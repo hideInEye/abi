@@ -1,0 +1,33 @@
+{
+  "private": true,
+  "author": "xd",
+  "scripts": {
+    "build": "max build",
+    "dev": "max dev",
+    "format": "prettier --cache --write .",
+    "postinstall": "max setup",
+    "setup": "max setup",
+    "start": "npm run dev"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.0.1",
+    "@umijs/max": "^4.5.1",
+    "antd": "^5.4.0",
+    "qiankun": "^2.10.16"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.33",
+    "@types/react-dom": "^18.0.11",
+    "@umijs/plugins": "^4.5.1",
+    "jsencrypt": "^3.5.4",
+    "lint-staged": "^13.2.0",
+    "prettier": "^2.8.7",
+    "prettier-plugin-organize-imports": "^3.2.2",
+    "prettier-plugin-packagejson": "^2.4.3",
+    "tailwindcss": "^3",
+    "typescript": "^5.0.3",
+    "@xd/config-tailwind": "workspace:*",
+    "@sa/utils": "workspace:*",
+    "@sa/axios": "workspace:*"
+  }
+}

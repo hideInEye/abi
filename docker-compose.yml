@@ -1,0 +1,150 @@
+version : '3.8'
+services:
+  abi-redis:
+    container_name: abi-redis
+    image: redis:6-alpine
+    build:
+      context: ./redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/conf/redis.conf:/home/trust/redis/redis.conf
+      - ./redis/data:/data
+    command: redis-server /home/trust/redis/redis.conf
+  abi-nginx:
+    container_name: abi-nginx
+    image: nginx
+    build:
+      context: ./nginx
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx/html/abi-ui/dist:/home/trust/projects/abi-ui
+      - ./nginx/html/chat-ui/dist:/home/trust/projects/chat-ui
+      - ./nginx/cert/server.crt:/home/trust/projects/cert/server.crt
+      - ./nginx/cert/server_unsecure.key:/home/trust/projects/cert/server_unsecure.key
+      - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/logs:/var/log/nginx
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - abi-gateway
+    links:
+      - abi-gateway
+  abi-gateway:
+    container_name: abi-gateway
+    build:
+      context: ./trust/gateway
+      dockerfile: dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - abi-redis
+    links:
+      - abi-redis
+  abi-auth:
+    container_name: abi-auth
+    build:
+      context: ./trust/auth
+      dockerfile: dockerfile
+    ports:
+      - "9200:9200"
+    depends_on:
+      - abi-redis
+    links:
+      - abi-redis
+  abi-modules-system:
+    container_name: abi-modules-system
+    build:
+      context: ./trust/modules/system
+      dockerfile: dockerfile
+    ports:
+      - "9201:9201"
+    depends_on:
+      - abi-redis
+    links:
+      - abi-redis
+  abi-modules-data:
+    container_name: abi-modules-data
+    build:
+      context: ./trust/modules/data
+      dockerfile: dockerfile
+    ports:
+      - "9206:9206"
+    depends_on:
+      - abi-redis
+    links:
+      - abi-redis
+  abi-modules-copilot:
+    container_name: abi-modules-copilot
+    build:
+      context: ./trust/modules/copilot
+      dockerfile: dockerfile
+    ports:
+      - "9205:9205"
+    depends_on:
+      - abi-redis
+    links:
+      - abi-redis
+  abi-modules-semantic:
+    container_name: abi-modules-semantic
+    build:
+      context: ./trust/modules/semantic
+      dockerfile: dockerfile
+    ports:
+      - "9207:9207"
+    depends_on:
+      - abi-redis
+    links:
+      - abi-redis
+  abi-modules-chat:
+    container_name: abi-modules-chat
+    build:
+      context: ./trust/modules/chat
+      dockerfile: dockerfile
+    ports:
+      - "9208:9208"
+    depends_on:
+      - abi-redis
+    links:
+      - abi-redis
+  abi-modules-debug:
+    container_name: abi-modules-debug
+    build:
+      context: ./trust/modules/debug
+      dockerfile: dockerfile
+    ports:
+      - "9209:9209"
+    depends_on:
+      - abi-redis
+    links:
+      - abi-redis
+  abi-modules-gen:
+    container_name: abi-modules-gen
+    build:
+      context: ./trust/modules/gen
+      dockerfile: dockerfile
+    ports:
+      - "9202:9202"
+  abi-modules-job:
+    container_name: abi-modules-job
+    build:
+      context: ./trust/modules/job
+      dockerfile: dockerfile
+    ports:
+      - "9203:9203"
+  abi-modules-file:
+    container_name: abi-modules-file
+    build:
+      context: ./trust/modules/file
+      dockerfile: dockerfile
+    ports:
+      - "9300:9300"
+    volumes:
+    - ./trust/uploadPath:/home/trust/uploadPath
+  abi-visual-monitor:
+    container_name: abi-visual-monitor
+    build:
+      context: ./trust/visual/monitor
+      dockerfile: dockerfile
+    ports:
+      - "9100:9100"

@@ -1,0 +1,61 @@
+{
+  "name": "xd",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=18.18.0",
+    "pnpm": ">=8.10.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "dev:portal": "pnpm --filter portal dev",
+    "dev:admin": "pnpm --filter admin dev",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "format": "prettier --write .",
+    "test": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "type-check": "tsc --noEmit",
+    "commit": "cz",
+    "prepare": "husky",
+    "build:packages": "pnpm -r --filter './packages/*' run build",
+    "prettier": "prettier --write '**/*.{js,jsx,tsx,ts,less,md,json}'",
+    "precommit": "lint-staged",
+    "clean:modules": "rimraf --glob \"**/node_modules\" \"node_modules\""
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.28.8",
+    "@tanstack/react-query-devtools": "5.28.8"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.0.0",
+    "@commitlint/config-conventional": "^18.0.0",
+    "@tailwindcss/postcss": "^4.1.14",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^20.0.0",
+    "autoprefixer": "^10.4.0",
+    "commitizen": "^4.3.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "father": "^4.6.6",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.2.0",
+    "postcss": "^8.4.0",
+    "prettier": "3.6.2",
+    "rimraf": "^5.0.0",
+    "tailwindcss": "^4.0.0",
+    "turbo": "1.13.0",
+    "typescript": "^5.0.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,md,html,css}": [
+      "git add",
+      "eslint",
+      "prettier --write"
+    ]
+  }
+}
