@@ -1,0 +1,258 @@
+import { CloudSyncOutlined, DeleteOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
+
+// import { enableStatusRecord } from '@/constants/business';
+// import { ATG_MAP } from '@/constants/common';
+import { message } from 'antd';
+
+import {
+  delAgentConfigDs,
+  fetchAssistantConfigList,
+  fetchDeleteAgent,
+  syncKnowledgeBase
+} from '@/service/api/assistant-manage';
+
+import DatasourceConfigDrawer from './modules/assistant-config-drawer';
+import DatasourceOperateDrawer from './modules/assistant-operate-drawer';
+import KeySearch from './modules/key-search';
+
+/**
+ * AI 助手配置管理页面
+ * 提供助手的创建、编辑、删除、配置和知识库同步功能
+ * 包含助手列表展示、搜索过滤、批量操作等功能
+ */
+
+// const DatasourceOperateDrawer = lazy(() => import('./modules/assistant-operate-drawer'));
+// const DatasourceConfigDrawer = lazy(() => import('./modules/assistant-config-drawer'));
+export function Component() {
+  const { t } = useTranslation();
+  const [selectedAgentId, setSelectedAgentId] = useState<number>();
+  const [editVisible, setEditVisible] = useState(false);
+  const [configVisible, setConfigVisible] = useState(false);
+
+  const { scrollConfig, tableWrapperRef } = useTableScroll();
+
+  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps } = useTable({
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    apiFn: fetchAssistantConfigList,
+    apiParams: {
+      bizName: '',
+      pageNum: 1,
+      pageSize: 10,
+      spaceId: Number(localStorage.getItem('spaceId')) // 空间id
+    } as any,
+    columns: () => [
+      {
+        align: 'center',
+        dataIndex: 'index',
+        key: 'index',
+        title: t('common.index'),
+        width: 64
+      },
+      {
+        align: 'center',
+        dataIndex: 'bizName',
+        key: 'bizName',
+        minWidth: 120,
+        title: '助手名称'
+      },
+      {
+        align: 'center',
+        dataIndex: 'techName',
+        key: 'techName',
+        minWidth: 120,
+        title: '英文名'
+      },
+      {
+        dataIndex: 'remark',
+        key: 'remark',
+        minWidth: 120,
+        title: '描述'
+      },
+      {
+        align: 'center',
+        dataIndex: 'createBy',
+        key: 'createBy',
+        // render: (_, record) => {
+        //   if (record.status === null) {
+        //     return null;
+        //   }
+        //   const label = t(enableStatusRecord[record.status]);
+        //   return <ATag color={ATG_MAP[record.status]}>{label}</ATag>;
+        // },
+        title: t('page.dataPreparation.dataSource.creator'),
+        width: 100
+      },
+      {
+        dataIndex: 'createTime',
+        key: 'createTime',
+        minWidth: 120,
+        title: t('page.dataPreparation.dataSource.createTime')
+      },
+      {
+        dataIndex: 'updateBy',
+        key: 'updateBy',
+        minWidth: 120,
+        title: t('page.dataPreparation.dataSource.operator')
+      },
+      {
+        dataIndex: 'updateTime',
+        key: 'updateTime',
+        minWidth: 120,
+        title: t('page.dataPreparation.dataSource.operateTime')
+      },
+      {
+        align: 'center',
+        key: 'operate',
+        render: (_: unknown, record: any) => (
+          <div className="flex-center gap-8px">
+            <ATooltip title="编辑助手">
+              <AButton
+                color="primary"
+                icon={<EditOutlined />}
+                size="small"
+                variant="link"
+                onClick={() => {
+                  setEditVisible(true);
+                  setSelectedAgentId(record.agentId);
+                }}
+              />
+            </ATooltip>
+            <APopconfirm
+              title={t('common.confirmDelete')}
+              onConfirm={() => handleDelete(record)}
+            >
+              <ATooltip title="删除助手">
+                <AButton
+                  color="danger"
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  variant="link"
+                />
+              </ATooltip>
+            </APopconfirm>
+            {/* 设置 */}
+            <ATooltip title="助手设置">
+              <AButton
+                color="primary"
+                icon={<FileTextOutlined />}
+                size="small"
+                variant="link"
+                onClick={() => {
+                  setConfigVisible(true);
+                  setSelectedAgentId(record.agentId);
+                }}
+              />
+            </ATooltip>
+            <APopconfirm
+              cancelText="取消"
+              description="确定要同步知识库吗？"
+              okText="确定"
+              title="提示"
+              onConfirm={() => handleConfirm(record)}
+            >
+              <ATooltip title="同步知识库">
+                <AButton
+                  color="primary"
+                  icon={<CloudSyncOutlined />}
+                  size="small"
+                  variant="link"
+                />
+              </ATooltip>
+            </APopconfirm>
+          </div>
+        ),
+        title: t('common.operate'),
+        width: 195
+      }
+    ]
+  });
+
+  const { checkedRowKeys, onDeleted } = useTableOperate(data as any, run, () => {});
+
+  async function handleDelete(record: any) {
+    const res = await delAgentConfigDs(record.agentId);
+    if (res.response.data.code === 200) {
+      try {
+        await fetchDeleteAgent({
+          agent_id: record.agentId,
+          space_id: `${record.spaceId}`
+        });
+      } catch (error) {}
+      onDeleted();
+    }
+  }
+
+  async function handleConfirm(record: any) {
+    const obj = JSON.parse(record.modelConfig);
+    const res = await syncKnowledgeBase({
+      agent_id: `${record.agentId}`,
+      dsl: obj.mdlConfigs ? JSON.stringify(obj.mdlConfigs) : '',
+      space_id: `${record.spaceId}`
+    });
+    if (res.response.data?.success) {
+      message.success('同步成功');
+    }
+  }
+
+  const handleAdd = () => {
+    setEditVisible(true);
+  };
+
+  const onClose = (refresh?: boolean) => {
+    if (refresh) {
+      run();
+    }
+    setSelectedAgentId(undefined);
+    setEditVisible(false);
+    setConfigVisible(false);
+  };
+
+  return (
+    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
+      <ACard>
+        <KeySearch {...searchProps} />
+      </ACard>
+
+      <ACard
+        bordered={false}
+        className="flex-col-stretch sm:flex-1-hidden card-wrapper"
+        ref={tableWrapperRef}
+        title="助手列表"
+        extra={
+          <div>
+            <TableHeaderOperation
+              add={handleAdd}
+              columns={columnChecks}
+              disabledDelete={checkedRowKeys.length === 0}
+              loading={tableProps.loading}
+              refresh={run}
+              setColumnChecks={setColumnChecks}
+            />
+          </div>
+        }
+      >
+        <ATable
+          rowKey="agentId"
+          scroll={scrollConfig}
+          size="small"
+          {...(tableProps as any)}
+        />
+      </ACard>
+
+      {editVisible ? (
+        <DatasourceOperateDrawer
+          agentId={selectedAgentId}
+          syncKnowledgeBase={handleConfirm}
+          onClose={onClose}
+        />
+      ) : null}
+      {configVisible ? (
+        <DatasourceConfigDrawer
+          agentId={selectedAgentId}
+          onClose={onClose}
+        />
+      ) : null}
+    </div>
+  );
+}

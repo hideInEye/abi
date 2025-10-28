@@ -1,0 +1,9 @@
+.star{
+    display: inline-block;
+    margin-inline-end: var(--ant-margin-xxs);
+    color: var(--ant-form-label-required-mark-color);
+    font-size: var(--ant-font-size);
+    font-family: SimSun, sans-serif;
+    line-height: 1;
+    content: "*";
+}

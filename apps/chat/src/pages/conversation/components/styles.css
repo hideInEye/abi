@@ -1,0 +1,11 @@
+.custom-collapse .ant-collapse-header {
+  display: none !important;
+}
+
+.custom-collapse .ant-collapse-content {
+  border-top: none !important;
+}
+
+.custom-collapse .ant-collapse-content-box {
+  padding: 0 !important;
+} 

@@ -1,0 +1,83 @@
+import { PlusOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+
+import { DictionaryGroup } from './components/DictionaryGroup';
+import { DictionaryModal } from './components/DictionaryModal';
+import { TableDictionary } from './components/DictionaryTable';
+import { EnumDrawer } from './components/EnumDrawer';
+import { useDictionaryGroup } from './hooks/useDictionaryGroup';
+import { useEnumDrawer } from './hooks/useEnumDrawer';
+
+export const Component: React.FC = () => {
+  const [groupId, setGroupId] = useState<any>(null);
+
+  const {
+    current,
+    dictionaryDataSource,
+    editObj,
+    handleAdd,
+    handleClose,
+    handleDelete,
+    handleEdit,
+    handleSearch,
+    handleSure,
+    handleUpdateStatus,
+    modalOpen,
+    searchValue,
+    setCurrent
+  } = useDictionaryGroup(groupId);
+
+  const { close: closeEnumDrawer, enumerationModalOpen, open: openEnumDrawer } = useEnumDrawer();
+
+  return (
+    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
+      <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper">
+        <AFlex className="gap-6">
+          <DictionaryGroup onGroupId={setGroupId} />
+
+          <div className="flex-1">
+            <ASpace className="mb-3 flex justify-between">
+              <AInput
+                placeholder="请输入字典项名称"
+                value={searchValue}
+                onChange={e => handleSearch(e.target.value)}
+              />
+              <AButton
+                color="primary"
+                icon={<PlusOutlined />}
+                variant="outlined"
+                onClick={handleAdd}
+              >
+                新增字典
+              </AButton>
+            </ASpace>
+
+            <TableDictionary
+              current={current}
+              dataSource={dictionaryDataSource}
+              onDelete={handleDelete}
+              onDiff={openEnumDrawer}
+              onEdit={handleEdit}
+              onPageChange={setCurrent}
+              onStatusChange={handleUpdateStatus}
+            />
+          </div>
+        </AFlex>
+
+        <DictionaryModal
+          editObj={editObj}
+          open={modalOpen}
+          onClose={handleClose}
+          onSure={handleSure}
+        />
+
+        {enumerationModalOpen && (
+          <EnumDrawer
+            close={closeEnumDrawer}
+            enumerationModalOpen={enumerationModalOpen}
+          />
+        )}
+      </ACard>
+    </div>
+  );
+};

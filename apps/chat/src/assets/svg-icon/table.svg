@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="16" height="16" viewBox="0 0 16 16" fill="none">
+<path d="M1 1L15 1L15 4.5L1 4.5L1 1Z"   fill="#8A8A8A" >
+</path>
+<path d="M1 1L1.875 1L1.875 15L1 15L1 1Z"   fill="#8A8A8A" >
+</path>
+<path d="M1 14.125L15 14.125L15 15L1 15L1 14.125ZM1 1L15 1L15 1.875L1 1.875L1 1Z"   fill="#8A8A8A" >
+</path>
+<path d="M14.125 1L15 1L15 15L14.125 15L14.125 1ZM1.875 7.125L14.125 7.125L14.125 8L1.875 8L1.875 7.125Z"   fill="#8A8A8A" >
+</path>
+<path d="M5.375 4.5L6.25 4.5L6.25 14.125L5.375 14.125L5.375 4.5ZM9.75 4.5L10.625 4.5L10.625 14.125L9.75 14.125L9.75 4.5Z"   fill="#8A8A8A" >
+</path>
+<path d="M1.875 10.625L14.125 10.625L14.125 11.5L1.875 11.5L1.875 10.625Z"   fill="#8A8A8A" >
+</path>
+</svg>

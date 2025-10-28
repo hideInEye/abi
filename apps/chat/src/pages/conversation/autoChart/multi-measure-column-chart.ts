@@ -1,0 +1,1 @@
+import { Chart as G2Chart } from '@antv/g2'; 

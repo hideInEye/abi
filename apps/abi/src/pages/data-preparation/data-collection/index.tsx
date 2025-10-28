@@ -1,0 +1,210 @@
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { message, Tooltip } from 'antd';
+import { Suspense } from 'react';
+
+// import { enableStatusRecord } from '@/constants/business';
+// import { ATG_MAP } from '@/constants/common';
+import { deleteCollection, fetchDataCollectionList } from '@/service/api';
+import { useRouter } from '~/packages/simple-router/src';
+
+import KeySearch from './modules/key-search';
+
+/** 数据集合管理页面组件 用于管理数据集合（数据集）的创建、编辑、删除和预览 支持数据集的操作、数据源关联、守族门查看等功能 包含数据集列表展示、搜索过滤、批量操作等功能 */
+
+const DataCollectionOperateDrawer = lazy(() => import('./modules/data-collection-operate-drawer'));
+
+export function Component() {
+  const { t } = useTranslation();
+  const { push } = useRouter();
+
+  const { scrollConfig, tableWrapperRef } = useTableScroll();
+  const { dataSourceList, getDatasourceList } = useDatasource();
+  useEffect(() => {
+    getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) });
+  }, []);
+  const toDetail = (record: any) => {
+    try {
+      const collectionViewInfo = JSON.parse(record.viewInfo);
+      const collectionBingDatasourceId = collectionViewInfo[0]?.currentDs?.sourceId;
+      const curSource = dataSourceList.find((item: any) => item.sourceId === collectionBingDatasourceId);
+      const curSourceIsEnable = curSource.status === '1';
+      if (curSourceIsEnable) {
+        push(`/data-preparation/data-collection-operate/${record.viewId}`);
+      } else {
+        message.error('当前数据集关联的数据源已被删除，无法进入详情');
+      }
+    } catch (error) {
+      message.error('当前数据集关联的数据源已被删除，无法进入详情');
+      console.log(error);
+    }
+  };
+  const columns = useCallback(
+    () => [
+      {
+        align: 'center',
+        dataIndex: 'index',
+        key: 'index',
+        title: t('common.index'),
+        width: 64
+      },
+      {
+        align: 'center',
+        dataIndex: 'viewName',
+        key: 'viewName',
+        minWidth: 120,
+        title: t('page.dataPreparation.dataCollection.name')
+      },
+      {
+        align: 'center',
+        dataIndex: 'viewInfo',
+        key: 'viewInfo',
+        minWidth: 120,
+        render: (viewInfo: string) => {
+          const info = JSON.parse(viewInfo)?.[0];
+          return dataSourceList?.find((item: any) => item?.sourceId === info?.currentDs?.sourceId)?.sourceName;
+        },
+        title: t('page.dataPreparation.dataCollection.datasource')
+      },
+      {
+        align: 'center',
+        dataIndex: 'createBy',
+        key: 'createBy',
+        title: t('page.dataPreparation.dataCollection.creator'),
+        width: 100
+      },
+      {
+        dataIndex: 'createTime',
+        key: 'createTime',
+        minWidth: 120,
+        title: t('page.dataPreparation.dataCollection.createTime')
+      },
+      {
+        dataIndex: 'updateBy',
+        key: 'updateBy',
+        minWidth: 120,
+        title: t('page.dataPreparation.dataCollection.operator')
+      },
+      {
+        dataIndex: 'updateTime',
+        key: 'updateTime',
+        minWidth: 120,
+        title: t('page.dataPreparation.dataCollection.operateTime')
+      },
+      {
+        align: 'center',
+        key: 'operate',
+        render: (_: unknown, record: any) => (
+          <div className="flex-center gap-8px">
+            <Tooltip title="编辑">
+              <AButton
+                color="primary"
+                icon={<EditOutlined />}
+                size="small"
+                variant="link"
+                onClick={() => toDetail(record)}
+              />
+            </Tooltip>
+            <APopconfirm
+              title={t('common.confirmDelete')}
+              onConfirm={() => handleDelete(record.viewId)}
+            >
+              <Tooltip title="删除">
+                <AButton
+                color="danger"
+                icon={<DeleteOutlined />}
+                size="small"
+                variant="link"
+              />
+              </Tooltip>
+            </APopconfirm>
+            <Tooltip title="血缘关系">
+              <AButton
+                color="primary"
+                icon={<SvgIcon localIcon="kinship" />}
+                size="small"
+                variant="link"
+                onClick={() => {
+                  const viewName = record.viewName;
+                  let sourceId = '';
+                  try {
+                    const viewInfo = JSON.parse(record.viewInfo);
+                    const { currentDs } = viewInfo[0];
+                    sourceId = currentDs.sourceId;
+                  } catch (error) {
+                    console.log(error);
+                  }
+                  push(`/data-preparation/data-source-kinship/${sourceId}?from=2&name=${viewName}`);
+                }}
+              />
+            </Tooltip>
+          </div>
+        ),
+        title: t('common.operate'),
+        width: 195
+      }
+    ],
+    [dataSourceList]
+  );
+  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps } = useTable({
+    apiFn: fetchDataCollectionList,
+    apiParams: {
+      pageNum: 1,
+      pageSize: 10,
+      spaceId: Number(localStorage.getItem('spaceId')),
+      viewName: ''
+    },
+    columns
+  } as any);
+
+  const { checkedRowKeys, generalPopupOperation, onDeleted } = useTableOperate(data as any, run, async (res, type) => {
+    if (type === 'add') {
+      // add request 调用新增的接口
+      // push('/data-preparation/data-collection-operate/0');
+    } else {
+      // edit request 调用编辑的接口
+      console.log(res);
+    }
+  });
+
+  async function handleDelete(id: number) {
+    // request
+    const res = await deleteCollection({ updateBy: '1', viewId: id });
+    if (res.response.data.code !== 200) return;
+    onDeleted();
+  }
+
+  return (
+    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
+      <ACard>
+        <KeySearch {...searchProps} />
+      </ACard>
+      <ACard
+        bordered={false}
+        className="flex-col-stretch sm:flex-1-hidden card-wrapper"
+        ref={tableWrapperRef}
+        title="数据集列表"
+        extra={
+          <TableHeaderOperation
+            add={() => push('/data-preparation/data-collection-operate/0')}
+            columns={columnChecks}
+            disabledDelete={checkedRowKeys.length === 0}
+            loading={tableProps.loading}
+            refresh={run}
+            setColumnChecks={setColumnChecks}
+            // onDelete={handleBatchDelete}
+          />
+        }
+      >
+        <ATable
+          scroll={scrollConfig}
+          size="small"
+          {...(tableProps as any)}
+        />
+
+        <Suspense>
+          <DataCollectionOperateDrawer {...generalPopupOperation} />
+        </Suspense>
+      </ACard>
+    </div>
+  );
+}

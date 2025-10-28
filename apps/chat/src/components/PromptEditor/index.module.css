@@ -1,0 +1,245 @@
+.editorContainer {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.editor {
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.editor :global(.ql-container) {
+  font-size: 14px;
+  line-height: 1.5;
+  border: none;
+}
+
+.editor :global(.ql-editor) {
+  height: 100%;
+  min-height: 120px;
+  padding: 12px 16px;
+}
+
+/* 保护区域样式 */
+.editor :global(.ql-editor span[style*="background-color: #f3f4f6"]),
+.editor :global(.ql-editor p[style*="background-color: #f3f4f6"]),
+.editor :global(.ql-editor div[style*="background-color: #f3f4f6"]) {
+  background-color: #f3f4f6 !important;
+  color: #374151 !important;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: 0 2px;
+  cursor: not-allowed;
+  user-select: none;
+  display: inline-block;
+}
+
+/* 编辑器焦点样式 */
+.editor :global(.ql-container.ql-focus) {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.editor :global(.monaco-editor) {
+  padding-left: 8px !important;
+}
+
+.editor :global(.monaco-editor .lines-content) {
+  justify-content: flex-start !important;
+  padding-left: 8px !important;
+}
+
+.editor :global(.monaco-editor .margin) {
+  display: none !important;
+}
+
+/* Markdown 样式 */
+.editor :global(.ql-editor h1) {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.5em 0;
+}
+
+.editor :global(.ql-editor h2) {
+  font-size: 1.3em;
+  font-weight: bold;
+  margin: 0.4em 0;
+}
+
+.editor :global(.ql-editor h3) {
+  font-size: 1.1em;
+  font-weight: bold;
+  margin: 0.3em 0;
+}
+
+.editor :global(.ql-editor p) {
+  margin: 0.2em 0;
+}
+
+.editor :global(.ql-editor ul), 
+.editor :global(.ql-editor ol) {
+  margin: 0.2em 0;
+  padding-left: 1.5em;
+}
+
+.editor :global(.ql-editor li) {
+  margin: 0.1em 0;
+}
+
+.editor :global(.ql-editor code) {
+  background-color: #e5e7eb;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.editor :global(.ql-editor pre) {
+  background-color: #e5e7eb;
+  padding: 0.5em;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.editor :global(.ql-editor blockquote) {
+  border-left: 3px solid #9ca3af;
+  margin: 0.2em 0;
+  padding-left: 0.5em;
+  color: #4b5563;
+}
+
+.editor :global(.ql-editor a) {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.editor :global(.ql-editor img) {
+  max-width: 100%;
+  height: auto;
+}
+
+.editor :global(.ql-editor table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+}
+
+.editor :global(.ql-editor th),
+.editor :global(.ql-editor td) {
+  border: 1px solid #d1d5db;
+  padding: 0.3em 0.5em;
+  text-align: left;
+}
+
+.editor :global(.ql-editor th) {
+  background-color: #e5e7eb;
+  font-weight: bold;
+}
+
+.readOnlySegment {
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: not-allowed !important;
+  color: #374151 !important;
+  font-weight: 500;
+  border: 1px solid #e5e7eb;
+  margin: 0 2px;
+  user-select: none;
+}
+
+.readOnlyOverlay {
+  position: absolute;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  padding: 2px 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Markdown 样式 */
+.readOnlyOverlay :global(h1) {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.5em 0;
+}
+
+.readOnlyOverlay :global(h2) {
+  font-size: 1.3em;
+  font-weight: bold;
+  margin: 0.4em 0;
+}
+
+.readOnlyOverlay :global(h3) {
+  font-size: 1.1em;
+  font-weight: bold;
+  margin: 0.3em 0;
+}
+
+.readOnlyOverlay :global(p) {
+  margin: 0.2em 0;
+}
+
+.readOnlyOverlay :global(ul), 
+.readOnlyOverlay :global(ol) {
+  margin: 0.2em 0;
+  padding-left: 1.5em;
+}
+
+.readOnlyOverlay :global(li) {
+  margin: 0.1em 0;
+}
+
+.readOnlyOverlay :global(code) {
+  background-color: #e5e7eb;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.readOnlyOverlay :global(pre) {
+  background-color: #e5e7eb;
+  padding: 0.5em;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.readOnlyOverlay :global(blockquote) {
+  border-left: 3px solid #9ca3af;
+  margin: 0.2em 0;
+  padding-left: 0.5em;
+  color: #4b5563;
+}
+
+.readOnlyOverlay :global(a) {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.readOnlyOverlay :global(img) {
+  max-width: 100%;
+  height: auto;
+}
+
+.readOnlyOverlay :global(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+}
+
+.readOnlyOverlay :global(th),
+.readOnlyOverlay :global(td) {
+  border: 1px solid #d1d5db;
+  padding: 0.3em 0.5em;
+  text-align: left;
+}
+
+.readOnlyOverlay :global(th) {
+  background-color: #e5e7eb;
+  font-weight: bold;
+}
+
+:global(.readOnlyDecoration) {
+  background-color: #f3f4f6;
+  border-radius: 4px;
+} 

@@ -1,0 +1,41 @@
+.loader-container {
+  width: 200px;
+  height: 10px;
+  background: #eee;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.loader-bar {
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    #8a57d7 0px,
+    /* 蓝色节段 */ #8a57d7 50px,
+    /* 蓝色节段宽度 */ #ddd 50px,
+    /* 灰色节段开始 */ #ddd 100px,
+    /* 灰色节段宽度 */ #8a57d7 100px,
+    /* 蓝色节段 */ #8a57d7 150px,
+    /* 蓝色节段宽度 */ #ddd 150px,
+    /* 灰色节段开始 */ #ddd 200px /* 灰色节段宽度 */
+  );
+  background-size: 200% 100%;
+  animation: slide 3s linear infinite;
+}
+
+@keyframes slide {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+.viewTable {
+  thead > tr > th {
+    background-color: white !important;
+  }
+}

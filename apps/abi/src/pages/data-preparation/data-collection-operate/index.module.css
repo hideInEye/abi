@@ -1,0 +1,122 @@
+/* @type */
+
+.container {
+  height: 100%;
+
+  & > div {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    height: 100%;
+  }
+
+  .table-data-container {
+    overflow: auto;
+    height: calc(100% - 210px);
+    padding: 4px 0;
+  }
+
+  .unfold {
+    position: absolute;
+    /* left: 200px; */
+    right: -12px;
+    top: 20px;
+    z-index: 3;
+    height: 24px;
+    width: 24px;
+    line-height: 22px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid #dee0e3;
+    border-radius: 50%;
+    color: #202328;
+    font-size: 12px;
+    box-shadow: 0 5px 10px #1f23291a;
+    background-color: #fff;
+
+    &:hover {
+      color: #8c96ff;
+    }
+  }
+
+  .rightUnfold {
+    position: absolute;
+    /* left: 200px; */
+    left: -12px;
+    top: 20px;
+    z-index: 3;
+    height: 24px;
+    width: 24px;
+    line-height: 22px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid #dee0e3;
+    border-radius: 50%;
+    color: #202328;
+    font-size: 12px;
+    box-shadow: 0 5px 10px #1f23291a;
+    background-color: #fff;
+
+    &:hover {
+      color: #8c96ff;
+    }
+  }
+
+  .right-container {
+    width: calc(100% - 250px);
+
+    .splitter-container {
+      width: calc(100% - 250px);
+    }
+  }
+
+  /* 下方tabs */
+  .bottom-tabs-container {
+    height: 100%;
+
+    & > div:first-child {
+      padding-left: 10px;
+      margin-bottom: 0;
+    }
+
+    & > div:last-child {
+      & > div {
+        height: 100%;
+
+        & > div {
+          height: 100%;
+        }
+      }
+    }
+  }
+
+  .bottom-left-item-container {
+    height: 50%;
+    overflow: auto;
+
+    & > div:first-child {
+      padding: 0 0 0 10px;
+      /* padding-left: 10px; */
+    }
+  }
+
+  .datasource-table-container {
+    thead th,
+    tbody td {
+      font-weight: normal;
+      padding: 8px 12px;
+    }
+  }
+}
+
+
+.collapse-container {
+  height: 100%;
+  width: 100%;
+}
+
+.collapse-container > div > div:first-child {
+  position: sticky !important;
+  top: 0;
+  background-color: #fff;
+  z-index: 9;
+}

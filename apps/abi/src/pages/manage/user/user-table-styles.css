@@ -1,0 +1,107 @@
+/* 用户管理表格滚动样式优化 */
+
+/* 主容器样式 - 使用更精确的选择器 */
+div.h-full.min-h-500px.flex-col-stretch.gap-16px.overflow-hidden {
+  overflow: auto !important;
+}
+
+/* 右侧内容区域 */
+div.h-full.min-h-500px.flex-col-stretch.gap-16px.overflow-hidden.lt-sm\\:overflow-auto {
+  overflow: auto !important;
+  flex: 1;
+}
+
+/* 确保表格容器有正确的滚动行为 */
+.card-wrapper .ant-card-body {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+/* 表格滚动条样式 */
+.ant-table-wrapper {
+  flex: 1;
+  overflow: auto;
+  min-height: 400px;
+}
+
+/* 自定义滚动条样式 */
+.ant-table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ant-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.ant-table-wrapper::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.ant-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 确保表格内容区域正确显示 */
+.ant-table {
+  height: 100%;
+}
+
+.ant-table-container {
+  height: 100%;
+}
+
+/* 表格头部固定 */
+.ant-table-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
+}
+
+/* 分页器样式 */
+.ant-pagination {
+  margin-top: 16px;
+  text-align: right;
+}
+
+/* 强制显示滚动条 */
+.ant-table-body {
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+}
+
+/* 响应式处理 */
+@media (max-width: 768px) {
+  .card-wrapper .ant-card-body {
+    padding: 12px;
+  }
+  
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+}
+
+/* 确保表格有最小高度以触发滚动 */
+.ant-table-tbody {
+  min-height: 300px;
+}
+
+/* 针对用户管理页面的特定样式 */
+.ant-card.card-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ant-card.card-wrapper .ant-card-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
