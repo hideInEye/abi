@@ -1,18 +1,15 @@
-import { apiRequest } from "@/services/request/index"
-import { LoginFormValues } from "@/types/login"
+import { request } from '@umijs/max'
+import { LoginFormValues } from '@/types/login'
 
-export const login = (data: LoginFormValues) =>{
-
-  return apiRequest({
-    url: '/auth/login',
+export const login = (data: LoginFormValues) => {
+  return request('/api/auth/login', {
+    data,
     method: 'POST',
-    data
   })
 }
 
 export const getUserInfo = () => {
-  return apiRequest({
-    url: '/system/user/getInfo',
+  return request('/api/system/user/getInfo', {
     method: 'GET',
   })
 }

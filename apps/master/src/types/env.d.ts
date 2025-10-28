@@ -1,13 +1,13 @@
 /**
  * Namespace Env
  *
- * It is used to declare the type of the import.meta object
+ * It is used to declare the type of the process object
  */
 declare namespace Env {
   /** The router history mode */
   type RouterHistoryMode = 'hash' | 'history' | 'memory';
 
-  /** Interface for import.meta */
+  /** Interface for process */
   interface ImportMeta extends ImportMetaEnv {
     /** The description of the application */
     readonly VITE_APP_DESC: string;

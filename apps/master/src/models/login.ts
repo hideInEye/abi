@@ -7,41 +7,41 @@ const login: loginModel = {
   namespace: 'login',
   state: {
     loading: false,
+    token: '',
+    userInfo: null,
   },
   effects: {
-    *login({ payload }, { put }) {
-      const { userName, password } = payload
+    *login({ payload }, { call, put }) {
+      const { username, password } = payload
       const psd = encrypt(password) as string
-      console.log(psd, userName)
 
-      const { data, error } = yield put(request.loginController.login({ userName, password: psd }))
-      const loginToken = {
-        ...data,
-        refreshToken: data?.refresh_token || '',
-        token: data?.access_token || '',
-        userId: data?.userId || '',
-      }
+      const data = yield call(request.loginController.login, { username, password: psd })
+      if (data.access_token) {
+        localStg.set('token', data.access_token)
 
-      // 1. stored in the localStorage, the later requests need it in headers
-      if (!error) {
-        localStg.set('token', loginToken.token)
-        localStg.set('refreshToken', loginToken.refreshToken)
-        localStg.set('userId', loginToken.userId)
-
-        const { error: userInfoError, response } = yield put(request.loginController.getUserInfo())
-        const { user } = response.data as any
-        if (!userInfoError) {
-          // 2. store user info
+        const { user } = yield call(request.loginController.getUserInfo)
+        if (user) {
+          
           localStg.set('userInfo', user)
-          return {
-            token: loginToken.token,
-            userInfo: user,
-          }
+          yield put({
+            type: 'saveUserInfo',
+            payload: {
+              token: data.access_token,
+              userInfo: user,
+            },
+          })
         }
       }
     },
   },
-  reducers: {},
+  reducers: {
+    saveUserInfo(state, { payload }) {
+      return {
+        ...state,
+        ...payload,
+      }
+    },
+  },
 }
 
 export default login

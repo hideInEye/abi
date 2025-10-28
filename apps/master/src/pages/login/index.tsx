@@ -1,7 +1,6 @@
 import { Button, Checkbox, Form, Input } from 'antd'
 
 import useNameIcon from '@/assets/hoveruser.png'
-// import { useFormRules } from '@/hooks/common/form';
 import loginBg from '@/assets/login_bg.jpg'
 import passwordIcon from '@/assets/password.png'
 import { LoginFormValues, LoginModelState } from '@/types/login'
@@ -14,9 +13,7 @@ const Login = (props: LoginModelState) => {
   const [form] = Form.useForm<LoginFormValues>()
   const dispatch = useDispatch()
 
-  // const {
-  //   formRules: { pwd, userName: userNameRules }
-  // } = useFormRules();
+ 
 
   const handleFinish = async (values: LoginFormValues) => {
     dispatch({
@@ -38,7 +35,7 @@ const Login = (props: LoginModelState) => {
 
         <Form form={form} layout="vertical" autoComplete="off" initialValues={{ remember: false }} requiredMark={false} onFinish={handleFinish} className="mt-10 flex flex-1 flex-col">
           <Form.Item
-            name="userName"
+            name="username"
             className="mb-6"
             // rules={userNameRules}
           >
