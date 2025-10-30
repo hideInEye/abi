@@ -69,6 +69,9 @@ importers:
 
   apps/abi:
     dependencies:
+      '@ant-design/icons':
+        specifier: 5.6.1
+        version: 5.6.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@antv/ava':
         specifier: ^3.4.1
         version: 3.4.1(@antv/g2plot@2.4.35)(@antv/g6@5.0.50(workerize-loader@2.0.2(webpack@5.102.1(esbuild@0.23.1))))
@@ -84,6 +87,9 @@ importers:
       '@codemirror/lang-sql':
         specifier: ^6.8.0
         version: 6.10.0
+      '@codemirror/view':
+        specifier: 6.38.6
+        version: 6.38.6
       '@iconify/react':
         specifier: 5.0.2
         version: 5.0.2(react@18.3.1)
@@ -126,6 +132,9 @@ importers:
       antd:
         specifier: 5.21.6
         version: 5.21.6(date-fns@2.30.0)(moment@2.30.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      axios:
+        specifier: 1.7.7
+        version: 1.7.7
       classnames:
         specifier: 2.5.1
         version: 2.5.1
@@ -162,6 +171,9 @@ importers:
       nprogress:
         specifier: 0.2.0
         version: 0.2.0
+      prop-types:
+        specifier: 15.8.1
+        version: 15.8.1
       qiankun:
         specifier: ^2.10.16
         version: 2.10.16
@@ -307,6 +319,9 @@ importers:
       lint-staged:
         specifier: 15.2.10
         version: 15.2.10
+      lodash:
+        specifier: 4.17.21
+        version: 4.17.21
       sass:
         specifier: 1.80.6
         version: 1.80.6
@@ -624,12 +639,25 @@ importers:
       '@sa/axios':
         specifier: workspace:*
         version: link:../axios
+      ahooks:
+        specifier: 3.8.1
+        version: 3.8.1(react@19.2.0)
+    devDependencies:
+      lodash:
+        specifier: 4.17.21
+        version: 4.17.21
 
   packages/materials:
     dependencies:
+      '@sa/color':
+        specifier: workspace:*
+        version: link:../color
       '@sa/utils':
         specifier: workspace:*
         version: link:../utils
+      classnames:
+        specifier: 2.5.1
+        version: 2.5.1
       simplebar-react:
         specifier: 3.2.6
         version: 3.2.6(react@19.2.0)
@@ -683,7 +711,20 @@ importers:
         specifier: 17.7.2
         version: 17.7.2
 
-  packages/simple-router: {}
+  packages/simple-router:
+    dependencies:
+      '@ohh-889/react-auto-route':
+        specifier: 0.3.5
+        version: 0.3.5
+      '@remix-run/router':
+        specifier: 1.20.0
+        version: 1.20.0
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-router-dom:
+        specifier: 6.27.0
+        version: 6.27.0(react-dom@19.2.0(react@18.3.1))(react@18.3.1)
 
   packages/uno-preset: {}
 
@@ -14669,6 +14710,19 @@ snapshots:
       screenfull: 5.2.0
       tslib: 2.8.1
 
+  ahooks@3.8.1(react@19.2.0):
+    dependencies:
+      '@babel/runtime': 7.28.4
+      dayjs: 1.11.13
+      intersection-observer: 0.12.2
+      js-cookie: 3.0.5
+      lodash: 4.17.21
+      react: 19.2.0
+      react-fast-compare: 3.2.2
+      resize-observer-polyfill: 1.5.1
+      screenfull: 5.2.0
+      tslib: 2.8.1
+
   ajv-formats@2.1.1(ajv@8.17.1):
     optionalDependencies:
       ajv: 8.17.1
@@ -20765,6 +20819,11 @@ snapshots:
       react: 18.3.1
       scheduler: 0.23.2
 
+  react-dom@19.2.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+      scheduler: 0.27.0
+
   react-dom@19.2.0(react@19.2.0):
     dependencies:
       react: 19.2.0
@@ -20865,6 +20924,13 @@ snapshots:
       '@remix-run/router': 1.20.0
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
+      react-router: 6.27.0(react@18.3.1)
+
+  react-router-dom@6.27.0(react-dom@19.2.0(react@18.3.1))(react@18.3.1):
+    dependencies:
+      '@remix-run/router': 1.20.0
+      react: 18.3.1
+      react-dom: 19.2.0(react@18.3.1)
       react-router: 6.27.0(react@18.3.1)
 
   react-router-dom@7.9.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1):

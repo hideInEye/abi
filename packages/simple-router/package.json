@@ -10,5 +10,11 @@
         "./src/*"
       ]
     }
+  },
+  "dependencies": {
+    "@ohh-889/react-auto-route": "0.3.5",
+    "@remix-run/router": "1.20.0",
+    "react": "18.3.1",
+    "react-router-dom": "6.27.0"
   }
 }

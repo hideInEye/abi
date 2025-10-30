@@ -1,162 +1,83 @@
-import { Button, Checkbox, Divider, Form, Input, message, Space } from 'antd';
+import { Button, Checkbox, Form, Input } from 'antd'
 
-import { loginModuleRecord } from '@/constants/app';
-import { useLogin } from '@/hooks/common/login';
-import { getCode } from '@/service/api/data-table-meaning';
-import Captcha, { CaptchaRef } from '@/components/captcha-code';
-type AccountKey = 'admin' | 'super' | 'user';
+import useNameIcon from '@/assets/imgs/hoveruser.png'
+import loginBg from '@/assets/imgs/login_bg.jpg'
+import passwordIcon from '@/assets/imgs/password.png'
+import { useLogin } from '@/hooks/common/login'
+import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons'
+
+type AccountKey = 'admin' | 'super' | 'user'
 interface Account {
-  key: AccountKey;
-  label: string;
-  password: string;
-  userName: string;
+  key: AccountKey
+  label: string
+  password: string
+  userName: string
 }
 
-type LoginParams = Pick<Account, 'password' | 'userName'>;
+type LoginParams = Pick<Account, 'password' | 'userName'>
 
+const INPUT_WRAPPER_CLASSES = 'h-56px rd-12px border border-white/60 bg-white/90 shadow-sm transition hover:!border-#3366FF focus-within:!border-#3366FF focus-within:!shadow-[0_0_0_2px_rgba(51,102,255,0.15)]'
 export function Component() {
-  const [form] = Form.useForm<LoginParams>();
-  const { toggleLoginModule } = useRouterPush();
-  const { t } = useTranslation();
-  const { loading, toLogin } = useLogin();
-  const captchaRef = useRef<CaptchaRef>(null);
-  const [inputValue, setInputValue] = useState('');
-  const [realCode, setRealCode] = useState('');
+  const [form] = Form.useForm<LoginParams>()
+  const { toggleLoginModule } = useRouterPush()
+  const { loading, toLogin } = useLogin()
 
   const {
-    formRules: { pwd, userName: userNameRules }
-  } = useFormRules();
+    formRules: { pwd, userName: userNameRules },
+  } = useFormRules()
 
-  async function handleSubmit() {
-    const userInput = inputValue.trim().toUpperCase();
-    const code = realCode.toUpperCase();
-    if (userInput !== code) {
-      message.error(t('page.login.pwdLogin.captchaError'));
-      captchaRef.current?.refresh();
-      return
-    }
-    const params = await form.validateFields();
-    toLogin(params);
+  function handleSubmit() {
+    const params = form.getFieldsValue()
+    
+    toLogin(params)
   }
 
   useKeyPress('enter', () => {
-    handleSubmit();
-  });
-
-  function handleAccountLogin(account: Account) {
-    toLogin(account);
-  }
-
-  const accounts: Account[] = [
-    {
-      key: 'super',
-      label: t('page.login.pwdLogin.superAdmin'),
-      password: '123456',
-      userName: 'Super'
-    },
-    {
-      key: 'admin',
-      label: t('page.login.pwdLogin.admin'),
-      password: '123456',
-      userName: 'Admin'
-    },
-    {
-      key: 'user',
-      label: t('page.login.pwdLogin.user'),
-      password: '123456',
-      userName: 'User'
-    }
-  ];
+    handleSubmit()
+  })
 
   return (
-    <>
-      <h3 className="text-18px text-primary font-medium">{t('page.login.pwdLogin.title')}</h3>
-      <Form
-        className="pt-24px"
-        form={form}
-        initialValues={{
-          password: '',
-          userName: ''
-        }}
-      >
-        <Form.Item
-          name="userName"
-          rules={userNameRules}
-        >
-          <Input  placeholder='请输入用户名' />
-        </Form.Item>
+    <div
+      className="relative flex min-h-100vh w-full items-center justify-center overflow-hidden bg-cover bg-center bg-no-repeat px-16px xl:items-start xl:justify-start xl:pl-780px xl:pt-220px 2xl:pl-934px 2xl:pt-260px 3xl:pl-1167px 3xl:pt-314px"
+      style={{ backgroundImage: `url(${loginBg})` }}
+    >
+      <div className="relative z-10 flex min-h-480px w-full max-w-400px flex-col rd-20px bg-white/30 px-32px pb-48px pt-56px shadow-[4px_2px_16px_rgba(0,0,0,0.06)] backdrop-blur-xl sm:px-40px">
+        <h1 className="w-120px font-[PingFangSC,'PingFang SC',sans-serif] text-30px font-medium leading-42px text-#333333">欢迎登录</h1>
+        <div className="mt-8px h-5px w-80px rd-full bg-#3366FF" />
 
-        <Form.Item
-          name="password"
-          rules={pwd}
-        >
-          <Input.Password placeholder='请输入密码' autoComplete="password" />
-        </Form.Item>
-        <Space direction="horizontal" className="flex [&_.ant-space-item:first-child]:flex-auto">
-          <Input
-            placeholder="请输入验证码"
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-          />
-          <Captcha ref={captchaRef} onChange={(code) => { setRealCode(code); }} />
-        </Space>
-        <Space
-          className="w-full"
-          direction="vertical"
-          size={24}
-        >
-          <div className="flex-y-center justify-between">
-            <Checkbox>{t('page.login.pwdLogin.rememberMe')}</Checkbox>
+        <Form form={form} layout="vertical" autoComplete="off" initialValues={{ remember: false }} requiredMark={false} onFinish={handleSubmit} className="mt-40px flex flex-1 flex-col">
+          <Form.Item name="userName" className="mb-24px" rules={userNameRules}>
+            <Input size="large" allowClear placeholder="账户名" prefix={<img className="w-28px h-28px" src={useNameIcon} />} className={`${INPUT_WRAPPER_CLASSES} !px-16px !text-base !text-#333333`} />
+          </Form.Item>
 
-            <Button
-              type="text"
-              onClick={() => toggleLoginModule('reset-pwd')}
-            >
-              {t('page.login.pwdLogin.forgetPassword')}
-            </Button>
+          <Form.Item name="password" className="mb-16px" rules={pwd}>
+            <Input.Password
+              size="large"
+              placeholder="密码"
+              prefix={<img className="w-28px h-28px" src={passwordIcon} />}
+              iconRender={(visible) => (visible ? <EyeTwoTone twoToneColor="#3366FF" /> : <EyeInvisibleOutlined />)}
+              className={`${INPUT_WRAPPER_CLASSES} !px-16px !text-base !text-#333333 [&_.ant-input]:!text-#333333`}
+            />
+          </Form.Item>
+
+          <div className="mt-8px flex items-center justify-between text-sm text-#666666">
+            <Form.Item name="remember" valuePropName="checked" noStyle>
+              <Checkbox className="[&_span]:text-#666666">记住我</Checkbox>
+            </Form.Item>
+            <a className="transition hover:text-#3366FF" href="#" onClick={() => toggleLoginModule('reset-pwd')}>
+              忘记密码?
+            </a>
           </div>
-          <Button
-            block
-            loading={loading}
-            shape="round"
-            size="large"
-            type="primary"
-            onClick={handleSubmit}
-          >
-            {t('common.confirm')}
+
+          <Button type="primary"  size="large" loading={loading} className="mt-40px h-56px w-full rd-12px bg-#3366FF text-base font-medium text-white shadow-[0_10px_24px_rgba(51,102,255,0.35)] transition hover:!bg-#2C58E8 focus:!bg-#2C58E8 active:!bg-#2448C6" block>
+            登 录
           </Button>
-          {/* <div className="flex-y-center justify-between gap-12px">
-            <Button
-              block
-              className="flex-1"
-              onClick={() => toggleLoginModule('code-login')}
-            >
-              {t(loginModuleRecord['code-login'])}
-            </Button>
-            <Button
-              block
-              className="flex-1"
-              onClick={() => toggleLoginModule('register')}
-            >
-              {t(loginModuleRecord.register)}
-            </Button>
-          </div>
-          <Divider className="!m-0 !text-14px !text-#666">{t('page.login.pwdLogin.otherAccountLogin')}</Divider>
-          <div className="flex-center gap-12px">
-            {accounts.map(item => {
-              return (
-                <Button
-                  key={item.key}
-                  type="primary"
-                  onClick={() => handleAccountLogin(item)}
-                >
-                  {item.label}
-                </Button>
-              );
-            })}
-          </div> */}
-        </Space>
-      </Form>
-    </>
-  );
+        </Form>
+      </div>
+
+      <div className="pointer-events-none absolute left-0 right-0 bottom-24px flex justify-center">
+        <span className="text-xs text-white/90">Copyright © 2025. 北京芯盾时代科技有限公司. 版权所有 京ICP备15056030号-1</span>
+      </div>
+    </div>
+  )
 }

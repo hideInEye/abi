@@ -12,7 +12,9 @@
     }
   },
   "dependencies": {
+    "@sa/color": "workspace:*",
     "@sa/utils": "workspace:*",
+    "classnames": "2.5.1",
     "simplebar-react": "3.2.6"
   },
   "devDependencies": {

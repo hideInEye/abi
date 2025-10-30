@@ -12,6 +12,10 @@
     }
   },
   "dependencies": {
-    "@sa/axios": "workspace:*"
+    "@sa/axios": "workspace:*",
+    "ahooks": "3.8.1"
+  },
+  "devDependencies": {
+    "lodash": "4.17.21"
   }
 }

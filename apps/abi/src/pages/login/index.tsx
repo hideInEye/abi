@@ -25,25 +25,29 @@ function useBgColor() {
 
 export function Component() {
   const { bgColor, bgThemeColor } = useBgColor();
-
+  console.log('====111');
+  
   return (
-    <div
-      className="relative size-full flex-center overflow-hidden bg-layout"
-      style={{ backgroundColor: bgColor }}
-    >
-      <WaveBg themeColor={bgThemeColor} />
+    // <div
+    //   className="relative size-full flex-center overflow-hidden bg-layout"
+    //   style={{ backgroundColor: bgColor }}
+    // >
+    //   <WaveBg themeColor={bgThemeColor} />
 
-      <Card
-        bordered={false}
-        className="relative z-4 w-auto rd-12px"
-      >
-        <div className="w-400px lt-sm:w-300px">
-          <Header />
-          <main className="pt-24px">
-            <Outlet />
-          </main>
-        </div>
-      </Card>
+    //   <Card
+    //     bordered={false}
+    //     className="relative z-4 w-auto rd-12px"
+    //   >
+    //     <div className="w-400px lt-sm:w-300px">
+    //       <Header />
+    //       <main className="pt-24px">
+    //         <Outlet />
+    //       </main>
+    //     </div>
+    //   </Card>
+    // </div>
+    <div>
+      <Outlet />
     </div>
   );
 }
