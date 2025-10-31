@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
-    "build": "turbo run build",
+    "build": "turbo run build --filter=./apps/*",
     "dev:portal": "pnpm --filter portal dev",
     "dev:admin": "pnpm --filter admin dev",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",

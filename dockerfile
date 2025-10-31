@@ -1,19 +1,23 @@
-# 基础镜像
-FROM nginx
-# author
-MAINTAINER trust
+# ==================================================
+# Stage 1: Minimal runtime image with Nginx
+# ==================================================
+FROM nginx:1.24.0
 
-# 挂载目录
-VOLUME /home/trust/projects/abi-ui
-# 挂载目录
-VOLUME /home/trust/projects/cert
-# 创建目录
-RUN mkdir -p /home/trust/projects/abi-ui
-# 创建目录
-RUN mkdir -p /home/trust/projects/cert
-# 指定路径
-WORKDIR /home/trust/projects/
-# 复制conf文件到路径
-COPY ./conf/nginx.conf /etc/nginx/nginx.conf
-# 复制html文件到路径
-COPY ./html/dist /home/trust/projects/abi-ui
+# 工作目录
+WORKDIR /usr/share/nginx/html
+
+# 删除默认的 nginx 静态文件配置
+RUN rm -rf ./*
+
+COPY ./apps/abi/dist ./abi
+COPY ./apps/chat/dist ./chat
+
+# 拷贝 Nginx 配置
+COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
+COPY ./nginx/abi.conf /etc/nginx/conf.d/abi.conf
+# COPY ./nginx/chat.conf /etc/nginx/conf.d/chat.conf
+
+EXPOSE 80
+
+# 启动 nginx
+CMD ["nginx", "-g", "daemon off;"]
