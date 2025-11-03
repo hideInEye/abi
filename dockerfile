@@ -1,6 +1,3 @@
-# ==================================================
-# Stage 1: Minimal runtime image with Nginx
-# ==================================================
 FROM nginx:1.24.0
 
 # 工作目录
@@ -15,7 +12,7 @@ COPY ./apps/chat/dist ./chat
 # 拷贝 Nginx 配置
 COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
 COPY ./nginx/abi.conf /etc/nginx/conf.d/abi.conf
-# COPY ./nginx/chat.conf /etc/nginx/conf.d/chat.conf
+COPY ./nginx/chat.conf /etc/nginx/conf.d/chat.conf
 
 EXPOSE 80
 

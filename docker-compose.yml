@@ -1,12 +1,12 @@
 version: "3.9"
 
 services:
-  monorepo-frontend:
-    image: registry.mycompany.com/fe/monorepo-frontend:latest
-    container_name: monorepo-frontend
+  web:
+    image: xd
+    container_name: web-nginx
     restart: always
     ports:
-      - "6678:80"
+      - "80:80"
     environment:
       - TZ=Asia/Shanghai
     networks:
