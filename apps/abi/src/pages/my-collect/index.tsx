@@ -1,37 +1,39 @@
-import { DeleteOutlined } from '@ant-design/icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
-import { deleteOperateRecord, queryOperateRecordList } from '@/service/api/operateRecord';
+import {
+  fetchOperateNew,
+  fetchOperateNewList,
+} from "@/service/api/operateRecord";
+import { message } from "antd";
+import { localStg } from "@/utils/storage";
 
 interface OperateRecord {
   readonly id: string;
+  readonly chatId: string;
+  spaceId: number
 }
 
 interface Response {
-  code: number;
-  msg: string;
   rows: any[];
   total: number;
 }
 
 export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   const [dataSource, setDataSource] = useState<Response>({
-    code: 0,
-    msg: '',
     rows: [],
-    total: 0
+    total: 0,
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const { switchToSpace } = useSpaceSwitch();
 
-  async function getRecordList(key?: string) {
-    const data = await queryOperateRecordList({
-      key,
-      pageNum: currentPage,
-      pageSize,
-      type: 2
+
+  async function getRecordList() {
+    const data: any = await fetchOperateNewList();
+
+    setDataSource({
+      total: data.response.data.total,
+      rows: data.response.data.rows,
     });
-    setDataSource(data.response.data);
   }
 
   function onSearchChange(e: any) {
@@ -39,10 +41,8 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     if (key) {
       setCurrentPage(1);
       setDataSource({
-        code: 0,
-        msg: '',
         rows: [],
-        total: 0
+        total: 0,
       });
       getRecordList(key);
     }
@@ -57,81 +57,77 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     getRecordList();
   }
 
-  function deleteOperateRecordItem(ids: string) {
-    deleteOperateRecord(ids).then(res => {
-      setDataSource(res.data);
-    });
-  }
+  const handleNavigate = (r:OperateRecord) => {
+    const { spaceId, chatId } = r
+    switchToSpace(spaceId)
+    localStorage.setItem('chatId',chatId)
+  };
 
-  const ActionButtons: React.FC<{ readonly record: OperateRecord }> = ({ record }) => (
-    <ASpace>
-      <ATooltip title="删除">
-        <AButton
-          icon={<DeleteOutlined />}
-          onClick={() => deleteOperateRecordItem(record.id)}
-        />
-      </ATooltip>
-    </ASpace>
-  );
+  const handleCollect = async (id: string) => {
+    const res: any = await fetchOperateNew({
+      chatId: id,
+      type: 2,
+    });
+    if(res.response.data.code !== 200){
+      message.error(res.response.data.msg);
+    }else {
+      message.success(res.response.data.msg);
+      getRecordList();
+    }
+  };
 
   const columns = [
     {
-      dataIndex: 'name',
-      key: 'name',
-      title: '名称'
+      dataIndex: "chatName",
+      key: "chatName",
+      title: "对话名称",
     },
     {
-      dataIndex: 'status',
-      key: 'status',
-      title: '状态'
+      dataIndex: "spaceName",
+      key: "spaceName",
+      title: "所属空间",
     },
     {
-      dataIndex: 'type',
-      key: 'type',
-      title: '类型'
+      dataIndex: "recentlyUseTime",
+      key: "recentlyUseTime",
+      title: "收藏时间",
     },
     {
-      dataIndex: 'creator',
-      key: 'creator',
-      title: '创建人'
+      dataIndex: "action",
+      key: "action",
+      render: (_: any, record: OperateRecord) => (
+        <div className="text-[#1890ff]">
+          <span
+            className="cursor-pointer"
+            onClick={() => {
+              handleNavigate(record);
+            }}
+          >
+            进入对话
+          </span>
+          <span
+            className="ml-4 cursor-pointer"
+            onClick={() => {
+              handleCollect(record.chatId);
+            }}
+          >
+            取消收藏
+          </span>
+        </div>
+      ),
+      title: "操作",
     },
-    {
-      dataIndex: 'createTime',
-      key: 'createTime',
-      title: '创建时间'
-    },
-    {
-      dataIndex: 'operator',
-      key: 'operator',
-      title: '操作人'
-    },
-    {
-      dataIndex: 'operateTime',
-      key: 'operateTime',
-      title: '操作时间'
-    },
-    {
-      dataIndex: 'invalid',
-      key: 'invalid',
-      title: '失效时间'
-    },
-    {
-      dataIndex: 'action',
-      key: 'action',
-      render: (_: any, record: OperateRecord) => <ActionButtons record={record} />,
-      title: '操作'
-    }
   ];
 
   return (
     <ACard>
       <ASpace className="flex justify-between">
         <h1 className="mb-4 text-base font-medium">最近收藏</h1>
-        <AInput
+        {/* <AInput
           className="flex-1"
           placeholder="搜索"
           onChange={onSearchChange}
-        />
+        /> */}
       </ASpace>
 
       <ATable
@@ -140,7 +136,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
         pagination={{
           current: currentPage,
           onChange: paginationChange,
-          total: dataSource.total
+          total: dataSource.total,
         }}
       />
     </ACard>

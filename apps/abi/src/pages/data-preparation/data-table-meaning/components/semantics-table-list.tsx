@@ -19,26 +19,45 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
     {
       dataIndex: 'bizName',
       key: 'bizName',
-      render: text => <a>{text}</a>,
+      width: 200,
+      fixed: 'left',
+      render: text => {
+        return (
+          <APopover content={text}>
+            <span className="max-w-100 overflow-hidden text-ellipsis text-blue">{text && text.length > 10 ? text.slice(0, 10) + '...' : text}</span>
+          </APopover>
+        );
+      },
       title: '表语义名称'
     },
     {
       dataIndex: 'techName',
       key: 'techName',
-      title: '英文名称'
+      title: '英文名称',
+      width: 200,
+      render: text => {
+        return (
+          <APopover content={text}>
+            <span className="max-w-100 overflow-hidden text-ellipsis text-blue">{text && text.length > 10 ? text.slice(0, 10) + '...' : text}</span>
+          </APopover>
+        );
+      },
     },
     {
       dataIndex: 'viewName',
       key: 'viewName',
-      title: '数据集'
+      title: '数据集',
+      width: 150
     },
     {
       dataIndex: 'createBy',
       key: 'createBy',
-      title: '创建人'
+      title: '创建人',
+      width: 150
     },
     {
       key: 'action',
+      width: 150,
       render: (_, record) => (
         <ASpace size="middle">
           <ATooltip title="编辑">
@@ -75,9 +94,15 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
       title: '操作'
     }
   ];
+
+  const columnWidth = useMemo(() => {
+    return columns.reduce((total, column) => total + (column.width as number || 0), 0);
+  }, [columns]);
+  
   return (
     <ATable
       columns={columns}
+      scroll={{x: columnWidth}}
       dataSource={tableSchemaList}
     />
   );

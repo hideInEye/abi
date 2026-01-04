@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Input, Table, Switch, Modal, message } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Input, Table, Switch, Modal, message, Empty,Tooltip } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
-import { fetchAppListPages, deleteApp } from '../../service/api/app';
+import { fetchAppListPages, deleteApp, updateApp } from '../../service/api/app';
 import dayjs from 'dayjs';
 import SvgIcon from '../../components/SvgIcon';
 import { fetchDatasourceById } from '../../service/api/app';
@@ -30,7 +30,37 @@ const AllConversations: React.FC<Props> = ({ onClose, onSelectApp, onUpdateList 
   const [saveVisible, setSaveVisible] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<any>(null);
   const [isStarred, setIsStarred] = useState<Record<string, boolean>>({});
-  const pageSize = 20;
+  const pageSize = 10;
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+  const [scrollY, setScrollY] = useState(0);
+  const [debouncedSearchText, setDebouncedSearchText] = useState('');
+
+  useEffect(() => {
+    const tableWrapper = tableWrapperRef.current;
+    if (!tableWrapper) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      const wrapperHeight = tableWrapper.offsetHeight;
+      const tableHeader = tableWrapper.querySelector('.ant-table-header');
+      const tablePagination = tableWrapper.querySelector('.ant-pagination');
+      
+      const headerHeight = tableHeader?.clientHeight || 55; 
+      const paginationHeight = tablePagination?.clientHeight || 64;
+      const SAFE_OFFSET = 24; // 额外预留空间，避免分页显示不完整
+
+      const calculatedHeight = wrapperHeight - headerHeight - paginationHeight - SAFE_OFFSET;
+      
+      if (calculatedHeight > 0) {
+          setScrollY(calculatedHeight);
+      }
+    });
+
+    resizeObserver.observe(tableWrapper);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [data]);
 
   const handleSetCurApp = async (item: any) => {
     const res: any = await fetchDatasourceById(item.agent_id);
@@ -49,12 +79,16 @@ const AllConversations: React.FC<Props> = ({ onClose, onSelectApp, onUpdateList 
   };
 
   const getConvList = async () => {
+    const userInfoString = localStorage.getItem('SOY-REACT_userInfo');
+    const userInfo = JSON.parse(userInfoString || '{}');
     try {
       setLoading(true);
       const res = await fetchAppListPages({
         spaceId: getSpaceId(),
         page,
-        pageSize
+        pageSize,
+        create_by: userInfo.userName,
+        biz_name: debouncedSearchText.trim() || undefined
       });
       if (res.data) {
         setData(res.data.items.map((item: any) => ({
@@ -70,6 +104,25 @@ const AllConversations: React.FC<Props> = ({ onClose, onSelectApp, onUpdateList 
       setLoading(false);
     }
   };
+
+  // 搜索防抖
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchText(searchText);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  // 搜索文本变化时重置到第一页
+  useEffect(() => {
+    if (debouncedSearchText !== searchText) return;
+    if (page !== 1) {
+      setPage(1);
+    } else {
+      getConvList();
+    }
+  }, [debouncedSearchText]);
 
   useEffect(() => {
     getConvList();
@@ -161,10 +214,23 @@ const AllConversations: React.FC<Props> = ({ onClose, onSelectApp, onUpdateList 
   };
 
   // 处理创建/编辑对话完成
-  const handleCreateFinish = (val?: any) => {
+  const handleCreateFinish = async (val?: any) => {
     setCreateModalVisible(false);
     if (val) {
-      getConvList();
+      try {
+        // 调用更新API
+        const res = await updateApp(val);
+        if (res?.success) {
+          // 立即更新本地列表数据
+          setData(prev => prev.map(item => 
+            item.chat_id === res.data.chat_id ? { ...item, ...res.data } : item
+          ));
+          // 通知父组件更新左侧列表
+          onUpdateList && onUpdateList(res?.data);
+        }
+      } catch (error) {
+        console.error('更新对话失败:', error);
+      }
     }
   };
 
@@ -208,58 +274,66 @@ const AllConversations: React.FC<Props> = ({ onClose, onSelectApp, onUpdateList 
       key: 'create_time',
       render: (text: string) => text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
-    {
-      title: '分享链接',
-      dataIndex: 'share_link',
-      key: 'share_link',
-      render: (text: string) => text || '-'
-    },
+    // {
+    //   title: '分享链接',
+    //   dataIndex: 'share_link',
+    //   key: 'share_link',
+    //   render: (text: string) => text || '-'
+    // },
     {
       title: '操作',
       key: 'action',
       width: 200,
       render: (_: any, record: any) => (
         <div className="flex items-center gap-4">
-          <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
-            <SvgIcon 
-              localIcon="edit" 
-              className="text-[#2E6CF6] hover:text-[#2E6CF6]/80 cursor-pointer"
-              style={{ fontSize: '20px' }}
-              onClick={() => handleEdit(record)}
-            />
-          </span>
-          <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
+          <Tooltip title="编辑对话">
+            <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
+              <SvgIcon 
+                localIcon="edit" 
+                className="text-[#2E6CF6] hover:text-[#2E6CF6]/80 cursor-pointer"
+                style={{ fontSize: '20px' }}
+                onClick={() => handleEdit(record)}
+              />
+            </span>
+          </Tooltip>
+          {/* 收藏功能暂时屏蔽 */}
+          {/* <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
             <SvgIcon 
               localIcon={isStarred[record.chat_id] ? "star-fill" : "star"}
               className="text-[#2E6CF6] hover:text-[#2E6CF6]/80 cursor-pointer"
               style={{ fontSize: '20px' }}
               onClick={() => handleStar(record)}
             />
-          </span>
-          <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
+          </span> */}
+          {/* <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
             <SvgIcon 
               localIcon="share-blue" 
               className="text-[#2E6CF6] hover:text-[#2E6CF6]/80 cursor-pointer"
               style={{ fontSize: '20px' }}
               onClick={() => handleShare(record)}
             />
-          </span>
-          <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
-            <SvgIcon 
-              localIcon="save" 
-              className="text-[#2E6CF6] hover:text-[#2E6CF6]/80 cursor-pointer"
-              style={{ fontSize: '20px' }}
-              onClick={() => handleSave(record)}
-            />
-          </span>
-          <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
-            <SvgIcon 
-              localIcon="delete" 
-              className="text-[#2E6CF6] hover:text-[#2E6CF6]/80 cursor-pointer"
-              style={{ fontSize: '20px' }}
-              onClick={() => handleDelete(record)}
-            />
-          </span>
+          </span> */}
+          {/* 隐藏复制对话按钮 */}
+          <Tooltip title="复制对话">
+            <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
+              <SvgIcon 
+                localIcon="save" 
+                className="text-[#2E6CF6] hover:text-[#2E6CF6]/80 cursor-pointer"
+                style={{ fontSize: '20px' }}
+                onClick={() => handleSave(record)}
+              />
+            </span>
+          </Tooltip>
+          <Tooltip title="删除对话">
+            <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
+              <SvgIcon 
+                localIcon="delete" 
+                className="text-[#2E6CF6] hover:text-[#2E6CF6]/80 cursor-pointer"
+                style={{ fontSize: '20px' }}
+                onClick={() => handleDelete(record)}
+              />
+            </span>
+          </Tooltip>
         </div>
       )
     }
@@ -294,7 +368,7 @@ const AllConversations: React.FC<Props> = ({ onClose, onSelectApp, onUpdateList 
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden px-4">
+        <div className="flex-1 overflow-hidden px-4 pb-4" ref={tableWrapperRef}>
           <Table
             columns={columns}
             dataSource={data}
@@ -306,7 +380,8 @@ const AllConversations: React.FC<Props> = ({ onClose, onSelectApp, onUpdateList 
               onChange: setPage,
               showSizeChanger: false
             }}
-            scroll={{ y: 'calc(100vh - 350px)' }}
+            scroll={{ y: scrollY }}
+            locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据"></Empty> }}
           />
         </div>
       </div>
@@ -331,4 +406,4 @@ const AllConversations: React.FC<Props> = ({ onClose, onSelectApp, onUpdateList 
   );
 };
 
-export default AllConversations; 
+export default AllConversations;

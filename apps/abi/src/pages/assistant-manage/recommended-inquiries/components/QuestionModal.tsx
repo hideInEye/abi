@@ -3,6 +3,7 @@ import React from 'react';
 
 import { useAssistant } from '../hooks/useAssistant.ts';
 import type { QuestionTableData } from '../types';
+import { CloseOutlined } from '@ant-design/icons';
 
 interface TagModalProps {
   readonly editingGroup: QuestionTableData | null;
@@ -63,6 +64,8 @@ export const QuestionModal: React.FC<TagModalProps> = ({
 
   return (
     <ADrawer
+      closeIcon={null}
+      extra={<CloseOutlined onClick={handleModalCancel} />}
       open={isModalOpen}
       title={editingGroup ? '编辑问题' : '新增问题'}
       width={600}
@@ -73,7 +76,7 @@ export const QuestionModal: React.FC<TagModalProps> = ({
             type="primary"
             onClick={handleModalOk}
           >
-            保存
+            确认
           </AButton>
         </ASpace>
       }

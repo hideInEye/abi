@@ -10,6 +10,10 @@ interface PropsType {
 
 const ResetPassword: FC<PropsType> = memo(({ onClose, userId }) => {
   const [form] = Form.useForm();
+    const {
+    formRules: { pwd}
+  } = useFormRules();
+
   const handleOk = async () => {
     const { password } = await form.validateFields();
     const params = { password: encrypt(password), userId };
@@ -19,6 +23,7 @@ const ResetPassword: FC<PropsType> = memo(({ onClose, userId }) => {
       message.success('重置成功');
     }
   };
+  
   return (
     <ADrawer
       open={true}
@@ -45,6 +50,7 @@ const ResetPassword: FC<PropsType> = memo(({ onClose, userId }) => {
         <AForm.Item
           label="密码"
           name="password"
+          rules={pwd}
         >
           <AInput.Password
             className="w-200px"

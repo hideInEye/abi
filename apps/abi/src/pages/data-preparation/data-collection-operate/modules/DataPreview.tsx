@@ -127,7 +127,7 @@ const DataPreview: React.FC<PropsType> = memo(({ isSql = false, previewData = {}
                 {item.tfieldShowName}
               </span>
             </span>
-            <Dropdown
+            {/* <Dropdown
               destroyPopupOnHide
               trigger={['click']}
               menu={{
@@ -179,7 +179,7 @@ const DataPreview: React.FC<PropsType> = memo(({ isSql = false, previewData = {}
                   localIcon="more"
                 />
               </span>
-            </Dropdown>
+            </Dropdown> */}
           </li>
         ))}
       </ul>

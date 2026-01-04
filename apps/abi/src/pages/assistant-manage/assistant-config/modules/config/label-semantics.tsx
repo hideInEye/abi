@@ -53,7 +53,7 @@ const LabelSemantics: FC<PropsType> = memo(({ dispatch, schemaId, state }) => {
     if (state.labelsGroupId) {
       getDataSource();
     }
-  }, [state]);
+  }, [state.labelsGroupId, schemaId]);
 
   const filterOption = (inputValue: string, option: RecordType) => option.title.includes(inputValue);
 
@@ -70,6 +70,7 @@ const LabelSemantics: FC<PropsType> = memo(({ dispatch, schemaId, state }) => {
         <ASelect
           allowClear
           className="mr-2"
+          style={{width: 200}}
           fieldNames={{ label: 'groupName', value: 'groupId' }}
           options={groupOptions}
           placeholder="选择标签分组"
@@ -81,8 +82,8 @@ const LabelSemantics: FC<PropsType> = memo(({ dispatch, schemaId, state }) => {
         showSearch
         dataSource={dataSource}
         filterOption={filterOption}
-        render={(item: any) => `${item.title}(${item.engName}) - ${item.description}`}
-        targetKeys={state?.labels}
+        render={(item: any) => `${item.engName} - ${item.title}`}
+        targetKeys={(state?.labels || []).map((k: any) => `${k}`)}
         titles={['可选标签语义', '已选标签语义']}
         listStyle={{
           height: 300,

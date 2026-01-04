@@ -1,39 +1,41 @@
 import request from "../request/index";
+// 获取基础API地址
+import { getChatbiBaseApi } from "../../utils/index";
 
 // 获取助手列表
 export function fetchAgentList(params: any) {
   return request({
-    url: "/api/copilot/v1/agentConfig/list",
+    url: "/copilot/v1/agentConfig/dataset",
     method: "get",
     params,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
 // 获取助手配置信息
 export function fetchAgentInfoById(agentId: number) {
   return request({
-    url: `/api/copilot/v1/agentConfig/${agentId}`,
+    url: `/copilot/v1/agentConfig/${agentId}`,
     method: "get",
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
 // 根据agentId获取表语义列表
 export function fetchSchemaById(agentId: number) {
   return request({
-    url: `/api/copilot/v1/agentConfig/schema/${agentId}`,
+    url: `/copilot/v1/agentConfig/schema/${agentId}`,
     method: "get",
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
 // 根据agentId获取数据源
 export function fetchDatasourceById(agentId: number) {
   return request({
-    url: `/api/copilot/v1/agentConfig/ds/${agentId}`,
+    url: `/copilot/v1/agentConfig/ds/${agentId}`,
     method: "get",
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
@@ -69,11 +71,11 @@ export function fetchAppList(params: any) {
 }
 
 // 获取app列表分页
-export function fetchAppListPages(data: {page: number; pageSize: number; spaceId: number}) {
+export function fetchAppListPages(data: {page: number; pageSize: number; spaceId: number; create_by: string; biz_name?: string}) {
   return request({
     url: "/chat-proxy/api/v1/chat/app/query_page?page=" + data.page + "&page_size=" + data.pageSize,
     method: "post",
-    data: {space_id: data.spaceId},
+    data: {space_id: data.spaceId, create_by: data.create_by, biz_name: data.biz_name},
     baseURL: window.APP_CONFIG?.VITE_BASE_API, // 设置基础 URL，根据实际情况修改 '/接口前缀', //import.meta.env.VITE_BASE_URL
   });
 }

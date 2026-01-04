@@ -6,7 +6,7 @@ export function addPlugin(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v2/plugin/plugin_add'
+    url: '/chat-proxy/api/v2/plugin/plugin_add'
   });
 }
 
@@ -15,7 +15,7 @@ export function updatePlugin(data: PlugEdit) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v2/plugin/plugin_modify'
+    url: '/chat-proxy/api/v2/plugin/plugin_modify'
   });
 }
 
@@ -24,14 +24,14 @@ export function deletePlugin(data: PluginDel) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: `/api/v2/plugin/plugin_del`
+    url: `/chat-proxy/api/v2/plugin/plugin_del`
   });
 }
 
-export function queryPluginList(params: { pageNum: number; pageSize: number; pluginName: string; spaceId: number }) {
+export function queryPluginList(params: { pageNum: number; pageSize: number; pluginName: string; spaceId: number; groupId: number }) {
   return apiRequest({
-    data: params,
+    params,
     method: 'get',
-    url: `/abi-system/v1/plugin/list?pageNum=${params.pageNum}&pageSize=${params.pageSize}&pluginName=${params.pluginName}&spaceId=${params.spaceId}`
+    url: `/abi-system/v1/plugin/list`
   });
 }

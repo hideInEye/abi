@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 import { Drawer, Space, Tabs, message } from 'antd';
 
-import { getAgentDetailById, putAgentConfig, syncKnowledgeBase } from '@/service/api/assistant-manage';
+import { fetchTerms, getAgentDetailById, putAgentConfig, syncKnowledgeBase } from '@/service/api/assistant-manage';
 import { useRouter } from '~/packages/simple-router/src';
 
 import Dictionaries from './config/dictionaries';
@@ -80,6 +80,7 @@ function formatData(data: any) {
     llms = [],
     memory = [],
     plugin = [],
+    pluginGroupId,
     term = [],
     termGroupId
   } = modelConfigObj;
@@ -90,13 +91,14 @@ function formatData(data: any) {
     dictionariesGroupId,
     example,
     exampleGroupId,
-    labels,
+    labels: (labels || []).map((k: any) => `${k}`),
     labelsGroupId,
     llms,
     memory,
     modelConfig,
     plugin,
-    term,
+    pluginGroupId,
+    term: (term || []).map((k: any) => `${k}`),
     termGroupId
   };
 }
@@ -211,6 +213,7 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
       labelsGroupId,
       memory,
       plugin,
+      pluginGroupId,
       term,
       termGroupId,
       ...elseState
@@ -234,6 +237,7 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
             labelsGroupId,
             memory,
             plugin,
+            pluginGroupId,
             term,
             termGroupId
           }
@@ -242,8 +246,15 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
     };
     console.log(params);
     await putAgentConfig(params);
-    
-    // 弹窗询问是否同步知识库，将标签、术语等同步
+    // 检查是否有变更
+    const hasChange = getHasChange();
+    const hasSelections = (Array.isArray(labels) && labels.length > 0) || (Array.isArray(term) && term.length > 0) || (Array.isArray(dictgroups) && dictgroups.length > 0);
+    // 只有在有变更且有知识库内容时才弹窗询问同步
+    if (!hasChange || !hasSelections) {
+      message.success('操作成功');
+      onClose(true);
+      return;
+    }
     AModal.confirm({
       cancelText: '取消',
       content: '是否需要同步知识库？将同步标签、术语等配置到本地。',
@@ -256,10 +267,32 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
         try {
           const detailRes = await getAgentDetailById(agentId!);
           const data = detailRes.data;
-          const modelConfig = JSON.parse(data.modelConfig);
+          const modelConfig = JSON.parse(data.modelConfig || '{}');
+          const cfg = modelConfig?.modelConfigs?.[0] || {};
+          let dslObj = modelConfig?.mdlConfigs || {};
+          try {
+            if (cfg?.termGroupId) {
+              const termRes = await fetchTerms({ groupId: cfg.termGroupId, spaceId: Number(data.spaceId), termName: '' });
+              const termMap: Record<string, string> = {};
+              (termRes?.data || []).forEach((it: any) => {
+                if (it?.techName) termMap[it.techName] = it.bizName;
+                if (it?.engName) termMap[it.engName] = it.bizName;
+              });
+              const rewrite = (node: any) => {
+                if (!node || typeof node !== 'object') return;
+                if (typeof node.displayName === 'string') {
+                  const v = termMap[node.displayName];
+                  if (v) node.displayName = v;
+                }
+                Object.keys(node).forEach(k => rewrite(node[k]));
+              };
+              rewrite(dslObj);
+            }
+          } catch {}
+          // console.log('KB sync DSL:', dslObj);
           await syncKnowledgeBase({
             agent_id: `${data?.agentId}`,
-            dsl: modelConfig.mdlConfigs ? JSON.stringify(modelConfig.mdlConfigs) : '',
+            dsl: JSON.stringify(dslObj || {}),
             space_id: `${data.spaceId}`
           });
           message.success('同步知识库成功');
@@ -328,12 +361,12 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
             >
               确定
             </AButton>
-            <AButton
+            {/* <AButton
               type="primary"
               onClick={handleStartChat}
             >
               开始对话
-            </AButton>
+            </AButton> */}
           </Space>
         </AFlex>
       }

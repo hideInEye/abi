@@ -56,4 +56,5 @@ export interface PlugEdit {
   service_config: string;
   space_id: number;
   status: 0 | 1;
+  group_id: number;
 }

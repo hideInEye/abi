@@ -24,17 +24,19 @@ export const Component: React.FC = () => {
     searchValue,
     setGroupId,
     setIsModalOpen,
-    tableData
+    tableData,
+    pagination,
+    setPagination
   } = useQuestionManagement();
-
-  useEffect(() => {
-    getTableData();
-  }, [groupId]);
+  
+  useEffect(()=>{
+    getTableData(searchValue,{...pagination})
+  },[pagination.pageNum, groupId])
 
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
       <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper">
-        <AFlex className="gap-6">
+        <AFlex className="gap-6" style={{height:'100%'}}>
           <Group
             config={{
               button: '添加问题语义组',
@@ -51,16 +53,19 @@ export const Component: React.FC = () => {
             }}
           />
 
-          <div className="w-full flex-1">
+          <div className="w-40% flex-1 overflow-hidden">
             <QuestionSearchInput
               searchValue={searchValue}
               onAdd={handleAdd}
               onSearch={handleSearch}
+              groupId={groupId}
             />
             <QuestionTable
               dataSource={tableData}
               onDelete={handleDelete}
               onEdit={handleEdit}
+              pagination={pagination}
+              setPagination={setPagination}
             />
             <QuestionModal
               editingGroup={editingGroup}

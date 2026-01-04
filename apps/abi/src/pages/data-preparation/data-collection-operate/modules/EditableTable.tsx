@@ -23,7 +23,6 @@ interface EditableRowProps {
 }
 
 const EditableRow: React.FC<EditableRowProps> = ({ index, ...props }) => {
-  console.log(index, { ...props });
 
   const [form] = Form.useForm();
   return (
@@ -216,9 +215,13 @@ const EditableTable: React.FC<PropsType> = ({ tfieldType }) => {
   const handleCopy = (record: any) => {
     setAllFields((state: any) => {
       const _state = cloneDeep(state);
-      const curIndex = _state.findIndex((item: any) => item.tfieldId === record.tfieldId);
-      _state.splice(curIndex + 1, 0, {
+      const curIndex = _state.findIndex((item: any) => item.tfieldId === record.tfieldId)
+      const rec  = {
         ...record,
+        sysFiledType: record.sysFiledType[0]
+      }
+      _state.splice(curIndex + 1, 0, {
+        ...rec,
         fieldType: '计算字段',
         // isEdit: true,
         name: '',
@@ -255,10 +258,14 @@ const EditableTable: React.FC<PropsType> = ({ tfieldType }) => {
   };
 
   const handleSwitchType = (record: any) => {
+    const rec  = {
+      ...record,
+      sysFiledType: record.sysFiledType[0]
+    }
     setAllFields((state: any) => {
       const _allFields = cloneDeep(state);
       const curIndex = allFields.findIndex((item: any) => item.tfieldId === record.tfieldId);
-      _allFields.splice(curIndex, 1, { ...record, tfieldType: record.tfieldType === 'd' ? 'q' : 'd' });
+      _allFields.splice(curIndex, 1, { ...rec, tfieldType: record.tfieldType === 'd' ? 'q' : 'd' });
       return _allFields;
     });
   };

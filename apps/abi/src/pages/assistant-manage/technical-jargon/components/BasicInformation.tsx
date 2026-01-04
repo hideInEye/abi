@@ -32,13 +32,13 @@ const BasicInformation: FC<PropsType> = memo(({ dispatch, form, state }) => {
     >
       <AForm.Item
         label="中文名"
-        name="techName"
+        name="bizName"
       >
         <AInput placeholder="请输入中文名" />
       </AForm.Item>
       <AForm.Item
         label="英文名"
-        name="engName"
+        name="techName"
         rules={[{ message: '请输入英文名', required: true },{message:'请输入正确格式英文名,英文单词以_分割',pattern:'^[a-zA-Z]+(_[a-zA-Z]+)*$'}]}
       >
         <AInput placeholder="请输入英文名" />
@@ -82,10 +82,11 @@ const BasicInformation: FC<PropsType> = memo(({ dispatch, form, state }) => {
       <AForm.Item
         label="计量单位"
         name="measurementUnit"
+        rules={[{ max: 32, message: '计量单位不超过32个字符' }]}
       >
         <AInput placeholder="请输入计量单位" />
       </AForm.Item>
-      <p className="indent-6em text-sm text-gray-500">请输入：中文、英文、数字、特殊字符等，不超过64个字符</p>
+      <p className="indent-6em text-sm text-gray-500">请输入：中文、英文、数字、特殊字符等，不超过32个字符</p>
     </AForm>
   );
 });

@@ -1,10 +1,12 @@
 import { Graph } from '@antv/g6';
+import { Typography } from 'antd';
 import { useEffect, useRef } from 'react';
 
 type requestParameter = {
   readonly basicData: any;
 };
 
+const { Text } = Typography;
 const App: React.FC<requestParameter> = ({ basicData }: requestParameter) => {
   // console.log('basicData ', basicData);
   //   const [datasets, setDatasets] = useState<any>([]);
@@ -80,7 +82,8 @@ const App: React.FC<requestParameter> = ({ basicData }: requestParameter) => {
       nodes.push({
         combo: 'datasets',
         id: item.viewId,
-        name: item.viewName
+        name: item.viewName,
+        size: 100
       });
     });
     // console.log('{ combos, edges, nodes }', { combos, edges, nodes });
@@ -231,14 +234,35 @@ const App: React.FC<requestParameter> = ({ basicData }: requestParameter) => {
     //   ]
     // };
     const graph = new Graph({
-      autoFit: 'view',
-      behaviors: ['drag-element', 'drag-canvas', 'zoom-canvas'], // 类别样式
+      plugins: [
+        {
+          type: "tooltip",
+          // 只对节点启用，边不显示tooltip
+          enable: (e) => e.targetType === "node",
+          getContent: (_, items) => {
+            return `<div>${items[0].name}</div>`;
+          },
+          enterable: true,
+          style: {
+            ".tooltip": {
+              background: "#1f1f1f",
+              color: "#fff",
+              border: "1px solid #333",
+              borderRadius: "8px",
+              fontSize: "24px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+            },
+          },
+        },
+      ],
+      autoFit: "view",
+      behaviors: ["drag-element", "drag-canvas", "zoom-canvas"], // 类别样式
       combo: {
         style: {
           // labelText: d => d.id,
-          radius: 8
+          radius: 8,
         },
-        type: 'none' // rect 同类别标记为框
+        type: "none", // rect 同类别标记为框
       },
       container: containerRef.current!,
       data,
@@ -246,34 +270,50 @@ const App: React.FC<requestParameter> = ({ basicData }: requestParameter) => {
       // 线条
       edge: {
         style: {
-          endArrow: true
+          endArrow: true,
         },
-        type: 'cubic-horizontal'
+        type: "cubic-horizontal",
       },
       height: 500,
       // 布局
       layout: {
-        direction: 'LR',
+        direction: "LR",
         dropCap: false,
         getHeight: () => 16,
         getWidth: () => 32,
         indent: 180,
-        type: 'indented'
+        type: "indented",
       },
       node: {
         palette: {
-          field: d => `${d.id}`
+          field: (d) => `${d.id}`,
           // type: 'group'
         },
         style: {
-          iconText: d => `${d.name}`,
+          // iconMaxLines: 1,
+          // iconText: d => `${d.name}`,
+          // iconTextOverflow: 'ellipsis',
+          // iconWidth: 50,
+          // iconWordWrap: false,
+          labelMaxWidth: "90%",
+          labelPlacement: "center",
+          labelText: (d) => `${d.name}`,
+          labelWordWrap: true,
+          // iconText: d => (
+          //   <Text
+          //     ellipsis
+          //     style={{ width: 200 }}
+          //   >
+          //     {d.name}
+          //   </Text>
+          // ),
           // labelBackground: true,
-          ports: [{ placement: 'left' }, { placement: 'right' }],
+          ports: [{ placement: "left" }, { placement: "right" }],
           radius: 6,
-          size: [80, 20]
+          size: [80, 20],
         },
-        type: 'rect'
-      }
+        type: "rect",
+      },
       // width: 500
     });
     graph.render();

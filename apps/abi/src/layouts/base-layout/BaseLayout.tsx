@@ -10,6 +10,7 @@ import {
   getFullContent,
   getMixSiderFixed,
   getSiderCollapse,
+  getSpaceHidden,
   setIsMobile,
   setSiderCollapse
 } from '@/store/slice/app';
@@ -34,6 +35,7 @@ configResponsive({ sm: 640 });
 
 const BaseLayout = () => {
   const siderCollapse = useAppSelector(getSiderCollapse);
+  const spaceHidden = useAppSelector(getSpaceHidden)
   const themeSettings = useAppSelector(getThemeSettings);
   const fullContent = useAppSelector(getFullContent);
   const dispatch = useAppDispatch();
@@ -134,7 +136,7 @@ const BaseLayout = () => {
         />
       }
       Sider={
-        isHideMenuRoute ? null : (
+        isHideMenuRoute || spaceHidden ? null : (
           <GlobalSider
             headerHeight={themeSettings.header.height}
             inverted={themeSettings.sider.inverted}

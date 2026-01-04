@@ -150,3 +150,26 @@ export const updateNodeDataByAllFields = (_nodData: any, allFields: any) => {
 
   return nodeData;
 };
+
+const loopDs = (ds: any, arr: any) => {
+  if (ds?.length) {
+    ds.forEach((node: any) => {
+      const { childrenDs, currentDs } = node;
+      if (currentDs) {
+        arr.push(currentDs.tableName);
+        loopDs(childrenDs, arr);
+      }
+    });
+  }
+};
+
+export const getTableArr = (node: any = {}) => {
+  const arr = [];
+  const { childrenDs, currentDs } = node;
+  if (currentDs) {
+    arr.push(currentDs.tableName);
+    loopDs(childrenDs, arr);
+  }
+
+  return arr;
+};

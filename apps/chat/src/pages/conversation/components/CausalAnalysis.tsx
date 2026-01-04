@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { DatePicker, Select, Table } from 'antd';
+import { DatePicker, Select, Table, Empty } from 'antd';
 import ReactMarkdown from 'react-markdown';
 import type { TableProps } from 'antd';
 import dayjs from 'dayjs';
+import { stripHtmlTags } from '@/utils';
 
 const { RangePicker } = DatePicker;
 
@@ -38,47 +39,6 @@ interface TotalDf {
 }
 
 const CausalAnalysis: React.FC<CausalAnalysisProps> = ({ data }) => {
-  // const data = {
-  //   "type": "response_table",
-  //   "digest": "乌斯浑河2024年1月份水位总体呈上涨趋势，月初至月末水位从439,648.055增加到459,181.664，增长率为4.44%。",
-  //   "analysis_response": {
-  //     "趋势深度剖析": [
-  //       "从时间维度来看，1月2号00:00时段的水位数据为27,795.017，与月末数据对比，显示出较大的波动。",
-  //       "KSSS、RKLL、CKLL等关键节点的变化率均为-0.9368%，表明这些节点可能是水位上涨的制约因素，需要重点关注。"
-  //     ],
-  //     "结论专业解读": [
-  //       "乌斯浑河1月份水位总体呈现增加趋势，但部分关键节点的负增长率提示存在潜在风险。",
-  //       "这种趋势可能与降雨量、蒸发作用或人为调控等多重因素相关。"
-  //     ],
-  //     "策略建议输出": [
-  //       "加强对KSSS、RKLL、CKLL等关键节点的监测，采取针对性措施以提升其对水位稳定的贡献。",
-  //       "优化河流调控策略，综合考虑自然条件和人为干预，以确保水位平稳健康发展。",
-  //       "加大生态保护力度，减少人类活动对河流的不利影响，促进水资源的可持续利用。"
-  //     ]
-  //   },
-  //   "chat_mode": "chat_with_analysis",
-  //   "data": [
-  //     {
-  //       "影响因素": "平稳",
-  //       "2024-01_sum": 439648.055,
-  //       "2024-01-02 00:00:00_sum": 27795.017,
-  //       "变化量": 411853.038,
-  //       "变化率": -0.9368
-  //     },
-  //     {
-  //       "影响因素": "平稳",
-  //       "2024-01_sum": 439648.055,
-  //       "2024-01-02 00:00:00_sum": 27795.017,
-  //       "变化量": 411853.038,
-  //       "变化率": -0.9368
-  //     }
-  //   ],
-  //   "total_df": {
-  //     "total_base_sum": 439648.05499999993,
-  //     "total_target_sum": 459181.664,
-  //     "total_ratio": 0.0444
-  //   }
-  // }
   const [pageSize, setPageSize] = useState<number>(5);
   const columns: any = []; // 表头
   let totalDf: TotalDf = {};
@@ -215,7 +175,7 @@ const CausalAnalysis: React.FC<CausalAnalysisProps> = ({ data }) => {
       {/* 第二部分：归因描述 */}
       <div className="rounded bg-white p-4 mb-4">
         <div className="text-gray-600">
-          {data.desc}
+          {stripHtmlTags(data.desc)}
         </div>
       </div>
 
@@ -227,6 +187,9 @@ const CausalAnalysis: React.FC<CausalAnalysisProps> = ({ data }) => {
           pagination={false}
           scroll={{ x: 'max-content', y: 400 }}
           size="middle"
+          locale={{
+            emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据"/>
+          }}
         />
       </div>
 
@@ -238,7 +201,7 @@ const CausalAnalysis: React.FC<CausalAnalysisProps> = ({ data }) => {
         </div>
         <div className="text-gray-600 pl-4">
           <div className="prose max-w-none">
-            <ReactMarkdown>{typeof data?.analysis_response === 'object' ? `${data?.analysis_response}` : data?.analysis_response}</ReactMarkdown>
+            <ReactMarkdown>{stripHtmlTags(typeof data?.analysis_response === 'object' ? `${data?.analysis_response}` : data?.analysis_response)}</ReactMarkdown>
           </div>
         </div>
       </div>

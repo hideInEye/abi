@@ -368,10 +368,55 @@ export const ModulesMap = {
   12: 'ATTRIBUTION', // 归因
   13: 'PREDICTION' // 预测
 };
+
+/**
+ * chat_mode 映射表（用于主场景标识）
+ */
+export const CHAT_MODE_MAP: { [key: string]: string } = {
+  'chat_with_db_execute': '智能问数',
+  'chat_with_analysis': '归因分析',
+  'chat_with_predict': '预测分析',
+  'chat_excel': 'Excel分析',
+  'chat_with_knowledge': '知识提取',
+};
+
+/**
+ * sub_chat_mode 映射表（用于AI思考和模型调试步骤名称）
+ */
+export const SUB_CHAT_MODE_MAP: { [key: string]: string } = {
+  // 归因分析 (chat_with_analysis)
+  'attribution_analysis_intent_clarify': '归因-意图澄清',
+  'attribution_analysis_semantic_abstract': '归因-语义提取',
+  'attribution_analysis_dims_metrics': '归因-分析因素',
+  'attribution_analysis_data_report': '归因-数据报告',
+  
+  // 智能问数 (chat_with_db_execute)
+  'data_query_intent_clarify': '问数-意图澄清',
+  'data_query_semantic_extract': '问数-语义提取',
+  'data_query_data_result': '问数-数据查询',
+  'data_query_data_summary': '问数-数据摘要',
+  
+  // 预测分析 (chat_with_predict)
+  'predict_intent_clarify': '预测-意图澄清',
+  'predict_semantic_extract': '预测-语义提取',
+  'predict_factors_extract': '预测-因素提取',
+  'predict_data_summary': '预测-数据摘要',
+  
+  // Excel分析 (chat_with_excel)
+  'excel_intent_clarify': 'Excel-意图澄清',
+  'excel_semantic_extract': 'Excel-语义提取',
+  'excel_data_result': 'Excel-数据查询',
+  'excel_data_summary': 'Excel-数据摘要',
+  
+  // 数据知识 (chat_with_knowledge)
+  'chat_with_knowledge': '数据-知识提取',
+};
+
 // [思考过程｜]
 export const chatModeWithModels = {
   chat_with_db_execute: Object.values(ModulesMap), // 正常对话(统计)
   chat_with_analysis: [ModulesMap[1], ModulesMap[2], ModulesMap[5], ModulesMap[6], ModulesMap[7], ModulesMap[8]], // 归因分析
   chat_with_predict: [ModulesMap[1], ModulesMap[2], ModulesMap[5], ModulesMap[7], ModulesMap[8]], // 预测分析
-  chat_excel: [ModulesMap[1], ModulesMap[2], ModulesMap[3], ModulesMap[5], ModulesMap[7], ModulesMap[8]] // excel分析
+  chat_excel: [ModulesMap[1], ModulesMap[2], ModulesMap[3], ModulesMap[5], ModulesMap[7], ModulesMap[8]], // excel分析
+  chat_with_knowledge: [ModulesMap[1], ModulesMap[2]] // 数据知识（只显示思考过程和描述分析）
 }

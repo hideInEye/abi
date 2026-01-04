@@ -34,7 +34,7 @@ const RoleSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
             />
           </AForm.Item>
         </ACol>
-
+{/* 
         <ACol
           lg={6}
           md={12}
@@ -50,7 +50,7 @@ const RoleSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
               placeholder={t('page.manage.role.form.roleKey')}
             />
           </AForm.Item>
-        </ACol>
+        </ACol> */}
 
         <ACol
           lg={6}
@@ -81,14 +81,16 @@ const RoleSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
             justify="end"
           >
             <AButton
-              icon={<IconIcRoundRefresh />}
+              style={{ borderRadius: '4px', padding: '4px 25px' }}
+              // icon={<IconIcRoundRefresh />}
+              type="primary"
               onClick={reset}
             >
               {t('common.reset')}
             </AButton>
             <AButton
-              ghost
-              icon={<IconIcRoundSearch />}
+              style={{ borderRadius: '4px', padding: '4px 25px' }}
+              // icon={<IconIcRoundSearch />}
               type="primary"
               onClick={search}
             >

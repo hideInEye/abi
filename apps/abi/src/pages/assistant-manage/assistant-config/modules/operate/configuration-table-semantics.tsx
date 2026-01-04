@@ -12,7 +12,6 @@ import { useSchemaFields } from './useSchemaFields';
 // import { getAgentConfigDs } from '@/service/api/assistant-manage';
 interface PropsType {
   readonly dispatch: (obj: object) => void;
-  setHasChange: Dispatch<SetStateAction<boolean>>;
   readonly state: any;
 }
 
@@ -31,7 +30,7 @@ interface PropsType {
 //   }
 // ];
 
-const ConfigurationTableSemantics: FC<PropsType> = memo(({ dispatch, setHasChange, state }) => {
+const ConfigurationTableSemantics: FC<PropsType> = memo(({ dispatch, state }) => {
   const [groupOptions, setGroupOptions] = useState<any[]>([]);
   const { fieldsDataSource: dataSource, schemaOptions } = useSchemaFields(state);
   const [targets, setTargets] = useState<any[]>([]);
@@ -70,7 +69,6 @@ const ConfigurationTableSemantics: FC<PropsType> = memo(({ dispatch, setHasChang
       return nextTargetKeys.includes(item.techId);
     });
     dispatch({ tableSemantics: list });
-    setHasChange(true);
   };
 
   return (

@@ -46,7 +46,12 @@ const Dictionaries: FC<PropsType> = memo(({ dispatch, state }) => {
       pageNum: 1,
       pageSize: 1000
     });
-    setDataSource(res.data?.map((item: any) => ({ ...item, key: `${item.dictId}` })) as any);
+    const list = (res.data || []).map((item: any) => ({
+      ...item,
+      key: `${item.dictId}`,
+      title: `${item.dictField}(${item.dictName})${item.remark ? ` - ${item.remark}` : ''}`
+    }));
+    setDataSource(list as any);
   };
 
   useEffect(() => {
@@ -55,7 +60,11 @@ const Dictionaries: FC<PropsType> = memo(({ dispatch, state }) => {
     }
   }, [state]);
 
-  const filterOption = (inputValue: string, option: RecordType) => option.title.includes(inputValue);
+  const filterOption = (inputValue: string, option: RecordType) => {
+    const text = (option.title || '').toLowerCase();
+    const query = (inputValue || '').toLowerCase();
+    return text.includes(query);
+  };
 
   const handleChange: TransferProps['onChange'] = nextTargetKeys => {
     const list = dataSource.filter(item => {
@@ -69,6 +78,7 @@ const Dictionaries: FC<PropsType> = memo(({ dispatch, state }) => {
       <div className="my-2">
         <ASelect
           allowClear
+          style={{width: 200}}
           className="mr-2"
           fieldNames={{ label: 'groupName', value: 'groupId' }}
           options={groupOptions}
@@ -81,7 +91,7 @@ const Dictionaries: FC<PropsType> = memo(({ dispatch, state }) => {
         showSearch
         dataSource={dataSource}
         filterOption={filterOption}
-        render={(item: any) => `${item.dictField}(${item.dictName}) - ${item.remark}`}
+        render={(item: any) => `${item.dictField}(${item.dictName})${item.remark? `- ${item.remark}`:''}`}
         targetKeys={state?.dictgroups}
         titles={['可选数据字典', '已选数据字典']}
         listStyle={{

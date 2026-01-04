@@ -84,7 +84,7 @@ export function DataAssets({ homeData }: { readonly homeData: DataAssetsProps })
   return (
     <div className="rd-20px bg-container">
       <AFlex justify="space-between">
-        <h1 className="mb4 text-base font-bold">数据资产</h1>
+        <h1 className="md:mb-[2px] lg:mb-[4px] xl:mb-[6px] 2xl:mb-[12px] text-base font-bold">数据资产</h1>
       </AFlex>
       <div className="grid grid-cols-5 gap-4">
         {dataAssetsConfig.map(item => (

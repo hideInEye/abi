@@ -114,6 +114,13 @@ export interface InputField {
   tfieldId: string;
   tfieldName: string;
   type: string;
+  rtableId?:string;
+  tableRemarks?:string;
+}
+
+export interface TableNames {
+  tableName: string;
+  rtableId: string;
 }
 
 export interface OutputData {
@@ -121,6 +128,7 @@ export interface OutputData {
   fields: OutputField[];
   identifiers: Dimension[];
   measures: Measure[];
+  tableNames: TableNames[];
 }
 
 export type TableSemanticParams = {

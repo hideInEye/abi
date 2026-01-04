@@ -106,17 +106,19 @@ function uniqueKey(keys: string[]) {
 export function DataTableFieldsSelect() {
   const [form] = Form.useForm();
   const { setFormFieldsConfig } = useTableStore();
-
+  const [loading, setLoading] = useState(false);
   const { downSelectVal } = useTableStore();
   const [dataSource, setDataSource] = useState<DataSourceItem[]>([]);
 
   const [targetKeys, setTargetKeys] = useState<TransferProps['targetKeys']>([]);
   const { fields, setFields, setTablePrikey, setUnion, union } = useTableStore();
   const { drawerTitle, editObj } = useTableStore();
+  
+
 
   function getRTableNames(viewData: any) {
-    const result = {};
-    function traverse(node: any, resultMap: any) {
+    const result: Record<string, string> = {};
+    function traverse(node: any, resultMap: Record<string, string>) {
       if (node.currentDs && node.currentDs.rtableId) {
         resultMap[node.currentDs.rtableId] = node.currentDs.rtableName || '';
       }
@@ -128,7 +130,21 @@ export function DataTableFieldsSelect() {
     return result;
   }
 
+  const getTableNames = ()=>{
+    if(editObj.modelDetail){
+      const modelDetail = JSON.parse(editObj.modelDetail);
+      
+      return modelDetail.tableNames&&modelDetail.tableNames.reduce((acc: any, item: any) => {
+        acc[item.rtableId] = item.tableName;
+        return acc;
+      }, {})||{};
+    }
+    return {}
+    
+  }
+
   async function fetchDataSource() {
+    setLoading(true);
     const { response } = await queryDataSetDetail({
       updateBy: '0',
       viewId: downSelectVal
@@ -136,19 +152,20 @@ export function DataTableFieldsSelect() {
 
     const { data } = response.data as { data: any };
     if (data.allFields.length > 0) {
-      const rTableNamesMap = getRTableNames(data);
+      const rTableNamesMap =!drawerTitle ? getRTableNames(data) : getTableNames();
       const allFs = data.allFields.map((field: any) => {
         return {
           tableRemarks: rTableNamesMap[field.rtableId] || '',
           ...field
         };
       });
-
+      
       const processedDataSource = transformDataSource(allFs);
       setDataSource(processedDataSource);
       setTablePrikey(data.tablePrikey);
       setUnion(data.union);
     }
+    setLoading(false);
   }
 
   function updateTechId(data: any[], techIds: []) {
@@ -187,7 +204,7 @@ export function DataTableFieldsSelect() {
     initForm();
   }, [dataSource]);
 
-  const onChange: TransferProps['onChange'] = nextTargetKeys => {
+ const onChange= (nextTargetKeys: TransferProps['targetKeys']) => {
     const keyList = uniqueKey(nextTargetKeys as string[]);
     setTargetKeys(keyList);
 
@@ -200,25 +217,129 @@ export function DataTableFieldsSelect() {
   };
 
   return (
-    <AForm form={form}>
+    <ASpin spinning={loading}>
+    <AForm form={form} onValuesChange={(val)=>{
+      if(val.fields){
+        onChange(val.fields)
+      }
+    }}>
       <AForm.Item
         required
         name="fields"
-        rules={[{ message: '请选择表语义字段', required: true }]}
+        rules={[{required: true, message: '请选择表语义字段'}]}
       >
-        <Transfer
-          showSearch
-          dataSource={dataSource}
-          render={item => item.title}
-          targetKeys={targetKeys}
-          titles={['数据集表语义字段', '已选表语义字段']}
-          listStyle={{
-            height: 300,
-            width: '100%'
-          }}
-          onChange={onChange}
-        />
+        <TransferComponent dataSource={dataSource}  targetKeys={targetKeys} />
       </AForm.Item>
     </AForm>
+    </ASpin>
+  );
+}
+
+export function TransferComponent({ dataSource, targetKeys, onChange }: {dataSource: DataSourceItem[], targetKeys: TransferProps['targetKeys'], onChange?:any}) {
+
+    // 可调整的高度状态
+  const [transferHeight, setTransferHeight] = useState(300);
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeRef = useRef<HTMLDivElement>(null);
+
+   useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !resizeRef.current) return;
+      
+      const container = resizeRef.current;
+      const containerRect = container.getBoundingClientRect();
+      // 计算鼠标相对于容器顶部的位置
+      const newHeight = e.clientY - containerRect.top;
+      
+      // 限制高度范围：最小 200px，最大 800px
+      const clampedHeight = Math.max(200, Math.min(800, newHeight));
+      setTransferHeight(clampedHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
+
+    // 处理拖拽调整大小
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+  };
+
+  const handleTranferChange = (nextTargetKeys: TransferProps['targetKeys']) => {
+    onChange?.(nextTargetKeys);
+  };
+  
+
+  return (
+    <div ref={resizeRef} style={{ position: 'relative', paddingBottom: '8px' }}>
+          <Transfer
+            showSearch
+            dataSource={dataSource}
+            render={item => item.title}
+            targetKeys={targetKeys}
+            titles={['数据集表语义字段', '已选表语义字段']}
+            listStyle={{
+              height: transferHeight,
+              width: '100%'
+            }}
+            onChange={handleTranferChange}
+          />
+          {/* 可拖拽的调整条 */}
+          <div
+            onMouseDown={handleMouseDown}
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '8px',
+              cursor: 'row-resize',
+              backgroundColor: isResizing ? '#1890ff' : 'transparent',
+              zIndex: 10,
+              transition: 'background-color 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onMouseEnter={(e) => {
+              if (!isResizing) {
+                (e.currentTarget as HTMLElement).style.backgroundColor = '#e6f7ff';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isResizing) {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              }
+            }}
+          >
+            {/* 调整条指示器 */}
+            <div
+              style={{
+                width: '40px',
+                height: '4px',
+                backgroundColor: isResizing ? '#1890ff' : '#d9d9d9',
+                borderRadius: '2px',
+                transition: 'background-color 0.2s'
+              }}
+            />
+          </div>
+        </div>
   );
 }

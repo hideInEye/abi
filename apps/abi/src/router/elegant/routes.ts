@@ -252,8 +252,47 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
+        name: 'job_email',
+        path: 'email',
+        component: 'view.job_email',
+        meta: {
+          i18nKey: 'route.job_email',
+          title: 'job_email'
+        },
+        children: [
+          {
+            name: 'job_email_modules',
+            path: 'modules',
+            meta: {
+              i18nKey: 'route.job_email_modules',
+              title: 'job_email_modules'
+            },
+            children: [
+              {
+                name: 'job_email_modules_editor-quill',
+                path: 'editor-quill',
+                component: 'view.job_email_modules_editor-quill',
+                meta: {
+                  i18nKey: 'route.job_email_modules_editor-quill',
+                  title: 'job_email_modules_editor-quill'
+                }
+              },
+              {
+                name: 'job_email_modules_share-email-setting',
+                path: 'share-email-setting',
+                component: 'view.job_email_modules_share-email-setting',
+                meta: {
+                  i18nKey: 'route.job_email_modules_share-email-setting',
+                  title: 'job_email_modules_share-email-setting'
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
         name: 'job_log',
-        path: 'log/:id',
+        path: 'log',
         component: 'view.job_log',
         meta: {
           title: 'test'
@@ -268,7 +307,37 @@ export const generatedRoutes: GeneratedRoute[] = [
           i18nKey: 'route.job_time',
           order: 1,
           title: 'job_time'
-        }
+        },
+        children: [
+          {
+            name: 'job_time_modules',
+            path: 'modules',
+            meta: {
+              i18nKey: 'route.job_time_modules',
+              title: 'job_time_modules'
+            },
+            children: [
+              {
+                name: 'job_time_modules_editor-quill',
+                path: 'editor-quill',
+                component: 'view.job_time_modules_editor-quill',
+                meta: {
+                  i18nKey: 'route.job_time_modules_editor-quill',
+                  title: 'job_time_modules_editor-quill'
+                }
+              },
+              {
+                name: 'job_time_modules_share-email-setting',
+                path: 'share-email-setting',
+                component: 'view.job_time_modules_share-email-setting',
+                meta: {
+                  i18nKey: 'route.job_time_modules_share-email-setting',
+                  title: 'job_time_modules_share-email-setting'
+                }
+              }
+            ]
+          }
+        ]
       }
     ]
   },

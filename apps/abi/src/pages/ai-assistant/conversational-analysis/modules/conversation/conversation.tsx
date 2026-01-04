@@ -74,7 +74,7 @@ const Conversation: React.FC<PropsType> = memo(({ conv, onClose }) => {
         temperature: 0,
         user_input: question
       };
-      await fetchEventSource(`${import.meta.env.VITE_CHAT_SERVICE_BASE_URL}/api/v1/chat/completions`, {
+      await fetchEventSource(`${import.meta.env.VITE_CHAT_SERVICE_BASE_URL}/chat-proxy/api/v1/chat/completions`, {
         // body: JSON.stringify(demo),
         body: JSON.stringify(paramsData),
         headers: {

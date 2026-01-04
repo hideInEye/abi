@@ -96,7 +96,7 @@ export function Component() {
             }
             return <ATag color="error">{label}</ATag>;
           },
-          title: t('page.manage.menu.status')
+          title: '菜单状态'
         },
         {
           dataIndex: 'createTime',

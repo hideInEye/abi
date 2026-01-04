@@ -1,12 +1,12 @@
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { sql } from '@codemirror/lang-sql';
-import { Input, Modal, Select, Splitter, message } from 'antd';
+import { Form, Input, Modal, Select, Splitter, message } from 'antd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
 import { DATA_COLLECTION_CONFIG_TYPE_OPTIONS } from '@/constants/data-preparation';
 import { addDataSet, getCollectionDetail, getFieldsBySql, saveDataSet } from '@/service/api';
-import { genUniqueId, updateNodeDataByAllFields } from '@/utils/data-collection-operate';
+import { formatNodeData, genUniqueId, getTableArr, updateNodeDataByAllFields } from '@/utils/data-collection-operate';
 import { useRoute, useRouter } from '~/packages/simple-router/src';
 
 import { DataCollectionOperateContext } from './context';
@@ -26,7 +26,6 @@ import { TreeNodeContainer } from './modules/TreeNodeContainer';
 const initialState = {
   // allFields: [], // 所有展示的字段
   nodeType: 'dataset', // 写死，页面暂无元素
-  spaceId: Number(localStorage.getItem('spaceId')),
   // union: [], // 数据集的关联关系树，非空。注rtableId 和 tfieldId由前端生成
   viewId: '', // 修改时才有
   viewMode: 0, // 存储模式：只有实时查询，也就是0
@@ -47,8 +46,11 @@ export function Component() {
   const [sqlVal, setSqlVal] = useState(''); // 单独拎出来的sql
   const [unfold, setUnfold] = useState(true);
   const [rightUnfold, setRightUnfold] = useState(true);
+  const [leftPanelSize, setLeftPanelSize] = useState<number | string>(220);
+  const [saveForm] = Form.useForm();
   const { dataSourceList, getDatasourceList, getTableListBySource, tableList } = useDatasource();
   const [datasource, setDatasource] = useState<string | undefined>(undefined);
+  const [curDatasource, setCurDatasource] = useState<any>(undefined);
   const [dataTableKeyword, setDataTableKeyword] = useState('');
   const [connectMode, setConnectMode] = useState([1, 2]); // 一期没用到
   const [loading, setLoading] = useState(false);
@@ -64,6 +66,11 @@ export function Component() {
     return dataSourceList;
   }, [collectionData.viewType, dataSourceList]);
 
+  const curDatasourceType = useMemo(() => {
+    const curDatasource = filterDataSourceList.find((item: any) => item.sourceId === datasource);
+    return curDatasource?.sourceType;
+  }, [filterDataSourceList, datasource]);
+
   const filterConfigOptions = useMemo(() => {
     if (datasource !== undefined) {
       const cur = dataSourceList.find((item: any) => item.sourceId === datasource);
@@ -78,10 +85,16 @@ export function Component() {
   const isFromDatasource = route.query?.from === 'data-source';
   const { id } = route.params;
 
+  const selectedTableNames = useMemo(() => {
+    return new Set(getTableArr(nodeData || {}));
+  }, [nodeData]);
+
   const filterTableList = useMemo(() => {
-    return dataTableKeyword
-      ? tableList.filter((item: any) => item.tableName.toLowerCase().includes(dataTableKeyword.toLowerCase()))
-      : tableList;
+    let resData = tableList;
+    if (dataTableKeyword) {
+      resData = resData.filter((item: any) => item.tableName.toLowerCase().includes(dataTableKeyword.toLowerCase()));
+    }
+    return resData;
   }, [tableList, dataTableKeyword]);
 
   const getDetail = async () => {
@@ -90,13 +103,15 @@ export function Component() {
       viewId: id
     });
     dispatch(res.data);
-    setNodeData(res.data?.union?.[0]);
+    saveForm.setFieldsValue({ viewName: res.data?.viewName });
+    const formatData = formatNodeData(res.data?.union?.[0]);
+    setNodeData(formatData);
     setAllFields(res.data?.allFields || []);
-    const sourceId = res.data?.union?.[0].currentDs?.sourceId;
+    const sourceId = formatData.currentDs?.sourceId;
     setDatasource(sourceId);
     if (res.data?.viewType === 'sql') {
       try {
-        const sqlObj = JSON.parse(res.data?.union?.[0].currentDs?.tableInfo);
+        const sqlObj = JSON.parse(formatData.currentDs?.tableInfo);
         setSqlVal(sqlObj?.sql || '');
       } catch (error) {
         console.log(error);
@@ -121,6 +136,7 @@ export function Component() {
   useEffect(() => {
     if (!datasource) return;
     const curDatasource = dataSourceList.find((item: any) => item.sourceId === datasource);
+    setCurDatasource(curDatasource);
     if (curDatasource) {
       getTableListBySource({
         sourceId: datasource,
@@ -129,6 +145,12 @@ export function Component() {
       });
     }
   }, [datasource, dataSourceList]);
+
+  const handleCloseModal = () => {
+    setVisible(false);
+    setBack(false);
+    saveForm.resetFields();
+  };
 
   const handleToggleUnfold = () => {
     setUnfold(!unfold);
@@ -144,8 +166,10 @@ export function Component() {
       return;
     }
     const resNodeData = updateNodeDataByAllFields(nodeData, allFields);
-    const { viewName, ...elseCollectionData } = collectionData;
+    const {  ...elseCollectionData } = collectionData;
+    const viewName = saveForm.getFieldValue('viewName');
     const paramsData = { ...elseCollectionData, allFields, union: [resNodeData], viewName: viewName.trim() };
+    paramsData.spaceId = Number(localStorage.getItem('spaceId'));
     let res = null;
     if (Number(id)) {
       res = await saveDataSet(paramsData);
@@ -169,18 +193,21 @@ export function Component() {
     };
 
     const res = await getFieldsBySql(params);
-    const fields = res?.data || [];
-
+    let fields = res?.data || [];
+    const rtableId = genUniqueId('1');
+    fields = fields.map((item: any) => ({ ...item, rtableId }));
     const paramsData = {
       ...collectionData,
+      viewName: saveForm.getFieldValue('viewName'),
       allFields: fields,
+      spaceId: Number(localStorage.getItem('spaceId')),
       union: [
         {
           childrenDs: [],
           currentDs: {
             dataType: 'sql',
             remark: '自定义sql',
-            rtableId: genUniqueId('1'),
+            rtableId,
             sourceId: datasource,
             tableInfo,
             tableName: '自定义sql'
@@ -199,11 +226,6 @@ export function Component() {
   };
 
   const handleSave = async () => {
-    const trimName = collectionData.viewName.trim();
-    if (!trimName) {
-      message.error('请输入名称');
-      return;
-    }
     setLoading(true);
     try {
       let resCode = 0;
@@ -258,66 +280,18 @@ export function Component() {
       });
     } else {
       setDatasource(val);
+      const curDataSource = filterDataSourceList.find((item: any) => item.sourceId === val);
+      setCurDatasource(curDataSource);
     }
   };
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <DataCollectionOperateContext.Provider value={{ allFields, datasource, nodeData, setAllFields, setNodeData }}>
+      <DataCollectionOperateContext.Provider
+        value={{ allFields, curDatasourceType, datasource, nodeData, setAllFields, setNodeData }}
+      >
         <ACard className={styles.container}>
           <div className="relative h-full flex">
-            {/* 左边 */}
-            <div
-              className={`relative h-full border-r border-r-#ccc pr-16px ${unfold ? 'block' : 'hidden'}`}
-              style={{ width: '220px' }}
-            >
-              <div className="w-full">
-                <div className="py-2">配置方式</div>
-                <Select
-                  className="w-full"
-                  options={filterConfigOptions}
-                  placeholder="请选择"
-                  value={collectionData.viewType}
-                  onChange={val => dispatch({ viewType: val })}
-                />
-              </div>
-              <div className="w-full">
-                <div className="py-2">数据源</div>
-                <Select
-                  allowClear
-                  className="w-full"
-                  fieldNames={{ label: 'sourceName', value: 'sourceId' }}
-                  options={filterDataSourceList}
-                  placeholder="请选择"
-                  value={datasource}
-                  onChange={handleChangeDatasource}
-                />
-              </div>
-              <div className="w-full">
-                <div className="py-2">数据表</div>
-                <Input
-                  className="w-full"
-                  placeholder="请输入内容"
-                  value={dataTableKeyword}
-                  onChange={e => setDataTableKeyword(e.target.value)}
-                />
-              </div>
-              <div className={styles['table-data-container']}>
-                {filterTableList?.map((item: any) => (
-                  <DragBox
-                    key={item.tableName}
-                    {...item}
-                  />
-                ))}
-              </div>
-              {/* 收缩按钮 */}
-              <span
-                className={`${styles.unfold}`}
-                onClick={handleToggleUnfold}
-              >
-                <LeftOutlined />
-              </span>
-            </div>
             {unfold ? null : (
               <span
                 className={`${styles.unfold} left-[-24px] !right-auto`}
@@ -327,120 +301,157 @@ export function Component() {
               </span>
             )}
 
-            {/* 右边 */}
-            <div style={{ width: `calc(100% - ${unfold ? 220 : 0}px)` }}>
-              <div className="border-b bg-#fff p-2 text-right">
-                <AButton
-                  className="mr-2"
-                  size="small"
-                  type="primary"
-                  onClick={() => handleClickSave(true)}
-                >
-                  保存并返回
-                </AButton>
-                {/* <AButton
-                  size="small"
-                  type="primary"
-                  onClick={() => handleClickSave()}
-                >
-                  保存
-                </AButton> */}
-              </div>
-              <div
-                className="relative h-full flex"
-                style={{ height: 'calc(100% - 45px)' }}
+              <Splitter
+                style={{ width: '100%', height: '100%' }}
+                onResize={(sizes) => {
+                  if (sizes && sizes[0]) {
+                    setLeftPanelSize(sizes[0]);
+                  }
+                }}
               >
-                <Splitter
-                  layout="vertical"
-                  style={{ width: rightUnfold ? 'calc(100% - 220px)' : '100%' }}
+                {/* 左边 - 使用 Splitter.Panel */}
+                <Splitter.Panel
+                  collapsible
+                  defaultSize="220"
                 >
-                  <Splitter.Panel className="relative bg-#f5f6f7">
-                    {collectionData.viewType === 'sql' ? (
-                      <ACodemirror
-                        extensions={[sql()]}
-                        height="200px"
-                        value={sqlVal}
-                        onChange={(val: string) => setSqlVal(val)}
+                  <div className="relative h-full pr-16px overflow-hidden">
+                    <div className="w-full">
+                      <div className="py-2">配置方式</div>
+                      <Select
+                        className="w-full"
+                        options={filterConfigOptions}
+                        placeholder="请选择"
+                        value={collectionData.viewType}
+                        onChange={val => dispatch({ viewType: val })}
                       />
-                    ) : (
-                      <TreeNodeContainer />
-                    )}
-                  </Splitter.Panel>
-                  <Splitter.Panel
-                    defaultSize="300"
-                    max="90%"
-                    min="10%"
-                  >
-                    {collectionData.viewType === 'sql' ? (
-                      <BottomSql
-                        previewData={previewData}
-                        setPreviewData={setPreviewData}
-                        sourceId={datasource}
-                        sql={sqlVal}
+                    </div>
+                    <div className="w-full">
+                      <div className="py-2">数据源</div>
+                      <Select
+                        allowClear
+                        className="w-full"
+                        fieldNames={{ label: 'sourceName', value: 'sourceId' }}
+                        options={filterDataSourceList}
+                        placeholder="请选择"
+                        value={datasource}
+                        onChange={handleChangeDatasource}
                       />
-                    ) : (
-                      <BottomTabs />
-                    )}
-                  </Splitter.Panel>
-                </Splitter>
-                {rightUnfold ? null : (
-                  <span
-                    className={`${styles.unfold} !right-[-24px]`}
-                    onClick={handleToggleRightUnfold}
-                  >
-                    <LeftOutlined />
-                  </span>
-                )}
-                <div
-                  className={`relative h-full w-230px border-l border-#ccc py-12px pl-16px ${rightUnfold ? 'block' : 'hidden'}`}
-                >
-                  {/* 收缩按钮 */}
-                  <span
-                    className={`${styles.rightUnfold}`}
-                    onClick={handleToggleRightUnfold}
-                  >
-                    <RightOutlined />
-                  </span>
-                  <div className="text-16px">模式配置</div>
-                  <div>
-                    <div className="py-2">关联模式</div>
-                    <Select
-                      className="w-full"
-                      mode="multiple"
-                      placeholder="请选择"
-                      value={connectMode}
-                      options={[
-                        { label: '视图关联', value: 1 },
-                        { label: '关联关系', value: 2 }
-                      ]}
-                      onChange={val => setConnectMode(val)}
-                    />
-                  </div>
-                  {/* <div>
-                    <div className="py-2">存储模式</div>
-                    <Radio.Group
-                      disabled
-                      className="w-full"
-                      value={collectionData.viewMode}
-                      onChange={e => dispatch({ viewMode: e.target.value })}
+                    </div>
+                    <div className="w-full">
+                      <div className="py-2">数据表</div>
+                      <Input
+                        className="w-full"
+                        placeholder="请输入内容"
+                        value={dataTableKeyword}
+                        onChange={e => setDataTableKeyword(e.target.value)}
+                      />
+                    </div>
+                    <div className={styles['table-data-container']}>
+                      {filterTableList?.map((item: any) => {
+                        const disabled = selectedTableNames.has(item.tableName);
+                        return (
+                          <DragBox
+                            key={item.tableName}
+                            {...item}
+                            disabled={disabled}
+                          />
+                        );
+                      })}
+                    </div>
+                    {/* 收缩按钮 */}
+                    {/* <span
+                      className={`${styles.unfold}`}
+                      onClick={handleToggleUnfold}
                     >
-                      <Radio
-                        className="whitespace-nowrap"
-                        value={0}
+                      <LeftOutlined />
+                    </span> */}
+                  </div>
+                </Splitter.Panel>
+
+                {/* 右边 */}
+                <Splitter.Panel>
+                  <div className="h-full flex flex-col">
+                    <div className="border-b bg-#fff p-2 text-right">
+                      <AButton
+                        className="mr-2"
+                        size="small"
+                        type="primary"
+                        onClick={() => handleClickSave(true)}
                       >
-                        实时查询
-                      </Radio>
-                      <Radio
-                        className="whitespace-nowrap"
-                        value={1}
+                        确认
+                      </AButton>
+                      {/* <AButton
+                        size="small"
+                        type="primary"
+                        onClick={() => handleClickSave()}
                       >
-                        定期本地
-                      </Radio>
-                    </Radio.Group>
-                  </div> */}
-                </div>
-              </div>
-            </div>
+                        保存
+                      </AButton> */}
+                    </div>
+                    <div className="relative flex-1">
+                      <Splitter
+                        layout="vertical"
+                        style={{ width: '100%', height: '100%' }}
+                      >
+                        <Splitter.Panel className="relative bg-#f5f6f7">
+                          {collectionData.viewType === 'sql' ? (
+                            <ACodemirror
+                              extensions={[sql()]}
+                              height="200px"
+                              value={sqlVal}
+                              onChange={(val: string) => setSqlVal(val)}
+                            />
+                          ) : (
+                            <TreeNodeContainer />
+                          )}
+                        </Splitter.Panel>
+                        <Splitter.Panel
+                          defaultSize="300"
+                          max="90%"
+                          min="10%"
+                        >
+                          {collectionData.viewType === 'sql' ? (
+                            <BottomSql
+                              previewData={previewData}
+                              setPreviewData={setPreviewData}
+                              sourceId={datasource}
+                              sql={sqlVal}
+                            />
+                          ) : (
+                            <BottomTabs curDatasource={curDatasource}/>
+                          )}
+                        </Splitter.Panel>
+                      </Splitter>
+                      {/* 右侧属性配置面板已隐藏 - 无实际功能 */}
+                      {/* <div
+                        className={`relative h-full w-230px border-l border-#ccc py-12px pl-16px ${rightUnfold ? 'block' : 'hidden'}`}
+                      >
+                        <span
+                          className={`${styles.rightUnfold}`}
+                          onClick={handleToggleRightUnfold}
+                        >
+                          <RightOutlined />
+                        </span>
+                        <div className="text-16px">模式配置</div>
+                        <div>
+                          <div className="py-2">关联模式</div>
+                          <Select
+                            className="w-full"
+                            mode="multiple"
+                            placeholder="请选择"
+                            value={connectMode}
+                            options={[
+                              { label: '视图关联', value: 1 },
+                              { label: '关联关系', value: 2 }
+                            ]}
+                            onChange={val => setConnectMode(val)}
+                          />
+                        </div>
+                      </div> */}
+                    </div>
+                  </div>
+                </Splitter.Panel>
+              </Splitter>
           </div>
         </ACard>
 
@@ -448,22 +459,24 @@ export function Component() {
           confirmLoading={loading}
           open={visible}
           title={back ? '保存并返回' : '保存'}
-          onOk={() => handleSave()}
-          onCancel={() => {
-            setVisible(false);
-            setBack(false);
-          }}
-          onClose={() => {
-            setVisible(false);
-            setBack(false);
-          }}
+          onOk={() => saveForm.submit()}
+          onCancel={handleCloseModal}
+          // onClose={handleCloseModal}
         >
-          <AInput
-            maxLength={50}
-            placeholder="请输入名称"
-            value={collectionData.viewName}
-            onChange={e => dispatch({ viewName: e.target.value })}
-          />
+          <AForm form={saveForm} onFinish={handleSave}>
+            <AForm.Item
+              label="名称"
+              name="viewName"
+              rules={[
+                { message: '请输入名称', required: true },
+                { max: 50, message: '名称最多50个字符' }
+              ]}
+            >
+              <AInput
+                placeholder="请输入名称"
+              />
+            </AForm.Item>
+          </AForm>
         </AModal>
       </DataCollectionOperateContext.Provider>
     </DndProvider>

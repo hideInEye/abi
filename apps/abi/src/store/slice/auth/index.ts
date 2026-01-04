@@ -10,6 +10,8 @@ import { resetRouteStore } from '../route';
 import { clearTabs } from '../tab';
 
 import { clearAuthStorage, getToken, getUserInfo } from './shared';
+import { message } from 'antd';
+import { setSpaceHidden } from '../app';
 
 // perform thorough cleanup of storages (localStg/localStorage/sessionStorage/localforage)
 async function performLogoutCleanup() {
@@ -93,9 +95,9 @@ export const authSlice = createAppSlice({
   name: 'auth',
   reducers: create => ({
     login: create.asyncThunk(
-      async ({ password, userName }: { password: string; userName: string }) => {
+      async ({ password, userName, code, uuid }: { password: string; userName: string; code?: string; uuid?: string }) => {
         const psd = encrypt(password) as string;
-        const { data, error } = await fetchLogin(userName, psd);
+        const { data, error } = await fetchLogin(userName, psd, code, uuid);
         const loginToken = {
           ...data,
           refreshToken: data?.refresh_token || '',
@@ -112,6 +114,12 @@ export const authSlice = createAppSlice({
           const { error: userInfoError, response } = await fetchGetUserInfo();
           const { user } = response.data as any;
           if (!userInfoError) {
+            const { roles } = user
+            const isRole = roles.some(item => item.status =='0')
+            if(!isRole){
+              message.error('未分配角色无法登陆您当前账号未分配任何角色，无法登录系统。请联系系统管理员为您分配相应角色后再试。')
+              return false
+            }
             // 2. store user info
             localStg.set('userInfo', user);
             return {
@@ -185,6 +193,8 @@ export const resetStore = (): AppThunk => async dispatch => {
 
   // Reset in-memory auth
   dispatch(resetAuth());
+
+  dispatch(setSpaceHidden(false))
 
   // Reset route and tabs
   await dispatch(resetRouteStore());

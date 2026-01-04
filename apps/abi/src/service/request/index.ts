@@ -9,7 +9,7 @@ import { getAuthorization, getUserId } from './shared';
 import type { RequestInstanceState } from './type';
 
 const isHttpProxy = import.meta.env.DEV && import.meta.env.VITE_HTTP_PROXY === 'Y';
-const { apiURL, baseURL, otherBaseURL } = getServiceBaseURL(import.meta.env, isHttpProxy);
+const { apiURL, baseURL, chatURL, otherBaseURL } = getServiceBaseURL(import.meta.env, isHttpProxy);
 
 export const request = createFlatRequest<App.Service.Response, RequestInstanceState>(
   {
@@ -90,6 +90,46 @@ export const apiRequest = createFlatRequest<App.Service.Response, RequestInstanc
     }
   }
 );
+
+// 专门用于 chat-proxy 相关请求的函数
+export const chatRequest = createFlatRequest<App.Service.Response, RequestInstanceState>(
+  {
+    baseURL: chatURL,
+    headers: {
+      apifoxToken: 'XL299LiMEDZ0H5h3A29PxwQXdMJqWyY2'
+    }
+  },
+  {
+    isBackendSuccess(response: any) {
+      // when the backend response code is "0000"(default), it means the request is success
+      // to change this logic by yourself, you can modify the `VITE_SERVICE_SUCCESS_CODE` in `.env` file
+      const responseCode = String(response.data.code);
+      return (
+        responseCode === import.meta.env.VITE_SERVICE_SUCCESS_CODE ||
+        responseCode === import.meta.env.VITE_SERVICE_SUCCESS_CODE1 ||
+        response.data.data === true ||
+        response.data.success === true
+      );
+    },
+    async onBackendFail(response, instance) {
+      await backEndFail(response, instance, chatRequest);
+    },
+    onError(error) {
+      handleError(error, chatRequest);
+    },
+    async onRequest(config) {
+      const Authorization = getAuthorization();
+      const userId = getUserId();
+      Object.assign(config.headers, { Authorization, userId });
+
+      return config;
+    },
+    transformBackendResponse(response) {
+      return response.data.data;
+    }
+  }
+);
+
 export const demoRequest = createRequest<App.Service.DemoResponse>(
   {
     baseURL: otherBaseURL.demo

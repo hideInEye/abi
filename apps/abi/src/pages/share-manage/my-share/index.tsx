@@ -1,36 +1,35 @@
-import { DeleteOutlined } from '@ant-design/icons';
-import React, { useEffect, useState } from 'react';
+import { DeleteOutlined } from "@ant-design/icons";
+import React, { useEffect, useState } from "react";
 
-import { deleteOperateRecord, queryOperateRecordList } from '@/service/api/operateRecord';
+import {
+  deleteOperateRecord,
+  getOperateRecordList,
+  queryOperateRecordList,
+} from "@/service/api/operateRecord";
+import { message } from "antd";
 
 interface OperateRecord {
   readonly id: string;
-}
-
-interface Response {
-  code: number;
-  msg: string;
-  rows: any[];
-  total: number;
+  readonly chatId: string;
+  spaceId: number;
 }
 
 export const Component: React.FC & { loader?: () => Promise<any> } = () => {
-  const [dataSource, setDataSource] = useState<Response>({
-    code: 0,
-    msg: '',
+  const [dataSource, setDataSource] = useState<any>({
     rows: [],
-    total: 0
+    total: 0,
   });
+  const { switchToSpace } = useSpaceSwitch();
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchValue, setSearchValue] = useState("");
   const pageSize = 10;
 
   async function getRecordList(key?: string) {
-    const data = await queryOperateRecordList({
-      key,
-      pageNum: currentPage,
+    const data = await getOperateRecordList('3',{
+      // key: searchValue,
+      pageNumber: currentPage,
       pageSize,
       // spaceId: localStorage.getItem('spaceId'),
-      type: 3
     });
     setDataSource(data.response.data);
   }
@@ -38,12 +37,11 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   function onSearchChange(e: any) {
     const key = e.target.value;
     if (key) {
+      setSearchValue(key);
       setCurrentPage(1);
       setDataSource({
-        code: 0,
-        msg: '',
         rows: [],
-        total: 0
+        total: 0,
       });
       getRecordList(key);
     }
@@ -59,89 +57,97 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   }
 
   function deleteOperateRecordItem(ids: string) {
-    deleteOperateRecord(ids).then(res => {
-      setDataSource(res.data);
+    deleteOperateRecord(ids).then((res) => {
+      if (res.response.data.code > 200) {
+        message.error(res.response.data.msg);
+      } else {
+        message.success(res.response.data.msg);
+        getRecordList();
+      }
     });
   }
 
-  const ActionButtons: React.FC<{ readonly record: OperateRecord }> = ({ record }) => (
+  const handleNavigate = (r: OperateRecord) => {
+    const { spaceId, chatId } = r;
+    switchToSpace(spaceId);
+    localStorage.setItem("chatId", chatId);
+  };
+
+  const ActionButtons: React.FC<{ readonly record: OperateRecord }> = ({
+    record,
+  }) => (
     <ASpace>
-      <ATooltip title="删除">
-        <AButton
-          icon={<DeleteOutlined />}
-          onClick={() => deleteOperateRecordItem(record.id)}
-        />
-      </ATooltip>
+      <span
+        className="cursor-pointer text-[#1890ff] mr-2"
+        onClick={() => {
+          handleNavigate(record);
+        }}
+      >
+        进入对话
+      </span>
+      <APopconfirm
+        cancelText="取消"
+        description="确定要删除吗？"
+        okText="确认"
+        title="删除"
+        onConfirm={() => deleteOperateRecordItem(record.id)}
+      >
+        <span className="cursor-pointer text-[#1890ff]">删除</span>
+      </APopconfirm>
     </ASpace>
   );
 
   const columns = [
     {
-      dataIndex: 'name',
-      key: 'name',
-      title: '名称'
+      dataIndex: "chatName",
+      key: "chatName",
+      title: "对话名称",
     },
     {
-      dataIndex: 'status',
-      key: 'status',
-      title: '状态'
+      dataIndex: "spaceName",
+      key: "spaceName",
+      title: "所属空间",
     },
     {
-      dataIndex: 'type',
-      key: 'type',
-      title: '类型'
+      dataIndex: "type",
+      key: "type",
+      title: "分享类型",
+      render: () => "快照",
     },
     {
-      dataIndex: 'creator',
-      key: 'creator',
-      title: '创建人'
+      dataIndex: "sharedTime",
+      key: "sharedTime",
+      title: "分享时间",
     },
     {
-      dataIndex: 'createTime',
-      key: 'createTime',
-      title: '创建时间'
+      dataIndex: "action",
+      key: "action",
+      render: (_: any, record: OperateRecord) => (
+        <ActionButtons record={record} />
+      ),
+      title: "操作",
     },
-    {
-      dataIndex: 'operator',
-      key: 'operator',
-      title: '操作人'
-    },
-    {
-      dataIndex: 'operateTime',
-      key: 'operateTime',
-      title: '操作时间'
-    },
-    {
-      dataIndex: 'invalid',
-      key: 'invalid',
-      title: '失效时间'
-    },
-    {
-      dataIndex: 'action',
-      key: 'action',
-      render: (_: any, record: OperateRecord) => <ActionButtons record={record} />,
-      title: '操作'
-    }
   ];
 
   return (
     <ACard>
       <ASpace className="flex justify-between">
         <h1 className="mb-4 text-base font-medium">最近分享</h1>
-        <AInput
+        {/* <AInput
           className="flex-1"
           placeholder="搜索"
           onChange={onSearchChange}
-        />
+        /> */}
       </ASpace>
 
       <ATable
         columns={columns}
         dataSource={dataSource.rows}
+        scroll={{x: 1126}}
         pagination={{
           current: currentPage,
           onChange: paginationChange,
-          total: dataSource.total
+          total: dataSource.total,
         }}
       />
     </ACard>

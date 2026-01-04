@@ -5,13 +5,17 @@ import copy from 'copy-to-clipboard';
 import type { FC } from 'react';
 import { useDrag } from 'react-dnd';
 
+import { DataCollectionOperateContext } from '../context';
+
 export interface BoxProps {
   readonly name: string;
   readonly type: string;
 }
 
 export const DragBox: FC<any> = props => {
-  const { dataType, sourceId, tableName } = props;
+  const { dataType, disabled, sourceId, tableName } = props;
+  const { curDatasourceType } = useContext(DataCollectionOperateContext);
+
   const { fieldsList, getFieldsList } = useDatasource();
   const [visible, setVisible] = useState(false);
   const [hasFetch, setHasFetch] = useState(false);
@@ -19,7 +23,7 @@ export const DragBox: FC<any> = props => {
 
   useEffect(() => {
     if (visible && !hasFetch) {
-      getFieldsList({ sourceId, tableName });
+      getFieldsList({ sourceId, tableName }, curDatasourceType);
       setHasFetch(true);
     }
   }, [visible, hasFetch]);
@@ -31,6 +35,7 @@ export const DragBox: FC<any> = props => {
     item: {
       ...props
     },
+    canDrag: () => !disabled,
     type: 'box'
   });
 
@@ -48,36 +53,43 @@ export const DragBox: FC<any> = props => {
   );
 
   const columns: TableColumnsType<any> = [
-    { dataIndex: 'originName', title: '物理字段名' },
-    { dataIndex: 'name', title: '字段备注' },
-    { render: (_: unknown, row: any) => <CopyOutlined onClick={() => handleCopy(row.originName)} />, title: '操作' }
+    { dataIndex: 'originName', title: '物理字段名',width:200 },
+    { dataIndex: 'name', title: '字段备注',width:200 },
+    { render: (_: unknown, row: any) => <CopyOutlined onClick={() => handleCopy(row.originName)} />, title: '操作',width:200 }
   ];
   const content = (
-    <ATable
-      columns={columns}
-      dataSource={fieldsList}
-      pagination={false}
-      rowKey="originName"
-    />
+    <div style={{ maxWidth:600 }}>
+      <ATable
+        columns={columns}
+        dataSource={fieldsList}
+        pagination={false}
+        rowKey="originName"
+        scroll={{ y: 'calc(100vh - 300px)'}}
+      />
+    </div>
   );
   return (
     <div
-      className={`group/item flex justify-between cursor-pointer items-center rounded px-2 py-1 hover:bg-gray-200 ${isDragging ? 'opacity-40' : ''}`}
+      className={`group/item flex justify-between items-center rounded px-2 py-1 ${disabled ? 'cursor-not-allowed bg-#f5f5f5 text-#999' : 'cursor-pointer hover:bg-gray-200'} ${isDragging ? 'opacity-40' : ''}`}
       ref={ref}
+      aria-disabled={disabled}
     >
-      <AFlex align="center">
+      <AFlex
+        align="center"
+        className="flex-1 min-w-0 mr-2"
+      >
         <SvgIcon
-          className="mr-2"
+          className="mr-2 flex-shrink-0"
           localIcon="db"
         />
         <span
-          className="inline-block max-w-130px overflow-hidden text-ellipsis"
+          className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
           title={tableName}
         >
           {tableName}
         </span>
       </AFlex>
-      <AFlex className="invisible group-hover/item:visible">
+      <AFlex className="invisible group-hover/item:visible flex-shrink-0">
         <CopyOutlined onClick={() => handleCopy(tableName)} />
         <APopover
           content={content}

@@ -5,8 +5,8 @@ const KeySearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
     <AForm
       form={form}
       labelCol={{
-        md: 7,
-        span: 5
+        md: 8,
+        span: 6
       }}
     >
       <ARow
@@ -20,10 +20,10 @@ const KeySearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
         >
           <AForm.Item
             className="m-0"
-            label={t('page.dataPreparation.dataSource.keyword')}
+            label="助手名称"
             name="bizName"
           >
-            <AInput placeholder={t('page.dataPreparation.dataSource.keywordPlaceholder')} />
+            <AInput placeholder="请输入助手名称" />
           </AForm.Item>
         </ACol>
         <ACol
@@ -48,14 +48,16 @@ const KeySearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
               justify="end"
             >
               <AButton
-                icon={<IconIcRoundRefresh />}
+                style={{ borderRadius: '4px', padding: '4px 25px' }}
+                // icon={<IconIcRoundRefresh />}
+                type="primary"
                 onClick={reset}
               >
                 {t('common.reset')}
               </AButton>
               <AButton
-                ghost
-                icon={<IconIcRoundSearch />}
+                style={{ borderRadius: '4px', padding: '4px 25px' }}
+                // icon={<IconIcRoundSearch />}
                 type="primary"
                 onClick={search}
               >

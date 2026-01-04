@@ -6,7 +6,7 @@ export function fetchConvList(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/chat/conv/list'
+    url: '/chat-proxy/api/v1/chat/conv/list'
   });
 }
 
@@ -16,7 +16,7 @@ export function newConv(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/chat/conv/new'
+    url: '/chat-proxy/api/v1/chat/conv/new'
   });
 }
 
@@ -26,7 +26,7 @@ export function fetchConvHistory(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/chat/conv/messages/history'
+    url: '/chat-proxy/api/v1/chat/conv/messages/history'
   });
 }
 
@@ -36,7 +36,7 @@ export function deleteConv(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/chat/conv/delete'
+    url: '/chat-proxy/api/v1/chat/conv/delete'
   });
 }
 
@@ -46,7 +46,7 @@ export function clearConvHistory(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/chat/conv/clear'
+    url: '/chat-proxy/api/v1/chat/conv/clear'
   });
 }
 
@@ -56,7 +56,7 @@ export function fetchConvAnswer(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/chat/completions'
+    url: '/chat-proxy/api/v1/chat/completions'
   });
 }
 
@@ -66,6 +66,6 @@ export function fetchDataBySql(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/chat/db/query'
+    url: '/chat-proxy/api/v1/chat/db/query'
   });
 }

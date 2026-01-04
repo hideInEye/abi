@@ -14,24 +14,26 @@ const dataPreviewOptions = [
   }
 ];
 
-const DataPreview: FC<{ onChange?: (val: any) => void; value?: any }> = memo(({ onChange, value }) => {
+const DataPreview: FC<{ onChange?: (val: any) => void; value?: any; operateType?: string }> = memo(({ onChange, value, operateType }) => {
   const [tab, setTab] = useState(1);
-
+  
   return (
     <>
-      <Segmented
-        options={dataPreviewOptions}
-        value={tab}
-        onChange={val => setTab(val)}
-      />
+      {operateType === 'add' && (
+        <Segmented
+          options={dataPreviewOptions}
+          value={tab}
+          onChange={val => setTab(val)}
+        />
+      )}
       {tab === 1 ? (
         <PreviewTable data={value} />
-      ) : (
+      ) : operateType === 'add' ? (
         <FieldSelectTable
           data={value}
           setData={onChange!}
         />
-      )}
+      ) : null}
     </>
   );
 });

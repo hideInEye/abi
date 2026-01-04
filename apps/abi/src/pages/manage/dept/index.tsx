@@ -31,6 +31,12 @@ export function Component() {
         },
         {
           align: 'center',
+          dataIndex: 'deptId',
+          key: 'deptId',
+          title: "机构编号"
+        },
+        {
+          align: 'center',
           dataIndex: 'orderNum',
           key: 'orderNum',
           title: t('page.manage.common.sort')

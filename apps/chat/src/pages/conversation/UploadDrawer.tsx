@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Drawer, Upload, message, Progress, List, Spin, Button, Radio, Modal, Space } from 'antd';
+import { Drawer, Upload, message, Progress, List, Spin, Button, Radio, Modal, Space, Empty} from 'antd';
 import { CloseOutlined, DeleteOutlined, DownloadOutlined, FileExcelOutlined} from '@ant-design/icons';
 import type { RcFile } from 'antd/es/upload/interface';
 import SvgIcon from '../../components/SvgIcon';
@@ -241,8 +241,14 @@ const UploadDrawer: React.FC<Props> = ({ open, onClose, conv, onOk }) => {
   useEffect(() => {
     if (open) {
       getHistoryFiles();
+      // 切换对话时清空当前选中和上传列表
+      setFileList([]);
+      setSelectedHistory({
+        file_id: 0,
+        file_name: ''
+      });
     }
-  }, [open]);
+  }, [open, conv?.conv_uid]);
 
   return (
     <Drawer
@@ -354,6 +360,7 @@ const UploadDrawer: React.FC<Props> = ({ open, onClose, conv, onOk }) => {
           <Spin spinning={loadingHistory}>
             <List
               dataSource={historyFiles}
+              locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" /> }}
               renderItem={(item: any) => (
                 <List.Item
                   styles={{

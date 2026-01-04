@@ -45,9 +45,7 @@ export const TreeNodeContainer: FC = () => {
 
   const onClose = (submit?: boolean, curInsert?: any) => {
     if (submit) {
-      console.log(curInsert);
       setNodeData((state: any) => {
-        console.log(state);
         return formatNodeData(state?.currentDs ? state : curInsert);
       });
     }

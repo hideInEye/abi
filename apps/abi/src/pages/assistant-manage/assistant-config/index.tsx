@@ -7,8 +7,12 @@ import { message } from 'antd';
 import {
   delAgentConfigDs,
   fetchAssistantConfigList,
+  fetchCheckBeforeDelete,
   fetchDeleteAgent,
-  syncKnowledgeBase
+  syncKnowledgeBase,
+  fetchTerms,
+  getAgentDetailById,
+  putAgentConfig,
 } from '@/service/api/assistant-manage';
 
 import DatasourceConfigDrawer from './modules/assistant-config-drawer';
@@ -118,19 +122,6 @@ export function Component() {
                 }}
               />
             </ATooltip>
-            <APopconfirm
-              title={t('common.confirmDelete')}
-              onConfirm={() => handleDelete(record)}
-            >
-              <ATooltip title="删除助手">
-                <AButton
-                  color="danger"
-                  icon={<DeleteOutlined />}
-                  size="small"
-                  variant="link"
-                />
-              </ATooltip>
-            </APopconfirm>
             {/* 设置 */}
             <ATooltip title="助手设置">
               <AButton
@@ -160,6 +151,19 @@ export function Component() {
                 />
               </ATooltip>
             </APopconfirm>
+            <APopconfirm
+              title={t('common.confirmDelete')}
+              onConfirm={() => handleDelete(record)}
+            >
+              <ATooltip title="删除助手">
+                <AButton
+                  color="danger"
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  variant="link"
+                />
+              </ATooltip>
+            </APopconfirm>
           </div>
         ),
         title: t('common.operate'),
@@ -171,27 +175,72 @@ export function Component() {
   const { checkedRowKeys, onDeleted } = useTableOperate(data as any, run, () => {});
 
   async function handleDelete(record: any) {
-    const res = await delAgentConfigDs(record.agentId);
-    if (res.response.data.code === 200) {
-      try {
-        await fetchDeleteAgent({
-          agent_id: record.agentId,
-          space_id: `${record.spaceId}`
-        });
-      } catch (error) {}
-      onDeleted();
+    // 删除助手取消调用此接口，不需要判断是否引用对话
+    // const checkRes = await fetchCheckBeforeDelete({ agent_id: record.agentId });
+    // if (checkRes.response.data.code === 601) {
+    //   message.error(checkRes.response.data.msg);
+    //   return;
+    // }
+    const res = await fetchDeleteAgent({
+      agent_id: record.agentId,
+      space_id: `${record.spaceId}`,
+    });
+
+    if (res.response.data.success) {
+      const rel = await delAgentConfigDs(record.agentId);
+      if (rel.response.data.code === 200) {
+        onDeleted();
+      }
+    } else {
+      message.error(res.response.data.err_msg);
     }
   }
 
   async function handleConfirm(record: any) {
-    const obj = JSON.parse(record.modelConfig);
+    // 1. 先获取助手详情并更新配置
+    const detailRes = await getAgentDetailById(record.agentId);
+    const detailData = detailRes?.data;
+    if (detailData) {
+      await putAgentConfig({
+        ...detailData,
+        spaceId: Number(localStorage.getItem('spaceId')),
+        status: 1,
+      });
+    }
+    // 2. 同步知识库
+    const obj = JSON.parse(record.modelConfig || '{}');
+    const cfg = obj?.modelConfigs?.[0] || {};
+    let dslObj = obj?.mdlConfigs || {};
+    try {
+      const termGroupId = cfg?.termGroupId;
+      if (termGroupId) {
+        const termRes = await fetchTerms({ groupId: termGroupId, spaceId: Number(record.spaceId), termName: '' });
+        const termMap: Record<string, string> = {};
+        (termRes?.data || []).forEach((it: any) => {
+          if (it?.techName) termMap[it.techName] = it.bizName;
+          if (it?.engName) termMap[it.engName] = it.bizName;
+        });
+        const rewrite = (node: any) => {
+          if (!node || typeof node !== 'object') return;
+          if (typeof node.displayName === 'string') {
+            const v = termMap[node.displayName];
+            if (v) node.displayName = v;
+          }
+          Object.keys(node).forEach(k => rewrite(node[k]));
+        };
+        rewrite(dslObj);
+      }
+    } catch (e) {}
+    // console.log('KB sync DSL:', dslObj);
     const res = await syncKnowledgeBase({
       agent_id: `${record.agentId}`,
-      dsl: obj.mdlConfigs ? JSON.stringify(obj.mdlConfigs) : '',
+      dsl: JSON.stringify(dslObj || {}),
       space_id: `${record.spaceId}`
     });
     if (res.response.data?.success) {
       message.success('同步成功');
+    } else {
+      message.error(res.response.data?.err_msg);
     }
   }
 

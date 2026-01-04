@@ -22,13 +22,15 @@ export function queryTerms(params: { groupId: number; spaceId: number; techName:
 export function addTerms(params: {
   alias: string;
   bizName: string;
-  engName: string;
   expr: string;
   groupId: number;
   relViewid: string;
+  remark: string;
   spaceId: number;
-  termName: string;
-  viewName: string;
+  techName: string;
+  engName?: string;
+  termName?: string;
+  viewName?: string;
 }) {
   return apiRequest({
     data: params,
@@ -46,13 +48,15 @@ export function addTerms(params: {
 export function editTerms(params: {
   alias: string;
   bizName: string;
-  engName: string;
   expr: string;
   groupId: number;
   relViewid: string;
+  remark: string;
   spaceId: number;
+  techName: string;
+  engName?: string;
   termId: number;
-  termName: string;
+  termName?: string;
 }) {
   return apiRequest({
     data: params,

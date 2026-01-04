@@ -10,6 +10,7 @@ export async function fetchAssistantConfigList(params?: Api.DataPreparation.Data
 
   return { data: { ...res?.response?.data, data: res?.response?.data?.rows || [] } };
 }
+
 // 修改智能助手配置
 export async function putAgentConfig(data: any) {
   return await apiRequest({
@@ -66,13 +67,21 @@ export function delAgentConfigDs(agentIds: number) {
   });
 }
 
+export function fetchCheckBeforeDelete(data: any) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `/copilot/v1/chatConfig/checkConfig`
+  });
+}
+
 // 同步知识库
 export function syncKnowledgeBase(data: any) {
   return apiRequest({
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: `/api/v1/semantic/prepare`
+    url: `/chat-proxy/api/v1/semantic/prepare`
   });
 }
 
@@ -118,7 +127,7 @@ export async function fetchMemoryList(params?: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     method: 'post',
     params,
-    url: '/api/v1/feedback/inquire'
+    url: '/chat-proxy/api/v1/feedback/inquire'
   })) as any;
 
   return { data: res };
@@ -130,7 +139,7 @@ export function fetchVectorStorage(data?: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/feedback/vectorstorage'
+    url: '/chat-proxy/api/v1/feedback/vectorstorage'
   });
 }
 
@@ -140,7 +149,7 @@ export function fetchModelEval(data?: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v2/workflow/chat/feedback/llmeval'
+    url: '/chat-proxy/api/v2/workflow/chat/feedback/llmeval'
   });
 }
 
@@ -149,7 +158,7 @@ export function fetchDeleteMemory(fbId: string) {
   return apiRequest<any>({
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     method: 'post',
-    url: `/api/v1/feedback/delete?fb_id=${fbId}`
+    url: `/chat-proxy/api/v1/feedback/delete?fb_id=${fbId}`
   });
 }
 
@@ -159,7 +168,7 @@ export function fetchVectorsDelete(fbId: string) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data: { fb_id: fbId },
     method: 'post',
-    url: `/api/v1/feedback/vectorsdelete`
+    url: `/chat-proxy/api/v1/feedback/vectorsdelete`
   });
 }
 
@@ -169,17 +178,20 @@ export function fetchDeleteAgent(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: `/api/v1/semantic/delete`
+    url: `/chat-proxy/api/v1/semantic/delete`
   });
 }
 
+// 删除前检查
+
+
 /** 记忆管理 - 编辑 */
-export function fetchEditMemory(params?: any) {
+export function fetchEditMemory(data?: any) {
   return apiRequest<any>({
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
+    data,
     method: 'post',
-    params,
-    url: '/api/v1/feedback/edit'
+    url: '/chat-proxy/api/v1/feedback/edit'
   });
 }
 
@@ -189,6 +201,6 @@ export function fetchDictionariesList(params?: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     method: 'get',
     params,
-    url: '/v1/dictionarydata/list'
+    url: '/chat-proxy/v1/dictionarydata/list'
   });
 }

@@ -10,10 +10,39 @@ import SvgIcon from "../../components/SvgIcon"
 import styles from './index.module.css';
 import ClarifyComponent from "./components/ClarifyComponent";
 import IntentClarifyV2 from "./components/IntentClarifyV2"; // 澄清处理组件
-import { DownOutlined } from '@ant-design/icons';  // 导入 Ant Design 图标
-import { message, Typography } from "antd";
+import { DownOutlined, UpOutlined } from '@ant-design/icons';  // 导入 Ant Design 图标
+import { Button, Typography, message } from "antd";
+import ReactMarkdown from 'react-markdown';
+import { SUB_CHAT_MODE_MAP } from '../../constant/chat';
 
-const { Paragraph, Text } = Typography;
+const { Text } = Typography;
+
+/**
+ * 思考节点接口
+ */
+interface ThinkNode {
+  name: string;
+  content: string;
+}
+
+/**
+ * 解析思考节点
+ */
+const parseThinkNodes = (content: string, assistantName: string = 'AI助手'): { thinkNodes: ThinkNode[], finalContent: string } => {
+  const thinkNodes: ThinkNode[] = [];
+
+  const blockRegex = /<think>([\s\S]*?)<\/think>/g;
+  let match;
+
+  while ((match = blockRegex.exec(content)) !== null) {
+    const inner = match[1].trim();
+    thinkNodes.push({ name: assistantName, content: inner });
+  }
+
+  const finalContent = content.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/\[DONE\]/g, '').trim();
+
+  return { thinkNodes, finalContent };
+};
 
 /**
  * 组件属性接口定义
@@ -47,9 +76,8 @@ interface PropsType {
 const AiEle: React.FC<PropsType> = ({
   isSharing,
   data, 
-  loading, 
-  isStorage = false,
-  isNew = false,
+  loading,
+  isStorage,
   thinkTime,
   useSimpleStyle = false,
   setDebugModalVisible,
@@ -57,12 +85,22 @@ const AiEle: React.FC<PropsType> = ({
   setCur,
   getAnswer,
   onMessageUpdate,
-  // questionData
 }) => {
 
-  // 获取AI助手名称，如果data中有name则使用，否则默认为"AI助手"
+  // 获取AI助手名称
+  // 实时对话：从流式数据的 sub_chat_mode 映射获取
+  // 历史对话：从接口返回的 name 字段获取
   const getAssistantName = () => {
-    return data?.name || 'AI助手';
+    // 如果有 sub_chat_mode 字段（实时对话），使用映射表
+    if (data?.sub_chat_mode && SUB_CHAT_MODE_MAP[data.sub_chat_mode]) {
+      return SUB_CHAT_MODE_MAP[data.sub_chat_mode];
+    }
+    // 否则，使用 name 字段（历史对话）
+    if (data?.name) {
+      return data.name;
+    }
+    // 默认值
+    return 'AI助手';
   };
 
   /**
@@ -71,10 +109,20 @@ const AiEle: React.FC<PropsType> = ({
    * @returns {string} 处理后的消息内容
    */
   const processContent = (content: string) => {
-    return content.split('</think>')[0] // 只保留think标签之前的内容
-      .replace(/<think>/g, '') // 移除所有 think 标签
+    // 处理后的内容
+    const processed = content
+      .replace(/\n{3,}/g, '\n\n') // 将3个及以上的连续换行符压缩为双换行
+      .replace(/\n\n\n/g, '\n\n') // 再次确保没有三连换行
       .trim();
+    
+    return processed;
   };
+
+  // 解析思考节点，传入助手名称
+  const assistantName = getAssistantName();
+  const { thinkNodes, finalContent } = parseThinkNodes(data.context || '', assistantName);
+  
+  // 直出思考内容，不使用折叠与额外容器
 
   const loadingLabel = (
     <div className="flex items-center">
@@ -87,7 +135,7 @@ const AiEle: React.FC<PropsType> = ({
 
   const endLabel = (
     <div className="text-[#666] flex items-center">
-      <span>已深度思考</span>
+      <span>已完成思考</span>
       {thinkTime ? (
         <span className="ml-1 text-blue-500">
           {thinkTime}s
@@ -109,7 +157,9 @@ const AiEle: React.FC<PropsType> = ({
           <div className="bg-[#e8eefb] rounded-lg px-4 py-2 text-sm text-gray-700 relative">
             {/* 添加小三角 */}
             <div className="absolute left-[-6px] top-3 w-3 h-3 bg-[#e8eefb] transform rotate-45"></div>
-            {processContent(data.context)}
+            <div className={styles['markdown-content']}>
+              <ReactMarkdown>{processContent(finalContent || data.context)}</ReactMarkdown> 
+            </div>
           </div>
           {loading ? (
             <div className="mt-1 text-xs text-gray-400">思考中...</div>
@@ -137,30 +187,27 @@ const AiEle: React.FC<PropsType> = ({
   const [isCollapsed, setIsCollapsed] = useState(true);
   // 记录内容高度
   const contentRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState<number | string>("auto");
-
-  // 动态计算内容高度
-  useEffect(() => {
-    if (contentRef.current) {
-      setContentHeight(contentRef.current.scrollHeight);
-    }
-  }, [data]);
 
   useEffect(() => {
     // 控制折叠状态
-    if (isSharing || data?.questionData?.agent_label === 'intent_clarify' || data.smLoading) {
-      setIsCollapsed(false); // 澄清或加载时展开
+    if (data?.questionData?.agent_label === 'intent_clarify' || data.smLoading || data.isIllegalQuery) {
+      setIsCollapsed(false); // 澄清、加载或闲聊场景时展开
     } else {
-
       setIsCollapsed(true); // 否则折叠
     }
-  }, [data, isSharing]);
+  }, [data]);
+  
+  useEffect(() => {
+    if (isDone && !isSharing && !data?.questionData?.agent_label && !data.isIllegalQuery) {
+      setIsCollapsed(true);
+    }
+  }, [isDone, isSharing, data]);
   
   useEffect(() => {
     if (!loading && data.context && isDone) {
-      console.log('====================================');
-      console.log('update 123123:',data.context);
-      console.log('====================================');
+      // console.log('====================================');
+      // console.log('update 123123:',data.context);
+      // console.log('====================================');
       onMessageUpdate && onMessageUpdate(data)
     }
   }, [loading, data, isDone])
@@ -179,8 +226,21 @@ const AiEle: React.FC<PropsType> = ({
               <div className="flex items-center">
                 <span className="cursor-pointer hover:opacity-70 select-none mr-2" onClick={(e) => {
                   e.stopPropagation()
-                  setDebugModalVisible(true);
-                  setCur(data);
+                  // 实时对话过程中（isStorage=false）：检查是否有 roundIndex
+                  // 历史对话直接打开
+                  if (!isStorage) {
+                    // 实时对话过程中，只有返回了 roundIndex 才能打开模型调试
+                    if (data.roundIndex) {
+                      setCur(data);
+                      setDebugModalVisible(true);
+                    } else {
+                      message.warning('暂未返回模型调试信息');
+                    }
+                  } else {
+                    // 历史对话场景，直接打开
+                    setCur(data);
+                    setDebugModalVisible(true);
+                  }
                 }}>
                   <SvgIcon className="text-16px" localIcon="setting" />
                 </span>
@@ -196,26 +256,23 @@ const AiEle: React.FC<PropsType> = ({
               </span>
             </div>
           </div>
-          <div className="p-[0.75rem] px-[1.5625rem]">
+          {isCollapsed ? null : <div className="p-[0.75rem] px-[1.5625rem]">
             <div
               ref={contentRef}
-              className={`
-                whitespace-pre-wrap text-sm text-gray-700 transition-all duration-300 ease-in-out relative 
-                ${isCollapsed ? 'max-h-0 overflow-hidden' : `max-h-[${contentHeight}px] pt-[20px]`} 
-              `}
+              className="whitespace-pre-wrap text-sm text-gray-700 transition-all duration-300 ease-in-out relative"
+              style={{
+                maxHeight: isCollapsed ? '0' : 'none',
+                overflow: isCollapsed ? 'hidden' : 'visible',
+                paddingTop: isCollapsed ? '0' : '20px'
+              }}
             >
-              {/* 流式渲染开始前的loading图标 */}
-              {/* {loading && (!data.context || data.context === '') && (
-                <div className={`${styles['spin-loading']} absolute left-1 top-[-5px]`}></div>
-              )} */}
-              
               {/* 复制 */}
               {
-                !questionData?.agent_label && (
+                !questionData?.agent_label && finalContent && (
                   <div className="absolute right-1 top-[-5px] cursor-pointer text-gray-600 hover:text-gray-800 transition-colors">
                     <Text
                       copyable={{
-                        text: processContent(data.context),
+                        text: processContent(finalContent),
                         tooltips: ['复制', '已复制'],
                       }}
                     />
@@ -223,9 +280,26 @@ const AiEle: React.FC<PropsType> = ({
                 )
               }
 
-              {/* 内容 */}
-              {/* 当触发意图澄清时，不显示JSON数据，只显示澄清组件 */}
-              {questionData?.agent_label === 'intent_clarify' ? null : processContent(data.context)}
+              {/* 思考内容直出 */}
+              {thinkNodes.length > 0 ? (
+                <div className="mb-4">
+                  {thinkNodes.map((node, index) => (
+                    <div key={index} className="mb-2">
+                      <div className={styles['markdown-content']}>
+                        <ReactMarkdown>{processContent(node.content)}</ReactMarkdown>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mb-4">
+                  <div className={styles['markdown-content']}>
+                    <ReactMarkdown>{processContent(data.context || '')}</ReactMarkdown>
+                  </div>
+                </div>
+              )}
+
+              {/* 内容区不渲染 </think> 之后的文本 */}
 
               {/* 澄清组件 */}
               {
@@ -240,8 +314,23 @@ const AiEle: React.FC<PropsType> = ({
                   ) : null
                 )
               }
+              {
+                !isCollapsed && !isSharing && (
+                  <div className={styles.collapseButtonWrapper}>
+                    <Button
+                      type="primary" 
+                      shape="circle"
+                      className={styles.collapseButton}
+                      onClick={() => setIsCollapsed(true)}
+                    >
+                      <UpOutlined className={styles.collapseButtonArrow} />
+                      <span>收起</span>
+                    </Button>
+                  </div>
+                )
+              }
             </div>
-          </div>
+          </div>}
         </div>
       </div>
     </div>

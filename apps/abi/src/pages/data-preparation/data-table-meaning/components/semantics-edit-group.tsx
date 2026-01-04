@@ -44,7 +44,7 @@ export const EditGroup = ({ updateGroupData }: { readonly updateGroupData: () =>
         remark: editGroupItem.remark
       });
     }
-  }, [editGroupItem, form]);
+  }, [editGroupItem, form,groupModalOpen]);
 
   return (
     <Modal
@@ -78,7 +78,7 @@ export const EditGroup = ({ updateGroupData }: { readonly updateGroupData: () =>
           name="groupName"
           rules={[
             { message: '组名称未填写', required: true },
-            { max: 20, message: '组名称最多20个字符' }
+            { max: 50, message: '组名称最多50个字符' }
           ]}
         >
           <Input />
@@ -87,8 +87,11 @@ export const EditGroup = ({ updateGroupData }: { readonly updateGroupData: () =>
         <Form.Item
           label="组描述"
           name="remark"
+          rules={[
+            { max: 500, message: '组描述最多500个字符' }
+          ]}
         >
-          <Input.TextArea />
+          <Input.TextArea maxLength={500} showCount />
         </Form.Item>
       </Form>
     </Modal>

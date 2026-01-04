@@ -107,6 +107,7 @@ export const SpaceEdit = ({ drawerOpen, editSpace, setDrawerOpen, updateSpace }:
                 oname: currentUserObj.userName,
                 orgId: currentUserObj.dept.deptId,
                 orgName: currentUserObj.dept.deptName,
+                recordId: currentUserObj.userUuid,
                 otype: 1,
                 roles: [
                   {

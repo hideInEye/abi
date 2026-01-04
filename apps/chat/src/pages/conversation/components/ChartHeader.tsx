@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Dropdown, Space, Popover, Skeleton, Divider, Select } from 'antd';
+import { Button, Dropdown, Space, Popover, Skeleton, Divider, Select, Tooltip } from 'antd';
 import SvgIcon from '../../../components/SvgIcon';
 import { FilterOutlined, DownloadOutlined, CloseOutlined } from '@ant-design/icons';
 import { fetchConvGuide, fetchAssembleSql, fetchSelectDataBySql } from '../../../service/api/conv';
@@ -48,6 +48,7 @@ interface Props {
   chatMode?: string;
   ansiSql?: string;
   chartType?: string;
+  currentTableData?: any[]; // 当前表格数据，用于提取筛选选项
 }
 
 const ChartHeader: React.FC<Props> = ({
@@ -67,7 +68,8 @@ const ChartHeader: React.FC<Props> = ({
   agentId,
   chatMode,
   ansiSql,
-  chartType
+  chartType,
+  currentTableData = []
 }) => {
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const [allFilters, setAllFilters] = useState<FilterData[]>([]); // 二次引导筛选项
@@ -75,6 +77,9 @@ const ChartHeader: React.FC<Props> = ({
   const [filterValuesLen, setFilterValuesLen] = useState(0);
   const [loading, setLoading] = useState(false); // 加载状态
   const [filtersFetched, setFiltersFetched] = useState(false); // 记录是否已获取过筛选数据
+  const [isRefreshHover, setIsRefreshHover] = useState(false); // 刷新按钮hover状态
+  const [isConfigHover, setIsConfigHover] = useState(false); // 设置按钮hover状态
+  const [isFullscreenHover, setIsFullscreenHover] = useState(false); // 全屏按钮hover状态
   const chartData = [
     {label:'柱状图',value:'response_bar_chart'},
     {label:'折线图',value:'response_line_chart'},
@@ -84,7 +89,6 @@ const ChartHeader: React.FC<Props> = ({
     {label:'多指标柱形图',value:'response_many_bar_chart'},
     {label:'多指标折线图',value:'response_many_line_chart'},
   ]   // 图表类型
-  
 
   const handleGetFileter = async () => {
     setOpen(true);
@@ -92,7 +96,7 @@ const ChartHeader: React.FC<Props> = ({
     if (filtersFetched && allFilters.length > 0) {
       return;
     }
-    
+
     if (convUid && chatId && spaceId && agentId && chatMode) {
       try {
         setLoading(true);
@@ -133,11 +137,14 @@ const ChartHeader: React.FC<Props> = ({
       
       // 根据筛选类型设置初始值
       switch (showType) {
-        case 'select': // 下拉选择框：设为 null 或空值
+        case 'select': // 下拉选择框：空数组
+          initialValue = [];
+          break;
+        case 'date': // 日期范围：空值
           initialValue = null;
           break;
-        case 'range': // 范围选择框：设为 null 或空数组
-          initialValue = null; // 或 []，需根据 FilterItem 组件实际逻辑调整
+        case 'range': // 数值范围：固定对象形态，避免 value.min/value.max 访问异常
+          initialValue = { min: '', max: '' };
           break;
         default: // 输入框等其他类型：设为 undefined 或空字符串
           initialValue = undefined;
@@ -149,6 +156,7 @@ const ChartHeader: React.FC<Props> = ({
     }, {} as Record<string, any>);
     
     setFilterValues(initialValues);
+    setFilterValuesLen(countActiveFilters(initialValues));
   };
 
   const handleFilterChange = (field: string, value: any) => {
@@ -160,12 +168,14 @@ const ChartHeader: React.FC<Props> = ({
 
   // 刷新
   const onRefreshClick = () => {
+    resetFilters();
+    setFilterValuesLen(0);
     handleSearch(true);
   };
 
   // 查询,根据筛选和上一次的sql条件转sql，再查数据
   const handleSearch = async (isRefresh: boolean = false) => {
-    setFilterValuesLen(countActiveFilters(filterValues));
+    setFilterValuesLen(isRefresh ? 0 : countActiveFilters(filterValues));
     try {
       const res = await fetchAssembleSql({
         convUid,
@@ -301,6 +311,20 @@ const ChartHeader: React.FC<Props> = ({
   };
 
   const renderFilterItem = (filter: FilterData) => {
+    if (currentTableData && currentTableData.length > 0) {
+      const tableFields = Object.keys(currentTableData[0] || {});
+      const matchedField = tableFields.find(field =>
+        field.includes(filter.tfieldName) ||
+        filter.tfieldName.includes(field) ||
+        field.includes(filter.tfieldShowName) ||
+        filter.tfieldShowName.includes(field)
+      );
+
+      if (!matchedField) {
+        return null;
+      }
+    }
+
     let config: FilterConfig = {
       type: 'input',
       field: filter.tfieldName,
@@ -316,14 +340,45 @@ const ChartHeader: React.FC<Props> = ({
 
     switch (filter.showType) {
       case 'select':
+        // 如果有当前表格数据，从表格数据中提取唯一值作为选项，否则使用API提供的选项
+        let options = filter.filtrateDataList.map(item => ({
+          label: item,
+          value: item
+        }));
+        
+        if (currentTableData && currentTableData.length > 0) {
+          try {
+            // 直接使用模糊匹配查找对应字段
+            const tableFields = Object.keys(currentTableData[0]);
+            const matchedField = tableFields.find(field => 
+              field.includes(filter.tfieldName) || 
+              filter.tfieldName.includes(field) ||
+              field.includes(filter.tfieldShowName) ||
+              filter.tfieldShowName.includes(field)
+            );
+            
+            if (matchedField) {
+              const fieldValues = currentTableData.map(row => row[matchedField]);
+              const uniqueValues = [...new Set(fieldValues.filter(val => val !== null && val !== undefined))];
+              
+              if (uniqueValues.length > 0) {
+                options = uniqueValues.map(item => ({
+                  label: String(item),
+                  value: item
+                }));
+              }
+            }
+          } catch (error) {
+            console.warn('Error extracting filter options from table data:', error);
+            // 如果提取失败，继续使用原来的选项
+          }
+        }
+        
         config = {
           type: 'select',
           field: filter.tfieldName,
           placeholder: filter.tfieldShowName,
-          options: filter.filtrateDataList.map(item => ({
-            label: item,
-            value: item
-          })),
+          options,
           extra: {
             convUid,
             chatId,
@@ -383,14 +438,24 @@ const ChartHeader: React.FC<Props> = ({
           {...config}
           value={filterValues[filter.tfieldName]}
           onChange={(value) => handleFilterChange(filter.tfieldName, value)}
-          style={config.type === 'input' ? { width: 200 } : undefined}
+          style={
+            config.type === 'input'
+              ? { width: 260 }
+              : config.type === 'date'
+                ? { width: 300 }
+                : config.type === 'select'
+                  ? { width: 300 }
+                  : config.type === 'range'
+                    ? { width: 300 }
+                    : undefined
+          }
         />
       </div>
     );
   };
 
   const popoverContent = (
-    <div className="p-3 w-[300px] max-h-[400px] overflow-y-auto">
+    <div className="p-3 w-[420px] max-h-[400px] overflow-y-auto">
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-medium">筛选条件</h3>
         <CloseOutlined 
@@ -448,72 +513,97 @@ const ChartHeader: React.FC<Props> = ({
         </div>
         <div className="flex items-center gap-2">
           {showChartIcon && (
-            <span
-              className={`cursor-pointer hover:opacity-70 select-none ${
-                activeType === 'chart' ? 'text-[#3470f6]' : ''
-              }`}
-              onClick={() => onTypeChange('chart')}
-            >
-              <SvgIcon className="text-16px" localIcon="chart" />
-            </span>
+            <Tooltip title="智能图表">
+              <span
+                className={`cursor-pointer hover:text-[#3470f6] select-none`}
+                onClick={() => onTypeChange('chart')}
+              >
+                {activeType === 'chart' ? <SvgIcon className="text-16px" localIcon="chartblue" /> : <SvgIcon className="text-16px" localIcon="chart" />}
+              </span>
+            </Tooltip>
           )}
-          <span
-            className={`cursor-pointer hover:opacity-70 select-none ${
-              activeType === 'table' ? 'text-[#3470f6]' : ''
-            }`}
-            onClick={() => onTypeChange('table')}
-          >
-            <SvgIcon className="text-16px" localIcon="table" />
-          </span>
-          <span
-            className={`cursor-pointer hover:opacity-70 select-none ${
-              activeType === 'sql' ? 'text-[#3470f6]' : ''
-            }`}
-            onClick={() => onTypeChange('sql')}
-          >
-            <SvgIcon className="text-16px" localIcon="sql" />
-          </span>
+          <Tooltip title="数据表格">
+            <span
+              className={`cursor-pointer hover:opacity-70 select-none`}
+              onClick={() => onTypeChange('table')}
+            >
+              {activeType === 'table' ? <SvgIcon className="text-16px" localIcon="tableblue" /> : <SvgIcon className="text-16px" localIcon="table" />}
+            </span>
+          </Tooltip>
+          <Tooltip title="SQL语句">
+            <span
+              className={`cursor-pointer hover:opacity-70 select-none`}
+              onClick={() => onTypeChange('sql')}
+            >
+              {activeType === 'sql' ? <SvgIcon className="text-16px" localIcon="sqlblue" /> : <SvgIcon className="text-16px" localIcon="sql" />}
+            </span>
+          </Tooltip>
           {/* 暂时隐藏分享按钮
           <span className="cursor-pointer hover:opacity-70 select-none" onClick={onShareClick}>
             <SvgIcon className="text-16px" localIcon="share" />
           </span>
           */}
-          <span className="cursor-pointer hover:opacity-70 select-none" onClick={onRefreshClick}>
-            <SvgIcon className="text-16px" localIcon="refresh" />
-          </span>
-          {showChartIcon && (
-            <span className="cursor-pointer hover:opacity-70 select-none" onClick={onConfigClick}>
-              <SvgIcon className="text-16px" localIcon="set" />
+          <Tooltip title="重新生成">
+            <span 
+              className="cursor-pointer hover:opacity-70 select-none" 
+              onClick={onRefreshClick}
+              onMouseEnter={() => setIsRefreshHover(true)}
+              onMouseLeave={() => setIsRefreshHover(false)}
+            >
+              <SvgIcon className="text-16px" localIcon={isRefreshHover ? "refreshblue" : "refresh"} />
             </span>
+          </Tooltip>
+          {showChartIcon && (
+            <Tooltip title="图表配置">
+              <span 
+                className="cursor-pointer hover:opacity-70 select-none" 
+                onClick={onConfigClick}
+                onMouseEnter={() => setIsConfigHover(true)}
+                onMouseLeave={() => setIsConfigHover(false)}
+              >
+                <SvgIcon className="text-16px" localIcon={isConfigHover ? "setblue" : "set"} />
+              </span>
+            </Tooltip>
           )}
           {/* <span className="cursor-pointer hover:opacity-70 select-none" onClick={onDebugClick}>
             <SvgIcon className="text-16px" localIcon="setting" />
           </span> */}
-          <span className="cursor-pointer hover:opacity-70 select-none" onClick={onFullscreenClick}>
-            <SvgIcon className="text-16px" localIcon="fullscreen" />
-          </span>
-          <span className="cursor-pointer hover:opacity-70 select-none text-[#666] hover:text-[#3470f6]">
-            <Dropdown menu={{ items: exportMenuItems, onClick: handleDownloadClick }} placement="bottom" trigger={['click']}>
-                <Space>
-                  <DownloadOutlined />
-                </Space>
-            </Dropdown>
-          </span>
-          {/* 筛选条件Popover */}
-          <Popover
-            content={popoverContent}
-            title={null} // 取消默认标题
-            trigger="click"
-            placement="bottomRight"
-            arrow={{ pointAtCenter: true }}
-            open={open}
-            onOpenChange={setOpen} // 监听popover打开/关闭状态
-          >
-            <span onClick={handleGetFileter} className="cursor-pointer hover:opacity-70 select-none text-[#666] hover:text-[#3470f6]">
-              <FilterOutlined />
-              {filterValuesLen > 0 && <span style={{ fontSize: '10px' }}>{`(${filterValuesLen})`}</span>}
+          <Tooltip title="大屏展示">
+            <span 
+              className="cursor-pointer hover:opacity-70 select-none" 
+              onClick={onFullscreenClick}
+              onMouseEnter={() => setIsFullscreenHover(true)}
+              onMouseLeave={() => setIsFullscreenHover(false)}
+            >
+              <SvgIcon className="text-16px" localIcon={isFullscreenHover ? "fullscreenblue" : "fullscreen"} />
             </span>
-          </Popover>
+          </Tooltip>
+          <Tooltip title="数据导出">
+            <span className="cursor-pointer hover:opacity-70 select-none text-[#666] hover:text-[#3470f6]">
+              <Dropdown menu={{ items: exportMenuItems, onClick: handleDownloadClick }} placement="bottom" trigger={['click']}>
+                  <Space>
+                    <DownloadOutlined />
+                  </Space>
+              </Dropdown>
+            </span>
+          </Tooltip>
+          {/* 筛选条件Popover */}
+          <Tooltip title="数据筛选" open={open ? false : undefined}>
+            <Popover
+              content={popoverContent}
+              title={null} // 取消默认标题
+              trigger="click"
+              placement="bottomRight"
+              arrow={{ pointAtCenter: true }}
+              open={open}
+              onOpenChange={setOpen} // 监听popover打开/关闭状态
+            >
+              <span onClick={handleGetFileter} className="cursor-pointer hover:opacity-70 select-none text-[#666] hover:text-[#3470f6]">
+                <FilterOutlined  />
+                {filterValuesLen > 0 && <span style={{ fontSize: '10px' }}>{`(${filterValuesLen})`}</span>}
+              </span>
+            </Popover>
+          </Tooltip>
         </div>
       </header>
     </div>

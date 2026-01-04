@@ -1,5 +1,5 @@
 import type { UploadFile } from 'antd';
-import { Upload } from 'antd';
+import { message, Upload } from 'antd';
 import type { UploadChangeParam } from 'antd/es/upload';
 
 import { uploadFile } from '@/service/api';
@@ -9,13 +9,23 @@ interface PropsType {
   onChange?: (val: UploadFile[]) => void;
   setData: (val: any) => void;
   value?: UploadFile[];
+  maxSize?: number;
+  setUploadError: (error: { messageTitle: string; message: string }) => void;
+  setPreviewVisible?: (visible: boolean) => void;
 }
 
-const Uploader: FC<PropsType> = memo(({ children, onChange, setData, value }) => {
+const Uploader: FC<PropsType> = memo(({ children, onChange, setData, value, maxSize, setUploadError, setPreviewVisible }) => {
   const [uploading, setUploading] = useState<boolean>(false);
   const customRequest = async (options: any) => {
     const { file } = options;
+    
     setUploading(true);
+    if (maxSize && file.size > maxSize) {
+      setUploadError({ messageTitle: '上传失败: 文件大小超过限制', message: `单个文件最大支持 10MB` });
+      setUploading(false);
+      setPreviewVisible?.(true);
+      return;
+    }
     const formData: any = new FormData();
     formData.append('file', file);
     formData.append('id', 0);
@@ -31,9 +41,13 @@ const Uploader: FC<PropsType> = memo(({ children, onChange, setData, value }) =>
 
           setData(resData.sheets);
           onChange!([{ ...file, ...resData, name: file.name }]);
+          message.success('文件上传成功');
         }
       } else {
-        onChange!([{ ...file, name: file.name, status: 'error' }]);
+        const msg  = res.response?.data?.msg;
+        setUploadError({ messageTitle: msg || '文件解析失败', message: msg || '文件解析失败' });
+        setPreviewVisible?.(true);
+        // onChange!([{ ...file, name: file.name, status: 'error' }]);
       }
     } catch (error) {
       console.log(error);
@@ -48,14 +62,14 @@ const Uploader: FC<PropsType> = memo(({ children, onChange, setData, value }) =>
 
   return (
     <Upload.Dragger
-      accept=".xls,.xlsx,.csv"
+      accept=".xls,.csv,.xlsx"
       customRequest={customRequest}
       // beforeUpload={beforeUpload}
       disabled={uploading}
       fileList={value}
       maxCount={1}
       // showUploadList={false}
-      onChange={handleChange}
+      // onChange={handleChange}
     >
       {children}
     </Upload.Dragger>

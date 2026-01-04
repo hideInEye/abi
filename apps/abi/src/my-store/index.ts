@@ -21,7 +21,8 @@ export const useSystemStore = create<StoreType>()(set => ({
   loadRoleOptions: () => {
     fetchGetRoleOption().then(res => {
       const _roleOptionsMap = new Map();
-      const roleOptions = res.data?.map((item: any) => {
+      const data = res.data?.filter(item=>!item.admin)
+      const roleOptions = data?.map((item: any) => {
         _roleOptionsMap.set(item.roleId, item.roleName);
         return { label: item.roleName, value: item.roleId };
       });

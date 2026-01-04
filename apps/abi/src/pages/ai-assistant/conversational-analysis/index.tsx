@@ -1,5 +1,7 @@
 import { loadMicroApp } from 'qiankun';
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
+import { store } from '@/store';
+import { resetStore } from '@/store/slice/auth';
 
 import styles from './index.module.css';
 
@@ -25,8 +27,13 @@ export function Component() {
       entry: import.meta.env.VITE_MICRO_AI_BOT_ENTRY, // 子应用入口地址
       name: 'ai-bot', // 子应用名称
       props: {
-        // 传递给子应用的路由基础路径
-        basename: '/ai-assistant/conversational-analysis'
+        // 传递给子应用的路由基础路径 
+        basename: '/ai-assistant/conversational-analysis',
+        // 传递 token 过期处理函数给子应用
+        onTokenExpired: () => {
+          // 调用主应用的 resetStore 来处理 token 过期
+          store.dispatch(resetStore());
+        }
         // 注释的代码支持根据是否为 qiankun 子应用动态调整路径
         // basename: (qiankunWindow as any)?.__POWERED_BY_QIANKUN__
         //   ? '/studio/chatbi/ai-assistant/conversational-analysis'

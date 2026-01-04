@@ -15,6 +15,12 @@ export async function backEndFail(
   instance: AxiosInstance,
   request: FlatRequestInstance<RequestInstanceState, App.Service.Response<unknown>>
 ) {
+  // 测试连接接口不跳转登录页
+  // const isTestConnect = response.config?.url?.includes('model/test/connect');
+  // if (isTestConnect) {
+  //   return null;
+  // }
+  
   const responseCode = String(response.data.code);
 
   async function handleLogout() {
@@ -92,18 +98,24 @@ export function handleError(
   // ai对话，通过sql查询图表数据接口，不提示报错
   if (['/api/v1/chat/db/query', '/api/v1/chat/db/add'].includes(error.config?.url || '')) return;
 
+  // 测试连接接口不跳转登录页
+  // const isTestConnect = error.config?.url?.includes('model/test/connect');
+  // if (isTestConnect) {
+  //   return;
+  // }
+
   let message = error.message;
   let backendErrorCode = '';
 
   // Network errors (no response) - backend unreachable, cert error, CORS, etc.
   // In this case, show an error and force logout so user returns to login page
-  if (!error.response) {
-    showErrorMsg(request.state, message || 'Network Error');
-    // dispatch resetStore to cleanup and redirect to login
-    // cast to any to avoid TS thunk typing issues here
-    store.dispatch(resetStore() as any);
-    return;
-  }
+  // if (!error.response) {
+  //   showErrorMsg(request.state, message || 'Network Error');
+  //   // dispatch resetStore to cleanup and redirect to login
+  //   // cast to any to avoid TS thunk typing issues here
+  //   // store.dispatch(resetStore() as any);
+  //   return;
+  // }
 
   // get backend error message and code
   if (error.code === BACKEND_ERROR_CODE) {

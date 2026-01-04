@@ -46,8 +46,12 @@ declare module "@elegant-router/types" {
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
     "job": "/job";
-    "job_log": "log/:id";
+    "job_email": "email";
+    "job_log": "log";
     "job_time": "time";
+    "job_time_modules": "modules";
+    "job_time_modules_editor-quill": "editor-quill";
+    "job_time_modules_share-email-setting": "share-email-setting";
     "login": "/login";
     "login_code-login": "code-login";
     "login_pwd-login": "pwd-login";
@@ -165,8 +169,11 @@ declare module "@elegant-router/types" {
     | "data-preparation_data-source"
     | "data-preparation_data-table-meaning"
     | "home"
+    | "job_email"
     | "job_log"
     | "job_time"
+    | "job_time_modules_editor-quill"
+    | "job_time_modules_share-email-setting"
     | "login_code-login"
     | "login"
     | "login_pwd-login"

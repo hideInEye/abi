@@ -1,5 +1,6 @@
 import { DislikeOutlined, LikeOutlined } from '@ant-design/icons';
 import { Form } from 'antd';
+import dayjs from 'dayjs';
 
 import {
   EVAL_EXPERT_OPTIONS,
@@ -87,6 +88,7 @@ const MemoryOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open
         >
           <AInput.TextArea
             readOnly
+            rows={10}
             variant="borderless"
           />
         </AForm.Item>
@@ -118,10 +120,11 @@ const MemoryOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open
           label="提交时间"
           name="create_time"
         >
-          <AInput
-            readOnly
-            variant="borderless"
-          />
+          <span className="pl-4">
+            {form.getFieldValue('create_time')
+              ? dayjs(form.getFieldValue('create_time')).format('YYYY-MM-DD HH:mm:ss')
+              : '-'}
+          </span>
         </AForm.Item>
 
         <div className="mb-2">

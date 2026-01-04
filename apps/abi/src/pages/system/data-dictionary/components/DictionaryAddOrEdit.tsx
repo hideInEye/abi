@@ -1,10 +1,11 @@
-import { Button as AButton, Drawer as ADrawer, Flex as AFlex, Form as AForm, Input as AInput, Form } from 'antd';
+import { CloseOutlined } from '@ant-design/icons';
+import { Button as AButton, Drawer as ADrawer, Flex as AFlex, Form as AForm, Input as AInput, Form, FormInstance } from 'antd';
 import React, { useEffect } from 'react';
 
 interface AddOrEditDictionaryProps {
   readonly editObj?: any;
   readonly onClose: () => void;
-  readonly onSure: (values: any) => void;
+  readonly onSure: (values: any,form:FormInstance) => void;
   readonly open: boolean;
 }
 
@@ -19,21 +20,24 @@ export const AddOrEditDictionary: React.FC<AddOrEditDictionaryProps> = ({ editOb
   const adrawerSure = async () => {
     const values = await form.validateFields();
     if (values) {
-      onSure(values);
-      form.resetFields();
+      onSure(values,form);
     }
   };
 
   useEffect(() => {
-    if (editObj) {
-      form.setFieldsValue(editObj);
-    } else {
-      form.resetFields();
+    if (open) {
+      if (editObj) {
+        form.setFieldsValue(editObj);
+      } else {
+        form.resetFields();
+      }
     }
-  }, [editObj]);
+  }, [editObj, open, form]);
 
   return (
     <ADrawer
+      closeIcon={null}
+      extra={<CloseOutlined onClick={handleCancel} />}
       open={open}
       title={editObj ? '编辑字典' : '添加字典'}
       width={700}
@@ -43,25 +47,25 @@ export const AddOrEditDictionary: React.FC<AddOrEditDictionaryProps> = ({ editOb
           onSure={adrawerSure}
         />
       }
-      onClose={onClose}
+      onClose={handleCancel}
     >
       <AForm
         form={form}
         layout="vertical"
       >
         <AForm.Item
-          label="英文名称"
+          label="字典名称"
           name="dictField"
           rules={[
-            { message: '请输入英文名称', required: true },
-            { max: 30, message: '长度不能超过20个字符' },
+            { message: '请输入数据库表字段英文名', required: true },
+            { max: 50, message: '不能超过50个字符' },
             {
-              message: '请输入英文字符，以下划线分割',
-              pattern: /^[\u4E00-\u9FA5a-zA-Z_]+$/
+              message: '请输入数据库表字段英文名，以下划线分割',
+              pattern: /^[a-zA-Z_]+$/
             }
           ]}
         >
-          <AInput placeholder="请输入英文名称" />
+          <AInput placeholder="请输入数据库表字段英文名" />
         </AForm.Item>
 
         <AForm.Item

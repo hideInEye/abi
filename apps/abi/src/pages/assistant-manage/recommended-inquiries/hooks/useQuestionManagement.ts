@@ -15,40 +15,37 @@ export function useQuestionManagement() {
   const [isReset, setIsReset] = useState<boolean>(false);
   const [pagination,setPagination] = useState({
     pageNum: 1,
-    pageSize: 10,
+    pageSize: 5,
     total:0
   })
 
-  const getTableData = async (question = '') => {
+  const defaultPagination = {
+    pageNum: 1,
+    pageSize: 5,
+  }
+
+  const getTableData = async (question = '', p:any = {}) => {
     if (!groupId) return;
+    const { pageNum:num = 1, pageSize:size = 5} = p
     setTableData([]);
     const { data } = await queryQuestion({
       groupId,
       question,
       spaceId: Number(localStorage.getItem('spaceId')),
-      pageNum:pagination.pageNum,
-      pageSize: pagination.pageSize
+      pageNum:num,
+      pageSize: size
     });
     const { list = [], pageNum,total} = data;
     setPagination(p=>({
       ...p,
-      pageNum: pageNum>0?pageNum:1,
       total
     }))
     setTableData(list);
   };
 
-  const resetPagination = () =>{
-    setPagination(p=>({
-      ...p,
-      pageNum:1,
-      pageSize:10
-    }))
-  }
 
   const add = async (question: string, agentId: number) => {
     if (!groupId) return;
-    resetPagination()
     const res =  await addQuestion({
       agentId,
       groupId,
@@ -56,15 +53,22 @@ export function useQuestionManagement() {
       spaceId: Number(localStorage.getItem('spaceId'))
     });
     const { response: {data: { code } } } = res
-    if(code as number >200) return
-    getTableData();
+    if(code as number >200){
+      return false
+    }
+    getTableData(searchValue,{...pagination});
     return true
   };
 
   const del = async (id: number) => {
-    resetPagination()
-    await deleteQuestion(id);
-    getTableData();
+    const res = await deleteQuestion(id);
+    
+    if (res.response?.data?.code === 200) {
+      message.success(res.response.data.msg || '删除成功');
+      getTableData(searchValue,{...pagination});
+    } else {
+      message.error(res.response?.data?.msg || '删除失败');
+    }
   };
 
   const edit = async (question: {
@@ -74,13 +78,15 @@ export function useQuestionManagement() {
     question: string;
     spaceId: number;
   }) => {
-    resetPagination()
     const res =  await editQuestion({
       ...question
     });
     const { response:{data:{code}}} = res
-    if(code as number >200) return
-    getTableData();
+    
+    if(code as number > 200) {
+      return false;
+    }
+    getTableData(searchValue,{...pagination});
     return true
   };
 
@@ -101,7 +107,7 @@ export function useQuestionManagement() {
   };
 
   const handleDelete = async (id: number) => {
-    setTableData(prev => prev.filter(group => group.groupId !== id));
+    // setTableData(prev => prev.filter(group => group.groupId !== id));
     await del(id);
   };
 
@@ -125,7 +131,9 @@ export function useQuestionManagement() {
         spaceId: editingGroup.spaceId
       };
 
-      flag = !!edit(edObj);
+      flag = !!(await edit(edObj))
+      
+      if(flag)message.success('编辑成功')
     } else {
       if (!groupId) {
         message.error('请选择标签组');
@@ -139,17 +147,13 @@ export function useQuestionManagement() {
       };
 
       flag =!!(await add(newTag.question, newTag.agentId));
-      message.success('创建成功');
       
+      if(flag)message.success('创建成功');
     }
     if(flag) {
       setIsReset(true);
       setIsModalOpen(false);
-      setPagination(p=>({
-        ...p,
-        pageNum:1,
-        pageSize:10,
-      }))
+      getTableData(searchValue,{...pagination})
     }
   };
 

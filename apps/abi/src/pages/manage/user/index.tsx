@@ -134,7 +134,7 @@ export function Component() {
                 />
               </APopconfirm>
             ),
-            title: t('page.manage.role.status'),
+            title: '用户状态',
             width: 160
           },
           {
@@ -187,12 +187,12 @@ export function Component() {
                   />
                 </ATooltip>
 
-                <ATooltip title={t('page.manage.user.assigningRole')}>
+                {/* <ATooltip title={t('page.manage.user.assigningRole')}>
                   <SafetyOutlined
                     className="tex-14px"
                     onClick={() => router.push(`/manage/user-role/${record.userId}`)}
                   />
-                </ATooltip>
+                </ATooltip> */}
               </div>
             ),
             title: t('common.operate'),
@@ -250,7 +250,8 @@ export function Component() {
     downLoad(
       '/system/user/export',
       {
-        ...searchParams.current
+        ...searchParams.current,
+        userIds: checkedRowKeys
       },
       t('page.manage.user.title')
     );

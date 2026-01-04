@@ -33,6 +33,7 @@ const ConversationAnalysis: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [hideRight, setHideRight] = useState(false);
   const isInitializedRef = useRef(false);
+  const skipNextConvFetchRef = useRef(false);
   // redux hooks已注释
   // const dispatch = useAppDispatch();
   // const cachedConvList = useAppSelector(state => curApp.chat_id ? selectConvListByChatId(state as any, curApp.chat_id) : []);
@@ -47,16 +48,29 @@ const ConversationAnalysis: React.FC = () => {
 
   // 获取app列表
   const getAppList = useCallback(async () => {
+     const userInfoString = JSON.parse(localStorage.getItem('SOY-REACT_userInfo')!||"");
+    console.log(userInfoString);
+    
+     
     try {
       setLoading(true);
       const res = await fetchAppList({
         chat_mode: CHAT_MODE,
-        space_id: getSpaceId()
-        // space_id:  //测试对话
-        // space_id: 1 //测试对话
-        // space_id: 52 //测试对话
+        space_id: getSpaceId(),
+        create_by: userInfoString?.userName
+        // space_id: 73 //测试对话
       });
-      setAppList(sortAppList(res.data));
+      const data = sortAppList(res.data) ||[]
+      setAppList(data);
+      const chatId = localStorage.getItem('chatId')
+      
+      if(chatId) {
+        
+        const item = data.find(item=>item.chat_id ==chatId)
+        if(Object.keys(item).length>0) {
+          handleSetCurApp(item)
+        }
+      }
       return res.data;
     } finally {
       setLoading(false);
@@ -102,7 +116,8 @@ const ConversationAnalysis: React.FC = () => {
       const res = await fetchConvList({
         chat_id: curApp.chat_id,
         chat_mode: CHAT_MODE,
-        space_id: getSpaceId()
+        space_id: getSpaceId(),
+        // space_id: 73,
       });
       if (res.data?.length) {
         setConvList(res.data);
@@ -120,7 +135,11 @@ const ConversationAnalysis: React.FC = () => {
   useEffect(() => {
     // 如果有选中的app就获取会话列表
     if (curApp.chat_id) {
-      getConvList();
+      if (skipNextConvFetchRef.current) {
+        skipNextConvFetchRef.current = false;
+      } else {
+        getConvList();
+      }
     }
   }, [curApp]);
 
@@ -131,23 +150,13 @@ const ConversationAnalysis: React.FC = () => {
       //   dispatch(setConvListForChat({ chatId: curApp.chat_id, convList }));
       // }
       setLoading(true);
-      const res: any = await fetchDatasourceById(item.agent_id);
       // redux已注释
       // if (datasourceData) {
       //   dispatch(setDatasourceCache({ agentId: agentId, data: datasourceData }));
       // }
       
-      let dbName = '';
-      let modelName = '';
-      try {
-        const data = res.data[0];
-        modelName = data.name;
-        const config = JSON.parse(data.config);
-        dbName = config.dbName;
-      } catch (error) {
-        console.log(error);
-      }
-      setCurApp({ ...item, dbName, modelName });
+     
+      setCurApp({ ...item });
     } finally {
       setLoading(false);
       setShowAllConversations(false);
@@ -168,38 +177,33 @@ const ConversationAnalysis: React.FC = () => {
         
         // 2. 刷新应用列表
         await getAppList();
-        
-        // 3. 获取数据源信息并设置当前应用（不触发会话列表获取）
-        const datasourceRes: any = await fetchDatasourceById(res.data.agent_id);
-        let dbName = '';
-        let modelName = '';
-        try {
-          const data = datasourceRes.data[0];
-          modelName = data.name;
-          const config = JSON.parse(data.config);
-          dbName = config.dbName;
-        } catch (error) {
-          console.log(error);
-        }
-        const currentApp = { ...res.data, dbName, modelName };
+            
+        const currentApp = { ...res.data };
         setCurApp(currentApp);
         
         // 4. 创建新会话
         const newConvRes = await newConv(currentApp);
         
         // 5. 获取会话列表
-        await getConvList();
+        // await getConvList();
         
         // 6. 设置当前会话
         setCurConv({ ...newConvRes.data, ...currentApp });
         
         setShowAllConversations(false);
         setHideRight(false);
+        setVisible(false);
+        return Promise.resolve();
+      } catch(e) {
+        message.error('创建失败');
+        return Promise.reject();
       } finally {
         setLoading(false);
       }
+    } else {
+      setVisible(false);
+      return Promise.resolve();
     }
-    setVisible(false);
   };
 
   const handleDeleteApp = async (item: any) => {
@@ -211,21 +215,18 @@ const ConversationAnalysis: React.FC = () => {
       onOk: async () => {
         try {
           setLoading(true);
-          
-          // 先删除相关的会话
-          if (curConv?.conv_uid) {
-            await deleteConv({ conv_uid: curConv.conv_uid });
+          const res = await fetchConvList({
+            chat_id: item.chat_id,
+            chat_mode: CHAT_MODE,
+            space_id: getSpaceId(),
+          });
+          if (res.data?.length) {
+            await Promise.all(res.data.map((conv: any) => deleteConv({ conv_uid: conv.conv_uid })));
           }
-          
-          // 再删除应用
-          console.log('正在删除应用:', item);
-          await deleteApp(item);
-          // redux已注释
-          // if (item?.chat_id) {
-          //   dispatch(clearConvListForChat({ chatId: item.chat_id }));
-          // }
+          if (curApp.chat_id === item.chat_id) {
+            setCurConv(undefined);
+          }
           getAppList();
-          setCurConv(undefined)
         } catch (error) {
           message.error('删除对话失败');
         } finally {
@@ -250,12 +251,35 @@ const ConversationAnalysis: React.FC = () => {
   };
 
   const handleUpdateList = (data: any) => {
-    getAppList()
-    setCurConv({ ...data });
-    // redux已注释
-    // if (curApp?.chat_id && data?.conv_uid) {
-    //   dispatch(upsertConvForChat({ chatId: curApp.chat_id, conv: data, toTop: true }));
-    // }
+    const newApp = data?.newApp;
+    const newConv = data?.newConv;
+    if (newApp) {
+      setAppList(prev => [newApp, ...prev.filter(a => a.chat_id !== newApp.chat_id)]);
+      skipNextConvFetchRef.current = true;
+      setCurApp(newApp);
+      if (newConv) {
+        setConvList([newConv]);
+        setCurConv({ ...newConv, ...newApp });
+      }
+      setShowAllConversations(false);
+      setHideRight(false);
+      return;
+    }
+    if (data) {
+      // 更新curConv
+      if (data.conv_uid) {
+        setCurConv((prev: any) => ({ ...prev, ...data }));
+      }
+      // 同步更新appList和curApp（编辑对话名称等信息）
+      if (data.chat_id) {
+        setAppList(prev => prev.map(app => 
+          app.chat_id === data.chat_id ? { ...app, ...data } : app
+        ));
+        if (curApp.chat_id === data.chat_id) {
+          setCurApp((prev: any) => ({ ...prev, ...data }));
+        }
+      }
+    }
   }
 
   return (

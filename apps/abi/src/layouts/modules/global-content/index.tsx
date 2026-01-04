@@ -47,7 +47,7 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   }, [reload]);
 
   return (
-    <div className={ClassNames('h-full flex-grow bg-layout relative', { 'p-16px': !closePadding })}>
+    <div className={ClassNames('h-full flex-grow bg-layout relative', { 'p-3px': !closePadding })}>
       <KeepAlive
         activeCacheKey={cacheKey}
         aliveRef={aliveRef}

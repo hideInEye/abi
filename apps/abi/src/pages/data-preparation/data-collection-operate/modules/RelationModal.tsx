@@ -1,6 +1,8 @@
 import { CloseOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { Form } from 'antd';
 
+import { DataCollectionOperateContext } from '../context';
+
 import { TableSelection } from './FieldSelectModal';
 
 interface RSelectPropsType {
@@ -41,13 +43,28 @@ const typeOptions = [
     label: '内连接',
     value: 'inner'
   },
-  {
-    label: '全连接',
-    value: 'full'
-  }
+  // {
+  //   label: '全连接',
+  //   value: 'full'
+  // }
 ];
 
+const mergeSelectedRows = (rows: any[] = [], unionRows: any[] = []) => {
+  const map = new Map<string, any>();
+  rows?.forEach(item => {
+    if (!item?.originName) return;
+    map.set(item.originName, item);
+  });
+  unionRows?.forEach(item => {
+    if (!item?.originName) return;
+    map.set(item.originName, { ...item, checked: true });
+  });
+  return Array.from(map.values());
+};
+
 const RelationModal: React.FC<PropsType> = memo(({ data, onClose }) => {
+  const { curDatasourceType } = useContext(DataCollectionOperateContext);
+
   const { current, parent } = data;
   const { currentDs, unionToParent } = current;
   const { currentDs: parentDs } = parent;
@@ -57,6 +74,31 @@ const RelationModal: React.FC<PropsType> = memo(({ data, onClose }) => {
   const [curFieldsList, setCurFieldsList] = useState<any[]>([]);
   const [parentFieldsList, setParentFieldsList] = useState<any[]>([]);
   const [form] = Form.useForm();
+  const unionFields = Form.useWatch(['unionToParent', 'unionFields'], form);
+  const parentUnionRows = useMemo(
+    () => (Array.isArray(unionFields) ? unionFields.map(item => item?.parentField).filter(Boolean) : []),
+    [unionFields]
+  );
+  const currentUnionRows = useMemo(
+    () => (Array.isArray(unionFields) ? unionFields.map(item => item?.currentField).filter(Boolean) : []),
+    [unionFields]
+  );
+  const lockedParentKeys = useMemo(
+    () => parentUnionRows.map((item: any) => item.originName).filter(Boolean),
+    [parentUnionRows]
+  );
+  const lockedCurrentKeys = useMemo(
+    () => currentUnionRows.map((item: any) => item.originName).filter(Boolean),
+    [currentUnionRows]
+  );
+  const mergedParentRows = useMemo(
+    () => mergeSelectedRows(selectedParentRows, parentUnionRows),
+    [selectedParentRows, parentUnionRows]
+  );
+  const mergedCurrentRows = useMemo(
+    () => mergeSelectedRows(selectedCurRows, currentUnionRows),
+    [selectedCurRows, currentUnionRows]
+  );
 
   useEffect(() => {
     if (unionToParent) {
@@ -68,8 +110,8 @@ const RelationModal: React.FC<PropsType> = memo(({ data, onClose }) => {
     const values = await form.validateFields();
     const res = {
       currentDs,
-      currentDsFields: selectedCurRows,
-      parentDsFields: selectedParentRows,
+      currentDsFields: mergedCurrentRows,
+      parentDsFields: mergedParentRows,
       ...values,
       uniqueId: current.uniqueId
     };
@@ -78,14 +120,14 @@ const RelationModal: React.FC<PropsType> = memo(({ data, onClose }) => {
 
   const getCurFields = () => {
     const { sourceId, tableName } = currentDs;
-    getFieldsList({ sourceId, tableName }).then(curResData => {
+    getFieldsList({ sourceId, tableName }, curDatasourceType).then(curResData => {
       setCurFieldsList(curResData);
     });
   };
 
   const getParentFields = () => {
     const { sourceId, tableName } = parentDs;
-    getFieldsList({ sourceId, tableName }).then(curResData => {
+    getFieldsList({ sourceId, tableName }, curDatasourceType).then(curResData => {
       setParentFieldsList(curResData);
     });
   };
@@ -127,7 +169,8 @@ const RelationModal: React.FC<PropsType> = memo(({ data, onClose }) => {
           <TableSelection
             data={parent}
             fieldsList={parentFieldsList}
-            selectedRows={selectedParentRows}
+            lockedRowKeys={lockedParentKeys}
+            selectedRows={mergedParentRows}
             setSelectedRows={setSelectedParentRows}
           />
         </div>
@@ -136,7 +179,8 @@ const RelationModal: React.FC<PropsType> = memo(({ data, onClose }) => {
           <TableSelection
             data={current}
             fieldsList={curFieldsList}
-            selectedRows={selectedCurRows}
+            lockedRowKeys={lockedCurrentKeys}
+            selectedRows={mergedCurrentRows}
             setSelectedRows={setSelectedCurRows}
           />
         </div>

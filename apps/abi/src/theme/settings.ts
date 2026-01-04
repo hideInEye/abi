@@ -4,7 +4,7 @@ export const themeSettings: App.Theme.ThemeSetting = {
   fixedHeaderAndTab: true,
   footer: {
     fixed: false,
-    height: 70,
+    height: 35,
     right: true,
     visible: true
   },

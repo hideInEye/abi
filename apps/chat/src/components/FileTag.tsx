@@ -22,7 +22,7 @@ interface FileTagProps {
 const FileTag: React.FC<FileTagProps> = ({
   fileId,
   fileName = '',
-  prefixText = '# File: ',
+  prefixText = '文件：',
   showDownloadIcon = false,
   showCloseIcon = true,
   backgroundColor = '#f5f7fa',

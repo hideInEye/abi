@@ -18,6 +18,7 @@ interface InitialStateType {
   siderCollapse: boolean;
   spaceId: number;
   themeDrawerVisible: boolean;
+  spaceHidden: boolean
 }
 
 const initialState: InitialStateType = {
@@ -40,7 +41,8 @@ const initialState: InitialStateType = {
   reloadFlag: true,
   siderCollapse: false,
   spaceId: 0,
-  themeDrawerVisible: false
+  themeDrawerVisible: false,
+  spaceHidden: false,
 };
 
 export const appSlice = createSlice({
@@ -84,6 +86,9 @@ export const appSlice = createSlice({
     },
     toggleSiderCollapse: state => {
       state.siderCollapse = !state.siderCollapse;
+    },
+    setSpaceHidden: (state, {payload}) => {
+      state.spaceHidden = payload
     }
   },
   selectors: {
@@ -96,7 +101,8 @@ export const appSlice = createSlice({
     getReloadFlag: app => app.reloadFlag,
     getSiderCollapse: app => app.siderCollapse,
     getSpaceId: app => app.spaceId,
-    getThemeDrawerVisible: app => app.themeDrawerVisible
+    getThemeDrawerVisible: app => app.themeDrawerVisible,
+    getSpaceHidden: state => state.spaceHidden
   }
 });
 // Action creators are generated for each case reducer function.
@@ -112,7 +118,8 @@ export const {
   setSiderCollapse,
   toggleFullContent,
   toggleMixSiderFixed,
-  toggleSiderCollapse
+  toggleSiderCollapse,
+  setSpaceHidden
 } = appSlice.actions;
 
 // Selectors returned by `slice.selectors` take the root state as their first argument.
@@ -126,7 +133,8 @@ export const {
   getReloadFlag,
   getSiderCollapse,
   getSpaceId,
-  getThemeDrawerVisible
+  getThemeDrawerVisible,
+  getSpaceHidden
 } = appSlice.selectors;
 
 /**

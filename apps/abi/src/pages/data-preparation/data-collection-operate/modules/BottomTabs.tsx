@@ -16,7 +16,7 @@ import DataPreview from './DataPreview';
 
 // interface PropsType {}
 
-const BottomTabs: React.FC = memo(() => {
+const BottomTabs: React.FC = memo(({curDatasource}: any) => {
   const { allFields, nodeData, setAllFields } = useContext(DataCollectionOperateContext);
   const [previewData, setPreviewData] = useState<any>({});
   const [createCalculatedField, setCreateCalculatedField] = useState(false);
@@ -42,15 +42,15 @@ const BottomTabs: React.FC = memo(() => {
       key: '1',
       label: '数据预览'
     },
-    {
-      children: <BatchManage />,
-      key: '2',
-      label: '批量管理'
-    }
+    // {
+    //   children: <BatchManage />,
+    //   key: '2',
+    //   label: '批量管理'
+    // }
   ];
 
   const handlePreview = async () => {
-    const res = await getPreviewData({ allFields, union: [nodeData] });
+    const res = await getPreviewData({ allFields, union: [nodeData],sourceType:curDatasource?.sourceType });
     if (res.data) setPreviewData(res.data);
   };
 
@@ -77,9 +77,10 @@ const BottomTabs: React.FC = memo(() => {
         className={styles['bottom-tabs-container']}
         defaultActiveKey="1"
         items={items}
+        tabBarExtraContent={<span className="ml-2">(说明: 参与预览计算的数据最多100行,原数据不足100行则取全量数据,超过则抽取样数据)</span>}
       />
       <div className="absolute right-10px top-8px">
-        <AButton
+        {/* <AButton
           className="mr-2"
           disabled={!allFields.length}
           icon={<PlusOutlined className="text-12px" />}
@@ -87,7 +88,7 @@ const BottomTabs: React.FC = memo(() => {
           onClick={() => setCreateCalculatedField(true)}
         >
           新建计算字段
-        </AButton>
+        </AButton> */}
         <AButton
           disabled={!allFields.length}
           icon={<ReloadOutlined className="text-12px" />}

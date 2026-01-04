@@ -50,7 +50,6 @@ const fieldTypeOptions = FIELD_TYPE_OPTIONS.map(({ icon, label, value }) => ({
 }));
 
 const EditableRow: React.FC<EditableRowProps> = ({ index, ...props }) => {
-  console.log(index, { ...props });
 
   const [form] = Form.useForm();
   return (

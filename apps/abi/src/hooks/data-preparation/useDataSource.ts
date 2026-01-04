@@ -26,9 +26,12 @@ export function useDatasource() {
     setTables(res.data || []);
   };
 
-  const getFieldsList = async (data: any) => {
+  const getFieldsList = async (data: any, datasourceType?: string) => {
     const res = await getFieldByDataSource(data);
-    const resData = res.data.map((item: any) => ({ ...item, tfieldAlias: item.name }));
+    let resData = res.data?.map((item: any) => ({ ...item, tfieldAlias: item.name }));
+    if (datasourceType === 'Excel') {
+      resData = resData?.filter((item: any) => item.checked);
+    }
     setFieldsList(resData);
     return resData;
   };

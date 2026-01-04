@@ -1,3 +1,4 @@
+import { CloseOutlined } from '@ant-design/icons';
 import { Form } from 'antd';
 import React, { useEffect } from 'react';
 
@@ -54,6 +55,8 @@ export const AddOrEditEnum: React.FC<AddOrEditEnumProps> = ({ editObj, onClose, 
 
   return (
     <ADrawer
+      closeIcon={null}
+      extra={<CloseOutlined onClick={handleCancel} />}
       open={open}
       title={editObj ? '编辑字典枚举' : '添加字典枚举'}
       width={700}
@@ -65,7 +68,11 @@ export const AddOrEditEnum: React.FC<AddOrEditEnumProps> = ({ editObj, onClose, 
       }
       onClose={onClose}
     >
-      <AForm form={form}>
+      <AForm 
+        form={form}
+        labelCol={{ span: 4 }}
+        wrapperCol={{ span: 14 }}
+      >
         <AForm.Item
           label="分组名称"
           name="groupName"
@@ -76,7 +83,7 @@ export const AddOrEditEnum: React.FC<AddOrEditEnumProps> = ({ editObj, onClose, 
           />
         </AForm.Item>
 
-        <AForm.Item
+        {/* <AForm.Item
           label="分组英文名"
           name="groupNameEn"
         >
@@ -84,11 +91,11 @@ export const AddOrEditEnum: React.FC<AddOrEditEnumProps> = ({ editObj, onClose, 
             disabled
             placeholder="请输入分组英文名"
           />
-        </AForm.Item>
+        </AForm.Item> */}
 
         <AForm.Item
           label="字典名称"
-          name="dictName"
+          name="dictField"
         >
           <AInput
             disabled
@@ -97,19 +104,22 @@ export const AddOrEditEnum: React.FC<AddOrEditEnumProps> = ({ editObj, onClose, 
         </AForm.Item>
 
         <AForm.Item
-          label="字典英文名"
-          name="dictField"
+          label="中文名称"
+          name="dictName"
         >
           <AInput
             disabled
-            placeholder="请输入字典英文名"
+            placeholder="请输入中文名称"
           />
-        </AForm.Item>
+        </AForm.Item>        
 
         <AForm.Item
           label="枚举名称"
           name="dictLabel"
-          rules={[{ message: '请输入枚举名称', required: true }]}
+          rules={[
+            { message: '请输入枚举名称', required: true },
+            { max: 50, message: '枚举名称不能超过50个字符' }
+          ]}
         >
           <AInput placeholder="请输入枚举名称" />
         </AForm.Item>
@@ -117,7 +127,10 @@ export const AddOrEditEnum: React.FC<AddOrEditEnumProps> = ({ editObj, onClose, 
         <AForm.Item
           label="枚举值"
           name="dictValue"
-          rules={[{ message: '请输入枚举值', required: true }]}
+          rules={[
+            { message: '请输入枚举值', required: true },
+            { max: 50, message: '枚举值不能超过50个字符' }
+          ]}
         >
           <AInput placeholder="请输入枚举值" />
         </AForm.Item>
@@ -132,6 +145,9 @@ export const AddOrEditEnum: React.FC<AddOrEditEnumProps> = ({ editObj, onClose, 
         <AForm.Item
           label="备注"
           name="remark"
+          rules={[
+            { max: 500, message: '备注不能超过500个字符' }
+          ]}
         >
           <AInput.TextArea
             placeholder="请输入备注"

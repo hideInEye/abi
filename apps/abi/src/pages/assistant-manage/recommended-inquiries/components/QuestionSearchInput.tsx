@@ -5,9 +5,10 @@ interface SearchInputProps {
   readonly onAdd: () => void;
   readonly onSearch: (value: string) => void;
   readonly searchValue: string;
+  groupId?: number
 }
 
-export const QuestionSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearch, searchValue }) => {
+export const QuestionSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearch, searchValue, groupId }) => {
   return (
     <ASpace className="mb3 flex justify-between">
       <AInput
@@ -20,6 +21,7 @@ export const QuestionSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearc
         icon={<PlusOutlined />}
         variant="outlined"
         onClick={onAdd}
+        disabled={!groupId}
       >
         新增问题
       </AButton>

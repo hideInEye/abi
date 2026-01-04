@@ -28,11 +28,8 @@ export const useDebugStore = create<StoreType>()(set => ({
       const debugInfoMap = cloneDeep(state.debugInfoMap);
       if (debugInfoMap[debugInfo.uid]) {
         const index = debugInfo.metrics.current_stage - 1;
-        if (debugInfoMap[debugInfo.uid][index]) {
-          debugInfoMap[debugInfo.uid][index] = debugInfo;
-        } else {
-          debugInfoMap[debugInfo.uid].push(debugInfo);
-        }
+        // 严格按照 index 位置更新，避免重复
+        debugInfoMap[debugInfo.uid][index] = debugInfo;
       } else {
         debugInfoMap[debugInfo.uid] = [debugInfo];
       }

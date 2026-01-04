@@ -89,3 +89,182 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Markdown 内容样式 - 精准控制各元素行高 */
+.markdown-content {
+  /* 基础样式重置 */
+  & > * {
+    padding: 0 !important;
+  }
+
+  /* 文本换行和溢出处理 */
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: pre-wrap !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+
+  /* 段落样式 - 更紧凑的间距 */
+  & > p,
+  & p {
+    line-height: 1.6 !important;
+  }
+
+  & > p:empty {
+    display: none !important;
+  }
+
+  /* 标题样式 */
+  & h1 {
+    line-height: 1.3 !important;
+    font-size: 1.5em !important;
+  }
+
+  & h2 {
+    line-height: 1.3 !important;
+  }
+
+  & h3 {
+    line-height: 1.3 !important;
+  }
+
+  & h4, & h5, & h6 {
+    line-height: 1.3 !important;
+  }
+
+  /* 列表基础样式 */
+  & ul,
+  & ol {
+    line-height: 1 !important;
+    list-style-position: outside !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 一级列表项 */
+  & > ul > li,
+  & > ol > li {
+    padding: 0 !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 二级列表 */
+  & ul ul,
+  & ol ol,
+  & ul ol,
+  & ol ul {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+  }
+
+  /* 二级列表项 */
+  & ul ul li,
+  & ol ol li,
+  & ul ol li,
+  & ol ul li {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.2 !important;
+  }
+
+  /* 三级列表 */
+  & ul ul ul,
+  & ol ol ol,
+  & ul ol ul,
+  & ol ul ol {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+  }
+  /* 三级列表项 */
+  & ul ul ul li,
+  & ol ol ol li {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.3 !important;
+  }
+
+  /* 列表中的段落 */
+  & li > p {
+    line-height: inherit !important;
+  }
+
+  /* 代码块 */
+  & pre {
+    padding: 0.3em !important;
+    line-height: 1.4 !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    overflow-x: auto !important;
+  }
+
+  & code {
+    line-height: 1.4 !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* 内联代码 */
+  & p code,
+  & li code {
+    white-space: normal !important;
+    word-break: break-all !important;
+  }
+
+  & td, & th {
+    padding: 0.2em 0.4em !important;
+    line-height: 1.3 !important;
+  }
+
+  /* 强调文本 */
+  & strong, & b, & em, & i {
+    line-height: inherit !important;
+  }
+}
+
+.collapseButtonWrapper {
+  position: sticky;
+  bottom: 16px;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.collapseButton {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background: #4e7bda;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  box-shadow: 0 6px 14px rgba(78, 123, 218, 0.35);
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  pointer-events: auto;
+}
+
+.collapseButton:hover {
+  transform: translateY(-2px);
+  opacity: 0.9;
+}
+
+.collapseButton:active {
+  transform: scale(0.98);
+}
+
+.collapseButtonArrow {
+  font-size: 14px;
+}

@@ -42,13 +42,13 @@ const MenuSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
         >
           <AForm.Item
             className="m-0"
-            label={t('page.manage.menu.menuStatus')}
+            label="菜单状态"
             name="status"
           >
             <ASelect
               allowClear
               options={statusOptions}
-              placeholder={t('page.manage.menu.form.menuStatus')}
+              placeholder="请选择菜单状态"
             />
           </AForm.Item>
         </ACol>
@@ -71,14 +71,16 @@ const MenuSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
               justify="end"
             >
               <AButton
-                icon={<IconIcRoundRefresh />}
+                style={{ borderRadius: '4px', padding: '4px 25px' }}
+                // icon={<IconIcRoundRefresh />}
+                type="primary"
                 onClick={reset}
               >
                 {t('common.reset')}
               </AButton>
               <AButton
-                ghost
-                icon={<IconIcRoundSearch />}
+                style={{ borderRadius: '4px', padding: '4px 25px' }}
+                // icon={<IconIcRoundSearch />}
                 type="primary"
                 onClick={search}
               >

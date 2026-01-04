@@ -1,11 +1,12 @@
 import React from 'react';
 
 import { AddOrEditDictionary } from './DictionaryAddOrEdit';
+import { FormInstance } from 'antd';
 
 interface DictionaryModalProps {
   readonly editObj: any;
   readonly onClose: () => void;
-  readonly onSure: (values: any) => void;
+  readonly onSure: (values: any,form:FormInstance) => void;
   readonly open: boolean;
 }
 

@@ -53,10 +53,10 @@ export const tabTypeOptions = [
 ];
 
 export const searchKeyOptions = [
-  {
-    label: '标签语义',
-    value: 'tagName'
-  },
+  // {
+  //   label: '标签语义',
+  //   value: 'tagName'
+  // },
   {
     label: '英文名',
     value: 'engName'
@@ -65,8 +65,8 @@ export const searchKeyOptions = [
     label: '别名',
     value: 'alias'
   },
-  {
-    label: '创建人',
-    value: 'createBy'
-  }
+  // {
+  //   label: '创建人',
+  //   value: 'createBy'
+  // }
 ];

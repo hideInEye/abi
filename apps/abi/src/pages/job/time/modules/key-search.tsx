@@ -38,23 +38,6 @@ const KeySearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
         >
           <AForm.Item
             className="m-0"
-            label="任务组名"
-            name="jobGroup"
-          >
-            <ASelect
-              allowClear
-              options={JOB_GROUP_OPTIONS}
-              placeholder="请选择任务组名"
-            />
-          </AForm.Item>
-        </ACol>
-        <ACol
-          lg={6}
-          md={12}
-          span={24}
-        >
-          <AForm.Item
-            className="m-0"
             label="任务状态"
             name="status"
           >
@@ -74,7 +57,7 @@ const KeySearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
             <AFlex
               align="center"
               gap={12}
-              justify="end"
+              // justify="end"
             >
               <AButton
                 icon={<IconIcRoundRefresh />}

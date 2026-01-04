@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Table } from 'antd';
 import { EChart } from '../../../components/react-echarts';
-import type { EChartsOption } from 'echarts';
 
 /**
  * 定义图表数据项的接口
@@ -35,12 +35,51 @@ const PredictionAnalysis: React.FC<PropsType> = ({ data }) => {
   /**
    * 解析原始数据
    */
-  const parseData = (data: string): ChartDataItem[] => {
+  const parseData = (data: string | any[]): ChartDataItem[] => {
     try {
-      // 使用正则表达式按数字索引分割数据行，避免日期时间中的空格被错误分割
-      // console.log(data)
+      // 如果数据已经是数组格式（历史数据），直接处理
+      if (Array.isArray(data)) {
+        return data.map(item => ({
+          date: item.date || item.ds,
+          value: typeof item.value === 'number' ? item.value : (typeof item.y === 'number' ? item.y : parseFloat(item.value || item.y)),
+          type: item.type === 'real' || item.type === 'actual' ? 'actual' : 'predicted'
+        }));
+      }
+
+      // 如果数据是字符串格式，按原来的方式解析
+      if (typeof data !== 'string') {
+        console.error('数据格式不支持:', typeof data);
+        return [];
+      }
+
       const lines = data.trim().split('\n');
-      // console.log(lines)
+      
+      // 检查是否是 MCP 表格格式数据
+      if (lines.length > 0 && lines[0].includes('rh_prediction')) {
+        const parsedData: ChartDataItem[] = [];
+        // 从第二行开始解析数据
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          
+          const values = line.split(/\s+/);
+          if (values.length >= 2) {
+            const rowIndex = values[0];
+            const predictionValue = parseFloat(values[values.length - 1]);
+            
+            if (!isNaN(predictionValue)) {
+              parsedData.push({
+                date: `预测${parseInt(rowIndex) + 1}`,
+                value: predictionValue,
+                type: 'predicted'
+              });
+            }
+          }
+        }
+        return parsedData;
+      }
+
+      // 原有的时间序列数据解析逻辑
       const [ds, y, type] = lines[0].split(/\s+/);
       
       const parsedData: ChartDataItem[] = [];
@@ -311,11 +350,136 @@ const PredictionAnalysis: React.FC<PropsType> = ({ data }) => {
       ]
     };
   }, [chartData]);
+
+  /**
+   * 获取 AQI 等级颜色
+   */
+  const getAQIColor = (value: number): string => {
+    if (value <= 50) return '#00e400';      // 优 - 绿色
+    if (value <= 100) return '#ffff00';     // 良 - 黄色
+    if (value <= 150) return '#ff7e00';     // 轻度污染 - 橙色
+    if (value <= 200) return '#ff0000';     // 中度污染 - 红色
+    if (value <= 300) return '#99004c';     // 重度污染 - 紫色
+    return '#7e0023';                       // 严重污染 - 褐红色
+  };
+
+  /**
+   * 渲染表格数据 - 新版本（显示特征列和预测值）
+   */
+  const renderTable = () => {
+    let inputData: any[] = [];
+    let predictions: any[] = [];
+    let featureKeys: string[] = [];
+    
+    // 从 result_df 解析数据（输入特征 + 预测结果）
+    if (data?.result_df && typeof data.result_df === 'string') {
+      try {
+        const lines = data.result_df.trim().split('\n');
+        
+        if (lines.length > 1) {
+          // 解析列名（第一行）
+          const headers = lines[0].trim().split(/\s+/);
+          
+          // 去掉最后一列（预测列），其他都是特征列
+          featureKeys = headers.slice(0, -1);
+          
+          // 解析数据行
+          for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const values = line.split(/\s+/);
+            
+            // 跳过第一个值（索引），解析剩余的值
+            const dataValues = values.slice(1);
+            
+            if (dataValues.length > 0) {
+              // 构建特征对象
+              const rowData: any = {};
+              for (let j = 0; j < featureKeys.length && j < dataValues.length - 1; j++) {
+                rowData[featureKeys[j]] = parseFloat(dataValues[j]);
+              }
+              inputData.push(rowData);
+              
+              // 最后一个值是预测结果
+              const predValue = parseFloat(dataValues[dataValues.length - 1]);
+              if (!isNaN(predValue)) {
+                predictions.push(predValue);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse result_df:', e);
+      }
+    }
+    
+    // 如果没有输入数据，返回空
+    if (inputData.length === 0) {
+      return <div>暂无数据</div>;
+    }
+
+    // 构建表格数据
+    const tableData = inputData.map((item: any, index: number) => {
+      const predictionValue = predictions[index] !== undefined ? predictions[index] : null;
+      
+      return {
+        key: index,
+        ...item,
+        prediction: predictionValue
+      };
+    });
+
+    // 构建表格列
+    const columns: any[] = featureKeys.map((key) => ({
+      title: key.toUpperCase(),
+      dataIndex: key,
+      key: key,
+      render: (value: number) => typeof value === 'number' ? value.toFixed(1) : value
+    }));
+
+    // 添加预测值列
+    columns.push({
+      title: '预测AQI',
+      dataIndex: 'prediction',
+      key: 'prediction',
+      render: (value: number | null) => {
+        if (value === null || value === undefined) return '-';
+        const displayValue = typeof value === 'number' ? Math.round(value) : value;
+        return (
+          <span style={{ 
+            color: getAQIColor(displayValue),
+            fontWeight: 'bold'
+          }}>
+            {displayValue}
+          </span>
+        );
+      }
+    });
+
+    return (
+      <Table
+        columns={columns}
+        dataSource={tableData}
+        pagination={{ 
+          pageSize: 10,
+          showSizeChanger: true,
+          showTotal: (total) => `共 ${total} 条数据`
+        }}
+        size="small"
+        bordered
+      />
+    );
+  };
+  
+  // 判断是否应该渲染表格
+  const shouldRenderTable = data?.predict_with_mcp || data?.predict_type === 'predict_with_mcp';
+
   return (
     <div className="prediction-analysis">
-      <EChart option={option} />
+      {shouldRenderTable ? renderTable() : <EChart option={option} handleClick={() => {}} />}
     </div>
   );
 };
 
-export default PredictionAnalysis; 
+export default PredictionAnalysis;

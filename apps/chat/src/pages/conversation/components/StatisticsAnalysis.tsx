@@ -4,6 +4,7 @@ import AnalysisRecommend from '../AnalysisRecommend';
 import { ModulesMap } from '@/constant/chat';
 import { getModulesByChatMode } from '@/utils';
 import { Tag, message, Tooltip } from 'antd';
+import { FundTwoTone, BulbTwoTone, FunnelPlotTwoTone } from '@ant-design/icons';
 
 interface Props {
   onAttributionClick: () => void;
@@ -13,7 +14,6 @@ interface Props {
   onDimensionClick?: () => void;
   onIndexClick?: () => void;
   onVoteChange: (payload: any) => void;
-  paramsData?: any;
   chatMode: string;
   feedback: any;
 }
@@ -21,7 +21,6 @@ interface Props {
 const StatisticsAnalysis: React.FC<Props> = ({
   chatMode,
   onVoteChange,
-  paramsData,
   onAttributionClick,
   onReferenceClick,
   onPredictClick,
@@ -134,12 +133,12 @@ const StatisticsAnalysis: React.FC<Props> = ({
   return (
     <>
       {/* 推荐问题等部分 */}
-      <div className="rounded bg-[#f6f6f6] p-2 rounded-[8px] w-full">
-        <div className="flex justify-between items-center p-2 pt-4">
-          <div className="flex gap-2">
+      <div className="rounded bg-[#f6f6f6] pb-2 pl-2 pr-2 rounded-[8px] w-full">
+        <div className="flex justify-between items-center">
+          <div className="flex gap-3">
             {renderLikeButtons()}
           </div>
-          <div className="flex gap-2 items-center mr-2">
+          <div className="flex gap-4 items-center mr-2">
             {/* {showReferenceButton && (
               <Tooltip title="引用">
                 <span 
@@ -153,22 +152,22 @@ const StatisticsAnalysis: React.FC<Props> = ({
             {showRecommend && (
               <Tooltip title="推荐问题">
                 <span 
-                  className="cursor-pointer text-[22px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
+                  className="cursor-pointer text-[20px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
                   onClick={onQaClick}
                 >
-                  QA
+                  <BulbTwoTone />  
                 </span>
               </Tooltip>
             )}
             {showRecommend && (
               <Tooltip title="推荐维度">
                 <span 
-                  className="cursor-pointer text-[20px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
+                  className="cursor-pointer text-[22px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
                   onClick={onDimensionClick}
                 >
                   <SvgIcon
                     className="cursor-pointer"
-                    localIcon="dimension"
+                    localIcon="weidu"
                   />
                 </span>
                 </Tooltip>
@@ -176,12 +175,12 @@ const StatisticsAnalysis: React.FC<Props> = ({
             {showRecommend && (
               <Tooltip title="推荐指标">
                 <span 
-                  className="cursor-pointer text-[20px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
+                  className="cursor-pointer text-[23px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
                   onClick={onIndexClick}
                 >
                   <SvgIcon
                     className="cursor-pointer"
-                    localIcon="index"
+                    localIcon="zhibiao"
                   />
                 </span>
               </Tooltip>
@@ -189,26 +188,20 @@ const StatisticsAnalysis: React.FC<Props> = ({
             {showAttributionButton && (
               <Tooltip title="归因分析">
                 <span 
-                  className="cursor-pointer text-[18px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
+                  className="cursor-pointer text-[20px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
                   onClick={onAttributionClick}
                 >
-                  <SvgIcon
-                    className="cursor-pointer"
-                    localIcon="attribution"
-                  />
+                  <FunnelPlotTwoTone />
                 </span>
               </Tooltip>
             )}
             {showPredictButton && (
               <Tooltip title="预测分析">
                 <span 
-                  className="cursor-pointer text-[18px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
+                  className="cursor-pointer text-[20px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
                   onClick={onPredictClick}
                 >
-                  <SvgIcon
-                    className="cursor-pointer"
-                    localIcon="predict"
-                  />
+                  <FundTwoTone />
                 </span>
               </Tooltip>
             )}

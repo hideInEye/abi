@@ -71,7 +71,9 @@ function assembleData(input: InputField[]): OutputData {
     // 主键
     identifiers: [],
     // 度量
-    measures: []
+    measures: [],
+    // 表名称
+    tableNames: []
   };
 
   const semanticTypeHandlers = {
@@ -129,7 +131,9 @@ function assembleData(input: InputField[]): OutputData {
   };
 
   type SemanticType = keyof typeof semanticTypeHandlers;
-
+  // 储存表名称的数组
+  const tableNames = new Map<string, string>();
+  
   input.forEach(field => {
     const handler = semanticTypeHandlers[field.semanticType as SemanticType];
     if (handler) {
@@ -139,8 +143,15 @@ function assembleData(input: InputField[]): OutputData {
       dataType: field.dataType,
       fieldName: field.fieldName
     });
+    
+    if(!tableNames.has(field.rtableId!)) {
+      result.tableNames.push({
+        tableName: field.tableRemarks!,
+        rtableId: field.rtableId!
+      })
+      tableNames.set(field.rtableId!, field.tableRemarks!);
+    }
   });
-
   return result;
 }
 
@@ -151,14 +162,9 @@ function getTablePrikey(
     tableName: string;
   }[]
 ) {
+  const prikeyMap = new Map(tablePrikey.map(p => [p.tableName, p.originName]));
   allFields.forEach(field => {
-    tablePrikey.forEach(prikey => {
-      if (prikey.tableName === field.tableName) {
-        field.primaryKey = prikey.originName;
-      } else {
-        field.primaryKey = '*';
-      }
-    });
+    field.primaryKey = (field.tableName && prikeyMap.get(field.tableName)) || '*';
   });
 }
 
@@ -183,11 +189,22 @@ function getTabNameByRtableId(union: any[], targetRtableId: string): string | un
   return undefined;
 }
 
-
 function setTableName(fields: any[], union: any[], tablePrikey: any[] = []) {
   if (!fields?.length) {
     return;
   }
+
+  // 一次性构建映射表，避免重复递归
+  const rtableIdMap = new Map<string, string>();
+  const traverse = (items: any[]) => {
+    items?.forEach(item => {
+      if (item.currentDs?.rtableId) {
+        rtableIdMap.set(item.currentDs.rtableId, item.currentDs.tableName);
+      }
+      traverse(item.childrenDs);
+    });
+  };
+  traverse(union);
 
   const primaryKeyMap = new Map<string, string>();
   tablePrikey.forEach((item) => {
@@ -198,7 +215,8 @@ function setTableName(fields: any[], union: any[], tablePrikey: any[] = []) {
   });
 
   fields.forEach((field) => {
-    const tableName = getTabNameByRtableId(union, field.rtableId);
+    // 直接从映射表查找
+    const tableName = rtableIdMap.get(field.rtableId);
 
     if (tableName) {
       field.tableName = tableName;
@@ -235,6 +253,7 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
   } = useTableStore();
 
   const { formBaseInfo, formFieldsConfig, formTableConfig, nextStep, prevStep } = useTableStore();
+  const [nextLoading, setNextLoading] = useState(false);
 
   const handleClose = () => {
     setTableModalOpen(false);
@@ -258,6 +277,32 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
     status: '1',
     techName: englishName
   });
+  // 滚动定位到表单字段
+  const scrollToErrorField = (fieldName: string) => {
+    let selector = '';
+    if (fieldName.includes('tableHeader')) {
+      selector = '[data-field-type="table-chinese-name"]';
+    } else if (fieldName.includes('tableConfig')) {
+      // 提取字段索引，如 tableConfig[5].semanticType -> 5
+      const indexMatch = fieldName.match(/tableConfig\[(\d+)\]/);
+      const fieldIndex = indexMatch ? indexMatch[1] : null;
+      
+      const fieldType = fieldName.includes('semanticType') ? 'semantic-type' : 
+                       fieldName.includes('bizName') ? 'bizName' : 
+                       fieldName.includes('alias') ? 'alias' : 'fieldDesc';
+      
+      // 如果是语义类型且有索引，精确定位到特定字段
+      if (fieldType === 'semantic-type' && fieldIndex) {
+        selector = `[data-field-type="semantic-type"][data-field-index="${fieldIndex}"]`;
+      } else {
+        selector = `[data-field-type="${fieldType}"]`;
+      }
+    }
+    
+    if (selector) {
+      document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   const handleTableSemantics = async () => {
     const params = buildTableSemanticParams();
@@ -280,17 +325,42 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
   }
 
   async function onNextStep() {
-    if (stepIndex === 0) {
-      await formBaseInfo.validateFields();
-      nextStep();
-    }
-    if (stepIndex === 1) {
-      await formFieldsConfig.validateFields();
-      nextStep();
-    }
-    if (stepIndex === 2) {
-      await formTableConfig.validateFields();
-      await handleTableSemantics();
+    if (nextLoading) return;
+    setNextLoading(true);
+    try {
+      if (stepIndex === 0) {
+        await formBaseInfo.validateFields();
+        nextStep();
+        await new Promise(resolve => setTimeout(resolve, 800));
+      } else if (stepIndex === 1) {
+        await formFieldsConfig.validateFields();
+        nextStep();
+        await new Promise(resolve => setTimeout(resolve, 800));
+      } else if (stepIndex === 2) {
+        try {
+          await formTableConfig.validateFields();
+        } catch (errorInfo) {
+          if (errorInfo?.errorFields?.[0]?.name?.[0]) {
+            scrollToErrorField(errorInfo.errorFields[0].name[0]);
+          }
+          return;
+        }
+
+        // 检查每个表都有主键
+        const tableNames = [...new Set(fields.map(f => f.tableName))];
+        for (const tableName of tableNames) {
+          const hasKey = fields.some(f => f.tableName === tableName && f.semanticType === 'primary_key');
+          if (!hasKey) {
+            const firstIndex = fields.findIndex(f => f.tableName === tableName);
+            scrollToErrorField(`tableConfig[${firstIndex}].semanticType`);
+            message.error(`表"${tableName}"缺少主键，每个表都必须设置一个主键字段`);
+            return;
+          }
+        }
+        await handleTableSemantics();
+      }
+    } finally {
+      setNextLoading(false);
     }
   }
 
@@ -317,6 +387,7 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
           {stepIndex >= 1 && (
             <AButton
               type="default"
+              disabled={nextLoading}
               onClick={() => {
                 onPrevStep();
               }}
@@ -326,6 +397,8 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
           )}
           <AButton
             type="primary"
+            loading={nextLoading}
+            disabled={nextLoading}
             onClick={() => {
               onNextStep();
             }}
@@ -341,10 +414,12 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
         handleClose();
       }}
     >
-      <DataTableMeaning data={stepIndex} />
-      {stepIndex === 0 && <DataTableMeaningBaseInfo />}
-      {stepIndex === 1 && <DataTableFieldsSelect />}
-      {stepIndex === 2 && <DataTableMeaningTable />}
+      <ASpin spinning={nextLoading} tip="正在处理，请稍候">
+        <DataTableMeaning data={stepIndex} />
+        {stepIndex === 0 && <DataTableMeaningBaseInfo />}
+        {stepIndex === 1 && <DataTableFieldsSelect />}
+        {stepIndex === 2 && <DataTableMeaningTable />}
+      </ASpin>
     </ADrawer>
   );
 }

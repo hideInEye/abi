@@ -47,14 +47,14 @@ const IndustryTerminology: FC<PropsType> = memo(({ dispatch, schemaId, state }) 
       termName: ''
     });
     const filterResData = res.data.filter((item: any) => item.semanticSchemaId === schemaId);
-    setDataSource(filterResData.map((item: any) => ({ ...item, key: `${item.termId}`, title: item.techName })));
+    setDataSource(filterResData.map((item: any) => ({ ...item, key: `${item.termId}`, title: item.bizName })));
   };
 
   useEffect(() => {
     if (state.termGroupId) {
       getDataSource();
     }
-  }, [state]);
+  }, [state.termGroupId, schemaId]);
 
   const filterOption = (inputValue: string, option: RecordType) => option.title.includes(inputValue);
 
@@ -70,6 +70,7 @@ const IndustryTerminology: FC<PropsType> = memo(({ dispatch, schemaId, state }) 
       <div className="my-2">
         <ASelect
           allowClear
+          style={{width: 200}}
           className="mr-2"
           fieldNames={{ label: 'groupName', value: 'groupId' }}
           options={groupOptions}
@@ -82,8 +83,8 @@ const IndustryTerminology: FC<PropsType> = memo(({ dispatch, schemaId, state }) 
         showSearch
         dataSource={dataSource}
         filterOption={filterOption}
-        render={(item: any) => `${item.title}(${item.termAlias}) - ${item.bizName}`}
-        targetKeys={state?.term}
+        render={(item: any) => `${item.techName} - ${item.title}`}
+        targetKeys={(state?.term || []).map((k: any) => `${k}`)}
         titles={['可选术语', '已选术语']}
         listStyle={{
           height: 300,

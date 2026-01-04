@@ -1,4 +1,5 @@
 import request from "../request/index";
+import { getChatbiBaseApi } from "../../utils/index";
 
 //列出全部对话
 export function fetchConvList(data: any) {
@@ -34,6 +35,15 @@ export function newConv(data: any) {
 export function fetchConvHistory(data: any) {
   return request({
     url: "/chat-proxy/api/v1/chat/conv/messages/history",
+    method: "post",
+    data,
+    baseURL: window.APP_CONFIG.VITE_BASE_API
+  });
+}
+
+export function fetchConvHistoryRound(data: any) {
+  return request({
+    url: "/chat-proxy/api/v1/chat/conv/messages/history_round",
     method: "post",
     data,
     baseURL: window.APP_CONFIG.VITE_BASE_API
@@ -214,51 +224,51 @@ export function fetchExcelAnalysis(data: any) {
 // 获取二次引导组件信息
 export function fetchConvGuide(data: any) {
   return request({
-    url: "/api/chat/v1/chat/queryIntroductoryMessage",
+    url: "/chat/v1/chat/queryIntroductoryMessage",
     method: "post",
     data,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
 // 根据过滤条件组装SQL接口
 export function fetchAssembleSql(data: any) {
   return request({
-    url: "/api/chat/v1/chat/assembleSql",
+    url: "/chat/v1/chat/assembleSql",
     method: "post",
     data,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
 // 根据SQL查询数据接口
 export function fetchSelectDataBySql(data: any) {
   return request({
-    url: "/api/chat/v1/chat/selectDataBySql",
+    url: "/chat/v1/chat/selectDataBySql",
     method: "post",
     data,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
 // 数据导出接口
 export function dataExport(data: any) {
   return request({
-    url: "/api/chat/v1/chat/dataExport",
+    url: "/chat/v1/chat/dataExport",
     method: "post",
     data,
     responseType: 'blob',
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
 // 根据查询过滤条件值
 export function fetchSelectFilterValue(data: any) {
   return request({
-    url: "/api/chat/v1/chat/selectFilterValue",
+    url: "/chat/v1/chat/selectFilterValue",
     method: "post",
     data,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
@@ -317,10 +327,10 @@ export function uploadExcelFile(data: { bucket: string; file_id: string;}) {
 // }
 export function fetchRecommendDimensions(data: any) {
   return request({
-    url: "/api/v2/workflow/chat/recommend_dimension",
+    url: "/v2/workflow/chat/recommend_dimension",
     method: "post",
     data,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
@@ -349,10 +359,10 @@ export function fetchRecommendDimensions(data: any) {
 // }
 export function fetchRecommendIndicators(data: any) {
   return request({
-    url: "/api/v2/workflow/chat/recommend_indicator",
+    url: "/v2/workflow/chat/recommend_indicator",
     method: "post",
     data,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
@@ -412,10 +422,10 @@ export function fetchQueryRewrite(data: any) {
 // 下钻
 export function fetchDrillDown(data: any) {
   return request({
-    url: "/api/chat/v1/chat/drillDown",
+    url: "/chat/v1/chat/drillDown",
     method: "post",
     data,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 

@@ -1,4 +1,5 @@
 import { message } from 'antd';
+import { debounce } from 'lodash';
 import { useState } from 'react';
 
 import type { Exp, ExpCondition, TagGroup } from '@/pages/assistant-manage/label-meaning/types';
@@ -7,7 +8,6 @@ import { addTag, delTag, editTag, queryTag } from '@/service/api/tag-meaning.ts'
 export function useTagManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<TagGroup | null>(null);
-  const [searchValue, setSearchValue] = useState('');
   const [tagGroups, setTagGroups] = useState<TagGroup[]>([]);
   const [tagList, setTagList] = useState<TagGroup[]>([]);
   const [groupId, setGroupId] = useState<number>(0);
@@ -24,13 +24,14 @@ export function useTagManagement() {
     tagName?: string;
   }
 
-  const getTagList = async (params: IQueryTag) => {
+  const getTagList = async(params: IQueryTag) => {
     if (!groupId) {
       return;
     }
     setTagList([]);
-
-    const queryParams = {
+    console.log('===');
+    
+    const queryParams:any = {
       groupId,
       spaceId: Number(localStorage.getItem('spaceId'))
     };
@@ -38,17 +39,6 @@ export function useTagManagement() {
     if (params.tagName) {
       queryParams.tagName = params.tagName;
     }
-    if (params.alias) {
-      queryParams.alias = params.alias;
-    }
-    if (params.engName) {
-      queryParams.engName = params.engName;
-    }
-
-    if (params.createBy) {
-      queryParams.createBy = params.createBy;
-    }
-
     const { response } = await queryTag(queryParams);
     const { data } = response.data;
     setTagList(data as TagGroup[]);
@@ -115,11 +105,9 @@ export function useTagManagement() {
     setEditingGroup(tempTag as any);
   };
 
-  const handleSearch = (value: string, type: string) => {
-    setSearchValue(value);
-    setTagList([]);
-    getTagList({ [type]: value });
-  };
+  const handleSearch =debounce ((value: string) => {
+    getTagList({ tagName: value });
+  },500);
 
   return {
     editingGroup,
@@ -130,7 +118,6 @@ export function useTagManagement() {
     handleEdit,
     handleSearch,
     isModalOpen,
-    searchValue,
     setEditingGroup,
     setGroupId,
     setIsModalOpen,

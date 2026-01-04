@@ -6,9 +6,12 @@
 
 import { Table } from "antd";
 import React, { memo, useEffect, useMemo, useState } from "react";
-import CodeMirror from '@uiw/react-codemirror';
-import { sql } from '@codemirror/lang-sql';
+import { format } from 'sql-formatter';
 import SvgIcon from "../../components/SvgIcon";
+// @ts-ignore - react-syntax-highlighter 类型定义问题
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+// @ts-ignore
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import AutoChart from "./autoChart";
 import { getChartType } from "./autoChart/helpers";
 import ReactMarkdown from 'react-markdown'
@@ -113,12 +116,34 @@ const Answer: React.FC<PropsType> = memo(({ dataInfo, loading }) => {
         />
       ),
       sql: (
-        <CodeMirror
-          readOnly
-          extensions={[sql()]}
-          height="200px"
-          value={data?.sql}
-        />
+        <>
+          {/* @ts-ignore */}
+          <SyntaxHighlighter
+            language="sql"
+            style={oneLight}
+            showLineNumbers={true}
+            customStyle={{
+              margin: 0,
+              borderRadius: '4px',
+              fontSize: '14px',
+              maxHeight: '400px',
+              backgroundColor: '#f5f5f5',
+              padding: '12px',
+            }}
+            codeTagProps={{
+              style: {
+                fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+              }
+            }}
+          >
+            {data?.sql ? format(data.sql, {
+              language: 'sql',
+              tabWidth: 2,
+              keywordCase: 'upper',
+              linesBetweenQueries: 2,
+            }) : ''}
+          </SyntaxHighlighter>
+        </>
       ),
       table: (
         <Table

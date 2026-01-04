@@ -11,7 +11,9 @@ import type { ISpaceItem } from '../space-list/types';
 
 import { DataAssets } from './modules/DataAssets';
 import { FastCreate } from './modules/FastCreate';
-
+import { clearTabs } from '@/store/slice/tab';
+import s from './index.module.scss';
+import cx from 'classnames';
 /**
  * 首页组件
  * 系统的主要仪表板页面，提供数据概览和快速访问入口
@@ -25,6 +27,7 @@ export function Component() {
   const [homeData, setHomeData] = useState<any>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editSpace, setEditSpace] = useState<ISpaceItem | null>(null);
+  const dispatch = useAppDispatch();
 
   const { push } = useRouter();
 
@@ -37,7 +40,7 @@ export function Component() {
         isAsc: 'desc',
         orderByColumn: 'spaceId',
         pageNum: 1,
-        pageSize: 4
+        pageSize: 5
       });
       
       // 合并数据，用空间列表API的数据替换原有的spaceList
@@ -63,6 +66,8 @@ export function Component() {
   async function deleteSpaceHandler(space: ISpaceItem) {
     const { data } = await deleteSpace([space.spaceId]);
     console.log('deleteSpaceHandler', data);
+    localStorage.removeItem('spaceId');
+    dispatch(clearTabs());
     getHomeData();
   }
 
@@ -75,11 +80,12 @@ export function Component() {
     getHomeData();
   }
   return (
-    <ACard>
+    <div className='h-full bg-[#fff]'>
+    <ACard className={cx(s.container)}>
       {homeData && <DataAssets homeData={homeData} />}
 
       <AFlex
-        className="my-4"
+        className="md:my-[4px] lg:my-[6px] xl:my-[8px] 2xl:my-[12px]"
         justify="space-between"
       >
         <h1 className="text-base font-bold">我的空间</h1>
@@ -94,7 +100,7 @@ export function Component() {
         </div>
       </AFlex>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-5">
         {homeData &&
           homeData?.spaceList?.map((item: ISpaceItem) => (
             <SpaceItem
@@ -117,5 +123,6 @@ export function Component() {
 
       <FastCreate spaceList={homeData?.spaceList} />
     </ACard>
+    </div>
   );
 }

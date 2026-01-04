@@ -122,8 +122,8 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({ allFields }) => {
             </Button>
           </div>
 
-          {fields.map(field => (
-            <div
+          {fields.map((field,index,rest) =>{             
+           return <div
               className="my4 rounded-md bg-gray-1/40 p-4"
               key={field.key}
             >
@@ -143,12 +143,14 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({ allFields }) => {
                     <Input placeholder="标签名称" />
                   </Form.Item>
 
+                  {rest.length>1&&
                   <DeleteOutlined
                     className="cursor-pointer"
                     onClick={() => {
                       remove(field.name);
                     }}
                   />
+                }
                 </div>
               </div>
 
@@ -156,7 +158,7 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({ allFields }) => {
               <Form.List name={[field.name, 'conditions']}>
                 {(subFields, subOpt) => (
                   <div style={{ display: 'flex', flexDirection: 'column', rowGap: 16 }}>
-                    {subFields.map(subField => (
+                    {subFields.map((subField,childIndex,childRest) => (
                       <div
                         className="my2 flex items-center gap-2"
                         key={subField.key}
@@ -223,6 +225,7 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({ allFields }) => {
                             title="在此位置后添加条件"
                             onClick={() => subOpt.add(defaultCondition, subField.name + 1)}
                           />
+                        {childRest.length>1&&
                           <Button
                             icon={<MinusCircleOutlined />}
                             title="删除此条件"
@@ -230,6 +233,7 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({ allFields }) => {
                               subOpt.remove(subField.name);
                             }}
                           />
+                          }
                         </div>
                       </div>
                     ))}
@@ -249,7 +253,7 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({ allFields }) => {
                 )}
               </Form.List>
             </div>
-          ))}
+          })}
         </div>
       )}
     </Form.List>

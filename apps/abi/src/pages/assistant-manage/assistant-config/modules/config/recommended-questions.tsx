@@ -42,9 +42,10 @@ const RecommendedQuestions: FC<PropsType> = memo(({ dispatch, state }) => {
   const getDataSource = async () => {
     const res = await fetchQuestions({
       groupId: state.exampleGroupId,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId: Number(localStorage.getItem('spaceId')),
+      pageSize: 100,
     });
-    setDataSource(res.data?.map((item: any) => ({ key: `${item.problemId}`, title: item.question })));
+    setDataSource(res.data?.list?.map((item: any) => ({ key: `${item.problemId}`, title: item.question })));
   };
 
   useEffect(() => {
@@ -67,6 +68,7 @@ const RecommendedQuestions: FC<PropsType> = memo(({ dispatch, state }) => {
       <div className="my-2">
         <ASelect
           allowClear
+          style={{width: 200}}
           className="mr-2"
           fieldNames={{ label: 'groupName', value: 'groupId' }}
           options={groupOptions}

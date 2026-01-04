@@ -72,7 +72,9 @@
   /* 下方tabs */
   .bottom-tabs-container {
     height: 100%;
-
+    :global(.ant-tabs-nav-wrap) {
+      flex: none;
+    }
     & > div:first-child {
       padding-left: 10px;
       margin-bottom: 0;

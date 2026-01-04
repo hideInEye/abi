@@ -33,11 +33,11 @@ export const MEMORY_CHAT_MODE_OPTIONS: any = [
 // 记忆管理 - 状态
 export const MEMORY_STATUS_OPTIONS: any = [
   {
-    label: '已拒绝',
+    label: '已接受',
     value: '0'
   },
   {
-    label: '已接受',
+    label: '已拒绝',
     value: '1'
   },
   {

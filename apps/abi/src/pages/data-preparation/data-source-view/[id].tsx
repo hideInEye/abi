@@ -7,13 +7,10 @@ import { BaseData } from './modules/base-data';
 import { ViewData } from './modules/view-data';
 
 /**
- * 数据源查看页面组件
- * 用于查看指定数据源的表结构和数据内容
- * 支持两个标签页：
+ * 数据源查看页面组件 用于查看指定数据源的表结构和数据内容 支持两个标签页：
+ *
  * 1. 基本数据 - 显示表结构、字段信息、统计信息等
- * 2. 预览数据 - 显示表中的实际数据内容
- * 左侧为数据表列表，右侧为详细信息展示区域
- * 支持表名搜索过滤功能
+ * 2. 预览数据 - 显示表中的实际数据内容 左侧为数据表列表，右侧为详细信息展示区域 支持表名搜索过滤功能
  */
 export function Component() {
   const [datasource, setDatasource] = useState<string | undefined>(undefined);
@@ -23,10 +20,16 @@ export function Component() {
   const route = useRoute();
   const { id } = route.params;
 
+  const curDatasource = useMemo(
+    () => dataSourceList.find((item: any) => item.sourceId === datasource),
+    [dataSourceList, datasource]
+  );
+
   const items: TabsProps['items'] = [
     {
       children: (
         <BaseData
+          curDatasource={curDatasource}
           sourceId={datasource}
           tableName={selectedTable}
         />
@@ -66,7 +69,6 @@ export function Component() {
 
   useEffect(() => {
     if (datasource) {
-      const curDatasource = dataSourceList.find((item: any) => item.sourceId === datasource);
       if (curDatasource) {
         getTableListBySource({
           sourceId: datasource,
@@ -75,7 +77,7 @@ export function Component() {
         });
       }
     }
-  }, [datasource, dataSourceList]);
+  }, [datasource, curDatasource]);
 
   return (
     <ACard>
@@ -116,10 +118,12 @@ export function Component() {
                 onClick={() => setSelectedTable(item.tableName)}
               >
                 <SvgIcon
-                  className="mr-2"
+                  className="mr-2 min-w-1rem"
                   localIcon="db"
                 />
-                {item.tableName}
+                <span title={item.tableName} className='inline-block max-w-170px overflow-hidden text-ellipsis whitespace-nowrap'>
+                  {item.tableName}
+                </span>
               </div>
             ))}
           </div>

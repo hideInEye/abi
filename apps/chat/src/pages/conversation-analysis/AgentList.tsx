@@ -1,5 +1,5 @@
 import { FileTextOutlined } from "@ant-design/icons";
-import { Table, TableProps } from "antd";
+import { Empty, Table, TableProps } from "antd";
 import React, { useEffect, useReducer, useState, forwardRef, useImperativeHandle } from "react"
 import { fetchAgentList } from "../../service/api/app";
 import AgentInfoModal from "./AgentInfoModal";
@@ -16,7 +16,7 @@ export type AgentListHandle = {
 
 const initVal = {
   pageNum: 1,
-  pageSize: 20,
+  pageSize: 10,
   total: 0
 };
 
@@ -46,7 +46,7 @@ const AgentList = forwardRef<AgentListHandle, PropsType>(({ setAgentId, agentId 
     {
       dataIndex: 'bizName',
       key: 'bizName',
-      title: '数据模型'
+      title: '助手名称'
     },
     {
       dataIndex: 'remark',
@@ -71,10 +71,11 @@ const AgentList = forwardRef<AgentListHandle, PropsType>(({ setAgentId, agentId 
     const res: any = await fetchAgentList({
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize,
-      spaceId: getSpaceId()
+      spaceId: getSpaceId(),
+      // spaceId: 73,
     });
     setDataSource(res.rows);
-    dispatch(res.total);
+    dispatch({ total: res.total });
   };
 
   useEffect(() => {
@@ -118,6 +119,7 @@ const AgentList = forwardRef<AgentListHandle, PropsType>(({ setAgentId, agentId 
           pageSize: pagination.pageSize,
           total: pagination.total
         }}
+        locale={{ emptyText: <Empty description="暂无数据"></Empty> }}
       />
 
       {viewRowAgentId ? (

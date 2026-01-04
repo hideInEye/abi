@@ -1,3 +1,4 @@
+import { message } from 'antd';
 import { useState } from 'react';
 
 import { queryTerms } from '@/service/api/Industry';
@@ -39,10 +40,16 @@ export function useTagManagement() {
   };
 
   const handleDelete = async (termId: number) => {
-    setTerms(prev => prev.filter(group => group.termId !== termId));
-    await deleteTerms({
+    const res = await deleteTerms({
       termId
     });
+    
+    if (res.response?.data?.code === 200) {
+      message.success(res.response.data.msg || '删除成功');
+      setTerms(prev => prev.filter(group => group.termId !== termId));
+    } else {
+      message.error(res.response?.data?.msg || '删除失败');
+    }
   };
 
   const handleSearch = (value: string) => {

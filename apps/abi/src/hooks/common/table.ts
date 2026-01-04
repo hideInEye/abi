@@ -231,7 +231,7 @@ export function useTableOperate<T extends TableData = TableData>(
     // request
     const executeRes: any = await executeResActions(res, operateType);
     if (executeRes === false) return;
-    window.$message?.success(t('common.updateSuccess'));
+
 
     onClose();
     getData();

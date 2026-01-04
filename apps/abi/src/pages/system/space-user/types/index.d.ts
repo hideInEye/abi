@@ -17,8 +17,10 @@ export interface DeptItem {
   isExpand?: boolean;
   isStuffChildren?: boolean;
   parentId?: number;
+  deptUuid: number;
   parentName?: string;
   hasChildren: boolean
+  children: DeptItem[]
 }
 
 export interface UserItem {
@@ -28,6 +30,7 @@ export interface UserItem {
   };
   userId: string;
   userName: string;
+  userUuid: number
 }
 
 export interface PermissionItem {

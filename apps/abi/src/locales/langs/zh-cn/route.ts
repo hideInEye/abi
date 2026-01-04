@@ -46,6 +46,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   job: '调度任务',
   job_log: '调度日志',
   job_time: '定时任务',
+  job_email: '邮件发送记录',
 
   login: '登录',
   'login_code-login': '验证码登录',

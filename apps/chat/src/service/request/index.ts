@@ -14,7 +14,7 @@ service.interceptors.request.use(
     // 默认 token
     // const defaultToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjpbeyJ1c2VyTmFtZSI6IlNveWJlYW4ifV0sImlhdCI6MTY5ODQ4NDg2MywiZXhwIjoxNzMwMDQ0Nzk5LCJhdWQiOiJzb3liZWFuLWFkbWluIiwiaXNzIjoiU295YmVhbiIsInN1YiI6IlNveWJlYW4ifQ._w5wmPm6HVJc5fzkSrd_j-92d5PBRzWUfnrTF1bAmfk';
 
-    const defaultToken = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VyX2lkIjoyLCJ1c2VyX2tleSI6IjIyMmJlYWUxLTU3MWEtNDUyYi05MTYyLTBjOTM0ZGNjY2E3YiIsInVzZXJuYW1lIjoidHJ1c3QifQ.8ZCyz5WnKnqI8xYEt2T_T5UA8bfvmsHPN831N0qrBqCFWGyxcirwGkECNCYEbEAApT7PNVrI317i33dNv4JsLA'
+    const defaultToken = 'eyJhbGciOiJIUzUxMiJ9.eyJ1c2VyX2lkIjoxMTAsInVzZXJfa2V5IjoiZjFjMjQ2ZWYtMDdmZS00M2YxLTkyZDktNTQ1ZmRmOGZjZTM5IiwidXNlcm5hbWUiOiJ5YW5neXVodWFuIn0.YNJ5nABncTx-10bfUv02tFABYCz_wJYlxp_1fpFYK0y3_dHoRktYY-qJD1F7Xpeucoq4IDwocClvuJ_xHeDcIw'
 
     // 获取存储的 toke
     let token = defaultToken;
@@ -27,7 +27,8 @@ service.interceptors.request.use(
       console.error('Token processing error:', error);
     }
 
-    if (isDevelopment) {
+    // 只在没有指定 baseURL 或 baseURL 为默认值 '/' 时才设置为 '/'
+    if (isDevelopment && (!config.baseURL || config.baseURL === '/')) {
       config.baseURL = '/';
     }
 
@@ -46,6 +47,14 @@ service.interceptors.response.use(
   (response) => {
     if (response.config.responseType === 'blob') {
       return response;
+    }
+    // 处理 token 过期：业务错误码 401
+    if (response.data?.code === 401) {
+      // 调用主应用传递的 token 过期处理函数
+      if (window.onTokenExpired) {
+        window.onTokenExpired();
+      }
+      return Promise.reject(new Error('Token expired'));
     }
     return response.data;
   },

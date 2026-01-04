@@ -39,5 +39,7 @@ declare namespace StorageType {
 
     /** The user info */
     userInfo: Api.Auth.UserInfo;
+    /** 跳转对话chatid */
+    chatId: string
   }
 }

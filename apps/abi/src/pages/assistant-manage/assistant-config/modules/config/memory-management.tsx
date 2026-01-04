@@ -1,5 +1,6 @@
 import { DeleteOutlined, DeploymentUnitOutlined, DislikeOutlined, LikeOutlined, UserOutlined } from '@ant-design/icons';
 import { Popconfirm, message } from 'antd';
+import dayjs from 'dayjs';
 import React, { Suspense } from 'react';
 
 import { EVAL_LLM_OPTIONS, MEMORY_CHAT_MODE_OPTIONS, MEMORY_STATUS_OPTIONS } from '@/constants/assistant-config';
@@ -11,7 +12,9 @@ import {
   fetchModelEval,
   fetchVectorStorage,
   fetchVectorsDelete,
-  syncKnowledgeBase
+  getAgentDetailById,
+  syncKnowledgeBase,
+  fetchTerms
 } from '@/service/api/assistant-manage';
 
 import KeySearch from './key-search';
@@ -74,6 +77,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
     type: ''
   });
   const [modelEvalLoading, setModelEvalLoading] = useState<boolean>(false);
+  const isWenShuScene = (chatMode: string) => chatMode === 'chat_with_db_execute';
   const { scrollConfig, tableWrapperRef } = useTableScroll(2000);
   const handleFeedback = (record: any, type: string) => {
     setFeedback({
@@ -82,7 +86,6 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
     });
   };
   const handleModelEval = async (record: any) => {
-    setModelEvalLoading(true);
     try {
       const modelListRes = await fetchModelList({ pageNum: 1, pageSize: 1000 });
       const modelList = modelListRes?.data?.data || [];
@@ -91,6 +94,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         message.error('未找到模型相关信息');
         return;
       }
+      setModelEvalLoading(true);
       const modelConfig = modelInfo?.modelConfig ? JSON.parse(modelInfo.modelConfig) : {};
       const contextObj = {
         agent_id: `${record.agent_id}`,
@@ -119,6 +123,8 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
       if (res.response?.data?.success) {
         message.success('模型评估成功');
         run();
+      }else {
+        message.error(res.response?.data?.err_msg);
       }
     } catch (error) {
       console.log(error);
@@ -211,13 +217,14 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         dataIndex: 'eval_by',
         key: 'eval_by',
         title: '评估人',
-        width: 80
+        width: 120
       },
       {
         dataIndex: 'expert_opinion',
+        ellipsis: true,
         key: 'expert_opinion',
         title: '评估意见',
-        width: 130
+        width: 200
       },
       {
         dataIndex: 'eval_llm',
@@ -236,12 +243,14 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
       {
         dataIndex: 'eval_time',
         key: 'eval_time',
+        render: (time: string) => (time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-'),
         title: '审核时间',
         width: 200
       },
       {
         dataIndex: 'create_time',
         key: 'create_time',
+        render: (time: string) => (time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-'),
         title: '提交时间',
         width: 200
       },
@@ -274,7 +283,11 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
               >
                 <AButton
                   color="primary"
-                  disabled={modelEvalLoading || MEMORY_STATUS_OPTIONS.find((item: any) => item.value === record.status)}
+                  disabled={
+                    modelEvalLoading ||
+                    ['0', '1'].includes(record.status) ||
+                    !isWenShuScene(record.chat_mode)
+                  }
                   icon={<DeploymentUnitOutlined />}
                   size="small"
                   variant="link"
@@ -283,7 +296,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
             </Popconfirm>
             <Popconfirm
               title="删除后不可恢复，确定删除吗？"
-              onConfirm={() => handleDelete(record.fb_id)}
+              onConfirm={() => handleDelete(record)}
             >
               <ATooltip title="删除">
                 <AButton
@@ -318,10 +331,10 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
           ...res,
           eval_by: currentUserObj.userName,
           fb_id: editingData?.fb_id,
-          status: editingData.status
+          status: res.status
         });
         if (!updateRes?.response?.data?.success) return false;
-        
+
         // 如果采纳状态=采纳，则同步数据库后再同步向量知识库，无须提示直接同步
         if (res.eval_user === '0') {
           // 同步数据库
@@ -329,13 +342,39 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
             fb_id: editingData?.fb_id
           });
           if (!evaluateRes?.response?.data?.success) return false;
-          
+
           // 同步向量知识库
           try {
-            await syncKnowledgeBase({
-              agent_id: `${agentId}`,
-              space_id: `${localStorage.getItem('spaceId')}`
-            });
+          const detailRes = await getAgentDetailById(agentId!);
+          const data = detailRes.data;
+          const modelConfig = data.modelConfig ? JSON.parse(data.modelConfig) : {};
+          const cfg = modelConfig?.modelConfigs?.[0] || {};
+          let dslObj = modelConfig?.mdlConfigs || {};
+          try {
+            if (cfg?.termGroupId) {
+              const termRes = await fetchTerms({ groupId: cfg.termGroupId, spaceId: Number(localStorage.getItem('spaceId')), termName: '' });
+              const termMap: Record<string, string> = {};
+              (termRes?.data || []).forEach((it: any) => {
+                if (it?.techName) termMap[it.techName] = it.bizName;
+                if (it?.engName) termMap[it.engName] = it.bizName;
+              });
+              const rewrite = (node: any) => {
+                if (!node || typeof node !== 'object') return;
+                if (typeof node.displayName === 'string') {
+                  const v = termMap[node.displayName];
+                  if (v) node.displayName = v;
+                }
+                Object.keys(node).forEach(k => rewrite(node[k]));
+              };
+              rewrite(dslObj);
+            }
+          } catch {}
+          // console.log('KB sync DSL:', dslObj);
+          await syncKnowledgeBase({
+            agent_id: `${agentId}`,
+            dsl: JSON.stringify(dslObj || {}),
+            space_id: `${localStorage.getItem('spaceId')}`
+          });
           } catch (error) {
             console.log('同步向量知识库失败:', error);
           }
@@ -343,16 +382,25 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
       }
     }
   );
-  async function handleDelete(fbId: string) {
+  async function handleDelete(record: any) {
     try {
-      await fetchVectorsDelete(fbId); // 删除向量存储
-    } catch (error) {
-    } finally {
-      const res = await fetchDeleteMemory(fbId);
-
+      // 1. 先调用删除数据库的接口
+      const res = await fetchDeleteMemory(record.fb_id);
+      
       if (res?.response?.data?.success) {
+        // 2. 如果有pk_id（进行过模型评估），则调用删除向量数据库的接口
+        if (record.pk_id) {
+          try {
+            await fetchVectorsDelete(record.fb_id);
+          } catch (error) {
+            console.log('删除向量数据库失败:', error);
+            // 向量数据库删除失败不影响整体删除流程
+          }
+        }
         onDeleted();
       }
+    } catch (error) {
+      console.log('删除失败:', error);
     }
   }
   useEffect(() => {
@@ -380,10 +428,14 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
     setFeedback({ record: null, type: '' });
     run(); // 刷新表格数据
   };
+  const handleReset = () => {
+    searchProps.form.resetFields();
+    run(); // 重置后立即刷新数据
+  };
 
   return (
     <div>
-      <KeySearch {...searchProps} />
+      <KeySearch {...searchProps} reset={handleReset} />
       <ATable
         // rowKey="agentId"
         // scroll={{ ...scrollConfig, y: 'calc(100vh - 300px)' }}

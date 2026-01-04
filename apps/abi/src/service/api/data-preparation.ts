@@ -44,7 +44,7 @@ export function addDb(data?: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/chat/db/add'
+    url: '/chat-proxy/api/v1/chat/db/add'
   });
 }
 
@@ -53,7 +53,7 @@ export function deleteDb(dbName: string) {
   return apiRequest<any>({
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     method: 'post',
-    url: `/api/v1/chat/db/delete?db_name=${dbName}`
+    url: `/chat-proxy/api/v1/chat/db/delete?db_name=${dbName}`
   });
 }
 

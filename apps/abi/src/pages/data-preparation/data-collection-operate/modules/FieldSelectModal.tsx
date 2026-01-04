@@ -3,11 +3,14 @@ import type { TableColumnsType } from 'antd';
 import type { TableRowSelection } from 'antd/es/table/interface';
 import type { Dispatch, SetStateAction } from 'react';
 
+import { DataCollectionOperateContext } from '../context';
+
 interface TableSelectionProps {
   data: any;
   fieldsList: any[];
   selectedRows: any[];
   setSelectedRows: Dispatch<SetStateAction<any[]>>;
+  lockedRowKeys?: string[];
 }
 
 const formatFieldsList = (fetchData: any, checkedData: any) => {
@@ -27,60 +30,83 @@ const formatFieldsList = (fetchData: any, checkedData: any) => {
   });
 };
 
-export const TableSelection: React.FC<TableSelectionProps> = memo(({ data, fieldsList, setSelectedRows }) => {
-  const { currentDsFields } = data;
-  const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([]);
-  const [dataSource, setDataSource] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
-  const onSelectChange = (newSelectedRowKeys: React.Key[], selected: any[]) => {
-    setSelectedRowKeys(newSelectedRowKeys);
-    setSelectedRows(selected.map(item => ({ ...item, checked: true })));
-  };
-  const rowSelection: TableRowSelection<DataType> = {
-    onChange: onSelectChange,
-    selectedRowKeys
-  };
-  const filterData = useMemo(() => {
-    return dataSource?.filter((item: DataType) => item.originName.toLowerCase().includes(search.toLowerCase()));
-  }, [dataSource, search]);
-  const columns: TableColumnsType<DataType> = [
-    { dataIndex: 'originName', title: '物理字段名' },
-    { dataIndex: 'name', title: '字段备注' }
-  ];
+export const TableSelection: React.FC<TableSelectionProps> = memo(
+  ({ data, fieldsList, selectedRows = [], setSelectedRows, lockedRowKeys = [] }) => {
+    const { currentDsFields } = data;
+    const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([]);
+    const [dataSource, setDataSource] = useState<any[]>([]);
+    const [search, setSearch] = useState('');
+    const lockedKeySet = useMemo(() => new Set(lockedRowKeys), [lockedRowKeys]);
+    const onSelectChange = (_newSelectedRowKeys: React.Key[], selected: any[]) => {
+      const manualSelected = selected
+        .filter(item => !lockedKeySet.has(item.originName))
+        .map(item => ({ ...item, checked: true }));
+      const manualKeys = manualSelected.map(item => item.originName);
+      const nextKeys = Array.from(new Set([...manualKeys, ...lockedRowKeys]));
+      setSelectedRowKeys(nextKeys);
+      setSelectedRows(manualSelected);
+    };
+    const rowSelection: TableRowSelection<DataType> = {
+      onChange: onSelectChange,
+      selectedRowKeys,
+      getCheckboxProps: (record: DataType) => ({
+        disabled: lockedKeySet.has(record.originName)
+      })
+    };
+    const filterData = useMemo(() => {
+      return dataSource?.filter((item: DataType) => item.originName.toLowerCase().includes(search.toLowerCase()));
+    }, [dataSource, search]);
+    const columns: TableColumnsType<DataType> = [
+      { dataIndex: 'originName', title: '物理字段名' },
+      { dataIndex: 'name', title: '字段备注' }
+    ];
 
-  useEffect(() => {
-    if (fieldsList?.length) {
-      const res = formatFieldsList(fieldsList, currentDsFields);
-      const selectedR = res.filter((item: any) => item.checked);
-      setSelectedRowKeys(selectedR.map((item: any) => item.originName));
-      setSelectedRows(selectedR);
-      setDataSource(res);
-    }
-  }, [fieldsList, currentDsFields]);
+    useEffect(() => {
+      if (fieldsList?.length) {
+        const res = formatFieldsList(fieldsList, currentDsFields);
+        const selectedR = res.filter((item: any) => item.checked);
+        setSelectedRows(selectedR);
+        setDataSource(res);
+      }
+    }, [fieldsList, currentDsFields, setSelectedRows]);
 
-  return (
-    <>
-      <div className="flex items-center justify-between pb-4">
-        <span className="whitespace-nowrap">
-          字段选择（{selectedRowKeys.length}/{dataSource?.length}）
-        </span>
-        <AInput.Search
-          className="w-200px"
-          placeholder="通过字段名称搜索"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+    useEffect(() => {
+      const keys =
+        selectedRows?.length || lockedRowKeys.length
+          ? Array.from(
+              new Set([
+                ...(selectedRows?.map((item: any) => item.originName).filter(Boolean) || []),
+                ...lockedRowKeys
+              ])
+            )
+          : [];
+      setSelectedRowKeys(keys);
+    }, [selectedRows, lockedRowKeys]);
+
+    return (
+      <>
+        <div className="flex items-center justify-between pb-4">
+          <span className="whitespace-nowrap">
+            字段选择（{selectedRowKeys.length}/{dataSource?.length}）
+          </span>
+          <AInput.Search
+            className="w-200px"
+            placeholder="通过字段名称搜索"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <ATable<DataType>
+          columns={columns}
+          dataSource={filterData}
+          pagination={false}
+          rowKey="originName"
+          rowSelection={rowSelection}
         />
-      </div>
-      <ATable<DataType>
-        columns={columns}
-        dataSource={filterData}
-        pagination={false}
-        rowKey="originName"
-        rowSelection={rowSelection}
-      />
-    </>
-  );
-});
+      </>
+    );
+  }
+);
 
 interface PropsType {
   data?: any;
@@ -106,6 +132,8 @@ interface DataType {
 // };
 
 const FieldSelectModal: React.FC<PropsType> = memo(({ data, onClose }) => {
+  const { curDatasourceType } = useContext(DataCollectionOperateContext);
+
   const { currentDs } = data;
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const { dataSourceList, fieldsList, getDatasourceList, getFieldsList } = useDatasource();
@@ -116,7 +144,7 @@ const FieldSelectModal: React.FC<PropsType> = memo(({ data, onClose }) => {
 
   useEffect(() => {
     const { sourceId, tableName } = currentDs;
-    getFieldsList({ sourceId, tableName });
+    getFieldsList({ sourceId, tableName }, curDatasourceType);
   }, [currentDs]);
 
   const handleSubmit = async () => {

@@ -1,5 +1,13 @@
 import { apiRequest, request } from '../request';
 
+/** 获取验证码图片 */
+export function fetchCaptchaImage() {
+  return apiRequest<Api.Auth.CaptchaImage>({
+    method: 'get',
+    url: '/auth/captchaImage'
+  });
+}
+
 /**
  * Login
  *

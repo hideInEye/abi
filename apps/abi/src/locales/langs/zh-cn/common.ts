@@ -29,7 +29,7 @@ const common: App.I18n.Schema['translation']['common'] = {
   pleaseCheckValue: '请检查输入的值是否合法',
   refresh: '刷新',
   reset: '重置',
-  search: '搜索',
+  search: '查询',
   switch: '切换',
   tip: '提示',
   trigger: '触发',

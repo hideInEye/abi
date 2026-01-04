@@ -14,6 +14,15 @@ export function setupUnocss(viteEnv: Env.ImportMeta) {
   const collectionName = VITE_ICON_LOCAL_PREFIX.replace(`${VITE_ICON_PREFIX}-`, '');
 
   return unocss({
+    theme:{
+      breakpoints: {
+        sm: '640px',
+        md: '768px',
+        lg: '1024px',
+        xl: '1280px',
+        '2xl': '1536px',
+      }
+    },
     presets: [
       presetIcons({
         collections: {

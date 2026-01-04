@@ -1,29 +1,26 @@
-import {
-  CaretRightOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  ExceptionOutlined,
-  FileSearchOutlined
-} from '@ant-design/icons';
-import { message } from 'antd';
+import { CaretRightOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, ExceptionOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { Form, message } from 'antd';
 import { Suspense } from 'react';
 
 // import { enableStatusRecord } from '@/constants/business';
 // import { ATG_MAP } from '@/constants/common';
 import { JOB_GROUP_OPTIONS } from '@/constants/job';
-import { addJob, deleteJob, exportJob, fetchChangeStatus, fetchJobList, runJob, updateJob } from '@/service/api/job';
+import { addJob, batchDeleteJob, deleteJob, exportJob, fetchChangeStatus, fetchJobList, fetchShareEmail, fetchShareEmailDetail, runJob, updateJob, updateShareEmail } from '@/service/api/job';
 import { useRouter } from '~/packages/simple-router/src/hooks/useRouter';
 
 import JobDetailDrawer from './modules/job-detail-drawer';
 import KeySearch from './modules/key-search';
+import ShareEmailSetting from './modules/share-email-setting';
 
 const JobDrawer = lazy(() => import('./modules/job-drawer'));
 
 export function Component() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [viewJobId, setViewJobId] = useState('');
-
+  // const [viewJobId, setViewJobId] = useState('');
+  const [form] = Form.useForm();
+  const [visible, setVisible] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
   const { scrollConfig, tableWrapperRef } = useTableScroll();
 
   const handleSwitch = async (record: any) => {
@@ -32,14 +29,14 @@ export function Component() {
       onOk: async () => {
         const res = await fetchChangeStatus({
           jobId: record.jobId,
-          status: record.status === '0' ? '1' : '0'
+          status: record.status === '0' ? '1' : '0',
         });
         if (res.response.data.code === 200) {
           message.success('操作成功');
           run();
         }
       },
-      title: '系统提示'
+      title: '系统提示',
     });
   };
 
@@ -49,7 +46,7 @@ export function Component() {
       pageNum: 1,
       pageSize: 10,
       // sourceName: '',
-      spaceId: Number(localStorage.getItem('spaceId')) // 空间id
+      spaceId: Number(localStorage.getItem('spaceId')), // 空间id
     },
     columns: () =>
       [
@@ -64,48 +61,50 @@ export function Component() {
           align: 'center',
           dataIndex: 'jobName',
           key: 'jobName',
-          title: '任务名称'
+          title: '任务名称',
+          width: 130,
+          fixed: 'left',
         },
         {
           align: 'center',
-          dataIndex: 'jobGroup',
-          key: 'jobGroup',
-          render: (group: string) => JOB_GROUP_OPTIONS.find(item => item.value === group)?.label,
-          title: '任务分组',
-          width: 80
-        },
-        {
-          dataIndex: 'invokeTarget',
-          key: 'invokeTarget',
-          title: '调用方法'
+          dataIndex: 'jobId',
+          key: 'jobId',
+          title: '任务id',
+          width: 130,
         },
         {
           align: 'center',
-          dataIndex: 'cronExpression',
-          key: 'cronExpression',
-          // render: (_, record) => {
-          //   if (record.status === null) {
-          //     return null;
-          //   }
-          //   const label = t(enableStatusRecord[record.status]);
-          //   return <ATag color={ATG_MAP[record.status]}>{label}</ATag>;
-          // },
-          title: 'cron执行表达式'
+          dataIndex: 'cycle',
+          key: 'cycle',
+          title: '周期/单次',
+          width: 130,
         },
         {
+          align: 'center',
+          dataIndex: 'lastSendTime',
+          key: 'lastSendTime',
+          title: '上次发送时间',
+          width: 130,
+        },
+        {
+          align: 'center',
+          dataIndex: 'nextExecuteTime',
+          key: 'nextExecuteTime',
+          title: '下次执行时间',
+          width: 130,
+        },
+        {
+          align: 'center',
           dataIndex: 'status',
           key: 'status',
-          render: (status: string, record: any) => (
-            <ASwitch
-              checked={status !== '1'}
-              onClick={() => handleSwitch(record)}
-            />
-          ),
+          render: (status: string, record: any) => <ASwitch checked={status !== '1'} onClick={() => handleSwitch(record)} />,
           title: '状态',
-          width: 80
+          width: 80,
         },
         {
           align: 'center',
+          fixed: 'right',
+          width: 120,
           key: 'operate',
           render: (_: unknown, record: any) => (
             <div className="flex-center gap-8px">
@@ -121,29 +120,9 @@ export function Component() {
                 />
               </ATooltip>
 
-              <ATooltip title="详情">
-                <AButton
-                  color="primary"
-                  icon={<FileSearchOutlined />}
-                  size="small"
-                  variant="link"
-                  onClick={() => handleView(record)}
-                />
+              <ATooltip title="发送记录">
+                <AButton color="primary" icon={<ClockCircleOutlined />} size="small" variant="link" onClick={() => handleView(record)} />
               </ATooltip>
-
-              <APopconfirm
-                title="确定要执行吗？"
-                onConfirm={() => handleRun(record)}
-              >
-                <ATooltip title="执行一次">
-                  <AButton
-                    color="primary"
-                    icon={<CaretRightOutlined />}
-                    size="small"
-                    variant="link"
-                  />
-                </ATooltip>
-              </APopconfirm>
               <ATooltip title="调度日志">
                 <AButton
                   color="primary"
@@ -151,42 +130,30 @@ export function Component() {
                   size="small"
                   variant="link"
                   onClick={() => {
-                    router.push(`/job/log/${record.jobId}`);
+                    router.push({
+                      name: 'job_log',
+                      query: {
+                        jobId: record.jobId,
+                      },
+                    });
                   }}
                 />
               </ATooltip>
 
-              <APopconfirm
-                title={t('common.confirmDelete')}
-                onConfirm={() => handleDelete(record.jobId)}
-              >
+              <APopconfirm title={t('common.confirmDelete')} onConfirm={() => handleDelete(record.recordId)}>
                 <ATooltip title="删除">
-                  <AButton
-                    color="danger"
-                    icon={<DeleteOutlined />}
-                    size="small"
-                    variant="link"
-                  />
+                  <AButton color="danger" icon={<DeleteOutlined />} size="small" variant="link" />
                 </ATooltip>
               </APopconfirm>
             </div>
           ),
-          title: t('common.operate')
-        }
+          title: t('common.operate'),
+        },
       ] as any,
-    rowKey: 'jobId'
+    rowKey: 'recordId',
   } as any);
 
-  const {
-    checkedRowKeys,
-    editingData,
-    generalPopupOperation,
-    handleAdd,
-    handleEdit,
-    onBatchDeleted,
-    onDeleted,
-    rowSelection
-  } = useTableOperate(data as any, run, async (res: any, type) => {
+  const { checkedRowKeys, editingData, generalPopupOperation, handleAdd, handleEdit, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, async (res: any, type) => {
     if (type === 'add') {
       // add request 调用新增的接口
       const addRes: any = await addJob(res);
@@ -197,10 +164,10 @@ export function Component() {
       if (updateRes?.response?.data?.code !== 200) return false;
     }
   });
-
+    
   async function handleBatchDelete() {
     // request
-    const res = await deleteJob(checkedRowKeys.join(','));
+    const res = await batchDeleteJob({ recordIds: checkedRowKeys });
     if (res.response.data.code === 200) {
       onBatchDeleted();
     }
@@ -224,7 +191,12 @@ export function Component() {
   }
 
   async function handleView(record: any) {
-    setViewJobId(record.jobId);
+    router.push({
+      name: 'job_email',
+      query: {
+        jobName: record.jobName,
+      },
+    });
   }
 
   const handleExport = async () => {
@@ -241,8 +213,68 @@ export function Component() {
   };
 
   function edit(row: any) {
-    handleEdit(row);
+    fetchShareEmailDetail(row.recordId).then((res: any) => {
+      if (res.data.code > 200) {
+        message.error(res.message);
+        return;
+      }
+      setVisible(true);
+      let data = { ...res.data, sendTime: { time: res.data.executeTime } };
+      if (res.data.executeFrequency === 2) {
+        data.sendTime = {
+          time: res.data.executeTime,
+          status: res.data.weekendTargetDay,
+        };
+      }
+      if (res.data.executeFrequency === 3) {
+        data.sendTime = {
+          time: res.data.executeTime,
+          status: res.data.monthlyTargetDay,
+        };
+      }
+      form.setFieldsValue(data);
+      setEditData(data);
+    });
   }
+
+  const handleConfirmCancel = () => {
+    setVisible(false);
+    form.resetFields();
+    setEditData(null);
+  };
+
+  const handleShareEmail = () => {
+    form.validateFields().then((values) => {
+      let data = {
+        ...editData,
+        convUid: editData.conv_uid,
+        chatId: editData.chat_id,
+        agentId: editData.agent_id,
+        spaceId: editData.space_id,
+        extra: {},
+        chatName: editData.biz_name,
+        roundIndexs: editData.round_indexs,
+        ...values,
+        executeTime: values?.sendTime?.time,
+      };
+      if (values.executeFrequency === 2) {
+        data.weekendTargetDay = values?.sendTime?.status;
+      }
+      if (values.executeFrequency === 3) {
+        data.monthlyTargetDay = values?.sendTime?.status;
+      }
+      delete data.sendTime;
+
+      updateShareEmail(data).then((res: any) => {
+        if (res.code === 200) {
+          message.success('分享成功');
+          form.resetFields();
+        } else {
+          message.error('服务器错误');
+        }
+      });
+    });
+  };
 
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
@@ -269,7 +301,6 @@ export function Component() {
         title="定时任务"
         extra={
           <TableHeaderOperation
-            add={handleAdd}
             columns={columnChecks}
             disabledDelete={checkedRowKeys.length === 0}
             loading={tableProps.loading}
@@ -280,14 +311,9 @@ export function Component() {
           />
         }
       >
-        <ATable
-          scroll={scrollConfig}
-          size="small"
-          {...(tableProps as any)}
-          rowSelection={rowSelection}
-        />
+        <ATable scroll={scrollConfig} size="small" {...(tableProps as any)} rowSelection={rowSelection} />
 
-        <Suspense>
+        {/* <Suspense>
           <JobDrawer {...generalPopupOperation} />
         </Suspense>
 
@@ -296,7 +322,53 @@ export function Component() {
             jobId={viewJobId}
             onClose={() => setViewJobId('')}
           />
-        ) : null}
+        ) : null} */}
+        <AModal
+          width="60%"
+          open={visible}
+          title="定时任务编辑"
+          onCancel={handleConfirmCancel}
+          classNames={{
+            body: 'h-[400px] overflow-auto',
+          }}
+          footer={
+            <div className="flex justify-end gap-2">
+              <AButton onClick={handleConfirmCancel}>取消</AButton>
+              <AButton
+                type="primary"
+                style={{
+                  outline: 'none',
+                }}
+                onClick={() => {
+                  handleShareEmail();
+                }}
+              >
+                确定
+              </AButton>
+            </div>
+          }
+        >
+          <Form
+            form={form}
+            onValuesChange={(values) => {
+              if (values.type) {
+                form.setFieldsValue({
+                  executeFrequency: null,
+                  sendTime: null,
+                });
+              }
+              if (values.executeFrequency) {
+                form.setFieldsValue({
+                  sendTime: null,
+                });
+              }
+            }}
+            layout="vertical"
+            wrapperCol={{ span: 20 }}
+          >
+            <ShareEmailSetting form={form} />
+          </Form>
+        </AModal>
       </ACard>
     </div>
   );

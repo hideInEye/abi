@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Collapse, Form, Input, Modal, Space } from 'antd';
+import { Button, Collapse, Form, Input, message, Modal, Space } from 'antd';
 import React from 'react';
 
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics';
@@ -7,6 +7,7 @@ import type { TableSemanticsGroupType } from '@/service/api/table-semantics';
 import { GroupFrom } from './GroupFrom';
 import GroupList from './GroupList';
 import { type QuestionGroupItem, useGroupManagement } from './useGroupManagement';
+import  './group.scss'
 
 const { Panel } = Collapse;
 
@@ -64,12 +65,16 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       let flag:any = true
       if (editingGroup) {
         // 编辑模式
-       flag = await handleGroupEdit({ ...editingGroup, ...values, groupType: config.type });
+       flag = await handleGroupEdit({ ...editingGroup, ...values, groupType: config.type },form);
+       
       } else {
         // 新增模式
-      flag = !!(await handleGroupAdd({ ...values, groupType: config.type }));
+      flag = !!(await handleGroupAdd({ ...values, groupType: config.type,form }));
       }
-      if(flag)handleModalCancel();
+      if(flag){
+        handleModalCancel();
+        message.success(editingGroup?'编辑成功':'创建成功')
+      }
     } catch (error) {
       console.error('Validate Failed:', error);
     }
@@ -88,7 +93,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
 
   return (
     <>
-      <Space direction="vertical">
+      <Space direction="vertical" className="space">
         <Input
           placeholder={config.inputPlaceholder}
           onChange={handleSearch}
@@ -129,6 +134,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
         title={editingGroup ? config.modalEditTitle : config.modalAddTitle}
         onCancel={handleModalCancel}
         onOk={handleModalOk}
+        okText="确认"
       >
         <AForm form={form}>
           <GroupFrom config={config} />

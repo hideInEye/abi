@@ -183,7 +183,9 @@ const DropBox: React.FC<any> = memo(({ nodeData }) => {
       >
         <span className="mr-2 w-150px flex items-center">
           <SvgIcon localIcon="db" />
-          <span className="ml-2">{nodeData?.currentDs?.tableName}</span>
+          <ATooltip title={nodeData?.currentDs?.tableName}>
+            <span className="ml-2 overflow-hidden text-ellipsis whitespace-nowrap">{nodeData?.currentDs?.tableName}</span>
+          </ATooltip>
         </span>
         <Dropdown
           menu={{ items: nodeOptBtns }}

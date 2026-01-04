@@ -46,3 +46,14 @@ export function queryUserList(
     url: `/abi-system/user/list?deptId=${params.deptId}`
   });
 }
+
+
+/**
+ * 搜索用户
+ */
+export const queryUser = (name:string) =>{
+return apiRequest({
+    method: 'get',
+    url: `/abi-system/user/search?searchName=${name}`
+  });
+}

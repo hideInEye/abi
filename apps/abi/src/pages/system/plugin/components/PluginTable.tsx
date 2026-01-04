@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { JsonEditor } from 'json-edit-react';
+// import { JsonEditor } from 'json-edit-react';
 
 import type { PluginItem, PluginList } from '@/types/plug';
 
@@ -29,20 +29,17 @@ export const PluginTable: React.FC<PluginTableProps> = ({
     {
       dataIndex: 'pluginName',
       key: 'pluginName',
-      title: '插件名称',
-      width: 100,
+      title: '插件名称'
     },
     {
       dataIndex: 'remark',
       key: 'remark',
-      title: '插件描述',
-      width: 100,
+      title: '插件描述'
     },
     {
       dataIndex: 'pluginType',
       key: 'pluginType',
-      title: '插件类型',
-      width: 100,
+      title: '插件类型'
     },
     {
       dataIndex: 'status',
@@ -57,38 +54,38 @@ export const PluginTable: React.FC<PluginTableProps> = ({
       },
       title: '插件状态',
     },
-    {
-      dataIndex: 'parseModeConfig',
-      key: 'parseModeConfig',
-      title: '解析配置',
-      render: (parseModeConfig: string) => {
-        return (
-          <JsonEditor
-            data={parseModeConfig}
-            enableClipboard={false}
-            restrictAdd={true}
-            restrictDelete={true}
-            restrictEdit={true}
-          />
-        );
-      },
-    },
-    {
-      dataIndex: 'serviceConfig',
-      key: 'serviceConfig',
-      title: '服务配置',
-      render: (serviceConfig: string) => {
-        return (
-          <JsonEditor
-            data={serviceConfig}
-            enableClipboard={false}
-            restrictAdd={true}
-            restrictDelete={true}
-            restrictEdit={true}
-          />
-        );
-      },
-    },
+    // {
+    //   dataIndex: 'parseModeConfig',
+    //   key: 'parseModeConfig',
+    //   title: '解析配置',
+    //   render: (parseModeConfig: string) => {
+    //     return (
+    //       <JsonEditor
+    //         data={parseModeConfig}
+    //         enableClipboard={false}
+    //         restrictAdd={true}
+    //         restrictDelete={true}
+    //         restrictEdit={true}
+    //       />
+    //     );
+    //   },
+    // },
+    // {
+    //   dataIndex: 'serviceConfig',
+    //   key: 'serviceConfig',
+    //   title: '服务配置',
+    //   render: (serviceConfig: string) => {
+    //     return (
+    //       <JsonEditor
+    //         data={serviceConfig}
+    //         enableClipboard={false}
+    //         restrictAdd={true}
+    //         restrictDelete={true}
+    //         restrictEdit={true}
+    //       />
+    //     );
+    //   },
+    // },
     {
       dataIndex: 'action',
       key: 'action',

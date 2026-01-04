@@ -11,19 +11,14 @@ const UserSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
   ];
 
   return (
-    <AForm
-      form={form}
-      labelCol={{
-        span: 6
-      }}
-    >
+    <AForm form={form}>
       <ARow
         wrap
         gutter={[16, 16]}
       >
         <ACol
           lg={6}
-          md={10}
+          md={12}
           span={24}
         >
           <AForm.Item
@@ -40,7 +35,7 @@ const UserSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
 
         <ACol
           lg={6}
-          md={10}
+          md={12}
           span={24}
         >
           <AForm.Item
@@ -57,7 +52,7 @@ const UserSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
 
         <ACol
           lg={6}
-          md={10}
+          md={12}
           span={24}
         >
           <AForm.Item
@@ -67,7 +62,6 @@ const UserSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
           >
             <ASelect
               allowClear
-              className="w-200px"
               options={statusOptions}
               placeholder={t('page.manage.common.form.status')}
             />
@@ -76,7 +70,7 @@ const UserSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
 
         <ACol
           lg={6}
-          md={10}
+          md={12}
           span={24}
         >
           <AForm.Item
@@ -87,6 +81,7 @@ const UserSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
               allowClear
               format="YYYY-MM-DD"
               placeholder={[t('page.manage.common.beginTime'), t('page.manage.common.endTime')]}
+              style={{ width: '100%' }}
               onChange={(dates, dateStrings) => {
                 if (dates && dates.length === 2) {
                   form.setFieldsValue({
@@ -124,14 +119,16 @@ const UserSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
             justify="end"
           >
             <AButton
-              icon={<IconIcRoundRefresh />}
+              style={{ borderRadius: '4px', padding: '4px 25px' }}
+              // icon={<IconIcRoundRefresh />}
+              type="primary"
               onClick={reset}
             >
               {t('common.reset')}
             </AButton>
             <AButton
-              ghost
-              icon={<IconIcRoundSearch />}
+              style={{ borderRadius: '4px', padding: '4px 25px' }}
+              // icon={<IconIcRoundSearch />}
               type="primary"
               onClick={search}
             >

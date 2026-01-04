@@ -5,12 +5,16 @@ import { apiRequest } from '../request';
  *
  * @param userName User name
  * @param password Password
+ * @param code 验证码
+ * @param uuid 验证码唯一标识
  */
-export function fetchLogin(userName: string, password: string) {
+export function fetchLogin(userName: string, password: string, code?: string, uuid?: string) {
   return apiRequest<Api.Auth.LoginToken>({
     data: {
       password,
-      username: userName
+      username: userName,
+      code,
+      uuid
     },
     method: 'post',
     url: '/auth/login'

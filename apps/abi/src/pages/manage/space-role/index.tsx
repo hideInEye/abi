@@ -315,18 +315,18 @@ export function Component() {
             add={() => {
               add();
             }}
-            suffix={
-              <AButton
-                ghost
-                color="danger"
-                icon={<VerticalAlignBottomOutlined className="text-icon" />}
-                size="small"
-                variant="filled"
-                onClick={handExport}
-              >
-                {t('page.manage.common.export')}
-              </AButton>
-            }
+            // suffix={
+            //   <AButton
+            //     ghost
+            //     color="danger"
+            //     icon={<VerticalAlignBottomOutlined className="text-icon" />}
+            //     size="small"
+            //     variant="filled"
+            //     onClick={handExport}
+            //   >
+            //     {t('page.manage.common.export')}
+            //   </AButton>
+            // }
             onDelete={deleteBatch}
           />
         }

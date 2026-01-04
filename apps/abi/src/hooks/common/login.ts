@@ -17,13 +17,16 @@ export function useLogin() {
 
   const dispatch = useAppDispatch();
 
-  async function toLogin(params: { password: string; userName: string }, redirect = true) {
+  async function toLogin(params: { password: string; userName: string; code?: string; uuid?: string },captchaRef:any) {
     startLoading();
 
     // 在登录前彻底重置路由状态
     await dispatch(resetRouteStore());
 
-    await dispatch(login(params));
+    const {payload} =  await dispatch(login(params));
+    if(!payload){
+      captchaRef.current?.refresh();
+    }
     const userName = dispatch(getUerName());
 
     if (userName) {

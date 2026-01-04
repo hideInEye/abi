@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { Button, Popconfirm, Space, Table } from 'antd';
+import { Button, Popconfirm, Space, Table, Tooltip } from 'antd';
 import React from 'react';
 
 import { tabTypeOptions } from '../constants';
@@ -16,12 +16,16 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
     {
       dataIndex: 'tagName',
       key: 'tagName',
-      title: '中文名'
+      title: '中文名',
+      width: 120,
+      ellipsis: true
     },
     {
       dataIndex: 'engName',
       key: 'engName',
-      title: '英文名'
+      title: '英文名',
+      width: 120,
+      ellipsis: true
     },
     {
       dataIndex: 'tagType',
@@ -29,31 +33,37 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
       render: (tagType: string) => {
         return tabTypeOptions.find(item => item.value === tagType)?.label;
       },
-      title: '标签类型'
+      title: '标准类型',
+      width: 100,
+      ellipsis: true
     },
-
     {
       dataIndex: 'alias',
       key: 'alias',
-      title: '别名'
+      title: '别名',
+      width: 120,
+      ellipsis: true
     },
-
     {
       dataIndex: 'remark',
       key: 'remark',
-      title: '文本定义'
+      title: '文本定义',
+      width: 200,
+      ellipsis: true
     },
-
     {
       key: 'action',
       render: (_: any, record: TagGroup) => (
-        <Space>
-          <Button
-            icon={<EditOutlined />}
-            type="text"
-            onClick={() => onEdit(record)}
-          />
-
+        <Space size="middle">
+          <Tooltip title="编辑">
+            <Button
+              color="primary"
+              icon={<EditOutlined />}
+              size="small"
+              variant="link"
+              onClick={() => onEdit(record)}
+            />
+          </Tooltip>
           <Popconfirm
             cancelText="取消"
             description="确定要删除吗？"
@@ -61,10 +71,14 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
             title="提示"
             onConfirm={() => onDelete(record.tagId)}
           >
-            <Button
-              icon={<DeleteOutlined />}
-              type="text"
-            />
+            <Tooltip title="删除">
+              <Button
+                color="danger"
+                icon={<DeleteOutlined />}
+                size="small"
+                variant="link"
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -73,11 +87,17 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
     }
   ];
 
+  const columnWidth = useMemo(() => {
+    return columns.reduce((total, column) => total + (column.width || 100), 0);
+  }, [columns]);
+
   return (
     <Table
       columns={columns}
       dataSource={dataSource}
       rowKey="id"
+      scroll={ {x: columnWidth, y:'max-content'} }
+      size="small"
     />
   );
 };

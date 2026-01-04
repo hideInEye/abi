@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
 
 import { useAppDispatch } from '@/hooks/business/useStore';
-import { changeSpaceId } from '@/store/slice/app';
+import { changeSpaceId, setSpaceHidden } from '@/store/slice/app';
 import { clearTabs } from '@/store/slice/tab';
 import { clearConversationCache } from '@/utils/cache';
 import { localStg } from '@/utils/storage';
 import { useRouter } from '~/packages/simple-router/src';
+import { getSpaceMenuBySpaceIdApi } from '@/service/api';
 
 /** 空间切换Hook 用于统一管理空间切换时的缓存清理和状态重置 */
 export function useSpaceSwitch() {
@@ -23,6 +24,14 @@ export function useSpaceSwitch() {
       // 清除对话相关的缓存，避免显示上个空间的对话列表
       clearConversationCache();
 
+      // 如果空间内没有菜单权限隐藏左边菜单
+      const { data, error } = await getSpaceMenuBySpaceIdApi(Number(spaceId));
+      if(!error) {
+        const isHidden = data && data.length > 0
+        dispatch(setSpaceHidden(!isHidden))
+      }else {
+        dispatch(setSpaceHidden(false))
+      }
       // 先同步并等待清除标签页（关闭前一个空间打开的 tab）
       try {
         await dispatch(clearTabs());

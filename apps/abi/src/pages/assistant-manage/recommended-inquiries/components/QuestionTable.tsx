@@ -9,13 +9,13 @@ interface IQuestionTable {
   readonly dataSource: QuestionTableData[];
   readonly onDelete: (id: number) => void;
   readonly onEdit: (group: QuestionTableData) => void;
+  pagination:any;
+  setPagination: any;
 }
 
-export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, onEdit }) => {
-  const {setPagination ,pagination, searchValue, getTableData} = useQuestionManagement()
-  useEffect(()=>{
-    getTableData(searchValue)
-  },[pagination.pageNum])
+export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, onEdit, pagination, setPagination }) => {
+
+
   const columns = [
     {
       dataIndex: 'question',
@@ -25,6 +25,7 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
 
     {
       key: 'action',
+      width:150,
       render: (_: any, record: QuestionTableData) => (
         <Space>
           <Button
@@ -53,12 +54,14 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
       title: '操作'
     }
   ];
-
+  console.log(pagination);
+  
   return (
     <Table
       columns={columns}
       dataSource={dataSource}
       rowKey="id"
+      scroll={{y: 360 }}
       pagination={{
         onChange:(p,n)=>{
           setPagination({

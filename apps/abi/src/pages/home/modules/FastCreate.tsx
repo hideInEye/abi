@@ -2,7 +2,6 @@ import { PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 
 import type { ISpaceItem } from '@/pages/space-list/types';
 import { useRouter } from '~/packages/simple-router/src';
-import { Tooltip } from 'antd';
 
 /**
  * 快速创建组件
@@ -21,32 +20,32 @@ const fastCreateList = [
   {
     description: '创建数据空间储存数据资产',
     title: '我的空间',
-    url: '/space-list',
-    tooltip:"空间为您提供独立的数据工作台，实现不同项目间的数据隔离。在每个空间内，您可独立完成从数据源连接、数据集构建到智能对话分析的全套流程，保障项目数据私密与操作流畅。"
+    url: '/space-list'
   },
   {
     description: '兼容数据库等类型数据格式',
     title: '数据对接',
-    url: '/data-preparation/data-source',
-    tooltip:"数据源是连接各类数据库的统一模块，支持MySQL、Oracle等多种数据库类型的便捷接入。它负责建立和管理数据库链接，为后续的数据处理与分析提供稳定、多样的数据供应。"
+    url: '/data-preparation/data-source'
   },
   {
     description: '创建数据集，进行数据关联',
     title: '数据关联',
-    url: '/data-preparation/data-collection',
-    tooltip:"数据集支持通过两种模式快速创建，旨在将分散的数据表及其关联关系直观地构建起来，形成易于理解的业务数据模型，为分析查询奠定基础。"
+    url: '/data-preparation/data-collection'
   },
   {
     description: '通过可视化组件组装数据大屏',
     title: '表语义关联',
-    url: '/data-preparation/data-collection',
-    tooltip:"表语义化功能将数据库中的技术性表名字段名，映射为“销售额”、“部门”等业务人员熟悉的术语。屏蔽了技术复杂性，让用户能用业务语言直接与数据对话，提升分析效率。"
+    url: '/data-preparation/data-table-meaning'
+  },
+  {
+    description: '快速创建数据助手,进行助手关联配置',
+    title: '助手管理',
+    url: '/assistant-manage/assistant-config'
   },
   {
     description: '根据数据进行智能对话分析',
     title: '智能对话',
-    url: '/ai-assistant/conversational-analysis',
-    tooltip:"用户与智能数据分析系统交互的核心界面，采用类似聊天软件的直观设计，让业务人员能够通过自然语言提问的方式快速获取数据洞察。"
+    url: '/ai-assistant/conversational-analysis'
   }
 ];
 
@@ -66,15 +65,15 @@ export const FastCreate: React.FC<FastCreateProps> = ({ spaceList }: FastCreateP
   }
 
   return (
-    <section className="mt10">
+    <section>
       <AFlex justify="space-between">
-        <h1 className="mb4 text-base font-bold">快速创建</h1>
+        <h1 className="md:my-[4px] lg:my-[6px] xl:my-[8px] 2xl:my-[12px] text-base font-bold">快速创建</h1>
       </AFlex>
       <ACard className="shadow-sm">
-        <section className="flex flex-col gap-5">
+        <section className="flex flex-col gap-[6px]">
           {fastCreateList.map((item, index) => (
             <div
-              className={`flex justify-between pb2 ${index !== fastCreateList.length - 1 ? 'border-b border-gray-100 ' : ''}`}
+              className={`flex justify-between pb-[8px] last:pb-0 ${index !== fastCreateList.length - 1 ? 'border-b border-gray-100 ' : ''}`}
               key={item.title}
             >
               <div>
@@ -82,7 +81,7 @@ export const FastCreate: React.FC<FastCreateProps> = ({ spaceList }: FastCreateP
                 <span>、</span>
                 <span>{item.title}</span>
                 <span className="ml2">( {item.description})</span>
-               <Tooltip title={item.tooltip}><QuestionCircleOutlined className="ml2" /></Tooltip>
+                {/* <QuestionCircleOutlined className="ml2" /> */}
               </div>
               <div
                 className="f-v cursor-pointer text-primary"

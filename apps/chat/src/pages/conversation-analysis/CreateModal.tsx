@@ -45,13 +45,14 @@ interface CreateModalProps {
   initialValues?: any;
 }
 
-const CreateModal: React.FC<CreateModalProps> = React.memo(({ 
-  visible, 
-  onClose, 
+const CreateModal: React.FC<CreateModalProps> = React.memo(({
+  visible,
+  onClose,
   isEdit = false,
   initialValues
 }) => {
   const [current, setCurrent] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [state, dispatch] = useReducer(reducer, initState);
   const agentListRef = useRef<AgentListHandle>(null);
   const recommendQuestionsRef = useRef<RecommendQuestionsHandle>(null);
@@ -96,17 +97,29 @@ const CreateModal: React.FC<CreateModalProps> = React.memo(({
     {
       content: (
         <Form labelCol={{ span: 2 }}>
-          <Form.Item required label="名称" key="biz_name">
+          <Form.Item 
+            label="名称" 
+            required
+            validateStatus={state.biz_name.length > 20 ? 'error' : ''}
+            help={state.biz_name.length > 20 ? '名称不能超过20个字符' : ''}
+          >
             <Input
               placeholder="对话名称"
               value={state.biz_name}
+              status={state.biz_name.length > 20 ? 'error' : ''}
               onChange={e => dispatch({ biz_name: e.target.value })}
             />
           </Form.Item>
-          <Form.Item label="描述" key="remark">
+          <Form.Item 
+            label="描述" 
+            key="remark"
+            validateStatus={state.remark.length > 50 ? 'error' : ''}
+            help={state.remark.length > 50 ? '描述不能超过50个字符' : ''}
+          >
             <Input.TextArea
               placeholder="对话描述"
               value={state.remark}
+              status={state.remark.length > 50 ? 'error' : ''}
               onChange={e => dispatch({ remark: e.target.value })}
             />
           </Form.Item>
@@ -135,7 +148,15 @@ const CreateModal: React.FC<CreateModalProps> = React.memo(({
         message.error('请输入名称');
         return;
       }
-      const res = await checkAppNameExists({biz_name: state.biz_name, space_id: state.space_id,});
+      if (state.biz_name.length > 20) {
+        message.error('名称不能超过20个字符');
+        return;
+      }
+      if (state.remark && state.remark.length > 50) {
+        message.error('描述不能超过50个字符');
+        return;
+      }
+      const res = await checkAppNameExists({biz_name: state.biz_name, space_id: getSpaceId(),});
       if(!res){
         message.error('对话名称已存在，请更换后重试');
         return;
@@ -144,7 +165,7 @@ const CreateModal: React.FC<CreateModalProps> = React.memo(({
 
     if (current === 1) {
       if (!state.agent_id) {
-        message.error('请选择数据模型');
+        message.error('请选择数据助手');
         return;
       }
     }
@@ -163,35 +184,42 @@ const CreateModal: React.FC<CreateModalProps> = React.memo(({
   };
 
   const handleFinish = async () => {
-    const { if_interpreter, if_multiturn, ...elseState } = state;
-    const data = recommendQuestionsRef.current?.getData() || []
-    const switchs:any = recommendQuestionsRef.current?.getSwitchStates()
+    setLoading(true);
+    try {
+      const { if_interpreter, if_multiturn, ...elseState } = state;
+      const data = recommendQuestionsRef.current?.getData() || [];
+      const switchs: any = recommendQuestionsRef.current?.getSwitchStates();
 
-    const filteredItems = [...data].map((item: any) => ({
-      ...item,
-      status: switchs[item.prompt_sub_scene_zh] === true ? '1' : '0',
-    }));
+      const filteredItems = [...data].map((item: any) => ({
+        ...item,
+        status: switchs[item.sub_chat_scene] === true ? '1' : '0',
+      }));
 
-    const resState = {
-      ...elseState,
+      const resState = {
+        ...elseState,
         space_id: getSpaceId(),
         chat_config: JSON.stringify({
-        prompts: filteredItems || []
-      })
-    };
-    await onClose(resState, isEdit);
-    // message.success(isEdit ? '更新成功' : '创建成功');
-    
-    // 重置所有状态
-    setCurrent(0);
-    dispatch(initState);
-    // 重置 AgentList 组件
-    if (agentListRef.current) {
-      agentListRef.current.resetState();
-    }
-    // 重置 RecommendQuestions 组件
-    if (recommendQuestionsRef.current) {
-      recommendQuestionsRef.current.resetState();
+          prompts: filteredItems || [],
+        }),
+      };
+      await onClose(resState, isEdit);
+      message.success(isEdit ? '更新成功' : '创建成功');
+
+      // 重置所有状态
+      setCurrent(0);
+      dispatch(initState);
+      // 重置 AgentList 组件
+      if (agentListRef.current) {
+        agentListRef.current.resetState();
+      }
+      // 重置 RecommendQuestions 组件
+      if (recommendQuestionsRef.current) {
+        recommendQuestionsRef.current.resetState();
+      }
+    } catch (error) {
+      // message.error('操作失败，请稍后重试');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -218,8 +246,8 @@ const CreateModal: React.FC<CreateModalProps> = React.memo(({
             <Button type="primary" onClick={next}>下一步</Button>
           )}
           {current === steps.length - 1 && (
-            <Button type="primary" onClick={handleFinish}>
-              {isEdit ? '更新' : '完成'}
+            <Button type="primary" onClick={handleFinish} loading={loading}>
+              {isEdit ? '更新' : '确认'}
             </Button>
           )}
         </Space>

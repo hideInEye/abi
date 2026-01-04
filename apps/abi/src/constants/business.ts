@@ -18,8 +18,8 @@ export const permissonRanaeRecord: Record<Api.Common.PermissionRanage, App.I18n.
 export const permissonRanaeOptions = transformRecordToOption(permissonRanaeRecord);
 
 export const userGenderRecord: Record<Api.SystemManage.UserGender, App.I18n.I18nKey> = {
-  '1': 'page.manage.user.gender.male',
-  '2': 'page.manage.user.gender.female'
+  '0': 'page.manage.user.gender.male',
+  '1': 'page.manage.user.gender.female'
 };
 
 export const userGenderOptions = transformRecordToOption(userGenderRecord);

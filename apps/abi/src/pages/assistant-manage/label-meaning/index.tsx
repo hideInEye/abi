@@ -23,7 +23,6 @@ export const Component: React.FC = () => {
     handleEdit,
     handleSearch,
     isModalOpen,
-    searchValue,
     setGroupId,
     setIsModalOpen,
     tagList,
@@ -61,11 +60,11 @@ export const Component: React.FC = () => {
             onGroupId={getGroupId}
           />
 
-          <div className="w-full flex-1">
+          <div className="w-40% flex-1">
             <TagSearch
-              searchValue={searchValue}
               onAdd={handleAdd}
               onSearch={handleSearch}
+              groupId={groupId}
             />
             <TagTable
               dataSource={tagList}

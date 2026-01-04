@@ -67,11 +67,12 @@ export const Component: React.FC = () => {
             }}
           />
 
-          <div className="w-full flex-1">
+          <div className="w-40%  flex-1">
             <TagSearchInput
               searchValue={searchValue}
               onAdd={handleAdd}
               onSearch={handleSearch}
+              groupId={groupId}
             />
             <TagTable
               dataSource={terms}

@@ -3,8 +3,8 @@ import { message } from 'antd';
 
 import { getSpaceInfo, updateSpaceInfo } from '@/service/api';
 
-import { NewCreateUser } from './modules/NewCreateUser';
 import { PermissionManagement } from './modules/PermissionManagement';
+import { DeptSelector } from './modules/dept';
 
 export function Component() {
   const { t } = useTranslation();
@@ -18,119 +18,138 @@ export function Component() {
   const [defaultUserRoles, setDefaultUserRoles] = useState<any[]>([]);
   const [spaceInfo, setSpaceInfo] = useState<any>({});
 
-  const { columnChecks, data, run, searchParams, searchProps, setColumnChecks, tableProps, updateSearchParams } = useTable(
-    {
-      apiFn: async () => {
-        try {
-          // 调用您的 API 方法获取空间信息
-          const spaceId = Number(localStorage.getItem('spaceId'));
-          const response = await getSpaceInfo(spaceId);
-          if (response?.data?.owners) {
-            const userList = JSON.parse(response.data.owners);
-            return {
-              data: userList,
-              total: userList.length
-            };
-          }
+  const {
+    columnChecks,
+    data,
+    run,
+    searchParams,
+    searchProps: _searchProps,
+    setColumnChecks,
+    tableProps,
+    updateSearchParams
+  } = useTable({
+    apiFn: async () => {
+      try {
+        // 调用您的 API 方法获取空间信息
+        const spaceId = Number(localStorage.getItem('spaceId'));
+        const response = await getSpaceInfo(spaceId);
+        if (response?.data?.owners) {
+          const userList = JSON.parse(response.data.owners);
           return {
-            data: [],
-            total: 0
+            data: userList,
+            total: userList.length
           };
-        } catch (error) {
-          console.error('获取空间信息失败:', error);
-          throw error;
         }
-      },
-      apiParams: {
-        pageNum: 1,
-        pageSize: 100000
-      },
-      columns: () =>
-        [
-          {
-            align: 'center',
-            dataIndex: 'oname',
-            key: 'oname',
-            title: t('page.manage.user.userName')
+        return {
+          data: [],
+          total: 0
+        };
+      } catch (error) {
+        message.error('获取空间信息失败');
+        throw error;
+      }
+    },
+    apiParams: {
+      pageNum: 1,
+      pageSize: 100000
+    },
+    columns: () =>
+      [
+        
+        {
+          align: 'center',
+          dataIndex: 'oname',
+          key: 'oname',
+          title: '空间成员'
+        },
+        {
+          align: 'center',
+          dataIndex: 'otype',
+          key: 'otype',
+          title: '成员类型',
+          render:(_,row)=>{
+            const { otype}  = row
+            return otype ==1?'用户':'部门'
+          }
+        },
+        {
+          align: 'center',
+          dataIndex: 'orgName',
+          key: 'orgName',
+          title: t('page.manage.user.organization')
+        },
+        {
+          key: 'roles',
+          render: (_, __, _index) => {
+            if (_.roles && _.roles.length > 0) {
+              return _.roles.map((item: any) => item.roleName).join(',');
+            }
+            return '-';
           },
-          {
-            align: 'center',
-            dataIndex: 'orgName',
-            key: 'orgName',
-            title: t('page.manage.user.organization')
-          },
-          {
-            key: 'roles',
-            render: (_, __, index) => {
-              if (_.roles && _.roles.length > 0) {
-                return _.roles.map((item: any) => item.roleName).join(',');
-              }
-              return '-';
-            },
-            title: '空间角色'
-          },
-          {
-            align: 'center',
-            key: 'operate',
-            render: (_, __, index) => (
-              <div className="flex-center gap-8px">
-                <ATooltip title={t('page.manage.user.assigningRole')}>
+          title: '空间角色'
+        },
+        {
+          align: 'center',
+          key: 'operate',
+          render: (_, __) => (
+            <div className="flex-center gap-8px">
+              <ATooltip title={t('page.manage.user.assigningRole')}>
+                <AButton
+                  className="tex-14px"
+                  disabled={_.type === 'special-user'}
+                  icon={<SafetyOutlined />}
+                  type="text"
+                  onClick={() => {
+                    openDistributeRole(_);
+                  }}
+                />
+              </ATooltip>
+
+              <APopconfirm
+                title={t('common.confirmDelete')}
+                onConfirm={() => handleDelete(_.recordId)}
+              >
+                <ATooltip title={t('page.manage.common.delete')}>
                   <AButton
-                    className="tex-14px"
+                    className="text-red"
+                    color="danger"
                     disabled={_.type === 'special-user'}
-                    icon={<SafetyOutlined />}
+                    icon={<DeleteOutlined />}
                     type="text"
-                    onClick={() => {
-                      openDistributeRole(_, index);
-                    }}
                   />
                 </ATooltip>
-
-                <APopconfirm
-                  title={t('common.confirmDelete')}
-                  onConfirm={() => handleDelete(index)}
-                >
-                  <ATooltip title={t('page.manage.common.delete')}>
-                    <AButton
-                      className="text-red"
-                      color="danger"
-                      disabled={_.type === 'special-user'}
-                      icon={<DeleteOutlined />}
-                      type="text"
-                    />
-                  </ATooltip>
-                </APopconfirm>
-              </div>
-            ),
-            title: t('common.operate'),
-            width: 200
-          }
-        ] as any,
-      // @ts-expect-error ------------
-      rowKey: 'userId',
-      transformer: (res: any): any => {
-        const { data: records = [], total: totalNum = 0 } = res || {};
-        let resRecords = records;
-        if (records.items) {
-          resRecords = records.items;
+              </APopconfirm>
+            </div>
+          ),
+          title: t('common.operate'),
+          width: 200
         }
-        const pageNum = searchParams.current.pageNum || searchParams.current.page || 1;
-        const pageSize = searchParams.current.pageSize || searchParams.current.page_size || 10;
-        const recordsWithIndex = resRecords.map((item: any, index: number) => {
-          return {
-            ...item,
-            index: (pageNum - 1) * pageSize + index + 1
-          };
-        });
-
-        return {
-          data: recordsWithIndex,
-          pageNum: searchParams.current.pageNum,
-          pageSize: searchParams.current.pageSize,
-          total: totalNum || records.total_count
-        };
+      ] as any,
+    // @ts-expect-error ------------
+    rowKey: 'userId',
+    transformer: (res: any): any => {
+      const { data: records = [], total: totalNum = 0 } = res || {};
+      let resRecords = records;
+      if (records.items) {
+        resRecords = records.items;
       }
-    });
+      const pageNum = searchParams.current.pageNum || searchParams.current.page || 1;
+      const pageSize = searchParams.current.pageSize || searchParams.current.page_size || 10;
+      const recordsWithIndex = resRecords.map((item: any, index: number) => {
+        return {
+          ...item,
+          index: (pageNum - 1) * pageSize + index + 1
+        };
+      });
+
+      return {
+        data: recordsWithIndex,
+        pageNum: searchParams.current.pageNum,
+        pageSize: searchParams.current.pageSize,
+        total: totalNum || records.total_count
+      };
+    }
+  });
 
   const { onDeleted } = useTableOperate(
     data as any,
@@ -142,27 +161,18 @@ export function Component() {
   );
 
   async function handlePermissionSure(permission: any[]) {
-    const owners = JSON.parse(spaceInfo.owners);
-    // 当前重组项目：
-    const cur = {
-      oid: data[currentPermissionItemIndex]?.oid,
-      oname: data[currentPermissionItemIndex]?.oname,
-      orgId: data[currentPermissionItemIndex]?.orgId,
-      orgName: data[currentPermissionItemIndex]?.orgName,
-      otype: data[currentPermissionItemIndex]?.otype,
-      roles: permission
-    };
-    const index = owners.findIndex((item: any) => item.oid === cur.oid);
-    if (index !== -1) {
-      owners[index] = cur;
-    } else {
-      owners.push(cur);
-    }
+    const userData = data.map(item=>{
+      const Item = item;
+      if(item.recordId === currentPermissionItemIndex) {
+        Item.roles = permission;
+      }
+      return Item
+    })
 
     // 调用更新空间接口：
     const params = {
       ...spaceInfo,
-      owners: JSON.stringify(owners)
+      owners: JSON.stringify(userData)
     };
     const res = await updateSpaceInfo(params);
     if (res.response.data.code !== 200) {
@@ -182,7 +192,9 @@ export function Component() {
     setNewCreateUserDrawerOpen(true);
 
     const owners = JSON.parse(spaceInfo.owners);
-    const keys = owners.map((i: any) => i.oid);
+    console.log('owners:', owners);
+    
+    const keys = owners.map((i: any) => i.recordId);
     setDefaultUserKeys(keys);
     setDefaultUserRoles(owners);
   }
@@ -207,26 +219,26 @@ export function Component() {
     }
   }
 
-  function openDistributeRole(user: any, index: number) {
+  function openDistributeRole(user: any) {
     const roleIds: any[] = [];
     if (user && Array.isArray(user.roles)) {
       user.roles.forEach((i: any) => {
         roleIds.push(i.roleId);
       });
     }
-    setCurrentPermissionItemIndex(index);
+    setCurrentPermissionItemIndex(user.recordId);
     setPermissionDrawerOpen(true);
     setDefaultPermissionKeys(roleIds);
   }
 
   async function handleDelete(index: number) {
     const owners = JSON.parse(spaceInfo.owners);
-    owners.splice(index, 1);
+    const data = owners.filter(item=>item.recordId!==index)
 
     // 调用更新空间接口：
     const params = {
       ...spaceInfo,
-      owners: JSON.stringify(owners)
+      owners: JSON.stringify(data)
     };
     const res = await updateSpaceInfo(params);
     if (res.response.data.code !== 200) {
@@ -234,6 +246,7 @@ export function Component() {
       return false;
     }
     message.success('删除成功');
+    getCurSpaceInfo()
     return onDeleted();
   }
 
@@ -253,7 +266,7 @@ export function Component() {
         bordered={false}
         className="flex-col-stretch sm:flex-1-hidden card-wrapper"
         ref={tableWrapperRef}
-        title={t('page.manage.user.title')}
+        title="空间成员列表"
         extra={
           <TableHeaderOperation
             columns={columnChecks}
@@ -285,12 +298,12 @@ export function Component() {
       )}
 
       {newCreateUserDrawerOpen && (
-        <NewCreateUser
+        <DeptSelector
           defaultUserKeys={defaultUserKeys}
           defaultUserRoles={defaultUserRoles}
           open={newCreateUserDrawerOpen}
-          userCancel={() => setNewCreateUserDrawerOpen(false)}
-          userSure={handUserAddSure}
+          onCancel={() => setNewCreateUserDrawerOpen(false)}
+          onConfirm={handUserAddSure}
         />
       )}
     </div>

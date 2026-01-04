@@ -1,3 +1,4 @@
+import { CloseOutlined } from '@ant-design/icons';
 import { Form, Input } from 'antd';
 import React from 'react';
 
@@ -23,6 +24,23 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
     ...resta,
     exp: exp ? JSON.parse(decodeURIComponent(exp)) : []
   };
+
+  useEffect(() => {
+    if(editingGroup){
+      return
+    }
+    form.setFieldsValue({
+      exp: [{ 
+        binName: '', 
+        conditions: [{
+          metric: '',
+          operator: '>=',
+          value: ''
+        }], 
+        logic: 'AND' 
+      }]
+    });
+  }, []);
 
   useEffect(() => {
     if (editingGroup) {
@@ -99,6 +117,8 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
 
   return (
     <ADrawer
+      closeIcon={null}
+      extra={<CloseOutlined onClick={handleModalCancel} />}
       open={isModalOpen}
       title={editingGroup ? '编辑标签语义' : '新增标签语义'}
       width={900}
@@ -114,7 +134,7 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
             type="primary"
             onClick={handleModalOk}
           >
-            保存
+            确认
           </AButton>
         </ASpace>
       }

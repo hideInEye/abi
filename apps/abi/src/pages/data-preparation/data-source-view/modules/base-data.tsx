@@ -1,11 +1,11 @@
 interface PropsType {
+  curDatasource?: any;
   sourceId?: string;
   tableName: string;
 }
 
-export const BaseData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
+export const BaseData: React.FC<PropsType> = memo(({ curDatasource, sourceId, tableName }) => {
   const { fieldsList, getFieldsList } = useDatasource();
-  const dataSource = useMemo(() => fieldsList?.filter((item: any) => item.checked), [fieldsList]);
   const columns = [
     {
       dataIndex: 'originName',
@@ -26,7 +26,7 @@ export const BaseData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
 
   const getTableList = async () => {
     if (sourceId && tableName) {
-      getFieldsList({ sourceId, tableName });
+      getFieldsList({ sourceId, tableName }, curDatasource?.sourceType);
     }
   };
 
@@ -37,7 +37,7 @@ export const BaseData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
   return (
     <ATable<any>
       columns={columns}
-      dataSource={dataSource}
+      dataSource={fieldsList}
       pagination={false}
       scroll={{ y: 'calc(100vh - 320px)' }}
     />

@@ -240,7 +240,7 @@ const page: App.I18n.Schema['translation']['page'] = {
       parentId: '上级部门',
       phone: '联系电话',
       status: '状态',
-      title: '部门列表'
+      title: '机构列表'
     },
     menu: {
       activeMenu: '高亮的菜单',
@@ -271,7 +271,7 @@ const page: App.I18n.Schema['translation']['page'] = {
         layout: '请选择布局组件',
         localIcon: '请选择本地图标',
         menuName: '请输入菜单名称',
-        menuStatus: '请选择菜单状态',
+        menuStatus: '请选择角色状态',
         menuType: '请选择菜单类型',
         multiTab: '请选择是否支持多标签',
         noMatchIcon: '没有找到匹配的图标',
@@ -311,7 +311,7 @@ const page: App.I18n.Schema['translation']['page'] = {
         donotcache: '不缓存'
       },
       menuName: '菜单名称',
-      menuStatus: '菜单状态',
+      menuStatus: '角色状态',
       menuType: '菜单类型',
       multiTab: '支持多页签',
       order: '排序',
@@ -389,7 +389,7 @@ const page: App.I18n.Schema['translation']['page'] = {
       roleSort: '显示顺序',
       roleStatus: '角色状态',
       selectUser: '选择用户',
-      status: '状态',
+      status: '角色状态',
       title: '角色列表'
     },
     spaceRole: {
@@ -436,7 +436,7 @@ const page: App.I18n.Schema['translation']['page'] = {
       userEmail: '邮箱',
       userGender: '性别',
       userId: '用户编号',
-      userName: '用户名称',
+      userName: '用户账号',
       userPhone: '手机号',
       userRole: '用户角色',
       userSex: '用户性别',

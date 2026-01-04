@@ -16,7 +16,9 @@ const initState = {
   engName: '',
   expr: '',
   measurementUnit: '',
+  relItemId: '',
   relViewid: undefined,
+  remark: '',
   techName: '',
   termAlias: ''
 };
@@ -44,7 +46,12 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
     }
   }, [editingGroup]);
 
-  const handleCb = async () => {
+  const handleCb = async (res:any) => {
+   if(res.response.data.code>200){
+    message.error(res.response.data.msg)
+    return
+   }
+    
     message.success('操作成功');
     onClose(true);
   };
@@ -58,6 +65,9 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
     await form.validateFields();
     const params = {
       ...state,
+      // 英文名称同时写入 techName 与 engName，确保唯一性校验字段一致
+      techName: state.techName,
+      engName: state.techName,
       groupId,
       spaceId: Number(localStorage.getItem('spaceId')),
       status: 1 // 写死
@@ -146,7 +156,7 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
               type="primary"
               onClick={handleSubmit}
             >
-              完成
+              确认
             </AButton>
           )}
         </ASpace>

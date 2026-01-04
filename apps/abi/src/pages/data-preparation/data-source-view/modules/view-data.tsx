@@ -25,10 +25,10 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
   const columns = useMemo(() => {
     return checkboxColumns
       ?.filter(item => item.checked)
-      .map(({ key }) => ({
+      .map(({ key,width }) => ({
         dataIndex: key,
         key,
-        minWidth: key.length * 20,
+        width,
         title: key
       }));
   }, [checkboxColumns]);
@@ -52,7 +52,8 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
       const _checkboxColumns = resData?.fields.map((item: any) => ({
         checked: true,
         key: item.originName,
-        title: item.originName
+        title: item.originName,
+        width: 150,
       }));
       setCheckboxColumns(_checkboxColumns);
     }
@@ -84,9 +85,10 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
       </APopover>
 
       <ATable<any>
+        footer={() => <div>说明: 参与预览计算的数据最多100行,原数据不足100行则取全量数据,超过则抽取样数据</div>}
         columns={columns}
         dataSource={pageDatasource}
-        scroll={{ x: 'max-content', y: 'calc(100vh - 400px)' }}
+        scroll={{ y: 'calc(100vh - 400px)' }}
         pagination={{
           ...pagination,
           onChange: (page: number, pageSize: number) => {

@@ -1,11 +1,11 @@
-import { EditOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { message } from 'antd';
 import { Suspense } from 'react';
 
 // import { enableStatusRecord } from '@/constants/business';
 // import { ATG_MAP } from '@/constants/common';
-import { MODAL_TYPE_OPTIONS } from '@/constants/manage';
-import { fetchAddModel, fetchEditModel, fetchModelList } from '@/service/api';
+import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage';
+import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList } from '@/service/api';
 
 import KeySearch from './modules/key-search';
 
@@ -25,6 +25,17 @@ export function Component() {
     run();
   };
 
+  const handleDelete =async (id:number) => {
+    const res =  await deleteModel(id)
+    console.log(res,'res');
+    if(res.response.data.code===200) {
+      message.success(res.response.data.msg)
+      return onDeleted()
+    }else {
+      message.error(res.response.data.msg)
+    }
+  }
+
   const { columnChecks, data, run, searchProps, setColumnChecks, tableProps } = useTable({
     apiFn: fetchModelList as any,
     apiParams: {
@@ -39,6 +50,7 @@ export function Component() {
           align: 'center',
           dataIndex: 'providerName',
           key: 'providerName',
+          render: (providerName: string) => PROVIDER_OPTIONS.find(item => item.value === providerName)?.label || providerName,
           title: '供应商'
         },
         {
@@ -86,7 +98,7 @@ export function Component() {
         {
           align: 'center',
           key: 'operate',
-          render: (_: unknown, record: any) => (
+          render: (_: unknown, record: any,index:number) => (
             <div className="flex-center gap-8px">
               <AButton
                 color="primary"
@@ -100,6 +112,20 @@ export function Component() {
                   edit(record);
                 }}
               />
+              <APopconfirm
+                title={t('common.confirmDelete')}
+                onConfirm={() => handleDelete(record.llmId)}
+              >
+                <ATooltip title={t('page.manage.common.delete')}>
+                  <AButton
+                    className="text-red"
+                    color="danger"
+                    disabled={_.type === 'special-user'}
+                    icon={<DeleteOutlined />}
+                    type="text"
+                  />
+                </ATooltip>
+              </APopconfirm>
             </div>
           ),
           title: t('common.operate')
@@ -163,7 +189,7 @@ export function Component() {
       } else {
         // edit request 调用编辑的接口
         // const sourceId = (editingData as any)?.sourceId;
-        const updateRes: any = await fetchEditModel({ ...commonData, llmId: editingData?.llmId });
+        const updateRes: any = await fetchEditModel({ ...commonData, llmId: editingData?.llmId, status: '1' });
         if (updateRes?.response?.data?.code !== 200) return false;
       }
     }
@@ -224,7 +250,7 @@ export function Component() {
           scroll={scrollConfig}
           size="small"
           {...(tableProps as any)}
-          pagination={false}
+          // pagination={false}
         />
 
         <Suspense>

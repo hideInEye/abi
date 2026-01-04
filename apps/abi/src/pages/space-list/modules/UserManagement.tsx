@@ -4,6 +4,7 @@ import type { TableProps } from 'antd';
 import { NewCreateUser } from '../components/NewCreateUser';
 import { PermissionManagement } from '../components/PermissionManagement';
 import { useSpaceListStore } from '../store';
+import { DeptSelector } from '@/pages/system/space-user/modules/dept';
 
 interface TableItem {
   dept: string;
@@ -20,11 +21,8 @@ export const UserManagement = () => {
   const [defaultPermissionKeys, setDefaultPermissionKeys] = useState<any[]>([]);
 
   const handleDeleteUser = (index: number) => {
-    const newRoleData = [...roleData];
-    const oid = newRoleData[index].oid;
-    newRoleData.splice(index, 1);
-
-    const newAlreadySelectedKeys = alreadySelectedKeys.filter(item => item !== oid);
+    const newRoleData = roleData.filter(item=>item.recordId!==index)
+    const newAlreadySelectedKeys = newRoleData.map(item=>item.oid)
     setAlreadySelectedKeys(newAlreadySelectedKeys);
     setRoleData(newRoleData);
   };
@@ -61,7 +59,7 @@ export const UserManagement = () => {
             type="text"
             variant="link"
             onClick={() => {
-              setCurrentPermissionItemIndex(index);
+              setCurrentPermissionItemIndex(_.recordId);
               setPermissionDrawerOpen(true);
               const roleIds = _.roles.map((item: any) => item.roleId);
               setDefaultPermissionKeys(roleIds);
@@ -76,7 +74,7 @@ export const UserManagement = () => {
             type="text"
             variant="link"
             onClick={() => {
-              handleDeleteUser(index);
+              handleDeleteUser(_.recordId);
             }}
           >
             删除用户
@@ -88,9 +86,19 @@ export const UserManagement = () => {
   ];
 
   function handlePermissionSure(permission: any[]) {
-    const newRoleData = [...roleData];
-    newRoleData[currentPermissionItemIndex].roles = permission;
+    const  newRoleData = roleData.map(item=>{
+      const Item = item
+      if(item.recordId === currentPermissionItemIndex) {
+        Item.roles = permission
+      }
+      return Item
+    })
     setRoleData(newRoleData);
+  }
+
+  const handUserAddSure = (data :any[]) =>{
+    setRoleData(data)
+    setNewCreateUserDrawerOpen(false)
   }
 
   return (
@@ -120,10 +128,17 @@ export const UserManagement = () => {
         />
       )}
       {newCreateUserDrawerOpen && (
-        <NewCreateUser
-          open={newCreateUserDrawerOpen}
-          setOpen={setNewCreateUserDrawerOpen}
-        />
+        // <NewCreateUser
+        //   open={newCreateUserDrawerOpen}
+        //   setOpen={setNewCreateUserDrawerOpen}
+        // />
+         <DeptSelector
+            defaultUserKeys={roleData.map(item=>item.recordId)}
+            defaultUserRoles={roleData}
+            open={newCreateUserDrawerOpen}
+            onCancel={() => setNewCreateUserDrawerOpen(false)}
+            onConfirm={handUserAddSure}
+          />
       )}
     </section>
   );

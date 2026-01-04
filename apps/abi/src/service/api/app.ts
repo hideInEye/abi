@@ -43,7 +43,7 @@ export function createApp(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/chat/app/add'
+    url: '/chat-proxy/api/v1/chat/app/add'
   });
 }
 
@@ -53,7 +53,7 @@ export function fetchAppList(params: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     method: 'get',
     params,
-    url: '/api/v1/chat/app/list'
+    url: '/chat-proxy/api/v1/chat/app/list'
   });
 }
 
@@ -63,6 +63,6 @@ export function deleteApp(data: any) {
     baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/api/v1/chat/app/delete'
+    url: '/chat-proxy/api/v1/chat/app/delete'
   });
 }

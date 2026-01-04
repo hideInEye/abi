@@ -72,14 +72,16 @@ const DeptSearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
               justify="end"
             >
               <AButton
-                icon={<IconIcRoundRefresh />}
+                style={{ borderRadius: '4px', padding: '4px 25px' }}
+                // icon={<IconIcRoundRefresh />}
+                type="primary"
                 onClick={reset}
               >
                 {t('common.reset')}
               </AButton>
               <AButton
-                ghost
-                icon={<IconIcRoundSearch />}
+                style={{ borderRadius: '4px', padding: '4px 25px' }}
+                // icon={<IconIcRoundSearch />}
                 type="primary"
                 onClick={search}
               >

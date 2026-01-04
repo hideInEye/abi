@@ -38,7 +38,7 @@ export const Component: React.FC = () => {
           <div className="flex-1">
             <ASpace className="mb-3 flex justify-between">
               <AInput
-                placeholder="请输入字典项名称"
+                placeholder="请输入字典名称"
                 value={searchValue}
                 onChange={e => handleSearch(e.target.value)}
               />
@@ -47,6 +47,7 @@ export const Component: React.FC = () => {
                 icon={<PlusOutlined />}
                 variant="outlined"
                 onClick={handleAdd}
+                disabled={!groupId}
               >
                 新增字典
               </AButton>

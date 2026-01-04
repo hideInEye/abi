@@ -7,12 +7,14 @@ interface IntentClarifyTestPanelProps {
   onTestData: (data: any, scenarioTitle: string) => void;
   onClearConversation?: () => void;
   visible?: boolean;
+  setConvContent?: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 const IntentClarifyTestPanel: React.FC<IntentClarifyTestPanelProps> = ({ 
   onTestData, 
   onClearConversation,
-  visible = true 
+  visible = true,
+  setConvContent
 }) => {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
 
@@ -95,6 +97,17 @@ const IntentClarifyTestPanel: React.FC<IntentClarifyTestPanelProps> = ({
     }
   };
 
+  const handleClearConversation = () => {
+    if (onClearConversation) {
+      onClearConversation();
+      return;
+    }
+    if (setConvContent) {
+      setConvContent([]);
+      message.success('对话已清空');
+    }
+  };
+
 
   if (!visible) return null;
 
@@ -105,18 +118,18 @@ const IntentClarifyTestPanel: React.FC<IntentClarifyTestPanelProps> = ({
           <SettingOutlined className="text-blue-600" />
           <span className="text-sm font-medium text-blue-800">测试意图澄清</span>
         </div>
-        {onClearConversation && (
+        {onClearConversation || setConvContent ? (
           <Button
             type="text"
             size="small"
             icon={<ClearOutlined />}
-            onClick={onClearConversation}
+            onClick={handleClearConversation}
             title="清空对话"
             className="text-blue-600 hover:text-blue-800"
           >
             清空
           </Button>
-        )}
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-2">

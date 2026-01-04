@@ -5,6 +5,7 @@ import { useCallback } from 'react';
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
 
 import type { ISpaceItem } from '../types';
+import s from '../../home/index.module.scss';
 
 interface SpaceItemProps {
   readonly deleteSpace: (space: ISpaceItem) => void;
@@ -18,7 +19,7 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
       e.stopPropagation();
       setEditSpace(space);
     },
-    [setEditSpace, space]
+    [setEditSpace, space],
   );
 
   const handleDelete = useCallback(
@@ -29,10 +30,10 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
         onOk: () => {
           deleteSpace(space);
         },
-        title: '删除空间'
+        title: '删除空间',
       });
     },
-    [deleteSpace, space]
+    [deleteSpace, space],
   );
 
   const { switchToSpace } = useSpaceSwitch();
@@ -50,49 +51,34 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
     switchToSpace(spaceId);
   };
   return (
-    <ACard
-      className="flex flex-col cursor-pointer"
-      key={space.spaceId}
-      onClick={() => setSpaceId(space.spaceId)}
-    >
-      <div className="flex flex-col text-sm font-bold">{space.spaceName}</div>
-      <div className="mt-2 flex flex-col gap-2 border-t border-gray-100 pt-2 text-xs op80">
-        <div className="grid grid-cols-[1fr_2fr]">
+    <ACard className={`flex flex-col cursor-pointer ${s['space-item']}`} key={space.spaceId} onClick={() => setSpaceId(space.spaceId)}>
+      <AFlex align='flex-start' justify="space-between">
+        <div className="text-sm lh-[1.75rem] font-bold">{space.spaceName}</div>
+        <div className="flex items-center justify-end">
+          <div className="flex justify-end">
+            <ATooltip title="编辑">
+              <AButton color="primary" icon={<EditOutlined />} size="small" variant="link" onClick={handleEdit} />
+            </ATooltip>
+            {canDelete && (
+              <ATooltip title="删除">
+                <AButton color="danger" icon={<DeleteOutlined />} size="small" variant="link" onClick={handleDelete} />
+              </ATooltip>
+            )}
+          </div>
+        </div>
+      </AFlex>
+      <div className="border-t flex flex-col gap-[8px]  border-gray-100 xl:pt-[6px] 2xl:pt-[8px] text-xs op80">
+        <div className="grid grid-cols-[auto_1fr] gap-x-2">
           <span>创建人</span>
           <span className="text-left">{space.createBy}</span>
         </div>
-        <div className="grid grid-cols-[1fr_2fr]">
+        <div className="grid grid-cols-[auto_1fr] gap-x-2">
           <span>空间 id</span>
           <span className="break-all text-left">{space.spaceId}</span>
         </div>
-        <div className="grid grid-cols-[1fr_2fr]">
+        <div className="grid grid-cols-[auto_1fr] gap-x-2">
           <span>创建时间</span>
           <span className="text-left">{space.createTime}</span>
-        </div>
-      </div>
-
-      <div className="mt4 flex items-center justify-end">
-        <div className="flex justify-end">
-          <ATooltip title="编辑">
-            <AButton
-              color="primary"
-              icon={<EditOutlined />}
-              size="small"
-              variant="link"
-              onClick={handleEdit}
-            />
-          </ATooltip>
-          {canDelete && (
-            <ATooltip title="删除">
-              <AButton
-                color="danger"
-                icon={<DeleteOutlined />}
-                size="small"
-                variant="link"
-                onClick={handleDelete}
-              />
-            </ATooltip>
-          )}
         </div>
       </div>
     </ACard>

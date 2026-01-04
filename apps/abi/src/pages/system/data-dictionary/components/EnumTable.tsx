@@ -37,36 +37,43 @@ export const TableEnum: React.FC<TableEnumProps> = ({
   };
 
   const columns = [
-    {
-      dataIndex: 'dictCode',
-      title: '字典编码'
-    },
+    // {
+    //   dataIndex: 'dictCode',
+    //   title: '字典编码'
+    // },
     {
       dataIndex: 'dictLabel',
-      title: '字典标签'
+      title: '枚举名称'
     },
     {
       dataIndex: 'dictValue',
-      title: '字典键值'
+      title: '枚举值'
     },
     {
       dataIndex: 'dictSort',
-      title: '字典排序'
+      title: '枚举排序'
     },
-    {
-      dataIndex: 'status',
-      render: (status: string) => <ASwitch checked={status !== '1'} />,
-      title: '状态'
-    },
+    // {
+    //   dataIndex: 'status',
+    //   render: (status: string) => <ASwitch checked={status !== '1'} />,
+    //   title: '状态'
+    // },
     {
       dataIndex: 'remark',
       title: '备注'
     },
     {
+      dataIndex: 'createBy',
+      title: '创建人'
+    },
+    {
       dataIndex: 'createTime',
       title: '创建时间'
     },
-
+    {
+      dataIndex: 'updateBy',
+      title: '操作人'
+    },
     {
       dataIndex: '操作',
       render: (_: any, record: any) => {

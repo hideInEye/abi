@@ -1,3 +1,4 @@
+import { CloseOutlined } from '@ant-design/icons';
 import React from 'react';
 
 import {
@@ -119,6 +120,8 @@ export const EnumDrawer: React.FC<EnumDrawerProps> = ({ close, enumerationModalO
   return (
     <>
       <ADrawer
+        closeIcon={null}
+        extra={<CloseOutlined onClick={close} />}
         open={enumerationModalOpen}
         title="字典枚举"
         width={1000}
@@ -143,7 +146,7 @@ export const EnumDrawer: React.FC<EnumDrawerProps> = ({ close, enumerationModalO
         <AFlex className="mb2 justify-between gap-2">
           <AInput
             className="w-50"
-            placeholder="请输入字典标签"
+            placeholder="请输入枚举名称"
             onChange={e => dictSearch(e.target.value)}
           />
           <AButton

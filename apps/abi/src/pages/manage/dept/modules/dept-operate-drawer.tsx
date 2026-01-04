@@ -89,8 +89,10 @@ const DeptOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
   };
 
   useEffect(() => {
-    getMenuTree();
-  }, []);
+    if(open) {
+      getMenuTree();
+    }
+  }, [open]);
 
 
 

@@ -8,10 +8,11 @@ import { PlugUpdate } from './components/PlugUpdate.tsx';
 import { PluginGroup } from './components/PluginGroup.tsx';
 import { PluginTable } from './components/PluginTable.tsx';
 import { usePluginManagement } from './hooks/usePluginManagement.ts';
+import { message } from 'antd';
 
 export const Component: React.FC = () => {
   const { currentEdit, open, setCurrentEdit, setOpen } = usePluginManagement();
-  const [groupId, setGroupId] = useState<number | null>(null);
+  const [groupId, setGroupId] = useState(0);
   const [dataSource, setDataSource] = useState<{
     code: number;
     msg: string;
@@ -27,7 +28,8 @@ export const Component: React.FC = () => {
       pageNum: current,
       pageSize,
       pluginName: pluginName || '',
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId: Number(localStorage.getItem('spaceId')),
+      groupId: groupId,
     });
 
     setDataSource(res.response.data as any);
@@ -51,7 +53,8 @@ export const Component: React.FC = () => {
       remark: record.remark,
       service_config: record.serviceConfig,
       space_id: Number(localStorage.getItem('spaceId')),
-      status: record.status === 0 ? 1 : 0
+      status: record.status === 0 ? 1 : 0,
+      group_id: groupId
     });
     getPluginList();
   };
@@ -64,8 +67,9 @@ export const Component: React.FC = () => {
   };
 
   const handleSubmit = async (formData: PluginForm) => {
+    let res:any=null
     if (currentEdit) {
-      await updatePlugin({
+     res =  await updatePlugin({
         parse_mode_config: JSON.stringify(formData.parse_mode_config),
         plugin_id: currentEdit.pluginId,
         plugin_name: formData.plugin_name,
@@ -73,30 +77,41 @@ export const Component: React.FC = () => {
         remark: formData.remark,
         service_config: JSON.stringify(formData.service_config),
         space_id: Number(localStorage.getItem('spaceId')),
-        status: currentEdit.status
+        status: currentEdit.status,
+        group_id: groupId
       });
-      getPluginList();
-      return;
+    }else {
+      const { parse_mode_config, service_config, ...rest } = formData;
+      const data = {
+        ...rest,
+        parse_mode_config: JSON.stringify(parse_mode_config),
+        service_config: JSON.stringify(service_config),
+        space_id: Number(localStorage.getItem('spaceId')),
+        group_id: groupId
+      };
+      res = await addPlugin(data);
     }
 
-    const { parse_mode_config, service_config, ...rest } = formData;
-    const data = {
-      ...rest,
-      parse_mode_config: JSON.stringify(parse_mode_config),
-      service_config: JSON.stringify(service_config),
-      space_id: Number(localStorage.getItem('spaceId'))
-    };
-    const res = await addPlugin(data);
-    const { code } = res.response.data;
+    
+    const { code, msg="服务器错误" } = res.response.data;
     if (code === 200) {
       setOpen(false);
       getPluginList();
+    }else {
+      message.error(msg)
     }
   };
 
   useEffect(() => {
     getPluginList();
   }, []);
+  useEffect(() => {
+    if (groupId !== null) {
+      setcurrent(1);
+      setDataSource({ code: 0, msg: '', rows: [], total: 0 });
+      getPluginList(searchValue);
+    }
+  }, [groupId]);
 
   const setPage = (page: number) => {
     setcurrent(page);
@@ -121,6 +136,7 @@ export const Component: React.FC = () => {
                 color="primary"
                 icon={<PlusOutlined />}
                 variant="outlined"
+                disabled={!groupId}
                 onClick={() => {
                   setOpen(true);
                   setCurrentEdit(null);
@@ -137,8 +153,8 @@ export const Component: React.FC = () => {
               setcurrent={setPage}
               updateStatus={updateStatus}
               updateCurrentEdit={record => {
-                setOpen(true);
                 setCurrentEdit(record);
+                setOpen(true);
               }}
             />
           </div>

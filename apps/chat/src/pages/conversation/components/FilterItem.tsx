@@ -1,9 +1,13 @@
-import React, { useState, useCallback } from 'react';
-import { Input, Select, DatePicker, Spin } from 'antd';
+import React, { useState, useCallback, useEffect } from 'react';
+import { ConfigProvider, Input, Select, DatePicker, Spin } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
+import dayjs from 'dayjs';
+import 'dayjs/locale/zh-cn';
 import { fetchSelectFilterValue } from '../../../service/api/conv';
 import { debounce } from 'lodash';
 const { RangePicker } = DatePicker;
 export type FilterType = 'input' | 'select' | 'range' | 'date';
+dayjs.locale('zh-cn');
 
 export interface FilterOption {
   label: string;
@@ -35,15 +39,17 @@ const FilterItem: React.FC<FilterItemProps> = ({
 }) => {
   const [searchOptions, setSearchOptions] = useState<FilterOption[]>(options);
   const [fetching, setFetching] = useState(false);
+
+  useEffect(() => {
+    setSearchOptions(options);
+  }, [options]);
+
   const handleChange = (val: any) => {
     onChange?.(val);
   };
 
   const handleSelectChange = (val: any) => {
     onChange?.(val);
-    if ((val === null || val?.length === 0) && handleSearch) {
-      handleSearch('');
-    }
   };
 
   const handleRangeChange = (key: 'min' | 'max', val: string) => {
@@ -56,6 +62,9 @@ const FilterItem: React.FC<FilterItemProps> = ({
   
   const handleSearch = useCallback(
     debounce(async (keyword: string) => {
+      if (!keyword) {
+        return;
+      }
       try {
         setFetching(true);
         const res = await fetchSelectFilterValue({
@@ -103,6 +112,7 @@ const FilterItem: React.FC<FilterItemProps> = ({
             {selectPlaceholder && <label className="mr-2 w-20 truncate">{selectPlaceholder}</label>}
             <Select
               placeholder={typeof placeholder === 'string' ? placeholder : '请选择'}
+              value={value}
               onChange={handleSelectChange}
               onSearch={handleSearch}
               filterOption={false}
@@ -123,10 +133,28 @@ const FilterItem: React.FC<FilterItemProps> = ({
         return (
           <div className="flex items-center">
             <label className="mr-2 w-20 truncate">{datePlaceholder.join(' ~ ')}</label>
-            <RangePicker 
-              style={{ width: '200px' }}
-              format="YYYY-MM-DD"
-            />
+            <ConfigProvider locale={zhCN}>
+              <RangePicker
+                style={{ width: '200px' }}
+                format="YYYY-MM-DD"
+                value={
+                  Array.isArray(value) && value.length === 2
+                    ? [value[0] ? dayjs(value[0]) : null, value[1] ? dayjs(value[1]) : null]
+                    : null
+                }
+                onChange={(dates) => {
+                  if (!dates) {
+                    onChange?.(null);
+                    return;
+                  }
+                  const [start, end] = dates;
+                  onChange?.([
+                    start ? start.format('YYYY-MM-DD') : null,
+                    end ? end.format('YYYY-MM-DD') : null
+                  ]);
+                }}
+              />
+            </ConfigProvider>
           </div>
         );
       }

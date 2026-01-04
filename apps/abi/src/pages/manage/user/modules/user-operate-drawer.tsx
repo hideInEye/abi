@@ -16,7 +16,9 @@ const UserOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
   const [deptTree, setDeptTree] = useState([]);
   const [postList, setPostList] = useState([]);
   // const [roleList, setRoleList] = useState([]);
-
+  const {
+    formRules: {  userName: userNameRules }
+  } = useFormRules();
   const getMenuTree = async () => {
     const res = await getDeptTreeApi();
     setDeptTree(res.data);
@@ -142,7 +144,7 @@ const UserOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
         <AForm.Item
           label={t('page.manage.user.userName')}
           name="userName"
-          rules={[{ required: true }]}
+          rules={[...userNameRules]}
         >
           <AInput placeholder={t('page.manage.user.form.userName')} />
         </AForm.Item>
@@ -179,6 +181,7 @@ const UserOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
         <AForm.Item
           label={t('page.manage.user.userStatus')}
           name="status"
+          rules={[{ required: true }]}
         >
           <ARadio.Group>
             {enableStatusOptions.map(item => (

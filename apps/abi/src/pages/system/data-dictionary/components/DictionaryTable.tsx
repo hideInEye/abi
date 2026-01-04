@@ -46,17 +46,17 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
   };
 
   const columns = [
-    {
-      dataIndex: 'dictId',
-      title: '字典ID'
-    },
+    // {
+    //   dataIndex: 'dictId',
+    //   title: '字典ID'
+    // },
     {
       dataIndex: 'dictField',
       title: '字典名称'
     },
     {
       dataIndex: 'dictName',
-      title: '中文名'
+      title: '中文名称'
     },
     {
       dataIndex: 'status',
@@ -72,7 +72,18 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
     },
     {
       dataIndex: 'remark',
-      title: '备注'
+      title: '字典描述',
+      render: (text: string) => {
+        if (!text) return '';
+        if (text.length > 15) {
+          return (
+            <ATooltip title={text}>
+              <span>{text.slice(0, 15)}...</span>
+            </ATooltip>
+          );
+        }
+        return <span>{text}</span>;
+      }
     },
     {
       dataIndex: 'createTime',
@@ -120,6 +131,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
           pageSize: 10,
           total: dataSource.total
         }}
+        scroll={{ x: 'max-content', y: 'calc(100vh - 350px)' }}
       />
     </div>
   );

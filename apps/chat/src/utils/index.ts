@@ -187,11 +187,12 @@ export function countActiveFilters(filterValues: Record<string, any>): number {
         // 对于对象类型，检查是否有有效的min/max值
         if (typeof value === 'object') {
             // 处理范围选择器
-            if (value.min !== undefined || value.max !== undefined) {
-            // 确保min/max不是空字符串
-            if (typeof value.min === 'string' && value.min.trim() === '') return false;
-            if (typeof value.max === 'string' && value.max.trim() === '') return false;
-            return true;
+            if (Object.prototype.hasOwnProperty.call(value, 'min') || Object.prototype.hasOwnProperty.call(value, 'max')) {
+                const minVal = (value as any).min;
+                const maxVal = (value as any).max;
+                const minValid = minVal !== undefined && minVal !== null && !(typeof minVal === 'string' && minVal.trim() === '');
+                const maxValid = maxVal !== undefined && maxVal !== null && !(typeof maxVal === 'string' && maxVal.trim() === '');
+                return minValid || maxValid;
             }
             
             // 处理其他对象类型（如日期对象等）
@@ -314,3 +315,76 @@ export const getOpeningText = (state: boolean): string => {
 
   return `${selectedConfig.userGreeting}\n${selectedConfig.promptMessage}`;
 };
+
+/**
+ * 移除HTML标签，只保留纯文本内容
+ * @param {string} text - 包含HTML标签的文本
+ * @returns {string} 移除HTML标签后的纯文本
+ */
+export const stripHtmlTags = (text: string | undefined | null): string => {
+  if (!text) return '';
+  if (typeof text !== 'string') return String(text);
+  
+  // 移除所有HTML标签
+  return text.replace(/<[^>]*>/g, '');
+};
+// 获取基础API地址
+export function getBaseApi() {
+  // 尝试从多个来源获取配置
+  const config = window.APP_CONFIG || {}
+  let baseApi = config.VITE_BASE_API
+  // 如果没有找到，尝试从环境变量获取
+  if (!baseApi && typeof import.meta !== 'undefined' && import.meta.env) {
+    baseApi = import.meta.env.VITE_BASE_API || ''
+  }
+  
+  // 如果还是没有，使用默认值或抛出错误
+  if (!baseApi) {
+    console.warn('VITE_BASE_API 未配置，使用默认值')
+    baseApi = ''
+  }
+  
+  return baseApi
+}
+
+// 获取处理后的 chatbi_base_api
+export function getChatbiBaseApi() {
+  let chatbi_base_api = getBaseApi()
+  if (chatbi_base_api) {
+    chatbi_base_api = chatbi_base_api.replace(/\/$/, '')
+    if (!chatbi_base_api.includes('/api')) {
+      chatbi_base_api = `${chatbi_base_api}/api`
+    }
+  }
+  return chatbi_base_api
+}
+
+// 一个相对宽松但够用的邮箱正则
+const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * 校验多个邮箱（用逗号分隔）
+ * @param {string} value - 输入的字符串，例如 "a@x.com, b@y.com"
+ * @returns {{ valid: boolean, invalidEmails: string[] }}
+ */
+export function validateMultiEmails(value: string) {
+  if (!value) {
+    return { valid: true, invalidEmails: [] }; // 看业务是否允许为空
+  }
+
+  // 按中英文逗号拆分
+  const parts = value
+    .split(/[,，]/)
+    .map(v => v.trim())
+    .filter(v => v.length > 0); // 去掉空串
+
+  if (parts.length === 0) {
+    return { valid: true, invalidEmails: [] };
+  }
+
+  const invalid = parts.filter((email: string) => !emailReg.test(email));
+  return {
+    valid: invalid.length === 0,
+    invalidEmails: invalid
+  };
+}

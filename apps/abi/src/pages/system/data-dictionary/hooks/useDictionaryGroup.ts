@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { addDictionary, deleteDictionary, editDictionary, queryDictionary } from '@/service/api/dictionary';
 
 import type { DictionaryItem } from '../types';
+import { FormInstance, message } from 'antd';
 
 export const useDictionaryGroup = (groupId: string) => {
   const [current, setCurrent] = useState(1);
@@ -28,7 +29,7 @@ export const useDictionaryGroup = (groupId: string) => {
         groupId,
         pageNum: current,
         pageSize: 10,
-        dictName: search
+        dictField: search
       });
       setDictionaryDataSource(res.response.data as any);
     }
@@ -69,20 +70,27 @@ export const useDictionaryGroup = (groupId: string) => {
     getDictionary(searchValue);
   };
 
-  const handleSure = async (values: any) => {
-    if (editObj) {
-      await editDictionary({
+  const handleSure = async (values: any,form:FormInstance) => {
+    let res:any = {}
+    if(editObj) {
+     res =   await editDictionary({
         ...editObj,
         ...values
       });
     } else {
-      await addDictionary({
+     res=  await addDictionary({
         groupId,
         spaceId: localStorage.getItem('spaceId'),
         ...values
       });
     }
 
+    if(res.response.data.code >200) {
+      message.error(res.response.data.msg)
+      return
+    }
+    message.success('创建成功')
+    form.resetFields();
     setModalOpen(false);
     setCurrent(1);
     getDictionary(searchValue);
@@ -90,6 +98,7 @@ export const useDictionaryGroup = (groupId: string) => {
 
   const handleClose = () => {
     setModalOpen(false);
+    setEditObj(null);
   };
 
   const handleSearch = (value: string) => {

@@ -6,12 +6,16 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, } from "react";
-import { Button, Spin, Table, message } from "antd";
-import CodeMirror from '@uiw/react-codemirror';
-import { sql } from '@codemirror/lang-sql';
-import { EditorView } from '@codemirror/view';
+import { Button, Spin, Table, message, ConfigProvider, Typography } from "antd";
+import zhCN from 'antd/es/locale/zh_CN';
+import { format } from 'sql-formatter';
 import SvgIcon from "../../components/SvgIcon";
+// @ts-ignore - react-syntax-highlighter 类型定义问题
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+// @ts-ignore
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { EChart } from "../../components/react-echarts";
+const { Text } = Typography;
 import type { EChartsOption } from 'echarts';
 import ShareModal from "./ShareModal";
 import ChartConfigModal from "./ChartConfigModal";
@@ -21,13 +25,15 @@ import ChartHeader from "./components/ChartHeader";
 import StatisticsAnalysis from './components/StatisticsAnalysis';
 import PredictionAnalysis from './components/PredictionAnalysis';
 import styles from './styles.module.css';
+import s from './index.module.css'
 import CausalAnalysis from "./components/CausalAnalysis";
-import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEmptyObject, getUserName, isSingleMetricData } from '@/utils';
+import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEmptyObject, getUserName, isSingleMetricData, stripHtmlTags } from '@/utils';
 import { handleDataExport, handleImageExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
 import { fetchDrillDown, fetchQueryRewrite, fetchRecommendQuestion, setExperteval, searchConv } from '../../service/api/conv';
-import { CloseOutlined, RedoOutlined, DownOutlined } from "@ant-design/icons";
+import { CloseOutlined, RedoOutlined, DownOutlined, UpOutlined } from "@ant-design/icons";
 import { marked } from 'marked';
+import { CHAT_MODE_MAP } from '../../constant/chat';
 
 /**
  * 组件属性接口定义
@@ -37,7 +43,6 @@ import { marked } from 'marked';
  * @property {Function} [getAnswer] - 获取回答的回调函数
  * @property {Function} [getRecommend] - 获取推荐问题等的回调函数
  * @property {Function} [getQueryRewrite] - 推荐维度、推荐指标、归因分析、预测分析的回调函数
- * @property {Object} [paramsData] - 参数数据
  * @property {string} [convUid] - 会话唯一标识
  * @property {string} [chatId] - 聊天ID
  * @property {number} [spaceId] - 空间ID
@@ -56,7 +61,6 @@ interface PropsType {
   getAnswer?: (props: any) => void;
   getRecommend?: (props: any) => void;
   getQueryRewrite?: (props: any) => void;
-  paramsData?: any;
   convUid?: string;
   chatId?: string;
   spaceId?: number;
@@ -135,7 +139,6 @@ const ViewEle: React.FC<PropsType> = ({
   getAnswer,
   getRecommend,
   getQueryRewrite,
-  paramsData,
   convUid,
   chatId,
   spaceId,
@@ -172,6 +175,36 @@ const ViewEle: React.FC<PropsType> = ({
   // 图表tooltip 
   const tooltipHtml = (color: any) => `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:${color}; margin-right:5px;"></span>`
 
+  // 解析ISO 8601时间格式 
+  const parseISO8601Duration = (duration: string): string => {
+    if (typeof duration !== 'string') return duration;
+    
+    const match = duration.match(/^P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/);
+    if (!match) return duration;
+
+    const days = parseInt(match[1] || '0', 10);
+    const hours = parseInt(match[2] || '0', 10);
+    const minutes = parseInt(match[3] || '0', 10);
+    const seconds = Math.floor(parseFloat(match[4] || '0'));
+
+    const totalHours = days * 24 + hours;
+    const hh = String(totalHours).padStart(2, '0');
+    const mm = String(minutes).padStart(2, '0');
+    const ss = String(seconds).padStart(2, '0');
+
+    return `${hh}:${mm}:${ss}`;
+  };
+  // 解析ISO日期格式
+  const parseISODate = (dateStr: string): string => {
+    if (typeof dateStr !== 'string') return dateStr;
+    
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}T/)) {
+      return dateStr.split('T')[0];
+    }
+    
+    return dateStr;
+  };
+
   const echartRef = useRef(null);
   const tableRef = useRef<HTMLDivElement>(null);
   //当前图表状态
@@ -207,9 +240,17 @@ const ViewEle: React.FC<PropsType> = ({
 
   // 导出功能
   const handleDownload = async (key: string) => {
+    if(!chartData?.data || chartData?.data?.length === 0) {
+      message.warning('暂无数据可导出');
+      return;
+    }
     const baseName = conv.biz_name || '数据';
     try {
       if (['csv', 'excel'].includes(key)) {
+        if(!chartData.sql) {
+          message.warning('未找到可导出的SQL语句, 请联系管理员或重新发起查询');
+          return;
+        }
         await handleDataExport({
           key: key as 'csv' | 'excel',
           fileName: baseName,
@@ -297,6 +338,24 @@ const ViewEle: React.FC<PropsType> = ({
     // 根据 type 决定是否显示图表图标和设置默认展示类型
     const hasChartType = contextData?.type;
     setShowChartIcon(hasChartType);
+    
+    // 定义有效的图表类型白名单，避免设置 response_error 等无效类型
+    const validChartTypes = [
+      'response_bar_chart',
+      'response_line_chart',
+      'response_area_chart',
+      'response_pie_chart',
+      'response_donut_chart',
+      'response_many_bar_chart',
+      'response_many_line_chart'
+    ];
+    
+    // 根据后端返回的图表类型设置 chartType，避免始终默认为柱状图
+    // 只有当类型在白名单中且不是 response_table 时才设置
+    if (hasChartType && hasChartType !== 'response_table' && validChartTypes.includes(hasChartType)) {
+      setChartType(hasChartType);
+    }
+    
     if (hasChartType === "response_table") {
       setActiveType('table');
     } else {
@@ -340,6 +399,34 @@ const ViewEle: React.FC<PropsType> = ({
   };
 
   const handleGetChartType = (type: string) => {
+    // 检测X轴维度数量
+    const chartDataClone = isNotEmptyObject(queryResult) && queryResult || chartData;
+    if (chartDataClone?.data && chartDataClone.data.length > 0) {
+      // 获取所有非数值字段作为维度字段
+      const firstItem = chartDataClone.data[0];
+      const allKeys = Object.keys(firstItem);
+      const dimensionFields = allKeys.filter(key => {
+        const value = firstItem[key];
+        // 排除数值字段
+        if (typeof value === 'number') return false;
+        if (typeof value === 'string') {
+          const numValue = parseFloat(value);
+          if (!isNaN(numValue) && isFinite(numValue) && numValue === Number(value.trim())) {
+            return false;
+          }
+        }
+        return true;
+      });
+      
+      // 如果维度字段超过1个（X轴超过1个维度），显示提醒
+      if (dimensionFields.length > 1) {
+        message.warning({
+          content: `当前数据包含多个维度，图表仅展示两个维度的数据`,
+          duration: 3,
+        });
+      }
+    }
+    
     setChartType(type);
   };
 
@@ -358,7 +445,7 @@ const ViewEle: React.FC<PropsType> = ({
         chat_id: chatId,
         space_id: spaceId,
         agent_id: agentId,
-        round_index: data.order,
+        round_index: data.order || data.roundIndex,
         create_by: createBy,
         ...payload
       });
@@ -368,7 +455,7 @@ const ViewEle: React.FC<PropsType> = ({
         setChartData({ ...chartData, feedback: res?.data || {} });
       }
       else {
-        message.error('操作失败');
+        message.error(res?.err_msg || '操作失败');
       }
     }
     catch (error) {
@@ -379,7 +466,7 @@ const ViewEle: React.FC<PropsType> = ({
   // 处理预测分析点击
   const handlePredictClick = () => {
     if (getQueryRewrite) {
-      const params = getRecommendParams(conv, data, '', '预测分析')
+      const params = getRecommendParams(conv, data, '', '推荐与当前问题相关的预测分析问题')
       getQueryRewrite(params);
     }
   };
@@ -387,7 +474,7 @@ const ViewEle: React.FC<PropsType> = ({
   // 处理归因分析点击
   const handleAttributionClick = () => {
     if (getQueryRewrite) {
-      const params = getRecommendParams(conv, data, '', '归因分析')
+      const params = getRecommendParams(conv, data, '', '推荐与当前问题相关的归因分析问题')
       getQueryRewrite(params);
     }
   };
@@ -436,13 +523,34 @@ const ViewEle: React.FC<PropsType> = ({
    * @returns {Object} 处理后的图表数据对象
    */
   const processChartData = (data: any[]) => {
-    if (!data || !data.length) return { xData: [], yFields: [], yData: [] };
+    if (!data || !data.length) return { xField: '', xData: [], yFields: [], yData: [] };
 
     // 判断数据格式是单指标还是多指标
     const isSingle = isSingleMetricData(data);
 
     // 获取第一条数据的所有键
     const keys = Object.keys(data[0]);
+
+    // 特殊处理：如果只有一条数据且只有一个数值字段，将其作为 yField
+    if (data.length === 1 && keys.length === 1) {
+      const singleKey = keys[0];
+      const singleValue = data[0][singleKey];
+      
+      // 检查是否为数值
+      const isNumeric = typeof singleValue === 'number' || 
+                       (!isNaN(parseFloat(singleValue)) && isFinite(parseFloat(singleValue)));
+      
+      if (isNumeric) {
+        // 单数值情况：返回特殊格式供图表使用
+        // console.log('检测到单数值数据:', singleKey, singleValue);
+        return {
+          xField: '',
+          xData: [],
+          yFields: [singleKey],
+          yData: [[typeof singleValue === 'number' ? singleValue : parseFloat(singleValue)]]
+        };
+      }
+    }
 
     // 获取 x 轴字段
     let xField = '';
@@ -504,8 +612,15 @@ const ViewEle: React.FC<PropsType> = ({
       });
     });
 
-    // 获取 xData
-    const xData = data.map(item => item[xField] || '');  // 为空时返回空字符串
+    // 获取 xData，并转换ISO 8601时间格式
+    const xData = data.map(item => {
+      const value = item[xField] || '';
+      // 检查是否为ISO 8601时间格式
+      if (typeof value === 'string' && value.match(/^P(?:\d+D)?T(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?$/)) {
+        return parseISO8601Duration(value);
+      }
+      return value;
+    });
 
     return { xField, yFields, xData, yData };
   };
@@ -536,8 +651,8 @@ const ViewEle: React.FC<PropsType> = ({
     try {
       const res = await fetchDrillDown(paramsData);
       console.log(res);
-      const columns = res.data?.columns?.map((item: any) => ({ ...item, title: item.name, dataIndex: item.name, key: item.name }));
-      setDrillDownData({ columns, data: res?.data?.data } || {});
+      const columns = res.data?.columns?.map((item: any) => ({ ...item, title: item.name, dataIndex: item.name, key: item.name })) || [];
+      setDrillDownData({ columns, data: res?.data?.data || [] });
     } catch (error) {
       console.log(error);
     } finally {
@@ -566,9 +681,12 @@ const ViewEle: React.FC<PropsType> = ({
     }
 
     const getChartOption = (type: string, data: any[]): EChartsOption => {
-      const { xField, yFields, xData, yData }: any = processChartData(data);  // 获取 xData 和 yData
+      const { xField, yFields = [], xData = [], yData = [] }: any = processChartData(data) || {};  // 获取 xData 和 yData，添加默认值
 
-      const isDateAxis = xData.some((x: any) => /^\d{4}-\d{2}-\d{2}/.test(x));
+      const isDateAxis = Array.isArray(xData) && xData.some((x: any) => /^\d{4}-\d{2}-\d{2}/.test(x));
+
+      // 处理单数值情况：如果 xData 为空，使用字段名作为 X 轴标签
+      const finalXData = Array.isArray(xData) && xData.length > 0 ? xData : (yFields || []);
 
       // 为系列生成不同的颜色
       const colors = ['#1677ff', '#ff9f00', '#ff4f6c', '#33cc99', '#ff6600', '#3399ff'];
@@ -577,10 +695,22 @@ const ViewEle: React.FC<PropsType> = ({
       const getColor = (index: number) => colors[index % colors.length];
 
       // 计算x轴标签的旋转角度
-      const rotation = isDateAxis ? 30 : calculateRotation(xData);
+      const rotation = isDateAxis ? 30 : calculateRotation(finalXData);
 
       // 使用配置的字体和字号
       const { font, fontSize, chartStyle } = chartConfig;
+
+      // 根据图表类型计算Y轴最大值
+      const calculateYAxisMax = (chartType: string) => {
+        // 多指标图表：计算所有指标的最大值
+        if (chartType === 'response_many_bar_chart' || chartType === 'response_many_line_chart') {
+          const allValues = Array.isArray(yData) ? yData.flat().filter((v: any) => typeof v === 'number') : [];
+          return allValues.length > 0 ? Math.max(...allValues) : 0;
+        }
+        // 单指标图表：只计算第一个指标的最大值
+        const currentValues = Array.isArray(yData?.[0]) ? yData[0].filter((v: any) => typeof v === 'number') : [];
+        return currentValues.length > 0 ? Math.max(...currentValues) : 0;
+      };
 
       // 基础配置
       const baseOption: EChartsOption = {
@@ -596,17 +726,17 @@ const ViewEle: React.FC<PropsType> = ({
         grid: {
           left: '3%',
           right: '4%',
-          bottom: xData.length > 15 ? '12%' : (rotation > 0 ? '15%' : '3%'), // 有滚动条或标签倾斜时增加底部间距
+          bottom: finalXData.length > 15 ? '12%' : (rotation > 0 ? '15%' : '3%'), // 有滚动条或标签倾斜时增加底部间距
           containLabel: true
         },
         // 添加横向滚动条配置（只能拖动蓝色区域）
         dataZoom: [
           {
             type: 'slider',
-            show: xData.length > 10, // 当数据点超过10个时显示滚动条
+            show: finalXData.length > 10, // 当数据点超过10个时显示滚动条
             xAxisIndex: 0,
             start: 0,
-            end: xData.length > 10 ? Math.min(100, (10 / xData.length) * 100) : 100, // 默认显示前10个数据点
+            end: finalXData.length > 10 ? Math.min(100, (10 / finalXData.length) * 100) : 100, // 默认显示前10个数据点
             bottom: '2%',
             height: 15, // 滚动条高度
             handleSize: '100%', // 手柄大小设为100%，覆盖整个蓝色区域
@@ -635,7 +765,7 @@ const ViewEle: React.FC<PropsType> = ({
               if (isDateAxis) {
                 const date = new Date(name);
                 if (date.toString() !== 'Invalid Date') {
-                  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日<br/>${yFields[0]}: ${value}`;
+                  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日<br/>${yFields?.[0] || ''}: ${value}`;
                 }
               }
 
@@ -669,7 +799,7 @@ const ViewEle: React.FC<PropsType> = ({
         },
         xAxis: {
           type: 'category' as const,
-          data: xData,
+          data: finalXData,  // 统一使用 finalXData
           axisLabel: {
             interval: 0, // 显示所有标签
             rotate: rotation,
@@ -689,6 +819,9 @@ const ViewEle: React.FC<PropsType> = ({
         yAxis: {
           type: 'value' as const,
           // name: yField,
+          scale: false, // 不自动缩放，确保滚动时纵轴不变
+          min: 0, // 从0开始
+          max: calculateYAxisMax(type), // 根据图表类型动态计算最大值
           nameTextStyle: {
             fontFamily: font,
             fontSize,
@@ -703,30 +836,25 @@ const ViewEle: React.FC<PropsType> = ({
       };
 
       switch (type) {
-        case 'response_bar_chart': {
-          const option: EChartsOption = {
+        case 'response_bar_chart':
+          return {
             ...baseOption,
             series: [{
               type: 'bar',
-              name: yFields[0], // 只取第一个指标
-              data: yData[0],   // 对应yData中的第一个数组
-              // itemStyle: {
-              //   color: getColor(0),
-              // },
+              name: yFields?.[0] || '',
+              data: yData?.[0] || [],
               barMaxWidth: 50,
               barGap: '30%'
             }]
           };
-          return option;
-        }
 
-        case 'response_line_chart': {
-          const option: EChartsOption = {
+        case 'response_line_chart':
+          return {
             ...baseOption,
             series: [{
               type: 'line',
-              name: yFields[0], // 只取第一个指标
-              data: yData[0],   // 对应yData中的第一个数组
+              name: yFields?.[0] || '',
+              data: yData?.[0] || [],
               smooth: true,
               // itemStyle: {
               //   color: getColor(0),
@@ -736,16 +864,14 @@ const ViewEle: React.FC<PropsType> = ({
               // }
             }]
           };
-          return option;
-        }
 
-        case 'response_area_chart': {
-          const option: EChartsOption = {
+        case 'response_area_chart':
+          return {
             ...baseOption,
             series: [{
               type: 'line',
-              name: yFields[0], // 只取第一个指标
-              data: yData[0],   // 对应yData中的第一个数组
+              name: yFields?.[0] || '', // 只取第一个指标
+              data: yData?.[0] || [],   // 对应yData中的第一个数组
               smooth: true,
               areaStyle: {
                 opacity: 0.3,
@@ -759,20 +885,37 @@ const ViewEle: React.FC<PropsType> = ({
               // }
             }]
           };
-          return option;
-        }
 
         case 'response_pie_chart': {
+          // 处理饼图数据：支持单数值和多分类数据
+          let pieData: any[] = [];
+          
+          if (Array.isArray(xData) && xData.length > 0 && Array.isArray(yData?.[0])) {
+            // 正常的多分类数据
+            pieData = xData.map((item: any, index: any) => ({
+              name: item,
+              value: yData[0][index]
+            }));
+          } else if (Array.isArray(yData?.[0]) && yData[0].length > 0) {
+            // 单数值数据：显示为一个完整的圆
+            pieData = [{
+              name: yFields?.[0] || '数值',
+              value: yData[0][0]
+            }];
+          }
+          
           const option: EChartsOption = {
             tooltip: {
               trigger: 'item',
-              formatter: '{b}: {c} ({d}%)'
+              formatter: '{b}: {c}'
             },
             legend: {
-              show: true,
+              show: pieData.length > 1,  // 单数值时隐藏图例
+              type: 'scroll',
+              top: '5%',
               itemWidth: 8,
               itemHeight: 8,
-              data: xData.filter((item: any) => item !== undefined && item !== null),
+              data: pieData.map((item: any) => item.name),
               textStyle: {
                 color: chartStyle.textColor,
                 fontFamily: font,
@@ -781,13 +924,9 @@ const ViewEle: React.FC<PropsType> = ({
             },
             series: [{
               type: 'pie',
-              name: yFields[0], // 只取第一个指标
               radius: '70%',
               center: ['50%', '60%'],
-              data: xData.map((item: any, index: any) => ({
-                name: item,
-                value: yData[0][index]  // 从第一个指标的 yData 中取值
-              })),
+              data: pieData,
               emphasis: {
                 itemStyle: {
                   shadowBlur: 10,
@@ -796,8 +935,11 @@ const ViewEle: React.FC<PropsType> = ({
                 }
               },
               label: {
-                show: false,
-                position: 'center'
+                show: pieData.length === 1,  // 单数值时显示标签
+                position: 'center',
+                formatter: '{b}\n{c}',
+                fontSize: 16,
+                color: chartStyle.textColor
               },
             }]
           };
@@ -805,16 +947,35 @@ const ViewEle: React.FC<PropsType> = ({
         }
 
         case 'response_donut_chart': {
+          // 处理环形图数据：支持单数值和多分类数据
+          let donutData: any[] = [];
+          
+          if (Array.isArray(xData) && xData.length > 0 && Array.isArray(yData?.[0])) {
+            // 正常的多分类数据
+            donutData = xData.map((item: any, index: any) => ({
+              name: item,
+              value: yData[0][index]
+            }));
+          } else if (Array.isArray(yData?.[0]) && yData[0].length > 0) {
+            // 单数值数据：显示为一个完整的环
+            donutData = [{
+              name: yFields?.[0] || '数值',
+              value: yData[0][0]
+            }];
+          }
+          
           const option: EChartsOption = {
             tooltip: {
               trigger: 'item',
-              formatter: '{b}: {c} ({d}%)'
+              formatter: '{b}: {c}'
             },
             legend: {
-              show: true,
+              show: donutData.length > 1,  // 单数值时隐藏图例
+              type: 'scroll',
+              top: '5%',
               itemWidth: 8,
               itemHeight: 8,
-              data: xData.filter((item: any) => item !== undefined && item !== null),
+              data: donutData.map((item: any) => item.name),
               textStyle: {
                 color: chartStyle.textColor,
                 fontFamily: font,
@@ -823,16 +984,15 @@ const ViewEle: React.FC<PropsType> = ({
             },
             series: [{
               type: 'pie',
-              name: yFields[0], // 只取第一个指标
               radius: ['40%', '70%'],
               center: ['50%', '60%'],
-              data: xData.map((item: any, index: any) => ({
-                name: item,
-                value: yData[0][index]  // 从第一个指标的 yData 中取值
-              })),
+              data: donutData,
               label: {
-                show: false,
-                position: 'center'
+                show: donutData.length === 1,  // 单数值时显示标签
+                position: 'center',
+                formatter: '{b}\n{c}',
+                fontSize: 16,
+                color: chartStyle.textColor
               },
             }]
           };
@@ -840,13 +1000,13 @@ const ViewEle: React.FC<PropsType> = ({
         }
 
         // **多指标柱状图**
-        case 'response_many_bar_chart': {
-          const option: EChartsOption = {
+        case 'response_many_bar_chart':
+          return {
             ...baseOption,
-            series: yFields.map((field: any, index: any) => ({
+            series: Array.isArray(yFields) ? yFields.map((field: any, index: any) => ({
               type: 'bar',
               name: field,   // 指标名
-              data: yData[index], // 对应指标的数据
+              data: yData?.[index] || [], // 对应指标的数据
               // itemStyle: {
               //   color: getColor(index),  // 动态分配颜色
               // },
@@ -855,19 +1015,17 @@ const ViewEle: React.FC<PropsType> = ({
               emphasis: {
                 focus: 'series'
               },
-            })),
+            })) : [],
           };
-          return option;
-        }
 
         // **多指标折线图**
-        case 'response_many_line_chart': {
-          const option: EChartsOption = {
+        case 'response_many_line_chart':
+          return {
             ...baseOption,
-            series: yFields.map((field: any, index: any) => ({
+            series: Array.isArray(yFields) ? yFields.map((field: any, index: any) => ({
               type: 'line',
-              name: field,    // 指标名
-              data: yData[index], // 对应指标的数据
+              name: field,
+              data: yData?.[index] || [],
               smooth: true,
               // itemStyle: {
               //   color: getColor(index),  // 动态分配颜色
@@ -878,10 +1036,8 @@ const ViewEle: React.FC<PropsType> = ({
               emphasis: {
                 focus: 'series'
               },
-            })),
+            })) : [],
           };
-          return option;
-        }
 
         default:
           return baseOption;
@@ -890,7 +1046,7 @@ const ViewEle: React.FC<PropsType> = ({
     };
 
     const option = getChartOption(chartType, chartDataClone.data);
-    const { xField } = processChartData(chartDataClone.data);
+    const { xField } = processChartData(chartDataClone.data) || {};
     return (
       <EChart
         ref={echartRef}
@@ -945,74 +1101,95 @@ const ViewEle: React.FC<PropsType> = ({
       case 'table':
         return (
           <div ref={tableRef} className="px-[1rem]">
-            <Table
-              dataSource={displayData?.map((item: Record<string, any>, index: number) => ({ ...item, key: index })) || []}
-              columns={Object.keys(displayData?.[0] || {}).map(key => ({
-                title: key,
-                dataIndex: key,
-                key: key,
-                ellipsis: true
-              }))}
-              pagination={paginationConfig}
-              size="small"
-              scroll={{ x: 'max-content' }}
-              // className={styles.viewTable}
-              className={`${styles.viewTable}`}
-              locale={{
-                emptyText: (
-                  <div className="flex items-center justify-center py-8 text-gray-400">
-                    <div className="text-center">
-                      <SvgIcon localIcon="empty" className="w-12 h-12 mb-2" />
-                      <div>暂无数据</div>
+            <ConfigProvider locale={zhCN}>
+              <Table
+                dataSource={displayData?.map((item: Record<string, any>, index: number) => ({ ...item, key: index })) || []}
+                columns={Object.keys(displayData?.[0] || {}).map(key => ({
+                  title: key,
+                  dataIndex: key,
+                  key: key,
+                  ellipsis: true,
+                  render: (text: any) => {
+                    if (typeof text === 'string') {
+                      // 转换ISO 8601时间格式
+                      if (text.match(/^P(?:\d+D)?T(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?$/)) {
+                        return parseISO8601Duration(text);
+                      }
+                      // 转换ISO日期格式
+                      if (text.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})?$/)) {
+                        return parseISODate(text);
+                      }
+                    }
+                    return text;
+                  }
+                }))}
+                pagination={paginationConfig}
+                size="small"
+                scroll={{ x: 'max-content' }}
+                className={`${styles.viewTable}`}
+                locale={{
+                  emptyText: (
+                    <div className="flex items-center justify-center py-8 text-gray-400">
+                      <div className="text-center">
+                        <SvgIcon localIcon="empty" className="w-12 h-12 mb-2" />
+                        <div>暂无数据</div>
+                      </div>
                     </div>
-                  </div>
-                )
-              }}
-            />
+                  )
+                }}
+              />
+            </ConfigProvider>
           </div>
         );
       case 'sql':
-        const sqlDispaly = queryResult?.sql || chartData?.sql || chartData?.python_code;
+        const sqlText = queryResult?.sql || chartData?.sql;
+        const pythonText = chartData?.python_code;
+        const codeLang = sqlText ? 'sql' : (pythonText ? 'python' : 'sql');
+        const codeText = sqlText || pythonText || '';
+        let displayText = codeText;
+        if (sqlText) {
+          try {
+            displayText = format(sqlText, {
+              language: 'sql',
+              tabWidth: 2,
+              keywordCase: 'upper',
+              linesBetweenQueries: 2,
+            });
+          } catch (_) {
+            displayText = sqlText;
+          }
+        }
         return (
-          <div className="bg-[#f6f6f6] rounded">
-            <CodeMirror
-              readOnly
-              value={sqlDispaly?.replace(/,/g, ',\n  ').replace(/ FROM /g, '\nFROM ').replace(/ WHERE /g, '\nWHERE ').replace(/ GROUP BY /g, '\nGROUP BY ').replace(/ ORDER BY /g, '\nORDER BY ').replace(/ LIMIT /g, '\nLIMIT ') || '暂无 SQL 语句'}
-              height="auto"
-              extensions={[sql()]}
-              editable={false}
-              basicSetup={{
-                lineNumbers: true,
-                foldGutter: true,
-                highlightActiveLine: true,
-                highlightActiveLineGutter: true,
-                dropCursor: false,
+          <div className="bg-[#f6f6f6] rounded p-2 relative">
+            <div className="absolute right-3 top-3 z-10 cursor-pointer text-gray-600 hover:text-gray-800 transition-colors">
+              <Text
+                copyable={{
+                  text: displayText,
+                  tooltips: ['复制', '已复制'],
+                }}
+              >
+              </Text>
+            </div>
+            {/* @ts-ignore */}
+            <SyntaxHighlighter
+              language={codeLang}
+              style={oneLight}
+              showLineNumbers={true}
+              customStyle={{
+                margin: 0,
+                borderRadius: '4px',
+                fontSize: '14px',
+                backgroundColor: '#f5f5f5',
+                padding: '12px',
               }}
-              theme={EditorView.theme({
-                "&": {
-                  backgroundColor: "#fff",
-                  border: "1px solid #aaa",
-                  borderRadius: "4px"
-                },
-                ".cm-content": {
-                  whiteSpace: "pre-wrap",
-                  padding: "8px",
-                  color: "#333"
-                },
-                ".cm-line": { padding: "0 8px" },
-                ".cm-gutters": {
-                  backgroundColor: "#fff",
-                  color: "#999",
-                  borderRight: "1px solid #aaa"
-                },
-                // ".cm-activeLineGutter": {
-                //   backgroundColor: "#f5f5f5"
-                // },
-                // ".cm-activeLine": {
-                //   backgroundColor: "#f5f5f5"
-                // },
-              })}
-            />
+              codeTagProps={{
+                style: {
+                  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                }
+              }}
+            >
+              {displayText || '暂无 SQL 语句'}
+            </SyntaxHighlighter>
           </div>
         );
 
@@ -1091,8 +1268,8 @@ const ViewEle: React.FC<PropsType> = ({
 
         return prevState;
       });
-
-      setIsCollapsed(!isCollapsed);
+      
+      setIsCollapsed(isSharing? true : !isCollapsed);
 
     } catch (error) {
       setMLoading(false);
@@ -1107,23 +1284,36 @@ const ViewEle: React.FC<PropsType> = ({
     }
   }
 
+  // 检查是否为已知场景
+  const isKnownChatMode = (chatMode: string) => {
+    return chatMode && (CHAT_MODE_MAP[chatMode] !== undefined || chatMode === '');
+  };
+
+  // 判断当前场景是否为未知场景
+  const isUnknownScene = chartData?.chat_mode && !isKnownChatMode(chartData.chat_mode);
+
   // 处理markdown格式数据
-  const desc = chartData?.desc || '';
-  const html: any = marked(desc)
+  // chat_with_knowledge 场景从 data_knowledge 字段获取，其他场景从 desc 字段获取
+  const desc = chartData?.chat_mode === 'chat_with_knowledge' 
+    ? (chartData?.data_knowledge || '') 
+    : (chartData?.desc || '');
+  // 先移除HTML标签，再处理markdown
+  const cleanDesc = stripHtmlTags(desc);
+  const html: any = marked(cleanDesc)
 
   return (
-    <div className={`my-2 w-full flex justify-start ${isSharing ? 'pl-[52px]' : ''}`}>
+    <div className={`my-2 w-full flex justify-start`}>
       <SvgIcon
         className="mt-6px text-[30px]"
         localIcon="view"
       />
 
       <div className="flex flex-col w-full px-2 text-left">
-        {/* 描述分析 */}
+        {/* 描述分析 / 数据知识 */}
         {data?.describe && (chartData?.chat_mode !== 'chat_with_analysis' && !chartData?.recommendQuestions && !chartData?.rewrite) && (
           <div className="w-full bg-white border border-gray-200 rounded-lg p mb-[8px]">
             <div className="p-[0.75rem] px-[1.5625rem] border-b border-gray-200 flex justify-between items-center grid grid-cols-[1fr_5fr]">
-              <span className="font-bold font-extrabold">描述分析</span>
+              <span className="font-bold font-extrabold">{chartData?.chat_mode === 'chat_with_knowledge' ? '数据知识' : '描述分析'}</span>
 
               <div className="flex items-center gap-[20px] justify-end" onClick={handleChangeStatus}>
                 {!data.arrowStatus ? (
@@ -1143,7 +1333,7 @@ const ViewEle: React.FC<PropsType> = ({
                 </span>
               </div>
             </div>
-            <div className="p-[0.75rem] px-[1.5625rem]">
+           {isCollapsed ? null : <div className="p-[0.75rem] px-[1.5625rem]">
               <div
                 ref={contentRef}
                 className={`
@@ -1151,21 +1341,44 @@ const ViewEle: React.FC<PropsType> = ({
                   ${isCollapsed ? 'max-h-0 overflow-hidden' : `max-h-[${contentHeight}px] `} 
                 `}
               >
-                <div
-                  className={`text-left whitespace-pre-wrap`}
-                  dangerouslySetInnerHTML={{ __html: html }}
-                  style={{ width: '90%', lineHeight: '1.1', }}
-                ></div>
+                {isUnknownScene ? (
+                  <div className="text-left text-gray-700" style={{ width: '90%' }}>
+                    检测到非法的场景标识
+                  </div>
+                ) : (
+                  <div
+                    className={`${s['markdown-content']} text-left whitespace-pre-wrap`}
+                    dangerouslySetInnerHTML={{ __html: html }}
+                    style={{ width: '90%', lineHeight: '1', }}
+                  ></div>
+                )}
+                {
+                  !isCollapsed &&!isSharing && (
+                    <div className={s.collapseButtonWrapper}>
+                      <Button
+                        type="primary" 
+                        shape="circle"
+                        className={s.collapseButton}
+                        onClick={() => setIsCollapsed(true)}
+                      >
+                        <UpOutlined className={s.collapseButtonArrow} />
+                        <span>收起</span>
+                      </Button>
+                    </div>
+                  )
+                }
               </div>
-            </div>
+            </div>}
           </div>
         )}
 
         {
           contextError ?
-            <div className="w-full px-2 text-left bg-[#f6f6f6] pt-4 pb-4 rounded-[8px]">{contextError}</div>
+            <div className="w-full px-2 text-left bg-[#f6f6f6] pt-4 pb-4 rounded-[8px]">{stripHtmlTags(contextError)}</div>
             : (
-              <div className="w-full px-2 text-left bg-[#f6f6f6] pt-4 rounded-[8px]">
+              // chat_with_knowledge 和未知场景不渲染数据面板
+             chartData?.chat_mode !== 'chat_with_knowledge' && !isUnknownScene && (
+              <div className="w-full px-2 text-left bg-[#f6f6f6] pt-2 rounded-[8px]">
                 <div className="rounded">
                   {chartData?.chat_mode === 'chat_excel' && chartData.file_id && (
                     <div className="mb-2 ml-2 mr-2">
@@ -1192,43 +1405,44 @@ const ViewEle: React.FC<PropsType> = ({
                   {/* chat_with_db_execute 正常对话（sql查询） */}
                   <Spin spinning={loading}>
                     {drillDownData ? <div className="text-right">
-                      <div><Button shape="circle" icon={<CloseOutlined />} onClick={() => setDrillDownData(null)} /></div>
-                      <Table columns={drillDownData?.columns || []} dataSource={drillDownData?.data || []} />
-                    </div> : (
-                      (chartData?.chat_mode === 'chat_with_db_execute' || chartData?.chat_mode === 'chat_excel') && (
-                        <div>
-                          <div className="pr-2">
-                            <div className="rounded bg-[#f6f6f6] w-full p-2">
-                              <div className="flex" style={{ width: '100%' }}>
-                                <div className="rounded bg-white" style={{ width: '100%' }}>
-                                  <ChartHeader
-                                    onTypeChange={handleTypeChange}
-                                    onShareClick={handleShareClick}
-                                    onConfigClick={handleConfigClick}
-                                    onDebugClick={handleDebugClick}
-                                    onFullscreenClick={handleFullscreenClick}
-                                    showChartIcon={showChartIcon}
-                                    chartType={chartType}
-                                    activeType={activeType}
-                                    convUid={convUid}
-                                    chatId={chatId}
-                                    spaceId={spaceId}
-                                    agentId={agentId}
-                                    chatMode={chartData?.chat_mode}
-                                    ansiSql={chartData?.sql}
-                                    onDataFetched={handleDataFetched}
-                                    onExportClick={handleDownload}
-                                    onhandleGetChartType={handleGetChartType}
-                                  />
-                                  {renderContent()}
+                        <div><Button shape="circle" icon={<CloseOutlined />} onClick={() => setDrillDownData(null)} /></div>
+                        <Table columns={drillDownData?.columns || []} dataSource={drillDownData?.data || []} />
+                      </div> : (
+                        (chartData?.chat_mode === 'chat_with_db_execute' || chartData?.chat_mode === 'chat_excel') && (
+                          <div>
+                            <div className="">
+                              <div className="rounded bg-[#f6f6f6] w-full p-2">
+                                <div className="flex" style={{ width: '100%' }}>
+                                  <div className="rounded bg-white" style={{ width: '100%' }}>
+                                    <ChartHeader
+                                      onTypeChange={handleTypeChange}
+                                      onShareClick={handleShareClick}
+                                      onConfigClick={handleConfigClick}
+                                      onDebugClick={handleDebugClick}
+                                      onFullscreenClick={handleFullscreenClick}
+                                      showChartIcon={showChartIcon}
+                                      chartType={chartType}
+                                      activeType={activeType}
+                                      convUid={convUid}
+                                      chatId={chatId}
+                                      spaceId={spaceId}
+                                      agentId={agentId}
+                                      chatMode={chartData?.chat_mode}
+                                      ansiSql={chartData?.sql}
+                                      onDataFetched={handleDataFetched}
+                                      onExportClick={handleDownload}
+                                      onhandleGetChartType={handleGetChartType}
+                                      currentTableData={queryResult.data || chartData?.data || []}
+                                    />
+                                    {renderContent()}
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )
-                    )}
-                  </Spin>
+                        )
+                      )}
+                    </Spin>
 
                   {/* chat_with_analysis 归因分析 - 待补充 */}
                   {
@@ -1256,7 +1470,6 @@ const ViewEle: React.FC<PropsType> = ({
                       onVoteChange={handleLike}
                       feedback={chartData?.feedback || {}}
                       chatMode={chartData?.chat_mode}
-                      paramsData={paramsData}
                     />
                   )}
                   {
@@ -1277,7 +1490,7 @@ const ViewEle: React.FC<PropsType> = ({
                             <a onClick={() => handleChangeBatch(chartData?.recommendQuestions)}><RedoOutlined />再换一批</a>
                           </div>
                         </>
-                      ) : '无数据'
+                      ) : '暂无相关推荐内容'
                     )
                   }
 
@@ -1300,14 +1513,15 @@ const ViewEle: React.FC<PropsType> = ({
                             <a onClick={() => handleChangeBatch(chartData?.rewrite)}><RedoOutlined />再换一批</a>
                           </div>
                         </>
-                      ) : (chartData?.err_msg || '无数据')
+                      ) : (chartData?.err_msg || '暂无相关推荐内容')
                     )
-                  }
-                </div>
-              </div>
+                   }
+                 </div>
+               </div>
+              )
             )
-        }
-      </div>
+         }
+       </div>
 
       <ShareModal
         open={shareModalVisible}
@@ -1349,6 +1563,7 @@ const ViewEle: React.FC<PropsType> = ({
               onDataFetched={handleDataFetched}
               onExportClick={handleDownload}
               onhandleGetChartType={handleGetChartType}
+              currentTableData={queryResult.data || chartData?.data || []}
             />
             <div className="flex-1 p-4 overflow-auto w-full">
               {renderContent()}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 // Minimal hook to compute antd table scroll config based on wrapper height
-export function useTableScroll(offset = 240) {
+export function useTableScroll(offset = 200) {
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const [scrollConfig, setScrollConfig] = useState<{ y?: number }>(() => ({ y: undefined }));
 
@@ -16,12 +16,10 @@ export function useTableScroll(offset = 240) {
 
         // compute available height inside wrapper
         const rect = el.getBoundingClientRect();
-        const available = window.innerHeight - rect.top - offset;
+        const available = window.innerHeight - rect.top - offset - 30;
         setScrollConfig({ y: Math.max(200, Math.floor(available)) });
-        return;
       } catch {
         setScrollConfig({ y: undefined });
-        return;
       }
     }
 

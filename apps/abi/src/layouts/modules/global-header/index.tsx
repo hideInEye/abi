@@ -55,7 +55,6 @@ const HEADER_PROPS_CONFIG: Record<UnionKey.ThemeLayoutMode, App.Global.HeaderPro
 const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, siderWidth }) => {
   const route = useRoute();
   const router = useRouter();
-  
   const authRoutes = useSelector(getAuthRoutes); // 从全局状态获取当前空间ID
   const _curspaceId = useAppSelector(getSpaceId);
 
@@ -220,6 +219,8 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
           mode="horizontal"
           selectedKeys={[route.name!]}
           onClick={e => router.push({ name: e.key })}
+          // overflowedIndicator={<span style={{ display: 'none' }}>...</span>}
+          // style={{ minWidth: 'auto', flex: 1 }}
         />
       </div>
 

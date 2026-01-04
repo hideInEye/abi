@@ -77,6 +77,14 @@ declare namespace Api {
       userId: string;
       userName: string;
     }
+
+    /** 验证码图片响应 */
+    interface CaptchaImage {
+      /** 验证码唯一标识 */
+      uuid: string;
+      /** 验证码图片 base64 */
+      img: string;
+    }
   }
 
   /**
@@ -129,10 +137,10 @@ declare namespace Api {
     /**
      * user gender
      *
-     * - "1": "male"
-     * - "2": "female"
+     * - "0": "male"
+     * - "1": "female"
      */
-    type UserGender = '1' | '2';
+    type UserGender = '0' | '1';
 
     /** user */
     type User = Common.CommonRecord<{

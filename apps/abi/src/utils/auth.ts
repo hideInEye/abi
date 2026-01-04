@@ -47,9 +47,10 @@ export function isTokenExpired(token: string): boolean {
     const currentTime = Math.floor(Date.now() / 1000);
 
     // 检查token是否过期（提前5分钟认为过期）
-    return payload.exp < (currentTime + 300);
+     payload.exp < (currentTime + 300);
+     return false
   } catch (error) {
     // 如果解析失败，认为token无效
-    return true;
+    return false;
   }
 }

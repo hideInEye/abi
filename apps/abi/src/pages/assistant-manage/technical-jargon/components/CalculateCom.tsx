@@ -1,4 +1,5 @@
 import type { FormInstance } from 'antd/es/form/Form';
+import { InfoCircleOutlined } from '@ant-design/icons';
 
 import { TableSemantics } from '@/components/tableSemantics.tsx';
 import QuoteFun from '@/pages/data-preparation/data-collection-operate/modules/QuoteFun.tsx';
@@ -12,10 +13,11 @@ import styles from '../styles/index.module.css';
 import QuoteField from './QuoteField.tsx';
 
 interface IState {
-  bizName: undefined;
-  relViewid: number;
-  remark: undefined;
-  techName: undefined;
+  expr?: string;        // 计算公式
+  relItemId?: string;   // 计算公式中引用的字段ID
+  relViewid?: number;   // 关联视图ID
+  remark?: string;      // 业务定义
+  viewId?: number;      // 初始化数据集视图ID
 }
 
 interface PropsType {
@@ -92,6 +94,18 @@ const CalculateCom: FC<PropsType> = memo(({ dispatch, form, isEdit, state }) => 
     }
   }, [form, state]);
 
+  // 初始化时，如果有计算公式但没有 relItemId，自动计算并设置
+  useEffect(() => {
+    if (state.expr && !state.relItemId) {
+      const extractedIds = extractUniqueIds(state.expr);
+      if (extractedIds.length > 0) {
+        dispatch({
+          relItemId: extractedIds.join(',')
+        });
+      }
+    }
+  }, [state.expr, state.relItemId]);
+
   function extractUniqueIds(expression: string): string[] {
     if (!expression) {
       return [];
@@ -109,12 +123,12 @@ const CalculateCom: FC<PropsType> = memo(({ dispatch, form, isEdit, state }) => 
 
   const handleValuesChange = (changeValues: any) => {
     const obj = changeValues;
-    if (!changeValues.expr) {
-      obj.relItemId = '';
+    // 如果修改了计算公式，自动计算并更新 relItemId
+    if ('expr' in changeValues) {
+      obj.relItemId = extractUniqueIds(changeValues.expr || '').join(',');
     }
     dispatch({
       ...obj,
-      relItemId: extractUniqueIds(obj.expr).join(','),
       relViewid: viewDataId
     });
   };
@@ -166,18 +180,35 @@ const CalculateCom: FC<PropsType> = memo(({ dispatch, form, isEdit, state }) => 
       />
       <AForm.Item
         label="业务定义"
-        name="bizName"
+        name="remark"
         rules={[{ message: '请输入业务定义', required: true }]}
       >
-        <AInput placeholder="请输入业务定义" />
+        <AInput.TextArea
+          autoSize={{ minRows: 2 }}
+          placeholder="请输入业务定义"
+        />
       </AForm.Item>
       <AForm.Item
         label={
-          <div className="flex">
+          <div className="flex items-center">
             <div className={styles.requiredLabel}>计算公式：</div>
             <div>
-              根据所定义的表语义，能够明确界定相关指标的具体范围，请参照右侧所列指标及其对应的计算公式，在下方文本框中输入相应的计算公式
+              从右侧[引用字段]、[引用函数]中选择元素，定义业务术语的计算表达式。
             </div>
+            <ATooltip
+              placement="top"
+              title={
+                <div style={{ maxWidth: 420 }}>
+                  <div>[业务术语] = 引用函数(引用字段A) + 算术运算符 + 引用函数(引用字段B)</div>
+                  <div style={{ marginTop: 8 }}>业务术语：订单成功率</div>
+                  <div>COUNT(CASE WHEN status = 'success' THEN order_id END) / COUNT(order_id)</div>
+                  <div style={{ marginTop: 8 }}>业务术语：净利润率</div>
+                  <div>(SUM(revenue) - SUM(total_cost)) / SUM(revenue)</div>
+                </div>
+              }
+            >
+              <InfoCircleOutlined className="ml-2 cursor-pointer text-gray-500" />
+            </ATooltip>
           </div>
         }
       >

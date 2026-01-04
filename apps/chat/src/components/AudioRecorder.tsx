@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import RecordRTC from "recordrtc";
 import { message } from "antd";
 import { AudioOutlined, LoadingOutlined } from "@ant-design/icons";
-import YuyinIcon from "../assets/svg-icon/yuyin.svg";
+import YuyinIcon from "../assets/svg-icon/yuyin2.svg";
 import styles from './AudioRecorder.module.css';
 import { checkMicrophonePermission } from '../utils/permissionUtils';
 
@@ -171,14 +171,14 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onTranscribed, disabled =
 
   return (
     <div 
-      className={`cursor-pointer p-1 rounded ${
-        disabled || isTranscribing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+      className={`cursor-pointer rounded ${
+        disabled || isTranscribing ? 'opacity-50 cursor-not-allowed' : 'hover:text-blue-500'
       }`}
       onClick={handleClick}
       title={recording ? "点击停止录音" : isTranscribing ? "正在识别中..." : "点击开始语音输入"}
     >
       {isTranscribing ? (
-        <LoadingOutlined className="w-5 h-5 text-red-500" />
+        <LoadingOutlined className="w-5 h-5 text-blue-500" />
       ) : recording ? (
         <img 
           src={YuyinIcon} 
@@ -186,7 +186,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onTranscribed, disabled =
           alt="语音识别中" 
         />
       ) : (
-        <AudioOutlined className="w-5 h-5 text-gray-600 hover:text-blue-500" />
+        <AudioOutlined className="w-4 h-5 text-blue-600" style={{fontSize:'18px'}}/>
       )}
     </div>
   );

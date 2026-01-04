@@ -57,7 +57,7 @@ export function Component() {
     <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
       <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper">
         <AFlex className="gap-6">
-          <ASpace direction="vertical">
+          <ASpace direction="vertical" className='min-w-100px w-100'>
             <AInput
               placeholder="请输入表语义组检索"
               onChange={e => searchGroupSchema(e)}
@@ -68,10 +68,7 @@ export function Component() {
             />
           </ASpace>
 
-          <ASpace
-            className="flex-1"
-            direction="vertical"
-          >
+          <div className="w-40% flex-1">
             <ASpace className="flex justify-between">
               <AInput
                 placeholder="请输入表语义检索"
@@ -85,6 +82,7 @@ export function Component() {
                   setDrawerTitle('新增表语义');
                   setTableModalOpen(true);
                 }}
+                disabled={!groupId}
               >
                 新增表语义
               </AButton>
@@ -95,7 +93,7 @@ export function Component() {
               editTable={editTable}
               tableSchemaList={tableSchemaList}
             />
-          </ASpace>
+          </div>
         </AFlex>
         <SemanticsTable updateTableList={updateTableList} />
       </ACard>

@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { querySpaceRoleList } from '@/service/api/space';
 
 import type { PermissionItem } from '../types';
+import { message } from 'antd';
 
 interface PermissionManagementProps {
   defaultPermissionKeys: any[];
@@ -38,6 +39,7 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
 
   const sure = () => {
     if (alreadySelectedPermission.length === 0) {
+      message.warning('未选择空间角色权限');
       return;
     }
 

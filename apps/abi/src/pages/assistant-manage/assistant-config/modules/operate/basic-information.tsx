@@ -9,11 +9,10 @@ interface IState {
 }
 interface PropsType {
   readonly dispatch: (obj: object) => void;
-  setHasChange: Dispatch<SetStateAction<boolean>>;
   readonly state: IState;
 }
 
-const BasicInformation: FC<PropsType> = memo(({ dispatch, setHasChange, state }) => {
+const BasicInformation: FC<PropsType> = memo(({ dispatch, state }) => {
   const [form] = useForm();
 
   useEffect(() => {
@@ -22,7 +21,6 @@ const BasicInformation: FC<PropsType> = memo(({ dispatch, setHasChange, state })
 
   const handleValuesChange = (changeValues: any) => {
     dispatch(changeValues);
-    setHasChange(true);
   };
   return (
     <AForm

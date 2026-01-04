@@ -1,6 +1,6 @@
 import { handleTree } from '@/utils/manage';
 
-import { apiRequest, request } from '../request';
+import { apiRequest, chatRequest, request } from '../request';
 
 /** get role list */
 export async function fetchGetRoleList(params?: any) {
@@ -190,11 +190,20 @@ export function fetchEditModel(data: any) {
   });
 }
 
+// 删除模型
+export function deleteModel (id:number) {
+  return apiRequest({
+    method:'delete',
+    url:`/system/v1/model/${id}`
+  })
+}
+
 // 大模型测试连接
 export function fetchTestModel(data: any) {
-  return apiRequest({
+  return chatRequest({
+    baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: `/api/generate`
+    url: `/chat-proxy/api/v1/model/test/connect`
   });
 }

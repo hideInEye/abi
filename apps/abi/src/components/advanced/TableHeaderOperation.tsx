@@ -51,9 +51,8 @@ const TableHeaderOperation: FC<Props> = ({
         <>
           {add ? (
             <Button
-              ghost
-              icon={<IconIcRoundPlus className="text-icon" />}
-              size="small"
+              // icon={<IconIcRoundPlus className="text-icon" />}
+              style={{ borderRadius: '4px', padding: '4px 25px' }}
               type="primary"
               onClick={add}
             >
@@ -107,13 +106,13 @@ const TableHeaderOperation: FC<Props> = ({
           ) : null}
         </>
       )}
-      <Button
+      {/* <Button
         icon={<IconMdiRefresh className={classNames('text-icon', { 'animate-spin': loading })} />}
         size="small"
         onClick={refresh}
       >
         {t('common.refresh')}
-      </Button>
+      </Button> */}
 
       <APopover
         placement="bottomRight"
@@ -125,12 +124,12 @@ const TableHeaderOperation: FC<Props> = ({
           />
         }
       >
-        <Button
+        {/* <Button
           icon={<IconAntDesignSettingOutlined />}
           size="small"
         >
           {t('common.columnSetting')}
-        </Button>
+        </Button> */}
       </APopover>
 
       {suffix}

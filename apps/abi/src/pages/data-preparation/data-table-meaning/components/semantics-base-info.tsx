@@ -88,7 +88,7 @@ export default function DataTableMeaningBaseInfo() {
         label="表语义"
         labelCol={{ span: 3 }}
         name="chineseName"
-        rules={[{ message: '请输入表语义', required: true }]}
+        rules={[{ message: '请输入表语义', required: true }, { max: 50, message: '表语义最多50个字符' }]}
       >
         <AInput placeholder="表语义" />
       </AForm.Item>
@@ -100,6 +100,7 @@ export default function DataTableMeaningBaseInfo() {
         name="englishName"
         rules={[
           { message: '请输入英文名', required: true },
+          { max: 50, message: '英文名最多50个字符' },
           {
             message: '请输入英文字符,以下划线分割',
             pattern: /^[\u4E00-\u9FA5a-zA-Z_]+$/
@@ -113,8 +114,9 @@ export default function DataTableMeaningBaseInfo() {
         label="描述"
         labelCol={{ span: 3 }}
         name="desc"
+        rules={[{ max: 500, message: '描述最多500个字符' }]}
       >
-        <AInput.TextArea placeholder="描述" />
+        <AInput.TextArea placeholder="描述" maxLength={500} showCount />
       </AForm.Item>
     </AForm>
   );

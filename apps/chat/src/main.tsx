@@ -1,6 +1,7 @@
 declare global {
   interface Window {
     APP_CONFIG: any;
+    onTokenExpired?: () => Promise<void>;
   }
 }
 
@@ -17,21 +18,26 @@ import { message } from 'antd';
 // import { store } from './store/redux'; // 只导入store，移除persistor
 // 移除PersistGate导入
 
+const configPath = import.meta.env.MODE==='development' ? 'http://localhost:5173/config.json': '/chat-ui/config.json'
 function render(props: any) {
-  fetch('/chat-ui/config.json')
+  fetch(configPath)
     .then((res) => res.json())
     .then((config) => {
       console.log('config', config);
       window.APP_CONFIG = config;
       
-      const { container, basename } = props;
+      const { container, basename, onTokenExpired } = props;
+      // 将主应用传递的 token 过期处理函数挂载到 window 对象
+      if (onTokenExpired) {
+        window.onTokenExpired = onTokenExpired;
+      }
       // 避免根id #root 与其他的 DOM 冲突
       createRoot(container ? container.querySelector('#root') : document.getElementById('root')!).render(
         <StrictMode>
           {/* redux Provider已注释 */}
           {/* <Provider store={store}> */}
             {/* 移除PersistGate包装器，直接使用BrowserRouter */}
-            <BrowserRouter basename={(qiankunWindow as any)?.__POWERED_BY_QIANKUN__ ? basename : '/chat-ui'}>
+            <BrowserRouter basename={(qiankunWindow as any)?.__POWERED_BY_QIANKUN__ ? basename : '/'}>
               <Routes>
                 <Route path="/" element={<App />} />
               </Routes>
@@ -56,6 +62,7 @@ const initQianKun = () => {
     },
     unmount(props: any) {
       console.log('unmount');
+      localStorage.removeItem('chatId')
       // const { container } = props;
       // const mountRoot = container?.querySelector('#root');
       // ReactDOM.unmountComponentAtNode(

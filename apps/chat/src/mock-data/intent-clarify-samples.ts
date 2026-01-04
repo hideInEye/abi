@@ -8,24 +8,44 @@ export const mockIntentClarifyData = {
         "chat_mode": "chat_with_db_execute",
         "query_mode": "query_detail",
         "confirm": {
-          "time_range": [
+          // "time_range": [
+          //   {
+          //     "text": "时间",
+          //     "candidate": [
+          //       {
+          //         "text": "交易时间",
+          //         "field": "deal_time"
+          //       },
+          //       {
+          //         "text": "创建时间",
+          //         "field": "create_time"
+          //       },
+          //       {
+          //         "text": "监测时间",
+          //         "field": "monitor_time"
+          //       }
+          //     ]
+          //   }
+          // ],
+          "time_range":[
             {
-              "text": "时间",
-              "candidate": [
+              "text":"时间",
+              "field":"bank_transactions_transaction_flow",
+              "granularity":"年",
+              "operator":"=",
+              "value" :"2019",
+              "isCalculated":"false",
+              "candidate":[
                 {
-                  "text": "交易时间",
-                  "field": "deal_time"
+                  "text":"交易时间",
+                  "field":"bank_transactions_transaction_flow",
+                  "isCalculated":"false"
                 },
                 {
-                  "text": "创建时间",
-                  "field": "create_time"
-                },
-                {
-                  "text": "监测时间",
-                  "field": "monitor_time"
-                }
-              ]
-            }
+                  "text":"账单流水",
+                  "field":"bank_transactions_bill_flow",
+                  "isCalculated":"false"
+                }]}
           ],
           "dimensions": [],
           "target_indicators": [
@@ -85,7 +105,7 @@ export const mockIntentClarifyData = {
     ]
   },
 
-  // 2. 问数场景 - 聚合查询1
+  // 2. 问数场景 - 聚合查询
   queryAggregationSample: {
     // "agent_label": "intent_clarify",
     // "agent_step": [
@@ -173,8 +193,60 @@ export const mockIntentClarifyData = {
               "text": "标签为1的账号",
               "field": "",
               "isCalculated": "false"
+            },
+            {
+              "text": "标签为2的账号",
+              "field": "",
+              "isCalculated": "false"
             }
           ],
+          "target_indicators": [],
+          "filters": [],
+          "group_by": "",
+        },
+        "recommend": {
+          "time_range": [
+            // 测试用例1: 年季度 + range 操作符（2023-Q1 到 2023-Q4）
+            {
+              "text": "订单时间",
+              "field": "order_time",
+              "granularity": "年季度",
+              "operator": "range",
+              "value": "2023-Q1,2023-Q4",
+              "candidate": []
+            },
+            
+            // 测试用例2: 年月日 + in 操作符（多个季度）
+            {
+              "text": "报表时间",
+              "field": "report_time",
+              "granularity": "年月日",
+              "operator": "in",
+              "value": "2023-1-1,2023-1-2,2023-1-3",
+              "candidate": []
+            },
+            
+            // 测试用例3: 年月 + range 操作符
+            {
+              "text": "订单时间",
+              "field": "",
+              "granularity": "年月",
+              "operator": "range",
+              "value": "2024-01,2024-03",
+              "candidate": []
+            },
+            
+            // 测试用例4: 年月 + in 操作符
+            {
+              "text": "订单时间",
+              "field": "",
+              "granularity": "年",
+              "operator": "in",
+              "value": "2023,2024,2025",
+              "candidate": []
+            },
+          ],
+          "dimensions": [],
           "target_indicators": [
             {
               "text": "累计交易金额",
@@ -200,23 +272,33 @@ export const mockIntentClarifyData = {
                   "value": "20"
                 }
               ]
-            }
-          ],
-          "filters": [],
-          "group_by": "",
-        },
-        "recommend": {
-          "time_range": [
+            },
             {
-              "text": "今年以来",
+              "text": "指标名称",
               "field": "",
-              "operator": "range",
-              "value": "2025-01-01,2025-10-23",
-              "candidate": []
+              "function": "sum",
+              "isCalculated": "false",
+              "qualifier": [
+                {
+                  "type": "dim",
+                  "text": "水库名称",
+                  "field": "SKMC",
+                  "operator": "in",
+                  "value": "三峡水库"
+                }
+              ],
+              "group_filters": [ // 分组过滤条件，适用于问数
+                {
+                  "operator": ">",
+                  "value": "10"
+                },
+                {
+                  "operator": "<=",
+                  "value": "20"
+                }
+              ]
             }
           ],
-          "dimensions": [],
-          "target_indicators": [],
         }
       }
     ]
@@ -260,7 +342,7 @@ export const mockIntentClarifyData = {
               "candidate": [
                 {
                   "text": "未来入库流量",
-                  "field": "RKLL",
+                  "field": "rgajkajcaivnawvljslb.SDJSL",
                   "function": "AVG",
                   "qualifier": [
                     {
@@ -274,7 +356,7 @@ export const mockIntentClarifyData = {
                 },
                 {
                   "text": "未来出库流量",
-                  "field": "CKLL",
+                  "field": "rgajkajcaivnawvljslb.SDJSL",
                   "function": "AVG",
                   "qualifier": [
                     {
@@ -288,7 +370,7 @@ export const mockIntentClarifyData = {
                 },
                 {
                   "text": "未来水位",
-                  "field": "SW",
+                  "field": "rgajkajcaivnawvljslb.SDJSL",
                   "function": "AVG",
                   "qualifier": [
                     {

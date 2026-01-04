@@ -8,7 +8,7 @@ import { EditGroup } from '../components/semantics-edit-group';
 import { useTableSemanticsStore } from '../store/useTableSemanticsStore';
 import { useTableStore } from '../store/useTableStore';
 import type { groupitem } from '../types';
-
+import './index.scss'
 const { Panel } = Collapse;
 
 interface DataGroupProps {
@@ -68,9 +68,8 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
   return (
     <div>
       <EditGroup updateGroupData={handleUpdateData} />
-      <Collapse defaultActiveKey={['1']}>
+      <Collapse defaultActiveKey={['1']} className='space'>
         <Panel
-          className="min-w-100"
           header="表语义组"
           key="1"
           extra={
@@ -123,11 +122,19 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
                   style={{
                     borderRadius: '4px',
                     cursor: 'pointer',
-                    padding: '8px'
+                    padding: '8px',
+                    maxWidth: '100px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
                   }}
                   onClick={() => groupNameClick(item)}
                 >
-                  {item.groupName}
+                 <APopover
+                 content={item.groupName}
+                 >
+                 {item.groupName}
+                 </APopover>
                 </div>
               </List.Item>
             )}

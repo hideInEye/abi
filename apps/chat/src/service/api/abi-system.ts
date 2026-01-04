@@ -1,23 +1,24 @@
 import dayjs from "dayjs";
 import request from "../request/index";
+import { getChatbiBaseApi } from '../../utils/index'
 
 // 获取部门列表
 export function fetchDeptList(params: any) {
   return request({
-    url: "/api/abi-system/dept/list",
+    url: "/abi-system/dept/list",
     method: "get",
     params,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
 // 获取用户列表
 export function fetchUserList(params: { dept_id?: string | number }) {
   return request({
-    url: "/api/abi-system/user/list",
+    url: "/abi-system/user/list",
     method: "get",
     params,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
@@ -44,22 +45,40 @@ export function fetchOperate(_data: any) {
     agentId: _data.agent_id,
     bizName: _data.biz_name,
     groupId: _data.group_id,
-    chatConfig: _data.chat_config,
+    // chatConfig: _data.chat_config,
     lastQuestion: _data.last_question,
     dbName: _data.dbName,
     modelName: _data.modelName,
     type: _data.type,
     name: _data.name,
-    operator: _data.operator
+    operator: _data.operator,
+    operationTime: dayjs().format('YYYY-MM-DD HH:mm:ss')
   }
   return request({
-    url: "/api/abi-system/record/add",
+    url: "/abi-system/record/add",
     method: "post",
     data,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: getChatbiBaseApi()
   });
 }
 
+// 新版收藏
+export function fetchOperateNew(data: any) {
+  return request({
+    url: "/api/abi-system/favorite/addOrRemove",
+    method: "post",
+    data,
+  });
+}
+
+// 查询是否收藏
+export function fetchIsFavorite(data: any) {
+  return request({
+    url: "/api/abi-system/favorite/status",
+    method: "get",
+    params: data,
+  });
+}
 /**
  * 获取部门列表
  *
@@ -72,8 +91,8 @@ export function queryDeptList({ dataSource, onenetToken }: { dataSource: 0 | 3; 
   return request({
     data: { dataSource, onenetToken },
     method: 'post',
-    url: '/api/abi-system/dept/allList',
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    url: '/abi-system/dept/allList',
+    baseURL: getChatbiBaseApi()
   });
 }
 
@@ -91,3 +110,11 @@ export function queryUserList(
 }
 
 
+// 邮件分享
+export function fetchShareEmail(data: any) {
+  return request({
+    url: "/api/abi-system/shared/add",
+    method: "post",
+    data,
+  });
+}

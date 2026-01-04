@@ -99,7 +99,10 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
           disabled={isEdit}
           options={groupOptions}
           placeholder="选择表语义组"
-          onChange={setGroupId}
+          onChange={(v)=>{
+            setGroupId(v)
+            form?.setFieldsValue({ semanticSchemaId: null })
+          }}
         />
       </AForm.Item>
 

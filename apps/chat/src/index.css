@@ -75,3 +75,27 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* 移除 Switch 组件点击时的焦点边框 */
+.ant-switch:focus,
+.ant-switch:focus-visible,
+.ant-switch:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* 清除按钮聚焦黑框 */
+.no-focus-border-btn.ant-btn {
+  outline: none !important;
+}
+
+/* 深度思考和上传文件按钮hover效果（仅未激活状态） */
+.chat-action-btn.ant-btn:hover {
+  background-color: #F1F1F1 !important;
+  color: #333 !important;
+}
+
+/* 激活状态的按钮不应用hover背景 */
+.chat-action-btn-active.ant-btn:hover {
+  background-color: #F1F1F1 !important;
+}
