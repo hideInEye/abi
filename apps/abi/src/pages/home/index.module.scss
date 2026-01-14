@@ -1,73 +1,145 @@
 .container {
-  padding: 0;
-  height: 100%;
-  :global {
-    @media (min-width: 768px) {
-      .ant-card-body {
-        padding: 4px;
-      }
-    }
+  padding: 34px 40px;
+  background-color: #fff;
+}
 
-    @media (min-width: 1024px) {
-      .ant-card-body {
-        padding: px;
-      }
-    }
-    @media (min-width: 1280px) {
-      .ant-card-body {
-        padding: 16px;
-      }
-    }
-    @media (min-width: 1536px) {
-      .ant-card-body {
-        padding: 24px;
-      }
-    }
-    @media (min-width: 1920px) {
-      .ant-card-body {
-        padding: 32px;
-      }
-    }
-    @media (min-width: 2560px) {
-      .ant-card-body {
-        padding: 48px;
-      }
-    }
+/* FastCreate.scss */
+.fast-create {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #ffffff;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 24px 64px;
+}
+
+.fast-create__grid{
+  display:flex;
+  align-items:flex-start;
+  gap: 0;                 /* 关键：不要用 gap 充当空白 */
+  justify-content: space-between;  /* 让四个 step 均匀分布 */
+}
+/* step 不要再平均分配宽度 */
+.fast-create__step{
+  position:relative;
+  display:flex;
+  align-items:flex-start;
+  gap:16px;
+
+  flex: 0 0 auto;         /* 关键：宽度由内容决定 */
+  min-width: 0;
+}
+
+/* 给每个 step 一个固定“占位宽”，保证布局稳定（可调） */
+.fast-create__step{
+  width: 220px;           /* 你可以调：200~280，看设计稿 */
+}
+
+/* 连接器：从当前 step 右边开始，画到下一个 step 左边之前一点 */
+.fast-create__step:not(.is-last)::after{
+  content:"";
+  position:absolute;
+  top: 32px;
+  left: calc(100% + 12px);
+  right: -9999px;         /* 先拉满 */
+  border-top: 2px dashed #D8D8D8;
+  pointer-events:none;
+}
+
+/* 头部：图标区域 */
+.fast-create__head {
+  display: flex;
+  align-items: center;
+}
+
+.fast-create__iconWrap {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: #EEF2FF;
+  box-shadow: 0 12px 28px rgba(102, 133, 255, 0.15);
+}
+
+.fast-create__icon {
+  width: 48px;
+  height: 48px;
+  display: block;
+}
+
+/* 文案 */
+.fast-create__title {
+  margin: 0 !important;
+  color: #1C2A4F !important;
+}
+
+.fast-create__desc {
+  white-space: pre-line;
+  color: #7E8AA5;
+  font-size: 14px;
+  line-height: 24px;
+}
+
+/* ====== 连接器：虚线 + 箭头 ====== */
+/* 给非最后一个 step 画连接线 */
+.fast-create__step:not(.is-last)::after {
+  content: "";
+  position: absolute;
+
+  /* 从当前 step 的右侧开始画 */
+  left: calc(100% + 18px);
+
+  /* 对齐图标中心：图标 64px，高度中心=32px */
+  top: 32px;
+
+  /* 线长：gap(40px) - 左右留白(8px+14px) = 18px */
+  width: calc(220px - 8px - 14px);
+
+  border-top: 2px dashed #D8D8D8;
+  pointer-events: none;
+}
+
+/* 箭头三角（放在虚线末端） */
+.fast-create__step:not(.is-last)::before {
+  content: "";
+  position: absolute;
+
+  /* 虚线起点(100%+8px) + 虚线宽度 */
+  left: calc(100% + 18px + (220px - 8px - 14px));
+  top: 33px;
+
+  transform: translateY(-50%);
+
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid #D8D8D8;
+  pointer-events: none;
+}
+
+/* ====== 响应式：窄屏允许换行，并隐藏连接线（避免跨行乱连） ====== */
+@media (max-width: 1199px) {
+  .fast-create__grid {
+    flex-wrap: wrap;
   }
 
-  .space-item {
-    :global {
-      @media (min-width: 768px) {
-        .ant-card-body {
-          padding: 4px;
-        }
-      }
+  .fast-create__step {
+    flex: 1 1 calc(50% - 20px); /* 两列 */
+  }
 
-      @media (min-width: 1024px) {
-        .ant-card-body {
-          padding: 6px;
-        }
-      }
-      @media (min-width: 1280px) {
-        .ant-card-body {
-          padding: 8px;
-        }
-      }
-      @media (min-width: 1536px) {
-        .ant-card-body {
-          padding: 10px;
-        }
-      }
-      @media (min-width: 1920px) {
-        .ant-card-body {
-          padding: 12px;
-        }
-      }
-      @media (min-width: 2560px) {
-        .ant-card-body {
-          padding: 14px;
-        }
-      }
-    }
+  .fast-create__step::before,
+  .fast-create__step::after {
+    display: none;
   }
 }
+
+@media (max-width: 767px) {
+  .fast-create__step {
+    flex: 1 1 100%; /* 一列 */
+  }
+}
+

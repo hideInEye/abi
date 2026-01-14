@@ -2,7 +2,6 @@ import { RouterProvider } from '@sa/simple-router';
 import { useUpdateEffect } from 'ahooks';
 import type { WatermarkProps } from 'antd';
 
-import { info } from '@/constants/app';
 import { useTokenCheck } from '@/hooks/business/useTokenCheck';
 import { router } from '@/router';
 import { getLocale } from '@/store/slice/app';

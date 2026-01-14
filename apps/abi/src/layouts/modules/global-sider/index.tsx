@@ -1,43 +1,86 @@
-import DarkModeContainer from '@/components/stateless/common/DarkModeContainer.tsx';
-import SidebarCollapseButton from '@/components/stateful/SidebarCollapseButton';
-import { GLOBAL_SIDER_MENU_ID } from '@/constants/app';
-import { getDarkMode } from '@/store/slice/theme';
+import { default as assistIcon, default as DeassistIcon } from '@/assets/imgs/home/assis.png'
+import componentsIcon from '@/assets/imgs/home/components.png'
+import DecomponentsIcon from '@/assets/imgs/home/decomponents.png'
+import DedialogueIcon from '@/assets/imgs/home/dedialogue.png'
+import DehomeIcon from '@/assets/imgs/home/dehome.png'
+import DeworkbenchIcon from '@/assets/imgs/home/deworkbench.png'
+import dialogueIcon from '@/assets/imgs/home/dialogue.png'
+import homeIcon from '@/assets/imgs/home/home.png'
+import appLogo from '@/assets/imgs/home/home_logo.png'
+import DeuserIcon from '@/assets/imgs/home/hoveruser.png'
+import userIcon from '@/assets/imgs/home/user.png'
+import workbenchIcon from '@/assets/imgs/home/workbench.png'
 
-import GlobalLogo from '../global-logo';
+import { Layout } from 'antd'
+import { useState } from 'react'
+import { useRouter } from '~/packages/simple-router/src'
+const { Sider } = Layout
 
-interface Props {
-  headerHeight: number;
-  inverted: boolean;
-  isHorizontalMix: boolean;
-  isVerticalMix: boolean;
-  siderCollapse: boolean;
-}
+const primaryMenuData = [
+  { key: 'home', label: '主页', icon: homeIcon, checkIcon: DehomeIcon,url: '/home' },
+  { key: 'dialogue', label: '对话', icon: dialogueIcon, checkIcon: DedialogueIcon ,url: '/ai-assistant/conversational-analysis' },
+  { key: 'workbench', label: '工作台', icon: workbenchIcon, checkIcon: DeworkbenchIcon ,url: '/workbench' },
+  { key: 'components', label: '组件', icon: componentsIcon, checkIcon: DecomponentsIcon ,url: '/components' },
+]
 
-const GlobalSider: FC<Props> = memo(({ headerHeight, inverted, isHorizontalMix, isVerticalMix, siderCollapse }) => {
-  const darkMode = useAppSelector(getDarkMode);
+const secondaryMenuData = [
+  { key: 'assist', icon: assistIcon, checkIcon: DeassistIcon },
+  { key: 'user', icon: userIcon, checkIcon: DeuserIcon },
+]
 
-  const showLogo = !isVerticalMix && !isHorizontalMix;
-
-  const darkMenu = !darkMode && !isHorizontalMix && inverted;
-
+const GlobalSider: FC = memo(() => {
+  const [selectedMenuKey, setSelectedMenuKey] = useState('home')
+  const [selectedSecondaryMenuKey, setSelectedSecondaryMenuKey] = useState('')
+  const router = useRouter()
+  const redirectHome = () => {
+    router.push('/home', {
+      query: {
+        redirect: '/home'
+      }
+    })
+  }
   return (
-    <DarkModeContainer
-      className="size-full flex-col-stretch shadow-sider relative"
-      inverted={darkMenu}
-    >
-      {showLogo && (
-        <GlobalLogo
-          showTitle={!siderCollapse}
-          style={{ height: `${headerHeight}px` }}
-        />
-      )}
-      <div
-        className={showLogo ? 'flex-1-hidden' : 'h-full'}
-        id={GLOBAL_SIDER_MENU_ID}
-      />
-      <SidebarCollapseButton />
-    </DarkModeContainer>
-  );
-});
+    <Sider width={88} className="fixed left-0 top-0 h-screen bg-white shadow-[6px_0_18px_rgba(67,103,172,0.08)]">
+      <div className="flex h-full flex-col justify-between items-center py-[24px]">
+        <div className="mt-6 mb-10 flex items-center justify-center cursor-pointer" onClick={redirectHome}>
+          <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_10px_24px_rgba(51,102,255,0.28)]" />
+        </div>
+        <div className="flex gap-[27px] flex-col text-[#848FA2]">
+          {primaryMenuData.map((item) => {
+            const isActive = item.key !== selectedMenuKey
+            return (
+              <div
+                onClick={() => {
+                  setSelectedMenuKey(item.key)
+                  router.push(item.url)
+                }}
+                className={`flex items-center  px-[12px] py-[11px] flex-col  gap-[9px] cursor-pointer ${!isActive ? 'bg-[#fff] shadow-[0px_4px_6px_0px_rgba(137,147,166,0.15)] rounded-[10px] text-[#3366FF]' : ''}`}
+              >
+                <img src={isActive ? item.checkIcon : item.icon} alt={item.label} className="h-6 w-6" />
+                <span className="text-[16px]">{item.label}</span>
+              </div>
+            )
+          })}
+        </div>
+        <div className="flex gap-[24px] flex-col text-[#848FA2]">
+          {secondaryMenuData.map((item) => {
+            const isActive = item.key === selectedSecondaryMenuKey
+            return (
+              <div
+                onClick={() => {
+                  setSelectedSecondaryMenuKey(item.key)
+                  setSelectedMenuKey('')
+                }}
+              >
+                <img src={isActive ? item.checkIcon : item.icon} className="h-6 w-6" />
+                {/* <span className="text-[16px]">{item.label}</span> */}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </Sider>
+  )
+})
 
-export default GlobalSider;
+export default GlobalSider

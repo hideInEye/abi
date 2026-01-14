@@ -1,19 +1,20 @@
-import { useEffect, useState } from 'react';
-import { RightOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react'
+import { PlusOutlined, RightOutlined } from '@ant-design/icons'
 
-import { deleteSpace, spaceList } from '@/service/api/data-space';
-import { fetchHomeData } from '@/service/api/home';
-import { useRouter } from '~/packages/simple-router/src';
+import { deleteSpace, spaceList } from '@/service/api/data-space'
+import { fetchHomeData } from '@/service/api/home'
+import { useRouter } from '~/packages/simple-router/src'
 
-import { SpaceEdit } from '../space-list/components/SpaceEdit';
-import { SpaceItem } from '../space-list/components/SpaceItem';
-import type { ISpaceItem } from '../space-list/types';
+import { SpaceEdit } from '../space-list/components/SpaceEdit'
+import { SpaceItem } from '../space-list/components/SpaceItem'
+import type { ISpaceItem } from '../space-list/types'
 
-import { DataAssets } from './modules/DataAssets';
-import { FastCreate } from './modules/FastCreate';
-import { clearTabs } from '@/store/slice/tab';
-import s from './index.module.scss';
-import cx from 'classnames';
+import { DataAssets } from './modules/DataAssets'
+import { FastCreate } from './modules/FastCreate'
+import { clearTabs } from '@/store/slice/tab'
+import s from './index.module.scss'
+import { HomeTitle } from './modules/home_title'
+import { ApprovSpace } from './modules/approv_space'
 /**
  * 首页组件
  * 系统的主要仪表板页面，提供数据概览和快速访问入口
@@ -24,105 +25,108 @@ import cx from 'classnames';
  * 支持空间管理操作，作为用户进入系统后的第一个页面
  */
 export function Component() {
-  const [homeData, setHomeData] = useState<any>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editSpace, setEditSpace] = useState<ISpaceItem | null>(null);
-  const dispatch = useAppDispatch();
+  const [homeData, setHomeData] = useState<any>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editSpace, setEditSpace] = useState<ISpaceItem | null>(null)
+  const dispatch = useAppDispatch()
 
-  const { push } = useRouter();
+  const { push } = useRouter()
 
   async function getHomeData() {
     try {
       // 获取首页基础数据
-      const { data: homeData } = await fetchHomeData();
-      
+      const { data: homeData } = await fetchHomeData()
+
       const spaceRes = await spaceList({
         isAsc: 'desc',
         orderByColumn: 'spaceId',
         pageNum: 1,
-        pageSize: 5
-      });
-      
+        pageSize: 7,
+      })
+
       // 合并数据，用空间列表API的数据替换原有的spaceList
-      const spaceData = (spaceRes as any).response?.data?.rows || [];
+      let spaceData = (spaceRes as any).response?.data?.rows || []
+
+      if (spaceData && spaceData.length > 0) {
+        spaceData = spaceData.map((item: any) => ({
+          ...item,
+          type: 'space',
+        }))
+        spaceData.unshift({
+          spaceId: 0,
+          spaceName: '创建应用',
+          type: 'add',
+        })
+      }
       const mergedData = {
         ...homeData,
-        spaceList: spaceData.length > 0 ? spaceData : (homeData.spaceList || [])
-      };
-      
-      setHomeData(mergedData);
+        spaceList: spaceData.length > 0 ? spaceData : homeData.spaceList || [],
+      }
+
+      setHomeData(mergedData)
     } catch (error) {
-      console.error('获取首页数据失败:', error);
+      console.error('获取首页数据失败:', error)
       // 如果出错，仍然尝试获取基础首页数据
-      const { data } = await fetchHomeData();
-      setHomeData(data);
+      const { data } = await fetchHomeData()
+      setHomeData(data)
     }
   }
 
   useEffect(() => {
-    getHomeData();
-  }, []);
+    getHomeData()
+  }, [])
 
   async function deleteSpaceHandler(space: ISpaceItem) {
-    const { data } = await deleteSpace([space.spaceId]);
-    console.log('deleteSpaceHandler', data);
-    localStorage.removeItem('spaceId');
-    dispatch(clearTabs());
-    getHomeData();
+    const { data } = await deleteSpace([space.spaceId])
+    console.log('deleteSpaceHandler', data)
+    localStorage.removeItem('spaceId')
+    dispatch(clearTabs())
+    getHomeData()
   }
 
   function editSpaceHandler(space: ISpaceItem) {
-    setDrawerOpen(true);
-    setEditSpace(space);
+    setDrawerOpen(true)
+    setEditSpace(space)
   }
 
   function updateSpace() {
-    getHomeData();
+    getHomeData()
   }
+
   return (
-    <div className='h-full bg-[#fff]'>
-    <ACard className={cx(s.container)}>
-      {homeData && <DataAssets homeData={homeData} />}
-
-      <AFlex
-        className="md:my-[4px] lg:my-[6px] xl:my-[8px] 2xl:my-[12px]"
-        justify="space-between"
-      >
-        <h1 className="text-base font-bold">我的空间</h1>
-        <div className="flex items-center gap-1 text-primary">
-          <p
-            className="cursor-pointer text-sm"
-            onClick={() => push('/space-list')}
-          >
-            查看更多
-          </p>
-          <RightOutlined />
-        </div>
-      </AFlex>
-
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-5">
+    <div className={s.container}>
+      <HomeTitle title="数据资产" />
+      <DataAssets homeData={homeData} />
+      <div className="mt-[22px]"></div>
+      <HomeTitle
+        title="我的空间"
+        action={
+          <AFlex>
+            <div>查看更多</div>
+            <RightOutlined />
+          </AFlex>
+        }
+        onAction={() => push('/space-list')}
+      />
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {homeData &&
-          homeData?.spaceList?.map((item: ISpaceItem) => (
-            <SpaceItem
-              deleteSpace={deleteSpaceHandler}
-              key={item.spaceId}
-              setEditSpace={editSpaceHandler}
-              space={item}
-            />
-          ))}
+          homeData?.spaceList?.map((item: ISpaceItem) =>
+            item.type === 'add' ? <ApprovSpace  /> : <SpaceItem deleteSpace={deleteSpaceHandler} key={item.spaceId} setEditSpace={editSpaceHandler} space={item} />,
+          )}
       </section>
 
-      {drawerOpen && (
-        <SpaceEdit
-          drawerOpen={drawerOpen}
-          editSpace={editSpace}
-          setDrawerOpen={setDrawerOpen}
-          updateSpace={updateSpace}
-        />
-      )}
-
+      {drawerOpen && <SpaceEdit drawerOpen={drawerOpen} editSpace={editSpace} setDrawerOpen={setDrawerOpen} updateSpace={updateSpace} />}
+      <div className="mt-[22px]"></div>
+      <HomeTitle
+        title="创建引导"
+        action={
+          <AFlex>
+            <PlusOutlined />
+            <div>快速创建</div>
+          </AFlex>
+        }
+      />
       <FastCreate spaceList={homeData?.spaceList} />
-    </ACard>
     </div>
-  );
+  )
 }

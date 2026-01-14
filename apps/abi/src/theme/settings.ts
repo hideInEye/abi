@@ -40,7 +40,7 @@ export const themeSettings: App.Theme.ThemeSetting = {
     mixChildMenuWidth: 200,
     mixCollapsedWidth: 64,
     mixWidth: 90,
-    width: 220
+    width: 88
   },
   tab: {
     cache: true,

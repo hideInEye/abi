@@ -8,6 +8,7 @@ export interface ISpaceItem {
   updateBy: string;
   updateTime: string;
   userCount: number;
+  type?: string
 }
 
 export interface DeptItem {

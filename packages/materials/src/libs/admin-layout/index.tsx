@@ -35,7 +35,7 @@ const AdminLayout: FC<AdminLayoutProps> = ({
   siderCollapse = false,
   siderCollapsedWidth = 64,
   siderVisible = true,
-  siderWidth = 220,
+  siderWidth = 88,
   Tab,
   tabClass,
   tabHeight = 44,

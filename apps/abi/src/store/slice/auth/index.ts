@@ -95,9 +95,9 @@ export const authSlice = createAppSlice({
   name: 'auth',
   reducers: create => ({
     login: create.asyncThunk(
-      async ({ password, userName, code, uuid }: { password: string; userName: string; code?: string; uuid?: string }) => {
+      async ({ password, username, code, uuid }: { password: string; username: string; code?: string; uuid?: string }) => {
         const psd = encrypt(password) as string;
-        const { data, error } = await fetchLogin(userName, psd, code, uuid);
+        const { data, error } = await fetchLogin(username, psd, code, uuid);
         const loginToken = {
           ...data,
           refreshToken: data?.refresh_token || '',
