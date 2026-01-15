@@ -1,0 +1,20 @@
+{
+  "name": "@sa/framework",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "type": "module",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./src/*"
+      ]
+    }
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "react-redux": "^9.2.0",
+    "redux": "^5.0.1"
+  }
+}

@@ -50,6 +50,7 @@
     "@reduxjs/toolkit": "2.3.0",
     "@sa/axios": "workspace:*",
     "@sa/color": "workspace:*",
+    "@sa/framework": "workspace:*",
     "@sa/hooks": "workspace:*",
     "@sa/materials": "workspace:*",
     "@sa/simple-router": "workspace:*",

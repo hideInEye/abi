@@ -41,7 +41,7 @@ export function Component() {
         isAsc: 'desc',
         orderByColumn: 'spaceId',
         pageNum: 1,
-        pageSize: 7,
+        pageSize: 8,
       })
 
       // 合并数据，用空间列表API的数据替换原有的spaceList
@@ -52,11 +52,11 @@ export function Component() {
           ...item,
           type: 'space',
         }))
-        spaceData.unshift({
-          spaceId: 0,
-          spaceName: '创建应用',
-          type: 'add',
-        })
+        // spaceData.unshift({
+        //   spaceId: 0,
+        //   spaceName: '创建应用',
+        //   type: 'add',
+        // })
       }
       const mergedData = {
         ...homeData,
@@ -119,12 +119,12 @@ export function Component() {
       <div className="mt-[22px]"></div>
       <HomeTitle
         title="创建引导"
-        action={
-          <AFlex>
-            <PlusOutlined />
-            <div>快速创建</div>
-          </AFlex>
-        }
+        // action={
+        //   <AFlex>
+        //     <PlusOutlined />
+        //     <div>快速创建</div>
+        //   </AFlex>
+        // }
       />
       <FastCreate spaceList={homeData?.spaceList} />
     </div>

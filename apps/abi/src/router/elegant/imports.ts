@@ -34,6 +34,7 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   "data-preparation_data-source-view": () => import("@/pages/data-preparation/data-source-view/[id].tsx"),
   "data-preparation_data-source": () => import("@/pages/data-preparation/data-source/index.tsx"),
   "data-preparation_data-table-meaning": () => import("@/pages/data-preparation/data-table-meaning/index.tsx"),
+  guide: () => import("@/pages/guide/index.tsx"),
   home: () => import("@/pages/home/index.tsx"),
   job_email: () => import("@/pages/job/email/index.tsx"),
   job_log: () => import("@/pages/job/log/index.tsx"),

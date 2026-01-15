@@ -5,17 +5,25 @@ import { qiankunWindow, renderWithQiankun } from 'vite-plugin-qiankun/dist/helpe
 
 import { setupRouter } from '@/router';
 import { store } from '@/store';
-import { localStg } from '@/utils/storage';
 import { setupRequestInterceptor } from '@/utils/requestInterceptor';
+import { localStg } from '@/utils/storage';
 
 import FallbackRender from '../ErrorBoundary.tsx';
 
 import App from './App.tsx';
-import './plugins/assets';
 import { setupI18n } from './locales';
 import { setupDayjs, setupIconifyOffline, setupLoading, setupNProgress } from './plugins';
+import './plugins/assets';
 import { fetchLoginChatbiByOnenet } from './service/api/index.ts';
+import { createApp } from '@sa/framework';
 
+const modelModules = import.meta.glob('./models/*.ts', { eager: true })
+
+const models = Object.values(modelModules).map((m: any) => m.default)
+
+createApp({
+  models,
+})
 let root: any;
 
 async function setupApp(props: any) {

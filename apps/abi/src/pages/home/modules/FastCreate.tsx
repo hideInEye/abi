@@ -8,6 +8,7 @@ import stepTwoIcon from '@/assets/imgs/home/step_two.png'
 import stepThreeIcon from '@/assets/imgs/home/step_three.png'
 import stepFourIcon from '@/assets/imgs/home/step_four.png'
 import s from '../index.module.scss'
+import React from 'react'
 /**
  * 快速创建组件
  * 提供系统主要功能的快速访问入口
@@ -23,8 +24,8 @@ import s from '../index.module.scss'
 interface FastCreateProps {
   readonly spaceList: ISpaceItem[]
 }
-
-export const FastCreate: React.FC<FastCreateProps> = ({ spaceList }: FastCreateProps) => {
+// FastCreate.tsx（方案 2：独立 Connector 节点）
+export const FastCreate: React.FC<FastCreateProps> = ({ spaceList }) => {
   const { push } = useRouter()
 
   function handleCreate(url: string) {
@@ -36,51 +37,39 @@ export const FastCreate: React.FC<FastCreateProps> = ({ spaceList }: FastCreateP
   }
 
   const guideSteps = [
-    {
-      key: '1',
-      title: '创建空间',
-      description: '创建数据空间\n存储数据资产',
-      icon: stepOneIcon,
-    },
-    {
-      key: '2',
-      title: '数据准备',
-      description: '数据接入、数据\n共享、语义映射',
-      icon: stepTwoIcon,
-    },
-    {
-      key: '3',
-      title: '助手配置',
-      description: '让每个人拥有个性化\n数据分析助手',
-      icon: stepThreeIcon,
-    },
-    {
-      key: '4',
-      title: '智能对话',
-      description: '通过可视化组件\n进行交互式分析',
-      icon: stepFourIcon,
-    },
+    { key: '1', title: '创建空间', description: '创建数据空间\n存储数据资产', icon: stepOneIcon },
+    { key: '2', title: '数据准备', description: '数据接入、数据\n共享、语义映射', icon: stepTwoIcon },
+    { key: '3', title: '助手配置', description: '让每个人拥有个性化\n数据分析助手', icon: stepThreeIcon },
+    { key: '4', title: '智能对话', description: '通过可视化组件\n进行交互式分析', icon: stepFourIcon },
   ]
 
   return (
     <div className={s['fast-create']}>
       <div className={s['fast-create__grid']}>
-        {guideSteps.map((step, index) => {
-          const isLast = index === guideSteps.length - 1
-          return (
-            <div key={step.key} className={`${s['fast-create__step']} ${isLast ? s['is-last'] : ''}`}>
+        {guideSteps.map((step, index) => (
+          <React.Fragment key={step.key}>
+            <div className={s['fast-create__step']}>
               <div className={s['fast-create__head']}>
                 <div className={s['fast-create__iconWrap']}>
                   <img src={step.icon} alt={step.title} className={s['fast-create__icon']} />
                 </div>
               </div>
               <div className="flex flex-col gap-[15px]">
-                <Title level={5} className={s['fast-create__title']}>{`${index + 1}. ${step.title}`}</Title>
+                <Title level={5} className={s['fast-create__title']}>
+                  {`${index + 1}. ${step.title}`}
+                </Title>
                 <Text className={s['fast-create__desc']}>{step.description}</Text>
               </div>
             </div>
-          )
-        })}
+
+            {index !== guideSteps.length - 1 && (
+              <div className={s['fast-create__connector']}>
+                <span className={s['fast-create__line']} />
+                <span className={s['fast-create__arrow']} />
+              </div>
+            )}
+          </React.Fragment>
+        ))}
       </div>
     </div>
   )

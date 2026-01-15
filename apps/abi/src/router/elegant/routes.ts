@@ -219,6 +219,15 @@ export const generatedRoutes: GeneratedRoute[] = [
     ]
   },
   {
+    name: 'guide',
+    path: '/guide',
+    component: 'layout.base$view.guide',
+    meta: {
+      i18nKey: 'route.guide',
+      title: 'guide'
+    }
+  },
+  {
     name: 'home',
     path: '/home',
     component: 'layout.base$view.home',

@@ -8,6 +8,17 @@ import { generatedRoutes } from '../elegant/routes';
  * @link https://github.com/soybeanjs/elegant-router?tab=readme-ov-file#custom-route
  */
 const customRoutes: CustomRoute[] = [
+  {
+    name:'guide',
+    path:'/guide',
+    component:'layout.base$view.guide',
+    meta:{
+      i18nKey:'route.guide',
+      title:'guide',
+      order:1,
+      constant:true
+    }
+  }
   // {
   //   children: [
   //     {

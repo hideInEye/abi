@@ -43,6 +43,7 @@ declare module "@elegant-router/types" {
     "data-preparation_data-source-kinship": "data-source-kinship/:id";
     "data-preparation_data-source-view": "data-source-view/:id";
     "data-preparation_data-table-meaning": "data-table-meaning";
+    "guide": "/guide";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
     "job": "/job";
@@ -123,6 +124,7 @@ declare module "@elegant-router/types" {
     | "ai-assistant"
     | "assistant-manage"
     | "data-preparation"
+    | "guide"
     | "home"
     | "iframe-page"
     | "job"
@@ -168,6 +170,7 @@ declare module "@elegant-router/types" {
     | "data-preparation_data-source-view"
     | "data-preparation_data-source"
     | "data-preparation_data-table-meaning"
+    | "guide"
     | "home"
     | "job_email"
     | "job_log"

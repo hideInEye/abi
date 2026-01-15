@@ -8,7 +8,7 @@ import type { ISpaceItem } from '../types'
 import s from '../../home/index.module.scss'
 import { Dropdown, Space } from 'antd'
 import { MenuProps } from 'antd/lib'
-
+import { setSelectedMenuKey } from '@/store/slice/layout'
 interface SpaceItemProps {
   readonly deleteSpace: (space: ISpaceItem) => void
   readonly setEditSpace: (space: ISpaceItem) => void
@@ -16,6 +16,8 @@ interface SpaceItemProps {
 }
 
 export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space }) => {
+  const dispatch = useAppDispatch()
+
   const handleEdit = useCallback(() => {
     setEditSpace(space)
   }, [setEditSpace, space])
@@ -73,7 +75,10 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
       className={`flex flex-col cursor-pointer rounded-[10px] py-[14px] px-[20px] ${s['space-item']}`}
       style={{ boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.1)' }}
       key={space.spaceId}
-      onClick={() => setSpaceId(space.spaceId)}
+      onClick={() => {
+        setSpaceId(space.spaceId)
+        dispatch(setSelectedMenuKey('dialogue'))
+      }}
     >
       <AFlex align="center" justify="space-between" gap="16px">
         <APopover content={space.spaceName}>

@@ -10,9 +10,9 @@ import appLogo from '@/assets/imgs/home/home_logo.png'
 import DeuserIcon from '@/assets/imgs/home/hoveruser.png'
 import userIcon from '@/assets/imgs/home/user.png'
 import workbenchIcon from '@/assets/imgs/home/workbench.png'
+import { selectSelectedMenuKey, selectSelectedSecondaryMenuKey, setSelectedMenuKey, setSelectedSecondaryMenuKey } from '@/store/slice/layout'
 
 import { Layout } from 'antd'
-import { useState } from 'react'
 import { useRouter } from '~/packages/simple-router/src'
 const { Sider } = Layout
 
@@ -29,9 +29,10 @@ const secondaryMenuData = [
 ]
 
 const GlobalSider: FC = memo(() => {
-  const [selectedMenuKey, setSelectedMenuKey] = useState('home')
-  const [selectedSecondaryMenuKey, setSelectedSecondaryMenuKey] = useState('')
+  const  selectedMenuKey  = useAppSelector(selectSelectedMenuKey)
+  const  selectedSecondaryMenuKey  = useAppSelector(selectSelectedSecondaryMenuKey)
   const router = useRouter()
+  const dispatch = useAppDispatch()
   const redirectHome = () => {
     router.push('/home', {
       query: {
@@ -51,7 +52,7 @@ const GlobalSider: FC = memo(() => {
             return (
               <div
                 onClick={() => {
-                  setSelectedMenuKey(item.key)
+                  dispatch(setSelectedMenuKey(item.key))
                   router.push(item.url)
                 }}
                 className={`flex items-center  px-[12px] py-[11px] flex-col  gap-[9px] cursor-pointer ${!isActive ? 'bg-[#fff] shadow-[0px_4px_6px_0px_rgba(137,147,166,0.15)] rounded-[10px] text-[#3366FF]' : ''}`}
@@ -68,8 +69,8 @@ const GlobalSider: FC = memo(() => {
             return (
               <div
                 onClick={() => {
-                  setSelectedSecondaryMenuKey(item.key)
-                  setSelectedMenuKey('')
+                  dispatch(setSelectedSecondaryMenuKey(item.key))
+                  dispatch(setSelectedMenuKey(''))
                 }}
               >
                 <img src={isActive ? item.checkIcon : item.icon} className="h-6 w-6" />

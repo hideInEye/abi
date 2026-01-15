@@ -224,6 +224,7 @@ const routeMap: RouteMap = {
   "data-preparation_data-source-kinship": "data-source-kinship/:id",
   "data-preparation_data-source-view": "data-source-view/:id",
   "data-preparation_data-table-meaning": "data-table-meaning",
+  "guide": "/guide",
   "home": "/home",
   "iframe-page": "/iframe-page/:url",
   "job": "/job",
