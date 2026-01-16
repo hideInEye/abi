@@ -54,7 +54,7 @@ export const FastCreate: React.FC<FastCreateProps> = ({ spaceList }) => {
                   <img src={step.icon} alt={step.title} className={s['fast-create__icon']} />
                 </div>
               </div>
-              <div className="flex flex-col gap-[15px]">
+              <div className="flex flex-col gap-[0.9375rem]">
                 <Title level={5} className={s['fast-create__title']}>
                   {`${index + 1}. ${step.title}`}
                 </Title>

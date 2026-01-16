@@ -41,12 +41,12 @@ const GlobalSider: FC = memo(() => {
     })
   }
   return (
-    <Sider width={88} className="fixed left-0 top-0 h-screen bg-white">
-      <div className="flex h-full flex-col justify-between items-center py-[24px]">
+    <Sider width="5.5rem" className="fixed left-0 top-0 h-screen bg-white">
+      <div className="flex h-full flex-col justify-between items-center py-6">
         <div className="mt-6 mb-10 flex items-center justify-center cursor-pointer" onClick={redirectHome}>
-          <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_10px_24px_rgba(51,102,255,0.28)]" />
+          <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
         </div>
-        <div className="flex gap-[27px] flex-col text-[#848FA2]">
+        <div className="flex gap-[1.6875rem] flex-col text-[#848FA2]">
           {primaryMenuData.map((item) => {
             const isActive = item.key !== selectedMenuKey
             return (
@@ -55,15 +55,15 @@ const GlobalSider: FC = memo(() => {
                   dispatch(setSelectedMenuKey(item.key))
                   router.push(item.url)
                 }}
-                className={`flex items-center  px-[12px] py-[11px] flex-col  gap-[9px] cursor-pointer ${!isActive ? 'bg-[#fff] shadow-[0px_4px_6px_0px_rgba(137,147,166,0.15)] rounded-[10px] text-[#3366FF]' : ''}`}
+                className={`flex items-center px-3 py-[0.6875rem] flex-col gap-[0.5625rem] cursor-pointer ${!isActive ? 'bg-[#fff] shadow-[0_0.25rem_0.375rem_0_rgba(137,147,166,0.15)] rounded-[0.625rem] text-[#3366FF]' : ''}`}
               >
                 <img src={isActive ? item.checkIcon : item.icon} alt={item.label} className="h-6 w-6" />
-                <span className="text-[16px]">{item.label}</span>
+                <span className="text-base">{item.label}</span>
               </div>
             )
           })}
         </div>
-        <div className="flex gap-[24px] flex-col text-[#848FA2]">
+        <div className="flex gap-6 flex-col text-[#848FA2]">
           {secondaryMenuData.map((item) => {
             const isActive = item.key === selectedSecondaryMenuKey
             return (
@@ -74,7 +74,7 @@ const GlobalSider: FC = memo(() => {
                 }}
               >
                 <img src={isActive ? item.checkIcon : item.icon} className="h-6 w-6" />
-                {/* <span className="text-[16px]">{item.label}</span> */}
+                {/* <span className="text-base">{item.label}</span> */}
               </div>
             )
           })}

@@ -18,7 +18,7 @@ interface Account {
 }
 
 type LoginParams = Pick<Account, 'password' | 'userName'>
-const INPUT_WRAPPER_CLASSES = 'h-14 rounded-[12px] border shadow-sm transition hover:!border-[#3366FF] focus-within:!border-[#3366FF] focus-within:!shadow-[0_0_0_2px_rgba(51,102,255,0.15)]'
+const INPUT_WRAPPER_CLASSES = 'h-14 rounded-xl border shadow-sm transition hover:!border-[#3366FF] focus-within:!border-[#3366FF] focus-within:!shadow-[0_0_0_0.125rem_rgba(51,102,255,0.15)]'
 
 export function Component() {
   const [form] = Form.useForm<LoginParams>()
@@ -49,9 +49,9 @@ export function Component() {
   return (
     <div className="relative min-h-screen w-full">
       <img src={loginBg} className="absolute inset-0 h-full w-full" />
-      <div className="absolute right-[17%] top-[20%] z-10 flex w-full max-w-[400px] flex-col rounded-[20px] bg-white/30 px-8 pb-12 pt-14 shadow-[4px_2px_16px_rgba(0,0,0,0.06)] backdrop-blur-xl sm:px-10 min-h-[480px]">
-        <h1 className="w-[120px] font-[PingFangSC,'PingFang SC',sans-serif] text-[30px] font-medium leading-[42px] text-[#333333]">欢迎登录</h1>
-        <div className="mt-2 h-[5px] w-20 rounded-full bg-[#3366FF]" />
+      <div className="absolute right-[17%] top-[20%] z-10 flex w-full max-w-[25rem] flex-col rounded-[1.25rem] bg-white/30 px-8 pb-12 pt-14 shadow-[0.25rem_0.125rem_1rem_rgba(0,0,0,0.06)] backdrop-blur-xl sm:px-10 min-h-[30rem]">
+        <h1 className="w-[7.5rem] font-[PingFangSC,'PingFang SC',sans-serif] text-3xl font-medium leading-[2.625rem] text-[#333333]">欢迎登录</h1>
+        <div className="mt-2 h-[0.3125rem] w-20 rounded-full bg-[#3366FF]" />
 
         <Form form={form} layout="vertical" autoComplete="off" initialValues={{ remember: false }} requiredMark={false} onFinish={handleSubmit} className="mt-10 flex flex-1 flex-col">
           <Form.Item name="username" className="mb-6" rules={userNameRules}>
@@ -59,7 +59,7 @@ export function Component() {
               size="large"
               allowClear
               placeholder="账户名"
-              prefix={<img className="w-[28px] h-[28px]" src={useNameIcon} />}
+              prefix={<img className="w-7 h-7" src={useNameIcon} />}
               className={`${INPUT_WRAPPER_CLASSES} !px-4 !text-base !text-[#333333]`}
             />
           </Form.Item>
@@ -68,7 +68,7 @@ export function Component() {
             <Input.Password
               size="large"
               placeholder="密码"
-              prefix={<img className=" w-[28px] h-[28px]" src={passwordIcon} />}
+              prefix={<img className="w-7 h-7" src={passwordIcon} />}
               iconRender={(visible) => (visible ? <EyeTwoTone twoToneColor="#3366FF" /> : <EyeInvisibleOutlined />)}
               className={`${INPUT_WRAPPER_CLASSES} !px-4 !text-base !text-[#333333] [&_.ant-input]:!text-[#333333]`}
             />
@@ -91,7 +91,7 @@ export function Component() {
             htmlType="submit"
             size="large"
             loading={loading}
-            className="mt-10 h-14 w-full rounded-[12px] bg-[#3366FF] text-base font-medium text-white shadow-[0_10px_24px_rgba(51,102,255,0.35)] transition hover:!bg-[#2C58E8] focus:!bg-[#2C58E8] active:!bg-[#2448C6]"
+            className="mt-10 h-14 w-full rounded-xl bg-[#3366FF] text-base font-medium text-white shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.35)] transition hover:!bg-[#2C58E8] focus:!bg-[#2C58E8] active:!bg-[#2448C6]"
             block
           >
             登 录

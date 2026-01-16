@@ -1851,9 +1851,9 @@ const Conversation: React.FC<PropsType> = React.memo(({ conv, onClose, onUpdateL
   }
 
   return (
-    <div className="min-w-[400px] flex-1 flex flex-col h-full">
+    <div className="min-w-[25rem] flex-1 flex flex-col h-full">
       <ChatHeader conv={conv} ref={chatHeaderRef} setConvContent={setConvContent} onUpdateList={onUpdateList} setIsSharing={setIsSharing} onClose={onClose} />
-      <div ref={chatContainerRef} className="overflow-y-auto bg-white p-4 flex-1 scroll-smooth" style={{ height: 'calc(100vh - 250px)' }}>
+      <div ref={chatContainerRef} className="overflow-y-auto bg-white p-4 flex-1 scroll-smooth h-[calc(100vh-15.625rem)]">
         {/* 开发测试面板 */}
         {/* {showTestPanel && (
           <IntentClarifyTestPanel 

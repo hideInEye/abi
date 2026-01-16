@@ -97,7 +97,7 @@ export function Component() {
     <div className={s.container}>
       <HomeTitle title="数据资产" />
       <DataAssets homeData={homeData} />
-      <div className="mt-[22px]"></div>
+      <div className="mt-[1.375rem]"></div>
       <HomeTitle
         title="我的空间"
         action={
@@ -116,7 +116,7 @@ export function Component() {
       </section>
 
       {drawerOpen && <SpaceEdit drawerOpen={drawerOpen} editSpace={editSpace} setDrawerOpen={setDrawerOpen} updateSpace={updateSpace} />}
-      <div className="mt-[22px]"></div>
+      <div className="mt-[1.375rem]"></div>
       <HomeTitle
         title="创建引导"
         // action={

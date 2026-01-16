@@ -142,44 +142,44 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
 
   return (
     <>
-      <header className="flex items-center justify-between border-b-[2px] border-[#F0F0F0] bg-[#F9F9F9] pt-[44px] pl-[37px] pr-[54px] pb-[25px]  sticky top-0 z-10">
+      <header className="flex items-center justify-between border-b-2 border-[#F0F0F0] bg-[#F9F9F9] pt-11 pl-[2.3125rem] pr-[3.375rem] pb-[1.5625rem] sticky top-0 z-10">
         <Space size={12}>
-          <div className="text-[#333333] text-[16px] leading-[22px] font-semibold">{conv.biz_name || 'AI智能助手'}</div>
+          <div className="text-[#333333] text-base leading-[1.375rem] font-semibold">{conv.biz_name || 'AI智能助手'}</div>
           <Tooltip title="编辑对话">
-            <SvgIcon localIcon="edit" className="w-[20px] h-[22px] cursor-pointer" onClick={handleEdit} />
+            <SvgIcon localIcon="edit" className="w-5 h-[1.375rem] cursor-pointer" onClick={handleEdit} />
           </Tooltip>
         </Space>
         <Space className="" size={24}>
           {/* <Tooltip title="历史记录">
-            <span className="cursor-pointer text-[12px] text-[#8a8a8a] hover:text-[#2E6CF6]" onClick={handleHistory}>
+            <span className="cursor-pointer text-xs text-[#8a8a8a] hover:text-[#2E6CF6]" onClick={handleHistory}>
               <SvgIcon localIcon="history" className="w-5 h-5" />
             </span>
           </Tooltip>
           <Tooltip title="清空对话">
-            <span className="cursor-pointer text-[12px] text-[#8a8a8a] hover:text-[#2E6CF6]" onClick={handleClearChat}>
+            <span className="cursor-pointer text-xs text-[#8a8a8a] hover:text-[#2E6CF6]" onClick={handleClearChat}>
               <SvgIcon localIcon="delete3" className="w-4 h-4" />
             </span>
           </Tooltip> */}
 
           <Tooltip title={isStarred ? '取消收藏' : '收藏对话'}>
             <span className="cursor-pointer text-[#8a8a8a] hover:text-[#2E6CF6]" onClick={handleStar}>
-              <SvgIcon localIcon={isStarred ? 'rstar' : 'star'} className="w-[27px] h-[20px]" />
+              <SvgIcon localIcon={isStarred ? 'rstar' : 'star'} className="w-[1.6875rem] h-5" />
             </span>
           </Tooltip>
           {/* 隐藏另存对话按钮 */}
           <Tooltip title="复制对话">
             <span className="cursor-pointer text-[#8a8a8a] hover:text-[#2E6CF6]" onClick={() => setSaveVisible(true)}>
-              <SvgIcon localIcon="copy" className="w-[22px] h-[22px]" />
+              <SvgIcon localIcon="copy" className="w-[1.375rem] h-[1.375rem]" />
             </span>
           </Tooltip>
           {/* 暂时隐藏分享按钮 */}
           <Tooltip title="分享对话">
             <span className="cursor-pointer text-[#8a8a8a] hover:text-[#2E6CF6]" onClick={handleShare}>
-              <SvgIcon localIcon="share" className="w-[26px] h-[24px]" />
+              <SvgIcon localIcon="share" className="w-[1.625rem] h-6" />
             </span>
           </Tooltip>
           {/* <span
-            className="text-[12px] w-3 h-5"
+            className="text-xs w-3 h-5"
             onClick={onClose}
           >
             <CloseOutlined className="w-5 h-5" />

@@ -14,7 +14,7 @@ interface CaptchaProps {
   onChange?: (value: string) => void
 }
 
-const INPUT_WRAPPER_CLASSES = 'h-14 rounded-[12px] border border-white/60 bg-white/90 shadow-sm transition hover:!border-[#3366FF] focus-within:!border-[#3366FF] focus-within:!shadow-[0_0_0_2px_rgba(51,102,255,0.15)]'
+const INPUT_WRAPPER_CLASSES = 'h-14 rounded-xl border border-white/60 bg-white/90 shadow-sm transition hover:!border-[#3366FF] focus-within:!border-[#3366FF] focus-within:!shadow-[0_0_0_0.125rem_rgba(51,102,255,0.15)]'
 
 const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({ width = 120, height = 38, onChange, onRefresh }, ref) => {
   const [imgSrc, setImgSrc] = useState('')
@@ -60,7 +60,7 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({ width = 120, height = 38
         onChange={(e) => {
           onChange?.(e.target.value)
         }}
-        // prefix={<img className=" w-[28px] h-[28px]" src={passwordIcon} />}
+        // prefix={<img className="w-7 h-7" src={passwordIcon} />}
         className={`${INPUT_WRAPPER_CLASSES} !px-4 !text-base !text-[#333333] [&_.ant-input]:!text-[#333333]`}
       />
       <Spin spinning={loading} size="small">
@@ -68,15 +68,8 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({ width = 120, height = 38
           src={imgSrc}
           alt="验证码"
           width={width}
-          className="h-14"
+          className="h-14 cursor-pointer select-none bg-white block rounded"
           onClick={refresh}
-          style={{
-            cursor: 'pointer',
-            borderRadius: 4,
-            userSelect: 'none',
-            background: '#fff',
-            display: 'block',
-          }}
           title="点击刷新验证码"
         />
       </Spin>

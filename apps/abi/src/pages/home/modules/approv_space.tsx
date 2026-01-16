@@ -5,18 +5,18 @@ import s from '../../home/index.module.scss'
 
 export const ApprovSpace: FC = () => {
   return (
-    <div className={`flex flex-col rounded-[10px] py-[14px] px-[20px] ${s['space-item']}`} style={{ boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.1)' }}>
-      <AFlex align="center" justify="space-between" gap="16px">
-        <div className="text-[18px] text-[#374557] text-nowrap flex-1 text-sm overflow-hidden text-ellipsis lh-[1.75rem] font-semibold">创建应用</div>
+    <div className={`flex flex-col rounded-[0.625rem] py-3.5 px-5 shadow-[0_0.5rem_1rem_0_rgba(0,0,0,0.1)] ${s['space-item']}`}>
+      <AFlex align="center" justify="space-between" className="gap-4">
+        <div className="text-lg text-[#374557] text-nowrap flex-1 text-sm overflow-hidden text-ellipsis leading-7 font-semibold">创建应用</div>
       </AFlex>
-      <div className="bg-[#DCDCDC] h-[1px] w-full mt-[10px] mb-[23px]"></div>
+      <div className="bg-[#DCDCDC] h-px w-full mt-2.5 mb-[1.4375rem]"></div>
       <AFlex align="center" justify="space-around">
-        <div className="flex cursor-pointer flex-col items-center gap-[16px]">
-          <img src={createSpace} alt="" className="w-[35px] h-[39px]" />
+        <div className="flex cursor-pointer flex-col items-center gap-4">
+          <img src={createSpace} alt="" className="w-[2.1875rem] h-[2.4375rem]" />
           创建空间
         </div>
-        <div className="flex cursor-pointer flex-col items-center gap-[16px]">
-          <img src={copySpace} alt="" className="w-[35px] h-[39px]" />
+        <div className="flex cursor-pointer flex-col items-center gap-4">
+          <img src={copySpace} alt="" className="w-[2.1875rem] h-[2.4375rem]" />
           复制空间
         </div>
       </AFlex>

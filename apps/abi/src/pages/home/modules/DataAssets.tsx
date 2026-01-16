@@ -76,11 +76,15 @@ export function DataAssets({ homeData }: { readonly homeData: DataAssetsProps })
   }
 
   return (
-    <div className="grid grid-cols-5 gap-[20px]">
+    <div className="grid grid-cols-5 gap-5">
       {dataAssetsConfig.map((item) => (
-        <div className="cursor-pointer border border-gray-200 rounded-[10px] p-[32px] shadow-sm" key={item.title} style={{ backgroundImage: `url(${item.icon})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="text-[20px] text-[#707784]">{item.title}</div>
-          <div className="text-[48px] text-[#101623]">{item.count}</div>
+        <div
+          className="cursor-pointer border border-gray-200 rounded-[0.625rem] p-8 shadow-sm bg-cover bg-center"
+          key={item.title}
+          style={{ backgroundImage: `url(${item.icon})` }}
+        >
+          <div className="text-xl text-[#707784]">{item.title}</div>
+          <div className="text-5xl text-[#101623]">{item.count}</div>
         </div>
       ))}
     </div>

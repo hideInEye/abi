@@ -72,17 +72,16 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
 
   return (
     <div
-      className={`flex flex-col cursor-pointer rounded-[10px] py-[14px] px-[20px] ${s['space-item']}`}
-      style={{ boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.1)' }}
+      className={`flex flex-col cursor-pointer rounded-[0.625rem] py-3.5 px-5 shadow-[0_0.5rem_1rem_0_rgba(0,0,0,0.1)] ${s['space-item']}`}
       key={space.spaceId}
       onClick={() => {
         setSpaceId(space.spaceId)
         dispatch(setSelectedMenuKey('dialogue'))
       }}
     >
-      <AFlex align="center" justify="space-between" gap="16px">
+      <AFlex align="center" justify="space-between" className="gap-4">
         <APopover content={space.spaceName}>
-          <div className="text-[18px] text-[#374557] text-nowrap flex-1 overflow-hidden text-ellipsis lh-[1.75rem] font-semibold">{space.spaceName}</div>
+          <div className="text-lg text-[#374557] text-nowrap flex-1 overflow-hidden text-ellipsis leading-7 font-semibold">{space.spaceName}</div>
         </APopover>
         <Dropdown menu={{ items, onClick }}>
           <a
@@ -99,8 +98,8 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
           </a>
         </Dropdown>
       </AFlex>
-      <div className="bg-[#DCDCDC] h-[1px] w-full mt-[10px] mb-[23px]"></div>
-      <div className="flex flex-col gap-[16px] text-[14px] op80">
+      <div className="bg-[#DCDCDC] h-px w-full mt-2.5 mb-[1.4375rem]"></div>
+      <div className="flex flex-col gap-4 text-sm op80">
         <div className="grid grid-cols-[auto_1fr] gap-x-2">
           <span className="text-[#666666]">创建人</span>
           <span className="text-left text-[#333333]">{space.createBy}</span>
