@@ -41,7 +41,7 @@ const GlobalSider: FC = memo(() => {
     })
   }
   return (
-    <Sider width={88} className="fixed left-0 top-0 h-screen bg-white shadow-[6px_0_18px_rgba(67,103,172,0.08)]">
+    <Sider width={88} className="fixed left-0 top-0 h-screen bg-white">
       <div className="flex h-full flex-col justify-between items-center py-[24px]">
         <div className="mt-6 mb-10 flex items-center justify-center cursor-pointer" onClick={redirectHome}>
           <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_10px_24px_rgba(51,102,255,0.28)]" />
