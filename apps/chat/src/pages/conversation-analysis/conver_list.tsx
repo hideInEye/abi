@@ -1,32 +1,145 @@
-import { CloseOutlined, DoubleLeftOutlined, DoubleRightOutlined, SearchOutlined } from '@ant-design/icons'
-import { Button, Input, Space } from 'antd'
+import { DoubleRightOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons'
+import { Dropdown, Input, message, Modal, Space } from 'antd'
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import SvgIcon from '../../components/SvgIcon'
 import left_online from '@/assets/svg-icon/left_online.svg'
 import right_online from '@/assets/svg-icon/right_online.svg'
-
+import { MenuProps } from 'antd'
+import { clearConvHistory, fetchConvList } from '../../service/api/conv'
+import { CHAT_MODE } from '../../constant'
+import { getSpaceId } from '../../utils'
 interface converListProps {
-  setVisible: (visible: boolean) => void
   appList: any[]
   handleSetCurApp: (item: any) => void
   handleDeleteApp: (item: any) => void
   setHideRight: (hideRight: boolean) => void
   setShowAllConversations: (showAllConversations: boolean) => void
   curApp: any
+  handleEdit: (key: string) => void
+  handleClearConvHistory: () => void
 }
 
 const ConverList: React.FC<converListProps> = (props: any) => {
-  const { setVisible, appList, handleSetCurApp, handleDeleteApp, setHideRight, setShowAllConversations, curApp } = props
+  const { appList, handleSetCurApp, handleDeleteApp, setHideRight, setShowAllConversations, curApp, handleEdit, handleClearConvHistory } = props
   const [fold, setFold] = useState(false)
+  const dropdownMenu: MenuProps['items'] = [
+    {
+      key: 'edit',
+      label: (
+        <Space>
+          <SvgIcon localIcon="drown_edit" className="w-5 h-[1.375rem] cursor-pointer" />
+          编辑
+        </Space>
+      ),
+    },
+    // {
+    //   key: 'rename',
+    //   label: (
+    //     <Space>
+    //       <SvgIcon localIcon="drown_rename" className="w-5 h-[1.375rem] cursor-pointer" onClick={handleEdit} />
+    //       重命名
+    //     </Space>
+    //   ),
+    //   onClick: ({ domEvent }) => {
+    //     domEvent.stopPropagation()
+    //     domEvent.preventDefault()
+    //     handleEdit()
+    //   },
+    // },
+    // {
+    //   key: 'save',
+    //   label: (
+    //     <Space>
+    //       <SvgIcon localIcon="drown_save" className="w-5 h-[1.375rem] cursor-pointer" onClick={handleEdit} />
+    //       另存
+    //     </Space>
+    //   ),
+    //   onClick: ({ domEvent }) => {
+    //     domEvent.stopPropagation()
+    //     domEvent.preventDefault()
+    //     handleEdit()
+    //   },
+    // },
+    {
+      key: 'clear',
+      label: (
+        <Space>
+          <SvgIcon localIcon="drown_clear" className="w-5 h-[1.375rem] cursor-pointer" />
+          清空
+        </Space>
+      ),
+    },
+    {
+      key: 'delete',
+      label: (
+        <Space>
+          <SvgIcon localIcon="drown_delete" className="w-5 h-[1.375rem] cursor-pointer" />
+          删除
+        </Space>
+      ),
+    },
+  ]
+
+  const handleClear = (item: any) => {
+    Modal.confirm({
+      title: '确认清空对话',
+      content: '是否确认清空当前对话？清空后无法恢复。',
+      okText: '确认',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await fetchConvList({
+            chat_id: item.chat_id,
+            chat_mode: CHAT_MODE,
+            space_id: getSpaceId(),
+          })
+          if (res.data?.length) {
+            const [first] = res.data
+            const result: any = await clearConvHistory({
+              conv_uid: first.conv_uid,
+            })
+            if (result.success) {
+              handleClearConvHistory()
+              message.success('对话已清空')
+            }
+          }
+        } catch (error) {
+          message.error('清空对话失败')
+        }
+      },
+    })
+  }
+
+  const handleMenuClick = (e: any, item: any) => {
+    e?.domEvent?.stopPropagation()
+    e?.domEvent?.preventDefault()
+    switch (e.key) {
+      case 'edit':
+        handleEdit('edit', item)
+        break
+      case 'rename':
+        handleEdit('rename')
+        break
+      case 'save':
+        handleEdit('save')
+        break
+      case 'clear':
+        handleClear(item)
+        break
+      case 'delete':
+        handleDeleteApp(item)
+        break
+    }
+  }
 
   return (
     <div className={`relative flex flex-col border-r py-[1.875rem] h-full transition-all duration-300 ease-in-out ${fold ? 'w-0' : 'w-[12.5rem]'}`}>
       <header className="mb-2 w-full flex items-center px-3.5">
         {!fold && (
           <Space>
-            <Input prefix={<SearchOutlined className="text-base" />} />
-            <SvgIcon localIcon="chat_add" className="text-[1.5625rem] cursor-pointer" onClick={() => setVisible(true)} />
+            <Input placeholder="搜索" prefix={<SearchOutlined className="text-base" />} />
+            <SvgIcon localIcon="chat_add" className="text-[1.5625rem] cursor-pointer" onClick={() => handleEdit('create')} />
           </Space>
         )}
       </header>
@@ -52,15 +165,18 @@ const ConverList: React.FC<converListProps> = (props: any) => {
                 <span className="text-[#333333] leading-[1.375rem]">{item.biz_name}</span>
                 <sub className="text-[#666666] leading-[1.25rem]">{item.create_time ? dayjs(item.create_time).format('YYYY-MM-DD HH:mm:ss') : '-'}</sub>
               </div>
-              <span
-                className="invisible px-2 text-xs group-hover:visible"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleDeleteApp(item)
+              <Dropdown
+                menu={{
+                  items: dropdownMenu,
+                  onClick: (e) => {
+                    handleMenuClick(e, item)
+                  },
                 }}
               >
-                <CloseOutlined />
-              </span>
+                <span className="invisible px-2 text-xs group-hover:visible" onClick={(e) => e.preventDefault()}>
+                  <MoreOutlined />
+                </span>
+              </Dropdown>
             </div>
           </li>
         ))}

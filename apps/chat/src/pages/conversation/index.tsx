@@ -8,7 +8,7 @@
 
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import { Modal, message, Button, Form } from 'antd'
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useId, useImperativeHandle, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import FileTag from '../../components/FileTag'
 import { fetchOperate, fetchShareEmail } from '../../service/api/abi-system'
@@ -60,7 +60,8 @@ interface PropsType {
  * 对话组件
  * 使用React.memo优化性能
  */
-const Conversation: React.FC<PropsType> = React.memo(({ conv, onClose, onUpdateList }) => {
+const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void }, PropsType>((props, ref) => {
+  const { conv, onClose, onUpdateList } = props
   // 数据库名称
   // const agentData = useRef<any>(null);
   const [confirmShareType, setConfirmShareType] = useState('')
@@ -122,6 +123,9 @@ const Conversation: React.FC<PropsType> = React.memo(({ conv, onClose, onUpdateL
   // const [showTestPanel, setShowTestPanel] = useState(
   //   env.NODE_ENV === 'development'
   // );
+  useImperativeHandle(ref, () => ({
+    setConvContent,
+  }))
 
   const chatHeaderRef = useRef<chatHeaderRefMethod>(null)
 

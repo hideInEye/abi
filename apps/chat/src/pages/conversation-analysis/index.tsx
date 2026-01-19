@@ -3,7 +3,7 @@ import React, { useEffect, useCallback, useRef } from 'react'
 import { useState } from 'react'
 import { deleteConv, fetchConvList, newConv } from '../../service/api/conv'
 import CreateModal from './CreateModal'
-import { createApp, fetchAppList } from '../../service/api/app'
+import { createApp, fetchAppList, updateApp } from '../../service/api/app'
 import { CHAT_MODE } from '../../constant'
 import Conversation from '../conversation'
 import AllConversations from './AllConversations'
@@ -19,22 +19,23 @@ const ConversationAnalysis: React.FC = () => {
   const [curApp, setCurApp] = useState<any>({})
   const [appList, setAppList] = useState<any[]>([])
   const [curConv, setCurConv] = useState<any>()
-  const [convList, setConvList] = useState<any[]>([])
   const [showAllConversations, setShowAllConversations] = useState(false)
   const [loading, setLoading] = useState(false)
   const [hideRight, setHideRight] = useState(false)
   const isInitializedRef = useRef(false)
   const skipNextConvFetchRef = useRef(false)
-  // redux hooks已注释
-  // const dispatch = useAppDispatch();
-  // const cachedConvList = useAppSelector(state => curApp.chat_id ? selectConvListByChatId(state as any, curApp.chat_id) : []);
-  // const datasourceCache = useAppSelector(state => selectDatasourceCache(state as any)); // <-- 将 useSelector 移到这里
+  const [isEdit, setIsEdit] = useState(false)
+  const conversationRef = useRef<any>(null)
 
   // 按 create_time 排序
   const sortAppList = (list: any[]) => {
     return list.sort((a, b) => {
       return new Date(b.create_time).getTime() - new Date(a.create_time).getTime()
     })
+  }
+
+  const handleClearConvHistory = () => {
+    conversationRef.current?.setConvContent([])
   }
 
   // 获取app列表
@@ -74,34 +75,11 @@ const ConversationAnalysis: React.FC = () => {
     }
   }, [])
 
-  // 新建会话
-  // const createConv = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const res = await newConv(curApp);
-  //     setConvList(state => {
-  //       return [res.data, ...state];
-  //     });
-  //     setCurConv({ ...res.data, ...curApp });
-  //     // redux已注释
-  //     // if (curApp?.chat_id) {
-  //     //   dispatch(upsertConvForChat({ chatId: curApp.chat_id, conv: res.data, toTop: true }));
-  //     // }
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   // 获取会话列表
   const getConvList = async () => {
     try {
       setLoading(true)
-      // redux缓存已注释，直接请求接口
-      // if (cachedConvList && cachedConvList.length > 0) {
-      //   setConvList(cachedConvList);
-      //   setCurConv({ ...cachedConvList[0], ...curApp });
-      //   return; // 从缓存中加载，直接返回
-      // }
+
       const res = await fetchConvList({
         chat_id: curApp.chat_id,
         chat_mode: CHAT_MODE,
@@ -109,12 +87,7 @@ const ConversationAnalysis: React.FC = () => {
         // space_id: 73,
       })
       if (res.data?.length) {
-        setConvList(res.data)
         setCurConv({ ...res.data[0], ...curApp })
-        // redux已注释
-        // if (curApp?.chat_id) {
-        //   dispatch(setConvListForChat({ chatId: curApp.chat_id, convList: res.data }));
-        // }
       }
     } finally {
       setLoading(false)
@@ -135,15 +108,7 @@ const ConversationAnalysis: React.FC = () => {
   const handleSetCurApp = async (item: any) => {
     // 移除datasourceCache参数
     try {
-      // redux已注释
-      // if (curApp?.chat_id && convList?.length) {
-      //   dispatch(setConvListForChat({ chatId: curApp.chat_id, convList }));
-      // }
       setLoading(true)
-      // redux已注释
-      // if (datasourceData) {
-      //   dispatch(setDatasourceCache({ agentId: agentId, data: datasourceData }));
-      // }
 
       setCurApp({ ...item })
     } finally {
@@ -159,11 +124,20 @@ const ConversationAnalysis: React.FC = () => {
         setLoading(true)
         // console.log(val,'创建接口 - push')
         // console.log( JSON.parse(val.chat_config) ,'--------- config')
-
+        if (isEdit) {
+          const res = await updateApp(val)
+          if (res?.success) {
+            // message.success('更新成功');
+            setIsEdit(false)
+            setVisible(false)
+            handleUpdateList(res?.data)
+          }
+          return Promise.resolve()
+        }
         // 1. 创建应用
         const res = await createApp(val)
         // console.log(val,'创建接口- data')
-
+        setIsEdit(false)
         // 2. 刷新应用列表
         await getAppList()
 
@@ -191,6 +165,7 @@ const ConversationAnalysis: React.FC = () => {
       }
     } else {
       setVisible(false)
+      setIsEdit(false)
       return Promise.resolve()
     }
   }
@@ -225,20 +200,6 @@ const ConversationAnalysis: React.FC = () => {
     })
   }
 
-  const handleDeleteConv = async (conv_uid: string) => {
-    try {
-      setLoading(true)
-      await deleteConv({ conv_uid })
-      // redux已注释
-      // if (curApp?.chat_id) {
-      //   dispatch(removeConvForChat({ chatId: curApp.chat_id, convUid: conv_uid }));
-      // }
-      getConvList()
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleUpdateList = (data: any) => {
     const newApp = data?.newApp
     const newConv = data?.newConv
@@ -247,7 +208,6 @@ const ConversationAnalysis: React.FC = () => {
       skipNextConvFetchRef.current = true
       setCurApp(newApp)
       if (newConv) {
-        setConvList([newConv])
         setCurConv({ ...newConv, ...newApp })
       }
       setShowAllConversations(false)
@@ -269,22 +229,40 @@ const ConversationAnalysis: React.FC = () => {
     }
   }
 
+  const handleEdit = (key?: string, item?: any) => {
+    setIsEdit(key === 'edit')
+    setVisible(true)
+    if (item) {
+      setCurApp(item)
+    }
+  }
+
   return (
     <Spin spinning={loading} wrapperClassName="h-full">
       <div className="h-full w-full flex bg-white">
         <ConverList
-          setVisible={setVisible}
+          handleEdit={handleEdit}
           appList={appList}
           handleSetCurApp={handleSetCurApp}
           handleDeleteApp={handleDeleteApp}
           setHideRight={setHideRight}
           setShowAllConversations={setShowAllConversations}
           curApp={curApp}
+          handleClearConvHistory={handleClearConvHistory}
         />
-        {!hideRight && curConv && !showAllConversations && <Conversation conv={curConv} onClose={() => setCurConv(undefined)} onUpdateList={handleUpdateList} />}
+        {!hideRight && curConv && !showAllConversations && <Conversation conv={curConv} ref={conversationRef} onClose={() => setCurConv(undefined)} onUpdateList={handleUpdateList} />}
         {!hideRight && showAllConversations && <AllConversations onClose={() => setShowAllConversations(false)} onSelectApp={(item) => handleSetCurApp(item)} onUpdateList={handleUpdateList} />}
       </div>
-      <CreateModal visible={visible} onClose={onClose} />
+      <CreateModal
+        onClose={onClose}
+        initialValues={{
+          ...curApp,
+          title: curApp.title || 'AI智能助手',
+          biz_name: curApp.biz_name || 'AI智能助手',
+        }}
+        isEdit={isEdit}
+        visible={visible}
+      />
     </Spin>
   )
 }
