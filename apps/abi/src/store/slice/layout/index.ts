@@ -8,7 +8,7 @@ interface InitialStateType {
 }
 
 const initialState: InitialStateType = {
-  selectedMenuKey: 'home',
+  selectedMenuKey: '',
   selectedSecondaryMenuKey: '',
 }
 

@@ -54,11 +54,11 @@ export function convertRuoYiToSoybean(ruoYiRoutes: any[]): any[] {
     const createSingleRoute = (route: any) => {
         const name = normalizeName(route.name);
         const comp = normalizeComponent(route.component);
-
+        const data =['system_model','system_plugin','system_data-dictionary']
         return {
             name,
             path: route.path,
-            component: `layout.base$view.${comp}`,
+            component: data.includes(comp)?comp:`layout.base$view.${comp}`,
             meta: {
                 hideInMenu: route.hidden,
                 i18nKey: `route.${name}`,

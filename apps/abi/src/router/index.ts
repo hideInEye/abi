@@ -29,7 +29,7 @@ export const router = createRouter({
 });
 
 export async function setupRouter() {
-  router.beforeEach(createRouteGuard);
-  router.afterEach(afterEach);
+  // router.beforeEach(createRouteGuard);
+  // router.afterEach(afterEach);
   await router.initReady();
 }

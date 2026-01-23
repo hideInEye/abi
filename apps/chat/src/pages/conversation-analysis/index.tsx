@@ -25,6 +25,7 @@ const ConversationAnalysis: React.FC = () => {
   const isInitializedRef = useRef(false)
   const skipNextConvFetchRef = useRef(false)
   const [isEdit, setIsEdit] = useState(false)
+  const [EditData, setEditData] = useState<any>({})
   const conversationRef = useRef<any>(null)
 
   // 按 create_time 排序
@@ -130,6 +131,7 @@ const ConversationAnalysis: React.FC = () => {
             // message.success('更新成功');
             setIsEdit(false)
             setVisible(false)
+            setEditData({})
             handleUpdateList(res?.data)
           }
           return Promise.resolve()
@@ -166,6 +168,7 @@ const ConversationAnalysis: React.FC = () => {
     } else {
       setVisible(false)
       setIsEdit(false)
+      setEditData({})
       return Promise.resolve()
     }
   }
@@ -186,6 +189,7 @@ const ConversationAnalysis: React.FC = () => {
           })
           if (res.data?.length) {
             await Promise.all(res.data.map((conv: any) => deleteConv({ conv_uid: conv.conv_uid })))
+            message.success('对话已删除')
           }
           if (curApp.chat_id === item.chat_id) {
             setCurConv(undefined)
@@ -233,7 +237,7 @@ const ConversationAnalysis: React.FC = () => {
     setIsEdit(key === 'edit')
     setVisible(true)
     if (item) {
-      setCurApp(item)
+      setEditData(item)
     }
   }
 
@@ -248,6 +252,7 @@ const ConversationAnalysis: React.FC = () => {
           setHideRight={setHideRight}
           setShowAllConversations={setShowAllConversations}
           curApp={curApp}
+          onUpdateList={handleUpdateList}
           handleClearConvHistory={handleClearConvHistory}
         />
         {!hideRight && curConv && !showAllConversations && <Conversation conv={curConv} ref={conversationRef} onClose={() => setCurConv(undefined)} onUpdateList={handleUpdateList} />}
@@ -256,9 +261,9 @@ const ConversationAnalysis: React.FC = () => {
       <CreateModal
         onClose={onClose}
         initialValues={{
-          ...curApp,
-          title: curApp.title || 'AI智能助手',
-          biz_name: curApp.biz_name || 'AI智能助手',
+          ...EditData,
+          title: EditData.title || 'AI智能助手',
+          biz_name: EditData.biz_name || 'AI智能助手',
         }}
         isEdit={isEdit}
         visible={visible}

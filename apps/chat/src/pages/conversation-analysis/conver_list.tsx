@@ -1,5 +1,5 @@
 import { DoubleRightOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons'
-import { Dropdown, Input, message, Modal, Space } from 'antd'
+import { Dropdown, Input, message, Modal, Popover, Space } from 'antd'
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import SvgIcon from '../../components/SvgIcon'
@@ -9,6 +9,7 @@ import { MenuProps } from 'antd'
 import { clearConvHistory, fetchConvList } from '../../service/api/conv'
 import { CHAT_MODE } from '../../constant'
 import { getSpaceId } from '../../utils'
+import SaveDrawer from '../conversation/SaveDrawer'
 interface converListProps {
   appList: any[]
   handleSetCurApp: (item: any) => void
@@ -18,11 +19,14 @@ interface converListProps {
   curApp: any
   handleEdit: (key: string) => void
   handleClearConvHistory: () => void
+  onUpdateList: (data: any) => void
 }
 
 const ConverList: React.FC<converListProps> = (props: any) => {
-  const { appList, handleSetCurApp, handleDeleteApp, setHideRight, setShowAllConversations, curApp, handleEdit, handleClearConvHistory } = props
+  const { appList, handleSetCurApp, handleDeleteApp, setHideRight, setShowAllConversations, curApp, handleEdit, handleClearConvHistory, onUpdateList } = props
   const [fold, setFold] = useState(false)
+  const [saveVisible, setSaveVisible] = useState(false)
+  const [saveData, setSaveData] = useState<any>({})
   const dropdownMenu: MenuProps['items'] = [
     {
       key: 'edit',
@@ -47,20 +51,15 @@ const ConverList: React.FC<converListProps> = (props: any) => {
     //     handleEdit()
     //   },
     // },
-    // {
-    //   key: 'save',
-    //   label: (
-    //     <Space>
-    //       <SvgIcon localIcon="drown_save" className="w-5 h-[1.375rem] cursor-pointer" onClick={handleEdit} />
-    //       另存
-    //     </Space>
-    //   ),
-    //   onClick: ({ domEvent }) => {
-    //     domEvent.stopPropagation()
-    //     domEvent.preventDefault()
-    //     handleEdit()
-    //   },
-    // },
+    {
+      key: 'save',
+      label: (
+        <Space>
+          <SvgIcon localIcon="drown_save" className="w-5 h-[1.375rem] cursor-pointer" />
+          另存
+        </Space>
+      ),
+    },
     {
       key: 'clear',
       label: (
@@ -111,6 +110,19 @@ const ConverList: React.FC<converListProps> = (props: any) => {
     })
   }
 
+  const handleSave = async (item: any) => {
+    const res = await fetchConvList({
+      chat_id: item.chat_id,
+      chat_mode: CHAT_MODE,
+      space_id: getSpaceId(),
+    })
+    if (res.data?.length) {
+      const [first] = res.data
+      setSaveData({ ...item, ...first })
+      setSaveVisible(true)
+    }
+  }
+
   const handleMenuClick = (e: any, item: any) => {
     e?.domEvent?.stopPropagation()
     e?.domEvent?.preventDefault()
@@ -122,7 +134,7 @@ const ConverList: React.FC<converListProps> = (props: any) => {
         handleEdit('rename')
         break
       case 'save':
-        handleEdit('save')
+        handleSave(item)
         break
       case 'clear':
         handleClear(item)
@@ -131,6 +143,13 @@ const ConverList: React.FC<converListProps> = (props: any) => {
         handleDeleteApp(item)
         break
     }
+  }
+
+  const saveDrawerClose = (refresh?: boolean, payload?: any) => {
+    if (refresh) {
+      onUpdateList && onUpdateList(payload)
+    }
+    setSaveVisible(false)
   }
 
   return (
@@ -162,7 +181,9 @@ const ConverList: React.FC<converListProps> = (props: any) => {
           >
             <div className="px-[1.375rem] group flex items-center justify-between">
               <div className="flex items-start flex-col">
-                <span className="text-[#333333] leading-[1.375rem]">{item.biz_name}</span>
+                <Popover content={item.biz_name}>
+                  <span className="text-[#333333] leading-[1.375rem] w-[8rem] overflow-hidden text-ellipsis whitespace-nowrap">{item.biz_name}</span>
+                </Popover>
                 <sub className="text-[#666666] leading-[1.25rem]">{item.create_time ? dayjs(item.create_time).format('YYYY-MM-DD HH:mm:ss') : '-'}</sub>
               </div>
               <Dropdown
@@ -196,6 +217,7 @@ const ConverList: React.FC<converListProps> = (props: any) => {
           <DoubleRightOutlined className="ml-2" />
         </div>
       </div>
+      <SaveDrawer open={saveVisible} onClose={(refresh?: boolean, payload?: any) => saveDrawerClose(refresh, payload)} conv={saveData} />
     </div>
   )
 }

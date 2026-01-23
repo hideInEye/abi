@@ -15,8 +15,8 @@ export const generatedRoutes: GeneratedRoute[] = [
       i18nKey: 'route.403',
       title: '403',
       constant: true,
-      hideInMenu: true
-    }
+      hideInMenu: true,
+    },
   },
   {
     name: '404',
@@ -26,8 +26,8 @@ export const generatedRoutes: GeneratedRoute[] = [
       i18nKey: 'route.404',
       title: '404',
       constant: true,
-      hideInMenu: true
-    }
+      hideInMenu: true,
+    },
   },
   {
     name: '500',
@@ -37,8 +37,8 @@ export const generatedRoutes: GeneratedRoute[] = [
       i18nKey: 'route.500',
       title: '500',
       constant: true,
-      hideInMenu: true
-    }
+      hideInMenu: true,
+    },
   },
   {
     name: 'ai-assistant',
@@ -49,7 +49,7 @@ export const generatedRoutes: GeneratedRoute[] = [
       i18nKey: 'route.ai-assistant',
       icon: 'mdi:message',
       order: 2,
-      title: 'ai-assistant'
+      title: 'ai-assistant',
     },
     children: [
       {
@@ -61,162 +61,353 @@ export const generatedRoutes: GeneratedRoute[] = [
           i18nKey: 'route.ai-assistant_conversational-analysis',
           icon: 'mdi:message',
           order: 2,
-          title: 'ai-assistant_conversational-analysis'
-        }
-      }
-    ]
+          title: 'ai-assistant_conversational-analysis',
+        },
+      },
+    ],
   },
   {
-    name: 'assistant-manage',
-    path: '/assistant-manage',
+    name: 'space',
+    path: '/',
+    component: 'layout.base',
+    meta: {},
+    children: [
+      {
+        name: 'data-preparation',
+        path: '/data-preparation',
+        component: 'layout.base',
+        meta: {
+          i18nKey: 'route.data-preparation',
+          icon: 'mdi:database',
+          order: 4,
+          title: 'data-preparation',
+        },
+        children: [
+          {
+            name: 'data-preparation_data-collection',
+            path: 'data-collection',
+            component: 'view.data-preparation_data-collection',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.data-preparation_data-collection',
+              order: 2,
+              title: 'data-preparation_data-collection',
+            },
+          },
+          {
+            name: 'data-preparation_data-collection-operate',
+            path: 'data-collection-operate/:id',
+            component: 'view.data-preparation_data-collection-operate',
+            meta: {
+              hideInMenu: true,
+              i18nKey: 'route.data-preparation_data-collection-operate',
+              title: 'data-preparation_data-collection-operate',
+            },
+          },
+          {
+            name: 'data-preparation_data-quick-creation',
+            path: 'data-quick-creation',
+            component: 'view.data-preparation_data-quick-creation',
+            meta: {
+              hideInMenu: true,
+              i18nKey: 'route.data-preparation_data-quick-creation',
+              order: 1,
+              title: 'data-preparation_data-quick-creation',
+            },
+          },
+          {
+            name: 'data-preparation_data-source',
+            path: 'data-source',
+            component: 'view.data-preparation_data-source',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.data-preparation_data-source',
+              order: 1,
+              title: 'data-preparation_data-source',
+            },
+          },
+          {
+            name: 'data-preparation_data-source-kinship',
+            path: 'data-source-kinship/:id',
+            component: 'view.data-preparation_data-source-kinship',
+            meta: {
+              hideInMenu: true,
+              i18nKey: 'route.data-preparation_data-source-kinship',
+              title: 'data-preparation_data-source-kinship',
+            },
+          },
+          {
+            name: 'data-preparation_data-source-view',
+            path: 'data-source-view/:id',
+            component: 'view.data-preparation_data-source-view',
+            meta: {
+              hideInMenu: true,
+              i18nKey: 'route.data-preparation_data-source-view',
+              title: 'data-preparation_data-source-view',
+            },
+          },
+          {
+            name: 'data-preparation_data-table-meaning',
+            path: 'data-table-meaning',
+            component: 'view.data-preparation_data-table-meaning',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.data-preparation_data-table-meaning',
+              order: 3,
+              title: 'data-preparation_data-table-meaning',
+            },
+          },
+        ],
+      },
+      {
+        name: 'assistant-manage',
+        path: '/assistant-manage',
+        component: 'layout.base',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.assistant-manage',
+          icon: 'mdi:assistant',
+          order: 3,
+          title: 'assistant-manage',
+        },
+        children: [
+          {
+            name: 'assistant-manage_assistant-config',
+            path: 'assistant-config',
+            component: 'view.assistant-manage_assistant-config',
+            meta: {
+              i18nKey: 'route.assistant-manage_assistant-config',
+              order: 3,
+              title: 'assistant-manage_assistant-config',
+            },
+          },
+          {
+            name: 'assistant-manage_label-meaning',
+            path: 'label-meaning',
+            component: 'view.assistant-manage_label-meaning',
+            meta: {
+              i18nKey: 'route.assistant-manage_label-meaning',
+              order: 4,
+              title: 'assistant-manage_label-meaning',
+            },
+          },
+          {
+            name: 'assistant-manage_memory-manage',
+            path: 'memory-manage',
+            component: 'view.assistant-manage_memory-manage',
+            meta: {
+              hideInMenu: true,
+              i18nKey: 'route.assistant-manage_memory-manage',
+              order: 4,
+              title: 'assistant-manage_memory-manage',
+            },
+          },
+          {
+            name: 'assistant-manage_recommended-inquiries',
+            path: 'recommended-inquiries',
+            component: 'view.assistant-manage_recommended-inquiries',
+            meta: {
+              i18nKey: 'route.assistant-manage_recommended-inquiries',
+              order: 4,
+              title: 'assistant-manage_recommended-inquiries',
+            },
+          },
+          {
+            name: 'assistant-manage_technical-jargon',
+            path: 'technical-jargon',
+            component: 'view.assistant-manage_technical-jargon',
+            meta: {
+              i18nKey: 'route.assistant-manage_technical-jargon',
+              order: 4,
+              title: 'assistant-manage_technical-jargon',
+            },
+          },
+        ],
+      },
+      {
+        name: 'job',
+        path: '/job',
+        component: 'layout.base',
+        meta: {
+          i18nKey: 'route.job',
+          icon: 'mdi:database',
+          order: 4,
+          title: 'job',
+        },
+        children: [
+          {
+            name: 'job_email',
+            path: 'email',
+            component: 'view.job_email',
+            meta: {
+              i18nKey: 'route.job_email',
+              title: 'job_email',
+            },
+            children: [
+              {
+                name: 'job_email_modules',
+                path: 'modules',
+                meta: {
+                  i18nKey: 'route.job_email_modules',
+                  title: 'job_email_modules',
+                },
+                children: [
+                  {
+                    name: 'job_email_modules_editor-quill',
+                    path: 'editor-quill',
+                    component: 'view.job_email_modules_editor-quill',
+                    meta: {
+                      i18nKey: 'route.job_email_modules_editor-quill',
+                      title: 'job_email_modules_editor-quill',
+                    },
+                  },
+                  {
+                    name: 'job_email_modules_share-email-setting',
+                    path: 'share-email-setting',
+                    component: 'view.job_email_modules_share-email-setting',
+                    meta: {
+                      i18nKey: 'route.job_email_modules_share-email-setting',
+                      title: 'job_email_modules_share-email-setting',
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            name: 'job_log',
+            path: 'log',
+            component: 'view.job_log',
+            meta: {
+              title: 'test',
+            },
+          },
+          {
+            name: 'job_time',
+            path: 'time',
+            component: 'view.job_time',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.job_time',
+              order: 1,
+              title: 'job_time',
+            },
+            children: [
+              {
+                name: 'job_time_modules',
+                path: 'modules',
+                meta: {
+                  i18nKey: 'route.job_time_modules',
+                  title: 'job_time_modules',
+                },
+                children: [
+                  {
+                    name: 'job_time_modules_editor-quill',
+                    path: 'editor-quill',
+                    component: 'view.job_time_modules_editor-quill',
+                    meta: {
+                      i18nKey: 'route.job_time_modules_editor-quill',
+                      title: 'job_time_modules_editor-quill',
+                    },
+                  },
+                  {
+                    name: 'job_time_modules_share-email-setting',
+                    path: 'share-email-setting',
+                    component: 'view.job_time_modules_share-email-setting',
+                    meta: {
+                      i18nKey: 'route.job_time_modules_share-email-setting',
+                      title: 'job_time_modules_share-email-setting',
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    name: '',
+    path: '/',
     component: 'layout.base',
     meta: {
-      hideInMenu: false,
-      i18nKey: 'route.assistant-manage',
-      icon: 'mdi:assistant',
-      order: 3,
-      title: 'assistant-manage'
+      hideInMenu: true,
+      i18nKey: 'route.home',
+      icon: 'mdi:monitor-dashboard',
+      order: 1,
+      title: 'home',
     },
     children: [
       {
-        name: 'assistant-manage_assistant-config',
-        path: 'assistant-config',
-        component: 'view.assistant-manage_assistant-config',
-        meta: {
-          i18nKey: 'route.assistant-manage_assistant-config',
-          order: 3,
-          title: 'assistant-manage_assistant-config'
-        }
-      },
-      {
-        name: 'assistant-manage_label-meaning',
-        path: 'label-meaning',
-        component: 'view.assistant-manage_label-meaning',
-        meta: {
-          i18nKey: 'route.assistant-manage_label-meaning',
-          order: 4,
-          title: 'assistant-manage_label-meaning'
-        }
-      },
-      {
-        name: 'assistant-manage_memory-manage',
-        path: 'memory-manage',
-        component: 'view.assistant-manage_memory-manage',
-        meta: {
-          hideInMenu: true,
-          i18nKey: 'route.assistant-manage_memory-manage',
-          order: 4,
-          title: 'assistant-manage_memory-manage'
-        }
-      },
-      {
-        name: 'assistant-manage_recommended-inquiries',
-        path: 'recommended-inquiries',
-        component: 'view.assistant-manage_recommended-inquiries',
-        meta: {
-          i18nKey: 'route.assistant-manage_recommended-inquiries',
-          order: 4,
-          title: 'assistant-manage_recommended-inquiries'
-        }
-      },
-      {
-        name: 'assistant-manage_technical-jargon',
-        path: 'technical-jargon',
-        component: 'view.assistant-manage_technical-jargon',
-        meta: {
-          i18nKey: 'route.assistant-manage_technical-jargon',
-          order: 4,
-          title: 'assistant-manage_technical-jargon'
-        }
-      }
-    ]
-  },
-  {
-    name: 'data-preparation',
-    path: '/data-preparation',
-    component: 'layout.base',
-    meta: {
-      i18nKey: 'route.data-preparation',
-      icon: 'mdi:database',
-      order: 4,
-      title: 'data-preparation'
-    },
-    children: [
-      {
-        name: 'data-preparation_data-collection',
-        path: 'data-collection',
-        component: 'view.data-preparation_data-collection',
+        name: 'system',
+        path: '/system',
+        component: 'layout.base',
         meta: {
           hideInMenu: false,
-          i18nKey: 'route.data-preparation_data-collection',
-          order: 2,
-          title: 'data-preparation_data-collection'
-        }
+          i18nKey: 'route.system',
+          icon: 'mdi:monitor-dashboard',
+          order: 6,
+          title: 'system',
+        },
+        children: [
+          // {
+          //   name: 'system_data-dictionary',
+          //   path: 'data-dictionary',
+          //   component: 'view.system_data-dictionary',
+          //   meta: {
+          //     i18nKey: 'route.system_data-dictionary',
+          //     title: 'system_data-dictionary',
+          //   },
+          // },
+          // {
+          //   name: 'system_model',
+          //   path: 'model',
+          //   component: 'view.system_model',
+          //   meta: {
+          //     hideInMenu: false,
+          //     i18nKey: 'route.manage_model',
+          //     order: 1,
+          //     title: 'manage_model',
+          //   },
+          // },
+          // {
+          //   name: 'system_plugin',
+          //   path: 'plugin',
+          //   component: 'view.system_plugin',
+          //   meta: {
+          //     hideInMenu: false,
+          //     i18nKey: 'route.system_plugin',
+          //     icon: 'mdi:monitor-dashboard',
+          //     order: 6,
+          //     title: 'system_plugin',
+          //   },
+          // },
+          // {
+          //   name: 'system_space-user',
+          //   path: 'space-user',
+          //   component: 'view.system_space-user',
+          //   meta: {
+          //     hideInMenu: false,
+          //     i18nKey: 'route.system_space-user',
+          //     icon: 'ic:round-manage-accounts',
+          //     title: 'system_space-user',
+          //   },
+          // },
+          // {
+          //   name: 'system_user',
+          //   path: 'user',
+          //   component: 'view.system_user',
+          //   meta: {
+          //     hideInMenu: false,
+          //     i18nKey: 'route.system_user',
+          //     icon: 'ic:round-manage-accounts',
+          //     title: 'system_user',
+          //   },
+          // },
+        ],
       },
-      {
-        name: 'data-preparation_data-collection-operate',
-        path: 'data-collection-operate/:id',
-        component: 'view.data-preparation_data-collection-operate',
-        meta: {
-          hideInMenu: true,
-          i18nKey: 'route.data-preparation_data-collection-operate',
-          title: 'data-preparation_data-collection-operate'
-        }
-      },
-      {
-        name: 'data-preparation_data-quick-creation',
-        path: 'data-quick-creation',
-        component: 'view.data-preparation_data-quick-creation',
-        meta: {
-          hideInMenu: true,
-          i18nKey: 'route.data-preparation_data-quick-creation',
-          order: 1,
-          title: 'data-preparation_data-quick-creation'
-        }
-      },
-      {
-        name: 'data-preparation_data-source',
-        path: 'data-source',
-        component: 'view.data-preparation_data-source',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.data-preparation_data-source',
-          order: 1,
-          title: 'data-preparation_data-source'
-        }
-      },
-      {
-        name: 'data-preparation_data-source-kinship',
-        path: 'data-source-kinship/:id',
-        component: 'view.data-preparation_data-source-kinship',
-        meta: {
-          hideInMenu: true,
-          i18nKey: 'route.data-preparation_data-source-kinship',
-          title: 'data-preparation_data-source-kinship'
-        }
-      },
-      {
-        name: 'data-preparation_data-source-view',
-        path: 'data-source-view/:id',
-        component: 'view.data-preparation_data-source-view',
-        meta: {
-          hideInMenu: true,
-          i18nKey: 'route.data-preparation_data-source-view',
-          title: 'data-preparation_data-source-view'
-        }
-      },
-      {
-        name: 'data-preparation_data-table-meaning',
-        path: 'data-table-meaning',
-        component: 'view.data-preparation_data-table-meaning',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.data-preparation_data-table-meaning',
-          order: 3,
-          title: 'data-preparation_data-table-meaning'
-        }
-      }
-    ]
+    ],
   },
   {
     name: 'guide',
@@ -224,8 +415,8 @@ export const generatedRoutes: GeneratedRoute[] = [
     component: 'layout.base$view.guide',
     meta: {
       i18nKey: 'route.guide',
-      title: 'guide'
-    }
+      title: 'guide',
+    },
   },
   {
     name: 'home',
@@ -236,8 +427,8 @@ export const generatedRoutes: GeneratedRoute[] = [
       i18nKey: 'route.home',
       icon: 'mdi:monitor-dashboard',
       order: 1,
-      title: 'home'
-    }
+      title: 'home',
+    },
   },
   {
     name: 'iframe-page',
@@ -246,110 +437,10 @@ export const generatedRoutes: GeneratedRoute[] = [
     meta: {
       i18nKey: 'route.iframe-page',
       title: 'iframe-page',
-      hideInMenu: true
-    }
-  },
-  {
-    name: 'job',
-    path: '/job',
-    component: 'layout.base',
-    meta: {
-      i18nKey: 'route.job',
-      icon: 'mdi:database',
-      order: 4,
-      title: 'job'
+      hideInMenu: true,
     },
-    children: [
-      {
-        name: 'job_email',
-        path: 'email',
-        component: 'view.job_email',
-        meta: {
-          i18nKey: 'route.job_email',
-          title: 'job_email'
-        },
-        children: [
-          {
-            name: 'job_email_modules',
-            path: 'modules',
-            meta: {
-              i18nKey: 'route.job_email_modules',
-              title: 'job_email_modules'
-            },
-            children: [
-              {
-                name: 'job_email_modules_editor-quill',
-                path: 'editor-quill',
-                component: 'view.job_email_modules_editor-quill',
-                meta: {
-                  i18nKey: 'route.job_email_modules_editor-quill',
-                  title: 'job_email_modules_editor-quill'
-                }
-              },
-              {
-                name: 'job_email_modules_share-email-setting',
-                path: 'share-email-setting',
-                component: 'view.job_email_modules_share-email-setting',
-                meta: {
-                  i18nKey: 'route.job_email_modules_share-email-setting',
-                  title: 'job_email_modules_share-email-setting'
-                }
-              }
-            ]
-          }
-        ]
-      },
-      {
-        name: 'job_log',
-        path: 'log',
-        component: 'view.job_log',
-        meta: {
-          title: 'test'
-        }
-      },
-      {
-        name: 'job_time',
-        path: 'time',
-        component: 'view.job_time',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.job_time',
-          order: 1,
-          title: 'job_time'
-        },
-        children: [
-          {
-            name: 'job_time_modules',
-            path: 'modules',
-            meta: {
-              i18nKey: 'route.job_time_modules',
-              title: 'job_time_modules'
-            },
-            children: [
-              {
-                name: 'job_time_modules_editor-quill',
-                path: 'editor-quill',
-                component: 'view.job_time_modules_editor-quill',
-                meta: {
-                  i18nKey: 'route.job_time_modules_editor-quill',
-                  title: 'job_time_modules_editor-quill'
-                }
-              },
-              {
-                name: 'job_time_modules_share-email-setting',
-                path: 'share-email-setting',
-                component: 'view.job_time_modules_share-email-setting',
-                meta: {
-                  i18nKey: 'route.job_time_modules_share-email-setting',
-                  title: 'job_time_modules_share-email-setting'
-                }
-              }
-            ]
-          }
-        ]
-      }
-    ]
   },
+
   {
     name: 'login',
     path: '/login',
@@ -360,7 +451,7 @@ export const generatedRoutes: GeneratedRoute[] = [
       constant: true,
       hideInMenu: true,
       i18nKey: 'route.login',
-      title: 'login'
+      title: 'login',
     },
     children: [
       {
@@ -369,8 +460,8 @@ export const generatedRoutes: GeneratedRoute[] = [
         component: 'view.login_code-login',
         meta: {
           i18nKey: 'route.login_code-login',
-          title: 'login_code-login'
-        }
+          title: 'login_code-login',
+        },
       },
       {
         name: 'login_pwd-login',
@@ -378,8 +469,8 @@ export const generatedRoutes: GeneratedRoute[] = [
         component: 'view.login_pwd-login',
         meta: {
           i18nKey: 'route.login_pwd-login',
-          title: 'login_pwd-login'
-        }
+          title: 'login_pwd-login',
+        },
       },
       {
         name: 'login_register',
@@ -387,8 +478,8 @@ export const generatedRoutes: GeneratedRoute[] = [
         component: 'view.login_register',
         meta: {
           i18nKey: 'route.login_register',
-          title: 'login_register'
-        }
+          title: 'login_register',
+        },
       },
       {
         name: 'login_reset-pwd',
@@ -396,10 +487,10 @@ export const generatedRoutes: GeneratedRoute[] = [
         component: 'view.login_reset-pwd',
         meta: {
           i18nKey: 'route.login_reset-pwd',
-          title: 'login_reset-pwd'
-        }
-      }
-    ]
+          title: 'login_reset-pwd',
+        },
+      },
+    ],
   },
   {
     name: 'manage',
@@ -410,7 +501,7 @@ export const generatedRoutes: GeneratedRoute[] = [
       i18nKey: 'route.manage',
       icon: 'mdi:monitor-dashboard',
       order: 6,
-      title: 'manage'
+      title: 'manage',
     },
     children: [
       {
@@ -418,7 +509,7 @@ export const generatedRoutes: GeneratedRoute[] = [
         path: 'component',
         meta: {
           i18nKey: 'route.manage_component',
-          title: 'manage_component'
+          title: 'manage_component',
         },
         children: [
           {
@@ -427,10 +518,10 @@ export const generatedRoutes: GeneratedRoute[] = [
             component: 'view.manage_component_icon-selector',
             meta: {
               i18nKey: 'route.manage_component_icon-selector',
-              title: 'manage_component_icon-selector'
-            }
-          }
-        ]
+              title: 'manage_component_icon-selector',
+            },
+          },
+        ],
       },
       {
         name: 'manage_dept',
@@ -441,8 +532,8 @@ export const generatedRoutes: GeneratedRoute[] = [
           i18nKey: 'route.manage_dept',
           icon: 'material-symbols:route',
           keepAlive: true,
-          title: 'manage_dept'
-        }
+          title: 'manage_dept',
+        },
       },
       {
         name: 'manage_group',
@@ -452,8 +543,8 @@ export const generatedRoutes: GeneratedRoute[] = [
           hideInMenu: true,
           i18nKey: 'route.manage_group',
           icon: 'carbon:user-role',
-          title: 'manage_group'
-        }
+          title: 'manage_group',
+        },
       },
       {
         name: 'manage_menu',
@@ -464,8 +555,8 @@ export const generatedRoutes: GeneratedRoute[] = [
           i18nKey: 'route.manage_menu',
           icon: 'material-symbols:route',
           keepAlive: true,
-          title: 'manage_menu'
-        }
+          title: 'manage_menu',
+        },
       },
       {
         name: 'manage_post',
@@ -475,8 +566,8 @@ export const generatedRoutes: GeneratedRoute[] = [
           hideInMenu: true,
           i18nKey: 'route.manage_post',
           icon: 'ic:round-manage-accounts',
-          title: 'manage_post'
-        }
+          title: 'manage_post',
+        },
       },
       {
         name: 'manage_role',
@@ -486,8 +577,8 @@ export const generatedRoutes: GeneratedRoute[] = [
           hideInMenu: false,
           i18nKey: 'route.manage_role',
           icon: 'carbon:user-role',
-          title: 'manage_role'
-        }
+          title: 'manage_role',
+        },
       },
       {
         name: 'manage_role-auth',
@@ -496,8 +587,8 @@ export const generatedRoutes: GeneratedRoute[] = [
         meta: {
           hideInMenu: true,
           i18nKey: 'route.manage_role-auth',
-          title: 'manage_role-auth'
-        }
+          title: 'manage_role-auth',
+        },
       },
       {
         name: 'manage_space-menu',
@@ -508,8 +599,8 @@ export const generatedRoutes: GeneratedRoute[] = [
           i18nKey: 'route.manage_space-menu',
           icon: 'material-symbols:route',
           keepAlive: true,
-          title: 'manage_space-menu'
-        }
+          title: 'manage_space-menu',
+        },
       },
       {
         name: 'manage_space-role',
@@ -519,8 +610,8 @@ export const generatedRoutes: GeneratedRoute[] = [
           hideInMenu: false,
           i18nKey: 'route.manage_space-role',
           icon: 'carbon:user-role',
-          title: 'manage_space-role'
-        }
+          title: 'manage_space-role',
+        },
       },
       {
         name: 'manage_user',
@@ -530,8 +621,8 @@ export const generatedRoutes: GeneratedRoute[] = [
           hideInMenu: false,
           i18nKey: 'route.manage_user',
           icon: 'ic:round-manage-accounts',
-          title: 'manage_user'
-        }
+          title: 'manage_user',
+        },
       },
       {
         name: 'manage_user-role',
@@ -540,10 +631,10 @@ export const generatedRoutes: GeneratedRoute[] = [
         meta: {
           hideInMenu: true,
           i18nKey: 'route.manage_user-role',
-          title: 'manage_user-role'
-        }
-      }
-    ]
+          title: 'manage_user-role',
+        },
+      },
+    ],
   },
   {
     name: 'my-collect',
@@ -553,8 +644,8 @@ export const generatedRoutes: GeneratedRoute[] = [
       hideInMenu: true,
       i18nKey: 'route.my-collect',
       order: 10,
-      title: 'my-collect'
-    }
+      title: 'my-collect',
+    },
   },
   {
     name: 'recently-used',
@@ -565,8 +656,8 @@ export const generatedRoutes: GeneratedRoute[] = [
       i18nKey: 'route.recently-used',
       icon: 'mdi:history',
       order: 11,
-      title: 'recently-used'
-    }
+      title: 'recently-used',
+    },
   },
   {
     name: 'share-manage',
@@ -577,7 +668,7 @@ export const generatedRoutes: GeneratedRoute[] = [
       i18nKey: 'route.share-manage',
       icon: 'mdi:monitor-share',
       order: 2,
-      title: 'share-mange'
+      title: 'share-mange',
     },
     children: [
       {
@@ -589,10 +680,10 @@ export const generatedRoutes: GeneratedRoute[] = [
           i18nKey: 'route.share-manage_my-share',
           icon: 'mdi:share-all',
           order: 2,
-          title: 'share-manage_my-share'
-        }
-      }
-    ]
+          title: 'share-manage_my-share',
+        },
+      },
+    ],
   },
   {
     name: 'space-list',
@@ -601,75 +692,7 @@ export const generatedRoutes: GeneratedRoute[] = [
     meta: {
       hideInMenu: true,
       i18nKey: 'route.space-list',
-      title: 'space-list'
-    }
-  },
-  {
-    name: 'system',
-    path: '/system',
-    component: 'layout.base',
-    meta: {
-      hideInMenu: false,
-      i18nKey: 'route.system',
-      icon: 'mdi:monitor-dashboard',
-      order: 6,
-      title: 'system'
+      title: 'space-list',
     },
-    children: [
-      {
-        name: 'system_data-dictionary',
-        path: 'data-dictionary',
-        component: 'view.system_data-dictionary',
-        meta: {
-          i18nKey: 'route.system_data-dictionary',
-          title: 'system_data-dictionary'
-        }
-      },
-      {
-        name: 'system_model',
-        path: 'model',
-        component: 'view.system_model',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.manage_model',
-          order: 1,
-          title: 'manage_model'
-        }
-      },
-      {
-        name: 'system_plugin',
-        path: 'plugin',
-        component: 'view.system_plugin',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.system_plugin',
-          icon: 'mdi:monitor-dashboard',
-          order: 6,
-          title: 'system_plugin'
-        }
-      },
-      {
-        name: 'system_space-user',
-        path: 'space-user',
-        component: 'view.system_space-user',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.system_space-user',
-          icon: 'ic:round-manage-accounts',
-          title: 'system_space-user'
-        }
-      },
-      {
-        name: 'system_user',
-        path: 'user',
-        component: 'view.system_user',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.system_user',
-          icon: 'ic:round-manage-accounts',
-          title: 'system_user'
-        }
-      }
-    ]
-  }
-];
+  },
+]

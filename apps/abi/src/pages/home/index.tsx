@@ -15,6 +15,7 @@ import { clearTabs } from '@/store/slice/tab'
 import s from './index.module.scss'
 import { HomeTitle } from './modules/home_title'
 import { ApprovSpace } from './modules/approv_space'
+import { changeSpaceId, getSpaceId } from '@/store/slice/app'
 /**
  * 首页组件
  * 系统的主要仪表板页面，提供数据概览和快速访问入口
@@ -29,7 +30,7 @@ export function Component() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editSpace, setEditSpace] = useState<ISpaceItem | null>(null)
   const dispatch = useAppDispatch()
-
+  const spaceId = useAppSelector(getSpaceId)
   const { push } = useRouter()
 
   async function getHomeData() {
@@ -62,7 +63,14 @@ export function Component() {
         ...homeData,
         spaceList: spaceData.length > 0 ? spaceData : homeData.spaceList || [],
       }
-
+      // 默认选中第一个空间
+      const lgSpaceId = localStorage.getItem('spaceId')
+      if (lgSpaceId && !spaceId) {
+        dispatch(changeSpaceId(Number(lgSpaceId)))
+      } else if (mergedData?.spaceList && mergedData.spaceList.length > 0 && mergedData.spaceList[0].spaceId && !spaceId) {
+        dispatch(changeSpaceId(mergedData.spaceList[0].spaceId))
+        localStorage.setItem('spaceId', mergedData.spaceList[0].spaceId.toString())
+      }
       setHomeData(mergedData)
     } catch (error) {
       console.error('获取首页数据失败:', error)
@@ -111,7 +119,7 @@ export function Component() {
       <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {homeData &&
           homeData?.spaceList?.map((item: ISpaceItem) =>
-            item.type === 'add' ? <ApprovSpace  /> : <SpaceItem deleteSpace={deleteSpaceHandler} key={item.spaceId} setEditSpace={editSpaceHandler} space={item} />,
+            item.type === 'add' ? <ApprovSpace /> : <SpaceItem deleteSpace={deleteSpaceHandler} key={item.spaceId} setEditSpace={editSpaceHandler} space={item} />,
           )}
       </section>
 

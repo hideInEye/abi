@@ -121,7 +121,7 @@ const SaveDrawer: React.FC<Props> = ({ open, onClose, conv }) => {
     <Drawer
       title={
         <div className="flex justify-between items-center">
-          <span className="text-lg font-medium">复制对话</span>
+          <span className="text-lg font-medium">另存为对话</span>
           <CloseOutlined
             className="cursor-pointer hover:opacity-70"
             onClick={onClose}

@@ -33,11 +33,11 @@ export function useSpaceSwitch() {
         dispatch(setSpaceHidden(false))
       }
       // 先同步并等待清除标签页（关闭前一个空间打开的 tab）
-      try {
-        await dispatch(clearTabs());
-      } catch {
-        // ignore error but continue
-      }
+      // try {
+      //   await dispatch(clearTabs());
+      // } catch {
+      //   // ignore error but continue
+      // }
 
       // 移除持久化的 tabs，防止重启/重新登录时恢复到旧空间的 tabs
       localStg.remove('globalTabs');
