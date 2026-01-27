@@ -12,7 +12,7 @@ export const primaryMenuData = [
   { key: 'home', label: '主页', icon: homeIcon, checkIcon: DehomeIcon, url: '/home' },
   { key: 'ai-assistant_conversational-analysis', label: '对话', icon: dialogueIcon, checkIcon: DedialogueIcon, url: '/ai-assistant/conversational-analysis' },
   { key: 'workbench', label: '工作台', icon: workbenchIcon, checkIcon: DeworkbenchIcon, url: '/workbench' },
-  { key: 'components', label: '组件', icon: componentsIcon, checkIcon: DecomponentsIcon, url: '/components' },
+  { key: 'component', label: '组件', icon: componentsIcon, checkIcon: DecomponentsIcon, url: '/component' },
 ]
 
 export const itemMap = new Map([
@@ -26,6 +26,6 @@ export const primaryMenuMap = new Map([
   ['home', '主页'],
   ['ai-assistant_conversational-analysis', '对话'],
   ['workbench', '工作台'],
-  ['components', '组件'],
+  ['component', '组件'],
 ])
 

@@ -29,30 +29,13 @@ declare module "@elegant-router/types" {
     "500": "/500";
     "ai-assistant": "/ai-assistant";
     "ai-assistant_conversational-analysis": "conversational-analysis";
-    "assistant-manage": "/assistant-manage";
-    "assistant-manage_assistant-config": "assistant-config";
-    "assistant-manage_label-meaning": "label-meaning";
-    "assistant-manage_memory-manage": "memory-manage";
-    "assistant-manage_recommended-inquiries": "recommended-inquiries";
-    "assistant-manage_technical-jargon": "technical-jargon";
-    "data-preparation": "/data-preparation";
-    "data-preparation_data-collection": "data-collection";
-    "data-preparation_data-collection-operate": "data-collection-operate/:id";
-    "data-preparation_data-quick-creation": "data-quick-creation";
-    "data-preparation_data-source": "data-source";
-    "data-preparation_data-source-kinship": "data-source-kinship/:id";
-    "data-preparation_data-source-view": "data-source-view/:id";
-    "data-preparation_data-table-meaning": "data-table-meaning";
+    "component": "/component";
+    "component_data-dictionary": "data-dictionary";
+    "component_model": "model";
+    "component_plugin": "plugin";
     "guide": "/guide";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
-    "job": "/job";
-    "job_email": "email";
-    "job_log": "log";
-    "job_time": "time";
-    "job_time_modules": "modules";
-    "job_time_modules_editor-quill": "editor-quill";
-    "job_time_modules_share-email-setting": "share-email-setting";
     "login": "/login";
     "login_code-login": "code-login";
     "login_pwd-login": "pwd-login";
@@ -77,11 +60,30 @@ declare module "@elegant-router/types" {
     "share-manage_my-share": "my-share";
     "space-list": "/space-list";
     "system": "/system";
-    "system_data-dictionary": "data-dictionary";
-    "system_model": "model";
-    "system_plugin": "plugin";
     "system_space-user": "space-user";
     "system_user": "user";
+    "workbench": "/workbench";
+    "workbench_assistant-manage": "assistant-manage";
+    "workbench_assistant-manage_assistant-config": "assistant-config";
+    "workbench_assistant-manage_label-meaning": "label-meaning";
+    "workbench_assistant-manage_memory-manage": "memory-manage";
+    "workbench_assistant-manage_recommended-inquiries": "recommended-inquiries";
+    "workbench_assistant-manage_technical-jargon": "technical-jargon";
+    "workbench_data-preparation": "data-preparation";
+    "workbench_data-preparation_data-collection": "data-collection";
+    "workbench_data-preparation_data-collection-operate": "data-collection-operate/:id";
+    "workbench_data-preparation_data-quick-creation": "data-quick-creation";
+    "workbench_data-preparation_data-source": "data-source";
+    "workbench_data-preparation_data-source-kinship": "data-source-kinship/:id";
+    "workbench_data-preparation_data-source-view": "data-source-view/:id";
+    "workbench_data-preparation_data-table-meaning": "data-table-meaning";
+    "workbench_job": "job";
+    "workbench_job_email": "email";
+    "workbench_job_log": "log";
+    "workbench_job_time": "time";
+    "workbench_job_time_modules": "modules";
+    "workbench_job_time_modules_editor-quill": "editor-quill";
+    "workbench_job_time_modules_share-email-setting": "share-email-setting";
   };
 
   /**
@@ -122,12 +124,10 @@ declare module "@elegant-router/types" {
     | "404"
     | "500"
     | "ai-assistant"
-    | "assistant-manage"
-    | "data-preparation"
+    | "component"
     | "guide"
     | "home"
     | "iframe-page"
-    | "job"
     | "login"
     | "manage"
     | "my-collect"
@@ -135,6 +135,7 @@ declare module "@elegant-router/types" {
     | "share-manage"
     | "space-list"
     | "system"
+    | "workbench"
   >;
 
   /**
@@ -158,25 +159,11 @@ declare module "@elegant-router/types" {
     | "500"
     | "iframe-page"
     | "ai-assistant_conversational-analysis"
-    | "assistant-manage_assistant-config"
-    | "assistant-manage_label-meaning"
-    | "assistant-manage_memory-manage"
-    | "assistant-manage_recommended-inquiries"
-    | "assistant-manage_technical-jargon"
-    | "data-preparation_data-collection-operate"
-    | "data-preparation_data-collection"
-    | "data-preparation_data-quick-creation"
-    | "data-preparation_data-source-kinship"
-    | "data-preparation_data-source-view"
-    | "data-preparation_data-source"
-    | "data-preparation_data-table-meaning"
+    | "component_data-dictionary"
+    | "component_model"
+    | "component_plugin"
     | "guide"
     | "home"
-    | "job_email"
-    | "job_log"
-    | "job_time"
-    | "job_time_modules_editor-quill"
-    | "job_time_modules_share-email-setting"
     | "login_code-login"
     | "login"
     | "login_pwd-login"
@@ -197,11 +184,25 @@ declare module "@elegant-router/types" {
     | "recently-used"
     | "share-manage_my-share"
     | "space-list"
-    | "system_data-dictionary"
-    | "system_model"
-    | "system_plugin"
     | "system_space-user"
     | "system_user"
+    | "workbench_assistant-manage_assistant-config"
+    | "workbench_assistant-manage_label-meaning"
+    | "workbench_assistant-manage_memory-manage"
+    | "workbench_assistant-manage_recommended-inquiries"
+    | "workbench_assistant-manage_technical-jargon"
+    | "workbench_data-preparation_data-collection-operate"
+    | "workbench_data-preparation_data-collection"
+    | "workbench_data-preparation_data-quick-creation"
+    | "workbench_data-preparation_data-source-kinship"
+    | "workbench_data-preparation_data-source-view"
+    | "workbench_data-preparation_data-source"
+    | "workbench_data-preparation_data-table-meaning"
+    | "workbench_job_email"
+    | "workbench_job_log"
+    | "workbench_job_time"
+    | "workbench_job_time_modules_editor-quill"
+    | "workbench_job_time_modules_share-email-setting"
   >;
 
   /**

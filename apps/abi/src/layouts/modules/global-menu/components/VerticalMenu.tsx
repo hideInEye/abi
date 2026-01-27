@@ -62,16 +62,16 @@ const VerticalMenu = memo(() => {
         const spaceId: any = localStorage.getItem('spaceId');
 
         // 门户管理的特殊处理
-        if (route.path.includes('/manage/')) {
-          const manageMenus = cloneAllMenus.filter(item => item.key === 'manage');
-          if (isMicroApp) {
-            manageMenus[0].children = manageMenus[0].children!.filter((item: any) => {
-              return onenetPortalManageMenus.find((oItem: any) => oItem.routeName === item.key);
-            });
-          }
-          setFilteredMenus(manageMenus);
-          return;
-        }
+        // if (route.path.includes('/manage/')) {
+        //   const manageMenus = cloneAllMenus.filter(item => item.key === 'manage');
+        //   if (isMicroApp) {
+        //     manageMenus[0].children = manageMenus[0].children!.filter((item: any) => {
+        //       return onenetPortalManageMenus.find((oItem: any) => oItem.routeName === item.key);
+        //     });
+        //   }
+        //   setFilteredMenus(manageMenus);
+        //   return;
+        // }
 
         let finalMenus: any = [];
         // 空间菜单特殊处理
@@ -182,7 +182,8 @@ const VerticalMenu = memo(() => {
 
     setStateOpenKeys(names || []);
   }, [isMix, inlineCollapsed]);
-
+  console.log(isMix,'isMix');
+  
   return (
     <SimpleScrollbar>
       <AMenu

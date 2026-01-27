@@ -1,7 +1,7 @@
 import type { TransferProps } from 'antd';
 import { Form, Transfer } from 'antd';
 
-import { useTableStore } from '@/pages/data-preparation/data-table-meaning/store/useTableStore';
+import { useTableStore } from '@/pages/workbench/data-preparation/data-table-meaning/store/useTableStore';
 import { queryDataSetDetail } from '@/service/api/data-table-meaning';
 
 import type { DataSourceItem } from '../types';

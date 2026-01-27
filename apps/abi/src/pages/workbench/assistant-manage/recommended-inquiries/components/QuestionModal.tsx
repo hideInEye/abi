@@ -2,7 +2,7 @@ import { Form } from 'antd';
 import React from 'react';
 
 import { useAssistant } from '../hooks/useAssistant.ts';
-import type { QuestionTableData } from '../types';
+import type { QuestionTableData } from '../types/index.ts';
 import { CloseOutlined } from '@ant-design/icons';
 
 interface TagModalProps {

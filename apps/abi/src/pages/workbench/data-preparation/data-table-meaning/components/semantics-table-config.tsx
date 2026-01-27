@@ -3,13 +3,13 @@ import type { TableColumnsType } from 'antd';
 import { Form } from 'antd';
 import { useEffect, useRef } from 'react';
 
-import Star from '../../../../components/star/index.tsx';
-import { useTableStore } from '../store/useTableStore';
-import type { DataTypea } from '../types';
-import { getSemanticTypeMap } from '../utils/getDefaultField';
-import { formatField } from '../utils/helper';
+import Star from '../../../../../components/star/index.tsx';
+import { useTableStore } from '../store/useTableStore.ts';
+import type { DataTypea } from '../types/index';
+import { getSemanticTypeMap } from '../utils/getDefaultField.ts';
+import { formatField } from '../utils/helper.ts';
 
-import { TableTooltip } from './table-tooltip';
+import { TableTooltip } from './table-tooltip.tsx';
 
 export default function DataTableMeaningTable() {
   const [form] = Form.useForm();

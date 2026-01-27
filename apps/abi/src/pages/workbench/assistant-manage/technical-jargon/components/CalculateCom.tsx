@@ -2,8 +2,8 @@ import type { FormInstance } from 'antd/es/form/Form';
 import { InfoCircleOutlined } from '@ant-design/icons';
 
 import { TableSemantics } from '@/components/tableSemantics.tsx';
-import QuoteFun from '@/pages/data-preparation/data-collection-operate/modules/QuoteFun.tsx';
-import type { TableSemanticParams } from '@/pages/data-preparation/data-table-meaning/types/index.js';
+import QuoteFun from '@/pages/workbench/data-preparation/data-collection-operate/modules/QuoteFun.tsx';
+import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types/index.js';
 import { fetchDataCollectionList } from '@/service/api';
 import { getAllFieldsByNodeData } from '@/utils/data-collection-operate.ts';
 

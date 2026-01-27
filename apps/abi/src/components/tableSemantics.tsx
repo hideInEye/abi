@@ -1,7 +1,7 @@
 import type { FormInstance } from 'antd';
 import { useEffect, useState } from 'react';
 
-import type { TableSemanticParams } from '@/pages/data-preparation/data-table-meaning/types';
+import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types';
 import { schemalist } from '@/service/api/data-table-meaning';
 import { type TableSemanticsGroupType, tableSemanticsGroupList } from '@/service/api/table-semantics';
 

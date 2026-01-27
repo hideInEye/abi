@@ -2,7 +2,7 @@ import { DeleteOutlined, MinusCircleOutlined, PlusOutlined } from '@ant-design/i
 import { Button, Form, Input, Select, TreeSelect } from 'antd';
 import React from 'react';
 
-import Star from '../../../../components/star';
+import Star from '../../../../../components/star';
 import { inequalityOptions, logicalOperators } from '../constants';
 
 export type Condition = {

@@ -1,8 +1,8 @@
 import { MinusOutlined, PlusOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 
-import { inequalityOptions, letters, logicalOperators } from '../../constants';
-import type { IAllFields } from '../../types';
+import { inequalityOptions, letters, logicalOperators } from '../../constants/index.ts';
+import type { IAllFields } from '../../types/index.ts';
 import { convertTo2DArray } from '../../utils/convertTo2DArray.ts';
 
 interface ExpressionSelectProps {

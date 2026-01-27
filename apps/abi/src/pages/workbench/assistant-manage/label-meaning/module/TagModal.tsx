@@ -3,11 +3,11 @@ import { Form, Input } from 'antd';
 import React from 'react';
 
 import { TableSemantics } from '@/components/tableSemantics';
-import ExpressionBuilder from '@/pages/assistant-manage/label-meaning/components/Expr.tsx';
-import type { TableSemanticParams } from '@/pages/data-preparation/data-table-meaning/types/index.js';
+import ExpressionBuilder from '@/pages/workbench/assistant-manage/label-meaning/components/Expr.tsx';
+import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types/index.js';
 
 import { TagInput } from '../components/Model/TagInput.tsx';
-import type { TagGroup } from '../types';
+import type { TagGroup } from '../types/index.ts';
 
 interface TagModalProps {
   readonly editingGroup: TagGroup | null;

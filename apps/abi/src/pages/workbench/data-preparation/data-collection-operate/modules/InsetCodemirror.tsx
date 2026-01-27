@@ -6,7 +6,7 @@ import type { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 import type { ForwardRefRenderFunction } from 'react';
 
-import { extensions } from './extensions';
+import { extensions } from './extensions.ts';
 import type { FunctionType, HintPathType, PlaceholderThemesType, ScriptEditorRef } from './interface.ts';
 
 interface PropsType {

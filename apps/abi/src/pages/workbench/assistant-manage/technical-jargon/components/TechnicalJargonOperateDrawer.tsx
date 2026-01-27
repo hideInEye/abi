@@ -4,7 +4,7 @@ import { useForm } from 'antd/es/form/Form';
 
 import { addTerms, editTerms } from '@/service/api/Industry.ts';
 
-import type { TagGroup } from '../types';
+import type { TagGroup } from '../types/index.ts';
 
 import BasicInformation from './BasicInformation.tsx';
 import CalculateCom from './CalculateCom.tsx';
