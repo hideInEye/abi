@@ -47,7 +47,7 @@ const VerticalMenu = memo(() => {
   const isMicroApp = qiankunWindow.__POWERED_BY_QIANKUN__;
   const { allMenus, childLevelMenus, route, selectKey } = useMixMenuContext();
   const { onenetPortalManageMenus } = useSystemStore();
-
+  
   // 状态：过滤后的菜单和加载状态
   const [filteredMenus, setFilteredMenus] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,50 +56,22 @@ const VerticalMenu = memo(() => {
   useEffect(() => {
     const filterMenus = async () => {
       setLoading(true); // 开始加载
-
+      
       try {
         const cloneAllMenus = cloneDeep(allMenus);
         const spaceId: any = localStorage.getItem('spaceId');
-
-        // 门户管理的特殊处理
-        // if (route.path.includes('/manage/')) {
-        //   const manageMenus = cloneAllMenus.filter(item => item.key === 'manage');
-        //   if (isMicroApp) {
-        //     manageMenus[0].children = manageMenus[0].children!.filter((item: any) => {
-        //       return onenetPortalManageMenus.find((oItem: any) => oItem.routeName === item.key);
-        //     });
-        //   }
-        //   setFilteredMenus(manageMenus);
-        //   return;
-        // }
-
-        let finalMenus: any = [];
-        // 空间菜单特殊处理
-        if (spaceId && spaceId !== 'undefined' && spaceId !== 'null') {
-          const { data, error } = await getSpaceMenuBySpaceIdApi(Number(spaceId));
-          if (!error) {
-            finalMenus = convertRuoYiToSoybean(data);
-
-            const arr = filterAndReconstructRoutes(cloneAllMenus, finalMenus);
-            setFilteredMenus(arr);
-            return;
-          }
-          // 合并菜单：这里假设需要将空间菜单合并到主菜单中
-          // 具体合并逻辑根据业务需求调整
-          // const finalMenus1 = [
-          //   ...cloneAllMenus.filter(item => item.key !== 'manage' && item.key !== 'my-collect' && item.key !== 'home' && item.key !== 'recently-used' && item.key !== 'share-manage'),
-          //   // ...spaceMenus
-          // ];
-          // console.log(allMenus)
-          // console.log('---------------')
-          // console.log(finalMenus)
-          setFilteredMenus(finalMenus);
-          return;
-        }
-
-        // 默认情况：直接为空 目前该场景待确认
-        setFilteredMenus(finalMenus);
-        // setFilteredMenus(cloneAllMenus.filter(item => item.key !== 'manage'));
+        const menuKey = route.path.split('/')[1]
+        let menuArr: any[] = []
+       cloneAllMenus.forEach((item)=>{
+         if(item.key === menuKey){
+          console.log(item.children,'====');
+          
+           menuArr = item.children
+         }
+       })
+       console.log(menuArr,'menuArr');
+       
+       setFilteredMenus(menuArr)
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('菜单过滤出错', error);
@@ -182,7 +154,6 @@ const VerticalMenu = memo(() => {
 
     setStateOpenKeys(names || []);
   }, [isMix, inlineCollapsed]);
-  console.log(isMix,'isMix');
   
   return (
     <SimpleScrollbar>

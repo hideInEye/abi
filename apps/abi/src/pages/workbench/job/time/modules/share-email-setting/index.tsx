@@ -4,7 +4,7 @@ import EditorQuill from '../editor-quill';
 import WeekSelect from './week-select';
 import MonthSelect from './month-select';
 import EmailTitle from './email-title';
-import { validateMultiEmails } from '../../../../../utils/date';
+import { validateMultiEmails } from '@/utils/date';
 import DailyTime from './daily-time';
 
 const ShareEmailSetting = ({ form }: { form: FormInstance}) => {

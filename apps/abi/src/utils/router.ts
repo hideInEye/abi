@@ -94,10 +94,11 @@ export function convertRuoYiToSoybean(ruoYiRoutes: any[]): any[] {
     }
 
     // 容器节点（Layout / ParentView / any hasChildren）
-    if (isLayout || isParentView || hasChildren) {
-      route.component = 'layout.base'
+    if (isLayout) {
+      route.component = isTop ? 'layout.base' : 'layout.blank'
+    } else if (isParentView || hasChildren) {
+      route.component = 'layout.blank'
     } else {
-      // 叶子页面：必须对齐 auto-route 的 key
       route.component = isTop ? `layout.base$view.${viewKey}` : `view.${viewKey}`
     }
 

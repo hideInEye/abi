@@ -79,36 +79,46 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
-        name: 'component_data-dictionary',
-        path: 'data-dictionary',
-        component: 'view.component_data-dictionary',
+        name: 'component_system',
+        path: 'system',
         meta: {
-          i18nKey: 'route.component_data-dictionary',
-          title: 'component_data-dictionary'
-        }
-      },
-      {
-        name: 'component_model',
-        path: 'model',
-        component: 'view.component_model',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.manage_model',
-          order: 1,
-          title: 'manage_model'
-        }
-      },
-      {
-        name: 'component_plugin',
-        path: 'plugin',
-        component: 'view.component_plugin',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.system_plugin',
-          icon: 'mdi:monitor-dashboard',
-          order: 6,
-          title: 'system_plugin'
-        }
+          i18nKey: 'route.component_system',
+          title: 'component_system'
+        },
+        children: [
+          {
+            name: 'component_system_data-dictionary',
+            path: 'data-dictionary',
+            component: 'view.component_system_data-dictionary',
+            meta: {
+              i18nKey: 'route.component_system_data-dictionary',
+              title: 'component_system_data-dictionary'
+            }
+          },
+          {
+            name: 'component_system_model',
+            path: 'model',
+            component: 'view.component_system_model',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.manage_model',
+              order: 1,
+              title: 'manage_model'
+            }
+          },
+          {
+            name: 'component_system_plugin',
+            path: 'plugin',
+            component: 'view.component_system_plugin',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.system_plugin',
+              icon: 'mdi:monitor-dashboard',
+              order: 6,
+              title: 'system_plugin'
+            }
+          }
+        ]
       }
     ]
   },

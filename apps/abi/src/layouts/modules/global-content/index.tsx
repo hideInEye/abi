@@ -48,13 +48,10 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   }, [reload])
 
   return (
-    <div className="flex">
-      {/* <div className={'h-full w-[15rem]'} id={GLOBAL_SIDER_MENU_ID} /> */}
-      <div className={ClassNames('h-full flex-grow bg-layout relative', { 'pl-0.5': !closePadding })}>
-        <KeepAlive activeCacheKey={cacheKey} aliveRef={aliveRef} cacheNodeClassName={reload ? transitionName : ''} include={cacheKeys}>
-          {currentOutlet}
-        </KeepAlive>
-      </div>
+    <div className={ClassNames('h-full flex-grow bg-layout relative', { 'pl-0.5': !closePadding })}>
+      <KeepAlive activeCacheKey={cacheKey} aliveRef={aliveRef} cacheNodeClassName={reload ? transitionName : ''} include={cacheKeys}>
+        {currentOutlet}
+      </KeepAlive>
     </div>
   )
 })
