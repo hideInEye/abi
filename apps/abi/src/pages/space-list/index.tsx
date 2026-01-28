@@ -122,7 +122,7 @@ export function Component() {
               />
             ))}
         </section>
-        <div className="flex justify-end">
+        <div className="flex justify-end mt-4 [&_.ant-pagination-item]:bg-[transparent]">
           <APagination
             current={pageNum}
             pageSize={pageSize}

@@ -20,7 +20,7 @@ export function useSpaceSwitch() {
    * @param redirectPath 跳转路径，默认为对话分析页面
    */
   const switchToSpace = useCallback(
-    async (spaceId: number, redirectPath = '/ai-assistant/conversational-analysis') => {
+    async (spaceId: number, redirectPath = '/ai-assistant/conversational-analysis',options?:{redirect?:boolean}) => {
       // 清除对话相关的缓存，避免显示上个空间的对话列表
       clearConversationCache();
 
@@ -51,7 +51,7 @@ export function useSpaceSwitch() {
       // 触发全局事件（供其它页面监听并刷新数据）
       const event = new CustomEvent('space-change', { detail: { spaceId } });
       window.dispatchEvent(event);
-
+      if(options?.redirect) return
       // 为了确保即使目标路径与当前路径相同也会触发刷新，附加一个时间戳 query
       const sep = redirectPath.includes('?') ? '&' : '?';
       const url = `${redirectPath}${sep}_ts=${Date.now()}`;

@@ -14,7 +14,7 @@ import ConverList from './conver_list'
 // import { useAppDispatch, useAppSelector } from '../../store/redux/hooks';
 // import { setConvListForChat, upsertConvForChat, removeConvForChat, clearConvListForChat, selectConvListByChatId, setDatasourceCache, selectDatasourceCache } from '../../store/redux/slices/conversations';
 
-const ConversationAnalysis: React.FC = () => {
+const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpaceId }) => {
   const [visible, setVisible] = useState(false)
   const [curApp, setCurApp] = useState<any>({})
   const [appList, setAppList] = useState<any[]>([])
@@ -22,14 +22,38 @@ const ConversationAnalysis: React.FC = () => {
   const [showAllConversations, setShowAllConversations] = useState(false)
   const [loading, setLoading] = useState(false)
   const [hideRight, setHideRight] = useState(false)
-  const isInitializedRef = useRef(false)
+  const lastSpaceIdRef = useRef<number | null>(null)
   const skipNextConvFetchRef = useRef(false)
   const [isEdit, setIsEdit] = useState(false)
   const [EditData, setEditData] = useState<any>({})
   const conversationRef = useRef<any>(null)
   const [fold, setFold] = useState(false)
+  const [currentSpaceId, setCurrentSpaceId] = useState<number>(() => {
+    return propSpaceId !== undefined ? Number(propSpaceId) : getSpaceId()
+  })
 
+  useEffect(() => {
+    if (propSpaceId === undefined) return
+    const next = Number(propSpaceId)
+    if (!Number.isNaN(next) && next !== currentSpaceId) {
+      setCurrentSpaceId(next)
+    }
+  }, [propSpaceId, currentSpaceId])
 
+  useEffect(() => {
+    const handleSpaceChange = (event: Event) => {
+      const detail = (event as CustomEvent)?.detail
+      const next = Number(detail?.spaceId)
+      if (!Number.isNaN(next)) {
+        setCurrentSpaceId(next)
+      }
+    }
+    window.addEventListener('space-change', handleSpaceChange)
+    return () => {
+      window.removeEventListener('space-change', handleSpaceChange)
+    }
+  }, [])
+  
   // 按 create_time 排序
   const sortAppList = (list: any[]) => {
     return list.sort((a, b) => {
@@ -50,7 +74,7 @@ const ConversationAnalysis: React.FC = () => {
       setLoading(true)
       const res = await fetchAppList({
         chat_mode: CHAT_MODE,
-        space_id: getSpaceId(),
+        space_id: currentSpaceId,
         create_by: userInfoString?.userName,
         // space_id: 73 //测试对话
       })
@@ -68,15 +92,15 @@ const ConversationAnalysis: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
-
+  }, [currentSpaceId])
+  
   useEffect(() => {
-    // 防止StrictMode导致的重复调用
-    if (!isInitializedRef.current) {
-      isInitializedRef.current = true
-      getAppList()
-    }
-  }, [])
+    // 防止StrictMode导致的重复调用，同时在 spaceId 变化时刷新列表
+    if (currentSpaceId === null || Number.isNaN(currentSpaceId)) return
+    if (lastSpaceIdRef.current === currentSpaceId) return
+    lastSpaceIdRef.current = currentSpaceId
+    getAppList()
+  }, [currentSpaceId, getAppList])
 
   // 获取会话列表
   const getConvList = async () => {
@@ -86,7 +110,7 @@ const ConversationAnalysis: React.FC = () => {
       const res = await fetchConvList({
         chat_id: curApp.chat_id,
         chat_mode: CHAT_MODE,
-        space_id: getSpaceId(),
+        space_id: currentSpaceId,
         // space_id: 73,
       })
       if (res.data?.length) {
@@ -187,7 +211,7 @@ const ConversationAnalysis: React.FC = () => {
           const res = await fetchConvList({
             chat_id: item.chat_id,
             chat_mode: CHAT_MODE,
-            space_id: getSpaceId(),
+            space_id: currentSpaceId,
           })
           if (res.data?.length) {
             await Promise.all(res.data.map((conv: any) => deleteConv({ conv_uid: conv.conv_uid })))

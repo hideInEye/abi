@@ -26,7 +26,7 @@ function render(props: any) {
       console.log('config', config);
       window.APP_CONFIG = config;
       
-      const { container, basename, onTokenExpired } = props;
+      const { container, basename, onTokenExpired, spaceId } = props;
       // 将主应用传递的 token 过期处理函数挂载到 window 对象
       if (onTokenExpired) {
         window.onTokenExpired = onTokenExpired;
@@ -39,7 +39,7 @@ function render(props: any) {
             {/* 移除PersistGate包装器，直接使用BrowserRouter */}
             <BrowserRouter basename={(qiankunWindow as any)?.__POWERED_BY_QIANKUN__ ? basename : '/'}>
               <Routes>
-                <Route path="/" element={<App />} />
+                <Route path="/" element={<App spaceId={spaceId} />} />
               </Routes>
             </BrowserRouter>
           {/* </Provider> */}
@@ -54,7 +54,7 @@ function render(props: any) {
 const initQianKun = () => {
   renderWithQiankun(({
     mount(props: any) {
-      console.log('mount');
+      console.log('mount',props);
       render(props);
     },
     bootstrap() {

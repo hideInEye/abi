@@ -164,7 +164,7 @@ const VerticalMenu = memo(() => {
         {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
       </div>
       <AMenu
-        className="transition-300 border-0! h-[100vh]"
+        className={`transition-300 border-0! h-[100vh] ${!collapsed?'w-[12.5rem]':''}`}
         inlineIndent={18}
         items={filteredMenus}
         mode="inline"
