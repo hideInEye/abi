@@ -10,6 +10,7 @@ import { getSpaceMenuBySpaceIdApi } from '@/service/api';
 import { getSiderCollapse } from '@/store/slice/app';
 import { getThemeSettings } from '@/store/slice/theme';
 import { convertRuoYiToSoybean, filterAndReconstructRoutes } from "@/utils/router";
+import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 
 interface LevelKeysProps {
   children?: LevelKeysProps[];
@@ -47,7 +48,11 @@ const VerticalMenu = memo(() => {
   const isMicroApp = qiankunWindow.__POWERED_BY_QIANKUN__;
   const { allMenus, childLevelMenus, route, selectKey } = useMixMenuContext();
   const { onenetPortalManageMenus } = useSystemStore();
-  
+    const [collapsed, setCollapsed] = useState(false);
+
+  const toggleCollapsed = () => {
+    setCollapsed(!collapsed);
+  };
   // 状态：过滤后的菜单和加载状态
   const [filteredMenus, setFilteredMenus] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,8 +69,6 @@ const VerticalMenu = memo(() => {
         let menuArr: any[] = []
        cloneAllMenus.forEach((item)=>{
          if(item.key === menuKey){
-          console.log(item.children,'====');
-          
            menuArr = item.children
          }
        })
@@ -156,19 +159,22 @@ const VerticalMenu = memo(() => {
   }, [isMix, inlineCollapsed]);
   
   return (
-    <SimpleScrollbar>
+    <div className='bg-white ml-[2px]' style={{boxShadow: '0px 3px 6px 0px rgba(0,0,0,0.05)' }}>
+       <div onClick={toggleCollapsed} className='mb-[10px] pt-[10px] mr-[10px] flex cursor-pointer items-center justify-end'>
+        {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+      </div>
       <AMenu
-        className="size-full transition-300 border-0!"
-        inlineCollapsed={isVerticalMix ? false : inlineCollapsed}
+        className="transition-300 border-0! h-[100vh]"
         inlineIndent={18}
-        items={isMix ? childLevelMenus : filteredMenus}
+        items={filteredMenus}
         mode="inline"
         openKeys={stateOpenKeys}
         selectedKeys={selectKey}
         onOpenChange={onOpenChange}
         onSelect={handleClickMenu}
+        inlineCollapsed={collapsed}
       />
-    </SimpleScrollbar>
+    </div>
   );
 });
 

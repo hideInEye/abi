@@ -55,8 +55,8 @@ export const themePageAnimationModeRecord: Record<UnionKey.ThemePageAnimateMode,
 export const themePageAnimationModeOptions = transformRecordToOption(themePageAnimationModeRecord);
 
 
-// export const hideMenuRoute = ['space-list', 'recently-used', 'my-collect', 'share-manage_my-share'];
-export const hideMenuRoute = [];
+export const hideMenuRoute = ['space-list', 'recently-used', 'my-collect', 'share-manage_my-share','home','ai-assistant_conversational-analysis'];
+// export const hideMenuRoute = [];
 // 门户管理菜单
 export const portalManageMenus = [
   { id: 405, menuName: '空间菜单管理', routeName: 'manage_space-menu' },

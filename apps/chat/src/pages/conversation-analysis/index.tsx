@@ -27,6 +27,8 @@ const ConversationAnalysis: React.FC = () => {
   const [isEdit, setIsEdit] = useState(false)
   const [EditData, setEditData] = useState<any>({})
   const conversationRef = useRef<any>(null)
+  const [fold, setFold] = useState(false)
+
 
   // 按 create_time 排序
   const sortAppList = (list: any[]) => {
@@ -254,8 +256,10 @@ const ConversationAnalysis: React.FC = () => {
           curApp={curApp}
           onUpdateList={handleUpdateList}
           handleClearConvHistory={handleClearConvHistory}
+          setFold={setFold}
+          fold={fold}
         />
-        {!hideRight && curConv && !showAllConversations && <Conversation conv={curConv} ref={conversationRef} onClose={() => setCurConv(undefined)} onUpdateList={handleUpdateList} />}
+        {!hideRight && curConv && !showAllConversations && <Conversation fold={fold} conv={curConv} ref={conversationRef} onClose={() => setCurConv(undefined)} onUpdateList={handleUpdateList} />}
         {!hideRight && showAllConversations && <AllConversations onClose={() => setShowAllConversations(false)} onSelectApp={(item) => handleSetCurApp(item)} onUpdateList={handleUpdateList} />}
       </div>
       <CreateModal

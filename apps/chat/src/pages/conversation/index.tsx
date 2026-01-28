@@ -54,6 +54,7 @@ interface PropsType {
   conv: any // 对话配置信息
   onClose: () => void // 关闭回调函数
   onUpdateList: (data: any) => void
+  fold: boolean
 }
 
 /**
@@ -61,7 +62,7 @@ interface PropsType {
  * 使用React.memo优化性能
  */
 const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void }, PropsType>((props, ref) => {
-  const { conv, onClose, onUpdateList } = props
+  const { conv, onClose, onUpdateList , fold } = props
   // 数据库名称
   // const agentData = useRef<any>(null);
   const [confirmShareType, setConfirmShareType] = useState('')
@@ -1855,7 +1856,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
   }
 
   return (
-    <div className="min-w-[25rem] flex-1 flex flex-col h-full">
+    <div className={`${!fold ? 'w-[calc(100vw-12.5rem-88px)]':'w-[calc(100vw-88px)]'} flex-1 flex flex-col h-full overflow-hidden`}>
       <ChatHeader conv={conv} ref={chatHeaderRef} setConvContent={setConvContent} onUpdateList={onUpdateList} setIsSharing={setIsSharing} onClose={onClose} />
       <div ref={chatContainerRef} className="overflow-y-auto bg-white p-4 flex-1 scroll-smooth h-[calc(100vh-15.625rem)]">
         {/* 开发测试面板 */}

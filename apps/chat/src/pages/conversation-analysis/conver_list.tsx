@@ -20,11 +20,12 @@ interface converListProps {
   handleEdit: (key: string) => void
   handleClearConvHistory: () => void
   onUpdateList: (data: any) => void
+  setFold: (fold: boolean) => void
+  fold: boolean
 }
 
 const ConverList: React.FC<converListProps> = (props: any) => {
-  const { appList, handleSetCurApp, handleDeleteApp, setHideRight, setShowAllConversations, curApp, handleEdit, handleClearConvHistory, onUpdateList } = props
-  const [fold, setFold] = useState(false)
+  const { appList, handleSetCurApp, handleDeleteApp, setHideRight, setShowAllConversations, curApp, handleEdit, handleClearConvHistory, onUpdateList, setFold, fold } = props
   const [saveVisible, setSaveVisible] = useState(false)
   const [saveData, setSaveData] = useState<any>({})
   const dropdownMenu: MenuProps['items'] = [
@@ -153,7 +154,7 @@ const ConverList: React.FC<converListProps> = (props: any) => {
   }
 
   return (
-    <div className={`relative flex flex-col border-r py-[1.875rem] h-full transition-all duration-300 ease-in-out ${fold ? 'w-0' : 'w-[12.5rem]'}`}>
+    <div className={`relative flex flex-col border-r py-[1.875rem] h-[100vh] transition-all duration-300 ease-in-out ${fold ? 'w-0' : 'w-[12.5rem]'}`}>
       <header className="mb-2 w-full flex items-center px-3.5">
         {!fold && (
           <Space>
@@ -164,7 +165,10 @@ const ConverList: React.FC<converListProps> = (props: any) => {
       </header>
       <span
         className={`absolute transition-all duration-300 ease-in-out top-1/2 -translate-y-1/2 z-10 cursor-pointer select-none ${fold ? 'right-[-2.5rem]' : 'right-[-0.75rem]'}`}
-        onClick={() => setFold(!fold)}
+        onClick={() => {
+          setFold(!fold)
+
+        }}
         title={fold ? '展开菜单' : '收起菜单'}
       >
         <img src={!fold ? left_online : right_online} className="w-[1.5625rem] h-[1.5625rem]" />
