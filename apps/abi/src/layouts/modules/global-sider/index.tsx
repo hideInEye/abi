@@ -13,6 +13,7 @@ import { handleLoginExpired } from '@/utils/auth'
 import { Dropdown, Layout } from 'antd'
 import { useRoute, useRouter } from '~/packages/simple-router/src'
 import { spaceList } from '@/service/api'
+import { MenuProps } from 'antd/lib'
 const { Sider } = Layout
 
 const GlobalSider: FC = memo(() => {
@@ -29,6 +30,7 @@ const GlobalSider: FC = memo(() => {
     router.push('/home')
   }
   const { switchToSpace } = useSpaceSwitch()
+  const [selectedSpaceName, setSelectedSpaceName] = useState('')
 
   const { data: curspaceList, run: getSpaceList } = useRequest(spaceList, {
     manual: true,
@@ -39,6 +41,15 @@ const GlobalSider: FC = memo(() => {
       dispatch(setSelectedMenuKey(route.name))
     }
   }, [route])
+
+  useEffect(() => {
+    if (curspaceList && curspaceList.data && curspaceList.data.length > 0 && !selectedSpaceName) {
+      const currentSpace = curspaceList.data.find((space: any) => space.spaceId === Number(localStorage.getItem('spaceId')))
+      if (currentSpace) {
+        setSelectedSpaceName(currentSpace.spaceName)
+      }
+    }
+  }, [curspaceList])
 
   useEffect(() => {
     getSpaceList({
@@ -79,7 +90,7 @@ const GlobalSider: FC = memo(() => {
         label: '门户管理',
       })
       items.splice(5, 0, {
-        key: 'manage_space',
+        key: 'system',
         label: '空间管理',
       })
     }
@@ -116,13 +127,17 @@ const GlobalSider: FC = memo(() => {
       curspaceList?.data?.map((space: any) => ({
         label: space.spaceName,
         value: space.spaceId,
-        key:space.spaceId
+        key: space.spaceId,
       }))) ||
     []
 
   // 添加空间切换处理函数
-  const handleSpaceChange = (e: any) => {
-    switchToSpace(Number(e.key))
+  const handleSpaceChange: MenuProps['onClick'] = (e) => {
+    const data = spaceOptions.find((item: any) => item.key == e.key)
+    console.log(data, '===')
+    setSelectedSpaceName(data?.label || '')
+
+    switchToSpace(Number(e?.key))
   }
 
   return (
@@ -133,7 +148,7 @@ const GlobalSider: FC = memo(() => {
         </div>
         <div className="flex gap-[1.6875rem] flex-col text-[#848FA2]">
           {primaryMenuData.map((item) => {
-            const isActive = item.key !== selectedMenuKey
+            const isActive = item.name !== selectedMenuKey
             return (
               <div
                 key={item.key}
@@ -150,8 +165,18 @@ const GlobalSider: FC = memo(() => {
           })}
         </div>
         <div className="flex items-center  gap-6 flex-col text-[#848FA2]">
-          <Dropdown menu={{ items: spaceOptions, onClick: handleSpaceChange }}>
-            <SwapOutlined className="cursor-pointer" />
+          <Dropdown overlayClassName="[&_.ant-dropdown-menu]:h-[20rem] h-[20rem] overflow-hidden" trigger={['click']} menu={{ items: spaceOptions, onClick: handleSpaceChange }}>
+            <APopover
+              content={
+                <div>
+                  <div className="text-balance">
+                    当前空间: <span className="text-[#3366FF]">{selectedSpaceName}</span>
+                  </div>
+                </div>
+              }
+            >
+              <SwapOutlined className="cursor-pointer" />
+            </APopover>
           </Dropdown>
           <Dropdown menu={{ items: userItems(), onClick: handleMenuClick }}>
             <img src={userIcon} className="h-6 w-6" />

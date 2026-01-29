@@ -72,7 +72,6 @@ const VerticalMenu = memo(() => {
            menuArr = item.children
          }
        })
-       console.log(menuArr,'menuArr');
        
        setFilteredMenus(menuArr)
       } catch (error) {
