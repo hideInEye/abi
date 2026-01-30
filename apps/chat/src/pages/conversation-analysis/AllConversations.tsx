@@ -314,11 +314,11 @@ const AllConversations: React.FC<Props> = ({ onClose, onSelectApp, onUpdateList 
             />
           </span> */}
           {/* 隐藏复制对话按钮 */}
-          <Tooltip title="复制对话">
+          <Tooltip title="另存为">
             <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
               <SvgIcon 
-                localIcon="save" 
-                className="text-[#2E6CF6] hover:text-[#2E6CF6]/80 cursor-pointer"
+                localIcon="drown_save" 
+                className="cursor-pointer"
                 style={{ fontSize: '20px' }}
                 onClick={() => handleSave(record)}
               />

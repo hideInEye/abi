@@ -185,7 +185,7 @@ export function Component() {
         title="数据集列表"
         extra={
           <TableHeaderOperation
-            add={() => push('/data-preparation/data-collection-operate/0')}
+            add={() => push('/workbench/data-preparation/data-collection-operate/0')}
             columns={columnChecks}
             disabledDelete={checkedRowKeys.length === 0}
             loading={tableProps.loading}

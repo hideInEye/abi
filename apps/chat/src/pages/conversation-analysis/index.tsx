@@ -132,7 +132,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
     }
   }, [curApp])
 
-  const handleSetCurApp = async (item: any) => {
+  const handleSetCurApp =useCallback(async (item: any) => {
     // 移除datasourceCache参数
     try {
       setLoading(true)
@@ -143,7 +143,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
       setShowAllConversations(false)
       setHideRight(false)
     }
-  }
+  }, [])
 
   const onClose = async (val?: any) => {
     if (val) {
@@ -199,7 +199,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
     }
   }
 
-  const handleDeleteApp = async (item: any) => {
+  const handleDeleteApp = useCallback(async (item: any) => {
     Modal.confirm({
       title: '确认删除对话',
       content: '是否确认删除当前对话？删除后无法恢复。',
@@ -228,9 +228,9 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
         }
       },
     })
-  }
+  }, [])
 
-  const handleUpdateList = (data: any) => {
+  const handleUpdateList = useCallback((data: any) => {
     const newApp = data?.newApp
     const newConv = data?.newConv
     if (newApp) {
@@ -257,15 +257,15 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
         }
       }
     }
-  }
+  }, [])
 
-  const handleEdit = (key?: string, item?: any) => {
+  const handleEdit = useCallback((key?: string, item?: any) => {
     setIsEdit(key === 'edit')
     setVisible(true)
     if (item) {
       setEditData(item)
     }
-  }
+  }, [])
 
   return (
     <Spin spinning={loading} wrapperClassName="h-full">
@@ -277,7 +277,6 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
           handleDeleteApp={handleDeleteApp}
           setHideRight={setHideRight}
           setShowAllConversations={setShowAllConversations}
-          curApp={curApp}
           onUpdateList={handleUpdateList}
           handleClearConvHistory={handleClearConvHistory}
           setFold={setFold}
