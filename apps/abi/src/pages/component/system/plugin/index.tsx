@@ -133,9 +133,8 @@ export const Component: React.FC = () => {
                 onChange={e => handleSearch(e.target.value)}
               />
               <AButton
-                color="primary"
+                type="primary"
                 icon={<PlusOutlined />}
-                variant="outlined"
                 disabled={!groupId}
                 onClick={() => {
                   setOpen(true);

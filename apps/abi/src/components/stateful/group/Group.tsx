@@ -1,15 +1,13 @@
-import { PlusOutlined } from '@ant-design/icons';
-import { Button, Collapse, Form, Input, message, Modal, Space } from 'antd';
+import { EditOutlined, MinusCircleOutlined, PlusCircleOutlined } from '@ant-design/icons';
+import { Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
+import type { TreeDataNode } from 'antd';
 import React from 'react';
 
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics';
 
 import { GroupFrom } from './GroupFrom';
-import GroupList from './GroupList';
 import { type QuestionGroupItem, useGroupManagement } from './useGroupManagement';
 import  './group.scss'
-
-const { Panel } = Collapse;
 
 export interface GroupProps {
   readonly config: {
@@ -42,15 +40,25 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     setGroups,
     setIsModalOpen
   } = useGroupManagement(config);
+  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>(['group-root']);
+  const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
 
   useEffect(() => {
     getGroups();
   }, []);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (groups.length > 0) {
+      const firstKey = `group-${groups[0].groupId}`;
+      setSelectedKeys([firstKey]);
+      onGroupId(groups[0].groupId);
+    }
+  }, [groups]);
+
+  const handleSearch = (value: string) => {
     setGroups([]);
-    handleGroupSearch(e.target.value);
-    getGroups(e.target.value);
+    handleGroupSearch(value);
+    getGroups(value);
   };
 
   const handleModalCancel = () => {
@@ -65,11 +73,11 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       let flag:any = true
       if (editingGroup) {
         // 编辑模式
-       flag = await handleGroupEdit({ ...editingGroup, ...values, groupType: config.type },form);
+       flag = await handleGroupEdit({ ...editingGroup, ...values, groupType: config.type });
        
       } else {
         // 新增模式
-      flag = !!(await handleGroupAdd({ ...values, groupType: config.type,form }));
+      flag = !!(await handleGroupAdd({ ...values, groupType: config.type }));
       }
       if(flag){
         handleModalCancel();
@@ -85,49 +93,92 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     setIsModalOpen(true);
   };
 
-  const showEditModal = (group: QuestionGroupItem) => {
+  const showEditModal = (group: QuestionGroupItem, e: React.MouseEvent) => {
+    e.stopPropagation();
     setEditingGroup(group);
     form.setFieldsValue(group);
     setIsModalOpen(true);
   };
 
+  const handleAddGroup = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    showAddModal();
+  };
+
+  const handleDeleteGroup = async (groupId: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    await handleGroupDelete(groupId);
+  };
+
+  const handleTreeSelect = (selectedKeys: React.Key[]) => {
+    if (selectedKeys.length > 0) {
+      const key = selectedKeys[0] as string;
+      if (key !== 'group-root') {
+        const groupId = Number(key.replace('group-', ''));
+        const group = groups.find(g => g.groupId === groupId);
+        if (group) {
+          setSelectedKeys(selectedKeys);
+          onGroupId(group.groupId);
+        }
+      }
+    }
+  };
+
+  const treeData: TreeDataNode[] = [
+    {
+      title: (
+        <span className="inline-flex items-center gap-2 group">
+          <span>{config.panelTitle}</span>
+          <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
+            <Tooltip title="添加组">
+              <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={handleAddGroup} />
+            </Tooltip>
+          </span>
+        </span>
+      ),
+      key: 'group-root',
+      children: groups.map(item => ({
+        title: (
+          <span className="inline-flex items-center gap-2 group">
+            <span>{item.groupName}</span>
+            <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
+              <Tooltip title="编辑">
+                <EditOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => showEditModal(item, e)} />
+              </Tooltip>
+              <Popconfirm
+                title="确定删除该组吗？"
+                onConfirm={(e) => handleDeleteGroup(item.groupId, e as any)}
+                onCancel={(e) => e?.stopPropagation()}
+              >
+                <Tooltip title="删除">
+                  <MinusCircleOutlined className="text-gray-400 cursor-pointer hover:text-red-500" onClick={(e) => e.stopPropagation()} />
+                </Tooltip>
+              </Popconfirm>
+            </span>
+          </span>
+        ),
+        key: `group-${item.groupId}`,
+        isLeaf: true
+      }))
+    }
+  ];
+
   return (
     <>
-      <Space direction="vertical" className="space">
-        <Input
+      <div className="flex flex-col gap-2">
+        <AInput
           placeholder={config.inputPlaceholder}
-          onChange={handleSearch}
+          onChange={(e) => handleSearch(e.target.value)}
         />
-        <Collapse defaultActiveKey={['1']}>
-          <Panel
-            className="min-w-100"
-            header={config.panelTitle}
-            key="1"
-            extra={
-              <Button
-                color="primary"
-                icon={<PlusOutlined />}
-                size="small"
-                type="primary"
-                variant="outlined"
-                onClick={e => {
-                  e.stopPropagation();
-                  showAddModal();
-                }}
-              >
-                {config.button}
-              </Button>
-            }
-          >
-            <GroupList
-              groups={groups}
-              onDelete={handleGroupDelete}
-              onEdit={showEditModal}
-              onGroupId={onGroupId}
-            />
-          </Panel>
-        </Collapse>
-      </Space>
+        <Tree
+          treeData={treeData}
+          expandedKeys={expandedKeys}
+          onExpand={(keys) => setExpandedKeys(keys)}
+          selectedKeys={selectedKeys}
+          onSelect={handleTreeSelect}
+          blockNode
+        />
+      </div>
 
       <Modal
         open={isModalOpen}

@@ -33,26 +33,19 @@ export function Component() {
   const [editVisible, setEditVisible] = useState(false);
   const [configVisible, setConfigVisible] = useState(false);
 
-  const { scrollConfig, tableWrapperRef } = useTableScroll();
+  const [searchValue, setSearchValue] = useState('');
 
   const { columnChecks, data, run, searchProps, setColumnChecks, tableProps } = useTable({
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
     apiFn: fetchAssistantConfigList,
     apiParams: {
-      bizName: '',
+      bizName: searchValue,
       pageNum: 1,
       pageSize: 10,
       spaceId: Number(localStorage.getItem('spaceId')) // 空间id
     } as any,
     columns: () => [
-      {
-        align: 'center',
-        dataIndex: 'index',
-        key: 'index',
-        title: t('common.index'),
-        width: 64
-      },
       {
         align: 'center',
         dataIndex: 'bizName',
@@ -172,7 +165,7 @@ export function Component() {
     ]
   });
 
-  const { checkedRowKeys, onDeleted } = useTableOperate(data as any, run, () => {});
+  const { checkedRowKeys, onDeleted, rowSelection } = useTableOperate(data as any, run, () => {});
 
   async function handleDelete(record: any) {
     // 删除助手取消调用此接口，不需要判断是否引用对话
@@ -257,37 +250,37 @@ export function Component() {
     setConfigVisible(false);
   };
 
-  return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard>
-        <KeySearch {...searchProps} />
-      </ACard>
+  const handleSearch = () => {
+    run();
+  };
 
-      <ACard
-        bordered={false}
-        className="flex-col-stretch sm:flex-1-hidden card-wrapper"
-        ref={tableWrapperRef}
-        title="助手列表"
-        extra={
-          <div>
-            <TableHeaderOperation
-              add={handleAdd}
-              columns={columnChecks}
-              disabledDelete={checkedRowKeys.length === 0}
-              loading={tableProps.loading}
-              refresh={run}
-              setColumnChecks={setColumnChecks}
-            />
-          </div>
-        }
-      >
-        <ATable
-          rowKey="agentId"
-          scroll={scrollConfig}
-          size="small"
-          {...(tableProps as any)}
+  return (
+    <div className="flex flex-col gap-4 p-6">
+      <div className="flex items-center gap-4">
+        <AInput
+          placeholder="请输入助手名称"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          onPressEnter={handleSearch}
+          style={{ width: 200 }}
         />
-      </ACard>
+        <AButton type="primary" onClick={() => handleAdd()}>
+          新增助手
+        </AButton>
+          </div>
+      <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
+        <ATable
+          columns={tableProps.columns as any}
+          dataSource={tableProps.dataSource}
+          loading={tableProps.loading}
+          pagination={tableProps.pagination}
+          rowKey="agentId"
+          rowSelection={rowSelection as any}
+          scroll={{ x: 'max-content', y: 400 }}
+          size="small"
+          className="assistant-config-table"
+        />
+      </div>
 
       {editVisible ? (
         <DatasourceOperateDrawer

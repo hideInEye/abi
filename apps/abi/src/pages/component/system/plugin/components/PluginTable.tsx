@@ -94,7 +94,10 @@ export const PluginTable: React.FC<PluginTableProps> = ({
           <ASpace>
             <ATooltip title="编辑">
               <AButton
+                color="primary"
                 icon={<EditOutlined />}
+                size="small"
+                variant="link"
                 onClick={() => updateCurrentEdit(record)}
               />
             </ATooltip>
@@ -102,6 +105,9 @@ export const PluginTable: React.FC<PluginTableProps> = ({
             <ATooltip title="删除">
               <AButton
                 icon={<DeleteOutlined />}
+                color="danger"
+                size="small"
+                variant="link"
                 onClick={() => {
                   AModal.confirm({
                     onOk: () => {
@@ -124,6 +130,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
   };
 
   return (
+  <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
     <ATable
       columns={columns}
       dataSource={dataSource.rows}
@@ -133,6 +140,9 @@ export const PluginTable: React.FC<PluginTableProps> = ({
         total: dataSource.total
       }}
       style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}
+      size="small"
+      className="plugin-table"
     />
+  </div>
   );
 };

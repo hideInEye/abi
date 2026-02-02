@@ -4,7 +4,10 @@ import type { TableProps } from 'antd';
 interface DataType {
   bizName: string;
   createBy: string;
+  createTime: string;
   techName: string;
+  updateBy: string;
+  updateTime: string;
   viewName: string;
 }
 
@@ -24,30 +27,11 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
       render: text => {
         return (
           <APopover content={text}>
-            <span className="max-w-100 overflow-hidden text-ellipsis text-blue">{text && text.length > 10 ? text.slice(0, 10) + '...' : text}</span>
+            <span className="max-w-100 overflow-hidden text-ellipsis" style={{ paddingLeft: '32px' }}>{text && text.length > 10 ? text.slice(0, 10) + '...' : text}</span>
           </APopover>
         );
       },
-      title: '表语义名称'
-    },
-    {
-      dataIndex: 'techName',
-      key: 'techName',
-      title: '英文名称',
-      width: 200,
-      render: text => {
-        return (
-          <APopover content={text}>
-            <span className="max-w-100 overflow-hidden text-ellipsis text-blue">{text && text.length > 10 ? text.slice(0, 10) + '...' : text}</span>
-          </APopover>
-        );
-      },
-    },
-    {
-      dataIndex: 'viewName',
-      key: 'viewName',
-      title: '数据集',
-      width: 150
+      title: <span style={{ paddingLeft: '32px' }}>主机名</span>
     },
     {
       dataIndex: 'createBy',
@@ -56,8 +40,22 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
       width: 150
     },
     {
+      dataIndex: 'createTime',
+      key: 'createTime',
+      title: '创建时间'
+    },
+    {
+      dataIndex: 'updateBy',
+      key: 'updateBy',
+      title: '操作人',
+    },
+    {
+      dataIndex: 'updateTime',
+      key: 'updateTime',
+      title: '操作时间'
+    },
+    {
       key: 'action',
-      width: 150,
       render: (_, record) => (
         <ASpace size="middle">
           <ATooltip title="编辑">
@@ -100,10 +98,14 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
   }, [columns]);
   
   return (
+  <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
     <ATable
       columns={columns}
       scroll={{x: columnWidth}}
       dataSource={tableSchemaList}
+      size="small"
+      className="semantics-table"
     />
+  </div>
   );
 }

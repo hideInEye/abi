@@ -33,6 +33,9 @@ const getLevelKeys = (items1: LevelKeysProps[]) => {
 };
 
 const getSelectedMenuKeyPath = (matches: RouteRecordNormalized[]) => {
+  if (!matches || !Array.isArray(matches)) {
+    return [];
+  }
   const result = matches.reduce((acc: string[], match, index) => {
     if (index < matches.length - 1 && match.name) {
       acc.push(match.name);

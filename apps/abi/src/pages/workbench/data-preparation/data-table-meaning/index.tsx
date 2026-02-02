@@ -54,30 +54,31 @@ export function Component() {
   }
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper">
-        <AFlex className="gap-6">
-          <ASpace direction="vertical" className='min-w-100px w-100'>
+    <div className="flex gap-4 p-6 h-full">
+      {/* 左侧分组树 */}
+      <div className="w-[280px] flex flex-col border-r pr-4">
             <AInput
               placeholder="请输入表语义组检索"
               onChange={e => searchGroupSchema(e)}
+              className="mb-4"
             />
+          <div className="flex-1 overflow-auto">
             <SemanticsGroup
               groupName={groupSearchValue}
               onDefaultGroupUpdate={onDefaultGroupUpdate}
             />
-          </ASpace>
+         </div>
+      </div>
 
-          <div className="w-40% flex-1">
-            <ASpace className="flex justify-between">
+      <div className="flex-1 flex flex-col">
+        <div className="flex items-center justify-between mb-4">
               <AInput
                 placeholder="请输入表语义检索"
                 onChange={e => searchTableSchema(e)}
+                style={{ width: 200 }}
               />
               <AButton
-                color="primary"
-                icon={<PlusOutlined />}
-                variant="outlined"
+              type="primary"
                 onClick={() => {
                   setDrawerTitle('新增表语义');
                   setTableModalOpen(true);
@@ -86,7 +87,7 @@ export function Component() {
               >
                 新增表语义
               </AButton>
-            </ASpace>
+            </div>
 
             <SemanticsTableList
               deleteTable={deleteTable}
@@ -94,9 +95,7 @@ export function Component() {
               tableSchemaList={tableSchemaList}
             />
           </div>
-        </AFlex>
         <SemanticsTable updateTableList={updateTableList} />
-      </ACard>
     </div>
   );
 }

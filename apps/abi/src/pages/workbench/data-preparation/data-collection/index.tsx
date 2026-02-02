@@ -16,8 +16,8 @@ const DataCollectionOperateDrawer = lazy(() => import('./modules/data-collection
 export function Component() {
   const { t } = useTranslation();
   const { push } = useRouter();
+  const [searchValue, setSearchValue] = useState('');
 
-  const { scrollConfig, tableWrapperRef } = useTableScroll();
   const { dataSourceList, getDatasourceList } = useDatasource();
   useEffect(() => {
     getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) });
@@ -29,7 +29,7 @@ export function Component() {
       const curSource = dataSourceList.find((item: any) => item.sourceId === collectionBingDatasourceId);
       const curSourceIsEnable = curSource.status === '1';
       if (curSourceIsEnable) {
-        push(`/data-preparation/data-collection-operate/${record.viewId}`);
+        push(`/workbench/data-preparation/data-collection-operate/${record.viewId}`);
       } else {
         message.error('当前数据集关联的数据源已被删除，无法进入详情');
       }
@@ -40,13 +40,6 @@ export function Component() {
   };
   const columns = useCallback(
     () => [
-      {
-        align: 'center',
-        dataIndex: 'index',
-        key: 'index',
-        title: t('common.index'),
-        width: 64
-      },
       {
         align: 'center',
         dataIndex: 'viewName',
@@ -151,12 +144,12 @@ export function Component() {
       pageNum: 1,
       pageSize: 10,
       spaceId: Number(localStorage.getItem('spaceId')),
-      viewName: ''
+      viewName: searchValue
     },
     columns
   } as any);
 
-  const { checkedRowKeys, generalPopupOperation, onDeleted } = useTableOperate(data as any, run, async (res, type) => {
+  const { checkedRowKeys, generalPopupOperation, onDeleted, rowSelection } = useTableOperate(data as any, run, async (res, type) => {
     if (type === 'add') {
       // add request 调用新增的接口
       // push('/data-preparation/data-collection-operate/0');
@@ -173,38 +166,43 @@ export function Component() {
     onDeleted();
   }
 
+  const handleSearch = () => {
+    run();
+  };
+
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard>
-        <KeySearch {...searchProps} />
-      </ACard>
-      <ACard
-        bordered={false}
-        className="flex-col-stretch sm:flex-1-hidden card-wrapper"
-        ref={tableWrapperRef}
-        title="数据集列表"
-        extra={
-          <TableHeaderOperation
-            add={() => push('/data-preparation/data-collection-operate/0')}
-            columns={columnChecks}
-            disabledDelete={checkedRowKeys.length === 0}
-            loading={tableProps.loading}
-            refresh={run}
-            setColumnChecks={setColumnChecks}
-            // onDelete={handleBatchDelete}
-          />
-        }
-      >
-        <ATable
-          scroll={scrollConfig}
-          size="small"
-          {...(tableProps as any)}
+    <div className="flex flex-col gap-4 p-6">
+      <div className="flex items-center gap-4">
+        <AInput
+          placeholder="请输入数据集名称"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          onPressEnter={handleSearch}
+          style={{ width: 200 }}
         />
+        <AButton type="primary" onClick={() => push('/workbench/data-preparation/data-collection-operate/0')}>
+          新增数据集
+        </AButton>
+      </div>
+
+      {/* 表格 */}
+      <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
+        <ATable
+          columns={tableProps.columns as any}
+          dataSource={tableProps.dataSource}
+          loading={tableProps.loading}
+          pagination={tableProps.pagination}
+          rowKey="viewId"
+          rowSelection={rowSelection}
+          scroll={{ x: 'max-content', y: 400 }}
+          size="small"
+          className="data-collection-table"
+        />
+      </div>
 
         <Suspense>
           <DataCollectionOperateDrawer {...generalPopupOperation} />
         </Suspense>
-      </ACard>
     </div>
   );
 }

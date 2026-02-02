@@ -20,11 +20,6 @@ export const TagSearch: React.FC<SearchInputProps> = ({ onAdd, onSearch, groupId
   return (
     <div className="mb2 flex">
       <div className="grid grid-cols-2 gap-2">
-        {/* <ASelect
-          defaultValue={searchKeyOptions[0].value}
-          options={searchKeyOptions}
-          onChange={v => setSearchType(v)}
-        /> */}
         <AInput
           placeholder="请输入标签语义检索"
           value={searchValue}
@@ -32,10 +27,9 @@ export const TagSearch: React.FC<SearchInputProps> = ({ onAdd, onSearch, groupId
         />
       </div>
       <AButton
-        className='position-absolute right-2'
-        color="primary"
+        className='position-absolute right-6'
+        type="primary"
         icon={<PlusOutlined />}
-        variant="outlined"
         onClick={onAdd}
         disabled={!groupId}
       >
