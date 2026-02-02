@@ -46,4 +46,17 @@ export function setupRequestInterceptor() {
     
     return originalXHRSend.call(this, body);
   };
-} 
+
+  // 返回清理函数，供 qiankun 等场景卸载时恢复全局对象
+  return () => {
+    try {
+      window.fetch = originalFetch;
+    } catch {}
+    try {
+      XMLHttpRequest.prototype.open = originalXHROpen;
+    } catch {}
+    try {
+      XMLHttpRequest.prototype.send = originalXHRSend;
+    } catch {}
+  };
+}

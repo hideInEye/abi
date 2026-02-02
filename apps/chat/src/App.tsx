@@ -5,7 +5,6 @@
 
 import './App.css'
 import ConversationAnalysis from './pages/conversation-analysis'
-import DemoPage from './pages/demo'
 
 function App({ spaceId }: { spaceId?: number }) {
   return (

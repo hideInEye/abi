@@ -15,16 +15,18 @@ import { setupI18n } from './locales';
 import { setupDayjs, setupIconifyOffline, setupLoading, setupNProgress } from './plugins';
 import './plugins/assets';
 import { fetchLoginChatbiByOnenet } from './service/api/index.ts';
-import { createApp } from '@sa/framework';
+// import { createApp } from '@sa/framework';
 
-const modelModules = import.meta.glob('./models/*.ts', { eager: true })
+// const modelModules = import.meta.glob('./models/*.ts', { eager: true })
 
-const models = Object.values(modelModules).map((m: any) => m.default)
+// const models = Object.values(modelModules).map((m: any) => m.default)
 
-createApp({
-  models,
-})
+//
+// createApp({
+//   models,
+// })
 let root: any;
+let teardownRequestInterceptor: null | (() => void) = null;
 
 async function setupApp(props: any) {
   setupI18n();
@@ -51,7 +53,8 @@ async function setupApp(props: any) {
   setupRouter();
 
   // 设置请求拦截器
-  setupRequestInterceptor();
+  teardownRequestInterceptor?.();
+  teardownRequestInterceptor = setupRequestInterceptor();
 
   setupDayjs();
 
@@ -85,6 +88,8 @@ const initQianKun = () => {
       // const mountRoot = container?.querySelector('#root');
       // ReactDOM.unmountComponentAtNode(mountRoot || document.querySelector('#root'));
       root.unmount();
+      teardownRequestInterceptor?.();
+      teardownRequestInterceptor = null;
       window.qiankunStore = null;
     }
   } as any);
