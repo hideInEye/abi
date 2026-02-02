@@ -5,7 +5,8 @@ import KeepAlive, { useKeepAliveRef } from 'keepalive-for-react'
 import { getReloadFlag } from '@/store/slice/app'
 import { getRemoveCacheKey, selectCacheRoutes } from '@/store/slice/route'
 import { getThemeSettings } from '@/store/slice/theme'
-import { GLOBAL_SIDER_MENU_ID } from '@/constants/app'
+import { GLOBAL_SIDER_MENU_ID, hideMenuRoute } from '@/constants/app'
+import { useRoute } from '~/packages/simple-router/src'
 
 interface Props {
   /** Show padding for content */
@@ -22,7 +23,7 @@ const useGetCacheKey = () => {
 
 const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   const currentOutlet = useOutlet()
-
+  const route = useRoute()
   const aliveRef = useKeepAliveRef()
 
   const removeCacheKey = useAppSelector(getRemoveCacheKey)
@@ -48,10 +49,13 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   }, [reload])
 
   return (
-    <div className={ClassNames('h-full flex-grow bg-layout relative', { 'pl-0.5': !closePadding })}>
-      <KeepAlive activeCacheKey={cacheKey} aliveRef={aliveRef} cacheNodeClassName={reload ? transitionName : ''} include={cacheKeys}>
-        {currentOutlet}
-      </KeepAlive>
+    <div className="flex min-w-0">
+      {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 overflow-y-auto overflow-x-hidden h-[100vh]  overflow-scroll'} id={GLOBAL_SIDER_MENU_ID} />}
+      <div className={ClassNames('flex-1 min-w-0 h-screen bg-layout relative', { 'pl-0.5': !closePadding })}>
+        {/* <KeepAlive activeCacheKey={cacheKey} aliveRef={aliveRef} cacheNodeClassName={reload ? transitionName : ''} include={cacheKeys}> */}
+          {currentOutlet}
+        {/* </KeepAlive> */}
+      </div>
     </div>
   )
 })

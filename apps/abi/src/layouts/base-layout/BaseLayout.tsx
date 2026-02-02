@@ -125,10 +125,10 @@ const BaseLayout = () => {
       //     siderWidth={themeSettings.sider.width}
       //   />
       // }
-      Sider={isHideMenuRoute || spaceHidden ? null : <GlobalSider />}
+      Sider={<GlobalSider />}
     >
       <GlobalContent />
-
+      <GlobalMenu mode={themeSettings.layout.mode} reverse={themeSettings.layout.reverseHorizontalMix} />
       <Suspense fallback={null}>
         <ThemeDrawer />
       </Suspense>

@@ -24,19 +24,20 @@ export const init: Init = async currentFullPath => {
 
   const isLogin = checkAuthStatus();
 
-  if (!isLogin) {
-    const loginRoute: RouteKey = 'login';
-    const routeHome = getRouteHome(store.getState());
+  // if (!isLogin) {
+  //   const loginRoute: RouteKey = 'login';
+  //   const routeHome = getRouteHome(store.getState());
 
-    const query = getRouteQueryOfLoginRoute(currentFullPath, routeHome as RouteKey);
+  //   const query = getRouteQueryOfLoginRoute(currentFullPath, routeHome as RouteKey);
 
-    const location: RouteLocationNamedRaw = {
-      name: loginRoute,
-      query
-    };
+  //   const location: RouteLocationNamedRaw = {
+  //     name: loginRoute,
+  //     query
+  //   };
 
-    return location;
-  }
+  //   return location;
+  // }
+  if(!isLogin) return
 
   await store.dispatch(initAuthRoute());
 

@@ -388,3 +388,44 @@ export function validateMultiEmails(value: string) {
     invalidEmails: invalid
   };
 }
+
+export 
+ const formatTimeDiff = (
+  inputTime: string,
+  options?: {
+    formatWhenOver24h?: string; // 超过24小时的显示格式
+  }
+) => {
+  const now = dayjs();
+  if(!inputTime)return now.format(options?.formatWhenOver24h ?? 'YYYY-MM-DD HH:mm:ss')
+
+  const target = dayjs(inputTime);
+
+  if (!target.isValid()) return '';
+
+  const diffSeconds = now.diff(target, 'second');
+
+  // 未来时间，按业务可自行处理
+  if (diffSeconds < 0) {
+    return '0s';
+  }
+
+  // 超过 24 小时
+  if (diffSeconds >= 24 * 60 * 60) {
+    return target.format(options?.formatWhenOver24h ?? 'YYYY-MM-DD HH:mm:ss');
+  }
+
+  const hours = Math.floor(diffSeconds / 3600);
+  const minutes = Math.floor((diffSeconds % 3600) / 60);
+  const seconds = diffSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}小时${minutes}分钟前`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}分钟${seconds}秒前`;
+  }
+
+  return `${seconds}秒前`;
+}

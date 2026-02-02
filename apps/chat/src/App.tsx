@@ -5,13 +5,12 @@
 
 import './App.css'
 import ConversationAnalysis from './pages/conversation-analysis'
-import DemoPage from './pages/demo'
 
-function App() {
+function App({ spaceId }: { spaceId?: number }) {
   return (
     <div className="App" style={{ height: '100%' }}>
       {/* 应用主内容区域 */}
-      <ConversationAnalysis />
+      <ConversationAnalysis spaceId={spaceId} />
       {/* <DemoPage /> */}
     </div>
   )

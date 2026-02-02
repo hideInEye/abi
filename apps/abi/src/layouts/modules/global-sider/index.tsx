@@ -4,7 +4,7 @@ import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/glo
 import { store } from '@/store'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
-import { UserOutlined } from '@ant-design/icons'
+import { SwapOutlined, UserOutlined } from '@ant-design/icons'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
 import { resetStore } from '@/store/slice/auth'
@@ -12,6 +12,8 @@ import { getAllRoutes } from '@/store/slice/route'
 import { handleLoginExpired } from '@/utils/auth'
 import { Dropdown, Layout } from 'antd'
 import { useRoute, useRouter } from '~/packages/simple-router/src'
+import { spaceList } from '@/service/api'
+import { MenuProps } from 'antd/lib'
 const { Sider } = Layout
 
 const GlobalSider: FC = memo(() => {
@@ -27,12 +29,36 @@ const GlobalSider: FC = memo(() => {
   const redirectHome = () => {
     router.push('/home')
   }
+  const { switchToSpace } = useSpaceSwitch()
+  const [selectedSpaceName, setSelectedSpaceName] = useState('')
+
+  const { data: curspaceList, run: getSpaceList } = useRequest(spaceList, {
+    manual: true,
+  })
 
   useEffect(() => {
     if (primaryMenuMap.get(route.name)) {
       dispatch(setSelectedMenuKey(route.name))
     }
   }, [route])
+
+  useEffect(() => {
+    if (curspaceList && curspaceList.data && curspaceList.data.length > 0 && !selectedSpaceName) {
+      const currentSpace = curspaceList.data.find((space: any) => space.spaceId === Number(localStorage.getItem('spaceId')))
+      if (currentSpace) {
+        setSelectedSpaceName(currentSpace.spaceName)
+      }
+    }
+  }, [curspaceList])
+
+  useEffect(() => {
+    getSpaceList({
+      isAsc: 'desc',
+      orderByColumn: 'spaceId',
+      pageNum: 1,
+      pageSize: 100000,
+    })
+  }, [])
 
   const userItems = useCallback(() => {
     const items = [
@@ -64,7 +90,7 @@ const GlobalSider: FC = memo(() => {
         label: '门户管理',
       })
       items.splice(5, 0, {
-        key: 'manage_space',
+        key: 'system',
         label: '空间管理',
       })
     }
@@ -96,6 +122,24 @@ const GlobalSider: FC = memo(() => {
     }
   }
 
+  const spaceOptions =
+    (curspaceList &&
+      curspaceList?.data?.map((space: any) => ({
+        label: space.spaceName,
+        value: space.spaceId,
+        key: space.spaceId,
+      }))) ||
+    []
+
+  // 添加空间切换处理函数
+  const handleSpaceChange: MenuProps['onClick'] = (e) => {
+    const data = spaceOptions.find((item: any) => item.key == e.key)
+    console.log(data, '===')
+    setSelectedSpaceName(data?.label || '')
+
+    switchToSpace(Number(e?.key))
+  }
+
   return (
     <Sider width="5.5rem" className="h-full bg-white">
       <div className="flex h-full flex-col justify-between items-center py-6">
@@ -104,9 +148,10 @@ const GlobalSider: FC = memo(() => {
         </div>
         <div className="flex gap-[1.6875rem] flex-col text-[#848FA2]">
           {primaryMenuData.map((item) => {
-            const isActive = item.key !== selectedMenuKey
+            const isActive = item.name !== selectedMenuKey
             return (
               <div
+                key={item.key}
                 onClick={() => {
                   dispatch(setSelectedMenuKey(item.key))
                   router.push(item.url)
@@ -119,7 +164,20 @@ const GlobalSider: FC = memo(() => {
             )
           })}
         </div>
-        <div className="flex gap-6 flex-col text-[#848FA2]">
+        <div className="flex items-center  gap-6 flex-col text-[#848FA2]">
+          <Dropdown overlayClassName="[&_.ant-dropdown-menu]:h-[20rem] h-[20rem] overflow-hidden" trigger={['click']} menu={{ items: spaceOptions, onClick: handleSpaceChange }}>
+            <APopover
+              content={
+                <div>
+                  <div className="text-balance">
+                    当前空间: <span className="text-[#3366FF]">{selectedSpaceName}</span>
+                  </div>
+                </div>
+              }
+            >
+              <SwapOutlined className="cursor-pointer" />
+            </APopover>
+          </Dropdown>
           <Dropdown menu={{ items: userItems(), onClick: handleMenuClick }}>
             <img src={userIcon} className="h-6 w-6" />
           </Dropdown>

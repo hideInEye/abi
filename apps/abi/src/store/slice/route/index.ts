@@ -241,7 +241,7 @@ const initDynamicAuthRoute = (): AppThunk => async dispatch => {
 
     handleUpdateRootRouteRedirect(home);
 
-    setIsInitAuthRoute(true);
+    dispatch(setIsInitAuthRoute(true));
   } else {
     // if fetch user routes failed, reset store
     dispatch(resetRouteStore());

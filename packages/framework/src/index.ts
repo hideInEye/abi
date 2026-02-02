@@ -37,7 +37,8 @@ export function createApp(opts: { models: any[] }) {
     }
   }
 
-  const rootReducer = combineReducers(reducersMap)
+  const hasReducers = Object.keys(reducersMap).length > 0
+  const rootReducer = hasReducers ? combineReducers(reducersMap) : ((state = {}) => state)
 
   // put 自动补 namespace：在 effect 里 put({type:'save'}) => ns/save
   const getNamespacePut = () => (fullType: string, store: any) => {

@@ -32,7 +32,6 @@ export function Component() {
 
   const handleSubmit = debounce(async function handleSubmit() {
     const params = await form.validateFields()
-    console.log('params', params)
     toLogin(
       {
         ...params,

@@ -9,10 +9,10 @@ import workbenchIcon from '@/assets/imgs/home/workbench.png'
 
 
 export const primaryMenuData = [
-  { key: 'home', label: '主页', icon: homeIcon, checkIcon: DehomeIcon, url: '/home' },
-  { key: 'ai-assistant_conversational-analysis', label: '对话', icon: dialogueIcon, checkIcon: DedialogueIcon, url: '/ai-assistant/conversational-analysis' },
-  { key: 'workbench', label: '工作台', icon: workbenchIcon, checkIcon: DeworkbenchIcon, url: '/workbench' },
-  { key: 'component', label: '组件', icon: componentsIcon, checkIcon: DecomponentsIcon, url: '/component' },
+  { key: 'home', label: '主页',name:'home', icon: homeIcon, checkIcon: DehomeIcon, url: '/home' },
+  { key: 'ai-assistant_conversational-analysis',name:'ai-assistant_conversational-analysis', label: '对话', icon: dialogueIcon, checkIcon: DedialogueIcon, url: '/ai-assistant/conversational-analysis' },
+  { key: 'workbench', name:'assistant-manage_assistant-config',label: '工作台', icon: workbenchIcon, checkIcon: DeworkbenchIcon, url: '/workbench' },
+  { key: 'component', name:'system_model',label: '组件', icon: componentsIcon, checkIcon: DecomponentsIcon, url: '/component' },
 ]
 
 export const itemMap = new Map([
@@ -25,7 +25,7 @@ export const itemMap = new Map([
 export const primaryMenuMap = new Map([
   ['home', '主页'],
   ['ai-assistant_conversational-analysis', '对话'],
-  ['workbench', '工作台'],
-  ['component', '组件'],
+  ['assistant-manage_assistant-config', '工作台'],
+  ['system_model', '组件'],
 ])
 
