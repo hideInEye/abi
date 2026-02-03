@@ -1,5 +1,6 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Collapse, List, Popconfirm } from 'antd';
+import { DeleteOutlined, EditOutlined, PlusCircleOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { Button, Popconfirm, Tooltip, Tree } from 'antd';
+import type { TreeDataNode } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 import { deleteTableSemanticsGroup, tableSemanticsGroupList } from '@/service/api/table-semantics';
@@ -8,8 +9,6 @@ import { EditGroup } from '../components/semantics-edit-group';
 import { useTableSemanticsStore } from '../store/useTableSemanticsStore';
 import { useTableStore } from '../store/useTableStore';
 import type { groupitem } from '../types';
-import './index.scss'
-const { Panel } = Collapse;
 
 interface DataGroupProps {
   readonly groupName: string;
@@ -20,6 +19,7 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
   const { setEditAddGroup, setEditGroupItem, setGroupModalOpen } = useTableSemanticsStore();
   const [listSemanticGroup, setListSemanticGroup] = useState<groupitem[]>([]);
   const { groupId, setGroupId } = useTableStore();
+  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>(['group-root']);
 
   const groupNameClick = async (item: any) => {
     setGroupId(item.groupId);
@@ -49,98 +49,106 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
     groupList();
   }, [groupName]);
 
-  const handleDelete = async (key: number) => {
+  const handleDelete = async (key: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     await deleteTableSemanticsGroup(key);
     setListSemanticGroup([]);
     groupList();
   };
 
-  function handleEditGroup(item: any) {
+  function handleEditGroup(item: any, e: React.MouseEvent) {
+    e.stopPropagation();
     setGroupModalOpen(true);
     setEditAddGroup(2);
     setEditGroupItem(item);
+  }
+
+  function handleAddGroup(parentItem?: any, e?: React.MouseEvent) {
+    e?.stopPropagation();
+    setGroupModalOpen(true);
+    setEditAddGroup(1);
+    if (parentItem) {
+      setEditGroupItem(parentItem);
+    }
   }
 
   function handleUpdateData() {
     groupList();
   }
 
+  // 树节点选中
+  const handleTreeSelect = (selectedKeys: React.Key[]) => {
+    const key = selectedKeys[0];
+    if (key && String(key).startsWith('group-') && key !== 'group-root') {
+      const gId = Number(String(key).replace('group-', ''));
+      const item = listSemanticGroup.find(g => g.groupId === gId);
+      if (item) {
+        groupNameClick(item);
+      }
+    }
+  };
+
+  // 构建树形数据
+  const treeData: TreeDataNode[] = [
+    {
+      title: (
+        <span className="inline-flex items-center gap-2 group">
+          <span>表语义组</span>
+          <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
+            <Tooltip title="编辑">
+              <EditOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => e.stopPropagation()} />
+            </Tooltip>
+            <Tooltip title="删除">
+              <MinusCircleOutlined className="text-gray-400 cursor-pointer hover:text-red-500" onClick={(e) => e.stopPropagation()} />
+            </Tooltip>
+            <Tooltip title="添加组">
+              <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => handleAddGroup(undefined, e)} />
+            </Tooltip>
+          </span>
+        </span>
+      ),
+      key: 'group-root',
+      children: listSemanticGroup.map(item => ({
+        title: (
+          <span className="inline-flex items-center gap-2 group">
+            <span>{item.groupName}</span>
+            <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
+              <Tooltip title="编辑">
+                <EditOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => handleEditGroup(item, e)} />
+              </Tooltip>
+              <Popconfirm
+                title="确定删除该组吗？"
+                onConfirm={(e) => handleDelete(item.groupId, e as any)}
+                onCancel={(e) => e?.stopPropagation()}
+              >
+                <Tooltip title="删除">
+                  <MinusCircleOutlined className="text-gray-400 cursor-pointer hover:text-red-500" onClick={(e) => e.stopPropagation()} />
+                </Tooltip>
+              </Popconfirm>
+              <Tooltip title="添加子组">
+                <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => handleAddGroup(item, e)} />
+              </Tooltip>
+            </span>
+          </span>
+        ),
+        key: `group-${item.groupId}`,
+        isLeaf: true
+      }))
+    }
+  ];
+
   return (
     <div>
       <EditGroup updateGroupData={handleUpdateData} />
-      <Collapse defaultActiveKey={['1']} className='space'>
-        <Panel
-          header="表语义组"
-          key="1"
-          extra={
-            <Button
-              color="primary"
-              icon={<PlusOutlined />}
-              size="small"
-              variant="outlined"
-              onClick={e => {
-                e.stopPropagation();
-                setGroupModalOpen(true);
-                setEditAddGroup(1);
-              }}
-            >
-              添加组
-            </Button>
-          }
-        >
-          <List
-            dataSource={listSemanticGroup}
-            itemLayout="horizontal"
-            renderItem={item => (
-              <List.Item
-                key={item.groupId}
-                actions={[
-                  <>
-                    <Button
-                      icon={<EditOutlined />}
-                      type="text"
-                      onClick={() => handleEditGroup(item)}
-                    />
-                    <Popconfirm
-                      cancelText="取消"
-                      key={item.groupId}
-                      okText="确定"
-                      title="确定删除该组吗？"
-                      onConfirm={() => handleDelete(item.groupId)}
-                    >
-                      <Button
-                        danger
-                        icon={<DeleteOutlined />}
-                        type="text"
-                      />
-                    </Popconfirm>
-                  </>
-                ]}
-              >
-                <div
-                  className={groupId === item.groupId ? 'bg-#646CFF text-#fff w-fit' : ''}
-                  style={{
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    padding: '8px',
-                    maxWidth: '100px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                  onClick={() => groupNameClick(item)}
-                >
-                 <APopover
-                 content={item.groupName}
-                 >
-                 {item.groupName}
-                 </APopover>
-                </div>
-              </List.Item>
-            )}
-          />
-        </Panel>
-      </Collapse>
+      <Tree
+        treeData={treeData}
+        expandedKeys={expandedKeys}
+        onExpand={(keys) => setExpandedKeys(keys)}
+        selectedKeys={groupId ? [`group-${groupId}`] : []}
+        onSelect={handleTreeSelect}
+        blockNode
+        className="semantics-tree"
+      />
     </div>
   );
 };

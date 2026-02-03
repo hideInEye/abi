@@ -127,12 +127,14 @@ export function Component() {
       <div className="mt-[1.375rem]"></div>
       <HomeTitle
         title="创建引导"
-        // action={
-        //   <AFlex>
-        //     <PlusOutlined />
-        //     <div>快速创建</div>
-        //   </AFlex>
-        // }
+        action={
+          <a href="/guide">
+            <AFlex>
+              <PlusOutlined />
+              <div>快速创建</div>
+            </AFlex>
+          </a>
+        }
       />
       <FastCreate spaceList={homeData?.spaceList} />
     </div>

@@ -21,6 +21,7 @@ export const EditGroup = ({ updateGroupData }: { readonly updateGroupData: () =>
       await addgroupsub({
         groupName,
         groupType: 'shema',
+        parentId: editGroupItem?.parentId || null,
         remark,
         spaceId: Number(localStorage.getItem('spaceId')),
         status: 1

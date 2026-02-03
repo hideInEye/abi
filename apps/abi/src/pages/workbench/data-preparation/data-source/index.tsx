@@ -33,10 +33,7 @@ export function Component() {
   const { t } = useTranslation();
   const { getSourceTypeOptions, sourceTypeOptions } = useDatasource();
   const router = useRouter();
-
-  // const isMobile = useMobile();
-
-  const { scrollConfig, tableWrapperRef } = useTableScroll();
+  const [searchValue, setSearchValue] = useState('');
 
   useEffect(() => {
     getSourceTypeOptions();
@@ -77,18 +74,11 @@ export function Component() {
       apiParams: {
         pageNum: 1,
         pageSize: 10,
-        sourceName: "",
+        sourceName: searchValue,
         spaceId: Number(localStorage.getItem("spaceId")), // 空间id
       },
       columns: () =>
         [
-          {
-            align: "center",
-            dataIndex: "index",
-            key: "index",
-            title: t("common.index"),
-            width: 60,
-          },
           {
             align: "center",
             dataIndex: "sourceType",
@@ -104,15 +94,6 @@ export function Component() {
             dataIndex: "sourceName",
             key: "sourceName",
             title: t("page.dataPreparation.dataSource.name"),
-          },
-          {
-            dataIndex: "configuration",
-            key: "configuration",
-            render: (configJson: any) => {
-              const config = JSON.parse(configJson);
-              return config?.host;
-            },
-            title: t("page.dataPreparation.dataSource.databaseAddress"),
           },
           {
             align: "center",
@@ -181,7 +162,7 @@ export function Component() {
                     variant="link"
                     onClick={() =>
                       router.push(
-                        `/data-preparation/data-collection-operate/${record.sourceId}?from=data-source`,
+                        `/workbench/data-preparation/data-collection-operate/${record.sourceId}?from=data-source`,
                       )
                     }
                   />
@@ -223,6 +204,7 @@ export function Component() {
     handleAdd,
     handleEdit,
     onDeleted,
+    rowSelection,
   } = useTableOperate(data as any, run, async (res: any, type) => {
     const { sourceName, sourceType, ...elseProps } = res as any;
     let commonData: any = {
@@ -304,46 +286,40 @@ export function Component() {
     handleEdit(row);
   }
 
-  return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      {/* <ACollapse
-        bordered={false}
-        className="card-wrapper"
-        defaultActiveKey={isMobile ? undefined : '1'}
-        items={[
-          {
-            children: <KeySearch {...searchProps} />,
-            key: '1',
-            label: t('common.search')
-          }
-        ]}
-      /> */}
-      <ACard>
-        <KeySearch {...searchProps} />
-      </ACard>
+  const handleSearch = () => {
+    run();
+  };
 
-      <ACard
-        bordered={false}
-        className="flex-col-stretch sm:flex-1-hidden card-wrapper"
-        ref={tableWrapperRef}
-        title={t("page.dataPreparation.dataSource.title")}
-        extra={
-          <TableHeaderOperation
-            add={handleAdd}
-            columns={columnChecks}
-            disabledDelete={checkedRowKeys.length === 0}
-            loading={tableProps.loading}
-            refresh={run}
-            setColumnChecks={setColumnChecks}
-            // onDelete={handleBatchDelete}
-          />
-        }
-      >
-        <ATable
-          scroll={{ x: "max-content", y: "300px" }}
-          size="small"
-          {...(tableProps as any)}
+  return (
+    <div className="flex flex-col gap-4 p-6">
+      {/* 搜索栏 */}
+      <div className="flex items-center gap-4">
+        <AInput
+          placeholder="请输入数据源名称"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          onPressEnter={handleSearch}
+          style={{ width: 200 }}
         />
+        <AButton type="primary" onClick={() => handleAdd()}>
+          新增数据源
+        </AButton>
+      </div>
+
+      {/* 表格 */}
+      <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
+        <ATable
+          columns={tableProps.columns as any}
+          dataSource={tableProps.dataSource}
+          loading={tableProps.loading}
+          pagination={tableProps.pagination}
+          rowKey="sourceId"
+          rowSelection={rowSelection}
+          scroll={{ x: 'max-content', y: 400 }}
+          size="small"
+          className="data-source-table"
+        />
+      </div>
 
         <Suspense>
           <DatasourceOperateDrawer
@@ -351,7 +327,6 @@ export function Component() {
             {...generalPopupOperation}
           />
         </Suspense>
-      </ACard>
     </div>
   );
 }

@@ -1,0 +1,30 @@
+// 列表表头样式
+.data-source-table,
+.data-collection-table,
+.assistant-config-table,
+.model-table,
+.tag-table,
+.question-table,
+.technical-table,
+.plugin-table,
+.dictionary-table,
+.semantics-table {
+  .ant-table-thead > tr > th {
+    background-color: #f5f8ff !important;
+  }
+}
+
+// Tree选中样式 - 所有分组统一样式
+.semantics-tree,
+.ant-tree {
+  // 选中状态：背景透明，文字变蓝
+  .ant-tree-node-selected {
+    background-color: transparent !important;
+  }
+  .ant-tree-node-selected .ant-tree-title {
+    color: #1890ff !important;
+  }
+  .ant-tree-node-content-wrapper:hover {
+    background-color: transparent !important;
+  }
+}

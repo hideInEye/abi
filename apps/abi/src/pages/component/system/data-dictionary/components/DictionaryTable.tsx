@@ -73,6 +73,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
     {
       dataIndex: 'remark',
       title: '字典描述',
+      width: 120,
       render: (text: string) => {
         if (!text) return '';
         if (text.length > 15) {
@@ -96,12 +97,18 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
         return (
           <div className="flex items-center gap-2">
             <AButton
+              color="primary"
               icon={<EditOutlined />}
+              size="small"
+              variant="link"
               onClick={() => handleEdit(record)}
             />
 
             <AButton
+              color="primary"
               icon={<SnippetsOutlined />}
+              size="small"
+              variant="link"
               onClick={() => handleDiff(record)}
             />
             <APopconfirm
@@ -111,7 +118,12 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
               title="删除字典"
               onConfirm={() => handleDelete(record)}
             >
-              <AButton icon={<DeleteOutlined />} />
+              <AButton
+                color="danger"
+                icon={<DeleteOutlined />}
+                size="small"
+                variant="link"
+              />
             </APopconfirm>
           </div>
         );
@@ -121,7 +133,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
   ];
 
   return (
-    <div>
+    <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
       <ATable
         columns={columns}
         dataSource={dataSource.rows}
@@ -132,6 +144,8 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
           total: dataSource.total
         }}
         scroll={{ x: 'max-content', y: 'calc(100vh - 350px)' }}
+        size="small"
+        className="dictionary-table"
       />
     </div>
   );

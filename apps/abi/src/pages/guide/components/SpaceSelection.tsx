@@ -1,0 +1,131 @@
+import { SearchOutlined } from '@ant-design/icons'
+import { Button as AButton, Input as AInput } from 'antd'
+import { useEffect, useState } from 'react'
+
+import { deleteSpace, spaceList } from '@/service/api/data-space'
+import type { ISpaceItem } from '@/pages/space-list/types'
+import { SpaceEdit } from '@/pages/space-list/components/SpaceEdit'
+import { SpaceItemCard } from './SpaceItemCard'
+
+interface SpaceSelectionProps {
+  onSelectSpace?: (space: ISpaceItem) => void
+  selectedSpaceId?: number
+}
+
+export const SpaceSelection = ({ onSelectSpace, selectedSpaceId }: SpaceSelectionProps) => {
+  const [spaces, setSpaces] = useState<ISpaceItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [searchValue, setSearchValue] = useState('')
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editSpace, setEditSpace] = useState<ISpaceItem | null>(null)
+  const [pageNum, setPageNum] = useState(1)
+  const pageSize = 12
+  const [total, setTotal] = useState(0)
+
+  const fetchSpaces = async () => {
+    setLoading(true)
+    try {
+      const res = await spaceList({
+        isAsc: 'desc',
+        orderByColumn: 'spaceId',
+        pageNum,
+        pageSize,
+        spaceName: searchValue || undefined,
+      })
+      const data = (res as any).response?.data?.rows || []
+      const totalCount = (res as any).response?.data?.total || 0
+      setSpaces(data)
+      setTotal(totalCount)
+      
+      // 自动选中第一个空间（仅在第一页且没有选中时）
+      if (data.length > 0 && !selectedSpaceId && pageNum === 1) {
+        onSelectSpace?.(data[0])
+      }
+    } catch (error) {
+      console.error('获取空间列表失败:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchSpaces()
+  }, [pageNum])
+
+  const handleSearch = () => {
+    setPageNum(1)
+    fetchSpaces()
+  }
+
+  const editSpaceHandler = (space: ISpaceItem) => {
+    setDrawerOpen(true)
+    setEditSpace(space)
+  }
+
+  const handleCreateSpace = () => {
+    setDrawerOpen(true)
+    setEditSpace(null)
+  }
+
+  const updateSpace = () => {
+    fetchSpaces()
+  }
+
+  const deleteSpaceHandler = async (space: ISpaceItem) => {
+    await deleteSpace([space.spaceId])
+    fetchSpaces()
+  }
+
+  const handlePageChange = (page: number) => {
+    setPageNum(page)
+  }
+
+  return (
+    <div className="flex flex-col gap-4 p-6">
+      {/* 搜索栏 */}
+      <div className="flex items-center justify-between">
+        <AInput
+          placeholder="请输入空间名称"
+          prefix={<SearchOutlined />}
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          onPressEnter={handleSearch}
+          style={{ width: 300 }}
+        />
+        <AButton type="primary" onClick={handleCreateSpace}>
+          新建空间
+        </AButton>
+      </div>
+
+      {/* 空间列表 */}
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        {spaces.map((space) => (
+          <div
+            key={space.spaceId}
+            className={selectedSpaceId === space.spaceId ? 'ring-2 ring-blue-500 rounded-[10px] cursor-pointer' : 'cursor-pointer'}
+            onClick={() => onSelectSpace?.(space)}
+          >
+            <SpaceItemCard deleteSpace={deleteSpaceHandler} setEditSpace={editSpaceHandler} space={space} />
+          </div>
+        ))}
+      </section>
+
+      {loading && <div className="text-center text-gray-500">加载中...</div>}
+      {!loading && spaces.length === 0 && <div className="text-center text-gray-500">暂无空间数据</div>}
+
+      {/* 分页 */}
+      {total > 0 && (
+        <div className="flex justify-end mt-4">
+          <APagination
+            current={pageNum}
+            pageSize={pageSize}
+            total={total}
+            onChange={handlePageChange}
+          />
+        </div>
+      )}
+
+      {drawerOpen && <SpaceEdit drawerOpen={drawerOpen} editSpace={editSpace} setDrawerOpen={setDrawerOpen} updateSpace={updateSpace} />}
+    </div>
+  )
+}

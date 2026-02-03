@@ -1,6 +1,6 @@
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { sql } from '@codemirror/lang-sql';
-import { Form, Input, Modal, Select, Splitter, message } from 'antd';
+import { Checkbox, Form, Input, Modal, Select, Splitter, message } from 'antd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
@@ -45,7 +45,6 @@ export function Component() {
   const [allFields, setAllFields] = useState<any[]>([]); // 单独拎出来的字段列表数据
   const [sqlVal, setSqlVal] = useState(''); // 单独拎出来的sql
   const [unfold, setUnfold] = useState(true);
-  const [rightUnfold, setRightUnfold] = useState(true);
   const [leftPanelSize, setLeftPanelSize] = useState<number | string>(220);
   const [saveForm] = Form.useForm();
   const { dataSourceList, getDatasourceList, getTableListBySource, tableList } = useDatasource();
@@ -83,6 +82,7 @@ export function Component() {
   }, [datasource, dataSourceList]);
 
   const isFromDatasource = route.query?.from === 'data-source';
+  const isFromGuide = route.query?.from === 'guide'
   const { id } = route.params;
 
   const selectedTableNames = useMemo(() => {
@@ -154,10 +154,6 @@ export function Component() {
 
   const handleToggleUnfold = () => {
     setUnfold(!unfold);
-  };
-
-  const handleToggleRightUnfold = () => {
-    setRightUnfold(!rightUnfold);
   };
 
   const saveNodeData: any = async () => {
@@ -237,12 +233,15 @@ export function Component() {
       if (resCode !== 200) return;
 
       message.success('保存成功');
+      setVisible(false);
       if (back) {
-        push('/data-preparation/data-collection');
-      } else {
-        setVisible(false);
-        setBack(false);
+        if (isFromGuide) {
+          push('/guide');
+        } else {
+          push('/data-preparation/data-collection');
+        }
       }
+      setBack(false);
     } catch (error) {
       console.log(error);
     } finally {
@@ -368,27 +367,10 @@ export function Component() {
                   </div>
                 </Splitter.Panel>
 
-                {/* 右边 */}
+                {/* 中间主编辑区 */}
                 <Splitter.Panel>
                   <div className="h-full flex flex-col">
-                    <div className="border-b bg-#fff p-2 text-right">
-                      <AButton
-                        className="mr-2"
-                        size="small"
-                        type="primary"
-                        onClick={() => handleClickSave(true)}
-                      >
-                        确认
-                      </AButton>
-                      {/* <AButton
-                        size="small"
-                        type="primary"
-                        onClick={() => handleClickSave()}
-                      >
-                        保存
-                      </AButton> */}
-                    </div>
-                    <div className="relative flex-1">
+                    <div className="flex-1">
                       <Splitter
                         layout="vertical"
                         style={{ width: '100%', height: '100%' }}
@@ -422,32 +404,87 @@ export function Component() {
                           )}
                         </Splitter.Panel>
                       </Splitter>
-                      {/* 右侧属性配置面板已隐藏 - 无实际功能 */}
-                      {/* <div
-                        className={`relative h-full w-230px border-l border-#ccc py-12px pl-16px ${rightUnfold ? 'block' : 'hidden'}`}
+                    </div>
+                    <div className="border-t bg-#fff p-2 text-center">
+                      <AButton
+                        className="mr-2"
+                        onClick={() => handleClickSave(true)}
                       >
-                        <span
-                          className={`${styles.rightUnfold}`}
-                          onClick={handleToggleRightUnfold}
-                        >
-                          <RightOutlined />
-                        </span>
-                        <div className="text-16px">模式配置</div>
-                        <div>
-                          <div className="py-2">关联模式</div>
-                          <Select
-                            className="w-full"
-                            mode="multiple"
-                            placeholder="请选择"
-                            value={connectMode}
-                            options={[
-                              { label: '视图关联', value: 1 },
-                              { label: '关联关系', value: 2 }
-                            ]}
-                            onChange={val => setConnectMode(val)}
-                          />
-                        </div>
-                      </div> */}
+                        保存并返回
+                      </AButton>
+                      <AButton
+                        type="primary"
+                        onClick={() => handleClickSave(false)}
+                      >
+                        保存
+                      </AButton>
+                    </div>
+                  </div>
+                </Splitter.Panel>
+
+                {/* 右侧属性配置面板 */}
+                <Splitter.Panel
+                  collapsible
+                  defaultSize="280"
+                  max="400"
+                  min="200"
+                >
+                  <div className="h-full border-l border-#e5e7eb bg-#fff px-16px py-12px">
+                    <div className="mb-16px text-16px font-500">模式配置</div>
+                    <div className="mb-16px">
+                      <div className="mb-8px text-14px">关联模式</div>
+                      <Select
+                        className="w-full"
+                        mode="multiple"
+                        placeholder="请选择"
+                        value={connectMode}
+                        options={[
+                          { label: '视图关联', value: 1 },
+                          { label: '关联关系', value: 2 },
+                          { label: '快速创建', value: 3 }
+                        ]}
+                        dropdownRender={(menu) => (
+                          <div>
+                            <div className="p-8px">
+                              <Checkbox.Group
+                                className="w-full"
+                                value={connectMode}
+                                onChange={(checkedValues) => setConnectMode(checkedValues as number[])}
+                              >
+                                <div className="grid grid-cols-2 gap-12px">
+                                  <Checkbox value={1}>视图关联</Checkbox>
+                                  <Checkbox value={2}>关联关系</Checkbox>
+                                  <Checkbox value={3}>快速创建</Checkbox>
+                                </div>
+                              </Checkbox.Group>
+                            </div>
+                            <div className="border-t border-#e5e7eb p-8px flex justify-between items-center">
+                              <span className="text-12px text-#666">
+                                选中 {connectMode.length}/3
+                              </span>
+                              <div>
+                                <AButton
+                                  size="small"
+                                  className="mr-8px"
+                                  onClick={() => setConnectMode([])}
+                                >
+                                  仅看选中
+                                </AButton>
+                                <AButton
+                                  type="primary"
+                                  size="small"
+                                  onClick={() => {
+                                    // 关闭下拉框的逻辑由Select自动处理
+                                  }}
+                                >
+                                  高级筛选
+                                </AButton>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        onChange={val => setConnectMode(val)}
+                      />
                     </div>
                   </div>
                 </Splitter.Panel>
