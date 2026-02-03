@@ -14,6 +14,7 @@ import { Dropdown, Layout } from 'antd'
 import { useRoute, useRouter } from '~/packages/simple-router/src'
 import { spaceList } from '@/service/api'
 import { MenuProps } from 'antd/lib'
+import { getSpaceId } from '@/store/slice/app'
 const { Sider } = Layout
 
 const GlobalSider: FC = memo(() => {
@@ -29,13 +30,13 @@ const GlobalSider: FC = memo(() => {
   const redirectHome = () => {
     router.push('/home')
   }
+ const spaceId = useAppSelector(getSpaceId)
   const { switchToSpace } = useSpaceSwitch()
   const [selectedSpaceName, setSelectedSpaceName] = useState('')
 
   const { data: curspaceList, run: getSpaceList } = useRequest(spaceList, {
     manual: true,
   })
-
   useEffect(() => {
     if (primaryMenuMap.get(route.name)) {
       dispatch(setSelectedMenuKey(route.name))
@@ -44,12 +45,12 @@ const GlobalSider: FC = memo(() => {
 
   useEffect(() => {
     if (curspaceList && curspaceList.data && curspaceList.data.length > 0 && !selectedSpaceName) {
-      const currentSpace = curspaceList.data.find((space: any) => space.spaceId === Number(localStorage.getItem('spaceId')))
+      const currentSpace = curspaceList.data.find((space: any) => space.spaceId === spaceId)
       if (currentSpace) {
         setSelectedSpaceName(currentSpace.spaceName)
       }
     }
-  }, [curspaceList])
+  }, [curspaceList,spaceId])
 
   useEffect(() => {
     getSpaceList({
