@@ -59,10 +59,9 @@ declare module "@elegant-router/types" {
     "recently-used": "/recently-used";
     "share-manage": "/share-manage";
     "share-manage_my-share": "my-share";
+    "space": "/space";
+    "space_user": "user";
     "space-list": "/space-list";
-    "system": "/system";
-    "system_space-user": "space-user";
-    "system_user": "user";
     "workbench": "/workbench";
     "workbench_assistant-manage": "assistant-manage";
     "workbench_assistant-manage_assistant-config": "assistant-config";
@@ -134,8 +133,8 @@ declare module "@elegant-router/types" {
     | "my-collect"
     | "recently-used"
     | "share-manage"
+    | "space"
     | "space-list"
-    | "system"
     | "workbench"
   >;
 
@@ -185,8 +184,7 @@ declare module "@elegant-router/types" {
     | "recently-used"
     | "share-manage_my-share"
     | "space-list"
-    | "system_space-user"
-    | "system_user"
+    | "space_user"
     | "workbench_assistant-manage_assistant-config"
     | "workbench_assistant-manage_label-meaning"
     | "workbench_assistant-manage_memory-manage"

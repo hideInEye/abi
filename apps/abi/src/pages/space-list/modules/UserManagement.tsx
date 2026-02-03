@@ -4,7 +4,7 @@ import type { TableProps } from 'antd';
 import { NewCreateUser } from '../components/NewCreateUser';
 import { PermissionManagement } from '../components/PermissionManagement';
 import { useSpaceListStore } from '../store';
-import { DeptSelector } from '@/pages/system/space-user/modules/dept';
+import { DeptSelector } from '@/pages/space/user/modules/dept';
 
 interface TableItem {
   dept: string;

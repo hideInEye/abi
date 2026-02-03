@@ -20,6 +20,7 @@ export const itemMap = new Map([
   ['my-collect', '我的收藏'],
   ['share-manage_my-share', '我的分享'],
   ['manage_user', '系统配置'],
+  ['space_user', '空间管理'],
 ])
 
 export const primaryMenuMap = new Map([

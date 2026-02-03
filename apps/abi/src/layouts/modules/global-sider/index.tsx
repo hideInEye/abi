@@ -91,7 +91,7 @@ const GlobalSider: FC = memo(() => {
         label: '门户管理',
       })
       items.splice(5, 0, {
-        key: 'system',
+        key: 'space_user',
         label: '空间管理',
       })
     }
