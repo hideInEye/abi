@@ -46,6 +46,8 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
       const next = Number(detail?.spaceId)
       if (!Number.isNaN(next)) {
         setCurrentSpaceId(next)
+        setCurApp({})
+        setCurConv(null)
       }
     }
     window.addEventListener('space-change', handleSpaceChange)

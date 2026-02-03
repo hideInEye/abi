@@ -1,7 +1,7 @@
 import { DoubleRightOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons'
 import { Dropdown, Input, message, Modal, Popover, Space } from 'antd'
 import dayjs from 'dayjs'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import SvgIcon from '../../components/SvgIcon'
 import left_online from '@/assets/svg-icon/left_online.svg'
 import right_online from '@/assets/svg-icon/right_online.svg'
@@ -28,6 +28,11 @@ const ConverList: React.FC<converListProps> = React.memo((props: any) => {
   const [saveVisible, setSaveVisible] = useState(false)
   const [saveData, setSaveData] = useState<any>({})
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null)
+
+  useEffect(() => {
+    setSelectedChatId(null)
+  }, [appList])
+
   const dropdownMenu: MenuProps['items'] = [
     {
       key: 'edit',
