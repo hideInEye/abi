@@ -260,27 +260,27 @@ export function useTableOperate<T extends TableData = TableData>(
   };
 }
 
-export function useTableScroll(scrollX: number = 1200) {
-  const tableWrapperRef = useRef<HTMLDivElement>(null);
+// export function useTableScroll(scrollX: number = 1200) {
+//   const tableWrapperRef = useRef<HTMLDivElement>(null);
 
-  const size = useSize(tableWrapperRef);
+//   const size = useSize(tableWrapperRef);
 
-  function getTableScrollY() {
-    const height = size?.height;
+//   function getTableScrollY() {
+//     const height = size?.height;
 
-    if (!height) return 400; // 提供默认高度
-    // 为表格内容预留更多空间，确保滚动条能正常显示
-    return height - 200; // Math.max(height - 200, 300);
-  }
+//     if (!height) return 400; // 提供默认高度
+//     // 为表格内容预留更多空间，确保滚动条能正常显示
+//     return height - 200; // Math.max(height - 200, 300);
+//   }
 
-  const scrollConfig = {
-    scrollToFirstRowOnChange: true,
-    x: scrollX,
-    y: getTableScrollY()
-  };
+//   const scrollConfig = {
+//     scrollToFirstRowOnChange: true,
+//     x: scrollX,
+//     y: getTableScrollY()
+//   };
 
-  return {
-    scrollConfig,
-    tableWrapperRef
-  };
-}
+//   return {
+//     scrollConfig,
+//     tableWrapperRef
+//   };
+// }

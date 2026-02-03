@@ -9,7 +9,7 @@ const loadingClasses = [
   'right-0 bottom-0 animate-delay-1500'
 ];
 
-const GlobalLoading = memo(() => {
+const GlobalLoadings = memo(() => {
   const { t } = useTranslation();
 
   return (
@@ -32,4 +32,4 @@ const GlobalLoading = memo(() => {
   );
 });
 
-export default GlobalLoading;
+export default GlobalLoadings;
