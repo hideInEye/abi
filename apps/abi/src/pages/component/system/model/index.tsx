@@ -134,7 +134,7 @@ export function Component() {
     rowKey: 'llmId'
   } as any);
 
-  const { checkedRowKeys, editingData, generalPopupOperation, handleAdd, handleEdit, onDeleted } = useTableOperate(
+  const { checkedRowKeys, editingData, generalPopupOperation, handleAdd, handleEdit, onDeleted, rowSelection } = useTableOperate(
     data as any,
     run,
     async (res: any, operateType) => {
@@ -246,12 +246,15 @@ export function Component() {
           />
         }
       >
-        <ATable
-          scroll={scrollConfig}
-          size="small"
-          {...(tableProps as any)}
-          // pagination={false}
-        />
+        <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
+          <ATable
+            scroll={scrollConfig}
+            size="small"
+            rowSelection={rowSelection}
+            className="model-table"
+            {...(tableProps as any)}
+          />
+        </div>
 
         <Suspense>
           <ModalOperateDrawer {...generalPopupOperation} />

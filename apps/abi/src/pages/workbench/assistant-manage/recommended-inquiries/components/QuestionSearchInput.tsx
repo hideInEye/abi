@@ -17,9 +17,8 @@ export const QuestionSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearc
         onChange={e => onSearch(e.target.value)}
       />
       <AButton
-        color="primary"
+        type="primary"
         icon={<PlusOutlined />}
-        variant="outlined"
         onClick={onAdd}
         disabled={!groupId}
       >

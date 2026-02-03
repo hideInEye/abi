@@ -41,11 +41,11 @@ export const Component: React.FC = () => {
                 placeholder="请输入字典名称"
                 value={searchValue}
                 onChange={e => handleSearch(e.target.value)}
+                style={{ width: 200 }}
               />
               <AButton
-                color="primary"
+                type="primary"
                 icon={<PlusOutlined />}
-                variant="outlined"
                 onClick={handleAdd}
                 disabled={!groupId}
               >

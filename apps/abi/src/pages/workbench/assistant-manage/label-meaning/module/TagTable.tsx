@@ -92,12 +92,15 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
   }, [columns]);
 
   return (
+    <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
     <Table
       columns={columns}
       dataSource={dataSource}
       rowKey="id"
       scroll={ {x: columnWidth, y:'max-content'} }
       size="small"
+      className="tag-table"
     />
+    </div>
   );
 };

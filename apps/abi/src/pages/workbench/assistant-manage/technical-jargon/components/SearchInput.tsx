@@ -18,10 +18,9 @@ export const TagSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearch, se
         onChange={e => onSearch(e.target.value)}
       />
       <AButton
-        className='position-absolute right-2'
-        color="primary"
+        className='position-absolute right-6'
+        type="primary"
         icon={<PlusOutlined />}
-        variant="outlined"
         onClick={onAdd}
         disabled={!groupId}
       >

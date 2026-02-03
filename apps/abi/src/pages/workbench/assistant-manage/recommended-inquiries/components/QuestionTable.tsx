@@ -29,14 +29,12 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
       render: (_: any, record: QuestionTableData) => (
         <Space>
           <Button
+            color="primary"
             icon={<EditOutlined />}
-            type="text"
+            size="small"
+            variant="link"
             onClick={() => onEdit(record)}
           />
-          {/* <Button
-            icon={<CopyOutlined />}
-            type="text"
-          /> */}
           <Popconfirm
             cancelText="取消"
             description="确定要删除吗？"
@@ -45,8 +43,10 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
             onConfirm={() => onDelete(record.problemId)}
           >
             <Button
+              color="danger"
               icon={<DeleteOutlined />}
-              type="text"
+              size="small"
+              variant="link"
             />
           </Popconfirm>
         </Space>
@@ -57,11 +57,14 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
   console.log(pagination);
   
   return (
+  <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
     <Table
       columns={columns}
       dataSource={dataSource}
       rowKey="id"
       scroll={{y: 360 }}
+      size="small"
+      className="question-table"
       pagination={{
         onChange:(p,n)=>{
           setPagination({
@@ -73,5 +76,6 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
         ...pagination
       }}
     />
+  </div>
   );
 };
