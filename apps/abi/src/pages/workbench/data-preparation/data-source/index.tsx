@@ -149,7 +149,7 @@ export function Component() {
                     variant="link"
                     onClick={() =>
                       router.push(
-                        `/data-preparation/data-source-view/${record.sourceId}`,
+                        `/workbench/data-preparation/data-source-view/${record.sourceId}`,
                       )
                     }
                   />
