@@ -49,9 +49,9 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   }, [reload])
 
   return (
-    <div className="flex min-w-0">
+    <div className="flex min-w-0 bg-white">
       {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 overflow-y-auto overflow-x-hidden h-[100vh]  overflow-scroll'} id={GLOBAL_SIDER_MENU_ID} />}
-      <div className={ClassNames('flex-1 min-w-0 h-screen bg-layout relative', { 'pl-0.5': !closePadding })}>
+      <div className={ClassNames('flex-1 min-w-0 h-screen relative', { 'pl-0.5': !closePadding })}>
         {/* <KeepAlive activeCacheKey={cacheKey} aliveRef={aliveRef} cacheNodeClassName={reload ? transitionName : ''} include={cacheKeys}> */}
           {currentOutlet}
         {/* </KeepAlive> */}

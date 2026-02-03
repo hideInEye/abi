@@ -129,9 +129,9 @@ const BaseLayout = () => {
     >
       <GlobalContent />
       <GlobalMenu mode={themeSettings.layout.mode} reverse={themeSettings.layout.reverseHorizontalMix} />
-      <Suspense fallback={null}>
+      {/* <Suspense fallback={null}>
         <ThemeDrawer />
-      </Suspense>
+      </Suspense> */}
     </AdminLayout>
   )
 }
