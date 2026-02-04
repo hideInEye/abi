@@ -61,6 +61,7 @@ export function Component() {
         title: '英文名'
       },
       {
+        align: 'center',
         dataIndex: 'remark',
         key: 'remark',
         minWidth: 120,
@@ -70,29 +71,25 @@ export function Component() {
         align: 'center',
         dataIndex: 'createBy',
         key: 'createBy',
-        // render: (_, record) => {
-        //   if (record.status === null) {
-        //     return null;
-        //   }
-        //   const label = t(enableStatusRecord[record.status]);
-        //   return <ATag color={ATG_MAP[record.status]}>{label}</ATag>;
-        // },
         title: t('page.dataPreparation.dataSource.creator'),
         width: 100
       },
       {
+        align: 'center',
         dataIndex: 'createTime',
         key: 'createTime',
         minWidth: 120,
         title: t('page.dataPreparation.dataSource.createTime')
       },
       {
+        align: 'center',
         dataIndex: 'updateBy',
         key: 'updateBy',
         minWidth: 120,
         title: t('page.dataPreparation.dataSource.operator')
       },
       {
+        align: 'center',
         dataIndex: 'updateTime',
         key: 'updateTime',
         minWidth: 120,
@@ -106,7 +103,7 @@ export function Component() {
             <ATooltip title="编辑助手">
               <AButton
                 color="primary"
-                icon={<EditOutlined />}
+                icon={<EditOutlined style={{ fontSize: '1rem' }} />}
                 size="small"
                 variant="link"
                 onClick={() => {
@@ -115,11 +112,10 @@ export function Component() {
                 }}
               />
             </ATooltip>
-            {/* 设置 */}
             <ATooltip title="助手设置">
               <AButton
                 color="primary"
-                icon={<FileTextOutlined />}
+                icon={<FileTextOutlined style={{ fontSize: '1rem' }} />}
                 size="small"
                 variant="link"
                 onClick={() => {
@@ -138,7 +134,7 @@ export function Component() {
               <ATooltip title="同步知识库">
                 <AButton
                   color="primary"
-                  icon={<CloudSyncOutlined />}
+                  icon={<CloudSyncOutlined style={{ fontSize: '1rem' }} />}
                   size="small"
                   variant="link"
                 />
@@ -151,7 +147,7 @@ export function Component() {
               <ATooltip title="删除助手">
                 <AButton
                   color="danger"
-                  icon={<DeleteOutlined />}
+                  icon={<DeleteOutlined style={{ fontSize: '1rem' }} />}
                   size="small"
                   variant="link"
                 />
@@ -255,31 +251,50 @@ export function Component() {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div
+      className="flex flex-col gap-4 p-6"
+      style={{ height: 'calc(100vh - 3rem)', minHeight: 0, overflow: 'hidden' }}
+    >
       <div className="flex items-center gap-4">
         <AInput
           placeholder="请输入助手名称"
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           onPressEnter={handleSearch}
-          style={{ width: 200 }}
+          style={{ width: '12.5rem' }}
         />
         <AButton type="primary" onClick={() => handleAdd()}>
           新增助手
         </AButton>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <div
+          style={{
+            border: '0.0625rem solid #d9d9d9',
+            borderRadius: '0.5rem',
+            overflow: 'hidden',
+            width: '100%',
+            maxHeight: '100%'
+          }}
+        >
+          <div style={{ overflow: 'auto', maxHeight: '100%' }}>
+            <ATable
+              columns={tableProps.columns as any}
+              dataSource={tableProps.dataSource}
+              loading={tableProps.loading}
+              pagination={false}
+              rowKey="agentId"
+              rowSelection={rowSelection as any}
+              scroll={{ x: 'max-content' }}
+              size="small"
+              className="assistant-config-table"
+            />
           </div>
-      <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
-        <ATable
-          columns={tableProps.columns as any}
-          dataSource={tableProps.dataSource}
-          loading={tableProps.loading}
-          pagination={tableProps.pagination}
-          rowKey="agentId"
-          rowSelection={rowSelection as any}
-          scroll={{ x: 'max-content', y: 400 }}
-          size="small"
-          className="assistant-config-table"
-        />
+        </div>
+
+        <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
+          <APagination {...tableProps.pagination} showSizeChanger />
+        </div>
       </div>
 
       {editVisible ? (

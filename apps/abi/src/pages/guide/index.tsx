@@ -2,10 +2,10 @@ import { Steps as ASteps, Button as AButton } from 'antd'
 import { useState } from 'react'
 import { SpaceSelection } from './components/SpaceSelection'
 import type { ISpaceItem } from '@/pages/space-list/types'
-import { Component as DataSourceList } from '@/pages/workbench/data-preparation/data-source'
-import { Component as DataCollectionList } from '@/pages/workbench/data-preparation/data-collection'
-import { Component as TableSemanticList } from '@/pages/workbench/data-preparation/data-table-meaning'
-import { Component as AssistantList } from '@/pages/workbench/assistant-manage/assistant-config'
+import { GuideDataSource } from './components/GuideDataSource'
+import { GuideDataCollection } from './components/GuideDataCollection'
+import { GuideTableMeaning } from './components/GuideTableMeaning'
+import { GuideAssistant } from './components/GuideAssistant'
 
 export function Component() {
   const [current, setCurrent] = useState(0)
@@ -14,6 +14,8 @@ export function Component() {
   
   const handleSelectSpace = (space: ISpaceItem) => {
     setSelectedSpace(space)
+    // 保存到localStorage，供后续步骤的列表组件读取
+    localStorage.setItem('spaceId', String(space.spaceId))
   }
   
   const handleNext = () => {
@@ -35,10 +37,10 @@ export function Component() {
       {/* 内容区域 */}
       <div style={{ flex: 1 }}>
         {current === 0 && <SpaceSelection selectedSpaceId={selectedSpace?.spaceId} onSelectSpace={handleSelectSpace} />}
-        {current === 1 && selectedSpace && <DataSourceList />}
-        {current === 2 && selectedSpace && <DataCollectionList />}
-        {current === 3 && selectedSpace && <TableSemanticList />}
-        {current === 4 && selectedSpace && <AssistantList />}
+        {current === 1 && selectedSpace && <GuideDataSource />}
+        {current === 2 && selectedSpace && <GuideDataCollection />}
+        {current === 3 && selectedSpace && <GuideTableMeaning />}
+        {current === 4 && selectedSpace && <GuideAssistant />}
         {current === 5 && <div>智能对话</div>}
       </div>
       
