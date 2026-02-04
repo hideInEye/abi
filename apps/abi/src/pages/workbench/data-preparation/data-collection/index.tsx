@@ -66,18 +66,21 @@ export function Component() {
         width: 100
       },
       {
+        align: 'center',
         dataIndex: 'createTime',
         key: 'createTime',
         minWidth: 120,
         title: t('page.dataPreparation.dataCollection.createTime')
       },
       {
+        align: 'center',
         dataIndex: 'updateBy',
         key: 'updateBy',
         minWidth: 120,
         title: t('page.dataPreparation.dataCollection.operator')
       },
       {
+        align: 'center',
         dataIndex: 'updateTime',
         key: 'updateTime',
         minWidth: 120,
@@ -91,7 +94,7 @@ export function Component() {
             <Tooltip title="编辑">
               <AButton
                 color="primary"
-                icon={<EditOutlined />}
+                icon={<EditOutlined style={{ fontSize: '1rem' }} />}
                 size="small"
                 variant="link"
                 onClick={() => toDetail(record)}
@@ -103,17 +106,17 @@ export function Component() {
             >
               <Tooltip title="删除">
                 <AButton
-                color="danger"
-                icon={<DeleteOutlined />}
-                size="small"
-                variant="link"
-              />
+                  color="danger"
+                  icon={<DeleteOutlined style={{ fontSize: '1rem' }} />}
+                  size="small"
+                  variant="link"
+                />
               </Tooltip>
             </APopconfirm>
             <Tooltip title="血缘关系">
               <AButton
                 color="primary"
-                icon={<SvgIcon localIcon="kinship" />}
+                icon={<SvgIcon localIcon="kinship" style={{ fontSize: '1rem' }} />}
                 size="small"
                 variant="link"
                 onClick={() => {
@@ -171,14 +174,17 @@ export function Component() {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div
+      className="flex flex-col gap-4 p-6"
+      style={{ height: 'calc(100vh - 3rem)', minHeight: 0, overflow: 'hidden' }}
+    >
       <div className="flex items-center gap-4">
         <AInput
           placeholder="请输入数据集名称"
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           onPressEnter={handleSearch}
-          style={{ width: 200 }}
+          style={{ width: '12.5rem' }}
         />
         <AButton type="primary" onClick={() => push('/workbench/data-preparation/data-collection-operate/0')}>
           新增数据集
@@ -186,23 +192,46 @@ export function Component() {
       </div>
 
       {/* 表格 */}
-      <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
-        <ATable
-          columns={tableProps.columns as any}
-          dataSource={tableProps.dataSource}
-          loading={tableProps.loading}
-          pagination={tableProps.pagination}
-          rowKey="viewId"
-          rowSelection={rowSelection}
-          scroll={{ x: 'max-content', y: 400 }}
-          size="small"
-          className="data-collection-table"
-        />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden'
+        }}
+      >
+        <div
+          style={{
+            border: '0.0625rem solid #d9d9d9',
+            borderRadius: '0.5rem',
+            overflow: 'hidden',
+            width: '100%',
+            maxHeight: '100%'
+          }}
+        >
+          <div style={{ overflow: 'auto', maxHeight: '100%' }}>
+            <ATable
+              columns={tableProps.columns as any}
+              dataSource={tableProps.dataSource}
+              loading={tableProps.loading}
+              pagination={false}
+              rowKey="viewId"
+              rowSelection={rowSelection}
+              scroll={{ x: 'max-content' }}
+              size="small"
+              className="data-collection-table"
+            />
+          </div>
+        </div>
+        <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
+          <APagination {...tableProps.pagination} showSizeChanger />
+        </div>
       </div>
 
-        <Suspense>
-          <DataCollectionOperateDrawer {...generalPopupOperation} />
-        </Suspense>
+      <Suspense>
+        <DataCollectionOperateDrawer {...generalPopupOperation} />
+      </Suspense>
     </div>
   );
 }

@@ -90,7 +90,7 @@ export function useTable<A extends AntDesign.TableApiFn>(
     // 固定分页位置在右下角
     style: {
       backgroundColor: '#fff',
-      borderTop: '1px solid #f0f0f0',
+      // borderTop: '1px solid #f0f0f0',
       bottom: 0,
       padding: '16px 0',
       position: 'sticky',

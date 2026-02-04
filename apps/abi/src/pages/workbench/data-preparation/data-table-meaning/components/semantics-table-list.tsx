@@ -20,6 +20,7 @@ interface SemanticsTableListProps {
 export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: SemanticsTableListProps) {
   const columns: TableProps<DataType>['columns'] = [
     {
+      align: 'center',
       dataIndex: 'bizName',
       key: 'bizName',
       width: 200,
@@ -27,41 +28,46 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
       render: text => {
         return (
           <APopover content={text}>
-            <span className="max-w-100 overflow-hidden text-ellipsis" style={{ paddingLeft: '32px' }}>{text && text.length > 10 ? text.slice(0, 10) + '...' : text}</span>
+            <span className="max-w-100 overflow-hidden text-ellipsis">{text && text.length > 10 ? text.slice(0, 10) + '...' : text}</span>
           </APopover>
         );
       },
-      title: <span style={{ paddingLeft: '32px' }}>主机名</span>
+      title: '主机名'
     },
     {
+      align: 'center',
       dataIndex: 'createBy',
       key: 'createBy',
       title: '创建人',
       width: 150
     },
     {
+      align: 'center',
       dataIndex: 'createTime',
       key: 'createTime',
       title: '创建时间'
     },
     {
+      align: 'center',
       dataIndex: 'updateBy',
       key: 'updateBy',
       title: '操作人',
     },
     {
+      align: 'center',
       dataIndex: 'updateTime',
       key: 'updateTime',
       title: '操作时间'
     },
     {
+      align: 'center',
       key: 'action',
       render: (_, record) => (
         <ASpace size="middle">
           <ATooltip title="编辑">
             <AButton
               color="primary"
-              icon={<EditOutlined />}
+              icon={<EditOutlined style={{ fontSize: '1rem' }} />}
               size="small"
               variant="link"
               onClick={() => editTable(record)}
@@ -71,7 +77,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
           <ATooltip title="删除">
             <AButton
               color="danger"
-              icon={<DeleteOutlined />}
+              icon={<DeleteOutlined style={{ fontSize: '1rem' }} />}
               size="small"
               variant="link"
               onClick={() => {
@@ -97,15 +103,49 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
     return columns.reduce((total, column) => total + (column.width as number || 0), 0);
   }, [columns]);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   return (
-  <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
-    <ATable
-      columns={columns}
-      scroll={{x: columnWidth}}
-      dataSource={tableSchemaList}
-      size="small"
-      className="semantics-table"
-    />
-  </div>
+    <div 
+      style={{ 
+        border: '0.0625rem solid #d9d9d9', 
+        borderRadius: '0.5rem',
+        display: 'flex',
+        flexDirection: 'column',
+        height: 'calc(100vh - 12.5rem)',
+        minHeight: 400,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        <ATable
+          columns={columns}
+          scroll={{ x: columnWidth }}
+          dataSource={tableSchemaList}
+          size="small"
+          className="semantics-table"
+          pagination={false}
+        />
+      </div>
+      <div 
+        style={{ 
+          padding: '0.75rem 1rem',
+          display: 'flex',
+          justifyContent: 'flex-end',
+        }}
+      >
+        <APagination
+          current={currentPage}
+          pageSize={pageSize}
+          total={tableSchemaList.length}
+          showSizeChanger
+          onChange={(page, size) => {
+            setCurrentPage(page);
+            setPageSize(size);
+          }}
+        />
+      </div>
+    </div>
   );
 }
