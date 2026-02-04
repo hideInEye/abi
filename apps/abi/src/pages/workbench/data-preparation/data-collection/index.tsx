@@ -129,7 +129,7 @@ export function Component() {
                   } catch (error) {
                     console.log(error);
                   }
-                  push(`/data-preparation/data-source-kinship/${sourceId}?from=2&name=${viewName}`);
+                  push(`/workbench/data-preparation/data-source-kinship/${sourceId}?from=2&name=${viewName}`);
                 }}
               />
             </Tooltip>

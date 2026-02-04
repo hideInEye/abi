@@ -89,8 +89,9 @@ const route: App.I18n.Schema['translation']['route'] = {
   'system_data-dictionary': '字典管理',
   system_model: '大模型管理',
   system_plugin: '插件管理',
-  'system_space-user': '空间用户管理',
-  system_user: '用户管理'
+  system_user: '用户管理',
+  'space-user':'空间用户管理',
+  'guide':'快速创建'
 
   // 'user-center': '个人中心'
 };

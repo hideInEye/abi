@@ -398,6 +398,28 @@ export const generatedRoutes: GeneratedRoute[] = [
     ]
   },
   {
+    name: 'space',
+    path: '/space',
+    component: 'layout.base',
+    meta: {
+      i18nKey: 'route.space',
+      title: 'space'
+    },
+    children: [
+      {
+        name: 'space_user',
+        path: 'user',
+        component: 'view.space_user',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.system_space-user',
+          icon: 'ic:round-manage-accounts',
+          title: 'system_space-user'
+        }
+      }
+    ]
+  },
+  {
     name: 'space-list',
     path: '/space-list',
     component: 'layout.base$view.space-list',
@@ -406,42 +428,6 @@ export const generatedRoutes: GeneratedRoute[] = [
       i18nKey: 'route.space-list',
       title: 'space-list'
     }
-  },
-  {
-    name: 'system',
-    path: '/system',
-    component: 'layout.base',
-    meta: {
-      hideInMenu: false,
-      i18nKey: 'route.system',
-      icon: 'mdi:monitor-dashboard',
-      order: 6,
-      title: 'system'
-    },
-    children: [
-      {
-        name: 'system_space-user',
-        path: 'space-user',
-        component: 'view.system_space-user',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.system_space-user',
-          icon: 'ic:round-manage-accounts',
-          title: 'system_space-user'
-        }
-      },
-      {
-        name: 'system_user',
-        path: 'user',
-        component: 'view.system_user',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.system_user',
-          icon: 'ic:round-manage-accounts',
-          title: 'system_user'
-        }
-      }
-    ]
   },
   {
     name: 'workbench',
