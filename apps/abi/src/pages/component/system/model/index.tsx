@@ -16,8 +16,6 @@ export function Component() {
 
   // const isMobile = useMobile();
 
-  const { scrollConfig, tableWrapperRef } = useTableScroll();
-
   const handleSwitch = async (record: any) => {
     const updateRes: any = await fetchEditModel({ ...record, status: record.status === '1' ? '0' : '1' });
     if (updateRes?.response?.data?.code !== 200) return false;
@@ -212,7 +210,10 @@ export function Component() {
   }
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
+    <div
+      className="flex flex-col gap-4 p-6"
+      style={{ height: 'calc(100vh - 3rem)', minHeight: 0, overflow: 'hidden' }}
+    >
       {/* <ACollapse
         bordered={false}
         className="card-wrapper"
@@ -232,7 +233,7 @@ export function Component() {
       <ACard
         bordered={false}
         className="flex-col-stretch sm:flex-1-hidden card-wrapper"
-        ref={tableWrapperRef}
+        styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
         title="大模型管理"
         extra={
           <TableHeaderOperation
@@ -246,14 +247,30 @@ export function Component() {
           />
         }
       >
-        <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
-          <ATable
-            scroll={scrollConfig}
-            size="small"
-            rowSelection={rowSelection}
-            className="model-table"
-            {...(tableProps as any)}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div
+            style={{
+              border: '0.0625rem solid #d9d9d9',
+              borderRadius: '0.5rem',
+              overflow: 'hidden',
+              width: '100%',
+              maxHeight: '100%'
+            }}
+          >
+            <div style={{ overflow: 'auto', maxHeight: '100%' }}>
+              <ATable
+                size="small"
+                rowSelection={rowSelection}
+                className="model-table"
+                {...(tableProps as any)}
+                pagination={false}
+              />
+            </div>
+          </div>
+
+          <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
+            <APagination {...(tableProps as any).pagination} showSizeChanger />
+          </div>
         </div>
 
         <Suspense>

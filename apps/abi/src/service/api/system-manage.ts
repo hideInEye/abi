@@ -169,7 +169,9 @@ export async function fetchModelList(params: any) {
     params,
     url: `/system/v1/model/list`
   });
-  return { data: res || [] };
+  const rows = res?.response?.data?.rows || res?.data || [];
+  const total = res?.response?.data?.total ?? (Array.isArray(rows) ? rows.length : 0);
+  return { data: { data: rows, total } };
 }
 
 // 新增模型

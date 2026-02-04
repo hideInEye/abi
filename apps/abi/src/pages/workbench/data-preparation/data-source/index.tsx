@@ -109,17 +109,20 @@ export function Component() {
             title: t("page.dataPreparation.dataSource.creator"),
           },
           {
+            align: "center",
             dataIndex: "createTime",
             key: "createTime",
             title: t("page.dataPreparation.dataSource.createTime"),
             width: 160,
           },
           {
+            align: "center",
             dataIndex: "updateByName",
             key: "updateByName",
             title: t("page.dataPreparation.dataSource.operator"),
           },
           {
+            align: "center",
             dataIndex: "updateTime",
             key: "updateTime",
             title: t("page.dataPreparation.dataSource.operateTime"),
@@ -133,7 +136,7 @@ export function Component() {
                 <Tooltip title="编辑">
                   <AButton
                     color="primary"
-                    icon={<EditOutlined />}
+                    icon={<EditOutlined style={{ fontSize: '1rem' }} />}
                     size="small"
                     variant="link"
                     onClick={() => {
@@ -144,7 +147,7 @@ export function Component() {
                 <Tooltip title="预览">
                   <AButton
                     color="primary"
-                    icon={<FileSearchOutlined />}
+                    icon={<FileSearchOutlined style={{ fontSize: '1rem' }} />}
                     size="small"
                     variant="link"
                     onClick={() =>
@@ -157,7 +160,7 @@ export function Component() {
                 <Tooltip title="创建数据集">
                   <AButton
                     color="primary"
-                    icon={<SvgIcon localIcon="add-collection" />}
+                    icon={<SvgIcon localIcon="add-collection" style={{ fontSize: '1rem' }} />}
                     size="small"
                     variant="link"
                     onClick={() =>
@@ -174,7 +177,7 @@ export function Component() {
                   <Tooltip title="删除">
                     <AButton
                       color="danger"
-                      icon={<DeleteOutlined />}
+                      icon={<DeleteOutlined style={{ fontSize: '1rem' }} />}
                       size="small"
                       variant="link"
                     />
@@ -307,20 +310,43 @@ export function Component() {
       </div>
 
       {/* 表格 */}
-      <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
-        <ATable
-          columns={tableProps.columns as any}
-          dataSource={tableProps.dataSource}
-          loading={tableProps.loading}
-          pagination={tableProps.pagination}
-          rowKey="sourceId"
-          rowSelection={rowSelection}
-          scroll={{ x: 'max-content', y: 400 }}
-          size="small"
-          className="data-source-table"
-        />
+      <div 
+        style={{ 
+          border: '0.0625rem solid #d9d9d9', 
+          borderRadius: '0.5rem',
+          display: 'flex',
+          flexDirection: 'column',
+          height: 'calc(100vh - 12.5rem))',
+          minHeight: 400,
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          <ATable
+            columns={tableProps.columns as any}
+            dataSource={tableProps.dataSource}
+            loading={tableProps.loading}
+            pagination={false}
+            rowKey="sourceId"
+            rowSelection={rowSelection}
+            scroll={{ x: 'max-content' }}
+            size="small"
+            className="data-source-table"
+          />
+        </div>
+        <div 
+          style={{ 
+            padding: '0.75rem 1rem',
+            display: 'flex',
+            justifyContent: 'flex-end',
+          }}
+        >
+          <APagination
+            {...tableProps.pagination}
+            showSizeChanger
+          />
+        </div>
       </div>
-
         <Suspense>
           <DatasourceOperateDrawer
             editingData={editingData}
