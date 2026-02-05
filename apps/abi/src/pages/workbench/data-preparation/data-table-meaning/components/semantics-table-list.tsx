@@ -105,36 +105,45 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
   
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const pagedTableSchemaList = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return tableSchemaList.slice(startIndex, startIndex + pageSize);
+  }, [currentPage, pageSize, tableSchemaList]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [pageSize, tableSchemaList]);
 
   return (
-    <div 
-      style={{ 
-        border: '0.0625rem solid #d9d9d9', 
-        borderRadius: '0.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'calc(100vh - 12.5rem)',
-        minHeight: 400,
-        overflow: 'hidden',
-      }}
-    >
-      <div style={{ flex: 1, overflow: 'auto' }}>
-        <ATable
-          columns={columns}
-          scroll={{ x: columnWidth }}
-          dataSource={tableSchemaList}
-          size="small"
-          className="semantics-table"
-          pagination={false}
-        />
-      </div>
-      <div 
-        style={{ 
-          padding: '0.75rem 1rem',
-          display: 'flex',
-          justifyContent: 'flex-end',
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div
+        style={{
+          border: '0.0625rem solid #d9d9d9',
+          borderRadius: '0.5rem',
+          overflow: 'hidden',
+          width: '100%',
+          maxHeight: '100%'
         }}
       >
+        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+          <ATable
+            columns={columns}
+            scroll={{ x: columnWidth }}
+            dataSource={pagedTableSchemaList}
+            size="small"
+            className="semantics-table"
+            pagination={false}
+          />
+        </div>
+      </div>
+      <div 
+      style={{ 
+        padding: '0.75rem 0', 
+        display: 'flex',
+        justifyContent: 'flex-end',
+        marginTop: 'auto'
+      }}
+     >
         <APagination
           current={currentPage}
           pageSize={pageSize}

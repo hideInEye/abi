@@ -31,11 +31,14 @@ export const Component: React.FC = () => {
 
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper">
-        <AFlex className="gap-6">
+      <ACard
+        className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full"
+        styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
+      >
+        <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
           <DictionaryGroup onGroupId={setGroupId} />
 
-          <div className="flex-1">
+          <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
             <ASpace className="mb-3 flex justify-between">
               <AInput
                 placeholder="请输入字典名称"

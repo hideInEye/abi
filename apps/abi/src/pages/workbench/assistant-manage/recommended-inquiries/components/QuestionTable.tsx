@@ -1,9 +1,8 @@
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { Button, Popconfirm, Space, Table } from 'antd';
+import { Button, Pagination, Popconfirm, Space, Table } from 'antd';
 import React from 'react';
 
 import type { QuestionTableData } from '../types';
-import { useQuestionManagement } from '../hooks/useQuestionManagement';
 
 interface IQuestionTable {
   readonly dataSource: QuestionTableData[];
@@ -18,12 +17,13 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
 
   const columns = [
     {
+      align: 'center',
       dataIndex: 'question',
       key: 'question',
       title: '问题'
     },
-
     {
+      align: 'center',
       key: 'action',
       width:150,
       render: (_: any, record: QuestionTableData) => (
@@ -54,28 +54,33 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
       title: '操作'
     }
   ];
-  console.log(pagination);
-  
   return (
-  <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
-    <Table
-      columns={columns}
-      dataSource={dataSource}
-      rowKey="id"
-      scroll={{y: 360 }}
-      size="small"
-      className="question-table"
-      pagination={{
-        onChange:(p,n)=>{
-          setPagination({
-            ...pagination,
-            pageNum: p,
-            pageSize: n
-          })
-        },
-        ...pagination
-      }}
-    />
-  </div>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px', overflow: 'hidden' }}>
+        <Table
+          columns={columns}
+          dataSource={dataSource}
+          rowKey="id"
+          size="small"
+          className="question-table"
+          pagination={false}
+        />
+      </div>
+      <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
+        <Pagination
+          current={pagination?.pageNum}
+          pageSize={pagination?.pageSize}
+          total={pagination?.total}
+          showSizeChanger
+          onChange={(page, size) => {
+            setPagination({
+              ...pagination,
+              pageNum: page,
+              pageSize: size
+            });
+          }}
+        />
+      </div>
+    </div>
   );
 };
