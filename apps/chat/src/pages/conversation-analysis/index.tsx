@@ -27,6 +27,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
   const [isEdit, setIsEdit] = useState(false)
   const [EditData, setEditData] = useState<any>({})
   const conversationRef = useRef<any>(null)
+  const converListRef = useRef<any>(null)
   const [fold, setFold] = useState(false)
   const [currentSpaceId, setCurrentSpaceId] = useState<number>(() => {
     return propSpaceId !== undefined ? Number(propSpaceId) : getSpaceId()
@@ -48,6 +49,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
         setCurrentSpaceId(next)
         setCurApp({})
         setCurConv(null)
+        converListRef.current?.setSelectedChatId(null)
       }
     }
     window.addEventListener('space-change', handleSpaceChange)
@@ -273,6 +275,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
     <Spin spinning={loading} wrapperClassName="h-full">
       <div className="h-full w-full flex bg-white">
         <ConverList
+          ref={converListRef}
           handleEdit={handleEdit}
           appList={appList}
           handleSetCurApp={handleSetCurApp}

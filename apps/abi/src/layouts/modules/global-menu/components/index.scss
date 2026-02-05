@@ -1,0 +1,17 @@
+.menu-container {
+  .ant-menu-submenu-selected > .ant-menu-submenu-title {
+    color: #333;
+    &.ant-menu-title-content {
+      color: #333;
+    }
+  }
+  & > li > ul {
+    & > .ant-menu-item-selected {
+      color: #3366ff !important;
+      background-color: rgba(51, 102, 255, 0.1);
+    }
+    &> .ant-menu-item {
+      color: #999999;
+    }
+  }
+}

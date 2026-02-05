@@ -142,14 +142,14 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
 
   return (
     <>
-      <header className="flex items-center justify-between border-b-2 border-[#F0F0F0] bg-[#F9F9F9] pt-11 pl-[2.3125rem] pr-[3.375rem] pb-[1.5625rem] sticky top-0 z-10">
+      <header className="flex items-center justify-between border-b-2 border-[#F0F0F0] bg-[#F9F9F9]  pl-[2.3125rem] pr-[3.375rem] py-[0.625rem] sticky top-0 z-10">
         <Space size={12}>
           <div className="text-[#333333] text-base leading-[1.375rem] font-semibold">{conv.biz_name || 'AI智能助手'}</div>
           {/* <Tooltip title="编辑对话">
             <SvgIcon localIcon="edit" className="w-5 h-[1.375rem] cursor-pointer" onClick={handleEdit} />
           </Tooltip> */}
         </Space>
-        <Space className="" size={24}>
+        <Space className="" size={10}>
           <Tooltip title="历史记录">
             <span className="cursor-pointer" onClick={handleHistory}>
               <SvgIcon localIcon="history" className="w-5 h-5" />
