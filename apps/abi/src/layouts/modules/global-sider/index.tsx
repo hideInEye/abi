@@ -135,7 +135,6 @@ const GlobalSider: FC = memo(() => {
   // 添加空间切换处理函数
   const handleSpaceChange: MenuProps['onClick'] = (e) => {
     const data = spaceOptions.find((item: any) => item.key == e.key)
-    console.log(data, '===')
     setSelectedSpaceName(data?.label || '')
 
     switchToSpace(Number(e?.key))
@@ -147,7 +146,7 @@ const GlobalSider: FC = memo(() => {
         <div className="mt-6 mb-10 flex items-center justify-center cursor-pointer" onClick={redirectHome}>
           <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
         </div>
-        <div className="flex gap-[1.6875rem] flex-col text-[#848FA2]">
+        <div className="flex gap-[1.625rem] flex-col text-[#848FA2]">
           {primaryMenuData.map((item) => {
             const isActive = item.name !== selectedMenuKey
             return (

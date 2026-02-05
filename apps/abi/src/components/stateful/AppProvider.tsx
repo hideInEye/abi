@@ -30,11 +30,17 @@ const AppProvider = memo(({ children }: { children: React.ReactNode }) => {
     { target: window }
   );
 
-  useMount(() => {
-    window.matchMedia(DARK_MODE_MEDIA_QUERY).addEventListener('change', event => {
+  useEffect(() => {
+    const mediaQueryList = window.matchMedia(DARK_MODE_MEDIA_QUERY);
+    const handler = (event: MediaQueryListEvent) => {
       dispatch(setDarkMode(event.matches));
-    });
-  });
+    };
+
+    mediaQueryList.addEventListener('change', handler);
+    return () => {
+      mediaQueryList.removeEventListener('change', handler);
+    };
+  }, [dispatch]);
 
   return (
     <App className="h-full">

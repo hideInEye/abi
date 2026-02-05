@@ -327,8 +327,8 @@ const AllConversations: React.FC<Props> = ({ onClose, onSelectApp, onUpdateList 
           <Tooltip title="删除对话">
             <span className="flex-shrink-0 w-[20px] h-[20px] flex items-center justify-center">
               <SvgIcon 
-                localIcon="delete" 
-                className="text-[#2E6CF6] hover:text-[#2E6CF6]/80 cursor-pointer"
+                localIcon="drown_delete" 
+                className="cursor-pointer"
                 style={{ fontSize: '20px' }}
                 onClick={() => handleDelete(record)}
               />
