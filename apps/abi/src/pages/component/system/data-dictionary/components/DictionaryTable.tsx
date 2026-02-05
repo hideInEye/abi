@@ -1,4 +1,5 @@
 import { DeleteOutlined, EditOutlined, SnippetsOutlined } from '@ant-design/icons';
+import { Pagination } from 'antd';
 
 import type { DictionaryItem } from '../types';
 
@@ -51,14 +52,17 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
     //   title: '字典ID'
     // },
     {
+      align: 'center',
       dataIndex: 'dictField',
       title: '字典名称'
     },
     {
+      align: 'center',
       dataIndex: 'dictName',
       title: '中文名称'
     },
     {
+      align: 'center',
       dataIndex: 'status',
       render: (text: string, record: DictionaryItem) => {
         return (
@@ -71,6 +75,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
       title: '状态'
     },
     {
+      align: 'center',
       dataIndex: 'remark',
       title: '字典描述',
       width: 120,
@@ -87,11 +92,13 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
       }
     },
     {
+      align: 'center',
       dataIndex: 'createTime',
       title: '创建时间'
     },
 
     {
+      align: 'center',
       dataIndex: '操作',
       render: (_: any, record: DictionaryItem) => {
         return (
@@ -133,20 +140,28 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
   ];
 
   return (
-    <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
-      <ATable
-        columns={columns}
-        dataSource={dataSource.rows}
-        pagination={{
-          current,
-          onChange: handlePageChange,
-          pageSize: 10,
-          total: dataSource.total
-        }}
-        scroll={{ x: 'max-content', y: 'calc(100vh - 350px)' }}
-        size="small"
-        className="dictionary-table"
-      />
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px', overflow: 'hidden' }}>
+        <ATable
+          columns={columns}
+          dataSource={dataSource.rows}
+          pagination={false}
+          scroll={{ x: 'max-content' }}
+          size="small"
+          className="dictionary-table"
+        />
+      </div>
+
+      {/* <div style={{ flex: 1, minHeight: 0 }} /> */}
+
+      <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
+        <Pagination
+          current={current}
+          pageSize={10}
+          total={dataSource.total}
+          onChange={(page) => handlePageChange(page)}
+        />
+      </div>
     </div>
   );
 };

@@ -14,6 +14,34 @@
     // color: #fff !important;
   }
 }
+.assistant-table-scroll {
+  &,
+  .ant-table-content,
+  .ant-table-body {
+    scrollbar-width: none !important;
+    scrollbar-color: rgba(144, 147, 153, 0.3) transparent !important;
+  }
+
+  &::-webkit-scrollbar,
+  .ant-table-content::-webkit-scrollbar,
+  .ant-table-body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  &:hover,
+  &:hover .ant-table-content,
+  &:hover .ant-table-body {
+    scrollbar-width: thin !important;
+  }
+
+  &:hover::-webkit-scrollbar,
+  &:hover .ant-table-content::-webkit-scrollbar,
+  &:hover .ant-table-body::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+}
 
 // Tree选中样式 - 所有分组统一样式
 .semantics-tree,
@@ -23,7 +51,7 @@
     background-color: transparent !important;
   }
   .ant-tree-node-selected .ant-tree-title {
-    color: #1890ff !important;
+    color: #3366ff !important;
   }
   .ant-tree-node-content-wrapper:hover {
     background-color: transparent !important;

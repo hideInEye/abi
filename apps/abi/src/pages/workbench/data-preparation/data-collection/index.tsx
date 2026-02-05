@@ -210,7 +210,7 @@ export function Component() {
             maxHeight: '100%'
           }}
         >
-          <div style={{ overflow: 'auto', maxHeight: '100%' }}>
+          <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
             <ATable
               columns={tableProps.columns as any}
               dataSource={tableProps.dataSource}

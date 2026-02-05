@@ -257,11 +257,12 @@ export function Component() {
               maxHeight: '100%'
             }}
           >
-            <div style={{ overflow: 'auto', maxHeight: '100%' }}>
+            <div className="assistant-table-scroll" style={{ overflow: 'hidden', maxHeight: '100%' }}>
               <ATable
                 size="small"
                 rowSelection={rowSelection}
                 className="model-table"
+                scroll={{ x: 'max-content' }}
                 {...(tableProps as any)}
                 pagination={false}
               />

@@ -294,7 +294,9 @@ export function Component() {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div className="flex flex-col gap-4 p-6"
+      style={{ height: 'calc(100vh - 3rem)', minHeight: 0, overflow: 'hidden' }}
+    >
       {/* 搜索栏 */}
       <div className="flex items-center gap-4">
         <AInput
@@ -302,7 +304,7 @@ export function Component() {
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           onPressEnter={handleSearch}
-          style={{ width: 200 }}
+          style={{ width: '12.5rem' }}
         />
         <AButton type="primary" onClick={() => handleAdd()}>
           新增数据源
@@ -310,39 +312,38 @@ export function Component() {
       </div>
 
       {/* 表格 */}
-      <div 
-        style={{ 
-          border: '0.0625rem solid #d9d9d9', 
-          borderRadius: '0.5rem',
-          display: 'flex',
-          flexDirection: 'column',
-          height: 'calc(100vh - 12.5rem))',
-          minHeight: 400,
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ flex: 1, overflow: 'auto' }}>
-          <ATable
-            columns={tableProps.columns as any}
-            dataSource={tableProps.dataSource}
-            loading={tableProps.loading}
-            pagination={false}
-            rowKey="sourceId"
-            rowSelection={rowSelection}
-            scroll={{ x: 'max-content' }}
-            size="small"
-            className="data-source-table"
-          />
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <div
+          style={{
+            border: '0.0625rem solid #d9d9d9',
+            borderRadius: '0.5rem',
+            overflow: 'hidden',
+          }}
+        >
+          <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+            <ATable
+              columns={tableProps.columns as any}
+              dataSource={tableProps.dataSource}
+              loading={tableProps.loading}
+              pagination={false}
+              rowKey="sourceId"
+              rowSelection={rowSelection}
+              scroll={{ x: 'max-content' }}
+              size="small"
+              className="data-source-table"
+            />
+          </div>
         </div>
-        <div 
-          style={{ 
-            padding: '0.75rem 1rem',
-            display: 'flex',
-            justifyContent: 'flex-end',
+        <div
+         style={{
+           padding: '0.75rem 1rem',
+           display: 'flex',
+           justifyContent: 'flex-end',
+           marginTop: 'auto' 
           }}
         >
           <APagination
-            {...tableProps.pagination}
+           {...tableProps.pagination}
             showSizeChanger
           />
         </div>

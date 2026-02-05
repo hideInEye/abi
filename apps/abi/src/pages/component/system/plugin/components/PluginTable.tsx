@@ -1,5 +1,6 @@
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 // import { JsonEditor } from 'json-edit-react';
+import { Pagination } from 'antd';
 
 import type { PluginItem, PluginList } from '@/types/plug';
 
@@ -27,21 +28,25 @@ export const PluginTable: React.FC<PluginTableProps> = ({
 }: PluginTableProps) => {
   const columns = [
     {
+      align: 'center',
       dataIndex: 'pluginName',
       key: 'pluginName',
       title: '插件名称'
     },
     {
+      align: 'center',
       dataIndex: 'remark',
       key: 'remark',
       title: '插件描述'
     },
     {
+    align: 'center',
       dataIndex: 'pluginType',
       key: 'pluginType',
       title: '插件类型'
     },
     {
+      align: 'center',
       dataIndex: 'status',
       key: 'status',
       render: (status: number, record: PluginItem) => {
@@ -52,41 +57,10 @@ export const PluginTable: React.FC<PluginTableProps> = ({
           />
         );
       },
-      title: '插件状态',
+      title: '插件状态'
     },
-    // {
-    //   dataIndex: 'parseModeConfig',
-    //   key: 'parseModeConfig',
-    //   title: '解析配置',
-    //   render: (parseModeConfig: string) => {
-    //     return (
-    //       <JsonEditor
-    //         data={parseModeConfig}
-    //         enableClipboard={false}
-    //         restrictAdd={true}
-    //         restrictDelete={true}
-    //         restrictEdit={true}
-    //       />
-    //     );
-    //   },
-    // },
-    // {
-    //   dataIndex: 'serviceConfig',
-    //   key: 'serviceConfig',
-    //   title: '服务配置',
-    //   render: (serviceConfig: string) => {
-    //     return (
-    //       <JsonEditor
-    //         data={serviceConfig}
-    //         enableClipboard={false}
-    //         restrictAdd={true}
-    //         restrictDelete={true}
-    //         restrictEdit={true}
-    //       />
-    //     );
-    //   },
-    // },
     {
+      align: 'center',
       dataIndex: 'action',
       key: 'action',
       render: (_: any, record: any) => {
@@ -130,19 +104,25 @@ export const PluginTable: React.FC<PluginTableProps> = ({
   };
 
   return (
-  <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px' }}>
-    <ATable
-      columns={columns}
-      dataSource={dataSource.rows}
-      pagination={{
-        current,
-        onChange: handleChange,
-        total: dataSource.total
-      }}
-      style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}
-      size="small"
-      className="plugin-table"
-    />
-  </div>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px', overflow: 'hidden' }}>
+        <ATable
+          columns={columns}
+          dataSource={dataSource.rows}
+          pagination={false}
+          style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}
+          size="small"
+          className="plugin-table"
+        />
+      </div>
+      <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
+        <Pagination
+          current={current}
+          pageSize={10}
+          total={dataSource.total}
+          onChange={(page) => handleChange(page)}
+        />
+      </div>
+    </div>
   );
 };
