@@ -1,5 +1,6 @@
 import type { CustomRoute, ElegantConstRoute, LastLevelRouteKey, RouteKey } from '@elegant-router/types';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSelector } from '@reduxjs/toolkit';
 
 import { router } from '@/router';
 import { getRoutePath } from '@/router/elegant/transform';
@@ -96,7 +97,10 @@ export const routeSlice = createAppSlice({
     })
   }),
   selectors: {
-    getAllRoutes: state => [...state.constantRoutes, ...state.authRoutes],
+    getAllRoutes: createSelector(
+      [(state: InitialStateType) => state.constantRoutes, (state: InitialStateType) => state.authRoutes],
+      (constantRoutes, authRoutes) => [...constantRoutes, ...authRoutes]
+    ),
     getAuthRoutes: route => route.authRoutes,
     getConstantRoutes: route => route.constantRoutes,
     getIsInitConstantRoute: route => route.isInitConstantRoute,

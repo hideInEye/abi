@@ -18,11 +18,9 @@ interface Props {
 const MenuProvider: FC<Props> = ({ children }) => {
   const sortRoutes = useAppSelector(getSortRoutes);
 
-  const menus = getGlobalMenusByAuthRoutes(sortRoutes);
-
   const locale = useAppSelector(getLocale);
 
-  const update = useUpdate();
+  const menus = useMemo(() => getGlobalMenusByAuthRoutes(sortRoutes), [sortRoutes, locale]);
 
   const activeFirstLevelMenuKey = useAppSelector(selectActiveFirstLevelMenuKey);
 
@@ -64,10 +62,6 @@ const MenuProvider: FC<Props> = ({ children }) => {
     () => menus.find(menu => menu.key === activeFirstLevelMenuKey)?.children as App.Global.Menu[],
     [activeFirstLevelMenuKey, menus]
   );
-
-  useUpdateEffect(() => {
-    update();
-  }, [locale]);
 
   const mixMenuContext = {
     activeFirstLevelMenuKey,
