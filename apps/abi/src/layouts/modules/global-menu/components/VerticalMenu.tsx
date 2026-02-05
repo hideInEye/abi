@@ -1,17 +1,11 @@
-import { SimpleScrollbar } from '@sa/materials';
 import type { RouteRecordNormalized } from '@sa/simple-router';
 import type { MenuProps } from 'antd';
-import { cloneDeep } from 'lodash';
 import type { MenuInfo } from 'rc-menu/lib/interface';
-import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
 
-import { useSystemStore } from '@/my-store';
-import { getSpaceMenuBySpaceIdApi } from '@/service/api';
 import { getSiderCollapse } from '@/store/slice/app';
 import { getThemeSettings } from '@/store/slice/theme';
-import { convertRuoYiToSoybean, filterAndReconstructRoutes } from "@/utils/router";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
-
+import './index.scss';
 interface LevelKeysProps {
   children?: LevelKeysProps[];
   key?: string;
@@ -48,56 +42,35 @@ const getSelectedMenuKeyPath = (matches: RouteRecordNormalized[]) => {
 };
 
 const VerticalMenu = memo(() => {
-  const isMicroApp = qiankunWindow.__POWERED_BY_QIANKUN__;
-  const { allMenus, childLevelMenus, route, selectKey } = useMixMenuContext();
-  const { onenetPortalManageMenus } = useSystemStore();
-    const [collapsed, setCollapsed] = useState(false);
+  const { allMenus, route, selectKey } = useMixMenuContext();
+  const [collapsed, setCollapsed] = useState(false);
 
   const toggleCollapsed = () => {
     setCollapsed(!collapsed);
   };
-  // 状态：过滤后的菜单和加载状态
-  const [filteredMenus, setFilteredMenus] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  // 处理菜单过滤的副作用
-  useEffect(() => {
-    const filterMenus = async () => {
-      setLoading(true); // 开始加载
-      
-      try {
-        const cloneAllMenus = cloneDeep(allMenus);
-        const spaceId: any = localStorage.getItem('spaceId');
-        const menuKey = route.path.split('/')[1]
-        let menuArr: any[] = []
-       cloneAllMenus.forEach((item)=>{
-         if(item.key === menuKey){
-           menuArr = item.children
-         }
-       })
-       
-       setFilteredMenus(menuArr)
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('菜单过滤出错', error);
-        // 出错时回退到默认菜单
-        setFilteredMenus(allMenus.filter(item => item.key !== 'manage'));
-      } finally {
-        setLoading(false); // 结束加载
-      }
-    };
+  const menuKey = useMemo(() => {
+    const path = route?.path || '';
+    return path.split('/')[1] || '';
+  }, [route?.path]);
 
-    filterMenus();
-  }, [route, allMenus, isMicroApp, onenetPortalManageMenus]);
+  // 二级菜单：根据当前 path 的一级 segment 过滤，避免在菜单切换时深拷贝（ReactNode 深拷贝会导致内存/CPU 飙升）
+  const filteredMenus = useMemo(() => {
+    if (!Array.isArray(allMenus) || allMenus.length === 0) return [];
+    const current = allMenus.find((item) => item?.key === menuKey);
+    const children = (current as any)?.children;
+    if (Array.isArray(children)) return children;
+    return allMenus.filter(item => item.key !== 'manage');
+  }, [allMenus, menuKey]);
 
   // 计算levelKeys - 添加空数组处理
   const levelKeys = useMemo(() => {
     // 确保filteredMenus是有效数组
-    if (loading || !filteredMenus || filteredMenus.length === 0) {
+    if (!filteredMenus || filteredMenus.length === 0) {
       return {};
     }
     return getLevelKeys(filteredMenus);
-  }, [filteredMenus, loading]);
+  }, [filteredMenus]);
 
   const themeSettings = useAppSelector(getThemeSettings);
 
@@ -147,7 +120,7 @@ const VerticalMenu = memo(() => {
   useEffect(() => {
     if (inlineCollapsed || isVerticalMix) return;
     setStateOpenKeys(getSelectedMenuKeyPath(route.matched));
-  }, [route, inlineCollapsed, isVerticalMix]);
+  }, [route.name, inlineCollapsed, isVerticalMix]);
 
   useUpdateEffect(() => {
     if (inlineCollapsed || isVerticalMix) return;
@@ -161,12 +134,12 @@ const VerticalMenu = memo(() => {
   }, [isMix, inlineCollapsed]);
   
   return (
-    <div className='bg-white ml-[2px]' style={{boxShadow: '0px 3px 6px 0px rgba(0,0,0,0.05)' }}>
+    <div className='bg-white ml-[2px] h-screen' style={{boxShadow: '0px 3px 6px 0px rgba(0,0,0,0.05)' }}>
        <div onClick={toggleCollapsed} className='mb-[10px] pt-[10px] mr-[10px] flex cursor-pointer items-center justify-end'>
         {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
       </div>
       <AMenu
-        className={`transition-300 border-0! h-[100vh] ${!collapsed?'w-[12.5rem]':''}`}
+        className={`transition-300 border-0! menu-container h-[calc(100vh-5rem)] ${!collapsed?'w-[12.5rem]':''}`}
         inlineIndent={18}
         items={filteredMenus}
         mode="inline"

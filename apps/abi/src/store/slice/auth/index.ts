@@ -21,10 +21,10 @@ async function performLogoutCleanup() {
   await cleanupWebStorage(prefix, debugRemoved);
   await cleanupLocalforageKeys(prefix, debugRemoved);
 
-  try {
-    // eslint-disable-next-line no-console
-    console.info('performLogoutCleanup removed keys:', Array.from(new Set(debugRemoved)));
-  } catch {}
+  // try {
+  //   // eslint-disable-next-line no-console
+  //   console.info('performLogoutCleanup removed keys:', Array.from(new Set(debugRemoved)));
+  // } catch {}
 }
 
 async function removeWellKnownKeys(prefix: string, debugRemoved: string[]) {
