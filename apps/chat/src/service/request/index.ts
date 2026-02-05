@@ -21,6 +21,18 @@ service.interceptors.request.use(
       console.error('Token processing error:', error);
     }
 
+    // 开发环境：如果业务代码传入了绝对 baseURL（如 https://192.168.x.x/api/），
+    // 浏览器会直接跨域请求，绕过 Vite proxy；这里把 baseURL 降级为同源路径（如 /api），让请求走代理。
+    if (isDevelopment && config.baseURL && /^https?:\/\//i.test(String(config.baseURL))) {
+      try {
+        const parsed = new URL(String(config.baseURL));
+        const pathname = parsed.pathname.replace(/\/$/, '');
+        config.baseURL = pathname || '/';
+      } catch {
+        config.baseURL = '/';
+      }
+    }
+
     // 只在没有指定 baseURL 或 baseURL 为默认值 '/' 时才设置为 '/'
     if (isDevelopment && (!config.baseURL || config.baseURL === '/')) {
       config.baseURL = '/';

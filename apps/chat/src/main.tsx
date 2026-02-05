@@ -81,7 +81,7 @@ function render(props: any) {
 const initQianKun = () => {
   renderWithQiankun(({
     mount(props: any) {
-      console.log('mount',props);
+      console.log('mount');
       render(props);
     },
     bootstrap() {
