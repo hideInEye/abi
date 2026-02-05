@@ -79,13 +79,15 @@ const EChartComponent = forwardRef<EChartHandle, EChartProps & { handleClick: (p
 
           return () => {
             window.removeEventListener('resize', resizeHandler);
+            resizeHandler.cancel();
           };
         }
       };
 
-      initChart();
+      const teardownAutoResize = initChart();
 
       return () => {
+        teardownAutoResize?.();
         if (chartInstance.current) {
           chartInstance.current.dispose();
           chartInstance.current = undefined;
