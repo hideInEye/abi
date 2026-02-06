@@ -7,12 +7,12 @@ import { Suspense } from 'react';
 import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage';
 import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList } from '@/service/api';
 
-import KeySearch from './modules/key-search';
-
 const ModalOperateDrawer = lazy(() => import('./modules/modal-operate-drawer'));
 
 export function Component() {
   const { t } = useTranslation();
+
+  const [searchValue, setSearchValue] = useState('');
 
   // const isMobile = useMobile();
 
@@ -34,12 +34,12 @@ export function Component() {
     }
   }
 
-  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps } = useTable({
+  const { data, run, tableProps, updateSearchParams } = useTable({
     apiFn: fetchModelList as any,
     apiParams: {
-      // current: 1,
-      // size: 10,
-      modelName: ''
+      pageNum: 1,
+      pageSize: 10,
+      modelName: searchValue
       // spaceId: 1 // 空间id
     },
     columns: () =>
@@ -96,7 +96,7 @@ export function Component() {
         {
           align: 'center',
           key: 'operate',
-          render: (_: unknown, record: any,index:number) => (
+          render: (_: unknown, record: any) => (
             <div className="flex-center gap-8px">
               <AButton
                 color="primary"
@@ -132,7 +132,7 @@ export function Component() {
     rowKey: 'llmId'
   } as any);
 
-  const { checkedRowKeys, editingData, generalPopupOperation, handleAdd, handleEdit, onDeleted, rowSelection } = useTableOperate(
+  const { editingData, generalPopupOperation, handleAdd, handleEdit, onDeleted, rowSelection } = useTableOperate(
     data as any,
     run,
     async (res: any, operateType) => {
@@ -208,76 +208,66 @@ export function Component() {
       console.log(error);
     }
   }
+  const handleSearch = () => {
+    const keyword = searchValue.trim();
+    updateSearchParams({
+      pageNum: 1,
+      modelName: keyword ? keyword : undefined
+    } as any);
+  };
 
   return (
     <div
       className="flex flex-col gap-4 p-6"
-      style={{ height: 'calc(100vh - 3rem)', minHeight: 0, overflow: 'hidden' }}
+      style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      {/* <ACollapse
-        bordered={false}
-        className="card-wrapper"
-        defaultActiveKey={isMobile ? undefined : '1'}
-        items={[
-          {
-            children: <KeySearch {...searchProps} />,
-            key: '1',
-            label: t('common.search')
-          }
-        ]}
-      /> */}
-      <ACard>
-        <KeySearch {...searchProps} />
-      </ACard>
-
-      <ACard
-        bordered={false}
-        className="flex-col-stretch sm:flex-1-hidden card-wrapper"
-        styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
-        title="大模型管理"
-        extra={
-          <TableHeaderOperation
-            add={() => handleAdd()}
-            columns={columnChecks}
-            disabledDelete={checkedRowKeys.length === 0}
-            loading={tableProps.loading}
-            refresh={run}
-            setColumnChecks={setColumnChecks}
-            // onDelete={handleBatchDelete}
-          />
-        }
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-          <div
-            style={{
-              border: '0.0625rem solid #d9d9d9',
-              borderRadius: '0.5rem',
-              overflow: 'hidden',
-              width: '100%',
-              maxHeight: '100%'
-            }}
-          >
-            <div className="assistant-table-scroll" style={{ overflow: 'hidden', maxHeight: '100%' }}>
-              <ATable
-                size="small"
-                rowSelection={rowSelection}
-                className="model-table"
-                scroll={{ x: 'max-content' }}
-                {...(tableProps as any)}
-                pagination={false}
-              />
-            </div>
-          </div>
-
-          <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
-            <APagination {...(tableProps as any).pagination} showSizeChanger />
+      <div className="flex items-center gap-4">
+        <AInput
+          placeholder="请输入模型名称"
+          value={searchValue}
+          onChange={e => setSearchValue(e.target.value)}
+          onPressEnter={handleSearch}
+          style={{ width: '12.5rem' }}
+        />
+        <AButton
+          className="ml-auto"
+          type="primary"
+          onClick={() => handleAdd()}
+        >
+          新增大模型
+        </AButton>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <div
+          style={{
+            border: '0.0625rem solid #d9d9d9',
+            borderRadius: '0.5rem',
+            overflow: 'hidden',
+            width: '100%',
+            maxHeight: '100%'
+          }}
+        >
+          <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+            <ATable
+              size="small"
+              rowSelection={rowSelection}
+              className="model-table"
+              scroll={{ x: 'max-content' }}
+              {...(tableProps as any)}
+              pagination={false}
+            />
           </div>
         </div>
 
-        <Suspense>
-          <ModalOperateDrawer {...generalPopupOperation} />
-        </Suspense>
-      </ACard>
+        <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
+          <APagination {...(tableProps as any).pagination} showSizeChanger style={{ padding: '0' }}
+          />
+        </div>
+      </div>
+
+      <Suspense>
+        <ModalOperateDrawer {...generalPopupOperation} />
+      </Suspense>
     </div>
   );
 }

@@ -81,7 +81,7 @@ export const SpaceSelection = ({ onSelectSpace, selectedSpaceId }: SpaceSelectio
   }
 
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div className="flex flex-col gap-4 p-6" style={{ height: 'calc(100vh - 11.25rem)', overflow: 'hidden' }}>
       {/* 搜索栏 */}
       <div className="flex items-center justify-between">
         <AInput
@@ -97,7 +97,8 @@ export const SpaceSelection = ({ onSelectSpace, selectedSpaceId }: SpaceSelectio
         </AButton>
       </div>
 
-      {/* 空间列表 */}
+  <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+    <div>
       <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {spaces.map((space) => (
           <div
@@ -109,13 +110,13 @@ export const SpaceSelection = ({ onSelectSpace, selectedSpaceId }: SpaceSelectio
           </div>
         ))}
       </section>
-
+      
       {loading && <div className="text-center text-gray-500">加载中...</div>}
       {!loading && spaces.length === 0 && <div className="text-center text-gray-500">暂无空间数据</div>}
-
+    </div>
       {/* 分页 */}
       {total > 0 && (
-        <div className="flex justify-end mt-4">
+        <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
           <APagination
             current={pageNum}
             pageSize={pageSize}
@@ -124,8 +125,8 @@ export const SpaceSelection = ({ onSelectSpace, selectedSpaceId }: SpaceSelectio
           />
         </div>
       )}
-
-      {drawerOpen && <SpaceEdit drawerOpen={drawerOpen} editSpace={editSpace} setDrawerOpen={setDrawerOpen} updateSpace={updateSpace} />}
     </div>
+      {drawerOpen && <SpaceEdit drawerOpen={drawerOpen} editSpace={editSpace} setDrawerOpen={setDrawerOpen} updateSpace={updateSpace} />}
+  </div>
   )
 }

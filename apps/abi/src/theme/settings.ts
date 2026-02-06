@@ -49,7 +49,7 @@ export const themeSettings: App.Theme.ThemeSetting = {
     visible: true
   },
   // themeColor: '#646cff',
-  themeColor: '#1e87da',
+  themeColor: '#3366ff',
   themeScheme: 'light',
   tokens: {
     dark: {

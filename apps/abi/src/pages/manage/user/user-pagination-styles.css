@@ -30,13 +30,13 @@
 }
 
 .ant-pagination .ant-pagination-item:hover {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: #3366ff;
+  color: #3366ff;
 }
 
 .ant-pagination .ant-pagination-item-active {
-  background-color: #1890ff;
-  border-color: #1890ff;
+  background-color: #3366ff;
+  border-color: #3366ff;
 }
 
 .ant-pagination .ant-pagination-item-active a {
