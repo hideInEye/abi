@@ -21,7 +21,6 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
   const [curConv, setCurConv] = useState<any>()
   const [showAllConversations, setShowAllConversations] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [hideRight, setHideRight] = useState(false)
   const lastSpaceIdRef = useRef<number | null>(null)
   const skipNextConvFetchRef = useRef(false)
   const [isEdit, setIsEdit] = useState(false)
@@ -57,7 +56,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
       window.removeEventListener('space-change', handleSpaceChange)
     }
   }, [])
-  
+
   // 按 create_time 排序
   const sortAppList = (list: any[]) => {
     return list.sort((a, b) => {
@@ -97,7 +96,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
       setLoading(false)
     }
   }, [currentSpaceId])
-  
+
   useEffect(() => {
     // 防止StrictMode导致的重复调用，同时在 spaceId 变化时刷新列表
     if (currentSpaceId === null || Number.isNaN(currentSpaceId)) return
@@ -136,7 +135,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
     }
   }, [curApp])
 
-  const handleSetCurApp =useCallback(async (item: any) => {
+  const handleSetCurApp = useCallback(async (item: any) => {
     // 移除datasourceCache参数
     try {
       setLoading(true)
@@ -145,7 +144,6 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
     } finally {
       setLoading(false)
       setShowAllConversations(false)
-      setHideRight(false)
     }
   }, [])
 
@@ -186,7 +184,6 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
         setCurConv({ ...newConvRes.data, ...currentApp })
 
         setShowAllConversations(false)
-        setHideRight(false)
         setVisible(false)
         return Promise.resolve()
       } catch (e) {
@@ -245,7 +242,6 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
         setCurConv({ ...newConv, ...newApp })
       }
       setShowAllConversations(false)
-      setHideRight(false)
       return
     }
     if (data) {
@@ -280,15 +276,14 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
           appList={appList}
           handleSetCurApp={handleSetCurApp}
           handleDeleteApp={handleDeleteApp}
-          setHideRight={setHideRight}
           setShowAllConversations={setShowAllConversations}
           onUpdateList={handleUpdateList}
           handleClearConvHistory={handleClearConvHistory}
           setFold={setFold}
           fold={fold}
         />
-        {!hideRight && curConv && !showAllConversations && <Conversation fold={fold} conv={curConv} ref={conversationRef} onClose={() => setCurConv(undefined)} onUpdateList={handleUpdateList} />}
-        {!hideRight && showAllConversations && <AllConversations onClose={() => setShowAllConversations(false)} onSelectApp={(item) => handleSetCurApp(item)} onUpdateList={handleUpdateList} />}
+        {curConv && !showAllConversations && <Conversation fold={fold} conv={curConv} ref={conversationRef} onClose={() => setCurConv(undefined)} onUpdateList={handleUpdateList} />}
+        {showAllConversations && <AllConversations onClose={() => setShowAllConversations(false)} onSelectApp={(item) => handleSetCurApp(item)} onUpdateList={handleUpdateList} />}
       </div>
       <CreateModal
         onClose={onClose}
