@@ -1,7 +1,6 @@
 import { DoubleRightOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons'
 import { Dropdown, Input, message, Modal, Popover, Space } from 'antd'
-import dayjs from 'dayjs'
-import React, { useCallback, useEffect, useImperativeHandle, useState } from 'react'
+import React, { useEffect, useImperativeHandle, useState } from 'react'
 import SvgIcon from '../../components/SvgIcon'
 import left_online from '@/assets/svg-icon/left_online.svg'
 import right_online from '@/assets/svg-icon/right_online.svg'
@@ -14,9 +13,8 @@ interface converListProps {
   appList: any[]
   handleSetCurApp: (item: any) => void
   handleDeleteApp: (item: any) => void
-  setHideRight: (hideRight: boolean) => void
   setShowAllConversations: (showAllConversations: boolean) => void
-  handleEdit: (key: string) => void
+  handleEdit: (key: string, item?: any) => void
   handleClearConvHistory: () => void
   onUpdateList: (data: any) => void
   setFold: (fold: boolean) => void
@@ -24,7 +22,7 @@ interface converListProps {
 }
 
 const ConverList = React.forwardRef((props: converListProps, ref) => {
-  const { appList, handleSetCurApp, handleDeleteApp, setHideRight, setShowAllConversations, handleEdit, handleClearConvHistory, onUpdateList, setFold, fold } = props
+  const { appList, handleSetCurApp, handleDeleteApp, setShowAllConversations, handleEdit, handleClearConvHistory, onUpdateList, setFold, fold } = props
   const [saveVisible, setSaveVisible] = useState(false)
   const [saveData, setSaveData] = useState<any>({})
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null)
@@ -222,7 +220,6 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
         <div
           className="block text-[#666666] text-base cursor-pointer text-right"
           onClick={() => {
-            setHideRight(false)
             setShowAllConversations(true)
           }}
         >
