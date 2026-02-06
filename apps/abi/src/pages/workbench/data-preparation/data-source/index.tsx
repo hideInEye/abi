@@ -68,7 +68,7 @@ export function Component() {
     }
   };
 
-  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps } =
+  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps, updateSearchParams, } =
     useTable({
       apiFn: fetchDataSourceList as any,
       apiParams: {
@@ -290,12 +290,16 @@ export function Component() {
   }
 
   const handleSearch = () => {
-    run();
+    const keyword = searchValue.trim();
+    updateSearchParams({
+      pageNum: 1,
+      sourceName: keyword ? keyword : undefined,
+    } as any);
   };
 
   return (
     <div className="flex flex-col gap-4 p-6"
-      style={{ height: 'calc(100vh - 3rem)', minHeight: 0, overflow: 'hidden' }}
+      style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
       {/* 搜索栏 */}
       <div className="flex items-center gap-4">
@@ -306,7 +310,7 @@ export function Component() {
           onPressEnter={handleSearch}
           style={{ width: '12.5rem' }}
         />
-        <AButton type="primary" onClick={() => handleAdd()}>
+        <AButton className="ml-auto" type="primary" onClick={() => handleAdd()}>
           新增数据源
         </AButton>
       </div>
@@ -336,7 +340,7 @@ export function Component() {
         </div>
         <div
          style={{
-           padding: '0.75rem 1rem',
+           padding: '0.75rem 0',
            display: 'flex',
            justifyContent: 'flex-end',
            marginTop: 'auto' 
@@ -345,6 +349,7 @@ export function Component() {
           <APagination
            {...tableProps.pagination}
             showSizeChanger
+            style={{ padding: '0'}}
           />
         </div>
       </div>
