@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>MageChevronRightCircle@2x</title>
+    <g id="页面-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
+        <g id="对话框无任何输入" transform="translate(-333, -466)" stroke="#E2E2E2" stroke-width="2">
+            <g id="MageChevronRightCircle" transform="translate(334, 467)">
+                <path d="M25.3333333,12.6666667 C25.3333333,5.67105984 19.6622735,0 12.6666667,0 C5.67105984,0 0,5.67105984 0,12.6666667 C0,19.6622735 5.67105984,25.3333333 12.6666667,25.3333333 C19.6622735,25.3333333 25.3333333,19.6622735 25.3333333,12.6666667 Z" id="路径" fill="#FFFFFF"></path>
+                <path d="M10.444,18.7106667 L15.4813333,13.6733333 C15.7657394,13.3898835 15.9255977,13.0048687 15.9255977,12.6033333 C15.9255977,12.201798 15.7657394,11.8167831 15.4813333,11.5333333 L10.444,6.62266667" id="路径"></path>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -268,7 +268,7 @@ export function Component() {
           style={{ width: '12.5rem' }}
         />
         <AButton className="ml-auto" type="primary" onClick={() => handleAdd()}>
-          新增助手
+          新增
         </AButton>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>

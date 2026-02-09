@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import React, { useState, useEffect } from 'react';
 
 import { addPlugin, deletePlugin, queryPluginList, updatePlugin } from '@/service/api/pulg';
@@ -137,14 +136,13 @@ export const Component: React.FC = () => {
               />
               <AButton
                 type="primary"
-                icon={<PlusOutlined />}
                 disabled={!groupId}
                 onClick={() => {
                   setOpen(true);
                   setCurrentEdit(null);
                 }}
               >
-                新增插件
+                新增
               </AButton>
             </ASpace>
 

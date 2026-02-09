@@ -311,7 +311,7 @@ export function Component() {
           style={{ width: '12.5rem' }}
         />
         <AButton className="ml-auto" type="primary" onClick={() => handleAdd()}>
-          新增数据源
+          新增
         </AButton>
       </div>
 

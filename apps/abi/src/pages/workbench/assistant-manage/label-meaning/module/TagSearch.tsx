@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import React from 'react';
 
 import { searchKeyOptions } from '../constants';
@@ -29,11 +28,10 @@ export const TagSearch: React.FC<SearchInputProps> = ({ onAdd, onSearch, groupId
       <AButton
         className='position-absolute right-6'
         type="primary"
-        icon={<PlusOutlined />}
         onClick={onAdd}
         disabled={!groupId}
       >
-        新增标签语义
+        新增
       </AButton>
     </div>
   );

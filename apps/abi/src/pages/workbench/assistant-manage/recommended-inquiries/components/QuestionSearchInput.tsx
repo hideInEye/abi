@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import React from 'react';
 
 interface SearchInputProps {
@@ -18,11 +17,10 @@ export const QuestionSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearc
       />
       <AButton
         type="primary"
-        icon={<PlusOutlined />}
         onClick={onAdd}
         disabled={!groupId}
       >
-        新增问题
+        新增
       </AButton>
     </ASpace>
   );

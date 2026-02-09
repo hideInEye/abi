@@ -85,7 +85,7 @@ export function Component() {
                 }}
                 disabled={!groupId}
               >
-                新增表语义
+                新增
               </AButton>
             </div>
 
