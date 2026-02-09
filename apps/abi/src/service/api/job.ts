@@ -4,10 +4,10 @@ import { apiRequest } from '../request';
 /**
  * 邮件列表 
  */
-export const fetchEmailList = (params?: any) => {
+export const fetchEmailList = (data?: any) => {
   return apiRequest<any>({
-    method: 'get',
-    params,
+    method: 'post',
+    data,
     url: '/abi-system/shared/list'
   })
 }
@@ -55,10 +55,10 @@ export function updateShareEmail(data: any) {
 }
 
 /** get data-source list */
-export async function fetchJobList(params?: any) {
+export async function fetchJobList(data?: any) {
   const res = (await apiRequest<any>({
-    method: 'get',
-    params,
+    method: 'post',
+    data,
     url: '/abi-system/shared/jobList'
   })) as any;
   return { data: res };
@@ -74,9 +74,9 @@ export async function fetchJobDetail(jobId: string) {
 
 export async function fetchChangeStatus(data?: any) {
   return await apiRequest<any>({
-    data,
+    // data,
     method: 'put',
-    url: '/abi-job/job/changeStatus'
+    url: `/abi-system/shared/changeStatus?recordId=${data.recordId}`
   });
 }
 

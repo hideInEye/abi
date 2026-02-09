@@ -4,7 +4,8 @@ import type { MenuInfo } from 'rc-menu/lib/interface';
 
 import { getSiderCollapse } from '@/store/slice/app';
 import { getThemeSettings } from '@/store/slice/theme';
-import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
+import leftOnlineIcon from '@/assets/svg-icon/left_online.svg';
+import rightOnlineIcon from '@/assets/svg-icon/right_online.svg';
 import './index.scss';
 interface LevelKeysProps {
   children?: LevelKeysProps[];
@@ -134,12 +135,14 @@ const VerticalMenu = memo(() => {
   }, [isMix, inlineCollapsed]);
   
   return (
-    <div className='bg-white ml-[2px] h-screen' style={{boxShadow: '0px 3px 6px 0px rgba(0,0,0,0.05)' }}>
-       <div onClick={toggleCollapsed} className='mb-[10px] pt-[10px] mr-[10px] flex cursor-pointer items-center justify-end'>
-        {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+    <div className='relative bg-white ml-[2px] h-screen' style={{boxShadow: '0px 3px 6px 0px rgba(0,0,0,0.05)' }}>
+      <div className='absolute right-[14px] top-0 h-full w-[1px] bg-[#E2E2E2]' />
+      <div onClick={toggleCollapsed} className='absolute right-0 top-1/2 -translate-y-1/2 cursor-pointer' >
+        <img src={collapsed ? rightOnlineIcon : leftOnlineIcon} />
       </div>
       <AMenu
         className={`transition-300 border-0! menu-container h-[calc(100vh-5rem)] ${!collapsed?'w-[12.5rem]':''}`}
+        style={{ paddingRight: '1rem' }}
         inlineIndent={18}
         items={filteredMenus}
         mode="inline"

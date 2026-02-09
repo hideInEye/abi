@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import React, { useState } from 'react';
 
 import { DictionaryGroup } from './components/DictionaryGroup';
@@ -48,11 +47,10 @@ export const Component: React.FC = () => {
               />
               <AButton
                 type="primary"
-                icon={<PlusOutlined />}
                 onClick={handleAdd}
                 disabled={!groupId}
               >
-                新增字典
+                新增
               </AButton>
             </ASpace>
 

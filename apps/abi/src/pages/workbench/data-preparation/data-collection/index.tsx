@@ -191,7 +191,7 @@ export function Component() {
           style={{ width: '12.5rem' }}
         />
         <AButton className="ml-auto" type="primary" onClick={() => push('/workbench/data-preparation/data-collection-operate/0')}>
-          新增数据集
+          新增
         </AButton>
       </div>
 

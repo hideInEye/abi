@@ -29,7 +29,7 @@ export function Component() {
       onOk: async () => {
         const res = await fetchChangeStatus({
           jobId: record.jobId,
-          status: record.status === '0' ? '1' : '0',
+          // status: record.status === '0' ? '1' : '0',
         });
         if (res.response.data.code === 200) {
           message.success('操作成功');

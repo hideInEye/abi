@@ -234,7 +234,7 @@ export function Component() {
           type="primary"
           onClick={() => handleAdd()}
         >
-          新增大模型
+          新增
         </AButton>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
