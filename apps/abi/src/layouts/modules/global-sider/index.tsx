@@ -44,7 +44,7 @@ const GlobalSider: FC = memo(() => {
   }, [route])
 
   useEffect(() => {
-    if (curspaceList && curspaceList.data && curspaceList.data.length > 0 && !selectedSpaceName) {
+    if (curspaceList && curspaceList.data && curspaceList.data.length > 0 ) {
       const currentSpace = curspaceList.data.find((space: any) => space.spaceId === spaceId)
       if (currentSpace) {
         setSelectedSpaceName(currentSpace.spaceName)
@@ -142,11 +142,11 @@ const GlobalSider: FC = memo(() => {
 
   return (
     <Sider width="5.5rem" className="h-full bg-white">
-      <div className="flex h-full flex-col justify-between items-center py-6">
-        <div className="mt-6 mb-10 flex items-center justify-center cursor-pointer" onClick={redirectHome}>
+      <div className="flex h-full flex-col justify-between items-center py-[1.5rem]">
+        <div className=" flex items-center justify-center cursor-pointer" onClick={redirectHome}>
           <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
         </div>
-        <div className="flex gap-[1.625rem] flex-col text-[#848FA2]">
+        <div className="flex gap-[1.625rem] flex-col text-[#848FA2] absolute top-[50%] translate-y-[-50%]">
           {primaryMenuData.map((item) => {
             const isActive = item.name !== selectedMenuKey
             return (
@@ -165,7 +165,7 @@ const GlobalSider: FC = memo(() => {
           })}
         </div>
         <div className="flex items-center  gap-6 flex-col text-[#848FA2]">
-          <Dropdown overlayClassName="[&_.ant-dropdown-menu]:h-[20rem] h-[20rem] overflow-hidden" trigger={['click']} menu={{ items: spaceOptions, onClick: handleSpaceChange }}>
+          <Dropdown overlayClassName="[&_.ant-dropdown-menu]:max-h-[20rem] max-h-[20rem]" trigger={['click']} menu={{ items: spaceOptions, onClick: handleSpaceChange }}>
             <APopover
               content={
                 <div>
@@ -175,7 +175,7 @@ const GlobalSider: FC = memo(() => {
                 </div>
               }
             >
-              <SwapOutlined className="cursor-pointer" />
+              <SwapOutlined className="cursor-pointer text-[1.2rem]" />
             </APopover>
           </Dropdown>
           <Dropdown menu={{ items: userItems(), onClick: handleMenuClick }}>
