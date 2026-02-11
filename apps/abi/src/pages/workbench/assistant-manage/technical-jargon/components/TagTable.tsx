@@ -13,7 +13,7 @@ interface TagTableProps {
 export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit }) => {
   const columns = [
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'bizName',
       key: 'bizName',
       title: '中文名',
@@ -21,7 +21,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
       ellipsis: true
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'techName',
       key: 'techName',
       title: '英文名',
@@ -29,7 +29,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
       ellipsis: true
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'termAlias',
       key: 'termAlias',
       title: '别名',
@@ -37,7 +37,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
       ellipsis: true
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'remark',
       key: 'remark',
       title: '业务定义',
@@ -53,7 +53,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
       }
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'dataType',
       key: 'dataType',
       title: '数据类型',
@@ -61,7 +61,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
       ellipsis: true
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'measurementUnit',
       key: 'measurementUnit',
       title: '计量单位',

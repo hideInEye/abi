@@ -14,7 +14,7 @@ interface TagTableProps {
 export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit }) => {
   const columns = [
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'tagName',
       key: 'tagName',
       title: '中文名',
@@ -22,7 +22,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
       ellipsis: true
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'engName',
       key: 'engName',
       title: '英文名',
@@ -30,7 +30,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
       ellipsis: true
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'tagType',
       key: 'tagType',
       render: (tagType: string) => {
@@ -41,7 +41,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
       ellipsis: true
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'alias',
       key: 'alias',
       title: '别名',
@@ -49,7 +49,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
       ellipsis: true
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'remark',
       key: 'remark',
       title: '文本定义',

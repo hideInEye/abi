@@ -27,7 +27,7 @@ export function Component() {
     columns: () =>
       [
         {
-          align: 'center',
+          align: 'left',
           fixed: 'left',
           dataIndex: 'jobName',
           key: 'jobName',
@@ -41,13 +41,14 @@ export function Component() {
           },
         },
         {
-          align: 'center',
+          align: 'right',
           dataIndex: 'jobId',
           key: 'jobId',
           title: '任务id',
           width: 130,
         },
         {
+          align: 'center',
           dataIndex: 'recipients',
           key: 'recipients',
           title: '收件人',
@@ -80,7 +81,7 @@ export function Component() {
           },
         },
         {
-          align: 'center',
+          align: 'left',
           dataIndex: 'type',
           key: 'type',
           title: '发送类型',
@@ -94,6 +95,7 @@ export function Component() {
           width: 130,
         },
         {
+          align: 'center',
           dataIndex: 'status',
           key: 'status',
           title: '状态',

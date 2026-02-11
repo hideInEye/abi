@@ -45,19 +45,20 @@ export function Component() {
     columns: () =>
       [
         {
-          align: 'center',
+          align: 'left',
           dataIndex: 'providerName',
           key: 'providerName',
           render: (providerName: string) => PROVIDER_OPTIONS.find(item => item.value === providerName)?.label || providerName,
           title: '供应商'
         },
         {
-          align: 'center',
+          align: 'left',
           dataIndex: 'modelName',
           key: 'modelName',
           title: '模型名称'
         },
         {
+          align: 'left',
           dataIndex: 'modelType',
           key: 'modelType',
           render: (type: string) => MODAL_TYPE_OPTIONS.find(item => item.value === type)?.label,
@@ -78,16 +79,19 @@ export function Component() {
           title: '状态'
         },
         {
+          align: 'left',
           dataIndex: 'remark',
           key: 'remark',
           title: '描述'
         },
         {
+          align: 'center',
           dataIndex: 'createBy',
           key: 'createBy',
           title: '创建人'
         },
         {
+          align: 'center',
           dataIndex: 'createTime',
           key: 'createTime',
           title: t('page.dataPreparation.dataSource.createTime'),

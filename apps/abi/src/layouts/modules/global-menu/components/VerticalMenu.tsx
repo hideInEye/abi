@@ -135,14 +135,13 @@ const VerticalMenu = memo(() => {
   }, [isMix, inlineCollapsed]);
   
   return (
-    <div className='relative bg-white ml-[2px] h-screen' style={{boxShadow: '0px 3px 6px 0px rgba(0,0,0,0.05)' }}>
-      <div className='absolute right-[14px] top-0 h-full w-[1px] bg-[#E2E2E2]' />
-      <div onClick={toggleCollapsed} className='absolute right-0 top-1/2 -translate-y-1/2 cursor-pointer' >
-        <img src={collapsed ? rightOnlineIcon : leftOnlineIcon} />
+    <div className={`relative bg-white ml-[2px] h-screen border-r border-[#E2E2E2] transition-width-300 ${
+        collapsed ? 'w-80px' : 'w-[12.5rem]'}`} style={{boxShadow: '0px 3px 6px 0px rgba(0,0,0,0.05)' }}>
+      <div onClick={toggleCollapsed} className='absolute right-[-0.75rem] top-1/2 -translate-y-1/2 cursor-pointer z-10' >
+        <img style={{width:"1.5rem",height:"1.5rem"}} src={collapsed ? rightOnlineIcon : leftOnlineIcon} />
       </div>
       <AMenu
-        className={`transition-300 border-0! menu-container h-[calc(100vh-5rem)] ${!collapsed?'w-[12.5rem]':''}`}
-        style={{ paddingRight: '1rem' }}
+        className={`border-0! menu-container h-[calc(100vh-5rem)]`}
         inlineIndent={0}
         items={filteredMenus}
         mode="inline"

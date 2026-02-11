@@ -5,19 +5,15 @@
   font-size: 0.875rem;
   color: #000000;
 }
-.data-source-table,
-.data-collection-table,
-.assistant-config-table,
-.model-table,
 .tag-table,
 .question-table,
 .technical-table,
 .plugin-table,
 .dictionary-table,
 .semantics-table {
-  .ant-table-thead > tr > th {
-    // background-color: #1F87DA !important;
-    // color: #fff !important;
+  .ant-table-thead > tr > th:first-child , 
+  .ant-table-tbody > tr > td:first-child {
+    padding-left: 3rem !important;
   }
 }
 .assistant-table-scroll {

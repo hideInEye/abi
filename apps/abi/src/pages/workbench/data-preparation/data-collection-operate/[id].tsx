@@ -238,7 +238,7 @@ export function Component() {
         if (isFromGuide) {
           push('/guide');
         } else {
-          push('/data-preparation/data-collection');
+          push('/workbench/data-preparation/data-collection');
         }
       }
       setBack(false);

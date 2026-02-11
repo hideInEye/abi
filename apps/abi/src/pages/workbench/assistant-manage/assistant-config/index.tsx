@@ -47,21 +47,21 @@ export function Component() {
     } as any,
     columns: () => [
       {
-        align: 'center',
+        align: 'left',
         dataIndex: 'bizName',
         key: 'bizName',
         minWidth: 120,
         title: '助手名称'
       },
       {
-        align: 'center',
+        align: 'left',
         dataIndex: 'techName',
         key: 'techName',
         minWidth: 120,
         title: '英文名'
       },
       {
-        align: 'center',
+        align: 'left',
         dataIndex: 'remark',
         key: 'remark',
         minWidth: 120,
