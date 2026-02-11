@@ -4,3 +4,11 @@
     overflow-y: scroll;
   }
 }
+.group-panel {
+  width: 280px;
+  flex: 0 0 280px;
+  overflow: hidden;
+  .ant-tree {
+    overflow: hidden;
+  }
+}

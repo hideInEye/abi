@@ -60,7 +60,7 @@ export function Component() {
             <AInput
               placeholder="请输入表语义组检索"
               onChange={e => searchGroupSchema(e)}
-              className="mb-4"
+              className="mb-4 group-search-input"
             />
           <div className="flex-1 overflow-auto">
             <SemanticsGroup
