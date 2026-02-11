@@ -80,7 +80,7 @@ export function Component() {
       columns: () =>
         [
           {
-            align: "center",
+            align: "left",
             dataIndex: "sourceType",
             key: "sourceType",
             render: (sourceType: any) =>
@@ -90,7 +90,7 @@ export function Component() {
             title: t("page.dataPreparation.dataSource.type"),
           },
           {
-            align: "center",
+            align: "left",
             dataIndex: "sourceName",
             key: "sourceName",
             title: t("page.dataPreparation.dataSource.name"),

@@ -58,7 +58,7 @@ export function Component() {
         //   width: 80
         // },
         {
-          align: 'center',
+          align: 'left',
           dataIndex: 'jobName',
           key: 'jobName',
           title: '任务名称',
@@ -66,7 +66,7 @@ export function Component() {
           fixed: 'left',
         },
         {
-          align: 'center',
+          align: 'right',
           dataIndex: 'jobId',
           key: 'jobId',
           title: '任务id',

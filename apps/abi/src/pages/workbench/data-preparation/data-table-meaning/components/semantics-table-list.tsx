@@ -20,7 +20,7 @@ interface SemanticsTableListProps {
 export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: SemanticsTableListProps) {
   const columns: TableProps<DataType>['columns'] = [
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'bizName',
       key: 'bizName',
       width: 200,
@@ -74,7 +74,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
             />
           </ATooltip>
 
-          <ATooltip title="删除">
+          <ATooltip title="删除"> 
             <AButton
               color="danger"
               icon={<DeleteOutlined style={{ fontSize: '1rem' }} />}

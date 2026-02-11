@@ -41,14 +41,14 @@ export function Component() {
   const columns = useCallback(
     () => [
       {
-        align: 'center',
+        align: 'left',
         dataIndex: 'viewName',
         key: 'viewName',
         minWidth: 120,
         title: t('page.dataPreparation.dataCollection.name')
       },
       {
-        align: 'center',
+        align: 'left',
         dataIndex: 'viewInfo',
         key: 'viewInfo',
         minWidth: 120,
