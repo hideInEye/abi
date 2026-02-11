@@ -93,14 +93,8 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
     {
       title: (
         <span className="inline-flex items-center gap-2 group">
-          <span>表语义组</span>
+          <span className="group-tree-title">表语义组</span>
           <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
-            <Tooltip title="编辑">
-              <EditOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => e.stopPropagation()} />
-            </Tooltip>
-            <Tooltip title="删除">
-              <MinusCircleOutlined className="text-gray-400 cursor-pointer hover:text-red-500" onClick={(e) => e.stopPropagation()} />
-            </Tooltip>
             <Tooltip title="添加组">
               <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => handleAddGroup(undefined, e)} />
             </Tooltip>
@@ -111,7 +105,7 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
       children: listSemanticGroup.map(item => ({
         title: (
           <span className="inline-flex items-center gap-2 group">
-            <span>{item.groupName}</span>
+            <span className="group-tree-title">{item.groupName}</span>
             <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
               <Tooltip title="编辑">
                 <EditOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => handleEditGroup(item, e)} />
@@ -125,9 +119,6 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
                   <MinusCircleOutlined className="text-gray-400 cursor-pointer hover:text-red-500" onClick={(e) => e.stopPropagation()} />
                 </Tooltip>
               </Popconfirm>
-              <Tooltip title="添加子组">
-                <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => handleAddGroup(item, e)} />
-              </Tooltip>
             </span>
           </span>
         ),

@@ -128,7 +128,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     {
       title: (
         <span className="inline-flex items-center gap-2 group">
-          <span>{config.panelTitle}</span>
+          <span className="group-tree-title">{config.panelTitle}</span>
           <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
             <Tooltip title="添加组">
               <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={handleAddGroup} />
@@ -140,7 +140,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       children: groups.map(item => ({
         title: (
           <span className="inline-flex items-center gap-2 group">
-            <span>{item.groupName}</span>
+            <span className="group-tree-title">{item.groupName}</span>
             <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
               <Tooltip title="编辑">
                 <EditOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => showEditModal(item, e)} />
@@ -165,9 +165,10 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
 
   return (
     <>
-      <div className="flex flex-col gap-2">
+      <div className="group-panel flex flex-col gap-2">
         <AInput
           placeholder={config.inputPlaceholder}
+          className="group-search-input"
           onChange={(e) => handleSearch(e.target.value)}
         />
         <Tree
@@ -182,6 +183,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
 
       <Modal
         open={isModalOpen}
+        centered
         title={editingGroup ? config.modalEditTitle : config.modalAddTitle}
         onCancel={handleModalCancel}
         onOk={handleModalOk}
