@@ -143,7 +143,7 @@ const VerticalMenu = memo(() => {
       <AMenu
         className={`transition-300 border-0! menu-container h-[calc(100vh-5rem)] ${!collapsed?'w-[12.5rem]':''}`}
         style={{ paddingRight: '1rem' }}
-        inlineIndent={18}
+        inlineIndent={0}
         items={filteredMenus}
         mode="inline"
         openKeys={stateOpenKeys}
