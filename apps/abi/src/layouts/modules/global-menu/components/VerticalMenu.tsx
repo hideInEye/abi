@@ -135,8 +135,11 @@ const VerticalMenu = memo(() => {
   
   return (
     <div className='relative bg-white ml-[2px] h-screen border-r-[1px] border-[#E2E2E2]' style={{boxShadow: '0px 3px 6px 0px rgba(0,0,0,0.05)' }}>
-      <div onClick={toggleCollapsed} className='absolute bottom-[16px] left-[16px] cursor-pointer flex items-center gap-2 rounded-8px px-8px h-[25px] hover:bg-[#F5F5F5] transition-300'>
-        <img style={{width:"1.25rem",height:"1.125rem"}} src={leftIcon} className={collapsed ? 'rotate-180 block' : 'block'} />
+      <div onClick={toggleCollapsed} className={`absolute bottom-[1rem] left-[1rem] cursor-pointer flex items-center gap-2 rounded-8px h-[40px] hover:bg-[#F5F5F5] transition-300 ${
+          collapsed ? 'w-[40px] justify-center px-0' : 'w-[calc(100%-2rem)] px-12px'
+        }`}
+      >
+        <img style={{width:"1.5rem", height:"1.5rem"}} src={leftIcon} className={collapsed ? 'rotate-180 block' : 'block'} />
         {!collapsed && <span className='text-[#333333] text-12px leading-[18px]'>收起导航</span>}
       </div>
       <AMenu
