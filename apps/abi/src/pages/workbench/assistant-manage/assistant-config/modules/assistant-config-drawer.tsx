@@ -344,6 +344,11 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
       size="large"
       title="助手配置"
       width="60%"
+      styles={{
+        header: {
+          paddingBottom: 0
+        }
+      }}
       extra={
         <AButton
           icon={<CloseOutlined />}

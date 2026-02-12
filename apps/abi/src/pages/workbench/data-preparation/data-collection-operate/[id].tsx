@@ -423,7 +423,7 @@ export function Component() {
                 </Splitter.Panel>
 
                 {/* 右侧属性配置面板 */}
-                <Splitter.Panel
+                {/* <Splitter.Panel
                   collapsible
                   defaultSize="280"
                   max="400"
@@ -487,7 +487,7 @@ export function Component() {
                       />
                     </div>
                   </div>
-                </Splitter.Panel>
+                </Splitter.Panel> */}
               </Splitter>
           </div>
         </ACard>
