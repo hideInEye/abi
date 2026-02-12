@@ -133,9 +133,9 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ agentId, onClose, syncKnowled
   const [state, dispatch] = useReducer(reducer, initState);
   const [originDetail, setOriginDetail] = useState<any>();
   const [submitLoading, setSubmitLoading] = useState(false);
-  const { fieldsDataSource } = useSchemaFields({
-    groupId: originDetail?.groupId,
-    schemaId: originDetail?.schemaId
+  const { fieldsDataSource, sourceId: schemaSourceId } = useSchemaFields({
+    groupId: state?.groupId,
+    schemaId: state?.schemaId
   });
 
   const getDetail = async () => {
@@ -204,7 +204,8 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ agentId, onClose, syncKnowled
     });
     const modelConfigObj = {
       llms,
-      ...elseModelConfigObj
+      ...elseModelConfigObj,
+      ...(schemaSourceId ? { sources: schemaSourceId } : {})
     };
 
     // 合并原有配置，避免覆盖“助手设置”中已保存的内容（标签、术语、推荐问题、插件、记忆等）

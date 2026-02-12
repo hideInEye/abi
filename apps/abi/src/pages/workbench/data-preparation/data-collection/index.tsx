@@ -113,7 +113,7 @@ export function Component() {
                 />
               </Tooltip>
             </APopconfirm>
-            <Tooltip title="血缘关系">
+            {/* <Tooltip title="血缘关系">
               <AButton
                 color="primary"
                 icon={<SvgIcon localIcon="kinship" style={{ fontSize: '1rem' }} />}
@@ -132,7 +132,7 @@ export function Component() {
                   push(`/workbench/data-preparation/data-source-kinship/${sourceId}?from=2&name=${viewName}`);
                 }}
               />
-            </Tooltip>
+            </Tooltip> */}
           </div>
         ),
         title: t('common.operate'),

@@ -69,9 +69,19 @@ const useSchemaFields = ({ groupId, schemaId }: PropsType) => {
     getSchemaOptions();
   }, [groupId]);
 
+  const sourceId = useMemo(() => {
+    if (schemaOptions?.length && schemaId) {
+      const selected = schemaOptions.find((item: any) => item.schemaId === schemaId);
+      return selected?.sourceId;
+    }
+    return undefined;
+  }, [schemaOptions, schemaId]);
+
   return {
     fieldsDataSource,
-    schemaOptions
+    schemaOptions,
+    setSchemaOptions,
+    sourceId
   };
 };
 
