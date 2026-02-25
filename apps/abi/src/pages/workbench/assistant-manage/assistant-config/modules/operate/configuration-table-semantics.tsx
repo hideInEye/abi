@@ -1,4 +1,4 @@
-import { Transfer } from 'antd';
+import { Tooltip, Transfer } from 'antd';
 import type { TransferProps } from 'antd';
 import type { Dispatch, SetStateAction } from 'react';
 import React, { useEffect, useState } from 'react';
@@ -101,12 +101,29 @@ const ConfigurationTableSemantics: FC<PropsType> = memo(({ dispatch, state }) =>
         showSearch
         dataSource={dataSource}
         filterOption={filterOption}
-        render={item => `${item.fieldName}(${item.bizName}) - ${SEMANTIC_TYPE_MAP[item.paramType]}`}
+        style={{ width: '100%' }}
+        render={item => {
+          const text = `${item.fieldName}(${item.bizName}) - ${SEMANTIC_TYPE_MAP[item.paramType]}`;
+          return (
+            <Tooltip title={text}>
+              <span
+                style={{
+                  display: 'block',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {text}
+              </span>
+            </Tooltip>
+          );
+        }}
         targetKeys={targets.map((item: any) => item.techId)}
         titles={['可选数据集表语义字段', '已选表语义字段']}
         listStyle={{
           height: 300,
-          width: 750
+          width: 'calc((100% - 56px) / 2)'
         }}
         onChange={handleChange}
       />

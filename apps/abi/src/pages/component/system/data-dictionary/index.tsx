@@ -38,6 +38,7 @@ export const Component: React.FC = () => {
           <DictionaryGroup onGroupId={setGroupId} />
 
           <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
+            <h1 className="text-base font-medium mb-4">字典列表</h1>
             <ASpace className="mb-3 flex justify-between">
               <AInput
                 placeholder="请输入字典名称"

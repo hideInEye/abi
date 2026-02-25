@@ -130,6 +130,7 @@ export function Component() {
           },
           {
             align: "center",
+            fixed: "right",
             key: "operate",
             render: (_: unknown, record: any) => (
               <div className="flex-center gap-8px">
@@ -171,7 +172,8 @@ export function Component() {
                   />
                 </Tooltip>
                 <APopconfirm
-                  title={t("common.confirmDelete")}
+                  title="提示"
+                  description={t("common.confirmDelete")}
                   onConfirm={() => handleDelete(record)}
                 >
                   <Tooltip title="删除">
@@ -301,6 +303,7 @@ export function Component() {
     <div className="flex flex-col gap-4 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
+      <h1 className="text-base font-medium">数据源列表</h1>
       {/* 搜索栏 */}
       <div className="flex items-center gap-4">
         <AInput
@@ -332,7 +335,7 @@ export function Component() {
               pagination={false}
               rowKey="sourceId"
               rowSelection={rowSelection}
-              scroll={{ x: 'max-content' }}
+              scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
               size="small"
               className="data-source-table"
             />

@@ -1,4 +1,4 @@
-import { Transfer } from 'antd';
+import { Tooltip, Transfer } from 'antd';
 import type { TransferProps } from 'antd';
 import React, { useEffect, useState } from 'react';
 
@@ -79,14 +79,28 @@ const RecommendedQuestions: FC<PropsType> = memo(({ dispatch, state }) => {
       </div>
       <Transfer
         showSearch
+        style={{ width: '100%' }}
         dataSource={dataSource}
         filterOption={filterOption}
-        render={item => item.title}
+        render={item => (
+          <Tooltip title={item.title}>
+            <span
+              style={{
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {item.title}
+            </span>
+          </Tooltip>
+        )}
         targetKeys={state?.example}
         titles={['可选问题', '已选问题']}
         listStyle={{
           height: 300,
-          width: 750
+          width: 'calc((100% - 56px) / 2)'
         }}
         onChange={handleChange}
       />

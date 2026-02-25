@@ -1,4 +1,4 @@
-import { Transfer } from 'antd';
+import { Tooltip, Transfer } from 'antd';
 import type { TransferProps } from 'antd';
 import React, { useEffect, useState } from 'react';
 
@@ -89,14 +89,28 @@ const Dictionaries: FC<PropsType> = memo(({ dispatch, state }) => {
       </div>
       <Transfer
         showSearch
+        style={{ width: '100%' }}
         dataSource={dataSource}
         filterOption={filterOption}
-        render={(item: any) => `${item.dictField}(${item.dictName})${item.remark? `- ${item.remark}`:''}`}
+        render={(item: any) => (
+          <Tooltip title={item.title}>
+            <span
+              style={{
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {item.title}
+            </span>
+          </Tooltip>
+        )}
         targetKeys={state?.dictgroups}
         titles={['可选数据字典', '已选数据字典']}
         listStyle={{
           height: 300,
-          width: 750
+          width: 'calc((100% - 56px) / 2)'
         }}
         onChange={handleChange}
       />

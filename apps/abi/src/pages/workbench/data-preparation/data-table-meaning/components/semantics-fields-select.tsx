@@ -292,7 +292,20 @@ export function TransferComponent({ dataSource, targetKeys, onChange }: {dataSou
           <Transfer
             showSearch
             dataSource={dataSource}
-            render={item => item.title}
+            render={item => (
+              <ATooltip title={item.title}>
+                <span
+                  style={{
+                    display: 'block',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {item.title}
+                </span>
+              </ATooltip>
+            )}
             targetKeys={targetKeys}
             titles={['数据集表语义字段', '已选表语义字段']}
             listStyle={{

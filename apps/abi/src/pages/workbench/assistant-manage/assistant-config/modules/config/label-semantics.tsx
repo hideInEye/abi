@@ -1,4 +1,4 @@
-import { Transfer } from 'antd';
+import { Tooltip, Transfer } from 'antd';
 import type { TransferProps } from 'antd';
 import React, { useEffect, useState } from 'react';
 
@@ -80,14 +80,31 @@ const LabelSemantics: FC<PropsType> = memo(({ dispatch, schemaId, state }) => {
       </div>
       <Transfer
         showSearch
+        style={{ width: '100%' }}
         dataSource={dataSource}
         filterOption={filterOption}
-        render={(item: any) => `${item.engName} - ${item.title}`}
+        render={(item: any) => {
+          const text = `${item.engName} - ${item.title}`;
+          return (
+            <Tooltip title={text}>
+              <span
+                style={{
+                  display: 'block',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {text}
+              </span>
+            </Tooltip>
+          );
+        }}
         targetKeys={(state?.labels || []).map((k: any) => `${k}`)}
         titles={['可选标签语义', '已选标签语义']}
         listStyle={{
           height: 300,
-          width: 750
+          width: 'calc((100% - 56px) / 2)'
         }}
         onChange={handleChange}
       />

@@ -146,7 +146,8 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
                 <EditOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => showEditModal(item, e)} />
               </Tooltip>
               <Popconfirm
-                title="确定删除该组吗？"
+                title="提示"
+                description="确定删除该组吗？"
                 onConfirm={(e) => handleDeleteGroup(item.groupId, e as any)}
                 onCancel={(e) => e?.stopPropagation()}
               >
