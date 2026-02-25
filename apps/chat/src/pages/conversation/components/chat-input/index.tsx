@@ -80,7 +80,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     }, [onToggleUploadFile]);
 
     return (
-      <div className=" m-auto border border-gray-300 rounded-lg px-3 py-2 bg-white">
+      <div className="m-auto border border-gray-300  rounded-lg px-3 py-2 bg-white">
         <div className="flex items-center mb-2">
           <div className="flex-1">
             <div className="relative flex items-center w-full">

@@ -9,6 +9,7 @@ import DragContent from './DragContent';
 
 interface Props {
   readonly add?: () => void;
+  readonly addTitle?: string;
   readonly children?: React.ReactNode;
   readonly columns: AntDesign.TableColumnCheck[];
   readonly disabledDelete?: boolean;
@@ -25,6 +26,7 @@ interface Props {
 
 const TableHeaderOperation: FC<Props> = ({
   add,
+  addTitle,
   children,
   columns,
   disabledDelete,
@@ -56,7 +58,7 @@ const TableHeaderOperation: FC<Props> = ({
               type="primary"
               onClick={add}
             >
-              {t('common.add')}
+              {addTitle??t('common.add')}
             </Button>
           ) : null}
 

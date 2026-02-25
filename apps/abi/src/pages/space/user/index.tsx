@@ -269,6 +269,7 @@ export function Component() {
         title="空间成员列表"
         extra={
           <TableHeaderOperation
+            addTitle="管理"
             columns={columnChecks}
             loading={tableProps.loading}
             refresh={run}

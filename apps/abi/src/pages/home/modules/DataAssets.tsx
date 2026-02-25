@@ -79,7 +79,7 @@ export function DataAssets({ homeData }: { readonly homeData: DataAssetsProps })
     <div className="grid grid-cols-5 gap-5">
       {dataAssetsConfig.map((item) => (
         <div
-          className="cursor-pointer border border-gray-200 rounded-[0.625rem] p-8 shadow-sm bg-cover bg-center"
+          className="cursor-pointer rounded-[0.625rem] p-8 shadow-sm bg-cover bg-center"
           key={item.title}
           style={{ backgroundImage: `url(${item.icon})` }}
         >

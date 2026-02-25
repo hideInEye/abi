@@ -1,5 +1,5 @@
 import { DoubleRightOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons'
-import { Dropdown, Input, message, Modal, Popover, Space } from 'antd'
+import { Dropdown, Flex, Input, message, Modal, Popover, Space } from 'antd'
 import React, { useEffect, useImperativeHandle, useState } from 'react'
 import SvgIcon from '../../components/SvgIcon'
 import left_online from '@/assets/svg-icon/left_online.svg'
@@ -159,17 +159,17 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
   }
 
   return (
-    <div className={`relative flex flex-col border-r py-[1.875rem] h-[100vh] transition-all duration-300 ease-in-out ${fold ? 'w-0' : 'w-[12.5rem]'}`}>
-      <header className="mb-2 w-full flex items-center px-3.5">
+    <div className={`relative flex flex-col border-r py-[1.5rem] h-[100vh] transition-all duration-300 ease-in-out ${fold ? 'w-[1rem]' : 'w-[12.5rem]'}`}>
+      <header className="mb-2 w-full flex items-center pl-3.5">
         {!fold && (
-          <Space>
+          <Flex justify="space-around" align="center">
             <Input placeholder="搜索" prefix={<SearchOutlined className="text-base" />} />
-            <SvgIcon localIcon="chat_add" className="text-[1.5625rem] cursor-pointer" onClick={() => handleEdit('create')} />
-          </Space>
+            <SvgIcon localIcon="chat_add" style={{margin:'0 1rem'}} className="text-[1.5625rem]  cursor-pointer" onClick={() => handleEdit('create')} />
+          </Flex>
         )}
       </header>
       <span
-        className={`absolute transition-all duration-300 ease-in-out top-1/2 -translate-y-1/2 z-10 cursor-pointer select-none ${fold ? 'right-[-2.5rem]' : 'right-[-0.75rem]'}`}
+        className={`absolute transition-all duration-300 ease-in-out top-1/2 -translate-y-1/2 z-10 cursor-pointer select-none ${fold ? 'right-[-0.9375rem]' : 'right-[-0.75rem]'}`}
         onClick={() => {
           setFold(!fold)
         }}
@@ -205,7 +205,7 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
                   },
                 }}
               >
-                <span className="invisible px-2 text-xs group-hover:visible" onClick={(e) => e.preventDefault()}>
+                <span className="px-2 py-2 text-xs absolute right-3" onClick={(e) => e.preventDefault()}>
                   <MoreOutlined />
                 </span>
               </Dropdown>

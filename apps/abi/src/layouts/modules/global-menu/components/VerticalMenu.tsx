@@ -4,7 +4,8 @@ import type { MenuInfo } from 'rc-menu/lib/interface';
 
 import { getSiderCollapse } from '@/store/slice/app';
 import { getThemeSettings } from '@/store/slice/theme';
-import leftIcon from '@/assets/svg-icon/left.svg';
+import leftOnlineIcon from '@/assets/svg-icon/left_online.svg';
+import rightOnlineIcon from '@/assets/svg-icon/right_online.svg';
 import './index.scss';
 interface LevelKeysProps {
   children?: LevelKeysProps[];
@@ -134,17 +135,12 @@ const VerticalMenu = memo(() => {
   }, [isMix, inlineCollapsed]);
   
   return (
-    <div className='relative bg-white ml-[2px] h-screen border-r-[1px] border-[#E2E2E2]' style={{boxShadow: '0px 3px 6px 0px rgba(0,0,0,0.05)' }}>
-      <div onClick={toggleCollapsed} className={`absolute bottom-[1rem] left-[1rem] cursor-pointer flex items-center gap-2 rounded-8px h-[40px] hover:bg-[#F5F5F5] transition-300 ${
-          collapsed ? 'w-[40px] justify-center px-0' : 'w-[calc(100%-2rem)] px-12px'
-        }`}
-      >
-        <img style={{width:"1.5rem", height:"1.5rem"}} src={leftIcon} className={collapsed ? 'rotate-180 block' : 'block'} />
-        {!collapsed && <span className='text-[#333333] text-12px leading-[18px]'>收起导航</span>}
+    <div className='bg-white relative h-screen' style={{boxShadow: '0px 3px 6px 0px rgba(0,0,0,0.05)' }}>
+       <div onClick={toggleCollapsed} className='absolute z-30 right-[-1rem] top-1/2 -translate-y-1/2 cursor-pointer'>
+        <img src={collapsed ? rightOnlineIcon : leftOnlineIcon} />
       </div>
       <AMenu
-        className={`transition-300 border-0! menu-container h-[calc(100vh-5rem)] pb-[3rem] ${!collapsed?'w-[12.5rem]':''}`}
-        inlineIndent={0}
+        className={`transition-300 border-0! menu-container h-[calc(100vh-5rem)] ${!collapsed?'w-[12.5rem]':''}`}
         items={filteredMenus}
         mode="inline"
         openKeys={stateOpenKeys}
