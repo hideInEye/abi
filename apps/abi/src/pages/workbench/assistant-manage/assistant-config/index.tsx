@@ -186,24 +186,20 @@ export function Component() {
   }
 
   async function handleConfirm(record: any) {
-    // 1. 先获取助手详情并更新配置
-    const detailRes = await getAgentDetailById(record.agentId);
-    const detailData = detailRes?.data;
-    if (detailData) {
+    const detailData = record?.modelConfig ? record : (await getAgentDetailById(record.agentId))?.data;
+    if (!detailData) return;
       await putAgentConfig({
         ...detailData,
         spaceId: Number(localStorage.getItem('spaceId')),
         status: 1,
       });
-    }
-    // 2. 同步知识库
-    const obj = JSON.parse(record.modelConfig || '{}');
+    const obj = JSON.parse(detailData.modelConfig || '{}');
     const cfg = obj?.modelConfigs?.[0] || {};
     let dslObj = obj?.mdlConfigs || {};
     try {
       const termGroupId = cfg?.termGroupId;
       if (termGroupId) {
-        const termRes = await fetchTerms({ groupId: termGroupId, spaceId: Number(record.spaceId), termName: '' });
+        const termRes = await fetchTerms({ groupId: termGroupId, spaceId: Number(detailData.spaceId), termName: '' });
         const termMap: Record<string, string> = {};
         (termRes?.data || []).forEach((it: any) => {
           if (it?.techName) termMap[it.techName] = it.bizName;
@@ -222,9 +218,9 @@ export function Component() {
     } catch (e) {}
     // console.log('KB sync DSL:', dslObj);
     const res = await syncKnowledgeBase({
-      agent_id: `${record.agentId}`,
+      agent_id: `${detailData.agentId}`,
       dsl: JSON.stringify(dslObj || {}),
-      space_id: `${record.spaceId}`
+      space_id: `${detailData.spaceId}`
     });
     if (res.response.data?.success) {
       message.success('同步成功');

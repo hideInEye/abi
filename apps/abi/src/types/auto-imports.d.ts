@@ -114,6 +114,7 @@ declare global {
   const SvgIcon: typeof import('../components/stateless/custom/SvgIcon')['default']
   const SystemLogo: typeof import('../components/stateless/common/SystemLogo')['default']
   const TableColumnSetting: typeof import('../components/advanced/TableColumnSetting')['default']
+  const TableEmpty: typeof import('../components/stateless/common/TableEmpty')['default']
   const TableHeaderOperation: typeof import('../components/advanced/TableHeaderOperation')['default']
   const TableSemantics: typeof import('../components/tableSemantics')['TableSemantics']
   const ThemeSchemaSwitch: typeof import('../components/stateful/ThemeSchemaSwitch')['default']

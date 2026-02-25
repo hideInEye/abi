@@ -379,6 +379,7 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
     >
       <Tabs
         defaultActiveKey="1"
+        tabBarStyle={{ marginBottom: 0 }}
         items={items}
       />
     </Drawer>

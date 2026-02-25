@@ -50,6 +50,11 @@
   font-size: 1rem;
   color: #333333;
 }
+.ant-table-wrapper:has(.ant-table-tbody > tr.ant-table-placeholder) {
+  .ant-table-thead {
+    display: none;
+  }
+}
 // Tree选中样式 - 所有分组统一样式
 .semantics-tree,
 .ant-tree {

@@ -17,6 +17,7 @@ import {
   fetchTerms
 } from '@/service/api/assistant-manage';
 
+import TableEmpty from '@/components/stateless/common/TableEmpty';
 import KeySearch from './key-search';
 import MemoryOperateDrawer from './memory-operate-drawer';
 
@@ -160,6 +161,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
     } as any,
     columns: () => [
       {
+        align: 'left',
         dataIndex: 'question',
         ellipsis: true,
         key: 'question',
@@ -167,6 +169,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 200
       },
       {
+        align: 'left',
         dataIndex: 'chat_mode',
         key: 'chat_mode',
         render: (chatMode: string) =>
@@ -175,6 +178,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 80
       },
       {
+        align: 'left',
         dataIndex: 'ai_response',
         ellipsis: true,
         key: 'ai_response',
@@ -182,6 +186,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 200
       },
       {
+        align: 'left',
         dataIndex: 'view_response',
         ellipsis: true,
         key: 'view_response',
@@ -189,12 +194,14 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 200
       },
       {
+        align: 'center',
         dataIndex: 'create_by',
         key: 'create_by',
         title: '提交人',
         width: 120
       },
       {
+        align: 'center',
         dataIndex: 'eval_user',
         key: 'eval_user',
         render: (evalExpert: string) => (
@@ -207,6 +214,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 120
       },
       {
+        align: 'left',
         dataIndex: 'status',
         key: 'status',
         render: (status: number) => MEMORY_STATUS_OPTIONS.find((item: any) => item.value === status)?.label || '未审核',
@@ -214,12 +222,14 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 120
       },
       {
+        align: 'center',
         dataIndex: 'eval_by',
         key: 'eval_by',
         title: '评估人',
         width: 120
       },
       {
+        align: 'left',
         dataIndex: 'expert_opinion',
         ellipsis: true,
         key: 'expert_opinion',
@@ -227,6 +237,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 200
       },
       {
+        align: 'center',
         dataIndex: 'eval_llm',
         key: 'eval_llm',
         render: (evalLlm: string) => EVAL_LLM_OPTIONS.find((item: any) => item.value === evalLlm)?.label,
@@ -234,6 +245,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 120
       },
       {
+        align: 'left',
         dataIndex: 'llm_opinion',
         ellipsis: true,
         key: 'llm_opinion',
@@ -241,6 +253,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 200
       },
       {
+        align: 'center',
         dataIndex: 'eval_time',
         key: 'eval_time',
         render: (time: string) => (time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-'),
@@ -248,6 +261,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 200
       },
       {
+        align: 'center',
         dataIndex: 'create_time',
         key: 'create_time',
         render: (time: string) => (time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-'),
@@ -255,6 +269,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         width: 200
       },
       {
+        align: 'center',
         dataIndex: 'operation',
         fixed: 'right',
         key: 'operation',
@@ -432,10 +447,14 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
     searchProps.form.resetFields();
     run(); // 重置后立即刷新数据
   };
+  const showEmpty = !tableProps.loading && (!tableProps.dataSource || tableProps.dataSource.length === 0);
 
   return (
     <div>
       <KeySearch {...searchProps} reset={handleReset} />
+      {showEmpty ? (
+        <TableEmpty bordered />
+      ) : (
       <ATable
         // rowKey="agentId"
         // scroll={{ ...scrollConfig, y: 'calc(100vh - 300px)' }}
@@ -444,6 +463,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
         {...(tableProps as any)}
         rowClassName="h-[7px] leading-[7px]"
       />
+      )}
 
       <Suspense>
         <MemoryOperateDrawer {...generalPopupOperation} />
