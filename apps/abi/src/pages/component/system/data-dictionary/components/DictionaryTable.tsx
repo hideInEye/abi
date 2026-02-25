@@ -52,12 +52,12 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
     //   title: '字典ID'
     // },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'dictField',
       title: '字典名称'
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'dictName',
       title: '中文名称'
     },
@@ -75,7 +75,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
       title: '状态'
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'remark',
       title: '字典描述',
       width: 120,

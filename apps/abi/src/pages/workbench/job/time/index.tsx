@@ -58,7 +58,7 @@ export function Component() {
         //   width: 80
         // },
         {
-          align: 'center',
+          align: 'left',
           dataIndex: 'jobName',
           key: 'jobName',
           title: '任务名称',
@@ -66,7 +66,7 @@ export function Component() {
           fixed: 'left',
         },
         {
-          align: 'center',
+          align: 'right',
           dataIndex: 'jobId',
           key: 'jobId',
           title: '任务id',
@@ -277,53 +277,87 @@ export function Component() {
   };
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      {/* <ACollapse
-        bordered={false}
-        className="card-wrapper"
-        defaultActiveKey={isMobile ? undefined : '1'}
-        items={[
-          {
-            children: <KeySearch {...searchProps} />,
-            key: '1',
-            label: t('common.search')
-          }
-        ]}
-      /> */}
-      <ACard>
+    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto p-6">
+      <div className="flex items-center gap-4">
         <KeySearch {...searchProps} />
-      </ACard>
+        <div className="ml-auto flex items-center gap-3">
+          <AButton
+            type="primary"
+            onClick={searchProps.reset}
+          >
+            重置
+          </AButton>
+          <AButton
+            type="primary"
+            onClick={searchProps.search}
+          >
+            查询
+          </AButton>
+          <AButton
+            type="primary"
+            onClick={handleExport}
+          >
+            导出
+          </AButton>
 
-      <ACard
-        bordered={false}
-        className="flex-col-stretch sm:flex-1-hidden card-wrapper"
+          <APopconfirm
+            title={t('common.confirmDelete')}
+            onConfirm={handleBatchDelete}
+          >
+            <AButton
+              type="primary"
+              disabled={checkedRowKeys.length === 0}
+            >
+              批量删除
+            </AButton>
+          </APopconfirm>
+        </div>
+      </div>
+
+      <div
         ref={tableWrapperRef}
-        title="定时任务"
-        extra={
-          <TableHeaderOperation
-            columns={columnChecks}
-            disabledDelete={checkedRowKeys.length === 0}
-            loading={tableProps.loading}
-            refresh={run}
-            setColumnChecks={setColumnChecks}
-            onDelete={handleBatchDelete}
-            onExport={handleExport}
-          />
-        }
+        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
       >
-        <ATable scroll={scrollConfig} size="small" {...(tableProps as any)} rowSelection={rowSelection} />
-
-        {/* <Suspense>
-          <JobDrawer {...generalPopupOperation} />
-        </Suspense>
-
-        {viewJobId ? (
-          <JobDetailDrawer
-            jobId={viewJobId}
-            onClose={() => setViewJobId('')}
+        <div
+          style={{
+            border: '0.0625rem solid #d9d9d9',
+            borderRadius: '0.5rem',
+            overflow: 'hidden',
+            width: '100%',
+            maxHeight: '100%'
+          }}
+        >
+          <div
+            className="assistant-table-scroll"
+            style={{ overflow: 'auto', maxHeight: '100%' }}
+          >
+            <ATable
+              scroll={{ x: 'max-content', ...scrollConfig }}
+              size="small"
+              {...(tableProps as any)}
+              pagination={false}
+              rowSelection={rowSelection}
+            />
+          </div>
+        </div>
+        <div
+          style={{
+            padding: '0.75rem 0',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginTop: 'auto'
+          }}
+        >
+          <APagination
+            {...(tableProps.pagination as any)}
+            showSizeChanger
+            style={{ padding: '0' }}
           />
-        ) : null} */}
+        </div>
+      </div>
+
         <AModal
+          key="shareEmail"
           width="60%"
           open={visible}
           title="定时任务编辑"
@@ -369,7 +403,6 @@ export function Component() {
             <ShareEmailSetting form={form} />
           </Form>
         </AModal>
-      </ACard>
     </div>
   );
 }

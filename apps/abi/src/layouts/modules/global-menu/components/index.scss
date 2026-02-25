@@ -5,6 +5,9 @@
       color: #333;
     }
   }
+  .ant-menu-submenu .ant-menu-sub .ant-menu-item-icon {
+    visibility: hidden;
+  }
   & > li > ul {
     & > .ant-menu-item-selected {
       color: #3366ff !important;

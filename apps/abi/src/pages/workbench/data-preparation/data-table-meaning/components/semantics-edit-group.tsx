@@ -50,6 +50,7 @@ export const EditGroup = ({ updateGroupData }: { readonly updateGroupData: () =>
   return (
     <Modal
       open={groupModalOpen}
+      centered
       title={editAddGroup === 1 ? '新增组' : '编辑组'}
       footer={[
         <Button

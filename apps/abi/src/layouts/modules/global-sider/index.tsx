@@ -159,7 +159,7 @@ const GlobalSider: FC = memo(() => {
                 className={`flex items-center px-3 py-[0.6875rem] flex-col gap-[0.5625rem] cursor-pointer ${!isActive ? 'bg-[#fff] shadow-[0_0.25rem_0.375rem_0_rgba(137,147,166,0.15)] rounded-[0.625rem] text-[#3366FF]' : ''}`}
               >
                 <img src={isActive ? item.checkIcon : item.icon} alt={item.label} className="h-6 w-6" />
-                <span className="text-base">{item.label}</span>
+                <span className="text-base" style={{ fontSize: '0.875rem' }}>{item.label}</span>
               </div>
             )
           })}
@@ -179,7 +179,7 @@ const GlobalSider: FC = memo(() => {
             </APopover>
           </Dropdown>
           <Dropdown menu={{ items: userItems(), onClick: handleMenuClick }}>
-            <img src={userIcon} className="h-6 w-6" />
+            <img src={userIcon} className="h-7 w-7" />
           </Dropdown>
         </div>
       </div>

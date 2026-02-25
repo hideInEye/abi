@@ -28,19 +28,19 @@ export const PluginTable: React.FC<PluginTableProps> = ({
 }: PluginTableProps) => {
   const columns = [
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'pluginName',
       key: 'pluginName',
       title: '插件名称'
     },
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'remark',
       key: 'remark',
       title: '插件描述'
     },
     {
-    align: 'center',
+    align: 'left',
       dataIndex: 'pluginType',
       key: 'pluginType',
       title: '插件类型'

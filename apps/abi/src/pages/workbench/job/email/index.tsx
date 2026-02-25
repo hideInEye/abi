@@ -13,7 +13,8 @@ export function Component() {
   const { switchToSpace } = useSpaceSwitch();
   const route = useRoute();
   const spaceId = useAppSelector(getSpaceId);
-  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps } = useTable({
+  const { scrollConfig, tableWrapperRef } = useTableScroll();
+  const { data, run, searchProps, tableProps } = useTable({
     apiFn: fetchEmailList as any,
     apiParams: {
       pageNum: 1,
@@ -26,7 +27,7 @@ export function Component() {
     columns: () =>
       [
         {
-          align: 'center',
+          align: 'left',
           fixed: 'left',
           dataIndex: 'jobName',
           key: 'jobName',
@@ -40,13 +41,14 @@ export function Component() {
           },
         },
         {
-          align: 'center',
+          align: 'right',
           dataIndex: 'jobId',
           key: 'jobId',
           title: '任务id',
           width: 130,
         },
         {
+          align: 'center',
           dataIndex: 'recipients',
           key: 'recipients',
           title: '收件人',
@@ -79,7 +81,7 @@ export function Component() {
           },
         },
         {
-          align: 'center',
+          align: 'left',
           dataIndex: 'type',
           key: 'type',
           title: '发送类型',
@@ -93,6 +95,7 @@ export function Component() {
           width: 130,
         },
         {
+          align: 'center',
           dataIndex: 'status',
           key: 'status',
           title: '状态',
@@ -208,27 +211,77 @@ export function Component() {
   }, [tableProps.columns]);
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px">
-      <ACard>
+    <div className="h-full min-h-500px flex-col-stretch gap-16px p-6">
+      <div className="flex items-center gap-4">
         <KeySearch {...searchProps} />
-      </ACard>
-      <ACard
-        bordered={false}
-        className="flex-col-stretch card-wrapper"
-        title="邮件发送记录"
-        extra={
-          <TableHeaderOperation
-            columns={columnChecks}
-            disabledDelete={checkedRowKeys.length === 0}
-            loading={tableProps.loading}
-            refresh={run}
-            setColumnChecks={setColumnChecks}
-            onDelete={handleBatchDelete}
-          />
-        }
+        <div className="ml-auto flex items-center gap-3">
+          <AButton
+            type="primary"
+            onClick={searchProps.reset}
+          >
+            重置
+          </AButton>
+          <AButton
+            type="primary"
+            onClick={searchProps.search}
+          >
+            查询
+          </AButton>
+
+          <APopconfirm
+            title={t('common.confirmDelete')}
+            onConfirm={handleBatchDelete}
+          >
+            <AButton
+              type="primary"
+              disabled={checkedRowKeys.length === 0}
+            >
+              批量删除
+            </AButton>
+          </APopconfirm>
+        </div>
+      </div>
+      <div
+        ref={tableWrapperRef}
+        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
       >
-        <ATable scroll={{ x: columnWidth }} size="small" {...(tableProps as any)} rowSelection={rowSelection} />
-      </ACard>
+        <div
+          style={{
+            border: '0.0625rem solid #d9d9d9',
+            borderRadius: '0.5rem',
+            overflow: 'hidden',
+            width: '100%',
+            maxHeight: '100%'
+          }}
+        >
+          <div
+            className="assistant-table-scroll"
+            style={{ overflow: 'auto', maxHeight: '100%' }}
+          >
+            <ATable
+              scroll={{ x: columnWidth, ...scrollConfig }}
+              size="small"
+              {...(tableProps as any)}
+              pagination={false}
+              rowSelection={rowSelection}
+            />
+          </div>
+        </div>
+        <div
+          style={{
+            padding: '0.75rem 0',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginTop: 'auto'
+          }}
+        >
+          <APagination
+            {...(tableProps.pagination as any)}
+            showSizeChanger
+            style={{ padding: '0' }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

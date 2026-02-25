@@ -1,17 +1,19 @@
 // 列表表头样式
-.data-source-table,
-.data-collection-table,
-.assistant-config-table,
-.model-table,
+.ant-table-wrapper .ant-table-thead > tr > th{
+  font-family: PingFangSC, PingFang SC;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #000000;
+}
 .tag-table,
 .question-table,
 .technical-table,
 .plugin-table,
 .dictionary-table,
 .semantics-table {
-  .ant-table-thead > tr > th {
-    // background-color: #1F87DA !important;
-    // color: #fff !important;
+  .ant-table-thead > tr > th:first-child , 
+  .ant-table-tbody > tr > td:first-child {
+    padding-left: 3rem !important;
   }
 }
 .assistant-table-scroll {
@@ -42,9 +44,28 @@
   }
 }
 
+.group-search-input {
+  font-family: PingFangSC, PingFang SC;
+  font-weight: 400;
+  font-size: 1rem;
+  color: #333333;
+}
 // Tree选中样式 - 所有分组统一样式
 .semantics-tree,
 .ant-tree {
+  font-family: PingFangSC, PingFang SC;
+  font-weight: 400;
+  font-size:  1rem;
+  color: #000000;
+  .group-tree-title {
+    display: inline-block;
+    max-width: 10em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+
   // 选中状态：背景透明，文字变蓝
   .ant-tree-node-selected {
     background-color: transparent !important;

@@ -44,7 +44,7 @@ export const Component: React.FC = () => {
 
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full"
+      <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
         styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
       >
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>

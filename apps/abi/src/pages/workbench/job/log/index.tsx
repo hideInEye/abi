@@ -152,38 +152,85 @@ export function Component() {
   };
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard>
-        <KeySearch jobDetail={jobDetail} {...searchProps} />
-      </ACard>
+    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto p-6">
+      <div className="flex items-center gap-4">
+        <KeySearch {...searchProps} />
+        <div className="ml-auto flex items-center gap-3">
+          <AButton
+            type="primary"
+            onClick={searchProps.reset}
+          >
+            重置
+          </AButton>
+          <AButton
+            type="primary"
+            onClick={searchProps.search}
+          >
+            查询
+          </AButton>
+          <AButton
+            type="primary"
+            onClick={handleExport}
+          >
+            导出
+          </AButton>
 
-      <ACard
-        bordered={false}
-        className="flex-col-stretch sm:flex-1-hidden card-wrapper"
+          <APopconfirm
+            title={t('common.confirmDelete')}
+            onConfirm={handleBatchDelete}
+          >
+            <AButton
+              type="primary"
+              disabled={checkedRowKeys.length === 0}
+            >
+              批量删除
+            </AButton>
+          </APopconfirm>
+        </div>
+      </div>
+
+      <div
         ref={tableWrapperRef}
-        title="调度日志"
-        extra={
-          <TableHeaderOperation
-            columns={columnChecks}
-            // disabledDelete={checkedRowKeys.length === 0}
-            loading={tableProps.loading}
-            refresh={run}
-            setColumnChecks={setColumnChecks}
-            // onClean={handleClean}
-            // onDelete={handleBatchDelete}
-            // onExport={handleExport}
-          />
-        }
+        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
       >
-        <ATable
-          scroll={scrollConfig}
-          size="small"
-          {...(tableProps as any)}
-          // rowSelection={rowSelection}
-        />
+        <div
+          style={{
+            border: '0.0625rem solid #d9d9d9',
+            borderRadius: '0.5rem',
+            overflow: 'hidden',
+            width: '100%',
+            maxHeight: '100%'
+          }}
+        >
+          <div
+            className="assistant-table-scroll"
+            style={{ overflow: 'auto', maxHeight: '100%' }}
+          >
+            <ATable
+              scroll={{ x: 'max-content', ...scrollConfig }}
+              size="small"
+              {...(tableProps as any)}
+              pagination={false}
+              rowSelection={rowSelection}
+            />
+          </div>
+        </div>
 
-        {viewJobLogId ? <JobLogDetailDrawer jobLogId={viewJobLogId} onClose={() => setViewJobLogId('')} /> : null}
-      </ACard>
+        <div
+          style={{
+            padding: '0.75rem 0',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginTop: 'auto'
+          }}
+        >
+          <APagination
+            {...(tableProps.pagination as any)}
+            showSizeChanger
+            style={{ padding: '0' }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

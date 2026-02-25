@@ -54,7 +54,7 @@ export function Component() {
   const [connectMode, setConnectMode] = useState([1, 2]); // 一期没用到
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState<any>({});
-  const { push } = useRouter();
+  const { back: routerBack, push } = useRouter();
 
   const route = useRoute();
 
@@ -238,7 +238,7 @@ export function Component() {
         if (isFromGuide) {
           push('/guide');
         } else {
-          push('/data-preparation/data-collection');
+          push('/workbench/data-preparation/data-collection');
         }
       }
       setBack(false);
@@ -266,6 +266,17 @@ export function Component() {
     }
   };
 
+  const handleClickBack = () => {
+    if (typeof routerBack === 'function') {
+      routerBack();
+      return;
+    }
+    if (isFromGuide) {
+      push('/guide');
+      return;
+    }
+    push('/workbench/data-preparation/data-collection');
+  };
   const handleChangeDatasource = (val: string) => {
     if (allFields?.length) {
       Modal.confirm({
@@ -370,6 +381,32 @@ export function Component() {
                 {/* 中间主编辑区 */}
                 <Splitter.Panel>
                   <div className="h-full flex flex-col">
+                    <div className={styles.editorHeader}>
+                      <div className="flex items-center min-w-0">
+                        <span
+                          className="mr-8px inline-flex h-28px w-28px cursor-pointer items-center justify-center rounded hover:bg-#f5f6f7"
+                          onClick={handleClickBack}
+                        >
+                          <LeftOutlined />
+                        </span>
+                        <div
+                          style={{
+                              fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                          }}
+                          title={collectionData.viewName}
+                        >
+                          {collectionData.viewName}
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <AButton
+                          type="primary"
+                          onClick={() => handleClickSave(true)}
+                        >
+                          保存
+                        </AButton>
+                      </div>
+                    </div>
                     <div className="flex-1">
                       <Splitter
                         layout="vertical"
@@ -405,25 +442,11 @@ export function Component() {
                         </Splitter.Panel>
                       </Splitter>
                     </div>
-                    <div className="border-t bg-#fff p-2 text-center">
-                      <AButton
-                        className="mr-2"
-                        onClick={() => handleClickSave(true)}
-                      >
-                        保存并返回
-                      </AButton>
-                      <AButton
-                        type="primary"
-                        onClick={() => handleClickSave(false)}
-                      >
-                        保存
-                      </AButton>
-                    </div>
                   </div>
                 </Splitter.Panel>
 
                 {/* 右侧属性配置面板 */}
-                <Splitter.Panel
+                {/* <Splitter.Panel
                   collapsible
                   defaultSize="280"
                   max="400"
@@ -487,7 +510,7 @@ export function Component() {
                       />
                     </div>
                   </div>
-                </Splitter.Panel>
+                </Splitter.Panel> */}
               </Splitter>
           </div>
         </ACard>
@@ -495,7 +518,7 @@ export function Component() {
         <AModal
           confirmLoading={loading}
           open={visible}
-          title={back ? '保存并返回' : '保存'}
+          title={'保存并返回'}
           onOk={() => saveForm.submit()}
           onCancel={handleCloseModal}
           // onClose={handleCloseModal}

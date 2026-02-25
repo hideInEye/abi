@@ -109,6 +109,14 @@
     }
   }
 }
+.editorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
 
 
 .collapse-container {

@@ -171,6 +171,8 @@ export default function DataTableMeaningTable() {
    * 根据字段类型返回语义类型（不考虑主键映射）
    */
   const getSemanticTypeByFieldType = (fieldType: string) => {
+    const lowerFieldType = fieldType?.toLowerCase() || '';
+    const upperFieldType = fieldType?.toUpperCase() || '';
     switch (fieldType) {
       case 'DATETIME':
       case 'DATETIME64':
@@ -178,30 +180,33 @@ export default function DataTableMeaningTable() {
       case 'TIME':
         return 'datetime';
     }
-    if (fieldType.includes('TIMESTAMP')) {
+    if (upperFieldType.includes('TIMESTAMP')) {
       return 'datetime';
     }
     // 度量类型：模糊匹配包含 int、float、decimal 的类型（转小写兼容各种大小写）
-    const lowerFieldType = fieldType?.toLowerCase() || '';
-    const upperFieldType = fieldType?.toUpperCase() || '';
     if (lowerFieldType.includes('int') || 
         lowerFieldType.includes('float') || 
         lowerFieldType.includes('decimal') ||
+        lowerFieldType.includes('integer') ||
+        lowerFieldType.includes('double') ||
         upperFieldType.includes('NUMBER') ||
+        upperFieldType.includes('NUMERIC') ||
         upperFieldType.includes('LONG')) {
       return 'measure';
     }
-    if( fieldType.includes('VARCHAR')){
+    if( upperFieldType.includes('VARCHAR')){
       return 'categorical';
     }
     switch (fieldType) {
       case 'STRING':
       case 'BOOL':
+      case 'BOOLEAN':
       case 'CHAR':
       case 'TEXT':
       case 'FIXEDSTRING':
       case 'NULLABLE':
       case 'CLOB':
+      case 'CHARACTER VARYING':
         return 'categorical';
       default:
         return '';
@@ -337,6 +342,7 @@ export default function DataTableMeaningTable() {
                 data-field-type="semantic-type"
                 data-field-index={globalIndex}
                 onChange={value => {
+                  const fieldName = `tableConfig[${globalIndex}].semanticType`;
                   const newFields = [...fields];
                   
                   // 单选主键功能：一个表只能有一个主键
@@ -362,7 +368,8 @@ export default function DataTableMeaningTable() {
                     semanticType: value
                   };
                   setFields(newFields);
-                  form.setFieldValue(`tableConfig[${globalIndex}].semanticType`, value);
+                  form.setFieldValue(fieldName, value);
+                  form.setFields([{ name: fieldName, errors: [] }]);
                 }}
               />
               {!record.semanticType && (

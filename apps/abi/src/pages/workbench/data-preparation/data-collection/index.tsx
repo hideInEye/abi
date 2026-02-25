@@ -41,14 +41,14 @@ export function Component() {
   const columns = useCallback(
     () => [
       {
-        align: 'center',
+        align: 'left',
         dataIndex: 'viewName',
         key: 'viewName',
         minWidth: 120,
         title: t('page.dataPreparation.dataCollection.name')
       },
       {
-        align: 'center',
+        align: 'left',
         dataIndex: 'viewInfo',
         key: 'viewInfo',
         minWidth: 120,
@@ -113,7 +113,7 @@ export function Component() {
                 />
               </Tooltip>
             </APopconfirm>
-            <Tooltip title="血缘关系">
+            {/* <Tooltip title="血缘关系">
               <AButton
                 color="primary"
                 icon={<SvgIcon localIcon="kinship" style={{ fontSize: '1rem' }} />}
@@ -132,7 +132,7 @@ export function Component() {
                   push(`/workbench/data-preparation/data-source-kinship/${sourceId}?from=2&name=${viewName}`);
                 }}
               />
-            </Tooltip>
+            </Tooltip> */}
           </div>
         ),
         title: t('common.operate'),

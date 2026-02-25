@@ -17,7 +17,7 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
 
   const columns = [
     {
-      align: 'center',
+      align: 'left',
       dataIndex: 'question',
       key: 'question',
       title: '问题'
