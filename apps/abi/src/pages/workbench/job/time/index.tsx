@@ -140,7 +140,7 @@ export function Component() {
                 />
               </ATooltip>
 
-              <APopconfirm title={t('common.confirmDelete')} onConfirm={() => handleDelete(record.recordId)}>
+              <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.recordId)}>
                 <ATooltip title="删除">
                   <AButton color="danger" icon={<DeleteOutlined />} size="small" variant="link" />
                 </ATooltip>
@@ -278,6 +278,7 @@ export function Component() {
 
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto p-6">
+      <h1 className="text-base font-medium">定时任务列表</h1>
       <div className="flex items-center gap-4">
         <KeySearch {...searchProps} />
         <div className="ml-auto flex items-center gap-3">
@@ -332,7 +333,7 @@ export function Component() {
             style={{ overflow: 'auto', maxHeight: '100%' }}
           >
             <ATable
-              scroll={{ x: 'max-content', ...scrollConfig }}
+              scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content', ...scrollConfig } : undefined}
               size="small"
               {...(tableProps as any)}
               pagination={false}

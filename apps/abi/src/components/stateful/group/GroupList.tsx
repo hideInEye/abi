@@ -60,7 +60,8 @@ const GroupList: React.FC<GroupListProps> = ({ groups, onDelete, onEdit, onGroup
               <Popconfirm
                 cancelText="取消"
                 okText="确定"
-                title="确定删除该组吗？"
+                title="提示"
+                description="确定删除该组吗？"
                 onConfirm={() => handleDelete(item)}
               >
                 <Button

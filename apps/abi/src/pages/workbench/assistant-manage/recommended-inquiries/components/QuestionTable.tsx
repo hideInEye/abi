@@ -24,6 +24,7 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
     },
     {
       align: 'center',
+      fixed: 'right',
       key: 'action',
       width:150,
       render: (_: any, record: QuestionTableData) => (

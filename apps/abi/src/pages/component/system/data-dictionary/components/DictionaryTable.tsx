@@ -99,6 +99,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
 
     {
       align: 'center',
+      fixed: 'right',
       dataIndex: '操作',
       render: (_: any, record: DictionaryItem) => {
         return (
@@ -146,7 +147,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
           columns={columns}
           dataSource={dataSource.rows}
           pagination={false}
-          scroll={{ x: 'max-content' }}
+          scroll={dataSource.rows?.length > 0 ? { x: 'max-content' } : undefined}
           size="small"
           className="dictionary-table"
         />

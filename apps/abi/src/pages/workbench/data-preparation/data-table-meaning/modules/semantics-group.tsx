@@ -111,7 +111,8 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
                 <EditOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => handleEditGroup(item, e)} />
               </Tooltip>
               <Popconfirm
-                title="确定删除该组吗？"
+                title="提示"
+                description="确定删除该组吗？"
                 onConfirm={(e) => handleDelete(item.groupId, e as any)}
                 onCancel={(e) => e?.stopPropagation()}
               >
