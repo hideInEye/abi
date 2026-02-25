@@ -689,7 +689,7 @@ export const useConversationController = (
         }
       } catch {}
 
-      await fetchEventSource(`${window.APP_CONFIG.VITE_BASE_API}/chat-proxy/api/v2/workflow/chat/completions`, {
+      await fetchEventSource(`/chat-proxy/api/v2/workflow/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -734,11 +734,11 @@ export const useConversationController = (
                 roundIndex = data?.data?.round_index || roundIndex
                 setLoadingRoundIndex(roundIndex)
 
-                if (data?.data?.status === 'start') {
-                  setSmLoading(true)
-                }
+                // if (data?.data?.status === 'start') {
+                //   setSmLoading(true)
+                // }
 
-                if (data?.data?.status === 'start' && data?.data?.context) {
+                if ( data?.data?.context) {
                   setCurrentMessage((prev) => prev + data?.data?.context)
                 }
 

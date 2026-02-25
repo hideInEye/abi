@@ -198,6 +198,7 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
                 <sub className="text-[#666666] leading-[1.25rem]">{formatTimeDiff(item.create_time)}</sub>
               </div>
               <Dropdown
+                trigger={['click']}
                 menu={{
                   items: dropdownMenu,
                   onClick: (e) => {
