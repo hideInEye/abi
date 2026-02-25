@@ -58,3 +58,7 @@ html.grayscale {
 .ant-select-item-option:hover {
   background-color: rgba(24, 144, 255, 0.1) !important;
 }
+
+.ant-table-tbody >tr >td {
+  border-bottom: 0 !important;
+}
