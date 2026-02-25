@@ -71,6 +71,7 @@ export function Component() {
       </div>
 
       <div className="flex-1 flex flex-col">
+        <h1 className="text-base font-medium">表语义列表</h1>
         <div className="flex items-center justify-between mb-4">
               <AInput
                 placeholder="请输入表语义检索"

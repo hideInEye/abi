@@ -58,6 +58,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
     },
     {
       align: 'center',
+      fixed: 'right',
       key: 'action',
       render: (_: any, record: TagGroup) => (
         <Space size="middle">
@@ -115,7 +116,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
           columns={columns}
           dataSource={pagedDataSource}
           rowKey="id"
-          scroll={{x: columnWidth}}
+          scroll={pagedDataSource?.length > 0 ? {x: columnWidth} : undefined}
           size="small"
           className="tag-table assistant-table-scroll"
           pagination={false}

@@ -61,6 +61,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
     },
     {
       align: 'center',
+      fixed: 'right',
       key: 'action',
       render: (_, record) => (
         <ASpace size="middle">
@@ -74,25 +75,20 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
             />
           </ATooltip>
 
-          <ATooltip title="删除"> 
-            <AButton
-              color="danger"
-              icon={<DeleteOutlined style={{ fontSize: '1rem' }} />}
-              size="small"
-              variant="link"
-              onClick={() => {
-                AModal.confirm({
-                  cancelText: '取消',
-                  content: '确定要删除这条记录吗？',
-                  okText: '确认',
-                  onOk: async () => {
-                    deleteTable(record);
-                  },
-                  title: '确认删除'
-                });
-              }}
-            />
-          </ATooltip>
+          <APopconfirm
+            title="提示"
+            description="确定要删除吗？"
+            onConfirm={() => deleteTable(record)}
+          >
+            <ATooltip title="删除">
+              <AButton
+                color="danger"
+                icon={<DeleteOutlined style={{ fontSize: '1rem' }} />}
+                size="small"
+                variant="link"
+              />
+            </ATooltip>
+          </APopconfirm>
         </ASpace>
       ),
       title: '操作'
@@ -128,7 +124,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
         <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
           <ATable
             columns={columns}
-            scroll={{ x: columnWidth }}
+            scroll={pagedTableSchemaList?.length > 0 ? { x: columnWidth } : undefined}
             dataSource={pagedTableSchemaList}
             size="small"
             className="semantics-table"

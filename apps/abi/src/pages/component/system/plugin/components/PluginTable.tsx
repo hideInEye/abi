@@ -61,6 +61,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
     },
     {
       align: 'center',
+      fixed: 'right',
       dataIndex: 'action',
       key: 'action',
       render: (_: any, record: any) => {

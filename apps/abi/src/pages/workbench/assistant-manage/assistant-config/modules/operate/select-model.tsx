@@ -6,7 +6,7 @@
  * @FilePath: /trust-abi-web/chatbi/src/pages/assistant-manage/assistant-config/modules/operate/select-model.tsx
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
-import { Transfer, message } from 'antd';
+import { Tooltip, Transfer, message } from 'antd';
 import type { TransferProps } from 'antd';
 import type { Dispatch, FC, SetStateAction } from 'react';
 import React, { useEffect, useState } from 'react';
@@ -87,6 +87,7 @@ const SelectModel: FC<PropsType> = memo(({ dispatch,  state }) => {
   return (
     <Transfer
       showSearch
+      style={{ width: '100%' }}
       dataSource={memoModelList}
       filterOption={filterOption}
       render={(item: any) => {
@@ -95,13 +96,27 @@ const SelectModel: FC<PropsType> = memo(({ dispatch,  state }) => {
           embedding: '嵌入模型'
         };
         const typeLabel = typeMap[item.modelType] || '';
-        return `${item.modelName}${typeLabel ? `（${typeLabel}）` : ''}`;
+        const text = `${item.modelName}${typeLabel ? `（${typeLabel}）` : ''}`;
+        return (
+          <Tooltip title={text}>
+            <span
+              style={{
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {text}
+            </span>
+          </Tooltip>
+        );
       }}
       targetKeys={state.llms}
       titles={['可选大模型', '已选大模型']}
       listStyle={{
         height: 300,
-        width: 750
+        width: 'calc((100% - 56px) / 2)'
       }}
       onChange={handleChange}
     />

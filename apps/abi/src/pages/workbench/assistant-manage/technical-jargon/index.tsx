@@ -70,6 +70,7 @@ export const Component: React.FC = () => {
           />
 
           <div className="w-40% flex-1 flex flex-col min-h-0 h-full overflow-hidden">
+            <h1 className="text-base font-medium">行业术语列表</h1>
             <TagSearchInput
               searchValue={searchValue}
               onAdd={handleAdd}
