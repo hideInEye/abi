@@ -17,6 +17,7 @@ export function useTable<A extends AntDesign.TableApiFn>(
   const [total, setTotal] = useState<TablePaginationConfig['total']>(0);
 
   const { apiFn, apiParams, immediate, rowKey = 'id', transformer } = config;
+  const [initialized, setInitialized] = useState<boolean>(() => !immediate);
 
   const [form] = Form.useForm<AntDesign.AntDesignTableConfig<A>['apiParams']>();
 
@@ -67,10 +68,22 @@ export function useTable<A extends AntDesign.TableApiFn>(
       const { total: totalNum } = transformed;
 
       setTotal(totalNum);
+      setInitialized(true);
     },
     transformer
   });
 
+  useEffect(() => {
+    if (!immediate) {
+      setInitialized(true);
+      return;
+    }
+
+    if (initialized) return;
+
+    const timer = window.setTimeout(() => setInitialized(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [immediate, initialized]);
   // this is for mobile, if the system does not support mobile, you can use `pagination` directly
   const pagination: TablePaginationConfig = {
     current: searchParams.current.current,
@@ -118,6 +131,7 @@ export function useTable<A extends AntDesign.TableApiFn>(
     }
   }
 
+  const tableLoading = !initialized || loading;
   return {
     columnChecks,
     data,
@@ -133,7 +147,7 @@ export function useTable<A extends AntDesign.TableApiFn>(
     tableProps: {
       columns,
       dataSource: data,
-      loading,
+      loading: tableLoading,
       pagination,
       rowKey
     },

@@ -11,6 +11,7 @@ import { localStg } from '@/utils/storage';
 
 import AppProvider from './components/stateful/AppProvider';
 import GlobalLoading from './components/stateful/GlobalLoading';
+import TableEmpty from './components/stateless/common/TableEmpty';
 import { antdLocales } from './locales/antd';
 
 const watermarkProps: WatermarkProps = {
@@ -57,6 +58,7 @@ const App = () => {
       button={{ classNames: { icon: 'align-1px  text-icon' } }}
       // card={{ styles: { body: { flex: 1, overflow: 'hidden', padding: '12px 16px ' } } }}
       locale={antdLocales[locale]}
+      renderEmpty={componentName => (componentName === 'Table' ? <TableEmpty /> : undefined)}
       theme={antdTheme}
     >
       <AppProvider>

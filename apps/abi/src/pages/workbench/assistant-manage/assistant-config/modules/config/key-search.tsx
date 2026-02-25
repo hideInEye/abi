@@ -7,30 +7,54 @@ const KeySearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
     <AForm
       className="mb-2"
       form={form}
-      labelCol={{
-        md: 9,
-        span: 5
-      }}
+      labelAlign="right"
+      labelCol={{ flex: '88px' }}
     >
       <ARow
         wrap
         gutter={[16, 16]}
       >
         <ACol
-          lg={6}
+          lg={8}
           md={12}
           span={24}
         >
           <AForm.Item
             className="m-0"
-            label="问题"
+            label={<span>问&emsp;&emsp;题</span>}
             name="question"
           >
-            <AInput allowClear />
+            <AInput allowClear style={{ width: 180 }} />
           </AForm.Item>
         </ACol>
         <ACol
-          lg={6}
+          lg={8}
+          md={12}
+          span={24}
+        >
+          <AForm.Item
+            className="m-0"
+            label="评估人"
+            name="eval_by"
+          >
+            <AInput allowClear style={{ width: 180 }} />
+          </AForm.Item>
+        </ACol>
+        <ACol
+          lg={8}
+          md={12}
+          span={24}
+        >
+          <AForm.Item
+            className="m-0"
+            label="提交人"
+            name="create_by"
+          >
+            <AInput allowClear style={{ width: 180 }} />
+          </AForm.Item>
+        </ACol>
+        <ACol
+          lg={8}
           md={12}
           span={24}
         >
@@ -43,82 +67,47 @@ const KeySearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
               allowClear
               options={MEMORY_CHAT_MODE_OPTIONS}
               placeholder="全部"
+              style={{ width: 180 }}
             />
           </AForm.Item>
         </ACol>
         <ACol
-          lg={6}
+          lg={8}
           md={12}
           span={24}
         >
           <AForm.Item
             className="m-0"
-            label="状态"
+            label="状&emsp;态"
             name="status"
           >
             <ASelect
               allowClear
               options={MEMORY_STATUS_OPTIONS}
               placeholder="全部"
+              style={{ width: 180 }}
             />
           </AForm.Item>
         </ACol>
         <ACol
-          lg={6}
-          md={12}
+          lg={8}
+          md={24}
           span={24}
         >
-          <AForm.Item
-            className="m-0"
-            label="评估人"
-            name="eval_by"
-          >
-            <AInput allowClear />
-          </AForm.Item>
-        </ACol>
-        <ACol
-          lg={6}
-          md={12}
-          span={24}
-        >
-          <AForm.Item
-            className="m-0"
-            label="提交人"
-            name="create_by"
-          >
-            <AInput allowClear />
-          </AForm.Item>
-        </ACol>
-        <ACol
-          lg={6}
-          md={12}
-          span={24}
-        />
-        <ACol
-          lg={6}
-          md={12}
-          span={24}
-        />
-        <ACol
-          lg={6}
-          md={12}
-          span={24}
-        >
-          <AForm.Item className="m-0">
+          <AForm.Item className="m-0" colon={false}  label=" ">
             <AFlex
               align="center"
               gap={12}
               justify="end"
+              style={{ width: 180 }}
             >
               <AButton
-                icon={<IconIcRoundRefresh />}
+                type="primary"
                 onClick={reset}
               >
                 {t('common.reset')}
               </AButton>
               <AButton
-                ghost
-                icon={<IconIcRoundSearch />}
                 type="primary"
                 onClick={search}
               >
