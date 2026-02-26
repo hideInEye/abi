@@ -1,4 +1,4 @@
-import { Checkbox } from 'antd';
+import { Checkbox, Input } from 'antd';
 import type { FC } from 'react';
 import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
 import type { OnDragEndResponder } from 'react-beautiful-dnd';
@@ -16,6 +16,15 @@ const reorder = (list: AntDesign.TableColumnCheck[], startIndex: number, endInde
 };
 
 const DragContent: FC<Props> = ({ columns, setColumnChecks }) => {
+  const [searchText, setSearchText] = useState('');
+  const filteredColumns = useMemo(() => {
+    if (!searchText) return columns;
+    return columns.filter(item => 
+      item.title?.toLowerCase().includes(searchText.toLowerCase()) ||
+      item.key?.toLowerCase().includes(searchText.toLowerCase())
+    );
+  }, [columns, searchText]);
+
   const dragEnd: OnDragEndResponder = result => {
     if (!result.destination) {
       return;
@@ -31,6 +40,16 @@ const DragContent: FC<Props> = ({ columns, setColumnChecks }) => {
   };
 
   return (
+    <div className="w-full">
+      <Input
+        placeholder="搜索字段"
+        size="small"
+        value={searchText}
+        onChange={e => setSearchText(e.target.value)}
+        className="mb-8px"
+        allowClear
+      />
+      <div className="max-h-600px overflow-y-auto">
     <DragDropContext onDragEnd={dragEnd}>
       <Droppable droppableId="sortable-list">
         {provided => (
@@ -38,7 +57,7 @@ const DragContent: FC<Props> = ({ columns, setColumnChecks }) => {
             ref={provided.innerRef}
             {...provided.droppableProps}
           >
-            {columns.map((item, index) => (
+            {filteredColumns.map((item, index) => (
               <Draggable
                 draggableId={item.key}
                 index={index}
@@ -68,6 +87,8 @@ const DragContent: FC<Props> = ({ columns, setColumnChecks }) => {
         )}
       </Droppable>
     </DragDropContext>
+    </div>
+  </div>
   );
 };
 

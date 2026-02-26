@@ -123,7 +123,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
               cancelText="取消"
               description="确定要删除该字典吗？"
               okText="确认"
-              title="删除字典"
+              title="提示"
               onConfirm={() => handleDelete(record)}
             >
               <AButton
@@ -150,6 +150,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({
           scroll={dataSource.rows?.length > 0 ? { x: 'max-content' } : undefined}
           size="small"
           className="dictionary-table"
+          style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
         />
       </div>
 

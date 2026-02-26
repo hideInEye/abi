@@ -5,12 +5,19 @@
   font-size: 0.875rem;
   color: #000000;
 }
+.assistant-config-table,
+.data-source-table,
+.data-collection-table,
+.model-table,
 .tag-table,
 .question-table,
 .technical-table,
 .plugin-table,
 .dictionary-table,
-.semantics-table {
+.semantics-table,
+.recently-used-table,
+.my-collect-table,
+.my-share-table {
   .ant-table-thead > tr > th:first-child , 
   .ant-table-tbody > tr > td:first-child {
     padding-left: 3rem !important;
@@ -81,4 +88,7 @@
   .ant-tree-node-content-wrapper:hover {
     background-color: transparent !important;
   }
+}
+.ant-drawer .ant-spin-container {
+  height: auto;
 }

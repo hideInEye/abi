@@ -116,7 +116,8 @@ export function Component() {
                 }}
               />
               <APopconfirm
-                title={t('common.confirmDelete')}
+                title="提示"
+                description={t('common.confirmDelete')}
                 onConfirm={() => handleDelete(record.llmId)}
               >
                 <ATooltip title={t('page.manage.common.delete')}>
@@ -226,7 +227,7 @@ export function Component() {
       className="flex flex-col gap-4 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <h1 className="text-base font-medium">大模型列表</h1>
+      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>大模型</h1>
       <div className="flex items-center gap-4">
         <AInput
           placeholder="请输入模型名称"

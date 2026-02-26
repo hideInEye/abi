@@ -125,15 +125,18 @@ export const Component: React.FC = () => {
         styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
       >
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
-          <PluginGroup onGroupId={setGroupId} />
+          <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
+            <PluginGroup onGroupId={setGroupId} />
+          </div>
 
           <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <h1 className="text-base font-medium mb-4">插件列表</h1>
+            <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>插件</h1>
             <ASpace className="mb-3 flex justify-between">
               <AInput
                 placeholder="请输入插件名称"
                 value={searchValue}
                 onChange={e => handleSearch(e.target.value)}
+                style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '1rem', color: '#333333' }}
               />
               <AButton
                 type="primary"

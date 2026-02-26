@@ -56,13 +56,13 @@ export function Component() {
   return (
     <div className="flex gap-4 p-6 h-full">
       {/* 左侧分组树 */}
-      <div className="w-[280px] flex flex-col border-r pr-4">
+      <div className="w-[280px] flex flex-col pr-4" style={{ borderRight: '0.0625rem solid #d9d9d9' }}>
             <AInput
               placeholder="请输入表语义组检索"
               onChange={e => searchGroupSchema(e)}
               className="mb-4 group-search-input"
             />
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-hidden">
             <SemanticsGroup
               groupName={groupSearchValue}
               onDefaultGroupUpdate={onDefaultGroupUpdate}
@@ -71,12 +71,12 @@ export function Component() {
       </div>
 
       <div className="flex-1 flex flex-col">
-        <h1 className="text-base font-medium">表语义列表</h1>
+        <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>表语义</h1>
         <div className="flex items-center justify-between mb-4">
               <AInput
                 placeholder="请输入表语义检索"
                 onChange={e => searchTableSchema(e)}
-                style={{ width: 200 }}
+                style={{ width: 200, fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '1rem', color: '#333333' }}
               />
               <AButton
               type="primary"

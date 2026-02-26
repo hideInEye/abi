@@ -163,7 +163,7 @@ export function Component() {
     ]
   });
 
-  const { checkedRowKeys, onDeleted, rowSelection } = useTableOperate(data as any, run, () => {});
+  const { onDeleted, rowSelection } = useTableOperate(data as any, run, () => {}, false);
 
   async function handleDelete(record: any) {
     // 删除助手取消调用此接口，不需要判断是否引用对话
@@ -257,7 +257,7 @@ export function Component() {
       className="flex flex-col gap-4 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <h1 className="text-base font-medium">助手列表</h1>
+      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>助手</h1>
       <div className="flex items-center gap-4">
         <AInput
           placeholder="请输入助手名称"

@@ -163,7 +163,7 @@ export function Component() {
       const updateRes: any = await updateJob({ ...editingData, ...res });
       if (updateRes?.response?.data?.code !== 200) return false;
     }
-  });
+  }, true);
     
   async function handleBatchDelete() {
     // request
@@ -278,7 +278,7 @@ export function Component() {
 
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto p-6">
-      <h1 className="text-base font-medium">定时任务列表</h1>
+      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>定时任务</h1>
       <div className="flex items-center gap-4">
         <KeySearch {...searchProps} />
         <div className="ml-auto flex items-center gap-3">

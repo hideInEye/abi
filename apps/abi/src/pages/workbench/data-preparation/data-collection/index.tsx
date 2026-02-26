@@ -184,7 +184,7 @@ export function Component() {
       className="flex flex-col gap-4 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <h1 className="text-base font-medium">数据集列表</h1>
+      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>数据集</h1>
       <div className="flex items-center gap-4">
         <AInput
           placeholder="请输入数据集名称"

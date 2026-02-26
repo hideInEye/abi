@@ -77,22 +77,20 @@ export const PluginTable: React.FC<PluginTableProps> = ({
               />
             </ATooltip>
 
+            <APopconfirm
+              title="提示"
+              description="确定删除该插件吗？"
+              onConfirm={() => deletePlugin(record)}
+            >
             <ATooltip title="删除">
               <AButton
                 icon={<DeleteOutlined />}
                 color="danger"
                 size="small"
                 variant="link"
-                onClick={() => {
-                  AModal.confirm({
-                    onOk: () => {
-                      deletePlugin(record);
-                    },
-                    title: '确定删除该插件吗？'
-                  });
-                }}
               />
             </ATooltip>
+          </APopconfirm>
           </ASpace>
         );
       },
@@ -111,7 +109,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
           columns={columns}
           dataSource={dataSource.rows}
           pagination={false}
-          style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}
+          style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
           size="small"
           className="plugin-table"
         />

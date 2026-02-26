@@ -156,7 +156,7 @@ export function Component() {
     rowKey: 'logId',
   } as any);
 
-  const { checkedRowKeys, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, () => {});
+  const { checkedRowKeys, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, () => {}, true);
   useEffect(() => {
     const { query } = route;
     if (query?.jobName) {
@@ -212,7 +212,7 @@ export function Component() {
 
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-16px p-6">
-      <h1 className="text-base font-medium">邮件任务列表</h1>
+      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>邮件任务</h1>
       <div className="flex items-center gap-4">
         <KeySearch {...searchProps} />
         <div className="ml-auto flex items-center gap-3">

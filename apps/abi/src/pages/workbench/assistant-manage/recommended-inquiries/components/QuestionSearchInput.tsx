@@ -14,6 +14,7 @@ export const QuestionSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearc
         placeholder="请输入问题检索"
         value={searchValue}
         onChange={e => onSearch(e.target.value)}
+        style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '1rem', color: '#333333' }}
       />
       <AButton
         type="primary"
