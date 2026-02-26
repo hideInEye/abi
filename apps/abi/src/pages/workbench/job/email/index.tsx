@@ -211,8 +211,8 @@ export function Component() {
   }, [tableProps.columns]);
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px p-6">
-      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>邮件任务</h1>
+    <div className="h-full min-h-500px flex-col-stretch gap-8px p-6">
+      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333'}}>邮件任务发送记录</h1>
       <div className="flex items-center gap-4">
         <KeySearch {...searchProps} />
         <div className="ml-auto flex items-center gap-3">

@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { qiankunWindow } from "vite-plugin-qiankun/dist/helper";
 
 import { queryDeptList, queryUserList } from "@/service/api/space";
+import { CloseOutlined } from "@ant-design/icons";
 
 import type { CheckboxChangeEvent } from "antd/es/checkbox";
 import type { ChangeEvent } from "react";
@@ -391,6 +392,7 @@ export const DeptSelector: FC<DeptSelectorProps> = ({
               {breadcrumbs.map((item, index) => {
                 return (
                   <span
+                    style={{ color: "#3467FF" }}
                     className="cursor-pointer text-gray-5"
                     onClick={() => {
                       handleBack(item.deptId);
@@ -446,6 +448,8 @@ export const DeptSelector: FC<DeptSelectorProps> = ({
             {roleData.map((item) => (
               <ATag
                 closable
+                closeIcon={<CloseOutlined style={{ color: "#3467FF" }} />}
+                style={{ color: "#3467FF", background: "#fff", border: "1px solid #3467FF" }}
                 key={item.recordId}
                 onClose={() => handleRemoveSelected(item.recordId)}
               >

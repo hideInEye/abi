@@ -179,7 +179,9 @@ const GlobalSider: FC = memo(() => {
             </APopover>
           </Dropdown>
           <Dropdown trigger={['click']} menu={{ items: userItems(), onClick: handleMenuClick }}>
+            <APopover content={'个人中心'}>
             <img src={userIcon} className="h-7 w-7" />
+            </APopover>
           </Dropdown>
         </div>
       </div>
