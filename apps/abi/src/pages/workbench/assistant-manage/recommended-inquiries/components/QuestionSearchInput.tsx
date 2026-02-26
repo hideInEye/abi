@@ -9,11 +9,12 @@ interface SearchInputProps {
 
 export const QuestionSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearch, searchValue, groupId }) => {
   return (
-    <ASpace className="mb3 flex justify-between">
+    <ASpace className="mb4 flex justify-between">
       <AInput
         placeholder="请输入问题检索"
         value={searchValue}
         onChange={e => onSearch(e.target.value)}
+        style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '1rem', color: '#333333' }}
       />
       <AButton
         type="primary"

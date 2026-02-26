@@ -158,7 +158,8 @@ export function useTable<A extends AntDesign.TableApiFn>(
 export function useTableOperate<T extends TableData = TableData>(
   data: T[],
   getData: (isResetCurrent?: boolean) => Promise<void>,
-  executeResActions: (res: T, operateType: AntDesign.TableOperateType) => void
+  executeResActions: (res: T, operateType: AntDesign.TableOperateType) => void,
+  enableBatchOperation: boolean = false
 ) {
   const { bool: drawerVisible, setFalse: closeDrawer, setTrue: openDrawer } = useBoolean();
 
@@ -203,13 +204,13 @@ export function useTableOperate<T extends TableData = TableData>(
     setCheckedRowKeys(keys);
   }
 
-  const rowSelection: TableProps<T>['rowSelection'] = {
+  const rowSelection: TableProps<T>['rowSelection'] = enableBatchOperation? {
     columnWidth: 48,
     fixed: true,
     onChange: onSelectChange,
     selectedRowKeys: checkedRowKeys,
     type: 'checkbox'
-  };
+  }:undefined;
 
   function onClose() {
     closeDrawer();
@@ -252,7 +253,7 @@ export function useTableOperate<T extends TableData = TableData>(
   }
 
   return {
-    checkedRowKeys,
+    checkedRowKeys: enableBatchOperation ? checkedRowKeys : [],
     closeDrawer,
     drawerVisible,
     editingData,

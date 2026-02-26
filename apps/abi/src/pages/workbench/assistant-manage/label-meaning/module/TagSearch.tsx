@@ -17,12 +17,13 @@ export const TagSearch: React.FC<SearchInputProps> = ({ onAdd, onSearch, groupId
   onSearch(value)
  }
   return (
-    <div className="mb2 flex">
+    <div className="mb4 flex">
       <div className="grid grid-cols-2 gap-2">
         <AInput
           placeholder="请输入标签语义检索"
           value={searchValue}
           onChange={e =>{SearchInput(e.target.value)}}
+          style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '1rem', color: '#333333' }}
         />
       </div>
       <AButton

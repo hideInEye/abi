@@ -129,6 +129,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
             size="small"
             className="semantics-table"
             pagination={false}
+            style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
           />
         </div>
       </div>

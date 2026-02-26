@@ -98,21 +98,25 @@ export function Component() {
           key: 'operate',
           render: (_: unknown, record: any) => (
             <div className="flex-center gap-8px">
-              <ATooltip title={t('page.manage.common.edit')}>
-                <AButton
-                  color="primary"
-                  icon={<EditOutlined />}
-                  size="small"
-                  variant="link"
-                  onClick={() => {
-                    // const config = JSON.parse(record.configuration);
-                    // const formatRecord = { ...record, ...config };
-                    // edit(formatRecord);
-                    edit(record)
-                  }}
-                />
+             <ATooltip title={t('page.manage.common.edit')}>
+              <AButton
+                color="primary"
+                icon={<EditOutlined />}
+                size="small"
+                variant="link"
+                onClick={() => {
+                  // const config = JSON.parse(record.configuration);
+                  // const formatRecord = { ...record, ...config };
+                  // edit(formatRecord);
+                  edit(record);
+                }}
+               />
               </ATooltip>
-              <APopconfirm title={t('common.confirmDelete')} onConfirm={() => handleDelete(record.llmId)}>
+              <APopconfirm
+                title="提示"
+                description={t('common.confirmDelete')}
+                onConfirm={() => handleDelete(record.llmId)}
+              >
                 <ATooltip title={t('page.manage.common.delete')}>
                   <AButton className="text-red" color="danger" disabled={_.type === 'special-user'} icon={<DeleteOutlined />} type="text" />
                 </ATooltip>
@@ -195,7 +199,7 @@ export function Component() {
 
   return (
     <div className="flex flex-col gap-4 p-6" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <h1 className="text-base font-medium">大模型列表</h1>
+      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>大模型</h1>
       <div className="flex items-center gap-4">
         <AInput placeholder="请输入模型名称" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onPressEnter={handleSearch} style={{ width: '12.5rem' }} />
         <AButton className="ml-auto" type="primary" onClick={() => handleAdd()}>

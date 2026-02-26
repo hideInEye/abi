@@ -139,6 +139,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
           size="small"
           className="technical-table assistant-table-scroll"
           pagination={false}
+          style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
         />
       </div>
       <div

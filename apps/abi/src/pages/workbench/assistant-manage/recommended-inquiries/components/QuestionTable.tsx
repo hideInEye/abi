@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { Button, Pagination, Popconfirm, Space, Table } from 'antd';
+import { Button, Pagination, Popconfirm, Space, Table, Tooltip } from 'antd';
 import React from 'react';
 
 import type { QuestionTableData } from '../types';
@@ -29,6 +29,7 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
       width:150,
       render: (_: any, record: QuestionTableData) => (
         <Space>
+        <Tooltip title="编辑">
           <Button
             color="primary"
             icon={<EditOutlined />}
@@ -36,6 +37,7 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
             variant="link"
             onClick={() => onEdit(record)}
           />
+        </Tooltip>
           <Popconfirm
             cancelText="取消"
             description="确定要删除吗？"
@@ -43,12 +45,14 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
             title="提示"
             onConfirm={() => onDelete(record.problemId)}
           >
+          <Tooltip title="删除">
             <Button
               color="danger"
               icon={<DeleteOutlined />}
               size="small"
               variant="link"
             />
+          </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -65,6 +69,7 @@ export const QuestionTable: React.FC<IQuestionTable> = ({ dataSource, onDelete, 
           size="small"
           className="question-table"
           pagination={false}
+          style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
         />
       </div>
       <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
