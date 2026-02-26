@@ -34,19 +34,19 @@ export const Component: React.FC = () => {
         className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
         styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
       >
+        <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>字典管理</h1>
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
           <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
             <DictionaryGroup onGroupId={setGroupId} />
           </div>
 
           <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>字典</h1>
             <ASpace className="mb-4 flex justify-between">
               <AInput
                 placeholder="请输入字典名称"
                 value={searchValue}
                 onChange={e => handleSearch(e.target.value)}
-                style={{ width: 200, fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '1rem', color: '#333333' }}
+                style={{ width: 200, fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
               />
               <AButton
                 type="primary"

@@ -54,7 +54,9 @@ export function Component() {
   }
 
   return (
-    <div className="flex gap-6 p-6 h-full">
+    <div className="flex flex-col p-6 h-full">
+      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>表语义</h1>
+    <div className="flex gap-6 flex-1">
       {/* 左侧分组树 */}
       <div className="w-[18.5417rem] flex flex-col pr-4" style={{ borderRight: '0.0625rem solid #d9d9d9' }}>
             <AInput
@@ -71,12 +73,11 @@ export function Component() {
       </div>
 
       <div className="flex-1 flex flex-col">
-        <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>表语义</h1>
         <div className="flex items-center justify-between mb-4">
               <AInput
                 placeholder="请输入表语义检索"
                 onChange={e => searchTableSchema(e)}
-                style={{ width: 200, fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '1rem', color: '#333333' }}
+                style={{ width: 200, fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
               />
               <AButton
               type="primary"
@@ -96,6 +97,7 @@ export function Component() {
               tableSchemaList={tableSchemaList}
             />
           </div>
+        </div>
         <SemanticsTable updateTableList={updateTableList} />
     </div>
   );
