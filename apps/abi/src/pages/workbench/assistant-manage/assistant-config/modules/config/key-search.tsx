@@ -5,7 +5,7 @@ const KeySearch: FC<Page.SearchProps> = memo(({ form, reset, search }) => {
 
   return (
     <AForm
-      className="mb-2"
+      className="mb-2 mt-2"
       form={form}
       labelAlign="right"
       labelCol={{ flex: '88px' }}

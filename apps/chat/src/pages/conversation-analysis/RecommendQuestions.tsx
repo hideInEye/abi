@@ -401,6 +401,7 @@ const RecommendQuestions = forwardRef<RecommendQuestionsHandle, { isEdit?:Boolea
               const categoryScenes = filterScenesByCategory(category, promptList);
               const hasScenes = categoryScenes.length > 0;
               const isChecked = isCategoryChecked(category.key);
+              console.log(isChecked);
               
               return (
                 <Form.Item key={category.key}>

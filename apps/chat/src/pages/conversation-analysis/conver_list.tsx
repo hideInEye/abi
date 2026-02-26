@@ -1,5 +1,5 @@
 import { DoubleRightOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons'
-import { Dropdown, Flex, Input, message, Modal, Popover, Space } from 'antd'
+import { Dropdown, Empty, Flex, Input, message, Modal, Popover, Space } from 'antd'
 import React, { useEffect, useImperativeHandle, useState } from 'react'
 import SvgIcon from '../../components/SvgIcon'
 import left_online from '@/assets/svg-icon/left_online.svg'
@@ -7,7 +7,7 @@ import right_online from '@/assets/svg-icon/right_online.svg'
 import { MenuProps } from 'antd'
 import { clearConvHistory, fetchConvList } from '../../service/api/conv'
 import { CHAT_MODE } from '../../constant'
-import {  formatTimeDiff, getSpaceId } from '../../utils'
+import { formatTimeDiff, getSpaceId } from '../../utils'
 import SaveDrawer from '../conversation/SaveDrawer'
 interface converListProps {
   appList: any[]
@@ -159,12 +159,12 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
   }
 
   return (
-    <div className={`relative flex flex-col border-r py-[1.5rem] h-[100vh] transition-all duration-300 ease-in-out ${fold ? 'w-[1rem]' : 'w-[12.5rem]'}`}>
+    <div className={`relative flex flex-col border-r py-[1.5rem] h-[100vh] transition-all duration-300 ease-in-out ${fold ? 'w-[0.7rem]' : 'w-[12.5rem]'}`}>
       <header className="mb-2 w-full flex items-center pl-3.5">
         {!fold && (
           <Flex justify="space-around" align="center">
             <Input placeholder="搜索" prefix={<SearchOutlined className="text-base" />} />
-            <SvgIcon localIcon="chat_add" style={{margin:'0 1rem'}} className="text-[1.5625rem]  cursor-pointer" onClick={() => handleEdit('create')} />
+            <SvgIcon localIcon="chat_add" style={{ margin: '0 1rem' }} className="text-[1.5625rem]  cursor-pointer" onClick={() => handleEdit('create')} />
           </Flex>
         )}
       </header>
@@ -177,43 +177,56 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
       >
         <img src={!fold ? left_online : right_online} className="w-[1.5625rem] h-[1.5625rem]" />
       </span>
-      <ul
-        className={`flex-1 overflow-y-auto transition-opacity duration-300 ease-in-out ${fold ? 'opacity-0' : 'opacity-100'}`}
-        style={{ display: fold ? 'none' : 'block', transitionDelay: fold ? '0ms' : '150ms' }}
-      >
-        {appList.map((item: any) => (
-          <li
-            className={` py-4 hover:bg-[#EEEDED] rounded  cursor-pointer leading-[1.0625rem] ${selectedChatId === item.chat_id ? 'bg-[#EEEDED]' : ''}`}
-            key={item.chat_id}
-            onClick={() => {
-              handleSetCurApp(item)
-              setSelectedChatId(item.chat_id)
-            }} // 移除datasourceCache参数
-          >
-            <div className="px-[1.375rem] group flex items-center justify-between">
-              <div className="flex items-start flex-col">
-                <Popover content={item.biz_name}>
-                  <span className="text-[#333333] leading-[1.375rem] w-[8rem] overflow-hidden text-ellipsis whitespace-nowrap">{item.biz_name}</span>
-                </Popover>
-                <sub className="text-[#666666] leading-[1.25rem]">{formatTimeDiff(item.create_time)}</sub>
+      {(appList && appList.length > 0 && (
+        <ul
+          className={`flex-1 overflow-y-auto transition-opacity duration-300 ease-in-out ${fold ? 'opacity-0' : 'opacity-100'}`}
+          style={{ display: fold ? 'none' : 'block', transitionDelay: fold ? '0ms' : '150ms' }}
+        >
+          {appList.map((item: any) => (
+            <li
+              className={` py-4 hover:bg-[#EEEDED] rounded  cursor-pointer leading-[1.0625rem] ${selectedChatId === item.chat_id ? 'bg-[#EEEDED]' : ''}`}
+              key={item.chat_id}
+              onClick={() => {
+                handleSetCurApp(item)
+                setSelectedChatId(item.chat_id)
+              }} // 移除datasourceCache参数
+            >
+              <div className="px-[1.375rem] group flex items-center justify-between">
+                <div className="flex items-start flex-col">
+                  <Popover content={item.biz_name}>
+                    <span className="text-[#333333] leading-[1.375rem] w-[8rem] overflow-hidden text-ellipsis whitespace-nowrap">{item.biz_name}</span>
+                  </Popover>
+                  <sub className="text-[#666666] leading-[1.25rem]">{formatTimeDiff(item.create_time)}</sub>
+                </div>
+                <Dropdown
+                  trigger={['click']}
+                  menu={{
+                    items: dropdownMenu,
+                    onClick: (e) => {
+                      handleMenuClick(e, item)
+                    },
+                  }}
+                >
+                  <span
+                    className="px-2 py-2 text-xs absolute right-3"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }}
+                  >
+                    <MoreOutlined />
+                  </span>
+                </Dropdown>
               </div>
-              <Dropdown
-                trigger={['click']}
-                menu={{
-                  items: dropdownMenu,
-                  onClick: (e) => {
-                    handleMenuClick(e, item)
-                  },
-                }}
-              >
-                <span className="px-2 py-2 text-xs absolute right-3" onClick={(e) => e.preventDefault()}>
-                  <MoreOutlined />
-                </span>
-              </Dropdown>
-            </div>
-          </li>
+            </li>
+          ))}
+        </ul>
+      )) ||
+        (!fold && (
+          <div className="flex items-center justify-center h-[100%]">
+            <Empty description="暂无数据" />
+          </div>
         ))}
-      </ul>
       <div
         className={`mt-auto pt-2 pr-6 transition-opacity duration-300 ease-in-out ${fold ? 'opacity-0' : 'opacity-100'}`}
         style={{ display: fold ? 'none' : 'block', transitionDelay: fold ? '0ms' : '150ms' }}
