@@ -5,7 +5,6 @@ import { qiankunWindow } from "vite-plugin-qiankun/dist/helper";
 import { queryDeptList, queryUserList } from "@/service/api/space";
 import { CloseOutlined } from "@ant-design/icons";
 
-
 import type { CheckboxChangeEvent } from "antd/es/checkbox";
 import type { ChangeEvent } from "react";
 import type { DeptItem, UserItem } from "../types";
