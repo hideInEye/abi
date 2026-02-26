@@ -2,11 +2,13 @@ import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event
 import { Form, message } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useId, useImperativeHandle, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import cloneDeep from 'lodash/cloneDeep'
 
 import { fetchOperate, fetchShareEmail } from '../../../service/api/abi-system'
 import {
   fetchConvHistoryRound,
+  fetchConvMaxRound,
   fetchDimension,
   fetchExceptionGuidance,
   fetchQueryRewrite,
@@ -84,6 +86,7 @@ export const useConversationController = (
   const requestTokenRef = useRef(0)
   const wsRef = useRef<WebSocket | null>(null)
   const wsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [hasError, setHasError] = useState(false)
 
   const { ref: sharingRef, download } = useScreenshot()
 
@@ -149,6 +152,7 @@ export const useConversationController = (
     chatContainer.style.scrollBehavior = 'auto'
     chatContainer.addEventListener('scroll', preventScroll, { capture: true, passive: false })
 
+    isLoadingHistory.current = true
     setHistoryLoading(true)
 
     try {
@@ -174,15 +178,17 @@ export const useConversationController = (
           arrowStatus: true
         }))
 
-        setConvContent((prev) => {
-          const opening = prev.length > 0 ? prev[0] : null
-          const rest = prev.length > 0 ? prev.slice(1) : []
-          const hasOpening = opening && opening.role === 'first'
+        flushSync(() => {
+          setConvContent((prev) => {
+            const opening = prev.length > 0 ? prev[0] : null
+            const rest = prev.length > 0 ? prev.slice(1) : []
+            const hasOpening = opening && opening.role === 'first'
 
-          if (hasOpening) {
-            return [opening, ...processedMessages, ...rest]
-          }
-          return [...processedMessages, ...prev]
+            if (hasOpening) {
+              return [opening, ...processedMessages, ...rest]
+            }
+            return [...processedMessages, ...prev]
+          })
         })
 
         maintainScroll()
@@ -198,6 +204,8 @@ export const useConversationController = (
           chatContainer.style.scrollBehavior = originalScrollBehavior
 
           setHistoryLoading(false)
+          isLoadingHistory.current = false
+          canLoadMore.current = true
         }, 100)
       } else {
         isLocked = false
@@ -206,6 +214,8 @@ export const useConversationController = (
         chatContainer.style.overflow = originalOverflow
         chatContainer.style.scrollBehavior = originalScrollBehavior
         setHistoryLoading(false)
+        isLoadingHistory.current = false
+        canLoadMore.current = true
       }
     } catch (error) {
       isLocked = false
@@ -214,6 +224,8 @@ export const useConversationController = (
       chatContainer.style.overflow = originalOverflow
       chatContainer.style.scrollBehavior = originalScrollBehavior
       setHistoryLoading(false)
+      isLoadingHistory.current = false
+      canLoadMore.current = true
     }
   }
 
@@ -489,6 +501,7 @@ export const useConversationController = (
       ...data,
       extra: { except_guidance: 'true' }
     })
+    console.log(res)
     updateAiMessage({ context: res.content })
 
     setExceptionGuidanceLoading(false)
@@ -512,6 +525,7 @@ export const useConversationController = (
 
       wsTimeoutRef.current = setTimeout(() => {
         if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) {
+          console.warn('WebSocket连接超时')
           wsRef.current.close()
           setLoading(false)
           setIsGettingData(false)
@@ -523,6 +537,7 @@ export const useConversationController = (
       }, 10000)
 
       wsRef.current.onopen = () => {
+        console.log('WebSocket connected')
         if (wsTimeoutRef.current) {
           clearTimeout(wsTimeoutRef.current)
           wsTimeoutRef.current = null
@@ -563,14 +578,20 @@ export const useConversationController = (
                 setDebugInfoMap(enhancedDebugInfo)
 
                 partialMessage = ''
+                setHasError(false)
               } catch (error) {
+                setHasError(true)
+                console.error('Error parsing message:', error)
                 break
               }
             }
           }
-        } catch {}
+        } catch (error) {
+          console.error('Error parsing message:', error)
+        }
       }
-      wsRef.current.onerror = () => {
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error)
         if (wsTimeoutRef.current) {
           clearTimeout(wsTimeoutRef.current)
           wsTimeoutRef.current = null
@@ -583,19 +604,26 @@ export const useConversationController = (
         message.error('WebSocket连接异常，请重试')
       }
       wsRef.current.onclose = (event) => {
+        console.log('WebSocket disconnected', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean
+        })
         if (wsTimeoutRef.current) {
           clearTimeout(wsTimeoutRef.current)
           wsTimeoutRef.current = null
         }
 
         if (!event.wasClean) {
+          console.warn('WebSocket异常关闭，清理loading状态')
           setLoading(false)
           setIsGettingData(false)
           setSmLoading(false)
           isRequesting.current = false
         }
       }
-    } catch {
+    } catch (error) {
+      console.error('WebSocket连接创建失败:', error)
       if (wsTimeoutRef.current) {
         clearTimeout(wsTimeoutRef.current)
         wsTimeoutRef.current = null
@@ -611,10 +639,6 @@ export const useConversationController = (
 
   const getAnswer = async ({ question, IC }: any) => {
     if (isRequesting.current) {
-      return
-    }
-    if (!paramsData) {
-      message.error('初始化中，请稍后再试')
       return
     }
     const tempUserId = `${baseId}-${Date.now()}`
@@ -689,7 +713,7 @@ export const useConversationController = (
         }
       } catch {}
 
-      await fetchEventSource(`/chat-proxy/api/v2/workflow/chat/completions`, {
+      await fetchEventSource(`${window.APP_CONFIG.VITE_BASE_API}/chat-proxy/api/v2/workflow/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -711,68 +735,251 @@ export const useConversationController = (
           if (retryCount >= maxRetries) {
             throw new Error('对话接口发生异常，请检查系统！')
           }
-
-          retryCount++
-          throw new Error(`HTTP ${response.status}: 服务器错误，将进行重试（${retryCount}/${maxRetries}）`)
         },
-        onmessage(event) {
-          try {
-            if (event.data) {
-              const data = JSON.parse(event.data)
-
-              if (data?.code !== 200 && data?.code !== 0 && data?.msg) {
-                message.error(data.msg)
-                abortController.current?.abort()
-                return
-              }
-
-              if (data?.code === 200 || data?.code === 0) {
-                if (!data?.data?.round_index) {
-                  return
-                }
-
-                roundIndex = data?.data?.round_index || roundIndex
+        async onmessage(event) {
+          if (event.data) {
+            if (event.data.includes('round_index')) {
+              const roundIndexMatch = event.data.match(/round_index:(\d+)/)
+              if (roundIndexMatch) {
+                const extractedRoundIndex = parseInt(roundIndexMatch[1], 10)
+                roundIndex = Number(extractedRoundIndex)
                 setLoadingRoundIndex(roundIndex)
-
-                // if (data?.data?.status === 'start') {
-                //   setSmLoading(true)
-                // }
-
-                if ( data?.data?.context) {
-                  setCurrentMessage((prev) => prev + data?.data?.context)
-                }
-
-                if (data?.data?.status === 'end') {
-                  setDoneStatus(true)
-                  setSmLoading(false)
-                  abortController.current = null
-                }
+                setUserDebugInfoMap({
+                  order: tempUserId,
+                  roundIndex
+                })
               }
             }
-          } catch {}
+
+            if (!event.data.includes('chatcmpl')) {
+              messageRef.current += event.data
+
+              const startCount = (messageRef.current.match(/<think>/g) || []).length
+              const endCount = (messageRef.current.match(/<\/think>/g) || []).length
+
+              if (endCount > closedGroupCountRef.current) {
+                closedGroupCountRef.current = endCount
+              }
+
+              if (startCount > groupCountRef.current) {
+                updateAiMessage({ smLoading: false, isDone: true })
+
+                if (!isAborting.current) {
+                  let currentSubChatMode = undefined
+                  if (event.data.includes('sub_chat_mode')) {
+                    const subChatModeMatch = event.data.match(/sub_chat_mode:(\w+)/)
+                    if (subChatModeMatch) {
+                      currentSubChatMode = subChatModeMatch[1]
+                    }
+                  }
+
+                  setConvContent((state) => [
+                    ...state,
+                    {
+                      context: '',
+                      role: 'ai',
+                      useSimpleStyle: false,
+                      smLoading: true,
+                      isStreaming: true,
+                      isDone: false,
+                      sub_chat_mode: currentSubChatMode,
+                      order: tempUserId,
+                      roundIndex
+                    }
+                  ])
+                }
+                groupCountRef.current = startCount
+              } else if (event.data.includes('sub_chat_mode')) {
+                const subChatModeMatch = event.data.match(/sub_chat_mode:(\w+)/)
+                if (subChatModeMatch) {
+                  const extractedSubChatMode = subChatModeMatch[1]
+                  updateAiMessage({
+                    sub_chat_mode: extractedSubChatMode
+                  })
+                }
+              }
+
+              let displayMessage = ''
+              const lastOpen = messageRef.current.lastIndexOf('<think>')
+              if (lastOpen >= 0) {
+                displayMessage = messageRef.current.substring(lastOpen + 7)
+                const closeIdx = displayMessage.indexOf('</think>')
+                if (closeIdx >= 0) {
+                  displayMessage = displayMessage.substring(0, closeIdx)
+                }
+              }
+              displayMessage = displayMessage.replace(/round_index:\d+,?\s*/, '')
+              displayMessage = displayMessage.replace(/"illegal_query":\s*"([^"]+)"/, '$1')
+              setCurrentMessage(displayMessage.replace(/\\n/g, '\n'))
+            }
+
+            if (event.data === '[DONE]') {
+              const endTime = performance.now()
+              const thinkTimeMs = endTime - startTimeRef.current
+              const calculatedThinkTime = Math.round(thinkTimeMs / 1000)
+
+              const parts = messageRef.current.split('</think>')
+              if (parts.length > 1) {
+                updateAiMessage({
+                  smLoading: false,
+                  isDone: true,
+                  thinkTime: calculatedThinkTime,
+                  roundIndex
+                })
+              }
+
+              if (!roundIndex) {
+                try {
+                  const maxRoundRes: any = await fetchConvMaxRound({
+                    conv_uid: conv.conv_uid
+                  })
+                  roundIndex = Number(maxRoundRes?.data || 0)
+                  setLoadingRoundIndex(roundIndex)
+                  setUserDebugInfoMap({
+                    order: tempUserId,
+                    roundIndex
+                  })
+                } catch {}
+              }
+              setIsGettingData(false)
+
+              setLoading(false)
+              setIsGettingData(false)
+
+              const isExcelScenario = params?.context?.chat_mode === 'chat_excel'
+
+              if (isExcelScenario || !webSocketViewAdded.current) {
+                setConvContent((state: any) => [
+                  ...state,
+                  {
+                    context: 'describe',
+                    describe: true,
+                    role: 'view',
+                    arrowStatus: false,
+                    roundIndex
+                  }
+                ])
+              }
+
+              return
+            }
+
+            if (event.data.includes('illegal_query')) {
+              const data = event.data
+              const regex = /<think>"illegal_query":\s?"(.*?)"<\/think>/
+              const match: any = data.match(regex)
+
+              updateAiMessage({
+                context: match[1],
+                isStreaming: false,
+                smLoading: false,
+                isDone: true,
+                isIllegalQuery: true
+              })
+
+              setLoading(false)
+              setIsGettingData(false)
+              setSmLoading(false)
+              isRequesting.current = false
+              abortController.current = null
+              return
+            }
+
+            if (event.data.includes('intent_clarify')) {
+              const data = JSON.parse(event.data)
+              const assemble = {
+                data: data || {},
+                context: '您好，系统检测到您当前提出的问题意图尚不明确，需进一步澄清。'
+              }
+              updateAiMessage({
+                context: assemble.context,
+                questionData: assemble.data,
+                isStreaming: false,
+                smLoading: false,
+                isDone: true
+              })
+
+              setLoading(false)
+              setIsGettingData(false)
+              setSmLoading(false)
+              isRequesting.current = false
+              abortController.current = null
+              return
+            }
+          }
         },
-        onclose() {},
-        onerror(error) {
-          throw error
+        onclose() {
+          setLoading(false)
+          setIsGettingData(false)
+          setSmLoading(false)
+          isRequesting.current = false
+          abortController.current = null
+          isMessageAdded.current = false
+          hasTriggeredIsGetting.current = false
+          groupCountRef.current = 0
+          closedGroupCountRef.current = 0
+
+          setConvContent((prevState: any[]) => {
+            return prevState.map((item: any) => {
+              if (item.role === 'ai' && item.smLoading) {
+                return {
+                  ...item,
+                  smLoading: false,
+                  isStreaming: false,
+                  isDone: true
+                }
+              }
+              return item
+            })
+          })
+        },
+        onerror(err: any) {
+          retryCount++
+          if (retryCount > maxRetries) {
+            setLoading(false)
+            setIsGettingData(false)
+            setSmLoading(false)
+            isRequesting.current = false
+            abortController.current = null
+            isMessageAdded.current = false
+            hasTriggeredIsGetting.current = false
+
+            message.error('对话接口发生异常，请检查系统！')
+
+            setConvContent((prevState: any[]) => {
+              return prevState.map((item: any) => {
+                if (item.role === 'ai' && item.smLoading) {
+                  return {
+                    ...item,
+                    smLoading: false,
+                    isStreaming: false,
+                    isDone: true
+                  }
+                }
+                return item
+              })
+            })
+
+            throw new Error('已达到最大重试次数')
+          }
         }
       })
     } catch (error: any) {
-      if (error?.name === 'AbortError') return
-      message.error(error?.message || '获取失败')
-      setConvContent((state: any) => {
-        return state.map((item: any) => {
-          if (item.role === 'ai' && item.smLoading) {
-            return {
-              ...item,
-              smLoading: false,
-              isStreaming: false,
-              isDone: true
+      if (error?.name !== 'AbortError') {
+        setConvContent((prevState: any[]) => {
+          return prevState.map((item: any) => {
+            if (item.role === 'ai' && item.smLoading) {
+              return {
+                ...item,
+                smLoading: false,
+                isStreaming: false,
+                isDone: true
+              }
             }
-          }
-          return item
+            return item
+          })
         })
-      })
-    } finally {
+      }
       setLoading(false)
       setIsGettingData(false)
       setSmLoading(false)

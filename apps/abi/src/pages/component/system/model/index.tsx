@@ -1,35 +1,35 @@
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { message } from 'antd';
-import { Suspense } from 'react';
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
+import { message } from 'antd'
+import { Suspense } from 'react'
 
 // import { enableStatusRecord } from '@/constants/business';
 // import { ATG_MAP } from '@/constants/common';
-import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage';
-import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList } from '@/service/api';
+import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage'
+import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList } from '@/service/api'
 
-const ModalOperateDrawer = lazy(() => import('./modules/modal-operate-drawer'));
+const ModalOperateDrawer = lazy(() => import('./modules/modal-operate-drawer'))
 
 export function Component() {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
 
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState('')
 
   // const isMobile = useMobile();
 
   const handleSwitch = async (record: any) => {
-    const updateRes: any = await fetchEditModel({ ...record, status: record.status === '1' ? '0' : '1' });
-    if (updateRes?.response?.data?.code !== 200) return false;
-    message.success('操作成功');
-    run();
-  };
+    const updateRes: any = await fetchEditModel({ ...record, status: record.status === '1' ? '0' : '1' })
+    if (updateRes?.response?.data?.code !== 200) return false
+    message.success('操作成功')
+    run()
+  }
 
-  const handleDelete =async (id:number) => {
-    const res =  await deleteModel(id)
-    console.log(res,'res');
-    if(res.response.data.code===200) {
+  const handleDelete = async (id: number) => {
+    const res = await deleteModel(id)
+    console.log(res, 'res')
+    if (res.response.data.code === 200) {
       message.success(res.response.data.msg)
       return onDeleted()
-    }else {
+    } else {
       message.error(res.response.data.msg)
     }
   }
@@ -39,7 +39,7 @@ export function Component() {
     apiParams: {
       pageNum: 1,
       pageSize: 10,
-      modelName: searchValue
+      modelName: searchValue,
       // spaceId: 1 // 空间id
     },
     columns: () =>
@@ -48,54 +48,49 @@ export function Component() {
           align: 'left',
           dataIndex: 'providerName',
           key: 'providerName',
-          render: (providerName: string) => PROVIDER_OPTIONS.find(item => item.value === providerName)?.label || providerName,
-          title: '供应商'
+          render: (providerName: string) => PROVIDER_OPTIONS.find((item) => item.value === providerName)?.label || providerName,
+          title: '供应商',
         },
         {
           align: 'left',
           dataIndex: 'modelName',
           key: 'modelName',
-          title: '模型名称'
+          title: '模型名称',
         },
         {
           align: 'left',
           dataIndex: 'modelType',
           key: 'modelType',
-          render: (type: string) => MODAL_TYPE_OPTIONS.find(item => item.value === type)?.label,
-          title: '模型类型'
+          render: (type: string) => MODAL_TYPE_OPTIONS.find((item) => item.value === type)?.label,
+          title: '模型类型',
         },
         {
           align: 'center',
           dataIndex: 'status',
           key: 'status',
           render: (status: string, record: any) => {
-            return (
-              <ASwitch
-                checked={status === '1'}
-                onClick={() => handleSwitch(record)}
-              />
-            );
+            return <ASwitch checked={status === '1'} onClick={() => handleSwitch(record)} />
           },
-          title: '状态'
+          title: '状态',
         },
         {
           align: 'left',
           dataIndex: 'remark',
           key: 'remark',
-          title: '描述'
+          title: '描述',
         },
         {
           align: 'center',
           dataIndex: 'createBy',
           key: 'createBy',
-          title: '创建人'
+          title: '创建人',
         },
         {
           align: 'center',
           dataIndex: 'createTime',
           key: 'createTime',
           title: t('page.dataPreparation.dataSource.createTime'),
-          width: 160
+          width: 160,
         },
         {
           align: 'center',
@@ -103,45 +98,48 @@ export function Component() {
           key: 'operate',
           render: (_: unknown, record: any) => (
             <div className="flex-center gap-8px">
-              <AButton
-                color="primary"
-                icon={<EditOutlined />}
-                size="small"
-                variant="link"
-                onClick={() => {
-                  // const config = JSON.parse(record.configuration);
-                  // const formatRecord = { ...record, ...config };
-                  // edit(formatRecord);
-                  edit(record);
-                }}
-              />
-              <APopconfirm
-                title={t('common.confirmDelete')}
-                onConfirm={() => handleDelete(record.llmId)}
-              >
+              <ATooltip title={t('page.manage.common.edit')}>
+                <AButton
+                  color="primary"
+                  icon={<EditOutlined />}
+                  size="small"
+                  variant="link"
+                  onClick={() => {
+                    // const config = JSON.parse(record.configuration);
+                    // const formatRecord = { ...record, ...config };
+                    // edit(formatRecord);
+                    edit(record)
+                  }}
+                />
+              </ATooltip>
+              <APopconfirm title={t('common.confirmDelete')} onConfirm={() => handleDelete(record.llmId)}>
                 <ATooltip title={t('page.manage.common.delete')}>
-                  <AButton
-                    className="text-red"
-                    color="danger"
-                    disabled={_.type === 'special-user'}
-                    icon={<DeleteOutlined />}
-                    type="text"
-                  />
+                  <AButton className="text-red" color="danger" disabled={_.type === 'special-user'} icon={<DeleteOutlined />} type="text" />
                 </ATooltip>
               </APopconfirm>
             </div>
           ),
-          title: t('common.operate')
-        }
+          title: t('common.operate'),
+        },
       ] as any,
-    rowKey: 'llmId'
-  } as any);
+    rowKey: 'llmId',
+  } as any)
 
-  const { editingData, generalPopupOperation, handleAdd, handleEdit, onDeleted, rowSelection } = useTableOperate(
-    data as any,
-    run,
-    async (res: any, operateType) => {
-      const {
+  const { editingData, generalPopupOperation, handleAdd, handleEdit, onDeleted, rowSelection } = useTableOperate(data as any, run, async (res: any, operateType) => {
+    const { apiKey, baseUrl, context_length, max_token, maxRetries, modelUID, secretKey, temperature, timeOut, type, ...elseProps } = res as any
+    let modelConfigObject: any = {
+      apiKey,
+      baseUrl,
+      context_length,
+      modelUID,
+      secretKey,
+      // max_token,
+      // maxRetries,
+      // temperature,
+      // timeOut
+    }
+    if (res.modelType === 'llm') {
+      modelConfigObject = {
         apiKey,
         baseUrl,
         context_length,
@@ -152,51 +150,25 @@ export function Component() {
         temperature,
         timeOut,
         type,
-        ...elseProps
-      } = res as any;
-      let modelConfigObject: any = {
-        apiKey,
-        baseUrl,
-        context_length,
-        modelUID,
-        secretKey
-        // max_token,
-        // maxRetries,
-        // temperature,
-        // timeOut
-      };
-      if (res.modelType === 'llm') {
-        modelConfigObject = {
-          apiKey,
-          baseUrl,
-          context_length,
-          max_token,
-          maxRetries,
-          modelUID,
-          secretKey,
-          temperature,
-          timeOut,
-          type
-        };
-      }
-      const modelConfig = JSON.stringify(modelConfigObject);
-      const commonData = {
-        ...elseProps,
-        modelConfig
-      };
-
-      if (operateType === 'add') {
-        // add request 调用新增的接口
-        const addRes: any = await fetchAddModel(commonData);
-        if (addRes?.response?.data?.code !== 200) return false;
-      } else {
-        // edit request 调用编辑的接口
-        // const sourceId = (editingData as any)?.sourceId;
-        const updateRes: any = await fetchEditModel({ ...commonData, llmId: editingData?.llmId, status: '1' });
-        if (updateRes?.response?.data?.code !== 200) return false;
       }
     }
-  );
+    const modelConfig = JSON.stringify(modelConfigObject)
+    const commonData = {
+      ...elseProps,
+      modelConfig,
+    }
+
+    if (operateType === 'add') {
+      // add request 调用新增的接口
+      const addRes: any = await fetchAddModel(commonData)
+      if (addRes?.response?.data?.code !== 200) return false
+    } else {
+      // edit request 调用编辑的接口
+      // const sourceId = (editingData as any)?.sourceId;
+      const updateRes: any = await fetchEditModel({ ...commonData, llmId: editingData?.llmId, status: '1' })
+      if (updateRes?.response?.data?.code !== 200) return false
+    }
+  })
 
   // async function handleBatchDelete() {
   //   // request
@@ -206,40 +178,27 @@ export function Component() {
 
   function edit(row: any) {
     try {
-      const config = JSON.parse(row.modelConfig);
-      const formatRow = { ...row, ...config };
-      handleEdit(formatRow);
+      const config = JSON.parse(row.modelConfig)
+      const formatRow = { ...row, ...config }
+      handleEdit(formatRow)
     } catch (error) {
-      console.log(error);
+      console.log(error)
     }
   }
   const handleSearch = () => {
-    const keyword = searchValue.trim();
+    const keyword = searchValue.trim()
     updateSearchParams({
       pageNum: 1,
-      modelName: keyword ? keyword : undefined
-    } as any);
-  };
+      modelName: keyword ? keyword : undefined,
+    } as any)
+  }
 
   return (
-    <div
-      className="flex flex-col gap-4 p-6"
-      style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
-    >
+    <div className="flex flex-col gap-4 p-6" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <h1 className="text-base font-medium">大模型列表</h1>
       <div className="flex items-center gap-4">
-        <AInput
-          placeholder="请输入模型名称"
-          value={searchValue}
-          onChange={e => setSearchValue(e.target.value)}
-          onPressEnter={handleSearch}
-          style={{ width: '12.5rem' }}
-        />
-        <AButton
-          className="ml-auto"
-          type="primary"
-          onClick={() => handleAdd()}
-        >
+        <AInput placeholder="请输入模型名称" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onPressEnter={handleSearch} style={{ width: '12.5rem' }} />
+        <AButton className="ml-auto" type="primary" onClick={() => handleAdd()}>
           新增
         </AButton>
       </div>
@@ -250,7 +209,7 @@ export function Component() {
             borderRadius: '0.5rem',
             overflow: 'hidden',
             width: '100%',
-            maxHeight: '100%'
+            maxHeight: '100%',
           }}
         >
           <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
@@ -266,8 +225,7 @@ export function Component() {
         </div>
 
         <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
-          <APagination {...(tableProps as any).pagination} showSizeChanger style={{ padding: '0' }}
-          />
+          <APagination {...(tableProps as any).pagination} showSizeChanger style={{ padding: '0' }} />
         </div>
       </div>
 
@@ -275,5 +233,5 @@ export function Component() {
         <ModalOperateDrawer {...generalPopupOperation} />
       </Suspense>
     </div>
-  );
+  )
 }

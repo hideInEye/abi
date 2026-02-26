@@ -152,7 +152,7 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
         <Space className="" size={10}>
           <Tooltip title="历史记录">
             <span className="cursor-pointer" onClick={handleHistory}>
-              <SvgIcon localIcon="history" className="w-5 h-5" />
+              <SvgIcon localIcon="history" className="w-7 h-7" />
             </span>
           </Tooltip>
           {/* <Tooltip title="清空对话">
@@ -163,7 +163,7 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
 
           <Tooltip title={isStarred ? '取消收藏' : '收藏对话'}>
             <span className="cursor-pointer" onClick={handleStar}>
-              <SvgIcon localIcon={isStarred ? 'rstar' : 'star'} className="w-[1.6875rem] h-5" />
+              <SvgIcon localIcon={isStarred ? 'rstar' : 'star'} className={`w-7 h-7 ${isStarred?'text-[blue]':''}`} />
             </span>
           </Tooltip>
           {/* 隐藏另存对话按钮 */}
@@ -175,7 +175,7 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
           {/* 暂时隐藏分享按钮 */}
           <Tooltip title="分享对话">
             <span className="cursor-pointer" onClick={handleShare}>
-              <SvgIcon localIcon="share" className="w-[1.625rem] h-6" />
+              <SvgIcon localIcon="share" className="w-7 h-7" />
             </span>
           </Tooltip>
           {/* <span

@@ -150,7 +150,6 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
   const onClose = async (val?: any) => {
     if (val) {
       try {
-        setLoading(true)
         // console.log(val,'创建接口 - push')
         // console.log( JSON.parse(val.chat_config) ,'--------- config')
         if (isEdit) {
@@ -190,7 +189,6 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
         message.error('创建失败')
         return Promise.reject()
       } finally {
-        setLoading(false)
       }
     } else {
       setVisible(false)
