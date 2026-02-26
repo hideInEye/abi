@@ -9,15 +9,17 @@ import { useLogin } from '@/hooks/common/login'
 import { getCode } from '@/service/api/data-table-meaning'
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons'
 import { debounce } from 'lodash'
+import { localStg } from '@/utils/storage'
 type AccountKey = 'admin' | 'super' | 'user'
 interface Account {
   key: AccountKey
   label: string
   password: string
-  userName: string
+  username: string
+  remember: boolean
 }
 
-type LoginParams = Pick<Account, 'password' | 'userName'>
+type LoginParams = Pick<Account, 'password' | 'username' | 'remember'>
 const INPUT_WRAPPER_CLASSES = 'h-14 rounded-xl border shadow-sm transition hover:!border-[#3366FF] focus-within:!border-[#3366FF] focus-within:!shadow-[0_0_0_0.125rem_rgba(51,102,255,0.15)]'
 
 export function Component() {
@@ -32,6 +34,11 @@ export function Component() {
 
   const handleSubmit = debounce(async function handleSubmit() {
     const params = await form.validateFields()
+    if (params.remember) {
+      localStorage.setItem('loginInfo', JSON.stringify({ userName: params.username, passWord: params.password }))
+    }else {
+      localStorage.removeItem('loginInfo')
+    }
     toLogin(
       {
         ...params,
@@ -44,7 +51,17 @@ export function Component() {
   useKeyPress('enter', () => {
     handleSubmit()
   })
-
+  useEffect(()=>{
+    const loginInfo = localStorage.getItem('loginInfo')
+    if(loginInfo){
+      const data = JSON.parse(loginInfo)
+      form.setFieldsValue({
+        username:data.userName,
+        password: data.passWord,
+        remember: true
+      })
+    }
+  },[])
   return (
     <div className="relative min-h-screen w-full">
       <img src={loginBg} className="absolute inset-0 h-full w-full" />
@@ -52,15 +69,9 @@ export function Component() {
         <h1 className="w-[7.5rem] font-[PingFangSC,'PingFang SC',sans-serif] text-3xl font-medium leading-[2.625rem] text-[#333333]">欢迎登录</h1>
         <div className="mt-2 h-[0.3125rem] w-20 rounded-full bg-[#3366FF]" />
 
-        <Form form={form} layout="vertical" autoComplete="off" initialValues={{ remember: false }} requiredMark={false} onFinish={handleSubmit} className="mt-10 flex flex-1 flex-col">
+        <Form form={form} layout="vertical" autoComplete="off" requiredMark={false} onFinish={handleSubmit} className="mt-10 flex flex-1 flex-col">
           <Form.Item name="username" className="mb-6" rules={userNameRules}>
-            <Input
-              size="large"
-              allowClear
-              placeholder="账户名"
-              prefix={<img className="w-7 h-7" src={useNameIcon} />}
-              className={`${INPUT_WRAPPER_CLASSES} !px-4 !text-base !text-[#333333]`}
-            />
+            <Input size="large" allowClear placeholder="账户名" prefix={<img className="w-7 h-7" src={useNameIcon} />} className={`${INPUT_WRAPPER_CLASSES} !px-4 !text-base !text-[#333333]`} />
           </Form.Item>
 
           <Form.Item name="password" className="mb-4" rules={pwd}>

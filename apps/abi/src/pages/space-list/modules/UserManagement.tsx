@@ -111,7 +111,7 @@ export const UserManagement = () => {
             setDefaultPermissionKeys([]);
           }}
         >
-          新建用户
+          管理用户
         </AButton>
       </div>
       <ATable

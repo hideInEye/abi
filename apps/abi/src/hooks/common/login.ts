@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { router } from '@/router';
 import { store } from '@/store';
 import { getUerName, login, resetStore } from '@/store/slice/auth';
-import { getRouteHome, initAuthRoute, resetRouteStore, safeResetRouteStore } from '@/store/slice/route';
+import { getRouteHome, initAuthRoute, resetRouteStore } from '@/store/slice/route';
 
 import { useAppDispatch } from '../business/useStore';
 
@@ -17,7 +17,7 @@ export function useLogin() {
 
   const dispatch = useAppDispatch();
 
-  async function toLogin(params: { password: string; userName: string; code?: string; uuid?: string },captchaRef:any) {
+  async function toLogin(params: { password: string; username: string; code?: string; uuid?: string },captchaRef:any) {
     startLoading();
 
     // 在登录前彻底重置路由状态
