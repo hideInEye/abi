@@ -17,7 +17,7 @@ export const TagSearch: React.FC<SearchInputProps> = ({ onAdd, onSearch, groupId
   onSearch(value)
  }
   return (
-    <div className="mb2 flex">
+    <div className="mb4 flex">
       <div className="grid grid-cols-2 gap-2">
         <AInput
           placeholder="请输入标签语义检索"

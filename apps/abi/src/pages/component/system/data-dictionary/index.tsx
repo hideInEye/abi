@@ -41,7 +41,7 @@ export const Component: React.FC = () => {
 
           <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
             <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>字典</h1>
-            <ASpace className="mb-3 flex justify-between">
+            <ASpace className="mb-4 flex justify-between">
               <AInput
                 placeholder="请输入字典名称"
                 value={searchValue}

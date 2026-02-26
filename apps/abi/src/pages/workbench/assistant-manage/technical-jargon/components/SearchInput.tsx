@@ -9,7 +9,7 @@ interface SearchInputProps {
 
 export const TagSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearch, searchValue, groupId }) => {
   return (
-    <div className="mb2 flex">
+    <div className="mb4 flex">
       <AInput
         placeholder="请输入行业术语名检索"
         value={searchValue}

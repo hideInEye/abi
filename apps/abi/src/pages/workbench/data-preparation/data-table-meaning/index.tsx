@@ -54,9 +54,9 @@ export function Component() {
   }
 
   return (
-    <div className="flex gap-4 p-6 h-full">
+    <div className="flex gap-6 p-6 h-full">
       {/* 左侧分组树 */}
-      <div className="w-[280px] flex flex-col pr-4" style={{ borderRight: '0.0625rem solid #d9d9d9' }}>
+      <div className="w-[18.5417rem] flex flex-col pr-4" style={{ borderRight: '0.0625rem solid #d9d9d9' }}>
             <AInput
               placeholder="请输入表语义组检索"
               onChange={e => searchGroupSchema(e)}
