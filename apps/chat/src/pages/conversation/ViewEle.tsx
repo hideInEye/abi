@@ -903,6 +903,14 @@ const ViewEle: React.FC<PropsType> = ({
               value: yData[0][0]
             }];
           }
+          // 双数值字段的特殊处理：当 xData 为空 yFields 有多个数值字段时
+          if (pieData.length === 0 && yFields.length >= 2 && Array.isArray(yData) && yData.length >= 2) {
+            pieData = yData[0].map((_: any, index: number) => ({
+              name: String(yData[0][index]),
+              value: yData[1][index]
+            }));
+          }
+          const legendData = pieData.map((item: any) => String(item.name));
           
           const option: EChartsOption = {
             tooltip: {
@@ -910,12 +918,12 @@ const ViewEle: React.FC<PropsType> = ({
               formatter: '{b}: {c}'
             },
             legend: {
-              show: pieData.length > 1,  // 单数值时隐藏图例
+              show: true,
               type: 'scroll',
               top: '5%',
               itemWidth: 8,
               itemHeight: 8,
-              data: pieData.map((item: any) => item.name),
+              data: legendData,
               textStyle: {
                 color: chartStyle.textColor,
                 fontFamily: font,
@@ -963,6 +971,14 @@ const ViewEle: React.FC<PropsType> = ({
               value: yData[0][0]
             }];
           }
+          // 双数值字段的特殊处理：当 xData 为空 yFields 有多个数值字段时
+          if (donutData.length === 0 && yFields.length >= 2 && Array.isArray(yData) && yData.length >= 2) {
+            donutData = yData[0].map((_: any, index: number) => ({
+              name: String(yData[0][index]),
+              value: yData[1][index]
+            }));
+          }
+          const donutLegendData = donutData.map((item: any) => String(item.name));
           
           const option: EChartsOption = {
             tooltip: {
@@ -970,12 +986,12 @@ const ViewEle: React.FC<PropsType> = ({
               formatter: '{b}: {c}'
             },
             legend: {
-              show: donutData.length > 1,  // 单数值时隐藏图例
+              show: true,
               type: 'scroll',
               top: '5%',
               itemWidth: 8,
               itemHeight: 8,
-              data: donutData.map((item: any) => item.name),
+              data: donutLegendData,
               textStyle: {
                 color: chartStyle.textColor,
                 fontFamily: font,

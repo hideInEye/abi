@@ -194,6 +194,7 @@ const ChartHeader: React.FC<Props> = ({
         const newSql = res.data.unionSql
         handleSelectDataBySql(newSql)
       }
+      setOpen(false)
     } catch (error) {
       console.error('组装SQL失败:', error)
     }
@@ -254,14 +255,14 @@ const ChartHeader: React.FC<Props> = ({
             if (Array.isArray(value) && value.length === 2) {
               const [startDate, endDate] = value
               if (startDate && endDate) {
-                const formattedStart = fieldType === 'VARCHAR' ? `'${startDate}'` : startDate
-                const formattedEnd = fieldType === 'VARCHAR' ? `'${endDate}'` : endDate
+                const formattedStart = (fieldType === 'VARCHAR' || showType === 'date') ? `'${startDate}'` : startDate
+                const formattedEnd = (fieldType === 'VARCHAR' || showType === 'date') ? `'${endDate}'` : endDate
                 filteredData = `${tfieldName} >= ${formattedStart} and ${tfieldName} <= ${formattedEnd}`
               } else if (startDate) {
-                const formattedStart = fieldType === 'VARCHAR' ? `'${startDate}'` : startDate
+                const formattedStart = (fieldType === 'VARCHAR' || showType === 'date') ? `'${startDate}'` : startDate
                 filteredData = `${tfieldName} >= ${formattedStart}`
               } else if (endDate) {
-                const formattedEnd = fieldType === 'VARCHAR' ? `'${endDate}'` : endDate
+                const formattedEnd = (fieldType === 'VARCHAR' || showType === 'date') ? `'${endDate}'` : endDate
                 filteredData = `${tfieldName} <= ${formattedEnd}`
               }
             }
@@ -274,7 +275,16 @@ const ChartHeader: React.FC<Props> = ({
               const values = Array.isArray(value) ? value : [value]
               const formattedValues = values
                 .filter((v) => v !== null && v !== undefined)
-                .map((v) => (fieldType === 'VARCHAR' ? `'${v}'` : v))
+                .map((v) => {
+                  // 将时间格式中的T替换为空格
+                  const cleanValue = String(v).replace(/T/g, ' ');
+                  // 对于字符串类型的值（包括时间），都需要加引号
+                  const needQuotes = fieldType === 'VARCHAR' || 
+                                    fieldType?.includes('TIMESTAMP') || 
+                                    fieldType?.includes('DATE') ||
+                                    typeof v === 'string';
+                  return needQuotes ? `'${cleanValue}'` : cleanValue;
+                })
                 .join(',')
               filteredData = `${tfieldName} in (${formattedValues})`
             }
@@ -356,10 +366,13 @@ const ChartHeader: React.FC<Props> = ({
               const uniqueValues = [...new Set(fieldValues.filter((val) => val !== null && val !== undefined))]
 
               if (uniqueValues.length > 0) {
-                options = uniqueValues.map((item) => ({
-                  label: String(item),
+                options = uniqueValues.map((item) => {
+                // 格式化时间字符串，将T替换为空格
+                const label = String(item).replace(/T/g, ' ');
+                return {
+                  label,
                   value: item,
-                }))
+                }})
               }
             }
           } catch (error) {
@@ -520,7 +533,7 @@ const ChartHeader: React.FC<Props> = ({
             <span className="cursor-pointer hover:opacity-70 select-none text-[#666] flex hover:text-[#3470f6]">
               <Dropdown menu={{ items: exportMenuItems, onClick: handleDownloadClick }} placement="bottom" trigger={['click']}>
                 <Space>
-                  <SvgIcon className="text-16px" localIcon="download" />
+                  <SvgIcon className="text-14px" localIcon="download" />
                 </Space>
               </Dropdown>
             </span>
