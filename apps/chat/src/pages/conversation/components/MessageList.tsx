@@ -170,8 +170,10 @@ const MessageList = ({
 
   if (!virtualized) {
     return (
-      <div ref={containerRef} className={containerClassName ?? 'overflow-y-auto bg-white w-[53.75rem] m-auto flex-1 scroll-smooth h-[calc(100vh-15.625rem)]'}>
-        {data.map(renderItem)}
+      <div ref={containerRef} className={containerClassName ?? 'overflow-y-auto bg-white w-full flex-1 scroll-smooth h-[calc(100vh-15.625rem)]'}>
+        <div className="w-[53.75rem] m-auto">
+          {data.map(renderItem)}
+        </div>
       </div>
     )
   }
@@ -185,11 +187,13 @@ const MessageList = ({
   return (
     <div
       ref={containerRef}
-      className={containerClassName ?? 'overflow-y-auto bg-white p-4 w-[53.75rem] flex-1 scroll-smooth h-[calc(100vh-15.625rem)]'}
+      className={containerClassName ?? 'overflow-y-auto bg-white w-full flex-1 scroll-smooth h-[calc(100vh-15.625rem)]'}
       onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
     >
+     <div className="w-[53.75rem] m-auto p-4">
       <div style={{ height: totalHeight, position: 'relative' }}>
         <div style={{ transform: `translateY(${offsetTop}px)` }}>{visibleItems.map((item, index) => renderItem(item, startIndex + index))}</div>
+      </div>
       </div>
     </div>
   )
