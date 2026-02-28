@@ -85,6 +85,13 @@ const fixTableForSafari = (container: HTMLElement) => {
   });
 };
 
+// 修复表格滚动容器在截图时的重叠问题
+const fixTableScrollForScreenshot = (container: HTMLElement) => {
+  container.querySelectorAll('.ant-table-body, .ant-table-content').forEach((el) => {
+    const height = el.getBoundingClientRect().height;
+    (el as HTMLElement).style.cssText += `height:${height}px!important;max-height:${height}px!important;overflow:hidden!important`;
+  });
+};
 export const useScreenshot = () => {
   const ref = useRef(null);
 
@@ -113,6 +120,8 @@ export const useScreenshot = () => {
           // 修复表格渲染问题（特别是 Safari）
           fixTableForSafari(element);
           
+          // 修复表格滚动容器在截图时的重叠问题
+          fixTableScrollForScreenshot(element);
           // 调用用户自定义的 onclone（如果有）
           if ((options as any).onclone) {
             (options as any).onclone(clonedDoc, element);
