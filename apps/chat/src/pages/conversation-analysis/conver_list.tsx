@@ -184,7 +184,7 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
         >
           {appList.map((item: any) => (
             <li
-              className={` py-4 hover:bg-[#EEEDED] rounded  cursor-pointer leading-[1.0625rem] ${selectedChatId === item.chat_id ? 'bg-[#EEEDED]' : ''}`}
+              className={` py-4 hover:bg-[#EEEDED] rounded  cursor-pointer relative leading-[1.0625rem] ${selectedChatId === item.chat_id ? 'bg-[#EEEDED]' : ''}`}
               key={item.chat_id}
               onClick={() => {
                 handleSetCurApp(item)
