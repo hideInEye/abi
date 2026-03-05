@@ -18,7 +18,7 @@ export function Component() {
       entry: import.meta.env.VITE_MICRO_LIGHT_CHASER_ENTRY,
       name: 'light-chaser',
       props: {},
-    });
+    }); 
 
     // eslint-disable-next-line consistent-return
     return () => {
