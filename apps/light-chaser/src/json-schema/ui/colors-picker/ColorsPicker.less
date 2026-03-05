@@ -1,0 +1,77 @@
+/*
+ * Copyright © 2023-2025 puyinzhen
+ * All rights reserved.
+ *
+ * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
+ *
+ * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ *
+ * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
+ */
+
+.colors-picker {
+  flex-wrap: wrap;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+
+  .colors-item {
+    position: relative;
+    margin-right: 3px;
+
+    span {
+      position: absolute;
+      top: 0;
+      left: 18px;
+      width: 10px;
+      height: 10px;
+      border-radius: 5px;
+      text-align: center;
+      background-color: #525252;
+
+      label {
+        cursor: pointer;
+        color: #d6d6d6;
+        position: relative;
+        top: -3.3px;
+      }
+    }
+  }
+
+  .colors-pick-add-btn {
+    border: 1px solid #007984;
+    width: 21px;
+    height: 21px;
+    border-radius: 15px;
+    font-size: 20px;
+    display: flex;
+
+    .add-icon {
+      color: #007984;
+      width: 21px;
+      height: 21px;
+      text-align: center;
+      line-height: 21px;
+      position: relative;
+      top: -4px;
+    }
+  }
+
+  .colors-pick-add-btn:hover {
+    cursor: pointer;
+    border-color: #00cde3;
+
+    .add-icon {
+      color: #00cde3;
+    }
+  }
+
+  .colors-pick-add-btn:active {
+    cursor: pointer;
+    border-color: #bef3ff;
+
+    .add-icon {
+      color: #bef3ff;
+    }
+  }
+}
