@@ -218,6 +218,7 @@ const routeMap: RouteMap = {
   "guide": "/guide",
   "home": "/home",
   "iframe-page": "/iframe-page/:url",
+  "light-chaser": "/light-chaser",
   "login": "/login",
   "login_code-login": "code-login",
   "login_pwd-login": "pwd-login",

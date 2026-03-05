@@ -154,6 +154,15 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'light-chaser',
+    path: '/light-chaser',
+    component: 'layout.base$view.light-chaser',
+    meta: {
+      i18nKey: 'route.light-chaser',
+      title: 'light-chaser'
+    }
+  },
+  {
     name: 'login',
     path: '/login',
     component: 'layout.blank',

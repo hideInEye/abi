@@ -37,6 +37,7 @@ declare module "@elegant-router/types" {
     "guide": "/guide";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
+    "light-chaser": "/light-chaser";
     "login": "/login";
     "login_code-login": "code-login";
     "login_pwd-login": "pwd-login";
@@ -128,6 +129,7 @@ declare module "@elegant-router/types" {
     | "guide"
     | "home"
     | "iframe-page"
+    | "light-chaser"
     | "login"
     | "manage"
     | "my-collect"
@@ -164,6 +166,7 @@ declare module "@elegant-router/types" {
     | "component_system_plugin"
     | "guide"
     | "home"
+    | "light-chaser"
     | "login_code-login"
     | "login"
     | "login_pwd-login"

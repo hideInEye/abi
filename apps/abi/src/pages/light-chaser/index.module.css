@@ -1,0 +1,6 @@
+.light-chaser {
+  height: 100%;
+  & > div {
+    height: 100%;
+  }
+}
