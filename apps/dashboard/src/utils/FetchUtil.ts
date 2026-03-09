@@ -15,6 +15,19 @@ export interface HttpResponse {
     data: any;
 }
 
+let _apiTarget = '';
+export async function loadAppConfig(): Promise<void> {
+    try {
+        const res = await fetch('/config.json');
+        const cfg = await res.json();
+        if (cfg.VITE_API_TARGET) {
+            _apiTarget = cfg.VITE_API_TARGET.replace(/\/$/, '');
+        }
+    } catch {
+        // config.json 不存在时静默降级，使用相对路径
+    }
+}
+
 export default class FetchUtil {
     /**
      * GET请求
@@ -75,9 +88,10 @@ export default class FetchUtil {
      * @private
      */
     private static async request(url: string, options: RequestInit = {}): Promise<HttpResponse> {
+        const fullUrl = url.startsWith('http') ? url : `${_apiTarget}${url}`;
         let response: Response | null = null;
         try {
-            response = await fetch(url, options);
+            response = await fetch(fullUrl, options);
             if (!response.ok) {
                 console.error('请求错误:', response?.status, response?.statusText);
                 return {code: response?.status ?? 500, msg: response?.statusText ?? '', data: null};
@@ -108,9 +122,10 @@ export default class FetchUtil {
      * @private
      */
     private static async requestNativeResult(url: string, options: RequestInit = {}): Promise<any> {
+        const fullUrl = url.startsWith('http') ? url : `${_apiTarget}${url}`;
         let response: Response | null = null;
         try {
-            response = await fetch(url, options);
+            response = await fetch(fullUrl, options);
             if (response.ok) {
                 const contentType = response.headers.get('content-type');
                 if (contentType && contentType.includes('application/json')) {
