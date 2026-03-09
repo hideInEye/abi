@@ -12,14 +12,16 @@
 import {createRoot} from "react-dom/client";
 import './index.less';
 import {lazy, Suspense} from "react";
-import Loading from "./json-schema/ui/loading/Loading.tsx";
+// import Loading from "./json-schema/ui/loading/Loading.tsx";
+import {loadAppConfig} from "./utils/FetchUtil.ts";
 import {renderWithQiankun, qiankunWindow} from 'vite-plugin-qiankun/dist/helper';
 
 const MainRouter = lazy(() => import('./router/MainRouter.tsx'))
 
 let root: ReturnType<typeof createRoot> | null = null;
 
-function render(props: any) {
+async function render(props: any) {
+    await loadAppConfig();
     const {container} = props ?? {};
     const containerEl = container
         ? container.querySelector('#root')
@@ -31,7 +33,7 @@ function render(props: any) {
     }
 
     root.render(
-        <Suspense fallback={<Loading/>}>
+        <Suspense fallback={null}>
             <MainRouter/>
         </Suspense>
     );

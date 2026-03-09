@@ -19,7 +19,7 @@ import {globalMessage} from "../../../framework/message/GlobalMessage";
 import DelProjectDialog from "./DelProjectDialog.tsx";
 import CloneProjectDialog from "./CloneProjectDialog.tsx";
 import ProjectItem from "./ProjectItem.tsx";
-import {Add} from "@icon-park/react";
+// import {Add} from "@icon-park/react";
 import baseApi from "../../../api/BaseApi.ts";
 
 const {Search} = Input;
