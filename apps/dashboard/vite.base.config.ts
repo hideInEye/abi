@@ -21,10 +21,11 @@ export default defineConfig({
         alias: {
             '@': path.resolve(__dirname, './src'),
         },
+        dedupe: ['react', 'react-dom'],
     },
     plugins: [
         react(),
-        qiankun('light-chaser', {useDevMode}),
+        qiankun('abi-dashboard', {useDevMode}),
     ],
     server: {
         headers: {

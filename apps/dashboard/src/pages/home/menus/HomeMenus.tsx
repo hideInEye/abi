@@ -12,7 +12,7 @@
 import './HomeMenus.less'
 import {useLocation, useNavigate} from "react-router-dom";
 import {memo} from "react";
-import {Data, NetworkDrive, System} from "@icon-park/react";
+import {NetworkDrive} from "@icon-park/react";
 import {Menu} from "antd";
 import {MenuItemType} from "antd/es/menu/interface";
 
@@ -23,16 +23,6 @@ const getMenus = () => {
             key: 'projects',
             icon: <NetworkDrive size={16}/>,
             label: '项目列表'
-        },
-        {
-            key: 'datasource',
-            icon: <Data size={16}/>,
-            label: '数据库管理'
-        },
-        {
-            key: 'more',
-            icon: <System size={16}/>,
-            label: '更多'
         },
     ]
     return baseMenus;

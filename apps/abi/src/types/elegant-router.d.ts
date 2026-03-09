@@ -37,7 +37,6 @@ declare module "@elegant-router/types" {
     "guide": "/guide";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
-    "light-chaser": "/light-chaser";
     "login": "/login";
     "login_code-login": "code-login";
     "login_pwd-login": "pwd-login";
@@ -64,6 +63,8 @@ declare module "@elegant-router/types" {
     "space_user": "user";
     "space-list": "/space-list";
     "workbench": "/workbench";
+    "workbench_screen-manage": "screen-manage";
+    "workbench_screen-manage_abi-dashboard": "abi-dashboard";
     "workbench_assistant-manage": "assistant-manage";
     "workbench_assistant-manage_assistant-config": "assistant-config";
     "workbench_assistant-manage_label-meaning": "label-meaning";
@@ -129,7 +130,6 @@ declare module "@elegant-router/types" {
     | "guide"
     | "home"
     | "iframe-page"
-    | "light-chaser"
     | "login"
     | "manage"
     | "my-collect"
@@ -166,7 +166,6 @@ declare module "@elegant-router/types" {
     | "component_system_plugin"
     | "guide"
     | "home"
-    | "light-chaser"
     | "login_code-login"
     | "login"
     | "login_pwd-login"
@@ -188,6 +187,7 @@ declare module "@elegant-router/types" {
     | "share-manage_my-share"
     | "space-list"
     | "space_user"
+    | "workbench_screen-manage_abi-dashboard"
     | "workbench_assistant-manage_assistant-config"
     | "workbench_assistant-manage_label-meaning"
     | "workbench_assistant-manage_memory-manage"

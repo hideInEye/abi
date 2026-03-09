@@ -10,8 +10,9 @@
  */
 
 import {lazy, memo} from 'react';
-import {createBrowserRouter, Navigate, RouterProvider} from "react-router-dom";
+import {createBrowserRouter, createMemoryRouter, Navigate, RouterProvider} from "react-router-dom";
 import {ConfigProvider, MappingAlgorithm, theme} from "antd";
+import {qiankunWindow} from 'vite-plugin-qiankun/dist/helper';
 
 const DesignerViewPage = lazy(() => import('../pages/view/DesignerViewPage.tsx'));
 const DesignerPage = lazy(() => import('../pages/designer/DesignerPage.tsx'));
@@ -21,7 +22,6 @@ const Home = lazy(() => import('../pages/home/Home'));
 const ServerProjectList = lazy(() => import('../pages/home/server-list/ServerProjectList.tsx'));
 const DataSourceList = lazy(() => import('../pages/home/datasource/DataSourceList.tsx'));
 const TemplateMarket = lazy(() => import('../pages/home/template-market/TemplateMarket.tsx'));
-const MoreInfo = lazy(() => import('../pages/home/more-info/MoreInfo.tsx'));
 const Demo = lazy(() => import('../test/Demo'));
 const NotFound = lazy(() => import('../pages/result/NotFound.tsx'));
 const NoAuth = lazy(() => import('../pages/result/NoAuth.tsx'));
@@ -420,7 +420,7 @@ const antdComponentTheme = {
     },
 };
 
-const router = createBrowserRouter([
+const routes = [
     {
         path: '/view',
         element: <DesignerViewPage/>
@@ -432,6 +432,10 @@ const router = createBrowserRouter([
     {
         path: '/designer',
         element: <DesignerPage/>
+    },
+    {
+        path: '/projects',
+        element: <ServerProjectList/>,
     },
     {
         path: '/home',
@@ -449,15 +453,11 @@ const router = createBrowserRouter([
                 path: 'template',
                 element: <TemplateMarket/>,
             },
-            {
-                path: 'more',
-                element: <MoreInfo/>
-            }
         ]
     },
     {
         path: '/',
-        element: <Navigate to="/home/projects" replace/>
+        element: <Navigate to="/projects" replace/>
     },
     {
         path: '/notFound',
@@ -475,7 +475,13 @@ const router = createBrowserRouter([
         path: '*',
         element: <NotFound/>
     }
-])
+]
+
+const isPoweredByQiankun = (qiankunWindow as any).__POWERED_BY_QIANKUN__
+
+const router = isPoweredByQiankun
+    ? createMemoryRouter(routes, {initialEntries: ['/projects']})
+    : createBrowserRouter(routes)
 
 const MainRouter = memo(() => {
     return (

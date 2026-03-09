@@ -3,22 +3,22 @@ import styles from './index.module.css';
 
 /**
  * 数据大屏页面组件
- * 使用 qiankun 微前端架构，动态加载 light-chaser 子应用
+ * 使用 qiankun 微前端架构，动态加载 abi-dashboard 子应用
  */
 export function Component() {
   useEffect(() => {
-    const container = document.getElementById('light-chaser');
+    const container = document.getElementById('abi-dashboard');
     if (!container) {
-      console.error('Container #light-chaser not found');
+      console.error('Container #abi-dashboard not found');
       return;
     }
 
     const microApp = loadMicroApp({
-      container: '#light-chaser',
+      container: '#abi-dashboard',
       entry: import.meta.env.VITE_MICRO_LIGHT_CHASER_ENTRY,
-      name: 'light-chaser',
+      name: 'abi-dashboard',
       props: {},
-    });  
+    });
 
     // eslint-disable-next-line consistent-return
     return () => {
@@ -28,8 +28,8 @@ export function Component() {
 
   return (
     <div
-      className={styles['light-chaser']}
-      id="light-chaser"
+      className={styles['abi-dashboard']}
+      id="abi-dashboard"
     >
       数据大屏
     </div>

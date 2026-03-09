@@ -1,10 +1,10 @@
 {
-  "name": "light-chaser",
+  "name": "abi-dashboard",
   "private": true,
   "version": "1.7.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "cross-env NODE_ENV=development vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "check": "npx tsc --noEmit --watch",
@@ -40,7 +40,8 @@
     "react-timer-hook": "^3.0.7"
   },
   "devDependencies": {
-    "vite-plugin-qiankun": "^1.0.16",
+    "cross-env": "^7.0.3",
+    "vite-plugin-qiankun": "^1.0.15",
     "@amap/amap-jsapi-loader": "^1.0.1",
     "@amap/amap-jsapi-types": "^0.0.15",
     "@types/crypto-js": "^4.2.2",

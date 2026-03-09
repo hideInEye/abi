@@ -15,7 +15,7 @@
 ##使用nginx镜像作为基础镜像
 #FROM nginx:alpine as runner
 ##设置工作目录
-#WORKDIR /usr/app/light-chaser
+#WORKDIR /usr/app/abi-dashboard
 ##覆盖默认配置文件
 #COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 ## 将构建阶段的 dist 目录复制到 Nginx 的 web 根目录
@@ -29,7 +29,7 @@
 #使用nginx镜像作为基础镜像
 FROM nginx:alpine
 #设置工作目录
-WORKDIR /usr/app/light-chaser
+WORKDIR /usr/app/abi-dashboard
 #将dist文件夹中的文件复制到工作目录
 COPY ./dist .
 #将nginx配置文件复制到/etc/nginx/conf.d/目录

@@ -154,15 +154,6 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
-    name: 'light-chaser',
-    path: '/light-chaser',
-    component: 'layout.base$view.light-chaser',
-    meta: {
-      i18nKey: 'route.light-chaser',
-      title: 'light-chaser'
-    }
-  },
-  {
     name: 'login',
     path: '/login',
     component: 'layout.blank',
@@ -447,6 +438,26 @@ export const generatedRoutes: GeneratedRoute[] = [
       title: 'workbench'
     },
     children: [
+      {
+        name: 'workbench_screen-manage',
+        path: 'screen-manage',
+        meta: {
+          i18nKey: 'route.screen-manage',
+          order: 5,
+          title: 'screen-manage'
+        },
+        children: [
+          {
+            name: 'workbench_screen-manage_abi-dashboard',
+            path: 'abi-dashboard',
+            component: 'view.workbench_screen-manage_abi-dashboard',
+            meta: {
+              i18nKey: 'route.screen-manage_abi-dashboard',
+              title: 'screen-manage_abi-dashboard'
+            }
+          }
+        ]
+      },
       {
         name: 'workbench_assistant-manage',
         path: 'assistant-manage',
