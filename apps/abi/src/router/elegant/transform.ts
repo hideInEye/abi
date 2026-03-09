@@ -244,6 +244,8 @@ const routeMap: RouteMap = {
   "space_user": "user",
   "space-list": "/space-list",
   "workbench": "/workbench",
+  "workbench_screen-manage": "screen-manage",
+  "workbench_screen-manage_abi-dashboard": "abi-dashboard",
   "workbench_assistant-manage": "assistant-manage",
   "workbench_assistant-manage_assistant-config": "assistant-config",
   "workbench_assistant-manage_label-meaning": "label-meaning",
