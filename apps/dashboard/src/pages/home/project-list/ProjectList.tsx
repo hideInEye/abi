@@ -149,17 +149,14 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     return (
         <div className={'project-list-container'}>
+            <h1 className={'project-list-title'}>项目列表</h1>
             <div className={'project-list-header'}>
-                <div className={'project-list-header-left'}>
-                    <Search placeholder="搜索项目" size={"small"}
-                            className={'project-list-search'}
-                            onKeyDown={onKeyDown}
-                            onSearch={doSearch}
-                            style={{width: 350}}/>
-                    <Button size={'small'} type={"primary"} onClick={toggleNewProVisible}>
-                        <Add style={{position: 'relative', top: 2, marginRight: 3}}/>新增</Button>
-                </div>
-                <div className={'project-list-header-right'}></div>
+                <Search placeholder="搜索项目"
+                        className={'project-list-search'}
+                        onKeyDown={onKeyDown}
+                        onSearch={doSearch}
+                        style={{width: '12.5rem'}}/>
+                <Button type={"primary"} onClick={toggleNewProVisible} style={{marginLeft: 'auto'}}>新增</Button>
             </div>
             <div className={'project-list'}>
                 {pageData && pageData.records.map((item: IProjectInfo) => {

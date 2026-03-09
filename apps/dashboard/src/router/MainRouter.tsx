@@ -486,8 +486,7 @@ const router = isPoweredByQiankun
 const MainRouter = memo(() => {
     return (
         <ConfigProvider theme={{
-            algorithm: studioDarkAlgorithm,
-            components: antdComponentTheme
+            algorithm: theme.defaultAlgorithm,
         }}>
             <RouterProvider router={router}/>
             <GlobalMessage/>

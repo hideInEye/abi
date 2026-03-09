@@ -10,20 +10,20 @@
  */
 
 .project-list-item {
-  background-color: #2C2C3E;
-  border: 1px solid #3A3A4E;
+  background-color: #ffffff;
+  border: 1px solid #e8e8e8;
   border-radius: 8px;
-  color: #FFFFFF;
+  color: #333333;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    border-color: #4FB8FF;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    border-color: #4096ff;
   }
 
   .project-item-cover {
@@ -42,12 +42,12 @@
       align-items: center;
       justify-content: center;
       gap: 16px;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.4);
       opacity: 0;
       transition: opacity 0.2s ease;
 
       .operate-icon {
-        color: #A0A0B2;
+        color: #ffffff;
         font-size: 18px;
         padding: 8px;
         border-radius: 4px;
@@ -55,8 +55,8 @@
         cursor: pointer;
 
         &:hover {
-          color: #4FB8FF;
-          background-color: rgba(79, 184, 255, 0.1);
+          color: #4096ff;
+          background-color: rgba(64, 150, 255, 0.15);
         }
       }
     }
@@ -78,18 +78,18 @@
       font-size: 14px;
       line-height: 20px;
       font-weight: 500;
-      color: #acacac;
+      color: #555555;
 
       .project-rename-input {
         .ant-input {
-          background-color: #2C2C3E;
-          border-color: #3A3A4E;
-          color: #FFFFFF;
+          background-color: #ffffff;
+          border-color: #d9d9d9;
+          color: #333333;
           border-radius: 4px;
 
           &:hover, &:focus {
-            border-color: #4FB8FF;
-            box-shadow: 0 0 0 2px rgba(79, 184, 255, 0.2);
+            border-color: #4096ff;
+            box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.2);
           }
         }
       }
@@ -103,7 +103,7 @@
     }
 
     .rename-icon {
-      color: #A0A0B2;
+      color: #999999;
       font-size: 14px;
       margin-left: 8px;
       opacity: 0;
@@ -111,7 +111,7 @@
       cursor: pointer;
 
       &:hover {
-        color: #4FB8FF;
+        color: #4096ff;
       }
     }
   }
