@@ -244,8 +244,6 @@ const routeMap: RouteMap = {
   "space_user": "user",
   "space-list": "/space-list",
   "workbench": "/workbench",
-  "workbench_screen-manage": "screen-manage",
-  "workbench_screen-manage_abi-dashboard": "abi-dashboard",
   "workbench_assistant-manage": "assistant-manage",
   "workbench_assistant-manage_assistant-config": "assistant-config",
   "workbench_assistant-manage_label-meaning": "label-meaning",
@@ -266,7 +264,9 @@ const routeMap: RouteMap = {
   "workbench_job_time": "time",
   "workbench_job_time_modules": "modules",
   "workbench_job_time_modules_editor-quill": "editor-quill",
-  "workbench_job_time_modules_share-email-setting": "share-email-setting"
+  "workbench_job_time_modules_share-email-setting": "share-email-setting",
+  "workbench_screen-manage": "screen-manage",
+  "workbench_screen-manage_abi-dashboard": "abi-dashboard"
 };
 
 /**

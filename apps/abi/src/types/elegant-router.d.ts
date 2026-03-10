@@ -63,8 +63,6 @@ declare module "@elegant-router/types" {
     "space_user": "user";
     "space-list": "/space-list";
     "workbench": "/workbench";
-    "workbench_screen-manage": "screen-manage";
-    "workbench_screen-manage_abi-dashboard": "abi-dashboard";
     "workbench_assistant-manage": "assistant-manage";
     "workbench_assistant-manage_assistant-config": "assistant-config";
     "workbench_assistant-manage_label-meaning": "label-meaning";
@@ -86,6 +84,8 @@ declare module "@elegant-router/types" {
     "workbench_job_time_modules": "modules";
     "workbench_job_time_modules_editor-quill": "editor-quill";
     "workbench_job_time_modules_share-email-setting": "share-email-setting";
+    "workbench_screen-manage": "screen-manage";
+    "workbench_screen-manage_abi-dashboard": "abi-dashboard";
   };
 
   /**
@@ -187,7 +187,6 @@ declare module "@elegant-router/types" {
     | "share-manage_my-share"
     | "space-list"
     | "space_user"
-    | "workbench_screen-manage_abi-dashboard"
     | "workbench_assistant-manage_assistant-config"
     | "workbench_assistant-manage_label-meaning"
     | "workbench_assistant-manage_memory-manage"
@@ -205,6 +204,7 @@ declare module "@elegant-router/types" {
     | "workbench_job_time"
     | "workbench_job_time_modules_editor-quill"
     | "workbench_job_time_modules_share-email-setting"
+    | "workbench_screen-manage_abi-dashboard"
   >;
 
   /**

@@ -48,7 +48,6 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   "share-manage_my-share": () => import("@/pages/share-manage/my-share/index.tsx"),
   "space-list": () => import("@/pages/space-list/index.tsx"),
   space_user: () => import("@/pages/space/user/index.tsx"),
-  "workbench_screen-manage_abi-dashboard": () => import("@/pages/workbench/abi-dashboard/index.tsx"),
   "workbench_assistant-manage_assistant-config": () => import("@/pages/workbench/assistant-manage/assistant-config/index.tsx"),
   "workbench_assistant-manage_label-meaning": () => import("@/pages/workbench/assistant-manage/label-meaning/index.tsx"),
   "workbench_assistant-manage_memory-manage": () => import("@/pages/workbench/assistant-manage/memory-manage/index.tsx"),
@@ -66,4 +65,5 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   workbench_job_time: () => import("@/pages/workbench/job/time/index.tsx"),
   "workbench_job_time_modules_editor-quill": () => import("@/pages/workbench/job/time/modules/editor-quill/index.tsx"),
   "workbench_job_time_modules_share-email-setting": () => import("@/pages/workbench/job/time/modules/share-email-setting/index.tsx"),
+  "workbench_screen-manage_abi-dashboard": () => import("@/pages/workbench/screen-manage/abi-dashboard/index.tsx"),
 };
