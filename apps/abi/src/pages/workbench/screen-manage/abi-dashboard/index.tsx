@@ -15,7 +15,7 @@ export function Component() {
 
     const microApp = loadMicroApp({
       container: '#abi-dashboard',
-      entry: import.meta.env.VITE_MICRO_LIGHT_CHASER_ENTRY,
+      entry: import.meta.env.VITE_MICRO_ABI_DASHBOARD_ENTRY,
       name: 'abi-dashboard',
       props: {},
     });
