@@ -439,26 +439,6 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
-        name: 'workbench_screen-manage',
-        path: 'screen-manage',
-        meta: {
-          i18nKey: 'route.screen-manage',
-          order: 5,
-          title: 'screen-manage'
-        },
-        children: [
-          {
-            name: 'workbench_screen-manage_abi-dashboard',
-            path: 'abi-dashboard',
-            component: 'view.workbench_screen-manage_abi-dashboard',
-            meta: {
-              i18nKey: 'route.screen-manage_abi-dashboard',
-              title: 'screen-manage_abi-dashboard'
-            }
-          }
-        ]
-      },
-      {
         name: 'workbench_assistant-manage',
         path: 'assistant-manage',
         meta: {
@@ -674,6 +654,25 @@ export const generatedRoutes: GeneratedRoute[] = [
                 ]
               }
             ]
+          }
+        ]
+      },
+      {
+        name: 'workbench_screen-manage',
+        path: 'screen-manage',
+        meta: {
+          i18nKey: 'route.workbench_screen-manage',
+          title: 'workbench_screen-manage'
+        },
+        children: [
+          {
+            name: 'workbench_screen-manage_abi-dashboard',
+            path: 'abi-dashboard',
+            component: 'view.workbench_screen-manage_abi-dashboard',
+            meta: {
+              i18nKey: 'route.workbench_screen-manage_abi-dashboard',
+              title: 'workbench_screen-manage_abi-dashboard'
+            }
           }
         ]
       }
