@@ -11,6 +11,7 @@ type MessageListProps = {
   mode?: 'default' | 'share'
   conv: any
   convContent: any[]
+  convContent2d?: any[][]
   sharingList?: any[]
   loading?: boolean
   isSharing?: boolean
@@ -38,6 +39,7 @@ const MessageList = ({
   mode = 'default',
   conv,
   convContent,
+  convContent2d = [],
   sharingList = [],
   loading = false,
   isSharing = false,
@@ -64,13 +66,18 @@ const MessageList = ({
   const [scrollTop, setScrollTop] = useState(0)
   const [containerHeight, setContainerHeight] = useState(0)
 
-  const data = useMemo(() => {
+  const groupedData = useMemo(() => {
+    const baseGroups = convContent2d.length ? convContent2d : convContent.map((item: any) => [item])
     if (mode === 'share') {
       const selectedOrders = new Set(sharingList.map((item: any) => item.order))
-      return convContent.filter((item: any) => selectedOrders.has(item.order))
+      return baseGroups
+        .map((group: any[]) => group.filter((item: any) => selectedOrders.has(item.order)))
+        .filter((group: any[]) => group.length > 0)
     }
-    return convContent
-  }, [mode, convContent, sharingList])
+    return baseGroups
+  }, [mode, convContent, convContent2d, sharingList])
+
+  const flatData = useMemo(() => groupedData.flat(), [groupedData])
 
   useLayoutEffect(() => {
     if (!virtualized) return
@@ -83,13 +90,13 @@ const MessageList = ({
     return () => observer.disconnect()
   }, [virtualized, containerRef])
 
-  const renderItem = (item: any, index: number) => {
+  const renderItem = (item: any, key: string | number) => {
     if (item.role === 'human') {
       const anchorId = `human-msg-${item.order}`
       const content = <HumanEle data={item} id={anchorId} />
-      if (mode === 'share') return <HumanEle key={index} data={item} id={anchorId} />
+      if (mode === 'share') return <HumanEle key={key} data={item} id={anchorId} />
       return (
-        <CheckboxWrapCom key={index} convContent={convContent} checkAll={checkAll} setSharingList={setSharingList!} isSharing={isSharing} data={item}>
+        <CheckboxWrapCom key={key} convContent={convContent} checkAll={checkAll} setSharingList={setSharingList!} isSharing={isSharing} data={item}>
           {content}
         </CheckboxWrapCom>
       )
@@ -99,7 +106,7 @@ const MessageList = ({
       if (mode === 'share') {
         return (
           <AiEle
-            key={index}
+            key={key}
             isSharing
             loading={loading}
             data={item}
@@ -114,7 +121,7 @@ const MessageList = ({
 
       return (
         <AiEle
-          key={index}
+          key={key}
           loading={loading}
           isStorage={isStorage}
           data={item}
@@ -138,7 +145,7 @@ const MessageList = ({
         <ViewEle
           isReadyShare={mode === 'share' ? false : undefined}
           isSharing={isSharing}
-          key={index}
+          key={key}
           data={item}
           getAnswer={getAnswer}
           getRecommend={getRecommend}
@@ -158,31 +165,52 @@ const MessageList = ({
     }
 
     if (item.role === 'first') {
-      return <OpeningsEle key={index} data={item} getAnswer={getAnswer} />
+      return <OpeningsEle key={key} data={item} getAnswer={getAnswer} />
     }
 
     return null
   }
 
+  const renderGroup = (group: any[], index: number) => {
+    const groupKey = group[0]?.order ?? group[0]?.id ?? index
+    if (group.length === 1 && group[0]?.role === 'first') {
+      return renderItem(group[0], `opening-${groupKey}`)
+    }
+
+    const humanItems = group.filter((item: any) => item.role === 'human')
+    const groupedBodyItems = group.filter((item: any) => item.role !== 'human' && item.role !== 'first')
+
+    return (
+      <div key={`group-${groupKey}-${index}`} className="mb-5">
+        {humanItems.map((item: any, itemIndex: number) => renderItem(item, `human-${groupKey}-${itemIndex}`))}
+        {groupedBodyItems.length > 0 ? (
+          <div className="rounded-[0.875rem] border border-[#ececec] bg-[#f8f8f8] px-2 py-2 shadow-[0_0.0625rem_0.125rem_rgba(15,23,42,0.03)]">
+            {groupedBodyItems.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`))}
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
   if (mode === 'share') {
-    return <>{data.map(renderItem)}</>
+    return <>{groupedData.map(renderGroup)}</>
   }
 
   if (!virtualized) {
     return (
-      <div ref={containerRef} className={containerClassName ?? 'overflow-y-auto bg-white w-full flex-1 scroll-smooth'}>
+      <div ref={containerRef} className={containerClassName ?? 'overflow-y-auto w-full flex-1 scroll-smooth'}>
         <div className="w-[53.75rem] m-auto">
-          {data.map(renderItem)}
+          {groupedData.map(renderGroup)}
         </div>
       </div>
     )
   }
 
-  const totalHeight = data.length * estimatedItemHeight
+  const totalHeight = flatData.length * estimatedItemHeight
   const startIndex = Math.max(0, Math.floor(scrollTop / estimatedItemHeight) - overscan)
-  const endIndex = Math.min(data.length, Math.ceil((scrollTop + containerHeight) / estimatedItemHeight) + overscan)
+  const endIndex = Math.min(flatData.length, Math.ceil((scrollTop + containerHeight) / estimatedItemHeight) + overscan)
   const offsetTop = startIndex * estimatedItemHeight
-  const visibleItems = data.slice(startIndex, endIndex)
+  const visibleItems = flatData.slice(startIndex, endIndex)
 
   return (
     <div
@@ -192,7 +220,7 @@ const MessageList = ({
     >
      <div className="w-[53.75rem] m-auto p-4">
       <div style={{ height: totalHeight, position: 'relative' }}>
-        <div style={{ transform: `translateY(${offsetTop}px)` }}>{visibleItems.map((item, index) => renderItem(item, startIndex + index))}</div>
+        <div style={{ transform: `translateY(${offsetTop / 16}rem)` }}>{visibleItems.map((item, index) => renderItem(item, startIndex + index))}</div>
       </div>
       </div>
     </div>

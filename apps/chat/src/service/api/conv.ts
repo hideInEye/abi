@@ -1,5 +1,47 @@
+import { fetchEventSource } from '@microsoft/fetch-event-source'
+import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 import request from "../request/index";
 import { getChatbiBaseApi } from "../../utils/index";
+
+type StreamConvAnswerOptions = {
+  data: any
+  signal: AbortSignal
+  onopen?: (response: Response) => Promise<void>
+  onmessage?: (event: EventSourceMessage) => void | Promise<void>
+  onclose?: () => void
+  onerror?: (err: any) => number | null | undefined | void
+}
+
+const getAuthorizationToken = () => {
+  const storedToken = localStorage.getItem('SOY-REACT_token')
+  if (!storedToken || storedToken === 'undefined' || storedToken === 'null') {
+    return ''
+  }
+
+  try {
+    return JSON.parse(storedToken)
+  } catch {
+    return ''
+  }
+}
+
+export function streamConvAnswer({ data, signal, onopen, onmessage, onclose, onerror }: StreamConvAnswerOptions) {
+  const authToken = getAuthorizationToken()
+  return fetchEventSource(`${window.APP_CONFIG.VITE_BASE_API}/chat-proxy/api/v2/workflow/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+    },
+    body: JSON.stringify(data),
+    signal,
+    openWhenHidden: true,
+    onopen,
+    onmessage,
+    onclose,
+    onerror
+  })
+}
 
 //列出全部对话
 export function fetchConvList(data: any) {
@@ -48,6 +90,39 @@ export function fetchConvHistoryRound(data: any) {
     data,
     baseURL: window.APP_CONFIG.VITE_BASE_API
   });
+}
+
+export const groupMessagesByOrder = (messages: any[]) => {
+  const groups: any[][] = []
+  const orderIndexMap = new Map<string, number>()
+
+  messages.forEach((item: any) => {
+    const orderKey = item?.order ?? item?.roundIndex
+    if (orderKey === undefined || orderKey === null) {
+      groups.push([item])
+      return
+    }
+
+    const mapKey = String(orderKey)
+    const existingIndex = orderIndexMap.get(mapKey)
+    if (existingIndex === undefined) {
+      orderIndexMap.set(mapKey, groups.length)
+      groups.push([item])
+      return
+    }
+
+    groups[existingIndex].push(item)
+  })
+
+  return groups
+}
+
+export async function fetchConvHistoryRoundGrouped(data: any) {
+  const res: any = await fetchConvHistoryRound(data)
+  return {
+    ...res,
+    data: groupMessagesByOrder(res?.data || [])
+  }
 }
 
 // 获取最大对话轮次

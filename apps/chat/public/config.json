@@ -1,5 +1,5 @@
 {
   "VITE_BASE_API": "/api",
-  "VITE_WEBSOCKET_API": "wss://192.168.1.196",
+  "VITE_WEBSOCKET_API": "wss://192.168.1.251",
   "VITE_CHAT_MODEL": "qwen3:30b-a3b-fp16"
 }

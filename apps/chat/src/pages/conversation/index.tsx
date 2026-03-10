@@ -18,6 +18,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
     chatContainerRef,
     chatHeaderRef,
     convContent,
+    convContent2d,
     setConvContent,
     checkAll,
     setCheckAll,
@@ -68,7 +69,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
   } = controller
 
   return (
-    <div className={`${!fold ? 'w-[calc(100vw-12.5rem-88px)]':'w-[calc(100vw-88px)]'} flex-1 flex h-[100vh] flex-col  overflow-hidden`}>
+    <div className={`${!fold ? 'w-[calc(100vw-18rem)]':'w-[calc(100vw-5.5rem)]'} flex-1 flex h-[100vh] flex-col bg-[#f9f9f9]  overflow-hidden`}>
       <ChatHeader
         conv={conv}
         ref={chatHeaderRef}
@@ -81,6 +82,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
       <MessageList
         conv={conv}
         convContent={convContent}
+        convContent2d={convContent2d}
         loading={loading}
         isSharing={isSharing}
         isStorage={isStorage}
@@ -198,6 +200,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
                 mode="share"
                 conv={conv}
                 convContent={convContent}
+                convContent2d={convContent2d}
                 sharingList={sharingList}
                 loading={loading}
                 isSharing={true}

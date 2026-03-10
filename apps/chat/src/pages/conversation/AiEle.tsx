@@ -148,15 +148,15 @@ const AiEle: React.FC<PropsType> = ({
     return (
       <div className="my-4 w-full flex items-start">
         <div className="flex-shrink-0">
-          <SvgIcon
-            className="text-[30px]"
+          {/* <SvgIcon
+            className="text-[1.875rem]"
             localIcon="bot"
-          />
+          /> */}
         </div>
         <div className="ml-2 max-w-[80%]">
           <div className="bg-[#e8eefb] rounded-lg px-4 py-2 text-sm text-gray-700 relative">
             {/* 添加小三角 */}
-            <div className="absolute left-[-6px] top-3 w-3 h-3 bg-[#e8eefb] transform rotate-45"></div>
+            <div className="absolute left-[-0.375rem] top-3 w-3 h-3 bg-[#e8eefb] transform rotate-45"></div>
             <div className={styles['markdown-content']}>
               <ReactMarkdown>{processContent(finalContent || data.context)}</ReactMarkdown> 
             </div>
@@ -214,15 +214,15 @@ const AiEle: React.FC<PropsType> = ({
 
   return (
     <div className="my-2 w-full flex justify-start">
-      <SvgIcon
-        className="mt-6px text-[30px]"
+      {/* <SvgIcon
+        className="mt-[0.375rem] text-[1.875rem]"
         localIcon="bot"
-      />
+      /> */}
       <div className="w-full px-2 text-left">
         <div className="w-full bg-white border border-gray-200 rounded-lg">
           <div className="p-[0.75rem] px-[1.5625rem] border-b border-gray-200 flex justify-between items-center grid grid-cols-[1fr_5fr]">
             <span className="font-bold font-extrabold">{getAssistantName()}</span>
-            <div className="flex items-center gap-[20px] justify-end" onClick={() => setIsCollapsed(!isCollapsed)}>
+            <div className="flex items-center gap-[1.25rem] justify-end" onClick={() => setIsCollapsed(!isCollapsed)}>
               <div className="flex items-center">
                 <span className="cursor-pointer hover:opacity-70 select-none mr-2" onClick={(e) => {
                   e.stopPropagation()
@@ -242,7 +242,7 @@ const AiEle: React.FC<PropsType> = ({
                     setDebugModalVisible(true);
                   }
                 }}>
-                  <SvgIcon className="text-16px" localIcon="setting" />
+                  <SvgIcon className="text-[1rem]" localIcon="setting" />
                 </span>
                 {data.smLoading ? loadingLabel : endLabel}
               </div>
@@ -263,13 +263,13 @@ const AiEle: React.FC<PropsType> = ({
               style={{
                 maxHeight: isCollapsed ? '0' : 'none',
                 overflow: isCollapsed ? 'hidden' : 'visible',
-                paddingTop: isCollapsed ? '0' : '20px'
+                paddingTop: isCollapsed ? '0' : '1.25rem'
               }}
             >
               {/* 复制 */}
               {
                 !questionData?.agent_label && finalContent && (
-                  <div className="absolute right-1 top-[-5px] cursor-pointer text-gray-600 hover:text-gray-800 transition-colors">
+                  <div className="absolute right-1 top-[-0.3125rem] cursor-pointer text-gray-600 hover:text-gray-800 transition-colors">
                     <Text
                       copyable={{
                         text: processContent(finalContent),

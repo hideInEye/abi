@@ -14,6 +14,31 @@ import ConverList from './conver_list'
 // import { useAppDispatch, useAppSelector } from '../../store/redux/hooks';
 // import { setConvListForChat, upsertConvForChat, removeConvForChat, clearConvListForChat, selectConvListByChatId, setDatasourceCache, selectDatasourceCache } from '../../store/redux/slices/conversations';
 
+const LAST_CONV_UID_MAP_KEY = 'SOY-REACT_lastConvUidByChatId'
+
+const getLastConvUidByChatId = (chatId?: string | number) => {
+  if (!chatId) return ''
+  try {
+    const cache = JSON.parse(localStorage.getItem(LAST_CONV_UID_MAP_KEY) || '{}')
+    return cache[String(chatId)] || ''
+  } catch {
+    return ''
+  }
+}
+
+const setLastConvUidByChatId = (chatId?: string | number, convUid?: string) => {
+  if (!chatId) return
+  try {
+    const cache = JSON.parse(localStorage.getItem(LAST_CONV_UID_MAP_KEY) || '{}')
+    if (convUid) {
+      cache[String(chatId)] = convUid
+    } else {
+      delete cache[String(chatId)]
+    }
+    localStorage.setItem(LAST_CONV_UID_MAP_KEY, JSON.stringify(cache))
+  } catch {}
+}
+
 const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpaceId }) => {
   const [visible, setVisible] = useState(false)
   const [curApp, setCurApp] = useState<any>({})
@@ -83,13 +108,16 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
       })
       const data = sortAppList(res.data) || []
       setAppList(data)
-      const chatId = localStorage.getItem('chatId')
+      const chatId = localStorage.getItem('chatId') || ''
+      const targetApp = (chatId && data.find((item) => String(item.chat_id) === String(chatId))) || data[0]
 
-      if (chatId) {
-        const item = data.find((item) => item.chat_id == chatId)
-        if (Object.keys(item).length > 0) {
-          handleSetCurApp(item)
-        }
+      if (targetApp) {
+        setCurApp({ ...targetApp })
+        localStorage.setItem('chatId', String(targetApp.chat_id))
+      } else {
+        setCurApp(undefined)
+        setCurConv(undefined)
+        localStorage.removeItem('chatId')
       }
       return res.data
     } finally {
@@ -116,8 +144,15 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
         space_id: currentSpaceId,
         // space_id: 73,
       })
-      if (res.data?.length) {
-        setCurConv({ ...res.data[0], ...curApp })
+      const convList = res.data || []
+      if (convList.length) {
+        const lastConvUid = getLastConvUidByChatId(curApp.chat_id)
+        const targetConv = convList.find((item: any) => item.conv_uid === lastConvUid) || convList[0]
+        setCurConv({ ...targetConv, ...curApp })
+        setLastConvUidByChatId(curApp.chat_id, targetConv.conv_uid)
+      } else {
+        setCurConv(undefined)
+        setLastConvUidByChatId(curApp.chat_id)
       }
     } finally {
       setLoading(false)
@@ -126,7 +161,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
 
   useEffect(() => {
     // 如果有选中的app就获取会话列表
-    if (curApp.chat_id) {
+    if (curApp&&curApp.chat_id) {
       if (skipNextConvFetchRef.current) {
         skipNextConvFetchRef.current = false
       } else {
@@ -135,16 +170,11 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
     }
   }, [curApp])
 
-  const handleSetCurApp = useCallback(async (item: any) => {
-    // 移除datasourceCache参数
-    try {
-      setLoading(true)
-
-      setCurApp({ ...item })
-    } finally {
-      setLoading(false)
-      setShowAllConversations(false)
-    }
+  const handleSetCurApp = useCallback((item: any) => {
+    if (!item) return
+    setCurApp({ ...item })
+    localStorage.setItem('chatId', String(item.chat_id))
+    setShowAllConversations(false)
   }, [])
 
   const onClose = async (val?: any) => {
@@ -172,6 +202,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
 
         const currentApp = { ...res.data }
         setCurApp(currentApp)
+        localStorage.setItem('chatId', String(currentApp.chat_id))
 
         // 4. 创建新会话
         const newConvRes = await newConv(currentApp)
@@ -181,6 +212,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
 
         // 6. 设置当前会话
         setCurConv({ ...newConvRes.data, ...currentApp })
+        setLastConvUidByChatId(currentApp.chat_id, newConvRes?.data?.conv_uid)
 
         setShowAllConversations(false)
         setVisible(false)
@@ -218,6 +250,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
           }
           if (curApp.chat_id === item.chat_id) {
             setCurConv(undefined)
+            setLastConvUidByChatId(item.chat_id)
           }
           getAppList()
         } catch (error) {
@@ -236,8 +269,10 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
       setAppList((prev) => [newApp, ...prev.filter((a) => a.chat_id !== newApp.chat_id)])
       skipNextConvFetchRef.current = true
       setCurApp(newApp)
+      localStorage.setItem('chatId', String(newApp.chat_id))
       if (newConv) {
         setCurConv({ ...newConv, ...newApp })
+        setLastConvUidByChatId(newApp.chat_id, newConv.conv_uid)
       }
       setShowAllConversations(false)
       return
@@ -246,6 +281,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
       // 更新curConv
       if (data.conv_uid) {
         setCurConv((prev: any) => ({ ...prev, ...data }))
+        setLastConvUidByChatId(data.chat_id || curApp.chat_id, data.conv_uid)
       }
       // 同步更新appList和curApp（编辑对话名称等信息）
       if (data.chat_id) {

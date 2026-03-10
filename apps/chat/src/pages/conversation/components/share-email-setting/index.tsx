@@ -106,7 +106,7 @@ export function EmailContent(props: any) {
   return (
     <>
       <EditorQuill {...props} />
-      <a className="text-xs text-blue-500 cursor-pointer" href="https://192.168.1.196/chat-proxy/api/v2/serve/file/files/pdffile/e2f1d322-8548-42f4-921c-03e60434a7e4">
+      <a className="text-xs text-blue-500 cursor-pointer" href="https://192.168.1.251/chat-proxy/api/v2/serve/file/files/pdffile/e2f1d322-8548-42f4-921c-03e60434a7e4">
         预览报告示例
       </a>
     </>

@@ -1,19 +1,20 @@
-import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import { Form, message } from 'antd'
 import dayjs from 'dayjs'
-import { useEffect, useId, useImperativeHandle, useRef, useState } from 'react'
+import { useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import cloneDeep from 'lodash/cloneDeep'
 
 import { fetchOperate, fetchShareEmail } from '../../../service/api/abi-system'
 import {
-  fetchConvHistoryRound,
+  fetchConvHistoryRoundGrouped,
   fetchConvMaxRound,
   fetchDimension,
   fetchExceptionGuidance,
+  groupMessagesByOrder,
   fetchQueryRewrite,
   fetchRecommendQuestion,
-  fetchRecommendedQuestionOpenings
+  fetchRecommendedQuestionOpenings,
+  streamConvAnswer
 } from '../../../service/api/conv'
 import { useDebugStore } from '../../../store'
 import { getHumanInHistoryByOrderIndex, getOpeningText } from '../../../utils'
@@ -28,6 +29,14 @@ export interface ConversationProps {
   fold: boolean
 }
 
+const groupConversationByOrder = (messages: any[]) => {
+  const firstMessageGroups = messages
+    .filter((item: any) => item?.role === 'first')
+    .map((item: any) => [item])
+  const normalMessages = messages.filter((item: any) => item?.role !== 'first')
+  return [...firstMessageGroups, ...groupMessagesByOrder(normalMessages)]
+}
+
 export const useConversationController = (
   props: ConversationProps,
   ref: React.Ref<{ setConvContent: (content: any[]) => void }>
@@ -39,6 +48,7 @@ export const useConversationController = (
   const [isStorage, setIsStorage] = useState(false)
   const [loading, setLoading] = useState(false)
   const [convContent, setConvContent] = useState<any[]>([])
+  const convContent2d = useMemo(() => groupConversationByOrder(convContent), [convContent])
   const [currentMessage, setCurrentMessage] = useState('')
   const [checkAll, setCheckAll] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
@@ -156,12 +166,12 @@ export const useConversationController = (
     setHistoryLoading(true)
 
     try {
-      const res = await fetchConvHistoryRound({
+      const res = await fetchConvHistoryRoundGrouped({
         conv_uid: conv.conv_uid,
         round_index: minRoundIndex
       })
 
-      const newMessages = res?.data || []
+      const newMessages = (res?.data || []).flat()
       if (newMessages.length < 10) {
         setHasMoreHistory(false)
       }
@@ -414,24 +424,26 @@ export const useConversationController = (
     if (convUid) {
       let result: any = []
       conversationList = [openingMessage]
-      result = await fetchConvHistoryRound({
+      result = await fetchConvHistoryRoundGrouped({
         conv_uid: convUid
       })
       if (!isRequestTokenActive(requestToken)) return
 
-      if (result?.data?.length > 0) {
-        const orders = result.data.map((item: any) => item.order)
+      const flatHistory = (result?.data || []).flat()
+
+      if (flatHistory.length > 0) {
+        const orders = flatHistory.map((item: any) => item.order)
         const minOrder = Math.min(...orders)
         if (!isRequestTokenActive(requestToken)) return
         setMinRoundIndex(minOrder)
 
-        if (result.data.length < 10) {
+        if (flatHistory.length < 10) {
           setHasMoreHistory(false)
         } else {
           setHasMoreHistory(true)
         }
 
-        result?.data.forEach((item: any) => {
+        flatHistory.forEach((item: any) => {
           setUserDebugInfoMap({
             order: item.order,
             roundIndex: item.order
@@ -440,7 +452,7 @@ export const useConversationController = (
       } else {
         setHasMoreHistory(false)
       }
-      conversationList = conversationList.concat(result?.data || [])
+      conversationList = conversationList.concat(flatHistory)
     }
 
     if (!isRequestTokenActive(requestToken)) return
@@ -637,6 +649,21 @@ export const useConversationController = (
     }
   }
 
+  const syncTempOrderToRoundIndex = (tempOrder: string, roundIndex: number) => {
+    setConvContent((prevState: any[]) => {
+      return prevState.map((item: any) => {
+        if (item.order === tempOrder) {
+          return {
+            ...item,
+            order: roundIndex,
+            roundIndex
+          }
+        }
+        return item
+      })
+    })
+  }
+
   const getAnswer = async ({ question, IC }: any) => {
     if (isRequesting.current) {
       return
@@ -659,7 +686,9 @@ export const useConversationController = (
     const userMessage = {
       context: question,
       role: 'human',
-      id: Date.now()
+      id: Date.now(),
+      order: tempUserId,
+      roundIndex: tempUserId
     }
     setConvContent((state) => [...state, userMessage])
 
@@ -705,25 +734,12 @@ export const useConversationController = (
       let retryCount = 0
       const maxRetries = 2
 
-      const storedToken = localStorage.getItem('SOY-REACT_token')
-      let authToken = ''
-      try {
-        if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
-          authToken = JSON.parse(storedToken)
-        }
-      } catch {}
-
-      await fetchEventSource(`${window.APP_CONFIG.VITE_BASE_API}/chat-proxy/api/v2/workflow/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
-        },
-        body: JSON.stringify(params),
+      await streamConvAnswer({
+        data: params,
         signal: abortController.current.signal,
-        openWhenHidden: true,
         async onopen(response) {
-          if (response.ok && response.headers.get('content-type') === EventStreamContentType) {
+          const contentType = response.headers.get('content-type') || ''
+          if (response.ok && contentType.includes('text/event-stream')) {
             retryCount = 0
             return
           }
@@ -748,6 +764,11 @@ export const useConversationController = (
                   order: tempUserId,
                   roundIndex
                 })
+                setUserDebugInfoMap({
+                  order: roundIndex,
+                  roundIndex
+                })
+                syncTempOrderToRoundIndex(tempUserId, roundIndex)
               }
             }
 
@@ -839,6 +860,11 @@ export const useConversationController = (
                     order: tempUserId,
                     roundIndex
                   })
+                  setUserDebugInfoMap({
+                    order: roundIndex,
+                    roundIndex
+                  })
+                  syncTempOrderToRoundIndex(tempUserId, roundIndex)
                 } catch {}
               }
               setIsGettingData(false)
@@ -856,6 +882,7 @@ export const useConversationController = (
                     describe: true,
                     role: 'view',
                     arrowStatus: false,
+                    order: roundIndex || tempUserId,
                     roundIndex
                   }
                 ])
@@ -1420,6 +1447,7 @@ export const useConversationController = (
     chatContainerRef,
     chatHeaderRef,
     convContent,
+    convContent2d,
     setConvContent,
     checkAll,
     setCheckAll,

@@ -2,23 +2,65 @@
   :global(.ant-table-body) {
     overflow-x: auto !important;
   }
-  
+
+  :global(.ant-table) {
+    border: 0.0625rem solid #e7ebf3;
+    border-radius: 0.875rem;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  :global(.ant-table-container) {
+    border-inline-start: none !important;
+  }
+
+  :global(.ant-table-content table) {
+    border-collapse: collapse;
+  }
+
   :global(.ant-table-thead > tr > th) {
     white-space: nowrap;
-    background: #fafafa !important;
-    padding: 8px 16px;
+    background: #f3f6fc !important;
+    color: #4b5565 !important;
+    font-weight: 600 !important;
+    font-size: 1.0625rem !important;
+    line-height: 1.35 !important;
+    border-bottom: 0.0625rem solid #e6ebf3 !important;
+    padding: 0.625rem 0.625rem !important;
   }
-  
+
   :global(.ant-table-tbody > tr > td) {
     white-space: nowrap;
-    padding: 8px 16px;
+    color: #596273 !important;
+    font-size: 1rem !important;
+    line-height: 1.4 !important;
+    border-bottom: 0.0625rem solid #edf1f6 !important;
+    padding: 0.75rem 0.625rem !important;
+    background: #fff;
   }
 
-  :global(.ant-table-thead > tr:first-child > *:first-child) {
-    border-radius: 0px !important;
+  :global(.ant-table-tbody > tr:last-child > td) {
+    border-bottom: none !important;
   }
 
-  :global(.ant-table-thead > tr:first-child >*:last-child) {
-    border-radius: 0px !important;
+  :global(.ant-table-thead > tr:first-child > th:first-child) {
+    border-top-left-radius: 0.875rem !important;
   }
+
+  :global(.ant-table-thead > tr:first-child > th:last-child) {
+    border-top-right-radius: 0.875rem !important;
+  }
+
+  :global(.ant-table-pagination.ant-pagination) {
+    margin: 1rem 1.125rem 0.75rem !important;
+  }
+}
+
+.tableCellValue {
+  color: #5f6777;
+}
+
+.deltaValue {
+  color: #4f98ea;
+  font-weight: 600;
 }

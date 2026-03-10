@@ -452,7 +452,7 @@ const ChartHeader: React.FC<Props> = ({
   }
 
   const popoverContent = (
-    <div className="p-3 w-[420px] max-h-[400px] overflow-y-auto">
+    <div className="p-3 w-[26.25rem] max-h-[25rem] overflow-y-auto">
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-medium">筛选条件</h3>
         <CloseOutlined className="cursor-pointer hover:text-gray-600" onClick={() => setOpen(false)} />
@@ -481,59 +481,61 @@ const ChartHeader: React.FC<Props> = ({
 
   return (
     <div>
-      <header className="flex items-center justify-between border-b p-2 shadow-md">
+      <header className="flex items-center justify-between px-4 py-3 bg-white">
+        
         <div className="flex items-center">
+          <span className='text-[16px] font-bold text-[#000] mr-[0.36rem]'>图表信息</span>
           {/* 左侧原本的筛选区域已移除 */}
-          {showChartIcon && activeType === 'chart' && <Select value={chartType} onChange={onhandleGetChartType} options={chartData} className="h-6 w-[120px]" />}
+          {showChartIcon && activeType === 'chart' && <Select value={chartType} onChange={onhandleGetChartType} options={chartData} className="h-6 w-[7.5rem]" />}
         </div>
         <div className="flex items-center gap-2">
           {showChartIcon && (
             <Tooltip title="智能图表">
               <span className={`cursor-pointer hover:text-[#3470f6] select-none`} onClick={() => onTypeChange('chart')}>
-                {activeType === 'chart' ? <SvgIcon className="text-16px" localIcon="chartblue" /> : <SvgIcon className="text-16px" localIcon="chart" />}
+                {activeType === 'chart' ? <SvgIcon className="text-[1rem]" localIcon="chartblue" /> : <SvgIcon className="text-[1rem]" localIcon="chart" />}
               </span>
             </Tooltip>
           )}
           <Tooltip title="数据表格">
             <span className={`cursor-pointer hover:opacity-70 select-none`} onClick={() => onTypeChange('table')}>
-              {activeType === 'table' ? <SvgIcon className="text-16px" localIcon="tableblue" /> : <SvgIcon className="text-16px" localIcon="table" />}
+              {activeType === 'table' ? <SvgIcon className="text-[1rem]" localIcon="tableblue" /> : <SvgIcon className="text-[1rem]" localIcon="table" />}
             </span>
           </Tooltip>
           <Tooltip title="SQL语句">
             <span className={`cursor-pointer hover:opacity-70 select-none`} onClick={() => onTypeChange('sql')}>
-              {activeType === 'sql' ? <SvgIcon className="text-16px" localIcon="sqlblue" /> : <SvgIcon className="text-16px" localIcon="sql" />}
+              {activeType === 'sql' ? <SvgIcon className="text-[1rem]" localIcon="sqlblue" /> : <SvgIcon className="text-[1rem]" localIcon="sql" />}
             </span>
           </Tooltip>
           {/* 暂时隐藏分享按钮
           <span className="cursor-pointer hover:opacity-70 select-none" onClick={onShareClick}>
-            <SvgIcon className="text-16px" localIcon="share" />
+            <SvgIcon className="text-[1rem]" localIcon="share" />
           </span>
           */}
           <Tooltip title="重新生成">
             <span className="cursor-pointer hover:opacity-70 select-none" onClick={onRefreshClick} onMouseEnter={() => setIsRefreshHover(true)} onMouseLeave={() => setIsRefreshHover(false)}>
-              <SvgIcon className="text-16px" localIcon={isRefreshHover ? 'refreshblue' : 'refresh'} />
+              <SvgIcon className="text-[1rem]" localIcon={isRefreshHover ? 'refreshblue' : 'refresh'} />
             </span>
           </Tooltip>
           {showChartIcon && (
             <Tooltip title="图表配置">
               <span className="cursor-pointer hover:opacity-70 select-none" onClick={onConfigClick} onMouseEnter={() => setIsConfigHover(true)} onMouseLeave={() => setIsConfigHover(false)}>
-                <SvgIcon className="text-16px" localIcon={isConfigHover ? 'setblue' : 'set'} />
+                <SvgIcon className="text-[1rem]" localIcon={isConfigHover ? 'setblue' : 'set'} />
               </span>
             </Tooltip>
           )}
           {/* <span className="cursor-pointer hover:opacity-70 select-none" onClick={onDebugClick}>
-            <SvgIcon className="text-16px" localIcon="setting" />
+            <SvgIcon className="text-[1rem]" localIcon="setting" />
           </span> */}
           <Tooltip title="大屏展示">
             <span className="cursor-pointer hover:opacity-70 select-none" onClick={onFullscreenClick} onMouseEnter={() => setIsFullscreenHover(true)} onMouseLeave={() => setIsFullscreenHover(false)}>
-              <SvgIcon className="text-16px" localIcon={isFullscreenHover ? 'fullscreenblue' : 'fullscreen'} />
+              <SvgIcon className="text-[1rem]" localIcon={isFullscreenHover ? 'fullscreenblue' : 'fullscreen'} />
             </span>
           </Tooltip>
           <Tooltip title="数据导出">
             <span className="cursor-pointer hover:opacity-70 select-none text-[#666] flex hover:text-[#3470f6]">
               <Dropdown menu={{ items: exportMenuItems, onClick: handleDownloadClick }} placement="bottom" trigger={['click']}>
                 <Space>
-                  <SvgIcon className="text-14px" localIcon="download" />
+                  <SvgIcon className="text-[0.875rem]" localIcon="download" />
                 </Space>
               </Dropdown>
             </span>
@@ -551,7 +553,7 @@ const ChartHeader: React.FC<Props> = ({
             >
               <span onClick={handleGetFileter} className="cursor-pointer hover:opacity-70 select-none text-[#666] hover:text-[#3470f6]">
                 <FilterOutlined />
-                {filterValuesLen > 0 && <span style={{ fontSize: '10px' }}>{`(${filterValuesLen})`}</span>}
+                {filterValuesLen > 0 && <span style={{ fontSize: '0.625rem' }}>{`(${filterValuesLen})`}</span>}
               </span>
             </Popover>
           </Tooltip>
