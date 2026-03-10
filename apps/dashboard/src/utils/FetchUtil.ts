@@ -18,7 +18,10 @@ export interface HttpResponse {
 let _apiTarget = '';
 export async function loadAppConfig(): Promise<void> {
     try {
-        const res = await fetch('/config.json');
+        const configPath = import.meta.env.MODE === 'development'
+            ? `${location.protocol}//${location.hostname}:${location.port}/config.json`
+            : `${import.meta.env.BASE_URL}config.json`;
+        const res = await fetch(configPath);
         const cfg = await res.json();
         if (cfg.VITE_API_TARGET) {
             _apiTarget = cfg.VITE_API_TARGET.replace(/\/$/, '');
