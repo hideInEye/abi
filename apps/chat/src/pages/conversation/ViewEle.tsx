@@ -31,7 +31,7 @@ import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEm
 import { handleDataExport, handleImageExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
 import { fetchDrillDown, fetchQueryRewrite, fetchRecommendQuestion, setExperteval, searchConv } from '../../service/api/conv';
-import { CloseOutlined, RedoOutlined, DownOutlined, UpOutlined } from "@ant-design/icons";
+import { CloseOutlined, RedoOutlined } from "@ant-design/icons";
 import { marked } from 'marked';
 import { CHAT_MODE_MAP } from '../../constant/chat';
 
@@ -1307,13 +1307,6 @@ const ViewEle: React.FC<PropsType> = ({
     }
   };
 
-  const handleChangeStatus = () => {
-    if (data.arrowStatus) {
-      setIsCollapsed(!isCollapsed);
-      return;
-    }
-  }
-
   // 检查是否为已知场景
   const isKnownChatMode = (chatMode: string) => {
     return chatMode && (CHAT_MODE_MAP[chatMode] !== undefined || chatMode === '');
@@ -1341,35 +1334,27 @@ const ViewEle: React.FC<PropsType> = ({
       <div className="flex flex-col w-full px-2 text-left">
         {/* 描述分析 / 数据知识 */}
         {data?.describe && (chartData?.chat_mode !== 'chat_with_analysis' && !chartData?.recommendQuestions && !chartData?.rewrite) && (
-          <div className="w-full bg-white border border-[#ececec] rounded-[0.875rem] overflow-hidden mb-[0.625rem] shadow-[0_0.0625rem_0.125rem_rgba(15,23,42,0.03)]">
-            <div className="px-6 py-4 border-b border-[#f0f0f0] flex justify-between items-center grid grid-cols-[1fr_5fr]">
+          <div className="w-full overflow-hidden mb-[0.625rem]">
+            <div className="px-6 pt-2 pb-4 border-b border-[#edf1f5] flex justify-between items-center">
               <span className="font-semibold text-[#2d2d2d]">{chartData?.chat_mode === 'chat_with_knowledge' ? '数据知识' : '描述分析'}</span>
 
-              <div className="flex items-center gap-[1.25rem] justify-end" onClick={handleChangeStatus}>
+              <div className="flex items-center gap-[1.25rem] justify-end">
                 {!data.arrowStatus ? (
                   <span className="text-[#6b7280] opacity-90 cursor-pointer hover:opacity-100 text-[0.875rem]" onClick={fetchData}>
                     点击查看数据摘要详情
                   </span>
                 ) : (
-                  <span className="text-[#6b7280] opacity-90 cursor-pointer hover:opacity-100 text-[0.875rem]">
-                    点击查看数据摘要详情
-                  </span>
+                  <span className="text-[#6b7280] opacity-90 text-[0.875rem]"> </span>
                 )}
-                <span
-                  style={{ transform: isCollapsed ? 'rotate(270deg)' : 'rotate(360deg)' }}
-                  className={`cursor-pointer transition-transform duration-300`}
-                >
-                  <DownOutlined className="text-[#666]" />
-                </span>
               </div>
             </div>
-           {isCollapsed ? null : <div className="px-6 py-4">
+           {(data.arrowStatus || !isCollapsed) ? <div className="px-6 py-4">
               <div
                 ref={contentRef}
                 className="whitespace-pre-wrap text-sm text-gray-700 transition-all duration-300 ease-in-out relative"
                 style={{
-                  maxHeight: isCollapsed ? 0 : contentHeight,
-                  overflow: isCollapsed ? 'hidden' : 'visible',
+                  maxHeight: data.arrowStatus ? 'none' : contentHeight,
+                  overflow: data.arrowStatus ? 'visible' : (isCollapsed ? 'hidden' : 'visible'),
                 }}
               >
                 {isUnknownScene ? (
@@ -1380,37 +1365,22 @@ const ViewEle: React.FC<PropsType> = ({
                   <div
                     className={`${s['markdown-content']} text-left whitespace-pre-wrap`}
                     dangerouslySetInnerHTML={{ __html: html }}
-                    style={{ width: '100%', lineHeight: '1.8' }}
+                    style={{ width: '100%'}}
                   ></div>
                 )}
-                {
-                  !isCollapsed &&!isSharing && (
-                    <div className={s.collapseButtonWrapper}>
-                      <Button
-                        type="primary" 
-                        shape="circle"
-                        className={s.collapseButton}
-                        onClick={() => setIsCollapsed(true)}
-                      >
-                        <UpOutlined className={s.collapseButtonArrow} />
-                        <span>收起</span>
-                      </Button>
-                    </div>
-                  )
-                }
               </div>
-            </div>}
+            </div> : null}
           </div>
         )}
 
         {
           contextError ?
-            <div className="w-full text-left bg-white border border-[#ececec] rounded-[0.875rem] px-5 py-4 shadow-[0_0.0625rem_0.125rem_rgba(15,23,42,0.03)]">{stripHtmlTags(contextError)}</div>
+            <div className="w-full text-left px-6 py-4">{stripHtmlTags(contextError)}</div>
             : (
               // chat_with_knowledge 和未知场景不渲染数据面板
              chartData?.chat_mode !== 'chat_with_knowledge' && !isUnknownScene && (
-              <div className="w-full text-left bg-white border border-[#ececec] rounded-[0.875rem] p-4 shadow-[0_0.0625rem_0.125rem_rgba(15,23,42,0.03)]">
-                <div className="rounded-[0.625rem]">
+              <div className="w-full text-left px-6 pt-1 pb-4">
+                <div>
                   {chartData?.chat_mode === 'chat_excel' && chartData.file_id && (
                     <div className="mb-3">
                       <div className="whitespace-nowrap text-[#666] text-left text-[0.875rem] font-medium">Excel分析</div>
@@ -1440,7 +1410,11 @@ const ViewEle: React.FC<PropsType> = ({
                         <Table columns={drillDownData?.columns || []} dataSource={drillDownData?.data || []} />
                       </div> : (
                         (chartData?.chat_mode === 'chat_with_db_execute' || chartData?.chat_mode === 'chat_excel') && (
-                          <div className="w-full rounded-[0.625rem]  bg-white overflow-hidden">
+                          <div className="w-full overflow-hidden">
+                            <div className="pt-2 pb-4 border-b border-[#edf1f5]">
+                              <span className="font-semibold text-[#2d2d2d]">图表信息</span>
+                            </div>
+                            <div className="pt-3">
                             <ChartHeader
                               onTypeChange={handleTypeChange}
                               onShareClick={handleShareClick}
@@ -1460,8 +1434,10 @@ const ViewEle: React.FC<PropsType> = ({
                               onExportClick={handleDownload}
                               onhandleGetChartType={handleGetChartType}
                               currentTableData={queryResult.data || chartData?.data || []}
+                              showTitle={false}
                             />
-                            {renderContent()}
+                            <div className="mt-3">{renderContent()}</div>
+                            </div>
                           </div>
                         )
                       )}

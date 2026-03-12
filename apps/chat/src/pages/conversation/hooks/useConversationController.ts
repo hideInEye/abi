@@ -37,6 +37,55 @@ const groupConversationByOrder = (messages: any[]) => {
   return [...firstMessageGroups, ...groupMessagesByOrder(normalMessages)]
 }
 
+const mergeAiMessagesForRender = (aiMessages: any[]) => {
+  if (!aiMessages.length) return null
+
+  const lastAi = aiMessages[aiMessages.length - 1]
+  const latestWithContent = [...aiMessages].reverse().find((item: any) => String(item?.context || '').trim())
+  const mergedContext = latestWithContent?.context ?? lastAi?.context ?? ''
+
+  return {
+    ...lastAi,
+    context: mergedContext,
+    aiSteps: aiMessages.map((item: any, index: number) => ({
+      id: `${item?.order ?? 'temp'}-${index}`,
+      name: item?.name || '',
+      content: item?.context || '',
+      role: item?.role,
+      order: item?.order,
+      roundIndex: item?.roundIndex
+    }))
+  }
+}
+
+const groupConversationByOrder3d = (groups2d: any[][]) => {
+  return groups2d.map((group: any[]) => {
+    if (!Array.isArray(group) || !group.length) return []
+
+    if (group.length === 1 && group[0]?.role === 'first') {
+      return [[group[0]]]
+    }
+
+    const humanItems = group.filter((item: any) => item?.role === 'human')
+    const aiItems = group.filter((item: any) => item?.role === 'ai')
+    const viewItems = group.filter((item: any) => item?.role === 'view')
+    const otherItems = group.filter((item: any) => !['first', 'human', 'ai', 'view'].includes(item?.role))
+
+    const mergedAi = mergeAiMessagesForRender(aiItems)
+    const bodyItems = [...(mergedAi ? [mergedAi] : []), ...viewItems, ...otherItems]
+
+    const sections: any[][] = []
+    if (humanItems.length) sections.push(humanItems)
+    if (bodyItems.length) sections.push(bodyItems)
+
+    if (!sections.length) {
+      sections.push(group)
+    }
+
+    return sections
+  })
+}
+
 export const useConversationController = (
   props: ConversationProps,
   ref: React.Ref<{ setConvContent: (content: any[]) => void }>
@@ -49,6 +98,7 @@ export const useConversationController = (
   const [loading, setLoading] = useState(false)
   const [convContent, setConvContent] = useState<any[]>([])
   const convContent2d = useMemo(() => groupConversationByOrder(convContent), [convContent])
+  const convContent3d = useMemo(() => groupConversationByOrder3d(convContent2d), [convContent2d])
   const [currentMessage, setCurrentMessage] = useState('')
   const [checkAll, setCheckAll] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
@@ -1448,6 +1498,7 @@ export const useConversationController = (
     chatHeaderRef,
     convContent,
     convContent2d,
+    convContent3d,
     setConvContent,
     checkAll,
     setCheckAll,

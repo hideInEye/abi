@@ -49,6 +49,7 @@ interface Props {
   ansiSql?: string
   chartType?: string
   currentTableData?: any[] // 当前表格数据，用于提取筛选选项
+  showTitle?: boolean
 }
 
 const ChartHeader: React.FC<Props> = ({
@@ -70,6 +71,7 @@ const ChartHeader: React.FC<Props> = ({
   ansiSql,
   chartType,
   currentTableData = [],
+  showTitle = true,
 }) => {
   const [filterValues, setFilterValues] = useState<Record<string, any>>({})
   const [allFilters, setAllFilters] = useState<FilterData[]>([]) // 二次引导筛选项
@@ -481,10 +483,10 @@ const ChartHeader: React.FC<Props> = ({
 
   return (
     <div>
-      <header className="flex items-center justify-between px-4 py-3 bg-white">
+      <header className="flex items-center justify-between  py-3 bg-white">
         
         <div className="flex items-center">
-          <span className='text-[16px] font-bold text-[#000] mr-[0.36rem]'>图表信息</span>
+          {showTitle ? <span className="font-semibold text-[#2d2d2d] mr-[0.36rem]">图表信息</span> : null}
           {/* 左侧原本的筛选区域已移除 */}
           {showChartIcon && activeType === 'chart' && <Select value={chartType} onChange={onhandleGetChartType} options={chartData} className="h-6 w-[7.5rem]" />}
         </div>

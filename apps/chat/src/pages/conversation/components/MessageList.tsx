@@ -12,6 +12,7 @@ type MessageListProps = {
   conv: any
   convContent: any[]
   convContent2d?: any[][]
+  convContent3d?: any[][][]
   sharingList?: any[]
   loading?: boolean
   isSharing?: boolean
@@ -26,8 +27,6 @@ type MessageListProps = {
   getRecommend: (data: any) => void
   getQueryRewrite: (data: any) => void
   onReferenceClick: (orderIndex: number) => void
-  setCur: (value: any) => void
-  onOpenDebug: (item: any) => void
   chatContainerRef?: RefObject<HTMLDivElement>
   containerClassName?: string
   virtualized?: boolean
@@ -40,6 +39,7 @@ const MessageList = ({
   conv,
   convContent,
   convContent2d = [],
+  convContent3d = [],
   sharingList = [],
   loading = false,
   isSharing = false,
@@ -54,8 +54,6 @@ const MessageList = ({
   getRecommend,
   getQueryRewrite,
   onReferenceClick,
-  setCur,
-  onOpenDebug,
   chatContainerRef,
   containerClassName,
   virtualized = false,
@@ -67,17 +65,24 @@ const MessageList = ({
   const [containerHeight, setContainerHeight] = useState(0)
 
   const groupedData = useMemo(() => {
-    const baseGroups = convContent2d.length ? convContent2d : convContent.map((item: any) => [item])
+    const baseGroups3d = convContent3d.length
+      ? convContent3d
+      : (convContent2d.length
+          ? convContent2d.map((group: any[]) => [group])
+          : convContent.map((item: any) => [[item]]))
+
     if (mode === 'share') {
       const selectedOrders = new Set(sharingList.map((item: any) => item.order))
-      return baseGroups
-        .map((group: any[]) => group.filter((item: any) => selectedOrders.has(item.order)))
-        .filter((group: any[]) => group.length > 0)
+      return baseGroups3d
+        .map((group: any[][]) => group
+          .map((section: any[]) => section.filter((item: any) => selectedOrders.has(item.order)))
+          .filter((section: any[]) => section.length > 0))
+        .filter((group: any[][]) => group.length > 0)
     }
-    return baseGroups
-  }, [mode, convContent, convContent2d, sharingList])
+    return baseGroups3d
+  }, [mode, convContent, convContent2d, convContent3d, sharingList])
 
-  const flatData = useMemo(() => groupedData.flat(), [groupedData])
+  const flatData = useMemo(() => groupedData.flat(2), [groupedData])
 
   useLayoutEffect(() => {
     if (!virtualized) return
@@ -112,8 +117,6 @@ const MessageList = ({
             data={item}
             thinkTime={item.thinkTime}
             useSimpleStyle={item.useSimpleStyle}
-            setCur={setCur}
-            setDebugModalVisible={() => onOpenDebug(item)}
             getAnswer={getAnswer}
           />
         )
@@ -128,8 +131,6 @@ const MessageList = ({
           isDone={item.isDone}
           thinkTime={item.thinkTime}
           useSimpleStyle={item.useSimpleStyle}
-          setCur={setCur}
-          setDebugModalVisible={() => onOpenDebug(item)}
           getAnswer={getAnswer}
           onMessageUpdate={() => {
             if (conv.conv_uid) {
@@ -171,23 +172,43 @@ const MessageList = ({
     return null
   }
 
-  const renderGroup = (group: any[], index: number) => {
-    const groupKey = group[0]?.order ?? group[0]?.id ?? index
-    if (group.length === 1 && group[0]?.role === 'first') {
-      return renderItem(group[0], `opening-${groupKey}`)
+  const renderGroup = (group: any[][], index: number) => {
+    const flatGroup = group.flat()
+    const groupKey = flatGroup[0]?.order ?? flatGroup[0]?.id ?? index
+    if (group.length === 1 && group[0]?.length === 1 && group[0][0]?.role === 'first') {
+      return renderItem(group[0][0], `opening-${groupKey}`)
     }
-
-    const humanItems = group.filter((item: any) => item.role === 'human')
-    const groupedBodyItems = group.filter((item: any) => item.role !== 'human' && item.role !== 'first')
 
     return (
       <div key={`group-${groupKey}-${index}`} className="mb-5">
-        {humanItems.map((item: any, itemIndex: number) => renderItem(item, `human-${groupKey}-${itemIndex}`))}
-        {groupedBodyItems.length > 0 ? (
-          <div className="rounded-[0.875rem] border border-[#ececec] bg-[#f8f8f8] px-2 py-2 shadow-[0_0.0625rem_0.125rem_rgba(15,23,42,0.03)]">
-            {groupedBodyItems.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`))}
-          </div>
-        ) : null}
+        {group.map((section: any[], sectionIndex: number) => {
+          const sectionKey = `section-${groupKey}-${sectionIndex}`
+          const sectionRoles = new Set(section.map((item: any) => item?.role))
+          const isHumanSection = sectionRoles.size === 1 && sectionRoles.has('human')
+          const hasBodyContent = section.some((item: any) => item.role !== 'human' && item.role !== 'first')
+
+          if (isHumanSection) {
+            return (
+              <div key={`${sectionKey}-human`}>
+                {section.map((item: any, itemIndex: number) => renderItem(item, `human-${groupKey}-${itemIndex}`))}
+              </div>
+            )
+          }
+
+          if (hasBodyContent) {
+            return (
+              <div key={`${sectionKey}-body`} className="rounded-[1.25rem] border border-[#e9edf4] bg-white px-[0.875rem] py-[0.75rem] shadow-[0_0.125rem_0.5rem_rgba(15,23,42,0.04)]">
+                {section.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`))}
+              </div>
+            )
+          }
+
+          return (
+            <div key={`${sectionKey}-fallback`}>
+              {section.map((item: any, itemIndex: number) => renderItem(item, `item-${groupKey}-${itemIndex}`))}
+            </div>
+          )
+        })}
       </div>
     )
   }

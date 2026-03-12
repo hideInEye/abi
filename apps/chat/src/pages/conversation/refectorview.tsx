@@ -19,6 +19,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
     chatHeaderRef,
     convContent,
     convContent2d,
+    convContent3d,
     setConvContent,
     checkAll,
     setCheckAll,
@@ -57,8 +58,6 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
     getRecommend,
     getQueryRewrite,
     getReference,
-    setCur,
-    openDebugPanel,
     closeDebugPanel,
     debugModalVisible,
     cur,
@@ -83,6 +82,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
         conv={conv}
         convContent={convContent}
         convContent2d={convContent2d}
+        convContent3d={convContent3d}
         loading={loading}
         isSharing={isSharing}
         isStorage={isStorage}
@@ -96,8 +96,6 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
         getRecommend={getRecommend}
         getQueryRewrite={getQueryRewrite}
         onReferenceClick={getReference}
-        setCur={setCur}
-        onOpenDebug={openDebugPanel}
         chatContainerRef={chatContainerRef}
       />
 
@@ -201,6 +199,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
                 conv={conv}
                 convContent={convContent}
                 convContent2d={convContent2d}
+                convContent3d={convContent3d}
                 sharingList={sharingList}
                 loading={loading}
                 isSharing={true}
@@ -208,8 +207,6 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
                 getRecommend={getRecommend}
                 getQueryRewrite={getQueryRewrite}
                 onReferenceClick={getReference}
-                setCur={setCur}
-                onOpenDebug={openDebugPanel}
               />
             </div>
           </div>
