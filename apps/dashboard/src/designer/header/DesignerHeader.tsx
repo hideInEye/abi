@@ -25,7 +25,6 @@ import BluePrintHdImpl from "./items/blue-print/BluePrintHdImpl.tsx";
 import {AfferentFour, ConnectionPointTwo, EfferentFour, Eyes, HardDiskOne, PageTemplate, Theme} from "@icon-park/react";
 import URLUtil from "../../utils/URLUtil.ts";
 import {DesignerMode} from "../DesignerType.ts";
-import logo from "../../images/logo.png";
 
 
 export interface IHeaderItem {
@@ -86,13 +85,25 @@ const leftItems: Array<IHeaderItem> = [
         key: 'preview',
         onClick: () => {
             const {saveType, id} = URLUtil.parseUrlParams();
-            window.open(`/view?id=${id}&saveType=${saveType}&mode=${DesignerMode.VIEW}`, '_blank');
+            URLUtil.navigateToAppPath('/view', {id, saveType, mode: DesignerMode.VIEW});
         }
     }
 ];
 
 
 const Header: React.FC = observer(() => {
+
+        const handleBack = () => {
+            const historyIndex = window.history.state?.idx;
+            if (typeof historyIndex === 'number' && historyIndex > 0) {
+                window.history.back();
+                return;
+            }
+            const fallbackPath = window.__ABI_DASHBOARD_HOST_BASE_PATH__
+                ? '/workbench/screen-manage/abi-dashboard'
+                : '/projects';
+            URLUtil.navigateToAppPath(fallbackPath);
+        };
 
         const buildHeaderItemUI = (items: Array<IHeaderItem>): Array<ReactElement> => {
             const headerItems: Array<ReactElement> = [];
@@ -112,7 +123,10 @@ const Header: React.FC = observer(() => {
             <>
                 <div className={'designer-header'}>
                     <div className={'header-left'}>
-                        <div className={'header-title'}><img style={{width: '60%'}} src={logo} alt={'logo'}/></div>
+                        <button className={'header-back-button'} onClick={handleBack} type={'button'}>
+                            <span className={'back-icon'}>{'<'}</span>
+                            <span>返回</span>
+                        </button>
                     </div>
                     <div className={'header-center'}>
                         {buildHeaderItemUI(centerItems)}

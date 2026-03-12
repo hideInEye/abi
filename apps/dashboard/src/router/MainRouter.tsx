@@ -9,7 +9,7 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import {lazy, memo} from 'react';
+import {lazy, memo, useMemo} from 'react';
 import {createBrowserRouter, createMemoryRouter, Navigate, RouterProvider} from "react-router-dom";
 import {ConfigProvider, theme} from "antd";
 import {qiankunWindow} from 'vite-plugin-qiankun/dist/helper';
@@ -479,11 +479,14 @@ const routes = [
 
 const isPoweredByQiankun = (qiankunWindow as any).__POWERED_BY_QIANKUN__
 
-const router = isPoweredByQiankun
-    ? createMemoryRouter(routes, {initialEntries: ['/projects']})
-    : createBrowserRouter(routes)
-
 const MainRouter = memo(() => {
+    const router = useMemo(() => {
+        if (isPoweredByQiankun) {
+            return createMemoryRouter(routes, {initialEntries: [window.__ABI_DASHBOARD_INITIAL_PATH__ || '/projects']});
+        }
+        return createBrowserRouter(routes);
+    }, []);
+
     return (
         <ConfigProvider theme={{
             algorithm: theme.defaultAlgorithm,
