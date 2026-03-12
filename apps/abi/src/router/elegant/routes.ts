@@ -123,6 +123,16 @@ export const generatedRoutes: GeneratedRoute[] = [
     ]
   },
   {
+    name: 'designer',
+    path: '/designer',
+    component: 'layout.blank$view.designer',
+    meta: {
+      constant: true,
+      hideInMenu: true,
+      title: 'designer'
+    }
+  },
+  {
     name: 'guide',
     path: '/guide',
     component: 'layout.base$view.guide',
@@ -427,6 +437,16 @@ export const generatedRoutes: GeneratedRoute[] = [
       hideInMenu: true,
       i18nKey: 'route.space-list',
       title: 'space-list'
+    }
+  },
+  {
+    name: 'view',
+    path: '/view',
+    component: 'layout.blank$view.view',
+    meta: {
+      constant: true,
+      hideInMenu: true,
+      title: 'view'
     }
   },
   {

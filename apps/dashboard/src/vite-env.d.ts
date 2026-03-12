@@ -19,6 +19,8 @@ import {LayerManager} from "./designer/manager/LayerManager.ts";
 
 declare global {
     interface Window {
+        __ABI_DASHBOARD_HOST_BASE_PATH__?: string;
+        __ABI_DASHBOARD_INITIAL_PATH__?: string;
         LC_ENV: {
             projectId?: string;
             mode?: DesignerMode;

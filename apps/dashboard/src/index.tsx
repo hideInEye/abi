@@ -22,7 +22,9 @@ let root: ReturnType<typeof createRoot> | null = null;
 
 async function render(props: any) {
     await loadAppConfig();
-    const {container} = props ?? {};
+    const {container, hostBasePath, initialPath} = props ?? {};
+    window.__ABI_DASHBOARD_HOST_BASE_PATH__ = hostBasePath;
+    window.__ABI_DASHBOARD_INITIAL_PATH__ = initialPath;
     const containerEl = container
         ? container.querySelector('#root')
         : document.getElementById('root');
@@ -48,6 +50,8 @@ const initQianKun = () => {
         unmount(_props: any) {
             root?.unmount();
             root = null;
+            delete window.__ABI_DASHBOARD_HOST_BASE_PATH__;
+            delete window.__ABI_DASHBOARD_INITIAL_PATH__;
         },
         update(_props: any) {},
     } as any);

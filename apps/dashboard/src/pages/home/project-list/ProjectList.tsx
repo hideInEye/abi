@@ -21,6 +21,7 @@ import CloneProjectDialog from "./CloneProjectDialog.tsx";
 import ProjectItem from "./ProjectItem.tsx";
 // import {Add} from "@icon-park/react";
 import baseApi from "../../../api/BaseApi.ts";
+import URLUtil from "../../../utils/URLUtil.ts";
 
 const {Search} = Input;
 
@@ -66,8 +67,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 globalMessage.messageApi?.error('创建失败');
             else {
                 setAddDialog(false);
-                window.open(`/designer?id=${id}&saveType=${saveType}&mode=${DesignerMode.EDIT}`, '_blank');
-                getProjectPageList(pageData.current, pageData.size)
+                URLUtil.navigateToAppPath('/designer', {id, saveType, mode: DesignerMode.EDIT});
             }
         });
     }
@@ -77,10 +77,10 @@ export const ProjectList = memo((props: ProjectListProps) => {
     const operateHandler = (id: string, type: string) => {
         switch (type) {
             case 'edit':
-                window.open(`/designer?id=${id}&saveType=${saveType}&mode=${DesignerMode.EDIT}`, '_blank');
+                URLUtil.navigateToAppPath('/designer', {id, saveType, mode: DesignerMode.EDIT});
                 break;
             case 'show':
-                window.open(`/view?id=${id}&saveType=${saveType}&mode=${DesignerMode.VIEW}`, '_blank');
+                URLUtil.navigateToAppPath('/view', {id, saveType, mode: DesignerMode.VIEW});
                 break;
             case 'del':
                 delIdRef.current = id;

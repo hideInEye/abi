@@ -20,15 +20,34 @@
   font-family: 'Helvetica Neue', Arial, sans-serif;
 
   .header-left {
-    .header-title {
-      img {
-        height: 32px;
-        object-fit: contain;
-        transition: opacity 0.2s;
+    .header-back-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 14px 0 12px;
+      border: 1px solid #3A3A4E;
+      border-radius: 18px;
+      background: rgba(79, 184, 255, 0.08);
+      color: #E7F4FF;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
 
-        &:hover {
-          opacity: 0.8;
-        }
+      &:hover {
+        border-color: #4FB8FF;
+        background: rgba(79, 184, 255, 0.16);
+        color: #4FB8FF;
+      }
+
+      &:active {
+        background: rgba(79, 184, 255, 0.24);
+      }
+
+      .back-icon {
+        font-size: 16px;
+        line-height: 1;
       }
     }
   }

@@ -16,7 +16,7 @@ export interface HttpResponse {
 }
 
 let _apiTarget = '';
-const DEFAULT_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.eyJ1c2VyX2lkIjoxMTAsInVzZXJfa2V5IjoiNzk1MWFmMTQtNThlNC00NzUwLWEyNzgtZTRkYmM2ZmE4YmJhIiwidXNlcm5hbWUiOiJ5YW5neXVodWFuIn0.Mo2W0cGJgq1JfIJGm73icFNxEgYwuz8SkO6O-L0pkaMBMqcoQuUd8o1xgztDtRt7gYdmVTX3o6BVJFjyLaIgCTJKQnrCGbT1mfYEo9xhzSOfnzG3R8PT88UDPxED-z8HnaodyPS-gf6m2yT0XZ2h8xJvePLCE9uglObtu9a4LZe722cghUY85rJS1_eiyKo8crNB1qlPFqTKOkhLnXYrgPJ4-iOzDdeSqrDNc5cDCm6Gt-ZmhPBvA3zMPdiHDBllR6zlzVXP9ZsaQL9Rh6JphfvXFM0RtBFtUpda3hVmAAeJZlzBGSI6-f_raGYvycTw7Nk4ScaVIkbEkFy6giMbzQ';
+const DEFAULT_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.eyJ1c2VyX2lkIjoxMTAsInVzZXJfa2V5IjoiZjJkNTIzNDItZTQ1OS00NjE0LWI1MWYtYTY5ZTg0NDI2M2E0IiwidXNlcm5hbWUiOiJ5YW5neXVodWFuIn0.dGbO_gW-nnjtijEXez6gL5-xb6T181irK_03bTkA1H7QDzFCgzCLJQy9PaD9vyHnd5kiJGuUybnfvM6S9AdY7e_IHOlcErRFiG-yAYkbH_8zYxotGOsfxjSKYeqQkz61KWvss7Ahg29dsDw0G93GZ-uQnzSTA_mf2uyupjZrLYxCkLjrJAQlABEal4_MIwGK7txwhUbCBjstndGXiDyRy_ddIY3cyD-khJyrSg5ad1AMv0qaDYtJJtzkbaXi5h7z1s5NJvl-cQt9nHP5qRVHpWPWUapQX7bD_EW4W6gwT-PBdmua3N2J9r9uu0tvLKF-dIt91QpQvPwDp5dpoELbiA';
 export async function loadAppConfig(): Promise<void> {
     try {
         const configPath = import.meta.env.MODE === 'development' ? 'http://localhost:5174/config.json': '/dashboard-ui/config.json'
