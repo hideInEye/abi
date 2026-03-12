@@ -533,7 +533,7 @@ export const importProject = () => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('projectId', window.LC_ENV.projectId!);
-        FetchUtil.post('/api/project/importProject', formData, {headers: {'Content-Type': 'multipart/form-data'}}).then((res) => {
+        FetchUtil.post('/dashboard/api/v1/project/importProject', formData, {headers: {'Content-Type': 'multipart/form-data'}}).then((res) => {
             const {code, data, msg} = res;
             const timer = setTimeout(() => {
                 clearTimeout(timer);

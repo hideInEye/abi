@@ -16,11 +16,10 @@ export interface HttpResponse {
 }
 
 let _apiTarget = '';
+const DEFAULT_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.eyJ1c2VyX2lkIjoxMTAsInVzZXJfa2V5IjoiNzk1MWFmMTQtNThlNC00NzUwLWEyNzgtZTRkYmM2ZmE4YmJhIiwidXNlcm5hbWUiOiJ5YW5neXVodWFuIn0.Mo2W0cGJgq1JfIJGm73icFNxEgYwuz8SkO6O-L0pkaMBMqcoQuUd8o1xgztDtRt7gYdmVTX3o6BVJFjyLaIgCTJKQnrCGbT1mfYEo9xhzSOfnzG3R8PT88UDPxED-z8HnaodyPS-gf6m2yT0XZ2h8xJvePLCE9uglObtu9a4LZe722cghUY85rJS1_eiyKo8crNB1qlPFqTKOkhLnXYrgPJ4-iOzDdeSqrDNc5cDCm6Gt-ZmhPBvA3zMPdiHDBllR6zlzVXP9ZsaQL9Rh6JphfvXFM0RtBFtUpda3hVmAAeJZlzBGSI6-f_raGYvycTw7Nk4ScaVIkbEkFy6giMbzQ';
 export async function loadAppConfig(): Promise<void> {
     try {
-        const configPath = import.meta.env.MODE === 'development'
-            ? `${location.protocol}//${location.hostname}:${location.port}/config.json`
-            : `${import.meta.env.BASE_URL}config.json`;
+        const configPath = import.meta.env.MODE === 'development' ? 'http://localhost:5174/config.json': '/dashboard-ui/config.json'
         const res = await fetch(configPath);
         const cfg = await res.json();
         if (cfg.VITE_API_TARGET) {
@@ -32,6 +31,45 @@ export async function loadAppConfig(): Promise<void> {
 }
 
 export default class FetchUtil {
+    private static normalizeToken(token: string): string {
+        let normalizedToken = token.trim();
+
+        while (
+            normalizedToken.length > 1 &&
+            ((normalizedToken.startsWith('"') && normalizedToken.endsWith('"')) ||
+                (normalizedToken.startsWith("'") && normalizedToken.endsWith("'")))
+        ) {
+            normalizedToken = normalizedToken.slice(1, -1).trim();
+        }
+
+        return normalizedToken;
+    }
+
+    private static getToken(): string {
+        let token = DEFAULT_TOKEN;
+
+        try {
+            const storedToken = window.localStorage.getItem('SOY-REACT_token');
+            if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
+                token = JSON.parse(storedToken);
+            }
+        } catch (error) {
+            console.error('Token processing error:', error);
+        }
+
+        return FetchUtil.normalizeToken(token);
+    }
+
+    private static buildHeaders(headers?: HeadersInit): Headers {
+        const nextHeaders = new Headers(headers);
+        const token = FetchUtil.getToken();
+
+        if (token && !nextHeaders.has('Authorization')) {
+            nextHeaders.set('Authorization', `Bearer ${token}`);
+        }
+
+        return nextHeaders;
+    }
     /**
      * GET请求
      * @param url
@@ -94,7 +132,10 @@ export default class FetchUtil {
         const fullUrl = url.startsWith('http') ? url : `${_apiTarget}${url}`;
         let response: Response | null = null;
         try {
-            response = await fetch(fullUrl, options);
+            response = await fetch(fullUrl, {
+                ...options,
+                headers: FetchUtil.buildHeaders(options.headers),
+            });
             if (!response.ok) {
                 console.error('请求错误:', response?.status, response?.statusText);
                 return {code: response?.status ?? 500, msg: response?.statusText ?? '', data: null};
@@ -128,7 +169,10 @@ export default class FetchUtil {
         const fullUrl = url.startsWith('http') ? url : `${_apiTarget}${url}`;
         let response: Response | null = null;
         try {
-            response = await fetch(fullUrl, options);
+            response = await fetch(fullUrl, {
+                ...options,
+                headers: FetchUtil.buildHeaders(options.headers),
+            });
             if (response.ok) {
                 const contentType = response.headers.get('content-type');
                 if (contentType && contentType.includes('application/json')) {
