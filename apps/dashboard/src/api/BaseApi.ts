@@ -19,22 +19,22 @@ import FetchUtil from "../utils/FetchUtil.ts";
 class BaseApi extends AbstractApi {
 
     async createProject(project: IProjectInfo): Promise<string> {
-        const res = await FetchUtil.post('/api/project/create', project);
+        const res = await FetchUtil.post('/dashboard/api/v1/project/create', project);
         return res.code === 200 ? res.data : '';
     }
 
     async copyProject(id: string): Promise<string> {
-        const res = await FetchUtil.get(`/api/project/copy/${id}`);
+        const res = await FetchUtil.get(`/dashboard/api/v1/project/copy/${id}`);
         return res.code === 200 ? res.data : '';
     }
 
     async deleteProject(id: string): Promise<boolean> {
-        const res = await FetchUtil.get(`/api/project/del/${id}`);
+        const res = await FetchUtil.get(`/dashboard/api/v1/project/del/${id}`);
         return res.code === 200;
     }
 
     async getProjectData(id: string): Promise<ProjectDataType | null> {
-        const res = await FetchUtil.get(`/api/project/getProjectData/${id}`);
+        const res = await FetchUtil.get(`/dashboard/api/v1/project/getProjectData/${id}`);
         if (res.code === 200)
             return JSON.parse(res.data);
         else {
@@ -48,7 +48,7 @@ class BaseApi extends AbstractApi {
      * @param id
      */
     async getProjectInfo(id: string): Promise<IProject | null> {
-        const res = await FetchUtil.get(`/api/project/getProjectInfo/${id}`);
+        const res = await FetchUtil.get(`/dashboard/api/v1/project/getProjectInfo/${id}`);
         const {code, data} = res;
         if (code === 200)
             return data;
@@ -62,8 +62,8 @@ class BaseApi extends AbstractApi {
      * 获取项目分页列表
      */
     public async getProjectInfoPageList(pageParam: IPageParam): Promise<IPage<IProjectInfo>> {
-        const res = await FetchUtil.post('/api/project/pageList', pageParam);
-        if (res.code === 200)
+        const res = await FetchUtil.post('/dashboard/api/v1/project/pageList', pageParam);
+        if (res.code === 200) 
             return res.data;
         else {
             globalMessage.messageApi?.error(res.msg);
@@ -72,7 +72,7 @@ class BaseApi extends AbstractApi {
     }
 
     public async updateProject(data: IProjectInfo): Promise<void> {
-        const res = await FetchUtil.post('/api/project/update', data);
+        const res = await FetchUtil.post('/dashboard/api/v1/project/update', data);
         if (res.code !== 200)
             globalMessage.messageApi?.error(res.msg);
     }
@@ -84,12 +84,12 @@ class BaseApi extends AbstractApi {
         formData.append('projectId', id);
         formData.append('type', "1");
 
-        const res = await FetchUtil.post('/api/image/upload', formData, {headers: {'Content-Type': 'multipart/form-data'}});
+        const res = await FetchUtil.post('/dashboard/api/v1/image/upload', formData, {headers: {'Content-Type': 'multipart/form-data'}});
         return res.code === 200 ? {url: res.data} : false;
     }
 
     async getImageSourceList(): Promise<IImageData[]> {
-        const res = await FetchUtil.post(`/api/image/pageList`, {
+        const res = await FetchUtil.post(`/dashboard/api/v1/image/pageList`, {
             current: 1,
             size: 1000
         });
@@ -102,7 +102,7 @@ class BaseApi extends AbstractApi {
     }
 
     public async delImageSource(imageId: string): Promise<boolean> {
-        const res = await FetchUtil.post(`/api/image/batchDelete`, [imageId]);
+        const res = await FetchUtil.post(`/dashboard/api/v1/image/batchDelete`, [imageId]);
         if (res.code === 200) {
             globalMessage.messageApi?.success("操作成功");
             return true;
@@ -118,12 +118,12 @@ class BaseApi extends AbstractApi {
         formData.append('file', file);
         formData.append('id', id);
 
-        const res = await FetchUtil.post('/api/project/cover', formData, {headers: {'Content-Type': 'multipart/form-data'}});
+        const res = await FetchUtil.post('/dashboard/api/v1/project/cover', formData, {headers: {'Content-Type': 'multipart/form-data'}});
         return res.code === 200;
     }
 
     public async exportProjectApi(projectDependency: any) {
-        return await FetchUtil.post('/api/project/exportProject', projectDependency);
+        return await FetchUtil.post('/dashboard/api/v1/project/exportProject', projectDependency);
     }
 
 }
