@@ -57,7 +57,7 @@ const page: App.I18n.Schema['translation']['page'] = {
       },
       keyword: '关键字',
       keywordPlaceholder: '请输入关键字',
-      name: '主机名',
+      name: '数据源名称',
       operateTime: '操作时间',
       operator: '操作人',
       password: '密码',

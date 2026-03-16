@@ -9,7 +9,7 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import React, {ReactElement, ReactNode} from 'react';
+import React, {ReactElement, ReactNode, useState} from 'react';
 import './DesignerHeader.less';
 import {observer} from "mobx-react";
 import eventOperateStore from "../operate-provider/EventOperateStore";
@@ -25,6 +25,7 @@ import BluePrintHdImpl from "./items/blue-print/BluePrintHdImpl.tsx";
 import {AfferentFour, ConnectionPointTwo, EfferentFour, Eyes, HardDiskOne, PageTemplate, Theme} from "@icon-park/react";
 import URLUtil from "../../utils/URLUtil.ts";
 import {DesignerMode} from "../DesignerType.ts";
+import AiChatPanel from "./items/ai-chat/AiChatPanel.tsx";
 
 
 export interface IHeaderItem {
@@ -85,13 +86,14 @@ const leftItems: Array<IHeaderItem> = [
         key: 'preview',
         onClick: () => {
             const {saveType, id} = URLUtil.parseUrlParams();
-            URLUtil.navigateToAppPath('/view', {id, saveType, mode: DesignerMode.VIEW});
+            window.open(URLUtil.buildAppUrl('/view', {id, saveType, mode: DesignerMode.VIEW}), '_blank');
         }
     }
 ];
 
 
 const Header: React.FC = observer(() => {
+        const [aiChatVisible, setAiChatVisible] = useState(false);
 
         const handleBack = () => {
             const historyIndex = window.history.state?.idx;
@@ -133,11 +135,27 @@ const Header: React.FC = observer(() => {
                     </div>
                     <div className={'header-right'}>
                         {buildHeaderItemUI(leftItems)}
+                        <div
+                            className={`header-item${aiChatVisible ? ' header-item-active' : ''}`}
+                            onClick={() => setAiChatVisible(!aiChatVisible)}
+                            title="AI 智能问答"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{marginBottom: 2}}>
+                                <path d="M20 2H4a2 2 0 00-2 2v12a2 2 0 002 2h4l4 4 4-4h4a2 2 0 002-2V4a2 2 0 00-2-2zm-9 11H7v-2h4v2zm6 0h-4v-2h4v2zm0-4H7V7h10v2z"/>
+                            </svg>
+                            <span className={'item-span'}>AI问答</span>
+                        </div>
                     </div>
                     {canvasHdStore.canvasVisible && <CanvasHdConfigImpl/>}
                     {projectHdStore.projectVisible && <ProjectHdItemImpl/>}
                     {themeHdStore.themeVisible && <ThemeHdItemImpl/>}
                     {bluePrintHdStore.bluePrintVisible && <BluePrintHdImpl/>}
+                    {aiChatVisible && (
+                        <AiChatPanel
+                            onClose={() => setAiChatVisible(false)}
+                            taskType="development"
+                        />
+                    )}
                 </div>
             </>
         );
