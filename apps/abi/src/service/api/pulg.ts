@@ -3,28 +3,25 @@ import { apiRequest } from '../request';
 
 export function addPlugin(data: any) {
   return apiRequest({
-    baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/chat-proxy/api/v2/plugin/plugin_add'
+    url: '/api/chat-proxy/api/v2/plugin/plugin_add'
   });
 }
 
 export function updatePlugin(data: PlugEdit) {
   return apiRequest({
-    baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/chat-proxy/api/v2/plugin/plugin_modify'
+    url: '/api/chat-proxy/api/v2/plugin/plugin_modify'
   });
 }
 
 export function deletePlugin(data: PluginDel) {
   return apiRequest({
-    baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: `/chat-proxy/api/v2/plugin/plugin_del`
+    url: `/api/chat-proxy/api/v2/plugin/plugin_del`
   });
 }
 
@@ -32,6 +29,6 @@ export function queryPluginList(params: { pageNum: number; pageSize: number; plu
   return apiRequest({
     params,
     method: 'get',
-    url: `/abi-system/v1/plugin/list`
+    url: `/api/abi-system/v1/plugin/list`
   });
 }

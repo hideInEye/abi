@@ -9,7 +9,7 @@ export function getSpaceMenuListApi(params: any) {
   return apiRequest({
     method: 'get',
     params,
-    url: '/system/v1/space/menu/list'
+    url: '/api/system/v1/space/menu/list'
   });
 }
 
@@ -24,7 +24,7 @@ export function addSpaceMenuApi(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: `/system/v1/space/menu`
+    url: `/api/system/v1/space/menu`
   });
 }
 
@@ -39,7 +39,7 @@ export function updateSpaceMenuApi(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/v1/space/menu`
+    url: `/api/system/v1/space/menu`
   });
 }
 
@@ -52,7 +52,7 @@ export function updateSpaceMenuApi(data: any) {
 export function deleteSpaceMenuApi(menuId: number) {
   return apiRequest({
     method: 'delete',
-    url: `/system/v1/space/menu/${menuId}`
+    url: `/api/system/v1/space/menu/${menuId}`
   });
 }
 
@@ -65,7 +65,7 @@ export function deleteSpaceMenuApi(menuId: number) {
 export function getSpaceMenuInfoApi(menuId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/v1/space/menu/${menuId}`
+    url: `/api/system/v1/space/menu/${menuId}`
   });
 }
 
@@ -78,7 +78,7 @@ export function getSpaceMenuInfoApi(menuId: number) {
 export function getSpaceMenuTreeByRoleIdApi(roleId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/v1/space/menu//roleMenuTreeselect/${roleId}`
+    url: `/api/system/v1/space/menu//roleMenuTreeselect/${roleId}`
   });
 }
 
@@ -86,7 +86,7 @@ export function getSpaceMenuTreeByRoleIdApi(roleId: number) {
 export function getSpaceMenuBySpaceIdApi(spaceId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/v1/space/menu/getRouters/${spaceId}`
+    url: `/api/system/v1/space/menu/getRouters/${spaceId}`
   });
 }
 
@@ -99,13 +99,13 @@ export function getSpaceMenuBySpaceIdApi(spaceId: number) {
 export function getSpaceMenuTreeListApi() {
   return apiRequest({
     method: 'get',
-    url: '/system/v1/space/menu/treeselect'
+    url: '/api/system/v1/space/menu/treeselect'
   });
 }
 
 // export function getUserSystemMenuApi() {
 //   return apiRequest({
 //     method: 'get',
-//     url: `/system/menu/getRouters`
+//     url: `/api/system/menu/getRouters`
 //   });
 // }

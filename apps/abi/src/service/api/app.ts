@@ -6,7 +6,7 @@ export function fetchAgentList(params: any) {
     // baseURL: import.meta.env.VITE_AGENT_BASE_API,
     method: 'get',
     params,
-    url: '/copilot/v1/agentConfig/list'
+    url: '/api/copilot/v1/agentConfig/list'
   });
 }
 
@@ -15,7 +15,7 @@ export function fetchAgentInfoById(agentId: number) {
   return apiRequest({
     // baseURL: import.meta.env.VITE_AGENT_BASE_API,
     method: 'get',
-    url: `/copilot/v1/agentConfig/${agentId}`
+    url: `/api/copilot/v1/agentConfig/${agentId}`
   });
 }
 
@@ -24,7 +24,7 @@ export function fetchSchemaById(agentId: number) {
   return apiRequest({
     // baseURL: import.meta.env.VITE_AGENT_BASE_API,
     method: 'get',
-    url: `/copilot/v1/agentConfig/schema/${agentId}`
+    url: `/api/copilot/v1/agentConfig/schema/${agentId}`
   });
 }
 
@@ -33,36 +33,33 @@ export function fetchDatasourceById(agentId: number) {
   return apiRequest({
     // baseURL: import.meta.env.VITE_AGENT_BASE_API,
     method: 'get',
-    url: `/copilot/v1/agentConfig/ds/${agentId}`
+    url: `/api/copilot/v1/agentConfig/ds/${agentId}`
   });
 }
 
 // 新建app
 export function createApp(data: any) {
   return apiRequest({
-    baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/chat-proxy/api/v1/chat/app/add'
+    url: '/api/chat-proxy/api/v1/chat/app/add'
   });
 }
 
 // 获取app列表
 export function fetchAppList(params: any) {
   return apiRequest({
-    baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     method: 'get',
     params,
-    url: '/chat-proxy/api/v1/chat/app/list'
+    url: '/api/chat-proxy/api/v1/chat/app/list'
   });
 }
 
 // 删除app
 export function deleteApp(data: any) {
   return apiRequest({
-    baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/chat-proxy/api/v1/chat/app/delete'
+    url: '/api/chat-proxy/api/v1/chat/app/delete'
   });
 }

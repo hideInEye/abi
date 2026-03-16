@@ -9,7 +9,7 @@ export function getDeptListApi(params: any) {
   return apiRequest({
     method: 'get',
     params,
-    url: '/system/dept/list'
+    url: '/api/system/dept/list'
   });
 }
 
@@ -22,7 +22,7 @@ export function getDeptListApi(params: any) {
 export function getDeptTreeApi() {
   return apiRequest({
     method: 'get',
-    url: '/system/user/deptTree'
+    url: '/api/system/user/deptTree'
   });
 }
 
@@ -35,7 +35,7 @@ export function getDeptTreeApi() {
 export function getDeptInfoApi(deptId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/dept/${deptId}`
+    url: `/api/system/dept/${deptId}`
   });
 }
 
@@ -50,7 +50,7 @@ export function addDeptApi(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: `/system/dept`
+    url: `/api/system/dept`
   });
 }
 
@@ -65,7 +65,7 @@ export function updateDeptApi(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/dept`
+    url: `/api/system/dept`
   });
 }
 
@@ -78,6 +78,6 @@ export function updateDeptApi(data: any) {
 export function deleteDeptApi(deptId: number) {
   return apiRequest({
     method: 'delete',
-    url: `/system/dept/${deptId}`
+    url: `/api/system/dept/${deptId}`
   });
 }

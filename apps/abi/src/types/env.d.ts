@@ -68,8 +68,6 @@ declare namespace Env {
     readonly VITE_ROUTE_HOME: import('@elegant-router/types').LastLevelRouteKey;
     /** The router history mode */
     readonly VITE_ROUTER_HISTORY_MODE?: RouterHistoryMode;
-    /** backend service url */
-    readonly VITE_SERVICE_API_URL: string;
     /** backend service base url */
     readonly VITE_SERVICE_BASE_URL: string;
     readonly VITE_CHAT_SERVICE_BASE_URL: string;
