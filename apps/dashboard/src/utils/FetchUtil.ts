@@ -16,6 +16,9 @@ export interface HttpResponse {
 }
 
 let _apiTarget = '';
+export function getApiTarget(): string {
+    return _apiTarget;
+}
 const DEFAULT_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.eyJ1c2VyX2lkIjoxMTAsInVzZXJfa2V5IjoiZjJkNTIzNDItZTQ1OS00NjE0LWI1MWYtYTY5ZTg0NDI2M2E0IiwidXNlcm5hbWUiOiJ5YW5neXVodWFuIn0.dGbO_gW-nnjtijEXez6gL5-xb6T181irK_03bTkA1H7QDzFCgzCLJQy9PaD9vyHnd5kiJGuUybnfvM6S9AdY7e_IHOlcErRFiG-yAYkbH_8zYxotGOsfxjSKYeqQkz61KWvss7Ahg29dsDw0G93GZ-uQnzSTA_mf2uyupjZrLYxCkLjrJAQlABEal4_MIwGK7txwhUbCBjstndGXiDyRy_ddIY3cyD-khJyrSg5ad1AMv0qaDYtJJtzkbaXi5h7z1s5NJvl-cQt9nHP5qRVHpWPWUapQX7bD_EW4W6gwT-PBdmua3N2J9r9uu0tvLKF-dIt91QpQvPwDp5dpoELbiA';
 export async function loadAppConfig(): Promise<void> {
     try {

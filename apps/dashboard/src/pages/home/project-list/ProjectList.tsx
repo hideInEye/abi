@@ -80,7 +80,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 URLUtil.navigateToAppPath('/designer', {id, saveType, mode: DesignerMode.EDIT});
                 break;
             case 'show':
-                URLUtil.navigateToAppPath('/view', {id, saveType, mode: DesignerMode.VIEW});
+                window.open(URLUtil.buildAppUrl('/view', {id, saveType, mode: DesignerMode.VIEW}), '_blank');
                 break;
             case 'del':
                 delIdRef.current = id;

@@ -129,7 +129,8 @@ export const generatedRoutes: GeneratedRoute[] = [
     meta: {
       constant: true,
       hideInMenu: true,
-      title: 'designer'
+      title: 'designer',
+      i18nKey: 'route.designer'
     }
   },
   {
@@ -446,7 +447,8 @@ export const generatedRoutes: GeneratedRoute[] = [
     meta: {
       constant: true,
       hideInMenu: true,
-      title: 'view'
+      title: 'view',
+      i18nKey: 'route.view'
     }
   },
   {
