@@ -36,6 +36,7 @@ export default defineConfig((configEnv) => ({
     },
   },
   server: {
+    port:5173,
     fs: {
       strict: true,
     },
