@@ -1,0 +1,588 @@
+/*
+ * Copyright © 2023-2025 puyinzhen
+ * All rights reserved.
+ *
+ * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
+ *
+ * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ *
+ * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
+ */
+
+import eventOperateStore from "../EventOperateStore";
+import {ILayerItem, IProjectInfo} from "../../DesignerType";
+import throttle from "lodash/throttle";
+import {historyOperator} from "../undo-redo/HistoryOperator";
+import historyRecordOperateProxy from "../undo-redo/HistoryRecordOperateProxy";
+import undoRedoMap from "../undo-redo/core";
+import runtimeConfigStore from "../../store/RuntimeStore.ts";
+import footerStore from "../../footer/FooterStore";
+import bpLeftStore from "../../../designer/blueprint/left/BPLeftStore";
+import URLUtil from "../../../utils/URLUtil";
+import LayerUtil from "../../left/layer-list/util/LayerUtil.ts";
+import bluePrintHdStore from "../../header/items/blue-print/BluePrintHdStore.ts";
+import projectHdStore from "../../header/items/project/ProjectManager.ts";
+import layerListStore from "../../left/layer-list/LayerListStore.ts";
+import {globalMessage} from "../../../framework/message/GlobalMessage.tsx";
+import layerManager from "../../manager/LayerManager.ts";
+import themeHdStore from "../../header/items/theme/ThemeManager.ts";
+import bluePrintManager from "../../blueprint/manager/BluePrintManager.ts";
+import canvasManager from "../../header/items/canvas/CanvasManager.ts";
+import designerManager from "../../manager/DesignerManager.ts";
+import BpCanvasUtil from "../../blueprint/util/BpCanvasUtil.ts";
+import NProgress from "nprogress";
+import ProjectUtil from "../../../utils/ProjectUtil.ts";
+import baseApi from "../../../api/BaseApi.ts";
+import FetchUtil from "../../../utils/FetchUtil.ts";
+
+export const selectAll = () => {
+    const {layerConfigs} = layerManager;
+    const {setTargetIds, calculateGroupCoordinate} = eventOperateStore;
+    const selected = [];
+    for (const id in layerConfigs) {
+        const item = layerConfigs[id];
+        if (!item.lock && !item.hide)
+            selected.push(id);
+    }
+
+    if (selected.length > 0) {
+        setTargetIds(selected as string[]);
+        calculateGroupCoordinate(selected.map((id: string | undefined) => document.getElementById(id!))?.filter((item: HTMLElement | null) => !!item) as HTMLElement[]);
+    }
+}
+
+/**
+ * 普通复制，只复制非分组图层
+ */
+export const doCopy = () => {
+    const {targetIds, setTargetIds} = eventOperateStore;
+    if (!targetIds || targetIds.length === 0) return;
+
+    const newIds = historyRecordOperateProxy.doCopy(targetIds);
+    //延迟10毫秒，等待dom元素渲染完毕后再获取。
+    const tempTimer = setTimeout(() => {
+        setTargetIds(newIds);
+        clearTimeout(tempTimer);
+    }, 10);
+}
+
+export const doLock = () => {
+    const {targetIds, setTargetIds} = eventOperateStore;
+    if (!targetIds || targetIds.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const toBeUpdate = [];
+    for (const targetId of targetIds) {
+        const item = layerConfigs[targetId];
+        toBeUpdate.push({...item, lock: true})
+    }
+    historyRecordOperateProxy.doLockUpd(toBeUpdate);
+    //操作完毕之后，清空已被选择的元素。
+    setTargetIds([]);
+}
+
+export const doUnLock = () => {
+    const {setTargetIds, targetIds} = eventOperateStore;
+    if (!targetIds || targetIds.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const toUpdate: ILayerItem[] = [];
+    targetIds.filter(id => {
+        //过滤出被锁定的组件
+        return layerConfigs[id].lock;
+    }).forEach((id) => {
+        toUpdate.push({id, lock: false})
+    })
+    historyRecordOperateProxy.doLockUpd(toUpdate);
+    setTargetIds([]);
+}
+
+export const layerToTop = () => {
+    historyRecordOperateProxy.doLayerToTop();
+}
+
+export const layerToBottom = () => {
+    historyRecordOperateProxy.doLayerToBottom();
+}
+
+export const layerMoveUp = () => {
+    historyRecordOperateProxy.doLayerMoveUp();
+}
+
+export const layerMoveDown = () => {
+    historyRecordOperateProxy.doLayerMoveDown();
+}
+
+export const doDelete = () => {
+    //如果蓝图中使用了当前要被删除的组件，则需要先删除蓝图中的组件和连线，且蓝图中的删除操作目前无法回退
+    const {targetIds} = eventOperateStore;
+    if (targetIds && targetIds.length > 0) {
+        const {delNode, bpNodeLayoutMap} = bluePrintManager;
+        const preDelNodeIds: string[] = [];
+        targetIds.forEach((id: string) => {
+            if (bpNodeLayoutMap[id])
+                preDelNodeIds.push(id);
+        });
+        if (preDelNodeIds.length > 0)
+            delNode(preDelNodeIds);
+    }
+
+    //删除设计器中的组件，并记录到历史操作
+    historyRecordOperateProxy.doDelete();
+}
+
+//保存函数节流5s, 5s内不可重复保存
+export const doSave = throttle(async () => {
+    NProgress.configure({minimum: 0.5});
+    NProgress.start();
+    const {id} = URLUtil.parseUrlParams();
+    const proData = designerManager.getData();
+    //转换为最终保存的数据格式
+    const projectInfo: IProjectInfo = {
+        id,
+        dataJson: JSON.stringify(proData),
+    }
+    await baseApi.updateProject(projectInfo);
+    NProgress.done()
+}, 5000, {trailing: false});
+
+export const doHide = () => {
+    const {targetIds, setTargetIds} = eventOperateStore;
+    if (!targetIds || targetIds.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const toBeUpdate: ILayerItem[] = [];
+    targetIds.forEach((id: string) => {
+        const item = layerConfigs[id];
+        toBeUpdate.push({...item, hide: true});
+    });
+    historyRecordOperateProxy.doHideUpd(toBeUpdate);
+    setTargetIds([]);
+}
+
+/**
+ * 图层编组,
+ * 编组时候，如果都是普通组件图层，则直接编组
+ * 如果包含了已经分组的图层，则将将已经编组的这个组作为基本图层和其他图层进行编组，
+ * 比如有A,B,C三个普通图层，则编组的时候可直接生成编组G
+ * 如果A,B已经编组为G1，此时再选中A,C或B,C，或者A,B,C，则编组的时候，G1作为基本图层，和C进行编组，生成G2
+ */
+export const doGrouping = () => {
+    historyRecordOperateProxy.doGrouping();
+}
+
+export const doUnGrouping = () => {
+    //如果蓝图中使用了分组图层节点，则需要先删除蓝图中的组件和连线，且蓝图中的删除操作目前无法回退
+    let {targetIds} = eventOperateStore;
+    const targetIdSet = new Set<string>();
+    LayerUtil.findTopGroupLayer(targetIds, false).forEach((id: string) => targetIdSet.add(id));
+    targetIds = Array.from(targetIdSet);
+    if (targetIds && targetIds.length > 0) {
+        const {delNode, bpNodeLayoutMap} = bluePrintManager;
+        const preDelNodeIds: string[] = [];
+        targetIds.forEach((id: string) => {
+            if (bpNodeLayoutMap[id])
+                preDelNodeIds.push(id);
+        });
+        if (preDelNodeIds.length > 0)
+            delNode(preDelNodeIds);
+    }
+    historyRecordOperateProxy.doUnGrouping();
+}
+
+
+export const removeFromGroup = () => {
+    historyRecordOperateProxy.doRemoveFromGroup();
+}
+
+/*************************快捷键控制移动组件的位置*************************/
+
+export const doMoveUp = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {dragStep = 1}} = canvasManager;
+    let yPos;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        yPos = (layerConfigs[id].y || 0) - dragStep;
+    } else {
+        yPos = (groupCoordinate?.minY || 0) - dragStep;
+    }
+    movableRef?.request("draggable", {y: yPos}, true);
+}
+
+export const doMoveDown = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {dragStep = 1}} = canvasManager;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        const yPos = layerConfigs[id].y! + dragStep;
+        movableRef?.request("draggable", {y: yPos}, true);
+    } else {
+        const yPos = (groupCoordinate?.minY ?? 0) + dragStep;
+        movableRef?.request("draggable", {y: yPos}, true);
+    }
+}
+
+export const doMoveLeft = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {dragStep = 1}} = canvasManager;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        const xPos = layerConfigs[id].x!;
+        movableRef?.request("draggable", {x: xPos - dragStep}, true);
+    } else {
+        const xPos = (groupCoordinate?.minX ?? 0) - dragStep;
+        movableRef?.request("draggable", {x: xPos}, true);
+    }
+}
+
+export const doMoveRight = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {dragStep = 1}} = canvasManager;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        const xPos = layerConfigs[id].x!;
+        movableRef?.request("draggable", {x: xPos + dragStep}, true);
+    } else {
+        const xPos = (groupCoordinate?.minX ?? 0) + dragStep;
+        movableRef?.request("draggable", {x: xPos}, true);
+    }
+}
+
+/*************************快捷键控制缩放组件尺寸*************************/
+
+/**
+ * 以底部为基准向上扩大
+ */
+export const doBaseBottomEnlargeUp = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {resizeStep = 1}} = canvasManager;
+    let height;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        height = layerConfigs[id].height! + resizeStep;
+    } else {
+        height = groupCoordinate.groupHeight! + resizeStep;
+    }
+    movableRef?.request("resizable", {offsetHeight: height, direction: [1, -1]}, true);
+}
+
+/**
+ * 以顶部为基准向下扩大
+ */
+export const doBaseUpEnlargeDown = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {resizeStep = 1}} = canvasManager;
+    let height;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        height = layerConfigs[id].height! + resizeStep;
+    } else {
+        height = groupCoordinate.groupHeight! + resizeStep;
+    }
+    movableRef?.request("resizable", {offsetHeight: height, direction: [1, 1]}, true);
+}
+
+/**
+ * 以右边为基准向左扩大
+ */
+export const doBaseRightEnlargeLeft = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {resizeStep = 1}} = canvasManager;
+    let width;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        width = layerConfigs[id].width! + resizeStep;
+    } else {
+        width = groupCoordinate.groupWidth! + resizeStep;
+    }
+    movableRef?.request("resizable", {offsetWidth: width, direction: [-1, 1]}, true);
+}
+
+/**
+ * 以左边为基准向右扩大
+ */
+export const doBaseLeftEnlargeRight = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {resizeStep = 1}} = canvasManager;
+    let width;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        width = layerConfigs[id].width! + resizeStep;
+    } else {
+        width = groupCoordinate.groupWidth! + resizeStep;
+    }
+    movableRef?.request("resizable", {offsetWidth: width, direction: [1, 1]}, true);
+}
+
+
+/**
+ * 以底部为基准向上缩小
+ */
+export const doBaseBottomDecreaseUp = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {resizeStep = 1}} = canvasManager;
+    let height;
+    if (targets.length === 1) {
+        height = layerConfigs[targets[0].id].height! - resizeStep;
+    } else {
+        height = groupCoordinate.groupHeight! - resizeStep;
+    }
+    movableRef?.request("resizable", {offsetHeight: height, direction: [1, -1]}, true);
+}
+
+/**
+ * 以顶部为基准向下缩小
+ */
+export const doBaseUpDecreaseDown = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {resizeStep = 1}} = canvasManager;
+    let height;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        height = layerConfigs[id].height! - resizeStep;
+    } else {
+        height = groupCoordinate.groupHeight! - resizeStep;
+    }
+    movableRef?.request("resizable", {offsetHeight: height, direction: [1, 1]}, true);
+}
+
+/**
+ * 以右边为基准向左缩小
+ */
+export const doBaseRightDecreaseLeft = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {resizeStep = 1}} = canvasManager;
+    let width;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        width = layerConfigs[id].width! - resizeStep;
+    } else {
+        width = groupCoordinate.groupWidth! - resizeStep;
+    }
+    movableRef?.request("resizable", {offsetWidth: width, direction: [-1, 1]}, true);
+}
+
+/**
+ * 以左边为基准向右缩小
+ */
+export const doBaseLeftDecreaseRight = () => {
+    const {targets, movableRef, groupCoordinate} = eventOperateStore;
+    if (!targets || targets.length === 0) return;
+    const {layerConfigs} = layerManager;
+    const {canvasConfig: {resizeStep = 1}} = canvasManager;
+    let width;
+    if (targets.length === 1) {
+        const id = targets[0].id;
+        width = layerConfigs[id].width! - resizeStep;
+    } else {
+        width = groupCoordinate.groupWidth! - resizeStep;
+    }
+    movableRef?.request("resizable", {offsetWidth: width, direction: [1, 1]}, true);
+}
+
+
+/**
+ * 撤销
+ */
+export const undo = () => {
+    const history = historyOperator.backoff();
+    if (!history) return;
+    const {actions} = history!;
+    actions.forEach(action => {
+        const {type} = action!;
+        undoRedoMap.get(type)?.undo(action!);
+    })
+}
+
+/**
+ * 重做
+ */
+export const redo = () => {
+    const history = historyOperator.forward();
+    if (!history) return;
+    const {actions} = history!;
+    actions.forEach(action => {
+        const {type} = action!;
+        undoRedoMap.get(type)?.redo(action!);
+    });
+}
+
+
+/*************************运行时配置快捷键*************************/
+
+/**
+ * 切换辅助线展示
+ */
+export const toggleSecondaryBorder = () => {
+    const {auxiliaryBorder, setAuxiliaryBorder} = runtimeConfigStore;
+    const newValue = !auxiliaryBorder;
+    if (newValue) {
+        //展示辅助线
+        const compContainers = document.getElementsByClassName('lc-comp-item')
+        compContainers && Array.from(compContainers).forEach((compContainer: Element) => {
+            (compContainer as HTMLElement).style.border = '1px solid #65eafc';
+        });
+    } else {
+        //隐藏辅助线
+        const compContainers = document.getElementsByClassName('lc-comp-item')
+        compContainers && Array.from(compContainers).forEach((compContainer: Element) => {
+            (compContainer as HTMLElement).style.border = 'none';
+        });
+    }
+    setAuxiliaryBorder(!auxiliaryBorder);
+}
+
+/**
+ * 切换项目设置弹框
+ */
+export const toggleProjectConfig = () => {
+    const {projectVisible, setProjectVisible} = projectHdStore;
+    setProjectVisible(!projectVisible);
+}
+
+/**
+ * 切换画布设置弹框
+ */
+export const toggleCanvasConfig = () => {
+    const {canvasVisible, setCanvasVisible} = canvasManager;
+    setCanvasVisible(!canvasVisible);
+}
+
+/**
+ * 切换全局主题设置弹框
+ */
+export const toggleGlobalThemeConfig = () => {
+    const {themeVisible, setThemeVisible} = themeHdStore;
+    setThemeVisible(!themeVisible);
+}
+
+/**
+ * 切换快捷键说明弹框
+ */
+export const toggleHotKeyDes = () => {
+    const {hotKeyVisible, setHotKeyVisible} = footerStore;
+    setHotKeyVisible(!hotKeyVisible)
+}
+
+export const exportProject = async () => {
+    globalMessage.messageApi?.open({
+        key: 'exportProject',
+        type: 'loading',
+        content: '正在导出项目数据，需要一些时间，请耐心等候...',
+        duration: 0,
+    })
+    const timeout = setTimeout(() => {
+        //1. 计算当前项目所依赖的外部资源
+        const projectDependency = ProjectUtil.calculateProjectDependency();
+        baseApi.exportProjectApi(projectDependency).then((res) => {
+            const {code, data, msg} = res;
+            if (code === 200) {
+                //3. 自动下载后端生成的压缩包
+                const url = URL.createObjectURL(data);
+                const a = document.createElement('a')
+                a.href = url;
+                a.download = `${document.title}.zip`;
+                a.click();
+                URL.revokeObjectURL(url);
+                globalMessage.messageApi?.success('项目数据导出成功');
+            } else {
+                globalMessage.messageApi?.error(msg);
+            }
+            globalMessage.messageApi?.destroy("exportProject");
+        })
+        clearTimeout(timeout);
+    }, 1000);
+
+}
+
+export const importProject = () => {
+    //打开文件选择框
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.zip';
+    input.onchange = (e: any) => {
+        globalMessage.messageApi?.open({
+            key: 'importProject',
+            type: 'loading',
+            content: '正在导入项目数据...'
+        })
+        const file = e.target.files[0] as File;
+        if (!file)
+            return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('projectId', window.LC_ENV.projectId!);
+        FetchUtil.post('/dashboard/api/v1/project/importProject', formData, {headers: {'Content-Type': 'multipart/form-data'}}).then((res) => {
+            const {code, data, msg} = res;
+            const timer = setTimeout(() => {
+                clearTimeout(timer);
+                globalMessage.messageApi?.destroy("importProject");
+                if (code === 200 && data) {
+                    globalMessage.messageApi?.success({content: '项目数据导入成功, 将重新加载页面！', duration: 1}).then(() => location.reload());
+                } else
+                    globalMessage.messageApi?.error(msg);
+            }, 1000)
+
+        })
+    }
+    input.click();
+}
+
+export const searchLayer = () => {
+    const {searchLayer, setSearchLayer} = layerListStore;
+    setSearchLayer(!searchLayer);
+}
+
+/*************************蓝图快捷键实现*************************/
+
+/**
+ * 删除蓝图中选中的节点
+ */
+export const delBPNode = () => {
+    if (!bluePrintHdStore.bluePrintVisible) return;
+    const {selectedNodes, delNode} = bluePrintManager;
+    if (selectedNodes.length === 0) return;
+    const selectedNodeIds = selectedNodes.map(node => node.id.split(':')[1]!);
+    delNode(selectedNodeIds);
+    //如果删除的是图层节点，则恢复左侧图层节点的可拖拽性
+    const {setUsedLayerNodes, usedLayerNodes} = bpLeftStore;
+    selectedNodeIds.forEach(nodeId => {
+        if (nodeId in usedLayerNodes)
+            setUsedLayerNodes(nodeId, false);
+    })
+    BpCanvasUtil.reRenderAllLine();
+}
+
+/**
+ * 删除蓝图中选中的连线
+ */
+export const delBPLine = () => {
+    if (!bluePrintHdStore.bluePrintVisible) return;
+    const {selectedLines, delLine} = bluePrintManager;
+    if (selectedLines.length === 0) return;
+    if (selectedLines.length === 0)
+        return;
+    delLine(selectedLines);
+    BpCanvasUtil.reRenderAllLine();
+}

@@ -25,6 +25,7 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   "component_system_data-dictionary": () => import("@/pages/component/system/data-dictionary/index.tsx"),
   component_system_model: () => import("@/pages/component/system/model/index.tsx"),
   component_system_plugin: () => import("@/pages/component/system/plugin/index.tsx"),
+  designer: () => import("@/pages/designer/index.tsx"),
   guide: () => import("@/pages/guide/index.tsx"),
   home: () => import("@/pages/home/index.tsx"),
   "login_code-login": () => import("@/pages/login/code-login/index.tsx"),
@@ -48,6 +49,7 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   "share-manage_my-share": () => import("@/pages/share-manage/my-share/index.tsx"),
   "space-list": () => import("@/pages/space-list/index.tsx"),
   space_user: () => import("@/pages/space/user/index.tsx"),
+  view: () => import("@/pages/view/index.tsx"),
   "workbench_assistant-manage_assistant-config": () => import("@/pages/workbench/assistant-manage/assistant-config/index.tsx"),
   "workbench_assistant-manage_label-meaning": () => import("@/pages/workbench/assistant-manage/label-meaning/index.tsx"),
   "workbench_assistant-manage_memory-manage": () => import("@/pages/workbench/assistant-manage/memory-manage/index.tsx"),
@@ -65,4 +67,5 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   workbench_job_time: () => import("@/pages/workbench/job/time/index.tsx"),
   "workbench_job_time_modules_editor-quill": () => import("@/pages/workbench/job/time/modules/editor-quill/index.tsx"),
   "workbench_job_time_modules_share-email-setting": () => import("@/pages/workbench/job/time/modules/share-email-setting/index.tsx"),
+  "workbench_screen-manage_abi-dashboard": () => import("@/pages/workbench/screen-manage/abi-dashboard/index.tsx"),
 };

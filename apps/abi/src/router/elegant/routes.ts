@@ -123,6 +123,17 @@ export const generatedRoutes: GeneratedRoute[] = [
     ]
   },
   {
+    name: 'designer',
+    path: '/designer',
+    component: 'layout.blank$view.designer',
+    meta: {
+      constant: true,
+      hideInMenu: true,
+      title: 'designer',
+      i18nKey: 'route.designer'
+    }
+  },
+  {
     name: 'guide',
     path: '/guide',
     component: 'layout.base$view.guide',
@@ -430,6 +441,17 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'view',
+    path: '/view',
+    component: 'layout.blank$view.view',
+    meta: {
+      constant: true,
+      hideInMenu: true,
+      title: 'view',
+      i18nKey: 'route.view'
+    }
+  },
+  {
     name: 'workbench',
     path: '/workbench',
     component: 'layout.base',
@@ -654,6 +676,25 @@ export const generatedRoutes: GeneratedRoute[] = [
                 ]
               }
             ]
+          }
+        ]
+      },
+      {
+        name: 'workbench_screen-manage',
+        path: 'screen-manage',
+        meta: {
+          i18nKey: 'route.workbench_screen-manage',
+          title: 'workbench_screen-manage'
+        },
+        children: [
+          {
+            name: 'workbench_screen-manage_abi-dashboard',
+            path: 'abi-dashboard',
+            component: 'view.workbench_screen-manage_abi-dashboard',
+            meta: {
+              i18nKey: 'route.workbench_screen-manage_abi-dashboard',
+              title: 'workbench_screen-manage_abi-dashboard'
+            }
           }
         ]
       }

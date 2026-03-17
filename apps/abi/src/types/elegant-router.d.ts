@@ -34,6 +34,7 @@ declare module "@elegant-router/types" {
     "component_system_data-dictionary": "data-dictionary";
     "component_system_model": "model";
     "component_system_plugin": "plugin";
+    "designer": "/designer";
     "guide": "/guide";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
@@ -62,6 +63,7 @@ declare module "@elegant-router/types" {
     "space": "/space";
     "space_user": "user";
     "space-list": "/space-list";
+    "view": "/view";
     "workbench": "/workbench";
     "workbench_assistant-manage": "assistant-manage";
     "workbench_assistant-manage_assistant-config": "assistant-config";
@@ -84,6 +86,8 @@ declare module "@elegant-router/types" {
     "workbench_job_time_modules": "modules";
     "workbench_job_time_modules_editor-quill": "editor-quill";
     "workbench_job_time_modules_share-email-setting": "share-email-setting";
+    "workbench_screen-manage": "screen-manage";
+    "workbench_screen-manage_abi-dashboard": "abi-dashboard";
   };
 
   /**
@@ -125,6 +129,7 @@ declare module "@elegant-router/types" {
     | "500"
     | "ai-assistant"
     | "component"
+    | "designer"
     | "guide"
     | "home"
     | "iframe-page"
@@ -135,6 +140,7 @@ declare module "@elegant-router/types" {
     | "share-manage"
     | "space"
     | "space-list"
+    | "view"
     | "workbench"
   >;
 
@@ -162,6 +168,7 @@ declare module "@elegant-router/types" {
     | "component_system_data-dictionary"
     | "component_system_model"
     | "component_system_plugin"
+    | "designer"
     | "guide"
     | "home"
     | "login_code-login"
@@ -185,6 +192,7 @@ declare module "@elegant-router/types" {
     | "share-manage_my-share"
     | "space-list"
     | "space_user"
+    | "view"
     | "workbench_assistant-manage_assistant-config"
     | "workbench_assistant-manage_label-meaning"
     | "workbench_assistant-manage_memory-manage"
@@ -202,6 +210,7 @@ declare module "@elegant-router/types" {
     | "workbench_job_time"
     | "workbench_job_time_modules_editor-quill"
     | "workbench_job_time_modules_share-email-setting"
+    | "workbench_screen-manage_abi-dashboard"
   >;
 
   /**

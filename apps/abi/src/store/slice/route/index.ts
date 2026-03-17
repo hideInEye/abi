@@ -140,6 +140,20 @@ export const {
 const authRouteMode = import.meta.env.VITE_AUTH_ROUTE_MODE;
 const constantRouteMode = import.meta.env.VITE_CONSTANT_ROUTE_MODE;
 
+function filterBuiltinDashboardRoutes(routes: any[]): any[] {
+  return routes
+    .filter(route => route?.name !== 'designer' && route?.name !== 'view' && route?.path !== '/designer' && route?.path !== '/view')
+    .map(route => {
+      if (route?.children?.length) {
+        return {
+          ...route,
+          children: filterBuiltinDashboardRoutes(route.children)
+        };
+      }
+      return route;
+    });
+}
+
 /**
  * Get cache routes
  *
@@ -234,6 +248,8 @@ const initDynamicAuthRoute = (): AppThunk => async dispatch => {
     } else {
       soybeanRoutes = convertRuoYiToSoybean(data);
     }
+
+    soybeanRoutes = filterBuiltinDashboardRoutes(soybeanRoutes);
 
     dispatch(setAuthRoutes(soybeanRoutes));
 

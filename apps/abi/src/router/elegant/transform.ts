@@ -215,6 +215,7 @@ const routeMap: RouteMap = {
   "component_system_data-dictionary": "data-dictionary",
   "component_system_model": "model",
   "component_system_plugin": "plugin",
+  "designer": "/designer",
   "guide": "/guide",
   "home": "/home",
   "iframe-page": "/iframe-page/:url",
@@ -243,6 +244,7 @@ const routeMap: RouteMap = {
   "space": "/space",
   "space_user": "user",
   "space-list": "/space-list",
+  "view": "/view",
   "workbench": "/workbench",
   "workbench_assistant-manage": "assistant-manage",
   "workbench_assistant-manage_assistant-config": "assistant-config",
@@ -264,7 +266,9 @@ const routeMap: RouteMap = {
   "workbench_job_time": "time",
   "workbench_job_time_modules": "modules",
   "workbench_job_time_modules_editor-quill": "editor-quill",
-  "workbench_job_time_modules_share-email-setting": "share-email-setting"
+  "workbench_job_time_modules_share-email-setting": "share-email-setting",
+  "workbench_screen-manage": "screen-manage",
+  "workbench_screen-manage_abi-dashboard": "abi-dashboard"
 };
 
 /**
