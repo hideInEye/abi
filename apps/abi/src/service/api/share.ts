@@ -4,7 +4,7 @@ import { apiRequest } from '../request';
 export function fetchShareList() {
   return apiRequest({
     method: 'get',
-    url: '/abi-system/share/list'
+    url: '/api/abi-system/share/list'
   });
 }
 
@@ -12,6 +12,6 @@ export function fetchShareList() {
 export function deleteShare(shareIds: string) {
   return apiRequest({
     method: 'delete',
-    url: `/abi-system/share/${shareIds}`
+    url: `/api/abi-system/share/${shareIds}`
   });
 }

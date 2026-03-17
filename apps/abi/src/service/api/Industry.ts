@@ -9,7 +9,7 @@ export function queryTerms(params: { groupId: number; spaceId: number; techName:
   return apiRequest({
     data: params,
     method: 'post',
-    url: '/copilot/v1/term/queryTerms'
+    url: '/api/copilot/v1/term/queryTerms'
   });
 }
 
@@ -35,7 +35,7 @@ export function addTerms(params: {
   return apiRequest({
     data: params,
     method: 'post',
-    url: '/copilot/v1/term/addTerms'
+    url: '/api/copilot/v1/term/addTerms'
   });
 }
 
@@ -61,7 +61,7 @@ export function editTerms(params: {
   return apiRequest({
     data: params,
     method: 'post',
-    url: '/copilot/v1/term/editTerms'
+    url: '/api/copilot/v1/term/editTerms'
   });
 }
 
@@ -75,6 +75,6 @@ export function deleteTerms(params: { termId: number }) {
   return apiRequest({
     data: params,
     method: 'post',
-    url: '/copilot/v1/term/deleteTerms'
+    url: '/api/copilot/v1/term/deleteTerms'
   });
 }

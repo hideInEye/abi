@@ -9,7 +9,7 @@ export function getMenuListApi(params: any) {
   return apiRequest({
     method: 'get',
     params,
-    url: '/system/menu/list'
+    url: '/api/system/menu/list'
   });
 }
 
@@ -22,7 +22,7 @@ export function getMenuListApi(params: any) {
 export function getMenuTreeListApi() {
   return apiRequest({
     method: 'get',
-    url: '/system/menu/treeselect'
+    url: '/api/system/menu/treeselect'
   });
 }
 
@@ -35,14 +35,14 @@ export function getMenuTreeListApi() {
 export function getMenuInfoApi(menuId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/menu/${menuId}`
+    url: `/api/system/menu/${menuId}`
   });
 }
 
 export function getUserSystemMenuApi() {
   return apiRequest({
     method: 'get',
-    url: `/system/menu/getRouters`
+    url: `/api/system/menu/getRouters`
   });
 }
 
@@ -50,7 +50,7 @@ export function getUserSystemMenuApi() {
 export function getAllSpaceMenuApi() {
   return apiRequest({
     method: 'get',
-    url: `/system/v1/space/menu/getAllRouters`
+    url: `/api/system/v1/space/menu/getAllRouters`
   });
 }
 
@@ -58,14 +58,14 @@ export function getAllSpaceMenuApi() {
 export function getUserSpaceMenuApi() {
   return apiRequest({
     method: 'get',
-    url: `/system/v1/space/menu/getRouters`
+    url: `/api/system/v1/space/menu/getRouters`
   });
 }
 
 export function getUserSpaceListApi() {
   return apiRequest({
     method: 'get',
-    url: `/system/v1/sinfo/list`
+    url: `/api/system/v1/sinfo/list`
   });
 }
 
@@ -80,7 +80,7 @@ export function addMenuApi(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: `/system/menu`
+    url: `/api/system/menu`
   });
 }
 
@@ -95,7 +95,7 @@ export function updateMenuApi(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/menu`
+    url: `/api/system/menu`
   });
 }
 
@@ -108,6 +108,6 @@ export function updateMenuApi(data: any) {
 export function deleteMenuApi(menuId: number) {
   return apiRequest({
     method: 'delete',
-    url: `/system/menu/${menuId}`
+    url: `/api/system/menu/${menuId}`
   });
 }

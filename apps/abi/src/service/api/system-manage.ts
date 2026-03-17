@@ -7,7 +7,7 @@ export async function fetchGetRoleList(params?: any) {
   const res: any = await apiRequest<Api.SystemManage.RoleList>({
     method: 'get',
     params,
-    url: '/system/role/list'
+    url: '/api/system/role/list'
   });
   return { data: { data: res?.response?.data?.rows || [] } };
 }
@@ -20,7 +20,7 @@ export async function fetchGetRoleList(params?: any) {
 export function fetchGetAllRoles() {
   return request<Api.SystemManage.AllRole[]>({
     method: 'get',
-    url: '/systemManage/getAllRoles'
+    url: '/api/systemManage/getAllRoles'
   });
 }
 
@@ -29,7 +29,7 @@ export async function fetchGetUserList(params?: Api.SystemManage.UserSearchParam
   const res: any = await apiRequest<Api.SystemManage.UserList>({
     method: 'get',
     params,
-    url: '/system/user/list'
+    url: '/api/system/user/list'
   });
   return { data: { data: res?.response?.data?.rows || [], total: res?.response?.data?.total } };
 }
@@ -39,7 +39,7 @@ export function fetchResetPassword(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: '/system/user/resetPwd'
+    url: '/api/system/user/resetPwd'
   });
 }
 
@@ -47,7 +47,7 @@ export function fetchResetPassword(data: any) {
 export function fetchGetDeptTree() {
   return apiRequest<Api.SystemManage.MenuList>({
     method: 'get',
-    url: '/system/user/deptTree'
+    url: '/api/system/user/deptTree'
   });
 }
 
@@ -55,7 +55,7 @@ export function fetchGetDeptTree() {
 export function fetchGetRoleOption() {
   return apiRequest({
     method: 'get',
-    url: '/system/role/optionselect'
+    url: '/api/system/role/optionselect'
   });
 }
 
@@ -64,7 +64,7 @@ export function fetchAddUser(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: '/system/user'
+    url: '/api/system/user'
   });
 }
 
@@ -72,7 +72,7 @@ export function fetchAddUser(data: any) {
 export function fetchDelUser(userId: number | string) {
   return apiRequest({
     method: 'delete',
-    url: `/system/user/${userId}`
+    url: `/api/system/user/${userId}`
   });
 }
 
@@ -81,7 +81,7 @@ export function fetchUpdateUser(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: '/system/user'
+    url: '/api/system/user'
   });
 }
 
@@ -89,7 +89,7 @@ export function fetchUpdateUser(data: any) {
 export function fetchGetMenuList() {
   return request<Api.SystemManage.MenuList>({
     method: 'get',
-    url: '/systemManage/getMenuList/v2'
+    url: '/api/systemManage/getMenuList/v2'
   });
 }
 
@@ -97,7 +97,7 @@ export function fetchGetMenuList() {
 export function fetchGetAllPages() {
   return request<string[]>({
     method: 'get',
-    url: '/systemManage/getAllPages'
+    url: '/api/systemManage/getAllPages'
   });
 }
 
@@ -105,7 +105,7 @@ export function fetchGetAllPages() {
 export function fetchGetMenuTree() {
   return apiRequest<Api.SystemManage.MenuTree[]>({
     method: 'get',
-    url: '/system/menu/treeselect'
+    url: '/api/system/menu/treeselect'
   });
 }
 
@@ -114,7 +114,7 @@ export function fetchAddRole(data: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: '/system/role'
+    url: '/api/system/role'
   });
 }
 
@@ -123,7 +123,7 @@ export function fetchUpdateRole(data: any) {
   return apiRequest<any>({
     data,
     method: 'put',
-    url: '/system/role'
+    url: '/api/system/role'
   });
 }
 
@@ -131,7 +131,7 @@ export function fetchUpdateRole(data: any) {
 export function fetchDelRole(roleId: any) {
   return apiRequest<any>({
     method: 'delete',
-    url: `/system/role/${roleId}`
+    url: `/api/system/role/${roleId}`
   });
 }
 
@@ -139,7 +139,7 @@ export function fetchDelRole(roleId: any) {
 export function fetchRoleInfoById(roleId: any) {
   return apiRequest<any>({
     method: 'get',
-    url: `/system/role/${roleId}`
+    url: `/api/system/role/${roleId}`
   });
 }
 
@@ -147,7 +147,7 @@ export function fetchRoleInfoById(roleId: any) {
 export function fetchRoleMenuById(roleId: any) {
   return apiRequest<any>({
     method: 'get',
-    url: `/system/menu/roleMenuTreeselect/${roleId}`
+    url: `/api/system/menu/roleMenuTreeselect/${roleId}`
   });
 }
 
@@ -156,7 +156,7 @@ export async function fetchGetGroupList(params?: any) {
   const res = await apiRequest({
     method: 'get',
     params,
-    url: '/system/dept/list'
+    url: '/api/system/dept/list'
   });
   const resData = handleTree(res.data, 'deptId');
   return { data: { data: resData || [] } };
@@ -167,7 +167,7 @@ export async function fetchModelList(params: any) {
   const res = await apiRequest({
     method: 'get',
     params,
-    url: `/system/v1/model/list`
+    url: `/api/system/v1/model/list`
   });
   const rows = res?.response?.data?.rows || res?.data || [];
   const total = res?.response?.data?.total ?? (Array.isArray(rows) ? rows.length : 0);
@@ -179,7 +179,7 @@ export function fetchAddModel(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: `/system/v1/model`
+    url: `/api/system/v1/model`
   });
 }
 
@@ -188,7 +188,7 @@ export function fetchEditModel(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/v1/model`
+    url: `/api/system/v1/model`
   });
 }
 
@@ -196,16 +196,15 @@ export function fetchEditModel(data: any) {
 export function deleteModel (id:number) {
   return apiRequest({
     method:'delete',
-    url:`/system/v1/model/${id}`
+    url:`/api/system/v1/model/${id}`
   })
 }
 
 // 大模型测试连接
 export function fetchTestModel(data: any) {
   return chatRequest({
-    baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: `/chat-proxy/api/v1/model/test/connect`
+    url: `/api/chat-proxy/api/v1/model/test/connect`
   });
 }

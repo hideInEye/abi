@@ -6,7 +6,7 @@ export function addDictionary(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: '/system/v1/dictionary'
+    url: '/api/system/v1/dictionary'
   });
 }
 
@@ -14,7 +14,7 @@ export function editDictionary(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: '/system/v1/dictionary'
+    url: '/api/system/v1/dictionary'
   });
 }
 
@@ -24,7 +24,7 @@ export function deleteDictionary(ids: number) {
     params: {
       ids
     },
-    url: `/system/v1/dictionary/${ids}`
+    url: `/api/system/v1/dictionary/${ids}`
   });
 }
 
@@ -33,7 +33,7 @@ export function queryDictionary(data: { groupId: string; pageNum: number; pageSi
     data,
     method: 'get',
     params: data,
-    url: '/system/v1/dictionary/list'
+    url: '/api/system/v1/dictionary/list'
   });
 }
 
@@ -47,7 +47,7 @@ export function addDictionaryEnum(data: DictionaryEnumAddItem) {
   return apiRequest({
     data,
     method: 'post',
-    url: '/system/v1/dictionarydata'
+    url: '/api/system/v1/dictionarydata'
   });
 }
 
@@ -55,7 +55,7 @@ export function updateDictionaryEnum(data: DictionaryEnumItem) {
   return apiRequest({
     data,
     method: 'put',
-    url: '/system/v1/dictionarydata'
+    url: '/api/system/v1/dictionarydata'
   });
 }
 
@@ -74,7 +74,7 @@ export function queryDictionaryEnum(params: {
   return apiRequest({
     method: 'get',
     params,
-    url: `/system/v1/dictionarydata/list`
+    url: `/api/system/v1/dictionarydata/list`
   });
 }
 
@@ -84,6 +84,6 @@ export function deleteDictionaryEnum(dictIds: number) {
     params: {
       dictIds
     },
-    url: `/system/v1/dictionarydata/${dictIds}`
+    url: `/api/system/v1/dictionarydata/${dictIds}`
   });
 }

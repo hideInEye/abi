@@ -5,7 +5,7 @@ export function querySpaceRoleOptionSelect(params = {}) {
   return apiRequest({
     data: params,
     method: 'get',
-    url: '/abi-system/v1/space/role/optionselect'
+    url: '/api/abi-system/v1/space/role/optionselect'
   });
 }
 
@@ -21,7 +21,7 @@ export function queryDeptList({ dataSource, onenetToken }: { dataSource: 0 | 3; 
   return apiRequest({
     data: { dataSource, onenetToken },
     method: 'post',
-    url: '/abi-system/dept/allList'
+    url: '/api/abi-system/dept/allList'
   });
 }
 
@@ -30,7 +30,7 @@ export function querySpaceRoleList() {
   return apiRequest({
     data: {},
     method: 'get',
-    url: '/abi-system/v1/space/role/list'
+    url: '/api/abi-system/v1/space/role/list'
   });
 }
 
@@ -43,7 +43,7 @@ export function queryUserList(
   return apiRequest({
     data: params,
     method: 'get',
-    url: `/abi-system/user/list?deptId=${params.deptId}`
+    url: `/api/abi-system/user/list?deptId=${params.deptId}`
   });
 }
 
@@ -54,6 +54,6 @@ export function queryUserList(
 export const queryUser = (name:string) =>{
 return apiRequest({
     method: 'get',
-    url: `/abi-system/user/search?searchName=${name}`
+    url: `/api/abi-system/user/search?searchName=${name}`
   });
 }

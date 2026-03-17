@@ -10,7 +10,7 @@ export async function getSpaceRoleListApi(params: any) {
   const res: any = await apiRequest({
     method: 'get',
     params,
-    url: '/system/v1/space/role/list'
+    url: '/api/system/v1/space/role/list'
   });
   return { data: { data: res?.response?.data?.rows || [], total: res?.response?.data?.total } };
 }
@@ -25,7 +25,7 @@ export function addSpaceRoleApi(data: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: `/system/v1/space/role`
+    url: `/api/system/v1/space/role`
   });
 }
 
@@ -40,7 +40,7 @@ export function updateSpaceRoleStatusAPi(data: any) {
   return apiRequest<any>({
     data,
     method: 'put',
-    url: `/system/v1/space/role/changeStatus`
+    url: `/api/system/v1/space/role/changeStatus`
   });
 }
 
@@ -53,7 +53,7 @@ export function updateSpaceRoleStatusAPi(data: any) {
 export function deleteSpaceRoleApi(roleId: number | string) {
   return apiRequest({
     method: 'delete',
-    url: `/system/v1/space/role/${roleId}`
+    url: `/api/system/v1/space/role/${roleId}`
   });
 }
 
@@ -66,7 +66,7 @@ export function deleteSpaceRoleApi(roleId: number | string) {
 export function getSpaceRoleInfoApi(roleId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/v1/space/role/${roleId}`
+    url: `/api/system/v1/space/role/${roleId}`
   });
 }
 
@@ -79,7 +79,7 @@ export function getSpaceRoleInfoApi(roleId: number) {
 export function getSpaceRoleMenuByRoleIdApi(roleId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/v1/space/menu/roleMenuTreeselect/${roleId}`
+    url: `/api/system/v1/space/menu/roleMenuTreeselect/${roleId}`
   });
 }
 
@@ -92,7 +92,7 @@ export function getSpaceRoleMenuByRoleIdApi(roleId: number) {
 export function getSpaceMenuTreeApi() {
   return apiRequest({
     method: 'get',
-    url: '/system/v1/space/menu/treeselect'
+    url: '/api/system/v1/space/menu/treeselect'
   });
 }
 
@@ -105,7 +105,7 @@ export function getSpaceMenuTreeApi() {
 export function roleIdMenuTree(roleId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/role/deptTree/${roleId}`
+    url: `/api/system/role/deptTree/${roleId}`
   });
 }
 
@@ -120,7 +120,7 @@ export function updateSpaceRoleApi(data?: any) {
   return apiRequest<any>({
     data,
     method: 'put',
-    url: '/system/v1/space/role'
+    url: '/api/system/v1/space/role'
   });
 }
 
@@ -135,7 +135,7 @@ export function assignDataPermission(roleId: number, data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/role/deptTree/${roleId}`
+    url: `/api/system/role/deptTree/${roleId}`
   });
 }
 
@@ -148,7 +148,7 @@ export function assignDataPermission(roleId: number, data: any) {
 export function assignDataPermissionInfo(roleId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/role/${roleId}`
+    url: `/api/system/role/${roleId}`
   });
 }
 
@@ -162,7 +162,7 @@ export function assignDataPermissionForSpaceRoleApi(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/v1/space/role/dataScope`
+    url: `/api/system/v1/space/role/dataScope`
   });
 }
 
@@ -176,7 +176,7 @@ export function cancelSpaceAuthorizationApi(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/v1/space/role/authUser/cancel`
+    url: `/api/system/v1/space/role/authUser/cancel`
   });
 }
 
@@ -190,7 +190,7 @@ export function batchCancelSpaceAuthorizationApi(params: any) {
   return apiRequest({
     method: 'put',
     params,
-    url: `/system/v1/space/role/authUser/cancelAll`
+    url: `/api/system/v1/space/role/authUser/cancelAll`
   });
 }
 
@@ -204,7 +204,7 @@ export function assignUserForSPaceRoleSubmit(params: any) {
   return apiRequest({
     method: 'put',
     params,
-    url: `/system/v1/space/role/authUser/selectAll`
+    url: `/api/system/v1/space/role/authUser/selectAll`
   });
 }
 
@@ -217,6 +217,6 @@ export function assignUserForSPaceRoleSubmit(params: any) {
 export function getSpaceRoleSelectListApi() {
   return apiRequest({
     method: 'get',
-    url: '/system/v1/space/role/optionselect'
+    url: '/api/system/v1/space/role/optionselect'
   });
 }
