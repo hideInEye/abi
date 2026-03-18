@@ -1,7 +1,7 @@
 
 ## 简介
 
-[`Trust ABI`](http://192.168.1.196/login) 是一个清新优雅、高颜值且功能强大的智能对话式分析平台，基于最新的前端技术栈，包括 React18,ReactRouter V6, Vite5, TypeScript, Redux/toolkit 和 UnoCSS。它内置了丰富的主题配置和组件，代码规范严谨，实现了自动化的文件路由系统。
+[`Trust ABI`](http://192.168.1.251/login) 是一个清新优雅、高颜值且功能强大的智能对话式分析平台，基于最新的前端技术栈，包括 React18,ReactRouter V6, Vite5, TypeScript, Redux/toolkit 和 UnoCSS。它内置了丰富的主题配置和组件，代码规范严谨，实现了自动化的文件路由系统。
 
 #### 文档
 

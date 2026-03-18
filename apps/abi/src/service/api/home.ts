@@ -4,6 +4,6 @@ import { apiRequest } from '../request';
 export function fetchHomeData() {
   return apiRequest({
     method: 'get',
-    url: '/system/v1/sinfo/home'
+    url: '/api/system/v1/sinfo/home'
   });
 }

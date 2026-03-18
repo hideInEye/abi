@@ -9,7 +9,7 @@ export async function getPostListApi(params: any) {
   const res: any = await apiRequest({
     method: 'get',
     params,
-    url: '/system/post/list'
+    url: '/api/system/post/list'
   });
   return { data: { data: res?.response?.data?.rows || [], total: res?.response?.data?.total } };
 }
@@ -23,7 +23,7 @@ export async function getPostListApi(params: any) {
 export function getPostSelectListApi() {
   return apiRequest({
     method: 'get',
-    url: '/system/post/optionselect'
+    url: '/api/system/post/optionselect'
   });
 }
 
@@ -36,7 +36,7 @@ export function getPostSelectListApi() {
 export function getPostInfoApi(postId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/post/${postId}`
+    url: `/api/system/post/${postId}`
   });
 }
 
@@ -51,7 +51,7 @@ export function updatePostApi(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/post`
+    url: `/api/system/post`
   });
 }
 
@@ -65,7 +65,7 @@ export function addPostAPi(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: `/system/post`
+    url: `/api/system/post`
   });
 }
 
@@ -78,6 +78,6 @@ export function addPostAPi(data: any) {
 export function deletePostApi(postId: number | string) {
   return apiRequest({
     method: 'delete',
-    url: `/system/post/${postId}`
+    url: `/api/system/post/${postId}`
   });
 }

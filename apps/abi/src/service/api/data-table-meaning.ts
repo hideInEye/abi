@@ -9,7 +9,7 @@ export function grouplist(params: { groupName?: string; pageNum?: number; pageSi
       pageSize: params.pageSize,
       spaceId: params.spaceId
     },
-    url: '/copilot/v1/group/list'
+    url: '/api/copilot/v1/group/list'
   });
 }
 /** 修改标语义组 */
@@ -17,7 +17,7 @@ export function editGroup(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: '/copilot/v1/group'
+    url: '/api/copilot/v1/group'
   });
 }
 /** 新增标语义组 */
@@ -25,7 +25,7 @@ export function addgroupsub(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: '/copilot/v1/group'
+    url: '/api/copilot/v1/group'
   });
 }
 /** 删除表语义组 */
@@ -33,7 +33,7 @@ export function delgroup(data: any, groupIds: any) {
   return apiRequest({
     data,
     method: 'delete',
-    url: `/copilot/v1/group/${groupIds}`
+    url: `/api/copilot/v1/group/${groupIds}`
   });
 }
 /** 获取标语义组 */
@@ -41,7 +41,7 @@ export function tablegroup(params: any, groupId: any) {
   return apiRequest({
     method: 'get',
     params,
-    url: `/copilot/v1/group/${groupId}`
+    url: `/api/copilot/v1/group/${groupId}`
   });
 }
 /** 获取标语义组右侧列表接口 */
@@ -54,7 +54,7 @@ export function schemalist(params: { bizName?: string; groupId?: number; pageNum
       pageNum: params.pageNum,
       pageSize: params.pageSize
     },
-    url: `/copilot/v1/schema/list`
+    url: `/api/copilot/v1/schema/list`
   });
 }
 /** 数据集合列表 */
@@ -68,7 +68,7 @@ export function dataSetList(
   return apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/dataset/qyeryDataSetList'
+    url: '/api/abi-data/api/v1/dataset/qyeryDataSetList'
   });
 }
 /** 查询数据集详情 */
@@ -76,7 +76,7 @@ export function queryDataSetDetail(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/dataset/queryDataSetDetail'
+    url: '/api/abi-data/api/v1/dataset/queryDataSetDetail'
   });
 }
 
@@ -85,7 +85,7 @@ export function addTableSemantics(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: '/copilot/v1/schema'
+    url: '/api/copilot/v1/schema'
   });
 }
 
@@ -94,7 +94,7 @@ export function deleteTableSemantics(schemaId: number) {
   return apiRequest({
     data: {},
     method: 'delete',
-    url: `/copilot/v1/schema/${schemaId}`
+    url: `/api/copilot/v1/schema/${schemaId}`
   });
 }
 
@@ -103,7 +103,7 @@ export function editTableSemantics(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: '/copilot/v1/schema'
+    url: '/api/copilot/v1/schema'
   });
 }
 
@@ -112,6 +112,6 @@ export function getCode() {
   return apiRequest({
     data: {},
     method: 'get',
-    url: '/code'
+    url: '/api/code'
   });
 }

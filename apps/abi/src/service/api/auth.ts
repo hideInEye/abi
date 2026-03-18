@@ -4,7 +4,7 @@ import { apiRequest, request } from '../request';
 export function fetchCaptchaImage() {
   return apiRequest<Api.Auth.CaptchaImage>({
     method: 'get',
-    url: '/auth/captchaImage'
+    url: '/api/auth/captchaImage'
   });
 }
 
@@ -21,13 +21,13 @@ export function fetchLogin(userName: string, password: string) {
       username: userName
     },
     method: 'post',
-    url: '/auth/login'
+    url: '/api/auth/login'
   });
 }
 
 /** Get user info */
 export function fetchGetUserInfo() {
-  return request<Api.Auth.UserInfo>({ url: '/system/user/getInfo' });
+  return request<Api.Auth.UserInfo>({ url: '/api/system/user/getInfo' });
 }
 
 /**
@@ -41,7 +41,7 @@ export function fetchRefreshToken(refreshToken: string) {
       refreshToken
     },
     method: 'post',
-    url: '/auth/refreshToken'
+    url: '/api/auth/refreshToken'
   });
 }
 
@@ -52,13 +52,13 @@ export function fetchRefreshToken(refreshToken: string) {
  * @param msg error message
  */
 export function fetchCustomBackendError(code: string, msg: string) {
-  return request({ params: { code, msg }, url: '/auth/error' });
+  return request({ params: { code, msg }, url: '/api/auth/error' });
 }
 
 /** 嵌入onenet时获取登录token接口 */
 export function fetchLoginChatbiByOnenet() {
   return apiRequest({
     method: 'post',
-    url: '/abi-system/onenet/api/loginChatbi'
+    url: '/api/abi-system/onenet/api/loginChatbi'
   });
 }

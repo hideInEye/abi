@@ -35,7 +35,7 @@ export function tableSemanticsGroupList(params: GrouplistParams) {
       pageSize: params.pageSize,
       spaceId: params.spaceId
     },
-    url: '/copilot/v1/group/list'
+    url: '/api/copilot/v1/group/list'
   });
 }
 
@@ -44,7 +44,7 @@ export function editTableSemanticsGroup(data: EditGroupParams) {
   return apiRequest({
     data,
     method: 'put',
-    url: '/copilot/v1/group'
+    url: '/api/copilot/v1/group'
   });
 }
 
@@ -53,7 +53,7 @@ export function addTableSemanticsGroup(data: AddGroupParams) {
   return apiRequest({
     data,
     method: 'post',
-    url: '/copilot/v1/group'
+    url: '/api/copilot/v1/group'
   });
 }
 
@@ -61,6 +61,6 @@ export function addTableSemanticsGroup(data: AddGroupParams) {
 export function deleteTableSemanticsGroup(groupId: number) {
   return apiRequest({
     method: 'delete',
-    url: `/copilot/v1/group/${groupId}`
+    url: `/api/copilot/v1/group/${groupId}`
   });
 }

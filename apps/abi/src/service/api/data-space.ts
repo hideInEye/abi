@@ -17,7 +17,7 @@ export function spaceList(params: {
     params: {
       ...params
     },
-    url: '/system/v1/sinfo/list'
+    url: '/api/system/v1/sinfo/list'
   });
 }
 
@@ -31,7 +31,7 @@ export function updateSpaceInfo(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: '/system/v1/sinfo'
+    url: '/api/system/v1/sinfo'
   });
 }
 
@@ -45,7 +45,7 @@ export function createSpace(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: '/abi-system/v1/sinfo'
+    url: '/api/abi-system/v1/sinfo'
   });
 }
 
@@ -58,7 +58,7 @@ export function createSpace(data: any) {
 export function deleteSpace(spaceIds: number[]) {
   return apiRequest({
     method: 'delete',
-    url: `/system/v1/sinfo/${spaceIds}`
+    url: `/api/system/v1/sinfo/${spaceIds}`
   });
 }
 
@@ -71,6 +71,6 @@ export function deleteSpace(spaceIds: number[]) {
 export function getSpaceInfo(spaceId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/v1/sinfo/${spaceId}`
+    url: `/api/system/v1/sinfo/${spaceId}`
   });
 }

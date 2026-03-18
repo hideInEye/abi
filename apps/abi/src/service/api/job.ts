@@ -8,7 +8,7 @@ export const fetchEmailList = (data?: any) => {
   return apiRequest<any>({
     method: 'post',
     data,
-    url: '/abi-system/shared/list'
+    url: '/api/abi-system/shared/list'
   })
 }
 
@@ -16,7 +16,7 @@ export const fetchEmailList = (data?: any) => {
 // 邮件分享
 export function fetchShareEmail(data: any) {
   return apiRequest({
-    url: "/abi-system/shared/add",
+    url: "/api/abi-system/shared/add",
     method: "post",
     data,
   });
@@ -24,14 +24,14 @@ export function fetchShareEmail(data: any) {
 // 邮件列表删除
 export function deleteShareEmail(id: string) {
   return apiRequest({
-    url: `/abi-system/shared/deleteLog?logId=${id}`,
+    url: `/api/abi-system/shared/deleteLog?logId=${id}`,
     method: "post",
   });
 }
 // 邮件列表批量删除
 export function deleteShareEmailBatch(data: any) {
   return apiRequest({
-    url: `/abi-system/shared/batchDeleteLog`,
+    url: `/api/abi-system/shared/batchDeleteLog`,
     method: "post",
     data
   });
@@ -40,7 +40,7 @@ export function deleteShareEmailBatch(data: any) {
 // 查询邮件详情
 export function fetchShareEmailDetail(id: string) {
   return apiRequest({
-    url: `/abi-system/shared/detail?recordId=${id}`,
+    url: `/api/abi-system/shared/detail?recordId=${id}`,
     method: "get",
   });
 }
@@ -48,7 +48,7 @@ export function fetchShareEmailDetail(id: string) {
 // 邮件更新
 export function updateShareEmail(data: any) {
   return apiRequest({
-    url: "/abi-system/shared/update",
+    url: "/api/abi-system/shared/update",
     method: "post",
     data,
   });
@@ -59,7 +59,7 @@ export async function fetchJobList(data?: any) {
   const res = (await apiRequest<any>({
     method: 'post',
     data,
-    url: '/abi-system/shared/jobList'
+    url: '/api/abi-system/shared/jobList'
   })) as any;
   return { data: res };
 }
@@ -68,7 +68,7 @@ export async function fetchJobList(data?: any) {
 export async function fetchJobDetail(jobId: string) {
   return await apiRequest<any>({
     method: 'get',
-    url: `/abi-job/job/${jobId}`
+    url: `/api/abi-job/job/${jobId}`
   });
 }
 
@@ -76,7 +76,7 @@ export async function fetchChangeStatus(data?: any) {
   return await apiRequest<any>({
     // data,
     method: 'put',
-    url: `/abi-system/shared/changeStatus?recordId=${data.recordId}`
+    url: `/api/abi-system/shared/changeStatus?recordId=${data.recordId}`
   });
 }
 
@@ -84,7 +84,7 @@ export function updateJob(data?: any) {
   return apiRequest<any>({
     data,
     method: 'put',
-    url: '/abi-job/job'
+    url: '/api/abi-job/job'
   });
 }
 
@@ -92,7 +92,7 @@ export function addJob(data?: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: '/abi-job/job'
+    url: '/api/abi-job/job'
   });
 }
 
@@ -100,7 +100,7 @@ export function addJob(data?: any) {
 export function batchDeleteJob(data: any) {
   return apiRequest<any>({
     method: 'post',
-    url: '/abi-system/shared/batchDelete',
+    url: '/api/abi-system/shared/batchDelete',
     data
   });
 }
@@ -108,7 +108,7 @@ export function batchDeleteJob(data: any) {
 export function deleteJob(id: string) {
   return apiRequest<any>({
     method: 'post',
-    url: `/abi-system/shared/delete?recordId=${id}`
+    url: `/api/abi-system/shared/delete?recordId=${id}`
   });
 }
 
@@ -116,7 +116,7 @@ export function runJob(data?: any) {
   return apiRequest<any>({
     data,
     method: 'put',
-    url: '/abi-job/job/run'
+    url: '/api/abi-job/job/run'
   });
 }
 
@@ -125,7 +125,7 @@ export function exportJob(data?: any) {
     data,
     method: 'post',
     responseType: 'blob' as any,
-    url: '/abi-job/job/export'
+    url: '/api/abi-job/job/export'
   });
 }
 
@@ -139,7 +139,7 @@ export async function fetchJobLogList(params?: any) {
   const res = (await apiRequest<any>({
     method: 'get',
     params:pr,
-    url: '/abi-job/job/log/sharedList'
+    url: '/api/abi-job/job/log/sharedList'
   })) as any;
   return { data: res };
 }
@@ -149,27 +149,27 @@ export function exportJobLog(data?: any) {
     data,
     method: 'post',
     responseType: 'blob' as any,
-    url: '/abi-job/job/log/export'
+    url: '/api/abi-job/job/log/export'
   });
 }
 
 export async function fetchJobLogDetail(jobLogId: string) {
   return await apiRequest<any>({
     method: 'get',
-    url: `/abi-job/job/log/${jobLogId}`
+    url: `/api/abi-job/job/log/${jobLogId}`
   });
 }
 
 export function deleteJobLog(jobLogIds: string) {
   return apiRequest<any>({
     method: 'delete',
-    url: `/abi-job/job/log/${jobLogIds}`
+    url: `/api/abi-job/job/log/${jobLogIds}`
   });
 }
 
 export function cleanJobLog() {
   return apiRequest<any>({
     method: 'delete',
-    url: `/abi-job/job/log/clean`
+    url: `/api/abi-job/job/log/clean`
   });
 }

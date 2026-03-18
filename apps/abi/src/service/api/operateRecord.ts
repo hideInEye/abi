@@ -4,7 +4,7 @@ export async function queryOperateRecordList(params: any) {
   const res: any = await apiRequest({
     method: 'get',
     params,
-    url: '/abi-system/record/list'
+    url: '/api/abi-system/record/list'
   });
   return res;
 }
@@ -18,7 +18,7 @@ export async function queryOperateRecordList(params: any) {
 export const getOperateRecordList = (type: string, pagination?: {pageNumber: number, pageSize: number}) => {
   return apiRequest({
     method: 'get',
-    url: '/abi-system/record/recentlyUseList',
+    url: '/api/abi-system/record/recentlyUseList',
     params: { type, ...pagination }
   });
 }
@@ -26,7 +26,7 @@ export const getOperateRecordList = (type: string, pagination?: {pageNumber: num
 // 新版收藏
 export function fetchOperateNew(data: any) {
   return apiRequest({
-    url: "/abi-system/favorite/addOrRemove",
+    url: "/api/abi-system/favorite/addOrRemove",
     method: "post",
     data,
   });
@@ -35,7 +35,7 @@ export function fetchOperateNew(data: any) {
 // 收藏列表接口
 export function fetchOperateNewList(data?: any) {
   return apiRequest({
-    url: "/abi-system/favorite/list",
+    url: "/api/abi-system/favorite/list",
     method: "get",
     params: data,
   });
@@ -44,7 +44,7 @@ export function fetchOperateNewList(data?: any) {
 export async function deleteOperateRecord(ids: string) {
   const res: any = await apiRequest({
     method: 'delete',
-    url: `/system/record/delete/${ids}`
+    url: `/api/system/record/delete/${ids}`
   });
   return res;
 }
