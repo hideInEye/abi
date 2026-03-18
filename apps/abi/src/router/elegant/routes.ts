@@ -461,6 +461,30 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
+        name: 'workbench_app-workshop',
+        path: 'app-workshop',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.app-workshop',
+          icon: 'mdi:application-cog-outline',
+          order: 5,
+          title: 'app-workshop'
+        },
+        children: [
+          {
+            name: 'workbench_app-workshop_my-screen',
+            path: 'my-screen',
+            component: 'view.workbench_app-workshop_my-screen',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.app-workshop_my-screen',
+              order: 1,
+              title: 'app-workshop_my-screen'
+            }
+          }
+        ]
+      },
+      {
         name: 'workbench_assistant-manage',
         path: 'assistant-manage',
         meta: {

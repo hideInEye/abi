@@ -497,8 +497,15 @@ export const exportProject = async () => {
         baseApi.exportProjectApi(projectDependency).then((res) => {
             const {code, data, msg} = res;
             if (code === 200) {
-                //3. 自动下载后端生成的压缩包
-                const url = URL.createObjectURL(data);
+                //3. 自动下载后端生成的压缩包（Base64解码）
+                const base64Str = data.projectDataBytes;
+                const byteChars = atob(base64Str);
+                const byteArr = new Uint8Array(byteChars.length);
+                for (let i = 0; i < byteChars.length; i++) {
+                    byteArr[i] = byteChars.charCodeAt(i);
+                }
+                const blob = new Blob([byteArr], {type: 'application/zip'});
+                const url = URL.createObjectURL(blob);
                 const a = document.createElement('a')
                 a.href = url;
                 a.download = `${document.title}.zip`;

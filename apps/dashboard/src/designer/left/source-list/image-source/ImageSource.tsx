@@ -17,11 +17,13 @@ import IdGenerate from "../../../../utils/IdGenerate";
 import {BaseImageComponentProps} from "../../../../comps/lc/base-image/BaseImageController";
 import {IImageData} from "../../../../comps/lc/base-image/BaseImageComponent";
 import DragAddProvider from "../../../../framework/drag-scale/DragAddProvider";
-import {Input, Popconfirm} from "antd";
+import {Input, Popconfirm, Upload} from "antd";
 import historyRecordOperateProxy from "../../../operate-provider/undo-redo/HistoryRecordOperateProxy.ts";
 import {Close, Search} from "@icon-park/react";
 import baseApi from "../../../../api/BaseApi.ts";
 import {DesignerLoader} from "../../../loader/DesignerLoader.ts";
+import {globalMessage} from "../../../../framework/message/GlobalMessage.tsx";
+import {RcFile} from "antd/es/upload";
 
 export default function ImageSource() {
     const [imageList, setImageList] = useState<IImageData[]>([]);
@@ -85,6 +87,16 @@ export default function ImageSource() {
             setImageList(data);
         });
     }
+    const beforeUpload = (file: RcFile) => {
+        baseApi.uploadImage(file).then((data) => {
+            if (!data) {
+                globalMessage.messageApi?.error('上传失败');
+            } else {
+                getImageList();
+            }
+        });
+        return false;
+    }
 
     useEffect(() => {
         getImageList();
@@ -121,6 +133,11 @@ export default function ImageSource() {
                     className="image-search-input"
                     allowClear
                 />
+            </div>
+            <div className={'image-source-upload'}>
+                <Upload accept="image/*" showUploadList={false} beforeUpload={beforeUpload}>
+                    <div className={'image-upload-btn'}>+ 上传图片</div>
+                </Upload>
             </div>
             <div className={'image-source-list'} id={'image-source-list'}>
                 {filteredImageList.map((item: IImageData, index: number) => (

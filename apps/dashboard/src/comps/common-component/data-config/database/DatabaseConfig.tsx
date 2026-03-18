@@ -20,6 +20,8 @@ import {IDatabase} from "../../../../designer/DesignerType.ts";
 import FetchUtil from "../../../../utils/FetchUtil.ts";
 import {IDataSource} from "../../../../pages/home/datasource/DataSourceStore.ts";
 import Base64Util from "../../../../utils/Base64Util.ts";
+import baseApi from "../../../../api/BaseApi.ts";
+import {doSave} from "../../../../designer/operate-provider/hot-key/HotKeyImpl.ts";
 
 export interface DatabaseDataConfigProps {
     controller: AbstractDesignerController;
@@ -34,15 +36,33 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
     const [count, setCount] = useState(0);
 
     useEffect(() => {
-        FetchUtil.get(`/api/commonDatabase/list`).then(res => {
+        const spaceId = localStorage.getItem('spaceId');
+        FetchUtil.post(`/dashboard/api/v1/commonDatabase/list`, {spaceId}).then(res => {
             if (res.code === 200) {
-                const options = (res.data as Array<IDataSource>).map(item => {
-                    return {label: item.name, value: item.id}
+                const list = res.data?.data?.list ?? [];
+                const options = list.map((item: any) => {
+                    return {label: item.sourceName, value: item.sourceId}
                 })
                 setDataSourceList(options as ISelectOption[]);
             } else
                 globalMessage.messageApi?.error(res.msg);
         })
+
+        const projectId = window.LC_ENV?.projectId;
+        const chartId = controller.config?.base?.id;
+        if (projectId && chartId) {
+            baseApi.getProjectInfo(projectId).then(project => {
+                if (!project?.dataJson) return;
+                try {
+                    const dataJson = typeof project.dataJson === 'string' ? JSON.parse(project.dataJson) : project.dataJson;
+                    const dbConfig = dataJson?.layerManager?.elemConfigs?.[chartId]?.data?.database;
+                    if (dbConfig?.sql) {
+                        dataRef.current = ObjectUtil.merge(dataRef.current, dbConfig);
+                        setCount(c => c + 1);
+                    }
+                } catch (_) { /* ignore */ }
+            });
+        }
     }, []);
 
     const validate = () => {
@@ -69,8 +89,15 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
         const {targetDb, sql, filter} = dataRef.current;
         if (!sql || sql === '')
             return;
-        FetchUtil.post(`/api/db/executor/execute`, {id: targetDb, sql: Base64Util.toBase64(sql)}).then(res => {
-            let {data} = res;
+        FetchUtil.post(`/dashboard/api/v1/db/executor/execute`, {
+            id: targetDb,
+            sql: sql,
+            projectId: window.LC_ENV?.projectId,
+            spaceId: localStorage.getItem('spaceId'),
+            remark: '',
+            saveFlag: true
+        }).then(res => {
+            let data = res.data.data;
             const {code, msg} = res;
             if (code === 200) {
                 if (filter && filter !== '') {
@@ -81,6 +108,7 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
 
                 controller.update({data: {database: dataRef.current, staticData: data}})
                 controller.changeData(data);
+                doSave()
             } else {
                 setTestRes(JSON.stringify({msg}, null, 2));
                 controller.update({data: {database: dataRef.current}}, {reRender: false})

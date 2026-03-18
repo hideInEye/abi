@@ -43,11 +43,11 @@ export const ProjectList = memo((props: ProjectListProps) => {
         size: 12
     });
 
-    const getProjectPageList = (current: number, size: number, searchValue?: string) => {
+    const getProjectPageList = (current: number, size: number, keywords?: string) => {
         baseApi.getProjectInfoPageList({
             current,
             size,
-            searchValue
+            keywords
         }).then((data: IPage<IProjectInfo>) => setPageData(data));
     }
 
@@ -59,8 +59,8 @@ export const ProjectList = memo((props: ProjectListProps) => {
         const project: IProjectInfo = {
             name: name,
             des: des,
-            saveType: saveType,
             dataJson: JSON.stringify({canvasManager: {width, height}}),
+            spaceId: Number(localStorage.getItem('spaceId')),
         }
         baseApi.createProject(project).then((id) => {
             if (id === "")
@@ -139,7 +139,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
         baseApi.getProjectInfoPageList({
             current: pageData.current,
             size: pageData.size,
-            searchValue: value
+            keywords: value
         }).then((data: IPage<IProjectInfo>) => setPageData(data));
     }
 

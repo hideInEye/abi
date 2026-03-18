@@ -1,4 +1,5 @@
 import { CaretRightOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, ExceptionOutlined, FileSearchOutlined } from '@ant-design/icons';
+import PageTitle from '@/components/stateless/common/PageTitle';
 import { Form, message } from 'antd';
 import { Suspense } from 'react';
 
@@ -278,7 +279,7 @@ export function Component() {
 
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-8px overflow-hidden lt-sm:overflow-auto p-6">
-      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333' }}>定时任务</h1>
+      <PageTitle />
       <div className="flex items-center gap-4">
         <KeySearch {...searchProps} />
         <div className="ml-auto flex items-center gap-3">

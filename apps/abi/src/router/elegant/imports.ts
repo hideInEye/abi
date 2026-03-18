@@ -50,6 +50,7 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   "space-list": () => import("@/pages/space-list/index.tsx"),
   space_user: () => import("@/pages/space/user/index.tsx"),
   view: () => import("@/pages/view/index.tsx"),
+  "workbench_app-workshop_my-screen": () => import("@/pages/workbench/app-workshop/my-screen/index.tsx"),
   "workbench_assistant-manage_assistant-config": () => import("@/pages/workbench/assistant-manage/assistant-config/index.tsx"),
   "workbench_assistant-manage_label-meaning": () => import("@/pages/workbench/assistant-manage/label-meaning/index.tsx"),
   "workbench_assistant-manage_memory-manage": () => import("@/pages/workbench/assistant-manage/memory-manage/index.tsx"),

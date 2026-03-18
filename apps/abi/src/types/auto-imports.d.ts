@@ -104,6 +104,7 @@ declare global {
   const NavLink: typeof import('react-router-dom')['NavLink']
   const Navigate: typeof import('react-router-dom')['Navigate']
   const Outlet: typeof import('react-router-dom')['Outlet']
+  const PageTitle: typeof import('../components/stateless/common/PageTitle')['default']
   const PinToggler: typeof import('../components/stateless/common/PinToggler')['default']
   const ReloadButton: typeof import('../components/stateless/common/ReloadButton')['default']
   const RightContentCollapseButton: typeof import('../components/stateful/RightContentCollapseButton')['default']

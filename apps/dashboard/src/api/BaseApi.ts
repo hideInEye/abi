@@ -83,6 +83,7 @@ class BaseApi extends AbstractApi {
         formData.append('file', file);
         formData.append('projectId', id);
         formData.append('type', "1");
+        formData.append('spaceId', localStorage.getItem('spaceId') ?? '');
 
         const res = await FetchUtil.post('/dashboard/api/v1/image/upload', formData, {headers: {'Content-Type': 'multipart/form-data'}});
         return res.code === 200 ? {url: res.data} : false;

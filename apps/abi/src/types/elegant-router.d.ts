@@ -65,6 +65,8 @@ declare module "@elegant-router/types" {
     "space-list": "/space-list";
     "view": "/view";
     "workbench": "/workbench";
+    "workbench_app-workshop": "app-workshop";
+    "workbench_app-workshop_my-screen": "my-screen";
     "workbench_assistant-manage": "assistant-manage";
     "workbench_assistant-manage_assistant-config": "assistant-config";
     "workbench_assistant-manage_label-meaning": "label-meaning";
@@ -193,6 +195,7 @@ declare module "@elegant-router/types" {
     | "space-list"
     | "space_user"
     | "view"
+    | "workbench_app-workshop_my-screen"
     | "workbench_assistant-manage_assistant-config"
     | "workbench_assistant-manage_label-meaning"
     | "workbench_assistant-manage_memory-manage"
