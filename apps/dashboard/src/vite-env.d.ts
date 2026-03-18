@@ -21,6 +21,7 @@ declare global {
     interface Window {
         __ABI_DASHBOARD_HOST_BASE_PATH__?: string;
         __ABI_DASHBOARD_INITIAL_PATH__?: string;
+        onTokenExpired?: () => Promise<void> | void;
         LC_ENV: {
             projectId?: string;
             mode?: DesignerMode;

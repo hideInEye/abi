@@ -14,6 +14,11 @@ export interface HttpResponse {
     msg: string;
     data: any;
 }
+export function notifyTokenExpired() {
+    if (typeof window.onTokenExpired === 'function') {
+        void window.onTokenExpired();
+    }
+}
 
 let _apiTarget = '';
 export function getApiTarget(): string {
@@ -72,6 +77,11 @@ export default class FetchUtil {
         }
 
         return nextHeaders;
+    }
+    private static handleUnauthorized(code?: number) {
+        if (code === 401) {
+            notifyTokenExpired();
+        }
     }
     /**
      * GET请求
@@ -140,12 +150,16 @@ export default class FetchUtil {
                 headers: FetchUtil.buildHeaders(options.headers),
             });
             if (!response.ok) {
+                FetchUtil.handleUnauthorized(response.status);
                 console.error('请求错误:', response?.status, response?.statusText);
                 return {code: response?.status ?? 500, msg: response?.statusText ?? '', data: null};
             }
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
                 const res = await response.json();
+                if (typeof res === 'object' && res !== null && 'code' in res) {
+                    FetchUtil.handleUnauthorized((res as HttpResponse).code);
+                }
                 if (typeof res === 'object' && 'code' in res && 'msg' in res)
                     return res;
                 else
@@ -179,13 +193,18 @@ export default class FetchUtil {
             if (response.ok) {
                 const contentType = response.headers.get('content-type');
                 if (contentType && contentType.includes('application/json')) {
-                    return await response.json();
+                    const res = await response.json();
+                    if (typeof res === 'object' && res !== null && 'code' in res) {
+                        FetchUtil.handleUnauthorized((res as HttpResponse).code);
+                    }
+                    return res;
                 } else if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain'))) {
                     return await response.text()
                 } else {
                     return await response.blob()
                 }
             } else {
+                FetchUtil.handleUnauthorized(response.status);
                 console.error('请求错误:', response?.status, response?.statusText);
                 return null;
             }

@@ -142,6 +142,8 @@ export interface IProjectInfo {
     cover?: string;
     //项目数据json
     dataJson?: string;
+    //空间id
+    spaceId?: number;
 }
 
 export type AdaptationType = 'scale' | 'full-screen' | 'full-x' | 'full-y' | 'none';
@@ -199,6 +201,7 @@ export interface IProject {
     name?: string;
     des?: string;
     dataJson?: string;
+    state?: string;
 }
 
 /**
@@ -269,5 +272,5 @@ export interface IPage<T = {}> {
 export interface IPageParam {
     current: number;
     size: number;
-    searchValue?: string;
+    keywords?: string;
 }

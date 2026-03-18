@@ -11,6 +11,8 @@ const route: App.I18n.Schema['translation']['route'] = {
   'assistant-manage_memory-manage': 'Memory Manage',
   'assistant-manage_recommended-inquiries': 'Recommended Inquiries',
   'assistant-manage_technical-jargon': 'Technical Jargon',
+  'app-workshop': 'App Workshop',
+  'app-workshop_my-screen': 'My Screen',
   'data-preparation': 'Data Preparation',
   'data-preparation_data-collection': 'Data Collection',
   'data-preparation_data-collection-operate': 'Data Collection Operate',
