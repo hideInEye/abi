@@ -173,14 +173,12 @@ export default function DataTableMeaningTable() {
   const getSemanticTypeByFieldType = (fieldType: string) => {
     const lowerFieldType = fieldType?.toLowerCase() || '';
     const upperFieldType = fieldType?.toUpperCase() || '';
-    switch (fieldType) {
-      case 'DATETIME':
-      case 'DATETIME64':
-      case 'DATE':
-      case 'TIME':
-        return 'datetime';
-    }
-    if (upperFieldType.includes('TIMESTAMP')) {
+    if (upperFieldType === 'DATETIME' ||
+        upperFieldType === 'DATETIME64' ||
+        upperFieldType === 'DATE' ||
+        upperFieldType === 'TIME' ||
+        upperFieldType.includes('TIMESTAMP')
+    ) {
       return 'datetime';
     }
     // 度量类型：模糊匹配包含 int、float、decimal 的类型（转小写兼容各种大小写）

@@ -163,6 +163,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
                     return (
                         <ProjectItem key={item.id} id={item.id!} name={item.name!} cover={item.cover || defaultSnapshot}
                                      saveType={saveType}
+                                     spaceId={String(item.spaceId)}
                                      doOperate={operateHandler}/>
                     )
                 })}

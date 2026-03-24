@@ -2,7 +2,7 @@ import { message } from 'antd';
 import { debounce } from 'lodash';
 import { useState } from 'react';
 
-import type { Exp, ExpCondition, TagGroup } from '@/pages/workbench/assistant-manage/label-meaning/types';
+import type { Exp, ExpCondition, TagGroup } from '@/pages/workbench/ontology-kg/label-meaning/types';
 import { addTag, delTag, editTag, queryTag } from '@/service/api/tag-meaning.ts';
 
 export function useTagManagement() {

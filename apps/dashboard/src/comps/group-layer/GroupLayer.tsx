@@ -38,7 +38,9 @@ export default class GroupLayer extends React.PureComponent<GroupLayerStyleProps
         const {layer} = this.props;
         const {elemConfigs, compController} = layerManager;
         const groupDefinition: AbstractDefinition = DesignerLoader.definitionMap['group'];
-        const {mode} = URLUtil.parseUrlParams();
+        const {mode: urlMode} = URLUtil.parseUrlParams();
+        const isSharePage = window.location.hash.includes('/dr/');
+        const mode = isSharePage ? DesignerMode.VIEW : (urlMode as DesignerMode || DesignerMode.EDIT);
         let config;
         if (layer.id! in compController!) {
             //重新编组后，被编组组件会重新渲染，需从之前的实例中获取原有数据

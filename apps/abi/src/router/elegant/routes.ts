@@ -506,16 +506,6 @@ export const generatedRoutes: GeneratedRoute[] = [
             }
           },
           {
-            name: 'workbench_assistant-manage_label-meaning',
-            path: 'label-meaning',
-            component: 'view.workbench_assistant-manage_label-meaning',
-            meta: {
-              i18nKey: 'route.assistant-manage_label-meaning',
-              order: 4,
-              title: 'assistant-manage_label-meaning'
-            }
-          },
-          {
             name: 'workbench_assistant-manage_memory-manage',
             path: 'memory-manage',
             component: 'view.workbench_assistant-manage_memory-manage',
@@ -524,26 +514,6 @@ export const generatedRoutes: GeneratedRoute[] = [
               i18nKey: 'route.assistant-manage_memory-manage',
               order: 4,
               title: 'assistant-manage_memory-manage'
-            }
-          },
-          {
-            name: 'workbench_assistant-manage_recommended-inquiries',
-            path: 'recommended-inquiries',
-            component: 'view.workbench_assistant-manage_recommended-inquiries',
-            meta: {
-              i18nKey: 'route.assistant-manage_recommended-inquiries',
-              order: 4,
-              title: 'assistant-manage_recommended-inquiries'
-            }
-          },
-          {
-            name: 'workbench_assistant-manage_technical-jargon',
-            path: 'technical-jargon',
-            component: 'view.workbench_assistant-manage_technical-jargon',
-            meta: {
-              i18nKey: 'route.assistant-manage_technical-jargon',
-              order: 4,
-              title: 'assistant-manage_technical-jargon'
             }
           }
         ]
@@ -700,6 +670,49 @@ export const generatedRoutes: GeneratedRoute[] = [
                 ]
               }
             ]
+          }
+        ]
+      },
+      {
+        name: 'workbench_ontology-kg',
+        path: 'ontology-kg',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.ontology-kg',
+          icon: 'mdi:graph-outline',
+          order: 4,
+          title: 'ontology-kg'
+        },
+        children: [
+          {
+            name: 'workbench_ontology-kg_label-meaning',
+            path: 'label-meaning',
+            component: 'view.workbench_ontology-kg_label-meaning',
+            meta: {
+              i18nKey: 'route.assistant-manage_label-meaning',
+              order: 4,
+              title: 'assistant-manage_label-meaning'
+            }
+          },
+          {
+            name: 'workbench_ontology-kg_recommended-inquiries',
+            path: 'recommended-inquiries',
+            component: 'view.workbench_ontology-kg_recommended-inquiries',
+            meta: {
+              i18nKey: 'route.assistant-manage_recommended-inquiries',
+              order: 4,
+              title: 'assistant-manage_recommended-inquiries'
+            }
+          },
+          {
+            name: 'workbench_ontology-kg_technical-jargon',
+            path: 'technical-jargon',
+            component: 'view.workbench_ontology-kg_technical-jargon',
+            meta: {
+              i18nKey: 'route.assistant-manage_technical-jargon',
+              order: 4,
+              title: 'assistant-manage_technical-jargon'
+            }
           }
         ]
       },

@@ -1,4 +1,4 @@
-import type { TagGroup } from '@/pages/workbench/assistant-manage/label-meaning/types';
+import type { TagGroup } from '@/pages/workbench/ontology-kg/label-meaning/types';
 import { addTag, delTag } from '@/service/api/tag-meaning.ts';
 
 export function useTag(initialGroups: TagGroup[]) {

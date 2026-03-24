@@ -1,4 +1,4 @@
-import type { IDataCollection, IDataCollectionOption } from '@/pages/workbench/assistant-manage/label-meaning/types';
+import type { IDataCollection, IDataCollectionOption } from '@/pages/workbench/ontology-kg/label-meaning/types';
 import { fetchDataCollectionList } from '@/service/api';
 
 function transformDataCollectionList(list: IDataCollection[]): IDataCollectionOption[] {
