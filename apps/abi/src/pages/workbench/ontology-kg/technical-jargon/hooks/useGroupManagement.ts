@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { GroupItem } from '@/pages/assistant-manage/label-meaning/components/GroupList';
+import type { GroupItem } from '@/pages/workbench/ontology-kg/label-meaning/components/GroupList';
 
 export const useGroupManagement = () => {
   const [groups, setGroups] = useState<GroupItem[]>([

@@ -250,10 +250,7 @@ const routeMap: RouteMap = {
   "workbench_app-workshop_my-screen": "my-screen",
   "workbench_assistant-manage": "assistant-manage",
   "workbench_assistant-manage_assistant-config": "assistant-config",
-  "workbench_assistant-manage_label-meaning": "label-meaning",
   "workbench_assistant-manage_memory-manage": "memory-manage",
-  "workbench_assistant-manage_recommended-inquiries": "recommended-inquiries",
-  "workbench_assistant-manage_technical-jargon": "technical-jargon",
   "workbench_data-preparation": "data-preparation",
   "workbench_data-preparation_data-collection": "data-collection",
   "workbench_data-preparation_data-collection-operate": "data-collection-operate/:id",
@@ -269,6 +266,10 @@ const routeMap: RouteMap = {
   "workbench_job_time_modules": "modules",
   "workbench_job_time_modules_editor-quill": "editor-quill",
   "workbench_job_time_modules_share-email-setting": "share-email-setting",
+  "workbench_ontology-kg": "ontology-kg",
+  "workbench_ontology-kg_label-meaning": "label-meaning",
+  "workbench_ontology-kg_recommended-inquiries": "recommended-inquiries",
+  "workbench_ontology-kg_technical-jargon": "technical-jargon",
   "workbench_screen-manage": "screen-manage",
   "workbench_screen-manage_abi-dashboard": "abi-dashboard"
 };

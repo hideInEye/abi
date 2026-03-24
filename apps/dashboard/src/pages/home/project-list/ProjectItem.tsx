@@ -10,8 +10,8 @@
  */
 
 import './ProjectItem.less';
-import {Copy, Delete, Edit, PreviewOpen} from "@icon-park/react";
-import {Input, Popover} from "antd";
+import {Copy, Delete, Edit, PreviewOpen, Share} from "@icon-park/react";
+import {Input, Popover, Modal, Switch, message} from "antd";
 import {useState} from "react";
 import {IProjectInfo, SaveType} from "../../../designer/DesignerType.ts";
 import baseApi from "../../../api/BaseApi.ts";
@@ -22,12 +22,18 @@ export interface ProjectItemProps {
     cover?: string;
     saveType: SaveType;
     doOperate: (id: string, type: string) => void;
+    spaceId?: string;
 }
 
 export default function ProjectItem(props: ProjectItemProps) {
-    const {cover, id, doOperate} = props;
+    const {cover, id, doOperate, spaceId} = props;
     const [rename, setRename] = useState(false);
     const [name, setName] = useState(props.name);
+    const [shareModalVisible, setShareModalVisible] = useState(false);
+    const [sharePasswordFlag, setSharePasswordFlag] = useState(false);
+    const [shareLink, setShareLink] = useState('');
+    const [sharePassword, setSharePassword] = useState<string | null>('');
+    const [shareLoading, setShareLoading] = useState(false);
 
     const updateName = () => {
         if (name !== props.name) {
@@ -35,6 +41,33 @@ export default function ProjectItem(props: ProjectItemProps) {
             baseApi.updateProject(data);
         }
     }
+
+    const handleShare = async () => {
+        setShareLoading(true);
+        try {
+            const currentSpaceId = localStorage.getItem('spaceId') || '';
+            const res = await baseApi.shareProject(Number(id), Number(currentSpaceId), sharePasswordFlag);
+            if (res?.shareUrl) {
+                setShareLink(res.shareUrl);
+                setSharePassword(res.sharePassword ?? null);
+            }
+        } finally {
+            setShareLoading(false);
+        }
+    };
+
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(shareLink).then(() => {
+            message.success('分享链接已复制到剪贴板');
+        });
+    };
+
+    const handleCloseShareModal = () => {
+        setShareModalVisible(false);
+        setShareLink('');
+        setSharePassword(null);
+        setSharePasswordFlag(false);
+    };
 
     return (
         <div className="project-list-item">
@@ -48,6 +81,8 @@ export default function ProjectItem(props: ProjectItemProps) {
                         onClick={() => doOperate(id, "del")}/></Popover></div>
                     <div className="operate-icon"><Popover content={'复制项目'}><Copy
                         onClick={() => doOperate(id, "clone")}/></Popover></div>
+                    <div className="operate-icon"><Popover content={'分享项目'}><Share
+                        onClick={() => setShareModalVisible(true)}/></Popover></div>
                 </div>
             </div>
             <div className="project-item-content">
@@ -76,6 +111,79 @@ export default function ProjectItem(props: ProjectItemProps) {
                     {rename || <Popover content={'重命名'}><Edit/></Popover>}
                 </div>
             </div>
+            <Modal
+                title="分享大屏项目"
+                open={shareModalVisible}
+                onCancel={handleCloseShareModal}
+                footer={null}
+                width={500}
+            >
+                <div style={{ padding: '20px 0' }}>
+                    <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span>设置访问密码：</span>
+                        <Switch
+                            checked={sharePasswordFlag}
+                            onChange={setSharePasswordFlag}
+                        />
+                    </div>
+                    {!shareLink ? (
+                        <div style={{ textAlign: 'center' }}>
+                            <button
+                                onClick={handleShare}
+                                disabled={shareLoading}
+                                style={{
+                                    padding: '8px 24px',
+                                    backgroundColor: '#1890ff',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: shareLoading ? 'not-allowed' : 'pointer',
+                                    opacity: shareLoading ? 0.6 : 1
+                                }}
+                            >
+                                {shareLoading ? '生成中...' : '生成分享链接'}
+                            </button>
+                        </div>
+                    ) : (
+                        <div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ marginBottom: '8px', color: '#666' }}>分享链接：</div>
+                                <Input.TextArea
+                                    value={shareLink}
+                                    readOnly
+                                    rows={3}
+                                    style={{ backgroundColor: '#f5f5f5' }}
+                                />
+                            </div>
+                            {sharePassword && (
+                                <div style={{marginBottom: '15px'}}>
+                                    <div style={{marginBottom: '8px', color: '#666'}}>访问密码：</div>
+                                    <Input
+                                        value={sharePassword}
+                                        readOnly
+                                        style={{backgroundColor: '#f5f5f5'}}
+                                    />
+                                </div>
+                            )}
+                            <div style={{textAlign: 'center'}}>
+                                <button
+                                    onClick={handleCopyLink}
+                                    style={{
+                                        padding: '8px 24px',
+                                        backgroundColor: '#52c41a',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    复制链接
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </Modal>
         </div>
     )
 }

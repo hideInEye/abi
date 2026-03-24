@@ -69,10 +69,7 @@ declare module "@elegant-router/types" {
     "workbench_app-workshop_my-screen": "my-screen";
     "workbench_assistant-manage": "assistant-manage";
     "workbench_assistant-manage_assistant-config": "assistant-config";
-    "workbench_assistant-manage_label-meaning": "label-meaning";
     "workbench_assistant-manage_memory-manage": "memory-manage";
-    "workbench_assistant-manage_recommended-inquiries": "recommended-inquiries";
-    "workbench_assistant-manage_technical-jargon": "technical-jargon";
     "workbench_data-preparation": "data-preparation";
     "workbench_data-preparation_data-collection": "data-collection";
     "workbench_data-preparation_data-collection-operate": "data-collection-operate/:id";
@@ -88,6 +85,10 @@ declare module "@elegant-router/types" {
     "workbench_job_time_modules": "modules";
     "workbench_job_time_modules_editor-quill": "editor-quill";
     "workbench_job_time_modules_share-email-setting": "share-email-setting";
+    "workbench_ontology-kg": "ontology-kg";
+    "workbench_ontology-kg_label-meaning": "label-meaning";
+    "workbench_ontology-kg_recommended-inquiries": "recommended-inquiries";
+    "workbench_ontology-kg_technical-jargon": "technical-jargon";
     "workbench_screen-manage": "screen-manage";
     "workbench_screen-manage_abi-dashboard": "abi-dashboard";
   };
@@ -197,10 +198,7 @@ declare module "@elegant-router/types" {
     | "view"
     | "workbench_app-workshop_my-screen"
     | "workbench_assistant-manage_assistant-config"
-    | "workbench_assistant-manage_label-meaning"
     | "workbench_assistant-manage_memory-manage"
-    | "workbench_assistant-manage_recommended-inquiries"
-    | "workbench_assistant-manage_technical-jargon"
     | "workbench_data-preparation_data-collection-operate"
     | "workbench_data-preparation_data-collection"
     | "workbench_data-preparation_data-quick-creation"
@@ -213,6 +211,9 @@ declare module "@elegant-router/types" {
     | "workbench_job_time"
     | "workbench_job_time_modules_editor-quill"
     | "workbench_job_time_modules_share-email-setting"
+    | "workbench_ontology-kg_label-meaning"
+    | "workbench_ontology-kg_recommended-inquiries"
+    | "workbench_ontology-kg_technical-jargon"
     | "workbench_screen-manage_abi-dashboard"
   >;
 

@@ -127,6 +127,50 @@ class BaseApi extends AbstractApi {
         return await FetchUtil.post('/dashboard/api/v1/project/exportProject', projectDependency);
     }
 
+    /**
+     * 分享大屏项目
+     * @param projectId 项目id
+     * @param spaceId 空间id
+     * @param sharePasswordFlag 是否设置密码
+     */
+    public async shareProject(projectId: number, spaceId: number, sharePasswordFlag: boolean): Promise<{shareUrl: string; sharePassword?: string | null} | null> {
+        const res = await FetchUtil.post('/dashboard/api/v1/project/share', {
+            projectId,
+            spaceId,
+            sharePasswordFlag
+        });
+        if (res.code === 200) {
+            return {
+                shareUrl: res.data?.shareUrl ?? '',
+                sharePassword: res.data?.sharePassword ?? null,
+            };
+        } else {
+            globalMessage.messageApi?.error(res.msg);
+            return null;
+        }
+    }
+
+    /**
+     * 校验分享密码 / 获取分享信息
+     * @param shareCode 分享码
+     * @param sharePassword 分享密码（无密码时传空字符串）
+     * @returns { passwordFlag: 是否需要密码, result: 密码校验结果 }
+     */
+    public async checkSharePassword(shareCode: string, sharePassword: string): Promise<{passwordFlag: boolean; result: boolean; projectId?: string | number} | null> {
+        const res = await FetchUtil.post('/dashboard/api/v1/project/checkSharePassword', {
+            shareCode,
+            sharePassword
+        });
+        if (res.code === 200) {
+            return {
+                passwordFlag: res.data?.passwordFlag ?? false,
+                result: res.data?.result ?? false,
+                projectId: res.data?.projectId,
+            };
+        }
+        return null;
+    }
+
 }
 
 const baseApi = new BaseApi();

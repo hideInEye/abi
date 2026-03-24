@@ -10,7 +10,7 @@
  */
 
 import {lazy, memo, useMemo} from 'react';
-import {createBrowserRouter, createMemoryRouter, Navigate, RouterProvider} from "react-router-dom";
+import {createHashRouter, createMemoryRouter, Navigate, RouterProvider} from "react-router-dom";
 import {ConfigProvider, theme} from "antd";
 import {qiankunWindow} from 'vite-plugin-qiankun/dist/helper';
 
@@ -26,6 +26,7 @@ const Demo = lazy(() => import('../test/Demo'));
 const NotFound = lazy(() => import('../pages/result/NotFound.tsx'));
 const NoAuth = lazy(() => import('../pages/result/NoAuth.tsx'));
 const Error = lazy(() => import('../pages/result/Error.tsx'));
+const ShareViewPage = lazy(() => import('../pages/share/ShareViewPage.tsx'));
 
 // const studioDarkAlgorithm: MappingAlgorithm = (seedToken, mapToken) => {
 //     const baseToken = theme.darkAlgorithm(seedToken, mapToken);
@@ -426,6 +427,10 @@ const routes = [
         element: <DesignerViewPage/>
     },
     {
+        path: '/dr/:shareCode',
+        element: <ShareViewPage/>
+    },
+    {
         path: '/test',
         element: <Demo/>
     },
@@ -484,7 +489,7 @@ const MainRouter = memo(() => {
         if (isPoweredByQiankun) {
             return createMemoryRouter(routes, {initialEntries: [window.__ABI_DASHBOARD_INITIAL_PATH__ || '/projects']});
         }
-        return createBrowserRouter(routes);
+        return createHashRouter(routes);
     }, []);
 
     return (

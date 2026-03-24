@@ -26,7 +26,11 @@ export interface ComponentContainerProps {
 const ComponentContainer = memo((props: ComponentContainerProps) => {
     const {layer} = props;
     const ref = useRef(null);
-    const mode: DesignerMode = URLUtil.parseUrlParams()?.mode as DesignerMode || DesignerMode.EDIT;
+    // 分享页路由 /dr/:shareCode 没有 ?mode 参数，需通过 hash 路径识别
+    const isSharePage = window.location.hash.includes('/dr/');
+    const mode: DesignerMode = isSharePage
+        ? DesignerMode.VIEW
+        : (URLUtil.parseUrlParams()?.mode as DesignerMode || DesignerMode.EDIT);
     const {auxiliaryBorder} = runtimeConfigStore;
     const enableEvent = mode === DesignerMode.VIEW || layerManager.enableEvent;
 
@@ -47,7 +51,8 @@ const ComponentContainer = memo((props: ComponentContainerProps) => {
                     config = componentDefine.getInitConfig();
                     config.base.id = layer.id!;
                 }
-                const {mode} = URLUtil.parseUrlParams();
+                const {mode: urlMode} = URLUtil.parseUrlParams();
+                const mode = isSharePage ? DesignerMode.VIEW : (urlMode as DesignerMode || DesignerMode.EDIT);
                 const controller = new Controller()! as AbstractDesignerController;
                 /**
                  * 此处注意，执行顺序尤为重要！！！
