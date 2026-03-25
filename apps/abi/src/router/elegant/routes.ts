@@ -656,6 +656,28 @@ export const generatedRoutes: GeneratedRoute[] = [
             ]
           }
         ]
+      },
+      {
+        name: 'workbench_lineage',
+        path: 'lineage',
+        meta: {
+          i18nKey: 'route.lineage',
+          icon: 'mdi:graph-outline',
+          order: 6,
+          title: 'lineage'
+        },
+        children: [
+          {
+            name: 'workbench_lineage_query',
+            path: 'query',
+            component: 'view.workbench_lineage_query',
+            meta: {
+              i18nKey: 'route.lineage_query',
+              order: 1,
+              title: 'lineage_query'
+            }
+          }
+        ]
       }
     ]
   }

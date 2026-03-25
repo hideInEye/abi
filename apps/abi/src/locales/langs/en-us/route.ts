@@ -43,6 +43,8 @@ const route: App.I18n.Schema['translation']['route'] = {
   // 'function_toggle-auth': 'Toggle Auth',
   home: 'Home',
   'iframe-page': 'Iframe',
+  lineage: 'Lineage',
+  lineage_query: 'Lineage Query',
   login: 'Login',
   'login_code-login': 'Code Login',
   'login_pwd-login': 'Password Login',
