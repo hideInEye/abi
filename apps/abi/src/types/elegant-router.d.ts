@@ -35,6 +35,7 @@ declare module "@elegant-router/types" {
     "component_system_model": "model";
     "component_system_plugin": "plugin";
     "designer": "/designer";
+    "dr": "/dr/:shareCode";
     "guide": "/guide";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
@@ -133,6 +134,7 @@ declare module "@elegant-router/types" {
     | "ai-assistant"
     | "component"
     | "designer"
+    | "dr"
     | "guide"
     | "home"
     | "iframe-page"
@@ -172,6 +174,7 @@ declare module "@elegant-router/types" {
     | "component_system_model"
     | "component_system_plugin"
     | "designer"
+    | "dr"
     | "guide"
     | "home"
     | "login_code-login"

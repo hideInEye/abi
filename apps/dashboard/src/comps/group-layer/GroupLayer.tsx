@@ -39,7 +39,7 @@ export default class GroupLayer extends React.PureComponent<GroupLayerStyleProps
         const {elemConfigs, compController} = layerManager;
         const groupDefinition: AbstractDefinition = DesignerLoader.definitionMap['group'];
         const {mode: urlMode} = URLUtil.parseUrlParams();
-        const isSharePage = window.location.hash.includes('/dr/');
+        const isSharePage = window.location.pathname.includes('/dr/') || window.location.hash.includes('/dr/');
         const mode = isSharePage ? DesignerMode.VIEW : (urlMode as DesignerMode || DesignerMode.EDIT);
         let config;
         if (layer.id! in compController!) {
