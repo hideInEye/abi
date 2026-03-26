@@ -18,6 +18,17 @@ const customRoutes: CustomRoute[] = [
       order:1,
       constant:true
     }
+  },
+  {
+    name: 'dr',
+    path: '/dr/:shareCode',
+    component: 'layout.blank$view.dr',
+    meta: {
+      constant: true,
+      hideInMenu: true,
+      title: 'dr',
+      i18nKey: 'route.dr'
+    }
   }
   // {
   //   children: [

@@ -134,17 +134,6 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
-    name: 'dr',
-    path: '/dr/:shareCode',
-    component: 'layout.blank$view.dr',
-    meta: {
-      constant: true,
-      hideInMenu: true,
-      title: 'dr',
-      i18nKey: 'route.dr'
-    }
-  },
-  {
     name: 'guide',
     path: '/guide',
     component: 'layout.base$view.guide',
@@ -483,9 +472,9 @@ export const generatedRoutes: GeneratedRoute[] = [
         },
         children: [
           {
-            name: 'workbench_app-workshop_my-screen',
-            path: 'my-screen',
-            component: 'view.workbench_app-workshop_my-screen',
+            name: 'workbench_app-workshop_my-dashboard',
+            path: 'my-dashboard',
+            component: 'view.workbench_app-workshop_my-dashboard',
             meta: {
               hideInMenu: false,
               i18nKey: 'route.app-workshop_my-screen',

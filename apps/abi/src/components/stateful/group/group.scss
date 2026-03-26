@@ -10,5 +10,32 @@
   overflow: hidden;
   .ant-tree {
     overflow: hidden;
+    // 去掉 Tree 节点左右 padding
+    .ant-tree-treenode {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+    .ant-tree-node-content-wrapper {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+    .ant-tree-indent-unit {
+      width: 16px !important;
+    }
+  }
+}
+
+// 分组树节点图标
+.group-node-icon {
+  flex-shrink: 0;
+  font-size: 15px;
+
+  &--folder {
+    color: #8c8c8c; // 灰色文件夹
+  }
+
+  &--leaf {
+    color: #8c8c8c; // 最内层叶子节点图标
+    font-size: 13px;
   }
 }
