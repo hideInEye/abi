@@ -443,6 +443,10 @@ const routes = [
         element: <ServerProjectList/>,
     },
     {
+        path: '/published-projects',
+        element: <ServerProjectList statusFilter="0" title="我的大屏"/>,
+    },
+    {
         path: '/home',
         element: <Home/>,
         children: [

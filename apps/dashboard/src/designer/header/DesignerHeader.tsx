@@ -22,10 +22,13 @@ import CanvasHdConfigImpl from "./items/canvas/CanvasHdConfigImpl.tsx";
 import ProjectHdItemImpl from "./items/project/ProjectHdItemImpl.tsx";
 import ThemeHdItemImpl from "./items/theme/ThemeHdItemImpl.tsx";
 import BluePrintHdImpl from "./items/blue-print/BluePrintHdImpl.tsx";
-import {AfferentFour, ConnectionPointTwo, EfferentFour, Eyes, HardDiskOne, PageTemplate, Theme} from "@icon-park/react";
+import {AfferentFour, ConnectionPointTwo, EfferentFour, Eyes, HardDiskOne, PageTemplate, Theme, Send} from "@icon-park/react";
 import URLUtil from "../../utils/URLUtil.ts";
-import {DesignerMode} from "../DesignerType.ts";
+import {DesignerMode, ProjectState} from "../DesignerType.ts";
 import AiChatPanel from "./items/ai-chat/AiChatPanel.tsx";
+import baseApi from "../../api/BaseApi.ts";
+import {globalMessage} from "../../framework/message/GlobalMessage.tsx";
+import designerManager from "../manager/DesignerManager.ts";
 
 
 export interface IHeaderItem {
@@ -94,7 +97,20 @@ const leftItems: Array<IHeaderItem> = [
 
 const Header: React.FC = observer(() => {
         const [aiChatVisible, setAiChatVisible] = React.useState(false);
-        const publishStatus = String(projectHdStore.projectConfig.state ?? '0');
+        const publishStatus = String(projectHdStore.projectConfig.status ?? '1');
+
+        const handlePublish = async () => {
+            if (publishStatus === '0') return;
+            const {id} = URLUtil.parseUrlParams();
+            const proData = designerManager.getData();
+            await baseApi.updateProject({
+                id,
+                dataJson: JSON.stringify(proData),
+                status: '0',
+            });
+            projectHdStore.updateProjectConfig({status: '0'});
+            globalMessage.messageApi?.success('发布成功');
+        };
 
         const handleBack = () => {
             const historyIndex = window.history.state?.idx;
@@ -135,9 +151,11 @@ const Header: React.FC = observer(() => {
                         {buildHeaderItemUI(centerItems)}
                     </div>
                     <div className={'header-right'}>
-                        <div className={'header-item'} onClick={() => {/* 接口待开发 */}}>
-                            <span className={'item-span'} style={{fontSize: 13}}>
-                                {publishStatus === '1' ? '已发布' : '发布'}
+                        <div className={'header-item'} onClick={handlePublish}
+                             style={publishStatus === '0' ? {cursor: 'default', opacity: 0.6} : {}}>
+                            <Send theme="outline" style={{marginTop: 2}} strokeWidth={4} strokeLinecap="square"/>
+                            <span className={'item-span'}>
+                                {publishStatus === '0' ? '已发布' : '发布'}
                             </span>
                         </div>
                         {buildHeaderItemUI(leftItems)}

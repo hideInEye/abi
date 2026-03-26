@@ -132,6 +132,8 @@ export interface IProjectInfo {
     des?: string;
     //项目状态
     state?: ProjectState;
+    //发布状态（后端字段）
+    status?: string;
     //创建时间
     createTime?: string;
     //更新时间
@@ -202,6 +204,7 @@ export interface IProject {
     des?: string;
     dataJson?: string;
     state?: string;
+    status?: string;
 }
 
 /**
@@ -273,4 +276,5 @@ export interface IPageParam {
     current: number;
     size: number;
     keywords?: string;
+    status?: string;
 }
