@@ -248,7 +248,7 @@ const routeMap: RouteMap = {
   "view": "/view",
   "workbench": "/workbench",
   "workbench_app-workshop": "app-workshop",
-  "workbench_app-workshop_my-screen": "my-screen",
+  "workbench_app-workshop_my-dashboard": "my-dashboard",
   "workbench_assistant-manage": "assistant-manage",
   "workbench_assistant-manage_assistant-config": "assistant-config",
   "workbench_assistant-manage_memory-manage": "memory-manage",

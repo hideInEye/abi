@@ -13,6 +13,7 @@ export interface QuestionGroupItem {
   groupId: number;
   groupName: string;
   groupType: 'question';
+  parentId?: number;
   remark: string;
   spaceId: number;
   status: string;
@@ -34,10 +35,11 @@ export const useGroupManagement = (config: GroupProps['config']) => {
     setGroups(data);
   };
 
-  const handleGroupAdd = async (newGroup: QuestionGroupItem) => {
+  const handleGroupAdd = async (newGroup: QuestionGroupItem & { parentId?: number }) => {
    const res =  await addTableSemanticsGroup({
       groupName: newGroup.groupName,
       groupType: config.type,
+      parentId: newGroup.parentId ?? 0,
       remark: newGroup.remark,
       spaceId: Number(localStorage.getItem('spaceId'))
     });

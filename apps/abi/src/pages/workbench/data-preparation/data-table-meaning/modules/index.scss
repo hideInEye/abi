@@ -4,3 +4,18 @@
     overflow-y: scroll;
   }
 }
+
+// 表语义分组树去掉左右 padding
+.semantics-tree {
+  .ant-tree-treenode {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .ant-tree-node-content-wrapper {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .ant-tree-indent-unit {
+    width: 16px !important;
+  }
+}
