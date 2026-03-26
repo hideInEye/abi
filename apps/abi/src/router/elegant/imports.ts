@@ -26,6 +26,7 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   component_system_model: () => import("@/pages/component/system/model/index.tsx"),
   component_system_plugin: () => import("@/pages/component/system/plugin/index.tsx"),
   designer: () => import("@/pages/designer/index.tsx"),
+  dr: () => import("@/pages/dr/index.tsx"),
   guide: () => import("@/pages/guide/index.tsx"),
   home: () => import("@/pages/home/index.tsx"),
   "login_code-login": () => import("@/pages/login/code-login/index.tsx"),

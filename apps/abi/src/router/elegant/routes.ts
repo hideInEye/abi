@@ -134,6 +134,17 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'dr',
+    path: '/dr/:shareCode',
+    component: 'layout.blank$view.dr',
+    meta: {
+      constant: true,
+      hideInMenu: true,
+      title: 'dr',
+      i18nKey: 'route.dr'
+    }
+  },
+  {
     name: 'guide',
     path: '/guide',
     component: 'layout.base$view.guide',

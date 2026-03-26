@@ -11,7 +11,7 @@
 
 import React, {memo, useEffect, useRef} from 'react';
 import './ProjectList.less';
-import {Button, Input, Pagination} from "antd";
+import {Button, Empty, Input, Pagination} from "antd";
 import defaultSnapshot from '../image/default-snapshot.jpg';
 import {DesignerMode, IPage, IProjectInfo, SaveType} from "../../../designer/DesignerType";
 import {INewProjectInfo, NewProjectDialog} from "./NewProjectDialog.tsx";
@@ -27,10 +27,12 @@ const {Search} = Input;
 
 export interface ProjectListProps {
     saveType: SaveType;
+    statusFilter?: string;
+    title?: string;
 }
 
 export const ProjectList = memo((props: ProjectListProps) => {
-    const {saveType} = props;
+    const {saveType, statusFilter, title = '项目列表'} = props;
     const [addDialog, setAddDialog] = React.useState(false);
     const [delDialog, setDelDialog] = React.useState(false);
     const [cloneDialog, setCloneDialog] = React.useState(false);
@@ -47,8 +49,13 @@ export const ProjectList = memo((props: ProjectListProps) => {
         baseApi.getProjectInfoPageList({
             current,
             size,
-            keywords
-        }).then((data: IPage<IProjectInfo>) => setPageData(data));
+            keywords,
+        }).then((data: IPage<IProjectInfo>) => {
+            if (statusFilter !== undefined) {
+                data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);
+            }
+            setPageData(data);
+        });
     }
 
 
@@ -125,8 +132,13 @@ export const ProjectList = memo((props: ProjectListProps) => {
     const pageChange = (page: number, size: number) => {
         baseApi.getProjectInfoPageList({
             current: page,
-            size: size
-        }).then((data: IPage<IProjectInfo>) => setPageData(data));
+            size: size,
+        }).then((data: IPage<IProjectInfo>) => {
+            if (statusFilter !== undefined) {
+                data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);
+            }
+            setPageData(data);
+        });
     }
 
     const onKeyDown = (event: React.KeyboardEvent) => {
@@ -139,8 +151,13 @@ export const ProjectList = memo((props: ProjectListProps) => {
         baseApi.getProjectInfoPageList({
             current: pageData.current,
             size: pageData.size,
-            keywords: value
-        }).then((data: IPage<IProjectInfo>) => setPageData(data));
+            keywords: value,
+        }).then((data: IPage<IProjectInfo>) => {
+            if (statusFilter !== undefined) {
+                data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);
+            }
+            setPageData(data);
+        });
     }
 
     useEffect(() => {
@@ -149,27 +166,45 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     return (
         <div className={'project-list-container'}>
-            <h1 className={'project-list-title'}>项目列表</h1>
+            <h1 className={'project-list-title'}>{title}</h1>
             <div className={'project-list-header'}>
                 <Search placeholder="搜索项目"
                         className={'project-list-search'}
                         onKeyDown={onKeyDown}
                         onSearch={doSearch}
                         style={{width: '12.5rem'}}/>
-                <Button type={"primary"} onClick={toggleNewProVisible} style={{marginLeft: 'auto'}}>新增</Button>
+                {!statusFilter && <Button type={"primary"} onClick={toggleNewProVisible} style={{marginLeft: 'auto'}}>新增</Button>}
             </div>
             <div className={'project-list'}>
-                {pageData && pageData.records.map((item: IProjectInfo) => {
+                {pageData && pageData.records.length > 0 ? pageData.records.map((item: IProjectInfo) => {
                     return (
                         <ProjectItem key={item.id} id={item.id!} name={item.name!} cover={item.cover || defaultSnapshot}
                                      saveType={saveType}
                                      spaceId={String(item.spaceId)}
                                      doOperate={operateHandler}/>
                     )
-                })}
+                }) : (
+                    <div style={{
+                        width: '100%',
+                        flex: '0 0 100%',
+                        maxWidth: '100%',
+                        aspectRatio: 'unset',
+                        border: '1px solid #e8e8e8',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '200px',
+                        overflow: 'hidden',
+                    }}>
+                        <Empty description="暂无数据"/>
+                    </div>
+                )}
             </div>
-            <Pagination rootClassName={'project-list-page'} defaultCurrent={pageData?.current}
-                        pageSize={pageData?.size} total={pageData?.total} onChange={pageChange}/>
+            {pageData && pageData.records.length > 0 && (
+                <Pagination rootClassName={'project-list-page'} defaultCurrent={pageData?.current}
+                            pageSize={pageData?.size} total={pageData?.total} onChange={pageChange}/>
+            )}
             <NewProjectDialog onOk={onOk} onCancel={onCancel} visible={addDialog}/>
             <DelProjectDialog visible={delDialog} onOk={confirmDel} onCancel={cancelDel}/>
             <CloneProjectDialog onOk={() => confirmClone()} onCancel={cancelClone}

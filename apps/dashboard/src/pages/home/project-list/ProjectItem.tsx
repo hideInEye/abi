@@ -48,7 +48,9 @@ export default function ProjectItem(props: ProjectItemProps) {
             const currentSpaceId = localStorage.getItem('spaceId') || '';
             const res = await baseApi.shareProject(Number(id), Number(currentSpaceId), sharePasswordFlag);
             if (res?.shareUrl) {
-                setShareLink(res.shareUrl);
+                // 将 /#/dr/xxx 格式转为 /dr/xxx，兼容 history 路由
+                const shareUrl = res.shareUrl.replace('/#/', '/');
+                setShareLink(shareUrl);
                 setSharePassword(res.sharePassword ?? null);
             }
         } finally {
