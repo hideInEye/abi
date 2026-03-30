@@ -1,52 +1,29 @@
 /* eslint-disable react/prop-types */
 import { Graph } from '@antv/g6'
 
-import { NODE_TYPE_COLORS, NODE_TYPE_LABELS, RELATION_TYPE_COLORS, RELATION_TYPE_LABELS } from './constants'
-import type { LineageNode, LineageRelation } from './types'
+import { NODE_TYPE_COLORS, NODE_TYPE_LABELS, RELATION_TYPE_COLORS } from './constants'
+import type { LineageRelation } from './types'
 
 interface Props {
-  onNodeClick?: (node: LineageNode) => void
   relations: LineageRelation[]
+  title?: string
 }
 
-function hasChinese(text?: string) {
-  if (!text) return false
-  return /[\u4e00-\u9fa5]/.test(text)
-}
-
-function resolveNodeLabel(nodeType: string, nodeId: number | string, nodeName?: string) {
+function resolveNodeLabel(nodeType: string, nodeName?: string) {
   const typeLabel = NODE_TYPE_LABELS[nodeType] || '节点'
   const cleanName = `${nodeName || ''}`.trim()
-  if (cleanName && hasChinese(cleanName)) return cleanName
-  return `${typeLabel}-${nodeId}`
+  if (cleanName) return cleanName
+  return typeLabel
 }
 
-function getDisplayLength(text: string) {
-  return Array.from(text).reduce((total, char) => {
-    return total + (/[\u4e00-\u9fa5]/.test(char) ? 2 : 1)
-  }, 0)
+function truncateLabel(text: string) {
+  if (text.length <= 14) return text
+  return `${text.slice(0, 12)}...`
 }
 
-function createNodeSize(label: string): [number, number] {
-  // 至少保证5个中文字符 + 内边距的可视宽度
-  const minWidth = 170
-  const maxWidth = 320
-  const displayLength = getDisplayLength(label)
-  const width = Math.min(maxWidth, Math.max(minWidth, displayLength * 10 + 40))
-  const lineCapacity = Math.max(1, Math.floor((width - 34) / 14))
-  const lineCount = Math.max(1, Math.ceil(displayLength / lineCapacity))
-  const height = Math.min(92, Math.max(46, 24 + lineCount * 18))
-  return [width, height]
-}
-
-const LineageGraph: React.FC<Props> = ({ onNodeClick, relations }) => {
+const LineageGraph: React.FC<Props> = ({ relations, title = '逻辑关系图' }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const graphRef = useRef<Graph | null>(null)
-  const onNodeClickRef = useRef<Props['onNodeClick']>(onNodeClick)
-
-  useEffect(() => {
-    onNodeClickRef.current = onNodeClick
-  }, [onNodeClick])
 
   const data = useMemo(() => {
     const nodesMap = new Map<string, any>()
@@ -55,30 +32,37 @@ const LineageGraph: React.FC<Props> = ({ onNodeClick, relations }) => {
     relations.forEach(item => {
       const sourceKey = `${item.source_node_type}:${item.source_node_id}`
       const targetKey = `${item.target_node_type}:${item.target_node_id}`
-      const sourceLabel = resolveNodeLabel(item.source_node_type, item.source_node_id, item.source_node_name)
-      const targetLabel = resolveNodeLabel(item.target_node_type, item.target_node_id, item.target_node_name)
+      const sourceLabel = resolveNodeLabel(item.source_node_type, item.source_node_name)
+      const targetLabel = resolveNodeLabel(item.target_node_type, item.target_node_name)
 
       if (!nodesMap.has(sourceKey)) {
-        const nodeSize = createNodeSize(sourceLabel)
+        const isSourceRoot = item.source_node_type === 'DATA_SOURCE'
         nodesMap.set(sourceKey, {
           id: sourceKey,
           label: sourceLabel,
+          fullLabel: sourceLabel,
           nodeType: item.source_node_type,
           style: {
-            labelText: sourceLabel,
-            size: nodeSize
+            fill: isSourceRoot ? '#3388ff' : '#ffffff',
+            labelText: truncateLabel(sourceLabel),
+            size: [190, 32],
+            stroke: isSourceRoot ? '#ffffff' : '#3388ff'
           }
         })
       }
+
       if (!nodesMap.has(targetKey)) {
-        const nodeSize = createNodeSize(targetLabel)
+        const isTargetRoot = item.target_node_type === 'DATA_SOURCE'
         nodesMap.set(targetKey, {
           id: targetKey,
           label: targetLabel,
+          fullLabel: targetLabel,
           nodeType: item.target_node_type,
           style: {
-            labelText: targetLabel,
-            size: nodeSize
+            fill: isTargetRoot ? '#3388ff' : '#ffffff',
+            labelText: truncateLabel(targetLabel),
+            size: [190, 32],
+            stroke: isTargetRoot ? '#ffffff' : '#3388ff'
           }
         })
       }
@@ -96,17 +80,17 @@ const LineageGraph: React.FC<Props> = ({ onNodeClick, relations }) => {
 
     const nodes = Array.from(nodesMap.values()).map(node => {
       const color = NODE_TYPE_COLORS[node.nodeType] || '#64748b'
+      const isDataSource = node.nodeType === 'DATA_SOURCE'
       return {
         ...node,
         style: {
           ...node.style,
-          fill: `${color}1A`,
-          labelFill: '#0f172a',
+          fill: node.style?.fill || `${color}12`,
+          labelFill: isDataSource ? '#ffffff' : '#333d46',
           lineWidth: 1.4,
-          radius: 10,
-          shadowBlur: 14,
-          shadowColor: `${color}33`,
-          stroke: color
+          radius: 4,
+          shadowBlur: 0,
+          stroke: node.style?.stroke || color
         }
       }
     })
@@ -138,7 +122,7 @@ const LineageGraph: React.FC<Props> = ({ onNodeClick, relations }) => {
             stroke: style.color
           }
         },
-        type: 'cubic-horizontal'
+        type: 'polyline'
       },
       height: 560,
       layout: {
@@ -151,11 +135,11 @@ const LineageGraph: React.FC<Props> = ({ onNodeClick, relations }) => {
       node: {
         style: {
           labelFontSize: 12,
-          labelMaxWidth: '92%',
-          labelMaxLines: 3,
+          labelMaxWidth: '90%',
+          labelMaxLines: 1,
           labelPlacement: 'center',
-          labelTextOverflow: 'clip',
-          labelWordWrap: true,
+          labelTextOverflow: 'ellipsis',
+          labelWordWrap: false,
           ports: [{ placement: 'left' }, { placement: 'right' }]
         },
         type: 'rect'
@@ -165,13 +149,12 @@ const LineageGraph: React.FC<Props> = ({ onNodeClick, relations }) => {
           enable: (event: any) => event?.targetType === 'node',
           getContent: (_: any, items: any[]) => {
             const item = items?.[0]
-            const label = item?.style?.labelText || item?.label
-            if (!label) return ''
+            const fullLabel = `${item?.fullLabel || item?.label || ''}`
+            if (!fullLabel || fullLabel.length <= 14) return ''
 
             return `
-              <div style="padding:8px 10px;line-height:1.4">
-                <div style="font-weight:600;color:#111827;margin-bottom:4px">${label}</div>
-                <div style="color:#4b5563">类型：${NODE_TYPE_LABELS[item.nodeType] || item.nodeType || '-'}</div>
+              <div style="max-width:360px;word-break:break-all;padding:8px 10px;line-height:1.4">
+                ${fullLabel}
               </div>
             `
           },
@@ -179,16 +162,6 @@ const LineageGraph: React.FC<Props> = ({ onNodeClick, relations }) => {
         }
       ]
     } as any)
-
-    graph.on('node:click', event => {
-      const fullId = `${event.target?.id || ''}`
-      const [type, ...rest] = fullId.split(':')
-      onNodeClickRef.current?.({
-        id: rest.join(':'),
-        label: event.target?.attributes?.labelText || event.target?.attributes?.label,
-        type
-      })
-    })
 
     graph.render()
     graph.zoomTo(0.5)
@@ -209,31 +182,7 @@ const LineageGraph: React.FC<Props> = ({ onNodeClick, relations }) => {
   }
 
   return (
-    <ACard
-      title="逻辑关系图"
-      extra={
-        <ASpace size={12}>
-          {Object.entries(RELATION_TYPE_LABELS).map(([value, label]) => {
-            const style = RELATION_TYPE_COLORS[value]
-            return (
-              <ASpace
-                key={value}
-                size={6}
-              >
-                <span
-                  style={{
-                    borderTop: style?.dash ? `2px dashed ${style.color}` : `2px solid ${style.color}`,
-                    display: 'inline-block',
-                    width: 24
-                  }}
-                />
-                <span style={{ color: '#4b5563', fontSize: 12 }}>{label}</span>
-              </ASpace>
-            )
-          })}
-        </ASpace>
-      }
-    >
+    <ACard title={title}>
       <div
         ref={containerRef}
         style={{ width: '100%' }}

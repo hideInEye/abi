@@ -206,8 +206,8 @@ export async function uploadFile(data: any) {
 // 血缘关系列表（关系模型）
 export async function queryLineageRelationList(data: any) {
   return await apiRequest({
-    data,
-    method: 'get',
-    url: '/abi-data/v1/lineage/getRelation'
+    method: 'post',
+     data,
+    url: '/abi-data/api/v1/lineage/getRelation'
   });
 }

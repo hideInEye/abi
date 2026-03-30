@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
-import { buildNodeDetail } from './adapter'
-import { RELATION_TYPE_LABELS, STATUS_LABELS } from './constants'
-import type { LineageNode, LineageRelation } from './types'
+import { buildNodeDetail } from '@/components/metadata-analysis/adapter'
+import { RELATION_TYPE_LABELS, STATUS_LABELS } from '@/components/metadata-analysis/constants'
+import type { LineageNode, LineageRelation } from '@/components/metadata-analysis/types'
 
 interface Props {
   node: LineageNode | null
@@ -20,13 +20,25 @@ const NodeDetailDrawer: React.FC<Props> = ({ node, onClose, open, relations }) =
     {
       dataIndex: 'source_node_name',
       key: 'source',
-      render: (_: string, row: LineageRelation) => row.source_node_name || row.source_node_id,
+      render: (_: string, row: LineageRelation) => (
+        <ATooltip title={row.source_node_name || '-'}>
+          <span className="inline-block max-w-220px overflow-hidden text-ellipsis whitespace-nowrap">
+            {row.source_node_name || '-'}
+          </span>
+        </ATooltip>
+      ),
       title: '源节点'
     },
     {
       dataIndex: 'target_node_name',
       key: 'target',
-      render: (_: string, row: LineageRelation) => row.target_node_name || row.target_node_id,
+      render: (_: string, row: LineageRelation) => (
+        <ATooltip title={row.target_node_name || '-'}>
+          <span className="inline-block max-w-220px overflow-hidden text-ellipsis whitespace-nowrap">
+            {row.target_node_name || '-'}
+          </span>
+        </ATooltip>
+      ),
       title: '目标节点'
     },
     {
@@ -62,7 +74,6 @@ const NodeDetailDrawer: React.FC<Props> = ({ node, onClose, open, relations }) =
             bordered
             column={2}
             items={[
-              { children: `${node.id}`, key: 'id', label: '节点ID' },
               { children: node.type, key: 'type', label: '节点类型' },
               { children: node.label || '-', key: 'name', label: '节点名称' },
               { children: detail.inCount, key: 'inCount', label: '上游关系数' },

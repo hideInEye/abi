@@ -10,6 +10,7 @@ export const NODE_TYPE_LABELS: Record<string, string> = {
   LLM: '大模型',
   MCP: 'MCP插件',
   METIRC: '度量',
+  PHYSICAL_TABLE: '数据表',
   TABLE_SEMANTIC: '表语义'
 }
 
@@ -25,10 +26,12 @@ export const NODE_TYPE_COLORS: Record<string, string> = {
   LLM: '#8b5cf6',
   MCP: '#14b8a6',
   METIRC: '#ec4899',
+  PHYSICAL_TABLE: '#64748b',
   TABLE_SEMANTIC: '#22c55e'
 }
 
 export const RELATION_TYPE_LABELS: Record<string, string> = {
+  DECOMPOSITION: '拆解',
   DECOMPOSION: '拆解',
   DEPENDENCY: '依赖',
   DERIVED: '派生',
@@ -36,6 +39,7 @@ export const RELATION_TYPE_LABELS: Record<string, string> = {
 }
 
 export const RELATION_TYPE_COLORS: Record<string, { color: string; dash?: number[] }> = {
+  DECOMPOSITION: { color: '#ef4444', dash: [8, 4] },
   DECOMPOSION: { color: '#ef4444', dash: [8, 4] },
   DEPENDENCY: { color: '#2563eb' },
   DERIVED: { color: '#16a34a' },

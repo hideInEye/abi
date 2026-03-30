@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
 import type { TableColumnsType } from 'antd'
 
-import { RELATION_TYPE_LABELS, STATUS_LABELS } from './constants'
-import type { LineageNode, LineageRelation } from './types'
+import { RELATION_TYPE_LABELS, STATUS_LABELS } from '@/components/metadata-analysis/constants'
+import type { LineageNode, LineageRelation } from '@/components/metadata-analysis/types'
 
 interface Props {
   onNodeClick?: (node: LineageNode) => void
@@ -17,8 +17,8 @@ const RelationTable: React.FC<Props> = ({ onNodeClick, relations, title = '关�
     const value = keyword.trim().toLowerCase()
     if (!value) return relations
     return relations.filter(item => {
-      const source = `${item.source_node_name || ''}${item.source_node_id}`.toLowerCase()
-      const target = `${item.target_node_name || ''}${item.target_node_id}`.toLowerCase()
+      const source = `${item.source_node_name || ''}`.toLowerCase()
+      const target = `${item.target_node_name || ''}`.toLowerCase()
       return source.includes(value) || target.includes(value)
     })
   }, [keyword, relations])
@@ -32,7 +32,11 @@ const RelationTable: React.FC<Props> = ({ onNodeClick, relations, title = '关�
           type="link"
           onClick={() => onNodeClick?.({ id: row.source_node_id, label: row.source_node_name, type: row.source_node_type })}
         >
-          {row.source_node_name || row.source_node_id}
+          <ATooltip title={row.source_node_name || '-'}>
+            <span className="inline-block max-w-220px overflow-hidden text-ellipsis whitespace-nowrap">
+              {row.source_node_name || '-'}
+            </span>
+          </ATooltip>
         </AButton>
       ),
       title: '源节点'
@@ -50,7 +54,11 @@ const RelationTable: React.FC<Props> = ({ onNodeClick, relations, title = '关�
           type="link"
           onClick={() => onNodeClick?.({ id: row.target_node_id, label: row.target_node_name, type: row.target_node_type })}
         >
-          {row.target_node_name || row.target_node_id}
+          <ATooltip title={row.target_node_name || '-'}>
+            <span className="inline-block max-w-220px overflow-hidden text-ellipsis whitespace-nowrap">
+              {row.target_node_name || '-'}
+            </span>
+          </ATooltip>
         </AButton>
       ),
       title: '目标节点'
@@ -90,7 +98,7 @@ const RelationTable: React.FC<Props> = ({ onNodeClick, relations, title = '关�
       extra={
         <AInput
           allowClear
-          placeholder="搜索节点名称/ID"
+          placeholder="搜索节点名称"
           style={{ width: 240 }}
           value={keyword}
           onChange={event => setKeyword(event.target.value)}

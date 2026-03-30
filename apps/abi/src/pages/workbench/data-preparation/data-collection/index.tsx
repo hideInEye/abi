@@ -1,9 +1,11 @@
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { message, Tooltip } from 'antd';
 import { Suspense } from 'react';
 
 // import { enableStatusRecord } from '@/constants/business';
 // import { ATG_MAP } from '@/constants/common';
+import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
+import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 import { deleteCollection, fetchDataCollectionList } from '@/service/api';
 import { useRouter } from '~/packages/simple-router/src';
 
@@ -17,6 +19,7 @@ export function Component() {
   const { t } = useTranslation();
   const { push } = useRouter();
   const [searchValue, setSearchValue] = useState('');
+  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
 
   const { dataSourceList, getDatasourceList } = useDatasource();
   useEffect(() => {
@@ -99,6 +102,22 @@ export function Component() {
                 size="small"
                 variant="link"
                 onClick={() => toDetail(record)}
+              />
+            </Tooltip>
+            <Tooltip title="查看元数据分析">
+              <AButton
+                color="primary"
+                icon={<ApartmentOutlined style={{ fontSize: '1rem' }} />}
+                size="small"
+                variant="link"
+                onClick={() =>
+                  setAnalysisContext({
+                    nodeId: record.viewId,
+                    nodeName: record.viewName,
+                    nodeType: 'DATASET',
+                    spaceId: Number(localStorage.getItem('spaceId')) || undefined
+                  })
+                }
               />
             </Tooltip>
             <APopconfirm
@@ -239,6 +258,11 @@ export function Component() {
       <Suspense>
         <DataCollectionOperateDrawer {...generalPopupOperation} />
       </Suspense>
+      <MetadataAnalysisDrawer
+        context={analysisContext}
+        open={Boolean(analysisContext)}
+        onClose={() => setAnalysisContext(null)}
+      />
     </div>
   );
 }

@@ -84,8 +84,6 @@ declare module "@elegant-router/types" {
     "workbench_job_time_modules": "modules";
     "workbench_job_time_modules_editor-quill": "editor-quill";
     "workbench_job_time_modules_share-email-setting": "share-email-setting";
-    "workbench_lineage": "lineage";
-    "workbench_lineage_query": "query";
   };
 
   /**
@@ -204,7 +202,6 @@ declare module "@elegant-router/types" {
     | "workbench_job_time"
     | "workbench_job_time_modules_editor-quill"
     | "workbench_job_time_modules_share-email-setting"
-    | "workbench_lineage_query"
   >;
 
   /**

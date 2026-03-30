@@ -65,5 +65,4 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   workbench_job_time: () => import("@/pages/workbench/job/time/index.tsx"),
   "workbench_job_time_modules_editor-quill": () => import("@/pages/workbench/job/time/modules/editor-quill/index.tsx"),
   "workbench_job_time_modules_share-email-setting": () => import("@/pages/workbench/job/time/modules/share-email-setting/index.tsx"),
-  workbench_lineage_query: () => import("@/pages/workbench/lineage/query/index.tsx"),
 };

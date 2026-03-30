@@ -23,3 +23,14 @@ export interface LineageNode {
   label?: string
   type: string
 }
+
+export type AnalysisMode = 'impact' | 'lineage'
+
+export type AnalysisViewMode = 'graph' | 'tree'
+
+export interface MetadataAnalysisContext {
+  nodeId?: number | string
+  nodeName?: string
+  nodeType: string
+  spaceId?: number
+}
