@@ -20,6 +20,7 @@ interface EditGroupParams {
 interface AddGroupParams {
   groupName: string;
   groupType: TableSemanticsGroupType;
+  parentId?: number;
   remark?: string;
   spaceId: number;
 }

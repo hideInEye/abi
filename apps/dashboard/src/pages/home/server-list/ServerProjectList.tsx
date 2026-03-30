@@ -13,9 +13,14 @@ import {memo} from "react";
 import ProjectList from "../project-list/ProjectList";
 import {SaveType} from "../../../designer/DesignerType";
 
-const ServerProjectList = memo(() => {
+interface ServerProjectListProps {
+    statusFilter?: string;
+    title?: string;
+}
+
+const ServerProjectList = memo((props: ServerProjectListProps) => {
     return (
-        <ProjectList saveType={SaveType.SERVER}/>
+        <ProjectList saveType={SaveType.SERVER} statusFilter={props.statusFilter} title={props.title}/>
     )
 })
 

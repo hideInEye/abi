@@ -83,6 +83,7 @@ class BaseApi extends AbstractApi {
         formData.append('file', file);
         formData.append('projectId', id);
         formData.append('type', "1");
+        formData.append('spaceId', localStorage.getItem('spaceId') ?? '');
 
         const res = await FetchUtil.post('/dashboard/api/v1/image/upload', formData, {headers: {'Content-Type': 'multipart/form-data'}});
         return res.code === 200 ? {url: res.data} : false;
@@ -124,6 +125,57 @@ class BaseApi extends AbstractApi {
 
     public async exportProjectApi(projectDependency: any) {
         return await FetchUtil.post('/dashboard/api/v1/project/exportProject', projectDependency);
+    }
+
+    /**
+     * 分享大屏项目
+     * @param projectId 项目id
+     * @param spaceId 空间id
+     * @param sharePasswordFlag 是否设置密码
+     * @param passwordExpirationDays 过期天数（1/7/30）
+     * @param passwordExpirationDate 自定义过期时间，格式 "2026-03-27 00:00:00"
+     */
+    public async shareProject(
+        projectId: number,
+        spaceId: number,
+        sharePasswordFlag: boolean,
+        passwordExpirationDays?: number,
+        passwordExpirationDate?: string
+    ): Promise<{shareUrl: string; sharePassword?: string | null} | null> {
+        const body: Record<string, unknown> = {projectId, spaceId, sharePasswordFlag};
+        if (passwordExpirationDays !== undefined) body.passwordExpirationDays = passwordExpirationDays;
+        if (passwordExpirationDate !== undefined) body.passwordExpirationDate = passwordExpirationDate;
+        const res = await FetchUtil.post('/dashboard/api/v1/project/share', body);
+        if (res.code === 200) {
+            return {
+                shareUrl: res.data?.shareUrl ?? '',
+                sharePassword: res.data?.sharePassword ?? null,
+            };
+        } else {
+            globalMessage.messageApi?.error(res.msg);
+            return null;
+        }
+    }
+
+    /**
+     * 校验分享密码 / 获取分享信息
+     * @param shareCode 分享码
+     * @param sharePassword 分享密码（无密码时传空字符串）
+     * @returns { passwordFlag: 是否需要密码, result: 密码校验结果 }
+     */
+    public async checkSharePassword(shareCode: string, sharePassword: string): Promise<{passwordFlag: boolean; result: boolean; projectId?: string | number} | null> {
+        const res = await FetchUtil.post('/dashboard/api/v1/project/checkSharePassword', {
+            shareCode,
+            sharePassword
+        }, {headers: {'X-Skip-Auth': 'true'}});
+        if (res.code === 200) {
+            return {
+                passwordFlag: res.data?.passwordFlag ?? false,
+                result: res.data?.result ?? false,
+                projectId: res.data?.projectId,
+            };
+        }
+        return null;
     }
 
 }

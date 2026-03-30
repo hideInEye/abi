@@ -14,12 +14,17 @@ export interface HttpResponse {
     msg: string;
     data: any;
 }
+export function notifyTokenExpired() {
+    if (typeof window.onTokenExpired === 'function') {
+        void window.onTokenExpired();
+    }
+}
 
 let _apiTarget = '';
 export function getApiTarget(): string {
     return _apiTarget;
 }
-const DEFAULT_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.eyJ1c2VyX2lkIjoxMTAsInVzZXJfa2V5IjoiZjJkNTIzNDItZTQ1OS00NjE0LWI1MWYtYTY5ZTg0NDI2M2E0IiwidXNlcm5hbWUiOiJ5YW5neXVodWFuIn0.dGbO_gW-nnjtijEXez6gL5-xb6T181irK_03bTkA1H7QDzFCgzCLJQy9PaD9vyHnd5kiJGuUybnfvM6S9AdY7e_IHOlcErRFiG-yAYkbH_8zYxotGOsfxjSKYeqQkz61KWvss7Ahg29dsDw0G93GZ-uQnzSTA_mf2uyupjZrLYxCkLjrJAQlABEal4_MIwGK7txwhUbCBjstndGXiDyRy_ddIY3cyD-khJyrSg5ad1AMv0qaDYtJJtzkbaXi5h7z1s5NJvl-cQt9nHP5qRVHpWPWUapQX7bD_EW4W6gwT-PBdmua3N2J9r9uu0tvLKF-dIt91QpQvPwDp5dpoELbiA';
+const DEFAULT_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.eyJ1c2VyX2lkIjoxMTAsInVzZXJfa2V5IjoiMTljNjcwOTAtMTU2Ni00ZmZhLThjZDctY2M5NTIwMjI2OGJkIiwidXNlcm5hbWUiOiJ5YW5neXVodWFuIn0.Z1BVnnMgQ3cL9mqamUjQNTktu11isjEJpgUcepGR8a_kUaSP_kVSidljFnDuaOKgAiYEPJDcr7fgbtYErc0EQOqiT1lAiZeajhoWql_lwOn9jK3LG2vw1FSIfVhkWi_CWcqHwzZp6wA6Gi4hSL1LT8asl7zvMolNIC4t5pmn7VFYbHaf6tkfQJatAugCgkv1KPlCaIRecEL2_mfvpEJ_a9ZfMGwFIr0w42lOkbG-Pw3go_gKGYyyZvVbyZMdlBS9KRiiaxSHENXr_zpwxwKp9CrGfRVKvY2L-DIpMWlSzM6SPi9Z9fNMk1zqV46mw0avmg14wMgb4MGwgx0RdulBeA';
 export async function loadAppConfig(): Promise<void> {
     try {
         const configPath = import.meta.env.MODE === 'development' ? 'http://localhost:5174/config.json': '/dashboard-ui/config.json'
@@ -72,6 +77,11 @@ export default class FetchUtil {
         }
 
         return nextHeaders;
+    }
+    private static handleUnauthorized(code?: number) {
+        if (code === 401) {
+            notifyTokenExpired();
+        }
     }
     /**
      * GET请求
@@ -140,12 +150,16 @@ export default class FetchUtil {
                 headers: FetchUtil.buildHeaders(options.headers),
             });
             if (!response.ok) {
+                FetchUtil.handleUnauthorized(response.status);
                 console.error('请求错误:', response?.status, response?.statusText);
                 return {code: response?.status ?? 500, msg: response?.statusText ?? '', data: null};
             }
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
                 const res = await response.json();
+                if (typeof res === 'object' && res !== null && 'code' in res) {
+                    FetchUtil.handleUnauthorized((res as HttpResponse).code);
+                }
                 if (typeof res === 'object' && 'code' in res && 'msg' in res)
                     return res;
                 else
@@ -179,13 +193,18 @@ export default class FetchUtil {
             if (response.ok) {
                 const contentType = response.headers.get('content-type');
                 if (contentType && contentType.includes('application/json')) {
-                    return await response.json();
+                    const res = await response.json();
+                    if (typeof res === 'object' && res !== null && 'code' in res) {
+                        FetchUtil.handleUnauthorized((res as HttpResponse).code);
+                    }
+                    return res;
                 } else if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain'))) {
                     return await response.text()
                 } else {
                     return await response.blob()
                 }
             } else {
+                FetchUtil.handleUnauthorized(response.status);
                 console.error('请求错误:', response?.status, response?.statusText);
                 return null;
             }

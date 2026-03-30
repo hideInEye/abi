@@ -110,6 +110,7 @@ declare global {
   const Navigate: typeof import('react-router-dom')['Navigate']
   const NodeDetailDrawer: typeof import('../components/metadata-analysis/NodeDetailDrawer')['default']
   const Outlet: typeof import('react-router-dom')['Outlet']
+  const PageTitle: typeof import('../components/stateless/common/PageTitle')['default']
   const PinToggler: typeof import('../components/stateless/common/PinToggler')['default']
   const RELATION_TYPE_COLORS: typeof import('../components/metadata-analysis/constants')['RELATION_TYPE_COLORS']
   const RELATION_TYPE_LABELS: typeof import('../components/metadata-analysis/constants')['RELATION_TYPE_LABELS']

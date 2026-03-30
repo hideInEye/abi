@@ -11,6 +11,8 @@ const route: App.I18n.Schema['translation']['route'] = {
   'assistant-manage_memory-manage': '记忆管理',
   'assistant-manage_recommended-inquiries': '推荐问题',
   'assistant-manage_technical-jargon': '行业术语',
+  'app-workshop': '应用工坊',
+  'app-workshop_my-screen': '我的大屏',
   'data-preparation': '数据准备',
   'data-preparation_data-collection': '数据集',
   'data-preparation_data-collection-operate': '数据集配置',

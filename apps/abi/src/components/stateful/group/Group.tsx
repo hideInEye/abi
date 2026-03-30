@@ -1,9 +1,10 @@
-import { EditOutlined, MinusCircleOutlined, PlusCircleOutlined } from '@ant-design/icons';
+import { EditOutlined, MinusCircleOutlined, PlusCircleOutlined, FolderOutlined, ApartmentOutlined } from '@ant-design/icons';
 import { Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React from 'react';
 
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics';
+import { buildGroupTree } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
 
 import { GroupFrom } from './GroupFrom';
 import { type QuestionGroupItem, useGroupManagement } from './useGroupManagement';
@@ -42,6 +43,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
   } = useGroupManagement(config);
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>(['group-root']);
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
+  const [addParentItem, setAddParentItem] = useState<QuestionGroupItem | null>(null);
 
   useEffect(() => {
     getGroups();
@@ -77,7 +79,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
        
       } else {
         // 新增模式
-      flag = !!(await handleGroupAdd({ ...values, groupType: config.type }));
+      flag = !!(await handleGroupAdd({ ...values, groupType: config.type, parentId: addParentItem?.groupId ?? 0 }));
       }
       if(flag){
         handleModalCancel();
@@ -88,7 +90,8 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     }
   };
 
-  const showAddModal = () => {
+  const showAddModal = (parentItem?: QuestionGroupItem | null) => {
+    setAddParentItem(parentItem ?? null);
     setEditingGroup(null);
     setIsModalOpen(true);
   };
@@ -100,9 +103,14 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     setIsModalOpen(true);
   };
 
-  const handleAddGroup = (e: React.MouseEvent) => {
+  const handleAddGroup = (e: React.MouseEvent, parentItem?: QuestionGroupItem) => {
     e.stopPropagation();
-    showAddModal();
+    showAddModal(parentItem);
+  };
+
+  const handleAddChildGroup = (item: QuestionGroupItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    showAddModal(item);
   };
 
   const handleDeleteGroup = async (groupId: number, e?: React.MouseEvent) => {
@@ -124,24 +132,25 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     }
   };
 
-  const treeData: TreeDataNode[] = [
-    {
-      title: (
-        <span className="inline-flex items-center gap-2 group">
-          <span className="group-tree-title">{config.panelTitle}</span>
-          <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
-            <Tooltip title="添加组">
-              <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={handleAddGroup} />
-            </Tooltip>
-          </span>
-        </span>
-      ),
-      key: 'group-root',
-      children: groups.map(item => ({
+  // 递归构建子节点
+  const buildTreeNodes = (items: any[], isLeafLevel = false): TreeDataNode[] => {
+    return items.map(item => {
+      const hasChildren = item.children && item.children.length > 0;
+      const nodeIsLeaf = !hasChildren;
+      return {
         title: (
           <span className="inline-flex items-center gap-2 group">
+            {nodeIsLeaf
+              ? <ApartmentOutlined className="group-node-icon group-node-icon--leaf" />
+              : <FolderOutlined className="group-node-icon group-node-icon--folder" />
+            }
             <span className="group-tree-title">{item.groupName}</span>
             <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
+              {!nodeIsLeaf || true ? (
+                <Tooltip title="添加子组">
+                  <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => handleAddChildGroup(item, e)} />
+                </Tooltip>
+              ) : null}
               <Tooltip title="编辑">
                 <EditOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => showEditModal(item, e)} />
               </Tooltip>
@@ -159,8 +168,27 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
           </span>
         ),
         key: `group-${item.groupId}`,
-        isLeaf: true
-      }))
+        children: hasChildren ? buildTreeNodes(item.children) : undefined,
+        isLeaf: nodeIsLeaf
+      };
+    });
+  };
+
+  const treeData: TreeDataNode[] = [
+    {
+      title: (
+        <span className="inline-flex items-center gap-2 group">
+          <FolderOutlined className="group-node-icon group-node-icon--folder" />
+          <span className="group-tree-title">{config.panelTitle}</span>
+          <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
+            <Tooltip title="添加组">
+              <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={handleAddGroup} />
+            </Tooltip>
+          </span>
+        </span>
+      ),
+      key: 'group-root',
+      children: buildTreeNodes(buildGroupTree(groups))
     }
   ];
 

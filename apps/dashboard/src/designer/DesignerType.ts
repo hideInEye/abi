@@ -132,6 +132,8 @@ export interface IProjectInfo {
     des?: string;
     //项目状态
     state?: ProjectState;
+    //发布状态（后端字段）
+    status?: string;
     //创建时间
     createTime?: string;
     //更新时间
@@ -142,6 +144,8 @@ export interface IProjectInfo {
     cover?: string;
     //项目数据json
     dataJson?: string;
+    //空间id
+    spaceId?: number;
 }
 
 export type AdaptationType = 'scale' | 'full-screen' | 'full-x' | 'full-y' | 'none';
@@ -199,6 +203,8 @@ export interface IProject {
     name?: string;
     des?: string;
     dataJson?: string;
+    state?: string;
+    status?: string;
 }
 
 /**
@@ -269,5 +275,6 @@ export interface IPage<T = {}> {
 export interface IPageParam {
     current: number;
     size: number;
-    searchValue?: string;
+    keywords?: string;
+    status?: string;
 }

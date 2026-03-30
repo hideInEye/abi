@@ -9,7 +9,7 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import {APIConfig, IDatabase, IFilterConfigType, ThemeItemType} from "../../designer/DesignerType";
+import {APIConfig, IDatabase, IFilterConfigType, ThemeItemType, DesignerMode} from "../../designer/DesignerType";
 import AbstractController from "./AbstractController";
 import {ComponentBaseProps} from "../../comps/common-component/CommonTypes.ts";
 import FetchUtil from "../../utils/FetchUtil.ts";
@@ -79,8 +79,15 @@ abstract class AbstractDesignerController<I = any, C = any> extends AbstractCont
         const request = () => {
             if (!sql || sql === '')
                 return;
-            FetchUtil.post(`/api/db/executor/execute`, {id: targetDb, sql: Base64Util.toBase64(sql)}).then(res => {
-                let {data} = res;
+            FetchUtil.post(`/dashboard/api/v1/db/executor/execute`, {
+                id: targetDb,
+                sql: sql,
+                projectId: window.LC_ENV?.projectId,
+                spaceId: localStorage.getItem('spaceId'),
+                remark: '',
+                saveFlag: false
+            }).then(res => {
+                let data = res.data?.data ?? res.data;
                 if (res.code === 200) {
                     if (!this.lastReqState) {
                         this.lastReqState = true;
@@ -126,6 +133,9 @@ abstract class AbstractDesignerController<I = any, C = any> extends AbstractCont
                 this.doApi(data?.apiData ?? {});
                 break;
             case 'database':
+                // 预览模式（预览页/分享页）下不调用远程接口，数据已存储在 dataJson 中
+                if (window.LC_ENV?.mode === DesignerMode.VIEW)
+                    break;
                 this.doDatabase(data?.database ?? {});
                 break;
         }

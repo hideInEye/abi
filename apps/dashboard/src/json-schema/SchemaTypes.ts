@@ -214,6 +214,10 @@ export interface CardPanelType extends BaseSchemaType {
     type?: "card-panel";
     config?: {
         contentStyle?: CSSProperties;
+        collapsible?: boolean;
+        defaultCollapsed?: boolean;
+        collapsed?: boolean;
+        onCollapsedChange?: (collapsed: boolean) => void;
     };
 }
 

@@ -4,7 +4,10 @@ export interface groupitem {
   groupId: number;
   groupName: string;
   groupType: string;
+  level: number;
+  parentId: number;
   remark: string;
+  sortOrder: number;
   spaceId: number;
   status: string;
   updateBy: string;

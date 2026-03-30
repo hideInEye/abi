@@ -9,7 +9,7 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import React, {ReactElement, ReactNode, useState} from 'react';
+import React, {ReactElement, ReactNode} from 'react';
 import './DesignerHeader.less';
 import {observer} from "mobx-react";
 import eventOperateStore from "../operate-provider/EventOperateStore";
@@ -22,10 +22,13 @@ import CanvasHdConfigImpl from "./items/canvas/CanvasHdConfigImpl.tsx";
 import ProjectHdItemImpl from "./items/project/ProjectHdItemImpl.tsx";
 import ThemeHdItemImpl from "./items/theme/ThemeHdItemImpl.tsx";
 import BluePrintHdImpl from "./items/blue-print/BluePrintHdImpl.tsx";
-import {AfferentFour, ConnectionPointTwo, EfferentFour, Eyes, HardDiskOne, PageTemplate, Theme} from "@icon-park/react";
+import {AfferentFour, ConnectionPointTwo, EfferentFour, Eyes, HardDiskOne, PageTemplate, Theme, Send} from "@icon-park/react";
 import URLUtil from "../../utils/URLUtil.ts";
-import {DesignerMode} from "../DesignerType.ts";
+import {DesignerMode, ProjectState} from "../DesignerType.ts";
 import AiChatPanel from "./items/ai-chat/AiChatPanel.tsx";
+import baseApi from "../../api/BaseApi.ts";
+import {globalMessage} from "../../framework/message/GlobalMessage.tsx";
+import designerManager from "../manager/DesignerManager.ts";
 
 
 export interface IHeaderItem {
@@ -93,7 +96,21 @@ const leftItems: Array<IHeaderItem> = [
 
 
 const Header: React.FC = observer(() => {
-        const [aiChatVisible, setAiChatVisible] = useState(false);
+        const [aiChatVisible, setAiChatVisible] = React.useState(false);
+        const publishStatus = String(projectHdStore.projectConfig.status ?? '1');
+
+        const handlePublish = async () => {
+            if (publishStatus === '0') return;
+            const {id} = URLUtil.parseUrlParams();
+            const proData = designerManager.getData();
+            await baseApi.updateProject({
+                id,
+                dataJson: JSON.stringify(proData),
+                status: '0',
+            });
+            projectHdStore.updateProjectConfig({status: '0'});
+            globalMessage.messageApi?.success('发布成功');
+        };
 
         const handleBack = () => {
             const historyIndex = window.history.state?.idx;
@@ -134,6 +151,13 @@ const Header: React.FC = observer(() => {
                         {buildHeaderItemUI(centerItems)}
                     </div>
                     <div className={'header-right'}>
+                        <div className={'header-item'} onClick={handlePublish}
+                             style={publishStatus === '0' ? {cursor: 'default', opacity: 0.6} : {}}>
+                            <Send theme="outline" style={{marginTop: 2}} strokeWidth={4} strokeLinecap="square"/>
+                            <span className={'item-span'}>
+                                {publishStatus === '0' ? '已发布' : '发布'}
+                            </span>
+                        </div>
                         {buildHeaderItemUI(leftItems)}
                         <div
                             className={`header-item${aiChatVisible ? ' header-item-active' : ''}`}

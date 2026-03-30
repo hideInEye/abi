@@ -1,6 +1,8 @@
 import { loadMicroApp } from 'qiankun'
 import type { CSSProperties } from 'react'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
+import { store } from '@/store'
+import { resetStore } from '@/store/slice/auth'
 
 const { VITE_BASE_URL } = import.meta.env
 
@@ -30,7 +32,10 @@ export default function DashboardMicroApp(props: DashboardMicroAppProps) {
       name: 'abi-dashboard',
       props: {
         hostBasePath: getDashboardHostBasePath(),
-        initialPath
+        initialPath,
+        onTokenExpired: () => {
+          store.dispatch(resetStore())
+        }
       }
     })
 

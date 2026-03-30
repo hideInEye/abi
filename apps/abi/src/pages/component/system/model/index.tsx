@@ -1,4 +1,5 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
+import PageTitle from '@/components/stateless/common/PageTitle'
 import { message } from 'antd'
 import { Suspense } from 'react'
 
@@ -218,7 +219,7 @@ export function Component() {
 
   return (
     <div className="flex flex-col gap-2 p-6" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333' }}>大模型管理</h1>
+      <PageTitle />
       <div className="flex items-center gap-4">
         <AInput placeholder="请输入模型名称" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onPressEnter={handleSearch} style={{ width: '12.5rem' }} />
         <AButton className="ml-auto" type="primary" onClick={() => handleAdd()}>

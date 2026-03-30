@@ -10,16 +10,27 @@
  */
 
 import designerManager from "../manager/DesignerManager.ts";
-import {DesignerMode, ProjectDataType, SaveType} from "../DesignerType";
+import {DesignerMode, ProjectDataType, ProjectState, SaveType} from "../DesignerType";
 import {DesignerLoader} from "./DesignerLoader.ts";
 import layerManager from "../manager/LayerManager.ts";
 import BPExecutor from "../blueprint/core/BPExecutor.ts";
 import baseApi from "../../api/BaseApi.ts";
+import projectHdStore from "../header/items/project/ProjectManager.ts";
 
 class EditorDesignerLoader extends DesignerLoader {
 
     protected async getProjectData(id: string): Promise<ProjectDataType | null> {
         const projectInfo = await baseApi.getProjectInfo(id);
+        if (!projectInfo)
+            return null;
+
+        projectHdStore.updateProjectConfig({
+            id,
+            name: projectInfo.name,
+            des: projectInfo.des,
+            state: projectInfo.state as ProjectState | undefined,
+            status: projectInfo.status,
+        });
         const {name, dataJson} = projectInfo!
         name && (document.title = name);
         return JSON.parse(dataJson!);

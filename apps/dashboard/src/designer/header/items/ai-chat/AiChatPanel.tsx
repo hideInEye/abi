@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { message } from 'antd';
-import { getApiTarget } from '../../../../utils/FetchUtil';
+import { getApiTarget, notifyTokenExpired } from '../../../../utils/FetchUtil';
 import './AiChatPanel.less';
 
 interface ChatMessage {
@@ -149,7 +149,6 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
 
     let retryCount = 0;
     const maxRetries = 2;
-    let hasReceivedContent = false;
 
     try {
       const response = await fetch(apiUrl, {
@@ -163,6 +162,9 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          notifyTokenExpired();
+        }
         throw new Error(`HTTP ${response.status}`);
       }
 
@@ -216,7 +218,6 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
           }
 
           displayContent = displayContent.replace(/\\n/g, '\n');
-          hasReceivedContent = true;
           updateLastAiMsg(displayContent, true);
         }
       }

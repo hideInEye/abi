@@ -16,6 +16,29 @@
     color: #d1dfe9;
     margin-bottom: 10px;
     font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    &--collapsible {
+      cursor: pointer;
+      user-select: none;
+      &:hover {
+        color: #a0b4c8;
+      }
+    }
+
+    .card-panel-arrow {
+      font-size: 12px;
+      display: inline-block;
+      transition: transform 0.2s ease;
+      transform: rotate(0deg);
+      line-height: 1;
+
+      &--collapsed {
+        transform: rotate(-90deg);
+      }
+    }
 
     .card-help {
       font-size: 14px;
