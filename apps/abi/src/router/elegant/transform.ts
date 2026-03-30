@@ -216,7 +216,7 @@ const routeMap: RouteMap = {
   "component_system_model": "model",
   "component_system_plugin": "plugin",
   "designer": "/designer",
-  "dr": "/dr/:shareCode",
+  "dr": "/dr",
   "guide": "/guide",
   "home": "/home",
   "iframe-page": "/iframe-page/:url",

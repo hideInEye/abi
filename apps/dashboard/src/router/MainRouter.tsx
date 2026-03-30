@@ -20,6 +20,7 @@ const GlobalMessage = lazy(() => import('../framework/message/GlobalMessage.tsx'
 const GlobalModal = lazy(() => import('../framework/message/GlobalModal.tsx'));
 const Home = lazy(() => import('../pages/home/Home'));
 const ServerProjectList = lazy(() => import('../pages/home/server-list/ServerProjectList.tsx'));
+const MyScreen = lazy(() => import('../pages/my-screen/MyScreen.tsx'));
 const DataSourceList = lazy(() => import('../pages/home/datasource/DataSourceList.tsx'));
 const TemplateMarket = lazy(() => import('../pages/home/template-market/TemplateMarket.tsx'));
 const Demo = lazy(() => import('../test/Demo'));
@@ -445,6 +446,10 @@ const routes = [
     {
         path: '/published-projects',
         element: <ServerProjectList statusFilter="0" title="我的大屏"/>,
+    },
+    {
+        path: '/my-screen',
+        element: <MyScreen/>,
     },
     {
         path: '/home',

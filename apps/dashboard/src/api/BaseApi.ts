@@ -132,13 +132,20 @@ class BaseApi extends AbstractApi {
      * @param projectId 项目id
      * @param spaceId 空间id
      * @param sharePasswordFlag 是否设置密码
+     * @param passwordExpirationDays 过期天数（1/7/30）
+     * @param passwordExpirationDate 自定义过期时间，格式 "2026-03-27 00:00:00"
      */
-    public async shareProject(projectId: number, spaceId: number, sharePasswordFlag: boolean): Promise<{shareUrl: string; sharePassword?: string | null} | null> {
-        const res = await FetchUtil.post('/dashboard/api/v1/project/share', {
-            projectId,
-            spaceId,
-            sharePasswordFlag
-        });
+    public async shareProject(
+        projectId: number,
+        spaceId: number,
+        sharePasswordFlag: boolean,
+        passwordExpirationDays?: number,
+        passwordExpirationDate?: string
+    ): Promise<{shareUrl: string; sharePassword?: string | null} | null> {
+        const body: Record<string, unknown> = {projectId, spaceId, sharePasswordFlag};
+        if (passwordExpirationDays !== undefined) body.passwordExpirationDays = passwordExpirationDays;
+        if (passwordExpirationDate !== undefined) body.passwordExpirationDate = passwordExpirationDate;
+        const res = await FetchUtil.post('/dashboard/api/v1/project/share', body);
         if (res.code === 200) {
             return {
                 shareUrl: res.data?.shareUrl ?? '',
@@ -160,7 +167,7 @@ class BaseApi extends AbstractApi {
         const res = await FetchUtil.post('/dashboard/api/v1/project/checkSharePassword', {
             shareCode,
             sharePassword
-        });
+        }, {headers: {'X-Skip-Auth': 'true'}});
         if (res.code === 200) {
             return {
                 passwordFlag: res.data?.passwordFlag ?? false,

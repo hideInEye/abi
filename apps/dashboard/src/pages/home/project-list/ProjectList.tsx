@@ -180,6 +180,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
                     return (
                         <ProjectItem key={item.id} id={item.id!} name={item.name!} cover={item.cover || defaultSnapshot}
                                      saveType={saveType}
+                                     status={item.status}
                                      spaceId={String(item.spaceId)}
                                      doOperate={operateHandler}/>
                     )
