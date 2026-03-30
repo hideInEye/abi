@@ -1,4 +1,4 @@
-import { CloudSyncOutlined, DeleteOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, CloudSyncOutlined, DeleteOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
 
 // import { enableStatusRecord } from '@/constants/business';
 // import { ATG_MAP } from '@/constants/common';
@@ -14,6 +14,8 @@ import {
   getAgentDetailById,
   putAgentConfig,
 } from '@/service/api/assistant-manage';
+import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
+import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 
 import DatasourceConfigDrawer from './modules/assistant-config-drawer';
 import DatasourceOperateDrawer from './modules/assistant-operate-drawer';
@@ -34,6 +36,7 @@ export function Component() {
   const [configVisible, setConfigVisible] = useState(false);
 
   const [searchValue, setSearchValue] = useState('');
+  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
 
   const { columnChecks, data, run, searchProps, setColumnChecks, tableProps, updateSearchParams } = useTable({
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -123,6 +126,22 @@ export function Component() {
                   setConfigVisible(true);
                   setSelectedAgentId(record.agentId);
                 }}
+              />
+            </ATooltip>
+            <ATooltip title="查看元数据分析">
+              <AButton
+                color="primary"
+                icon={<ApartmentOutlined style={{ fontSize: '1rem' }} />}
+                size="small"
+                variant="link"
+                onClick={() =>
+                  setAnalysisContext({
+                    nodeId: record.schemaId,
+                    nodeName: record.bizName,
+                    nodeType: 'COPILOT',
+                    spaceId: Number(localStorage.getItem('spaceId')) || undefined
+                  })
+                }
               />
             </ATooltip>
             <APopconfirm
@@ -315,6 +334,11 @@ export function Component() {
           onClose={onClose}
         />
       ) : null}
+      <MetadataAnalysisDrawer
+        context={analysisContext}
+        open={Boolean(analysisContext)}
+        onClose={() => setAnalysisContext(null)}
+      />
     </div>
   );
 }

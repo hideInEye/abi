@@ -1,7 +1,9 @@
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 // import { JsonEditor } from 'json-edit-react';
 import { Pagination } from 'antd';
 
+import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
+import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 import type { PluginItem, PluginList } from '@/types/plug';
 
 interface PluginTableProps {
@@ -26,6 +28,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
   updateCurrentEdit,
   updateStatus
 }: PluginTableProps) => {
+  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const columns = [
     {
       align: 'left',
@@ -76,6 +79,22 @@ export const PluginTable: React.FC<PluginTableProps> = ({
                 onClick={() => updateCurrentEdit(record)}
               />
             </ATooltip>
+            <ATooltip title="查看元数据分析">
+              <AButton
+                color="primary"
+                icon={<ApartmentOutlined />}
+                size="small"
+                variant="link"
+                onClick={() =>
+                  setAnalysisContext({
+                    nodeId: record.pluginId,
+                    nodeName: record.pluginName,
+                    nodeType: 'MCP',
+                    spaceId: Number(localStorage.getItem('spaceId')) || undefined
+                  })
+                }
+              />
+            </ATooltip>
 
             <APopconfirm
               title="提示"
@@ -122,6 +141,11 @@ export const PluginTable: React.FC<PluginTableProps> = ({
           onChange={(page) => handleChange(page)}
         />
       </div>
+      <MetadataAnalysisDrawer
+        context={analysisContext}
+        open={Boolean(analysisContext)}
+        onClose={() => setAnalysisContext(null)}
+      />
     </div>
   );
 };

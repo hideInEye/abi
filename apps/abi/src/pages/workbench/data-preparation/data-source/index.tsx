@@ -1,4 +1,5 @@
 import {
+  ApartmentOutlined,
   DeleteOutlined,
   EditOutlined,
   FileSearchOutlined,
@@ -16,6 +17,8 @@ import {
   fetchDataSourceList,
   updateDataSource,
 } from "@/service/api";
+import MetadataAnalysisDrawer from "@/components/metadata-analysis/MetadataAnalysisDrawer";
+import type { MetadataAnalysisContext } from "@/components/metadata-analysis/types";
 import { useRouter } from "~/packages/simple-router/src/hooks/useRouter";
 
 import KeySearch from "./modules/key-search";
@@ -34,6 +37,7 @@ export function Component() {
   const { getSourceTypeOptions, sourceTypeOptions } = useDatasource();
   const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
+  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
 
   useEffect(() => {
     getSourceTypeOptions();
@@ -168,6 +172,22 @@ export function Component() {
                       router.push(
                         `/workbench/data-preparation/data-collection-operate/${record.sourceId}?from=data-source`,
                       )
+                    }
+                  />
+                </Tooltip>
+                <Tooltip title="查看元数据分析">
+                  <AButton
+                    color="primary"
+                    icon={<ApartmentOutlined style={{ fontSize: '1rem' }} />}
+                    size="small"
+                    variant="link"
+                    onClick={() =>
+                      setAnalysisContext({
+                        nodeId: record.sourceId,
+                        nodeName: record.sourceName,
+                        nodeType: "DATA_SOURCE",
+                        spaceId: Number(localStorage.getItem("spaceId")) || undefined
+                      })
                     }
                   />
                 </Tooltip>
@@ -362,6 +382,11 @@ export function Component() {
             {...generalPopupOperation}
           />
         </Suspense>
+        <MetadataAnalysisDrawer
+          context={analysisContext}
+          open={Boolean(analysisContext)}
+          onClose={() => setAnalysisContext(null)}
+        />
     </div>
   );
 }
