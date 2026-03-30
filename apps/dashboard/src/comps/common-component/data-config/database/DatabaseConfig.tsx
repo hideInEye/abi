@@ -34,6 +34,7 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
     const [dataSourceList, setDataSourceList] = useState<ISelectOption[]>([]);
     const [testRes, setTestRes] = useState<string | null>(null);
     const [count, setCount] = useState(0);
+    const [resCollapsed, setResCollapsed] = useState(true);
 
     useEffect(() => {
         const spaceId = localStorage.getItem('spaceId');
@@ -105,12 +106,14 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
                     data = typeof func === 'function' ? func(data) : data;
                 }
                 setTestRes(JSON.stringify(data, null, 2));
+                setResCollapsed(false);
 
                 controller.update({data: {database: dataRef.current, staticData: data}})
                 controller.changeData(data);
                 doSave()
             } else {
                 setTestRes(JSON.stringify({msg}, null, 2));
+                setResCollapsed(false);
                 controller.update({data: {database: dataRef.current}}, {reRender: false})
                 globalMessage.messageApi?.warning('配置项已保存，但数据未成功刷新 ' + msg);
             }
@@ -168,7 +171,9 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
                 type: 'card-panel',
                 label: 'SQL语句',
                 config: {
-                    contentStyle: {padding: 0}
+                    contentStyle: {padding: 0},
+                    collapsible: true,
+                    defaultCollapsed: false,
                 },
                 children: [
                     {
@@ -186,7 +191,9 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
                 type: 'card-panel',
                 label: '过滤器',
                 config: {
-                    contentStyle: {padding: 0}
+                    contentStyle: {padding: 0},
+                    collapsible: true,
+                    defaultCollapsed: true,
                 },
                 children: [
                     {
@@ -205,7 +212,10 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
                 type: 'card-panel',
                 label: '响应结果',
                 config: {
-                    contentStyle: {padding: 0}
+                    contentStyle: {padding: 0},
+                    collapsible: true,
+                    collapsed: resCollapsed,
+                    onCollapsedChange: setResCollapsed,
                 },
                 children: [
                     {
