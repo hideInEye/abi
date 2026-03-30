@@ -206,6 +206,6 @@ export async function queryLineageRelationList(data: any) {
   return await apiRequest({
     method: 'post',
      data,
-    url: '/abi-data/api/v1/lineage/getRelation'
+    url: '/api/abi-data/api/v1/lineage/getRelation'
   });
 }
