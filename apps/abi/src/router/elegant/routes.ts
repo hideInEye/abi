@@ -123,6 +123,15 @@ export const generatedRoutes: GeneratedRoute[] = [
     ]
   },
   {
+    name: 'dashboard-share-page',
+    path: '/dashboard-share-page',
+    component: 'layout.base$view.dashboard-share-page',
+    meta: {
+      i18nKey: 'route.dashboard-share-page',
+      title: 'dashboard-share-page'
+    }
+  },
+  {
     name: 'designer',
     path: '/designer',
     component: 'layout.blank$view.designer',
@@ -131,15 +140,6 @@ export const generatedRoutes: GeneratedRoute[] = [
       hideInMenu: true,
       title: 'designer',
       i18nKey: 'route.designer'
-    }
-  },
-  {
-    name: 'dr',
-    path: '/dr',
-    component: 'layout.base$view.dr',
-    meta: {
-      i18nKey: 'route.dr',
-      title: 'dr'
     }
   },
   {

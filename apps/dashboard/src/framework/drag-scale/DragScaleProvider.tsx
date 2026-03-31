@@ -85,6 +85,15 @@ export default class DragScaleProvider {
             container?.removeEventListener('contextmenu', this.contextMenu);
         }
     }
+    /**
+     * 外部更新缩放和位置（如初始自适应缩放），同步内部状态
+     */
+    public setTransform(scale: number, position: IPoint) {
+        this.scaleCore.scale = scale;
+        this.config.position = {...position};
+        this.config.dsTarget.style.transform =
+            'translate3d(' + position.x + 'px, ' + position.y + 'px, 0) scale(' + scale + ')';
+    }
 
     /************************注册拖拽事件************************/
     private registerDrag() {

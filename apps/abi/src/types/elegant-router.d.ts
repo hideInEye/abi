@@ -34,8 +34,8 @@ declare module "@elegant-router/types" {
     "component_system_data-dictionary": "data-dictionary";
     "component_system_model": "model";
     "component_system_plugin": "plugin";
+    "dashboard-share-page": "/dashboard-share-page";
     "designer": "/designer";
-    "dr": "/dr";
     "guide": "/guide";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
@@ -133,8 +133,8 @@ declare module "@elegant-router/types" {
     | "500"
     | "ai-assistant"
     | "component"
+    | "dashboard-share-page"
     | "designer"
-    | "dr"
     | "guide"
     | "home"
     | "iframe-page"
@@ -173,8 +173,8 @@ declare module "@elegant-router/types" {
     | "component_system_data-dictionary"
     | "component_system_model"
     | "component_system_plugin"
+    | "dashboard-share-page"
     | "designer"
-    | "dr"
     | "guide"
     | "home"
     | "login_code-login"
