@@ -1,4 +1,4 @@
-import { CloudSyncOutlined, DeleteOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, CloudSyncOutlined, DeleteOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
 import PageTitle from '@/components/stateless/common/PageTitle';
 
 // import { enableStatusRecord } from '@/constants/business';
