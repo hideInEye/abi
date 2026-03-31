@@ -11,7 +11,8 @@
 
 import './ProjectItem.less';
 import {Copy, Delete, Edit, PreviewOpen, Share} from "@icon-park/react";
-import {Input, Popover, Modal, Switch, message, Segmented, DatePicker, Button} from "antd";
+import {Input, Popover, Modal, Switch, message, Segmented, DatePicker, Button, ConfigProvider} from "antd";
+import zhCN from 'antd/locale/zh_CN';
 import type {Dayjs} from 'dayjs';
 import {useState} from "react";
 import {IProjectInfo, SaveType} from "../../../designer/DesignerType.ts";
@@ -50,14 +51,14 @@ export default function ProjectItem(props: ProjectItemProps) {
         setShareLoading(true);
         try {
             const currentSpaceId = localStorage.getItem('spaceId') || '';
-            const passwordExpirationDays = ['1', '7', '30'].includes(expirationMode) ? Number(expirationMode) : undefined;
-            const passwordExpirationDate = expirationMode === 'custom' && expirationDate
+            const expirationDays = ['1', '7', '30'].includes(expirationMode) ? Number(expirationMode) : undefined;
+            const expirationDateStr = expirationMode === 'custom' && expirationDate
                 ? expirationDate.format('YYYY-MM-DD HH:mm:ss')
                 : undefined;
-            const res = await baseApi.shareProject(Number(id), Number(currentSpaceId), sharePasswordFlag, passwordExpirationDays, passwordExpirationDate);
+            const res = await baseApi.shareProject(Number(id), Number(currentSpaceId), sharePasswordFlag, expirationDays, expirationDateStr);
             if (res?.shareUrl) {
-                // 将 /#/dr/xxx 格式转为 /dr/xxx，兼容 history 路由
-                const shareUrl = res.shareUrl.replace('/#/', '/');
+                // 将 /#/dr/xxx 格式转为 /dashboard_share_page/xxx，兼容 history 路由并对齐新路由路径
+                const shareUrl = res.shareUrl.replace('/#/', '/').replace('/dr/', '/dashboard-share-page/');
                 setShareLink(shareUrl);
                 setSharePassword(res.sharePassword ?? null);
             }
@@ -134,6 +135,7 @@ export default function ProjectItem(props: ProjectItemProps) {
                 onCancel={handleCloseShareModal}
                 footer={null}
                 width={520}
+                centered
             >
                 <div style={{ padding: '8px 0 4px' }}>
                     {/* 访问密码 */}
@@ -150,7 +152,7 @@ export default function ProjectItem(props: ProjectItemProps) {
                             <div style={{ fontWeight: 500, color: '#262626', marginBottom: '2px' }}>访问密码保护</div>
                             <div style={{ fontSize: '12px', color: '#8c8c8c' }}>开启后将生成随机访问密码</div>
                         </div>
-                        <Switch checked={sharePasswordFlag} onChange={setSharePasswordFlag} />
+                        <Switch checked={sharePasswordFlag} onChange={setSharePasswordFlag} disabled={!!shareLink} />
                     </div>
 
                     {/* 链接有效期 */}
@@ -175,6 +177,7 @@ export default function ProjectItem(props: ProjectItemProps) {
                         />
                         {expirationMode === 'custom' && (
                             <div style={{ marginTop: '12px' }}>
+                                <ConfigProvider locale={{...zhCN, DatePicker: {...zhCN.DatePicker, lang: {...zhCN.DatePicker?.lang, ok: '确认'}} as any}}>
                                 <DatePicker
                                     value={expirationDate}
                                     onChange={(date) => setExpirationDate(date)}
@@ -184,6 +187,7 @@ export default function ProjectItem(props: ProjectItemProps) {
                                     style={{width: '100%'}}
                                     disabledDate={(current) => current && current.isBefore(new Date(), 'day')}
                                 />
+                                </ConfigProvider>
                         </div>
                         )}
                     </div>

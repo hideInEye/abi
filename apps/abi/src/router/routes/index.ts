@@ -20,14 +20,14 @@ const customRoutes: CustomRoute[] = [
     }
   },
   {
-    name: 'dr',
-    path: '/dr/:shareCode',
-    component: 'layout.blank$view.dr',
+    name: 'dashboard-share-page',
+    path: '/dashboard-share-page/:shareCode',
+    component: 'layout.blank$view.dashboard-share-page',
     meta: {
       constant: true,
       hideInMenu: true,
-      title: 'dr',
-      i18nKey: 'route.dr'
+      title: 'dashboard-share-page',
+      i18nKey: 'route.dashboard-share-page'
     }
   }
   // {

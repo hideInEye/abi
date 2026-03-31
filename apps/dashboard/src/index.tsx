@@ -66,6 +66,11 @@ const initQianKun = () => {
 if ((qiankunWindow as any).__POWERED_BY_QIANKUN__) {
     initQianKun();
 } else {
+    // 独立运行时将 pathname 转成 hash 格式供其识别
+    const { pathname, search } = window.location;
+    if (pathname && pathname !== '/') {
+        window.history.replaceState(null, '', '/#' + pathname + search);
+    }
     render({});
 }
 
