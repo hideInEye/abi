@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons'
 import PageTitle from '@/components/stateless/common/PageTitle'
 import { message } from 'antd'
 import { Suspense } from 'react'
