@@ -1,10 +1,16 @@
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import type { TableProps } from 'antd';
+
+import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
+import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 
 interface DataType {
   bizName: string;
   createBy: string;
   createTime: string;
+  id?: number | string;
+  relViewId?: number | string;
+  schemaId?: number | string;
   techName: string;
   updateBy: string;
   updateTime: string;
@@ -18,6 +24,7 @@ interface SemanticsTableListProps {
 }
 
 export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: SemanticsTableListProps) {
+  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const columns: TableProps<DataType>['columns'] = [
     {
       align: 'left',
@@ -28,7 +35,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
       render: text => {
         return (
           <APopover content={text}>
-            <span className="max-w-100 overflow-hidden text-ellipsis">{text && text.length > 10 ? text.slice(0, 10) + '...' : text}</span>
+            <span className="max-w-100 overflow-hidden text-ellipsis">{text && text.length > 10 ? `${text.slice(0, 10)}...` : text}</span>
           </APopover>
         );
       },
@@ -72,6 +79,22 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
               size="small"
               variant="link"
               onClick={() => editTable(record)}
+            />
+          </ATooltip>
+          <ATooltip title="查看元数据分析">
+            <AButton
+              color="primary"
+              icon={<ApartmentOutlined style={{ fontSize: '1rem' }} />}
+              size="small"
+              variant="link"
+              onClick={() =>
+                setAnalysisContext({
+                  nodeId: record.relViewId,
+                  nodeName: record.bizName,
+                  nodeType: 'TABLE_SEMANTIC',
+                  spaceId: Number(localStorage.getItem('spaceId')) || undefined
+                })
+              }
             />
           </ATooltip>
 
@@ -152,6 +175,11 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
           }}
         />
       </div>
+      <MetadataAnalysisDrawer
+        context={analysisContext}
+        open={Boolean(analysisContext)}
+        onClose={() => setAnalysisContext(null)}
+      />
     </div>
   );
 }
