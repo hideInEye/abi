@@ -5,6 +5,8 @@ import { Suspense } from 'react'
 
 // import { enableStatusRecord } from '@/constants/business';
 // import { ATG_MAP } from '@/constants/common';
+import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer'
+import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
 import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage'
 import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList } from '@/service/api'
 
@@ -14,6 +16,7 @@ export function Component() {
   const { t } = useTranslation()
 
   const [searchValue, setSearchValue] = useState('')
+  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null)
 
   // const isMobile = useMobile();
 
@@ -112,6 +115,22 @@ export function Component() {
                   edit(record);
                 }}
                />
+              </ATooltip>
+              <ATooltip title="查看元数据分析">
+                <AButton
+                  color="primary"
+                  icon={<ApartmentOutlined />}
+                  size="small"
+                  variant="link"
+                  onClick={() =>
+                    setAnalysisContext({
+                      nodeId: record.llmId,
+                      nodeName: record.modelName,
+                      nodeType: 'LLM',
+                      spaceId: Number(localStorage.getItem('spaceId')) || undefined
+                    })
+                  }
+                />
               </ATooltip>
               <APopconfirm
                 title="提示"
@@ -237,6 +256,11 @@ export function Component() {
       <Suspense>
         <ModalOperateDrawer {...generalPopupOperation} />
       </Suspense>
+      <MetadataAnalysisDrawer
+        context={analysisContext}
+        open={Boolean(analysisContext)}
+        onClose={() => setAnalysisContext(null)}
+      />
     </div>
   )
 }
