@@ -1,9 +1,10 @@
-import { Tooltip, Transfer } from 'antd';
+import { Tooltip, Transfer, TreeSelect } from 'antd';
 import type { TransferProps } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 import { fetchTerms } from '@/service/api/assistant-manage';
 import { grouplist } from '@/service/api/data-table-meaning';
+import { buildGroupTree } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
 // 接口未提供
 // import { getAgentConfigDs } from '@/service/api/assistant-manage';
 
@@ -32,8 +33,8 @@ const IndustryTerminology: FC<PropsType> = memo(({ dispatch, schemaId, state }) 
       pageSize,
       spaceId: Number(localStorage.getItem('spaceId'))
     });
-    // const res = await grouplist();
-    setGroupOptions(res.data.filter((item: any) => item.groupType === 'term'));
+    const termGroups = res.data.filter((item: any) => item.groupType === 'term');
+    setGroupOptions(buildGroupTree(termGroups));
   };
 
   useEffect(() => {
@@ -68,14 +69,15 @@ const IndustryTerminology: FC<PropsType> = memo(({ dispatch, schemaId, state }) 
   return (
     <>
       <div className="my-2">
-        <ASelect
+        <TreeSelect
           allowClear
           style={{width: 200}}
           className="mr-2"
-          fieldNames={{ label: 'groupName', value: 'groupId' }}
-          options={groupOptions}
+          treeData={groupOptions}
+          fieldNames={{ label: 'groupName', value: 'groupId', children: 'children' }}
           placeholder="选择术语分组"
           value={state.termGroupId}
+          treeDefaultExpandAll
           onChange={val => dispatch({ termGroupId: val })}
         />
       </div>

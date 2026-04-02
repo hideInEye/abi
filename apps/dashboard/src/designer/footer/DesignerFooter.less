@@ -1,0 +1,98 @@
+/*
+ * Copyright © 2023-2025 puyinzhen
+ * All rights reserved.
+ *
+ * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
+ *
+ * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ *
+ * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
+ */
+.lc-designer-footer {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: #1E1E2F;
+  border-top: 1px solid #3A3A4E;
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+
+  .footer-left {
+    display: flex;
+    gap: 16px;
+
+    .footer-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #A0A0B2;
+
+      &:hover {
+        background-color: rgba(79, 184, 255, 0.1);
+        color: #4FB8FF;
+      }
+
+      &.active {
+        color: #4FB8FF;
+        background-color: rgba(79, 184, 255, 0.1);
+      }
+    }
+  }
+
+  .footer-center {
+    display: flex;
+    gap: 12px;
+
+    .footer-center-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #A0A0B2;
+
+      &:hover {
+        background-color: rgba(79, 184, 255, 0.1);
+        color: #4FB8FF;
+      }
+
+      &.active {
+        color: #4FB8FF;
+        background-color: rgba(79, 184, 255, 0.1);
+      }
+    }
+  }
+
+  .footer-right {
+    display: flex;
+    gap: 24px;
+    font-size: 12px;
+
+    .right-info-item {
+      color: #A0A0B2;
+    }
+  }
+}
+
+.designer-tooltip {
+  .ant-tooltip-inner {
+    background-color: #2C2C3E;
+    color: #FFFFFF;
+    font-size: 12px;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  .ant-tooltip-arrow::before {
+    background-color: #2C2C3E;
+  }
+}

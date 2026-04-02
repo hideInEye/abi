@@ -15,6 +15,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 // @ts-ignore
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { EChart } from "../../components/react-echarts";
+import PieLegend from "../../components/PieLegend";
 const { Text } = Typography;
 import type { EChartsOption } from 'echarts';
 import ShareModal from "./ShareModal";
@@ -205,7 +206,7 @@ const ViewEle: React.FC<PropsType> = ({
     return dateStr;
   };
 
-  const echartRef = useRef(null);
+  const echartRef = useRef<import('../../components/react-echarts/components/EChart').EChartHandle>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   //当前图表状态
   const [chartType, setChartType] = React.useState<string>('response_bar_chart');
@@ -910,7 +911,6 @@ const ViewEle: React.FC<PropsType> = ({
               value: yData[1][index]
             }));
           }
-          const legendData = pieData.map((item: any) => String(item.name));
           
           const option: EChartsOption = {
             tooltip: {
@@ -918,22 +918,12 @@ const ViewEle: React.FC<PropsType> = ({
               formatter: '{b}: {c}'
             },
             legend: {
-              show: true,
-              type: 'scroll',
-              top: '5%',
-              itemWidth: 8,
-              itemHeight: 8,
-              data: legendData,
-              textStyle: {
-                color: chartStyle.textColor,
-                fontFamily: font,
-                fontSize,
-              }
+              show: false, // 禁用内置图例，使用自定义图例
             },
             series: [{
               type: 'pie',
-              radius: '70%',
-              center: ['50%', '60%'],
+              radius: '80%',
+              center: ['50%', '50%'],
               data: pieData,
               emphasis: {
                 itemStyle: {
@@ -978,7 +968,6 @@ const ViewEle: React.FC<PropsType> = ({
               value: yData[1][index]
             }));
           }
-          const donutLegendData = donutData.map((item: any) => String(item.name));
           
           const option: EChartsOption = {
             tooltip: {
@@ -986,22 +975,12 @@ const ViewEle: React.FC<PropsType> = ({
               formatter: '{b}: {c}'
             },
             legend: {
-              show: true,
-              type: 'scroll',
-              top: '5%',
-              itemWidth: 8,
-              itemHeight: 8,
-              data: donutLegendData,
-              textStyle: {
-                color: chartStyle.textColor,
-                fontFamily: font,
-                fontSize,
-              }
+              show: false, // 禁用内置图例，使用自定义图例
             },
             series: [{
               type: 'pie',
-              radius: ['40%', '70%'],
-              center: ['50%', '60%'],
+              radius: ['40%', '80%'],
+              center: ['50%', '50%'],
               data: donutData,
               label: {
                 show: donutData.length === 1,  // 单数值时显示标签
@@ -1063,7 +1042,27 @@ const ViewEle: React.FC<PropsType> = ({
 
     const option = getChartOption(chartType, chartDataClone.data);
     const { xField } = processChartData(chartDataClone.data) || {};
+    const isPieOrDonut = chartType === 'response_pie_chart' || chartType === 'response_donut_chart';
+    const pieSeriesData: any[] = isPieOrDonut ? ((option as any).series?.[0]?.data || []) : [];
+    const colors = chartConfig.chartStyle.color.split(',');
+    const legendData = pieSeriesData.map((item: any, i: number) => ({
+      name: String(item.name),
+      value: item.value,
+      color: colors[i % colors.length]
+    }));
     return (
+      <div style={{ width: '100%' }}>
+        {isPieOrDonut && legendData.length > 0 && (
+          <PieLegend
+            data={legendData}
+            maxRows={3}
+            fontSize={chartConfig.fontSize}
+            resetKey={chartType + (chartDataClone.data?.length ?? 0)}
+            onItemClick={(name) => {
+              echartRef.current?.getInstance()?.dispatchAction({ type: 'legendToggleSelect', name });
+            }}
+          />
+        )}
       <EChart
         ref={echartRef}
         option={option}
@@ -1072,6 +1071,7 @@ const ViewEle: React.FC<PropsType> = ({
         autoResize
         handleClick={(params: any) => handleClick({ ...params, xField })}
       />
+     </div>
     );
   };
 

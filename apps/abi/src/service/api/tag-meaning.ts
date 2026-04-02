@@ -17,7 +17,7 @@ export function queryTag(params: {
   return apiRequest({
     data: params,
     method: 'POST',
-    url: '/abi-copilot/v1/tag/queryTag'
+    url: '/api/abi-copilot/v1/tag/queryTag'
   });
 }
 
@@ -31,7 +31,7 @@ export function delTag(params: { tagId: number }) {
   return apiRequest({
     data: params,
     method: 'POST',
-    url: '/abi-copilot/v1/tag/deleteTag'
+    url: '/api/abi-copilot/v1/tag/deleteTag'
   });
 }
 
@@ -59,7 +59,7 @@ export function addTag(params: ITag) {
   return apiRequest({
     data: params,
     method: 'POST',
-    url: '/abi-copilot/v1/tag/addTag'
+    url: '/api/abi-copilot/v1/tag/addTag'
   });
 }
 
@@ -73,6 +73,6 @@ export function editTag(params: ITag) {
   return apiRequest({
     data: params,
     method: 'POST',
-    url: '/abi-copilot/v1/tag/editTag'
+    url: '/api/abi-copilot/v1/tag/editTag'
   });
 }

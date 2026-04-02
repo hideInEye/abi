@@ -78,7 +78,7 @@ export const createRouteGuard: BeforeEach = (to, _, blockerOrJump) => {
   };
 
   const loginStatus = Boolean(localStg.get('token'));
-  if (!loginStatus && to.name !== 'login') {
+  if (!loginStatus && to.name !== 'login' && !to.meta?.constant) {
     return blockerOrJump({
       name: 'login',
       query: {

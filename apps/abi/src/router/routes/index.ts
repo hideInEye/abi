@@ -18,6 +18,17 @@ const customRoutes: CustomRoute[] = [
       order:1,
       constant:true
     }
+  },
+  {
+    name: 'dashboard-share-page',
+    path: '/dashboard-share-page/:shareCode',
+    component: 'layout.blank$view.dashboard-share-page',
+    meta: {
+      constant: true,
+      hideInMenu: true,
+      title: 'dashboard-share-page',
+      i18nKey: 'route.dashboard-share-page'
+    }
   }
   // {
   //   children: [

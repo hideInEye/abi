@@ -9,7 +9,7 @@ export function getUserListApi(params: any) {
   return apiRequest({
     method: 'get',
     params,
-    url: '/system/user/list'
+    url: '/api/system/user/list'
   });
 }
 
@@ -22,7 +22,7 @@ export function getUserListApi(params: any) {
 export function getRoleListByUseIdApi(userId: number | string) {
   return apiRequest({
     method: 'get',
-    url: `/system/user/authRole/${userId}`
+    url: `/api/system/user/authRole/${userId}`
   });
 }
 
@@ -37,7 +37,7 @@ export function authRoleByUserIdApi(params: any) {
   return apiRequest({
     method: 'put',
     params,
-    url: `/system/user/authRole`
+    url: `/api/system/user/authRole`
   });
 }
 
@@ -50,7 +50,7 @@ export function authRoleByUserIdApi(params: any) {
 export function getUserInfoListApi() {
   return apiRequest({
     method: 'get',
-    url: '/system/user'
+    url: '/api/system/user'
   });
 }
 
@@ -63,7 +63,7 @@ export function getUserInfoListApi() {
 export async function getUserInfoApi(userId: number) {
   const res = await apiRequest({
     method: 'get',
-    url: `/system/user/${userId}`
+    url: `/api/system/user/${userId}`
   });
   return { data: res?.response?.data };
 }
@@ -79,7 +79,7 @@ export function addUserApi(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: `/system/user`
+    url: `/api/system/user`
   });
 }
 
@@ -94,7 +94,7 @@ export function updateUserApi(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/user`
+    url: `/api/system/user`
   });
 }
 
@@ -109,7 +109,7 @@ export function updateUserStatusAPi(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/user/changeStatus`
+    url: `/api/system/user/changeStatus`
   });
 }
 
@@ -123,7 +123,7 @@ export function exportUserApi(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: `/system/user/export`
+    url: `/api/system/user/export`
   });
 }
 
@@ -141,7 +141,7 @@ export function importUserApi(data: any) {
       'Content-Type': 'multipart/form-data'
     },
     method: 'post',
-    url: `/system/user/importData`
+    url: `/api/system/user/importData`
   });
 }
 
@@ -154,6 +154,6 @@ export function importUserApi(data: any) {
 export function deleteUserApi(userId: number) {
   return apiRequest({
     method: 'delete',
-    url: `/system/dept/${userId}`
+    url: `/api/system/dept/${userId}`
   });
 }

@@ -1,4 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
+import PageTitle from '@/components/stateless/common/PageTitle';
 
 import { SemanticsTableList } from './components/semantics-table-list';
 import { useSemanticsTable } from './hook/useSemanticsTable';
@@ -55,7 +56,7 @@ export function Component() {
 
   return (
     <div className="flex flex-col p-6 h-full">
-      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333', paddingBottom: '0.5rem' }}>表语义</h1>
+      <PageTitle style={{ paddingBottom: '0.5rem' }} />
     <div className="flex gap-6 flex-1">
       {/* 左侧分组树 */}
       <div className="w-[18.5417rem] flex flex-col pr-4" style={{ borderRight: '0.0625rem solid #d9d9d9' }}>

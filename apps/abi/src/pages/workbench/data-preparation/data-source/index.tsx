@@ -1,8 +1,10 @@
 import {
+  ApartmentOutlined,
   DeleteOutlined,
   EditOutlined,
   FileSearchOutlined,
 } from "@ant-design/icons";
+import PageTitle from '@/components/stateless/common/PageTitle';
 import { message, Tooltip } from "antd";
 import { Suspense } from "react";
 
@@ -16,6 +18,8 @@ import {
   fetchDataSourceList,
   updateDataSource,
 } from "@/service/api";
+import MetadataAnalysisDrawer from "@/components/metadata-analysis/MetadataAnalysisDrawer";
+import type { MetadataAnalysisContext } from "@/components/metadata-analysis/types";
 import { useRouter } from "~/packages/simple-router/src/hooks/useRouter";
 
 import KeySearch from "./modules/key-search";
@@ -34,6 +38,7 @@ export function Component() {
   const { getSourceTypeOptions, sourceTypeOptions } = useDatasource();
   const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
+  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
 
   useEffect(() => {
     getSourceTypeOptions();
@@ -171,6 +176,22 @@ export function Component() {
                     }
                   />
                 </Tooltip>
+                <Tooltip title="查看元数据分析">
+                  <AButton
+                    color="primary"
+                    icon={<ApartmentOutlined style={{ fontSize: '1rem' }} />}
+                    size="small"
+                    variant="link"
+                    onClick={() =>
+                      setAnalysisContext({
+                        nodeId: record.sourceId,
+                        nodeName: record.sourceName,
+                        nodeType: "DATA_SOURCE",
+                        spaceId: Number(localStorage.getItem("spaceId")) || undefined
+                      })
+                    }
+                  />
+                </Tooltip>
                 <APopconfirm
                   title="提示"
                   description={t("common.confirmDelete")}
@@ -303,7 +324,7 @@ export function Component() {
     <div className="flex flex-col gap-2 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <h1 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 600, fontSize: '1.125rem', color: '#333333' }}>数据源</h1>
+      <PageTitle />
       {/* 搜索栏 */}
       <div className="flex items-center gap-4">
         <AInput
@@ -362,6 +383,11 @@ export function Component() {
             {...generalPopupOperation}
           />
         </Suspense>
+        <MetadataAnalysisDrawer
+          context={analysisContext}
+          open={Boolean(analysisContext)}
+          onClose={() => setAnalysisContext(null)}
+        />
     </div>
   );
 }

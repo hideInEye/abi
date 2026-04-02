@@ -9,7 +9,7 @@ export async function roleList(params: any) {
   const res: any = await apiRequest({
     method: 'get',
     params,
-    url: '/system/role/list'
+    url: '/api/system/role/list'
   });
   return { data: { data: res?.response?.data?.rows || [], total: res?.response?.data?.total } };
 }
@@ -24,7 +24,7 @@ export async function spaceRoleList(params: any) {
   const res: any = await apiRequest({
     method: 'get',
     params,
-    url: '/system/v1/space/role/list'
+    url: '/api/system/v1/space/role/list'
   });
   return { data: { data: res?.response?.data?.rows || [], total: res?.response?.data?.total } };
 }
@@ -40,7 +40,7 @@ export function updateRoleStatusAPi(data: any) {
   return apiRequest<any>({
     data,
     method: 'put',
-    url: `/system/role/changeStatus`
+    url: `/api/system/role/changeStatus`
   });
 }
 
@@ -53,7 +53,7 @@ export function updateRoleStatusAPi(data: any) {
 export function roleInfo(roleId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/role/${roleId}`
+    url: `/api/system/role/${roleId}`
   });
 }
 
@@ -66,7 +66,7 @@ export function roleInfo(roleId: number) {
 export function roleMenuTree(roleId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/menu/roleMenuTreeselect/${roleId}`
+    url: `/api/system/menu/roleMenuTreeselect/${roleId}`
   });
 }
 
@@ -79,7 +79,7 @@ export function roleMenuTree(roleId: number) {
 export function roleIdMenuTree(roleId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/role/deptTree/${roleId}`
+    url: `/api/system/role/deptTree/${roleId}`
   });
 }
 
@@ -94,7 +94,7 @@ export function updateRole(data?: any) {
   return apiRequest<any>({
     data,
     method: 'put',
-    url: '/system/role'
+    url: '/api/system/role'
   });
 }
 
@@ -109,7 +109,7 @@ export function assignDataPermission(roleId: number, data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/role/deptTree/${roleId}`
+    url: `/api/system/role/deptTree/${roleId}`
   });
 }
 
@@ -122,7 +122,7 @@ export function assignDataPermission(roleId: number, data: any) {
 export function assignDataPermissionInfo(roleId: number) {
   return apiRequest({
     method: 'get',
-    url: `/system/role/${roleId}`
+    url: `/api/system/role/${roleId}`
   });
 }
 
@@ -136,7 +136,7 @@ export function assignDataPermissionSubmit(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/role/dataScope`
+    url: `/api/system/role/dataScope`
   });
 }
 
@@ -150,7 +150,7 @@ export function cancelAuthorizationApi(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/system/role/authUser/cancel`
+    url: `/api/system/role/authUser/cancel`
   });
 }
 
@@ -164,7 +164,7 @@ export function batchCancelAuthorizationApi(params: any) {
   return apiRequest({
     method: 'put',
     params,
-    url: `/system/role/authUser/cancelAll`
+    url: `/api/system/role/authUser/cancelAll`
   });
 }
 
@@ -177,7 +177,7 @@ export async function assignUserList(params: any) {
   const res: any = await apiRequest({
     method: 'get',
     params,
-    url: `/system/role/authUser/allocatedList`
+    url: `/api/system/role/authUser/allocatedList`
   });
   return { data: { data: res?.response?.data?.rows || [], total: res?.response?.data?.total } };
 }
@@ -191,7 +191,7 @@ export function assignUserUnallocatedList(params: any) {
   return apiRequest({
     method: 'get',
     params,
-    url: `/system/role/authUser/unallocatedList`
+    url: `/api/system/role/authUser/unallocatedList`
   });
 }
 
@@ -203,7 +203,7 @@ export function assignUserUnallocatedList(params: any) {
 export function getMenuTreeApi() {
   return apiRequest({
     method: 'get',
-    url: '/system/menu/treeselect'
+    url: '/api/system/menu/treeselect'
   });
 }
 
@@ -217,7 +217,7 @@ export function assignUserSubmit(params: any) {
   return apiRequest({
     method: 'put',
     params,
-    url: `/system/role/authUser/selectAll`
+    url: `/api/system/role/authUser/selectAll`
   });
 }
 
@@ -230,7 +230,7 @@ export function assignUserSubmit(params: any) {
 export function getRoleSelectListApi() {
   return apiRequest({
     method: 'get',
-    url: '/system/role/optionselect'
+    url: '/api/system/role/optionselect'
   });
 }
 
@@ -242,7 +242,7 @@ export function getRoleSelectListApi() {
 export function createRoleMenuTree() {
   return apiRequest({
     method: 'get',
-    url: `/system/menu/treeselect`
+    url: `/api/system/menu/treeselect`
   });
 }
 
@@ -256,7 +256,7 @@ export function createRoleSubmit(data: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: `/system/role`
+    url: `/api/system/role`
   });
 }
 
@@ -269,6 +269,6 @@ export function createRoleSubmit(data: any) {
 export function deleteRole(roleId: number) {
   return apiRequest({
     method: 'delete',
-    url: `/system/role/${roleId}`
+    url: `/api/system/role/${roleId}`
   });
 }

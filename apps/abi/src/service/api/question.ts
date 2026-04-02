@@ -9,7 +9,7 @@ export function queryQuestion(params: { groupId: number; question: string; space
   return apiRequest({
     data: params,
     method: 'post',
-    url: '/copilot/v1/question/queryQuestion'
+    url: '/api/copilot/v1/question/queryQuestion'
   });
 }
 
@@ -22,7 +22,7 @@ export function addQuestion(params: { agentId: number; groupId: number; question
   return apiRequest({
     data: params,
     method: 'post',
-    url: '/abi-copilot/v1/question/addQuestion'
+    url: '/api/abi-copilot/v1/question/addQuestion'
   });
 }
 
@@ -41,7 +41,7 @@ export function editQuestion(params: {
   return apiRequest({
     data: params,
     method: 'post',
-    url: '/abi-copilot/v1/question/editQuestion'
+    url: '/api/abi-copilot/v1/question/editQuestion'
   });
 }
 
@@ -56,6 +56,6 @@ export function deleteQuestion(id: number) {
       problemId: id
     },
     method: 'post',
-    url: '/abi-copilot/v1/question/deleteQuestion'
+    url: '/api/abi-copilot/v1/question/deleteQuestion'
   });
 }

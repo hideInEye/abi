@@ -17,11 +17,11 @@ export function fetchLogin(userName: string, password: string, code?: string, uu
       uuid
     },
     method: 'post',
-    url: '/auth/login'
+    url: '/api/auth/login'
   });
 }
 
 /** Get user info */
 export function fetchGetUserInfo() {
-  return apiRequest<Api.Auth.UserInfo>({ url: '/system/user/getInfo' });
+  return apiRequest<Api.Auth.UserInfo>({ url: '/api/system/user/getInfo' });
 }

@@ -5,7 +5,7 @@ export async function fetchDataSourceList(data?: Api.DataPreparation.DataSourceS
   const res = (await apiRequest<Api.DataPreparation.DatasourceListType>({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/queryDataSourcelist'
+    url: '/api/abi-data/api/v1/source/queryDataSourcelist'
   })) as any;
   res.data.data = res.data?.list || [];
   return res;
@@ -16,7 +16,7 @@ export function validDataSource(data?: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/validDataSource'
+    url: '/api/abi-data/api/v1/source/validDataSource'
   });
 }
 
@@ -25,7 +25,7 @@ export function updateDataSource(data?: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/updateDataSource'
+    url: '/api/abi-data/api/v1/source/updateDataSource'
   });
 }
 
@@ -34,26 +34,24 @@ export function addDataSource(data?: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/addDataSource'
+    url: '/api/abi-data/api/v1/source/addDataSource'
   });
 }
 
 // 新增数据源时额外调用接口，用于ai对话
 export function addDb(data?: any) {
   return apiRequest<any>({
-    baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     data,
     method: 'post',
-    url: '/chat-proxy/api/v1/chat/db/add'
+    url: '/api/chat-proxy/api/v1/chat/db/add'
   });
 }
 
 // 删除数据源时额外调用接口，用于ai对话
 export function deleteDb(dbName: string) {
   return apiRequest<any>({
-    baseURL: import.meta.env.VITE_CHAT_SERVICE_BASE_URL,
     method: 'post',
-    url: `/chat-proxy/api/v1/chat/db/delete?db_name=${dbName}`
+    url: `/api/chat-proxy/api/v1/chat/db/delete?db_name=${dbName}`
   });
 }
 
@@ -61,7 +59,7 @@ export function deleteDb(dbName: string) {
 export function fetchDataSourceTypeOptions() {
   return apiRequest<any>({
     method: 'post',
-    url: '/abi-data/api/v1/source/getDataSourceType'
+    url: '/api/abi-data/api/v1/source/getDataSourceType'
   });
 }
 
@@ -70,7 +68,7 @@ export function deleteDataSource(data: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/deleteDataSource'
+    url: '/api/abi-data/api/v1/source/deleteDataSource'
   });
 }
 
@@ -79,7 +77,7 @@ export function fetchTablesBySource(data: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/getTables'
+    url: '/api/abi-data/api/v1/source/getTables'
   });
 }
 
@@ -88,7 +86,7 @@ export async function getFieldByDataSource(data: any) {
   const res = await apiRequest<any>({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/getTableField'
+    url: '/api/abi-data/api/v1/source/getTableField'
   });
 
   return { data: res.data.map((item: any) => ({ ...item, ...data })) };
@@ -99,7 +97,7 @@ export function getPreviewDataByTable(data: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/previewDataWithLimit'
+    url: '/api/abi-data/api/v1/source/previewDataWithLimit'
   });
 }
 
@@ -109,7 +107,7 @@ export async function fetchDataCollectionList(data?: any) {
   const res: any = await apiRequest<Api.DataPreparation.DatasourceListType>({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/dataset/qyeryDataSetList'
+    url: '/api/abi-data/api/v1/dataset/qyeryDataSetList'
   });
   res.data.data = res.data?.list || [];
   return res;
@@ -120,7 +118,7 @@ export async function deleteCollection(data: any) {
   return await apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/dataset/deleteDataSet'
+    url: '/api/abi-data/api/v1/dataset/deleteDataSet'
   });
 }
 
@@ -129,7 +127,7 @@ export async function getCollectionDetail(data: any) {
   return await apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/dataset/queryDataSetDetail'
+    url: '/api/abi-data/api/v1/dataset/queryDataSetDetail'
   });
 }
 
@@ -138,7 +136,7 @@ export async function getPreviewData(data: any) {
   return await apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/dataset/previewData'
+    url: '/api/abi-data/api/v1/dataset/previewData'
   });
 }
 
@@ -147,7 +145,7 @@ export async function getPreviewSql(data: any) {
   return await apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/dataset/previewSql'
+    url: '/api/abi-data/api/v1/dataset/previewSql'
   });
 }
 
@@ -156,7 +154,7 @@ export async function getFieldsBySql(data: any) {
   return await apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/dataset/tableField'
+    url: '/api/abi-data/api/v1/dataset/tableField'
   });
 }
 
@@ -165,7 +163,7 @@ export async function addDataSet(data: any) {
   return await apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/dataset/addDataSet'
+    url: '/api/abi-data/api/v1/dataset/addDataSet'
   });
 }
 
@@ -174,7 +172,7 @@ export async function saveDataSet(data: any) {
   return await apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/dataset/saveDataSet'
+    url: '/api/abi-data/api/v1/dataset/saveDataSet'
   });
 }
 // 2.根据数据源id查询 数据集、表资源（血缘管系上方 筛选条件）
@@ -182,7 +180,7 @@ export async function getRelResList(data: any) {
   return await apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/getRelResList'
+    url: '/api/abi-data/api/v1/source/getRelResList'
   });
 }
 // 1.获取数据源下血缘关系
@@ -190,7 +188,7 @@ export async function getBloodRel(data: any) {
   return await apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/getBloodRel'
+    url: '/api/abi-data/api/v1/source/getBloodRel'
   });
 }
 
@@ -199,6 +197,15 @@ export async function uploadFile(data: any) {
   return await apiRequest({
     data,
     method: 'post',
-    url: '/abi-data/api/v1/source/uploadFile'
+    url: '/api/abi-data/api/v1/source/uploadFile'
+  });
+}
+
+// 血缘关系列表（关系模型）
+export async function queryLineageRelationList(data: any) {
+  return await apiRequest({
+    method: 'post',
+     data,
+    url: '/api/abi-data/api/v1/lineage/getRelation'
   });
 }

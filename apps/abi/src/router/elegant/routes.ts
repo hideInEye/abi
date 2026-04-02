@@ -123,6 +123,26 @@ export const generatedRoutes: GeneratedRoute[] = [
     ]
   },
   {
+    name: 'dashboard-share-page',
+    path: '/dashboard-share-page',
+    component: 'layout.base$view.dashboard-share-page',
+    meta: {
+      i18nKey: 'route.dashboard-share-page',
+      title: 'dashboard-share-page'
+    }
+  },
+  {
+    name: 'designer',
+    path: '/designer',
+    component: 'layout.blank$view.designer',
+    meta: {
+      constant: true,
+      hideInMenu: true,
+      title: 'designer',
+      i18nKey: 'route.designer'
+    }
+  },
+  {
     name: 'guide',
     path: '/guide',
     component: 'layout.base$view.guide',
@@ -430,6 +450,17 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'view',
+    path: '/view',
+    component: 'layout.blank$view.view',
+    meta: {
+      constant: true,
+      hideInMenu: true,
+      title: 'view',
+      i18nKey: 'route.view'
+    }
+  },
+  {
     name: 'workbench',
     path: '/workbench',
     component: 'layout.base',
@@ -438,6 +469,30 @@ export const generatedRoutes: GeneratedRoute[] = [
       title: 'workbench'
     },
     children: [
+      {
+        name: 'workbench_app-workshop',
+        path: 'app-workshop',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.app-workshop',
+          icon: 'mdi:application-cog-outline',
+          order: 5,
+          title: 'app-workshop'
+        },
+        children: [
+          {
+            name: 'workbench_app-workshop_my-dashboard',
+            path: 'my-dashboard',
+            component: 'view.workbench_app-workshop_my-dashboard',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.app-workshop_my-screen',
+              order: 1,
+              title: 'app-workshop_my-screen'
+            }
+          }
+        ]
+      },
       {
         name: 'workbench_assistant-manage',
         path: 'assistant-manage',
@@ -460,16 +515,6 @@ export const generatedRoutes: GeneratedRoute[] = [
             }
           },
           {
-            name: 'workbench_assistant-manage_label-meaning',
-            path: 'label-meaning',
-            component: 'view.workbench_assistant-manage_label-meaning',
-            meta: {
-              i18nKey: 'route.assistant-manage_label-meaning',
-              order: 4,
-              title: 'assistant-manage_label-meaning'
-            }
-          },
-          {
             name: 'workbench_assistant-manage_memory-manage',
             path: 'memory-manage',
             component: 'view.workbench_assistant-manage_memory-manage',
@@ -478,26 +523,6 @@ export const generatedRoutes: GeneratedRoute[] = [
               i18nKey: 'route.assistant-manage_memory-manage',
               order: 4,
               title: 'assistant-manage_memory-manage'
-            }
-          },
-          {
-            name: 'workbench_assistant-manage_recommended-inquiries',
-            path: 'recommended-inquiries',
-            component: 'view.workbench_assistant-manage_recommended-inquiries',
-            meta: {
-              i18nKey: 'route.assistant-manage_recommended-inquiries',
-              order: 4,
-              title: 'assistant-manage_recommended-inquiries'
-            }
-          },
-          {
-            name: 'workbench_assistant-manage_technical-jargon',
-            path: 'technical-jargon',
-            component: 'view.workbench_assistant-manage_technical-jargon',
-            meta: {
-              i18nKey: 'route.assistant-manage_technical-jargon',
-              order: 4,
-              title: 'assistant-manage_technical-jargon'
             }
           }
         ]
@@ -654,6 +679,68 @@ export const generatedRoutes: GeneratedRoute[] = [
                 ]
               }
             ]
+          }
+        ]
+      },
+      {
+        name: 'workbench_ontology-kg',
+        path: 'ontology-kg',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.ontology-kg',
+          icon: 'mdi:graph-outline',
+          order: 4,
+          title: 'ontology-kg'
+        },
+        children: [
+          {
+            name: 'workbench_ontology-kg_label-meaning',
+            path: 'label-meaning',
+            component: 'view.workbench_ontology-kg_label-meaning',
+            meta: {
+              i18nKey: 'route.assistant-manage_label-meaning',
+              order: 4,
+              title: 'assistant-manage_label-meaning'
+            }
+          },
+          {
+            name: 'workbench_ontology-kg_recommended-inquiries',
+            path: 'recommended-inquiries',
+            component: 'view.workbench_ontology-kg_recommended-inquiries',
+            meta: {
+              i18nKey: 'route.assistant-manage_recommended-inquiries',
+              order: 4,
+              title: 'assistant-manage_recommended-inquiries'
+            }
+          },
+          {
+            name: 'workbench_ontology-kg_technical-jargon',
+            path: 'technical-jargon',
+            component: 'view.workbench_ontology-kg_technical-jargon',
+            meta: {
+              i18nKey: 'route.assistant-manage_technical-jargon',
+              order: 4,
+              title: 'assistant-manage_technical-jargon'
+            }
+          }
+        ]
+      },
+      {
+        name: 'workbench_screen-manage',
+        path: 'screen-manage',
+        meta: {
+          i18nKey: 'route.workbench_screen-manage',
+          title: 'workbench_screen-manage'
+        },
+        children: [
+          {
+            name: 'workbench_screen-manage_abi-dashboard',
+            path: 'abi-dashboard',
+            component: 'view.workbench_screen-manage_abi-dashboard',
+            meta: {
+              i18nKey: 'route.workbench_screen-manage_abi-dashboard',
+              title: 'workbench_screen-manage_abi-dashboard'
+            }
           }
         ]
       }
