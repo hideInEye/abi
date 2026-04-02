@@ -30,7 +30,13 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
     setSelectedChatId,
   }))
   useEffect(() => {
-    setSelectedChatId(null)
+    if (!appList?.length) {
+      setSelectedChatId(null)
+      return
+    }
+    const lastChatId = localStorage.getItem('chatId')
+    const target = (lastChatId && appList.find((item) => String(item.chat_id) === String(lastChatId))) || appList[0]
+    setSelectedChatId(target?.chat_id || null)
   }, [appList])
 
   const dropdownMenu: MenuProps['items'] = [
@@ -189,6 +195,7 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
               onClick={() => {
                 handleSetCurApp(item)
                 setSelectedChatId(item.chat_id)
+                localStorage.setItem('chatId', String(item.chat_id))
               }} // 移除datasourceCache参数
             >
               <div className="px-[1.375rem] group flex items-center justify-between">

@@ -5,13 +5,14 @@
  * @module AiEle
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import SvgIcon from "../../components/SvgIcon"
 import styles from './index.module.css';
 import ClarifyComponent from "./components/ClarifyComponent";
 import IntentClarifyV2 from "./components/IntentClarifyV2"; // 澄清处理组件
-import { DownOutlined, UpOutlined } from '@ant-design/icons';  // 导入 Ant Design 图标
-import { Button, Typography, message } from "antd";
+import ThinkingStepsDrawer from "./components/ThinkingStepsDrawer";
+import { RightOutlined } from '@ant-design/icons';  // 导入 Ant Design 图标
+import { Typography } from "antd";
 import ReactMarkdown from 'react-markdown';
 import { SUB_CHAT_MODE_MAP } from '../../constant/chat';
 
@@ -62,8 +63,6 @@ interface PropsType {
   thinkTime?: number
   isDone?: boolean;
   useSimpleStyle?: boolean
-  setDebugModalVisible: React.Dispatch<React.SetStateAction<boolean>>
-  setCur: React.Dispatch<React.SetStateAction<any>>
   getAnswer?: (props: any) => void;
   onMessageUpdate?: (props: any) => void;
 }
@@ -80,9 +79,7 @@ const AiEle: React.FC<PropsType> = ({
   isStorage,
   thinkTime,
   useSimpleStyle = false,
-  setDebugModalVisible,
   isDone,
-  setCur,
   getAnswer,
   onMessageUpdate,
 }) => {
@@ -118,45 +115,66 @@ const AiEle: React.FC<PropsType> = ({
     return processed;
   };
 
+  const normalizeStepContent = (rawContent: string, stepAssistantName: string) => {
+    const cleanedRaw = processContent(
+      String(rawContent || '')
+        .replace(/\[DONE\]/g, '')
+        .replace(/round_index:\d+,?\s*/g, '')
+        .replace(/sub_chat_mode:\w+,?\s*/g, '')
+    )
+
+    const parsed = parseThinkNodes(rawContent, stepAssistantName)
+    const thinkOnly = processContent(
+      parsed.thinkNodes.length
+        ? parsed.thinkNodes.map((node) => node.content).join('\n\n')
+        : ''
+    )
+    const finalOnly = processContent(parsed.finalContent || '')
+
+    return thinkOnly || finalOnly || cleanedRaw
+  }
+
   // 解析思考节点，传入助手名称
   const assistantName = getAssistantName();
   const { thinkNodes, finalContent } = parseThinkNodes(data.context || '', assistantName);
-  
-  // 直出思考内容，不使用折叠与额外容器
 
-  const loadingLabel = (
-    <div className="flex items-center">
-      <span className="mr-4">思考中</span>
-      <div className={styles['loader-container']}>
-        <div className={styles['loader-bar']} />
-      </div>
-    </div>
-  );
+  const historySteps = useMemo(() => {
+    if (Array.isArray(data?.aiSteps) && data.aiSteps.length > 0) {
+      return data.aiSteps
+        .map((step: any, index: number) => {
+          const rawContent = String(step?.content || '')
+          const stepAssistantName = step?.name || assistantName
+          const normalizedContent = normalizeStepContent(rawContent, stepAssistantName)
 
-  const endLabel = (
-    <div className="text-[#666] flex items-center">
-      <span>已完成思考</span>
-      {thinkTime ? (
-        <span className="ml-1 text-blue-500">
-          {thinkTime}s
-        </span>
-      ) : null}
-    </div>
-  );
+          return {
+            id: step?.id ?? `${data?.order ?? 'step'}-${index}`,
+            name: stepAssistantName,
+            content: normalizedContent
+          }
+        })
+        .filter((step: any) => !!step.content)
+    }
+
+    return thinkNodes.map((node, index) => ({
+      id: `${data?.order ?? 'step'}-${index}`,
+      name: node.name || assistantName,
+      content: normalizeStepContent(node.content || '', node.name || assistantName)
+    }))
+  }, [assistantName, data?.aiSteps, data?.order, thinkNodes])
 
   if (useSimpleStyle) {
     return (
       <div className="my-4 w-full flex items-start">
         <div className="flex-shrink-0">
-          <SvgIcon
-            className="text-[30px]"
+          {/* <SvgIcon
+            className="text-[1.875rem]"
             localIcon="bot"
-          />
+          /> */}
         </div>
         <div className="ml-2 max-w-[80%]">
           <div className="bg-[#e8eefb] rounded-lg px-4 py-2 text-sm text-gray-700 relative">
             {/* 添加小三角 */}
-            <div className="absolute left-[-6px] top-3 w-3 h-3 bg-[#e8eefb] transform rotate-45"></div>
+            <div className="absolute left-[-0.375rem] top-3 w-3 h-3 bg-[#e8eefb] transform rotate-45"></div>
             <div className={styles['markdown-content']}>
               <ReactMarkdown>{processContent(finalContent || data.context)}</ReactMarkdown> 
             </div>
@@ -185,8 +203,10 @@ const AiEle: React.FC<PropsType> = ({
 
   // 控制折叠状态
   const [isCollapsed, setIsCollapsed] = useState(true);
-  // 记录内容高度
-  const contentRef = useRef<HTMLDivElement>(null);
+  // 实时思考秒数（用于生成中展示）
+  const [thinkingSeconds, setThinkingSeconds] = useState(0);
+  // 思考步骤抽屉
+  const [stepsDrawerOpen, setStepsDrawerOpen] = useState(false);
 
   useEffect(() => {
     // 控制折叠状态
@@ -212,64 +232,87 @@ const AiEle: React.FC<PropsType> = ({
     }
   }, [loading, data, isDone])
 
+  useEffect(() => {
+    if (data?.smLoading) {
+      setThinkingSeconds(0)
+      const timer = window.setInterval(() => {
+        setThinkingSeconds((prev) => prev + 1)
+      }, 1000)
+      return () => window.clearInterval(timer)
+    }
+
+    if (typeof thinkTime === 'number' && Number.isFinite(thinkTime)) {
+      setThinkingSeconds(thinkTime)
+    }
+  }, [data?.smLoading, data?.order, thinkTime])
+
+  useEffect(() => {
+    if (data?.smLoading) {
+      setStepsDrawerOpen(false)
+    }
+  }, [data?.smLoading, data?.order])
+
+  const displayThinkingSeconds = data?.smLoading
+    ? thinkingSeconds
+    : (typeof thinkTime === 'number' && Number.isFinite(thinkTime) ? thinkTime : thinkingSeconds)
+
+  const statusLabel = data?.smLoading
+    ? '思考中'
+    : (displayThinkingSeconds > 0 ? '思考了' : '已完成思考')
+
+  const showHistoryTrigger = !questionData?.agent_label && !data?.isIllegalQuery
+  const fallbackThinkingContent = processContent(data.context || '')
+  const canOpenHistorySteps = showHistoryTrigger && !data?.smLoading && (historySteps.length > 0 || !!fallbackThinkingContent)
+
+  const handleOpenHistorySteps = () => {
+    if (!canOpenHistorySteps) return
+    setStepsDrawerOpen((prev) => !prev)
+  }
+
   return (
     <div className="my-2 w-full flex justify-start">
-      <SvgIcon
-        className="mt-6px text-[30px]"
+      {/* <SvgIcon
+        className="mt-[0.375rem] text-[1.875rem]"
         localIcon="bot"
-      />
+      /> */}
       <div className="w-full px-2 text-left">
-        <div className="w-full bg-white border border-gray-200 rounded-lg">
-          <div className="p-[0.75rem] px-[1.5625rem] border-b border-gray-200 flex justify-between items-center grid grid-cols-[1fr_5fr]">
-            <span className="font-bold font-extrabold">{getAssistantName()}</span>
-            <div className="flex items-center gap-[20px] justify-end" onClick={() => setIsCollapsed(!isCollapsed)}>
-              <div className="flex items-center">
-                <span className="cursor-pointer hover:opacity-70 select-none mr-2" onClick={(e) => {
-                  e.stopPropagation()
-                  // 实时对话过程中（isStorage=false）：检查是否有 roundIndex
-                  // 历史对话直接打开
-                  if (!isStorage) {
-                    // 实时对话过程中，只有返回了 roundIndex 才能打开模型调试
-                    if (data.roundIndex) {
-                      setCur(data);
-                      setDebugModalVisible(true);
-                    } else {
-                      message.warning('暂未返回模型调试信息');
-                    }
-                  } else {
-                    // 历史对话场景，直接打开
-                    setCur(data);
-                    setDebugModalVisible(true);
-                  }
-                }}>
-                  <SvgIcon className="text-16px" localIcon="setting" />
-                </span>
-                {data.smLoading ? loadingLabel : endLabel}
-              </div>
-
-              {/* 箭头 */}
-              <span
-                style={{ transform: isCollapsed ? 'rotate(270deg)' : 'rotate(360deg)' }}
-                className={`cursor-pointer transition-transform duration-300`}
-              >
-                <DownOutlined className="text-[#666]" />
+        <div className={styles.thinkingCard}>
+          <div className={styles.thinkingCardHeader}>
+            <div className={styles.thinkingStatusWrap}>
+              <span className={styles.thinkingStatusIcon}>
+                <SvgIcon className="text-[1rem]" localIcon={data?.smLoading ? 'thinkingblue' : 'thinking'} />
               </span>
+              <span className={styles.thinkingStatusText}>
+                {statusLabel}
+              </span>
+              {displayThinkingSeconds > 0 ? <span className={styles.thinkingStatusTime}>{displayThinkingSeconds}秒</span> : null}
+              {/* <span className={styles.thinkingAssistantName}>{getAssistantName()}</span> */}
+            </div>
+            <div className="flex items-center gap-[1rem]">
+              {showHistoryTrigger ? (
+                <button
+                  type="button"
+                  className={`${styles.thinkingHistoryTrigger} ${!canOpenHistorySteps ? styles.thinkingHistoryTriggerDisabled : ''}`}
+                  onClick={handleOpenHistorySteps}
+                  disabled={!canOpenHistorySteps}
+                >
+                  <span>{stepsDrawerOpen ? '收起历史步骤' : '查看历史步骤'}</span>
+                  <RightOutlined className={styles.thinkingHistoryArrow} />
+                </button>
+              ) : null}
             </div>
           </div>
-          {isCollapsed ? null : <div className="p-[0.75rem] px-[1.5625rem]">
+          {isCollapsed ? null : <div className={styles.thinkingCardBody}>
             <div
-              ref={contentRef}
-              className="whitespace-pre-wrap text-sm text-gray-700 transition-all duration-300 ease-in-out relative"
+              className={styles.thinkingContent}
               style={{
-                maxHeight: isCollapsed ? '0' : 'none',
-                overflow: isCollapsed ? 'hidden' : 'visible',
-                paddingTop: isCollapsed ? '0' : '20px'
+                paddingTop: '1.25rem'
               }}
             >
               {/* 复制 */}
               {
                 !questionData?.agent_label && finalContent && (
-                  <div className="absolute right-1 top-[-5px] cursor-pointer text-gray-600 hover:text-gray-800 transition-colors">
+                  <div className={styles.thinkingCopy}>
                     <Text
                       copyable={{
                         text: processContent(finalContent),
@@ -284,7 +327,7 @@ const AiEle: React.FC<PropsType> = ({
               {thinkNodes.length > 0 ? (
                 <div className="mb-4">
                   {thinkNodes.map((node, index) => (
-                    <div key={index} className="mb-2">
+                    <div key={index} className={styles.thinkingNode}>
                       <div className={styles['markdown-content']}>
                         <ReactMarkdown>{processContent(node.content)}</ReactMarkdown>
                       </div>
@@ -314,25 +357,17 @@ const AiEle: React.FC<PropsType> = ({
                   ) : null
                 )
               }
-              {
-                !isCollapsed && !isSharing && (
-                  <div className={styles.collapseButtonWrapper}>
-                    <Button
-                      type="primary" 
-                      shape="circle"
-                      className={styles.collapseButton}
-                      onClick={() => setIsCollapsed(true)}
-                    >
-                      <UpOutlined className={styles.collapseButtonArrow} />
-                      <span>收起</span>
-                    </Button>
-                  </div>
-                )
-              }
             </div>
           </div>}
         </div>
       </div>
+      <ThinkingStepsDrawer
+        open={stepsDrawerOpen}
+        onClose={() => setStepsDrawerOpen(false)}
+        steps={historySteps}
+        fallbackContent={historySteps.length > 0 ? '' : fallbackThinkingContent}
+        thinkTime={displayThinkingSeconds}
+      />
     </div>
   );
 }

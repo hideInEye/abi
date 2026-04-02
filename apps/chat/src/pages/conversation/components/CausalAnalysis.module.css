@@ -1,0 +1,130 @@
+.container {
+  width: 100%;
+}
+
+.block {
+  margin-bottom: 0.75rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.blockTitle {
+  padding: 0.625rem 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #2d2d2d;
+}
+
+.divider {
+  height: 0.0625rem;
+  background: #edf1f5;
+}
+
+.blockContent {
+  padding: 1rem 0 1.125rem;
+}
+
+.descText {
+  color: #374151;
+  font-size: 0.875rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 3.5rem;
+  padding: 1rem 0 1.125rem;
+}
+
+.metricItem {
+  min-width: 8rem;
+}
+
+.metricLabel {
+  color: #6b7280;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.metricValue {
+  margin-top: .5rem;
+  color: #313a4a;
+  font-size: 1.3125rem;
+  font-weight: 600;
+  line-height: 1.375rem;
+}
+
+.metricHighlight {
+  margin-top: .5rem;
+  color: #1890FF;
+  font-size: 1.3125rem;
+  font-weight: 600;
+  line-height: 1.375rem;
+}
+
+.tableWrap {
+  padding: 1rem 0 1.125rem;
+}
+
+.factorTable :global(.ant-table) {
+  color: #364154;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.factorTable :global(.ant-table-thead > tr > th) {
+  background: #f4f7fd !important;
+  color: #4d586b;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-bottom: 0.0625rem solid #edf1f5 !important;
+  padding: 0.875rem 1rem !important;
+}
+
+.factorTable :global(.ant-table-tbody > tr > td) {
+  color: #364154;
+  font-size: 0.875rem;
+  border-bottom: 0.0625rem solid #edf1f5 !important;
+  padding: 0.875rem 1rem !important;
+}
+
+.factorTable :global(.ant-pagination) {
+  margin: 0.75rem 0 0 0;
+}
+
+.deltaValue {
+  color: #3b82f6;
+}
+
+.markdownContent {
+  color: #374151;
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+
+.markdownContent :global(p) {
+  margin: 0 0 0.5rem 0;
+}
+
+.markdownContent :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdownContent :global(h1),
+.markdownContent :global(h2),
+.markdownContent :global(h3),
+.markdownContent :global(h4),
+.markdownContent :global(h5),
+.markdownContent :global(h6) {
+  margin: 0 0 0.75rem 0;
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+}

@@ -108,7 +108,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
       <>
         <Tooltip title="点赞">
           <span 
-            className={`cursor-pointer text-[24px] hover:opacity-80 select-none ${
+            className={`cursor-pointer text-[1.5rem] hover:opacity-80 select-none ${
               loading || !canOperate() ? 'opacity-50 cursor-not-allowed' : ''
             }`} 
             onClick={handleLike}
@@ -118,7 +118,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
         </Tooltip>
         <Tooltip title="点踩">
           <span 
-            className={`cursor-pointer text-[24px] hover:opacity-80 select-none ${
+            className={`cursor-pointer text-[1.5rem] hover:opacity-80 select-none ${
               loading || !canOperate() ? 'opacity-50 cursor-not-allowed' : ''
             }`} 
             onClick={handleDislike}
@@ -131,9 +131,9 @@ const StatisticsAnalysis: React.FC<Props> = ({
   };
 
   return (
-    <>
+    <div className='my-2'>
       {/* 推荐问题等部分 */}
-      <div className="rounded bg-[#f6f6f6] pb-2 pl-2 pr-2 rounded-[8px] w-full">
+      <div className="rounded bg-[#f6f6f6]  pl-2 pr-2 rounded-[0.5rem] w-full">
         <div className="flex justify-between items-center">
           <div className="flex gap-3">
             {renderLikeButtons()}
@@ -142,7 +142,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
             {/* {showReferenceButton && (
               <Tooltip title="引用">
                 <span 
-                  className="cursor-pointer text-[24px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none" 
+                  className="cursor-pointer text-[1.5rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none" 
                   onClick={onReferenceClick}
                 >
                   #
@@ -152,7 +152,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
             {showRecommend && (
               <Tooltip title="推荐问题">
                 <span 
-                  className="cursor-pointer text-[20px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
+                  className="cursor-pointer text-[1.25rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
                   onClick={onQaClick}
                 >
                   <BulbTwoTone />  
@@ -162,7 +162,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
             {showRecommend && (
               <Tooltip title="推荐维度">
                 <span 
-                  className="cursor-pointer text-[22px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
+                  className="cursor-pointer text-[1.375rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
                   onClick={onDimensionClick}
                 >
                   <SvgIcon
@@ -175,7 +175,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
             {showRecommend && (
               <Tooltip title="推荐指标">
                 <span 
-                  className="cursor-pointer text-[23px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
+                  className="cursor-pointer text-[1.4375rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
                   onClick={onIndexClick}
                 >
                   <SvgIcon
@@ -188,7 +188,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
             {showAttributionButton && (
               <Tooltip title="归因分析">
                 <span 
-                  className="cursor-pointer text-[20px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
+                  className="cursor-pointer text-[1.25rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
                   onClick={onAttributionClick}
                 >
                   <FunnelPlotTwoTone />
@@ -198,7 +198,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
             {showPredictButton && (
               <Tooltip title="预测分析">
                 <span 
-                  className="cursor-pointer text-[20px] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
+                  className="cursor-pointer text-[1.25rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
                   onClick={onPredictClick}
                 >
                   <FundTwoTone />
@@ -208,7 +208,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

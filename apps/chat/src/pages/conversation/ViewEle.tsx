@@ -32,7 +32,7 @@ import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEm
 import { handleDataExport, handleImageExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
 import { fetchDrillDown, fetchQueryRewrite, fetchRecommendQuestion, setExperteval, searchConv } from '../../service/api/conv';
-import { CloseOutlined, RedoOutlined, DownOutlined, UpOutlined } from "@ant-design/icons";
+import { CloseOutlined, RedoOutlined } from "@ant-design/icons";
 import { marked } from 'marked';
 import { CHAT_MODE_MAP } from '../../constant/chat';
 
@@ -174,7 +174,7 @@ const ViewEle: React.FC<PropsType> = ({
     }
   });
   // 图表tooltip 
-  const tooltipHtml = (color: any) => `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:${color}; margin-right:5px;"></span>`
+  const tooltipHtml = (color: any) => `<span style="display:inline-block; width:0.5rem; height:0.5rem; border-radius:50%; background-color:${color}; margin-right:0.3125rem;"></span>`
 
   // 解析ISO 8601时间格式 
   const parseISO8601Duration = (duration: string): string => {
@@ -672,7 +672,7 @@ const ViewEle: React.FC<PropsType> = ({
     // 检查数据是否为空
     if (!chartDataClone.data || chartDataClone.data.length === 0) {
       return (
-        <div className="flex items-center justify-center h-[200px] text-gray-400">
+        <div className="flex items-center justify-center h-[12.5rem] text-gray-400">
           <div className="text-center">
             <SvgIcon localIcon="empty" className="w-12 h-12 mb-2" />
             <div>暂无数据</div>
@@ -1066,7 +1066,7 @@ const ViewEle: React.FC<PropsType> = ({
       <EChart
         ref={echartRef}
         option={option}
-        style={{ height: '400px', width: '100%' }}
+        style={{ height: '25rem', width: '100%' }}
         theme={chartConfig.theme === 'dark' ? 'dark' : undefined}
         autoResize
         handleClick={(params: any) => handleClick({ ...params, xField })}
@@ -1083,7 +1083,7 @@ const ViewEle: React.FC<PropsType> = ({
 
     if (activeType !== 'sql' && (!displayData || displayData.length === 0)) {
       return (
-        <div className="flex items-center justify-center h-[200px] text-gray-400">
+        <div className="flex items-center justify-center h-[12.5rem] text-gray-400">
           <div className="text-center">
             <SvgIcon localIcon="empty" className="w-12 h-12 mb-2" />
             <div>暂无数据</div>
@@ -1115,32 +1115,46 @@ const ViewEle: React.FC<PropsType> = ({
       case 'chart':
         return renderVisualization();
       case 'table':
+        const tableColumns = Object.keys(displayData?.[0] || {}).map((key, columnIndex) => {
+          const isDeltaColumn = /变化量|变化率/.test(key)
+          const isLeftAlign = columnIndex <= 1
+
+          return {
+            title: key,
+            dataIndex: key,
+            key: key,
+            ellipsis: true,
+            align: isLeftAlign ? 'left' : 'center',
+            width: columnIndex === 0 ? 90 : undefined,
+            render: (text: any) => {
+              let displayText = text
+              if (typeof displayText === 'string') {
+                // 转换ISO 8601时间格式
+                if (displayText.match(/^P(?:\d+D)?T(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?$/)) {
+                  displayText = parseISO8601Duration(displayText)
+                }
+                // 转换ISO日期格式
+                if (displayText.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})?$/)) {
+                  displayText = parseISODate(displayText)
+                }
+              }
+
+              return (
+                <span className={isDeltaColumn ? styles.deltaValue : styles.tableCellValue}>
+                  {displayText}
+                </span>
+              )
+            }
+          }
+        })
+
         return (
-          <div ref={tableRef} className="px-[1rem]">
+          <div ref={tableRef} className="px-1 pb-2">
             <ConfigProvider locale={zhCN}>
               <Table
                 dataSource={displayData?.map((item: Record<string, any>, index: number) => ({ ...item, key: index })) || []}
-                columns={Object.keys(displayData?.[0] || {}).map(key => ({
-                  title: key,
-                  dataIndex: key,
-                  key: key,
-                  ellipsis: true,
-                  render: (text: any) => {
-                    if (typeof text === 'string') {
-                      // 转换ISO 8601时间格式
-                      if (text.match(/^P(?:\d+D)?T(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?$/)) {
-                        return parseISO8601Duration(text);
-                      }
-                      // 转换ISO日期格式
-                      if (text.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})?$/)) {
-                        return parseISODate(text);
-                      }
-                    }
-                    return text;
-                  }
-                }))}
+                columns={tableColumns as any}
                 pagination={paginationConfig}
-                size="small"
                 scroll={{ x: 'max-content' }}
                 className={`${styles.viewTable}`}
                 locale={{
@@ -1193,10 +1207,10 @@ const ViewEle: React.FC<PropsType> = ({
               showLineNumbers={true}
               customStyle={{
                 margin: 0,
-                borderRadius: '4px',
-                fontSize: '14px',
+                borderRadius: '0.25rem',
+                fontSize: '0.875rem',
                 backgroundColor: '#f5f5f5',
-                padding: '12px',
+                padding: '0.75rem',
               }}
               codeTagProps={{
                 style: {
@@ -1293,13 +1307,6 @@ const ViewEle: React.FC<PropsType> = ({
     }
   };
 
-  const handleChangeStatus = () => {
-    if (data.arrowStatus) {
-      setIsCollapsed(!isCollapsed);
-      return;
-    }
-  }
-
   // 检查是否为已知场景
   const isKnownChatMode = (chatMode: string) => {
     return chatMode && (CHAT_MODE_MAP[chatMode] !== undefined || chatMode === '');
@@ -1318,44 +1325,37 @@ const ViewEle: React.FC<PropsType> = ({
   const html: any = marked(cleanDesc)
 
   return (
-    <div className={`my-2 w-full flex justify-start`}>
-      <SvgIcon
-        className="mt-6px text-[30px]"
+    <div className={`my-2 w-full flex justify-start items-start`}>
+      {/* <SvgIcon
+        className="mt-1 text-[1.875rem]"
         localIcon="view"
-      />
+      /> */}
 
       <div className="flex flex-col w-full px-2 text-left">
         {/* 描述分析 / 数据知识 */}
         {data?.describe && (chartData?.chat_mode !== 'chat_with_analysis' && !chartData?.recommendQuestions && !chartData?.rewrite) && (
-          <div className="w-full bg-white border border-gray-200 rounded-lg p mb-[8px]">
-            <div className="p-[0.75rem] px-[1.5625rem] border-b border-gray-200 flex justify-between items-center grid grid-cols-[1fr_5fr]">
-              <span className="font-bold font-extrabold">{chartData?.chat_mode === 'chat_with_knowledge' ? '数据知识' : '描述分析'}</span>
+          <div className="w-full overflow-hidden mb-[0.625rem]">
+            <div className="px-6 pt-2 pb-4 border-b border-[#edf1f5] flex justify-between items-center">
+              <span className="font-semibold text-[#2d2d2d]">{chartData?.chat_mode === 'chat_with_knowledge' ? '数据知识' : '描述分析'}</span>
 
-              <div className="flex items-center gap-[20px] justify-end" onClick={handleChangeStatus}>
+              <div className="flex items-center gap-[1.25rem] justify-end">
                 {!data.arrowStatus ? (
-                  <span className="text-[#666] opacity-80 cursor-pointer hover:opacity-100" onClick={fetchData}>
+                  <span className="text-[#6b7280] opacity-90 cursor-pointer hover:opacity-100 text-[0.875rem]" onClick={fetchData}>
                     点击查看数据摘要详情
                   </span>
                 ) : (
-                  <span className="text-[#666] opacity-80 cursor-pointer hover:opacity-100">
-                    点击查看数据摘要详情
-                  </span>
+                  <span className="text-[#6b7280] opacity-90 text-[0.875rem]"> </span>
                 )}
-                <span
-                  style={{ transform: isCollapsed ? 'rotate(270deg)' : 'rotate(360deg)' }}
-                  className={`cursor-pointer transition-transform duration-300`}
-                >
-                  <DownOutlined className="text-[#666]" />
-                </span>
               </div>
             </div>
-           {isCollapsed ? null : <div className="p-[0.75rem] px-[1.5625rem]">
+           {(data.arrowStatus || !isCollapsed) ? <div className="px-6 py-4">
               <div
                 ref={contentRef}
-                className={`
-                  whitespace-pre-wrap text-sm text-gray-700 transition-all duration-300 ease-in-out relative 
-                  ${isCollapsed ? 'max-h-0 overflow-hidden' : `max-h-[${contentHeight}px] `} 
-                `}
+                className="whitespace-pre-wrap text-sm text-gray-700 transition-all duration-300 ease-in-out relative"
+                style={{
+                  maxHeight: data.arrowStatus ? 'none' : contentHeight,
+                  overflow: data.arrowStatus ? 'visible' : (isCollapsed ? 'hidden' : 'visible'),
+                }}
               >
                 {isUnknownScene ? (
                   <div className="text-left text-gray-700" style={{ width: '90%' }}>
@@ -1365,41 +1365,26 @@ const ViewEle: React.FC<PropsType> = ({
                   <div
                     className={`${s['markdown-content']} text-left whitespace-pre-wrap`}
                     dangerouslySetInnerHTML={{ __html: html }}
-                    style={{ width: '90%', lineHeight: '1', }}
+                    style={{ width: '100%'}}
                   ></div>
                 )}
-                {
-                  !isCollapsed &&!isSharing && (
-                    <div className={s.collapseButtonWrapper}>
-                      <Button
-                        type="primary" 
-                        shape="circle"
-                        className={s.collapseButton}
-                        onClick={() => setIsCollapsed(true)}
-                      >
-                        <UpOutlined className={s.collapseButtonArrow} />
-                        <span>收起</span>
-                      </Button>
-                    </div>
-                  )
-                }
               </div>
-            </div>}
+            </div> : null}
           </div>
         )}
 
         {
           contextError ?
-            <div className="w-full px-2 text-left bg-[#f6f6f6] pt-4 pb-4 rounded-[8px]">{stripHtmlTags(contextError)}</div>
+            <div className="w-full text-left px-6 py-4">{stripHtmlTags(contextError)}</div>
             : (
               // chat_with_knowledge 和未知场景不渲染数据面板
              chartData?.chat_mode !== 'chat_with_knowledge' && !isUnknownScene && (
-              <div className="w-full px-2 text-left bg-[#f6f6f6] pt-2 rounded-[8px]">
-                <div className="rounded">
+              <div className="w-full text-left px-6 pt-1 pb-4">
+                <div>
                   {chartData?.chat_mode === 'chat_excel' && chartData.file_id && (
-                    <div className="mb-2 ml-2 mr-2">
-                      <div className="whitespace-nowrap text-[#666] text-left" style={{ width: '10%' }}>Excel分析</div>
-                      <div className="mt-2 bg-[#ffffff] rounded-[8px] pl-2 pr-2 pt-2 pb-2">
+                    <div className="mb-3">
+                      <div className="whitespace-nowrap text-[#666] text-left text-[0.875rem] font-medium">Excel分析</div>
+                      <div className="mt-2 bg-[#ffffff] rounded-[0.5rem] border border-[#f0f0f0] p-3">
                         <div className="text-left">使用了一个参考</div>
                         <FileTag
                           fileId={chartData.file_id}
@@ -1425,35 +1410,33 @@ const ViewEle: React.FC<PropsType> = ({
                         <Table columns={drillDownData?.columns || []} dataSource={drillDownData?.data || []} />
                       </div> : (
                         (chartData?.chat_mode === 'chat_with_db_execute' || chartData?.chat_mode === 'chat_excel') && (
-                          <div>
-                            <div className="">
-                              <div className="rounded bg-[#f6f6f6] w-full p-2">
-                                <div className="flex" style={{ width: '100%' }}>
-                                  <div className="rounded bg-white" style={{ width: '100%' }}>
-                                    <ChartHeader
-                                      onTypeChange={handleTypeChange}
-                                      onShareClick={handleShareClick}
-                                      onConfigClick={handleConfigClick}
-                                      onDebugClick={handleDebugClick}
-                                      onFullscreenClick={handleFullscreenClick}
-                                      showChartIcon={showChartIcon}
-                                      chartType={chartType}
-                                      activeType={activeType}
-                                      convUid={convUid}
-                                      chatId={chatId}
-                                      spaceId={spaceId}
-                                      agentId={agentId}
-                                      chatMode={chartData?.chat_mode}
-                                      ansiSql={chartData?.sql}
-                                      onDataFetched={handleDataFetched}
-                                      onExportClick={handleDownload}
-                                      onhandleGetChartType={handleGetChartType}
-                                      currentTableData={queryResult.data || chartData?.data || []}
-                                    />
-                                    {renderContent()}
-                                  </div>
-                                </div>
-                              </div>
+                          <div className="w-full overflow-hidden">
+                            <div className="pt-2 pb-4 border-b border-[#edf1f5]">
+                              <span className="font-semibold text-[#2d2d2d]">图表信息</span>
+                            </div>
+                            <div className="pt-3">
+                            <ChartHeader
+                              onTypeChange={handleTypeChange}
+                              onShareClick={handleShareClick}
+                              onConfigClick={handleConfigClick}
+                              onDebugClick={handleDebugClick}
+                              onFullscreenClick={handleFullscreenClick}
+                              showChartIcon={showChartIcon}
+                              chartType={chartType}
+                              activeType={activeType}
+                              convUid={convUid}
+                              chatId={chatId}
+                              spaceId={spaceId}
+                              agentId={agentId}
+                              chatMode={chartData?.chat_mode}
+                              ansiSql={chartData?.sql}
+                              onDataFetched={handleDataFetched}
+                              onExportClick={handleDownload}
+                              onhandleGetChartType={handleGetChartType}
+                              currentTableData={queryResult.data || chartData?.data || []}
+                              showTitle={false}
+                            />
+                            <div className="mt-3">{renderContent()}</div>
                             </div>
                           </div>
                         )
@@ -1475,7 +1458,7 @@ const ViewEle: React.FC<PropsType> = ({
                     </div>
                   )}
                   {/* 点赞、点踩、引用、推荐、归因、预测 */}
-                  {chartData?.chat_mode && (
+                  {/* {chartData?.chat_mode && (
                     <StatisticsAnalysis
                       onAttributionClick={handleAttributionClick}
                       onPredictClick={handlePredictClick}
@@ -1487,7 +1470,7 @@ const ViewEle: React.FC<PropsType> = ({
                       feedback={chartData?.feedback || {}}
                       chatMode={chartData?.chat_mode}
                     />
-                  )}
+                  )} */}
                   {
                     // 推荐问题
                     chartData?.recommendQuestions !== undefined && (
