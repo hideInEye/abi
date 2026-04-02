@@ -34,6 +34,137 @@
   }
 }
 
+/* 思考卡片 */
+.thinkingCard {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.thinkingCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.5rem 0.25rem;
+  border-bottom: none;
+}
+
+.thinkingStatusWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.thinkingStatusIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: #f1f4fa;
+  color: #5f6f8f;
+  flex-shrink: 0;
+}
+
+.thinkingStatusText {
+  color: #303849;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.thinkingStatusTime {
+  color: #6b7280;
+  font-size: 1rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.thinkingAssistantName {
+  color: #94a0b3;
+  font-size: 0.875rem;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thinkingHistoryTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: none;
+  background: transparent;
+  color: #606a78;
+  font-size: 0.9375rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.thinkingHistoryTrigger:hover {
+  opacity: 0.75;
+}
+
+.thinkingHistoryTriggerDisabled {
+  color: #a6afbe;
+  cursor: not-allowed;
+}
+
+.thinkingHistoryTriggerDisabled:hover {
+  opacity: 1;
+}
+
+.thinkingHistoryArrow {
+  font-size: 0.75rem;
+  transform: translateY(0.03125rem);
+}
+
+.thinkingCardBody {
+  padding: 0.625rem 0.5rem 0.875rem;
+}
+
+.thinkingContent {
+  position: relative;
+  color: #515d6e;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  max-height: 17rem;
+  overflow: auto;
+}
+
+.thinkingCopy {
+  position: absolute;
+  right: 0.125rem;
+  top: 0.125rem;
+  cursor: pointer;
+  color: #677486;
+  transition: color 0.2s ease;
+}
+
+.thinkingCopy:hover {
+  color: #3d4756;
+}
+
+.thinkingNode {
+  margin-bottom: 0.625rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 0.0625rem dashed #edf1f5;
+}
+
+.thinkingNode:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
 .viewTable {
   thead > tr > th {
     background-color: white !important;
@@ -92,6 +223,10 @@
 
 /* Markdown 内容样式 - 精准控制各元素行高 */
 .markdown-content {
+  color: #374151;
+  font-size: 0.875rem;
+  /* line-height: 1.8; */
+
   /* 基础样式重置 */
   & > * {
     padding: 0 !important;
@@ -108,35 +243,51 @@
   /* 段落样式 - 更紧凑的间距 */
   & > p,
   & p {
-    line-height: 1.6 !important;
+    margin: 0 0 0.5rem 0 !important;
   }
 
   & > p:empty {
     display: none !important;
   }
 
+  & > p:last-child,
+  & p:last-child {
+    margin-bottom: 0 !important;
+  }
+
   /* 标题样式 */
   & h1 {
-    line-height: 1.3 !important;
-    font-size: 1.5em !important;
+    font-size: 1rem !important;
   }
 
   & h2 {
-    line-height: 1.3 !important;
+    font-size: 1rem !important;
   }
 
   & h3 {
-    line-height: 1.3 !important;
+    font-size: 1rem !important;
   }
 
   & h4, & h5, & h6 {
-    line-height: 1.3 !important;
+    font-size: 1rem !important;
+  }
+
+  & h1,
+  & h2,
+  & h3,
+  & h4,
+  & h5,
+  & h6 {
+    margin: 0 0 0.75rem 0 !important;
+    color: #2d2d2d !important;
+    line-height: 1.5 !important;
+    font-weight: 600 !important;
   }
 
   /* 列表基础样式 */
   & ul,
   & ol {
-    line-height: 1 !important;
+    /* line-height: 1 !important; */
     list-style-position: outside !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -146,7 +297,7 @@
   & > ul > li,
   & > ol > li {
     padding: 0 !important;
-    line-height: 1.2 !important;
+    /* line-height: 1.2 !important; */
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -158,7 +309,7 @@
   & ol ul {
     margin: 0 !important;
     padding: 0 !important;
-    line-height: 1 !important;
+    /* line-height: 1 !important; */
   }
 
   /* 二级列表项 */
@@ -168,7 +319,7 @@
   & ol ul li {
     margin: 0 !important;
     padding: 0 !important;
-    line-height: 1.2 !important;
+    /* line-height: 1.2 !important; */
   }
 
   /* 三级列表 */
@@ -178,14 +329,14 @@
   & ol ul ol {
     margin: 0 !important;
     padding: 0 !important;
-    line-height: 1 !important;
+    /* line-height: 1 !important; */
   }
   /* 三级列表项 */
   & ul ul ul li,
   & ol ol ol li {
     margin: 0 !important;
     padding: 0 !important;
-    line-height: 1.3 !important;
+    /* line-height: 1.3 !important; */
   }
 
   /* 列表中的段落 */
@@ -196,7 +347,7 @@
   /* 代码块 */
   & pre {
     padding: 0.3em !important;
-    line-height: 1.4 !important;
+    /* line-height: 1.4 !important; */
     white-space: pre-wrap !important;
     word-wrap: break-word !important;
     overflow-wrap: break-word !important;
@@ -204,7 +355,7 @@
   }
 
   & code {
-    line-height: 1.4 !important;
+    /* line-height: 1.4 !important; */
     white-space: pre-wrap !important;
     word-wrap: break-word !important;
     overflow-wrap: break-word !important;
@@ -219,7 +370,7 @@
 
   & td, & th {
     padding: 0.2em 0.4em !important;
-    line-height: 1.3 !important;
+    /* line-height: 1.3 !important; */
   }
 
   /* 强调文本 */
