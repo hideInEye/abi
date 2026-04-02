@@ -428,7 +428,7 @@ const routes = [
         element: <DesignerViewPage/>
     },
     {
-        path: '/dr/:shareCode',
+        path: '/dashboard-share-page/:shareCode',
         element: <ShareViewPage/>
     },
     {

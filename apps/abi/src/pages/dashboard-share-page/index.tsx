@@ -8,7 +8,7 @@ export function Component() {
   return (
     <DashboardMicroApp
       containerId="abi-dashboard-dr"
-      initialPath={`/dr/${shareCode}`}
+      initialPath={`/dashboard-share-page/${shareCode}`}
       style={{ height: '100vh' }}
     />
   )

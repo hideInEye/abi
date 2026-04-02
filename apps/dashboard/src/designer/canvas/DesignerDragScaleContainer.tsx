@@ -26,12 +26,15 @@ const DesignerDragScaleContainer = memo(observer((props: DesignerDragScaleContai
     const containerRef = React.useRef<HTMLDivElement>(null);
     const contentRef = React.useRef<HTMLDivElement>(null);
     const {canvasConfig} = canvasManager!;
+    const dragScaleProviderRef = React.useRef<DragScaleProvider | null>(null);
+
     useEffect(() => {
         const container = containerRef.current;
         const content = contentRef.current;
         if (container && content) {
             const {setDsContentRef} = eventOperateStore;
             setDsContentRef(content)
+            // 先以默认 scale=1 创建，确保拖拽/缩放事件立即可用
             const dragScaleProvider = new DragScaleProvider({
                 eventContainer: container,
                 dsTarget: content,
@@ -48,7 +51,32 @@ const DesignerDragScaleContainer = memo(observer((props: DesignerDragScaleContai
                     rulerRef?.ruleDrag();
                 },
             });
+            dragScaleProviderRef.current = dragScaleProvider;
+
+            // 延迟一帧：确保所有兄弟/父组件 useEffect 都已执行（rulerRef 已注册），布局已稳定
+            const rafId = requestAnimationFrame(() => {
+                const containerW = container.clientWidth;
+                const containerH = container.clientHeight;
+                const canvasW = (canvasConfig?.width as number) || 1920;
+                const canvasH = (canvasConfig?.height as number) || 1080;
+                const initScale = Math.min(containerW / canvasW, containerH / canvasH, 1);
+                // 补偿 transform-origin(center) 导致的视觉偏移
+                const initX = -(canvasW * (1 - initScale)) / 2;
+                const initY = -(canvasH * (1 - initScale)) / 2;
+
+                // 更新 DragScaleProvider 内部状态（scale + position + transform 同步）
+                dragScaleProvider.setTransform(initScale, {x: initX, y: initY});
+
+                // 同步缩放状态到 store 并更新标尺
+                const {setScale, setRatio, rulerRef} = eventOperateStore;
+                setScale(initScale);
+                setRatio(initScale);
+                ScaleAction.doScale(initScale, initScale);
+                rulerRef?.ruleWheel();
+            });
+
             return () => {
+                cancelAnimationFrame(rafId);
                 dragScaleProvider.destroy();
             }
         }
