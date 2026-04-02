@@ -55,6 +55,12 @@ function parsePhysicalTableNames(rawValue: unknown) {
     .filter(Boolean)
 }
 
+function toCount(value: unknown): number | string | undefined {
+  if (value === null || value === undefined || value === '') return undefined
+  if (typeof value === 'number' || typeof value === 'string') return value
+  return String(value)
+}
+
 function fromRelationRows(rows: any[]): LineageRelation[] {
   return rows.map((item, index) => ({
     create_by: item.create_by ?? item.createBy,
@@ -63,12 +69,14 @@ function fromRelationRows(rows: any[]): LineageRelation[] {
     relation_type: normalizeRelationType(item.relation_type ?? item.relationType),
     remark: item.remark ?? '',
     source_node_id: toNodeId(item.source_node_id ?? item.sourceNodeId),
-    source_node_name: item.source_node_name ?? item.sourceNodeName ?? item.sourceName,
+    source_node_count: toCount(item.source_node_count ?? item.sourceNodeCount ?? item.sourceCount ?? item.sourceCountNum ?? item.sourceNode?.count),
+    source_node_name: item.source_node_name ?? item.sourceNodeName ?? item.sourceName ?? item.sourceNode?.nodeName ?? item.sourceNode?.name,
     source_node_type: normalizeNodeType(item.source_node_type ?? item.sourceNodeType),
     space_id: item.space_id ?? item.spaceId,
     status: normalizeStatus(item.status),
     target_node_id: toNodeId(item.target_node_id ?? item.targetNodeId),
-    target_node_name: item.target_node_name ?? item.targetNodeName ?? item.targetName,
+    target_node_count: toCount(item.target_node_count ?? item.targetNodeCount ?? item.targetCount ?? item.targetCountNum ?? item.targetNode?.count),
+    target_node_name: item.target_node_name ?? item.targetNodeName ?? item.targetName ?? item.targetNode?.nodeName ?? item.targetNode?.name,
     target_node_type: normalizeNodeType(item.target_node_type ?? item.targetNodeType),
     update_by: item.update_by ?? item.updateBy,
     update_time: item.update_time ?? item.updateTime
@@ -80,12 +88,12 @@ function fromNodeEdgeShape(raw: any): LineageRelation[] {
   const edges = Array.isArray(raw?.edges) ? raw.edges : []
 
   const nodeMap = new Map<string, any>()
-  nodes.forEach(node => {
+  nodes.forEach((node: any) => {
     const nodeId = toNodeId(node.nodeId ?? node.id)
     if (`${nodeId}`) nodeMap.set(`${nodeId}`, node)
   })
 
-  const edgeRelations = edges.map((edge, index) => {
+  const edgeRelations = edges.map((edge: any, index: number) => {
     const sourceId = toNodeId(edge.sourceNodeId ?? edge.source_node_id ?? edge.sourceId)
     const targetId = toNodeId(edge.targetNodeId ?? edge.target_node_id ?? edge.targetId)
     const sourceNode = nodeMap.get(`${sourceId}`)
@@ -98,11 +106,13 @@ function fromNodeEdgeShape(raw: any): LineageRelation[] {
       relation_type: normalizeRelationType(edge.relationType ?? edge.relation_type),
       remark: edge.remark ?? '',
       source_node_id: sourceId,
+      source_node_count: toCount(sourceNode?.count),
       source_node_name: sourceNode?.nodeName ?? sourceNode?.name,
       source_node_type: normalizeNodeType(sourceNode?.nodeType ?? edge.sourceNodeType ?? edge.source_node_type),
       space_id: edge.spaceId ?? edge.space_id ?? raw?.spaceId,
       status: normalizeStatus(edge.status ?? sourceNode?.status ?? targetNode?.status),
       target_node_id: targetId,
+      target_node_count: toCount(targetNode?.count),
       target_node_name: targetNode?.nodeName ?? targetNode?.name,
       target_node_type: normalizeNodeType(targetNode?.nodeType ?? edge.targetNodeType ?? edge.target_node_type),
       update_by: edge.updateBy ?? edge.update_by,
@@ -111,7 +121,7 @@ function fromNodeEdgeShape(raw: any): LineageRelation[] {
   })
 
   const tableRelations: LineageRelation[] = []
-  nodes.forEach(node => {
+  nodes.forEach((node: any) => {
     const nodeId = toNodeId(node.nodeId ?? node.id)
     const nodeType = normalizeNodeType(node.nodeType ?? node.type)
     const nodeName = node.nodeName ?? node.name
@@ -123,6 +133,7 @@ function fromNodeEdgeShape(raw: any): LineageRelation[] {
         lineage_id: `physical-table-${nodeId}-${index}`,
         relation_type: normalizeRelationType('DEPENDENCY'),
         source_node_id: nodeId,
+        source_node_count: toCount(node?.count),
         source_node_name: nodeName,
         source_node_type: nodeType,
         space_id: raw?.spaceId ?? node?.spaceId,
@@ -155,10 +166,12 @@ function fromLegacyShape(raw: any): LineageRelation[] {
       lineage_id: `legacy-table-${index}-${sourceId}`,
       relation_type: normalizeRelationType('DEPENDENCY'),
       source_node_id: sourceId,
+      source_node_count: undefined,
       source_node_name: sourceName,
       source_node_type: normalizeNodeType(sourceType),
       status: '0',
       target_node_id: tableId,
+      target_node_count: undefined,
       target_node_name: tableName,
       target_node_type: normalizeNodeType('TABLE_SEMANTIC')
     })
@@ -173,10 +186,12 @@ function fromLegacyShape(raw: any): LineageRelation[] {
       lineage_id: `legacy-dataset-${index}-${sourceId}`,
       relation_type: normalizeRelationType('DERIVED'),
       source_node_id: tableId || sourceId,
+      source_node_count: undefined,
       source_node_name: tableId ? raw.tables?.find((table: any) => table.viewId === dataset.viewId)?.tableName : sourceName,
       source_node_type: normalizeNodeType(tableId ? 'TABLE_SEMANTIC' : sourceType),
       status: '0',
       target_node_id: datasetId,
+      target_node_count: undefined,
       target_node_name: datasetName,
       target_node_type: normalizeNodeType('DATASET')
     })
@@ -201,10 +216,12 @@ function fromTreeShape(root: any): LineageRelation[] {
         lineage_id: child?.relationId ?? child?.lineageId ?? child?.id ?? `${childId}-${parentId}-${index}`,
         relation_type: normalizeRelationType(child?.relationType ?? 'DEPENDENCY'),
         source_node_id: childId,
+        source_node_count: undefined,
         source_node_name: child?.name,
         source_node_type: childType,
         status: normalizeStatus(child?.status ?? parent?.status),
         target_node_id: parentId,
+        target_node_count: undefined,
         target_node_name: parent?.name,
         target_node_type: parentType
       })

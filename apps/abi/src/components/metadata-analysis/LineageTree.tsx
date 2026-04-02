@@ -2,6 +2,7 @@
 import {
   ApiOutlined,
   DatabaseOutlined,
+  FileTextOutlined,
   MessageOutlined,
   RobotOutlined,
   TableOutlined,
@@ -44,7 +45,7 @@ function getNodeIcon(nodeType: string) {
     case 'TABLE_SEMANTIC':
       return <TableOutlined style={{ color: '#16a34a' }} />
     case 'PHYSICAL_TABLE':
-      return <TableOutlined style={{ color: '#64748b' }} />
+      return <FileTextOutlined style={{ color: '#64748b' }} />
     case 'COPILOT':
     case 'LLM':
       return <RobotOutlined style={{ color: '#7c3aed' }} />
@@ -222,14 +223,14 @@ const LineageTree: React.FC<Props> = ({ mode, relations, rootContext }) => {
 
   if (!displayData.length) {
     return (
-      <ACard title="树形展示">
+      <ACard title="树形图">
         <AEmpty description="暂无关系数据" />
       </ACard>
     )
   }
 
   return (
-    <ACard title="树形展示">
+    <ACard title="树形图">
       <ATable<TreeNode>
         columns={columns}
         dataSource={displayData}
