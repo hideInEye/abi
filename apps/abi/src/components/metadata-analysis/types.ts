@@ -6,11 +6,13 @@ export interface LineageRelation {
   lineage_id: number | string
   relation_type: string
   remark?: string
+  source_node_count?: number | string
   source_node_id: number | string
   source_node_name?: string
   source_node_type: string
   space_id?: number
   status: LineageStatus
+  target_node_count?: number | string
   target_node_id: number | string
   target_node_name?: string
   target_node_type: string

@@ -17,12 +17,12 @@ interface Props {
 
 const analysisOptions = [
   { label: '血缘分析', value: 'lineage' },
-  { label: '影响性分析', value: 'impact' }
+  { label: '影响分析', value: 'impact' }
 ] as const
 
 const viewOptions = [
-  { label: '逻辑关系图', value: 'graph' },
-  { label: '树形展示', value: 'tree' }
+  { label: '关系图', value: 'graph' },
+  { label: '树形图', value: 'tree' }
 ] as const
 
 function normalizeId(value: string | number | undefined) {
@@ -108,32 +108,49 @@ const MetadataAnalysisDrawer: React.FC<Props> = ({ context, onClose, open }) => 
     <ADrawer
       destroyOnClose
       open={open}
+      styles={{
+        body: {
+          overflow: viewMode === 'graph' ? 'hidden' : 'auto'
+        }
+      }}
       title="元数据分析"
       width={1280}
       onClose={onClose}
     >
-      <div className="mb-12px flex items-center justify-between">
+      <div className="mb-12px flex items-start justify-between">
         <div className="flex items-center gap-8px text-14px text-[#4b5563]">
           <span className="font-600 text-[#111827]">{context?.nodeName || '-'}</span>
           <span>({NODE_TYPE_LABELS[context?.nodeType || ''] || context?.nodeType || '-'})</span>
         </div>
-        <ASpace size={12}>
-          <Segmented
-            options={analysisOptions as any}
-            value={analysisMode}
-            onChange={value => setAnalysisMode(value as AnalysisMode)}
-          />
-          <Segmented
-            options={viewOptions as any}
-            value={viewMode}
-            onChange={value => setViewMode(value as AnalysisViewMode)}
-          />
-        </ASpace>
+        <div className="flex items-end gap-16px rounded-8px bg-[#f8fafc] px-12px py-8px">
+          <div className="flex flex-col gap-6px">
+            <span className="text-12px leading-12px text-[#6b7280]">分析类型</span>
+            <Segmented
+              options={analysisOptions as any}
+              value={analysisMode}
+              onChange={value => setAnalysisMode(value as AnalysisMode)}
+            />
+          </div>
+          <div className="h-38px w-1px bg-[#e5e7eb]" />
+          <div className="flex flex-col gap-6px">
+            <span className="text-12px leading-12px text-[#6b7280]">展示方式</span>
+            <Segmented
+              options={viewOptions as any}
+              value={viewMode}
+              onChange={value => setViewMode(value as AnalysisViewMode)}
+            />
+          </div>
+        </div>
       </div>
 
       <ASpin spinning={loading}>
         {viewMode === 'graph' ? (
-          <LineageGraph relations={relations} />
+          <LineageGraph
+            defaultExpandLevel={2}
+            mode={analysisMode}
+            relations={relations}
+            rootContext={context}
+          />
         ) : (
           <LineageTree
             mode={analysisMode}
