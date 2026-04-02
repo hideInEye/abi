@@ -108,7 +108,7 @@ class AntdPercentBarDefinition extends AbstractBarDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -127,7 +127,7 @@ class AntdPercentBarDefinition extends AbstractBarDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -142,7 +142,7 @@ class AntdPercentBarDefinition extends AbstractBarDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     }

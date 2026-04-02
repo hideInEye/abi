@@ -91,7 +91,7 @@ const DesignerRuler = memo((props: RulerProps & DesignerRulerProps) => {
     return (
         <div style={{
             position: 'relative',
-            backgroundColor: '#1E1E2F',
+            backgroundColor: '#f0f2f5',
             fontFamily: '"Inter", "Helvetica Neue", sans-serif'
         }}>
             {/* 单位标签 */}
@@ -99,7 +99,7 @@ const DesignerRuler = memo((props: RulerProps & DesignerRulerProps) => {
                 position: 'absolute',
                 width: 20,
                 height: 20,
-                color: '#A0A0B2',
+                color: '#999',
                 textAlign: 'center',
                 fontSize: 12,
                 top: -1
@@ -110,19 +110,19 @@ const DesignerRuler = memo((props: RulerProps & DesignerRulerProps) => {
                 width: `calc(100% - ${baseOffsetRef.current}px)`,
                 position: 'relative',
                 left: baseOffsetRef.current,
-                backgroundColor: '#1E1E2F',
-                borderBottom: '1px solid #3A3A4E'
+                backgroundColor: '#f0f2f5',
+                borderBottom: '1px solid #e0e0e0'
             }}>
                 <Ruler
                     ref={rulerXRef}
                     scrollPos={scrollPosRef.current.x}
                     zoom={scale}
-                    lineColor={'#3A3A4E'}
-                    textColor={'#A0A0B2'}
+                    lineColor={'#d9d9d9'}
+                    textColor={'#999'}
                     segment={2}
                     negativeRuler={true}
                     textOffset={[0, 10]}
-                    backgroundColor={'#1E1E2F'}
+                    backgroundColor={'#f0f2f5'}
                     unit={unitRef.current}
                 />
             </div>
@@ -131,20 +131,20 @@ const DesignerRuler = memo((props: RulerProps & DesignerRulerProps) => {
                 height: window.innerHeight - baseOffsetRef.current - 100,
                 position: 'relative',
                 overflow: 'hidden',
-                backgroundColor: '#1E1E2F',
-                borderRight: '1px solid #3A3A4E'
+                backgroundColor: '#f0f2f5',
+                borderRight: '1px solid #e0e0e0'
             }}>
                 <Ruler
                     ref={rulerYRef}
                     type={'vertical'}
                     scrollPos={scrollPosRef.current.y}
-                    lineColor={'#3A3A4E'}
-                    textColor={'#A0A0B2'}
+                    lineColor={'#d9d9d9'}
+                    textColor={'#999'}
                     zoom={scale}
                     segment={2}
                     negativeRuler={true}
                     textOffset={[10, 0]}
-                    backgroundColor={'#1E1E2F'}
+                    backgroundColor={'#f0f2f5'}
                     unit={unitRef.current}
                 />
             </div>

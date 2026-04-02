@@ -104,7 +104,7 @@ class AntdPercentColumnDefinition extends AbstractColumnDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -123,7 +123,7 @@ class AntdPercentColumnDefinition extends AbstractColumnDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -139,7 +139,7 @@ class AntdPercentColumnDefinition extends AbstractColumnDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 13
                         }
                     }

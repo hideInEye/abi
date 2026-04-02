@@ -51,14 +51,14 @@ class AntdBaseLineDefinition extends AbstractLineDefinition {
                 yField: "value",
                 smooth: true,
                 supportCSSTransform: true,
-                color: "l(90) 0:#2f82ff 1:#cd4dff",
+                color: "#1677ff",
                 point: {
                     size: 6,
-                    color: "l(90) 0:#4995ff 1:#d176ff",
+                    color: "#1677ff",
                     shape: "circle",
                     style: {
                         lineWidth: 0,
-                        stroke: "#00d7ff"
+                        stroke: "#4096ff"
                     }
                 },
                 lineStyle: {
@@ -67,7 +67,7 @@ class AntdBaseLineDefinition extends AbstractLineDefinition {
                 label: {
                     position: "middle",
                     style: {
-                        fill: "#ffffff",
+                        fill: "#555",
                         fontSize: 10,
                         fontWeight: 400
                     }
@@ -76,7 +76,7 @@ class AntdBaseLineDefinition extends AbstractLineDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -91,7 +91,7 @@ class AntdBaseLineDefinition extends AbstractLineDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },

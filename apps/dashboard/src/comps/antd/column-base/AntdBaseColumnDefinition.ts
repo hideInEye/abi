@@ -58,7 +58,7 @@ class AntdBaseColumnDefinition extends AbstractColumnDefinition {
                 maxColumnWidth: 18,
                 supportCSSTransform: true,
                 color: [
-                    "l(90) 0:#71aaff 1:#008cff"
+                    "l(90) 0:#69b1ff 1:#1677ff"
                 ],
                 columnStyle: {
                     radius: 5
@@ -67,7 +67,7 @@ class AntdBaseColumnDefinition extends AbstractColumnDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -81,13 +81,13 @@ class AntdBaseColumnDefinition extends AbstractColumnDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
                     line: {
                         style: {
-                            stroke: "#ffffffa3",
+                            stroke: "rgba(0,0,0,0.15)",
                             lineWidth: 1
                         }
                     },
@@ -102,7 +102,7 @@ class AntdBaseColumnDefinition extends AbstractColumnDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#f9f5f5",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -120,7 +120,7 @@ class AntdBaseColumnDefinition extends AbstractColumnDefinition {
                 label: {
                     position: "top",
                     style: {
-                        fill: "#ffffff"
+                        fill: "#555"
                     },
                     offsetY: 9
                 }

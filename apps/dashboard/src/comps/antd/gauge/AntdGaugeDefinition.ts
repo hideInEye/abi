@@ -96,7 +96,7 @@ class AntdGaugeDefinition extends AbstractDesignerDefinition<AntdGaugeController
                     },
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12,
                             textAlign: "center",
                             textBaseline: "bottom"
@@ -106,7 +106,7 @@ class AntdGaugeDefinition extends AbstractDesignerDefinition<AntdGaugeController
                 statistic: {
                     content: {
                         style: {
-                            color: "#ffffff",
+                            color: "#555",
                             fontSize: "16"
                         }
                     }

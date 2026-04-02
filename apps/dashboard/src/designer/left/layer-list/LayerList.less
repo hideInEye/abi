@@ -12,8 +12,8 @@
 .layer-list {
   width: 280px;
   height: 100%;
-  background-color: #2C2C3E;
-  border-right: 1px solid #3A3A4E;
+  background-color: #fff;
+  border-right: 1px solid rgba(5, 5, 5, 0.06);
   display: flex;
   flex-direction: column;
   font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -23,22 +23,22 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    border-bottom: 1px solid #3A3A4E;
+    border-bottom: 1px solid rgba(5, 5, 5, 0.06);
 
     .dl-ll-header-title {
-      color: #FFFFFF;
+      color: #333;
       font-size: 14px;
       font-weight: 600;
       line-height: 20px;
     }
 
     .dl-ll-header-operate {
-      color: #A0A0B2;
+      color: #999;
       cursor: pointer;
       transition: color 0.2s;
 
       &:hover {
-        color: #FF6E6E;
+        color: #ff4d4f;
       }
 
       .icon-park {
@@ -57,19 +57,19 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background-color: rgba(79, 184, 255, 0.47);
+      background-color: #d9d9d9;
       border-radius: 3px;
     }
 
     &::-webkit-scrollbar-track {
-      background-color: #2C2C3E;
+      background-color: #f2f3f5;
     }
   }
 }
 
 /* 基础图层项样式 */
 .layer-item-base {
-  color: #A0A0B2;
+  color: #555;
   font-size: 12px;
   line-height: 20px;
   padding: 8px 12px;
@@ -84,7 +84,7 @@
   box-sizing: border-box;
 
   &:hover {
-    background-color: rgba(79, 184, 255, 0.1);
+    background-color: #e6f4ff;
 
     .layer-operators,
     .group-operators {
@@ -124,11 +124,11 @@
 
     .i-icon {
       font-size: 16px;
-      color: #A0A0B2;
+      color: #999;
       transition: color 0.2s;
 
       &:hover {
-        color: #4FB8FF;
+        color: #1677ff;
       }
     }
   }
@@ -147,7 +147,7 @@
 
       .group-icon {
         margin-right: 8px;
-        color: #4FB8FF;
+        color: #1677ff;
 
         .i-icon {
           font-size: 16px;
@@ -180,11 +180,11 @@
 
       .i-icon {
         font-size: 16px;
-        color: #A0A0B2;
+        color: #999;
         transition: color 0.2s;
 
         &:hover {
-          color: #4FB8FF;
+          color: #1677ff;
         }
       }
     }
@@ -197,20 +197,20 @@
 
 /* 状态类 */
 .layer-selected {
-  background-color: rgba(79, 184, 255, 0.2) !important;
-  color: #FFFFFF !important;
+  background-color: #e6f4ff !important;
+  color: #1677ff !important;
 }
 
 .layer-lock {
-  background-color: rgba(255, 110, 110, 0.2) !important;
-  color: #FF6E6E !important;
+  background-color: rgba(255, 77, 79, 0.1) !important;
+  color: #ff4d4f !important;
 
   .group-icon {
-    color: #FF6E6E !important;
+    color: #ff4d4f !important;
   }
 }
 
 .layer-hide {
-  background-color: rgba(160, 160, 178, 0.2) !important;
+  background-color: rgba(0, 0, 0, 0.04) !important;
   opacity: 0.6;
 }

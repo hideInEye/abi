@@ -1,4 +1,4 @@
-import { EditOutlined, MinusCircleOutlined, PlusCircleOutlined, FolderOutlined, ApartmentOutlined } from '@ant-design/icons';
+import { EditOutlined, MinusCircleOutlined, PlusCircleOutlined, FolderOpenFilled } from '@ant-design/icons';
 import { Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React from 'react';
@@ -140,10 +140,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       return {
         title: (
           <span className="inline-flex items-center gap-2 group">
-            {nodeIsLeaf
-              ? <ApartmentOutlined className="group-node-icon group-node-icon--leaf" />
-              : <FolderOutlined className="group-node-icon group-node-icon--folder" />
-            }
+            <FolderOpenFilled className="group-node-icon group-node-icon--folder" />
             <span className="group-tree-title">{item.groupName}</span>
             <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
               {!nodeIsLeaf || true ? (
@@ -178,7 +175,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     {
       title: (
         <span className="inline-flex items-center gap-2 group">
-          <FolderOutlined className="group-node-icon group-node-icon--folder" />
+          <FolderOpenFilled className="group-node-icon group-node-icon--folder" />
           <span className="group-tree-title">{config.panelTitle}</span>
           <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
             <Tooltip title="添加组">

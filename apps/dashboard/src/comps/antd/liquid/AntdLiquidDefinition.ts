@@ -91,7 +91,7 @@ class AntdLiquidDefinition extends AbstractDesignerDefinition<AntdLiquidControll
                         style: {
                             fill: "#7de0ff",
                             fontSize: '20',
-                            color: "#ffffff",
+                            color: "#555",
                             fontWeight: 200
                         }
                     },
@@ -99,7 +99,7 @@ class AntdLiquidDefinition extends AbstractDesignerDefinition<AntdLiquidControll
                         content: "指标1",
                         style: {
                             fontSize: "22",
-                            color: "#ffffffc2",
+                            color: "#555",
                             fontWeight: 500
                         },
                         offsetY: -10

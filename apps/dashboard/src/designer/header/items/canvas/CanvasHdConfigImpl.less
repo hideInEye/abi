@@ -11,17 +11,17 @@
 // CanvasHdConfigImpl.less
 .lc-header-canvas-modal {
   .ant-modal-content {
-    background-color: #1E1E2F;
+    background-color: #fff;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 
     .ant-modal-header {
       background-color: transparent;
-      border-bottom: 1px solid #3A3A4E;
+      border-bottom: 1px solid rgba(5, 5, 5, 0.06);
       padding: 16px 20px;
 
       .canvas-config-title {
-        color: #FFFFFF;
+        color: #333;
         font-size: 18px;
         font-weight: 600;
         line-height: 28px;
@@ -29,9 +29,9 @@
     }
 
     .ant-modal-close {
-      color: #A0A0B2;
+      color: #999;
       &:hover {
-        color: #FFFFFF;
+        color: #333;
       }
     }
 
@@ -48,32 +48,32 @@
         margin-bottom: 16px;
 
         .lc-field-label {
-          color: #A0A0B2;
+          color: #555;
           font-size: 14px;
           margin-bottom: 8px;
         }
 
         .ant-input-number, .ant-select-selector, .ant-input {
-          background-color: #2C2C3E !important;
-          border-color: #3A3A4E !important;
-          color: #FFFFFF !important;
+          background-color: #fff !important;
+          border-color: #d9d9d9 !important;
+          color: #333 !important;
           border-radius: 4px;
           transition: all 0.2s;
 
           &:hover {
-            border-color: #4FB8FF !important;
+            border-color: #1677ff !important;
           }
 
           &:focus {
-            box-shadow: 0 0 0 2px rgba(79, 184, 255, 0.2);
+            box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
           }
         }
 
         .ant-switch {
-          background-color: #3A3A4E;
+          background-color: rgba(0, 0, 0, 0.25);
 
           &.ant-switch-checked {
-            background-color: #4FB8FF;
+            background-color: #1677ff;
           }
         }
       }
@@ -81,12 +81,12 @@
   }
 
   .canvas-config-desc {
-    color: #A0A0B2;
+    color: #999;
     font-size: 12px;
     line-height: 16px;
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid #3A3A4E;
+    border-top: 1px solid rgba(5, 5, 5, 0.06);
   }
 
   .canvas-config-btn {
@@ -98,34 +98,34 @@
     transition: all 0.2s;
 
     &.primary {
-      background-color: #4FB8FF;
-      border-color: #4FB8FF;
-      color: #FFFFFF;
+      background-color: #1677ff;
+      border-color: #1677ff;
+      color: #fff;
 
       &:hover {
-        background-color: lighten(#4FB8FF, 10%);
-        border-color: lighten(#4FB8FF, 10%);
+        background-color: #4096ff;
+        border-color: #4096ff;
       }
 
       &:active {
-        background-color: darken(#4FB8FF, 10%);
-        border-color: darken(#4FB8FF, 10%);
+        background-color: #0958d9;
+        border-color: #0958d9;
       }
     }
 
     &.secondary {
       background-color: transparent;
-      border-color: #4FB8FF;
-      color: #4FB8FF;
+      border-color: #d9d9d9;
+      color: #555;
 
       &:hover {
-        color: lighten(#4FB8FF, 10%);
-        border-color: lighten(#4FB8FF, 10%);
+        color: #1677ff;
+        border-color: #1677ff;
       }
 
       &:active {
-        color: darken(#4FB8FF, 10%);
-        border-color: darken(#4FB8FF, 10%);
+        color: #0958d9;
+        border-color: #0958d9;
       }
     }
   }

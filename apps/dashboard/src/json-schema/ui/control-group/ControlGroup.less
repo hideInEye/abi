@@ -12,10 +12,9 @@
 .control-group {
   width: 100%;
   margin-bottom: 16px;
-  background-color: #2C2C3E;
+  background-color: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  border: 1px solid #3A3A4E;
+  border: 1px solid rgba(5, 5, 5, 0.06);
   overflow: hidden;
   transition: all 0.2s ease;
 
@@ -24,7 +23,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    color: #FFFFFF;
+    color: #333;
     font-size: 16px;
     font-weight: 500;
     line-height: 1.5;
@@ -33,11 +32,11 @@
     border-bottom: 1px solid transparent;
 
     &:hover {
-      background-color: rgba(79, 184, 255, 0.05);
-      color: #4FB8FF;
+      background-color: #e6f4ff;
+      color: #1677ff;
 
       .cgh-operate .operate-icon {
-        color: #4FB8FF;
+        color: #1677ff;
       }
     }
 
@@ -53,7 +52,7 @@
       gap: 12px;
 
       .operate-icon {
-        color: #A0A0B2;
+        color: #999;
         cursor: pointer;
         padding: 4px;
         border-radius: 4px;
@@ -63,13 +62,13 @@
         justify-content: center;
 
         &:hover {
-          background-color: rgba(79, 184, 255, 0.1);
-          color: #4FB8FF;
+          background-color: #e6f4ff;
+          color: #1677ff;
         }
 
         &.del-icon:hover {
-          color: #FF6E6E;
-          background-color: rgba(255, 110, 110, 0.1);
+          color: #ff4d4f;
+          background-color: rgba(255, 77, 79, 0.1);
         }
       }
     }
@@ -77,8 +76,8 @@
 
   .control-group-body {
     padding: 16px;
-    background-color: #3A3A4E;
-    border-top: 1px solid #3A3A4E;
+    background-color: #f2f3f5;
+    border-top: 1px solid rgba(5, 5, 5, 0.06);
 
     .lc-accordion {
       margin-bottom: 12px;
@@ -88,7 +87,7 @@
       }
 
       .accordion-header {
-        color: #A0A0B2;
+        color: #555;
         font-size: 14px;
       }
     }

@@ -137,7 +137,7 @@ class AntdRadarDefinition extends AntdCommonDefinition<AntdRadarController, Antd
                     },
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 13
                         }
                     }
@@ -162,7 +162,7 @@ class AntdRadarDefinition extends AntdCommonDefinition<AntdRadarController, Antd
                     },
                     label: {
                         style: {
-                            fill: "#ffffff"
+                            fill: "#555"
                         }
                     },
                     tickCount: 3

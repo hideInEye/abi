@@ -77,7 +77,7 @@ class AntdRingProgressDefinition extends AntdCommonDefinition<AntdRingProgressCo
                             fill: "#fff",
                             fontSize: '21',
                             fontWeight: 500,
-                            color: "#ffffff"
+                            color: "#555"
                         },
                         offsetY: 7,
                         offsetX: 0
@@ -86,7 +86,7 @@ class AntdRingProgressDefinition extends AntdCommonDefinition<AntdRingProgressCo
                         style: {
                             fontSize: '15',
                             fontWeight: 500,
-                            color: "#ffffff"
+                            color: "#555"
                         },
                         content: "指标1",
                         offsetY: -11

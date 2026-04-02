@@ -99,7 +99,7 @@ class AntdBaseRadialBarDefinition extends AntdCommonDefinition<AntdBaseRadialBar
                 xAxis: {
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     }

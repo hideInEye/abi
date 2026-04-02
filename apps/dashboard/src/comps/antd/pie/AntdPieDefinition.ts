@@ -95,8 +95,8 @@ class AntdPieDefinition extends AntdCommonDefinition<AntdPieController, AntdPieP
                         textAlign: "center",
                         fontSize: 12,
                         fontWeight: 400,
-                        fill: "#ffffff",
-                        stroke: "#f10d0d"
+                        fill: "#555",
+                        stroke: "transparent"
                     },
                     labelLine: false
                 },
@@ -105,7 +105,7 @@ class AntdPieDefinition extends AntdCommonDefinition<AntdPieController, AntdPieP
                     layout: "vertical",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     }
@@ -122,7 +122,7 @@ class AntdPieDefinition extends AntdCommonDefinition<AntdPieController, AntdPieP
                     title: {
                         style: {
                             fontSize: '12',
-                            color: "#ffffff",
+                            color: "#555",
                             fontWeight: 300
                         },
                         content: "总计",
@@ -131,7 +131,7 @@ class AntdPieDefinition extends AntdCommonDefinition<AntdPieController, AntdPieP
                     content: {
                         style: {
                             fontSize: "16px",
-                            color: "#ffffff",
+                            color: "#555",
                             fontWeight: 400
                         },
                         content: "100",
@@ -146,10 +146,10 @@ class AntdPieDefinition extends AntdCommonDefinition<AntdPieController, AntdPieP
                     }
                 },
                 color: [
-                    "l(90) 0:#4ca9ff 1:#0082d9",
-                    "l(90) 0:#8f4dff 1:#f0b3fc",
-                    "l(90) 0:#ff5e62 1:#ff9966",
-                    "l(90) 0:#28f7ac 1:#348ac7"
+                    "#1677ff",
+                    "#13c2c2",
+                    "#52c41a",
+                    "#faad14"
                 ]
             },
             data: {

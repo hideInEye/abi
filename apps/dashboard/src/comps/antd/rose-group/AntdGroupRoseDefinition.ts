@@ -87,7 +87,7 @@ class AntdGroupRoseDefinition extends AbstractRoseDefinition {
                 label: {
                     offset: 16,
                     style: {
-                        fill: "#ffffff"
+                        fill: "#555"
                     },
                     autoRotate: false
                 },
@@ -96,7 +96,7 @@ class AntdGroupRoseDefinition extends AbstractRoseDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     }

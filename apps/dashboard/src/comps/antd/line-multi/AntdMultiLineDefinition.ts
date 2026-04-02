@@ -116,7 +116,7 @@ class AntdMultiLineDefinition extends AbstractLineDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -130,7 +130,7 @@ class AntdMultiLineDefinition extends AbstractLineDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -151,7 +151,7 @@ class AntdMultiLineDefinition extends AbstractLineDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     }
@@ -166,7 +166,7 @@ class AntdMultiLineDefinition extends AbstractLineDefinition {
                     position: "middle",
                     style: {
                         fontSize: 8,
-                        fill: "#ffffff"
+                        fill: "#555"
                     }
                 }
             },

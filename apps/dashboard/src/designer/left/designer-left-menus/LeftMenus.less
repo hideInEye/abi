@@ -11,8 +11,8 @@
 
 .designer-left-menus {
   width: 64px;
-  background-color: #2C2C3E;
-  border-right: 1px solid #3A3A4E;
+  background-color: #fff;
+  border-right: 1px solid rgba(5, 5, 5, 0.06);
   padding: 8px 0;
   overflow-y: auto;
   scrollbar-width: none; /* Firefox */
@@ -29,7 +29,7 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    color: #A0A0B2;
+    color: #555;
     transition: all 0.2s ease;
     margin-bottom: 4px;
     border-radius: 4px;
@@ -49,17 +49,17 @@
     }
 
     &:hover {
-      color: #4FB8FF;
-      background-color: rgba(79, 184, 255, 0.1);
+      color: #1677ff;
+      background-color: #e6f4ff;
 
       .menu-item-icon {
-        color: #4FB8FF;
+        color: #1677ff;
       }
     }
 
     &-active {
-      color: #4FB8FF;
-      background-color: rgba(79, 184, 255, 0.2);
+      color: #1677ff;
+      background-color: #e6f4ff;
 
       &::after {
         content: '';
@@ -68,12 +68,12 @@
         top: 0;
         bottom: 0;
         width: 3px;
-        background-color: #4FB8FF;
+        background-color: #1677ff;
         border-radius: 0 2px 2px 0;
       }
 
       .menu-item-icon {
-        color: #4FB8FF;
+        color: #1677ff;
       }
     }
   }

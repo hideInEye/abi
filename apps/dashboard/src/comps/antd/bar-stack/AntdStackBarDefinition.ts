@@ -87,7 +87,7 @@ class AntdStackBarDefinition extends AbstractBarDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -106,7 +106,7 @@ class AntdStackBarDefinition extends AbstractBarDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -121,7 +121,7 @@ class AntdStackBarDefinition extends AbstractBarDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     }

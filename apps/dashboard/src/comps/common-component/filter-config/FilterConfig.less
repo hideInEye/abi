@@ -11,9 +11,8 @@
 
 .filter-config {
   padding: 20px;
-  background-color: #1E1E2F;
+  background-color: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 
   .ui-container {
     margin-bottom: 16px;
@@ -21,7 +20,7 @@
     &-label {
       min-width: 55px;
       font-size: 14px;
-      color: #FFFFFF;
+      color: #333;
       margin-right: 12px;
       display: inline-block;
       line-height: 20px;
@@ -34,20 +33,20 @@
 
   // 假设 LCGUI 内部使用的输入组件样式
   input, select {
-    background-color: #2C2C3E;
-    border: 1px solid #3A3A4E;
+    background-color: #fff;
+    border: 1px solid #d9d9d9;
     border-radius: 4px;
-    color: #FFFFFF;
+    color: #333;
     padding: 8px 12px;
     transition: all 0.2s;
 
     &:hover {
-      border-color: #4FB8FF;
+      border-color: #1677ff;
     }
 
     &:focus {
-      border-color: #4FB8FF;
-      box-shadow: 0 0 0 2px rgba(79, 184, 255, 0.2);
+      border-color: #1677ff;
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
       outline: none;
     }
   }
@@ -55,19 +54,19 @@
   // 按钮样式假设
   button {
     &.primary {
-      background-color: #4FB8FF;
-      color: #FFFFFF;
+      background-color: #1677ff;
+      color: #fff;
       border: none;
       border-radius: 4px;
       padding: 6px 12px;
       cursor: pointer;
 
       &:hover {
-        background-color: lighten(#4FB8FF, 10%);
+        background-color: #4096ff;
       }
 
       &:active {
-        background-color: darken(#4FB8FF, 10%);
+        background-color: #0958d9;
       }
     }
   }

@@ -11,23 +11,24 @@
 .bp-node {
   width: 200px;
   min-height: 80px;
-  background-color: #2C2C3E;
+  background-color: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   font-family: 'Helvetica Neue', Arial, sans-serif;
-  color: #FFFFFF;
+  color: #333;
   transition: all 0.2s ease;
+  border: 1px solid rgba(5, 5, 5, 0.08);
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
   .bp-node-header {
     padding: 12px 16px;
     display: flex;
     align-items: center;
-    background-color: #247057; // 保留原有titleBgColor逻辑
+    background-color: #247057;
 
     .bp-node-icon {
       margin-right: 8px;
@@ -47,11 +48,13 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: #fff;
     }
   }
 
   .bp-node-body {
     padding: 12px 16px;
+    background-color: #f8f9fb;
 
     .bp-node-ap {
       display: flex;
@@ -61,15 +64,15 @@
       transition: all 0.2s ease;
 
       &:hover {
-        background-color: #3A3A4E;
+        background-color: #e6f4ff;
 
         .bp-node-ap-circle span {
-          border-color: #4FB8FF;
-          background-color: #4FB8FF;
+          border-color: #1677ff;
+          background-color: #1677ff;
         }
 
         .bg-node-ap-label {
-          color: #FFFFFF;
+          color: #1677ff;
         }
       }
 
@@ -85,8 +88,8 @@
           width: 12px;
           height: 12px;
           border-radius: 50%;
-          border: 2px solid #A0A0B2;
-          background-color: #2C2C3E;
+          border: 2px solid #bbb;
+          background-color: #fff;
           transition: all 0.2s ease;
           cursor: pointer;
         }
@@ -103,7 +106,7 @@
       .bg-node-ap-label {
         font-size: 12px;
         line-height: 16px;
-        color: #d9d9d9;
+        color: #555;
         transition: color 0.2s ease;
         padding: 0 4px;
         white-space: nowrap;

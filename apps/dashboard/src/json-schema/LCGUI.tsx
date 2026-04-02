@@ -13,8 +13,8 @@ import {Control, ControlValueType} from "./SchemaTypes";
 import React, {ReactNode} from "react";
 import LCGUIUtil from "./LCGUIUtil";
 import UIMap from "./ui";
-import {ConfigProvider} from "antd";
-import {antdComponentTheme, studioDarkAlgorithm} from "./AntdTheme.ts";
+import {ConfigProvider, theme} from "antd";
+import {antdComponentTheme} from "./AntdTheme.ts";
 
 export interface FieldChangeData {
     id?: string;
@@ -176,7 +176,7 @@ export class LCGUI extends React.Component<LCGUIProps> {
     render() {
         return (
             <ConfigProvider theme={{
-                algorithm: studioDarkAlgorithm,
+                algorithm: theme.defaultAlgorithm,
                 components: antdComponentTheme
             }}>
                 {this.init()}

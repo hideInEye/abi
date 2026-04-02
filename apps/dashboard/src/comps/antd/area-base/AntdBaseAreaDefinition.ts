@@ -137,7 +137,7 @@ class AntdBaseAreaDefinition extends AbstractAreaDefinition {
                     position: "top",
                     offsetY: -4,
                     style: {
-                        fill: "#ffffff",
+                        fill: "#555",
                         fontSize: 14
                     },
                 },

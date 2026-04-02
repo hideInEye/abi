@@ -89,7 +89,7 @@ class AntdRangeColumnDefinition extends AbstractColumnDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     },
@@ -103,7 +103,7 @@ class AntdRangeColumnDefinition extends AbstractColumnDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     },
@@ -123,7 +123,7 @@ class AntdRangeColumnDefinition extends AbstractColumnDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     },
@@ -138,7 +138,7 @@ class AntdRangeColumnDefinition extends AbstractColumnDefinition {
                 label: {
                     position: "middle",
                     style: {
-                        fill: "#ffffff",
+                        fill: "#555",
                         fontSize: 10
                     }
                 }
