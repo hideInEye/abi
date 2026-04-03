@@ -10,10 +10,10 @@
  */
 .lc-theme-config-global, .lc-edit-theme-config {
   .ant-modal-content {
-    background-color: #1E1E2F;
-    color: #FFFFFF;
+    background-color: #fff;
+    color: #333;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 
     .ant-modal-close {
       top: 30px;
@@ -21,20 +21,20 @@
     }
 
     .ant-modal-header {
-      background-color: #2C2C3E;
-      border-bottom: 1px solid #3A3A4E;
+      background-color: #f2f3f5;
+      border-bottom: 1px solid rgba(5, 5, 5, 0.06);
       border-radius: 8px 8px 0 0;
       padding: 16px 20px;
 
       .ant-modal-title {
-        color: #FFFFFF;
+        color: #333;
       }
     }
 
     .ant-modal-footer {
-      border-top: 1px solid #3A3A4E;
+      border-top: 1px solid rgba(5, 5, 5, 0.06);
       padding: 12px 20px;
-      background-color: #2C2C3E;
+      background-color: #f2f3f5;
       border-radius: 0 0 8px 8px;
     }
   }
@@ -52,23 +52,25 @@
     }
 
     &-primary {
-      background-color: #4FB8FF;
-      border-color: #4FB8FF;
-      color: #FFFFFF;
+      background-color: #1677ff;
+      border-color: #1677ff;
+      color: #fff;
 
       &:hover {
-        background-color: #3CA8EF;
-        border-color: #3CA8EF;
+        background-color: #4096ff;
+        border-color: #4096ff;
       }
     }
 
     &-default {
       background-color: transparent;
-      border-color: #4FB8FF;
-      color: #4FB8FF;
+      border-color: #d9d9d9;
+      color: #555;
 
       &:hover {
-        background-color: rgba(79, 184, 255, 0.1);
+        color: #1677ff;
+        border-color: #1677ff;
+        background-color: rgba(22, 119, 255, 0.04);
       }
     }
   }

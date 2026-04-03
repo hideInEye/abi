@@ -34,14 +34,14 @@ class ThemeManager extends AbstractManager<Array<ThemeItemType>> {
     themeConfig: Array<ThemeItemType> | null = [
         {
             id: "0",
-            name: "科技风格(默认主题)",
+            name: "标准风格(默认主题)",
             colors: {
-                main: "#00dfff",
-                mainText: "#62edff",
-                subText: "#4ca4b1",
-                background: "#00dfff33",
-                supplementFirst: "#38929f",
-                supplementSecond: "#1790a2",
+                main: "#1677ff",
+                mainText: "#333333",
+                subText: "#555555",
+                background: "rgba(22,119,255,0.08)",
+                supplementFirst: "#13c2c2",
+                supplementSecond: "#52c41a",
             },
         },
     ];

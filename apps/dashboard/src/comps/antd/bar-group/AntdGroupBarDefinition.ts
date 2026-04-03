@@ -85,7 +85,7 @@ class AntdGroupBarDefinition extends AbstractBarDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -104,7 +104,7 @@ class AntdGroupBarDefinition extends AbstractBarDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -119,7 +119,7 @@ class AntdGroupBarDefinition extends AbstractBarDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     }
@@ -135,7 +135,7 @@ class AntdGroupBarDefinition extends AbstractBarDefinition {
                 label: {
                     position: "right",
                     style: {
-                        fill: "#efefef",
+                        fill: "#555",
                         fontSize: 10
                     }
                 }

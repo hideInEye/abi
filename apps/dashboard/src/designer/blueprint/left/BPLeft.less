@@ -11,21 +11,21 @@
 .bp-left {
   display: flex;
   height: calc(100vh - 56px);
-  background-color: #1E1E2F;
-  border-right: 1px solid #3A3A4E;
+  background-color: #fff;
+  border-right: 1px solid rgba(5, 5, 5, 0.06);
 
   .bp-node-sort-list {
     height: 100%;
     width: 80px;
-    border-right: 1px solid #3A3A4E;
+    border-right: 1px solid rgba(5, 5, 5, 0.06);
     padding: 16px 0;
-    background-color: #2C2C3E;
+    background-color: #f2f3f5;
 
     .bp-left-item {
       display: flex;
       flex-direction: column;
       align-items: center;
-      color: #A0A0B2;
+      color: #888;
       padding: 12px 0;
       margin: 0 8px 8px;
       border-radius: 4px;
@@ -46,41 +46,42 @@
       }
 
       &:hover {
-        background-color: #3A3A4E;
-        color: #4FB8FF;
+        background-color: #e6f4ff;
+        color: #1677ff;
         cursor: pointer;
       }
     }
 
     .bp-left-item-active {
-      background-color: #3A3A4E;
-      color: #4FB8FF;
+      background-color: #e6f4ff;
+      color: #1677ff;
     }
   }
 
   .bp-node-list {
     width: 280px;
     height: 100%;
-    background-color: #1E1E2F;
+    background-color: #fff;
     display: flex;
     flex-direction: column;
 
     .bp-node-list-header {
       padding: 16px;
-      border-bottom: 1px solid #3A3A4E;
+      border-bottom: 1px solid rgba(5, 5, 5, 0.06);
 
       .bp-node-list-search {
         width: 100%;
 
         .input-container {
-          background-color: #2C2C3E;
-          border: 1px solid #3A3A4E;
+          background-color: #f2f3f5;
+          border: 1px solid #d9d9d9;
           border-radius: 4px;
 
           input {
-            color: #FFFFFF;
+            color: #333;
+            background-color: transparent;
             &::placeholder {
-              color: #A0A0B2;
+              color: #bbb;
             }
           }
         }
@@ -98,11 +99,11 @@
           align-items: center;
           padding: 12px;
           margin-bottom: 8px;
-          background-color: #2C2C3E;
+          background-color: #f2f3f5;
           border-radius: 4px;
           border: 1px solid transparent;
           transition: all 0.2s ease;
-          color: #FFFFFF;
+          color: #333;
 
           .bpn-li-icon {
             width: 24px;
@@ -111,13 +112,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: rgba(79, 184, 255, 0.15);
+            background-color: rgba(22, 119, 255, 0.1);
             border-radius: 4px;
             padding: 4px;
 
             svg {
               stroke-width: 2px;
-              color: #4FB8FF;
+              color: #1677ff;
             }
           }
 
@@ -128,8 +129,8 @@
           }
 
           &:hover {
-            background-color: #3A3A4E;
-            border-color: #4FB8FF;
+            background-color: #e6f4ff;
+            border-color: #1677ff;
             cursor: grab;
           }
 
@@ -139,14 +140,14 @@
         }
 
         .bp-node-list-item-used {
-          background-color: #2C2C3E;
-          color: #A0A0B2;
+          background-color: #f5f5f5;
+          color: #bbb;
           cursor: not-allowed;
 
           .bpn-li-icon {
-            background-color: rgba(160, 160, 178, 0.1);
+            background-color: rgba(0, 0, 0, 0.04);
             svg {
-              color: #A0A0B2;
+              color: #bbb;
             }
           }
         }

@@ -125,7 +125,7 @@ class AntdScatterBubbleDefinition extends AbstractScatterDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         },
                         offset: 16
@@ -140,7 +140,7 @@ class AntdScatterBubbleDefinition extends AbstractScatterDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         },
                         offset: 5
@@ -161,7 +161,7 @@ class AntdScatterBubbleDefinition extends AbstractScatterDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     }

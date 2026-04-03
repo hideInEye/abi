@@ -31,11 +31,11 @@
   font-size: 15px;
 
   &--folder {
-    color: #8c8c8c; // 灰色文件夹
+    color: #595959; // 黑灰色文件夹
   }
 
   &--leaf {
-    color: #8c8c8c; // 最内层叶子节点图标
-    font-size: 13px;
+    color: #595959; // 叶子节点图标（保留class兼容性）
+    font-size: 15px;
   }
 }

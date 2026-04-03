@@ -87,7 +87,7 @@ class AntdGroupColumnDefinition extends AbstractColumnDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -101,7 +101,7 @@ class AntdGroupColumnDefinition extends AbstractColumnDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -137,7 +137,7 @@ class AntdGroupColumnDefinition extends AbstractColumnDefinition {
                     position: "top",
                     style: {
                         fontSize: 10,
-                        fill: "#ffffff"
+                        fill: "#555"
                     },
                     offsetX: 0,
                     offsetY: 8

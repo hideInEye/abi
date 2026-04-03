@@ -56,7 +56,7 @@ export default function MonacoEditor(props: MonacoEditorProps) {
             <div style={{width, height}} className={'monaco-editor-container'}>
                 <Suspense fallback={<Loading/>}>
                     <Editor defaultLanguage={language || 'json'}
-                            theme="vs-dark"
+                            theme="light"
                             onChange={onChange}
                             height={'100%'}
                             width={'100%'}

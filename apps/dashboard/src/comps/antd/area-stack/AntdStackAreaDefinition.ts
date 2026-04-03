@@ -153,7 +153,7 @@ class AntdStackAreaDefinition extends AbstractAreaDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -168,7 +168,7 @@ class AntdStackAreaDefinition extends AbstractAreaDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#f9f9f9",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -189,7 +189,7 @@ class AntdStackAreaDefinition extends AbstractAreaDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 10
                         }
                     }

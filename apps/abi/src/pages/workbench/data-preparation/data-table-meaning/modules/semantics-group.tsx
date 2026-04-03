@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, PlusCircleOutlined, MinusCircleOutlined, FolderOutlined, ApartmentOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, PlusCircleOutlined, MinusCircleOutlined, FolderOpenFilled } from '@ant-design/icons';
 import { Button, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React, { useEffect, useState } from 'react';
@@ -97,10 +97,7 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
       return {
         title: (
           <span className="inline-flex items-center gap-2 group">
-            {nodeIsLeaf
-              ? <ApartmentOutlined className="group-node-icon group-node-icon--leaf" />
-              : <FolderOutlined className="group-node-icon group-node-icon--folder" />
-            }
+            <FolderOpenFilled className="group-node-icon group-node-icon--folder" />
             <span className="group-tree-title">{item.groupName}</span>
             <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
               <Tooltip title="添加子组">
@@ -143,7 +140,7 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
     {
       title: (
         <span className="inline-flex items-center gap-2 group">
-          <FolderOutlined className="group-node-icon group-node-icon--folder" />
+          <FolderOpenFilled className="group-node-icon group-node-icon--folder" />
           <span className="group-tree-title">表语义组</span>
           <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
             <Tooltip title="添加组">

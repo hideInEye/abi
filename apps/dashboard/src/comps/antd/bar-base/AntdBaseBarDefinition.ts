@@ -54,7 +54,7 @@ class AntdBaseBarDefinition extends AbstractBarDefinition {
                 data: data,
                 label: {
                     style: {
-                        fill: "#ffffff",
+                        fill: "#555",
                         fontWeight: 500
                     },
                     position: "right"
@@ -64,9 +64,9 @@ class AntdBaseBarDefinition extends AbstractBarDefinition {
                 seriesField: "name",
                 maxBarWidth: 12,
                 color: [
-                    "l(135) 0:#43cbff 1:#0090d9",
-                    "l(135) 0:#3e95ff 1:#256eff",
-                    "l(135) 0:#428bff 1:#7e64ff"
+                    "l(135) 0:#4096ff 1:#1677ff",
+                    "l(135) 0:#36cfc9 1:#13c2c2",
+                    "l(135) 0:#73d13d 1:#52c41a"
                 ],
                 barStyle: {
                     radius: 6
@@ -76,7 +76,7 @@ class AntdBaseBarDefinition extends AbstractBarDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#d9d9d9",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -95,7 +95,7 @@ class AntdBaseBarDefinition extends AbstractBarDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#d6d6d6",
+                            fill: "#555",
                             fontSize: 12
                         },
                         offset: 9
@@ -111,7 +111,7 @@ class AntdBaseBarDefinition extends AbstractBarDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#e4e4e4",
+                            fill: "#555",
                             fontSize: 12
                         }
                     }

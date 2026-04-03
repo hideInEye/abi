@@ -119,7 +119,7 @@ class AntdStackRoseDefinition extends AbstractRoseDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 16
                         }
                     }

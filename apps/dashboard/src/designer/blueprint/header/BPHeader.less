@@ -11,18 +11,18 @@
 .bp-header {
   width: 100%;
   height: 56px;
-  background-color: #1E1E2F;
+  background-color: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  border-bottom: 1px solid #3A3A4E;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(5, 5, 5, 0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 
   .bp-header-title {
     font-size: 18px;
     font-weight: 600;
-    color: #FFFFFF;
+    color: #333;
     line-height: 28px;
     font-family: 'Helvetica Neue', Arial, sans-serif;
   }
@@ -34,9 +34,10 @@
     .bp-close-icon {
       cursor: pointer;
       transition: all 0.2s ease;
+      color: #555;
 
       &:hover {
-        fill: #4FB8FF;
+        color: #1677ff;
         transform: scale(1.1);
       }
 

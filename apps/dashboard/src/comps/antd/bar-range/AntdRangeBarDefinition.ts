@@ -89,7 +89,7 @@ class AntdRangeBarDefinition extends AbstractBarDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     },
@@ -108,7 +108,7 @@ class AntdRangeBarDefinition extends AbstractBarDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     },
@@ -123,7 +123,7 @@ class AntdRangeBarDefinition extends AbstractBarDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     },

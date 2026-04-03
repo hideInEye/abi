@@ -189,7 +189,7 @@ class AntdPercentAreaDefinition extends AbstractAreaDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 10
                         }
                     },
@@ -203,7 +203,7 @@ class AntdPercentAreaDefinition extends AbstractAreaDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -218,7 +218,7 @@ class AntdPercentAreaDefinition extends AbstractAreaDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     }

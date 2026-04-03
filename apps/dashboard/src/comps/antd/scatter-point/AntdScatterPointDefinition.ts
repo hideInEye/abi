@@ -79,7 +79,7 @@ class AntdScatterPointDefinition extends AbstractScatterDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -99,7 +99,7 @@ class AntdScatterPointDefinition extends AbstractScatterDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -115,7 +115,7 @@ class AntdScatterPointDefinition extends AbstractScatterDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     }

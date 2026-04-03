@@ -14,14 +14,14 @@
 .lc-theme-item {
   padding: 5px 0;
   margin-bottom: 10px;
-  background-color: rgba(49, 49, 49, 0.32);
+  background-color: #f2f3f5;
   border-radius: 5px;
   border: 2px solid transparent;
 
   .lc-theme-item-header {
     padding: 5px 7px;
     font-size: @lc-font-sm;
-    color: #aeaeae;
+    color: #555;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -39,7 +39,7 @@
     }
 
     .lc-theme-item-operators:hover {
-      color: #47f1ff;
+      color: #1677ff;
     }
   }
 
@@ -52,16 +52,13 @@
 }
 
 .lc-theme-item:hover {
-  background-color: rgba(105, 105, 105, 0.32);
+  background-color: #e6f4ff;
   border-radius: 5px;
   cursor: pointer;
 }
 
 .lc-theme-item-active {
-  border: 2px solid transparent;
+  border: 2px solid #1677ff;
   border-radius: 5px;
-  background-color: rgba(49, 49, 49, 0.32);
-  background-clip: padding-box, border-box;
-  background-origin: padding-box, border-box;
-  background-image: linear-gradient(to right, #222, #222), linear-gradient(90deg, #0080be, #005c82);
+  background-color: #e6f4ff;
 }

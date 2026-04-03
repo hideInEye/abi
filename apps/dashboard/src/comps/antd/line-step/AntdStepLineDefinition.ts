@@ -55,16 +55,16 @@ class AntdStepLineDefinition extends AbstractLineDefinition {
                 xField: "year",
                 yField: "value",
                 stepType: "vh",
-                color: "l(90) 0:#2e88ff 1:#b95eff",
+                color: "#1677ff",
                 smooth: true,
                 supportCSSTransform: true,
                 point: {
                     size: 0,
-                    color: "#00d7ff",
+                    color: "#4096ff",
                     shape: "bowtie",
                     style: {
                         lineWidth: 0,
-                        stroke: "#00d7ff"
+                        stroke: "#4096ff"
                     }
                 },
                 lineStyle: {
@@ -74,7 +74,7 @@ class AntdStepLineDefinition extends AbstractLineDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -89,7 +89,7 @@ class AntdStepLineDefinition extends AbstractLineDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     },
@@ -123,7 +123,7 @@ class AntdStepLineDefinition extends AbstractLineDefinition {
                 label: {
                     position: "top",
                     style: {
-                        fill: "#ffffff",
+                        fill: "#555",
                         fontSize: 10
                     },
                     offsetY: -11,

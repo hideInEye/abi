@@ -11,18 +11,17 @@
 
 .code-editor-container {
   position: relative;
-  background-color: #1E1E2F;
+  background-color: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   overflow: hidden;
 
   .monaco-editor-container {
-    border: 1px solid #3A3A4E;
+    border: 1px solid #d9d9d9;
     border-radius: 4px;
     transition: border-color 0.2s;
 
     &:hover {
-      border-color: #4FB8FF;
+      border-color: #1677ff;
     }
   }
 
@@ -36,9 +35,9 @@
       top: -24px;
       right: 6px;
       font-size: 16px;
-      color: #A0A0B2;
+      color: #999;
       transition: all 0.2s;
-      background-color: #2C2C3E;
+      background-color: #f2f3f5;
       width: 24px;
       height: 24px;
       display: flex;
@@ -48,12 +47,12 @@
       cursor: pointer;
 
       &:hover {
-        color: #4FB8FF;
-        background-color: lighten(#2C2C3E, 5%);
+        color: #1677ff;
+        background-color: #e6f4ff;
       }
 
       &:active {
-        background-color: darken(#2C2C3E, 5%);
+        background-color: #bae0ff;
       }
     }
   }
@@ -61,16 +60,16 @@
   // FullEditor 模态框样式
   .ant-modal {
     .ant-modal-content {
-      background-color: #1E1E2F;
+      background-color: #fff;
       border-radius: 8px;
 
       .ant-modal-header {
-        background-color: #2C2C3E;
-        border-bottom: 1px solid #3A3A4E;
+        background-color: #f2f3f5;
+        border-bottom: 1px solid rgba(5, 5, 5, 0.06);
         border-radius: 8px 8px 0 0;
 
         .ant-modal-title {
-          color: #FFFFFF;
+          color: #333;
           font-size: 18px;
           font-weight: 600;
         }
@@ -86,9 +85,9 @@
       }
 
       .ant-modal-footer {
-        border-top: 1px solid #3A3A4E;
+        border-top: 1px solid rgba(5, 5, 5, 0.06);
         padding: 12px 20px;
-        background-color: #2C2C3E;
+        background-color: #f2f3f5;
         border-radius: 0 0 8px 8px;
 
         .ant-btn {
@@ -100,24 +99,24 @@
 
           &-default {
             background-color: transparent;
-            border-color: #4FB8FF;
-            color: #4FB8FF;
+            border-color: #d9d9d9;
+            color: #555;
 
             &:hover {
-              background-color: rgba(79, 184, 255, 0.1);
-              border-color: lighten(#4FB8FF, 10%);
-              color: lighten(#4FB8FF, 10%);
+              color: #1677ff;
+              border-color: #1677ff;
+              background-color: rgba(22, 119, 255, 0.04);
             }
           }
 
           &-primary {
-            background-color: #4FB8FF;
-            border-color: #4FB8FF;
-            color: #FFFFFF;
+            background-color: #1677ff;
+            border-color: #1677ff;
+            color: #fff;
 
             &:hover {
-              background-color: lighten(#4FB8FF, 10%);
-              border-color: lighten(#4FB8FF, 10%);
+              background-color: #4096ff;
+              border-color: #4096ff;
             }
           }
         }

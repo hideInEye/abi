@@ -62,7 +62,7 @@ class AntdBaseRoseDefinition extends AbstractRoseDefinition {
                 },
                 label: {
                     style: {
-                        fill: "#ffffff",
+                        fill: "#555",
                         fontSize: 16
                     },
                     autoRotate: true
@@ -72,7 +72,7 @@ class AntdBaseRoseDefinition extends AbstractRoseDefinition {
                     layout: "vertical",
                     itemName: {
                         style: {
-                            fill: "#ffffff",
+                            fill: "#555",
                             fontSize: 14
                         }
                     },
