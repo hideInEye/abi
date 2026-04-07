@@ -422,6 +422,10 @@ const ShareViewPage = lazy(() => import('../pages/share/ShareViewPage.tsx'));
 //     },
 // };
 
+/** 动态读取主应用传入的页面标题 */
+const DynamicServerProjectList = () => <ServerProjectList title={window.__ABI_DASHBOARD_PAGE_TITLE__}/>
+const DynamicMyScreen = () => <MyScreen title={window.__ABI_DASHBOARD_PAGE_TITLE__}/>
+
 const routes = [
     {
         path: '/view',
@@ -441,7 +445,7 @@ const routes = [
     },
     {
         path: '/projects',
-        element: <ServerProjectList/>,
+        element: <DynamicServerProjectList/>,
     },
     {
         path: '/published-projects',
@@ -449,7 +453,7 @@ const routes = [
     },
     {
         path: '/my-screen',
-        element: <MyScreen/>,
+        element: <DynamicMyScreen/>,
     },
     {
         path: '/home',

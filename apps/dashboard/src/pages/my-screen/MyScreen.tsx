@@ -8,7 +8,11 @@ import '../home/project-list/ProjectList.less';
 
 const {Search} = Input;
 
-const MyScreen = memo(() => {
+interface MyScreenProps {
+    title?: string;
+}
+
+const MyScreen = memo(({ title }: MyScreenProps) => {
     const [pageData, setPageData] = React.useState<IPage<IProjectInfo>>({
         records: [],
         total: 0,
@@ -60,7 +64,7 @@ const MyScreen = memo(() => {
 
     return (
         <div className="project-list-container">
-            <h1 className="project-list-title">我的大屏</h1>
+            <h1 className="project-list-title">{title || '我的大屏'}</h1>
             <div className="project-list-header">
                 <Search
                     placeholder="搜索项目"
