@@ -5,8 +5,8 @@
   }
 }
 .group-panel {
-  width: 280px;
-  flex: 0 0 280px;
+  width: 200px;
+  flex: 0 0 200px;
   overflow: hidden;
   .ant-tree {
     overflow: hidden;
@@ -31,7 +31,8 @@
   font-size: 15px;
 
   &--folder {
-    color: #595959; // 黑灰色文件夹
+    width: 15px;
+    height: 15px;
   }
 
   &--leaf {

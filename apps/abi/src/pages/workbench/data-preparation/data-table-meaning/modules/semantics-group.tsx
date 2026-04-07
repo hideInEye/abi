@@ -1,9 +1,10 @@
-import { DeleteOutlined, EditOutlined, PlusCircleOutlined, MinusCircleOutlined, FolderOpenFilled } from '@ant-design/icons';
-import { Button, Popconfirm, Tooltip, Tree } from 'antd';
+import { EllipsisOutlined, PlusCircleOutlined } from '@ant-design/icons';
+import { Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React, { useEffect, useState } from 'react';
 
-import { deleteTableSemanticsGroup, tableSemanticsGroupList } from '@/service/api/table-semantics';
+import folderIcon from '@/assets/svg-icon/folder.svg';
+import { tableSemanticsGroupList } from '@/service/api/table-semantics';
 import { buildGroupTree } from '../utils/helper';
 import '@/components/stateful/group/group.scss';
 import './index.scss';
@@ -22,7 +23,7 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
   const { setEditAddGroup, setEditGroupItem, setGroupModalOpen } = useTableSemanticsStore();
   const [listSemanticGroup, setListSemanticGroup] = useState<groupitem[]>([]);
   const { groupId, setGroupId } = useTableStore();
-  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>(['group-root']);
+  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
 
   const groupNameClick = async (item: any) => {
     setGroupId(item.groupId);
@@ -52,13 +53,6 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
     groupList();
   }, [groupName]);
 
-  const handleDelete = async (key: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    await deleteTableSemanticsGroup(key);
-    setListSemanticGroup([]);
-    groupList();
-  };
-
   function handleEditGroup(item: any, e: React.MouseEvent) {
     e.stopPropagation();
     setGroupModalOpen(true);
@@ -66,11 +60,11 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
     setEditGroupItem(item);
   }
 
-  function handleAddGroup(parentItem?: any, e?: React.MouseEvent) {
-    e?.stopPropagation();
+  function handleAddGroup(e: React.MouseEvent) {
+    e.stopPropagation();
     setGroupModalOpen(true);
     setEditAddGroup(1);
-    setEditGroupItem(parentItem ?? null);
+    setEditGroupItem(null);
   }
 
   function handleUpdateData() {
@@ -80,7 +74,7 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
   // 树节点选中
   const handleTreeSelect = (selectedKeys: React.Key[]) => {
     const key = selectedKeys[0];
-    if (key && String(key).startsWith('group-') && key !== 'group-root') {
+    if (key && String(key).startsWith('group-')) {
       const gId = Number(String(key).replace('group-', ''));
       const item = listSemanticGroup.find(g => g.groupId === gId);
       if (item) {
@@ -93,73 +87,45 @@ export const SemanticsGroup: React.FC<DataGroupProps> = ({ groupName, onDefaultG
   const buildTreeNodes = (items: any[]): TreeDataNode[] => {
     return items.map(item => {
       const hasChildren = item.children && item.children.length > 0;
-      const nodeIsLeaf = !hasChildren;
       return {
         title: (
-          <span className="inline-flex items-center gap-2 group">
-            <FolderOpenFilled className="group-node-icon group-node-icon--folder" />
-            <span className="group-tree-title">{item.groupName}</span>
-            <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
-              <Tooltip title="添加子组">
-                <PlusCircleOutlined
-                  className="text-gray-400 cursor-pointer hover:text-primary"
-                  onClick={(e) => handleAddGroup(item, e)}
-                />
-              </Tooltip>
+          <span className="flex items-center gap-2 w-full group">
+            <img src={folderIcon} className="group-node-icon group-node-icon--folder flex-shrink-0" alt="folder" />
+            <span className="group-tree-title flex-1 truncate">{item.groupName}</span>
+            <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
               <Tooltip title="编辑">
-                <EditOutlined
+                <EllipsisOutlined
                   className="text-gray-400 cursor-pointer hover:text-primary"
+                  style={{ fontSize: '1rem' }}
                   onClick={(e) => handleEditGroup(item, e)}
                 />
               </Tooltip>
-              <Popconfirm
-                title="提示"
-                description="确定删除该组吗？"
-                onConfirm={(e) => handleDelete(item.groupId, e as any)}
-                onCancel={(e) => e?.stopPropagation()}
-              >
-                <Tooltip title="删除">
-                  <MinusCircleOutlined
-                    className="text-gray-400 cursor-pointer hover:text-red-500"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </Tooltip>
-              </Popconfirm>
             </span>
           </span>
         ),
         key: `group-${item.groupId}`,
         children: hasChildren ? buildTreeNodes(item.children) : undefined,
-        isLeaf: nodeIsLeaf
+        isLeaf: !hasChildren
       };
     });
   };
 
-  // 构建树形数据
-  const treeData: TreeDataNode[] = [
-    {
-      title: (
-        <span className="inline-flex items-center gap-2 group">
-          <FolderOpenFilled className="group-node-icon group-node-icon--folder" />
-          <span className="group-tree-title">表语义组</span>
-          <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
-            <Tooltip title="添加组">
-              <PlusCircleOutlined
-                className="text-gray-400 cursor-pointer hover:text-primary"
-                onClick={(e) => handleAddGroup(undefined, e)}
-              />
-            </Tooltip>
-          </span>
-        </span>
-      ),
-      key: 'group-root',
-      children: buildTreeNodes(buildGroupTree(listSemanticGroup))
-    }
-  ];
+  const treeData: TreeDataNode[] = buildTreeNodes(buildGroupTree(listSemanticGroup));
 
   return (
     <div>
-      <EditGroup updateGroupData={handleUpdateData} />
+      <EditGroup updateGroupData={handleUpdateData} allGroups={listSemanticGroup} />
+      {/* 顶部标题行 */}
+      <div className="flex items-center justify-between px-1 py-1">
+        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'rgba(0,0,0,0.35)', letterSpacing: '0.05em' }}>文件夹</span>
+        <Tooltip title="添加组">
+          <PlusCircleOutlined
+            className="text-gray-400 cursor-pointer hover:text-primary"
+            style={{ fontSize: '0.875rem' }}
+            onClick={(e) => handleAddGroup(e as any)}
+          />
+        </Tooltip>
+      </div>
       <Tree
         treeData={treeData}
         expandedKeys={expandedKeys}

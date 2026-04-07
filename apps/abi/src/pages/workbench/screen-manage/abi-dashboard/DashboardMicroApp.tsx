@@ -1,6 +1,8 @@
 import { loadMicroApp } from 'qiankun'
+import type { MicroApp } from 'qiankun'
 import type { CSSProperties } from 'react'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
+import { useRoute } from '@sa/simple-router'
 import { store } from '@/store'
 import { resetStore } from '@/store/slice/auth'
 
@@ -19,7 +21,11 @@ function getDashboardHostBasePath() {
 
 export default function DashboardMicroApp(props: DashboardMicroAppProps) {
   const { className, containerId, initialPath, style } = props
+  const route = useRoute()
+  const routeTitle = typeof route.meta?.title === 'string' ? route.meta.title.trim() : ''
+  const microAppRef = useRef<MicroApp | null>(null)
 
+  // 初次挂载微应用
   useEffect(() => {
     const container = document.getElementById(containerId)
     if (!container) {
@@ -33,16 +39,28 @@ export default function DashboardMicroApp(props: DashboardMicroAppProps) {
       props: {
         hostBasePath: getDashboardHostBasePath(),
         initialPath,
+        pageTitle: routeTitle || undefined,
         onTokenExpired: () => {
           store.dispatch(resetStore())
         }
       }
     })
+    microAppRef.current = microApp
 
     return () => {
       microApp.mountPromise.then(() => microApp.unmount())
+      microAppRef.current = null
     }
   }, [containerId, initialPath])
+
+  // routeTitle 变化时更新微应用 props
+  useEffect(() => {
+    if (microAppRef.current) {
+      microAppRef.current.update?.({
+        pageTitle: routeTitle || undefined
+      })
+    }
+  }, [routeTitle])
 
   return (
     <div

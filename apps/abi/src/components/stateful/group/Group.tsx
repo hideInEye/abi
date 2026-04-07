@@ -1,10 +1,21 @@
-import { EditOutlined, MinusCircleOutlined, PlusCircleOutlined, FolderOpenFilled } from '@ant-design/icons';
-import { Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
+import { DeleteOutlined, EllipsisOutlined, PlusCircleOutlined } from '@ant-design/icons';
+import { Button, Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React from 'react';
 
+import folderIcon from '@/assets/svg-icon/folder.svg';
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics';
 import { buildGroupTree } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
+
+function buildParentTreeOptions(list: any[]): any[] {
+  return buildGroupTree(list).map(function toOption(node: any): any {
+    return {
+      title: node.groupName,
+      value: node.groupId,
+      ...(node.children?.length ? { children: node.children.map(toOption) } : {}),
+    };
+  });
+}
 
 import { GroupFrom } from './GroupFrom';
 import { type QuestionGroupItem, useGroupManagement } from './useGroupManagement';
@@ -41,9 +52,8 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     setGroups,
     setIsModalOpen
   } = useGroupManagement(config);
-  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>(['group-root']);
+  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
-  const [addParentItem, setAddParentItem] = useState<QuestionGroupItem | null>(null);
 
   useEffect(() => {
     getGroups();
@@ -78,8 +88,13 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
        flag = await handleGroupEdit({ ...editingGroup, ...values, groupType: config.type });
        
       } else {
-        // 新增模式
-      flag = !!(await handleGroupAdd({ ...values, groupType: config.type, parentId: addParentItem?.groupId ?? 0 }));
+        // 新增模式：parentId 来自表单选择（未选则为 0），isPrivate 来自表单
+        flag = !!(await handleGroupAdd({
+          ...values,
+          groupType: config.type,
+          parentId: values.parentId ?? 0,
+          isPrivate: values.isPrivate ?? false
+        }));
       }
       if(flag){
         handleModalCancel();
@@ -90,8 +105,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     }
   };
 
-  const showAddModal = (parentItem?: QuestionGroupItem | null) => {
-    setAddParentItem(parentItem ?? null);
+  const showAddModal = () => {
     setEditingGroup(null);
     setIsModalOpen(true);
   };
@@ -99,18 +113,16 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
   const showEditModal = (group: QuestionGroupItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingGroup(group);
-    form.setFieldsValue(group);
+    form.setFieldsValue({
+      ...group,
+      parentId: group.parentId || undefined,
+    });
     setIsModalOpen(true);
   };
 
-  const handleAddGroup = (e: React.MouseEvent, parentItem?: QuestionGroupItem) => {
+  const handleAddGroup = (e: React.MouseEvent) => {
     e.stopPropagation();
-    showAddModal(parentItem);
-  };
-
-  const handleAddChildGroup = (item: QuestionGroupItem, e: React.MouseEvent) => {
-    e.stopPropagation();
-    showAddModal(item);
+    showAddModal();
   };
 
   const handleDeleteGroup = async (groupId: number, e?: React.MouseEvent) => {
@@ -121,13 +133,11 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
   const handleTreeSelect = (selectedKeys: React.Key[]) => {
     if (selectedKeys.length > 0) {
       const key = selectedKeys[0] as string;
-      if (key !== 'group-root') {
-        const groupId = Number(key.replace('group-', ''));
-        const group = groups.find(g => g.groupId === groupId);
-        if (group) {
-          setSelectedKeys(selectedKeys);
-          onGroupId(group.groupId);
-        }
+      const groupId = Number(key.replace('group-', ''));
+      const group = groups.find(g => g.groupId === groupId);
+      if (group) {
+        setSelectedKeys(selectedKeys);
+        onGroupId(group.groupId);
       }
     }
   };
@@ -139,28 +149,17 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       const nodeIsLeaf = !hasChildren;
       return {
         title: (
-          <span className="inline-flex items-center gap-2 group">
-            <FolderOpenFilled className="group-node-icon group-node-icon--folder" />
-            <span className="group-tree-title">{item.groupName}</span>
-            <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
-              {!nodeIsLeaf || true ? (
-                <Tooltip title="添加子组">
-                  <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => handleAddChildGroup(item, e)} />
-                </Tooltip>
-              ) : null}
+          <span className="flex items-center gap-2 w-full group">
+            <img src={folderIcon} className="group-node-icon group-node-icon--folder flex-shrink-0" alt="folder" />
+            <span className="group-tree-title flex-1 truncate">{item.groupName}</span>
+            <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
               <Tooltip title="编辑">
-                <EditOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={(e) => showEditModal(item, e)} />
+                <EllipsisOutlined
+                  className="text-gray-400 cursor-pointer hover:text-primary"
+                  style={{ fontSize: '1rem' }}
+                  onClick={(e) => showEditModal(item, e)}
+                />
               </Tooltip>
-              <Popconfirm
-                title="提示"
-                description="确定删除该组吗？"
-                onConfirm={(e) => handleDeleteGroup(item.groupId, e as any)}
-                onCancel={(e) => e?.stopPropagation()}
-              >
-                <Tooltip title="删除">
-                  <MinusCircleOutlined className="text-gray-400 cursor-pointer hover:text-red-500" onClick={(e) => e.stopPropagation()} />
-                </Tooltip>
-              </Popconfirm>
             </span>
           </span>
         ),
@@ -171,23 +170,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     });
   };
 
-  const treeData: TreeDataNode[] = [
-    {
-      title: (
-        <span className="inline-flex items-center gap-2 group">
-          <FolderOpenFilled className="group-node-icon group-node-icon--folder" />
-          <span className="group-tree-title">{config.panelTitle}</span>
-          <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
-            <Tooltip title="添加组">
-              <PlusCircleOutlined className="text-gray-400 cursor-pointer hover:text-primary" onClick={handleAddGroup} />
-            </Tooltip>
-          </span>
-        </span>
-      ),
-      key: 'group-root',
-      children: buildTreeNodes(buildGroupTree(groups))
-    }
-  ];
+  const treeData: TreeDataNode[] = buildTreeNodes(buildGroupTree(groups));
 
   return (
     <>
@@ -197,6 +180,16 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
           className="group-search-input"
           onChange={(e) => handleSearch(e.target.value)}
         />
+        <div className="flex items-center justify-between px-1 py-1">
+          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'rgba(0,0,0,0.35)', letterSpacing: '0.05em' }}>文件夹</span>
+          <Tooltip title="添加组">
+            <PlusCircleOutlined
+              className="text-gray-400 cursor-pointer hover:text-primary"
+              style={{ fontSize: '0.875rem' }}
+              onClick={(e) => handleAddGroup(e as any)}
+            />
+          </Tooltip>
+        </div>
         <Tree
           treeData={treeData}
           expandedKeys={expandedKeys}
@@ -212,11 +205,30 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
         centered
         title={editingGroup ? config.modalEditTitle : config.modalAddTitle}
         onCancel={handleModalCancel}
-        onOk={handleModalOk}
-        okText="确认"
+        footer={
+          <div className="flex items-center justify-between">
+            {/* 编辑时左下角显示删除按钮 */}
+            {editingGroup ? (
+              <Popconfirm
+                title="提示"
+                description="确定删除该组吗？"
+                onConfirm={() => { handleDeleteGroup(editingGroup.groupId); handleModalCancel(); }}
+              >
+                <Button danger icon={<DeleteOutlined />}>删除</Button>
+              </Popconfirm>
+            ) : <span />}
+            <div className="flex gap-2">
+              <Button onClick={handleModalCancel}>取消</Button>
+              <Button type="primary" onClick={handleModalOk}>确认</Button>
+            </div>
+          </div>
+        }
       >
-        <AForm form={form}>
-          <GroupFrom config={config} />
+        <AForm form={form} layout="vertical">
+          <GroupFrom
+            config={config}
+            parentOptions={buildParentTreeOptions(groups)}
+          />
         </AForm>
       </Modal>
     </>

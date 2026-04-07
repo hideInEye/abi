@@ -8,8 +8,8 @@ interface Props {
 
 const baseStyle: CSSProperties = {
   color: '#333333',
-  fontFamily: 'PingFangSC, PingFang SC',
-  fontSize: '1.125rem',
+  // fontFamily: 'PingFangSC, PingFang SC',
+  fontSize: '1rem',
   fontWeight: 600
 }
 

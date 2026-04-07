@@ -22,9 +22,10 @@ let root: ReturnType<typeof createRoot> | null = null;
 
 async function render(props: any) {
     await loadAppConfig();
-    const {container, hostBasePath, initialPath, onTokenExpired} = props ?? {};
+    const {container, hostBasePath, initialPath, onTokenExpired, pageTitle} = props ?? {};
     window.__ABI_DASHBOARD_HOST_BASE_PATH__ = hostBasePath;
     window.__ABI_DASHBOARD_INITIAL_PATH__ = initialPath;
+    window.__ABI_DASHBOARD_PAGE_TITLE__ = pageTitle;
     window.onTokenExpired = onTokenExpired;
     const containerEl = container
         ? container.querySelector('#root')
@@ -53,13 +54,16 @@ const initQianKun = () => {
             root = null;
             delete window.__ABI_DASHBOARD_HOST_BASE_PATH__;
             delete window.__ABI_DASHBOARD_INITIAL_PATH__;
+            delete window.__ABI_DASHBOARD_PAGE_TITLE__;
             try {
                 delete window.onTokenExpired;
             } catch {
                 window.onTokenExpired = undefined;
             }
         },
-        update(_props: any) {},
+        update(props: any) {
+            render(props);
+        },
     } as any);
 };
 

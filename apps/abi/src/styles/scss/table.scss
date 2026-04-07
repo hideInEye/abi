@@ -1,6 +1,6 @@
 // 列表表头样式
 .ant-table-wrapper .ant-table-thead > tr > th{
-  font-family: PingFangSC, PingFang SC;
+  // font-family: PingFangSC, PingFang SC;
   font-weight: 500;
   font-size: 0.875rem;
   color: #000000;
@@ -52,7 +52,7 @@
 }
 
 .group-search-input {
-  font-family: PingFangSC, PingFang SC;
+  // font-family: PingFangSC, PingFang SC;
   font-weight: 400;
   font-size: 14px;
   color: #333333;
@@ -65,9 +65,9 @@
 // Tree选中样式 - 所有分组统一样式
 .semantics-tree,
 .ant-tree {
-  font-family: PingFangSC, PingFang SC;
+  // font-family: PingFangSC, PingFang SC;
   font-weight: 400;
-  font-size:  1rem;
+  font-size: 0.875rem;
   color: #000000;
   .group-tree-title {
     display: inline-block;
