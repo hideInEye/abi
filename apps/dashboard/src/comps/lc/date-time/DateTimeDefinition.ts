@@ -48,7 +48,7 @@ export default class DateTimeDefinition extends AbstractDesignerDefinition<DateT
             style: {
                 fontSize: 16,
                 fontWeight: 500,
-                color: '#fff',
+                color: '#000',
                 fontFamily: 'Arial',
                 alignItems: 'center',
                 justifyContent: 'center',

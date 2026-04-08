@@ -93,7 +93,7 @@ class G2PlotCustomDefinition extends AntdCommonDefinition<G2PlotCustomController
                     "                grid: null,\n" +
                     "                label: {\n" +
                     "                    style: {\n" +
-                    "                        fill: \"#fff\",\n" +
+                    "                        fill: \"#555\",\n" +
                     "                        fontSize: 10,\n" +
                     "                    },\n" +
                     "                },\n" +
@@ -103,7 +103,7 @@ class G2PlotCustomDefinition extends AntdCommonDefinition<G2PlotCustomController
                     "                grid: null,\n" +
                     "                label: {\n" +
                     "                    style: {\n" +
-                    "                        fill: \"#fff\",\n" +
+                    "                        fill: \"#555\",\n" +
                     "                        fontSize: 10,\n" +
                     "                    },\n" +
                     "                },\n" +
@@ -113,7 +113,7 @@ class G2PlotCustomDefinition extends AntdCommonDefinition<G2PlotCustomController
                     "            grid: null,\n" +
                     "            label: {\n" +
                     "                style: {\n" +
-                    "                    fill: \"#fff\",\n" +
+                    "                    fill: \"#555\",\n" +
                     "                    fontSize: 10,\n" +
                     "                },\n" +
                     "            },\n" +
@@ -130,7 +130,7 @@ class G2PlotCustomDefinition extends AntdCommonDefinition<G2PlotCustomController
                     "        label: {\n" +
                     "            position: 'top',\n" +
                     "            style: {\n" +
-                    "                fill: '#fff'\n" +
+                    "                fill: '#555'\n" +
                     "            }\n" +
                     "        },\n" +
                     "    });\n" +

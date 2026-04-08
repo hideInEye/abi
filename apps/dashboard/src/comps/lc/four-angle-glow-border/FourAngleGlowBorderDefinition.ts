@@ -47,7 +47,7 @@ export default class FourAngleGlowBorderDefinition extends AbstractDesignerDefin
                 type: 'BaseColorBlock',
             },
             style: {
-                color: '#34e4ff',
+                color: '#000',
                 width: 2,
                 radius: 4,
                 length: 10,

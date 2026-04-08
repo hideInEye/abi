@@ -48,7 +48,7 @@ export default class DigitalFlipperDefinition extends AbstractDesignerDefinition
                 fontSize: 20,
                 fontWeight: 500,
                 fontFamily: 'Microsoft YaHei',
-                color: '#ffffff',
+                color: '#000',
                 type: 'caper',
                 justifyContent: 'center',
                 alignItems: 'center'

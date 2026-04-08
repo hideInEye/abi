@@ -87,7 +87,7 @@ const DesignerDragScaleContainer = memo(observer((props: DesignerDragScaleContai
                  overflow: "hidden",
                  height: window.innerHeight - 110,
                  width: window.innerWidth - 115,
-                 backgroundColor: '#f0f2f5',
+                 backgroundColor: '#fafafc',
                  backgroundImage: 'linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)',
                  backgroundSize: '20px 20px',
                  position: 'relative'
@@ -99,7 +99,7 @@ const DesignerDragScaleContainer = memo(observer((props: DesignerDragScaleContai
                  style={{
                      width: canvasConfig?.width,
                      height: canvasConfig?.height,
-                     background: '#fff',
+                     background: '#f2f3f5',
                      position: 'absolute',
                      boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
                  }}>

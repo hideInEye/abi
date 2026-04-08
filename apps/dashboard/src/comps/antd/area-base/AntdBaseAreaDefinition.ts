@@ -154,25 +154,25 @@ class AntdBaseAreaDefinition extends AbstractAreaDefinition {
                     }
                 },
                 line: {
-                    color: "r(0.5,0.5,1) 0.55:#00aaff 1:#004074",
+                    color: "#6ea6e0",
                     size: 1.5
                 },
                 areaStyle: {
-                    fillOpacity: 1,
-                    fill: "l(90) 0:#016eb7 0.85:#0964a133"
+                    fillOpacity: 0.3,
+                    fill: "#6ea6e0"
                 },
                 xAxis: {
                     range: [0, 1],
                     grid: null,
                     label: {
                         style: {
-                            fill: "#fff",
+                            fill: "#555",
                             fontSize: 10
                         }
                     },
                     line: {
                         style: {
-                            stroke: "#c7c7c76e",
+                            stroke: "#d9d9d9",
                             lineWidth: 1
                         }
                     },
@@ -186,7 +186,7 @@ class AntdBaseAreaDefinition extends AbstractAreaDefinition {
                     grid: null,
                     label: {
                         style: {
-                            fill: "#fff",
+                            fill: "#555",
                             fontSize: 10
                         }
                     },
@@ -200,7 +200,7 @@ class AntdBaseAreaDefinition extends AbstractAreaDefinition {
                     layout: "vertical",
                     itemName: {
                         style: {
-                            fill: "#00f0ffff",
+                            fill: "#555",
                             fontSize: 12
                         }
                     }

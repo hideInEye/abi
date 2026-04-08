@@ -77,8 +77,8 @@ export default class BaseTableDefinition extends AbstractDesignerDefinition<Base
                     fontWeight: 900,
                 },
                 body: {
-                    background: '#141414',
-                    color: '#acacac',
+                    background: '#fff',
+                    color: '#555',
                     fontSize: 14,
                     fontWeight: 500,
                     enableCarousel: false,

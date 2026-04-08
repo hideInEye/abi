@@ -68,7 +68,7 @@ const AMapComponent = React.forwardRef((props: AMapComponentProps, ref: Forwarde
     return (
         <div className={'a-map'} ref={mapContainerRef}>
             {(config.style?.key && config.style?.securityJsCode) ? undefined :
-                <div className={'no-key-message'} style={{display: 'flex', alignItems: 'center'}}>请配置Key和密钥</div>}
+                <div className={'no-key-message'} style={{display: 'flex', alignItems: 'center' ,fontSize: '1.2rem'}}>请配置Key和密钥</div>}
         </div>
     );
 });

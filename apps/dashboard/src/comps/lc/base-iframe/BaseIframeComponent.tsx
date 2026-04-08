@@ -43,7 +43,8 @@ class BaseIframeComponent extends Component<BaseIframeComponentProps, BaseIframe
                     height: '100%',
                     display: 'flex',
                     justifyContent: 'center',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    fontSize: '1.5rem'
                 }}>
                     <div>请设置iframe地址</div>
                 </div> : <div style={{height: '100%', display: 'flex'}}>
