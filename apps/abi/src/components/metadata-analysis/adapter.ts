@@ -132,15 +132,16 @@ function fromNodeEdgeShape(raw: any): LineageRelation[] {
       tableRelations.push({
         lineage_id: `physical-table-${nodeId}-${index}`,
         relation_type: normalizeRelationType('DEPENDENCY'),
-        source_node_id: nodeId,
-        source_node_count: toCount(node?.count),
-        source_node_name: nodeName,
-        source_node_type: nodeType,
+        source_node_id: `${nodeId}:table:${index}`,
+        source_node_count: 1,
+        source_node_name: tableName,
+        source_node_type: 'PHYSICAL_TABLE',
         space_id: raw?.spaceId ?? node?.spaceId,
         status,
-        target_node_id: `${nodeId}:table:${index}`,
-        target_node_name: tableName,
-        target_node_type: 'PHYSICAL_TABLE'
+        target_node_id: nodeId,
+        target_node_count: toCount(node?.count),
+        target_node_name: nodeName,
+        target_node_type: nodeType
       })
     })
   })
