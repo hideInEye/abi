@@ -68,8 +68,9 @@ function buildTreeData(
 ): TreeNode[] {
   if (!relations.length && !rootContext) return []
 
-  const nextMap = new Map<string, Set<string>>()
-  const allChildKeys = new Set<string>()
+  const inDegreeMap = new Map<string, number>()
+  const inMap = new Map<string, Set<string>>()
+  const outMap = new Map<string, Set<string>>()
   const nodeMap = new Map<string, { name: string; nodeId: string; nodeType: string }>()
 
   const ensureNode = (type: string, id: string | number, name?: string) => {
@@ -87,25 +88,40 @@ function buildTreeData(
   relations.forEach(item => {
     const sourceKey = ensureNode(item.source_node_type, item.source_node_id, item.source_node_name)
     const targetKey = ensureNode(item.target_node_type, item.target_node_id, item.target_node_name)
-    const from = mode === 'impact' ? sourceKey : targetKey
-    const to = mode === 'impact' ? targetKey : sourceKey
-    if (!nextMap.has(from)) nextMap.set(from, new Set())
-    nextMap.get(from)!.add(to)
-    allChildKeys.add(to)
+    const from = mode === 'impact' ? targetKey : sourceKey
+    const to = mode === 'impact' ? sourceKey : targetKey
+    if (!outMap.has(from)) outMap.set(from, new Set())
+    outMap.get(from)!.add(to)
+    if (!inMap.has(to)) inMap.set(to, new Set())
+    inMap.get(to)!.add(from)
+    inDegreeMap.set(to, (inDegreeMap.get(to) || 0) + 1)
+    if (!inDegreeMap.has(from)) inDegreeMap.set(from, inDegreeMap.get(from) || 0)
   })
+
+  const traversalChildrenCache = new Map<string, string[]>()
+  const getTraversalChildren = (nodeKeyValue: string) => {
+    const cached = traversalChildrenCache.get(nodeKeyValue)
+    if (cached) return cached
+
+    const outChildren = Array.from(outMap.get(nodeKeyValue) || [])
+    const inChildren = Array.from(inMap.get(nodeKeyValue) || [])
+    const children = Array.from(new Set([...outChildren, ...inChildren]))
+    traversalChildrenCache.set(nodeKeyValue, children)
+    return children
+  }
 
   const resolveRootFromContext = () => {
     if (!rootContext) return undefined
 
-    const hasAnyChildren = Array.from(nextMap.values()).some(children => children.size > 0)
+    const hasAnyChildren = Array.from(nodeMap.keys()).some(key => getTraversalChildren(key).length > 0)
     const exactKey = rootContext.nodeId !== undefined
       ? nodeKey(rootContext.nodeType, rootContext.nodeId)
       : undefined
 
-    if (exactKey && nextMap.has(exactKey)) return exactKey
+    if (exactKey && nodeMap.has(exactKey)) return exactKey
 
     const sameTypeKeys = Array.from(nodeMap.keys()).filter(key => key.split(':')[0] === rootContext.nodeType)
-    const sameTypeWithChildren = sameTypeKeys.find(key => (nextMap.get(key)?.size || 0) > 0)
+    const sameTypeWithChildren = sameTypeKeys.find(key => getTraversalChildren(key).length > 0)
     if (sameTypeWithChildren) return sameTypeWithChildren
 
     if (!hasAnyChildren) {
@@ -117,10 +133,12 @@ function buildTreeData(
   }
 
   const resolveRootByStructure = () => {
-    const structuralRoots = Array.from(nodeMap.keys()).filter(key => !allChildKeys.has(key) && (nextMap.get(key)?.size || 0) > 0)
+    const structuralRoots = Array.from(nodeMap.keys()).filter(
+      key => (inDegreeMap.get(key) || 0) === 0 && (outMap.get(key)?.size || 0) > 0
+    )
     if (structuralRoots.length) return structuralRoots[0]
 
-    const withChildren = Array.from(nextMap.keys()).find(key => (nextMap.get(key)?.size || 0) > 0)
+    const withChildren = Array.from(nodeMap.keys()).find(key => getTraversalChildren(key).length > 0)
     if (withChildren) return withChildren
 
     return nodeMap.keys().next().value
@@ -139,7 +157,7 @@ function buildTreeData(
 
   const walk = (key: string, visited: Set<string>): TreeNode => {
     const current = nodeMap.get(key)!
-    const childrenKeys = Array.from(nextMap.get(key) || [])
+    const childrenKeys = getTraversalChildren(key)
     const children: TreeNode[] = []
 
     childrenKeys.forEach(childKey => {
