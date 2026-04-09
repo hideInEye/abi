@@ -217,20 +217,6 @@ const SqlModeEditor: React.FC<Props> = ({
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
-      {/* 格式化按钮 */}
-      <div
-        style={{
-          position: 'absolute',
-          right: 8,
-          top: 8,
-          zIndex: 10,
-        }}
-      >
-        <Button size="small" onClick={handleFormat}>
-          格式化
-        </Button>
-      </div>
-
       <Editor
         height={height}
         language="sql"
@@ -252,6 +238,12 @@ const SqlModeEditor: React.FC<Props> = ({
           padding: { top: 8 },
         }}
       />
+      {/* 格式化按钮 - 左下角 */}
+      <div style={{ position: 'absolute', left: 8, bottom: 8, zIndex: 10 }}>
+        <Button size="small" onClick={handleFormat}>
+          格式化
+        </Button>
+      </div>
     </div>
   );
 };

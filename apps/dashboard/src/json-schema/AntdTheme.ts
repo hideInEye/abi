@@ -207,7 +207,7 @@ export const antdComponentTheme = {
     Collapse: {
         borderRadiusLG: 3,
         colorBorder: 'rgba(5, 5, 5, 0.06)',
-        headerBg: '#f2f3f5',
+        headerBg: '#fff',
         contentBg: '#fff',
         headerPadding: '8px 12px',
         contentPadding: '12px',
