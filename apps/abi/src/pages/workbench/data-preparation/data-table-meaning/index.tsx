@@ -1,11 +1,22 @@
 import { PlusOutlined } from '@ant-design/icons';
 import PageTitle from '@/components/stateless/common/PageTitle';
+import { Group } from '@/components/stateful/group/Group';
 
 import { SemanticsTableList } from './components/semantics-table-list';
 import { useSemanticsTable } from './hook/useSemanticsTable';
-import { SemanticsGroup } from './modules/semantics-group';
 import { SemanticsTable } from './modules/semantics-table';
 import { useTableStore } from './store/useTableStore';
+
+const SCHEMA_GROUP_CONFIG = {
+  button: '新增分组',
+  inputLabel: '组名称',
+  inputPlaceholder: '搜索分组',
+  modalAddTitle: '新增组',
+  modalEditTitle: '编辑组',
+  panelTitle: '文件夹',
+  rule: [[{ message: '组名称未填写', required: true }], []],
+  type: 'shema' as const,
+};
 
 export function Component() {
   const {
@@ -17,15 +28,15 @@ export function Component() {
     setDrawerTitle,
     setEditObj,
     setEnglishname,
+    setGroupId,
     setTableModalOpen
   } = useTableStore();
 
   const { deleteTable, fetchTableSchemaList, setTableSchemaList, tableSchemaList } = useSemanticsTable();
 
-  function onDefaultGroupUpdate(data: any) {
-    if (typeof data === 'object') {
-      fetchTableSchemaList(100, data.groupId);
-    }
+  function handleGroupId(gId: number) {
+    setGroupId(gId);
+    fetchTableSchemaList(100, gId);
   }
 
   function updateTableList() {
@@ -48,29 +59,13 @@ export function Component() {
     fetchTableSchemaList(100, groupId, e.target.value);
   }
 
-  const [groupSearchValue, setGroupSearchValue] = useState('');
-
-  function searchGroupSchema(e: any) {
-    setGroupSearchValue(e.target.value);
-  }
-
   return (
     <div className="flex flex-col p-6 h-full">
       <PageTitle style={{ paddingBottom: '0.5rem' }} />
     <div className="flex gap-6 flex-1">
       {/* 左侧分组树 */}
-      <div className="flex flex-col pr-4" style={{ width: '12.5rem', flexShrink: 0, borderRight: '0.0625rem solid #d9d9d9' }}>
-            <AInput
-              placeholder="请输入表语义组检索"
-              onChange={e => searchGroupSchema(e)}
-              className="mb-4 group-search-input"
-            />
-          <div className="flex-1 overflow-hidden">
-            <SemanticsGroup
-              groupName={groupSearchValue}
-              onDefaultGroupUpdate={onDefaultGroupUpdate}
-            />
-         </div>
+      <div className="flex flex-col" style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
+        <Group config={SCHEMA_GROUP_CONFIG} onGroupId={handleGroupId} />
       </div>
 
       <div className="flex-1 flex flex-col">

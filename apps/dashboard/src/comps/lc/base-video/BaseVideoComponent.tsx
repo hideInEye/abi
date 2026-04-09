@@ -39,7 +39,8 @@ const BaseVideoComponent = forwardRef((props: BaseVideoComponentProps, ref: Ref<
                     height: '100%',
                     display: 'flex',
                     justifyContent: 'center',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    fontSize: '1.5rem'
                 }}>
                     <div>请配置视频连接...</div>
                 </div> :

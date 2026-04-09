@@ -1,5 +1,4 @@
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
-import { sql } from '@codemirror/lang-sql';
 import { Checkbox, Form, Input, Modal, Select, Splitter, message } from 'antd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -12,6 +11,7 @@ import { useRoute, useRouter } from '~/packages/simple-router/src';
 import { DataCollectionOperateContext } from './context';
 import styles from './index.module.css';
 import BottomSql from './modules/BottomSql';
+import SqlModeEditor from './modules/SqlModeEditor';
 import BottomTabs from './modules/BottomTabs';
 import { DragBox } from './modules/DragBox';
 import { TreeNodeContainer } from './modules/TreeNodeContainer';
@@ -192,12 +192,7 @@ export function Component() {
     let fields = res?.data || [];
     const rtableId = genUniqueId('1');
     fields = fields.map((item: any) => ({ ...item, rtableId }));
-    const paramsData = {
-      ...collectionData,
-      viewName: saveForm.getFieldValue('viewName'),
-      allFields: fields,
-      spaceId: Number(localStorage.getItem('spaceId')),
-      union: [
+    const unionData = [
         {
           childrenDs: [],
           currentDs: {
@@ -214,7 +209,14 @@ export function Component() {
             unionType: 'left'
           }
         }
-      ]
+    ];
+    const paramsData = {
+      ...collectionData,
+      viewName: saveForm.getFieldValue('viewName'),
+      allFields: fields,
+      spaceId: Number(localStorage.getItem('spaceId')),
+      unionSql: JSON.stringify(unionData),
+      union: unionData
     };
 
     const saveRes = await saveDataSet(paramsData);
@@ -414,9 +416,10 @@ export function Component() {
                       >
                         <Splitter.Panel className="relative bg-#f5f6f7">
                           {collectionData.viewType === 'sql' ? (
-                            <ACodemirror
-                              extensions={[sql()]}
-                              height="200px"
+                            <SqlModeEditor
+                              sourceId={datasource}
+                              sourceType={curDatasourceType}
+                              tableList={tableList}
                               value={sqlVal}
                               onChange={(val: string) => setSqlVal(val)}
                             />

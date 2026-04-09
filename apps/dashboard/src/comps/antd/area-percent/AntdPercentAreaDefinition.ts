@@ -152,16 +152,16 @@ class AntdPercentAreaDefinition extends AbstractAreaDefinition {
                 smooth: true,
                 supportCSSTransform: true,
                 color: [
-                    "l(90) 0:#016eb7 0.42:#016eb700",
-                    "l(90) 0:#016eb7 0.53:#016eb700",
-                    "l(90) 0:#016eb7 0.72:#016eb700"
+                    "#6ea6e0",
+                    "#c8d96a",
+                    "#9b8fd4"
                 ],
                 point: {
                     size: 0,
                     color: [
-                        "#4fa3ff67",
-                        "#009aff67",
-                        "#006d7f67"
+                        "#6ea6e0",
+                        "#c8d96a",
+                        "#9b8fd4"
                     ],
                     style: {
                         stroke: "#ffffff",
@@ -174,11 +174,13 @@ class AntdPercentAreaDefinition extends AbstractAreaDefinition {
                         lineWidth: 2
                     },
                     color: [
-                        "r(0.5,0.5,1) 0.24:#0099ff 1:#005c9936"
+                        "#6ea6e0",
+                        "#c8d96a",
+                        "#9b8fd4"
                     ]
                 },
                 areaStyle: {
-                    fillOpacity: 1
+                    fillOpacity: 0.3
                 },
                 xAxis: {
                     position: "bottom",

@@ -50,7 +50,7 @@ export default class TextScrollerDefinition extends AbstractDesignerDefinition<T
                 speed: 10,
                 fontSize: 16,
                 fontWeight: 500,
-                color: '#fff',
+                color: '#000',
                 fontFamily: 'Arial',
             },
             filter: {

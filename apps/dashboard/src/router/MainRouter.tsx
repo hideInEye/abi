@@ -10,7 +10,7 @@
  */
 
 import {lazy, memo, useMemo} from 'react';
-import {createHashRouter, createMemoryRouter, Navigate, RouterProvider} from "react-router-dom";
+import {createBrowserRouter, createMemoryRouter, Navigate, RouterProvider} from "react-router-dom";
 import {ConfigProvider, theme} from "antd";
 import {qiankunWindow} from 'vite-plugin-qiankun/dist/helper';
 
@@ -502,7 +502,7 @@ const MainRouter = memo(() => {
         if (isPoweredByQiankun) {
             return createMemoryRouter(routes, {initialEntries: [window.__ABI_DASHBOARD_INITIAL_PATH__ || '/projects']});
         }
-        return createHashRouter(routes);
+        return createBrowserRouter(routes);
     }, []);
 
     return (
