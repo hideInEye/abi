@@ -218,6 +218,7 @@ const LineageGraph: React.FC<Props> = ({
   const data = useMemo(() => {
     const nodesMetaMap = new Map<string, NodeMeta>()
     const allEdges: GraphEdge[] = []
+    const inMap = new Map<string, Set<string>>()
     const outMap = new Map<string, Set<string>>()
     const inDegreeMap = new Map<string, number>()
 
@@ -245,6 +246,8 @@ const LineageGraph: React.FC<Props> = ({
       const { id, relationType, source, status, target } = payload
       if (!outMap.has(source)) outMap.set(source, new Set())
       outMap.get(source)!.add(target)
+      if (!inMap.has(target)) inMap.set(target, new Set())
+      inMap.get(target)!.add(source)
       inDegreeMap.set(target, (inDegreeMap.get(target) || 0) + 1)
       if (!inDegreeMap.has(source)) inDegreeMap.set(source, inDegreeMap.get(source) || 0)
 
@@ -264,30 +267,30 @@ const LineageGraph: React.FC<Props> = ({
 
       const orientedSource = relationMode === 'impact'
         ? {
-            count: item.source_node_count,
-            key: sourceKey,
-            name: item.source_node_name,
-            nodeType: item.source_node_type
-          }
-        : {
             count: item.target_node_count,
             key: targetKey,
             name: item.target_node_name,
             nodeType: item.target_node_type
+          }
+        : {
+            count: item.source_node_count,
+            key: sourceKey,
+            name: item.source_node_name,
+            nodeType: item.source_node_type
           }
 
       const orientedTarget = relationMode === 'impact'
         ? {
-            count: item.target_node_count,
-            key: targetKey,
-            name: item.target_node_name,
-            nodeType: item.target_node_type
-          }
-        : {
             count: item.source_node_count,
             key: sourceKey,
             name: item.source_node_name,
             nodeType: item.source_node_type
+          }
+        : {
+            count: item.target_node_count,
+            key: targetKey,
+            name: item.target_node_name,
+            nodeType: item.target_node_type
           }
 
       ensureNodeMeta(orientedSource)
@@ -329,6 +332,18 @@ const LineageGraph: React.FC<Props> = ({
     const rootKey = resolveRootKey()
     if (!rootKey) return { edges: [], nodes: [] }
 
+    const traversalChildrenCache = new Map<string, string[]>()
+    const getTraversalChildren = (nodeKey: string) => {
+      const cached = traversalChildrenCache.get(nodeKey)
+      if (cached) return cached
+
+      const outChildren = Array.from(outMap.get(nodeKey) || [])
+      const inChildren = Array.from(inMap.get(nodeKey) || [])
+      const nextChildren = Array.from(new Set([...outChildren, ...inChildren]))
+      traversalChildrenCache.set(nodeKey, nextChildren)
+      return nextChildren
+    }
+
     if (rootContext?.nodeName && nodesMetaMap.has(rootKey)) {
       const rootMeta = nodesMetaMap.get(rootKey)!
       if (rootMeta.nodeType === rootContext.nodeType) {
@@ -342,7 +357,7 @@ const LineageGraph: React.FC<Props> = ({
     while (queue.length) {
       const current = queue.shift()!
       const currentDepth = depthMap.get(current) || 0
-      const nextNodes = Array.from(outMap.get(current) || [])
+      const nextNodes = getTraversalChildren(current)
       nextNodes.forEach(nextKey => {
         if (!depthMap.has(nextKey)) {
           depthMap.set(nextKey, currentDepth + 1)
@@ -353,7 +368,7 @@ const LineageGraph: React.FC<Props> = ({
 
     const expandLevel = Math.max(defaultExpandLevel ?? 2, 1)
     const isExpandedByState = (nodeKey: string) => {
-      const childrenSize = outMap.get(nodeKey)?.size || 0
+      const childrenSize = getTraversalChildren(nodeKey).length
       if (!childrenSize) return false
 
       const depth = depthMap.get(nodeKey) || 0
@@ -373,7 +388,7 @@ const LineageGraph: React.FC<Props> = ({
       if (!handled.has(current)) {
         handled.add(current)
 
-        const children = Array.from(outMap.get(current) || [])
+        const children = getTraversalChildren(current)
         const shouldExpand = children.length > 0 && isExpandedByState(current)
         if (shouldExpand) {
           children.forEach(child => {
@@ -386,7 +401,7 @@ const LineageGraph: React.FC<Props> = ({
 
     const visibleNodes: GraphNode[] = Array.from(visibleKeys).map(key => {
       const meta = nodesMetaMap.get(key)!
-      const childrenSize = outMap.get(key)?.size || 0
+      const childrenSize = getTraversalChildren(key).length
       const displayCount = meta.count === undefined ? (childrenSize || undefined) : meta.count
       const baseLabel = buildDisplayLabel(meta.name, displayCount)
       const isExpanded = isExpandedByState(key)
