@@ -60,23 +60,25 @@ export function Component() {
   }
 
   return (
-    <div className="flex flex-col p-6 h-full">
-      <PageTitle style={{ paddingBottom: '0.5rem' }} />
-    <div className="flex gap-6 flex-1">
-      {/* 左侧分组树 */}
-      <div className="flex flex-col" style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
-        <Group config={SCHEMA_GROUP_CONFIG} onGroupId={handleGroupId} />
-      </div>
+    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
+      <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
+        styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
+      >
+        <PageTitle style={{ paddingBottom: '0.5rem' }} />
+        <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
+          <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
+            <Group config={SCHEMA_GROUP_CONFIG} onGroupId={handleGroupId} />
+          </div>
 
-      <div className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-4">
+          <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
+            <div className="flex items-center justify-between mb-4">
               <AInput
                 placeholder="请输入表语义检索"
                 onChange={e => searchTableSchema(e)}
                 style={{ width: 200, fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
               />
               <AButton
-              type="primary"
+                type="primary"
                 onClick={() => {
                   setDrawerTitle('新增表语义');
                   setTableModalOpen(true);
@@ -93,8 +95,10 @@ export function Component() {
               tableSchemaList={tableSchemaList}
             />
           </div>
-        </div>
+        </AFlex>
+
         <SemanticsTable updateTableList={updateTableList} />
+      </ACard>
     </div>
   );
 }

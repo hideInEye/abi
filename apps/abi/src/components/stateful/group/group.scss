@@ -7,9 +7,11 @@
 .group-panel {
   width: 200px;
   flex: 0 0 200px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
   .ant-tree {
-    overflow: hidden;
+    overflow: visible;
     // 去掉 Tree 节点左右 padding
     .ant-tree-treenode {
       padding-left: 0 !important;
