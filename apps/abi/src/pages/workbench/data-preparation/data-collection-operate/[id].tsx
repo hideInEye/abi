@@ -10,7 +10,7 @@ import { useRoute, useRouter } from '~/packages/simple-router/src';
 
 import { DataCollectionOperateContext } from './context';
 import styles from './index.module.css';
-import BottomSql from './modules/BottomSql';
+import BottomSql, { type BottomSqlHandle } from './modules/BottomSql';
 import SqlModeEditor from './modules/SqlModeEditor';
 import BottomTabs from './modules/BottomTabs';
 import { DragBox } from './modules/DragBox';
@@ -53,7 +53,9 @@ export function Component() {
   const [dataTableKeyword, setDataTableKeyword] = useState('');
   const [connectMode, setConnectMode] = useState([1, 2]); // 一期没用到
   const [loading, setLoading] = useState(false);
+  const [runLoading, setRunLoading] = useState(false);
   const [previewData, setPreviewData] = useState<any>({});
+  const bottomSqlRef = useRef<BottomSqlHandle>(null);
   const { back: routerBack, push } = useRouter();
 
   const route = useRoute();
@@ -383,32 +385,6 @@ export function Component() {
                 {/* 中间主编辑区 */}
                 <Splitter.Panel>
                   <div className="h-full flex flex-col">
-                    <div className={styles.editorHeader}>
-                      <div className="flex items-center min-w-0">
-                        <span
-                          className="mr-8px inline-flex h-28px w-28px cursor-pointer items-center justify-center rounded hover:bg-#f5f6f7"
-                          onClick={handleClickBack}
-                        >
-                          <LeftOutlined />
-                        </span>
-                        <div
-                          style={{
-                              fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-                          }}
-                          title={collectionData.viewName}
-                        >
-                          {collectionData.viewName}
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <AButton
-                          type="primary"
-                          onClick={() => handleClickSave(true)}
-                        >
-                          保存
-                        </AButton>
-                      </div>
-                    </div>
                     <div className="flex-1">
                       <Splitter
                         layout="vertical"
@@ -419,9 +395,14 @@ export function Component() {
                             <SqlModeEditor
                               sourceId={datasource}
                               sourceType={curDatasourceType}
+                              dataSourceList={filterDataSourceList}
+                              onDatasourceChange={handleChangeDatasource}
                               tableList={tableList}
                               value={sqlVal}
                               onChange={(val: string) => setSqlVal(val)}
+                              runLoading={runLoading}
+                              onRun={() => bottomSqlRef.current?.run()}
+                              onSave={() => handleClickSave()}
                             />
                           ) : (
                             <TreeNodeContainer />
@@ -434,10 +415,11 @@ export function Component() {
                         >
                           {collectionData.viewType === 'sql' ? (
                             <BottomSql
-                              previewData={previewData}
+                              ref={bottomSqlRef}
                               setPreviewData={setPreviewData}
                               sourceId={datasource}
                               sql={sqlVal}
+                              onLoadingChange={setRunLoading}
                             />
                           ) : (
                             <BottomTabs curDatasource={curDatasource}/>
