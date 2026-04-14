@@ -44,7 +44,7 @@ const DesignerView = observer((props: DesignerViewProps) => {
     if (!loaderRef.current?.loaded)
         return <Loading/>;
 
-    const canvasDom = <div style={{width, height, background: 'black', overflow: 'hidden', position: "relative"}}>
+    const canvasDom = <div style={{width, height, background: '#f2f3f5', overflow: 'hidden', position: "relative"}}>
         {layerBuilder.buildCanvasComponents(layerConfigs)}
     </div>
 
