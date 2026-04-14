@@ -1,7 +1,8 @@
 import Editor, { useMonaco } from '@monaco-editor/react';
-import { Button } from 'antd';
+import { Button, Input, Tooltip } from 'antd';
+import { ApiOutlined, DatabaseOutlined, PlayCircleOutlined, TableOutlined } from '@ant-design/icons';
 import { format } from 'sql-formatter';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type * as Monaco from 'monaco-editor';
 
 import { getFieldByDataSource } from '@/service/api';
@@ -11,6 +12,10 @@ interface Props {
   sourceId?: string;
   /** 数据源类型 */
   sourceType?: string;
+  /** 数据源列表 */
+  dataSourceList?: Array<{ sourceId: string; sourceName: string; sourceType: string }>;
+  /** 数据源切换回调 */
+  onDatasourceChange?: (sourceId: string) => void;
   /** 当前已加载的表列表 */
   tableList?: Array<{ tableName: string }>;
   /** 当前 SQL 值 */
@@ -19,6 +24,12 @@ interface Props {
   onChange?: (val: string) => void;
   /** 编辑器高度 */
   height?: string;
+  /** 执行 SQL 回调（点击「执行」按钮） */
+  onRun?: () => void;
+  /** 执行按钮 loading 状态 */
+  runLoading?: boolean;
+  /** 保存回调（点击「保存」按钮） */
+  onSave?: () => void;
 }
 
 /**
@@ -56,13 +67,19 @@ function parseTableAliasMap(sql: string, tableList: Array<{ tableName: string }>
 const SqlModeEditor: React.FC<Props> = ({
   sourceId,
   sourceType,
+  dataSourceList = [],
+  onDatasourceChange,
   tableList = [],
   value,
   onChange,
   height = '100%',
+  onRun,
+  runLoading,
+  onSave,
 }) => {
   const monaco = useMonaco();
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const [nlInput, setNlInput] = useState('');
   // 缓存每张表的字段列表：{ tableName -> [{ originName, comment }] }
   const fieldsCache = useRef<Record<string, Array<{ originName: string; comment: string }>>>({});
   // 保存 completionProvider dispose 函数，切换数据源时清理
@@ -216,33 +233,133 @@ const SqlModeEditor: React.FC<Props> = ({
   }, [onChange]);
 
   return (
-    <div style={{ position: 'relative', height: '100%', width: '100%' }}>
-      <Editor
-        height={height}
-        language="sql"
-        value={value}
-        onChange={(val) => onChange?.(val ?? '')}
-        onMount={(editor) => {
-          editorRef.current = editor;
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+      {/* 顶部自然语言输入栏 */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: 42,
+          padding: '2px 12px 2px 16px',
+          borderBottom: '1px solid #e5e7eb',
+          background: '#fff',
+          flexShrink: 0,
+          gap: 10,
         }}
-        options={{
-          fontSize: 13,
-          minimap: { enabled: false },
-          scrollBeyondLastLine: false,
-          automaticLayout: true,
-          wordWrap: 'on',
-          suggestOnTriggerCharacters: true,
-          quickSuggestions: true,
-          tabSize: 2,
-          lineNumbers: 'on',
-          padding: { top: 8 },
+      >
+        <div
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #8c96ff 0%, #6c63ff 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: 700,
+          }}
+        >
+          AI
+        </div>
+        <Input
+          bordered={false}
+          placeholder="在这里输入纯文本语句"
+          style={{ flex: 1, fontSize: 13 }}
+          value={nlInput}
+          onChange={(e) => setNlInput(e.target.value)}
+        />
+        <Tooltip title="发送">
+          <Button
+            type="primary"
+            size="small"
+            style={{ width: 32, height: 26, padding: 0, flexShrink: 0, background: '#9374EE', borderColor: '#9374EE' }}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+            </svg>
+          </Button>
+        </Tooltip>
+        <Tooltip title="选择表">
+          <div
+            style={{
+              cursor: 'pointer',
+              padding: '4px 6px',
+              borderRadius: 6,
+              color: '#666',
+              flexShrink: 0,
+              lineHeight: 1,
+            }}
+          >
+            <TableOutlined style={{ fontSize: 16 }} />
+          </div>
+        </Tooltip>
+      </div>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        <Editor
+          height="100%"
+          language="sql"
+          value={value}
+          onChange={(val) => onChange?.(val ?? '')}
+          onMount={(editor) => {
+            editorRef.current = editor;
+          }}
+          options={{
+            fontSize: 13,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            wordWrap: 'on',
+            suggestOnTriggerCharacters: true,
+            quickSuggestions: true,
+            tabSize: 2,
+            lineNumbers: 'on',
+            padding: { top: 8 },
+          }}
+        />
+      </div>
+      {/* 底部操作栏 */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '6px 12px',
+          background: '#fff',
+          flexShrink: 0,
         }}
-      />
-      {/* 格式化按钮 - 左下角 */}
-      <div style={{ position: 'absolute', left: 8, bottom: 8, zIndex: 10 }}>
+      >
+        <AButton
+          icon={<PlayCircleOutlined />}
+          loading={runLoading}
+          type="primary"
+          size="small"
+          style={{ backgroundColor: '#9374EE', borderColor: '#9374EE' }}
+          onClick={onRun}
+        >
+          执行
+        </AButton>
+        <Button size="small" onClick={onSave}>
+          保存
+        </Button>
         <Button size="small" onClick={handleFormat}>
           格式化
         </Button>
+        {/* 右侧数据源信息展示 */}
+        {sourceId && dataSourceList.length > 0 && (
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ApiOutlined style={{ color: '#9374EE', fontSize: 13 }} />
+            <span style={{ fontSize: 12, color: '#555', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {dataSourceList.find(d => String(d.sourceId) === String(sourceId))?.sourceName || '--'}
+            </span>
+            <DatabaseOutlined style={{ color: '#666', fontSize: 13 }} />
+            <span style={{ fontSize: 12, color: '#555', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {dataSourceList.find(d => String(d.sourceId) === String(sourceId))?.sourceType || '--'}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

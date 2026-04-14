@@ -111,7 +111,7 @@ const ShareViewPage = observer(() => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: '#1E1E2F'
+                background: '#fff'
             }}>
                 <Spin size="large" tip="加载中..."/>
             </div>
@@ -119,7 +119,7 @@ const ShareViewPage = observer(() => {
     }
 
     return (
-        <div style={{width: '100vw', height: '100vh', background: '#1E1E2F'}}>
+        <div style={{width: '100vw', height: '100vh', background: '#fff'}}>
             {/* 密码输入弹窗 */}
             <Modal
                 title={
@@ -171,7 +171,7 @@ const CanvasRenderer = observer(() => {
     const {canvasConfig: {width, height, adaptationType}} = canvasManager;
 
     const canvasDom = (
-        <div style={{width, height, background: 'black', overflow: 'hidden', position: "relative"}}>
+        <div style={{width, height, background: '#f2f3f5', overflow: 'hidden', position: "relative"}}>
             {layerBuilder.buildCanvasComponents(layerConfigs)}
         </div>
     );

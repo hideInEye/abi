@@ -168,6 +168,15 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
                 ]
             },
             {
+            type: 'grid',
+            config: {
+                gridGap: '0',
+                containerStyle: {
+                    overflow: 'hidden',
+                }
+            },
+            children: [
+            {
                 type: 'card-panel',
                 label: 'SQL语句',
                 config: {
@@ -228,6 +237,8 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
                         reRender: true,
                         value: testRes,
                     }
+                    ]
+            },
                 ]
             },
             {

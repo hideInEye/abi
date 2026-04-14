@@ -32,18 +32,42 @@ const DataPreview: React.FC<PropsType> = memo(({ isSql = false, previewData = {}
   useEffect(() => {
     const { data } = previewData;
     if (data?.fields && data?.data) {
-      setColumns(
-        data?.fields.map((item: any) => ({
+      const fieldCols = data?.fields.map((item: any) => {
+        const dataKey = item.tfieldName || item.tfieldShowName;
+        return {
           ...item,
-          dataIndex: item.tfieldName || item.tfieldShowName,
-          key: 'tfieldId',
-          title: item.tfieldShowName
-        }))
-      );
+          dataIndex: dataKey,
+          key: dataKey,
+          title: item.tfieldShowName,
+          // SQL 模式：启用排序（Ant Design Table 自带箭头）
+          ...(isSql ? { sorter: (a: any, b: any) => {
+            const va = a[dataKey], vb = b[dataKey];
+            if (va == null && vb == null) return 0;
+            if (va == null) return -1;
+            if (vb == null) return 1;
+            if (typeof va === 'number' && typeof vb === 'number') return va - vb;
+            return String(va).localeCompare(String(vb));
+          }} : {}),
+        };
+      });
 
+      if (isSql) {
+        fieldCols.unshift({
+          title: '',
+          dataIndex: '_rowNo',
+          key: '_rowNo',
+          width: 60,
+          fixed: 'left' as const,
+          render: (_: any, __: any, index: number) => (
+            <span style={{ color: '#333', textAlign: 'center', display: 'block' }}>{index + 1}</span>
+          ),
+        });
+      }
+
+      setColumns(fieldCols);
       setDataSource(data.data);
     }
-  }, [previewData]);
+  }, [previewData, isSql]);
 
   const changeAField = (resetObj: any) => {
     setAllFields((state: any) => {
@@ -232,11 +256,12 @@ const DataPreview: React.FC<PropsType> = memo(({ isSql = false, previewData = {}
       <div className="h-full w-full overflow-auto">
         <Table<DataType>
           bordered
-          className={styles['datasource-table-container']}
+          className={isSql ? styles['sql-result-table'] : styles['datasource-table-container']}
           columns={columns}
           dataSource={dataSource}
           pagination={false}
-          // scroll={{ y: '100%' }}
+          rowKey={(_, index) => String(index)}
+          scroll={isSql ? { x: 'max-content' } : undefined}
         />
       </div>
 

@@ -12,17 +12,17 @@
 // CoverConfig.less
 .cover-config-modal {
   .ant-modal-content {
-    background-color: #1E1E2F;
+    background-color: #fff;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 
     .ant-modal-header {
       background-color: transparent;
-      border-bottom: 1px solid #3A3A4E;
+      border-bottom: 1px solid rgba(5, 5, 5, 0.15);
       padding: 16px 20px;
 
       .cover-modal-title {
-        color: #FFFFFF;
+        color: #333;
         font-size: 18px;
         font-weight: 600;
         line-height: 28px;
@@ -30,10 +30,10 @@
     }
 
     .ant-modal-close {
-      color: #A0A0B2;
+      color: #999;
 
       &:hover {
-        color: #FFFFFF;
+        color: #333;
       }
     }
   }
@@ -49,14 +49,14 @@
       .ant-upload {
         width: 100%;
         height: 280px;
-        background-color: #2C2C3E;
-        border: 1px dashed #3A3A4E;
+        background-color: #f5f5f5;
+        border: 1px dashed rgba(5, 5, 5, 0.15);
         border-radius: 8px;
         transition: all 0.2s;
 
         &:hover {
-          border-color: #4FB8FF;
-          background-color: lighten(#2C2C3E, 5%);
+          border-color: #1677ff;
+          background-color: #f0f7ff;
         }
 
         .upload-btn-content {
@@ -65,12 +65,12 @@
           align-items: center;
           justify-content: center;
           height: 100%;
-          color: #A0A0B2;
+          color: #999;
 
           .upload-text {
             margin-top: 12px;
             font-size: 14px;
-            color: #FFFFFF;
+            color: #333;
           }
 
           .upload-hint {
@@ -92,19 +92,19 @@
       .cover-save-btn {
         width: 100%;
         height: 40px;
-        background-color: #4FB8FF;
+        background-color: #1677ff;
         border: none;
         border-radius: 4px;
-        color: #FFFFFF;
+        color: #fff;
         font-weight: 500;
         transition: all 0.2s;
 
         &:hover {
-          background-color: lighten(#4FB8FF, 10%);
+          background-color: #4096ff;
         }
 
         &:active {
-          background-color: darken(#4FB8FF, 10%);
+          background-color: #0958d9;
         }
       }
     }

@@ -170,7 +170,7 @@ export const FUN_ENUM = [
 
 export const DATA_COLLECTION_CONFIG_TYPE_OPTIONS = [
   { label: '快速创建', value: 'union' },
-  { label: 'sql创建', value: 'sql' }
+  { label: 'SQL创建', value: 'sql' }
 ];
 
 export const DATA_COLLECTION_T_FIELD_TYPE_OPTIONS = [
