@@ -137,7 +137,7 @@ export function Component() {
                 variant="link"
                 onClick={() =>
                   setAnalysisContext({
-                    nodeId: record.schemaId,
+                    nodeId: record.agentId,
                     nodeName: record.bizName,
                     nodeType: 'COPILOT',
                     spaceId: Number(localStorage.getItem('spaceId')) || undefined
