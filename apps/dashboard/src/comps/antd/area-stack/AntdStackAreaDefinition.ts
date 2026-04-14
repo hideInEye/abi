@@ -126,7 +126,7 @@ class AntdStackAreaDefinition extends AbstractAreaDefinition {
                     "#9b8fd4"
                 ],
                 point: {
-                    size: 0,
+                    size: 5,
                     color: [
                         "#6ea6e0",
                         "#c8d96a",
@@ -134,9 +134,9 @@ class AntdStackAreaDefinition extends AbstractAreaDefinition {
                     ],
                     style: {
                         stroke: "#ffffff",
-                        lineWidth: 0
+                        lineWidth: 1
                     },
-                    shape: "circle"
+                    shape: "square"
                 },
                 line: {
                     style: {
@@ -192,7 +192,7 @@ class AntdStackAreaDefinition extends AbstractAreaDefinition {
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 10
+                            fontSize: 18
                         }
                     }
                 },

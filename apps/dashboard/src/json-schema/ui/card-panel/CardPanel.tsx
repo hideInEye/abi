@@ -9,7 +9,7 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import React, {useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import "./CardPanel.less";
 import {Tooltip} from "antd";
 import {Help} from "@icon-park/react";
@@ -29,10 +29,23 @@ export interface ItemPanelProps {
 export const CardPanel: React.FC<ItemPanelProps> = (props) => {
     const {label, tip, contentStyle, children, collapsible, defaultCollapsed, collapsed: collapsedProp, onCollapsedChange} = props;
     const [innerCollapsed, setInnerCollapsed] = useState(!!defaultCollapsed);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const [height, setHeight] = useState<string>('0px');
 
     // 受控模式优先
     const isControlled = collapsedProp !== undefined;
     const collapsed = isControlled ? collapsedProp : innerCollapsed;
+
+    useEffect(() => {
+        if (!collapsed && contentRef.current) {
+            setHeight(`${contentRef.current.scrollHeight}px`);
+            // 动画结束后设为 auto，避免内容变化后被截断
+            const timer = setTimeout(() => setHeight('auto'), 250);
+            return () => clearTimeout(timer);
+        } else {
+            setHeight('0px');
+        }
+    }, [collapsed]);
 
     const handleToggle = () => {
         if (!collapsible) return;
@@ -50,15 +63,16 @@ export const CardPanel: React.FC<ItemPanelProps> = (props) => {
                 className={`card-panel-label${collapsible ? ' card-panel-label--collapsible' : ''}`}
                 onClick={handleToggle}
             >
-                {collapsible && (
-                    <span className={`card-panel-arrow${collapsed ? ' card-panel-arrow--collapsed' : ''}`}>▾</span>
-                )}
                 {label}
                 {tip && <Tooltip className={'card-help'} title={tip}>&nbsp;<Help/>&nbsp;</Tooltip>}
             </div>
-            {!collapsed && (
-                <div style={{...contentStyle}} className={"card-panel-content"}>{children}</div>
-            )}
+            <div
+                ref={contentRef}
+                className={"card-panel-content"}
+                style={{height, overflow: 'hidden', transition: 'height 0.25s ease', ...contentStyle}}
+            >
+                {children}
+            </div>
         </div>
     )
 }

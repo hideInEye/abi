@@ -98,12 +98,12 @@ class AntdBaseColumnDefinition extends AbstractColumnDefinition {
                     tickCount: 4
                 },
                 legend: {
-                    position: "top-right",
+                    position: "top",
                     layout: "horizontal",
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 12
+                            fontSize: 18
                         }
                     },
                     itemSpacing: 3,

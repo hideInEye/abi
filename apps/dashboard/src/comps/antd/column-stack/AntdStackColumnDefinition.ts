@@ -123,7 +123,7 @@ class AntdStackColumnDefinition extends AbstractColumnDefinition {
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 14
+                            fontSize: 18
                         }
                     }
                 },

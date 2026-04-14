@@ -10,13 +10,13 @@
  */
 
 .project-list-container {
-  padding: 25px;
+  padding: 24px;
   background-color: #ffffff;
   color: #333333;
   font-family: 'Helvetica Neue', Arial, sans-serif;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 110px);
+  height: 100%;
   overflow: hidden;
   gap:8px;
 
@@ -34,7 +34,7 @@
   }
 
   .project-list {
-    //flex: 1;
+    flex: 1;
     display: flex;
     flex-wrap: wrap;
     gap: 20px; // 保持元素间距20px
@@ -88,9 +88,12 @@
   }
 
   .project-list-page {
-    margin-top: 24px;
+    position: sticky;
+    bottom: 0;
+    background-color: #ffffff;
+    padding: 12px 0;
     display: flex;
-    justify-content: center;
+    justify-content: flex-end;
 
     .ant-pagination {
       .ant-pagination-item,

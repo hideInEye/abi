@@ -108,12 +108,12 @@ class AntdRadarDefinition extends AntdCommonDefinition<AntdRadarController, Antd
                     opacity: 0.5
                 },
                 point: {
-                    size: 3,
-                    shape: "circle",
+                    size: 5,
+                    shape: "square",
                     style: {
                         fill: "l(90) 0:#248eff 1:#f36fff",
                         stroke: "#64d6ff",
-                        lineWidth: 0
+                        lineWidth: 1
                     }
                 },
                 area: {
