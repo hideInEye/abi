@@ -89,7 +89,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
               variant="link"
               onClick={() =>
                 setAnalysisContext({
-                  nodeId: record.relViewId,
+                  nodeId: record.schemaId,
                   nodeName: record.bizName,
                   nodeType: 'TABLE_SEMANTIC',
                   spaceId: Number(localStorage.getItem('spaceId')) || undefined
