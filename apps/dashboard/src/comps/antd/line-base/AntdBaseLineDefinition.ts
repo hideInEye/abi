@@ -53,11 +53,11 @@ class AntdBaseLineDefinition extends AbstractLineDefinition {
                 supportCSSTransform: true,
                 color: "#1677ff",
                 point: {
-                    size: 6,
+                    size: 5,
                     color: "#1677ff",
-                    shape: "circle",
+                    shape: "square",
                     style: {
-                        lineWidth: 0,
+                        lineWidth: 1,
                         stroke: "#4096ff"
                     }
                 },

@@ -72,21 +72,21 @@ export const AntdLegend = (props: ConfigType) => {
                                 key: 'position',
                                 type: 'select',
                                 label: '位置',
-                                value: 'left-top',
+                                value: (legend as any)?.position ?? 'top',
                                 config: {
                                     options: [
-                                        {value: 'left-top', label: '左上'},
-                                        {value: 'left', label: '正左'},
-                                        {value: 'left-bottom', label: '左下'},
-                                        {value: 'top-left', label: '上左'},
+                                        {value: 'top-left', label: '左上'},
                                         {value: 'top', label: '正上'},
-                                        {value: 'top-right', label: '上右'},
-                                        {value: 'right-top', label: '右上'},
+                                        {value: 'top-right', label: '右上'},
+                                        {value: 'left-top', label: '上左'},
+                                        {value: 'left', label: '正左'},
+                                        {value: 'left-bottom', label: '下左'},
+                                        {value: 'right-top', label: '上右'},
                                         {value: 'right', label: '正右'},
-                                        {value: 'right-bottom', label: '右下'},
-                                        {value: 'bottom-left', label: '下左'},
+                                        {value: 'right-bottom', label: '下右'},
+                                        {value: 'bottom-left', label: '左下'},
                                         {value: 'bottom', label: '正下'},
-                                        {value: 'bottom-right', label: '下右'},
+                                        {value: 'bottom-right', label: '右下'},
                                     ]
                                 }
                             },
@@ -94,7 +94,7 @@ export const AntdLegend = (props: ConfigType) => {
                                 key: 'layout',
                                 type: 'select',
                                 label: '方向',
-                                value: 'horizontal',
+                                value: (legend as any)?.layout ?? 'horizontal',
                                 config: {
                                     options: [
                                         {value: 'horizontal', label: '水平'},
@@ -112,7 +112,7 @@ export const AntdLegend = (props: ConfigType) => {
                                                 key: 'fontSize',
                                                 type: 'number-input',
                                                 label: '字号',
-                                                value: 12,
+                                                value: (legend as any)?.itemName?.style?.fontSize ?? 18,
                                                 config: {
                                                     min: 0,
                                                     max: 100,
@@ -122,7 +122,7 @@ export const AntdLegend = (props: ConfigType) => {
                                                 key: 'fill',
                                                 type: 'color-picker',
                                                 label: '颜色',
-                                                value: '#1c1c1c',
+                                                value: (legend as any)?.itemName?.style?.fill ?? '#1c1c1c',
                                                 config: {
                                                     showText: true,
                                                 }

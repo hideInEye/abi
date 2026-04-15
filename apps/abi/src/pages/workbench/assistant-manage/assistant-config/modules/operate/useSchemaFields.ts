@@ -72,7 +72,23 @@ const useSchemaFields = ({ groupId, schemaId }: PropsType) => {
   const sourceId = useMemo(() => {
     if (schemaOptions?.length && schemaId) {
       const selected = schemaOptions.find((item: any) => item.schemaId === schemaId);
-      return selected?.sourceId;
+      // 优先取 schema 顶层 sourceId
+      if (selected?.sourceId) return selected.sourceId;
+      // 从 modelDetail 的字段中取sourceId（SQL场景）
+      try {
+        if (selected?.modelDetail) {
+          const detail = JSON.parse(selected.modelDetail);
+          const allFields = [
+            ...(detail.dimensions || []),
+            ...(detail.identifiers || []),
+            ...(detail.measures || [])
+          ];
+          const found = allFields.find((f: any) => f.sourceId);
+          if (found?.sourceId) return found.sourceId;
+        }
+      } catch (e) {
+        console.error('解析sourceId失败:', e);
+      }
     }
     return undefined;
   }, [schemaOptions, schemaId]);

@@ -146,11 +146,12 @@ class AntdBaseAreaDefinition extends AbstractAreaDefinition {
                 isStack: false,
                 startOnZero: false,
                 point: {
-                    size: 0,
+                    size: 5,
+                    shape: "square",
                     style: {
                         fill: "#205e9a",
                         stroke: "#ffffff",
-                        lineWidth: 0
+                        lineWidth: 1
                     }
                 },
                 line: {
@@ -196,12 +197,12 @@ class AntdBaseAreaDefinition extends AbstractAreaDefinition {
                     title: null
                 },
                 legend: {
-                    position: "right-top",
-                    layout: "vertical",
+                    position: "top",
+                    layout: "horizontal",
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 12
+                            fontSize: 18
                         }
                     }
                 },

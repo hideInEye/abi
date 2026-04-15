@@ -120,7 +120,7 @@ class AntdGroupBarDefinition extends AbstractBarDefinition {
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 14
+                            fontSize: 18
                         }
                     }
                 },

@@ -144,7 +144,7 @@ const BottomSql = forwardRef<BottomSqlHandle, PropsType>(
           options={PAGE_SIZE_OPTIONS}
           onChange={handlePageSizeChange}
         />
-        <Button type="link" size="small" style={{ color: '#9374EE' }}>总数：{activeTab?.total}</Button>
+        <Button type="link" size="small" style={{ color: '#3467FF' }}>总数：{activeTab?.total}</Button>
       </div>
     );
     
@@ -167,7 +167,7 @@ const BottomSql = forwardRef<BottomSqlHandle, PropsType>(
             size="small"
             type="editable-card"
             activeKey={activeKey}
-            items={tabs.map((t) => ({ key: t.key, label: <span><CheckCircleFilled style={{ color: '#9374EE', marginRight: 4 }} /><span style={{ color: '#333' }}>{t.label}</span></span>, closable: true }))}
+            items={tabs.map((t) => ({ key: t.key, label: <span><CheckCircleFilled style={{ color: '#3467FF', marginRight: 4 }} /><span style={{ color: '#333' }}>{t.label}</span></span>, closable: true }))}
             className="flex-shrink-0 mb-0"
             tabBarStyle={{ marginBottom: 0 }}
             onChange={setActiveKey}

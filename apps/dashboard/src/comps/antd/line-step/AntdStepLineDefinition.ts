@@ -59,11 +59,11 @@ class AntdStepLineDefinition extends AbstractLineDefinition {
                 smooth: true,
                 supportCSSTransform: true,
                 point: {
-                    size: 0,
+                    size: 5,
                     color: "#4096ff",
-                    shape: "bowtie",
+                    shape: "square",
                     style: {
-                        lineWidth: 0,
+                        lineWidth: 1,
                         stroke: "#4096ff"
                     }
                 },
@@ -105,12 +105,12 @@ class AntdStepLineDefinition extends AbstractLineDefinition {
                     title: null
                 },
                 legend: {
-                    position: "right-top",
-                    layout: "vertical",
+                    position: "top",
+                    layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#00f0ffff",
-                            fontSize: 12
+                            fill: "#555",
+                            fontSize: 18
                         }
                     }
                 },
