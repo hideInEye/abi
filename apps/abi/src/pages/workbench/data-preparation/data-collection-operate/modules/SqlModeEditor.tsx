@@ -252,7 +252,7 @@ const SqlModeEditor: React.FC<Props> = ({
             width: 22,
             height: 22,
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #8c96ff 0%, #6c63ff 100%)',
+            background: 'linear-gradient(180deg, #c8dcff 0%, #4d8ef0 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -275,7 +275,7 @@ const SqlModeEditor: React.FC<Props> = ({
           <Button
             type="primary"
             size="small"
-            style={{ width: 32, height: 26, padding: 0, flexShrink: 0, background: '#9374EE', borderColor: '#9374EE' }}
+            style={{ width: 32, height: 26, padding: 0, flexShrink: 0, background: '#3467FF', borderColor: '#3467FF' }}
           >
             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
               <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
@@ -336,7 +336,7 @@ const SqlModeEditor: React.FC<Props> = ({
           loading={runLoading}
           type="primary"
           size="small"
-          style={{ backgroundColor: '#9374EE', borderColor: '#9374EE' }}
+          style={{ backgroundColor: '#3467FF', borderColor: '#3467FF' }}
           onClick={onRun}
         >
           执行
@@ -350,7 +350,7 @@ const SqlModeEditor: React.FC<Props> = ({
         {/* 右侧数据源信息展示 */}
         {sourceId && dataSourceList.length > 0 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ApiOutlined style={{ color: '#9374EE', fontSize: 13 }} />
+            <ApiOutlined style={{ color: '#3467FF', fontSize: 13 }} />
             <span style={{ fontSize: 12, color: '#555', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {dataSourceList.find(d => String(d.sourceId) === String(sourceId))?.sourceName || '--'}
             </span>

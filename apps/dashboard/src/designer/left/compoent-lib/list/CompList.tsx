@@ -87,7 +87,7 @@ class CompList extends Component {
     addItem = (compKey: string, position = [0, 0]) => {
         const {setAddRecordCompId} = eventOperateStore;
         const {definitionMap} = DesignerLoader;
-        const {compName, width = 320, height = 200} = definitionMap[compKey].getBaseInfo();
+        const {compName, width = 700, height = 500} = definitionMap[compKey].getBaseInfo();
         const movableItem: ILayerItem = {
             name: compName,
             type: compKey,

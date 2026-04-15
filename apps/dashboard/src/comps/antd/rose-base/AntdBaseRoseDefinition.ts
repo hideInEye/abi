@@ -68,12 +68,12 @@ class AntdBaseRoseDefinition extends AbstractRoseDefinition {
                     autoRotate: true
                 },
                 legend: {
-                    position: "left",
-                    layout: "vertical",
+                    position: "top",
+                    layout: "horizontal",
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 14
+                            fontSize: 18
                         }
                     },
                     itemSpacing: 0

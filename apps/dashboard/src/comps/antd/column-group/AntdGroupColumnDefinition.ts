@@ -121,8 +121,8 @@ class AntdGroupColumnDefinition extends AbstractColumnDefinition {
                     layout: "horizontal",
                     itemName: {
                         style: {
-                            fill: "#fdfdfd",
-                            fontSize: 14
+                            fill: "#555",
+                            fontSize: 18
                         }
                     },
                     itemMarginBottom: 0

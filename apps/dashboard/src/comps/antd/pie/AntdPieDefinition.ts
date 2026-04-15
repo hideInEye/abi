@@ -101,12 +101,12 @@ class AntdPieDefinition extends AntdCommonDefinition<AntdPieController, AntdPieP
                     labelLine: false
                 },
                 legend: {
-                    position: "right",
-                    layout: "vertical",
+                    position: "top",
+                    layout: "horizontal",
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 14
+                            fontSize: 18
                         }
                     }
                 },

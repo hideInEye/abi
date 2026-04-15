@@ -124,7 +124,7 @@ class AntdRangeColumnDefinition extends AbstractColumnDefinition {
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 14
+                            fontSize: 18
                         }
                     },
                     itemSpacing: 7

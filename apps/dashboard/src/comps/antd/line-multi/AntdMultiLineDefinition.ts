@@ -102,11 +102,11 @@ class AntdMultiLineDefinition extends AbstractLineDefinition {
                         "#00a8ff",
                         "#00ffc9"
                     ],
-                    size: 0,
-                    shape: "circle",
+                    size: 5,
+                    shape: "square",
                     style: {
                         stroke: "#00a8ff",
-                        lineWidth: 0
+                        lineWidth: 1
                     }
                 },
                 lineStyle: {
@@ -152,7 +152,7 @@ class AntdMultiLineDefinition extends AbstractLineDefinition {
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 14
+                            fontSize: 18
                         }
                     }
                 },

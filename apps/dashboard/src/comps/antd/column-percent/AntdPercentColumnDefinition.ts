@@ -140,7 +140,7 @@ class AntdPercentColumnDefinition extends AbstractColumnDefinition {
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 13
+                            fontSize: 18
                         }
                     }
                 },

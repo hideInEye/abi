@@ -11,41 +11,31 @@
 
 .card-panel {
   margin-bottom: 8px;
-  background-color: #fff;
+  background-color: #f2f3f5;
   border-radius: 4px;
-  border: 1px solid rgba(5, 5, 5, 0.15);
+  border: 1px solid rgba(5, 5, 5, 0.06);
   overflow: hidden;
+  transition: all 0.2s ease;
 
   &:last-child {
     margin-bottom: 0;
   }
 
   .card-panel-label {
-    color: #333;
-    padding: 10px 12px;
+    color: #555;
+    padding: 12px 16px;
     margin-bottom: 0;
-    font-size: 13px;
+    font-size: 14px;
     display: flex;
     align-items: center;
     gap: 4px;
+    transition: all 0.2s ease;
 
     &--collapsible {
       cursor: pointer;
       user-select: none;
       &:hover {
         color: #1677ff;
-      }
-    }
-
-    .card-panel-arrow {
-      font-size: 12px;
-      display: inline-block;
-      transition: transform 0.2s ease;
-      transform: rotate(0deg);
-      line-height: 1;
-
-      &--collapsed {
-        transform: rotate(-90deg);
       }
     }
 
@@ -60,7 +50,7 @@
   .card-panel-content {
     color: #555;
     font-size: 12px;
-    padding: 12px;
-    border-top: 1px solid rgba(5, 5, 5, 0.15);
+    padding: 12px 16px;
+    background-color: #fff;
   }
 }

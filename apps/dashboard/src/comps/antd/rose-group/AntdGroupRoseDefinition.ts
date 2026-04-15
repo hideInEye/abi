@@ -92,12 +92,12 @@ class AntdGroupRoseDefinition extends AbstractRoseDefinition {
                     autoRotate: false
                 },
                 legend: {
-                    position: "top-left",
+                    position: "top",
                     layout: "horizontal",
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 14
+                            fontSize: 18
                         }
                     }
                 },

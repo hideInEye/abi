@@ -120,7 +120,7 @@ class AntdStackRoseDefinition extends AbstractRoseDefinition {
                     itemName: {
                         style: {
                             fill: "#555",
-                            fontSize: 16
+                            fontSize: 18
                         }
                     }
                 },

@@ -238,12 +238,10 @@ export function Component() {
 
       message.success('保存成功');
       setVisible(false);
-      if (back) {
-        if (isFromGuide) {
-          push('/guide');
-        } else {
-          push('/workbench/data-preparation/data-collection');
-        }
+      if (isFromGuide) {
+        push('/guide');
+      } else {
+        push('/workbench/data-preparation/data-collection');
       }
       setBack(false);
     } catch (error) {
