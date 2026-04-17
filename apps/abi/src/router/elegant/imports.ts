@@ -22,6 +22,7 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   500: () => import("@/pages/_builtin/500/index.tsx"),
   "iframe-page": () => import("@/pages/_builtin/iframe-page/[url].tsx"),
   "ai-assistant_conversational-analysis": () => import("@/pages/ai-assistant/conversational-analysis/index.tsx"),
+  "component_applications_api-key": () => import("@/pages/component/applications/api-key/index.tsx"),
   "component_system_data-dictionary": () => import("@/pages/component/system/data-dictionary/index.tsx"),
   component_system_model: () => import("@/pages/component/system/model/index.tsx"),
   component_system_plugin: () => import("@/pages/component/system/plugin/index.tsx"),

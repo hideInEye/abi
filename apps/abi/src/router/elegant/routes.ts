@@ -79,6 +79,29 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
+        name: 'component_applications',
+        path: 'applications',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.component_application',
+          order: 7,
+          title: 'component_application'
+        },
+        children: [
+          {
+            name: 'component_applications_api-key',
+            path: 'api-key',
+            component: 'view.component_applications_api-key',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.component_application_apikey',
+              order: 1,
+              title: 'component_application_apikey'
+            }
+          }
+        ]
+      },
+      {
         name: 'component_system',
         path: 'system',
         meta: {
