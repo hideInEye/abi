@@ -25,7 +25,6 @@ import BluePrintHdImpl from "./items/blue-print/BluePrintHdImpl.tsx";
 import {AfferentFour, ConnectionPointTwo, EfferentFour, Eyes, HardDiskOne, PageTemplate, Theme, Send} from "@icon-park/react";
 import URLUtil from "../../utils/URLUtil.ts";
 import {DesignerMode, ProjectState} from "../DesignerType.ts";
-import AiChatPanel from "./items/ai-chat/AiChatPanel.tsx";
 import baseApi from "../../api/BaseApi.ts";
 import {globalMessage} from "../../framework/message/GlobalMessage.tsx";
 import designerManager from "../manager/DesignerManager.ts";
@@ -96,16 +95,21 @@ const leftItems: Array<IHeaderItem> = [
 
 
 const Header: React.FC = observer(() => {
-        const [aiChatVisible, setAiChatVisible] = React.useState(false);
         const publishStatus = String(projectHdStore.projectConfig.status ?? '1');
 
         const handlePublish = async () => {
             if (publishStatus === '0') return;
             const {id} = URLUtil.parseUrlParams();
             const proData = designerManager.getData();
+            // 保留 dataJson 中已有的 chatId，防止发布时覆盖丢失
+            let chatId: string | undefined;
+            try {
+                const existing = projectHdStore.projectConfig.dataJson;
+                if (existing) chatId = JSON.parse(existing)?.chatId;
+            } catch { /* ignore */ }
             await baseApi.updateProject({
                 id,
-                dataJson: JSON.stringify(proData),
+                dataJson: JSON.stringify(chatId ? {...proData, chatId} : proData),
                 status: '0',
             });
             projectHdStore.updateProjectConfig({status: '0'});
@@ -159,27 +163,11 @@ const Header: React.FC = observer(() => {
                             </span>
                         </div>
                         {buildHeaderItemUI(leftItems)}
-                        <div
-                            className={`header-item${aiChatVisible ? ' header-item-active' : ''}`}
-                            onClick={() => setAiChatVisible(!aiChatVisible)}
-                            title="AI 智能问答"
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{marginBottom: 2}}>
-                                <path d="M20 2H4a2 2 0 00-2 2v12a2 2 0 002 2h4l4 4 4-4h4a2 2 0 002-2V4a2 2 0 00-2-2zm-9 11H7v-2h4v2zm6 0h-4v-2h4v2zm0-4H7V7h10v2z"/>
-                            </svg>
-                            <span className={'item-span'}>AI问答</span>
-                        </div>
                     </div>
                     {canvasHdStore.canvasVisible && <CanvasHdConfigImpl/>}
                     {projectHdStore.projectVisible && <ProjectHdItemImpl/>}
                     {themeHdStore.themeVisible && <ThemeHdItemImpl/>}
                     {bluePrintHdStore.bluePrintVisible && <BluePrintHdImpl/>}
-                    {aiChatVisible && (
-                        <AiChatPanel
-                            onClose={() => setAiChatVisible(false)}
-                            taskType="development"
-                        />
-                    )}
                 </div>
             </>
         );

@@ -41,7 +41,7 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
 
     const pageChange = (page: number, size: number) => {
         baseApi.getProjectInfoPageList({current: page, size, status: '0'}).then((data: IPage<IProjectInfo>) => {
-            setPageData(data);
+            setPageData({...data, current: page, size});
         });
     };
 
@@ -99,10 +99,13 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
             {pageData.records.length > 0 && (
                 <Pagination
                     rootClassName="project-list-page"
-                    defaultCurrent={pageData.current}
+                    current={pageData.current}
                     pageSize={pageData.size}
                     total={pageData.total}
                     onChange={pageChange}
+                    showSizeChanger
+                    onShowSizeChange={pageChange}
+                    locale={{ items_per_page: '条/页' }}
                 />
             )}
             <Modal
