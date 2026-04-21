@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { message } from 'antd';
 import { getApiTarget, notifyTokenExpired } from '../../../../utils/FetchUtil';
+import baseApi from '../../../../api/BaseApi';
+import projectHdStore from '../project/ProjectManager';
+import URLUtil from '../../../../utils/URLUtil';
 import './AiChatPanel.less';
 
 interface ChatMessage {
@@ -17,22 +20,16 @@ function getNow() {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// 生成 uuid
-function genUid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
-}
-
 interface AiChatPanelProps {
-  onClose: () => void;
+  onClose?: () => void;
   /** 大屏id（开发态传图表名称，发布态传空） */
   dashboardId?: string;
   /** 图表名称列表（发布态使用） */
   chartNameList?: string[];
   /** task_type: development | release */
   taskType?: 'development' | 'release';
+  /** 浮层模式（顶部按钮触发），默认 false（嵌入右侧面板） */
+  float?: boolean;
 }
 
 const AiChatPanel: React.FC<AiChatPanelProps> = ({
@@ -40,16 +37,42 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
   dashboardId = '',
   chartNameList = [],
   taskType = 'development',
+  float = false,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const [agentList, setAgentList] = useState<any[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+  const [agentDropOpen, setAgentDropOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const convUidRef = useRef<string>(genUid());
-  const chatIdRef = useRef<string>(String(Date.now()));
+  const convUidRef = useRef<string>('');
+  const chatIdRef = useRef<string>('');
   const streamBufferRef = useRef('');
+
+  // 挂载时拉取助手列表 + 初始化 chatId / conv_uid
+  useEffect(() => {
+    const spaceId = Number(localStorage.getItem('spaceId'));
+    baseApi.fetchAgentList(spaceId).then(setAgentList).catch(() => {});
+
+    // 从 store 读 chatId（进编辑页时已由 EditorDesignerLoader 存入）
+    const dataJson = projectHdStore.projectConfig.dataJson;
+    const parsed = dataJson ? JSON.parse(dataJson) : null;
+    const chatId = parsed?.chatId ? String(parsed.chatId) : '';
+    if (!chatId) return;
+    chatIdRef.current = chatId;
+
+    // 拉取已有会话，取第一条 conv_uid 作为本次会话标识
+    baseApi.fetchChatConvList({
+      chat_id: chatId,
+      chat_mode: 'chat_with_dashboard',
+      space_id: spaceId,
+    }).then((convList) => {
+      if (convList.length) convUidRef.current = convList[0].conv_uid ?? '';
+    }).catch(() => {});
+  }, []);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -88,6 +111,10 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
   const handleSend = useCallback(async () => {
     const text = inputValue.trim();
     if (!text || loading) return;
+    if (!selectedAgentId) {
+      message.warning('请先选择助手');
+      return;
+    }
 
     setInputValue('');
     setMessages((prev) => [
@@ -120,6 +147,16 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
       // ignore
     }
 
+    let userName = '1';
+    try {
+      const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
+      if (userInfoStr) {
+        userName = JSON.parse(userInfoStr)?.userName || '1';
+      }
+    } catch {
+      // ignore
+    }
+
     const params = {
       messages: text,
       model: 'deepseek-r1:14b',
@@ -131,17 +168,17 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
       context: {
         conv_uid: convUidRef.current,
         chat_id: chatIdRef.current,
-        agent_id: '1100051234665',
-        space_id: '1',
+        agent_id: selectedAgentId,
+        space_id: String(localStorage.getItem('spaceId') ?? ''),
         app_code: 'chat_with_dashboard',
         chat_mode: 'chat_with_dashboard',
         sys_code: '1',
-        user_name: '1',
+        user_name: userName,
         extra: {
           task_type: taskType,
           chart_name_list: taskType === 'release' ? chartNameList : [],
           db_name: '',
-          dashbord_id: taskType === 'development' ? dashboardId : '',
+          dashboard_id: dashboardId,
           elements: {},
         },
       },
@@ -252,7 +289,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
         );
       }
     }
-  }, [inputValue, loading, dashboardId, chartNameList, taskType, updateLastAiMsg]);
+  }, [inputValue, loading, selectedAgentId, dashboardId, chartNameList, taskType, updateLastAiMsg]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -264,8 +301,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
   const handleClearHistory = () => {
     stopGenerating();
     setMessages([]);
-    convUidRef.current = genUid();
-    chatIdRef.current = String(Date.now());
+    convUidRef.current = '';
     streamBufferRef.current = '';
   };
 
@@ -278,8 +314,9 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
   };
 
   return (
-    <div className="ai-chat-panel">
+    <div className={`ai-chat-panel${float ? ' ai-chat-panel--float' : ''}`}>
       {/* Header */}
+      {float && (
       <div className="ai-chat-header">
         <div className="ai-chat-title">
           <div className="ai-icon">A</div>
@@ -298,14 +335,17 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
             </svg>
           </button>
           {/* 关闭 */}
+          {onClose && (
           <button className="action-btn" title="关闭" onClick={onClose}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
+          )}
         </div>
       </div>
+      )}
 
       {/* Status Bar */}
       <div className="ai-status-bar">
@@ -313,6 +353,17 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
         <span className={`status-text ${loading ? 'loading' : ''}`}>
           {loading ? '正在思考中...' : '知识已生效'}
         </span>
+        <button
+          className="action-btn"
+          style={{marginLeft: 'auto'}}
+          title="清空历史"
+          onClick={handleClearHistory}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 1 0 .49-3.37" />
+          </svg>
+        </button>
       </div>
 
       {/* Message List */}
@@ -360,11 +411,43 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="向「大屏图表」提问，Enter 发送，Shift+Enter 换行"
+            placeholder="请输入问题，获取结果"
             rows={2}
             disabled={loading}
           />
           <div className="input-toolbar">
+            {/* 助手选择 */}
+            {agentList.length > 0 && (
+              <div className="agent-selector">
+                <div className="agent-select-trigger" onClick={() => setAgentDropOpen(v => !v)}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13" style={{marginRight: 5, flexShrink: 0}}>
+                    <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                  </svg>
+                  <span>{selectedAgentId ? agentList.find(a => String(a.agentId) === selectedAgentId)?.bizName || '未知助手' : '请选择助手'}</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12" style={{marginLeft: 4, transition: 'transform 0.2s', transform: agentDropOpen ? 'rotate(180deg)' : 'none'}}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </div>
+                {agentDropOpen && (
+                  <div className="agent-dropdown">
+                    {agentList.map((agent: any) => (
+                      <div
+                        key={agent.agentId}
+                        className={`agent-option${selectedAgentId === String(agent.agentId) ? ' agent-option-active' : ''}`}
+                        onClick={() => { setSelectedAgentId(String(agent.agentId)); setAgentDropOpen(false); }}
+                      >
+                        <div className="agent-option-name">{agent.bizName || `助手${agent.agentId}`}</div>
+                        {selectedAgentId === String(agent.agentId) && (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {loading ? (
               <button className="stop-btn" onClick={stopGenerating} title="停止生成">
                 <svg viewBox="0 0 24 24" fill="currentColor">

@@ -22,6 +22,7 @@ import AbstractController from "../../framework/core/AbstractController";
 import {Close} from "@icon-park/react";
 import layerManager from "../manager/LayerManager.ts";
 import {DesignerLoader} from "../loader/DesignerLoader.ts";
+import AiChatPanel from "../header/items/ai-chat/AiChatPanel";
 
 export interface ConfigType<T extends AbstractController = AbstractDesignerController> {
     controller: T;
@@ -51,8 +52,15 @@ const ConfigContent = observer(() => {
     }
 
     const buildConfigContent = () => {
-        const {compController} = layerManager;
         const {activeMenu, activeElem} = rightStore;
+        // AI tab 对所有图表统一渲染，不走各组件 mapping
+        if (activeMenu === 'ai') {
+            // 去掉 Antd 前缀，转换为后端期望的图表 ID（如 AntdBaseBar → BaseBar）
+            const rawType = activeElem.type ?? '';
+            const chartId = rawType.startsWith('Antd') ? rawType.slice(4) : rawType;
+            return <AiChatPanel taskType="development" dashboardId={chartId}/>;
+        }
+        const {compController} = layerManager;
         const abstractConfigObj: AbstractDefinition = DesignerLoader.definitionMap[activeElem.type + '']
         if (!abstractConfigObj) return;
         const configMapping = abstractConfigObj.getMenuToConfigContentMap();
@@ -127,7 +135,7 @@ const ConfigContent = observer(() => {
                     <Close theme="filled" size={18}/>
                 </div>
             </div>
-            <div className={'lc-panel-content'}>
+            <div className={`lc-panel-content${activeMenu === 'ai' ? ' lc-panel-content--no-padding' : ''}`}>
                 {buildConfigContent()}
             </div>
             <div className="resize-handle" ref={resizeHandleRef}></div>

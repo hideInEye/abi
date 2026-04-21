@@ -135,10 +135,16 @@ export const doSave = throttle(async () => {
     NProgress.start();
     const {id} = URLUtil.parseUrlParams();
     const proData = designerManager.getData();
+    // 保留 dataJson 中已有的 chatId，防止保存时覆盖丢失
+    let chatId: string | undefined;
+    try {
+        const existing = projectHdStore.projectConfig.dataJson;
+        if (existing) chatId = JSON.parse(existing)?.chatId;
+    } catch { /* ignore */ }
     //转换为最终保存的数据格式
     const projectInfo: IProjectInfo = {
         id,
-        dataJson: JSON.stringify(proData),
+        dataJson: JSON.stringify(chatId ? {...proData, chatId} : proData),
     }
     await baseApi.updateProject(projectInfo);
     NProgress.done()

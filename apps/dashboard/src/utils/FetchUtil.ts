@@ -142,7 +142,8 @@ export default class FetchUtil {
      * @private
      */
     private static async request(url: string, options: RequestInit = {}): Promise<HttpResponse> {
-        const fullUrl = url.startsWith('http') ? url : `${_apiTarget}${url}`;
+        // /chat-proxy/ 开头的路径直接走代理，不拼接 _apiTarget
+        const fullUrl = (url.startsWith('http') || url.startsWith('/chat-proxy/')) ? url : `${_apiTarget}${url}`;
         let response: Response | null = null;
         try {
             response = await fetch(fullUrl, {
@@ -183,7 +184,7 @@ export default class FetchUtil {
      * @private
      */
     private static async requestNativeResult(url: string, options: RequestInit = {}): Promise<any> {
-        const fullUrl = url.startsWith('http') ? url : `${_apiTarget}${url}`;
+        const fullUrl = (url.startsWith('http') || url.startsWith('/chat-proxy/')) ? url : `${_apiTarget}${url}`;
         let response: Response | null = null;
         try {
             response = await fetch(fullUrl, {
