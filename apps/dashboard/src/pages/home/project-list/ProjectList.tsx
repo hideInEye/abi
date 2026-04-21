@@ -81,7 +81,12 @@ export const ProjectList = memo((props: ProjectListProps) => {
             const agentList = await baseApi.fetchAgentList(spaceId);
             const agentId = agentList?.[0]?.agentId;
 
-            // 3. 创建会话应用
+            // 3. 获取提示词列表，status 全部设为 '1'（开启），组装 chat_config
+            const promptList = await baseApi.fetchRecommendQuestions();
+            const promptsWithStatus = promptList.map((p: any) => ({...p, status: '1'}));
+            const chatConfig = JSON.stringify({prompts: promptsWithStatus});
+
+            // 4. 创建会话应用
             const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
             let createBy = '';
             try {
@@ -96,11 +101,12 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 chat_mode: 'chat_with_dashboard',
                 space_id: spaceId,
                 create_by: createBy,
+                chat_config: chatConfig,
                 ...(agentId ? {agent_id: String(agentId)} : {}),
             };
             const appRes = await baseApi.createChatApp(chatAppData);
 
-            // 4. 创建会话，并把 chat_id 存入大屏 dataJson
+            // 5. 创建会话，并把 chat_id 存入大屏 dataJson
             if (appRes.success && appRes.data) {
                 const chatId = appRes.data.data.chat_id;
                 await baseApi.createChatConv({

@@ -5,12 +5,23 @@ import baseApi from '../../../../api/BaseApi';
 import projectHdStore from '../project/ProjectManager';
 import URLUtil from '../../../../utils/URLUtil';
 import './AiChatPanel.less';
+import AiTableResult from './AiTableResult';
+
+interface TableRow { [key: string]: any; }
 
 interface ChatMessage {
   role: 'human' | 'ai';
   content: string;
   time: string;
   streaming?: boolean;
+  /** AI 返回的结构化表格数据 */
+  tableData?: TableRow[];
+  /** 对应的 SQL 语句 */
+  sql?: string;
+  /** 字段映射 */
+  mapping?: { x字段?: string; y字段?: string };
+  /** 图表名称信息 */
+  chartName?: { x_name?: string; y_name?: string; title?: string };
 }
 
 // 获取当前时间字符串
@@ -135,7 +146,8 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
     abortControllerRef.current = controller;
 
     // 构造请求参数
-    const apiUrl = `${getApiTarget()}/dashboard/api/v2/workflow/chat/completions`;
+    const apiBase = getApiTarget().replace(/\/api$/, '');
+    const apiUrl = `${apiBase}/chat-proxy/api/v2/workflow/chat/completions`;
 
     const storedToken = localStorage.getItem('SOY-REACT_token');
     let authToken = '';
@@ -159,11 +171,11 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
 
     const params = {
       messages: text,
-      model: 'deepseek-r1:14b',
-      stream: true,
+      model: 'qwen3:30b-a3b-fp16',
+      stream: false,
       temperature: 0.0,
       max_new_tokens: 4096,
-      incremental: true,
+      incremental: false,
       enable_vis: true,
       context: {
         conv_uid: convUidRef.current,
@@ -205,66 +217,39 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
         throw new Error(`HTTP ${response.status}`);
       }
 
-      if (!response.body) {
-        throw new Error('Response body is null');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let lineBuffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        lineBuffer += decoder.decode(value, { stream: true });
-        const lines = lineBuffer.split('\n');
-        lineBuffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data:')) continue;
-          const data = trimmed.slice(5).trim();
-          if (!data) continue;
-
-          if (data === '[DONE]') {
-            const finalContent = streamBufferRef.current
-              .replace(/<think>[\s\S]*?<\/think>/g, '')
-              .replace(/\\n/g, '\n')
-              .trim();
-            updateLastAiMsg(finalContent || streamBufferRef.current, false);
-            setLoading(false);
-            abortControllerRef.current = null;
-            return;
+      const json = await response.json();
+      // data 字段是 JSON 字符串，需再次 parse
+      let parsedResp: any = {};
+      try {
+        parsedResp = typeof json.data === 'string' ? JSON.parse(json.data) : (json.data ?? {});
+      } catch { /* ignore */ }
+      
+      const respTaskType = parsedResp.task_type ?? 'development';
+      const devData = parsedResp[respTaskType] ?? {};
+      const tableData: TableRow[] | undefined =
+        Array.isArray(devData.data) && devData.data.length > 0 ? devData.data : undefined;
+      const respSql: string | undefined = devData.sql || undefined;
+      const respMapping = devData.mapping;
+      const respChartName = devData.name;
+      
+      setMessages((prev) => {
+        const copy = [...prev];
+        for (let i = copy.length - 1; i >= 0; i--) {
+          if (copy[i].role === 'ai') {
+            copy[i] = {
+              ...copy[i],
+              streaming: false,
+              content: tableData ? '' : (devData.text || devData.content || '无数据返回'),
+              tableData,
+              sql: respSql,
+              mapping: respMapping,
+              chartName: respChartName,
+            };
+            return copy;
           }
-
-          if (data.includes('chatcmpl')) continue;
-
-          let chunk = data;
-          chunk = chunk.replace(/round_index:\d+,?\s*/g, '');
-          streamBufferRef.current += chunk;
-
-          let displayContent = streamBufferRef.current;
-          const lastOpen = displayContent.lastIndexOf('<think>');
-          if (lastOpen >= 0) {
-            displayContent = displayContent.substring(lastOpen + 7);
-            const closeIdx = displayContent.indexOf('</think>');
-            if (closeIdx >= 0) {
-              displayContent = displayContent.substring(0, closeIdx);
-            }
-          }
-
-          displayContent = displayContent.replace(/\\n/g, '\n');
-          updateLastAiMsg(displayContent, true);
         }
-      }
-
-      // stream ended
-      const finalContent = streamBufferRef.current
-        .replace(/<think>[\s\S]*?<\/think>/g, '')
-        .replace(/\\n/g, '\n')
-        .trim();
-      updateLastAiMsg(finalContent || streamBufferRef.current || '（无响应内容）', false);
+        return prev;
+      });
       setLoading(false);
       abortControllerRef.current = null;
     } catch (error: any) {
@@ -382,8 +367,16 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
         {messages.map((msg, idx) => (
           <div key={idx} className={`ai-message ${msg.role}`}>
             <div className="message-bubble">
-              {msg.content}
-              {msg.streaming && <span className="cursor">▌</span>}
+              {msg.tableData ? (
+                <AiTableResult
+                  data={msg.tableData}
+                  sql={msg.sql}
+                  mapping={msg.mapping}
+                  chartName={msg.chartName}
+                />
+              ) : (
+                <>{msg.content}{msg.streaming && <span className="cursor">▌</span>}</>
+              )}
             </div>
             <div className="message-time">{msg.time}</div>
           </div>
@@ -420,9 +413,6 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
             {agentList.length > 0 && (
               <div className="agent-selector">
                 <div className="agent-select-trigger" onClick={() => setAgentDropOpen(v => !v)}>
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13" style={{marginRight: 5, flexShrink: 0}}>
-                    <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-                  </svg>
                   <span>{selectedAgentId ? agentList.find(a => String(a.agentId) === selectedAgentId)?.bizName || '未知助手' : '请选择助手'}</span>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12" style={{marginLeft: 4, transition: 'transform 0.2s', transform: agentDropOpen ? 'rotate(180deg)' : 'none'}}>
                     <polyline points="6 9 12 15 18 9"/>

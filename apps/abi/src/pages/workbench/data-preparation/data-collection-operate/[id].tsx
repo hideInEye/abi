@@ -403,7 +403,32 @@ export function Component() {
                               onSave={() => handleClickSave()}
                             />
                           ) : (
-                            <TreeNodeContainer />
+                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'flex-end',
+                                  gap: 8,
+                                  padding: '6px 12px',
+                                  background: '#fff',
+                                  borderBottom: '1px solid #e5e7eb',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <AButton
+                                  size="small"
+                                  type="primary"
+                                  style={{ backgroundColor: '#3467FF', borderColor: '#3467FF' }}
+                                  onClick={() => handleClickSave()}
+                                >
+                                  保存
+                                </AButton>
+                              </div>
+                              <div style={{ flex: 1, minHeight: 0 }}>
+                                <TreeNodeContainer />
+                              </div>
+                            </div>
                           )}
                         </Splitter.Panel>
                         <Splitter.Panel

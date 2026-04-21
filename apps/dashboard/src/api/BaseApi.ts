@@ -61,6 +61,16 @@ class BaseApi extends AbstractApi {
     }
 
     /**
+     * 获取提示词列表（chat-proxy）
+     * 用于创建对话时传入 chat_config
+     */
+    async fetchRecommendQuestions(): Promise<any[]> {
+        const res = await FetchUtil.post('/chat-proxy/prompt/list?map_required=true', {});
+        const list = res.data?.data ?? res.data;
+        return Array.isArray(list) ? list : [];
+    }
+
+    /**
      * 删除会话（chat-proxy）
      * @param convUid 会话uid
      */
