@@ -7,6 +7,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   'ai-assistant_conversational-analysis': 'Conversational Analysis',
   'assistant-manage': 'Assistant Manage',
   'assistant-manage_assistant-config': 'Assistant Config',
+  'assistant-manage_knowledge-extraction': 'Knowledge Extraction',
   'assistant-manage_label-meaning': 'Label Meaning',
   'assistant-manage_memory-manage': 'Memory Manage',
   'assistant-manage_recommended-inquiries': 'Recommended Inquiries',
@@ -81,6 +82,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   // 'multi-menu_second_child': 'Menu Two Child',
   // 'multi-menu_second_child_home': 'Menu Two Child Home',
   'space-list': 'Space List',
+  'workbench_ontology-kg_knowledge-extraction': 'Knowledge Extraction',
   'system_space-user': 'Space User'
   // 'user-center': 'User Center'
 };

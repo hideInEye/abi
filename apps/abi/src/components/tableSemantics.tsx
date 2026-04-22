@@ -97,6 +97,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
       >
         <ASelect
           disabled={isEdit}
+          allowClear
           options={groupOptions}
           placeholder="选择表语义组"
           onChange={(v)=>{
@@ -113,6 +114,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
       >
         <ASelect
           disabled={isEdit}
+          allowClear
           options={schemaOptions}
           placeholder="选择表语义"
           onChange={backGroupIdAndSchemaId}

@@ -694,6 +694,16 @@ export const generatedRoutes: GeneratedRoute[] = [
         },
         children: [
           {
+            name: 'workbench_ontology-kg_knowledge-extraction',
+            path: 'knowledge-extraction',
+            component: 'view.workbench_ontology-kg_knowledge-extraction',
+            meta: {
+              i18nKey: 'route.workbench_ontology-kg_knowledge-extraction',
+              order: 4,
+              title: 'workbench_ontology-kg_knowledge-extraction'
+            }
+          },
+          {
             name: 'workbench_ontology-kg_label-meaning',
             path: 'label-meaning',
             component: 'view.workbench_ontology-kg_label-meaning',
