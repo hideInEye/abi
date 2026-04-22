@@ -2,6 +2,7 @@ import type { CustomRoute, ElegantConstRoute, LastLevelRouteKey, RouteKey } from
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSelector } from '@reduxjs/toolkit';
 
+import { SUB_APP_TOP_LEVEL_WHITE_ROUTE_NAMES } from '@/constants/sub-app';
 import { router } from '@/router';
 import { getRoutePath } from '@/router/elegant/transform';
 import { createStaticRoutes } from '@/router/routes';
@@ -154,6 +155,28 @@ function filterBuiltinDashboardRoutes(routes: any[]): any[] {
     });
 }
 
+function isRouteExistByName(routes: ElegantConstRoute[], routeName: string): boolean {
+  return routes.some(route => {
+    if (route.name === routeName) return true;
+    if (route.children?.length) return isRouteExistByName(route.children as ElegantConstRoute[], routeName);
+    return false;
+  });
+}
+
+function appendSubAppWhiteRoutes(routes: ElegantConstRoute[]): ElegantConstRoute[] {
+  const { authRoutes: staticAuthRoutes } = createStaticRoutes();
+  const missingRoutes = staticAuthRoutes.filter(route => {
+    return (
+      SUB_APP_TOP_LEVEL_WHITE_ROUTE_NAMES.includes(route.name as (typeof SUB_APP_TOP_LEVEL_WHITE_ROUTE_NAMES)[number]) &&
+      !isRouteExistByName(routes, String(route.name))
+    );
+  });
+
+  if (!missingRoutes.length) return routes;
+
+  return [...routes, ...missingRoutes];
+}
+
 /**
  * Get cache routes
  *
@@ -250,6 +273,7 @@ const initDynamicAuthRoute = (): AppThunk => async dispatch => {
     }
 
     soybeanRoutes = filterBuiltinDashboardRoutes(soybeanRoutes);
+    soybeanRoutes = appendSubAppWhiteRoutes(soybeanRoutes);
 
     dispatch(setAuthRoutes(soybeanRoutes));
 

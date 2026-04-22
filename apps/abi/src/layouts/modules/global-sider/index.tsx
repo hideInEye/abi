@@ -153,6 +153,11 @@ const GlobalSider: FC = memo(() => {
               <div
                 key={item.key}
                 onClick={() => {
+                  if(item.key==='chat-ui') {
+                    window.open(item.key,'__blank')
+                    localStorage.setItem('spaceId', spaceId.toString());
+                    return
+                  }
                   dispatch(setSelectedMenuKey(item.key))
                   router.push(item.url)
                 }}

@@ -201,8 +201,7 @@ export function Component() {
 
   function handleNavigate(row: any) {
     const { chatId } = row;
-    switchToSpace(spaceId);
-    localStorage.setItem('chatId', chatId);
+    switchToSpace(spaceId, undefined, { chatId });
   }
 
   const columnWidth = useMemo(() => {

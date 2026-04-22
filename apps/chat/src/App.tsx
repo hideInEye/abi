@@ -1,19 +1,17 @@
-/**
- * 应用根组件
- * 包含应用的主要布局和路由配置
- */
+import { RouterProvider } from '@tanstack/react-router';
+import { useMemo } from 'react';
 
-import './App.css'
-import ConversationAnalysis from './pages/conversation-analysis'
+import './App.css';
+import { createAppRouter } from './router';
 
 function App({ spaceId }: { spaceId?: number }) {
+  const router = useMemo(() => createAppRouter(), []);
+
   return (
     <div className="App" style={{ height: '100%' }}>
-      {/* 应用主内容区域 */}
-      <ConversationAnalysis spaceId={spaceId} />
-      {/* <DemoPage /> */}
+      <RouterProvider router={router} context={{ spaceId }} />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
