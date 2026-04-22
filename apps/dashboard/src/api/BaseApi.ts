@@ -79,6 +79,15 @@ class BaseApi extends AbstractApi {
         return res.code === 200;
     }
 
+    /**
+     * 清空会话消息（chat-proxy）
+     * @param convUid 会话uid
+     */
+    async clearChatConv(convUid: string): Promise<boolean> {
+        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/clear', {conv_uid: convUid});
+        return res.code === 200;
+    }
+
     async copyProject(id: string): Promise<string> {
         const res = await FetchUtil.get(`/dashboard/api/v1/project/copy/${id}`);
         return res.code === 200 ? res.data : '';

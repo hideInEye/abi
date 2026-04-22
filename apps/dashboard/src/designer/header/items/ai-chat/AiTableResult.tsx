@@ -7,9 +7,13 @@ interface AiTableResultProps {
   sql?: string;
   mapping?: { [key: string]: string };
   chartName?: { x_name?: string; y_name?: string; title?: string };
+  /** 采纳回调（仅实时消息传入），参数为表格数据 */
+  onAccept?: (data: TableRow[]) => void;
+  /** 不采纳回调（仅实时消息传入） */
+  onReject?: () => void;
 }
 
-const AiTableResult: React.FC<AiTableResultProps> = ({ data, sql, chartName }) => {
+const AiTableResult: React.FC<AiTableResultProps> = ({ data, sql, chartName, onAccept, onReject }) => {
   const [sqlExpanded, setSqlExpanded] = useState(false);
 
   if (!data || data.length === 0) return <span>无数据返回</span>;
@@ -69,6 +73,28 @@ const AiTableResult: React.FC<AiTableResultProps> = ({ data, sql, chartName }) =
           </div>
           {sqlExpanded && (
             <pre className="ai-sql-content">{sql}</pre>
+          )}
+        </div>
+      )}
+
+      {/* 采纳 / 不采纳（仅实时消息） */}
+      {(onAccept || onReject) && (
+        <div className="ai-accept-bar">
+          {onAccept && (
+            <button className="ai-accept-btn" onClick={() => onAccept(data)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              采纳
+            </button>
+          )}
+          {onReject && (
+            <button className="ai-reject-btn" onClick={onReject}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="13" height="13">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              不采纳
+            </button>
           )}
         </div>
       )}
