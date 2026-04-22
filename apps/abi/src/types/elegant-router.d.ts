@@ -30,8 +30,9 @@ declare module "@elegant-router/types" {
     "ai-assistant": "/ai-assistant";
     "ai-assistant_conversational-analysis": "conversational-analysis";
     "component": "/component";
+    "component_data": "data";
+    "component_data_data-dictionary": "data-dictionary";
     "component_system": "system";
-    "component_system_data-dictionary": "data-dictionary";
     "component_system_model": "model";
     "component_system_plugin": "plugin";
     "dashboard-share-page": "/dashboard-share-page";
@@ -170,7 +171,7 @@ declare module "@elegant-router/types" {
     | "500"
     | "iframe-page"
     | "ai-assistant_conversational-analysis"
-    | "component_system_data-dictionary"
+    | "component_data_data-dictionary"
     | "component_system_model"
     | "component_system_plugin"
     | "dashboard-share-page"
