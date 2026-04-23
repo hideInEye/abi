@@ -2,7 +2,7 @@
 import { FullscreenExitOutlined, FullscreenOutlined } from '@ant-design/icons'
 import { Graph } from '@antv/g6'
 
-import { NODE_TYPE_COLORS, NODE_TYPE_LABELS, RELATION_TYPE_COLORS } from './constants'
+import { NODE_TYPE_LABELS, RELATION_TYPE_COLORS } from './constants'
 import type { AnalysisMode, LineageRelation, MetadataAnalysisContext } from './types'
 
 interface Props {
@@ -82,52 +82,24 @@ function truncateName(text: string) {
   return `${text.slice(0, 14)}...`
 }
 
-function resolveGroupNodeStyle(nodeType: string) {
-  const color = NODE_TYPE_COLORS[nodeType] || '#64748b'
+function resolveGroupNodeStyle(_nodeType: string) {
   return {
-    fill: `${color}1A`,
-    labelFill: '#334155',
+    // 类型节点：统一配色（数据源/数据集/表语义等类型标题）
+    fill: '#eef2ff',
+    labelFill: '#1d4ed8',
     lineDash: undefined,
-    stroke: color
+    stroke: '#93c5fd'
   }
 }
 
 function resolveNodeStyle(nodeType: string) {
-  const color = NODE_TYPE_COLORS[nodeType] || '#64748b'
-
-  if (nodeType === 'DATA_SOURCE') {
-    return {
-      fill: '#3388ff',
-      labelFill: '#ffffff',
-      lineDash: undefined,
-      stroke: '#3388ff'
-    }
-  }
-
   if (nodeType === 'PHYSICAL_TABLE') {
     return {
-      fill: '#f8fafc',
-      labelFill: '#334155',
+      // 数据表节点：单独暖色背景，便于和实例区分
+      fill: '#fff7ed',
+      labelFill: '#7c2d12',
       lineDash: [6, 4],
-      stroke: '#64748b'
-    }
-  }
-
-  if (nodeType === 'TABLE_SEMANTIC') {
-    return {
-      fill: '#f0fdf4',
-      labelFill: '#334155',
-      lineDash: undefined,
-      stroke: '#22c55e'
-    }
-  }
-
-  if (nodeType === 'DATASET') {
-    return {
-      fill: '#eff6ff',
-      labelFill: '#334155',
-      lineDash: undefined,
-      stroke: '#3b82f6'
+      stroke: '#fb923c'
     }
   }
 
@@ -140,11 +112,12 @@ function resolveNodeStyle(nodeType: string) {
     }
   }
 
+  // 实例节点：统一配色（接口返回 nodeName 的实例）
   return {
-    fill: `${color}14`,
-    labelFill: '#333d46',
+    fill: '#f8fafc',
+    labelFill: '#1f2937',
     lineDash: undefined,
-    stroke: color
+    stroke: '#60a5fa'
   }
 }
 
