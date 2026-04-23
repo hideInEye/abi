@@ -1,5 +1,6 @@
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
+import { createAuthorizationHeader, readTokenFromLocalStorage } from '@sa/axios'
 import request from "../request/index";
 import { getChatbiBaseApi } from "../../utils/index";
 
@@ -12,26 +13,15 @@ type StreamConvAnswerOptions = {
   onerror?: (err: any) => number | null | undefined | void
 }
 
-const getAuthorizationToken = () => {
-  const storedToken = localStorage.getItem('SOY-REACT_token')
-  if (!storedToken || storedToken === 'undefined' || storedToken === 'null') {
-    return ''
-  }
-
-  try {
-    return JSON.parse(storedToken)
-  } catch {
-    return ''
-  }
-}
-
 export function streamConvAnswer({ data, signal, onopen, onmessage, onclose, onerror }: StreamConvAnswerOptions) {
-  const authToken = getAuthorizationToken()
+  const token = readTokenFromLocalStorage(['SOY-REACT_token', 'token'])
+  const authorization = createAuthorizationHeader(token)
+
   return fetchEventSource(`${window.APP_CONFIG.VITE_BASE_API}/chat-proxy/api/v2/workflow/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+      ...(authorization ? { Authorization: authorization } : {})
     },
     body: JSON.stringify(data),
     signal,

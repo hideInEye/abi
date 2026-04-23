@@ -2,7 +2,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@sa/axios": ["../../packages/axios/src/index.ts"],
+      "@sa/axios/*": ["../../packages/axios/src/*"]
     },
     "target": "ES2020",
     "useDefineForClassFields": true,

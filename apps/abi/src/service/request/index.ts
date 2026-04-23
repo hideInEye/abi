@@ -1,4 +1,4 @@
-import { BACKEND_ERROR_CODE, createFlatRequest, createRequest } from '@sa/axios'
+import { BACKEND_ERROR_CODE, createAuthorizationHeader, createFlatRequest, createRequest } from '@sa/axios'
 
 import { getCookie } from '@/utils/common'
 import { getServiceBaseURL } from '@/utils/service'
@@ -69,8 +69,7 @@ export const apiRequest = createFlatRequest<App.Service.Response, RequestInstanc
       handleError(error, apiRequest)
     },
     async onRequest(config) {
-      // const Authorization = getAuthorization();
-      const Authorization = config.url === '/abi-system/onenet/api/loginChatbi' ? `Bearer ${getCookie('token')}` : getAuthorization()
+      const Authorization = config.url === '/abi-system/onenet/api/loginChatbi' ? createAuthorizationHeader(getCookie('token')) : getAuthorization()
       Object.assign(config.headers, { Authorization })
 
       return config
@@ -144,7 +143,7 @@ export const demoRequest = createRequest<App.Service.DemoResponse>(
 
       // set token
       const token = localStg.get('token')
-      const Authorization = token ? `Bearer ${token}` : null
+      const Authorization = createAuthorizationHeader(token)
       Object.assign(headers, { Authorization })
 
       return config

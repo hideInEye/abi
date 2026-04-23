@@ -1,53 +1,42 @@
-import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Layout } from 'antd'
 import type { MenuProps } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   bottomMenus,
-  CONVERSATION_DETAIL_ROUTE,
-  CONVERSATION_ROUTE_PREFIX,
+  HISTORY_ROUTE,
+  HISTORY_ROUTE_PREFIX,
   HISTORY_MENU_KEY,
   middleMenus,
   SIDER_COLLAPSED_WIDTH,
   SIDER_WIDTH,
 } from '@/constant/layout'
 import { BrandHeader } from '@/components/layout/BrandHeader'
-import { HistoryTopicsPanel } from '@/components/layout/HistoryTopicsPanel'
 import { UserProfileCard } from '@/components/layout/UserProfileCard'
 import { WorkbenchMenuList } from '@/components/layout/WorkbenchMenuList'
-import { useHistoryTopics } from '@/hooks/layout/useHistoryTopics'
-import type { WorkbenchPanel } from '@/types/layout'
-import { extractConversationIdFromPath, getCurrentUserName } from '@/utils/layout'
+import { getCurrentUserName } from '@/utils/layout'
 
 const { Content, Sider } = Layout
-const appLogoUrl = new URL('../assets/imgs/home_logo.png', import.meta.url).href
+const appLogoUrl = new URL('../../assets/imgs/home_logo.png', import.meta.url).href
 
-function shouldShowConversationPanel(pathname: string): boolean {
-  return pathname.startsWith(CONVERSATION_ROUTE_PREFIX)
-}
+export const Route = createFileRoute('/chat')({
+  component: ChatWorkbenchLayout,
+})
 
-export default function ChatWorkbenchLayout() {
+function ChatWorkbenchLayout() {
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
 
   const [collapsed, setCollapsed] = useState(false)
-  const [activePanel, setActivePanel] = useState<WorkbenchPanel>('history')
 
   const userName = useMemo(() => getCurrentUserName(), [])
-  const activeConversationId = useMemo(() => extractConversationIdFromPath(pathname), [pathname])
-  const { historyLoading, historyTopics, loadHistoryTopics } = useHistoryTopics()
+  const selectedBottomKeys = useMemo(() => (pathname.startsWith(HISTORY_ROUTE_PREFIX) ? [HISTORY_MENU_KEY] : []), [pathname])
+  const pageTitle = useMemo(() => (pathname.startsWith('/chat/task') ? 'ABI - 对话' : 'ABI - 历史话题'), [pathname])
 
   useEffect(() => {
-    if (activePanel !== 'history') return
-    loadHistoryTopics()
-  }, [activePanel, loadHistoryTopics])
-
-  useEffect(() => {
-    if (shouldShowConversationPanel(pathname)) {
-      setActivePanel('conversation')
-    }
-  }, [pathname])
+    document.title = pageTitle
+  }, [pageTitle])
 
   const handleToggleCollapse = useCallback(() => {
     setCollapsed((previousCollapsed) => !previousCollapsed)
@@ -61,21 +50,7 @@ export default function ChatWorkbenchLayout() {
     ({ key }) => {
       if (key !== HISTORY_MENU_KEY) return
 
-      setActivePanel('history')
-      loadHistoryTopics()
-    },
-    [loadHistoryTopics],
-  )
-
-  const handleTopicSelect = useCallback(
-    (chatId: string) => {
-      if (!chatId) return
-
-      setActivePanel('conversation')
-      navigate({
-        to: CONVERSATION_DETAIL_ROUTE,
-        params: { conversationId: chatId },
-      })
+      navigate({ to: HISTORY_ROUTE })
     },
     [navigate],
   )
@@ -101,7 +76,7 @@ export default function ChatWorkbenchLayout() {
             <WorkbenchMenuList
               collapsed={collapsed}
               items={bottomMenus}
-              selectedKeys={activePanel === 'history' ? [HISTORY_MENU_KEY] : []}
+              selectedKeys={selectedBottomKeys}
               onClick={handleBottomMenuClick}
             />
             <UserProfileCard collapsed={collapsed} userName={userName} />
@@ -111,16 +86,7 @@ export default function ChatWorkbenchLayout() {
 
       <Layout className="min-w-0">
         <Content className="h-full min-h-0 overflow-hidden bg-[#f7f8fa]">
-          {activePanel === 'history' ? (
-            <HistoryTopicsPanel
-              loading={historyLoading}
-              topics={historyTopics}
-              activeConversationId={activeConversationId}
-              onSelectTopic={handleTopicSelect}
-            />
-          ) : (
-            <Outlet />
-          )}
+          <Outlet />
         </Content>
       </Layout>
     </Layout>

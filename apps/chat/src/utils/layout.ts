@@ -17,7 +17,9 @@ function safeParseJson(value: string): unknown {
 }
 
 function normalizeText(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
+  if (typeof value === 'string') return value.trim()
+  if (typeof value === 'number' || typeof value === 'bigint') return String(value)
+  return ''
 }
 
 function normalizeTopic(item: unknown): TopicItem | null {

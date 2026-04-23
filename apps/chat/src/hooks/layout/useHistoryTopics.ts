@@ -15,8 +15,10 @@ export function useHistoryTopics() {
   const mountedRef = useRef(true)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyTopics, setHistoryTopics] = useState<TopicItem[]>(fallbackTopics)
+  const [historyApps, setHistoryApps] = useState<any[]>([])
 
   useEffect(() => {
+    mountedRef.current = true
     return () => {
       mountedRef.current = false
     }
@@ -32,16 +34,19 @@ export function useHistoryTopics() {
         chat_mode: CHAT_MODE,
         space_id: getSpaceId(),
         create_by: user.userName,
+        _t: Date.now(),
       })) as FetchAppListResponse
-
-      const normalizedTopics = normalizeTopicsFromApi(response?.data)
+      const rawApps = Array.isArray(response?.data) ? response.data : []
+      const normalizedTopics = normalizeTopicsFromApi(rawApps)
       const nextTopics = normalizedTopics.length ? normalizedTopics : fallbackTopics
 
       if (mountedRef.current) {
+        setHistoryApps(rawApps)
         setHistoryTopics(nextTopics)
       }
     } catch {
       if (mountedRef.current) {
+        setHistoryApps([])
         setHistoryTopics(fallbackTopics)
       }
     } finally {
@@ -54,6 +59,7 @@ export function useHistoryTopics() {
   return {
     historyLoading,
     historyTopics,
+    historyApps,
     loadHistoryTopics,
   }
 }
