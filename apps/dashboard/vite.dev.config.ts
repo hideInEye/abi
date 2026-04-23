@@ -18,6 +18,11 @@ export default defineConfig({
             '^/(api|static)/.*': {
                 target: 'http://127.0.0.1:8080',
                 changeOrigin: true,
+            },
+            '^/chat-proxy/.*': {
+                target: 'https://192.168.1.252',
+                changeOrigin: true,
+                secure: false,
             }
         }
     },

@@ -10,10 +10,15 @@
  */
 
 import {MenuInfo} from "./MenuType";
-import {ColorFilter, Data, Deeplink, Optimize, SettingOne, Theme} from "@icon-park/react";
+import {ColorFilter, Data, Deeplink, Optimize, SettingOne, Theme, Robot} from "@icon-park/react";
 
 export const getDefaultMenuList = (): Array<MenuInfo> => {
     return [
+        {
+            icon: Robot,
+            name: 'AI',
+            key: 'ai',
+        },
         {
             icon: SettingOne,
             name: '基础',

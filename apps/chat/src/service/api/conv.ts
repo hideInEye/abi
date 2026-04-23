@@ -327,6 +327,16 @@ export function dataExport(data: any) {
   });
 }
 
+// excel结果导出接口（chat_excel模式）
+export function excelFileExport(params: { file_id: string; python: string; format: 'excel' | 'csv' }) {
+  return request({
+    url: "/chat-proxy/api/v2/excel/fileexport",
+    method: "post",
+    params,  // Query参数
+    responseType: 'blob',
+  });
+}
+
 // 根据查询过滤条件值
 export function fetchSelectFilterValue(data: any) {
   return request({

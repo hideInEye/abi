@@ -1,7 +1,7 @@
 import html2canvas from 'html2canvas';
 import { downloadExtMap} from '@/constant/chat';
 import { generateFilename, downloadFileByBlob, prepareTableForExport, createTempContainer, downloadImage } from '@/utils';
-import { dataExport } from '@/service/api/conv';
+import { dataExport, excelFileExport } from '@/service/api/conv';
 
 export const handleDataExport = async (params: {
     key: 'csv' | 'excel';
@@ -18,6 +18,27 @@ export const handleDataExport = async (params: {
     }
     catch (error) {
       throw new Error('数据导出失败');
+    }
+};
+
+// excel结果导出（chat_excel模式）
+export const handleExcelFileExport = async (params: {
+    fileName: string;
+    file_id: string;
+    python: string;
+    format: 'excel' | 'csv';
+  }) => {
+    try {
+      const res = await excelFileExport({
+        file_id: params.file_id,
+        python: params.python,
+        format: params.format
+      });
+      const ext = params.format === 'excel' ? 'xlsx' : 'csv';
+      downloadFileByBlob(res, generateFilename(params.fileName, ext));
+    }
+    catch (error) {
+      throw new Error('Excel导出失败');
     }
 };
 

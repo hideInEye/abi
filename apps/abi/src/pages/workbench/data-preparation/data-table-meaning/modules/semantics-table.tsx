@@ -195,11 +195,15 @@ function setTableName(fields: any[], union: any[], tablePrikey: any[] = []) {
   }
 
   // 一次性构建映射表，避免重复递归
+  // 优先从 currentDsFields 里取真实 tableName（SQL 视图场景 currentDs.tableName 为"自定义sql"）
   const rtableIdMap = new Map<string, string>();
   const traverse = (items: any[]) => {
     items?.forEach(item => {
       if (item.currentDs?.rtableId) {
-        rtableIdMap.set(item.currentDs.rtableId, item.currentDs.tableName);
+        // 先尝试从 currentDsFields 取第一个字段的 tableName（SQL视图时有真实表名）
+        const fieldsTableName = item.currentDsFields?.[0]?.tableName;
+        const tableName = fieldsTableName || item.currentDs.tableName;
+        rtableIdMap.set(item.currentDs.rtableId, tableName);
       }
       traverse(item.childrenDs);
     });

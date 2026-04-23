@@ -19,7 +19,6 @@ import {globalMessage} from "../../../framework/message/GlobalMessage";
 import DelProjectDialog from "./DelProjectDialog.tsx";
 import CloneProjectDialog from "./CloneProjectDialog.tsx";
 import ProjectItem from "./ProjectItem.tsx";
-// import {Add} from "@icon-park/react";
 import baseApi from "../../../api/BaseApi.ts";
 import URLUtil from "../../../utils/URLUtil.ts";
 
@@ -61,7 +60,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     const toggleNewProVisible = () => setAddDialog(!addDialog);
 
-    const onOk = (data: INewProjectInfo) => {
+    const onOk = async (data: INewProjectInfo) => {
         const {name, des, width, height} = data;
         const project: IProjectInfo = {
             name: name,
@@ -69,14 +68,65 @@ export const ProjectList = memo((props: ProjectListProps) => {
             dataJson: JSON.stringify({canvasManager: {width, height}}),
             spaceId: Number(localStorage.getItem('spaceId')),
         }
-        baseApi.createProject(project).then((id) => {
-            if (id === "")
+        try {
+            // 1. 创建大屏项目
+            const id = await baseApi.createProject(project);
+            if (id === "") {
                 globalMessage.messageApi?.error('创建失败');
-            else {
-                setAddDialog(false);
-                URLUtil.navigateToAppPath('/designer', {id, saveType, mode: DesignerMode.EDIT});
+                return;
             }
-        });
+
+            // 2. 获取助手列表，取第一条的 agentId
+            const spaceId = Number(localStorage.getItem('spaceId'));
+            const agentList = await baseApi.fetchAgentList(spaceId);
+            const agentId = agentList?.[0]?.agentId;
+
+            // 3. 获取提示词列表，status 全部设为 '1'（开启），组装 chat_config
+            const promptList = await baseApi.fetchRecommendQuestions();
+            const promptsWithStatus = promptList.map((p: any) => ({...p, status: '1'}));
+            const chatConfig = JSON.stringify({prompts: promptsWithStatus});
+
+            // 4. 创建会话应用
+            const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
+            let createBy = '';
+            try {
+                if (userInfoStr) {
+                    createBy = JSON.parse(userInfoStr)?.userName || '';
+                }
+            } catch { /* ignore */ }
+
+            const chatAppData = {
+                biz_name: name,
+                status: '1',
+                chat_mode: 'chat_with_dashboard',
+                space_id: spaceId,
+                create_by: createBy,
+                chat_config: chatConfig,
+                ...(agentId ? {agent_id: String(agentId)} : {}),
+            };
+            const appRes = await baseApi.createChatApp(chatAppData);
+
+            // 5. 创建会话，并把 chat_id 存入大屏 dataJson
+            if (appRes.success && appRes.data) {
+                const chatId = appRes.data.data.chat_id;
+                await baseApi.createChatConv({
+                    chat_id: chatId,
+                    chat_mode: 'chat_with_dashboard',
+                    space_id: spaceId,
+                });
+                // 把 chat_id 保存到大屏 dataJson，供 AI 对话面板使用
+                await baseApi.updateProject({
+                    id,
+                    dataJson: JSON.stringify({canvasManager: {width, height}, chatId}),
+                });
+            }
+
+            setAddDialog(false);
+            URLUtil.navigateToAppPath('/designer', {id, saveType, mode: DesignerMode.EDIT});
+        } catch (e) {
+            console.error('创建项目失败:', e);
+            globalMessage.messageApi?.error('创建失败');
+        }
     }
 
     const onCancel = () => setAddDialog(false);
@@ -116,8 +166,29 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     const cancelClone = () => setCloneDialog(false);
 
-    const confirmDel = () => {
-        baseApi.deleteProject(delIdRef.current).then((res) => {
+    const confirmDel = async () => {
+        const id = delIdRef.current;
+        try {
+            // 1. 查询大屏详情，从 dataJson 取出 chatId，删除关联会话
+            const spaceId = Number(localStorage.getItem('spaceId'));
+            const projectInfo = await baseApi.getProjectInfo(id);
+            const chatId = projectInfo?.dataJson ? JSON.parse(projectInfo.dataJson)?.chatId : null;
+            if (chatId) {
+                const convList = await baseApi.fetchChatConvList({
+                    chat_id: chatId,
+                    chat_mode: 'chat_with_dashboard',
+                    space_id: spaceId,
+                });
+                if (convList.length) {
+                    await Promise.all(convList.map((conv: any) => baseApi.deleteChatConv(conv.conv_uid)));
+                }
+            }
+        } catch (e) {
+            console.error('删除关联会话失败:', e);
+        }
+
+        // 2. 删除大屏项目
+        baseApi.deleteProject(id).then((res) => {
             if (res) {
                 setDelDialog(false);
                 getProjectPageList(pageData.current, pageData.size);
@@ -126,7 +197,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 globalMessage.messageApi?.error('删除失败');
             }
         });
-
     }
 
     const pageChange = (page: number, size: number) => {
@@ -137,7 +207,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
             if (statusFilter !== undefined) {
                 data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);
             }
-            setPageData(data);
+            setPageData({...data, current: page, size});
         });
     }
 
@@ -203,8 +273,10 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 )}
             </div>
             {pageData && pageData.records.length > 0 && (
-                <Pagination rootClassName={'project-list-page'} defaultCurrent={pageData?.current}
-                            pageSize={pageData?.size} total={pageData?.total} onChange={pageChange}/>
+                <Pagination rootClassName={'project-list-page'} current={pageData?.current}
+                            pageSize={pageData?.size} total={pageData?.total} onChange={pageChange}
+                            showSizeChanger onShowSizeChange={pageChange}
+                            locale={{ items_per_page: '条/页' }}/>
             )}
             <NewProjectDialog onOk={onOk} onCancel={onCancel} visible={addDialog}/>
             <DelProjectDialog visible={delDialog} onOk={confirmDel} onCancel={cancelDel}/>

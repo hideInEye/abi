@@ -30,6 +30,7 @@ class EditorDesignerLoader extends DesignerLoader {
             des: projectInfo.des,
             state: projectInfo.state as ProjectState | undefined,
             status: projectInfo.status,
+            dataJson: projectInfo.dataJson,
         });
         const {name, dataJson} = projectInfo!
         name && (document.title = name);
