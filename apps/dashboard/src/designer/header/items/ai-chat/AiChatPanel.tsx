@@ -6,6 +6,7 @@ import projectHdStore from '../project/ProjectManager';
 import URLUtil from '../../../../utils/URLUtil';
 import './AiChatPanel.less';
 import AiTableResult from './AiTableResult';
+import eventOperateStore from '../../../operate-provider/EventOperateStore';
 
 interface TableRow { [key: string]: any; }
 
@@ -22,6 +23,8 @@ interface ChatMessage {
   mapping?: { x字段?: string; y字段?: string };
   /** 图表名称信息 */
   chartName?: { x_name?: string; y_name?: string; title?: string };
+  /** 是否为实时对话产生的消息（仅实时消息显示采纳/不采纳） */
+  isNew?: boolean;
 }
 
 // 获取当前时间字符串
@@ -75,13 +78,77 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
     if (!chatId) return;
     chatIdRef.current = chatId;
 
-    // 拉取已有会话，取第一条 conv_uid 作为本次会话标识
+    // 拉取已有会话，取第一条 conv_uid 并加载历史消息
     baseApi.fetchChatConvList({
       chat_id: chatId,
       chat_mode: 'chat_with_dashboard',
       space_id: spaceId,
-    }).then((convList) => {
-      if (convList.length) convUidRef.current = convList[0].conv_uid ?? '';
+    }).then(async (convList) => {
+      if (!convList.length) return;
+      const convUid = convList[0].conv_uid ?? '';
+      convUidRef.current = convUid;
+      if (!convUid) return;
+
+      // 调用 history_round 接口拉取历史消息
+      try {
+        const apiBase = getApiTarget().replace(/\/api$/, '');
+        let histToken = '';
+        try { const t = localStorage.getItem('SOY-REACT_token'); if (t && t !== 'undefined' && t !== 'null') histToken = JSON.parse(t); } catch { /* ignore */ }
+        const histHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (histToken) histHeaders['Authorization'] = `Bearer ${histToken}`;
+        const res = await fetch(`${apiBase}/chat-proxy/api/v1/chat/conv/messages/history_round`, {
+          method: 'POST',
+          headers: histHeaders,
+          body: JSON.stringify({ conv_uid: convUid }),
+        });
+        const json = await res.json();
+        const historyList: any[] = json?.data ?? [];
+        if (!historyList.length) return;
+
+        // 只保留 human 和 view，跳过 ai（思考过程）
+        const filtered = historyList.filter((item: any) => item.role === 'human' || item.role === 'view');
+
+        const histMsgs: ChatMessage[] = filtered.map((item: any) => {
+          const timeStr = item.gmt_created
+            ? (() => { const d = new Date(item.gmt_created); const pad = (n: number) => String(n).padStart(2, '0'); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; })()
+            : '';
+
+          if (item.role === 'human') {
+            return {
+              role: 'human' as const,
+              content: item.context ?? item.content ?? '',
+              time: timeStr,
+            };
+          }
+
+          // view：解析 context JSON，提取结构化数据
+          let tableData: TableRow[] | undefined;
+          let respSql: string | undefined;
+          let respMapping: any;
+          let respChartName: any;
+          try {
+            const viewCtx = typeof item.context === 'string' ? JSON.parse(item.context) : (item.context ?? {});
+            const respTaskType = viewCtx.task_type ?? 'development';
+            const devData = viewCtx[respTaskType] ?? {};
+            tableData = Array.isArray(devData.data) && devData.data.length > 0 ? devData.data : undefined;
+            respSql = devData.sql || undefined;
+            respMapping = devData.mapping;
+            respChartName = devData.name;
+          } catch { /* ignore */ }
+
+          return {
+            role: 'ai' as const,
+            content: tableData ? '' : '',
+            time: timeStr,
+            tableData,
+            sql: respSql,
+            mapping: respMapping,
+            chartName: respChartName,
+          };
+        });
+
+        setMessages(histMsgs);
+      } catch { /* ignore */ }
     }).catch(() => {});
   }, []);
 
@@ -244,6 +311,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
               sql: respSql,
               mapping: respMapping,
               chartName: respChartName,
+              isNew: true,
             };
             return copy;
           }
@@ -283,8 +351,12 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
     }
   };
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
     stopGenerating();
+    // 调用后端清空会话消息接口
+    if (convUidRef.current) {
+      await baseApi.clearChatConv(convUidRef.current).catch(() => {});
+    }
     setMessages([]);
     convUidRef.current = '';
     streamBufferRef.current = '';
@@ -311,7 +383,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
           {/* 清空历史 */}
           <button
             className="action-btn"
-            title="清空历史"
+            title="清空对话"
             onClick={handleClearHistory}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -373,6 +445,33 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
                   sql={msg.sql}
                   mapping={msg.mapping}
                   chartName={msg.chartName}
+                  onAccept={msg.isNew ? (data) => {
+                    const selectedIds = eventOperateStore.targetIds;
+                    if (!selectedIds || selectedIds.length === 0) {
+                      message.warning('请先在大屏中选中一个图表');
+                      return;
+                    }
+                    const controllers = window.LC_ENV?.controllers;
+                    if (!controllers) {
+                      message.error('图表控制器未初始化');
+                      return;
+                    }
+                    let updated = 0;
+                    selectedIds.forEach(id => {
+                      const ctrl = controllers[id];
+                      if (ctrl) { ctrl.changeData(data); updated++; }
+                    });
+                    if (updated > 0) {
+                      message.success(`已更新 ${updated} 个图表`);
+                      // 清除 isNew 标记，避免重复采纳
+                      setMessages(prev => prev.map((m, i) => i === idx ? { ...m, isNew: false } : m));
+                    } else {
+                      message.warning('选中的图表不支持数据更新');
+                    }
+                  } : undefined}
+                  onReject={msg.isNew ? () => {
+                    setMessages(prev => prev.map((m, i) => i === idx ? { ...m, isNew: false } : m));
+                  } : undefined}
                 />
               ) : (
                 <>{msg.content}{msg.streaming && <span className="cursor">▌</span>}</>

@@ -47,7 +47,7 @@ class MenuList extends Component<LcConfigMenusProps | any> {
                     <div className="item-icon">
                         <Icon theme="filled"/>
                     </div>
-                    <div className="item-content">{item.name}</div>
+                    <div className={`item-content ${/^[A-Za-z0-9]+$/.test(item.name) ? 'item-content-latin' : ''}`}>{item.name}</div>
                 </div>
             );
         });

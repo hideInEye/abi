@@ -29,7 +29,7 @@ import styles from './styles.module.css';
 import s from './index.module.css'
 import CausalAnalysis from "./components/CausalAnalysis";
 import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEmptyObject, getUserName, isSingleMetricData, stripHtmlTags } from '@/utils';
-import { handleDataExport, handleImageExport } from './helpers/download';
+import { handleDataExport, handleImageExport, handleExcelFileExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
 import { fetchDrillDown, fetchQueryRewrite, fetchRecommendQuestion, setExperteval, searchConv } from '../../service/api/conv';
 import { CloseOutlined, RedoOutlined } from "@ant-design/icons";
@@ -248,6 +248,16 @@ const ViewEle: React.FC<PropsType> = ({
     const baseName = conv.biz_name || '数据';
     try {
       if (['csv', 'excel'].includes(key)) {
+       // chat_excel 模式使用新接口
+       if (chartData?.chat_mode === 'chat_excel') {
+        await handleExcelFileExport({
+          fileName: baseName,
+          file_id: chartData?.file_id,
+          python: chartData?.python_code,
+          format: key === 'excel' ? 'excel' : 'csv'
+        });
+      } else {
+        // 其他模式使用原接口
         if(!chartData.sql) {
           message.warning('未找到可导出的SQL语句, 请联系管理员或重新发起查询');
           return;
@@ -264,6 +274,7 @@ const ViewEle: React.FC<PropsType> = ({
             unionSql: chartData?.sql
           }
         });
+      }
       } else {
         if (!['table', 'chart'].includes(activeType)) {
           message.warning('请切换到表格或图表再点击进行下载图片');
