@@ -277,4 +277,5 @@ export interface IPageParam {
     size: number;
     keywords?: string;
     status?: string;
+    spaceId?: number;
 }

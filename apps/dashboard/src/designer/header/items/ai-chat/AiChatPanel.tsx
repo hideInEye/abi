@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { message } from 'antd';
+import { observer } from 'mobx-react';
 import { getApiTarget, notifyTokenExpired } from '../../../../utils/FetchUtil';
 import baseApi from '../../../../api/BaseApi';
 import projectHdStore from '../project/ProjectManager';
-import URLUtil from '../../../../utils/URLUtil';
+import layerManager from '../../../manager/LayerManager.ts';
+import rightStore from '../../../right/RightStore';
 import './AiChatPanel.less';
 import AiTableResult from './AiTableResult';
 import eventOperateStore from '../../../operate-provider/EventOperateStore';
@@ -23,9 +25,19 @@ interface ChatMessage {
   mapping?: { x字段?: string; y字段?: string };
   /** 图表名称信息 */
   chartName?: { x_name?: string; y_name?: string; title?: string };
-  /** 是否为实时对话产生的消息（仅实时消息显示采纳/不采纳） */
+  /** 是否为实时对话产生的消息（仅实时消息可点击采纳星） */
   isNew?: boolean;
+  /** 是否已采纳 */
+  accepted?: boolean;
+  /** 关联的图表 id（用于过滤和互斥） */
+  chartId?: string;
 }
+
+// 模块级单例缓存（组件销毁重建时不丢失）
+let cachedMessages: ChatMessage[] = [];
+let cachedConvUid = '';
+let cachedChatId = '';
+let historyLoaded = false; // 是否已成功拉取过历史
 
 // 获取当前时间字符串
 function getNow() {
@@ -46,14 +58,29 @@ interface AiChatPanelProps {
   float?: boolean;
 }
 
-const AiChatPanel: React.FC<AiChatPanelProps> = ({
+const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
   onClose,
   dashboardId = '',
   chartNameList = [],
   taskType = 'development',
   float = false,
 }) => {
+  // 全量消息缓存（所有图表）—— 初始值从模块级缓存恢复
+  const [allMessages, _setAllMessages] = useState<ChatMessage[]>(cachedMessages);
+  // 展示用消息（按当前选中图表过滤）
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // 当前选中图表名称
+  const [currentChartName, setCurrentChartName] = useState('');
+
+  // 包装 setAllMessages：同时写入模块级缓存
+  const setAllMessages = useCallback((updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+    _setAllMessages(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      cachedMessages = next;
+      return next;
+    });
+  }, []);
+
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [agentList, setAgentList] = useState<any[]>([]);
@@ -66,19 +93,45 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
   const chatIdRef = useRef<string>('');
   const streamBufferRef = useRef('');
 
-  // 挂载时拉取助手列表 + 初始化 chatId / conv_uid
+  // 监听选中图表变化 → 更新图表名称 + 过滤消息
+  useEffect(() => {
+    const chartId = eventOperateStore.targetIds[0] ?? '';
+    const name = chartId
+      ? (layerManager.layerConfigs[chartId]?.name ?? '')
+      : '';
+    setCurrentChartName(name);
+  }, [eventOperateStore.targetIds]);
+
+  // allMessages 或 targetIds 变化时重新过滤展示
+  useEffect(() => {
+    const chartId = eventOperateStore.targetIds[0] ?? '';
+    if (!chartId) {
+      setMessages(allMessages);
+    } else {
+      // chartId='' 的消息是历史消息（后端无图表标识），始终显示；
+      // chartId 有值的实时消息只显示匹配当前图表的
+      setMessages(allMessages.filter(m => !m.chartId || m.chartId === chartId));
+    }
+  }, [allMessages, eventOperateStore.targetIds]);
+
+  // 挂载时拉取助手列表 + 初始化 chatId / conv_uid + 历史消息
   useEffect(() => {
     const spaceId = Number(localStorage.getItem('spaceId'));
     baseApi.fetchAgentList(spaceId).then(setAgentList).catch(() => {});
 
-    // 从 store 读 chatId（进编辑页时已由 EditorDesignerLoader 存入）
     const dataJson = projectHdStore.projectConfig.dataJson;
     const parsed = dataJson ? JSON.parse(dataJson) : null;
     const chatId = parsed?.chatId ? String(parsed.chatId) : '';
     if (!chatId) return;
     chatIdRef.current = chatId;
 
-    // 拉取已有会话，取第一条 conv_uid 并加载历史消息
+    // ── 缓存命中：已加载过历史，直接恢复 ref，不再调接口 ──
+    if (historyLoaded && cachedChatId === chatId) {
+      convUidRef.current = cachedConvUid;
+      chatIdRef.current = cachedChatId;
+      return;
+    }
+
     baseApi.fetchChatConvList({
       chat_id: chatId,
       chat_mode: 'chat_with_dashboard',
@@ -89,7 +142,6 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
       convUidRef.current = convUid;
       if (!convUid) return;
 
-      // 调用 history_round 接口拉取历史消息
       try {
         const apiBase = getApiTarget().replace(/\/api$/, '');
         let histToken = '';
@@ -108,16 +160,31 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
         // 只保留 human 和 view，跳过 ai（思考过程）
         const filtered = historyList.filter((item: any) => item.role === 'human' || item.role === 'view');
 
-        const histMsgs: ChatMessage[] = filtered.map((item: any) => {
+        // 预先解析每条 view 的 chart_id，供同组 human 使用
+        // filtered 中 human 和 view 成对出现，view 紧跟在 human 后面
+        const getViewChartId = (item: any): string => {
+          try {
+            const ctx = typeof item.context === 'string' ? JSON.parse(item.context) : (item.context ?? {});
+            const taskType = ctx.task_type ?? 'development';
+            return ctx[taskType]?.chart_id ?? '';
+          } catch { return ''; }
+        };
+
+        const histMsgs: ChatMessage[] = filtered.map((item: any, i: number) => {
           const timeStr = item.gmt_created
             ? (() => { const d = new Date(item.gmt_created); const pad = (n: number) => String(n).padStart(2, '0'); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; })()
             : '';
 
           if (item.role === 'human') {
+            // human 的 chartId 从紧跟的 view（下一条）里取
+            const nextItem = filtered[i + 1];
+            const chartId = nextItem?.role === 'view' ? getViewChartId(nextItem) : '';
             return {
               role: 'human' as const,
               content: item.context ?? item.content ?? '',
               time: timeStr,
+              isNew: false,
+              chartId,
             };
           }
 
@@ -126,6 +193,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
           let respSql: string | undefined;
           let respMapping: any;
           let respChartName: any;
+          let viewChartId = '';
           try {
             const viewCtx = typeof item.context === 'string' ? JSON.parse(item.context) : (item.context ?? {});
             const respTaskType = viewCtx.task_type ?? 'development';
@@ -134,20 +202,28 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
             respSql = devData.sql || undefined;
             respMapping = devData.mapping;
             respChartName = devData.name;
+            viewChartId = devData.chart_id ?? '';
           } catch { /* ignore */ }
 
           return {
             role: 'ai' as const,
-            content: tableData ? '' : '',
+            content: '',
             time: timeStr,
             tableData,
             sql: respSql,
             mapping: respMapping,
             chartName: respChartName,
+            isNew: true,
+            accepted: false,
+            chartId: viewChartId,
           };
         });
 
-        setMessages(histMsgs);
+        setAllMessages(histMsgs);
+        // 写入模块级缓存标记，下次组件挂载时跳过接口
+        cachedConvUid = convUid;
+        cachedChatId = chatId;
+        historyLoaded = true;
       } catch { /* ignore */ }
     }).catch(() => {});
   }, []);
@@ -160,27 +236,12 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // 更新最后一条 ai 消息内容（流式）
-  const updateLastAiMsg = useCallback((content: string, streaming: boolean) => {
-    setMessages((prev) => {
-      const copy = [...prev];
-      for (let i = copy.length - 1; i >= 0; i--) {
-        if (copy[i].role === 'ai') {
-          copy[i] = { ...copy[i], content, streaming };
-          return copy;
-        }
-      }
-      return prev;
-    });
-  }, []);
-
   const stopGenerating = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setLoading(false);
-      // 停止流式
-      setMessages((prev) =>
+      setAllMessages((prev) =>
         prev.map((m) => (m.streaming ? { ...m, streaming: false } : m))
       );
     }
@@ -194,25 +255,31 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
       return;
     }
 
+    // 当前选中图表 id（发送时快照）
+    const currentChartId = eventOperateStore.targetIds[0] ?? '';
+    // dashboardId：从当前选中图表的 type 动态计算（去掉 Antd 前缀）
+    const rawType = rightStore.activeElem?.type ?? '';
+    const dynamicDashboardId = rawType.startsWith('Antd') ? rawType.slice(4) : rawType;
+
     setInputValue('');
-    setMessages((prev) => [
+    // 追加 human 消息到全量缓存
+    setAllMessages((prev) => [
       ...prev,
-      { role: 'human', content: text, time: getNow() },
+      { role: 'human', content: text, time: getNow(), isNew: false, chartId: currentChartId },
     ]);
 
     setLoading(true);
     streamBufferRef.current = '';
 
     // 先插入一个空的 ai 消息占位
-    setMessages((prev) => [
+    setAllMessages((prev) => [
       ...prev,
-      { role: 'ai', content: '', time: getNow(), streaming: true },
+      { role: 'ai', content: '', time: getNow(), streaming: true, isNew: false, chartId: currentChartId },
     ]);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    // 构造请求参数
     const apiBase = getApiTarget().replace(/\/api$/, '');
     const apiUrl = `${apiBase}/chat-proxy/api/v2/workflow/chat/completions`;
 
@@ -257,14 +324,12 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
           task_type: taskType,
           chart_name_list: taskType === 'release' ? chartNameList : [],
           db_name: '',
-          dashboard_id: dashboardId,
+          dashboard_id: dynamicDashboardId,
+          chart_id: currentChartId,
           elements: {},
         },
       },
     };
-
-    let retryCount = 0;
-    const maxRetries = 2;
 
     try {
       const response = await fetch(apiUrl, {
@@ -278,19 +343,16 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          notifyTokenExpired();
-        }
+        if (response.status === 401) notifyTokenExpired();
         throw new Error(`HTTP ${response.status}`);
       }
 
       const json = await response.json();
-      // data 字段是 JSON 字符串，需再次 parse
       let parsedResp: any = {};
       try {
         parsedResp = typeof json.data === 'string' ? JSON.parse(json.data) : (json.data ?? {});
       } catch { /* ignore */ }
-      
+
       const respTaskType = parsedResp.task_type ?? 'development';
       const devData = parsedResp[respTaskType] ?? {};
       const tableData: TableRow[] | undefined =
@@ -298,11 +360,12 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
       const respSql: string | undefined = devData.sql || undefined;
       const respMapping = devData.mapping;
       const respChartName = devData.name;
-      
-      setMessages((prev) => {
+
+      // 更新 allMessages 中最后一条 ai 占位消息
+      setAllMessages((prev) => {
         const copy = [...prev];
         for (let i = copy.length - 1; i >= 0; i--) {
-          if (copy[i].role === 'ai') {
+          if (copy[i].role === 'ai' && copy[i].chartId === currentChartId) {
             copy[i] = {
               ...copy[i],
               streaming: false,
@@ -312,37 +375,35 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
               mapping: respMapping,
               chartName: respChartName,
               isNew: true,
+              accepted: false,
             };
             return copy;
           }
         }
         return prev;
       });
+
       setLoading(false);
       abortControllerRef.current = null;
     } catch (error: any) {
+      setLoading(false);
+      abortControllerRef.current = null;
       if (error?.name !== 'AbortError') {
-        setLoading(false);
-        abortControllerRef.current = null;
-        setMessages((prev) =>
+        setAllMessages((prev) =>
           prev.map((m) =>
             m.streaming ? { ...m, streaming: false, content: m.content || '请求异常，请稍后重试' } : m
           )
         );
-        if (retryCount <= maxRetries) {
-          message.error('AI对话接口异常，请检查系统');
-        }
+        message.error('AI对话接口异常，请检查系统');
       } else {
-        setLoading(false);
-        abortControllerRef.current = null;
-        setMessages((prev) =>
+        setAllMessages((prev) =>
           prev.map((m) =>
             m.streaming ? { ...m, streaming: false, content: m.content || '已停止生成' } : m
           )
         );
       }
     }
-  }, [inputValue, loading, selectedAgentId, dashboardId, chartNameList, taskType, updateLastAiMsg]);
+  }, [inputValue, loading, selectedAgentId, dashboardId, chartNameList, taskType]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -353,16 +414,59 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
 
   const handleClearHistory = async () => {
     stopGenerating();
-    // 调用后端清空会话消息接口
     if (convUidRef.current) {
       await baseApi.clearChatConv(convUidRef.current).catch(() => {});
     }
-    setMessages([]);
+    setAllMessages([]);
     convUidRef.current = '';
     streamBufferRef.current = '';
+    // 重置模块级缓存，下次挂载重新拉取
+    cachedMessages = [];
+    cachedConvUid = '';
+    cachedChatId = '';
+    historyLoaded = false;
   };
 
-  // 自动调整 textarea 高度
+  /** 切换采纳状态（找到 allMessages 中的对应项） */
+  const handleToggleAccept = useCallback((msgIndex: number, data: TableRow[]) => {
+    // msgIndex 是 messages（过滤后）中的下标，需找到 allMessages 中对应的项
+    const targetMsg = messages[msgIndex];
+    if (!targetMsg) return;
+
+    const newAccepted = !targetMsg.accepted;
+    const currentChartId = targetMsg.chartId ?? '';
+
+    if (newAccepted) {
+      // 采纳：调用 changeData 更新图表
+      const controllers = window.LC_ENV?.controllers;
+      if (!controllers) {
+        message.error('图表控制器未初始化');
+        return;
+      }
+      const ctrl = controllers[currentChartId];
+      if (ctrl) {
+        ctrl.changeData(data);
+        message.success('已更新图表数据');
+      } else {
+        message.warning('选中的图表不支持数据更新');
+      }
+    }
+
+    // 更新 allMessages：互斥逻辑（同一 chartId 下只允许一条 accepted）
+    setAllMessages((prev) => {
+      // 找到对应的 allMessages 下标（通过引用匹配）
+      const allIdx = prev.indexOf(targetMsg);
+      return prev.map((m, i) => {
+        if (i === allIdx) return { ...m, accepted: newAccepted };
+        // 同图表的其他 ai 消息互斥
+        if (newAccepted && m.chartId === currentChartId && m.role === 'ai') {
+          return { ...m, accepted: false };
+        }
+        return m;
+      });
+    });
+  }, [messages]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
     const ta = e.target;
@@ -372,15 +476,14 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
 
   return (
     <div className={`ai-chat-panel${float ? ' ai-chat-panel--float' : ''}`}>
-      {/* Header */}
+      {/* Header（仅浮层模式） */}
       {float && (
       <div className="ai-chat-header">
         <div className="ai-chat-title">
           <div className="ai-icon">A</div>
-          <span>智能问答</span>
+          <span>AI {currentChartName ? `· ${currentChartName}` : '智能问答'}</span>
         </div>
         <div className="ai-chat-actions">
-          {/* 清空历史 */}
           <button
             className="action-btn"
             title="清空对话"
@@ -391,7 +494,6 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
               <path d="M3.51 15a9 9 0 1 0 .49-3.37" />
             </svg>
           </button>
-          {/* 关闭 */}
           {onClose && (
           <button className="action-btn" title="关闭" onClick={onClose}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -404,7 +506,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
       </div>
       )}
 
-      {/* Status Bar */}
+      {/* Status Bar（嵌入模式也显示图表名称） */}
       <div className="ai-status-bar">
         <div className={`status-dot ${loading ? 'loading' : ''}`} />
         <span className={`status-text ${loading ? 'loading' : ''}`}>
@@ -438,40 +540,16 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
 
         {messages.map((msg, idx) => (
           <div key={idx} className={`ai-message ${msg.role}`}>
-            <div className="message-bubble">
+            <div className={`message-bubble${msg.tableData && msg.accepted ? ' accepted' : ''}`}>
               {msg.tableData ? (
                 <AiTableResult
                   data={msg.tableData}
                   sql={msg.sql}
                   mapping={msg.mapping}
                   chartName={msg.chartName}
-                  onAccept={msg.isNew ? (data) => {
-                    const selectedIds = eventOperateStore.targetIds;
-                    if (!selectedIds || selectedIds.length === 0) {
-                      message.warning('请先在大屏中选中一个图表');
-                      return;
-                    }
-                    const controllers = window.LC_ENV?.controllers;
-                    if (!controllers) {
-                      message.error('图表控制器未初始化');
-                      return;
-                    }
-                    let updated = 0;
-                    selectedIds.forEach(id => {
-                      const ctrl = controllers[id];
-                      if (ctrl) { ctrl.changeData(data); updated++; }
-                    });
-                    if (updated > 0) {
-                      message.success(`已更新 ${updated} 个图表`);
-                      // 清除 isNew 标记，避免重复采纳
-                      setMessages(prev => prev.map((m, i) => i === idx ? { ...m, isNew: false } : m));
-                    } else {
-                      message.warning('选中的图表不支持数据更新');
-                    }
-                  } : undefined}
-                  onReject={msg.isNew ? () => {
-                    setMessages(prev => prev.map((m, i) => i === idx ? { ...m, isNew: false } : m));
-                  } : undefined}
+                  accepted={msg.accepted}
+                  isNew={msg.isNew}
+                  onToggleAccept={(data) => handleToggleAccept(idx, data)}
                 />
               ) : (
                 <>{msg.content}{msg.streaming && <span className="cursor">▌</span>}</>
@@ -481,7 +559,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
           </div>
         ))}
 
-        {/* Loading dots: 仅在 loading 且最后一条不是 ai streaming 时显示 */}
+        {/* Loading dots */}
         {loading &&
           (messages.length === 0 ||
             messages[messages.length - 1]?.role !== 'ai') && (
@@ -562,6 +640,6 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default AiChatPanel;

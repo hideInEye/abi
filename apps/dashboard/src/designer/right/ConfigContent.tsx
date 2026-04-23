@@ -12,6 +12,7 @@
 import React, {Suspense, useEffect, useRef} from 'react';
 import rightStore from "./RightStore";
 import {observer} from "mobx-react";
+import eventOperateStore from "../operate-provider/EventOperateStore";
 import './ConfigContent.less';
 import {AbstractDefinition} from "../../framework/core/AbstractDefinition";
 import AbstractDesignerController from "../../framework/core/AbstractDesignerController";
@@ -53,13 +54,7 @@ const ConfigContent = observer(() => {
 
     const buildConfigContent = () => {
         const {activeMenu, activeElem} = rightStore;
-        // AI tab 对所有图表统一渲染，不走各组件 mapping
-        if (activeMenu === 'ai') {
-            // 去掉 Antd 前缀，转换为后端期望的图表 ID（如 AntdBaseBar → BaseBar）
-            const rawType = activeElem.type ?? '';
-            const chartId = rawType.startsWith('Antd') ? rawType.slice(4) : rawType;
-            return <AiChatPanel taskType="development" dashboardId={chartId}/>;
-        }
+        if (activeMenu === 'ai') return null;
         const {compController} = layerManager;
         const abstractConfigObj: AbstractDefinition = DesignerLoader.definitionMap[activeElem.type + '']
         if (!abstractConfigObj) return;
@@ -130,13 +125,24 @@ const ConfigContent = observer(() => {
     return (
         <div className={'lc-config-panel'} ref={configPanelRef}>
             <div className={'lc-panel-top'}>
-                <div className={'panel-title'}><span>{activeMenuName}</span></div>
+                <div className={'panel-title'}>
+                    <span>{activeMenuName}</span>
+                    {activeMenu === 'ai' && (() => {
+                        const chartId = eventOperateStore.targetIds[0] ?? '';
+                        const chartName = chartId ? (layerManager.layerConfigs[chartId]?.name ?? '') : '';
+                        return chartName ? <span className="panel-title-chart-name">{chartName}</span> : null;
+                    })()}
+                </div>
                 <div className={'panel-operate'} onClick={onClose}>
                     <Close theme="filled" size={18}/>
                 </div>
             </div>
             <div className={`lc-panel-content${activeMenu === 'ai' ? ' lc-panel-content--no-padding' : ''}`}>
-                {buildConfigContent()}
+                {/* AiChatPanel 常驻，用 display 控制显隐，避免切换图表时重新挂载触发接口 */}
+                <div style={{ display: activeMenu === 'ai' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
+                    <AiChatPanel taskType="development" dashboardId=""/>
+                </div>
+                {activeMenu !== 'ai' && buildConfigContent()}
             </div>
             <div className="resize-handle" ref={resizeHandleRef}></div>
         </div>
