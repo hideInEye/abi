@@ -1,11 +1,4 @@
-import {
-  CheckCircleOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-  PauseCircleOutlined,
-  RedoOutlined
-} from '@ant-design/icons'
+import { CheckCircleOutlined, DeleteOutlined, EyeOutlined, PauseCircleOutlined, RedoOutlined } from '@ant-design/icons'
 import { Pagination, message } from 'antd'
 import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
@@ -15,8 +8,8 @@ import type { ApiKeyItem } from '../types'
 interface ApiKeyTableProps {
   readonly current: number
   readonly dataSource: ApiKeyItem[]
+  readonly loading?: boolean
   readonly onDelete: (record: ApiKeyItem) => void
-  readonly onEdit: (record: ApiKeyItem) => void
   readonly onPageChange: (page: number) => void
   readonly onResetSk: (record: ApiKeyItem) => void
   readonly onToggleStatus: (record: ApiKeyItem) => void
@@ -28,8 +21,8 @@ interface ApiKeyTableProps {
 export function ApiKeyTable({
   current,
   dataSource,
+  loading = false,
   onDelete,
-  onEdit,
   onPageChange,
   onResetSk,
   onToggleStatus,
@@ -37,6 +30,16 @@ export function ApiKeyTable({
   pageSize,
   total
 }: ApiKeyTableProps) {
+  const copyValue = (value: string, label: string) => {
+    if (!value) {
+      message.warning(`${label}为空，无法复制`)
+      return
+    }
+
+    copy(value)
+    message.success(`${label}已复制`)
+  }
+
   const columns = [
     {
       dataIndex: 'businessSpace',
@@ -49,14 +52,11 @@ export function ApiKeyTable({
       key: 'clientId',
       render: (value: string) => (
         <ASpace>
-          <span>{value}</span>
+          <span>{value || '-'}</span>
           <AButton
             style={{ paddingInline: 0 }}
             type="link"
-            onClick={() => {
-              copy(value)
-              message.success('已复制')
-            }}
+            onClick={() => copyValue(value, 'Client ID')}
           >
             复制
           </AButton>
@@ -70,14 +70,11 @@ export function ApiKeyTable({
       key: 'accessKey',
       render: (value: string) => (
         <ASpace>
-          <span>{value}</span>
+          <span>{value || '-'}</span>
           <AButton
             style={{ paddingInline: 0 }}
             type="link"
-            onClick={() => {
-              copy(value)
-              message.success('已复制')
-            }}
+            onClick={() => copyValue(value, 'Access Key')}
           >
             复制
           </AButton>
@@ -104,7 +101,7 @@ export function ApiKeyTable({
     {
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (value: string) => dayjs(value).format('YYYY-MM-DD HH:mm:ss'),
+      render: (value: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
       title: '创建时间',
       width: 200
     },
@@ -119,14 +116,6 @@ export function ApiKeyTable({
               size="small"
               variant="link"
               onClick={() => onView(record)}
-            />
-          </ATooltip>
-          <ATooltip title="编辑">
-            <AButton
-              icon={<EditOutlined />}
-              size="small"
-              variant="link"
-              onClick={() => onEdit(record)}
             />
           </ATooltip>
           <APopconfirm
@@ -178,6 +167,7 @@ export function ApiKeyTable({
         <ATable
           columns={columns}
           dataSource={dataSource}
+          loading={loading}
           pagination={false}
           rowKey="id"
           scroll={{ x: 1400 }}

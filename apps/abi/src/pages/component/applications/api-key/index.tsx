@@ -1,60 +1,209 @@
 import { message } from 'antd'
-import dayjs from 'dayjs'
+import copy from 'copy-to-clipboard'
 
 import PageTitle from '@/components/stateless/common/PageTitle'
+import {
+  type AbiClientDetailItem,
+  type AbiClientListItem,
+  addAbiClient,
+  deleteAbiClient,
+  getAbiClientDetail,
+  queryAbiClientList,
+  resetAbiClientSk,
+  updateAbiClientStatus
+} from '@/service/api/abi-client'
+import { spaceList } from '@/service/api/data-space'
 
 import { ApiKeyDrawer } from './components/ApiKeyDrawer'
 import { ApiKeyTable } from './components/ApiKeyTable'
 import type { ApiKeyFormValues, ApiKeyItem, DrawerMode } from './types'
-import { generateCredential } from './utils'
 
 const PAGE_SIZE = 10
+const DEFAULT_ACTIVE_TIMEOUT = 120
 
-const initialData: ApiKeyItem[] = [
-  {
-    accessKey: 'ak_1a2b3c4d5e',
-    businessSpace: '默认业务空间',
-    clientId: 'cli_3f8a9afc61',
-    createdAt: '2026-04-15 10:23:13',
-    description: '默认空间的客户端访问授权',
-    id: 1,
-    ipAccessType: 'unlimited',
-    ipWhitelist: [],
-    secretKey: 'sk_7f4f8a22a1',
-    status: 'normal'
-  },
-  {
-    accessKey: 'ak_6f7g8h9i0j',
-    businessSpace: '开发测试空间',
-    clientId: 'cli_7b8c9d0e1f',
-    createdAt: '2026-01-28 09:16:49',
-    description: '开发空间 API Key',
-    id: 2,
-    ipAccessType: 'whitelist',
-    ipWhitelist: ['192.168.1.10', '192.168.1.0/24'],
-    secretKey: 'sk_9b5e3c11d2',
-    status: 'disabled'
+function extractSecretKey(resp: any): string {
+  const respData = resp?.response?.data
+  const dataField = respData?.data
+
+  if (typeof dataField === 'string') {
+    return dataField
   }
-]
+
+  if (dataField && typeof dataField === 'object' && typeof dataField.secretKey === 'string') {
+    return dataField.secretKey
+  }
+
+  return respData?.secretKey || (typeof resp?.data?.secretKey === 'string' ? resp.data.secretKey : '') || ''
+}
+
+function showOneTimeSecretKeyModal(secretKey: string, title: string) {
+  AModal.info({
+    content: (
+      <div>
+        <div>Secret Key 仅展示一次，关闭弹窗后将无法再次查看，请立即复制并妥善保存。</div>
+        <div style={{ fontFamily: 'monospace', marginTop: 12, wordBreak: 'break-all' }}>{secretKey}</div>
+        <AButton
+          style={{ marginTop: 12, paddingInline: 0 }}
+          type="link"
+          onClick={() => {
+            copy(secretKey)
+            message.success('Secret Key已复制')
+          }}
+        >
+          复制 Secret Key
+        </AButton>
+      </div>
+    ),
+    title
+  })
+}
+
+function parseWhitelist(item: Partial<AbiClientListItem & AbiClientDetailItem>): string[] {
+  if (Array.isArray(item.whitelist)) {
+    return item.whitelist.map(row => row.whitelist).filter(Boolean)
+  }
+
+  if (typeof item.ipWhitelist === 'string') {
+    return item.ipWhitelist
+      .split(/[,\n]/)
+      .map(v => v.trim())
+      .filter(Boolean)
+  }
+
+  return []
+}
+
+function isRestrictedIp(value: unknown): boolean {
+  return value === true || value === 1 || value === '1'
+}
+
+function isDisabled(value: unknown): boolean {
+  return value === 1 || value === '1'
+}
+
+function mapClientRowToView(item: AbiClientListItem, fallbackSpaceId: number): ApiKeyItem {
+  return {
+    accessKey: item.accessKey || '',
+    businessSpace: item.spaceName || '',
+    clientId: item.clientId || '',
+    createdAt: item.createTime || '',
+    description: item.remark || '',
+    expireTime: item.expireTime || null,
+    id: Number(item.id),
+    ipAccessType: isRestrictedIp(item.restrictedIp) ? 'whitelist' : 'unlimited',
+    ipWhitelist: parseWhitelist(item),
+    rawSecretKey: '',
+    secretKey: '',
+    spaceId: Number(item.spaceId || fallbackSpaceId),
+    status: isDisabled(item.status) ? 'disabled' : 'normal',
+    timeoutMinutes: item.activeTimeout
+  }
+}
+
+function mapClientDetailToView(item: AbiClientDetailItem, fallback: ApiKeyItem | null): ApiKeyItem {
+  const fallbackSpaceId = fallback?.spaceId || Number(localStorage.getItem('spaceId')) || 0
+  const base = mapClientRowToView(
+    {
+      ...item,
+      accessKey: item.accessKey || fallback?.accessKey || '',
+      clientId: item.clientId || fallback?.clientId || '',
+      createTime: item.createTime || fallback?.createdAt || '',
+      remark: item.remark || '',
+      spaceId: item.spaceId || fallbackSpaceId,
+      spaceName: fallback?.businessSpace || ''
+    },
+    fallbackSpaceId
+  )
+
+  return {
+    ...base,
+    rawSecretKey: item.secretKey || '',
+    secretKey: item.secretKey || ''
+  }
+}
 
 export function Component() {
-  const [rows, setRows] = useState<ApiKeyItem[]>(initialData)
+  const [rows, setRows] = useState<ApiKeyItem[]>([])
+  const [total, setTotal] = useState(0)
   const [current, setCurrent] = useState(1)
+  const [listLoading, setListLoading] = useState(false)
+
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('create')
   const [currentRecord, setCurrentRecord] = useState<ApiKeyItem | null>(null)
+  const [submitLoading, setSubmitLoading] = useState(false)
 
-  const businessSpaceOptions = useMemo(() => {
-    const spaces = new Set(rows.map(item => item.businessSpace))
-    if (!spaces.size) spaces.add('默认业务空间')
+  const [spaceOptions, setSpaceOptions] = useState<Array<{ label: string; value: number }>>([])
 
-    return Array.from(spaces).map(item => ({ label: item, value: item }))
-  }, [rows])
+  const currentSpaceId = useMemo(() => Number(localStorage.getItem('spaceId')) || 0, [])
 
-  const pagedRows = useMemo(() => {
-    const start = (current - 1) * PAGE_SIZE
-    return rows.slice(start, start + PAGE_SIZE)
-  }, [current, rows])
+  const loadSpaceOptions = useCallback(async () => {
+    try {
+      const res = await spaceList({
+        isAsc: 'desc',
+        orderByColumn: 'spaceId',
+        pageNum: 1,
+        pageSize: 1000
+      })
+
+      const list = ((res as any).response?.data?.rows || []) as Array<{ spaceId: number; spaceName: string }>
+
+      const options = list.map(item => ({
+        label: item.spaceName,
+        value: Number(item.spaceId)
+      }))
+
+      setSpaceOptions(options)
+    } catch {
+      message.warning('加载空间列表失败')
+    }
+  }, [])
+
+  const loadList = useCallback(
+    async (pageNum: number) => {
+      if (!currentSpaceId) {
+        setRows([])
+        setTotal(0)
+        return
+      }
+
+      setListLoading(true)
+
+      try {
+        const res = await queryAbiClientList({
+          pageNum,
+          pageSize: PAGE_SIZE,
+          spaceId: currentSpaceId
+        })
+
+        const payload = (res as any).response?.data || {}
+        const list = (payload.rows || []) as AbiClientListItem[]
+
+        setRows(list.map(item => mapClientRowToView(item, currentSpaceId)))
+        setTotal(Number(payload.total || 0))
+      } finally {
+        setListLoading(false)
+      }
+    },
+    [currentSpaceId]
+  )
+
+  useEffect(() => {
+    loadSpaceOptions()
+  }, [loadSpaceOptions])
+
+  useEffect(() => {
+    loadList(current)
+  }, [current, loadList])
+
+  const refreshList = (targetPage?: number) => {
+    if (typeof targetPage === 'number' && targetPage !== current) {
+      setCurrent(targetPage)
+      return
+    }
+
+    loadList(typeof targetPage === 'number' ? targetPage : current)
+  }
 
   const openCreate = () => {
     setDrawerMode('create')
@@ -62,15 +211,18 @@ export function Component() {
     setDrawerOpen(true)
   }
 
-  const openView = (record: ApiKeyItem) => {
-    setDrawerMode('view')
-    setCurrentRecord(record)
-    setDrawerOpen(true)
-  }
+  const openView = async (record: ApiKeyItem) => {
+    const res = await getAbiClientDetail(record.id)
+    const payload = (res as any).response?.data || {}
+    const detail = (payload.data || {}) as AbiClientDetailItem
 
-  const openEdit = (record: ApiKeyItem) => {
-    setDrawerMode('edit')
-    setCurrentRecord(record)
+    const mapped = mapClientDetailToView(detail, record)
+
+    const matchedSpace = spaceOptions.find(item => item.value === mapped.spaceId)
+    if (matchedSpace) mapped.businessSpace = matchedSpace.label
+
+    setDrawerMode('view')
+    setCurrentRecord(mapped)
     setDrawerOpen(true)
   }
 
@@ -79,73 +231,96 @@ export function Component() {
     setCurrentRecord(null)
   }
 
-  const handleSubmit = (values: ApiKeyFormValues, ipWhitelist: string[]) => {
-    if (drawerMode === 'create') {
-      const newItem: ApiKeyItem = {
-        accessKey: generateCredential('ak'),
-        businessSpace: values.businessSpace,
-        clientId: generateCredential('cli'),
-        createdAt: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-        description: values.description || '',
-        id: Date.now(),
-        ipAccessType: values.ipAccessType,
-        ipWhitelist,
-        secretKey: generateCredential('sk'),
-        status: 'normal'
+  const handleSubmit = async (values: ApiKeyFormValues, ipWhitelist: string[]) => {
+    setSubmitLoading(true)
+
+    const payload = {
+      activeTimeout: currentRecord?.timeoutMinutes || DEFAULT_ACTIVE_TIMEOUT,
+      expireTime: currentRecord?.expireTime || null,
+      ips: values.ipAccessType === 'whitelist' ? ipWhitelist.map(whitelist => ({ whitelist })) : undefined,
+      remark: values.description || '',
+      restrictedIp: values.ipAccessType === 'whitelist' ? 1 : 0,
+      spaceId: values.spaceId
+    }
+
+    try {
+      const res = await addAbiClient(payload)
+      const msg = (res as any).response?.data?.msg || '创建成功'
+      const createdSecretKey = extractSecretKey(res)
+
+      message.success(msg)
+      closeDrawer()
+
+      if (createdSecretKey) {
+        showOneTimeSecretKeyModal(createdSecretKey, '创建成功，请妥善保存 Secret Key')
       }
 
-      setRows(prev => [newItem, ...prev])
-      message.success('创建成功')
+      refreshList(1)
+    } finally {
+      setSubmitLoading(false)
+    }
+  }
+
+  const handleToggleStatus = async (record: ApiKeyItem) => {
+    const nextStatus: 0 | 1 = record.status === 'normal' ? 1 : 0
+    const res = await updateAbiClientStatus({
+      id: record.id,
+      spaceId: record.spaceId || currentSpaceId,
+      status: nextStatus
+    })
+
+    message.success((res as any).response?.data?.msg || '操作成功')
+    refreshList()
+  }
+
+  const handleDelete = async (record: ApiKeyItem) => {
+    const res = await deleteAbiClient({
+      id: record.id,
+      spaceId: record.spaceId || currentSpaceId
+    })
+
+    message.success((res as any).response?.data?.msg || '删除成功')
+
+    if (rows.length === 1 && current > 1) {
+      refreshList(current - 1)
+      return
     }
 
-    if (drawerMode === 'edit' && currentRecord) {
-      setRows(prev =>
-        prev.map(item => {
-          if (item.id !== currentRecord.id) return item
-
-          return {
-            ...item,
-            businessSpace: values.businessSpace,
-            description: values.description || '',
-            ipAccessType: values.ipAccessType,
-            ipWhitelist
-          }
-        })
-      )
-      message.success('保存成功')
-    }
-
-    closeDrawer()
+    refreshList()
   }
 
-  const handleToggleStatus = (record: ApiKeyItem) => {
-    setRows(prev =>
-      prev.map(item => {
-        if (item.id !== record.id) return item
-        return { ...item, status: item.status === 'normal' ? 'disabled' : 'normal' }
-      })
-    )
-  }
+  const handleResetSk = async (record: ApiKeyItem) => {
+    const resetRes = await resetAbiClientSk(record.id)
+    message.success((resetRes as any).response?.data?.msg || '重置成功')
 
-  const handleDelete = (record: ApiKeyItem) => {
-    setRows(prev => prev.filter(item => item.id !== record.id))
-    message.success('删除成功')
-  }
-
-  const handleResetSk = (record: ApiKeyItem) => {
-    const secretKey = generateCredential('sk')
-
-    setRows(prev => prev.map(item => (item.id === record.id ? { ...item, secretKey } : item)))
+    const detailRes = await getAbiClientDetail(record.id)
+    const secretKey = (detailRes as any).response?.data?.data as string | undefined
 
     AModal.info({
       content: (
         <div>
-          <div>新的 Secret Key 仅展示一次，请立即保存：</div>
-          <div style={{ fontFamily: 'monospace', marginTop: 12, wordBreak: 'break-all' }}>{secretKey}</div>
+          <div>Secret Key 已重置，请及时保存：</div>
+          <div style={{ fontFamily: 'monospace', marginTop: 12, wordBreak: 'break-all' }}>{secretKey || '-'}</div>
+          <AButton
+            style={{ marginTop: 12, paddingInline: 0 }}
+            type="link"
+            onClick={() => {
+              if (!secretKey) {
+                message.warning('Secret Key为空，无法复制')
+                return
+              }
+              copy(secretKey)
+              message.success('Secret Key已复制')
+            }}
+          >
+            复制
+          </AButton>
         </div>
       ),
       title: 'Secret Key 已重置'
     })
+
+    refreshList()
   }
 
   return (
@@ -174,11 +349,11 @@ export function Component() {
 
         <ApiKeyTable
           current={current}
-          dataSource={pagedRows}
+          dataSource={rows}
+          loading={listLoading}
           pageSize={PAGE_SIZE}
-          total={rows.length}
+          total={total}
           onDelete={handleDelete}
-          onEdit={openEdit}
           onPageChange={setCurrent}
           onResetSk={handleResetSk}
           onToggleStatus={handleToggleStatus}
@@ -189,8 +364,9 @@ export function Component() {
       <ApiKeyDrawer
         mode={drawerMode}
         open={drawerOpen}
-        options={businessSpaceOptions}
+        options={spaceOptions}
         record={currentRecord}
+        submitLoading={submitLoading}
         onClose={closeDrawer}
         onSubmit={handleSubmit}
       />

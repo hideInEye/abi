@@ -46,6 +46,11 @@ export function isIpDuplicated(list: string[], value: string): boolean {
   return list.some(item => normalizeIpValue(item).toLowerCase() === normalized)
 }
 
+export function isMaskedValue(value?: string | null): boolean {
+  if (!value) return false
+  return /\*{2,}/.test(value)
+}
+
 export function generateCredential(prefix: 'ak' | 'cli' | 'sk'): string {
   const randomPart = Math.random().toString(16).slice(2, 12)
   return `${prefix}_${randomPart}`
