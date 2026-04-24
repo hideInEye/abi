@@ -1,35 +1,26 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons'
 import PageTitle from '@/components/stateless/common/PageTitle'
 import { message } from 'antd'
 import { Suspense } from 'react'
 
-// import { enableStatusRecord } from '@/constants/business';
-// import { ATG_MAP } from '@/constants/common';
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer'
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
-import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage'
 import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList } from '@/service/api'
 
 const ModalOperateDrawer = lazy(() => import('./modules/modal-operate-drawer'))
+const ProviderList = lazy(() => import('./modules/provider-list'))
+const ModelCardList = lazy(() => import('./modules/model-card-list'))
 
 export function Component() {
   const { t } = useTranslation()
 
   const [searchValue, setSearchValue] = useState('')
+  const [searchType, setSearchType] = useState<'modelName' | 'baseModel'>('modelName')
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null)
-
-  // const isMobile = useMobile();
-
-  const handleSwitch = async (record: any) => {
-    const updateRes: any = await fetchEditModel({ ...record, status: record.status === '1' ? '0' : '1' })
-    if (updateRes?.response?.data?.code !== 200) return false
-    message.success('操作成功')
-    run()
-  }
+  const [activeProviderId, setActiveProviderId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'0' | '1' | '2'>('0')
 
   const handleDelete = async (id: number) => {
     const res = await deleteModel(id)
-    console.log(res, 'res')
     if (res.response.data.code === 200) {
       message.success(res.response.data.msg)
       return onDeleted()
@@ -42,114 +33,14 @@ export function Component() {
     apiFn: fetchModelList as any,
     apiParams: {
       pageNum: 1,
-      pageSize: 10,
+      pageSize: 999,
       modelName: searchValue,
-      // spaceId: 1 // 空间id
     },
-    columns: () =>
-      [
-        {
-          align: 'left',
-          dataIndex: 'providerName',
-          key: 'providerName',
-          render: (providerName: string) => PROVIDER_OPTIONS.find((item) => item.value === providerName)?.label || providerName,
-          title: '供应商',
-        },
-        {
-          align: 'left',
-          dataIndex: 'modelName',
-          key: 'modelName',
-          title: '模型名称',
-        },
-        {
-          align: 'left',
-          dataIndex: 'modelType',
-          key: 'modelType',
-          render: (type: string) => MODAL_TYPE_OPTIONS.find((item) => item.value === type)?.label,
-          title: '模型类型',
-        },
-        {
-          align: 'center',
-          dataIndex: 'status',
-          key: 'status',
-          render: (status: string, record: any) => {
-            return <ASwitch checked={status === '1'} onClick={() => handleSwitch(record)} />
-          },
-          title: '状态',
-        },
-        {
-          align: 'left',
-          dataIndex: 'remark',
-          key: 'remark',
-          title: '描述',
-        },
-        {
-          align: 'center',
-          dataIndex: 'createBy',
-          key: 'createBy',
-          title: '创建人',
-        },
-        {
-          align: 'center',
-          dataIndex: 'createTime',
-          key: 'createTime',
-          title: t('page.dataPreparation.dataSource.createTime'),
-          width: 160,
-        },
-        {
-          align: 'center',
-          fixed: 'right',
-          key: 'operate',
-          render: (_: unknown, record: any) => (
-            <div className="flex-center gap-8px">
-             <ATooltip title={t('page.manage.common.edit')}>
-              <AButton
-                color="primary"
-                icon={<EditOutlined />}
-                size="small"
-                variant="link"
-                onClick={() => {
-                  // const config = JSON.parse(record.configuration);
-                  // const formatRecord = { ...record, ...config };
-                  // edit(formatRecord);
-                  edit(record);
-                }}
-               />
-              </ATooltip>
-              <ATooltip title="查看元数据分析">
-                <AButton
-                  color="primary"
-                  icon={<ApartmentOutlined />}
-                  size="small"
-                  variant="link"
-                  onClick={() =>
-                    setAnalysisContext({
-                      nodeId: record.llmId,
-                      nodeName: record.modelName,
-                      nodeType: 'LLM',
-                      spaceId: Number(localStorage.getItem('spaceId')) || undefined
-                    })
-                  }
-                />
-              </ATooltip>
-              <APopconfirm
-                title="提示"
-                description={t('common.confirmDelete')}
-                onConfirm={() => handleDelete(record.llmId)}
-              >
-                <ATooltip title={t('page.manage.common.delete')}>
-                  <AButton className="text-red" color="danger" disabled={_.type === 'special-user'} icon={<DeleteOutlined />} type="text" />
-                </ATooltip>
-              </APopconfirm>
-            </div>
-          ),
-          title: t('common.operate'),
-        },
-      ] as any,
+    columns: () => [] as any,
     rowKey: 'llmId',
   } as any)
 
-  const { editingData, generalPopupOperation, handleAdd, handleEdit, onDeleted, rowSelection } = useTableOperate(data as any, run, async (res: any, operateType) => {
+  const { editingData, generalPopupOperation, handleAdd, handleEdit, onDeleted } = useTableOperate(data as any, run, async (res: any, operateType) => {
     const { apiKey, baseUrl, context_length, max_token, maxRetries, modelUID, secretKey, temperature, timeOut, type, ...elseProps } = res as any
     let modelConfigObject: any = {
       apiKey,
@@ -157,10 +48,6 @@ export function Component() {
       context_length,
       modelUID,
       secretKey,
-      // max_token,
-      // maxRetries,
-      // temperature,
-      // timeOut
     }
     if (res.modelType === 'llm') {
       modelConfigObject = {
@@ -177,28 +64,16 @@ export function Component() {
       }
     }
     const modelConfig = JSON.stringify(modelConfigObject)
-    const commonData = {
-      ...elseProps,
-      modelConfig,
-    }
+    const commonData = { ...elseProps, modelConfig }
 
     if (operateType === 'add') {
-      // add request 调用新增的接口
       const addRes: any = await fetchAddModel(commonData)
       if (addRes?.response?.data?.code !== 200) return false
     } else {
-      // edit request 调用编辑的接口
-      // const sourceId = (editingData as any)?.sourceId;
       const updateRes: any = await fetchEditModel({ ...commonData, llmId: editingData?.llmId, status: '1' })
       if (updateRes?.response?.data?.code !== 200) return false
     }
   })
-
-  // async function handleBatchDelete() {
-  //   // request
-  //   console.log(checkedRowKeys);
-  //   onBatchDeleted();
-  // }
 
   function edit(row: any) {
     try {
@@ -209,6 +84,7 @@ export function Component() {
       console.log(error)
     }
   }
+
   const handleSearch = () => {
     const keyword = searchValue.trim()
     updateSearchParams({
@@ -217,39 +93,68 @@ export function Component() {
     } as any)
   }
 
+  const handleSelectProvider = (id: string | null) => {
+    setActiveProviderId(id)
+  }
+
+  const handleTabChange = (tab: '0' | '1' | '2') => {
+    setActiveTab(tab)
+    setActiveProviderId(null)
+  }
+
+  // 根据左侧选中的供应商或 Tab 过滤模型列表
+  const allModels: any[] = (tableProps as any).dataSource || []
+  const displayModels = useMemo(() => {
+    if (activeProviderId) {
+      return allModels.filter((m: any) => m.providerName === activeProviderId)
+    }
+    return allModels
+  }, [allModels, activeProviderId])
+
   return (
-    <div className="flex flex-col gap-2 p-6" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
+    <div className="flex flex-col p-6" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <PageTitle />
-      <div className="flex items-center gap-4">
-        <AInput placeholder="请输入模型名称" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onPressEnter={handleSearch} style={{ width: '12.5rem' }} />
-        <AButton className="ml-auto" type="primary" onClick={() => handleAdd()}>
-          新增
-        </AButton>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, gap: 16, minHeight: 0, overflow: 'hidden', marginTop: 8 }}>
+        {/* 左侧供应商列表 */}
         <div
           style={{
-            border: '0.0625rem solid #d9d9d9',
-            borderRadius: '0.5rem',
+            width: 280,
+            flexShrink: 0,
+            background: '#fff',
+            borderRadius: 8,
+            border: '1px solid #f0f0f0',
+            padding: '12px 8px',
             overflow: 'hidden',
-            width: '100%',
-            maxHeight: '100%',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
-          <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-            <ATable
-              size="small"
-              rowSelection={rowSelection}
-              className="model-table"
-              scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
-              {...(tableProps as any)}
-              pagination={false}
+          <Suspense>
+            <ProviderList
+              activeProviderId={activeProviderId}
+              activeTab={activeTab}
+              onSelect={handleSelectProvider}
+              onTabChange={handleTabChange}
             />
-          </div>
+          </Suspense>
         </div>
 
-        <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
-          <APagination {...(tableProps as any).pagination} showSizeChanger style={{ padding: '0' }} />
+        {/* 右侧卡片网格 */}
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <Suspense>
+            <ModelCardList
+              models={displayModels}
+              searchValue={searchValue}
+              searchType={searchType}
+              onSearchValueChange={setSearchValue}
+              onSearchTypeChange={setSearchType}
+              onSearch={handleSearch}
+              onAdd={() => handleAdd()}
+              onEdit={edit}
+              onDelete={handleDelete}
+              onAnalysis={setAnalysisContext}
+            />
+          </Suspense>
         </div>
       </div>
 

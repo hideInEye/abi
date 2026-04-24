@@ -88,7 +88,14 @@ export const ProjectList = memo((props: ProjectListProps) => {
             const promptsWithStatus = promptList.map((p: any) => ({...p, status: '1'}));
             const chatConfig = JSON.stringify({prompts: promptsWithStatus});
 
-            // 4. 创建会话应用
+            // 4. 验证对话应用名称唯一性
+            const nameValid = await baseApi.validateChatAppName(name, spaceId);
+            if (!nameValid) {
+                globalMessage.messageApi?.error('对话应用名称已存在，请更换后重试');
+                return;
+            }
+
+            // 5. 创建会话应用
             const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
             let createBy = '';
             try {
@@ -108,7 +115,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
             };
             const appRes = await baseApi.createChatApp(chatAppData);
 
-            // 5. 创建会话，并把 chat_id 存入大屏 dataJson
+            // 6. 创建会话，并把 chat_id 存入大屏 dataJson
             if (appRes.success && appRes.data) {
                 const chatId = appRes.data.data.chat_id;
                 await baseApi.createChatConv({

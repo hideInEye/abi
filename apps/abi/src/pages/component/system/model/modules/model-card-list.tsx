@@ -1,0 +1,311 @@
+import { ApartmentOutlined, DeleteOutlined, EditOutlined, MoreOutlined, StarFilled } from '@ant-design/icons'
+import { Dropdown, Space } from 'antd'
+import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage'
+import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
+import './model-card-list.css'
+
+interface ModelItem {
+  llmId: number
+  providerName: string
+  modelName: string
+  modelType: string
+  status: string
+  remark?: string
+  createBy?: string
+  createTime?: string
+  isDefault?: number
+  [key: string]: any
+}
+
+interface Props {
+  models: ModelItem[]
+  searchValue: string
+  searchType: 'modelName' | 'baseModel'
+  onSearchValueChange: (val: string) => void
+  onSearchTypeChange: (type: 'modelName' | 'baseModel') => void
+  onSearch: () => void
+  onAdd: () => void
+  onEdit: (record: ModelItem) => void
+  onDelete: (id: number) => void
+  onAnalysis: (context: MetadataAnalysisContext) => void
+}
+
+const modelTypeTagColorMap: Record<string, import('antd/es/tag').TagProps['color']> = {
+  llm: 'blue',
+  embedding: 'green',
+  rerank: 'orange',
+}
+
+const ModelCardList: FC<Props> = ({
+  models,
+  searchValue,
+  searchType,
+  onSearchValueChange,
+  onSearchTypeChange,
+  onSearch,
+  onAdd,
+  onEdit,
+  onDelete,
+  onAnalysis,
+}) => {
+  const { t } = useTranslation()
+
+  const searchTypeOptions = [
+    { label: '模型名称', value: 'modelName' },
+    { label: '基础模型', value: 'baseModel' },
+  ]
+
+  const filteredModels = useMemo(() => {
+    if (!searchValue) return models
+    const text = searchValue.toLowerCase()
+    return models.filter(m => {
+      if (searchType === 'modelName') return m.modelName?.toLowerCase().includes(text)
+      if (searchType === 'baseModel') return m.modelName?.toLowerCase().includes(text)
+      return false
+    })
+  }, [models, searchValue, searchType])
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <ACard
+        bordered={false}
+        size="small"
+        title="模型"
+        style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+        styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px 16px' } }}
+        extra={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Space.Compact style={{ width: 280 }}>
+              <ASelect
+                value={searchType}
+                options={searchTypeOptions}
+                size="small"
+                style={{ width: '38%' }}
+                onChange={onSearchTypeChange}
+              />
+              <AInput
+                value={searchValue}
+                placeholder="请输入关键词"
+                size="small"
+                style={{ width: '62%' }}
+                allowClear
+                onChange={e => onSearchValueChange(e.target.value)}
+                onPressEnter={onSearch}
+              />
+            </Space.Compact>
+            <AButton type="primary" size="small" ghost onClick={onAdd}>
+              + 新增模型
+            </AButton>
+          </div>
+        }
+      >
+        <div style={{ flex: 1, overflow: 'auto', padding: '4px 20px 12px 12px' }}>
+          {filteredModels.length === 0 ? (
+            <AEmpty description="暂无模型数据" style={{ marginTop: 80 }} />
+          ) : (
+            <div className="model-card-grid">
+              {filteredModels.map(item => {
+                const modelTypeLabel = MODAL_TYPE_OPTIONS.find(o => o.value === item.modelType)?.label || item.modelType
+                const providerOption = PROVIDER_OPTIONS.find(o => o.value === item.providerName)
+                const providerLabel = providerOption?.label || item.providerName
+                const providerIcon = (providerOption as any)?.icon || ''
+                const tagColor = modelTypeTagColorMap[item.modelType] || 'default'
+
+                const dropdownItems = [
+                  {
+                    key: 'edit',
+                    label: (
+                      <span>
+                        <EditOutlined style={{ marginRight: 6 }} />
+                        {t('page.manage.common.edit')}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'analysis',
+                    label: (
+                      <span>
+                        <ApartmentOutlined style={{ marginRight: 6 }} />
+                        查看元数据分析
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'delete',
+                    label: (
+                      <span style={{ color: '#ff4d4f' }}>
+                        <DeleteOutlined style={{ marginRight: 6 }} />
+                        {t('page.manage.common.delete')}
+                      </span>
+                    ),
+                  },
+                ]
+
+                return (
+                  <div
+                    key={item.llmId}
+                    className="model-card-item"
+                    style={{
+                      position: 'relative',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 8,
+                      padding: 16,
+                      minHeight: 180,
+                      height: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      background: '#fff',
+                      boxShadow: '0 2px 8px 0 rgba(0,0,0,0.08)',
+                    }}
+                  >
+                    {/* 默认模型角标 */}
+                    {item.isDefault === 1 && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          right: 0,
+                          width: 24,
+                          height: 24,
+                          background: '#faad14',
+                          borderRadius: '0 8px 0 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 10,
+                        }}
+                      >
+                        <StarFilled style={{ color: '#fff', fontSize: 12 }} />
+                      </div>
+                    )}
+
+                    {/* 操作菜单（hover 显示） */}
+                    <div
+                      className="model-card-more"
+                      style={{
+                        position: 'absolute',
+                        bottom: 8,
+                        right: 8,
+                        zIndex: 10,
+                        opacity: 0,
+                        transition: 'opacity 0.2s',
+                      }}
+                    >
+                      <Dropdown
+                        menu={{
+                          items: dropdownItems,
+                          onClick: ({ key }) => {
+                            if (key === 'edit') onEdit(item)
+                            else if (key === 'analysis') {
+                              onAnalysis({
+                                nodeId: item.llmId,
+                                nodeName: item.modelName,
+                                nodeType: 'LLM',
+                                spaceId: Number(localStorage.getItem('spaceId')) || undefined,
+                              })
+                            } else if (key === 'delete') onDelete(item.llmId)
+                          },
+                        }}
+                        trigger={['hover']}
+                      >
+                        <AButton type="text" size="small" style={{ color: '#8c8c8c' }}>
+                          <MoreOutlined />
+                        </AButton>
+                      </Dropdown>
+                    </div>
+
+                    {/* 上部：图标 + 名称 + 标签 */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <div
+                        style={{
+                          width: 48,
+                          height: 48,
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: providerIcon ? 'transparent' : '#f0f5ff',
+                          borderRadius: 8,
+                          fontSize: 20,
+                          color: '#1677ff',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {providerIcon ? (
+                          <img src={providerIcon} alt={providerLabel} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 8 }} />
+                        ) : (
+                          providerLabel?.slice(0, 1)
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 15,
+                            fontWeight: 700,
+                            lineHeight: 1.3,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                          title={item.modelName}
+                        >
+                          {item.modelName}
+                        </div>
+                        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <ATag color={tagColor} bordered style={{ margin: 0 }}>
+                            {modelTypeLabel}
+                          </ATag>
+                          <ATag bordered style={{ margin: 0 }}>
+                            {providerLabel}
+                          </ATag>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 下部：基础模型 + 状态 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <span style={{ color: '#8c8c8c', flexShrink: 0 }}>基础模型</span>
+                        <span
+                          style={{
+                            color: '#595959',
+                            fontFamily: 'monospace',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                          title={item.modelName}
+                        >
+                          {item.modelName}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <span style={{ color: '#8c8c8c', flexShrink: 0 }}>状&emsp;态&emsp;</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: '50%',
+                              background: item.status === '1' ? '#52c41a' : '#bfbfbf',
+                            }}
+                          />
+                          <span style={{ color: item.status === '1' ? '#434343' : '#8c8c8c' }}>
+                            {item.status === '1' ? '启用' : '禁用'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </ACard>
+    </div>
+  )
+}
+
+export default ModelCardList

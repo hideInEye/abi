@@ -9,28 +9,64 @@
 // 供应商
 export const PROVIDER_OPTIONS = [
   {
-    label: '通义千问',
-    value: 'Qwen'
-  },
-  {
-    label: 'DeepSeek',
-    value: 'DeepSeek'
-  },
-  {
-    label: '硅基流动',
-    value: 'SiliconFlow'
+    label: 'Local (内置)',
+    value: 'Local',
+    icon: '/model-provider-icon/logo.png'
   },
   {
     label: 'OpenAI',
-    value: 'OpenAI'
+    value: 'OpenAI',
+    icon: '/model-provider-icon/openai.png'
+  },
+  {
+    label: 'Gemini',
+    value: 'Gemini',
+    icon: '/model-provider-icon/gemini.svg'
   },
   {
     label: 'Ollama',
-    value: 'Ollama'
+    value: 'Ollama',
+    icon: '/model-provider-icon/ollama.png'
   },
   {
-    label: '移动大模型',
-    value: 'MobileIoT'
+    label: 'DeepSeek',
+    value: 'DeepSeek',
+    icon: '/model-provider-icon/deepseek.png'
+  },
+  {
+    label: 'vLLM',
+    value: 'vLLM',
+    icon: '/model-provider-icon/vllm.ico'
+  },
+  {
+    label: 'Azure OpenAI',
+    value: 'AzureOpenAI',
+    icon: '/model-provider-icon/azure.png'
+  },
+  {
+    label: '阿里云百炼',
+    value: 'BaiLian',
+    icon: '/model-provider-icon/bailian.jpeg'
+  },
+  {
+    label: '智谱AI',
+    value: 'ZhipuAI',
+    icon: '/model-provider-icon/zhipu.png'
+  },
+  {
+    label: '火山引擎(豆包)',
+    value: 'Doubao',
+    icon: '/model-provider-icon/doubao.png'
+  },
+  {
+    label: 'Moonshot',
+    value: 'Moonshot',
+    icon: '/model-provider-icon/moonshot.ico'
+  },
+  {
+    label: 'SiliconFlow (硅基流动)',
+    value: 'SiliconFlow',
+    icon: '/model-provider-icon/logo-siliconflow.svg'
   }
 ];
 
