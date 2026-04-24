@@ -79,6 +79,48 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
+        name: 'component_applications',
+        path: 'applications',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.component_application',
+          order: 7,
+          title: 'component_application'
+        },
+        children: [
+          {
+            name: 'component_applications_api-key',
+            path: 'api-key',
+            component: 'view.component_applications_api-key',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.component_application_apikey',
+              order: 1,
+              title: 'component_application_apikey'
+            }
+          }
+        ]
+      },
+      {
+        name: 'component_data',
+        path: 'data',
+        meta: {
+          i18nKey: 'route.component_data',
+          title: 'component_data'
+        },
+        children: [
+          {
+            name: 'component_data_data-dictionary',
+            path: 'data-dictionary',
+            component: 'view.component_data_data-dictionary',
+            meta: {
+              i18nKey: 'route.component_data_data-dictionary',
+              title: 'component_data_data-dictionary'
+            }
+          }
+        ]
+      },
+      {
         name: 'component_system',
         path: 'system',
         meta: {
@@ -86,15 +128,6 @@ export const generatedRoutes: GeneratedRoute[] = [
           title: 'component_system'
         },
         children: [
-          {
-            name: 'component_system_data-dictionary',
-            path: 'data-dictionary',
-            component: 'view.component_system_data-dictionary',
-            meta: {
-              i18nKey: 'route.component_system_data-dictionary',
-              title: 'component_system_data-dictionary'
-            }
-          },
           {
             name: 'component_system_model',
             path: 'model',

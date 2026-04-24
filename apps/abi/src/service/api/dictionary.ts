@@ -1,4 +1,4 @@
-import type { DictionaryEnumAddItem, DictionaryEnumItem } from '@/pages/component/system/data-dictionary/types';
+import type { DictionaryEnumAddItem, DictionaryEnumItem } from '@/pages/component/data/data-dictionary/types';
 
 import { apiRequest } from '../request';
 

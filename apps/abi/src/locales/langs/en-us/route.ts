@@ -5,14 +5,17 @@ const route: App.I18n.Schema['translation']['route'] = {
   // about: 'About',
   'ai-assistant': 'AI Assistant',
   'ai-assistant_conversational-analysis': 'Conversational Analysis',
+  'app-workshop': 'App Workshop',
+  'app-workshop_my-screen': 'My Screen',
   'assistant-manage': 'Assistant Manage',
   'assistant-manage_assistant-config': 'Assistant Config',
   'assistant-manage_label-meaning': 'Label Meaning',
   'assistant-manage_memory-manage': 'Memory Manage',
   'assistant-manage_recommended-inquiries': 'Recommended Inquiries',
   'assistant-manage_technical-jargon': 'Technical Jargon',
-  'app-workshop': 'App Workshop',
-  'app-workshop_my-screen': 'My Screen',
+  component_application: 'Application',
+  'component_application_api-key': 'API Key Management',
+  component_application_apikey: 'API Key Management',
   'data-preparation': 'Data Preparation',
   'data-preparation_data-collection': 'Data Collection',
   'data-preparation_data-collection-operate': 'Data Collection Operate',
@@ -83,6 +86,6 @@ const route: App.I18n.Schema['translation']['route'] = {
   'space-list': 'Space List',
   'system_space-user': 'Space User'
   // 'user-center': 'User Center'
-};
+}
 
-export default route;
+export default route

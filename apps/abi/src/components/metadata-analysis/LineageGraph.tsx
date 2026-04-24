@@ -2,7 +2,7 @@
 import { FullscreenExitOutlined, FullscreenOutlined } from '@ant-design/icons'
 import { Graph } from '@antv/g6'
 
-import { NODE_TYPE_COLORS, NODE_TYPE_LABELS, RELATION_TYPE_COLORS } from './constants'
+import { NODE_TYPE_LABELS, RELATION_TYPE_COLORS } from './constants'
 import type { AnalysisMode, LineageRelation, MetadataAnalysisContext } from './types'
 
 interface Props {
@@ -15,13 +15,14 @@ interface Props {
 
 interface GraphNode {
   canToggle?: boolean
-  count?: number | string
+  count?: number
   fullLabel: string
   id: string
   label: string
   nodeType: string
   style: Record<string, any>
   toggleAction?: 'collapse' | 'expand'
+  tooltipLabel?: string
 }
 
 interface EnsureNodePayload {
@@ -40,7 +41,14 @@ interface GraphEdge {
 }
 
 interface NodeMeta {
-  count?: number | string
+  count?: number
+  name: string
+  nodeType: string
+}
+
+interface DisplayNodeMeta {
+  count?: number
+  isGroup?: boolean
   name: string
   nodeType: string
 }
@@ -64,57 +72,34 @@ function resolveNodeLabel(nodeType: string, nodeName?: string) {
 
 function resolveNodeCount(count?: number | string) {
   if (count === undefined || count === null || `${count}` === '') return undefined
-  return count
+  const parsed = Number(count)
+  if (Number.isFinite(parsed)) return parsed
+  return undefined
 }
 
-function buildDisplayLabel(name: string, count?: number | string) {
-  const safeName = `${name || ''}`.trim()
-  if (!safeName) return '-'
-  if (count === undefined) return safeName
-  return `${safeName} (${count})`
-}
-
-function truncateLabel(text: string) {
+function truncateName(text: string) {
   if (text.length <= 16) return text
   return `${text.slice(0, 14)}...`
 }
 
-function resolveNodeStyle(nodeType: string) {
-  const color = NODE_TYPE_COLORS[nodeType] || '#64748b'
-
-  if (nodeType === 'DATA_SOURCE') {
-    return {
-      fill: '#3388ff',
-      labelFill: '#ffffff',
-      lineDash: undefined,
-      stroke: '#3388ff'
-    }
+function resolveGroupNodeStyle(_nodeType: string) {
+  return {
+    // 类型节点：统一配色（数据源/数据集/表语义等类型标题）
+    fill: '#eef2ff',
+    labelFill: '#1d4ed8',
+    lineDash: undefined,
+    stroke: '#93c5fd'
   }
+}
 
+function resolveNodeStyle(nodeType: string) {
   if (nodeType === 'PHYSICAL_TABLE') {
     return {
-      fill: '#f8fafc',
-      labelFill: '#334155',
+      // 数据表节点：单独暖色背景，便于和实例区分
+      fill: '#fff7ed',
+      labelFill: '#7c2d12',
       lineDash: [6, 4],
-      stroke: '#64748b'
-    }
-  }
-
-  if (nodeType === 'TABLE_SEMANTIC') {
-    return {
-      fill: '#f0fdf4',
-      labelFill: '#334155',
-      lineDash: undefined,
-      stroke: '#22c55e'
-    }
-  }
-
-  if (nodeType === 'DATASET') {
-    return {
-      fill: '#eff6ff',
-      labelFill: '#334155',
-      lineDash: undefined,
-      stroke: '#3b82f6'
+      stroke: '#fb923c'
     }
   }
 
@@ -127,11 +112,12 @@ function resolveNodeStyle(nodeType: string) {
     }
   }
 
+  // 实例节点：统一配色（接口返回 nodeName 的实例）
   return {
-    fill: `${color}14`,
-    labelFill: '#333d46',
+    fill: '#f8fafc',
+    labelFill: '#1f2937',
     lineDash: undefined,
-    stroke: color
+    stroke: '#60a5fa'
   }
 }
 
@@ -153,6 +139,165 @@ function resolveClickedNodeId(event: any, nodeMap: Map<string, GraphNode>) {
   }
 
   return undefined
+}
+
+function toFiniteNumber(value: unknown, fallback = 0) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : fallback
+}
+
+function parseNodeSize(size: unknown) {
+  if (Array.isArray(size)) {
+    const width = Math.max(toFiniteNumber(size[0], 240), 1)
+    const height = Math.max(toFiniteNumber(size[1], width), 1)
+    return { height, width }
+  }
+
+  const scalar = Math.max(toFiniteNumber(size, 240), 1)
+  return { height: scalar, width: scalar }
+}
+
+function normalizeControlPoints(points: unknown) {
+  if (!Array.isArray(points)) return []
+
+  return points
+    .map(point => {
+      if (Array.isArray(point) && point.length >= 2) {
+        return [toFiniteNumber(point[0]), toFiniteNumber(point[1])]
+      }
+
+      if (point && typeof point === 'object') {
+        const pointData = point as Record<string, unknown>
+        return [toFiniteNumber(pointData.x), toFiniteNumber(pointData.y)]
+      }
+
+      return null
+    })
+    .filter((point): point is [number, number] => Boolean(point))
+}
+
+function isSameControlPoints(a: unknown, b: unknown, epsilon = 0.5) {
+  const left = normalizeControlPoints(a)
+  const right = normalizeControlPoints(b)
+  if (left.length !== right.length) return false
+
+  for (let index = 0; index < left.length; index += 1) {
+    const [lx, ly] = left[index]
+    const [rx, ry] = right[index]
+    if (Math.abs(lx - rx) > epsilon || Math.abs(ly - ry) > epsilon) return false
+  }
+
+  return true
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+async function applyGroupedEdgeRouting(graph: Graph) {
+  const edges = ((graph as any).getEdgeData?.() || []) as any[]
+  if (!edges.length) return
+
+  const nodeBoxCache = new Map<string, {
+    bottom: number
+    height: number
+    left: number
+    right: number
+    top: number
+    x: number
+    y: number
+  }>()
+
+  const getNodeBox = (nodeId: string) => {
+    if (nodeBoxCache.has(nodeId)) return nodeBoxCache.get(nodeId)!
+
+    const position = (graph as any).getElementPosition?.(nodeId)
+    if (!Array.isArray(position) || position.length < 2) return null
+
+    const renderStyle = (graph as any).getElementRenderStyle?.(nodeId) || {}
+    const { height, width } = parseNodeSize(renderStyle.size)
+    const x = toFiniteNumber(position[0])
+    const y = toFiniteNumber(position[1])
+
+    const box = {
+      bottom: y + height / 2,
+      height,
+      left: x - width / 2,
+      right: x + width / 2,
+      top: y - height / 2,
+      x,
+      y
+    }
+    nodeBoxCache.set(nodeId, box)
+    return box
+  }
+
+  const groupedEdges = new Map<string, Array<{
+    edge: any
+    sourceBox: ReturnType<typeof getNodeBox>
+    targetBox: ReturnType<typeof getNodeBox>
+  }>>()
+
+  edges.forEach(edge => {
+    const source = `${edge.source || ''}`
+    const target = `${edge.target || ''}`
+    if (!source || !target || source === target) return
+
+    const sourceBox = getNodeBox(source)
+    const targetBox = getNodeBox(target)
+    if (!sourceBox || !targetBox) return
+
+    const direction = targetBox.x >= sourceBox.x ? 'R' : 'L'
+    const groupKey = `${source}:${direction}`
+    const bucket = groupedEdges.get(groupKey) || []
+    bucket.push({ edge, sourceBox, targetBox })
+    groupedEdges.set(groupKey, bucket)
+  })
+
+  const updates: Array<{ id: string; style: { controlPoints: [number, number][] } }> = []
+
+  groupedEdges.forEach(group => {
+    if (!group.length) return
+
+    const sourceBox = group[0].sourceBox!
+    const directionRight = group[0].targetBox!.x >= sourceBox.x
+    const sourceBoundary = directionRight ? sourceBox.right : sourceBox.left
+    const nearestTargetBoundary = directionRight
+      ? Math.min(...group.map(item => item.targetBox!.left))
+      : Math.max(...group.map(item => item.targetBox!.right))
+
+    const availableSpan = directionRight
+      ? nearestTargetBoundary - sourceBoundary
+      : sourceBoundary - nearestTargetBoundary
+    const offset = clampNumber(Math.abs(availableSpan) * 0.35, 56, 160)
+    const splitX = directionRight ? sourceBoundary + offset : sourceBoundary - offset
+
+    group.forEach(item => {
+      const edgeId = `${item.edge.id || ''}`
+      if (!edgeId) return
+
+      const yGap = Math.abs(item.targetBox!.y - sourceBox.y)
+      const useElbow = group.length > 1 || yGap > 1
+      let controlPoints: [number, number][] = []
+      if (useElbow && yGap <= 1) {
+        controlPoints = [[splitX, sourceBox.y]]
+      } else if (useElbow) {
+        controlPoints = [[splitX, sourceBox.y], [splitX, item.targetBox!.y]]
+      }
+
+      const currentPoints = item.edge?.style?.controlPoints
+      if (isSameControlPoints(currentPoints, controlPoints)) return
+
+      updates.push({
+        id: edgeId,
+        style: { controlPoints }
+      })
+    })
+  })
+
+  if (!updates.length) return
+  ;(graph as any).updateEdgeData?.(updates)
+  await (graph as any).draw?.()
 }
 
 const LineageGraph: React.FC<Props> = ({
@@ -216,144 +361,245 @@ const LineageGraph: React.FC<Props> = ({
   }, [])
 
   const data = useMemo(() => {
-    const nodesMetaMap = new Map<string, NodeMeta>()
-    const allEdges: GraphEdge[] = []
-    const inMap = new Map<string, Set<string>>()
-    const outMap = new Map<string, Set<string>>()
-    const inDegreeMap = new Map<string, number>()
+    const instanceMetaMap = new Map<string, NodeMeta>()
+    const directOutMap = new Map<string, Set<string>>()
+    const directInDegreeMap = new Map<string, number>()
+    const directEdgeMetaMap = new Map<string, { id: string; relationType: string; status: string }>()
 
     const ensureNodeMeta = (payload: EnsureNodePayload) => {
       const { count, key, name, nodeType } = payload
-      const exists = nodesMetaMap.get(key)
+      const exists = instanceMetaMap.get(key)
       if (exists) {
         if (!exists.name || exists.name === (NODE_TYPE_LABELS[nodeType] || '节点')) {
           exists.name = resolveNodeLabel(nodeType, name)
         }
         if (exists.count === undefined && count !== undefined && count !== null && `${count}` !== '') {
-          exists.count = count
+          exists.count = resolveNodeCount(count)
         }
         return
       }
 
-      nodesMetaMap.set(key, {
+      instanceMetaMap.set(key, {
         count: resolveNodeCount(count),
         name: resolveNodeLabel(nodeType, name),
         nodeType
       })
+      if (!directInDegreeMap.has(key)) directInDegreeMap.set(key, 0)
     }
 
-    const connect = (payload: ConnectPayload) => {
+    const connectDirect = (payload: ConnectPayload) => {
       const { id, relationType, source, status, target } = payload
-      if (!outMap.has(source)) outMap.set(source, new Set())
-      outMap.get(source)!.add(target)
-      if (!inMap.has(target)) inMap.set(target, new Set())
-      inMap.get(target)!.add(source)
-      inDegreeMap.set(target, (inDegreeMap.get(target) || 0) + 1)
-      if (!inDegreeMap.has(source)) inDegreeMap.set(source, inDegreeMap.get(source) || 0)
+      if (!source || !target || source === target) return
 
-      allEdges.push({
+      if (!directOutMap.has(source)) directOutMap.set(source, new Set())
+      const sourceChildren = directOutMap.get(source)!
+      if (!sourceChildren.has(target)) {
+        sourceChildren.add(target)
+        directInDegreeMap.set(target, (directInDegreeMap.get(target) || 0) + 1)
+      }
+
+      if (!directInDegreeMap.has(source)) directInDegreeMap.set(source, directInDegreeMap.get(source) || 0)
+      directEdgeMetaMap.set(`${source}->${target}`, {
         id,
         relationType,
-        source,
-        status,
-        target
+        status
       })
     }
 
-    const relationMode = mode || 'lineage'
     relations.forEach(item => {
       const sourceKey = `${item.source_node_type}:${item.source_node_id}`
       const targetKey = `${item.target_node_type}:${item.target_node_id}`
 
-      const orientedSource = relationMode === 'impact'
-        ? {
-            count: item.target_node_count,
-            key: targetKey,
-            name: item.target_node_name,
-            nodeType: item.target_node_type
-          }
-        : {
-            count: item.source_node_count,
-            key: sourceKey,
-            name: item.source_node_name,
-            nodeType: item.source_node_type
-          }
+      const sourcePayload = {
+        count: item.source_node_count,
+        key: sourceKey,
+        name: item.source_node_name,
+        nodeType: item.source_node_type
+      }
+      const targetPayload = {
+        count: item.target_node_count,
+        key: targetKey,
+        name: item.target_node_name,
+        nodeType: item.target_node_type
+      }
 
-      const orientedTarget = relationMode === 'impact'
-        ? {
-            count: item.source_node_count,
-            key: sourceKey,
-            name: item.source_node_name,
-            nodeType: item.source_node_type
-          }
-        : {
-            count: item.target_node_count,
-            key: targetKey,
-            name: item.target_node_name,
-            nodeType: item.target_node_type
-          }
+      // 数据表展示要求与业务实例同层：将 physicalTableName 拆分出的关系统一按 父实例 -> 数据表
+      if (sourcePayload.nodeType === 'PHYSICAL_TABLE' && targetPayload.nodeType !== 'PHYSICAL_TABLE') {
+        const temp = { ...sourcePayload }
+        sourcePayload.count = targetPayload.count
+        sourcePayload.key = targetPayload.key
+        sourcePayload.name = targetPayload.name
+        sourcePayload.nodeType = targetPayload.nodeType
 
-      ensureNodeMeta(orientedSource)
-      ensureNodeMeta(orientedTarget)
+        targetPayload.count = temp.count
+        targetPayload.key = temp.key
+        targetPayload.name = temp.name
+        targetPayload.nodeType = temp.nodeType
+      }
 
-      connect({
+      ensureNodeMeta(sourcePayload)
+      ensureNodeMeta(targetPayload)
+      connectDirect({
         id: `${item.lineage_id}`,
         relationType: item.relation_type,
-        source: orientedSource.key,
+        source: sourcePayload.key,
         status: `${item.status ?? '0'}`,
-        target: orientedTarget.key
+        target: targetPayload.key
       })
     })
 
     const resolveRootKey = () => {
-      if (!nodesMetaMap.size) return undefined
+      if (!instanceMetaMap.size) return undefined
 
       if (rootContext?.nodeId !== undefined) {
         const exactKey = `${rootContext.nodeType}:${rootContext.nodeId}`
-        if (nodesMetaMap.has(exactKey)) return exactKey
+        if (instanceMetaMap.has(exactKey)) return exactKey
       }
 
       if (rootContext?.nodeType) {
-        const sameTypeKeys = Array.from(nodesMetaMap.keys()).filter(key => key.startsWith(`${rootContext.nodeType}:`))
+        const sameTypeKeys = Array.from(instanceMetaMap.keys()).filter(key => key.startsWith(`${rootContext.nodeType}:`))
         if (sameTypeKeys.length === 1) return sameTypeKeys[0]
-        const sameTypeWithChildren = sameTypeKeys.find(key => (outMap.get(key)?.size || 0) > 0)
+        const sameTypeWithChildren = sameTypeKeys.find(key => (directOutMap.get(key)?.size || 0) > 0)
         if (sameTypeWithChildren) return sameTypeWithChildren
       }
 
-      const structuralRoot = Array.from(nodesMetaMap.keys()).find(key => (inDegreeMap.get(key) || 0) === 0 && (outMap.get(key)?.size || 0) > 0)
+      const structuralRoot = Array.from(instanceMetaMap.keys()).find(
+        key => (directInDegreeMap.get(key) || 0) === 0 && (directOutMap.get(key)?.size || 0) > 0
+      )
       if (structuralRoot) return structuralRoot
 
-      const withChildren = Array.from(nodesMetaMap.keys()).find(key => (outMap.get(key)?.size || 0) > 0)
+      const withChildren = Array.from(instanceMetaMap.keys()).find(key => (directOutMap.get(key)?.size || 0) > 0)
       if (withChildren) return withChildren
 
-      return nodesMetaMap.keys().next().value
+      return instanceMetaMap.keys().next().value
     }
 
     const rootKey = resolveRootKey()
     if (!rootKey) return { edges: [], nodes: [] }
 
-    const traversalChildrenCache = new Map<string, string[]>()
-    const getTraversalChildren = (nodeKey: string) => {
-      const cached = traversalChildrenCache.get(nodeKey)
-      if (cached) return cached
-
-      const outChildren = Array.from(outMap.get(nodeKey) || [])
-      const inChildren = Array.from(inMap.get(nodeKey) || [])
-      const nextChildren = Array.from(new Set([...outChildren, ...inChildren]))
-      traversalChildrenCache.set(nodeKey, nextChildren)
-      return nextChildren
-    }
-
-    if (rootContext?.nodeName && nodesMetaMap.has(rootKey)) {
-      const rootMeta = nodesMetaMap.get(rootKey)!
+    if (rootContext?.nodeName && instanceMetaMap.has(rootKey)) {
+      const rootMeta = instanceMetaMap.get(rootKey)!
       if (rootMeta.nodeType === rootContext.nodeType) {
         rootMeta.name = rootContext.nodeName
       }
     }
 
+    const displayMetaMap = new Map<string, DisplayNodeMeta>()
+    const displayOutMap = new Map<string, Set<string>>()
+    const displayInMap = new Map<string, Set<string>>()
+    const displayInDegreeMap = new Map<string, number>()
+    const displayEdges: GraphEdge[] = []
+    const displayEdgeSet = new Set<string>()
+
+    const buildTypeLabel = (nodeType: string, count?: number) =>
+      `${NODE_TYPE_LABELS[nodeType] || nodeType || '节点'}[${count ?? 0}]`
+    const toRootTypeKey = (instanceKey: string) => `TYPE_ROOT:${instanceKey}`
+    const toChildTypeKey = (parentKey: string, childType: string) => `TYPE_CHILD:${parentKey}:${childType}`
+
+    const ensureDisplayNode = (nodeId: string, meta: DisplayNodeMeta) => {
+      if (!displayMetaMap.has(nodeId)) displayMetaMap.set(nodeId, meta)
+      if (!displayInDegreeMap.has(nodeId)) displayInDegreeMap.set(nodeId, displayInDegreeMap.get(nodeId) || 0)
+    }
+
+    const connectDisplay = (payload: ConnectPayload) => {
+      const { id, relationType, source, status, target } = payload
+      if (!source || !target || source === target) return
+
+      if (!displayOutMap.has(source)) displayOutMap.set(source, new Set())
+      const children = displayOutMap.get(source)!
+      if (!children.has(target)) {
+        children.add(target)
+        displayInDegreeMap.set(target, (displayInDegreeMap.get(target) || 0) + 1)
+      }
+      if (!displayInMap.has(target)) displayInMap.set(target, new Set())
+      displayInMap.get(target)!.add(source)
+
+      const edgeKey = `${source}->${target}`
+      if (displayEdgeSet.has(edgeKey)) return
+      displayEdgeSet.add(edgeKey)
+      displayEdges.push({ id, relationType, source, status, target })
+    }
+
+    instanceMetaMap.forEach((meta, instanceKey) => {
+      ensureDisplayNode(instanceKey, {
+        count: meta.count,
+        isGroup: false,
+        name: meta.name,
+        nodeType: meta.nodeType
+      })
+    })
+
+    const rootMeta = instanceMetaMap.get(rootKey)!
+    const rootTypeKey = toRootTypeKey(rootKey)
+    ensureDisplayNode(rootTypeKey, {
+      count: rootMeta.count,
+      isGroup: true,
+      name: buildTypeLabel(rootMeta.nodeType, rootMeta.count),
+      nodeType: rootMeta.nodeType
+    })
+    connectDisplay({
+      id: `root-type-${rootKey}`,
+      relationType: 'DEPENDENCY',
+      source: rootTypeKey,
+      status: '0',
+      target: rootKey
+    })
+
+    directOutMap.forEach((targets, sourceKey) => {
+      const childrenByType = new Map<string, string[]>()
+      targets.forEach(targetKey => {
+        const targetMeta = instanceMetaMap.get(targetKey)
+        if (!targetMeta) return
+        const bucket = childrenByType.get(targetMeta.nodeType) || []
+        bucket.push(targetKey)
+        childrenByType.set(targetMeta.nodeType, bucket)
+      })
+
+      childrenByType.forEach((instanceKeys, childType) => {
+        if (!instanceKeys.length) return
+        const typeNodeKey = toChildTypeKey(sourceKey, childType)
+        ensureDisplayNode(typeNodeKey, {
+          count: instanceKeys.length,
+          isGroup: true,
+          name: buildTypeLabel(childType, instanceKeys.length),
+          nodeType: childType
+        })
+
+        const firstEdgeMeta = directEdgeMetaMap.get(`${sourceKey}->${instanceKeys[0]}`)
+        connectDisplay({
+          id: `instance-type-${sourceKey}-${childType}`,
+          relationType: firstEdgeMeta?.relationType || 'DEPENDENCY',
+          source: sourceKey,
+          status: firstEdgeMeta?.status || '0',
+          target: typeNodeKey
+        })
+
+        instanceKeys.forEach((targetKey, index) => {
+          const edgeMeta = directEdgeMetaMap.get(`${sourceKey}->${targetKey}`)
+          connectDisplay({
+            id: edgeMeta?.id || `type-instance-${sourceKey}-${childType}-${index}`,
+            relationType: edgeMeta?.relationType || 'DEPENDENCY',
+            source: typeNodeKey,
+            status: edgeMeta?.status || '0',
+            target: targetKey
+          })
+        })
+      })
+    })
+
+    const resolvedDisplayRootKey = rootTypeKey
+
+    if (!resolvedDisplayRootKey) return { edges: [], nodes: [] }
+
+    const getTraversalChildren = (nodeKey: string) => {
+      const outChildren = Array.from(displayOutMap.get(nodeKey) || [])
+      const inChildren = Array.from(displayInMap.get(nodeKey) || [])
+      return Array.from(new Set([...outChildren, ...inChildren]))
+    }
+
     const depthMap = new Map<string, number>()
-    depthMap.set(rootKey, 0)
-    const queue = [rootKey]
+    depthMap.set(resolvedDisplayRootKey, 0)
+    const queue = [resolvedDisplayRootKey]
     while (queue.length) {
       const current = queue.shift()!
       const currentDepth = depthMap.get(current) || 0
@@ -367,20 +613,21 @@ const LineageGraph: React.FC<Props> = ({
     }
 
     const expandLevel = Math.max(defaultExpandLevel ?? 2, 1)
+    const effectiveExpandLevel = Math.max(expandLevel * 2 - 1, 1)
     const isExpandedByState = (nodeKey: string) => {
       const childrenSize = getTraversalChildren(nodeKey).length
       if (!childrenSize) return false
 
       const depth = depthMap.get(nodeKey) || 0
-      const defaultExpanded = depth < expandLevel
+      const defaultExpanded = depth < effectiveExpandLevel
       const overrideState = toggleStates[nodeKey]
       if (overrideState === 'expand') return true
       if (overrideState === 'collapse') return false
       return defaultExpanded
     }
 
-    const visibleKeys = new Set<string>([rootKey])
-    const bfsQueue = [rootKey]
+    const visibleKeys = new Set<string>([resolvedDisplayRootKey])
+    const bfsQueue = [resolvedDisplayRootKey]
     const handled = new Set<string>()
 
     while (bfsQueue.length) {
@@ -400,36 +647,41 @@ const LineageGraph: React.FC<Props> = ({
     }
 
     const visibleNodes: GraphNode[] = Array.from(visibleKeys).map(key => {
-      const meta = nodesMetaMap.get(key)!
+      const meta = displayMetaMap.get(key)!
       const childrenSize = getTraversalChildren(key).length
-      const displayCount = meta.count === undefined ? (childrenSize || undefined) : meta.count
-      const baseLabel = buildDisplayLabel(meta.name, displayCount)
       const isExpanded = isExpandedByState(key)
       const canToggle = childrenSize > 0
       const actionLabel = isExpanded ? '[-]' : '[+]'
+      const baseLabel = meta.isGroup ? meta.name : truncateName(meta.name)
+      const fullBaseLabel = meta.name
       const displayLabel = canToggle ? `${baseLabel} ${actionLabel}` : baseLabel
-      const style = resolveNodeStyle(meta.nodeType)
+      const fullLabel = canToggle ? `${fullBaseLabel} ${actionLabel}` : fullBaseLabel
+      const isNameTruncated = !meta.isGroup && meta.name.length > 16
+      const nodeStyle = meta.isGroup ? resolveGroupNodeStyle(meta.nodeType) : resolveNodeStyle(meta.nodeType)
       const toggleAction = isExpanded ? 'collapse' : 'expand'
+
       return {
         canToggle,
-        count: displayCount,
-        fullLabel: baseLabel,
+        count: meta.count,
+        fullLabel,
         id: key,
         label: displayLabel,
         nodeType: meta.nodeType,
         style: {
-          fill: style.fill,
-          labelFill: style.labelFill,
-          labelText: truncateLabel(displayLabel),
-          lineDash: style.lineDash,
-          size: [240, 36],
-          stroke: style.stroke
+          fill: nodeStyle.fill,
+          labelFill: nodeStyle.labelFill,
+          labelFontWeight: meta.isGroup ? 500 : 600,
+          labelText: displayLabel,
+          lineDash: nodeStyle.lineDash,
+          size: [240, 42],
+          stroke: nodeStyle.stroke
         },
-        toggleAction: canToggle ? toggleAction : undefined
+        toggleAction: canToggle ? toggleAction : undefined,
+        tooltipLabel: isNameTruncated ? fullLabel : undefined
       }
     })
 
-    const visibleEdges = allEdges.filter(edge => visibleKeys.has(edge.source) && visibleKeys.has(edge.target))
+    const visibleEdges = displayEdges.filter(edge => visibleKeys.has(edge.source) && visibleKeys.has(edge.target))
     const edges = [...visibleEdges]
 
     const nodes = [...visibleNodes].map(node => ({
@@ -477,7 +729,9 @@ const LineageGraph: React.FC<Props> = ({
     if (graphRef.current) return undefined
 
     const width = containerRef.current.clientWidth || 1200
+    containerRef.current.style.opacity = '0'
     const graph = new Graph({
+      animation: false,
       autoFit: false,
       behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element'],
       container: containerRef.current,
@@ -490,28 +744,33 @@ const LineageGraph: React.FC<Props> = ({
             lineDash: style.dash || undefined,
             lineWidth: edgeData.status === '1' ? 1 : 2.2,
             opacity: edgeData.status === '1' ? 0.4 : 0.95,
-            stroke: style.color
+            radius: 0,
+            router: { padding: 12, type: 'orth' },
+            stroke: style.color,
+            zIndex: 0
           }
         },
         type: 'polyline'
       },
       height: graphHeight,
       layout: {
-        controlPoints: true,
+        animation: false,
+        controlPoints: false,
         nodesep: 120,
         rankdir: 'LR',
-        ranksep: 240,
+        ranksep: 100,
         type: 'dagre'
       } as any,
       node: {
         style: {
           labelFontSize: 13,
+          labelFontWeight: 600,
           labelMaxWidth: '90%',
           labelMaxLines: 1,
           labelPlacement: 'center',
           labelTextOverflow: 'ellipsis',
           labelWordWrap: false,
-          ports: [{ placement: 'left' }, { placement: 'right' }]
+          zIndex: 2
         },
         type: 'rect'
       },
@@ -520,12 +779,12 @@ const LineageGraph: React.FC<Props> = ({
           enable: (event: any) => event?.targetType === 'node',
           getContent: (_: any, items: any[]) => {
             const item = items?.[0]
-            const fullLabel = `${item?.fullLabel || item?.label || ''}`
-            if (!fullLabel || fullLabel.length <= 16) return ''
+            const tooltipLabel = `${item?.tooltipLabel || ''}`
+            if (!tooltipLabel) return ''
 
             return `
               <div style="max-width:360px;word-break:break-all;padding:8px 10px;line-height:1.4">
-                ${fullLabel}
+                ${tooltipLabel.replace(/\n/g, '<br/>')}
               </div>
             `
           },
@@ -558,14 +817,21 @@ const LineageGraph: React.FC<Props> = ({
     graphRef.current = graph
     let disposed = false
     ;(async () => {
-      await graph.render()
-      if (disposed) return
-      await (graph as any).fitView?.()
-      isInitialViewportRef.current = false
+      try {
+        await graph.render()
+        if (disposed) return
+        await applyGroupedEdgeRouting(graph)
+        if (disposed) return
+        await (graph as any).fitView?.()
+        isInitialViewportRef.current = false
+      } finally {
+        if (!disposed && containerRef.current) containerRef.current.style.opacity = '1'
+      }
     })()
 
     return () => {
       disposed = true
+      if (containerRef.current) containerRef.current.style.opacity = '1'
       ;(graph as any).off?.('node:click', handleNodeClick)
       graph.destroy()
       if (graphRef.current === graph) graphRef.current = null
@@ -578,8 +844,14 @@ const LineageGraph: React.FC<Props> = ({
     if (!graph || !hasGraphData || isInitialViewportRef.current) return undefined
 
     ;(async () => {
-      graph.setData(data as any)
-      await graph.render()
+      if (containerRef.current) containerRef.current.style.opacity = '0'
+      try {
+        graph.setData(data as any)
+        await graph.render()
+        await applyGroupedEdgeRouting(graph)
+      } finally {
+        if (containerRef.current) containerRef.current.style.opacity = '1'
+      }
     })()
 
     return undefined

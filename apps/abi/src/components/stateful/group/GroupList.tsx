@@ -2,7 +2,7 @@ import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { Button, List, Popconfirm } from 'antd';
 import React, { useState } from 'react';
 
-import { useDataPreparationStore } from '@/pages/component/system/data-dictionary/store';
+import { useDataPreparationStore } from '@/pages/component/data/data-dictionary/store';
 
 import { type QuestionGroupItem } from './useGroupManagement';
 
