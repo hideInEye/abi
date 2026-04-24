@@ -22,8 +22,10 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
     const unpublishIdRef = useRef<string>('');
     const [unpublishDialog, setUnpublishDialog] = React.useState(false);
 
+    const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
+
     const fetchList = (current: number, size: number, keywords?: string) => {
-        baseApi.getProjectInfoPageList({current, size, keywords, status: '0'}).then((data: IPage<IProjectInfo>) => {
+        baseApi.getProjectInfoPageList({current, size, keywords, status: '0', spaceId}).then((data: IPage<IProjectInfo>) => {
             setPageData(data);
         });
     };
@@ -34,13 +36,14 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
             size: pageData.size,
             keywords: value,
             status: '0',
+            spaceId,
         }).then((data: IPage<IProjectInfo>) => {
             setPageData(data);
         });
     };
 
     const pageChange = (page: number, size: number) => {
-        baseApi.getProjectInfoPageList({current: page, size, status: '0'}).then((data: IPage<IProjectInfo>) => {
+        baseApi.getProjectInfoPageList({current: page, size, status: '0', spaceId}).then((data: IPage<IProjectInfo>) => {
             setPageData({...data, current: page, size});
         });
     };

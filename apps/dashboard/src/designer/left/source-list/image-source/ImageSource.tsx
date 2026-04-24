@@ -60,9 +60,17 @@ export default function ImageSource() {
         const {definitionMap} = DesignerLoader;
         const definition = definitionMap[compKey];
         const {compName, width = 320, height = 200} = definition.getBaseInfo();
+        // 唯一名称：若已存在同名图层，追加递增数字
+        const existNames = new Set(Object.values(layerManager.layerConfigs).map((l: any) => l.name));
+        let uniqueName = compName;
+        if (existNames.has(uniqueName)) {
+            let i = 2;
+            while (existNames.has(`${compName}${i}`)) i++;
+            uniqueName = `${compName}${i}`;
+        }
         const id = IdGenerate.generateId();
         const movableItem: ILayerItem = {
-            name: compName,
+            name: uniqueName,
             type: compKey,
             x: Math.round(position![0]),
             y: Math.round(position![1]),

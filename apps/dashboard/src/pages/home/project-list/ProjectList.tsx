@@ -45,10 +45,12 @@ export const ProjectList = memo((props: ProjectListProps) => {
     });
 
     const getProjectPageList = (current: number, size: number, keywords?: string) => {
+        const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({
             current,
             size,
             keywords,
+            spaceId,
         }).then((data: IPage<IProjectInfo>) => {
             if (statusFilter !== undefined) {
                 data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);
@@ -200,9 +202,11 @@ export const ProjectList = memo((props: ProjectListProps) => {
     }
 
     const pageChange = (page: number, size: number) => {
+        const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({
             current: page,
             size: size,
+            spaceId,
         }).then((data: IPage<IProjectInfo>) => {
             if (statusFilter !== undefined) {
                 data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);
@@ -218,10 +222,12 @@ export const ProjectList = memo((props: ProjectListProps) => {
     }
 
     const doSearch = (value: string) => {
+        const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({
             current: pageData.current,
             size: pageData.size,
             keywords: value,
+            spaceId,
         }).then((data: IPage<IProjectInfo>) => {
             if (statusFilter !== undefined) {
                 data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);

@@ -7,21 +7,21 @@ interface AiTableResultProps {
   sql?: string;
   mapping?: { [key: string]: string };
   chartName?: { x_name?: string; y_name?: string; title?: string };
-  /** 采纳回调（仅实时消息传入），参数为表格数据 */
-  onAccept?: (data: TableRow[]) => void;
-  /** 不采纳回调（仅实时消息传入） */
-  onReject?: () => void;
+  /** 是否已采纳 */
+  accepted?: boolean;
+  /** 是否为实时消息（true=可点击，false=只读展示） */
+  isNew?: boolean;
+  /** 切换采纳/取消采纳（传入表格数据），仅 isNew=true 时可点击 */
+  onToggleAccept?: (data: TableRow[]) => void;
 }
 
-const AiTableResult: React.FC<AiTableResultProps> = ({ data, sql, chartName, onAccept, onReject }) => {
+const AiTableResult: React.FC<AiTableResultProps> = ({ data, sql, chartName,accepted = false,isNew = false,onToggleAccept,}) => {
   const [sqlExpanded, setSqlExpanded] = useState(false);
 
   if (!data || data.length === 0) return <span>无数据返回</span>;
 
-  // 取表头（所有 key 的并集）
   const columns = Array.from(new Set(data.flatMap(row => Object.keys(row))));
 
-  // 列名显示：优先用 chartName 里的语义名
   const colLabel = (col: string) => {
     if (chartName?.x_name && col === Object.keys(data[0])[0]) return chartName.x_name;
     if (chartName?.y_name && col === Object.keys(data[0])[1]) return chartName.y_name;
@@ -29,10 +29,31 @@ const AiTableResult: React.FC<AiTableResultProps> = ({ data, sql, chartName, onA
   };
 
   return (
-    <div className="ai-table-result">
-      {chartName?.title && (
-        <div className="ai-table-title">{chartName.title}</div>
-      )}
+    <div className={`ai-table-result${accepted ? ' accepted' : ''}`}>
+      {/* 标题行 + 采纳星 */}
+      <div className="ai-table-header-row">
+        {chartName?.title && (
+          <div className="ai-table-title">{chartName.title}</div>
+        )}
+        <button
+          className={`ai-accept-star${accepted ? ' accepted' : ''}${!isNew ? ' readonly' : ''}`}
+          title={accepted ? '取消采纳' : '采纳此结果'}
+          onClick={() => isNew && onToggleAccept && onToggleAccept(data)}
+          style={{ pointerEvents: isNew ? 'auto' : 'none' }}
+        >
+          {accepted ? (
+            /* 实心星 */
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="#1677ff" stroke="#1677ff" strokeWidth="1">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          ) : (
+            /* 空心星 */
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#bfbfbf" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          )}
+        </button>
+      </div>
 
       {/* 数据表格 */}
       <div className="ai-table-wrapper">
@@ -73,28 +94,6 @@ const AiTableResult: React.FC<AiTableResultProps> = ({ data, sql, chartName, onA
           </div>
           {sqlExpanded && (
             <pre className="ai-sql-content">{sql}</pre>
-          )}
-        </div>
-      )}
-
-      {/* 采纳 / 不采纳（仅实时消息） */}
-      {(onAccept || onReject) && (
-        <div className="ai-accept-bar">
-          {onAccept && (
-            <button className="ai-accept-btn" onClick={() => onAccept(data)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              采纳
-            </button>
-          )}
-          {onReject && (
-            <button className="ai-reject-btn" onClick={onReject}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="13" height="13">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-              不采纳
-            </button>
           )}
         </div>
       )}
