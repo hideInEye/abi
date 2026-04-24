@@ -211,6 +211,8 @@ const routeMap: RouteMap = {
   "ai-assistant": "/ai-assistant",
   "ai-assistant_conversational-analysis": "conversational-analysis",
   "component": "/component",
+  "component_applications": "applications",
+  "component_applications_api-key": "api-key",
   "component_data": "data",
   "component_data_data-dictionary": "data-dictionary",
   "component_system": "system",
