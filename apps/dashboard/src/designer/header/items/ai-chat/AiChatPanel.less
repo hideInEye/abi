@@ -187,6 +187,8 @@
           background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
           color: #fff;
           border-radius: 12px 12px 2px 12px;
+          user-select: text;
+          cursor: text;
         }
       }
 
@@ -199,6 +201,8 @@
           color: #333;
           border-radius: 12px 12px 12px 2px;
           border: 1px solid #e8e8e8;
+          user-select: text;
+          cursor: text;
         }
       }
 
@@ -209,9 +213,60 @@
         word-break: break-word;
         white-space: pre-wrap;
         transition: box-shadow 0.2s;
+        user-select: text;
+        cursor: text;
 
         &.accepted {
-          box-shadow: 0 0 0 1.5px rgba(22, 119, 255, 0.4);
+          box-shadow: 0 0 0 1.5px rgba(22, 119, 255, 0.5);
+          border-color: rgba(22, 119, 255, 0.4);
+        }
+      }
+
+      /* 采纳/不采纳按钮组 - 气泡外部 */
+      .ai-accept-btns {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      .ai-accept-btn,
+      .ai-reject-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 8px;
+        border: 1px solid #e8e8e8;
+        background: #f5f5f5;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.15s;
+        color: #595959;
+        line-height: 1.5;
+        font-weight: 500;
+        svg { flex-shrink: 0; }
+        &:hover {
+          background: #ebebeb;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+      }
+
+      .ai-accept-btn.active {
+        border-color: #52c41a;
+        background: #f6ffed;
+        color: #52c41a;
+        svg { stroke: #52c41a; }
+      }
+
+      .ai-reject-btn.active {
+        border-color: #e8e8e8;
+        background: #f5f5f5;
+        color: #595959;
+        &:hover {
+          background: #f5f5f5;
+          box-shadow: none;
+          cursor: default;
         }
       }
 
@@ -532,7 +587,20 @@
     }
   }
 
-  /* 标题行（含采纳星） */
+  /* 折叠内容过渡 */
+  .ai-table-collapse-content {
+    overflow: hidden;
+    max-height: 2000px;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 1;
+  
+    &.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+  }
+  
+  /* 标题行 */
   .ai-table-header-row {
     display: flex;
     align-items: center;
@@ -541,31 +609,40 @@
     min-height: 20px;
   }
 
-  /* 采纳星按钮 */
-  .ai-accept-star {
+  /* 底部行：记录数 */
+  .ai-table-footer-row {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: none;
-    background: transparent;
+    margin-top: 5px;
+  }
+
+  /* 折叠/展开按钮行 */
+  .ai-table-collapse-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .ai-collapse-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    border: 1px solid #e8e8e8;
+    background: #f5f5f5;
+    font-size: 12px;
+    color: #595959;
+    font-weight: 500;
     cursor: pointer;
-    padding: 0;
-    flex-shrink: 0;
-    transition: transform 0.15s, background 0.15s;
+    transition: all 0.15s;
 
-    &:hover:not(.readonly) {
-      transform: scale(1.2);
-    }
+    svg { flex-shrink: 0; }
 
-    &.accepted {
-            svg { filter: drop-shadow(0 0 2px rgba(22, 119, 255, 0.6)); }
-    }
-
-    &.readonly {
-      cursor: default;
+    &:hover {
+      background: #ebebeb;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
   }
 }

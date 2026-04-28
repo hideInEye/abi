@@ -1,0 +1,9 @@
+.model-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.model-card-item:hover .model-card-more {
+  opacity: 1 !important;
+}

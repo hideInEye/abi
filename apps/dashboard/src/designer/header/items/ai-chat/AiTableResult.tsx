@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 
 interface TableRow { [key: string]: any; }
 
@@ -15,8 +15,24 @@ interface AiTableResultProps {
   onToggleAccept?: (data: TableRow[]) => void;
 }
 
-const AiTableResult: React.FC<AiTableResultProps> = ({ data, sql, chartName,accepted = false,isNew = false,onToggleAccept,}) => {
+const AiTableResult: React.FC<AiTableResultProps> = ({ data, sql, chartName, accepted = false }) => {
   const [sqlExpanded, setSqlExpanded] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lockedWidthRef = useRef<number | null>(null);
+
+  const handleCollapse = useCallback(() => {
+    setCollapsed(prev => {
+      if (!prev) {
+        if (containerRef.current) {
+          lockedWidthRef.current = containerRef.current.offsetWidth;
+        }
+      } else {
+        lockedWidthRef.current = null;
+      }
+      return !prev;
+    });
+  }, []);
 
   if (!data || data.length === 0) return <span>无数据返回</span>;
 
@@ -29,74 +45,79 @@ const AiTableResult: React.FC<AiTableResultProps> = ({ data, sql, chartName,acce
   };
 
   return (
-    <div className={`ai-table-result${accepted ? ' accepted' : ''}`}>
-      {/* 标题行 + 采纳星 */}
-      <div className="ai-table-header-row">
-        {chartName?.title && (
+    <div
+      ref={containerRef}
+      className={`ai-table-result${accepted ? ' accepted' : ''}`}
+      style={lockedWidthRef.current ? { minWidth: lockedWidthRef.current } : undefined}
+    >
+      {/* 标题行 */}
+      {chartName?.title && (
+        <div className="ai-table-header-row">
           <div className="ai-table-title">{chartName.title}</div>
-        )}
-        <button
-          className={`ai-accept-star${accepted ? ' accepted' : ''}${!isNew ? ' readonly' : ''}`}
-          title={accepted ? '取消采纳' : '采纳此结果'}
-          onClick={() => isNew && onToggleAccept && onToggleAccept(data)}
-          style={{ pointerEvents: isNew ? 'auto' : 'none' }}
-        >
-          {accepted ? (
-            /* 实心星 */
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="#1677ff" stroke="#1677ff" strokeWidth="1">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-            </svg>
-          ) : (
-            /* 空心星 */
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#bfbfbf" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-            </svg>
-          )}
-        </button>
-      </div>
-
-      {/* 数据表格 */}
-      <div className="ai-table-wrapper">
-        <table className="ai-table">
-          <thead>
-            <tr>
-              {columns.map(col => (
-                <th key={col}>{colLabel(col)}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, i) => (
-              <tr key={i}>
-                {columns.map(col => (
-                  <td key={col}>{row[col] ?? '-'}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="ai-table-meta">共 {data.length} 条记录</div>
-
-      {/* SQL 折叠 */}
-      {sql && (
-        <div className="ai-sql-block">
-          <div
-            className="ai-sql-toggle"
-            onClick={() => setSqlExpanded(v => !v)}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"
-              style={{ transition: 'transform 0.2s', transform: sqlExpanded ? 'rotate(90deg)' : 'none', flexShrink: 0 }}>
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-            查看 SQL
-          </div>
-          {sqlExpanded && (
-            <pre className="ai-sql-content">{sql}</pre>
-          )}
         </div>
       )}
+
+      {/* 折叠内容区域 */}
+      <div className={`ai-table-collapse-content${collapsed ? ' collapsed' : ''}`}>
+        {/* 数据表格 */}
+        <div className="ai-table-wrapper">
+          <table className="ai-table">
+            <thead>
+              <tr>
+                {columns.map(col => (
+                  <th key={col}>{colLabel(col)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((row, i) => (
+                <tr key={i}>
+                  {columns.map(col => (
+                    <td key={col}>{row[col] ?? '-'}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="ai-table-footer-row">
+          <div className="ai-table-meta">共 {data.length} 条记录</div>
+        </div>
+        {/* SQL 折叠 - 独立一行，左对齐 */}
+        {sql && (
+          <div className="ai-sql-block">
+            <div
+              className="ai-sql-toggle"
+              onClick={() => setSqlExpanded(v => !v)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12"
+                style={{ transition: 'transform 0.2s', transform: sqlExpanded ? 'rotate(90deg)' : 'none', flexShrink: 0 }}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+              查看 SQL
+            </div>
+            {sqlExpanded && (
+              <pre className="ai-sql-content">{sql}</pre>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 右下角折叠按钮 */}
+      <div className="ai-table-collapse-row">
+        <button
+          className="ai-collapse-btn"
+          onClick={handleCollapse}
+          title={collapsed ? '展开内容' : '折叠内容'}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="11" height="11"
+            style={{ transition: 'transform 0.2s', transform: collapsed ? 'rotate(180deg)' : 'none' }}>
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+          {collapsed ? '展开' : '折叠'}
+        </button>
+      </div>
     </div>
   );
 };

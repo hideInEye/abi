@@ -31,7 +31,16 @@ class BaseApi extends AbstractApi {
         const res = await FetchUtil.post('/chat-proxy/api/v1/chat/app/add', data);
         return {success: res.code === 200, data: res.data};
     }
-    
+
+    /**
+     * 验证对话应用名称是否可用（chat-proxy）
+     * 接口返回 true 表示名称可用，false 表示已存在
+     */
+    async validateChatAppName(bizName: string, spaceId: number): Promise<boolean> {
+        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/app/validate_name', {biz_name: bizName, space_id: spaceId});
+        return res.code === 200 ? !!res.data : false;
+    }
+
     /**
      * 获取助手列表
      * @param spaceId 空间id
