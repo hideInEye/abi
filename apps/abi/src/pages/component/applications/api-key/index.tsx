@@ -1,5 +1,7 @@
 import { message } from 'antd'
 import copy from 'copy-to-clipboard'
+import dayjs from 'dayjs'
+import type { Dayjs } from 'dayjs'
 
 import PageTitle from '@/components/stateless/common/PageTitle'
 import {
@@ -16,10 +18,10 @@ import { spaceList } from '@/service/api/data-space'
 
 import { ApiKeyDrawer } from './components/ApiKeyDrawer'
 import { ApiKeyTable } from './components/ApiKeyTable'
-import type { ApiKeyFormValues, ApiKeyItem, DrawerMode } from './types'
+import type { ApiKeyFormValues, ApiKeyItem, ApiKeyQueryValues, DrawerMode } from './types'
 
 const PAGE_SIZE = 10
-const DEFAULT_ACTIVE_TIMEOUT = 120
+const DEFAULT_ACTIVE_TIMEOUT = 1800
 
 function extractSecretKey(resp: any): string {
   const respData = resp?.response?.data
@@ -81,6 +83,16 @@ function isDisabled(value: unknown): boolean {
   return value === 1 || value === '1'
 }
 
+function mapQueryRestrictedIp(value: ApiKeyQueryValues['ipAccessType']): 0 | 1 | undefined {
+  if (!value) return undefined
+  return value === 'whitelist' ? 1 : 0
+}
+
+function mapQueryStatus(value: ApiKeyQueryValues['status']): '0' | '1' | undefined {
+  if (!value) return undefined
+  return value === 'disabled' ? '1' : '0'
+}
+
 function mapClientRowToView(item: AbiClientListItem, fallbackSpaceId: number): ApiKeyItem {
   return {
     accessKey: item.accessKey || '',
@@ -92,11 +104,11 @@ function mapClientRowToView(item: AbiClientListItem, fallbackSpaceId: number): A
     id: Number(item.id),
     ipAccessType: isRestrictedIp(item.restrictedIp) ? 'whitelist' : 'unlimited',
     ipWhitelist: parseWhitelist(item),
-    rawSecretKey: '',
-    secretKey: '',
+    rawSecretKey: item.secretKey || '',
+    secretKey: item.secretKey || '',
     spaceId: Number(item.spaceId || fallbackSpaceId),
     status: isDisabled(item.status) ? 'disabled' : 'normal',
-    timeoutMinutes: item.activeTimeout
+    timeoutSeconds: item.activeTimeout
   }
 }
 
@@ -123,6 +135,8 @@ function mapClientDetailToView(item: AbiClientDetailItem, fallback: ApiKeyItem |
 }
 
 export function Component() {
+  const [queryForm] = AForm.useForm()
+  const currentSpaceId = useMemo(() => Number(localStorage.getItem('spaceId')) || 0, [])
   const [rows, setRows] = useState<ApiKeyItem[]>([])
   const [total, setTotal] = useState(0)
   const [current, setCurrent] = useState(1)
@@ -134,8 +148,9 @@ export function Component() {
   const [submitLoading, setSubmitLoading] = useState(false)
 
   const [spaceOptions, setSpaceOptions] = useState<Array<{ label: string; value: number }>>([])
-
-  const currentSpaceId = useMemo(() => Number(localStorage.getItem('spaceId')) || 0, [])
+  const [queryValues, setQueryValues] = useState<ApiKeyQueryValues>({
+    spaceId: currentSpaceId || undefined
+  })
 
   const loadSpaceOptions = useCallback(async () => {
     try {
@@ -160,8 +175,9 @@ export function Component() {
   }, [])
 
   const loadList = useCallback(
-    async (pageNum: number) => {
-      if (!currentSpaceId) {
+    async (pageNum: number, query: ApiKeyQueryValues) => {
+      const effectiveSpaceId = query.spaceId || currentSpaceId
+      if (!effectiveSpaceId) {
         setRows([])
         setTotal(0)
         return
@@ -171,15 +187,21 @@ export function Component() {
 
       try {
         const res = await queryAbiClientList({
+          accessKey: query.accessKey || undefined,
+          clientId: query.clientId || undefined,
+          entCreateTime: query.entCreateTime || undefined,
           pageNum,
           pageSize: PAGE_SIZE,
-          spaceId: currentSpaceId
+          restrictedIp: mapQueryRestrictedIp(query.ipAccessType),
+          spaceId: effectiveSpaceId,
+          startCreateTime: query.startCreateTime || undefined,
+          status: mapQueryStatus(query.status)
         })
 
         const payload = (res as any).response?.data || {}
         const list = (payload.rows || []) as AbiClientListItem[]
 
-        setRows(list.map(item => mapClientRowToView(item, currentSpaceId)))
+        setRows(list.map(item => mapClientRowToView(item, effectiveSpaceId)))
         setTotal(Number(payload.total || 0))
       } finally {
         setListLoading(false)
@@ -193,8 +215,13 @@ export function Component() {
   }, [loadSpaceOptions])
 
   useEffect(() => {
-    loadList(current)
-  }, [current, loadList])
+    if (!currentSpaceId) return
+    queryForm.setFieldValue('spaceId', currentSpaceId)
+  }, [currentSpaceId, queryForm])
+
+  useEffect(() => {
+    loadList(current, queryValues)
+  }, [current, loadList, queryValues])
 
   const refreshList = (targetPage?: number) => {
     if (typeof targetPage === 'number' && targetPage !== current) {
@@ -202,7 +229,7 @@ export function Component() {
       return
     }
 
-    loadList(typeof targetPage === 'number' ? targetPage : current)
+    loadList(typeof targetPage === 'number' ? targetPage : current, queryValues)
   }
 
   const openCreate = () => {
@@ -234,12 +261,19 @@ export function Component() {
   const handleSubmit = async (values: ApiKeyFormValues, ipWhitelist: string[]) => {
     setSubmitLoading(true)
 
+    const restrictedIp: 0 | 1 = values.ipAccessType === 'whitelist' ? 1 : 0
+    let expireTime: string | null = null
+    if (values.expireTime) {
+      expireTime = dayjs.isDayjs(values.expireTime)
+        ? values.expireTime.format('YYYY-MM-DD HH:mm:ss')
+        : String(values.expireTime)
+    }
     const payload = {
-      activeTimeout: currentRecord?.timeoutMinutes || DEFAULT_ACTIVE_TIMEOUT,
-      expireTime: currentRecord?.expireTime || null,
+      activeTimeout: values.activeTimeout || DEFAULT_ACTIVE_TIMEOUT,
+      expireTime,
       ips: values.ipAccessType === 'whitelist' ? ipWhitelist.map(whitelist => ({ whitelist })) : undefined,
       remark: values.description || '',
-      restrictedIp: values.ipAccessType === 'whitelist' ? 1 : 0,
+      restrictedIp,
       spaceId: values.spaceId
     }
 
@@ -263,9 +297,10 @@ export function Component() {
 
   const handleToggleStatus = async (record: ApiKeyItem) => {
     const nextStatus: 0 | 1 = record.status === 'normal' ? 1 : 0
+    const effectiveSpaceId = queryValues.spaceId || record.spaceId || currentSpaceId
     const res = await updateAbiClientStatus({
       id: record.id,
-      spaceId: record.spaceId || currentSpaceId,
+      spaceId: effectiveSpaceId,
       status: nextStatus
     })
 
@@ -274,9 +309,10 @@ export function Component() {
   }
 
   const handleDelete = async (record: ApiKeyItem) => {
+    const effectiveSpaceId = queryValues.spaceId || record.spaceId || currentSpaceId
     const res = await deleteAbiClient({
       id: record.id,
-      spaceId: record.spaceId || currentSpaceId
+      spaceId: effectiveSpaceId
     })
 
     message.success((res as any).response?.data?.msg || '删除成功')
@@ -323,6 +359,38 @@ export function Component() {
     refreshList()
   }
 
+  const handleSearch = async () => {
+    const values = (await queryForm.validateFields()) as {
+      accessKey?: string
+      clientId?: string
+      createTimeRange?: [Dayjs, Dayjs]
+      ipAccessType?: 'unlimited' | 'whitelist'
+      spaceId: number
+      status?: 'disabled' | 'normal'
+    }
+
+    setQueryValues({
+      accessKey: values.accessKey?.trim(),
+      clientId: values.clientId?.trim(),
+      entCreateTime: values.createTimeRange?.[1] ? values.createTimeRange[1].format('YYYY-MM-DD') : undefined,
+      ipAccessType: values.ipAccessType,
+      spaceId: values.spaceId,
+      startCreateTime: values.createTimeRange?.[0] ? values.createTimeRange[0].format('YYYY-MM-DD') : undefined,
+      status: values.status
+    })
+
+    setCurrent(1)
+  }
+
+  const handleResetSearch = () => {
+    queryForm.resetFields()
+    queryForm.setFieldValue('spaceId', currentSpaceId || undefined)
+    setQueryValues({
+      spaceId: currentSpaceId || undefined
+    })
+    setCurrent(1)
+  }
+
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
       <ACard
@@ -335,9 +403,101 @@ export function Component() {
           用于管理业务空间下的客户端访问授权凭证，支持 AK/SK 生成、IP 访问限制和启停控制。
         </div>
 
+        <AForm
+          form={queryForm}
+          layout="inline"
+          onFinish={handleSearch}
+        >
+          <ASpace
+            wrap
+            size={12}
+          >
+            <AForm.Item
+              label="业务空间"
+              name="spaceId"
+              rules={[{ message: '请选择业务空间', required: true }]}
+            >
+              <ASelect
+                options={spaceOptions}
+                placeholder="请选择"
+                style={{ width: 220 }}
+              />
+            </AForm.Item>
+            <AForm.Item
+              label="Client ID"
+              name="clientId"
+            >
+              <AInput
+                allowClear
+                placeholder="请输入"
+                style={{ width: 260 }}
+              />
+            </AForm.Item>
+            <AForm.Item
+              label="Access Key"
+              name="accessKey"
+            >
+              <AInput
+                allowClear
+                placeholder="请输入"
+                style={{ width: 260 }}
+              />
+            </AForm.Item>
+            <AForm.Item
+              label="状态"
+              name="status"
+            >
+              <ASelect
+                allowClear
+                placeholder="请选择"
+                style={{ width: 120 }}
+                options={[
+                  { label: '正常', value: 'normal' },
+                  { label: '停用', value: 'disabled' }
+                ]}
+              />
+            </AForm.Item>
+            <AForm.Item
+              label="IP访问限制"
+              name="ipAccessType"
+            >
+              <ASelect
+                allowClear
+                placeholder="请选择"
+                style={{ width: 140 }}
+                options={[
+                  { label: '不限制', value: 'unlimited' },
+                  { label: '仅白名单', value: 'whitelist' }
+                ]}
+              />
+            </AForm.Item>
+            <AForm.Item
+              label="创建时间"
+              name="createTimeRange"
+            >
+              <ADatePicker.RangePicker
+                allowClear
+                format="YYYY-MM-DD"
+                style={{ width: 300 }}
+              />
+            </AForm.Item>
+            <AForm.Item>
+              <ASpace>
+                <AButton
+                  htmlType="submit"
+                  type="primary"
+                >
+                  查询
+                </AButton>
+                <AButton onClick={handleResetSearch}>重置</AButton>
+              </ASpace>
+            </AForm.Item>
+          </ASpace>
+        </AForm>
+
         <AFlex
           justify="end"
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 8 }}
         >
           <AButton
             type="primary"

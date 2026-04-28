@@ -17,6 +17,7 @@ export interface AbiClientListItem {
   ipWhitelist?: string
   remark?: string | null
   restrictedIp?: 0 | 1 | boolean
+  secretKey?: string
   spaceId?: number
   spaceName?: string
   status?: '0' | '1' | number
@@ -40,7 +41,19 @@ export interface AbiClientDetailItem {
   whitelist?: AbiClientWhitelistItem[]
 }
 
-export function queryAbiClientList(params: { pageNum: number; pageSize: number; spaceId: number }) {
+export interface QueryAbiClientListParams {
+  accessKey?: string
+  clientId?: string
+  entCreateTime?: string
+  pageNum: number
+  pageSize: number
+  restrictedIp?: 0 | 1
+  spaceId: number
+  startCreateTime?: string
+  status?: '0' | '1'
+}
+
+export function queryAbiClientList(params: QueryAbiClientListParams) {
   return apiRequest({
     method: 'get',
     params,

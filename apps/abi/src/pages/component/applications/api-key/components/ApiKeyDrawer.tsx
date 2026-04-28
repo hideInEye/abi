@@ -1,5 +1,6 @@
 import { message } from 'antd'
 import copy from 'copy-to-clipboard'
+import dayjs from 'dayjs'
 
 import type { ApiKeyFormValues, ApiKeyItem, DrawerMode, IpAccessType } from '../types'
 import { isIpDuplicated, normalizeIpValue, validateIpOrCidr } from '../utils'
@@ -43,7 +44,9 @@ export function ApiKeyDrawer({
     if (!open) return
 
     form.setFieldsValue({
+      activeTimeout: record?.timeoutSeconds || 1800,
       description: record?.description || '',
+      expireTime: record?.expireTime ? dayjs(record.expireTime) : undefined,
       ipAccessType: record?.ipAccessType || 'unlimited',
       spaceId: record?.spaceId || options[0]?.value
     })
@@ -135,7 +138,13 @@ export function ApiKeyDrawer({
       return
     }
 
-    onSubmit(values, values.ipAccessType === 'whitelist' ? ipWhitelist : [])
+    onSubmit(
+      {
+        ...values,
+        expireTime: values.expireTime ? dayjs(values.expireTime).format('YYYY-MM-DD HH:mm:ss') : null
+      },
+      values.ipAccessType === 'whitelist' ? ipWhitelist : []
+    )
   }
 
   const viewRowStyle: React.CSSProperties = {
@@ -168,74 +177,89 @@ export function ApiKeyDrawer({
     overflow: 'hidden'
   }
 
-  const renderViewMode = () => (
-    <>
-      <div style={{ color: '#1f2937', fontSize: 14, fontWeight: 600 }}>基础与状态信息</div>
-      <ADivider style={{ margin: '10px 0' }} />
-      <div style={viewCardStyle}>
-        <div style={viewRowStyle}>
-          <div style={viewLabelStyle}>归属业务空间</div>
-          <div style={viewValueStyle}>{record?.businessSpace || '-'}</div>
-        </div>
-        <div style={viewRowStyle}>
-          <div style={viewLabelStyle}>当前状态</div>
-          <div style={viewValueStyle}>
-            <ATag color={record?.status === 'normal' ? 'default' : 'error'}>{statusText}</ATag>
-          </div>
-        </div>
-        <div style={viewRowStyle}>
-          <div style={viewLabelStyle}>创建时间</div>
-          <div style={viewValueStyle}>{record?.createdAt || '-'}</div>
-        </div>
-        <div style={{ ...viewRowStyle, borderBottom: 'none' }}>
-          <div style={viewLabelStyle}>描述</div>
-          <div style={viewValueStyle}>{record?.description || '-'}</div>
+  const sectionTitleStyle: React.CSSProperties = { color: '#1f2937', fontSize: 14, fontWeight: 600 }
+
+  const renderBaseInfoCard = () => (
+    <div style={viewCardStyle}>
+      <div style={viewRowStyle}>
+        <div style={viewLabelStyle}>归属业务空间</div>
+        <div style={viewValueStyle}>{record?.businessSpace || '-'}</div>
+      </div>
+      <div style={viewRowStyle}>
+        <div style={viewLabelStyle}>当前状态</div>
+        <div style={viewValueStyle}>
+          <ATag color={record?.status === 'normal' ? 'default' : 'error'}>{statusText}</ATag>
         </div>
       </div>
+      <div style={viewRowStyle}>
+        <div style={viewLabelStyle}>创建时间</div>
+        <div style={viewValueStyle}>{record?.createdAt || '-'}</div>
+      </div>
+      <div style={{ ...viewRowStyle, borderBottom: 'none' }}>
+        <div style={viewLabelStyle}>描述</div>
+        <div style={viewValueStyle}>{record?.description || '-'}</div>
+      </div>
+    </div>
+  )
 
-      <div style={{ color: '#1f2937', fontSize: 14, fontWeight: 600, marginTop: 12 }}>凭证配置</div>
-      <ADivider style={{ margin: '10px 0' }} />
-      <div style={viewCardStyle}>
-        <div style={viewRowStyle}>
-          <div style={viewLabelStyle}>Client ID</div>
-          <div style={{ ...viewValueStyle, justifyContent: 'space-between' }}>
-            <span style={{ marginRight: 12, wordBreak: 'break-all' }}>{record?.clientId || '-'}</span>
-            <AButton
-              type="link"
-              onClick={() => copyCredential(record?.clientId, 'Client ID')}
-            >
-              复制
-            </AButton>
-          </div>
-        </div>
-        <div style={{ ...viewRowStyle, borderBottom: 'none' }}>
-          <div style={viewLabelStyle}>Access Key</div>
-          <div style={{ ...viewValueStyle, justifyContent: 'space-between' }}>
-            <span style={{ marginRight: 12, wordBreak: 'break-all' }}>{record?.accessKey || '-'}</span>
-            <AButton
-              type="link"
-              onClick={() => copyCredential(record?.accessKey, 'Access Key')}
-            >
-              复制
-            </AButton>
-          </div>
+  const renderCredentialCard = () => (
+    <div style={viewCardStyle}>
+      <div style={viewRowStyle}>
+        <div style={viewLabelStyle}>Client ID</div>
+        <div style={{ ...viewValueStyle, justifyContent: 'space-between' }}>
+          <span style={{ marginRight: 12, wordBreak: 'break-all' }}>{record?.clientId || '-'}</span>
+          <AButton
+            type="link"
+            onClick={() => copyCredential(record?.clientId, 'Client ID')}
+          >
+            复制
+          </AButton>
         </div>
       </div>
+      <div style={{ ...viewRowStyle, borderBottom: 'none' }}>
+        <div style={viewLabelStyle}>Access Key</div>
+        <div style={{ ...viewValueStyle, justifyContent: 'space-between' }}>
+          <span style={{ marginRight: 12, wordBreak: 'break-all' }}>{record?.accessKey || '-'}</span>
+          <AButton
+            type="link"
+            onClick={() => copyCredential(record?.accessKey, 'Access Key')}
+          >
+            复制
+          </AButton>
+        </div>
+      </div>
+    </div>
+  )
 
-      <div style={{ color: '#1f2937', fontSize: 14, fontWeight: 600, marginTop: 12 }}>访问配置</div>
-      <ADivider style={{ margin: '10px 0' }} />
+  const renderAccessCard = () => {
+    const showWhitelist = record?.ipAccessType === 'whitelist'
+    const whitelistItems = record?.ipWhitelist || []
+
+    return (
       <div style={viewCardStyle}>
         <div style={viewRowStyle}>
           <div style={viewLabelStyle}>IP访问限制</div>
           <div style={viewValueStyle}>{ipLimitText}</div>
         </div>
-        {record?.ipAccessType === 'whitelist' && (
+        <div style={viewRowStyle}>
+          <div style={viewLabelStyle}>Token活跃超时时间(秒)</div>
+          <div style={viewValueStyle}>
+            {typeof record?.timeoutSeconds === 'number' ? `${record.timeoutSeconds} 秒` : '-'}
+          </div>
+        </div>
+        <div style={viewRowStyle}>
+          <div style={viewLabelStyle}>过期时间</div>
+          <div style={viewValueStyle}>{record?.expireTime || '永久有效'}</div>
+        </div>
+        {showWhitelist && (
           <div style={{ ...viewRowStyle, borderBottom: 'none' }}>
             <div style={viewLabelStyle}>IP 白名单</div>
             <div style={{ ...viewValueStyle, alignItems: 'flex-start', display: 'block' }}>
-              {(record?.ipWhitelist || []).length ? (
+              {whitelistItems.length ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {record?.ipWhitelist.map(ip => <ATag key={ip}>{ip}</ATag>)}
+                  {whitelistItems.map(ip => (
+                    <ATag key={ip}>{ip}</ATag>
+                  ))}
                 </div>
               ) : (
                 '-'
@@ -244,6 +268,22 @@ export function ApiKeyDrawer({
           </div>
         )}
       </div>
+    )
+  }
+
+  const renderViewMode = () => (
+    <>
+      <div style={sectionTitleStyle}>基础与状态信息</div>
+      <ADivider style={{ margin: '10px 0' }} />
+      {renderBaseInfoCard()}
+
+      <div style={{ ...sectionTitleStyle, marginTop: 12 }}>凭证配置</div>
+      <ADivider style={{ margin: '10px 0' }} />
+      {renderCredentialCard()}
+
+      <div style={{ ...sectionTitleStyle, marginTop: 12 }}>访问配置</div>
+      <ADivider style={{ margin: '10px 0' }} />
+      {renderAccessCard()}
     </>
   )
 
@@ -328,6 +368,36 @@ export function ApiKeyDrawer({
                   <ARadio value="whitelist">仅白名单</ARadio>
                 </ARadio.Group>
               </AForm.Item>
+
+              <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr', marginBottom: 16 }}>
+                <AForm.Item
+                  label="Token活跃超时时间 (秒)"
+                  name="activeTimeout"
+                  rules={[
+                    { message: '请输入Token活跃超时时间', required: true },
+                    { message: '请输入大于0的整数', min: 1, type: 'number' }
+                  ]}
+                >
+                  <AInputNumber
+                    min={1}
+                    placeholder="请输入Token活跃超时时间(秒)"
+                    precision={0}
+                    style={{ width: '100%' }}
+                  />
+                </AForm.Item>
+
+                <AForm.Item
+                  label="过期时间"
+                  name="expireTime"
+                >
+                  <ADatePicker
+                    showTime
+                    format="YYYY-MM-DD HH:mm:ss"
+                    placeholder="请选择过期时间，格式 YYYY-MM-D"
+                    style={{ width: '100%' }}
+                  />
+                </AForm.Item>
+              </div>
 
               <AForm.Item
                 noStyle
