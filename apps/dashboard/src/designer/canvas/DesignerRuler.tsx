@@ -128,7 +128,7 @@ const DesignerRuler = memo((props: RulerProps & DesignerRulerProps) => {
             </div>
             <div style={{
                 width: baseOffsetRef.current,
-                height: window.innerHeight - baseOffsetRef.current - 100,
+                height: 'calc(100vh - 110px)',
                 position: 'relative',
                 overflow: 'hidden',
                 backgroundColor: '#f0f2f5',
@@ -155,7 +155,7 @@ const DesignerRuler = memo((props: RulerProps & DesignerRulerProps) => {
                 left: baseOffsetRef.current,
                 right: 0,
                 bottom: 0,
-                backgroundColor: '#2C2C3E'
+                backgroundColor: '#fafafc',
             }}>
                 {props.children}
             </div>

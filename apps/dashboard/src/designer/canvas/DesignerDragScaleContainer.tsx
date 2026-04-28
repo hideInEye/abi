@@ -85,8 +85,8 @@ const DesignerDragScaleContainer = memo(observer((props: DesignerDragScaleContai
         <div className={'designer-ds-container'} ref={containerRef}
              style={{
                  overflow: "hidden",
-                 height: window.innerHeight - 110,
-                 width: window.innerWidth - 115,
+                 width: '100%',
+                 height: '100%',
                  backgroundColor: '#fafafc',
                  backgroundImage: 'linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)',
                  backgroundSize: '20px 20px',

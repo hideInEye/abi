@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { message } from 'antd';
+import { message, Tooltip } from 'antd';
 import { observer } from 'mobx-react';
 import { getApiTarget, notifyTokenExpired } from '../../../../utils/FetchUtil';
 import baseApi from '../../../../api/BaseApi';
@@ -38,6 +38,7 @@ let cachedMessages: ChatMessage[] = [];
 let cachedConvUid = '';
 let cachedChatId = '';
 let historyLoaded = false; // 是否已成功拉取过历史
+let cachedSelectedAgentId = ''; // 持久化助手选择
 
 // 获取当前时间字符串
 function getNow() {
@@ -84,7 +85,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [agentList, setAgentList] = useState<any[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(cachedSelectedAgentId);
   const [agentDropOpen, setAgentDropOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -232,8 +233,13 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
+  const shouldScrollRef = useRef(false);
+
   useEffect(() => {
-    scrollToBottom();
+    if (shouldScrollRef.current) {
+      scrollToBottom();
+      shouldScrollRef.current = false;
+    }
   }, [messages, scrollToBottom]);
 
   const stopGenerating = useCallback(() => {
@@ -262,6 +268,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
     const dynamicDashboardId = rawType.startsWith('Antd') ? rawType.slice(4) : rawType;
 
     setInputValue('');
+    shouldScrollRef.current = true;
     // 追加 human 消息到全量缓存
     setAllMessages((prev) => [
       ...prev,
@@ -362,6 +369,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
       const respChartName = devData.name;
 
       // 更新 allMessages 中最后一条 ai 占位消息
+      shouldScrollRef.current = true;
       setAllMessages((prev) => {
         const copy = [...prev];
         for (let i = copy.length - 1; i >= 0; i--) {
@@ -510,19 +518,20 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
       <div className="ai-status-bar">
         <div className={`status-dot ${loading ? 'loading' : ''}`} />
         <span className={`status-text ${loading ? 'loading' : ''}`}>
-          {loading ? '正在思考中...' : '知识已生效'}
+          {loading ? '正在思考中...' : ''}
         </span>
-        <button
-          className="action-btn"
-          style={{marginLeft: 'auto'}}
-          title="清空历史"
-          onClick={handleClearHistory}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-            <polyline points="1 4 1 10 7 10" />
-            <path d="M3.51 15a9 9 0 1 0 .49-3.37" />
-          </svg>
-        </button>
+        <Tooltip title="清空对话历史">
+          <button
+            className="action-btn"
+            style={{marginLeft: 'auto'}}
+            onClick={handleClearHistory}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 .49-3.37" />
+            </svg>
+          </button>
+        </Tooltip>
       </div>
 
       {/* Message List */}
@@ -555,6 +564,35 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
                 <>{msg.content}{msg.streaming && <span className="cursor">▌</span>}</>
               )}
             </div>
+            {/* 采纳/不采纳按钮：仅 AI 返回表格数据时显示，在气泡外部 */}
+            {msg.role === 'ai' && msg.tableData && (
+              <div className="ai-accept-btns">
+                <button
+                  className={`ai-accept-btn${msg.accepted ? ' active' : ''}`}
+                  title={msg.accepted ? '取消采纳' : '采纳此结果'}
+                  onClick={() => handleToggleAccept(idx, msg.tableData!)}
+                >
+                  采纳
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none"
+                    stroke="#52c41a" strokeWidth="2.5"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </button>
+                <button
+                  className={`ai-reject-btn${!msg.accepted ? ' active' : ''}`}
+                  title="不采纳"
+                  onClick={() => msg.accepted && handleToggleAccept(idx, msg.tableData!)}
+                >
+                  不采纳
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none"
+                    stroke="#bfbfbf" strokeWidth="2.5"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </button>
+              </div>
+            )}
             <div className="message-time">{msg.time}</div>
           </div>
         ))}
@@ -601,7 +639,11 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
                       <div
                         key={agent.agentId}
                         className={`agent-option${selectedAgentId === String(agent.agentId) ? ' agent-option-active' : ''}`}
-                        onClick={() => { setSelectedAgentId(String(agent.agentId)); setAgentDropOpen(false); }}
+                        onClick={() => { 
+                          setSelectedAgentId(String(agent.agentId)); 
+                          cachedSelectedAgentId = String(agent.agentId);
+                          setAgentDropOpen(false); 
+                        }}
                       >
                         <div className="agent-option-name">{agent.bizName || `助手${agent.agentId}`}</div>
                         {selectedAgentId === String(agent.agentId) && (
