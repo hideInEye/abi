@@ -24,14 +24,45 @@ export abstract class AntdBaseDesignerController<I extends Plot<any> = Plot<Opti
     protected lastReqState: boolean = true;
     private ClazzTemplate: (new (...args: any[]) => I) | undefined;
 
-    changeData(data: any) {
+    changeData(data: any, extra?: {
+        mapping?: { 'x字段'?: string; 'y字段'?: string; '分组字段'?: string };
+        name?: { x_name?: string; y_name?: string; title?: string };
+    }) {
         this.instance?.changeData(data);
-        //g2plot系列图表，style.data是其内部存储图表数据的地方，因此每次更新数据，该属性可以主动更新
-        if (this.config?.style?.data)
-            this.config!.style!.data = data;
-        //data.staticData是LC表中组件属性存储静态数据的地方，也作为其他数据源存储结果的中转站，更新数据时应该同时更新staticData属性
+        if (this.config?.style?.data) this.config!.style!.data = data;
         this.config!['data']!['staticData'] = data;
+        if (extra?.mapping) {
+            const {['x字段']: xField, ['y字段']: yField, ['分组字段']: seriesField} = extra.mapping;
+            if (xField) this.config!.style!.xField = xField;
+            if (yField) this.config!.style!.yField = yField;
+            if (seriesField) this.config!.style!.seriesField = seriesField;
+            this.instance?.update({...(xField&&{xField}), ...(yField&&{yField}), ...(seriesField&&{seriesField})});
+        }
+        if (extra?.name) {
+            const {x_name, y_name, title} = extra.name;
+            const parentEl = this.container?.parentElement;
+            if (parentEl) {
+                let el = parentEl.querySelector<HTMLElement>(':scope > .lc-chart-title');
+                if (title) {
+                    if (!el) {
+                        el = Object.assign(document.createElement('div'), {className: 'lc-chart-title'});
+                        el.style.cssText = 'font-size:13px;font-weight:600;color:#1c1c1c;text-align:center;line-height:24px;height:24px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;';
+                        parentEl.insertBefore(el, parentEl.firstChild);
+                        if (this.container) this.container.style.height = 'calc(100% - 24px)';
+                    }
+                    el.textContent = title;
+                    this.config!.style!.title = title;
+                } else if (el) {
+                    el.remove();
+                    if (this.container) this.container.style.height = '100%';
+                }
+            }
+            const axisCfg = (t: string) => ({text: t, offset: 0, position: 'center', style: {fill: '#1c1c1c', fontSize: 12}});
+            if (x_name) { const c = axisCfg(x_name); if (this.config!.style!.xAxis) this.config!.style!.xAxis.title = c; this.instance?.update({xAxis: {...(this.config!.style!.xAxis??{}), title: c}} as any); }
+            if (y_name) { const c = axisCfg(y_name); if (this.config!.style!.yAxis) this.config!.style!.yAxis.title = c; this.instance?.update({yAxis: {...(this.config!.style!.yAxis??{}), title: c}} as any); }
+        }
     }
+
 
     registerEvent(): void {
         const nodeId = this.config?.base?.id ?? "";
@@ -62,6 +93,18 @@ export abstract class AntdBaseDesignerController<I extends Plot<any> = Plot<Opti
         this.instance?.render();
         this.ClazzTemplate = Clazz;
         this.registerEvent();
+        // 如果 config 里保存了标题（之前采纳过），恢复标题 DOM
+        const savedTitle = (this.config as any)?.style?.title;
+        if (savedTitle) this.restoreChartTitle(savedTitle);
+    }
+  
+    private restoreChartTitle(title: string) {
+        const parentEl = this.container?.parentElement;
+        if (!parentEl || parentEl.querySelector(':scope > .lc-chart-title')) return;
+        const el = Object.assign(document.createElement('div'), {className: 'lc-chart-title', textContent: title});
+        el.style.cssText = 'font-size:13px;font-weight:600;color:#1c1c1c;text-align:center;line-height:24px;height:24px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;';
+        parentEl.insertBefore(el, parentEl.firstChild);
+        if (this.container) this.container.style.height = 'calc(100% - 24px)';
     }
 
     public commonUpdate(config: C, Clazz: new (...args: any[]) => I, upOp?: UpdateOptions,): void {

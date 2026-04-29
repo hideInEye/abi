@@ -38,6 +38,7 @@ declare global {
   const APopconfirm: typeof import('antd')['Popconfirm']
   const APopover: typeof import('antd')['Popover']
   const ARadio: typeof import('antd')['Radio']
+  const ARadioGroup: typeof import('antd')['RadioGroup']
   const ARow: typeof import('antd')['Row']
   const ASearchOutlined: typeof import('antd')['SearchOutlined']
   const ASelect: typeof import('antd')['Select']
