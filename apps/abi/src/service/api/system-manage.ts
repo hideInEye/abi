@@ -162,12 +162,21 @@ export async function fetchGetGroupList(params?: any) {
   return { data: { data: resData || [] } };
 }
 
+// 获取供应商列表
+export async function fetchProviderList() {
+  const res = await apiRequest({
+    method: 'get',
+    url: '/api/abi-copilot/v1/provider/list'
+  });
+  return res?.response?.data?.data || res?.data || [];
+}
+
 // 获取模型列表
 export async function fetchModelList(params: any) {
   const res = await apiRequest({
     method: 'get',
     params,
-    url: `/api/system/v1/model/list`
+    url: `/api/abi-copilot/v1/model/list`
   });
   const rows = res?.response?.data?.rows || res?.data || [];
   const total = res?.response?.data?.total ?? (Array.isArray(rows) ? rows.length : 0);
@@ -179,7 +188,7 @@ export function fetchAddModel(data: any) {
   return apiRequest({
     data,
     method: 'post',
-    url: `/api/system/v1/model`
+    url: `/api/abi-copilot/v1/model`
   });
 }
 
@@ -188,7 +197,7 @@ export function fetchEditModel(data: any) {
   return apiRequest({
     data,
     method: 'put',
-    url: `/api/system/v1/model`
+    url: `/api/abi-copilot/v1/model`
   });
 }
 
@@ -196,15 +205,31 @@ export function fetchEditModel(data: any) {
 export function deleteModel (id:number) {
   return apiRequest({
     method:'delete',
-    url:`/api/system/v1/model/${id}`
+    url:`/api/abi-copilot/v1/model/${id}`
+  })
+}
+
+// 复制模型
+export function copyModel(id: number) {
+  return apiRequest({
+    method: 'post',
+    url: `/api/abi-copilot/v1/model/copy/${id}`
+  })
+}
+
+// 设置默认模型
+export function setDefaultModel(id: number) {
+  return apiRequest({
+    method: 'post',
+    url: `/api/abi-copilot/v1/model/setDefault/${id}`
   })
 }
 
 // 大模型测试连接
 export function fetchTestModel(data: any) {
-  return chatRequest({
+  return apiRequest({
     data,
     method: 'post',
-    url: `/api/chat-proxy/api/v1/model/test/connect`
+    url: `/api/abi-copilot/v1/model/test-connection`
   });
 }

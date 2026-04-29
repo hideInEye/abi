@@ -32,7 +32,7 @@ abstract class AbstractDesignerController<I = any, C = any> extends AbstractCont
      * @param data
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public changeData(data: any): void {
+    public changeData(data: any, extra?: Record<string, any>): void {
     }
 
     /**

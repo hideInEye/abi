@@ -1,18 +1,19 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined, MoreOutlined, StarFilled } from '@ant-design/icons'
+import { ApartmentOutlined, CopyOutlined, DeleteOutlined, EditOutlined, MoreOutlined, StarFilled, StarOutlined } from '@ant-design/icons'
 import { Dropdown, Space } from 'antd'
 import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage'
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
 import './model-card-list.css'
 
 interface ModelItem {
-  llmId: number
-  providerName: string
+  modelId: number
+  providerId: number
+  providerName?: string
   modelName: string
+  modelKey?: string
   modelType: string
+  modelSource?: string
   status: string
   remark?: string
-  createBy?: string
-  createTime?: string
   isDefault?: number
   [key: string]: any
 }
@@ -26,14 +27,16 @@ interface Props {
   onSearch: () => void
   onAdd: () => void
   onEdit: (record: ModelItem) => void
+  onCopy: (id: number) => void
   onDelete: (id: number) => void
+  onSetDefault: (id: number) => void
   onAnalysis: (context: MetadataAnalysisContext) => void
 }
 
 const modelTypeTagColorMap: Record<string, import('antd/es/tag').TagProps['color']> = {
-  llm: 'blue',
-  embedding: 'green',
-  rerank: 'orange',
+  '1': 'blue',
+  '2': 'green',
+  '3': 'orange',
 }
 
 const ModelCardList: FC<Props> = ({
@@ -45,7 +48,9 @@ const ModelCardList: FC<Props> = ({
   onSearch,
   onAdd,
   onEdit,
+  onCopy,
   onDelete,
+  onSetDefault,
   onAnalysis,
 }) => {
   const { t } = useTranslation()
@@ -106,9 +111,12 @@ const ModelCardList: FC<Props> = ({
             <div className="model-card-grid">
               {filteredModels.map(item => {
                 const modelTypeLabel = MODAL_TYPE_OPTIONS.find(o => o.value === item.modelType)?.label || item.modelType
-                const providerOption = PROVIDER_OPTIONS.find(o => o.value === item.providerName)
-                const providerLabel = providerOption?.label || item.providerName
+                // 供应商图标：用 providerName 匹配静态图标
+                const providerOption = PROVIDER_OPTIONS.find(o => o.label === item.providerName || o.value === item.providerName)
                 const providerIcon = (providerOption as any)?.icon || ''
+                const providerLabel = item.providerName || ''
+                // 模型来源标签：'1'=公有, '2'=本地
+                const modelSourceLabel = item.modelSource === '2' ? '本地' : '公有'
                 const tagColor = modelTypeTagColorMap[item.modelType] || 'default'
 
                 const dropdownItems = [
@@ -122,11 +130,30 @@ const ModelCardList: FC<Props> = ({
                     ),
                   },
                   {
+                    key: 'copy',
+                    label: (
+                      <span>
+                        <CopyOutlined style={{ marginRight: 6 }} />
+                        复制
+                      </span>
+                    ),
+                  },
+                  ...((['1', '2', '3'].includes(item.modelType)) ? [{
+                    key: 'setDefault',
+                    disabled: item.isDefault === 1,
+                    label: (
+                      <span style={{ color: item.isDefault === 1 ? '#bfbfbf' : undefined }}>
+                        <StarOutlined style={{ marginRight: 6 }} />
+                        设为默认模型
+                      </span>
+                    ),
+                  }] : []),
+                  {
                     key: 'analysis',
                     label: (
                       <span>
                         <ApartmentOutlined style={{ marginRight: 6 }} />
-                        查看元数据分析
+                        元数据分析
                       </span>
                     ),
                   },
@@ -143,7 +170,7 @@ const ModelCardList: FC<Props> = ({
 
                 return (
                   <div
-                    key={item.llmId}
+                    key={item.modelId}
                     className="model-card-item"
                     style={{
                       position: 'relative',
@@ -197,14 +224,16 @@ const ModelCardList: FC<Props> = ({
                           items: dropdownItems,
                           onClick: ({ key }) => {
                             if (key === 'edit') onEdit(item)
+                            else if (key === 'copy') onCopy(item.modelId)
+                            else if (key === 'setDefault') onSetDefault(item.modelId)
                             else if (key === 'analysis') {
                               onAnalysis({
-                                nodeId: item.llmId,
+                                nodeId: item.modelId,
                                 nodeName: item.modelName,
                                 nodeType: 'LLM',
                                 spaceId: Number(localStorage.getItem('spaceId')) || undefined,
                               })
-                            } else if (key === 'delete') onDelete(item.llmId)
+                            } else if (key === 'delete') onDelete(item.modelId)
                           },
                         }}
                         trigger={['hover']}
@@ -257,7 +286,7 @@ const ModelCardList: FC<Props> = ({
                             {modelTypeLabel}
                           </ATag>
                           <ATag bordered style={{ margin: 0 }}>
-                            {providerLabel}
+                            {modelSourceLabel}
                           </ATag>
                         </div>
                       </div>

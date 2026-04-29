@@ -73,17 +73,13 @@ export const PROVIDER_OPTIONS = [
 // 模型类型
 export const MODAL_TYPE_OPTIONS = [
   {
-    label: '大模型',
-    value: 'llm'
+    label: '语言模型',
+    value: '1'
   },
   {
-    label: '嵌入模型',
-    value: 'embedding'
+    label: '向量模型',
+    value: '2'
   }
-  // {
-  //   label: '重排模型',
-  //   value: 'rerank'
-  // }
 ];
 
 // LLM类型

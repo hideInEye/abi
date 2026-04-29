@@ -453,7 +453,10 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
       }
       const ctrl = controllers[currentChartId];
       if (ctrl) {
-        ctrl.changeData(data);
+        ctrl.changeData(data, {
+          mapping: targetMsg.mapping,
+          name: targetMsg.chartName,
+        });
         message.success('已更新图表数据');
       } else {
         message.warning('选中的图表不支持数据更新');

@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer'
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
-import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList } from '@/service/api'
+import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList, fetchProviderList, copyModel, setDefaultModel } from '@/service/api'
 
 const ModalOperateDrawer = lazy(() => import('./modules/modal-operate-drawer'))
 const ProviderList = lazy(() => import('./modules/provider-list'))
@@ -16,8 +16,23 @@ export function Component() {
   const [searchValue, setSearchValue] = useState('')
   const [searchType, setSearchType] = useState<'modelName' | 'baseModel'>('modelName')
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null)
-  const [activeProviderId, setActiveProviderId] = useState<string | null>(null)
+  const [activeProviderId, setActiveProviderId] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'0' | '1' | '2'>('0')
+  const [providers, setProviders] = useState<any[]>([])
+  const [providersLoading, setProvidersLoading] = useState(false)
+
+  useEffect(() => {
+    const loadProviders = async () => {
+      setProvidersLoading(true)
+      try {
+        const data = await fetchProviderList()
+        setProviders(Array.isArray(data) ? data : [])
+      } finally {
+        setProvidersLoading(false)
+      }
+    }
+    loadProviders()
+  }, [])
 
   const handleDelete = async (id: number) => {
     const res = await deleteModel(id)
@@ -29,6 +44,26 @@ export function Component() {
     }
   }
 
+  const handleCopy = async (id: number) => {
+    const res: any = await copyModel(id)
+    if (res?.response?.data?.code === 200) {
+      message.success('复制成功')
+      run()
+    } else {
+      message.error(res?.response?.data?.msg || '复制失败')
+    }
+  }
+
+  const handleSetDefault = async (id: number) => {
+    const res: any = await setDefaultModel(id)
+    if (res?.response?.data?.code === 200) {
+      message.success('设置默认模型成功')
+      run()
+    } else {
+      message.error(res?.response?.data?.msg || '设置失败')
+    }
+  }
+
   const { data, run, tableProps, updateSearchParams } = useTable({
     apiFn: fetchModelList as any,
     apiParams: {
@@ -37,51 +72,59 @@ export function Component() {
       modelName: searchValue,
     },
     columns: () => [] as any,
-    rowKey: 'llmId',
+    rowKey: 'modelId',
   } as any)
 
   const { editingData, generalPopupOperation, handleAdd, handleEdit, onDeleted } = useTableOperate(data as any, run, async (res: any, operateType) => {
-    const { apiKey, baseUrl, context_length, max_token, maxRetries, modelUID, secretKey, temperature, timeOut, type, ...elseProps } = res as any
-    let modelConfigObject: any = {
-      apiKey,
-      baseUrl,
-      context_length,
-      modelUID,
-      secretKey,
+    const { apiKey, apiBase, contextLength, modelUID, secretKey, temperature, timeOut, maxRetries, ...elseProps } = res as any
+    // 构建 config 对象
+    const configObj: any = {
+      apiKey: apiKey || '',
+      baseUrl: apiBase || '',
+      secretKey: secretKey || '',
     }
-    if (res.modelType === 'llm') {
-      modelConfigObject = {
-        apiKey,
-        baseUrl,
-        context_length,
-        max_token,
-        maxRetries,
-        modelUID,
-        secretKey,
-        temperature,
-        timeOut,
-        type,
-      }
+    if (res.modelType === '1') {
+      configObj.temperature = temperature ?? 0.7
+      configObj.max_token = res.max_token || 4096
+      configObj.timeOut = timeOut || 60
+      configObj.maxRetries = maxRetries || 3
+      configObj.contextLength = contextLength || 4096
     }
-    const modelConfig = JSON.stringify(modelConfigObject)
-    const commonData = { ...elseProps, modelConfig }
+    const commonData = {
+      ...elseProps,
+      apiBase: apiBase || '',
+      apiKey: apiKey || '',
+      config: JSON.stringify(configObj),
+    }
 
     if (operateType === 'add') {
       const addRes: any = await fetchAddModel(commonData)
       if (addRes?.response?.data?.code !== 200) return false
     } else {
-      const updateRes: any = await fetchEditModel({ ...commonData, llmId: editingData?.llmId, status: '1' })
+      const updateRes: any = await fetchEditModel({ ...commonData, modelId: editingData?.modelId })
       if (updateRes?.response?.data?.code !== 200) return false
     }
   })
 
   function edit(row: any) {
     try {
-      const config = JSON.parse(row.modelConfig)
-      const formatRow = { ...row, ...config }
+      // 新接口 config 字段存储配置
+      const config = row.config ? JSON.parse(row.config) : {}
+      const formatRow = {
+        ...row,
+        apiKey: config.apiKey || row.apiKey || '',
+        apiBase: config.baseUrl || row.apiBase || '',
+        secretKey: config.secretKey || row.secretKey || '',
+        temperature: config.temperature,
+        max_token: config.max_token,
+        timeOut: config.timeOut,
+        maxRetries: config.maxRetries,
+        contextLength: config.contextLength || row.contextLength,
+      }
       handleEdit(formatRow)
     } catch (error) {
       console.log(error)
+      handleEdit(row)
     }
   }
 
@@ -93,7 +136,7 @@ export function Component() {
     } as any)
   }
 
-  const handleSelectProvider = (id: string | null) => {
+  const handleSelectProvider = (id: number | null) => {
     setActiveProviderId(id)
   }
 
@@ -102,11 +145,12 @@ export function Component() {
     setActiveProviderId(null)
   }
 
-  // 根据左侧选中的供应商或 Tab 过滤模型列表
+  // 根据左侧选中的供应商过滤模型列表
   const allModels: any[] = (tableProps as any).dataSource || []
   const displayModels = useMemo(() => {
     if (activeProviderId) {
-      return allModels.filter((m: any) => m.providerName === activeProviderId)
+      // 新接口模型有 providerId 字段，直接匹配
+      return allModels.filter((m: any) => m.providerId === activeProviderId)
     }
     return allModels
   }, [allModels, activeProviderId])
@@ -131,6 +175,8 @@ export function Component() {
         >
           <Suspense>
             <ProviderList
+              providers={providers}
+              loading={providersLoading}
               activeProviderId={activeProviderId}
               activeTab={activeTab}
               onSelect={handleSelectProvider}
@@ -151,6 +197,8 @@ export function Component() {
               onSearch={handleSearch}
               onAdd={() => handleAdd()}
               onEdit={edit}
+              onCopy={handleCopy}
+              onSetDefault={handleSetDefault}
               onDelete={handleDelete}
               onAnalysis={setAnalysisContext}
             />
@@ -159,7 +207,7 @@ export function Component() {
       </div>
 
       <Suspense>
-        <ModalOperateDrawer {...generalPopupOperation} />
+        <ModalOperateDrawer {...generalPopupOperation} providers={providers} />
       </Suspense>
       <MetadataAnalysisDrawer
         context={analysisContext}
