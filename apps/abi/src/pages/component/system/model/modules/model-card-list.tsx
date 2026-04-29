@@ -75,33 +75,32 @@ const ModelCardList: FC<Props> = ({
       <ACard
         bordered={false}
         size="small"
-        title="模型"
+        title={
+          <div style={{ fontWeight: 'normal' }}>
+          <Space.Compact style={{ width: 320 }}>
+            <ASelect
+              value={searchType}
+              options={searchTypeOptions}
+              style={{ width: '38%' }}
+              onChange={onSearchTypeChange}
+            />
+            <AInput
+              value={searchValue}
+              placeholder="请输入关键词"
+              style={{ width: '62%' }}
+              allowClear
+              onChange={e => onSearchValueChange(e.target.value)}
+              onPressEnter={onSearch}
+            />
+          </Space.Compact>
+          </div>
+        }
         style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
         styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px 16px' } }}
         extra={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Space.Compact style={{ width: 280 }}>
-              <ASelect
-                value={searchType}
-                options={searchTypeOptions}
-                size="small"
-                style={{ width: '38%' }}
-                onChange={onSearchTypeChange}
-              />
-              <AInput
-                value={searchValue}
-                placeholder="请输入关键词"
-                size="small"
-                style={{ width: '62%' }}
-                allowClear
-                onChange={e => onSearchValueChange(e.target.value)}
-                onPressEnter={onSearch}
-              />
-            </Space.Compact>
-            <AButton type="primary" size="small" ghost onClick={onAdd}>
-              + 新增模型
-            </AButton>
-          </div>
+          <AButton type="primary" onClick={onAdd}>
+            新增
+          </AButton>
         }
       >
         <div style={{ flex: 1, overflow: 'auto', padding: '4px 20px 12px 12px' }}>
