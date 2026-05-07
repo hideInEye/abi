@@ -38,6 +38,25 @@ function extractSecretKey(resp: any): string {
   return respData?.secretKey || (typeof resp?.data?.secretKey === 'string' ? resp.data.secretKey : '') || ''
 }
 
+function extractSecretKeyFromReset(resp: any): string {
+  const respData = resp?.response?.data
+  const dataField = respData?.data
+
+  if (typeof respData?.secretKey === 'string') {
+    return respData.secretKey
+  }
+
+  if (typeof dataField === 'string') {
+    return dataField
+  }
+
+  if (dataField && typeof dataField === 'object' && typeof dataField.secretKey === 'string') {
+    return dataField.secretKey
+  }
+
+  return typeof resp?.data?.secretKey === 'string' ? resp.data.secretKey : ''
+}
+
 function showOneTimeSecretKeyModal(secretKey: string, title: string) {
   AModal.info({
     content: (
@@ -329,32 +348,12 @@ export function Component() {
     const resetRes = await resetAbiClientSk(record.id)
     message.success((resetRes as any).response?.data?.msg || '重置成功')
 
-    const detailRes = await getAbiClientDetail(record.id)
-    const secretKey = (detailRes as any).response?.data?.data as string | undefined
-
-    AModal.info({
-      content: (
-        <div>
-          <div>Secret Key 已重置，请及时保存：</div>
-          <div style={{ fontFamily: 'monospace', marginTop: 12, wordBreak: 'break-all' }}>{secretKey || '-'}</div>
-          <AButton
-            style={{ marginTop: 12, paddingInline: 0 }}
-            type="link"
-            onClick={() => {
-              if (!secretKey) {
-                message.warning('Secret Key为空，无法复制')
-                return
-              }
-              copy(secretKey)
-              message.success('Secret Key已复制')
-            }}
-          >
-            复制
-          </AButton>
-        </div>
-      ),
-      title: 'Secret Key 已重置'
-    })
+    const resetSecretKey = extractSecretKeyFromReset(resetRes)
+    if (resetSecretKey) {
+      showOneTimeSecretKeyModal(resetSecretKey, 'Secret Key 已重置，请妥善保存')
+    } else {
+      message.warning('未获取到 Secret Key，请联系管理员确认接口返回')
+    }
 
     refreshList()
   }
