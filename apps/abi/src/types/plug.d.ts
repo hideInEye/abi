@@ -45,6 +45,12 @@ export interface PluginItem extends PluginAddParams {
 
   updateBy: string;
   updateTime: string;
+
+  capabilities?: string[];
+  protocol?: string;
+  versionDetail?: {
+    version?: string;
+  };
 }
 
 export interface PlugEdit {
@@ -57,4 +63,37 @@ export interface PlugEdit {
   space_id: number;
   status: 0 | 1;
   group_id: number;
+}
+
+export interface McpSecurityScheme {
+  id: string;
+  type: 'http' | 'apiKey';
+  scheme?: string;
+  defaultCredential?: string;
+}
+
+export interface McpSecurityExtensions {
+  'server.defaultDownstreamSecurity'?: { id?: string; passthrough?: boolean };
+  'server.defaultUpstreamSecurity'?: { id?: string; credential?: string };
+}
+
+export interface McpToolItem {
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  inputSchema?: any;
+  protocolTemplate?: string;
+  passthroughAuth?: boolean;
+}
+
+export interface McpForm {
+  mcp_name: string;
+  version: string;
+  description?: string;
+  address: string;
+  port: string;
+  transport: 'HTTP' | 'HTTPS';
+  securitySchemes?: McpSecurityScheme[];
+  securityExtensions?: McpSecurityExtensions;
+  tools?: McpToolItem[];
 }

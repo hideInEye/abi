@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/stateless/common/PageTitle';
 
-import { addPlugin, deletePlugin, queryPluginList, updatePlugin } from '@/service/api/pulg';
-import type { PluginAddParams, PluginForm, PluginItem, PluginList } from '@/types/plug';
+import { deleteMcp, getMcpDetail, queryMcpList, registerMcp, updateMcp } from '@/service/api/pulg';
+import type { PluginAddParams, PluginItem, PluginList, McpForm } from '@/types/plug';
 
 import { PlugUpdate } from './components/PlugUpdate.tsx';
+import { PluginDetail } from './components/PluginDetail.tsx';
 import { PluginGroup } from './components/PluginGroup.tsx';
 import { PluginTable } from './components/PluginTable.tsx';
 import { usePluginManagement } from './hooks/usePluginManagement.ts';
@@ -21,40 +22,69 @@ export const Component: React.FC = () => {
   }>({ code: 0, msg: '', rows: [], total: 0 });
   const [current, setcurrent] = useState(1);
   const [searchValue, setSearchValue] = useState('');
+  const [detailRecord, setDetailRecord] = useState<PluginItem | null>(null);
   const pageSize = 10;
 
-  const getPluginList = async (pluginName?: string) => {
-    const res = await queryPluginList({
-      pageNum: current,
+  const getPluginList = async (mcpName?: string) => {
+    const res: any = await queryMcpList({
+      pageNo: current,
       pageSize,
-      pluginName: pluginName || '',
-      spaceId: Number(localStorage.getItem('spaceId')),
-      groupId: groupId,
+      mcpName: mcpName || undefined,
+      search: 'blur',
+      namespaceId: 'public',
+      // namespaceId: 's_27'
     });
 
-    setDataSource(res.response.data as any);
+    // 新接口字段适配：pageItems → rows
+    // 响应结构：{ code, msg, data: { data: { totalCount, pageItems } } }
+    const payload = res?.response?.data?.data?.data ?? {};
+    const pageItems: any[] = payload.pageItems ?? [];
+    const rows = pageItems.map(item => ({
+      ...item,
+      pluginId: item.id,
+      pluginName: item.name,
+      remark: item.description,
+      pluginType: item.protocol,
+      status: item.enabled ? 1 : 0
+    }));
+    setDataSource({
+      code: 0,
+      msg: '',
+      rows: rows as any,
+      total: payload.totalCount ?? 0
+    });
   };
 
   const toDeletePlugin = async (data: PluginList) => {
-    await deletePlugin({
-      plugin_ids: data.pluginId.toString(),
-      plugin_type: data.pluginType,
-      space_id: Number(localStorage.getItem('spaceId'))
+    await deleteMcp({
+      mcpId: data.pluginId.toString(),
+      mcpName: data.pluginName,
+      namespaceId: 'public',
+      // namespaceId: 's_27'
     });
     getPluginList();
   };
 
   const updateStatus = async (record: PluginItem) => {
-    await updatePlugin({
-      parse_mode_config: record.parseModeConfig,
-      plugin_id: record.pluginId,
-      plugin_name: record.pluginName,
-      plugin_type: record.pluginType,
-      remark: record.remark,
-      service_config: record.serviceConfig,
-      space_id: Number(localStorage.getItem('spaceId')),
-      status: record.status === 0 ? 1 : 0,
-      group_id: groupId
+    // 启停切换走更新接口 (PUT)
+    await updateMcp({
+      namespaceId: 'public',
+      // namespaceId: 's_27',
+      serverSpecification: {
+        id: String(record.pluginId),
+        name: record.pluginName,
+        version: record.versionDetail?.version || '1.0.0',
+        protocol: 'sse',
+        frontProtocol: 'sse',
+        description: record.remark || '',
+        remoteServerConfig: {
+          url: '',
+          connectTimeout: 5000,
+          readTimeout: 30000
+        },
+        enabled: record.status === 0,
+        capabilities: record.capabilities ?? []
+      }
     });
     getPluginList();
   };
@@ -66,51 +96,66 @@ export const Component: React.FC = () => {
     getPluginList(value);
   };
 
-  const handleSubmit = async (formData: PluginForm) => {
-    let res:any=null
+  const handleSubmit = async (formData: McpForm) => {
+    // 新增 POST registerMcp / 编辑 PUT updateMcp，协议固定 sse + DIRECT 模式
+    const addressWithPort = `${formData.address}:${formData.port}`;
+    const scheme = (formData.transport || 'HTTP').toLowerCase();
+    const serverSpec: Record<string, any> = {
+      name: formData.mcp_name,
+      protocol: 'sse',
+      frontProtocol: 'sse',
+      description: formData.description || '',
+      version: formData.version,
+      remoteServerConfig: {
+        url: `${scheme}://${addressWithPort}/mcp`,
+        connectTimeout: 5000,
+        readTimeout: 30000
+      }
+    };
     if (currentEdit) {
-     res =  await updatePlugin({
-        parse_mode_config: JSON.stringify(formData.parse_mode_config),
-        plugin_id: currentEdit.pluginId,
-        plugin_name: formData.plugin_name,
-        plugin_type: formData.plugin_type,
-        remark: formData.remark,
-        service_config: JSON.stringify(formData.service_config),
-        space_id: Number(localStorage.getItem('spaceId')),
-        status: currentEdit.status,
-        group_id: groupId
-      });
-    }else {
-      const { parse_mode_config, service_config, ...rest } = formData;
-      const data = {
-        ...rest,
-        parse_mode_config: JSON.stringify(parse_mode_config),
-        service_config: JSON.stringify(service_config),
-        space_id: Number(localStorage.getItem('spaceId')),
-        group_id: groupId
-      };
-      res = await addPlugin(data);
+      serverSpec.id = String(currentEdit.pluginId);
     }
-
-    
-    const { code, msg="服务器错误" } = res.response.data;
-    if (code === 200) {
+    const endpointSpec = {
+      type: 'DIRECT',
+      data: {
+        address: addressWithPort,
+        port: formData.port
+      }
+    };
+    // 高级配置 + Tools → toolSpecification（均为可选）
+    const toolSpec: Record<string, any> = {};
+    if (formData.securitySchemes && formData.securitySchemes.length > 0) {
+      toolSpec.securitySchemes = formData.securitySchemes;
+    }
+    if (formData.securityExtensions && Object.keys(formData.securityExtensions).length > 0) {
+      toolSpec.extensions = formData.securityExtensions;
+    }
+    if (formData.tools && formData.tools.length > 0) {
+      toolSpec.tools = formData.tools;
+    }
+    try {
+      const fn = currentEdit ? updateMcp : registerMcp;
+      await fn({
+        namespaceId: 'public',
+        // namespaceId: 's_27',
+        serverSpecification: serverSpec,
+        endpointSpecification: endpointSpec,
+        ...(Object.keys(toolSpec).length > 0 ? { toolSpecification: toolSpec } : {})
+      });
+      message.success(currentEdit ? '编辑成功' : '创建成功');
       setOpen(false);
       getPluginList();
-    }else {
-      message.error(msg)
+    } catch (err: any) {
+      message.error(err?.message || (currentEdit ? '编辑失败' : '创建失败'));
     }
   };
 
   useEffect(() => {
-    getPluginList();
-  }, []);
-  useEffect(() => {
-    if (groupId !== null) {
-      setcurrent(1);
-      setDataSource({ code: 0, msg: '', rows: [], total: 0 });
-      getPluginList(searchValue);
-    }
+    // 初始 groupId=0 时等待 PluginGroup 回传真实分组 id 后再拉列表，避免重复请求
+    if (!groupId) return;
+    setcurrent(1);
+    setDataSource({ code: 0, msg: '', rows: [], total: 0 });
+    getPluginList(searchValue);
   }, [groupId]);
 
   const setPage = (page: number) => {
@@ -134,7 +179,7 @@ export const Component: React.FC = () => {
           <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
             <ASpace className="mb-4 flex justify-between">
               <AInput
-                placeholder="请输入插件名称"
+                placeholder="请输入MCP服务名称"
                 value={searchValue}
                 onChange={e => handleSearch(e.target.value)}
                 style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
@@ -157,6 +202,21 @@ export const Component: React.FC = () => {
               deletePlugin={toDeletePlugin}
               setcurrent={setPage}
               updateStatus={updateStatus}
+              onDetail={async record => {
+                try {
+                  const res: any = await getMcpDetail({
+                    mcpId: String(record.pluginId),
+                    mcpName: record.pluginName,
+                    namespaceId: 'public',
+                    // namespaceId: 's_27'
+                  });
+                  const remote = res?.response?.data?.data ?? res?.response?.data;
+                  // 后端返回成功则以详情接口数据为准，否则降级使用行数据
+                  setDetailRecord({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
+                } catch {
+                  setDetailRecord(record);
+                }
+              }}
               updateCurrentEdit={record => {
                 setCurrentEdit(record);
                 setOpen(true);
@@ -170,6 +230,12 @@ export const Component: React.FC = () => {
           open={open}
           onClose={() => setOpen(false)}
           onSubmit={handleSubmit}
+        />
+
+        <PluginDetail
+          open={Boolean(detailRecord)}
+          record={detailRecord}
+          onClose={() => setDetailRecord(null)}
         />
       </ACard>
     </div>

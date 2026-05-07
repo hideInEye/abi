@@ -1,135 +1,73 @@
-import { CloseOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import { Form, message } from 'antd';
-import copy from 'copy-to-clipboard';
-import { JsonEditor } from 'json-edit-react';
+import { CloseOutlined, ToolOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Form } from 'antd';
 import { useEffect, useState } from 'react';
-import './JsonEditorTextBtn.css';
+import type { McpForm, McpSecurityScheme, McpSecurityExtensions, McpToolItem, PluginItem } from '@/types/plug';
 
-import type { PluginForm, PluginItem } from '@/types/plug';
+import { CreateToolModal } from './CreateToolModal';
+import { SecuritySchemeSection } from './SecuritySchemeSection';
 
 interface PlugUpdateProps {
   readonly currentEdit: PluginItem | null;
   readonly onClose: () => void;
-  readonly onSubmit: (formData: PluginForm) => void;
+  readonly onSubmit: (formData: McpForm) => void;
   readonly open: boolean;
 }
 
 export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateProps) => {
-  const [form] = Form.useForm<PluginForm>();
-  const [parseModeConfig, setParseModeConfig] = useState<any>({});
-  const [serviceConfig, setServiceConfig] = useState<any>({});
-  const PARSE_MODE_CONFIG_EXAMPLE = {
-    openapi: '3.1.0',
-    info: { title: 'FastAPI', version: '0.1.0' },
-    paths: {
-      '/api/v1/services/Iff8080810196767c767c3ac001967bd4ae490078': {
-        post: {
-          summary: '预期空气质量指数',
-          description: '基于DEWP, TEMP, WSPM, O3, PM25预测空气质量指数',
-          operationId: 'CNN-LSTM-RH-SVC',
-          requestBody: {
-            content: { 'application/json': { schema: { $ref: '#/components/schemas/InputData' } } },
-            required: true
-          },
-          responses: {
-            200: {
-              description: 'Successful Response',
-              content: {
-                'application/json': {
-                  schema: {
-                    items: { $ref: '#/components/schemas/DataItemWithTotal' },
-                    type: 'array',
-                    title: 'Response Sum Columns'
-                  }
-                }
-              }
-            },
-            422: {
-              description: 'Validation Error',
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/HTTPValidationError' } } }
-            }
-          }
-        }
-      }
-    },
-    components: {
-      schemas: {
-        DataItem: {
-          properties: {
-            DEWP: { type: 'number', title: 'Dewp', description: 'DEWP' },
-            TEMP: { type: 'number', title: 'Temp', description: 'TEMP' },
-            WSPM: { type: 'number', title: 'Wspm', description: 'WSPM' },
-            O3: { type: 'number', title: 'O3', description: 'O3' },
-            PM25: { type: 'number', title: 'Pm25', description: 'PM25' }
-          },
-          type: 'object',
-          required: ['DEWP', 'TEMP', 'WSPM', 'O3', 'PM25'],
-          title: 'DataItem'
-        },
-        DataItemWithTotal: {
-          properties: {
-            DEWP: { type: 'number', title: 'Dewp', description: 'DEWP' },
-            TEMP: { type: 'number', title: 'Temp', description: 'TEMP' },
-            WSPM: { type: 'number', title: 'Wspm', description: 'WSPM' },
-            O3: { type: 'number', title: 'O3', description: 'O3' },
-            PM25: { type: 'number', title: 'Pm25', description: 'PM25' },
-            total: { type: 'number', title: 'Total', description: 'Sum of DEWP, TEMP, WSPM, O3, PM25' }
-          },
-          type: 'object',
-          required: ['DEWP', 'TEMP', 'WSPM', 'O3', 'PM25', 'total'],
-          title: 'DataItemWithTotal'
-        },
-        HTTPValidationError: {
-          properties: { detail: { items: { $ref: '#/components/schemas/ValidationError' }, type: 'array', title: 'Detail' } },
-          type: 'object',
-          title: 'HTTPValidationError'
-        },
-        InputData: {
-          properties: { data: { items: { $ref: '#/components/schemas/DataItem' }, type: 'array', title: 'Data' } },
-          type: 'object',
-          required: ['data'],
-          title: 'InputData'
-        },
-        ValidationError: {
-          properties: {
-            loc: { items: { anyOf: [{ type: 'string' }, { type: 'integer' }] }, type: 'array', title: 'Location' },
-            msg: { type: 'string', title: 'Message' },
-            type: { type: 'string', title: 'Error Type' }
-          },
-          type: 'object',
-          required: ['loc', 'msg', 'type'],
-          title: 'ValidationError'
-        }
-      }
-    }
-  };
-  const SERVICE_CONFIG_EXAMPLE = {
-    "base_url": "https://123.181.192.131:8900"
-  };
+  const [form] = Form.useForm<McpForm>();
+  // 高级配置：安全认证方案列表 + 默认上/下行认证 extensions
+  const [securitySchemes, setSecuritySchemes] = useState<McpSecurityScheme[]>([]);
+  const [securityExtensions, setSecurityExtensions] = useState<McpSecurityExtensions>({});
+  // Tools 列表 + 创建工具弹窗
+  const [tools, setTools] = useState<McpToolItem[]>([]);
+  const [toolModalOpen, setToolModalOpen] = useState(false);
+  const [editingToolIdx, setEditingToolIdx] = useState<number | null>(null);
 
-  function resetFormData() {
-    form.resetFields();
-    setParseModeConfig({});
-    setServiceConfig({});
-  }
+  const removeTool = (idx: number) => setTools(prev => prev.filter((_, i) => i !== idx));
+  const openCreateTool = () => {
+    setEditingToolIdx(null);
+    setToolModalOpen(true);
+  };
+  const openEditTool = (idx: number) => {
+    setEditingToolIdx(idx);
+    setToolModalOpen(true);
+  };
+  const handleToolModalOk = (tool: McpToolItem) => {
+    setTools(prev => {
+      if (editingToolIdx === null) return [...prev, tool];
+      return prev.map((t, i) => (i === editingToolIdx ? tool : t));
+    });
+    setToolModalOpen(false);
+  };
 
   useEffect(() => {
     if (!open) {
-      resetFormData();
+      form.resetFields();
+      setSecuritySchemes([]);
+      setSecurityExtensions({});
+      setTools([]);
       return;
     }
 
-    // 当打开抽屉时，根据 currentEdit 设置数据
-    if (open && currentEdit) {
+    if (currentEdit) {
+      // 编辑回显：address/port 列表接口暂未返回，留空由用户重新填写
       form.setFieldsValue({
-        plugin_name: currentEdit.pluginName,
-        plugin_type: currentEdit.pluginType,
-        remark: currentEdit.remark,
-        parse_mode_config: JSON.parse(currentEdit.parseModeConfig),
-        service_config: JSON.parse(currentEdit.serviceConfig)
+        mcp_name: currentEdit.pluginName,
+        version: currentEdit.versionDetail?.version ?? '1.0.0',
+        description: currentEdit.remark ?? '',
+        address: '',
+        port: '',
+        transport: 'HTTP'
       });
-      setParseModeConfig(JSON.parse(currentEdit.parseModeConfig));
-      setServiceConfig(JSON.parse(currentEdit.serviceConfig));
+    } else {
+      form.setFieldsValue({
+        mcp_name: '',
+        version: '1.0.0',
+        description: '',
+        address: '',
+        port: '',
+        transport: 'HTTP'
+      });
     }
   }, [open, currentEdit, form]);
 
@@ -138,8 +76,9 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
       const values = await form.validateFields();
       onSubmit({
         ...values,
-        parse_mode_config: parseModeConfig,
-        service_config: serviceConfig
+        securitySchemes: securitySchemes.filter(s => s.id),
+        securityExtensions,
+        tools
       });
     } catch (error) {
       console.error('Form validation failed:', error);
@@ -151,150 +90,177 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
       closeIcon={null}
       extra={<CloseOutlined onClick={onClose} />}
       open={open}
-      title={currentEdit ? '编辑插件' : '新增插件'}
-      width={800}
-      footer={
-        <DrawerFooter
-          onClose={onClose}
-          onSubmit={handleSubmit}
-        />
-      }
+      title={currentEdit ? '编辑MCP服务' : '新增MCP服务'}
+      width={1000}
+      footer={<DrawerFooter onClose={onClose} onSubmit={handleSubmit} />}
       onClose={onClose}
     >
-      <AForm
-        form={form}
-        layout="vertical"
-      >
-        <Form.Item
-          label="插件名称"
-          name="plugin_name"
-          rules={[{ message: '请输入插件名称', required: true }]}
-        >
-          <AInput placeholder="请输入插件名称" />
+      <AForm form={form} layout="vertical">
+        <Form.Item label="命名空间">
+          <AInput value="public" disabled />
         </Form.Item>
 
         <Form.Item
-          label="插件描述"
-          name="remark"
-          rules={[{ message: '请输入插件描述', required: true }]}
+          label="MCP服务名"
+          name="mcp_name"
+          rules={[{ message: '请输入MCP服务名', required: true }]}
         >
-          <AInput placeholder="请输入插件描述" />
+          <AInput placeholder="请输入MCP服务名" disabled={!!currentEdit} />
+        </Form.Item>
+
+        <Form.Item label="协议类型">
+          <ARadio.Group value="sse">
+            <ARadio value="sse">sse</ARadio>
+          </ARadio.Group>
+        </Form.Item>
+
+        <Form.Item label="新建服务" required style={{ marginBottom: 24 }}>
+          <AFlex gap={12} align="flex-start">
+            <Form.Item
+              name="address"
+              label="address"
+              required={false}
+              style={{ flex: 1, marginBottom: 0 }}
+              rules={[{ message: '请输入服务地址', required: true }]}
+            >
+              <AInput placeholder="localhost" />
+            </Form.Item>
+            <Form.Item
+              name="port"
+              label="port"
+              required={false}
+              style={{ width: 120, marginBottom: 0 }}
+              rules={[{ message: '请输入端口', required: true }]}
+            >
+              <AInput placeholder="8080" />
+            </Form.Item>
+            <Form.Item
+              name="transport"
+              label="传输协议"
+              required={false}
+              style={{ width: 140, marginBottom: 0 }}
+              rules={[{ message: '请选择传输协议', required: true }]}
+            >
+              <ASelect
+                options={[
+                  { label: 'HTTP', value: 'HTTP' },
+                  { label: 'HTTPS', value: 'HTTPS' }
+                ]}
+              />
+            </Form.Item>
+          </AFlex>
         </Form.Item>
 
         <Form.Item
-          label="插件类型"
-          name="plugin_type"
-          rules={[{ message: '请选择插件类型', required: true }]}
+          label="服务版本"
+          name="version"
+          rules={[{ message: '请输入服务版本', required: true }]}
         >
-          <ASelect>
-            {/* <ASelect.Option value="web_page">网页</ASelect.Option> */}
-            {/* <ASelect.Option value="mcp">MCP</ASelect.Option> */}
-            <ASelect.Option value="api">服务接口</ASelect.Option>
-          </ASelect>
+          <AInput placeholder="例如 1.0.0" />
         </Form.Item>
 
-        <Form.Item
-          label={
-            <div className="flex items-center">
-              <span>插件解析配置</span>
-              <APopover
-                trigger="hover"
-                placement="right"
-                content={
-                  <div style={{ maxWidth: 800, maxHeight: '60vh', overflow: 'auto' }}>
-                    <div className="mb-2">
-                      <ASpace>
-                        <AButton
-                          size="small"
-                          onClick={() => {
-                            copy(JSON.stringify(PARSE_MODE_CONFIG_EXAMPLE, null, 2));
-                            message.success('已复制示例');
-                          }}
-                        >
-                          复制示例
-                        </AButton>
-                      </ASpace>
-                    </div>
-                    <pre style={{ margin: 0 }}>{JSON.stringify(PARSE_MODE_CONFIG_EXAMPLE, null, 2)}</pre>
-                  </div>
-                }
-              >
-                <QuestionCircleOutlined style={{ marginLeft: 8, color: '#999', cursor: 'pointer' }} />
-              </APopover>
-            </div>
-          }
-          name="parse_mode_config"
-          required
-          rules={[{ message: '请配置插件解析配置', required: true }]}
-        >
-         <div className="json-editor-fix-container">
-          <JsonEditor
-            data={parseModeConfig}
-            enableClipboard={({success})=>{
-              if(success)message.success('复制成功')
-            }}
-            minWidth={700}
-            restrictAdd={true}
-            restrictDelete={true}
-            rootName=""
-            onUpdate={data => {
-              setParseModeConfig(data.newData);
-              form.setFieldsValue({ parse_mode_config: data.newData });
-            }}
+        <Form.Item label="描述" name="description">
+          <AInput.TextArea placeholder="请输入描述" rows={3} />
+        </Form.Item>
+
+        {/* 高级配置：安全认证方案（非必填） */}
+        <Form.Item label="高级配置">
+          <ACollapse
+            ghost
+            items={[
+              {
+                key: 'security',
+                label: '安全认证方案',
+                children: (
+                  <SecuritySchemeSection
+                    schemes={securitySchemes}
+                    extensions={securityExtensions}
+                    onSchemesChange={setSecuritySchemes}
+                    onExtensionsChange={setSecurityExtensions}
+                  />
+                )
+              }
+            ]}
           />
-         </div>
         </Form.Item>
 
-        <Form.Item
-          label={
-            <div className="flex items-center">
-              <span>服务参数配置</span>
-              <APopover
-                trigger="hover"
-                placement="rightTop"
-                content={
-                  <div style={{ maxWidth: 800, maxHeight: '60vh', overflow: 'auto' }}>
-                    <div className="mb-2">
-                      <ASpace>
-                        <AButton
-                          size="small"
-                          onClick={() => {
-                            copy(JSON.stringify(SERVICE_CONFIG_EXAMPLE, null, 2));
-                            message.success('已复制示例');
-                          }}
-                        >
-                          复制示例
-                        </AButton>
-                      </ASpace>
-                    </div>
-                    <pre style={{ margin: 0 }}>{JSON.stringify(SERVICE_CONFIG_EXAMPLE, null, 2)}</pre>
+        {/* Tools （非必填） */}
+        <Form.Item label="Tools">
+          {tools.length === 0 ? (
+            <AFlex
+              vertical
+              align="center"
+              justify="center"
+              gap={12}
+              style={{
+                padding: '32px 16px',
+                background: '#fafafa',
+                border: '1px dashed #d9d9d9',
+                borderRadius: 4
+              }}
+            >
+              <ToolOutlined style={{ fontSize: 32, color: '#bfbfbf' }} />
+              <span style={{ color: '#999', fontSize: 12 }}>暂无可用的 Tools</span>
+              <ASpace>
+                <AButton type="primary" onClick={openCreateTool}>
+                  添加
+                </AButton>
+                <AButton disabled>从 OpenAPI 文件导入工具</AButton>
+              </ASpace>
+            </AFlex>
+          ) : (
+            <AFlex vertical gap={8}>
+              {tools.map((tool, idx) => (
+                <AFlex
+                  key={idx}
+                  gap={8}
+                  align="center"
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #eef0f4',
+                    borderRadius: 6,
+                    background: '#fff'
+                  }}
+                >
+                  <ToolOutlined style={{ color: '#1677ff' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 500 }}>{tool.name || '(未命名)'}</div>
+                    {tool.description && (
+                      <div style={{ color: '#888', fontSize: 12 }}>{tool.description}</div>
+                    )}
                   </div>
-                }
-              >
-                <QuestionCircleOutlined style={{ marginLeft: 8, color: '#999', cursor: 'pointer' }} />
-              </APopover>
-            </div>
-          }
-          name="service_config"
-          required
-          rules={[{ message: '请配置服务参数配置', required: true }]}
-        >
-         <div className="json-editor-fix-container">
-          <JsonEditor
-            data={serviceConfig}
-            enableClipboard={true}
-            minWidth={700}
-            restrictAdd={true}
-            restrictDelete={true}
-            rootName=""
-            onUpdate={data => {
-              setServiceConfig(data.newData);
-              form.setFieldsValue({ service_config: data.newData });
-            }}
-          />
-         </div>
+                  <AButton
+                    type="text"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => openEditTool(idx)}
+                  />
+                  <AButton
+                    danger
+                    type="text"
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={() => removeTool(idx)}
+                  />
+                </AFlex>
+              ))}
+              <ASpace>
+                <AButton type="primary" onClick={openCreateTool}>
+                  添加
+                </AButton>
+                <AButton disabled>从 OpenAPI 文件导入工具</AButton>
+              </ASpace>
+            </AFlex>
+          )}
         </Form.Item>
       </AForm>
+
+      <CreateToolModal
+        open={toolModalOpen}
+        initial={editingToolIdx !== null ? tools[editingToolIdx] : null}
+        onClose={() => setToolModalOpen(false)}
+        onOk={handleToolModalOk}
+      />
     </ADrawer>
   );
 };
@@ -309,10 +275,7 @@ function DrawerFooter({ onClose, onSubmit }: DrawerFooterProps) {
     <AFlex justify="end">
       <ASpace>
         <AButton onClick={onClose}>取消</AButton>
-        <AButton
-          type="primary"
-          onClick={onSubmit}
-        >
+        <AButton type="primary" onClick={onSubmit}>
           确认
         </AButton>
       </ASpace>

@@ -1,6 +1,7 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
 // import { JsonEditor } from 'json-edit-react';
 import { Pagination } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
@@ -18,6 +19,7 @@ interface PluginTableProps {
   readonly setcurrent: (current: number) => void;
   readonly updateCurrentEdit: (currentEdit: PluginItem) => void;
   readonly updateStatus: (record: PluginItem) => void;
+  readonly onDetail?: (record: PluginItem) => void;
 }
 
 export const PluginTable: React.FC<PluginTableProps> = ({
@@ -26,27 +28,61 @@ export const PluginTable: React.FC<PluginTableProps> = ({
   deletePlugin,
   setcurrent,
   updateCurrentEdit,
-  updateStatus
+  updateStatus,
+  onDetail
 }: PluginTableProps) => {
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
-  const columns = [
+  const columns: ColumnsType<PluginItem> = [
     {
       align: 'left',
       dataIndex: 'pluginName',
       key: 'pluginName',
-      title: '插件名称'
+      title: 'MCP服务名称'
     },
     {
       align: 'left',
       dataIndex: 'remark',
       key: 'remark',
-      title: '插件描述'
+      title: '描述'
+    },
+    {
+      align: 'left',
+      dataIndex: 'capabilities',
+      key: 'capabilities',
+      title: '支持能力',
+      render: (_: unknown, record: PluginItem) => {
+        const caps = record.capabilities ?? [];
+        if (!caps.length) return '--';
+        return (
+          <ASpace size={4} wrap>
+            {caps.map(item => (
+              <ATag color="blue" key={item}>{item}</ATag>
+            ))}
+          </ASpace>
+        );
+      }
     },
     {
     align: 'left',
       dataIndex: 'pluginType',
       key: 'pluginType',
-      title: '插件类型'
+      title: '类型',
+      render: (_: unknown, record: PluginItem) => {
+        const isHttp = record.protocol === 'http' || record.protocol === 'https';
+        return (
+          <ASpace size={6}>
+            <span>{record.pluginType || '--'}</span>
+            {isHttp && <ATag color="green">转换服务</ATag>}
+          </ASpace>
+        );
+      }
+    },
+    {
+      align: 'left',
+      dataIndex: 'version',
+      key: 'version',
+      title: '版本',
+      render: (_: unknown, record: PluginItem) => record?.versionDetail?.version || '--'
     },
     {
       align: 'center',
@@ -60,7 +96,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
           />
         );
       },
-      title: '插件状态'
+      title: '状态'
     },
     {
       align: 'center',
@@ -70,6 +106,15 @@ export const PluginTable: React.FC<PluginTableProps> = ({
       render: (_: any, record: any) => {
         return (
           <ASpace>
+            <ATooltip title="详情">
+              <AButton
+                color="primary"
+                icon={<EyeOutlined />}
+                size="small"
+                variant="link"
+                onClick={() => onDetail?.(record)}
+              />
+            </ATooltip>
             <ATooltip title="编辑">
               <AButton
                 color="primary"
@@ -98,7 +143,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
 
             <APopconfirm
               title="提示"
-              description="确定删除该插件吗？"
+              description="确定删除该MCP服务吗？"
               onConfirm={() => deletePlugin(record)}
             >
             <ATooltip title="删除">
