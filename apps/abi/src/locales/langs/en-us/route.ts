@@ -5,6 +5,8 @@ const route: App.I18n.Schema['translation']['route'] = {
   // about: 'About',
   'ai-assistant': 'AI Assistant',
   'ai-assistant_conversational-analysis': 'Conversational Analysis',
+  'app-workshop': 'App Workshop',
+  'app-workshop_my-screen': 'My Screen',
   'assistant-manage': 'Assistant Manage',
   'assistant-manage_assistant-config': 'Assistant Config',
   'assistant-manage_knowledge-extraction': 'Knowledge Extraction',
@@ -12,8 +14,6 @@ const route: App.I18n.Schema['translation']['route'] = {
   'assistant-manage_memory-manage': 'Memory Manage',
   'assistant-manage_recommended-inquiries': 'Recommended Inquiries',
   'assistant-manage_technical-jargon': 'Technical Jargon',
-  'app-workshop': 'App Workshop',
-  'app-workshop_my-screen': 'My Screen',
   'data-preparation': 'Data Preparation',
   'data-preparation_data-collection': 'Data Collection',
   'data-preparation_data-collection-operate': 'Data Collection Operate',
@@ -82,9 +82,10 @@ const route: App.I18n.Schema['translation']['route'] = {
   // 'multi-menu_second_child': 'Menu Two Child',
   // 'multi-menu_second_child_home': 'Menu Two Child Home',
   'space-list': 'Space List',
-  'workbench_ontology-kg_knowledge-extraction': 'Knowledge Extraction',
-  'system_space-user': 'Space User'
+  'system_space-user': 'Space User',
+  'workbench_ontology-kg_dimension-modeling': 'Dimension Modeling',
+  'workbench_ontology-kg_knowledge-extraction': 'Knowledge Extraction'
   // 'user-center': 'User Center'
-};
+}
 
-export default route;
+export default route

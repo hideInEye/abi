@@ -52,12 +52,12 @@ export const Component: React.FC = () => {
                 rule: [[{ message: '请输入分组名称', required: true }]],
                 type: KNOWLEDGE_GROUP_TYPE
               }}
-              onGroupId={groupId => {
+              onGroupId={(groupId, groupName) => {
                 setSelectedGroup(prev => {
-                  if (prev?.groupId === groupId) {
+                  if (prev?.groupId === groupId && prev?.groupName === (groupName || '')) {
                     return prev
                   }
-                  return { groupId, groupName: prev?.groupName || '' }
+                  return { groupId, groupName: groupName || '' }
                 })
               }}
             />

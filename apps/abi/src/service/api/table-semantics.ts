@@ -1,6 +1,14 @@
 import { apiRequest } from '../request'
 /** shema:表语义，term：专业术语，tag：标签，question：推荐问题，agent:智能助手，dictionary:字典类型 */
-export type TableSemanticsGroupType = 'agent' | 'dictionary' | 'ontology' | 'question' | 'shema' | 'tag' | 'term'
+export type TableSemanticsGroupType =
+  | 'agent'
+  | 'dictionary'
+  | 'ontology'
+  | 'ontology-dimension'
+  | 'question'
+  | 'shema'
+  | 'tag'
+  | 'term'
 
 interface GrouplistParams {
   groupName?: string

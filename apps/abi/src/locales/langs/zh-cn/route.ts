@@ -5,6 +5,8 @@ const route: App.I18n.Schema['translation']['route'] = {
   // about: '关于',
   'ai-assistant': '智能对话',
   'ai-assistant_conversational-analysis': '对话分析',
+  'app-workshop': '应用工坊',
+  'app-workshop_my-screen': '我的大屏',
   'assistant-manage': '助手管理',
   'assistant-manage_assistant-config': '助手配置',
   'assistant-manage_knowledge-extraction': '知识提取',
@@ -12,8 +14,6 @@ const route: App.I18n.Schema['translation']['route'] = {
   'assistant-manage_memory-manage': '记忆管理',
   'assistant-manage_recommended-inquiries': '推荐问题',
   'assistant-manage_technical-jargon': '行业术语',
-  'app-workshop': '应用工坊',
-  'app-workshop_my-screen': '我的大屏',
   'data-preparation': '数据准备',
   'data-preparation_data-collection': '数据集',
   'data-preparation_data-collection-operate': '数据集配置',
@@ -34,6 +34,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   exception_403: '403',
   exception_404: '404',
   exception_500: '500',
+  guide: '快速创建',
   // function: '系统功能',
   // 'function_hide-child': '隐藏子菜单',
   // 'function_hide-child_one': '隐藏子菜单',
@@ -47,12 +48,12 @@ const route: App.I18n.Schema['translation']['route'] = {
   home: '首页',
   'iframe-page': '外链页面',
   job: '调度任务',
+  job_email: '邮件发送记录',
   job_log: '调度日志',
   job_time: '定时任务',
-  job_email: '邮件发送记录',
   lineage: '血缘管理',
-  lineage_query: '查询中心',
 
+  lineage_query: '查询中心',
   login: '登录',
   'login_code-login': '验证码登录',
   'login_pwd-login': '密码登录',
@@ -90,16 +91,16 @@ const route: App.I18n.Schema['translation']['route'] = {
   // 'multi-menu_second_child': '菜单二子菜单',
   // 'multi-menu_second_child_home': '菜单二子菜单首页',
   'space-list': '空间列表',
-  'workbench_ontology-kg_knowledge-extraction': '知识提取',
+  'space-user': '空间用户管理',
   system: '系统管理',
   'system_data-dictionary': '字典管理',
   system_model: '大模型管理',
   system_plugin: '插件管理',
   system_user: '用户管理',
-  'space-user':'空间用户管理',
-  'guide':'快速创建'
+  'workbench_ontology-kg_dimension-modeling': '维度建模',
+  'workbench_ontology-kg_knowledge-extraction': '知识提取'
 
   // 'user-center': '个人中心'
-};
+}
 
-export default route;
+export default route

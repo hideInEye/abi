@@ -17,18 +17,28 @@ interface IProps {
   readonly getSchemaId: ({
     semanticGroupId,
     semanticSchemaId,
+    semanticsGroupId,
     viewId
   }: {
     semanticGroupId: number | null;
     semanticSchemaId: number;
+    semanticsGroupId: number | null;
     viewId: number;
   }) => void;
   readonly getSchemaOptions?: (schemaOptions: TableSemanticParams[]) => void;
+  readonly groupFieldName?: 'semanticGroupId' | 'semanticsGroupId';
   readonly isEdit?: boolean;
   readonly type: TableSemanticsGroupType;
 }
 
-export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = false, type }: IProps) => {
+export const TableSemantics = ({
+  form,
+  getSchemaId,
+  getSchemaOptions,
+  groupFieldName = 'semanticGroupId',
+  isEdit = false,
+  type
+}: IProps) => {
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: number }[]>([]);
   const [groupId, setGroupId] = useState<number | null>(null);
   const [schemaOptions, setSchemaOptions] = useState<{ label: string; value: number }[]>([]);
@@ -70,8 +80,8 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
     fetchGroupOptions();
 
     if (form) {
-      const { semanticGroupId } = form.getFieldsValue();
-      setGroupId(semanticGroupId);
+      const formValues = form.getFieldsValue();
+      setGroupId(formValues[groupFieldName]);
     }
   }, []);
 
@@ -84,6 +94,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
     return getSchemaId({
       semanticGroupId: groupId,
       semanticSchemaId: v,
+      semanticsGroupId: groupId,
       viewId: findViewId(v)
     });
   }
@@ -92,7 +103,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
     <div className="grid grid-cols-2 gap-2">
       <AForm.Item
         label="表语义组"
-        name="semanticGroupId"
+        name={groupFieldName}
         rules={[{ message: '请选择表语义组', required: true }]}
       >
         <ASelect
