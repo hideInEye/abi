@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { McpForm, McpSecurityScheme, McpSecurityExtensions, McpToolItem, PluginItem } from '@/types/plug';
 
 import { CreateToolModal } from './CreateToolModal';
+import { ImportOpenApiModal } from './ImportOpenApiModal';
 import { SecuritySchemeSection } from './SecuritySchemeSection';
 
 interface PlugUpdateProps {
@@ -22,6 +23,21 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
   const [tools, setTools] = useState<McpToolItem[]>([]);
   const [toolModalOpen, setToolModalOpen] = useState(false);
   const [editingToolIdx, setEditingToolIdx] = useState<number | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+
+  const openImportOpenApi = () => setImportModalOpen(true);
+  const handleImportOpenApi = (data: { tools: McpToolItem[]; schemes: McpSecurityScheme[] }) => {
+    setTools(prev => [...prev, ...data.tools]);
+    // 合并认证方案（按 id 去重）
+    setSecuritySchemes(prev => {
+      const map = new Map(prev.map(s => [s.id, s] as const));
+      data.schemes.forEach(s => {
+        if (s.id && !map.has(s.id)) map.set(s.id, s);
+      });
+      return Array.from(map.values());
+    });
+    setImportModalOpen(false);
+  };
 
   const removeTool = (idx: number) => setTools(prev => prev.filter((_, i) => i !== idx));
   const openCreateTool = () => {
@@ -50,15 +66,37 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
     }
 
     if (currentEdit) {
-      // 编辑回显：address/port 列表接口暂未返回，留空由用户重新填写
+      // 编辑回显：详情接口返回的 backendEndpoints/remoteServerConfig/toolSpec
+      const endpoint = currentEdit.backendEndpoints?.[0];
+      const rawAddress = endpoint?.address || '';
+      const rawPort = endpoint?.port != null ? String(endpoint.port) : '';
+      // address 可能为 "localhost:8080"，需要剥离端口
+      let address = rawAddress;
+      let port = rawPort;
+      if (rawAddress.includes(':')) {
+        const [host, portPart] = rawAddress.split(':');
+        address = host;
+        if (!port && portPart && /^\d+$/.test(portPart)) {
+          port = portPart;
+        }
+      }
+      // 从 remoteServerConfig.url 推导 HTTP/HTTPS
+      const url = currentEdit.remoteServerConfig?.url || '';
+      const transport: 'HTTP' | 'HTTPS' = /^https:/i.test(url) ? 'HTTPS' : 'HTTP';
+
       form.setFieldsValue({
-        mcp_name: currentEdit.pluginName,
+        mcp_name: currentEdit.name || currentEdit.pluginName,
         version: currentEdit.versionDetail?.version ?? '1.0.0',
-        description: currentEdit.remark ?? '',
-        address: '',
-        port: '',
-        transport: 'HTTP'
+        description: currentEdit.description ?? currentEdit.remark ?? '',
+        address,
+        port,
+        transport
       });
+
+      // 高级配置 + Tools 回显
+      setSecuritySchemes(currentEdit.toolSpec?.securitySchemes || []);
+      setSecurityExtensions((currentEdit.toolSpec?.extensions as any) || {});
+      setTools(currentEdit.toolSpec?.tools || []);
     } else {
       form.setFieldsValue({
         mcp_name: '',
@@ -205,7 +243,7 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
                 <AButton type="primary" onClick={openCreateTool}>
                   添加
                 </AButton>
-                <AButton disabled>从 OpenAPI 文件导入工具</AButton>
+                <AButton onClick={openImportOpenApi}>从 OpenAPI 文件导入工具</AButton>
               </ASpace>
             </AFlex>
           ) : (
@@ -248,7 +286,7 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
                 <AButton type="primary" onClick={openCreateTool}>
                   添加
                 </AButton>
-                <AButton disabled>从 OpenAPI 文件导入工具</AButton>
+                <AButton onClick={openImportOpenApi}>从 OpenAPI 文件导入工具</AButton>
               </ASpace>
             </AFlex>
           )}
@@ -258,8 +296,15 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
       <CreateToolModal
         open={toolModalOpen}
         initial={editingToolIdx !== null ? tools[editingToolIdx] : null}
+        schemes={securitySchemes}
         onClose={() => setToolModalOpen(false)}
         onOk={handleToolModalOk}
+      />
+
+      <ImportOpenApiModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onOk={handleImportOpenApi}
       />
     </ADrawer>
   );

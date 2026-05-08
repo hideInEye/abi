@@ -31,8 +31,8 @@ export const Component: React.FC = () => {
       pageSize,
       mcpName: mcpName || undefined,
       search: 'blur',
-      namespaceId: 'public',
-      // namespaceId: 's_27'
+      // namespaceId: 'public',
+      namespaceId: 's_27'
     });
 
     // 新接口字段适配：pageItems → rows
@@ -59,8 +59,8 @@ export const Component: React.FC = () => {
     await deleteMcp({
       mcpId: data.pluginId.toString(),
       mcpName: data.pluginName,
-      namespaceId: 'public',
-      // namespaceId: 's_27'
+      // namespaceId: 'public',
+      namespaceId: 's_27'
     });
     getPluginList();
   };
@@ -68,8 +68,8 @@ export const Component: React.FC = () => {
   const updateStatus = async (record: PluginItem) => {
     // 启停切换走更新接口 (PUT)
     await updateMcp({
-      namespaceId: 'public',
-      // namespaceId: 's_27',
+      // namespaceId: 'public',
+      namespaceId: 's_27',
       serverSpecification: {
         id: String(record.pluginId),
         name: record.pluginName,
@@ -136,8 +136,8 @@ export const Component: React.FC = () => {
     try {
       const fn = currentEdit ? updateMcp : registerMcp;
       await fn({
-        namespaceId: 'public',
-        // namespaceId: 's_27',
+        // namespaceId: 'public',
+        namespaceId: 's_27',
         serverSpecification: serverSpec,
         endpointSpecification: endpointSpec,
         ...(Object.keys(toolSpec).length > 0 ? { toolSpecification: toolSpec } : {})
@@ -207,8 +207,8 @@ export const Component: React.FC = () => {
                   const res: any = await getMcpDetail({
                     mcpId: String(record.pluginId),
                     mcpName: record.pluginName,
-                    namespaceId: 'public',
-                    // namespaceId: 's_27'
+                    // namespaceId: 'public',
+                    namespaceId: 's_27'
                   });
                   const remote = res?.response?.data?.data ?? res?.response?.data;
                   // 后端返回成功则以详情接口数据为准，否则降级使用行数据
@@ -217,8 +217,19 @@ export const Component: React.FC = () => {
                   setDetailRecord(record);
                 }
               }}
-              updateCurrentEdit={record => {
-                setCurrentEdit(record);
+              updateCurrentEdit={async record => {
+                // 编辑前先拉详情，补充 backendEndpoints/toolSpec/remoteServerConfig 等字段用于回显
+                try {
+                  const res: any = await getMcpDetail({
+                    mcpId: String(record.pluginId),
+                    mcpName: record.pluginName,
+                    namespaceId: 's_27'
+                  });
+                  const remote = res?.response?.data?.data ?? res?.response?.data;
+                  setCurrentEdit({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
+                } catch {
+                  setCurrentEdit(record);
+                }
                 setOpen(true);
               }}
             />
