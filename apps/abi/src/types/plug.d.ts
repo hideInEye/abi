@@ -45,6 +45,34 @@ export interface PluginItem extends PluginAddParams {
 
   updateBy: string;
   updateTime: string;
+
+  capabilities?: string[];
+  protocol?: string;
+  frontProtocol?: string;
+  description?: string;
+  enabled?: boolean;
+  versionDetail?: {
+    version?: string;
+    release_date?: string;
+    is_latest?: boolean;
+  };
+  allVersions?: Array<{ version: string; release_date?: string; is_latest?: boolean }>;
+  remoteServerConfig?: {
+    url?: string;
+    exportPath?: string;
+    serviceRef?: {
+      namespaceId?: string;
+      groupName?: string;
+      serviceName?: string;
+    };
+  };
+  backendEndpoints?: Array<{ address?: string; port?: number }>;
+  toolSpec?: {
+    tools?: McpToolItem[];
+    securitySchemes?: McpSecurityScheme[];
+    extensions?: McpSecurityExtensions;
+  } | null;
+  name?: string;
 }
 
 export interface PlugEdit {
@@ -57,4 +85,39 @@ export interface PlugEdit {
   space_id: number;
   status: 0 | 1;
   group_id: number;
+}
+
+export interface McpSecurityScheme {
+  id: string;
+  type: 'http' | 'apiKey';
+  scheme?: string;
+  defaultCredential?: string;
+}
+
+export interface McpSecurityExtensions {
+  'server.defaultDownstreamSecurity'?: { id?: string; passthrough?: boolean };
+  'server.defaultUpstreamSecurity'?: { id?: string; credential?: string };
+}
+
+export interface McpToolItem {
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  inputSchema?: any;
+  protocolTemplate?: string;
+  passthroughAuth?: boolean;
+  backendSecuritySchemeId?: string;
+  clientSecuritySchemeId?: string;
+}
+
+export interface McpForm {
+  mcp_name: string;
+  version: string;
+  description?: string;
+  address: string;
+  port: string;
+  transport: 'HTTP' | 'HTTPS';
+  securitySchemes?: McpSecurityScheme[];
+  securityExtensions?: McpSecurityExtensions;
+  tools?: McpToolItem[];
 }
