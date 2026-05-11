@@ -57,9 +57,9 @@ export abstract class AntdBaseDesignerController<I extends Plot<any> = Plot<Opti
                     if (this.container) this.container.style.height = '100%';
                 }
             }
-            const axisCfg = (t: string) => ({text: t, offset: 0, position: 'center', style: {fill: '#1c1c1c', fontSize: 12}});
-            if (x_name) { const c = axisCfg(x_name); if (this.config!.style!.xAxis) this.config!.style!.xAxis.title = c; this.instance?.update({xAxis: {...(this.config!.style!.xAxis??{}), title: c}} as any); }
-            if (y_name) { const c = axisCfg(y_name); if (this.config!.style!.yAxis) this.config!.style!.yAxis.title = c; this.instance?.update({yAxis: {...(this.config!.style!.yAxis??{}), title: c}} as any); }
+            const axisCfg = (t: string, offset: number) => ({text: t, offset, position: 'center', style: {fill: '#1c1c1c', fontSize: 12}});
+            if (x_name) { const c = axisCfg(x_name, 30); if (this.config!.style!.xAxis) this.config!.style!.xAxis.title = c; this.instance?.update({xAxis: {...(this.config!.style!.xAxis??{}), title: c}} as any); }
+            if (y_name) { const c = axisCfg(y_name, 40); if (this.config!.style!.yAxis) this.config!.style!.yAxis.title = c; this.instance?.update({yAxis: {...(this.config!.style!.yAxis??{}), title: c}} as any); }
         }
     }
 

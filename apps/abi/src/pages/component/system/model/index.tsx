@@ -190,6 +190,7 @@ export function Component() {
           <Suspense>
             <ModelCardList
               models={displayModels}
+              providers={providers}
               searchValue={searchValue}
               searchType={searchType}
               onSearchValueChange={setSearchValue}

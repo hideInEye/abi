@@ -187,7 +187,10 @@ export const PluginDetail: React.FC<PluginDetailProps> = ({ open, record, onClos
             <div style={{ borderTop: `1px solid ${BORDER}` }} />
             <InfoCell
               label="命名空间"
-              value={record.spaceId ? String(record.spaceId) : serviceRef?.namespaceId || '--'}
+              value={
+                serviceRef?.namespaceId
+                || (record.spaceId != null ? `s_${record.spaceId}` : '--')
+              }
             />
             {record.remoteServerConfig?.exportPath && (
               <>

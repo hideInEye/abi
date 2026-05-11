@@ -114,9 +114,14 @@ export interface McpForm {
   mcp_name: string;
   version: string;
   description?: string;
-  address: string;
-  port: string;
-  transport: 'HTTP' | 'HTTPS';
+  /** HTTP 转 MCP 开关：false=MCP 直接接入（默认）；true=HTTP 转 MCP */
+  restToMcpSwitch?: boolean;
+  /** 关闭开关时使用：完整的 MCP 服务端点 URL */
+  mcpEndpointUrl?: string;
+  /** 开启开关时使用：address/port/传输协议 */
+  address?: string;
+  port?: string;
+  transport?: 'HTTP' | 'HTTPS';
   securitySchemes?: McpSecurityScheme[];
   securityExtensions?: McpSecurityExtensions;
   tools?: McpToolItem[];

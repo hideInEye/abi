@@ -31,8 +31,7 @@ export const Component: React.FC = () => {
       pageSize,
       mcpName: mcpName || undefined,
       search: 'blur',
-      // namespaceId: 'public',
-      namespaceId: 's_27'
+      namespaceId: `s_${groupId}`
     });
 
     // 新接口字段适配：pageItems → rows
@@ -59,8 +58,7 @@ export const Component: React.FC = () => {
     await deleteMcp({
       mcpId: data.pluginId.toString(),
       mcpName: data.pluginName,
-      // namespaceId: 'public',
-      namespaceId: 's_27'
+      namespaceId: `s_${groupId}`
     });
     getPluginList();
   };
@@ -68,8 +66,7 @@ export const Component: React.FC = () => {
   const updateStatus = async (record: PluginItem) => {
     // 启停切换走更新接口 (PUT)
     await updateMcp({
-      // namespaceId: 'public',
-      namespaceId: 's_27',
+      namespaceId: `s_${groupId}`,
       serverSpecification: {
         id: String(record.pluginId),
         name: record.pluginName,
@@ -97,17 +94,44 @@ export const Component: React.FC = () => {
   };
 
   const handleSubmit = async (formData: McpForm) => {
-    // 新增 POST registerMcp / 编辑 PUT updateMcp，协议固定 sse + DIRECT 模式
-    const addressWithPort = `${formData.address}:${formData.port}`;
-    const scheme = (formData.transport || 'HTTP').toLowerCase();
+    // 根据 HTTP 转 MCP 开关区分两种模式构造接口参数
+    let addressWithPort: string;
+    let scheme: string;
+    let serverUrl: string;
+    let endpointPort: string | number;
+    let endpointAddress: string;
+
+    if (formData.restToMcpSwitch) {
+      // HTTP 转 MCP：用户填 address + port + 传输协议
+      scheme = (formData.transport || 'HTTP').toLowerCase();
+      endpointAddress = (formData.address || '').trim();
+      endpointPort = (formData.port || '').trim();
+      addressWithPort = `${endpointAddress}:${endpointPort}`;
+      serverUrl = `${scheme}://${addressWithPort}/mcp`;
+    } else {
+      // MCP 直接接入：用户填完整 URL，解析出 address/port
+      try {
+        const u = new URL((formData.mcpEndpointUrl || '').trim());
+        scheme = u.protocol.replace(':', '') || 'http';
+        endpointAddress = u.hostname;
+        endpointPort = u.port || (scheme === 'https' ? '443' : '80');
+        addressWithPort = `${endpointAddress}:${endpointPort}`;
+        serverUrl = formData.mcpEndpointUrl as string;
+      } catch {
+        message.error('MCP Server Endpoint URL 格式不正确');
+        return;
+      }
+    }
+
     const serverSpec: Record<string, any> = {
       name: formData.mcp_name,
-      protocol: 'sse',
+      // HTTP 转 MCP 开启时 protocol 为 http/https；关闭时维持 sse
+      protocol: formData.restToMcpSwitch ? scheme : 'sse',
       frontProtocol: 'sse',
       description: formData.description || '',
       version: formData.version,
       remoteServerConfig: {
-        url: `${scheme}://${addressWithPort}/mcp`,
+        url: serverUrl,
         connectTimeout: 5000,
         readTimeout: 30000
       }
@@ -119,7 +143,7 @@ export const Component: React.FC = () => {
       type: 'DIRECT',
       data: {
         address: addressWithPort,
-        port: formData.port
+        port: endpointPort
       }
     };
     // 高级配置 + Tools → toolSpecification（均为可选）
@@ -136,8 +160,7 @@ export const Component: React.FC = () => {
     try {
       const fn = currentEdit ? updateMcp : registerMcp;
       await fn({
-        // namespaceId: 'public',
-        namespaceId: 's_27',
+        namespaceId: `s_${groupId}`,
         serverSpecification: serverSpec,
         endpointSpecification: endpointSpec,
         ...(Object.keys(toolSpec).length > 0 ? { toolSpecification: toolSpec } : {})
@@ -207,8 +230,7 @@ export const Component: React.FC = () => {
                   const res: any = await getMcpDetail({
                     mcpId: String(record.pluginId),
                     mcpName: record.pluginName,
-                    // namespaceId: 'public',
-                    namespaceId: 's_27'
+                    namespaceId: `s_${groupId}`
                   });
                   const remote = res?.response?.data?.data ?? res?.response?.data;
                   // 后端返回成功则以详情接口数据为准，否则降级使用行数据
@@ -223,7 +245,7 @@ export const Component: React.FC = () => {
                   const res: any = await getMcpDetail({
                     mcpId: String(record.pluginId),
                     mcpName: record.pluginName,
-                    namespaceId: 's_27'
+                    namespaceId: `s_${groupId}`
                   });
                   const remote = res?.response?.data?.data ?? res?.response?.data;
                   setCurrentEdit({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
@@ -238,6 +260,7 @@ export const Component: React.FC = () => {
 
         <PlugUpdate
           currentEdit={currentEdit}
+          namespaceId={`s_${groupId}`}
           open={open}
           onClose={() => setOpen(false)}
           onSubmit={handleSubmit}

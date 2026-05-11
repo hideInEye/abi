@@ -68,7 +68,7 @@ export const AxisConfig = (props: AxisConfigProps) => {
                 enableRef.current = !!data;
                 break;
             case 'titleSwitch':
-                if (data) onChange({title: {text: '标题', offset: 0, style: {fill: '#1c1c1c', fontSize: 12}}});
+                if (data) onChange({title: {text: '标题', offset: title === 'Y轴' ? 40 : 30, position: 'center', style: {fill: '#1c1c1c', fontSize: 12}}});
                 else onChange({title: null});
                 break;
             case 'lineSwitch':

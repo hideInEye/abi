@@ -18,8 +18,17 @@ interface ModelItem {
   [key: string]: any
 }
 
+interface ProviderItem {
+  providerId: number
+  providerName: string
+  providerKey: string
+  providerType: string
+  iconUrl?: string
+}
+
 interface Props {
   models: ModelItem[]
+  providers?: ProviderItem[]
   searchValue: string
   searchType: 'modelName' | 'baseModel'
   onSearchValueChange: (val: string) => void
@@ -41,6 +50,7 @@ const modelTypeTagColorMap: Record<string, import('antd/es/tag').TagProps['color
 
 const ModelCardList: FC<Props> = ({
   models,
+  providers = [],
   searchValue,
   searchType,
   onSearchValueChange,
@@ -65,7 +75,7 @@ const ModelCardList: FC<Props> = ({
     const text = searchValue.toLowerCase()
     return models.filter(m => {
       if (searchType === 'modelName') return m.modelName?.toLowerCase().includes(text)
-      if (searchType === 'baseModel') return m.modelName?.toLowerCase().includes(text)
+      if (searchType === 'baseModel') return m.modelKey?.toLowerCase().includes(text)
       return false
     })
   }, [models, searchValue, searchType])
@@ -110,10 +120,10 @@ const ModelCardList: FC<Props> = ({
             <div className="model-card-grid">
               {filteredModels.map(item => {
                 const modelTypeLabel = MODAL_TYPE_OPTIONS.find(o => o.value === item.modelType)?.label || item.modelType
-                // 供应商图标：用 providerName 匹配静态图标
-                const providerOption = PROVIDER_OPTIONS.find(o => o.label === item.providerName || o.value === item.providerName)
-                const providerIcon = (providerOption as any)?.icon || ''
-                const providerLabel = item.providerName || ''
+                // 供应商图标：通过 providerId 在 providers 中匹配
+                const provider = providers.find(p => p.providerId === item.providerId)
+                const providerIcon = provider?.iconUrl || ''
+                const providerLabel = provider?.providerName || ''
                 // 模型来源标签：'1'=公有, '2'=本地
                 const modelSourceLabel = item.modelSource === '2' ? '本地' : '公有'
                 const tagColor = modelTypeTagColorMap[item.modelType] || 'default'
@@ -206,7 +216,7 @@ const ModelCardList: FC<Props> = ({
                       </div>
                     )}
 
-                    {/* 操作菜单（hover 显示） */}
+                    {/* 操作菜单（默认一直显示） */}
                     <div
                       className="model-card-more"
                       style={{
@@ -214,8 +224,7 @@ const ModelCardList: FC<Props> = ({
                         bottom: 8,
                         right: 8,
                         zIndex: 10,
-                        opacity: 0,
-                        transition: 'opacity 0.2s',
+                        opacity: 1,
                       }}
                     >
                       <Dropdown
@@ -303,9 +312,9 @@ const ModelCardList: FC<Props> = ({
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }}
-                          title={item.modelName}
+                          title={item.modelKey || '-'}
                         >
-                          {item.modelName}
+                          {item.modelKey || '-'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

@@ -91,11 +91,12 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
   const handleTest = async () => {
     try {
       setTestLoading(true);
-      const values = await form.validateFields(['providerId', 'modelKey', 'apiKey']);
+      const values = await form.validateFields(['providerId', 'modelKey', 'apiKey', 'apiBase']);
       const params = {
         providerId: String(values.providerId),
         modelKey: values.modelKey || '',
         apiKey: operateType === 'edit' ? unmaskIfUnchanged(values.apiKey, originalApiKeyRef.current) : (values.apiKey || ''),
+        apiBase: (values.apiBase || '').trim().replace(/`/g, ''),
       };
       const res: any = await fetchTestModel(params);
       if (!res.error && res?.response?.data?.code === 200) {
@@ -103,7 +104,7 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
         setSubmitDisabled(false);
       } else {
         message.error(res?.response?.data?.msg || res?.response?.data?.err_msg || '测试连接失败');
-      }
+      } 
     } catch (error: any) {
       const errMsg = error?.response?.data?.msg || error?.response?.data?.err_msg || error?.message || '测试连接失败';
       message.error(errMsg);
