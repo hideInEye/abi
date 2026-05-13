@@ -37,6 +37,7 @@ declare module "@elegant-router/types" {
     "component_system": "system";
     "component_system_model": "model";
     "component_system_plugin": "plugin";
+    "component_system_skills": "skills";
     "dashboard-share-page": "/dashboard-share-page";
     "designer": "/designer";
     "guide": "/guide";
@@ -56,6 +57,7 @@ declare module "@elegant-router/types" {
     "manage_post": "post";
     "manage_role": "role";
     "manage_role-auth": "role-auth/:id";
+    "manage_skill": "skill";
     "manage_space-menu": "space-menu";
     "manage_space-role": "space-role";
     "manage_user": "user";
@@ -177,6 +179,7 @@ declare module "@elegant-router/types" {
     | "component_data_data-dictionary"
     | "component_system_model"
     | "component_system_plugin"
+    | "component_system_skills"
     | "dashboard-share-page"
     | "designer"
     | "guide"
@@ -193,6 +196,7 @@ declare module "@elegant-router/types" {
     | "manage_post"
     | "manage_role-auth"
     | "manage_role"
+    | "manage_skill"
     | "manage_space-menu"
     | "manage_space-role"
     | "manage_user-role"

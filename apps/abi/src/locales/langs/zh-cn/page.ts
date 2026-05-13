@@ -449,6 +449,52 @@ const page: App.I18n.Schema['translation']['page'] = {
         请求懒加载的文件 - 解析 - 请求懒加载的文件 - 挂载之后去发出网络请求 - 然后渲染页面 - 渲染完成
         还要自己加loading效果`,
       explain: '这个页面仅仅是为了展示 react-router-dom 的 loader 的强大能力，数据是随机的对不上很正常'
+    },
+    skill: {
+      title: '技能管理',
+      subtitle: '管理你发布到空间的技能包，点击卡片查看详情或发布新版本。',
+      publish: '发布技能',
+      empty: '暂无技能，点击右上角发布你的第一个技能包',
+      view: '查看',
+      downloads: '下载量',
+      detailComingSoon: '详情页即将上线',
+      deleteConfirmTitle: '确认删除该技能？',
+      deleteConfirmContent: '删除后将无法恢复，技能「{{name}}」的所有版本都会被移除。',
+      filter: {
+        all: '全部',
+        published: '已发布',
+        hidden: '已隐藏'
+      },
+      status: {
+        published: '已发布',
+        hidden: '已隐藏',
+        archived: '已归档',
+        review: '审核中',
+        rejected: '已驳回',
+        scanning: '扫描中'
+      },
+      publishPage: {
+        back: '返回技能列表',
+        heroTitle: '发布新技能',
+        heroDesc: '选择归属空间，上传技能 ZIP 包，一键发布到 SkillHub。',
+        namespace: '归属空间',
+        namespacePh: '请选择空间',
+        namespaceRequired: '请选择要发布到的空间',
+        version: '版本号',
+        versionPh: '例如：1.0.0（可选，留空则由后端自动分配）',
+        changelog: '版本说明',
+        changelogPh: '简要描述本次变更内容（可选）',
+        skillPackage: '技能包（ZIP）',
+        dropOrClick: '点击或拖拽 ZIP 包到此处上传',
+        zipHint: '仅支持 .zip 格式，文件最大 100MB',
+        clickToReplace: '点击重新选择',
+        onlyZip: '只支持 ZIP 格式的技能包',
+        tooLarge: '文件大小超过 100MB，请压缩后重试',
+        fileRequired: '请先选择要上传的技能包',
+        submit: '发布',
+        success: '发布成功',
+        failed: '发布失败，请稍后重试'
+      }
     }
   },
   mySpace: {
