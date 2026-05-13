@@ -4,6 +4,3 @@
   gap: 16px;
 }
 
-.model-card-item:hover .model-card-more {
-  opacity: 1 !important;
-}

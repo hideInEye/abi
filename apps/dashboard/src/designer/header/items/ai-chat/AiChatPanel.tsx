@@ -423,7 +423,8 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
   const handleClearHistory = async () => {
     stopGenerating();
     if (convUidRef.current) {
-      await baseApi.clearChatConv(convUidRef.current).catch(() => {});
+      const currentChartId = eventOperateStore.targetIds[0] ?? '';
+      await baseApi.clearChatConv(convUidRef.current, currentChartId, 'chat_with_dashboard').catch(() => {});
     }
     setAllMessages([]);
     convUidRef.current = '';

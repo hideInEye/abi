@@ -9,13 +9,16 @@ import { SecuritySchemeSection } from './SecuritySchemeSection';
 
 interface PlugUpdateProps {
   readonly currentEdit: PluginItem | null;
+  readonly namespaceId: string;
   readonly onClose: () => void;
   readonly onSubmit: (formData: McpForm) => void;
   readonly open: boolean;
 }
 
-export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateProps) => {
+export const PlugUpdate = ({ currentEdit, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
   const [form] = Form.useForm<McpForm>();
+  // HTTP 转 MCP 开关：默认关闭（即 MCP 直接接入模式）
+  const [restToMcpSwitch, setRestToMcpSwitch] = useState(false);
   // 高级配置：安全认证方案列表 + 默认上/下行认证 extensions
   const [securitySchemes, setSecuritySchemes] = useState<McpSecurityScheme[]>([]);
   const [securityExtensions, setSecurityExtensions] = useState<McpSecurityExtensions>({});
@@ -59,6 +62,7 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
   useEffect(() => {
     if (!open) {
       form.resetFields();
+      setRestToMcpSwitch(false);
       setSecuritySchemes([]);
       setSecurityExtensions({});
       setTools([]);
@@ -83,14 +87,22 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
       // 从 remoteServerConfig.url 推导 HTTP/HTTPS
       const url = currentEdit.remoteServerConfig?.url || '';
       const transport: 'HTTP' | 'HTTPS' = /^https:/i.test(url) ? 'HTTPS' : 'HTTP';
+      // 判断是否为 HTTP 转 MCP：后端返回的 protocol 为 http/https 即为开启状态
+      const proto = (currentEdit.protocol || '').toLowerCase();
+      const isRestToMcp = proto === 'http' || proto === 'https';
+      setRestToMcpSwitch(isRestToMcp);
 
       form.setFieldsValue({
         mcp_name: currentEdit.name || currentEdit.pluginName,
         version: currentEdit.versionDetail?.version ?? '1.0.0',
         description: currentEdit.description ?? currentEdit.remark ?? '',
+        restToMcpSwitch: isRestToMcp,
+        // HTTP 转 MCP 模式回显三段式
         address,
         port,
-        transport
+        transport,
+        // MCP 直接接入模式回显完整 URL（优先用 remoteServerConfig.url，降级用 endpoint 拼接）
+        mcpEndpointUrl: url || (address && port ? `${transport.toLowerCase()}://${address}:${port}` : '')
       });
 
       // 高级配置 + Tools 回显
@@ -98,10 +110,13 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
       setSecurityExtensions((currentEdit.toolSpec?.extensions as any) || {});
       setTools(currentEdit.toolSpec?.tools || []);
     } else {
+      setRestToMcpSwitch(false);
       form.setFieldsValue({
         mcp_name: '',
         version: '1.0.0',
         description: '',
+        restToMcpSwitch: false,
+        mcpEndpointUrl: '',
         address: '',
         port: '',
         transport: 'HTTP'
@@ -114,6 +129,7 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
       const values = await form.validateFields();
       onSubmit({
         ...values,
+        restToMcpSwitch,
         securitySchemes: securitySchemes.filter(s => s.id),
         securityExtensions,
         tools
@@ -135,7 +151,7 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
     >
       <AForm form={form} layout="vertical">
         <Form.Item label="命名空间">
-          <AInput value="public" disabled />
+          <AInput value={namespaceId} disabled />
         </Form.Item>
 
         <Form.Item
@@ -152,42 +168,89 @@ export const PlugUpdate = ({ currentEdit, onClose, onSubmit, open }: PlugUpdateP
           </ARadio.Group>
         </Form.Item>
 
-        <Form.Item label="新建服务" required style={{ marginBottom: 24 }}>
-          <AFlex gap={12} align="flex-start">
-            <Form.Item
-              name="address"
-              label="address"
-              required={false}
-              style={{ flex: 1, marginBottom: 0 }}
-              rules={[{ message: '请输入服务地址', required: true }]}
-            >
-              <AInput placeholder="localhost" />
-            </Form.Item>
-            <Form.Item
-              name="port"
-              label="port"
-              required={false}
-              style={{ width: 120, marginBottom: 0 }}
-              rules={[{ message: '请输入端口', required: true }]}
-            >
-              <AInput placeholder="8080" />
-            </Form.Item>
-            <Form.Item
-              name="transport"
-              label="传输协议"
-              required={false}
-              style={{ width: 140, marginBottom: 0 }}
-              rules={[{ message: '请选择传输协议', required: true }]}
-            >
-              <ASelect
-                options={[
-                  { label: 'HTTP', value: 'HTTP' },
-                  { label: 'HTTPS', value: 'HTTPS' }
-                ]}
-              />
-            </Form.Item>
+        <Form.Item label="HTTP 转 MCP 服务" required>
+          <AFlex align="center" gap={8}>
+            <ASwitch
+              checked={restToMcpSwitch}
+              checkedChildren="开启"
+              unCheckedChildren="关闭"
+              onChange={setRestToMcpSwitch}
+            />
           </AFlex>
+          <div style={{ color: '#8c8c8c', fontSize: 12, marginTop: 4, lineHeight: '18px' }}>
+            存量 HTTP 服务转化为 MCP 服务需要搭配网关使用，请参考文档
+            <a
+              href="https://nacos.io/docs/v3.0/manual/user/mcp-template"
+              target="_blank"
+              rel="noreferrer"
+              style={{ marginLeft: 4 }}
+            >
+              https://nacos.io/docs/v3.0/manual/user/mcp-template
+            </a>
+          </div>
         </Form.Item>
+
+        {restToMcpSwitch ? (
+          <Form.Item label="新建服务" required style={{ marginBottom: 24 }}>
+            <AFlex gap={12} align="flex-start">
+              <Form.Item
+                name="address"
+                label="address"
+                required={false}
+                style={{ flex: 1, marginBottom: 0 }}
+                rules={[{ message: '请输入服务地址', required: true }]}
+              >
+                <AInput placeholder="localhost" />
+              </Form.Item>
+              <Form.Item
+                name="port"
+                label="port"
+                required={false}
+                style={{ width: 120, marginBottom: 0 }}
+                rules={[{ message: '请输入端口', required: true }]}
+              >
+                <AInput placeholder="8080" />
+              </Form.Item>
+              <Form.Item
+                name="transport"
+                label="传输协议"
+                required={false}
+                style={{ width: 140, marginBottom: 0 }}
+                rules={[{ message: '请选择传输协议', required: true }]}
+              >
+                <ASelect
+                  options={[
+                    { label: 'HTTP', value: 'HTTP' },
+                    { label: 'HTTPS', value: 'HTTPS' }
+                  ]}
+                />
+              </Form.Item>
+            </AFlex>
+          </Form.Item>
+        ) : (
+          <Form.Item
+            label="MCP Server Endpoint"
+            name="mcpEndpointUrl"
+            rules={[
+              { message: '请输入完整的 MCP 服务端点 URL', required: true },
+              {
+                validator: (_: any, value: string) => {
+                  if (!value) return Promise.resolve();
+                  try {
+                    // eslint-disable-next-line no-new
+                    new URL(value);
+                    return Promise.resolve();
+                  } catch {
+                    return Promise.reject(new Error('URL 格式不正确，例如：http://example.com/sse'));
+                  }
+                }
+              }
+            ]}
+            extra="请输入完整的 MCP 服务端点 URL，例如：http://example.com/sse"
+          >
+            <AInput placeholder="http://example.com/sse" />
+          </Form.Item>
+        )}
 
         <Form.Item
           label="服务版本"

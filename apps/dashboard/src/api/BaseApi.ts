@@ -91,9 +91,15 @@ class BaseApi extends AbstractApi {
     /**
      * 清空会话消息（chat-proxy）
      * @param convUid 会话uid
+     * @param chartId 当前图表id
+     * @param chatMode 聊天模式，默认 chat_with_dashboard
      */
-    async clearChatConv(convUid: string): Promise<boolean> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/clear', {conv_uid: convUid});
+    async clearChatConv(convUid: string, chartId = '', chatMode = 'chat_with_dashboard'): Promise<boolean> {
+        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/clear', {
+            conv_uid: convUid,
+            chart_id: chartId,
+            chat_mode: chatMode,
+        });
         return res.code === 200;
     }
 

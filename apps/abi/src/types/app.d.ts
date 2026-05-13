@@ -811,6 +811,52 @@ declare namespace App {
               content: string;
               explain: string;
             };
+            skill: {
+              title: string;
+              subtitle: string;
+              publish: string;
+              empty: string;
+              view: string;
+              downloads: string;
+              detailComingSoon: string;
+              deleteConfirmTitle: string;
+              deleteConfirmContent: string;
+              filter: {
+                all: string;
+                published: string;
+                hidden: string;
+              };
+              status: {
+                published: string;
+                hidden: string;
+                archived: string;
+                review: string;
+                rejected: string;
+                scanning: string;
+              };
+              publishPage: {
+                back: string;
+                heroTitle: string;
+                heroDesc: string;
+                namespace: string;
+                namespacePh: string;
+                namespaceRequired: string;
+                version: string;
+                versionPh: string;
+                changelog: string;
+                changelogPh: string;
+                skillPackage: string;
+                dropOrClick: string;
+                zipHint: string;
+                clickToReplace: string;
+                onlyZip: string;
+                tooLarge: string;
+                fileRequired: string;
+                submit: string;
+                success: string;
+                failed: string;
+              };
+            };
           };
           mySpace: {
             addNewSpace: string;

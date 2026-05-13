@@ -445,6 +445,52 @@ const page: App.I18n.Schema['translation']['page'] = {
     userDetail: {
       content: `The loader allows network requests and lazy-loaded files to be triggered almost simultaneously, enabling the lazy-loaded files to be parsed while waiting for the network request to complete. Once the network request finishes, the page is displayed all at once. Leveraging React's Fiber architecture, if users find the waiting time too long, they can switch to different pages during the wait. This is an advantage of the React framework and React Router's data loader, as it avoids the conventional sequence of: request lazy-loaded file -> parse -> mount -> send network request -> render page -> display, and eliminates the need for manually adding a loading effect.`,
       explain: `This page is solely for demonstrating the powerful capabilities of react-router-dom's loader. The data is random and may not match.`
+    },
+    skill: {
+      title: 'Skill Manage',
+      subtitle: 'Manage the skill packages you publish to your spaces. Click a card to view details or publish a new version.',
+      publish: 'Publish Skill',
+      empty: 'No skills yet. Click the button at the top-right to publish your first skill package.',
+      view: 'View',
+      downloads: 'Downloads',
+      detailComingSoon: 'Detail page is coming soon',
+      deleteConfirmTitle: 'Delete this skill?',
+      deleteConfirmContent: 'This action cannot be undone. All versions of "{{name}}" will be removed.',
+      filter: {
+        all: 'All',
+        published: 'Published',
+        hidden: 'Hidden'
+      },
+      status: {
+        published: 'Published',
+        hidden: 'Hidden',
+        archived: 'Archived',
+        review: 'In Review',
+        rejected: 'Rejected',
+        scanning: 'Scanning'
+      },
+      publishPage: {
+        back: 'Back to Skills',
+        heroTitle: 'Publish New Skill',
+        heroDesc: 'Choose the target space, upload a skill ZIP package, and publish to SkillHub in one click.',
+        namespace: 'Namespace',
+        namespacePh: 'Please select a space',
+        namespaceRequired: 'Please select a space to publish to',
+        version: 'Version',
+        versionPh: 'e.g. 1.0.0 (optional, leave blank for auto-assignment)',
+        changelog: 'Changelog',
+        changelogPh: 'Briefly describe the changes in this version (optional)',
+        skillPackage: 'Skill Package (ZIP)',
+        dropOrClick: 'Click or drag a ZIP file here to upload',
+        zipHint: 'Only .zip format is supported, maximum 100MB',
+        clickToReplace: 'Click to replace',
+        onlyZip: 'Only ZIP packages are supported',
+        tooLarge: 'File size exceeds 100MB, please compress and try again',
+        fileRequired: 'Please select a skill package first',
+        submit: 'Publish',
+        success: 'Published successfully',
+        failed: 'Failed to publish, please try again later'
+      }
     }
   },
   mySpace: {
