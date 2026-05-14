@@ -57,7 +57,6 @@ declare module "@elegant-router/types" {
     "manage_post": "post";
     "manage_role": "role";
     "manage_role-auth": "role-auth/:id";
-    "manage_skill": "skill";
     "manage_space-menu": "space-menu";
     "manage_space-role": "space-role";
     "manage_user": "user";
@@ -196,7 +195,6 @@ declare module "@elegant-router/types" {
     | "manage_post"
     | "manage_role-auth"
     | "manage_role"
-    | "manage_skill"
     | "manage_space-menu"
     | "manage_space-role"
     | "manage_user-role"

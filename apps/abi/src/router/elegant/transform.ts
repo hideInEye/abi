@@ -238,7 +238,6 @@ const routeMap: RouteMap = {
   "manage_post": "post",
   "manage_role": "role",
   "manage_role-auth": "role-auth/:id",
-  "manage_skill": "skill",
   "manage_space-menu": "space-menu",
   "manage_space-role": "space-role",
   "manage_user": "user",

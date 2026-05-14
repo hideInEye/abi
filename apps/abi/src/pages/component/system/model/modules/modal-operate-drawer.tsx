@@ -48,17 +48,34 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
   // 当模型来源或供应商变化时自动清空供应商/基础模型
   const prevModelSourceRef = useRef<string | undefined>();
   const prevProviderRef = useRef<string | undefined>();
+  // 编辑态下记录初始的模型来源、供应商、基础模型，用于来回切换时恢复
+  const initialSourceRef = useRef<string | undefined>();
+  const initialProviderRef = useRef<number | undefined>();
+  const initialModelKeyRef = useRef<string | undefined>();
   useEffect(() => {
     if (!open) return;
     if (prevModelSourceRef.current !== undefined && prevModelSourceRef.current !== modelSourceVal) {
-      form.setFieldsValue({ providerId: undefined, modelKey: undefined });
+      // 切回编辑初始来源时恢复原供应商与基础模型，否则清空
+      if (operateType === 'edit' && modelSourceVal === initialSourceRef.current) {
+        form.setFieldsValue({
+          providerId: initialProviderRef.current,
+          modelKey: initialModelKeyRef.current,
+        });
+      } else {
+        form.setFieldsValue({ providerId: undefined, modelKey: undefined });
+      }
     }
     prevModelSourceRef.current = modelSourceVal;
   }, [modelSourceVal]);
   useEffect(() => {
     if (!open) return;
     if (prevProviderRef.current !== undefined && prevProviderRef.current !== providerIdVal) {
-      form.setFieldsValue({ modelKey: undefined });
+      // 若切换到的供应商就是编辑初始供应商，保留原基础模型；否则清空
+      if (operateType === 'edit' && providerIdVal === initialProviderRef.current) {
+        form.setFieldsValue({ modelKey: initialModelKeyRef.current });
+      } else {
+        form.setFieldsValue({ modelKey: undefined });
+      }
     }
     prevProviderRef.current = providerIdVal;
   }, [providerIdVal]);
@@ -68,11 +85,18 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
       const ak = form.getFieldValue('apiKey');
       originalApiKeyRef.current = ak;
       if (ak) form.setFieldsValue({ apiKey: maskValue(ak) });
+      // 记录进入编辑时的初始来源/供应商/基础模型
+      initialSourceRef.current = form.getFieldValue('modelSource');
+      initialProviderRef.current = form.getFieldValue('providerId');
+      initialModelKeyRef.current = form.getFieldValue('modelKey');
     }
     if (!open) {
       originalApiKeyRef.current = undefined;
       prevModelSourceRef.current = undefined;
       prevProviderRef.current = undefined;
+      initialSourceRef.current = undefined;
+      initialProviderRef.current = undefined;
+      initialModelKeyRef.current = undefined;
     }
   }, [open, operateType, form, maskValue]);
 

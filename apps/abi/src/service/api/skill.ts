@@ -164,10 +164,10 @@ export function addSkillTagApi(data: { skillId: number | string; tagName: string
 /**
  * 删除技能标签
  *
- * @param data skillId（接口文档只有 skillId；若后续支持按 tagName 删除可再加字段）
+ * @param data tagId（标签列表项的 id）
  * @returns
  */
-export function deleteSkillTagApi(data: { skillId: number | string; tagName?: string }) {
+export function deleteSkillTagApi(data: { tagId: number | string }) {
   return apiRequest({
     data,
     method: 'post',

@@ -1,9 +1,8 @@
-import { DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { App, Empty, Spin, Tabs } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import PageTitle from '@/components/stateless/common/PageTitle';
-import { deleteSkillApi, querySkillListApi } from '@/service/api/skill';
+import { querySkillListApi } from '@/service/api/skill';
 
 import SkillDetailDrawer from './modules/skill-detail-drawer';
 import SkillPublishDrawer from './modules/skill-publish-drawer';
@@ -11,22 +10,14 @@ import SkillPublishDrawer from './modules/skill-publish-drawer';
 import './skill.css';
 
 type SkillItem = {
-  skillId: number | string;
-  name?: string;
-  skillName?: string;
-  title?: string;
-  namespace?: string;
-  namespaceSlug?: string;
+  id: number | string;
+  bizName?: string;
   spaceId?: number | string;
-  spaceName?: string;
   summary?: string;
-  description?: string;
-  changelog?: string;
-  version?: string;
-  latestVersion?: string;
   status?: string;
-  downloadCount?: number;
-  downloads?: number;
+  visibility?: string;
+  latestVersionId?: number | string;
+  createdBy?: string;
   createTime?: string;
   updateTime?: string;
 };
@@ -46,7 +37,6 @@ function resolveStatusKey(status?: string): StatusKey {
 
 export function Component() {
   const { t } = useTranslation();
-  const { modal, message } = App.useApp();
 
   const [filter, setFilter] = useState<'ALL' | '1' | '0'>('ALL');
   const [list, setList] = useState<SkillItem[]>([]);
@@ -84,23 +74,6 @@ export function Component() {
     setDetailOpen(true);
   }
 
-  function handleDelete(item: SkillItem) {
-    modal.confirm({
-      title: t('page.manage.skill.deleteConfirmTitle'),
-      content: t('page.manage.skill.deleteConfirmContent', { name: item.skillName || item.name || item.title || '' }),
-      okType: 'danger',
-      okText: t('common.confirm'),
-      cancelText: t('common.cancel'),
-      onOk: async () => {
-        const res: any = await deleteSkillApi({ skillId: item.skillId });
-        if (res?.response?.data?.code === 200 || res?.data) {
-          message.success(t('common.deleteSuccess'));
-          fetchList();
-        }
-      }
-    });
-  }
-
   const filterItems = useMemo(
     () => [
       { key: 'ALL', label: t('page.manage.skill.filter.all') },
@@ -118,7 +91,7 @@ export function Component() {
           type="primary"
           onClick={goPublish}
         >
-          新增
+          安装技能
         </AButton>
       </div>
 
@@ -138,15 +111,13 @@ export function Component() {
           <div className="grid grid-cols-1 gap-16px md:grid-cols-2 xl:grid-cols-3">
             {list.map(item => {
               const statusKey = resolveStatusKey(item.status);
-              const title = item.skillName || item.name || item.title || '-';
-              const namespace = item.namespaceSlug || item.namespace || item.spaceName;
-              const version = item.latestVersion || item.version;
-              const downloads = item.downloadCount ?? item.downloads ?? 0;
-              const summary = item.summary || item.description || item.changelog;
+              const title = item.bizName || '-';
+              const namespace = item.spaceId;
+              const summary = item.summary;
               return (
                 <div
                   className="skill-card"
-                  key={item.skillId}
+                  key={item.id}
                   onClick={() => goDetail(item)}
                 >
                   <div className="skill-card__title">{title}</div>
@@ -154,39 +125,10 @@ export function Component() {
                   {summary && <div className="skill-card__summary">{summary}</div>}
 
                   <div className="skill-card__meta">
-                    {namespace && <span className="handle-tag">@{String(namespace).replace(/^@/, '')}</span>}
-                    {version && <span>v{version}</span>}
-                    <span>
-                      {t('page.manage.skill.downloads')}：{downloads}
-                    </span>
-                  </div>
-
-                  <div className="skill-card__footer">
                     <span className={`status-pill status-pill--${statusKey}`}>
                       {t(`page.manage.skill.status.${statusKey}` as any)}
                     </span>
-                    <div
-                      className="flex items-center gap-4px"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <AButton
-                        icon={<EyeOutlined />}
-                        size="small"
-                        type="text"
-                        onClick={() => goDetail(item)}
-                      >
-                        {t('page.manage.skill.view')}
-                      </AButton>
-                      <AButton
-                        danger
-                        icon={<DeleteOutlined />}
-                        size="small"
-                        type="text"
-                        onClick={() => handleDelete(item)}
-                      >
-                        {t('common.delete')}
-                      </AButton>
-                    </div>
+                    {namespace != null && <span className="handle-tag">@{namespace}</span>}
                   </div>
                 </div>
               );
@@ -205,6 +147,10 @@ export function Component() {
         open={detailOpen}
         skill={activeSkill}
         onClose={() => setDetailOpen(false)}
+        onDeleted={() => {
+          setDetailOpen(false);
+          fetchList();
+        }}
       />
     </div>
   );
