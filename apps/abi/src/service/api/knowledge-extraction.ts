@@ -1,5 +1,7 @@
 import { apiRequest } from '../request'
 
+const INDICATOR_API_PREFIX = '/api/abi-ontology/api/v1/ontology/indicator'
+
 export function queryKnowledgeIndicators(params: { pageNum?: number; pageSize?: number; spaceId: number }) {
   return apiRequest({
     data: {
@@ -8,7 +10,7 @@ export function queryKnowledgeIndicators(params: { pageNum?: number; pageSize?: 
       ...params
     },
     method: 'post',
-    url: '/api/ontology/api/v1/ontology/indicator/list'
+    url: `${INDICATOR_API_PREFIX}/list`
   })
 }
 
@@ -16,7 +18,7 @@ export function addKnowledgeIndicator(params: Record<string, any>) {
   return apiRequest({
     data: params,
     method: 'post',
-    url: '/api/ontology/api/v1/ontology/indicator/create'
+    url: `${INDICATOR_API_PREFIX}/create`
   })
 }
 
@@ -24,7 +26,7 @@ export function editKnowledgeIndicator(params: Record<string, any>) {
   return apiRequest({
     data: params,
     method: 'put',
-    url: '/api/ontology/api/v1/ontology/indicator/update'
+    url: `${INDICATOR_API_PREFIX}/update`
   })
 }
 
@@ -35,7 +37,7 @@ export function deleteKnowledgeIndicator(params: { id: number; spaceId: number; 
       spaceId: params.spaceId,
       techName: params.techName || ''
     },
-    url: `/api/ontology/api/v1/ontology/indicator/delete/${params.id}`
+    url: `${INDICATOR_API_PREFIX}/delete/${params.id}`
   })
 }
 
@@ -46,6 +48,6 @@ export function queryKnowledgeIndicatorDetail(params: { id: number; spaceId: num
       spaceId: params.spaceId,
       techName: params.techName || ''
     },
-    url: `/api/ontology/api/v1/ontology/indicator/detail/${params.id}`
+    url: `${INDICATOR_API_PREFIX}/detail/${params.id}`
   })
 }

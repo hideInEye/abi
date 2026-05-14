@@ -3,8 +3,10 @@ import { message } from 'antd'
 import {
   addDimensionModel,
   deleteDimensionModel,
+  editDimensionHierarchy,
   editDimensionModel,
   queryDimensionDetail,
+  queryDimensionHierarchyByDimId,
   queryDimensionList
 } from '@/service/api/dimension-modeling'
 
@@ -12,6 +14,7 @@ import type {
   DimensionFieldOption,
   DimensionFormValues,
   DimensionGroup,
+  DimensionHierarchyEditItem,
   DimensionModelItem,
   DimensionPagination,
   DimensionSchemaInfo,
@@ -36,6 +39,26 @@ const initialPagination: DimensionPagination = {
   total: 0
 }
 
+function toNumber(value: any) {
+  if (value === '' || value === null || value === undefined) {
+    return undefined
+  }
+  const num = Number(value)
+  return Number.isNaN(num) ? undefined : num
+}
+
+function normalizeHierarchyItem(item: any): DimensionHierarchyEditItem {
+  return {
+    ...item,
+    childDimId: toNumber(item?.childDimId),
+    dimId: toNumber(item?.dimId || item?.dimensionId) || 0,
+    hierarchyId: toNumber(item?.hierarchyId || item?.id || item?.hierarchyID),
+    levelOrder: toNumber(item?.levelOrder || item?.level) || 0,
+    parentDimId: toNumber(item?.parentDimId),
+    spaceId: toNumber(item?.spaceId) || Number(localStorage.getItem('spaceId')) || 0
+  }
+}
+
 export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [loading, setLoading] = useState(false)
   const [searchParams, setSearchParams] = useState<DimensionSearchParams>(initialSearchParams)
@@ -47,6 +70,8 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [editingItem, setEditingItem] = useState<DimensionModelItem | null>(null)
   const [hierarchyOpen, setHierarchyOpen] = useState(false)
   const [hierarchyTarget, setHierarchyTarget] = useState<DimensionModelItem | null>(null)
+  const [hierarchyItems, setHierarchyItems] = useState<DimensionHierarchyEditItem[]>([])
+  const [hierarchyLoading, setHierarchyLoading] = useState(false)
 
   const filteredList = useMemo(() => {
     const keyword = queryKeyword.trim()
@@ -221,19 +246,49 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     })
   }
 
-  const openHierarchyModal = (record: DimensionModelItem) => {
+  const openHierarchyModal = async (record: DimensionModelItem) => {
     setHierarchyTarget(record)
     setHierarchyOpen(true)
+    setHierarchyItems([])
+    if (!record?.id) {
+      return
+    }
+    setHierarchyLoading(true)
+    try {
+      const res = await queryDimensionHierarchyByDimId({ dimId: Number(record.id) })
+      if (!isApiSuccess(res)) {
+        message.warning(getApiErrorMessage(res, '查询层级配置失败'))
+        return
+      }
+      const rows = normalizeRows(res)
+      const list = rows.filter(Boolean).map(normalizeHierarchyItem)
+      setHierarchyItems(list)
+    } finally {
+      setHierarchyLoading(false)
+    }
   }
 
   const closeHierarchyModal = () => {
     setHierarchyOpen(false)
     setHierarchyTarget(null)
+    setHierarchyItems([])
+    setHierarchyLoading(false)
   }
 
-  const saveHierarchyConfig = () => {
+  const saveHierarchyConfig = async (items: DimensionHierarchyEditItem[]) => {
+    if (!items.length) {
+      message.warning('请先配置层级结构')
+      return false
+    }
+    const res = await editDimensionHierarchy(items)
+    if (!isApiSuccess(res)) {
+      message.error(getApiErrorMessage(res, '保存层级失败'))
+      return false
+    }
     message.success('层级配置已保存')
     closeHierarchyModal()
+    await fetchTableData()
+    return true
   }
 
   const closeDrawer = (refresh?: boolean) => {
@@ -257,6 +312,8 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     handleReset,
     handleSearchChange,
     handleSubmit,
+    hierarchyItems,
+    hierarchyLoading,
     hierarchyOpen,
     hierarchyTarget,
     loading,

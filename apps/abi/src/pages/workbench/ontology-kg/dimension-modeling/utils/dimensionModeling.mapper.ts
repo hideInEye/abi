@@ -72,6 +72,8 @@ function parseRelatedFields(value: any): DimensionFieldOption[] {
         fieldType: trim(item.fieldType || item.type),
         key: trim(item.key || item.techId || item.tfieldId) || '',
         originName: trim(item.originName || item.name || item.fieldName || item.techName),
+        relViewId: trim(item.relViewId),
+        sourceId: trim(item.sourceId),
         sourceTableName: trim(item.sourceTableName || item.tableBizName || item.tableName),
         techId: trim(item.techId || item.tfieldId || item.key) || ''
       }))
@@ -154,6 +156,23 @@ function normalizeSampleValues(value: any) {
   return ''
 }
 
+function isTimeFieldType(fieldType: any) {
+  const value = String(fieldType || '')
+    .trim()
+    .toLowerCase()
+  if (!value) {
+    return false
+  }
+  return (
+    value.includes('datetime') ||
+    value.includes('timestamp') ||
+    value.includes('date') ||
+    value.includes('time') ||
+    value.includes('日期') ||
+    value.includes('时间')
+  )
+}
+
 export function normalizeRows(res: any): any[] {
   return getFirstArray(res, [
     '',
@@ -181,7 +200,7 @@ export function normalizeDetail(res: any): any | null {
 
 export function mapDimensionFromApi(item: any): DimensionModelItem {
   const relFields = parseRelatedFields(
-    pickFirst(item, ['relFields', 'relatedFields', 'relateFields', 'techIds', 'techId'])
+    pickFirst(item, ['relFields', 'relatedFields', 'relateFields', 'techId', 'techIds'])
   )
   const dimCategory = trim(pickFirst(item, ['dimCategory', 'dimensionCategory']))
   const dimType = normalizeType(pickFirst(item, ['dimType', 'dimensionType']))
@@ -283,7 +302,7 @@ export function buildSubmitPayload(params: {
   selectedGroupId?: number
   selectedSchema?: DimensionSchemaInfo
 }) {
-  const { formValues, id, relatedFields, selectedGroupId } = params
+  const { formValues, id, relatedFields, selectedGroupId, selectedSchema } = params
   const sampleValues = String(formValues.sampleValues || '')
     .split(',')
     .map(item => item.trim())
@@ -298,7 +317,18 @@ export function buildSubmitPayload(params: {
         })
       : undefined
   const fieldType = formValues.dimType === 'time' ? 'datetime' : 'varchar'
-  const techId = relatedFields.map(item => item.techId).join(',')
+  const techIdList = relatedFields.map(item => item.techId).join(',')
+  const relatedFieldObjects = relatedFields.map(item => ({
+    bizName: trim(item.bizName),
+    fieldType: trim(item.fieldType),
+    key: trim(item.key),
+    originName: trim(item.originName),
+    sourceId: trim(item.sourceId),
+    sourceTableName: trim(item.sourceTableName),
+    techId: trim(item.techId)
+  }))
+  // const relatedFieldJson = JSON.stringify(relatedFieldObjects)
+  const relatedFieldJson = relatedFieldObjects
 
   const payload = {
     bizName: trim(formValues.zhName),
@@ -312,7 +342,7 @@ export function buildSubmitPayload(params: {
       drill_direction: trim(formValues.drillDirection) || 'down',
       granularity: formValues.dimType === 'time' ? (formValues.timeGranularity || []).slice(-1)[0] || 'day' : undefined
     },
-    expr: trim(formValues.englishName) || techId,
+    expr: trim(formValues.englishName) || techIdList,
     fieldType,
     groupId: selectedGroupId || toNumber(formValues.groupId),
     isLeaf: '1',
@@ -320,15 +350,17 @@ export function buildSubmitPayload(params: {
     ownerEmail: trim(formValues.ownerEmail),
     // parentDimId: 0,
     prevVersionId: undefined,
+    relFields: relatedFieldJson,
     relSchemaId: toNumber(formValues.semanticSchemaId),
-    // relViewId: toNumber(selectedSchema?.relViewId),
+    relViewId: trim(selectedSchema?.relViewId || relatedFields[0]?.relViewId),
     remark: trim(formValues.bizDesc),
     sampleValues,
     semanticsGroupId: toNumber(formValues.semanticsGroupId || formValues.semanticGroupId),
     semanticType,
     spaceId: Number(localStorage.getItem('spaceId')),
     status: String(formValues.status ?? 1),
-    techId,
+    techId: relatedFieldJson,
+    techIds: techIdList,
     techName: trim(formValues.englishName),
     typeParams,
     updateFreq: trim(formValues.updateFreq),
@@ -372,9 +404,11 @@ export function buildSchemaFieldOptions(schema?: DimensionSchemaInfo): Dimension
           const techId = String(item.techId || item.tfieldId || '')
           list.push({
             bizName: item.bizName || item.alias || techId,
-            fieldType: item.type || item.fieldType,
+            fieldType: item.type || item.fieldType || item.semanticType,
             key: techId,
             originName: item.originName || item.name || item.fieldName || item.techName || techId,
+            relViewId: schema.relViewId,
+            sourceId: item.sourceId,
             sourceTableName: item.tableBizName || item.tableName,
             techId
           })
@@ -388,7 +422,7 @@ export function buildSchemaFieldOptions(schema?: DimensionSchemaInfo): Dimension
 
 export function filterSelectableFields(allFields: DimensionFieldOption[], dimType: DimensionType) {
   if (dimType === 'time') {
-    return allFields.filter(field => String(field.fieldType || '').toLowerCase() === 'datetime')
+    return allFields.filter(field => isTimeFieldType(field.fieldType))
   }
-  return allFields.filter(field => String(field.fieldType || '').toLowerCase() !== 'datetime')
+  return allFields.filter(field => !isTimeFieldType(field.fieldType))
 }

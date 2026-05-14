@@ -26,6 +26,8 @@ export const Component: React.FC = () => {
     handleReset,
     handleSearchChange,
     handleSubmit,
+    hierarchyItems,
+    hierarchyLoading,
     hierarchyOpen,
     hierarchyTarget,
     loading,
@@ -103,6 +105,8 @@ export const Component: React.FC = () => {
       />
 
       <HierarchyModal
+        hierarchyItems={hierarchyItems}
+        loading={hierarchyLoading}
         open={hierarchyOpen}
         record={hierarchyTarget}
         onCancel={closeHierarchyModal}

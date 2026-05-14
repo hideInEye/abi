@@ -29,14 +29,28 @@ export function parseAliasTags(alias?: string) {
     .filter(Boolean)
 }
 
-export function parseDimensionKeys(dimensionFieldIds?: string) {
+export function parseDimensionKeys(dimensionFieldIds?: any) {
   if (!dimensionFieldIds) {
     return []
   }
-  return dimensionFieldIds
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean)
+  if (Array.isArray(dimensionFieldIds)) {
+    return dimensionFieldIds.map(item => String(item?.dimId ?? item?.id ?? item).trim()).filter(Boolean)
+  }
+  if (typeof dimensionFieldIds === 'string') {
+    try {
+      const parsed = JSON.parse(dimensionFieldIds)
+      if (Array.isArray(parsed)) {
+        return parseDimensionKeys(parsed)
+      }
+    } catch {
+      // compatible with old comma-separated dim ids
+    }
+    return dimensionFieldIds
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean)
+  }
+  return []
 }
 
 export function extractUniqueIds(expression: string): string[] {
@@ -135,10 +149,12 @@ export function buildEditFormValues(editingItem: KnowledgeIndicatorItem): Knowle
     ),
     derivedTimeWindow:
       Number(editingItem.derivedTimeWindow || templateParams.derivedTimeWindow || calcLogic.derivedTimeWindow) || 1,
+    dimensionFieldIds: editingItem.dimensionFieldIds || editingItem.relateDims,
     divideZeroStrategy:
       editingItem.divideZeroStrategy || templateParams.divideZeroStrategy || DEFAULT_FORM_VALUES.divideZeroStrategy,
     expr: editingItem.expr || templateParams.expr || calcLogic.expr,
     indicatorAliasTags: parseAliasTags(editingItem.termAlias),
+    indicatorCode: editingItem.indicatorCode,
     indicatorType: editingItem.indicatorType || DEFAULT_FORM_VALUES.indicatorType,
     measurementUnit: editingItem.measurementUnit,
     nullStrategy: editingItem.nullStrategy || templateParams.nullStrategy || DEFAULT_FORM_VALUES.nullStrategy,

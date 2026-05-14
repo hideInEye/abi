@@ -39,6 +39,7 @@ export const TableSemantics = ({
   isEdit = false,
   type
 }: IProps) => {
+  const watchedGroupId = AForm.useWatch(groupFieldName, form);
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: number }[]>([]);
   const [groupId, setGroupId] = useState<number | null>(null);
   const [schemaOptions, setSchemaOptions] = useState<{ label: string; value: number }[]>([]);
@@ -51,6 +52,9 @@ export const TableSemantics = ({
   // 表语义
   const fetchSchemaOptions = async (gpId: number | null) => {
     if (!gpId) {
+      setSchemaOptions([]);
+      setOriginalSchemaOptions([]);
+      getSchemaOptions?.([]);
       return;
     }
     const { data } = await schemalist({
@@ -78,15 +82,16 @@ export const TableSemantics = ({
 
   useEffect(() => {
     fetchGroupOptions();
-
-    if (form) {
-      const formValues = form.getFieldsValue();
-      setGroupId(formValues[groupFieldName]);
-    }
   }, []);
 
   useEffect(() => {
-    setSchemaOptions([]);
+    if (watchedGroupId === undefined) {
+      return;
+    }
+    setGroupId(watchedGroupId || null);
+  }, [watchedGroupId]);
+
+  useEffect(() => {
     fetchSchemaOptions(groupId);
   }, [groupId]);
 

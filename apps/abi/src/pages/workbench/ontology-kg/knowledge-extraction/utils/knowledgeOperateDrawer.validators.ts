@@ -107,13 +107,13 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     }
 
     const duplicate = existingItems.some(item => {
-      if (!item.techName) {
+      if (!item.indicatorCode) {
         return false
       }
       if (editingItem?.termId && item.termId === editingItem.termId) {
         return false
       }
-      return item.techName.trim() === text
+      return String(item.indicatorCode).trim() === text
     })
     if (duplicate) {
       return Promise.reject(new Error('指标编码已存在，请更换后重试'))

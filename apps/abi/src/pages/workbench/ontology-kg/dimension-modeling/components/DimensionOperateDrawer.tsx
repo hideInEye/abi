@@ -67,7 +67,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
   }, [editingItem?.relatedFields, filteredFields, selectedFieldKeys])
 
   useEffect(() => {
-    if (!filteredFields.length || !selectedFieldKeys.length) {
+    if (!selectedFieldKeys.length || !selectedSchema) {
       return
     }
     const keySet = new Set(selectedFieldKeys)
@@ -76,7 +76,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
       setSelectedFieldKeys(safeKeys)
       form.setFieldValue('relatedFieldKeys', safeKeys)
     }
-  }, [filteredFields, form, selectedFieldKeys])
+  }, [filteredFields, form, selectedFieldKeys, selectedSchema])
 
   useEffect(() => {
     if (!open) {
@@ -154,16 +154,16 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
     }
 
     if (openHierarchyAfterSave) {
-      onClose(true)
+      handleDrawerClose(true)
       onOpenHierarchy(nextRecord)
       return
     }
-    onClose(true)
+    handleDrawerClose(true)
   }
 
   const createFooter = (
     <div className="flex justify-end gap-3">
-      <AButton onClick={() => onClose()}>取消</AButton>
+      <AButton onClick={() => handleDrawerClose()}>取消</AButton>
       <AButton
         type="primary"
         onClick={() => handleSave(false)}
@@ -176,7 +176,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
 
   const editFooter = (
     <div className="flex justify-end gap-3">
-      <AButton onClick={() => onClose()}>取消</AButton>
+      <AButton onClick={() => handleDrawerClose()}>取消</AButton>
       <AButton
         type="primary"
         onClick={() => handleSave(false)}
@@ -186,15 +186,30 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
     </div>
   )
 
+  function resetDrawerState() {
+    form.resetFields()
+    setActiveTab('base')
+    setSchemaOptions([])
+    setViewId(undefined)
+    setFieldModalOpen(false)
+    setSelectedFieldKeys([])
+  }
+
+  function handleDrawerClose(refresh?: boolean) {
+    resetDrawerState()
+    onClose(refresh)
+  }
+
   return (
     <>
       <ADrawer
         destroyOnClose
         extra={editingItem ? null : <span className="text-xs text-gray-400">所在分组：{groupName || '-'}</span>}
+        footer={editingItem ? editFooter : createFooter}
         open={open}
         title={editingItem ? '编辑维度' : '新建维度'}
         width={720}
-        onClose={() => onClose()}
+        onClose={() => handleDrawerClose()}
       >
         {editingItem ? (
           <ATabs
@@ -248,8 +263,6 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
             type={selectedDimType}
           />
         ) : null}
-
-        <div className="mt-4 border-t border-gray-100 pt-4">{editingItem ? editFooter : createFooter}</div>
       </ADrawer>
 
       <FieldSelectModal

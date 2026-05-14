@@ -12,6 +12,8 @@ export interface DimensionFieldOption {
   fieldType?: string
   key: string
   originName?: string
+  relViewId?: number | string
+  sourceId?: string
   sourceTableName?: string
   techId: string
 }
@@ -20,6 +22,22 @@ export interface DimensionHierarchyNode {
   fieldKey: string
   fieldName: string
   level: number
+}
+
+export interface DimensionHierarchyEditItem {
+  childDimId?: number
+  configJson?: string
+  dimId: number
+  drillDirection?: 'DOWN' | 'UP'
+  hierarchyId?: number
+  hierarchyName: string
+  isDefault?: '0' | '1'
+  levelName: string
+  levelOrder: number
+  parentDimId?: number
+  remark?: string
+  spaceId: number
+  status?: '0' | '1'
 }
 
 export interface DimensionRelatedMetric {

@@ -48,12 +48,28 @@ const UI_TO_API_QUALITY_LEVEL: Record<string, string> = {
 }
 
 const API_TO_UI_QUALITY_LEVEL: Record<string, string> = {
+  P0: 'p0',
   p0: 'p0',
   'P0-核心': 'p0',
+  P1: 'p1',
   p1: 'p1',
   'P1-重要': 'p1',
+  P2: 'p2',
   p2: 'p2',
   'P2-一般': 'p2'
+}
+
+const UI_TO_API_DATA_TYPE: Record<string, string> = {
+  amount: 'decimal',
+  number: 'decimal',
+  percent: 'decimal',
+  text: 'string'
+}
+
+const API_TO_UI_DATA_TYPE: Record<string, string> = {
+  decimal: 'number',
+  string: 'text',
+  varchar: 'text'
 }
 
 const STATUS_TEXT_MAP: Record<string, number> = {
@@ -96,6 +112,48 @@ function trimOrUndefined(value: any) {
   return text || undefined
 }
 
+function normalizeRelateDimsFieldValue(value: any) {
+  if (!value) {
+    return undefined
+  }
+  if (Array.isArray(value)) {
+    return JSON.stringify(value)
+  }
+  return trimOrUndefined(value)
+}
+
+function parseRelateDimsPayload(value: any) {
+  if (!value) {
+    return undefined
+  }
+  if (Array.isArray(value)) {
+    return value
+  }
+  if (typeof value !== 'string') {
+    return value
+  }
+  const text = value.trim()
+  if (!text) {
+    return undefined
+  }
+  try {
+    const parsed = JSON.parse(text)
+    if (Array.isArray(parsed)) {
+      return parsed
+    }
+  } catch {
+    return text
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean)
+      .map(item => ({
+        dimId: Number(item),
+        techName: item
+      }))
+  }
+  return undefined
+}
+
 function toNumberOrUndefined(value: any) {
   if (value === '' || value === null || value === undefined) {
     return undefined
@@ -117,6 +175,11 @@ function normalizeFrequency(value: any) {
 function normalizeQualityLevel(value: any) {
   const key = String(value || '').trim()
   return API_TO_UI_QUALITY_LEVEL[key] || key || 'p1'
+}
+
+function normalizeDataType(value: any) {
+  const key = String(value || '').trim()
+  return API_TO_UI_DATA_TYPE[key] || key || 'number'
 }
 
 function normalizeStatus(value: any) {
@@ -142,6 +205,11 @@ function toApiFrequency(value: any) {
 function toApiQualityLevel(value: any) {
   const key = String(value || '').trim()
   return UI_TO_API_QUALITY_LEVEL[key] || key || undefined
+}
+
+function toApiDataType(value: any) {
+  const key = String(value || '').trim()
+  return UI_TO_API_DATA_TYPE[key] || key || undefined
 }
 
 function compactPayload<T extends Record<string, any>>(payload: T): Partial<T> {
@@ -179,7 +247,6 @@ function normalizeRows(res: any): KnowledgeIndicatorItem[] {
 function mapIndicatorFromApi(item: any): KnowledgeIndicatorItem {
   const calcLogic = asObject(item.calcLogic)
   const termId = toNumberOrUndefined(item.indId ?? item.termId)
-  const techName = trimOrUndefined(item.indicatorCode) || trimOrUndefined(item.techName)
 
   return {
     ...item,
@@ -196,15 +263,16 @@ function mapIndicatorFromApi(item: any): KnowledgeIndicatorItem {
     cumulativeMode: item.cumulativeMode ?? calcLogic.cumulativeMode,
     cumulativeTimeRange: item.cumulativeTimeRange ?? calcLogic.cumulativeTimeRange,
     dataFrequency: normalizeFrequency(item.updateFrequency ?? item.dataFrequency),
-    dataType: trimOrUndefined(item.dataType),
+    dataType: normalizeDataType(item.dataType),
     derivedConditionExpr: item.derivedConditionExpr ?? calcLogic.derivedConditionExpr,
     derivedConditions: item.derivedConditions ?? calcLogic.derivedConditions,
     derivedTimeWindow: item.derivedTimeWindow ?? calcLogic.derivedTimeWindow,
-    dimensionFieldIds: trimOrUndefined(item.relateDims ?? item.dimensionFieldIds),
+    dimensionFieldIds: normalizeRelateDimsFieldValue(item.relateDims ?? item.dimensionFieldIds),
     divideZeroStrategy: item.divideZeroStrategy ?? calcLogic.divideZeroStrategy,
     expr: trimOrUndefined(item.expr) || calcLogic.expr,
     groupId: toNumberOrUndefined(item.groupId),
     groupName: trimOrUndefined(item.groupName),
+    indicatorCode: trimOrUndefined(item.indicatorCode),
     indicatorType: normalizeIndicatorType(item.indicatorClass ?? item.indicatorType),
     measurementUnit: trimOrUndefined(item.measurementUnit),
     nullStrategy: item.nullStrategy ?? calcLogic.nullStrategy,
@@ -215,14 +283,14 @@ function mapIndicatorFromApi(item: any): KnowledgeIndicatorItem {
     ratioNumeratorId: item.ratioNumeratorId ?? calcLogic.ratioNumeratorId,
     ratioPrecision: item.ratioPrecision ?? calcLogic.ratioPrecision,
     relItemId: trimOrUndefined(item.techId ?? item.relItemId ?? calcLogic.relItemId),
-    relViewid: toNumberOrUndefined(item.relViewId ?? item.relViewid),
+    relViewid: trimOrUndefined(item.relViewId ?? item.relViewid),
     remark: trimOrUndefined(item.businessDefinition ?? item.remark),
     rollingWindowSize: item.rollingWindowSize ?? calcLogic.rollingWindowSize,
     semanticGroupId: toNumberOrUndefined(item.semanticGroupId),
     semanticSchemaId: toNumberOrUndefined(item.relSchemaId ?? item.semanticSchemaId),
     semanticSchemaName: trimOrUndefined(item.relSchemaName ?? item.semanticSchemaName),
     status: normalizeStatus(item.status),
-    techName,
+    techName: trimOrUndefined(item.techName),
     technicalRemark: trimOrUndefined(item.technicalDefinition ?? item.technicalRemark),
     templateParams: item.templateParams ?? calcLogic.templateParams,
     templateType: trimOrUndefined(item.templateType ?? calcLogic.templateType),
@@ -297,32 +365,25 @@ function buildSubmitPayload(payload: Record<string, any>, selectedGroup: Knowled
     bizName: trimOrUndefined(payload.bizName),
     businessDefinition: trimOrUndefined(payload.remark),
     calcLogic: buildCalcLogic(payload),
-    dataType: trimOrUndefined(payload.dataType),
+    dataType: toApiDataType(payload.dataType),
     groupId: selectedGroupId ?? toNumberOrUndefined(payload.groupId),
     indAlias: trimOrUndefined(payload.termAlias),
     indicatorCategory: trimOrUndefined(selectedGroup?.groupName),
     indicatorClass,
-    indicatorCode: trimOrUndefined(payload.techName),
+    indicatorCode: trimOrUndefined(payload.indicatorCode),
     indicatorOwner: trimOrUndefined(payload.owner),
     indId: toNumberOrUndefined(payload.termId ?? payload.indId),
-    isPublic: payload.isPublic === undefined ? '1' : String(payload.isPublic),
     measurementUnit: trimOrUndefined(payload.measurementUnit),
-    ownerEmail: trimOrUndefined(payload.ownerEmail),
-    ownerPhone: trimOrUndefined(payload.ownerPhone),
     projectionFunc: trimOrUndefined(payload.aggMethod),
     qualityLevel: toApiQualityLevel(payload.qualityLevel),
-    relateDims: trimOrUndefined(payload.dimensionFieldIds),
+    relateDims: parseRelateDimsPayload(payload.dimensionFieldIds),
     relSchemaId: toNumberOrUndefined(payload.semanticSchemaId),
-    relViewId: toNumberOrUndefined(payload.relViewid),
+    relViewId: trimOrUndefined(payload.relViewid),
     remark: trimOrUndefined(payload.remark),
-    semanticType: trimOrUndefined(payload.semanticType),
     spaceId: Number(localStorage.getItem('spaceId')),
     status: String(payload.status ?? 2),
-    techId: trimOrUndefined(payload.relItemId),
-    techName: trimOrUndefined(payload.techName),
     technicalDefinition: trimOrUndefined(payload.technicalRemark),
     updateFrequency: toApiFrequency(payload.dataFrequency),
-    versionNo: trimOrUndefined(payload.versionNo),
     versionStatus: String(payload.status ?? 2)
   })
 }

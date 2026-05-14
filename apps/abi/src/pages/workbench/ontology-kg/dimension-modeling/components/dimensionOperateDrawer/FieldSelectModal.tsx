@@ -13,8 +13,8 @@ interface Props {
 
 function formatFieldLabel(item: DimensionFieldOption) {
   const bizName = item.bizName || item.techId
-  const originName = item.originName || item.techId
-  return `${bizName}(${originName})`
+  const tableName = item.sourceTableName || item.originName || item.techId
+  return `${bizName}(${tableName})`
 }
 
 export const FieldSelectModal: React.FC<Props> = ({ onCancel, onConfirm, open, options, selectedKeys }) => {

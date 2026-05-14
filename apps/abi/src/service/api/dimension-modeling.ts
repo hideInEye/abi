@@ -1,6 +1,7 @@
 import { apiRequest } from '../request'
 
 const DIMENSION_API_PREFIX = '/api/abi-ontology/api/v1/ontology/dimension'
+const HIERARCHY_API_PREFIX = '/api/abi-ontology/api/v1/ontology/hierarchy'
 
 export function queryDimensionList(params: {
   bizName?: string
@@ -51,5 +52,20 @@ export function queryDimensionDetail(params: { id: number }) {
   return apiRequest({
     method: 'get',
     url: `${DIMENSION_API_PREFIX}/detail/${params.id}`
+  })
+}
+
+export function editDimensionHierarchy(params: Record<string, any>[]) {
+  return apiRequest({
+    data: params,
+    method: 'post',
+    url: `${HIERARCHY_API_PREFIX}/edit`
+  })
+}
+
+export function queryDimensionHierarchyByDimId(params: { dimId: number }) {
+  return apiRequest({
+    method: 'get',
+    url: `${HIERARCHY_API_PREFIX}/listByDimId/${params.dimId}`
   })
 }

@@ -23,7 +23,7 @@ interface Props {
   }: {
     semanticGroupId: number | null
     semanticSchemaId: number
-    viewId: number
+    viewId: number | string
   }) => void
   readonly indicatorType: string
   readonly setSchemaOptions: (schemaOptions: any[]) => void
@@ -67,7 +67,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
         <AForm.Item
           required
           label="指标编码"
-          name="techName"
+          name="indicatorCode"
           rules={[{ validator: validateTechName }]}
         >
           <AInput placeholder="请输入指标编码" />

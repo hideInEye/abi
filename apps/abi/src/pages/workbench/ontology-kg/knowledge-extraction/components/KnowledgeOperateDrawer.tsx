@@ -41,9 +41,10 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   open
 }) => {
   const [form] = AForm.useForm<KnowledgeFormValues>()
+  const formValuesRef = useRef<Partial<KnowledgeFormValues>>({})
   const [current, setCurrent] = useState(0)
   const [selectedIndicatorType, setSelectedIndicatorType] = useState<string>(DEFAULT_FORM_VALUES.indicatorType)
-  const [viewDataId, setViewDataId] = useState<number | undefined>(editingItem?.relViewid)
+  const [viewDataId, setViewDataId] = useState<number | string | undefined>(editingItem?.relViewid)
   const [schemaOptions, setSchemaOptions] = useState<TableSemanticParams[]>([])
 
   const semanticSchemaIdVal = AForm.useWatch('semanticSchemaId', form)
@@ -70,28 +71,49 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       return
     }
 
+    form.resetFields()
+    formValuesRef.current = {}
     setCurrent(0)
 
     if (editingItem) {
       const editValues = buildEditFormValues(editingItem)
-      form.setFieldsValue({
+      const nextValues = {
         ...DEFAULT_FORM_VALUES,
         ...editValues
-      })
+      }
+      form.setFieldsValue(nextValues)
+      formValuesRef.current = nextValues
       setSelectedIndicatorType(editValues.indicatorType || DEFAULT_FORM_VALUES.indicatorType)
       setViewDataId(editingItem.relViewid)
       return
     }
 
-    form.setFieldsValue({
+    const nextValues = {
       ...DEFAULT_FORM_VALUES,
       derivedConditions: ensureDerivedConditions(),
       indicatorAliasTags: [],
       variableMappings: []
-    })
+    }
+    form.setFieldsValue(nextValues)
+    formValuesRef.current = nextValues
     setSelectedIndicatorType(DEFAULT_FORM_VALUES.indicatorType)
     setViewDataId(undefined)
   }, [editingItem, form, open])
+
+  const setCachedFieldsValue = (values: Partial<KnowledgeFormValues>) => {
+    form.setFieldsValue(values)
+    formValuesRef.current = {
+      ...formValuesRef.current,
+      ...values
+    }
+  }
+
+  const syncFormValuesSnapshot = () => {
+    formValuesRef.current = {
+      ...formValuesRef.current,
+      ...form.getFieldsValue(true)
+    }
+  }
 
   const atomicMetricOptions = useMemo(() => {
     const dynamicOptions = compactArray(existingItems)
@@ -212,7 +234,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       const nextType = changeValues.indicatorType
       setSelectedIndicatorType(String(nextType || DEFAULT_FORM_VALUES.indicatorType))
       if (nextType === 'atomic') {
-        form.setFieldsValue({
+        setCachedFieldsValue({
           atomicMetricId: undefined,
           compareMetricId: undefined,
           comparePeriod: undefined,
@@ -237,7 +259,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         })
       }
       if (nextType === 'derived') {
-        form.setFieldsValue({
+        setCachedFieldsValue({
           compareMetricId: undefined,
           comparePeriod: undefined,
           compareType: undefined,
@@ -258,7 +280,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         })
       }
       if (nextType === 'extended') {
-        form.setFieldsValue({
+        setCachedFieldsValue({
           derivedConditionExpr: undefined,
           derivedConditions: ensureDerivedConditions(),
           derivedTimeWindow: undefined
@@ -267,7 +289,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     }
 
     if (Object.hasOwn(changeValues, 'templateType')) {
-      form.setFieldsValue({
+      setCachedFieldsValue({
         compareMetricId: undefined,
         comparePeriod: undefined,
         compareType: DEFAULT_FORM_VALUES.compareType,
@@ -299,9 +321,9 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   }: {
     semanticGroupId: number | null
     semanticSchemaId: number
-    viewId: number
+    viewId: number | string
   }) => {
-    form.setFieldsValue({
+    setCachedFieldsValue({
       semanticGroupId: semanticGroupId || undefined,
       semanticSchemaId
     })
@@ -311,7 +333,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   const getTechnicalRequiredFields = (): Array<keyof KnowledgeFormValues> => {
     const indicatorType = getIndicatorType()
     const baseFields: Array<keyof KnowledgeFormValues> = [
-      'techName',
+      'indicatorCode',
       'semanticGroupId',
       'semanticSchemaId',
       'aggMethod'
@@ -359,6 +381,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         'qualityLevel',
         'remark'
       ])
+      syncFormValuesSnapshot()
       setSelectedIndicatorType(String(form.getFieldValue('indicatorType') || DEFAULT_FORM_VALUES.indicatorType))
       setCurrent(prev => prev + 1)
       return
@@ -366,10 +389,12 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
 
     if (currentStepKey === 'technical') {
       await form.validateFields(getTechnicalRequiredFields() as string[])
+      syncFormValuesSnapshot()
       setCurrent(prev => prev + 1)
       return
     }
 
+    syncFormValuesSnapshot()
     setCurrent(prev => prev + 1)
   }
 
@@ -420,11 +445,16 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     fieldList.push(...(getTechnicalRequiredFields() as string[]))
     await form.validateFields(fieldList)
 
-    const values = await form.validateFields()
+    await form.validateFields()
+    syncFormValuesSnapshot()
+    const values = {
+      ...formValuesRef.current,
+      ...form.getFieldsValue(true)
+    } as KnowledgeFormValues
     const payload: Record<string, any> = {
       ...editingItem,
       ...values,
-      dimensionFieldIds: editingItem?.dimensionFieldIds || values.dimensionFieldIds || '',
+      dimensionFieldIds: values.dimensionFieldIds ?? editingItem?.dimensionFieldIds ?? '',
       groupId,
       relItemId: extractUniqueIds(values.expr || '').join(','),
       relViewid: viewDataId,
@@ -511,10 +541,18 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         />
       </div>
       <AForm
+        preserve
         requiredMark
         form={form}
         layout="vertical"
-        onValuesChange={handleValuesChange}
+        onValuesChange={(changeValues, allValues) => {
+          formValuesRef.current = {
+            ...formValuesRef.current,
+            ...allValues,
+            ...changeValues
+          }
+          handleValuesChange(changeValues)
+        }}
       >
         {currentStepKey === 'business' ? (
           <KnowledgeOperateBusinessStep
@@ -547,7 +585,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
           />
         ) : null}
 
-        {currentStepKey === 'dimension' ? <KnowledgeOperateDimensionStep /> : null}
+        {currentStepKey === 'dimension' ? <KnowledgeOperateDimensionStep form={form} /> : null}
       </AForm>
     </ADrawer>
   )

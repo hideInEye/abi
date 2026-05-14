@@ -59,8 +59,8 @@ export interface KnowledgeIndicatorItem {
   relItemId?: string
   relSchemaId?: number
   relSchemaName?: string
-  relViewId?: number
-  relViewid?: number
+  relViewId?: number | string
+  relViewid?: number | string
   relateDims?: string
   remark?: string
   rollingWindowSize?: number
@@ -70,7 +70,7 @@ export interface KnowledgeIndicatorItem {
   semanticSchemaName?: string
   status?: number | string
   techName?: string
-  techId?: string
+  techId?: Record<string, any> | string
   technicalRemark?: string
   technicalDefinition?: string
   templateParams?: Record<string, any> | string
@@ -112,6 +112,7 @@ export interface KnowledgeFormValues {
   expr?: string
   indicatorAliasTags?: string[]
   indicatorType?: string
+  indicatorCode?: string
   measurementUnit?: string
   nullStrategy?: string
   owner?: string
@@ -121,7 +122,7 @@ export interface KnowledgeFormValues {
   ratioNumeratorId?: number | string
   ratioPrecision?: string
   relItemId?: string
-  relViewid?: number
+  relViewid?: number | string
   remark?: string
   rollingWindowSize?: number
   semanticGroupId?: number
