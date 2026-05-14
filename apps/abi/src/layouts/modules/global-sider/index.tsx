@@ -154,8 +154,7 @@ const GlobalSider: FC = memo(() => {
                 key={item.key}
                 onClick={() => {
                   if(item.key==='chat-ui') {
-                    window.open(item.key,'__blank')
-                    localStorage.setItem('spaceId', spaceId.toString());
+                    switchToSpace(spaceId)
                     return
                   }
                   dispatch(setSelectedMenuKey(item.key))
