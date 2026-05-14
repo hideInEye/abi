@@ -115,12 +115,13 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
   const handleTest = async () => {
     try {
       setTestLoading(true);
-      const values = await form.validateFields(['providerId', 'modelKey', 'apiKey', 'apiBase']);
+      const values = await form.validateFields(['providerId', 'modelKey', 'apiKey', 'apiBase', 'modelType']);
       const params = {
         providerId: String(values.providerId),
         modelKey: values.modelKey || '',
         apiKey: operateType === 'edit' ? unmaskIfUnchanged(values.apiKey, originalApiKeyRef.current) : (values.apiKey || ''),
         apiBase: (values.apiBase || '').trim().replace(/`/g, ''),
+        modelType: values.modelType ? String(values.modelType) : '',
       };
       const res: any = await fetchTestModel(params);
       if (!res.error && res?.response?.data?.code === 200) {
