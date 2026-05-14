@@ -1,10 +1,12 @@
 import {
+  CaretRightOutlined,
   CloseOutlined,
   CloudDownloadOutlined,
   DeleteOutlined,
   DownOutlined,
   DownloadOutlined,
   FileOutlined,
+  FolderOpenOutlined,
   FolderOutlined,
   GlobalOutlined,
   LockOutlined,
@@ -14,12 +16,13 @@ import {
   TagOutlined,
   UserOutlined
 } from '@ant-design/icons';
-import { App, Button, Drawer, Empty, Input, Spin, Tabs, Tag, Tooltip, Tree } from 'antd';
-import type { DataNode } from 'antd/es/tree';
+import { App, Button, Drawer, Empty, Input, Spin, Tabs, Tag, Tooltip } from 'antd';
+import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
 import {
   addSkillTagApi,
+  deleteSkillApi,
   deleteSkillTagApi,
   downloadSkillFileApi,
   downloadSkillPackageApi,
@@ -96,6 +99,7 @@ type TagItem = {
 type Props = {
   open: boolean;
   onClose: () => void;
+  onDeleted?: () => void;
   skill?: SkillItem | null;
 };
 
@@ -144,8 +148,16 @@ function resolveBlob(res: any): Blob | null {
   return null;
 }
 
+/** 文件树节点（自定义，不依赖 antd Tree） */
+type FbNode = {
+  key: string;
+  title: string;
+  isLeaf: boolean;
+  children?: FbNode[];
+};
+
 /** 根据 filePath 构建树形结构 */
-function buildFileTree(files: FileItem[]): { tree: DataNode[]; map: Record<string, FileItem> } {
+function buildFileTree(files: FileItem[]): { tree: FbNode[]; map: Record<string, FileItem> } {
   const root: Record<string, any> = {};
   const map: Record<string, FileItem> = {};
   files.forEach(f => {
@@ -166,7 +178,7 @@ function buildFileTree(files: FileItem[]): { tree: DataNode[]; map: Record<strin
     });
   });
 
-  const toTree = (obj: Record<string, any>): DataNode[] =>
+  const toTree = (obj: Record<string, any>): FbNode[] =>
     Object.keys(obj)
       .sort((a, b) => {
         const ax = obj[a].__isLeaf && Object.keys(obj[a].__children).length === 0;
@@ -181,14 +193,90 @@ function buildFileTree(files: FileItem[]): { tree: DataNode[]; map: Record<strin
         return {
           key: val.__path,
           title: key,
-          icon: isFile ? <FileOutlined /> : <FolderOutlined />,
           isLeaf: isFile,
           children: children.length ? children : undefined
-        } as DataNode;
+        };
       });
 
   return { tree: toTree(root), map };
 }
+
+/** 自定义文件浏览器：递归平铺渲染，避免 antd Tree 默认样式包裹 */
+const FileBrowser: FC<{
+  data: FbNode[];
+  fileMap: Record<string, FileItem>;
+  size?: 'sm' | 'md';
+  onDownload: (path: string) => void;
+}> = ({ data, fileMap, onDownload, size = 'md' }) => {
+  const [closed, setClosed] = useState<Set<string>>(new Set());
+
+  const toggle = (k: string) => {
+    setClosed(prev => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
+  };
+
+  const render = (nodes: FbNode[], depth: number): ReactNode =>
+    nodes.map(n => {
+      const indent = 8 + depth * 16;
+      if (!n.isLeaf) {
+        const isOpen = !closed.has(n.key);
+        return (
+          <div key={n.key}>
+            <div
+              className="fb-row fb-row--folder"
+              style={{ paddingLeft: indent }}
+              onClick={() => toggle(n.key)}
+            >
+              <CaretRightOutlined className={`fb-caret ${isOpen ? 'fb-caret--open' : ''}`} />
+              {isOpen ? (
+                <FolderOpenOutlined className="fb-icon-folder" />
+              ) : (
+                <FolderOutlined className="fb-icon-folder" />
+              )}
+              <span className="fb-name fb-name--folder">{n.title}</span>
+            </div>
+            {isOpen && n.children && render(n.children, depth + 1)}
+          </div>
+        );
+      }
+      const file = fileMap[n.key];
+      return (
+        <div
+          className="fb-row fb-row--file"
+          key={n.key}
+          style={{ paddingLeft: indent + 18 }}
+        >
+          <FileOutlined className="fb-icon-file" />
+          <span className="fb-name">{n.title}</span>
+          {file?.fileSize != null && (
+            <span className="fb-size">{formatFileSize(file.fileSize)}</span>
+          )}
+          <Tooltip title="下载">
+            <Button
+              className="fb-action"
+              icon={<DownloadOutlined />}
+              size="small"
+              type="text"
+              onClick={e => {
+                e.stopPropagation();
+                onDownload((file?.filePath || file?.path || n.key) as string);
+              }}
+            />
+          </Tooltip>
+        </div>
+      );
+    });
+
+  return (
+    <div className={`file-browser ${size === 'sm' ? 'file-browser--sm' : ''}`}>
+      {render(data, 0)}
+    </div>
+  );
+};
 
 function resolveStatusBadge(status?: string) {
   if (!status) return null;
@@ -212,7 +300,7 @@ function resolveVisibilityBadge(visibility?: string) {
   return null;
 }
 
-const SkillDetailDrawer: FC<Props> = ({ onClose, open, skill }) => {
+const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const { message, modal } = App.useApp();
 
   const [detail, setDetail] = useState<SkillItem | null>(null);
@@ -399,7 +487,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, open, skill }) => {
         setPublishingVid(vid);
         try {
           const res: any = await publishSkillVersionApi({ versionId: vid });
-          if (res?.response?.data?.code === 200 || res?.data != null) {
+          if (res?.response?.data?.code === 200) {
             message.success('发布成功');
             loadVersions(false);
             loadDetail();
@@ -419,7 +507,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, open, skill }) => {
     setAddingTag(true);
     try {
       const res: any = await addSkillTagApi({ skillId, tagName: t });
-      if (res?.response?.data?.code === 200 || res?.data != null) {
+      if (res?.response?.data?.code === 200) {
         message.success('添加成功');
         setNewTag('');
         loadTags();
@@ -432,16 +520,34 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, open, skill }) => {
   }
 
   async function handleDeleteTag(t: TagItem) {
-    if (!skillId) return;
+    if (t.tagId == null) return;
     try {
-      const res: any = await deleteSkillTagApi({ skillId, tagName: t.tagName });
-      if (res?.response?.data?.code === 200 || res?.data != null) {
+      const res: any = await deleteSkillTagApi({ tagId: t.tagId });
+      if (res?.response?.data?.code === 200) {
         message.success('删除成功');
         loadTags();
       }
     } catch (err: any) {
       message.error(err?.message || '删除失败');
     }
+  }
+
+  function handleDeleteSkill() {
+    if (!skillId) return;
+    modal.confirm({
+      title: '确认删除该技能？',
+      content: `技能 「${skillName}」 删除后不可恢复，所有版本和文件均会一并删除。`,
+      okType: 'danger',
+      okText: '删除',
+      cancelText: '取消',
+      onOk: async () => {
+        const res: any = await deleteSkillApi({ skillId });
+        if (res?.response?.data?.code === 200) {
+          message.success('删除成功');
+          onDeleted?.();
+        }
+      }
+    });
   }
 
   return (
@@ -486,16 +592,6 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, open, skill }) => {
               )}
 
               {summary && <div className="sd-summary">{summary}</div>}
-
-              {Array.isArray(src.labels) && src.labels.length > 0 && (
-                <div className="flex flex-wrap gap-6px">
-                  {src.labels.map((lb: any, idx: number) => (
-                    <Tag color="geekblue" key={lb.slug || lb.id || idx}>
-                      {lb.displayName || lb.name || lb}
-                    </Tag>
-                  ))}
-                </div>
-              )}
             </div>
 
             <Tabs
@@ -554,37 +650,10 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, open, skill }) => {
                         </div>
                       ) : (
                         <div className="sd-file-tree">
-                          <Tree
-                            showIcon
-                            defaultExpandAll
-                            treeData={fileTree}
-                            titleRender={(node: any) => {
-                              const f = fileMap[node.key as string];
-                              if (!f) return <span>{node.title as any}</span>;
-                              return (
-                                <div className="flex items-center justify-between gap-12px pr-8px">
-                                  <span className="truncate text-13px">{node.title as any}</span>
-                                  <div className="flex flex-shrink-0 items-center gap-12px">
-                                    {f.fileSize != null && (
-                                      <span className="text-12px text-gray-400">
-                                        {formatFileSize(f.fileSize)}
-                                      </span>
-                                    )}
-                                    <Tooltip title="下载">
-                                      <Button
-                                        icon={<DownloadOutlined />}
-                                        size="small"
-                                        type="text"
-                                        onClick={e => {
-                                          e.stopPropagation();
-                                          handleDownloadFile((f.filePath || f.path) as string);
-                                        }}
-                                      />
-                                    </Tooltip>
-                                  </div>
-                                </div>
-                              );
-                            }}
+                          <FileBrowser
+                            data={fileTree}
+                            fileMap={fileMap}
+                            onDownload={handleDownloadFile}
                           />
                         </div>
                       )}
@@ -656,144 +725,48 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, open, skill }) => {
                       )}
                     </Spin>
                   )
-                },
-                {
-                  key: 'tags',
-                  label: (
-                    <span>
-                      <TagOutlined /> 标签（{tags.length}）
-                    </span>
-                  ),
-                  children: (
-                    <Spin spinning={loadingTags}>
-                      <div className="rounded-8px border border-gray-200 bg-white p-20px">
-                        <div className="mb-16px flex gap-8px">
-                          <Input
-                            placeholder="输入标签名称"
-                            value={newTag}
-                            onChange={e => setNewTag(e.target.value)}
-                            onPressEnter={handleAddTag}
-                          />
-                          <Button
-                            className="brand-button"
-                            icon={<PlusOutlined />}
-                            loading={addingTag}
-                            type="primary"
-                            onClick={handleAddTag}
-                          >
-                            添加标签
-                          </Button>
-                        </div>
-                        {tags.length === 0 ? (
-                          <Empty description="暂无标签" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                        ) : (
-                          <div className="flex flex-wrap gap-8px">
-                            {tags.map(t => (
-                              <Tag
-                                closable
-                                color="purple"
-                                closeIcon={<DeleteOutlined />}
-                                key={t.tagId ?? t.tagName}
-                                onClose={e => {
-                                  e.preventDefault();
-                                  handleDeleteTag(t);
-                                }}
-                              >
-                                {t.tagName}
-                              </Tag>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </Spin>
-                  )
                 }
               ]}
             />
           </div>
 
-          {/* 右侧信息栏 */}
+          {/* 右侧信息栏：文件 + 版本 + 下载 + 标签管理 + 生命周期管理 */}
           <aside className="w-280px flex-shrink-0">
-            <div className="sd-info-card mb-12px">
-              <Button
-                block
-                className="brand-button"
-                icon={<CloudDownloadOutlined />}
-                loading={downloading}
-                size="large"
-                type="primary"
-                onClick={handleDownloadPackage}
-              >
-                下载技能包
-              </Button>
-              <Button
-                block
-                className="mt-8px"
-                icon={<ReloadOutlined />}
-                onClick={() => {
-                  loadDetail();
-                  loadVersions(false);
-                  loadTags();
-                  if (activeVersionId != null) {
-                    loadVersionDetail(activeVersionId);
-                    loadFiles(activeVersionId);
-                  }
-                }}
-              >
-                刷新数据
-              </Button>
-            </div>
-
-            {/* 文件浏览（侧栏版） */}
+            {/* 1. 文件浏览 */}
             {files.length > 0 && (
               <div className="sd-info-card mb-12px">
                 <button
                   aria-expanded={fileBrowserOpen}
-                  className="flex w-full cursor-pointer items-center gap-6px border-0 bg-transparent p-0 text-left"
+                  className="sd-side-card-header w-full cursor-pointer border-0 bg-transparent text-left"
                   type="button"
                   onClick={() => setFileBrowserOpen(v => !v)}
                 >
-                  <FolderOutlined className="text-gray-500" />
-                  <span className="text-13px font-600 text-gray-800">文件浏览</span>
-                  <span className="ml-auto mr-4px text-12px text-gray-400">{files.length}</span>
+                  <span className="sd-side-card-icon">
+                    <FolderOutlined />
+                  </span>
+                  <span className="sd-side-card-title">文件浏览</span>
+                  <span className="sd-side-card-count">{files.length}</span>
                   <DownOutlined
                     className="text-12px text-gray-400 transition-transform"
                     style={{ transform: fileBrowserOpen ? 'rotate(180deg)' : 'none' }}
                   />
                 </button>
                 {fileBrowserOpen && (
-                  <div className="mt-12px max-h-400px overflow-auto">
-                    <Tree
-                      showIcon
-                      defaultExpandAll
-                      treeData={fileTree}
-                      titleRender={(node: any) => {
-                        const f = fileMap[node.key as string];
-                        if (!f) return <span className="text-13px">{node.title as any}</span>;
-                        return (
-                          <div className="flex items-center justify-between gap-6px pr-4px">
-                            <span className="truncate text-12px">{node.title as any}</span>
-                            <Tooltip title="下载">
-                              <Button
-                                icon={<DownloadOutlined />}
-                                size="small"
-                                type="text"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  handleDownloadFile((f.filePath || f.path) as string);
-                                }}
-                              />
-                            </Tooltip>
-                          </div>
-                        );
-                      }}
+                  <div className="max-h-400px overflow-auto">
+                    <FileBrowser
+                      data={fileTree}
+                      fileMap={fileMap}
+                      size="sm"
+                      onDownload={handleDownloadFile}
                     />
                   </div>
                 )}
               </div>
             )}
 
+            {/* 2. 版本信息 */}
             <div className="sd-info-card mb-12px">
+              <div className="mb-12px text-13px font-600 text-gray-800">版本信息</div>
               <div className="sd-info-row">
                 <span className="sd-info-row__label">当前版本</span>
                 <span className="sd-info-row__value">
@@ -801,27 +774,9 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, open, skill }) => {
                 </span>
               </div>
               <div className="sd-info-row">
-                <span className="sd-info-row__label">下载量</span>
-                <span className="sd-info-row__value">{downloads}</span>
-              </div>
-              {src.starCount != null && (
-                <div className="sd-info-row">
-                  <span className="sd-info-row__label">收藏数</span>
-                  <span className="sd-info-row__value">{src.starCount}</span>
-                </div>
-              )}
-              {src.ratingCount != null && src.ratingCount > 0 && (
-                <div className="sd-info-row">
-                  <span className="sd-info-row__label">评分</span>
-                  <span className="sd-info-row__value">
-                    {src.ratingAvg != null ? src.ratingAvg.toFixed(1) : '-'} / 5
-                  </span>
-                </div>
-              )}
-              <div className="sd-info-row">
                 <span className="sd-info-row__label">命名空间</span>
                 <span className="sd-info-row__value truncate max-w-160px">
-                  @{String(namespace || '').replace(/^@/, '') || '-'}
+                  @{String(namespace ?? '-').replace(/^@/, '')}
                 </span>
               </div>
               {src.createTime && (
@@ -838,20 +793,103 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, open, skill }) => {
               )}
             </div>
 
-            {tags.length > 0 && (
-              <div className="sd-info-card">
-                <div className="mb-8px text-13px font-600 text-gray-800">
-                  <TagOutlined /> 标签
-                </div>
+            {/* 3. 下载 */}
+            <div className="sd-info-card mb-12px">
+              <div className="mb-12px text-13px font-600 text-gray-800">下载</div>
+              <Button
+                block
+                className="brand-button"
+                icon={<CloudDownloadOutlined />}
+                loading={downloading}
+                size="large"
+                type="primary"
+                onClick={handleDownloadPackage}
+              >
+                下载
+              </Button>
+              {/* <Button
+                block
+                className="mt-8px"
+                icon={<ReloadOutlined />}
+                onClick={() => {
+                  loadDetail();
+                  loadVersions(false);
+                  loadTags();
+                  if (activeVersionId != null) {
+                    loadVersionDetail(activeVersionId);
+                    loadFiles(activeVersionId);
+                  }
+                }}
+              >
+                刷新数据
+              </Button> */}
+            </div>
+
+            {/* 4. 标签管理 */}
+            <div className="sd-info-card mb-12px">
+              <div className="mb-8px flex items-center gap-6px text-13px font-600 text-gray-800">
+                <TagOutlined /> 标签管理
+              </div>
+              <div className="mb-8px flex gap-6px">
+                <Input
+                  placeholder="输入标签名"
+                  size="small"
+                  value={newTag}
+                  onChange={e => setNewTag(e.target.value)}
+                  onPressEnter={handleAddTag}
+                />
+                <Button
+                  icon={<PlusOutlined />}
+                  loading={addingTag}
+                  size="small"
+                  type="primary"
+                  onClick={handleAddTag}
+                />
+              </div>
+              {tags.length === 0 ? (
+                <div className="text-12px text-gray-400">暂无标签</div>
+              ) : (
                 <div className="flex flex-wrap gap-4px">
                   {tags.map(t => (
-                    <Tag color="purple" key={t.tagId ?? t.tagName}>
+                    <Tag
+                      closable
+                      color="blue"
+                      closeIcon={<DeleteOutlined />}
+                      key={t.tagId ?? t.tagName}
+                      onClose={e => {
+                        e.preventDefault();
+                        handleDeleteTag(t);
+                      }}
+                    >
                       {t.tagName}
                     </Tag>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* 5. 生命周期管理 */}
+            <div className="sd-info-card">
+              <div className="mb-8px flex items-center gap-6px text-13px font-600 text-gray-800">
+                <ReloadOutlined /> 生命周期管理
               </div>
-            )}
+              <div className="mb-12px text-12px text-gray-500">删除后不可恢复，所有版本和文件均会一并删除。</div>
+              <div className="sd-info-row">
+                <span className="sd-info-row__label">当前公开版本</span>
+                <span className="sd-info-row__value">
+                  {headlineVersion ? `v${headlineVersion.version || headlineVersion.versionNo}` : '暂无'}
+                </span>
+              </div>
+              <Button
+                danger
+                block
+                className="mt-12px"
+                type="primary"
+                onClick={handleDeleteSkill}
+              >
+                删除技能
+              </Button>
+            </div>
           </aside>
         </div>
       </Spin>

@@ -1,34 +1,30 @@
-/* SkillHub 紫色品牌主题 —— 从 skills_web 迁移 */
+/* SkillHub 品牌主题——适配系统蓝色 */
 .skill-hub-scope {
-  --brand-start: #6A6DFF;
-  --brand-end: #B85EFF;
-  --brand-gradient: linear-gradient(135deg, #6A6DFF 0%, #B85EFF 100%);
+  --brand-start: #1677ff;
+  --brand-end: #1677ff;
+  --brand-gradient: #1677ff;
 }
 
 /* 品牌渐变文字 */
 .skill-hub-scope .text-brand-gradient {
-  background: var(--brand-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
+  color: #1677ff;
 }
 
 /* 品牌渐变背景 */
 .skill-hub-scope .bg-brand-gradient {
-  background: var(--brand-gradient);
+  background: #1677ff;
 }
 
-/* 品牌渐变按钮 */
+/* 品牌按钮 */
 .skill-hub-scope .brand-button.ant-btn-primary {
-  background: var(--brand-gradient);
+  background: #1677ff;
   border: none;
   color: #fff;
-  box-shadow: 0 6px 16px rgba(106, 109, 255, 0.25);
+  box-shadow: 0 6px 16px rgba(22, 119, 255, 0.25);
 }
 .skill-hub-scope .brand-button.ant-btn-primary:hover,
 .skill-hub-scope .brand-button.ant-btn-primary:focus {
-  background: linear-gradient(135deg, #5558f5 0%, #a94df1 100%) !important;
+  background: #4096ff !important;
   color: #fff !important;
 }
 .skill-hub-scope .brand-button.ant-btn-primary:disabled {
@@ -84,8 +80,8 @@
   cursor: pointer;
 }
 .skill-hub-scope .skill-card:hover {
-  border-color: var(--brand-start);
-  box-shadow: 0 10px 24px rgba(106, 109, 255, 0.12);
+  border-color: #1677ff;
+  box-shadow: 0 10px 24px rgba(22, 119, 255, 0.12);
   transform: translateY(-2px);
 }
 .skill-hub-scope .skill-card__title {
@@ -249,8 +245,8 @@
 }
 .skill-hub-scope .sd-version-item + .sd-version-item { margin-top: 12px; }
 .skill-hub-scope .sd-version-item:hover {
-  border-color: var(--brand-start);
-  box-shadow: 0 6px 14px rgba(106, 109, 255, 0.08);
+  border-color: #1677ff;
+  box-shadow: 0 6px 14px rgba(22, 119, 255, 0.08);
 }
 .skill-hub-scope .sd-version-chip {
   display: inline-flex;
@@ -260,8 +256,8 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   font-weight: 600;
-  color: #4338ca;
-  background: rgba(106, 109, 255, 0.12);
+  color: #1d4ed8;
+  background: rgba(22, 119, 255, 0.12);
 }
 .skill-hub-scope .sd-version-current {
   display: inline-flex;
@@ -274,15 +270,130 @@
   background: var(--brand-gradient);
 }
 
-/* 文件树容器 */
+/* 文件树容器（主 Tab） */
 .skill-hub-scope .sd-file-tree {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
-  padding: 10px 6px;
+  padding: 8px 6px;
   background: #fff;
   max-height: 520px;
   overflow: auto;
 }
-.skill-hub-scope .sd-file-tree .ant-tree-node-content-wrapper:hover {
-  background: rgba(106, 109, 255, 0.06) !important;
+
+/* 侧边栏文件浏览卡片头部 */
+.skill-hub-scope .sd-side-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
 }
+.skill-hub-scope .sd-side-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(22, 119, 255, 0.1);
+  color: #1677ff;
+  font-size: 13px;
+}
+.skill-hub-scope .sd-side-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  flex: 1;
+}
+.skill-hub-scope .sd-side-card-count {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-right: 4px;
+}
+
+/* 自定义文件浏览器 FileBrowser */
+.skill-hub-scope .file-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.skill-hub-scope .fb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 22px;
+  transition: background 0.15s;
+  user-select: none;
+}
+.skill-hub-scope .fb-row--folder {
+  cursor: pointer;
+  font-weight: 500;
+}
+.skill-hub-scope .fb-row:hover {
+  background: rgba(22, 119, 255, 0.06);
+}
+.skill-hub-scope .fb-caret {
+  width: 10px;
+  font-size: 10px;
+  color: #94a3b8;
+  transition: transform 0.18s;
+  flex-shrink: 0;
+}
+.skill-hub-scope .fb-caret--open { transform: rotate(90deg); }
+.skill-hub-scope .fb-icon-folder {
+  color: #f59e0b;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.skill-hub-scope .fb-icon-file {
+  color: #94a3b8;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.skill-hub-scope .fb-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #334155;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.skill-hub-scope .fb-name--folder {
+  color: #1f2937;
+  font-weight: 600;
+}
+.skill-hub-scope .fb-size {
+  font-size: 12px;
+  color: #94a3b8;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.skill-hub-scope .fb-action {
+  flex-shrink: 0;
+  opacity: 0;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0 !important;
+  margin-left: -4px;
+}
+.skill-hub-scope .fb-row:hover .fb-action {
+  opacity: 1;
+}
+
+/* 紧凑尺寸（侧边栏使用） */
+.skill-hub-scope .file-browser--sm .fb-row {
+  font-size: 12px;
+  padding: 3px 6px;
+  line-height: 20px;
+  gap: 6px;
+}
+.skill-hub-scope .file-browser--sm .fb-icon-folder { font-size: 13px; }
+.skill-hub-scope .file-browser--sm .fb-icon-file { font-size: 12px; }
+.skill-hub-scope .file-browser--sm .fb-size { font-size: 11px; }

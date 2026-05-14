@@ -228,8 +228,8 @@ const SkillPublishDrawer: FC<Props> = ({ onClose, onSuccess, open }) => {
             )}
             <input
               accept=".zip,application/zip,application/x-zip-compressed"
-              className="hidden"
               ref={inputFileRef}
+              style={{ display: 'none' }}
               type="file"
               onChange={e => {
                 onFilePicked(e.target.files?.[0]);

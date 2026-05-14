@@ -156,10 +156,7 @@ export const generatedRoutes: GeneratedRoute[] = [
             path: 'skills',
             component: 'view.component_system_skills',
             meta: {
-              hideInMenu: false,
               i18nKey: 'route.component_system_skills',
-              icon: 'mdi:lightbulb-on-outline',
-              order: 7,
               title: 'component_system_skills'
             }
           }
@@ -365,15 +362,6 @@ export const generatedRoutes: GeneratedRoute[] = [
           hideInMenu: true,
           i18nKey: 'route.manage_role-auth',
           title: 'manage_role-auth'
-        }
-      },
-      {
-        name: 'manage_skill',
-        path: 'skill',
-        component: 'view.manage_skill',
-        meta: {
-          i18nKey: 'route.manage_skill',
-          title: 'manage_skill'
         }
       },
       {
