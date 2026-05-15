@@ -115,6 +115,12 @@ function formatFileSize(bytes?: number) {
   return `${size.toFixed(1)} ${units[i]}`;
 }
 
+/** 格式化时间：去掉 ISO 中的 T，并去掉毫秒/时区后缀 */
+function formatDateTime(s?: string) {
+  if (!s) return '';
+  return String(s).replace('T', ' ').replace(/\.\d+Z?$/, '').replace(/Z$/, '');
+}
+
 function unwrapRows(res: any): any[] {
   const rows =
     res?.response?.data?.data?.rows ||
@@ -695,7 +701,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                                     onClick={e => e.stopPropagation()}
                                   >
                                     <span className="text-12px text-gray-400">
-                                      {v.publishedAt || v.createTime || ''}
+                                      {formatDateTime(v.publishedAt || v.createTime)}
                                     </span>
                                     {isDraft && (
                                       <Button
@@ -782,13 +788,13 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
               {src.createTime && (
                 <div className="sd-info-row">
                   <span className="sd-info-row__label">创建时间</span>
-                  <span className="sd-info-row__value text-12px">{src.createTime}</span>
+                  <span className="sd-info-row__value text-12px">{formatDateTime(src.createTime)}</span>
                 </div>
               )}
               {src.updateTime && (
                 <div className="sd-info-row">
                   <span className="sd-info-row__label">更新时间</span>
-                  <span className="sd-info-row__value text-12px">{src.updateTime}</span>
+                  <span className="sd-info-row__value text-12px">{formatDateTime(src.updateTime)}</span>
                 </div>
               )}
             </div>
