@@ -1,3 +1,5 @@
+import type { Dayjs } from 'dayjs'
+
 export type IpAccessType = 'unlimited' | 'whitelist'
 
 export type ApiKeyStatus = 'disabled' | 'normal'
@@ -18,11 +20,23 @@ export interface ApiKeyItem {
   secretKey: string
   spaceId: number
   status: ApiKeyStatus
-  timeoutMinutes?: number
+  timeoutSeconds?: number
 }
 
 export interface ApiKeyFormValues {
+  activeTimeout: number
   description?: string
+  expireTime?: Dayjs | string | null
   ipAccessType: IpAccessType
   spaceId: number
+}
+
+export interface ApiKeyQueryValues {
+  accessKey?: string
+  clientId?: string
+  entCreateTime?: string
+  ipAccessType?: IpAccessType
+  spaceId?: number
+  startCreateTime?: string
+  status?: ApiKeyStatus
 }

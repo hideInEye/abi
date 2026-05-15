@@ -84,11 +84,32 @@ export function ApiKeyTable({
       width: 260
     },
     {
+      dataIndex: 'secretKey',
+      key: 'secretKey',
+      render: (value: string) => <span>{value || '********'}</span>,
+      title: 'Secret Key',
+      width: 160
+    },
+    {
       dataIndex: 'ipAccessType',
       key: 'ipAccessType',
       render: (value: ApiKeyItem['ipAccessType']) => <ATag>{value === 'unlimited' ? '不限制' : '仅白名单'}</ATag>,
       title: 'IP访问限制',
       width: 150
+    },
+    {
+      dataIndex: 'timeoutSeconds',
+      key: 'timeoutSeconds',
+      render: (value?: number) => (typeof value === 'number' ? `${value} 秒` : '-'),
+      title: 'Token超时',
+      width: 150
+    },
+    {
+      dataIndex: 'expireTime',
+      key: 'expireTime',
+      render: (value?: string | null) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '永久有效'),
+      title: '过期时间',
+      width: 180
     },
     {
       dataIndex: 'status',
@@ -170,7 +191,7 @@ export function ApiKeyTable({
           loading={loading}
           pagination={false}
           rowKey="id"
-          scroll={{ x: 1400 }}
+          scroll={{ x: 1680 }}
           size="small"
         />
       </div>
