@@ -10,7 +10,7 @@ import {
 import { Drawer, Space, Tabs, message } from 'antd';
 
 import { fetchTerms, getAgentDetailById, putAgentConfig, syncKnowledgeBase } from '@/service/api/assistant-manage';
-import { useRouter } from '~/packages/simple-router/src';
+import { openChatConversationWindow } from '@/utils/chatWindow';
 
 import Dictionaries from './config/dictionaries';
 import IndustryTerminology from './config/industry-terminology';
@@ -106,7 +106,6 @@ function formatData(data: any) {
 const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
   const [state, dispatch] = useReducer(reducer, initState);
   const [initialState, setInitialState] = useState();
-  const router = useRouter();
 
   const getHasChange = useCallback(() => {
     if (!initialState) return false;
@@ -313,7 +312,7 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
       content: '是否需要同步知识库？将同步标签、术语等配置到本地。',
       okText: '确认',
       onCancel: () => {
-        router.push(`/ai-assistant/conversational-analysis`);
+        openChatConversationWindow({ spaceId: data?.spaceId });
       },
       onOk: async () => {
         try {
@@ -326,11 +325,11 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
             space_id: `${data.spaceId}`
           });
           message.success('同步知识库成功');
-          router.push(`/ai-assistant/conversational-analysis`);
+          openChatConversationWindow({ spaceId: data?.spaceId });
         } catch (error) {
           message.error('同步知识库失败');
           console.log('同步知识库失败:', error);
-          router.push(`/ai-assistant/conversational-analysis`);
+          openChatConversationWindow({ spaceId: data?.spaceId });
         }
       },
       title: '同步知识库'

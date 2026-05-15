@@ -1,3 +1,4 @@
+import { createAuthorizationHeader } from '@sa/axios';
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
 
 import { store } from '@/store';
@@ -10,9 +11,7 @@ import type { RequestInstanceState } from './type';
 
 export function getAuthorization() {
   const token = localStg.get('token');
-  const Authorization = token ? `Bearer ${token}` : null;
-
-  return Authorization;
+  return createAuthorizationHeader(token);
 }
 
 export function getUserId() {

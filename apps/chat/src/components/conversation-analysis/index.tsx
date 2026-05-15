@@ -1,4 +1,4 @@
-import { Modal, Spin } from 'antd'
+import { Empty, Modal, Spin } from 'antd'
 import React, { useEffect, useCallback, useRef } from 'react'
 import { useState } from 'react'
 import { deleteConv, fetchConvList, newConv } from '../../service/api/conv'
@@ -39,7 +39,13 @@ const setLastConvUidByChatId = (chatId?: string | number, convUid?: string) => {
   } catch {}
 }
 
-const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpaceId }) => {
+interface ConversationAnalysisProps {
+  spaceId?: number
+  chatId?: string
+  hideSidebar?: boolean
+}
+
+const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false }) => {
   const [visible, setVisible] = useState(false)
   const [curApp, setCurApp] = useState<any>({})
   const [appList, setAppList] = useState<any[]>([])
@@ -108,8 +114,8 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
       })
       const data = sortAppList(res.data) || []
       setAppList(data)
-      const chatId = localStorage.getItem('chatId') || ''
-      const targetApp = (chatId && data.find((item) => String(item.chat_id) === String(chatId))) || data[0]
+      const preferredChatId = routeChatId || localStorage.getItem('chatId') || ''
+      const targetApp = (preferredChatId && data.find((item) => String(item.chat_id) === String(preferredChatId))) || data[0]
 
       if (targetApp) {
         setCurApp({ ...targetApp })
@@ -123,7 +129,7 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
     } finally {
       setLoading(false)
     }
-  }, [currentSpaceId])
+  }, [currentSpaceId, routeChatId])
 
   useEffect(() => {
     // 防止StrictMode导致的重复调用，同时在 spaceId 变化时刷新列表
@@ -169,6 +175,16 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
       }
     }
   }, [curApp])
+
+  useEffect(() => {
+    if (!routeChatId || !appList.length) return
+    const nextApp = appList.find((item) => String(item.chat_id) === String(routeChatId))
+    if (!nextApp) return
+    if (String(curApp?.chat_id) === String(nextApp.chat_id)) return
+    setCurApp({ ...nextApp })
+    localStorage.setItem('chatId', String(nextApp.chat_id))
+    setShowAllConversations(false)
+  }, [routeChatId, appList, curApp?.chat_id])
 
   const handleSetCurApp = useCallback((item: any) => {
     if (!item) return
@@ -304,20 +320,43 @@ const ConversationAnalysis: React.FC<{ spaceId?: number }> = ({ spaceId: propSpa
   return (
     <Spin spinning={loading} wrapperClassName="h-full">
       <div className="h-full w-full flex bg-white">
-        <ConverList
-          ref={converListRef}
-          handleEdit={handleEdit}
-          appList={appList}
-          handleSetCurApp={handleSetCurApp}
-          handleDeleteApp={handleDeleteApp}
-          setShowAllConversations={setShowAllConversations}
-          onUpdateList={handleUpdateList}
-          handleClearConvHistory={handleClearConvHistory}
-          setFold={setFold}
-          fold={fold}
-        />
-        {curConv && !showAllConversations && <Conversation fold={fold} conv={curConv} ref={conversationRef} onClose={() => setCurConv(undefined)} onUpdateList={handleUpdateList} />}
-        {showAllConversations && <AllConversations onClose={() => setShowAllConversations(false)} onSelectApp={(item) => handleSetCurApp(item)} onUpdateList={handleUpdateList} />}
+        {!hideSidebar && (
+          <ConverList
+            ref={converListRef}
+            handleEdit={handleEdit}
+            appList={appList}
+            handleSetCurApp={handleSetCurApp}
+            handleDeleteApp={handleDeleteApp}
+            setShowAllConversations={setShowAllConversations}
+            onUpdateList={handleUpdateList}
+            handleClearConvHistory={handleClearConvHistory}
+            setFold={setFold}
+            fold={fold}
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          {curConv && !showAllConversations && (
+            <Conversation
+              fold={hideSidebar ? false : fold}
+              conv={curConv}
+              ref={conversationRef}
+              onClose={() => setCurConv(undefined)}
+              onUpdateList={handleUpdateList}
+            />
+          )}
+          {!curConv && !showAllConversations && (
+            <div className="h-full w-full flex items-center justify-center">
+              <Empty description="暂无可用对话" />
+            </div>
+          )}
+          {showAllConversations && (
+            <AllConversations
+              onClose={() => setShowAllConversations(false)}
+              onSelectApp={(item) => handleSetCurApp(item)}
+              onUpdateList={handleUpdateList}
+            />
+          )}
+        </div>
       </div>
       <CreateModal
         onClose={onClose}

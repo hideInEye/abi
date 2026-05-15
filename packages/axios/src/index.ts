@@ -91,6 +91,7 @@ function createCommonRequest<ResponseData = any>(axiosConfig?: CreateAxiosDefaul
 }
 
 export type * from './type'
+export * from './auth'
 
 /**
  * create a request instance

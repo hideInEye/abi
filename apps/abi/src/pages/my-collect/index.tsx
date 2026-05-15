@@ -64,8 +64,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
 
   const handleNavigate = (r:OperateRecord) => {
     const { spaceId, chatId } = r
-    switchToSpace(spaceId)
-    localStorage.setItem('chatId',chatId)
+    switchToSpace(spaceId, undefined, { chatId })
   };
 
   const handleCollect = async (id: string) => {

@@ -10,7 +10,7 @@ import workbenchIcon from '@/assets/imgs/home/workbench.png'
 
 export const primaryMenuData = [
   { key: 'home', label: '主页',name:'home', icon: homeIcon, checkIcon: DehomeIcon, url: '/home' },
-  { key: 'ai-assistant_conversational-analysis',name:'ai-assistant_conversational-analysis', label: '对话', icon: dialogueIcon, checkIcon: DedialogueIcon, url: '/ai-assistant/conversational-analysis' },
+  { key: 'chat-ui',name:'chat-ui', label: '对话', icon: dialogueIcon, checkIcon: DedialogueIcon, url: '/ai-assistant/conversational-analysis' },
   { key: 'workbench', name:'assistant-manage_assistant-config',label: '工作台', icon: workbenchIcon, checkIcon: DeworkbenchIcon, url: '/workbench' },
   { key: 'component', name:'system_model',label: '组件', icon: componentsIcon, checkIcon: DecomponentsIcon, url: '/component' },
 ]

@@ -2,9 +2,35 @@ import type { RouteKey } from '@elegant-router/types';
 import { useRoute, useRouter } from '@sa/simple-router';
 import type { RouteLocationNamedRaw } from '@sa/simple-router';
 
+import { localStg } from '@/utils/storage';
+
 interface RouterPushOptions {
   params?: Record<string, string>;
   query?: Record<string, string>;
+}
+
+function isNormalRole(roles: any[]): boolean {
+  if (!Array.isArray(roles) || !roles.length) {
+    return true;
+  }
+
+  return !roles.some((role) => {
+    const roleText = String(
+      role?.roleKey ||
+        role?.key ||
+        role?.roleName ||
+        role?.name ||
+        role
+    ).toLowerCase();
+
+    return (
+      roleText.includes('admin') ||
+      roleText.includes('super') ||
+      roleText.includes('creator') ||
+      roleText.includes('管理员') ||
+      roleText.includes('超级')
+    );
+  });
 }
 
 /**
@@ -108,10 +134,17 @@ export function useRouterPush() {
     const redirect = searchParams.get('redirect');
 
     if (needRedirect && redirect) {
-      routerPush(redirect);
-    } else {
-      toHome();
+      return routerPush(redirect);
     }
+
+    const userInfo: any = localStg.get('userInfo') || {};
+    const roles = Array.isArray(userInfo?.roles) ? userInfo.roles : [];
+
+    if (isNormalRole(roles)) {
+      return routerPush('/ai-assistant/conversational-analysis');
+    }
+
+    return toHome();
   }
 
   return {

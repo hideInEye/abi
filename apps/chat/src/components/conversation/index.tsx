@@ -11,7 +11,7 @@ import ShareEmailSetting from './components/share-email-setting'
 import { useConversationController, type ConversationProps } from './hooks/useConversationController'
 
 const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void }, ConversationProps>((props, ref) => {
-  const { conv, fold } = props
+  const { conv } = props
   const controller = useConversationController(props, ref)
 
   const {
@@ -68,7 +68,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
   } = controller
 
   return (
-    <div className={`${!fold ? 'w-[calc(100vw-18rem)]':'w-[calc(100vw-5.5rem)]'} flex-1 flex h-[100vh] flex-col bg-[#f9f9f9]  overflow-hidden`}>
+    <div className="flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden bg-[#f9f9f9]">
       <ChatHeader
         conv={conv}
         ref={chatHeaderRef}
