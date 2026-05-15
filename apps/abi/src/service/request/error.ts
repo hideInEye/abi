@@ -1,5 +1,5 @@
 import type { FlatRequestInstance } from '@sa/axios';
-import { BACKEND_ERROR_CODE } from '@sa/axios';
+import { BACKEND_ERROR_CODE, isBackendCodeIn, parseBackendCodeList } from '@sa/axios';
 import type { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 
 import { $t } from '@/locales';
@@ -9,6 +9,10 @@ import { resetStore } from '@/store/slice/auth';
 
 import { getAuthorization, handleExpiredRequest, showErrorMsg } from './shared';
 import type { RequestInstanceState } from './type';
+
+const logoutCodes = parseBackendCodeList(import.meta.env.VITE_SERVICE_LOGOUT_CODES);
+const modalLogoutCodes = parseBackendCodeList(import.meta.env.VITE_SERVICE_MODAL_LOGOUT_CODES);
+const expiredTokenCodes = parseBackendCodeList(import.meta.env.VITE_SERVICE_EXPIRED_TOKEN_CODES);
 /** - 后端错误处理 */
 export async function backEndFail(
   response: AxiosResponse<App.Service.Response<unknown>, any>,
@@ -20,9 +24,6 @@ export async function backEndFail(
   // if (isTestConnect) {
   //   return null;
   // }
-  
-  const responseCode = String(response.data.code);
-
   async function handleLogout() {
     await store.dispatch(resetStore());
     // handleLoginExpired();
@@ -36,15 +37,13 @@ export async function backEndFail(
   }
 
   // when the backend response code is in `logoutCodes`, it means the user will be logged out and redirected to login page
-  const logoutCodes = import.meta.env.VITE_SERVICE_LOGOUT_CODES?.split(',') || [];
-  if (logoutCodes.includes(responseCode)) {
+  if (isBackendCodeIn(response.data, logoutCodes)) {
     await handleLogout();
     return null;
   }
 
   // when the backend response code is in `modalLogoutCodes`, it means the user will be logged out by displaying a modal
-  const modalLogoutCodes = import.meta.env.VITE_SERVICE_MODAL_LOGOUT_CODES?.split(',') || [];
-  if (modalLogoutCodes.includes(responseCode) && !request.state.errMsgStack?.includes(response.data.msg)) {
+  if (isBackendCodeIn(response.data, modalLogoutCodes) && !request.state.errMsgStack?.includes(response.data.msg)) {
     request.state.errMsgStack = [...(request.state.errMsgStack || []), response.data.msg];
 
     // prevent the user from refreshing the page
@@ -71,8 +70,7 @@ export async function backEndFail(
   // the api `refreshToken` can not return error code in `expiredTokenCodes`, otherwise it will be a dead loop, should return `logoutCodes` or `modalLogoutCodes`
   // when the backend response code is in `expiredTokenCodes`, it means the token is expired, and refresh token
   // the api `refreshToken` can not return error code in `expiredTokenCodes`, otherwise it will be a dead loop, should return `logoutCodes` or `modalLogoutCodes`
-  const expiredTokenCodes = import.meta.env.VITE_SERVICE_EXPIRED_TOKEN_CODES?.split(',') || [];
-  if (expiredTokenCodes.includes(responseCode)) {
+  if (isBackendCodeIn(response.data, expiredTokenCodes)) {
     const success = await handleExpiredRequest(request.state);
     if (success) {
       const Authorization = getAuthorization();
@@ -124,13 +122,11 @@ export function handleError(
   }
 
   // the error message is displayed in the modal
-  const modalLogoutCodes = import.meta.env.VITE_SERVICE_MODAL_LOGOUT_CODES?.split(',') || [];
   if (modalLogoutCodes.includes(backendErrorCode)) {
     return;
   }
 
   // when the token is expired, refresh token and retry request, so no need to show error message
-  const expiredTokenCodes = import.meta.env.VITE_SERVICE_EXPIRED_TOKEN_CODES?.split(',') || [];
   if (expiredTokenCodes.includes(backendErrorCode)) {
     return;
   }
