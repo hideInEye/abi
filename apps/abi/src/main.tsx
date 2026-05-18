@@ -5,6 +5,7 @@ import { qiankunWindow, renderWithQiankun } from 'vite-plugin-qiankun/dist/helpe
 
 import { setupRouter } from '@/router';
 import { store } from '@/store';
+import { registerAiBotMicroApp } from '@/utils/aiBotMicroApp';
 import { setupRequestInterceptor } from '@/utils/requestInterceptor';
 import { localStg } from '@/utils/storage';
 
@@ -51,6 +52,9 @@ async function setupApp(props: any) {
   setupIconifyOffline();
 
   setupRouter();
+
+  // 主应用初始化时注册 chat 子应用，后续通过路由激活挂载
+  registerAiBotMicroApp();
 
   // 设置请求拦截器
   teardownRequestInterceptor?.();

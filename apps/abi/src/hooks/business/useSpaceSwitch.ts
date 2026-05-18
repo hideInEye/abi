@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 
 import { useAppDispatch } from '@/hooks/business/useStore';
 import { changeSpaceId, setSpaceHidden } from '@/store/slice/app';
-import { clearTabs } from '@/store/slice/tab';
 import { clearConversationCache } from '@/utils/cache';
 import { localStg } from '@/utils/storage';
 import { useRouter } from '~/packages/simple-router/src';
@@ -20,7 +19,15 @@ export function useSpaceSwitch() {
    * @param redirectPath 跳转路径，默认为对话分析页面
    */
   const switchToSpace = useCallback(
-    async (spaceId: number, redirectPath = '/ai-assistant/conversational-analysis',options?:{redirect?:boolean}) => {
+    async (
+      spaceId: number,
+      redirectPath = '/chat-ui/',
+      options?: { redirect?: boolean; chatId?: string | number }
+    ) => {
+      const url = `${redirectPath}`;
+
+      // 必须在同步点击上下文中尽早触发打开新窗口，避免 await 后被浏览器拦截为弹窗
+
       // 清除对话相关的缓存，避免显示上个空间的对话列表
       clearConversationCache();
 
@@ -44,6 +51,9 @@ export function useSpaceSwitch() {
 
       // 设置新的空间ID 到 localStorage
       localStorage.setItem('spaceId', spaceId.toString());
+      if (options?.chatId !== undefined && options?.chatId !== null && `${options.chatId}` !== '') {
+        localStorage.setItem('chatId', String(options.chatId));
+      }
 
       // 更新全局状态
       dispatch(changeSpaceId(spaceId));
@@ -51,11 +61,10 @@ export function useSpaceSwitch() {
       // 触发全局事件（供其它页面监听并刷新数据）
       const event = new CustomEvent('space-change', { detail: { spaceId } });
       window.dispatchEvent(event);
-      if(options?.redirect) return
-      // 为了确保即使目标路径与当前路径相同也会触发刷新，附加一个时间戳 query
-      const sep = redirectPath.includes('?') ? '&' : '?';
-      const url = `${redirectPath}${sep}_ts=${Date.now()}`;
-      push(url);
+      if (options?.redirect) return;
+
+       window.open(url, '_blank', 'noopener,noreferrer');
+
     },
     [dispatch, push]
   );

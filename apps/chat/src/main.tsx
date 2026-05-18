@@ -9,10 +9,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import 'virtual:svg-icons-register'
 import { renderWithQiankun, qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
 import { message } from 'antd';
+import { syncBootParamsFromUrl } from './router/syncBootParams';
 // redux Provider已注释
 // import { Provider } from 'react-redux';
 // import { store } from './store/redux'; // 只导入store，移除persistor
@@ -24,7 +24,9 @@ let mountedContainer: Element | null = null
 let configAbortController: AbortController | null = null
 
 function mountApp(props: any) {
-  const { container, basename, onTokenExpired, spaceId } = props ?? {}
+  const { container, onTokenExpired, spaceId } = props ?? {}
+
+  syncBootParamsFromUrl()
 
   // 将主应用传递的 token 过期处理函数挂载到 window 对象（卸载时清理）
   window.onTokenExpired = onTokenExpired
@@ -44,19 +46,9 @@ function mountApp(props: any) {
     mountedContainer = containerEl
   }
 
-  const routerBase = (qiankunWindow as any)?.__POWERED_BY_QIANKUN__ ? (basename || '/') : '/'
-
   root.render(
     <StrictMode>
-      {/* redux Provider已注释 */}
-      {/* <Provider store={store}> */}
-      {/* 移除PersistGate包装器，直接使用BrowserRouter */}
-      <BrowserRouter basename={routerBase}>
-        <Routes>
-          <Route path="/" element={<App spaceId={spaceId} />} />
-        </Routes>
-      </BrowserRouter>
-      {/* </Provider> */}
+      <App spaceId={spaceId} />
     </StrictMode>,
   )
 }
@@ -79,6 +71,8 @@ function render(props: any) {
 }
 
 const initQianKun = () => {
+  console.log('子应用加载');
+  
   renderWithQiankun(({
     mount(props: any) {
       console.log('mount');
@@ -109,6 +103,7 @@ const initQianKun = () => {
     },
   }) as any);
 }
+console.log(qiankunWindow.__POWERED_BY_QIANKUN__,'qiankunWindow.__POWERED_BY_QIANKUN__');
 
 if (qiankunWindow.__POWERED_BY_QIANKUN__) {
   initQianKun()
