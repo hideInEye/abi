@@ -453,7 +453,7 @@ const page: App.I18n.Schema['translation']['page'] = {
     skill: {
       title: '技能管理',
       subtitle: '管理你发布到空间的技能包，点击卡片查看详情或发布新版本。',
-      publish: '发布技能',
+      publish: '安装技能',
       empty: '暂无技能，点击右上角发布你的第一个技能包',
       view: '查看',
       downloads: '下载量',
@@ -462,12 +462,12 @@ const page: App.I18n.Schema['translation']['page'] = {
       deleteConfirmContent: '删除后将无法恢复，技能「{{name}}」的所有版本都会被移除。',
       filter: {
         all: '全部',
-        published: '已发布',
-        hidden: '已隐藏'
+        published: '启用',
+        hidden: '隐藏'
       },
       status: {
-        published: '已发布',
-        hidden: '已隐藏',
+        published: '启用',
+        hidden: '隐藏',
         archived: '已归档',
         review: '审核中',
         rejected: '已驳回',
@@ -475,8 +475,8 @@ const page: App.I18n.Schema['translation']['page'] = {
       },
       publishPage: {
         back: '返回技能列表',
-        heroTitle: '发布新技能',
-        heroDesc: '选择归属空间，上传技能 ZIP 包，一键发布到 SkillHub。',
+        heroTitle: '安装新技能',
+        heroDesc: '选择归属空间，上传技能 ZIP 包，一键发布',
         namespace: '归属空间',
         namespacePh: '请选择空间',
         namespaceRequired: '请选择要发布到的空间',

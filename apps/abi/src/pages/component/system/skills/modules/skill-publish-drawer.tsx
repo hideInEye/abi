@@ -1,6 +1,6 @@
 import { CheckCircleFilled, CloudUploadOutlined, FileZipOutlined } from '@ant-design/icons';
 import { App, Drawer, Flex, Form, Input, Select } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { spaceList } from '@/service/api/data-space';
 import { publishSkillApi } from '@/service/api/skill';
@@ -13,10 +13,21 @@ type SpaceOption = {
   handle?: string;
 };
 
+type SkillLite = {
+  id?: number | string;
+  bizName?: string;
+  spaceId?: number | string;
+  spaceName?: string;
+};
+
 type Props = {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  /** 'install' 新装技能（默认）｜'update' 为已有技能上传新版本文件 */
+  mode?: 'install' | 'update';
+  /** 更新模式下传入当前技能信息 */
+  skill?: SkillLite | null;
 };
 
 function formatFileSize(bytes: number) {
@@ -31,18 +42,48 @@ function formatFileSize(bytes: number) {
   return `${size.toFixed(1)} ${units[i]}`;
 }
 
-const SkillPublishDrawer: FC<Props> = ({ onClose, onSuccess, open }) => {
+const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, open, skill }) => {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const inputFileRef = useRef<HTMLInputElement>(null);
+
+  const isUpdate = mode === 'update';
 
   const [spaces, setSpaces] = useState<SpaceOption[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // 当前用户信息与管理员判断（roles[].roleName 为“管理员”或“超级管理员”）
+  const { currentSpaceId, initialFormValues, isAdmin } = useMemo(() => {
+    let userInfo: any = {};
+    try {
+      userInfo = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}');
+    } catch {
+      userInfo = {};
+    }
+    const adminFlag =
+      Array.isArray(userInfo?.roles) &&
+      userInfo.roles.some((r: any) => {
+        const name = typeof r === 'string' ? r : r?.roleName;
+        return name === '管理员' || name === '超级管理员';
+      });
+    // 更新模式：锁定为当前技能的 spaceId；否则取 localStorage
+    const sid = isUpdate
+      ? Number(skill?.spaceId) || 0
+      : Number(localStorage.getItem('spaceId')) || 0;
+    return {
+      currentSpaceId: sid,
+      initialFormValues: sid ? { spaceId: sid } : undefined,
+      isAdmin: adminFlag
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isUpdate, skill?.spaceId]);
+
   async function loadSpaces() {
+    // 更新模式不需要空间列表，直接跳过
+    if (isUpdate) return;
     try {
       const res: any = await spaceList({
         isAsc: 'desc',
@@ -54,9 +95,29 @@ const SkillPublishDrawer: FC<Props> = ({ onClose, onSuccess, open }) => {
       const opts: SpaceOption[] = (rows as any[]).map(r => ({
         handle: r.spaceCode || r.spaceName || r.name,
         label: r.spaceName || r.name || r.spaceCode,
-        value: r.spaceId ?? r.id
+        // 统一为 number，避免跟 currentSpaceId（number）不匹配导致 Select 显示原始 id
+        value: Number(r.spaceId ?? r.id)
       }));
+      // 管理员/超管额外提供“全部空间”选项，spaceId=0
+      if (isAdmin) {
+        opts.unshift({ handle: 'ALL', label: '全部空间', value: 0 });
+      }
+      // 普通用户兑底：接口列表中未包含当前空间时，预插一个占位项避免显示原始 id
+      if (!isAdmin && currentSpaceId) {
+        const has = opts.some(o => Number(o.value) === currentSpaceId);
+        if (!has) {
+          opts.unshift({
+            handle: '',
+            label: `空间 #${currentSpaceId}`,
+            value: currentSpaceId
+          });
+        }
+      }
       setSpaces(opts);
+      // 普通用户：加载完后再设默认值，确保 Select options 已存在能正确显示 label
+      if (!isAdmin && currentSpaceId) {
+        form.setFieldValue('spaceId', currentSpaceId);
+      }
     } catch {
       setSpaces([]);
     }
@@ -64,8 +125,12 @@ const SkillPublishDrawer: FC<Props> = ({ onClose, onSuccess, open }) => {
 
   useEffect(() => {
     if (open) {
-      loadSpaces();
       form.resetFields();
+      loadSpaces();
+      // 同步预设一下，避免接口返回前 input 表现异常
+      if (currentSpaceId && (isUpdate || !isAdmin)) {
+        form.setFieldValue('spaceId', currentSpaceId);
+      }
       setFile(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,7 +167,9 @@ const SkillPublishDrawer: FC<Props> = ({ onClose, onSuccess, open }) => {
       setSubmitting(true);
       const fd = new FormData();
       fd.append('file', file);
-      fd.append('spaceId', String(values.spaceId));
+      // 更新模式直接从技能信息取 spaceId，不依赖表单字段
+      const spaceIdToSubmit = isUpdate ? skill?.spaceId : values.spaceId;
+      fd.append('spaceId', String(spaceIdToSubmit ?? ''));
       if (values.version) fd.append('version', values.version);
       if (values.changelog) fd.append('changelog', values.changelog);
 
@@ -123,10 +190,9 @@ const SkillPublishDrawer: FC<Props> = ({ onClose, onSuccess, open }) => {
 
   return (
     <Drawer
-      destroyOnClose
       open={open}
       rootClassName="skill-hub-scope"
-      title={t('page.manage.skill.publish')}
+      title={isUpdate ? '更新技能' : t('page.manage.skill.publish')}
       width={640}
       footer={
         <Flex justify="flex-end" gap={8}>
@@ -137,34 +203,46 @@ const SkillPublishDrawer: FC<Props> = ({ onClose, onSuccess, open }) => {
             type="primary"
             onClick={handleSubmit}
           >
-            {t('page.manage.skill.publishPage.submit')}
+            {isUpdate ? '提交更新' : t('page.manage.skill.publishPage.submit')}
           </AButton>
         </Flex>
       }
       onClose={onClose}
     >
       <div className="skill-hero mb-16px">
-        <div className="skill-hero__title text-brand-gradient">{t('page.manage.skill.publishPage.heroTitle')}</div>
-        <div className="skill-hero__desc">{t('page.manage.skill.publishPage.heroDesc')}</div>
+        <div className="skill-hero__title text-brand-gradient">
+          {isUpdate
+            ? `更新${skill?.bizName}技能`
+            : t('page.manage.skill.publishPage.heroTitle')}
+        </div>
+        <div className="skill-hero__desc">
+          {isUpdate
+            ? '选择新的 ZIP 包提交，系统会在当前技能下生成一个新的草稿版本，可在详情页中发布。'
+            : t('page.manage.skill.publishPage.heroDesc')}
+        </div>
       </div>
 
       <Form
         form={form}
         layout="vertical"
         requiredMark
+        initialValues={initialFormValues}
       >
+        {!isUpdate && (
         <Form.Item
           label={t('page.manage.skill.publishPage.namespace')}
           name="spaceId"
           rules={[{ message: t('page.manage.skill.publishPage.namespaceRequired'), required: true }]}
         >
           <Select
+            disabled={!isAdmin}
             options={spaces}
             placeholder={t('page.manage.skill.publishPage.namespacePh')}
             showSearch
             filterOption={(input, option) => String(option?.label || '').toLowerCase().includes(input.toLowerCase())}
           />
         </Form.Item>
+      )}
 
         <Form.Item
           label={t('page.manage.skill.publishPage.version')}
