@@ -1,8 +1,9 @@
-import { App, Empty, Spin, Tabs } from 'antd';
+import { MoreOutlined } from '@ant-design/icons';
+import { App, Dropdown, Empty, Spin, Switch, Tabs } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import PageTitle from '@/components/stateless/common/PageTitle';
-import { querySkillListApi } from '@/service/api/skill';
+import { deleteSkillApi, querySkillListApi } from '@/service/api/skill';
 
 import SkillDetailDrawer from './modules/skill-detail-drawer';
 import SkillPublishDrawer from './modules/skill-publish-drawer';
@@ -13,6 +14,7 @@ type SkillItem = {
   id: number | string;
   bizName?: string;
   spaceId?: number | string;
+  spaceName?: string;
   summary?: string;
   status?: string;
   visibility?: string;
@@ -37,6 +39,7 @@ function resolveStatusKey(status?: string): StatusKey {
 
 export function Component() {
   const { t } = useTranslation();
+  const { message, modal } = App.useApp();
 
   const [filter, setFilter] = useState<'ALL' | '1' | '0'>('ALL');
   const [list, setList] = useState<SkillItem[]>([]);
@@ -44,6 +47,9 @@ export function Component() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [activeSkill, setActiveSkill] = useState<SkillItem | null>(null);
+  // 更新文件弹窗
+  const [updateOpen, setUpdateOpen] = useState(false);
+  const [updatingSkill, setUpdatingSkill] = useState<SkillItem | null>(null);
 
   async function fetchList() {
     setLoading(true);
@@ -72,6 +78,38 @@ export function Component() {
   function goDetail(item: SkillItem) {
     setActiveSkill(item);
     setDetailOpen(true);
+  }
+
+  function openUpdate(item: SkillItem) {
+    setUpdatingSkill(item);
+    setUpdateOpen(true);
+  }
+
+  function confirmDelete(item: SkillItem) {
+    modal.confirm({
+      title: '确认删除该技能？',
+      content: `将删除${item.bizName}，删除后不可恢复。`,
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: t('common.cancel'),
+      onOk: async () => {
+        try {
+          await deleteSkillApi({ skillId: item.id });
+          message.success('删除成功');
+          fetchList();
+        } catch (err: any) {
+          message.error(err?.message || '删除失败');
+        }
+      }
+    });
+  }
+
+  // 切换启用/隐藏：后端修改接口待提供，暂先乐观更新本地列表并提示
+  function toggleSkillStatus(item: SkillItem, checked: boolean) {
+    const nextStatus = checked ? '1' : '0';
+    setList(prev => prev.map(it => (it.id === item.id ? { ...it, status: nextStatus } : it)));
+    message.info(checked ? '已启用（待后端修改接口对接）' : '已隐藏（待后端修改接口对接）');
+    // TODO: 后端提供状态修改接口后，在这里调用并根据响应 fetchList()
   }
 
   const filterItems = useMemo(
@@ -120,6 +158,38 @@ export function Component() {
                   key={item.id}
                   onClick={() => goDetail(item)}
                 >
+                  <div className="skill-card__actions" onClick={e => e.stopPropagation()}>
+                    <Switch
+                      checked={String(item.status) === '1'}
+                      onChange={checked => toggleSkillStatus(item, checked)}
+                    />
+                    <Dropdown
+                      trigger={['click']}
+                      placement="bottomRight"
+                      menu={{
+                        items: [
+                          { key: 'update', label: '更新技能' },
+                          { type: 'divider' },
+                          { key: 'delete', label: <span style={{ color: '#ff4d4f' }}>删除</span> }
+                        ],
+                        onClick: ({ domEvent, key }) => {
+                          domEvent?.stopPropagation?.();
+                          if (key === 'update') openUpdate(item);
+                          else if (key === 'delete') confirmDelete(item);
+                        }
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="skill-card__more"
+                        aria-label="more"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <MoreOutlined />
+                      </button>
+                    </Dropdown>
+                  </div>
+
                   <div className="skill-card__title">{title}</div>
 
                   {summary && <div className="skill-card__summary">{summary}</div>}
@@ -140,6 +210,14 @@ export function Component() {
       <SkillPublishDrawer
         open={publishOpen}
         onClose={() => setPublishOpen(false)}
+        onSuccess={fetchList}
+      />
+
+      <SkillPublishDrawer
+        mode="update"
+        open={updateOpen}
+        skill={updatingSkill}
+        onClose={() => setUpdateOpen(false)}
         onSuccess={fetchList}
       />
 

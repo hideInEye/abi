@@ -462,12 +462,12 @@ const page: App.I18n.Schema['translation']['page'] = {
       deleteConfirmContent: '删除后将无法恢复，技能「{{name}}」的所有版本都会被移除。',
       filter: {
         all: '全部',
-        published: '已发布',
-        hidden: '已隐藏'
+        published: '启用',
+        hidden: '隐藏'
       },
       status: {
-        published: '已发布',
-        hidden: '已隐藏',
+        published: '启用',
+        hidden: '隐藏',
         archived: '已归档',
         review: '审核中',
         rejected: '已驳回',

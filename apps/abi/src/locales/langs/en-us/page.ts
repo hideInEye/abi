@@ -458,11 +458,11 @@ const page: App.I18n.Schema['translation']['page'] = {
       deleteConfirmContent: 'This action cannot be undone. All versions of "{{name}}" will be removed.',
       filter: {
         all: 'All',
-        published: 'Published',
+        published: 'Enabled',
         hidden: 'Hidden'
       },
       status: {
-        published: 'Published',
+        published: 'Enabled',
         hidden: 'Hidden',
         archived: 'Archived',
         review: 'In Review',
