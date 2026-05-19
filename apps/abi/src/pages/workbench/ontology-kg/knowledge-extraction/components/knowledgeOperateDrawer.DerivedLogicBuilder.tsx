@@ -43,29 +43,32 @@ function buildDerivedResult({
   allFields,
   atomicMetricId,
   atomicMetricOptions,
+  calcPeriod,
   conditions,
-  dataFrequency,
-  derivedTimeWindow
+  dataFrequency
 }: {
   allFields: any[]
   atomicMetricId?: string | number
   atomicMetricOptions: AtomicMetricOption[]
+  calcPeriod?: string | number
   conditions?: ConditionItem[]
   dataFrequency?: string
-  derivedTimeWindow?: number
 }) {
   const atomicLabel =
     atomicMetricOptions.find(item => String(item.value) === String(atomicMetricId || ''))?.label || '原子指标'
 
   const freqLabel =
     DATA_FREQUENCY_OPTIONS.find(item => String(item.value) === String(dataFrequency || ''))?.label || '周期'
+  const timeWindow = String(calcPeriod || '1').trim() || '1'
 
   const fieldMap = new Map<string, string>()
+  const sqlFieldMap = new Map<string, string>()
   allFields.forEach(item => {
     const key = String(item.techId || item.fieldName || item.name || '')
     const label = String(item.bizName || item.fieldName || item.name || key)
     if (key) {
       fieldMap.set(key, label)
+      sqlFieldMap.set(key, String(item.fieldName || item.originName || item.name || key))
     }
   })
 
@@ -79,9 +82,9 @@ function buildDerivedResult({
     .filter(item => item.metric && item.operator && item.value)
 
   const whereLines = validConditions.map((item, index) => {
-    const metricLabel = fieldMap.get(item.metric) || item.metric
+    const metricField = sqlFieldMap.get(item.metric) || item.metric
     const prefix = index === 0 ? 'WHERE' : item.logic
-    return `${prefix} ${metricLabel} ${item.operator} ${quoteValue(item.value)}`
+    return `${prefix} ${metricField} ${item.operator} ${quoteValue(item.value)}`
   })
 
   const whereClause = whereLines.join('\n')
@@ -95,30 +98,28 @@ function buildDerivedResult({
   const summaryText = [
     `AtomicMetric(${atomicLabel})`,
     `Frequency(${freqLabel})`,
-    `TimeWindow(${derivedTimeWindow || 1})`,
+    `TimeWindow(${timeWindow})`,
     filterLabels.length ? `Filters(${filterLabels.join(' , ')})` : undefined
   ]
     .filter(Boolean)
     .join(' + ')
 
-  const resultPreview = `近${derivedTimeWindow || 1}${freqLabel}满足条件的${atomicLabel}`
-
-  const referenceCount = new Set([atomicLabel, ...filterLabels]).size
-
   return {
     expressionPreview: summaryText,
-    referenceCount,
-    resultPreview,
+    filterLabels,
+    frequencyLabel: freqLabel,
+    metricLabel: atomicLabel,
     sqlPreview,
+    timeWindow,
     whereClause
   }
 }
 
 export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields, atomicMetricOptions, form }) => {
   const atomicMetricId = AForm.useWatch('atomicMetricId', form)
+  const calcPeriod = AForm.useWatch('calcPeriod', form)
   const dataFrequency = AForm.useWatch('dataFrequency', form)
   const derivedConditions = AForm.useWatch('derivedConditions', form) as ConditionItem[] | undefined
-  const derivedTimeWindow = Number(AForm.useWatch('derivedTimeWindow', form) || 1)
 
   const fieldOptions = useMemo(
     () =>
@@ -135,11 +136,11 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
         allFields,
         atomicMetricId,
         atomicMetricOptions,
+        calcPeriod,
         conditions: derivedConditions,
-        dataFrequency,
-        derivedTimeWindow
+        dataFrequency
       }),
-    [allFields, atomicMetricId, atomicMetricOptions, dataFrequency, derivedConditions, derivedTimeWindow]
+    [allFields, atomicMetricId, atomicMetricOptions, calcPeriod, dataFrequency, derivedConditions]
   )
 
   useEffect(() => {
@@ -149,20 +150,9 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
 
   return (
     <>
-      <AForm.Item
-        label="时间周期"
-        name="derivedTimeWindow"
-        rules={[{ message: '请输入时间周期', required: true }]}
-      >
-        <AInput
-          maxLength={3}
-          placeholder="请输入时间周期"
-        />
-      </AForm.Item>
-
       <div className="mb-4 border border-gray-200 rounded p-4">
         <div className="mb-3 flex items-center gap-2">
-          <span className="text-base font-medium">业务限定表达式</span>
+          <span className="text-base font-semibold">业务限定表达式</span>
           <AButton
             size="small"
             type="primary"
@@ -175,12 +165,31 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
           </AButton>
         </div>
 
+        <div className="mb-3 text-sm font-semibold">表达式定义</div>
         <AForm.List name="derivedConditions">
           {(fields, { add, remove }) => (
-            <div>
+            <div className="relative pl-8">
+              {fields.length > 1 ? <div className="absolute bottom-6 left-3 top-6 w-1px bg-blue-100" /> : null}
               {fields.map((field, index) => (
-                <div key={field.key}>
-                  <div className="grid grid-cols-3 mb-2 gap-x-3">
+                <div
+                  className="relative"
+                  key={field.key}
+                >
+                  {index > 0 ? (
+                    <AForm.Item
+                      className="absolute top-1 mb-0 w-7 -left-8"
+                      {...field}
+                      name={[field.name, 'logic']}
+                    >
+                      <ASelect
+                        bordered={false}
+                        className="knowledge-derived-logic-node"
+                        options={DERIVED_LOGIC_OPTIONS}
+                        popupMatchSelectWidth={80}
+                      />
+                    </AForm.Item>
+                  ) : null}
+                  <div className="grid grid-cols-[180px_140px_1fr_80px] mb-3 items-start gap-x-3">
                     <AForm.Item
                       {...field}
                       name={[field.name, 'metric']}
@@ -223,16 +232,6 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
                       />
                     </div>
                   </div>
-
-                  {index < fields.length - 1 ? (
-                    <AForm.Item
-                      className="mb-2 w-120px"
-                      {...field}
-                      name={[field.name, 'logic']}
-                    >
-                      <ASelect options={DERIVED_LOGIC_OPTIONS} />
-                    </AForm.Item>
-                  ) : null}
                 </div>
               ))}
 
@@ -250,29 +249,31 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
       </div>
 
       <div className="mb-4 border border-gray-200 rounded bg-gray-50 p-4">
-        <div className="mb-2 text-base font-medium">派生逻辑生成结果</div>
-        <div className="mb-2 border border-gray-200 rounded bg-white p-3">
-          <div className="mb-1 text-gray-400">表达式预览</div>
-          <div className="text-blue-600">{result.expressionPreview}</div>
+        <div className="mb-3 text-base font-semibold">派生逻辑生成结果</div>
+        <div className="mb-3 flex flex-wrap gap-2">
+          <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">
+            原子指标：{result.metricLabel}
+          </span>
+          <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">
+            数据频度：{result.frequencyLabel}
+          </span>
+          <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">
+            时间周期：{result.timeWindow}
+          </span>
+          {result.filterLabels.map(item => (
+            <span
+              className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold"
+              key={item}
+            >
+              业务限定：{item}
+            </span>
+          ))}
         </div>
-        <div className="mb-2 border border-gray-200 rounded bg-white p-3">
-          <div className="mb-1 text-gray-400">SQL Preview</div>
+        <div className="border border-blue-200 rounded border-dashed bg-white p-3">
+          <div className="mb-1 text-gray-400">公式预览</div>
+          <pre className="m-0 whitespace-pre-wrap text-blue-600">{result.expressionPreview}</pre>
+          <div className="mb-1 mt-6 text-gray-400">SQL Preview</div>
           <pre className="m-0 whitespace-pre-wrap text-blue-600">{result.sqlPreview}</pre>
-        </div>
-        <div className="mb-2 border border-gray-200 rounded bg-white p-3 text-blue-600">{result.resultPreview}</div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="border border-gray-200 rounded bg-white p-3">
-            <div className="text-gray-400">构成要素校验</div>
-            <div className="text-green-600">原子指标 / 时间周期 / 业务限定 已齐全</div>
-          </div>
-          <div className="border border-gray-200 rounded bg-white p-3">
-            <div className="text-gray-400">引用对象</div>
-            <div>引用指标 {result.referenceCount} 个</div>
-          </div>
-          <div className="border border-gray-200 rounded bg-white p-3">
-            <div className="text-gray-400">提交状态</div>
-            <div className="text-orange-500">当前仅保存，未提交</div>
-          </div>
         </div>
       </div>
     </>

@@ -39,6 +39,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
   const [schemaOptions, setSchemaOptions] = useState<DimensionSchemaInfo[]>([])
   const [viewId, setViewId] = useState<number | undefined>(editingItem?.viewId)
   const [fieldModalOpen, setFieldModalOpen] = useState(false)
+  const [relatedMetricTotal, setRelatedMetricTotal] = useState(0)
   const [selectedFieldKeys, setSelectedFieldKeys] = useState<string[]>([])
 
   const selectedDimType = (AForm.useWatch('dimType', form) || DEFAULT_FORM_VALUES.dimType) as 'std' | 'time'
@@ -83,6 +84,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
       return
     }
     setActiveTab('base')
+    setRelatedMetricTotal(editingItem?.relatedMetrics?.length || 0)
     setSchemaOptions([])
     setViewId(editingItem?.viewId)
 
@@ -189,6 +191,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
   function resetDrawerState() {
     form.resetFields()
     setActiveTab('base')
+    setRelatedMetricTotal(0)
     setSchemaOptions([])
     setViewId(undefined)
     setFieldModalOpen(false)
@@ -217,7 +220,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
             className="mb-4"
             items={[
               { key: 'base', label: '基础信息' },
-              { key: 'metrics', label: `相关指标 (${editingItem.relatedMetrics?.length || 0})` },
+              { key: 'metrics', label: `相关指标 (${relatedMetricTotal})` },
               { key: 'preview', label: '预览数据' }
             ]}
             onChange={setActiveTab}
@@ -254,10 +257,16 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
           </AForm>
         ) : null}
 
-        {activeTab === 'metrics' ? <RelatedMetricsTab record={editingItem} /> : null}
+        {activeTab === 'metrics' ? (
+          <RelatedMetricsTab
+            record={editingItem}
+            onTotalChange={setRelatedMetricTotal}
+          />
+        ) : null}
 
         {activeTab === 'preview' ? (
           <PreviewDataTab
+            dimId={editingItem?.id}
             fieldTableData={selectedFields}
             sampleValues={form.getFieldValue('sampleValues')}
             type={selectedDimType}

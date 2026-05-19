@@ -1,27 +1,88 @@
 import React from 'react'
 
 import { useRouterPush } from '@/hooks/common/routerPush'
+import { queryKnowledgeIndicatorDetailList } from '@/service/api/knowledge-extraction'
 
 import type { DimensionModelItem } from '../../types'
 
 interface Props {
+  readonly onTotalChange?: (total: number) => void
   readonly record?: DimensionModelItem | null
 }
 
-export const RelatedMetricsTab: React.FC<Props> = ({ record }) => {
+function getMetricListPayload(res: any) {
+  const data = res?.response?.data?.data || res?.data?.data || res?.data || {}
+  return {
+    current: Number(data.pageNum || 1),
+    list: Array.isArray(data.list) ? data.list : [],
+    pageSize: Number(data.pageSize || 10),
+    total: Number(data.total || 0)
+  }
+}
+
+export const RelatedMetricsTab: React.FC<Props> = ({ onTotalChange, record }) => {
   const { routerPushByKey } = useRouterPush()
   const [keyword, setKeyword] = React.useState('')
-  const dataSource = React.useMemo(() => record?.relatedMetrics || [], [record?.relatedMetrics])
-  const filteredData = React.useMemo(() => {
-    const text = keyword.trim()
-    if (!text) {
-      return dataSource
-    }
+  const [loading, setLoading] = React.useState(false)
+  const [pagination, setPagination] = React.useState({ current: 1, pageSize: 10, total: 0 })
+  const [tableData, setTableData] = React.useState<any[]>([])
 
-    return dataSource.filter(item =>
-      [item.name, item.groupName, item.refType, item.updateTime].some(value => String(value || '').includes(text))
-    )
-  }, [dataSource, keyword])
+  const fetchMetrics = React.useCallback(
+    async (pageNum = 1, pageSize = 10, techName = keyword) => {
+      if (!record?.id) {
+        setTableData([])
+        setPagination(prev => ({ ...prev, total: 0 }))
+        onTotalChange?.(0)
+        return
+      }
+      setLoading(true)
+      try {
+        const res = await queryKnowledgeIndicatorDetailList({
+          dimId: record.id,
+          pageNum,
+          pageSize,
+          techName: techName.trim() || undefined
+        })
+        const data = getMetricListPayload(res)
+        setTableData(data.list)
+        setPagination({
+          current: data.current || pageNum,
+          pageSize: data.pageSize || pageSize,
+          total: data.total
+        })
+        onTotalChange?.(data.total)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [keyword, onTotalChange, record?.id]
+  )
+
+  React.useEffect(() => {
+    fetchMetrics(1, 10, '')
+  }, [fetchMetrics])
+
+  const handleSearch = () => {
+    fetchMetrics(1, pagination.pageSize, keyword)
+  }
+
+  const handleTableChange = (nextPagination: any) => {
+    fetchMetrics(nextPagination.current, nextPagination.pageSize, keyword)
+  }
+
+  const dataSource = React.useMemo(
+    () =>
+      tableData.map(item => ({
+        groupName: item.indicatorCategory || item.groupName,
+        id: item.indId,
+        name: item.techName,
+        refType: item.refType || item.referenceType || '统计维度',
+        updateTime: item.updateTime || item.createTime
+      })),
+    [tableData]
+  )
+
+  const tabCount = pagination.total || dataSource.length
 
   const goIndicatorModeling = () => {
     routerPushByKey('workbench_ontology-kg_knowledge-extraction')
@@ -43,7 +104,9 @@ export const RelatedMetricsTab: React.FC<Props> = ({ record }) => {
           placeholder="搜索指标名称"
           value={keyword}
           onChange={event => setKeyword(event.target.value)}
+          onPressEnter={handleSearch}
         />
+        <AButton onClick={handleSearch}>查询</AButton>
         <AButton
           type="primary"
           onClick={goIndicatorModeling}
@@ -54,9 +117,9 @@ export const RelatedMetricsTab: React.FC<Props> = ({ record }) => {
 
       <ATable
         className="[&_.ant-table-thead>tr>th]:bg-[#f4f6fb] [&_.ant-table-thead>tr>th]:font-semibold"
-        dataSource={filteredData}
+        dataSource={dataSource}
+        loading={loading}
         locale={{ emptyText: '暂无关联指标' }}
-        pagination={false}
         rowKey={(item, index) => String(item.id || `${item.name}-${index}`)}
         size="small"
         columns={[
@@ -83,6 +146,13 @@ export const RelatedMetricsTab: React.FC<Props> = ({ record }) => {
             title: '最近更新时间'
           }
         ]}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          showTotal: total => `共 ${total} 条`,
+          total: tabCount
+        }}
+        onChange={handleTableChange}
       />
     </div>
   )

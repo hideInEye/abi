@@ -55,6 +55,13 @@ export function queryDimensionDetail(params: { id: number }) {
   })
 }
 
+export function queryDimensionPreview(params: { dimId: number }) {
+  return apiRequest({
+    method: 'get',
+    url: `${DIMENSION_API_PREFIX}/preview/${params.dimId}`
+  })
+}
+
 export function editDimensionHierarchy(params: Record<string, any>[]) {
   return apiRequest({
     data: params,

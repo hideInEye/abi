@@ -10,13 +10,12 @@ import {
 import type { KnowledgeGroupItem, KnowledgeIndicatorItem, KnowledgeSearchParams } from '../types'
 
 const INDICATOR_TYPE_TO_API_CLASS: Record<string, string> = {
-  atomic: 'atomic',
   derived: '派生',
   extended: '衍生'
 }
 
 const API_CLASS_TO_INDICATOR_TYPE: Record<string, string> = {
-  atomic: 'atomic',
+  atomic: 'derived',
   derived: 'derived',
   extended: 'extended',
   派生: 'derived',
@@ -27,7 +26,9 @@ const UI_TO_API_FREQUENCY: Record<string, string> = {
   day: 'daily',
   hour: 'hourly',
   month: 'monthly',
-  week: 'weekly'
+  quarter: 'quarterly',
+  week: 'weekly',
+  year: 'yearly'
 }
 
 const API_TO_UI_FREQUENCY: Record<string, string> = {
@@ -37,8 +38,12 @@ const API_TO_UI_FREQUENCY: Record<string, string> = {
   hourly: 'hour',
   month: 'month',
   monthly: 'month',
+  quarter: 'quarter',
+  quarterly: 'quarter',
   week: 'week',
-  weekly: 'week'
+  weekly: 'week',
+  year: 'year',
+  yearly: 'year'
 }
 
 const UI_TO_API_QUALITY_LEVEL: Record<string, string> = {
@@ -164,7 +169,7 @@ function toNumberOrUndefined(value: any) {
 
 function normalizeIndicatorType(value: any) {
   const key = String(value || '').trim()
-  return API_CLASS_TO_INDICATOR_TYPE[key] || key || 'atomic'
+  return API_CLASS_TO_INDICATOR_TYPE[key] || key || 'derived'
 }
 
 function normalizeFrequency(value: any) {
@@ -266,7 +271,6 @@ function mapIndicatorFromApi(item: any): KnowledgeIndicatorItem {
     dataType: normalizeDataType(item.dataType),
     derivedConditionExpr: item.derivedConditionExpr ?? calcLogic.derivedConditionExpr,
     derivedConditions: item.derivedConditions ?? calcLogic.derivedConditions,
-    derivedTimeWindow: item.derivedTimeWindow ?? calcLogic.derivedTimeWindow,
     dimensionFieldIds: normalizeRelateDimsFieldValue(item.relateDims ?? item.dimensionFieldIds),
     divideZeroStrategy: item.divideZeroStrategy ?? calcLogic.divideZeroStrategy,
     expr: trimOrUndefined(item.expr) || calcLogic.expr,
@@ -274,9 +278,12 @@ function mapIndicatorFromApi(item: any): KnowledgeIndicatorItem {
     groupName: trimOrUndefined(item.groupName),
     indicatorCode: trimOrUndefined(item.indicatorCode),
     indicatorType: normalizeIndicatorType(item.indicatorClass ?? item.indicatorType),
+    isPublic: String(item.isPublic ?? '1') === '1',
     measurementUnit: trimOrUndefined(item.measurementUnit),
     nullStrategy: item.nullStrategy ?? calcLogic.nullStrategy,
     owner: trimOrUndefined(item.indicatorOwner ?? item.owner),
+    ownerEmail: trimOrUndefined(item.ownerEmail),
+    ownerPhone: trimOrUndefined(item.ownerPhone),
     percentileValue: item.percentileValue ?? calcLogic.percentileValue,
     qualityLevel: normalizeQualityLevel(item.qualityLevel),
     ratioDenominatorId: item.ratioDenominatorId ?? calcLogic.ratioDenominatorId,
@@ -334,7 +341,6 @@ function buildCalcLogic(values: Record<string, any>) {
     cumulativeTimeRange: values.cumulativeTimeRange,
     derivedConditionExpr: values.derivedConditionExpr,
     derivedConditions: values.derivedConditions,
-    derivedTimeWindow: values.derivedTimeWindow,
     divideZeroStrategy: values.divideZeroStrategy,
     expr: values.expr,
     nullStrategy: values.nullStrategy,
@@ -356,7 +362,7 @@ function buildCalcLogic(values: Record<string, any>) {
 }
 
 function buildSubmitPayload(payload: Record<string, any>, selectedGroup: KnowledgeGroupItem | null) {
-  const indicatorType = String(payload.indicatorType || 'atomic')
+  const indicatorType = String(payload.indicatorType || 'derived')
   const indicatorClass = INDICATOR_TYPE_TO_API_CLASS[indicatorType] || indicatorType
   const selectedGroupId = toNumberOrUndefined(selectedGroup?.groupId)
 
@@ -368,12 +374,15 @@ function buildSubmitPayload(payload: Record<string, any>, selectedGroup: Knowled
     dataType: toApiDataType(payload.dataType),
     groupId: selectedGroupId ?? toNumberOrUndefined(payload.groupId),
     indAlias: trimOrUndefined(payload.termAlias),
-    indicatorCategory: trimOrUndefined(selectedGroup?.groupName),
+    indicatorCategory: trimOrUndefined(payload.indicatorCategory),
     indicatorClass,
     indicatorCode: trimOrUndefined(payload.indicatorCode),
     indicatorOwner: trimOrUndefined(payload.owner),
     indId: toNumberOrUndefined(payload.termId ?? payload.indId),
+    isPublic: payload.isPublic ? '1' : '0',
     measurementUnit: trimOrUndefined(payload.measurementUnit),
+    ownerEmail: trimOrUndefined(payload.ownerEmail),
+    ownerPhone: trimOrUndefined(payload.ownerPhone),
     projectionFunc: trimOrUndefined(payload.aggMethod),
     qualityLevel: toApiQualityLevel(payload.qualityLevel),
     relateDims: parseRelateDimsPayload(payload.dimensionFieldIds),
@@ -382,6 +391,7 @@ function buildSubmitPayload(payload: Record<string, any>, selectedGroup: Knowled
     remark: trimOrUndefined(payload.remark),
     spaceId: Number(localStorage.getItem('spaceId')),
     status: String(payload.status ?? 2),
+    techName: trimOrUndefined(payload.techName),
     technicalDefinition: trimOrUndefined(payload.technicalRemark),
     updateFrequency: toApiFrequency(payload.dataFrequency),
     versionStatus: String(payload.status ?? 2)

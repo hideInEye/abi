@@ -103,6 +103,29 @@ export function isValidNumberInput(value: string) {
   return /^-?\d+(\.\d+)?$/.test(value)
 }
 
+export function validateGeneratedExpressionSyntax(expression?: string) {
+  const text = String(expression || '').trim()
+  if (!text || text === '请填写计算逻辑') {
+    return { message: '请先配置完整表达式', passed: false }
+  }
+  if (text.length > 2000) {
+    return { message: '表达式长度不能超过2000个字符', passed: false }
+  }
+  if (!isBalancedParentheses(text)) {
+    return { message: '表达式括号不匹配', passed: false }
+  }
+  if (/\b(undefined|null|NaN)\b/i.test(text)) {
+    return { message: '表达式包含无效参数', passed: false }
+  }
+  if (/[+\-*/]{2,}/.test(text.replace(/\*\*/g, ''))) {
+    return { message: '表达式存在连续运算符', passed: false }
+  }
+  if (/^[+*/]/.test(text) || /[+\-*/]\s*$/.test(text)) {
+    return { message: '表达式运算符位置不正确', passed: false }
+  }
+  return { message: '通过（前端校验）', passed: true }
+}
+
 export function compactArray<T>(list?: Array<T | null | undefined>): T[] {
   return (list || []).filter(Boolean) as T[]
 }
@@ -147,18 +170,20 @@ export function buildEditFormValues(editingItem: KnowledgeIndicatorItem): Knowle
     derivedConditions: ensureDerivedConditions(
       editingItem.derivedConditions || templateParams.derivedConditions || calcLogic.derivedConditions
     ),
-    derivedTimeWindow:
-      Number(editingItem.derivedTimeWindow || templateParams.derivedTimeWindow || calcLogic.derivedTimeWindow) || 1,
     dimensionFieldIds: editingItem.dimensionFieldIds || editingItem.relateDims,
     divideZeroStrategy:
       editingItem.divideZeroStrategy || templateParams.divideZeroStrategy || DEFAULT_FORM_VALUES.divideZeroStrategy,
     expr: editingItem.expr || templateParams.expr || calcLogic.expr,
     indicatorAliasTags: parseAliasTags(editingItem.termAlias),
+    indicatorCategory: editingItem.indicatorCategory || DEFAULT_FORM_VALUES.indicatorCategory,
     indicatorCode: editingItem.indicatorCode,
     indicatorType: editingItem.indicatorType || DEFAULT_FORM_VALUES.indicatorType,
+    isPublic: editingItem.isPublic === '1' || editingItem.isPublic === true,
     measurementUnit: editingItem.measurementUnit,
     nullStrategy: editingItem.nullStrategy || templateParams.nullStrategy || DEFAULT_FORM_VALUES.nullStrategy,
     owner: editingItem.owner,
+    ownerEmail: editingItem.ownerEmail,
+    ownerPhone: editingItem.ownerPhone,
     percentileValue: Number(editingItem.percentileValue || templateParams.percentileValue) || undefined,
     qualityLevel: editingItem.qualityLevel || DEFAULT_FORM_VALUES.qualityLevel,
     ratioDenominatorId:

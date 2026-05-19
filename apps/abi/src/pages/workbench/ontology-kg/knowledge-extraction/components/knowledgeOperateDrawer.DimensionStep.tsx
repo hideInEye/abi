@@ -6,7 +6,6 @@ import { queryDimensionList } from '@/service/api/dimension-modeling'
 import { tableSemanticsGroupList } from '@/service/api/table-semantics'
 
 import type { KnowledgeFormValues } from '../types'
-import { parseDimensionKeys } from '../utils/knowledgeOperateDrawer.utils'
 
 interface DimensionGroupItem {
   groupId: number
@@ -18,6 +17,12 @@ interface DimensionTransferItem {
   key: string
   techName: string
   title: string
+}
+
+interface SelectedDimensionSnapshot {
+  key: string
+  techName?: string
+  title?: string
 }
 
 interface Props {
@@ -89,6 +94,45 @@ function normalizeDimensionOption(item: any): DimensionTransferItem | null {
   return { key: dimId, techName, title }
 }
 
+function parseSelectedDimensions(dimensionFieldIds?: any): SelectedDimensionSnapshot[] {
+  if (!dimensionFieldIds) {
+    return []
+  }
+  if (Array.isArray(dimensionFieldIds)) {
+    return dimensionFieldIds
+      .map(item => {
+        if (item === null || item === undefined) {
+          return null
+        }
+        if (typeof item === 'object') {
+          const key = String(item.dimId ?? item.id ?? '').trim()
+          if (!key) {
+            return null
+          }
+          const techName = String(item.techName ?? '').trim()
+          const title = String(item.title ?? '').trim()
+          return { key, techName: techName || undefined, title: title || undefined }
+        }
+        const key = String(item).trim()
+        return key ? { key } : null
+      })
+      .filter(Boolean) as SelectedDimensionSnapshot[]
+  }
+  if (typeof dimensionFieldIds === 'string') {
+    try {
+      const parsed = JSON.parse(dimensionFieldIds)
+      return parseSelectedDimensions(parsed)
+    } catch {
+      return dimensionFieldIds
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean)
+        .map(key => ({ key }))
+    }
+  }
+  return []
+}
+
 export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
   const [dimensionGroups, setDimensionGroups] = useState<DimensionGroupItem[]>([])
   const [dimensionMap, setDimensionMap] = useState<Record<string, DimensionTransferItem[]>>({})
@@ -96,9 +140,17 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
   const [loadingGroups, setLoadingGroups] = useState(false)
   const [loadingDimensionGroupIds, setLoadingDimensionGroupIds] = useState<string[]>([])
   const [targetKeys, setTargetKeys] = useState<string[]>([])
+  const [selectedSnapshotMap, setSelectedSnapshotMap] = useState<Record<string, SelectedDimensionSnapshot>>({})
 
   useEffect(() => {
-    setTargetKeys(parseDimensionKeys(form.getFieldValue('dimensionFieldIds')))
+    const selected = parseSelectedDimensions(form.getFieldValue('dimensionFieldIds'))
+    setTargetKeys(selected.map(item => item.key))
+    setSelectedSnapshotMap(
+      selected.reduce<Record<string, SelectedDimensionSnapshot>>((acc, item) => {
+        acc[item.key] = item
+        return acc
+      }, {})
+    )
   }, [form])
 
   useEffect(() => {
@@ -113,7 +165,10 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
             spaceId: getSpaceId()
           })
         )
-        setDimensionGroups(rows.map(normalizeDimensionGroup).filter(Boolean) as DimensionGroupItem[])
+        const groups = rows.map(normalizeDimensionGroup).filter(Boolean) as DimensionGroupItem[]
+        setDimensionGroups(groups)
+        const groupKeys = groups.map(group => `group-${group.groupId}`)
+        setExpandedKeys(groupKeys)
       } catch {
         message.error('维度分组查询失败')
       } finally {
@@ -154,6 +209,15 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
     [dimensionMap, loadingDimensionGroupIds]
   )
 
+  useEffect(() => {
+    if (!dimensionGroups.length) {
+      return
+    }
+    dimensionGroups.forEach(group => {
+      fetchDimensionsByGroup(group.groupId)
+    })
+  }, [dimensionGroups, fetchDimensionsByGroup])
+
   const loadedDimensionOptions = useMemo(() => {
     const map = new Map<string, DimensionTransferItem>()
     Object.values(dimensionMap)
@@ -163,11 +227,14 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
       })
     targetKeys.forEach(key => {
       if (!map.has(key)) {
-        map.set(key, { key, techName: key, title: key })
+        const snapshot = selectedSnapshotMap[key]
+        const techName = snapshot?.techName || key
+        const title = snapshot?.title || snapshot?.techName || key
+        map.set(key, { key, techName, title })
       }
     })
     return Array.from(map.values())
-  }, [dimensionMap, targetKeys])
+  }, [dimensionMap, selectedSnapshotMap, targetKeys])
 
   const treeData = useMemo(() => {
     return dimensionGroups.map(group => {

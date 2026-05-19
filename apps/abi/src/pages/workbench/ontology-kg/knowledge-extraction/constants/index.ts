@@ -1,7 +1,6 @@
 export const KNOWLEDGE_GROUP_TYPE = 'ontology'
 
 export const INDICATOR_TYPE_OPTIONS = [
-  { label: '原子指标', value: 'atomic' },
   { label: '派生指标', value: 'derived' },
   { label: '衍生指标', value: 'extended' }
 ]
@@ -12,7 +11,14 @@ export const STATUS_OPTIONS = [
   { label: '草稿', value: 2 }
 ]
 
+export const INDICATOR_CATEGORY_OPTIONS = [
+  { label: '普惠贷款指标', value: '普惠贷款指标' },
+  { label: '交易域/核心指标', value: '交易域/核心指标' }
+]
+
 export const DATA_FREQUENCY_OPTIONS = [
+  { label: '年', value: 'year' },
+  { label: '季', value: 'quarter' },
   { label: '月', value: 'month' },
   { label: '周', value: 'week' },
   { label: '日', value: 'day' },
@@ -34,9 +40,11 @@ export const QUALITY_LEVEL_OPTIONS = [
 
 export const AGG_METHOD_OPTIONS = [
   { label: '合计（SUM）', value: 'SUM' },
+  { label: '平均值（AVG）', value: 'AVG' },
   { label: '计数（COUNT）', value: 'COUNT' },
   { label: '去重计数（COUNT DISTINCT）', value: 'COUNT_DISTINCT' },
-  { label: '平均值（AVG）', value: 'AVG' }
+  { label: '最大值（MAX）', value: 'MAX' },
+  { label: '最小值（MIN）', value: 'MIN' }
 ]
 
 export const EXTENDED_TEMPLATE_OPTIONS = [
@@ -132,12 +140,6 @@ export const CALC_PERIOD_OPTIONS = [
   { label: '月', value: 'month' }
 ]
 
-export const DEFAULT_ATOMIC_METRIC_OPTIONS = [
-  { label: '支付总金额', value: 'default_atomic_pay_amount' },
-  { label: '支付订单数', value: 'default_atomic_pay_order_count' },
-  { label: '退款总金额', value: 'default_atomic_refund_amount' }
-]
-
 export const STATUS_TEXT_MAP: Record<string, string> = {
   '0': '停用',
   '1': '启用',
@@ -145,14 +147,13 @@ export const STATUS_TEXT_MAP: Record<string, string> = {
 }
 
 export const INDICATOR_TYPE_TEXT_MAP: Record<string, string> = {
-  atomic: '原子指标',
   derived: '派生指标',
   extended: '衍生指标'
 }
 
 export const DEFAULT_FORM_VALUES = {
   aggMethod: 'SUM',
-  calcPeriod: 'day',
+  calcPeriod: '1',
   compareType: 'YOY',
   comparisonOutputType: 'PERCENTAGE',
   cumulativeMode: 'UP',
@@ -160,10 +161,11 @@ export const DEFAULT_FORM_VALUES = {
   dataFrequency: 'day',
   dataType: 'number',
   derivedConditions: [{ logic: 'AND' as const, metric: '', operator: '>=', value: '' }],
-  derivedTimeWindow: 1,
   divideZeroStrategy: 'return_zero',
   indicatorAliasTags: [],
-  indicatorType: 'atomic',
+  indicatorCategory: '普惠贷款指标',
+  indicatorType: 'derived',
+  isPublic: true,
   nullStrategy: 'set_zero',
   qualityLevel: 'p1',
   ratioPrecision: '2',

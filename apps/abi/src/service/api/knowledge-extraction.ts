@@ -51,3 +51,20 @@ export function queryKnowledgeIndicatorDetail(params: { id: number; spaceId: num
     url: `${INDICATOR_API_PREFIX}/detail/${params.id}`
   })
 }
+
+export function queryKnowledgeIndicatorDetailList(params: {
+  dimId: number
+  pageNum?: number
+  pageSize?: number
+  techName?: string
+}) {
+  return apiRequest({
+    data: {
+      pageNum: 1,
+      pageSize: 10,
+      ...params
+    },
+    method: 'post',
+    url: `${INDICATOR_API_PREFIX}/detail`
+  })
+}

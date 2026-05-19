@@ -31,7 +31,6 @@ export interface KnowledgeIndicatorItem {
   dataType?: string
   derivedConditions?: Array<{ logic?: 'AND' | 'OR'; metric?: string; operator?: string; value?: string }>
   derivedConditionExpr?: string
-  derivedTimeWindow?: number
   dimensionFieldIds?: string
   divideZeroStrategy?: string
   expr?: string
@@ -106,15 +105,18 @@ export interface KnowledgeFormValues {
   dataType?: string
   derivedConditions?: Array<{ logic?: 'AND' | 'OR'; metric?: string; operator?: string; value?: string }>
   derivedConditionExpr?: string
-  derivedTimeWindow?: number
   dimensionFieldIds?: string
   divideZeroStrategy?: string
   expr?: string
   indicatorAliasTags?: string[]
+  indicatorCategory?: string
   indicatorType?: string
   indicatorCode?: string
+  isPublic?: boolean | string
   measurementUnit?: string
   nullStrategy?: string
+  ownerEmail?: string
+  ownerPhone?: string
   owner?: string
   percentileValue?: number
   qualityLevel?: string

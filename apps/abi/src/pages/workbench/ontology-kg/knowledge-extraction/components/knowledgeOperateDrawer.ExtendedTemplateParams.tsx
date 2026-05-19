@@ -28,7 +28,6 @@ interface Props {
   readonly validatePercentile: (_: any, value?: number | string) => Promise<void>
   readonly validatePositiveInt: (value: any, messageText: string) => Promise<void>
   readonly validateRollingWindow: (_: any, value?: number | string) => Promise<void>
-  readonly validateSqlExpression: (_: any, value?: string) => Promise<void>
   readonly validateThresholdMax: (_: any, value?: string) => Promise<void>
   readonly validateThresholdValue: (_: any, value?: string) => Promise<void>
 }
@@ -47,8 +46,7 @@ function buildExtendedExpressionPreview(
     const denominator = getLabel(options, values.ratioDenominatorId)
     const precision = values.ratioPrecision || '2'
     return {
-      expression: `( ${numerator} / ${denominator} ) * 100%  [保留 ${precision} 位小数]`,
-      referenceCount: new Set([numerator, denominator]).size
+      expression: `( ${numerator} / ${denominator} ) * 100%  [保留 ${precision} 位小数]`
     }
   }
 
@@ -56,8 +54,7 @@ function buildExtendedExpressionPreview(
     const metric = getLabel(options, values.cumulativeMetricId)
     const range = values.cumulativeTimeRange || 'YEAR'
     return {
-      expression: `SUM( ${metric} ) OVER ( ${range} )`,
-      referenceCount: 1
+      expression: `SUM( ${metric} ) OVER ( ${range} )`
     }
   }
 
@@ -66,8 +63,7 @@ function buildExtendedExpressionPreview(
     const compareType = values.compareType || 'YOY'
     const period = values.comparePeriod || 1
     return {
-      expression: `( 当前周期值(${metric}) - 比较周期值(${compareType}-${period}) ) / 比较周期值`,
-      referenceCount: 1
+      expression: `( 当前周期值(${metric}) - 比较周期值(${compareType}-${period}) ) / 比较周期值`
     }
   }
 
@@ -76,8 +72,7 @@ function buildExtendedExpressionPreview(
     const method = values.volatilityMethod || 'STDDEV'
     const windowSize = values.rollingWindowSize || 'N'
     return {
-      expression: `${method}( ${metric} ) OVER ( 过去 ${windowSize} 天 )`,
-      referenceCount: 1
+      expression: `${method}( ${metric} ) OVER ( 过去 ${windowSize} 天 )`
     }
   }
 
@@ -85,14 +80,12 @@ function buildExtendedExpressionPreview(
     const metric = getLabel(options, values.atomicMetricId)
     const percentileValue = values.percentileValue || '0.9'
     return {
-      expression: `PERCENTILE_CONT( ${percentileValue} ) WITHIN GROUP (ORDER BY ${metric})`,
-      referenceCount: 1
+      expression: `PERCENTILE_CONT( ${percentileValue} ) WITHIN GROUP (ORDER BY ${metric})`
     }
   }
 
   return {
-    expression: String(values.expr || '').trim() || '请填写计算逻辑',
-    referenceCount: 1
+    expression: String(values.expr || '').trim() || '请填写计算逻辑'
   }
 }
 
@@ -106,7 +99,6 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   validatePercentile,
   validatePositiveInt,
   validateRollingWindow,
-  validateSqlExpression,
   validateThresholdMax,
   validateThresholdValue
 }) => {
@@ -385,10 +377,11 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
 
         {templateTypeVal === 'custom' ? (
           <KnowledgeOperateExpressionEditor
+            strictCustom
             allFields={allFields}
             form={form}
             validateCustomExpression={validateCustomExpression}
-            validateSqlExpression={validateSqlExpression}
+            validateSqlExpression={validateCustomExpression}
           />
         ) : null}
       </div>
@@ -398,20 +391,6 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
         <div className="mb-2 border border-gray-200 rounded bg-white p-3">
           <div className="mb-1 text-gray-400">表达式预览</div>
           <div className="text-blue-600">{preview.expression}</div>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="border border-gray-200 rounded bg-white p-3">
-            <div className="text-gray-400">语法校验</div>
-            <div className="text-green-600">通过（模版生成）</div>
-          </div>
-          <div className="border border-gray-200 rounded bg-white p-3">
-            <div className="text-gray-400">引用对象</div>
-            <div>引用指标 {preview.referenceCount} 个</div>
-          </div>
-          <div className="border border-gray-200 rounded bg-white p-3">
-            <div className="text-gray-400">可执行提示</div>
-            <div className="text-green-600">模板参数已配置</div>
-          </div>
         </div>
       </div>
     </>

@@ -3,12 +3,12 @@ import { message } from 'antd'
 import React from 'react'
 
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
+import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
 
-import { DEFAULT_ATOMIC_METRIC_OPTIONS, DEFAULT_FORM_VALUES } from '../constants'
+import { DEFAULT_FORM_VALUES } from '../constants'
 import type { KnowledgeFormValues, KnowledgeIndicatorItem } from '../types'
 import {
   buildEditFormValues,
-  compactArray,
   ensureDerivedConditions,
   extractUniqueIds,
   getStepItems
@@ -20,6 +20,11 @@ import { KnowledgeOperateDimensionStep } from './knowledgeOperateDrawer.Dimensio
 import { KnowledgeOperateTechnicalStep } from './knowledgeOperateDrawer.TechnicalStep'
 
 const MODEL_DETAIL_KEYS = new Set(['dimensions', 'identifiers', 'measures'])
+
+interface AtomicMetricOption {
+  label: string
+  value: string
+}
 
 interface Props {
   readonly editingItem: KnowledgeIndicatorItem | null
@@ -45,6 +50,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   const [current, setCurrent] = useState(0)
   const [selectedIndicatorType, setSelectedIndicatorType] = useState<string>(DEFAULT_FORM_VALUES.indicatorType)
   const [viewDataId, setViewDataId] = useState<number | string | undefined>(editingItem?.relViewid)
+  const [atomicMetricLoading, setAtomicMetricLoading] = useState(false)
+  const [atomicMetricOptions, setAtomicMetricOptions] = useState<AtomicMetricOption[]>([])
   const [schemaOptions, setSchemaOptions] = useState<TableSemanticParams[]>([])
 
   const semanticSchemaIdVal = AForm.useWatch('semanticSchemaId', form)
@@ -85,6 +92,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       formValuesRef.current = nextValues
       setSelectedIndicatorType(editValues.indicatorType || DEFAULT_FORM_VALUES.indicatorType)
       setViewDataId(editingItem.relViewid)
+      setAtomicMetricOptions([])
       return
     }
 
@@ -98,6 +106,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     formValuesRef.current = nextValues
     setSelectedIndicatorType(DEFAULT_FORM_VALUES.indicatorType)
     setViewDataId(undefined)
+    setAtomicMetricOptions([])
   }, [editingItem, form, open])
 
   const setCachedFieldsValue = (values: Partial<KnowledgeFormValues>) => {
@@ -115,28 +124,50 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     }
   }
 
-  const atomicMetricOptions = useMemo(() => {
-    const dynamicOptions = compactArray(existingItems)
-      .filter(item => {
-        const type = String(item.indicatorType || '')
-        return type === 'atomic' || type === '原子指标'
-      })
-      .map(item => {
-        const label = String(item.bizName || '').trim()
-        const value = String(item.termId || '').trim()
-        return { label, value }
-      })
-      .filter(item => item.label && item.value)
-
-    const deduped = dynamicOptions.filter(
-      (item, index, list) => list.findIndex(cur => cur.label === item.label) === index
-    )
-
-    if (deduped.length) {
-      return deduped
+  // eslint-disable-next-line complexity
+  const normalizeAtomicMetricOptions = useCallback((modelDetailRaw: any): AtomicMetricOption[] => {
+    if (!modelDetailRaw) {
+      return []
     }
-    return DEFAULT_ATOMIC_METRIC_OPTIONS
-  }, [existingItems])
+    try {
+      const modelDetail = typeof modelDetailRaw === 'string' ? JSON.parse(modelDetailRaw) : modelDetailRaw
+      const options: AtomicMetricOption[] = []
+      Object.keys(modelDetail || {}).forEach(rawKey => {
+        const keyLower = String(rawKey || '')
+          .trim()
+          .toLowerCase()
+        if (!MODEL_DETAIL_KEYS.has(keyLower)) {
+          return
+        }
+        const items = Array.isArray(modelDetail[rawKey]) ? modelDetail[rawKey] : []
+        // eslint-disable-next-line complexity
+        items.forEach((item: any) => {
+          const value = String(item?.techId || item?.tfieldId || '').trim()
+          if (!value) {
+            return
+          }
+          const bizName = String(item?.bizName || item?.techName || item?.fieldName || item?.originName || '').trim()
+          const originName = String(item?.originName || item?.fieldName || item?.techName || '').trim()
+          const label = originName ? `${bizName || value}(${originName})` : bizName || value
+          options.push({ label, value })
+        })
+      })
+      return options.filter((item, index, list) => list.findIndex(cur => cur.value === item.value) === index)
+    } catch {
+      return []
+    }
+  }, [])
+
+  const ensureAtomicMetricSelectionVisible = useCallback(
+    (options: AtomicMetricOption[]) => {
+      const atomicMetricId = String(form.getFieldValue('atomicMetricId') || '').trim()
+      if (!atomicMetricId || options.some(item => item.value === atomicMetricId)) {
+        return options
+      }
+      return [...options, { label: atomicMetricId, value: atomicMetricId }]
+    },
+    [form]
+  )
 
   const allFields = useMemo(() => {
     if (!semanticSchemaIdVal) {
@@ -209,7 +240,6 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     validatePercentile,
     validatePositiveInt,
     validateRollingWindow,
-    validateSqlExpression,
     validateTechName,
     validateTechnicalRemark,
     validateThresholdMax,
@@ -233,31 +263,6 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     if (Object.hasOwn(changeValues, 'indicatorType')) {
       const nextType = changeValues.indicatorType
       setSelectedIndicatorType(String(nextType || DEFAULT_FORM_VALUES.indicatorType))
-      if (nextType === 'atomic') {
-        setCachedFieldsValue({
-          atomicMetricId: undefined,
-          compareMetricId: undefined,
-          comparePeriod: undefined,
-          compareType: undefined,
-          comparisonOutputType: undefined,
-          cumulativeMetricId: undefined,
-          cumulativeMode: undefined,
-          cumulativeTimeRange: undefined,
-          derivedConditionExpr: undefined,
-          derivedConditions: ensureDerivedConditions(),
-          derivedTimeWindow: undefined,
-          expr: undefined,
-          ratioDenominatorId: undefined,
-          ratioNumeratorId: undefined,
-          ratioPrecision: DEFAULT_FORM_VALUES.ratioPrecision,
-          templateType: DEFAULT_FORM_VALUES.templateType,
-          thresholdMax: undefined,
-          thresholdMin: undefined,
-          volatilityDataRange: DEFAULT_FORM_VALUES.volatilityDataRange,
-          volatilityMethod: DEFAULT_FORM_VALUES.volatilityMethod,
-          volatilityMetricId: undefined
-        })
-      }
       if (nextType === 'derived') {
         setCachedFieldsValue({
           compareMetricId: undefined,
@@ -282,8 +287,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       if (nextType === 'extended') {
         setCachedFieldsValue({
           derivedConditionExpr: undefined,
-          derivedConditions: ensureDerivedConditions(),
-          derivedTimeWindow: undefined
+          derivedConditions: ensureDerivedConditions()
         })
       }
     }
@@ -323,6 +327,11 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     semanticSchemaId: number
     viewId: number | string
   }) => {
+    const currentSchemaId = Number(form.getFieldValue('semanticSchemaId') || 0)
+    if (currentSchemaId !== Number(semanticSchemaId || 0)) {
+      setCachedFieldsValue({ atomicMetricId: undefined })
+      setAtomicMetricOptions([])
+    }
     setCachedFieldsValue({
       semanticGroupId: semanticGroupId || undefined,
       semanticSchemaId
@@ -340,11 +349,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     ]
 
     if (indicatorType === 'derived') {
-      return [...baseFields, 'atomicMetricId', 'derivedTimeWindow', 'derivedConditions']
-    }
-
-    if (indicatorType === 'atomic') {
-      return baseFields
+      return [...baseFields, 'atomicMetricId', 'derivedConditions']
     }
 
     const templateFields: Array<keyof KnowledgeFormValues> = ['templateType']
@@ -370,13 +375,51 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     return [...baseFields, ...templateFields]
   }
 
+  const handleGenerateAtomicMetrics = async () => {
+    const schemaId = Number(form.getFieldValue('semanticSchemaId'))
+    if (!schemaId) {
+      message.warning('请先选择表语义')
+      return
+    }
+    setAtomicMetricLoading(true)
+    try {
+      const res = await queryTableSemanticsDetail(schemaId)
+      const detail = res?.data ?? res?.response?.data?.data ?? res?.response?.data
+      const options = normalizeAtomicMetricOptions(detail?.modelDetail)
+      if (!options.length) {
+        message.warning('当前表语义下暂无可用原子指标')
+        setAtomicMetricOptions([])
+        form.setFieldValue('atomicMetricId', undefined)
+        return
+      }
+      const visibleOptions = ensureAtomicMetricSelectionVisible(options)
+      setAtomicMetricOptions(visibleOptions)
+      if (!visibleOptions.some(item => item.value === String(form.getFieldValue('atomicMetricId') || ''))) {
+        form.setFieldValue('atomicMetricId', undefined)
+      }
+      message.success('原子指标生成成功')
+    } catch {
+      const currentSchemaId = Number(semanticSchemaIdVal || 0)
+      const selectedSchema = schemaOptions.find(item => Number(item.schemaId) === currentSchemaId) as any
+      const fallbackOptions = ensureAtomicMetricSelectionVisible(
+        normalizeAtomicMetricOptions(selectedSchema?.modelDetail)
+      )
+      setAtomicMetricOptions(fallbackOptions)
+      message.error('生成原子指标失败')
+    } finally {
+      setAtomicMetricLoading(false)
+    }
+  }
+
   const next = async () => {
     if (currentStepKey === 'business') {
       await form.validateFields([
         'bizName',
+        'indicatorCategory',
         'indicatorType',
         'status',
         'dataFrequency',
+        'calcPeriod',
         'dataType',
         'qualityLevel',
         'remark'
@@ -416,7 +459,6 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       cumulativeTimeRange: values.cumulativeTimeRange,
       derivedConditionExpr: values.derivedConditionExpr,
       derivedConditions: values.derivedConditions,
-      derivedTimeWindow: values.derivedTimeWindow,
       divideZeroStrategy: values.divideZeroStrategy,
       nullStrategy: values.nullStrategy,
       percentileValue: values.percentileValue,
@@ -441,7 +483,17 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       return
     }
 
-    const fieldList = ['bizName', 'indicatorType', 'status', 'dataFrequency', 'dataType', 'qualityLevel', 'remark']
+    const fieldList = [
+      'techName',
+      'indicatorCategory',
+      'indicatorType',
+      'status',
+      'dataFrequency',
+      'calcPeriod',
+      'dataType',
+      'qualityLevel',
+      'remark'
+    ]
     fieldList.push(...(getTechnicalRequiredFields() as string[]))
     await form.validateFields(fieldList)
 
@@ -451,6 +503,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       ...formValuesRef.current,
       ...form.getFieldsValue(true)
     } as KnowledgeFormValues
+
     const payload: Record<string, any> = {
       ...editingItem,
       ...values,
@@ -464,28 +517,6 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         .map(item => String(item || '').trim())
         .filter(Boolean)
         .join(',')
-    }
-
-    if (values.indicatorType === 'atomic') {
-      payload.atomicMetricId = undefined
-      payload.compareMetricId = undefined
-      payload.comparePeriod = undefined
-      payload.comparisonOutputType = undefined
-      payload.compareType = undefined
-      payload.cumulativeMetricId = undefined
-      payload.cumulativeMode = undefined
-      payload.cumulativeTimeRange = undefined
-      payload.derivedConditions = undefined
-      payload.derivedConditionExpr = undefined
-      payload.expr = ''
-      payload.relItemId = ''
-      payload.ratioDenominatorId = undefined
-      payload.ratioNumeratorId = undefined
-      payload.ratioPrecision = undefined
-      payload.templateType = undefined
-      payload.volatilityDataRange = undefined
-      payload.volatilityMethod = undefined
-      payload.volatilityMetricId = undefined
     }
 
     delete payload.indicatorAliasTags
@@ -566,6 +597,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         {currentStepKey === 'technical' ? (
           <KnowledgeOperateTechnicalStep
             allFields={allFields}
+            atomicMetricLoading={atomicMetricLoading}
             atomicMetricOptions={atomicMetricOptions}
             form={form}
             getSchemaId={getSchemaId}
@@ -577,11 +609,11 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
             validatePercentile={validatePercentile}
             validatePositiveInt={validatePositiveInt}
             validateRollingWindow={validateRollingWindow}
-            validateSqlExpression={validateSqlExpression}
             validateTechName={validateTechName}
             validateTechnicalRemark={validateTechnicalRemark}
             validateThresholdMax={validateThresholdMax}
             validateThresholdValue={validateThresholdValue}
+            onGenerateAtomicMetrics={handleGenerateAtomicMetrics}
           />
         ) : null}
 
