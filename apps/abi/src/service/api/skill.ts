@@ -22,10 +22,12 @@ export function publishSkillApi(formData: FormData) {
 /**
  * 查询技能列表
  *
- * @param data spaceId 不传则查询所有公开技能；status 0 禁用 / 1 启用
+ * @param data spaceId 不传则查询所有公开技能；status 0 禁用 / 1 启用；createdBy 传当前登录用户名可过滤本人创建
  * @returns
  */
-export function querySkillListApi(data: { spaceId?: number | string; status?: string } = {}) {
+export function querySkillListApi(
+  data: { spaceId?: number | string; status?: string; createdBy?: string } = {}
+) {
   return apiRequest({
     data,
     method: 'post',

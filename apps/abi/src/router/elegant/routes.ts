@@ -159,6 +159,15 @@ export const generatedRoutes: GeneratedRoute[] = [
               i18nKey: 'route.component_system_skills',
               title: 'component_system_skills'
             }
+          },
+          {
+            name: 'component_system_tools',
+            path: 'tools',
+            component: 'view.component_system_tools',
+            meta: {
+              i18nKey: 'route.component_system_tools',
+              title: 'component_system_tools'
+            }
           }
         ]
       }

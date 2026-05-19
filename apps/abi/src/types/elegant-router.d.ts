@@ -38,6 +38,7 @@ declare module "@elegant-router/types" {
     "component_system_model": "model";
     "component_system_plugin": "plugin";
     "component_system_skills": "skills";
+    "component_system_tools": "tools";
     "dashboard-share-page": "/dashboard-share-page";
     "designer": "/designer";
     "guide": "/guide";
@@ -179,6 +180,7 @@ declare module "@elegant-router/types" {
     | "component_system_model"
     | "component_system_plugin"
     | "component_system_skills"
+    | "component_system_tools"
     | "dashboard-share-page"
     | "designer"
     | "guide"

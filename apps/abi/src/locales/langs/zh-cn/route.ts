@@ -17,6 +17,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   'component_application_api-key': 'API Key管理',
   component_application_apikey: 'API Key管理',
   component_system_skills: '技能管理',
+  component_system_tools: '工具开发',
   'data-preparation': '数据准备',
   'data-preparation_data-collection': '数据集',
   'data-preparation_data-collection-operate': '数据集配置',
