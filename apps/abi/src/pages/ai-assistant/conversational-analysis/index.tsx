@@ -1,60 +1,42 @@
-import { loadMicroApp } from 'qiankun';
-import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
-import { store } from '@/store';
-import { resetStore } from '@/store/slice/auth';
+import { Spin } from 'antd';
+import { useRouter } from '@sa/simple-router';
 
-import styles from './index.module.css';
+import { getChatStandaloneUrl, openChatConversationWindow } from '@/utils/chatWindow';
 
-const { VITE_BASE_URL } = import.meta.env;
+function getSpaceIdFromContext() {
+  const fromQuery = new URLSearchParams(window.location.search).get('spaceId');
+  if (fromQuery) {
+    return fromQuery;
+  }
+
+  const fromStorage = localStorage.getItem('spaceId');
+  return fromStorage || undefined;
+}
 
 /**
- * AI 对话分析页面组件
- * 使用 qiankun 微前端架构，动态加载 AI 对话子应用
- * 支持智能对话、数据分析等 AI 功能
+ * 兼容旧路由：
+ * 命中 `/ai-assistant/conversational-analysis` 时统一转发到 chat 独立页面，
+ * 避免子应用继续渲染在主应用布局中。
  */
 export function Component() {
+  const { push } = useRouter();
+
   useEffect(() => {
-    // 获取子应用容器
-    const container = document.getElementById('ai-bot');
-    if (!container) {
-      console.error('Container #ai-bot not found');
+    const spaceId = getSpaceIdFromContext();
+    const result = openChatConversationWindow({ spaceId });
+
+    // 若浏览器拦截新开页，降级为当前页直接跳转到独立 chat 地址
+    if (result === 'blocked') {
+      window.location.replace(getChatStandaloneUrl({ spaceId }));
       return;
     }
 
-    // 手动加载 AI 对话子应用 (微前端)
-    const microApp = loadMicroApp({
-      container: '#ai-bot', // 子应用挂载容器
-      entry: import.meta.env.VITE_MICRO_AI_BOT_ENTRY, // 子应用入口地址
-      name: 'ai-bot', // 子应用名称
-      props: {
-        // 传递给子应用的路由基础路径 
-        basename: '/ai-assistant/conversational-analysis',
-        // 传递 token 过期处理函数给子应用
-        onTokenExpired: () => {
-          // 调用主应用的 resetStore 来处理 token 过期
-          store.dispatch(resetStore());
-        }
-        // 注释的代码支持根据是否为 qiankun 子应用动态调整路径
-        // basename: (qiankunWindow as any)?.__POWERED_BY_QIANKUN__
-        //   ? '/studio/chatbi/ai-assistant/conversational-analysis'
-        //   : `${VITE_BASE_URL}/ai-assistant/conversational-analysis`
-      }
-    });
+    push('/home');
+  }, [push]);
 
-    // 组件卸载时清理子应用
-    // eslint-disable-next-line consistent-return
-    return () => {
-      // 等待子应用挂载完成后再卸载，避免卸载时机问题
-      microApp.mountPromise.then(() => microApp.unmount());
-    };
-  }, []);
-  
   return (
-    <div
-      className={styles['ai-bot']}
-      id="ai-bot" // 作为子应用的挂载点
-    >
-      ai对话
+    <div className="flex h-full items-center justify-center">
+      <Spin tip="正在打开对话页面..." />
     </div>
   );
 }
