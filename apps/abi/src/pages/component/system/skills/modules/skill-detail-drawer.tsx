@@ -13,6 +13,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   RocketOutlined,
+  SwapOutlined,
   TagOutlined,
   UserOutlined
 } from '@ant-design/icons';
@@ -507,6 +508,39 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     });
   }
 
+  // 设为当前版本：后端接口待提供，先做交互占位
+  function handleSetCurrentVersion(v: VersionItem) {
+    const vid = v.versionId ?? v.id;
+    if (!vid) return;
+    modal.confirm({
+      title: '设为当前版本？',
+      content: `将把 v${v.version || v.versionNo || vid} 设为当前对外展示的版本。`,
+      okText: '确认',
+      cancelText: '取消',
+      onOk: () => {
+        message.info('设为当前版本（待后端接口对接）');
+        // TODO: 后端提供切换当前版本接口后，在这里调用并刷新版本列表
+      }
+    });
+  }
+
+  // 删除版本：后端接口待提供，先做交互占位
+  function handleDeleteVersion(v: VersionItem) {
+    const vid = v.versionId ?? v.id;
+    if (!vid) return;
+    modal.confirm({
+      title: '删除该版本？',
+      content: `将删除版本 v${v.version || v.versionNo || vid}，删除后不可恢复。`,
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: () => {
+        message.info('删除版本（待后端接口对接）');
+        // TODO: 后端提供删除版本接口后，在这里调用并刷新版本列表
+      }
+    });
+  }
+
   async function handleAddTag() {
     const t = newTag.trim();
     if (!skillId || !t) return;
@@ -715,6 +749,26 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                                         发布
                                       </Button>
                                     )}
+                                    {!isDraft && !isHeadline && (
+                                      <Button
+                                        className="brand-button"
+                                        icon={<SwapOutlined />}
+                                        size="small"
+                                        type="primary"
+                                        onClick={() => handleSetCurrentVersion(v)}
+                                      >
+                                        设为当前版本
+                                      </Button>
+                                    )}
+                                    <Button
+                                      danger
+                                      icon={<DeleteOutlined />}
+                                      size="small"
+                                      type="primary"
+                                      onClick={() => handleDeleteVersion(v)}
+                                    >
+                                      删除
+                                    </Button>
                                   </div>
                                 </div>
                                 {v.changelog && (

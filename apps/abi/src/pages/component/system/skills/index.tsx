@@ -1,5 +1,5 @@
-import { MoreOutlined } from '@ant-design/icons';
-import { App, Dropdown, Empty, Spin, Switch, Tabs } from 'antd';
+import { DeleteOutlined, MoreOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
+import { App, Dropdown, Empty, Input, Select, Spin, Switch, Tabs } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import PageTitle from '@/components/stateless/common/PageTitle';
@@ -41,7 +41,9 @@ export function Component() {
   const { t } = useTranslation();
   const { message, modal } = App.useApp();
 
-  const [filter, setFilter] = useState<'ALL' | '1' | '0'>('ALL');
+  const [tab, setTab] = useState<'plaza' | 'mine'>('plaza');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | '1' | '0'>('ALL');
+  const [keyword, setKeyword] = useState('');
   const [list, setList] = useState<SkillItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
@@ -54,8 +56,19 @@ export function Component() {
   async function fetchList() {
     setLoading(true);
     try {
-      const params: { status?: string } = {};
-      if (filter !== 'ALL') params.status = filter;
+      const params: { spaceId?: number | string; status?: string; createdBy?: string } = {};
+      // 我的技能：传当前空间ID + 当前登录用户名；广场：不传 spaceId 查所有公开技能
+      if (tab === 'mine') {
+        const sid = localStorage.getItem('spaceId');
+        if (sid) params.spaceId = sid;
+        try {
+          const u = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}');
+          if (u?.userName) params.createdBy = u.userName;
+        } catch {
+          // ignore parse error
+        }
+      }
+      if (statusFilter !== 'ALL') params.status = statusFilter;
       const res: any = await querySkillListApi(params);
       const rows = res?.response?.data?.data?.rows || res?.response?.data?.rows || res?.data?.rows || res?.data?.data || res?.data || [];
       setList(Array.isArray(rows) ? rows : []);
@@ -69,7 +82,7 @@ export function Component() {
   useEffect(() => {
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [tab, statusFilter]);
 
   function goPublish() {
     setPublishOpen(true);
@@ -112,14 +125,30 @@ export function Component() {
     // TODO: 后端提供状态修改接口后，在这里调用并根据响应 fetchList()
   }
 
-  const filterItems = useMemo(
+  const tabItems = useMemo(
     () => [
-      { key: 'ALL', label: t('page.manage.skill.filter.all') },
-      { key: '1', label: t('page.manage.skill.filter.published') },
-      { key: '0', label: t('page.manage.skill.filter.hidden') }
+      { key: 'plaza', label: '广场' },
+      { key: 'mine', label: '我的技能' }
+    ],
+    []
+  );
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'ALL', label: t('page.manage.skill.filter.all') },
+      { value: '1', label: t('page.manage.skill.filter.published') },
+      { value: '0', label: t('page.manage.skill.filter.hidden') }
     ],
     [t]
   );
+
+  // 客户端按技能名称模糊过滤（接口暂不支持 keyword 参数）；
+  // spaceId 与 createdBy 已下沉到接口参数，由后端过滤。
+  const visibleList = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return list;
+    return list.filter(it => (it.bizName || '').toLowerCase().includes(kw));
+  }, [list, keyword]);
 
   return (
     <div className="skill-hub-scope h-full overflow-auto p-24px">
@@ -134,20 +163,38 @@ export function Component() {
       </div>
 
       <Tabs
-        activeKey={filter}
+        activeKey={tab}
         className="skill-filter-tabs"
-        items={filterItems}
-        onChange={k => setFilter(k as any)}
+        items={tabItems}
+        onChange={k => setTab(k as any)}
       />
 
+      <div className="mb-16px flex flex-wrap items-center gap-12px">
+        <Input
+          allowClear
+          className="w-280px"
+          placeholder="请输入技能名称"
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+          value={keyword}
+          onChange={e => setKeyword(e.target.value)}
+        />
+        <Select
+          className="w-140px"
+          options={statusOptions}
+          placeholder="状态"
+          value={statusFilter}
+          onChange={v => setStatusFilter(v)}
+        />
+      </div>
+
       <Spin spinning={loading}>
-        {list.length === 0 && !loading ? (
+        {visibleList.length === 0 && !loading ? (
           <div className="py-80px">
             <Empty description={t('page.manage.skill.empty')} />
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-16px md:grid-cols-2 xl:grid-cols-3">
-            {list.map(item => {
+            {visibleList.map(item => {
               const statusKey = resolveStatusKey(item.status);
               const title = item.bizName || '-';
               const namespace = item.spaceId;
@@ -168,9 +215,24 @@ export function Component() {
                       placement="bottomRight"
                       menu={{
                         items: [
-                          { key: 'update', label: '更新技能' },
-                          { type: 'divider' },
-                          { key: 'delete', label: <span style={{ color: '#ff4d4f' }}>删除</span> }
+                          {
+                            key: 'update',
+                            label: (
+                              <span>
+                                <SyncOutlined style={{ marginRight: 6 }} />
+                                更新技能
+                              </span>
+                            )
+                          },
+                          {
+                            key: 'delete',
+                            label: (
+                              <span style={{ color: '#ff4d4f' }}>
+                                <DeleteOutlined style={{ marginRight: 6 }} />
+                                删除
+                              </span>
+                            )
+                          }
                         ],
                         onClick: ({ domEvent, key }) => {
                           domEvent?.stopPropagation?.();

@@ -27,6 +27,7 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   component_system_model: () => import("@/pages/component/system/model/index.tsx"),
   component_system_plugin: () => import("@/pages/component/system/plugin/index.tsx"),
   component_system_skills: () => import("@/pages/component/system/skills/index.tsx"),
+  component_system_tools: () => import("@/pages/component/system/tools/index.tsx"),
   "dashboard-share-page": () => import("@/pages/dashboard-share-page/index.tsx"),
   designer: () => import("@/pages/designer/index.tsx"),
   guide: () => import("@/pages/guide/index.tsx"),
