@@ -32,7 +32,15 @@ function ChatWorkbenchLayout() {
 
   const userName = useMemo(() => getCurrentUserName(), [])
   const selectedBottomKeys = useMemo(() => (pathname.startsWith(HISTORY_ROUTE_PREFIX) ? [HISTORY_MENU_KEY] : []), [pathname])
-  const pageTitle = useMemo(() => (pathname.startsWith('/chat/task') ? 'ABI - 对话' : 'ABI - 历史话题'), [pathname])
+  const pageTitle = useMemo(() => {
+    if (pathname.startsWith('/chat/task')) {
+      return 'ABI - 对话'
+    }
+    if (pathname.startsWith('/chat/history')) {
+      return 'ABI - 历史话题'
+    }
+    return 'ABI - 对话工作台'
+  }, [pathname])
 
   useEffect(() => {
     document.title = pageTitle

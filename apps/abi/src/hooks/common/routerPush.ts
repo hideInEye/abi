@@ -2,6 +2,7 @@ import type { RouteKey } from '@elegant-router/types';
 import { useRoute, useRouter } from '@sa/simple-router';
 import type { RouteLocationNamedRaw } from '@sa/simple-router';
 
+import { getChatStandaloneUrl } from '@/utils/chatWindow';
 import { localStg } from '@/utils/storage';
 
 interface RouterPushOptions {
@@ -31,6 +32,59 @@ function isNormalRole(roles: any[]): boolean {
       roleText.includes('超级')
     );
   });
+}
+
+function parseChatRedirectSpaceId(redirect: string): string | undefined {
+  if (!redirect) {
+    return undefined;
+  }
+
+  const fromHashMatch = redirect.match(/[?#&]spaceId=([^&#]+)/);
+  if (fromHashMatch?.[1]) {
+    return decodeURIComponent(fromHashMatch[1]);
+  }
+
+  return undefined;
+}
+
+function isChatRedirect(redirect: string): boolean {
+  if (!redirect) {
+    return false;
+  }
+
+  return (
+    redirect.includes('/chat-ui') ||
+    redirect.includes('#/chat/') ||
+    redirect.includes('/ai-assistant/conversational-analysis')
+  );
+}
+
+function buildChatStandaloneRedirectUrl(redirect: string): string {
+  const spaceId = parseChatRedirectSpaceId(redirect);
+  const fallbackUrl = getChatStandaloneUrl({
+    spaceId: spaceId && spaceId !== '0' ? spaceId : undefined
+  });
+
+  if (redirect.includes('/chat-ui')) {
+    return redirect;
+  }
+
+  const hash = redirect.split('#')[1];
+  if (hash?.startsWith('/chat/')) {
+    const chatHostUrl = fallbackUrl.split('#')[0];
+    return `${chatHostUrl}#${hash}`;
+  }
+
+  return fallbackUrl;
+}
+
+function openStandaloneChatByRedirect(redirect: string) {
+  const chatUrl = buildChatStandaloneRedirectUrl(redirect);
+  const win = window.open(chatUrl, '_blank', 'noopener,noreferrer');
+
+  if (!win) {
+    window.location.replace(chatUrl);
+  }
 }
 
 /**
@@ -134,6 +188,11 @@ export function useRouterPush() {
     const redirect = searchParams.get('redirect');
 
     if (needRedirect && redirect) {
+      if (isChatRedirect(redirect)) {
+        openStandaloneChatByRedirect(redirect);
+        return toHome();
+      }
+
       return routerPush(redirect);
     }
 
@@ -141,7 +200,7 @@ export function useRouterPush() {
     const roles = Array.isArray(userInfo?.roles) ? userInfo.roles : [];
 
     if (isNormalRole(roles)) {
-      return routerPush('/ai-assistant/conversational-analysis');
+      return toHome();
     }
 
     return toHome();

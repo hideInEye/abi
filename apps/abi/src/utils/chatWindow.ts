@@ -47,7 +47,7 @@ export function getChatStandaloneUrl(params?: ChatWindowParams) {
 
   const hashPath = conversationId
     ? `/chat/conversation/${encodeURIComponent(conversationId)}`
-    : '/chat/conversation';
+    : '/chat/';
   const hashQuery = hashSearch.toString();
 
   return `${getChatHostRouteUrl()}#${hashPath}${hashQuery ? `?${hashQuery}` : ''}`;
