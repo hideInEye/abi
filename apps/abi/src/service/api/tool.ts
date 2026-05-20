@@ -34,3 +34,70 @@ export function queryToolListApi(data: { toolName?: string } = {}) {
     url: `${TOOL_BASE}/list`
   });
 }
+
+/**
+ * 查询工具详情
+ *
+ * @param data toolId 工具ID
+ */
+export function getToolDetailApi(data: { toolId: string | number }) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `${TOOL_BASE}/get`
+  });
+}
+
+/** 新增工具请求参数 */
+export interface CreateToolParams {
+  toolName: string;
+  toolLabel: string;
+  description?: string;
+  toolType?: string;
+  icon?: string;
+  scriptContent?: string;
+  startupParams?: string;
+  inputSchema?: string;
+  outputSchema?: string;
+  status?: string;
+}
+
+/**
+ * 新增工具
+ */
+export function createToolApi(data: CreateToolParams) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `${TOOL_BASE}/create`
+  });
+}
+
+/** 修改工具请求参数 */
+export interface UpdateToolParams extends CreateToolParams {
+  toolId: string | number;
+}
+
+/**
+ * 修改工具
+ */
+export function updateToolApi(data: UpdateToolParams) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `${TOOL_BASE}/update`
+  });
+}
+
+/**
+ * 删除工具
+ *
+ * @param data toolId 工具ID
+ */
+export function deleteToolApi(data: { toolId: string | number }) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `${TOOL_BASE}/delete`
+  });
+}
