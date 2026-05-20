@@ -9,14 +9,16 @@ import s from '../../home/index.module.scss'
 import { Dropdown, Space } from 'antd'
 import { MenuProps } from 'antd/lib'
 import { setSelectedMenuKey } from '@/store/slice/layout'
+import { useRouter } from '~/packages/simple-router/src'
 interface SpaceItemProps {
   readonly deleteSpace: (space: ISpaceItem) => void
   readonly setEditSpace: (space: ISpaceItem) => void
   readonly space: ISpaceItem
 }
 
-export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space }) => {
+export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space}) => {
   const dispatch = useAppDispatch()
+  const { push } = useRouter()
 
   const handleEdit = useCallback(() => {
     setEditSpace(space)
@@ -43,8 +45,10 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
   const canDelete = isAdmin || Boolean(isCreator)
 
   const setSpaceId = (spaceId: number) => {
-    // 使用统一的空间切换逻辑
-    switchToSpace(spaceId)
+    // 首页场景：仅切换空间并停留主应用，进入工作台空白页
+    switchToSpace(spaceId, undefined, { redirect: true })
+    dispatch(setSelectedMenuKey(''))
+    push('/workbench')
   }
 
   const items = [
@@ -76,7 +80,6 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
       key={space.spaceId}
       onClick={() => {
         setSpaceId(space.spaceId)
-        dispatch(setSelectedMenuKey('dialogue'))
       }}
     >
       <AFlex align="center" justify="space-between" className="gap-4">

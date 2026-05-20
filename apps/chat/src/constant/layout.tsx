@@ -23,14 +23,14 @@ export const menuSkinClass = [
 ].join(' ')
 
 export const middleMenus: MenuProps['items'] = [
-  { key: 'schedule', icon: <CalendarOutlined />, label: '日程' },
-  { key: 'files', icon: <FolderOpenOutlined />, label: '文件' },
-  { key: 'mail', icon: <MailOutlined />, label: '邮箱' },
-  { key: 'device', icon: <DesktopOutlined />, label: '设备' },
-  { type: 'divider' },
+  // { key: 'schedule', icon: <CalendarOutlined />, label: '日程' },
+  // { key: 'files', icon: <FolderOpenOutlined />, label: '文件' },
+  // { key: 'mail', icon: <MailOutlined />, label: '邮箱' },
+  // { key: 'device', icon: <DesktopOutlined />, label: '设备' },
+  // { type: 'divider' },
   { key: 'skills', icon: <ShopOutlined />, label: '技能商店' },
-  { key: 'video', icon: <VideoCameraOutlined />, label: '视频创作' },
-  { key: 'agent-world', icon: <UserOutlined />, label: 'Agent World' },
+  // { key: 'video', icon: <VideoCameraOutlined />, label: '视频创作' },
+  // { key: 'agent-world', icon: <UserOutlined />, label: 'Agent World' },
 ]
 
 export const bottomMenus: MenuProps['items'] = [{ key: HISTORY_MENU_KEY, icon: <HistoryOutlined />, label: '历史话题' }]
