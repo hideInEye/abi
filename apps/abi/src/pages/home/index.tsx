@@ -16,6 +16,7 @@ import s from './index.module.scss'
 import { HomeTitle } from './modules/home_title'
 import { ApprovSpace } from './modules/approv_space'
 import { changeSpaceId, getSpaceId } from '@/store/slice/app'
+import { clearPersistedSpace, persistSpaceName } from '@/utils/spaceStorage'
 /**
  * 首页组件
  * 系统的主要仪表板页面，提供数据概览和快速访问入口
@@ -69,7 +70,7 @@ export function Component() {
         dispatch(changeSpaceId(Number(lgSpaceId)))
       } else if (mergedData?.spaceList && mergedData.spaceList.length > 0 && mergedData.spaceList[0].spaceId && !spaceId) {
         dispatch(changeSpaceId(mergedData.spaceList[0].spaceId))
-        localStorage.setItem('spaceId', mergedData.spaceList[0].spaceId.toString())
+        persistSpaceName(mergedData.spaceList[0].spaceName)
       }
       setHomeData(mergedData)
     } catch (error) {
@@ -87,7 +88,7 @@ export function Component() {
   async function deleteSpaceHandler(space: ISpaceItem) {
     const { data } = await deleteSpace([space.spaceId])
     console.log('deleteSpaceHandler', data)
-    localStorage.removeItem('spaceId')
+    clearPersistedSpace()
     dispatch(clearTabs())
     getHomeData()
   }

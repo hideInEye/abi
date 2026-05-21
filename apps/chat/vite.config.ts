@@ -5,19 +5,13 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import tailwindcss from 'tailwindcss'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import path from 'path'
-import qiankun from 'vite-plugin-qiankun'
 const localIconPath = path.join(process.cwd(), 'src/assets/svg-icon')
 
-// 是否为开发模式，用于qiankun热更新
 const useDevMode = process.env.NODE_ENV === 'development'
-const baseUrl = process.env.NODE_ENV === 'development' ? '/' : '/chat-ui/'
+const baseUrl = '/chat-ui/'
 // https://vite.dev/config/
 export default defineConfig({
-  // 这里的 'myMicroAppName' 是子应用名，主应用注册时AppName需保持一致
-  // plugins: [qiankun('myMicroAppName')],
-  // 生产环境需要指定运行域名作为base
-  // base: 'http://xxx.com/'
-  base: baseUrl, // 关键配置：设置基础路径
+  base: baseUrl,
   plugins: [
     tanstackRouter({
       target: 'react',
@@ -26,7 +20,6 @@ export default defineConfig({
       quoteStyle: 'single',
     }),
     ...(useDevMode ? [] : [reactRefresh()]),
-    qiankun('ai-bot', { useDevMode }),
     createSvgIconsPlugin({
       customDomId: '__SVG_ICON_LOCAL__',
       iconDirs: [localIconPath],

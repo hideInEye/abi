@@ -5,7 +5,7 @@ export interface ChatWindowParams {
 
 export type ChatOpenResult = 'new-window' | 'blocked';
 
-const CHAT_HOST_ROUTE = '/chat-ui';
+const CHAT_HOST_ROUTE = '/chat-ui/';
 
 function trimRightSlash(value: string) {
   return value.replace(/\/+$/, '');
@@ -46,7 +46,7 @@ export function getChatStandaloneUrl(params?: ChatWindowParams) {
   }
 
   const hashPath = conversationId
-    ? `/chat/conversation/${encodeURIComponent(conversationId)}`
+    ? `/chat/task/${encodeURIComponent(conversationId)}`
     : '/chat/';
   const hashQuery = hashSearch.toString();
 
