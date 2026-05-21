@@ -11,11 +11,12 @@ import { resetStore } from '@/store/slice/auth'
 import { getAllRoutes } from '@/store/slice/route'
 import { handleLoginExpired } from '@/utils/auth'
 import { openChatConversationWindow } from '@/utils/chatWindow'
+import { persistSpaceName, readPersistedSpaceId, readPersistedSpaceName } from '@/utils/spaceStorage'
 import { Dropdown, Layout } from 'antd'
 import { useRoute, useRouter } from '~/packages/simple-router/src'
 import { spaceList } from '@/service/api'
 import { MenuProps } from 'antd/lib'
-import { getSpaceId } from '@/store/slice/app'
+import { changeSpaceId, getSpaceId } from '@/store/slice/app'
 const { Sider } = Layout
 
 const GlobalSider: FC = memo(() => {
@@ -32,13 +33,15 @@ const GlobalSider: FC = memo(() => {
     router.push('/home')
   }
  const spaceId = useAppSelector(getSpaceId)
+  const effectiveSpaceId = spaceId || readPersistedSpaceId()
   const { switchToSpace } = useSpaceSwitch()
-  const [selectedSpaceName, setSelectedSpaceName] = useState('')
+  const [selectedSpaceName, setSelectedSpaceName] = useState(() => readPersistedSpaceName())
 
   const { data: curspaceList, run: getSpaceList } = useRequest(spaceList, {
     manual: true,
   })
   useEffect(() => {
+    
     if (primaryMenuMap.get(route.name)) {
       dispatch(setSelectedMenuKey(route.name))
     }
@@ -46,12 +49,19 @@ const GlobalSider: FC = memo(() => {
 
   useEffect(() => {
     if (curspaceList && curspaceList.data && curspaceList.data.length > 0 ) {
-      const currentSpace = curspaceList.data.find((space: any) => space.spaceId === spaceId)
+      const currentSpace = curspaceList.data.find((space: any) => space.spaceId === effectiveSpaceId)
       if (currentSpace) {
         setSelectedSpaceName(currentSpace.spaceName)
+        persistSpaceName(currentSpace.spaceName)
       }
     }
-  }, [curspaceList,spaceId])
+  }, [curspaceList,effectiveSpaceId])
+
+  useEffect(() => {
+    if (!spaceId && effectiveSpaceId) {
+      dispatch(changeSpaceId(effectiveSpaceId))
+    }
+  }, [dispatch, effectiveSpaceId, spaceId])
 
   useEffect(() => {
     getSpaceList({
@@ -137,11 +147,13 @@ const GlobalSider: FC = memo(() => {
   const handleSpaceChange: MenuProps['onClick'] = (e) => {
     const data = spaceOptions.find((item: any) => item.key == e.key)
     setSelectedSpaceName(data?.label || '')
+    persistSpaceName(data?.label)
 
     switchToSpace(Number(e?.key), undefined, { redirect: true })
     dispatch(setSelectedMenuKey(''))
     router.push('/workbench')
   }
+console.log(selectedMenuKey);
 
   return (
     <Sider width="80px" className="h-full bg-white">
@@ -151,16 +163,17 @@ const GlobalSider: FC = memo(() => {
         </div>
         <div className="flex gap-[1.625rem] flex-col text-[#848FA2] absolute top-[50%] translate-y-[-50%]">
           {primaryMenuData.map((item) => {
+            
             const isActive = item.name !== selectedMenuKey
             return (
               <div
                 key={item.key}
                 onClick={() => {
                   if(item.key==='chat-ui') {
-                    openChatConversationWindow({ spaceId })
+                    openChatConversationWindow({ spaceId: effectiveSpaceId || undefined })
                     return
                   }
-                  dispatch(setSelectedMenuKey(item.key))
+                  dispatch(setSelectedMenuKey(item.name))
                   router.push(item.url)
                 }}
                 className={`flex items-center px-3 py-[0.6875rem] flex-col gap-[0.5625rem] cursor-pointer ${!isActive ? 'bg-[#fff] shadow-[0_0.25rem_0.375rem_0_rgba(137,147,166,0.15)] rounded-[0.625rem] text-[#3366FF]' : ''}`}

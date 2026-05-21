@@ -22,9 +22,9 @@ let root: ReturnType<typeof createRoot> | null = null
 let configAbortController: AbortController | null = null
 
 function mountApp() {
-  const spaceId = Number(localStorage.getItem('spaceId')) || undefined
-
   syncBootParamsFromUrl()
+
+  const spaceId = Number(localStorage.getItem('spaceId')) || undefined
 
   const containerEl = document.getElementById('root')
   if (!containerEl) return

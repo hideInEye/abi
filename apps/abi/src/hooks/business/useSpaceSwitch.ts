@@ -4,6 +4,7 @@ import { useAppDispatch } from '@/hooks/business/useStore';
 import { changeSpaceId, setSpaceHidden } from '@/store/slice/app';
 import { clearConversationCache } from '@/utils/cache';
 import { getChatStandaloneUrl } from '@/utils/chatWindow';
+import { persistSpaceId } from '@/utils/spaceStorage';
 import { localStg } from '@/utils/storage';
 import { getSpaceMenuBySpaceIdApi } from '@/service/api';
 
@@ -53,7 +54,7 @@ export function useSpaceSwitch() {
       localStg.remove('globalTabs');
 
       // 设置新的空间ID 到 localStorage
-      localStorage.setItem('spaceId', spaceId.toString());
+      persistSpaceId(spaceId);
       if (options?.chatId !== undefined && options?.chatId !== null && `${options.chatId}` !== '') {
         localStorage.setItem('chatId', String(options.chatId));
       }
@@ -79,7 +80,7 @@ export function useSpaceSwitch() {
    */
   const updateSpaceId = useCallback((spaceId: number) => {
     clearConversationCache();
-    localStorage.setItem('spaceId', spaceId.toString());
+    persistSpaceId(spaceId);
   }, []);
 
   return {
