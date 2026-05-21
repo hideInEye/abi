@@ -1,6 +1,6 @@
 import Editor from '@monaco-editor/react';
 import { ExclamationCircleFilled } from '@ant-design/icons';
-import { App, Button, Form, Input, Modal, Select, Space, Table, Tabs, Tag } from 'antd';
+import { App, Button, Drawer, Form, Input, Select, Space, Table, Tabs, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useState } from 'react';
 
@@ -299,20 +299,22 @@ export function Component() {
         </div>
       </div>
 
-      {/* 新增/编辑弹窗 */}
-      <Modal
+      {/* 新增/编辑抽屛 */}
+      <Drawer
         title={editingTool ? '编辑内置工具' : '新增内置工具'}
         open={modalOpen}
-        width={680}
+        width={720}
         destroyOnClose
-        onCancel={() => setModalOpen(false)}
+        onClose={() => setModalOpen(false)}
         footer={
-          <Space>
-            <Button onClick={() => setModalOpen(false)}>取消</Button>
-            <Button type="primary" loading={saving} onClick={handleSave}>
-              保存
-            </Button>
-          </Space>
+          <div style={{ textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => setModalOpen(false)}>取消</Button>
+              <Button type="primary" loading={saving} onClick={handleSave}>
+                保存
+              </Button>
+            </Space>
+          </div>
         }
       >
         <Form form={form} layout="vertical" preserve={false}>
@@ -321,7 +323,7 @@ export function Component() {
             name="toolName"
             rules={[{ required: true, message: '请输入工具名称' }]}
           >
-            <Input placeholder="如：builtin_increment" disabled={!!editingTool} />
+            <Input placeholder="如：builtin_increment" />
           </Form.Item>
 
           <Form.Item
@@ -396,7 +398,7 @@ export function Component() {
             </Form.Item>
           </div>
         </Form>
-      </Modal>
+      </Drawer>
     </div>
   );
 }

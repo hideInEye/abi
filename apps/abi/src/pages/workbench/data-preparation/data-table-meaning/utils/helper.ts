@@ -28,3 +28,26 @@ export function buildGroupTree(list: any[], parentId = 0): any[] {
       return children.length > 0 ? { ...item, children } : { ...item };
     });
 }
+
+/**
+ * 获取指定分组的所有后代 ID（用于防止循环引用）
+ *
+ * @param list 平铺分组数组
+ * @param groupId 当前分组 ID
+ * @returns 包含所有后代 ID 的 Set
+ */
+export function getAllDescendantIds(list: any[], groupId: number): Set<number> {
+  const descendants = new Set<number>();
+
+  function collectDescendants(parentId: number) {
+    list.forEach((item) => {
+      if (item.parentId === parentId && !descendants.has(item.groupId)) {
+        descendants.add(item.groupId);
+        collectDescendants(item.groupId);
+      }
+    });
+  }
+
+  collectDescendants(groupId);
+  return descendants;
+}

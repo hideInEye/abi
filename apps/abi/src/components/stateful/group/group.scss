@@ -20,6 +20,14 @@
     .ant-tree-node-content-wrapper {
       padding-left: 0 !important;
       padding-right: 0 !important;
+      overflow: hidden;
+      flex: 1;
+      min-width: 0;
+    }
+    .ant-tree-title {
+      display: block;
+      overflow: hidden;
+      width: 100%;
     }
     .ant-tree-indent-unit {
       width: 16px !important;
