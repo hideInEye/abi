@@ -9,6 +9,7 @@ import stepThreeIcon from '@/assets/imgs/home/step_three.png'
 import stepFourIcon from '@/assets/imgs/home/step_four.png'
 import s from '../index.module.scss'
 import React from 'react'
+import { persistSpaceId, persistSpaceName } from '@/utils/spaceStorage'
 /**
  * 快速创建组件
  * 提供系统主要功能的快速访问入口
@@ -31,7 +32,8 @@ export const FastCreate: React.FC<FastCreateProps> = ({ spaceList }) => {
   function handleCreate(url: string) {
     const spaceId = localStorage.getItem('spaceId')
     if (!spaceId && spaceList?.length > 0) {
-      localStorage.setItem('spaceId', spaceList[0]?.spaceId.toString())
+      persistSpaceId(spaceList[0]?.spaceId)
+      persistSpaceName(spaceList[0]?.spaceName)
     }
     push(url)
   }

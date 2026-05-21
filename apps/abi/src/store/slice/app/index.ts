@@ -2,6 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
 import { setLng } from '@/locales';
+import { persistSpaceId, readPersistedSpaceId } from '@/utils/spaceStorage';
 import { localStg } from '@/utils/storage';
 
 import type { AppThunk } from '../..';
@@ -40,7 +41,7 @@ const initialState: InitialStateType = {
   mixSiderFixed: false,
   reloadFlag: true,
   siderCollapse: false,
-  spaceId: 0,
+  spaceId: readPersistedSpaceId(),
   themeDrawerVisible: false,
   spaceHidden: false,
 };
@@ -56,6 +57,7 @@ export const appSlice = createSlice({
     },
     changeSpaceId(state, { payload }: PayloadAction<number>) {
       state.spaceId = payload;
+      persistSpaceId(payload);
     },
     closeThemeDrawer: state => {
       state.themeDrawerVisible = false;

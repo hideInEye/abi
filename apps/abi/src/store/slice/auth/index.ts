@@ -28,7 +28,7 @@ async function performLogoutCleanup() {
 }
 
 async function removeWellKnownKeys(prefix: string, debugRemoved: string[]) {
-  const wellKnown = ['globalTabs', 'token', 'refreshToken', 'userInfo', 'spaceId', 'userId'];
+  const wellKnown = ['globalTabs', 'token', 'refreshToken', 'userInfo', 'spaceId', 'spaceName', 'userId'];
   for (const k of wellKnown) {
     try {
       localStg.remove(k as any);
@@ -47,7 +47,7 @@ async function cleanupWebStorage(prefix: string, debugRemoved: string[]) {
   try {
     for (let i = window.localStorage.length - 1; i >= 0; ) {
       const key = window.localStorage.key(i) || '';
-      if (/globalTabs|token|userInfo|refreshToken|spaceId|userId/i.test(key) || (prefix && key.startsWith(prefix))) {
+      if (/globalTabs|token|userInfo|refreshToken|spaceId|spaceName|userId/i.test(key) || (prefix && key.startsWith(prefix))) {
         window.localStorage.removeItem(key);
         debugRemoved.push(key);
       } else {
@@ -59,7 +59,7 @@ async function cleanupWebStorage(prefix: string, debugRemoved: string[]) {
   try {
     for (let i = window.sessionStorage.length - 1; i >= 0; ) {
       const key = window.sessionStorage.key(i) || '';
-      if (/globalTabs|token|userInfo|refreshToken|spaceId|userId/i.test(key) || (prefix && key.startsWith(prefix))) {
+      if (/globalTabs|token|userInfo|refreshToken|spaceId|spaceName|userId/i.test(key) || (prefix && key.startsWith(prefix))) {
         window.sessionStorage.removeItem(key);
         debugRemoved.push(key);
       } else {
@@ -75,7 +75,7 @@ async function cleanupLocalforageKeys(prefix: string, debugRemoved: string[]) {
     await Promise.all(
       keys.map(k => {
         const s = String(k);
-        if (/globalTabs|token|userInfo|refreshToken|spaceId|userId/i.test(s) || (prefix && s.startsWith(prefix))) {
+        if (/globalTabs|token|userInfo|refreshToken|spaceId|spaceName|userId/i.test(s) || (prefix && s.startsWith(prefix))) {
           debugRemoved.push(s);
           return localforage.removeItem(k as any);
         }

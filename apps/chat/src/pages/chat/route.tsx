@@ -13,6 +13,7 @@ import {
   SIDER_WIDTH,
 } from '@/constant/layout'
 import { BrandHeader } from '@/components/layout/BrandHeader'
+import { CreateConversationButton } from '@/components/layout/CreateConversationButton'
 import { UserProfileCard } from '@/components/layout/UserProfileCard'
 import { WorkbenchMenuList } from '@/components/layout/WorkbenchMenuList'
 import { getCurrentUserName } from '@/utils/layout'
@@ -75,6 +76,8 @@ function ChatWorkbenchLayout() {
       >
         <div className="h-full min-h-0 flex flex-col">
           <BrandHeader collapsed={collapsed} logoSrc={appLogoUrl} onToggleCollapse={handleToggleCollapse} />
+
+          <CreateConversationButton collapsed={collapsed} />
 
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2.5 py-3">
             <WorkbenchMenuList collapsed={collapsed} items={middleMenus} onClick={handleMiddleMenuClick} selectable={false} />

@@ -1,4 +1,4 @@
-import { ClearOutlined, ClockCircleOutlined, CopyOutlined, DeleteOutlined, EditOutlined, MoreOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { ClearOutlined, ClockCircleOutlined, CopyOutlined, DeleteOutlined, EditOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Dropdown, List, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import { Input } from 'antd'
@@ -13,7 +13,6 @@ type HistoryTopicsPanelProps = {
   searchKeyword: string
   onSearchChange: (value: string) => void
   onSelectTopic: (chatId: string) => void
-  onCreateTopic: () => void
   onEditTopic: (chatId: string) => void
   onSaveTopic: (chatId: string) => void
   onClearTopic: (chatId: string) => void
@@ -36,7 +35,6 @@ export function HistoryTopicsPanel({
   searchKeyword,
   onSearchChange,
   onSelectTopic,
-  onCreateTopic,
   onEditTopic,
   onSaveTopic,
   onClearTopic,
@@ -97,9 +95,6 @@ export function HistoryTopicsPanel({
     <div className="h-full min-h-0 flex flex-col">
       <div className="h-[64px] border-b border-[#eceef2] bg-white px-5 flex items-center justify-between">
         <Typography.Text className="text-[22px] font-bold text-[#111827]">历史话题</Typography.Text>
-        <Button icon={<PlusOutlined />} className="!h-9 !rounded-[10px] !border-[#dde2e8] !px-3 !text-[14px] !font-semibold !text-[#111827]" onClick={onCreateTopic}>
-          新话题
-        </Button>
       </div>
 
       <div className="px-6 pt-3">
