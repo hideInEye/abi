@@ -17,7 +17,7 @@ function readHashQueryParam(hash: string, key: string): string | null {
 }
 
 function extractChatIdFromHashPath(hash: string): string | null {
-  const match = hash.match(/\/chat\/conversation\/([^/?#]+)/)
+  const match = hash.match(/\/chat\/(?:conversation|task)\/([^/?#]+)/)
   if (!match?.[1]) return null
 
   try {
@@ -78,4 +78,3 @@ export function syncBootParamsFromUrl() {
     // 忽略 URL 解析异常，保留现有本地状态。
   }
 }
-

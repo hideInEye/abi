@@ -8,8 +8,8 @@ import { HistoryTopicsPanel } from '@/components/layout/HistoryTopicsPanel'
 import { useHistoryTopics } from '@/hooks/layout/useHistoryTopics'
 import CreateModal from '@/components/conversation-analysis/CreateModal'
 import SaveDrawer from '@/components/conversation/SaveDrawer'
-import { createApp, deleteApp, updateApp } from '@/service/api/app'
-import { clearConvHistory, deleteConv, fetchConvList, newConv } from '@/service/api/conv'
+import { deleteApp, updateApp } from '@/service/api/app'
+import { clearConvHistory, deleteConv, fetchConvList } from '@/service/api/conv'
 import { getSpaceId } from '@/utils'
 
 export const Route = createFileRoute('/chat/history')({
@@ -52,12 +52,6 @@ function HistoryPage() {
     [navigate],
   )
 
-  const handleCreateTopic = useCallback(() => {
-    setCreateModalIsEdit(false)
-    setCreateModalInitialValues(undefined)
-    setCreateModalVisible(true)
-  }, [])
-
   const handleCreateModalClose = useCallback(
     async (formValue?: any, isEdit?: boolean) => {
       if (!formValue) {
@@ -68,40 +62,25 @@ function HistoryPage() {
       }
 
       try {
-        if (isEdit) {
-          await updateApp(formValue)
+        if (!isEdit) {
           setCreateModalVisible(false)
           setCreateModalIsEdit(false)
           setCreateModalInitialValues(undefined)
-          await loadHistoryTopics()
           return Promise.resolve()
         }
 
-        const createAppRes = await createApp(formValue)
-        const createdApp = createAppRes?.data
-        if (!createdApp?.chat_id) {
-          throw new Error('chat_id missing')
-        }
-
-        await newConv(createdApp)
-        const taskId = String(createdApp.chat_id)
-        localStorage.setItem('chatId', taskId)
-
+        await updateApp(formValue)
         setCreateModalVisible(false)
         setCreateModalIsEdit(false)
         setCreateModalInitialValues(undefined)
         await loadHistoryTopics()
-        navigate({
-          to: TASK_DETAIL_ROUTE,
-          params: { taskId },
-        })
         return Promise.resolve()
       } catch (error) {
-        message.error('创建失败')
+        message.error('更新失败')
         return Promise.reject(error)
       }
     },
-    [loadHistoryTopics, navigate],
+    [loadHistoryTopics],
   )
 
   const handleEditTopic = useCallback(
@@ -244,7 +223,6 @@ function HistoryPage() {
         searchKeyword={searchKeyword}
         onSearchChange={setSearchKeyword}
         onSelectTopic={handleSelectTopic}
-        onCreateTopic={handleCreateTopic}
         onEditTopic={handleEditTopic}
         onSaveTopic={handleSaveTopic}
         onClearTopic={handleClearTopic}

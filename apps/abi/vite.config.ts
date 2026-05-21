@@ -47,6 +47,11 @@ export default defineConfig(configEnv => {
       open: true,
       port: 9527,
       proxy: {
+        '/chat-ui': {
+          target: 'http://localhost:5173',
+          changeOrigin: true,
+          ws: true,
+        },
         ...createViteProxy(viteEnv, enableProxy),
         '/proxy-api': {
           changeOrigin: true,

@@ -1,7 +1,9 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/chat/')({
-  beforeLoad: () => {
-    throw redirect({ to: '/chat/history' })
-  },
+  component: ChatEmptyPage,
 })
+
+function ChatEmptyPage() {
+  return <div className="h-full w-full bg-[#f7f8fa]" />
+}

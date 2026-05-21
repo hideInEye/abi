@@ -13,6 +13,7 @@ import {
   SIDER_WIDTH,
 } from '@/constant/layout'
 import { BrandHeader } from '@/components/layout/BrandHeader'
+import { CreateConversationButton } from '@/components/layout/CreateConversationButton'
 import { UserProfileCard } from '@/components/layout/UserProfileCard'
 import { WorkbenchMenuList } from '@/components/layout/WorkbenchMenuList'
 import { getCurrentUserName } from '@/utils/layout'
@@ -32,7 +33,15 @@ function ChatWorkbenchLayout() {
 
   const userName = useMemo(() => getCurrentUserName(), [])
   const selectedBottomKeys = useMemo(() => (pathname.startsWith(HISTORY_ROUTE_PREFIX) ? [HISTORY_MENU_KEY] : []), [pathname])
-  const pageTitle = useMemo(() => (pathname.startsWith('/chat/task') ? 'ABI - 对话' : 'ABI - 历史话题'), [pathname])
+  const pageTitle = useMemo(() => {
+    if (pathname.startsWith('/chat/task')) {
+      return 'ABI - 对话'
+    }
+    if (pathname.startsWith('/chat/history')) {
+      return 'ABI - 历史话题'
+    }
+    return 'ABI - 对话工作台'
+  }, [pathname])
 
   useEffect(() => {
     document.title = pageTitle
@@ -67,6 +76,8 @@ function ChatWorkbenchLayout() {
       >
         <div className="h-full min-h-0 flex flex-col">
           <BrandHeader collapsed={collapsed} logoSrc={appLogoUrl} onToggleCollapse={handleToggleCollapse} />
+
+          <CreateConversationButton collapsed={collapsed} />
 
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2.5 py-3">
             <WorkbenchMenuList collapsed={collapsed} items={middleMenus} onClick={handleMiddleMenuClick} selectable={false} />

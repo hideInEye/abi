@@ -6,6 +6,7 @@ import { GuideDataSource } from './components/GuideDataSource'
 import { GuideDataCollection } from './components/GuideDataCollection'
 import { GuideTableMeaning } from './components/GuideTableMeaning'
 import { GuideAssistant } from './components/GuideAssistant'
+import { persistSpaceId, persistSpaceName } from '@/utils/spaceStorage'
 
 export function Component() {
   const [current, setCurrent] = useState(0)
@@ -15,7 +16,8 @@ export function Component() {
   const handleSelectSpace = (space: ISpaceItem) => {
     setSelectedSpace(space)
     // 保存到localStorage，供后续步骤的列表组件读取
-    localStorage.setItem('spaceId', String(space.spaceId))
+    persistSpaceId(space.spaceId)
+    persistSpaceName(space.spaceName)
   }
   
   const handleNext = () => {
