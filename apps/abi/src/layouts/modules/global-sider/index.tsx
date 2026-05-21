@@ -10,6 +10,7 @@ import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 import { resetStore } from '@/store/slice/auth'
 import { getAllRoutes } from '@/store/slice/route'
 import { handleLoginExpired } from '@/utils/auth'
+import { openChatConversationWindow } from '@/utils/chatWindow'
 import { Dropdown, Layout } from 'antd'
 import { useRoute, useRouter } from '~/packages/simple-router/src'
 import { spaceList } from '@/service/api'
@@ -137,7 +138,9 @@ const GlobalSider: FC = memo(() => {
     const data = spaceOptions.find((item: any) => item.key == e.key)
     setSelectedSpaceName(data?.label || '')
 
-    switchToSpace(Number(e?.key))
+    switchToSpace(Number(e?.key), undefined, { redirect: true })
+    dispatch(setSelectedMenuKey(''))
+    router.push('/workbench')
   }
 
   return (
@@ -154,7 +157,7 @@ const GlobalSider: FC = memo(() => {
                 key={item.key}
                 onClick={() => {
                   if(item.key==='chat-ui') {
-                    switchToSpace(spaceId)
+                    openChatConversationWindow({ spaceId })
                     return
                   }
                   dispatch(setSelectedMenuKey(item.key))

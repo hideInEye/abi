@@ -3,28 +3,31 @@ import { useCallback } from 'react';
 import { useAppDispatch } from '@/hooks/business/useStore';
 import { changeSpaceId, setSpaceHidden } from '@/store/slice/app';
 import { clearConversationCache } from '@/utils/cache';
+import { getChatStandaloneUrl } from '@/utils/chatWindow';
 import { localStg } from '@/utils/storage';
-import { useRouter } from '~/packages/simple-router/src';
 import { getSpaceMenuBySpaceIdApi } from '@/service/api';
 
 /** 空间切换Hook 用于统一管理空间切换时的缓存清理和状态重置 */
 export function useSpaceSwitch() {
-  const { push } = useRouter();
   const dispatch = useAppDispatch();
 
   /**
    * 切换到指定空间
    *
    * @param spaceId 空间ID
-   * @param redirectPath 跳转路径，默认为对话分析页面
+   * @param redirectPath 可选跳转路径；默认只切换空间，不打开页面
    */
   const switchToSpace = useCallback(
     async (
       spaceId: number,
-      redirectPath = '/chat-ui/',
+      redirectPath?: string,
       options?: { redirect?: boolean; chatId?: string | number }
     ) => {
-      const url = `${redirectPath}`;
+      const url = redirectPath
+        ? `${redirectPath}`
+        : options?.chatId !== undefined && options?.chatId !== null && `${options.chatId}` !== ''
+          ? getChatStandaloneUrl({ chatId: options.chatId, spaceId })
+          : '';
 
       // 必须在同步点击上下文中尽早触发打开新窗口，避免 await 后被浏览器拦截为弹窗
 
@@ -61,12 +64,12 @@ export function useSpaceSwitch() {
       // 触发全局事件（供其它页面监听并刷新数据）
       const event = new CustomEvent('space-change', { detail: { spaceId } });
       window.dispatchEvent(event);
-      if (options?.redirect) return;
+      if (options?.redirect || !url) return;
 
-       window.open(url, '_blank', 'noopener,noreferrer');
+      window.open(url, '_blank', 'noopener,noreferrer');
 
     },
-    [dispatch, push]
+    [dispatch]
   );
 
   /**
