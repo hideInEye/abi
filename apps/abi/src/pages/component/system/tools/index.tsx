@@ -52,6 +52,7 @@ export function Component() {
   const [form] = Form.useForm();
 
   const [searchValue, setSearchValue] = useState('');
+  const [labelValue, setLabelValue] = useState('');
   const [list, setList] = useState<ToolItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -63,7 +64,7 @@ export function Component() {
   // 编辑弹窗 tab
   const [activeTab, setActiveTab] = useState('script');
 
-  async function fetchList(params: { toolName?: string } = {}) {
+  async function fetchList(params: { toolName?: string; toolLabel?: string } = {}) {
     setLoading(true);
     try {
       const res: any = await queryToolListApi(params);
@@ -86,7 +87,11 @@ export function Component() {
 
   function handleSearch() {
     const keyword = searchValue.trim();
-    fetchList({ toolName: keyword || undefined });
+    const label = labelValue.trim();
+    fetchList({
+      toolName: keyword || undefined,
+      toolLabel: label || undefined
+    });
   }
 
   function handleAdd() {
@@ -205,6 +210,14 @@ export function Component() {
       width: 220
     },
     {
+      title: '标签',
+      dataIndex: 'toolLabel',
+      key: 'toolLabel',
+      align: 'center',
+      width: 160,
+      render: (text: string) => (text ? <Tag color="blue">{text}</Tag> : '-')
+    },
+    {
       title: '功能描述',
       dataIndex: 'description',
       key: 'description',
@@ -270,6 +283,17 @@ export function Component() {
           onPressEnter={handleSearch}
           style={{ width: '12.5rem', marginTop: '6px' }}
         />
+        <Input
+          allowClear
+          placeholder="请输入标签搜索"
+          value={labelValue}
+          onChange={e => setLabelValue(e.target.value)}
+          onPressEnter={handleSearch}
+          style={{ width: '12.5rem', marginTop: '6px' }}
+        />
+        <Button type="primary" onClick={handleSearch}>
+          搜索
+        </Button>
         <Button className="ml-auto" type="primary" onClick={handleAdd}>
           新增
         </Button>

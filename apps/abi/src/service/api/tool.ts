@@ -25,9 +25,9 @@ export interface ToolItem {
 /**
  * 查询内置工具列表
  *
- * @param data toolName 可选模糊匹配
+ * @param data toolName 可选模糊匹配；toolLabel 可选标签模糊匹配
  */
-export function queryToolListApi(data: { toolName?: string } = {}) {
+export function queryToolListApi(data: { toolName?: string; toolLabel?: string } = {}) {
   return apiRequest({
     data,
     method: 'post',
