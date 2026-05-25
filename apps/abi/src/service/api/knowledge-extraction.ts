@@ -68,3 +68,11 @@ export function queryKnowledgeIndicatorDetailList(params: {
     url: `${INDICATOR_API_PREFIX}/detail`
   })
 }
+
+export function syncAtomicIndicators(params: { relSchemaId: number; spaceId: number }) {
+  return apiRequest({
+    data: params,
+    method: 'post',
+    url: `${INDICATOR_API_PREFIX}/sync/atom`
+  })
+}

@@ -109,6 +109,31 @@ function asObject(value: any): Record<string, any> {
   }
 }
 
+function parseObjectIfPossible(value: any) {
+  if (!value) {
+    return undefined
+  }
+  if (typeof value === 'object') {
+    return value as Record<string, any>
+  }
+  if (typeof value !== 'string') {
+    return undefined
+  }
+  const text = value.trim()
+  if (!text) {
+    return undefined
+  }
+  try {
+    const parsed = JSON.parse(text)
+    if (parsed && typeof parsed === 'object') {
+      return parsed as Record<string, any>
+    }
+  } catch {
+    // keep fallback below
+  }
+  return undefined
+}
+
 function trimOrUndefined(value: any) {
   if (typeof value !== 'string') {
     return value
@@ -257,7 +282,6 @@ function mapIndicatorFromApi(item: any): KnowledgeIndicatorItem {
     ...item,
     accumulateStartDate: item.accumulateStartDate ?? calcLogic.accumulateStartDate,
     aggMethod: trimOrUndefined(item.projectionFunc) || item.aggMethod || calcLogic.aggMethod,
-    atomicMetricId: item.atomicMetricId ?? calcLogic.atomicMetricId,
     bizName: trimOrUndefined(item.bizName),
     calcPeriod: item.calcPeriod ?? calcLogic.calcPeriod,
     compareMetricId: item.compareMetricId ?? calcLogic.compareMetricId,
@@ -289,7 +313,7 @@ function mapIndicatorFromApi(item: any): KnowledgeIndicatorItem {
     ratioDenominatorId: item.ratioDenominatorId ?? calcLogic.ratioDenominatorId,
     ratioNumeratorId: item.ratioNumeratorId ?? calcLogic.ratioNumeratorId,
     ratioPrecision: item.ratioPrecision ?? calcLogic.ratioPrecision,
-    relItemId: trimOrUndefined(item.techId ?? item.relItemId ?? calcLogic.relItemId),
+    relItemId: trimOrUndefined(item.relItemId ?? calcLogic.relItemId),
     relViewid: trimOrUndefined(item.relViewId ?? item.relViewid),
     remark: trimOrUndefined(item.businessDefinition ?? item.remark),
     rollingWindowSize: item.rollingWindowSize ?? calcLogic.rollingWindowSize,
@@ -297,6 +321,7 @@ function mapIndicatorFromApi(item: any): KnowledgeIndicatorItem {
     semanticSchemaId: toNumberOrUndefined(item.relSchemaId ?? item.semanticSchemaId),
     semanticSchemaName: trimOrUndefined(item.relSchemaName ?? item.semanticSchemaName),
     status: normalizeStatus(item.status),
+    techId: parseObjectIfPossible(item.techId ?? calcLogic.techId) || item.techId || calcLogic.techId,
     techName: trimOrUndefined(item.techName),
     technicalRemark: trimOrUndefined(item.technicalDefinition ?? item.technicalRemark),
     templateParams: item.templateParams ?? calcLogic.templateParams,
@@ -330,7 +355,6 @@ function buildCalcLogic(values: Record<string, any>) {
   return compactPayload({
     accumulateStartDate: values.accumulateStartDate,
     aggMethod: values.aggMethod,
-    atomicMetricId: values.atomicMetricId,
     calcPeriod: values.calcPeriod,
     compareMetricId: values.compareMetricId,
     comparePeriod: values.comparePeriod,
@@ -350,6 +374,7 @@ function buildCalcLogic(values: Record<string, any>) {
     ratioPrecision: values.ratioPrecision,
     relItemId: values.relItemId,
     rollingWindowSize: values.rollingWindowSize,
+    techId: values.techId,
     templateType: values.templateType,
     thresholdMax: values.thresholdMax,
     thresholdMin: values.thresholdMin,
@@ -391,6 +416,7 @@ function buildSubmitPayload(payload: Record<string, any>, selectedGroup: Knowled
     remark: trimOrUndefined(payload.remark),
     spaceId: Number(localStorage.getItem('spaceId')),
     status: String(payload.status ?? 2),
+    techId: payload.techId,
     techName: trimOrUndefined(payload.techName),
     technicalDefinition: trimOrUndefined(payload.technicalRemark),
     updateFrequency: toApiFrequency(payload.dataFrequency),

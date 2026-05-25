@@ -103,6 +103,18 @@ export function isValidNumberInput(value: string) {
   return /^-?\d+(\.\d+)?$/.test(value)
 }
 
+function normalizeTechIdForForm(value: any): string | undefined {
+  if (!value) {
+    return undefined
+  }
+  if (typeof value === 'object') {
+    const objectId = String(value.techId || value.tfieldId || value.fieldName || value.originName || '').trim()
+    return objectId || undefined
+  }
+  const text = String(value).trim()
+  return text || undefined
+}
+
 export function validateGeneratedExpressionSyntax(expression?: string) {
   const text = String(expression || '').trim()
   if (!text || text === '请填写计算逻辑') {
@@ -151,7 +163,6 @@ export function buildEditFormValues(editingItem: KnowledgeIndicatorItem): Knowle
   return {
     accumulateStartDate: editingItem.accumulateStartDate || templateParams.accumulateStartDate,
     aggMethod: editingItem.aggMethod || DEFAULT_FORM_VALUES.aggMethod,
-    atomicMetricId: editingItem.atomicMetricId || templateParams.atomicMetricId,
     bizName: editingItem.bizName,
     calcPeriod: editingItem.calcPeriod || templateParams.calcPeriod || DEFAULT_FORM_VALUES.calcPeriod,
     compareMetricId: editingItem.compareMetricId || templateParams.compareMetricId || calcLogic.compareMetricId,
@@ -199,6 +210,7 @@ export function buildEditFormValues(editingItem: KnowledgeIndicatorItem): Knowle
     semanticGroupId: editingItem.semanticGroupId,
     semanticSchemaId: editingItem.semanticSchemaId,
     status: editingItem.status ?? DEFAULT_FORM_VALUES.status,
+    techId: normalizeTechIdForForm(editingItem.techId || templateParams.techId || calcLogic.techId),
     techName: editingItem.techName,
     technicalRemark: editingItem.technicalRemark,
     templateType: editingItem.templateType || templateParams.templateType || DEFAULT_FORM_VALUES.templateType,

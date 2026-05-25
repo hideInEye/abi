@@ -41,21 +41,20 @@ function quoteValue(value: string) {
 
 function buildDerivedResult({
   allFields,
-  atomicMetricId,
   atomicMetricOptions,
   calcPeriod,
   conditions,
-  dataFrequency
+  dataFrequency,
+  techId
 }: {
   allFields: any[]
-  atomicMetricId?: string | number
   atomicMetricOptions: AtomicMetricOption[]
   calcPeriod?: string | number
   conditions?: ConditionItem[]
   dataFrequency?: string
+  techId?: string | number
 }) {
-  const atomicLabel =
-    atomicMetricOptions.find(item => String(item.value) === String(atomicMetricId || ''))?.label || '原子指标'
+  const atomicLabel = atomicMetricOptions.find(item => String(item.value) === String(techId || ''))?.label || '原子指标'
 
   const freqLabel =
     DATA_FREQUENCY_OPTIONS.find(item => String(item.value) === String(dataFrequency || ''))?.label || '周期'
@@ -116,7 +115,7 @@ function buildDerivedResult({
 }
 
 export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields, atomicMetricOptions, form }) => {
-  const atomicMetricId = AForm.useWatch('atomicMetricId', form)
+  const techId = AForm.useWatch('techId', form)
   const calcPeriod = AForm.useWatch('calcPeriod', form)
   const dataFrequency = AForm.useWatch('dataFrequency', form)
   const derivedConditions = AForm.useWatch('derivedConditions', form) as ConditionItem[] | undefined
@@ -134,13 +133,13 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
     () =>
       buildDerivedResult({
         allFields,
-        atomicMetricId,
         atomicMetricOptions,
         calcPeriod,
         conditions: derivedConditions,
-        dataFrequency
+        dataFrequency,
+        techId
       }),
-    [allFields, atomicMetricId, atomicMetricOptions, calcPeriod, dataFrequency, derivedConditions]
+    [allFields, atomicMetricOptions, calcPeriod, dataFrequency, derivedConditions, techId]
   )
 
   useEffect(() => {

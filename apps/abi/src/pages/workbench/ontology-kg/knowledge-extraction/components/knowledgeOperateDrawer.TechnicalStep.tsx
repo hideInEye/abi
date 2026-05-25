@@ -118,7 +118,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
 
           <AForm.Item
             label="原子指标"
-            name="atomicMetricId"
+            name="techId"
             rules={[{ message: '请选择原子指标', required: true }]}
           >
             <ASelect
@@ -179,6 +179,15 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
 
       {tableSemanticsNode}
       {generateAtomicMetricsNode}
+      <AForm.Item
+        label="原子指标"
+        name="techId"
+      >
+        <ASelect
+          options={atomicMetricOptions}
+          placeholder="请选择原子指标（先生成）"
+        />
+      </AForm.Item>
 
       {indicatorType === 'extended' ? (
         <>

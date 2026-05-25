@@ -107,15 +107,15 @@ export const TableSemantics = ({
   return (
     <div className="grid grid-cols-2 gap-2">
       <AForm.Item
-        label="表语义组"
+        label="数据语义组"
         name={groupFieldName}
-        rules={[{ message: '请选择表语义组', required: true }]}
+        rules={[{ message: '请选择数据语义组', required: true }]}
       >
         <ASelect
           disabled={isEdit}
           allowClear
           options={groupOptions}
-          placeholder="选择表语义组"
+          placeholder="选择数据语义组"
           onChange={(v)=>{
             setGroupId(v)
             form?.setFieldsValue({ semanticSchemaId: null })
@@ -124,15 +124,15 @@ export const TableSemantics = ({
       </AForm.Item>
 
       <AForm.Item
-        label="表语义"
+        label="数据语义"
         name="semanticSchemaId"
-        rules={[{ message: '请选择表语义', required: true }]}
+        rules={[{ message: '请选择数据语义', required: true }]}
       >
         <ASelect
           disabled={isEdit}
           allowClear
           options={schemaOptions}
-          placeholder="选择表语义"
+          placeholder="选择数据语义"
           onChange={backGroupIdAndSchemaId}
         />
       </AForm.Item>

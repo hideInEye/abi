@@ -77,7 +77,7 @@ function buildExtendedExpressionPreview(
   }
 
   if (templateType === 'percentile') {
-    const metric = getLabel(options, values.atomicMetricId)
+    const metric = getLabel(options, values.techId)
     const percentileValue = values.percentileValue || '0.9'
     return {
       expression: `PERCENTILE_CONT( ${percentileValue} ) WITHIN GROUP (ORDER BY ${metric})`
@@ -114,7 +114,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   const volatilityMetricId = AForm.useWatch('volatilityMetricId', form)
   const volatilityMethod = AForm.useWatch('volatilityMethod', form)
   const rollingWindowSize = AForm.useWatch('rollingWindowSize', form)
-  const atomicMetricId = AForm.useWatch('atomicMetricId', form)
+  const techId = AForm.useWatch('techId', form)
   const percentileValue = AForm.useWatch('percentileValue', form)
   const expr = AForm.useWatch('expr', form)
 
@@ -123,7 +123,6 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
       buildExtendedExpressionPreview(
         templateTypeVal,
         {
-          atomicMetricId,
           compareMetricId,
           comparePeriod,
           compareType,
@@ -136,13 +135,13 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
           ratioNumeratorId,
           ratioPrecision,
           rollingWindowSize,
+          techId,
           volatilityMethod,
           volatilityMetricId
         },
         atomicMetricOptions
       ),
     [
-      atomicMetricId,
       atomicMetricOptions,
       compareMetricId,
       comparePeriod,
@@ -157,6 +156,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
       ratioPrecision,
       rollingWindowSize,
       templateTypeVal,
+      techId,
       volatilityMethod,
       volatilityMetricId
     ]
@@ -355,16 +355,6 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
 
         {templateTypeVal === 'percentile' ? (
           <div className="grid grid-cols-2 gap-x-4">
-            <AForm.Item
-              label="原子指标"
-              name="atomicMetricId"
-              rules={[{ message: '请选择原子指标', required: true }]}
-            >
-              <ASelect
-                options={atomicMetricOptions}
-                placeholder="请选择原子指标"
-              />
-            </AForm.Item>
             <AForm.Item
               label="分位数值 (0~1)"
               name="percentileValue"

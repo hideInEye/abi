@@ -91,7 +91,6 @@ export interface KnowledgeIndicatorItem {
 export interface KnowledgeFormValues {
   accumulateStartDate?: string
   aggMethod?: string
-  atomicMetricId?: number | string
   bizName?: string
   calcPeriod?: string
   compareMetricId?: number | string
@@ -131,6 +130,7 @@ export interface KnowledgeFormValues {
   semanticSchemaId?: number
   status?: number | string
   techName?: string
+  techId?: Record<string, any> | string
   technicalRemark?: string
   templateType?: string
   thresholdMax?: string
