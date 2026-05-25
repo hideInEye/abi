@@ -1,6 +1,6 @@
 import Editor from '@monaco-editor/react';
 import { ExclamationCircleFilled } from '@ant-design/icons';
-import { App, Button, Form, Input, Modal, Select, Space, Table, Tabs, Tag } from 'antd';
+import { App, Button, Drawer, Form, Input, Select, Space, Table, Tabs, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useState } from 'react';
 
@@ -52,6 +52,7 @@ export function Component() {
   const [form] = Form.useForm();
 
   const [searchValue, setSearchValue] = useState('');
+  const [labelValue, setLabelValue] = useState('');
   const [list, setList] = useState<ToolItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -63,7 +64,7 @@ export function Component() {
   // 编辑弹窗 tab
   const [activeTab, setActiveTab] = useState('script');
 
-  async function fetchList(params: { toolName?: string } = {}) {
+  async function fetchList(params: { toolName?: string; toolLabel?: string } = {}) {
     setLoading(true);
     try {
       const res: any = await queryToolListApi(params);
@@ -86,7 +87,11 @@ export function Component() {
 
   function handleSearch() {
     const keyword = searchValue.trim();
-    fetchList({ toolName: keyword || undefined });
+    const label = labelValue.trim();
+    fetchList({
+      toolName: keyword || undefined,
+      toolLabel: label || undefined
+    });
   }
 
   function handleAdd() {
@@ -205,6 +210,14 @@ export function Component() {
       width: 220
     },
     {
+      title: '标签',
+      dataIndex: 'toolLabel',
+      key: 'toolLabel',
+      align: 'center',
+      width: 160,
+      render: (text: string) => (text ? <Tag color="blue">{text}</Tag> : '-')
+    },
+    {
       title: '功能描述',
       dataIndex: 'description',
       key: 'description',
@@ -270,6 +283,17 @@ export function Component() {
           onPressEnter={handleSearch}
           style={{ width: '12.5rem', marginTop: '6px' }}
         />
+        <Input
+          allowClear
+          placeholder="请输入标签搜索"
+          value={labelValue}
+          onChange={e => setLabelValue(e.target.value)}
+          onPressEnter={handleSearch}
+          style={{ width: '12.5rem', marginTop: '6px' }}
+        />
+        <Button type="primary" onClick={handleSearch}>
+          搜索
+        </Button>
         <Button className="ml-auto" type="primary" onClick={handleAdd}>
           新增
         </Button>
@@ -299,20 +323,22 @@ export function Component() {
         </div>
       </div>
 
-      {/* 新增/编辑弹窗 */}
-      <Modal
+      {/* 新增/编辑抽屛 */}
+      <Drawer
         title={editingTool ? '编辑内置工具' : '新增内置工具'}
         open={modalOpen}
-        width={680}
+        width={720}
         destroyOnClose
-        onCancel={() => setModalOpen(false)}
+        onClose={() => setModalOpen(false)}
         footer={
-          <Space>
-            <Button onClick={() => setModalOpen(false)}>取消</Button>
-            <Button type="primary" loading={saving} onClick={handleSave}>
-              保存
-            </Button>
-          </Space>
+          <div style={{ textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => setModalOpen(false)}>取消</Button>
+              <Button type="primary" loading={saving} onClick={handleSave}>
+                保存
+              </Button>
+            </Space>
+          </div>
         }
       >
         <Form form={form} layout="vertical" preserve={false}>
@@ -321,7 +347,7 @@ export function Component() {
             name="toolName"
             rules={[{ required: true, message: '请输入工具名称' }]}
           >
-            <Input placeholder="如：builtin_increment" disabled={!!editingTool} />
+            <Input placeholder="如：builtin_increment" />
           </Form.Item>
 
           <Form.Item
@@ -396,7 +422,7 @@ export function Component() {
             </Form.Item>
           </div>
         </Form>
-      </Modal>
+      </Drawer>
     </div>
   );
 }

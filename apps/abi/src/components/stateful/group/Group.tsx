@@ -5,10 +5,24 @@ import React from 'react';
 
 import folderIcon from '@/assets/svg-icon/folder.svg';
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics';
-import { buildGroupTree } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
+import { buildGroupTree, getAllDescendantIds } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
 
-function buildParentTreeOptions(list: any[]): any[] {
-  return buildGroupTree(list).map(function toOption(node: any): any {
+/**
+ * 构建父级文件夹树形选项
+ * @param list 平铺分组数组
+ * @param excludeId 编辑时需排除的分组 ID（排除自身及所有后代，防止循环引用）
+ */
+function buildParentTreeOptions(list: any[], excludeId?: number): any[] {
+  // 编辑模式：过滤掉自身及其所有后代节点，防止选自己或子文件夹作为父级
+  const excludeIds = excludeId != null
+    ? new Set([excludeId, ...getAllDescendantIds(list, excludeId)])
+    : new Set<number>();
+
+  const filteredList = excludeIds.size > 0
+    ? list.filter(item => !excludeIds.has(item.groupId))
+    : list;
+
+  return buildGroupTree(filteredList).map(function toOption(node: any): any {
     return {
       title: node.groupName,
       value: node.groupId,
@@ -149,9 +163,9 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       const nodeIsLeaf = !hasChildren;
       return {
         title: (
-          <span className="flex items-center gap-2 w-full group">
+          <span className="flex items-center gap-2 w-full group overflow-hidden">
             <img src={folderIcon} className="group-node-icon group-node-icon--folder flex-shrink-0" alt="folder" />
-            <span className="group-tree-title flex-1 truncate">{item.groupName}</span>
+            <span className="group-tree-title flex-1 min-w-0 truncate">{item.groupName}</span>
             <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
               <Tooltip title="编辑">
                 <EllipsisOutlined
@@ -227,7 +241,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
         <AForm form={form} layout="vertical">
           <GroupFrom
             config={config}
-            parentOptions={buildParentTreeOptions(groups)}
+            parentOptions={buildParentTreeOptions(groups, editingGroup?.groupId)}
           />
         </AForm>
       </Modal>
