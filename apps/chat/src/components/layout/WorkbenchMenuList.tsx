@@ -1,4 +1,4 @@
-import { ConfigProvider, Menu } from 'antd'
+import { Menu } from 'antd'
 import type { MenuProps } from 'antd'
 
 import { menuSkinClass } from '@/constant/layout'
