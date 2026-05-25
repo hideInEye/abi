@@ -25,14 +25,17 @@ import {
   addSkillTagApi,
   deleteSkillApi,
   deleteSkillTagApi,
+  deleteSkillVersionApi,
   downloadSkillFileApi,
   downloadSkillPackageApi,
   getSkillDetailApi,
   getSkillFileListApi,
+  getSkillIntroductionApi,
   getSkillTagListApi,
   getSkillVersionDetailApi,
   getSkillVersionListApi,
-  publishSkillVersionApi
+  publishSkillVersionApi,
+  selectSkillVersionApi
 } from '@/service/api/skill';
 
 import '../skill.css';
@@ -326,6 +329,8 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const [downloading, setDownloading] = useState(false);
   const [addingTag, setAddingTag] = useState(false);
   const [fileBrowserOpen, setFileBrowserOpen] = useState(true);
+  const [introduction, setIntroduction] = useState('');
+  const [loadingIntro, setLoadingIntro] = useState(false);
 
   const src: any = detail || skill || {};
   const skillId = skill?.id;
@@ -337,7 +342,8 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const statusBadge = resolveStatusBadge(src.status);
   const visibilityBadge = resolveVisibilityBadge(src.visibility);
   const activeVersion = versions.find(v => String(v.versionId ?? v.id) === String(activeVersionId));
-  const headlineVersion = versions.find(v => String(v.versionId ?? v.id) === String(src.latestVersionId)) || versions[0];
+  const headlineVersionId = src.sourceSkillId;
+  const headlineVersion = versions.find(v => String(v.versionId ?? v.id) === String(headlineVersionId)) || versions[0];
 
   const { tree: fileTree, map: fileMap } = useMemo(() => buildFileTree(files), [files]);
 
@@ -355,6 +361,20 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     }
   }
 
+  async function loadIntroduction() {
+    if (!skillId) return;
+    setLoadingIntro(true);
+    try {
+      const res: any = await getSkillIntroductionApi({ skillId });
+      const md = res?.response?.data?.data || res?.data?.data || res?.data || '';
+      setIntroduction(typeof md === 'string' ? md : '');
+    } catch {
+      setIntroduction('');
+    } finally {
+      setLoadingIntro(false);
+    }
+  }
+
   async function loadVersions(autoSelect = true) {
     if (!skillId) return;
     setLoadingVersions(true);
@@ -363,7 +383,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
       const list = unwrapRows(res);
       setVersions(list);
       if (autoSelect && list.length) {
-        const firstId = src.latestVersionId || list[0].versionId || list[0].id;
+        const firstId = src.sourceSkillId || list[0].versionId || list[0].id;
         setActiveVersionId(firstId);
       }
     } catch {
@@ -434,7 +454,9 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
       setVersionDetail(null);
       setFiles([]);
       setDetail(null);
+      setIntroduction('');
       loadDetail();
+      loadIntroduction();
       loadVersions();
       loadTags();
     }
@@ -508,23 +530,33 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     });
   }
 
-  // 设为当前版本：后端接口待提供，先做交互占位
+  // 设为当前版本
   function handleSetCurrentVersion(v: VersionItem) {
     const vid = v.versionId ?? v.id;
-    if (!vid) return;
+    if (!vid || !skillId) return;
     modal.confirm({
       title: '设为当前版本？',
       content: `将把 v${v.version || v.versionNo || vid} 设为当前对外展示的版本。`,
       okText: '确认',
       cancelText: '取消',
-      onOk: () => {
-        message.info('设为当前版本（待后端接口对接）');
-        // TODO: 后端提供切换当前版本接口后，在这里调用并刷新版本列表
+      onOk: async () => {
+        try {
+          const res: any = await selectSkillVersionApi({ skillId, versionId: vid });
+          if (res?.response?.data?.code === 200 || res?.data?.code === 200) {
+            message.success('已设为当前版本');
+            loadVersions(false);
+            loadDetail();
+          } else {
+            message.error(res?.response?.data?.msg || '操作失败');
+          }
+        } catch (err: any) {
+          message.error(err?.message || '操作失败');
+        }
       }
     });
   }
 
-  // 删除版本：后端接口待提供，先做交互占位
+  // 删除版本
   function handleDeleteVersion(v: VersionItem) {
     const vid = v.versionId ?? v.id;
     if (!vid) return;
@@ -534,9 +566,19 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
-      onOk: () => {
-        message.info('删除版本（待后端接口对接）');
-        // TODO: 后端提供删除版本接口后，在这里调用并刷新版本列表
+      onOk: async () => {
+        try {
+          const res: any = await deleteSkillVersionApi({ versionId: vid });
+          if (res?.response?.data?.code === 200 || res?.data?.code === 200) {
+            message.success('删除成功');
+            loadVersions(false);
+            loadDetail();
+          } else {
+            message.error(res?.response?.data?.msg || '删除失败');
+          }
+        } catch (err: any) {
+          message.error(err?.message || '删除失败');
+        }
       }
     });
   }
@@ -642,17 +684,26 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                   key: 'overview',
                   label: '概览',
                   children: (
-                    <Spin spinning={loadingVersionDetail}>
+                    <Spin spinning={loadingIntro || loadingVersionDetail}>
                       <div className="rounded-8px border border-gray-200 bg-white p-20px">
-                        <div className="mb-16px flex items-center justify-between">
-                          <div className="text-14px font-600 text-gray-800">版本说明</div>
-                          {activeVersion && (
-                            <span className="sd-version-chip">v{activeVersion.version || activeVersion.versionNo}</span>
-                          )}
-                        </div>
-                        <div className="whitespace-pre-wrap text-13px leading-22px text-gray-700">
-                          {versionDetail?.changelog || activeVersion?.changelog || '暂无版本说明'}
-                        </div>
+                        {/* 技能介绍 MD */}
+                        {introduction ? (
+                          <div className="whitespace-pre-wrap text-13px leading-22px text-gray-700">
+                            {introduction}
+                          </div>
+                        ) : (
+                          <>
+                            <div className="mb-16px flex items-center justify-between">
+                              <div className="text-14px font-600 text-gray-800">版本说明</div>
+                              {activeVersion && (
+                                <span className="sd-version-chip">v{activeVersion.version || activeVersion.versionNo}</span>
+                              )}
+                            </div>
+                            <div className="whitespace-pre-wrap text-13px leading-22px text-gray-700">
+                              {versionDetail?.changelog || activeVersion?.changelog || '暂无版本说明'}
+                            </div>
+                          </>
+                        )}
 
                         {(versionDetail?.readme || versionDetail?.description) && (
                           <>

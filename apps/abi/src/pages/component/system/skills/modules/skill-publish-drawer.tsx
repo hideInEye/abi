@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { spaceList } from '@/service/api/data-space';
 import { publishSkillApi } from '@/service/api/skill';
+import { readPersistedSpaceName } from '@/utils/spaceStorage';
 
 import '../skill.css';
 
@@ -170,6 +171,10 @@ const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, o
       // 更新模式直接从技能信息取 spaceId，不依赖表单字段
       const spaceIdToSubmit = isUpdate ? skill?.spaceId : values.spaceId;
       fd.append('spaceId', String(spaceIdToSubmit ?? ''));
+      // 追加 spacename 参数：优先从选项列表取 label，其次从本地存储取
+      const matchedSpace = spaces.find(s => String(s.value) === String(spaceIdToSubmit));
+      const spacename = matchedSpace?.label || readPersistedSpaceName() || '';
+      if (spacename) fd.append('spacename', spacename);
       if (values.version) fd.append('version', values.version);
       if (values.changelog) fd.append('changelog', values.changelog);
 

@@ -1,9 +1,9 @@
 import { DeleteOutlined, MoreOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
-import { App, Dropdown, Empty, Input, Select, Spin, Switch, Tabs } from 'antd';
+import { App, Dropdown, Empty, Input, Select, Spin, Switch, Tabs, Tooltip } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import PageTitle from '@/components/stateless/common/PageTitle';
-import { deleteSkillApi, querySkillListApi } from '@/service/api/skill';
+import { deleteSkillApi, querySkillListApi, updateSkillStatusApi } from '@/service/api/skill';
 
 import SkillDetailDrawer from './modules/skill-detail-drawer';
 import SkillPublishDrawer from './modules/skill-publish-drawer';
@@ -56,20 +56,7 @@ export function Component() {
   async function fetchList() {
     setLoading(true);
     try {
-      const params: { spaceId?: number | string; status?: string; createdBy?: string } = {};
-      // 我的技能：传当前空间ID + 当前登录用户名；广场：不传 spaceId 查所有公开技能
-      if (tab === 'mine') {
-        const sid = localStorage.getItem('spaceId');
-        if (sid) params.spaceId = sid;
-        try {
-          const u = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}');
-          if (u?.userName) params.createdBy = u.userName;
-        } catch {
-          // ignore parse error
-        }
-      }
-      if (statusFilter !== 'ALL') params.status = statusFilter;
-      const res: any = await querySkillListApi(params);
+      const res: any = await querySkillListApi({});
       const rows = res?.response?.data?.data?.rows || res?.response?.data?.rows || res?.data?.rows || res?.data?.data || res?.data || [];
       setList(Array.isArray(rows) ? rows : []);
     } catch {
@@ -79,10 +66,11 @@ export function Component() {
     }
   }
 
+  // 只在挂载时请求一次
   useEffect(() => {
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, statusFilter]);
+  }, []);
 
   function goPublish() {
     setPublishOpen(true);
@@ -117,12 +105,24 @@ export function Component() {
     });
   }
 
-  // 切换启用/隐藏：后端修改接口待提供，暂先乐观更新本地列表并提示
-  function toggleSkillStatus(item: SkillItem, checked: boolean) {
+  // 切换启用/隐藏
+  async function toggleSkillStatus(item: SkillItem, checked: boolean) {
     const nextStatus = checked ? '1' : '0';
     setList(prev => prev.map(it => (it.id === item.id ? { ...it, status: nextStatus } : it)));
-    message.info(checked ? '已启用（待后端修改接口对接）' : '已隐藏（待后端修改接口对接）');
-    // TODO: 后端提供状态修改接口后，在这里调用并根据响应 fetchList()
+    try {
+      const res: any = await updateSkillStatusApi({ skillId: item.id, status: nextStatus });
+      if (res?.response?.data?.code === 200 || res?.data?.code === 200) {
+        message.success(checked ? '已启用' : '已隐藏');
+      } else {
+        // 接口失败
+        setList(prev => prev.map(it => (it.id === item.id ? { ...it, status: item.status } : it)));
+        message.error(res?.response?.data?.msg || '操作失败');
+      }
+    } catch (err: any) {
+      // 网络错误
+      setList(prev => prev.map(it => (it.id === item.id ? { ...it, status: item.status } : it)));
+      message.error(err?.message || '操作失败');
+    }
   }
 
   const tabItems = useMemo(
@@ -142,13 +142,36 @@ export function Component() {
     [t]
   );
 
-  // 客户端按技能名称模糊过滤（接口暂不支持 keyword 参数）；
-  // spaceId 与 createdBy 已下沉到接口参数，由后端过滤。
   const visibleList = useMemo(() => {
+    let arr = list;
+
+    // 「我的技能」：spaceId + createdBy 双重匹配
+    if (tab === 'mine') {
+      const sid = localStorage.getItem('spaceId');
+      let userName = '';
+      try {
+        const u = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}');
+        userName = u?.userName || '';
+      } catch { /* ignore */ }
+      arr = arr.filter(it =>
+        (!sid || String(it.spaceId ?? '') === String(sid)) &&
+        (!userName || String(it.createdBy ?? '') === String(userName))
+      );
+    }
+
+    // 启用/隐藏状态
+    if (statusFilter !== 'ALL') {
+      arr = arr.filter(it => String(it.status ?? '') === statusFilter);
+    }
+
+    // 技能名称关键字模糊匹配
     const kw = keyword.trim().toLowerCase();
-    if (!kw) return list;
-    return list.filter(it => (it.bizName || '').toLowerCase().includes(kw));
-  }, [list, keyword]);
+    if (kw) {
+      arr = arr.filter(it => (it.bizName || '').toLowerCase().includes(kw));
+    }
+
+    return arr;
+  }, [list, tab, statusFilter, keyword]);
 
   return (
     <div className="skill-hub-scope h-full overflow-auto p-24px">
@@ -197,7 +220,7 @@ export function Component() {
             {visibleList.map(item => {
               const statusKey = resolveStatusKey(item.status);
               const title = item.bizName || '-';
-              const namespace = item.spaceId;
+              const spaceName = item.spaceName || (item.spaceId ? `空间${item.spaceId}` : '');
               const summary = item.summary;
               return (
                 <div
@@ -260,7 +283,13 @@ export function Component() {
                     <span className={`status-pill status-pill--${statusKey}`}>
                       {t(`page.manage.skill.status.${statusKey}` as any)}
                     </span>
-                    {namespace != null && <span className="handle-tag">@{namespace}</span>}
+                    {spaceName && (
+                      <Tooltip title={spaceName}>
+                        <span className="handle-tag">
+                          {spaceName.length > 4 ? `${spaceName.slice(0, 4)}...` : spaceName}
+                        </span>
+                      </Tooltip>
+                    )}
                   </div>
                 </div>
               );
