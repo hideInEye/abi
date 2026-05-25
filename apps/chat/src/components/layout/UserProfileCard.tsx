@@ -12,7 +12,7 @@ function getUserInitial(userName: string): string {
 
 export function UserProfileCard({ collapsed, userName }: UserProfileCardProps) {
   return (
-    <div className={`mt-2.5 min-h-16 rounded-xl bg-[#f7f8fa] py-3 flex items-center transition-[padding] duration-200 ease-out ${collapsed ? 'px-2 justify-center' : 'px-3'}`}>
+    <div className={`mt-2.5 min-h-16 rounded-xl  py-3 flex items-center transition-[padding] duration-200 ease-out ${collapsed ? 'px-2 justify-center' : 'px-3'}`}>
       <Avatar size={40} className="shrink-0">
         {getUserInitial(userName)}
       </Avatar>
