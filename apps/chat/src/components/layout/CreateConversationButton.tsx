@@ -10,9 +10,10 @@ import { newConv } from '@/service/api/conv'
 
 interface CreateConversationButtonProps {
   collapsed: boolean
+  onCreated?: () => void
 }
 
-export function CreateConversationButton({ collapsed }: CreateConversationButtonProps) {
+export function CreateConversationButton({ collapsed, onCreated }: CreateConversationButtonProps) {
   const navigate = useNavigate()
   const [createModalVisible, setCreateModalVisible] = useState(false)
 
@@ -39,6 +40,7 @@ export function CreateConversationButton({ collapsed }: CreateConversationButton
         const taskId = String(createdApp.chat_id)
         localStorage.setItem('chatId', taskId)
         setCreateModalVisible(false)
+        onCreated?.()
 
         navigate({
           to: TASK_DETAIL_ROUTE,
@@ -50,7 +52,7 @@ export function CreateConversationButton({ collapsed }: CreateConversationButton
         return Promise.reject(error)
       }
     },
-    [navigate],
+    [navigate, onCreated],
   )
 
   return (
@@ -59,8 +61,9 @@ export function CreateConversationButton({ collapsed }: CreateConversationButton
         <Button
           block
           icon={<PlusOutlined />}
+          size="small"
           onClick={handleOpenCreateModal}
-          className="!h-11 !rounded-[12px] !border-0 !bg-[#1f1c19] !text-[15px] !font-semibold !text-white shadow-[0_8px_18px_rgba(31,28,25,0.16)] hover:!bg-[#2a2622]"
+          className="!h-8 !rounded-[14px] !border-0 !bg-white !text-[16px] !font-medium !text-[#202124] shadow-[0_10px_24px_rgba(15,23,42,0.04)] hover:!bg-[#eaf2ff] hover:!text-[#3f7cff] active:!bg-[#deebff] active:!text-[#3267db]"
         >
           {!collapsed && '新建对话'}
         </Button>

@@ -17,9 +17,21 @@ export const menuSkinClass = [
   '[&_.ant-menu-item]:w-full',
   '[&_.ant-menu-item]:mx-0',
   '[&_.ant-menu-item]:rounded-[10px]',
+  // '[&_.ant-menu-item]:!bg-transparent',
+  '[&_.ant-menu-item]:!text-[#333333]',
+  // '[&_.ant-menu-item:hover]:!bg-transparent',
+  '[&_.ant-menu-item:hover]:!text-[#111111]',
+  '[&_.ant-menu-item-selected]:!bg-transparent',
+  '[&_.ant-menu-item-selected]:!text-[#111111]',
+  '[&_.ant-menu-item-selected::after]:!border-r-0',
+  '[&_.ant-menu-item_.ant-menu-item-icon]:!text-current',
   '[&_.ant-menu-submenu-title]:w-full',
   '[&_.ant-menu-submenu-title]:mx-0',
   '[&_.ant-menu-submenu-title]:rounded-[10px]',
+  '[&_.ant-menu-submenu-title]:!bg-transparent',
+  '[&_.ant-menu-submenu-title]:!text-[#333333]',
+  '[&_.ant-menu-submenu-title:hover]:!bg-transparent',
+  '[&_.ant-menu-submenu-title:hover]:!text-[#111111]',
 ].join(' ')
 
 export const middleMenus: MenuProps['items'] = [

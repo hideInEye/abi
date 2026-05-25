@@ -1,4 +1,4 @@
-import { Menu } from 'antd'
+import { ConfigProvider, Menu } from 'antd'
 import type { MenuProps } from 'antd'
 
 import { menuSkinClass } from '@/constant/layout'
@@ -11,22 +11,17 @@ type WorkbenchMenuListProps = {
   selectable?: boolean
 }
 
-export function WorkbenchMenuList({
-  collapsed,
-  items,
-  onClick,
-  selectedKeys,
-  selectable = true,
-}: WorkbenchMenuListProps) {
+export function WorkbenchMenuList({ collapsed, items, onClick, selectedKeys, selectable = true }: WorkbenchMenuListProps) {
   return (
-    <Menu
-      mode="inline"
-      items={items}
-      onClick={onClick}
-      selectedKeys={selectedKeys}
-      className={menuSkinClass}
-      inlineCollapsed={collapsed}
-      selectable={selectable}
-    />
+      <Menu
+        mode="inline"
+        items={items}
+        onClick={onClick}
+        selectedKeys={selectedKeys}
+        className={menuSkinClass}
+        inlineCollapsed={collapsed}
+        selectable={selectable}
+        style={{ background: 'transparent', borderInlineEnd: 'none' }}
+      />
   )
 }
