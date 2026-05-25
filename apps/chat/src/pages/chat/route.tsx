@@ -1,19 +1,16 @@
-import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Outlet, createFileRoute, useRouterState } from '@tanstack/react-router'
 import { Layout } from 'antd'
 import type { MenuProps } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
-  bottomMenus,
-  HISTORY_ROUTE,
-  HISTORY_ROUTE_PREFIX,
-  HISTORY_MENU_KEY,
   middleMenus,
   SIDER_COLLAPSED_WIDTH,
   SIDER_WIDTH,
 } from '@/constant/layout'
 import { BrandHeader } from '@/components/layout/BrandHeader'
 import { CreateConversationButton } from '@/components/layout/CreateConversationButton'
+import { SidebarHistoryTopics } from '@/components/layout/SidebarHistoryTopics'
 import { UserProfileCard } from '@/components/layout/UserProfileCard'
 import { WorkbenchMenuList } from '@/components/layout/WorkbenchMenuList'
 import { getCurrentUserName } from '@/utils/layout'
@@ -26,13 +23,12 @@ export const Route = createFileRoute('/chat')({
 })
 
 function ChatWorkbenchLayout() {
-  const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
 
   const [collapsed, setCollapsed] = useState(false)
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
 
   const userName = useMemo(() => getCurrentUserName(), [])
-  const selectedBottomKeys = useMemo(() => (pathname.startsWith(HISTORY_ROUTE_PREFIX) ? [HISTORY_MENU_KEY] : []), [pathname])
   const pageTitle = useMemo(() => {
     if (pathname.startsWith('/chat/task')) {
       return 'ABI - 对话'
@@ -52,17 +48,8 @@ function ChatWorkbenchLayout() {
   }, [])
 
   const handleMiddleMenuClick = useCallback<MenuProps['onClick']>(() => {
-    // 中部菜单暂为占位项，当前版本只实现历史话题和对话详情流程。
+    // 中部菜单暂为占位项，当前版本只实现对话详情流程。
   }, [])
-
-  const handleBottomMenuClick = useCallback<MenuProps['onClick']>(
-    ({ key }) => {
-      if (key !== HISTORY_MENU_KEY) return
-
-      navigate({ to: HISTORY_ROUTE })
-    },
-    [navigate],
-  )
 
   return (
     <Layout className="h-[100dvh] overflow-hidden bg-[#f5f6f7]">
@@ -72,24 +59,19 @@ function ChatWorkbenchLayout() {
         width={SIDER_WIDTH}
         collapsedWidth={SIDER_COLLAPSED_WIDTH}
         trigger={null}
-        className="!h-[100dvh] !bg-white border-r border-[#eceef2]"
+        className="!h-[100dvh] !bg-[#f7f7f4] border-r border-[#eceef2]"
       >
         <div className="h-full min-h-0 flex flex-col">
           <BrandHeader collapsed={collapsed} logoSrc={appLogoUrl} onToggleCollapse={handleToggleCollapse} />
 
-          <CreateConversationButton collapsed={collapsed} />
+          <CreateConversationButton collapsed={collapsed} onCreated={() => setHistoryRefreshKey((key) => key + 1)} />
 
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2.5 py-3">
             <WorkbenchMenuList collapsed={collapsed} items={middleMenus} onClick={handleMiddleMenuClick} selectable={false} />
+            <SidebarHistoryTopics collapsed={collapsed} refreshKey={historyRefreshKey} />
           </div>
 
-          <div className="shrink-0 border-t border-[#f0f1f4] p-2.5 bg-white">
-            <WorkbenchMenuList
-              collapsed={collapsed}
-              items={bottomMenus}
-              selectedKeys={selectedBottomKeys}
-              onClick={handleBottomMenuClick}
-            />
+          <div className="shrink-0 border-t border-[#eceee8] p-2.5 bg-[#f7f7f4]">
             <UserProfileCard collapsed={collapsed} userName={userName} />
           </div>
         </div>
