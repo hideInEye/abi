@@ -3,13 +3,14 @@ import {
   CaretDownOutlined,
   CaretRightOutlined,
   EditOutlined,
+  GlobalOutlined,
+  LockOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
   SendOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons';
-import { Button, Drawer, Input, Tag } from 'antd';
-import { useMemo, useState } from 'react';
+import { Button, Drawer, Input, Modal, Radio, Switch, Tag } from 'antd';
 
 /**
  * 助手新增/编辑 - 全屏 Drawer
@@ -72,6 +73,11 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
   const [name, setName] = useState<string>(agent?.name || '投资顾问');
   const [editingName, setEditingName] = useState(false);
   const [prompt, setPrompt] = useState<string>(agent?.prompt || DEFAULT_PROMPT);
+  // 调试模式 enable_debug: '0'禁用 '1'启用
+  const [enableDebug, setEnableDebug] = useState(false);
+  // 公开访问 public_access: '0'关闭(私密) '1'开启(全空间)
+  const [publicAccess, setPublicAccess] = useState<'0' | '1'>('1');
+  const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
 
   const [openMap, setOpenMap] = useState<Record<SectionKey, boolean>>({
     knowledge: false,
@@ -259,6 +265,81 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
             titleExtra={<QuestionCircleOutlined style={{ color: '#bfbfbf', marginLeft: 4 }} />}
             onToggle={() => toggle('skills')}
           />
+
+          {/* 开启调试模式 */}
+          <div
+            style={{
+              alignItems: 'center',
+              borderTop: '1px solid #f0f0f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '14px 16px'
+            }}
+          >
+            <span style={{ color: '#262626', fontSize: 14 }}>开启调试模式</span>
+            <Switch
+              checked={enableDebug}
+              onChange={setEnableDebug}
+            />
+          </div>
+
+          {/* 访问权限 */}
+          <div
+            style={{
+              alignItems: 'center',
+              borderTop: '1px solid #f0f0f0',
+              cursor: 'pointer',
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '14px 16px'
+            }}
+            onClick={() => setVisibilityModalOpen(true)}
+          >
+            <span style={{ color: '#262626', fontSize: 14 }}>访问权限</span>
+            <span style={{ color: '#8c8c8c', fontSize: 13 }}>
+              {publicAccess === '1' ? '全空间可见' : '仅自己可见'}
+              <CaretRightOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+            </span>
+          </div>
+
+          {/* 可见范围弹窗 */}
+          <Modal
+            centered
+            destroyOnClose
+            open={visibilityModalOpen}
+            title="可见范围"
+            width={420}
+            okText="确定"
+            cancelText="取消"
+            onOk={() => setVisibilityModalOpen(false)}
+            onCancel={() => setVisibilityModalOpen(false)}
+          >
+            <Radio.Group
+              style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '20px 0' }}
+              value={publicAccess}
+              onChange={e => setPublicAccess(e.target.value)}
+            >
+              <Radio value="1">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginLeft: 4 }}>
+                  <div style={{ alignItems: 'center', display: 'flex', gap: 10 }}>
+                    <GlobalOutlined style={{ fontSize: 16 }} />
+                    <span style={{ fontSize: 14, fontWeight: 500 }}>personal</span>
+                    <span style={{ color: '#fa541c', fontSize: 12, fontWeight: 500 }}>空间中全部人可见</span>
+                  </div>
+                  <div style={{ color: '#8c8c8c', fontSize: 12, paddingLeft: 26 }}>此组织中的所有人都可以查看并参与</div>
+                </div>
+              </Radio>
+              <Radio value="0">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginLeft: 4 }}>
+                  <div style={{ alignItems: 'center', display: 'flex', gap: 10 }}>
+                    <LockOutlined style={{ fontSize: 16 }} />
+                    <span style={{ fontSize: 14, fontWeight: 500 }}>私密</span>
+                  </div>
+                  <div style={{ color: '#8c8c8c', fontSize: 12, paddingLeft: 26 }}>只有你可以查看并参与</div>
+                </div>
+              </Radio>
+            </Radio.Group>
+          </Modal>
         </div>
 
         {/* 右：调试预览 */}

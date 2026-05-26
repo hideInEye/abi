@@ -190,3 +190,59 @@ export function getSkillTagListApi(data: { skillId: number | string }) {
     url: `${SKILL_BASE}/tags`
   });
 }
+
+/**
+ * 获取技能介绍（概览 Markdown）
+ *
+ * @param data skillId
+ * @returns Markdown 字符串
+ */
+export function getSkillIntroductionApi(data: { skillId: number | string }) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `${SKILL_BASE}/introduction`
+  });
+}
+
+/**
+ * 选择当前版本（切换技能当前生效版本）
+ *
+ * @param data skillId + versionId
+ * @returns boolean
+ */
+export function selectSkillVersionApi(data: { skillId: number | string; versionId: number | string }) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `${SKILL_BASE}/version/select`
+  });
+}
+
+/**
+ * 删除版本
+ *
+ * @param data versionId
+ * @returns boolean
+ */
+export function deleteSkillVersionApi(data: { versionId: number | string }) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `${SKILL_BASE}/version/delete`
+  });
+}
+
+/**
+ * 更新技能启用/禁用状态
+ *
+ * @param data skillId + status (1=启用, 0=隐藏)
+ * @returns boolean
+ */
+export function updateSkillStatusApi(data: { skillId: number | string; status: number | string }) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `${SKILL_BASE}/status`
+  });
+}
