@@ -11,6 +11,7 @@ import {
 import { BrandHeader } from '@/components/layout/BrandHeader'
 import { CreateConversationButton } from '@/components/layout/CreateConversationButton'
 import { SidebarHistoryTopics } from '@/components/layout/SidebarHistoryTopics'
+import { SpaceSelector } from '@/components/layout/SpaceSelector'
 import { UserProfileCard } from '@/components/layout/UserProfileCard'
 import { WorkbenchMenuList } from '@/components/layout/WorkbenchMenuList'
 import { getCurrentUserName } from '@/utils/layout'
@@ -51,6 +52,10 @@ function ChatWorkbenchLayout() {
     // 中部菜单暂为占位项，当前版本只实现对话详情流程。
   }, [])
 
+  const handleSpaceChanged = useCallback(() => {
+    setHistoryRefreshKey((key) => key + 1)
+  }, [])
+
   return (
     <Layout className="h-[100dvh] overflow-hidden bg-[#f5f6f7]">
       <Sider
@@ -72,6 +77,7 @@ function ChatWorkbenchLayout() {
           </div>
 
           <div className="shrink-0 border-t border-[#eceee8] p-2.5 bg-[#f7f7f4]">
+            <SpaceSelector collapsed={collapsed} onSpaceChanged={handleSpaceChanged} />
             <UserProfileCard collapsed={collapsed} userName={userName} />
           </div>
         </div>
