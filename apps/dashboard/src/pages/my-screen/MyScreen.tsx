@@ -1,12 +1,11 @@
 import React, {memo, useEffect, useRef} from 'react';
 import {Empty, Input, Modal, Pagination} from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import {IPage, IProjectInfo} from '../../designer/DesignerType.ts';
 import baseApi from '../../api/BaseApi.ts';
 import {globalMessage} from '../../framework/message/GlobalMessage.tsx';
 import MyScreenItem from './MyScreenItem.tsx';
 import '../home/project-list/ProjectList.less';
-
-const {Search} = Input;
 
 interface MyScreenProps {
     title?: string;
@@ -69,11 +68,13 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
         <div className="project-list-container">
             <h1 className="project-list-title">{title || '我的大屏'}</h1>
             <div className="project-list-header">
-                <Search
+                <Input
                     placeholder="搜索项目"
-                    className="project-list-search"
-                    onSearch={doSearch}
-                    style={{width: '12.5rem'}}
+                    prefix={<SearchOutlined style={{color: '#bfbfbf'}} />}
+                    allowClear
+                    onPressEnter={(e) => doSearch((e.target as any).value)}
+                    onChange={(e) => { if (!e.target.value) doSearch(''); }}
+                    style={{width: '12rem'}}
                 />
             </div>
             <div className="project-list">

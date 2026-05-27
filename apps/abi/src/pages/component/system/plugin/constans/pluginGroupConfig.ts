@@ -8,5 +8,5 @@ export const pluginGroupConfig = {
   rule: [
     [{ message: '请输入MCP分组名称', required: true }]
   ],
-  type: 'plugin'
+  type: 'mcp'
 }; 

@@ -3,6 +3,7 @@ import {
   DeleteOutlined,
   EditOutlined,
   FileSearchOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import PageTitle from '@/components/stateless/common/PageTitle';
 import { message, Tooltip } from "antd";
@@ -324,19 +325,23 @@ export function Component() {
     <div className="flex flex-col gap-2 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <PageTitle />
+      <div className="flex items-center justify-between">
+        <PageTitle />
+        <AButton type="primary" onClick={() => handleAdd()}>
+          新增
+        </AButton>
+      </div>
       {/* 搜索栏 */}
       <div className="flex items-center gap-4">
         <AInput
+          allowClear
           placeholder="请输入数据源名称"
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           onPressEnter={handleSearch}
-          style={{ width: '12.5rem' }}
+          style={{ width: '12rem' }}
         />
-        <AButton className="ml-auto" type="primary" onClick={() => handleAdd()}>
-          新增
-        </AButton>
       </div>
 
       {/* 表格 */}

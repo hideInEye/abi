@@ -195,14 +195,14 @@ export function Component() {
       <div className="mb-16px flex flex-wrap items-center gap-12px">
         <Input
           allowClear
-          className="w-280px"
+          className="w-170px"
           placeholder="请输入技能名称"
           prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
           value={keyword}
           onChange={e => setKeyword(e.target.value)}
         />
         <Select
-          className="w-140px"
+          className="w-80px"
           options={statusOptions}
           placeholder="状态"
           value={statusFilter}

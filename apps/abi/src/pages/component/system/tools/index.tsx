@@ -1,8 +1,8 @@
 import Editor from '@monaco-editor/react';
-import { ExclamationCircleFilled } from '@ant-design/icons';
+import { ExclamationCircleFilled, SearchOutlined } from '@ant-design/icons';
 import { App, Button, Drawer, Form, Input, Select, Space, Table, Tabs, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import PageTitle from '@/components/stateless/common/PageTitle';
 import type { CreateToolParams, ToolItem, UpdateToolParams } from '@/service/api/tool';
@@ -51,8 +51,7 @@ export function Component() {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
 
-  const [searchValue, setSearchValue] = useState('');
-  const [labelValue, setLabelValue] = useState('');
+  const [keyword, setKeyword] = useState('');
   const [list, setList] = useState<ToolItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -64,10 +63,10 @@ export function Component() {
   // 编辑弹窗 tab
   const [activeTab, setActiveTab] = useState('script');
 
-  async function fetchList(params: { toolName?: string; toolLabel?: string } = {}) {
+  async function fetchList() {
     setLoading(true);
     try {
-      const res: any = await queryToolListApi(params);
+      const res: any = await queryToolListApi({});
       const rows =
         res?.response?.data?.data ||
         res?.data?.data ||
@@ -85,14 +84,15 @@ export function Component() {
     fetchList();
   }, []);
 
-  function handleSearch() {
-    const keyword = searchValue.trim();
-    const label = labelValue.trim();
-    fetchList({
-      toolName: keyword || undefined,
-      toolLabel: label || undefined
-    });
-  }
+  const filteredList = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return list;
+    return list.filter(
+      it =>
+        (it.toolName || '').toLowerCase().includes(kw) ||
+        (it.toolLabel || '').toLowerCase().includes(kw)
+    );
+  }, [list, keyword]);
 
   function handleAdd() {
     setEditingTool(null);
@@ -273,30 +273,21 @@ export function Component() {
       className="flex flex-col gap-2 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <PageTitle />
+      <div className="flex items-center justify-between">
+        <PageTitle />
+        <Button type="primary" onClick={handleAdd}>
+          新增
+        </Button>
+      </div>
       <div className="flex items-center gap-4">
         <Input
           allowClear
-          placeholder="请输入工具名称搜索"
-          value={searchValue}
-          onChange={e => setSearchValue(e.target.value)}
-          onPressEnter={handleSearch}
-          style={{ width: '12.5rem', marginTop: '6px' }}
+          placeholder="搜索工具名称或标签"
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+          value={keyword}
+          onChange={e => setKeyword(e.target.value)}
+          style={{ width: '12rem' }}
         />
-        <Input
-          allowClear
-          placeholder="请输入标签搜索"
-          value={labelValue}
-          onChange={e => setLabelValue(e.target.value)}
-          onPressEnter={handleSearch}
-          style={{ width: '12.5rem', marginTop: '6px' }}
-        />
-        <Button type="primary" onClick={handleSearch}>
-          搜索
-        </Button>
-        <Button className="ml-auto" type="primary" onClick={handleAdd}>
-          新增
-        </Button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -313,7 +304,7 @@ export function Component() {
             <Table<ToolItem>
               rowKey="toolId"
               columns={columns}
-              dataSource={list}
+              dataSource={filteredList}
               loading={loading}
               pagination={false}
               size="small"

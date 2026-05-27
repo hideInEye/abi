@@ -544,6 +544,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
           const res: any = await selectSkillVersionApi({ skillId, versionId: vid });
           if (res?.response?.data?.code === 200 || res?.data?.code === 200) {
             message.success('已设为当前版本');
+            setActiveVersionId(vid);
             loadVersions(false);
             loadDetail();
           } else {

@@ -14,7 +14,6 @@ export function Component() {
   const { t } = useTranslation()
 
   const [searchValue, setSearchValue] = useState('')
-  const [searchType, setSearchType] = useState<'modelName' | 'baseModel'>('modelName')
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null)
   const [activeProviderId, setActiveProviderId] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'0' | '1' | '2'>('0')
@@ -157,7 +156,12 @@ export function Component() {
 
   return (
     <div className="flex flex-col p-6" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <PageTitle />
+      <div className="flex items-center justify-between">
+        <PageTitle />
+        <AButton type="primary" onClick={() => handleAdd()}>
+          新增
+        </AButton>
+      </div>
       <div style={{ display: 'flex', flex: 1, gap: 16, minHeight: 0, overflow: 'hidden', marginTop: 8 }}>
         {/* 左侧供应商列表 */}
         <div
@@ -192,10 +196,7 @@ export function Component() {
               models={displayModels}
               providers={providers}
               searchValue={searchValue}
-              searchType={searchType}
               onSearchValueChange={setSearchValue}
-              onSearchTypeChange={setSearchType}
-              onSearch={handleSearch}
               onAdd={() => handleAdd()}
               onEdit={edit}
               onCopy={handleCopy}

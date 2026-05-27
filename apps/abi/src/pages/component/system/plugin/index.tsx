@@ -1,3 +1,4 @@
+import { SearchOutlined } from '@ant-design/icons';
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/stateless/common/PageTitle';
 
@@ -193,31 +194,35 @@ export const Component: React.FC = () => {
         className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
         styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
       >
-        <PageTitle style={{ paddingBottom: '0.5rem' }} />
+        <div className="flex items-center justify-between" style={{ paddingBottom: '0.5rem' }}>
+          <PageTitle />
+          <AButton
+            type="primary"
+            disabled={!groupId}
+            onClick={() => {
+              setOpen(true);
+              setCurrentEdit(null);
+            }}
+          >
+            新增
+          </AButton>
+        </div>
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
           <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
             <PluginGroup onGroupId={setGroupId} />
           </div>
 
           <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <ASpace className="mb-4 flex justify-between">
+            <div className="mb-3">
               <AInput
+                allowClear
                 placeholder="请输入MCP服务名称"
+                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
                 value={searchValue}
                 onChange={e => handleSearch(e.target.value)}
-                style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
+                style={{ width: '12rem' }}
               />
-              <AButton
-                type="primary"
-                disabled={!groupId}
-                onClick={() => {
-                  setOpen(true);
-                  setCurrentEdit(null);
-                }}
-              >
-                新增
-              </AButton>
-            </ASpace>
+            </div>
 
             <PluginTable
               current={current}
