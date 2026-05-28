@@ -79,44 +79,34 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   const ActionButtons: React.FC<{ readonly record: OperateRecord }> = ({
     record,
   }) => (
-    <ASpace>
-      <span
-        className="cursor-pointer text-[#1890ff] mr-2"
-        onClick={() => {
-          handleNavigate(record);
-        }}
-      >
-        进入对话
-      </span>
-      <APopconfirm
-        cancelText="取消"
-        description="确定要删除吗？"
-        okText="确认"
-        title="删除"
-        onConfirm={() => deleteOperateRecordItem(record.id)}
-      >
-        <span className="cursor-pointer text-[#1890ff]">删除</span>
+    <div className="flex items-center gap-12px">
+      <AButton color="primary" size="small" variant="link" onClick={() => handleNavigate(record)}>进入对话</AButton>
+      <APopconfirm cancelText="取消" description="确定要删除吗？" okText="确认" title="删除" onConfirm={() => deleteOperateRecordItem(record.id)}>
+        <AButton color="danger" size="small" variant="link">删除</AButton>
       </APopconfirm>
-    </ASpace>
+    </div>
   );
 
-  const columns = [
+  const columns: any[] = [
     {
-      align: "left",
+      align: "center",
       dataIndex: "chatName",
       key: "chatName",
+      minWidth: 140,
       title: "对话名称",
     },
     {
-      align: "left",
+      align: "center",
       dataIndex: "spaceName",
       key: "spaceName",
+      minWidth: 120,
       title: "所属空间",
     },
     {
-      align: "left",
+      align: "center",
       dataIndex: "type",
       key: "type",
+      minWidth: 100,
       title: "分享类型",
       render: () => "快照",
     },
@@ -124,12 +114,15 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
       align: "center",
       dataIndex: "sharedTime",
       key: "sharedTime",
+      minWidth: 140,
       title: "分享时间",
     },
     {
       align: "center",
       dataIndex: "action",
       key: "action",
+      width: 150,
+      fixed: "right",
       render: (_: any, record: OperateRecord) => (
         <ActionButtons record={record} />
       ),
@@ -167,8 +160,8 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
               pagination={false}
               rowKey="id"
               scroll={dataSource.rows?.length > 0 ? { x: 'max-content' } : undefined}
-              size="small"
-              className="my-share-table"
+              size="middle"
+              className="my-share-table abi-std-table"
             />
           </div>
         </div>

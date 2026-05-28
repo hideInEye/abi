@@ -43,7 +43,16 @@ export const Component: React.FC = () => {
       <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
         styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
       >
-        <PageTitle style={{ paddingBottom: '0.5rem' }} />
+        <div className="flex items-center justify-between" style={{ paddingBottom: '0.5rem' }}>
+          <PageTitle />
+          <AButton
+            type="primary"
+            onClick={handleAdd}
+            disabled={!groupId}
+          >
+            新增
+          </AButton>
+        </div>
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
         <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
           <Group

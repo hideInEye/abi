@@ -1,3 +1,4 @@
+import { SearchOutlined } from '@ant-design/icons';
 import { JOB_STATUS_OPTIONS } from '@/constants/job';
 
 const KeySearch: FC<Page.SearchProps> = memo(({ form }) => {
@@ -10,7 +11,8 @@ const KeySearch: FC<Page.SearchProps> = memo(({ form }) => {
         <AInput
           allowClear
           placeholder="请输入任务名称"
-          style={{ width: '12.5rem' }}
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+          style={{ width: '12rem' }}
         />
       </AForm.Item>
       <AForm.Item
@@ -21,7 +23,7 @@ const KeySearch: FC<Page.SearchProps> = memo(({ form }) => {
           allowClear
           options={JOB_STATUS_OPTIONS}
           placeholder="请选择任务状态"
-          style={{ width: '12.5rem' }}
+          style={{ width: '12rem' }}
         />
       </AForm.Item>
     </AForm>

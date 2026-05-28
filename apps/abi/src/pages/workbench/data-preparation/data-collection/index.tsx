@@ -1,4 +1,4 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, EditOutlined, SearchOutlined } from '@ant-design/icons';
 import PageTitle from '@/components/stateless/common/PageTitle';
 import { message, Tooltip } from 'antd';
 import { Suspense } from 'react';
@@ -45,17 +45,17 @@ export function Component() {
   const columns = useCallback(
     () => [
       {
-        align: 'left',
+        align: 'center',
         dataIndex: 'viewName',
         key: 'viewName',
-        minWidth: 120,
+        minWidth: 140,
         title: t('page.dataPreparation.dataCollection.name')
       },
       {
-        align: 'left',
+        align: 'center',
         dataIndex: 'viewInfo',
         key: 'viewInfo',
-        minWidth: 120,
+        minWidth: 140,
         render: (viewInfo: string) => {
           const info = JSON.parse(viewInfo)?.[0];
           return dataSourceList?.find((item: any) => item?.sourceId === info?.currentDs?.sourceId)?.sourceName;
@@ -67,99 +67,54 @@ export function Component() {
         dataIndex: 'createBy',
         key: 'createBy',
         title: t('page.dataPreparation.dataCollection.creator'),
-        width: 100
+        minWidth: 100
       },
       {
         align: 'center',
         dataIndex: 'createTime',
         key: 'createTime',
-        minWidth: 120,
+        minWidth: 140,
         title: t('page.dataPreparation.dataCollection.createTime')
       },
       {
         align: 'center',
         dataIndex: 'updateBy',
         key: 'updateBy',
-        minWidth: 120,
+        minWidth: 100,
         title: t('page.dataPreparation.dataCollection.operator')
       },
       {
         align: 'center',
         dataIndex: 'updateTime',
         key: 'updateTime',
-        minWidth: 120,
+        minWidth: 140,
         title: t('page.dataPreparation.dataCollection.operateTime')
       },
       {
         align: 'center',
         fixed: 'right',
         key: 'operate',
+        width: 160,
         render: (_: unknown, record: any) => (
-          <div className="flex-center gap-8px">
-            <Tooltip title="编辑">
-              <AButton
-                color="primary"
-                icon={<EditOutlined style={{ fontSize: '1rem' }} />}
-                size="small"
-                variant="link"
-                onClick={() => toDetail(record)}
-              />
-            </Tooltip>
-            <Tooltip title="查看元数据分析">
-              <AButton
-                color="primary"
-                icon={<ApartmentOutlined style={{ fontSize: '1rem' }} />}
-                size="small"
-                variant="link"
-                onClick={() =>
-                  setAnalysisContext({
-                    nodeId: record.viewId,
-                    nodeName: record.viewName,
-                    nodeType: 'DATASET',
-                    spaceId: Number(localStorage.getItem('spaceId')) || undefined
-                  })
-                }
-              />
-            </Tooltip>
-            <APopconfirm
-              title="提示"
-              description={t('common.confirmDelete')}
-              onConfirm={() => handleDelete(record.viewId)}
+          <div className="flex items-center gap-12px">
+            <AButton color="primary" size="small" variant="link" onClick={() => toDetail(record)}>
+              编辑
+            </AButton>
+            <AButton
+              color="primary"
+              size="small"
+              variant="link"
+              onClick={() => setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}
             >
-              <Tooltip title="删除">
-                <AButton
-                  color="danger"
-                  icon={<DeleteOutlined style={{ fontSize: '1rem' }} />}
-                  size="small"
-                  variant="link"
-                />
-              </Tooltip>
+              元数据分析
+            </AButton>
+            <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.viewId)}>
+              <AButton color="danger" size="small" variant="link">删除</AButton>
             </APopconfirm>
-            {/* <Tooltip title="血缘关系">
-              <AButton
-                color="primary"
-                icon={<SvgIcon localIcon="kinship" style={{ fontSize: '1rem' }} />}
-                size="small"
-                variant="link"
-                onClick={() => {
-                  const viewName = record.viewName;
-                  let sourceId = '';
-                  try {
-                    const viewInfo = JSON.parse(record.viewInfo);
-                    const { currentDs } = viewInfo[0];
-                    sourceId = currentDs.sourceId;
-                  } catch (error) {
-                    console.log(error);
-                  }
-                  push(`/workbench/data-preparation/data-source-kinship/${sourceId}?from=2&name=${viewName}`);
-                }}
-              />
-            </Tooltip> */}
           </div>
         ),
-        title: t('common.operate'),
-        width: 195
-      }
+        title: t('common.operate')
+      },
     ],
     [dataSourceList]
   );
@@ -204,18 +159,22 @@ export function Component() {
       className="flex flex-col gap-2 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <PageTitle />
+      <div className="flex items-center justify-between">
+        <PageTitle />
+        <AButton type="primary" onClick={() => push('/workbench/data-preparation/data-collection-operate/0')}>
+          新增
+        </AButton>
+      </div>
       <div className="flex items-center gap-4">
         <AInput
+          allowClear
           placeholder="请输入数据集名称"
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           onPressEnter={handleSearch}
-          style={{ width: '12.5rem' }}
+          style={{ width: '12rem' }}
         />
-        <AButton className="ml-auto" type="primary" onClick={() => push('/workbench/data-preparation/data-collection-operate/0')}>
-          新增
-        </AButton>
       </div>
 
       {/* 表格 */}
@@ -246,8 +205,8 @@ export function Component() {
               rowKey="viewId"
               rowSelection={rowSelection}
               scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
-              size="small"
-              className="data-collection-table"
+              size="middle"
+              className="data-collection-table abi-std-table"
             />
           </div>
         </div>

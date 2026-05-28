@@ -12,6 +12,7 @@
 import React, {memo, useEffect, useRef} from 'react';
 import './ProjectList.less';
 import {Button, Empty, Input, Pagination} from "antd";
+import { SearchOutlined } from '@ant-design/icons';
 import defaultSnapshot from '../image/default-snapshot.jpg';
 import {DesignerMode, IPage, IProjectInfo, SaveType} from "../../../designer/DesignerType";
 import {INewProjectInfo, NewProjectDialog} from "./NewProjectDialog.tsx";
@@ -21,8 +22,6 @@ import CloneProjectDialog from "./CloneProjectDialog.tsx";
 import ProjectItem from "./ProjectItem.tsx";
 import baseApi from "../../../api/BaseApi.ts";
 import URLUtil from "../../../utils/URLUtil.ts";
-
-const {Search} = Input;
 
 export interface ProjectListProps {
     saveType: SaveType;
@@ -249,14 +248,18 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     return (
         <div className={'project-list-container'}>
-            <h1 className={'project-list-title'}>{title}</h1>
+            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                <h1 className={'project-list-title'}>{title}</h1>
+                {!statusFilter && <Button type={"primary"} onClick={toggleNewProVisible}>新增</Button>}
+            </div>
             <div className={'project-list-header'}>
-                <Search placeholder="搜索项目"
-                        className={'project-list-search'}
+                <Input placeholder="搜索项目"
+                        prefix={<SearchOutlined style={{color: '#bfbfbf'}} />}
+                        allowClear
                         onKeyDown={onKeyDown}
-                        onSearch={doSearch}
-                        style={{width: '12.5rem'}}/>
-                {!statusFilter && <Button type={"primary"} onClick={toggleNewProVisible} style={{marginLeft: 'auto'}}>新增</Button>}
+                        onChange={(e) => { if (!e.target.value) doSearch(''); }}
+                        onPressEnter={(e) => doSearch((e.target as any).value)}
+                        style={{width: '12rem'}}/>
             </div>
             <div className={'project-list'}>
                 {pageData && pageData.records.length > 0 ? pageData.records.map((item: IProjectInfo) => {

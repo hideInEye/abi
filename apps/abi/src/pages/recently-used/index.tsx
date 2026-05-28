@@ -55,37 +55,37 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     switchToSpace(spaceId, undefined, { chatId })
   };
 
-  const columns = [
+  const columns: any[] = [
     {
-      align: "left",
+      align: "center",
       dataIndex: "chatName",
       key: "chatName",
+      minWidth: 140,
       title: "对话名称",
     },
     {
-      align: "left",
+      align: "center",
       dataIndex: "spaceName",
       key: "spaceName",
+      minWidth: 120,
       title: "所属空间",
     },
     {
       align: "center",
       dataIndex: "recentlyUseTime",
       key: "recentlyUseTime",
+      minWidth: 140,
       title: "最近使用时间",
     },
     {
       align: "center",
       dataIndex: "opreation",
       key: "opreation",
+      width: 100,
+      fixed: "right",
       title: "操作",
-      render: (_,r) => (
-        <span
-          className="cursor-pointer text-[#1890ff]"
-          onClick={()=>{handleNavigate(r)}}
-        >
-          进入对话
-        </span>
+      render: (_: any, r: any) => (
+        <AButton color="primary" size="small" variant="link" onClick={() => handleNavigate(r)}>进入对话</AButton>
       ),
     },
   ];
@@ -120,8 +120,8 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
               pagination={false}
               rowKey="id"
               scroll={dataSource.rows?.length > 0 ? { x: 'max-content' } : undefined}
-              size="small"
-              className="recently-used-table"
+              size="middle"
+              className="recently-used-table abi-std-table"
             />
           </div>
         </div>

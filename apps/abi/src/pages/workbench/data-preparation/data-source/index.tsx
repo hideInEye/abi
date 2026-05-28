@@ -1,11 +1,9 @@
 import {
-  ApartmentOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  FileSearchOutlined,
+  DownOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import PageTitle from '@/components/stateless/common/PageTitle';
-import { message, Tooltip } from "antd";
+import { Dropdown, message } from "antd";
 import { Suspense } from "react";
 
 // import { enableStatusRecord } from '@/constants/business';
@@ -85,9 +83,10 @@ export function Component() {
       columns: () =>
         [
           {
-            align: "left",
+            align: "center",
             dataIndex: "sourceType",
             key: "sourceType",
+            minWidth: 100,
             render: (sourceType: any) =>
               sourceTypeOptions.find(
                 (item: any) => item.sourceType === sourceType,
@@ -95,22 +94,17 @@ export function Component() {
             title: t("page.dataPreparation.dataSource.type"),
           },
           {
-            align: "left",
+            align: "center",
             dataIndex: "sourceName",
             key: "sourceName",
+            minWidth: 140,
             title: t("page.dataPreparation.dataSource.name"),
           },
           {
             align: "center",
             dataIndex: "createByName",
             key: "createByName",
-            // render: (_, record) => {
-            //   if (record.status === null) {
-            //     return null;
-            //   }
-            //   const label = t(enableStatusRecord[record.status]);
-            //   return <ATag color={ATG_MAP[record.status]}>{label}</ATag>;
-            // },
+            minWidth: 100,
             title: t("page.dataPreparation.dataSource.creator"),
           },
           {
@@ -118,12 +112,13 @@ export function Component() {
             dataIndex: "createTime",
             key: "createTime",
             title: t("page.dataPreparation.dataSource.createTime"),
-            width: 160,
+            minWidth: 140,
           },
           {
             align: "center",
             dataIndex: "updateByName",
             key: "updateByName",
+            minWidth: 100,
             title: t("page.dataPreparation.dataSource.operator"),
           },
           {
@@ -131,90 +126,61 @@ export function Component() {
             dataIndex: "updateTime",
             key: "updateTime",
             title: t("page.dataPreparation.dataSource.operateTime"),
-            width: 160,
+            minWidth: 140,
           },
           {
             align: "center",
             fixed: "right",
             key: "operate",
+            width: 240,
             render: (_: unknown, record: any) => (
-              <div className="flex-center gap-8px">
-                <Tooltip title="编辑">
-                  <AButton
-                    color="primary"
-                    icon={<EditOutlined style={{ fontSize: '1rem' }} />}
-                    size="small"
-                    variant="link"
-                    onClick={() => {
-                      handleListEdit(record);
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip title="预览">
-                  <AButton
-                    color="primary"
-                    icon={<FileSearchOutlined style={{ fontSize: '1rem' }} />}
-                    size="small"
-                    variant="link"
-                    onClick={() =>
-                      router.push(
-                        `/workbench/data-preparation/data-source-view/${record.sourceId}`,
-                      )
-                    }
-                  />
-                </Tooltip>
-                <Tooltip title="创建数据集">
-                  <AButton
-                    color="primary"
-                    icon={<SvgIcon localIcon="add-collection" style={{ fontSize: '1rem' }} />}
-                    size="small"
-                    variant="link"
-                    onClick={() =>
-                      router.push(
-                        `/workbench/data-preparation/data-collection-operate/${record.sourceId}?from=data-source`,
-                      )
-                    }
-                  />
-                </Tooltip>
-                <Tooltip title="查看元数据分析">
-                  <AButton
-                    color="primary"
-                    icon={<ApartmentOutlined style={{ fontSize: '1rem' }} />}
-                    size="small"
-                    variant="link"
-                    onClick={() =>
-                      setAnalysisContext({
-                        nodeId: record.sourceId,
-                        nodeName: record.sourceName,
-                        nodeType: "DATA_SOURCE",
-                        spaceId: Number(localStorage.getItem("spaceId")) || undefined
-                      })
-                    }
-                  />
-                </Tooltip>
-                <APopconfirm
-                  title="提示"
-                  description={t("common.confirmDelete")}
-                  onConfirm={() => handleDelete(record)}
-                >
-                  <Tooltip title="删除">
-                    <AButton
-                      color="danger"
-                      icon={<DeleteOutlined style={{ fontSize: '1rem' }} />}
-                      size="small"
-                      variant="link"
-                    />
-                  </Tooltip>
-                </APopconfirm>
-                {/* <Tooltip title="数据血缘">
+              <div className="flex items-center gap-12px">
+                <AButton color="primary" size="small" variant="link" onClick={() => handleListEdit(record)}>
+                  编辑
+                </AButton>
                 <AButton
                   color="primary"
-                  icon={<SvgIcon localIcon="kinship" />}
                   size="small"
                   variant="link"
-                  onClick={() => router.push(`/data-preparation/data-source-kinship/${record.sourceId}?from=1`)}
-                />
-              </Tooltip> */}
+                  onClick={() => router.push(`/workbench/data-preparation/data-source-view/${record.sourceId}`)}
+                >
+                  预览
+                </AButton>
+                <AButton
+                  color="primary"
+                  size="small"
+                  variant="link"
+                  onClick={() => router.push(`/workbench/data-preparation/data-collection-operate/${record.sourceId}?from=data-source`)}
+                >
+                  创建数据集
+                </AButton>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'analysis',
+                        label: (
+                          <span onClick={() => setAnalysisContext({ nodeId: record.sourceId, nodeName: record.sourceName, nodeType: 'DATA_SOURCE', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}>
+                            元数据分析
+                          </span>
+                        ),
+                      },
+                      {
+                        key: 'delete',
+                        danger: true,
+                        label: (
+                          <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record)}>
+                            <span>删除</span>
+                          </APopconfirm>
+                        ),
+                      },
+                    ],
+                  }}
+                >
+                  <AButton color="primary" size="small" variant="link">
+                    更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+                  </AButton>
+                </Dropdown>
               </div>
             ),
             title: t("common.operate"),
@@ -324,19 +290,23 @@ export function Component() {
     <div className="flex flex-col gap-2 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <PageTitle />
+      <div className="flex items-center justify-between">
+        <PageTitle />
+        <AButton type="primary" onClick={() => handleAdd()}>
+          新增
+        </AButton>
+      </div>
       {/* 搜索栏 */}
       <div className="flex items-center gap-4">
         <AInput
+          allowClear
           placeholder="请输入数据源名称"
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           onPressEnter={handleSearch}
-          style={{ width: '12.5rem' }}
+          style={{ width: '12rem' }}
         />
-        <AButton className="ml-auto" type="primary" onClick={() => handleAdd()}>
-          新增
-        </AButton>
       </div>
 
       {/* 表格 */}
@@ -357,37 +327,37 @@ export function Component() {
               rowKey="sourceId"
               rowSelection={rowSelection}
               scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
-              size="small"
-              className="data-source-table"
+              size="middle"
+              className="data-source-table abi-std-table"
             />
           </div>
         </div>
         <div
-         style={{
-           padding: '0.75rem 0',
-           display: 'flex',
-           justifyContent: 'flex-end',
-           marginTop: 'auto' 
+          style={{
+            padding: '0.75rem 0',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginTop: 'auto'
           }}
         >
           <APagination
-           {...tableProps.pagination}
+            {...tableProps.pagination}
             showSizeChanger
-            style={{ padding: '0'}}
+            style={{ padding: '0' }}
           />
         </div>
       </div>
-        <Suspense>
-          <DatasourceOperateDrawer
-            editingData={editingData}
-            {...generalPopupOperation}
-          />
-        </Suspense>
-        <MetadataAnalysisDrawer
-          context={analysisContext}
-          open={Boolean(analysisContext)}
-          onClose={() => setAnalysisContext(null)}
+      <Suspense>
+        <DatasourceOperateDrawer
+          editingData={editingData}
+          {...generalPopupOperation}
         />
+      </Suspense>
+      <MetadataAnalysisDrawer
+        context={analysisContext}
+        open={Boolean(analysisContext)}
+        onClose={() => setAnalysisContext(null)}
+      />
     </div>
   );
 }

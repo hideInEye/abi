@@ -82,48 +82,39 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
 
   const columns = [
     {
-      align: "left",
+      align: "center",
       dataIndex: "chatName",
       key: "chatName",
+      minWidth: 140,
       title: "对话名称",
     },
     {
-      align: "left",
+      align: "center",
       dataIndex: "spaceName",
       key: "spaceName",
+      minWidth: 120,
       title: "所属空间",
     },
     {
       align: "center",
       dataIndex: "recentlyUseTime",
       key: "recentlyUseTime",
+      minWidth: 140,
       title: "收藏时间",
     },
     {
       align: "center",
       dataIndex: "action",
       key: "action",
+      width: 150,
+      fixed: "right",
+      title: "操作",
       render: (_: any, record: OperateRecord) => (
-        <div className="text-[#1890ff]">
-          <span
-            className="cursor-pointer"
-            onClick={() => {
-              handleNavigate(record);
-            }}
-          >
-            进入对话
-          </span>
-          <span
-            className="ml-4 cursor-pointer"
-            onClick={() => {
-              handleCollect(record.chatId);
-            }}
-          >
-            取消收藏
-          </span>
+        <div className="flex items-center justify-center gap-12px">
+          <AButton color="primary" size="small" variant="link" onClick={() => handleNavigate(record)}>进入对话</AButton>
+          <AButton color="primary" size="small" variant="link" onClick={() => handleCollect(record.chatId)}>取消收藏</AButton>
         </div>
       ),
-      title: "操作",
     },
   ];
 
@@ -157,8 +148,8 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
               pagination={false}
               rowKey="id"
               scroll={dataSource.rows?.length > 0 ? { x: 'max-content' } : undefined}
-              size="small"
-              className="my-collect-table"
+              size="middle"
+              className="my-collect-table abi-std-table"
             />
           </div>
         </div>

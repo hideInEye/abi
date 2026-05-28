@@ -1,4 +1,4 @@
-import { ApartmentOutlined, CopyOutlined, DeleteOutlined, EditOutlined, MoreOutlined, StarFilled, StarOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, CopyOutlined, DeleteOutlined, EditOutlined, MoreOutlined, SearchOutlined, StarFilled, StarOutlined } from '@ant-design/icons'
 import { Dropdown, Space } from 'antd'
 import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage'
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
@@ -30,10 +30,7 @@ interface Props {
   models: ModelItem[]
   providers?: ProviderItem[]
   searchValue: string
-  searchType: 'modelName' | 'baseModel'
   onSearchValueChange: (val: string) => void
-  onSearchTypeChange: (type: 'modelName' | 'baseModel') => void
-  onSearch: () => void
   onAdd: () => void
   onEdit: (record: ModelItem) => void
   onCopy: (id: number) => void
@@ -52,10 +49,7 @@ const ModelCardList: FC<Props> = ({
   models,
   providers = [],
   searchValue,
-  searchType,
   onSearchValueChange,
-  onSearchTypeChange,
-  onSearch,
   onAdd,
   onEdit,
   onCopy,
@@ -65,20 +59,14 @@ const ModelCardList: FC<Props> = ({
 }) => {
   const { t } = useTranslation()
 
-  const searchTypeOptions = [
-    { label: '模型名称', value: 'modelName' },
-    { label: '基础模型', value: 'baseModel' },
-  ]
-
   const filteredModels = useMemo(() => {
-    if (!searchValue) return models
-    const text = searchValue.toLowerCase()
-    return models.filter(m => {
-      if (searchType === 'modelName') return m.modelName?.toLowerCase().includes(text)
-      if (searchType === 'baseModel') return m.modelKey?.toLowerCase().includes(text)
-      return false
-    })
-  }, [models, searchValue, searchType])
+    const kw = searchValue.trim().toLowerCase()
+    if (!kw) return models
+    return models.filter(m =>
+      (m.modelName || '').toLowerCase().includes(kw) ||
+      (m.modelKey || '').toLowerCase().includes(kw)
+    )
+  }, [models, searchValue])
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -87,31 +75,18 @@ const ModelCardList: FC<Props> = ({
         size="small"
         title={
           <div style={{ fontWeight: 'normal' }}>
-          <Space.Compact style={{ width: 320 }}>
-            <ASelect
-              value={searchType}
-              options={searchTypeOptions}
-              style={{ width: '38%' }}
-              onChange={onSearchTypeChange}
-            />
             <AInput
               value={searchValue}
-              placeholder="请输入关键词"
-              style={{ width: '62%' }}
+              placeholder="搜索模型名称或基础模型"
+              prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
               allowClear
+              style={{ width: '14rem' }}
               onChange={e => onSearchValueChange(e.target.value)}
-              onPressEnter={onSearch}
             />
-          </Space.Compact>
           </div>
         }
         style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
         styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px 16px' } }}
-        extra={
-          <AButton type="primary" onClick={onAdd}>
-            新增
-          </AButton>
-        }
       >
         <div style={{ flex: 1, overflow: 'auto', padding: '4px 20px 12px 12px' }}>
           {filteredModels.length === 0 ? (

@@ -10,7 +10,7 @@ import {
   SendOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons';
-import { Button, Drawer, Input, Modal, Radio, Switch, Tag } from 'antd';
+import { Button, Drawer, Input, Modal, Radio, Switch, Tag, message } from 'antd';
 
 /**
  * 助手新增/编辑 - 全屏 Drawer
@@ -30,6 +30,8 @@ export interface AgentMock {
   iconLetter?: string;
   description?: string;
   prompt?: string;
+  /** status: '0'草稿 | '1'发布 | '2'下线 */
+  status?: '0' | '1' | '2';
 }
 
 // 默认提示词模板（图片中的"投资顾问"prompt）
@@ -67,27 +69,67 @@ const RECOMMEND_QUESTIONS = [
 ];
 
 // 折叠面板分组
-type SectionKey = 'model' | 'opening' | 'knowledge' | 'tools' | 'skills';
+type SectionKey = 'model' | 'opening' | 'knowledge' | 'tools' | 'skills' | 'questions';
 
 const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
   const [name, setName] = useState<string>(agent?.name || '投资顾问');
   const [editingName, setEditingName] = useState(false);
   const [prompt, setPrompt] = useState<string>(agent?.prompt || DEFAULT_PROMPT);
+  // status: '0'草稿 '1'发布 '2'下线
+  const [status, setStatus] = useState<'0' | '1' | '2'>(agent?.status || '0');
   // 调试模式 enable_debug: '0'禁用 '1'启用
   const [enableDebug, setEnableDebug] = useState(false);
-  // 公开访问 public_access: '0'关闭(私密) '1'开启(全空间)
+  // 公开访问 public_access: '0'关闭(私密) '1'开启(空间可见)
   const [publicAccess, setPublicAccess] = useState<'0' | '1'>('1');
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
+  // rec_query 推荐问题列表
+  const [recQuestions, setRecQuestions] = useState<string[]>([
+    '如何查询特定股票的实时价格和交易量？',
+    '市场行情有哪些重要的经济数据和事件需要关注？',
+    '你能提供哪些投资策略和建议来应对当前的市场行情？'
+  ]);
+  const [recDrawerOpen, setRecDrawerOpen] = useState(false);
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [batchText, setBatchText] = useState('');
+
+  const handleBatchAdd = () => {
+    const lines = batchText.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length > 0) {
+      setRecQuestions(prev => [...prev, ...lines]);
+      message.success(`已添加 ${lines.length} 个推荐问题`);
+    }
+    setBatchText('');
+    setBatchModalOpen(false);
+  };
+
+  const handleDeleteQuestion = (index: number) => {
+    setRecQuestions(prev => prev.filter((_, i) => i !== index));
+  };
 
   const [openMap, setOpenMap] = useState<Record<SectionKey, boolean>>({
     knowledge: false,
     model: false,
     opening: false,
+    questions: false,
     skills: false,
     tools: true
   });
 
   const toggle = (key: SectionKey) => setOpenMap(p => ({ ...p, [key]: !p[key] }));
+
+  /** 保存：状态设为草稿 */
+  const handleSave = () => {
+    setStatus('0');
+    message.success('已保存为草稿');
+    // TODO: 接口对接：create/update 传 status='0'
+  };
+
+  /** 上线：状态设为发布 */
+  const handlePublish = () => {
+    setStatus('1');
+    message.success('已上线，状态设为发布');
+    // TODO: 接口对接：create/update 传 status='1'
+  };
 
   const headerIcon = useMemo(
     () => (
@@ -161,8 +203,13 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
           )}
         </div>
         <div style={{ alignItems: 'center', display: 'flex', gap: 8, marginLeft: 'auto' }}>
-          <Button>保存</Button>
-          <Button type="primary">上线</Button>
+          <Button onClick={handleSave}>保存</Button>
+          <Button
+            type="primary"
+            onClick={handlePublish}
+          >
+            上线
+          </Button>
         </div>
       </div>
 
@@ -266,6 +313,40 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
             onToggle={() => toggle('skills')}
           />
 
+          {/* 推荐问题 */}
+          <CollapseRow
+            extra={
+              <PlusOutlined
+                style={{ color: '#999' }}
+                onClick={e => { e.stopPropagation(); setRecDrawerOpen(true); }}
+              />
+            }
+            open={openMap.questions}
+            title="推荐问题"
+            onToggle={() => toggle('questions')}
+          >
+            {recQuestions.length === 0 ? (
+              <div style={{ color: '#bfbfbf', fontSize: 13, padding: '6px 24px' }}>暂无推荐问题</div>
+            ) : (
+              recQuestions.slice(0, 3).map((q, i) => (
+                <div
+                  key={i}
+                  style={{ color: '#595959', fontSize: 13, padding: '5px 24px', lineHeight: 1.6 }}
+                >
+                  {i + 1}. {q}
+                </div>
+              ))
+            )}
+            {recQuestions.length > 3 && (
+              <div
+                style={{ color: '#1677ff', cursor: 'pointer', fontSize: 12, padding: '4px 24px' }}
+                onClick={() => setRecDrawerOpen(true)}
+              >
+                查看全部 {recQuestions.length} 条
+              </div>
+            )}
+          </CollapseRow>
+
           {/* 开启调试模式 */}
           <div
             style={{
@@ -297,7 +378,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
           >
             <span style={{ color: '#262626', fontSize: 14 }}>访问权限</span>
             <span style={{ color: '#8c8c8c', fontSize: 13 }}>
-              {publicAccess === '1' ? '全空间可见' : '仅自己可见'}
+              {publicAccess === '1' ? '空间可见' : '仅自己可见'}
               <CaretRightOutlined style={{ fontSize: 10, marginLeft: 4 }} />
             </span>
           </div>
@@ -323,8 +404,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginLeft: 4 }}>
                   <div style={{ alignItems: 'center', display: 'flex', gap: 10 }}>
                     <GlobalOutlined style={{ fontSize: 16 }} />
-                    <span style={{ fontSize: 14, fontWeight: 500 }}>personal</span>
-                    <span style={{ color: '#fa541c', fontSize: 12, fontWeight: 500 }}>空间中全部人可见</span>
+                    <span style={{ fontSize: 14, fontWeight: 500 }}>空间</span>
                   </div>
                   <div style={{ color: '#8c8c8c', fontSize: 12, paddingLeft: 26 }}>此组织中的所有人都可以查看并参与</div>
                 </div>
@@ -341,6 +421,76 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
             </Radio.Group>
           </Modal>
         </div>
+
+        {/* 推荐问题管理抖幕 */}
+        <Drawer
+          destroyOnClose
+          open={recDrawerOpen}
+          placement="right"
+          title="推荐问题"
+          width={400}
+          extra={
+            <Button
+              size="small"
+              type="primary"
+              onClick={() => setBatchModalOpen(true)}
+            >
+              批量添加
+            </Button>
+          }
+          onClose={() => setRecDrawerOpen(false)}
+        >
+          {recQuestions.length === 0 ? (
+            <div style={{ color: '#bfbfbf', padding: '32px 0', textAlign: 'center' }}>暂无推荐问题</div>
+          ) : (
+            recQuestions.map((q, i) => (
+              <div
+                key={i}
+                style={{
+                  alignItems: 'center',
+                  borderBottom: '1px solid #f5f5f5',
+                  display: 'flex',
+                  gap: 8,
+                  padding: '10px 0'
+                }}
+              >
+                <span style={{ color: '#bfbfbf', flexShrink: 0, fontSize: 13, width: 24 }}>{i + 1}.</span>
+                <span style={{ flex: 1, fontSize: 13 }}>{q}</span>
+                <AButton
+                  danger
+                  size="small"
+                  type="link"
+                  onClick={() => handleDeleteQuestion(i)}
+                >
+                  删除
+                </AButton>
+              </div>
+            ))
+          )}
+        </Drawer>
+
+        {/* 批量添加问题 Modal */}
+        <Modal
+          centered
+          destroyOnClose
+          okText="确认"
+          cancelText="取消"
+          open={batchModalOpen}
+          title="批量添加问题"
+          width={560}
+          onOk={handleBatchAdd}
+          onCancel={() => { setBatchModalOpen(false); setBatchText(''); }}
+        >
+          <div style={{ color: '#595959', fontSize: 13, marginBottom: 10 }}>
+            每行一个问题，提交后将批量创建。
+          </div>
+          <Input.TextArea
+            autoSize={{ minRows: 10, maxRows: 16 }}
+            placeholder={`请输入问题，每行一个问题\n例如：\n如何使用这个系统？\n系统支持哪些功能？\n如何导出数据？`}
+            value={batchText}
+            onChange={e => setBatchText(e.target.value)}
+          />
+        </Modal>
 
         {/* 右：调试预览 */}
         <div style={{ background: '#fff', display: 'flex', flexDirection: 'column' }}>

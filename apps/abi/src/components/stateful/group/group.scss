@@ -12,17 +12,44 @@
   min-height: 0;
   .ant-tree {
     overflow: visible;
-    // 去掉 Tree 节点左右 padding
+    // treenode 作为背景色承载层
     .ant-tree-treenode {
+      position: relative;
       padding-left: 0 !important;
       padding-right: 0 !important;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      border-radius: 6px;
+      overflow: hidden;
+      padding-top: 4px !important;
+      padding-bottom: 4px !important;
+
+      // 选中态：整行浅蓝背景
+      &.ant-tree-treenode-selected {
+        background-color: rgba(51, 102, 255, 0.1) !important;
+      }
+
+      // hover 态：灰色背景
+      &:hover {
+        background-color: #F0F0F0 !important;
+      }
     }
+    // 清除 content-wrapper 自带的选中/hover 背景，避免叠加
     .ant-tree-node-content-wrapper {
-      padding-left: 0 !important;
-      padding-right: 0 !important;
+      padding-left: 6px !important;
+      padding-right: 6px !important;
       overflow: hidden;
       flex: 1;
       min-width: 0;
+      background: transparent !important;
+      &.ant-tree-node-selected {
+        background: transparent !important;
+        color: inherit !important;
+      }
+      &:hover {
+        background: transparent !important;
+      }
     }
     .ant-tree-title {
       display: block;

@@ -1,4 +1,4 @@
-import { DeleteOutlined, EllipsisOutlined, PlusCircleOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EllipsisOutlined, PlusCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React from 'react';
@@ -190,8 +190,10 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     <>
       <div className="group-panel flex flex-col gap-2">
         <AInput
+          allowClear
           placeholder={config.inputPlaceholder}
           className="group-search-input"
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
           onChange={(e) => handleSearch(e.target.value)}
         />
         <div className="flex items-center justify-between px-1 py-1">
