@@ -1,6 +1,6 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
+import { DownOutlined } from '@ant-design/icons';
 // import { JsonEditor } from 'json-edit-react';
-import { Pagination } from 'antd';
+import { Dropdown, Pagination } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
@@ -34,21 +34,24 @@ export const PluginTable: React.FC<PluginTableProps> = ({
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const columns: ColumnsType<PluginItem> = [
     {
-      align: 'left',
+      align: 'center',
       dataIndex: 'pluginName',
       key: 'pluginName',
+      minWidth: 140,
       title: 'MCP服务名称'
     },
     {
-      align: 'left',
+      align: 'center',
       dataIndex: 'remark',
       key: 'remark',
+      minWidth: 140,
       title: '描述'
     },
     {
-      align: 'left',
+      align: 'center',
       dataIndex: 'capabilities',
       key: 'capabilities',
+      minWidth: 120,
       title: '支持能力',
       render: (_: unknown, record: PluginItem) => {
         const caps = record.capabilities ?? [];
@@ -63,9 +66,10 @@ export const PluginTable: React.FC<PluginTableProps> = ({
       }
     },
     {
-    align: 'left',
+      align: 'center',
       dataIndex: 'pluginType',
       key: 'pluginType',
+      minWidth: 100,
       title: '类型',
       render: (_: unknown, record: PluginItem) => {
         const isHttp = record.protocol === 'http' || record.protocol === 'https';
@@ -78,9 +82,10 @@ export const PluginTable: React.FC<PluginTableProps> = ({
       }
     },
     {
-      align: 'left',
+      align: 'center',
       dataIndex: 'version',
       key: 'version',
+      minWidth: 80,
       title: '版本',
       render: (_: unknown, record: PluginItem) => record?.versionDetail?.version || '--'
     },
@@ -88,6 +93,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
       align: 'center',
       dataIndex: 'status',
       key: 'status',
+      minWidth: 80,
       render: (status: number, record: PluginItem) => {
         return (
           <ASwitch
@@ -105,57 +111,35 @@ export const PluginTable: React.FC<PluginTableProps> = ({
       key: 'action',
       render: (_: any, record: any) => {
         return (
-          <ASpace>
-            <ATooltip title="详情">
-              <AButton
-                color="primary"
-                icon={<EyeOutlined />}
-                size="small"
-                variant="link"
-                onClick={() => onDetail?.(record)}
-              />
-            </ATooltip>
-            <ATooltip title="编辑">
-              <AButton
-                color="primary"
-                icon={<EditOutlined />}
-                size="small"
-                variant="link"
-                onClick={() => updateCurrentEdit(record)}
-              />
-            </ATooltip>
-            <ATooltip title="查看元数据分析">
-              <AButton
-                color="primary"
-                icon={<ApartmentOutlined />}
-                size="small"
-                variant="link"
-                onClick={() =>
-                  setAnalysisContext({
-                    nodeId: record.pluginId,
-                    nodeName: record.pluginName,
-                    nodeType: 'MCP',
-                    spaceId: Number(localStorage.getItem('spaceId')) || undefined
-                  })
-                }
-              />
-            </ATooltip>
-
-            <APopconfirm
-              title="提示"
-              description="确定删除该MCP服务吗？"
-              onConfirm={() => deletePlugin(record)}
+          <div className="flex items-center gap-12px">
+            <AButton color="primary" size="small" variant="link" onClick={() => onDetail?.(record)}>详情</AButton>
+            <AButton color="primary" size="small" variant="link" onClick={() => updateCurrentEdit(record)}>编辑</AButton>
+            <AButton
+              color="primary"
+              size="small"
+              variant="link"
+              onClick={() => setAnalysisContext({ nodeId: record.pluginId, nodeName: record.pluginName, nodeType: 'MCP', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}
             >
-            <ATooltip title="删除">
-              <AButton
-                icon={<DeleteOutlined />}
-                color="danger"
-                size="small"
-                variant="link"
-              />
-            </ATooltip>
-          </APopconfirm>
-          </ASpace>
+              元数据分析
+            </AButton>
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'delete',
+                    danger: true,
+                    label: (
+                      <APopconfirm title="提示" description="确定删除该MCP服务吗？" onConfirm={() => deletePlugin(record)}>
+                        <span>删除</span>
+                      </APopconfirm>
+                    ),
+                  },
+                ],
+              }}
+            >
+              <AButton color="primary" size="small" variant="link">更多 <DownOutlined style={{ fontSize: '0.625rem' }} /></AButton>
+            </Dropdown>
+          </div>
         );
       },
       title: '操作'
@@ -174,8 +158,8 @@ export const PluginTable: React.FC<PluginTableProps> = ({
           dataSource={dataSource.rows}
           pagination={false}
           style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
-          size="small"
-          className="plugin-table"
+          size="middle"
+          className="plugin-table abi-std-table"
         />
       </div>
       <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>

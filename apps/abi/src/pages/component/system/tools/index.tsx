@@ -207,20 +207,23 @@ export function Component() {
       title: '工具名称',
       dataIndex: 'toolName',
       key: 'toolName',
-      width: 220
+      align: 'center',
+      minWidth: 140
     },
     {
       title: '标签',
       dataIndex: 'toolLabel',
       key: 'toolLabel',
       align: 'center',
-      width: 160,
+      minWidth: 100,
       render: (text: string) => (text ? <Tag color="blue">{text}</Tag> : '-')
     },
     {
       title: '功能描述',
       dataIndex: 'description',
       key: 'description',
+      align: 'center',
+      minWidth: 160,
       ellipsis: true,
       render: (text: string) => text || '-'
     },
@@ -228,7 +231,8 @@ export function Component() {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      align: 'center',
+      minWidth: 80,
       render: (status: string) =>
         String(status) === '0' ? (
           <Tag color="success">启用</Tag>
@@ -240,22 +244,21 @@ export function Component() {
       title: '创建时间',
       dataIndex: 'createTime',
       key: 'createTime',
-      width: 200,
+      align: 'center',
+      minWidth: 160,
       render: (t: string) => (t ? t.replace('T', ' ') : '-')
     },
     {
       title: '操作',
       key: 'action',
-      width: 160,
+      align: 'center',
+      width: 120,
+      fixed: 'right',
       render: (_, record) => (
-        <Space>
-          <Button type="default" onClick={() => handleEdit(record)}>
-            编辑
-          </Button>
-          <Button danger type="primary" onClick={() => handleDelete(record)}>
-            删除
-          </Button>
-        </Space>
+        <div className="flex items-center justify-center gap-12px">
+          <Button color="primary" size="small" variant="link" onClick={() => handleEdit(record)}>编辑</Button>
+          <Button color="danger" size="small" variant="link" onClick={() => handleDelete(record)}>删除</Button>
+        </div>
       )
     }
   ];
@@ -307,7 +310,8 @@ export function Component() {
               dataSource={filteredList}
               loading={loading}
               pagination={false}
-              size="small"
+              size="middle"
+              className="tools-table abi-std-table"
               scroll={list.length > 0 ? { x: 'max-content' } : undefined}
             />
           </div>

@@ -1,28 +1,76 @@
-// 列表表头样式
+// ============================================================
+// 全局统一表格样式规范
+// ============================================================
+.abi-std-table {
+  // 表头
+  .ant-table-thead > tr > th {
+    background-color: #FAFAFA !important;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: #8C8C8C;
+    text-align: center !important;
+    padding: 14px 16px !important;
+    border-bottom: 1px solid #EDEEF0 !important;
+  }
+
+  // 第一列表头左缩进
+  .ant-table-thead > tr > th:first-child {
+    padding-left: 3rem !important;
+  }
+
+  // 单元格内边距 & 行高（基于 8px 网格：上下 14px = 行高约 48px+）
+  // 排除空数据占位行和列宽测量行
+  .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row) > td {
+    padding: 14px 16px !important;
+    font-size: 0.875rem;
+    color: #333333;
+    border-bottom: 1px solid #EDEEF0 !important;
+  }
+
+  // 第一列单元格左缩进
+  .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row) > td:first-child {
+    padding-left: 3rem !important;
+  }
+
+  // 隔行底色（奇数行白色，偶数行浅灰蓝），排除占位行和测量行
+  .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):nth-child(even) > td {
+    background-color: #F5F7FA !important;
+  }
+  .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):nth-child(odd) > td {
+    background-color: #FFFFFF !important;
+  }
+
+  // hover 行温和反馈，排除占位行和测量行
+  .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td {
+    background-color: #F5F9FF !important;
+  }
+}
+
+// 列表表头样式（兼容旧模块，未迁移到 abi-std-table 的仍生效）
 .ant-table-wrapper .ant-table-thead > tr > th{
   // font-family: PingFangSC, PingFang SC;
   font-weight: 500;
   font-size: 0.875rem;
-  color: #000000;
+  color: #8C8C8C;
 }
-.assistant-config-table,
-.data-source-table,
-.data-collection-table,
-.model-table,
-.tag-table,
-.question-table,
-.technical-table,
-.plugin-table,
-.dictionary-table,
-.semantics-table,
-.recently-used-table,
-.my-collect-table,
-.my-share-table {
-  .ant-table-thead > tr > th:first-child , 
-  .ant-table-tbody > tr > td:first-child {
-    padding-left: 3rem !important;
-  }
-}
+// .assistant-config-table,
+// .data-source-table,
+// .data-collection-table,
+// .model-table,
+// .tag-table,
+// .question-table,
+// .technical-table,
+// .plugin-table,
+// .dictionary-table,
+// .semantics-table,
+// .recently-used-table,
+// .my-collect-table,
+// .my-share-table {
+//   .ant-table-thead > tr > th:first-child , 
+//   .ant-table-tbody > tr > td:first-child {
+//     padding-left: 3rem !important;
+//   }
+// }
 .assistant-table-scroll {
   &,
   .ant-table-content,

@@ -27,10 +27,10 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const columns: TableProps<DataType>['columns'] = [
     {
-      align: 'left',
+      align: 'center',
       dataIndex: 'bizName',
       key: 'bizName',
-      width: 200,
+      minWidth: 160,
       fixed: 'left',
       render: text => {
         return (
@@ -45,81 +45,59 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
       align: 'center',
       dataIndex: 'createBy',
       key: 'createBy',
+      minWidth: 100,
       title: '创建人',
-      width: 150
     },
     {
       align: 'center',
       dataIndex: 'createTime',
       key: 'createTime',
+      minWidth: 140,
       title: '创建时间'
     },
     {
       align: 'center',
       dataIndex: 'updateBy',
       key: 'updateBy',
+      minWidth: 100,
       title: '操作人',
     },
     {
       align: 'center',
       dataIndex: 'updateTime',
       key: 'updateTime',
+      minWidth: 140,
       title: '操作时间'
     },
     {
       align: 'center',
       fixed: 'right',
       key: 'action',
+      minWidth: 160,
+      title: '操作',
       render: (_, record) => (
-        <ASpace size="middle">
-          <ATooltip title="编辑">
-            <AButton
-              color="primary"
-              icon={<EditOutlined style={{ fontSize: '1rem' }} />}
-              size="small"
-              variant="link"
-              onClick={() => editTable(record)}
-            />
-          </ATooltip>
-          <ATooltip title="查看元数据分析">
-            <AButton
-              color="primary"
-              icon={<ApartmentOutlined style={{ fontSize: '1rem' }} />}
-              size="small"
-              variant="link"
-              onClick={() =>
-                setAnalysisContext({
-                  nodeId: record.schemaId,
-                  nodeName: record.bizName,
-                  nodeType: 'TABLE_SEMANTIC',
-                  spaceId: Number(localStorage.getItem('spaceId')) || undefined
-                })
-              }
-            />
-          </ATooltip>
-
-          <APopconfirm
-            title="提示"
-            description="确定要删除吗？"
-            onConfirm={() => deleteTable(record)}
+        <div className="flex items-center justify-center gap-12px">
+          <AButton color="primary" size="small" variant="link" onClick={() => editTable(record)}>
+            编辑
+          </AButton>
+          <AButton
+            color="primary"
+            size="small"
+            variant="link"
+            onClick={() => setAnalysisContext({ nodeId: record.schemaId, nodeName: record.bizName, nodeType: 'TABLE_SEMANTIC', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}
           >
-            <ATooltip title="删除">
-              <AButton
-                color="danger"
-                icon={<DeleteOutlined style={{ fontSize: '1rem' }} />}
-                size="small"
-                variant="link"
-              />
-            </ATooltip>
+            元数据分析
+          </AButton>
+          <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => deleteTable(record)}>
+            <AButton color="danger" size="small" variant="link">删除</AButton>
           </APopconfirm>
-        </ASpace>
+        </div>
       ),
-      title: '操作'
     }
   ];
 
   const columnWidth = useMemo(() => {
-    return columns.reduce((total, column) => total + (column.width as number || 0), 0);
+    return columns!.reduce((total, column: any) => total + (column.minWidth || column.width || 100), 0);
   }, [columns]);
   
   const [currentPage, setCurrentPage] = useState(1);
@@ -149,8 +127,8 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList }: 
             columns={columns}
             scroll={pagedTableSchemaList?.length > 0 ? { x: columnWidth } : undefined}
             dataSource={pagedTableSchemaList}
-            size="small"
-            className="semantics-table"
+            size="middle"
+            className="semantics-table abi-std-table"
             pagination={false}
             style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
           />

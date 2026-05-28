@@ -1,4 +1,3 @@
-import { DeleteOutlined, DiffOutlined, EditOutlined, SnippetsOutlined } from '@ant-design/icons'
 import { Pagination } from 'antd'
 
 import type { DictionaryItem } from '../types'
@@ -41,15 +40,11 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
   const { t } = useTranslation()
 
   const columns = [
-    // {
-    //   dataIndex: 'dictId',
-    //   title: '字典ID'
-    // },
     {
-      align: 'left',
+      align: 'center',
       dataIndex: 'dictField',
       title: '字典名称',
-      width: 150,
+      minWidth: 120,
       render: (text: string) => {
         if (!text) return ''
         if (text.length > 10) {
@@ -63,10 +58,10 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
       },
     },
     {
-      align: 'left',
+      align: 'center',
       dataIndex: 'dictName',
       title: '中文名称',
-      width: 150,
+      minWidth: 120,
       render: (text: string) => {
         if (!text) return ''
         if (text.length > 7) {
@@ -82,17 +77,17 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
     {
       align: 'center',
       dataIndex: 'status',
-      width: 100,
+      minWidth: 80,
       render: (text: string, record: DictionaryItem) => {
         return <ASwitch checked={text === '2'} onChange={() => handleStatusChange(record)} />
       },
       title: '状态',
     },
     {
-      align: 'left',
+      align: 'center',
       dataIndex: 'remark',
       title: '字典描述',
-      width: 150,
+      minWidth: 120,
       render: (text: string) => {
         if (!text) return ''
         if (text.length > 7) {
@@ -109,26 +104,20 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
       align: 'center',
       dataIndex: 'createTime',
       title: '创建时间',
-      width: 180,
+      minWidth: 160,
     },
     {
       align: 'center',
-      width: 130,
+      minWidth: 130,
       fixed: 'right',
       dataIndex: '操作',
       render: (_: any, record: DictionaryItem) => {
         return (
-          <div className="flex items-center gap-2">
-            <ATooltip title={t('page.manage.common.edit')}>
-              <AButton color="primary" icon={<EditOutlined />} size="small" variant="link" onClick={() => handleEdit(record)} />
-            </ATooltip>
-            <ATooltip title={t('page.manage.common.add')}>
-              <AButton color="primary" icon={<DiffOutlined/>} size="small" variant="link" onClick={() => handleDiff(record)} />
-            </ATooltip>
+          <div className="flex items-center justify-center gap-12px">
+            <AButton color="primary" size="small" variant="link" onClick={() => handleEdit(record)}>编辑</AButton>
+            <AButton color="primary" size="small" variant="link" onClick={() => handleDiff(record)}>新增</AButton>
             <APopconfirm cancelText="取消" description="确定要删除该字典吗？" okText="确认" title="删除字典" onConfirm={() => handleDelete(record)}>
-              <ATooltip title={t('page.manage.common.delete')}>
-                <AButton color="danger" icon={<DeleteOutlined />} size="small" variant="link" />
-              </ATooltip>
+              <AButton color="danger" size="small" variant="link">删除</AButton>
             </APopconfirm>
           </div>
         )
@@ -137,12 +126,12 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
     },
   ]
   const getColumnWidth = useMemo(() => {
-    return columns.reduce((total, column) => total + (column.width || 100), 0)
+    return columns.reduce((total, column: any) => total + (column.minWidth || column.width || 100), 0)
   }, [columns])
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px', overflow: 'hidden' }}>
-        <ATable columns={columns} dataSource={dataSource.rows} pagination={false} scroll={{ x: getColumnWidth }} size="small" className="dictionary-table" />
+        <ATable columns={columns} dataSource={dataSource.rows} pagination={false} scroll={{ x: getColumnWidth }} size="middle" className="dictionary-table abi-std-table" />
       </div>
 
       {/* <div style={{ flex: 1, minHeight: 0 }} /> */}
