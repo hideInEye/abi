@@ -47,7 +47,7 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
   const setSpaceId = (spaceId: number) => {
     // 首页场景：仅切换空间并停留主应用，进入工作台空白页
     switchToSpace(spaceId, undefined, { redirect: true })
-    dispatch(setSelectedMenuKey(''))
+    dispatch(setSelectedMenuKey('assistant-manage_assistant-config'))
     push('/workbench')
   }
 

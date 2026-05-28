@@ -11,3 +11,7 @@ export type UserInfo = {
   nickName?: string
 }
 
+export type SpaceInfo = {
+  spaceId: number
+  spaceName: string
+}
