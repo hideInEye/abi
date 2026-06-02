@@ -89,6 +89,29 @@ export function updateToolApi(data: UpdateToolParams) {
   });
 }
 
+/** 生成 Schema 请求参数 */
+export interface GenerateSchemaParams {
+  name: string;
+  description: string;
+  param: {
+    paramName: string;
+    paramType: string;
+    paramDescription: string;
+    required: boolean;
+  }[];
+}
+
+/**
+ * 根据表单参数生成 JSON Schema
+ */
+export function generateSchemaApi(data: GenerateSchemaParams) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `${TOOL_BASE}/generate-schema`
+  });
+}
+
 /**
  * 删除工具
  *

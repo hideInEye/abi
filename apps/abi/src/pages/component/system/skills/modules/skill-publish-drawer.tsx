@@ -29,6 +29,8 @@ type Props = {
   mode?: 'install' | 'update';
   /** 更新模式下传入当前技能信息 */
   skill?: SkillLite | null;
+  /** 已有技能列表，用于安装时校验重名 */
+  existingSkills?: SkillLite[];
 };
 
 function formatFileSize(bytes: number) {
@@ -43,7 +45,7 @@ function formatFileSize(bytes: number) {
   return `${size.toFixed(1)} ${units[i]}`;
 }
 
-const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, open, skill }) => {
+const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, open, skill, existingSkills = [] }) => {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const [form] = Form.useForm();
@@ -137,6 +139,11 @@ const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, o
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+/** 从 zip 文件名提取技能名称（去掉 .zip 后缀） */
+function extractSkillName(fileName: string) {
+  return fileName.replace(/\.zip$/i, '');
+}
+
   function onFilePicked(f?: File | null) {
     if (!f) return;
     const isZip =
@@ -151,6 +158,26 @@ const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, o
       message.error(t('page.manage.skill.publishPage.tooLarge'));
       return;
     }
+
+    // 校验：更新模式下 zip 包名必须与当前技能名一致
+    if (isUpdate && skill?.bizName) {
+      const zipName = extractSkillName(f.name);
+      if (zipName !== skill.bizName) {
+        message.warning(`上传的包名「${zipName}」与当前技能「${skill.bizName}」不一致，请确认后重新上传`);
+        return;
+      }
+    }
+
+    // 校验：安装模式下 zip 包名+空间 已存在则提示
+    if (!isUpdate && existingSkills.length > 0) {
+      const zipName = extractSkillName(f.name);
+      const currentSpaceId = form.getFieldValue('spaceId');
+      if (currentSpaceId && existingSkills.some(s => s.bizName === zipName && String(s.spaceId) === String(currentSpaceId))) {
+        message.warning(`空间下已存在技能「${zipName}」，如需更新请使用更新功能`);
+        return;
+      }
+    }
+
     setFile(f);
   }
 
@@ -167,9 +194,29 @@ const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, o
       }
       setSubmitting(true);
       const fd = new FormData();
+      const spaceIdToSubmit = isUpdate ? skill?.spaceId : values.spaceId;
+
+      // 提交前二次校验
+      if (file) {
+        const zipName = extractSkillName(file.name);
+        // 更新模式：包名 + 空间必须匹配
+        if (isUpdate && skill?.bizName && zipName !== skill.bizName) {
+          message.warning(`上传的包名「${zipName}」与当前技能「${skill.bizName}」不一致`);
+          return;
+        }
+        if (isUpdate && skill?.spaceId && String(spaceIdToSubmit) !== String(skill.spaceId)) {
+          message.warning('上传的空间与当前技能空间不一致');
+          return;
+        }
+        // 安装模式：重名校验
+        if (!isUpdate && existingSkills.some(s => s.bizName === zipName && String(s.spaceId) === String(spaceIdToSubmit))) {
+          message.warning(`空间下已存在技能「${zipName}」，如需更新请使用更新功能`);
+          return;
+        }
+      }
+
       fd.append('file', file);
       // 更新模式直接从技能信息取 spaceId，不依赖表单字段
-      const spaceIdToSubmit = isUpdate ? skill?.spaceId : values.spaceId;
       fd.append('spaceId', String(spaceIdToSubmit ?? ''));
       // 追加 spacename 参数：优先从选项列表取 label，其次从本地存储取
       const matchedSpace = spaces.find(s => String(s.value) === String(spaceIdToSubmit));

@@ -428,3 +428,98 @@
 .skill-hub-scope .file-browser--sm .fb-icon-folder { font-size: 13px; }
 .skill-hub-scope .file-browser--sm .fb-icon-file { font-size: 12px; }
 .skill-hub-scope .file-browser--sm .fb-size { font-size: 11px; }
+
+/* 技能介绍 Markdown 渲染样式 */
+.skill-intro-md {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.skill-intro-md h1,
+.skill-intro-md h2,
+.skill-intro-md h3,
+.skill-intro-md h4,
+.skill-intro-md h5,
+.skill-intro-md h6 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #111827;
+}
+.skill-intro-md h1 { font-size: 20px; }
+.skill-intro-md h2 { font-size: 17px; }
+.skill-intro-md h3 { font-size: 15px; }
+.skill-intro-md h4 { font-size: 14px; }
+.skill-intro-md h5,
+.skill-intro-md h6 { font-size: 13px; }
+.skill-intro-md p {
+  margin: 0 0 8px;
+}
+.skill-intro-md ul,
+.skill-intro-md ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+.skill-intro-md li {
+  margin-bottom: 4px;
+}
+.skill-intro-md code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #d97706;
+}
+.skill-intro-md pre {
+  margin: 8px 0;
+  padding: 12px;
+  border-radius: 6px;
+  background: #f8f9fa;
+  overflow-x: auto;
+}
+.skill-intro-md pre code {
+  padding: 0;
+  background: none;
+  color: #334155;
+  font-size: 12px;
+}
+.skill-intro-md blockquote {
+  margin: 8px 0;
+  padding: 4px 12px;
+  border-left: 3px solid #d1d5db;
+  color: #6b7280;
+  background: #f9fafb;
+}
+.skill-intro-md a {
+  color: #1677ff;
+  text-decoration: none;
+}
+.skill-intro-md a:hover {
+  text-decoration: underline;
+}
+.skill-intro-md table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 12px;
+}
+.skill-intro-md th,
+.skill-intro-md td {
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  text-align: left;
+}
+.skill-intro-md th {
+  background: #f3f4f6;
+  font-weight: 600;
+}
+.skill-intro-md img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.skill-intro-md hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 12px 0;
+}

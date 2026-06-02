@@ -302,6 +302,7 @@ export function Component() {
         open={publishOpen}
         onClose={() => setPublishOpen(false)}
         onSuccess={fetchList}
+        existingSkills={list}
       />
 
       <SkillPublishDrawer
@@ -310,6 +311,7 @@ export function Component() {
         skill={updatingSkill}
         onClose={() => setUpdateOpen(false)}
         onSuccess={fetchList}
+        existingSkills={list}
       />
 
       <SkillDetailDrawer
