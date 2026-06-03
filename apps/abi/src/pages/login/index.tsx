@@ -1,7 +1,7 @@
 import { Button, Checkbox, Divider, Form, Input, message, Space } from 'antd'
 
 import useNameIcon from '@/assets/imgs/hoveruser.png'
-import loginBg from '@/assets/imgs/login_bg.jpg'
+import loginBg from '@/assets/imgs/login_bg.webp'
 import passwordIcon from '@/assets/imgs/password.png'
 import Captcha, { CaptchaRef } from '@/components/captcha-code'
 import { loginModuleRecord } from '@/constants/app'
