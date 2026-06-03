@@ -1,10 +1,11 @@
 import appLogo from '@/assets/imgs/home/home_logo.png'
-import userIcon from '@/assets/imgs/home/user.png'
+import userIcon from '@/assets/imgs/home/users.png'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
 import { store } from '@/store'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
-import { SwapOutlined, UserOutlined } from '@ant-design/icons'
+import swapIcon from '@/assets/imgs/home/切换币种.png'
+import { UserOutlined } from '@ant-design/icons'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
 import { resetStore } from '@/store/slice/auth'
@@ -41,9 +42,21 @@ const GlobalSider: FC = memo(() => {
     manual: true,
   })
   useEffect(() => {
-    
-    if (primaryMenuMap.get(route.name)) {
-      dispatch(setSelectedMenuKey(route.name))
+    const path = route.path || '';
+    let matchedName = '';
+
+    if (path.startsWith('/home')) {
+      matchedName = 'home';
+    } else if (path.startsWith('/ai-assistant')) {
+      matchedName = 'ai-assistant_conversational-analysis';
+    } else if (path.startsWith('/workbench')) {
+      matchedName = 'assistant-manage_assistant-config';
+    } else if (path.startsWith('/component')) {
+      matchedName = 'system_model';
+    }
+
+    if (matchedName && primaryMenuMap.get(matchedName)) {
+      dispatch(setSelectedMenuKey(matchedName));
     }
   }, [route])
 
@@ -147,7 +160,7 @@ const GlobalSider: FC = memo(() => {
   const handleSpaceChange: MenuProps['onClick'] = (e) => {
     const data = spaceOptions.find((item: any) => item.key == e.key)
     setSelectedSpaceName(data?.label || '')
-    persistSpaceName(data?.label)
+    persistSpaceName(data?.label) 
 
     switchToSpace(Number(e?.key), undefined, { redirect: true })
     dispatch(setSelectedMenuKey(''))
@@ -156,7 +169,7 @@ const GlobalSider: FC = memo(() => {
 console.log(selectedMenuKey);
 
   return (
-    <Sider width="80px" className="h-full bg-white">
+    <Sider width="80px" className="h-full bg-[#F2F2F0] border-r border-[#E8E8E8] dark:border-[#333]">
       <div className="flex h-full flex-col justify-between items-center py-[1.5rem]">
         <div className=" flex items-center justify-center cursor-pointer" onClick={redirectHome}>
           <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
@@ -176,7 +189,7 @@ console.log(selectedMenuKey);
                   dispatch(setSelectedMenuKey(item.name))
                   router.push(item.url)
                 }}
-                className={`flex items-center px-3 py-[0.6875rem] flex-col gap-[0.5625rem] cursor-pointer ${!isActive ? 'bg-[#fff] shadow-[0_0.25rem_0.375rem_0_rgba(137,147,166,0.15)] rounded-[0.625rem] text-[#3366FF]' : ''}`}
+                className={`flex items-center px-3 py-[0.6875rem] flex-col gap-[0.5625rem] cursor-pointer rounded-[4px] transition-colors ${!isActive ? 'bg-[#E5EAFA] text-[#0B6DFF] font-semibold' : 'text-[#0E0E0E] hover:bg-[rgba(0,0,0,0.06)]'}`}
               >
                 <img src={isActive ? item.checkIcon : item.icon} alt={item.label} className="h-6 w-6" />
                 <span className="text-base" style={{ fontSize: '0.875rem' }}>{item.label}</span>
@@ -190,12 +203,12 @@ console.log(selectedMenuKey);
               content={
                 <div>
                   <div className="text-balance">
-                    当前空间: <span className="text-[#3366FF]">{selectedSpaceName}</span>
+                    当前空间: <span className="text-[#3366FF] font-semibold">{selectedSpaceName}</span>
                   </div>
                 </div>
               }
             >
-              <SwapOutlined className="cursor-pointer text-[1.2rem]" />
+              <img src={swapIcon} alt="切换空间" className="h-6 w-6 cursor-pointer" />
             </APopover>
           </Dropdown>
           <Dropdown trigger={['click']} menu={{ items: userItems(), onClick: handleMenuClick }}>

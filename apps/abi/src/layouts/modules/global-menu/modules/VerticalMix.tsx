@@ -1,7 +1,6 @@
 import classNames from 'classnames';
 import { createPortal } from 'react-dom';
 
-import DarkModeContainer from '@/components/stateless/common/DarkModeContainer';
 import PinToggler from '@/components/stateless/common/PinToggler';
 import { GLOBAL_SIDER_MENU_ID } from '@/constants/app';
 import { getMixSiderFixed, toggleMixSiderFixed } from '@/store/slice/app';
@@ -56,9 +55,11 @@ const VerticalMix = memo(() => {
         className="relative h-full transition-width-300"
         style={{ width: mixSiderFixed && hasMenus ? `${themeSettings.sider.mixChildMenuWidth}px` : '0px' }}
       >
-        <DarkModeContainer
-          className="absolute-lt h-full flex-col-stretch nowrap-hidden shadow-sm transition-all-300"
-          inverted={siderInverted}
+        <div
+          className={classNames(
+            'absolute-lt h-full flex-col-stretch nowrap-hidden shadow-sm transition-all-300',
+            { 'bg-inverted text-#1f1f1f': siderInverted }
+          )}
           style={{ width: showDrawer ? `${themeSettings.sider.mixChildMenuWidth}px` : '0px' }}
         >
           <header
@@ -73,7 +74,7 @@ const VerticalMix = memo(() => {
             />
           </header>
           <VerticalMenu />
-        </DarkModeContainer>
+        </div>
       </div>
     </div>
   );

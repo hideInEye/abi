@@ -3,6 +3,16 @@ import { message, Modal } from 'antd';
 
 import { useDatasource } from '@/hooks/data-preparation/useDataSource';
 import { validDataSource } from '@/service/api';
+import clickhouseIcon from '@/assets/imgs/home/ClickHouse.svg';
+import dmIcon from '@/assets/imgs/home/dm.svg';
+import dorisIcon from '@/assets/imgs/home/doris.svg';
+import excelIcon from '@/assets/imgs/home/excel.svg';
+import hiveIcon from '@/assets/imgs/home/Hive.svg';
+import mysqlIcon from '@/assets/imgs/home/MySQL.svg';
+import oracleIcon from '@/assets/imgs/home/Oracle.svg';
+import postgresqlIcon from '@/assets/imgs/home/PostgreSQL.svg';
+import starrocksIcon from '@/assets/imgs/home/starrocks.svg';
+import kingbaseIcon from '@/assets/imgs/home/人大金仓 (1).svg';
 
 import DataPreview from './data-preview';
 import Uploader from './uploader';
@@ -10,6 +20,38 @@ import Uploader from './uploader';
 type Props = Page.OperateDrawerProps& {
   editingData?: any;
 };
+
+const DB_TYPE_ICON_MAP: Record<string, string> = {
+  clickhouse: clickhouseIcon,
+  dm: dmIcon,
+  doris: dorisIcon,
+  excel: excelIcon,
+  hive: hiveIcon,
+  mysql: mysqlIcon,
+  oracle: oracleIcon,
+  postgresql: postgresqlIcon,
+  starrocks: starrocksIcon,
+  kingbase: kingbaseIcon,
+  人大金仓: kingbaseIcon,
+};
+
+function getDbIcon(name?: string, sourceType?: string): string | undefined {
+  const n = name?.toLowerCase().trim() || '';
+  const st = sourceType?.toLowerCase().trim() || '';
+  // 直接匹配
+  if (DB_TYPE_ICON_MAP[n]) return DB_TYPE_ICON_MAP[n];
+  if (DB_TYPE_ICON_MAP[st]) return DB_TYPE_ICON_MAP[st];
+  // 去掉空格再匹配
+  const nNoSpace = n.replace(/\s+/g, '');
+  if (DB_TYPE_ICON_MAP[nNoSpace]) return DB_TYPE_ICON_MAP[nNoSpace];
+  // 部分包含匹配（如 "apache doris" 包含 "doris"）
+  for (const key of Object.keys(DB_TYPE_ICON_MAP)) {
+    if (n.includes(key) || st.includes(key)) {
+      return DB_TYPE_ICON_MAP[key];
+    }
+  }
+  return undefined;
+}
 
 const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType,editingData }) => { 
   const { t } = useTranslation();
@@ -126,6 +168,15 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
             options={sourceTypeOptions}
             disabled={ operateType === "edit"&&sourceTypeVal==='Excel'&& sourceTypeDisabled}
             placeholder={t("page.dataPreparation.dataSource.form.type")}
+            optionRender={(option: any) => {
+              const icon = getDbIcon(option.data.name, option.data.sourceType);
+              return (
+                <div className="flex items-center gap-2">
+                  {icon && <img src={icon} alt="" style={{ width: 20, height: 20 }} />}
+                  <span>{option.data.name}</span>
+                </div>
+              );
+            }}
           />
         </AForm.Item>
 

@@ -199,7 +199,8 @@ export function getAntdTheme(
         darkSubMenuItemBg: 'transparent',
         itemMarginInline: 8,
         itemSelectedBg: bgColor,
-        subMenuItemBg: 'transparent'
+        subMenuItemBg: 'transparent',
+        colorBgContainer: 'transparent'
       }
     },
     cssVar: true,
@@ -209,7 +210,8 @@ export function getAntdTheme(
       colorInfo: info,
       colorPrimary: primary,
       colorSuccess: success,
-      colorWarning: warning
+      colorWarning: warning,
+      fontFamily: '"Microsoft YaHei", "PingFang SC", -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, \'Noto Sans\', sans-serif, \'Apple Color Emoji\', \'Segoe UI Emoji\', \'Segoe UI Symbol\', \'Noto Color Emoji\''
     }
   };
 

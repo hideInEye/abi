@@ -20,6 +20,7 @@ import {
 import { App, Button, Drawer, Empty, Input, Spin, Tabs, Tag, Tooltip } from 'antd';
 import type { FC, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 import {
   addSkillTagApi,
@@ -332,6 +333,12 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const [introduction, setIntroduction] = useState('');
   const [loadingIntro, setLoadingIntro] = useState(false);
 
+  // 左侧（固定默认版本）的独立状态
+  const [leftFiles, setLeftFiles] = useState<FileItem[]>([]);
+  const [leftVersionDetail, setLeftVersionDetail] = useState<any>(null);
+  const [loadingLeftFiles, setLoadingLeftFiles] = useState(false);
+  const [loadingLeftVersionDetail, setLoadingLeftVersionDetail] = useState(false);
+
   const src: any = detail || skill || {};
   const skillId = skill?.id;
   const skillName = src.bizName;
@@ -346,16 +353,18 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const headlineVersion = versions.find(v => String(v.versionId ?? v.id) === String(headlineVersionId)) || versions[0];
 
   const { tree: fileTree, map: fileMap } = useMemo(() => buildFileTree(files), [files]);
+  const { tree: leftFileTree, map: leftFileMap } = useMemo(() => buildFileTree(leftFiles), [leftFiles]);
 
   async function loadDetail() {
-    if (!skillId) return;
+    if (!skillId) return null;
     setLoadingDetail(true);
     try {
       const res: any = await getSkillDetailApi({ skillId });
       const d = unwrapObject(res);
       if (d && Object.keys(d).length) setDetail(d);
+      return d;
     } catch {
-      /* ignore */
+      return null;
     } finally {
       setLoadingDetail(false);
     }
@@ -375,7 +384,47 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     }
   }
 
-  async function loadVersions(autoSelect = true) {
+  async function loadLeftFiles(vid: number | string): Promise<FileItem[]> {
+    setLoadingLeftFiles(true);
+    try {
+      const res: any = await getSkillFileListApi({ versionId: vid });
+      const list = unwrapRows(res);
+      const mapped = list.map((r: any) => {
+        if (typeof r === 'string') return { filePath: r, name: r.split('/').pop() };
+        return {
+          contentType: r.contentType,
+          fileSize: r.fileSize ?? r.size,
+          filePath: r.filePath ?? r.path ?? r.name,
+          id: r.id,
+          name: r.name || (r.filePath || r.path || '').split('/').pop()
+        };
+      });
+      setLeftFiles(mapped);
+      return mapped;
+    } catch {
+      setLeftFiles([]);
+      return [];
+    } finally {
+      setLoadingLeftFiles(false);
+    }
+  }
+
+  async function loadLeftVersionDetail(vid: number | string): Promise<any> {
+    setLoadingLeftVersionDetail(true);
+    try {
+      const res: any = await getSkillVersionDetailApi({ versionId: vid });
+      const d = unwrapObject(res);
+      setLeftVersionDetail(d);
+      return d;
+    } catch {
+      setLeftVersionDetail(null);
+      return null;
+    } finally {
+      setLoadingLeftVersionDetail(false);
+    }
+  }
+
+  async function loadVersions(sourceSkillId?: number | string | null, autoSelect = true) {
     if (!skillId) return;
     setLoadingVersions(true);
     try {
@@ -383,8 +432,11 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
       const list = unwrapRows(res);
       setVersions(list);
       if (autoSelect && list.length) {
-        const firstId = src.sourceSkillId || list[0].versionId || list[0].id;
+        const firstId = sourceSkillId || list[0].versionId || list[0].id;
         setActiveVersionId(firstId);
+        // 加载左侧（固定默认版本），初始加载时右侧复用左侧数据避免重复请求
+        loadLeftVersionDetail(firstId).then(d => { setVersionDetail(d); });
+        loadLeftFiles(firstId).then(list => { setFiles(list); });
       }
     } catch {
       setVersions([]);
@@ -452,23 +504,24 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     if (open && skillId) {
       setActiveVersionId(undefined);
       setVersionDetail(null);
+      setLeftVersionDetail(null);
       setFiles([]);
+      setLeftFiles([]);
       setDetail(null);
       setIntroduction('');
-      loadDetail();
-      loadIntroduction();
-      loadVersions();
-      loadTags();
+      setVersions([]);
+      // 先加载 detail 获取 sourceSkillId，再加载版本列表
+      (async () => {
+        const d = await loadDetail();
+        loadVersions(d?.sourceSkillId);
+        loadIntroduction();
+        loadTags();
+      })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, skillId]);
 
-  useEffect(() => {
-    if (activeVersionId != null) {
-      loadVersionDetail(activeVersionId);
-      loadFiles(activeVersionId);
-    }
-  }, [activeVersionId]);
+  // activeVersionId 变化时不再自动加载，数据加载改为显式调用
 
   async function handleDownloadPackage() {
     if (!skillId) return;
@@ -518,8 +571,13 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
           const res: any = await publishSkillVersionApi({ versionId: vid });
           if (res?.response?.data?.code === 200) {
             message.success('发布成功');
-            loadVersions(false);
+            loadVersions(undefined, false);
             loadDetail();
+            // 发布后刷新左侧数据
+            if (activeVersionId != null) {
+              loadLeftVersionDetail(activeVersionId);
+              loadLeftFiles(activeVersionId);
+            }
           }
         } catch (err: any) {
           message.error(err?.message || '发布失败');
@@ -530,7 +588,14 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     });
   }
 
-  // 设为当前版本
+  // 切换版本查看（仅右侧变化）
+  function handleVersionClick(vid: number | string) {
+    setActiveVersionId(vid);
+    loadVersionDetail(vid);
+    loadFiles(vid);
+  }
+
+  // 设为当前版本（左右两侧都刷新）
   function handleSetCurrentVersion(v: VersionItem) {
     const vid = v.versionId ?? v.id;
     if (!vid || !skillId) return;
@@ -545,7 +610,11 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
           if (res?.response?.data?.code === 200 || res?.data?.code === 200) {
             message.success('已设为当前版本');
             setActiveVersionId(vid);
-            loadVersions(false);
+            loadVersionDetail(vid);
+            loadFiles(vid);
+            loadLeftVersionDetail(vid);
+            loadLeftFiles(vid);
+            loadVersions(undefined, false);
             loadDetail();
           } else {
             message.error(res?.response?.data?.msg || '操作失败');
@@ -572,7 +641,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
           const res: any = await deleteSkillVersionApi({ versionId: vid });
           if (res?.response?.data?.code === 200 || res?.data?.code === 200) {
             message.success('删除成功');
-            loadVersions(false);
+            loadVersions(undefined, false);
             loadDetail();
           } else {
             message.error(res?.response?.data?.msg || '删除失败');
@@ -673,8 +742,6 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                   <span>作者：{ownerName}</span>
                 </div>
               )}
-
-              {summary && <div className="sd-summary">{summary}</div>}
             </div>
 
             <Tabs
@@ -685,45 +752,45 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                   key: 'overview',
                   label: '概览',
                   children: (
-                    <Spin spinning={loadingIntro || loadingVersionDetail}>
+                    <Spin spinning={loadingIntro || loadingLeftVersionDetail}>
                       <div className="rounded-8px border border-gray-200 bg-white p-20px">
                         {/* 技能介绍 MD */}
                         {introduction ? (
-                          <div className="whitespace-pre-wrap text-13px leading-22px text-gray-700">
-                            {introduction}
+                          <div className="skill-intro-md text-13px leading-22px text-gray-700">
+                            <ReactMarkdown>{introduction}</ReactMarkdown>
                           </div>
                         ) : (
                           <>
                             <div className="mb-16px flex items-center justify-between">
                               <div className="text-14px font-600 text-gray-800">版本说明</div>
-                              {activeVersion && (
-                                <span className="sd-version-chip">v{activeVersion.version || activeVersion.versionNo}</span>
+                              {headlineVersion && (
+                                <span className="sd-version-chip">v{headlineVersion.version || headlineVersion.versionNo}</span>
                               )}
                             </div>
                             <div className="whitespace-pre-wrap text-13px leading-22px text-gray-700">
-                              {versionDetail?.changelog || activeVersion?.changelog || '暂无版本说明'}
+                              {leftVersionDetail?.changelog || headlineVersion?.changelog || '暂无版本说明'}
                             </div>
                           </>
                         )}
 
-                        {(versionDetail?.readme || versionDetail?.description) && (
+                        {(leftVersionDetail?.readme || leftVersionDetail?.description) && (
                           <>
                             <div className="my-16px h-1px bg-gray-100" />
                             <div className="mb-12px text-14px font-600 text-gray-800">README</div>
                             <div className="whitespace-pre-wrap text-13px leading-22px text-gray-600">
-                              {versionDetail.readme || versionDetail.description}
+                              {leftVersionDetail.readme || leftVersionDetail.description}
                             </div>
                           </>
                         )}
 
-                        {versionDetail?.manifestJson && (
+                        {leftVersionDetail?.manifestJson && (
                           <>
                             <div className="my-16px h-1px bg-gray-100" />
                             <div className="mb-12px text-14px font-600 text-gray-800">Manifest</div>
                             <pre className="m-0 max-h-300px overflow-auto rounded-6px bg-gray-50 p-12px text-12px text-gray-700">
-                              {typeof versionDetail.manifestJson === 'string'
-                                ? versionDetail.manifestJson
-                                : JSON.stringify(versionDetail.manifestJson, null, 2)}
+                              {typeof leftVersionDetail.manifestJson === 'string'
+                                ? leftVersionDetail.manifestJson
+                                : JSON.stringify(leftVersionDetail.manifestJson, null, 2)}
                             </pre>
                           </>
                         )}
@@ -733,18 +800,18 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                 },
                 {
                   key: 'files',
-                  label: `文件（${files.length}）`,
+                  label: `文件（${leftFiles.length}）`,
                   children: (
-                    <Spin spinning={loadingFiles}>
-                      {files.length === 0 && !loadingFiles ? (
+                    <Spin spinning={loadingLeftFiles}>
+                      {leftFiles.length === 0 && !loadingLeftFiles ? (
                         <div className="py-60px">
                           <Empty description="暂无文件" />
                         </div>
                       ) : (
                         <div className="sd-file-tree">
                           <FileBrowser
-                            data={fileTree}
-                            fileMap={fileMap}
+                            data={leftFileTree}
+                            fileMap={leftFileMap}
                             onDownload={handleDownloadFile}
                           />
                         </div>
@@ -774,7 +841,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                                 className="sd-version-item cursor-pointer"
                                 key={vid}
                                 style={isActive ? { borderColor: '#6A6DFF' } : undefined}
-                                onClick={() => setActiveVersionId(vid)}
+                                onClick={() => vid != null && handleVersionClick(vid)}
                               >
                                 <div className="mb-8px flex flex-wrap items-center justify-between gap-8px">
                                   <div className="flex flex-wrap items-center gap-8px">
@@ -864,14 +931,32 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                   />
                 </button>
                 {fileBrowserOpen && (
-                  <div className="max-h-400px overflow-auto">
-                    <FileBrowser
-                      data={fileTree}
-                      fileMap={fileMap}
-                      size="sm"
-                      onDownload={handleDownloadFile}
-                    />
-                  </div>
+                  <>
+                    {/* 当前查看的版本信息 */}
+                    {activeVersion && (
+                      <div className="mb-8px flex flex-wrap items-center gap-6px border-b border-gray-100 pb-8px">
+                        <span className="sd-version-chip">v{activeVersion.version || activeVersion.versionNo}</span>
+                        {(() => {
+                          const vStatus = resolveStatusBadge(activeVersion.status);
+                          return vStatus ? <span className={`sd-badge ${vStatus.cls}`}>{vStatus.label}</span> : null;
+                        })()}
+                        {activeVersion.fileCount != null && (
+                          <span className="text-12px text-gray-400">{activeVersion.fileCount} 个文件</span>
+                        )}
+                        {activeVersion.totalSize != null && (
+                          <span className="text-12px text-gray-400">{formatFileSize(activeVersion.totalSize)}</span>
+                        )}
+                      </div>
+                    )}
+                    <div className="max-h-400px overflow-auto">
+                      <FileBrowser
+                        data={fileTree}
+                        fileMap={fileMap}
+                        size="sm"
+                        onDownload={handleDownloadFile}
+                      />
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -880,7 +965,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
             <div className="sd-info-card mb-12px">
               <div className="mb-12px text-13px font-600 text-gray-800">版本信息</div>
               <div className="sd-info-row">
-                <span className="sd-info-row__label">当前版本</span>
+                <span className="sd-info-row__label">公开版本</span>
                 <span className="sd-info-row__value">
                   {headlineVersion ? `v${headlineVersion.version || headlineVersion.versionNo}` : '—'}
                 </span>
@@ -919,22 +1004,6 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
               >
                 下载
               </Button>
-              {/* <Button
-                block
-                className="mt-8px"
-                icon={<ReloadOutlined />}
-                onClick={() => {
-                  loadDetail();
-                  loadVersions(false);
-                  loadTags();
-                  if (activeVersionId != null) {
-                    loadVersionDetail(activeVersionId);
-                    loadFiles(activeVersionId);
-                  }
-                }}
-              >
-                刷新数据
-              </Button> */}
             </div>
 
             {/* 4. 标签管理 */}

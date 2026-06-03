@@ -9,7 +9,7 @@ interface Props {
 const baseStyle: CSSProperties = {
   color: '#333333',
   // fontFamily: 'PingFangSC, PingFang SC',
-  fontSize: '1rem',
+  fontSize: '1.125rem',
   fontWeight: 600
 }
 
