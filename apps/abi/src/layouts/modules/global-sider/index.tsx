@@ -174,7 +174,7 @@ console.log(selectedMenuKey);
         <div className=" flex items-center justify-center cursor-pointer" onClick={redirectHome}>
           <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
         </div>
-        <div className="flex gap-[1.625rem] flex-col text-[#848FA2] absolute top-[50%] translate-y-[-50%]">
+        <div className="flex gap-3 flex-col text-[#848FA2] absolute top-[50%] translate-y-[-50%]">
           {primaryMenuData.map((item) => {
             
             const isActive = item.name !== selectedMenuKey

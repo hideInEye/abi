@@ -161,7 +161,7 @@ export function Component() {
                     lineHeight: '1.5',
                   }}
                 >
-                  {icon && <img src={icon} alt="" style={{ width: 26, height: 20 }} />}
+                  {icon && <img src={icon} alt="" style={{ width: 26, height: 20,objectFit: 'contain' }} />}
                 </span>
               );
             },
@@ -468,6 +468,7 @@ export function Component() {
             新增
           </AButton>
           <AButton
+            disabled={checkedRowKeys.length === 0}
             style={{ borderColor: '#d9d9d9', color: '#333', borderRadius: '3px' }}
             onClick={() => handleBatchDelete()}
           >

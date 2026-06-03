@@ -59,7 +59,7 @@ export default defineConfig(configEnv => {
           target: 'http://192.168.1.252:8080',
         },
         '/api': {
-          target: 'https://192.168.1.252/',
+          target: 'https://192.168.1.251/',
           // target: 'http://123.181.192.131:81/',
           changeOrigin: true,
           secure: false,
@@ -71,7 +71,7 @@ export default defineConfig(configEnv => {
           },
         },
         '/chat-proxy': {
-          target: 'https://192.168.1.252/',
+          target: 'https://192.168.1.251/',
           // target: 'http://123.181.192.131:81/',
           changeOrigin: true,
           secure: false,
@@ -80,9 +80,9 @@ export default defineConfig(configEnv => {
               // console.log('proxyReq', proxyReq, req, res)
             })
           },
-        },
+        }, 
         '/abi-chat-proxy': {
-          target: 'http://192.168.1.252/',
+          target: 'http://192.168.1.251/',
           // target: 'http://123.181.192.131:81/',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/abi-chat-proxy/, '/abi-chat'),
