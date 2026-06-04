@@ -143,14 +143,21 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     await handleGroupDelete(groupId);
   };
 
-  const handleTreeSelect = (selectedKeys: React.Key[]) => {
-    if (selectedKeys.length > 0) {
-      const key = selectedKeys[0] as string;
-      const groupId = Number(key.replace('group-', ''));
-      const group = groups.find(g => g.groupId === groupId);
-      if (group) {
-        setSelectedKeys(selectedKeys);
-        onGroupId(group.groupId);
+  const handleTreeSelect = (keys: React.Key[], info: { node: any }) => {
+    const nodeKey = info.node.key as string;
+    // 始终选中当前点击节点
+    setSelectedKeys([nodeKey]);
+    const groupId = Number(nodeKey.replace('group-', ''));
+    const group = groups.find(g => g.groupId === groupId);
+    if (group) {
+      onGroupId(group.groupId);
+    }
+    // 文件夹节点：点击行切换展开/折叠（对齐 qknow-ui DeptTree 行为）
+    if (!info.node.isLeaf) {
+      if (expandedKeys.includes(nodeKey)) {
+        setExpandedKeys(expandedKeys.filter(k => k !== nodeKey));
+      } else {
+        setExpandedKeys([...expandedKeys, nodeKey]);
       }
     }
   };

@@ -11,6 +11,7 @@ export type TableColumnCheck = {
   checked: boolean
   key: string
   title: string
+  width?: number
 }
 
 export type TableDataWithIndex<T> = T & { index: number }

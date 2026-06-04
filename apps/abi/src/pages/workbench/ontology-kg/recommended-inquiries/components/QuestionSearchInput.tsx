@@ -9,7 +9,7 @@ interface SearchInputProps {
 
 export const QuestionSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearch, searchValue, groupId }) => {
   return (
-    <ASpace className="mb4 flex justify-between">
+    <div className="mb4 flex items-start">
       <AInput
         placeholder="请输入问题检索"
         value={searchValue}
@@ -17,12 +17,13 @@ export const QuestionSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearc
         style={{ fontFamily: 'PingFangSC, PingFang SC', fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}
       />
       <AButton
+        className="ml-auto"
         type="primary"
         onClick={onAdd}
         disabled={!groupId}
       >
         新增
       </AButton>
-    </ASpace>
+    </div>
   );
 };

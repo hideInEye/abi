@@ -1,5 +1,5 @@
 import { DeleteOutlined, FileMarkdownOutlined, QuestionCircleOutlined, WechatWorkOutlined } from '@ant-design/icons';
-import PageTitle from '@/components/stateless/common/PageTitle';
+// import PageTitle from '@/components/stateless/common/PageTitle';
 
 import { deleteJob, deleteShareEmail, deleteShareEmailBatch, fetchEmailList } from '@/service/api/job';
 
@@ -212,7 +212,7 @@ export function Component() {
 
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-8px p-6">
-      <PageTitle />
+      {/* <PageTitle /> */}
       <div className="flex items-center gap-4">
         <KeySearch {...searchProps} />
         <div className="ml-auto flex items-center gap-3">

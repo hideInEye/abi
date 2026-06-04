@@ -4,7 +4,7 @@ import {
   LeftOutlined,
   RightOutlined,
 } from "@ant-design/icons";
-import PageTitle from '@/components/stateless/common/PageTitle';
+// import PageTitle from '@/components/stateless/common/PageTitle';
 import { Dropdown, message } from "antd";
 import { Suspense } from "react";
 
@@ -30,7 +30,7 @@ import mysqlIcon from '@/assets/imgs/home/deMysql.svg';
 import oracleIcon from '@/assets/imgs/home/deOracle.svg';
 import postgresqlIcon from '@/assets/imgs/home/dePostgreSQL.svg';
 import starrocksIcon from '@/assets/imgs/home/deStarrocks.svg';
-import kingbaseIcon from '@/assets/imgs/home/人大金仓.svg';
+import kingbaseIcon from '@/assets/imgs/home/kingbase.svg';
 
 import KeySearch from "./modules/key-search";
 
@@ -50,7 +50,6 @@ const DB_TYPE_ICONS: Record<string, string> = {
   postgresql: postgresqlIcon,
   starrocks: starrocksIcon,
   kingbase: kingbaseIcon,
-  人大金仓: kingbaseIcon,
 };
 
 function getDbIcon(name?: string, sourceType?: string): string | undefined {
@@ -449,9 +448,6 @@ export function Component() {
     <div className="flex flex-col gap-2 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <div className="flex items-center justify-between">
-        <PageTitle />
-      </div>
       {/* 搜索栏 */}
       <div className="flex items-center justify-between gap-4" style={{ marginBottom: '0.5rem' }}>
         <AInput

@@ -66,7 +66,6 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
 
     return (
         <div className="project-list-container">
-            <h1 className="project-list-title">{title || '我的大屏'}</h1>
             <div className="project-list-header">
                 <Input
                     placeholder="搜索项目"

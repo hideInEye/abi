@@ -1,4 +1,4 @@
-import PageTitle from '@/components/stateless/common/PageTitle'
+// import PageTitle from '@/components/stateless/common/PageTitle'
 import { message } from 'antd'
 import { Suspense } from 'react'
 
@@ -156,13 +156,7 @@ export function Component() {
 
   return (
     <div className="flex flex-col p-6" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <div className="flex items-center justify-between">
-        <PageTitle />
-        <AButton type="primary" onClick={() => handleAdd()}>
-          新增
-        </AButton>
-      </div>
-      <div style={{ display: 'flex', flex: 1, gap: 16, minHeight: 0, overflow: 'hidden', marginTop: 8 }}>
+      <div style={{ display: 'flex', flex: 1, gap: 16, minHeight: 0, overflow: 'hidden' }}>
         {/* 左侧供应商列表 */}
         <div
           style={{

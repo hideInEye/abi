@@ -9,7 +9,7 @@ interface SearchInputProps {
 
 export const TagSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearch, searchValue, groupId }) => {
   return (
-    <div className="mb4 flex">
+    <div className="mb4 flex items-start">
       <AInput
         placeholder="请输入行业术语名检索"
         value={searchValue}
@@ -17,7 +17,7 @@ export const TagSearchInput: React.FC<SearchInputProps> = ({ onAdd, onSearch, se
         onChange={e => onSearch(e.target.value)}
       />
       <AButton
-        className='position-absolute right-6'
+        className="ml-auto"
         type="primary"
         onClick={onAdd}
         disabled={!groupId}

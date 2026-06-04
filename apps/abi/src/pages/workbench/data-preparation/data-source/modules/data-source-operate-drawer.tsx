@@ -12,7 +12,7 @@ import mysqlIcon from '@/assets/imgs/home/MySQL.svg';
 import oracleIcon from '@/assets/imgs/home/Oracle.svg';
 import postgresqlIcon from '@/assets/imgs/home/PostgreSQL.svg';
 import starrocksIcon from '@/assets/imgs/home/starrocks.svg';
-import kingbaseIcon from '@/assets/imgs/home/人大金仓 (1).svg';
+import kingbaseIcon from '@/assets/imgs/home/dekingbase.svg';
 
 import DataPreview from './data-preview';
 import Uploader from './uploader';
@@ -32,7 +32,6 @@ const DB_TYPE_ICON_MAP: Record<string, string> = {
   postgresql: postgresqlIcon,
   starrocks: starrocksIcon,
   kingbase: kingbaseIcon,
-  人大金仓: kingbaseIcon,
 };
 
 function getDbIcon(name?: string, sourceType?: string): string | undefined {
@@ -174,6 +173,15 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                 <div className="flex items-center gap-2">
                   {icon && <img src={icon} alt="" style={{ width: 20, height: 20 }} />}
                   <span>{option.data.name}</span>
+                </div>
+              );
+            }}
+            labelRender={(props: any) => {
+              const icon = getDbIcon(props.label, props.value);
+              return (
+                <div className="flex items-center gap-2">
+                  {icon && <img src={icon} alt="" style={{ width: 20, height: 20 }} />}
+                  <span>{props.label}</span>
                 </div>
               );
             }}

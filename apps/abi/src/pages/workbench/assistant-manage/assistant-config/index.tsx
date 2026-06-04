@@ -1,7 +1,7 @@
 import { DeleteOutlined, SearchOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
 import { Empty, Input, Popconfirm, Switch, message } from 'antd';
 
-import PageTitle from '@/components/stateless/common/PageTitle';
+// import PageTitle from '@/components/stateless/common/PageTitle';
 
 import { Group } from '@/components/stateful/group/Group';
 import type { GroupProps } from '@/components/stateful/group/Group';
@@ -218,13 +218,6 @@ export function Component() {
         className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
         styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
       >
-        <div className="flex items-center justify-between" style={{ paddingBottom: '0.5rem' }}>
-          <PageTitle />
-          <AButton type="primary" onClick={handleAdd}>
-            新增助手
-          </AButton>
-        </div>
-
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
           {/* 左侧：分组树 */}
           <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
@@ -233,7 +226,7 @@ export function Component() {
 
           {/* 右侧：搜索 + 卡片网格 */}
           <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <div className="mb-3">
+            <div className="flex items-center gap-3 mb-3">
               <Input
                 allowClear
                 placeholder="请输入助手名称"
@@ -242,6 +235,9 @@ export function Component() {
                 value={keyword}
                 onChange={e => setKeyword(e.target.value)}
               />
+              <AButton type="primary" className="ml-auto" onClick={handleAdd}>
+                新增助手
+              </AButton>
             </div>
 
             {/* 卡片网格 */}

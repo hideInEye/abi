@@ -113,3 +113,35 @@
   width: auto;
   transition: all 0.3s;
 }
+
+/* 侧边栏玻璃态透亮样式 */
+.sidebar-container {
+  /* 1. 极淡的乳白色背景，保证文字清晰 */
+  background: rgba(255, 255, 255, 0.75);
+
+  /* 2. 核心：背景模糊 + 饱和度提升(让颜色更鲜活) */
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+  /* 3. 边缘光泽：模拟玻璃厚度 */
+  border-right: 1px solid rgba(255, 255, 255, 0.5);
+
+  /* 4. 柔和投影：增加空间层次 */
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.03);
+}
+
+/* 内容栏标题栏渐变样式 */
+.page-header-container {
+  /* 核心渐变设置 */
+  background: linear-gradient(
+    to bottom,
+    rgba(230, 245, 255, 0.5) 0%,
+    #FFFFFF 100%
+  );
+
+  /* 增加一点内阴影增强立体感 */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  /* 确保文字清晰 */
+  color: #333;
+}
