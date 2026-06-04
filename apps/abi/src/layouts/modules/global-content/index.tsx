@@ -45,9 +45,12 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
 
   const { allMenus: menus } = useMixMenuContext()
   const breadcrumb = getBreadcrumbsByRoute(route, menus)
-  const breadcrumbItems = breadcrumb.slice(-2).map(item => ({
-    title: <span style={{ color: '#999999' }}>{item.label}</span>
-  }))
+  const breadcrumbItems = breadcrumb.slice(-2).map((item, index) => {
+    const isLast = index === breadcrumb.slice(-2).length - 1
+    return {
+      title: <span style={{ color: isLast ? '#000000' : '#999999' }}>{item.label}</span>
+    }
+  })
 
   useUpdateEffect(() => {
     if (!aliveRef.current || !removeCacheKey) return
@@ -66,17 +69,14 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
         {!hideMenuRoute.includes(route.name!) && (
           <div className="px-6 pt-4 pb-0 page-header-container">
             <div className="flex items-center justify-between mb-6">
-              <Breadcrumb items={breadcrumbItems} style={{ fontSize: '12px', color: '#999999' }} />
-              <span style={{ color: '#999999', fontSize: '12px' }}>
+              <Breadcrumb items={breadcrumbItems} style={{ fontSize: '15px', color: '#999999' }} />
+              <span style={{ color: '#999999', fontSize: '15px' }}>
                 当前空间：
-                <strong style={{ fontWeight: 600, color: '#666666' }}>
+                <strong style={{ fontWeight: 600, color: '#000'}}>
                   {readPersistedSpaceName()}
                 </strong>
               </span>
             </div>
-            <h1 style={{ fontSize: '24px', fontWeight: 700, lineHeight: '32px', color: '#1F1F1F'}}>
-              {(typeof route.meta?.title === 'string' ? route.meta.title.trim() : '') || (breadcrumb[breadcrumb.length - 1]?.label as string) || ''}
-            </h1>
           </div>
         )}
         <div className="flex-1 min-h-0 overflow-auto">
