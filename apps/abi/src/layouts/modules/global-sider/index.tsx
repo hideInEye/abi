@@ -174,7 +174,7 @@ console.log(selectedMenuKey);
         <div className=" flex items-center justify-center cursor-pointer" onClick={redirectHome}>
           <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
         </div>
-        <div className="flex gap-3 flex-col text-[#848FA2] absolute top-[50%] translate-y-[-50%]">
+        <div className="flex gap-1 flex-col text-[#848FA2] absolute top-[45%] translate-y-[-50%]">
           {primaryMenuData.map((item) => {
             
             const isActive = item.name !== selectedMenuKey
@@ -189,7 +189,7 @@ console.log(selectedMenuKey);
                   dispatch(setSelectedMenuKey(item.name))
                   router.push(item.url)
                 }}
-                className={`flex items-center px-3 py-[0.6875rem] flex-col gap-[0.5625rem] cursor-pointer rounded-[4px] transition-colors ${!isActive ? 'bg-[#E5EAFA] text-[#0B6DFF] font-semibold' : 'text-[#0E0E0E] hover:bg-[rgba(0,0,0,0.06)]'}`}
+                className={`flex items-center px-3 py-[10px] flex-col gap-[8px] cursor-pointer rounded-[4px] transition-colors ${!isActive ? 'bg-[#E5EAFA] text-[#0B6DFF] font-semibold' : 'text-[#0E0E0E] hover:bg-[rgba(0,0,0,0.06)]'}`}
               >
                 <img src={isActive ? item.checkIcon : item.icon} alt={item.label} className="h-6 w-6" />
                 <span className="text-base" style={{ fontSize: '0.875rem' }}>{item.label}</span>

@@ -66,7 +66,7 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
         {!hideMenuRoute.includes(route.name!) && (
           <div className="flex items-center justify-between px-6 pt-4 pb-4 bg-[#F9F9F9]">
             <Breadcrumb items={breadcrumbItems} style={{ fontSize: '15px' }} />
-            <span style={{ color: '#666', fontSize: '15px', marginRight: '5rem' }}>
+            <span style={{ color: '#666', fontSize: '15px' }}>
               当前空间：
               <strong style={{ fontWeight: 600 }}>
                 {readPersistedSpaceName()}
