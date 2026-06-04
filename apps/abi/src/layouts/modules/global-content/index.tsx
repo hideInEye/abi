@@ -64,9 +64,9 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
       {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 bg-[#F9F9F9] dark:bg-[#1a1a1a] border-r border-[#E8E8E8] dark:border-[#333] h-[100vh]'} id={GLOBAL_SIDER_MENU_ID} />}
       <div className={ClassNames('flex-1 min-w-0 h-screen relative flex flex-col')}>
         {!hideMenuRoute.includes(route.name!) && (
-          <div className="flex items-center justify-between px-6 pt-6 pb-6 bg-[#F9F9F9]">
+          <div className="flex items-center justify-between px-6 pt-4 pb-4 bg-[#F9F9F9]">
             <Breadcrumb items={breadcrumbItems} style={{ fontSize: '15px' }} />
-            <span style={{ color: '#666', fontSize: '15px', marginRight: '5rem' }}>
+            <span style={{ color: '#666', fontSize: '15px' }}>
               当前空间：
               <strong style={{ fontWeight: 600 }}>
                 {readPersistedSpaceName()}

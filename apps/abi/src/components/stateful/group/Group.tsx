@@ -1,9 +1,8 @@
-import { DeleteOutlined, EllipsisOutlined, PlusCircleOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EllipsisOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, PlusCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
-import React from 'react';
+import React, { useMemo } from 'react';
 
-import folderIcon from '@/assets/svg-icon/folder.svg';
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics';
 import { buildGroupTree, getAllDescendantIds } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
 
@@ -156,15 +155,22 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     }
   };
 
-  // 递归构建子节点
-  const buildTreeNodes = (items: any[], isLeafLevel = false): TreeDataNode[] => {
+  // 递归构建子节点（区分文件夹/叶子图标，对齐 qknow-ui DeptTree 视觉）
+  const buildTreeNodes = (items: any[], currentExpandedKeys: React.Key[]): TreeDataNode[] => {
     return items.map(item => {
       const hasChildren = item.children && item.children.length > 0;
-      const nodeIsLeaf = !hasChildren;
+      const nodeKey = `group-${item.groupId}`;
+      const isExpanded = currentExpandedKeys.includes(nodeKey);
+      // 有子节点 → 文件夹图标（展开/折叠区分），叶子节点 → 文档图标
+      const nodeIcon = hasChildren
+        ? (isExpanded
+          ? <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
+          : <FolderOutlined className="group-node-icon group-node-icon--folder" />)
+        : <FileTextOutlined className="group-node-icon group-node-icon--leaf" />;
       return {
         title: (
           <span className="flex items-center gap-2 w-full group overflow-hidden">
-            <img src={folderIcon} className="group-node-icon group-node-icon--folder flex-shrink-0" alt="folder" />
+            {nodeIcon}
             <span className="group-tree-title flex-1 min-w-0 truncate">{item.groupName}</span>
             <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
               <Tooltip title="编辑">
@@ -177,14 +183,14 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
             </span>
           </span>
         ),
-        key: `group-${item.groupId}`,
-        children: hasChildren ? buildTreeNodes(item.children) : undefined,
-        isLeaf: nodeIsLeaf
+        key: nodeKey,
+        children: hasChildren ? buildTreeNodes(item.children, currentExpandedKeys) : undefined,
+        isLeaf: !hasChildren
       };
     });
   };
 
-  const treeData: TreeDataNode[] = buildTreeNodes(buildGroupTree(groups));
+  const treeData = useMemo(() => buildTreeNodes(buildGroupTree(groups), expandedKeys), [groups, expandedKeys]);
 
   return (
     <>

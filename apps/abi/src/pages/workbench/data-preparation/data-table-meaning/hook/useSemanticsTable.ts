@@ -1,7 +1,7 @@
 import { deleteTableSemantics, schemalist } from '@/service/api/data-table-meaning';
 
 export function useSemanticsTable() {
-  const [tableSchemaList, setTableSchemaList] = useState([]);
+  const [tableSchemaList, setTableSchemaList] = useState<any[]>([]);
 
   async function fetchTableSchemaList(grouppageSize: number, gpId: number, bizName = '') {
     const { response } = await schemalist({
@@ -11,7 +11,7 @@ export function useSemanticsTable() {
       pageSize: grouppageSize
     });
     const { rows } = response.data as unknown as { rows: any[] };
-    setTableSchemaList(rows as any);
+    setTableSchemaList(rows || []);
   }
 
   function deleteTable(record: any) {

@@ -5,8 +5,8 @@
   }
 }
 .group-panel {
-  width: 200px;
-  flex: 0 0 200px;
+  width: 240px;
+  flex: 0 0 240px;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
@@ -25,9 +25,13 @@
       padding-top: 4px !important;
       padding-bottom: 4px !important;
 
-      // 选中态：整行浅蓝背景
+      // 选中态：整行浅蓝背景 + 叶子图标变深蓝
       &.ant-tree-treenode-selected {
         background-color: rgba(51, 102, 255, 0.1) !important;
+
+        .group-node-icon--leaf {
+          color: rgb(53, 140, 243) !important;
+        }
       }
 
       // hover 态：灰色背景
@@ -62,18 +66,18 @@
   }
 }
 
-// 分组树节点图标
+// 分组树节点图标（对齐 qknow-ui DeptTree 视觉风格）
 .group-node-icon {
   flex-shrink: 0;
   font-size: 15px;
 
-  &--folder {
-    width: 15px;
-    height: 15px;
+  &--folder,
+  &--folder-open {
+    color: #358cf3; // 蓝色文件夹图标
   }
 
   &--leaf {
-    color: #595959; // 叶子节点图标（保留class兼容性）
-    font-size: 15px;
+    color: rgb(175, 209, 250); // 浅蓝色文档图标（选中态由上方 .ant-tree-treenode-selected 覆盖为深蓝）
+    font-size: 14px;
   }
 }
