@@ -166,7 +166,7 @@ const GlobalSider: FC = memo(() => {
 console.log(selectedMenuKey);
 
   return (
-    <Sider width="80px" className="sidebar-container h-full bg-[#F0F5FC] border-r border-[#E8E8E8] dark:border-[#333]">
+    <Sider width="80px" className="h-full bg-[#F0F5FC] border-r border-[#E8E8E8] dark:border-[#333]">
       <div className="flex h-full flex-col justify-between items-center py-[1.5rem]">
         <div className=" flex items-center justify-center cursor-pointer" onClick={redirectHome}>
           <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
