@@ -2,7 +2,7 @@ import { DeleteOutlined, MoreOutlined, SearchOutlined, SyncOutlined } from '@ant
 import { App, Dropdown, Empty, Input, Select, Spin, Switch, Tabs, Tooltip } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
-import PageTitle from '@/components/stateless/common/PageTitle';
+// import PageTitle from '@/components/stateless/common/PageTitle';
 import { deleteSkillApi, querySkillListApi, updateSkillStatusApi } from '@/service/api/skill';
 
 import SkillDetailDrawer from './modules/skill-detail-drawer';
@@ -175,16 +175,6 @@ export function Component() {
 
   return (
     <div className="skill-hub-scope h-full overflow-auto p-24px">
-      <div className="mb-16px flex items-center justify-between">
-        <PageTitle />
-        <AButton
-          type="primary"
-          onClick={goPublish}
-        >
-          安装技能
-        </AButton>
-      </div>
-
       <Tabs
         activeKey={tab}
         className="skill-filter-tabs"
@@ -208,6 +198,13 @@ export function Component() {
           value={statusFilter}
           onChange={v => setStatusFilter(v)}
         />
+        <AButton
+          type="primary"
+          className="ml-auto"
+          onClick={goPublish}
+        >
+          安装技能
+        </AButton>
       </div>
 
       <Spin spinning={loading}>

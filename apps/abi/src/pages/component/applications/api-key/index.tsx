@@ -3,7 +3,7 @@ import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
 import type { Dayjs } from 'dayjs'
 
-import PageTitle from '@/components/stateless/common/PageTitle'
+// import PageTitle from '@/components/stateless/common/PageTitle'
 import {
   type AbiClientDetailItem,
   type AbiClientListItem,
@@ -396,7 +396,7 @@ export function Component() {
         className="h-full flex-col-stretch sm:flex-1-hidden border-0 card-wrapper"
         styles={{ body: { display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' } }}
       >
-        <PageTitle style={{ paddingBottom: '0.5rem' }} />
+        {/* <PageTitle style={{ paddingBottom: '0.5rem' }} /> */}
 
         <div style={{ color: '#475569', marginBottom: 16 }}>
           用于管理业务空间下的客户端访问授权凭证，支持 AK/SK 生成、IP 访问限制和启停控制。

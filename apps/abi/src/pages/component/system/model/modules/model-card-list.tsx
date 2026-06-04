@@ -74,7 +74,7 @@ const ModelCardList: FC<Props> = ({
         bordered={false}
         size="small"
         title={
-          <div style={{ fontWeight: 'normal' }}>
+          <div className="flex items-center" style={{ fontWeight: 'normal' }}>
             <AInput
               value={searchValue}
               placeholder="搜索模型名称或基础模型"
@@ -83,6 +83,9 @@ const ModelCardList: FC<Props> = ({
               style={{ width: '14rem' }}
               onChange={e => onSearchValueChange(e.target.value)}
             />
+            <AButton type="primary" className="ml-auto" onClick={onAdd}>
+              新增
+            </AButton>
           </div>
         }
         style={{ height: '100%', display: 'flex', flexDirection: 'column' }}

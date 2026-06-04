@@ -230,7 +230,7 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
             <ASelect
               options={spaceOptions}
               placeholder="空间切换"
-              style={{ minWidth: '120px' }}
+              style={{ width: '286px' }}
               value={currentSpace}
               variant="borderless"
               onChange={handleSpaceChange}
@@ -256,7 +256,7 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
               <ASelect
                 options={spaceOptions}
                 placeholder="空间切换"
-                style={{ minWidth: '120px' }}
+                style={{ width: '286px' }}
                 value={currentSpace}
                 variant="borderless"
                 onChange={handleSpaceChange}

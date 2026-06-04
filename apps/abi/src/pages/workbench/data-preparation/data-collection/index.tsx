@@ -1,5 +1,5 @@
 import { ApartmentOutlined, DeleteOutlined, EditOutlined, SearchOutlined } from '@ant-design/icons';
-import PageTitle from '@/components/stateless/common/PageTitle';
+// import PageTitle from '@/components/stateless/common/PageTitle';
 import { message, Tooltip } from 'antd';
 import { Suspense } from 'react';
 
@@ -159,12 +159,6 @@ export function Component() {
       className="flex flex-col gap-2 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <div className="flex items-center justify-between">
-        <PageTitle />
-        <AButton type="primary" onClick={() => push('/workbench/data-preparation/data-collection-operate/0')}>
-          新增
-        </AButton>
-      </div>
       <div className="flex items-center gap-4">
         <AInput
           allowClear
@@ -175,6 +169,9 @@ export function Component() {
           onPressEnter={handleSearch}
           style={{ width: '12rem' }}
         />
+        <AButton className="ml-auto" type="primary" onClick={() => push('/workbench/data-preparation/data-collection-operate/0')}>
+          新增
+        </AButton>
       </div>
 
       {/* 表格 */}

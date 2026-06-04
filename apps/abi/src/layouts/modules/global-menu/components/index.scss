@@ -1,38 +1,66 @@
 .menu-container {
   background: transparent !important;
   padding-top: 2rem;
+
   .ant-menu-submenu,
   .ant-menu-item {
     margin-bottom: 8px;
   }
+
+  // 一级菜单
   .ant-menu-submenu-title {
     font-size: 15px;
     letter-spacing: 0.05em;
-  }
-  .ant-menu-submenu-selected > .ant-menu-submenu-title {
-    color: #333;
-    &.ant-menu-title-content {
-      color: #333;
+    font-weight: 400;
+    color: #5F6672;
+
+    .ant-menu-item-icon {
+      color: #5F6672;
+    }
+
+    .ant-menu-title-content {
+      color: #5F6672;
     }
   }
+
+  .ant-menu-submenu-selected > .ant-menu-submenu-title {
+    color: #1890FF;
+
+    .ant-menu-item-icon {
+      color: #1890FF;
+    }
+
+    .ant-menu-title-content {
+      color: #1890FF;
+    }
+  }
+
   .ant-menu-submenu .ant-menu-sub .ant-menu-item-icon {
     display: none;
   }
-  // 子菜单项样式：与父菜单第2个字对齐
+
+  // 二级菜单项样式
   .ant-menu-sub .ant-menu-item {
+    height: 46px;
+    line-height: 46px;
+    color: #606266;
+    letter-spacing: 0.05em;
+    font-size: 15px;
+
     .ant-menu-title-content {
       margin-left: 22px;
     }
   }
   .ant-menu-sub .ant-menu-item-selected {
-    color: #0B6DFF !important;
-    background-color: rgba(51, 102, 255, 0.1);
+    color: #1890FF !important;
+    background-color: transparent;
     font-weight: 600;
     font-size: 15px;
-  }
-  .ant-menu-sub .ant-menu-item {
-    color: #595959;
-    letter-spacing: 0.05em;
-    font-size: 15px;
+    border-left: 3px solid #1890FF;
+    border-radius: 0;
+
+    .ant-menu-title-content {
+      margin-left: 19px;
+    }
   }
 }
