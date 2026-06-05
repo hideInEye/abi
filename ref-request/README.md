@@ -11,6 +11,7 @@
 - `04-performance-bundle.md`：性能与构建优化（bundle 现状、分包/按需加载/依赖治理、度量方式）
 - `05-observability-security.md`：可观测性与安全（错误上报、性能监控、权限与 token 风险治理）
 - `06-roadmap.md`：演进路线（分阶段交付、风险控制、里程碑与验收）
+- `07-architecture-review.md`：架构师独立审查报告（含现有文档未覆盖的 12 项新发现，附优先级矩阵与执行顺序）
 
 ## 约定（用于后续落地）
 
