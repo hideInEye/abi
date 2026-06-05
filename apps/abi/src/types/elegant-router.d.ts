@@ -45,10 +45,6 @@ declare module "@elegant-router/types" {
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
     "login": "/login";
-    "login_code-login": "code-login";
-    "login_pwd-login": "pwd-login";
-    "login_register": "register";
-    "login_reset-pwd": "reset-pwd";
     "manage": "/manage";
     "manage_component": "component";
     "manage_component_icon-selector": "icon-selector";
@@ -185,11 +181,7 @@ declare module "@elegant-router/types" {
     | "designer"
     | "guide"
     | "home"
-    | "login_code-login"
     | "login"
-    | "login_pwd-login"
-    | "login_register"
-    | "login_reset-pwd"
     | "manage_component_icon-selector"
     | "manage_dept"
     | "manage_group"
