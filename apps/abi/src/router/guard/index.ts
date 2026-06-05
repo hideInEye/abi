@@ -37,12 +37,12 @@ export const init: Init = async currentFullPath => {
 
   //   return location;
   // }
-  if(!isLogin) return
+  if (!isLogin) return null;
 
   await store.dispatch(initAuthRoute());
 
   if (currentFullPath.includes('login')) {
-    return { name: 'root', replace: true };
+    return { name: 'root' as RouteKey, replace: true };
   }
 
   return null;
@@ -55,7 +55,7 @@ export const init: Init = async currentFullPath => {
  */
 export const createRouteGuard: BeforeEach = (to, _, blockerOrJump) => {
   // 第一步：白名单检查
-  const whiteList: any[] = ['login', 'pwd-login', 'code-login', 'register', 'reset-pwd', 'not-found', '403'];
+  const whiteList: any[] = ['login', 'not-found', '403'];
 
   if (whiteList.includes(to.name)) {
     return blockerOrJump();

@@ -8,73 +8,80 @@ export interface CaptchaRef {
 }
 
 interface CaptchaProps {
-  width?: number
-  height?: number
+  className?: string
+  width?: number | string
+  height?: number | string
+  imageClassName?: string
+  inputClassName?: string
   onRefresh: (uuid: string) => void
   onChange?: (value: string) => void
 }
 
-const INPUT_WRAPPER_CLASSES = 'h-14 rounded-xl border border-white/60 bg-white/90 shadow-sm transition hover:!border-[#3366FF] focus-within:!border-[#3366FF] focus-within:!shadow-[0_0_0_0.125rem_rgba(51,102,255,0.15)]'
+const INPUT_WRAPPER_CLASSES =
+  'h-12 rounded-xl border border-black/10 bg-white/90 shadow-sm transition hover:!border-[#1890FF] focus-within:!border-[#1890FF] focus-within:!shadow-[0_0_0_0.1875rem_rgba(24,144,255,0.2)]'
 
-const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({ width = 120, height = 38, onChange, onRefresh }, ref) => {
-  const [imgSrc, setImgSrc] = useState('')
-  const [uuid, setUuid] = useState('')
-  const [loading, setLoading] = useState(false)
+const Captcha = forwardRef<CaptchaRef, CaptchaProps>(
+  ({ className, width, height, imageClassName, inputClassName, onChange, onRefresh }, ref) => {
+    const [imgSrc, setImgSrc] = useState('')
+    const [uuid, setUuid] = useState('')
+    const [loading, setLoading] = useState(false)
 
-  // 获取验证码
-  const fetchCaptcha = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await fetchCaptchaImage()
-      if (!error && data) {
-        const imgData = data.img.startsWith('data:') ? data.img : `data:image/png;base64,${data.img}`
-        setImgSrc(imgData)
-        setUuid(data.uuid)
-        onRefresh(data.uuid)
+    // 获取验证码
+    const fetchCaptcha = async () => {
+      setLoading(true)
+      try {
+        const { data, error } = await fetchCaptchaImage()
+        if (!error && data) {
+          const imgData = data.img.startsWith('data:') ? data.img : `data:image/png;base64,${data.img}`
+          setImgSrc(imgData)
+          setUuid(data.uuid)
+          onRefresh(data.uuid)
+        }
+      } finally {
+        setLoading(false)
       }
-    } finally {
-      setLoading(false)
     }
-  }
 
-  // 刷新验证码
-  const refresh = () => {
-    fetchCaptcha()
-  }
+    // 刷新验证码
+    const refresh = () => {
+      fetchCaptcha()
+    }
 
-  // 供父组件调用
-  useImperativeHandle(ref, () => ({
-    refresh,
-    getUuid: () => uuid,
-  }))
+    // 供父组件调用
+    useImperativeHandle(ref, () => ({
+      refresh,
+      getUuid: () => uuid,
+    }))
 
-  useEffect(() => {
-    fetchCaptcha()
-  }, [])
+    useEffect(() => {
+      fetchCaptcha()
+    }, [])
 
-  return (
-    <Space>
-      <Input
-        size="large"
-        placeholder="验证码"
-        onChange={(e) => {
-          onChange?.(e.target.value)
-        }}
-        // prefix={<img className="w-7 h-7" src={passwordIcon} />}
-        className={`${INPUT_WRAPPER_CLASSES} !px-4 !text-base !text-[#333333] [&_.ant-input]:!text-[#333333]`}
-      />
-      <Spin spinning={loading} size="small">
-        <img
-          src={imgSrc}
-          alt="验证码"
-          width={width}
-          className="h-14 cursor-pointer select-none bg-white block rounded"
-          onClick={refresh}
-          title="点击刷新验证码"
+    return (
+      <Space className={className}>
+        <Input
+          size="large"
+          placeholder="验证码"
+          onChange={(e) => {
+            onChange?.(e.target.value)
+          }}
+          className={`${INPUT_WRAPPER_CLASSES} ${inputClassName || ''} !px-4 !text-base !text-[#333333] [&_.ant-input]:!text-[#333333]`}
         />
-      </Spin>
-    </Space>
-  )
-})
+        <Spin spinning={loading} size="small">
+          <img
+            src={imgSrc}
+            alt="验证码"
+            width={width}
+            height={height}
+            className={`${imageClassName || ''} block cursor-pointer select-none bg-white`}
+            style={{ height, width }}
+            onClick={refresh}
+            title="点击刷新验证码"
+          />
+        </Spin>
+      </Space>
+    )
+  }
+)
 
 export default Captcha
