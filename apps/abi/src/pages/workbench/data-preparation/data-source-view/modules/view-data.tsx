@@ -85,10 +85,10 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
       </APopover>
 
       <ATable<any>
-        footer={() => <div>说明: 参与预览计算的数据最多100行,原数据不足100行则取全量数据,超过则抽取样数据</div>}
+        footer={pageDatasource?.length ? () => <div>说明: 参与预览计算的数据最多100行,原数据不足100行则取全量数据,超过则抽取样数据</div> : undefined}
         columns={columns}
         dataSource={pageDatasource}
-        scroll={{ y: 'calc(100vh - 400px)' }}
+        scroll={pageDatasource?.length ? { y: 'calc(100vh - 400px)' } : undefined}
         pagination={{
           ...pagination,
           onChange: (page: number, pageSize: number) => {

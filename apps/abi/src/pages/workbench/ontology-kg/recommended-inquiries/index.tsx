@@ -1,5 +1,5 @@
 import React from 'react';
-import PageTitle from '@/components/stateless/common/PageTitle';
+// import PageTitle from '@/components/stateless/common/PageTitle';
 
 import { Group } from '@/components/stateful/group/Group.tsx';
 
@@ -39,7 +39,7 @@ export const Component: React.FC = () => {
       <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
         styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
       >
-        <PageTitle style={{ paddingBottom: '0.5rem' }} />
+        {/* <PageTitle style={{ paddingBottom: '0.5rem' }} /> */}
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
         <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
           <Group

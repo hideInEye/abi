@@ -1,5 +1,5 @@
 import React from 'react';
-import PageTitle from '@/components/stateless/common/PageTitle';
+// import PageTitle from '@/components/stateless/common/PageTitle';
 
 import { Group } from '@/components/stateful/group/Group.tsx';
 
@@ -43,16 +43,6 @@ export const Component: React.FC = () => {
       <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
         styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
       >
-        <div className="flex items-center justify-between" style={{ paddingBottom: '0.5rem' }}>
-          <PageTitle />
-          <AButton
-            type="primary"
-            onClick={handleAdd}
-            disabled={!groupId}
-          >
-            新增
-          </AButton>
-        </div>
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
         <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
           <Group
@@ -76,11 +66,21 @@ export const Component: React.FC = () => {
         </div>
 
           <div className="w-40% flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <TagSearch
-              onAdd={handleAdd}
-              onSearch={handleSearch}
-              groupId={groupId}
-            />
+            <div className="flex items-start gap-3 mb-3">
+              <TagSearch
+                onAdd={handleAdd}
+                onSearch={handleSearch}
+                groupId={groupId}
+              />
+              <AButton
+                type="primary"
+                className="ml-auto"
+                onClick={handleAdd}
+                disabled={!groupId}
+              >
+                新增
+              </AButton>
+            </div>
             <TagTable
               dataSource={tagList}
               onDelete={handleDelete}

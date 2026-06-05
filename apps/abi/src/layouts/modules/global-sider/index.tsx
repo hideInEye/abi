@@ -4,8 +4,8 @@ import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/glo
 import { store } from '@/store'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
-import swapIcon from '@/assets/imgs/home/切换币种.png'
-import { UserOutlined } from '@ant-design/icons'
+import swapIcon from '@/assets/imgs/home/swap.png'
+import { CheckOutlined, UserOutlined } from '@ant-design/icons'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
 import { resetStore } from '@/store/slice/auth'
@@ -13,7 +13,7 @@ import { getAllRoutes } from '@/store/slice/route'
 import { handleLoginExpired } from '@/utils/auth'
 import { openChatConversationWindow } from '@/utils/chatWindow'
 import { persistSpaceName, readPersistedSpaceId, readPersistedSpaceName } from '@/utils/spaceStorage'
-import { Dropdown, Layout } from 'antd'
+import { Dropdown, Layout, Typography, Spin, Empty } from 'antd'
 import { useRoute, useRouter } from '~/packages/simple-router/src'
 import { spaceList } from '@/service/api'
 import { MenuProps } from 'antd/lib'
@@ -169,7 +169,7 @@ const GlobalSider: FC = memo(() => {
 console.log(selectedMenuKey);
 
   return (
-    <Sider width="80px" className="h-full bg-[#F2F2F0] border-r border-[#E8E8E8] dark:border-[#333]">
+    <Sider width="80px" className="h-full bg-[#F0F5FC] border-r border-[#E8E8E8] dark:border-[#333]">
       <div className="flex h-full flex-col justify-between items-center py-[1.5rem]">
         <div className=" flex items-center justify-center cursor-pointer" onClick={redirectHome}>
           <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
@@ -198,7 +198,41 @@ console.log(selectedMenuKey);
           })}
         </div>
         <div className="flex items-center  gap-6 flex-col text-[#848FA2]">
-          <Dropdown overlayClassName="[&_.ant-dropdown-menu]:max-h-[20rem] max-h-[20rem]" trigger={['click']} menu={{ items: spaceOptions, onClick: handleSpaceChange }}>
+          <Dropdown
+            trigger={['click']}
+            dropdownRender={() => (
+              <div className="w-[286px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#edf0f5] bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+                <Typography.Text className="mb-2 block px-2 text-[15px] font-semibold text-[#1f2937]">
+                  空间
+                </Typography.Text>
+                <Spin spinning={!curspaceList}>
+                  <div className="max-h-[320px] overflow-y-auto pr-1">
+                    {spaceOptions.length ? (
+                      spaceOptions.map((space: any) => {
+                        const isActive = space.value === effectiveSpaceId
+                        return (
+                          <button
+                            type="button"
+                            key={space.key}
+                            className={[
+                              'mb-1 flex w-full items-center justify-between rounded-xl bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[#eef4ff]',
+                              isActive ? 'text-[#2563eb]' : 'text-[#111827]',
+                            ].join(' ')}
+                            onClick={() => handleSpaceChange({ key: space.key } as any)}
+                          >
+                            <span className="truncate text-[14px]">{space.label}</span>
+                            {isActive ? <CheckOutlined className="text-[14px]" /> : null}
+                          </button>
+                        )
+                      })
+                    ) : (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无空间" className="!my-2" />
+                    )}
+                  </div>
+                </Spin>
+              </div>
+            )}
+          >
             <APopover
               content={
                 <div>

@@ -9,7 +9,7 @@ import { App, Button, Checkbox, Divider, Drawer, Form, Input, Select, Space, Tab
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import PageTitle from '@/components/stateless/common/PageTitle';
+// import PageTitle from '@/components/stateless/common/PageTitle';
 import type { CreateToolParams, ToolItem, UpdateToolParams } from '@/service/api/tool';
 import {
   createToolApi,
@@ -400,12 +400,6 @@ const TABLE_SCROLL = { x: 'max-content' };
       className="flex flex-col gap-2 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <div className="flex items-center justify-between">
-        <PageTitle />
-        <Button type="primary" onClick={handleAdd}>
-          新增
-        </Button>
-      </div>
       <div className="flex items-center gap-4">
         <Input
           allowClear
@@ -426,6 +420,9 @@ const TABLE_SCROLL = { x: 'max-content' };
             { value: '1', label: '禁用' }
           ]}
         />
+        <Button className="ml-auto" type="primary" onClick={handleAdd}>
+          新增
+        </Button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>

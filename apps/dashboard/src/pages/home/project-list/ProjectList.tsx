@@ -248,10 +248,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     return (
         <div className={'project-list-container'}>
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                <h1 className={'project-list-title'}>{title}</h1>
-                {!statusFilter && <Button type={"primary"} onClick={toggleNewProVisible}>新增</Button>}
-            </div>
             <div className={'project-list-header'}>
                 <Input placeholder="搜索项目"
                         prefix={<SearchOutlined style={{color: '#bfbfbf'}} />}
@@ -260,6 +256,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
                         onChange={(e) => { if (!e.target.value) doSearch(''); }}
                         onPressEnter={(e) => doSearch((e.target as any).value)}
                         style={{width: '12rem'}}/>
+                {!statusFilter && <Button className="ml-auto" type={"primary"} onClick={toggleNewProVisible}>新增</Button>}
             </div>
             <div className={'project-list'}>
                 {pageData && pageData.records.length > 0 ? pageData.records.map((item: IProjectInfo) => {

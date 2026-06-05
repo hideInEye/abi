@@ -1,6 +1,6 @@
 import componentsIcon from '@/assets/imgs/home/components.png'
 import DecomponentsIcon from '@/assets/imgs/home/decomponentss.png'
-import DedialogueIcon from '@/assets/imgs/home/机器人头像.png'
+import DedialogueIcon from '@/assets/imgs/home/deDialogues.png'
 import DehomeIcon from '@/assets/imgs/home/homes.png'
 import DeworkbenchIcon from '@/assets/imgs/home/deworkbenchs.png'
 import dialogueIcon from '@/assets/imgs/home/dialogue.png'

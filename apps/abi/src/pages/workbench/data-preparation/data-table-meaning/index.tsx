@@ -1,5 +1,5 @@
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import PageTitle from '@/components/stateless/common/PageTitle';
+// import PageTitle from '@/components/stateless/common/PageTitle';
 import { Group } from '@/components/stateful/group/Group';
 
 import { SemanticsTableList } from './components/semantics-table-list';
@@ -64,26 +64,13 @@ export function Component() {
       <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
         styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
       >
-        <div className="flex items-center justify-between" style={{ paddingBottom: '0.5rem' }}>
-          <PageTitle />
-          <AButton
-            type="primary"
-            onClick={() => {
-              setDrawerTitle('新增表语义');
-              setTableModalOpen(true);
-            }}
-            disabled={!groupId}
-          >
-            新增
-          </AButton>
-        </div>
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
           <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
             <Group config={SCHEMA_GROUP_CONFIG} onGroupId={handleGroupId} />
           </div>
 
           <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <div className="flex items-center mb-3">
+            <div className="flex items-center gap-3 mb-3">
               <AInput
                 allowClear
                 placeholder="请输入表语义检索"
@@ -91,6 +78,17 @@ export function Component() {
                 onChange={e => searchTableSchema(e)}
                 style={{ width: '12rem' }}
               />
+              <AButton
+                type="primary"
+                className="ml-auto"
+                onClick={() => {
+                  setDrawerTitle('新增表语义');
+                  setTableModalOpen(true);
+                }}
+                disabled={!groupId}
+              >
+                新增
+              </AButton>
             </div>
 
             <SemanticsTableList

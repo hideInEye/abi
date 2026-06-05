@@ -20,10 +20,9 @@
       width: 100%;
       display: flex;
       align-items: center;
-      border-radius: 6px;
       overflow: hidden;
-      padding-top: 4px !important;
-      padding-bottom: 4px !important;
+      padding-top: 6px !important;
+      padding-bottom: 6px !important;
 
       // 选中态：整行浅蓝背景 + 叶子图标变深蓝
       &.ant-tree-treenode-selected {
@@ -62,6 +61,17 @@
     }
     .ant-tree-indent-unit {
       width: 16px !important;
+    }
+    // switcher（展开/折叠箭头）去掉 hover 高亮，保持简洁
+    .ant-tree-switcher {
+      background: transparent !important;
+      &:hover {
+        background: transparent !important;
+      }
+      .ant-tree-switcher-icon {
+        font-size: 12px;
+        color: rgba(0, 0, 0, 0.25);
+      }
     }
   }
 }
