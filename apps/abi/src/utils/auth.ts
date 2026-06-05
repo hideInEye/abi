@@ -20,7 +20,7 @@ export function handleLoginExpired(redirectPath?: string) {
     const currentPath = redirectPath || (window.location.pathname + (window.location.search || ''));
 
     // 构建登录页面URL
-    const loginUrl = `/login/pwd-login?redirect=${encodeURIComponent(currentPath)}`;
+    const loginUrl = `/login?redirect=${encodeURIComponent(currentPath)}`;
 
     // 直接跳转到登录页面
     window.location.href = loginUrl;

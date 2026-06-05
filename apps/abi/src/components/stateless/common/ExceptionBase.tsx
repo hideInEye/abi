@@ -24,7 +24,7 @@ const ExceptionBase: FC<Props> = memo(({ type }) => {
   const nav = useNavigate();
 
   const onClick = () => {
-    nav('/login/pwd-login');
+    nav('/login');
   };
 
   return (
