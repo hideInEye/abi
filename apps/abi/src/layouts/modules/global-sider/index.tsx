@@ -1,22 +1,20 @@
 import appLogo from '@/assets/imgs/home/home_logo.png'
 import userIcon from '@/assets/imgs/home/users.png'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
+import SvgIcon from '@/components/stateless/custom/SvgIcon'
 import { store } from '@/store'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
-import swapIcon from '@/assets/imgs/home/swap.png'
-import { CheckOutlined, UserOutlined } from '@ant-design/icons'
+import { UserOutlined } from '@ant-design/icons'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
 import { resetStore } from '@/store/slice/auth'
 import { getAllRoutes } from '@/store/slice/route'
 import { handleLoginExpired } from '@/utils/auth'
 import { openChatConversationWindow } from '@/utils/chatWindow'
-import { persistSpaceName, readPersistedSpaceId, readPersistedSpaceName } from '@/utils/spaceStorage'
-import { Dropdown, Layout, Typography, Spin, Empty } from 'antd'
+import { readPersistedSpaceId } from '@/utils/spaceStorage'
+import { Dropdown, Layout } from 'antd'
 import { useRoute, useRouter } from '~/packages/simple-router/src'
-import { spaceList } from '@/service/api'
-import { MenuProps } from 'antd/lib'
 import { changeSpaceId, getSpaceId } from '@/store/slice/app'
 const { Sider } = Layout
 
@@ -35,12 +33,7 @@ const GlobalSider: FC = memo(() => {
   }
  const spaceId = useAppSelector(getSpaceId)
   const effectiveSpaceId = spaceId || readPersistedSpaceId()
-  const { switchToSpace } = useSpaceSwitch()
-  const [selectedSpaceName, setSelectedSpaceName] = useState(() => readPersistedSpaceName())
 
-  const { data: curspaceList, run: getSpaceList } = useRequest(spaceList, {
-    manual: true,
-  })
   useEffect(() => {
     const path = route.path || '';
     let matchedName = '';
@@ -61,29 +54,10 @@ const GlobalSider: FC = memo(() => {
   }, [route])
 
   useEffect(() => {
-    if (curspaceList && curspaceList.data && curspaceList.data.length > 0 ) {
-      const currentSpace = curspaceList.data.find((space: any) => space.spaceId === effectiveSpaceId)
-      if (currentSpace) {
-        setSelectedSpaceName(currentSpace.spaceName)
-        persistSpaceName(currentSpace.spaceName)
-      }
-    }
-  }, [curspaceList,effectiveSpaceId])
-
-  useEffect(() => {
     if (!spaceId && effectiveSpaceId) {
       dispatch(changeSpaceId(effectiveSpaceId))
     }
   }, [dispatch, effectiveSpaceId, spaceId])
-
-  useEffect(() => {
-    getSpaceList({
-      isAsc: 'desc',
-      orderByColumn: 'spaceId',
-      pageNum: 1,
-      pageSize: 100000,
-    })
-  }, [])
 
   const userItems = useCallback(() => {
     const items = [
@@ -147,34 +121,15 @@ const GlobalSider: FC = memo(() => {
     }
   }
 
-  const spaceOptions =
-    (curspaceList &&
-      curspaceList?.data?.map((space: any) => ({
-        label: space.spaceName,
-        value: space.spaceId,
-        key: space.spaceId,
-      }))) ||
-    []
-
-  // 添加空间切换处理函数
-  const handleSpaceChange: MenuProps['onClick'] = (e) => {
-    const data = spaceOptions.find((item: any) => item.key == e.key)
-    setSelectedSpaceName(data?.label || '')
-    persistSpaceName(data?.label) 
-
-    switchToSpace(Number(e?.key), undefined, { redirect: true })
-    dispatch(setSelectedMenuKey(''))
-    router.push('/workbench')
-  }
 console.log(selectedMenuKey);
 
   return (
-    <Sider width="80px" className="h-full bg-[#F0F5FC] border-r border-[#E8E8E8] dark:border-[#333]">
+    <Sider width="80px" className="h-full bg-[#EDF1FF] border-r border-[#E0E5F5] dark:border-[#333]">
       <div className="flex h-full flex-col justify-between items-center py-[1.5rem]">
         <div className=" flex items-center justify-center cursor-pointer" onClick={redirectHome}>
           <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
         </div>
-        <div className="flex gap-1 flex-col text-[#848FA2] absolute top-[45%] translate-y-[-50%]">
+        <div className="flex gap-1 flex-col absolute top-[40%] translate-y-[-50%]">
           {primaryMenuData.map((item) => {
             
             const isActive = item.name !== selectedMenuKey
@@ -189,62 +144,15 @@ console.log(selectedMenuKey);
                   dispatch(setSelectedMenuKey(item.name))
                   router.push(item.url)
                 }}
-                className={`flex items-center px-3 py-[10px] flex-col gap-[8px] cursor-pointer rounded-[4px] transition-colors ${!isActive ? 'bg-[#E5EAFA] text-[#0B6DFF] font-semibold' : 'text-[#0E0E0E] hover:bg-[rgba(0,0,0,0.06)]'}`}
+                className={`flex items-center px-3 py-[10px] flex-col gap-[6px] cursor-pointer rounded-[8px] transition-colors ${!isActive ? 'bg-[#DDE4F8] text-[#5C7DF7]' : 'text-[#8494AD] hover:text-[#5C7DF7] hover:bg-[rgba(0,0,0,0.04)]'}`}
               >
-                <img src={isActive ? item.checkIcon : item.icon} alt={item.label} className="h-6 w-6" />
-                <span className="text-base" style={{ fontSize: '0.875rem' }}>{item.label}</span>
+                <SvgIcon localIcon={item.icon} style={{ fontSize: 20 }} />
+                <span style={{ fontSize: '0.75rem' }}>{item.label}</span>
               </div>
             )
           })}
         </div>
         <div className="flex items-center  gap-6 flex-col text-[#848FA2]">
-          <Dropdown
-            trigger={['click']}
-            dropdownRender={() => (
-              <div className="w-[286px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#edf0f5] bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
-                <Typography.Text className="mb-2 block px-2 text-[15px] font-semibold text-[#1f2937]">
-                  空间
-                </Typography.Text>
-                <Spin spinning={!curspaceList}>
-                  <div className="max-h-[320px] overflow-y-auto pr-1">
-                    {spaceOptions.length ? (
-                      spaceOptions.map((space: any) => {
-                        const isActive = space.value === effectiveSpaceId
-                        return (
-                          <button
-                            type="button"
-                            key={space.key}
-                            className={[
-                              'mb-1 flex w-full items-center justify-between rounded-xl bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[#eef4ff]',
-                              isActive ? 'text-[#2563eb]' : 'text-[#111827]',
-                            ].join(' ')}
-                            onClick={() => handleSpaceChange({ key: space.key } as any)}
-                          >
-                            <span className="truncate text-[14px]">{space.label}</span>
-                            {isActive ? <CheckOutlined className="text-[14px]" /> : null}
-                          </button>
-                        )
-                      })
-                    ) : (
-                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无空间" className="!my-2" />
-                    )}
-                  </div>
-                </Spin>
-              </div>
-            )}
-          >
-            <APopover
-              content={
-                <div>
-                  <div className="text-balance">
-                    当前空间: <span className="text-[#3366FF] font-semibold">{selectedSpaceName}</span>
-                  </div>
-                </div>
-              }
-            >
-              <img src={swapIcon} alt="切换空间" className="h-6 w-6 cursor-pointer" />
-            </APopover>
-          </Dropdown>
           <Dropdown trigger={['click']} menu={{ items: userItems(), onClick: handleMenuClick }}>
             <APopover content={'个人中心'}>
             <img src={userIcon} className="h-7 w-7" />

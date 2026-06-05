@@ -22,8 +22,8 @@
   // 排除空数据占位行和列宽测量行
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row) > td {
     padding: 14px 16px !important;
-    font-size: 15px;
-    color: #333333;
+    font-size: 13px;
+    color: #475875;
     border-bottom: 1px solid #EDEEF0 !important;
   }
 
@@ -32,9 +32,14 @@
     padding-left: 1rem !important;
   }
 
+    // 表格内容背景色
+  .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row) > td {
+    background-color: #F7F8FF!important;
+  }
+
   // hover 行温和反馈，排除占位行和测量行
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td {
-    background-color: #F5F9FF !important;
+      background: linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%);
   }
 }
 
@@ -42,8 +47,8 @@
 .ant-table-wrapper .ant-table-thead > tr > th{
   // font-family: PingFangSC, PingFang SC;
   font-weight: semibold;
-  font-size: 15px;
-  color: #686868;
+  font-size: 12px;
+  color: #8494AD;
 }
 // .assistant-config-table,
 // .data-source-table,
@@ -141,6 +146,8 @@
   }
 
   .source-name-text {
+    color: #5b7cf7;
+    font-weight: 600;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -255,6 +262,35 @@
         border-radius: 4px;
       }
     }
+  }
+}
+
+// 渐变主色按钮 - 照搬 data-platform-ui-v4.html 新建数据源按钮样式
+.btn-accent-gradient {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 18px !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  background: linear-gradient(135deg, #5b7cf7, #7091fa) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(91, 124, 247, 0.3) !important;
+
+  &:hover {
+    box-shadow: 0 4px 18px rgba(91, 124, 247, 0.4) !important;
+    transform: translateY(-1px) !important;
+    color: #fff !important;
+    background: linear-gradient(135deg, #5b7cf7, #7091fa) !important;
+  }
+
+  &:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3) !important;
   }
 }
 

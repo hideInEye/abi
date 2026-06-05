@@ -32,7 +32,7 @@ const RecommendedQuestions: FC<PropsType> = memo(({ dispatch, state }) => {
       pageSize,
       spaceId: Number(localStorage.getItem('spaceId'))
     });
-    const questionGroups = res.data.filter((item: any) => item.groupType === 'question');
+    const questionGroups = (res.data || []).filter((item: any) => item.groupType === 'question');
     setGroupOptions(buildGroupTree(questionGroups));
   };
 

@@ -78,6 +78,7 @@ export function Component() {
   const [searchValue, setSearchValue] = useState('');
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [jumpValue, setJumpValue] = useState('');
+  const [dateRange, setDateRange] = useState<any>(null);
 
   useEffect(() => {
     getSourceTypeOptions();
@@ -202,15 +203,15 @@ export function Component() {
             key: "operate",
             width: 240,
             render: (_: unknown, record: any) => (
-              <div className="flex items-center gap-12px" style={{ color: '#206BE0' }}>
-                <AButton color="primary" size="small" variant="link" style={{ color: '#206BE0', fontSize: '15px' }} onClick={() => handleListEdit(record)}>
+              <div className="flex items-center gap-12px" style={{ color: '#206BE0', fontSize: '13px' }}>
+                <AButton color="primary" size="small" variant="link" style={{ color: '#206BE0'}} onClick={() => handleListEdit(record)}>
                   编辑
                 </AButton>
                 <AButton
                   color="primary"
                   size="small"
                   variant="link"
-                  style={{ color: '#206BE0', fontSize: '15px' }}
+                  style={{ color: '#206BE0'}}
                   onClick={() => router.push(`/workbench/data-preparation/data-source-view/${record.sourceId}`)}
                 >
                   预览
@@ -246,7 +247,7 @@ export function Component() {
                     ],
                   }}
                 >
-                  <AButton color="primary" size="small" variant="link" style={{ color: '#206BE0', fontSize: '15px' }}>
+                  <AButton color="primary" size="small" variant="link" style={{ color: '#206BE0' }}>
                     更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
                   </AButton>
                 </Dropdown>
@@ -362,9 +363,24 @@ export function Component() {
 
   const handleSearch = () => {
     const keyword = searchValue.trim();
+    const startTime = dateRange?.[0]?.format ? dateRange[0].format('YYYY-MM-DD HH:mm:ss') : undefined;
+    const endTime = dateRange?.[1]?.format ? dateRange[1].format('YYYY-MM-DD HH:mm:ss') : undefined;
     updateSearchParams({
       pageNum: 1,
       sourceName: keyword ? keyword : undefined,
+      startTime,
+      endTime,
+    } as any);
+  };
+
+  const handleReset = () => {
+    setSearchValue('');
+    setDateRange(null);
+    updateSearchParams({
+      pageNum: 1,
+      sourceName: undefined,
+      startTime: undefined,
+      endTime: undefined,
     } as any);
   };
 
@@ -449,7 +465,7 @@ export function Component() {
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
       {/* 搜索栏 */}
-      <div className="flex items-center justify-between gap-4" style={{ marginBottom: '0.5rem' }}>
+      <div className="flex items-center gap-3 flex-wrap" style={{ marginBottom: '0.5rem' }}>
         <AInput
           allowClear
           placeholder="请输入数据源名称"
@@ -457,20 +473,33 @@ export function Component() {
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           onPressEnter={handleSearch}
-          style={{ width: '12rem' }}
+          style={{ width: '16rem' }}
         />
-        <div className="flex items-center gap-2">
-          <AButton type="primary" style={{ backgroundColor: '#206BE0'}} onClick={() => handleAdd()}>
-            新增
-          </AButton>
-          <AButton
-            disabled={checkedRowKeys.length === 0}
-            style={{ borderColor: '#d9d9d9', color: '#333', borderRadius: '3px' }}
-            onClick={() => handleBatchDelete()}
-          >
-            批量删除数据
-          </AButton>
-        </div>
+        <ADatePicker.RangePicker
+          placeholder={['开始时间', '结束时间']}
+          value={dateRange}
+          onChange={(dates) => setDateRange(dates)}
+        />
+        <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
+          <SearchOutlined /> 查询
+        </AButton>
+        <AButton className="btn-accent-gradient" onClick={handleReset}>
+          重置
+        </AButton>
+      </div>
+
+      {/* 操作栏 */}
+      <div className="flex items-center gap-2" style={{ marginBottom: '0.5rem' }}>
+        <AButton className="btn-accent-gradient" onClick={() => handleAdd()}>
+           新增
+        </AButton>
+        <AButton
+          disabled={checkedRowKeys.length === 0}
+          style={{ borderColor: '#d9d9d9', color: '#333', borderRadius: '3px' }}
+          onClick={() => handleBatchDelete()}
+        >
+          批量删除数据
+        </AButton>
       </div>
 
       {/* 表格 */}

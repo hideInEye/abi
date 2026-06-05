@@ -2,17 +2,33 @@ import * as antdIcons from '@ant-design/icons';
 import { Empty, theme } from 'antd';
 import React, { forwardRef, useMemo, useState } from 'react';
 
+import { getLocalIcons } from '@/utils/icon';
+
 import type { IconSelectorProps } from './types';
 
 const { CloseOutlined, PlusOutlined, QuestionCircleOutlined, SearchOutlined } = antdIcons;
 
 // 提取所有 Ant Design 图标
-const allAntdIcons = Object.entries(antdIcons).filter(([name]) => name.endsWith('Outlined')).map(([name, IconComponent]) => ({
+const allAntdIcons = Object.entries(antdIcons).filter(([name]) => name.endsWith('Outlined')).map(([name, IconComponent]: [string, any]) => ({
     name,
     label: name.replace('Outlined', ''),
     component: <IconComponent />,
-    value: name
+    value: name,
+    type: 'antd' as const
 }));
+
+// 提取所有本地 SVG 图标
+const localSvgNames = getLocalIcons();
+const allLocalIcons = localSvgNames.map(name => ({
+    name,
+    label: name,
+    component: <SvgIcon localIcon={name} style={{ fontSize: 24 }} />,
+    value: name,
+    type: 'local' as const
+}));
+
+// 合并所有图标：本地 SVG 在前，antd 在后
+const allIcons = [...allLocalIcons, ...allAntdIcons];
 
 const IconSelector = forwardRef<HTMLDivElement, IconSelectorProps>(({
     value = undefined,
@@ -30,12 +46,12 @@ const IconSelector = forwardRef<HTMLDivElement, IconSelectorProps>(({
     const { t } = useTranslation();
 
     const selectedIcon = useMemo(() => {
-        return value ? allAntdIcons.find(icon => icon.value === value) : null;
+        return value ? allIcons.find(icon => icon.value === value) : null;
     }, [value]);
 
     const filteredIcons = useMemo(() => {
-        if (!searchValue) return allAntdIcons;
-        return allAntdIcons.filter(
+        if (!searchValue) return allIcons;
+        return allIcons.filter(
             icon =>
                 icon.label.toLowerCase().includes(searchValue.toLowerCase()) ||
                 icon.value.toLowerCase().includes(searchValue.toLowerCase())
@@ -97,7 +113,7 @@ const IconSelector = forwardRef<HTMLDivElement, IconSelectorProps>(({
                                         }
                                     }}
                                 >
-                                    <div style={{ fontSize: 24, marginBottom: 8 }}>
+                                    <div style={{ fontSize: 24, marginBottom: 8, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                         {icon.component}
                                     </div>
                                     <div style={{ fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
