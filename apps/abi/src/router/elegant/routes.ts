@@ -227,13 +227,53 @@ export const generatedRoutes: GeneratedRoute[] = [
   {
     name: 'login',
     path: '/login',
-    component: 'layout.blank$view.login',
+    component: 'layout.blank',
+    redirect: 'pwd-login',
+    layout: 'blank',
     meta: {
       constant: true,
       hideInMenu: true,
       i18nKey: 'route.login',
       title: 'login'
-    }
+    },
+    children: [
+      {
+        name: 'login_code-login',
+        path: 'code-login',
+        component: 'view.login_code-login',
+        meta: {
+          i18nKey: 'route.login_code-login',
+          title: 'login_code-login'
+        }
+      },
+      {
+        name: 'login_pwd-login',
+        path: 'pwd-login',
+        component: 'view.login_pwd-login',
+        meta: {
+          i18nKey: 'route.login_pwd-login',
+          title: 'login_pwd-login'
+        }
+      },
+      {
+        name: 'login_register',
+        path: 'register',
+        component: 'view.login_register',
+        meta: {
+          i18nKey: 'route.login_register',
+          title: 'login_register'
+        }
+      },
+      {
+        name: 'login_reset-pwd',
+        path: 'reset-pwd',
+        component: 'view.login_reset-pwd',
+        meta: {
+          i18nKey: 'route.login_reset-pwd',
+          title: 'login_reset-pwd'
+        }
+      }
+    ]
   },
   {
     name: 'manage',
