@@ -60,7 +60,14 @@ const VerticalMenu = memo(() => {
     if (!Array.isArray(allMenus) || allMenus.length === 0) return [];
     const current = allMenus.find((item) => item?.key === menuKey);
     const children = (current as any)?.children;
-    if (Array.isArray(children)) return children;
+    if (Array.isArray(children)) {
+      const result = [...children];
+      // 在第三项和第四项之间添加分割线
+      if (menuKey === 'workbench' && result.length > 3) {
+        result.splice(3, 0, { type: 'divider', key: 'menu-divider' } as any);
+      }
+      return result;
+    }
     return allMenus.filter(item => item.key !== 'manage');
   }, [allMenus, menuKey]);
 
@@ -139,6 +146,12 @@ const VerticalMenu = memo(() => {
        <div onClick={toggleCollapsed} className='absolute z-30 right-[-1rem] top-1/2 -translate-y-1/2 cursor-pointer'>
         <img src={collapsed ? rightOnlineIcon : leftOnlineIcon} />
       </div>
+      {menuKey === 'workbench' && (
+        <div className="px-34px mt-14px pt-6px pb-12px text-11px font-bold text-[#b0bdd0]">工作台导航</div>
+      )}
+      {menuKey === 'component' && (
+        <div className="px-34px mt-14px pt-6px pb-12px text-11px font-bold text-[#b0bdd0]">组件导航</div>
+      )}
       <AMenu
         className={`transition-300 border-0! menu-container !bg-transparent h-[calc(100vh-5rem)] ${!collapsed?'w-[15rem]':''}`}
         items={filteredMenus}

@@ -29,7 +29,7 @@ export function Component() {
   }
   
   return (
-    <div style={{ backgroundColor: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* 步骤条 */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px 0' }}>
         <ASteps items={items} current={current} style={{ maxWidth: '1200px', width: '100%' }} />
@@ -47,7 +47,7 @@ export function Component() {
       </div>
       
       {/* 底部按钮 */}
-      <div style={{ backgroundColor: '#f5f5f5', borderTop: '1px solid #e5e7eb' }}>
+      <div style={{ backgroundColor: 'transparent', borderTop: '1px solid #e5e7eb' }}>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px 0', gap: '12px' }}>
           {current > 0 && (
             <AButton onClick={() => setCurrent(current - 1)}>

@@ -1,18 +1,8 @@
-import componentsIcon from '@/assets/imgs/home/components.png'
-import DecomponentsIcon from '@/assets/imgs/home/decomponentss.png'
-import DedialogueIcon from '@/assets/imgs/home/deDialogues.png'
-import DehomeIcon from '@/assets/imgs/home/homes.png'
-import DeworkbenchIcon from '@/assets/imgs/home/deworkbenchs.png'
-import dialogueIcon from '@/assets/imgs/home/dialogue.png'
-import homeIcon from '@/assets/imgs/home/home.png'
-import workbenchIcon from '@/assets/imgs/home/workbench.png'
-
-
 export const primaryMenuData = [
-  { key: 'home', label: '主页',name:'home', icon: DehomeIcon, checkIcon: DehomeIcon, url: '/home' },
-  { key: 'chat-ui',name:'chat-ui', label: '对话', icon: DedialogueIcon, checkIcon: DedialogueIcon, url: '/ai-assistant/conversational-analysis' },
-  { key: 'workbench', name:'assistant-manage_assistant-config',label: '工作台', icon: DeworkbenchIcon, checkIcon: DeworkbenchIcon, url: '/workbench' },
-  { key: 'component', name:'system_model',label: '组件', icon: DecomponentsIcon, checkIcon: DecomponentsIcon, url: '/component' },
+  { key: 'home', label: '主页',name:'home', icon: 'sider-home', url: '/home' },
+  { key: 'chat-ui',name:'chat-ui', label: '对话', icon: 'sider-chat', url: '/ai-assistant/conversational-analysis' },
+  { key: 'workbench', name:'assistant-manage_assistant-config',label: '工作台', icon: 'sider-workbench', url: '/workbench' },
+  { key: 'component', name:'system_model',label: '组件', icon: 'sider-components', url: '/component' },
 ]
 
 export const itemMap = new Map([

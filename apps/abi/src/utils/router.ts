@@ -2,8 +2,10 @@
 import * as antdIcons from '@ant-design/icons'
 import React from 'react'
 
+import { getLocalIcons } from '@/utils/icon'
+
 // 创建安全的图标映射
-const safeIcons = new Map<string, React.FC<any>>()
+const safeIcons = new Map<string, any>()
 
 // 将 Ant Design 图标添加到安全映射
 Object.entries(antdIcons).forEach(([name, iconComponent]) => {
@@ -11,19 +13,31 @@ Object.entries(antdIcons).forEach(([name, iconComponent]) => {
     safeIcons.set(name, iconComponent)
   }
 })
+// 预加载本地 SVG 图标名称列表
+const localIconNames = getLocalIcons()
 
 // 添加默认图标
 const DefaultIcon = antdIcons.QuestionCircleOutlined
 
 /**
- * 图标转换器
+ * 图标转换器：支持 antd 图标和本地 SVG 图标
  */
 export const safeConvertToIcon = (iconName?: string, props?: React.ComponentProps<typeof DefaultIcon>): React.ReactElement | null => {
   if (!iconName) return null
 
+  // 如果是非 Outlined 结尾且存在本地 SVG，走 SvgIcon
+  if (!iconName.endsWith('Outlined') && localIconNames.includes(iconName)) {
+    return React.createElement(SvgIcon, { localIcon: iconName, style: { fontSize: '20px' } })
+  }
+
   const IconComponent = safeIcons.get(iconName)
   if (IconComponent) {
     return React.createElement(IconComponent, props)
+  }
+
+  // 兜底：如果 iconName 匹配本地 SVG，也用 SvgIcon
+  if (localIconNames.includes(iconName)) {
+    return React.createElement(SvgIcon, { localIcon: iconName, style: { fontSize: '20px' } })
   }
 
   return React.createElement(DefaultIcon, props)

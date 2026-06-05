@@ -20,6 +20,7 @@ export function formatField(field: string) {
  * @returns 多级树数组
  */
 export function buildGroupTree(list: any[], parentId = 0): any[] {
+  if (!Array.isArray(list)) return [];
   return list
     .filter(item => item.parentId === parentId)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))

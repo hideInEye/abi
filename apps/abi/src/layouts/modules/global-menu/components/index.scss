@@ -1,6 +1,5 @@
 .menu-container {
   background: transparent !important;
-  padding-top: 2rem;
 
   .ant-menu-submenu,
   .ant-menu-item {
@@ -9,7 +8,7 @@
 
   // 一级菜单
   .ant-menu-submenu-title {
-    font-size: 15px;
+    font-size: 14px;
     letter-spacing: 0.05em;
     font-weight: 400;
     color: #5F6672;
@@ -41,26 +40,23 @@
 
   // 二级菜单项样式
   .ant-menu-sub .ant-menu-item {
-    height: 46px;
-    line-height: 46px;
     color: #606266;
     letter-spacing: 0.05em;
-    font-size: 15px;
+    font-size: 14px;
 
     .ant-menu-title-content {
-      margin-left: 22px;
+      margin-left: 28px;
     }
   }
   .ant-menu-sub .ant-menu-item-selected {
     color: #1890FF !important;
-    background-color: transparent;
     font-weight: 600;
-    font-size: 15px;
-    border-left: 3px solid #1890FF;
     border-radius: 0;
+  }
 
-    .ant-menu-title-content {
-      margin-left: 19px;
-    }
+  // 菜单分割线样式
+  .ant-menu-item-divider {
+    margin: 15px 16px !important;
+    border-color: #D0D5E5 !important;
   }
 }

@@ -10,8 +10,11 @@ import {
   getSpaceMenuListApi,
   updateSpaceMenuApi
 } from '@/service/api/space-menu';
+import { getLocalIcons } from '@/utils/icon';
 
 import MenuSearch from './modules/menu-search';
+// 预加载本地 SVG 图标名称列表
+const localIconNames = getLocalIcons();
 
 const MenuOperateDrawer = lazy(() => import('./modules/menu-operate-drawer'));
 
@@ -39,11 +42,20 @@ export function Component() {
     M: '1' // 显式处理未知类型
   };
 
-  // 创建图标渲染函数
+  // 创建图标渲染函数：支持 antd 图标和本地 SVG 图标
   const renderIcon = (iconName: string) => {
+    // 如果是非 Outlined 结尾且存在本地 SVG，走 SvgIcon
+    if (iconName && !iconName.endsWith('Outlined') && localIconNames.includes(iconName)) {
+      return <SvgIcon localIcon={iconName} style={{ fontSize: 20 }} />;
+    }
+    // antd 图标
     const IconComponent = (antdIcons as any)[iconName];
     if (IconComponent) {
       return <IconComponent style={{ fontSize: 20 }} />;
+    }
+    // 兜底：尝试本地 SVG
+    if (iconName && localIconNames.includes(iconName)) {
+      return <SvgIcon localIcon={iconName} style={{ fontSize: 20 }} />;
     }
     return <antdIcons.QuestionCircleOutlined style={{ fontSize: 20 }} />;
   };
