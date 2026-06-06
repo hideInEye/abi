@@ -32,7 +32,7 @@ export const useGroupManagement = (config: GroupProps['config']) => {
       pageSize: 60,
       spaceId: Number(localStorage.getItem('spaceId'))
     });
-    setGroups(data);
+    setGroups(data || []);
   };
 
   const handleGroupAdd = async (newGroup: QuestionGroupItem & { parentId?: number }) => {

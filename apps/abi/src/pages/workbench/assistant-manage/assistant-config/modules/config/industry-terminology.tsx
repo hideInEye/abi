@@ -33,7 +33,7 @@ const IndustryTerminology: FC<PropsType> = memo(({ dispatch, schemaId, state }) 
       pageSize,
       spaceId: Number(localStorage.getItem('spaceId'))
     });
-    const termGroups = res.data.filter((item: any) => item.groupType === 'term');
+    const termGroups = (res.data || []).filter((item: any) => item.groupType === 'term');
     setGroupOptions(buildGroupTree(termGroups));
   };
 
@@ -47,7 +47,7 @@ const IndustryTerminology: FC<PropsType> = memo(({ dispatch, schemaId, state }) 
       spaceId: Number(localStorage.getItem('spaceId')),
       termName: ''
     });
-    const filterResData = res.data.filter((item: any) => item.semanticSchemaId === schemaId);
+    const filterResData = (res.data || []).filter((item: any) => item.semanticSchemaId === schemaId);
     setDataSource(filterResData.map((item: any) => ({ ...item, key: `${item.termId}`, title: item.bizName })));
   };
 
