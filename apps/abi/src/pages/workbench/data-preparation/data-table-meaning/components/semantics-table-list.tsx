@@ -3,6 +3,16 @@ import type { TableProps } from 'antd';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
+
+const ALL_COLUMNS: ColumnOption[] = [
+  { key: 'bizName', label: '主机名', visible: true },
+  { key: 'createBy', label: '创建人', visible: true },
+  { key: 'createTime', label: '创建时间', visible: true },
+  { key: 'updateBy', label: '操作人', visible: false },
+  { key: 'updateTime', label: '操作时间', visible: true },
+];
 
 interface DataType {
   bizName: string;
@@ -21,23 +31,31 @@ interface SemanticsTableListProps {
   readonly deleteTable: (record: DataType) => void;
   readonly editTable: (record: DataType) => void;
   readonly tableSchemaList: DataType[];
+  readonly toolbarLeft?: React.ReactNode;
 }
 
-export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [] }: SemanticsTableListProps) {
+export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [], toolbarLeft }: SemanticsTableListProps) {
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
-  const columns: TableProps<DataType>['columns'] = [
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
+
+  const visibleKeys = useMemo(() => new Set(columnOptions.filter(c => c.visible).map(c => c.key)), [columnOptions]);
+
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
+
+  const allColumns: TableProps<DataType>['columns'] = [
     {
       align: 'center',
       dataIndex: 'bizName',
       key: 'bizName',
       minWidth: 160,
-      render: text => {
-        return (
-          <APopover content={text}>
-            <span className="max-w-100 overflow-hidden text-ellipsis">{text && text.length > 10 ? `${text.slice(0, 10)}...` : text}</span>
-          </APopover>
-        );
-      },
+      render: text => (
+        <APopover content={text}>
+          <span className="max-w-100 overflow-hidden text-ellipsis">{text && text.length > 10 ? `${text.slice(0, 10)}...` : text}</span>
+        </APopover>
+      ),
       title: '主机名'
     },
     {
@@ -72,34 +90,38 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
       align: 'center',
       fixed: 'right',
       key: 'action',
-      minWidth: 600,
+      minWidth: 400,
       title: '操作',
       render: (_, record) => (
-        <div className="flex items-center justify-center gap-12px" style={{ color: '#206BE0' }}>
-          <AButton color="primary" size="small" variant="link" style={{ color: '#206BE0', fontSize: '15px' }} onClick={() => editTable(record)}>
+        <div className="flex items-center justify-center" style={{ gap: 2 }}>
+          <AButton className="abi-action-link" size="small" variant="link" onClick={() => editTable(record)}>
             编辑
           </AButton>
           <AButton
-            color="primary"
+            className="abi-action-link"
             size="small"
             variant="link"
-            style={{ color: '#206BE0', fontSize: '15px' }}
             onClick={() => setAnalysisContext({ nodeId: record.schemaId, nodeName: record.bizName, nodeType: 'TABLE_SEMANTIC', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}
           >
             元数据分析
           </AButton>
           <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => deleteTable(record)}>
-            <AButton color="danger" size="small" variant="link" style={{ fontSize: '15px' }}>删除</AButton>
+            <AButton className="abi-action-link-danger" size="small" variant="link">删除</AButton>
           </APopconfirm>
         </div>
       ),
     }
   ];
 
+  // Filter columns by visibility (always keep action column)
+  const columns = useMemo(() => {
+    return allColumns.filter((col: any) => col.key === 'action' || visibleKeys.has(col.key));
+  }, [visibleKeys]);
+
   const columnWidth = useMemo(() => {
-    return columns!.reduce((total, column: any) => total + (column.minWidth || column.width || 100), 0);
+    return columns!.reduce((total: number, column: any) => total + (column.minWidth || column.width || 100), 0);
   }, [columns]);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [jumpValue, setJumpValue] = useState('');
@@ -118,7 +140,6 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
-
   const handlePrev = () => { if (currentPage > 1) handlePageChange(currentPage - 1); };
   const handleNext = () => { if (currentPage < totalPages) handlePageChange(currentPage + 1); };
 
@@ -147,50 +168,99 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
       pages.push('...', totalPages);
     }
     return pages.map((page, idx) => {
-      if (page === '...') {
-        return <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">...</span>;
-      }
+      if (page === '...') return <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">...</span>;
       const isActive = page === currentPage;
       return (
-        <span
-          key={page}
-          className={`page-item ${isActive ? 'page-active' : ''}`}
-          onClick={() => handlePageChange(page as number)}
-        >
+        <span key={page} className={`page-item ${isActive ? 'page-active' : ''}`} onClick={() => handlePageChange(page as number)}>
           {page}
         </span>
       );
     });
   };
 
+  // Card grid
+  const renderCardGrid = () => (
+    <div className="abi-card-grid">
+      <div className="abi-card-grid-inner">
+        {pagedTableSchemaList.map((record: DataType) => (
+          <div key={record.schemaId || record.id} className="abi-data-card">
+            <div className="abi-data-card-head">
+              <div className="abi-data-card-title">{record.bizName}</div>
+              <span style={{ fontSize: 11, color: '#768a9f' }}>{record.techName}</span>
+            </div>
+            <div className="abi-data-card-body">
+              {visibleKeys.has('createBy') && (
+                <div className="row"><span className="lbl">创建人</span><span className="val">{record.createBy}</span></div>
+              )}
+              {visibleKeys.has('createTime') && (
+                <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createTime}</span></div>
+              )}
+              {visibleKeys.has('updateBy') && (
+                <div className="row"><span className="lbl">操作人</span><span className="val">{record.updateBy}</span></div>
+              )}
+              {visibleKeys.has('updateTime') && (
+                <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime}</span></div>
+              )}
+            </div>
+            <div className="abi-data-card-footer">
+              <button className="abi-card-act" onClick={() => editTable(record)}>编辑</button>
+              <button className="abi-card-act" onClick={() => setAnalysisContext({ nodeId: record.schemaId, nodeName: record.bizName, nodeType: 'TABLE_SEMANTIC', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}>元数据分析</button>
+              <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => deleteTable(record)}>
+                <button className="abi-card-act danger">删除</button>
+              </APopconfirm>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-      <div
-        style={{
-          border: '0.0625rem solid #d9d9d9',
-          borderRadius: '0.5rem',
-          overflow: 'hidden',
-          width: '100%',
-          maxHeight: '100%'
-        }}
-      >
-        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-          <ATable
-            columns={columns}
-            scroll={pagedTableSchemaList?.length > 0 ? { x: columnWidth } : undefined}
-            dataSource={pagedTableSchemaList}
-            size="middle"
-            className="semantics-table abi-std-table"
-            pagination={false}
-          />
-        </div>
+      {/* View controls toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+        {toolbarLeft && <div style={{ marginRight: 'auto' }}>{toolbarLeft}</div>}
+        <ViewControls
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          columns={columnOptions}
+          onColumnToggle={handleColumnToggle}
+        />
       </div>
+
+      {viewMode === 'list' ? (
+        <div
+          style={{
+            border: '1px solid rgba(130,140,200,0.18)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            width: '100%',
+            maxHeight: '100%',
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
+          <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+            <ATable
+              columns={columns}
+              scroll={pagedTableSchemaList?.length > 0 ? { x: columnWidth } : undefined}
+              dataSource={pagedTableSchemaList}
+              size="middle"
+              className="semantics-table abi-std-table"
+              pagination={false}
+            />
+          </div>
+        </div>
+      ) : (
+        renderCardGrid()
+      )}
+
       <div className="data-source-pagination">
         <span className="total-text">共 {totalCount} 条</span>
         <div className="pagination-controls">
           <ASelect
             value={pageSize}
-            onChange={(val) => { setPageSize(val); setCurrentPage(1); }}
+            onChange={(val: any) => { setPageSize(val); setCurrentPage(1); }}
             options={[
               { label: '10条/页', value: 10 },
               { label: '15条/页', value: 15 },
@@ -213,7 +283,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
               className="jump-input"
               style={{ width: 48, textAlign: 'center' }}
               value={jumpValue}
-              onChange={(e) => setJumpValue(e.target.value)}
+              onChange={(e: any) => setJumpValue(e.target.value)}
               onPressEnter={handleJump}
             />
             页

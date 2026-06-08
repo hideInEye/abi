@@ -46,6 +46,7 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   const { switchToSpace } = useSpaceSwitch();
   const [currentSpaceName, setCurrentSpaceName] = useState('');
   const [currentSpace, setCurrentSpace] = useState<number | null>(currentSpaceId);
+  const [spaceDropdownOpen, setSpaceDropdownOpen] = useState(false);
 
   const { data: curspaceList, run: getSpaceList } = useRequest(spaceList, {
     manual: true
@@ -76,10 +77,25 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
     }
   }, [curspaceList, currentSpace]);
 
-  const handleSpaceClick = (spaceId: number, spaceName: string) => {
+  // 同步 Redux store 中的 spaceId 到本地状态
+  useEffect(() => {
+    if (currentSpaceId) {
+      setCurrentSpace(currentSpaceId);
+    }
+  }, [currentSpaceId]);
+
+  const handleSpaceClick = async (spaceId: number, spaceName: string) => {
+    // 点击当前已选中的空间，仅关闭下拉
+    if (spaceId === currentSpace) {
+      setSpaceDropdownOpen(false);
+      return;
+    }
     setCurrentSpaceName(spaceName);
     setCurrentSpace(spaceId);
-    switchToSpace(spaceId);
+    setSpaceDropdownOpen(false);
+    await switchToSpace(spaceId);
+    // 刷新当前页面，使各组件基于新的 spaceId 重新请求数据
+    window.location.reload();
   };
 
   const themeSetting = useAppSelector(getThemeSettings)
@@ -91,7 +107,7 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   const breadcrumbItems = breadcrumb.slice(-2).map((item, index) => {
     const isLast = index === breadcrumb.slice(-2).length - 1
     return {
-      title: <span style={{ color: isLast ? '#000000' : '#999999' }}>{item.label}</span>
+      title: <span style={{ color: isLast ? '#1a2744' : '#768a9f',fontWeight: isLast ? 600 : 400,}}>{item.label}</span>
     }
   })
 
@@ -107,16 +123,18 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
 
   return (
     <div className="flex min-w-0" style={{ background: 'linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%)' }}>
-      {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 bg-[#EDF1FF] dark:bg-[#1a1a1a] border-r border-[#E0E5F5] dark:border-[#333] h-[100vh]'} id={GLOBAL_SIDER_MENU_ID} />}
+      {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 bg-[linear-gradient(135deg,#F0F4FF_0%,#EFF3FF_45%,#EFF2FF_100%)] dark:bg-[#1a1a1a] border-r border-[rgba(130,140,200,0.12)] dark:border-[#333] h-[100vh] transition-all duration-300'} id={GLOBAL_SIDER_MENU_ID} />}
       <div className={ClassNames('flex-1 min-w-0 h-screen relative flex flex-col')}>
         {!hideMenuRoute.includes(route.name!) && (
-          <div className="px-6 pt-4 pb-0 page-header-container">
-            <div className="flex items-center justify-between mb-6">
-              <Breadcrumb items={breadcrumbItems} style={{ fontSize: '15px', color: '#999999' }} />
+          <div className="px-6 pt-4 pb-4 page-header-container">
+            <div className="flex items-center justify-between">
+              <Breadcrumb items={breadcrumbItems} className="abi-breadcrumb" />
               <Dropdown
+                open={spaceDropdownOpen}
+                onOpenChange={setSpaceDropdownOpen}
                 trigger={['click']}
                 dropdownRender={() => (
-                  <div className="w-[286px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#edf0f5] bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+                  <div className="w-[286px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#edf0f5] bg-[#FCFDFF] p-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
                     <Typography.Text className="mb-2 block px-2 text-[15px] font-semibold text-[#1f2937]">
                       空间
                     </Typography.Text>
@@ -131,7 +149,7 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
                                 key={space.key}
                                 className={[
                                   'mb-1 flex w-full items-center justify-between rounded-xl bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[#eef4ff]',
-                                  isActive ? 'text-[#2563eb]' : 'text-[#111827]',
+                                  isActive ? 'text-[#5b7cf7]' : 'text-[#1a2744]',
                                 ].join(' ')}
                                 onClick={() => handleSpaceClick(space.value, space.label)}
                               >
@@ -148,10 +166,10 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
                   </div>
                 )}
               >
-                <div className="flex items-center gap-2 px-4 py-1.5 bg-white/45 border border-white/60 rounded-full cursor-pointer hover:bg-white/75 transition-all text-sm font-semibold text-[#475875]">
+                <div className="flex items-center gap-2 px-4 py-1.5 bg-white/45 border border-white/60 rounded-full cursor-pointer hover:bg-white/75 transition-all text-sm font-semibold text-[#3e5068]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shadow-[0_0_6px_rgba(16,185,129,0.4)] flex-shrink-0"></span>
                   <span className="truncate max-w-[120px]">{currentSpaceName || '选择空间'}</span>
-                  <DownOutlined className="text-xs text-[#8494AD]" />
+                  <DownOutlined className="text-xs text-[#768a9f]" />
                 </div>
               </Dropdown>
             </div>

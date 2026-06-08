@@ -3,23 +3,21 @@ import {
   SearchOutlined,
   LeftOutlined,
   RightOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
-// import PageTitle from '@/components/stateless/common/PageTitle';
 import { Dropdown, message } from "antd";
 import { Suspense } from "react";
 
-// import { enableStatusRecord } from '@/constants/business';
-// import { ATG_MAP } from '@/constants/common';
 import {
   addDataSource,
-  addDb,
   deleteDataSource,
-  deleteDb,
   fetchDataSourceList,
   updateDataSource,
 } from "@/service/api";
 import MetadataAnalysisDrawer from "@/components/metadata-analysis/MetadataAnalysisDrawer";
 import type { MetadataAnalysisContext } from "@/components/metadata-analysis/types";
+import { ViewControls } from "@/components/ViewControls";
+import type { ColumnOption } from "@/components/ViewControls";
 import { useRouter } from "~/packages/simple-router/src/hooks/useRouter";
 import clickhouseIcon from '@/assets/imgs/home/deClickHouse.svg';
 import dmIcon from '@/assets/imgs/home/deDm.svg';
@@ -31,13 +29,6 @@ import oracleIcon from '@/assets/imgs/home/deOracle.svg';
 import postgresqlIcon from '@/assets/imgs/home/dePostgreSQL.svg';
 import starrocksIcon from '@/assets/imgs/home/deStarrocks.svg';
 import kingbaseIcon from '@/assets/imgs/home/kingbase.svg';
-
-import KeySearch from "./modules/key-search";
-
-/**
- * 数据源管理页面组件 用于管理各类数据源（数据库、Excel 等）的连接和配置 支持数据源的增删改查、连接测试、数据预览等功能 包含数据源列表展示、搜索过滤、批量操作等功能
- * 支持多种数据源类型：MySQL、PostgreSQL、Excel 等
- */
 
 const DB_TYPE_ICONS: Record<string, string> = {
   clickhouse: clickhouseIcon,
@@ -71,6 +62,16 @@ const DatasourceOperateDrawer = lazy(
   () => import("./modules/data-source-operate-drawer"),
 );
 
+// Column definitions for picker
+const ALL_COLUMNS: ColumnOption[] = [
+  { key: 'sourceName', label: '数据源名称', visible: true },
+  { key: 'sourceType', label: '类型', visible: true },
+  { key: 'createByName', label: '创建人', visible: true },
+  { key: 'createTime', label: '创建时间', visible: true },
+  { key: 'updateByName', label: '操作人', visible: false },
+  { key: 'updateTime', label: '操作时间', visible: true },
+];
+
 export function Component() {
   const { t } = useTranslation();
   const { getSourceTypeOptions, sourceTypeOptions } = useDatasource();
@@ -79,6 +80,8 @@ export function Component() {
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [jumpValue, setJumpValue] = useState('');
   const [dateRange, setDateRange] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
 
   useEffect(() => {
     getSourceTypeOptions();
@@ -89,7 +92,6 @@ export function Component() {
       const config = JSON.parse(record.configuration);
       if (config?.excelConfig) {
         let excelConfig = JSON.parse(config?.excelConfig);
-
         excelConfig = {
           ...excelConfig[0],
           sourceType: "Excel",
@@ -113,6 +115,13 @@ export function Component() {
     }
   };
 
+  // Visible column keys set
+  const visibleKeys = useMemo(() => new Set(columnOptions.filter(c => c.visible).map(c => c.key)), [columnOptions]);
+
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
+
   const { columnChecks, data, run, searchProps, setColumnChecks, tableProps, updateSearchParams, searchParams } =
     useTable({
       apiFn: fetchDataSourceList as any,
@@ -120,7 +129,7 @@ export function Component() {
         pageNum: 1,
         pageSize: 10,
         sourceName: searchValue,
-        spaceId: Number(localStorage.getItem("spaceId")), // 空间id
+        spaceId: Number(localStorage.getItem("spaceId")),
       },
       columns: () =>
         [
@@ -132,9 +141,7 @@ export function Component() {
             minWidth: 140,
             onHeaderCell: () => ({ className: 'col-source-name' }),
             render: (text: string) => (
-              <span className="source-name-text" title={text}>
-                {text}
-              </span>
+              <span className="source-name-text" title={text}>{text}</span>
             ),
             title: t("page.dataPreparation.dataSource.name"),
           },
@@ -150,18 +157,8 @@ export function Component() {
               const name = option?.name || sourceType;
               const icon = getDbIcon(name, sourceType);
               return (
-                <span
-                  style={{
-                    color: '#595959',
-                    padding: '2px 0',
-                    fontSize: '15px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    lineHeight: '1.5',
-                  }}
-                >
-                  {icon && <img src={icon} alt="" style={{ width: 26, height: 20,objectFit: 'contain' }} />}
+                <span style={{ color: '#3e5068', padding: '2px 0', fontSize: '15px', display: 'inline-flex', alignItems: 'center', gap: '6px', lineHeight: '1.5' }}>
+                  {icon && <img src={icon} alt="" style={{ width: 26, height: 20, objectFit: 'contain' }} />}
                 </span>
               );
             },
@@ -203,15 +200,14 @@ export function Component() {
             key: "operate",
             width: 240,
             render: (_: unknown, record: any) => (
-              <div className="flex items-center gap-12px" style={{ color: '#206BE0', fontSize: '13px' }}>
-                <AButton color="primary" size="small" variant="link" style={{ color: '#206BE0'}} onClick={() => handleListEdit(record)}>
+              <div className="flex items-center" style={{ gap: 2 }}>
+                <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleListEdit(record)}>
                   编辑
                 </AButton>
                 <AButton
-                  color="primary"
+                  className="abi-action-link"
                   size="small"
                   variant="link"
-                  style={{ color: '#206BE0'}}
                   onClick={() => router.push(`/workbench/data-preparation/data-source-view/${record.sourceId}`)}
                 >
                   预览
@@ -247,7 +243,7 @@ export function Component() {
                     ],
                   }}
                 >
-                  <AButton color="primary" size="small" variant="link" style={{ color: '#206BE0' }}>
+                  <AButton className="abi-action-link" size="small" variant="link">
                     更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
                   </AButton>
                 </Dropdown>
@@ -258,6 +254,13 @@ export function Component() {
         ] as any,
       rowKey: "spaceId",
     } as any);
+
+  // Filter columns by visibility (always keep operate column)
+  const filteredColumns = useMemo(() => {
+    const cols = tableProps.columns as any[];
+    if (!cols) return cols;
+    return cols.filter((col: any) => col.key === 'operate' || visibleKeys.has(col.key));
+  }, [tableProps.columns, visibleKeys]);
 
   const {
     checkedRowKeys,
@@ -292,7 +295,6 @@ export function Component() {
     }
     message.destroy();
     if (type === "add") {
-      // add request 调用新增的接口
       const addRes: any = await addDataSource(commonData);
       if (addRes?.response?.data?.code !== 200) {
         message.error(addRes?.response?.data?.msg);
@@ -300,7 +302,6 @@ export function Component() {
       }
       message.success(t("common.addSuccess"));
     } else {
-      // edit request 调用编辑的接口
       const sourceId = (editingData as any)?.sourceId;
       const updateRes: any = await updateDataSource({
         ...commonData,
@@ -312,17 +313,6 @@ export function Component() {
       }
       message.success(t("common.updateSuccess"));
     }
-    // 额外调用接口，用于ai对话部分
-    // const paramsData = {
-    //   comment: res.sourceName,
-    //   db_host: res.host,
-    //   db_name: res.dbName,
-    //   db_port: res.port,
-    //   db_pwd: res.password,
-    //   db_type: res.sourceType,
-    //   db_user: res.userName
-    // };
-    // await addDb(paramsData);
   }, true);
 
   async function handleBatchDelete() {
@@ -348,11 +338,7 @@ export function Component() {
       sourceId: record.sourceId,
       spaceId: Number(localStorage.getItem("spaceId")),
     });
-
     if (res.response.data.code === 200) {
-      // const config = JSON.parse(record.configuration);
-      // await deleteDb(config.dbName);
-
       onDeleted();
     }
   }
@@ -384,7 +370,6 @@ export function Component() {
     } as any);
   };
 
-  // 自定义分页逻辑（从 searchParams 直接读取页码，避免 tableProps.pagination.current 为 undefined 的 bug）
   const pagination = tableProps.pagination as any;
   const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1;
   const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10;
@@ -401,17 +386,8 @@ export function Component() {
     }
   };
 
-  const handlePrev = () => {
-    if (currentPage > 1) {
-      handlePageChange(currentPage - 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentPage < totalPages) {
-      handlePageChange(currentPage + 1);
-    }
-  };
+  const handlePrev = () => { if (currentPage > 1) handlePageChange(currentPage - 1); };
+  const handleNext = () => { if (currentPage < totalPages) handlePageChange(currentPage + 1); };
 
   const handleJump = () => {
     const page = parseInt(jumpValue, 10);
@@ -424,7 +400,6 @@ export function Component() {
   const renderPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxVisible = 5;
-
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else if (currentPage <= 3) {
@@ -438,93 +413,191 @@ export function Component() {
       pages.push(currentPage - 1, currentPage, currentPage + 1);
       pages.push('...', totalPages);
     }
-
     return pages.map((page, idx) => {
-      if (page === '...') {
-        return (
-          <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">
-            ...
-          </span>
-        );
-      }
+      if (page === '...') return <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">...</span>;
       const isActive = page === currentPage;
       return (
-        <span
-          key={page}
-          className={`page-item ${isActive ? 'page-active' : ''}`}
-          onClick={() => handlePageChange(page as number)}
-        >
+        <span key={page} className={`page-item ${isActive ? 'page-active' : ''}`} onClick={() => handlePageChange(page as number)}>
           {page}
         </span>
       );
     });
   };
 
+  // DB type → tag CSS class mapping
+  const getDbTagClass = (typeName: string) => {
+    const n = typeName?.toLowerCase().trim() || '';
+    const map: Record<string, string> = {
+      mysql: 'tag-mysql', postgresql: 'tag-postgresql', oracle: 'tag-oracle',
+      clickhouse: 'tag-clickhouse', doris: 'tag-doris', starrocks: 'tag-starrocks',
+      hive: 'tag-hive', dm: 'tag-dm', kingbase: 'tag-kingbase', excel: 'tag-excel',
+    };
+    for (const [key, cls] of Object.entries(map)) {
+      if (n.includes(key)) return cls;
+    }
+    return 'tag-default';
+  };
+
+  // Card grid render helper
+  const dataSource = tableProps.dataSource as any[] || [];
+
+  const renderCardGrid = () => (
+    <div className="abi-card-grid">
+      <div className="abi-card-grid-inner">
+        {dataSource.map((record: any) => {
+          const option = sourceTypeOptions.find((item: any) => item.sourceType === record.sourceType);
+          const typeName = option?.name || record.sourceType;
+          return (
+            <div key={record.sourceId} className="abi-data-card">
+              <div className="abi-data-card-head">
+                <div className="abi-data-card-title">
+                  {getDbIcon(typeName, record.sourceType) && (
+                    <img src={getDbIcon(typeName, record.sourceType)} alt="" style={{ width: 22, height: 16, objectFit: 'contain', flexShrink: 0 }} />
+                  )}
+                  <span className="abi-data-card-name">{record.sourceName}</span>
+                </div>
+                <span className={`abi-db-tag ${getDbTagClass(typeName)}`}>{typeName?.toUpperCase()}</span>
+              </div>
+              <div className="abi-data-card-body">
+                {visibleKeys.has('createByName') && (
+                  <div className="row"><span className="lbl">创建人</span><span className="val">{record.createByName}</span></div>
+                )}
+                {visibleKeys.has('createTime') && (
+                  <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createTime}</span></div>
+                )}
+                {visibleKeys.has('updateByName') && (
+                  <div className="row"><span className="lbl">操作人</span><span className="val">{record.updateByName}</span></div>
+                )}
+                {visibleKeys.has('updateTime') && (
+                  <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime}</span></div>
+                )}
+                <div className="row"><span className="lbl">状态</span><span className="val">正常</span></div>
+              </div>
+              <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'edit',
+                        label: <span onClick={() => handleListEdit(record)}>编辑</span>,
+                      },
+                      {
+                        key: 'preview',
+                        label: <span onClick={() => router.push(`/workbench/data-preparation/data-source-view/${record.sourceId}`)}>预览</span>,
+                      },
+                      {
+                        key: 'collection',
+                        label: <span onClick={() => router.push(`/workbench/data-preparation/data-collection-operate/${record.sourceId}?from=data-source`)}>创建数据集</span>,
+                      },
+                      {
+                        key: 'delete',
+                        danger: true,
+                        label: (
+                          <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record)}>
+                            <span>删除</span>
+                          </APopconfirm>
+                        ),
+                      },
+                    ],
+                  }}
+                  trigger={['hover']}
+                >
+                  <AButton type="text" size="small" style={{ color: '#8c8c8c' }}>
+                    <MoreOutlined />
+                  </AButton>
+                </Dropdown>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="flex flex-col gap-2 p-6"
-      style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
-    >
-      {/* 搜索栏 */}
-      <div className="flex items-center gap-3 flex-wrap" style={{ marginBottom: '0.5rem' }}>
-        <AInput
-          allowClear
-          placeholder="请输入数据源名称"
-          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          onPressEnter={handleSearch}
-          style={{ width: '16rem' }}
-        />
-        <ADatePicker.RangePicker
-          placeholder={['开始时间', '结束时间']}
-          value={dateRange}
-          onChange={(dates) => setDateRange(dates)}
-        />
-        <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-          <SearchOutlined /> 查询
-        </AButton>
-        <AButton className="btn-accent-gradient" onClick={handleReset}>
-          重置
-        </AButton>
-      </div>
-
-      {/* 操作栏 */}
-      <div className="flex items-center gap-2" style={{ marginBottom: '0.5rem' }}>
-        <AButton className="btn-accent-gradient" onClick={() => handleAdd()}>
-           新增
-        </AButton>
-        <AButton
-          disabled={checkedRowKeys.length === 0}
-          style={{ borderColor: '#d9d9d9', color: '#333', borderRadius: '3px' }}
-          onClick={() => handleBatchDelete()}
-        >
-          批量删除数据
-        </AButton>
-      </div>
-
-      {/* 表格 */}
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <div
-          style={{
-            border: '0.0625rem solid #d9d9d9',
-            borderRadius: '0.5rem',
-            overflow: 'hidden',
-          }}
-        >
-          <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-            <ATable
-              columns={tableProps.columns as any}
-              dataSource={tableProps.dataSource}
-              loading={tableProps.loading}
-              pagination={false}
-              rowKey="sourceId"
-              rowSelection={rowSelection}
-              scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
-              size="middle"
-              className="data-source-table abi-std-table"
-            />
-          </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* v5 Searchbar */}
+      <section className="abi-searchbar">
+        <div className="abi-search-row">
+          <AInput
+            allowClear
+            placeholder="请输入数据源名称"
+            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            onPressEnter={handleSearch}
+            className="abi-field-input"
+            style={{ width: '16rem' }}
+          />
+          <ADatePicker.RangePicker
+            placeholder={['开始时间', '结束时间']}
+            value={dateRange}
+            onChange={(dates) => setDateRange(dates)}
+            className="abi-field-input"
+          />
+          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
+            <SearchOutlined /> 查询
+          </AButton>
+          <AButton className="btn-ghost-v5" onClick={handleReset}>
+            重置
+          </AButton>
         </div>
+      </section>
+
+      {/* v5 Data Area */}
+      <section className="abi-data-area">
+        {/* Toolbar */}
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <AButton className="btn-accent-gradient" onClick={() => handleAdd()}>
+              + 新增数据源
+            </AButton>
+            <AButton
+              className="btn-ghost-v5"
+              disabled={checkedRowKeys.length === 0}
+              onClick={() => handleBatchDelete()}
+            >
+              批量删除数据
+            </AButton>
+          </div>
+          <ViewControls
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            columns={columnOptions}
+            onColumnToggle={handleColumnToggle}
+          />
+        </div>
+
+        {/* Content: table or cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {viewMode === 'list' ? (
+          <div
+            style={{
+              border: '1px solid rgba(130,140,200,0.18)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+              <ATable
+                columns={filteredColumns as any}
+                dataSource={tableProps.dataSource}
+                loading={tableProps.loading}
+                pagination={false}
+                rowKey="sourceId"
+                rowSelection={viewMode === 'list' ? rowSelection : undefined}
+                scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
+                size="middle"
+                className="data-source-table abi-std-table"
+              />
+            </div>
+          </div>
+        ) : (
+          renderCardGrid()
+        )}
+
         <div className="data-source-pagination">
           <span className="total-text">共 {totalCount} 条</span>
           <div className="pagination-controls">
@@ -540,19 +613,11 @@ export function Component() {
               ]}
               className="page-size-select"
             />
-            <button
-              className="page-btn"
-              disabled={currentPage === 1}
-              onClick={handlePrev}
-            >
+            <button className="page-btn" disabled={currentPage === 1} onClick={handlePrev}>
               <LeftOutlined />
             </button>
             {renderPageNumbers()}
-            <button
-              className="page-btn"
-              disabled={currentPage === totalPages}
-              onClick={handleNext}
-            >
+            <button className="page-btn" disabled={currentPage === totalPages} onClick={handleNext}>
               <RightOutlined />
             </button>
             <span className="quick-jumper">
@@ -569,6 +634,7 @@ export function Component() {
           </div>
         </div>
       </div>
+      </section>
       <Suspense>
         <DatasourceOperateDrawer
           editingData={editingData}

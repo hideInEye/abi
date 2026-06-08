@@ -379,7 +379,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
             <span style={{ color: '#262626', fontSize: 14 }}>访问权限</span>
             <span style={{ color: '#8c8c8c', fontSize: 13 }}>
               {publicAccess === '1' ? '空间可见' : '仅自己可见'}
-              <CaretRightOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+              <CaretRightOutlined style={{ fontSize: 11, marginLeft: 4 }} />
             </span>
           </div>
 

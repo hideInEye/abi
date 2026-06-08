@@ -10,9 +10,14 @@ html {
   overflow-x: hidden;
 }
 
+/* Global line-height: 1.5 for comfortable reading */
+body {
+  line-height: 1.5;
+}
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+  scrollbar-color: rgba(130, 140, 200, 0.2) transparent;
 }
 
 .ant-table-header::-webkit-scrollbar {
@@ -41,14 +46,14 @@ html.grayscale {
   z-index: 9999;
 }
 
-/* ASelect 组件样式覆盖 */
+/* ASelect 组件样式覆盖 — v5 accent color */
 .ant-select-item-option-selected {
   background-color: transparent !important;
-  color: #1890ff !important;
+  color: #5b7cf7 !important;
 }
 
 .ant-select-item-option-selected .ant-select-item-option-content {
-  color: #1890ff !important;
+  color: #5b7cf7 !important;
 }
 
 .ant-select-item-option-active {
@@ -56,10 +61,9 @@ html.grayscale {
 }
 
 .ant-select-item-option:hover {
-  background-color: rgba(24, 144, 255, 0.1) !important;
+  background-color: rgba(91, 124, 247, 0.08) !important;
 }
 
 .ant-table-tbody >tr >td {
   border-bottom: 0 !important;
 }
-
