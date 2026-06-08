@@ -1,31 +1,45 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined, SearchOutlined } from '@ant-design/icons';
-// import PageTitle from '@/components/stateless/common/PageTitle';
+import { ApartmentOutlined, DeleteOutlined, EditOutlined, LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { message, Tooltip } from 'antd';
 import { Suspense } from 'react';
 
-// import { enableStatusRecord } from '@/constants/business';
-// import { ATG_MAP } from '@/constants/common';
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
 import { deleteCollection, fetchDataCollectionList } from '@/service/api';
 import { useRouter } from '~/packages/simple-router/src';
 
-import KeySearch from './modules/key-search';
-
-/** 数据集合管理页面组件 用于管理数据集合（数据集）的创建、编辑、删除和预览 支持数据集的操作、数据源关联、守族门查看等功能 包含数据集列表展示、搜索过滤、批量操作等功能 */
-
 const DataCollectionOperateDrawer = lazy(() => import('./modules/data-collection-operate-drawer'));
+
+const ALL_COLUMNS: ColumnOption[] = [
+  { key: 'viewName', label: '数据集名称', visible: true },
+  { key: 'viewInfo', label: '数据源', visible: true },
+  { key: 'createBy', label: '创建人', visible: true },
+  { key: 'createTime', label: '创建时间', visible: true },
+  { key: 'updateBy', label: '操作人', visible: false },
+  { key: 'updateTime', label: '操作时间', visible: true },
+];
 
 export function Component() {
   const { t } = useTranslation();
   const { push } = useRouter();
   const [searchValue, setSearchValue] = useState('');
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
+  const [jumpValue, setJumpValue] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
 
   const { dataSourceList, getDatasourceList } = useDatasource();
   useEffect(() => {
     getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) });
   }, []);
+
+  const visibleKeys = useMemo(() => new Set(columnOptions.filter(c => c.visible).map(c => c.key)), [columnOptions]);
+
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
+
   const toDetail = (record: any) => {
     try {
       const collectionViewInfo = JSON.parse(record.viewInfo);
@@ -39,9 +53,9 @@ export function Component() {
       }
     } catch (error) {
       message.error('当前数据集关联的数据源已被删除，无法进入详情');
-      console.log(error);
     }
   };
+
   const columns = useCallback(
     () => [
       {
@@ -94,14 +108,14 @@ export function Component() {
         align: 'center',
         fixed: 'right',
         key: 'operate',
-        width: 160,
+        width: 200,
         render: (_: unknown, record: any) => (
-          <div className="flex items-center gap-12px">
-            <AButton color="primary" size="small" variant="link" onClick={() => toDetail(record)}>
+          <div className="flex items-center" style={{ gap: 2 }}>
+            <AButton className="abi-action-link" size="small" variant="link" onClick={() => toDetail(record)}>
               编辑
             </AButton>
             <AButton
-              color="primary"
+              className="abi-action-link"
               size="small"
               variant="link"
               onClick={() => setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}
@@ -109,7 +123,7 @@ export function Component() {
               元数据分析
             </AButton>
             <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.viewId)}>
-              <AButton color="danger" size="small" variant="link">删除</AButton>
+              <AButton className="abi-action-link-danger" size="small" variant="link">删除</AButton>
             </APopconfirm>
           </div>
         ),
@@ -118,7 +132,8 @@ export function Component() {
     ],
     [dataSourceList]
   );
-  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps, updateSearchParams } = useTable({
+
+  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps, updateSearchParams, searchParams } = useTable({
     apiFn: fetchDataCollectionList,
     apiParams: {
       pageNum: 1,
@@ -129,18 +144,22 @@ export function Component() {
     columns
   } as any);
 
+  // Filter columns by visibility (always keep operate column)
+  const filteredColumns = useMemo(() => {
+    const cols = tableProps.columns as any[];
+    if (!cols) return cols;
+    return cols.filter((col: any) => col.key === 'operate' || visibleKeys.has(col.key));
+  }, [tableProps.columns, visibleKeys]);
+
   const { checkedRowKeys, generalPopupOperation, onDeleted, rowSelection } = useTableOperate(data as any, run, async (res, type) => {
     if (type === 'add') {
-      // add request 调用新增的接口
-      // push('/data-preparation/data-collection-operate/0');
+      // add request
     } else {
-      // edit request 调用编辑的接口
       console.log(res);
     }
   });
 
   async function handleDelete(id: number) {
-    // request
     const res = await deleteCollection({ updateBy: '1', viewId: id });
     if (res.response.data.code !== 200) return;
     onDeleted();
@@ -154,27 +173,139 @@ export function Component() {
     } as any);
   };
 
-  return (
-    <div
-      className="flex flex-col gap-2 p-6"
-      style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
-    >
-      <div className="flex items-center gap-4">
-        <AInput
-          allowClear
-          placeholder="请输入数据集名称"
-          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          onPressEnter={handleSearch}
-          style={{ width: '12rem' }}
-        />
-        <AButton className="ml-auto" type="primary" onClick={() => push('/workbench/data-preparation/data-collection-operate/0')}>
-          新增
-        </AButton>
-      </div>
+  const pagination = tableProps.pagination as any;
+  const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1;
+  const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10;
+  const totalCount = pagination?.total || 0;
+  const totalPages = Math.ceil(totalCount / pageSizeVal) || 1;
 
-      {/* 表格 */}
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) pagination?.onChange?.(page, pageSizeVal);
+  };
+  const handlePrev = () => { if (currentPage > 1) handlePageChange(currentPage - 1); };
+  const handleNext = () => { if (currentPage < totalPages) handlePageChange(currentPage + 1); };
+
+  const handleJump = () => {
+    const page = parseInt(jumpValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      handlePageChange(page);
+      setJumpValue('');
+    }
+  };
+
+  const renderPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else if (currentPage <= 3) {
+      for (let i = 1; i <= 4; i++) pages.push(i);
+      pages.push('...', totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      pages.push(1, '...');
+      for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1, '...');
+      pages.push(currentPage - 1, currentPage, currentPage + 1);
+      pages.push('...', totalPages);
+    }
+    return pages.map((page, idx) => {
+      if (page === '...') return <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">...</span>;
+      const isActive = page === currentPage;
+      return (
+        <span key={page} className={`page-item ${isActive ? 'page-active' : ''}`} onClick={() => handlePageChange(page as number)}>
+          {page}
+        </span>
+      );
+    });
+  };
+
+  // Card grid
+  const dataSource = tableProps.dataSource as any[] || [];
+
+  const getDatasourceName = (record: any) => {
+    try {
+      const info = JSON.parse(record.viewInfo)?.[0];
+      return dataSourceList?.find((item: any) => item?.sourceId === info?.currentDs?.sourceId)?.sourceName || '-';
+    } catch {
+      return '-';
+    }
+  };
+
+  const renderCardGrid = () => (
+    <div className="abi-card-grid">
+      <div className="abi-card-grid-inner">
+        {dataSource.map((record: any) => (
+          <div key={record.viewId} className="abi-data-card">
+            <div className="abi-data-card-head">
+              <div className="abi-data-card-title">{record.viewName}</div>
+              <span style={{ fontSize: 11, color: '#768a9f' }}>{getDatasourceName(record)}</span>
+            </div>
+            <div className="abi-data-card-body">
+              {visibleKeys.has('createBy') && (
+                <div className="row"><span className="lbl">创建人</span><span className="val">{record.createBy}</span></div>
+              )}
+              {visibleKeys.has('createTime') && (
+                <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createTime}</span></div>
+              )}
+              {visibleKeys.has('updateBy') && (
+                <div className="row"><span className="lbl">操作人</span><span className="val">{record.updateBy}</span></div>
+              )}
+              {visibleKeys.has('updateTime') && (
+                <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime}</span></div>
+              )}
+            </div>
+            <div className="abi-data-card-footer">
+              <button className="abi-card-act" onClick={() => toDetail(record)}>编辑</button>
+              <button className="abi-card-act" onClick={() => setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}>元数据分析</button>
+              <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.viewId)}>
+                <button className="abi-card-act danger">删除</button>
+              </APopconfirm>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* v5 Searchbar */}
+      <section className="abi-searchbar">
+        <div className="abi-search-row">
+          <AInput
+            allowClear
+            placeholder="请输入数据集名称"
+            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            onPressEnter={handleSearch}
+            className="abi-field-input"
+            style={{ width: '16rem' }}
+          />
+          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
+            <SearchOutlined /> 查询
+          </AButton>
+        </div>
+      </section>
+
+      {/* v5 Data Area */}
+      <section className="abi-data-area">
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <AButton className="btn-accent-gradient" onClick={() => push('/workbench/data-preparation/data-collection-operate/0')}>
+              + 新增数据集
+            </AButton>
+          </div>
+          <ViewControls
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            columns={columnOptions}
+            onColumnToggle={handleColumnToggle}
+          />
+        </div>
+
+      {/* 内容区域 */}
       <div
         style={{
           display: 'flex',
@@ -184,33 +315,73 @@ export function Component() {
           overflow: 'hidden'
         }}
       >
-        <div
-          style={{
-            border: '0.0625rem solid #d9d9d9',
-            borderRadius: '0.5rem',
-            overflow: 'hidden',
-            width: '100%',
-            maxHeight: '100%'
-          }}
-        >
-          <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-            <ATable
-              columns={tableProps.columns as any}
-              dataSource={tableProps.dataSource}
-              loading={tableProps.loading}
-              pagination={false}
-              rowKey="viewId"
-              rowSelection={rowSelection}
-              scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
-              size="middle"
-              className="data-collection-table abi-std-table"
+        {viewMode === 'list' ? (
+          <div
+            style={{
+              border: '1px solid rgba(130,140,200,0.18)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              width: '100%',
+              maxHeight: '100%',
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+              <ATable
+                columns={filteredColumns as any}
+                dataSource={tableProps.dataSource}
+                loading={tableProps.loading}
+                pagination={false}
+                rowKey="viewId"
+                rowSelection={viewMode === 'list' ? rowSelection : undefined}
+                scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
+                size="middle"
+                className="data-collection-table abi-std-table"
+              />
+            </div>
+          </div>
+        ) : (
+          renderCardGrid()
+        )}
+
+        <div className="data-source-pagination">
+          <span className="total-text">共 {totalCount} 条</span>
+          <div className="pagination-controls">
+            <ASelect
+              value={pageSizeVal}
+              onChange={(value: number) => pagination?.onChange?.(1, value)}
+              options={[
+                { label: '10条/页', value: 10 },
+                { label: '15条/页', value: 15 },
+                { label: '20条/页', value: 20 },
+                { label: '25条/页', value: 25 },
+                { label: '30条/页', value: 30 },
+              ]}
+              className="page-size-select"
             />
+            <button className="page-btn" disabled={currentPage === 1} onClick={handlePrev}>
+              <LeftOutlined />
+            </button>
+            {renderPageNumbers()}
+            <button className="page-btn" disabled={currentPage === totalPages} onClick={handleNext}>
+              <RightOutlined />
+            </button>
+            <span className="quick-jumper">
+              前往
+              <AInput
+                className="jump-input"
+                style={{ width: 48, textAlign: 'center' }}
+                value={jumpValue}
+                onChange={(e) => setJumpValue(e.target.value)}
+                onPressEnter={handleJump}
+              />
+              页
+            </span>
           </div>
         </div>
-        <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
-          <APagination {...tableProps.pagination} showSizeChanger style={{ padding: '0'}} />
-        </div>
       </div>
+      </section>
 
       <Suspense>
         <DataCollectionOperateDrawer {...generalPopupOperation} />

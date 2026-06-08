@@ -42,6 +42,11 @@ const getSelectedMenuKeyPath = (matches: RouteRecordNormalized[]) => {
   return result;
 };
 
+const MENU_LABELS: Record<string, string> = {
+  workbench: '工作台导航',
+  component: '组件导航',
+};
+
 const VerticalMenu = memo(() => {
   const { allMenus, route, selectKey } = useMixMenuContext();
   const [collapsed, setCollapsed] = useState(false);
@@ -55,25 +60,28 @@ const VerticalMenu = memo(() => {
     return path.split('/')[1] || '';
   }, [route?.path]);
 
-  // 二级菜单：根据当前 path 的一级 segment 过滤，避免在菜单切换时深拷贝（ReactNode 深拷贝会导致内存/CPU 飙升）
+  // Filter menus based on current path segment
   const filteredMenus = useMemo(() => {
     if (!Array.isArray(allMenus) || allMenus.length === 0) return [];
     const current = allMenus.find((item) => item?.key === menuKey);
     const children = (current as any)?.children;
     if (Array.isArray(children)) {
       const result = [...children];
-      // 在第三项和第四项之间添加分割线
+      // Add divider between 3rd and 4th items for workbench
       if (menuKey === 'workbench' && result.length > 3) {
-        result.splice(3, 0, { type: 'divider', key: 'menu-divider' } as any);
+        result.splice(3, 0, {
+          key: 'menu-divider',
+          disabled: true,
+          label: '',
+          className: 'abi-menu-custom-divider'
+        } as any);
       }
       return result;
     }
     return allMenus.filter(item => item.key !== 'manage');
   }, [allMenus, menuKey]);
 
-  // 计算levelKeys - 添加空数组处理
   const levelKeys = useMemo(() => {
-    // 确保filteredMenus是有效数组
     if (!filteredMenus || filteredMenus.length === 0) {
       return {};
     }
@@ -81,13 +89,9 @@ const VerticalMenu = memo(() => {
   }, [filteredMenus]);
 
   const themeSettings = useAppSelector(getThemeSettings);
-
   const router = useRouterPush();
-
   const isMix = themeSettings.layout.mode.includes('mix');
-
   const isVerticalMix = themeSettings.layout.mode === 'vertical-mix';
-
   const inlineCollapsed = useAppSelector(getSiderCollapse);
 
   const [stateOpenKeys, setStateOpenKeys] = useState<string[]>(
@@ -106,7 +110,6 @@ const VerticalMenu = memo(() => {
 
     const currentOpenKey = keys.find(key => !stateOpenKeys.includes(key));
 
-    // open
     if (currentOpenKey && themeSettings.isOnlyExpandCurrentParentMenu) {
       const repeatIndex = keys
         .filter(key => key !== currentOpenKey)
@@ -114,13 +117,10 @@ const VerticalMenu = memo(() => {
 
       setStateOpenKeys(
         keys
-          // remove repeat key
           .filter((_, index) => index !== repeatIndex)
-          // remove current level all child
           .filter(key => levelKeys[key] <= levelKeys[currentOpenKey])
       );
     } else {
-      // // close
       setStateOpenKeys(keys);
     }
   };
@@ -140,28 +140,34 @@ const VerticalMenu = memo(() => {
 
     setStateOpenKeys(names || []);
   }, [isMix, inlineCollapsed]);
-  
+
+  const menuLabel = MENU_LABELS[menuKey];
+
   return (
-    <div className='relative h-screen'>
-       <div onClick={toggleCollapsed} className='absolute z-30 right-[-1rem] top-1/2 -translate-y-1/2 cursor-pointer'>
-        <img src={collapsed ? rightOnlineIcon : leftOnlineIcon} />
+    <div style={{ position: 'relative', height: '100%' }}>
+      <div className={`abi-menu-panel ${collapsed ? 'abi-menu-panel--collapsed' : ''}`}>
+        {/* Section label — hidden when collapsed */}
+        {!collapsed && menuLabel && (
+          <div className="abi-menu-label">{menuLabel}</div>
+        )}
+
+        {/* AntD Menu */}
+        <AMenu
+          className={`transition-300 border-0! menu-container !bg-transparent h-[calc(100vh-5rem)] ${!collapsed ? 'w-full' : ''}`}
+          items={filteredMenus}
+          mode="inline"
+          openKeys={stateOpenKeys}
+          selectedKeys={selectKey}
+          onOpenChange={onOpenChange}
+          onSelect={handleClickMenu}
+          inlineCollapsed={collapsed}
+        />
       </div>
-      {menuKey === 'workbench' && (
-        <div className="px-34px mt-14px pt-6px pb-12px text-11px font-bold text-[#b0bdd0]">工作台导航</div>
-      )}
-      {menuKey === 'component' && (
-        <div className="px-34px mt-14px pt-6px pb-12px text-11px font-bold text-[#b0bdd0]">组件导航</div>
-      )}
-      <AMenu
-        className={`transition-300 border-0! menu-container !bg-transparent h-[calc(100vh-5rem)] ${!collapsed?'w-[15rem]':''}`}
-        items={filteredMenus}
-        mode="inline"
-        openKeys={stateOpenKeys}
-        selectedKeys={selectKey}
-        onOpenChange={onOpenChange}
-        onSelect={handleClickMenu}
-        inlineCollapsed={collapsed}
-      />
+
+      {/* Collapse toggle — placed outside abi-menu-panel to avoid overflow clipping */}
+      <div onClick={toggleCollapsed} className="abi-menu-toggle">
+        <img src={collapsed ? rightOnlineIcon : leftOnlineIcon} width={28} height={28} />
+      </div>
     </div>
   );
 });

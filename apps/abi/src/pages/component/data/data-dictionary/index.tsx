@@ -37,7 +37,7 @@ export const Component: React.FC = () => {
         styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
       >
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
-          <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
+          <div className="abi-group-sidebar">
             <DictionaryGroup onGroupId={setGroupId} />
           </div>
 

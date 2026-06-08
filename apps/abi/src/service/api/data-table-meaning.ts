@@ -45,14 +45,16 @@ export function tablegroup(params: any, groupId: any) {
   });
 }
 /** 获取标语义组右侧列表接口 */
-export function schemalist(params: { bizName?: string; groupId?: number; pageNum?: number; pageSize?: number }) {
+export function schemalist(params: { bizName?: string; groupId?: number; pageNum?: number; pageSize?: number; startTime?: string; endTime?: string }) {
   return apiRequest({
     method: 'get',
     params: {
       bizName: params.bizName,
+      endTime: params.endTime,
       groupId: params.groupId,
       pageNum: params.pageNum,
-      pageSize: params.pageSize
+      pageSize: params.pageSize,
+      startTime: params.startTime
     },
     url: `/api/copilot/v1/schema/list`
   });

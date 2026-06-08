@@ -1,5 +1,5 @@
-import appLogo from '@/assets/imgs/home/home_logo.png'
-import userIcon from '@/assets/imgs/home/users.png'
+import appLogo from '@/assets/imgs/home/abi_logo.png'
+import userIcon from '@/assets/imgs/home/用户.png'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
 import SvgIcon from '@/components/stateless/custom/SvgIcon'
 import { store } from '@/store'
@@ -14,6 +14,7 @@ import { handleLoginExpired } from '@/utils/auth'
 import { openChatConversationWindow } from '@/utils/chatWindow'
 import { readPersistedSpaceId } from '@/utils/spaceStorage'
 import { Dropdown, Layout } from 'antd'
+import './index.scss'
 import { useRoute, useRouter } from '~/packages/simple-router/src'
 import { changeSpaceId, getSpaceId } from '@/store/slice/app'
 const { Sider } = Layout
@@ -31,7 +32,7 @@ const GlobalSider: FC = memo(() => {
   const redirectHome = () => {
     router.push('/home')
   }
- const spaceId = useAppSelector(getSpaceId)
+  const spaceId = useAppSelector(getSpaceId)
   const effectiveSpaceId = spaceId || readPersistedSpaceId()
 
   useEffect(() => {
@@ -108,9 +109,6 @@ const GlobalSider: FC = memo(() => {
           content: t('common.logoutConfirm'),
           okText: t('common.confirm'),
           onOk: () => {
-            // let needRedirect = false;
-            // if (!route.meta?.constant) needRedirect = true;
-            // submit({ needRedirect, redirectFullPath: route.fullPath }, { action: '/logout', method: 'post' });
             store.dispatch(resetStore())
             handleLoginExpired()
           },
@@ -121,42 +119,52 @@ const GlobalSider: FC = memo(() => {
     }
   }
 
-console.log(selectedMenuKey);
-
   return (
-    <Sider width="80px" className="h-full bg-[#EDF1FF] border-r border-[#E0E5F5] dark:border-[#333]">
+    <Sider
+      width="72px"
+      className="abi-nav-sider"
+    >
       <div className="flex h-full flex-col justify-between items-center py-[1.5rem]">
         <div className=" flex items-center justify-center cursor-pointer" onClick={redirectHome}>
-          <img src={appLogo} alt="ABI Logo" className="h-14 w-14 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
+          <img src={appLogo} alt="ABI Logo" className="mb-4 h-12 w-12 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
         </div>
-        <div className="flex gap-1 flex-col absolute top-[40%] translate-y-[-50%]">
+
+        {/* Nav Items - Top */}
+        <div className="abi-nav-items">
           {primaryMenuData.map((item) => {
-            
-            const isActive = item.name !== selectedMenuKey
+            const isActive = item.name === selectedMenuKey
             return (
-              <div
+              <button
                 key={item.key}
+                className={`abi-nav-item ${isActive ? 'active' : ''}`}
                 onClick={() => {
-                  if(item.key==='chat-ui') {
+                  if (item.key === 'chat-ui') {
                     openChatConversationWindow({ spaceId: effectiveSpaceId || undefined })
                     return
                   }
                   dispatch(setSelectedMenuKey(item.name))
                   router.push(item.url)
                 }}
-                className={`flex items-center px-3 py-[10px] flex-col gap-[6px] cursor-pointer rounded-[8px] transition-colors ${!isActive ? 'bg-[#DDE4F8] text-[#5C7DF7]' : 'text-[#8494AD] hover:text-[#5C7DF7] hover:bg-[rgba(0,0,0,0.04)]'}`}
               >
-                <SvgIcon localIcon={item.icon} style={{ fontSize: 20 }} />
-                <span style={{ fontSize: '0.75rem' }}>{item.label}</span>
-              </div>
+                <SvgIcon localIcon={item.icon} style={{ fontSize: 21 }} />
+                <span>{item.label}</span>
+              </button>
             )
           })}
         </div>
-        <div className="flex items-center  gap-6 flex-col text-[#848FA2]">
+
+        {/* Spacer */}
+        <div className="abi-nav-spacer" />
+
+        {/* Divider */}
+        <div className="abi-nav-divider" />
+
+        {/* User Section - Bottom */}
+        <div className="abi-nav-user">
           <Dropdown trigger={['click']} menu={{ items: userItems(), onClick: handleMenuClick }}>
-            <APopover content={'个人中心'}>
-            <img src={userIcon} className="h-7 w-7" />
-            </APopover>
+            <div className="abi-nav-user-icon">
+              <img src={userIcon} alt="user" />
+            </div>
           </Dropdown>
         </div>
       </div>

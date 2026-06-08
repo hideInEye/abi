@@ -183,7 +183,7 @@ const BottomSql = forwardRef<BottomSqlHandle, PropsType>(
             </div>
             <div className={styles['bottom-sql-toolbar-right']}>
               <Dropdown menu={{ items: exportMenuItems }} trigger={['click']}>
-                <span style={{ cursor: 'pointer', fontSize: 13 }}>导出 <DownOutlined style={{ fontSize: 10 }} /></span>
+                <span style={{ cursor: 'pointer', fontSize: 13 }}>导出 <DownOutlined style={{ fontSize: 11 }} /></span>
               </Dropdown>
             </div>
           </div>

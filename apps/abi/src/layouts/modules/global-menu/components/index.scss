@@ -1,62 +1,247 @@
 .menu-container {
   background: transparent !important;
 
+  /* v5: gap 1px between items */
   .ant-menu-submenu,
   .ant-menu-item {
-    margin-bottom: 8px;
+    margin-bottom: 1px;
   }
 
-  // 一级菜单
+  /* ── Top-level submenu title (二级菜单标题) ── */
   .ant-menu-submenu-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px !important;
+    padding-inline-start: 14px !important;
+    border-radius: 8px !important;
     font-size: 14px;
-    letter-spacing: 0.05em;
-    font-weight: 400;
-    color: #5F6672;
+    font-weight: 500;
+    color: #3a4d65;
+    letter-spacing: 0;
+    line-height: 30px !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    margin: 0 !important;
+    height: auto !important;
 
+    /* v5: icon — zero out AntD margin defaults */
     .ant-menu-item-icon {
-      color: #5F6672;
+      color: #3a4d65;
+      margin-inline-end: 0 !important;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
     .ant-menu-title-content {
-      color: #5F6672;
+      color: #3a4d65;
+    }
+
+    .ant-menu-submenu-arrow {
+      display: none;
+    }
+
+    /* Custom chevron via ::after — matches reference HTML .chevron */
+    &::after {
+      content: '';
+      margin-left: auto;
+      width: 7px;
+      height: 7px;
+      border-right: 2px solid #768a9f;
+      border-bottom: 2px solid #768a9f;
+      transform: rotate(-45deg);
+      opacity: 0.35;
+      flex-shrink: 0;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+    }
+
+    &:hover::after {
+      border-color: #1a2744;
+      opacity: 0.6;
+    }
+
+    &:hover {
+      background: rgba(91, 124, 247, 0.10) !important;
+      color: #1a2744;
+
+      .ant-menu-item-icon,
+      .ant-menu-title-content {
+        color: #1a2744;
+      }
     }
   }
 
+  /* Selected top-level submenu */
   .ant-menu-submenu-selected > .ant-menu-submenu-title {
-    color: #1890FF;
+    color: #5b7cf7;
 
     .ant-menu-item-icon {
-      color: #1890FF;
+      color: #5b7cf7;
     }
-
     .ant-menu-title-content {
-      color: #1890FF;
+      color: #5b7cf7;
     }
   }
 
   .ant-menu-submenu .ant-menu-sub .ant-menu-item-icon {
     display: none;
   }
-
-  // 二级菜单项样式
+  /* ── Sub-menu items (三级菜单子项) ── */
   .ant-menu-sub .ant-menu-item {
-    color: #606266;
-    letter-spacing: 0.05em;
-    font-size: 14px;
+    position: relative;
+    padding: 6px 10px 6px 40px !important;
+    padding-inline-start: 40px !important;
+    border-radius: 8px !important;
+    font-size: 13px;
+    font-weight: 500;
+    color: #5f7490;
+    line-height: 1.5;
+    letter-spacing: 0;
+    margin: 0 !important;
+    margin-bottom: 1px !important;
+    height: auto !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
+    /* Dot indicator before text */
     .ant-menu-title-content {
-      margin-left: 28px;
+      margin-left: 0;
+      position: relative;
+      padding-left: 12px;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: -2px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #a3b3c8;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+    }
+
+    &:hover {
+      color: #1a2744;
+      background: rgba(130, 140, 200, 0.06) !important;
+
+      .ant-menu-title-content::before {
+        background: #5b7cf7;
+        transform: translateY(-50%) scale(1.3);
+        box-shadow: 0 0 6px rgba(91, 124, 247, 0.22);
+      }
     }
   }
+
   .ant-menu-sub .ant-menu-item-selected {
-    color: #1890FF !important;
+    color: #5b7cf7 !important;
     font-weight: 600;
-    border-radius: 0;
+    background: rgba(91, 124, 247, 0.10) !important;
+    border-radius: 8px !important;
+
+    .ant-menu-title-content {
+      color: #5b7cf7 !important;
+
+      &::before {
+        background: #5b7cf7;
+        width: 6px;
+        height: 6px;
+        box-shadow: 0 0 8px rgba(91, 124, 247, 0.22);
+      }
+    }
   }
 
-  // 菜单分割线样式
-  .ant-menu-item-divider {
-    margin: 15px 16px !important;
-    border-color: #D0D5E5 !important;
+  /* Custom divider — uses disabled menu item with class, bypasses AntD CSS-in-JS */
+  .abi-menu-custom-divider {
+    margin: 10px 0!important;
+    padding: 0 14px !important;
+    height: 1px !important;
+    line-height: 0 !important;
+    border: none !important;
+    background: rgba(130, 140, 200, 0.18) !important;
+    background-clip: content-box !important;
+    border-radius: 0 !important;
+    pointer-events: none !important;
+    cursor: default !important;
+    opacity: 1 !important;
+    color: transparent !important;
+
+    &::before,
+    &::after,
+    .ant-menu-item-icon,
+    .ant-menu-title-content {
+      display: none !important;
+    }
   }
+
+  .ant-menu-item-divider {
+    margin-block: 10px !important;
+    margin-inline: 14px !important;
+    height: 1px !important;
+    line-height: 0 !important;
+    border: none !important;
+    background: rgba(130, 140, 200, 0.18) !important;
+  }
+
+  /* Chevron rotation — driven by AntD's own .ant-menu-submenu-open class */
+  .ant-menu-submenu-open > .ant-menu-submenu-title::after {
+    transform: rotate(45deg);
+    opacity: 0.6;
+  }
+}
+
+/* ── Menu panel container — v5: padding 20px 12px ── */
+/* Menu panel container — v5: padding 20px 8px */
+.abi-menu-panel {
+  position: relative;
+  height: 100vh;
+  width: 240px;
+  background: linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%);
+  border-right: 1px solid rgba(130, 140, 200, 0.22);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 12px 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(130, 140, 200, 0.18);
+    border-radius: 3px;
+  }
+
+  /* Collapsed state: narrow panel */
+  &.abi-menu-panel--collapsed {
+    width: 64px;
+    padding: 20px 4px 0;
+  }
+}
+
+.abi-menu-toggle {
+  position: absolute;
+  z-index: 30;
+  right: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Menu section label */
+.abi-menu-label {
+  font-size: 12px;
+  font-weight: 700; 
+  color: #a3b3c8;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  padding: 8px 14px 14px;
+  user-select: none;
 }

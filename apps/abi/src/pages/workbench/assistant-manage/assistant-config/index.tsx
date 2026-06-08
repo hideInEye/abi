@@ -220,7 +220,7 @@ export function Component() {
       >
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
           {/* 左侧：分组树 */}
-          <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
+          <div className="abi-group-sidebar">
             <Group config={ASSISTANT_GROUP_CONFIG} onGroupId={setGroupId} />
           </div>
 

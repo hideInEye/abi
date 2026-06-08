@@ -1,0 +1,141 @@
+/* ============================================================
+ * ABI Navigation Sider — v5 Glass Morphism Style
+ * 72px wide left nav with backdrop blur
+ * ============================================================ */
+
+.abi-nav-sider {
+  background: linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%) !important;
+  border-right: 1px solid rgba(130, 140, 200, 0.22) !important;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Brand Logo */
+.abi-nav-brand {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  overflow: hidden;
+  cursor: pointer;
+  margin-bottom: 26px;
+  box-shadow:
+    0 4px 16px rgba(91, 124, 247, 0.35),
+    0 0 24px rgba(139, 92, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.abi-nav-brand-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 13px;
+}
+
+/* Nav Items Container */
+.abi-nav-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+
+/* Individual Nav Item */
+.abi-nav-item {
+  width: 52px;
+  height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #768a9f;
+  font-family: inherit;
+  position: relative;
+  padding: 0;
+
+  span {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+
+  &:hover {
+    color: #5b7cf7;
+    background: rgba(91, 124, 247, 0.10);
+  }
+
+  /* Active state */
+  &.active {
+    color: #5b7cf7;
+    background: rgba(91, 124, 247, 0.10);
+
+    /* Left gradient indicator bar */
+    &::before {
+      content: '';
+      position: absolute;
+      left: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 22px;
+      border-radius: 0 3px 3px 0;
+      background: linear-gradient(180deg, #5b7cf7, #8b5cf6);
+      box-shadow: 0 0 10px rgba(91, 124, 247, 0.22);
+    }
+  }
+}
+
+/* Spacer to push user section to bottom */
+.abi-nav-spacer {
+  flex: 1;
+}
+
+/* Divider line */
+.abi-nav-divider {
+  width: 28px;
+  height: 1px;
+  background: rgba(130, 140, 200, 0.18);
+  margin: 8px 0;
+  flex-shrink: 0;
+}
+
+/* User icon at bottom */
+.abi-nav-user {
+  flex-shrink: 0;
+}
+
+.abi-nav-user-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+
+  img {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+  }
+
+  &:hover {
+    background: rgba(91, 124, 247, 0.10);
+    transform: scale(1.05);
+  }
+}

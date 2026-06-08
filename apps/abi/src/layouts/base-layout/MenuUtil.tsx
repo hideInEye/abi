@@ -12,7 +12,7 @@ const iconWrap = (iconEl: React.ReactNode) => (
   <span style={{
     width: 30,
     height: 30,
-    borderRadius: 8,
+    borderRadius: 6,
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',

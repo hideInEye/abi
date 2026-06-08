@@ -57,8 +57,9 @@ const VerticalMix = memo(() => {
       >
         <div
           className={classNames(
-            'absolute-lt h-full flex-col-stretch nowrap-hidden shadow-sm transition-all-300',
-            { 'bg-inverted text-#1f1f1f': siderInverted }
+            'absolute-lt h-full flex-col-stretch shadow-sm transition-all-300',
+            { 'bg-inverted text-#1f1f1f': siderInverted },
+            { 'nowrap-hidden': !showDrawer }
           )}
           style={{ width: showDrawer ? `${themeSettings.sider.mixChildMenuWidth}px` : '0px' }}
         >
