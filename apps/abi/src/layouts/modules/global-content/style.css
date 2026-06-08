@@ -114,15 +114,25 @@
   transition: all 0.3s;
 }
 
-/* 内容栏标题栏渐变样式 */
+/* 内容栏标题栏 — v5 topbar style */
 .page-header-container {
-  /* 核心渐变设置 */
-  background: #EDF1FF;
-  /* 增加一点内阴影增强立体感 */
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  /* 确保文字清晰 */
+  background: rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(130, 140, 200, 0.10);
   color: #333;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* v5 Breadcrumb: font-size 12px, gap 8px */
+.abi-breadcrumb {
+  font-size: 13px !important;
+}
+
+.abi-breadcrumb .ant-breadcrumb-separator {
+  color: #a3b3c8 !important;
+  font-size: 11px !important;
+}
+
+.abi-breadcrumb .ant-breadcrumb-link {
+  font-size: 13px;
 }
 
 /* 页面内容区统一渐变背景 */

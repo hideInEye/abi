@@ -131,6 +131,7 @@ declare global {
   const TableHeaderOperation: typeof import('../components/advanced/TableHeaderOperation')['default']
   const TableSemantics: typeof import('../components/tableSemantics')['TableSemantics']
   const ThemeSchemaSwitch: typeof import('../components/stateful/ThemeSchemaSwitch')['default']
+  const ViewControls: typeof import('../components/ViewControls')['ViewControls']
   const WaveBg: typeof import('../components/stateless/custom/WaveBg')['default']
   const buildNodeDetail: typeof import('../components/metadata-analysis/adapter')['buildNodeDetail']
   const captchaCode: typeof import('../components/captcha-code')['default']

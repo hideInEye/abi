@@ -202,13 +202,6 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
   return (
     <>
       <div className="group-panel flex flex-col gap-2">
-        <AInput
-          allowClear
-          placeholder={config.inputPlaceholder}
-          className="group-search-input"
-          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-          onChange={(e) => handleSearch(e.target.value)}
-        />
         <div className="flex items-center justify-between px-1 py-1">
           <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'rgba(0,0,0,0.35)', letterSpacing: '0.05em' }}>文件夹</span>
           <Tooltip title="添加组">
@@ -219,6 +212,14 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
             />
           </Tooltip>
         </div>
+        <AInput
+          allowClear
+          placeholder={config.inputPlaceholder}
+          className="group-search-input"
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+          onChange={(e) => handleSearch(e.target.value)}
+        />
+        <div style={{ borderTop: '1px solid rgba(130, 140, 200, 0.18)', margin: '2px 0' }} />
         <Tree
           treeData={treeData}
           expandedKeys={expandedKeys}

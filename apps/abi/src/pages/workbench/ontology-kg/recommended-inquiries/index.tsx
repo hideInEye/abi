@@ -41,7 +41,7 @@ export const Component: React.FC = () => {
       >
         {/* <PageTitle style={{ paddingBottom: '0.5rem' }} /> */}
         <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
-        <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
+        <div className="abi-group-sidebar">
           <Group
             config={{
               button: '添加问题语义组',

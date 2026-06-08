@@ -1,5 +1,4 @@
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
-// import PageTitle from '@/components/stateless/common/PageTitle';
 import { Group } from '@/components/stateful/group/Group';
 
 import { SemanticsTableList } from './components/semantics-table-list';
@@ -34,6 +33,9 @@ export function Component() {
 
   const { deleteTable, fetchTableSchemaList, setTableSchemaList, tableSchemaList } = useSemanticsTable();
 
+  const [searchValue, setSearchValue] = useState('');
+  const [dateRange, setDateRange] = useState<any>(null);
+
   function handleGroupId(gId: number) {
     setGroupId(gId);
     fetchTableSchemaList(100, gId);
@@ -54,53 +56,84 @@ export function Component() {
     setEditObj(data);
   }
 
-  function searchTableSchema(e: any) {
+  function handleSearch() {
+    const keyword = searchValue.trim();
+    const startTime = dateRange?.[0]?.format ? dateRange[0].format('YYYY-MM-DD HH:mm:ss') : undefined;
+    const endTime = dateRange?.[1]?.format ? dateRange[1].format('YYYY-MM-DD HH:mm:ss') : undefined;
     setTableSchemaList([]);
-    fetchTableSchemaList(100, groupId, e.target.value);
+    fetchTableSchemaList(100, groupId, keyword, startTime, endTime);
+  }
+
+  function handleReset() {
+    setSearchValue('');
+    setDateRange(null);
+    setTableSchemaList([]);
+    fetchTableSchemaList(100, groupId);
+  }
+
+  function handleAdd() {
+    setDrawerTitle('新增表语义');
+    setTableModalOpen(true);
   }
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
-        styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
-      >
-        <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
-          <div style={{ borderRight: '0.0625rem solid #d9d9d9', paddingRight: '1rem' }}>
-            <Group config={SCHEMA_GROUP_CONFIG} onGroupId={handleGroupId} />
-          </div>
+    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* v5 Tree Panel — left sidebar */}
+      <div className="abi-group-sidebar">
+        <Group config={SCHEMA_GROUP_CONFIG} onGroupId={handleGroupId} />
+      </div>
 
-          <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <div className="flex items-center gap-3 mb-3">
-              <AInput
-                allowClear
-                placeholder="请输入表语义检索"
-                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                onChange={e => searchTableSchema(e)}
-                style={{ width: '12rem' }}
-              />
+      {/* Right content area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        {/* v5 Searchbar */}
+        <section className="abi-searchbar">
+          <div className="abi-search-row">
+            <AInput
+              allowClear
+              placeholder="请输入表语义名称"
+              prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+              value={searchValue}
+              onChange={e => setSearchValue(e.target.value)}
+              onPressEnter={handleSearch}
+              className="abi-field-input"
+              style={{ width: '16rem' }}
+            />
+            <ADatePicker.RangePicker
+              placeholder={['开始时间', '结束时间']}
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates)}
+              className="abi-field-input"
+            />
+            <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
+              <SearchOutlined /> 查询
+            </AButton>
+            <AButton className="btn-ghost-v5" onClick={handleReset}>
+              重置
+            </AButton>
+          </div>
+        </section>
+
+        {/* v5 Data Area */}
+        <section className="abi-data-area">
+          <SemanticsTableList
+            deleteTable={deleteTable}
+            editTable={editTable}
+            tableSchemaList={tableSchemaList}
+            toolbarLeft={
               <AButton
                 type="primary"
-                className="ml-auto"
-                onClick={() => {
-                  setDrawerTitle('新增表语义');
-                  setTableModalOpen(true);
-                }}
+                className="btn-accent-gradient"
+                onClick={handleAdd}
                 disabled={!groupId}
               >
-                新增
+                + 新增表语义
               </AButton>
-            </div>
+            }
+          />
+        </section>
+      </div>
 
-            <SemanticsTableList
-              deleteTable={deleteTable}
-              editTable={editTable}
-              tableSchemaList={tableSchemaList}
-            />
-          </div>
-        </AFlex>
-
-        <SemanticsTable updateTableList={updateTableList} />
-      </ACard>
+      <SemanticsTable updateTableList={updateTableList} />
     </div>
   );
 }
