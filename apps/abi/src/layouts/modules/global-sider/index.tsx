@@ -1,8 +1,6 @@
 import appLogo from '@/assets/imgs/home/abi_logo.png'
 import userIcon from '@/assets/imgs/home/用户.svg'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
-import SvgIcon from '@/components/stateless/custom/SvgIcon'
-import { store } from '@/store'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
 import { UserOutlined } from '@ant-design/icons'
