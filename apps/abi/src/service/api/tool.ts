@@ -60,6 +60,7 @@ export interface CreateToolParams {
   inputSchema?: string;
   outputSchema?: string;
   status?: string;
+  mode_type?: number;
 }
 
 /**
