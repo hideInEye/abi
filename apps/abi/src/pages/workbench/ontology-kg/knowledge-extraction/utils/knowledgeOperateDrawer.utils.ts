@@ -1,6 +1,3 @@
-import { DEFAULT_FORM_VALUES } from '../constants'
-import type { KnowledgeFormValues, KnowledgeIndicatorItem } from '../types'
-
 export interface TransferItem {
   key: string
   title: string
@@ -11,12 +8,18 @@ export interface StepItem {
   title: string
 }
 
-export function getStepItems(_indicatorType: string): StepItem[] {
-  return [
+export function getStepItems(showDimensionStep = true, businessOnly = false): StepItem[] {
+  if (businessOnly) {
+    return [{ key: 'business', title: '业务配置' }]
+  }
+  const baseItems: StepItem[] = [
     { key: 'business', title: '业务配置' },
-    { key: 'technical', title: '技术属性' },
-    { key: 'dimension', title: '维度配置' }
+    { key: 'technical', title: '技术属性' }
   ]
+  if (!showDimensionStep) {
+    return baseItems
+  }
+  return [...baseItems, { key: 'dimension', title: '维度配置' }]
 }
 
 export function parseAliasTags(alias?: string) {
@@ -103,18 +106,6 @@ export function isValidNumberInput(value: string) {
   return /^-?\d+(\.\d+)?$/.test(value)
 }
 
-function normalizeTechIdForForm(value: any): string | undefined {
-  if (!value) {
-    return undefined
-  }
-  if (typeof value === 'object') {
-    const objectId = String(value.techId || value.tfieldId || value.fieldName || value.originName || '').trim()
-    return objectId || undefined
-  }
-  const text = String(value).trim()
-  return text || undefined
-}
-
 export function validateGeneratedExpressionSyntax(expression?: string) {
   const text = String(expression || '').trim()
   if (!text || text === '请填写计算逻辑') {
@@ -154,81 +145,4 @@ export function ensureDerivedConditions(
     operator: item?.operator || '>=',
     value: item?.value || ''
   }))
-}
-
-// eslint-disable-next-line complexity
-export function buildEditFormValues(editingItem: KnowledgeIndicatorItem): KnowledgeFormValues {
-  const templateParams = parseTemplateParams(editingItem.templateParams)
-  const calcLogic = parseTemplateParams(editingItem.calcLogic)
-  return {
-    accumulateStartDate: editingItem.accumulateStartDate || templateParams.accumulateStartDate,
-    aggMethod: editingItem.aggMethod || DEFAULT_FORM_VALUES.aggMethod,
-    bizName: editingItem.bizName,
-    calcPeriod: editingItem.calcPeriod || templateParams.calcPeriod || DEFAULT_FORM_VALUES.calcPeriod,
-    compareMetricId: editingItem.compareMetricId || templateParams.compareMetricId || calcLogic.compareMetricId,
-    comparePeriod: editingItem.comparePeriod || templateParams.comparePeriod,
-    compareType: editingItem.compareType || templateParams.compareType || calcLogic.compareType,
-    comparisonOutputType:
-      editingItem.comparisonOutputType || templateParams.comparisonOutputType || calcLogic.comparisonOutputType,
-    cumulativeMetricId:
-      editingItem.cumulativeMetricId || templateParams.cumulativeMetricId || calcLogic.cumulativeMetricId,
-    cumulativeMode: editingItem.cumulativeMode || templateParams.cumulativeMode || calcLogic.cumulativeMode,
-    cumulativeTimeRange:
-      editingItem.cumulativeTimeRange || templateParams.cumulativeTimeRange || calcLogic.cumulativeTimeRange,
-    dataFrequency: editingItem.dataFrequency || DEFAULT_FORM_VALUES.dataFrequency,
-    dataType: editingItem.dataType || DEFAULT_FORM_VALUES.dataType,
-    derivedConditionExpr: editingItem.derivedConditionExpr || templateParams.derivedConditionExpr,
-    derivedConditions: ensureDerivedConditions(
-      editingItem.derivedConditions || templateParams.derivedConditions || calcLogic.derivedConditions
-    ),
-    dimensionFieldIds: editingItem.dimensionFieldIds || editingItem.relateDims,
-    divideZeroStrategy:
-      editingItem.divideZeroStrategy || templateParams.divideZeroStrategy || DEFAULT_FORM_VALUES.divideZeroStrategy,
-    expr: editingItem.expr || templateParams.expr || calcLogic.expr,
-    indicatorAliasTags: parseAliasTags(editingItem.termAlias),
-    indicatorCategory: editingItem.indicatorCategory || DEFAULT_FORM_VALUES.indicatorCategory,
-    indicatorCode: editingItem.indicatorCode,
-    indicatorType: editingItem.indicatorType || DEFAULT_FORM_VALUES.indicatorType,
-    isPublic: editingItem.isPublic === '1' || editingItem.isPublic === true,
-    measurementUnit: editingItem.measurementUnit,
-    nullStrategy: editingItem.nullStrategy || templateParams.nullStrategy || DEFAULT_FORM_VALUES.nullStrategy,
-    owner: editingItem.owner,
-    ownerEmail: editingItem.ownerEmail,
-    ownerPhone: editingItem.ownerPhone,
-    percentileValue: Number(editingItem.percentileValue || templateParams.percentileValue) || undefined,
-    qualityLevel: editingItem.qualityLevel || DEFAULT_FORM_VALUES.qualityLevel,
-    ratioDenominatorId:
-      editingItem.ratioDenominatorId || templateParams.ratioDenominatorId || calcLogic.ratioDenominatorId,
-    ratioNumeratorId: editingItem.ratioNumeratorId || templateParams.ratioNumeratorId || calcLogic.ratioNumeratorId,
-    ratioPrecision:
-      editingItem.ratioPrecision ||
-      templateParams.ratioPrecision ||
-      calcLogic.ratioPrecision ||
-      DEFAULT_FORM_VALUES.ratioPrecision,
-    remark: editingItem.remark,
-    rollingWindowSize: editingItem.rollingWindowSize || templateParams.rollingWindowSize,
-    semanticGroupId: editingItem.semanticGroupId,
-    semanticSchemaId: editingItem.semanticSchemaId,
-    status: editingItem.status ?? DEFAULT_FORM_VALUES.status,
-    techId: normalizeTechIdForForm(editingItem.techId || templateParams.techId || calcLogic.techId),
-    techName: editingItem.techName,
-    technicalRemark: editingItem.technicalRemark,
-    templateType: editingItem.templateType || templateParams.templateType || DEFAULT_FORM_VALUES.templateType,
-    thresholdMax: editingItem.thresholdMax || templateParams.thresholdMax,
-    thresholdMin: editingItem.thresholdMin || templateParams.thresholdMin,
-    variableMappings: editingItem.variableMappings || templateParams.variableMappings || [],
-    variableName: templateParams.variableName,
-    volatilityDataRange:
-      editingItem.volatilityDataRange ||
-      templateParams.volatilityDataRange ||
-      calcLogic.volatilityDataRange ||
-      DEFAULT_FORM_VALUES.volatilityDataRange,
-    volatilityMethod:
-      editingItem.volatilityMethod ||
-      templateParams.volatilityMethod ||
-      calcLogic.volatilityMethod ||
-      DEFAULT_FORM_VALUES.volatilityMethod,
-    volatilityMetricId:
-      editingItem.volatilityMetricId || templateParams.volatilityMetricId || calcLogic.volatilityMetricId
-  }
 }

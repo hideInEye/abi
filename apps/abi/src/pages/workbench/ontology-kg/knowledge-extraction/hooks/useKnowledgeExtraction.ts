@@ -4,86 +4,17 @@ import {
   addKnowledgeIndicator,
   deleteKnowledgeIndicator,
   editKnowledgeIndicator,
-  queryKnowledgeIndicators
+  queryKnowledgeIndicatorDetail,
+  queryKnowledgeIndicators,
+  syncAtomicIndicators
 } from '@/service/api/knowledge-extraction'
 
 import type { KnowledgeGroupItem, KnowledgeIndicatorItem, KnowledgeSearchParams } from '../types'
-
-const INDICATOR_TYPE_TO_API_CLASS: Record<string, string> = {
-  derived: '派生',
-  extended: '衍生'
-}
-
-const API_CLASS_TO_INDICATOR_TYPE: Record<string, string> = {
-  atomic: 'derived',
-  derived: 'derived',
-  extended: 'extended',
-  派生: 'derived',
-  衍生: 'extended'
-}
-
-const UI_TO_API_FREQUENCY: Record<string, string> = {
-  day: 'daily',
-  hour: 'hourly',
-  month: 'monthly',
-  quarter: 'quarterly',
-  week: 'weekly',
-  year: 'yearly'
-}
-
-const API_TO_UI_FREQUENCY: Record<string, string> = {
-  daily: 'day',
-  day: 'day',
-  hour: 'hour',
-  hourly: 'hour',
-  month: 'month',
-  monthly: 'month',
-  quarter: 'quarter',
-  quarterly: 'quarter',
-  week: 'week',
-  weekly: 'week',
-  year: 'year',
-  yearly: 'year'
-}
 
 const UI_TO_API_QUALITY_LEVEL: Record<string, string> = {
   p0: 'P0-核心',
   p1: 'P1-重要',
   p2: 'P2-一般'
-}
-
-const API_TO_UI_QUALITY_LEVEL: Record<string, string> = {
-  P0: 'p0',
-  p0: 'p0',
-  'P0-核心': 'p0',
-  P1: 'p1',
-  p1: 'p1',
-  'P1-重要': 'p1',
-  P2: 'p2',
-  p2: 'p2',
-  'P2-一般': 'p2'
-}
-
-const UI_TO_API_DATA_TYPE: Record<string, string> = {
-  amount: 'decimal',
-  number: 'decimal',
-  percent: 'decimal',
-  text: 'string'
-}
-
-const API_TO_UI_DATA_TYPE: Record<string, string> = {
-  decimal: 'number',
-  string: 'text',
-  varchar: 'text'
-}
-
-const STATUS_TEXT_MAP: Record<string, number> = {
-  archive: 0,
-  draft: 2,
-  published: 1,
-  停用: 0,
-  启用: 1,
-  草稿: 2
 }
 
 const initialSearchParams: KnowledgeSearchParams = {
@@ -92,64 +23,12 @@ const initialSearchParams: KnowledgeSearchParams = {
   type: ''
 }
 
-function asObject(value: any): Record<string, any> {
-  if (!value) {
-    return {}
-  }
-  if (typeof value === 'object') {
-    return value as Record<string, any>
-  }
-  if (typeof value !== 'string') {
-    return {}
-  }
-  try {
-    return JSON.parse(value)
-  } catch {
-    return {}
-  }
-}
-
-function parseObjectIfPossible(value: any) {
-  if (!value) {
-    return undefined
-  }
-  if (typeof value === 'object') {
-    return value as Record<string, any>
-  }
-  if (typeof value !== 'string') {
-    return undefined
-  }
-  const text = value.trim()
-  if (!text) {
-    return undefined
-  }
-  try {
-    const parsed = JSON.parse(text)
-    if (parsed && typeof parsed === 'object') {
-      return parsed as Record<string, any>
-    }
-  } catch {
-    // keep fallback below
-  }
-  return undefined
-}
-
 function trimOrUndefined(value: any) {
   if (typeof value !== 'string') {
     return value
   }
   const text = value.trim()
   return text || undefined
-}
-
-function normalizeRelateDimsFieldValue(value: any) {
-  if (!value) {
-    return undefined
-  }
-  if (Array.isArray(value)) {
-    return JSON.stringify(value)
-  }
-  return trimOrUndefined(value)
 }
 
 function parseRelateDimsPayload(value: any) {
@@ -192,150 +71,21 @@ function toNumberOrUndefined(value: any) {
   return Number.isNaN(num) ? undefined : num
 }
 
-function normalizeIndicatorType(value: any) {
-  const key = String(value || '').trim()
-  return API_CLASS_TO_INDICATOR_TYPE[key] || key || 'derived'
-}
-
-function normalizeFrequency(value: any) {
-  const key = String(value || '').trim()
-  return API_TO_UI_FREQUENCY[key] || key || 'day'
-}
-
-function normalizeQualityLevel(value: any) {
-  const key = String(value || '').trim()
-  return API_TO_UI_QUALITY_LEVEL[key] || key || 'p1'
-}
-
-function normalizeDataType(value: any) {
-  const key = String(value || '').trim()
-  return API_TO_UI_DATA_TYPE[key] || key || 'number'
-}
-
-function normalizeStatus(value: any) {
-  if (value === '' || value === null || value === undefined) {
-    return 2
-  }
-  const text = String(value).trim()
-  if (text in STATUS_TEXT_MAP) {
-    return STATUS_TEXT_MAP[text]
-  }
-  const num = Number(text)
-  if (!Number.isNaN(num)) {
-    return num
-  }
-  return 2
-}
-
-function toApiFrequency(value: any) {
-  const key = String(value || '').trim()
-  return UI_TO_API_FREQUENCY[key] || key || undefined
-}
-
 function toApiQualityLevel(value: any) {
   const key = String(value || '').trim()
   return UI_TO_API_QUALITY_LEVEL[key] || key || undefined
 }
 
-function toApiDataType(value: any) {
-  const key = String(value || '').trim()
-  return UI_TO_API_DATA_TYPE[key] || key || undefined
+function toPublicFlag(value: any) {
+  if (value === undefined || value === null || value === '') {
+    return undefined
+  }
+  return value === true || String(value) === '1' ? '1' : '0'
 }
 
 function compactPayload<T extends Record<string, any>>(payload: T): Partial<T> {
   const entries = Object.entries(payload).filter(([, value]) => value !== undefined && value !== null)
   return Object.fromEntries(entries) as Partial<T>
-}
-
-// eslint-disable-next-line complexity
-function normalizeRows(res: any): KnowledgeIndicatorItem[] {
-  if (Array.isArray(res)) {
-    return res as KnowledgeIndicatorItem[]
-  }
-  if (Array.isArray(res?.rows)) {
-    return res.rows as KnowledgeIndicatorItem[]
-  }
-  if (Array.isArray(res?.list)) {
-    return res.list as KnowledgeIndicatorItem[]
-  }
-  if (Array.isArray(res?.data)) {
-    return res.data as KnowledgeIndicatorItem[]
-  }
-  if (Array.isArray(res?.response?.data?.data?.rows)) {
-    return res.response.data.data.rows as KnowledgeIndicatorItem[]
-  }
-  if (Array.isArray(res?.response?.data?.rows)) {
-    return res.response.data.rows as KnowledgeIndicatorItem[]
-  }
-  if (Array.isArray(res?.response?.data?.data)) {
-    return res.response.data.data as KnowledgeIndicatorItem[]
-  }
-  return []
-}
-
-// eslint-disable-next-line complexity
-function mapIndicatorFromApi(item: any): KnowledgeIndicatorItem {
-  const calcLogic = asObject(item.calcLogic)
-  const termId = toNumberOrUndefined(item.indId ?? item.termId)
-
-  return {
-    ...item,
-    accumulateStartDate: item.accumulateStartDate ?? calcLogic.accumulateStartDate,
-    aggMethod: trimOrUndefined(item.projectionFunc) || item.aggMethod || calcLogic.aggMethod,
-    bizName: trimOrUndefined(item.bizName),
-    calcPeriod: item.calcPeriod ?? calcLogic.calcPeriod,
-    compareMetricId: item.compareMetricId ?? calcLogic.compareMetricId,
-    comparePeriod: item.comparePeriod ?? calcLogic.comparePeriod,
-    compareType: item.compareType ?? calcLogic.compareType,
-    comparisonOutputType: item.comparisonOutputType ?? calcLogic.comparisonOutputType,
-    cumulativeMetricId: item.cumulativeMetricId ?? calcLogic.cumulativeMetricId,
-    cumulativeMode: item.cumulativeMode ?? calcLogic.cumulativeMode,
-    cumulativeTimeRange: item.cumulativeTimeRange ?? calcLogic.cumulativeTimeRange,
-    dataFrequency: normalizeFrequency(item.updateFrequency ?? item.dataFrequency),
-    dataType: normalizeDataType(item.dataType),
-    derivedConditionExpr: item.derivedConditionExpr ?? calcLogic.derivedConditionExpr,
-    derivedConditions: item.derivedConditions ?? calcLogic.derivedConditions,
-    dimensionFieldIds: normalizeRelateDimsFieldValue(item.relateDims ?? item.dimensionFieldIds),
-    divideZeroStrategy: item.divideZeroStrategy ?? calcLogic.divideZeroStrategy,
-    expr: trimOrUndefined(item.expr) || calcLogic.expr,
-    groupId: toNumberOrUndefined(item.groupId),
-    groupName: trimOrUndefined(item.groupName),
-    indicatorCode: trimOrUndefined(item.indicatorCode),
-    indicatorType: normalizeIndicatorType(item.indicatorClass ?? item.indicatorType),
-    isPublic: String(item.isPublic ?? '1') === '1',
-    measurementUnit: trimOrUndefined(item.measurementUnit),
-    nullStrategy: item.nullStrategy ?? calcLogic.nullStrategy,
-    owner: trimOrUndefined(item.indicatorOwner ?? item.owner),
-    ownerEmail: trimOrUndefined(item.ownerEmail),
-    ownerPhone: trimOrUndefined(item.ownerPhone),
-    percentileValue: item.percentileValue ?? calcLogic.percentileValue,
-    qualityLevel: normalizeQualityLevel(item.qualityLevel),
-    ratioDenominatorId: item.ratioDenominatorId ?? calcLogic.ratioDenominatorId,
-    ratioNumeratorId: item.ratioNumeratorId ?? calcLogic.ratioNumeratorId,
-    ratioPrecision: item.ratioPrecision ?? calcLogic.ratioPrecision,
-    relItemId: trimOrUndefined(item.relItemId ?? calcLogic.relItemId),
-    relViewid: trimOrUndefined(item.relViewId ?? item.relViewid),
-    remark: trimOrUndefined(item.businessDefinition ?? item.remark),
-    rollingWindowSize: item.rollingWindowSize ?? calcLogic.rollingWindowSize,
-    semanticGroupId: toNumberOrUndefined(item.semanticGroupId),
-    semanticSchemaId: toNumberOrUndefined(item.relSchemaId ?? item.semanticSchemaId),
-    semanticSchemaName: trimOrUndefined(item.relSchemaName ?? item.semanticSchemaName),
-    status: normalizeStatus(item.status),
-    techId: parseObjectIfPossible(item.techId ?? calcLogic.techId) || item.techId || calcLogic.techId,
-    techName: trimOrUndefined(item.techName),
-    technicalRemark: trimOrUndefined(item.technicalDefinition ?? item.technicalRemark),
-    templateParams: item.templateParams ?? calcLogic.templateParams,
-    templateType: trimOrUndefined(item.templateType ?? calcLogic.templateType),
-    termAlias: trimOrUndefined(item.indAlias ?? item.termAlias),
-    termId,
-    thresholdMax: trimOrUndefined(item.thresholdMax ?? calcLogic.thresholdMax),
-    thresholdMin: trimOrUndefined(item.thresholdMin ?? calcLogic.thresholdMin),
-    variableMappings: item.variableMappings ?? calcLogic.variableMappings,
-    versionStatus: trimOrUndefined(item.versionStatus),
-    volatilityDataRange: item.volatilityDataRange ?? calcLogic.volatilityDataRange,
-    volatilityMethod: item.volatilityMethod ?? calcLogic.volatilityMethod,
-    volatilityMetricId: item.volatilityMetricId ?? calcLogic.volatilityMetricId
-  }
 }
 
 function getApiErrorMessage(res: any, fallback: string) {
@@ -349,6 +99,14 @@ function isApiSuccess(res: any) {
   }
   const code = Number(res?.response?.data?.code ?? 200)
   return Number.isNaN(code) || code <= 200
+}
+
+function normalizeDetail(res: any) {
+  const data = res?.response?.data?.data ?? res?.data
+  if (!data || Array.isArray(data)) {
+    return null
+  }
+  return data
 }
 
 function buildCalcLogic(values: Record<string, any>) {
@@ -387,40 +145,33 @@ function buildCalcLogic(values: Record<string, any>) {
 }
 
 function buildSubmitPayload(payload: Record<string, any>, selectedGroup: KnowledgeGroupItem | null) {
-  const indicatorType = String(payload.indicatorType || 'derived')
-  const indicatorClass = INDICATOR_TYPE_TO_API_CLASS[indicatorType] || indicatorType
   const selectedGroupId = toNumberOrUndefined(selectedGroup?.groupId)
 
   return compactPayload({
     alertConfig: payload.alertConfig,
     bizName: trimOrUndefined(payload.bizName),
-    businessDefinition: trimOrUndefined(payload.remark),
+    businessDefinition: trimOrUndefined(payload.businessDefinition),
     calcLogic: buildCalcLogic(payload),
-    dataType: toApiDataType(payload.dataType),
+    dataType: trimOrUndefined(payload.dataType),
     groupId: selectedGroupId ?? toNumberOrUndefined(payload.groupId),
-    indAlias: trimOrUndefined(payload.termAlias),
-    indicatorCategory: trimOrUndefined(payload.indicatorCategory),
-    indicatorClass,
+    indAlias: trimOrUndefined(payload.indAlias),
+    indicatorClass: trimOrUndefined(payload.indicatorClass),
     indicatorCode: trimOrUndefined(payload.indicatorCode),
-    indicatorOwner: trimOrUndefined(payload.owner),
+    indicatorOwner: trimOrUndefined(payload.indicatorOwner),
     indId: toNumberOrUndefined(payload.termId ?? payload.indId),
-    isPublic: payload.isPublic ? '1' : '0',
+    isPublic: toPublicFlag(payload.isPublic),
     measurementUnit: trimOrUndefined(payload.measurementUnit),
     ownerEmail: trimOrUndefined(payload.ownerEmail),
     ownerPhone: trimOrUndefined(payload.ownerPhone),
-    projectionFunc: trimOrUndefined(payload.aggMethod),
     qualityLevel: toApiQualityLevel(payload.qualityLevel),
     relateDims: parseRelateDimsPayload(payload.dimensionFieldIds),
-    relSchemaId: toNumberOrUndefined(payload.semanticSchemaId),
-    relViewId: trimOrUndefined(payload.relViewid),
-    remark: trimOrUndefined(payload.remark),
     spaceId: Number(localStorage.getItem('spaceId')),
-    status: String(payload.status ?? 2),
+    status: trimOrUndefined(payload.status),
     techId: payload.techId,
     techName: trimOrUndefined(payload.techName),
-    technicalDefinition: trimOrUndefined(payload.technicalRemark),
-    updateFrequency: toApiFrequency(payload.dataFrequency),
-    versionStatus: String(payload.status ?? 2)
+    technicalDefinition: trimOrUndefined(payload.technicalDefinition),
+    updateFrequency: trimOrUndefined(payload.updateFrequency),
+    versionStatus: trimOrUndefined(payload.versionStatus)
   })
 }
 
@@ -428,28 +179,31 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
   const [loading, setLoading] = useState(false)
   const [tableData, setTableData] = useState<KnowledgeIndicatorItem[]>([])
   const [searchParams, setSearchParams] = useState<KnowledgeSearchParams>(initialSearchParams)
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [customDrawerOpen, setCustomDrawerOpen] = useState(false)
+  const [atomicDrawerOpen, setAtomicDrawerOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<KnowledgeIndicatorItem | null>(null)
 
-  const fetchTableData = async () => {
+  const fetchTableData = async (params?: Partial<KnowledgeSearchParams>) => {
     if (!selectedGroup?.groupId) {
       setTableData([])
       return
     }
+    const queryParams = {
+      ...searchParams,
+      ...(params || {})
+    }
     setLoading(true)
     try {
       const res = await queryKnowledgeIndicators({
+        groupId: selectedGroup.groupId,
+        indicatorClass: queryParams.type || undefined,
+        keyword: queryParams.keyword || undefined,
         pageNum: 1,
-        pageSize: 1000,
-        spaceId: Number(localStorage.getItem('spaceId'))
+        pageSize: 10,
+        spaceId: Number(localStorage.getItem('spaceId')),
+        status: queryParams.status
       })
-      const list = normalizeRows(res)
-        .map(item => mapIndicatorFromApi(item))
-        .filter(item => Number(item.groupId) === Number(selectedGroup.groupId))
-        .map(item => ({
-          ...item,
-          groupName: item.groupName || selectedGroup.groupName
-        }))
+      const list = (res?.response?.data?.data?.list || []) as KnowledgeIndicatorItem[]
       setTableData(list)
     } finally {
       setLoading(false)
@@ -457,21 +211,9 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
   }
 
   useEffect(() => {
-    fetchTableData()
+    fetchTableData(searchParams)
   }, [selectedGroup?.groupId])
 
-  const filteredData = useMemo(() => {
-    return tableData.filter(item => {
-      const typeMatch = searchParams.type ? item.indicatorType === searchParams.type : true
-      const statusMatch =
-        typeof searchParams.status === 'number' ? Number(item.status ?? 2) === Number(searchParams.status) : true
-      const keyword = String(searchParams.keyword || '').trim()
-      const keywordMatch = keyword
-        ? String(item.bizName || '').includes(keyword) || String(item.techName || '').includes(keyword)
-        : true
-      return typeMatch && statusMatch && keywordMatch
-    })
-  }, [searchParams, tableData])
 
   const handleSearchChange = (value: Partial<KnowledgeSearchParams>) => {
     setSearchParams(prev => ({
@@ -481,35 +223,64 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
   }
 
   const handleQuery = () => {
-    fetchTableData()
+    fetchTableData(searchParams)
   }
 
   const handleReset = () => {
     setSearchParams(initialSearchParams)
-    fetchTableData()
+    fetchTableData(initialSearchParams)
   }
 
-  const handleAdd = () => {
+  const handleAddCustom = () => {
     if (!selectedGroup?.groupId) {
       message.error('请先选择知识提取组')
       return
     }
+  
     setEditingItem(null)
-    setDrawerOpen(true)
+    setCustomDrawerOpen(true)
   }
 
-  const handleEdit = (record: KnowledgeIndicatorItem) => {
-    setEditingItem(record)
-    setDrawerOpen(true)
+  const handleAddAtomic = () => {
+    if (!selectedGroup?.groupId) {
+      message.error('请先选择知识提取组')
+      return
+    }
+    setAtomicDrawerOpen(true)
+  }
+
+  const handleEdit = async (record: KnowledgeIndicatorItem) => {
+    const indicatorId = Number(record.indId ?? record.termId)
+    if (!indicatorId) {
+      message.error('缺少指标ID，无法获取详情')
+      return
+    }
+
+    const res = await queryKnowledgeIndicatorDetail({
+      id: indicatorId
+    })
+    if (!isApiSuccess(res)) {
+      message.error(getApiErrorMessage(res, '获取指标详情失败'))
+      return
+    }
+
+    const detail = normalizeDetail(res)
+    if (!detail) {
+      message.error('获取指标详情失败')
+      return
+    }
+    setEditingItem(detail)
+    setCustomDrawerOpen(true)
   }
 
   const handleDelete = async (record: KnowledgeIndicatorItem) => {
-    if (!record.termId) {
+    const indicatorId = Number(record.indId ?? record.termId)
+    if (!indicatorId) {
       message.error('缺少指标ID，无法删除')
       return
     }
     const res = await deleteKnowledgeIndicator({
-      id: record.termId,
+      id: indicatorId,
       spaceId: Number(localStorage.getItem('spaceId')),
       techName: record.techName
     })
@@ -533,22 +304,44 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     return true
   }
 
-  const closeDrawer = (refresh?: boolean) => {
-    setDrawerOpen(false)
+  const handleAtomicMappingSubmit = async (payload: Array<Record<string, any>>) => {
+    const res = await syncAtomicIndicators(payload as any)
+    const code = Number(res?.response?.data?.code ?? res?.code ?? 200)
+    if (code !== 200) {
+      message.error(getApiErrorMessage(res, '原子指标映射保存失败'))
+      return false
+    }
+    message.success('原子指标映射保存成功')
+    await fetchTableData()
+    return true
+  }
+
+  const closeCustomDrawer = (refresh?: boolean) => {
+    setCustomDrawerOpen(false)
     setEditingItem(null)
     if (refresh) {
       fetchTableData()
     }
   }
 
+  const closeAtomicDrawer = (refresh?: boolean) => {
+    setAtomicDrawerOpen(false)
+    if (refresh) {
+      fetchTableData()
+    }
+  }
+
   return {
-    closeDrawer,
-    drawerOpen,
+    atomicDrawerOpen,
+    closeAtomicDrawer,
+    closeCustomDrawer,
+    customDrawerOpen,
     editingItem,
-    filteredData,
-    handleAdd,
+    handleAddAtomic,
+    handleAddCustom,
     handleDelete,
     handleEdit,
+    handleAtomicMappingSubmit,
     handleQuery,
     handleReset,
     handleSearchChange,

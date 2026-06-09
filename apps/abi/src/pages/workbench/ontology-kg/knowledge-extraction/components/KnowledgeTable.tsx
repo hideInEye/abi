@@ -29,22 +29,23 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
   const columns = useMemo(
     () => [
       {
-        dataIndex: 'bizName',
+        dataIndex: 'techName',
         ellipsis: true,
-        key: 'bizName',
+        key: 'techName',
         title: '指标名称',
         width: 180
       },
       {
-        dataIndex: 'groupName',
+        dataIndex: 'indicatorCode',
         ellipsis: true,
-        key: 'groupName',
-        title: '指标分类',
+        key: 'indicatorCode',
+        render: (value: string) => value || '-',
+        title: '指标编码',
         width: 180
       },
       {
-        dataIndex: 'indicatorType',
-        key: 'indicatorType',
+        dataIndex: 'indicatorClass',
+        key: 'indicatorClass',
         render: (value: string) => {
           const text = INDICATOR_TYPE_TEXT_MAP[value] || value || '-'
           return <Tag color="blue">{text}</Tag>
@@ -52,14 +53,7 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
         title: '指标类型',
         width: 130
       },
-      {
-        dataIndex: 'semanticSchemaName',
-        ellipsis: true,
-        key: 'semanticSchemaName',
-        render: (value: string) => value || '-',
-        title: '所属模型',
-        width: 220
-      },
+      { dataIndex: 'qualityLevel', key: 'qualityLevel', render: (value: string) => value || '-', title: '质量等级', width: 120 },
       {
         dataIndex: 'status',
         key: 'status',
@@ -69,13 +63,6 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
         },
         title: '状态',
         width: 100
-      },
-      {
-        dataIndex: 'updateTime',
-        key: 'updateTime',
-        render: (_: string, record: KnowledgeIndicatorItem) => record.updateTime || record.createTime || '-',
-        title: '更新时间',
-        width: 190
       },
       {
         fixed: 'right' as const,
@@ -139,7 +126,7 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
           loading={loading}
           locale={{ emptyText: emptyNode }}
           pagination={{ pageSize: 10, showSizeChanger: true }}
-          rowKey={record => String(record.termId || record.techName || record.bizName)}
+          rowKey={record => String(record.indId || record.termId || record.techName || record.bizName)}
           scroll={dataSource.length > 0 ? { x: tableWidth } : undefined}
           size="small"
         />

@@ -32,18 +32,6 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
       return Promise.reject(new Error('指标名称仅支持中文、英文、数字、下划线'))
     }
 
-    const duplicate = existingItems.some(item => {
-      if (!item.bizName) {
-        return false
-      }
-      if (editingItem?.termId && item.termId === editingItem.termId) {
-        return false
-      }
-      return item.bizName.trim() === text
-    })
-    if (duplicate) {
-      return Promise.reject(new Error('指标名称已存在，请更换后重试'))
-    }
     return Promise.resolve()
   }
 
@@ -73,8 +61,8 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     if (lowerSet.size !== list.length) {
       return Promise.reject(new Error('别名需唯一且不超过10个'))
     }
-    const bizName = String(form.getFieldValue('bizName') || '').trim()
-    if (bizName && list.includes(bizName)) {
+    const techName = String(form.getFieldValue('techName') || '').trim()
+    if (techName && list.includes(techName)) {
       return Promise.reject(new Error('别名不能与指标名称相同'))
     }
     return Promise.resolve()

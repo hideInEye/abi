@@ -44,20 +44,20 @@ function buildDerivedResult({
   atomicMetricOptions,
   calcPeriod,
   conditions,
-  dataFrequency,
+  updateFrequency,
   techId
 }: {
   allFields: any[]
   atomicMetricOptions: AtomicMetricOption[]
   calcPeriod?: string | number
   conditions?: ConditionItem[]
-  dataFrequency?: string
+  updateFrequency?: string
   techId?: string | number
 }) {
   const atomicLabel = atomicMetricOptions.find(item => String(item.value) === String(techId || ''))?.label || '原子指标'
 
   const freqLabel =
-    DATA_FREQUENCY_OPTIONS.find(item => String(item.value) === String(dataFrequency || ''))?.label || '周期'
+    DATA_FREQUENCY_OPTIONS.find(item => String(item.value) === String(updateFrequency || ''))?.label || '周期'
   const timeWindow = String(calcPeriod || '1').trim() || '1'
 
   const fieldMap = new Map<string, string>()
@@ -117,7 +117,7 @@ function buildDerivedResult({
 export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields, atomicMetricOptions, form }) => {
   const techId = AForm.useWatch('techId', form)
   const calcPeriod = AForm.useWatch('calcPeriod', form)
-  const dataFrequency = AForm.useWatch('dataFrequency', form)
+  const updateFrequency = AForm.useWatch('updateFrequency', form)
   const derivedConditions = AForm.useWatch('derivedConditions', form) as ConditionItem[] | undefined
 
   const fieldOptions = useMemo(
@@ -136,10 +136,10 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
         atomicMetricOptions,
         calcPeriod,
         conditions: derivedConditions,
-        dataFrequency,
+        updateFrequency,
         techId
       }),
-    [allFields, atomicMetricOptions, calcPeriod, dataFrequency, derivedConditions, techId]
+    [allFields, atomicMetricOptions, calcPeriod, updateFrequency, derivedConditions, techId]
   )
 
   useEffect(() => {

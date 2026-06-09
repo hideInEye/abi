@@ -3,6 +3,7 @@ import React from 'react'
 import { Group } from '@/components/stateful/group/Group.tsx'
 import PageTitle from '@/components/stateless/common/PageTitle'
 
+import { KnowledgeAtomicMappingDrawer } from './components/KnowledgeAtomicMappingDrawer'
 import { KnowledgeOperateDrawer } from './components/KnowledgeOperateDrawer'
 import { KnowledgeSearchBar } from './components/KnowledgeSearchBar'
 import { KnowledgeTable } from './components/KnowledgeTable'
@@ -13,11 +14,14 @@ import type { KnowledgeGroupItem } from './types'
 export const Component: React.FC = () => {
   const [selectedGroup, setSelectedGroup] = useState<KnowledgeGroupItem | null>(null)
   const {
-    closeDrawer,
-    drawerOpen,
+    atomicDrawerOpen,
+    closeAtomicDrawer,
+    closeCustomDrawer,
+    customDrawerOpen,
     editingItem,
-    filteredData,
-    handleAdd,
+    handleAddAtomic,
+    handleAddCustom,
+    handleAtomicMappingSubmit,
     handleDelete,
     handleEdit,
     handleQuery,
@@ -66,13 +70,14 @@ export const Component: React.FC = () => {
             <KnowledgeSearchBar
               addDisabled={!selectedGroup?.groupId}
               searchParams={searchParams}
-              onAdd={handleAdd}
+              onAddAtomic={handleAddAtomic}
+              onAddCustom={handleAddCustom}
               onQuery={handleQuery}
               onReset={handleReset}
               onSearchChange={handleSearchChange}
             />
             <KnowledgeTable
-              dataSource={filteredData}
+              dataSource={tableData}
               loading={loading}
               onDelete={handleDelete}
               onEdit={handleEdit}
@@ -86,9 +91,17 @@ export const Component: React.FC = () => {
         existingItems={tableData}
         groupId={selectedGroup?.groupId}
         groupName={selectedGroup?.groupName}
-        open={drawerOpen}
-        onClose={closeDrawer}
+        open={customDrawerOpen}
+        onClose={closeCustomDrawer}
         onSubmit={handleSubmit}
+      />
+
+      <KnowledgeAtomicMappingDrawer
+        groupName={selectedGroup?.groupName}
+        open={atomicDrawerOpen}
+        onClose={closeAtomicDrawer}
+        groupId={selectedGroup?.groupId}
+        onSubmit={handleAtomicMappingSubmit}
       />
     </div>
   )

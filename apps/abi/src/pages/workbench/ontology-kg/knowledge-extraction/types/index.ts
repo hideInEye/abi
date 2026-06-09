@@ -8,7 +8,7 @@ export interface KnowledgeGroupItem {
   groupId: number
   groupName: string
   parentId?: number
-  remark?: string
+  businessDefinition?: string
 }
 
 export interface KnowledgeIndicatorItem {
@@ -27,7 +27,6 @@ export interface KnowledgeIndicatorItem {
   cumulativeMode?: string
   cumulativeTimeRange?: string
   createTime?: string
-  dataFrequency?: string
   dataType?: string
   derivedConditions?: Array<{ logic?: 'AND' | 'OR'; metric?: string; operator?: string; value?: string }>
   derivedConditionExpr?: string
@@ -38,17 +37,14 @@ export interface KnowledgeIndicatorItem {
   groupName?: string
   indAlias?: string
   indId?: number
-  indicatorCategory?: string
   indicatorClass?: string
   indicatorCode?: string
   indicatorOwner?: string
-  indicatorType?: string
   isPublic?: string
   measurementUnit?: string
   nullStrategy?: string
   ownerEmail?: string
   ownerPhone?: string
-  owner?: string
   percentileValue?: number | string
   projectionFunc?: string
   qualityLevel?: string
@@ -61,7 +57,7 @@ export interface KnowledgeIndicatorItem {
   relViewId?: number | string
   relViewid?: number | string
   relateDims?: string
-  remark?: string
+  businessDefinition?: string
   rollingWindowSize?: number
   semanticGroupId?: number
   semanticType?: string
@@ -70,11 +66,9 @@ export interface KnowledgeIndicatorItem {
   status?: number | string
   techName?: string
   techId?: Record<string, any> | string
-  technicalRemark?: string
   technicalDefinition?: string
   templateParams?: Record<string, any> | string
   templateType?: string
-  termAlias?: string
   termId?: number
   thresholdMax?: string
   thresholdMin?: string
@@ -100,7 +94,7 @@ export interface KnowledgeFormValues {
   cumulativeMetricId?: number | string
   cumulativeMode?: string
   cumulativeTimeRange?: string
-  dataFrequency?: string
+  updateFrequency?: string
   dataType?: string
   derivedConditions?: Array<{ logic?: 'AND' | 'OR'; metric?: string; operator?: string; value?: string }>
   derivedConditionExpr?: string
@@ -108,30 +102,33 @@ export interface KnowledgeFormValues {
   divideZeroStrategy?: string
   expr?: string
   indicatorAliasTags?: string[]
-  indicatorCategory?: string
-  indicatorType?: string
+  indicatorClass?: string
   indicatorCode?: string
+  indicatorOwner?: string
+  indAlias?: string
   isPublic?: boolean | string
   measurementUnit?: string
   nullStrategy?: string
   ownerEmail?: string
   ownerPhone?: string
-  owner?: string
   percentileValue?: number
+  projectionFunc?: string
   qualityLevel?: string
   ratioDenominatorId?: number | string
   ratioNumeratorId?: number | string
   ratioPrecision?: string
   relItemId?: string
   relViewid?: number | string
-  remark?: string
+  businessDefinition?: string
   rollingWindowSize?: number
   semanticGroupId?: number
+  semanticGroupName?: string
   semanticSchemaId?: number
+  semanticSchemaName?: string
   status?: number | string
   techName?: string
   techId?: Record<string, any> | string
-  technicalRemark?: string
+  technicalDefinition?: string
   templateType?: string
   thresholdMax?: string
   thresholdMin?: string
@@ -140,6 +137,7 @@ export interface KnowledgeFormValues {
   volatilityDataRange?: string
   volatilityMethod?: string
   volatilityMetricId?: number | string
+  versionStatus?: string
 }
 
 export interface KnowledgeSearchParams {

@@ -2,7 +2,7 @@ import { apiRequest } from '../request'
 
 const INDICATOR_API_PREFIX = '/api/abi-ontology/api/v1/ontology/indicator'
 
-export function queryKnowledgeIndicators(params: { pageNum?: number; pageSize?: number; spaceId: number }) {
+export function queryKnowledgeIndicators(params: Record<string, any> & { pageNum?: number; pageSize?: number; spaceId: number }) {
   return apiRequest({
     data: {
       pageNum: 1,
@@ -41,13 +41,9 @@ export function deleteKnowledgeIndicator(params: { id: number; spaceId: number; 
   })
 }
 
-export function queryKnowledgeIndicatorDetail(params: { id: number; spaceId: number; techName?: string }) {
+export function queryKnowledgeIndicatorDetail(params: { id: number; }) {
   return apiRequest({
     method: 'get',
-    params: {
-      spaceId: params.spaceId,
-      techName: params.techName || ''
-    },
     url: `${INDICATOR_API_PREFIX}/detail/${params.id}`
   })
 }
@@ -69,9 +65,9 @@ export function queryKnowledgeIndicatorDetailList(params: {
   })
 }
 
-export function syncAtomicIndicators(params: { relSchemaId: number; spaceId: number }) {
+export function syncAtomicIndicators(data: Array<Record<string, any>>) {
   return apiRequest({
-    data: params,
+    data,
     method: 'post',
     url: `${INDICATOR_API_PREFIX}/sync/atom`
   })
