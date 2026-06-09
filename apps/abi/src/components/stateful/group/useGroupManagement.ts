@@ -6,6 +6,8 @@ import {
   editTableSemanticsGroup,
   tableSemanticsGroupList
 } from '@/service/api/table-semantics';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 import type { GroupProps } from './Group';
 
@@ -20,6 +22,7 @@ export interface QuestionGroupItem {
 }
 
 export const useGroupManagement = (config: GroupProps['config']) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [groups, setGroups] = useState<QuestionGroupItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<QuestionGroupItem | null>(null);
@@ -30,7 +33,7 @@ export const useGroupManagement = (config: GroupProps['config']) => {
       groupType: config.type,
       pageNum: 1,
       pageSize: 60,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     });
     setGroups(data || []);
   };
@@ -41,7 +44,7 @@ export const useGroupManagement = (config: GroupProps['config']) => {
       groupType: config.type,
       parentId: newGroup.parentId ?? 0,
       remark: newGroup.remark,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     });
     const { response:{data:{code}}} = res
     if(code as number >200) return

@@ -14,7 +14,6 @@ import { GLOBAL_SIDER_MENU_ID, hideMenuRoute } from '@/constants/app'
 import { useRoute } from '~/packages/simple-router/src'
 
 import { useMixMenuContext } from '@/hooks/common/menu'
-import { getBreadcrumbsByRoute } from '../global-breadcrumb/shared'
 
 interface Props {
   /** Show padding for content */
@@ -94,8 +93,6 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
     setCurrentSpace(spaceId);
     setSpaceDropdownOpen(false);
     await switchToSpace(spaceId);
-    // 刷新当前页面，使各组件基于新的 spaceId 重新请求数据
-    window.location.reload();
   };
 
   const themeSetting = useAppSelector(getThemeSettings)
@@ -103,13 +100,34 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   const transitionName = themeSetting.page.animate ? themeSetting.page.animateMode : ''
 
   const { allMenus: menus } = useMixMenuContext()
-  const breadcrumb = getBreadcrumbsByRoute(route, menus)
-  const breadcrumbItems = breadcrumb.slice(-2).map((item, index) => {
-    const isLast = index === breadcrumb.slice(-2).length - 1
-    return {
-      title: <span style={{ color: isLast ? '#1a2744' : '#768a9f',fontWeight: isLast ? 600 : 400,}}>{item.label}</span>
+
+  // 构建完整面包屑：遍历 route.matched 在菜单树中逐级查找
+  const breadcrumbItems = useMemo(() => {
+    const items: { label: any; key: string }[] = [];
+    let currentMenus = menus;
+    const matched = route.matched || [];
+
+    for (let i = 0; i < matched.length; i++) {
+      const name = matched[i]?.name;
+      if (!name) continue;
+      const found = currentMenus.find((m: any) => m?.key === name);
+      if (found) {
+        items.push({ label: found.title || found.label, key: found.key });
+        currentMenus = (found as any).children || [];
+      }
     }
-  })
+
+    return items.map((item, index) => {
+      const isLast = index === items.length - 1;
+      return {
+        title: (
+          <span style={{ color: isLast ? '#1a2744' : '#768a9f', fontWeight: isLast ? 600 : 400 }}>
+            {item.label}
+          </span>
+        )
+      };
+    });
+  }, [route.matched, menus])
 
   useUpdateEffect(() => {
     if (!aliveRef.current || !removeCacheKey) return
@@ -123,12 +141,12 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
 
   return (
     <div className="flex min-w-0" style={{ background: 'linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%)' }}>
-      {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 bg-[linear-gradient(135deg,#F0F4FF_0%,#EFF3FF_45%,#EFF2FF_100%)] dark:bg-[#1a1a1a] border-r border-[rgba(130,140,200,0.12)] dark:border-[#333] h-[100vh] transition-all duration-300'} id={GLOBAL_SIDER_MENU_ID} />}
+      {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 bg-[linear-gradient(135deg,#F0F4FF_0%,#EFF3FF_45%,#EFF2FF_100%)] dark:bg-[#1a1a1a] dark:border-[#333] h-[100vh] transition-all duration-300'} id={GLOBAL_SIDER_MENU_ID} />}
       <div className={ClassNames('flex-1 min-w-0 h-screen relative flex flex-col')}>
         {!hideMenuRoute.includes(route.name!) && (
           <div className="px-6 pt-4 pb-4 page-header-container">
             <div className="flex items-center justify-between">
-              <Breadcrumb items={breadcrumbItems} className="abi-breadcrumb" />
+              <Breadcrumb items={breadcrumbItems} separator=">" className="abi-breadcrumb" />
               <Dropdown
                 open={spaceDropdownOpen}
                 onOpenChange={setSpaceDropdownOpen}

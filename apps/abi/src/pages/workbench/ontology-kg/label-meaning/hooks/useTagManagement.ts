@@ -2,10 +2,13 @@ import { message } from 'antd';
 import { debounce } from 'lodash';
 import { useState } from 'react';
 
+import { useAppSelector } from '@/hooks/business/useStore';
 import type { Exp, ExpCondition, TagGroup } from '@/pages/workbench/ontology-kg/label-meaning/types';
 import { addTag, delTag, editTag, queryTag } from '@/service/api/tag-meaning.ts';
+import { getSpaceId } from '@/store/slice/app';
 
 export function useTagManagement() {
+  const spaceId = useAppSelector(getSpaceId) || 0;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<TagGroup | null>(null);
   const [tagGroups, setTagGroups] = useState<TagGroup[]>([]);
@@ -33,7 +36,7 @@ export function useTagManagement() {
     
     const queryParams:any = {
       groupId,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     };
 
     if (params.tagName) {
@@ -84,7 +87,7 @@ export function useTagManagement() {
         ...newTag,
         groupId,
         relItemId: metricIds.size > 0 ? Array.from(metricIds).join() : '',
-        spaceId: Number(localStorage.getItem('spaceId'))
+        spaceId
       });
       getTagList({});
     }

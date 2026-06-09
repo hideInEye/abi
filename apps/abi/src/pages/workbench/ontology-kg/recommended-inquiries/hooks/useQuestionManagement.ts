@@ -1,11 +1,14 @@
 import { message } from 'antd';
 import { useState } from 'react';
 
+import { useAppSelector } from '@/hooks/business/useStore';
 import { addQuestion, deleteQuestion, editQuestion, queryQuestion } from '@/service/api/question.ts';
+import { getSpaceId } from '@/store/slice/app';
 
 import type { QuestionTableData } from '../types';
 
 export function useQuestionManagement() {
+  const spaceId = useAppSelector(getSpaceId);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<QuestionTableData | null>(null);
   const [searchValue, setSearchValue] = useState('');
@@ -31,7 +34,7 @@ export function useQuestionManagement() {
     const { data } = await queryQuestion({
       groupId,
       question,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       pageNum:num,
       pageSize: size
     });
@@ -50,7 +53,7 @@ export function useQuestionManagement() {
       agentId,
       groupId,
       question,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     });
     const { response: {data: { code } } } = res
     if(code as number >200){

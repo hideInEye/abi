@@ -20,6 +20,8 @@ import {
 import TableEmpty from '@/components/stateless/common/TableEmpty';
 import KeySearch from './key-search';
 import MemoryOperateDrawer from './memory-operate-drawer';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 interface DataType {
   address: string;
@@ -69,6 +71,7 @@ interface PropsType {
 }
 
 const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [dataSource, setDataSource] = useState<any[]>([]);
   const [feedback, setFeedback] = useState<{
     record: any;
@@ -157,7 +160,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
       agent_id: agentId,
       page: 1,
       page_size: 10,
-      space_id: Number(localStorage.getItem('spaceId')) // 空间id
+      space_id: spaceId // 空间id
     } as any,
     columns: () => [
       {
@@ -367,7 +370,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
           let dslObj = modelConfig?.mdlConfigs || {};
           try {
             if (cfg?.termGroupId) {
-              const termRes = await fetchTerms({ groupId: cfg.termGroupId, spaceId: Number(localStorage.getItem('spaceId')), termName: '' });
+              const termRes = await fetchTerms({ groupId: cfg.termGroupId, spaceId, termName: '' });
               const termMap: Record<string, string> = {};
               (termRes?.data || []).forEach((it: any) => {
                 if (it?.techName) termMap[it.techName] = it.bizName;
@@ -388,7 +391,7 @@ const MemoryManagement: React.FC<PropsType> = ({ agentId, dispatch, state }) => 
           await syncKnowledgeBase({
             agent_id: `${agentId}`,
             dsl: JSON.stringify(dslObj || {}),
-            space_id: `${localStorage.getItem('spaceId')}`
+            space_id: `${spaceId}`
           });
           } catch (error) {
             console.log('同步向量知识库失败:', error);

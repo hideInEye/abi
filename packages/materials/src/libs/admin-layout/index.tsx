@@ -150,7 +150,7 @@ const AdminLayout: FC<AdminLayoutProps> = ({
         {/*  Main Content  */}
         <main
           id={isContentScroll ? scrollElId : ''}
-          className={classNames('flex flex-col  flex-grow', commonClass, contentClass, leftGapClass(), {
+          className={classNames('flex flex-col flex-grow min-w-0 overflow-x-hidden', commonClass, contentClass, leftGapClass(), {
             'overflow-y-auto': isContentScroll,
           })}
         >

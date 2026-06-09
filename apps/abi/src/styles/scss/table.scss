@@ -274,8 +274,9 @@
   }
 }
 
-// ── 渐变主色按钮 v5 ──
+// ── 主色按钮 v5 ──
 .btn-accent-gradient {
+  height: 34px !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
@@ -296,16 +297,11 @@
     color: #fff !important;
     background: linear-gradient(135deg, #5b7cf7, #7091fa) !important;
   }
-
-  &:active {
-    transform: translateY(0) !important;
-    box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3) !important;
-  }
 }
 
-// ── Ghost按钮 (批量删除等) v5 ──
+// ── Ghost按钮 (批量删除/重置等) v5 ──
 .btn-ghost-v5 {
-  display: inline-flex !important;
+  height: 35px;
   align-items: center !important;
   gap: 6px !important;
   padding: 8px 18px !important;
@@ -316,12 +312,12 @@
   cursor: pointer !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
   background: transparent !important;
-  color: #768a9f !important;
+  color: #5f7490 !important;
 
   &:hover {
-    border-color: #ef4444 !important;
-    color: #ef4444 !important;
-    background: rgba(239, 68, 68, 0.04) !important;
+    border-color: #5f7490 !important;
+    color: #3a4d65 !important;
+    background: rgba(255, 255, 255, 0.4) !important;
   }
 
   &:disabled {
@@ -393,11 +389,16 @@
   border-color: rgba(130, 140, 200, 0.18) !important;
   background: rgba(255, 255, 255, 0.55) !important;
   font-size: 14px !important;
-  line-height: 1.5 !important;
+  // line-height: 1.5 !important;
+  height: 35px !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 
   &:hover {
     border-color: #5b7cf7 !important;
+  }
+
+  input::placeholder {
+    color: #8FA0B5 !important;
   }
 
   &:focus,
@@ -418,25 +419,75 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
+  background: rgba(130, 140, 200, 0.08);
+  color: #768a9f;
 
   &::before {
     content: '';
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
+    flex-shrink: 0;
   }
 
-  &.tag-mysql       { background: rgba(91,124,247,0.08);  color: #4568e8; &::before { background: #4568e8; } }
-  &.tag-postgresql  { background: rgba(16,185,129,0.08);  color: #059669; &::before { background: #059669; } }
-  &.tag-oracle      { background: rgba(239,68,68,0.08);   color: #dc2626; &::before { background: #dc2626; } }
-  &.tag-clickhouse  { background: rgba(245,158,11,0.08);  color: #d97706; &::before { background: #d97706; } }
-  &.tag-doris       { background: rgba(139,92,246,0.08);   color: #7c3aed; &::before { background: #7c3aed; } }
-  &.tag-starrocks   { background: rgba(236,72,153,0.08);  color: #db2777; &::before { background: #db2777; } }
-  &.tag-hive        { background: rgba(245,158,11,0.08);  color: #d97706; &::before { background: #d97706; } }
-  &.tag-dm          { background: rgba(20,184,166,0.08);   color: #0d9488; &::before { background: #0d9488; } }
-  &.tag-kingbase    { background: rgba(99,102,241,0.08);   color: #6366f1; &::before { background: #6366f1; } }
-  &.tag-excel       { background: rgba(16,185,129,0.08);  color: #059669; &::before { background: #059669; } }
-  &.tag-default     { background: rgba(130,140,200,0.08);  color: #768a9f; &::before { background: #768a9f; } }
+  &.tag-mysql       { background: rgba(91,124,247,0.10);  color: #4568e8; &::before { background: #4568e8; } }
+  &.tag-postgresql  { background: rgba(16,185,129,0.10);  color: #059669; &::before { background: #059669; } }
+  &.tag-oracle      { background: rgba(239,68,68,0.10);   color: #dc2626; &::before { background: #dc2626; } }
+  &.tag-clickhouse  { background: rgba(245,158,11,0.10);  color: #d97706; &::before { background: #d97706; } }
+  &.tag-doris       { background: rgba(139,92,246,0.10);   color: #7c3aed; &::before { background: #7c3aed; } }
+  &.tag-starrocks   { background: rgba(236,72,153,0.10);  color: #db2777; &::before { background: #db2777; } }
+  &.tag-hive        { background: rgba(245,158,11,0.10);  color: #d97706; &::before { background: #d97706; } }
+  &.tag-dm          { background: rgba(20,184,166,0.10);   color: #0d9488; &::before { background: #0d9488; } }
+  &.tag-kingbase    { background: rgba(99,102,241,0.10);   color: #6366f1; &::before { background: #6366f1; } }
+  &.tag-excel       { background: rgba(16,185,129,0.10);  color: #059669; &::before { background: #059669; } }
+  &.tag-default     { background: rgba(130,140,200,0.10);  color: #768a9f; &::before { background: #768a9f; } }
+}
+
+// ── 状态标签 v5 status tag 色块 ──
+.abi-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &.status-normal {
+    background: rgba(16, 185, 129, 0.10);
+    color: #059669;
+
+    &::before {
+      background: #059669;
+    }
+  }
+
+  &.status-error {
+    background: rgba(239, 68, 68, 0.10);
+    color: #dc2626;
+
+    &::before {
+      background: #dc2626;
+    }
+  }
+
+  &.status-warning {
+    background: rgba(245, 158, 11, 0.10);
+    color: #d97706;
+
+    &::before {
+      background: #d97706;
+    }
+  }
 }
 
 // ── 操作按钮链接样式 v5 .act ──
@@ -655,8 +706,12 @@
     }
     .lbl {
       color: #a3b3c8;
-      min-width: 60px;
+      min-width: 76px;
       flex-shrink: 0;
+
+      &::after {
+        content: '：';
+      }
     }
     .val {
       color: #3e5068;

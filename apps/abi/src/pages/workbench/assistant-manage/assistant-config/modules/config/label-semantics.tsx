@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 
 import { fetchTags } from '@/service/api/assistant-manage';
 import { grouplist } from '@/service/api/data-table-meaning';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 // 接口未提供
 // import { getAgentConfigDs } from '@/service/api/assistant-manage';
 
@@ -21,6 +23,7 @@ interface PropsType {
 }
 
 const LabelSemantics: FC<PropsType> = memo(({ dispatch, schemaId, state }) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [dataSource, setDataSource] = useState<RecordType[]>([]);
   const [groupOptions, setGroupOptions] = useState<any[]>([]);
 
@@ -30,7 +33,7 @@ const LabelSemantics: FC<PropsType> = memo(({ dispatch, schemaId, state }) => {
     const res = await grouplist({
       pageNum,
       pageSize,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     });
     // const res = await grouplist();
     setGroupOptions(res.data.filter((item: any) => item.groupType === 'tag'));
@@ -38,12 +41,12 @@ const LabelSemantics: FC<PropsType> = memo(({ dispatch, schemaId, state }) => {
 
   useEffect(() => {
     getGrouplist();
-  }, []);
+  }, [spaceId]);
 
   const getDataSource = async () => {
     const res = await fetchTags({
       groupId: state.labelsGroupId,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     });
     const filterResData = res.data.filter((item: any) => item.semanticSchemaId === schemaId);
     setDataSource(filterResData.map((item: any) => ({ key: `${item.tagId}`, title: item.tagName, ...item })));

@@ -1,6 +1,8 @@
 import type { FormInstance } from 'antd';
 
+import { useAppSelector } from '@/hooks/business/useStore';
 import { getCollectionDetail } from '@/service/api';
+import { getSpaceId } from '@/store/slice/app';
 
 import type { IAllFields, IDataCollectionOption } from '../../types';
 
@@ -11,10 +13,11 @@ interface DataMapsSelectProps {
 }
 
 export function DataMapsSelect({ dataCollectionList, dataScopeHandle, form }: DataMapsSelectProps) {
+  const spaceId = useAppSelector(getSpaceId) || 0;
   const dataScopeChange = async () => {
     const viewId = form.getFieldValue('viewId');
     const { data } = await getCollectionDetail({
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       viewId
     });
     dataScopeHandle(data?.allFields);

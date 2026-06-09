@@ -4,6 +4,7 @@ import {
   LeftOutlined,
   RightOutlined,
   MoreOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { Dropdown, message } from "antd";
 import { Suspense } from "react";
@@ -19,6 +20,8 @@ import type { MetadataAnalysisContext } from "@/components/metadata-analysis/typ
 import { ViewControls } from "@/components/ViewControls";
 import type { ColumnOption } from "@/components/ViewControls";
 import { useRouter } from "~/packages/simple-router/src/hooks/useRouter";
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 import clickhouseIcon from '@/assets/imgs/home/deClickHouse.svg';
 import dmIcon from '@/assets/imgs/home/deDm.svg';
 import dorisIcon from '@/assets/imgs/home/deDoris.svg';
@@ -76,6 +79,7 @@ export function Component() {
   const { t } = useTranslation();
   const { getSourceTypeOptions, sourceTypeOptions } = useDatasource();
   const router = useRouter();
+  const spaceId = useAppSelector(getSpaceId);
   const [searchValue, setSearchValue] = useState('');
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [jumpValue, setJumpValue] = useState('');
@@ -125,12 +129,11 @@ export function Component() {
   const { columnChecks, data, run, searchProps, setColumnChecks, tableProps, updateSearchParams, searchParams } =
     useTable({
       apiFn: fetchDataSourceList as any,
-      apiParams: {
+      apiParams: useMemo(() => ({
         pageNum: 1,
         pageSize: 10,
-        sourceName: searchValue,
-        spaceId: Number(localStorage.getItem("spaceId")),
-      },
+        spaceId,
+      }), [spaceId]),
       columns: () =>
         [
           {
@@ -226,7 +229,7 @@ export function Component() {
                       {
                         key: 'analysis',
                         label: (
-                          <span onClick={() => setAnalysisContext({ nodeId: record.sourceId, nodeName: record.sourceName, nodeType: 'DATA_SOURCE', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}>
+                          <span onClick={() => setAnalysisContext({ nodeId: record.sourceId, nodeName: record.sourceName, nodeType: 'DATA_SOURCE', spaceId: spaceId || undefined })}>
                             元数据分析
                           </span>
                         ),
@@ -280,7 +283,7 @@ export function Component() {
       }),
       sourceName,
       sourceType,
-      spaceId: Number(localStorage.getItem("spaceId")),
+      spaceId,
     };
 
     if (sourceType === "Excel") {
@@ -288,7 +291,7 @@ export function Component() {
       file[0].sheets = res.sheets;
       commonData = {
         configuration: JSON.stringify(file),
-        spaceId: Number(localStorage.getItem("spaceId")),
+        spaceId,
         fileSourceDbType: "mysql",
         ...res,
       };
@@ -320,7 +323,6 @@ export function Component() {
       message.warning('请先选择要删除的数据源');
       return;
     }
-    const spaceId = Number(localStorage.getItem('spaceId'));
     const promises = checkedRowKeys.map((sourceId) =>
       deleteDataSource({ sourceId: Number(sourceId), spaceId }),
     );
@@ -336,7 +338,7 @@ export function Component() {
   async function handleDelete(record: any) {
     const res = await deleteDataSource({
       sourceId: record.sourceId,
-      spaceId: Number(localStorage.getItem("spaceId")),
+      spaceId,
     });
     if (res.response.data.code === 200) {
       onDeleted();
@@ -471,7 +473,7 @@ export function Component() {
                 {visibleKeys.has('updateTime') && (
                   <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime}</span></div>
                 )}
-                <div className="row"><span className="lbl">状态</span><span className="val">正常</span></div>
+                <div className="row"><span className="lbl">状态</span><span className="abi-status-tag status-normal">正常</span></div>
               </div>
               <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
                 <Dropdown
@@ -527,7 +529,7 @@ export function Component() {
             onChange={(e) => setSearchValue(e.target.value)}
             onPressEnter={handleSearch}
             className="abi-field-input"
-            style={{ width: '16rem' }}
+            style={{ width: '212px' }}
           />
           <ADatePicker.RangePicker
             placeholder={['开始时间', '结束时间']}
@@ -550,7 +552,7 @@ export function Component() {
         <div className="abi-toolbar">
           <div className="abi-toolbar-left">
             <AButton className="btn-accent-gradient" onClick={() => handleAdd()}>
-              + 新增数据源
+              <PlusOutlined />新增数据源
             </AButton>
             <AButton
               className="btn-ghost-v5"

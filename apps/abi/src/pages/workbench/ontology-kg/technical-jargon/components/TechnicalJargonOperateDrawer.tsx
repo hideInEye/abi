@@ -2,7 +2,9 @@ import { CloseOutlined } from '@ant-design/icons';
 import { Steps, message } from 'antd'; // 新增配置列表
 import { useForm } from 'antd/es/form/Form';
 
+import { useAppSelector } from '@/hooks/business/useStore';
 import { addTerms, editTerms } from '@/service/api/Industry.ts';
+import { getSpaceId } from '@/store/slice/app';
 
 import type { TagGroup } from '../types/index.ts';
 
@@ -37,6 +39,7 @@ interface Props {
   isEdit?: boolean; // 新增
 }
 const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, onClose, isEdit }) => {
+  const spaceId = useAppSelector(getSpaceId) || 0;
   const [state, dispatch] = useReducer(reducer, initState);
   const [form] = useForm();
 
@@ -69,7 +72,7 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
       techName: state.techName,
       engName: state.techName,
       groupId,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       status: 1 // 写死
     };
 

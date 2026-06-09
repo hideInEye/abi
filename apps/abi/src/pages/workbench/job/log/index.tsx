@@ -5,6 +5,8 @@ import { message } from 'antd';
 import { JOB_GROUP_OPTIONS } from '@/constants/job';
 import { cleanJobLog, deleteJobLog, exportJobLog, fetchJobDetail, fetchJobLogList } from '@/service/api/job';
 import { useRoute } from '~/packages/simple-router/src';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 import JobLogDetailDrawer from './modules/job-log-detail-drawer';
 import KeySearch from './modules/key-search';
@@ -12,6 +14,7 @@ import KeySearch from './modules/key-search';
 export function Component() {
   const { t } = useTranslation();
   const route = useRoute();
+  const spaceId = useAppSelector(getSpaceId);
   const [viewJobLogId, setViewJobLogId] = useState('');
   const [jobDetail, setJobDetail] = useState<any>();
   useEffect(() => {
@@ -31,7 +34,7 @@ export function Component() {
       pageNum: 1,
       pageSize: 10,
       // sourceName: '',
-      spaceId: Number(localStorage.getItem('spaceId')), // 空间id
+      spaceId, // 空间id
     },
     columns: () =>
       [
