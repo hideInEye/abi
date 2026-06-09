@@ -32,6 +32,8 @@ function buildParentTreeOptions(list: any[], excludeId?: number): any[] {
 
 import { GroupFrom } from './GroupFrom';
 import { type QuestionGroupItem, useGroupManagement } from './useGroupManagement';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 import  './group.scss'
 
 export interface GroupProps {
@@ -51,6 +53,7 @@ export interface GroupProps {
 }
 
 export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [form] = Form.useForm();
   const {
     editingGroup,
@@ -70,7 +73,8 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
 
   useEffect(() => {
     getGroups();
-  }, []);
+    setSelectedKeys([]);
+  }, [spaceId]);
 
   useEffect(() => {
     if (groups.length > 0) {

@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 
 import { fetchTerms } from '@/service/api/assistant-manage';
 import { grouplist } from '@/service/api/data-table-meaning';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 import { buildGroupTree } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
 // 接口未提供
 // import { getAgentConfigDs } from '@/service/api/assistant-manage';
@@ -22,6 +24,7 @@ interface PropsType {
 }
 
 const IndustryTerminology: FC<PropsType> = memo(({ dispatch, schemaId, state }) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [dataSource, setDataSource] = useState<RecordType[]>([]);
   const [groupOptions, setGroupOptions] = useState<any[]>([]);
 
@@ -31,7 +34,7 @@ const IndustryTerminology: FC<PropsType> = memo(({ dispatch, schemaId, state }) 
     const res = await grouplist({
       pageNum,
       pageSize,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     });
     const termGroups = (res.data || []).filter((item: any) => item.groupType === 'term');
     setGroupOptions(buildGroupTree(termGroups));
@@ -39,12 +42,12 @@ const IndustryTerminology: FC<PropsType> = memo(({ dispatch, schemaId, state }) 
 
   useEffect(() => {
     getGrouplist();
-  }, []);
+  }, [spaceId]);
 
   const getDataSource = async () => {
     const res = await fetchTerms({
       groupId: state.termGroupId,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       termName: ''
     });
     const filterResData = (res.data || []).filter((item: any) => item.semanticSchemaId === schemaId);

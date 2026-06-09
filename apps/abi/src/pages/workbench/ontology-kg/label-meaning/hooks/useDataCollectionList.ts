@@ -1,5 +1,7 @@
+import { useAppSelector } from '@/hooks/business/useStore';
 import type { IDataCollection, IDataCollectionOption } from '@/pages/workbench/ontology-kg/label-meaning/types';
 import { fetchDataCollectionList } from '@/service/api';
+import { getSpaceId } from '@/store/slice/app';
 
 function transformDataCollectionList(list: IDataCollection[]): IDataCollectionOption[] {
   return list.map(item => ({
@@ -9,12 +11,13 @@ function transformDataCollectionList(list: IDataCollection[]): IDataCollectionOp
 }
 
 export function useDataCollectionList() {
+  const spaceId = useAppSelector(getSpaceId) || 0;
   const [dataCollectionList, setDataCollectionList] = useState<IDataCollectionOption[]>([]);
   async function getDataCollectionList() {
     const { data } = await fetchDataCollectionList({
       pageNum: 1,
       pageSize: 10000,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       viewName: ''
     });
     const rows = data?.data as unknown as IDataCollection[];

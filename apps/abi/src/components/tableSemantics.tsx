@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types';
 import { schemalist } from '@/service/api/data-table-meaning';
 import { type TableSemanticsGroupType, tableSemanticsGroupList } from '@/service/api/table-semantics';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 function mapOptions(list: any[], labelKey: string, valueKey: string) {
   return list.map(item => ({
@@ -29,6 +31,7 @@ interface IProps {
 }
 
 export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = false, type }: IProps) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: number }[]>([]);
   const [groupId, setGroupId] = useState<number | null>(null);
   const [schemaOptions, setSchemaOptions] = useState<{ label: string; value: number }[]>([]);
@@ -61,7 +64,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
       groupType: type,
       pageNum: 1,
       pageSize: 100,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     });
     setGroupOptions(mapOptions(data, 'groupName', 'groupId'));
   };
@@ -73,7 +76,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
       const { semanticGroupId } = form.getFieldsValue();
       setGroupId(semanticGroupId);
     }
-  }, []);
+  }, [spaceId]);
 
   useEffect(() => {
     setSchemaOptions([]);

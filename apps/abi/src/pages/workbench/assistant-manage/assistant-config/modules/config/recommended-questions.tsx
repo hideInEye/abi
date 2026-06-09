@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 
 import { fetchQuestions } from '@/service/api/assistant-manage';
 import { grouplist } from '@/service/api/data-table-meaning';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 import { buildGroupTree } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
 // 接口未提供
 // import { getAgentConfigDs } from '@/service/api/assistant-manage';
@@ -21,6 +23,7 @@ interface PropsType {
 }
 
 const RecommendedQuestions: FC<PropsType> = memo(({ dispatch, state }) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [dataSource, setDataSource] = useState<RecordType[]>([]);
   const [groupOptions, setGroupOptions] = useState<any[]>([]);
 
@@ -30,7 +33,7 @@ const RecommendedQuestions: FC<PropsType> = memo(({ dispatch, state }) => {
     const res = await grouplist({
       pageNum,
       pageSize,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     });
     const questionGroups = (res.data || []).filter((item: any) => item.groupType === 'question');
     setGroupOptions(buildGroupTree(questionGroups));
@@ -38,12 +41,12 @@ const RecommendedQuestions: FC<PropsType> = memo(({ dispatch, state }) => {
 
   useEffect(() => {
     getGrouplist();
-  }, []);
+  }, [spaceId]);
 
   const getDataSource = async () => {
     const res = await fetchQuestions({
       groupId: state.exampleGroupId,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       pageSize: 100,
     });
     setDataSource(res.data?.list?.map((item: any) => ({ key: `${item.problemId}`, title: item.question })));

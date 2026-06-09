@@ -11,7 +11,7 @@
   .ant-menu-submenu-title {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
     padding: 10px 14px !important;
     padding-inline-start: 14px !important;
     border-radius: 8px !important;
@@ -36,6 +36,7 @@
 
     .ant-menu-title-content {
       color: #3a4d65;
+      margin-left: 0 !important;
     }
 
     .ant-menu-submenu-arrow {
@@ -196,10 +197,12 @@
 /* Menu panel container — v5: padding 20px 8px */
 .abi-menu-panel {
   position: relative;
+  z-index: 1;
   height: 100vh;
   width: 240px;
   background: linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%);
-  border-right: 1px solid rgba(130, 140, 200, 0.22);
+  border-right: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 1px 0 0 0 rgba(130, 140, 200, 0.25);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 20px 12px 0;

@@ -8,6 +8,8 @@ import { Suspense } from 'react';
 import { JOB_GROUP_OPTIONS } from '@/constants/job';
 import { addJob, batchDeleteJob, deleteJob, exportJob, fetchChangeStatus, fetchJobList, fetchShareEmail, fetchShareEmailDetail, runJob, updateJob, updateShareEmail } from '@/service/api/job';
 import { useRouter } from '~/packages/simple-router/src/hooks/useRouter';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 import JobDetailDrawer from './modules/job-detail-drawer';
 import KeySearch from './modules/key-search';
@@ -18,6 +20,7 @@ const JobDrawer = lazy(() => import('./modules/job-drawer'));
 export function Component() {
   const { t } = useTranslation();
   const router = useRouter();
+  const spaceId = useAppSelector(getSpaceId);
   // const [viewJobId, setViewJobId] = useState('');
   const [form] = Form.useForm();
   const [visible, setVisible] = useState(false);
@@ -47,7 +50,7 @@ export function Component() {
       pageNum: 1,
       pageSize: 10,
       // sourceName: '',
-      spaceId: Number(localStorage.getItem('spaceId')), // 空间id
+      spaceId, // 空间id
     },
     columns: () =>
       [

@@ -8,6 +8,8 @@ import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { deleteCollection, fetchDataCollectionList } from '@/service/api';
 import { useRouter } from '~/packages/simple-router/src';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 const DataCollectionOperateDrawer = lazy(() => import('./modules/data-collection-operate-drawer'));
 
@@ -23,6 +25,7 @@ const ALL_COLUMNS: ColumnOption[] = [
 export function Component() {
   const { t } = useTranslation();
   const { push } = useRouter();
+  const spaceId = useAppSelector(getSpaceId);
   const [searchValue, setSearchValue] = useState('');
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [jumpValue, setJumpValue] = useState('');
@@ -31,8 +34,8 @@ export function Component() {
 
   const { dataSourceList, getDatasourceList } = useDatasource();
   useEffect(() => {
-    getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) });
-  }, []);
+    getDatasourceList({ spaceId });
+  }, [spaceId]);
 
   const visibleKeys = useMemo(() => new Set(columnOptions.filter(c => c.visible).map(c => c.key)), [columnOptions]);
 
@@ -108,7 +111,7 @@ export function Component() {
         align: 'center',
         fixed: 'right',
         key: 'operate',
-        width: 200,
+        minWidth: 300,
         render: (_: unknown, record: any) => (
           <div className="flex items-center" style={{ gap: 2 }}>
             <AButton className="abi-action-link" size="small" variant="link" onClick={() => toDetail(record)}>
@@ -118,7 +121,7 @@ export function Component() {
               className="abi-action-link"
               size="small"
               variant="link"
-              onClick={() => setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}
+              onClick={() => setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: spaceId || undefined })}
             >
               元数据分析
             </AButton>
@@ -138,7 +141,7 @@ export function Component() {
     apiParams: {
       pageNum: 1,
       pageSize: 10,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       viewName: searchValue
     },
     columns
@@ -257,7 +260,7 @@ export function Component() {
             </div>
             <div className="abi-data-card-footer">
               <button className="abi-card-act" onClick={() => toDetail(record)}>编辑</button>
-              <button className="abi-card-act" onClick={() => setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}>元数据分析</button>
+              <button className="abi-card-act" onClick={() => setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: spaceId || undefined })}>元数据分析</button>
               <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.viewId)}>
                 <button className="abi-card-act danger">删除</button>
               </APopconfirm>

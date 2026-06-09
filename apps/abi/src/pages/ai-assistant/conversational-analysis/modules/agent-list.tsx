@@ -5,6 +5,8 @@ import React, { useEffect, useReducer, useState } from 'react';
 
 import { SPACE_ID } from '@/constants/chat';
 import { fetchAgentList } from '@/service/api/app';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 import AgentInfoModal from './agent-info-modal';
 
@@ -31,6 +33,7 @@ const reducer = (state: any, field: any) => {
 };
 
 const AgentList: React.FC<PropsType> = memo(({ setAgentId }) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [pagination, dispatch] = useReducer(reducer, initVal);
   const [dataSource, setDataSource] = useState<any[]>([]);
   const [selectedRow, setSelectedRow] = useState<any>({});
@@ -64,7 +67,7 @@ const AgentList: React.FC<PropsType> = memo(({ setAgentId }) => {
     const res: any = await fetchAgentList({
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     });
 
     setDataSource(res.data);
@@ -73,7 +76,7 @@ const AgentList: React.FC<PropsType> = memo(({ setAgentId }) => {
 
   useEffect(() => {
     getAgentList();
-  }, [pagination.pageNum, pagination.pageSize]);
+  }, [pagination.pageNum, pagination.pageSize, spaceId]);
 
   const rowSelection: TableProps<any>['rowSelection'] = {
     onChange: (keys: React.Key[], selectedRows: any[]) => {

@@ -2,12 +2,15 @@ import { DeleteOutlined, SafetyOutlined } from '@ant-design/icons';
 import { message } from 'antd';
 
 import { getSpaceInfo, updateSpaceInfo } from '@/service/api';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 import { PermissionManagement } from './modules/PermissionManagement';
 import { DeptSelector } from './modules/dept';
 
 export function Component() {
   const { t } = useTranslation();
+  const spaceId = useAppSelector(getSpaceId);
   const { scrollConfig, tableWrapperRef } = useTableScroll();
 
   const [permissionDrawerOpen, setPermissionDrawerOpen] = useState(false);
@@ -28,11 +31,10 @@ export function Component() {
     tableProps,
     updateSearchParams
   } = useTable({
-    apiFn: async () => {
+    apiFn: async (params: any) => {
       try {
         // 调用您的 API 方法获取空间信息
-        const spaceId = Number(localStorage.getItem('spaceId'));
-        const response = await getSpaceInfo(spaceId);
+        const response = await getSpaceInfo(params.spaceId);
         if (response?.data?.owners) {
           const userList = JSON.parse(response.data.owners);
           return {
@@ -51,7 +53,8 @@ export function Component() {
     },
     apiParams: {
       pageNum: 1,
-      pageSize: 100000
+      pageSize: 100000,
+      spaceId
     },
     columns: () =>
       [
@@ -251,14 +254,13 @@ export function Component() {
   }
 
   async function getCurSpaceInfo() {
-    const spaceId = Number(localStorage.getItem('spaceId'));
     const res = await getSpaceInfo(spaceId);
     setSpaceInfo(res.data);
   }
 
   useEffect(() => {
     getCurSpaceInfo();
-  }, []);
+  }, [spaceId]);
 
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">

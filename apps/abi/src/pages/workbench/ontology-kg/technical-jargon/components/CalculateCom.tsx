@@ -2,9 +2,11 @@ import type { FormInstance } from 'antd/es/form/Form';
 import { InfoCircleOutlined } from '@ant-design/icons';
 
 import { TableSemantics } from '@/components/tableSemantics.tsx';
+import { useAppSelector } from '@/hooks/business/useStore';
 import QuoteFun from '@/pages/workbench/data-preparation/data-collection-operate/modules/QuoteFun.tsx';
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types/index.js';
 import { fetchDataCollectionList } from '@/service/api';
+import { getSpaceId } from '@/store/slice/app';
 import { getAllFieldsByNodeData } from '@/utils/data-collection-operate.ts';
 
 import Editor from '../../../data-preparation/data-collection-operate/modules/InsetCodemirror.tsx';
@@ -28,6 +30,7 @@ interface PropsType {
 }
 
 const CalculateCom: FC<PropsType> = memo(({ dispatch, form, isEdit, state }) => {
+  const spaceId = useAppSelector(getSpaceId) || 0;
   const [viewDataId, setViewDataId] = useState<number | null>(state.viewId);
   const tfieldId = `${new Date().getTime()}`;
   const [dataCollectionList, setDataCollectionList] = useState<any>([]);
@@ -78,7 +81,7 @@ const CalculateCom: FC<PropsType> = memo(({ dispatch, form, isEdit, state }) => 
     const { data } = await fetchDataCollectionList({
       pageNum: 1,
       pageSize: 10000,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       viewName: ''
     });
     setDataCollectionList(data?.data);
