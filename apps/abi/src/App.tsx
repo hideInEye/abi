@@ -2,7 +2,6 @@ import { RouterProvider } from '@sa/simple-router';
 import { useUpdateEffect } from 'ahooks';
 import type { WatermarkProps } from 'antd';
 
-import { useTokenCheck } from '@/hooks/business/useTokenCheck';
 import { router } from '@/router';
 import { getLocale } from '@/store/slice/app';
 import { getDarkMode, getThemeSettings, themeColors } from '@/store/slice/theme';
@@ -49,9 +48,6 @@ const App = () => {
   const locale = useAppSelector(getLocale);
 
   const { antdTheme, themeSettings } = useTheme();
-
-  // 启用token过期检查
-  useTokenCheck();
 
   return (
     <AConfigProvider

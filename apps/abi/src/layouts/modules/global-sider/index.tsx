@@ -1,16 +1,14 @@
 import appLogo from '@/assets/imgs/home/home_logo.png'
 import userIcon from '@/assets/imgs/home/users.png'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
-import { store } from '@/store'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
 import swapIcon from '@/assets/imgs/home/切换币种.png'
 import { UserOutlined } from '@ant-design/icons'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
-import { resetStore } from '@/store/slice/auth'
 import { getAllRoutes } from '@/store/slice/route'
-import { handleLoginExpired } from '@/utils/auth'
+import { logoutNow } from '@/utils/auth'
 import { openChatConversationWindow } from '@/utils/chatWindow'
 import { persistSpaceName, readPersistedSpaceId, readPersistedSpaceName } from '@/utils/spaceStorage'
 import { Dropdown, Layout } from 'antd'
@@ -137,8 +135,7 @@ const GlobalSider: FC = memo(() => {
             // let needRedirect = false;
             // if (!route.meta?.constant) needRedirect = true;
             // submit({ needRedirect, redirectFullPath: route.fullPath }, { action: '/logout', method: 'post' });
-            store.dispatch(resetStore())
-            handleLoginExpired()
+            logoutNow()
           },
           title: t('common.tip'),
         })

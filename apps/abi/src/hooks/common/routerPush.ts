@@ -78,13 +78,9 @@ function buildChatStandaloneRedirectUrl(redirect: string): string {
   return fallbackUrl;
 }
 
-function openStandaloneChatByRedirect(redirect: string) {
+function replaceStandaloneChatByRedirect(redirect: string) {
   const chatUrl = buildChatStandaloneRedirectUrl(redirect);
-  const win = window.open(chatUrl, '_blank', 'noopener,noreferrer');
-
-  if (!win) {
-    window.location.replace(chatUrl);
-  }
+  window.location.replace(chatUrl);
 }
 
 /**
@@ -175,8 +171,8 @@ export function useRouterPush() {
 
     if (needRedirect && redirect) {
       if (isChatRedirect(redirect)) {
-        openStandaloneChatByRedirect(redirect);
-        return toHome();
+        replaceStandaloneChatByRedirect(redirect);
+        return true;
       }
 
       return routerPush(redirect);

@@ -207,29 +207,7 @@ export const resetStore = (): AppThunk => async dispatch => {
     Promise.resolve(dispatch(getUerName()));
   } catch {}
 
-  // Navigate to login (prefer SPA navigation; dynamic import to avoid cycles)
-  try {
-    const { router } = await import('@/router');
-    try {
-      await router.push({ name: 'login' });
-    } catch (err) {
-      // fallback to full redirect
-      // eslint-disable-next-line no-console
-      console.warn('router.push login failed, falling back to full redirect', err);
-      try {
-        window.location.assign('/login');
-      } catch {
-        window.location.replace('/login');
-      }
-    }
-  } catch {
-    // if dynamic import fails, do a naive redirect
-    try {
-      window.location.assign('/login');
-    } catch {
-      window.location.replace('/login');
-    }
-  }
+  // Navigation is handled by the caller, so token cleanup has a single responsibility.
 };
 
 /** Is login */

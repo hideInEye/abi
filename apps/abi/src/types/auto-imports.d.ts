@@ -257,7 +257,6 @@ declare global {
   const useTimeout: typeof import('ahooks')['useTimeout']
   const useTitle: typeof import('ahooks')['useTitle']
   const useToggle: typeof import('ahooks')['useToggle']
-  const useTokenCheck: typeof import('../hooks/business/useTokenCheck')['useTokenCheck']
   const useTrackedEffect: typeof import('ahooks')['useTrackedEffect']
   const useTransition: typeof import('react')['useTransition']
   const useTranslation: typeof import('react-i18next')['useTranslation']

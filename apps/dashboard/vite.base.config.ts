@@ -13,6 +13,7 @@ import {defineConfig} from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import qiankun from 'vite-plugin-qiankun'
+import {fileURLToPath, URL} from 'node:url'
 
 const useDevMode = process.env.NODE_ENV === 'development'
 
@@ -20,6 +21,7 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),
+            '@sa/auth': fileURLToPath(new URL('../../packages/auth/src/index.ts', import.meta.url)),
         },
         dedupe: ['react', 'react-dom'],
     },

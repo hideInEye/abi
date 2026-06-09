@@ -3,8 +3,7 @@ import type { MicroApp } from 'qiankun'
 import type { CSSProperties } from 'react'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 import { useRoute } from '@sa/simple-router'
-import { store } from '@/store'
-import { resetStore } from '@/store/slice/auth'
+import { handleLoginExpired } from '@/utils/auth'
 
 const { VITE_BASE_URL } = import.meta.env
 
@@ -41,7 +40,7 @@ export default function DashboardMicroApp(props: DashboardMicroAppProps) {
         initialPath,
         pageTitle: routeTitle || undefined,
         onTokenExpired: () => {
-          store.dispatch(resetStore())
+          handleLoginExpired()
         }
       }
     })

@@ -5,7 +5,6 @@ import { qiankunWindow, renderWithQiankun } from 'vite-plugin-qiankun/dist/helpe
 
 import { setupRouter } from '@/router';
 import { store } from '@/store';
-import { setupRequestInterceptor } from '@/utils/requestInterceptor';
 import { localStg } from '@/utils/storage';
 
 import FallbackRender from '../ErrorBoundary.tsx';
@@ -15,6 +14,7 @@ import { setupI18n } from './locales';
 import { setupDayjs, setupIconifyOffline, setupLoading, setupNProgress } from './plugins';
 import './plugins/assets';
 import { fetchLoginChatbiByOnenet } from './service/api/index.ts';
+import { resetLoginExpiredState } from './utils/auth.ts';
 // import { createApp } from '@sa/framework';
 
 // const modelModules = import.meta.glob('./models/*.ts', { eager: true })
@@ -26,7 +26,6 @@ import { fetchLoginChatbiByOnenet } from './service/api/index.ts';
 //   models,
 // })
 let root: any;
-let teardownRequestInterceptor: null | (() => void) = null;
 
 async function setupApp(props: any) {
   setupI18n();
@@ -41,6 +40,7 @@ async function setupApp(props: any) {
       qiankunStore.commit('setShowHeader', false);
       const res = await fetchLoginChatbiByOnenet();
       localStg.set('token', res.data?.access_token);
+      resetLoginExpiredState();
     } catch (error) {
       console.log(error);
     }
@@ -51,10 +51,6 @@ async function setupApp(props: any) {
   setupIconifyOffline();
 
   setupRouter();
-
-  // 设置请求拦截器
-  teardownRequestInterceptor?.();
-  teardownRequestInterceptor = setupRequestInterceptor();
 
   setupDayjs();
 
@@ -88,8 +84,6 @@ const initQianKun = () => {
       // const mountRoot = container?.querySelector('#root');
       // ReactDOM.unmountComponentAtNode(mountRoot || document.querySelector('#root'));
       root.unmount();
-      teardownRequestInterceptor?.();
-      teardownRequestInterceptor = null;
       window.qiankunStore = null;
     }
   } as any);

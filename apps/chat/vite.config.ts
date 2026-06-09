@@ -32,6 +32,7 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@sa/axios': fileURLToPath(new URL('../../packages/axios/src/index.ts', import.meta.url)),
+      '@sa/auth': fileURLToPath(new URL('../../packages/auth/src/index.ts', import.meta.url)),
     },
   },
   server: {

@@ -1,62 +1,12 @@
+import { createAuthorizationHeader, normalizeToken } from '@sa/auth'
 import type { InternalAxiosRequestConfig } from 'axios'
 
 type TokenExpiredHandler = (() => void | Promise<void>) | undefined
 
-const INVALID_TOKEN_VALUES = new Set(['', 'null', 'undefined'])
+export { createAuthorizationHeader, normalizeToken } from '@sa/auth'
 
 function isObjectValue(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
-}
-
-function tryReadTokenFromObject(tokenLike: Record<string, unknown>) {
-  const tokenKeys = ['token', 'access_token', 'accessToken']
-  for (const tokenKey of tokenKeys) {
-    const tokenValue = tokenLike[tokenKey]
-    const normalizedToken = normalizeToken(tokenValue)
-    if (normalizedToken) {
-      return normalizedToken
-    }
-  }
-  return ''
-}
-
-/**
- * normalize token-like value to a plain token string
- */
-export function normalizeToken(tokenLike: unknown): string {
-  if (typeof tokenLike === 'string') {
-    const trimmedToken = tokenLike.trim()
-    if (INVALID_TOKEN_VALUES.has(trimmedToken)) {
-      return ''
-    }
-
-    try {
-      const parsedToken = JSON.parse(trimmedToken) as unknown
-      if (parsedToken !== tokenLike) {
-        return normalizeToken(parsedToken)
-      }
-    } catch {}
-
-    return trimmedToken
-  }
-
-  if (typeof tokenLike === 'number' || typeof tokenLike === 'bigint') {
-    return String(tokenLike)
-  }
-
-  if (isObjectValue(tokenLike)) {
-    return tryReadTokenFromObject(tokenLike)
-  }
-
-  return ''
-}
-
-/**
- * resolve bearer authorization header value
- */
-export function createAuthorizationHeader(tokenLike: unknown): string | null {
-  const token = normalizeToken(tokenLike)
-  return token ? `Bearer ${token}` : null
 }
 
 /**

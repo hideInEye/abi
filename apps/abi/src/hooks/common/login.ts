@@ -5,6 +5,7 @@ import { router } from '@/router';
 import { store } from '@/store';
 import { getUerName, login, resetStore } from '@/store/slice/auth';
 import { getRouteHome, initAuthRoute, resetRouteStore } from '@/store/slice/route';
+import { resetLoginExpiredState } from '@/utils/auth';
 
 import { useAppDispatch } from '../business/useStore';
 
@@ -30,6 +31,7 @@ export function useLogin() {
     const userName = dispatch(getUerName());
 
     if (userName) {
+      resetLoginExpiredState();
       await dispatch(initAuthRoute());
 
       // console.log('登录路由初始化完成，当前路由数:', {
