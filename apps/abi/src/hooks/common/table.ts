@@ -2,7 +2,7 @@ import { useBoolean, useHookTable } from '@sa/hooks';
 import type { TablePaginationConfig, TableProps } from 'antd';
 import { Form } from 'antd';
 
-import { getIsMobile } from '@/store/slice/app';
+import { getIsMobile, getSpaceId } from '@/store/slice/app';
 
 type TableData = AntDesign.TableData;
 type GetTableData<A extends AntDesign.TableApiFn> = AntDesign.GetTableData<A>;
@@ -13,6 +13,7 @@ export function useTable<A extends AntDesign.TableApiFn>(
   paginationConfig?: Omit<TablePaginationConfig, 'current' | 'onChange' | 'pageSize' | 'total'>
 ) {
   const isMobile = useAppSelector(getIsMobile);
+  const reduxSpaceId = useAppSelector(getSpaceId);
 
   const [total, setTotal] = useState<TablePaginationConfig['total']>(0);
 
@@ -72,6 +73,30 @@ export function useTable<A extends AntDesign.TableApiFn>(
     },
     transformer
   });
+
+  const initialSpaceIdRef = useRef(reduxSpaceId);
+  const apiParamsRef = useRef(apiParams);
+  apiParamsRef.current = apiParams;
+
+  useEffect(() => {
+    if (reduxSpaceId <= 0) return;
+
+    const currentParams = apiParamsRef.current;
+    if (!currentParams) return;
+
+    const keys = Object.keys(currentParams);
+    const spaceKey = keys.find(k =>
+      k.toLowerCase() === 'spaceid' || k.toLowerCase() === 'space_id'
+    );
+
+    if (!spaceKey) return;
+
+    // 首次挂载不触发，只在 spaceId 切换时触发
+    if (reduxSpaceId === initialSpaceIdRef.current) return;
+
+    updateSearchParams({ [spaceKey]: reduxSpaceId, pageNum: 1 } as any);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduxSpaceId]);
 
   useEffect(() => {
     if (!immediate) {

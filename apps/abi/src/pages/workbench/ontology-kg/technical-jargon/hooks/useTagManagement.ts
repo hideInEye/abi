@@ -1,12 +1,15 @@
 import { message } from 'antd';
 import { useState } from 'react';
 
+import { useAppSelector } from '@/hooks/business/useStore';
 import { queryTerms } from '@/service/api/Industry';
 import { deleteTerms } from '@/service/api/Industry.ts';
+import { getSpaceId } from '@/store/slice/app';
 
 import type { TagGroup } from '../types';
 
 export function useTagManagement() {
+  const spaceId = useAppSelector(getSpaceId);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<TagGroup | null>(null);
   const [searchValue, setSearchValue] = useState('');
@@ -21,7 +24,7 @@ export function useTagManagement() {
     setTerms([]);
     const res = await queryTerms({
       groupId,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       techName: key || ''
     });
 

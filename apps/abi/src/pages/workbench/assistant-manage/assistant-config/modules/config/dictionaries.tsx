@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 
 import { queryDictionary } from '@/service/api/dictionary';
 import { tableSemanticsGroupList } from '@/service/api/table-semantics';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 // 接口未提供
 // import { getAgentConfigDs } from '@/service/api/assistant-manage';
 
@@ -20,6 +22,7 @@ interface PropsType {
 }
 
 const Dictionaries: FC<PropsType> = memo(({ dispatch, state }) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [dataSource, setDataSource] = useState<RecordType[]>([]);
   const [groupOptions, setGroupOptions] = useState<any[]>([]);
 
@@ -31,14 +34,14 @@ const Dictionaries: FC<PropsType> = memo(({ dispatch, state }) => {
       groupType: 'dictionary',
       pageNum,
       pageSize,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     } as any);
     setGroupOptions(data);
   };
 
   useEffect(() => {
     getGroupList();
-  }, []);
+  }, [spaceId]);
 
   const getDataSource = async () => {
     const res = await queryDictionary({

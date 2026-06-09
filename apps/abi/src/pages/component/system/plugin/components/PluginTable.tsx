@@ -6,6 +6,8 @@ import type { ColumnsType } from 'antd/es/table';
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 import type { PluginItem, PluginList } from '@/types/plug';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 interface PluginTableProps {
   readonly current: number;
@@ -31,6 +33,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
   updateStatus,
   onDetail
 }: PluginTableProps) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const columns: ColumnsType<PluginItem> = [
     {
@@ -118,7 +121,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
               color="primary"
               size="small"
               variant="link"
-              onClick={() => setAnalysisContext({ nodeId: record.pluginId, nodeName: record.pluginName, nodeType: 'MCP', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}
+              onClick={() => setAnalysisContext({ nodeId: record.pluginId, nodeName: record.pluginName, nodeType: 'MCP', spaceId: spaceId || undefined })}
             >
               元数据分析
             </AButton>

@@ -121,14 +121,20 @@
   color: #333;
 }
 
-/* v5 Breadcrumb: font-size 12px, gap 8px */
+/* v5 Breadcrumb: font-size 13px */
 .abi-breadcrumb {
   font-size: 13px !important;
 }
 
+.abi-breadcrumb ol {
+  display: flex !important;
+  align-items: center !important;
+}
+
 .abi-breadcrumb .ant-breadcrumb-separator {
   color: #a3b3c8 !important;
-  font-size: 11px !important;
+  font-size: 13px !important;
+  margin: 0 6px;
 }
 
 .abi-breadcrumb .ant-breadcrumb-link {

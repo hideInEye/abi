@@ -20,7 +20,7 @@ export function Component() {
     apiParams: {
       pageNum: 1,
       pageSize: 10,
-      spaceId: Number(localStorage.getItem('spaceId')), // 空间id
+      spaceId, // 空间id
     },
     transformer: (res: any) => {
       return res;

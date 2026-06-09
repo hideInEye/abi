@@ -125,11 +125,10 @@ const GlobalSider: FC = memo(() => {
       width="72px"
       className="abi-nav-sider"
     >
-      <div className="flex h-full flex-col justify-between items-center py-[1.5rem]">
+      <div className="flex h-full flex-col justify-between items-center py-[20px]">
         <div className=" flex items-center justify-center cursor-pointer" onClick={redirectHome}>
-          <img src={appLogo} alt="ABI Logo" className="mb-4 h-12 w-12 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
+          <img src={appLogo} alt="ABI Logo" className="mb-6 h-12 w-12 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
         </div>
-
         {/* Nav Items - Top */}
         <div className="abi-nav-items">
           {primaryMenuData.map((item) => {

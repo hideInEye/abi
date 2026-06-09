@@ -2,6 +2,8 @@ import { ApartmentOutlined, CopyOutlined, DeleteOutlined, EditOutlined, MoreOutl
 import { Dropdown, Space } from 'antd'
 import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage'
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
+import { useAppSelector } from '@/hooks/business/useStore'
+import { getSpaceId } from '@/store/slice/app'
 import './model-card-list.css'
 
 interface ModelItem {
@@ -58,6 +60,7 @@ const ModelCardList: FC<Props> = ({
   onAnalysis,
 }) => {
   const { t } = useTranslation()
+  const spaceId = useAppSelector(getSpaceId)
 
   const filteredModels = useMemo(() => {
     const kw = searchValue.trim().toLowerCase()
@@ -217,7 +220,7 @@ const ModelCardList: FC<Props> = ({
                                 nodeId: item.modelId,
                                 nodeName: item.modelName,
                                 nodeType: 'LLM',
-                                spaceId: Number(localStorage.getItem('spaceId')) || undefined,
+                                spaceId: spaceId || undefined,
                               })
                             } else if (key === 'delete') onDelete(item.modelId)
                           },

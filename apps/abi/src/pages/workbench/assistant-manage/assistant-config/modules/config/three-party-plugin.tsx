@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 
 import { queryPluginList } from '@/service/api/pulg';
 import { grouplist } from '@/service/api/data-table-meaning';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 // 接口未提供
 // import { getAgentConfigDs } from '@/service/api/assistant-manage';
 
@@ -18,6 +20,7 @@ interface PropsType {
 }
 
 const ThreePartyPlugin: FC<PropsType> = memo(({ dispatch, state }) => {
+  const spaceId = useAppSelector(getSpaceId);
   const [dataSource, setDataSource] = useState<RecordType[]>([]);
   const [groupOptions, setGroupOptions] = useState<any[]>([]);
 
@@ -27,21 +30,21 @@ const ThreePartyPlugin: FC<PropsType> = memo(({ dispatch, state }) => {
     const res = await grouplist({
       pageNum,
       pageSize,
-      spaceId: Number(localStorage.getItem('spaceId'))
+      spaceId
     });
     setGroupOptions(res.data.filter((item: any) => item.groupType === 'plugin'));
   };
 
   useEffect(() => {
     getGrouplist();
-  }, []);
+  }, [spaceId]);
 
   const getDataSource = async () => {
     const res = await queryPluginList({
       pageNum: 1,
       pageSize: 1000,
       pluginName: '',
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       groupId: state.pluginGroupId
     });
     // const res = await fetchPluginList();
