@@ -93,7 +93,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
       width: 230,
       title: '操作',
       render: (_, record) => (
-        <div className="flex items-center" style={{ gap: 2 }}>
+        <div className="flex items-center justify-center" style={{ gap: 2 }}>
           <AButton className="abi-action-link" size="small" variant="link" onClick={() => editTable(record)}>
             编辑
           </AButton>

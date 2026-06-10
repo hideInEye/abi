@@ -107,9 +107,46 @@
   color: #333333;
 }
 
+// 空白表格撑满剩余空间
+// 所有 scroll 容器始终填满父容器（有数据时靠 overflow:auto 滚动，无数据时让表格撑满）
+.assistant-table-scroll {
+  height: 100% !important;
+}
+
 .ant-table-wrapper:has(.ant-table-tbody > tr.ant-table-placeholder) {
+  height: 100%;
+
   .ant-table-thead {
     display: none;
+  }
+
+  .ant-spin-nested-loading,
+  .ant-spin-container,
+  .ant-table,
+  .ant-table-container,
+  .ant-table-content,
+  .ant-table-body {
+    height: 100%;
+  }
+
+  table {
+    height: 100%;
+  }
+
+  .ant-table-tbody {
+    height: 100%;
+    background-color: #F6F7FF;
+  }
+
+  .ant-table-tbody > tr.ant-table-placeholder {
+    height: 100%;
+  }
+
+  .ant-table-tbody > tr.ant-table-placeholder > td {
+    height: 100%;
+    background-color: #F6F7FF !important;
+    padding: 0 !important;
+    vertical-align: middle;
   }
 }
 
@@ -371,15 +408,11 @@
 
 // ── 数据语义左侧树面板 v5 ──
 .abi-group-sidebar {
-  width: 280px;
-  min-width: 280px;
   flex-shrink: 0;
   background: #FCFDFF;
-  border-right: 1px solid rgba(130, 140, 200, 0.18);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 16px 14px;
 }
 
 // ── 页面内搜索栏行内输入框 v5 field 风格 ──

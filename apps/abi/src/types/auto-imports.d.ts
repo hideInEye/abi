@@ -133,6 +133,7 @@ declare global {
   const ThemeSchemaSwitch: typeof import('../components/stateful/ThemeSchemaSwitch')['default']
   const ViewControls: typeof import('../components/ViewControls')['ViewControls']
   const WaveBg: typeof import('../components/stateless/custom/WaveBg')['default']
+  const WorkbenchEmpty: typeof import('../components/stateless/common/WorkbenchEmpty')['default']
   const buildNodeDetail: typeof import('../components/metadata-analysis/adapter')['buildNodeDetail']
   const captchaCode: typeof import('../components/captcha-code')['default']
   const createRef: typeof import('react')['createRef']

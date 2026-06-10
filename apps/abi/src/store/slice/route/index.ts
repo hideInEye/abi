@@ -17,6 +17,19 @@ import { createAppSlice } from '../../createAppSlice';
 
 import { filterAuthRoutesByRoles, getCacheRouteNames, sortRoutesByOrder } from './shared';
 
+/** 移除 workbench/component 的 index route（自动生成的重定向） */
+const NO_REDIRECT_ROUTE_NAMES = ['workbench', 'component'];
+function cleanIndexRedirectRoutes(routes: any[]) {
+  routes.forEach((r: any) => {
+    if (NO_REDIRECT_ROUTE_NAMES.includes(r.id) && Array.isArray(r.children)) {
+      r.children = r.children.filter((c: any) => !c.index);
+    }
+    if (Array.isArray(r.children)) {
+      cleanIndexRedirectRoutes(r.children);
+    }
+  });
+}
+
 interface InitialStateType {
   authRoutes: ElegantConstRoute[];
   cacheRoutes: RouteKey[];
@@ -205,6 +218,9 @@ const handleConstantOrAuthRoutes =
       const sortRoutes = sortRoutesByOrder(routes);
 
       router.addReactRoutes(sortRoutes);
+
+      // 移除 workbench/component 自动生成的 index route 重定向
+      cleanIndexRedirectRoutes((router.reactRouter as any).routes);
 
       dispatch(addSortRoutes(sortRoutes));
 

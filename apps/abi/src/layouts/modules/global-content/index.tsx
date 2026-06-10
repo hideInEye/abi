@@ -12,6 +12,7 @@ import { getRemoveCacheKey, selectCacheRoutes } from '@/store/slice/route'
 import { getThemeSettings } from '@/store/slice/theme'
 import { GLOBAL_SIDER_MENU_ID, hideMenuRoute } from '@/constants/app'
 import { useRoute } from '~/packages/simple-router/src'
+import WorkbenchEmpty from '@/components/stateless/common/WorkbenchEmpty'
 
 import { useMixMenuContext } from '@/hooks/common/menu'
 
@@ -195,7 +196,7 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
         )}
         <div className="flex-1 min-h-0 overflow-auto page-content-area">
           {/* <KeepAlive activeCacheKey={cacheKey} aliveRef={aliveRef} cacheNodeClassName={reload ? transitionName : ''} include={cacheKeys}> */}
-            {currentOutlet}
+            {(route.name === 'workbench' || route.name === 'component') ? <WorkbenchEmpty /> : currentOutlet}
           {/* </KeepAlive> */}
         </div>
       </div>
