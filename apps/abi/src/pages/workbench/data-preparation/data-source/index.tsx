@@ -201,9 +201,9 @@ export function Component() {
             align: "center",
             fixed: "right",
             key: "operate",
-            width: 240,
+            minWidth: 200,
             render: (_: unknown, record: any) => (
-              <div className="flex items-center" style={{ gap: 2 }}>
+              <div className="flex items-center justify-center" style={{ gap: 2 }}>
                 <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleListEdit(record)}>
                   编辑
                 </AButton>

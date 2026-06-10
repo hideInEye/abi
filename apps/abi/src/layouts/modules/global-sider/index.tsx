@@ -1,5 +1,5 @@
 import appLogo from '@/assets/imgs/home/abi_logo.png'
-import userIcon from '@/assets/imgs/home/用户.png'
+import userIcon from '@/assets/imgs/home/用户.svg'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
 import SvgIcon from '@/components/stateless/custom/SvgIcon'
 import { store } from '@/store'
@@ -43,9 +43,9 @@ const GlobalSider: FC = memo(() => {
       matchedName = 'home';
     } else if (path.startsWith('/ai-assistant')) {
       matchedName = 'ai-assistant_conversational-analysis';
-    } else if (path.startsWith('/workbench')) {
+    } else if (path.startsWith('/workbench/')) {
       matchedName = 'assistant-manage_assistant-config';
-    } else if (path.startsWith('/component')) {
+    } else if (path.startsWith('/component/')) {
       matchedName = 'system_model';
     }
 
@@ -161,8 +161,11 @@ const GlobalSider: FC = memo(() => {
         {/* User Section - Bottom */}
         <div className="abi-nav-user">
           <Dropdown trigger={['click']} menu={{ items: userItems(), onClick: handleMenuClick }}>
-            <div className="abi-nav-user-icon">
-              <img src={userIcon} alt="user" />
+            <div className="flex flex-col items-center cursor-pointer">
+              <div className="abi-nav-user-icon">
+                <img src={userIcon} alt="user" style={{ width: 26, height: 26, objectFit: 'contain' }} />
+              </div>
+              <span style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>用户</span>
             </div>
           </Dropdown>
         </div>

@@ -74,7 +74,7 @@ export function useTable<A extends AntDesign.TableApiFn>(
     transformer
   });
 
-  const initialSpaceIdRef = useRef(reduxSpaceId);
+  const prevSpaceIdRef = useRef(reduxSpaceId);
   const apiParamsRef = useRef(apiParams);
   apiParamsRef.current = apiParams;
 
@@ -91,9 +91,10 @@ export function useTable<A extends AntDesign.TableApiFn>(
 
     if (!spaceKey) return;
 
-    // 首次挂载不触发，只在 spaceId 切换时触发
-    if (reduxSpaceId === initialSpaceIdRef.current) return;
+    // 仅在 spaceId 真正发生变化时触发刷新，避免与首次挂载的 getData 重复请求
+    if (reduxSpaceId === prevSpaceIdRef.current) return;
 
+    prevSpaceIdRef.current = reduxSpaceId;
     updateSearchParams({ [spaceKey]: reduxSpaceId, pageNum: 1 } as any);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduxSpaceId]);
