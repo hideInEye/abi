@@ -1,3 +1,4 @@
+import type { FormInstance } from 'antd'
 import React from 'react'
 
 import {
@@ -10,6 +11,7 @@ import {
   VOLATILITY_DATA_RANGE_OPTIONS,
   VOLATILITY_METHOD_OPTIONS
 } from '../constants'
+import type { KnowledgeFormValues, KnowledgeTechField } from '../types'
 
 import { KnowledgeOperateExpressionEditor } from './knowledgeOperateDrawer.ExpressionEditor'
 
@@ -19,17 +21,17 @@ interface AtomicMetricOption {
 }
 
 interface Props {
-  readonly allFields: any[]
+  readonly allFields: KnowledgeTechField[]
   readonly atomicMetricOptions: AtomicMetricOption[]
-  readonly form: any
+  readonly form: FormInstance<KnowledgeFormValues>
   readonly templateTypeVal: string
-  readonly validateAccumulationDate: (_: any, value?: string) => Promise<void>
-  readonly validateCustomExpression: (_: any, value?: string) => Promise<void>
-  readonly validatePercentile: (_: any, value?: number | string) => Promise<void>
-  readonly validatePositiveInt: (value: any, messageText: string) => Promise<void>
-  readonly validateRollingWindow: (_: any, value?: number | string) => Promise<void>
-  readonly validateThresholdMax: (_: any, value?: string) => Promise<void>
-  readonly validateThresholdValue: (_: any, value?: string) => Promise<void>
+  readonly validateAccumulationDate: (_: unknown, value?: string) => Promise<void>
+  readonly validateCustomExpression: (_: unknown, value?: string) => Promise<void>
+  readonly validatePercentile: (_: unknown, value?: number | string) => Promise<void>
+  readonly validatePositiveInt: (value: unknown, messageText: string) => Promise<void>
+  readonly validateRollingWindow: (_: unknown, value?: number | string) => Promise<void>
+  readonly validateThresholdMax: (_: unknown, value?: string) => Promise<void>
+  readonly validateThresholdValue: (_: unknown, value?: string) => Promise<void>
 }
 
 function getLabel(options: AtomicMetricOption[], value?: string | number) {
@@ -38,7 +40,7 @@ function getLabel(options: AtomicMetricOption[], value?: string | number) {
 
 function buildExtendedExpressionPreview(
   templateType: string,
-  values: Record<string, any>,
+  values: Partial<KnowledgeFormValues>,
   options: AtomicMetricOption[]
 ) {
   if (templateType === 'ratio') {

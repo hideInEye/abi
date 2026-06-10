@@ -1,23 +1,16 @@
 import type { FormInstance } from 'antd'
 
-import type { KnowledgeFormValues, KnowledgeIndicatorItem } from '../types'
+import type { KnowledgeFormValues } from '../types'
 
 import { hasSqlSyntaxError } from './knowledgeOperateDrawer.sql'
-import {
-  compactArray,
-  isBalancedParentheses,
-  isFieldNameLike,
-  isValidNumberInput
-} from './knowledgeOperateDrawer.utils'
+import { compactArray, isBalancedParentheses, isFieldNameLike, isValidNumberInput } from './knowledgeOperateDrawer.utils'
 
 interface CreateValidatorsParams {
-  editingItem: KnowledgeIndicatorItem | null
-  existingItems: KnowledgeIndicatorItem[]
   form: FormInstance<KnowledgeFormValues>
 }
 
-export function createKnowledgeOperateValidators({ editingItem, existingItems, form }: CreateValidatorsParams) {
-  const validateIndicatorName = (_: any, value?: string) => {
+export function createKnowledgeOperateValidators({ form }: CreateValidatorsParams) {
+  const validateIndicatorName = (_: unknown, value?: string) => {
     const text = String(value || '').trim()
     if (!text) {
       return Promise.reject(new Error('请输入指标名称'))
@@ -35,7 +28,7 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validateMeasurementUnit = (_: any, value?: string) => {
+  const validateMeasurementUnit = (_: unknown, value?: string) => {
     const text = String(value || '').trim()
     if (!text) {
       return Promise.resolve()
@@ -49,15 +42,15 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validateAliasTags = (_: any, value?: string[]) => {
-    const list = compactArray((value || []).map(item => String(item || '').trim())).filter(Boolean)
+  const validateAliasTags = (_: unknown, value?: string[]) => {
+    const list = compactArray((value || []).map((item) => String(item || '').trim())).filter(Boolean)
     if (list.length > 10) {
       return Promise.reject(new Error('别名需唯一且不超过10个'))
     }
-    if (list.some(item => item.length > 20)) {
+    if (list.some((item) => item.length > 20)) {
       return Promise.reject(new Error('单个别名长度不能超过20个字符'))
     }
-    const lowerSet = new Set(list.map(item => item.toLowerCase()))
+    const lowerSet = new Set(list.map((item) => item.toLowerCase()))
     if (lowerSet.size !== list.length) {
       return Promise.reject(new Error('别名需唯一且不超过10个'))
     }
@@ -68,7 +61,7 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validateBusinessRemark = (_: any, value?: string) => {
+  const validateBusinessRemark = (_: unknown, value?: string) => {
     const text = String(value || '').trim()
     if (!text) {
       return Promise.reject(new Error('请填写完整的业务口径描述（10-500字）'))
@@ -82,34 +75,22 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validateTechName = (_: any, value?: string) => {
+  const validateTechName = (_: unknown, value?: string) => {
     const text = String(value || '').trim()
     if (!text) {
-      return Promise.reject(new Error('请输入合法的指标编码（大写字母开头，仅支持字母/数字/下划线，且不可重复）'))
+      return Promise.reject(new Error('请输入合法的指标编码（大写字母开头，仅支持字母/数字/下划线）'))
     }
     if (text.length < 3 || text.length > 50) {
-      return Promise.reject(new Error('请输入合法的指标编码（大写字母开头，仅支持字母/数字/下划线，且不可重复）'))
+      return Promise.reject(new Error('请输入合法的指标编码（大写字母开头，仅支持字母/数字/下划线）'))
     }
     if (!/^[A-Z][A-Z0-9_]*$/.test(text)) {
-      return Promise.reject(new Error('请输入合法的指标编码（大写字母开头，仅支持字母/数字/下划线，且不可重复）'))
+      return Promise.reject(new Error('请输入合法的指标编码（大写字母开头，仅支持字母/数字/下划线）'))
     }
 
-    const duplicate = existingItems.some(item => {
-      if (!item.indicatorCode) {
-        return false
-      }
-      if (editingItem?.termId && item.termId === editingItem.termId) {
-        return false
-      }
-      return String(item.indicatorCode).trim() === text
-    })
-    if (duplicate) {
-      return Promise.reject(new Error('指标编码已存在，请更换后重试'))
-    }
     return Promise.resolve()
   }
 
-  const validateTechnicalRemark = (_: any, value?: string) => {
+  const validateTechnicalRemark = (_: unknown, value?: string) => {
     const text = String(value || '')
     if (!text) {
       return Promise.resolve()
@@ -123,7 +104,7 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validateThresholdValue = (_: any, value?: string) => {
+  const validateThresholdValue = (_: unknown, value?: string) => {
     const text = String(value || '').trim()
     if (!text) {
       return Promise.resolve()
@@ -134,7 +115,7 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validateThresholdMax = async (_: any, value?: string) => {
+  const validateThresholdMax = async (_: unknown, value?: string) => {
     const text = String(value || '').trim()
     if (!text) {
       return Promise.resolve()
@@ -147,7 +128,7 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validateAccumulationDate = (_: any, value?: string) => {
+  const validateAccumulationDate = (_: unknown, value?: string) => {
     const text = String(value || '').trim()
     if (!text) {
       return Promise.reject(new Error('请选择有效的累加起点日期'))
@@ -164,7 +145,7 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validatePositiveInt = (value: any, messageText: string) => {
+  const validatePositiveInt = (value: unknown, messageText: string) => {
     const text = String(value ?? '').trim()
     if (!text || !/^[1-9]\d*$/.test(text)) {
       return Promise.reject(new Error(messageText))
@@ -172,7 +153,7 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validateRollingWindow = (_: any, value?: number | string) => {
+  const validateRollingWindow = (_: unknown, value?: number | string) => {
     const text = String(value ?? '').trim()
     if (!text || !/^[1-9]\d*$/.test(text)) {
       return Promise.reject(new Error('计算波动至少需要2个周期，窗口大小必须 ≥ 2'))
@@ -183,7 +164,7 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validatePercentile = (_: any, value?: number | string) => {
+  const validatePercentile = (_: unknown, value?: number | string) => {
     const text = String(value ?? '').trim()
     if (!text) {
       return Promise.reject(new Error('分位数值必须大于0且小于1'))
@@ -205,7 +186,7 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validateVariableName = (_: any, value?: string) => {
+  const validateVariableName = (_: unknown, value?: string) => {
     const text = String(value || '').trim()
     if (!text) {
       return Promise.reject(new Error('变量名仅支持英文和数字，且需以字母开头'))
@@ -220,16 +201,16 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
 
     const rows = compactArray((form.getFieldValue('variableMappings') || []) as Array<{ variableName?: string }>)
     const rowNames = rows
-      .map(item => String(item?.variableName || '').trim())
+      .map((item) => String(item?.variableName || '').trim())
       .filter(Boolean)
-      .map(item => item.toLowerCase())
+      .map((item) => item.toLowerCase())
     if (new Set(rowNames).size !== rowNames.length) {
       return Promise.reject(new Error('该变量名已存在或与内置函数冲突'))
     }
     return Promise.resolve()
   }
 
-  const validateCustomExpression = (_: any, value?: string) => {
+  const validateCustomExpression = (_: unknown, value?: string) => {
     const expr = String(value || '').trim()
     if (!expr) {
       return Promise.reject(new Error('表达式未引用任何变量或指标'))
@@ -246,16 +227,14 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
 
     const vars = compactArray<string>([
       String(form.getFieldValue('variableName') || '').trim(),
-      ...compactArray((form.getFieldValue('variableMappings') || []) as Array<{ variableName?: string }>).map(item =>
-        String(item?.variableName || '').trim()
-      )
+      ...compactArray((form.getFieldValue('variableMappings') || []) as Array<{ variableName?: string }>).map((item) => String(item?.variableName || '').trim()),
     ]).filter(Boolean)
 
     if (!vars.length) {
       return Promise.reject(new Error('表达式未引用任何变量或指标'))
     }
 
-    const hasVar = vars.some(item => new RegExp(`\\b${item}\\b`).test(expr))
+    const hasVar = vars.some((item) => new RegExp(`\\b${item}\\b`).test(expr))
     if (!hasVar) {
       return Promise.reject(new Error('表达式未引用任何变量或指标'))
     }
@@ -265,7 +244,7 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     return Promise.resolve()
   }
 
-  const validateSqlExpression = (_: any, value?: string) => {
+  const validateSqlExpression = (_: unknown, value?: string) => {
     const expr = String(value || '').trim()
     if (!expr) {
       return Promise.reject(new Error('请输入计算逻辑'))
@@ -291,6 +270,6 @@ export function createKnowledgeOperateValidators({ editingItem, existingItems, f
     validateTechnicalRemark,
     validateThresholdMax,
     validateThresholdValue,
-    validateVariableName
+    validateVariableName,
   }
 }

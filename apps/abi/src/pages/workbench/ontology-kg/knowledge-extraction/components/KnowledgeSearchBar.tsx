@@ -52,7 +52,7 @@ export const KnowledgeSearchBar: React.FC<Props> = ({ addDisabled, onAddAtomic, 
   return (
     <div className="mb-4 w-full">
       <div className="w-full flex flex-wrap items-center gap-3">
-        <AInput allowClear className="w-220px" placeholder="请输入搜索关键字" value={searchParams.keyword} onChange={(e) => onSearchChange({ keyword: e.target.value })} />
+        <AInput allowClear className="w-220px" placeholder="请输入搜索关键字" value={searchParams.techName} onChange={(e) => onSearchChange({ techName: e.target.value })} />
         <ASelect
           allowClear
           className="w-180px"

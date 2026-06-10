@@ -1,5 +1,74 @@
 /* eslint-disable sort/type-properties */
 
+export type JsonRecord = Record<string, unknown>
+
+export interface KnowledgeTechField {
+  alias?: string
+  bizName?: string
+  description?: string
+  englishName?: string
+  fieldName?: string
+  fieldShortName?: string
+  fieldType?: string
+  name?: string
+  originName?: string
+  tableBizName?: string
+  tableName?: string
+  techId?: string
+  techName?: string
+  tfieldAlias?: string
+  tfieldId?: string
+  tfieldName?: string
+  tfieldType?: string
+}
+
+export type KnowledgeTemplateParams = Partial<
+  Pick<
+    KnowledgeFormValues,
+    | 'accumulateStartDate'
+    | 'compareMetricId'
+    | 'comparePeriod'
+    | 'comparisonOutputType'
+    | 'compareType'
+    | 'cumulativeMetricId'
+    | 'cumulativeMode'
+    | 'cumulativeTimeRange'
+    | 'expr'
+    | 'percentileValue'
+    | 'ratioDenominatorId'
+    | 'ratioNumeratorId'
+    | 'ratioPrecision'
+    | 'relItemId'
+    | 'rollingWindowSize'
+    | 'templateType'
+    | 'thresholdMax'
+    | 'thresholdMin'
+    | 'volatilityDataRange'
+    | 'volatilityMethod'
+    | 'volatilityMetricId'
+  >
+>
+
+export interface KnowledgeSubmitPayload extends KnowledgeFormValues {
+  alertConfig?: JsonRecord | string
+  dimensionFieldIds?: string
+  groupId: number
+  indAlias?: string
+  indId?: number
+  relItemId?: string
+  spaceId: number
+  techId?: KnowledgeTechField[] | JsonRecord | string
+  templateParams?: KnowledgeTemplateParams
+  termId?: number
+}
+
+export interface AtomicMappingPayload {
+  groupId?: number
+  relSchemaId: number
+  spaceId: number
+  techId: KnowledgeTechField[]
+}
+
 export interface KnowledgeGroupItem {
   children?: KnowledgeGroupItem[]
   groupAlias?: string
@@ -13,12 +82,11 @@ export interface KnowledgeGroupItem {
 
 export interface KnowledgeIndicatorItem {
   accumulateStartDate?: string
-  aggMethod?: string
-  alertConfig?: Record<string, any> | string
+  alertConfig?: JsonRecord | string
   atomicMetricId?: number | string
   bizName?: string
   calcPeriod?: string
-  calcLogic?: Record<string, any> | string
+  calcLogic?: JsonRecord | string
   compareMetricId?: number | string
   comparisonOutputType?: string
   compareType?: string
@@ -65,9 +133,9 @@ export interface KnowledgeIndicatorItem {
   semanticSchemaName?: string
   status?: number | string
   techName?: string
-  techId?: Record<string, any> | string
+  techId?: KnowledgeTechField[] | JsonRecord | string
   technicalDefinition?: string
-  templateParams?: Record<string, any> | string
+  templateParams?: KnowledgeTemplateParams | JsonRecord | string
   templateType?: string
   termId?: number
   thresholdMax?: string
@@ -84,7 +152,6 @@ export interface KnowledgeIndicatorItem {
 
 export interface KnowledgeFormValues {
   accumulateStartDate?: string
-  aggMethod?: string
   bizName?: string
   calcPeriod?: string
   compareMetricId?: number | string
@@ -101,17 +168,16 @@ export interface KnowledgeFormValues {
   dimensionFieldIds?: string
   divideZeroStrategy?: string
   expr?: string
-  indicatorAliasTags?: string[]
   indicatorClass?: string
   indicatorCode?: string
   indicatorOwner?: string
-  indAlias?: string
+  indAlias?: string[] | string
   isPublic?: boolean | string
   measurementUnit?: string
   nullStrategy?: string
   ownerEmail?: string
   ownerPhone?: string
-  percentileValue?: number
+  percentileValue?: number | string
   projectionFunc?: string
   qualityLevel?: string
   ratioDenominatorId?: number | string
@@ -127,7 +193,7 @@ export interface KnowledgeFormValues {
   semanticSchemaName?: string
   status?: number | string
   techName?: string
-  techId?: Record<string, any> | string
+  techId?: KnowledgeTechField[] | JsonRecord | string
   technicalDefinition?: string
   templateType?: string
   thresholdMax?: string
@@ -141,7 +207,7 @@ export interface KnowledgeFormValues {
 }
 
 export interface KnowledgeSearchParams {
-  keyword: string
+  techName: string
   status?: number
   type: string
 }

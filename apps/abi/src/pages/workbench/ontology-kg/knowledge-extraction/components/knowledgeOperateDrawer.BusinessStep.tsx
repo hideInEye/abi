@@ -4,10 +4,10 @@ import { DATA_FREQUENCY_OPTIONS, INDICATOR_TYPE_OPTIONS, KNOWLEDGE_DATA_TYPE_OPT
 
 interface Props {
   readonly indicatorNameDisabled?: boolean
-  readonly validateAliasTags: (_: any, value?: string[]) => Promise<void>
-  readonly validateBusinessRemark: (_: any, value?: string) => Promise<void>
-  readonly validateIndicatorName: (_: any, value?: string) => Promise<void>
-  readonly validateMeasurementUnit: (_: any, value?: string) => Promise<void>
+  readonly validateAliasTags: (_: unknown, value?: string[]) => Promise<void>
+  readonly validateBusinessRemark: (_: unknown, value?: string) => Promise<void>
+  readonly validateIndicatorName: (_: unknown, value?: string) => Promise<void>
+  readonly validateMeasurementUnit: (_: unknown, value?: string) => Promise<void>
 }
 
 export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
@@ -77,7 +77,7 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
 
       <div className="mb-4 border border-gray-200 rounded bg-white p-4">
         <div className="mb-3 text-base font-semibold">语义信息</div>
-        <AForm.Item extra="用于 ChatBI 对业务术语的识别与召回" label="指标别名" name="indicatorAliasTags" rules={[{ validator: validateAliasTags }]}>
+        <AForm.Item extra="用于 ChatBI 对业务术语的识别与召回" label="指标别名" name="indAlias" rules={[{ validator: validateAliasTags }]}>
           <ASelect mode="tags" open={false} placeholder="输入后按回车生成标签" tokenSeparators={[',']} />
         </AForm.Item>
 

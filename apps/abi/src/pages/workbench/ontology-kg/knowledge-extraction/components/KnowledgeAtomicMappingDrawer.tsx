@@ -1,11 +1,15 @@
 /* eslint-disable complexity */
 import { CloseOutlined } from '@ant-design/icons'
 import { message } from 'antd'
+import type { TableColumnsType } from 'antd'
 import React from 'react'
 
 import { TableSemantics } from '@/components/tableSemantics'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
 import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
+
+import type { AtomicMappingPayload, KnowledgeTechField } from '../types'
+import { getKnowledgeSpaceId } from '../utils/space'
 
 interface MeasureFieldItem {
   alias: string
@@ -14,7 +18,7 @@ interface MeasureFieldItem {
   englishName: string
   fieldType: string
   key: string
-  raw: Record<string, any>
+  raw: KnowledgeTechField
 }
 
 interface MappingFormValues {
@@ -25,21 +29,21 @@ interface MappingFormValues {
 interface Props {
   readonly groupName?: string
   readonly onClose: (refresh?: boolean) => void
-  readonly onSubmit: (payload: Array<Record<string, any>>) => Promise<boolean>
+  readonly onSubmit: (payload: AtomicMappingPayload[]) => Promise<boolean>
   readonly open: boolean
   readonly groupId?: number
 }
 
 // eslint-disable-next-line complexity
-function parseMeasureFields(modelDetail: any): MeasureFieldItem[] {
+function parseMeasureFields(modelDetail: unknown): MeasureFieldItem[] {
   if (!modelDetail) {
     return []
   }
   try {
     const detail = typeof modelDetail === 'string' ? JSON.parse(modelDetail) : modelDetail
-    const measures = Array.isArray(detail?.measures) ? detail.measures : []
+    const measures = Array.isArray((detail as { measures?: unknown[] })?.measures) ? (detail as { measures: KnowledgeTechField[] }).measures : []
     return measures
-      .map((item: any) => {
+      .map((item) => {
         const key = String(item?.techId || item?.tfieldId || item?.fieldName || item?.originName || '').trim()
         if (!key) {
           return null
@@ -75,7 +79,12 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
   const [loadingFields, setLoadingFields] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const handleSchemaChange = async ({ semanticSchemaId }: { semanticSchemaId: number }) => {
+  const handleSchemaChange = async ({ semanticSchemaId }: {
+    semanticGroupId: number | null
+    semanticSchemaId: number
+    semanticsGroupId: number | null
+    viewId: number
+  }) => {
     setLoadingFields(true)
     try {
       const res = await queryTableSemanticsDetail(semanticSchemaId)
@@ -116,9 +125,9 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
     }
 
     const selectedRows = fieldRows.filter(item => selectedRowKeys.includes(item.key))
-    const payload = selectedRows.map(item => ({
+    const payload: AtomicMappingPayload[] = selectedRows.map(item => ({
       relSchemaId: values.semanticSchemaId,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId: getKnowledgeSpaceId(),
       groupId: groupId,
       techId: [{
         ...item.raw,
@@ -143,7 +152,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
     }
   }
 
-  const columns = [
+  const columns: TableColumnsType<MeasureFieldItem> = [
     {
       dataIndex: 'englishName',
       key: 'englishName',
@@ -245,7 +254,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       >
         <TableSemantics
           form={form}
-          getSchemaId={handleSchemaChange as any}
+          getSchemaId={handleSchemaChange}
           getSchemaOptions={(_: TableSemanticParams[]) => {}}
           type="shema"
         />
@@ -253,7 +262,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
 
       <div className="mb-4 mt-2 text-4 font-semibold">字段映射原子指标</div>
       <ATable
-        columns={columns as any}
+        columns={columns}
         dataSource={fieldRows}
         loading={loadingFields}
         pagination={false}

@@ -1,18 +1,24 @@
 import { InfoCircleOutlined } from '@ant-design/icons'
+import type { FormInstance } from 'antd'
 import React from 'react'
 
 import Editor from '@/pages/workbench/data-preparation/data-collection-operate/modules/InsetCodemirror'
 import QuoteFun from '@/pages/workbench/data-preparation/data-collection-operate/modules/QuoteFun'
 import QuoteField from '@/pages/workbench/ontology-kg/technical-jargon/components/QuoteField'
 
+import type { KnowledgeFormValues, KnowledgeTechField } from '../types'
 import { extractUniqueIds } from '../utils/knowledgeOperateDrawer.utils'
 
 interface Props {
-  readonly allFields: any[]
-  readonly form: any
+  readonly allFields: KnowledgeTechField[]
+  readonly form: FormInstance<KnowledgeFormValues>
   readonly strictCustom?: boolean
-  readonly validateCustomExpression: (_: any, value?: string) => Promise<void>
-  readonly validateSqlExpression: (_: any, value?: string) => Promise<void>
+  readonly validateCustomExpression: (_: unknown, value?: string) => Promise<void>
+  readonly validateSqlExpression: (_: unknown, value?: string) => Promise<void>
+}
+
+interface ExpressionEditorRef {
+  insertText?: (value: string, replace?: boolean) => void
 }
 
 export const KnowledgeOperateExpressionEditor: React.FC<Props> = ({
@@ -22,13 +28,14 @@ export const KnowledgeOperateExpressionEditor: React.FC<Props> = ({
   validateCustomExpression,
   validateSqlExpression
 }) => {
-  const [target, setTarget] = useState<any[]>([])
-  const editorRef = useRef<any>(null)
+  const [target, setTarget] = useState<KnowledgeTechField[]>([])
+  const editorRef = useRef<ExpressionEditorRef | null>(null)
   const tfieldId = useMemo(() => `${Date.now()}`, [])
 
-  const insertCode = (val: any) => {
-    if (typeof val === 'object' && val?.techId) {
-      const token = `##${val.techId}##`
+  const insertCode = (val: unknown) => {
+    const field = val as KnowledgeTechField | null
+    if (field && typeof field === 'object' && field.techId) {
+      const token = `##${field.techId}##`
       const currentExpr = form.getFieldValue('expr') || ''
       const nextExpr = `${currentExpr}${token}`
       form.setFieldValue('expr', nextExpr)

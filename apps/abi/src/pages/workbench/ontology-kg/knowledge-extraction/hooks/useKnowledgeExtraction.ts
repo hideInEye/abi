@@ -9,7 +9,8 @@ import {
   syncAtomicIndicators
 } from '@/service/api/knowledge-extraction'
 
-import type { KnowledgeGroupItem, KnowledgeIndicatorItem, KnowledgeSearchParams } from '../types'
+import type { AtomicMappingPayload, KnowledgeGroupItem, KnowledgeIndicatorItem, KnowledgeSearchParams, KnowledgeSubmitPayload } from '../types'
+import { getKnowledgeSpaceId } from '../utils/space'
 
 const UI_TO_API_QUALITY_LEVEL: Record<string, string> = {
   p0: 'P0-核心',
@@ -17,13 +18,27 @@ const UI_TO_API_QUALITY_LEVEL: Record<string, string> = {
   p2: 'P2-一般'
 }
 
+interface ApiResponseLike {
+  code?: number | string
+  data?: unknown
+  response?: {
+    data?: {
+      code?: number | string
+      data?: unknown
+      errMsg?: string
+      msg?: string
+      success?: boolean
+    }
+  }
+}
+
 const initialSearchParams: KnowledgeSearchParams = {
-  keyword: '',
+  techName: '',
   status: undefined,
   type: ''
 }
 
-function trimOrUndefined(value: any) {
+function trimOrUndefined(value: unknown) {
   if (typeof value !== 'string') {
     return value
   }
@@ -31,7 +46,7 @@ function trimOrUndefined(value: any) {
   return text || undefined
 }
 
-function parseRelateDimsPayload(value: any) {
+function parseRelateDimsPayload(value: unknown) {
   if (!value) {
     return undefined
   }
@@ -63,7 +78,7 @@ function parseRelateDimsPayload(value: any) {
   return undefined
 }
 
-function toNumberOrUndefined(value: any) {
+function toNumberOrUndefined(value: unknown) {
   if (value === '' || value === null || value === undefined) {
     return undefined
   }
@@ -71,28 +86,28 @@ function toNumberOrUndefined(value: any) {
   return Number.isNaN(num) ? undefined : num
 }
 
-function toApiQualityLevel(value: any) {
+function toApiQualityLevel(value: unknown) {
   const key = String(value || '').trim()
   return UI_TO_API_QUALITY_LEVEL[key] || key || undefined
 }
 
-function toPublicFlag(value: any) {
+function toPublicFlag(value: unknown) {
   if (value === undefined || value === null || value === '') {
     return undefined
   }
   return value === true || String(value) === '1' ? '1' : '0'
 }
 
-function compactPayload<T extends Record<string, any>>(payload: T): Partial<T> {
+function compactPayload<T extends Record<string, unknown>>(payload: T): Partial<T> {
   const entries = Object.entries(payload).filter(([, value]) => value !== undefined && value !== null)
   return Object.fromEntries(entries) as Partial<T>
 }
 
-function getApiErrorMessage(res: any, fallback: string) {
+function getApiErrorMessage(res: ApiResponseLike, fallback: string) {
   return res?.response?.data?.errMsg || res?.response?.data?.msg || fallback
 }
 
-function isApiSuccess(res: any) {
+function isApiSuccess(res: ApiResponseLike) {
   const success = res?.response?.data?.success
   if (typeof success === 'boolean') {
     return success
@@ -101,18 +116,18 @@ function isApiSuccess(res: any) {
   return Number.isNaN(code) || code <= 200
 }
 
-function normalizeDetail(res: any) {
+function normalizeDetail(res: ApiResponseLike): KnowledgeIndicatorItem | null {
   const data = res?.response?.data?.data ?? res?.data
   if (!data || Array.isArray(data)) {
     return null
   }
-  return data
+  return data as KnowledgeIndicatorItem
 }
 
-function buildCalcLogic(values: Record<string, any>) {
+function buildCalcLogic(values: KnowledgeSubmitPayload) {
   return compactPayload({
     accumulateStartDate: values.accumulateStartDate,
-    aggMethod: values.aggMethod,
+    projectionFunc: values.projectionFunc,
     calcPeriod: values.calcPeriod,
     compareMetricId: values.compareMetricId,
     comparePeriod: values.comparePeriod,
@@ -144,7 +159,7 @@ function buildCalcLogic(values: Record<string, any>) {
   })
 }
 
-function buildSubmitPayload(payload: Record<string, any>, selectedGroup: KnowledgeGroupItem | null) {
+function buildSubmitPayload(payload: KnowledgeSubmitPayload, selectedGroup: KnowledgeGroupItem | null) {
   const selectedGroupId = toNumberOrUndefined(selectedGroup?.groupId)
 
   return compactPayload({
@@ -163,10 +178,14 @@ function buildSubmitPayload(payload: Record<string, any>, selectedGroup: Knowled
     measurementUnit: trimOrUndefined(payload.measurementUnit),
     ownerEmail: trimOrUndefined(payload.ownerEmail),
     ownerPhone: trimOrUndefined(payload.ownerPhone),
+    projectionFunc: trimOrUndefined(payload.projectionFunc),
     qualityLevel: toApiQualityLevel(payload.qualityLevel),
     relateDims: parseRelateDimsPayload(payload.dimensionFieldIds),
-    spaceId: Number(localStorage.getItem('spaceId')),
+    relItemId: trimOrUndefined(payload.relItemId),
+    spaceId: getKnowledgeSpaceId(),
     status: trimOrUndefined(payload.status),
+    templateParams: payload.templateParams,
+    templateType: trimOrUndefined(payload.templateType),
     techId: payload.techId,
     techName: trimOrUndefined(payload.techName),
     technicalDefinition: trimOrUndefined(payload.technicalDefinition),
@@ -197,10 +216,10 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
       const res = await queryKnowledgeIndicators({
         groupId: selectedGroup.groupId,
         indicatorClass: queryParams.type || undefined,
-        keyword: queryParams.keyword || undefined,
+        techName: queryParams.techName || undefined,
         pageNum: 1,
         pageSize: 10,
-        spaceId: Number(localStorage.getItem('spaceId')),
+        spaceId: getKnowledgeSpaceId(),
         status: queryParams.status
       })
       const list = (res?.response?.data?.data?.list || []) as KnowledgeIndicatorItem[]
@@ -281,7 +300,7 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     }
     const res = await deleteKnowledgeIndicator({
       id: indicatorId,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId: getKnowledgeSpaceId(),
       techName: record.techName
     })
     if (!isApiSuccess(res)) {
@@ -292,7 +311,7 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     fetchTableData()
   }
 
-  const handleSubmit = async (payload: Record<string, any>, isEdit: boolean) => {
+  const handleSubmit = async (payload: KnowledgeSubmitPayload, isEdit: boolean) => {
     const params = buildSubmitPayload(payload, selectedGroup)
     const res = isEdit ? await editKnowledgeIndicator(params) : await addKnowledgeIndicator(params)
     if (!isApiSuccess(res)) {
@@ -304,8 +323,8 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     return true
   }
 
-  const handleAtomicMappingSubmit = async (payload: Array<Record<string, any>>) => {
-    const res = await syncAtomicIndicators(payload as any)
+  const handleAtomicMappingSubmit = async (payload: AtomicMappingPayload[]) => {
+    const res = await syncAtomicIndicators(payload)
     const code = Number(res?.response?.data?.code ?? res?.code ?? 200)
     if (code !== 200) {
       message.error(getApiErrorMessage(res, '原子指标映射保存失败'))

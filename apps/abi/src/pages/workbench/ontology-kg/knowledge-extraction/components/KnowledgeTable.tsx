@@ -1,5 +1,6 @@
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
 import { Button, Empty, Popconfirm, Space, Table, Tag, Tooltip } from 'antd'
+import type { TableColumnsType } from 'antd'
 import React from 'react'
 
 import { INDICATOR_TYPE_TEXT_MAP, STATUS_TEXT_MAP } from '../constants'
@@ -26,7 +27,7 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
     />
   )
 
-  const columns = useMemo(
+  const columns = useMemo<TableColumnsType<KnowledgeIndicatorItem>>(
     () => [
       {
         dataIndex: 'techName',
@@ -103,16 +104,16 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
     [onDelete, onEdit]
   )
 
-  const tableWidth = useMemo(() => columns.reduce((sum, item: any) => sum + (item.width || 120), 0), [columns])
+  const tableWidth = useMemo(() => columns.reduce((sum, item) => sum + (Number(item.width) || 120), 0), [columns])
   const tableColumns = useMemo(
     () =>
       dataSource.length
         ? columns
-        : columns.map((item: any) => ({
+        : columns.map((item) => ({
             ...item,
             fixed: undefined,
             width: undefined
-          })),
+          })) as TableColumnsType<KnowledgeIndicatorItem>,
     [columns, dataSource.length]
   )
 
@@ -121,7 +122,7 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
       <div style={{ border: '1px solid #d9d9d9', borderRadius: 8, overflow: 'hidden' }}>
         <Table
           className="assistant-table-scroll"
-          columns={tableColumns as any}
+          columns={tableColumns}
           dataSource={dataSource}
           loading={loading}
           locale={{ emptyText: emptyNode }}

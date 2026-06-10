@@ -6,6 +6,7 @@ import { queryDimensionList } from '@/service/api/dimension-modeling'
 import { tableSemanticsGroupList } from '@/service/api/table-semantics'
 
 import type { KnowledgeFormValues } from '../types'
+import { getKnowledgeSpaceId } from '../utils/space'
 
 interface DimensionGroupItem {
   groupId: number
@@ -29,14 +30,25 @@ interface Props {
   readonly form: FormInstance<KnowledgeFormValues>
 }
 
-function getFirstArray(res: any, paths: string[]) {
+type UnknownRecord = Record<string, unknown>
+
+function getPathValue(source: unknown, path: string) {
+  return path.split('.').reduce<unknown>((acc, key) => {
+    if (!acc || typeof acc !== 'object') {
+      return undefined
+    }
+    return (acc as UnknownRecord)[key]
+  }, source)
+}
+
+function getFirstArray(res: unknown, paths: string[]) {
   for (const path of paths) {
     if (!path) {
       if (Array.isArray(res)) {
         return res
       }
     } else {
-      const value = path.split('.').reduce((acc, key) => acc?.[key], res)
+      const value = getPathValue(res, path)
       if (Array.isArray(value)) {
         return value
       }
@@ -45,7 +57,7 @@ function getFirstArray(res: any, paths: string[]) {
   return []
 }
 
-function normalizeRows(res: any): any[] {
+function normalizeRows(res: unknown): unknown[] {
   return getFirstArray(res, [
     '',
     'rows',
@@ -59,22 +71,20 @@ function normalizeRows(res: any): any[] {
   ])
 }
 
-function getSpaceId() {
-  return Number(localStorage.getItem('spaceId')) || 0
-}
-
-function normalizeDimensionGroup(item: any): DimensionGroupItem | null {
-  const groupId = Number(item?.groupId ?? item?.id)
-  const groupName = String(item?.groupName ?? item?.name ?? '').trim()
+function normalizeDimensionGroup(item: unknown): DimensionGroupItem | null {
+  const source = item as UnknownRecord
+  const groupId = Number(source?.groupId ?? source?.id)
+  const groupName = String(source?.groupName ?? source?.name ?? '').trim()
   if (!groupId || !groupName) {
     return null
   }
   return { groupId, groupName }
 }
 
-function pickText(item: any, keys: string[]) {
+function pickText(item: unknown, keys: string[]) {
+  const source = item as UnknownRecord
   for (const key of keys) {
-    const value = String(item?.[key] ?? '').trim()
+    const value = String(source?.[key] ?? '').trim()
     if (value) {
       return value
     }
@@ -82,7 +92,7 @@ function pickText(item: any, keys: string[]) {
   return ''
 }
 
-function normalizeDimensionOption(item: any): DimensionTransferItem | null {
+function normalizeDimensionOption(item: unknown): DimensionTransferItem | null {
   const dimId = pickText(item, ['dimId', 'id', 'dimensionId'])
   if (!dimId) {
     return null
@@ -94,7 +104,7 @@ function normalizeDimensionOption(item: any): DimensionTransferItem | null {
   return { key: dimId, techName, title }
 }
 
-function parseSelectedDimensions(dimensionFieldIds?: any): SelectedDimensionSnapshot[] {
+function parseSelectedDimensions(dimensionFieldIds?: unknown): SelectedDimensionSnapshot[] {
   if (!dimensionFieldIds) {
     return []
   }
@@ -105,12 +115,13 @@ function parseSelectedDimensions(dimensionFieldIds?: any): SelectedDimensionSnap
           return null
         }
         if (typeof item === 'object') {
-          const key = String(item.dimId ?? item.id ?? '').trim()
+          const source = item as UnknownRecord
+          const key = String(source.dimId ?? source.id ?? '').trim()
           if (!key) {
             return null
           }
-          const techName = String(item.techName ?? '').trim()
-          const title = String(item.title ?? '').trim()
+          const techName = String(source.techName ?? '').trim()
+          const title = String(source.title ?? '').trim()
           return { key, techName: techName || undefined, title: title || undefined }
         }
         const key = String(item).trim()
@@ -162,13 +173,12 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
             groupType: 'ontology-dimension',
             pageNum: 1,
             pageSize: 1000,
-            spaceId: getSpaceId()
+            spaceId: getKnowledgeSpaceId()
           })
         )
         const groups = rows.map(normalizeDimensionGroup).filter(Boolean) as DimensionGroupItem[]
         setDimensionGroups(groups)
-        const groupKeys = groups.map(group => `group-${group.groupId}`)
-        setExpandedKeys(groupKeys)
+        setExpandedKeys([])
       } catch {
         message.error('维度分组查询失败')
       } finally {
@@ -193,7 +203,7 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
             groupId,
             pageNum: 1,
             pageSize: 1000,
-            spaceId: getSpaceId()
+            spaceId: getKnowledgeSpaceId()
           })
         )
         setDimensionMap(prev => ({
@@ -208,15 +218,6 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
     },
     [dimensionMap, loadingDimensionGroupIds]
   )
-
-  useEffect(() => {
-    if (!dimensionGroups.length) {
-      return
-    }
-    dimensionGroups.forEach(group => {
-      fetchDimensionsByGroup(group.groupId)
-    })
-  }, [dimensionGroups, fetchDimensionsByGroup])
 
   const loadedDimensionOptions = useMemo(() => {
     const map = new Map<string, DimensionTransferItem>()
@@ -269,7 +270,7 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
     form.setFieldValue('dimensionFieldIds', JSON.stringify(relateDims))
   }
 
-  const handleLoadTreeData = async (node: any) => {
+  const handleLoadTreeData = async (node: { key?: React.Key }) => {
     const key = String(node.key || '')
     if (!key.startsWith('group-')) {
       return

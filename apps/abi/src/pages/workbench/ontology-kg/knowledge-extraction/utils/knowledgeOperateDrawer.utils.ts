@@ -8,6 +8,8 @@ export interface StepItem {
   title: string
 }
 
+type UnknownRecord = Record<string, unknown>
+
 export function getStepItems(showDimensionStep = true, businessOnly = false): StepItem[] {
   if (businessOnly) {
     return [{ key: 'business', title: '业务配置' }]
@@ -32,12 +34,18 @@ export function parseAliasTags(alias?: string) {
     .filter(Boolean)
 }
 
-export function parseDimensionKeys(dimensionFieldIds?: any) {
+export function parseDimensionKeys(dimensionFieldIds?: unknown) {
   if (!dimensionFieldIds) {
     return []
   }
   if (Array.isArray(dimensionFieldIds)) {
-    return dimensionFieldIds.map(item => String(item?.dimId ?? item?.id ?? item).trim()).filter(Boolean)
+    return dimensionFieldIds.map(item => {
+      if (item && typeof item === 'object') {
+        const source = item as UnknownRecord
+        return String(source.dimId ?? source.id ?? '').trim()
+      }
+      return String(item).trim()
+    }).filter(Boolean)
   }
   if (typeof dimensionFieldIds === 'string') {
     try {
@@ -69,7 +77,7 @@ export function extractUniqueIds(expression: string): string[] {
   return Array.from(idSet)
 }
 
-export function parseTemplateParams(templateParams?: Record<string, any> | string) {
+export function parseTemplateParams(templateParams?: object | string) {
   if (!templateParams) {
     return {}
   }

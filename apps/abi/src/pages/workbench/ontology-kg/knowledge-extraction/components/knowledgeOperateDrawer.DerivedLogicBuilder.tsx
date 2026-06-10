@@ -1,7 +1,9 @@
 import { MinusOutlined, PlusOutlined } from '@ant-design/icons'
+import type { FormInstance } from 'antd'
 import React from 'react'
 
 import { DATA_FREQUENCY_OPTIONS, DERIVED_LOGIC_OPTIONS, DERIVED_OPERATOR_OPTIONS } from '../constants'
+import type { KnowledgeFormValues, KnowledgeTechField } from '../types'
 
 interface AtomicMetricOption {
   label: string
@@ -16,9 +18,9 @@ interface ConditionItem {
 }
 
 interface Props {
-  readonly allFields: any[]
+  readonly allFields: KnowledgeTechField[]
   readonly atomicMetricOptions: AtomicMetricOption[]
-  readonly form: any
+  readonly form: FormInstance<KnowledgeFormValues>
 }
 
 const defaultCondition: ConditionItem = {
@@ -47,7 +49,7 @@ function buildDerivedResult({
   updateFrequency,
   techId
 }: {
-  allFields: any[]
+  allFields: KnowledgeTechField[]
   atomicMetricOptions: AtomicMetricOption[]
   calcPeriod?: string | number
   conditions?: ConditionItem[]
