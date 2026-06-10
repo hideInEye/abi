@@ -1,4 +1,4 @@
-import { DeleteOutlined, EllipsisOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, PlusCircleOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React, { useMemo } from 'react';
@@ -166,36 +166,60 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     }
   };
 
-  // 递归构建子节点（区分文件夹/叶子图标，对齐 qknow-ui DeptTree 视觉）
-  const buildTreeNodes = (items: any[], currentExpandedKeys: React.Key[]): TreeDataNode[] => {
-    return items.map(item => {
+  // 递归构建子节点（v5 设计稿风格：徽章 + 右侧箭头 + 叶子圆点，文件夹图标保持原蓝色）
+  const buildTreeNodes = (items: any[], currentExpandedKeys: React.Key[], depth: number = 0): TreeDataNode[] => {
+    return items.map((item) => {
       const hasChildren = item.children && item.children.length > 0;
       const nodeKey = `group-${item.groupId}`;
       const isExpanded = currentExpandedKeys.includes(nodeKey);
-      // 有子节点 → 文件夹图标（展开/折叠区分），叶子节点 → 文档图标
-      const nodeIcon = hasChildren
-        ? (isExpanded
-          ? <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
-          : <FolderOutlined className="group-node-icon group-node-icon--folder" />)
-        : <FileTextOutlined className="group-node-icon group-node-icon--leaf" />;
+
+      // 文件夹图标（保持原蓝色样式）
+      const folderIcon = hasChildren ? (
+        isExpanded ? (
+          <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
+        ) : (
+          <FolderOutlined className="group-node-icon group-node-icon--folder" />
+        )
+      ) : null;
+
+      // 叶子节点圆点
+      const leafDot = !hasChildren ? (
+        <span className="group-node-dot" />
+      ) : null;
+
+      // 子节点数量徽章
+      const countBadge = hasChildren && item.children?.length > 0 ? (
+        <span className="group-node-count">{item.children.length}</span>
+      ) : null;
+
+      // 右侧展开箭头
+      const chevron = hasChildren ? (
+        <span className={`group-node-chevron ${isExpanded ? 'open' : ''}`}>
+          <RightOutlined style={{ fontSize: 'inherit' }} />
+        </span>
+      ) : null;
+
       return {
         title: (
-          <span className="flex items-center gap-2 w-full group overflow-hidden">
-            {nodeIcon}
-            <span className="group-tree-title flex-1 min-w-0 truncate">{item.groupName}</span>
-            <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
+          <span className="group-node-content" data-depth={depth}>
+            {folderIcon}
+            {leafDot}
+            <span className="group-tree-title">{item.groupName}</span>
+            {countBadge}
+            <span className="group-node-action">
               <Tooltip title="编辑">
-                <EllipsisOutlined
+                <MoreOutlined
                   className="text-gray-400 cursor-pointer hover:text-primary"
                   style={{ fontSize: '1rem' }}
                   onClick={(e) => showEditModal(item, e)}
                 />
               </Tooltip>
             </span>
+            {chevron}
           </span>
         ),
         key: nodeKey,
-        children: hasChildren ? buildTreeNodes(item.children, currentExpandedKeys) : undefined,
+        children: hasChildren ? buildTreeNodes(item.children, currentExpandedKeys, depth + 1) : undefined,
         isLeaf: !hasChildren
       };
     });
@@ -205,33 +229,36 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
 
   return (
     <>
-      <div className="group-panel flex flex-col gap-2">
-        <div className="flex items-center justify-between px-1 py-1">
-          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'rgba(0,0,0,0.35)', letterSpacing: '0.05em' }}>文件夹</span>
-          <Tooltip title="添加组">
-            <PlusCircleOutlined
-              className="text-gray-400 cursor-pointer hover:text-primary"
-              style={{ fontSize: '0.875rem' }}
-              onClick={(e) => handleAddGroup(e as any)}
+      <div className="group-panel">
+        <div className="group-header">
+          <div className="group-header-title">
+            {config.panelTitle}
+            <Tooltip title="添加组">
+              <div className="group-add-btn" onClick={(e) => handleAddGroup(e as any)}>
+                <PlusOutlined />
+              </div>
+            </Tooltip>
+          </div>
+          <div className="group-search">
+            <SearchOutlined />
+            <input
+              className="group-search-input-inner"
+              type="text"
+              placeholder={config.inputPlaceholder}
+              onChange={(e) => handleSearch(e.target.value)}
             />
-          </Tooltip>
+          </div>
         </div>
-        <AInput
-          allowClear
-          placeholder={config.inputPlaceholder}
-          className="group-search-input"
-          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-          onChange={(e) => handleSearch(e.target.value)}
-        />
-        <div style={{ borderTop: '1px solid rgba(130, 140, 200, 0.18)', margin: '2px 0' }} />
-        <Tree
-          treeData={treeData}
-          expandedKeys={expandedKeys}
-          onExpand={(keys) => setExpandedKeys(keys)}
-          selectedKeys={selectedKeys}
-          onSelect={handleTreeSelect}
-          blockNode
-        />
+        <div className="group-tree-body">
+          <Tree
+            treeData={treeData}
+            expandedKeys={expandedKeys}
+            onExpand={(keys) => setExpandedKeys(keys)}
+            selectedKeys={selectedKeys}
+            onSelect={handleTreeSelect}
+            blockNode
+          />
+        </div>
       </div>
 
       <Modal

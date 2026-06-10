@@ -4,93 +4,330 @@
     overflow-y: scroll;
   }
 }
+
 .group-panel {
-  width: 240px;
-  min-width: 240px;
-  max-width: 240px;
+  width: 300px;
+  min-width: 300px;
+  max-width: 300px;
   flex: 1 1 auto;
-  background: #FCFDFF;
+  background: var(--abi-panel-bg);
+  backdrop-filter: var(--abi-backdrop);
+  border-right: 1px solid var(--abi-panel-border);
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
-  .ant-tree {
-    overflow: visible;
-    // treenode 作为背景色承载层
-    .ant-tree-treenode {
-      position: relative;
-      padding-left: 0 !important;
-      padding-right: 0 !important;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      overflow: hidden;
-      padding-top: 6px !important;
-      padding-bottom: 6px !important;
+  display: flex;
+  flex-direction: column;
+}
 
-      // 选中态：整行浅蓝背景 + 叶子图标变深蓝
-      &.ant-tree-treenode-selected {
-        background-color: rgba(51, 102, 255, 0.1) !important;
+/* Header */
+.group-header {
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--abi-border-light);
+  flex-shrink: 0;
+}
 
-        .group-node-icon--leaf {
-          color: rgb(53, 140, 243) !important;
-        }
-      }
+.group-header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a2744;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
-      // hover 态：灰色背景
-      &:hover {
-        background-color: #F0F0F0 !important;
-      }
+.group-add-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--abi-panel-border);
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #5b7cf7;
+    background: rgba(91, 124, 247, 0.10);
+
+    svg, .anticon {
+      color: #5b7cf7;
     }
-    // 清除 content-wrapper 自带的选中/hover 背景，避免叠加
-    .ant-tree-node-content-wrapper {
-      padding-left: 6px !important;
-      padding-right: 6px !important;
-      overflow: hidden;
-      flex: 1;
-      min-width: 0;
-      background: transparent !important;
-      &.ant-tree-node-selected {
-        background: transparent !important;
-        color: inherit !important;
-      }
-      &:hover {
-        background: transparent !important;
-      }
-    }
-    .ant-tree-title {
-      display: block;
-      overflow: hidden;
-      width: 100%;
-    }
-    .ant-tree-indent-unit {
-      width: 16px !important;
-    }
-    // switcher（展开/折叠箭头）去掉 hover 高亮，保持简洁
-    .ant-tree-switcher {
-      background: transparent !important;
-      &:hover {
-        background: transparent !important;
-      }
-      .ant-tree-switcher-icon {
-        font-size: 12px;
-        color: rgba(0, 0, 0, 0.25);
-      }
-    }
+  }
+
+  svg, .anticon {
+    width: 14px;
+    height: 14px;
+    color: #8fa0b5;
+    transition: all 0.2s ease;
   }
 }
 
-// 分组树节点图标（对齐 qknow-ui DeptTree 视觉风格）
+/* Search */
+.group-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--abi-panel-border);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+
+  &:focus-within {
+    border-color: #5b7cf7;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.10);
+  }
+
+  .anticon {
+    font-size: 14px;
+    color: #8fa0b5;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+
+  &:focus-within .anticon {
+    color: #5b7cf7;
+  }
+}
+
+.group-search-input-inner {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: #1a2744;
+  width: 100%;
+  padding: 0;
+
+  &::placeholder {
+    color: #8fa0b5;
+  }
+}
+
+/* Tree body */
+.group-tree-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 10px;
+
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(130, 140, 200, 0.18);
+    border-radius: 3px;
+  }
+}
+
+/* Ant Design Tree overrides */
+.ant-tree {
+  overflow: visible;
+  background: transparent;
+
+  .ant-tree-treenode {
+    position: relative;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+
+    &.ant-tree-treenode-selected {
+      .group-node-content {
+        color: #5b7cf7;
+        font-weight: 600;
+        background: rgba(91, 124, 247, 0.10);
+      }
+
+      .group-node-dot {
+        background: #5b7cf7;
+        box-shadow: 0 0 6px rgba(91, 124, 247, 0.22);
+      }
+    }
+
+    &:hover {
+      .group-node-content {
+        background: rgba(130, 140, 200, 0.08);
+      }
+    }
+  }
+
+  .ant-tree-node-content-wrapper {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
+    background: transparent !important;
+
+    &.ant-tree-node-selected {
+      background: transparent !important;
+      color: inherit !important;
+    }
+
+    &:hover {
+      background: transparent !important;
+    }
+  }
+
+  .ant-tree-title {
+    display: block;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .ant-tree-indent-unit {
+    width: 16px !important;
+  }
+
+  .ant-tree-switcher {
+    display: none !important;
+  }
+}
+
+/* Node content wrapper */
+.group-node-content {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3a4d65;
+  user-select: none;
+  position: relative;
+  line-height: 1.5;
+  width: 100%;
+}
+
+/* Folder icon (保持原蓝色样式) */
 .group-node-icon {
   flex-shrink: 0;
   font-size: 15px;
 
   &--folder,
   &--folder-open {
-    color: #358cf3; // 蓝色文件夹图标
+    color: #358cf3;
+  }
+}
+
+/* Tree title text */
+.group-tree-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Count badge */
+.group-node-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8fa0b5;
+  background: rgba(130, 140, 200, 0.1);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  flex-shrink: 0;
+}
+
+/* Chevron */
+.group-node-chevron {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.25s ease;
+  opacity: 0.35;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg, .anticon {
+    width: 14px;
+    height: 14px;
   }
 
-  &--leaf {
-    color: rgb(175, 209, 250); // 浅蓝色文档图标（选中态由上方 .ant-tree-treenode-selected 覆盖为深蓝）
+  &.open {
+    transform: rotate(90deg);
+    opacity: 0.6;
+  }
+}
+
+/* Dot for leaf nodes */
+.group-node-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #8fa0b5;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+/* Action button (edit) */
+.group-node-action {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+
+  .group-node-content:hover & {
+    opacity: 1;
+  }
+}
+
+/* Depth-based adjustments */
+.group-node-content[data-depth="1"] {
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+
+  .group-node-icon {
     font-size: 14px;
+  }
+}
+
+.group-node-content[data-depth="2"] {
+  font-size: 13px;
+  font-weight: 500;
+  gap: 5px;
+  color: #3a4d65;
+
+  .group-node-icon {
+    font-size: 13px;
+  }
+}
+
+.group-node-content[data-depth="3"] {
+  font-size: 12px;
+  font-weight: 500;
+  gap: 5px;
+  color: #5f7490;
+
+  .group-node-icon {
+    font-size: 12px;
+  }
+}
+
+.group-node-content[data-depth="4"] {
+  font-size: 12px;
+  font-weight: 500;
+  gap: 4px;
+  color: #5f7490;
+
+  .group-node-icon {
+    font-size: 11px;
   }
 }

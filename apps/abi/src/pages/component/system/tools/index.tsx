@@ -537,6 +537,7 @@ const TABLE_SCROLL = { x: 'max-content' };
         width={900}
         destroyOnClose
         onClose={() => setModalOpen(false)}
+        styles={{ body: { display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', height: '100%' } }}
         footer={
           <div style={{ textAlign: 'right' }}>
             <Space>
@@ -548,194 +549,213 @@ const TABLE_SCROLL = { x: 'max-content' };
           </div>
         }
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            label="工具名称"
-            name="toolName"
-            rules={[{ required: true, message: '请输入工具名称' }]}
-          >
-            <Input placeholder="如：builtin_increment" />
-          </Form.Item>
-
-          <Form.Item
-            label="标签"
-            name="toolLabel"
-            rules={[{ required: true, message: '请输入工具标签' }]}
-          >
-            <Input placeholder="如：计算器" />
-          </Form.Item>
-
-          <Form.Item label="功能描述" name="description">
-            <Input.TextArea rows={3} placeholder="请输入功能描述" />
-          </Form.Item>
-
-          <Form.Item label="状态" name="status">
-            <Select style={{ width: 160 }}>
-              <Select.Option value="0">启用</Select.Option>
-              <Select.Option value="1">禁用</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <div style={{ marginBottom: 16 }}>
-            <Button
-              type={isAdvancedMode ? 'primary' : 'default'}
-              onClick={() => {
-                setIsAdvancedMode(v => !v);
-                setActiveTab('inputSchema');
-              }}
+        {/* 固定区域：表单基础字段 */}
+        <Form form={form} layout="vertical" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: '24px 24px 0', flexShrink: 0 }}>
+            <Form.Item
+              label="工具名称"
+              name="toolName"
+              rules={[{ required: true, message: '请输入工具名称' }]}
             >
-              {isAdvancedMode ? '关闭高级配置' : '高级配置'}
-            </Button>
+              <Input placeholder="如：builtin_increment" />
+            </Form.Item>
+
+            <Form.Item
+              label="标签"
+              name="toolLabel"
+              rules={[{ required: true, message: '请输入工具标签' }]}
+            >
+              <Input placeholder="如：计算器" />
+            </Form.Item>
+
+            <Form.Item label="功能描述" name="description">
+              <Input.TextArea rows={3} placeholder="请输入功能描述" />
+            </Form.Item>
+
+            <Form.Item label="状态" name="status" style={{ marginBottom: 0 }}>
+              <Select style={{ width: 160 }}>
+                <Select.Option value="0">启用</Select.Option>
+                <Select.Option value="1">禁用</Select.Option>
+              </Select>
+            </Form.Item>
+
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              style={{ marginTop: 16 }}
+              items={[
+                { key: 'script', label: 'Python 脚本' },
+                { key: 'startupParams', label: '启动参数' },
+                { key: 'inputSchema', label: '输入参数 Schema' },
+                { key: 'outputSchema', label: '输出参数 JSON Schema' },
+                { key: 'remark', label: '备注' }
+              ]}
+            />
           </div>
 
-          <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
-            { key: 'script', label: 'Python 脚本' },
-            { key: 'startupParams', label: '启动参数' },
-            { key: 'inputSchema', label: '输入参数 Schema' },
-            { key: 'outputSchema', label: '输出参数 JSON Schema' },
-            { key: 'remark', label: '备注' }
-          ]} />
+          {/* 滚动区域：五个 Tab 内容盒子，各自内部滚动，外层不产生大滚动条 */}
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: '0 24px 24px' }}>
 
-          {/* Python 脚本 */}
-          <div style={{ display: activeTab === 'script' ? 'block' : 'none' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 8,
-                padding: '8px 12px',
-                background: '#fffbe6',
-                border: '1px solid #ffe58f',
-                borderRadius: 6,
-                marginBottom: 12
-              }}
-            >
-              <ExclamationCircleFilled style={{ color: '#faad14', fontSize: 14, marginTop: 3 }} />
-              <div style={{ fontSize: 13, lineHeight: '20px', color: 'rgba(0,0,0,0.85)' }}>
-                <div style={{ fontWeight: 500, marginBottom: 2 }}>安全警告</div>
-                <div style={{ color: 'rgba(0,0,0,0.65)' }}>
-                  Python 脚本将以服务器进程权限执行，请确保代码来源可信。请勿编写删除文件、访问网络等高危操作，或交由管理员审核后发布。
+            {/* Python 脚本 */}
+            <div style={{ display: activeTab === 'script' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                  padding: '8px 12px',
+                  background: '#fffbe6',
+                  border: '1px solid #ffe58f',
+                  borderRadius: 6,
+                  marginBottom: 12,
+                  flexShrink: 0
+                }}
+              >
+                <ExclamationCircleFilled style={{ color: '#faad14', fontSize: 14, marginTop: 3 }} />
+                <div style={{ fontSize: 13, lineHeight: '20px', color: 'rgba(0,0,0,0.85)' }}>
+                  <div style={{ fontWeight: 500, marginBottom: 2 }}>安全警告</div>
+                  <div style={{ color: 'rgba(0,0,0,0.65)' }}>
+                    Python 脚本将以服务器进程权限执行，请确保代码来源可信。请勿编写删除文件、访问网络等高危操作，或交由管理员审核后发布。
+                  </div>
                 </div>
               </div>
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <Form.Item name="scriptContent" noStyle>
+                  <CodeEditor language="python" height="260px" />
+                </Form.Item>
+              </div>
             </div>
-            <Form.Item name="scriptContent" noStyle>
-              <CodeEditor language="python" height="320px" />
-            </Form.Item>
-          </div>
 
-          {/* 启动参数 */}
-          <div style={{ display: activeTab === 'startupParams' ? 'block' : 'none' }}>
-            <Form.Item name="startupParams" noStyle>
-              <CodeEditor language="json" height="320px" />
-            </Form.Item>
-          </div>
-
-          {/* 输入参数 Schema */}
-          <div style={{ display: activeTab === 'inputSchema' ? 'block' : 'none' }}>
-            {isAdvancedMode ? (
-              <Form.Item name="inputSchema" noStyle>
+            {/* 启动参数 */}
+            <div style={{ display: activeTab === 'startupParams' ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+              <Form.Item name="startupParams" noStyle style={{ flex: 1, minHeight: 0 }}>
                 <CodeEditor language="json" height="320px" />
               </Form.Item>
-            ) : (
-              <>
-                <div style={{ marginBottom: 8, fontWeight: 500 }}>参数列表</div>
-                <Form.List
-                  name="schemaParams"
-                  rules={[
-                    {
-                      validator: (_, values) => {
-                        const names = (values || []).map((v: any) => v?.paramName).filter(Boolean);
-                        const dup = names.find((n: string, i: number) => names.indexOf(n) !== i);
-                        if (dup) return Promise.reject(new Error(`参数名字「${dup}」重复，请修改`));
-                        return Promise.resolve();
-                      }
-                    }
-                  ]}
-                >
-                  {(fields, { add, remove }) => (
-                    <div className="flex flex-col gap-8px">
-                      {fields.map(({ key, name, ...restField }) => (
-                        <div
-                          key={key}
-                          style={{
-                            display: 'flex',
-                            gap: 8,
-                            alignItems: 'flex-start',
-                            padding: 8,
-                            border: '1px solid #f0f0f0',
-                            borderRadius: 6,
-                            background: '#fafafa'
-                          }}
-                        >
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'paramName']}
-                            rules={[
-                              { validator: nameValidator },
-                              {
-                                validator: (_, value) => {
-                                  if (!value) return Promise.resolve();
-                                  const allParams: { paramName?: string }[] = form.getFieldValue('schemaParams') || [];
-                                  const count = allParams.filter(p => p?.paramName === value).length;
-                                  if (count > 1) return Promise.reject(new Error('参数名字重复'));
-                                  return Promise.resolve();
-                                }
-                              }
-                            ]}
-                            style={{ flex: 1, marginBottom: 0 }}
-                          >
-                            <Input placeholder="参数名字" />
-                          </Form.Item>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'paramType']}
-                            style={{ flex: 1, marginBottom: 0 }}
-                          >
-                            <Select placeholder="参数类型" options={paramTypeOptions} />
-                          </Form.Item>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'paramDescription']}
-                            style={{ flex: 2, marginBottom: 0 }}
-                          >
-                            <Input placeholder="参数描述" />
-                          </Form.Item>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'required']}
-                            valuePropName="checked"
-                            style={{ marginBottom: 0, whiteSpace: 'nowrap' }}
-                          >
-                            <Checkbox>必填</Checkbox>
-                          </Form.Item>
-                          <Button
-                            type="link"
-                            danger
-                            icon={<MinusCircleOutlined />}
-                            onClick={() => remove(name)}
-                            style={{ padding: '0 4px' }}
-                          />
+            </div>
+
+            {/* 输入参数 Schema */}
+            <div style={{ display: activeTab === 'inputSchema' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
+              {isAdvancedMode ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12, flexShrink: 0 }}>
+                    <Button type="primary" onClick={() => setIsAdvancedMode(false)}>
+                      关闭高级配置
+                    </Button>
+                  </div>
+                  <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                    <Form.Item name="inputSchema" noStyle>
+                      <CodeEditor language="json" height="320px" />
+                    </Form.Item>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexShrink: 0 }}>
+                    <div style={{ fontWeight: 500 }}>参数列表</div>
+                    <Button onClick={() => setIsAdvancedMode(true)}>
+                      高级配置
+                    </Button>
+                  </div>
+                  <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                    <Form.List
+                      name="schemaParams"
+                      rules={[
+                        {
+                          validator: (_, values) => {
+                            const names = (values || []).map((v: any) => v?.paramName).filter(Boolean);
+                            const dup = names.find((n: string, i: number) => names.indexOf(n) !== i);
+                            if (dup) return Promise.reject(new Error(`参数名字「${dup}」重复，请修改`));
+                            return Promise.resolve();
+                          }
+                        }
+                      ]}
+                    >
+                      {(fields, { add, remove }) => (
+                        <div className="flex flex-col gap-8px">
+                          {fields.map(({ key, name, ...restField }) => (
+                            <div
+                              key={key}
+                              style={{
+                                display: 'flex',
+                                gap: 8,
+                                alignItems: 'flex-start',
+                                padding: 8,
+                                border: '1px solid #f0f0f0',
+                                borderRadius: 6,
+                                background: '#fafafa'
+                              }}
+                            >
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'paramName']}
+                                rules={[
+                                  { validator: nameValidator },
+                                  {
+                                    validator: (_, value) => {
+                                      if (!value) return Promise.resolve();
+                                      const allParams: { paramName?: string }[] = form.getFieldValue('schemaParams') || [];
+                                      const count = allParams.filter(p => p?.paramName === value).length;
+                                      if (count > 1) return Promise.reject(new Error('参数名字重复'));
+                                      return Promise.resolve();
+                                    }
+                                  }
+                                ]}
+                                style={{ flex: 1, marginBottom: 0 }}
+                              >
+                                <Input placeholder="参数名字" />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'paramType']}
+                                style={{ flex: 1, marginBottom: 0 }}
+                              >
+                                <Select placeholder="参数类型" options={paramTypeOptions} />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'paramDescription']}
+                                style={{ flex: 2, marginBottom: 0 }}
+                              >
+                                <Input placeholder="参数描述" />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'required']}
+                                valuePropName="checked"
+                                style={{ marginBottom: 0, whiteSpace: 'nowrap' }}
+                              >
+                                <Checkbox>必填</Checkbox>
+                              </Form.Item>
+                              <Button
+                                type="link"
+                                danger
+                                icon={<MinusCircleOutlined />}
+                                onClick={() => remove(name)}
+                                style={{ padding: '0 4px' }}
+                              />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </Form.List>
-              </>
-            )}
-          </div>
+                      )}
+                    </Form.List>
+                  </div>
+                </>
+              )}
+            </div>
 
-          {/* 输出参数 JSON Schema */}
-          <div style={{ display: activeTab === 'outputSchema' ? 'block' : 'none' }}>
-            <Form.Item name="outputSchema" noStyle>
-              <CodeEditor language="json" height="320px" />
-            </Form.Item>
-          </div>
+            {/* 输出参数 JSON Schema */}
+            <div style={{ display: activeTab === 'outputSchema' ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+              <Form.Item name="outputSchema" noStyle style={{ flex: 1, minHeight: 0 }}>
+                <CodeEditor language="json" height="320px" />
+              </Form.Item>
+            </div>
 
-          {/* 备注 */}
-          <div style={{ display: activeTab === 'remark' ? 'block' : 'none' }}>
-            <Form.Item name="remark" noStyle>
-              <Input.TextArea rows={12} placeholder="备注信息" />
-            </Form.Item>
+            {/* 备注 */}
+            <div style={{ display: activeTab === 'remark' ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+              <Form.Item name="remark" noStyle style={{ flex: 1, minHeight: 0 }}>
+                <Input.TextArea rows={12} placeholder="备注信息" style={{ height: '100%', resize: 'none' }} />
+              </Form.Item>
+            </div>
           </div>
         </Form>
       </Drawer>

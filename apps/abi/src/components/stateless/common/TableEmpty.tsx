@@ -9,7 +9,7 @@ export default function TableEmpty({ bordered = false, description = '暂无数�
   const mergedClassName = [baseClass, className].filter(Boolean).join(' ');
 
   return (
-    <div className={mergedClassName}>
+    <div className={`flex items-center justify-center flex-col h-full w-full ${mergedClassName}`}>
       <AEmpty description={description} />
     </div>
   );

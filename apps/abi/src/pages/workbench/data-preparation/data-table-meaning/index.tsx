@@ -12,7 +12,7 @@ const SCHEMA_GROUP_CONFIG = {
   inputPlaceholder: '搜索分组',
   modalAddTitle: '新增组',
   modalEditTitle: '编辑组',
-  panelTitle: '文件夹',
+  panelTitle: '分组目录',
   rule: [[{ message: '组名称未填写', required: true }], []],
   type: 'shema' as const,
 };

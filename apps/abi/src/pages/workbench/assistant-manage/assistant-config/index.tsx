@@ -15,7 +15,7 @@ const ASSISTANT_GROUP_CONFIG: GroupProps['config'] = {
   inputPlaceholder: '搜索分组',
   modalAddTitle: '新增分组',
   modalEditTitle: '编辑分组',
-  panelTitle: '文件夹',
+  panelTitle: '分组目录',
   rule: [[{ message: '分组名称未填写', required: true }], []],
   type: 'assistant' as any
 };

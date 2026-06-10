@@ -1,5 +1,14 @@
 @import './reset.css';
 @import './nprogress.css';
+
+/* ABI v5 全局 CSS 变量 */
+:root {
+  --abi-panel-bg: rgba(255, 255, 255, 0.48);
+  --abi-panel-border: rgba(130, 140, 200, 0.18);
+  --abi-backdrop: blur(12px);
+  --abi-border-light: rgba(130, 140, 200, 0.10);
+}
+
 html,
 body,
 #root {
