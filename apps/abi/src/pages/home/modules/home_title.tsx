@@ -1,14 +1,17 @@
+import { RightOutlined } from '@ant-design/icons'
+import s from '../index.module.scss'
+
 export const HomeTitle = ({ title, action, onAction }: { title: string; action?: React.ReactNode; onAction?: () => void }) => {
   return (
-    <>
-      <AFlex className="pb-4" justify="space-between">
-        <div className="font-semibold text-3xl text-[#333] leading-[2.625rem] text-left">{title}</div>
-        {action && (
-          <div className="py-[0.5625rem] cursor-pointer px-[1.0625rem] border border-[#3366FF] rounded-[1.125rem] text-[#3366FF]" onClick={onAction}>
-            {action}
-          </div>
-        )}
-      </AFlex>
-    </>
+    <div className={s['section-title']}>
+      <div className={s['section-title-bar']}></div>
+      <span>{title}</span>
+      {action && (
+        <div className={s['section-title-action']} onClick={onAction}>
+          {action}
+          <RightOutlined style={{ fontSize: '0.625rem' }} />
+        </div>
+      )}
+    </div>
   )
 }

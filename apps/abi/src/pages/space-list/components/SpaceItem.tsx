@@ -1,4 +1,4 @@
-import { CaretDownOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons'
+import { CaretDownOutlined } from '@ant-design/icons'
 import type { FC } from 'react'
 import { useCallback } from 'react'
 
@@ -14,9 +14,12 @@ interface SpaceItemProps {
   readonly deleteSpace: (space: ISpaceItem) => void
   readonly setEditSpace: (space: ISpaceItem) => void
   readonly space: ISpaceItem
+  readonly index?: number
 }
 
-export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space}) => {
+const dotColors = ['blue', 'purple', 'green'] as const
+
+export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space, index }) => {
   const dispatch = useAppDispatch()
   const { push } = useRouter()
 
@@ -36,7 +39,6 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
 
   const { switchToSpace } = useSpaceSwitch()
 
-  // current user and simplified permission check: only admin or space creator can delete
   const currentUserObj: any = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}')
   const isAdmin = currentUserObj?.userName === 'admin'
   const createByMatchesUserName = space.createBy === currentUserObj?.userName
@@ -45,7 +47,6 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
   const canDelete = isAdmin || Boolean(isCreator)
 
   const setSpaceId = (spaceId: number) => {
-    // 首页场景：仅切换空间并停留主应用，进入工作台空白页
     switchToSpace(spaceId, undefined, { redirect: true })
     dispatch(setSelectedMenuKey('assistant-manage_assistant-config'))
     push('/workbench')
@@ -74,46 +75,56 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
     }
   }
 
+  const dotColor = dotColors[(index ?? 0) % dotColors.length]
+
   return (
     <div
-      className={`flex flex-col cursor-pointer rounded-[0.625rem] py-3.5 px-5 shadow-[0_0.5rem_1rem_0_rgba(0,0,0,0.1)] ${s['space-item']}`}
+      className={s['space-card']}
       key={space.spaceId}
       onClick={() => {
         setSpaceId(space.spaceId)
       }}
     >
-      <AFlex align="center" justify="space-between" className="gap-4">
-        <APopover content={space.spaceName}>
-          <div className="text-lg text-[#374557] text-nowrap flex-1 overflow-hidden text-ellipsis leading-7 font-semibold">{space.spaceName}</div>
-        </APopover>
-        <Dropdown menu={{ items, onClick }}>
-          <a
+      <div className={s['space-card-head']}>
+        <div className={s['space-card-name']}>
+          <div className={`${s['space-card-dot']} ${s[dotColor]}`}></div>
+          <APopover content={space.spaceName}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '10rem' }}>{space.spaceName}</span>
+          </APopover>
+        </div>
+        <div className={s['space-card-actions']}>
+          <button
             onClick={(e) => {
-              e.preventDefault()
               e.stopPropagation()
+              setSpaceId(space.spaceId)
             }}
-            style={{ color: '#848FA2' }}
           >
-            <Space>
-              操作
-              <CaretDownOutlined style={{ color: '#3366FF' }} />
-            </Space>
-          </a>
-        </Dropdown>
-      </AFlex>
-      <div className="bg-[#DCDCDC] h-px w-full mt-2.5 mb-[1.4375rem]"></div>
-      <div className="flex flex-col gap-4 text-sm op80">
-        <div className="grid grid-cols-[auto_1fr] gap-x-2">
-          <span className="text-[#666666]">创建人</span>
-          <span className="text-left text-[#333333]">{space.createBy}</span>
+            进入
+          </button>
+          <Dropdown menu={{ items, onClick }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                e.preventDefault()
+              }}
+            >
+              操作 <CaretDownOutlined style={{ fontSize: '0.625rem' }} />
+            </button>
+          </Dropdown>
         </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-2">
-          <span className="text-[#666666]">空间 id</span>
-          <span className="break-all text-left text-[#333333]">{space.spaceId}</span>
+      </div>
+      <div className={s['space-card-meta']}>
+        <div className={s['space-card-meta-row']}>
+          <span className={s['space-card-meta-lbl']}>创建人</span>
+          <span className={s['space-card-meta-val']}>{space.createBy}</span>
         </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-2">
-          <span className="text-[#666666]">创建时间</span>
-          <span className="text-left text-[#333333]">{space.createTime}</span>
+        <div className={s['space-card-meta-row']}>
+          <span className={s['space-card-meta-lbl']}>创建时间</span>
+          <span className={s['space-card-meta-val']}>{space.createTime}</span>
+        </div>
+        <div className={s['space-card-meta-row']}>
+          <span className={s['space-card-meta-lbl']}>空间 ID</span>
+          <span className={s['space-card-meta-val-id']}>{space.spaceId}</span>
         </div>
       </div>
     </div>
