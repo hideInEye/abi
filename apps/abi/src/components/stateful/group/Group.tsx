@@ -154,7 +154,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     const groupId = Number(nodeKey.replace('group-', ''));
     const group = groups.find(g => g.groupId === groupId);
     if (group) {
-      onGroupId(group.groupId);
+      onGroupId(group.groupId, group.groupName);
     }
     // 文件夹节点：点击行切换展开/折叠（对齐 qknow-ui DeptTree 行为）
     if (!info.node.isLeaf) {
@@ -205,7 +205,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
           </span>
         ),
         key: nodeKey,
-        children: hasChildren ? buildTreeNodes(item.children, currentExpandedKeys, depth + 1) : undefined,
+        children: hasChildren ? buildTreeNodes(item.children, currentExpandedKeys) : undefined,
         isLeaf: !hasChildren
       };
     });
