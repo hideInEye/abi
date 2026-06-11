@@ -51,6 +51,7 @@
     "@iconify/utils": "2.3.0",
     "@microsoft/fetch-event-source": "^2.0.1",
     "@reduxjs/toolkit": "2.3.0",
+    "@sa/auth": "workspace:*",
     "@sa/axios": "workspace:*",
     "@sa/color": "workspace:*",
     "@sa/framework": "workspace:*",

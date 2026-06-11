@@ -7,10 +7,9 @@ import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
 
 import { portalManageMenus } from '@/constants/app';
 import { useSystemStore } from '@/my-store';
-import { store } from '@/store';
-import { resetStore, selectToken, selectUserInfo } from '@/store/slice/auth';
+import { selectToken, selectUserInfo } from '@/store/slice/auth';
 import { getAllRoutes } from '@/store/slice/route';
-import { handleLoginExpired } from '@/utils/auth';
+import { logoutNow } from '@/utils/auth';
 
 const isMicroApp = qiankunWindow.__POWERED_BY_QIANKUN__;
 const UserAvatar = memo(() => {
@@ -30,8 +29,7 @@ const UserAvatar = memo(() => {
         // let needRedirect = false;
         // if (!route.meta?.constant) needRedirect = true;
         // submit({ needRedirect, redirectFullPath: route.fullPath }, { action: '/logout', method: 'post' });
-        store.dispatch(resetStore());
-        handleLoginExpired();
+        logoutNow();
       },
       title: t('common.tip')
     });

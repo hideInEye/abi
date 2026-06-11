@@ -1,5 +1,5 @@
 export const meta = {
-  i18nKey: 'route.assistant-manage_label-meaning',
+  i18nKey: 'route.workbench_ontology-kg_label-meaning',
   order: 4,
-  title: 'assistant-manage_label-meaning'
+  title: 'workbench_ontology-kg_label-meaning'
 };

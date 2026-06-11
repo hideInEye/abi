@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { message, Tooltip } from 'antd';
 import { observer } from 'mobx-react';
 import { getApiTarget, notifyTokenExpired } from '../../../../utils/FetchUtil';
+import { getAuthorization } from '../../../../utils/auth';
 import baseApi from '../../../../api/BaseApi';
 import projectHdStore from '../project/ProjectManager';
 import layerManager from '../../../manager/LayerManager.ts';
@@ -145,15 +146,18 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
 
       try {
         const apiBase = getApiTarget().replace(/\/api$/, '');
-        let histToken = '';
-        try { const t = localStorage.getItem('SOY-REACT_token'); if (t && t !== 'undefined' && t !== 'null') histToken = JSON.parse(t); } catch { /* ignore */ }
+        const histAuthorization = getAuthorization();
         const histHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (histToken) histHeaders['Authorization'] = `Bearer ${histToken}`;
+        if (histAuthorization) histHeaders.Authorization = histAuthorization;
         const res = await fetch(`${apiBase}/chat-proxy/api/v1/chat/conv/messages/history_round`, {
           method: 'POST',
           headers: histHeaders,
           body: JSON.stringify({ conv_uid: convUid }),
         });
+        if (res.status === 401) {
+          notifyTokenExpired();
+          return;
+        }
         const json = await res.json();
         const historyList: any[] = json?.data ?? [];
         if (!historyList.length) return;
@@ -290,15 +294,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
     const apiBase = getApiTarget().replace(/\/api$/, '');
     const apiUrl = `${apiBase}/chat-proxy/api/v2/workflow/chat/completions`;
 
-    const storedToken = localStorage.getItem('SOY-REACT_token');
-    let authToken = '';
-    try {
-      if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
-        authToken = JSON.parse(storedToken);
-      }
-    } catch {
-      // ignore
-    }
+    const authorization = getAuthorization();
 
     let userName = '1';
     try {
@@ -343,7 +339,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          ...(authorization ? { Authorization: authorization } : {}),
         },
         body: JSON.stringify(params),
         signal: controller.signal,

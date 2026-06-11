@@ -3,6 +3,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@sa/auth": ["../../packages/auth/src/index.ts"],
+      "@sa/auth/*": ["../../packages/auth/src/*"],
       "@sa/axios": ["../../packages/axios/src/index.ts"],
       "@sa/axios/*": ["../../packages/axios/src/*"]
     },

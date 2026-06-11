@@ -9,22 +9,21 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
+import {getAuthorization, handleLoginExpired} from "./auth.ts";
+
 export interface HttpResponse {
     code: number;
     msg: string;
     data: any;
 }
 export function notifyTokenExpired() {
-    if (typeof window.onTokenExpired === 'function') {
-        void window.onTokenExpired();
-    }
+    void handleLoginExpired();
 }
 
 let _apiTarget = '';
 export function getApiTarget(): string {
     return _apiTarget;
 }
-const DEFAULT_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.eyJ1c2VyX2lkIjoxMTAsInVzZXJfa2V5IjoiMTljNjcwOTAtMTU2Ni00ZmZhLThjZDctY2M5NTIwMjI2OGJkIiwidXNlcm5hbWUiOiJ5YW5neXVodWFuIn0.Z1BVnnMgQ3cL9mqamUjQNTktu11isjEJpgUcepGR8a_kUaSP_kVSidljFnDuaOKgAiYEPJDcr7fgbtYErc0EQOqiT1lAiZeajhoWql_lwOn9jK3LG2vw1FSIfVhkWi_CWcqHwzZp6wA6Gi4hSL1LT8asl7zvMolNIC4t5pmn7VFYbHaf6tkfQJatAugCgkv1KPlCaIRecEL2_mfvpEJ_a9ZfMGwFIr0w42lOkbG-Pw3go_gKGYyyZvVbyZMdlBS9KRiiaxSHENXr_zpwxwKp9CrGfRVKvY2L-DIpMWlSzM6SPi9Z9fNMk1zqV46mw0avmg14wMgb4MGwgx0RdulBeA';
 export async function loadAppConfig(): Promise<void> {
     try {
         const configPath = import.meta.env.MODE === 'development' ? 'http://localhost:5174/config.json': '/dashboard-ui/config.json'
@@ -39,41 +38,12 @@ export async function loadAppConfig(): Promise<void> {
 }
 
 export default class FetchUtil {
-    private static normalizeToken(token: string): string {
-        let normalizedToken = token.trim();
-
-        while (
-            normalizedToken.length > 1 &&
-            ((normalizedToken.startsWith('"') && normalizedToken.endsWith('"')) ||
-                (normalizedToken.startsWith("'") && normalizedToken.endsWith("'")))
-        ) {
-            normalizedToken = normalizedToken.slice(1, -1).trim();
-        }
-
-        return normalizedToken;
-    }
-
-    private static getToken(): string {
-        let token = DEFAULT_TOKEN;
-
-        try {
-            const storedToken = window.localStorage.getItem('SOY-REACT_token');
-            if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
-                token = JSON.parse(storedToken);
-            }
-        } catch (error) {
-            console.error('Token processing error:', error);
-        }
-
-        return FetchUtil.normalizeToken(token);
-    }
-
     private static buildHeaders(headers?: HeadersInit): Headers {
         const nextHeaders = new Headers(headers);
-        const token = FetchUtil.getToken();
+        const authorization = getAuthorization();
 
-        if (token && !nextHeaders.has('Authorization')) {
-            nextHeaders.set('Authorization', `Bearer ${token}`);
+        if (authorization && !nextHeaders.has('Authorization')) {
+            nextHeaders.set('Authorization', authorization);
         }
 
         return nextHeaders;

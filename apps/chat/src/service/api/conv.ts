@@ -1,8 +1,8 @@
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
-import { createAuthorizationHeader, readTokenFromLocalStorage } from '@sa/axios'
 import request from "../request/index";
 import { getChatbiBaseApi } from "../../utils/index";
+import { getAuthorization, handleLoginExpired } from "../../utils/auth";
 
 type StreamConvAnswerOptions = {
   data: any
@@ -14,8 +14,7 @@ type StreamConvAnswerOptions = {
 }
 
 export function streamConvAnswer({ data, signal, onopen, onmessage, onclose, onerror }: StreamConvAnswerOptions) {
-  const token = readTokenFromLocalStorage(['SOY-REACT_token', 'token'])
-  const authorization = createAuthorizationHeader(token)
+  const authorization = getAuthorization()
 
   return fetchEventSource(`${window.APP_CONFIG.VITE_BASE_API}/chat-proxy/api/v2/workflow/chat/completions`, {
     method: 'POST',
@@ -26,7 +25,14 @@ export function streamConvAnswer({ data, signal, onopen, onmessage, onclose, one
     body: JSON.stringify(data),
     signal,
     openWhenHidden: true,
-    onopen,
+    async onopen(response) {
+      if (response.status === 401) {
+        await handleLoginExpired()
+        throw new Error('Token expired')
+      }
+
+      await onopen?.(response)
+    },
     onmessage,
     onclose,
     onerror

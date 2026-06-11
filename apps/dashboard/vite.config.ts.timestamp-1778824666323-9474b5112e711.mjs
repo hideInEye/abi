@@ -37,7 +37,7 @@ var vite_dev_config_default = defineConfig2({
         changeOrigin: true
       },
       "^/chat-proxy/.*": {
-        target: "https://192.168.1.252",
+        target: "https://192.168.1.251",
         changeOrigin: true,
         secure: false
       }

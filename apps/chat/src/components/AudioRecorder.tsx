@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import RecordRTC from 'recordrtc'
 import { message } from 'antd'
 import { LoadingOutlined } from '@ant-design/icons'
+import { getAuthorization, handleLoginExpired } from '@/utils/auth'
 import styles from './AudioRecorder.module.css'
 import SvgIcon from './SvgIcon'
 const YuyinIcon = new URL('../assets/svg-icon/video.gif', import.meta.url).href
@@ -118,12 +119,21 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onTranscribed, disabled =
 
     setIsTranscribing(true)
     try {
+      const authorization = getAuthorization()
       const response = await fetch('/chat-proxy/api/v2/workflow/voice-to-text', {
         method: 'POST',
+        headers: {
+          ...(authorization ? { Authorization: authorization } : {}),
+        },
         body: formData,
       })
 
       if (!response.ok) {
+        if (response.status === 401) {
+          await handleLoginExpired()
+          return
+        }
+
         // 尝试获取错误响应的详细内容
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`
         try {

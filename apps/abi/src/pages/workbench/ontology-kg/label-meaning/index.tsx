@@ -1,103 +1,80 @@
-import React from 'react';
-// import PageTitle from '@/components/stateless/common/PageTitle';
+import type { TabsProps } from 'antd'
+import { useRoute } from '@sa/simple-router'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { Group } from '@/components/stateful/group/Group.tsx';
+import DimensionModeling from './components/dimension-modeling/DimensionModeling'
+import MetricModeling from './components/metric-modeling/MetricModeling'
+import SemanticTag from './components/semantic-tag/SemanticTag'
 
-import { useTagManagement } from './hooks/useTagManagement.ts';
-import { TagModal } from './module/TagModal.tsx';
-import { TagSearch } from './module/TagSearch.tsx';
-import { TagTable } from './module/TagTable.tsx';
+type AttributeModelingTabKey = 'dimension' | 'metric' | 'semanticTag'
 
-/**
- * 标签语义管理页面组件
- * 用于管理数据标签的语义信息，支持分组管理
- * 包含标签的增删改查、搜索过滤、分组管理等功能
- * 采用左侧分组面板 + 右侧列表操作的布局结构
- */
+const DEFAULT_ACTIVE_TAB: AttributeModelingTabKey = 'semanticTag'
+const ATTRIBUTE_MODELING_TAB_KEYS: AttributeModelingTabKey[] = ['dimension', 'metric', 'semanticTag']
+
+function normalizeTabKey(tabKey: unknown): AttributeModelingTabKey {
+  const key = Array.isArray(tabKey) ? tabKey[0] : tabKey
+  return ATTRIBUTE_MODELING_TAB_KEYS.includes(key as AttributeModelingTabKey)
+    ? (key as AttributeModelingTabKey)
+    : DEFAULT_ACTIVE_TAB
+}
+
 export const Component: React.FC = () => {
-  const {
-    editingGroup,
-    getTagList,
-    groupId,
-    handleAdd,
-    handleDelete,
-    handleEdit,
-    handleSearch,
-    isModalOpen,
-    setGroupId,
-    setIsModalOpen,
-    tagList,
-    tagSave
-  } = useTagManagement();
+  const route = useRoute()
+  const queryTab = route.query?.tab
+  const [activeTab, setActiveTab] = useState<AttributeModelingTabKey>(() => normalizeTabKey(queryTab))
 
-  const getGroupId = (id: number) => {
-    setGroupId(id);
-  };
+  const handleTabChange = useCallback((key: string) => {
+    setActiveTab(key as AttributeModelingTabKey)
+  }, [])
 
   useEffect(() => {
-    getTagList({});
-  }, [groupId]);
+    setActiveTab(normalizeTabKey(queryTab))
+  }, [queryTab])
+
+  const tabItems = useMemo<TabsProps['items']>(() => [
+    {
+      children: (
+        <div className="h-full min-h-0 p-4">
+          <DimensionModeling />
+        </div>
+      ),
+      key: 'dimension',
+      label: '维度建模'
+    },
+    {
+      children: (
+        <div className="h-full min-h-0 p-4">
+          <MetricModeling />
+        </div>
+      ),
+      key: 'metric',
+      label: '指标建模'
+    },
+    {
+      children: (
+        <div className="h-full min-h-0 p-4">
+          <SemanticTag />
+        </div>
+      ),
+      key: 'semanticTag',
+      label: '标签语义'
+    }
+  ], [])
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
-        styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
+    <div className="h-full min-h-500px flex-col-stretch overflow-hidden lt-sm:overflow-auto">
+      <ACard
+        className="flex-col-stretch sm:flex-1-hidden border-0 card-wrapper"
+        styles={{ body: { display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden', padding: 0 } }}
       >
-        <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
-        <div className="abi-group-sidebar">
-          <Group
-            config={{
-              button: '添加标签语义组',
-              inputLabel: '标签语义组名称',
-              inputPlaceholder: '请输入标签语义组名称',
-              modalAddTitle: '新增标签语义组',
-              modalEditTitle: '编辑标签语义组',
-              panelTitle: '标签语义组',
-              rule: [
-                [
-                  { message: '请输入标签语义组名称', required: true },
-                  { max: 50, message: '标签语义组名称不能超过50个字符' }
-                ]
-              ],
-              type: 'tag'
-            }}
-            onGroupId={getGroupId}
-          />
-        </div>
-
-          <div className="w-40% flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <div className="flex items-start gap-3 mb-3">
-              <TagSearch
-                onAdd={handleAdd}
-                onSearch={handleSearch}
-                groupId={groupId}
-              />
-              <AButton
-                type="primary"
-                className="ml-auto"
-                onClick={handleAdd}
-                disabled={!groupId}
-              >
-                新增
-              </AButton>
-            </div>
-            <TagTable
-              dataSource={tagList}
-              onDelete={handleDelete}
-              onEdit={handleEdit}
-            />
-
-            {isModalOpen && (
-              <TagModal
-                editingGroup={editingGroup}
-                isModalOpen={isModalOpen}
-                onCancel={setIsModalOpen}
-                onSave={tagSave}
-              />
-            )}
-          </div>
-        </AFlex>
+        <ATabs
+          activeKey={activeTab}
+          className="h-full min-h-0"
+          items={tabItems}
+          style={{ flex: 1, minHeight: 0 }}
+          onChange={handleTabChange}
+        />
       </ACard>
     </div>
-  );
-};
+  )
+}

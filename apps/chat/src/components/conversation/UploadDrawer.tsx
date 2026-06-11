@@ -5,6 +5,7 @@ import type { RcFile } from 'antd/es/upload/interface';
 import SvgIcon from '../../components/SvgIcon';
 import { fetchFilesList, deleteFile, uploadExcelFile } from '@/service/api/conv';
 import { checkFileType, downloadFileByBlob } from '@/utils';
+import { getAuthorization, handleLoginExpired } from '@/utils/auth';
 
 interface Props {
   open: boolean;
@@ -116,6 +117,9 @@ const UploadDrawer: React.FC<Props> = ({ open, onClose, conv, onOk }) => {
           catch (parseError) {
             reject(new Error('解析服务器响应失败'));
           }
+        } else if (xhr.status === 401) {
+          void handleLoginExpired();
+          reject(new Error('登录状态已过期'));
         } else {
           reject(new Error(`上传失败: ${xhr.statusText}`));
         }
@@ -131,6 +135,10 @@ const UploadDrawer: React.FC<Props> = ({ open, onClose, conv, onOk }) => {
         sys_code: conv.sys_code || '1'
       });
       xhr.open('POST', `/chat-proxy/api/v2/serve/file/files/excelfile?${query}`);
+      const authorization = getAuthorization();
+      if (authorization) {
+        xhr.setRequestHeader('Authorization', authorization);
+      }
       xhr.send(formData);
     });
   };

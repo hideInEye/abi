@@ -9,7 +9,8 @@ const route: App.I18n.Schema['translation']['route'] = {
   'app-workshop_my-screen': 'My Screen',
   'assistant-manage': 'Assistant Manage',
   'assistant-manage_assistant-config': 'Assistant Config',
-  'assistant-manage_label-meaning': 'Label Meaning',
+  'assistant-manage_knowledge-extraction': 'Knowledge Extraction',
+  'assistant-manage_label-meaning': 'Attribute Modeling',
   'assistant-manage_memory-manage': 'Memory Manage',
   'assistant-manage_recommended-inquiries': 'Recommended Inquiries',
   'assistant-manage_technical-jargon': 'Technical Jargon',
@@ -82,7 +83,8 @@ const route: App.I18n.Schema['translation']['route'] = {
   // 'multi-menu_second_child': 'Menu Two Child',
   // 'multi-menu_second_child_home': 'Menu Two Child Home',
   'space-list': 'Space List',
-  'system_space-user': 'Space User'
+  'system_space-user': 'Space User',
+  'workbench_ontology-kg_label-meaning': 'Attribute Modeling'
   // 'user-center': 'User Center'
 }
 

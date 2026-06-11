@@ -1,4 +1,4 @@
-import { tabTypeOptions } from '../../constants';
+import { tabTypeOptions } from '../../../constants';
 
 export function TagInput() {
   return (

@@ -31,21 +31,6 @@ export function fetchGetUserInfo() {
 }
 
 /**
- * Refresh token
- *
- * @param refreshToken Refresh token
- */
-export function fetchRefreshToken(refreshToken: string) {
-  return request<Api.Auth.LoginToken>({
-    data: {
-      refreshToken
-    },
-    method: 'post',
-    url: '/api/auth/refreshToken'
-  });
-}
-
-/**
  * return custom backend error
  *
  * @param code error code

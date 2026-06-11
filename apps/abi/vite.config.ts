@@ -56,7 +56,7 @@ export default defineConfig(configEnv => {
         '/proxy-api': {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/proxy-chat/, ''),
-          target: 'http://192.168.1.252:8080',
+          target: 'http://192.168.1.251:8080',
         },
         '/api': {
           target: 'https://192.168.1.251/',

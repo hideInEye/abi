@@ -1,16 +1,13 @@
 import appLogo from '@/assets/imgs/home/abi_logo.png'
 import userIcon from '@/assets/imgs/home/用户.svg'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
-import SvgIcon from '@/components/stateless/custom/SvgIcon'
-import { store } from '@/store'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
 import { UserOutlined } from '@ant-design/icons'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
-import { resetStore } from '@/store/slice/auth'
 import { getAllRoutes } from '@/store/slice/route'
-import { handleLoginExpired } from '@/utils/auth'
+import { logoutNow } from '@/utils/auth'
 import { openChatConversationWindow } from '@/utils/chatWindow'
 import { readPersistedSpaceId } from '@/utils/spaceStorage'
 import { Dropdown, Layout } from 'antd'
@@ -109,8 +106,10 @@ const GlobalSider: FC = memo(() => {
           content: t('common.logoutConfirm'),
           okText: t('common.confirm'),
           onOk: () => {
-            store.dispatch(resetStore())
-            handleLoginExpired()
+            // let needRedirect = false;
+            // if (!route.meta?.constant) needRedirect = true;
+            // submit({ needRedirect, redirectFullPath: route.fullPath }, { action: '/logout', method: 'post' });
+            logoutNow()
           },
           title: t('common.tip'),
         })

@@ -1,29 +1,44 @@
-import { apiRequest } from '../request';
+import { apiRequest } from '../request'
 /** shema:表语义，term：专业术语，tag：标签，question：推荐问题，agent:智能助手，dictionary:字典类型 */
-export type TableSemanticsGroupType = 'agent' | 'dictionary' | 'question' | 'shema' | 'tag' | 'term';
+export type TableSemanticsGroupType =
+  | 'agent'
+  | 'dictionary'
+  | 'ontology'
+  | 'ontology-dimension'
+  | 'question'
+  | 'shema'
+  | 'tag'
+  | 'term'
 
 interface GrouplistParams {
-  groupName?: string;
-  groupType: TableSemanticsGroupType;
-  pageNum: number;
-  pageSize: number;
-  spaceId: number;
+  groupName?: string
+  groupType: TableSemanticsGroupType
+  pageNum: number
+  pageSize: number
+  spaceId: number
 }
 
 interface EditGroupParams {
-  groupId: number;
-  groupName: string;
-  groupType: TableSemanticsGroupType;
-  spaceId: number;
+  groupAlias?: string
+  groupCode?: string
+  groupDesc?: string
+  groupId: number
+  groupName: string
+  groupType: TableSemanticsGroupType
+  parentId?: number
+  remark?: string
+  spaceId: number
 }
 
 interface AddGroupParams {
-  groupName: string;
-  groupType: TableSemanticsGroupType;
-  isPrivate?: boolean;
-  parentId?: number;
-  remark?: string;
-  spaceId: number;
+  groupAlias?: string
+  groupCode?: string
+  groupDesc?: string
+  groupName: string
+  groupType: TableSemanticsGroupType
+  parentId?: number
+  remark?: string
+  spaceId: number
 }
 
 /** 获取标语义组 */
@@ -38,7 +53,7 @@ export function tableSemanticsGroupList(params: GrouplistParams) {
       spaceId: params.spaceId
     },
     url: '/api/copilot/v1/group/list'
-  });
+  })
 }
 
 /** 修改标语义组 */
@@ -47,7 +62,7 @@ export function editTableSemanticsGroup(data: EditGroupParams) {
     data,
     method: 'put',
     url: '/api/copilot/v1/group'
-  });
+  })
 }
 
 /** 新增标语义组 */
@@ -56,13 +71,17 @@ export function addTableSemanticsGroup(data: AddGroupParams) {
     data,
     method: 'post',
     url: '/api/copilot/v1/group'
-  });
+  })
 }
 
 /** 删除表语义组 */
-export function deleteTableSemanticsGroup(groupId: number) {
+export function deleteTableSemanticsGroup(
+  groupId: number,
+  params?: { groupType?: TableSemanticsGroupType; spaceId?: number }
+) {
   return apiRequest({
     method: 'delete',
+    params,
     url: `/api/copilot/v1/group/${groupId}`
-  });
+  })
 }
