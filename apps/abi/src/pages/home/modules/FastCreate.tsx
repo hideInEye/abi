@@ -1,31 +1,48 @@
 import type { ISpaceItem } from '@/pages/space-list/types'
 import { useRouter } from '~/packages/simple-router/src'
-import { Typography } from 'antd'
-const { Title, Text } = Typography
-
-import stepOneIcon from '@/assets/imgs/home/step_one.png'
-import stepTwoIcon from '@/assets/imgs/home/step_two.png'
-import stepThreeIcon from '@/assets/imgs/home/step_three.png'
-import stepFourIcon from '@/assets/imgs/home/step_four.png'
 import s from '../index.module.scss'
 import React from 'react'
 import { persistSpaceId, persistSpaceName } from '@/utils/spaceStorage'
-/**
- * 快速创建组件
- * 提供系统主要功能的快速访问入口
- * 按照数据处理流程顺序展示创建选项：
- * 1. 我的空间 - 创建数据空间来储存数据资产
- * 2. 数据对接 - 连接各类数据源
- * 3. 数据关联 - 创建数据集并进行数据关联
- * 4. 表语义关联 - 建立表之间的语义关系
- * 5. 智能对话 - 基于数据进行AI对话分析
- * 自动设置默认空间ID，确保用户操作的连续性
- */
 
 interface FastCreateProps {
   readonly spaceList: ISpaceItem[]
 }
-// FastCreate.tsx（方案 2：独立 Connector 节点）
+
+const guideSteps = [
+  {
+    key: '1',
+    title: '创建空间',
+    description: '创建数据空间\n存储数据资产',
+    colorClass: 's1',
+    url: '/space-list',
+    iconSvg: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+  },
+  {
+    key: '2',
+    title: '数据准备',
+    description: '数据接入、数据\n共享、语义映射',
+    colorClass: 's2',
+    url: '/data-preparation/data-source',
+    iconSvg: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
+  },
+  {
+    key: '3',
+    title: '助手配置',
+    description: '让每个人拥有个性化\n数据分析助手',
+    colorClass: 's3',
+    url: '/workbench',
+    iconSvg: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  },
+  {
+    key: '4',
+    title: '智能对话',
+    description: '通过可视化组件\n进行交互式分析',
+    colorClass: 's4',
+    url: '/ai-assistant/conversational-analysis',
+    iconSvg: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>',
+  },
+]
+
 export const FastCreate: React.FC<FastCreateProps> = ({ spaceList }) => {
   const { push } = useRouter()
 
@@ -38,41 +55,32 @@ export const FastCreate: React.FC<FastCreateProps> = ({ spaceList }) => {
     push(url)
   }
 
-  const guideSteps = [
-    { key: '1', title: '创建空间', description: '创建数据空间\n存储数据资产', icon: stepOneIcon },
-    { key: '2', title: '数据准备', description: '数据接入、数据\n共享、语义映射', icon: stepTwoIcon },
-    { key: '3', title: '助手配置', description: '让每个人拥有个性化\n数据分析助手', icon: stepThreeIcon },
-    { key: '4', title: '智能对话', description: '通过可视化组件\n进行交互式分析', icon: stepFourIcon },
-  ]
-
   return (
-    <div className={s['fast-create']}>
-      <div className={s['fast-create__grid']}>
-        {guideSteps.map((step, index) => (
-          <React.Fragment key={step.key}>
-            <div className={s['fast-create__step']}>
-              <div className={s['fast-create__head']}>
-                <div className={s['fast-create__iconWrap']}>
-                  <img src={step.icon} alt={step.title} className={s['fast-create__icon']} />
-                </div>
+    <div className={s['guide-flow']}>
+      {guideSteps.map((step, index) => (
+        <React.Fragment key={step.key}>
+          <div className={s['guide-step']} onClick={() => handleCreate(step.url)}>
+            <div className={s['guide-step-top']}>
+              <div className={`${s['guide-circle']} ${s[step.colorClass]}`}>
+                <span className={s['guide-num']}>{index + 1}</span>
+                <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: step.iconSvg }} />
               </div>
-              <div className="flex flex-col gap-[0.9375rem]">
-                <Title level={5} className={s['fast-create__title']}>
-                  {`${index + 1}. ${step.title}`}
-                </Title>
-                <Text className={s['fast-create__desc']}>{step.description}</Text>
+              <div className={s['guide-text']}>
+                <div className={s['guide-label']}>{step.title}</div>
+                <div className={s['guide-desc']}>{step.description}</div>
               </div>
             </div>
-
-            {index !== guideSteps.length - 1 && (
-              <div className={s['fast-create__connector']}>
-                <span className={s['fast-create__line']} />
-                <span className={s['fast-create__arrow']} />
-              </div>
-            )}
-          </React.Fragment>
-        ))}
-      </div>
+          </div>
+          {index !== guideSteps.length - 1 && (
+            <div className={s['guide-arrow']}>
+              <svg viewBox="0 0 40 12">
+                <line x1="0" y1="6" x2="34" y2="6" />
+                <polyline points="30 2 36 6 30 10" />
+              </svg>
+            </div>
+          )}
+        </React.Fragment>
+      ))}
     </div>
   )
 }

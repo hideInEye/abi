@@ -142,21 +142,19 @@
     padding-bottom: 2px !important;
 
     &.ant-tree-treenode-selected {
-      .group-node-content {
+      .group-node-label {
         color: #5b7cf7;
-        font-weight: 600;
         background: rgba(91, 124, 247, 0.10);
-      }
-
-      .group-node-dot {
-        background: #5b7cf7;
-        box-shadow: 0 0 6px rgba(91, 124, 247, 0.22);
       }
     }
 
     &:hover {
-      .group-node-content {
+      .group-node-label {
         background: rgba(130, 140, 200, 0.08);
+      }
+
+      .group-node-action {
+        opacity: 1;
       }
     }
   }
@@ -189,27 +187,67 @@
     width: 16px !important;
   }
 
+  // 隐藏左侧默认 switcher，折叠箭头改到右侧
   .ant-tree-switcher {
     display: none !important;
   }
 }
 
-/* Node content wrapper */
-.group-node-content {
+/* Node label — v5 字体大小、粗细 */
+.group-node-label {
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 14px;
   font-weight: 600;
   color: #3a4d65;
   user-select: none;
-  position: relative;
-  line-height: 1.5;
   width: 100%;
+  line-height: 1.5;
+  position: relative;
+
+  &.is-leaf {
+    font-weight: 500;
+    color: #5f7490;
+  }
+
+  // hover 时显示编辑按钮
+  &:hover .group-node-action {
+    opacity: 1;
+  }
+}
+
+/* 右侧折叠箭头 */
+.group-node-chevron {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.25s ease;
+  opacity: 0.35;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+
+  &.open {
+    transform: rotate(90deg);
+    opacity: 0.6;
+  }
+}
+
+/* 编辑按钮 — 绝对定位，hover 显示，不影响 flex 布局 */
+.group-node-action {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  position: absolute;
+  right: 26px;
+  display: flex;
+  align-items: center;
 }
 
 /* Folder icon (保持原蓝色样式) */
@@ -221,6 +259,11 @@
   &--folder-open {
     color: #358cf3;
   }
+
+  &--leaf {
+    color: rgb(175, 209, 250);
+    font-size: 14px;
+  }
 }
 
 /* Tree title text */
@@ -230,104 +273,4 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Count badge */
-.group-node-count {
-  font-size: 11px;
-  font-weight: 700;
-  color: #8fa0b5;
-  background: rgba(130, 140, 200, 0.1);
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-  flex-shrink: 0;
-}
-
-/* Chevron */
-.group-node-chevron {
-  margin-left: auto;
-  width: 14px;
-  height: 14px;
-  transition: transform 0.25s ease;
-  opacity: 0.35;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  svg, .anticon {
-    width: 14px;
-    height: 14px;
-  }
-
-  &.open {
-    transform: rotate(90deg);
-    opacity: 0.6;
-  }
-}
-
-/* Dot for leaf nodes */
-.group-node-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #8fa0b5;
-  flex-shrink: 0;
-  transition: all 0.2s ease;
-}
-
-/* Action button (edit) */
-.group-node-action {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  flex-shrink: 0;
-
-  .group-node-content:hover & {
-    opacity: 1;
-  }
-}
-
-/* Depth-based adjustments */
-.group-node-content[data-depth="1"] {
-  font-size: 13px;
-  font-weight: 600;
-  gap: 6px;
-
-  .group-node-icon {
-    font-size: 14px;
-  }
-}
-
-.group-node-content[data-depth="2"] {
-  font-size: 13px;
-  font-weight: 500;
-  gap: 5px;
-  color: #3a4d65;
-
-  .group-node-icon {
-    font-size: 13px;
-  }
-}
-
-.group-node-content[data-depth="3"] {
-  font-size: 12px;
-  font-weight: 500;
-  gap: 5px;
-  color: #5f7490;
-
-  .group-node-icon {
-    font-size: 12px;
-  }
-}
-
-.group-node-content[data-depth="4"] {
-  font-size: 12px;
-  font-weight: 500;
-  gap: 4px;
-  color: #5f7490;
-
-  .group-node-icon {
-    font-size: 11px;
-  }
 }

@@ -33,16 +33,8 @@ interface IProps {
   readonly type: TableSemanticsGroupType;
 }
 
-export const TableSemantics = ({
-  form,
-  getSchemaId,
-  getSchemaOptions,
-  groupFieldName = 'semanticGroupId',
-  isEdit = false,
-  type
-}: IProps) => {
+export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = false, type }: IProps) => {
   const spaceId = useAppSelector(getSpaceId);
-  const watchedGroupId = AForm.useWatch(groupFieldName, form);
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: number }[]>([]);
   const [groupId, setGroupId] = useState<number | null>(null);
   const [schemaOptions, setSchemaOptions] = useState<{ label: string; value: number }[]>([]);
@@ -91,13 +83,6 @@ export const TableSemantics = ({
       setGroupId(semanticGroupId);
     }
   }, [spaceId]);
-
-  useEffect(() => {
-    if (watchedGroupId === undefined) {
-      return;
-    }
-    setGroupId(watchedGroupId || null);
-  }, [watchedGroupId]);
 
   useEffect(() => {
     fetchSchemaOptions(groupId);

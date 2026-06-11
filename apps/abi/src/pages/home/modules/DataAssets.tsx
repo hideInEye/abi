@@ -1,55 +1,50 @@
-import aiBot from '@/assets/imgs/home/intelligent_assistant.jpg'
-import aiChat from '@/assets/imgs/home/intelligent_talk.jpg'
-import dataSource from '@/assets/imgs/home/datasource.jpg'
-import dataMap from '@/assets/imgs/home/dataset.jpg'
-import space from '@/assets/imgs/home/space.png'
 import { $t } from '@/locales'
 import { useRouter } from '~/packages/simple-router/src'
+import s from '../index.module.scss'
 
-/**
- * 数据资产概览组件
- * 显示系统中各类数据资产的统计信息
- * 包含我的空间、数据源、数据集、AI助手、AI对话等模块的数量统计
- * 每个资产卡片都有对应的图标、颜色主题和计数显示
- * 支持点击跳转到相应的管理页面（目前点击事件被注释）
- */
 interface DataAssetType {
-  count: number // 统计数量
-  href?: string // 跳转链接
-  icon: string // 图标图片
-  title: string // 资产名称
+  count: number
+  href?: string
+  iconSvg: string
+  title: string
+  colorClass: string
 }
 
 const dataAssetsConfig: DataAssetType[] = [
   {
     count: 0,
     href: '/space-list',
-    icon: space,
+    iconSvg: '<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
     title: $t('page.home.mySpace'),
+    colorClass: 'c1',
   },
   {
     count: 0,
     href: '/data-preparation/data-source',
-    icon: dataSource,
+    iconSvg: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
     title: $t('page.home.dataSource'),
+    colorClass: 'c2',
   },
   {
     count: 0,
     href: '/data-preparation/data-collection',
-    icon: dataMap,
+    iconSvg: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="9" x2="15" y2="21"/><line x1="9" y1="15" x2="21" y2="15"/>',
     title: $t('page.home.dataColletion'),
+    colorClass: 'c3',
   },
   {
     count: 0,
     href: '/ai-assistant/conversational-analysis',
-    icon: aiBot,
+    iconSvg: '<rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16.01"/><line x1="16" y1="16" x2="16" y2="16.01"/>',
     title: $t('page.home.aiBot'),
+    colorClass: 'c4',
   },
   {
     count: 0,
     href: '/ai-assistant/conversational-analysis',
-    icon: aiChat,
+    iconSvg: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>',
     title: $t('page.home.aiChat'),
+    colorClass: 'c5',
   },
 ]
 
@@ -76,15 +71,18 @@ export function DataAssets({ homeData }: { readonly homeData: DataAssetsProps })
   }
 
   return (
-    <div className="grid grid-cols-5 gap-5">
+    <div className={s['stats-row']}>
       {dataAssetsConfig.map((item) => (
         <div
-          className="cursor-pointer rounded-[0.625rem] p-8 shadow-sm bg-cover bg-center"
+          className={s['stat-card']}
           key={item.title}
-          style={{ backgroundImage: `url(${item.icon})` }}
+          onClick={() => item.href && push(item.href)}
         >
-          <div className="text-xl text-[#707784]">{item.title}</div>
-          <div className="text-5xl text-[#101623]">{item.count}</div>
+          <div className={`${s['stat-icon']} ${s[item.colorClass]}`}>
+            <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: item.iconSvg }} />
+          </div>
+          <div className={s['stat-num']}>{item.count}</div>
+          <div className={s['stat-label']}>{item.title}</div>
         </div>
       ))}
     </div>

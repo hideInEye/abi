@@ -1,25 +1,27 @@
 import type { FC } from 'react'
-import createSpace from '@/assets/imgs/home/create.png'
-import copySpace from '@/assets/imgs/home/workspace.png'
 import s from '../../home/index.module.scss'
 
 export const ApprovSpace: FC = () => {
   return (
-    <div className={`flex flex-col rounded-[0.625rem] py-3.5 px-5 shadow-[0_0.5rem_1rem_0_rgba(0,0,0,0.1)] ${s['space-item']}`}>
-      <AFlex align="center" justify="space-between" className="gap-4">
-        <div className="text-lg text-[#374557] text-nowrap flex-1 text-sm overflow-hidden text-ellipsis leading-7 font-semibold">创建应用</div>
-      </AFlex>
-      <div className="bg-[#DCDCDC] h-px w-full mt-2.5 mb-[1.4375rem]"></div>
-      <AFlex align="center" justify="space-around">
-        <div className="flex cursor-pointer flex-col items-center gap-4">
-          <img src={createSpace} alt="" className="w-[2.1875rem] h-[2.4375rem]" />
-          创建空间
+    <div className={s['space-card']} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '8rem' }}>
+      <div style={{ textAlign: 'center', color: 'var(--v5-ink-3)', fontSize: '0.875rem' }}>
+        <div style={{
+          width: '3rem',
+          height: '3rem',
+          borderRadius: '50%',
+          background: 'var(--v5-accent-soft)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 0.75rem',
+        }}>
+          <svg viewBox="0 0 24 24" style={{ width: '1.5rem', height: '1.5rem', stroke: 'var(--v5-accent)', fill: 'none', strokeWidth: 2, strokeLinecap: 'round' }}>
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
         </div>
-        <div className="flex cursor-pointer flex-col items-center gap-4">
-          <img src={copySpace} alt="" className="w-[2.1875rem] h-[2.4375rem]" />
-          复制空间
-        </div>
-      </AFlex>
+        <div style={{ fontWeight: 600, color: 'var(--v5-ink-2)' }}>创建应用</div>
+      </div>
     </div>
   )
 }
