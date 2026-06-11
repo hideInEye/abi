@@ -1,6 +1,5 @@
 import { SearchOutlined } from '@ant-design/icons';
 import React, { useState } from 'react';
-// import PageTitle from '@/components/stateless/common/PageTitle';
 
 import { DictionaryGroup } from './components/DictionaryGroup';
 import { DictionaryModal } from './components/DictionaryModal';
@@ -31,62 +30,71 @@ export const Component: React.FC = () => {
   const { close: closeEnumDrawer, enumerationModalOpen, open: openEnumDrawer } = useEnumDrawer();
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard
-        className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
-        styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
-      >
-        <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
-          <div className="abi-group-sidebar">
-            <DictionaryGroup onGroupId={setGroupId} />
-          </div>
+    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* v5 Tree Panel — left sidebar */}
+      <div className="abi-group-sidebar">
+        <DictionaryGroup onGroupId={setGroupId} />
+      </div>
 
-          <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <div className="flex items-center gap-3 mb-3">
-              <AInput
-                allowClear
-                placeholder="请输入字典名称"
-                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                value={searchValue}
-                onChange={e => handleSearch(e.target.value)}
-                style={{ width: '12rem' }}
-              />
+      {/* Right content area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        {/* v5 Searchbar */}
+        <section className="abi-searchbar">
+          <div className="abi-search-row">
+            <AInput
+              allowClear
+              placeholder="请输入字典名称"
+              prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+              value={searchValue}
+              onChange={e => handleSearch(e.target.value)}
+              className="abi-field-input"
+              style={{ width: '16rem' }}
+            />
+            <AButton type="primary" className="btn-accent-gradient" onClick={() => handleSearch(searchValue)}>
+              <SearchOutlined /> 查询
+            </AButton>
+          </div>
+        </section>
+
+        {/* v5 Data Area */}
+        <section className="abi-data-area">
+          <div className="abi-toolbar">
+            <div className="abi-toolbar-left">
               <AButton
                 type="primary"
-                className="ml-auto"
+                className="btn-accent-gradient"
                 onClick={handleAdd}
                 disabled={!groupId}
               >
-                新增
+                + 新增字典
               </AButton>
             </div>
-
-            <TableDictionary
-              current={current}
-              dataSource={dictionaryDataSource}
-              onDelete={handleDelete}
-              onDiff={openEnumDrawer}
-              onEdit={handleEdit}
-              onPageChange={setCurrent}
-              onStatusChange={handleUpdateStatus}
-            />
           </div>
-        </AFlex>
-
-        <DictionaryModal
-          editObj={editObj}
-          open={modalOpen}
-          onClose={handleClose}
-          onSure={handleSure}
-        />
-
-        {enumerationModalOpen && (
-          <EnumDrawer
-            close={closeEnumDrawer}
-            enumerationModalOpen={enumerationModalOpen}
+          <TableDictionary
+            current={current}
+            dataSource={dictionaryDataSource}
+            onDelete={handleDelete}
+            onDiff={openEnumDrawer}
+            onEdit={handleEdit}
+            onPageChange={setCurrent}
+            onStatusChange={handleUpdateStatus}
           />
-        )}
-      </ACard>
+        </section>
+      </div>
+
+      <DictionaryModal
+        editObj={editObj}
+        open={modalOpen}
+        onClose={handleClose}
+        onSure={handleSure}
+      />
+
+      {enumerationModalOpen && (
+        <EnumDrawer
+          close={closeEnumDrawer}
+          enumerationModalOpen={enumerationModalOpen}
+        />
+      )}
     </div>
   );
 };

@@ -74,30 +74,60 @@
 }
 
 .assistant-table-scroll {
-  &,
-  .ant-table-content,
-  .ant-table-body {
-    scrollbar-width: none !important;
-  }
+  // 始终保留滚动条空间，默认透明，hover 时显示
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 
-  &::-webkit-scrollbar,
-  .ant-table-content::-webkit-scrollbar,
-  .ant-table-body::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-  }
-
-  &:hover,
-  &:hover .ant-table-content,
-  &:hover .ant-table-body {
-    scrollbar-width: thin !important;
-  }
-
-  &:hover::-webkit-scrollbar,
-  &:hover .ant-table-content::-webkit-scrollbar,
-  &:hover .ant-table-body::-webkit-scrollbar {
+  &::-webkit-scrollbar {
     width: 7px;
     height: 7px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 7px;
+  }
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  // hover 时显示滚动条 thumb
+  &:hover {
+    scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(144, 147, 153, 0.3);
+  }
+  &:hover::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(144, 147, 153, 0.5);
+  }
+
+  // 内部 antd 表格元素也同样处理
+  .ant-table-content,
+  .ant-table-body {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .ant-table-content::-webkit-scrollbar,
+  .ant-table-body::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+  .ant-table-content::-webkit-scrollbar-thumb,
+  .ant-table-body::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 7px;
+  }
+  .ant-table-content::-webkit-scrollbar-track,
+  .ant-table-body::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  &:hover .ant-table-content,
+  &:hover .ant-table-body {
+    scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+  }
+  &:hover .ant-table-content::-webkit-scrollbar-thumb,
+  &:hover .ant-table-body::-webkit-scrollbar-thumb {
+    background-color: rgba(144, 147, 153, 0.3);
   }
 }
 
@@ -755,6 +785,7 @@
     display: flex;
     gap: 6px;
     padding-top: 0;
+    justify-content: flex-end;
 
     .abi-card-act {
       padding: 5px 12px;
@@ -776,6 +807,27 @@
       &.danger:hover {
         background: rgba(239, 68, 68, 0.06);
         color: #ef4444;
+      }
+    }
+
+    .abi-card-more {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: #8c8c8c;
+      font-size: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      padding: 0;
+
+      &:hover {
+        background: rgba(91, 124, 247, 0.08);
+        color: #5b7cf7;
       }
     }
   }

@@ -162,7 +162,7 @@ export function Component() {
           style={{
             width: 280,
             flexShrink: 0,
-            background: '#fff',
+            background: '#FDFEFF',
             borderRadius: 8,
             border: '1px solid #f0f0f0',
             padding: '12px 8px',

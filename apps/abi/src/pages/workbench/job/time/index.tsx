@@ -1,4 +1,4 @@
-import { CaretRightOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, ExceptionOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { CaretRightOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 // import PageTitle from '@/components/stateless/common/PageTitle';
 import { Form, message } from 'antd';
 import { Suspense } from 'react';
@@ -345,19 +345,37 @@ export function Component() {
             />
           </div>
         </div>
-        <div
-          style={{
-            padding: '0.75rem 0',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            marginTop: 'auto'
-          }}
-        >
-          <APagination
-            {...(tableProps.pagination as any)}
-            showSizeChanger
-            style={{ padding: '0' }}
-          />
+        <div className="data-source-pagination">
+          {(() => {
+            const pag = tableProps.pagination as any;
+            const current = pag?.current || 1;
+            const pageSizeVal = pag?.pageSize || 10;
+            const totalVal = pag?.total || 0;
+            const totalPages = Math.max(1, Math.ceil(totalVal / pageSizeVal));
+            const onChange = pag?.onChange;
+            const pages: number[] = [];
+            if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
+            else {
+              pages.push(1);
+              if (current > 3) pages.push(-1);
+              const start = Math.max(2, current - 1);
+              const end = Math.min(totalPages - 1, current + 1);
+              for (let i = start; i <= end; i++) pages.push(i);
+              if (current < totalPages - 2) pages.push(-2);
+              pages.push(totalPages);
+            }
+            return (
+              <>
+                <span className="total-text">共 {totalVal} 条</span>
+                <div className="pagination-controls">
+                  <ASelect value={pageSizeVal} onChange={(v: number) => onChange?.(1, v)} options={[{label:'10条/页',value:10},{label:'15条/页',value:15},{label:'20条/页',value:20}]} className="page-size-select" />
+                  <button className="page-btn" disabled={current === 1} onClick={() => onChange?.(current - 1, pageSizeVal)}><LeftOutlined /></button>
+                  {pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === current ? ' page-active' : ''}`} onClick={() => onChange?.(p, pageSizeVal)}>{p}</span>)}
+                  <button className="page-btn" disabled={current >= totalPages} onClick={() => onChange?.(current + 1, pageSizeVal)}><RightOutlined /></button>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
 

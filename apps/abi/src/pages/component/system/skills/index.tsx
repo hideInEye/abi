@@ -1,4 +1,4 @@
-import { DeleteOutlined, MoreOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
+import { DeleteOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
 import { App, Dropdown, Empty, Input, Select, Spin, Switch, Tabs, Tooltip } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -173,8 +173,25 @@ export function Component() {
     return arr;
   }, [list, tab, statusFilter, keyword]);
 
+  // v5 pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [jumpValue, setJumpValue] = useState('');
+
+  // 筛选条件变化时重置到第一页
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tab, statusFilter, keyword]);
+
+  const totalCount = visibleList.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const pagedList = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return visibleList.slice(start, start + pageSize);
+  }, [visibleList, currentPage, pageSize]);
+
   return (
-    <div className="skill-hub-scope h-full overflow-auto p-24px">
+    <div className="skill-hub-scope h-full overflow-hidden p-24px" style={{ display: 'flex', flexDirection: 'column' }}>
       <Tabs
         activeKey={tab}
         className="skill-filter-tabs"
@@ -182,12 +199,12 @@ export function Component() {
         onChange={k => setTab(k as any)}
       />
 
-      <div className="mb-16px flex flex-wrap items-center gap-12px">
+      <div className="mb-16px flex flex-wrap items-center gap-12px" style={{ flexShrink: 0 }}>
         <Input
           allowClear
-          className="w-170px"
+          className="w-170px abi-field-input"
           placeholder="请输入技能名称"
-          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+          prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
           value={keyword}
           onChange={e => setKeyword(e.target.value)}
         />
@@ -200,100 +217,143 @@ export function Component() {
         />
         <AButton
           type="primary"
-          className="ml-auto"
+          className="btn-accent-gradient ml-auto"
           onClick={goPublish}
         >
           安装技能
         </AButton>
       </div>
-
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
       <Spin spinning={loading}>
-        {visibleList.length === 0 && !loading ? (
-          <div className="py-80px">
-            <Empty description={t('page.manage.skill.empty')} />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-16px md:grid-cols-2 xl:grid-cols-3">
-            {visibleList.map(item => {
-              const statusKey = resolveStatusKey(item.status);
-              const title = item.bizName || '-';
-              const spaceName = item.spaceName || (item.spaceId ? `空间${item.spaceId}` : '');
-              const summary = item.summary;
-              return (
-                <div
-                  className="skill-card"
-                  key={item.id}
-                  onClick={() => goDetail(item)}
-                >
-                  <div className="skill-card__actions" onClick={e => e.stopPropagation()}>
-                    <Switch
-                      checked={String(item.status) === '1'}
-                      onChange={checked => toggleSkillStatus(item, checked)}
-                    />
-                    <Dropdown
-                      trigger={['click']}
-                      placement="bottomRight"
-                      menu={{
-                        items: [
-                          {
-                            key: 'update',
-                            label: (
-                              <span>
-                                <SyncOutlined style={{ marginRight: 6 }} />
-                                更新技能
-                              </span>
-                            )
-                          },
-                          {
-                            key: 'delete',
-                            label: (
-                              <span style={{ color: '#ff4d4f' }}>
-                                <DeleteOutlined style={{ marginRight: 6 }} />
-                                删除
-                              </span>
-                            )
+          {visibleList.length === 0 && !loading ? (
+            <div className="py-80px">
+              <Empty description={t('page.manage.skill.empty')} />
+            </div>
+          ) : (
+            <div className="skill-card-grid">
+              {pagedList.map(item => {
+                const statusKey = resolveStatusKey(item.status);
+                const title = item.bizName || '-';
+                const spaceName = item.spaceName || (item.spaceId ? `空间${item.spaceId}` : '');
+                const summary = item.summary;
+                return (
+                  <div
+                    className="skill-card"
+                    key={item.id}
+                    onClick={() => goDetail(item)}
+                  >
+                    <div className="skill-card__actions">
+                      <Switch
+                        checked={String(item.status) === '1'}
+                        size="small"
+                        onChange={checked => toggleSkillStatus(item, checked)}
+                      />
+                      <Dropdown
+                        trigger={['click']}
+                        placement="bottomRight"
+                        menu={{
+                          items: [
+                            {
+                              key: 'update',
+                              label: (
+                                <span>
+                                  <SyncOutlined style={{ marginRight: 6 }} />
+                                  更新技能
+                                </span>
+                              )
+                            },
+                            {
+                              key: 'delete',
+                              label: (
+                                <span style={{ color: '#ff4d4f' }}>
+                                  <DeleteOutlined style={{ marginRight: 6 }} />
+                                  删除
+                                </span>
+                              )
+                            }
+                          ],
+                          onClick: ({ domEvent, key }) => {
+                            domEvent?.stopPropagation?.();
+                            if (key === 'update') openUpdate(item);
+                            else if (key === 'delete') confirmDelete(item);
                           }
-                        ],
-                        onClick: ({ domEvent, key }) => {
-                          domEvent?.stopPropagation?.();
-                          if (key === 'update') openUpdate(item);
-                          else if (key === 'delete') confirmDelete(item);
-                        }
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="skill-card__more"
-                        aria-label="more"
-                        onClick={e => e.stopPropagation()}
+                        }}
                       >
-                        <MoreOutlined />
-                      </button>
-                    </Dropdown>
+                        <button
+                          type="button"
+                          className="skill-card__more"
+                          aria-label="more"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <MoreOutlined />
+                        </button>
+                      </Dropdown>
+                    </div>
+
+                    <div className="skill-card__title">{title}</div>
+
+                    {summary && <div className="skill-card__summary">{summary}</div>}
+
+                    <div className="skill-card__meta">
+                      <span className={`status-pill status-pill--${statusKey}`}>
+                        {t(`page.manage.skill.status.${statusKey}` as any)}
+                      </span>
+                      {spaceName && (
+                        <Tooltip title={spaceName}>
+                          <span className="handle-tag">
+                            {spaceName.length > 4 ? `${spaceName.slice(0, 4)}...` : spaceName}
+                          </span>
+                        </Tooltip>
+                      )}
+                    </div>
                   </div>
-
-                  <div className="skill-card__title">{title}</div>
-
-                  {summary && <div className="skill-card__summary">{summary}</div>}
-
-                  <div className="skill-card__meta">
-                    <span className={`status-pill status-pill--${statusKey}`}>
-                      {t(`page.manage.skill.status.${statusKey}` as any)}
-                    </span>
-                    {spaceName && (
-                      <Tooltip title={spaceName}>
-                        <span className="handle-tag">
-                          {spaceName.length > 4 ? `${spaceName.slice(0, 4)}...` : spaceName}
-                        </span>
-                      </Tooltip>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
       </Spin>
+      </div>
+      <div className="data-source-pagination" style={{ flexShrink: 0 }}>
+        <span className="total-text">共 {totalCount} 条</span>
+        <div className="pagination-controls">
+          <Select
+            value={pageSize}
+            onChange={(val: number) => { setPageSize(val); setCurrentPage(1); }}
+            options={[
+              { label: '12条/页', value: 12 },
+              { label: '20条/页', value: 20 },
+              { label: '30条/页', value: 30 },
+              { label: '50条/页', value: 50 },
+            ]}
+            className="page-size-select"
+          />
+          <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+            <LeftOutlined />
+          </button>
+          {(() => {
+            const pages: number[] = [];
+            if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
+            else {
+              pages.push(1);
+              if (currentPage > 3) pages.push(-1);
+              const start = Math.max(2, currentPage - 1);
+              const end = Math.min(totalPages - 1, currentPage + 1);
+              for (let i = start; i <= end; i++) pages.push(i);
+              if (currentPage < totalPages - 2) pages.push(-2);
+              pages.push(totalPages);
+            }
+            return pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === currentPage ? ' page-active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</span>);
+          })()}
+          <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+            <RightOutlined />
+          </button>
+          <span className="quick-jumper">
+            前往
+            <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (p >= 1 && p <= totalPages) setCurrentPage(p); setJumpValue(''); }} />
+            页
+          </span>
+        </div>
+      </div>
 
       <SkillPublishDrawer
         open={publishOpen}

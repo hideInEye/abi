@@ -105,7 +105,7 @@ export function Component() {
       {drawerOpen && <SpaceEdit drawerOpen={drawerOpen} editSpace={editSpace} setDrawerOpen={setDrawerOpen} updateSpace={updateSpace} />}
 
       <HomeTitle title="创建引导" />
-      <FastCreate spaceList={homeData?.spaceList} />
+      <FastCreate />
     </div>
   )
 }

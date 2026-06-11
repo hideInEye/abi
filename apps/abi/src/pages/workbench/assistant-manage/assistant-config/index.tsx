@@ -1,5 +1,5 @@
-import { DeleteOutlined, SearchOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
-import { Empty, Input, Popconfirm, Switch, message } from 'antd';
+import { DeleteOutlined, EditOutlined, LeftOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { Dropdown, Empty, Popconfirm, Select, Switch, message } from 'antd';
 
 // import PageTitle from '@/components/stateless/common/PageTitle';
 
@@ -190,6 +190,23 @@ export function Component() {
     return arr;
   }, [keyword, agents, groupId]);
 
+  // v5 pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [jumpValue, setJumpValue] = useState('');
+
+  // 筛选条件变化时重置到第一页
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [keyword, groupId]);
+
+  const totalCount = list.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const pagedList = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return list.slice(start, start + pageSize);
+  }, [list, currentPage, pageSize]);
+
   const handleAdd = () => {
     setEditingAgent(null);
     setEditVisible(true);
@@ -213,99 +230,71 @@ export function Component() {
   };
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard
-        className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
-        styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
-      >
-        <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
-          {/* 左侧：分组树 */}
-          <div className="abi-group-sidebar">
-            <Group config={ASSISTANT_GROUP_CONFIG} onGroupId={setGroupId} />
+    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* v5 Tree Panel — left sidebar */}
+      <div className="abi-group-sidebar">
+        <Group config={ASSISTANT_GROUP_CONFIG} onGroupId={setGroupId} />
+      </div>
+
+      {/* Right content area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        {/* v5 Searchbar */}
+        <section className="abi-searchbar">
+          <div className="abi-search-row">
+            <AInput
+              allowClear
+              placeholder="请输入助手名称"
+              prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+              value={keyword}
+              onChange={e => setKeyword(e.target.value)}
+              className="abi-field-input"
+              style={{ width: '16rem' }}
+            />
+            <AButton type="primary" className="btn-accent-gradient" onClick={handleAdd}>
+              <PlusOutlined /> 新增助手
+            </AButton>
           </div>
+        </section>
 
-          {/* 右侧：搜索 + 卡片网格 */}
-          <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <div className="flex items-center gap-3 mb-3">
-              <Input
-                allowClear
-                placeholder="请输入助手名称"
-                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                style={{ width: '12rem' }}
-                value={keyword}
-                onChange={e => setKeyword(e.target.value)}
-              />
-              <AButton type="primary" className="ml-auto" onClick={handleAdd}>
-                新增助手
-              </AButton>
-            </div>
-
-            {/* 卡片网格 */}
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              {list.length === 0 ? (
-                <div style={{ marginTop: 80 }}>
-                  <Empty description="暂无助手" />
-                </div>
-              ) : (
-                <div
-                  style={{
-                    display: 'grid',
-                    gap: 16,
-                    gridTemplateColumns: 'repeat(2, 1fr)'
-                  }}
-                >
-                  {list.map(agent => {
+        {/* v5 Data Area */}
+        <section className="abi-data-area">
+          <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+            {list.length === 0 ? (
+              <div style={{ marginTop: 80 }}>
+                <Empty description="暂无助手" />
+              </div>
+            ) : (
+              <div className="abi-card-grid">
+                <div className="abi-card-grid-inner">
+                  {pagedList.map(agent => {
                     const active = agent.id === selectedId;
                     return (
                       <div
                         key={agent.id}
-                        style={{
-                          background: '#fff',
-                          border: active ? '2px solid #ff4d4f' : '1px solid #d9d9d9',
-                          borderRadius: 8,
-                          boxShadow: '0 2px 8px 0 rgba(0,0,0,0.08)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          minHeight: 180,
-                          padding: 16,
-                          position: 'relative',
-                          transition: 'all 0.2s'
-                        }}
+                        className="abi-data-card"
+                        style={active ? { borderColor: '#5b7cf7' } : undefined}
                         onClick={() => handleEdit(agent)}
                       >
-                        {/* 标题行：图标 + 名称 + 开关 */}
-                        <div style={{ alignItems: 'flex-start', display: 'flex', gap: 10 }}>
-                          <div
-                            style={{
-                              alignItems: 'center',
-                              background: agent.iconBg,
-                              borderRadius: 6,
-                              color: '#fff',
-                              display: 'flex',
-                              flexShrink: 0,
-                              fontSize: 14,
-                              fontWeight: 700,
-                              height: 28,
-                              justifyContent: 'center',
-                              width: 28
-                            }}
-                          >
-                            {agent.iconLetter}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="abi-data-card-head">
+                          <div className="abi-data-card-title">
                             <div
                               style={{
+                                alignItems: 'center',
+                                background: agent.iconBg,
+                                borderRadius: 6,
+                                color: '#fff',
+                                display: 'flex',
+                                flexShrink: 0,
                                 fontSize: 14,
-                                fontWeight: 600,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
+                                fontWeight: 700,
+                                height: 28,
+                                justifyContent: 'center',
+                                width: 28
                               }}
                             >
-                              {agent.name}
+                              {agent.iconLetter}
                             </div>
+                            <span className="abi-data-card-name">{agent.name}</span>
                           </div>
                           <span onClick={e => e.stopPropagation()}>
                             <Switch
@@ -315,64 +304,111 @@ export function Component() {
                             />
                           </span>
                         </div>
-                        {/* 描述 */}
-                        <div
-                          style={{
-                            color: '#8c8c8c',
-                            display: '-webkit-box',
-                            flex: 1,
-                            fontSize: 12,
-                            lineHeight: 1.6,
-                            marginTop: 12,
-                            overflow: 'hidden',
-                            WebkitBoxOrient: 'vertical',
-                            WebkitLineClamp: 2
-                          }}
-                        >
-                          {agent.description}
+                        <div className="abi-data-card-body">
+                          <div className="row">
+                            <span className="lbl">描述</span>
+                            <span className="val" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{agent.description}</span>
+                          </div>
+                          <div className="row"><span className="lbl">创建用户</span><span className="val">{agent.createBy || '-'}</span></div>
                         </div>
-                        {/* 底部：创建用户 + 设置/删除 */}
-                        <div
-                          style={{
-                            alignItems: 'center',
-                            borderTop: '1px solid #f5f5f5',
-                            color: '#8c8c8c',
-                            display: 'flex',
-                            fontSize: 12,
-                            marginTop: 12,
-                            paddingTop: 10
-                          }}
-                        >
-                          <UserOutlined style={{ marginRight: 6 }} />
-                          <span>创建用户 {agent.createBy || '-'}</span>
-                          <span
-                            style={{ display: 'flex', gap: 12, marginLeft: 'auto' }}
-                            onClick={e => e.stopPropagation()}
+                        <div className="abi-data-card-footer" onClick={e => e.stopPropagation()}>
+                          <Dropdown
+                            trigger={['hover']}
+                            placement="topRight"
+                            menu={{
+                              items: [
+                                {
+                                  key: 'edit',
+                                  label: (
+                                    <span>
+                                      <EditOutlined style={{ marginRight: 6 }} />
+                                      编辑
+                                    </span>
+                                  ),
+                                },
+                                {
+                                  key: 'delete',
+                                  label: (
+                                    <Popconfirm
+                                      cancelText="取消"
+                                      okText="删除"
+                                      okType="danger"
+                                      title="确定删除该助手？"
+                                      onConfirm={() => handleDelete(agent.id)}
+                                    >
+                                      <span style={{ color: '#ff4d4f' }}>
+                                        <DeleteOutlined style={{ marginRight: 6 }} />
+                                        删除
+                                      </span>
+                                    </Popconfirm>
+                                  ),
+                                },
+                              ],
+                              onClick: ({ key, domEvent }) => {
+                                domEvent?.stopPropagation?.();
+                                if (key === 'edit') handleEdit(agent);
+                              },
+                            }}
                           >
-                            <SettingOutlined
-                              style={{ color: '#8c8c8c', cursor: 'pointer', fontSize: 14 }}
-                              onClick={() => handleEdit(agent)}
-                            />
-                            <Popconfirm
-                              cancelText="取消"
-                              okText="删除"
-                              okType="danger"
-                              title="确定删除该助手？"
-                              onConfirm={() => handleDelete(agent.id)}
+                            <button
+                              type="button"
+                              className="abi-card-more"
+                              aria-label="more"
                             >
-                              <DeleteOutlined style={{ color: '#8c8c8c', cursor: 'pointer', fontSize: 14 }} />
-                            </Popconfirm>
-                          </span>
+                              <MoreOutlined />
+                            </button>
+                          </Dropdown>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              )}
+              </div>
+            )}
+          </div>
+          <div className="data-source-pagination">
+            <span className="total-text">共 {totalCount} 条</span>
+            <div className="pagination-controls">
+              <Select
+                value={pageSize}
+                onChange={(val: number) => { setPageSize(val); setCurrentPage(1); }}
+                options={[
+                  { label: '12条/页', value: 12 },
+                  { label: '20条/页', value: 20 },
+                  { label: '30条/页', value: 30 },
+                  { label: '50条/页', value: 50 },
+                ]}
+                className="page-size-select"
+              />
+              <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                <LeftOutlined />
+              </button>
+              {(() => {
+                const pages: number[] = [];
+                if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
+                else {
+                  pages.push(1);
+                  if (currentPage > 3) pages.push(-1);
+                  const start = Math.max(2, currentPage - 1);
+                  const end = Math.min(totalPages - 1, currentPage + 1);
+                  for (let i = start; i <= end; i++) pages.push(i);
+                  if (currentPage < totalPages - 2) pages.push(-2);
+                  pages.push(totalPages);
+                }
+                return pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === currentPage ? ' page-active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</span>);
+              })()}
+              <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                <RightOutlined />
+              </button>
+              <span className="quick-jumper">
+                前往
+                <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (p >= 1 && p <= totalPages) setCurrentPage(p); setJumpValue(''); }} />
+                页
+              </span>
             </div>
           </div>
-        </AFlex>
-      </ACard>
+        </section>
+      </div>
 
       {editVisible ? (
         <AssistantEditDrawer

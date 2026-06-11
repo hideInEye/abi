@@ -1,12 +1,5 @@
-import type { ISpaceItem } from '@/pages/space-list/types'
-import { useRouter } from '~/packages/simple-router/src'
 import s from '../index.module.scss'
 import React from 'react'
-import { persistSpaceId, persistSpaceName } from '@/utils/spaceStorage'
-
-interface FastCreateProps {
-  readonly spaceList: ISpaceItem[]
-}
 
 const guideSteps = [
   {
@@ -14,7 +7,6 @@ const guideSteps = [
     title: '创建空间',
     description: '创建数据空间\n存储数据资产',
     colorClass: 's1',
-    url: '/space-list',
     iconSvg: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
   },
   {
@@ -22,7 +14,6 @@ const guideSteps = [
     title: '数据准备',
     description: '数据接入、数据\n共享、语义映射',
     colorClass: 's2',
-    url: '/data-preparation/data-source',
     iconSvg: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   },
   {
@@ -30,7 +21,6 @@ const guideSteps = [
     title: '助手配置',
     description: '让每个人拥有个性化\n数据分析助手',
     colorClass: 's3',
-    url: '/workbench',
     iconSvg: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
   },
   {
@@ -38,28 +28,16 @@ const guideSteps = [
     title: '智能对话',
     description: '通过可视化组件\n进行交互式分析',
     colorClass: 's4',
-    url: '/ai-assistant/conversational-analysis',
     iconSvg: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>',
   },
 ]
 
-export const FastCreate: React.FC<FastCreateProps> = ({ spaceList }) => {
-  const { push } = useRouter()
-
-  function handleCreate(url: string) {
-    const spaceId = localStorage.getItem('spaceId')
-    if (!spaceId && spaceList?.length > 0) {
-      persistSpaceId(spaceList[0]?.spaceId)
-      persistSpaceName(spaceList[0]?.spaceName)
-    }
-    push(url)
-  }
-
+export const FastCreate: React.FC = () => {
   return (
     <div className={s['guide-flow']}>
       {guideSteps.map((step, index) => (
         <React.Fragment key={step.key}>
-          <div className={s['guide-step']} onClick={() => handleCreate(step.url)}>
+          <div className={s['guide-step']}>
             <div className={s['guide-step-top']}>
               <div className={`${s['guide-circle']} ${s[step.colorClass]}`}>
                 <span className={s['guide-num']}>{index + 1}</span>

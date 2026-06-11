@@ -1,5 +1,5 @@
-import { CheckCircleOutlined, DeleteOutlined, EyeOutlined, PauseCircleOutlined, RedoOutlined } from '@ant-design/icons'
-import { Pagination, message } from 'antd'
+import { CheckCircleOutlined, DeleteOutlined, EyeOutlined, LeftOutlined, PauseCircleOutlined, RedoOutlined, RightOutlined } from '@ant-design/icons'
+import { message, Empty } from 'antd'
 import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
 
@@ -39,6 +39,9 @@ export function ApiKeyTable({
     copy(value)
     message.success(`${label}已复制`)
   }
+
+  const [jumpValue, setJumpValue] = useState('')
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const columns = [
     {
@@ -184,25 +187,71 @@ export function ApiKeyTable({
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-      <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px', overflow: 'hidden' }}>
-        <ATable
-          columns={columns}
-          dataSource={dataSource}
-          loading={loading}
-          pagination={false}
-          rowKey="id"
-          scroll={{ x: 1680 }}
-          size="small"
-        />
-      </div>
+      {dataSource.length > 0 ? (
+        <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden' }}>
+          <ATable
+            columns={columns}
+            dataSource={dataSource}
+            loading={loading}
+            pagination={false}
+            rowKey="id"
+            scroll={{ x: 1680 }}
+            size="small"
+          />
+        </div>
+      ) : (
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '1px solid rgba(130,140,200,0.18)',
+          borderRadius: '12px',
+          background: '#F5F7FF',
+        }}>
+          <Empty description="暂无数据" />
+        </div>
+      )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'auto', padding: '0.75rem 0' }}>
-        <Pagination
-          current={current}
-          pageSize={pageSize}
-          total={total}
-          onChange={onPageChange}
-        />
+      <div className="data-source-pagination">
+        <span className="total-text">共 {total} 条</span>
+        <div className="pagination-controls">
+          <ASelect
+            value={pageSize}
+            options={[
+              { label: '10条/页', value: 10 },
+              { label: '20条/页', value: 20 },
+              { label: '50条/页', value: 50 },
+            ]}
+            disabled
+            className="page-size-select"
+          />
+          <button className="page-btn" disabled={current === 1} onClick={() => onPageChange(current - 1)}>
+            <LeftOutlined />
+          </button>
+          {(() => {
+            const pages: number[] = []
+            if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i) }
+            else {
+              pages.push(1)
+              if (current > 3) pages.push(-1)
+              const start = Math.max(2, current - 1)
+              const end = Math.min(totalPages - 1, current + 1)
+              for (let i = start; i <= end; i++) pages.push(i)
+              if (current < totalPages - 2) pages.push(-2)
+              pages.push(totalPages)
+            }
+            return pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === current ? ' page-active' : ''}`} onClick={() => onPageChange(p)}>{p}</span>)
+          })()}
+          <button className="page-btn" disabled={current >= totalPages} onClick={() => onPageChange(current + 1)}>
+            <RightOutlined />
+          </button>
+          <span className="quick-jumper">
+            前往
+            <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (p >= 1 && p <= totalPages) onPageChange(p); setJumpValue('') }} />
+            页
+          </span>
+        </div>
       </div>
     </div>
   )

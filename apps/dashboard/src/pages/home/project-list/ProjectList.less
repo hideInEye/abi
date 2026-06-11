@@ -20,6 +20,17 @@
   overflow: hidden;
   gap:8px;
 
+  .project-list-empty {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    border: 1px solid rgba(130, 140, 200, 0.18);
+    border-radius: 12px;
+    background: #F5F7FF;
+  }
+
   .project-list-title {
     // font-family: 'PingFangSC', 'PingFang SC', sans-serif;
     color: rgb(51, 51, 51); 
@@ -31,6 +42,16 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+
+    .abi-field-input {
+      border-radius: 8px;
+      border-color: rgba(130, 140, 200, 0.18);
+
+      &:hover, &:focus, &.ant-input-affix-wrapper-focused {
+        border-color: #5b7cf7;
+        box-shadow: 0 0 0 2px rgba(91, 124, 247, 0.1);
+      }
+    }
   }
 
   .project-list {
@@ -56,7 +77,7 @@
     }
 
     // 网格项样式
-    & > * {
+    & > *:not(.project-list-empty) {
       flex: 1 1 calc(25% - 20px); // 4列布局（25%宽度减去gap）
       min-width: 0; // 防止内容溢出
       min-height: 0; // 防止内容溢出
@@ -68,62 +89,155 @@
 
     // 响应式调整（保持原逻辑）
     @media (max-width: 1400px) {
-      & > * {
+      & > *:not(.project-list-empty) {
         flex-basis: calc(33.333% - 20px);
         max-width: calc(33.333% - 20px);
       }
     }
     @media (max-width: 1100px) {
-      & > * {
+      & > *:not(.project-list-empty) {
         flex-basis: calc(50% - 20px);
         max-width: calc(50% - 20px);
       }
     }
     @media (max-width: 768px) {
-      & > * {
+      & > *:not(.project-list-empty) {
         flex-basis: 100%;
         max-width: 100%;
       }
     }
   }
 
-  .project-list-page {
-    flex-shrink: 0;
-    background-color: transparent;
-    padding: 12px 0;
+  // ── v5 主色按钮 ──
+  .btn-accent-gradient {
+    height: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 8px 18px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    background: linear-gradient(135deg, #5b7cf7, #7091fa) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 10px rgba(91, 124, 247, 0.3) !important;
+
+    &:hover {
+      background: linear-gradient(135deg, #4a6cf6, #6081f9) !important;
+      box-shadow: 0 4px 14px rgba(91, 124, 247, 0.4) !important;
+      transform: translateY(-1px);
+    }
+  }
+
+  // ── v5 统一自定义分页样式 ──
+  .data-source-pagination {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    padding: 14px 0;
+    margin-top: auto;
 
-    .ant-pagination {
-      .ant-pagination-item,
-      .ant-pagination-prev,
-      .ant-pagination-next,
-      .ant-pagination-jump-prev,
-      .ant-pagination-jump-next {
-        background-color: #ffffff;
-        border-color: #d9d9d9;
-        transition: all 0.2s ease;
+    .total-text {
+      color: #768a9f;
+      font-size: 13px;
+      margin-right: 16px;
+    }
 
-        a {
-          color: #666666;
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      .page-size-select {
+        min-width: 100px;
+        .ant-select-selector {
+          border-radius: 8px !important;
+          border-color: rgba(130, 140, 200, 0.18) !important;
+        }
+      }
+
+      .page-btn {
+        min-width: 34px;
+        height: 34px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(130, 140, 200, 0.18);
+        background: rgba(255, 255, 255, 0.40);
+        color: #3e5068;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &:disabled {
+          opacity: 0.25;
+          cursor: not-allowed;
         }
 
-        &:hover {
-          border-color: #4096ff;
-          transform: translateY(-1px);
+        &:hover:not(:disabled) {
+          border-color: #5b7cf7;
+          color: #5b7cf7;
+          background: rgba(91, 124, 247, 0.10);
+        }
+      }
 
-          a {
-            color: #4096ff;
-          }
+      .page-item {
+        min-width: 34px;
+        height: 34px;
+        padding: 0 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(130, 140, 200, 0.18);
+        background: rgba(255, 255, 255, 0.40);
+        color: #3e5068;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+
+        &:hover:not(.page-active):not(.page-ellipsis) {
+          border-color: #5b7cf7;
+          color: #5b7cf7;
+          background: rgba(91, 124, 247, 0.10);
         }
 
-        &.ant-pagination-item-active {
-          background-color: #4096ff;
-          border-color: #4096ff;
+        &.page-active {
+          background: #5b7cf7;
+          color: #fff;
+          border-color: #5b7cf7;
+          box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3);
+          cursor: default;
+        }
 
-          a {
-            color: #ffffff;
-          }
+        &.page-ellipsis {
+          border: none;
+          background: transparent;
+          cursor: default;
+          color: #a3b3c8;
+          min-width: 20px;
+        }
+      }
+
+      .quick-jumper {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #768a9f;
+        font-size: 13px;
+        margin-left: 4px;
+
+        .jump-input {
+          border-radius: 8px;
+          border-color: rgba(130, 140, 200, 0.18);
         }
       }
     }

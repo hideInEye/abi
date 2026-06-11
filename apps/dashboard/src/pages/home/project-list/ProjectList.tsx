@@ -9,10 +9,10 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import React, {memo, useEffect, useRef} from 'react';
+import React, {memo, useEffect, useRef, useState} from 'react';
 import './ProjectList.less';
-import {Button, Empty, Input, Pagination} from "antd";
-import { SearchOutlined } from '@ant-design/icons';
+import {Button, Empty, Input, Select} from "antd";
+import { LeftOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import defaultSnapshot from '../image/default-snapshot.jpg';
 import {DesignerMode, IPage, IProjectInfo, SaveType} from "../../../designer/DesignerType";
 import {INewProjectInfo, NewProjectDialog} from "./NewProjectDialog.tsx";
@@ -42,6 +42,11 @@ export const ProjectList = memo((props: ProjectListProps) => {
         current: 1,
         size: 12
     });
+
+    // v5 pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(12);
+    const [jumpValue, setJumpValue] = useState('');
 
     const getProjectPageList = (current: number, size: number, keywords?: string) => {
         const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
@@ -218,8 +223,53 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);
             }
             setPageData({...data, current: page, size});
+            setCurrentPage(page);
+            setPageSize(size);
         });
     }
+
+    // v5 custom pagination helpers
+    const totalCount = pageData.total || 0;
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+    const handlePrev = () => {
+        if (currentPage > 1) pageChange(currentPage - 1, pageSize);
+    };
+    const handleNext = () => {
+        if (currentPage < totalPages) pageChange(currentPage + 1, pageSize);
+    };
+    const handleJump = () => {
+        const p = parseInt(jumpValue, 10);
+        if (p >= 1 && p <= totalPages) pageChange(p, pageSize);
+        setJumpValue('');
+    };
+
+    const renderPageNumbers = () => {
+        const pages: number[] = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (currentPage > 3) pages.push(-1); // ellipsis
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+            for (let i = start; i <= end; i++) pages.push(i);
+            if (currentPage < totalPages - 2) pages.push(-2); // ellipsis
+            pages.push(totalPages);
+        }
+        return pages.map(p => {
+            if (p < 0) return <span key={p} className="page-item page-ellipsis">...</span>;
+            return (
+                <span
+                    key={p}
+                    className={`page-item${p === currentPage ? ' page-active' : ''}`}
+                    onClick={() => pageChange(p, pageSize)}
+                >
+                    {p}
+                </span>
+            );
+        });
+    };
 
     const onKeyDown = (event: React.KeyboardEvent) => {
         if (event.key !== 'Enter')
@@ -250,47 +300,64 @@ export const ProjectList = memo((props: ProjectListProps) => {
         <div className={'project-list-container'}>
             <div className={'project-list-header'}>
                 <Input placeholder="搜索项目"
-                        prefix={<SearchOutlined style={{color: '#bfbfbf'}} />}
+                        prefix={<SearchOutlined style={{color: '#a3b3c8'}} />}
                         allowClear
+                        className="abi-field-input"
                         onKeyDown={onKeyDown}
                         onChange={(e) => { if (!e.target.value) doSearch(''); }}
                         onPressEnter={(e) => doSearch((e.target as any).value)}
                         style={{width: '12rem'}}/>
-                {!statusFilter && <Button className="ml-auto" type={"primary"} onClick={toggleNewProVisible}>新增</Button>}
+                {!statusFilter && <Button className="btn-accent-gradient ml-auto" onClick={toggleNewProVisible}><PlusOutlined />新增</Button>}
             </div>
-            <div className={'project-list'}>
-                {pageData && pageData.records.length > 0 ? pageData.records.map((item: IProjectInfo) => {
-                    return (
+            {pageData && pageData.records.length > 0 ? (
+                <div className={'project-list'}>
+                    {pageData.records.map((item: IProjectInfo) => (
                         <ProjectItem key={item.id} id={item.id!} name={item.name!} cover={item.cover || defaultSnapshot}
                                      saveType={saveType}
                                      status={item.status}
                                      spaceId={String(item.spaceId)}
                                      doOperate={operateHandler}/>
-                    )
-                }) : (
-                    <div style={{
-                        width: '100%',
-                        flex: '0 0 100%',
-                        maxWidth: '100%',
-                        aspectRatio: 'unset',
-                        border: '1px solid #e8e8e8',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minHeight: '200px',
-                        overflow: 'hidden',
-                    }}>
-                        <Empty description="暂无数据"/>
-                    </div>
-                )}
-            </div>
-            {pageData && pageData.records.length > 0 && (
-                <Pagination rootClassName={'project-list-page'} current={pageData?.current}
-                            pageSize={pageData?.size} total={pageData?.total} onChange={pageChange}
-                            showSizeChanger onShowSizeChange={pageChange}
-                            locale={{ items_per_page: '条/页' }}/>
+                    ))}
+                </div>
+            ) : (
+                <div className="project-list-empty">
+                    <Empty description="暂无数据"/>
+                </div>
             )}
+            <div className="data-source-pagination">
+                    <span className="total-text">共 {totalCount} 条</span>
+                    <div className="pagination-controls">
+                        <Select
+                            value={pageSize}
+                            onChange={(val: number) => { setPageSize(val); setCurrentPage(1); pageChange(1, val); }}
+                            options={[
+                                { label: '12条/页', value: 12 },
+                                { label: '20条/页', value: 20 },
+                                { label: '30条/页', value: 30 },
+                                { label: '50条/页', value: 50 },
+                            ]}
+                            className="page-size-select"
+                        />
+                        <button className="page-btn" disabled={currentPage === 1} onClick={handlePrev}>
+                            <LeftOutlined />
+                        </button>
+                        {renderPageNumbers()}
+                        <button className="page-btn" disabled={currentPage === totalPages} onClick={handleNext}>
+                            <RightOutlined />
+                        </button>
+                        <span className="quick-jumper">
+                            前往
+                            <Input
+                                className="jump-input"
+                                style={{ width: 48, textAlign: 'center' }}
+                                value={jumpValue}
+                                onChange={(e: any) => setJumpValue(e.target.value)}
+                                onPressEnter={handleJump}
+                            />
+                            页
+                        </span>
+                    </div>
+                </div>
             <NewProjectDialog onOk={onOk} onCancel={onCancel} visible={addDialog}/>
             <DelProjectDialog visible={delDialog} onOk={confirmDel} onCancel={cancelDel}/>
             <CloneProjectDialog onOk={() => confirmClone()} onCancel={cancelClone}
