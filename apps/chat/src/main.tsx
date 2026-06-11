@@ -1,7 +1,7 @@
 declare global {
   interface Window {
     APP_CONFIG: any;
-    onTokenExpired?: () => Promise<void>;
+    onTokenExpired?: () => Promise<void> | void;
   }
 }
 

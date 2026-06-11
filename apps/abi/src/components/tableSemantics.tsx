@@ -19,13 +19,16 @@ interface IProps {
   readonly getSchemaId: ({
     semanticGroupId,
     semanticSchemaId,
+    semanticsGroupId,
     viewId
   }: {
     semanticGroupId: number | null;
     semanticSchemaId: number;
+    semanticsGroupId: number | null;
     viewId: number;
   }) => void;
   readonly getSchemaOptions?: (schemaOptions: TableSemanticParams[]) => void;
+  readonly groupFieldName?: 'semanticGroupId' | 'semanticsGroupId';
   readonly isEdit?: boolean;
   readonly type: TableSemanticsGroupType;
 }
@@ -44,6 +47,9 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
   // 表语义
   const fetchSchemaOptions = async (gpId: number | null) => {
     if (!gpId) {
+      setSchemaOptions([]);
+      setOriginalSchemaOptions([]);
+      getSchemaOptions?.([]);
       return;
     }
     const { data } = await schemalist({
@@ -79,7 +85,6 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
   }, [spaceId]);
 
   useEffect(() => {
-    setSchemaOptions([]);
     fetchSchemaOptions(groupId);
   }, [groupId]);
 
@@ -87,6 +92,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
     return getSchemaId({
       semanticGroupId: groupId,
       semanticSchemaId: v,
+      semanticsGroupId: groupId,
       viewId: findViewId(v)
     });
   }
@@ -94,14 +100,15 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
   return (
     <div className="grid grid-cols-2 gap-2">
       <AForm.Item
-        label="表语义组"
-        name="semanticGroupId"
-        rules={[{ message: '请选择表语义组', required: true }]}
+        label="数据语义组"
+        name={groupFieldName}
+        rules={[{ message: '请选择数据语义组', required: true }]}
       >
         <ASelect
           disabled={isEdit}
+          allowClear
           options={groupOptions}
-          placeholder="选择表语义组"
+          placeholder="选择数据语义组"
           onChange={(v)=>{
             setGroupId(v)
             form?.setFieldsValue({ semanticSchemaId: null })
@@ -110,14 +117,15 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
       </AForm.Item>
 
       <AForm.Item
-        label="表语义"
+        label="数据语义"
         name="semanticSchemaId"
-        rules={[{ message: '请选择表语义', required: true }]}
+        rules={[{ message: '请选择数据语义', required: true }]}
       >
         <ASelect
           disabled={isEdit}
+          allowClear
           options={schemaOptions}
-          placeholder="选择表语义"
+          placeholder="选择数据语义"
           onChange={backGroupIdAndSchemaId}
         />
       </AForm.Item>

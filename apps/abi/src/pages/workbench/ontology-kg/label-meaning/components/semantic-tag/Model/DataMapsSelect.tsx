@@ -4,7 +4,7 @@ import { useAppSelector } from '@/hooks/business/useStore';
 import { getCollectionDetail } from '@/service/api';
 import { getSpaceId } from '@/store/slice/app';
 
-import type { IAllFields, IDataCollectionOption } from '../../types';
+import type { IAllFields, IDataCollectionOption } from '../../../types';
 
 interface DataMapsSelectProps {
   readonly dataCollectionList: IDataCollectionOption[];

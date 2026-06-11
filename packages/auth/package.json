@@ -1,0 +1,16 @@
+{
+  "name": "@sa/auth",
+  "version": "1.1.1",
+  "main": "./src/index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./src/*"
+      ]
+    }
+  }
+}

@@ -6,6 +6,7 @@
 // biome-ignore lint: disable
 export {}
 declare global {
+  const AAlert: typeof import('antd')['Alert']
   const AAndroidOutlined: typeof import('antd')['AndroidOutlined']
   const AAppleOutlined: typeof import('antd')['AppleOutlined']
   const AButton: typeof import('antd')['Button']
@@ -259,7 +260,6 @@ declare global {
   const useTimeout: typeof import('ahooks')['useTimeout']
   const useTitle: typeof import('ahooks')['useTitle']
   const useToggle: typeof import('ahooks')['useToggle']
-  const useTokenCheck: typeof import('../hooks/business/useTokenCheck')['useTokenCheck']
   const useTrackedEffect: typeof import('ahooks')['useTrackedEffect']
   const useTransition: typeof import('react')['useTransition']
   const useTranslation: typeof import('react-i18next')['useTranslation']

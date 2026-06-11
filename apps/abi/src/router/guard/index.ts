@@ -5,7 +5,6 @@ import type {
   Init,
   LocationQuery,
   NavigationGuardNext,
-  RouteLocationNamedRaw,
   RouteLocationNormalizedLoaded
 } from '@sa/simple-router';
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
@@ -24,19 +23,17 @@ export const init: Init = async currentFullPath => {
 
   const isLogin = checkAuthStatus();
 
-  // if (!isLogin) {
-  //   const loginRoute: RouteKey = 'login';
-  //   const routeHome = getRouteHome(store.getState());
+  if (!isLogin && !currentFullPath.includes('login')) {
+    const loginRoute: RouteKey = 'login';
+    const routeHome = getRouteHome(store.getState());
+    const query = getRouteQueryOfLoginRoute(currentFullPath, routeHome as RouteKey);
 
-  //   const query = getRouteQueryOfLoginRoute(currentFullPath, routeHome as RouteKey);
+    return {
+      name: loginRoute,
+      query
+    };
+  }
 
-  //   const location: RouteLocationNamedRaw = {
-  //     name: loginRoute,
-  //     query
-  //   };
-
-  //   return location;
-  // }
   if (!isLogin) return null;
 
   await store.dispatch(initAuthRoute());
@@ -77,16 +74,6 @@ export const createRouteGuard: BeforeEach = (to, _, blockerOrJump) => {
     return routeName && getIsAuthRouteExist(routeName);
   };
 
-  const loginStatus = Boolean(localStg.get('token'));
-  if (!loginStatus && to.name !== 'login' && !to.meta?.constant) {
-    return blockerOrJump({
-      name: 'login',
-      query: {
-        redirect: to.fullPath
-      }
-    });
-  }
-
   // it is captured by the "not-found" route, then check whether the route exists
   if (isNotFoundRoute) {
     if (!to.name || !checkRouteExistence(to.name as RouteKey)) {
@@ -98,10 +85,8 @@ export const createRouteGuard: BeforeEach = (to, _, blockerOrJump) => {
   }
 
   const rootRoute: RouteKey = 'root';
-  const loginRoute: RouteKey = 'login';
   const noAuthorizationRoute: RouteKey = '403';
 
-  const isLogin = checkAuthStatus();
   const needLogin = qiankunWindow.__POWERED_BY_QIANKUN__ ? false : !to.meta.constant;
   const routeRoles = to.meta.roles || [];
 
@@ -117,7 +102,7 @@ export const createRouteGuard: BeforeEach = (to, _, blockerOrJump) => {
       callback: () => {
         return blockerOrJump({ name: rootRoute });
       },
-      condition: isLogin && to.path.includes('login')
+      condition: Boolean(localStg.get('token')) && to.path.includes('login')
     },
     // if it is constant route, then it is allowed to access directly
     {
@@ -126,26 +111,19 @@ export const createRouteGuard: BeforeEach = (to, _, blockerOrJump) => {
       },
       condition: !needLogin
     },
-    // if the route need login but the user is not logged in, then switch to the login page
-    {
-      callback: () => {
-        return blockerOrJump({ name: loginRoute, query: { redirect: to.fullPath } });
-      },
-      condition: !isLogin && needLogin
-    },
     // if the user is logged in and has authorization, then it is allowed to access
     {
       callback: () => {
         return handleRouteSwitch(to, blockerOrJump);
       },
-      condition: isLogin && needLogin && hasAuth
+      condition: needLogin && hasAuth
     },
     // if the user is logged in but does not have authorization, then switch to the 403 page
     {
       callback: () => {
         return blockerOrJump({ name: noAuthorizationRoute });
       },
-      condition: isLogin && needLogin && !hasAuth
+      condition: needLogin && !hasAuth
     }
   ];
 

@@ -3,10 +3,10 @@ import { Form, Input } from 'antd';
 import React from 'react';
 
 import { TableSemantics } from '@/components/tableSemantics';
-import ExpressionBuilder from '@/pages/workbench/ontology-kg/label-meaning/components/Expr.tsx';
+import ExpressionBuilder from '@/pages/workbench/ontology-kg/label-meaning/components/semantic-tag/Expr.tsx';
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types/index.js';
 
-import { TagInput } from '../components/Model/TagInput.tsx';
+import { TagInput } from '../components/semantic-tag/Model/TagInput.tsx';
 import type { TagGroup } from '../types/index.ts';
 
 interface TagModalProps {

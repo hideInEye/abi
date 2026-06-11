@@ -709,9 +709,9 @@ export const generatedRoutes: GeneratedRoute[] = [
             path: 'label-meaning',
             component: 'view.workbench_ontology-kg_label-meaning',
             meta: {
-              i18nKey: 'route.assistant-manage_label-meaning',
+              i18nKey: 'route.workbench_ontology-kg_label-meaning',
               order: 4,
-              title: 'assistant-manage_label-meaning'
+              title: 'workbench_ontology-kg_label-meaning'
             }
           },
           {

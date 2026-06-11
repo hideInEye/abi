@@ -105,6 +105,9 @@ importers:
       '@reduxjs/toolkit':
         specifier: 2.3.0
         version: 2.3.0(react-redux@9.1.2(@types/react@18.3.12)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
+      '@sa/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@sa/axios':
         specifier: workspace:*
         version: link:../../packages/axios
@@ -691,8 +694,13 @@ importers:
         specifier: ^1.0.15
         version: 1.0.15(typescript@5.6.3)(vite@5.4.10(@types/node@20.19.27)(less@3.13.1)(lightningcss@1.30.2)(sass@1.80.6)(terser@5.44.1))
 
+  packages/auth: {}
+
   packages/axios:
     dependencies:
+      '@sa/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@sa/utils':
         specifier: workspace:*
         version: link:../utils
