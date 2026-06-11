@@ -34,7 +34,7 @@ export const Component: React.FC = () => {
   const tabItems = useMemo<TabsProps['items']>(() => [
     {
       children: (
-        <div className="h-full min-h-0 p-4">
+        <div className="h-full min-h-0">
           <DimensionModeling />
         </div>
       ),
@@ -43,7 +43,7 @@ export const Component: React.FC = () => {
     },
     {
       children: (
-        <div className="h-full min-h-0 p-4">
+        <div className="h-full min-h-0 ">
           <MetricModeling />
         </div>
       ),
@@ -52,7 +52,7 @@ export const Component: React.FC = () => {
     },
     {
       children: (
-        <div className="h-full min-h-0 p-4">
+        <div className="h-full min-h-0">
           <SemanticTag />
         </div>
       ),
@@ -69,7 +69,7 @@ export const Component: React.FC = () => {
       >
         <ATabs
           activeKey={activeTab}
-          className="h-full min-h-0"
+          className="h-full min-h-0 p-4"
           items={tabItems}
           style={{ flex: 1, minHeight: 0 }}
           onChange={handleTabChange}
