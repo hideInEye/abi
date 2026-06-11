@@ -10,7 +10,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   'assistant-manage': '助手管理',
   'assistant-manage_assistant-config': '助手配置',
   'assistant-manage_knowledge-extraction': '知识提取',
-  'assistant-manage_label-meaning': '标签语义',
+  'assistant-manage_label-meaning': '属性建模',
   'assistant-manage_memory-manage': '记忆管理',
   'assistant-manage_recommended-inquiries': '推荐问题',
   'assistant-manage_technical-jargon': '行业术语',
@@ -98,8 +98,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   system_model: '大模型管理',
   system_plugin: '插件管理',
   system_user: '用户管理',
-  'workbench_ontology-kg_dimension-modeling': '维度建模',
-  'workbench_ontology-kg_knowledge-extraction': '知识提取'
+  'workbench_ontology-kg_label-meaning': '属性建模'
 
   // 'user-center': '个人中心'
 }

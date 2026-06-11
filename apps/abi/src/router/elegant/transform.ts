@@ -269,8 +269,6 @@ const routeMap: RouteMap = {
   "workbench_job_time_modules_editor-quill": "editor-quill",
   "workbench_job_time_modules_share-email-setting": "share-email-setting",
   "workbench_ontology-kg": "ontology-kg",
-  "workbench_ontology-kg_dimension-modeling": "dimension-modeling",
-  "workbench_ontology-kg_knowledge-extraction": "knowledge-extraction",
   "workbench_ontology-kg_label-meaning": "label-meaning",
   "workbench_ontology-kg_recommended-inquiries": "recommended-inquiries",
   "workbench_ontology-kg_technical-jargon": "technical-jargon",

@@ -705,32 +705,13 @@ export const generatedRoutes: GeneratedRoute[] = [
         },
         children: [
           {
-            name: 'workbench_ontology-kg_dimension-modeling',
-            path: 'dimension-modeling',
-            component: 'view.workbench_ontology-kg_dimension-modeling',
-            meta: {
-              i18nKey: 'route.workbench_ontology-kg_dimension-modeling',
-              title: 'workbench_ontology-kg_dimension-modeling'
-            }
-          },
-          {
-            name: 'workbench_ontology-kg_knowledge-extraction',
-            path: 'knowledge-extraction',
-            component: 'view.workbench_ontology-kg_knowledge-extraction',
-            meta: {
-              i18nKey: 'route.workbench_ontology-kg_knowledge-extraction',
-              order: 4,
-              title: 'workbench_ontology-kg_knowledge-extraction'
-            }
-          },
-          {
             name: 'workbench_ontology-kg_label-meaning',
             path: 'label-meaning',
             component: 'view.workbench_ontology-kg_label-meaning',
             meta: {
-              i18nKey: 'route.assistant-manage_label-meaning',
+              i18nKey: 'route.workbench_ontology-kg_label-meaning',
               order: 4,
-              title: 'assistant-manage_label-meaning'
+              title: 'workbench_ontology-kg_label-meaning'
             }
           },
           {
