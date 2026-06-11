@@ -1,4 +1,4 @@
-import { DeleteOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EllipsisOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React, { useMemo } from 'react';
@@ -166,46 +166,32 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     }
   };
 
-  // 递归构建子节点（v5 设计稿风格：徽章 + 右侧箭头 + 叶子圆点，文件夹图标保持原蓝色）
-  const buildTreeNodes = (items: any[], currentExpandedKeys: React.Key[], depth: number = 0): TreeDataNode[] => {
-    return items.map((item) => {
+  // 递归构建子节点（图标和缩进保持原样，折叠箭头移到右侧，字体按 v5 调整）
+  const buildTreeNodes = (items: any[], currentExpandedKeys: React.Key[]): TreeDataNode[] => {
+    return items.map(item => {
       const hasChildren = item.children && item.children.length > 0;
       const nodeKey = `group-${item.groupId}`;
       const isExpanded = currentExpandedKeys.includes(nodeKey);
 
-      // 文件夹图标（保持原蓝色样式）
-      const folderIcon = hasChildren ? (
-        isExpanded ? (
-          <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
-        ) : (
-          <FolderOutlined className="group-node-icon group-node-icon--folder" />
-        )
-      ) : null;
+      // 图标保持原蓝色文件夹 / 浅蓝文档图标
+      const nodeIcon = hasChildren
+        ? (isExpanded
+          ? <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
+          : <FolderOutlined className="group-node-icon group-node-icon--folder" />)
+        : <FileTextOutlined className="group-node-icon group-node-icon--leaf" />;
 
-      // 叶子节点圆点
-      const leafDot = !hasChildren ? (
-        <span className="group-node-dot" />
-      ) : null;
-
-      // 子节点数量徽章
-      const countBadge = hasChildren && item.children?.length > 0 ? (
-        <span className="group-node-count">{item.children.length}</span>
-      ) : null;
-
-      // 右侧展开箭头
+      // 右侧折叠箭头（仅文件夹节点）
       const chevron = hasChildren ? (
         <span className={`group-node-chevron ${isExpanded ? 'open' : ''}`}>
-          <RightOutlined style={{ fontSize: 'inherit' }} />
+          <RightOutlined />
         </span>
       ) : null;
 
       return {
         title: (
-          <span className="group-node-content" data-depth={depth}>
-            {folderIcon}
-            {leafDot}
+          <span className={`group-node-label ${hasChildren ? 'is-folder' : 'is-leaf'}`}>
+            {nodeIcon}
             <span className="group-tree-title">{item.groupName}</span>
-            {countBadge}
             <span className="group-node-action">
               <Tooltip title="编辑">
                 <MoreOutlined
@@ -219,7 +205,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
           </span>
         ),
         key: nodeKey,
-        children: hasChildren ? buildTreeNodes(item.children, currentExpandedKeys, depth + 1) : undefined,
+        children: hasChildren ? buildTreeNodes(item.children, currentExpandedKeys) : undefined,
         isLeaf: !hasChildren
       };
     });
@@ -257,6 +243,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
             selectedKeys={selectedKeys}
             onSelect={handleTreeSelect}
             blockNode
+            motion={false}
           />
         </div>
       </div>
