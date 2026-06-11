@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 
 import { deleteMcp, getMcpDetail, queryMcpList, registerMcp, updateMcp } from '@/service/api/pulg';
 import type { PluginAddParams, PluginItem, PluginList, McpForm } from '@/types/plug';
+import { getSpaceId } from '@/store/slice/app';
+import { useAppSelector } from '@/hooks/business/useStore';
 
 import { PlugUpdate } from './components/PlugUpdate.tsx';
 import { PluginDetail } from './components/PluginDetail.tsx';
@@ -14,7 +16,9 @@ import { message } from 'antd';
 
 export const Component: React.FC = () => {
   const { currentEdit, open, setCurrentEdit, setOpen } = usePluginManagement();
+  const spaceId = useAppSelector(getSpaceId);
   const [groupId, setGroupId] = useState(0);
+  const [fetchKey, setFetchKey] = useState(0);
   const [dataSource, setDataSource] = useState<{
     code: number;
     msg: string;
@@ -26,9 +30,9 @@ export const Component: React.FC = () => {
   const [detailRecord, setDetailRecord] = useState<PluginItem | null>(null);
   const pageSize = 10;
 
-  const getPluginList = async (mcpName?: string) => {
+  const getPluginList = async (mcpName?: string, pageOverride?: number) => {
     const res: any = await queryMcpList({
-      pageNo: current,
+      pageNo: pageOverride ?? current,
       pageSize,
       mcpName: mcpName || undefined,
       search: 'blur',
@@ -91,7 +95,7 @@ export const Component: React.FC = () => {
     setSearchValue(value);
     setcurrent(1);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
-    getPluginList(value);
+    getPluginList(value, 1);
   };
 
   const handleSubmit = async (formData: McpForm) => {
@@ -179,102 +183,102 @@ export const Component: React.FC = () => {
     if (!groupId) return;
     setcurrent(1);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
-    getPluginList(searchValue);
-  }, [groupId]);
+    getPluginList(searchValue, 1);
+  }, [groupId, fetchKey]);
+
+  // 空间切换时重置分组 + 强制刷新，让 PluginGroup 重新回调新空间的 groupId
+  useEffect(() => {
+    setGroupId(0);
+    setcurrent(1);
+    setDataSource({ code: 0, msg: '', rows: [], total: 0 });
+    setFetchKey(k => k + 1);
+  }, [spaceId]);
 
   const setPage = (page: number) => {
     setcurrent(page);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
-    getPluginList();
+    getPluginList(undefined, page);
   };
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard
-        className="flex-col-stretch sm:flex-1-hidden card-wrapper h-full border-0"
-        styles={{ body: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' } }}
-      >
-        <AFlex className="gap-6 h-full" style={{ flex: 1, minHeight: 0 }}>
-          <div className="abi-group-sidebar">
-            <PluginGroup onGroupId={setGroupId} />
-          </div>
+    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* v5 Tree Panel — left sidebar */}
+      <div className="abi-group-sidebar">
+        <PluginGroup onGroupId={setGroupId} />
+      </div>
 
-          <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-            <div className="flex items-center gap-3 mb-3">
-              <AInput
-                allowClear
-                placeholder="请输入MCP服务名称"
-                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                value={searchValue}
-                onChange={e => handleSearch(e.target.value)}
-                style={{ width: '12rem' }}
-              />
-              <AButton
-                type="primary"
-                className="ml-auto"
-                disabled={!groupId}
-                onClick={() => {
-                  setOpen(true);
-                  setCurrentEdit(null);
-                }}
-              >
-                新增
-              </AButton>
-            </div>
-
-            <PluginTable
-              current={current}
-              dataSource={dataSource}
-              deletePlugin={toDeletePlugin}
-              setcurrent={setPage}
-              updateStatus={updateStatus}
-              onDetail={async record => {
-                try {
-                  const res: any = await getMcpDetail({
-                    mcpId: String(record.pluginId),
-                    mcpName: record.pluginName,
-                    namespaceId: `s_${groupId}`
-                  });
-                  const remote = res?.response?.data?.data ?? res?.response?.data;
-                  // 后端返回成功则以详情接口数据为准，否则降级使用行数据
-                  setDetailRecord({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
-                } catch {
-                  setDetailRecord(record);
-                }
-              }}
-              updateCurrentEdit={async record => {
-                // 编辑前先拉详情，补充 backendEndpoints/toolSpec/remoteServerConfig 等字段用于回显
-                try {
-                  const res: any = await getMcpDetail({
-                    mcpId: String(record.pluginId),
-                    mcpName: record.pluginName,
-                    namespaceId: `s_${groupId}`
-                  });
-                  const remote = res?.response?.data?.data ?? res?.response?.data;
-                  setCurrentEdit({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
-                } catch {
-                  setCurrentEdit(record);
-                }
-                setOpen(true);
-              }}
+      {/* Right content area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        {/* v5 Searchbar */}
+        <section className="abi-searchbar">
+          <div className="abi-search-row">
+            <AInput
+              allowClear
+              placeholder="请输入MCP服务名称"
+              prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+              value={searchValue}
+              onChange={e => handleSearch(e.target.value)}
+              className="abi-field-input"
+              style={{ width: '16rem' }}
             />
+            <AButton type="primary" className="btn-accent-gradient" disabled={!groupId} onClick={() => { setOpen(true); setCurrentEdit(null); }}>
+              + 新增MCP服务
+            </AButton>
           </div>
-        </AFlex>
+        </section>
 
-        <PlugUpdate
-          currentEdit={currentEdit}
-          namespaceId={`s_${groupId}`}
-          open={open}
-          onClose={() => setOpen(false)}
-          onSubmit={handleSubmit}
-        />
+        {/* v5 Data Area */}
+        <section className="abi-data-area">
+          <PluginTable
+            current={current}
+            dataSource={dataSource}
+            deletePlugin={toDeletePlugin}
+            setcurrent={setPage}
+            updateStatus={updateStatus}
+            onDetail={async record => {
+              try {
+                const res: any = await getMcpDetail({
+                  mcpId: String(record.pluginId),
+                  mcpName: record.pluginName,
+                  namespaceId: `s_${groupId}`
+                });
+                const remote = res?.response?.data?.data ?? res?.response?.data;
+                setDetailRecord({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
+              } catch {
+                setDetailRecord(record);
+              }
+            }}
+            updateCurrentEdit={async record => {
+              try {
+                const res: any = await getMcpDetail({
+                  mcpId: String(record.pluginId),
+                  mcpName: record.pluginName,
+                  namespaceId: `s_${groupId}`
+                });
+                const remote = res?.response?.data?.data ?? res?.response?.data;
+                setCurrentEdit({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
+              } catch {
+                setCurrentEdit(record);
+              }
+              setOpen(true);
+            }}
+          />
+        </section>
+      </div>
 
-        <PluginDetail
-          open={Boolean(detailRecord)}
-          record={detailRecord}
-          onClose={() => setDetailRecord(null)}
-        />
-      </ACard>
+      <PlugUpdate
+        currentEdit={currentEdit}
+        namespaceId={`s_${groupId}`}
+        open={open}
+        onClose={() => setOpen(false)}
+        onSubmit={handleSubmit}
+      />
+
+      <PluginDetail
+        open={Boolean(detailRecord)}
+        record={detailRecord}
+        onClose={() => setDetailRecord(null)}
+      />
     </div>
   );
 };

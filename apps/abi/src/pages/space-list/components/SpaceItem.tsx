@@ -93,14 +93,6 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
           </APopover>
         </div>
         <div className={s['space-card-actions']}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setSpaceId(space.spaceId)
-            }}
-          >
-            进入
-          </button>
           <Dropdown menu={{ items, onClick }}>
             <button
               onClick={(e) => {
@@ -115,15 +107,15 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
       </div>
       <div className={s['space-card-meta']}>
         <div className={s['space-card-meta-row']}>
-          <span className={s['space-card-meta-lbl']}>创建人</span>
+          <span className={s['space-card-meta-lbl']}>创建人：</span>
           <span className={s['space-card-meta-val']}>{space.createBy}</span>
         </div>
         <div className={s['space-card-meta-row']}>
-          <span className={s['space-card-meta-lbl']}>创建时间</span>
+          <span className={s['space-card-meta-lbl']}>创建时间：</span>
           <span className={s['space-card-meta-val']}>{space.createTime}</span>
         </div>
         <div className={s['space-card-meta-row']}>
-          <span className={s['space-card-meta-lbl']}>空间 ID</span>
+          <span className={s['space-card-meta-lbl']}>空间 ID：</span>
           <span className={s['space-card-meta-val-id']}>{space.spaceId}</span>
         </div>
       </div>

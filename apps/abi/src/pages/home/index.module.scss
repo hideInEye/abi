@@ -33,7 +33,7 @@
 /* ===== Container ===== */
 .container {
   padding: 1.75rem;
-  background: linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%);
+  background: var(--abi-card-bg);
   min-height: 100%;
   font-family: var(--v5-font);
   -webkit-font-smoothing: antialiased;
@@ -261,7 +261,8 @@
 
 .space-card-meta-lbl {
   color: var(--v5-ink-4);
-  min-width: 3.125rem;
+  width: 4.5rem;
+  flex-shrink: 0;
   font-size: 0.8125rem;
 }
 
@@ -454,24 +455,4 @@
   .guide-step {
     flex: 1 1 100%;
   }
-}
-
-/* Legacy compatibility - keep old classes for components that still reference them */
-.fast-create {
-  /* no longer used directly, kept for backwards compat */
-}
-.fast-create__grid,
-.fast-create__step,
-.fast-create__connector,
-.fast-create__line,
-.fast-create__arrow,
-.fast-create__iconWrap,
-.fast-create__icon,
-.fast-create__title,
-.fast-create__desc,
-.fast-create__head {
-  /* legacy - no longer needed */
-}
-.space-item {
-  /* legacy - replaced by space-card */
 }

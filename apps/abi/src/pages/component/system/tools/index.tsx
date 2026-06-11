@@ -1,7 +1,9 @@
 import Editor from '@monaco-editor/react';
 import {
   ExclamationCircleFilled,
+  LeftOutlined,
   MinusCircleOutlined,
+  RightOutlined,
   SearchOutlined
 } from '@ant-design/icons';
 import { App, Button, Checkbox, Divider, Drawer, Form, Input, Select, Space, Table, Tabs, Tag } from 'antd';
@@ -174,6 +176,22 @@ const TABLE_SCROLL = { x: 'max-content' };
 
     return arr;
   }, [list, statusFilter, keyword]);
+
+  // v5 pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [jumpValue, setJumpValue] = useState('');
+  const totalCount = filteredList.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const pagedList = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredList.slice(start, start + pageSize);
+  }, [filteredList, currentPage, pageSize]);
+
+  // 筛选条件变化时重置到第一页
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, keyword]);
 
   const defaultPythonScript = `def get_current_date(format: str = "%Y-%m-%d", include_weekday: bool = False) -> str:
     from datetime import date
@@ -519,14 +537,53 @@ const TABLE_SCROLL = { x: 'max-content' };
             <Table<ToolItem>
               rowKey="toolId"
               columns={columns}
-              dataSource={filteredList}
+              dataSource={pagedList}
               loading={loading}
               pagination={false}
               size="middle"
               className="tools-table abi-std-table"
-              scroll={list.length > 0 ? TABLE_SCROLL : undefined}
+              scroll={pagedList.length > 0 ? TABLE_SCROLL : undefined}
             />
           </div>
+        </div>
+      </div>
+
+      <div className="data-source-pagination">
+        <span className="total-text">共 {totalCount} 条</span>
+        <div className="pagination-controls">
+          <ASelect
+            value={pageSize}
+            options={[
+              { label: '10条/页', value: 10 },
+            ]}
+            disabled
+            className="page-size-select"
+          />
+          <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+            <LeftOutlined />
+          </button>
+          {(() => {
+            const pages: number[] = [];
+            if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
+            else {
+              pages.push(1);
+              if (currentPage > 3) pages.push(-1);
+              const start = Math.max(2, currentPage - 1);
+              const end = Math.min(totalPages - 1, currentPage + 1);
+              for (let i = start; i <= end; i++) pages.push(i);
+              if (currentPage < totalPages - 2) pages.push(-2);
+              pages.push(totalPages);
+            }
+            return pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === currentPage ? ' page-active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</span>);
+          })()}
+          <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+            <RightOutlined />
+          </button>
+          <span className="quick-jumper">
+            前往
+            <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (p >= 1 && p <= totalPages) setCurrentPage(p); setJumpValue(''); }} />
+            页
+          </span>
         </div>
       </div>
 

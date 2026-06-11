@@ -1,5 +1,5 @@
-import { ApartmentOutlined, CopyOutlined, DeleteOutlined, EditOutlined, MoreOutlined, SearchOutlined, StarFilled, StarOutlined } from '@ant-design/icons'
-import { Dropdown, Space } from 'antd'
+import { ApartmentOutlined, CopyOutlined, DeleteOutlined, EditOutlined, LeftOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined, StarFilled, StarOutlined } from '@ant-design/icons'
+import { Dropdown, Select, Space } from 'antd'
 import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage'
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
 import { useAppSelector } from '@/hooks/business/useStore'
@@ -71,35 +71,52 @@ const ModelCardList: FC<Props> = ({
     )
   }, [models, searchValue])
 
+  // v5 pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(12)
+  const [jumpValue, setJumpValue] = useState('')
+
+  // 搜索条件变化时重置到第一页
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchValue])
+
+  const totalCount = filteredModels.length
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const pagedModels = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredModels.slice(start, start + pageSize)
+  }, [filteredModels, currentPage, pageSize])
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <ACard
-        bordered={false}
-        size="small"
-        title={
-          <div className="flex items-center" style={{ fontWeight: 'normal' }}>
-            <AInput
-              value={searchValue}
-              placeholder="搜索模型名称或基础模型"
-              prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-              allowClear
-              style={{ width: '14rem' }}
-              onChange={e => onSearchValueChange(e.target.value)}
-            />
-            <AButton type="primary" className="ml-auto" onClick={onAdd}>
-              新增
-            </AButton>
-          </div>
-        }
-        style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-        styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px 16px' } }}
-      >
-        <div style={{ flex: 1, overflow: 'auto', padding: '4px 20px 12px 12px' }}>
-          {filteredModels.length === 0 ? (
-            <AEmpty description="暂无模型数据" style={{ marginTop: 80 }} />
-          ) : (
-            <div className="model-card-grid">
-              {filteredModels.map(item => {
+      {/* v5 Search Bar */}
+      <div className="abi-searchbar">
+        <div className="abi-search-row">
+          <AInput
+            value={searchValue}
+            placeholder="搜索模型名称或基础模型"
+            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+            allowClear
+            className="abi-field-input"
+            style={{ width: '14rem' }}
+            onChange={e => onSearchValueChange(e.target.value)}
+          />
+          <AButton className="btn-accent-gradient ml-auto" onClick={onAdd}>
+            <PlusOutlined />
+            新增
+          </AButton>
+        </div>
+      </div>
+
+      {/* Card Grid */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '4px 20px 12px 12px' }}>
+        {filteredModels.length === 0 ? (
+          <AEmpty description="暂无模型数据" style={{ marginTop: 80 }} />
+        ) : (
+          <div className="abi-card-grid">
+            <div className="abi-card-grid-inner">
+              {pagedModels.map(item => {
                 const modelTypeLabel = MODAL_TYPE_OPTIONS.find(o => o.value === item.modelType)?.label || item.modelType
                 // 供应商图标：通过 providerId 在 providers 中匹配
                 const provider = providers.find(p => p.providerId === item.providerId)
@@ -161,19 +178,9 @@ const ModelCardList: FC<Props> = ({
                 return (
                   <div
                     key={item.modelId}
-                    className="model-card-item"
+                    className="abi-data-card model-card-item"
                     style={{
                       position: 'relative',
-                      border: '1px solid #d9d9d9',
-                      borderRadius: 8,
-                      padding: 16,
-                      minHeight: 180,
-                      height: 'auto',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      background: '#fff',
-                      boxShadow: '0 2px 8px 0 rgba(0,0,0,0.08)',
                     }}
                   >
                     {/* 默认模型角标 */}
@@ -319,9 +326,50 @@ const ModelCardList: FC<Props> = ({
                 )
               })}
             </div>
+          </div>
           )}
+      </div>
+      <div className="data-source-pagination">
+        <span className="total-text">共 {totalCount} 条</span>
+        <div className="pagination-controls">
+          <Select
+            value={pageSize}
+            onChange={(val: number) => { setPageSize(val); setCurrentPage(1) }}
+            options={[
+              { label: '12条/页', value: 12 },
+              { label: '20条/页', value: 20 },
+              { label: '30条/页', value: 30 },
+              { label: '50条/页', value: 50 },
+            ]}
+            className="page-size-select"
+          />
+          <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+            <LeftOutlined />
+          </button>
+          {(() => {
+            const pages: number[] = []
+            if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i) }
+            else {
+              pages.push(1)
+              if (currentPage > 3) pages.push(-1)
+              const start = Math.max(2, currentPage - 1)
+              const end = Math.min(totalPages - 1, currentPage + 1)
+              for (let i = start; i <= end; i++) pages.push(i)
+              if (currentPage < totalPages - 2) pages.push(-2)
+              pages.push(totalPages)
+            }
+            return pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === currentPage ? ' page-active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</span>)
+          })()}
+          <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+            <RightOutlined />
+          </button>
+          <span className="quick-jumper">
+            前往
+            <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (p >= 1 && p <= totalPages) setCurrentPage(p); setJumpValue('') }} />
+            页
+          </span>
         </div>
-      </ACard>
+      </div>
     </div>
   )
 }

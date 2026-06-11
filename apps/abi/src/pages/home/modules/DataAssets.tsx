@@ -1,5 +1,4 @@
 import { $t } from '@/locales'
-import { useRouter } from '~/packages/simple-router/src'
 import s from '../index.module.scss'
 
 interface DataAssetType {
@@ -65,7 +64,6 @@ function initDataAssetsConfig(homeData: DataAssetsProps) {
 }
 
 export function DataAssets({ homeData }: { readonly homeData: DataAssetsProps }) {
-  const { push } = useRouter()
   if (homeData) {
     initDataAssetsConfig(homeData)
   }
@@ -76,7 +74,6 @@ export function DataAssets({ homeData }: { readonly homeData: DataAssetsProps })
         <div
           className={s['stat-card']}
           key={item.title}
-          onClick={() => item.href && push(item.href)}
         >
           <div className={`${s['stat-icon']} ${s[item.colorClass]}`}>
             <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: item.iconSvg }} />

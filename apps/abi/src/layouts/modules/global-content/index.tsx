@@ -141,8 +141,8 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   }, [reload])
 
   return (
-    <div className="flex min-w-0" style={{ background: 'linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%)' }}>
-      {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 bg-[linear-gradient(135deg,#F0F4FF_0%,#EFF3FF_45%,#EFF2FF_100%)] dark:bg-[#1a1a1a] dark:border-[#333] h-[100vh] transition-all duration-300'} id={GLOBAL_SIDER_MENU_ID} />}
+    <div className="flex min-w-0" style={{ background: 'var(--abi-card-bg)' }}>
+      {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 dark:bg-[#1a1a1a] dark:border-[#333] h-[100vh] transition-all duration-300'} id={GLOBAL_SIDER_MENU_ID} style={{ background: 'var(--abi-card-bg)' }} />}
       <div className={ClassNames('flex-1 min-w-0 h-screen relative flex flex-col')}>
         {!hideMenuRoute.includes(route.name!) && (
           <div className="px-6 pt-4 pb-4 page-header-container">

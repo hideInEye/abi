@@ -143,7 +143,7 @@
 
 /* 页面内容区统一渐变背景 */
 .page-content-area {
-  background: linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%);
+  background: var(--abi-card-bg);
 }
 
 /* 页面内容区卡片透明化，透出渐变背景 */
