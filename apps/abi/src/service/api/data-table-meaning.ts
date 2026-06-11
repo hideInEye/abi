@@ -1,4 +1,4 @@
-import { apiRequest } from '../request';
+import { apiRequest } from '../request'
 /** 获取标语义组 */
 export function grouplist(params: { groupName?: string; pageNum?: number; pageSize?: number; spaceId?: number }) {
   return apiRequest({
@@ -10,7 +10,7 @@ export function grouplist(params: { groupName?: string; pageNum?: number; pageSi
       spaceId: params.spaceId
     },
     url: '/api/copilot/v1/group/list'
-  });
+  })
 }
 /** 修改标语义组 */
 export function editGroup(data: any) {
@@ -18,7 +18,7 @@ export function editGroup(data: any) {
     data,
     method: 'put',
     url: '/api/copilot/v1/group'
-  });
+  })
 }
 /** 新增标语义组 */
 export function addgroupsub(data: any) {
@@ -26,7 +26,7 @@ export function addgroupsub(data: any) {
     data,
     method: 'post',
     url: '/api/copilot/v1/group'
-  });
+  })
 }
 /** 删除表语义组 */
 export function delgroup(data: any, groupIds: any) {
@@ -34,7 +34,7 @@ export function delgroup(data: any, groupIds: any) {
     data,
     method: 'delete',
     url: `/api/copilot/v1/group/${groupIds}`
-  });
+  })
 }
 /** 获取标语义组 */
 export function tablegroup(params: any, groupId: any) {
@@ -42,7 +42,7 @@ export function tablegroup(params: any, groupId: any) {
     method: 'get',
     params,
     url: `/api/copilot/v1/group/${groupId}`
-  });
+  })
 }
 /** 获取标语义组右侧列表接口 */
 export function schemalist(params: { bizName?: string; groupId?: number; pageNum?: number; pageSize?: number; startTime?: string; endTime?: string }) {
@@ -57,7 +57,7 @@ export function schemalist(params: { bizName?: string; groupId?: number; pageNum
       startTime: params.startTime
     },
     url: `/api/copilot/v1/schema/list`
-  });
+  })
 }
 /** 数据集合列表 */
 export function dataSetList(
@@ -71,7 +71,7 @@ export function dataSetList(
     data,
     method: 'post',
     url: '/api/abi-data/api/v1/dataset/qyeryDataSetList'
-  });
+  })
 }
 /** 查询数据集详情 */
 export function queryDataSetDetail(data: any) {
@@ -79,7 +79,7 @@ export function queryDataSetDetail(data: any) {
     data,
     method: 'post',
     url: '/api/abi-data/api/v1/dataset/queryDataSetDetail'
-  });
+  })
 }
 
 /** 新增表语义 */
@@ -88,7 +88,7 @@ export function addTableSemantics(data: any) {
     data,
     method: 'post',
     url: '/api/copilot/v1/schema'
-  });
+  })
 }
 
 /** 删除表语义 */
@@ -97,7 +97,7 @@ export function deleteTableSemantics(schemaId: number) {
     data: {},
     method: 'delete',
     url: `/api/copilot/v1/schema/${schemaId}`
-  });
+  })
 }
 
 /** 编辑表语义 */
@@ -106,7 +106,15 @@ export function editTableSemantics(data: any) {
     data,
     method: 'put',
     url: '/api/copilot/v1/schema'
-  });
+  })
+}
+
+/** 查询表语义详情 */
+export function queryTableSemanticsDetail(schemaId: number | string) {
+  return apiRequest({
+    method: 'get',
+    url: `/api/copilot/v1/schema/${schemaId}`
+  })
 }
 
 /** 获取 验证码 */
@@ -115,5 +123,5 @@ export function getCode() {
     data: {},
     method: 'get',
     url: '/api/code'
-  });
+  })
 }

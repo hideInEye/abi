@@ -49,7 +49,7 @@ export interface GroupProps {
     rule: any[];
     type: TableSemanticsGroupType;
   };
-  readonly onGroupId: (groupId: number) => void;
+  readonly onGroupId: (groupId: number, groupName?: string) => void;
 }
 
 export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
@@ -80,7 +80,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     if (groups.length > 0) {
       const firstKey = `group-${groups[0].groupId}`;
       setSelectedKeys([firstKey]);
-      onGroupId(groups[0].groupId);
+      onGroupId(groups[0].groupId, groups[0].groupName);
     }
   }, [groups]);
 
