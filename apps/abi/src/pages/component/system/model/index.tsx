@@ -5,6 +5,8 @@ import { Suspense } from 'react'
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer'
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
 import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList, fetchProviderList, copyModel, setDefaultModel } from '@/service/api'
+import { getSpaceId } from '@/store/slice/app'
+import { useAppSelector } from '@/hooks/business/useStore'
 
 const ModalOperateDrawer = lazy(() => import('./modules/modal-operate-drawer'))
 const ProviderList = lazy(() => import('./modules/provider-list'))
@@ -12,6 +14,7 @@ const ModelCardList = lazy(() => import('./modules/model-card-list'))
 
 export function Component() {
   const { t } = useTranslation()
+  const spaceId = useAppSelector(getSpaceId)
 
   const [searchValue, setSearchValue] = useState('')
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null)
@@ -65,11 +68,12 @@ export function Component() {
 
   const { data, run, tableProps, updateSearchParams } = useTable({
     apiFn: fetchModelList as any,
-    apiParams: {
+    apiParams: useMemo(() => ({
       pageNum: 1,
       pageSize: 999,
       modelName: searchValue,
-    },
+      spaceId,
+    }), [spaceId]),
     columns: () => [] as any,
     rowKey: 'modelId',
   } as any)

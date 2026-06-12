@@ -1,5 +1,5 @@
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
-import { Button, Empty, Pagination, Popconfirm, Space, Table, Tag, Tooltip } from 'antd'
+import { LeftOutlined, RightOutlined } from '@ant-design/icons'
+import { Popconfirm, Table, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
 import React from 'react'
 
@@ -23,16 +23,10 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  const emptyNode = (
-    <Empty
-      className="my-10"
-      description="暂无数据"
-    />
-  )
-
   const columns = useMemo<TableColumnsType<KnowledgeIndicatorItem>>(
     () => [
       {
+        align: 'center',
         dataIndex: 'techName',
         ellipsis: true,
         key: 'techName',
@@ -40,6 +34,7 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
         width: 180
       },
       {
+        align: 'center',
         dataIndex: 'indicatorCode',
         ellipsis: true,
         key: 'indicatorCode',
@@ -48,6 +43,7 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
         width: 180
       },
       {
+        align: 'center',
         dataIndex: 'indicatorClass',
         key: 'indicatorClass',
         render: (value: string) => {
@@ -57,8 +53,9 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
         title: '指标类型',
         width: 130
       },
-      { dataIndex: 'qualityLevel', key: 'qualityLevel', render: (value: string) => value || '-', title: '质量等级', width: 120 },
+      { align: 'center', dataIndex: 'qualityLevel', key: 'qualityLevel', render: (value: string) => value || '-', title: '质量等级', width: 120 },
       {
+        align: 'center',
         dataIndex: 'status',
         key: 'status',
         render: (value: string | number) => {
@@ -69,19 +66,14 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
         width: 100
       },
       {
-        fixed: 'right' as const,
+        align: 'center',
+        fixed: 'right',
         key: 'action',
         render: (_: unknown, record: KnowledgeIndicatorItem) => (
-          <Space>
-            <Tooltip title="编辑">
-              <Button
-                color="primary"
-                icon={<EditOutlined />}
-                size="small"
-                variant="link"
-                onClick={() => onEdit(record)}
-              />
-            </Tooltip>
+          <div className="flex items-center justify-center" style={{ gap: 2 }}>
+            <AButton className="abi-action-link" size="small" variant="link" onClick={() => onEdit(record)}>
+              编辑
+            </AButton>
             <Popconfirm
               cancelText="取消"
               description="确定删除该指标吗？"
@@ -89,19 +81,12 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
               title="提示"
               onConfirm={() => onDelete(record)}
             >
-              <Tooltip title="删除">
-                <Button
-                  color="danger"
-                  icon={<DeleteOutlined />}
-                  size="small"
-                  variant="link"
-                />
-              </Tooltip>
+              <AButton className="abi-action-link-danger" size="small" variant="link">删除</AButton>
             </Popconfirm>
-          </Space>
+          </div>
         ),
         title: '操作',
-        width: 120
+        width: 140
       }
     ],
     [onDelete, onEdit]
@@ -128,32 +113,60 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
     setCurrentPage(1)
   }, [dataSource, pageSize])
 
+  const handlePageChange = (page: number) => {
+    const totalPages = Math.ceil(dataSource.length / pageSize) || 1
+    if (page >= 1 && page <= totalPages) setCurrentPage(page)
+  }
+  const handlePrev = () => { if (currentPage > 1) handlePageChange(currentPage - 1) }
+  const handleNext = () => { if (currentPage < Math.ceil(dataSource.length / pageSize)) handlePageChange(currentPage + 1) }
+
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-      <div className="assistant-table-scroll" style={{ border: '1px solid #d9d9d9', borderRadius: 8, overflow: 'hidden' }}>
-        <Table
-          className="assistant-table-scroll abi-std-table"
-          columns={tableColumns}
-          dataSource={pagedDataSource}
-          loading={loading}
-          locale={{ emptyText: emptyNode }}
-          pagination={false}
-          rowKey={record => String(record.indId || record.termId || record.techName || record.bizName)}
-          scroll={pagedDataSource.length > 0 ? { x: tableWidth } : undefined}
-          size="small"
-        />
+      <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0, width: '100%' }}>
+        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+          <Table
+            className="assistant-table-scroll abi-std-table"
+            columns={tableColumns}
+            dataSource={pagedDataSource}
+            loading={loading}
+            pagination={false}
+            rowKey={record => String(record.indId || record.termId || record.techName || record.bizName)}
+            scroll={pagedDataSource.length > 0 ? { x: tableWidth } : undefined}
+            size="middle"
+          />
+        </div>
       </div>
-      <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
-        <Pagination
-          current={currentPage}
-          pageSize={pageSize}
-          showSizeChanger
-          total={dataSource.length}
-          onChange={(page, size) => {
-            setCurrentPage(page)
-            setPageSize(size)
-          }}
-        />
+      <div className="data-source-pagination">
+        <span className="total-text">共 {dataSource.length} 条</span>
+        <div className="pagination-controls">
+          <ASelect
+            value={pageSize}
+            onChange={(val: number) => { setPageSize(val); setCurrentPage(1); }}
+            options={[
+              { label: '10条/页', value: 10 },
+              { label: '15条/页', value: 15 },
+              { label: '20条/页', value: 20 },
+              { label: '25条/页', value: 25 },
+              { label: '30条/页', value: 30 },
+            ]}
+            className="page-size-select"
+          />
+          <button className="page-btn" disabled={currentPage === 1} onClick={handlePrev}>
+            <LeftOutlined />
+          </button>
+          {Array.from({ length: Math.ceil(dataSource.length / pageSize) || 1 }, (_, i) => i + 1).map(page => (
+            <span
+              key={page}
+              className={`page-item ${page === currentPage ? 'page-active' : ''}`}
+              onClick={() => handlePageChange(page)}
+            >
+              {page}
+            </span>
+          ))}
+          <button className="page-btn" disabled={currentPage >= Math.ceil(dataSource.length / pageSize)} onClick={handleNext}>
+            <RightOutlined />
+          </button>
+        </div>
       </div>
     </div>
   )

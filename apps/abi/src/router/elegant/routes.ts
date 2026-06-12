@@ -380,55 +380,6 @@ export const generatedRoutes: GeneratedRoute[] = [
     ]
   },
   {
-    name: 'my-collect',
-    path: '/my-collect',
-    component: 'layout.base$view.my-collect',
-    meta: {
-      hideInMenu: true,
-      i18nKey: 'route.my-collect',
-      order: 10,
-      title: 'my-collect'
-    }
-  },
-  {
-    name: 'recently-used',
-    path: '/recently-used',
-    component: 'layout.base$view.recently-used',
-    meta: {
-      hideInMenu: true,
-      i18nKey: 'route.recently-used',
-      icon: 'mdi:history',
-      order: 11,
-      title: 'recently-used'
-    }
-  },
-  {
-    name: 'share-manage',
-    path: '/share-manage',
-    component: 'layout.base',
-    meta: {
-      hideInMenu: true,
-      i18nKey: 'route.share-manage',
-      icon: 'mdi:monitor-share',
-      order: 2,
-      title: 'share-mange'
-    },
-    children: [
-      {
-        name: 'share-manage_my-share',
-        path: 'my-share',
-        component: 'view.share-manage_my-share',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.share-manage_my-share',
-          icon: 'mdi:share-all',
-          order: 2,
-          title: 'share-manage_my-share'
-        }
-      }
-    ]
-  },
-  {
     name: 'space',
     path: '/space',
     component: 'layout.base',
@@ -492,6 +443,17 @@ export const generatedRoutes: GeneratedRoute[] = [
         },
         children: [
           {
+            name: 'workbench_app-workshop_my-collect',
+            path: 'my-collect',
+            component: 'view.workbench_app-workshop_my-collect',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.workbench_app-workshop_my-collect',
+              order: 3,
+              title: 'workbench_app-workshop_my-collect'
+            }
+          },
+          {
             name: 'workbench_app-workshop_my-dashboard',
             path: 'my-dashboard',
             component: 'view.workbench_app-workshop_my-dashboard',
@@ -500,6 +462,30 @@ export const generatedRoutes: GeneratedRoute[] = [
               i18nKey: 'route.app-workshop_my-screen',
               order: 1,
               title: 'app-workshop_my-screen'
+            }
+          },
+          {
+            name: 'workbench_app-workshop_my-share',
+            path: 'my-share',
+            component: 'view.workbench_app-workshop_my-share',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.workbench_app-workshop_my-share',
+              icon: 'mdi:share-all',
+              order: 4,
+              title: 'workbench_app-workshop_my-share'
+            }
+          },
+          {
+            name: 'workbench_app-workshop_recently-used',
+            path: 'recently-used',
+            component: 'view.workbench_app-workshop_recently-used',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.workbench_app-workshop_recently-used',
+              icon: 'mdi:history',
+              order: 2,
+              title: 'workbench_app-workshop_recently-used'
             }
           }
         ]

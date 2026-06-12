@@ -58,17 +58,16 @@ declare module "@elegant-router/types" {
     "manage_space-role": "space-role";
     "manage_user": "user";
     "manage_user-role": "user-role/:id";
-    "my-collect": "/my-collect";
-    "recently-used": "/recently-used";
-    "share-manage": "/share-manage";
-    "share-manage_my-share": "my-share";
     "space": "/space";
     "space_user": "user";
     "space-list": "/space-list";
     "view": "/view";
     "workbench": "/workbench";
     "workbench_app-workshop": "app-workshop";
+    "workbench_app-workshop_my-collect": "my-collect";
     "workbench_app-workshop_my-dashboard": "my-dashboard";
+    "workbench_app-workshop_my-share": "my-share";
+    "workbench_app-workshop_recently-used": "recently-used";
     "workbench_assistant-manage": "assistant-manage";
     "workbench_assistant-manage_assistant-config": "assistant-config";
     "workbench_assistant-manage_memory-manage": "memory-manage";
@@ -141,9 +140,6 @@ declare module "@elegant-router/types" {
     | "iframe-page"
     | "login"
     | "manage"
-    | "my-collect"
-    | "recently-used"
-    | "share-manage"
     | "space"
     | "space-list"
     | "view"
@@ -193,13 +189,13 @@ declare module "@elegant-router/types" {
     | "manage_space-role"
     | "manage_user-role"
     | "manage_user"
-    | "my-collect"
-    | "recently-used"
-    | "share-manage_my-share"
     | "space-list"
     | "space_user"
     | "view"
+    | "workbench_app-workshop_my-collect"
     | "workbench_app-workshop_my-dashboard"
+    | "workbench_app-workshop_my-share"
+    | "workbench_app-workshop_recently-used"
     | "workbench_assistant-manage_assistant-config"
     | "workbench_assistant-manage_memory-manage"
     | "workbench_data-preparation_data-collection-operate"

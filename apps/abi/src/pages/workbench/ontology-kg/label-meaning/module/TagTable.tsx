@@ -142,6 +142,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
           overflow: 'hidden',
           flex: 1,
           minHeight: 0,
+          width: '100%',
         }}
       >
         <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>

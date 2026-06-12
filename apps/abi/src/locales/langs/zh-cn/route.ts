@@ -75,10 +75,6 @@ const route: App.I18n.Schema['translation']['route'] = {
   manage_user: '用户管理',
   'manage_user-detail': '用户详情',
   'manage_user-role': '分配角色',
-  'my-collect': '我的收藏',
-  'recently-used': '最近使用',
-  'share-manage': '分享管理',
-  'share-manage_my-share': '我的分享',
   // 'scheduling-tasks':'任务调度',
   // 'scheduling-tasks_timed-tasks':'定时任务',
 
@@ -98,6 +94,10 @@ const route: App.I18n.Schema['translation']['route'] = {
   system_model: '大模型管理',
   system_plugin: '插件管理',
   system_user: '用户管理',
+  'workbench_app-workshop_my-collect': '我的收藏',
+  'workbench_app-workshop_my-dashboard': '我的大屏',
+  'workbench_app-workshop_my-share': '我的分享',
+  'workbench_app-workshop_recently-used': '最近使用',
   'workbench_ontology-kg_label-meaning': '属性建模'
 
   // 'user-center': '个人中心'

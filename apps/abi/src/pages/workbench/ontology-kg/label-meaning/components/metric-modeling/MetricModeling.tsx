@@ -42,44 +42,41 @@ const MetricModeling: React.FC = () => {
   }, [])
 
   return (
-    <div className="h-full min-h-0 flex-col-stretch overflow-hidden lt-sm:overflow-auto">
-      <AFlex
-        className="h-full gap-6"
-        style={{ flex: 1, minHeight: 0 }}
-      >
-        <div className="abi-group-sidebar">
-          <Group
-            config={{
-              button: '添加指标组',
-              inputLabel: '指标组名称',
-              inputPlaceholder: '请输入分组名称',
-              modalAddTitle: '新增指标组',
-              modalEditTitle: '编辑指标组',
-              panelTitle: '指标组',
-              rule: [[{ message: '请输入指标组名称', required: true }]],
-              type: KNOWLEDGE_GROUP_TYPE
-            }}
-            onGroupId={handleGroupChange}
-          />
-        </div>
-        <div className="h-full min-h-0 w-40% flex flex-col flex-1 overflow-hidden">
-          <KnowledgeSearchBar
-            addDisabled={!selectedGroup?.groupId}
-            searchParams={searchParams}
-            onAddAtomic={handleAddAtomic}
-            onAddCustom={handleAddCustom}
-            onQuery={handleQuery}
-            onReset={handleReset}
-            onSearchChange={handleSearchChange}
-          />
+    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <div className="abi-group-sidebar">
+        <Group
+          config={{
+            button: '添加指标组',
+            inputLabel: '指标组名称',
+            inputPlaceholder: '请输入分组名称',
+            modalAddTitle: '新增指标组',
+            modalEditTitle: '编辑指标组',
+            panelTitle: '指标组',
+            rule: [[{ message: '请输入指标组名称', required: true }]],
+            type: KNOWLEDGE_GROUP_TYPE
+          }}
+          onGroupId={handleGroupChange}
+        />
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        <KnowledgeSearchBar
+          addDisabled={!selectedGroup?.groupId}
+          searchParams={searchParams}
+          onAddAtomic={handleAddAtomic}
+          onAddCustom={handleAddCustom}
+          onQuery={handleQuery}
+          onReset={handleReset}
+          onSearchChange={handleSearchChange}
+        />
+        <section className="abi-data-area">
           <KnowledgeTable
             dataSource={tableData}
             loading={loading}
             onDelete={handleDelete}
             onEdit={handleEdit}
           />
-        </div>
-      </AFlex>
+        </section>
+      </div>
 
       <KnowledgeOperateDrawer
         editingItem={editingItem}

@@ -65,28 +65,16 @@ const GlobalSider: FC = memo(() => {
         icon: <UserOutlined />,
       },
       {
-        key: 'recently-used',
-        label: '最近使用',
-      },
-      {
-        key: 'my-collect',
-        label: '我的收藏',
-      },
-      {
-        key: 'share-manage_my-share',
-        label: '我的分享',
-      },
-      {
         key: 'logout',
         label: '退出登录',
       },
     ]
     if (showManage) {
-      items.splice(4, 0, {
+      items.splice(1, 0, {
         key: 'manage_user',
         label: '门户管理',
       })
-      items.splice(5, 0, {
+      items.splice(2, 0, {
         key: 'space_user',
         label: '空间管理',
       })

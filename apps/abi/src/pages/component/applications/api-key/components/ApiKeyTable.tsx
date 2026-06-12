@@ -1,4 +1,4 @@
-import { CheckCircleOutlined, DeleteOutlined, EyeOutlined, LeftOutlined, PauseCircleOutlined, RedoOutlined, RightOutlined } from '@ant-design/icons'
+import { LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { message, Empty } from 'antd'
 import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
@@ -43,14 +43,16 @@ export function ApiKeyTable({
   const [jumpValue, setJumpValue] = useState('')
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-  const columns = [
+  const columns: any[] = [
     {
+      align: 'center',
       dataIndex: 'businessSpace',
       key: 'businessSpace',
       title: '业务空间',
       width: 180
     },
     {
+      align: 'center',
       dataIndex: 'clientId',
       key: 'clientId',
       render: (value: string) => (
@@ -69,6 +71,7 @@ export function ApiKeyTable({
       width: 260
     },
     {
+      align: 'center',
       dataIndex: 'accessKey',
       key: 'accessKey',
       render: (value: string) => (
@@ -87,6 +90,7 @@ export function ApiKeyTable({
       width: 260
     },
     {
+      align: 'center',
       dataIndex: 'secretKey',
       key: 'secretKey',
       render: (value: string) => <span>{value || '********'}</span>,
@@ -94,6 +98,7 @@ export function ApiKeyTable({
       width: 160
     },
     {
+      align: 'center',
       dataIndex: 'ipAccessType',
       key: 'ipAccessType',
       render: (value: ApiKeyItem['ipAccessType']) => <ATag>{value === 'unlimited' ? '不限制' : '仅白名单'}</ATag>,
@@ -101,6 +106,7 @@ export function ApiKeyTable({
       width: 150
     },
     {
+      align: 'center',
       dataIndex: 'timeoutSeconds',
       key: 'timeoutSeconds',
       render: (value?: number) => (typeof value === 'number' ? `${value} 秒` : '-'),
@@ -108,6 +114,7 @@ export function ApiKeyTable({
       width: 150
     },
     {
+      align: 'center',
       dataIndex: 'expireTime',
       key: 'expireTime',
       render: (value?: string | null) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '永久有效'),
@@ -115,6 +122,7 @@ export function ApiKeyTable({
       width: 180
     },
     {
+      align: 'center',
       dataIndex: 'status',
       key: 'status',
       render: (value: ApiKeyItem['status']) =>
@@ -123,6 +131,7 @@ export function ApiKeyTable({
       width: 120
     },
     {
+      align: 'center',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (value: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
@@ -130,74 +139,63 @@ export function ApiKeyTable({
       width: 200
     },
     {
+      align: 'center',
       fixed: 'right' as const,
       key: 'operate',
       render: (_: unknown, record: ApiKeyItem) => (
-        <ASpace size={6}>
-          <ATooltip title="查看">
-            <AButton
-              icon={<EyeOutlined />}
-              size="small"
-              variant="link"
-              onClick={() => onView(record)}
-            />
-          </ATooltip>
+        <div className="flex items-center justify-center" style={{ gap: 2 }}>
+          <AButton className="abi-action-link" size="small" variant="link" onClick={() => onView(record)}>
+            查看
+          </AButton>
           <APopconfirm
             description="确认重置 Secret Key 吗？"
             title="重置 SK"
             onConfirm={() => onResetSk(record)}
           >
-            <ATooltip title="重置SK">
-              <AButton
-                icon={<RedoOutlined />}
-                size="small"
-                variant="link"
-              />
-            </ATooltip>
+            <AButton className="abi-action-link" size="small" variant="link">
+              重置SK
+            </AButton>
           </APopconfirm>
-          <ATooltip title={record.status === 'normal' ? '停用' : '启用'}>
-            <AButton
-              color={record.status === 'normal' ? 'default' : 'primary'}
-              icon={record.status === 'normal' ? <PauseCircleOutlined /> : <CheckCircleOutlined />}
-              size="small"
-              variant="link"
-              onClick={() => onToggleStatus(record)}
-            />
-          </ATooltip>
+          <AButton
+            className="abi-action-link"
+            size="small"
+            variant="link"
+            onClick={() => onToggleStatus(record)}
+          >
+            {record.status === 'normal' ? '停用' : '启用'}
+          </AButton>
           <APopconfirm
             description="确认删除该 API Key 吗？"
             title="删除 API Key"
             onConfirm={() => onDelete(record)}
           >
-            <ATooltip title="删除">
-              <AButton
-                color="danger"
-                icon={<DeleteOutlined />}
-                size="small"
-                variant="link"
-              />
-            </ATooltip>
+            <AButton className="abi-action-link" size="small" variant="link" danger>
+              删除
+            </AButton>
           </APopconfirm>
-        </ASpace>
+        </div>
       ),
       title: '操作',
-      width: 180
+      width: 260
     }
   ]
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
       {dataSource.length > 0 ? (
-        <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden' }}>
-          <ATable
-            columns={columns}
-            dataSource={dataSource}
-            loading={loading}
-            pagination={false}
-            rowKey="id"
-            scroll={{ x: 1680 }}
-            size="small"
-          />
+        <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0 }}>
+          <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+            <ATable
+              columns={columns}
+              dataSource={dataSource}
+              loading={loading}
+              pagination={false}
+              rowKey="id"
+              scroll={dataSource.length > 0 ? { x: 'max-content' } : undefined}
+              size="middle"
+              className="abi-std-table"
+            />
+          </div>
         </div>
       ) : (
         <div style={{

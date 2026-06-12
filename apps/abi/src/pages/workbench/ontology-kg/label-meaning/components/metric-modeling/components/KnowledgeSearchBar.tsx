@@ -1,4 +1,4 @@
-import { DownOutlined } from '@ant-design/icons'
+import { DownOutlined, SearchOutlined } from '@ant-design/icons'
 import { Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
 import React from 'react'
@@ -50,28 +50,49 @@ export const KnowledgeSearchBar: React.FC<Props> = ({ addDisabled, onAddAtomic, 
   }
 
   return (
-    <div className="mb-4 w-full">
-      <div className="w-full flex flex-wrap items-center gap-3">
-        <AInput allowClear className="w-220px" placeholder="请输入搜索关键字" value={searchParams.techName} onChange={(e) => onSearchChange({ techName: e.target.value })} />
+    <section className="abi-searchbar">
+      <div className="abi-search-row">
+        <AInput
+          allowClear
+          className="abi-field-input w-220px"
+          placeholder="请输入搜索关键字"
+          prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+          value={searchParams.techName}
+          onChange={(e) => onSearchChange({ techName: e.target.value })}
+        />
         <ASelect
           allowClear
-          className="w-180px"
+          className="abi-field-input w-180px"
           options={INDICATOR_TYPE_FILTER_OPTIONS}
           placeholder="指标类型"
           value={searchParams.type || undefined}
           onChange={(value) => onSearchChange({ type: value || '' })}
         />
-        <ASelect allowClear className="w-180px" options={STATUS_OPTIONS} placeholder="状态" value={searchParams.status} onChange={(value) => onSearchChange({ status: value })} />
-        <AButton type="primary" onClick={onQuery}>
-          查询
+        <ASelect
+          allowClear
+          className="abi-field-input w-180px"
+          options={STATUS_OPTIONS}
+          placeholder="状态"
+          value={searchParams.status}
+          onChange={(value) => onSearchChange({ status: value })}
+        />
+        <AButton type="primary" className="btn-accent-gradient" onClick={onQuery}>
+          <SearchOutlined /> 查询
         </AButton>
-        <AButton onClick={onReset}>重置</AButton>
-      </div>
-      <div className="mt-3">
-        <Dropdown.Button className="ml-auto justify-end" disabled={addDisabled} menu={{ items: addMenus, onClick: handleMenuClick }} type="primary" icon={<DownOutlined />} onClick={onAddAtomic}>
-          新增
+        <AButton className="btn-ghost-v5" onClick={onReset}>
+          重置
+        </AButton>
+        <Dropdown.Button
+          className="ml-auto btn-accent-dropdown"
+          disabled={addDisabled}
+          icon={<DownOutlined />}
+          menu={{ items: addMenus, onClick: handleMenuClick }}
+          type="primary"
+          onClick={onAddAtomic}
+        >
+          + 新增
         </Dropdown.Button>
       </div>
-    </div>
+    </section>
   )
 }
