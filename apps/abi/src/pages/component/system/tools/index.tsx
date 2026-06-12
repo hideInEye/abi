@@ -3,6 +3,7 @@ import {
   ExclamationCircleFilled,
   LeftOutlined,
   MinusCircleOutlined,
+  PlusOutlined,
   RightOutlined,
   SearchOutlined
 } from '@ant-design/icons';
@@ -12,6 +13,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 // import PageTitle from '@/components/stateless/common/PageTitle';
 import type { CreateToolParams, ToolItem, UpdateToolParams } from '@/service/api/tool';
+import { getSpaceId } from '@/store/slice/app';
+import { useAppSelector } from '@/hooks/business/useStore';
 import {
   createToolApi,
   deleteToolApi,
@@ -115,6 +118,7 @@ function formatJsonString(raw: string | undefined): string {
 export function Component() {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
+  const spaceId = useAppSelector(getSpaceId);
 
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | '0' | '1'>('ALL');
@@ -154,7 +158,7 @@ const TABLE_SCROLL = { x: 'max-content' };
 
   useEffect(() => {
     fetchList();
-  }, []);
+  }, [spaceId]);
 
   const filteredList = useMemo(() => {
     let arr = list;
@@ -461,9 +465,9 @@ const TABLE_SCROLL = { x: 'max-content' };
         width: 120,
         fixed: 'right',
         render: (_, record) => (
-          <div className="flex items-center justify-center gap-12px">
-            <Button color="primary" size="small" variant="link" onClick={() => handleEdit(record)}>编辑</Button>
-            <Button color="danger" size="small" variant="link" onClick={() => handleDelete(record)}>删除</Button>
+          <div className="flex items-center justify-center" style={{ gap: 2 }}>
+            <Button className="abi-action-link" size="small" variant="link" onClick={() => handleEdit(record)}>编辑</Button>
+            <Button className="abi-action-link" size="small" variant="link" danger onClick={() => handleDelete(record)}>删除</Button>
           </div>
         )
       }
@@ -494,98 +498,116 @@ const TABLE_SCROLL = { x: 'max-content' };
   }, []);
 
   return (
-    <div
-      className="flex flex-col gap-2 p-6"
-      style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
-    >
-      <div className="flex items-center gap-4">
-        <Input
-          allowClear
-          placeholder="搜索工具名称或标签"
-          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-          value={keyword}
-          onChange={e => setKeyword(e.target.value)}
-          style={{ width: '12rem' }}
-        />
-        <Select
-          style={{ width: 80 }}
-          placeholder="状态"
-          value={statusFilter}
-          onChange={v => setStatusFilter(v)}
-          options={[
-            { value: 'ALL', label: '全部' },
-            { value: '0', label: '启用' },
-            { value: '1', label: '禁用' }
-          ]}
-        />
-        <Button className="ml-auto" type="primary" onClick={handleAdd}>
-          新增
-        </Button>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* v5 Searchbar */}
+      <section className="abi-searchbar">
+        <div className="abi-search-row">
+          <Input
+            allowClear
+            placeholder="请输入工具名称或标签"
+            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+            value={keyword}
+            onChange={e => setKeyword(e.target.value)}
+            onPressEnter={() => setCurrentPage(1)}
+            className="abi-field-input"
+            style={{ width: '16rem' }}
+          />
+          <Select
+            style={{ width: 100 }}
+            placeholder="状态"
+            value={statusFilter}
+            onChange={v => setStatusFilter(v)}
+            className="abi-field-input"
+            options={[
+              { value: 'ALL', label: '全部' },
+              { value: '0', label: '启用' },
+              { value: '1', label: '禁用' }
+            ]}
+          />
+          <Button type="primary" className="btn-accent-gradient" onClick={() => setCurrentPage(1)}>
+            <SearchOutlined /> 查询
+          </Button>
+          <Button className="btn-ghost-v5" onClick={() => { setKeyword(''); setStatusFilter('ALL'); setCurrentPage(1); }}>
+            重置
+          </Button>
+        </div>
+      </section>
 
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <div
-          style={{
-            border: '0.0625rem solid #d9d9d9',
-            borderRadius: '0.5rem',
-            overflow: 'hidden',
-            width: '100%',
-            maxHeight: '100%'
-          }}
-        >
-          <div style={{ overflow: 'auto', maxHeight: '100%' }}>
-            <Table<ToolItem>
-              rowKey="toolId"
-              columns={columns}
-              dataSource={pagedList}
-              loading={loading}
-              pagination={false}
-              size="middle"
-              className="tools-table abi-std-table"
-              scroll={pagedList.length > 0 ? TABLE_SCROLL : undefined}
-            />
+      {/* v5 Data Area */}
+      <section className="abi-data-area">
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <Button className="btn-accent-gradient" onClick={handleAdd}>
+              <PlusOutlined />新增工具
+            </Button>
           </div>
         </div>
-      </div>
 
-      <div className="data-source-pagination">
-        <span className="total-text">共 {totalCount} 条</span>
-        <div className="pagination-controls">
-          <ASelect
-            value={pageSize}
-            options={[
-              { label: '10条/页', value: 10 },
-            ]}
-            disabled
-            className="page-size-select"
-          />
-          <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
-            <LeftOutlined />
-          </button>
-          {(() => {
-            const pages: number[] = [];
-            if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
-            else {
-              pages.push(1);
-              if (currentPage > 3) pages.push(-1);
-              const start = Math.max(2, currentPage - 1);
-              const end = Math.min(totalPages - 1, currentPage + 1);
-              for (let i = start; i <= end; i++) pages.push(i);
-              if (currentPage < totalPages - 2) pages.push(-2);
-              pages.push(totalPages);
-            }
-            return pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === currentPage ? ' page-active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</span>);
-          })()}
-          <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
-            <RightOutlined />
-          </button>
-          <span className="quick-jumper">
-            前往
-            <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (p >= 1 && p <= totalPages) setCurrentPage(p); setJumpValue(''); }} />
-            页
-          </span>
+        {/* 内容区域 */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div
+            style={{
+              border: '1px solid rgba(130,140,200,0.18)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+              <Table<ToolItem>
+                rowKey="toolId"
+                columns={columns}
+                dataSource={pagedList}
+                loading={loading}
+                pagination={false}
+                size="middle"
+                className="tools-table abi-std-table"
+                scroll={pagedList.length > 0 ? TABLE_SCROLL : undefined}
+              />
+            </div>
+          </div>
+
+          <div className="data-source-pagination">
+            <span className="total-text">共 {totalCount} 条</span>
+            <div className="pagination-controls">
+              <ASelect
+                value={pageSize}
+                options={[
+                  { label: '10条/页', value: 10 },
+                ]}
+                disabled
+                className="page-size-select"
+              />
+              <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                <LeftOutlined />
+              </button>
+              {(() => {
+                const pages: number[] = [];
+                if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
+                else {
+                  pages.push(1);
+                  if (currentPage > 3) pages.push(-1);
+                  const start = Math.max(2, currentPage - 1);
+                  const end = Math.min(totalPages - 1, currentPage + 1);
+                  for (let i = start; i <= end; i++) pages.push(i);
+                  if (currentPage < totalPages - 2) pages.push(-2);
+                  pages.push(totalPages);
+                }
+                return pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === currentPage ? ' page-active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</span>);
+              })()}
+              <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                <RightOutlined />
+              </button>
+              <span className="quick-jumper">
+                前往
+                <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (p >= 1 && p <= totalPages) setCurrentPage(p); setJumpValue(''); }} />
+                页
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* 新增/编辑抽屛 */}
       <Drawer

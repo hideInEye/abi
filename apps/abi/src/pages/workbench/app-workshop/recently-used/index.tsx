@@ -1,37 +1,29 @@
-import { DeleteOutlined } from "@ant-design/icons";
 import React, { useEffect, useState } from "react";
 
-import {
-  deleteOperateRecord,
-  getOperateRecordList,
-  queryOperateRecordList,
-} from "@/service/api/operateRecord";
-import { message } from "antd";
+import { getOperateRecordList } from "@/service/api/operateRecord";
+import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
 
-interface OperateRecord {
-  readonly id: string;
-  readonly chatId: string;
-  spaceId: number;
+interface Response {
+  rows: any[];
+  total: number;
 }
 
 export const Component: React.FC & { loader?: () => Promise<any> } = () => {
-  const [dataSource, setDataSource] = useState<any>({
+  const [dataSource, setDataSource] = useState<Response>({
     rows: [],
     total: 0,
   });
-  const { switchToSpace } = useSpaceSwitch();
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchValue, setSearchValue] = useState("");
-  const pageSize = 10;
+  const [searchValue, setSearchValue] = useState('');
+  const { switchToSpace } = useSpaceSwitch();
 
   async function getRecordList(key?: string) {
-    const data = await getOperateRecordList('3',{
-      // key: searchValue,
-      pageNumber: currentPage,
-      pageSize,
-      // spaceId: localStorage.getItem('spaceId'),
+    const data: any = await getOperateRecordList("1");
+
+    setDataSource({
+      total: data.response.data.total,
+      rows: data.response.data.rows,
     });
-    setDataSource(data.response.data);
   }
   const handleSearch = () => {
     const keyword = searchValue.trim();
@@ -40,15 +32,12 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
 
   function onSearchChange(e: any) {
     const key = e.target.value;
-    if (key) {
-      setSearchValue(key);
-      setCurrentPage(1);
-      setDataSource({
-        rows: [],
-        total: 0,
-      });
-      getRecordList(key);
-    }
+    setCurrentPage(1);
+    setDataSource({
+      rows: [],
+      total: 0,
+    });
+    getRecordList(key);
   }
 
   useEffect(() => {
@@ -60,32 +49,10 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     getRecordList();
   }
 
-  function deleteOperateRecordItem(ids: string) {
-    deleteOperateRecord(ids).then((res) => {
-      if (res.response.data.code > 200) {
-        message.error(res.response.data.msg);
-      } else {
-        message.success(res.response.data.msg);
-        getRecordList();
-      }
-    });
-  }
-
-  const handleNavigate = (r: OperateRecord) => {
-    const { spaceId, chatId } = r;
-    switchToSpace(spaceId, undefined, { chatId });
+  const handleNavigate = (r:any) => {
+    const { spaceId, chatId} = r
+    switchToSpace(spaceId, undefined, { chatId })
   };
-
-  const ActionButtons: React.FC<{ readonly record: OperateRecord }> = ({
-    record,
-  }) => (
-    <div className="flex items-center gap-12px">
-      <AButton color="primary" size="small" variant="link" onClick={() => handleNavigate(record)}>进入对话</AButton>
-      <APopconfirm cancelText="取消" description="确定要删除吗？" okText="确认" title="删除" onConfirm={() => deleteOperateRecordItem(record.id)}>
-        <AButton color="danger" size="small" variant="link">删除</AButton>
-      </APopconfirm>
-    </div>
-  );
 
   const columns: any[] = [
     {
@@ -104,29 +71,21 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     },
     {
       align: "center",
-      dataIndex: "type",
-      key: "type",
-      minWidth: 100,
-      title: "分享类型",
-      render: () => "快照",
-    },
-    {
-      align: "center",
-      dataIndex: "sharedTime",
-      key: "sharedTime",
+      dataIndex: "recentlyUseTime",
+      key: "recentlyUseTime",
       minWidth: 140,
-      title: "分享时间",
+      title: "最近使用时间",
     },
     {
       align: "center",
-      dataIndex: "action",
-      key: "action",
-      width: 150,
+      dataIndex: "opreation",
+      key: "opreation",
+      width: 100,
       fixed: "right",
-      render: (_: any, record: OperateRecord) => (
-        <ActionButtons record={record} />
-      ),
       title: "操作",
+      render: (_: any, r: any) => (
+        <AButton color="primary" size="small" variant="link" onClick={() => handleNavigate(r)}>进入对话</AButton>
+      ),
     },
   ];
 
@@ -134,7 +93,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     <div className="flex flex-col gap-4 p-6"
       style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
     >
-      <h1 className="text-base font-medium">我的分享列表</h1>
+      <h1 className="text-base font-medium">最近使用</h1>
       <div className="flex items-center gap-4">
         <AInput
           placeholder="请输入对话名称"
@@ -161,7 +120,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
               rowKey="id"
               scroll={dataSource.rows?.length > 0 ? { x: 'max-content' } : undefined}
               size="middle"
-              className="my-share-table abi-std-table"
+              className="recently-used-table abi-std-table"
             />
           </div>
         </div>
@@ -175,7 +134,6 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
         >
           <APagination
             current={currentPage}
-            pageSize={pageSize}
             total={dataSource.total}
             onChange={paginationChange}
             showSizeChanger

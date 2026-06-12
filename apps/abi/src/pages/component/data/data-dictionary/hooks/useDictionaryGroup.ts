@@ -23,15 +23,18 @@ export const useDictionaryGroup = (groupId: string) => {
     total: 0
   });
 
-  const getDictionary = async (search = '') => {
-    if (groupId) {
+  const getDictionary = async (search = '', queryGroupId = groupId) => {
+    if (queryGroupId) {
       const res = await queryDictionary({
-        groupId,
+        groupId: queryGroupId,
         pageNum: current,
         pageSize: 10,
         dictField: search
       });
-      setDictionaryDataSource(res.response.data as any);
+      // 防止快速切换时旧请求响应覆盖新数据
+      if (queryGroupId === groupId) {
+        setDictionaryDataSource(res.response.data as any);
+      }
     }
   };
 

@@ -1,3 +1,4 @@
+import { SearchOutlined, PlusOutlined } from '@ant-design/icons'
 import { message } from 'antd'
 import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
@@ -15,6 +16,8 @@ import {
   updateAbiClientStatus
 } from '@/service/api/abi-client'
 import { spaceList } from '@/service/api/data-space'
+import { getSpaceId } from '@/store/slice/app'
+import { useAppSelector } from '@/hooks/business/useStore'
 
 import { ApiKeyDrawer } from './components/ApiKeyDrawer'
 import { ApiKeyTable } from './components/ApiKeyTable'
@@ -155,7 +158,8 @@ function mapClientDetailToView(item: AbiClientDetailItem, fallback: ApiKeyItem |
 
 export function Component() {
   const [queryForm] = AForm.useForm()
-  const currentSpaceId = useMemo(() => Number(localStorage.getItem('spaceId')) || 0, [])
+  const reduxSpaceId = useAppSelector(getSpaceId)
+  const currentSpaceId = reduxSpaceId || 0
   const [rows, setRows] = useState<ApiKeyItem[]>([])
   const [total, setTotal] = useState(0)
   const [current, setCurrent] = useState(1)
@@ -236,6 +240,8 @@ export function Component() {
   useEffect(() => {
     if (!currentSpaceId) return
     queryForm.setFieldValue('spaceId', currentSpaceId)
+    setQueryValues(prev => ({ ...prev, spaceId: currentSpaceId }))
+    setCurrent(1)
   }, [currentSpaceId, queryForm])
 
   useEffect(() => {
@@ -391,120 +397,86 @@ export function Component() {
   }
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard
-        className="h-full flex-col-stretch sm:flex-1-hidden border-0 card-wrapper"
-        styles={{ body: { display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' } }}
-      >
-        {/* <PageTitle style={{ paddingBottom: '0.5rem' }} /> */}
-
-        <div style={{ color: '#475569', marginBottom: 16 }}>
-          用于管理业务空间下的客户端访问授权凭证，支持 AK/SK 生成、IP 访问限制和启停控制。
-        </div>
-
-        <AForm
-          form={queryForm}
-          layout="inline"
-          onFinish={handleSearch}
-        >
-          <ASpace
-            wrap
-            size={12}
-          >
-            <AForm.Item
-              label="业务空间"
-              name="spaceId"
-              rules={[{ message: '请选择业务空间', required: true }]}
-            >
-              <ASelect
-                options={spaceOptions}
-                placeholder="请选择"
-                style={{ width: 220 }}
-              />
-            </AForm.Item>
-            <AForm.Item
-              label="Client ID"
-              name="clientId"
-            >
-              <AInput
-                allowClear
-                placeholder="请输入"
-                style={{ width: 260 }}
-              />
-            </AForm.Item>
-            <AForm.Item
-              label="Access Key"
-              name="accessKey"
-            >
-              <AInput
-                allowClear
-                placeholder="请输入"
-                style={{ width: 260 }}
-              />
-            </AForm.Item>
-            <AForm.Item
-              label="状态"
-              name="status"
-            >
-              <ASelect
-                allowClear
-                placeholder="请选择"
-                style={{ width: 120 }}
-                options={[
-                  { label: '正常', value: 'normal' },
-                  { label: '停用', value: 'disabled' }
-                ]}
-              />
-            </AForm.Item>
-            <AForm.Item
-              label="IP访问限制"
-              name="ipAccessType"
-            >
-              <ASelect
-                allowClear
-                placeholder="请选择"
-                style={{ width: 140 }}
-                options={[
-                  { label: '不限制', value: 'unlimited' },
-                  { label: '仅白名单', value: 'whitelist' }
-                ]}
-              />
-            </AForm.Item>
-            <AForm.Item
-              label="创建时间"
-              name="createTimeRange"
-            >
-              <ADatePicker.RangePicker
-                allowClear
-                format="YYYY-MM-DD"
-                style={{ width: 300 }}
-              />
-            </AForm.Item>
-            <AForm.Item>
-              <ASpace>
-                <AButton
-                  htmlType="submit"
-                  type="primary"
-                >
-                  查询
-                </AButton>
-                <AButton onClick={handleResetSearch}>重置</AButton>
-              </ASpace>
-            </AForm.Item>
-          </ASpace>
-        </AForm>
-
-        <AFlex
-          justify="end"
-          style={{ marginBottom: 8 }}
-        >
-          <AButton
-            type="primary"
-            onClick={openCreate}
-          >
-            新建 API Key
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ color: '#475569', padding: '12px 28px 0' }}>
+        用于管理业务空间下的客户端访问授权凭证，支持 AK/SK 生成、IP 访问限制和启停控制。
+      </div>
+      {/* v5 Searchbar */}
+      <section className="abi-searchbar">
+        <div className="abi-search-row">
+          <ASelect
+            options={spaceOptions}
+            placeholder="请选择业务空间"
+            className="abi-field-input"
+            style={{ width: 200 }}
+            defaultValue={queryValues.spaceId}
+            onChange={(v: number) => queryForm.setFieldValue('spaceId', v)}
+          />
+          <AInput
+            allowClear
+            placeholder="请输入 Client ID"
+            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+            className="abi-field-input"
+            style={{ width: 200 }}
+            onChange={(e) => queryForm.setFieldValue('clientId', e.target.value)}
+            onPressEnter={handleSearch}
+          />
+          <AInput
+            allowClear
+            placeholder="请输入 Access Key"
+            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+            className="abi-field-input"
+            style={{ width: 200 }}
+            onChange={(e) => queryForm.setFieldValue('accessKey', e.target.value)}
+            onPressEnter={handleSearch}
+          />
+          <ASelect
+            allowClear
+            placeholder="状态"
+            className="abi-field-input"
+            style={{ width: 120 }}
+            options={[
+              { label: '正常', value: 'normal' },
+              { label: '停用', value: 'disabled' }
+            ]}
+            onChange={(v) => queryForm.setFieldValue('status', v)}
+          />
+          <ASelect
+            allowClear
+            placeholder="IP访问限制"
+            className="abi-field-input"
+            style={{ width: 140 }}
+            options={[
+              { label: '不限制', value: 'unlimited' },
+              { label: '仅白名单', value: 'whitelist' }
+            ]}
+            onChange={(v) => queryForm.setFieldValue('ipAccessType', v)}
+          />
+          <ADatePicker.RangePicker
+            allowClear
+            format="YYYY-MM-DD"
+            placeholder={['开始时间', '结束时间']}
+            className="abi-field-input"
+            onChange={(dates) => queryForm.setFieldValue('createTimeRange', dates)}
+          />
+          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
+            <SearchOutlined /> 查询
           </AButton>
-        </AFlex>
+          <AButton className="btn-ghost-v5" onClick={handleResetSearch}>
+            重置
+          </AButton>
+        </div>
+      </section>
+
+      {/* v5 Data Area */}
+      <section className="abi-data-area">
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <AButton className="btn-accent-gradient" onClick={openCreate}>
+              <PlusOutlined />新建 API Key
+            </AButton>
+          </div>
+        </div>
 
         <ApiKeyTable
           current={current}
@@ -518,7 +490,7 @@ export function Component() {
           onToggleStatus={handleToggleStatus}
           onView={openView}
         />
-      </ACard>
+      </section>
 
       <ApiKeyDrawer
         mode={drawerMode}

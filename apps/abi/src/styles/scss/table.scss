@@ -366,6 +366,47 @@
   }
 }
 
+// ── Dropdown.Button v5 主色风格 ──
+.btn-accent-dropdown {
+  &.ant-dropdown-button {
+    display: inline-flex;
+    align-items: center;
+
+    .ant-btn-compact-item + .ant-btn-compact-item::before {
+      display: none !important;
+    }
+
+    > .ant-btn {
+      background: linear-gradient(135deg, #5b7cf7, #7091fa) !important;
+      border: none !important;
+      color: #fff !important;
+      font-weight: 600 !important;
+      box-shadow: 0 2px 10px rgba(91, 124, 247, 0.3) !important;
+
+      &:hover {
+        box-shadow: 0 4px 18px rgba(91, 124, 247, 0.4) !important;
+      }
+    }
+
+    > .ant-dropdown-trigger {
+      background: linear-gradient(135deg, #5b7cf7, #7091fa) !important;
+      border: none !important;
+      color: #fff !important;
+      box-shadow: 0 2px 10px rgba(91, 124, 247, 0.3) !important;
+
+      &:hover {
+        box-shadow: 0 4px 18px rgba(91, 124, 247, 0.4) !important;
+      }
+    }
+
+    &.ant-dropdown-button-disabled > .ant-btn {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none !important;
+    }
+  }
+}
+
 // ── Ghost按钮 (批量删除/重置等) v5 ──
 .btn-ghost-v5 {
   height: 35px;
@@ -443,6 +484,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  height: 100%;
+  align-self: stretch;
 }
 
 // ── 页面内搜索栏行内输入框 v5 field 风格 ──
@@ -835,4 +878,30 @@
 
 .ant-drawer .ant-spin-container {
   height: auto;
+}
+
+// ── ATabs height 传递：当 ATabs 父容器带 h-full 时，确保 tab panel 能撑满 ──
+.ant-tabs.h-full,
+.ant-tabs[class*='h-full'] {
+  display: flex;
+  flex-direction: column;
+
+  > .ant-tabs-nav {
+    flex-shrink: 0;
+  }
+
+  > .ant-tabs-content-holder {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+
+    > .ant-tabs-content {
+      height: 100%;
+
+      > .ant-tabs-tabpane {
+        height: 100%;
+        overflow: hidden;
+      }
+    }
+  }
 }

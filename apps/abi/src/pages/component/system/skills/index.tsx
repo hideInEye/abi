@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 // import PageTitle from '@/components/stateless/common/PageTitle';
 import { deleteSkillApi, querySkillListApi, updateSkillStatusApi } from '@/service/api/skill';
+import { getSpaceId } from '@/store/slice/app';
+import { useAppSelector } from '@/hooks/business/useStore';
 
 import SkillDetailDrawer from './modules/skill-detail-drawer';
 import SkillPublishDrawer from './modules/skill-publish-drawer';
@@ -40,6 +42,7 @@ function resolveStatusKey(status?: string): StatusKey {
 export function Component() {
   const { t } = useTranslation();
   const { message, modal } = App.useApp();
+  const spaceId = useAppSelector(getSpaceId);
 
   const [tab, setTab] = useState<'plaza' | 'mine'>('plaza');
   const [statusFilter, setStatusFilter] = useState<'ALL' | '1' | '0'>('ALL');
@@ -66,11 +69,11 @@ export function Component() {
     }
   }
 
-  // 只在挂载时请求一次
+  // 空间切换时重新拉取列表
   useEffect(() => {
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [spaceId]);
 
   function goPublish() {
     setPublishOpen(true);

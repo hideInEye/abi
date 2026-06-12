@@ -6,9 +6,6 @@ export const primaryMenuData = [
 ]
 
 export const itemMap = new Map([
-  ['recently-used', '最近使用'],
-  ['my-collect', '我的收藏'],
-  ['share-manage_my-share', '我的分享'],
   ['manage_user', '系统配置'],
   ['space_user', '空间管理'],
 ])

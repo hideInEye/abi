@@ -131,34 +131,19 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
   const isHideMenuRoute = hideMenuRoute.includes(route.name!);
   const isMicroApp = qiankunWindow.__POWERED_BY_QIANKUN__;
   const routeName = (route.name || '') as string;
-  const excludedRoutes = new Set(['home', 'recently-used', 'my-collect', 'share-manage_my-share']);
+  const excludedRoutes = new Set(['home', 'workbench_app-workshop_recently-used', 'workbench_app-workshop_my-collect', 'workbench_app-workshop_my-share']);
   const isManageRoute = routeName.startsWith('manage');
   const showSpaceSelector = !excludedRoutes.has(routeName) && !isManageRoute;
 
   let items: any = [];
-  // 一级菜单栏固定死为：门户首页 我的收藏 我的分享 最近使用四个
-  const topMenuList = ['home', 'recently-used', 'my-collect', 'share-manage'];
+  // 一级菜单栏固定死为：门户首页
+  const topMenuList = ['home'];
   authRoutes.forEach((item: any) => {
     if (topMenuList.includes(item.name)) {
       if (item.name === 'home') {
         items.push({
           key: 'home',
           label: '门户首页'
-        });
-      } else if (item.name === 'recently-used') {
-        items.push({
-          key: 'recently-used',
-          label: '最近使用'
-        });
-      } else if (item.name === 'my-collect') {
-        items.push({
-          key: 'my-collect',
-          label: '我的收藏'
-        });
-      } else {
-        items.push({
-          key: 'share-manage_my-share',
-          label: '我的分享'
         });
       }
     }

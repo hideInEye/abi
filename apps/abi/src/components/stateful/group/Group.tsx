@@ -81,6 +81,9 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       const firstKey = `group-${groups[0].groupId}`;
       setSelectedKeys([firstKey]);
       onGroupId(groups[0].groupId, groups[0].groupName);
+    } else {
+      // 分组为空时通知父组件清空数据
+      onGroupId(0);
     }
   }, [groups]);
 
@@ -205,7 +208,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
           </span>
         ),
         key: nodeKey,
-        children: hasChildren ? buildTreeNodes(item.children, currentExpandedKeys, depth + 1) : undefined,
+        children: hasChildren ? buildTreeNodes(item.children, currentExpandedKeys) : undefined,
         isLeaf: !hasChildren
       };
     });

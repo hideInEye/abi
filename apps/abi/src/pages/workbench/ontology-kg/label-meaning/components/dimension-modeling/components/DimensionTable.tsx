@@ -1,5 +1,5 @@
-import { DeleteOutlined, EditOutlined, NodeIndexOutlined } from '@ant-design/icons'
-import { Button, Empty, Pagination, Popconfirm, Space, Table, Tag, Tooltip } from 'antd'
+import { LeftOutlined, RightOutlined } from '@ant-design/icons'
+import { Popconfirm, Table, Tag } from 'antd'
 import React from 'react'
 
 import { DIMENSION_STATUS_TEXT_MAP, DIMENSION_TYPE_TEXT_MAP } from '../constants/dimensionModeling.constants'
@@ -29,16 +29,10 @@ export const DimensionTable: React.FC<Props> = ({
   onPaginationChange,
   pagination
 }) => {
-  const emptyNode = (
-    <Empty
-      className="my-10"
-      description="暂无数据"
-    />
-  )
-
   const columns = useMemo(
     () => [
       {
+        align: 'center',
         dataIndex: 'zhName',
         ellipsis: true,
         key: 'zhName',
@@ -46,6 +40,7 @@ export const DimensionTable: React.FC<Props> = ({
         width: 180
       },
       {
+        align: 'center',
         dataIndex: 'englishName',
         ellipsis: true,
         key: 'englishName',
@@ -53,6 +48,7 @@ export const DimensionTable: React.FC<Props> = ({
         width: 180
       },
       {
+        align: 'center',
         dataIndex: 'dimType',
         key: 'dimType',
         render: (value: string) => DIMENSION_TYPE_TEXT_MAP[value] || value || '-',
@@ -60,6 +56,7 @@ export const DimensionTable: React.FC<Props> = ({
         width: 120
       },
       {
+        align: 'center',
         dataIndex: 'path',
         ellipsis: true,
         key: 'path',
@@ -67,6 +64,7 @@ export const DimensionTable: React.FC<Props> = ({
         width: 300
       },
       {
+        align: 'center',
         dataIndex: 'owner',
         ellipsis: true,
         key: 'owner',
@@ -74,6 +72,7 @@ export const DimensionTable: React.FC<Props> = ({
         width: 130
       },
       {
+        align: 'center',
         dataIndex: 'status',
         key: 'status',
         render: (value: string | number) => {
@@ -84,34 +83,24 @@ export const DimensionTable: React.FC<Props> = ({
         width: 100
       },
       {
+        align: 'center',
         dataIndex: 'updateTime',
         key: 'updateTime',
         title: '更新时间',
         width: 180
       },
       {
-        fixed: 'right' as const,
+        align: 'center',
+        fixed: 'right',
         key: 'action',
         render: (_: unknown, record: DimensionModelItem) => (
-          <Space>
-            <Tooltip title="编辑">
-              <Button
-                color="primary"
-                icon={<EditOutlined />}
-                size="small"
-                variant="link"
-                onClick={() => onEdit(record)}
-              />
-            </Tooltip>
-            <Tooltip title="层级配置">
-              <Button
-                color="default"
-                icon={<NodeIndexOutlined />}
-                size="small"
-                variant="link"
-                onClick={() => onHierarchy(record)}
-              />
-            </Tooltip>
+          <div className="flex items-center justify-center" style={{ gap: 2 }}>
+            <AButton className="abi-action-link" size="small" variant="link" onClick={() => onEdit(record)}>
+              编辑
+            </AButton>
+            <AButton className="abi-action-link" size="small" variant="link" onClick={() => onHierarchy(record)}>
+              层级配置
+            </AButton>
             <Popconfirm
               cancelText="取消"
               description="确定删除该维度吗？"
@@ -119,19 +108,12 @@ export const DimensionTable: React.FC<Props> = ({
               title="提示"
               onConfirm={() => onDelete(record)}
             >
-              <Tooltip title="删除">
-                <Button
-                  color="danger"
-                  icon={<DeleteOutlined />}
-                  size="small"
-                  variant="link"
-                />
-              </Tooltip>
+              <AButton className="abi-action-link-danger" size="small" variant="link">删除</AButton>
             </Popconfirm>
-          </Space>
+          </div>
         ),
         title: '操作',
-        width: 140
+        width: 180
       }
     ],
     [onDelete, onEdit, onHierarchy]
@@ -152,28 +134,51 @@ export const DimensionTable: React.FC<Props> = ({
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-      <div className="assistant-table-scroll" style={{ border: '1px solid #d9d9d9', borderRadius: 8, overflow: 'hidden' }}>
-        <Table
-          className="assistant-table-scroll abi-std-table"
-          columns={tableColumns as any}
-          dataSource={dataSource}
-          loading={loading}
-          locale={{ emptyText: emptyNode }}
-          rowKey={record => String(record.id)}
-          scroll={dataSource.length > 0 ? { x: tableWidth } : undefined}
-          size="small"
-          pagination={false}
-        />
+      <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0, width: '100%' }}>
+        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+          <Table
+            className="assistant-table-scroll abi-std-table"
+            columns={tableColumns as any}
+            dataSource={dataSource}
+            loading={loading}
+            rowKey={record => String(record.id)}
+            scroll={dataSource.length > 0 ? { x: tableWidth } : undefined}
+            size="middle"
+            pagination={false}
+          />
+        </div>
       </div>
-      <div style={{ padding: '0.75rem 0', display: 'flex', justifyContent: 'flex-end', marginTop: 'auto' }}>
-        <Pagination
-          current={pagination.current}
-          pageSize={pagination.pageSize}
-          showSizeChanger
-          total={pagination.total}
-          onChange={onPaginationChange}
-          onShowSizeChange={onPaginationChange}
-        />
+      <div className="data-source-pagination">
+        <span className="total-text">共 {pagination.total} 条</span>
+        <div className="pagination-controls">
+          <ASelect
+            value={pagination.pageSize}
+            onChange={(size: number) => onPaginationChange(pagination.current, size)}
+            options={[
+              { label: '10条/页', value: 10 },
+              { label: '15条/页', value: 15 },
+              { label: '20条/页', value: 20 },
+              { label: '25条/页', value: 25 },
+              { label: '30条/页', value: 30 },
+            ]}
+            className="page-size-select"
+          />
+          <button className="page-btn" disabled={pagination.current === 1} onClick={() => onPaginationChange(pagination.current - 1, pagination.pageSize)}>
+            <LeftOutlined />
+          </button>
+          {Array.from({ length: Math.ceil(pagination.total / pagination.pageSize) || 1 }, (_, i) => i + 1).map(page => (
+            <span
+              key={page}
+              className={`page-item ${page === pagination.current ? 'page-active' : ''}`}
+              onClick={() => onPaginationChange(page, pagination.pageSize)}
+            >
+              {page}
+            </span>
+          ))}
+          <button className="page-btn" disabled={pagination.current >= Math.ceil(pagination.total / pagination.pageSize)} onClick={() => onPaginationChange(pagination.current + 1, pagination.pageSize)}>
+            <RightOutlined />
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -38,7 +38,11 @@ export function Component() {
 
   function handleGroupId(gId: number) {
     setGroupId(gId);
-    fetchTableSchemaList(100, gId);
+    if (gId) {
+      fetchTableSchemaList(100, gId);
+    } else {
+      setTableSchemaList([]);
+    }
   }
 
   function updateTableList() {

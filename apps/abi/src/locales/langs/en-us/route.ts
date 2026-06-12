@@ -69,10 +69,6 @@ const route: App.I18n.Schema['translation']['route'] = {
   manage_user: 'User Manage',
   'manage_user-detail': 'User Detail',
   'manage_user-role': 'User Role',
-  'my-collect': 'My Collect',
-  'recently-used': 'Recently Used',
-  'share-manage': 'Share ManageMent',
-  'share-manage_my-share': 'My Share',
   // 'scheduling-tasks':'Scheduling Tasks',
   // 'scheduling-tasks_timed-tasks':'Timed Tasks',
 
@@ -84,6 +80,10 @@ const route: App.I18n.Schema['translation']['route'] = {
   // 'multi-menu_second_child_home': 'Menu Two Child Home',
   'space-list': 'Space List',
   'system_space-user': 'Space User',
+  'workbench_app-workshop_my-collect': 'My Collect',
+  'workbench_app-workshop_my-dashboard': 'My Screen',
+  'workbench_app-workshop_my-share': 'My Share',
+  'workbench_app-workshop_recently-used': 'Recently Used',
   'workbench_ontology-kg_label-meaning': 'Attribute Modeling'
   // 'user-center': 'User Center'
 }

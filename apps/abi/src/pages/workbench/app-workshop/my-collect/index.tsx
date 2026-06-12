@@ -5,7 +5,6 @@ import {
   fetchOperateNewList,
 } from "@/service/api/operateRecord";
 import { message } from "antd";
-import { localStg } from "@/utils/storage";
 
 interface OperateRecord {
   readonly id: string;

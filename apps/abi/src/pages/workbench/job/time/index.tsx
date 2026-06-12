@@ -1,4 +1,4 @@
-import { CaretRightOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { CaretRightOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 // import PageTitle from '@/components/stateless/common/PageTitle';
 import { Form, message } from 'antd';
 import { Suspense } from 'react';
@@ -46,12 +46,11 @@ export function Component() {
 
   const { columnChecks, data, run, searchParams, searchProps, setColumnChecks, tableProps } = useTable({
     apiFn: fetchJobList as any,
-    apiParams: {
+    apiParams: useMemo(() => ({
       pageNum: 1,
       pageSize: 10,
-      // sourceName: '',
-      spaceId, // 空间id
-    },
+      spaceId,
+    }), [spaceId]),
     columns: () =>
       [
         // {
@@ -62,7 +61,7 @@ export function Component() {
         //   width: 80
         // },
         {
-          align: 'left',
+          align: 'center',
           dataIndex: 'jobName',
           key: 'jobName',
           title: '任务名称',
@@ -70,7 +69,7 @@ export function Component() {
           fixed: 'left',
         },
         {
-          align: 'right',
+          align: 'center',
           dataIndex: 'jobId',
           key: 'jobId',
           title: '任务id',
@@ -111,43 +110,30 @@ export function Component() {
           width: 120,
           key: 'operate',
           render: (_: unknown, record: any) => (
-            <div className="flex-center gap-8px">
-              <ATooltip title="编辑">
-                <AButton
-                  color="primary"
-                  icon={<EditOutlined />}
-                  size="small"
-                  variant="link"
-                  onClick={() => {
-                    edit(record);
-                  }}
-                />
-              </ATooltip>
-
-              <ATooltip title="发送记录">
-                <AButton color="primary" icon={<ClockCircleOutlined />} size="small" variant="link" onClick={() => handleView(record)} />
-              </ATooltip>
-              <ATooltip title="调度日志">
-                <AButton
-                  color="primary"
-                  icon={<ExceptionOutlined />}
-                  size="small"
-                  variant="link"
-                  onClick={() => {
-                    router.push({
-                      name: 'job_log',
-                      query: {
-                        jobId: record.jobId,
-                      },
-                    });
-                  }}
-                />
-              </ATooltip>
-
+            <div className="flex items-center justify-center" style={{ gap: 2 }}>
+              <AButton className="abi-action-link" size="small" variant="link" onClick={() => edit(record)}>
+                编辑
+              </AButton>
+              <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleView(record)}>
+                发送记录
+              </AButton>
+              <AButton
+                className="abi-action-link"
+                size="small"
+                variant="link"
+                onClick={() => {
+                  router.push({
+                    name: 'job_log',
+                    query: { jobId: record.jobId },
+                  });
+                }}
+              >
+                调度日志
+              </AButton>
               <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.recordId)}>
-                <ATooltip title="删除">
-                  <AButton color="danger" icon={<DeleteOutlined />} size="small" variant="link" />
-                </ATooltip>
+                <AButton className="abi-action-link" size="small" variant="link" danger>
+                  删除
+                </AButton>
               </APopconfirm>
             </div>
           ),
@@ -281,103 +267,103 @@ export function Component() {
   };
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-8px overflow-hidden lt-sm:overflow-auto p-6">
-      {/* <PageTitle /> */}
-      <div className="flex items-center gap-4">
-        <KeySearch {...searchProps} />
-        <div className="ml-auto flex items-center gap-3">
-          <AButton
-            type="primary"
-            onClick={searchProps.reset}
-          >
-            重置
-          </AButton>
-          <AButton
-            type="primary"
-            onClick={searchProps.search}
-          >
-            查询
-          </AButton>
-          <AButton
-            type="primary"
-            onClick={handleExport}
-          >
-            导出
-          </AButton>
-
-          <APopconfirm
-            title={t('common.confirmDelete')}
-            onConfirm={handleBatchDelete}
-          >
-            <AButton
-              type="primary"
-              disabled={checkedRowKeys.length === 0}
-            >
-              批量删除
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* v5 Searchbar */}
+      <section className="abi-searchbar">
+        <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }}>
+          <div className="abi-search-row">
+            <KeySearch {...searchProps} />
+            <AButton type="primary" className="btn-accent-gradient" onClick={() => searchProps.search()}>
+              <SearchOutlined /> 查询
             </AButton>
-          </APopconfirm>
-        </div>
-      </div>
+            <AButton className="btn-ghost-v5" onClick={() => searchProps.reset()}>
+              重置
+            </AButton>
+          </div>
+        </AForm>
+      </section>
 
-      <div
-        ref={tableWrapperRef}
-        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
-      >
-        <div
-          style={{
-            border: '0.0625rem solid #d9d9d9',
-            borderRadius: '0.5rem',
-            overflow: 'hidden',
-            width: '100%',
-            maxHeight: '100%'
-          }}
-        >
-          <div
-            className="assistant-table-scroll"
-            style={{ overflow: 'auto', maxHeight: '100%' }}
-          >
-            <ATable
-              scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content', ...scrollConfig } : undefined}
-              size="small"
-              {...(tableProps as any)}
-              pagination={false}
-              rowSelection={rowSelection}
-            />
+      {/* v5 Data Area */}
+      <section className="abi-data-area">
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <AButton className="btn-accent-gradient" onClick={handleExport}>
+              导出
+            </AButton>
+            <APopconfirm
+              title={t('common.confirmDelete')}
+              onConfirm={handleBatchDelete}
+            >
+              <AButton
+                className="btn-ghost-v5"
+                disabled={checkedRowKeys.length === 0}
+              >
+                批量删除
+              </AButton>
+            </APopconfirm>
           </div>
         </div>
-        <div className="data-source-pagination">
-          {(() => {
-            const pag = tableProps.pagination as any;
-            const current = pag?.current || 1;
-            const pageSizeVal = pag?.pageSize || 10;
-            const totalVal = pag?.total || 0;
-            const totalPages = Math.max(1, Math.ceil(totalVal / pageSizeVal));
-            const onChange = pag?.onChange;
-            const pages: number[] = [];
-            if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
-            else {
-              pages.push(1);
-              if (current > 3) pages.push(-1);
-              const start = Math.max(2, current - 1);
-              const end = Math.min(totalPages - 1, current + 1);
-              for (let i = start; i <= end; i++) pages.push(i);
-              if (current < totalPages - 2) pages.push(-2);
-              pages.push(totalPages);
-            }
-            return (
-              <>
-                <span className="total-text">共 {totalVal} 条</span>
-                <div className="pagination-controls">
-                  <ASelect value={pageSizeVal} onChange={(v: number) => onChange?.(1, v)} options={[{label:'10条/页',value:10},{label:'15条/页',value:15},{label:'20条/页',value:20}]} className="page-size-select" />
-                  <button className="page-btn" disabled={current === 1} onClick={() => onChange?.(current - 1, pageSizeVal)}><LeftOutlined /></button>
-                  {pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === current ? ' page-active' : ''}`} onClick={() => onChange?.(p, pageSizeVal)}>{p}</span>)}
-                  <button className="page-btn" disabled={current >= totalPages} onClick={() => onChange?.(current + 1, pageSizeVal)}><RightOutlined /></button>
-                </div>
-              </>
-            );
-          })()}
+
+        {/* Content */}
+        <div
+          ref={tableWrapperRef}
+          style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
+        >
+          <div
+            style={{
+              border: '1px solid rgba(130,140,200,0.18)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+              <ATable
+                scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content', ...scrollConfig } : undefined}
+                size="middle"
+                className="abi-std-table"
+                {...(tableProps as any)}
+                pagination={false}
+                rowSelection={rowSelection}
+              />
+            </div>
+          </div>
+
+          <div className="data-source-pagination">
+            {(() => {
+              const pag = tableProps.pagination as any;
+              const current = pag?.current || 1;
+              const pageSizeVal = pag?.pageSize || 10;
+              const totalVal = pag?.total || 0;
+              const totalPages = Math.max(1, Math.ceil(totalVal / pageSizeVal));
+              const onChange = pag?.onChange;
+              const pages: number[] = [];
+              if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
+              else {
+                pages.push(1);
+                if (current > 3) pages.push(-1);
+                const start = Math.max(2, current - 1);
+                const end = Math.min(totalPages - 1, current + 1);
+                for (let i = start; i <= end; i++) pages.push(i);
+                if (current < totalPages - 2) pages.push(-2);
+                pages.push(totalPages);
+              }
+              return (
+                <>
+                  <span className="total-text">共 {totalVal} 条</span>
+                  <div className="pagination-controls">
+                    <ASelect value={pageSizeVal} onChange={(v: number) => onChange?.(1, v)} options={[{label:'10条/页',value:10},{label:'15条/页',value:15},{label:'20条/页',value:20}]} className="page-size-select" />
+                    <button className="page-btn" disabled={current === 1} onClick={() => onChange?.(current - 1, pageSizeVal)}><LeftOutlined /></button>
+                    {pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === current ? ' page-active' : ''}`} onClick={() => onChange?.(p, pageSizeVal)}>{p}</span>)}
+                    <button className="page-btn" disabled={current >= totalPages} onClick={() => onChange?.(current + 1, pageSizeVal)}><RightOutlined /></button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
         </div>
-      </div>
+      </section>
 
         <AModal
           key="shareEmail"

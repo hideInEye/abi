@@ -36,46 +36,39 @@ export const Component: React.FC = () => {
   }, [groupId])
 
   return (
-    <div className="h-full min-h-0 flex-col-stretch overflow-hidden lt-sm:overflow-auto">
-      <AFlex
-        className="h-full gap-6"
-        style={{ flex: 1, minHeight: 0 }}
-      >
-        <div className="abi-group-sidebar">
-          <Group
-            config={{
-              button: '添加标签语义组',
-              inputLabel: '标签语义组名称',
-              inputPlaceholder: '请输入标签语义组名称',
-              modalAddTitle: '新增标签语义组',
-              modalEditTitle: '编辑标签语义组',
-              panelTitle: '标签语义组',
-              rule: [
-                [
-                  { message: '请输入标签语义组名称', required: true },
-                  { max: 50, message: '标签语义组名称不能超过50个字符' }
-                ]
-              ],
-              type: 'tag'
-            }}
-            onGroupId={handleGroupChange}
-          />
-        </div>
+    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <div className="abi-group-sidebar">
+        <Group
+          config={{
+            button: '添加标签语义组',
+            inputLabel: '标签语义组名称',
+            inputPlaceholder: '请输入标签语义组名称',
+            modalAddTitle: '新增标签语义组',
+            modalEditTitle: '编辑标签语义组',
+            panelTitle: '标签语义组',
+            rule: [
+              [
+                { message: '请输入标签语义组名称', required: true },
+                { max: 50, message: '标签语义组名称不能超过50个字符' }
+              ]
+            ],
+            type: 'tag'
+          }}
+          onGroupId={handleGroupChange}
+        />
+      </div>
 
-        <div className="w-40% flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-          <div className="flex items-start gap-3 mb-3">
-            <TagSearch
-              onAdd={handleAdd}
-              onSearch={handleSearch}
-              groupId={groupId}
-            />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        <TagSearch onSearch={handleSearch} />
+        <section className="abi-data-area">
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
             <AButton
               type="primary"
-              className="ml-auto"
+              className="btn-accent-gradient"
               onClick={handleAdd}
               disabled={!groupId}
             >
-              新增
+              + 新增标签语义
             </AButton>
           </div>
           <TagTable
@@ -83,17 +76,17 @@ export const Component: React.FC = () => {
             onDelete={handleDelete}
             onEdit={handleEdit}
           />
+        </section>
 
-          {isModalOpen && (
-            <TagModal
-              editingGroup={editingGroup}
-              isModalOpen={isModalOpen}
-              onCancel={setIsModalOpen}
-              onSave={tagSave}
-            />
-          )}
-        </div>
-      </AFlex>
+        {isModalOpen && (
+          <TagModal
+            editingGroup={editingGroup}
+            isModalOpen={isModalOpen}
+            onCancel={setIsModalOpen}
+            onSave={tagSave}
+          />
+        )}
+      </div>
     </div>
   )
 }
