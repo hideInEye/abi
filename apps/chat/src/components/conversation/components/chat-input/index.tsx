@@ -1,7 +1,8 @@
-import { Input, Button } from 'antd';
+import { AudioOutlined, BulbOutlined, CompassOutlined, DownOutlined, FileTextOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, SendOutlined, StopOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { Dropdown, Input, message } from 'antd';
+import type { MenuProps } from 'antd';
 import React, { useCallback, useRef, useState } from 'react';
 import AudioRecorder from '../../../../components/AudioRecorder';
-import SvgIcon from '../../../../components/SvgIcon';
 import UploadDrawer from '../../UploadDrawer';
 
 interface ChatInputProps {
@@ -17,7 +18,7 @@ interface ChatInputProps {
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
-  ({ loading, onSend, onStop, deepThinkEnabled,uploadFileEnabled, setSelectedExcel, conv, onToggleDeepThink, onToggleUploadFile }) => {
+  ({ loading, onSend, onStop, deepThinkEnabled, uploadFileEnabled, setSelectedExcel, conv, onToggleDeepThink, onToggleUploadFile }) => {
     const [value, setValue] = useState('');
     const isComposingRef = useRef(false);
     const [uploadFileVisible, setUploadFileVisible] = useState(false);
@@ -61,13 +62,12 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     const handleTranscribed = useCallback((text: string) => {
       setValue(text);
     }, []);
-    // 附件上传
+
     const handleUploadBtnClick = useCallback(() => {
       onToggleUploadFile();
       setUploadFileVisible(true);
     }, [onToggleUploadFile]);
 
-    // 上传excel回调
     const handleUploadOk = (file: any) => {
       setSelectedExcel(file);
       setUploadFileVisible(false);
@@ -79,94 +79,155 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       onToggleUploadFile();
     }, [onToggleUploadFile]);
 
+    // ── Dropdown menus ──
+
+    /** + dropdown: 上传文件, 上传图片 (占位) */
+    const plusMenuItems: MenuProps['items'] = [
+      {
+        key: 'upload-file',
+        icon: <PaperClipOutlined />,
+        label: '上传文件',
+        onClick: () => handleUploadBtnClick(),
+      },
+      {
+        key: 'upload-image',
+        icon: <PictureOutlined />,
+        label: '上传图片',
+        onClick: () => message.info('图片上传功能即将上线'),
+      },
+    ];
+
+    /** 交互 dropdown: 交互, 探索, 报告 with icons */
+    const modeMenuItems: MenuProps['items'] = [
+      {
+        key: 'interact',
+        icon: <MessageOutlined />,
+        label: '交互',
+        onClick: () => {},
+      },
+      {
+        key: 'explore',
+        icon: <CompassOutlined />,
+        label: '探索',
+        onClick: () => {},
+      },
+      {
+        key: 'report',
+        icon: <FileTextOutlined />,
+        label: '报告',
+        onClick: () => {},
+      },
+    ];
+
     return (
-      <div className="m-auto border border-gray-300  rounded-lg px-3 py-2 bg-white">
-        <div className="flex items-center mb-2">
-          <div className="flex-1">
-            <div className="relative flex items-center w-full">
-              <Input.TextArea
-                autoFocus
-                id="input-textarea"
-                disabled={loading}
-                placeholder={
-                  loading
-                    ? '正在思考中,请稍后输入'
-                    : deepThinkEnabled
-                      ? '深度思考模式已开启，请输入您的问题'
-                      : '请输入问题，快速获取结果'
-                }
-                value={value}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-                onCompositionStart={handleCompositionStart}
-                onCompositionEnd={handleCompositionEnd}
-                className="pr-16"
-                autoSize={{ minRows: 1, maxRows: 4 }}
-                style={{
-                  border: 'none',
-                  boxShadow: 'none',
-                  padding: '4px 0',
-                  resize: 'none',
-                  backgroundColor: 'transparent',
-                  cursor: loading ? 'not-allowed' : 'text',
-                }}
-                styles={{
-                  textarea: {
-                    border: 'none',
-                    boxShadow: 'none',
-                    backgroundColor: 'transparent',
-                  },
-                }}
-              />
-              <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center"></div>
-            </div>
-          </div>
+      <div className="chat-input-glass" style={{ overflow: 'visible' }}>
+        {/* Textarea area */}
+        <div style={{ padding: '16px 18px 8px' }}>
+          <Input.TextArea
+            autoFocus
+            id="input-textarea"
+            disabled={loading}
+            placeholder={
+              loading
+                ? '正在思考中,请稍后输入'
+                : deepThinkEnabled
+                  ? '深度思考模式已开启，请输入您的问题'
+                  : '请输入问题，快速获取结果'
+            }
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
+            autoSize={{ minRows: 1, maxRows: 4 }}
+            style={{
+              border: 'none',
+              boxShadow: 'none',
+              padding: '0',
+              resize: 'none',
+              backgroundColor: 'transparent',
+              cursor: loading ? 'not-allowed' : 'text',
+              fontSize: 13,
+              color: 'var(--ink)',
+              lineHeight: 1.5,
+              fontFamily: 'var(--font)',
+            }}
+            styles={{
+              textarea: {
+                border: 'none',
+                boxShadow: 'none',
+                backgroundColor: 'transparent',
+              },
+            }}
+          />
         </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-            className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border-none no-focus-border-btn ${
-              deepThinkEnabled ? 'chat-action-btn-active bg-[#e8f0fe] text-[#3470f6]' : 'chat-action-btn text-[#333]'
-            }`}
+
+        {/* Toolbar */}
+        <div style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 10px', gap: 6 }}>
+          {/* ── Left side ── */}
+
+          {/* + (upload dropdown) */}
+          <Dropdown menu={{ items: plusMenuItems }} trigger={['click']} placement="topLeft">
+            <button type="button" className="input-label-btn" title="更多操作">
+              <PlusOutlined style={{ fontSize: 14 }} />
+            </button>
+          </Dropdown>
+
+          {/* 交互 (mode switcher dropdown) */}
+          <Dropdown menu={{ items: modeMenuItems }} trigger={['click']} placement="topLeft">
+            <button type="button" className="input-label-btn">
+              <MessageOutlined style={{ fontSize: 13 }} />
+              <span>交互</span>
+              <DownOutlined className="btn-arrow" />
+            </button>
+          </Dropdown>
+
+          {/* 思考 (deep think toggle) - BulbOutlined */}
+          <button
+            type="button"
+            className={`input-label-btn ${deepThinkEnabled ? 'active' : ''}`}
             onClick={onToggleDeepThink}
           >
-            <SvgIcon 
-              localIcon={deepThinkEnabled ? "thinkingblue" : "thinking"} 
-              className="w-4 h-4 cursor-pointer" 
-            />
-            <span>深度思考</span>
-            </Button>
-            <Button
-            className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border-none no-focus-border-btn ${
-              uploadFileEnabled ? 'chat-action-btn-active bg-[#e8f0fe] text-[#3470f6]' : 'chat-action-btn text-[#333]'
-            }`}
-            onClick={handleUploadBtnClick}
-            title="附件上传"
+            <BulbOutlined style={{ fontSize: 14 }} />
+            <span>思考</span>
+          </button>
+
+          {/* 技能 (placeholder) */}
+          <button
+            type="button"
+            className="input-label-btn"
+            onClick={() => message.info('技能功能即将上线')}
           >
-            <SvgIcon localIcon="file-link" className="w-[22px] h-[22px]" />
-            <span>附件上传</span>
-          </Button>
-          </div>
-          <div className="flex items-center gap-3">
-            <AudioRecorder
-              onTranscribed={handleTranscribed}
-              disabled={loading}
-            />
-            <span
-              className="cursor-pointer text-[#8a8a8a] hover:text-[#2E6CF6]"
-              onClick={loading ? onStop : handleSend}
-            >
-              <SvgIcon
-                localIcon={loading ? 'stop' : 'send'}
-                className={`w-6 h-6 ${
-                  loading
-                    ? 'text-red-500 hover:text-red-600'
-                    : 'text-[#3470f6] hover:text-[#2E6CF6]'
-                }`}
-              />
-            </span>
-          </div>
+            <ThunderboltOutlined style={{ fontSize: 13 }} />
+            <span>技能</span>
+          </button>
+
+          {/* Spacer */}
+          <div style={{ flex: 1 }} />
+
+          {/* ── Right side ── */}
+
+          {/* Voice Input */}
+          <AudioRecorder
+            onTranscribed={handleTranscribed}
+            disabled={loading}
+          />
+
+          {/* Send / Stop Button */}
+          <button
+            type="button"
+            className="send-btn-glass"
+            onClick={loading ? onStop : handleSend}
+            style={loading ? { background: 'var(--danger)', boxShadow: '0 2px 8px rgba(239,68,68,0.3)' } : {}}
+          >
+            {loading ? (
+              <StopOutlined style={{ fontSize: 16 }} />
+            ) : (
+              <SendOutlined style={{ fontSize: 16 }} />
+            )}
+          </button>
         </div>
+
         <UploadDrawer
           open={uploadFileVisible}
           conv={conv}

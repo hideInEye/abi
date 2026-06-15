@@ -1,0 +1,234 @@
+/* ── Debug Drawer ── */
+.debugDrawer :global(.ant-drawer-header) {
+  border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.9), #fff);
+}
+
+.debugDrawer :global(.ant-drawer-body) {
+  padding: 16px 20px;
+  background: rgba(250, 251, 255, 0.5);
+}
+
+/* ── Drawer Title ── */
+.drawerTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.drawerTitleLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drawerTitleIcon {
+  font-size: 18px;
+  color: #5b7cf7;
+}
+
+.drawerTitleText {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2d2d2d;
+}
+
+.drawerTitleTag {
+  margin-left: 4px;
+  font-size: 12px;
+  background: rgba(91, 124, 247, 0.06);
+  color: #5b7cf7;
+}
+
+.drawerCloseBtn {
+  color: #8c8c8c;
+  transition: color 0.2s;
+}
+
+.drawerCloseBtn:hover {
+  color: #5b7cf7;
+}
+
+/* ── Collapse ── */
+.debugCollapse {
+  border: none;
+  background: transparent;
+}
+
+.debugCollapse :global(.ant-collapse-item) {
+  border: 1px solid rgba(130, 140, 200, 0.1) !important;
+  border-radius: 10px !important;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.debugCollapse :global(.ant-collapse-item):hover {
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.08);
+}
+
+.debugCollapse :global(.ant-collapse-item-active) {
+  box-shadow: 0 2px 12px rgba(91, 124, 247, 0.1);
+  border-color: rgba(91, 124, 247, 0.15) !important;
+}
+
+.debugCollapse :global(.ant-collapse-header) {
+  padding: 12px 16px !important;
+  align-items: center !important;
+}
+
+.debugCollapse :global(.ant-collapse-content) {
+  border-top: 1px solid rgba(130, 140, 200, 0.08) !important;
+}
+
+.debugCollapse :global(.ant-collapse-content-box) {
+  padding: 14px 16px !important;
+}
+
+/* ── Step Label ── */
+.stepLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stepIndex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5b7cf7, #7c9cff);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.stepName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2d2d2d;
+}
+
+.stepMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.stepMeta :global(.ant-tag) {
+  font-size: 11px;
+  margin: 0;
+}
+
+/* ── Step Content ── */
+.stepContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stepSection {
+  flex: 1;
+}
+
+/* ── Code Block ── */
+.codeBlock {
+  border: 1px solid rgba(130, 140, 200, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fafbfd, #f5f7fb);
+}
+
+.codeBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(245, 248, 252, 0.8);
+  border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+}
+
+.codeBlockTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4a5060;
+}
+
+.codeIcon,
+.codeIconOut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.codeIcon {
+  background: rgba(91, 124, 247, 0.1);
+  color: #5b7cf7;
+}
+
+.codeIconOut {
+  background: rgba(82, 196, 26, 0.1);
+  color: #52c41a;
+}
+
+.codeActionBtn {
+  color: #8c8c8c !important;
+  transition: color 0.2s !important;
+}
+
+.codeActionBtn:hover {
+  color: #5b7cf7 !important;
+  background: rgba(91, 124, 247, 0.06) !important;
+}
+
+.codeMirror {
+  font-size: 13px !important;
+  border-radius: 0 !important;
+}
+
+.codeMirror :global(.cm-editor) {
+  background: transparent !important;
+}
+
+.codePlaceholder {
+  padding: 24px;
+  text-align: center;
+  color: #b0b8c8;
+  font-size: 13px;
+  background: rgba(248, 250, 255, 0.5);
+  border-radius: 10px;
+  border: 1px dashed rgba(130, 140, 200, 0.15);
+}
+
+/* ── Empty State ── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: #b0b8c8;
+  font-size: 14px;
+}
+
+.emptyIcon {
+  font-size: 36px;
+  color: #d0d5e0;
+}

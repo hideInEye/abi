@@ -1,10 +1,23 @@
 import React, {useState} from 'react';
-import SvgIcon from '../../../components/SvgIcon';
-import AnalysisRecommend from '../AnalysisRecommend';
 import { ModulesMap } from '@/constant/chat';
 import { getModulesByChatMode } from '@/utils';
-import { Tag, message, Tooltip } from 'antd';
-import { FundTwoTone, BulbTwoTone, FunnelPlotTwoTone } from '@ant-design/icons';
+import { message, Tooltip, Dropdown } from 'antd';
+import type { MenuProps } from 'antd';
+import {
+  LikeOutlined,
+  DislikeOutlined,
+  LikeFilled,
+  DislikeFilled,
+  BulbOutlined,
+  FunnelPlotOutlined,
+  FundOutlined,
+  DashboardOutlined,
+  LineChartOutlined,
+  CopyOutlined,
+  MoreOutlined,
+  FileTextOutlined,
+  SnippetsOutlined,
+} from '@ant-design/icons';
 
 interface Props {
   onAttributionClick: () => void;
@@ -16,6 +29,7 @@ interface Props {
   onVoteChange: (payload: any) => void;
   chatMode: string;
   feedback: any;
+  content?: string; // 用于复制的内容
 }
 
 const StatisticsAnalysis: React.FC<Props> = ({
@@ -27,7 +41,8 @@ const StatisticsAnalysis: React.FC<Props> = ({
   onQaClick,
   onDimensionClick,
   onIndexClick,
-  feedback
+  feedback,
+  content = ''
 }) => {
   const showLikeButton = getModulesByChatMode(chatMode, ModulesMap[7]); // 是否显示点赞点踩按钮
   const showReferenceButton = getModulesByChatMode(chatMode, ModulesMap[8]); // 是否显示引用按钮
@@ -101,6 +116,108 @@ const StatisticsAnalysis: React.FC<Props> = ({
     }
   };
 
+  // 复制功能
+  const handleCopy = async (format: 'markdown' | 'plaintext') => {
+    if (!content) {
+      message.warning('暂无可复制的内容');
+      return;
+    }
+
+    try {
+      let textToCopy = content;
+      
+      if (format === 'plaintext') {
+        // 移除 Markdown 标记,转为纯文本
+        textToCopy = content
+          .replace(/#{1,6}\s/g, '') // 移除标题
+          .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗体
+          .replace(/\*(.*?)\*/g, '$1') // 移除斜体
+          .replace(/`(.*?)`/g, '$1') // 移除行内代码
+          .replace(/\[(.*?)\]\(.*?\)/g, '$1') // 移除链接,保留文本
+          .replace(/!\[(.*?)\]\(.*?\)/g, '$1') // 移除图片
+          .replace(/^>\s/gm, '') // 移除引用
+          .replace(/^[-*+]\s/gm, '') // 移除无序列表
+          .replace(/^\d+\.\s/gm, '') // 移除有序列表
+          .replace(/```[\s\S]*?```/g, '') // 移除代码块
+          .trim();
+      }
+
+      await navigator.clipboard.writeText(textToCopy);
+      message.success(format === 'markdown' ? '已复制为 Markdown' : '已复制为纯文本');
+    } catch (error) {
+      console.error('复制失败:', error);
+      message.error('复制失败,请重试');
+    }
+  };
+
+  // 复制下拉菜单
+  const copyMenuItems: MenuProps['items'] = [
+    {
+      key: 'markdown',
+      label: (
+        <span className="flex items-center gap-2">
+          <SnippetsOutlined />
+          复制为 Markdown
+        </span>
+      ),
+      onClick: () => handleCopy('markdown'),
+    },
+    {
+      key: 'plaintext',
+      label: (
+        <span className="flex items-center gap-2">
+          <FileTextOutlined />
+          复制为纯文本
+        </span>
+      ),
+      onClick: () => handleCopy('plaintext'),
+    },
+  ];
+
+  // 更多操作下拉菜单
+  const moreMenuItems: MenuProps['items'] = [
+    ...(showRecommend ? [{
+      key: 'dimension',
+      label: (
+        <span className="flex items-center gap-2">
+          <DashboardOutlined />
+          推荐维度
+        </span>
+      ),
+      onClick: onDimensionClick,
+    }] : []),
+    ...(showRecommend ? [{
+      key: 'index',
+      label: (
+        <span className="flex items-center gap-2">
+          <LineChartOutlined />
+          推荐指标
+        </span>
+      ),
+      onClick: onIndexClick,
+    }] : []),
+    ...(showAttributionButton ? [{
+      key: 'attribution',
+      label: (
+        <span className="flex items-center gap-2">
+          <FunnelPlotOutlined />
+          归因分析
+        </span>
+      ),
+      onClick: onAttributionClick,
+    }] : []),
+    ...(showPredictButton ? [{
+      key: 'predict',
+      label: (
+        <span className="flex items-center gap-2">
+          <FundOutlined />
+          预测分析
+        </span>
+      ),
+      onClick: onPredictClick,
+    }] : []),
+  ];
+
   const renderLikeButtons = () => {
     if (!showLikeButton) return null;
     
@@ -108,22 +225,22 @@ const StatisticsAnalysis: React.FC<Props> = ({
       <>
         <Tooltip title="点赞">
           <span 
-            className={`cursor-pointer text-[1.5rem] hover:opacity-80 select-none ${
-              loading || !canOperate() ? 'opacity-50 cursor-not-allowed' : ''
+            className={`action-icon ${hasLiked() ? 'active' : ''} ${
+              loading || !canOperate() ? 'disabled' : ''
             }`} 
             onClick={handleLike}
           >
-            <SvgIcon localIcon={hasLiked() ? "good-fill" : "good"} />
+            {hasLiked() ? <LikeFilled /> : <LikeOutlined />}
           </span>
         </Tooltip>
         <Tooltip title="点踩">
           <span 
-            className={`cursor-pointer text-[1.5rem] hover:opacity-80 select-none ${
-              loading || !canOperate() ? 'opacity-50 cursor-not-allowed' : ''
+            className={`action-icon ${hasDisliked() ? 'active' : ''} ${
+              loading || !canOperate() ? 'disabled' : ''
             }`} 
             onClick={handleDislike}
           >
-            <SvgIcon localIcon={hasDisliked() ? "bad-fill" : "bad"} />
+            {hasDisliked() ? <DislikeFilled /> : <DislikeOutlined />}
           </span>
         </Tooltip>
       </>
@@ -132,80 +249,40 @@ const StatisticsAnalysis: React.FC<Props> = ({
 
   return (
     <div className='my-2'>
-      {/* 推荐问题等部分 */}
-      <div className="rounded bg-[#f6f6f6]  pl-2 pr-2 rounded-[0.5rem] w-full">
-        <div className="flex justify-between items-center">
-          <div className="flex gap-3">
-            {renderLikeButtons()}
-          </div>
-          <div className="flex gap-4 items-center mr-2">
-            {/* {showReferenceButton && (
-              <Tooltip title="引用">
-                <span 
-                  className="cursor-pointer text-[1.5rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none" 
-                  onClick={onReferenceClick}
-                >
-                  #
+      {/* 操作栏 - 左对齐 */}
+      <div className="action-bar">
+        <div className="action-bar-left">
+          {/* 复制按钮 */}
+          <Dropdown menu={{ items: copyMenuItems }} trigger={['click']} placement="topLeft">
+            <Tooltip title="复制">
+              <span className="action-icon">
+                <CopyOutlined />
+              </span>
+            </Tooltip>
+          </Dropdown>
+
+          {/* 点赞、点踩 */}
+          {renderLikeButtons()}
+
+          {/* 推荐问题 */}
+          {showRecommend && (
+            <Tooltip title="推荐问题">
+              <span className="action-icon" onClick={onQaClick}>
+                <BulbOutlined />
+              </span>
+            </Tooltip>
+          )}
+
+          {/* 更多操作 */}
+          {moreMenuItems && moreMenuItems.length > 0 && (
+            <Dropdown menu={{ items: moreMenuItems }} trigger={['click']} placement="topLeft">
+              <Tooltip title="更多">
+                <span className="action-icon">
+                  <MoreOutlined />
                 </span>
               </Tooltip>
-            )} */}
-            {showRecommend && (
-              <Tooltip title="推荐问题">
-                <span 
-                  className="cursor-pointer text-[1.25rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
-                  onClick={onQaClick}
-                >
-                  <BulbTwoTone />  
-                </span>
-              </Tooltip>
-            )}
-            {showRecommend && (
-              <Tooltip title="推荐维度">
-                <span 
-                  className="cursor-pointer text-[1.375rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
-                  onClick={onDimensionClick}
-                >
-                  <SvgIcon
-                    className="cursor-pointer"
-                    localIcon="weidu"
-                  />
-                </span>
-                </Tooltip>
-            )}
-            {showRecommend && (
-              <Tooltip title="推荐指标">
-                <span 
-                  className="cursor-pointer text-[1.4375rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
-                  onClick={onIndexClick}
-                >
-                  <SvgIcon
-                    className="cursor-pointer"
-                    localIcon="zhibiao"
-                  />
-                </span>
-              </Tooltip>
-            )}
-            {showAttributionButton && (
-              <Tooltip title="归因分析">
-                <span 
-                  className="cursor-pointer text-[1.25rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
-                  onClick={onAttributionClick}
-                >
-                  <FunnelPlotTwoTone />
-                </span>
-              </Tooltip>
-            )}
-            {showPredictButton && (
-              <Tooltip title="预测分析">
-                <span 
-                  className="cursor-pointer text-[1.25rem] text-[#2E6CF6] hover:text-[#2E6CF6] hover:opacity-80 select-none"
-                  onClick={onPredictClick}
-                >
-                  <FundTwoTone />
-                </span>
-              </Tooltip>
-            )}
-          </div>
+            </Dropdown>
+          )}
         </div>
       </div>
     </div>
