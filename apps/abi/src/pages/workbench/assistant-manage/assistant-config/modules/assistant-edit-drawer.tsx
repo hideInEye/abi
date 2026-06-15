@@ -160,7 +160,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
       closable={false}
       placement="right"
       width="100%"
-      bodyStyle={{ background: '#f5f5f5', padding: 0 }}
+      bodyStyle={{ background: '#FCFDFF', padding: 0 }}
       headerStyle={{ display: 'none' }}
       onClose={() => onClose(false)}
     >
@@ -168,7 +168,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
       <div
         style={{
           alignItems: 'center',
-          background: '#fff',
+          background: '#FCFDFF',
           borderBottom: '1px solid #f0f0f0',
           display: 'flex',
           height: 56,
@@ -223,7 +223,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
         }}
       >
         {/* 左：助手画像 */}
-        <div style={{ background: '#fff', borderRight: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: '#FCFDFF', borderRight: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column' }}>
           <SectionHeader title="助手配置" />
           <div style={{ padding: '12px 16px 0' }}>
             <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
@@ -249,7 +249,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
         </div>
 
         {/* 中：基础配置 / 知识 / 能力 */}
-        <div style={{ background: '#fff', borderRight: '1px solid #f0f0f0', overflow: 'auto' }}>
+        <div style={{ background: '#FCFDFF', borderRight: '1px solid #f0f0f0', overflow: 'auto' }}>
           <GroupTitle title="基础配置" />
           <CollapseRow
             open={openMap.model}
@@ -493,7 +493,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
         </Modal>
 
         {/* 右：调试预览 */}
-        <div style={{ background: '#fff', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: '#FCFDFF', display: 'flex', flexDirection: 'column' }}>
           <SectionHeader icon={headerIcon} title="调试预览" />
           <div style={{ flex: 1, overflow: 'auto', padding: '16px 24px' }}>
             <div style={{ color: '#bfbfbf', fontSize: 12, marginBottom: 16, textAlign: 'center' }}>
@@ -572,7 +572,7 @@ const SectionHeader: React.FC<{ title: string; icon?: React.ReactNode }> = ({ ic
   <div
     style={{
       alignItems: 'center',
-      background: '#fafafa',
+      background: '#FCFDFF',
       borderBottom: '1px solid #f0f0f0',
       display: 'flex',
       gap: 8,
@@ -589,7 +589,7 @@ const SectionHeader: React.FC<{ title: string; icon?: React.ReactNode }> = ({ ic
 const GroupTitle: React.FC<{ title: string }> = ({ title }) => (
   <div
     style={{
-      background: '#fafafa',
+      background: '#FCFDFF',
       color: '#595959',
       fontSize: 13,
       padding: '8px 16px'
