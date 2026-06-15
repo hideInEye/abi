@@ -10,7 +10,7 @@
   min-width: 300px;
   max-width: 300px;
   flex: 1 1 auto;
-  background: var(--abi-panel-bg);
+  background: #F8FAFF;
   backdrop-filter: var(--abi-backdrop);
   border-right: 1px solid var(--abi-panel-border);
   overflow-y: auto;
@@ -72,7 +72,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--abi-input-bg);
   border: 1px solid var(--abi-panel-border);
   border-radius: 6px;
   transition: all 0.2s ease;

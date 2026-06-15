@@ -72,6 +72,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+  padding-top: 4px; /* 给第一行卡片 hover 上移留空间，防止被 overflow:auto 裁剪 */
 }
 @media (max-width: 1400px) {
   .skill-hub-scope .skill-card-grid {
@@ -131,6 +132,8 @@
   border-color: #1677ff;
   box-shadow: 0 10px 24px rgba(22, 119, 255, 0.12);
   transform: translateY(-2px);
+  background: #FCFDFF;
+  z-index: 1;
 }
 .skill-hub-scope .skill-card__title {
   font-size: 16px;

@@ -594,6 +594,15 @@
       background: #d97706;
     }
   }
+
+  &.status-disabled {
+    background: rgba(139, 139, 139, 0.10);
+    color: #8c8c8c;
+
+    &::before {
+      background: #8c8c8c;
+    }
+  }
 }
 
 // ── 操作按钮链接样式 v5 .act ──
@@ -769,6 +778,7 @@
     background: rgba(255, 255, 255, 0.80);
     box-shadow: 0 6px 24px rgba(26, 39, 68, 0.08);
     transform: translateY(-2px);
+    border-color: #1677ff;
   }
 
   .abi-data-card-head {

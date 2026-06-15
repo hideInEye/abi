@@ -178,10 +178,8 @@ const ModelCardList: FC<Props> = ({
                 return (
                   <div
                     key={item.modelId}
-                    className="abi-data-card model-card-item"
-                    style={{
-                      position: 'relative',
-                    }}
+                    className="abi-data-card"
+                    style={{ position: 'relative' }}
                   >
                     {/* 默认模型角标 */}
                     {item.isDefault === 1 && (
@@ -193,7 +191,7 @@ const ModelCardList: FC<Props> = ({
                           width: 24,
                           height: 24,
                           background: '#faad14',
-                          borderRadius: '0 8px 0 12px',
+                          borderRadius: '0 12px 0 12px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -204,17 +202,47 @@ const ModelCardList: FC<Props> = ({
                       </div>
                     )}
 
-                    {/* 操作菜单（默认一直显示） */}
-                    <div
-                      className="model-card-more"
-                      style={{
-                        position: 'absolute',
-                        bottom: 8,
-                        right: 8,
-                        zIndex: 10,
-                        opacity: 1,
-                      }}
-                    >
+                    {/* 卡片头部 */}
+                    <div className="abi-data-card-head">
+                      <div className="abi-data-card-title">
+                        {providerIcon ? (
+                          <img src={providerIcon} alt={providerLabel} style={{ width: 22, height: 16, objectFit: 'contain', flexShrink: 0 }} />
+                        ) : (
+                          <span style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 4,
+                            background: '#f0f5ff',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 12,
+                            color: '#1677ff',
+                            fontWeight: 'bold',
+                            flexShrink: 0,
+                          }}>
+                            {providerLabel?.slice(0, 1)}
+                          </span>
+                        )}
+                        <span className="abi-data-card-name">{item.modelName}</span>
+                      </div>
+                      <ATag color={tagColor} bordered style={{ margin: 0 }}>{modelTypeLabel}</ATag>
+                    </div>
+
+                    {/* 卡片主体 */}
+                    <div className="abi-data-card-body">
+                      <div className="row"><span className="lbl">基础模型</span><span className="val" title={item.modelKey || '-'}>{item.modelKey || '-'}</span></div>
+                      <div className="row"><span className="lbl">模型来源</span><span className="val">{modelSourceLabel}</span></div>
+                      <div className="row">
+                        <span className="lbl">状态</span>
+                        <span className={`abi-status-tag ${item.status === '1' ? 'status-normal' : 'status-disabled'}`}>
+                          {item.status === '1' ? '启用' : '禁用'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 操作菜单 */}
+                    <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
                       <Dropdown
                         menu={{
                           items: dropdownItems,
@@ -238,89 +266,6 @@ const ModelCardList: FC<Props> = ({
                           <MoreOutlined />
                         </AButton>
                       </Dropdown>
-                    </div>
-
-                    {/* 上部：图标 + 名称 + 标签 */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                      <div
-                        style={{
-                          width: 48,
-                          height: 48,
-                          flexShrink: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: providerIcon ? 'transparent' : '#f0f5ff',
-                          borderRadius: 8,
-                          fontSize: 20,
-                          color: '#1677ff',
-                          fontWeight: 'bold',
-                        }}
-                      >
-                        {providerIcon ? (
-                          <img src={providerIcon} alt={providerLabel} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 8 }} />
-                        ) : (
-                          providerLabel?.slice(0, 1)
-                        )}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: 15,
-                            fontWeight: 700,
-                            lineHeight: 1.3,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                          title={item.modelName}
-                        >
-                          {item.modelName}
-                        </div>
-                        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <ATag color={tagColor} bordered style={{ margin: 0 }}>
-                            {modelTypeLabel}
-                          </ATag>
-                          <ATag bordered style={{ margin: 0 }}>
-                            {modelSourceLabel}
-                          </ATag>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 下部：基础模型 + 状态 */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <span style={{ color: '#8c8c8c', flexShrink: 0 }}>基础模型</span>
-                        <span
-                          style={{
-                            color: '#595959',
-                            fontFamily: 'monospace',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                          title={item.modelKey || '-'}
-                        >
-                          {item.modelKey || '-'}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <span style={{ color: '#8c8c8c', flexShrink: 0 }}>状&emsp;态&emsp;</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <div
-                            style={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: '50%',
-                              background: item.status === '1' ? '#52c41a' : '#bfbfbf',
-                            }}
-                          />
-                          <span style={{ color: item.status === '1' ? '#434343' : '#8c8c8c' }}>
-                            {item.status === '1' ? '启用' : '禁用'}
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 )
