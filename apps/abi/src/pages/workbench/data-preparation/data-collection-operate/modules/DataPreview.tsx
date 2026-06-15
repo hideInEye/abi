@@ -36,6 +36,7 @@ const DataPreview: React.FC<PropsType> = memo(({ isSql = false, previewData = {}
         const dataKey = item.tfieldName || item.tfieldShowName;
         return {
           ...item,
+          align: 'center',
           dataIndex: dataKey,
           key: dataKey,
           title: item.tfieldShowName,
@@ -242,27 +243,39 @@ const DataPreview: React.FC<PropsType> = memo(({ isSql = false, previewData = {}
   return (
     <div className="h-full flex">
       {!isSql ? (
-        <div className="h-full border-r border-r-#ccc">
+        <div className="h-full border-r border-r-#ccc" style={{ background: '#F9FAFF' }}>
           <Collapse
             bordered={false}
             className="h-full w-200px"
             defaultActiveKey={['d', 'q']}
             expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
             items={getItems()}
+            style={{ background: 'transparent' }}
           />
         </div>
       ) : null}
 
-      <div className="h-full w-full overflow-auto">
-        <Table<DataType>
-          bordered
-          className={isSql ? styles['sql-result-table'] : styles['datasource-table-container']}
-          columns={columns}
-          dataSource={dataSource}
-          pagination={false}
-          rowKey={(_, index) => String(index)}
-          scroll={isSql ? { x: 'max-content' } : undefined}
-        />
+      <div
+        className="h-full w-full"
+        style={{
+          border: '1px solid rgba(130,140,200,0.18)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+          <Table<DataType>
+            className="abi-std-table"
+            columns={columns as any[]}
+            dataSource={dataSource}
+            pagination={false}
+            rowKey={(_, index) => String(index)}
+            scroll={{ x: 'max-content' }}
+            size="middle"
+          />
+        </div>
       </div>
 
       {modalType ? (

@@ -1,5 +1,5 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined, LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
-import { message, Tooltip } from 'antd';
+import { ApartmentOutlined, DeleteOutlined, EditOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { Dropdown, message, Tooltip } from 'antd';
 import { Suspense } from 'react';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
@@ -27,6 +27,7 @@ export function Component() {
   const { push } = useRouter();
   const spaceId = useAppSelector(getSpaceId);
   const [searchValue, setSearchValue] = useState('');
+  const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [jumpValue, setJumpValue] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
@@ -176,6 +177,12 @@ export function Component() {
     } as any);
   };
 
+  const handleReset = () => {
+    setSearchValue('');
+    setDateRange(null);
+    updateSearchParams({ pageNum: 1, viewName: undefined } as any);
+  };
+
   const pagination = tableProps.pagination as any;
   const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1;
   const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10;
@@ -258,12 +265,25 @@ export function Component() {
                 <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime}</span></div>
               )}
             </div>
-            <div className="abi-data-card-footer">
-              <button className="abi-card-act" onClick={() => toDetail(record)}>编辑</button>
-              <button className="abi-card-act" onClick={() => setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: spaceId || undefined })}>元数据分析</button>
-              <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.viewId)}>
-                <button className="abi-card-act danger">删除</button>
-              </APopconfirm>
+            <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+              <Dropdown
+                menu={{
+                  items: [
+                    { key: 'edit', label: <span><EditOutlined style={{ marginRight: 6 }} />编辑</span> },
+                    { key: 'analysis', label: <span><ApartmentOutlined style={{ marginRight: 6 }} />元数据分析</span> },
+                    { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
+                  ],
+                  onClick: ({ key, domEvent }) => {
+                    domEvent.stopPropagation();
+                    if (key === 'edit') toDetail(record);
+                    else if (key === 'analysis') setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: spaceId || undefined });
+                    else if (key === 'delete') handleDelete(record.viewId);
+                  }
+                }}
+                trigger={['hover']}
+              >
+                <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
+              </Dropdown>
             </div>
           </div>
         ))}
@@ -286,8 +306,17 @@ export function Component() {
             className="abi-field-input"
             style={{ width: '16rem' }}
           />
+          <ADatePicker.RangePicker
+            placeholder={['开始时间', '结束时间']}
+            value={dateRange}
+            onChange={(dates) => setDateRange(dates)}
+            className="abi-field-input"
+          />
           <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
             <SearchOutlined /> 查询
+          </AButton>
+          <AButton className="btn-ghost-v5" onClick={handleReset}>
+            重置
           </AButton>
         </div>
       </section>

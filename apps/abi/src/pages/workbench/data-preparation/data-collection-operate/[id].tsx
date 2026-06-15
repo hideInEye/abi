@@ -388,7 +388,7 @@ export function Component() {
                         layout="vertical"
                         style={{ width: '100%', height: '100%' }}
                       >
-                        <Splitter.Panel className="relative bg-#f5f6f7">
+                        <Splitter.Panel className="relative bg-#F9FAFF">
                           {collectionData.viewType === 'sql' ? (
                             <SqlModeEditor
                               sourceId={datasource}
@@ -411,7 +411,7 @@ export function Component() {
                                   justifyContent: 'flex-end',
                                   gap: 8,
                                   padding: '6px 12px',
-                                  background: '#fff',
+                                  background: '#F9FAFF',
                                   borderBottom: '1px solid #e5e7eb',
                                   flexShrink: 0,
                                 }}

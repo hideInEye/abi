@@ -5,6 +5,8 @@ import { Dropdown, Empty, Popconfirm, Select, Switch, message } from 'antd';
 
 import { Group } from '@/components/stateful/group/Group';
 import type { GroupProps } from '@/components/stateful/group/Group';
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
 
 import AssistantEditDrawer, { type AgentMock } from './modules/assistant-edit-drawer';
 
@@ -175,6 +177,28 @@ export function Component() {
   const [agents, setAgents] = useState<AgentCard[]>(() =>
     MOCK_AGENTS.map(a => ({ createBy: 'admin', status: '1' as const, ...a }))
   );
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
+  const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'name', label: '名称', visible: true },
+    { key: 'description', label: '描述', visible: true },
+    { key: 'createBy', label: '创建用户', visible: true },
+    { key: 'status', label: '状态', visible: true },
+    { key: 'operate', label: '操作', visible: true },
+  ]);
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+  };
+
+  const handleReset = () => {
+    setKeyword('');
+    setDateRange(null);
+    setCurrentPage(1);
+  };
 
   const list = useMemo(() => {
     let arr = agents;
@@ -206,6 +230,44 @@ export function Component() {
     const start = (currentPage - 1) * pageSize;
     return list.slice(start, start + pageSize);
   }, [list, currentPage, pageSize]);
+
+  // 表格列定义
+  const allTableColumns = useMemo(() => [
+    {
+      title: '名称', key: 'name', dataIndex: 'name',
+      render: (_: any, record: AgentCard) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ alignItems: 'center', background: record.iconBg, borderRadius: 6, color: '#fff', display: 'flex', flexShrink: 0, fontSize: 12, fontWeight: 700, height: 24, justifyContent: 'center', width: 24 }}>{record.iconLetter}</div>
+          <span>{record.name}</span>
+        </div>
+      )
+    },
+    { title: '描述', key: 'description', dataIndex: 'description', ellipsis: true },
+    { title: '创建用户', key: 'createBy', dataIndex: 'createBy' },
+    {
+      title: '状态', key: 'status', dataIndex: 'status', align: 'center' as const,
+      render: (_: any, record: AgentCard) => <Switch checked={record.status === '1'} size="small" onChange={checked => handleToggle(record.id, checked)} />
+    },
+    {
+      title: '操作', key: 'operate', align: 'center' as const, fixed: 'right' as const,
+      render: (_: any, record: AgentCard) => (
+        <Dropdown trigger={['hover']} menu={{
+          items: [
+            { key: 'edit', label: <span><EditOutlined style={{ marginRight: 6 }} />编辑</span> },
+            { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
+          ],
+          onClick: ({ key }) => { if (key === 'edit') handleEdit(record); else if (key === 'delete') handleDelete(record.id); }
+        }}>
+          <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
+        </Dropdown>
+      )
+    },
+  ], []);
+
+  const tableColumns = useMemo(() => {
+    const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
+    return allTableColumns.filter(col => visibleKeys.has(col.key));
+  }, [columnOptions, allTableColumns]);
 
   const handleAdd = () => {
     setEditingAgent(null);
@@ -247,21 +309,58 @@ export function Component() {
               prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
+              onPressEnter={handleSearch}
               className="abi-field-input"
               style={{ width: '16rem' }}
             />
-            <AButton type="primary" className="btn-accent-gradient" onClick={handleAdd}>
-              <PlusOutlined /> 新增助手
+            <ADatePicker.RangePicker
+              placeholder={['开始时间', '结束时间']}
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates)}
+              className="abi-field-input"
+            />
+            <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
+              <SearchOutlined /> 查询
+            </AButton>
+            <AButton className="btn-ghost-v5" onClick={handleReset}>
+              重置
             </AButton>
           </div>
         </section>
 
         {/* v5 Data Area */}
         <section className="abi-data-area">
+          <div className="abi-toolbar">
+            <div className="abi-toolbar-left">
+              <AButton type="primary" className="btn-accent-gradient" onClick={handleAdd}>
+                <PlusOutlined /> 新增助手
+              </AButton>
+            </div>
+            <ViewControls
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              columns={columnOptions}
+              onColumnToggle={handleColumnToggle}
+            />
+          </div>
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
             {list.length === 0 ? (
               <div style={{ marginTop: 80 }}>
                 <Empty description="暂无助手" />
+              </div>
+            ) : viewMode === 'list' ? (
+              <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: 12, overflow: 'hidden', flex: 1, minHeight: 0 }}>
+                <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+                  <ATable
+                    rowKey="id"
+                    columns={tableColumns as any}
+                    dataSource={pagedList}
+                    pagination={false}
+                    size="middle"
+                    className="abi-std-table"
+                    scroll={pagedList.length > 0 ? { x: 'max-content' } : undefined}
+                  />
+                </div>
               </div>
             ) : (
               <div className="abi-card-grid">

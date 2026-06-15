@@ -6,6 +6,8 @@ import {
   getOperateRecordList,
 } from "@/service/api/operateRecord";
 import { message } from "antd";
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 interface OperateRecord {
   readonly id: string;
@@ -19,6 +21,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     total: 0,
   });
   const { switchToSpace } = useSpaceSwitch();
+  const spaceId = useAppSelector(getSpaceId);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchValue, setSearchValue] = useState("");
   const pageSize = 10;
@@ -51,8 +54,10 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   }
 
   useEffect(() => {
+    setCurrentPage(1);
+    setDataSource({ rows: [], total: 0 });
     getRecordList();
-  }, []);
+  }, [spaceId]);
 
   function paginationChange(page: number) {
     setCurrentPage(page);

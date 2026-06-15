@@ -14,6 +14,7 @@ import { GLOBAL_SIDER_MENU_ID, hideMenuRoute } from '@/constants/app'
 import { useRoute } from '~/packages/simple-router/src'
 import WorkbenchEmpty from '@/components/stateless/common/WorkbenchEmpty'
 
+import { $t } from '@/locales';
 import { useMixMenuContext } from '@/hooks/common/menu'
 
 interface Props {
@@ -32,6 +33,7 @@ const useGetCacheKey = () => {
 const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   const currentOutlet = useOutlet()
   const route = useRoute()
+  const location = useLocation()
   const aliveRef = useKeepAliveRef()
 
   const removeCacheKey = useAppSelector(getRemoveCacheKey)
@@ -102,19 +104,78 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
 
   const { allMenus: menus } = useMixMenuContext()
 
-  // 构建完整面包屑：遍历 route.matched 在菜单树中逐级查找
+  // 构建面包屑：完全基于 pathname 推导（不依赖 route.matched，因为 simple-router 中 matched 可能为空）
   const breadcrumbItems = useMemo(() => {
-    const items: { label: any; key: string }[] = [];
-    let currentMenus = menus;
-    const matched = route.matched || [];
+    const pathname = location.pathname;
+    const pathSegs = pathname.split('/').filter(Boolean);
 
-    for (let i = 0; i < matched.length; i++) {
-      const name = matched[i]?.name;
-      if (!name) continue;
-      const found = currentMenus.find((m: any) => m?.key === name);
+    // 去掉末尾的数字ID段
+    if (pathSegs.length > 0 && /^\d+$/.test(pathSegs[pathSegs.length - 1])) {
+      pathSegs.pop();
+    }
+
+    if (pathSegs.length === 0) return [];
+
+    // 最后一个段的后缀处理（-operate → 去掉后缀得到兄弟菜单名）
+    const lastSeg = pathSegs[pathSegs.length - 1];
+    const suffixes = ['-operate', '-view', '-edit', '-detail', '-create'];
+    let lastMenuSeg = lastSeg;
+    for (const suffix of suffixes) {
+      if (lastSeg.endsWith(suffix)) {
+        lastMenuSeg = lastSeg.slice(0, -suffix.length);
+        break;
+      }
+    }
+
+    // 构建路径段列表（最后一段用处理后的菜单段名）
+    const menuSegs = pathSegs.map((seg, i) => i === pathSegs.length - 1 ? lastMenuSeg : seg);
+
+    // 在菜单树中查找（支持短格式 key，如 data-preparation 而非 workbench_data-preparation）
+    const findInMenuTree = (menuList: any[], key: string): any => {
+      for (const m of menuList) {
+        if (m?.key === key) return m;
+        if (m?.children?.length) {
+          const found = findInMenuTree(m.children, key);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    // 逐级构建面包屑，在每一级尝试多种 key 格式
+    const items: { label: any; key: string }[] = [];
+    for (let i = 0; i < menuSegs.length; i++) {
+      const seg = menuSegs[i];
+      const parentKey = i > 0 && items.length > 0 ? items[items.length - 1].key : '';
+
+      // 候选 key：长格式（父+子）、短格式（仅当前段）
+      const candidates: string[] = [];
+      if (parentKey) {
+        candidates.push(`${parentKey}_${seg}`);
+      }
+      candidates.push(seg);
+
+      let found: any = null;
+      for (const key of candidates) {
+        found = findInMenuTree(menus, key);
+        if (found) break;
+      }
+
       if (found) {
         items.push({ label: found.title || found.label, key: found.key });
-        currentMenus = (found as any).children || [];
+      } else if (parentKey) {
+        // 未找到菜单项时，尝试 i18n 翻译
+        const fullKey = [...pathSegs.slice(0, i), seg].join('_');
+        const candidateKeys = [fullKey, `${parentKey}_${seg}`, seg];
+        let label = '';
+        for (const k of candidateKeys) {
+          const translated = $t(`route.${k}`);
+          if (translated && translated !== `route.${k}`) {
+            label = translated;
+            break;
+          }
+        }
+        items.push({ label: label || seg, key: `${parentKey}_${seg}` });
       }
     }
 
@@ -128,7 +189,7 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
         )
       };
     });
-  }, [route.matched, menus])
+  }, [menus, location.pathname])
 
   useUpdateEffect(() => {
     if (!aliveRef.current || !removeCacheKey) return

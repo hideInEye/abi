@@ -159,12 +159,12 @@ export function Component() {
   }, [allModels, activeProviderId])
 
   return (
-    <div className="flex flex-col p-6" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', flex: 1, gap: 16, minHeight: 0, overflow: 'hidden' }}>
+    <div className="flex flex-col" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {/* 左侧供应商列表 */}
         <div
           style={{
-            width: 280,
+            width: 300,
             flexShrink: 0,
             background: '#F8FAFF',
             borderRadius: 8,

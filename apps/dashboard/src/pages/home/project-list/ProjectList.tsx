@@ -296,6 +296,16 @@ export const ProjectList = memo((props: ProjectListProps) => {
         getProjectPageList(pageData.current, pageData.size);
     }, []);
 
+    // 监听主应用空间切换事件，刷新列表
+    useEffect(() => {
+        const handleSpaceChange = () => {
+            setCurrentPage(1);
+            getProjectPageList(1, pageSize);
+        };
+        window.addEventListener('space-change', handleSpaceChange);
+        return () => window.removeEventListener('space-change', handleSpaceChange);
+    }, [pageSize]);
+
     return (
         <div className={'project-list-container'}>
             <div className={'project-list-header'}>

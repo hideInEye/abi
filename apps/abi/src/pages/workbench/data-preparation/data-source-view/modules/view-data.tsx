@@ -26,6 +26,7 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
     return checkboxColumns
       ?.filter(item => item.checked)
       .map(({ key,width }) => ({
+        align: 'center',
         dataIndex: key,
         key,
         width,
@@ -84,22 +85,36 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
         </AButton>
       </APopover>
 
-      <ATable<any>
-        footer={pageDatasource?.length ? () => <div>说明: 参与预览计算的数据最多100行,原数据不足100行则取全量数据,超过则抽取样数据</div> : undefined}
-        columns={columns}
-        dataSource={pageDatasource}
-        scroll={pageDatasource?.length ? { y: 'calc(100vh - 400px)' } : undefined}
-        pagination={{
-          ...pagination,
-          onChange: (page: number, pageSize: number) => {
-            setPagination({
-              current: page,
-              pageSize,
-              total: pagination.total
-            });
-          }
+      <div
+        style={{
+          border: '1px solid rgba(130,140,200,0.18)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          flex: 1,
+          minHeight: 0,
         }}
-      />
+      >
+        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
+          <ATable<any>
+            footer={pageDatasource?.length ? () => <div>说明: 参与预览计算的数据最多100行,原数据不足100行则取全量数据,超过则抽取样数据</div> : undefined}
+            columns={columns as any[]}
+            dataSource={pageDatasource}
+            scroll={pageDatasource?.length ? { x: 'max-content' } : undefined}
+            size="middle"
+            className="abi-std-table"
+            pagination={{
+              ...pagination,
+              onChange: (page: number, pageSize: number) => {
+                setPagination({
+                  current: page,
+                  pageSize,
+                  total: pagination.total
+                });
+              }
+            }}
+          />
+        </div>
+      </div>
     </>
   );
 });

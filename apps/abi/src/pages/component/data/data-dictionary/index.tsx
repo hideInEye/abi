@@ -1,5 +1,9 @@
-import { SearchOutlined } from '@ant-design/icons';
+import { MoreOutlined, SearchOutlined } from '@ant-design/icons';
 import React, { useState } from 'react';
+import { Dropdown } from 'antd';
+
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
 
 import { DictionaryGroup } from './components/DictionaryGroup';
 import { DictionaryModal } from './components/DictionaryModal';
@@ -28,6 +32,19 @@ export const Component: React.FC = () => {
   } = useDictionaryGroup(groupId);
 
   const { close: closeEnumDrawer, enumerationModalOpen, open: openEnumDrawer } = useEnumDrawer();
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'dictField', label: '字典名称', visible: true },
+    { key: 'dictName', label: '中文名称', visible: true },
+    { key: 'status', label: '状态', visible: true },
+    { key: 'remark', label: '描述', visible: true },
+    { key: 'createTime', label: '创建时间', visible: true },
+    { key: 'action', label: '操作', visible: true },
+  ]);
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
 
   return (
     <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
@@ -50,8 +67,17 @@ export const Component: React.FC = () => {
               className="abi-field-input"
               style={{ width: '16rem' }}
             />
+            <ADatePicker.RangePicker
+              placeholder={['开始时间', '结束时间']}
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates)}
+              className="abi-field-input"
+            />
             <AButton type="primary" className="btn-accent-gradient" onClick={() => handleSearch(searchValue)}>
               <SearchOutlined /> 查询
+            </AButton>
+            <AButton className="btn-ghost-v5" onClick={() => { handleSearch(''); setDateRange(null); }}>
+              重置
             </AButton>
           </div>
         </section>
@@ -69,7 +95,14 @@ export const Component: React.FC = () => {
                 + 新增字典
               </AButton>
             </div>
+            <ViewControls
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              columns={columnOptions}
+              onColumnToggle={handleColumnToggle}
+            />
           </div>
+          {viewMode === 'list' ? (
           <TableDictionary
             current={current}
             dataSource={dictionaryDataSource}
@@ -79,6 +112,47 @@ export const Component: React.FC = () => {
             onPageChange={setCurrent}
             onStatusChange={handleUpdateStatus}
           />
+          ) : (
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              {dictionaryDataSource.rows.length === 0 ? (
+                <div style={{ marginTop: 80, textAlign: 'center' }}><AEmpty description="暂无字典" /></div>
+              ) : (
+                <div className="abi-card-grid">
+                  <div className="abi-card-grid-inner">
+                    {dictionaryDataSource.rows.map((record: any) => (
+                      <div key={record.dictId} className="abi-data-card" style={{ position: 'relative' }}>
+                        <div className="abi-data-card-head">
+                          <div className="abi-data-card-title">
+                            <span className="abi-data-card-name">{record.dictField}</span>
+                          </div>
+                          <ASwitch checked={record.status === '2'} size="small" onChange={() => handleUpdateStatus(record)} />
+                        </div>
+                        <div className="abi-data-card-body">
+                          <div className="row"><span className="lbl">中文名称</span><span className="val">{record.dictName || '-'}</span></div>
+                          <div className="row"><span className="lbl">描述</span><span className="val">{record.remark || '-'}</span></div>
+                          <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createTime || '-'}</span></div>
+                        </div>
+                        <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+                          <Dropdown
+                            menu={{
+                              items: [
+                                { key: 'edit', label: <span onClick={() => handleEdit(record)}>编辑</span> },
+                                { key: 'add', label: <span onClick={() => openEnumDrawer(record)}>新增</span> },
+                                { key: 'delete', danger: true, label: <APopconfirm cancelText="取消" description="确定要删除该字典吗？" okText="确认" title="删除字典" onConfirm={() => handleDelete(record.dictId)}><span>删除</span></APopconfirm> },
+                              ]
+                            }}
+                            trigger={['hover']}
+                          >
+                            <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
+                          </Dropdown>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </section>
       </div>
 

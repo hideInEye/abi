@@ -10,6 +10,8 @@ import { addJob, batchDeleteJob, deleteJob, exportJob, fetchChangeStatus, fetchJ
 import { useRouter } from '~/packages/simple-router/src/hooks/useRouter';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
 
 import JobDetailDrawer from './modules/job-detail-drawer';
 import KeySearch from './modules/key-search';
@@ -25,6 +27,23 @@ export function Component() {
   const [form] = Form.useForm();
   const [visible, setVisible] = useState(false);
   const [editData, setEditData] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+
+  // 列选项：用于列选择器
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'jobName', label: '任务名称', visible: true },
+    { key: 'jobId', label: '任务ID', visible: true },
+    { key: 'cycle', label: '周期/单次', visible: true },
+    { key: 'lastSendTime', label: '上次发送时间', visible: true },
+    { key: 'nextExecuteTime', label: '下次执行时间', visible: true },
+    { key: 'status', label: '状态', visible: true },
+    { key: 'operate', label: '操作', visible: true },
+  ]);
+
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
   const { scrollConfig, tableWrapperRef } = useTableScroll();
 
   const handleSwitch = async (record: any) => {
@@ -154,6 +173,53 @@ export function Component() {
       if (updateRes?.response?.data?.code !== 200) return false;
     }
   }, true);
+
+  const filteredColumns = useMemo(() => {
+    const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
+    return ((tableProps as any).columns || []).filter((col: any) => visibleKeys.has(col.key || col.dataIndex));
+  }, [columnOptions, tableProps]);
+
+  // 卡片视图渲染
+  const renderCardGrid = () => {
+    const dataSource = (tableProps as any).dataSource || [];
+    return (
+      <div className="abi-card-grid">
+        <div className="abi-card-grid-inner">
+          {dataSource.map((record: any) => {
+            const statusOn = record.status !== '1';
+            return (
+              <div key={record.recordId || record.jobId} className="abi-data-card" style={{ position: 'relative' }}>
+                <div className="abi-data-card-head">
+                  <div className="abi-data-card-title">
+                    <ClockCircleOutlined style={{ fontSize: 16, color: '#5b7cf7', flexShrink: 0 }} />
+                    <span className="abi-data-card-name">{record.jobName}</span>
+                  </div>
+                  <ASwitch checked={statusOn} size="small" onClick={() => handleSwitch(record)} />
+                </div>
+                <div className="abi-data-card-body">
+                  <div className="row"><span className="lbl">周期</span><span className="val">{record.cycle || '-'}</span></div>
+                  <div className="row"><span className="lbl">上次发送</span><span className="val">{record.lastSendTime || '-'}</span></div>
+                  <div className="row"><span className="lbl">下次执行</span><span className="val">{record.nextExecuteTime || '-'}</span></div>
+                </div>
+                <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10, display: 'flex', gap: 2 }}>
+                  <AButton className="abi-action-link" size="small" variant="link" onClick={() => edit(record)}>编辑</AButton>
+                  <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleView(record)}>记录</AButton>
+                  <AButton
+                    className="abi-action-link"
+                    size="small"
+                    variant="link"
+                    onClick={() => router.push({ name: 'job_log', query: { jobId: record.jobId } })}
+                  >
+                    日志
+                  </AButton>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
     
   async function handleBatchDelete() {
     // request
@@ -273,10 +339,16 @@ export function Component() {
         <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }}>
           <div className="abi-search-row">
             <KeySearch {...searchProps} />
+            <ADatePicker.RangePicker
+              placeholder={['开始时间', '结束时间']}
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates)}
+              className="abi-field-input"
+            />
             <AButton type="primary" className="btn-accent-gradient" onClick={() => searchProps.search()}>
               <SearchOutlined /> 查询
             </AButton>
-            <AButton className="btn-ghost-v5" onClick={() => searchProps.reset()}>
+            <AButton className="btn-ghost-v5" onClick={() => { searchProps.reset(); setDateRange(null); }}>
               重置
             </AButton>
           </div>
@@ -302,6 +374,12 @@ export function Component() {
               </AButton>
             </APopconfirm>
           </div>
+          <ViewControls
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            columns={columnOptions}
+            onColumnToggle={handleColumnToggle}
+          />
         </div>
 
         {/* Content */}
@@ -309,26 +387,31 @@ export function Component() {
           ref={tableWrapperRef}
           style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
         >
-          <div
-            style={{
-              border: '1px solid rgba(130,140,200,0.18)',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              flex: 1,
-              minHeight: 0,
-            }}
-          >
-            <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-              <ATable
-                scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content', ...scrollConfig } : undefined}
-                size="middle"
-                className="abi-std-table"
-                {...(tableProps as any)}
-                pagination={false}
-                rowSelection={rowSelection}
-              />
+          {viewMode === 'list' ? (
+            <div
+              style={{
+                border: '1px solid rgba(130,140,200,0.18)',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                flex: 1,
+                minHeight: 0,
+              }}
+            >
+              <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+                <ATable
+                  scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content', ...scrollConfig } : undefined}
+                  size="middle"
+                  className="abi-std-table"
+                  {...(tableProps as any)}
+                  columns={filteredColumns as any}
+                  pagination={false}
+                  rowSelection={rowSelection}
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            renderCardGrid()
+          )}
 
           <div className="data-source-pagination">
             {(() => {

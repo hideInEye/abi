@@ -1,13 +1,16 @@
 import Editor from '@monaco-editor/react';
 import {
+  DeleteOutlined,
+  EditOutlined,
   ExclamationCircleFilled,
   LeftOutlined,
   MinusCircleOutlined,
+  MoreOutlined,
   PlusOutlined,
   RightOutlined,
   SearchOutlined
 } from '@ant-design/icons';
-import { App, Button, Checkbox, Divider, Drawer, Form, Input, Select, Space, Table, Tabs, Tag } from 'antd';
+import { App, Button, Checkbox, Divider, Drawer, Dropdown, Form, Input, Select, Space, Table, Tabs, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -15,6 +18,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CreateToolParams, ToolItem, UpdateToolParams } from '@/service/api/tool';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
 import {
   createToolApi,
   deleteToolApi,
@@ -129,6 +134,19 @@ export function Component() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTool, setEditingTool] = useState<ToolItem | null>(null);
   const [saving, setSaving] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'toolName', label: '工具名称', visible: true },
+    { key: 'toolLabel', label: '标签', visible: true },
+    { key: 'description', label: '功能描述', visible: true },
+    { key: 'status', label: '状态', visible: true },
+    { key: 'createTime', label: '创建时间', visible: true },
+    { key: 'action', label: '操作', visible: true },
+  ]);
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
 
   // 编辑弹窗 tab
   const [activeTab, setActiveTab] = useState('script');
@@ -475,6 +493,11 @@ const TABLE_SCROLL = { x: 'max-content' };
     []
   );
 
+  const filteredColumns = useMemo(() => {
+    const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
+    return columns.filter(col => visibleKeys.has(col.key || (col as any).dataIndex));
+  }, [columnOptions, columns]);
+
   // 参数类型选项
   const paramTypeOptions = useMemo(
     () => [
@@ -524,10 +547,16 @@ const TABLE_SCROLL = { x: 'max-content' };
               { value: '1', label: '禁用' }
             ]}
           />
+          <ADatePicker.RangePicker
+            placeholder={['开始时间', '结束时间']}
+            value={dateRange}
+            onChange={(dates) => setDateRange(dates)}
+            className="abi-field-input"
+          />
           <Button type="primary" className="btn-accent-gradient" onClick={() => setCurrentPage(1)}>
             <SearchOutlined /> 查询
           </Button>
-          <Button className="btn-ghost-v5" onClick={() => { setKeyword(''); setStatusFilter('ALL'); setCurrentPage(1); }}>
+          <Button className="btn-ghost-v5" onClick={() => { setKeyword(''); setStatusFilter('ALL'); setCurrentPage(1); setDateRange(null); }}>
             重置
           </Button>
         </div>
@@ -541,10 +570,17 @@ const TABLE_SCROLL = { x: 'max-content' };
               <PlusOutlined />新增工具
             </Button>
           </div>
+          <ViewControls
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            columns={columnOptions}
+            onColumnToggle={handleColumnToggle}
+          />
         </div>
 
         {/* 内容区域 */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          {viewMode === 'list' ? (
           <div
             style={{
               border: '1px solid rgba(130,140,200,0.18)',
@@ -557,7 +593,7 @@ const TABLE_SCROLL = { x: 'max-content' };
             <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
               <Table<ToolItem>
                 rowKey="toolId"
-                columns={columns}
+                columns={filteredColumns}
                 dataSource={pagedList}
                 loading={loading}
                 pagination={false}
@@ -567,6 +603,50 @@ const TABLE_SCROLL = { x: 'max-content' };
               />
             </div>
           </div>
+          ) : (
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              {pagedList.length === 0 ? (
+                <div style={{ marginTop: 80, textAlign: 'center' }}><AEmpty description="暂无工具" /></div>
+              ) : (
+                <div className="abi-card-grid">
+                  <div className="abi-card-grid-inner">
+                    {pagedList.map((item: ToolItem) => (
+                      <div key={item.toolId} className="abi-data-card" style={{ position: 'relative' }}>
+                        <div className="abi-data-card-head">
+                          <div className="abi-data-card-title">
+                            <span className="abi-data-card-name">{item.toolName}</span>
+                          </div>
+                          {item.toolLabel ? <Tag color="blue">{item.toolLabel}</Tag> : null}
+                        </div>
+                        <div className="abi-data-card-body">
+                          <div className="row"><span className="lbl">功能描述</span><span className="val">{item.description || '-'}</span></div>
+                          <div className="row"><span className="lbl">状态</span><span className={`abi-status-tag ${String(item.status) === '0' ? 'status-normal' : 'status-disabled'}`}>{String(item.status) === '0' ? '启用' : '禁用'}</span></div>
+                          <div className="row"><span className="lbl">创建时间</span><span className="val">{item.createTime ? item.createTime.replace('T', ' ') : '-'}</span></div>
+                        </div>
+                        <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+                          <Dropdown
+                            menu={{
+                              items: [
+                                { key: 'edit', label: <span><EditOutlined style={{ marginRight: 6 }} />编辑</span> },
+                                { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
+                              ],
+                              onClick: ({ key }) => {
+                                if (key === 'edit') handleEdit(item);
+                                else if (key === 'delete') handleDelete(item);
+                              }
+                            }}
+                            trigger={['hover']}
+                          >
+                            <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
+                          </Dropdown>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="data-source-pagination">
             <span className="total-text">共 {totalCount} 条</span>
