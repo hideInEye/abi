@@ -414,15 +414,6 @@ export function Component() {
           />
           <AInput
             allowClear
-            placeholder="请输入 Client ID"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            className="abi-field-input"
-            style={{ width: 200 }}
-            onChange={(e) => queryForm.setFieldValue('clientId', e.target.value)}
-            onPressEnter={handleSearch}
-          />
-          <AInput
-            allowClear
             placeholder="请输入 Access Key"
             prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
             className="abi-field-input"
@@ -440,17 +431,6 @@ export function Component() {
               { label: '停用', value: 'disabled' }
             ]}
             onChange={(v) => queryForm.setFieldValue('status', v)}
-          />
-          <ASelect
-            allowClear
-            placeholder="IP访问限制"
-            className="abi-field-input"
-            style={{ width: 140 }}
-            options={[
-              { label: '不限制', value: 'unlimited' },
-              { label: '仅白名单', value: 'whitelist' }
-            ]}
-            onChange={(v) => queryForm.setFieldValue('ipAccessType', v)}
           />
           <ADatePicker.RangePicker
             allowClear

@@ -1,4 +1,5 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, EditOutlined, LeftOutlined, MoreOutlined, RightOutlined } from '@ant-design/icons';
+import { Dropdown } from 'antd';
 import type { TableProps } from 'antd';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
@@ -202,12 +203,24 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
                 <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime}</span></div>
               )}
             </div>
-            <div className="abi-data-card-footer">
-              <button className="abi-card-act" onClick={() => editTable(record)}>编辑</button>
-              <button className="abi-card-act" onClick={() => setAnalysisContext({ nodeId: record.schemaId, nodeName: record.bizName, nodeType: 'TABLE_SEMANTIC', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}>元数据分析</button>
-              <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => deleteTable(record)}>
-                <button className="abi-card-act danger">删除</button>
-              </APopconfirm>
+            <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+              <Dropdown
+                menu={{
+                  items: [
+                    { key: 'edit', label: <span><EditOutlined style={{ marginRight: 6 }} />编辑</span> },
+                    { key: 'analysis', label: <span><ApartmentOutlined style={{ marginRight: 6 }} />元数据分析</span> },
+                    { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
+                  ],
+                  onClick: ({ key }) => {
+                    if (key === 'edit') editTable(record);
+                    else if (key === 'analysis') setAnalysisContext({ nodeId: record.schemaId, nodeName: record.bizName, nodeType: 'TABLE_SEMANTIC', spaceId: Number(localStorage.getItem('spaceId')) || undefined });
+                    else if (key === 'delete') deleteTable(record);
+                  }
+                }}
+                trigger={['hover']}
+              >
+                <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
+              </Dropdown>
             </div>
           </div>
         ))}

@@ -1,4 +1,4 @@
-import { SearchOutlined } from '@ant-design/icons';
+import { MoreOutlined, SearchOutlined } from '@ant-design/icons';
 import React, { useState, useEffect } from 'react';
 // import PageTitle from '@/components/stateless/common/PageTitle';
 
@@ -6,13 +6,15 @@ import { deleteMcp, getMcpDetail, queryMcpList, registerMcp, updateMcp } from '@
 import type { PluginAddParams, PluginItem, PluginList, McpForm } from '@/types/plug';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
 
 import { PlugUpdate } from './components/PlugUpdate.tsx';
 import { PluginDetail } from './components/PluginDetail.tsx';
 import { PluginGroup } from './components/PluginGroup.tsx';
 import { PluginTable } from './components/PluginTable.tsx';
 import { usePluginManagement } from './hooks/usePluginManagement.ts';
-import { message } from 'antd';
+import { Dropdown, message } from 'antd';
 
 export const Component: React.FC = () => {
   const { currentEdit, open, setCurrentEdit, setOpen } = usePluginManagement();
@@ -28,6 +30,19 @@ export const Component: React.FC = () => {
   const [current, setcurrent] = useState(1);
   const [searchValue, setSearchValue] = useState('');
   const [detailRecord, setDetailRecord] = useState<PluginItem | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'pluginName', label: 'MCP服务名称', visible: true },
+    { key: 'remark', label: '描述', visible: true },
+    { key: 'capabilities', label: '支持能力', visible: true },
+    { key: 'pluginType', label: '类型', visible: true },
+    { key: 'version', label: '版本', visible: true },
+    { key: 'status', label: '状态', visible: true },
+  ]);
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
   const pageSize = 10;
 
   const getPluginList = async (mcpName?: string, pageOverride?: number) => {
@@ -221,14 +236,37 @@ export const Component: React.FC = () => {
               className="abi-field-input"
               style={{ width: '16rem' }}
             />
-            <AButton type="primary" className="btn-accent-gradient" disabled={!groupId} onClick={() => { setOpen(true); setCurrentEdit(null); }}>
-              + 新增MCP服务
+            <ADatePicker.RangePicker
+              placeholder={['开始时间', '结束时间']}
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates)}
+              className="abi-field-input"
+            />
+            <AButton type="primary" className="btn-accent-gradient" onClick={() => handleSearch(searchValue)}>
+              <SearchOutlined /> 查询
+            </AButton>
+            <AButton className="btn-ghost-v5" onClick={() => { handleSearch(''); setDateRange(null); }}>
+              重置
             </AButton>
           </div>
         </section>
 
         {/* v5 Data Area */}
         <section className="abi-data-area">
+          <div className="abi-toolbar">
+            <div className="abi-toolbar-left">
+              <AButton type="primary" className="btn-accent-gradient" disabled={!groupId} onClick={() => { setOpen(true); setCurrentEdit(null); }}>
+                + 新增MCP服务
+              </AButton>
+            </div>
+            <ViewControls
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              columns={columnOptions}
+              onColumnToggle={handleColumnToggle}
+            />
+          </div>
+          {viewMode === 'list' ? (
           <PluginTable
             current={current}
             dataSource={dataSource}
@@ -263,6 +301,58 @@ export const Component: React.FC = () => {
               setOpen(true);
             }}
           />
+          ) : (
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              {dataSource.rows.length === 0 ? (
+                <div style={{ marginTop: 80, textAlign: 'center' }}>
+                  <AEmpty description="暂无MCP服务" />
+                </div>
+              ) : (
+                <div className="abi-card-grid">
+                  <div className="abi-card-grid-inner">
+                    {dataSource.rows.map((record: any) => (
+                      <div key={record.pluginId} className="abi-data-card" style={{ position: 'relative' }}>
+                        <div className="abi-data-card-head">
+                          <div className="abi-data-card-title">
+                            <span className="abi-data-card-name">{record.pluginName}</span>
+                          </div>
+                          <ASwitch checked={record.status === 1} size="small" onChange={() => updateStatus(record)} />
+                        </div>
+                        <div className="abi-data-card-body">
+                          <div className="row"><span className="lbl">描述</span><span className="val">{record.remark || '-'}</span></div>
+                          <div className="row"><span className="lbl">类型</span><span className="val">{record.pluginType || '-'}</span></div>
+                          <div className="row"><span className="lbl">版本</span><span className="val">{record.versionDetail?.version || '-'}</span></div>
+                        </div>
+                        <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+                          <Dropdown
+                            menu={{
+                              items: [
+                                { key: 'edit', label: <span>编辑</span> },
+                                { key: 'delete', danger: true, label: <APopconfirm title="提示" description="确定删除该MCP服务吗？" onConfirm={() => toDeletePlugin(record)}><span>删除</span></APopconfirm> },
+                              ],
+                              onClick: ({ key, domEvent }) => {
+                                domEvent.stopPropagation();
+                                if (key === 'edit') {
+                                  getMcpDetail({ mcpId: String(record.pluginId), mcpName: record.pluginName, namespaceId: `s_${groupId}` }).then((res: any) => {
+                                    const remote = res?.response?.data?.data ?? res?.response?.data;
+                                    setCurrentEdit({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
+                                    setOpen(true);
+                                  });
+                                }
+                              }
+                            }}
+                            trigger={['hover']}
+                          >
+                            <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
+                          </Dropdown>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </section>
       </div>
 

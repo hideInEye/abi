@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 
 import { getOperateRecordList } from "@/service/api/operateRecord";
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { getSpaceId } from '@/store/slice/app';
 
 interface Response {
   rows: any[];
@@ -16,6 +18,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchValue, setSearchValue] = useState('');
   const { switchToSpace } = useSpaceSwitch();
+  const spaceId = useAppSelector(getSpaceId);
 
   async function getRecordList(key?: string) {
     const data: any = await getOperateRecordList("1");
@@ -41,8 +44,10 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   }
 
   useEffect(() => {
+    setCurrentPage(1);
+    setDataSource({ rows: [], total: 0 });
     getRecordList();
-  }, []);
+  }, [spaceId]);
 
   function paginationChange(page: number) {
     setCurrentPage(page);

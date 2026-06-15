@@ -4,6 +4,8 @@ import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage'
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
 import { useAppSelector } from '@/hooks/business/useStore'
 import { getSpaceId } from '@/store/slice/app'
+import { ViewControls } from '@/components/ViewControls'
+import type { ColumnOption } from '@/components/ViewControls'
 import './model-card-list.css'
 
 interface ModelItem {
@@ -75,6 +77,19 @@ const ModelCardList: FC<Props> = ({
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
   const [jumpValue, setJumpValue] = useState('')
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card')
+  const [dateRange, setDateRange] = useState<[any, any] | null>(null)
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'modelName', label: '模型名称', visible: true },
+    { key: 'modelKey', label: '基础模型', visible: true },
+    { key: 'modelType', label: '模型类型', visible: true },
+    { key: 'modelSource', label: '模型来源', visible: true },
+    { key: 'status', label: '状态', visible: true },
+    { key: 'operate', label: '操作', visible: true },
+  ])
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c))
+  }
 
   // 搜索条件变化时重置到第一页
   useEffect(() => {
@@ -88,10 +103,54 @@ const ModelCardList: FC<Props> = ({
     return filteredModels.slice(start, start + pageSize)
   }, [filteredModels, currentPage, pageSize])
 
+  // 表格列定义
+  const allTableColumns = useMemo(() => [
+    { title: '模型名称', key: 'modelName', dataIndex: 'modelName', ellipsis: true },
+    { title: '基础模型', key: 'modelKey', dataIndex: 'modelKey', ellipsis: true, render: (v: string) => v || '-' },
+    {
+      title: '模型类型', key: 'modelType', dataIndex: 'modelType',
+      render: (v: string) => { const tag = MODAL_TYPE_OPTIONS.find(o => o.value === v); return <ATag color={modelTypeTagColorMap[v] || 'default'} bordered style={{ margin: 0 }}>{tag?.label || v}</ATag> }
+    },
+    {
+      title: '模型来源', key: 'modelSource', dataIndex: 'modelSource',
+      render: (v: string) => v === '2' ? '本地' : '公有'
+    },
+    {
+      title: '状态', key: 'status', dataIndex: 'status', align: 'center' as const,
+      render: (v: string) => <span className={`abi-status-tag ${v === '1' ? 'status-normal' : 'status-disabled'}`}>{v === '1' ? '启用' : '禁用'}</span>
+    },
+    {
+      title: '操作', key: 'operate', align: 'center' as const, fixed: 'right' as const,
+      render: (_: any, record: ModelItem) => (
+        <Dropdown trigger={['hover']} menu={{
+          items: [
+            { key: 'edit', label: <span><EditOutlined style={{ marginRight: 6 }} />{t('page.manage.common.edit')}</span> },
+            { key: 'copy', label: <span><CopyOutlined style={{ marginRight: 6 }} />复制</span> },
+            { key: 'analysis', label: <span><ApartmentOutlined style={{ marginRight: 6 }} />元数据分析</span> },
+            { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />{t('page.manage.common.delete')}</span> },
+          ],
+          onClick: ({ key }) => {
+            if (key === 'edit') onEdit(record)
+            else if (key === 'copy') onCopy(record.modelId)
+            else if (key === 'analysis') onAnalysis({ nodeId: record.modelId, nodeName: record.modelName, nodeType: 'LLM', spaceId: spaceId || undefined })
+            else if (key === 'delete') onDelete(record.modelId)
+          }
+        }}>
+          <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
+        </Dropdown>
+      )
+    },
+  ], [spaceId, t])
+
+  const tableColumns = useMemo(() => {
+    const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key))
+    return allTableColumns.filter(col => visibleKeys.has(col.key))
+  }, [columnOptions, allTableColumns])
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* v5 Search Bar */}
-      <div className="abi-searchbar">
+      <section className="abi-searchbar">
         <div className="abi-search-row">
           <AInput
             value={searchValue}
@@ -101,18 +160,57 @@ const ModelCardList: FC<Props> = ({
             className="abi-field-input"
             style={{ width: '14rem' }}
             onChange={e => onSearchValueChange(e.target.value)}
+            onPressEnter={() => onSearchValueChange(searchValue)}
           />
-          <AButton className="btn-accent-gradient ml-auto" onClick={onAdd}>
-            <PlusOutlined />
-            新增
+          <ADatePicker.RangePicker
+            placeholder={['开始时间', '结束时间']}
+            value={dateRange}
+            onChange={(dates) => setDateRange(dates)}
+            className="abi-field-input"
+          />
+          <AButton type="primary" className="btn-accent-gradient" onClick={() => onSearchValueChange(searchValue)}>
+            <SearchOutlined /> 查询
+          </AButton>
+          <AButton className="btn-ghost-v5" onClick={() => { onSearchValueChange(''); setDateRange(null); }}>
+            重置
           </AButton>
         </div>
-      </div>
+      </section>
 
-      {/* Card Grid */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '4px 20px 12px 12px' }}>
+      {/* v5 Data Area */}
+      <section className="abi-data-area">
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <AButton className="btn-accent-gradient" onClick={onAdd}>
+              <PlusOutlined /> 新增
+            </AButton>
+          </div>
+          <ViewControls
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            columns={columnOptions}
+            onColumnToggle={handleColumnToggle}
+          />
+        </div>
+
+      {/* Content: table or cards */}
+      <div style={{ flex: 1, overflow: 'auto' }}>
         {filteredModels.length === 0 ? (
           <AEmpty description="暂无模型数据" style={{ marginTop: 80 }} />
+        ) : viewMode === 'list' ? (
+          <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: 12, overflow: 'hidden', flex: 1, minHeight: 0 }}>
+            <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+              <ATable
+                rowKey="modelId"
+                columns={tableColumns as any}
+                dataSource={pagedModels}
+                pagination={false}
+                size="middle"
+                className="abi-std-table"
+                scroll={pagedModels.length > 0 ? { x: 'max-content' } : undefined}
+              />
+            </div>
+          </div>
         ) : (
           <div className="abi-card-grid">
             <div className="abi-card-grid-inner">
@@ -315,6 +413,7 @@ const ModelCardList: FC<Props> = ({
           </span>
         </div>
       </div>
+      </section>
     </div>
   )
 }

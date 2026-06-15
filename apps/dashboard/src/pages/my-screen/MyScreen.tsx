@@ -26,15 +26,15 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
     const [pageSize, setPageSize] = useState(12);
     const [jumpValue, setJumpValue] = useState('');
 
-    const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
-
     const fetchList = (current: number, size: number, keywords?: string) => {
+        const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({current, size, keywords, status: '0', spaceId}).then((data: IPage<IProjectInfo>) => {
             setPageData(data);
         });
     };
 
     const doSearch = (value: string) => {
+        const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({
             current: pageData.current,
             size: pageData.size,
@@ -47,6 +47,7 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
     };
 
     const pageChange = (page: number, size: number) => {
+        const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({current: page, size, status: '0', spaceId}).then((data: IPage<IProjectInfo>) => {
             setPageData({...data, current: page, size});
             setCurrentPage(page);
@@ -113,6 +114,16 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
     useEffect(() => {
         fetchList(pageData.current, pageData.size);
     }, []);
+
+    // 监听主应用空间切换事件，刷新列表
+    useEffect(() => {
+        const handleSpaceChange = () => {
+            setCurrentPage(1);
+            fetchList(1, pageSize);
+        };
+        window.addEventListener('space-change', handleSpaceChange);
+        return () => window.removeEventListener('space-change', handleSpaceChange);
+    }, [pageSize]);
 
     return (
         <div className="project-list-container">

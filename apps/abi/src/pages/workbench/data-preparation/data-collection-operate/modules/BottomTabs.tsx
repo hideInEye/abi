@@ -72,7 +72,7 @@ const BottomTabs: React.FC = memo(({curDatasource}: any) => {
   };
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full" style={{ background: '#F9FAFF' }}>
       <Tabs
         className={styles['bottom-tabs-container']}
         defaultActiveKey="1"
