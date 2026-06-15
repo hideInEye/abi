@@ -8,4 +8,106 @@
 
 .custom-collapse .ant-collapse-content-box {
   padding: 0 !important;
+}
+
+/* ── Chart Header Bar ── */
+.chart-header-bar {
+  border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+}
+
+/* ── Section Header (描述分析 / 图表信息 / 数据知识) ── */
+.section-header {
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.8), rgba(255, 255, 255, 0));
+  border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+}
+
+.chart-header-title {
+  position: relative;
+  padding-left: 10px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.chart-header-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #5b7cf7, #7c9cff);
+}
+
+/* ── Chart Header Icons ── */
+.chart-header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  font-size: 15px;
+  color: #8c8c8c;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.chart-header-icon:hover {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.08);
+}
+
+.chart-header-icon.active {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.1);
+  font-weight: 600;
+}
+
+/* ── Action Bar (底部操作栏) ── */
+.action-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.action-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  color: #8c8c8c;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.action-icon:hover {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.08);
+}
+
+.action-icon.active {
+  color: #5b7cf7;
+}
+
+.action-icon.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-icon.disabled:hover {
+  color: #8c8c8c;
+  background: transparent;
 } 

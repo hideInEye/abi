@@ -20,12 +20,12 @@ type HistoryTopicsPanelProps = {
 }
 
 function getCardClassName(isActive: boolean): string {
-  const baseClass = 'w-full cursor-pointer rounded-xl border bg-white px-4 py-3 text-left transition-all duration-200 ease-out'
+  const baseClass = 'w-full cursor-pointer rounded-xl border px-4 py-3 text-left transition-all duration-200 ease-out'
   if (isActive) {
-    return `${baseClass} border-[#8fb2ff] shadow-[0_8px_20px_rgba(59,130,246,0.12)]`
+    return `${baseClass} border-[#5b7cf7] bg-gradient-to-r from-[#f0f4ff] to-[#f8f9ff] shadow-[0_8px_24px_rgba(91,124,247,0.15)]`
   }
 
-  return `${baseClass} border-[#e8ebef] hover:border-[#c7d2fe] hover:shadow-[0_6px_16px_rgba(51,102,255,0.08)]`
+  return `${baseClass} border-[#e8ebef] bg-white hover:border-[#5b7cf7] hover:shadow-[0_6px_20px_rgba(91,124,247,0.1)] hover:bg-[#fafbff]`
 }
 
 export function HistoryTopicsPanel({

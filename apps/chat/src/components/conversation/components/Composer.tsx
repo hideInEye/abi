@@ -51,7 +51,7 @@ const Composer = ({
   onRemoveDialog
 }: ComposerProps) => {
   return (
-    <div className="pb-2 pr-4 pl-4 sticky bottom-0 bg-white">
+    <div className="composer-wrap">
       {isSharing ? (
         <SharingModal
           handleConfirmShare={onConfirmShare}
@@ -93,6 +93,11 @@ const Composer = ({
           />
         </div>
       )}
+
+      {/* AI Footer Disclaimer */}
+      <div className="chat-footer">
+        内容由 AI 生成，请注意甄别
+      </div>
     </div>
   )
 }

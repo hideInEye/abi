@@ -1,7 +1,7 @@
-import { CloseOutlined } from '@ant-design/icons'
-import { message, Modal, Space, Tooltip } from 'antd'
-import React, { useImperativeHandle, useState, useEffect } from 'react'
-import SvgIcon from '../../../../components/SvgIcon'
+import { DownOutlined, HistoryOutlined, ShareAltOutlined, StarFilled, StarOutlined } from '@ant-design/icons'
+import { Dropdown, message, Modal, Tooltip } from 'antd'
+import type { MenuProps } from 'antd'
+import React, { useImperativeHandle, useState, useEffect, useCallback } from 'react'
 import { fetchIsFavorite, fetchOperateNew } from '../../../../service/api/abi-system'
 import { updateApp } from '../../../../service/api/app'
 import { clearConvHistory } from '../../../../service/api/conv'
@@ -18,12 +18,20 @@ interface ChatHeaderProps {
   onClose: () => void
 }
 
+/** Available models */
+const MODEL_OPTIONS = [
+  { key: 'qwen3.7-max', label: 'Qwen3.7-Max', desc: '通义千问旗舰，多模态推理' },
+  { key: 'claude-sonnet-4', label: 'Claude-Sonnet-4', desc: 'Anthropic 高性能推理模型' },
+  { key: 'deepseek-r1', label: 'DeepSeek-R1', desc: '深度思考链式推理' },
+]
+
 const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props, ref) => {
   const { conv, setConvContent, onUpdateList, setIsSharing, onClose } = props
   const [historyVisible, setHistoryVisible] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
   const [isStarred, setIsStarred] = useState(false)
   const [saveVisible, setSaveVisible] = useState(false)
+  const [selectedModel, setSelectedModel] = useState(MODEL_OPTIONS[0])
 
   // 当对话改变时，重新获取收藏状态
   useEffect(() => {
@@ -38,34 +46,25 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
     }
   }, [])
 
-  // 处理历史记录
   const handleHistory = () => {
     setHistoryVisible(true)
   }
 
-  // 历史记录点击
   const handleHistoryClick = (orderIndex: number) => {
     setHistoryVisible(false)
-
     const anchorId = `human-msg-${orderIndex}`
     const targetElement = document.getElementById(anchorId)
-
     if (targetElement) {
-      targetElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      })
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
     } else {
       message.warning('对话数据暂未加载')
     }
   }
 
-  // 处理编辑对话
   const handleEdit = () => {
     setCreateModalVisible(true)
   }
 
-  // 处理清空对话
   const handleClearChat = () => {
     Modal.confirm({
       title: '确认清空对话',
@@ -75,9 +74,7 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
       onOk: async () => {
         try {
           if (conv.conv_uid) {
-            await clearConvHistory({
-              conv_uid: conv.conv_uid,
-            })
+            await clearConvHistory({ conv_uid: conv.conv_uid })
           }
           setConvContent([])
           message.success('对话已清空')
@@ -88,12 +85,10 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
     })
   }
 
-  // 处理创建/编辑对话完成
   const handleUpdateConv = async (data: any) => {
     try {
       const res = await updateApp(data)
       if (res?.success) {
-        // message.success('更新成功');
         setCreateModalVisible(false)
         onUpdateList && onUpdateList(res?.data)
       }
@@ -101,11 +96,8 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
     }
   }
 
-  // 处理收藏功能
   const handleStar = async () => {
-    const res: any = await fetchOperateNew({
-      chatId: conv.chat_id,
-    })
+    const res: any = await fetchOperateNew({ chatId: conv.chat_id })
     if (res.code !== 200) {
       message.error(res.message || '收藏失败，请稍后再试')
       return
@@ -115,10 +107,7 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
   }
 
   const handleIsFavorite = async () => {
-    const res: any = await fetchIsFavorite({
-      chatId: conv.chat_id,
-    })
-
+    const res: any = await fetchIsFavorite({ chatId: conv.chat_id })
     if (res.code !== 200) {
       // message.error(res.msg);
     } else {
@@ -134,59 +123,59 @@ const ChatHeader = React.forwardRef<chatHeaderRefMethod, ChatHeaderProps>((props
     setSaveVisible(false)
   }
 
-  // 处理分享功能
   const handleShare = () => {
-    // setShareModalVisible(true);
     setIsSharing(true)
   }
 
+  /** Model switcher menu items */
+  const modelMenuItems: MenuProps['items'] = MODEL_OPTIONS.map((model) => ({
+    key: model.key,
+    label: (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ fontWeight: 600, fontSize: 13 }}>{model.label}</span>
+        <span style={{ fontSize: 11, color: '#888', fontWeight: 400 }}>{model.desc}</span>
+      </div>
+    ),
+    onClick: () => {
+      setSelectedModel(model)
+      message.info(`已切换到 ${model.label}`)
+    },
+  }))
+
   return (
     <>
-      <header className="flex items-center justify-between border-b-2 border-[#F0F0F0] bg-[#F9F9F9]  pl-[2.3125rem] pr-[3.375rem] py-[0.625rem] sticky top-0 z-10">
-        <Space size={12}>
-          <div className="text-[#333333] text-base leading-[1.375rem] font-semibold">{conv.biz_name || 'AI智能助手'}</div>
-          {/* <Tooltip title="编辑对话">
-            <SvgIcon localIcon="edit" className="w-5 h-[1.375rem] cursor-pointer" onClick={handleEdit} />
-          </Tooltip> */}
-        </Space>
-        <Space className="" size={10}>
+      <header className="chat-header">
+        <div className="chat-header-left">
+          {/* Model Switcher */}
+          <Dropdown menu={{ items: modelMenuItems }} trigger={['click']} placement="bottomLeft">
+            <button type="button" className="model-switcher-btn">
+              <span className="model-dot" />
+              <span className="model-name">{selectedModel.label}</span>
+              <DownOutlined className="model-arrow" />
+            </button>
+          </Dropdown>
+        </div>
+        <div className="chat-header-right">
           <Tooltip title="历史记录">
-            <span className="cursor-pointer" onClick={handleHistory}>
-              <SvgIcon localIcon="history" className="w-7 h-7" />
-            </span>
+            <button type="button" className="header-icon-btn" onClick={handleHistory}>
+              <HistoryOutlined />
+            </button>
           </Tooltip>
-          {/* <Tooltip title="清空对话">
-            <span className="cursor-pointer text-xs text-[#8a8a8a] hover:text-[#2E6CF6]" onClick={handleClearChat}>
-              <SvgIcon localIcon="delete3" className="w-4 h-4" />
-            </span>
-          </Tooltip> */}
 
           <Tooltip title={isStarred ? '取消收藏' : '收藏对话'}>
-            <span className="cursor-pointer" onClick={handleStar}>
-              <SvgIcon localIcon={isStarred ? 'rstar' : 'star'} className={`w-7 h-7 ${isStarred?'text-[blue]':''}`} />
-            </span>
+            <button type="button" className={`header-icon-btn ${isStarred ? 'starred' : ''}`} onClick={handleStar}>
+              {isStarred ? <StarFilled /> : <StarOutlined />}
+            </button>
           </Tooltip>
-          {/* 隐藏另存对话按钮 */}
-          {/* <Tooltip title="复制对话">
-            <span className="cursor-pointer text-[#8a8a8a] hover:text-[#2E6CF6]" onClick={() => setSaveVisible(true)}>
-              <SvgIcon localIcon="copy" className="w-[1.375rem] h-[1.375rem]" />
-            </span>
-          </Tooltip> */}
-          {/* 暂时隐藏分享按钮 */}
+
           <Tooltip title="分享对话">
-            <span className="cursor-pointer" onClick={handleShare}>
-              <SvgIcon localIcon="share" className="w-7 h-7" />
-            </span>
+            <button type="button" className="header-icon-btn" onClick={handleShare}>
+              <ShareAltOutlined />
+            </button>
           </Tooltip>
-          {/* <span
-            className="text-xs w-3 h-5"
-            onClick={onClose}
-          >
-            <CloseOutlined className="w-5 h-5" />
-          </span> */}
-        </Space>
+        </div>
       </header>
-      {/* 添加抽屉和模态框组件 */}
+
       <HistoryDrawer open={historyVisible} onClose={() => setHistoryVisible(false)} onHistoryClick={handleHistoryClick} currentConv={conv} />
 
       <CreateModal

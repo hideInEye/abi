@@ -57,7 +57,7 @@ const OpeningsEle: React.FC<OpeningsEleProps> = ({ data, getAnswer }) => {
         />
       </div>
       <div className="ml-2 max-w-[80%]">
-        <div className="bg-[#e8eefb] rounded-lg px-4 py-2 text-sm text-gray-700 relative">
+        <div className="bg-[#e8eefb] rounded-lg px-4 py-2 text-[13px] text-gray-700 relative" style={{ lineHeight: 1.5 }}>
           <div className="absolute left-[-6px] top-3 w-3 h-3 bg-[#e8eefb] transform rotate-45"></div>
           {formattedContext}
           <>
