@@ -105,14 +105,14 @@ const ModelCardList: FC<Props> = ({
 
   // 表格列定义
   const allTableColumns = useMemo(() => [
-    { title: '模型名称', key: 'modelName', dataIndex: 'modelName', ellipsis: true },
-    { title: '基础模型', key: 'modelKey', dataIndex: 'modelKey', ellipsis: true, render: (v: string) => v || '-' },
+    { title: '模型名称', key: 'modelName', dataIndex: 'modelName', align: 'center' as const, ellipsis: true },
+    { title: '基础模型', key: 'modelKey', dataIndex: 'modelKey', align: 'center' as const, ellipsis: true, render: (v: string) => v || '-' },
     {
-      title: '模型类型', key: 'modelType', dataIndex: 'modelType',
+      title: '模型类型', key: 'modelType', dataIndex: 'modelType', align: 'center' as const,
       render: (v: string) => { const tag = MODAL_TYPE_OPTIONS.find(o => o.value === v); return <ATag color={modelTypeTagColorMap[v] || 'default'} bordered style={{ margin: 0 }}>{tag?.label || v}</ATag> }
     },
     {
-      title: '模型来源', key: 'modelSource', dataIndex: 'modelSource',
+      title: '模型来源', key: 'modelSource', dataIndex: 'modelSource', align: 'center' as const,
       render: (v: string) => v === '2' ? '本地' : '公有'
     },
     {
@@ -120,24 +120,14 @@ const ModelCardList: FC<Props> = ({
       render: (v: string) => <span className={`abi-status-tag ${v === '1' ? 'status-normal' : 'status-disabled'}`}>{v === '1' ? '启用' : '禁用'}</span>
     },
     {
-      title: '操作', key: 'operate', align: 'center' as const, fixed: 'right' as const,
+      title: '操作', key: 'operate', align: 'center' as const, fixed: 'right' as const, width: 240,
       render: (_: any, record: ModelItem) => (
-        <Dropdown trigger={['hover']} menu={{
-          items: [
-            { key: 'edit', label: <span><EditOutlined style={{ marginRight: 6 }} />{t('page.manage.common.edit')}</span> },
-            { key: 'copy', label: <span><CopyOutlined style={{ marginRight: 6 }} />复制</span> },
-            { key: 'analysis', label: <span><ApartmentOutlined style={{ marginRight: 6 }} />元数据分析</span> },
-            { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />{t('page.manage.common.delete')}</span> },
-          ],
-          onClick: ({ key }) => {
-            if (key === 'edit') onEdit(record)
-            else if (key === 'copy') onCopy(record.modelId)
-            else if (key === 'analysis') onAnalysis({ nodeId: record.modelId, nodeName: record.modelName, nodeType: 'LLM', spaceId: spaceId || undefined })
-            else if (key === 'delete') onDelete(record.modelId)
-          }
-        }}>
-          <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
-        </Dropdown>
+        <div className="flex items-center justify-center" style={{ gap: 2 }}>
+          <AButton className="abi-action-link" size="small" variant="link" onClick={() => onEdit(record)}>编辑</AButton>
+          <AButton className="abi-action-link" size="small" variant="link" onClick={() => onCopy(record.modelId)}>复制</AButton>
+          <AButton className="abi-action-link" size="small" variant="link" onClick={() => onAnalysis({ nodeId: record.modelId, nodeName: record.modelName, nodeType: 'LLM', spaceId: spaceId || undefined })}>元数据分析</AButton>
+          <AButton className="abi-action-link-danger" size="small" variant="link" onClick={() => onDelete(record.modelId)}>删除</AButton>
+        </div>
       )
     },
   ], [spaceId, t])

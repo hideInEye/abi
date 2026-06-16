@@ -210,7 +210,16 @@ export function Component() {
   // 表格列定义
   const allTableColumns = useMemo(() => [
     { title: '技能名称', dataIndex: 'bizName', key: 'bizName', align: 'center' as const },
-    { title: '描述', dataIndex: 'summary', key: 'summary', align: 'center' as const, ellipsis: true },
+    {
+      title: '描述', dataIndex: 'summary', key: 'summary', align: 'center' as const, width: 200,
+      render: (text: string) => (
+        <Tooltip title={text} placement="topLeft">
+          <div style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '0 auto' }}>
+            {text || '-'}
+          </div>
+        </Tooltip>
+      )
+    },
     {
       title: '状态', dataIndex: 'status', key: 'status', align: 'center' as const,
       render: (_: any, record: SkillItem) => <Switch checked={String(record.status) === '1'} size="small" onChange={checked => toggleSkillStatus(record, checked)} />
@@ -222,15 +231,10 @@ export function Component() {
     {
       title: '操作', key: 'operate', align: 'center' as const, fixed: 'right' as const,
       render: (_: any, record: SkillItem) => (
-        <Dropdown trigger={['hover']} menu={{
-          items: [
-            { key: 'update', label: <span><SyncOutlined style={{ marginRight: 6 }} />更新技能</span> },
-            { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
-          ],
-          onClick: ({ key }) => { if (key === 'update') openUpdate(record); else if (key === 'delete') confirmDelete(record); }
-        }}>
-          <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
-        </Dropdown>
+        <div className="flex items-center justify-center" style={{ gap: 2 }}>
+          <AButton className="abi-action-link" size="small" variant="link" onClick={() => openUpdate(record)}>更新技能</AButton>
+          <AButton className="abi-action-link-danger" size="small" variant="link" onClick={() => confirmDelete(record)}>删除</AButton>
+        </div>
       )
     },
   ], []);

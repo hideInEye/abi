@@ -1,5 +1,5 @@
-import { LeftOutlined, RightOutlined } from '@ant-design/icons'
-import { message, Empty } from 'antd'
+import { CopyOutlined, DeleteOutlined, EditOutlined, EyeOutlined, LeftOutlined, MoreOutlined, RightOutlined, SyncOutlined } from '@ant-design/icons'
+import { Dropdown, message, Empty } from 'antd'
 import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
 
@@ -16,6 +16,7 @@ interface ApiKeyTableProps {
   readonly onView: (record: ApiKeyItem) => void
   readonly pageSize: number
   readonly total: number
+  readonly viewMode: 'list' | 'card'
 }
 
 export function ApiKeyTable({
@@ -28,7 +29,8 @@ export function ApiKeyTable({
   onToggleStatus,
   onView,
   pageSize,
-  total
+  total,
+  viewMode
 }: ApiKeyTableProps) {
   const copyValue = (value: string, label: string) => {
     if (!value) {
@@ -182,6 +184,8 @@ export function ApiKeyTable({
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+      {viewMode === 'list' ? (
+      <>
       {dataSource.length > 0 ? (
         <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0 }}>
           <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
@@ -208,6 +212,58 @@ export function ApiKeyTable({
           background: '#F5F7FF',
         }}>
           <Empty description="暂无数据" />
+        </div>
+      )}
+      </>
+      ) : (
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+          {dataSource.length === 0 ? (
+            <div style={{ marginTop: 80, textAlign: 'center' }}><Empty description="暂无数据" /></div>
+          ) : (
+            <div className="abi-card-grid">
+              <div className="abi-card-grid-inner">
+                {dataSource.map((record) => (
+                  <div key={record.id} className="abi-data-card" style={{ position: 'relative' }}>
+                    <div className="abi-data-card-head">
+                      <div className="abi-data-card-title">
+                        <span className="abi-data-card-name">{record.clientId || '-'}</span>
+                      </div>
+                      <ATag color={record.status === 'normal' ? 'default' : 'error'}>{record.status === 'normal' ? '正常' : '停用'}</ATag>
+                    </div>
+                    <div className="abi-data-card-body">
+                      <div className="row"><span className="lbl">业务空间</span><span className="val">{record.businessSpace || '-'}</span></div>
+                      <div className="row"><span className="lbl">Access Key</span><span className="val" style={{ fontFamily: 'monospace', fontSize: 12 }}>{record.accessKey ? `${record.accessKey.slice(0, 16)}...` : '-'}</span></div>
+                      <div className="row"><span className="lbl">IP限制</span><span className="val">{record.ipAccessType === 'unlimited' ? '不限制' : '仅白名单'}</span></div>
+                      <div className="row"><span className="lbl">过期时间</span><span className="val">{record.expireTime ? dayjs(record.expireTime).format('YYYY-MM-DD') : '永久有效'}</span></div>
+                      <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createdAt ? dayjs(record.createdAt).format('YYYY-MM-DD') : '-'}</span></div>
+                    </div>
+                    <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+                      <Dropdown
+                        menu={{
+                          items: [
+                            { key: 'view', label: <span><EyeOutlined style={{ marginRight: 6 }} />查看</span> },
+                            { key: 'resetSk', label: <span><SyncOutlined style={{ marginRight: 6 }} />重置SK</span> },
+                            { key: 'toggle', label: <span><EditOutlined style={{ marginRight: 6 }} />{record.status === 'normal' ? '停用' : '启用'}</span> },
+                            { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
+                          ],
+                          onClick: ({ key }) => {
+                            if (key === 'view') onView(record);
+                            else if (key === 'copyAk') copyValue(record.accessKey, 'Access Key');
+                            else if (key === 'resetSk') onResetSk(record);
+                            else if (key === 'toggle') onToggleStatus(record);
+                            else if (key === 'delete') onDelete(record);
+                          }
+                        }}
+                        trigger={['hover']}
+                      >
+                        <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
+                      </Dropdown>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -186,3 +186,12 @@ html body .ant-select-selection-placeholder {
 .ant-table-tbody >tr >td {
   border-bottom: 0 !important;
 }
+
+/* Tooltip 背景色统一 */
+.ant-tooltip .ant-tooltip-inner {
+  background: #F8FAFF !important;
+  color: #1f2937 !important;
+}
+.ant-tooltip .ant-tooltip-arrow::before {
+  background: #F8FAFF !important;
+}

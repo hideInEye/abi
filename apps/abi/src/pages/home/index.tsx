@@ -95,11 +95,13 @@ export function Component() {
         }
         onAction={() => push('/space-list')}
       />
-      <div className={s['space-grid']}>
-        {homeData &&
-          homeData?.spaceList?.map((item: ISpaceItem, index: number) =>
-            item.type === 'add' ? <ApprovSpace key="add" /> : <SpaceItem deleteSpace={deleteSpaceHandler} index={index} key={item.spaceId} setEditSpace={editSpaceHandler} space={item} />,
-          )}
+      <div className={s['space-section']}>
+        <div className={s['space-grid']}>
+          {homeData &&
+            homeData?.spaceList?.map((item: ISpaceItem, index: number) =>
+              item.type === 'add' ? <ApprovSpace key="add" /> : <SpaceItem deleteSpace={deleteSpaceHandler} index={index} key={item.spaceId} setEditSpace={editSpaceHandler} space={item} />,
+            )}
+        </div>
       </div>
 
       {drawerOpen && <SpaceEdit drawerOpen={drawerOpen} editSpace={editSpace} setDrawerOpen={setDrawerOpen} updateSpace={updateSpace} />}

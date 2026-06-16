@@ -4,6 +4,9 @@ import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
 import type { Dayjs } from 'dayjs'
 
+import { ViewControls } from '@/components/ViewControls'
+import type { ColumnOption } from '@/components/ViewControls'
+
 // import PageTitle from '@/components/stateless/common/PageTitle'
 import {
   type AbiClientDetailItem,
@@ -174,6 +177,19 @@ export function Component() {
   const [queryValues, setQueryValues] = useState<ApiKeyQueryValues>({
     spaceId: currentSpaceId || undefined
   })
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list')
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'businessSpace', label: '业务空间', visible: true },
+    { key: 'clientId', label: 'Client ID', visible: true },
+    { key: 'accessKey', label: 'Access Key', visible: true },
+    { key: 'status', label: '状态', visible: true },
+    { key: 'expireTime', label: '过期时间', visible: true },
+    { key: 'createdAt', label: '创建时间', visible: true },
+    { key: 'operate', label: '操作', visible: true },
+  ])
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c))
+  }
 
   const loadSpaceOptions = useCallback(async () => {
     try {
@@ -456,6 +472,12 @@ export function Component() {
               <PlusOutlined />新建 API Key
             </AButton>
           </div>
+          <ViewControls
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            columns={columnOptions}
+            onColumnToggle={handleColumnToggle}
+          />
         </div>
 
         <ApiKeyTable
@@ -464,6 +486,7 @@ export function Component() {
           loading={listLoading}
           pageSize={PAGE_SIZE}
           total={total}
+          viewMode={viewMode}
           onDelete={handleDelete}
           onPageChange={setCurrent}
           onResetSk={handleResetSk}

@@ -144,6 +144,8 @@
 /* 页面内容区统一渐变背景 */
 .page-content-area {
   background: var(--abi-card-bg);
+  display: flex;
+  flex-direction: column;
 }
 
 /* 页面内容区卡片透明化，透出渐变背景 */

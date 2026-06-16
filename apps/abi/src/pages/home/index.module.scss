@@ -34,14 +34,16 @@
 .container {
   padding: 1.25rem 1.75rem 1.25rem 2.5rem;
   background: var(--abi-card-bg);
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   font-family: var(--v5-font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  overflow: hidden;
+  justify-content: space-evenly;
+  gap: 0.625rem;
   box-sizing: border-box;
 }
 
@@ -87,10 +89,8 @@
 .stats-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  grid-auto-rows: 1fr;
   gap: 1rem;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
 }
 
 .stat-card {
@@ -103,9 +103,6 @@
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
 }
 
 .stat-card::before {
@@ -179,12 +176,19 @@
   letter-spacing: 0.02em;
 }
 
+/* ===== Space Section (wrapper for scrollable grid) ===== */
+.space-section {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  max-height: fit-content;
+}
+
 /* ===== Space Grid (v5 style) ===== */
 .space-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.875rem;
-  flex-shrink: 0;
 }
 
 .space-card {
@@ -302,8 +306,7 @@
   border: 1px solid var(--v5-glass-border);
   border-radius: var(--v5-r-md);
   padding: 1.25rem 2rem;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
 }
 
 .guide-step {
@@ -312,7 +315,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 0.875rem;
   position: relative;
   cursor: pointer;
@@ -440,27 +442,41 @@
 
 /* ===== Responsive ===== */
 @media (max-width: 74.9375rem) {
+  .container {
+    justify-content: flex-start;
+    gap: 0.75rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
   .stats-row {
     grid-template-columns: repeat(3, 1fr);
+  }
+  .space-section {
+    flex-shrink: 0;
   }
   .space-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .guide-flow {
     flex-wrap: wrap;
-    gap: 1.5rem;
-    padding: 1.25rem;
+    gap: 1rem;
+    padding: 1rem;
+    flex-shrink: 0;
   }
   .guide-arrow {
     display: none;
   }
   .guide-step {
-    flex: 1 1 calc(50% - 1.5rem);
+    flex: 1 1 calc(50% - 1rem);
     align-items: flex-start;
   }
 }
 
 @media (max-width: 47.9375rem) {
+  .container {
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
   .stats-row {
     grid-template-columns: repeat(2, 1fr);
   }
