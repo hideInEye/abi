@@ -5,5 +5,5 @@ export const Route = createFileRoute('/chat/')({
 })
 
 function ChatEmptyPage() {
-  return <div className="h-full w-full bg-[#f7f8fa]" />
+  return <div className="h-full w-full" style={{ background: 'transparent' }} />
 }

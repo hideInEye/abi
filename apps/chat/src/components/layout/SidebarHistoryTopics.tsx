@@ -1,6 +1,6 @@
 import { ClearOutlined, CopyOutlined, DeleteOutlined, EditOutlined, MoreOutlined } from '@ant-design/icons'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
-import { Dropdown, Empty, message, Modal, Spin, Typography } from 'antd'
+import { Dropdown, message, Modal, Spin, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -238,11 +238,22 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
 
   return (
     <>
-      <section className="mt-5 px-1">
-        <Typography.Text className="block px-3 text-[13px] font-medium text-[#c2c6cf]">最近对话</Typography.Text>
+      <section className="mt-4 px-1">
+        <div
+          className="flex items-center justify-between px-3 pb-2"
+          style={{
+            fontSize: 10.5,
+            fontWeight: 700,
+            color: 'var(--ink-4)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+          }}
+        >
+          <span>最近对话</span>
+        </div>
 
         <Spin spinning={historyLoading}>
-          <div className="mt-2 flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5">
             {historyTopics.length ? (
               historyTopics.map((topic) => {
                 const isActive = topic.chatId === activeTaskId
@@ -252,37 +263,62 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
                     key={topic.chatId}
                     role="button"
                     tabIndex={0}
-                    className={[
-                      'group flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-3 text-left transition-colors',
-                      isActive ? 'bg-[#ececec] text-[#202124]' : 'text-[#202124] hover:bg-[#f1f1f1]',
-                    ].join(' ')}
+                    className="group flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-3 text-left"
+                    style={{
+                      padding: '8px 12px',
+                      background: isActive ? 'var(--accent-soft)' : 'transparent',
+                      color: isActive ? 'var(--accent)' : 'var(--ink-2)',
+                      fontWeight: isActive ? 600 : 500,
+                      fontSize: 12.5,
+                      transition: 'all 0.15s cubic-bezier(0.4,0,0.2,1)',
+                    }}
                     onClick={() => handleSelectTopic(topic.chatId)}
                     onKeyDown={(event) => event.key === 'Enter' && handleSelectTopic(topic.chatId)}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        ;(e.currentTarget as HTMLElement).style.background = 'rgba(130,140,200,0.08)'
+                        ;(e.currentTarget as HTMLElement).style.color = 'var(--ink)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        ;(e.currentTarget as HTMLElement).style.background = 'transparent'
+                        ;(e.currentTarget as HTMLElement).style.color = 'var(--ink-2)'
+                      }
+                    }}
                   >
-                    <span className="min-w-0 flex-1 truncate text-[15px] leading-10">{topic.title}</span>
+                    <span className="min-w-0 flex-1 truncate">{topic.title}</span>
                     <Dropdown
                       trigger={['click']}
                       menu={buildMenu(topic.chatId)}
                       placement="bottomRight"
                     >
                       <span
-                        className={[
-                          'shrink-0 px-2 py-2 text-xs text-[#6f737b] transition-opacity',
-                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-                        ].join(' ')}
+                        className="shrink-0 px-1 py-1 transition-opacity"
+                        style={{
+                          opacity: isActive ? 1 : 0,
+                          color: 'var(--ink-3)',
+                        }}
                         onClick={(event) => {
                           event.preventDefault()
                           event.stopPropagation()
                         }}
+                        onMouseEnter={(e) => {
+                          ;(e.currentTarget as HTMLElement).closest('.group')?.querySelectorAll('[class*="opacity-0"]').forEach((el) => {
+                            ;(el as HTMLElement).style.opacity = '1'
+                          })
+                        }}
                       >
-                        <MoreOutlined />
+                        <MoreOutlined style={{ fontSize: 14 }} />
                       </span>
                     </Dropdown>
                   </div>
                 )
               })
-            ) : (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无最近对话" className="!my-3" />
+            ) : historyLoading ? null : (
+              <div className="px-3 py-4 text-center" style={{ fontSize: 12, color: 'var(--ink-4)' }}>
+                暂无最近对话
+              </div>
             )}
           </div>
         </Spin>

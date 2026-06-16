@@ -1,10 +1,9 @@
 import { useState, useRef } from 'react'
 import RecordRTC from 'recordrtc'
 import { message } from 'antd'
-import { LoadingOutlined } from '@ant-design/icons'
+import { AudioOutlined, LoadingOutlined } from '@ant-design/icons'
 import { getAuthorization, handleLoginExpired } from '@/utils/auth'
 import styles from './AudioRecorder.module.css'
-import SvgIcon from './SvgIcon'
 const YuyinIcon = new URL('../assets/svg-icon/video.gif', import.meta.url).href
 interface AudioRecorderProps {
   onTranscribed: (text: string) => void // 识别完成后的回调
@@ -179,16 +178,16 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onTranscribed, disabled =
 
   return (
     <div
-      className={`cursor-pointer rounded ${disabled || isTranscribing ? 'opacity-50 cursor-not-allowed' : 'hover:text-blue-500'}`}
+      className={`voice-btn ${recording ? 'voice-btn-active' : ''} ${disabled || isTranscribing ? 'voice-btn-disabled' : ''}`}
       onClick={handleClick}
       title={recording ? '点击停止录音' : isTranscribing ? '正在识别中...' : '点击开始语音输入'}
     >
       {isTranscribing ? (
-        <LoadingOutlined className="w-5 h-5 text-blue-500" />
+        <LoadingOutlined className="voice-icon" />
       ) : recording ? (
-        <img src={YuyinIcon} className={`w-5 h-5 ${styles.voiceIcon} ${styles.active}`} alt="语音识别中" />
+        <img src={YuyinIcon} className={`voice-icon ${styles.active}`} alt="语音识别中" />
       ) : (
-        <SvgIcon localIcon="video" className="w-5 h-5" />
+        <AudioOutlined className="voice-icon" />
       )}
     </div>
   )

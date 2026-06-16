@@ -165,7 +165,7 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
   }
 
   return (
-    <div className={`relative flex flex-col border-r py-[1.5rem] h-[100vh] transition-all duration-300 ease-in-out ${fold ? 'w-[0.7rem]' : 'w-[12.5rem]'}`}>
+    <div className={`relative flex flex-col py-[1.5rem] h-[100vh] transition-all duration-300 ease-in-out ${fold ? 'w-[0.7rem]' : 'w-[12.5rem]'}`} style={{ borderRight: '1px solid var(--border)', background: 'rgba(255,255,255,0.3)', backdropFilter: 'blur(12px)' }}>
       <header className="mb-2 w-full flex items-center pl-3.5">
         {!fold && (
           <Flex justify="space-around" align="center">

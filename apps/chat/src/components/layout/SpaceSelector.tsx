@@ -1,4 +1,4 @@
-import { CheckOutlined, DownOutlined, ApartmentOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, CheckOutlined, DownOutlined } from '@ant-design/icons'
 import { useNavigate } from '@tanstack/react-router'
 import { Button, Dropdown, Empty, Spin, Typography, message } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -120,35 +120,57 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
   )
 
   const triggerNode = (
-    <Button
-      block
-      size="small"
-      className={[
-        '!h-8 !rounded-[14px] !border-0 !bg-transparent !text-[15px] !font-medium !text-[#202124] !shadow-none',
-        'hover:!bg-[#eef4ff] hover:!text-[#3f7cff] active:!bg-[#e3eeff] active:!text-[#3267db]',
-        collapsed ? '!w-8 !px-0' : '',
-      ].join(' ')}
-      icon={collapsed ? <ApartmentOutlined /> : undefined}
+    <div
+      className="space-switcher-glass"
+      style={{ cursor: 'pointer' }}
     >
-      {collapsed ? null : (
-        <span className="flex w-full items-center justify-between gap-2">
-          <span className="truncate">{currentSpace?.spaceName || '选择空间'}</span>
-          <DownOutlined className={`text-xs transition-transform ${open ? 'rotate-180' : ''}`} />
-        </span>
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: '50%',
+          background: 'var(--success)',
+          boxShadow: '0 0 6px rgba(16,185,129,0.4)',
+          flexShrink: 0,
+        }}
+      />
+      {!collapsed && (
+        <>
+          <span className="flex-1 truncate" style={{ fontSize: 12.5, fontWeight: 600 }}>
+            {currentSpace?.spaceName || '选择空间'}
+          </span>
+          <DownOutlined
+            className={`text-xs transition-transform ${open ? 'rotate-180' : ''}`}
+            style={{ fontSize: 10, color: 'var(--ink-4)' }}
+          />
+        </>
       )}
-    </Button>
+      {collapsed && <ApartmentOutlined style={{ fontSize: 14 }} />}
+    </div>
   )
 
   return (
-    <div className="shrink-0 px-2.5 pb-2">
+    <div className="shrink-0 px-4 pb-2">
       <Dropdown
         trigger={['click']}
         open={open}
         onOpenChange={setOpen}
         placement="topLeft"
         dropdownRender={() => (
-          <div className="w-[286px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#edf0f5] bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
-            <Typography.Text className="mb-2 block px-2 text-[15px] font-semibold text-[#1f2937]">
+          <div
+            className="w-[286px] max-w-[calc(100vw-32px)] p-2"
+            style={{
+              background: 'rgba(255,255,255,0.95)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-sm)',
+              boxShadow: 'var(--shadow-m)',
+            }}
+          >
+            <Typography.Text
+              className="mb-1 block px-3 py-2"
+              style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}
+            >
               空间
             </Typography.Text>
             <Spin spinning={loading}>
@@ -160,14 +182,23 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
                       <button
                         type="button"
                         key={space.spaceId}
-                        className={[
-                          'mb-1 flex w-full items-center justify-between rounded-xl bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[#eef4ff]',
-                          isActive ? 'text-[#2563eb]' : 'text-[#111827]',
-                        ].join(' ')}
+                        className="flex w-full items-center justify-between rounded-lg bg-transparent px-3 py-2 text-left transition-colors"
+                        style={{
+                          fontSize: 12.5,
+                          color: isActive ? 'var(--accent)' : 'var(--ink-2)',
+                          fontWeight: isActive ? 600 : 400,
+                          marginBottom: 2,
+                        }}
                         onClick={() => handleSelectSpace(space)}
+                        onMouseEnter={(e) => {
+                          ;(e.currentTarget as HTMLElement).style.background = 'var(--accent-soft)'
+                        }}
+                        onMouseLeave={(e) => {
+                          ;(e.currentTarget as HTMLElement).style.background = 'transparent'
+                        }}
                       >
-                        <span className="truncate text-[14px]">{space.spaceName}</span>
-                        {isActive ? <CheckOutlined className="text-[14px]" /> : null}
+                        <span className="truncate">{space.spaceName}</span>
+                        {isActive ? <CheckOutlined style={{ fontSize: 12 }} /> : null}
                       </button>
                     )
                   })

@@ -1,16 +1,17 @@
-import { Outlet, createFileRoute, useRouterState } from '@tanstack/react-router'
+import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Layout } from 'antd'
-import type { MenuProps } from 'antd'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
-  middleMenus,
+  SKILL_STORE_MENU_KEY,
   SIDER_COLLAPSED_WIDTH,
   SIDER_WIDTH,
 } from '@/constant/layout'
 import { BrandHeader } from '@/components/layout/BrandHeader'
+import { ConversationGroups } from '@/components/layout/ConversationGroups'
 import { CreateConversationButton } from '@/components/layout/CreateConversationButton'
 import { SidebarHistoryTopics } from '@/components/layout/SidebarHistoryTopics'
+import { SkillStoreView } from '@/components/layout/SkillStoreView'
 import { SpaceSelector } from '@/components/layout/SpaceSelector'
 import { UserProfileCard } from '@/components/layout/UserProfileCard'
 import { WorkbenchMenuList } from '@/components/layout/WorkbenchMenuList'
@@ -25,12 +26,16 @@ export const Route = createFileRoute('/chat')({
 
 function ChatWorkbenchLayout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const navigate = useNavigate()
 
   const [collapsed, setCollapsed] = useState(false)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
+  const [showSkillStore, setShowSkillStore] = useState(false)
+  const prevPathnameRef = useRef(pathname)
 
   const userName = useMemo(() => getCurrentUserName(), [])
   const pageTitle = useMemo(() => {
+    if (showSkillStore) return 'ABI - 技能商店'
     if (pathname.startsWith('/chat/task')) {
       return 'ABI - 对话'
     }
@@ -38,54 +43,104 @@ function ChatWorkbenchLayout() {
       return 'ABI - 历史话题'
     }
     return 'ABI - 对话工作台'
-  }, [pathname])
+  }, [pathname, showSkillStore])
 
   useEffect(() => {
     document.title = pageTitle
   }, [pageTitle])
 
+  /* 3. Auto-close skill store when user navigates to a conversation */
+  useEffect(() => {
+    if (pathname !== prevPathnameRef.current) {
+      prevPathnameRef.current = pathname
+      if (showSkillStore && pathname.startsWith('/chat/task')) {
+        setShowSkillStore(false)
+      }
+    }
+  }, [pathname, showSkillStore])
+
   const handleToggleCollapse = useCallback(() => {
     setCollapsed((previousCollapsed) => !previousCollapsed)
   }, [])
 
-  const handleMiddleMenuClick = useCallback<MenuProps['onClick']>(() => {
-    // 中部菜单暂为占位项，当前版本只实现对话详情流程。
-  }, [])
+  const handleNavItemClick = useCallback(
+    (key: string) => {
+      if (key === SKILL_STORE_MENU_KEY) {
+        setShowSkillStore(true)
+      } else {
+        setShowSkillStore(false)
+        /* placeholder for other nav items like 应用工坊 */
+      }
+    },
+    [],
+  )
 
   const handleSpaceChanged = useCallback(() => {
     setHistoryRefreshKey((key) => key + 1)
   }, [])
 
+  const handleBackFromSkillStore = useCallback(() => {
+    setShowSkillStore(false)
+  }, [])
+
   return (
-    <Layout className="h-[100dvh] overflow-hidden bg-[#f5f6f7]">
+    <Layout
+      className="h-[100dvh] overflow-hidden app-bg-decor"
+      style={{
+        background: 'linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 45%, var(--bg-3) 100%)',
+      }}
+    >
       <Sider
         collapsible
         collapsed={collapsed}
         width={SIDER_WIDTH}
         collapsedWidth={SIDER_COLLAPSED_WIDTH}
         trigger={null}
-        className="!h-[100dvh] !bg-[#f7f7f4] border-r border-[#eceef2]"
+        className="sidebar-glass !h-[100dvh]"
+        style={{
+          borderRight: '1px solid var(--glass-border)',
+        }}
       >
-        <div className="h-full min-h-0 flex flex-col">
+        <div className="h-full min-h-0 flex flex-col" style={{ position: 'relative', zIndex: 1 }}>
           <BrandHeader collapsed={collapsed} logoSrc={appLogoUrl} onToggleCollapse={handleToggleCollapse} />
 
-          <CreateConversationButton collapsed={collapsed} onCreated={() => setHistoryRefreshKey((key) => key + 1)} />
+          <CreateConversationButton
+            collapsed={collapsed}
+            onCreated={() => setHistoryRefreshKey((key) => key + 1)}
+            onToggleCollapse={handleToggleCollapse}
+          />
 
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2.5 py-3">
-            <WorkbenchMenuList collapsed={collapsed} items={middleMenus} onClick={handleMiddleMenuClick} selectable={false} />
+          <div className="sidebar-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-2">
+            <WorkbenchMenuList
+              collapsed={collapsed}
+              activeKey={showSkillStore ? SKILL_STORE_MENU_KEY : undefined}
+              onItemClick={handleNavItemClick}
+            />
+            <ConversationGroups collapsed={collapsed} />
             <SidebarHistoryTopics collapsed={collapsed} refreshKey={historyRefreshKey} />
           </div>
 
-          <div className="shrink-0 border-t border-[#eceee8] p-2.5 bg-[#f7f7f4]">
+          <div
+            className="shrink-0 py-3"
+            style={{
+              borderTop: '1px solid var(--border-2)',
+            }}
+          >
             <SpaceSelector collapsed={collapsed} onSpaceChanged={handleSpaceChanged} />
-            <UserProfileCard collapsed={collapsed} userName={userName} />
+            <div className="px-4">
+              <UserProfileCard collapsed={collapsed} userName={userName} />
+            </div>
           </div>
         </div>
       </Sider>
 
-      <Layout className="min-w-0">
-        <Content className="h-full min-h-0 overflow-hidden bg-[#f7f8fa]">
-          <Outlet />
+      <Layout className="min-w-0" style={{ background: 'transparent' }}>
+        <Content className="content-glass h-full min-h-0 overflow-hidden">
+          {showSkillStore ? (
+            <SkillStoreView onBack={handleBackFromSkillStore} />
+          ) : (
+            <Outlet />
+          )}
         </Content>
       </Layout>
     </Layout>

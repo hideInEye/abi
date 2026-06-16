@@ -1,12 +1,11 @@
 import React from 'react'
-import FileTag from '../../components/FileTag' // 引入文件组件
+import FileTag from '../../components/FileTag'
 import { parseMessageContent } from '../../utils'
 
 interface HumanEleProps {
   data: {
     context: string
     file?: {
-      // 单个文件对象
       file_id: string | number
       file_name: string
     }
@@ -16,37 +15,51 @@ interface HumanEleProps {
 
 const HumanEle: React.FC<HumanEleProps> = ({ data, id }) => {
   const contextData = parseMessageContent(data?.context)
-
-  // 处理显示内容：如果是对象且有question字段，显示question；否则显示原始内容
   const displayContent = typeof contextData === 'object' && contextData?.question ? contextData.question : contextData
 
   return (
     <div className="my-4 w-full flex justify-end">
       <div className="max-w-[80%] mr-2 break-words">
-        {/* 消息内容气泡 */}
-        <div id={id} className="border-[#DDDDDD] bg-white py-[0.875rem] pr-[1.625rem] text-[#333333] pl-[1.9375rem]" style={{ borderRadius: '1.5625rem 1.5625rem 0 1.5625rem' }}>
+        {/* User message bubble - subtle brand background for better contrast */}
+        <div
+          id={id}
+          className="msg-bubble-human"
+          style={{
+            background: 'linear-gradient(135deg, rgba(91,124,247,0.06), rgba(112,145,250,0.08))',
+            border: '1px solid rgba(91,124,247,0.18)',
+            color: 'var(--ink)',
+            padding: '12px 16px',
+            borderRadius: '16px 16px 4px 16px',
+            boxShadow: '0 2px 8px rgba(91,124,247,0.08)',
+            fontSize: 13,
+            lineHeight: 1.6,
+          }}
+        >
           <span style={{ whiteSpace: 'pre-wrap' }}>{displayContent}</span>
         </div>
 
-        {/* 文件标签（固定在消息内容下方，不使用绝对定位） */}
+        {/* File tag */}
         {typeof contextData === 'object' && contextData?.file_id && contextData?.file_name && (
           <FileTag
             fileId={contextData.file_id}
             fileName={contextData.file_name}
             showCloseIcon={false}
             showDownloadIcon={true}
-            backgroundColor="#f5f7fa"
-            textColor="#2b2626"
+            backgroundColor="rgba(255,255,255,0.5)"
+            textColor="var(--ink-2)"
             style={{
-              display: 'block', // 确保独占一行
-              marginTop: '0.25rem', // 与消息内容的间距
-              marginLeft: '0', // 左对齐
-              width: 'fit-content', // 宽度自适应内容
+              display: 'block',
+              marginTop: '4px',
+              marginLeft: '0',
+              width: 'fit-content',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-xs)',
             }}
           />
         )}
 
-        {/* 引用对话标签 */}
+        {/* Reference dialog tag */}
         {typeof contextData === 'object' && contextData?.reference_order && contextData?.reference_context && (
           <FileTag
             fileId={contextData.reference_order}
@@ -55,13 +68,16 @@ const HumanEle: React.FC<HumanEleProps> = ({ data, id }) => {
             showDownloadIcon={false}
             showFileIcon={false}
             showCloseIcon={false}
-            backgroundColor="#f5f7fa"
-            textColor="#2b2626"
+            backgroundColor="rgba(255,255,255,0.5)"
+            textColor="var(--ink-2)"
             style={{
-              display: 'block', // 确保独占一行
-              marginTop: '0.25rem', // 与消息内容的间距
-              marginLeft: '0', // 左对齐
-              width: 'fit-content', // 宽度自适应内容
+              display: 'block',
+              marginTop: '4px',
+              marginLeft: '0',
+              width: 'fit-content',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-xs)',
             }}
           />
         )}
