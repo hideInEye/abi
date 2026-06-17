@@ -1,8 +1,11 @@
-import { SearchOutlined, PlusOutlined } from '@ant-design/icons'
-import { message } from 'antd'
+import { DeleteOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { message, Modal } from 'antd'
 import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
 import type { Dayjs } from 'dayjs'
+
+import { ViewControls } from '@/components/ViewControls'
+import type { ColumnOption } from '@/components/ViewControls'
 
 // import PageTitle from '@/components/stateless/common/PageTitle'
 import {
@@ -169,33 +172,27 @@ export function Component() {
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('create')
   const [currentRecord, setCurrentRecord] = useState<ApiKeyItem | null>(null)
   const [submitLoading, setSubmitLoading] = useState(false)
-
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [spaceOptions, setSpaceOptions] = useState<Array<{ label: string; value: number }>>([])
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'businessSpace', label: '业务空间', visible: true },
+    { key: 'clientId', label: 'Client ID', visible: true },
+    { key: 'accessKey', label: 'Access Key', visible: true },
+    { key: 'secretKey', label: 'Secret Key', visible: true },
+    { key: 'ipAccessType', label: 'IP访问限制', visible: true },
+    { key: 'timeoutSeconds', label: 'Token超时', visible: true },
+    { key: 'expireTime', label: '过期时间', visible: true },
+    { key: 'status', label: '状态', visible: true },
+    { key: 'createdAt', label: '创建时间', visible: true },
+  ])
+
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c))
+  }
+
   const [queryValues, setQueryValues] = useState<ApiKeyQueryValues>({
     spaceId: currentSpaceId || undefined
   })
-
-  const loadSpaceOptions = useCallback(async () => {
-    try {
-      const res = await spaceList({
-        isAsc: 'desc',
-        orderByColumn: 'spaceId',
-        pageNum: 1,
-        pageSize: 1000
-      })
-
-      const list = ((res as any).response?.data?.rows || []) as Array<{ spaceId: number; spaceName: string }>
-
-      const options = list.map(item => ({
-        label: item.spaceName,
-        value: Number(item.spaceId)
-      }))
-
-      setSpaceOptions(options)
-    } catch {
-      message.warning('加载空间列表失败')
-    }
-  }, [])
 
   const loadList = useCallback(
     async (pageNum: number, query: ApiKeyQueryValues) => {
@@ -234,15 +231,27 @@ export function Component() {
   )
 
   useEffect(() => {
-    loadSpaceOptions()
-  }, [loadSpaceOptions])
-
-  useEffect(() => {
     if (!currentSpaceId) return
     queryForm.setFieldValue('spaceId', currentSpaceId)
     setQueryValues(prev => ({ ...prev, spaceId: currentSpaceId }))
     setCurrent(1)
   }, [currentSpaceId, queryForm])
+
+  useEffect(() => {
+    let cancelled = false
+    spaceList({ isAsc: 'asc', orderByColumn: 'createTime', pageNum: 1, pageSize: 200 })
+      .then((res) => {
+        if (cancelled) return
+        const payload = (res as any).response?.data || {}
+        const rows = (payload.rows || []) as Array<{ id: number; spaceName?: string }>
+        const opts = rows
+          .filter(r => r.id)
+          .map(r => ({ label: r.spaceName || `空间${r.id}`, value: Number(r.id) }))
+        setSpaceOptions(opts)
+      })
+      .catch(() => { /* ignore */ })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     loadList(current, queryValues)
@@ -269,9 +278,6 @@ export function Component() {
     const detail = (payload.data || {}) as AbiClientDetailItem
 
     const mapped = mapClientDetailToView(detail, record)
-
-    const matchedSpace = spaceOptions.find(item => item.value === mapped.spaceId)
-    if (matchedSpace) mapped.businessSpace = matchedSpace.label
 
     setDrawerMode('view')
     setCurrentRecord(mapped)
@@ -396,6 +402,37 @@ export function Component() {
     setCurrent(1)
   }
 
+  const handleBatchDelete = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的 API Key')
+      return
+    }
+    Modal.confirm({
+      title: '批量删除',
+      content: `确定要删除选中的 ${selectedRowKeys.length} 个 API Key 吗？`,
+      okText: '确认',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        let successCount = 0
+        for (const id of selectedRowKeys) {
+          const record = rows.find(r => r.id === id)
+          if (!record) continue
+          const effectiveSpaceId = queryValues.spaceId || record.spaceId || currentSpaceId
+          try {
+            await deleteAbiClient({ id: record.id, spaceId: effectiveSpaceId })
+            successCount++
+          } catch {
+            // continue with others
+          }
+        }
+        message.success(`成功删除 ${successCount} 个 API Key`)
+        setSelectedRowKeys([])
+        refreshList(1)
+      },
+    })
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <div style={{ color: '#475569', padding: '12px 28px 0' }}>
@@ -404,14 +441,6 @@ export function Component() {
       {/* v5 Searchbar */}
       <section className="abi-searchbar">
         <div className="abi-search-row">
-          <ASelect
-            options={spaceOptions}
-            placeholder="请选择业务空间"
-            className="abi-field-input"
-            style={{ width: 200 }}
-            defaultValue={queryValues.spaceId}
-            onChange={(v: number) => queryForm.setFieldValue('spaceId', v)}
-          />
           <AInput
             allowClear
             placeholder="请输入 Access Key"
@@ -443,7 +472,7 @@ export function Component() {
             <SearchOutlined /> 查询
           </AButton>
           <AButton className="btn-ghost-v5" onClick={handleResetSearch}>
-            重置
+            <ReloadOutlined /> 重置
           </AButton>
         </div>
       </section>
@@ -453,26 +482,42 @@ export function Component() {
         <div className="abi-toolbar">
           <div className="abi-toolbar-left">
             <AButton className="btn-accent-gradient" onClick={openCreate}>
-              <PlusOutlined />新建 API Key
+              <PlusOutlined />新增APIKey
+            </AButton>
+            <AButton
+              className="btn-ghost-v5"
+              disabled={selectedRowKeys.length === 0}
+              onClick={handleBatchDelete}
+            >
+              <DeleteOutlined /> 批量删除
             </AButton>
           </div>
+          <ViewControls
+            columns={columnOptions}
+            hideViewToggle
+            onColumnToggle={handleColumnToggle}
+          />
         </div>
 
         <ApiKeyTable
+          columnOptions={columnOptions}
           current={current}
           dataSource={rows}
           loading={listLoading}
           pageSize={PAGE_SIZE}
+          selectedRowKeys={selectedRowKeys}
           total={total}
           onDelete={handleDelete}
           onPageChange={setCurrent}
           onResetSk={handleResetSk}
+          onSelectedRowKeysChange={setSelectedRowKeys}
           onToggleStatus={handleToggleStatus}
           onView={openView}
         />
       </section>
 
       <ApiKeyDrawer
+        defaultSpaceId={currentSpaceId}
         mode={drawerMode}
         open={drawerOpen}
         options={spaceOptions}

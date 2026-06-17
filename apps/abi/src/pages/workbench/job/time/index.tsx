@@ -1,10 +1,7 @@
-import { CaretRightOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
-// import PageTitle from '@/components/stateless/common/PageTitle';
-import { Form, message } from 'antd';
+import { ClockCircleOutlined, DeleteOutlined, DownOutlined, EditOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { Dropdown, Empty, Form, message } from 'antd';
 import { Suspense } from 'react';
 
-// import { enableStatusRecord } from '@/constants/business';
-// import { ATG_MAP } from '@/constants/common';
 import { JOB_GROUP_OPTIONS } from '@/constants/job';
 import { addJob, batchDeleteJob, deleteJob, exportJob, fetchChangeStatus, fetchJobList, fetchShareEmail, fetchShareEmailDetail, runJob, updateJob, updateShareEmail } from '@/service/api/job';
 import { useRouter } from '~/packages/simple-router/src/hooks/useRouter';
@@ -23,7 +20,6 @@ export function Component() {
   const { t } = useTranslation();
   const router = useRouter();
   const spaceId = useAppSelector(getSpaceId);
-  // const [viewJobId, setViewJobId] = useState('');
   const [form] = Form.useForm();
   const [visible, setVisible] = useState(false);
   const [editData, setEditData] = useState<any>(null);
@@ -52,7 +48,6 @@ export function Component() {
       onOk: async () => {
         const res = await fetchChangeStatus({
           jobId: record.jobId,
-          // status: record.status === '0' ? '1' : '0',
         });
         if (res.response.data.code === 200) {
           message.success('操作成功');
@@ -72,48 +67,43 @@ export function Component() {
     }), [spaceId]),
     columns: () =>
       [
-        // {
-        //   align: 'center',
-        //   dataIndex: 'jobId',
-        //   key: 'jobId',
-        //   title: '任务编号',
-        //   width: 80
-        // },
         {
-          align: 'center',
+          align: 'left',
           dataIndex: 'jobName',
           key: 'jobName',
           title: '任务名称',
-          width: 130,
-          fixed: 'left',
+          minWidth: 200,
+          render: (text: string) => (
+            <span style={{ fontWeight: 600 }} title={text}>{text}</span>
+          ),
         },
         {
           align: 'center',
           dataIndex: 'jobId',
           key: 'jobId',
           title: '任务id',
-          width: 130,
+          minWidth: 130,
         },
         {
           align: 'center',
           dataIndex: 'cycle',
           key: 'cycle',
           title: '周期/单次',
-          width: 130,
+          minWidth: 130,
         },
         {
           align: 'center',
           dataIndex: 'lastSendTime',
           key: 'lastSendTime',
           title: '上次发送时间',
-          width: 130,
+          minWidth: 150,
         },
         {
           align: 'center',
           dataIndex: 'nextExecuteTime',
           key: 'nextExecuteTime',
           title: '下次执行时间',
-          width: 130,
+          minWidth: 150,
         },
         {
           align: 'center',
@@ -121,39 +111,52 @@ export function Component() {
           key: 'status',
           render: (status: string, record: any) => <ASwitch checked={status !== '1'} onClick={() => handleSwitch(record)} />,
           title: '状态',
-          width: 80,
+          minWidth: 80,
         },
         {
           align: 'center',
           fixed: 'right',
-          width: 120,
           key: 'operate',
+          minWidth: 150,
           render: (_: unknown, record: any) => (
-            <div className="flex items-center justify-center" style={{ gap: 2 }}>
+            <div className="ds-action-group">
               <AButton className="abi-action-link" size="small" variant="link" onClick={() => edit(record)}>
-                编辑
+                <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
               </AButton>
-              <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleView(record)}>
-                发送记录
-              </AButton>
-              <AButton
-                className="abi-action-link"
-                size="small"
-                variant="link"
-                onClick={() => {
-                  router.push({
-                    name: 'job_log',
-                    query: { jobId: record.jobId },
-                  });
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: 'sendRecord',
+                      label: (
+                        <span><FileSearchOutlined style={{ marginRight: 4 }} />发送记录</span>
+                      ),
+                      onClick: () => handleView(record),
+                    },
+                    {
+                      key: 'jobLog',
+                      label: (
+                        <span><ExceptionOutlined style={{ marginRight: 4 }} />调度日志</span>
+                      ),
+                      onClick: () => router.push({ name: 'job_log', query: { jobId: record.jobId } }),
+                    },
+                    { type: 'divider' },
+                    {
+                      key: 'delete',
+                      danger: true,
+                      label: (
+                        <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.recordId)}>
+                          <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
+                        </APopconfirm>
+                      ),
+                    },
+                  ],
                 }}
               >
-                调度日志
-              </AButton>
-              <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.recordId)}>
-                <AButton className="abi-action-link" size="small" variant="link" danger>
-                  删除
+                <AButton className="abi-action-link" size="small" variant="link">
+                  更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
                 </AButton>
-              </APopconfirm>
+              </Dropdown>
             </div>
           ),
           title: t('common.operate'),
@@ -164,11 +167,9 @@ export function Component() {
 
   const { checkedRowKeys, editingData, generalPopupOperation, handleAdd, handleEdit, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, async (res: any, type) => {
     if (type === 'add') {
-      // add request 调用新增的接口
       const addRes: any = await addJob(res);
       if (addRes?.response?.data?.code !== 200) return false;
     } else {
-      // edit request 调用编辑的接口
       const updateRes: any = await updateJob({ ...editingData, ...res });
       if (updateRes?.response?.data?.code !== 200) return false;
     }
@@ -182,17 +183,24 @@ export function Component() {
   // 卡片视图渲染
   const renderCardGrid = () => {
     const dataSource = (tableProps as any).dataSource || [];
+    if (dataSource.length === 0) {
+      return (
+        <div className="abi-card-empty">
+          <Empty description="暂无定时任务" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        </div>
+      );
+    }
     return (
       <div className="abi-card-grid">
         <div className="abi-card-grid-inner">
           {dataSource.map((record: any) => {
             const statusOn = record.status !== '1';
             return (
-              <div key={record.recordId || record.jobId} className="abi-data-card" style={{ position: 'relative' }}>
+              <div key={record.recordId || record.jobId} className="abi-data-card">
                 <div className="abi-data-card-head">
                   <div className="abi-data-card-title">
                     <ClockCircleOutlined style={{ fontSize: 16, color: '#5b7cf7', flexShrink: 0 }} />
-                    <span className="abi-data-card-name">{record.jobName}</span>
+                    <span className="abi-data-card-name" title={record.jobName}>{record.jobName}</span>
                   </div>
                   <ASwitch checked={statusOn} size="small" onClick={() => handleSwitch(record)} />
                 </div>
@@ -201,17 +209,35 @@ export function Component() {
                   <div className="row"><span className="lbl">上次发送</span><span className="val">{record.lastSendTime || '-'}</span></div>
                   <div className="row"><span className="lbl">下次执行</span><span className="val">{record.nextExecuteTime || '-'}</span></div>
                 </div>
-                <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10, display: 'flex', gap: 2 }}>
-                  <AButton className="abi-action-link" size="small" variant="link" onClick={() => edit(record)}>编辑</AButton>
-                  <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleView(record)}>记录</AButton>
-                  <AButton
-                    className="abi-action-link"
-                    size="small"
-                    variant="link"
-                    onClick={() => router.push({ name: 'job_log', query: { jobId: record.jobId } })}
+                <div className="abi-data-card-footer">
+                  <button className="abi-card-act" onClick={() => edit(record)}>
+                    <EditOutlined style={{ marginRight: 3 }} />编辑
+                  </button>
+                  <button className="abi-card-act" onClick={() => handleView(record)}>
+                    <FileSearchOutlined style={{ marginRight: 3 }} />记录
+                  </button>
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: 'log',
+                          label: '调度日志',
+                          onClick: () => router.push({ name: 'job_log', query: { jobId: record.jobId } }),
+                        },
+                        { type: 'divider' },
+                        { key: 'delete', danger: true, label: '删除' },
+                      ],
+                      onClick: ({ key, domEvent }) => {
+                        domEvent.stopPropagation();
+                        if (key === 'delete') handleDelete(record.recordId);
+                      }
+                    }}
+                    trigger={['click']}
                   >
-                    日志
-                  </AButton>
+                    <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
+                      <MoreOutlined />
+                    </button>
+                  </Dropdown>
                 </div>
               </div>
             );
@@ -222,7 +248,6 @@ export function Component() {
   };
     
   async function handleBatchDelete() {
-    // request
     const res = await batchDeleteJob({ recordIds: checkedRowKeys });
     if (res.response.data.code === 200) {
       onBatchDeleted();
@@ -231,7 +256,6 @@ export function Component() {
 
   async function handleDelete(jobId: string) {
     const res = await deleteJob(jobId);
-
     if (res.response.data.code === 200) {
       onDeleted();
     }
@@ -239,7 +263,6 @@ export function Component() {
 
   async function handleRun(record: any) {
     const res = await runJob(record);
-
     if (res.response.data.code === 200) {
       message.success('执行成功');
       run();
@@ -448,53 +471,53 @@ export function Component() {
         </div>
       </section>
 
-        <AModal
-          key="shareEmail"
-          width="60%"
-          open={visible}
-          title="定时任务编辑"
-          onCancel={handleConfirmCancel}
-          classNames={{
-            body: 'h-[400px] overflow-auto',
+      <AModal
+        key="shareEmail"
+        width="60%"
+        open={visible}
+        title="定时任务编辑"
+        onCancel={handleConfirmCancel}
+        classNames={{
+          body: 'h-[400px] overflow-auto',
+        }}
+        footer={
+          <div className="flex justify-end gap-2">
+            <AButton onClick={handleConfirmCancel}>取消</AButton>
+            <AButton
+              type="primary"
+              style={{
+                outline: 'none',
+              }}
+              onClick={() => {
+                handleShareEmail();
+              }}
+            >
+              确定
+            </AButton>
+          </div>
+        }
+      >
+        <Form
+          form={form}
+          onValuesChange={(values) => {
+            if (values.type) {
+              form.setFieldsValue({
+                executeFrequency: null,
+                sendTime: null,
+              });
+            }
+            if (values.executeFrequency) {
+              form.setFieldsValue({
+                sendTime: null,
+              });
+            }
           }}
-          footer={
-            <div className="flex justify-end gap-2">
-              <AButton onClick={handleConfirmCancel}>取消</AButton>
-              <AButton
-                type="primary"
-                style={{
-                  outline: 'none',
-                }}
-                onClick={() => {
-                  handleShareEmail();
-                }}
-              >
-                确定
-              </AButton>
-            </div>
-          }
+          layout="vertical"
+          wrapperCol={{ span: 20 }}
         >
-          <Form
-            form={form}
-            onValuesChange={(values) => {
-              if (values.type) {
-                form.setFieldsValue({
-                  executeFrequency: null,
-                  sendTime: null,
-                });
-              }
-              if (values.executeFrequency) {
-                form.setFieldsValue({
-                  sendTime: null,
-                });
-              }
-            }}
-            layout="vertical"
-            wrapperCol={{ span: 20 }}
-          >
-            <ShareEmailSetting form={form} />
-          </Form>
-        </AModal>
+          <ShareEmailSetting form={form} />
+        </Form>
+      </AModal>
     </div>
   );
 }

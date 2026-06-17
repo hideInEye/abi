@@ -1,15 +1,15 @@
 import { CaretDownOutlined } from '@ant-design/icons'
+import { Dropdown } from 'antd'
+import type { MenuProps } from 'antd'
 import type { FC } from 'react'
 import { useCallback } from 'react'
 
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch'
-
-import type { ISpaceItem } from '../types'
-import s from '../../home/index.module.scss'
-import { Dropdown, Space } from 'antd'
-import { MenuProps } from 'antd/lib'
 import { setSelectedMenuKey } from '@/store/slice/layout'
 import { useRouter } from '~/packages/simple-router/src'
+
+import s from '../../home/index.module.scss'
+import type { ISpaceItem } from '../types'
 interface SpaceItemProps {
   readonly deleteSpace: (space: ISpaceItem) => void
   readonly setEditSpace: (space: ISpaceItem) => void

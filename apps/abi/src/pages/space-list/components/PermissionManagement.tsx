@@ -1,10 +1,16 @@
-import { CloseOutlined } from '@ant-design/icons';
-import PropTypes from 'prop-types';
+import {
+  CheckCircleFilled,
+  CloseOutlined,
+  SafetyCertificateOutlined,
+  SafetyOutlined,
+} from '@ant-design/icons';
+import { message } from 'antd';
+import type { FC } from 'react';
+import { useEffect, useState } from 'react';
 
 import { querySpaceRoleList } from '@/service/api/space';
 
 import type { PermissionItem } from '../types';
-import { message } from 'antd';
 
 interface PermissionManagementProps {
   defaultPermissionKeys: any[];
@@ -65,66 +71,93 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
     setAlreadySelectedPermission([]);
   };
 
+  const selectedCount = alreadySelectedPermission.length;
+
   return (
     <ADrawer
+      className="sd-v5-perm-drawer"
       closeIcon={null}
-      extra={<CloseOutlined onClick={cancel} />}
-      footer={PermissionManagementFooter(sure, cancel)}
+      extra={<CloseOutlined className="sd-v5-close" onClick={cancel} />}
+      footer={<PermDrawerFooter sure={sure} cancel={cancel} selectedCount={selectedCount} />}
       open={open}
-      title="权限管理"
-      width={900}
+      title={
+        <div className="sd-v5-drawer-title">
+          <span className="sd-v5-drawer-title-icon">
+            <SafetyOutlined />
+          </span>
+          <span>权限管理</span>
+        </div>
+      }
+      width={680}
       onClose={() => setOpen(false)}
     >
-      <div className="border border-gray-2 rd-2 border-solid p-6">
+      {/* Selection summary bar */}
+      <div className="sd-v5-perm-summary">
+        <div className="sd-v5-perm-summary-left">
+          <SafetyCertificateOutlined style={{ color: '#5b7cf7', fontSize: 16 }} />
+          <span className="sd-v5-perm-summary-text">
+            已选择 <strong>{selectedCount}</strong> 个角色
+          </span>
+        </div>
+        {selectedCount > 0 && (
+          <AButton
+            type="link"
+            size="small"
+            onClick={() => setAlreadySelectedPermission([])}
+            className="sd-v5-perm-clear"
+          >
+            清空选择
+          </AButton>
+        )}
+      </div>
+
+      {/* Role list */}
+      <div className="sd-v5-perm-section">
+        <div className="sd-v5-perm-section-title">选择空间角色</div>
         <ACheckbox.Group
-          className="grid grid-cols-1 gap-8"
+          className="sd-v5-perm-list"
           style={{ width: '100%' }}
           value={alreadySelectedPermission}
           onChange={handlePermissionChange}
         >
-          {permissionList.map(item => (
-            <ACheckbox
-              key={item.roleId}
-              value={item.roleId}
-            >
-              <div className="flex flex-col pl4">
-                <p className="text-base font-bold">{item.roleName}</p>
-                <p className="text-sm text-gray-5">{item.remark || '暂无描述'}</p>
+          {permissionList.map(item => {
+            const isActive = alreadySelectedPermission.includes(item.roleId);
+            return (
+              <div key={item.roleId} className={`sd-v5-perm-card ${isActive ? 'sd-v5-perm-card-active' : ''}`}>
+                <ACheckbox value={item.roleId}>
+                  <div className="sd-v5-perm-card-inner">
+                    <div className="sd-v5-perm-card-icon">
+                      <SafetyOutlined />
+                    </div>
+                    <div className="sd-v5-perm-card-body">
+                      <div className="sd-v5-perm-card-name">{item.roleName}</div>
+                      <div className="sd-v5-perm-card-desc">{item.remark || '暂无描述'}</div>
+                    </div>
+                    {isActive && (
+                      <div className="sd-v5-perm-card-check">
+                        <CheckCircleFilled />
+                      </div>
+                    )}
+                  </div>
+                </ACheckbox>
               </div>
-            </ACheckbox>
-          ))}
+            );
+          })}
         </ACheckbox.Group>
       </div>
     </ADrawer>
   );
 };
 
-PermissionManagement.propTypes = {
-  defaultPermissionKeys: PropTypes.array.isRequired,
-  open: PropTypes.bool.isRequired,
-  permissionCancel: PropTypes.func.isRequired,
-  permissionSure: PropTypes.func.isRequired,
-  setOpen: PropTypes.func.isRequired
-};
-
-function PermissionManagementFooter(sure: () => void, cancel: () => void) {
+function PermDrawerFooter({ sure, cancel, selectedCount }: { sure: () => void; cancel: () => void; selectedCount: number }) {
   return (
-    <AFlex
-      className="gap-6 py-6"
-      justify="flex-end"
-    >
-      <AButton
-        type="default"
-        onClick={cancel}
-      >
-        取消
-      </AButton>
-      <AButton
-        type="primary"
-        onClick={sure}
-      >
-        完成
-      </AButton>
-    </AFlex>
+    <div className="sd-v5-footer">
+      <span className="sd-v5-perm-footer-hint">
+        {selectedCount > 0 ? `已选 ${selectedCount} 个角色` : '请至少选择一个角色'}
+      </span>
+      <div style={{ flex: 1 }} />
+      <AButton className="btn-ghost-v5" onClick={cancel}>取消</AButton>
+      <AButton className="btn-accent-gradient" onClick={sure}>完成</AButton>
+    </div>
   );
 }

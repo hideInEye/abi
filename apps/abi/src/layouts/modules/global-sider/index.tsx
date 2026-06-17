@@ -3,7 +3,7 @@ import userIcon from '@/assets/imgs/home/用户.svg'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
-import { UserOutlined } from '@ant-design/icons'
+import { UserOutlined, SettingOutlined, TeamOutlined, LogoutOutlined } from '@ant-design/icons'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
 import { getAllRoutes } from '@/store/slice/route'
@@ -58,27 +58,58 @@ const GlobalSider: FC = memo(() => {
   }, [dispatch, effectiveSpaceId, spaceId])
 
   const userItems = useCallback(() => {
-    const items = [
+    const userName = isMicroApp ? window.qiankunStore.state.userInfo?.userName : userInfo?.userName
+    
+    const items: any[] = [
       {
-        key: '1',
-        label: isMicroApp ? window.qiankunStore.state.userInfo?.userName : userInfo?.userName,
-        icon: <UserOutlined />,
+        key: 'user-header',
+        label: (
+          <div className="abi-user-dropdown-header-new">
+            <UserOutlined className="abi-user-dropdown-icon-new" />
+            <span className="abi-user-dropdown-label-new">{userName || '用户'}</span>
+          </div>
+        ),
+        disabled: true,
+        className: 'abi-user-dropdown-header-item',
       },
-      {
-        key: 'logout',
-        label: '退出登录',
-      },
+      { type: 'divider', className: 'abi-user-dropdown-divider-new' },
     ]
+    
     if (showManage) {
-      items.splice(1, 0, {
+      items.push({
         key: 'manage_user',
-        label: '门户管理',
+        label: (
+          <div className="abi-user-dropdown-item-new">
+            <SettingOutlined className="abi-user-dropdown-icon-new" />
+            <span className="abi-user-dropdown-label-new">门户管理</span>
+          </div>
+        ),
+        className: 'abi-user-dropdown-menu-item',
       })
-      items.splice(2, 0, {
+      items.push({
         key: 'space_user',
-        label: '空间管理',
+        label: (
+          <div className="abi-user-dropdown-item-new">
+            <TeamOutlined className="abi-user-dropdown-icon-new" />
+            <span className="abi-user-dropdown-label-new">空间管理</span>
+          </div>
+        ),
+        className: 'abi-user-dropdown-menu-item',
       })
     }
+    
+    items.push({ type: 'divider', className: 'abi-user-dropdown-divider-new' })
+    items.push({
+      key: 'logout',
+      label: (
+        <div className="abi-user-dropdown-item-new abi-user-dropdown-danger-new">
+          <LogoutOutlined className="abi-user-dropdown-icon-new" />
+          <span className="abi-user-dropdown-label-new">退出登录</span>
+        </div>
+      ),
+      className: 'abi-user-dropdown-menu-item',
+    })
+    
     return items
   }, [showManage])
 
@@ -111,10 +142,11 @@ const GlobalSider: FC = memo(() => {
       width="72px"
       className="abi-nav-sider"
     >
-      <div className="flex h-full flex-col justify-between items-center py-[20px]">
-        <div className=" flex items-center justify-center cursor-pointer" onClick={redirectHome}>
-          <img src={appLogo} alt="ABI Logo" className="mb-6 h-12 w-12 rounded-full shadow-[0_0.625rem_1.5rem_rgba(51,102,255,0.28)]" />
+      <div className="abi-nav-container">
+        <div className="abi-nav-brand" onClick={redirectHome}>
+          <img src={appLogo} alt="ABI Logo" className="abi-nav-brand-img" />
         </div>
+        
         {/* Nav Items - Top */}
         <div className="abi-nav-items">
           {primaryMenuData.map((item) => {
@@ -132,7 +164,7 @@ const GlobalSider: FC = memo(() => {
                   router.push(item.url)
                 }}
               >
-                <SvgIcon localIcon={item.icon} style={{ fontSize: 21 }} />
+                <SvgIcon localIcon={item.icon} style={{ fontSize: 20 }} />
                 <span>{item.label}</span>
               </button>
             )
@@ -147,12 +179,22 @@ const GlobalSider: FC = memo(() => {
 
         {/* User Section - Bottom */}
         <div className="abi-nav-user">
-          <Dropdown trigger={['click']} menu={{ items: userItems(), onClick: handleMenuClick }}>
-            <div className="flex flex-col items-center cursor-pointer">
-              <div className="abi-nav-user-icon">
-                <img src={userIcon} alt="user" style={{ width: 26, height: 26, objectFit: 'contain' }} />
+          <Dropdown
+            trigger={['click']}
+            placement="topRight"
+            overlayClassName="abi-user-dropdown-overlay"
+            dropdownRender={(menu) => (
+              <div className="abi-user-dropdown-panel">
+                {menu}
               </div>
-              <span style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>用户</span>
+            )}
+            menu={{ items: userItems(), onClick: handleMenuClick }}
+          >
+            <div className="abi-nav-user-btn">
+              <div className="abi-nav-user-icon">
+                <img src={userIcon} alt="user" style={{ width: 24, height: 24, objectFit: 'contain' }} />
+              </div>
+              <span>用户</span>
             </div>
           </Dropdown>
         </div>

@@ -1,17 +1,13 @@
 /*
  * Copyright © 2023-2025 puyinzhen
  * All rights reserved.
- *
- * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
- *
- * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
- *
- * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
 .dl-filter-list {
   width: 250px;
-  border-right: 1px solid #404040;
+  border-right: 1px solid rgba(130, 140, 200, 0.10);
+  background: rgba(255, 255, 255, 0.50);
+  backdrop-filter: blur(12px);
 
   .dl-fl-header {
     display: flex;
@@ -19,19 +15,22 @@
     align-items: center;
     padding: 13px 10px;
     font-size: 12px;
-    border-bottom: 1px solid #404040;
-    color: #bababa;
+    border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+    color: #5f7490;
+    font-weight: 600;
 
     .add {
       position: relative;
       top: 1px;
       cursor: pointer;
+      color: #5b7cf7;
     }
 
     .close {
       position: relative;
       bottom: 1px;
       cursor: pointer;
+      color: #768a9f;
     }
   }
 
@@ -41,33 +40,47 @@
 
     .filter-item {
       width: 100%;
-      height: 30px;
-      background-color: #2d2d2d;
-      border-radius: 3px;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.62);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(130, 140, 200, 0.10);
+      border-radius: 8px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 3px 5px;
+      padding: 3px 8px;
       font-size: 12px;
-      color: #b7b7b7;
+      color: #3e5068;
+      margin-bottom: 4px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover {
+        border-color: rgba(91, 124, 247, 0.25);
+        box-shadow: 0 2px 8px rgba(91, 124, 247, 0.06);
+      }
 
       .filter-name {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         width: 155px;
+        font-weight: 500;
       }
 
       .filter-operate {
         font-size: 11px;
 
         span {
-          color: #4493c0;
+          color: #5b7cf7;
           cursor: pointer;
+          padding: 2px 4px;
+          border-radius: 4px;
+          transition: all 0.15s;
         }
 
         span:hover {
-          color: #6eb7e5;
+          color: #4a6cf6;
+          background: rgba(91, 124, 247, 0.08);
         }
       }
     }
@@ -85,13 +98,13 @@
 
   .add-filter-dialog-footer {
     margin-top: 10px;
-    border-top: 2px solid #272b34;
+    border-top: 1px solid rgba(130, 140, 200, 0.12);
     display: flex;
     flex-direction: row-reverse;
 
     .lc-button {
       font-size: 12px;
-      color: #a3a3a3;
+      color: #3e5068;
       width: 85px;
       height: 30px;
       margin: 6px 0 0 0;

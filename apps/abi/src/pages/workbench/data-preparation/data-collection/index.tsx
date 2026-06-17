@@ -1,5 +1,5 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
-import { Dropdown, message, Tooltip } from 'antd';
+import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, EyeOutlined, LeftOutlined, MoreOutlined, PlusOutlined, ReloadOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { Dropdown, Empty, message } from 'antd';
 import { Suspense } from 'react';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
@@ -10,12 +10,52 @@ import { deleteCollection, fetchDataCollectionList } from '@/service/api';
 import { useRouter } from '~/packages/simple-router/src';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
+import clickhouseIcon from '@/assets/imgs/home/deClickHouse.svg';
+import dmIcon from '@/assets/imgs/home/deDm.svg';
+import dorisIcon from '@/assets/imgs/home/deDoris.svg';
+import excelIcon from '@/assets/imgs/home/Excel.svg';
+import hiveIcon from '@/assets/imgs/home/deHive.svg';
+import mysqlIcon from '@/assets/imgs/home/deMysql.svg';
+import oracleIcon from '@/assets/imgs/home/deOracle.svg';
+import postgresqlIcon from '@/assets/imgs/home/dePostgreSQL.svg';
+import starrocksIcon from '@/assets/imgs/home/deStarrocks.svg';
+import kingbaseIcon from '@/assets/imgs/home/kingbase.svg';
+
+const DB_TYPE_ICONS: Record<string, string> = {
+  ck: clickhouseIcon,
+  clickhouse: clickhouseIcon,
+  dm: dmIcon,
+  doris: dorisIcon,
+  excel: excelIcon,
+  hive: hiveIcon,
+  mysql: mysqlIcon,
+  oracle: oracleIcon,
+  pg: postgresqlIcon,
+  postgresql: postgresqlIcon,
+  starrocks: starrocksIcon,
+  kingbase: kingbaseIcon,
+};
+
+function getDbIcon(name?: string, sourceType?: string): string | undefined {
+  const n = name?.toLowerCase().trim() || '';
+  const st = sourceType?.toLowerCase().trim() || '';
+  if (DB_TYPE_ICONS[n]) return DB_TYPE_ICONS[n];
+  if (DB_TYPE_ICONS[st]) return DB_TYPE_ICONS[st];
+  const nNoSpace = n.replace(/\s+/g, '');
+  if (DB_TYPE_ICONS[nNoSpace]) return DB_TYPE_ICONS[nNoSpace];
+  for (const key of Object.keys(DB_TYPE_ICONS)) {
+    if (n.includes(key) || st.includes(key)) {
+      return DB_TYPE_ICONS[key];
+    }
+  }
+  return undefined;
+}
 
 const DataCollectionOperateDrawer = lazy(() => import('./modules/data-collection-operate-drawer'));
 
 const ALL_COLUMNS: ColumnOption[] = [
   { key: 'viewName', label: '数据集名称', visible: true },
-  { key: 'viewInfo', label: '数据源', visible: true },
+  { key: 'viewInfo', label: '数据源名称', visible: true },
   { key: 'createBy', label: '创建人', visible: true },
   { key: 'createTime', label: '创建时间', visible: true },
   { key: 'updateBy', label: '操作人', visible: false },
@@ -63,22 +103,36 @@ export function Component() {
   const columns = useCallback(
     () => [
       {
-        align: 'center',
+        align: 'left',
+        className: 'col-dataset-name',
         dataIndex: 'viewName',
         key: 'viewName',
-        minWidth: 140,
-        title: t('page.dataPreparation.dataCollection.name')
+        minWidth: 180,
+        onHeaderCell: () => ({ className: 'col-dataset-name' }),
+        render: (text: string) => <span style={{ fontWeight: 600 }}>{text}</span>,
+        title: '数据集名称'
       },
       {
-        align: 'center',
+        align: 'left',
+        className: 'col-source-name',
         dataIndex: 'viewInfo',
         key: 'viewInfo',
-        minWidth: 140,
+        minWidth: 160,
+        onHeaderCell: () => ({ className: 'col-source-name' }),
         render: (viewInfo: string) => {
           const info = JSON.parse(viewInfo)?.[0];
-          return dataSourceList?.find((item: any) => item?.sourceId === info?.currentDs?.sourceId)?.sourceName;
+          const source = dataSourceList?.find((item: any) => item?.sourceId === info?.currentDs?.sourceId);
+          const sourceName = source?.sourceName;
+          const sourceType = source?.sourceType;
+          const icon = getDbIcon(sourceType, sourceType);
+          return (
+            <span className="source-name-cell">
+              {icon && <img src={icon} alt="" className="source-name-icon" />}
+              <span className="source-name-text" title={sourceName}>{sourceName}</span>
+            </span>
+          );
         },
-        title: t('page.dataPreparation.dataCollection.datasource')
+        title: '数据源名称'
       },
       {
         align: 'center',
@@ -91,7 +145,7 @@ export function Component() {
         align: 'center',
         dataIndex: 'createTime',
         key: 'createTime',
-        minWidth: 140,
+        minWidth: 160,
         title: t('page.dataPreparation.dataCollection.createTime')
       },
       {
@@ -105,7 +159,7 @@ export function Component() {
         align: 'center',
         dataIndex: 'updateTime',
         key: 'updateTime',
-        minWidth: 140,
+        minWidth: 160,
         title: t('page.dataPreparation.dataCollection.operateTime')
       },
       {
@@ -114,9 +168,9 @@ export function Component() {
         key: 'operate',
         minWidth: 200,
         render: (_: unknown, record: any) => (
-          <div className="flex items-center justify-center" style={{ gap: 2 }}>
+          <div className="ds-action-group">
             <AButton className="abi-action-link" size="small" variant="link" onClick={() => toDetail(record)}>
-              编辑
+              <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
             </AButton>
             <AButton
               className="abi-action-link"
@@ -124,11 +178,28 @@ export function Component() {
               variant="link"
               onClick={() => setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: spaceId || undefined })}
             >
-              元数据分析
+              <ApartmentOutlined style={{ marginRight: 3, fontSize: 12 }} />元数据分析
             </AButton>
-            <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.viewId)}>
-              <AButton className="abi-action-link-danger" size="small" variant="link">删除</AButton>
-            </APopconfirm>
+            <Dropdown
+              menu={{
+                items: [
+                  { type: 'divider' },
+                  {
+                    key: 'delete',
+                    danger: true,
+                    label: (
+                      <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.viewId)}>
+                        <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
+                      </APopconfirm>
+                    ),
+                  },
+                ],
+              }}
+            >
+              <AButton className="abi-action-link" size="small" variant="link">
+                更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+              </AButton>
+            </Dropdown>
           </div>
         ),
         title: t('common.operate')
@@ -161,12 +232,26 @@ export function Component() {
     } else {
       console.log(res);
     }
-  });
+  }, true);
 
   async function handleDelete(id: number) {
     const res = await deleteCollection({ updateBy: '1', viewId: id });
     if (res.response.data.code !== 200) return;
     onDeleted();
+  }
+
+  async function handleBatchDelete() {
+    if (!checkedRowKeys || checkedRowKeys.length === 0) return;
+    const ids = checkedRowKeys as number[];
+    const promises = ids.map(id => deleteCollection({ updateBy: '1', viewId: id }));
+    const results = await Promise.all(promises);
+    const allSuccess = results.every((res: any) => res.response.data.code === 200);
+    if (allSuccess) {
+      message.success(`成功删除 ${ids.length} 个数据集`);
+      onDeleted();
+    } else {
+      message.error('部分数据集删除失败');
+    }
   }
 
   const handleSearch = () => {
@@ -233,67 +318,94 @@ export function Component() {
   // Card grid
   const dataSource = tableProps.dataSource as any[] || [];
 
-  const getDatasourceName = (record: any) => {
+  const getDatasourceInfo = (record: any) => {
     try {
       const info = JSON.parse(record.viewInfo)?.[0];
-      return dataSourceList?.find((item: any) => item?.sourceId === info?.currentDs?.sourceId)?.sourceName || '-';
+      const source = dataSourceList?.find((item: any) => item?.sourceId === info?.currentDs?.sourceId);
+      return {
+        name: source?.sourceName || '-',
+        type: source?.sourceType
+      };
     } catch {
-      return '-';
+      return { name: '-', type: undefined };
     }
   };
 
-  const renderCardGrid = () => (
-    <div className="abi-card-grid">
-      <div className="abi-card-grid-inner">
-        {dataSource.map((record: any) => (
-          <div key={record.viewId} className="abi-data-card">
-            <div className="abi-data-card-head">
-              <div className="abi-data-card-title">{record.viewName}</div>
-              <span style={{ fontSize: 11, color: '#768a9f' }}>{getDatasourceName(record)}</span>
-            </div>
-            <div className="abi-data-card-body">
-              {visibleKeys.has('createBy') && (
-                <div className="row"><span className="lbl">创建人</span><span className="val">{record.createBy}</span></div>
-              )}
-              {visibleKeys.has('createTime') && (
-                <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createTime}</span></div>
-              )}
-              {visibleKeys.has('updateBy') && (
-                <div className="row"><span className="lbl">操作人</span><span className="val">{record.updateBy}</span></div>
-              )}
-              {visibleKeys.has('updateTime') && (
-                <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime}</span></div>
-              )}
-            </div>
-            <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
-              <Dropdown
-                menu={{
-                  items: [
-                    { key: 'edit', label: <span><EditOutlined style={{ marginRight: 6 }} />编辑</span> },
-                    { key: 'analysis', label: <span><ApartmentOutlined style={{ marginRight: 6 }} />元数据分析</span> },
-                    { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
-                  ],
-                  onClick: ({ key, domEvent }) => {
-                    domEvent.stopPropagation();
-                    if (key === 'edit') toDetail(record);
-                    else if (key === 'analysis') setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: spaceId || undefined });
-                    else if (key === 'delete') handleDelete(record.viewId);
-                  }
-                }}
-                trigger={['hover']}
-              >
-                <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
-              </Dropdown>
-            </div>
-          </div>
-        ))}
+  const renderCardGrid = () => {
+    if (dataSource.length === 0) {
+      return (
+        <div className="abi-card-empty">
+          <Empty description="暂无数据集" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        </div>
+      );
+    }
+
+    return (
+      <div className="abi-card-grid">
+        <div className="abi-card-grid-inner">
+          {dataSource.map((record: any) => {
+            const dsInfo = getDatasourceInfo(record);
+            const icon = getDbIcon(dsInfo.type, dsInfo.type);
+            return (
+              <div key={record.viewId} className="abi-data-card">
+                <div className="abi-data-card-head">
+                  <div className="abi-data-card-title">
+                    <span className="abi-data-card-name" title={record.viewName}>{record.viewName}</span>
+                  </div>
+                  <span className="abi-db-tag tag-default">
+                    {icon && <img src={icon} alt="" style={{ width: 16, height: 16, marginRight: 4, verticalAlign: 'middle' }} />}
+                    {dsInfo.name}
+                  </span>
+                </div>
+                <div className="abi-data-card-body">
+                  {visibleKeys.has('createBy') && (
+                    <div className="row"><span className="lbl">创建人</span><span className="val">{record.createBy || '-'}</span></div>
+                  )}
+                  {visibleKeys.has('createTime') && (
+                    <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createTime || '-'}</span></div>
+                  )}
+                  {visibleKeys.has('updateBy') && (
+                    <div className="row"><span className="lbl">操作人</span><span className="val">{record.updateBy || '-'}</span></div>
+                  )}
+                  {visibleKeys.has('updateTime') && (
+                    <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime || '-'}</span></div>
+                  )}
+                </div>
+                <div className="abi-data-card-footer">
+                  <button className="abi-card-act" onClick={() => toDetail(record)}>
+                    <EditOutlined style={{ marginRight: 3 }} />编辑
+                  </button>
+                  <button className="abi-card-act" onClick={() => setAnalysisContext({ nodeId: record.viewId, nodeName: record.viewName, nodeType: 'DATASET', spaceId: spaceId || undefined })}>
+                    <ApartmentOutlined style={{ marginRight: 3 }} />元数据
+                  </button>
+                  <Dropdown
+                    menu={{
+                      items: [
+                        { key: 'delete', danger: true, label: '删除' },
+                      ],
+                      onClick: ({ key, domEvent }) => {
+                        domEvent.stopPropagation();
+                        if (key === 'delete') handleDelete(record.viewId);
+                      }
+                    }}
+                    trigger={['click']}
+                  >
+                    <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
+                      <MoreOutlined />
+                    </button>
+                  </Dropdown>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      {/* v5 Searchbar */}
+      {/* Searchbar */}
       <section className="abi-searchbar">
         <div className="abi-search-row">
           <AInput
@@ -304,30 +416,46 @@ export function Component() {
             onChange={(e) => setSearchValue(e.target.value)}
             onPressEnter={handleSearch}
             className="abi-field-input"
-            style={{ width: '16rem' }}
+            style={{ width: '220px' }}
           />
           <ADatePicker.RangePicker
+            showTime={{ format: 'HH:mm:ss' }}
+            format="YYYY-MM-DD HH:mm:ss"
             placeholder={['开始时间', '结束时间']}
             value={dateRange}
             onChange={(dates) => setDateRange(dates)}
             className="abi-field-input"
+            style={{ width: '380px' }}
           />
           <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
             <SearchOutlined /> 查询
           </AButton>
           <AButton className="btn-ghost-v5" onClick={handleReset}>
-            重置
+            <ReloadOutlined /> 重置
           </AButton>
         </div>
       </section>
 
-      {/* v5 Data Area */}
+      {/* Data Area */}
       <section className="abi-data-area">
         <div className="abi-toolbar">
           <div className="abi-toolbar-left">
             <AButton className="btn-accent-gradient" onClick={() => push('/workbench/data-preparation/data-collection-operate/0')}>
-              + 新增数据集
+              <PlusOutlined />新增数据集
             </AButton>
+            <APopconfirm
+              title="提示"
+              description={`确定要删除选中的 ${checkedRowKeys?.length || 0} 个数据集吗？`}
+              onConfirm={handleBatchDelete}
+              disabled={!checkedRowKeys || checkedRowKeys.length === 0}
+            >
+              <AButton
+                className="btn-ghost-v5"
+                disabled={!checkedRowKeys || checkedRowKeys.length === 0}
+              >
+                <DeleteOutlined />批量删除{checkedRowKeys && checkedRowKeys.length > 0 ? `(${checkedRowKeys.length})` : ''}
+              </AButton>
+            </APopconfirm>
           </div>
           <ViewControls
             viewMode={viewMode}

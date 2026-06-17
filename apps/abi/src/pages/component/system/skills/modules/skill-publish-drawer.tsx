@@ -1,5 +1,5 @@
-import { CheckCircleFilled, CloudUploadOutlined, FileZipOutlined } from '@ant-design/icons';
-import { App, Drawer, Flex, Form, Input, Select } from 'antd';
+import { CheckCircleFilled, CloudUploadOutlined, FileZipOutlined, SettingOutlined } from '@ant-design/icons';
+import { App, Button, Drawer, Flex, Form, Input, Select } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { spaceList } from '@/service/api/data-space';
@@ -244,20 +244,52 @@ function extractSkillName(fileName: string) {
     <Drawer
       open={open}
       rootClassName="skill-hub-scope"
-      title={isUpdate ? '更新技能' : t('page.manage.skill.publish')}
+      className="ds-operate-drawer"
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            alignItems: 'center', background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+            borderRadius: 10, boxShadow: '0 4px 12px rgba(91,124,247,0.3)',
+            color: '#fff', display: 'flex', fontSize: 18, height: 36, justifyContent: 'center', width: 36,
+          }}>
+            <SettingOutlined />
+          </div>
+          <div>
+            <div style={{ color: '#1a2744', fontSize: 17, fontWeight: 700, letterSpacing: '0.02em' }}>
+              {isUpdate ? '更新技能' : t('page.manage.skill.publish')}
+            </div>
+            <div style={{ color: '#768a9f', fontSize: 12, marginTop: 2 }}>
+              {isUpdate
+                ? `更新${skill?.bizName}技能版本`
+                : '上传 ZIP 包安装新技能'}
+            </div>
+          </div>
+        </div>
+      }
       width={640}
+      destroyOnClose
+      closeIcon={null}
       footer={
-        <Flex justify="flex-end" gap={8}>
-          <AButton onClick={onClose}>{t('common.cancel')}</AButton>
-          <AButton
-            className="brand-button"
+        <div style={{ alignItems: 'center', display: 'flex', gap: 12, justifyContent: 'flex-end', padding: '4px 0' }}>
+          <Button
+            onClick={onClose}
+            style={{ background: 'transparent', border: '1px solid rgba(130,140,200,0.18)', color: '#5f7490', fontWeight: 500, height: 38, padding: '0 20px', borderRadius: 8 }}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button
             loading={submitting}
-            type="primary"
             onClick={handleSubmit}
+            style={{
+              background: 'linear-gradient(135deg, #5b7cf7, #7091fa)', border: 'none',
+              borderRadius: 8, boxShadow: '0 2px 10px rgba(91,124,247,0.3)', fontWeight: 600,
+              height: 38, padding: '0 28px',
+            }}
+            type="primary"
           >
             {isUpdate ? '提交更新' : t('page.manage.skill.publishPage.submit')}
-          </AButton>
-        </Flex>
+          </Button>
+        </div>
       }
       onClose={onClose}
     >

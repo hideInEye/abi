@@ -1,4 +1,4 @@
-import { CloseOutlined } from '@ant-design/icons';
+import { CloseOutlined, SettingOutlined, SlidersOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { Form, Radio, Tabs, message } from 'antd';
 
 import { MODAL_TYPE_OPTIONS } from '@/constants/manage';
@@ -22,6 +22,34 @@ const MODEL_SOURCE_OPTIONS = [
   { label: '公有', value: '1' },
   { label: '本地', value: '2' },
 ];
+
+/** v5 分区标题 — 简洁风格，无色彩竖线 */
+const SectionTitle: FC<{ icon: React.ReactNode; title: string; color?: string }> = ({ icon, title, color = '#5b7cf7' }) => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '10px 0',
+    marginBottom: 16,
+    borderBottom: '1px solid rgba(130, 140, 200, 0.10)',
+  }}>
+    <div style={{
+      width: 26,
+      height: 26,
+      borderRadius: 7,
+      background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#fff',
+      fontSize: 13,
+      boxShadow: `0 2px 8px ${color}30`,
+    }}>
+      {icon}
+    </div>
+    <span style={{ fontSize: 14, fontWeight: 600, color: '#1a2744', letterSpacing: '0.02em' }}>{title}</span>
+  </div>
+);
 
 const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType, providers = [] }) => {
   const { t } = useTranslation();
@@ -48,14 +76,12 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
   // 当模型来源或供应商变化时自动清空供应商/基础模型
   const prevModelSourceRef = useRef<string | undefined>();
   const prevProviderRef = useRef<string | undefined>();
-  // 编辑态下记录初始的模型来源、供应商、基础模型，用于来回切换时恢复
   const initialSourceRef = useRef<string | undefined>();
   const initialProviderRef = useRef<number | undefined>();
   const initialModelKeyRef = useRef<string | undefined>();
   useEffect(() => {
     if (!open) return;
     if (prevModelSourceRef.current !== undefined && prevModelSourceRef.current !== modelSourceVal) {
-      // 切回编辑初始来源时恢复原供应商与基础模型，否则清空
       if (operateType === 'edit' && modelSourceVal === initialSourceRef.current) {
         form.setFieldsValue({
           providerId: initialProviderRef.current,
@@ -70,7 +96,6 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
   useEffect(() => {
     if (!open) return;
     if (prevProviderRef.current !== undefined && prevProviderRef.current !== providerIdVal) {
-      // 若切换到的供应商就是编辑初始供应商，保留原基础模型；否则清空
       if (operateType === 'edit' && providerIdVal === initialProviderRef.current) {
         form.setFieldsValue({ modelKey: initialModelKeyRef.current });
       } else {
@@ -85,7 +110,6 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
       const ak = form.getFieldValue('apiKey');
       originalApiKeyRef.current = ak;
       if (ak) form.setFieldsValue({ apiKey: maskValue(ak) });
-      // 记录进入编辑时的初始来源/供应商/基础模型
       initialSourceRef.current = form.getFieldValue('modelSource');
       initialProviderRef.current = form.getFieldValue('providerId');
       initialModelKeyRef.current = form.getFieldValue('modelKey');
@@ -100,14 +124,11 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
     }
   }, [open, operateType, form, maskValue]);
 
-  // 根据当前模型来源过滤供应商列表
   const filteredProviders = useMemo(() => {
     if (!modelSourceVal) return providers;
-    // providerType '1'=公有, '2'=本地
     return providers.filter((p: ProviderItem) => p.providerType === modelSourceVal);
   }, [modelSourceVal, providers]);
 
-  // 获取当前选中供应商
   const selectedProvider = useMemo(() => {
     return providers.find((p: ProviderItem) => p.providerId === providerIdVal);
   }, [providerIdVal, providers]);
@@ -129,7 +150,7 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
         setSubmitDisabled(false);
       } else {
         message.error(res?.response?.data?.msg || res?.response?.data?.err_msg || '测试连接失败');
-      } 
+      }
     } catch (error: any) {
       const errMsg = error?.response?.data?.msg || error?.response?.data?.err_msg || error?.message || '测试连接失败';
       message.error(errMsg);
@@ -157,32 +178,122 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
     }
   };
 
+  const drawerTitle = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontSize: 18,
+        boxShadow: '0 4px 12px rgba(91, 124, 247, 0.3)',
+      }}>
+        <ThunderboltOutlined />
+      </div>
+      <div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: '#1a2744', letterSpacing: '0.02em' }}>
+          {operateType === 'add' ? '添加大模型' : '编辑大模型'}
+        </div>
+        <div style={{ fontSize: 12, color: '#768a9f', marginTop: 2 }}>
+          {operateType === 'add' ? '配置并接入新的大语言模型' : '修改模型配置参数'}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <ADrawer
+      className="ds-operate-drawer"
       closeIcon={null}
-      extra={<CloseOutlined onClick={handleClose} />}
+      destroyOnClose
+      extra={
+        <div
+          onClick={handleClose}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: 'rgba(255,255,255,0.6)',
+            border: '1px solid rgba(130, 140, 200, 0.18)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            color: '#8fa0b5',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.9)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91, 124, 247, 0.4)';
+            (e.currentTarget as HTMLElement).style.color = '#5b7cf7';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.6)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(130, 140, 200, 0.18)';
+            (e.currentTarget as HTMLElement).style.color = '#8fa0b5';
+          }}
+        >
+          <CloseOutlined style={{ fontSize: 14 }} />
+        </div>
+      }
       open={open}
       size="large"
-      title={operateType === 'add' ? '添加大模型' : '编辑大模型'}
+      title={drawerTitle}
       footer={
-        <AFlex justify="space-between" align="center">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, padding: '4px 0' }}>
+          <AButton
+            onClick={handleClose}
+            style={{
+              height: 38,
+              padding: '0 20px',
+              borderRadius: 8,
+              fontWeight: 500,
+              border: '1px solid rgba(130, 140, 200, 0.18)',
+              color: '#5f7490',
+              background: 'transparent',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            {t('common.cancel')}
+          </AButton>
           <AButton
             loading={testLoading}
             onClick={handleTest}
+            style={{
+              height: 38,
+              padding: '0 24px',
+              borderRadius: 8,
+              fontWeight: 600,
+              border: '1px solid #5b7cf7',
+              color: '#5b7cf7',
+              background: 'rgba(91, 124, 247, 0.04)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
           >
-            {t('page.dataPreparation.dataSource.testConnect')}
+            <ThunderboltOutlined /> {t('page.dataPreparation.dataSource.testConnect')}
           </AButton>
-          <AFlex gap={8}>
-            <AButton onClick={handleClose}>{t('common.cancel')}</AButton>
-            <AButton
-              disabled={submitDisabled}
-              type="primary"
-              onClick={submit}
-            >
-              {t('common.confirm')}
-            </AButton>
-          </AFlex>
-        </AFlex>
+          <AButton
+            disabled={submitDisabled}
+            type="primary"
+            onClick={submit}
+            style={{
+              height: 38,
+              padding: '0 28px',
+              borderRadius: 8,
+              fontWeight: 600,
+              background: submitDisabled ? undefined : 'linear-gradient(135deg, #5b7cf7, #7091fa)',
+              boxShadow: submitDisabled ? undefined : '0 2px 10px rgba(91, 124, 247, 0.3)',
+              border: 'none',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            {t('common.confirm')}
+          </AButton>
+        </div>
       }
       onClose={handleClose}
     >
@@ -193,11 +304,17 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
           items={[
             {
               key: 'basic',
-              label: '基础设置',
+              label: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <SettingOutlined />基础设置
+                </span>
+              ),
               children: (
-                <div style={{ minHeight: 580, display: 'flex', flexDirection: 'column', paddingTop: 16 }}>
+                <div style={{ minHeight: 580, display: 'flex', flexDirection: 'column', paddingTop: 8 }}>
+                  <SectionTitle icon={<SettingOutlined />} title="模型配置" color="#5b7cf7" />
+
                   {/* 模型来源 */}
-                  <AForm.Item label="模型来源" name="modelSource" initialValue="1">
+                  <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>模型来源</span>} name="modelSource" initialValue="1">
                     <Radio.Group
                       options={MODEL_SOURCE_OPTIONS}
                       optionType="button"
@@ -207,16 +324,18 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
 
                   {/* 模型名称 */}
                   <AForm.Item
-                    label="模型名称"
+                    label={<span style={{ fontWeight: 500, color: '#3e5068' }}>模型名称</span>}
                     name="modelName"
                     rules={[{ required: true, message: '请输入模型名称' }, { max: 100, message: '模型名称不能超过100个字符' }]}
                   >
                     <AInput placeholder="请输入模型名称" />
                   </AForm.Item>
 
+                  <SectionTitle icon={<SettingOutlined />} title="接入配置" color="#10b981" />
+
                   {/* 供应商 */}
                   <AForm.Item
-                    label="供应商"
+                    label={<span style={{ fontWeight: 500, color: '#3e5068' }}>供应商</span>}
                     name="providerId"
                     rules={[{ required: true, message: '请选择供应商' }]}
                   >
@@ -230,7 +349,7 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
 
                   {/* 模型类型 */}
                   <AForm.Item
-                    label="模型类型"
+                    label={<span style={{ fontWeight: 500, color: '#3e5068' }}>模型类型</span>}
                     name="modelType"
                     rules={[{ required: true, message: '请选择模型类型' }]}
                   >
@@ -241,17 +360,17 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                   </AForm.Item>
 
                   {/* 基础模型 (modelKey) */}
-                  <AForm.Item label="基础模型" name="modelKey">
+                  <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>基础模型</span>} name="modelKey">
                     <AInput placeholder="请输入基础模型名称（如 gpt-4o）" />
                   </AForm.Item>
 
                   {/* API Key */}
-                  <AForm.Item label="API Key" name="apiKey">
+                  <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>API Key</span>} name="apiKey">
                     <AInput.Password placeholder="请输入 API Key" />
                   </AForm.Item>
 
                   {/* API Base */}
-                  <AForm.Item label="API Base" name="apiBase">
+                  <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>API Base</span>} name="apiBase">
                     <AInput
                       placeholder={
                         modelSourceVal === '1'
@@ -261,9 +380,11 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                     />
                   </AForm.Item>
 
+                  <SectionTitle icon={<SettingOutlined />} title="状态与描述" color="#f59e0b" />
+
                   {/* 状态 */}
                   <AForm.Item
-                    label="状态"
+                    label={<span style={{ fontWeight: 500, color: '#3e5068' }}>状态</span>}
                     name="status"
                     valuePropName="checked"
                     getValueFromEvent={(checked: boolean) => checked ? '1' : '0'}
@@ -276,7 +397,7 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                   </AForm.Item>
 
                   {/* 描述 */}
-                  <AForm.Item label="描述" name="remark">
+                  <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>描述</span>} name="remark">
                     <AInput.TextArea placeholder="请输入描述" rows={3} />
                   </AForm.Item>
                 </div>
@@ -284,29 +405,38 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
             },
             {
               key: 'advanced',
-              label: '高级设置',
+              label: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <SlidersOutlined />高级设置
+                </span>
+              ),
               children: (
-                <div style={{ minHeight: 580, display: 'flex', flexDirection: 'column', paddingTop: 16 }}>
+                <div style={{ minHeight: 580, display: 'flex', flexDirection: 'column', paddingTop: 8 }}>
                   {modelTypeVal === '1' ? (
                     <>
-                      <AForm.Item label="最大 Token 上限" name="max_token">
+                      <SectionTitle icon={<SlidersOutlined />} title="推理参数" color="#8b5cf6" />
+                      <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>最大 Token 上限</span>} name="max_token">
                         <SliderAndInput max={32000} />
                       </AForm.Item>
-                      <AForm.Item label="温度" name="temperature">
+                      <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>温度</span>} name="temperature">
                         <SliderAndInput max={1} min={0} precision={1} step="0.1" />
                       </AForm.Item>
-                      <AForm.Item label="超时（s）" name="timeOut">
+
+                      <SectionTitle icon={<SlidersOutlined />} title="稳定性参数" color="#ec4899" />
+                      <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>超时（s）</span>} name="timeOut">
                         <SliderAndInput max={300} />
                       </AForm.Item>
-                      <AForm.Item label="最大重试次数" name="maxRetries">
+                      <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>最大重试次数</span>} name="maxRetries">
                         <SliderAndInput max={5} />
                       </AForm.Item>
-                      <AForm.Item label="模型上下文长度" name="context_length">
+                      <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>模型上下文长度</span>} name="context_length">
                         <SliderAndInput max={32000} />
                       </AForm.Item>
                     </>
                   ) : (
-                    <AEmpty description="该模型类型暂无高级设置" style={{ marginTop: 80 }} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
+                      <AEmpty description="该模型类型暂无高级设置" />
+                    </div>
                   )}
                 </div>
               ),

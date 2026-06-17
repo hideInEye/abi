@@ -12,8 +12,8 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
   const [checkboxColumns, setCheckboxColumns] = useState<TableColumnCheck[]>([]);
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 50,
-    total: 0
+    pageSize: 5,
+    total: 0,
   });
 
   const pageDatasource = useMemo(() => {
@@ -25,12 +25,12 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
   const columns = useMemo(() => {
     return checkboxColumns
       ?.filter(item => item.checked)
-      .map(({ key,width }) => ({
+      .map(({ key, width }) => ({
         align: 'center',
         dataIndex: key,
         key,
         width,
-        title: key
+        title: key,
       }));
   }, [checkboxColumns]);
 
@@ -39,14 +39,14 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
       const res = await getPreviewDataByTable({
         sourceId,
         spaceId: Number(localStorage.getItem('spaceId')),
-        tableName
+        tableName,
       });
       const resData = res.data?.data;
       setDataSource(resData?.data);
       const pageConfig = {
         current: 1,
-        pageSize: 50,
-        total: resData?.data?.length
+        pageSize: 5,
+        total: resData?.data?.length,
       };
       setPagination(pageConfig);
 
@@ -65,56 +65,60 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
   }, [tableName]);
 
   return (
-    <>
-      <APopover
-        placement="bottomRight"
-        trigger="click"
-        content={
-          <DragContent
-            columns={checkboxColumns}
-            setColumnChecks={setCheckboxColumns}
-          />
-        }
-      >
-        <AButton
-          className="absolute right-0 top-[-50px] z-1"
-          icon={<IconAntDesignSettingOutlined />}
-          size="small"
+    <div className="ds-view-tab-content">
+      <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <APopover
+          placement="bottomRight"
+          trigger="click"
+          content={
+            <DragContent
+              columns={checkboxColumns}
+              setColumnChecks={setCheckboxColumns}
+            />
+          }
         >
-          {t('common.columnSetting')}
-        </AButton>
-      </APopover>
+          <AButton
+            className="ds-view-col-setting-btn"
+            icon={<IconAntDesignSettingOutlined />}
+            size="small"
+          >
+            {t('common.columnSetting')}
+          </AButton>
+        </APopover>
 
-      <div
-        style={{
-          border: '1px solid rgba(130,140,200,0.18)',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
-        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
-          <ATable<any>
-            footer={pageDatasource?.length ? () => <div>说明: 参与预览计算的数据最多100行,原数据不足100行则取全量数据,超过则抽取样数据</div> : undefined}
-            columns={columns as any[]}
-            dataSource={pageDatasource}
-            scroll={pageDatasource?.length ? { x: 'max-content' } : undefined}
-            size="middle"
-            className="abi-std-table"
-            pagination={{
-              ...pagination,
-              onChange: (page: number, pageSize: number) => {
-                setPagination({
-                  current: page,
-                  pageSize,
-                  total: pagination.total
-                });
-              }
-            }}
-          />
+        <div
+          style={{
+            border: '1px solid rgba(130,140,200,0.18)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div className="assistant-table-scroll" style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
+            <ATable<any>
+              footer={pageDatasource?.length ? () => <div>说明: 参与预览计算的数据最多100行,原数据不足100行则取全量数据,超过则抽取样数据</div> : undefined}
+              columns={columns as any[]}
+              dataSource={pageDatasource}
+              scroll={pageDatasource?.length ? { x: 'max-content' } : undefined}
+              size="middle"
+              className="abi-std-table"
+              pagination={{
+                ...pagination,
+                onChange: (page: number, pageSize: number) => {
+                  setPagination({
+                    current: page,
+                    pageSize,
+                    total: pagination.total,
+                  });
+                },
+              }}
+            />
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 });

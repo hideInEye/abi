@@ -1,5 +1,5 @@
 // import PageTitle from '@/components/stateless/common/PageTitle'
-import { message } from 'antd'
+import { message, Splitter } from 'antd'
 import { Suspense } from 'react'
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer'
@@ -43,6 +43,23 @@ export function Component() {
       return onDeleted()
     } else {
       message.error(res.response.data.msg)
+    }
+  }
+
+  const handleBatchDelete = async (ids: number[]) => {
+    if (ids.length === 0) {
+      message.warning('请先选择要删除的模型')
+      return
+    }
+    const promises = ids.map(id => deleteModel(id))
+    const results = await Promise.all(promises)
+    const allSuccess = results.every((res: any) => res.response.data.code === 200)
+    if (allSuccess) {
+      message.success(`成功删除 ${ids.length} 个模型`)
+      run()
+    } else {
+      message.error('批量删除部分失败')
+      run()
     }
   }
 
@@ -159,36 +176,26 @@ export function Component() {
   }, [allModels, activeProviderId])
 
   return (
-    <div className="flex flex-col" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {/* 左侧供应商列表 */}
-        <div
-          style={{
-            width: 300,
-            flexShrink: 0,
-            background: '#F8FAFF',
-            borderRadius: 8,
-            border: '1px solid #f0f0f0',
-            padding: '12px 8px',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <Suspense>
-            <ProviderList
-              providers={providers}
-              loading={providersLoading}
-              activeProviderId={activeProviderId}
-              activeTab={activeTab}
-              onSelect={handleSelectProvider}
-              onTabChange={handleTabChange}
-            />
-          </Suspense>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <Splitter style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {/* 左侧供应商列表 — 可调整宽度 */}
+        <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
+          <div className="abi-group-sidebar" style={{ height: '100%' }}>
+            <Suspense>
+              <ProviderList
+                providers={providers}
+                loading={providersLoading}
+                activeProviderId={activeProviderId}
+                activeTab={activeTab}
+                onSelect={handleSelectProvider}
+                onTabChange={handleTabChange}
+              />
+            </Suspense>
+          </div>
+        </Splitter.Panel>
 
-        {/* 右侧卡片网格 */}
-        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        {/* 右侧模型列表 */}
+        <Splitter.Panel>
           <Suspense>
             <ModelCardList
               models={displayModels}
@@ -200,11 +207,12 @@ export function Component() {
               onCopy={handleCopy}
               onSetDefault={handleSetDefault}
               onDelete={handleDelete}
+              onBatchDelete={handleBatchDelete}
               onAnalysis={setAnalysisContext}
             />
           </Suspense>
-        </div>
-      </div>
+        </Splitter.Panel>
+      </Splitter>
 
       <Suspense>
         <ModalOperateDrawer {...generalPopupOperation} providers={providers} />

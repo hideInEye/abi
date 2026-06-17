@@ -1,10 +1,11 @@
-import { DeleteOutlined, EditOutlined, LeftOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Dropdown, Empty, Popconfirm, Select, Switch, message } from 'antd';
-
-// import PageTitle from '@/components/stateless/common/PageTitle';
+import type { TableProps } from 'antd';
 
 import { Group } from '@/components/stateful/group/Group';
 import type { GroupProps } from '@/components/stateful/group/Group';
+import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
+import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 
@@ -22,11 +23,6 @@ const ASSISTANT_GROUP_CONFIG: GroupProps['config'] = {
   type: 'assistant' as any
 };
 
-/**
- * AI 助手列表页（静态卡片版）
- * - 后期接入接口时只需将 MOCK_AGENTS 替换为接口返回数据
- */
-
 interface AgentCard extends AgentMock {
   type: '助手' | '技能';
   iconBg: string;
@@ -34,11 +30,15 @@ interface AgentCard extends AgentMock {
   selected?: boolean;
   createBy?: string;
   groupId?: number;
+  createTime?: string;
+  updateTime?: string;
 }
 
 const MOCK_AGENTS: AgentCard[] = [
   {
     createBy: 'admin',
+    createTime: '2024-01-15 10:30:00',
+    updateTime: '2024-01-20 14:20:00',
     description: '提供股票、指数的实时行情以及历史行情查询，以及市场情况分析、投资知识普及。',
     groupId: 1,
     iconBg: '#fa8c16',
@@ -50,6 +50,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-16 09:15:00',
+    updateTime: '2024-01-18 16:45:00',
     description: 'test',
     groupId: 3,
     iconBg: '#52c41a',
@@ -59,6 +62,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '技能'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-17 11:20:00',
+    updateTime: '2024-01-19 10:30:00',
     description: '提供实时股票价格查询和市场行情分析服务。',
     groupId: 5,
     iconBg: '#7cb305',
@@ -68,6 +74,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-18 14:00:00',
+    updateTime: '2024-01-20 09:15:00',
     description: '根据提示词创作玄幻小说，包括大章划分和各章节内容概述。',
     groupId: 4,
     iconBg: '#722ed1',
@@ -77,6 +86,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-19 16:30:00',
+    updateTime: '2024-01-21 11:45:00',
     description: '回答关于金融风控方面的问题。',
     groupId: 6,
     iconBg: '#fa541c',
@@ -86,6 +98,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-20 08:45:00',
+    updateTime: '2024-01-22 15:20:00',
     description: '快速查询宏观经济数据以及图表绘制，提供辅助研究服务。',
     groupId: 1,
     iconBg: '#fa8c16',
@@ -95,6 +110,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-21 13:15:00',
+    updateTime: '2024-01-23 10:00:00',
     description: '为您提供全面的 SWOT 公司分析报告，帮助您详细了解指定公司的优势、劣势、机会和威胁。',
     groupId: 1,
     iconBg: '#52c41a',
@@ -104,6 +122,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-22 10:00:00',
+    updateTime: '2024-01-24 14:30:00',
     description: '一名 Excel 全能助手，可以帮助你解决 Excel 相关的问题和提供高效的数据处理方案。',
     groupId: 2,
     iconBg: '#13c2c2',
@@ -113,6 +134,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-23 15:45:00',
+    updateTime: '2024-01-25 09:30:00',
     description: '为你生成专业、结构化的中文周报。',
     groupId: 2,
     iconBg: '#1677ff',
@@ -122,6 +146,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-24 11:30:00',
+    updateTime: '2024-01-26 16:15:00',
     description: '解决电脑，手机，打印机，投影仪，路由器等电器问题',
     groupId: 2,
     iconBg: '#fa541c',
@@ -131,6 +158,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-25 09:00:00',
+    updateTime: '2024-01-27 13:45:00',
     description: '提供各种与税法相关的帮助和信息',
     groupId: 1,
     iconBg: '#722ed1',
@@ -140,6 +170,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-26 14:20:00',
+    updateTime: '2024-01-28 10:30:00',
     description: '给代码生成单元测试',
     groupId: 3,
     iconBg: '#52c41a',
@@ -149,6 +182,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-27 16:00:00',
+    updateTime: '2024-01-29 11:15:00',
     description: '一名全能的编程专家，擅长项目设计以及具体的编码。',
     groupId: 3,
     iconBg: '#1677ff',
@@ -158,6 +194,9 @@ const MOCK_AGENTS: AgentCard[] = [
     type: '助手'
   },
   {
+    createBy: 'admin',
+    createTime: '2024-01-28 10:45:00',
+    updateTime: '2024-01-30 15:00:00',
     description: '在准确表达原文事实和背景的基础上，进一步润色使得符合中文表达习惯。',
     groupId: 4,
     iconBg: '#fa8c16',
@@ -179,12 +218,16 @@ export function Component() {
   );
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
+  const [checkedRowKeys, setCheckedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRows, setSelectedRows] = useState<AgentCard[]>([]);
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
-    { key: 'name', label: '名称', visible: true },
-    { key: 'description', label: '描述', visible: true },
+    { key: 'name', label: '助手名称', visible: true },
+    { key: 'description', label: '助手描述', visible: true },
     { key: 'createBy', label: '创建用户', visible: true },
-    { key: 'status', label: '状态', visible: true },
-    { key: 'operate', label: '操作', visible: true },
+    { key: 'createTime', label: '创建时间', visible: true },
+    { key: 'updateBy', label: '操作人', visible: false },
+    { key: 'updateTime', label: '操作时间', visible: true },
   ]);
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
@@ -216,7 +259,7 @@ export function Component() {
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(10);
   const [jumpValue, setJumpValue] = useState('');
 
   // 筛选条件变化时重置到第一页
@@ -232,41 +275,120 @@ export function Component() {
   }, [list, currentPage, pageSize]);
 
   // 表格列定义
-  const allTableColumns = useMemo(() => [
+  const allTableColumns: TableProps<AgentCard>['columns'] = [
     {
-      title: '名称', key: 'name', dataIndex: 'name',
+      align: 'left',
+      className: 'col-assistant-name',
+      dataIndex: 'name',
+      key: 'name',
+      minWidth: 200,
+      onHeaderCell: () => ({ className: 'col-assistant-name' }),
+      render: (text: string) => (
+        <span style={{ fontWeight: 600 }} title={text}>{text}</span>
+      ),
+      title: '助手名称'
+    },
+    {
+      align: 'left',
+      dataIndex: 'description',
+      key: 'description',
+      minWidth: 300,
+      render: (text: string) => (
+        <ATooltip title={text} placement="topLeft">
+          <div style={{
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            lineHeight: '1.5',
+            maxHeight: '3em'
+          }}>
+            {text || '-'}
+          </div>
+        </ATooltip>
+      ),
+      title: '助手描述'
+    },
+    {
+      align: 'center',
+      dataIndex: 'createBy',
+      key: 'createBy',
+      minWidth: 100,
+      title: '创建用户'
+    },
+    {
+      align: 'center',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      minWidth: 150,
+      title: '创建时间'
+    },
+    {
+      align: 'center',
+      dataIndex: 'updateBy',
+      key: 'updateBy',
+      minWidth: 100,
+      title: '操作人'
+    },
+    {
+      align: 'center',
+      dataIndex: 'updateTime',
+      key: 'updateTime',
+      minWidth: 150,
+      title: '操作时间'
+    },
+    {
+      align: 'center',
+      fixed: 'right',
+      key: 'operate',
+      minWidth: 150,
+      title: '操作',
       render: (_: any, record: AgentCard) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ alignItems: 'center', background: record.iconBg, borderRadius: 6, color: '#fff', display: 'flex', flexShrink: 0, fontSize: 12, fontWeight: 700, height: 24, justifyContent: 'center', width: 24 }}>{record.iconLetter}</div>
-          <span>{record.name}</span>
+        <div className="ds-action-group">
+          <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleEdit(record)}>
+            <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
+          </AButton>
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'metadata',
+                  label: (
+                    <span><ApartmentOutlined style={{ marginRight: 4 }} />元数据分析</span>
+                  ),
+                  onClick: () => setAnalysisContext({
+                    nodeId: record.id,
+                    nodeName: record.name,
+                    nodeType: 'ASSISTANT',
+                    spaceId: Number(localStorage.getItem('spaceId')) || undefined
+                  })
+                },
+                { type: 'divider' },
+                {
+                  key: 'delete',
+                  danger: true,
+                  label: (
+                    <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => handleDelete(record.id)}>
+                      <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
+                    </APopconfirm>
+                  ),
+                },
+              ],
+            }}
+          >
+            <AButton className="abi-action-link" size="small" variant="link">
+              更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+            </AButton>
+          </Dropdown>
         </div>
       )
     },
-    { title: '描述', key: 'description', dataIndex: 'description', ellipsis: true },
-    { title: '创建用户', key: 'createBy', dataIndex: 'createBy' },
-    {
-      title: '状态', key: 'status', dataIndex: 'status', align: 'center' as const,
-      render: (_: any, record: AgentCard) => <Switch checked={record.status === '1'} size="small" onChange={checked => handleToggle(record.id, checked)} />
-    },
-    {
-      title: '操作', key: 'operate', align: 'center' as const, fixed: 'right' as const,
-      render: (_: any, record: AgentCard) => (
-        <Dropdown trigger={['hover']} menu={{
-          items: [
-            { key: 'edit', label: <span><EditOutlined style={{ marginRight: 6 }} />编辑</span> },
-            { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
-          ],
-          onClick: ({ key }) => { if (key === 'edit') handleEdit(record); else if (key === 'delete') handleDelete(record.id); }
-        }}>
-          <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
-        </Dropdown>
-      )
-    },
-  ], []);
+  ];
 
   const tableColumns = useMemo(() => {
     const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
-    return allTableColumns.filter(col => visibleKeys.has(col.key));
+    return allTableColumns!.filter(col => col.key === 'operate' || visibleKeys.has(col.key));
   }, [columnOptions, allTableColumns]);
 
   const handleAdd = () => {
@@ -291,6 +413,164 @@ export function Component() {
     message.success('已删除');
   };
 
+  // Batch delete
+  const handleBatchDelete = () => {
+    if (checkedRowKeys.length === 0) {
+      message.warning('请先选择要删除的助手');
+      return;
+    }
+    setAgents(prev => prev.filter(it => !checkedRowKeys.includes(it.id)));
+    setCheckedRowKeys([]);
+    setSelectedRows([]);
+    message.success(`成功删除 ${checkedRowKeys.length} 个助手`);
+  };
+
+  const rowSelection: TableProps<AgentCard>['rowSelection'] = {
+    fixed: true,
+    selectedRowKeys: checkedRowKeys,
+    onChange: (keys, rows) => {
+      setCheckedRowKeys(keys);
+      setSelectedRows(rows);
+    },
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
+  const handlePrev = () => { if (currentPage > 1) handlePageChange(currentPage - 1); };
+  const handleNext = () => { if (currentPage < totalPages) handlePageChange(currentPage + 1); };
+
+  const handleJump = () => {
+    const page = parseInt(jumpValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      handlePageChange(page);
+      setJumpValue('');
+    }
+  };
+
+  const renderPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else if (currentPage <= 3) {
+      for (let i = 1; i <= 4; i++) pages.push(i);
+      pages.push('...', totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      pages.push(1, '...');
+      for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1, '...');
+      pages.push(currentPage - 1, currentPage, currentPage + 1);
+      pages.push('...', totalPages);
+    }
+    return pages.map((page, idx) => {
+      if (page === '...') return <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">...</span>;
+      const isActive = page === currentPage;
+      return (
+        <span key={page} className={`page-item ${isActive ? 'page-active' : ''}`} onClick={() => handlePageChange(page as number)}>
+          {page}
+        </span>
+      );
+    });
+  };
+
+  // Card grid
+  const renderCardGrid = () => {
+    if (pagedList.length === 0) {
+      return (
+        <div className="abi-card-empty">
+          <Empty description="暂无助手" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        </div>
+      );
+    }
+
+    return (
+      <div className="abi-card-grid">
+        <div className="abi-card-grid-inner">
+          {pagedList.map(agent => {
+            const active = agent.id === selectedId;
+            return (
+              <div
+                key={agent.id}
+                className="abi-data-card"
+                style={active ? { borderColor: '#5b7cf7' } : undefined}
+                onClick={() => handleEdit(agent)}
+              >
+                <div className="abi-data-card-head">
+                  <div className="abi-data-card-title">
+                    <div
+                      style={{
+                        alignItems: 'center',
+                        background: agent.iconBg,
+                        borderRadius: 6,
+                        color: '#fff',
+                        display: 'flex',
+                        flexShrink: 0,
+                        fontSize: 14,
+                        fontWeight: 700,
+                        height: 28,
+                        justifyContent: 'center',
+                        width: 28
+                      }}
+                    >
+                      {agent.iconLetter}
+                    </div>
+                    <span className="abi-data-card-name">{agent.name}</span>
+                  </div>
+                  <span onClick={e => e.stopPropagation()}>
+                    <Switch
+                      checked={agent.status === '1'}
+                      size="small"
+                      onChange={checked => handleToggle(agent.id, checked)}
+                    />
+                  </span>
+                </div>
+                <div className="abi-data-card-body">
+                  <div className="row">
+                    <span className="lbl">描述</span>
+                    <span className="val" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{agent.description}</span>
+                  </div>
+                  <div className="row"><span className="lbl">创建用户</span><span className="val">{agent.createBy || '-'}</span></div>
+                  <div className="row"><span className="lbl">创建时间</span><span className="val">{agent.createTime || '-'}</span></div>
+                </div>
+                <div className="abi-data-card-footer" onClick={e => e.stopPropagation()}>
+                  <button className="abi-card-act" onClick={() => handleEdit(agent)}>
+                    <EditOutlined style={{ marginRight: 3 }} />编辑
+                  </button>
+                  <button className="abi-card-act" onClick={() => setAnalysisContext({
+                    nodeId: agent.id,
+                    nodeName: agent.name,
+                    nodeType: 'ASSISTANT',
+                    spaceId: Number(localStorage.getItem('spaceId')) || undefined
+                  })}>
+                    <ApartmentOutlined style={{ marginRight: 3 }} />元数据
+                  </button>
+                  <Dropdown
+                    menu={{
+                      items: [
+                        { key: 'delete', danger: true, label: '删除' },
+                      ],
+                      onClick: ({ key, domEvent }) => {
+                        domEvent.stopPropagation();
+                        if (key === 'delete') handleDelete(agent.id);
+                      }
+                    }}
+                    trigger={['click']}
+                  >
+                    <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
+                      <MoreOutlined />
+                    </button>
+                  </Dropdown>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* v5 Tree Panel — left sidebar */}
@@ -311,19 +591,22 @@ export function Component() {
               onChange={e => setKeyword(e.target.value)}
               onPressEnter={handleSearch}
               className="abi-field-input"
-              style={{ width: '16rem' }}
+              style={{ width: '220px' }}
             />
             <ADatePicker.RangePicker
+              showTime={{ format: 'HH:mm:ss' }}
+              format="YYYY-MM-DD HH:mm:ss"
               placeholder={['开始时间', '结束时间']}
               value={dateRange}
               onChange={(dates) => setDateRange(dates)}
               className="abi-field-input"
+              style={{ width: '380px' }}
             />
             <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
               <SearchOutlined /> 查询
             </AButton>
             <AButton className="btn-ghost-v5" onClick={handleReset}>
-              重置
+              <ReloadOutlined /> 重置
             </AButton>
           </div>
         </section>
@@ -334,6 +617,13 @@ export function Component() {
             <div className="abi-toolbar-left">
               <AButton type="primary" className="btn-accent-gradient" onClick={handleAdd}>
                 <PlusOutlined /> 新增助手
+              </AButton>
+              <AButton
+                className="btn-ghost-v5"
+                disabled={checkedRowKeys.length === 0}
+                onClick={handleBatchDelete}
+              >
+                <DeleteOutlined /> 批量删除
               </AButton>
             </div>
             <ViewControls
@@ -349,7 +639,15 @@ export function Component() {
                 <Empty description="暂无助手" />
               </div>
             ) : viewMode === 'list' ? (
-              <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: 12, overflow: 'hidden', flex: 1, minHeight: 0 }}>
+              <div style={{
+                border: '1px solid rgba(130,140,200,0.18)',
+                borderRadius: 12,
+                overflow: 'hidden',
+                flex: 1,
+                minHeight: 0,
+                width: '100%',
+                maxHeight: '100%'
+              }}>
                 <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
                   <ATable
                     rowKey="id"
@@ -357,112 +655,14 @@ export function Component() {
                     dataSource={pagedList}
                     pagination={false}
                     size="middle"
-                    className="abi-std-table"
+                    className="assistant-table abi-std-table"
                     scroll={pagedList.length > 0 ? { x: 'max-content' } : undefined}
+                    rowSelection={viewMode === 'list' ? rowSelection : undefined}
                   />
                 </div>
               </div>
             ) : (
-              <div className="abi-card-grid">
-                <div className="abi-card-grid-inner">
-                  {pagedList.map(agent => {
-                    const active = agent.id === selectedId;
-                    return (
-                      <div
-                        key={agent.id}
-                        className="abi-data-card"
-                        style={active ? { borderColor: '#5b7cf7' } : undefined}
-                        onClick={() => handleEdit(agent)}
-                      >
-                        <div className="abi-data-card-head">
-                          <div className="abi-data-card-title">
-                            <div
-                              style={{
-                                alignItems: 'center',
-                                background: agent.iconBg,
-                                borderRadius: 6,
-                                color: '#fff',
-                                display: 'flex',
-                                flexShrink: 0,
-                                fontSize: 14,
-                                fontWeight: 700,
-                                height: 28,
-                                justifyContent: 'center',
-                                width: 28
-                              }}
-                            >
-                              {agent.iconLetter}
-                            </div>
-                            <span className="abi-data-card-name">{agent.name}</span>
-                          </div>
-                          <span onClick={e => e.stopPropagation()}>
-                            <Switch
-                              checked={agent.status === '1'}
-                              size="small"
-                              onChange={checked => handleToggle(agent.id, checked)}
-                            />
-                          </span>
-                        </div>
-                        <div className="abi-data-card-body">
-                          <div className="row">
-                            <span className="lbl">描述</span>
-                            <span className="val" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{agent.description}</span>
-                          </div>
-                          <div className="row"><span className="lbl">创建用户</span><span className="val">{agent.createBy || '-'}</span></div>
-                        </div>
-                        <div className="abi-data-card-footer" onClick={e => e.stopPropagation()}>
-                          <Dropdown
-                            trigger={['hover']}
-                            placement="topRight"
-                            menu={{
-                              items: [
-                                {
-                                  key: 'edit',
-                                  label: (
-                                    <span>
-                                      <EditOutlined style={{ marginRight: 6 }} />
-                                      编辑
-                                    </span>
-                                  ),
-                                },
-                                {
-                                  key: 'delete',
-                                  label: (
-                                    <Popconfirm
-                                      cancelText="取消"
-                                      okText="删除"
-                                      okType="danger"
-                                      title="确定删除该助手？"
-                                      onConfirm={() => handleDelete(agent.id)}
-                                    >
-                                      <span style={{ color: '#ff4d4f' }}>
-                                        <DeleteOutlined style={{ marginRight: 6 }} />
-                                        删除
-                                      </span>
-                                    </Popconfirm>
-                                  ),
-                                },
-                              ],
-                              onClick: ({ key, domEvent }) => {
-                                domEvent?.stopPropagation?.();
-                                if (key === 'edit') handleEdit(agent);
-                              },
-                            }}
-                          >
-                            <button
-                              type="button"
-                              className="abi-card-more"
-                              aria-label="more"
-                            >
-                              <MoreOutlined />
-                            </button>
-                          </Dropdown>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              renderCardGrid()
             )}
           </div>
           <div className="data-source-pagination">
@@ -472,36 +672,30 @@ export function Component() {
                 value={pageSize}
                 onChange={(val: number) => { setPageSize(val); setCurrentPage(1); }}
                 options={[
-                  { label: '12条/页', value: 12 },
+                  { label: '10条/页', value: 10 },
+                  { label: '15条/页', value: 15 },
                   { label: '20条/页', value: 20 },
+                  { label: '25条/页', value: 25 },
                   { label: '30条/页', value: 30 },
-                  { label: '50条/页', value: 50 },
                 ]}
                 className="page-size-select"
               />
-              <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+              <button className="page-btn" disabled={currentPage === 1} onClick={handlePrev}>
                 <LeftOutlined />
               </button>
-              {(() => {
-                const pages: number[] = [];
-                if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
-                else {
-                  pages.push(1);
-                  if (currentPage > 3) pages.push(-1);
-                  const start = Math.max(2, currentPage - 1);
-                  const end = Math.min(totalPages - 1, currentPage + 1);
-                  for (let i = start; i <= end; i++) pages.push(i);
-                  if (currentPage < totalPages - 2) pages.push(-2);
-                  pages.push(totalPages);
-                }
-                return pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === currentPage ? ' page-active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</span>);
-              })()}
-              <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+              {renderPageNumbers()}
+              <button className="page-btn" disabled={currentPage >= totalPages} onClick={handleNext}>
                 <RightOutlined />
               </button>
               <span className="quick-jumper">
                 前往
-                <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (p >= 1 && p <= totalPages) setCurrentPage(p); setJumpValue(''); }} />
+                <AInput
+                  className="jump-input"
+                  style={{ width: 48, textAlign: 'center' }}
+                  value={jumpValue}
+                  onChange={(e: any) => setJumpValue(e.target.value)}
+                  onPressEnter={handleJump}
+                />
                 页
               </span>
             </div>
@@ -509,15 +703,17 @@ export function Component() {
         </section>
       </div>
 
-      {editVisible ? (
-        <AssistantEditDrawer
-          agent={editingAgent}
-          onClose={() => {
-            setEditVisible(false);
-            setEditingAgent(null);
-          }}
-        />
-      ) : null}
+      <AssistantEditDrawer
+        visible={editVisible}
+        onClose={() => setEditVisible(false)}
+        agent={editingAgent}
+      />
+
+      <MetadataAnalysisDrawer
+        context={analysisContext}
+        open={Boolean(analysisContext)}
+        onClose={() => setAnalysisContext(null)}
+      />
     </div>
   );
 }

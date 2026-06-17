@@ -85,12 +85,12 @@ export default function DataTableMeaningBaseInfo() {
       </AForm.Item>
 
       <AForm.Item
-        label="表语义"
+        label="数据语义"
         labelCol={{ span: 3 }}
         name="chineseName"
-        rules={[{ message: '请输入表语义', required: true }, { max: 50, message: '表语义最多50个字符' }]}
+        rules={[{ message: '请输入数据语义', required: true }, { max: 50, message: '数据语义最多50个字符' }]}
       >
-        <AInput placeholder="表语义" />
+        <AInput placeholder="数据语义" />
       </AForm.Item>
 
       <AForm.Item

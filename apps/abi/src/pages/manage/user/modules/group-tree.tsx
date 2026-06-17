@@ -1,3 +1,10 @@
+import {
+  ApartmentOutlined,
+  FolderOpenOutlined,
+  FolderOutlined,
+  RightOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { Dispatch, Key, SetStateAction } from 'react';
 
@@ -10,7 +17,6 @@ interface PropsType {
 
 function filterTreeData(data: Api.SystemManage.MenuTree[], keyword: string): DataNode[] {
   const filterNode = (node: Api.SystemManage.MenuTree): DataNode | null => {
-    // 如果当前节点的 label 包含关键字，则保留该节点
     if (node.label.includes(keyword)) {
       return {
         children: node.children ? filterTreeData(node.children, keyword) : undefined,
@@ -19,11 +25,9 @@ function filterTreeData(data: Api.SystemManage.MenuTree[], keyword: string): Dat
       };
     }
 
-    // 如果当前节点有 children，递归过滤 children
     if (node.children) {
       const filteredChildren = node.children.map(filterNode).filter((child): child is DataNode => child !== null);
 
-      // 如果有过滤后的 children，则保留该节点
       if (filteredChildren.length > 0) {
         return {
           children: filteredChildren,
@@ -33,17 +37,23 @@ function filterTreeData(data: Api.SystemManage.MenuTree[], keyword: string): Dat
       }
     }
 
-    // 如果当前节点及其子节点都不匹配关键字，则返回 null
     return null;
   };
 
   return data?.map(filterNode).filter((node): node is DataNode => node !== null);
 }
 
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 420;
+const DEFAULT_WIDTH = 260;
+
 const GroupTree: FC<PropsType> = memo(({ selectedKeys, setSelectedKeys }) => {
   const [keyword, setKeyword] = useState<string>('');
-
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH);
+  const draggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(DEFAULT_WIDTH);
 
   const { data, run: getTree } = useRequest(fetchGetDeptTree, {
     manual: true
@@ -68,36 +78,98 @@ const GroupTree: FC<PropsType> = memo(({ selectedKeys, setSelectedKeys }) => {
           });
         }
       });
-      setExpandedKeys(curExpandedKeys); // 初始树展开展示
+      setExpandedKeys(curExpandedKeys);
       if (data?.data[0]) {
-        setSelectedKeys([data?.data[0]?.id]); // 初始部门选中
+        setSelectedKeys([data?.data[0]?.id]);
       }
     }
   }, [data]);
 
+  // ── Resize handlers ──
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!draggingRef.current) return;
+      const delta = e.clientX - startXRef.current;
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidthRef.current + delta));
+      setPanelWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      draggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    startXRef.current = e.clientX;
+    startWidthRef.current = panelWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
   return (
-    <ASpace direction="vertical">
-      <div className="flex-y-center gap-16px pb-12px">
-        <AInput
-          className="w-240px"
-          placeholder="请输入关键字进行搜索"
-          value={keyword}
-          onChange={e => setKeyword(e.target?.value)}
-        />
+    <div className="dept-tree-panel" style={{ width: panelWidth }}>
+      {/* Resize handle — right edge */}
+      <div
+        className="dept-tree-resize-handle"
+        onMouseDown={handleResizeStart}
+      />
+
+      {/* Header */}
+      <div className="dept-tree-header">
+        <div className="dept-tree-header-title">
+          <span className="dept-tree-header-icon">
+            <ApartmentOutlined />
+          </span>
+          <span>机构目录</span>
+        </div>
       </div>
 
-      <ATree
-        expandedKeys={expandedKeys}
-        selectedKeys={selectedKeys}
-        treeData={treeData}
-        onExpand={keys => {
-          setExpandedKeys(keys);
-        }}
-        onSelect={value => {
-          setSelectedKeys(value);
-        }}
-      />
-    </ASpace>
+      {/* Search */}
+      <div className="dept-tree-search">
+        <div className="dept-tree-search-inner">
+          <SearchOutlined />
+          <input
+            className="dept-tree-search-input"
+            placeholder="搜索机构名称"
+            value={keyword}
+            onChange={e => setKeyword(e.target?.value)}
+          />
+        </div>
+      </div>
+
+      {/* Tree Body */}
+      <div className="dept-tree-body">
+        <ATree
+          expandedKeys={expandedKeys}
+          selectedKeys={selectedKeys}
+          treeData={treeData}
+          showIcon
+          blockNode
+          switcherIcon={<RightOutlined style={{ fontSize: 10 }} />}
+          icon={(props: any) => {
+            if (props.expanded) return <FolderOpenOutlined style={{ color: '#5b7cf7' }} />;
+            return <FolderOutlined style={{ color: '#5b7cf7' }} />;
+          }}
+          onExpand={keys => {
+            setExpandedKeys(keys);
+          }}
+          onSelect={value => {
+            setSelectedKeys(value);
+          }}
+        />
+      </div>
+    </div>
   );
 });
 

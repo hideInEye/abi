@@ -707,67 +707,92 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
       destroyOnClose
       open={open}
       rootClassName="skill-hub-scope"
+      className="sd-v5-drawer"
       title={null}
       width={1200}
       closeIcon={<CloseOutlined />}
       onClose={onClose}
     >
       <Spin spinning={loadingDetail && !detail}>
-        {/* 两栏布局：左主栏（头部信息 + Tabs）+ 右侧栏 */}
-        <div className="flex gap-24px">
-          {/* 左主栏 */}
-          <div className="min-w-0 flex-1">
-            {/* 顶部信息区 */}
-            <div className="sd-header mb-20px">
-              <div className="flex flex-wrap items-center gap-8px">
-                {namespace && (
-                  <span className="sd-badge sd-badge--ns">
-                    @{String(namespace).replace(/^@/, '')}
-                  </span>
-                )}
-                {statusBadge && <span className={`sd-badge ${statusBadge.cls}`}>{statusBadge.label}</span>}
+        {/* 顶部 Hero 区 — 渐变背景 + 毛玻璃 */}
+        <div className="sd-v5-hero">
+          <div className="sd-v5-hero__inner">
+            <div className="sd-v5-hero__head">
+              <div className="sd-v5-hero__icon">
+                <RocketOutlined />
+              </div>
+              <div className="sd-v5-hero__meta">
+                <div className="sd-v5-hero__title">{skillName}</div>
+                <div className="sd-v5-hero__sub">
+                  {ownerName && (
+                    <span className="sd-v5-hero__author"><UserOutlined /> {ownerName}</span>
+                  )}
+                  {namespace && (
+                    <span className="sd-v5-hero__ns">@{String(namespace).replace(/^@/, '')}</span>
+                  )}
+                </div>
+              </div>
+              <div className="sd-v5-hero__badges">
+                {statusBadge && <span className={`sd-v5-pill sd-v5-pill--${statusBadge.cls.includes('active') ? 'active' : statusBadge.cls.includes('hidden') ? 'hidden' : statusBadge.cls.includes('review') ? 'review' : statusBadge.cls.includes('rejected') ? 'rejected' : 'default'}`}>{statusBadge.label}</span>}
                 {visibilityBadge && (
-                  <span className={`sd-badge ${visibilityBadge.cls}`}>
-                    {visibilityBadge.icon}
-                    {visibilityBadge.label}
+                  <span className="sd-v5-pill sd-v5-pill--ns">
+                    {visibilityBadge.icon} {visibilityBadge.label}
                   </span>
                 )}
               </div>
-
-              <div className="sd-title">{skillName}</div>
-
-              {ownerName && (
-                <div className="flex items-center gap-6px text-13px text-gray-500">
-                  <UserOutlined />
-                  <span>作者：{ownerName}</span>
+            </div>
+            {summary && <div className="sd-v5-hero__desc">{summary}</div>}
+            {/* 统计数字条 */}
+            <div className="sd-v5-stats">
+              <div className="sd-v5-stat">
+                <span className="sd-v5-stat__val">{versions.length}</span>
+                <span className="sd-v5-stat__lbl">版本</span>
+              </div>
+              <div className="sd-v5-stat">
+                <span className="sd-v5-stat__val">{leftFiles.length}</span>
+                <span className="sd-v5-stat__lbl">文件</span>
+              </div>
+              <div className="sd-v5-stat">
+                <span className="sd-v5-stat__val">{tags.length}</span>
+                <span className="sd-v5-stat__lbl">标签</span>
+              </div>
+              {headlineVersion && (
+                <div className="sd-v5-stat">
+                  <span className="sd-v5-stat__val sd-v5-stat__val--accent">v{headlineVersion.version || headlineVersion.versionNo}</span>
+                  <span className="sd-v5-stat__lbl">当前版本</span>
                 </div>
               )}
             </div>
+          </div>
+        </div>
 
+        {/* 主体两栏 */}
+        <div className="sd-v5-body">
+          {/* 左主栏 */}
+          <div className="sd-v5-main">
             <Tabs
               defaultActiveKey="overview"
-              className="skill-detail-tabs"
+              className="sd-v5-tabs"
               items={[
                 {
                   key: 'overview',
                   label: '概览',
                   children: (
                     <Spin spinning={loadingIntro || loadingLeftVersionDetail}>
-                      <div className="rounded-8px border border-gray-200 bg-white p-20px">
-                        {/* 技能介绍 MD */}
+                      <div className="sd-v5-panel">
                         {introduction ? (
-                          <div className="skill-intro-md text-13px leading-22px text-gray-700">
+                          <div className="skill-intro-md sd-v5-md">
                             <ReactMarkdown>{introduction}</ReactMarkdown>
                           </div>
                         ) : (
                           <>
-                            <div className="mb-16px flex items-center justify-between">
-                              <div className="text-14px font-600 text-gray-800">版本说明</div>
+                            <div className="sd-v5-section-head">
+                              <span className="sd-v5-section-title">版本说明</span>
                               {headlineVersion && (
-                                <span className="sd-version-chip">v{headlineVersion.version || headlineVersion.versionNo}</span>
+                                <span className="sd-v5-chip">v{headlineVersion.version || headlineVersion.versionNo}</span>
                               )}
                             </div>
-                            <div className="whitespace-pre-wrap text-13px leading-22px text-gray-700">
+                            <div className="sd-v5-text">
                               {leftVersionDetail?.changelog || headlineVersion?.changelog || '暂无版本说明'}
                             </div>
                           </>
@@ -775,9 +800,9 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
 
                         {(leftVersionDetail?.readme || leftVersionDetail?.description) && (
                           <>
-                            <div className="my-16px h-1px bg-gray-100" />
-                            <div className="mb-12px text-14px font-600 text-gray-800">README</div>
-                            <div className="whitespace-pre-wrap text-13px leading-22px text-gray-600">
+                            <div className="sd-v5-divider" />
+                            <div className="sd-v5-section-head"><span className="sd-v5-section-title">README</span></div>
+                            <div className="sd-v5-text sd-v5-text--muted">
                               {leftVersionDetail.readme || leftVersionDetail.description}
                             </div>
                           </>
@@ -785,9 +810,9 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
 
                         {leftVersionDetail?.manifestJson && (
                           <>
-                            <div className="my-16px h-1px bg-gray-100" />
-                            <div className="mb-12px text-14px font-600 text-gray-800">Manifest</div>
-                            <pre className="m-0 max-h-300px overflow-auto rounded-6px bg-gray-50 p-12px text-12px text-gray-700">
+                            <div className="sd-v5-divider" />
+                            <div className="sd-v5-section-head"><span className="sd-v5-section-title">Manifest</span></div>
+                            <pre className="sd-v5-code">
                               {typeof leftVersionDetail.manifestJson === 'string'
                                 ? leftVersionDetail.manifestJson
                                 : JSON.stringify(leftVersionDetail.manifestJson, null, 2)}
@@ -804,16 +829,10 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                   children: (
                     <Spin spinning={loadingLeftFiles}>
                       {leftFiles.length === 0 && !loadingLeftFiles ? (
-                        <div className="py-60px">
-                          <Empty description="暂无文件" />
-                        </div>
+                        <div className="sd-v5-empty"><Empty description="暂无文件" /></div>
                       ) : (
-                        <div className="sd-file-tree">
-                          <FileBrowser
-                            data={leftFileTree}
-                            fileMap={leftFileMap}
-                            onDownload={handleDownloadFile}
-                          />
+                        <div className="sd-v5-panel sd-v5-file-tree">
+                          <FileBrowser data={leftFileTree} fileMap={leftFileMap} onDownload={handleDownloadFile} />
                         </div>
                       )}
                     </Spin>
@@ -825,11 +844,9 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                   children: (
                     <Spin spinning={loadingVersions}>
                       {versions.length === 0 && !loadingVersions ? (
-                        <div className="py-60px">
-                          <Empty description="暂无版本" />
-                        </div>
+                        <div className="sd-v5-empty"><Empty description="暂无版本" /></div>
                       ) : (
-                        <div>
+                        <div className="sd-v5-version-list">
                           {versions.map(v => {
                             const vid = v.versionId ?? v.id;
                             const isActive = String(vid) === String(activeVersionId);
@@ -838,62 +855,29 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                             const vStatus = resolveStatusBadge(v.status);
                             return (
                               <div
-                                className="sd-version-item cursor-pointer"
+                                className={`sd-v5-ver ${isActive ? 'sd-v5-ver--active' : ''}`}
                                 key={vid}
-                                style={isActive ? { borderColor: '#6A6DFF' } : undefined}
                                 onClick={() => vid != null && handleVersionClick(vid)}
                               >
-                                <div className="mb-8px flex flex-wrap items-center justify-between gap-8px">
-                                  <div className="flex flex-wrap items-center gap-8px">
-                                    <span className="sd-version-chip">v{v.version || v.versionNo || vid}</span>
-                                    {vStatus && <span className={`sd-badge ${vStatus.cls}`}>{vStatus.label}</span>}
-                                    {isHeadline && <span className="sd-version-current">当前版本</span>}
+                                <div className="sd-v5-ver__head">
+                                  <div className="sd-v5-ver__left">
+                                    <span className="sd-v5-chip">v{v.version || v.versionNo || vid}</span>
+                                    {vStatus && <span className={`sd-v5-pill ${vStatus.cls.includes('active') ? 'sd-v5-pill--active' : vStatus.cls.includes('hidden') ? 'sd-v5-pill--hidden' : vStatus.cls.includes('review') ? 'sd-v5-pill--review' : vStatus.cls.includes('rejected') ? 'sd-v5-pill--rejected' : 'sd-v5-pill--default'}`}>{vStatus.label}</span>}
+                                    {isHeadline && <span className="sd-v5-pill sd-v5-pill--current">当前版本</span>}
                                   </div>
-                                  <div
-                                    className="flex items-center gap-8px"
-                                    onClick={e => e.stopPropagation()}
-                                  >
-                                    <span className="text-12px text-gray-400">
-                                      {formatDateTime(v.publishedAt || v.createTime)}
-                                    </span>
+                                  <div className="sd-v5-ver__actions" onClick={e => e.stopPropagation()}>
+                                    <span className="sd-v5-ver__time">{formatDateTime(v.publishedAt || v.createTime)}</span>
                                     {isDraft && (
-                                      <Button
-                                        className="brand-button"
-                                        icon={<RocketOutlined />}
-                                        loading={publishingVid === vid}
-                                        size="small"
-                                        type="primary"
-                                        onClick={() => handlePublishVersion(v)}
-                                      >
-                                        发布
-                                      </Button>
+                                      <Button className="sd-v5-btn sd-v5-btn--primary" icon={<RocketOutlined />} loading={publishingVid === vid} size="small" onClick={() => handlePublishVersion(v)}>发布</Button>
                                     )}
                                     {!isDraft && !isHeadline && (
-                                      <Button
-                                        className="brand-button"
-                                        icon={<SwapOutlined />}
-                                        size="small"
-                                        type="primary"
-                                        onClick={() => handleSetCurrentVersion(v)}
-                                      >
-                                        设为当前版本
-                                      </Button>
+                                      <Button className="sd-v5-btn sd-v5-btn--primary" icon={<SwapOutlined />} size="small" onClick={() => handleSetCurrentVersion(v)}>设为当前</Button>
                                     )}
-                                    <Button
-                                      danger
-                                      icon={<DeleteOutlined />}
-                                      size="small"
-                                      type="primary"
-                                      onClick={() => handleDeleteVersion(v)}
-                                    >
-                                      删除
-                                    </Button>
+                                    <Button className="sd-v5-btn sd-v5-btn--danger" icon={<DeleteOutlined />} size="small" onClick={() => handleDeleteVersion(v)} />
                                   </div>
                                 </div>
-                                {v.changelog && (
-                                  <div className="text-13px leading-20px text-gray-600">{v.changelog}</div>
-                                )}
-                                <div className="mt-8px flex items-center gap-12px text-12px text-gray-400">
+                                {v.changelog && <div className="sd-v5-ver__desc">{v.changelog}</div>}
+                                <div className="sd-v5-ver__footer">
                                   {v.fileCount != null && <span>{v.fileCount} 个文件</span>}
                                   {v.totalSize != null && <span>{formatFileSize(v.totalSize)}</span>}
                                 </div>
@@ -909,138 +893,104 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
             />
           </div>
 
-          {/* 右侧信息栏：文件 + 版本 + 下载 + 标签管理 + 生命周期管理 */}
-          <aside className="w-280px flex-shrink-0">
-            {/* 1. 文件浏览 */}
+          {/* 右侧栏 */}
+          <aside className="sd-v5-side">
+            {/* 下载 */}
+            <div className="sd-v5-card">
+              <div className="sd-v5-card__title"><CloudDownloadOutlined /> 下载技能包</div>
+              <Button
+                block
+                className="sd-v5-btn sd-v5-btn--gradient"
+                loading={downloading}
+                size="large"
+                icon={<CloudDownloadOutlined />}
+                onClick={handleDownloadPackage}
+              >
+                下载 ZIP
+              </Button>
+            </div>
+
+            {/* 文件浏览 */}
             {files.length > 0 && (
-              <div className="sd-info-card mb-12px">
+              <div className="sd-v5-card">
                 <button
-                  aria-expanded={fileBrowserOpen}
-                  className="sd-side-card-header w-full cursor-pointer border-0 bg-transparent text-left"
+                  className="sd-v5-card__toggle"
                   type="button"
                   onClick={() => setFileBrowserOpen(v => !v)}
                 >
-                  <span className="sd-side-card-icon">
-                    <FolderOutlined />
-                  </span>
-                  <span className="sd-side-card-title">文件浏览</span>
-                  <span className="sd-side-card-count">{files.length}</span>
-                  <DownOutlined
-                    className="text-12px text-gray-400 transition-transform"
-                    style={{ transform: fileBrowserOpen ? 'rotate(180deg)' : 'none' }}
-                  />
+                  <FolderOutlined className="sd-v5-card__icon" />
+                  <span className="sd-v5-card__title-text">文件浏览</span>
+                  <span className="sd-v5-card__count">{files.length}</span>
+                  <DownOutlined className={`sd-v5-caret ${fileBrowserOpen ? 'sd-v5-caret--open' : ''}`} />
                 </button>
                 {fileBrowserOpen && (
                   <>
-                    {/* 当前查看的版本信息 */}
                     {activeVersion && (
-                      <div className="mb-8px flex flex-wrap items-center gap-6px border-b border-gray-100 pb-8px">
-                        <span className="sd-version-chip">v{activeVersion.version || activeVersion.versionNo}</span>
-                        {(() => {
-                          const vStatus = resolveStatusBadge(activeVersion.status);
-                          return vStatus ? <span className={`sd-badge ${vStatus.cls}`}>{vStatus.label}</span> : null;
-                        })()}
-                        {activeVersion.fileCount != null && (
-                          <span className="text-12px text-gray-400">{activeVersion.fileCount} 个文件</span>
-                        )}
-                        {activeVersion.totalSize != null && (
-                          <span className="text-12px text-gray-400">{formatFileSize(activeVersion.totalSize)}</span>
-                        )}
+                      <div className="sd-v5-card__ver-info">
+                        <span className="sd-v5-chip sd-v5-chip--sm">v{activeVersion.version || activeVersion.versionNo}</span>
+                        {activeVersion.fileCount != null && <span className="sd-v5-muted">{activeVersion.fileCount} 文件</span>}
                       </div>
                     )}
-                    <div className="max-h-400px overflow-auto">
-                      <FileBrowser
-                        data={fileTree}
-                        fileMap={fileMap}
-                        size="sm"
-                        onDownload={handleDownloadFile}
-                      />
+                    <div className="sd-v5-card__file-scroll">
+                      <FileBrowser data={fileTree} fileMap={fileMap} size="sm" onDownload={handleDownloadFile} />
                     </div>
                   </>
                 )}
               </div>
             )}
 
-            {/* 2. 版本信息 */}
-            <div className="sd-info-card mb-12px">
-              <div className="mb-12px text-13px font-600 text-gray-800">版本信息</div>
-              <div className="sd-info-row">
-                <span className="sd-info-row__label">公开版本</span>
-                <span className="sd-info-row__value">
-                  {headlineVersion ? `v${headlineVersion.version || headlineVersion.versionNo}` : '—'}
-                </span>
-              </div>
-              <div className="sd-info-row">
-                <span className="sd-info-row__label">命名空间</span>
-                <span className="sd-info-row__value truncate max-w-160px">
-                  @{String(namespace ?? '-').replace(/^@/, '')}
-                </span>
-              </div>
-              {src.createTime && (
-                <div className="sd-info-row">
-                  <span className="sd-info-row__label">创建时间</span>
-                  <span className="sd-info-row__value text-12px">{formatDateTime(src.createTime)}</span>
+            {/* 版本信息 */}
+            <div className="sd-v5-card">
+              <div className="sd-v5-card__title">版本信息</div>
+              <div className="sd-v5-info-rows">
+                <div className="sd-v5-info-row">
+                  <span className="sd-v5-info-row__label">公开版本</span>
+                  <span className="sd-v5-info-row__val">{headlineVersion ? `v${headlineVersion.version || headlineVersion.versionNo}` : '—'}</span>
                 </div>
-              )}
-              {src.updateTime && (
-                <div className="sd-info-row">
-                  <span className="sd-info-row__label">更新时间</span>
-                  <span className="sd-info-row__value text-12px">{formatDateTime(src.updateTime)}</span>
+                <div className="sd-v5-info-row">
+                  <span className="sd-v5-info-row__label">命名空间</span>
+                  <span className="sd-v5-info-row__val sd-v5-info-row__val--mono">@{String(namespace ?? '-').replace(/^@/, '')}</span>
                 </div>
-              )}
+                {src.createTime && (
+                  <div className="sd-v5-info-row">
+                    <span className="sd-v5-info-row__label">创建时间</span>
+                    <span className="sd-v5-info-row__val">{formatDateTime(src.createTime)}</span>
+                  </div>
+                )}
+                {src.updateTime && (
+                  <div className="sd-v5-info-row">
+                    <span className="sd-v5-info-row__label">更新时间</span>
+                    <span className="sd-v5-info-row__val">{formatDateTime(src.updateTime)}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* 3. 下载 */}
-            <div className="sd-info-card mb-12px">
-              <div className="mb-12px text-13px font-600 text-gray-800">下载</div>
-              <Button
-                block
-                className="brand-button"
-                icon={<CloudDownloadOutlined />}
-                loading={downloading}
-                size="large"
-                type="primary"
-                onClick={handleDownloadPackage}
-              >
-                下载
-              </Button>
-            </div>
-
-            {/* 4. 标签管理 */}
-            <div className="sd-info-card mb-12px">
-              <div className="mb-8px flex items-center gap-6px text-13px font-600 text-gray-800">
-                <TagOutlined /> 标签管理
-              </div>
-              <div className="mb-8px flex gap-6px">
+            {/* 标签管理 */}
+            <div className="sd-v5-card">
+              <div className="sd-v5-card__title"><TagOutlined /> 标签管理</div>
+              <div className="sd-v5-tag-input-row">
                 <Input
                   placeholder="输入标签名"
                   size="small"
                   value={newTag}
                   onChange={e => setNewTag(e.target.value)}
                   onPressEnter={handleAddTag}
+                  className="sd-v5-input"
                 />
-                <Button
-                  icon={<PlusOutlined />}
-                  loading={addingTag}
-                  size="small"
-                  type="primary"
-                  onClick={handleAddTag}
-                />
+                <Button className="sd-v5-btn sd-v5-btn--primary" icon={<PlusOutlined />} loading={addingTag} size="small" onClick={handleAddTag} />
               </div>
               {tags.length === 0 ? (
-                <div className="text-12px text-gray-400">暂无标签</div>
+                <div className="sd-v5-muted">暂无标签</div>
               ) : (
-                <div className="flex flex-wrap gap-4px">
+                <div className="sd-v5-tag-list">
                   {tags.map(t => (
                     <Tag
                       closable
-                      color="blue"
                       closeIcon={<DeleteOutlined />}
                       key={t.tagId ?? t.tagName}
-                      onClose={e => {
-                        e.preventDefault();
-                        handleDeleteTag(t);
-                      }}
+                      className="sd-v5-tag"
+                      onClose={e => { e.preventDefault(); handleDeleteTag(t); }}
                     >
                       {t.tagName}
                     </Tag>
@@ -1049,25 +999,17 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
               )}
             </div>
 
-            {/* 5. 生命周期管理 */}
-            <div className="sd-info-card">
-              <div className="mb-8px flex items-center gap-6px text-13px font-600 text-gray-800">
-                <ReloadOutlined /> 生命周期管理
+            {/* 生命周期管理 */}
+            <div className="sd-v5-card sd-v5-card--danger">
+              <div className="sd-v5-card__title sd-v5-card__title--danger"><ReloadOutlined /> 生命周期管理</div>
+              <div className="sd-v5-muted">删除后不可恢复，所有版本和文件均会一并删除。</div>
+              <div className="sd-v5-info-rows" style={{ marginTop: 8 }}>
+                <div className="sd-v5-info-row">
+                  <span className="sd-v5-info-row__label">当前公开版本</span>
+                  <span className="sd-v5-info-row__val">{headlineVersion ? `v${headlineVersion.version || headlineVersion.versionNo}` : '暂无'}</span>
+                </div>
               </div>
-              <div className="mb-12px text-12px text-gray-500">删除后不可恢复，所有版本和文件均会一并删除。</div>
-              <div className="sd-info-row">
-                <span className="sd-info-row__label">当前公开版本</span>
-                <span className="sd-info-row__value">
-                  {headlineVersion ? `v${headlineVersion.version || headlineVersion.versionNo}` : '暂无'}
-                </span>
-              </div>
-              <Button
-                danger
-                block
-                className="mt-12px"
-                type="primary"
-                onClick={handleDeleteSkill}
-              >
+              <Button danger block className="sd-v5-btn sd-v5-btn--danger-fill" style={{ marginTop: 12 }} type="primary" onClick={handleDeleteSkill}>
                 删除技能
               </Button>
             </div>

@@ -1,84 +1,105 @@
-// import { enableStatusOptions } from '@/constants/business';
-
-// import ButtonAuthModal from './button-auth-modal';
+import {
+  CloseOutlined,
+  DatabaseOutlined,
+  LinkOutlined,
+  TableOutlined,
+} from '@ant-design/icons';
 
 type Props = Page.OperateDrawerProps;
 
-// type Model = 'database_address' | 'name' | 'port' | 'type';
-
-// type RuleKey = Exclude<keyof Model, 'port'>;
-
-const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType }) => {
+const DataCollectionOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType }) => {
   const { t } = useTranslation();
 
-  // const { defaultRequiredRule } = useFormRules();
+  const handleClose = () => {
+    onClose();
+  };
 
-  // const [buttonAuthVisible, { setFalse: closeButtonAuthModal, setTrue: openButtonAuthModal }] = useBoolean();
-
-  // const [menuAuthVisible, { setFalse: closeMenuAuthModal, setTrue: openMenuAuthModal }] = useBoolean();
-
-  // const rules: Record<RuleKey, App.Global.FormRule> = {
-  //   database_address: defaultRequiredRule,
-  //   name: defaultRequiredRule,
-  //   type: defaultRequiredRule
-  // };
+  const submit = async () => {
+    try {
+      await form.validateFields();
+      await handleSubmit();
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   return (
     <ADrawer
+      className="ds-operate-drawer"
+      closeIcon={null}
+      extra={<CloseOutlined onClick={handleClose} style={{ fontSize: 16, color: '#8c8c8c' }} />}
       open={open}
+      size="large"
       footer={
-        <AFlex justify="flex-end">
-          <AButton onClick={onClose}>{t('common.cancel')}</AButton>
-          <AButton
-            type="primary"
-            onClick={handleSubmit}
-          >
-            {t('common.confirm')}
-          </AButton>
-        </AFlex>
+        <div className="ds-operate-footer">
+          <div className="ds-operate-footer-left" />
+          <div className="ds-operate-footer-right">
+            <AButton onClick={handleClose}>{t('common.cancel')}</AButton>
+            <AButton className="btn-accent-gradient" onClick={submit}>
+              {t('common.confirm')}
+            </AButton>
+          </div>
+        </div>
       }
       title={
-        operateType === 'add'
-          ? t('page.dataPreparation.dataCollection.addCollection')
-          : t('page.dataPreparation.dataCollection.editDatasource')
+        <div className="ds-operate-title">
+          <span className="ds-operate-title-icon">
+            <TableOutlined />
+          </span>
+          <span>{operateType === 'add' ? '新增数据集' : '编辑数据集'}</span>
+        </div>
       }
-      onClose={onClose}
+      onClose={handleClose}
     >
       <AForm
         form={form}
         layout="vertical"
+        className="ds-operate-form"
       >
-        <AForm.Item
-          label={t('page.dataPreparation.dataCollection.name')}
-          name="name"
-          // rules={[rules.name]}
-        >
-          <AInput placeholder={t('page.dataPreparation.dataCollection.form.name')} />
-        </AForm.Item>
-        <AForm.Item
-          label={t('page.dataPreparation.dataCollection.collection')}
-          name="name"
-          // rules={[rules.name]}
-        >
-          <AInput placeholder={t('page.dataPreparation.dataCollection.form.collection')} />
-        </AForm.Item>
-        <AForm.Item
-          label={t('page.dataPreparation.dataCollection.username')}
-          name="username"
-          // rules={[rules.name]}
-        >
-          <AInput placeholder={t('page.dataPreparation.dataCollection.form.username')} />
-        </AForm.Item>
-        <AForm.Item
-          label={t('page.dataPreparation.dataCollection.password')}
-          name="password"
-          // rules={[rules.name]}
-        >
-          <AInput.Password placeholder={t('page.dataPreparation.dataCollection.form.password')} />
-        </AForm.Item>
+        <div className="ds-form-section">
+          <div className="ds-form-section-title">
+            <DatabaseOutlined />
+            基本信息
+          </div>
+          <AForm.Item
+            label={t('page.dataPreparation.dataCollection.name')}
+            name="name"
+            rules={[{ required: true, message: '请输入数据集名称' }]}
+          >
+            <AInput placeholder={t('page.dataPreparation.dataCollection.form.name')} />
+          </AForm.Item>
+        </div>
+
+        <div className="ds-form-section">
+          <div className="ds-form-section-title">
+            <LinkOutlined />
+            连接配置
+          </div>
+          <AForm.Item
+            label={t('page.dataPreparation.dataCollection.collection')}
+            name="collection"
+            rules={[{ required: true, message: '请输入集合名称' }]}
+          >
+            <AInput placeholder={t('page.dataPreparation.dataCollection.form.collection')} />
+          </AForm.Item>
+          <AForm.Item
+            label={t('page.dataPreparation.dataCollection.username')}
+            name="username"
+            rules={[{ required: true, message: '请输入用户名' }]}
+          >
+            <AInput placeholder={t('page.dataPreparation.dataCollection.form.username')} />
+          </AForm.Item>
+          <AForm.Item
+            label={t('page.dataPreparation.dataCollection.password')}
+            name="password"
+            rules={[{ required: true, message: '请输入密码' }]}
+          >
+            <AInput.Password placeholder={t('page.dataPreparation.dataCollection.form.password')} />
+          </AForm.Item>
+        </div>
       </AForm>
     </ADrawer>
   );
 });
 
-export default DatasourceOperateDrawer;
+export default DataCollectionOperateDrawer;

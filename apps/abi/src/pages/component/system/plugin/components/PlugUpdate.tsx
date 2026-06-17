@@ -1,4 +1,4 @@
-import { CloseOutlined, ToolOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ApiOutlined, CloudServerOutlined, SafetyCertificateOutlined, ToolOutlined, CloseOutlined, EditOutlined, DeleteOutlined, ImportOutlined, PlusOutlined } from '@ant-design/icons';
 import { Form } from 'antd';
 import { useEffect, useState } from 'react';
 import type { McpForm, McpSecurityScheme, McpSecurityExtensions, McpToolItem, PluginItem } from '@/types/plug';
@@ -17,12 +17,9 @@ interface PlugUpdateProps {
 
 export const PlugUpdate = ({ currentEdit, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
   const [form] = Form.useForm<McpForm>();
-  // HTTP 转 MCP 开关：默认关闭（即 MCP 直接接入模式）
   const [restToMcpSwitch, setRestToMcpSwitch] = useState(false);
-  // 高级配置：安全认证方案列表 + 默认上/下行认证 extensions
   const [securitySchemes, setSecuritySchemes] = useState<McpSecurityScheme[]>([]);
   const [securityExtensions, setSecurityExtensions] = useState<McpSecurityExtensions>({});
-  // Tools 列表 + 创建工具弹窗
   const [tools, setTools] = useState<McpToolItem[]>([]);
   const [toolModalOpen, setToolModalOpen] = useState(false);
   const [editingToolIdx, setEditingToolIdx] = useState<number | null>(null);
@@ -31,7 +28,6 @@ export const PlugUpdate = ({ currentEdit, namespaceId, onClose, onSubmit, open }
   const openImportOpenApi = () => setImportModalOpen(true);
   const handleImportOpenApi = (data: { tools: McpToolItem[]; schemes: McpSecurityScheme[] }) => {
     setTools(prev => [...prev, ...data.tools]);
-    // 合并认证方案（按 id 去重）
     setSecuritySchemes(prev => {
       const map = new Map(prev.map(s => [s.id, s] as const));
       data.schemes.forEach(s => {
@@ -70,11 +66,9 @@ export const PlugUpdate = ({ currentEdit, namespaceId, onClose, onSubmit, open }
     }
 
     if (currentEdit) {
-      // 编辑回显：详情接口返回的 backendEndpoints/remoteServerConfig/toolSpec
       const endpoint = currentEdit.backendEndpoints?.[0];
       const rawAddress = endpoint?.address || '';
       const rawPort = endpoint?.port != null ? String(endpoint.port) : '';
-      // address 可能为 "localhost:8080"，需要剥离端口
       let address = rawAddress;
       let port = rawPort;
       if (rawAddress.includes(':')) {
@@ -84,10 +78,8 @@ export const PlugUpdate = ({ currentEdit, namespaceId, onClose, onSubmit, open }
           port = portPart;
         }
       }
-      // 从 remoteServerConfig.url 推导 HTTP/HTTPS
       const url = currentEdit.remoteServerConfig?.url || '';
       const transport: 'HTTP' | 'HTTPS' = /^https:/i.test(url) ? 'HTTPS' : 'HTTP';
-      // 判断是否为 HTTP 转 MCP：后端返回的 protocol 为 http/https 即为开启状态
       const proto = (currentEdit.protocol || '').toLowerCase();
       const isRestToMcp = proto === 'http' || proto === 'https';
       setRestToMcpSwitch(isRestToMcp);
@@ -97,15 +89,12 @@ export const PlugUpdate = ({ currentEdit, namespaceId, onClose, onSubmit, open }
         version: currentEdit.versionDetail?.version ?? '1.0.0',
         description: currentEdit.description ?? currentEdit.remark ?? '',
         restToMcpSwitch: isRestToMcp,
-        // HTTP 转 MCP 模式回显三段式
         address,
         port,
         transport,
-        // MCP 直接接入模式回显完整 URL（优先用 remoteServerConfig.url，降级用 endpoint 拼接）
         mcpEndpointUrl: url || (address && port ? `${transport.toLowerCase()}://${address}:${port}` : '')
       });
 
-      // 高级配置 + Tools 回显
       setSecuritySchemes(currentEdit.toolSpec?.securitySchemes || []);
       setSecurityExtensions((currentEdit.toolSpec?.extensions as any) || {});
       setTools(currentEdit.toolSpec?.tools || []);
@@ -142,219 +131,259 @@ export const PlugUpdate = ({ currentEdit, namespaceId, onClose, onSubmit, open }
   return (
     <ADrawer
       closeIcon={null}
-      extra={<CloseOutlined onClick={onClose} />}
+      extra={
+        <div className="drawer-close-btn" onClick={onClose}>
+          <CloseOutlined />
+        </div>
+      }
       open={open}
-      title={currentEdit ? '编辑MCP服务' : '新增MCP服务'}
+      title={
+        <div className="drawer-title-v5">
+          <div className="drawer-title-icon">
+            <ApiOutlined />
+          </div>
+          <span>{currentEdit ? '编辑MCP服务' : '新增MCP服务'}</span>
+        </div>
+      }
       width={1000}
+      className="mcp-edit-drawer"
       footer={<DrawerFooter onClose={onClose} onSubmit={handleSubmit} />}
       onClose={onClose}
     >
-      <AForm form={form} layout="vertical">
-        <Form.Item label="命名空间">
-          <AInput value={namespaceId} disabled />
-        </Form.Item>
+      <div className="mcp-form-container">
+        <AForm form={form} layout="vertical" className="mcp-form">
+          {/* 基础信息区 */}
+          <div className="form-section">
+            <div className="section-header">
+              <CloudServerOutlined className="section-icon" />
+              <span className="section-title">基础信息</span>
+            </div>
+            <div className="section-body">
+              <Form.Item label="命名空间" className="form-item-v5">
+                <AInput value={namespaceId} disabled className="form-input-v5" />
+              </Form.Item>
 
-        <Form.Item
-          label="MCP服务名"
-          name="mcp_name"
-          rules={[{ message: '请输入MCP服务名', required: true }]}
-        >
-          <AInput placeholder="请输入MCP服务名" disabled={!!currentEdit} />
-        </Form.Item>
+              <Form.Item
+                label="MCP服务名"
+                name="mcp_name"
+                rules={[{ message: '请输入MCP服务名', required: true }]}
+                className="form-item-v5"
+              >
+                <AInput placeholder="请输入MCP服务名" disabled={!!currentEdit} className="form-input-v5" />
+              </Form.Item>
 
-        <Form.Item label="协议类型">
-          <ARadio.Group value="sse">
-            <ARadio value="sse">sse</ARadio>
-          </ARadio.Group>
-        </Form.Item>
+              <Form.Item label="协议类型" className="form-item-v5">
+                <ARadio.Group value="sse" className="radio-group-v5">
+                  <ARadio value="sse">SSE (Server-Sent Events)</ARadio>
+                </ARadio.Group>
+              </Form.Item>
 
-        <Form.Item label="HTTP 转 MCP 服务" required>
-          <AFlex align="center" gap={8}>
-            <ASwitch
-              checked={restToMcpSwitch}
-              checkedChildren="开启"
-              unCheckedChildren="关闭"
-              onChange={setRestToMcpSwitch}
-            />
-          </AFlex>
-          <div style={{ color: '#8c8c8c', fontSize: 12, marginTop: 4, lineHeight: '18px' }}>
-            存量 HTTP 服务转化为 MCP 服务需要搭配网关使用，请参考文档
-            <a
-              href="https://nacos.io/docs/v3.0/manual/user/mcp-template"
-              target="_blank"
-              rel="noreferrer"
-              style={{ marginLeft: 4 }}
-            >
-              https://nacos.io/docs/v3.0/manual/user/mcp-template
-            </a>
+              <Form.Item label="服务版本" name="version" rules={[{ message: '请输入服务版本', required: true }]} className="form-item-v5">
+                <AInput placeholder="例如 1.0.0" className="form-input-v5" />
+              </Form.Item>
+
+              <Form.Item label="描述" name="description" className="form-item-v5">
+                <AInput.TextArea placeholder="请输入服务描述" rows={3} className="form-textarea-v5" />
+              </Form.Item>
+            </div>
           </div>
-        </Form.Item>
 
-        {restToMcpSwitch ? (
-          <Form.Item label="新建服务" required style={{ marginBottom: 24 }}>
-            <AFlex gap={12} align="flex-start">
-              <Form.Item
-                name="address"
-                label="address"
-                required={false}
-                style={{ flex: 1, marginBottom: 0 }}
-                rules={[{ message: '请输入服务地址', required: true }]}
-              >
-                <AInput placeholder="localhost" />
+          {/* 连接配置区 */}
+          <div className="form-section">
+            <div className="section-header">
+              <ApiOutlined className="section-icon" />
+              <span className="section-title">连接配置</span>
+            </div>
+            <div className="section-body">
+              <Form.Item label="HTTP 转 MCP 服务" required className="form-item-v5">
+                <div className="switch-wrapper-v5">
+                  <ASwitch
+                    checked={restToMcpSwitch}
+                    checkedChildren="开启"
+                    unCheckedChildren="关闭"
+                    onChange={setRestToMcpSwitch}
+                    className="switch-v5"
+                  />
+                  <span className="switch-label">{restToMcpSwitch ? '已开启' : '已关闭'}</span>
+                </div>
+                <div className="form-hint-v5">
+                  存量 HTTP 服务转化为 MCP 服务需要搭配网关使用，请参考文档
+                  <a
+                    href="https://nacos.io/docs/v3.0/manual/user/mcp-template"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hint-link"
+                  >
+                    MCP模板配置指南
+                  </a>
+                </div>
               </Form.Item>
-              <Form.Item
-                name="port"
-                label="port"
-                required={false}
-                style={{ width: 120, marginBottom: 0 }}
-                rules={[{ message: '请输入端口', required: true }]}
-              >
-                <AInput placeholder="8080" />
-              </Form.Item>
-              <Form.Item
-                name="transport"
-                label="传输协议"
-                required={false}
-                style={{ width: 140, marginBottom: 0 }}
-                rules={[{ message: '请选择传输协议', required: true }]}
-              >
-                <ASelect
-                  options={[
-                    { label: 'HTTP', value: 'HTTP' },
-                    { label: 'HTTPS', value: 'HTTPS' }
+
+              {restToMcpSwitch ? (
+                <Form.Item label="新建服务" required className="form-item-v5" style={{ marginBottom: 24 }}>
+                  <div className="endpoint-grid">
+                    <Form.Item
+                      name="address"
+                      label="服务地址"
+                      required={false}
+                      rules={[{ message: '请输入服务地址', required: true }]}
+                      className="endpoint-item endpoint-item-wide"
+                    >
+                      <AInput placeholder="localhost" className="form-input-v5" />
+                    </Form.Item>
+                    <Form.Item
+                      name="port"
+                      label="端口"
+                      required={false}
+                      rules={[{ message: '请输入端口', required: true }]}
+                      className="endpoint-item endpoint-item-narrow"
+                    >
+                      <AInput placeholder="8080" className="form-input-v5" />
+                    </Form.Item>
+                    <Form.Item
+                      name="transport"
+                      label="传输协议"
+                      required={false}
+                      rules={[{ message: '请选择传输协议', required: true }]}
+                      className="endpoint-item endpoint-item-medium"
+                    >
+                      <ASelect
+                        options={[
+                          { label: 'HTTP', value: 'HTTP' },
+                          { label: 'HTTPS', value: 'HTTPS' }
+                        ]}
+                        className="form-select-v5"
+                      />
+                    </Form.Item>
+                  </div>
+                </Form.Item>
+              ) : (
+                <Form.Item
+                  label="MCP Server Endpoint"
+                  name="mcpEndpointUrl"
+                  rules={[
+                    { message: '请输入完整的 MCP 服务端点 URL', required: true },
+                    {
+                      validator: (_: any, value: string) => {
+                        if (!value) return Promise.resolve();
+                        try {
+                          new URL(value);
+                          return Promise.resolve();
+                        } catch {
+                          return Promise.reject(new Error('URL 格式不正确，例如：http://example.com/sse'));
+                        }
+                      }
+                    }
+                  ]}
+                  className="form-item-v5"
+                  extra="请输入完整的 MCP 服务端点 URL，例如：http://example.com/sse"
+                >
+                  <AInput placeholder="http://example.com/sse" className="form-input-v5" />
+                </Form.Item>
+              )}
+            </div>
+          </div>
+
+          {/* 高级配置区 */}
+          <div className="form-section">
+            <div className="section-header">
+              <SafetyCertificateOutlined className="section-icon" />
+              <span className="section-title">高级配置</span>
+            </div>
+            <div className="section-body">
+              <Form.Item label="安全认证方案" className="form-item-v5">
+                <ACollapse
+                  ghost
+                  className="collapse-v5"
+                  items={[
+                    {
+                      key: 'security',
+                      label: '配置安全认证方案（可选）',
+                      children: (
+                        <SecuritySchemeSection
+                          schemes={securitySchemes}
+                          extensions={securityExtensions}
+                          onSchemesChange={setSecuritySchemes}
+                          onExtensionsChange={setSecurityExtensions}
+                        />
+                      )
+                    }
                   ]}
                 />
               </Form.Item>
-            </AFlex>
-          </Form.Item>
-        ) : (
-          <Form.Item
-            label="MCP Server Endpoint"
-            name="mcpEndpointUrl"
-            rules={[
-              { message: '请输入完整的 MCP 服务端点 URL', required: true },
-              {
-                validator: (_: any, value: string) => {
-                  if (!value) return Promise.resolve();
-                  try {
-                    // eslint-disable-next-line no-new
-                    new URL(value);
-                    return Promise.resolve();
-                  } catch {
-                    return Promise.reject(new Error('URL 格式不正确，例如：http://example.com/sse'));
-                  }
-                }
-              }
-            ]}
-            extra="请输入完整的 MCP 服务端点 URL，例如：http://example.com/sse"
-          >
-            <AInput placeholder="http://example.com/sse" />
-          </Form.Item>
-        )}
+            </div>
+          </div>
 
-        <Form.Item
-          label="服务版本"
-          name="version"
-          rules={[{ message: '请输入服务版本', required: true }]}
-        >
-          <AInput placeholder="例如 1.0.0" />
-        </Form.Item>
-
-        <Form.Item label="描述" name="description">
-          <AInput.TextArea placeholder="请输入描述" rows={3} />
-        </Form.Item>
-
-        {/* 高级配置：安全认证方案（非必填） */}
-        <Form.Item label="高级配置">
-          <ACollapse
-            ghost
-            items={[
-              {
-                key: 'security',
-                label: '安全认证方案',
-                children: (
-                  <SecuritySchemeSection
-                    schemes={securitySchemes}
-                    extensions={securityExtensions}
-                    onSchemesChange={setSecuritySchemes}
-                    onExtensionsChange={setSecurityExtensions}
-                  />
-                )
-              }
-            ]}
-          />
-        </Form.Item>
-
-        {/* Tools （非必填） */}
-        <Form.Item label="Tools">
-          {tools.length === 0 ? (
-            <AFlex
-              vertical
-              align="center"
-              justify="center"
-              gap={12}
-              style={{
-                padding: '32px 16px',
-                background: '#fafafa',
-                border: '1px dashed #d9d9d9',
-                borderRadius: 4
-              }}
-            >
-              <ToolOutlined style={{ fontSize: 32, color: '#bfbfbf' }} />
-              <span style={{ color: '#999', fontSize: 12 }}>暂无可用的 Tools</span>
-              <ASpace>
-                <AButton type="primary" onClick={openCreateTool}>
-                  添加
-                </AButton>
-                <AButton onClick={openImportOpenApi}>从 OpenAPI 文件导入工具</AButton>
-              </ASpace>
-            </AFlex>
-          ) : (
-            <AFlex vertical gap={8}>
-              {tools.map((tool, idx) => (
-                <AFlex
-                  key={idx}
-                  gap={8}
-                  align="center"
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #eef0f4',
-                    borderRadius: 6,
-                    background: '#fff'
-                  }}
-                >
-                  <ToolOutlined style={{ color: '#1677ff' }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500 }}>{tool.name || '(未命名)'}</div>
-                    {tool.description && (
-                      <div style={{ color: '#888', fontSize: 12 }}>{tool.description}</div>
-                    )}
+          {/* Tools 区 */}
+          <div className="form-section">
+            <div className="section-header">
+              <ToolOutlined className="section-icon" />
+              <span className="section-title">Tools 工具集</span>
+            </div>
+            <div className="section-body">
+              <Form.Item label="可用工具" className="form-item-v5">
+                {tools.length === 0 ? (
+                  <div className="tools-empty-v5">
+                    <div className="empty-icon">
+                      <ToolOutlined />
+                    </div>
+                    <div className="empty-text">暂无可用的 Tools</div>
+                    <div className="empty-actions">
+                      <AButton type="primary" className="btn-accent-gradient" onClick={openCreateTool}>
+                        <PlusOutlined /> 添加工具
+                      </AButton>
+                      <AButton className="btn-ghost-v5" onClick={openImportOpenApi}>
+                        <ImportOutlined /> 从 OpenAPI 导入
+                      </AButton>
+                    </div>
                   </div>
-                  <AButton
-                    type="text"
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => openEditTool(idx)}
-                  />
-                  <AButton
-                    danger
-                    type="text"
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    onClick={() => removeTool(idx)}
-                  />
-                </AFlex>
-              ))}
-              <ASpace>
-                <AButton type="primary" onClick={openCreateTool}>
-                  添加
-                </AButton>
-                <AButton onClick={openImportOpenApi}>从 OpenAPI 文件导入工具</AButton>
-              </ASpace>
-            </AFlex>
-          )}
-        </Form.Item>
-      </AForm>
+                ) : (
+                  <div className="tools-list-v5">
+                    {tools.map((tool, idx) => (
+                      <div key={idx} className="tool-card-v5">
+                        <div className="tool-icon">
+                          <ToolOutlined />
+                        </div>
+                        <div className="tool-info">
+                          <div className="tool-name">{tool.name || '(未命名)'}</div>
+                          {tool.description && (
+                            <div className="tool-desc">{tool.description}</div>
+                          )}
+                        </div>
+                        <div className="tool-actions">
+                          <AButton
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() => openEditTool(idx)}
+                            className="tool-action-btn"
+                          />
+                          <AButton
+                            danger
+                            type="text"
+                            size="small"
+                            icon={<DeleteOutlined />}
+                            onClick={() => removeTool(idx)}
+                            className="tool-action-btn danger"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <div className="tools-actions-v5">
+                      <AButton type="primary" className="btn-accent-gradient" onClick={openCreateTool}>
+                        <PlusOutlined /> 添加工具
+                      </AButton>
+                      <AButton className="btn-ghost-v5" onClick={openImportOpenApi}>
+                        <ImportOutlined /> 从 OpenAPI 导入
+                      </AButton>
+                    </div>
+                  </div>
+                )}
+              </Form.Item>
+            </div>
+          </div>
+        </AForm>
+      </div>
 
       <CreateToolModal
         open={toolModalOpen}
@@ -380,13 +409,13 @@ interface DrawerFooterProps {
 
 function DrawerFooter({ onClose, onSubmit }: DrawerFooterProps) {
   return (
-    <AFlex justify="end">
-      <ASpace>
-        <AButton onClick={onClose}>取消</AButton>
-        <AButton type="primary" onClick={onSubmit}>
-          确认
-        </AButton>
-      </ASpace>
-    </AFlex>
+    <div className="drawer-footer-v5">
+      <AButton className="btn-ghost-v5" onClick={onClose}>
+        取消
+      </AButton>
+      <AButton type="primary" className="btn-accent-gradient" onClick={onSubmit}>
+        确认提交
+      </AButton>
+    </div>
   );
 }

@@ -182,7 +182,7 @@ export function DataTableFieldsSelect() {
   }
 
   function initForm() {
-    if (drawerTitle === '编辑表语义') {
+    if (drawerTitle === '编辑数据语义') {
       const selectKeyFields = updateTechIdToFields(JSON.parse(editObj.modelDetail), dataSource).fields as [];
       const initKey = selectKeyFields.map((item: any) => item.tfieldId);
       setTargetKeys(initKey);
@@ -208,7 +208,7 @@ export function DataTableFieldsSelect() {
     const keyList = uniqueKey(nextTargetKeys as string[]);
     setTargetKeys(keyList);
 
-    if (drawerTitle === '编辑表语义') {
+    if (drawerTitle === '编辑数据语义') {
       const selectKeyFields = updateTechIdToFields(JSON.parse(editObj.modelDetail), dataSource).fields as [];
       setFields(updateTechId(findFieldReturnObject(keyList, dataSource), selectKeyFields));
       return;
@@ -226,7 +226,7 @@ export function DataTableFieldsSelect() {
       <AForm.Item
         required
         name="fields"
-        rules={[{required: true, message: '请选择表语义字段'}]}
+        rules={[{required: true, message: '请选择数据语义字段'}]}
       >
         <TransferComponent dataSource={dataSource}  targetKeys={targetKeys} />
       </AForm.Item>
@@ -307,7 +307,7 @@ export function TransferComponent({ dataSource, targetKeys, onChange }: {dataSou
               </ATooltip>
             )}
             targetKeys={targetKeys}
-            titles={['数据集表语义字段', '已选表语义字段']}
+            titles={['数据集数据语义字段', '已选数据语义字段']}
             listStyle={{
               height: transferHeight,
               width: '100%'

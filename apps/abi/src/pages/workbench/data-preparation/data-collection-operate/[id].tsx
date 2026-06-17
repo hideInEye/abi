@@ -326,19 +326,37 @@ export function Component() {
                   collapsible
                   defaultSize="220"
                 >
-                  <div className="relative h-full pr-16px overflow-hidden">
+                  <div className="relative h-full pr-16px overflow-hidden" style={{
+                    background: 'rgba(255, 255, 255, 0.4)',
+                    backdropFilter: 'blur(8px)',
+                    borderRight: '1px solid rgba(130, 140, 200, 0.1)'
+                  }}>
                     <div className="w-full">
-                      <div className="py-2">配置方式</div>
+                      <div className="py-2" style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#3e5068',
+                        letterSpacing: '0.02em'
+                      }}>配置方式</div>
                       <Select
                         className="w-full"
                         options={filterConfigOptions}
                         placeholder="请选择"
                         value={collectionData.viewType}
                         onChange={val => dispatch({ viewType: val })}
+                        style={{
+                          borderRadius: '8px',
+                          border: '1px solid rgba(130, 140, 200, 0.2)'
+                        }}
                       />
                     </div>
                     <div className="w-full">
-                      <div className="py-2">数据源</div>
+                      <div className="py-2" style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#3e5068',
+                        letterSpacing: '0.02em'
+                      }}>数据源</div>
                       <Select
                         allowClear
                         className="w-full"
@@ -347,15 +365,28 @@ export function Component() {
                         placeholder="请选择"
                         value={datasource}
                         onChange={handleChangeDatasource}
+                        style={{
+                          borderRadius: '8px',
+                          border: '1px solid rgba(130, 140, 200, 0.2)'
+                        }}
                       />
                     </div>
                     <div className="w-full">
-                      <div className="py-2">数据表</div>
+                      <div className="py-2" style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#3e5068',
+                        letterSpacing: '0.02em'
+                      }}>数据表</div>
                       <Input
                         className="w-full"
                         placeholder="请输入内容"
                         value={dataTableKeyword}
                         onChange={e => setDataTableKeyword(e.target.value)}
+                        style={{
+                          borderRadius: '8px',
+                          border: '1px solid rgba(130, 140, 200, 0.2)'
+                        }}
                       />
                     </div>
                     <div className={styles['table-data-container']}>
@@ -409,17 +440,25 @@ export function Component() {
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'flex-end',
-                                  gap: 8,
-                                  padding: '6px 12px',
-                                  background: '#F9FAFF',
-                                  borderBottom: '1px solid #e5e7eb',
+                                  gap: 12,
+                                  padding: '10px 16px',
+                                  background: 'linear-gradient(180deg, rgba(246, 247, 255, 0.8), rgba(246, 247, 255, 0.6))',
+                                  backdropFilter: 'blur(8px)',
+                                  borderBottom: '1px solid rgba(130, 140, 200, 0.1)',
                                   flexShrink: 0,
                                 }}
                               >
                                 <AButton
                                   size="small"
                                   type="primary"
-                                  style={{ backgroundColor: '#3467FF', borderColor: '#3467FF' }}
+                                  style={{ 
+                                    background: 'linear-gradient(135deg, #5b7cf7, #7091fa)',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 4px 12px rgba(91, 124, 247, 0.3)',
+                                    fontWeight: 600,
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                  }}
                                   onClick={() => handleClickSave()}
                                 >
                                   保存

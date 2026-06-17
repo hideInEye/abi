@@ -1,10 +1,19 @@
-import { SearchOutlined } from '@ant-design/icons';
-import type { TableProps } from 'antd';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  SafetyOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { Empty, type TableProps } from 'antd';
+import { useState } from 'react';
+
+import { DeptSelector } from '@/pages/space/user/modules/dept';
 
 import { NewCreateUser } from '../components/NewCreateUser';
 import { PermissionManagement } from '../components/PermissionManagement';
 import { useSpaceListStore } from '../store';
-import { DeptSelector } from '@/pages/space/user/modules/dept';
 
 interface TableItem {
   dept: string;
@@ -21,8 +30,8 @@ export const UserManagement = () => {
   const [defaultPermissionKeys, setDefaultPermissionKeys] = useState<any[]>([]);
 
   const handleDeleteUser = (index: number) => {
-    const newRoleData = roleData.filter(item=>item.recordId!==index)
-    const newAlreadySelectedKeys = newRoleData.map(item=>item.oid)
+    const newRoleData = roleData.filter(item => item.recordId !== index);
+    const newAlreadySelectedKeys = newRoleData.map(item => item.oid);
     setAlreadySelectedKeys(newAlreadySelectedKeys);
     setRoleData(newRoleData);
   };
@@ -31,32 +40,53 @@ export const UserManagement = () => {
     {
       dataIndex: 'oname',
       key: 'oname',
-      title: '用户名'
+      title: '用户名',
+      render: (text: string, record: any) => (
+        <span className="sd-v5-user-name">
+          <span className="sd-v5-user-avatar">
+            <UserOutlined style={{ fontSize: 12 }} />
+          </span>
+          {text}
+          {record.type === 'special-user' && (
+            <span className="sd-v5-creator-badge">创建者</span>
+          )}
+        </span>
+      )
     },
     {
       dataIndex: 'orgName',
       key: 'orgName',
-      title: '组织'
+      title: '组织',
+      render: (text: string) => (
+        <span className="sd-v5-org-name">{text || '-'}</span>
+      )
     },
     {
       key: 'roles',
-      render: _ => {
+      title: '空间角色',
+      render: (_: any) => {
         if (_.roles && _.roles.length > 0) {
-          return _.roles.map((item: any) => item.roleName).join(',');
+          return (
+            <div className="sd-v5-role-tags">
+              {_.roles.map((item: any, idx: number) => (
+                <span key={idx} className="sd-v5-role-tag">{item.roleName}</span>
+              ))}
+            </div>
+          );
         }
-        return '-';
-      },
-      title: '空间角色'
+        return <span className="sd-v5-role-empty">未分配</span>;
+      }
     },
     {
       key: 'action',
-      render: (_, __, index) => (
-        <ASpace size="middle">
+      title: '操作',
+      width: 200,
+      render: (_: any) => (
+        <div className="ds-action-group">
           <AButton
-            color="primary"
+            className="abi-action-link"
             disabled={_.type === 'special-user'}
             size="small"
-            type="text"
             variant="link"
             onClick={() => {
               setCurrentPermissionItemIndex(_.recordId);
@@ -65,59 +95,88 @@ export const UserManagement = () => {
               setDefaultPermissionKeys(roleIds);
             }}
           >
-            分配权限
+            <SafetyOutlined style={{ marginRight: 3, fontSize: 12 }} />分配权限
           </AButton>
-          <AButton
-            color="danger"
+          <APopconfirm
+            title="提示"
+            description="确定删除该用户吗？"
+            onConfirm={() => handleDeleteUser(_.recordId)}
             disabled={_.type === 'special-user'}
-            size="small"
-            type="text"
-            variant="link"
-            onClick={() => {
-              handleDeleteUser(_.recordId);
-            }}
           >
-            删除用户
-          </AButton>
-        </ASpace>
-      ),
-      title: '操作'
+            <AButton
+              className="abi-action-link"
+              color="danger"
+              disabled={_.type === 'special-user'}
+              size="small"
+              variant="link"
+            >
+              <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
+            </AButton>
+          </APopconfirm>
+        </div>
+      )
     }
   ];
 
   function handlePermissionSure(permission: any[]) {
-    const  newRoleData = roleData.map(item=>{
-      const Item = item
-      if(item.recordId === currentPermissionItemIndex) {
-        Item.roles = permission
+    const newRoleData = roleData.map(item => {
+      const Item = item;
+      if (item.recordId === currentPermissionItemIndex) {
+        Item.roles = permission;
       }
-      return Item
-    })
+      return Item;
+    });
     setRoleData(newRoleData);
   }
 
-  const handUserAddSure = (data :any[]) =>{
-    setRoleData(data)
-    setNewCreateUserDrawerOpen(false)
-  }
+  const handUserAddSure = (data: any[]) => {
+    setRoleData(data);
+    setNewCreateUserDrawerOpen(false);
+  };
 
   return (
-    <section>
-      <div className="my4 flex items-center justify-end">
+    <section className="sd-v5-user-mgmt">
+      {/* Section header */}
+      <div className="sd-v5-user-mgmt-header">
+        <div className="sd-v5-form-header">
+          <div className="sd-v5-form-header-icon">
+            <TeamOutlined />
+          </div>
+          <div>
+            <div className="sd-v5-form-title">用户管理</div>
+            <div className="sd-v5-form-desc">管理空间成员及角色权限分配</div>
+          </div>
+        </div>
         <AButton
-          type="primary"
+          className="btn-accent-gradient"
           onClick={() => {
             setNewCreateUserDrawerOpen(true);
             setDefaultPermissionKeys([]);
           }}
         >
-          管理用户
+          <PlusOutlined /> 管理用户
         </AButton>
       </div>
-      <ATable
-        columns={columns}
-        dataSource={roleData}
-      />
+
+      {/* Table */}
+      <div className="sd-v5-table-wrapper">
+        <ATable
+          columns={columns}
+          dataSource={roleData}
+          pagination={false}
+          rowKey="recordId"
+          size="middle"
+          className="abi-std-table sd-v5-user-table"
+          locale={{
+            emptyText: (
+              <div className="sd-v5-empty">
+                <Empty description="暂无空间成员" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              </div>
+            )
+          }}
+        />
+      </div>
+
       {permissionDrawerOpen && (
         <PermissionManagement
           defaultPermissionKeys={defaultPermissionKeys}
@@ -128,17 +187,13 @@ export const UserManagement = () => {
         />
       )}
       {newCreateUserDrawerOpen && (
-        // <NewCreateUser
-        //   open={newCreateUserDrawerOpen}
-        //   setOpen={setNewCreateUserDrawerOpen}
-        // />
-         <DeptSelector
-            defaultUserKeys={roleData.map(item=>item.recordId)}
-            defaultUserRoles={roleData}
-            open={newCreateUserDrawerOpen}
-            onCancel={() => setNewCreateUserDrawerOpen(false)}
-            onConfirm={handUserAddSure}
-          />
+        <DeptSelector
+          defaultUserKeys={roleData.map(item => item.recordId)}
+          defaultUserRoles={roleData}
+          open={newCreateUserDrawerOpen}
+          onCancel={() => setNewCreateUserDrawerOpen(false)}
+          onConfirm={handUserAddSure}
+        />
       )}
     </section>
   );

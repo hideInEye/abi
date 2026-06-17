@@ -1,4 +1,6 @@
 /* eslint-disable react/prop-types */
+import { CloseOutlined, NodeIndexOutlined } from '@ant-design/icons'
+
 import { buildNodeDetail } from '@/components/metadata-analysis/adapter'
 import { RELATION_TYPE_LABELS, STATUS_LABELS } from '@/components/metadata-analysis/constants'
 import type { LineageNode, LineageRelation } from '@/components/metadata-analysis/types'
@@ -22,7 +24,7 @@ const NodeDetailDrawer: React.FC<Props> = ({ node, onClose, open, relations }) =
       key: 'source',
       render: (_: string, row: LineageRelation) => (
         <ATooltip title={row.source_node_name || '-'}>
-          <span className="inline-block max-w-220px overflow-hidden text-ellipsis whitespace-nowrap">
+          <span className="ma-cell-ellipsis">
             {row.source_node_name || '-'}
           </span>
         </ATooltip>
@@ -34,7 +36,7 @@ const NodeDetailDrawer: React.FC<Props> = ({ node, onClose, open, relations }) =
       key: 'target',
       render: (_: string, row: LineageRelation) => (
         <ATooltip title={row.target_node_name || '-'}>
-          <span className="inline-block max-w-220px overflow-hidden text-ellipsis whitespace-nowrap">
+          <span className="ma-cell-ellipsis">
             {row.target_node_name || '-'}
           </span>
         </ATooltip>
@@ -57,61 +59,96 @@ const NodeDetailDrawer: React.FC<Props> = ({ node, onClose, open, relations }) =
 
   return (
     <ADrawer
+      className="ma-node-drawer"
+      closeIcon={null}
+      extra={<CloseOutlined onClick={onClose} style={{ fontSize: 16, color: '#8c8c8c' }} />}
       open={open}
-      title="节点详情"
+      title={
+        <div className="ma-drawer-title">
+          <span className="ma-drawer-title-icon">
+            <NodeIndexOutlined />
+          </span>
+          <span>节点详情</span>
+        </div>
+      }
       width={720}
       onClose={onClose}
     >
       {!node || !detail ? (
-        <AEmpty description="暂无数据" />
+        <div className="ma-panel">
+          <AEmpty description="暂无数据" image={AEmpty.PRESENTED_IMAGE_SIMPLE} />
+        </div>
       ) : (
-        <ASpace
-          direction="vertical"
-          size={16}
-          style={{ width: '100%' }}
-        >
-          <ADescriptions
-            bordered
-            column={2}
-            items={[
-              { children: node.type, key: 'type', label: '节点类型' },
-              { children: node.label || '-', key: 'name', label: '节点名称' },
-              { children: detail.inCount, key: 'inCount', label: '上游关系数' },
-              { children: detail.outCount, key: 'outCount', label: '下游关系数' }
-            ]}
-            size="small"
-          />
+        <div className="ma-node-detail">
+          <div className="ma-node-info-cards">
+            <div className="ma-node-info-card">
+              <span className="ma-node-info-label">节点类型</span>
+              <span className="ma-node-info-value">{node.type}</span>
+            </div>
+            <div className="ma-node-info-card ma-node-info-card-wide">
+              <span className="ma-node-info-label">节点名称</span>
+              <span className="ma-node-info-value" title={node.label || '-'}>{node.label || '-'}</span>
+            </div>
+            <div className="ma-node-info-card ma-node-info-card-stat">
+              <span className="ma-node-info-stat-num" style={{ color: '#5b7cf7' }}>{detail.inCount}</span>
+              <span className="ma-node-info-label">上游关系</span>
+            </div>
+            <div className="ma-node-info-card ma-node-info-card-stat">
+              <span className="ma-node-info-stat-num" style={{ color: '#059669' }}>{detail.outCount}</span>
+              <span className="ma-node-info-label">下游关系</span>
+            </div>
+          </div>
+
           <ATabs
+            className="ma-node-tabs"
             items={[
               {
                 children: (
-                  <ATable<LineageRelation>
-                    columns={columns}
-                    dataSource={detail.inboundRelations}
-                    pagination={{ pageSize: 6 }}
-                    rowKey="lineage_id"
-                    size="small"
-                  />
+                  <div
+                    style={{
+                      border: '1px solid rgba(130,140,200,0.18)',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <ATable<LineageRelation>
+                      columns={columns}
+                      dataSource={detail.inboundRelations}
+                      pagination={{ pageSize: 5, showSizeChanger: false }}
+                      rowKey="lineage_id"
+                      size="small"
+                      className="abi-std-table"
+                    />
+                  </div>
                 ),
                 key: 'inbound',
                 label: `上游关系 (${detail.inCount})`
               },
               {
                 children: (
-                  <ATable<LineageRelation>
-                    columns={columns}
-                    dataSource={detail.outboundRelations}
-                    pagination={{ pageSize: 6 }}
-                    rowKey="lineage_id"
-                    size="small"
-                  />
+                  <div
+                    style={{
+                      border: '1px solid rgba(130,140,200,0.18)',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <ATable<LineageRelation>
+                      columns={columns}
+                      dataSource={detail.outboundRelations}
+                      pagination={{ pageSize: 5, showSizeChanger: false }}
+                      rowKey="lineage_id"
+                      size="small"
+                      className="abi-std-table"
+                    />
+                  </div>
                 ),
                 key: 'outbound',
                 label: `下游关系 (${detail.outCount})`
               }
             ]}
           />
-        </ASpace>
+        </div>
       )}
     </ADrawer>
   )

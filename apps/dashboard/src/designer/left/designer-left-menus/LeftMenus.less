@@ -4,15 +4,16 @@
  *
  * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
  *
- * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ * This copyright statement applies to, but is limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
  *
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
 .designer-left-menus {
   width: 64px;
-  background-color: #fff;
-  border-right: 1px solid rgba(5, 5, 5, 0.06);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(130, 140, 200, 0.10);
   padding: 8px 0;
   overflow-y: auto;
   scrollbar-width: none; /* Firefox */
@@ -29,51 +30,53 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    color: #555;
-    transition: all 0.2s ease;
+    color: #5f7490;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     margin-bottom: 4px;
-    border-radius: 4px;
+    border-radius: 8px;
     position: relative;
 
     &-icon {
-      font-size: 24px;
+      font-size: 22px;
       margin-bottom: 6px;
-      transition: color 0.2s ease;
+      transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     &-content {
-      font-size: 12px;
-      line-height: 16px;
-      font-weight: 500;
-      transition: color 0.2s ease;
+      font-size: 11px;
+      line-height: 14px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     &:hover {
-      color: #1677ff;
-      background-color: #e6f4ff;
+      color: #5b7cf7;
+      background: rgba(91, 124, 247, 0.08);
 
       .menu-item-icon {
-        color: #1677ff;
+        color: #5b7cf7;
       }
     }
 
     &-active {
-      color: #1677ff;
-      background-color: #e6f4ff;
+      color: #5b7cf7;
+      background: rgba(91, 124, 247, 0.10);
 
       &::after {
         content: '';
         position: absolute;
         left: 0;
-        top: 0;
-        bottom: 0;
+        top: 12px;
+        bottom: 12px;
         width: 3px;
-        background-color: #1677ff;
-        border-radius: 0 2px 2px 0;
+        background: linear-gradient(180deg, #5b7cf7, #7091fa);
+        border-radius: 0 3px 3px 0;
+        box-shadow: 0 0 8px rgba(91, 124, 247, 0.4);
       }
 
       .menu-item-icon {
-        color: #1677ff;
+        color: #5b7cf7;
       }
     }
   }

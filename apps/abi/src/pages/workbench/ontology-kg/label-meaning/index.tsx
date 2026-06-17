@@ -69,7 +69,7 @@ export const Component: React.FC = () => {
       >
         <ATabs
           activeKey={activeTab}
-          className="h-full min-h-0"
+          className="abi-attr-modeling-tabs h-full min-h-0"
           items={tabItems}
           style={{ flex: 1, minHeight: 0 }}
           onChange={handleTabChange}

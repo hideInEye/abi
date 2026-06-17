@@ -2,8 +2,8 @@ import { AndroidOutlined, AppleOutlined } from '@ant-design/icons';
 
 import type { ISpaceItem } from '../types';
 
-import RoleManagement from './UserManagement';
-import { SpaceInfoEdit } from './SpaceInfoEdit';
+import { SpaceBasicInfo } from './SpaceInfoEdit';
+import { UserManagement } from './UserManagement';
 
 interface SpaceFeatureSetProps {
   readonly editSpace: ISpaceItem | null;
@@ -15,17 +15,14 @@ export default function SpaceFeatureSet({ editSpace, setTabIndex, tabIndex }: Sp
   const tabs = [
     {
       children: (
-        <SpaceInfoEdit
-          description={editSpace?.remark ?? ''}
-          name={editSpace?.spaceName ?? ''}
-        />
+        <SpaceBasicInfo editSpace={editSpace} />
       ),
       icon: <AppleOutlined />,
       key: '0',
       label: `基本信息`
     },
     {
-      children: <RoleManagement />,
+      children: <UserManagement />,
       icon: <AndroidOutlined />,
       key: '1',
       label: `角色管理`

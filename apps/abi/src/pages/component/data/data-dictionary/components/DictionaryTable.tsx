@@ -14,10 +14,12 @@ interface TableDictionaryProps {
   readonly onDiff: (record: DictionaryItem) => void
   readonly onEdit: (record: DictionaryItem) => void
   readonly onPageChange: (page: number) => void
+  readonly onSelectedRowKeysChange: (keys: React.Key[]) => void
   readonly onStatusChange: (record: DictionaryItem) => void
+  readonly selectedRowKeys: React.Key[]
 }
 
-export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataSource, onDelete, onDiff, onEdit, onPageChange, onStatusChange }: TableDictionaryProps) => {
+export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataSource, onDelete, onDiff, onEdit, onPageChange, onSelectedRowKeysChange, onStatusChange, selectedRowKeys }: TableDictionaryProps) => {
   const handleEdit = (record: DictionaryItem) => {
     onEdit(record)
   }
@@ -35,6 +37,12 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
 
   const handleStatusChange = (record: DictionaryItem) => {
     onStatusChange(record)
+  }
+
+  const rowSelection = {
+    fixed: true,
+    selectedRowKeys,
+    onChange: (keys: React.Key[]) => onSelectedRowKeysChange(keys),
   }
 
   const { t } = useTranslation()
@@ -186,7 +194,16 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
         }}
       >
         <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-          <ATable columns={columns} dataSource={dataSource.rows} pagination={false} scroll={{ x: getColumnWidth }} size="middle" className="dictionary-table abi-std-table" />
+          <ATable
+            columns={columns}
+            dataSource={dataSource.rows}
+            pagination={false}
+            rowKey="dictId"
+            rowSelection={rowSelection}
+            scroll={{ x: getColumnWidth }}
+            size="middle"
+            className="dictionary-table abi-std-table"
+          />
         </div>
       </div>
       <div className="data-source-pagination">
