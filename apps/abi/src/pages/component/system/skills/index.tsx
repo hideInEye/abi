@@ -222,7 +222,7 @@ export function Component() {
     },
     {
       title: '状态', dataIndex: 'status', key: 'status', align: 'center' as const,
-      render: (_: any, record: SkillItem) => <Switch checked={String(record.status) === '1'} size="small" onChange={checked => toggleSkillStatus(record, checked)} />
+      render: (_: any, record: SkillItem) => <Switch checked={String(record.status) === '1'} onChange={checked => toggleSkillStatus(record, checked)} />
     },
     {
       title: '空间', dataIndex: 'spaceName', key: 'spaceName', align: 'center' as const,
@@ -330,7 +330,6 @@ export function Component() {
             ) : (
               <div className="skill-card-grid">
                 {pagedList.map(item => {
-                  const statusKey = resolveStatusKey(item.status);
                   const title = item.bizName || '-';
                   const spaceName = item.spaceName || (item.spaceId ? `空间${item.spaceId}` : '');
                   const summary = item.summary;
@@ -346,9 +345,6 @@ export function Component() {
 
                       <div className="skill-card__footer">
                         <div className="skill-card__meta">
-                          <span className={`status-pill status-pill--${statusKey}`}>
-                            {t(`page.manage.skill.status.${statusKey}` as any)}
-                          </span>
                           {spaceName && (
                             <Tooltip title={spaceName}>
                               <span className="handle-tag">
@@ -359,11 +355,21 @@ export function Component() {
                         </div>
 
                         <div className="skill-card__actions">
-                          <Switch
-                            checked={String(item.status) === '1'}
-                            size="small"
-                            onChange={checked => toggleSkillStatus(item, checked)}
-                          />
+                          <button
+                            type="button"
+                            className={`skill-card__toggle-btn ${String(item.status) === '1' ? 'skill-card__toggle-btn--active' : ''}`}
+                            onClick={e => {
+                              e.stopPropagation();
+                              toggleSkillStatus(item, String(item.status) !== '1');
+                            }}
+                            style={
+                              String(item.status) === '1'
+                                ? { padding: '5px 14px', border: 'none', borderRadius: 8, background: '#5b7cf7', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(91,124,247,0.3)', fontFamily: 'inherit' }
+                                : { padding: '5px 14px', border: '1px solid rgba(130,140,200,0.16)', borderRadius: 8, background: 'transparent', color: '#5b7cf7', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }
+                            }
+                          >
+                            {String(item.status) === '1' ? '已启用' : '启用'}
+                          </button>
                           <Dropdown
                             trigger={['click']}
                             placement="bottomRight"

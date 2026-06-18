@@ -294,17 +294,17 @@ const ModelCardList: FC<Props> = ({
                     <div className="abi-data-card-head">
                       <div className="abi-data-card-title">
                         {providerIcon ? (
-                          <img src={providerIcon} alt={providerLabel} style={{ width: 22, height: 16, objectFit: 'contain', flexShrink: 0 }} />
+                          <img src={providerIcon} alt={providerLabel} style={{ width: 42, height: 42, objectFit: 'contain', flexShrink: 0, borderRadius: 12 }} />
                         ) : (
                           <span style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: 4,
+                            width: 42,
+                            height: 42,
+                            borderRadius: 12,
                             background: '#f0f5ff',
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: 12,
+                            fontSize: 16,
                             color: '#1677ff',
                             fontWeight: 'bold',
                             flexShrink: 0,

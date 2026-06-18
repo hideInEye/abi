@@ -120,19 +120,31 @@ export const Component: React.FC = () => {
                 <div className="abi-card-grid">
                   <div className="abi-card-grid-inner">
                     {dictionaryDataSource.rows.map((record: any) => (
-                      <div key={record.dictId} className="abi-data-card" style={{ position: 'relative' }}>
+                      <div key={record.dictId} className="abi-data-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
                         <div className="abi-data-card-head">
                           <div className="abi-data-card-title">
                             <span className="abi-data-card-name">{record.dictField}</span>
                           </div>
-                          <ASwitch checked={record.status === '2'} size="small" onChange={() => handleUpdateStatus(record)} />
                         </div>
                         <div className="abi-data-card-body">
                           <div className="row"><span className="lbl">中文名称</span><span className="val">{record.dictName || '-'}</span></div>
                           <div className="row"><span className="lbl">描述</span><span className="val">{record.remark || '-'}</span></div>
                           <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createTime || '-'}</span></div>
                         </div>
-                        <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+                        {/* footer: 左按钮 + 右 Dropdown */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 12 }}>
+                          <button
+                            type="button"
+                            className={`abi-card-toggle-btn ${record.status === '2' ? 'abi-card-toggle-btn--active' : ''}`}
+                            onClick={e => { e.stopPropagation(); handleUpdateStatus(record); }}
+                            style={
+                              record.status === '2'
+                                ? { padding: '5px 14px', border: 'none', borderRadius: 8, background: '#5b7cf7', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(91,124,247,0.3)', fontFamily: 'inherit' }
+                                : { padding: '5px 14px', border: '1px solid rgba(130,140,200,0.16)', borderRadius: 8, background: 'transparent', color: '#5b7cf7', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }
+                            }
+                          >
+                            {record.status === '2' ? '已启用' : '启用'}
+                          </button>
                           <Dropdown
                             menu={{
                               items: [

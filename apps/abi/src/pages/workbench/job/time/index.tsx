@@ -191,7 +191,7 @@ export function Component() {
               <div key={record.recordId || record.jobId} className="abi-data-card" style={{ position: 'relative' }}>
                 <div className="abi-data-card-head">
                   <div className="abi-data-card-title">
-                    <ClockCircleOutlined style={{ fontSize: 16, color: '#5b7cf7', flexShrink: 0 }} />
+                    <ClockCircleOutlined style={{ fontSize: 20, color: '#5b7cf7', flexShrink: 0 }} />
                     <span className="abi-data-card-name">{record.jobName}</span>
                   </div>
                   <ASwitch checked={statusOn} size="small" onClick={() => handleSwitch(record)} />

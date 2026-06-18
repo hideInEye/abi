@@ -10,16 +10,24 @@ import {
   SendOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons';
-import { Button, Drawer, Input, Modal, Radio, Switch, Tag, message } from 'antd';
+import { Button, Checkbox, Drawer, Input, Modal, Radio, Spin, Switch, Tag, Tooltip, message } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+
+import { queryToolListApi } from '@/service/api/tool';
+import type { ToolItem } from '@/service/api/tool';
+import { queryMcpList } from '@/service/api/pulg';
+import { fetchAppDetailApi, addAppApi, updateAppApi } from '@/service/api/abi-chat-app';
+import { getSpaceId } from '@/store/slice/app';
+import { useAppSelector } from '@/hooks/business/useStore';
 
 /**
  * 助手新增/编辑 - 全屏 Drawer
- * 静态页面：左（助手画像）/ 中（基础配置 / 知识 / 能力）/ 右（调试预览）
- * 后期接入接口时只需替换 mock 与事件回调。
+ * 左（助手画像）/ 中（基础配置 / 知识 / 能力）/ 右（调试预览）
  */
 
 interface Props {
   agent?: AgentMock | null;
+  groupId?: number;
   onClose: (refresh?: boolean) => void;
 }
 
@@ -30,6 +38,7 @@ export interface AgentMock {
   iconLetter?: string;
   description?: string;
   prompt?: string;
+  groupId?: number | string;
   /** status: '0'草稿 | '1'发布 | '2'下线 */
   status?: '0' | '1' | '2';
 }
@@ -55,12 +64,6 @@ const DEFAULT_PROMPT = `## 角色
 - 所有提供的数据和分析仅供参考，不构成具体的投资建议。
 - 不能提供实时交易或交易执行服务，仅限于提供信息和分析。`;
 
-// 工具 mock
-const TOOL_LIST = [
-  { id: 't1', name: 'GDP', iconBg: '#fff7e6', iconColor: '#fa8c16' },
-  { id: 't2', name: '股票实时行情', iconBg: '#fff7e6', iconColor: '#fa8c16' }
-];
-
 // 推荐问题
 const RECOMMEND_QUESTIONS = [
   '如何查询特定股票的实时价格和交易量？',
@@ -71,10 +74,14 @@ const RECOMMEND_QUESTIONS = [
 // 折叠面板分组
 type SectionKey = 'model' | 'opening' | 'knowledge' | 'tools' | 'skills' | 'questions';
 
-const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
-  const [name, setName] = useState<string>(agent?.name || '投资顾问');
+const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, onClose }) => {
+  const spaceId = useAppSelector(getSpaceId);
+  const isEdit = !!agent?.id;
+
+  const [name, setName] = useState<string>(agent?.name || '');
   const [editingName, setEditingName] = useState(false);
-  const [prompt, setPrompt] = useState<string>(agent?.prompt || DEFAULT_PROMPT);
+  const [prompt, setPrompt] = useState<string>(agent?.prompt || '');
+  const [description, setDescription] = useState<string>(agent?.description || '');
   // status: '0'草稿 '1'发布 '2'下线
   const [status, setStatus] = useState<'0' | '1' | '2'>(agent?.status || '0');
   // 调试模式 enable_debug: '0'禁用 '1'启用
@@ -82,12 +89,10 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
   // 公开访问 public_access: '0'关闭(私密) '1'开启(空间可见)
   const [publicAccess, setPublicAccess] = useState<'0' | '1'>('1');
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [saving, setSaving] = useState(false);
   // rec_query 推荐问题列表
-  const [recQuestions, setRecQuestions] = useState<string[]>([
-    '如何查询特定股票的实时价格和交易量？',
-    '市场行情有哪些重要的经济数据和事件需要关注？',
-    '你能提供哪些投资策略和建议来应对当前的市场行情？'
-  ]);
+  const [recQuestions, setRecQuestions] = useState<string[]>([]);
   const [recDrawerOpen, setRecDrawerOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [batchText, setBatchText] = useState('');
@@ -106,6 +111,186 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
     setRecQuestions(prev => prev.filter((_, i) => i !== index));
   };
 
+  // ── 工具选择 ──
+  type ToolGroupKey = 'mcp' | 'builtin';
+  type ToolOption = { id: string; name: string; group: ToolGroupKey; description?: string };
+
+  const [mcpTools, setMcpTools] = useState<ToolOption[]>([]);
+  const [builtinTools, setBuiltinTools] = useState<ToolOption[]>([]);
+  const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set());
+  const [loadingTools, setLoadingTools] = useState(false);
+
+  /** 加载助手详情 */
+  async function loadDetail() {
+    if (!agent?.id) return;
+    setLoadingDetail(true);
+    try {
+      const res: any = await fetchAppDetailApi({ appId: agent.id });
+      // createFlatRequest 返回 { data, error, response }，data 即为解包后的详情
+      const d = res?.data ?? res?.response?.data?.data ?? res;
+      if (d) {
+        setName(d.appName ?? d.name ?? '');
+        setPrompt(d.appPrompt ?? d.prompt ?? '');
+        setDescription(d.description ?? '');
+        setStatus((d.status as any) ?? '0');
+        setEnableDebug(String(d.enableDebug) === '1');
+        setPublicAccess(String(d.publicAccess) === '1' ? '1' : '0');
+        const rq = d.recQuery ?? [];
+        setRecQuestions(Array.isArray(rq) ? rq.map((q: any) => typeof q === 'string' ? q : q?.question ?? '') : []);
+        // 回填工具选中状态
+        if (Array.isArray(d.tools)) {
+          const ids = new Set<string>();
+          d.tools.forEach((t: any) => {
+            const toolType = t.toolType === '2' || t.toolType === 'mcp' ? 'mcp' : 'builtin';
+            const cfg = t.toolConfig;
+            if (Array.isArray(cfg)) {
+              cfg.forEach((c: any) => ids.add(`${toolType}_${c.id}`));
+            }
+          });
+          setSelectedToolIds(ids);
+        }
+      }
+    } catch {
+      message.error('加载助手详情失败');
+    } finally {
+      setLoadingDetail(false);
+    }
+  }
+
+  useEffect(() => {
+    if (agent?.id) loadDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent?.id]);
+
+  /** 构建提交数据 */
+  function buildPayload(overrideStatus?: string) {
+    const toolConfigs = Array.from(selectedToolIds).map(id => {
+      const [group, ...rest] = id.split('_');
+      const toolId = rest.join('_');
+      return {
+        toolType: group === 'mcp' ? '2' : '1',
+        toolConfig: [{ type: 'tool', id: Number(toolId) || toolId }]
+      };
+    });
+    const payload: any = {
+      appName: name,
+      spaceId,
+      groupId: isEdit ? (agent?.groupId ?? 0) : (propsGroupId ?? 0),
+      description,
+      appPrompt: prompt,
+      prologue: '',
+      recQuery: recQuestions,
+      status: overrideStatus ?? status,
+      enableDebug: enableDebug ? '1' : '0',
+      publicAccess,
+      tools: toolConfigs,
+    };
+    if (isEdit && agent?.id) {
+      payload.appId = agent.id;
+    }
+    return payload;
+  }
+
+  /** 保存：状态设为草稿 */
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = buildPayload('0');
+      if (isEdit) {
+        await updateAppApi(payload);
+      } else {
+        await addAppApi(payload);
+      }
+      setStatus('0');
+      message.success('已保存为草稿');
+      onClose(true);
+    } catch (err: any) {
+      message.error(err?.message ?? '保存失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** 上线：状态设为发布 */
+  const handlePublish = async () => {
+    setSaving(true);
+    try {
+      const payload = buildPayload('1');
+      if (isEdit) {
+        await updateAppApi(payload);
+      } else {
+        await addAppApi(payload);
+      }
+      setStatus('1');
+      message.success('已上线，状态设为发布');
+      onClose(true);
+    } catch (err: any) {
+      message.error(err?.message ?? '发布失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  async function fetchToolGroups() {
+    setLoadingTools(true);
+    try {
+      const [mcpRes, builtinRes]: any[] = await Promise.all([
+        queryMcpList({ pageNo: 1, pageSize: 200 }),
+        queryToolListApi({})
+      ]);
+      const mcpPayload = mcpRes?.response?.data?.data?.data ?? {};
+      const mcpItems: any[] = mcpPayload.pageItems ?? [];
+      setMcpTools(mcpItems.map((m: any) => ({
+        id: `mcp_${m.id}`,
+        name: m.name || m.pluginName || '-',
+        group: 'mcp' as ToolGroupKey,
+        description: m.description || ''
+      })));
+      const bRows = builtinRes?.response?.data?.data || builtinRes?.data?.data || builtinRes?.data || [];
+      const bList: ToolItem[] = Array.isArray(bRows) ? bRows : [];
+      setBuiltinTools(bList.map(t => ({
+        id: `builtin_${t.toolId}`,
+        name: t.toolName || '-',
+        group: 'builtin' as ToolGroupKey,
+        description: t.description || ''
+      })));
+    } catch {
+      setMcpTools([]);
+      setBuiltinTools([]);
+    } finally {
+      setLoadingTools(false);
+    }
+  }
+
+  useEffect(() => { fetchToolGroups(); }, []);
+
+  const allToolOptions = useMemo(() => [...mcpTools, ...builtinTools], [mcpTools, builtinTools]);
+
+  function handleGroupCheck(group: ToolGroupKey, checked: boolean) {
+    const ids = allToolOptions.filter(t => t.group === group).map(t => t.id);
+    setSelectedToolIds(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => checked ? next.add(id) : next.delete(id));
+      return next;
+    });
+  }
+  function handleToolCheck(id: string, checked: boolean) {
+    setSelectedToolIds(prev => {
+      const next = new Set(prev);
+      checked ? next.add(id) : next.delete(id);
+      return next;
+    });
+  }
+  function isGroupAllChecked(group: ToolGroupKey) {
+    const items = allToolOptions.filter(t => t.group === group);
+    return items.length > 0 && items.every(t => selectedToolIds.has(t.id));
+  }
+  function isGroupIndeterminate(group: ToolGroupKey) {
+    const items = allToolOptions.filter(t => t.group === group);
+    const c = items.filter(t => selectedToolIds.has(t.id)).length;
+    return c > 0 && c < items.length;
+  }
+
   const [openMap, setOpenMap] = useState<Record<SectionKey, boolean>>({
     knowledge: false,
     model: false,
@@ -116,20 +301,6 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
   });
 
   const toggle = (key: SectionKey) => setOpenMap(p => ({ ...p, [key]: !p[key] }));
-
-  /** 保存：状态设为草稿 */
-  const handleSave = () => {
-    setStatus('0');
-    message.success('已保存为草稿');
-    // TODO: 接口对接：create/update 传 status='0'
-  };
-
-  /** 上线：状态设为发布 */
-  const handlePublish = () => {
-    setStatus('1');
-    message.success('已上线，状态设为发布');
-    // TODO: 接口对接：create/update 传 status='1'
-  };
 
   const headerIcon = useMemo(
     () => (
@@ -164,6 +335,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
       headerStyle={{ display: 'none' }}
       onClose={() => onClose(false)}
     >
+      <Spin spinning={loadingDetail}>
       {/* 顶部栏 */}
       <div
         style={{
@@ -203,8 +375,9 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
           )}
         </div>
         <div style={{ alignItems: 'center', display: 'flex', gap: 8, marginLeft: 'auto' }}>
-          <Button onClick={handleSave}>保存</Button>
+          <Button loading={saving} onClick={handleSave}>保存</Button>
           <Button
+            loading={saving}
             type="primary"
             onClick={handlePublish}
           >
@@ -276,28 +449,85 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
             title="工具"
             onToggle={() => toggle('tools')}
           >
-            {TOOL_LIST.map(it => (
+            {/* MCP工具分组 */}
+            <div style={{ padding: '4px 24px 8px' }}>
               <div
-                key={it.id}
-                style={{ alignItems: 'center', display: 'flex', gap: 10, padding: '8px 24px' }}
+                style={{ alignItems: 'center', cursor: 'pointer', display: 'flex', gap: 8, paddingBottom: 4, userSelect: 'none' }}
+                onClick={() => handleGroupCheck('mcp', !isGroupAllChecked('mcp'))}
               >
-                <div
-                  style={{
-                    alignItems: 'center',
-                    background: it.iconBg,
-                    borderRadius: 6,
-                    color: it.iconColor,
-                    display: 'flex',
-                    height: 24,
-                    justifyContent: 'center',
-                    width: 24
-                  }}
-                >
-                  <ThunderboltOutlined style={{ fontSize: 14 }} />
-                </div>
-                <span>{it.name}</span>
+                <Checkbox
+                  checked={isGroupAllChecked('mcp')}
+                  indeterminate={isGroupIndeterminate('mcp')}
+                  onChange={e => handleGroupCheck('mcp', e.target.checked)}
+                  onClick={e => e.stopPropagation()}
+                />
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#595959' }}>MCP工具</span>
+                <span style={{ color: '#bfbfbf', fontSize: 11 }}>({mcpTools.length})</span>
               </div>
-            ))}
+              {mcpTools.length === 0 ? (
+                <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无MCP工具</div>
+              ) : (
+                mcpTools.map(item => (
+                  <div
+                    key={item.id}
+                    style={{ alignItems: 'center', cursor: 'pointer', display: 'flex', gap: 10, padding: '6px 0 6px 28px', userSelect: 'none' }}
+                    onClick={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
+                  >
+                    <Checkbox
+                      checked={selectedToolIds.has(item.id)}
+                      onChange={e => handleToolCheck(item.id, e.target.checked)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <div style={{ alignItems: 'center', background: '#fff7e6', borderRadius: 6, color: '#fa8c16', display: 'flex', height: 24, justifyContent: 'center', width: 24, flexShrink: 0 }}>
+                      <ThunderboltOutlined style={{ fontSize: 14 }} />
+                    </div>
+                    <Tooltip title={item.description || item.name}>
+                      <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+                    </Tooltip>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* 内置工具分组 */}
+            <div style={{ padding: '4px 24px 8px' }}>
+              <div
+                style={{ alignItems: 'center', cursor: 'pointer', display: 'flex', gap: 8, paddingBottom: 4, userSelect: 'none' }}
+                onClick={() => handleGroupCheck('builtin', !isGroupAllChecked('builtin'))}
+              >
+                <Checkbox
+                  checked={isGroupAllChecked('builtin')}
+                  indeterminate={isGroupIndeterminate('builtin')}
+                  onChange={e => handleGroupCheck('builtin', e.target.checked)}
+                  onClick={e => e.stopPropagation()}
+                />
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#595959' }}>内置工具</span>
+                <span style={{ color: '#bfbfbf', fontSize: 11 }}>({builtinTools.length})</span>
+              </div>
+              {builtinTools.length === 0 ? (
+                <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无内置工具</div>
+              ) : (
+                builtinTools.map(item => (
+                  <div
+                    key={item.id}
+                    style={{ alignItems: 'center', cursor: 'pointer', display: 'flex', gap: 10, padding: '6px 0 6px 28px', userSelect: 'none' }}
+                    onClick={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
+                  >
+                    <Checkbox
+                      checked={selectedToolIds.has(item.id)}
+                      onChange={e => handleToolCheck(item.id, e.target.checked)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <div style={{ alignItems: 'center', background: '#fff7e6', borderRadius: 6, color: '#fa8c16', display: 'flex', height: 24, justifyContent: 'center', width: 24, flexShrink: 0 }}>
+                      <ThunderboltOutlined style={{ fontSize: 14 }} />
+                    </div>
+                    <Tooltip title={item.description || item.name}>
+                      <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+                    </Tooltip>
+                  </div>
+                ))
+              )}
+            </div>
           </CollapseRow>
 
           <CollapseRow
@@ -563,6 +793,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, onClose }) => {
           </div>
         </div>
       </div>
+      </Spin>
     </Drawer>
   );
 };

@@ -20,6 +20,7 @@ export const Component: React.FC = () => {
   const { currentEdit, open, setCurrentEdit, setOpen } = usePluginManagement();
   const spaceId = useAppSelector(getSpaceId);
   const [groupId, setGroupId] = useState(0);
+  const [groupType, setGroupType] = useState<string>('mcp-sse');
   const [fetchKey, setFetchKey] = useState(0);
   const [dataSource, setDataSource] = useState<{
     code: number;
@@ -91,8 +92,8 @@ export const Component: React.FC = () => {
         id: String(record.pluginId),
         name: record.pluginName,
         version: record.versionDetail?.version || '1.0.0',
-        protocol: 'sse',
-        frontProtocol: 'sse',
+        protocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
+        frontProtocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
         description: record.remark || '',
         remoteServerConfig: {
           url: '',
@@ -145,9 +146,9 @@ export const Component: React.FC = () => {
 
     const serverSpec: Record<string, any> = {
       name: formData.mcp_name,
-      // HTTP 转 MCP 开启时 protocol 为 http/https；关闭时维持 sse
-      protocol: formData.restToMcpSwitch ? scheme : 'sse',
-      frontProtocol: 'sse',
+      // HTTP 转 MCP 开启时 protocol 为 http/https；关闭时根据分组类型决定
+      protocol: formData.restToMcpSwitch ? scheme : (groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse'),
+      frontProtocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
       description: formData.description || '',
       version: formData.version,
       remoteServerConfig: {
@@ -204,6 +205,7 @@ export const Component: React.FC = () => {
   // 空间切换时重置分组 + 强制刷新，让 PluginGroup 重新回调新空间的 groupId
   useEffect(() => {
     setGroupId(0);
+    setGroupType('mcp-sse');
     setcurrent(1);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
     setFetchKey(k => k + 1);
@@ -219,7 +221,7 @@ export const Component: React.FC = () => {
     <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* v5 Tree Panel — left sidebar */}
       <div className="abi-group-sidebar">
-        <PluginGroup onGroupId={setGroupId} />
+        <PluginGroup onGroupId={(id, _name, type) => { setGroupId(id); if (type) setGroupType(type); }} />
       </div>
 
       {/* Right content area */}
@@ -311,19 +313,31 @@ export const Component: React.FC = () => {
                 <div className="abi-card-grid">
                   <div className="abi-card-grid-inner">
                     {dataSource.rows.map((record: any) => (
-                      <div key={record.pluginId} className="abi-data-card" style={{ position: 'relative' }}>
+                      <div key={record.pluginId} className="abi-data-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
                         <div className="abi-data-card-head">
                           <div className="abi-data-card-title">
                             <span className="abi-data-card-name">{record.pluginName}</span>
                           </div>
-                          <ASwitch checked={record.status === 1} size="small" onChange={() => updateStatus(record)} />
                         </div>
                         <div className="abi-data-card-body">
                           <div className="row"><span className="lbl">描述</span><span className="val">{record.remark || '-'}</span></div>
                           <div className="row"><span className="lbl">类型</span><span className="val">{record.pluginType || '-'}</span></div>
                           <div className="row"><span className="lbl">版本</span><span className="val">{record.versionDetail?.version || '-'}</span></div>
                         </div>
-                        <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+                        {/* footer: 左按钮 + 右 Dropdown */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 12 }}>
+                          <button
+                            type="button"
+                            className={`abi-card-toggle-btn ${record.status === 1 ? 'abi-card-toggle-btn--active' : ''}`}
+                            onClick={e => { e.stopPropagation(); updateStatus(record); }}
+                            style={
+                              record.status === 1
+                                ? { padding: '5px 14px', border: 'none', borderRadius: 8, background: '#5b7cf7', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(91,124,247,0.3)', fontFamily: 'inherit' }
+                                : { padding: '5px 14px', border: '1px solid rgba(130,140,200,0.16)', borderRadius: 8, background: 'transparent', color: '#5b7cf7', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }
+                            }
+                          >
+                            {record.status === 1 ? '已启用' : '启用'}
+                          </button>
                           <Dropdown
                             menu={{
                               items: [
@@ -358,6 +372,7 @@ export const Component: React.FC = () => {
 
       <PlugUpdate
         currentEdit={currentEdit}
+        groupType={groupType}
         namespaceId={`s_${groupId}`}
         open={open}
         onClose={() => setOpen(false)}

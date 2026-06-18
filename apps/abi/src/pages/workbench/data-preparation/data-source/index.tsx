@@ -161,7 +161,7 @@ export function Component() {
               const icon = getDbIcon(name, sourceType);
               return (
                 <span style={{ color: '#3e5068', padding: '2px 0', fontSize: '15px', display: 'inline-flex', alignItems: 'center', gap: '6px', lineHeight: '1.5' }}>
-                  {icon && <img src={icon} alt="" style={{ width: 26, height: 20, objectFit: 'contain' }} />}
+                  {icon && <img src={icon} alt="" style={{ width: 32, height: 24, objectFit: 'contain' }} />}
                 </span>
               );
             },
@@ -454,7 +454,7 @@ export function Component() {
               <div className="abi-data-card-head">
                 <div className="abi-data-card-title">
                   {getDbIcon(typeName, record.sourceType) && (
-                    <img src={getDbIcon(typeName, record.sourceType)} alt="" style={{ width: 22, height: 16, objectFit: 'contain', flexShrink: 0 }} />
+                    <img src={getDbIcon(typeName, record.sourceType)} alt="" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0, borderRadius: 8 }} />
                   )}
                   <span className="abi-data-card-name">{record.sourceName}</span>
                 </div>

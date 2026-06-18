@@ -187,7 +187,6 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
           <div key={record.schemaId || record.id} className="abi-data-card">
             <div className="abi-data-card-head">
               <div className="abi-data-card-title">{record.bizName}</div>
-              <span style={{ fontSize: 11, color: '#768a9f' }}>{record.techName}</span>
             </div>
             <div className="abi-data-card-body">
               {visibleKeys.has('createBy') && (

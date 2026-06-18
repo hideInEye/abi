@@ -249,7 +249,6 @@ export function Component() {
           <div key={record.viewId} className="abi-data-card">
             <div className="abi-data-card-head">
               <div className="abi-data-card-title">{record.viewName}</div>
-              <span style={{ fontSize: 11, color: '#768a9f' }}>{getDatasourceName(record)}</span>
             </div>
             <div className="abi-data-card-body">
               {visibleKeys.has('createBy') && (

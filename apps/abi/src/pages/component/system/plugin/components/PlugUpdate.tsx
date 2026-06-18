@@ -9,13 +9,15 @@ import { SecuritySchemeSection } from './SecuritySchemeSection';
 
 interface PlugUpdateProps {
   readonly currentEdit: PluginItem | null;
+  /** 当前分组的类型，用于限制协议类型选择 */
+  readonly groupType?: string;
   readonly namespaceId: string;
   readonly onClose: () => void;
   readonly onSubmit: (formData: McpForm) => void;
   readonly open: boolean;
 }
 
-export const PlugUpdate = ({ currentEdit, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
+export const PlugUpdate = ({ currentEdit, groupType, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
   const [form] = Form.useForm<McpForm>();
   // HTTP 转 MCP 开关：默认关闭（即 MCP 直接接入模式）
   const [restToMcpSwitch, setRestToMcpSwitch] = useState(false);
@@ -163,8 +165,9 @@ export const PlugUpdate = ({ currentEdit, namespaceId, onClose, onSubmit, open }
         </Form.Item>
 
         <Form.Item label="协议类型">
-          <ARadio.Group value="sse">
+          <ARadio.Group value={groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse'} disabled>
             <ARadio value="sse">sse</ARadio>
+            <ARadio value="streamableHttp">streamableHttp</ARadio>
           </ARadio.Group>
         </Form.Item>
 

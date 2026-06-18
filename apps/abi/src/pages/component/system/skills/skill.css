@@ -93,11 +93,12 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 18px 20px;
-  background: #F8FAFF;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  padding: 20px;
+  background: #FCFDFF;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
 }
@@ -105,6 +106,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.skill-hub-scope .skill-card__toggle-btn {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.skill-hub-scope .skill-card__toggle-btn:not(.skill-card__toggle-btn--active):hover {
+  background: #5b7cf7 !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3);
+  border-color: #5b7cf7 !important;
 }
 .skill-hub-scope .skill-card__more {
   width: 28px;
@@ -126,22 +136,21 @@
   color: #1677ff;
 }
 .skill-hub-scope .skill-card:hover {
-  border-color: #1677ff;
-  box-shadow: 0 10px 24px rgba(22, 119, 255, 0.12);
+  box-shadow: 0 4px 16px rgba(26, 39, 68, 0.06);
   transform: translateY(-2px);
-  background: #FCFDFF;
+  background: #FEFEFF;
   z-index: 1;
 }
 .skill-hub-scope .skill-card__title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a2e;
   line-height: 24px;
 }
 .skill-hub-scope .skill-card__summary {
-  font-size: 13px;
-  color: #6b7280;
-  line-height: 20px;
+  font-size: 12.5px;
+  color: #888888;
+  line-height: 1.5;
   white-space: pre-line;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -160,7 +169,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: auto;
 }
 
 /* 顶部 hero 横幅（发布页） */
@@ -538,6 +547,11 @@
   max-width: 100%;
   border-radius: 6px;
 }
+/* 工具选项行 hover */
+.tool-option-row:hover {
+  background: rgba(91, 124, 247, 0.06);
+}
+
 .skill-intro-md hr {
   border: none;
   border-top: 1px solid #e5e7eb;

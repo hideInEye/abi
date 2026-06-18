@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined, LeftOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
-import { Dropdown, Empty, Popconfirm, Select, Switch, message } from 'antd';
+import { Dropdown, Empty, Popconfirm, Select, Spin, Switch, message } from 'antd';
 
 // import PageTitle from '@/components/stateless/common/PageTitle';
 
@@ -7,6 +7,9 @@ import { Group } from '@/components/stateful/group/Group';
 import type { GroupProps } from '@/components/stateful/group/Group';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
+import { getSpaceId } from '@/store/slice/app';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { fetchAppListApi, deleteAppApi } from '@/service/api/abi-chat-app';
 
 import AssistantEditDrawer, { type AgentMock } from './modules/assistant-edit-drawer';
 
@@ -23,8 +26,7 @@ const ASSISTANT_GROUP_CONFIG: GroupProps['config'] = {
 };
 
 /**
- * AI 助手列表页（静态卡片版）
- * - 后期接入接口时只需将 MOCK_AGENTS 替换为接口返回数据
+ * AI 助手列表页
  */
 
 interface AgentCard extends AgentMock {
@@ -36,147 +38,15 @@ interface AgentCard extends AgentMock {
   groupId?: number;
 }
 
-const MOCK_AGENTS: AgentCard[] = [
-  {
-    createBy: 'admin',
-    description: '提供股票、指数的实时行情以及历史行情查询，以及市场情况分析、投资知识普及。',
-    groupId: 1,
-    iconBg: '#fa8c16',
-    iconLetter: '=',
-    id: 1,
-    name: '预置勿动_智能投顾助手',
-    selected: true,
-    status: '2',
-    type: '助手'
-  },
-  {
-    description: 'test',
-    groupId: 3,
-    iconBg: '#52c41a',
-    iconLetter: '✦',
-    id: 2,
-    name: 'AutoGen_Sara回归技能模板',
-    type: '技能'
-  },
-  {
-    description: '提供实时股票价格查询和市场行情分析服务。',
-    groupId: 5,
-    iconBg: '#7cb305',
-    iconLetter: '=',
-    id: 3,
-    name: '投顾助手',
-    type: '助手'
-  },
-  {
-    description: '根据提示词创作玄幻小说，包括大章划分和各章节内容概述。',
-    groupId: 4,
-    iconBg: '#722ed1',
-    iconLetter: '=',
-    id: 4,
-    name: '小说生成',
-    type: '助手'
-  },
-  {
-    description: '回答关于金融风控方面的问题。',
-    groupId: 6,
-    iconBg: '#fa541c',
-    iconLetter: '=',
-    id: 5,
-    name: '预置勿动_互联网金融风控答疑助手',
-    type: '助手'
-  },
-  {
-    description: '快速查询宏观经济数据以及图表绘制，提供辅助研究服务。',
-    groupId: 1,
-    iconBg: '#fa8c16',
-    iconLetter: '=',
-    id: 6,
-    name: '预置勿动_宏观研究员助手',
-    type: '助手'
-  },
-  {
-    description: '为您提供全面的 SWOT 公司分析报告，帮助您详细了解指定公司的优势、劣势、机会和威胁。',
-    groupId: 1,
-    iconBg: '#52c41a',
-    iconLetter: '=',
-    id: 7,
-    name: '预置勿动_公司分析助手',
-    type: '助手'
-  },
-  {
-    description: '一名 Excel 全能助手，可以帮助你解决 Excel 相关的问题和提供高效的数据处理方案。',
-    groupId: 2,
-    iconBg: '#13c2c2',
-    iconLetter: '=',
-    id: 8,
-    name: '预置勿动_Excel助手',
-    type: '助手'
-  },
-  {
-    description: '为你生成专业、结构化的中文周报。',
-    groupId: 2,
-    iconBg: '#1677ff',
-    iconLetter: '=',
-    id: 9,
-    name: '预置勿动_周报写作助手',
-    type: '助手'
-  },
-  {
-    description: '解决电脑，手机，打印机，投影仪，路由器等电器问题',
-    groupId: 2,
-    iconBg: '#fa541c',
-    iconLetter: '=',
-    id: 10,
-    name: '预置勿动_电脑助手',
-    type: '助手'
-  },
-  {
-    description: '提供各种与税法相关的帮助和信息',
-    groupId: 1,
-    iconBg: '#722ed1',
-    iconLetter: '=',
-    id: 11,
-    name: '预置勿动_税法助手',
-    type: '助手'
-  },
-  {
-    description: '给代码生成单元测试',
-    groupId: 3,
-    iconBg: '#52c41a',
-    iconLetter: '=',
-    id: 12,
-    name: '预置勿动_开发测试助手',
-    type: '助手'
-  },
-  {
-    description: '一名全能的编程专家，擅长项目设计以及具体的编码。',
-    groupId: 3,
-    iconBg: '#1677ff',
-    iconLetter: '=',
-    id: 13,
-    name: '预置勿动_编程助手',
-    type: '助手'
-  },
-  {
-    description: '在准确表达原文事实和背景的基础上，进一步润色使得符合中文表达习惯。',
-    groupId: 4,
-    iconBg: '#fa8c16',
-    iconLetter: '=',
-    id: 14,
-    name: '预置勿动_高级翻译助手',
-    type: '助手'
-  }
-];
-
 export function Component() {
+  const spaceId = useAppSelector(getSpaceId);
   const [keyword, setKeyword] = useState('');
   const [editVisible, setEditVisible] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AgentCard | null>(null);
   const [selectedId, setSelectedId] = useState<string | number>(1);
   const [groupId, setGroupId] = useState<number>(0);
-  const [agents, setAgents] = useState<AgentCard[]>(() =>
-    MOCK_AGENTS.map(a => ({ createBy: 'admin', status: '1' as const, ...a }))
-  );
+  const [agents, setAgents] = useState<AgentCard[]>([]);
+  const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
@@ -189,6 +59,44 @@ export function Component() {
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
+
+  /** 拉取助手列表 */
+  const fetchIdRef = useRef(0);
+  async function fetchList() {
+    if (!spaceId) return;
+    const fetchId = ++fetchIdRef.current;
+    setLoading(true);
+    try {
+      const res: any = await fetchAppListApi({ spaceId, appName: keyword || undefined });
+      // 防止旧请求覆盖新数据
+      if (fetchId !== fetchIdRef.current) return;
+      // 解包响应：createFlatRequest 返回 { data, error, response }
+      const rows: any[] = Array.isArray(res?.data)
+        ? res.data
+        : (res?.response?.data?.data || res?.response?.data?.rows || []);
+      const list: AgentCard[] = (Array.isArray(rows) ? rows : []).map((r: any) => ({
+        id: r.appId ?? r.id,
+        name: r.appName ?? r.name ?? '-',
+        description: r.description ?? '',
+        iconBg: r.iconBg ?? '#fa8c16',
+        iconLetter: r.iconLetter ?? (r.appName ?? r.name ?? '?').slice(0, 1),
+        status: r.status ?? '0',
+        createBy: r.createBy ?? '',
+        groupId: r.groupId,
+        type: '助手' as const,
+      }));
+      setAgents(list);
+    } catch {
+      if (fetchId === fetchIdRef.current) setAgents([]);
+    } finally {
+      if (fetchId === fetchIdRef.current) setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spaceId]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -204,7 +112,7 @@ export function Component() {
     let arr = agents;
     // 按分组过滤
     if (groupId > 0) {
-      arr = arr.filter(it => it.groupId === groupId);
+      arr = arr.filter(it => it.groupId == groupId);
     }
     // 关键字搜索
     const k = keyword.trim();
@@ -282,13 +190,20 @@ export function Component() {
 
   /** 开关切换: ON=发布(status='1') OFF=下线(status='2') */
   const handleToggle = (id: AgentCard['id'], checked: boolean) => {
-    setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: checked ? '1' : '2' } : it)));
+    const nextStatus = checked ? '1' : '2';
+    setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: nextStatus } : it)));
+    // TODO: 接口对接：待后端提供更新状态接口后替换
     message.success(checked ? '已发布' : '已下线');
   };
 
-  const handleDelete = (id: AgentCard['id']) => {
-    setAgents(prev => prev.filter(it => it.id !== id));
-    message.success('已删除');
+  const handleDelete = async (id: AgentCard['id']) => {
+    try {
+      await deleteAppApi({ appId: id });
+      message.success('已删除');
+      fetchList();
+    } catch {
+      message.error('删除失败');
+    }
   };
 
   return (
@@ -344,7 +259,8 @@ export function Component() {
             />
           </div>
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-            {list.length === 0 ? (
+            <Spin spinning={loading}>
+            {list.length === 0 && !loading ? (
               <div style={{ marginTop: 80 }}>
                 <Empty description="暂无助手" />
               </div>
@@ -380,15 +296,15 @@ export function Component() {
                               style={{
                                 alignItems: 'center',
                                 background: agent.iconBg,
-                                borderRadius: 6,
+                                borderRadius: 12,
                                 color: '#fff',
                                 display: 'flex',
                                 flexShrink: 0,
-                                fontSize: 14,
+                                fontSize: 18,
                                 fontWeight: 700,
-                                height: 28,
+                                height: 42,
                                 justifyContent: 'center',
-                                width: 28
+                                width: 42
                               }}
                             >
                               {agent.iconLetter}
@@ -464,6 +380,7 @@ export function Component() {
                 </div>
               </div>
             )}
+            </Spin>
           </div>
           <div className="data-source-pagination">
             <span className="total-text">共 {totalCount} 条</span>
@@ -512,9 +429,11 @@ export function Component() {
       {editVisible ? (
         <AssistantEditDrawer
           agent={editingAgent}
-          onClose={() => {
+          groupId={groupId}
+          onClose={(refresh) => {
             setEditVisible(false);
             setEditingAgent(null);
+            if (refresh) fetchList();
           }}
         />
       ) : null}
