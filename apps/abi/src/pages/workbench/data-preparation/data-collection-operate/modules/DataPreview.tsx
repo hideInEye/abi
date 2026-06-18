@@ -1,9 +1,5 @@
-import { CaretRightOutlined } from '@ant-design/icons';
-import type { CollapseProps } from 'antd';
-import { Collapse, Dropdown, Table } from 'antd';
+import { Dropdown, Table } from 'antd';
 import { cloneDeep } from 'lodash';
-
-import { FIELD_TYPE_OPTIONS } from '@/constants/data-preparation';
 
 import { DataCollectionOperateContext } from '../context';
 import styles from '../index.module.css';
@@ -132,99 +128,6 @@ const DataPreview: React.FC<PropsType> = memo(({ isSql = false, previewData = {}
     }
   };
 
-  const setItemChildren = (arr: any) => {
-    return (
-      <ul>
-        {arr.map((item: any) => (
-          <li
-            className="flex cursor-pointer items-center justify-between rounded px-2 py-1 hover:bg-gray-200"
-            key={item.tfieldId}
-          >
-            <span className="flex items-center">
-              <SvgIcon
-                className="mr-2"
-                localIcon={FIELD_TYPE_OPTIONS.find(fItem => fItem.key === item.sysFiledType)?.icon}
-              />
-              <span
-                className="inline-block max-w-110px ellipsis-text overflow-hidden"
-                title={item.tfieldShowName}
-              >
-                {item.tfieldShowName}
-              </span>
-            </span>
-            {/* <Dropdown
-              destroyPopupOnHide
-              trigger={['click']}
-              menu={{
-                items: [
-                  {
-                    key: 'switch',
-                    label: (
-                      <span className="cursor-pointer">{item.tfieldType === 'd' ? '转换为指标' : '转换为维度'}</span>
-                    )
-                  },
-                  {
-                    children: FIELD_TYPE_OPTIONS.map(fItem => ({ ...fItem, icon: <SvgIcon localIcon={fItem.icon} /> })),
-                    key: 'change',
-                    label: '变更字段类型'
-                  },
-                  {
-                    key: 'rename',
-                    label: <span className="cursor-pointer">重命名</span>
-                  },
-                  {
-                    key: 'copy',
-                    label: <span className="cursor-pointer">复制</span>
-                  },
-                  {
-                    key: 'delete',
-                    label: (
-                      <span
-                        className="cursor-pointer"
-                        // onClick={handleDeleteNode}
-                      >
-                        删除
-                      </span>
-                    )
-                  }
-                ],
-                onSelect,
-                selectable: true
-              }}
-            >
-              <span
-                className="cursor-pointer rounded px-4px py-4px hover:bg-#e8e9e9"
-                onClick={(e: any) => {
-                  e.stopPropagation();
-                  setSelectedFiled(item);
-                }}
-              >
-                <SvgIcon
-                  className="text-14px"
-                  localIcon="more"
-                />
-              </span>
-            </Dropdown> */}
-          </li>
-        ))}
-      </ul>
-    );
-  };
-  const getItems: () => CollapseProps['items'] = () => [
-    {
-      children: setItemChildren(allFields.filter((item: any) => item.tfieldType === 'd')),
-      className: styles['bottom-left-item-container'],
-      key: 'd',
-      label: <div>维度</div>
-    },
-    {
-      children: setItemChildren(allFields.filter((item: any) => item.tfieldType === 'q')),
-      className: styles['bottom-left-item-container'],
-      key: 'q',
-      label: '指标'
-    }
-  ];
-
   const onClose = (val: any) => {
     if (val.rename) {
       changeAField({ originName: val.rename });
@@ -242,19 +145,6 @@ const DataPreview: React.FC<PropsType> = memo(({ isSql = false, previewData = {}
   };
   return (
     <div className="h-full flex">
-      {!isSql ? (
-        <div className="h-full border-r border-r-#ccc" style={{ background: '#F9FAFF' }}>
-          <Collapse
-            bordered={false}
-            className="h-full w-200px"
-            defaultActiveKey={['d', 'q']}
-            expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
-            items={getItems()}
-            style={{ background: 'transparent' }}
-          />
-        </div>
-      ) : null}
-
       <div
         className="h-full w-full"
         style={{

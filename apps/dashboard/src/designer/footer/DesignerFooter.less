@@ -4,23 +4,24 @@
  *
  * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
  *
- * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ * This copyright statement applies to, but is limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
  *
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 .lc-designer-footer {
-  height: 40px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background-color: #fff;
-  border-top: 1px solid #e8e8e8;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(130, 140, 200, 0.12);
   font-family: 'Inter', 'Helvetica Neue', sans-serif;
 
   .footer-left {
     display: flex;
-    gap: 16px;
+    gap: 6px;
 
     .footer-item {
       display: flex;
@@ -28,26 +29,27 @@
       justify-content: center;
       width: 28px;
       height: 28px;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
-      transition: all 0.2s ease;
-      color: #555;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #768a9f;
 
       &:hover {
-        background-color: #e6f4ff;
-        color: #1677ff;
+        background: rgba(91, 124, 247, 0.08);
+        color: #5b7cf7;
       }
 
       &.active {
-        color: #1677ff;
-        background-color: #e6f4ff;
+        color: #fff;
+        background: linear-gradient(135deg, #5b7cf7, #7091fa);
+        box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3);
       }
     }
   }
 
   .footer-center {
     display: flex;
-    gap: 12px;
+    gap: 6px;
 
     .footer-center-item {
       display: flex;
@@ -55,44 +57,54 @@
       justify-content: center;
       width: 28px;
       height: 28px;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
-      transition: all 0.2s ease;
-      color: #555;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #768a9f;
 
       &:hover {
-        background-color: #e6f4ff;
-        color: #1677ff;
+        background: rgba(91, 124, 247, 0.08);
+        color: #5b7cf7;
       }
 
       &.active {
-        color: #1677ff;
-        background-color: #e6f4ff;
+        color: #fff;
+        background: linear-gradient(135deg, #5b7cf7, #7091fa);
+        box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3);
       }
     }
   }
 
   .footer-right {
     display: flex;
-    gap: 24px;
+    gap: 16px;
     font-size: 12px;
 
     .right-info-item {
-      color: #999;
+      color: #768a9f;
+      font-weight: 500;
+      padding: 3px 10px;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(130, 140, 200, 0.12);
+      border-radius: 6px;
     }
   }
 }
 
 .designer-tooltip {
   .ant-tooltip-inner {
-    background-color: #fff;
-    color: #333;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    color: #3e5068;
     font-size: 12px;
-    border-radius: 4px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid rgba(130, 140, 200, 0.12);
+    box-shadow: 0 4px 16px rgba(26, 39, 68, 0.08);
+    padding: 6px 12px;
   }
 
   .ant-tooltip-arrow::before {
-    background-color: #fff;
+    background: rgba(255, 255, 255, 0.95);
   }
 }

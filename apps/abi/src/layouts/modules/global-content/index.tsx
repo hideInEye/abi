@@ -1,7 +1,7 @@
 import './style.css'
 import ClassNames from 'classnames'
 import KeepAlive, { useKeepAliveRef } from 'keepalive-for-react'
-import { Breadcrumb, Dropdown, Typography, Spin, Empty } from 'antd';
+import { Breadcrumb, Dropdown, Spin, Empty } from 'antd';
 import { CheckOutlined, DownOutlined } from '@ant-design/icons';
 import { useRequest } from '@sa/hooks';
 import { spaceList } from '@/service/api/data-space';
@@ -11,11 +11,30 @@ import { getReloadFlag, getSpaceId } from '@/store/slice/app'
 import { getRemoveCacheKey, selectCacheRoutes } from '@/store/slice/route'
 import { getThemeSettings } from '@/store/slice/theme'
 import { GLOBAL_SIDER_MENU_ID, hideMenuRoute } from '@/constants/app'
-import { useRoute } from '~/packages/simple-router/src'
+import { useRoute, useRouter } from '~/packages/simple-router/src'
 import WorkbenchEmpty from '@/components/stateless/common/WorkbenchEmpty'
 
 import { $t } from '@/locales';
 import { useMixMenuContext } from '@/hooks/common/menu'
+import { useRouterPush } from '@/hooks/common/routerPush'
+
+// 在菜单树中查找（支持短格式 key）
+function findInMenuTree(menuList: any[], key: string): any {
+  for (const m of menuList) {
+    if (m?.key === key) return m;
+    if (m?.children?.length) {
+      const found = findInMenuTree(m.children, key);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// 获取第一个叶子菜单
+function getFirstLeafMenu(menu: any): any {
+  if (!menu?.children?.length) return menu;
+  return getFirstLeafMenu(menu.children[0]);
+}
 
 interface Props {
   /** Show padding for content */
@@ -33,6 +52,10 @@ const useGetCacheKey = () => {
 const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   const currentOutlet = useOutlet()
   const route = useRoute()
+  const { push } = useRouter()
+  const routerPush = useRouterPush();
+  const routerPushRef = useRef(routerPush);
+  routerPushRef.current = routerPush;
   const location = useLocation()
   const aliveRef = useKeepAliveRef()
 
@@ -130,18 +153,6 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
     // 构建路径段列表（最后一段用处理后的菜单段名）
     const menuSegs = pathSegs.map((seg, i) => i === pathSegs.length - 1 ? lastMenuSeg : seg);
 
-    // 在菜单树中查找（支持短格式 key，如 data-preparation 而非 workbench_data-preparation）
-    const findInMenuTree = (menuList: any[], key: string): any => {
-      for (const m of menuList) {
-        if (m?.key === key) return m;
-        if (m?.children?.length) {
-          const found = findInMenuTree(m.children, key);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
     // 逐级构建面包屑，在每一级尝试多种 key 格式
     const items: { label: any; key: string }[] = [];
     for (let i = 0; i < menuSegs.length; i++) {
@@ -181,15 +192,50 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
 
     return items.map((item, index) => {
       const isLast = index === items.length - 1;
+      // 构建每级的路径
+      const pathParts = item.key.split('_');
+      const path = '/' + pathParts.join('/');
+      
       return {
         title: (
-          <span style={{ color: isLast ? '#1a2744' : '#768a9f', fontWeight: isLast ? 600 : 400 }}>
+          <span 
+            style={{ 
+              color: isLast ? '#1a2744' : '#768a9f', 
+              fontWeight: isLast ? 600 : 400,
+              cursor: isLast ? 'default' : 'pointer',
+              transition: 'color 0.2s'
+            }}
+            onClick={() => {
+              if (isLast) return;
+
+              const menuItem = findInMenuTree(menus, item.key);
+              if (menuItem?.children?.length) {
+                const firstLeaf = getFirstLeafMenu(menuItem);
+                if (firstLeaf?.key) {
+                  routerPushRef.current.routerPushByKeyWithMetaQuery(firstLeaf.key);
+                  return;
+                }
+              }
+
+              push(path);
+            }}
+            onMouseEnter={(e) => {
+              if (!isLast) {
+                e.currentTarget.style.color = '#5b7cf7';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLast) {
+                e.currentTarget.style.color = '#768a9f';
+              }
+            }}
+          >
             {item.label}
           </span>
         )
       };
     });
-  }, [menus, location.pathname])
+  }, [menus, location.pathname, push])
 
   useUpdateEffect(() => {
     if (!aliveRef.current || !removeCacheKey) return
@@ -206,20 +252,18 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
       {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 dark:bg-[#1a1a1a] dark:border-[#333] h-[100vh] transition-all duration-300'} id={GLOBAL_SIDER_MENU_ID} style={{ background: 'var(--abi-card-bg)' }} />}
       <div className={ClassNames('flex-1 min-w-0 h-screen relative flex flex-col')}>
         {!hideMenuRoute.includes(route.name!) && (
-          <div className="px-6 pt-4 pb-4 page-header-container">
+          <div className="px-6 pt-4 pb-3 page-header-container">
             <div className="flex items-center justify-between">
-              <Breadcrumb items={breadcrumbItems} separator=">" className="abi-breadcrumb" />
+              <Breadcrumb items={breadcrumbItems} separator="/" className="abi-breadcrumb" />
               <Dropdown
                 open={spaceDropdownOpen}
                 onOpenChange={setSpaceDropdownOpen}
                 trigger={['click']}
                 dropdownRender={() => (
-                  <div className="w-[286px] max-w-[calc(100vw-32px)] rounded-2xl border border-[#edf0f5] bg-[#FCFDFF] p-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
-                    <Typography.Text className="mb-2 block px-2 text-[15px] font-semibold text-[#1f2937]">
-                      空间
-                    </Typography.Text>
+                  <div className="abi-space-dropdown">
+                    <div className="abi-space-dropdown-title">空间</div>
                     <Spin spinning={!curspaceList}>
-                      <div className="max-h-[320px] overflow-y-auto pr-1">
+                      <div className="max-h-[280px] overflow-y-auto">
                         {spaceOptions.length ? (
                           spaceOptions.map((space: any) => {
                             const isActive = space.value === currentSpace;
@@ -227,14 +271,11 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
                               <button
                                 type="button"
                                 key={space.key}
-                                className={[
-                                  'mb-1 flex w-full items-center justify-between rounded-xl bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[#eef4ff]',
-                                  isActive ? 'text-[#5b7cf7]' : 'text-[#1a2744]',
-                                ].join(' ')}
+                                className={`abi-space-dropdown-item ${isActive ? 'active' : ''}`}
                                 onClick={() => handleSpaceClick(space.value, space.label)}
                               >
-                                <span className="truncate text-[14px]">{space.label}</span>
-                                {isActive ? <CheckOutlined className="text-[14px]" /> : null}
+                                <span className="truncate">{space.label}</span>
+                                {isActive ? <CheckOutlined style={{ fontSize: 13, flexShrink: 0 }} /> : null}
                               </button>
                             );
                           })
@@ -246,10 +287,10 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
                   </div>
                 )}
               >
-                <div className="flex items-center gap-2 px-4 py-1.5 bg-white/45 border border-white/60 rounded-full cursor-pointer hover:bg-white/75 transition-all text-sm font-semibold text-[#3e5068]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shadow-[0_0_6px_rgba(16,185,129,0.4)] flex-shrink-0"></span>
-                  <span className="truncate max-w-[120px]">{currentSpaceName || '选择空间'}</span>
-                  <DownOutlined className="text-xs text-[#768a9f]" />
+                <div className="abi-space-trigger">
+                  <span className="abi-space-trigger-dot" />
+                  <span className="abi-space-trigger-name">{currentSpaceName || '选择空间'}</span>
+                  <DownOutlined className="abi-space-trigger-arrow" />
                 </div>
               </Dropdown>
             </div>

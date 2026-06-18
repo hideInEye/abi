@@ -1,4 +1,5 @@
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { Splitter } from 'antd';
 import { Group } from '@/components/stateful/group/Group';
 
 import { SemanticsTableList } from './components/semantics-table-list';
@@ -51,7 +52,7 @@ export function Component() {
 
   function editTable(data: any) {
     setTableModalOpen(true);
-    setDrawerTitle('编辑表语义');
+    setDrawerTitle('编辑数据语义');
     setChinaname(data.bizName);
     setEnglishname(data.techName);
     setDescribe(data.remark);
@@ -76,66 +77,75 @@ export function Component() {
   }
 
   function handleAdd() {
-    setDrawerTitle('新增表语义');
+    setDrawerTitle('新增数据语义');
     setTableModalOpen(true);
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      {/* v5 Tree Panel — left sidebar */}
-      <div className="abi-group-sidebar">
-        <Group config={SCHEMA_GROUP_CONFIG} onGroupId={handleGroupId} />
-      </div>
-
-      {/* Right content area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-        {/* v5 Searchbar */}
-        <section className="abi-searchbar">
-          <div className="abi-search-row">
-            <AInput
-              allowClear
-              placeholder="请输入表语义名称"
-              prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-              value={searchValue}
-              onChange={e => setSearchValue(e.target.value)}
-              onPressEnter={handleSearch}
-              className="abi-field-input"
-              style={{ width: '16rem' }}
-            />
-            <ADatePicker.RangePicker
-              placeholder={['开始时间', '结束时间']}
-              value={dateRange}
-              onChange={(dates) => setDateRange(dates)}
-              className="abi-field-input"
-            />
-            <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-              <SearchOutlined /> 查询
-            </AButton>
-            <AButton className="btn-ghost-v5" onClick={handleReset}>
-              重置
-            </AButton>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <Splitter style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {/* v5 Tree Panel — left sidebar */}
+        <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
+          <div className="abi-group-sidebar" style={{ height: '100%' }}>
+            <Group config={SCHEMA_GROUP_CONFIG} onGroupId={handleGroupId} />
           </div>
-        </section>
+        </Splitter.Panel>
 
-        {/* v5 Data Area */}
-        <section className="abi-data-area">
-          <SemanticsTableList
-            deleteTable={deleteTable}
-            editTable={editTable}
-            tableSchemaList={tableSchemaList}
-            toolbarLeft={
-              <AButton
-                type="primary"
-                className="btn-accent-gradient"
-                onClick={handleAdd}
-                disabled={!groupId}
-              >
-                + 新增表语义
-              </AButton>
-            }
-          />
-        </section>
-      </div>
+        {/* Right content area */}
+        <Splitter.Panel>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
+            {/* Searchbar */}
+            <section className="abi-searchbar">
+              <div className="abi-search-row">
+                <AInput
+                  allowClear
+                  placeholder="请输入数据语义名称"
+                  prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+                  value={searchValue}
+                  onChange={e => setSearchValue(e.target.value)}
+                  onPressEnter={handleSearch}
+                  className="abi-field-input"
+                  style={{ width: '220px' }}
+                />
+                <ADatePicker.RangePicker
+                  showTime={{ format: 'HH:mm:ss' }}
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates)}
+                  className="abi-field-input"
+                  style={{ width: '380px' }}
+                />
+                <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
+                  <SearchOutlined /> 查询
+                </AButton>
+                <AButton className="btn-ghost-v5" onClick={handleReset}>
+                  <ReloadOutlined /> 重置
+                </AButton>
+              </div>
+            </section>
+
+            {/* v5 Data Area */}
+            <section className="abi-data-area">
+              <SemanticsTableList
+                deleteTable={deleteTable}
+                editTable={editTable}
+                tableSchemaList={tableSchemaList}
+                toolbarLeft={
+                  <AButton
+                    type="primary"
+                    className="btn-accent-gradient"
+                    onClick={handleAdd}
+                    disabled={!groupId}
+                  >
+                    <PlusOutlined />新增数据语义
+                  </AButton>
+                }
+              />
+            </section>
+          </div>
+        </Splitter.Panel>
+      </Splitter>
 
       <SemanticsTable updateTableList={updateTableList} />
     </div>

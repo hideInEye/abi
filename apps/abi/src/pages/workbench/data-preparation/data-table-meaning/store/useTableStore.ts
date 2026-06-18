@@ -12,7 +12,7 @@ type TableModalState = {
 const createTableModalSlice = (set: any): TableModalState => ({
   nextStep: () =>
     set((state: Store) => ({
-      stepIndex: Math.min(state.stepIndex + 1, 2)
+      stepIndex: Math.min(state.stepIndex + 1, 1)
     })),
   prevStep: () =>
     set((state: Store) => ({
@@ -86,14 +86,14 @@ const createGroupConfigSlice = (set: any): GroupConfigState => ({
 });
 
 type BaseConfigState = {
-  drawerTitle: '新增表语义' | '编辑表语义';
+  drawerTitle: '新增数据语义' | '编辑数据语义';
   editObj: any;
   setDrawerTitle: (drawerTitle: string) => void;
   setEditObj: (editObj: any) => void;
 };
 
 const createBaseConfigSlice = (set: any): BaseConfigState => ({
-  drawerTitle: '新增表语义',
+  drawerTitle: '新增数据语义',
   editObj: {},
   setDrawerTitle: (drawerTitle: string) => set({ drawerTitle }),
   setEditObj: (editObj: any) => set({ editObj })

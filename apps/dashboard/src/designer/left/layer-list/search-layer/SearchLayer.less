@@ -1,29 +1,24 @@
 /*
  * Copyright © 2023-2025 puyinzhen
  * All rights reserved.
- *
- * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
- *
- * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
- *
- * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 .search-layer-modal {
   .ant-modal-content {
-    background-color: #1E1E2F;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    border: 1px solid #3A3A4E;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(26, 39, 68, 0.12);
+    border: 1px solid rgba(130, 140, 200, 0.12);
 
     .ant-modal-header {
       background: transparent;
-      border-bottom: 1px solid #3A3A4E;
+      border-bottom: 1px solid rgba(130, 140, 200, 0.10);
       padding: 20px 24px;
 
       .search-dialog-title {
-        color: #FFFFFF;
-        font-size: 18px;
-        font-weight: 600;
+        color: #1a2744;
+        font-size: 16px;
+        font-weight: 700;
         line-height: 28px;
         display: flex;
         align-items: center;
@@ -33,7 +28,7 @@
           display: inline-block;
           width: 4px;
           height: 16px;
-          background: #4FB8FF;
+          background: linear-gradient(180deg, #5b7cf7, #7091fa);
           margin-right: 12px;
           border-radius: 2px;
         }
@@ -41,11 +36,11 @@
     }
 
     .ant-modal-close {
-      color: #A0A0B2;
+      color: #768a9f;
       transition: all 0.2s;
 
       &:hover {
-        color: #FFFFFF;
+        color: #5b7cf7;
         transform: rotate(90deg);
       }
     }
@@ -53,29 +48,31 @@
 
   .search-layer-content {
     .search-input-container {
-      margin-bottom: 24px;
+      margin-bottom: 20px;
 
       .search-layer-input {
         .ant-input {
-          background-color: #2C2C3E;
-          border-radius: 4px;
-          color: #FFFFFF;
+          background: rgba(255, 255, 255, 0.55);
+          border: 1px solid rgba(130, 140, 200, 0.18);
+          border-radius: 8px;
+          color: #1a2744;
           height: 40px;
           padding: 8px 16px;
-          transition: all 0.2s;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
           &::placeholder {
-            color: #A0A0B2;
+            color: #8FA0B5;
             font-size: 14px;
           }
 
           &:hover {
-            border-color: #4FB8FF;
+            border-color: #5b7cf7;
           }
 
           &:focus {
-            box-shadow: 0 0 0 2px rgba(79, 184, 255, 0.3);
-            border-color: #4FB8FF;
+            box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.10);
+            border-color: #5b7cf7;
+            background: rgba(255, 255, 255, 0.88);
           }
         }
       }
@@ -84,18 +81,18 @@
     .search-results-container {
       max-height: 400px;
       overflow-y: auto;
-      border-radius: 4px;
-      background-color: #2C2C3E;
-      border: 1px solid #3A3A4E;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.50);
+      border: 1px solid rgba(130, 140, 200, 0.12);
 
       .search-result-item {
-        padding: 16px;
-        color: #FFFFFF;
+        padding: 14px 16px;
+        color: #1a2744;
         font-size: 14px;
         line-height: 20px;
         cursor: pointer;
-        transition: all 0.2s;
-        border-bottom: 1px solid #3A3A4E;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border-bottom: 1px solid rgba(130, 140, 200, 0.08);
         display: flex;
         flex-direction: column;
 
@@ -104,20 +101,20 @@
         }
 
         &:hover {
-          background-color: lighten(#2C2C3E, 5%);
+          background: rgba(91, 124, 247, 0.06);
         }
 
         &:active {
-          background-color: lighten(#2C2C3E, 8%);
+          background: rgba(91, 124, 247, 0.10);
         }
 
         .result-item-name {
-          font-weight: 500;
+          font-weight: 600;
           margin-bottom: 4px;
         }
 
         .result-item-id {
-          color: #A0A0B2;
+          color: #768a9f;
           font-size: 12px;
           font-family: monospace;
         }
@@ -126,7 +123,7 @@
       .search-empty-state {
         padding: 24px;
         text-align: center;
-        color: #A0A0B2;
+        color: #768a9f;
         font-size: 14px;
       }
     }

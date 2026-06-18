@@ -1,0 +1,142 @@
+/* ============================================================
+ * 门户管理页面菜单栏样式
+ * 与工作台菜单保持一致的视觉风格
+ * ============================================================ */
+
+.manage-menu-wrapper {
+  /* ── 菜单栏面板 ── 与工作台 .abi-menu-panel 一致 */
+  .abi-menu-panel {
+    padding: 20px 14px 0 !important;
+
+    &.abi-menu-panel--collapsed {
+      padding: 20px 6px 0 !important;
+    }
+  }
+
+  /* ── 菜单栏标题 ── 与工作台 .abi-menu-label 一致 */
+  .abi-menu-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #a3b3c8 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.12em !important;
+    padding: 6px 12px 12px !important;
+
+    /* 移除装饰线 */
+    &::after {
+      display: none !important;
+    }
+  }
+
+  /* ── 菜单容器 ── */
+  .menu-container {
+    /* 菜单项间距 与工作台一致 */
+    .ant-menu-item {
+      margin-bottom: 2px !important;
+    }
+
+    /* ── 菜单项样式 ── 对齐工作台 .ant-menu-submenu-title */
+    .ant-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px !important;
+      padding-inline-start: 12px !important;
+      border-radius: 8px !important;
+      font-size: 14px;
+      font-weight: 500;
+      color: #3e5068;
+      letter-spacing: 0;
+      line-height: 28px !important;
+      transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      margin: 0 !important;
+      height: auto !important;
+
+      /* 图标 与工作台 .ant-menu-submenu-title .ant-menu-item-icon 一致 */
+      .ant-menu-item-icon {
+        color: #5f7490;
+        margin-inline-end: 0 !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 16px;
+      }
+
+      .ant-menu-title-content {
+        color: #3e5068;
+        margin-left: 0 !important;
+        font-weight: 500;
+      }
+
+      /* ── 悬停效果 ── 与工作台一致 */
+      &:hover {
+        background: rgba(91, 124, 247, 0.08) !important;
+        color: #1a2744;
+
+        .ant-menu-item-icon {
+          color: #1a2744;
+        }
+
+        .ant-menu-title-content {
+          color: #1a2744;
+        }
+      }
+    }
+
+    /* ── 选中状态 ── 与工作台一致 */
+    .ant-menu-item-selected {
+      color: #5b7cf7 !important;
+      font-weight: 500;
+      background: rgba(91, 124, 247, 0.10) !important;
+      border-radius: 8px !important;
+
+      .ant-menu-item-icon {
+        color: #5b7cf7 !important;
+      }
+
+      .ant-menu-title-content {
+        color: #5b7cf7 !important;
+        font-weight: 500;
+      }
+
+      &:hover {
+        background: rgba(91, 124, 247, 0.12) !important;
+      }
+    }
+  }
+
+  /* ── 折叠按钮 ── 与工作台 .abi-menu-toggle 一致 */
+  .abi-menu-toggle {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--abi-card-bg) !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    img {
+      width: 22px;
+      height: 22px;
+    }
+
+    &:hover {
+      background: var(--abi-card-bg) !important;
+      box-shadow: none !important;
+
+      img {
+        transform: scale(1.08);
+      }
+    }
+  }
+
+  /* ── 折叠状态 ── */
+  .abi-menu-panel {
+    &.abi-menu-panel--collapsed {
+      .ant-menu-item {
+        justify-content: center;
+        padding: 10px 8px !important;
+      }
+    }
+  }
+}

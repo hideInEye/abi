@@ -81,6 +81,20 @@
 
 .table-data-container {
   overflow: auto;
-  height: calc(100vh - 350px);
+  flex: 1;
+  min-height: 0;
   padding: 4px 0;
+}
+
+.table-data-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.table-data-container::-webkit-scrollbar-thumb {
+  background: rgba(130, 140, 200, 0.2);
+  border-radius: 4px;
+}
+
+.table-data-container::-webkit-scrollbar-track {
+  background: transparent;
 }

@@ -1,14 +1,21 @@
 import Editor from '@monaco-editor/react';
 import {
   DeleteOutlined,
+  DownOutlined,
   EditOutlined,
   ExclamationCircleFilled,
   LeftOutlined,
   MinusCircleOutlined,
   MoreOutlined,
   PlusOutlined,
+  ReloadOutlined,
   RightOutlined,
-  SearchOutlined
+  SearchOutlined,
+  SettingOutlined,
+  SlidersOutlined,
+  CodeOutlined,
+  FileTextOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons';
 import { App, Button, Checkbox, Divider, Drawer, Dropdown, Form, Input, Select, Space, Table, Tabs, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -144,9 +151,37 @@ export function Component() {
     { key: 'createTime', label: '创建时间', visible: true },
     { key: 'action', label: '操作', visible: true },
   ]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
+
+  // 批量删除
+  function handleBatchDelete() {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的工具');
+      return;
+    }
+    modal.confirm({
+      title: '批量删除',
+      content: `确定要删除选中的 ${selectedRowKeys.length} 个工具吗？删除后不可恢复。`,
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await Promise.all(
+            selectedRowKeys.map(id => deleteToolApi({ toolId: Number(id) }))
+          );
+          message.success(`成功删除 ${selectedRowKeys.length} 个工具`);
+          setSelectedRowKeys([]);
+          fetchList();
+        } catch {
+          message.error('批量删除失败');
+        }
+      }
+    });
+  }
 
   // 编辑弹窗 tab
   const [activeTab, setActiveTab] = useState('script');
@@ -201,7 +236,7 @@ const TABLE_SCROLL = { x: 'max-content' };
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [jumpValue, setJumpValue] = useState('');
   const totalCount = filteredList.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -213,7 +248,7 @@ const TABLE_SCROLL = { x: 'max-content' };
   // 筛选条件变化时重置到第一页
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, keyword]);
+  }, [statusFilter, keyword, pageSize]);
 
   const defaultPythonScript = `def get_current_date(format: str = "%Y-%m-%d", include_weekday: bool = False) -> str:
     from datetime import date
@@ -480,12 +515,18 @@ const TABLE_SCROLL = { x: 'max-content' };
         title: '操作',
         key: 'action',
         align: 'center',
-        width: 120,
+        minWidth: 120,
         fixed: 'right',
         render: (_, record) => (
-          <div className="flex items-center justify-center" style={{ gap: 2 }}>
-            <Button className="abi-action-link" size="small" variant="link" onClick={() => handleEdit(record)}>编辑</Button>
-            <Button className="abi-action-link" size="small" variant="link" danger onClick={() => handleDelete(record)}>删除</Button>
+          <div className="ds-action-group">
+            <Button className="abi-action-link" size="small" variant="link" onClick={() => handleEdit(record)}>
+              <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
+            </Button>
+            <APopconfirm title="提示" description="确定删除该工具吗？" onConfirm={() => handleDelete(record)}>
+              <Button className="abi-action-link" size="small" variant="link">
+                <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
+              </Button>
+            </APopconfirm>
           </div>
         )
       }
@@ -533,10 +574,10 @@ const TABLE_SCROLL = { x: 'max-content' };
             onChange={e => setKeyword(e.target.value)}
             onPressEnter={() => setCurrentPage(1)}
             className="abi-field-input"
-            style={{ width: '16rem' }}
+            style={{ width: '220px' }}
           />
           <Select
-            style={{ width: 100 }}
+            style={{ width: 120 }}
             placeholder="状态"
             value={statusFilter}
             onChange={v => setStatusFilter(v)}
@@ -548,16 +589,19 @@ const TABLE_SCROLL = { x: 'max-content' };
             ]}
           />
           <ADatePicker.RangePicker
+            showTime={{ format: 'HH:mm:ss' }}
+            format="YYYY-MM-DD HH:mm:ss"
             placeholder={['开始时间', '结束时间']}
             value={dateRange}
             onChange={(dates) => setDateRange(dates)}
             className="abi-field-input"
+            style={{ width: '380px' }}
           />
           <Button type="primary" className="btn-accent-gradient" onClick={() => setCurrentPage(1)}>
             <SearchOutlined /> 查询
           </Button>
           <Button className="btn-ghost-v5" onClick={() => { setKeyword(''); setStatusFilter('ALL'); setCurrentPage(1); setDateRange(null); }}>
-            重置
+            <ReloadOutlined /> 重置
           </Button>
         </div>
       </section>
@@ -568,6 +612,13 @@ const TABLE_SCROLL = { x: 'max-content' };
           <div className="abi-toolbar-left">
             <Button className="btn-accent-gradient" onClick={handleAdd}>
               <PlusOutlined />新增工具
+            </Button>
+            <Button
+              className="btn-ghost-v5"
+              disabled={selectedRowKeys.length === 0}
+              onClick={handleBatchDelete}
+            >
+              批量删除数据
             </Button>
           </div>
           <ViewControls
@@ -600,6 +651,12 @@ const TABLE_SCROLL = { x: 'max-content' };
                 size="middle"
                 className="tools-table abi-std-table"
                 scroll={pagedList.length > 0 ? TABLE_SCROLL : undefined}
+                rowSelection={{
+                  columnWidth: 48,
+                  fixed: true,
+                  selectedRowKeys,
+                  onChange: (keys) => setSelectedRowKeys(keys),
+                }}
               />
             </div>
           </div>
@@ -611,7 +668,7 @@ const TABLE_SCROLL = { x: 'max-content' };
                 <div className="abi-card-grid">
                   <div className="abi-card-grid-inner">
                     {pagedList.map((item: ToolItem) => (
-                      <div key={item.toolId} className="abi-data-card" style={{ position: 'relative' }}>
+                      <div key={item.toolId} className="abi-data-card">
                         <div className="abi-data-card-head">
                           <div className="abi-data-card-title">
                             <span className="abi-data-card-name">{item.toolName}</span>
@@ -623,21 +680,26 @@ const TABLE_SCROLL = { x: 'max-content' };
                           <div className="row"><span className="lbl">状态</span><span className={`abi-status-tag ${String(item.status) === '0' ? 'status-normal' : 'status-disabled'}`}>{String(item.status) === '0' ? '启用' : '禁用'}</span></div>
                           <div className="row"><span className="lbl">创建时间</span><span className="val">{item.createTime ? item.createTime.replace('T', ' ') : '-'}</span></div>
                         </div>
-                        <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+                        <div className="abi-data-card-footer">
+                          <button className="abi-card-act" onClick={() => handleEdit(item)}>
+                            <EditOutlined style={{ marginRight: 3 }} />编辑
+                          </button>
                           <Dropdown
                             menu={{
                               items: [
-                                { key: 'edit', label: <span><EditOutlined style={{ marginRight: 6 }} />编辑</span> },
-                                { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
+                                {
+                                  key: 'delete',
+                                  danger: true,
+                                  label: '删除',
+                                  onClick: () => handleDelete(item),
+                                },
                               ],
-                              onClick: ({ key }) => {
-                                if (key === 'edit') handleEdit(item);
-                                else if (key === 'delete') handleDelete(item);
-                              }
                             }}
-                            trigger={['hover']}
+                            trigger={['click']}
                           >
-                            <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
+                            <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
+                              <MoreOutlined />
+                            </button>
                           </Dropdown>
                         </div>
                       </div>
@@ -653,35 +715,47 @@ const TABLE_SCROLL = { x: 'max-content' };
             <div className="pagination-controls">
               <ASelect
                 value={pageSize}
+                onChange={(value: number) => setPageSize(value)}
                 options={[
                   { label: '10条/页', value: 10 },
+                  { label: '15条/页', value: 15 },
+                  { label: '20条/页', value: 20 },
+                  { label: '25条/页', value: 25 },
+                  { label: '30条/页', value: 30 },
                 ]}
-                disabled
                 className="page-size-select"
               />
               <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
                 <LeftOutlined />
               </button>
               {(() => {
-                const pages: number[] = [];
-                if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
-                else {
-                  pages.push(1);
-                  if (currentPage > 3) pages.push(-1);
-                  const start = Math.max(2, currentPage - 1);
-                  const end = Math.min(totalPages - 1, currentPage + 1);
-                  for (let i = start; i <= end; i++) pages.push(i);
-                  if (currentPage < totalPages - 2) pages.push(-2);
-                  pages.push(totalPages);
+                const pages: (number | string)[] = [];
+                const maxVisible = 5;
+                if (totalPages <= maxVisible) {
+                  for (let i = 1; i <= totalPages; i++) pages.push(i);
+                } else if (currentPage <= 3) {
+                  for (let i = 1; i <= 4; i++) pages.push(i);
+                  pages.push('...', totalPages);
+                } else if (currentPage >= totalPages - 2) {
+                  pages.push(1, '...');
+                  for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+                } else {
+                  pages.push(1, '...');
+                  pages.push(currentPage - 1, currentPage, currentPage + 1);
+                  pages.push('...', totalPages);
                 }
-                return pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === currentPage ? ' page-active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</span>);
+                return pages.map((page, idx) => {
+                  if (page === '...') return <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">...</span>;
+                  const isActive = page === currentPage;
+                  return <span key={page} className={`page-item${isActive ? ' page-active' : ''}`} onClick={() => setCurrentPage(page as number)}>{page}</span>;
+                });
               })()}
               <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
                 <RightOutlined />
               </button>
               <span className="quick-jumper">
                 前往
-                <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (p >= 1 && p <= totalPages) setCurrentPage(p); setJumpValue(''); }} />
+                <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (!isNaN(p) && p >= 1 && p <= totalPages) setCurrentPage(p); setJumpValue(''); }} />
                 页
               </span>
             </div>
@@ -689,49 +763,103 @@ const TABLE_SCROLL = { x: 'max-content' };
         </div>
       </section>
 
-      {/* 新增/编辑抽屛 */}
+      {/* 新增/编辑抽屉 — v5 风格 */}
       <Drawer
-        title={editingTool ? '编辑内置工具' : '新增内置工具'}
+        className="ds-operate-drawer"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: 18, boxShadow: '0 4px 12px rgba(91,124,247,0.3)',
+            }}>
+              <SettingOutlined />
+            </div>
+            <div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: '#1a2744', letterSpacing: '0.02em' }}>
+                {editingTool ? '编辑内置工具' : '新增内置工具'}
+              </div>
+              <div style={{ fontSize: 12, color: '#768a9f', marginTop: 2 }}>
+                {editingTool ? '修改工具配置与脚本' : '创建新的 Python 工具'}
+              </div>
+            </div>
+          </div>
+        }
         open={modalOpen}
         width={900}
         destroyOnClose
+        closeIcon={null}
         onClose={() => setModalOpen(false)}
         styles={{ body: { display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', height: '100%' } }}
         footer={
-          <div style={{ textAlign: 'right' }}>
-            <Space>
-              <Button onClick={() => setModalOpen(false)}>取消</Button>
-              <Button type="primary" loading={saving} onClick={handleSave}>
-                保存
-              </Button>
-            </Space>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, padding: '4px 0' }}>
+            <Button
+              onClick={() => setModalOpen(false)}
+              style={{ height: 38, padding: '0 20px', borderRadius: 8, fontWeight: 500, border: '1px solid rgba(130,140,200,0.18)', color: '#5f7490', background: 'transparent' }}
+            >
+              取消
+            </Button>
+            <Button
+              type="primary"
+              loading={saving}
+              onClick={handleSave}
+              style={{
+                height: 38, padding: '0 28px', borderRadius: 8, fontWeight: 600,
+                background: 'linear-gradient(135deg, #5b7cf7, #7091fa)',
+                boxShadow: '0 2px 10px rgba(91,124,247,0.3)', border: 'none',
+              }}
+            >
+              保存
+            </Button>
           </div>
         }
       >
         {/* 固定区域：表单基础字段 */}
         <Form form={form} layout="vertical" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{ padding: '24px 24px 0', flexShrink: 0 }}>
-            <Form.Item
-              label="工具名称"
-              name="toolName"
-              rules={[{ required: true, message: '请输入工具名称' }]}
-            >
-              <Input placeholder="如：builtin_increment" />
+          <div style={{ padding: '20px 24px 0', flexShrink: 0 }}>
+            {/* 基础信息区 */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 0', marginBottom: 16,
+              borderBottom: '1px solid rgba(130,140,200,0.10)',
+            }}>
+              <div style={{
+                width: 26, height: 26, borderRadius: 7,
+                background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 13, boxShadow: '0 2px 8px rgba(91,124,247,0.25)',
+              }}>
+                <SettingOutlined />
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#1a2744', letterSpacing: '0.02em' }}>基础信息</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 16 }}>
+              <Form.Item
+                label={<span style={{ fontWeight: 500, color: '#3e5068' }}>工具名称</span>}
+                name="toolName"
+                rules={[{ required: true, message: '请输入工具名称' }]}
+                style={{ flex: 1 }}
+              >
+                <Input placeholder="如：builtin_increment" />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ fontWeight: 500, color: '#3e5068' }}>标签</span>}
+                name="toolLabel"
+                rules={[{ required: true, message: '请输入工具标签' }]}
+                style={{ flex: 1 }}
+              >
+                <Input placeholder="如：计算器" />
+              </Form.Item>
+            </div>
+
+            <Form.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>功能描述</span>} name="description">
+              <Input.TextArea rows={2} placeholder="请输入功能描述" />
             </Form.Item>
 
-            <Form.Item
-              label="标签"
-              name="toolLabel"
-              rules={[{ required: true, message: '请输入工具标签' }]}
-            >
-              <Input placeholder="如：计算器" />
-            </Form.Item>
-
-            <Form.Item label="功能描述" name="description">
-              <Input.TextArea rows={3} placeholder="请输入功能描述" />
-            </Form.Item>
-
-            <Form.Item label="状态" name="status" style={{ marginBottom: 0 }}>
+            <Form.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>状态</span>} name="status" style={{ marginBottom: 0 }}>
               <Select style={{ width: 160 }}>
                 <Select.Option value="0">启用</Select.Option>
                 <Select.Option value="1">禁用</Select.Option>
@@ -743,38 +871,33 @@ const TABLE_SCROLL = { x: 'max-content' };
               onChange={setActiveTab}
               style={{ marginTop: 16 }}
               items={[
-                { key: 'script', label: 'Python 脚本' },
-                { key: 'startupParams', label: '启动参数' },
-                { key: 'inputSchema', label: '输入参数 Schema' },
-                { key: 'outputSchema', label: '输出参数 JSON Schema' },
-                { key: 'remark', label: '备注' }
+                { key: 'script', label: <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><CodeOutlined />Python 脚本</span> },
+                { key: 'startupParams', label: <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><SlidersOutlined />启动参数</span> },
+                { key: 'inputSchema', label: <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><FileTextOutlined />输入参数 Schema</span> },
+                { key: 'outputSchema', label: <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><FileTextOutlined />输出 Schema</span> },
+                { key: 'remark', label: <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><InfoCircleOutlined />备注</span> }
               ]}
             />
           </div>
 
-          {/* 滚动区域：五个 Tab 内容盒子，各自内部滚动，外层不产生大滚动条 */}
+          {/* 滚动区域：五个 Tab 内容盒子 */}
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: '0 24px 24px' }}>
 
             {/* Python 脚本 */}
             <div style={{ display: activeTab === 'script' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
               <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 8,
-                  padding: '8px 12px',
-                  background: '#fffbe6',
-                  border: '1px solid #ffe58f',
-                  borderRadius: 6,
-                  marginBottom: 12,
-                  flexShrink: 0
+                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                  padding: '8px 12px', marginBottom: 12, flexShrink: 0,
+                  background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)',
+                  borderRadius: 8,
                 }}
               >
-                <ExclamationCircleFilled style={{ color: '#faad14', fontSize: 14, marginTop: 3 }} />
-                <div style={{ fontSize: 13, lineHeight: '20px', color: 'rgba(0,0,0,0.85)' }}>
-                  <div style={{ fontWeight: 500, marginBottom: 2 }}>安全警告</div>
-                  <div style={{ color: 'rgba(0,0,0,0.65)' }}>
-                    Python 脚本将以服务器进程权限执行，请确保代码来源可信。请勿编写删除文件、访问网络等高危操作，或交由管理员审核后发布。
+                <ExclamationCircleFilled style={{ color: '#f59e0b', fontSize: 14, marginTop: 3 }} />
+                <div style={{ fontSize: 13, lineHeight: '20px', color: '#3e5068' }}>
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>安全警告</div>
+                  <div style={{ color: '#5f7490' }}>
+                    Python 脚本将以服务器进程权限执行，请确保代码来源可信。
                   </div>
                 </div>
               </div>
@@ -810,7 +933,7 @@ const TABLE_SCROLL = { x: 'max-content' };
               ) : (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexShrink: 0 }}>
-                    <div style={{ fontWeight: 500 }}>参数列表</div>
+                    <div style={{ fontWeight: 500, color: '#3e5068' }}>参数列表</div>
                     <Button onClick={() => setIsAdvancedMode(true)}>
                       高级配置
                     </Button>
@@ -835,13 +958,9 @@ const TABLE_SCROLL = { x: 'max-content' };
                             <div
                               key={key}
                               style={{
-                                display: 'flex',
-                                gap: 8,
-                                alignItems: 'flex-start',
-                                padding: 8,
-                                border: '1px solid #f0f0f0',
-                                borderRadius: 6,
-                                background: '#fafafa'
+                                display: 'flex', gap: 8, alignItems: 'flex-start',
+                                padding: 8, border: '1px solid rgba(130,140,200,0.12)',
+                                borderRadius: 8, background: 'rgba(255,255,255,0.5)',
                               }}
                             >
                               <Form.Item

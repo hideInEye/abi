@@ -1,20 +1,18 @@
-import { MoreOutlined, SearchOutlined } from '@ant-design/icons';
+import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import React, { useState, useEffect } from 'react';
-// import PageTitle from '@/components/stateless/common/PageTitle';
+import { Splitter } from 'antd';
 
 import { deleteMcp, getMcpDetail, queryMcpList, registerMcp, updateMcp } from '@/service/api/pulg';
 import type { PluginAddParams, PluginItem, PluginList, McpForm } from '@/types/plug';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
-import { ViewControls } from '@/components/ViewControls';
-import type { ColumnOption } from '@/components/ViewControls';
 
 import { PlugUpdate } from './components/PlugUpdate.tsx';
 import { PluginDetail } from './components/PluginDetail.tsx';
 import { PluginGroup } from './components/PluginGroup.tsx';
 import { PluginTable } from './components/PluginTable.tsx';
 import { usePluginManagement } from './hooks/usePluginManagement.ts';
-import { Dropdown, message } from 'antd';
+import { message } from 'antd';
 
 export const Component: React.FC = () => {
   const { currentEdit, open, setCurrentEdit, setOpen } = usePluginManagement();
@@ -31,19 +29,7 @@ export const Component: React.FC = () => {
   const [current, setcurrent] = useState(1);
   const [searchValue, setSearchValue] = useState('');
   const [detailRecord, setDetailRecord] = useState<PluginItem | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
-  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
-    { key: 'pluginName', label: 'MCP服务名称', visible: true },
-    { key: 'remark', label: '描述', visible: true },
-    { key: 'capabilities', label: '支持能力', visible: true },
-    { key: 'pluginType', label: '类型', visible: true },
-    { key: 'version', label: '版本', visible: true },
-    { key: 'status', label: '状态', visible: true },
-  ]);
-  const handleColumnToggle = (key: string, visible: boolean) => {
-    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
-  };
   const pageSize = 10;
 
   const getPluginList = async (mcpName?: string, pageOverride?: number) => {
@@ -76,6 +62,7 @@ export const Component: React.FC = () => {
   };
 
   const toDeletePlugin = async (data: PluginList) => {
+    if (!groupId) return;
     await deleteMcp({
       mcpId: data.pluginId.toString(),
       mcpName: data.pluginName,
@@ -85,6 +72,7 @@ export const Component: React.FC = () => {
   };
 
   const updateStatus = async (record: PluginItem) => {
+    if (!groupId) return;
     // 启停切换走更新接口 (PUT)
     await updateMcp({
       namespaceId: `s_${groupId}`,
@@ -108,6 +96,7 @@ export const Component: React.FC = () => {
   };
 
   const handleSearch = (value: string) => {
+    if (!groupId) return;
     setSearchValue(value);
     setcurrent(1);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
@@ -115,6 +104,7 @@ export const Component: React.FC = () => {
   };
 
   const handleSubmit = async (formData: McpForm) => {
+    if (!groupId) return;
     // 根据 HTTP 转 MCP 开关区分两种模式构造接口参数
     let addressWithPort: string;
     let scheme: string;
@@ -212,163 +202,99 @@ export const Component: React.FC = () => {
   }, [spaceId]);
 
   const setPage = (page: number) => {
+    if (!groupId) return;
     setcurrent(page);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
     getPluginList(undefined, page);
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      {/* v5 Tree Panel — left sidebar */}
-      <div className="abi-group-sidebar">
-        <PluginGroup onGroupId={(id, _name, type) => { setGroupId(id); if (type) setGroupType(type); }} />
-      </div>
-
-      {/* Right content area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-        {/* v5 Searchbar */}
-        <section className="abi-searchbar">
-          <div className="abi-search-row">
-            <AInput
-              allowClear
-              placeholder="请输入MCP服务名称"
-              prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-              value={searchValue}
-              onChange={e => handleSearch(e.target.value)}
-              className="abi-field-input"
-              style={{ width: '16rem' }}
-            />
-            <ADatePicker.RangePicker
-              placeholder={['开始时间', '结束时间']}
-              value={dateRange}
-              onChange={(dates) => setDateRange(dates)}
-              className="abi-field-input"
-            />
-            <AButton type="primary" className="btn-accent-gradient" onClick={() => handleSearch(searchValue)}>
-              <SearchOutlined /> 查询
-            </AButton>
-            <AButton className="btn-ghost-v5" onClick={() => { handleSearch(''); setDateRange(null); }}>
-              重置
-            </AButton>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <Splitter style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {/* v5 Tree Panel — left sidebar */}
+        <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
+          <div className="abi-group-sidebar" style={{ height: '100%' }}>
+            <PluginGroup onGroupId={(id, _name, type) => { setGroupId(id); if (type) setGroupType(type); }} />
           </div>
-        </section>
+        </Splitter.Panel>
 
-        {/* v5 Data Area */}
-        <section className="abi-data-area">
-          <div className="abi-toolbar">
-            <div className="abi-toolbar-left">
-              <AButton type="primary" className="btn-accent-gradient" disabled={!groupId} onClick={() => { setOpen(true); setCurrentEdit(null); }}>
-                + 新增MCP服务
-              </AButton>
-            </div>
-            <ViewControls
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              columns={columnOptions}
-              onColumnToggle={handleColumnToggle}
-            />
+        {/* Right content area */}
+        <Splitter.Panel>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
+            {/* Searchbar */}
+            <section className="abi-searchbar">
+              <div className="abi-search-row">
+                <AInput
+                  allowClear
+                  placeholder="请输入MCP名称"
+                  prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+                  value={searchValue}
+                  onChange={e => handleSearch(e.target.value)}
+                  className="abi-field-input"
+                  style={{ width: '220px' }}
+                />
+                <ADatePicker.RangePicker
+                  showTime={{ format: 'HH:mm:ss' }}
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates)}
+                  className="abi-field-input"
+                  style={{ width: '380px' }}
+                />
+                <AButton type="primary" className="btn-accent-gradient" onClick={() => handleSearch(searchValue)}>
+                  <SearchOutlined /> 查询
+                </AButton>
+                <AButton className="btn-ghost-v5" onClick={() => { handleSearch(''); setDateRange(null); }}>
+                  <ReloadOutlined /> 重置
+                </AButton>
+              </div>
+            </section>
+
+            {/* v5 Data Area */}
+            <section className="abi-data-area">
+              <PluginTable
+                current={current}
+                dataSource={dataSource}
+                deletePlugin={toDeletePlugin}
+                setcurrent={setPage}
+                updateStatus={updateStatus}
+                groupId={groupId}
+                onAdd={() => { setOpen(true); setCurrentEdit(null); }}
+                onDetail={async record => {
+                  if (!groupId) return;
+                  try {
+                    const res: any = await getMcpDetail({
+                      mcpId: String(record.pluginId),
+                      mcpName: record.pluginName,
+                      namespaceId: `s_${groupId}`
+                    });
+                    const remote = res?.response?.data?.data ?? res?.response?.data;
+                    setDetailRecord({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
+                  } catch {
+                    setDetailRecord(record);
+                  }
+                }}
+                updateCurrentEdit={async record => {
+                  if (!groupId) return;
+                  try {
+                    const res: any = await getMcpDetail({
+                      mcpId: String(record.pluginId),
+                      mcpName: record.pluginName,
+                      namespaceId: `s_${groupId}`
+                    });
+                    const remote = res?.response?.data?.data ?? res?.response?.data;
+                    setCurrentEdit({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
+                  } catch {
+                    setCurrentEdit(record);
+                  }
+                  setOpen(true);
+                }}
+              />
+            </section>
           </div>
-          {viewMode === 'list' ? (
-          <PluginTable
-            current={current}
-            dataSource={dataSource}
-            deletePlugin={toDeletePlugin}
-            setcurrent={setPage}
-            updateStatus={updateStatus}
-            onDetail={async record => {
-              try {
-                const res: any = await getMcpDetail({
-                  mcpId: String(record.pluginId),
-                  mcpName: record.pluginName,
-                  namespaceId: `s_${groupId}`
-                });
-                const remote = res?.response?.data?.data ?? res?.response?.data;
-                setDetailRecord({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
-              } catch {
-                setDetailRecord(record);
-              }
-            }}
-            updateCurrentEdit={async record => {
-              try {
-                const res: any = await getMcpDetail({
-                  mcpId: String(record.pluginId),
-                  mcpName: record.pluginName,
-                  namespaceId: `s_${groupId}`
-                });
-                const remote = res?.response?.data?.data ?? res?.response?.data;
-                setCurrentEdit({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
-              } catch {
-                setCurrentEdit(record);
-              }
-              setOpen(true);
-            }}
-          />
-          ) : (
-            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-              {dataSource.rows.length === 0 ? (
-                <div style={{ marginTop: 80, textAlign: 'center' }}>
-                  <AEmpty description="暂无MCP服务" />
-                </div>
-              ) : (
-                <div className="abi-card-grid">
-                  <div className="abi-card-grid-inner">
-                    {dataSource.rows.map((record: any) => (
-                      <div key={record.pluginId} className="abi-data-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
-                        <div className="abi-data-card-head">
-                          <div className="abi-data-card-title">
-                            <span className="abi-data-card-name">{record.pluginName}</span>
-                          </div>
-                        </div>
-                        <div className="abi-data-card-body">
-                          <div className="row"><span className="lbl">描述</span><span className="val">{record.remark || '-'}</span></div>
-                          <div className="row"><span className="lbl">类型</span><span className="val">{record.pluginType || '-'}</span></div>
-                          <div className="row"><span className="lbl">版本</span><span className="val">{record.versionDetail?.version || '-'}</span></div>
-                        </div>
-                        {/* footer: 左按钮 + 右 Dropdown */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 12 }}>
-                          <button
-                            type="button"
-                            className={`abi-card-toggle-btn ${record.status === 1 ? 'abi-card-toggle-btn--active' : ''}`}
-                            onClick={e => { e.stopPropagation(); updateStatus(record); }}
-                            style={
-                              record.status === 1
-                                ? { padding: '5px 14px', border: 'none', borderRadius: 8, background: '#5b7cf7', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(91,124,247,0.3)', fontFamily: 'inherit' }
-                                : { padding: '5px 14px', border: '1px solid rgba(130,140,200,0.16)', borderRadius: 8, background: 'transparent', color: '#5b7cf7', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }
-                            }
-                          >
-                            {record.status === 1 ? '已启用' : '启用'}
-                          </button>
-                          <Dropdown
-                            menu={{
-                              items: [
-                                { key: 'edit', label: <span>编辑</span> },
-                                { key: 'delete', danger: true, label: <APopconfirm title="提示" description="确定删除该MCP服务吗？" onConfirm={() => toDeletePlugin(record)}><span>删除</span></APopconfirm> },
-                              ],
-                              onClick: ({ key, domEvent }) => {
-                                domEvent.stopPropagation();
-                                if (key === 'edit') {
-                                  getMcpDetail({ mcpId: String(record.pluginId), mcpName: record.pluginName, namespaceId: `s_${groupId}` }).then((res: any) => {
-                                    const remote = res?.response?.data?.data ?? res?.response?.data;
-                                    setCurrentEdit({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
-                                    setOpen(true);
-                                  });
-                                }
-                              }
-                            }}
-                            trigger={['hover']}
-                          >
-                            <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
-                          </Dropdown>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-      </div>
+        </Splitter.Panel>
+      </Splitter>
 
       <PlugUpdate
         currentEdit={currentEdit}

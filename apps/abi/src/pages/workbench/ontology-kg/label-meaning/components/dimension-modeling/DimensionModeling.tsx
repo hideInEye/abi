@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+import { Splitter } from 'antd'
 
 import { Group } from '@/components/stateful/group/Group.tsx'
 
@@ -47,52 +48,58 @@ const DimensionModeling: React.FC = () => {
   }, [])
 
   return (
-    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <div className="abi-group-sidebar">
-        <Group
-          config={{
-            button: '添加维度组',
-            inputLabel: '维度组名称',
-            inputPlaceholder: '请输入分组名称',
-            modalAddTitle: '新增维度组',
-            modalEditTitle: '编辑维度组',
-            panelTitle: '维度组',
-            rule: [[{ message: '请输入维度组名称', required: true }]],
-            type: DIMENSION_GROUP_TYPE
-          }}
-          onGroupId={handleGroupChange}
-        />
-      </div>
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-        <DimensionSearchBar
-          searchParams={searchParams}
-          onQuery={handleQuery}
-          onReset={handleReset}
-          onSearchChange={handleSearchChange}
-        />
-        <section className="abi-data-area">
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-            <AButton
-              type="primary"
-              className="btn-accent-gradient"
-              disabled={!selectedGroup?.groupId}
-              onClick={handleAdd}
-            >
-              + 新增维度
-            </AButton>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <Splitter style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
+          <div className="abi-group-sidebar" style={{ height: '100%' }}>
+            <Group
+              config={{
+                button: '添加维度组',
+                inputLabel: '维度组名称',
+                inputPlaceholder: '请输入分组名称',
+                modalAddTitle: '新增维度组',
+                modalEditTitle: '编辑维度组',
+                panelTitle: '维度组',
+                rule: [[{ message: '请输入维度组名称', required: true }]],
+                type: DIMENSION_GROUP_TYPE
+              }}
+              onGroupId={handleGroupChange}
+            />
           </div>
-          <DimensionTable
-            dataSource={tableData}
-            loading={loading}
-            pagination={pagination}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-            onHierarchy={openHierarchyModal}
-            onPaginationChange={handlePaginationChange}
-          />
-        </section>
-      </div>
+        </Splitter.Panel>
+
+        <Splitter.Panel>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
+            <DimensionSearchBar
+              searchParams={searchParams}
+              onQuery={handleQuery}
+              onReset={handleReset}
+              onSearchChange={handleSearchChange}
+            />
+            <section className="abi-data-area">
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                <AButton
+                  type="primary"
+                  className="btn-accent-gradient"
+                  disabled={!selectedGroup?.groupId}
+                  onClick={handleAdd}
+                >
+                  + 新增维度
+                </AButton>
+              </div>
+              <DimensionTable
+                dataSource={tableData}
+                loading={loading}
+                pagination={pagination}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+                onHierarchy={openHierarchyModal}
+                onPaginationChange={handlePaginationChange}
+              />
+            </section>
+          </div>
+        </Splitter.Panel>
+      </Splitter>
 
       <DimensionOperateDrawer
         editingItem={editingItem}

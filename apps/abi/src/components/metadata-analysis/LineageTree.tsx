@@ -1,12 +1,13 @@
 /* eslint-disable react/prop-types */
 import {
   ApiOutlined,
+  BranchesOutlined,
   DatabaseOutlined,
   FileTextOutlined,
   MessageOutlined,
   RobotOutlined,
   TableOutlined,
-  TagsOutlined
+  TagsOutlined,
 } from '@ant-design/icons'
 import type { TableColumnsType } from 'antd'
 
@@ -223,7 +224,7 @@ const LineageTree: React.FC<Props> = ({ mode, relations, rootContext }) => {
         <ASpace size={8}>
           {getNodeIcon(row.nodeType)}
           <ATooltip title={row.name}>
-            <span className="inline-block max-w-420px overflow-hidden text-ellipsis whitespace-nowrap">
+            <span className="ma-tree-node-name">
               {row.name}
             </span>
           </ATooltip>
@@ -235,29 +236,47 @@ const LineageTree: React.FC<Props> = ({ mode, relations, rootContext }) => {
       key: 'nodeType',
       title: '类型',
       width: '30%',
-      render: (value: string) => NODE_TYPE_LABELS[value] || value
+      render: (value: string) => (
+        <span className="ma-node-type-tag">{NODE_TYPE_LABELS[value] || value}</span>
+      )
     }
   ]
 
   if (!displayData.length) {
     return (
-      <ACard title="树形图">
-        <AEmpty description="暂无关系数据" />
-      </ACard>
+      <div className="ma-panel">
+        <AEmpty description="暂无关系数据" image={AEmpty.PRESENTED_IMAGE_SIMPLE} />
+      </div>
     )
   }
 
   return (
-    <ACard title="树形图">
-      <ATable<TreeNode>
-        columns={columns}
-        dataSource={displayData}
-        expandable={{ defaultExpandAllRows: true }}
-        pagination={false}
-        rowKey="key"
-        size="middle"
-      />
-    </ACard>
+    <div className="ma-panel">
+      <div className="ma-panel-header">
+        <BranchesOutlined />
+        <span>树形图</span>
+        <span className="ma-panel-count">{displayData.length} 个节点</span>
+      </div>
+      <div
+        style={{
+          border: '1px solid rgba(130,140,200,0.18)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+        }}
+      >
+        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '600px' }}>
+          <ATable<TreeNode>
+            columns={columns}
+            dataSource={displayData}
+            expandable={{ defaultExpandAllRows: true }}
+            pagination={false}
+            rowKey="key"
+            size="middle"
+            className="abi-std-table"
+          />
+        </div>
+      </div>
+    </div>
   )
 }
 

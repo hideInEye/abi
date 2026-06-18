@@ -1,18 +1,32 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { Suspense } from 'react';
 
 import { enableStatusRecord } from '@/constants/business';
 import { fetchGetGroupList } from '@/service/api';
-
-import GroupSearch from './modules/group-search';
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
 
 const GroupOperateDrawer = lazy(() => import('./modules/group-operate-drawer'));
 
+// Column definitions for picker
+const ALL_COLUMNS: ColumnOption[] = [
+  { key: 'deptName', label: '组织名称', visible: true },
+  { key: 'status', label: '状态', visible: true },
+  { key: 'createTime', label: '创建时间', visible: true },
+];
+
 export function Component() {
   const { t } = useTranslation();
-  const { scrollConfig, tableWrapperRef } = useTableScroll();
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
+  const [searchDeptName, setSearchDeptName] = useState('');
 
-  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps } = useTable({
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
+
+  const visibleKeys = useMemo(() => new Set(columnOptions.filter(c => c.visible).map(c => c.key)), [columnOptions]);
+
+  const { columnChecks, data, run, setColumnChecks, tableProps, updateSearchParams } = useTable({
     apiFn: fetchGetGroupList,
     apiParams: {
       current: 1,
@@ -46,48 +60,60 @@ export function Component() {
         {
           align: 'center',
           key: 'operate',
+          minWidth: 220,
           render: (_: unknown, record: any) => (
-            <div className="flex-center gap-8px">
-              <PlusOutlined
-                className="tex-14px mr-2"
-              // onClick={() => add(record.id)}
-              />
-              <EditOutlined
-                className="tex-14px mr-2"
+            <div className="ds-action-group">
+              <AButton
+                className="abi-action-link"
+                size="small"
+                variant="link"
                 onClick={() => edit(record.id)}
-              />
+              >
+                <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
+              </AButton>
+              <AButton
+                className="abi-action-link"
+                size="small"
+                variant="link"
+                onClick={() => handleAdd({ parentId: record.id } as any)}
+              >
+                <PlusOutlined style={{ marginRight: 3, fontSize: 12 }} />新增子级
+              </AButton>
               <APopconfirm
                 title={t('common.confirmDelete')}
                 onConfirm={() => handleDelete(record.id)}
               >
-                <DeleteOutlined
-                  className="text-red"
-                  type="error"
-                />
+                <AButton className="abi-action-link" size="small" variant="link">
+                  <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
+                </AButton>
               </APopconfirm>
             </div>
           ),
           title: t('common.operate'),
-          width: 195
+          width: 220
         }
       ] as any,
     rowKey: 'deptId'
   });
+
+  // Filter columns by visibility (always keep operate column)
+  const filteredColumns = useMemo(() => {
+    const cols = tableProps.columns as any[];
+    if (!cols) return cols;
+    return cols.filter((col: any) => col.key === 'operate' || visibleKeys.has(col.key));
+  }, [tableProps.columns, visibleKeys]);
+
   const {
     checkedRowKeys,
     editingData,
     generalPopupOperation,
     handleAdd,
     handleEdit,
-    // onBatchDeleted,
     onDeleted
-    // rowSelection
   } = useTableOperate(data, run, async (res, type) => {
     if (type === 'add') {
-      // add request 调用新增的接口
       console.log(res);
     } else {
-      // edit request 调用编辑的接口
       console.log(res);
     }
   });
@@ -95,48 +121,98 @@ export function Component() {
   function edit(id: number) {
     handleEdit(id);
   }
-  function handleDelete() {
+  function handleDelete(_id?: number) {
     onDeleted();
   }
 
+  const handleSearch = () => {
+    updateSearchParams({
+      current: 1,
+      keyword: searchDeptName.trim() || null,
+    } as any);
+  };
+
+  const handleReset = () => {
+    setSearchDeptName('');
+    updateSearchParams({
+      current: 1,
+      keyword: null,
+    } as any);
+  };
+
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard>
-        <GroupSearch {...searchProps} />
-      </ACard>
-
-      <ACard
-        bordered={false}
-        className="flex-col-stretch sm:flex-1-hidden card-wrapper"
-        ref={tableWrapperRef}
-        title="组织列表"
-        extra={
-          <TableHeaderOperation
-            add={handleAdd}
-            columns={columnChecks}
-            disabledDelete={checkedRowKeys.length === 0}
-            loading={tableProps.loading}
-            refresh={run}
-            setColumnChecks={setColumnChecks}
-          // onDelete={handleBatchDelete}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* Searchbar */}
+      <section className="abi-searchbar">
+        <div className="abi-search-row">
+          <AInput
+            allowClear
+            placeholder="请输入部门名称"
+            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+            value={searchDeptName}
+            onChange={(e) => setSearchDeptName(e.target.value)}
+            onPressEnter={handleSearch}
+            className="abi-field-input"
+            style={{ width: '220px' }}
           />
-        }
-      >
-        <ATable
-          // rowSelection={rowSelection}
-          scroll={scrollConfig}
-          size="small"
-          {...tableProps}
-          pagination={false}
+          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
+            <SearchOutlined /> 查询
+          </AButton>
+          <AButton className="btn-ghost-v5" onClick={handleReset}>
+            <ReloadOutlined /> 重置
+          </AButton>
+        </div>
+      </section>
+
+      {/* Data Area */}
+      <section className="abi-data-area" style={{ paddingBottom: '16px' }}>
+        {/* Toolbar */}
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <AButton className="btn-accent-gradient" onClick={() => handleAdd()}>
+              <PlusOutlined />新增机构
+            </AButton>
+          </div>
+          <ViewControls
+            hideViewToggle
+            columns={columnOptions}
+            onColumnToggle={handleColumnToggle}
+          />
+        </div>
+
+        {/* Table */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div
+            style={{
+              border: '1px solid rgba(130,140,200,0.18)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+              <ATable
+                columns={filteredColumns as any}
+                dataSource={tableProps.dataSource}
+                loading={tableProps.loading}
+                pagination={false}
+                rowKey="deptId"
+                scroll={{ x: 'max-content' }}
+                size="middle"
+                className="abi-std-table"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <Suspense>
+        <GroupOperateDrawer
+          {...generalPopupOperation}
+          rowId={editingData?.id || -1}
         />
-
-        <Suspense>
-          <GroupOperateDrawer
-            {...generalPopupOperation}
-            rowId={editingData?.id || -1}
-          />
-        </Suspense>
-      </ACard>
+      </Suspense>
     </div>
   );
 }

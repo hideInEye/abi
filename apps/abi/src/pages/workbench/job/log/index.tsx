@@ -1,6 +1,5 @@
-import { DeleteOutlined, FileSearchOutlined, LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
-// import PageTitle from '@/components/stateless/common/PageTitle';
-import { message } from 'antd';
+import { DeleteOutlined, DownOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { Dropdown, Empty, message } from 'antd';
 
 import { JOB_GROUP_OPTIONS } from '@/constants/job';
 import { cleanJobLog, deleteJobLog, exportJobLog, fetchJobDetail, fetchJobLogList } from '@/service/api/job';
@@ -49,7 +48,6 @@ export function Component() {
     apiParams: {
       pageNum: 1,
       pageSize: 10,
-      // sourceName: '',
       spaceId, // 空间id
     },
     columns: () =>
@@ -59,61 +57,52 @@ export function Component() {
           dataIndex: 'executeTime',
           key: 'executeTime',
           title: '任务执行时间',
+          minWidth: 180,
         },
         {
           align: 'center',
           dataIndex: 'status',
           key: 'status',
           title: '任务状态',
+          minWidth: 100,
           render: (val: number) => {
-            const text = {
+            const text: Record<number, string> = {
               0: '正常',
               1: '错误',
               2: '执行中',
             };
-            return <span>{text[val]}</span>;
+            return <span>{text[val] || '-'}</span>;
           },
         },
-        // {
-        //   align: 'center',
-        //   dataIndex: 'jobLogDuration',
-        //   key: 'jobLogDuration',
-        //   title: '任务执行时长'
-        // },
-        // {
-        //   align: 'center',
-        //   dataIndex: 'jobLogRecipients',
-        //   key: 'jobLogRecipients',
-        //   title: '收件人'
-        // },
-        // {
-        //   align: 'center',
-        //   dataIndex: 'jobLogSubject',
-        //   key: 'jobLogSubject',
-        //   title: '邮件标题'
-        // },
         {
           align: 'center',
           dataIndex: 'resultDescription',
           key: 'resultDescription',
           title: '结果描述',
+          minWidth: 200,
         },
         {
           align: 'center',
           fixed: 'right',
           key: 'operate',
+          minWidth: 120,
           render: (_: unknown, record: any) => (
-            <div className="flex items-center justify-center" style={{ gap: 2 }}>
+            <div className="ds-action-group">
               {record?.status === '0' && (
                 <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleView(record)}>
-                  查看报告
+                  <FileSearchOutlined style={{ marginRight: 3, fontSize: 12 }} />查看报告
                 </AButton>
               )}
               {record?.status === '1' && (
                 <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleViewError(record)}>
-                  查看错误
+                  <ExceptionOutlined style={{ marginRight: 3, fontSize: 12 }} />查看错误
                 </AButton>
               )}
+              <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => handleDelete(record.jobLogId)}>
+                <AButton className="abi-action-link" size="small" variant="link">
+                  <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
+                </AButton>
+              </APopconfirm>
             </div>
           ),
           title: t('common.operate'),
@@ -139,6 +128,13 @@ export function Component() {
 
   const renderCardGrid = () => {
     const dataSource = (tableProps as any).dataSource || [];
+    if (dataSource.length === 0) {
+      return (
+        <div className="abi-card-empty">
+          <Empty description="暂无调度日志" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        </div>
+      );
+    }
     return (
       <div className="abi-card-grid">
         <div className="abi-card-grid-inner">
@@ -148,7 +144,7 @@ export function Component() {
               <div key={record.jobLogId} className="abi-data-card">
                 <div className="abi-data-card-head">
                   <div className="abi-data-card-title">
-                    <span className="abi-data-card-name">{record.jobName || record.jobLogId}</span>
+                    <span className="abi-data-card-name" title={record.jobName || record.jobLogId}>{record.jobName || record.jobLogId}</span>
                   </div>
                   <span className={`abi-status-tag ${st.cls}`}>{st.text}</span>
                 </div>
@@ -156,13 +152,33 @@ export function Component() {
                   <div className="row"><span className="lbl">执行时间</span><span className="val">{record.executeTime || '-'}</span></div>
                   <div className="row"><span className="lbl">结果描述</span><span className="val">{record.resultDescription || '-'}</span></div>
                 </div>
-                <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10, display: 'flex', gap: 4 }}>
+                <div className="abi-data-card-footer">
                   {record.status === '0' && (
-                    <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleView(record)}>查看报告</AButton>
+                    <button className="abi-card-act" onClick={() => handleView(record)}>
+                      <FileSearchOutlined style={{ marginRight: 3 }} />查看报告
+                    </button>
                   )}
                   {record.status === '1' && (
-                    <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleViewError(record)}>查看错误</AButton>
+                    <button className="abi-card-act" onClick={() => handleViewError(record)}>
+                      <ExceptionOutlined style={{ marginRight: 3 }} />查看错误
+                    </button>
                   )}
+                  <Dropdown
+                    menu={{
+                      items: [
+                        { key: 'delete', danger: true, label: '删除' },
+                      ],
+                      onClick: ({ key, domEvent }) => {
+                        domEvent.stopPropagation();
+                        if (key === 'delete') handleDelete(record.jobLogId);
+                      }
+                    }}
+                    trigger={['click']}
+                  >
+                    <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
+                      <MoreOutlined />
+                    </button>
+                  </Dropdown>
                 </div>
               </div>
             );
@@ -173,7 +189,6 @@ export function Component() {
   };
 
   async function handleBatchDelete() {
-    // request
     const res = await deleteJobLog(checkedRowKeys.join(','));
     if (res.response.data.code === 200) {
       onBatchDeleted();
@@ -182,7 +197,6 @@ export function Component() {
 
   async function handleDelete(jobLogId: string) {
     const res = await deleteJobLog(jobLogId);
-
     if (res.response.data.code === 200) {
       onDeleted();
     }

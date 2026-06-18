@@ -7,6 +7,7 @@ import { getThemeSettings } from '@/store/slice/theme';
 import leftOnlineIcon from '@/assets/svg-icon/left_online.svg';
 import rightOnlineIcon from '@/assets/svg-icon/right_online.svg';
 import './index.scss';
+import '../../../base-layout/manage-menu.scss';
 interface LevelKeysProps {
   children?: LevelKeysProps[];
   key?: string;
@@ -45,6 +46,8 @@ const getSelectedMenuKeyPath = (matches: RouteRecordNormalized[]) => {
 const MENU_LABELS: Record<string, string> = {
   workbench: '工作台导航',
   component: '组件导航',
+  manage: '门户管理导航',
+  space: '空间管理导航',
 };
 
 const VerticalMenu = memo(() => {
@@ -144,11 +147,11 @@ const VerticalMenu = memo(() => {
   const menuLabel = MENU_LABELS[menuKey];
 
   return (
-    <div style={{ position: 'relative', height: '100%' }}>
+    <div className={['manage', 'space'].includes(menuKey) ? 'manage-menu-wrapper' : ''} style={{ position: 'relative', height: '100%' }}>
       <div className={`abi-menu-panel ${collapsed ? 'abi-menu-panel--collapsed' : ''}`}>
-        {/* Section label — hidden when collapsed */}
-        {!collapsed && menuLabel && (
-          <div className="abi-menu-label">{menuLabel}</div>
+        {/* Section label — fades out when collapsed */}
+        {menuLabel && (
+          <div className={`abi-menu-label ${collapsed ? 'abi-menu-label--hidden' : ''}`}>{menuLabel}</div>
         )}
 
         {/* AntD Menu */}

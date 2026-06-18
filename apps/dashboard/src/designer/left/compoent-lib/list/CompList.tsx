@@ -145,7 +145,7 @@ class CompList extends Component {
                     onDoubleClick={() => this.addItem(compKey)}
                     data-type={compKey}
                 >
-                    <div style={{pointerEvents: 'none'}}>
+                    <div style={{pointerEvents: 'none', display: 'flex', flexDirection: 'column', height: '100%'}}>
                         <div className={'item-header'}>
                             <div className={'item-name'}>{compName}</div>
                         </div>

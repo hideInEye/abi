@@ -1,36 +1,44 @@
 import { CopyOutlined, DeleteOutlined, EditOutlined, EyeOutlined, LeftOutlined, MoreOutlined, RightOutlined, SyncOutlined } from '@ant-design/icons'
-import { Dropdown, message, Empty } from 'antd'
+import { Dropdown, Empty, message } from 'antd'
+import { DownOutlined } from '@ant-design/icons'
 import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
 
+import type { ColumnOption } from '@/components/ViewControls'
 import type { ApiKeyItem } from '../types'
 
 interface ApiKeyTableProps {
+  readonly columnOptions: ColumnOption[]
   readonly current: number
   readonly dataSource: ApiKeyItem[]
   readonly loading?: boolean
   readonly onDelete: (record: ApiKeyItem) => void
   readonly onPageChange: (page: number) => void
   readonly onResetSk: (record: ApiKeyItem) => void
+  readonly onSelectedRowKeysChange: (keys: React.Key[]) => void
   readonly onToggleStatus: (record: ApiKeyItem) => void
   readonly onView: (record: ApiKeyItem) => void
   readonly pageSize: number
+  readonly selectedRowKeys: React.Key[]
   readonly total: number
   readonly viewMode: 'list' | 'card'
 }
 
 export function ApiKeyTable({
+  columnOptions,
   current,
   dataSource,
   loading = false,
   onDelete,
   onPageChange,
   onResetSk,
+  onSelectedRowKeysChange,
   onToggleStatus,
   onView,
   pageSize,
   total,
-  viewMode
+  viewMode,
+  selectedRowKeys
 }: ApiKeyTableProps) {
   const copyValue = (value: string, label: string) => {
     if (!value) {
@@ -45,18 +53,27 @@ export function ApiKeyTable({
   const [jumpValue, setJumpValue] = useState('')
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
+  const rowSelection = {
+    fixed: true,
+    selectedRowKeys,
+    onChange: (keys: React.Key[]) => onSelectedRowKeysChange(keys),
+  }
+
   const columns: any[] = [
     {
-      align: 'center',
+      align: 'left',
+      className: 'col-apikey-left',
       dataIndex: 'businessSpace',
       key: 'businessSpace',
-      title: '业务空间',
-      width: 180
+      minWidth: 160,
+      onHeaderCell: () => ({ className: 'col-apikey-left' }),
+      title: '业务空间'
     },
     {
       align: 'center',
       dataIndex: 'clientId',
       key: 'clientId',
+      minWidth: 260,
       render: (value: string) => (
         <ASpace>
           <span>{value || '-'}</span>
@@ -69,13 +86,13 @@ export function ApiKeyTable({
           </AButton>
         </ASpace>
       ),
-      title: 'Client ID',
-      width: 260
+      title: 'Client ID'
     },
     {
       align: 'center',
       dataIndex: 'accessKey',
       key: 'accessKey',
+      minWidth: 260,
       render: (value: string) => (
         <ASpace>
           <span>{value || '-'}</span>
@@ -88,76 +105,67 @@ export function ApiKeyTable({
           </AButton>
         </ASpace>
       ),
-      title: 'Access Key',
-      width: 260
+      title: 'Access Key'
     },
     {
       align: 'center',
       dataIndex: 'secretKey',
       key: 'secretKey',
+      minWidth: 160,
       render: (value: string) => <span>{value || '********'}</span>,
-      title: 'Secret Key',
-      width: 160
+      title: 'Secret Key'
     },
     {
       align: 'center',
       dataIndex: 'ipAccessType',
       key: 'ipAccessType',
+      minWidth: 150,
       render: (value: ApiKeyItem['ipAccessType']) => <ATag>{value === 'unlimited' ? '不限制' : '仅白名单'}</ATag>,
-      title: 'IP访问限制',
-      width: 150
+      title: 'IP访问限制'
     },
     {
       align: 'center',
       dataIndex: 'timeoutSeconds',
       key: 'timeoutSeconds',
+      minWidth: 150,
       render: (value?: number) => (typeof value === 'number' ? `${value} 秒` : '-'),
-      title: 'Token超时',
-      width: 150
+      title: 'Token超时'
     },
     {
       align: 'center',
       dataIndex: 'expireTime',
       key: 'expireTime',
+      minWidth: 180,
       render: (value?: string | null) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '永久有效'),
-      title: '过期时间',
-      width: 180
+      title: '过期时间'
     },
     {
       align: 'center',
       dataIndex: 'status',
       key: 'status',
+      minWidth: 120,
       render: (value: ApiKeyItem['status']) =>
         value === 'normal' ? <ATag color="default">正常</ATag> : <ATag color="error">停用</ATag>,
-      title: '状态',
-      width: 120
+      title: '状态'
     },
     {
       align: 'center',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      minWidth: 200,
       render: (value: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
-      title: '创建时间',
-      width: 200
+      title: '创建时间'
     },
     {
       align: 'center',
       fixed: 'right' as const,
       key: 'operate',
+      minWidth: 200,
       render: (_: unknown, record: ApiKeyItem) => (
-        <div className="flex items-center justify-center" style={{ gap: 2 }}>
+        <div className="ds-action-group">
           <AButton className="abi-action-link" size="small" variant="link" onClick={() => onView(record)}>
-            查看
+            <EyeOutlined style={{ marginRight: 3, fontSize: 12 }} />查看
           </AButton>
-          <APopconfirm
-            description="确认重置 Secret Key 吗？"
-            title="重置 SK"
-            onConfirm={() => onResetSk(record)}
-          >
-            <AButton className="abi-action-link" size="small" variant="link">
-              重置SK
-            </AButton>
-          </APopconfirm>
           <AButton
             className="abi-action-link"
             size="small"
@@ -166,21 +174,52 @@ export function ApiKeyTable({
           >
             {record.status === 'normal' ? '停用' : '启用'}
           </AButton>
-          <APopconfirm
-            description="确认删除该 API Key 吗？"
-            title="删除 API Key"
-            onConfirm={() => onDelete(record)}
+          <ADropdown
+            menu={{
+              items: [
+                {
+                  key: 'resetSk',
+                  label: (
+                    <APopconfirm
+                      description="确认重置 Secret Key 吗？"
+                      title="重置 SK"
+                      onConfirm={() => onResetSk(record)}
+                    >
+                      <span>重置SK</span>
+                    </APopconfirm>
+                  ),
+                },
+                { type: 'divider' },
+                {
+                  key: 'delete',
+                  danger: true,
+                  label: (
+                    <APopconfirm
+                      description="确认删除该 API Key 吗？"
+                      title="删除 API Key"
+                      onConfirm={() => onDelete(record)}
+                    >
+                      <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
+                    </APopconfirm>
+                  ),
+                },
+              ],
+            }}
           >
-            <AButton className="abi-action-link" size="small" variant="link" danger>
-              删除
+            <AButton className="abi-action-link" size="small" variant="link">
+              更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
             </AButton>
-          </APopconfirm>
+          </ADropdown>
         </div>
       ),
-      title: '操作',
-      width: 260
+      title: '操作'
     }
   ]
+
+  const filteredColumns = useMemo(() => {
+    const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key))
+    return columns.filter(col => col.key === 'operate' || visibleKeys.has(col.key))
+  }, [columnOptions, columns])
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
@@ -190,14 +229,15 @@ export function ApiKeyTable({
         <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0 }}>
           <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
             <ATable
-              columns={columns}
+              columns={filteredColumns}
               dataSource={dataSource}
               loading={loading}
               pagination={false}
               rowKey="id"
+              rowSelection={rowSelection}
               scroll={dataSource.length > 0 ? { x: 'max-content' } : undefined}
               size="middle"
-              className="abi-std-table"
+              className="api-key-table abi-std-table"
             />
           </div>
         </div>
@@ -284,25 +324,37 @@ export function ApiKeyTable({
             <LeftOutlined />
           </button>
           {(() => {
-            const pages: number[] = []
-            if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i) }
-            else {
-              pages.push(1)
-              if (current > 3) pages.push(-1)
-              const start = Math.max(2, current - 1)
-              const end = Math.min(totalPages - 1, current + 1)
-              for (let i = start; i <= end; i++) pages.push(i)
-              if (current < totalPages - 2) pages.push(-2)
-              pages.push(totalPages)
+            const pages: (number | string)[] = []
+            const maxVisible = 5
+            if (totalPages <= maxVisible) {
+              for (let i = 1; i <= totalPages; i++) pages.push(i)
+            } else if (current <= 3) {
+              for (let i = 1; i <= 4; i++) pages.push(i)
+              pages.push('...', totalPages)
+            } else if (current >= totalPages - 2) {
+              pages.push(1, '...')
+              for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i)
+            } else {
+              pages.push(1, '...')
+              pages.push(current - 1, current, current + 1)
+              pages.push('...', totalPages)
             }
-            return pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === current ? ' page-active' : ''}`} onClick={() => onPageChange(p)}>{p}</span>)
+            return pages.map((page, idx) => {
+              if (page === '...') return <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">...</span>
+              const isActive = page === current
+              return (
+                <span key={page} className={`page-item ${isActive ? 'page-active' : ''}`} onClick={() => onPageChange(page as number)}>
+                  {page}
+                </span>
+              )
+            })
           })()}
           <button className="page-btn" disabled={current >= totalPages} onClick={() => onPageChange(current + 1)}>
             <RightOutlined />
           </button>
           <span className="quick-jumper">
             前往
-            <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (p >= 1 && p <= totalPages) onPageChange(p); setJumpValue('') }} />
+            <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e: any) => setJumpValue(e.target.value)} onPressEnter={() => { const p = parseInt(jumpValue, 10); if (!isNaN(p) && p >= 1 && p <= totalPages) onPageChange(p); setJumpValue('') }} />
             页
           </span>
         </div>

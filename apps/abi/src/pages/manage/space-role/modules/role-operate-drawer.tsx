@@ -2,6 +2,7 @@ import { enableStatusOptions } from '@/constants/business';
 import { useRequest } from '@sa/hooks';
 import { getSpaceMenuTreeApi } from '@/service/api/space-role';
 import RoleAuth from './role-auth';
+import './role-operate-drawer.scss';
 
 type Props = Page.OperateDrawerProps & { rowId: number };
 
@@ -84,26 +85,28 @@ const RoleOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
 
   return (
     <ADrawer
+      className="space-role-drawer-v5"
       open={open}
       title={operateType === 'add' ? t('page.manage.role.addRole') : t('page.manage.role.editRole')}
       footer={
-        <AFlex justify="space-between">
-          <AButton onClick={onClose}>{t('common.cancel')}</AButton>
+        <div className="space-role-drawer-footer-v5">
+          <AButton className="btn-ghost-v5" onClick={onClose}>{t('common.cancel')}</AButton>
           <AButton
-            type="primary"
+            className="btn-accent-gradient"
             onClick={submit}
           >
             {t('common.confirm')}
           </AButton>
-        </AFlex>
+        </div>
       }
       onClose={onClose}
     >
-      <AForm
-        form={form}
-        initialValues={{ status: '0' }}
-        layout="vertical"
-      >
+      <div className="space-role-form-panel">
+        <AForm
+          form={form}
+          initialValues={{ status: '0' }}
+          layout="vertical"
+        >
         <AForm.Item
           label={t('page.manage.role.roleName')}
           name="roleName"
@@ -167,7 +170,8 @@ const RoleOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
         >
           <AInput.TextArea placeholder={t('page.manage.role.form.remark')} />
         </AForm.Item>
-      </AForm>
+        </AForm>
+      </div>
     </ADrawer>
   );
 });

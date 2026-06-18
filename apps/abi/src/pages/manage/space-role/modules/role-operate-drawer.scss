@@ -1,0 +1,148 @@
+/* ============================================================
+ * 空间角色编辑抽屉 v5 玻璃态科技风格
+ * ============================================================ */
+
+/* ── 抽屉整体 ── */
+.space-role-drawer-v5 {
+  .ant-drawer-header {
+    background: linear-gradient(135deg, rgba(91, 124, 247, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%);
+    border-bottom: 1px solid rgba(91, 124, 247, 0.1);
+    padding: 20px 24px;
+  }
+
+  .ant-drawer-body {
+    padding: 24px;
+    background: linear-gradient(180deg, rgba(248, 250, 255, 0.5) 0%, rgba(255, 255, 255, 0.8) 100%);
+  }
+
+  .ant-drawer-footer {
+    border-top: 1px solid rgba(130, 140, 200, 0.12);
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  /* ── 表单面板 ── */
+  .space-role-form-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(130, 140, 200, 0.15);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(91, 124, 247, 0.04);
+
+    /* 表单项样式 */
+    .ant-form-item {
+      margin-bottom: 20px;
+
+      .ant-form-item-label {
+        > label {
+          font-size: 13px;
+          font-weight: 500;
+          color: #4a5d78;
+
+          &.ant-form-item-required::before {
+            color: #5b7cf7;
+          }
+        }
+      }
+
+      /* 输入框 */
+      .ant-input,
+      .ant-input-number,
+      .ant-select-selector,
+      .ant-tree-select-selector {
+        border-radius: 8px !important;
+        border-color: rgba(130, 140, 200, 0.18) !important;
+        background: rgba(255, 255, 255, 0.55) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+        &:hover {
+          border-color: #5b7cf7 !important;
+        }
+
+        &:focus,
+        &.ant-input-focused,
+        &.ant-select-focused .ant-select-selector {
+          border-color: #5b7cf7 !important;
+          background: rgba(255, 255, 255, 0.88) !important;
+          box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.10) !important;
+        }
+      }
+
+      .ant-input-number {
+        width: 100%;
+      }
+
+      /* Radio 组 */
+      .ant-radio-group {
+        display: flex;
+        gap: 16px;
+
+        .ant-radio-wrapper {
+          padding: 8px 16px;
+          border-radius: 8px;
+          border: 1px solid rgba(130, 140, 200, 0.12);
+          background: rgba(255, 255, 255, 0.5);
+          transition: all 0.2s;
+
+          &:hover {
+            border-color: rgba(91, 124, 247, 0.25);
+            background: rgba(255, 255, 255, 0.8);
+          }
+
+          &.ant-radio-wrapper-checked {
+            border-color: rgba(91, 124, 247, 0.4);
+            background: linear-gradient(135deg, rgba(91, 124, 247, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%);
+            box-shadow: 0 2px 8px rgba(91, 124, 247, 0.1);
+          }
+        }
+      }
+
+      /* Tree 组件 */
+      .ant-tree {
+        background: transparent;
+        border: 1px solid rgba(130, 140, 200, 0.15);
+        border-radius: 8px;
+        padding: 12px;
+        max-height: 320px;
+        overflow-y: auto;
+
+        .ant-tree-node-content-wrapper {
+          border-radius: 6px;
+          transition: all 0.2s;
+
+          &:hover {
+            background: rgba(91, 124, 247, 0.06);
+          }
+
+          &.ant-tree-node-selected {
+            background: rgba(91, 124, 247, 0.12);
+          }
+        }
+
+        .ant-tree-checkbox {
+          .ant-tree-checkbox-inner {
+            border-radius: 4px;
+            border-color: rgba(130, 140, 200, 0.3);
+
+            &:hover {
+              border-color: #5b7cf7;
+            }
+          }
+
+          &.ant-tree-checkbox-checked .ant-tree-checkbox-inner {
+            background: linear-gradient(135deg, #5b7cf7 0%, #7c9cff 100%);
+            border-color: #5b7cf7;
+          }
+        }
+      }
+    }
+  }
+
+  /* ── 底部按钮区 ── */
+  .space-role-drawer-footer-v5 {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+}

@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { enableStatusOptions } from '@/constants/business';
 import { getDeptListApi } from '@/service/api/dept';
 
+import './dept-operate-drawer.scss';
+
 type Props = Page.OperateDrawerProps;
 
 const DeptOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType }) => {
@@ -98,25 +100,27 @@ const DeptOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
 
   return (
     <ADrawer
+      className="dept-drawer-v5"
       open={open}
       title={operateType === 'add' ? t('page.manage.dept.addDept') : t('page.manage.dept.editDept')}
       footer={
-        <AFlex justify="flex-end">
-          <AButton onClick={onClose}>{t('common.cancel')}</AButton>
+        <div className="dept-drawer-footer-v5">
+          <AButton className="btn-ghost-v5" onClick={onClose}>{t('common.cancel')}</AButton>
           <AButton
-            type="primary"
+            className="btn-accent-gradient"
             onClick={submit}
           >
             {t('common.confirm')}
           </AButton>
-        </AFlex>
+        </div>
       }
       onClose={onClose}
     >
-      <AForm
-        form={form}
-        layout="vertical"
-      >
+      <div className="dept-form-panel">
+        <AForm
+          form={form}
+          layout="vertical"
+        >
         {/* 验证 parentName 是否存入表单 */}
         <AForm.Item
           label="Parent Name"
@@ -212,7 +216,8 @@ const DeptOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
             ))}
           </ARadio.Group>
         </AForm.Item>
-      </AForm>
+        </AForm>
+      </div>
     </ADrawer>
   );
 });

@@ -1,4 +1,5 @@
 /* eslint-disable react/prop-types */
+import { SearchOutlined, UnorderedListOutlined } from '@ant-design/icons'
 import type { TableColumnsType } from 'antd'
 
 import { RELATION_TYPE_LABELS, STATUS_LABELS } from '@/components/metadata-analysis/constants'
@@ -30,10 +31,11 @@ const RelationTable: React.FC<Props> = ({ onNodeClick, relations, title = '关�
       render: (_, row) => (
         <AButton
           type="link"
+          className="ma-link-btn"
           onClick={() => onNodeClick?.({ id: row.source_node_id, label: row.source_node_name, type: row.source_node_type })}
         >
           <ATooltip title={row.source_node_name || '-'}>
-            <span className="inline-block max-w-220px overflow-hidden text-ellipsis whitespace-nowrap">
+            <span className="ma-cell-ellipsis">
               {row.source_node_name || '-'}
             </span>
           </ATooltip>
@@ -52,10 +54,11 @@ const RelationTable: React.FC<Props> = ({ onNodeClick, relations, title = '关�
       render: (_, row) => (
         <AButton
           type="link"
+          className="ma-link-btn"
           onClick={() => onNodeClick?.({ id: row.target_node_id, label: row.target_node_name, type: row.target_node_type })}
         >
           <ATooltip title={row.target_node_name || '-'}>
-            <span className="inline-block max-w-220px overflow-hidden text-ellipsis whitespace-nowrap">
+            <span className="ma-cell-ellipsis">
               {row.target_node_name || '-'}
             </span>
           </ATooltip>
@@ -76,44 +79,60 @@ const RelationTable: React.FC<Props> = ({ onNodeClick, relations, title = '关�
     },
     {
       dataIndex: 'status',
-      minWidth: 100,
+      minWidth: 80,
       render: (value: '0' | '1') => <ATag color={value === '0' ? 'green' : 'default'}>{STATUS_LABELS[value]}</ATag>,
       title: '状态'
     },
     {
       dataIndex: 'update_time',
-      minWidth: 160,
+      minWidth: 150,
       title: '更新时间'
     },
     {
       dataIndex: 'remark',
-      minWidth: 180,
+      minWidth: 160,
       title: '备注'
     }
   ]
 
   return (
-    <ACard
-      title={title}
-      extra={
-        <AInput
-          allowClear
-          placeholder="搜索节点名称"
-          style={{ width: 240 }}
-          value={keyword}
-          onChange={event => setKeyword(event.target.value)}
-        />
-      }
-    >
-      <ATable<LineageRelation>
-        columns={columns}
-        dataSource={filteredData}
-        pagination={{ showSizeChanger: true }}
-        rowKey="lineage_id"
-        scroll={{ x: 1300 }}
-        size="small"
-      />
-    </ACard>
+    <div className="ma-panel">
+      <div className="ma-panel-header">
+        <UnorderedListOutlined />
+        <span>{title}</span>
+        <span className="ma-panel-count">{filteredData.length} 条</span>
+        <div style={{ marginLeft: 'auto' }}>
+          <AInput
+            allowClear
+            placeholder="搜索节点名称"
+            prefix={<SearchOutlined style={{ color: '#a3b3c8', fontSize: 13 }} />}
+            style={{ width: 220 }}
+            value={keyword}
+            onChange={event => setKeyword(event.target.value)}
+            size="small"
+          />
+        </div>
+      </div>
+      <div
+        style={{
+          border: '1px solid rgba(130,140,200,0.18)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+        }}
+      >
+        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '500px' }}>
+          <ATable<LineageRelation>
+            columns={columns}
+            dataSource={filteredData}
+            pagination={{ pageSize: 5, showSizeChanger: false }}
+            rowKey="lineage_id"
+            scroll={{ x: 1200 }}
+            size="middle"
+            className="abi-std-table"
+          />
+        </div>
+      </div>
+    </div>
   )
 }
 

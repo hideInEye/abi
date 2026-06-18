@@ -1,4 +1,11 @@
 /* eslint-disable react/prop-types */
+import {
+  ApartmentOutlined,
+  BranchesOutlined,
+  CloseOutlined,
+  NodeIndexOutlined,
+  PartitionOutlined,
+} from '@ant-design/icons'
 import { Segmented, message } from 'antd'
 
 import { queryLineageRelationList } from '@/service/api'
@@ -16,13 +23,13 @@ interface Props {
 }
 
 const analysisOptions = [
-  { label: '血缘分析', value: 'lineage' },
-  { label: '影响分析', value: 'impact' }
+  { icon: <NodeIndexOutlined />, label: '血缘分析', value: 'lineage' },
+  { icon: <PartitionOutlined />, label: '影响分析', value: 'impact' }
 ] as const
 
 const viewOptions = [
-  { label: '关系图', value: 'graph' },
-  { label: '树形图', value: 'tree' }
+  { icon: <ApartmentOutlined />, label: '关系图', value: 'graph' },
+  { icon: <BranchesOutlined />, label: '树形图', value: 'tree' }
 ] as const
 
 function normalizeId(value: string | number | undefined) {
@@ -104,61 +111,94 @@ const MetadataAnalysisDrawer: React.FC<Props> = ({ context, onClose, open }) => 
     }
   }, [open])
 
+  const nodeTypeLabel = NODE_TYPE_LABELS[context?.nodeType || ''] || context?.nodeType || '-'
+  const relationCount = relations.length
+
   return (
     <ADrawer
+      className="ma-drawer"
+      closeIcon={null}
       destroyOnClose
+      extra={<CloseOutlined onClick={onClose} style={{ fontSize: 16, color: '#8c8c8c' }} />}
       open={open}
       styles={{
         body: {
-          overflow: viewMode === 'graph' ? 'hidden' : 'auto'
+          overflow: viewMode === 'graph' ? 'hidden' : 'auto',
+          padding: 0,
         }
       }}
-      title="元数据分析"
+      title={
+        <div className="ma-drawer-title">
+          <span className="ma-drawer-title-icon">
+            <NodeIndexOutlined />
+          </span>
+          <span>元数据分析</span>
+        </div>
+      }
       width={1280}
       onClose={onClose}
     >
-      <div className="mb-12px flex items-start justify-between">
-        <div className="flex items-center gap-8px text-14px text-[#4b5563]">
-          <span className="font-600 text-[#111827]">{context?.nodeName || '-'}</span>
-          <span>({NODE_TYPE_LABELS[context?.nodeType || ''] || context?.nodeType || '-'})</span>
+      {/* Toolbar */}
+      <div className="ma-toolbar">
+        <div className="ma-toolbar-left">
+          <div className="ma-node-badge">
+            <span className="ma-node-badge-name">{context?.nodeName || '-'}</span>
+            <span className="ma-node-badge-type">{nodeTypeLabel}</span>
+          </div>
+          {relationCount > 0 && (
+            <span className="ma-relation-count">
+              共 {relationCount} 条关系
+            </span>
+          )}
         </div>
-        <div className="flex items-end gap-16px rounded-8px bg-[#f8fafc] px-12px py-8px">
-          <div className="flex flex-col gap-6px">
-            <span className="text-12px leading-12px text-[#6b7280]">分析类型</span>
+        <div className="ma-toolbar-right">
+          <div className="ma-control-group">
+            <span className="ma-control-label">分析类型</span>
             <Segmented
               options={analysisOptions as any}
               value={analysisMode}
               onChange={value => setAnalysisMode(value as AnalysisMode)}
+              size="small"
             />
           </div>
-          <div className="h-38px w-1px bg-[#e5e7eb]" />
-          <div className="flex flex-col gap-6px">
-            <span className="text-12px leading-12px text-[#6b7280]">展示方式</span>
+          <div className="ma-control-divider" />
+          <div className="ma-control-group">
+            <span className="ma-control-label">展示方式</span>
             <Segmented
               options={viewOptions as any}
               value={viewMode}
               onChange={value => setViewMode(value as AnalysisViewMode)}
+              size="small"
             />
           </div>
         </div>
       </div>
 
-      <ASpin spinning={loading}>
-        {viewMode === 'graph' ? (
-          <LineageGraph
-            defaultExpandLevel={2}
-            mode={analysisMode}
-            relations={relations}
-            rootContext={context}
-          />
-        ) : (
-          <LineageTree
-            mode={analysisMode}
-            relations={relations}
-            rootContext={context}
-          />
-        )}
-      </ASpin>
+      {/* Content */}
+      <div className="ma-content">
+        <ASpin spinning={loading}>
+          {relations.length === 0 && !loading ? (
+            <div className="ma-empty">
+              <NodeIndexOutlined className="ma-empty-icon" />
+              <p className="ma-empty-text">暂无血缘关系数据</p>
+              <p className="ma-empty-hint">当前节点未关联任何上下游数据</p>
+            </div>
+          ) : viewMode === 'graph' ? (
+            <LineageGraph
+              defaultExpandLevel={2}
+              mode={analysisMode}
+              relations={relations}
+              rootContext={context}
+            />
+          ) : (
+            <LineageTree
+              mode={analysisMode}
+              relations={relations}
+              rootContext={context}
+            />
+          )}
+        </ASpin>
+      </div>
     </ADrawer>
   )
 }

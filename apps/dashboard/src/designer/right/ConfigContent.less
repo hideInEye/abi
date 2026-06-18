@@ -4,80 +4,94 @@
  *
  * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
  *
- * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ * This copyright statement applies to, but is limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
  *
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 .lc-config-panel {
   z-index: 1;
-  animation: lcFadeInUp 0.2s forwards;
+  animation: lcFadeInUp 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   width: 350px;
-  top: 60px;
+  top: 56px;
   right: 35px;
   position: absolute;
-  height: calc(100% - 100px);
-  background-color: #f2f3f5;
-  border-left: 1px solid #d9d9d9;
-  border-radius: 8px 0 0 8px;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.06);
+  height: calc(100% - 94px);
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(16px);
+  border-left: 1px solid rgba(130, 140, 200, 0.12);
+  border-radius: 12px 0 0 12px;
+  box-shadow: -4px 0 20px rgba(26, 39, 68, 0.06), -2px 0 8px rgba(91, 124, 247, 0.04);
   overflow: hidden;
 
   .lc-panel-top {
     width: 100%;
-    height: 40px;
+    height: 42px;
     display: flex;
-    color: #333;
+    color: #1a2744;
     padding: 0 16px;
     align-items: center;
-    background-color: #f2f3f5;
+    background: rgba(255, 255, 255, 0.70);
+    backdrop-filter: blur(8px);
     justify-content: space-between;
-    border-bottom: 1px solid #e8e8e8;
+    border-bottom: 1px solid rgba(130, 140, 200, 0.10);
 
     .panel-title {
       font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      color: #1a2744;
 
       .panel-title-chart-name {
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
-        color: #595959;
+        color: #768a9f;
         max-width: 120px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        padding: 2px 8px;
+        background: rgba(91, 124, 247, 0.06);
+        border-radius: 6px;
       }
     }
 
     .panel-operate {
-      padding: 8px;
-      border-radius: 4px;
+      padding: 6px;
+      border-radius: 6px;
       cursor: pointer;
-      transition: all 0.2s;
-      color: #999;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #768a9f;
 
       &:hover {
-        color: #ff4d4f;
-        background-color: rgba(255, 77, 79, 0.1);
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.06);
       }
     }
   }
 
   .lc-panel-content {
-    height: calc(100% - 40px);
+    height: calc(100% - 42px);
     overflow-y: auto;
     padding: 16px;
 
     &::-webkit-scrollbar {
-      width: 6px;
+      width: 5px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background-color: #d9d9d9;
-      border-radius: 3px;
+      background: rgba(130, 140, 200, 0.20);
+      border-radius: 5px;
+
+      &:hover {
+        background: rgba(130, 140, 200, 0.35);
+      }
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
     }
 
     &.lc-panel-content--no-padding {
@@ -90,14 +104,15 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 4px;
+    width: 3px;
     height: 100%;
     cursor: col-resize;
-    background-color: transparent;
-    transition: background-color 0.2s;
+    background: transparent;
+    transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
     &:hover {
-      background-color: #1677ff;
+      background: linear-gradient(180deg, #5b7cf7, #7091fa);
+      box-shadow: 0 0 6px rgba(91, 124, 247, 0.4);
     }
   }
 }

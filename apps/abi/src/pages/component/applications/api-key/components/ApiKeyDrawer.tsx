@@ -1,3 +1,4 @@
+import { CloseOutlined, EyeOutlined, KeyOutlined, LockOutlined, SettingOutlined } from '@ant-design/icons'
 import { message } from 'antd'
 import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
@@ -6,6 +7,7 @@ import type { ApiKeyFormValues, ApiKeyItem, DrawerMode, IpAccessType } from '../
 import { isIpDuplicated, normalizeIpValue, validateIpOrCidr } from '../utils'
 
 interface ApiKeyDrawerProps {
+  readonly defaultSpaceId?: number
   readonly mode: DrawerMode
   readonly onClose: () => void
   readonly onSubmit: (values: ApiKeyFormValues, ipWhitelist: string[]) => void
@@ -21,6 +23,7 @@ const drawerTitleMap: Record<DrawerMode, string> = {
 }
 
 export function ApiKeyDrawer({
+  defaultSpaceId,
   mode,
   onClose,
   onSubmit,
@@ -43,18 +46,22 @@ export function ApiKeyDrawer({
   useEffect(() => {
     if (!open) return
 
+    const resolvedSpaceId = record?.spaceId
+      || (mode === 'create' && defaultSpaceId ? defaultSpaceId : undefined)
+      || options[0]?.value
+
     form.setFieldsValue({
       activeTimeout: record?.timeoutSeconds || 1800,
       description: record?.description || '',
       expireTime: record?.expireTime ? dayjs(record.expireTime) : undefined,
       ipAccessType: record?.ipAccessType || 'unlimited',
-      spaceId: record?.spaceId || options[0]?.value
+      spaceId: resolvedSpaceId
     })
 
     setIpWhitelist(record?.ipWhitelist || [])
     setIpInput('')
     setImportValue('')
-  }, [form, open, options, record])
+  }, [form, open, options, record, mode, defaultSpaceId])
 
   const tryAddIp = (rawValue: string) => {
     const value = normalizeIpValue(rawValue)
@@ -147,220 +154,249 @@ export function ApiKeyDrawer({
     )
   }
 
-  const viewRowStyle: React.CSSProperties = {
-    borderBottom: '1px solid #d9dfe8',
-    display: 'grid',
-    gridTemplateColumns: '260px 1fr'
-  }
-
-  const viewLabelStyle: React.CSSProperties = {
-    background: '#f2f5fa',
-    color: '#344054',
-    fontSize: 14,
-    fontWeight: 500,
-    minHeight: 48,
-    padding: '10px 12px'
-  }
-
-  const viewValueStyle: React.CSSProperties = {
-    alignItems: 'center',
-    color: '#1f2937',
-    display: 'flex',
-    fontSize: 14,
-    minHeight: 48,
-    padding: '10px 12px'
-  }
-
-  const viewCardStyle: React.CSSProperties = {
-    border: '1px solid #d9dfe8',
-    borderRadius: 10,
-    overflow: 'hidden'
-  }
-
-  const sectionTitleStyle: React.CSSProperties = { color: '#1f2937', fontSize: 14, fontWeight: 600 }
-
-  const renderBaseInfoCard = () => (
-    <div style={viewCardStyle}>
-      <div style={viewRowStyle}>
-        <div style={viewLabelStyle}>归属业务空间</div>
-        <div style={viewValueStyle}>{record?.businessSpace || '-'}</div>
-      </div>
-      <div style={viewRowStyle}>
-        <div style={viewLabelStyle}>当前状态</div>
-        <div style={viewValueStyle}>
-          <ATag color={record?.status === 'normal' ? 'default' : 'error'}>{statusText}</ATag>
+  const renderViewMode = () => {
+    const sectionHeaderStyle = (icon: React.ReactNode, title: string) => (
+      <div style={{
+        alignItems: 'center', borderBottom: '1px solid rgba(130,140,200,0.10)',
+        display: 'flex', gap: 10, marginBottom: 20, padding: '10px 0',
+      }}>
+        <div style={{
+          alignItems: 'center', background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+          borderRadius: 7, boxShadow: '0 2px 8px rgba(91,124,247,0.25)',
+          color: '#fff', display: 'flex', fontSize: 13, height: 26, justifyContent: 'center', width: 26,
+        }}>
+          {icon}
         </div>
+        <span style={{ color: '#1a2744', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em' }}>{title}</span>
       </div>
-      <div style={viewRowStyle}>
-        <div style={viewLabelStyle}>创建时间</div>
-        <div style={viewValueStyle}>{record?.createdAt || '-'}</div>
-      </div>
-      <div style={{ ...viewRowStyle, borderBottom: 'none' }}>
-        <div style={viewLabelStyle}>描述</div>
-        <div style={viewValueStyle}>{record?.description || '-'}</div>
-      </div>
-    </div>
-  )
+    )
 
-  const renderCredentialCard = () => (
-    <div style={viewCardStyle}>
-      <div style={viewRowStyle}>
-        <div style={viewLabelStyle}>Client ID</div>
-        <div style={{ ...viewValueStyle, justifyContent: 'space-between' }}>
-          <span style={{ marginRight: 12, wordBreak: 'break-all' }}>{record?.clientId || '-'}</span>
-          <AButton
-            type="link"
-            onClick={() => copyCredential(record?.clientId, 'Client ID')}
-          >
-            复制
-          </AButton>
-        </div>
+    const infoRowStyle = (label: string, value: React.ReactNode, isLast = false) => (
+      <div style={{
+        alignItems: 'center', borderBottom: isLast ? 'none' : '1px dashed rgba(130,140,200,0.10)',
+        display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '10px 14px',
+      }}>
+        <span style={{ color: '#768a9f', fontWeight: 500 }}>{label}</span>
+        <span style={{ color: '#1a2744', fontWeight: 500, maxWidth: '60%', textAlign: 'right' }}>{value}</span>
       </div>
-      <div style={{ ...viewRowStyle, borderBottom: 'none' }}>
-        <div style={viewLabelStyle}>Access Key</div>
-        <div style={{ ...viewValueStyle, justifyContent: 'space-between' }}>
-          <span style={{ marginRight: 12, wordBreak: 'break-all' }}>{record?.accessKey || '-'}</span>
-          <AButton
-            type="link"
-            onClick={() => copyCredential(record?.accessKey, 'Access Key')}
-          >
-            复制
-          </AButton>
-        </div>
-      </div>
-    </div>
-  )
-
-  const renderAccessCard = () => {
-    const showWhitelist = record?.ipAccessType === 'whitelist'
-    const whitelistItems = record?.ipWhitelist || []
+    )
 
     return (
-      <div style={viewCardStyle}>
-        <div style={viewRowStyle}>
-          <div style={viewLabelStyle}>IP访问限制</div>
-          <div style={viewValueStyle}>{ipLimitText}</div>
+      <div style={{ padding: '0 24px 24px' }}>
+        {/* 基础信息 */}
+        {sectionHeaderStyle(<SettingOutlined />, '基础信息')}
+        <div style={{
+          background: '#fff', border: '1px solid rgba(130,140,200,0.12)',
+          borderRadius: 12, boxShadow: '0 1px 4px rgba(91,124,247,0.04)', overflow: 'hidden',
+        }}>
+          {infoRowStyle('归属业务空间', record?.businessSpace || '-')}
+          {infoRowStyle('当前状态', <ATag color={record?.status === 'normal' ? 'default' : 'error'}>{statusText}</ATag>)}
+          {infoRowStyle('创建时间', record?.createdAt || '-')}
+          {infoRowStyle('描述', record?.description || '-', true)}
         </div>
-        <div style={viewRowStyle}>
-          <div style={viewLabelStyle}>Token活跃超时时间(秒)</div>
-          <div style={viewValueStyle}>
-            {typeof record?.timeoutSeconds === 'number' ? `${record.timeoutSeconds} 秒` : '-'}
-          </div>
-        </div>
-        <div style={viewRowStyle}>
-          <div style={viewLabelStyle}>过期时间</div>
-          <div style={viewValueStyle}>{record?.expireTime || '永久有效'}</div>
-        </div>
-        {showWhitelist && (
-          <div style={{ ...viewRowStyle, borderBottom: 'none' }}>
-            <div style={viewLabelStyle}>IP 白名单</div>
-            <div style={{ ...viewValueStyle, alignItems: 'flex-start', display: 'block' }}>
-              {whitelistItems.length ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {whitelistItems.map(ip => (
-                    <ATag key={ip}>{ip}</ATag>
-                  ))}
-                </div>
-              ) : (
-                '-'
-              )}
+
+        {/* 凭证配置 */}
+        <div style={{ marginTop: 24 }}>
+          {sectionHeaderStyle(<KeyOutlined />, '凭证配置')}
+          <div style={{
+            background: '#fff', border: '1px solid rgba(130,140,200,0.12)',
+            borderRadius: 12, boxShadow: '0 1px 4px rgba(91,124,247,0.04)', overflow: 'hidden',
+          }}>
+            <div style={{
+              alignItems: 'center', borderBottom: '1px dashed rgba(130,140,200,0.10)',
+              display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '10px 14px',
+            }}>
+              <span style={{ color: '#768a9f', fontWeight: 500 }}>Client ID</span>
+              <span style={{ alignItems: 'center', color: '#1a2744', display: 'flex', gap: 8, maxWidth: '60%' }}>
+                <span style={{ wordBreak: 'break-all' }}>{record?.clientId || '-'}</span>
+                <AButton size="small" type="link" onClick={() => copyCredential(record?.clientId, 'Client ID')}>复制</AButton>
+              </span>
+            </div>
+            <div style={{
+              alignItems: 'center', borderBottom: 'none',
+              display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '10px 14px',
+            }}>
+              <span style={{ color: '#768a9f', fontWeight: 500 }}>Access Key</span>
+              <span style={{ alignItems: 'center', color: '#1a2744', display: 'flex', gap: 8, maxWidth: '60%' }}>
+                <span style={{ wordBreak: 'break-all' }}>{record?.accessKey || '-'}</span>
+                <AButton size="small" type="link" onClick={() => copyCredential(record?.accessKey, 'Access Key')}>复制</AButton>
+              </span>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* 访问配置 */}
+        <div style={{ marginTop: 24 }}>
+          {sectionHeaderStyle(<LockOutlined />, '访问配置')}
+          <div style={{
+            background: '#fff', border: '1px solid rgba(130,140,200,0.12)',
+            borderRadius: 12, boxShadow: '0 1px 4px rgba(91,124,247,0.04)', overflow: 'hidden',
+          }}>
+            {infoRowStyle('IP访问限制', ipLimitText)}
+            {infoRowStyle('Token活跃超时时间', typeof record?.timeoutSeconds === 'number' ? `${record.timeoutSeconds} 秒` : '-')}
+            {infoRowStyle('过期时间', record?.expireTime || '永久有效')}
+            {record?.ipAccessType === 'whitelist' && (
+              <div style={{
+                borderBottom: 'none', fontSize: 13, padding: '10px 14px',
+              }}>
+                <div style={{ color: '#768a9f', fontWeight: 500, marginBottom: 8 }}>IP 白名单</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {(record?.ipWhitelist || []).length > 0 ? (
+                    record?.ipWhitelist?.map(ip => <ATag key={ip}>{ip}</ATag>)
+                  ) : (
+                    <span style={{ color: '#a3b3c8' }}>-</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     )
   }
 
-  const renderViewMode = () => (
-    <>
-      <div style={sectionTitleStyle}>基础与状态信息</div>
-      <ADivider style={{ margin: '10px 0' }} />
-      {renderBaseInfoCard()}
-
-      <div style={{ ...sectionTitleStyle, marginTop: 12 }}>凭证配置</div>
-      <ADivider style={{ margin: '10px 0' }} />
-      {renderCredentialCard()}
-
-      <div style={{ ...sectionTitleStyle, marginTop: 12 }}>访问配置</div>
-      <ADivider style={{ margin: '10px 0' }} />
-      {renderAccessCard()}
-    </>
-  )
-
   return (
     <>
       <ADrawer
+        className="ds-operate-drawer"
+        closeIcon={null}
         destroyOnClose
+        extra={<CloseOutlined onClick={onClose} style={{ color: '#768a9f', fontSize: 16 }} />}
         open={open}
-        title={drawerTitleMap[mode]}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              alignItems: 'center', background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+              borderRadius: 10, boxShadow: '0 4px 12px rgba(91,124,247,0.3)',
+              color: '#fff', display: 'flex', fontSize: 18, height: 36, justifyContent: 'center', width: 36,
+            }}>
+              {isView ? <EyeOutlined /> : <KeyOutlined />}
+            </div>
+            <div>
+              <div style={{ color: '#1a2744', fontSize: 17, fontWeight: 700, letterSpacing: '0.02em' }}>
+                {drawerTitleMap[mode]}
+              </div>
+              <div style={{ color: '#768a9f', fontSize: 12, marginTop: 2 }}>
+                {isView ? '查看 API Key 详细配置信息' : '创建新的客户端访问授权凭证'}
+              </div>
+            </div>
+          </div>
+        }
         width={980}
         footer={
-          <AFlex
-            gap={12}
-            justify="end"
-          >
+          <div style={{ alignItems: 'center', display: 'flex', gap: 12, justifyContent: 'flex-end', padding: '4px 0' }}>
             {isView ? (
               <AButton
-                type="primary"
                 onClick={onClose}
+                style={{
+                  background: 'linear-gradient(135deg, #5b7cf7, #7091fa)', border: 'none',
+                  borderRadius: 8, boxShadow: '0 2px 10px rgba(91,124,247,0.3)', fontWeight: 600,
+                  height: 38, padding: '0 28px',
+                }}
+                type="primary"
               >
                 关闭
               </AButton>
             ) : (
-              <AButton onClick={onClose}>取消</AButton>
+              <>
+                <AButton
+                  onClick={onClose}
+                  style={{ background: 'transparent', border: '1px solid rgba(130,140,200,0.18)', borderRadius: 8, color: '#5f7490', fontWeight: 500, height: 38, padding: '0 20px' }}
+                >
+                  取消
+                </AButton>
+                <AButton
+                  loading={submitLoading}
+                  onClick={handleFinish}
+                  style={{
+                    background: 'linear-gradient(135deg, #5b7cf7, #7091fa)', border: 'none',
+                    borderRadius: 8, boxShadow: '0 2px 10px rgba(91,124,247,0.3)', fontWeight: 600,
+                    height: 38, padding: '0 28px',
+                  }}
+                  type="primary"
+                >
+                  {mode === 'create' ? '确认新建' : '确认保存'}
+                </AButton>
+              </>
             )}
-            {!isView && (
-              <AButton
-                loading={submitLoading}
-                type="primary"
-                onClick={handleFinish}
-              >
-                {mode === 'create' ? '确认新建' : '确认保存'}
-              </AButton>
-            )}
-          </AFlex>
+          </div>
         }
         onClose={onClose}
       >
         {isView ? (
           renderViewMode()
         ) : (
-          <>
-            <div style={{ color: '#1f2937', fontSize: 28, fontWeight: 600 }}>基础信息</div>
-            <ADivider />
+          <div style={{ padding: '0 24px 24px' }}>
+            {/* 基础信息 Section */}
+            <div style={{
+              alignItems: 'center', borderBottom: '1px solid rgba(130,140,200,0.10)',
+              display: 'flex', gap: 10, marginBottom: 20, padding: '10px 0',
+            }}>
+              <div style={{
+                alignItems: 'center', background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+                borderRadius: 7, boxShadow: '0 2px 8px rgba(91,124,247,0.25)',
+                color: '#fff', display: 'flex', fontSize: 13, height: 26, justifyContent: 'center', width: 26,
+              }}>
+                <SettingOutlined />
+              </div>
+              <span style={{ color: '#1a2744', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em' }}>基础信息</span>
+            </div>
 
-            <AForm
-              form={form}
-              layout="vertical"
-            >
-              <AForm.Item
-                label="归属业务空间"
-                name="spaceId"
-                rules={[{ message: '请选择归属业务空间', required: true }]}
-              >
-                <ASelect
-                  options={options}
-                  placeholder="请选择归属业务空间"
-                />
-              </AForm.Item>
+            <div style={{
+              background: '#fff', border: '1px solid rgba(130,140,200,0.12)',
+              borderRadius: 12, boxShadow: '0 1px 4px rgba(91,124,247,0.04)',
+              padding: '20px', marginBottom: 24,
+            }}>
+              <AForm form={form} layout="vertical">
+                <AForm.Item
+                  label={<span style={{ color: '#3e5068', fontWeight: 500 }}>归属业务空间</span>}
+                  name="spaceId"
+                  rules={[{ message: '请选择归属业务空间', required: true }]}
+                >
+                  <ASelect
+                    disabled
+                    options={options}
+                    placeholder="请选择归属业务空间"
+                  />
+                </AForm.Item>
 
-              <AForm.Item
-                label="描述"
-                name="description"
-              >
-                <AInput.TextArea
-                  maxLength={200}
-                  placeholder="请输入描述"
-                  rows={4}
-                />
-              </AForm.Item>
+                <AForm.Item
+                  label={<span style={{ color: '#3e5068', fontWeight: 500 }}>描述</span>}
+                  name="description"
+                >
+                  <AInput.TextArea
+                    maxLength={200}
+                    placeholder="请输入描述信息，用于说明该 API Key 的用途"
+                    rows={4}
+                    style={{ borderRadius: 8 }}
+                  />
+                </AForm.Item>
+              </AForm>
+            </div>
 
-              <div style={{ color: '#1f2937', fontSize: 28, fontWeight: 600, marginTop: 16 }}>访问配置</div>
-              <ADivider />
+            {/* 访问配置 Section */}
+            <div style={{
+              alignItems: 'center', borderBottom: '1px solid rgba(130,140,200,0.10)',
+              display: 'flex', gap: 10, marginBottom: 20, padding: '10px 0',
+            }}>
+              <div style={{
+                alignItems: 'center', background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+                borderRadius: 7, boxShadow: '0 2px 8px rgba(91,124,247,0.25)',
+                color: '#fff', display: 'flex', fontSize: 13, height: 26, justifyContent: 'center', width: 26,
+              }}>
+                <LockOutlined />
+              </div>
+              <span style={{ color: '#1a2744', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em' }}>访问配置</span>
+            </div>
 
+            <div style={{
+              background: '#fff', border: '1px solid rgba(130,140,200,0.12)',
+              borderRadius: 12, boxShadow: '0 1px 4px rgba(91,124,247,0.04)',
+              padding: '20px', marginBottom: 24,
+            }}>
               <AForm.Item
                 initialValue="unlimited"
-                label="IP 访问限制"
+                label={<span style={{ color: '#3e5068', fontWeight: 500 }}>IP 访问限制</span>}
                 name="ipAccessType"
               >
                 <ARadio.Group>
@@ -371,7 +407,7 @@ export function ApiKeyDrawer({
 
               <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr', marginBottom: 16 }}>
                 <AForm.Item
-                  label="Token活跃超时时间 (秒)"
+                  label={<span style={{ color: '#3e5068', fontWeight: 500 }}>Token活跃超时时间 (秒)</span>}
                   name="activeTimeout"
                   rules={[
                     { message: '请输入Token活跃超时时间', required: true },
@@ -387,13 +423,13 @@ export function ApiKeyDrawer({
                 </AForm.Item>
 
                 <AForm.Item
-                  label="过期时间"
+                  label={<span style={{ color: '#3e5068', fontWeight: 500 }}>过期时间</span>}
                   name="expireTime"
                 >
                   <ADatePicker
                     showTime
                     format="YYYY-MM-DD HH:mm:ss"
-                    placeholder="请选择过期时间，格式 YYYY-MM-D"
+                    placeholder="请选择过期时间，留空表示永久有效"
                     style={{ width: '100%' }}
                   />
                 </AForm.Item>
@@ -412,11 +448,11 @@ export function ApiKeyDrawer({
 
                   return (
                     <div>
-                      <div style={{ color: '#1f2937', fontWeight: 500, marginBottom: 8 }}>IP 白名单</div>
+                      <div style={{ color: '#3e5068', fontWeight: 500, marginBottom: 8 }}>IP 白名单</div>
                       <AInput.Group compact>
                         <AInput
                           placeholder="请输入 IP 或 CIDR，按 Enter 添加"
-                          style={{ width: 'calc(100% - 88px)' }}
+                          style={{ borderRadius: '8px 0 0 8px', width: 'calc(100% - 88px)' }}
                           value={ipInput}
                           onChange={e => setIpInput(e.target.value)}
                           onPressEnter={e => {
@@ -425,7 +461,7 @@ export function ApiKeyDrawer({
                           }}
                         />
                         <AButton
-                          style={{ width: 88 }}
+                          style={{ borderRadius: '0 8px 8px 0', width: 88 }}
                           onClick={handleAddIp}
                         >
                           添加
@@ -468,15 +504,37 @@ export function ApiKeyDrawer({
                   )
                 }}
               </AForm.Item>
-            </AForm>
-
-            <div style={{ color: '#1f2937', fontSize: 28, fontWeight: 600, marginTop: 30 }}>自动生成凭证说明</div>
-            <ADivider />
-            <div style={{ background: '#f2f4f7', borderRadius: 8, color: '#334155', lineHeight: 2, padding: 16 }}>
-              <div>• Client ID、Access Key、Secret Key 将由系统自动生成。</div>
-              <div>• Secret Key 仅在创建成功后展示一次，请及时复制并妥善保存。</div>
             </div>
-          </>
+
+            {/* 自动生成凭证说明 Section */}
+            <div style={{
+              alignItems: 'center', borderBottom: '1px solid rgba(130,140,200,0.10)',
+              display: 'flex', gap: 10, marginBottom: 20, padding: '10px 0',
+            }}>
+              <div style={{
+                alignItems: 'center', background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+                borderRadius: 7, boxShadow: '0 2px 8px rgba(91,124,247,0.25)',
+                color: '#fff', display: 'flex', fontSize: 13, height: 26, justifyContent: 'center', width: 26,
+              }}>
+                <KeyOutlined />
+              </div>
+              <span style={{ color: '#1a2744', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em' }}>自动生成凭证说明</span>
+            </div>
+
+            <div style={{
+              background: 'rgba(91,124,247,0.04)', border: '1px solid rgba(91,124,247,0.12)',
+              borderRadius: 10, color: '#3e5068', lineHeight: 2, padding: 16,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <span style={{ color: '#5b7cf7', fontWeight: 600 }}>•</span>
+                <span>Client ID、Access Key、Secret Key 将由系统自动生成。</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <span style={{ color: '#5b7cf7', fontWeight: 600 }}>•</span>
+                <span>Secret Key 仅在创建成功后展示一次，请及时复制并妥善保存。</span>
+              </div>
+            </div>
+          </div>
         )}
       </ADrawer>
 

@@ -7,6 +7,7 @@ import { getSpaceMenuTreeListApi } from '@/service/api/space-menu';
 // import { getLocalIcons } from '@/utils/icon';
 
 import IconSelector from '../../component/icon-selector';
+import './menu-operate-drawer.scss';
 
 type Props = Page.OperateDrawerProps;
 
@@ -62,25 +63,27 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
 
   return (
     <ADrawer
+      className="space-menu-drawer-v5"
       open={open}
       title={operateType === 'add' ? t('page.manage.menu.addMenu') : t('page.manage.menu.editMenu')}
       footer={
-        <AFlex justify="space-between">
-          <AButton onClick={onClose}>{t('common.cancel')}</AButton>
+        <div className="menu-drawer-footer-v5">
+          <AButton className="btn-ghost-v5" onClick={onClose}>{t('common.cancel')}</AButton>
           <AButton
-            type="primary"
+            className="btn-accent-gradient"
             onClick={submit}
           >
             {t('common.confirm')}
           </AButton>
-        </AFlex>
+        </div>
       }
       onClose={onClose}
     >
-      <AForm
-        form={form}
-        layout="vertical"
-      >
+      <div className="menu-form-panel">
+        <AForm
+          form={form}
+          layout="vertical"
+        >
         {/* 验证 parentName 是否存入表单 */}
         <AForm.Item
           label="Parent Name"
@@ -268,7 +271,8 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
             ))}
           </ARadio.Group>
         </AForm.Item>
-      </AForm>
+        </AForm>
+      </div>
     </ADrawer>
   );
 });

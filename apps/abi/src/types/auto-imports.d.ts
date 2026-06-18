@@ -24,6 +24,7 @@ declare global {
   const ADescriptions: typeof import('antd')['Descriptions']
   const ADivider: typeof import('antd')['Divider']
   const ADrawer: typeof import('antd')['Drawer']
+  const ADropdown: typeof import('antd')['Dropdown']
   const AEditOutlined: typeof import('antd')['EditOutlined']
   const AEmpty: typeof import('antd')['Empty']
   const AFlex: typeof import('antd')['Flex']

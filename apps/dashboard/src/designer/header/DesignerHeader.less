@@ -4,50 +4,53 @@
  *
  * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
  *
- * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ * This copyright statement applies to, but is limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
  *
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 .designer-header {
-  height: 60px;
+  height: 56px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #fff;
-  border-bottom: 1px solid #ddd;
-  padding: 0 24px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+  padding: 0 20px;
+  box-shadow: 0 2px 12px rgba(91, 124, 247, 0.06);
   font-family: 'Helvetica Neue', Arial, sans-serif;
 
   .header-left {
     .header-back-button {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      height: 36px;
-      padding: 0 14px 0 12px;
-      border: 1px solid #d9d9d9;
-      border-radius: 18px;
-      background: #f5f5f5;
-      color: #333;
+      gap: 6px;
+      height: 34px;
+      padding: 0 16px 0 14px;
+      border: 1px solid rgba(130, 140, 200, 0.18);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.6);
+      color: #3e5068;
       cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s ease;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
       &:hover {
-        border-color: #1677ff;
-        background: #e6f4ff;
-        color: #1677ff;
+        border-color: #5b7cf7;
+        background: rgba(91, 124, 247, 0.08);
+        color: #5b7cf7;
+        box-shadow: 0 2px 8px rgba(91, 124, 247, 0.12);
       }
 
       &:active {
-        background: #bae0ff;
+        background: rgba(91, 124, 247, 0.14);
       }
 
       .back-icon {
-        font-size: 16px;
+        font-size: 14px;
         line-height: 1;
+        font-weight: 700;
       }
     }
   }
@@ -55,7 +58,7 @@
   .header-center, .header-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 4px;
   }
 
   .header-item {
@@ -63,48 +66,49 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-width: 60px;
+    min-width: 56px;
     height: 40px;
     cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    padding: 0 8px;
-    color: #555;
+    border-radius: 8px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0 10px;
+    color: #5f7490;
 
     &:hover {
-      background-color: #e6f4ff;
-      color: #1677ff;
+      background: rgba(91, 124, 247, 0.08);
+      color: #5b7cf7;
 
       .icon-park {
-        color: #1677ff;
+        color: #5b7cf7;
       }
     }
 
     &:active {
-      background-color: #bae0ff;
+      background: rgba(91, 124, 247, 0.14);
     }
 
     .icon-park {
-      font-size: 20px;
-      margin-bottom: 2px;
+      font-size: 18px;
+      margin-bottom: 1px;
       color: inherit;
       transition: color 0.2s;
     }
 
     .item-span {
-      font-size: 12px;
-      line-height: 16px;
-      font-weight: 500;
+      font-size: 11px;
+      line-height: 14px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
     }
   }
 
   // 特殊高亮项（如当前激活的菜单项）
   .header-item-active {
-    color: #1677ff;
-    background-color: #e6f4ff;
+    color: #5b7cf7;
+    background: rgba(91, 124, 247, 0.10);
 
     .icon-park {
-      color: #1677ff;
+      color: #5b7cf7;
     }
   }
 }

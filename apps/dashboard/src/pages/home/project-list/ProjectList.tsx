@@ -4,22 +4,26 @@
  *
  * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
  *
- * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ * This copyright statement applies to, but is limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
  *
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
 import React, {memo, useEffect, useRef, useState} from 'react';
 import './ProjectList.less';
-import {Button, Empty, Input, Select} from "antd";
-import { LeftOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
-import defaultSnapshot from '../image/default-snapshot.jpg';
+import {Button, Empty, Input, Select, Table, Dropdown, Popconfirm, Modal, Switch, Segmented, DatePicker, ConfigProvider, message} from "antd";
+import {
+    LeftOutlined, PlusOutlined, RightOutlined, SearchOutlined, ReloadOutlined,
+    DeleteOutlined, EditOutlined, EyeOutlined, CopyOutlined, ShareAltOutlined,
+    DownOutlined, AppstoreOutlined, UnorderedListOutlined, MoreOutlined, SettingOutlined
+} from '@ant-design/icons';
+import zhCN from 'antd/locale/zh_CN';
+import type {Dayjs} from 'dayjs';
 import {DesignerMode, IPage, IProjectInfo, SaveType} from "../../../designer/DesignerType";
 import {INewProjectInfo, NewProjectDialog} from "./NewProjectDialog.tsx";
 import {globalMessage} from "../../../framework/message/GlobalMessage";
 import DelProjectDialog from "./DelProjectDialog.tsx";
 import CloneProjectDialog from "./CloneProjectDialog.tsx";
-import ProjectItem from "./ProjectItem.tsx";
 import baseApi from "../../../api/BaseApi.ts";
 import URLUtil from "../../../utils/URLUtil.ts";
 
@@ -48,6 +52,49 @@ export const ProjectList = memo((props: ProjectListProps) => {
     const [pageSize, setPageSize] = useState(12);
     const [jumpValue, setJumpValue] = useState('');
 
+    // v5 view mode and selection state
+    const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+    const [searchKeyword, setSearchKeyword] = useState('');
+
+    // v5 column picker state
+    const [columnOptions, setColumnOptions] = useState([
+        { key: 'name', label: '项目名称', visible: true },
+        { key: 'status', label: '状态', visible: true },
+        { key: 'createTime', label: '创建时间', visible: true },
+        { key: 'updateTime', label: '更新时间', visible: true },
+    ]);
+    const [colPickerOpen, setColPickerOpen] = useState(false);
+    const colPickerRef = useRef<HTMLDivElement>(null);
+
+    // Close column picker on outside click
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (colPickerRef.current && !colPickerRef.current.contains(e.target as Node)) {
+                setColPickerOpen(false);
+            }
+        }
+        if (colPickerOpen) {
+            document.addEventListener('mousedown', handleClick);
+        }
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [colPickerOpen]);
+
+    const visibleKeys = React.useMemo(() => new Set(columnOptions.filter(c => c.visible).map(c => c.key)), [columnOptions]);
+    const handleColumnToggle = (key: string, visible: boolean) => {
+        setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+    };
+
+    // Share modal state
+    const [shareModalVisible, setShareModalVisible] = useState(false);
+    const [shareProjectId, setShareProjectId] = useState<string>('');
+    const [sharePasswordFlag, setSharePasswordFlag] = useState(false);
+    const [shareLink, setShareLink] = useState('');
+    const [sharePassword, setSharePassword] = useState<string | null>('');
+    const [shareLoading, setShareLoading] = useState(false);
+    const [expirationMode, setExpirationMode] = useState<string>('forever');
+    const [expirationDate, setExpirationDate] = useState<Dayjs | null>(null);
+
     const getProjectPageList = (current: number, size: number, keywords?: string) => {
         const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({
@@ -60,6 +107,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);
             }
             setPageData(data);
+            setSelectedRowKeys([]); // Clear selection on data refresh
         });
     }
 
@@ -160,6 +208,10 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 cloneIdRef.current = id;
                 setCloneDialog(true);
                 break;
+            case 'share':
+                setShareProjectId(id);
+                setShareModalVisible(true);
+                break;
         }
     }
 
@@ -212,6 +264,44 @@ export const ProjectList = memo((props: ProjectListProps) => {
         });
     }
 
+    // Batch delete handler
+    const handleBatchDelete = async () => {
+        if (selectedRowKeys.length === 0) {
+            globalMessage.messageApi?.warning('请先选择要删除的项目');
+            return;
+        }
+        try {
+            const spaceId = Number(localStorage.getItem('spaceId'));
+            // Delete each selected project
+            for (const id of selectedRowKeys) {
+                const projectId = String(id);
+                try {
+                    const projectInfo = await baseApi.getProjectInfo(projectId);
+                    const chatId = projectInfo?.dataJson ? JSON.parse(projectInfo.dataJson)?.chatId : null;
+                    if (chatId) {
+                        const convList = await baseApi.fetchChatConvList({
+                            chat_id: chatId,
+                            chat_mode: 'chat_with_dashboard',
+                            space_id: spaceId,
+                        });
+                        if (convList.length) {
+                            await Promise.all(convList.map((conv: any) => baseApi.deleteChatConv(conv.conv_uid)));
+                        }
+                    }
+                } catch (e) {
+                    console.error('删除关联会话失败:', e);
+                }
+                await baseApi.deleteProject(projectId);
+            }
+            globalMessage.messageApi?.success(`成功删除 ${selectedRowKeys.length} 个项目`);
+            setSelectedRowKeys([]);
+            getProjectPageList(currentPage, pageSize, searchKeyword);
+        } catch (e) {
+            console.error('批量删除失败:', e);
+            globalMessage.messageApi?.error('批量删除失败');
+        }
+    };
+
     const pageChange = (page: number, size: number) => {
         const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({
@@ -225,6 +315,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
             setPageData({...data, current: page, size});
             setCurrentPage(page);
             setPageSize(size);
+            setSelectedRowKeys([]); // Clear selection on page change
         });
     }
 
@@ -271,70 +362,384 @@ export const ProjectList = memo((props: ProjectListProps) => {
         });
     };
 
-    const onKeyDown = (event: React.KeyboardEvent) => {
-        if (event.key !== 'Enter')
-            return;
-        doSearch((event.target as any).value);
-    }
-
     const doSearch = (value: string) => {
+        setSearchKeyword(value);
         const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({
-            current: pageData.current,
-            size: pageData.size,
+            current: 1,
+            size: pageSize,
             keywords: value,
             spaceId,
         }).then((data: IPage<IProjectInfo>) => {
             if (statusFilter !== undefined) {
                 data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);
             }
-            setPageData(data);
+            setPageData({...data, current: 1});
+            setCurrentPage(1);
+            setSelectedRowKeys([]);
         });
     }
+
+    const handleReset = () => {
+        setSearchKeyword('');
+        doSearch('');
+    };
+
+    // ── Share modal handlers ──
+    const handleShare = async () => {
+        setShareLoading(true);
+        try {
+            const currentSpaceId = localStorage.getItem('spaceId') || '';
+            const expirationDays = ['1', '7', '30'].includes(expirationMode) ? Number(expirationMode) : undefined;
+            const expirationDateStr = expirationMode === 'custom' && expirationDate
+                ? expirationDate.format('YYYY-MM-DD HH:mm:ss')
+                : undefined;
+            const res = await baseApi.shareProject(Number(shareProjectId), Number(currentSpaceId), sharePasswordFlag, expirationDays, expirationDateStr);
+            if (res?.shareUrl) {
+                const shareUrl = res.shareUrl.replace('/#/', '/').replace('/dr/', '/dashboard-share-page/');
+                setShareLink(shareUrl);
+                setSharePassword(res.sharePassword ?? null);
+            }
+        } finally {
+            setShareLoading(false);
+        }
+    };
+
+    const handleCopyLink = () => {
+        const text = sharePassword
+            ? `分享链接：${shareLink}\n访问密码：${sharePassword}`
+            : shareLink;
+        navigator.clipboard.writeText(text).then(() => {
+            message.success(sharePassword ? '分享链接和密码已复制到剪贴板' : '分享链接已复制到剪贴板');
+        });
+    };
+
+    const handleCloseShareModal = () => {
+        setShareModalVisible(false);
+        setShareLink('');
+        setSharePassword(null);
+        setSharePasswordFlag(false);
+        setExpirationMode('forever');
+        setExpirationDate(null);
+    };
 
     useEffect(() => {
         getProjectPageList(pageData.current, pageData.size);
     }, []);
 
-    // 监听主应用空间切换事件，刷新列表
-    useEffect(() => {
-        const handleSpaceChange = () => {
-            setCurrentPage(1);
-            getProjectPageList(1, pageSize);
-        };
-        window.addEventListener('space-change', handleSpaceChange);
-        return () => window.removeEventListener('space-change', handleSpaceChange);
-    }, [pageSize]);
+    // Table columns for list view — v5 style with minWidth, col-first-data
+    const tableColumns = [
+        {
+            align: 'left' as const,
+            className: 'col-project-name col-first-data',
+            dataIndex: 'name',
+            key: 'name',
+            minWidth: 180,
+            onHeaderCell: () => ({ className: 'col-project-name col-first-data' }),
+            render: (text: string) => <span style={{ fontWeight: 600, color: '#1a2744' }}>{text}</span>,
+            title: '项目名称',
+        },
+        {
+            align: 'center' as const,
+            dataIndex: 'status',
+            key: 'status',
+            minWidth: 100,
+            render: (status: string) => {
+                const statusMap: Record<string, { text: string; cls: string }> = {
+                    '0': { text: '草稿', cls: 'status-draft' },
+                    '1': { text: '已发布', cls: 'status-published' },
+                };
+                const st = statusMap[status] || { text: '-', cls: '' };
+                return <span className={`abi-status-tag ${st.cls}`}>{st.text}</span>;
+            },
+            title: '状态',
+        },
+        {
+            align: 'center' as const,
+            dataIndex: 'createTime',
+            key: 'createTime',
+            minWidth: 160,
+            title: '创建时间',
+        },
+        {
+            align: 'center' as const,
+            dataIndex: 'updateTime',
+            key: 'updateTime',
+            minWidth: 160,
+            title: '更新时间',
+        },
+        {
+            align: 'center' as const,
+            fixed: 'right' as const,
+            key: 'action',
+            minWidth: 200,
+            render: (_: any, record: IProjectInfo) => (
+                <div className="ds-action-group">
+                    <Button
+                        className="abi-action-link"
+                        size="small"
+                        type="link"
+                        onClick={() => operateHandler(record.id!, 'edit')}
+                    >
+                        <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
+                    </Button>
+                    <Button
+                        className="abi-action-link"
+                        size="small"
+                        type="link"
+                        onClick={() => operateHandler(record.id!, 'show')}
+                    >
+                        <EyeOutlined style={{ marginRight: 3, fontSize: 12 }} />预览
+                    </Button>
+                    <Dropdown
+                        menu={{
+                            items: [
+                                {
+                                    key: 'clone',
+                                    label: <span><CopyOutlined style={{ marginRight: 4 }} />复制</span>,
+                                    onClick: () => operateHandler(record.id!, 'clone'),
+                                },
+                                {
+                                    key: 'share',
+                                    label: <span><ShareAltOutlined style={{ marginRight: 4 }} />分享</span>,
+                                    onClick: () => operateHandler(record.id!, 'share'),
+                                },
+                                { type: 'divider' },
+                                {
+                                    key: 'delete',
+                                    danger: true,
+                                    label: (
+                                        <Popconfirm
+                                            title="确定要删除该项目吗？"
+                                            onConfirm={() => operateHandler(record.id!, 'del')}
+                                        >
+                                            <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
+                                        </Popconfirm>
+                                    ),
+                                },
+                            ],
+                        }}
+                    >
+                        <Button className="abi-action-link" size="small" type="link">
+                            更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+                        </Button>
+                    </Dropdown>
+                </div>
+            ),
+            title: '操作',
+        },
+    ];
+
+    // Filter columns by visibility (always keep action column)
+    const filteredColumns = React.useMemo(() => {
+        return tableColumns.filter((col: any) => col.key === 'action' || visibleKeys.has(col.key));
+    }, [visibleKeys]);
+
+    // v5 card grid render
+    const renderCardGrid = () => {
+        const records = pageData.records || [];
+        if (records.length === 0) {
+            return (
+                <div className="abi-card-empty">
+                    <Empty description="暂无大屏" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </div>
+            );
+        }
+
+        return (
+            <div className="abi-card-grid">
+                <div className="abi-card-grid-inner">
+                    {records.map((item: IProjectInfo) => (
+                        <div key={item.id} className="abi-data-card">
+                            <div className="abi-data-card-head">
+                                <div className="abi-data-card-title">
+                                    <span className="abi-data-card-name" title={item.name!}>{item.name}</span>
+                                </div>
+                                <span className={`abi-status-tag ${String(item.status) === '1' ? 'status-published' : 'status-draft'}`}>
+                                    {String(item.status) === '1' ? '已发布' : '草稿'}
+                                </span>
+                            </div>
+
+                            <div className="abi-data-card-body">
+                                {visibleKeys.has('status') && (
+                                    <div className="row"><span className="lbl">状态</span><span className="val">
+                                        <span className={`abi-status-tag ${String(item.status) === '1' ? 'status-published' : 'status-draft'}`}>
+                                            {String(item.status) === '1' ? '已发布' : '草稿'}
+                                        </span>
+                                    </span></div>
+                                )}
+                                {visibleKeys.has('createTime') && (
+                                    <div className="row"><span className="lbl">创建时间</span><span className="val">{item.createTime || '-'}</span></div>
+                                )}
+                                {visibleKeys.has('updateTime') && (
+                                    <div className="row"><span className="lbl">更新时间</span><span className="val">{item.updateTime || '-'}</span></div>
+                                )}
+                            </div>
+
+                            <div className="abi-data-card-footer">
+                                <button className="abi-card-act" onClick={() => operateHandler(item.id!, 'edit')}>
+                                    <EditOutlined style={{ marginRight: 3 }} />编辑
+                                </button>
+                                <button className="abi-card-act" onClick={() => operateHandler(item.id!, 'show')}>
+                                    <EyeOutlined style={{ marginRight: 3 }} />预览
+                                </button>
+                                <Dropdown
+                                    menu={{
+                                        items: [
+                                            {
+                                                key: 'clone',
+                                                label: '复制',
+                                                onClick: () => operateHandler(item.id!, 'clone'),
+                                            },
+                                            {
+                                                key: 'share',
+                                                label: '分享',
+                                                onClick: () => operateHandler(item.id!, 'share'),
+                                            },
+                                            { type: 'divider' },
+                                            {
+                                                key: 'delete',
+                                                danger: true,
+                                                label: '删除',
+                                                onClick: () => operateHandler(item.id!, 'del'),
+                                            },
+                                        ],
+                                    }}
+                                    trigger={['click']}
+                                >
+                                    <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
+                                        <MoreOutlined />
+                                    </button>
+                                </Dropdown>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className={'project-list-container'}>
-            <div className={'project-list-header'}>
-                <Input placeholder="搜索项目"
+            {/* v5 Searchbar */}
+            <section className="abi-searchbar">
+                <div className="abi-search-row">
+                    <Input
+                        placeholder="搜索项目名称"
                         prefix={<SearchOutlined style={{color: '#a3b3c8'}} />}
                         allowClear
                         className="abi-field-input"
-                        onKeyDown={onKeyDown}
-                        onChange={(e) => { if (!e.target.value) doSearch(''); }}
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
                         onPressEnter={(e) => doSearch((e.target as any).value)}
-                        style={{width: '12rem'}}/>
-                {!statusFilter && <Button className="btn-accent-gradient ml-auto" onClick={toggleNewProVisible}><PlusOutlined />新增</Button>}
-            </div>
-            {pageData && pageData.records.length > 0 ? (
-                <div className={'project-list'}>
-                    {pageData.records.map((item: IProjectInfo) => (
-                        <ProjectItem key={item.id} id={item.id!} name={item.name!} cover={item.cover || defaultSnapshot}
-                                     saveType={saveType}
-                                     status={item.status}
-                                     spaceId={String(item.spaceId)}
-                                     doOperate={operateHandler}/>
-                    ))}
+                        style={{width: '220px'}}
+                    />
+                    <Button type="primary" className="btn-accent-gradient" onClick={() => doSearch(searchKeyword)}>
+                        <SearchOutlined /> 查询
+                    </Button>
+                    <Button className="btn-ghost-v5" onClick={handleReset}>
+                        <ReloadOutlined /> 重置
+                    </Button>
                 </div>
-            ) : (
-                <div className="project-list-empty">
-                    <Empty description="暂无数据"/>
+            </section>
+
+            {/* v5 Data Area */}
+            <section className="abi-data-area">
+                <div className="abi-toolbar">
+                    <div className="abi-toolbar-left">
+                        {!statusFilter && (
+                            <Button className="btn-accent-gradient" onClick={toggleNewProVisible}>
+                                <PlusOutlined />新增大屏
+                            </Button>
+                        )}
+                        <Popconfirm
+                            title="确定要批量删除选中的项目吗？"
+                            onConfirm={handleBatchDelete}
+                            disabled={selectedRowKeys.length === 0}
+                        >
+                            <Button
+                                className="btn-ghost-v5"
+                                disabled={selectedRowKeys.length === 0}
+                            >
+                                <DeleteOutlined /> 批量删除
+                            </Button>
+                        </Popconfirm>
+                    </div>
+                    <div className="abi-toolbar-right">
+                        <div className="abi-view-toggle">
+                            <button
+                                className={`abi-vt-btn ${viewMode === 'list' ? 'active' : ''}`}
+                                onClick={() => setViewMode('list')}
+                                title="列表视图"
+                            >
+                                <UnorderedListOutlined />
+                            </button>
+                            <button
+                                className={`abi-vt-btn ${viewMode === 'card' ? 'active' : ''}`}
+                                onClick={() => setViewMode('card')}
+                                title="卡片视图"
+                            >
+                                <AppstoreOutlined />
+                            </button>
+                        </div>
+                        <div className="abi-col-picker" ref={colPickerRef}>
+                            <button className="abi-col-picker-btn" onClick={() => setColPickerOpen(!colPickerOpen)}>
+                                <SettingOutlined />
+                                列设置
+                                <DownOutlined style={{ fontSize: 11, transition: 'transform 0.2s', transform: colPickerOpen ? 'rotate(180deg)' : 'none' }} />
+                            </button>
+                            {colPickerOpen && (
+                                <div className="abi-col-dropdown">
+                                    {columnOptions.map(col => (
+                                        <label key={col.key}>
+                                            <input
+                                                type="checkbox"
+                                                checked={col.visible}
+                                                onChange={e => handleColumnToggle(col.key, e.target.checked)}
+                                            />
+                                            {col.label}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
-            )}
-            <div className="data-source-pagination">
+
+                {/* Content: table or cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                    {viewMode === 'list' ? (
+                        <div
+                            style={{
+                                border: '1px solid rgba(130,140,200,0.18)',
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                flex: 1,
+                                minHeight: 0,
+                            }}
+                        >
+                            <div className="abi-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+                                <Table
+                                    columns={filteredColumns as any}
+                                    dataSource={pageData.records}
+                                    rowKey="id"
+                                    pagination={false}
+                                    rowSelection={{
+                                        fixed: true,
+                                        selectedRowKeys,
+                                        onChange: (keys) => setSelectedRowKeys(keys),
+                                    }}
+                                    scroll={pageData.records.length > 0 ? { x: 'max-content' } : undefined}
+                                    size="middle"
+                                    className="project-table abi-std-table"
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        renderCardGrid()
+                    )}
+
+                    <div className="data-source-pagination">
                     <span className="total-text">共 {totalCount} 条</span>
                     <div className="pagination-controls">
                         <Select
@@ -368,14 +773,131 @@ export const ProjectList = memo((props: ProjectListProps) => {
                         </span>
                     </div>
                 </div>
+                </div>
+            </section>
+
             <NewProjectDialog onOk={onOk} onCancel={onCancel} visible={addDialog}/>
             <DelProjectDialog visible={delDialog} onOk={confirmDel} onCancel={cancelDel}/>
             <CloneProjectDialog onOk={() => confirmClone()} onCancel={cancelClone}
                                 visible={cloneDialog}/>
+
+            {/* Share Modal */}
+            <Modal
+                title="分享大屏项目"
+                open={shareModalVisible}
+                onCancel={handleCloseShareModal}
+                footer={null}
+                width={520}
+                centered
+            >
+                <div style={{ padding: '8px 0 4px' }}>
+                    {/* 访问密码 */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '14px 16px',
+                        background: '#f7f8fa',
+                        borderRadius: '10px',
+                        marginBottom: '12px',
+                    }}>
+                        <div>
+                            <div style={{ fontWeight: 500, color: '#262626', marginBottom: '2px' }}>访问密码保护</div>
+                            <div style={{ fontSize: '12px', color: '#8c8c8c' }}>开启后将生成随机访问密码</div>
+                        </div>
+                        <Switch checked={sharePasswordFlag} onChange={setSharePasswordFlag} disabled={!!shareLink} />
+                    </div>
+
+                    {/* 链接有效期 */}
+                    <div style={{
+                        padding: '14px 16px',
+                        background: '#f7f8fa',
+                        borderRadius: '10px',
+                        marginBottom: '20px',
+                    }}>
+                        <div style={{ fontWeight: 500, color: '#262626', marginBottom: '10px' }}>链接有效期</div>
+                        <Segmented
+                            value={expirationMode}
+                            onChange={(val) => setExpirationMode(String(val))}
+                            options={[
+                                { label: '永久', value: 'forever' },
+                                { label: '1 天', value: '1' },
+                                { label: '7 天', value: '7' },
+                                { label: '30 天', value: '30' },
+                                { label: '自定义', value: 'custom' },
+                            ]}
+                            block
+                        />
+                        {expirationMode === 'custom' && (
+                            <div style={{ marginTop: '12px' }}>
+                                <ConfigProvider locale={{...zhCN, DatePicker: {...zhCN.DatePicker, lang: {...zhCN.DatePicker?.lang, ok: '确认'}} as any}}>
+                                <DatePicker
+                                    value={expirationDate}
+                                    onChange={(date) => setExpirationDate(date)}
+                                    showTime={{format: 'HH:mm:ss'}}
+                                    format="YYYY-MM-DD HH:mm:ss"
+                                    placeholder="选择过期日期和时间"
+                                    style={{width: '100%'}}
+                                    disabledDate={(current) => current && current.isBefore(new Date(), 'day')}
+                                />
+                                </ConfigProvider>
+                        </div>
+                        )}
+                    </div>
+
+                    {/* 生成按钮 / 结果区 */}
+                    {!shareLink ? (
+                        <Button
+                            type="primary"
+                            block
+                            size="large"
+                            loading={shareLoading}
+                            onClick={handleShare}
+                            disabled={expirationMode === 'custom' && !expirationDate}
+                            style={{ borderRadius: '8px', height: '44px' }}
+                        >
+                            生成分享链接
+                        </Button>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{
+                                background: '#f7f8fa',
+                                borderRadius: '10px',
+                                padding: '14px 16px',
+                            }}>
+                                <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: '8px' }}>分享链接</div>
+                                <Input.TextArea
+                                    value={shareLink}
+                                    readOnly
+                                    rows={2}
+                                    style={{ background: 'transparent', border: 'none', padding: 0, resize: 'none', boxShadow: 'none' }}
+                                />
+                            </div>
+                            {sharePassword && (
+                                <div style={{
+                                    background: '#F7F8FA',
+                                    borderRadius: '10px',
+                                    padding: '14px 16px',
+                                }}>
+                                    <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: '6px' }}>访问密码</div>
+                                    <div style={{ fontWeight: 700, fontSize: '22px', letterSpacing: '6px', color: '#666' }}>{sharePassword}</div>
+                                </div>
+                            )}
+                            <Button
+                                type="primary"
+                                block
+                                size="large"
+                                onClick={handleCopyLink}
+                                style={{borderRadius: '8px', height: '44px' }}
+                            >
+                                {sharePassword ? '复制链接和密码' : '复制链接'}
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </Modal>
         </div>
     );
 })
 
 export default ProjectList;
-
-

@@ -12,13 +12,15 @@ export interface ColumnOption {
 
 interface ViewControlsProps {
   /** Current view mode */
-  viewMode: 'list' | 'card';
+  viewMode?: 'list' | 'card';
   /** Called when view mode changes */
-  onViewModeChange: (mode: 'list' | 'card') => void;
+  onViewModeChange?: (mode: 'list' | 'card') => void;
   /** Column options for the picker */
   columns: ColumnOption[];
   /** Called when column visibility changes */
   onColumnToggle: (key: string, visible: boolean) => void;
+  /** Hide view mode toggle (list/card) buttons */
+  hideViewToggle?: boolean;
 }
 
 /**
@@ -27,9 +29,10 @@ interface ViewControlsProps {
  */
 export function ViewControls({
   columns,
+  hideViewToggle = false,
   onColumnToggle,
   onViewModeChange,
-  viewMode,
+  viewMode = 'list',
 }: ViewControlsProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -50,22 +53,24 @@ export function ViewControls({
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
       {/* View Toggle */}
-      <div className="abi-view-toggle">
-        <button
-          className={`abi-vt-btn ${viewMode === 'list' ? 'active' : ''}`}
-          onClick={() => onViewModeChange('list')}
-          title="列表视图"
-        >
-          <UnorderedListOutlined />
-        </button>
-        <button
-          className={`abi-vt-btn ${viewMode === 'card' ? 'active' : ''}`}
-          onClick={() => onViewModeChange('card')}
-          title="卡片视图"
-        >
-          <AppstoreOutlined />
-        </button>
-      </div>
+      {!hideViewToggle && (
+        <div className="abi-view-toggle">
+          <button
+            className={`abi-vt-btn ${viewMode === 'list' ? 'active' : ''}`}
+            onClick={() => onViewModeChange?.('list')}
+            title="列表视图"
+          >
+            <UnorderedListOutlined />
+          </button>
+          <button
+            className={`abi-vt-btn ${viewMode === 'card' ? 'active' : ''}`}
+            onClick={() => onViewModeChange?.('card')}
+            title="卡片视图"
+          >
+            <AppstoreOutlined />
+          </button>
+        </div>
+      )}
 
       {/* Column Picker */}
       <div className="abi-col-picker" ref={dropdownRef}>

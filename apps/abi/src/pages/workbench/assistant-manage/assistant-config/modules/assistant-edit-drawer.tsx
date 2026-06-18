@@ -1,13 +1,17 @@
 import {
   ArrowLeftOutlined,
+  BookOutlined,
   CaretDownOutlined,
   CaretRightOutlined,
   EditOutlined,
+  ExperimentOutlined,
   GlobalOutlined,
   LockOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
+  SecurityScanOutlined,
   SendOutlined,
+  SettingOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons';
 import { Button, Checkbox, Drawer, Input, Modal, Radio, Spin, Switch, Tag, Tooltip, message } from 'antd';
@@ -16,9 +20,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { queryToolListApi } from '@/service/api/tool';
 import type { ToolItem } from '@/service/api/tool';
 import { queryMcpList } from '@/service/api/pulg';
-import { fetchAppDetailApi, addAppApi, updateAppApi } from '@/service/api/abi-chat-app';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
+import React from 'react';
 
 /**
  * 助手新增/编辑 - 全屏 Drawer
@@ -26,6 +30,7 @@ import { useAppSelector } from '@/hooks/business/useStore';
  */
 
 interface Props {
+  visible?: boolean;
   agent?: AgentMock | null;
   groupId?: number;
   onClose: (refresh?: boolean) => void;
@@ -42,6 +47,10 @@ export interface AgentMock {
   /** status: '0'草稿 | '1'发布 | '2'下线 */
   status?: '0' | '1' | '2';
 }
+
+// ── 工具选择 ──
+type ToolGroupKey = 'mcp' | 'builtin';
+type ToolOption = { id: string; name: string; group: ToolGroupKey; description?: string };
 
 // 默认提示词模板（图片中的"投资顾问"prompt）
 const DEFAULT_PROMPT = `## 角色
@@ -61,7 +70,7 @@ const DEFAULT_PROMPT = `## 角色
 
 ## 限制
 - 仅提供与股票市场相关的信息和分析，不涉及其他类型的投资，如债券、期货、外汇等。
-- 所有提供的数据和分析仅供参考，不构成具体的投资建议。
+- 所有提供的数据和分析仅供参考，不构成具体的投资建议。s
 - 不能提供实时交易或交易执行服务，仅限于提供信息和分析。`;
 
 // 推荐问题
@@ -72,13 +81,12 @@ const RECOMMEND_QUESTIONS = [
 ];
 
 // 折叠面板分组
-type SectionKey = 'model' | 'opening' | 'knowledge' | 'tools' | 'skills' | 'questions';
+type SectionKey = 'model' | 'opening' | 'semanticKnowledge' | 'ontologyNetwork' | 'mcpTools' | 'builtinTools' | 'skills' | 'questions';
 
-const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, onClose }) => {
+const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: propsGroupId, onClose }) => {
   const spaceId = useAppSelector(getSpaceId);
   const isEdit = !!agent?.id;
-
-  const [name, setName] = useState<string>(agent?.name || '');
+  const [name, setName] = useState<string>(agent?.name || '投资顾问');
   const [editingName, setEditingName] = useState(false);
   const [prompt, setPrompt] = useState<string>(agent?.prompt || '');
   const [description, setDescription] = useState<string>(agent?.description || '');
@@ -112,55 +120,24 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
   };
 
   // ── 工具选择 ──
-  type ToolGroupKey = 'mcp' | 'builtin';
-  type ToolOption = { id: string; name: string; group: ToolGroupKey; description?: string };
 
   const [mcpTools, setMcpTools] = useState<ToolOption[]>([]);
   const [builtinTools, setBuiltinTools] = useState<ToolOption[]>([]);
   const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set());
   const [loadingTools, setLoadingTools] = useState(false);
 
-  /** 加载助手详情 */
-  async function loadDetail() {
-    if (!agent?.id) return;
-    setLoadingDetail(true);
-    try {
-      const res: any = await fetchAppDetailApi({ appId: agent.id });
-      // createFlatRequest 返回 { data, error, response }，data 即为解包后的详情
-      const d = res?.data ?? res?.response?.data?.data ?? res;
-      if (d) {
-        setName(d.appName ?? d.name ?? '');
-        setPrompt(d.appPrompt ?? d.prompt ?? '');
-        setDescription(d.description ?? '');
-        setStatus((d.status as any) ?? '0');
-        setEnableDebug(String(d.enableDebug) === '1');
-        setPublicAccess(String(d.publicAccess) === '1' ? '1' : '0');
-        const rq = d.recQuery ?? [];
-        setRecQuestions(Array.isArray(rq) ? rq.map((q: any) => typeof q === 'string' ? q : q?.question ?? '') : []);
-        // 回填工具选中状态
-        if (Array.isArray(d.tools)) {
-          const ids = new Set<string>();
-          d.tools.forEach((t: any) => {
-            const toolType = t.toolType === '2' || t.toolType === 'mcp' ? 'mcp' : 'builtin';
-            const cfg = t.toolConfig;
-            if (Array.isArray(cfg)) {
-              cfg.forEach((c: any) => ids.add(`${toolType}_${c.id}`));
-            }
-          });
-          setSelectedToolIds(ids);
-        }
-      }
-    } catch {
-      message.error('加载助手详情失败');
-    } finally {
-      setLoadingDetail(false);
-    }
+  /** 加载助手详情（mock：从 agent prop 读取） */
+  function loadDetail() {
+    if (!agent) return;
+    setName(agent.name || '投资顾问');
+    setPrompt(agent.prompt || DEFAULT_PROMPT);
+    setDescription(agent.description || '');
+    setStatus(agent.status || '0');
   }
 
   useEffect(() => {
     if (agent?.id) loadDetail();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agent?.id]);
+  }, [agent]);
 
   /** 构建提交数据 */
   function buildPayload(overrideStatus?: string) {
@@ -191,44 +168,24 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
     return payload;
   }
 
-  /** 保存：状态设为草稿 */
+  /** 保存：状态设为草稿（mock） */
   const handleSave = async () => {
     setSaving(true);
-    try {
-      const payload = buildPayload('0');
-      if (isEdit) {
-        await updateAppApi(payload);
-      } else {
-        await addAppApi(payload);
-      }
-      setStatus('0');
-      message.success('已保存为草稿');
-      onClose(true);
-    } catch (err: any) {
-      message.error(err?.message ?? '保存失败');
-    } finally {
-      setSaving(false);
-    }
+    await new Promise(r => setTimeout(r, 300));
+    setStatus('0');
+    message.success('已保存为草稿');
+    onClose(true);
+    setSaving(false);
   };
 
-  /** 上线：状态设为发布 */
+  /** 上线：状态设为发布（mock） */
   const handlePublish = async () => {
     setSaving(true);
-    try {
-      const payload = buildPayload('1');
-      if (isEdit) {
-        await updateAppApi(payload);
-      } else {
-        await addAppApi(payload);
-      }
-      setStatus('1');
-      message.success('已上线，状态设为发布');
-      onClose(true);
-    } catch (err: any) {
-      message.error(err?.message ?? '发布失败');
-    } finally {
-      setSaving(false);
-    }
+    await new Promise(r => setTimeout(r, 300));
+    setStatus('1');
+    message.success('已上线，状态设为发布');
+    onClose(true);
+    setSaving(false);
   };
 
   async function fetchToolGroups() {
@@ -292,12 +249,14 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
   }
 
   const [openMap, setOpenMap] = useState<Record<SectionKey, boolean>>({
-    knowledge: false,
+    semanticKnowledge: false,
     model: false,
+    mcpTools: false,
+    ontologyNetwork: false,
     opening: false,
     questions: false,
     skills: false,
-    tools: true
+    builtinTools: false
   });
 
   const toggle = (key: SectionKey) => setOpenMap(p => ({ ...p, [key]: !p[key] }));
@@ -307,15 +266,16 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
       <div
         style={{
           alignItems: 'center',
-          background: '#fa8c16',
-          borderRadius: 6,
+          background: 'linear-gradient(135deg, #fa8c16 0%, #fa541c 100%)',
+          borderRadius: 8,
           color: '#fff',
           display: 'flex',
           fontSize: 14,
           fontWeight: 700,
-          height: 24,
+          height: 28,
           justifyContent: 'center',
-          width: 24
+          width: 28,
+          boxShadow: '0 2px 8px rgba(250, 140, 22, 0.3)'
         }}
       >
         =
@@ -326,12 +286,15 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
 
   return (
     <Drawer
-      open
+      open={visible}
       destroyOnClose
       closable={false}
       placement="right"
       width="100%"
-      bodyStyle={{ background: '#FCFDFF', padding: 0 }}
+      bodyStyle={{
+        background: 'linear-gradient(135deg, rgba(240, 244, 255, 0.6) 0%, rgba(239, 243, 255, 0.6) 50%, rgba(239, 242, 255, 0.6) 100%)',
+        padding: 0
+      }}
       headerStyle={{ display: 'none' }}
       onClose={() => onClose(false)}
     >
@@ -340,25 +303,35 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
       <div
         style={{
           alignItems: 'center',
-          background: '#FCFDFF',
-          borderBottom: '1px solid #f0f0f0',
+          background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 255, 0.95) 100%)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(130, 140, 200, 0.15)',
           display: 'flex',
-          height: 56,
-          padding: '0 16px'
+          height: 60,
+          padding: '0 20px',
+          boxShadow: '0 2px 12px rgba(91, 124, 247, 0.08)'
         }}
       >
         <Button
           icon={<ArrowLeftOutlined />}
           type="text"
           onClick={() => onClose(false)}
+          style={{
+            borderRadius: 8,
+            transition: 'all 0.3s ease'
+          }}
         />
-        <div style={{ alignItems: 'center', display: 'flex', gap: 8, marginLeft: 8 }}>
+        <div style={{ alignItems: 'center', display: 'flex', gap: 10, marginLeft: 10 }}>
           {headerIcon}
           {editingName ? (
             <Input
               autoFocus
               size="small"
-              style={{ width: 200 }}
+              style={{
+                width: 200,
+                borderRadius: 8,
+                border: '1px solid rgba(130, 140, 200, 0.2)'
+              }}
               value={name}
               onBlur={() => setEditingName(false)}
               onChange={e => setName(e.target.value)}
@@ -366,20 +339,38 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
             />
           ) : (
             <>
-              <span style={{ fontSize: 16, fontWeight: 600 }}>{name}</span>
+              <span style={{ fontSize: 17, fontWeight: 600, color: '#1a2744' }}>{name}</span>
               <EditOutlined
-                style={{ color: '#999', cursor: 'pointer' }}
+                style={{ color: '#5b7cf7', cursor: 'pointer', transition: 'all 0.2s ease' }}
                 onClick={() => setEditingName(true)}
               />
             </>
           )}
         </div>
-        <div style={{ alignItems: 'center', display: 'flex', gap: 8, marginLeft: 'auto' }}>
-          <Button loading={saving} onClick={handleSave}>保存</Button>
+        <div style={{ alignItems: 'center', display: 'flex', gap: 12, marginLeft: 'auto' }}>
+          <Button
+            onClick={handleSave}
+            style={{
+              borderRadius: 8,
+              border: '1px solid rgba(130, 140, 200, 0.2)',
+              fontWeight: 500,
+              transition: 'all 0.3s ease'
+            }}
+          >
+            保存
+          </Button>
           <Button
             loading={saving}
             type="primary"
             onClick={handlePublish}
+            style={{
+              background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+              border: 'none',
+              borderRadius: 8,
+              boxShadow: '0 4px 12px rgba(91, 124, 247, 0.3)',
+              fontWeight: 600,
+              transition: 'all 0.3s ease'
+            }}
           >
             上线
           </Button>
@@ -392,29 +383,48 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
           display: 'grid',
           gap: 0,
           gridTemplateColumns: '1fr 1fr 1fr',
-          height: 'calc(100vh - 56px)'
+          height: 'calc(100vh - 60px)'
         }}
       >
         {/* 左：助手画像 */}
-        <div style={{ background: '#FCFDFF', borderRight: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column' }}>
+        <div
+          style={{
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(248, 250, 255, 0.6) 100%)',
+            backdropFilter: 'blur(8px)',
+            borderRight: '1px solid rgba(130, 140, 200, 0.12)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
           <SectionHeader title="助手配置" />
-          <div style={{ padding: '12px 16px 0' }}>
+          <div style={{ padding: '14px 18px 0' }}>
             <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 500 }}>助手画像</span>
+              <span style={{ fontWeight: 600, color: '#3e5068' }}>助手画像</span>
               <Button
                 icon={<ThunderboltOutlined />}
                 size="small"
-                style={{ color: '#1677ff' }}
+                style={{
+                  color: '#5b7cf7',
+                  fontWeight: 500
+                }}
                 type="link"
               >
                 自动优化
               </Button>
             </div>
           </div>
-          <div style={{ flex: 1, overflow: 'hidden', padding: '8px 16px 16px' }}>
+          <div style={{ flex: 1, overflow: 'hidden', padding: '10px 18px 18px' }}>
             <Input.TextArea
               bordered={false}
-              style={{ height: '100%', resize: 'none' }}
+              style={{
+                height: '100%',
+                resize: 'none',
+                background: 'rgba(255, 255, 255, 0.6)',
+                borderRadius: 10,
+                padding: '12px 14px',
+                fontSize: 13,
+                lineHeight: 1.6
+              }}
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
             />
@@ -422,8 +432,16 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
         </div>
 
         {/* 中：基础配置 / 知识 / 能力 */}
-        <div style={{ background: '#FCFDFF', borderRight: '1px solid #f0f0f0', overflow: 'auto' }}>
-          <GroupTitle title="基础配置" />
+        <div
+          style={{
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(248, 250, 255, 0.7) 50%, rgba(246, 247, 255, 0.65) 100%)',
+            backdropFilter: 'blur(12px)',
+            borderRight: '1px solid rgba(130, 140, 200, 0.15)',
+            overflow: 'auto',
+            position: 'relative'
+          }}
+        >
+          <GroupTitle title="基础配置" color="#5b7cf7" icon={<SettingOutlined />} />
           <CollapseRow
             open={openMap.model}
             title="AI模型配置"
@@ -435,96 +453,71 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
             onToggle={() => toggle('opening')}
           />
 
-          <GroupTitle title="知识" />
+          <GroupTitle title="知识语义" color="#10b981" icon={<BookOutlined />} />
           <CollapseRow
-            open={openMap.knowledge}
-            title="知识库"
-            onToggle={() => toggle('knowledge')}
+            extra={<PlusOutlined style={{ color: '#5b7cf7' }} />}
+            open={openMap.semanticKnowledge}
+            title="数据语义"
+            onToggle={() => toggle('semanticKnowledge')}
+          />
+          <CollapseRow
+            extra={<PlusOutlined style={{ color: '#5b7cf7' }} />}
+            open={openMap.ontologyNetwork}
+            title="本体网络"
+            onToggle={() => toggle('ontologyNetwork')}
           />
 
-          <GroupTitle title="能力" />
+          <GroupTitle title="扩展能力" color="#f59e0b" icon={<ThunderboltOutlined />} />
           <CollapseRow
-            extra={<PlusOutlined style={{ color: '#999' }} />}
-            open={openMap.tools}
-            title="工具"
-            onToggle={() => toggle('tools')}
+            extra={<PlusOutlined style={{ color: '#5b7cf7' }} />}
+            open={openMap.mcpTools}
+            title="MCP"
+            onToggle={() => toggle('mcpTools')}
           >
             {/* MCP工具分组 */}
             <div style={{ padding: '4px 24px 8px' }}>
-              <div
-                style={{ alignItems: 'center', cursor: 'pointer', display: 'flex', gap: 8, paddingBottom: 4, userSelect: 'none' }}
-                onClick={() => handleGroupCheck('mcp', !isGroupAllChecked('mcp'))}
-              >
-                <Checkbox
-                  checked={isGroupAllChecked('mcp')}
-                  indeterminate={isGroupIndeterminate('mcp')}
-                  onChange={e => handleGroupCheck('mcp', e.target.checked)}
-                  onClick={e => e.stopPropagation()}
-                />
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#595959' }}>MCP工具</span>
-                <span style={{ color: '#bfbfbf', fontSize: 11 }}>({mcpTools.length})</span>
-              </div>
+              <ToolGroupHeader
+                checked={isGroupAllChecked('mcp')}
+                count={mcpTools.length}
+                indeterminate={isGroupIndeterminate('mcp')}
+                title="MCP工具"
+                onChange={checked => handleGroupCheck('mcp', checked)}
+              />
               {mcpTools.length === 0 ? (
                 <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无MCP工具</div>
               ) : (
                 mcpTools.map(item => (
-                  <div
+                  <ToolItemRow
                     key={item.id}
-                    style={{ alignItems: 'center', cursor: 'pointer', display: 'flex', gap: 10, padding: '6px 0 6px 28px', userSelect: 'none' }}
-                    onClick={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
-                  >
-                    <Checkbox
-                      checked={selectedToolIds.has(item.id)}
-                      onChange={e => handleToolCheck(item.id, e.target.checked)}
-                      onClick={e => e.stopPropagation()}
-                    />
-                    <div style={{ alignItems: 'center', background: '#fff7e6', borderRadius: 6, color: '#fa8c16', display: 'flex', height: 24, justifyContent: 'center', width: 24, flexShrink: 0 }}>
-                      <ThunderboltOutlined style={{ fontSize: 14 }} />
-                    </div>
-                    <Tooltip title={item.description || item.name}>
-                      <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
-                    </Tooltip>
-                  </div>
+                    description={item.description}
+                    name={item.name}
+                    selected={selectedToolIds.has(item.id)}
+                    onToggle={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
+                  />
                 ))
               )}
             </div>
 
             {/* 内置工具分组 */}
             <div style={{ padding: '4px 24px 8px' }}>
-              <div
-                style={{ alignItems: 'center', cursor: 'pointer', display: 'flex', gap: 8, paddingBottom: 4, userSelect: 'none' }}
-                onClick={() => handleGroupCheck('builtin', !isGroupAllChecked('builtin'))}
-              >
-                <Checkbox
-                  checked={isGroupAllChecked('builtin')}
-                  indeterminate={isGroupIndeterminate('builtin')}
-                  onChange={e => handleGroupCheck('builtin', e.target.checked)}
-                  onClick={e => e.stopPropagation()}
-                />
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#595959' }}>内置工具</span>
-                <span style={{ color: '#bfbfbf', fontSize: 11 }}>({builtinTools.length})</span>
-              </div>
+              <ToolGroupHeader
+                checked={isGroupAllChecked('builtin')}
+                count={builtinTools.length}
+                indeterminate={isGroupIndeterminate('builtin')}
+                title="内置工具"
+                onChange={checked => handleGroupCheck('builtin', checked)}
+              />
               {builtinTools.length === 0 ? (
                 <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无内置工具</div>
               ) : (
                 builtinTools.map(item => (
-                  <div
+                  <ToolItemRow
                     key={item.id}
-                    style={{ alignItems: 'center', cursor: 'pointer', display: 'flex', gap: 10, padding: '6px 0 6px 28px', userSelect: 'none' }}
-                    onClick={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
-                  >
-                    <Checkbox
-                      checked={selectedToolIds.has(item.id)}
-                      onChange={e => handleToolCheck(item.id, e.target.checked)}
-                      onClick={e => e.stopPropagation()}
-                    />
-                    <div style={{ alignItems: 'center', background: '#fff7e6', borderRadius: 6, color: '#fa8c16', display: 'flex', height: 24, justifyContent: 'center', width: 24, flexShrink: 0 }}>
-                      <ThunderboltOutlined style={{ fontSize: 14 }} />
-                    </div>
-                    <Tooltip title={item.description || item.name}>
-                      <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
-                    </Tooltip>
-                  </div>
+                    description={item.description}
+                    name={item.name}
+                    selected={selectedToolIds.has(item.id)}
+                    onToggle={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
+                  />
                 ))
               )}
             </div>
@@ -533,13 +526,13 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
           <CollapseRow
             extra={
               <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
-                <QuestionCircleOutlined style={{ color: '#bfbfbf' }} />
-                <PlusOutlined style={{ color: '#999' }} />
+                <QuestionCircleOutlined style={{ color: '#8fa0b5' }} />
+                <PlusOutlined style={{ color: '#5b7cf7' }} />
               </span>
             }
             open={openMap.skills}
             title="技能"
-            titleExtra={<QuestionCircleOutlined style={{ color: '#bfbfbf', marginLeft: 4 }} />}
+            titleExtra={<QuestionCircleOutlined style={{ color: '#8fa0b5', marginLeft: 4 }} />}
             onToggle={() => toggle('skills')}
           />
 
@@ -547,21 +540,21 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
           <CollapseRow
             extra={
               <PlusOutlined
-                style={{ color: '#999' }}
+                style={{ color: '#5b7cf7' }}
                 onClick={e => { e.stopPropagation(); setRecDrawerOpen(true); }}
               />
             }
             open={openMap.questions}
-            title="推荐问题"
+            title="示例"
             onToggle={() => toggle('questions')}
           >
             {recQuestions.length === 0 ? (
-              <div style={{ color: '#bfbfbf', fontSize: 13, padding: '6px 24px' }}>暂无推荐问题</div>
+              <div style={{ color: '#8fa0b5', fontSize: 13, padding: '8px 24px' }}>暂无推荐问题</div>
             ) : (
               recQuestions.slice(0, 3).map((q, i) => (
                 <div
                   key={i}
-                  style={{ color: '#595959', fontSize: 13, padding: '5px 24px', lineHeight: 1.6 }}
+                  style={{ color: '#3e5068', fontSize: 13, padding: '6px 24px', lineHeight: 1.6 }}
                 >
                   {i + 1}. {q}
                 </div>
@@ -569,7 +562,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
             )}
             {recQuestions.length > 3 && (
               <div
-                style={{ color: '#1677ff', cursor: 'pointer', fontSize: 12, padding: '4px 24px' }}
+                style={{ color: '#5b7cf7', cursor: 'pointer', fontSize: 12, padding: '6px 24px', fontWeight: 500 }}
                 onClick={() => setRecDrawerOpen(true)}
               >
                 查看全部 {recQuestions.length} 条
@@ -581,13 +574,35 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
           <div
             style={{
               alignItems: 'center',
-              borderTop: '1px solid #f0f0f0',
+              borderTop: '1px solid rgba(130, 140, 200, 0.1)',
               display: 'flex',
               justifyContent: 'space-between',
-              padding: '14px 16px'
+              padding: '18px 24px',
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.04) 0%, rgba(139, 92, 246, 0.02) 100%)',
+              gap: 12,
+              boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
             }}
           >
-            <span style={{ color: '#262626', fontSize: 14 }}>开启调试模式</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontSize: 16,
+                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                  flexShrink: 0
+                }}
+              >
+                <ExperimentOutlined />
+              </div>
+              <span style={{ color: '#1a2744', fontSize: 15, fontWeight: 500, letterSpacing: '0.03em' }}>开启调试模式</span>
+            </div>
             <Switch
               checked={enableDebug}
               onChange={setEnableDebug}
@@ -598,58 +613,42 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
           <div
             style={{
               alignItems: 'center',
-              borderTop: '1px solid #f0f0f0',
-              cursor: 'pointer',
+              borderTop: '1px solid rgba(130, 140, 200, 0.1)',
               display: 'flex',
               justifyContent: 'space-between',
-              padding: '14px 16px'
+              padding: '18px 24px',
+              background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.04) 0%, rgba(236, 72, 153, 0.02) 100%)',
+              gap: 12,
+              boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
             }}
-            onClick={() => setVisibilityModalOpen(true)}
           >
-            <span style={{ color: '#262626', fontSize: 14 }}>访问权限</span>
-            <span style={{ color: '#8c8c8c', fontSize: 13 }}>
-              {publicAccess === '1' ? '空间可见' : '仅自己可见'}
-              <CaretRightOutlined style={{ fontSize: 11, marginLeft: 4 }} />
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  background: 'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontSize: 16,
+                  boxShadow: '0 4px 12px rgba(236, 72, 153, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                  flexShrink: 0
+                }}
+              >
+                <SecurityScanOutlined />
+              </div>
+              <span style={{ color: '#1a2744', fontSize: 15, fontWeight: 500, letterSpacing: '0.03em' }}>访问权限</span>
+            </div>
+            <Switch
+              checked={publicAccess === '1'}
+              onChange={(checked) => setPublicAccess(checked ? '1' : '0')}
+              checkedChildren="空间可见"
+              unCheckedChildren="仅自己可见"
+            />
           </div>
-
-          {/* 可见范围弹窗 */}
-          <Modal
-            centered
-            destroyOnClose
-            open={visibilityModalOpen}
-            title="可见范围"
-            width={420}
-            okText="确定"
-            cancelText="取消"
-            onOk={() => setVisibilityModalOpen(false)}
-            onCancel={() => setVisibilityModalOpen(false)}
-          >
-            <Radio.Group
-              style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '20px 0' }}
-              value={publicAccess}
-              onChange={e => setPublicAccess(e.target.value)}
-            >
-              <Radio value="1">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginLeft: 4 }}>
-                  <div style={{ alignItems: 'center', display: 'flex', gap: 10 }}>
-                    <GlobalOutlined style={{ fontSize: 16 }} />
-                    <span style={{ fontSize: 14, fontWeight: 500 }}>空间</span>
-                  </div>
-                  <div style={{ color: '#8c8c8c', fontSize: 12, paddingLeft: 26 }}>此组织中的所有人都可以查看并参与</div>
-                </div>
-              </Radio>
-              <Radio value="0">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginLeft: 4 }}>
-                  <div style={{ alignItems: 'center', display: 'flex', gap: 10 }}>
-                    <LockOutlined style={{ fontSize: 16 }} />
-                    <span style={{ fontSize: 14, fontWeight: 500 }}>私密</span>
-                  </div>
-                  <div style={{ color: '#8c8c8c', fontSize: 12, paddingLeft: 26 }}>只有你可以查看并参与</div>
-                </div>
-              </Radio>
-            </Radio.Group>
-          </Modal>
         </div>
 
         {/* 推荐问题管理抖幕 */}
@@ -664,6 +663,11 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
               size="small"
               type="primary"
               onClick={() => setBatchModalOpen(true)}
+              style={{
+                background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+                border: 'none',
+                borderRadius: 6
+              }}
             >
               批量添加
             </Button>
@@ -671,21 +675,21 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
           onClose={() => setRecDrawerOpen(false)}
         >
           {recQuestions.length === 0 ? (
-            <div style={{ color: '#bfbfbf', padding: '32px 0', textAlign: 'center' }}>暂无推荐问题</div>
+            <div style={{ color: '#8fa0b5', padding: '32px 0', textAlign: 'center' }}>暂无推荐问题</div>
           ) : (
             recQuestions.map((q, i) => (
               <div
                 key={i}
                 style={{
                   alignItems: 'center',
-                  borderBottom: '1px solid #f5f5f5',
+                  borderBottom: '1px solid rgba(130, 140, 200, 0.08)',
                   display: 'flex',
                   gap: 8,
-                  padding: '10px 0'
+                  padding: '12px 0'
                 }}
               >
-                <span style={{ color: '#bfbfbf', flexShrink: 0, fontSize: 13, width: 24 }}>{i + 1}.</span>
-                <span style={{ flex: 1, fontSize: 13 }}>{q}</span>
+                <span style={{ color: '#8fa0b5', flexShrink: 0, fontSize: 13, width: 24 }}>{i + 1}.</span>
+                <span style={{ flex: 1, fontSize: 13, color: '#3e5068' }}>{q}</span>
                 <AButton
                   danger
                   size="small"
@@ -711,7 +715,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
           onOk={handleBatchAdd}
           onCancel={() => { setBatchModalOpen(false); setBatchText(''); }}
         >
-          <div style={{ color: '#595959', fontSize: 13, marginBottom: 10 }}>
+          <div style={{ color: '#3e5068', fontSize: 13, marginBottom: 12 }}>
             每行一个问题，提交后将批量创建。
           </div>
           <Input.TextArea
@@ -719,41 +723,62 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
             placeholder={`请输入问题，每行一个问题\n例如：\n如何使用这个系统？\n系统支持哪些功能？\n如何导出数据？`}
             value={batchText}
             onChange={e => setBatchText(e.target.value)}
+            style={{
+              borderRadius: 8,
+              border: '1px solid rgba(130, 140, 200, 0.2)'
+            }}
           />
         </Modal>
 
         {/* 右：调试预览 */}
-        <div style={{ background: '#FCFDFF', display: 'flex', flexDirection: 'column' }}>
+        <div
+          style={{
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(248, 250, 255, 0.6) 100%)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
           <SectionHeader icon={headerIcon} title="调试预览" />
-          <div style={{ flex: 1, overflow: 'auto', padding: '16px 24px' }}>
-            <div style={{ color: '#bfbfbf', fontSize: 12, marginBottom: 16, textAlign: 'center' }}>
+          <div style={{ flex: 1, overflow: 'auto', padding: '18px 24px' }}>
+            <div style={{
+              color: '#8fa0b5',
+              fontSize: 12,
+              marginBottom: 18,
+              textAlign: 'center',
+              fontWeight: 500
+            }}>
               ----------- 配置已更新 -----------
             </div>
-            <div style={{ alignItems: 'flex-start', display: 'flex', gap: 8 }}>
+            <div style={{ alignItems: 'flex-start', display: 'flex', gap: 10 }}>
               <div
                 style={{
                   alignItems: 'center',
-                  background: '#fa8c16',
-                  borderRadius: 6,
+                  background: 'linear-gradient(135deg, #fa8c16 0%, #fa541c 100%)',
+                  borderRadius: 8,
                   color: '#fff',
                   display: 'flex',
                   flexShrink: 0,
                   fontSize: 12,
                   fontWeight: 700,
-                  height: 24,
+                  height: 28,
                   justifyContent: 'center',
-                  width: 24
+                  width: 28,
+                  boxShadow: '0 2px 8px rgba(250, 140, 22, 0.3)'
                 }}
               >
                 =
               </div>
               <div
                 style={{
-                  background: '#f5f5f5',
-                  borderRadius: 8,
+                  background: 'rgba(246, 247, 255, 0.8)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: 10,
                   fontSize: 13,
                   lineHeight: 1.7,
-                  padding: '10px 14px'
+                  padding: '12px 16px',
+                  color: '#3e5068',
+                  border: '1px solid rgba(130, 140, 200, 0.1)'
                 }}
               >
                 你好，我是你的{name}，专注于利用先进技术和算法，为你提供实时的股票价格查询和市场行情分析，帮助你做出更明智的投资决策。
@@ -762,23 +787,25 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
           </div>
 
           {/* 推荐问题 + 输入栏 */}
-          <div style={{ padding: '8px 24px 16px' }}>
-            <div style={{ color: '#8c8c8c', fontSize: 12, marginBottom: 8 }}>推荐问题</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+          <div style={{ padding: '10px 24px 18px' }}>
+            <div style={{ color: '#5f7490', fontSize: 12, marginBottom: 10, fontWeight: 500 }}>推荐问题</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
               {RECOMMEND_QUESTIONS.map(q => (
                 <Tag
                   key={q}
                   color="processing"
                   style={{
-                    background: '#f0f5ff',
-                    border: '1px solid #adc6ff',
-                    borderRadius: 6,
-                    color: '#2f54eb',
+                    background: 'linear-gradient(135deg, rgba(91, 124, 247, 0.08) 0%, rgba(112, 145, 250, 0.08) 100%)',
+                    border: '1px solid rgba(91, 124, 247, 0.2)',
+                    borderRadius: 8,
+                    color: '#5b7cf7',
                     cursor: 'pointer',
                     fontSize: 12,
                     margin: 0,
-                    padding: '4px 10px',
-                    width: 'fit-content'
+                    padding: '6px 12px',
+                    width: 'fit-content',
+                    fontWeight: 500,
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   {q}
@@ -788,7 +815,12 @@ const AssistantEditDrawer: React.FC<Props> = ({ agent, groupId: propsGroupId, on
             <Input
               placeholder="请输入问题"
               size="large"
-              suffix={<SendOutlined style={{ color: '#bfbfbf' }} />}
+              suffix={<SendOutlined style={{ color: '#5b7cf7' }} />}
+              style={{
+                borderRadius: 10,
+                border: '1px solid rgba(130, 140, 200, 0.2)',
+                background: 'rgba(255, 255, 255, 0.6)'
+              }}
             />
           </div>
         </div>
@@ -803,30 +835,58 @@ const SectionHeader: React.FC<{ title: string; icon?: React.ReactNode }> = ({ ic
   <div
     style={{
       alignItems: 'center',
-      background: '#FCFDFF',
-      borderBottom: '1px solid #f0f0f0',
+      background: 'linear-gradient(180deg, rgba(248, 250, 255, 0.8) 0%, rgba(246, 247, 255, 0.8) 100%)',
+      backdropFilter: 'blur(8px)',
+      borderBottom: '1px solid rgba(130, 140, 200, 0.12)',
       display: 'flex',
-      gap: 8,
-      height: 40,
-      padding: '0 16px'
+      gap: 10,
+      height: 44,
+      padding: '0 18px'
     }}
   >
     {icon}
-    <span style={{ fontWeight: 500 }}>{title}</span>
+    <span style={{ fontWeight: 600, color: '#3e5068' }}>{title}</span>
   </div>
 );
 
 // 中栏分组小标题
-const GroupTitle: React.FC<{ title: string }> = ({ title }) => (
+const GroupTitle: React.FC<{ title: string; color?: string; icon?: React.ReactNode }> = ({ title, color = '#5b7cf7', icon }) => (
   <div
     style={{
-      background: '#FCFDFF',
-      color: '#595959',
-      fontSize: 13,
-      padding: '8px 16px'
+      background: `linear-gradient(135deg, ${color}08 0%, ${color}04 100%)`,
+      color: '#1a2744',
+      fontSize: 14,
+      fontWeight: 600,
+      padding: '16px 24px',
+      borderBottom: `1px solid ${color}15`,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+      position: 'relative',
+      overflow: 'hidden'
     }}
   >
-    {title}
+    {icon && (
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 10,
+          background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          fontSize: 16,
+          boxShadow: `0 4px 12px ${color}50, inset 0 1px 0 rgba(255, 255, 255, 0.3)`,
+          flexShrink: 0
+        }}
+      >
+        {icon}
+      </div>
+    )}
+    <span style={{ letterSpacing: '0.03em', fontSize: 15 }}>{title}</span>
   </div>
 );
 
@@ -839,31 +899,168 @@ interface CollapseRowProps {
   titleExtra?: React.ReactNode;
   children?: React.ReactNode;
 }
-const CollapseRow: React.FC<CollapseRowProps> = ({ children, extra, onToggle, open, title, titleExtra }) => (
-  <div style={{ borderBottom: '1px solid #f5f5f5' }}>
+const CollapseRow: React.FC<CollapseRowProps> = ({ children, extra, onToggle, open, title, titleExtra }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  
+  return (
+    <div 
+      style={{ 
+        borderBottom: '1px solid rgba(130, 140, 200, 0.08)',
+        transition: 'all 0.2s ease'
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div
+        style={{
+          alignItems: 'center',
+          cursor: 'pointer',
+          display: 'flex',
+          height: 48,
+          padding: '0 20px',
+          transition: 'all 0.2s ease',
+          background: isHovered ? 'rgba(91, 124, 247, 0.03)' : 'transparent'
+        }}
+        onClick={onToggle}
+      >
+        <div
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: 6,
+            background: open ? 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)' : 'rgba(130, 140, 200, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 12,
+            transition: 'all 0.3s ease',
+            boxShadow: open ? '0 2px 8px rgba(91, 124, 247, 0.3)' : 'none'
+          }}
+        >
+          {open ? (
+            <CaretDownOutlined style={{ color: '#fff', fontSize: 10 }} />
+          ) : (
+            <CaretRightOutlined style={{ color: '#8fa0b5', fontSize: 10 }} />
+          )}
+        </div>
+        <span style={{ fontWeight: 500, color: '#1a2744', fontSize: 13 }}>{title}</span>
+        {titleExtra}
+        <span style={{ marginLeft: 'auto' }} onClick={e => e.stopPropagation()}>
+          {extra}
+        </span>
+      </div>
+      {open && children ? (
+        <div 
+          style={{ 
+            paddingBottom: 12,
+            background: 'rgba(248, 250, 255, 0.3)',
+            animation: 'fadeIn 0.3s ease'
+          }}
+        >
+          {children}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+// 工具分组全选标题行
+interface ToolGroupHeaderProps {
+  title: string;
+  count: number;
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: (checked: boolean) => void;
+}
+const ToolGroupHeader: React.FC<ToolGroupHeaderProps> = ({ title, count, checked, indeterminate, onChange }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
     <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         alignItems: 'center',
+        background: hovered ? 'rgba(91, 124, 247, 0.04)' : 'transparent',
+        borderRadius: 6,
         cursor: 'pointer',
         display: 'flex',
-        height: 44,
-        padding: '0 16px'
+        gap: 8,
+        padding: '6px 8px',
+        userSelect: 'none',
+        transition: 'all 0.2s ease',
+        marginBottom: 4
+      }}
+      onClick={() => onChange(!checked)}
+    >
+      <Checkbox
+        checked={checked}
+        indeterminate={indeterminate}
+        onChange={e => onChange(e.target.checked)}
+        onClick={e => e.stopPropagation()}
+      />
+      <span style={{ fontSize: 12, fontWeight: 600, color: '#595959' }}>{title}</span>
+      <span style={{ color: '#bfbfbf', fontSize: 11 }}>({count})</span>
+    </div>
+  );
+};
+
+// 单个工具项行
+interface ToolItemRowProps {
+  name: string;
+  description?: string;
+  selected: boolean;
+  onToggle: () => void;
+}
+const ToolItemRow: React.FC<ToolItemRowProps> = ({ name, description, selected, onToggle }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        alignItems: 'center',
+        background: selected ? 'rgba(91, 124, 247, 0.06)' : hovered ? 'rgba(91, 124, 247, 0.04)' : 'transparent',
+        borderRadius: 6,
+        cursor: 'pointer',
+        display: 'flex',
+        gap: 10,
+        padding: '6px 8px 6px 28px',
+        userSelect: 'none',
+        transition: 'all 0.2s ease'
       }}
       onClick={onToggle}
     >
-      {open ? (
-        <CaretDownOutlined style={{ color: '#8c8c8c', marginRight: 8 }} />
-      ) : (
-        <CaretRightOutlined style={{ color: '#8c8c8c', marginRight: 8 }} />
-      )}
-      <span>{title}</span>
-      {titleExtra}
-      <span style={{ marginLeft: 'auto' }} onClick={e => e.stopPropagation()}>
-        {extra}
-      </span>
+      <Checkbox
+        checked={selected}
+        onChange={() => onToggle()}
+        onClick={e => e.stopPropagation()}
+      />
+      <div style={{
+        alignItems: 'center',
+        background: '#fff7e6',
+        borderRadius: 6,
+        color: '#fa8c16',
+        display: 'flex',
+        height: 24,
+        justifyContent: 'center',
+        width: 24,
+        flexShrink: 0
+      }}>
+        <ThunderboltOutlined style={{ fontSize: 14 }} />
+      </div>
+      <Tooltip title={description || name}>
+        <span style={{
+          color: selected ? '#5b7cf7' : '#1a2744',
+          fontSize: 13,
+          fontWeight: selected ? 500 : 400,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          transition: 'all 0.2s ease'
+        }}>{name}</span>
+      </Tooltip>
     </div>
-    {open && children ? <div style={{ paddingBottom: 8 }}>{children}</div> : null}
-  </div>
-);
+  );
+};
 
 export default AssistantEditDrawer;

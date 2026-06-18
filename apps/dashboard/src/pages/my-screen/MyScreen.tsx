@@ -1,6 +1,6 @@
 import React, {memo, useEffect, useRef, useState} from 'react';
-import {Empty, Input, Modal, Select} from 'antd';
-import { LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import {Empty, Input, Modal, Select, Button} from 'antd';
+import { LeftOutlined, RightOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import {IPage, IProjectInfo} from '../../designer/DesignerType.ts';
 import baseApi from '../../api/BaseApi.ts';
 import {globalMessage} from '../../framework/message/GlobalMessage.tsx';
@@ -25,29 +25,36 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(12);
     const [jumpValue, setJumpValue] = useState('');
+    const [searchKeyword, setSearchKeyword] = useState('');
+
+    const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
 
     const fetchList = (current: number, size: number, keywords?: string) => {
-        const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({current, size, keywords, status: '0', spaceId}).then((data: IPage<IProjectInfo>) => {
             setPageData(data);
         });
     };
 
     const doSearch = (value: string) => {
-        const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
+        setSearchKeyword(value);
         baseApi.getProjectInfoPageList({
-            current: pageData.current,
-            size: pageData.size,
+            current: 1,
+            size: pageSize,
             keywords: value,
             status: '0',
             spaceId,
         }).then((data: IPage<IProjectInfo>) => {
-            setPageData(data);
+            setPageData({...data, current: 1});
+            setCurrentPage(1);
         });
     };
 
+    const handleReset = () => {
+        setSearchKeyword('');
+        doSearch('');
+    };
+
     const pageChange = (page: number, size: number) => {
-        const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({current: page, size, status: '0', spaceId}).then((data: IPage<IProjectInfo>) => {
             setPageData({...data, current: page, size});
             setCurrentPage(page);
@@ -108,48 +115,54 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
         await baseApi.updateProject({id, status: '1'} as IProjectInfo);
         globalMessage.messageApi?.success('已取消发布');
         setUnpublishDialog(false);
-        fetchList(pageData.current, pageData.size);
+        fetchList(currentPage, pageSize, searchKeyword);
     };
 
     useEffect(() => {
         fetchList(pageData.current, pageData.size);
     }, []);
 
-    // 监听主应用空间切换事件，刷新列表
-    useEffect(() => {
-        const handleSpaceChange = () => {
-            setCurrentPage(1);
-            fetchList(1, pageSize);
-        };
-        window.addEventListener('space-change', handleSpaceChange);
-        return () => window.removeEventListener('space-change', handleSpaceChange);
-    }, [pageSize]);
-
     return (
         <div className="project-list-container">
-            <div className="project-list-header">
-                <Input
-                    placeholder="搜索项目"
-                    prefix={<SearchOutlined style={{color: '#a3b3c8'}} />}
-                    allowClear
-                    className="abi-field-input"
-                    onPressEnter={(e) => doSearch((e.target as any).value)}
-                    onChange={(e) => { if (!e.target.value) doSearch(''); }}
-                    style={{width: '12rem'}}
-                />
-            </div>
-            {pageData.records.length > 0 ? (
-                <div className="project-list">
-                    {pageData.records.map(item => (
-                        <MyScreenItem key={item.id} item={item} onUnpublish={handleUnpublish}/>
-                    ))}
+            {/* v5 Searchbar */}
+            <section className="abi-searchbar">
+                <div className="abi-search-row">
+                    <Input 
+                        placeholder="搜索项目名称"
+                        prefix={<SearchOutlined style={{color: '#a3b3c8'}} />}
+                        allowClear
+                        className="abi-field-input"
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                        onPressEnter={(e) => doSearch((e.target as any).value)}
+                        style={{width: '220px'}}
+                    />
+                    <Button type="primary" className="btn-accent-gradient" onClick={() => doSearch(searchKeyword)}>
+                        <SearchOutlined /> 查询
+                    </Button>
+                    <Button className="btn-ghost-v5" onClick={handleReset}>
+                        <ReloadOutlined /> 重置
+                    </Button>
                 </div>
-            ) : (
-                <div className="project-list-empty">
-                    <Empty description="暂无数据"/>
+            </section>
+
+            {/* v5 Data Area */}
+            <section className="abi-data-area">
+                <div className="abi-data-content">
+                    {pageData.records.length > 0 ? (
+                        <div className="project-list">
+                            {pageData.records.map(item => (
+                                <MyScreenItem key={item.id} item={item} onUnpublish={handleUnpublish}/>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="project-list-empty">
+                            <Empty description="暂无已发布的大屏"/>
+                        </div>
+                    )}
                 </div>
-            )}
-            <div className="data-source-pagination">
+
+                <div className="data-source-pagination">
                     <span className="total-text">共 {totalCount} 条</span>
                     <div className="pagination-controls">
                         <Select
@@ -183,6 +196,8 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
                         </span>
                     </div>
                 </div>
+            </section>
+
             <Modal
                 title="确认"
                 open={unpublishDialog}
