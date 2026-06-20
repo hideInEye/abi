@@ -11,6 +11,7 @@ import { useRoute, useRouter } from '~/packages/simple-router/src';
 import { DataCollectionOperateContext } from './context';
 import styles from './index.module.css';
 import BottomSql, { type BottomSqlHandle } from './modules/BottomSql';
+import DesignerRightPanel from './modules/DesignerRightPanel';
 import SqlModeEditor from './modules/SqlModeEditor';
 import BottomTabs from './modules/BottomTabs';
 import { DragBox } from './modules/DragBox';
@@ -98,6 +99,14 @@ export function Component() {
     }
     return resData;
   }, [tableList, dataTableKeyword]);
+
+  /** 右侧面板的字段列表（SQL模式取预览结果，非SQL模式取 allFields） */
+  const panelFields = useMemo(() => {
+    if (collectionData.viewType === 'sql') {
+      return previewData?.data?.fields || [];
+    }
+    return allFields || [];
+  }, [collectionData.viewType, previewData, allFields]);
 
   const getDetail = async () => {
     const res = await getCollectionDetail({
@@ -314,7 +323,7 @@ export function Component() {
             )}
 
               <Splitter
-                style={{ width: '100%', height: '100%' }}
+                style={{ flex: 1, minHeight: 0, height: '100%' }}
                 onResize={(sizes) => {
                   if (sizes && sizes[0]) {
                     setLeftPanelSize(sizes[0]);
@@ -401,13 +410,6 @@ export function Component() {
                         );
                       })}
                     </div>
-                    {/* 收缩按钮 */}
-                    {/* <span
-                      className={`${styles.unfold}`}
-                      onClick={handleToggleUnfold}
-                    >
-                      <LeftOutlined />
-                    </span> */}
                   </div>
                 </Splitter.Panel>
 
@@ -492,73 +494,10 @@ export function Component() {
                   </div>
                 </Splitter.Panel>
 
-                {/* 右侧属性配置面板 */}
-                {/* <Splitter.Panel
-                  collapsible
-                  defaultSize="280"
-                  max="400"
-                  min="200"
-                >
-                  <div className="h-full border-l border-#e5e7eb bg-#fff px-16px py-12px">
-                    <div className="mb-16px text-16px font-500">模式配置</div>
-                    <div className="mb-16px">
-                      <div className="mb-8px text-14px">关联模式</div>
-                      <Select
-                        className="w-full"
-                        mode="multiple"
-                        placeholder="请选择"
-                        value={connectMode}
-                        options={[
-                          { label: '视图关联', value: 1 },
-                          { label: '关联关系', value: 2 },
-                          { label: '快速创建', value: 3 }
-                        ]}
-                        dropdownRender={(menu) => (
-                          <div>
-                            <div className="p-8px">
-                              <Checkbox.Group
-                                className="w-full"
-                                value={connectMode}
-                                onChange={(checkedValues) => setConnectMode(checkedValues as number[])}
-                              >
-                                <div className="grid grid-cols-2 gap-12px">
-                                  <Checkbox value={1}>视图关联</Checkbox>
-                                  <Checkbox value={2}>关联关系</Checkbox>
-                                  <Checkbox value={3}>快速创建</Checkbox>
-                                </div>
-                              </Checkbox.Group>
-                            </div>
-                            <div className="border-t border-#e5e7eb p-8px flex justify-between items-center">
-                              <span className="text-12px text-#666">
-                                选中 {connectMode.length}/3
-                              </span>
-                              <div>
-                                <AButton
-                                  size="small"
-                                  className="mr-8px"
-                                  onClick={() => setConnectMode([])}
-                                >
-                                  仅看选中
-                                </AButton>
-                                <AButton
-                                  type="primary"
-                                  size="small"
-                                  onClick={() => {
-                                    // 关闭下拉框的逻辑由Select自动处理
-                                  }}
-                                >
-                                  高级筛选
-                                </AButton>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        onChange={val => setConnectMode(val)}
-                      />
-                    </div>
-                  </div>
-                </Splitter.Panel> */}
               </Splitter>
+
+              {/* 右侧垂直导航栏 + 维度/指标配置面板 */}
+              <DesignerRightPanel fields={panelFields} />
           </div>
         </ACard>
 

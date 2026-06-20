@@ -188,7 +188,7 @@ export const SpaceEdit = ({ drawerOpen, editSpace, setDrawerOpen, updateSpace }:
 
       {/* Tab content */}
       <div className="sd-v5-tab-content">
-        <AForm form={form}>
+        <AForm form={form} layout="vertical">
           {tabsData[tabActiveIndex].children}
         </AForm>
       </div>

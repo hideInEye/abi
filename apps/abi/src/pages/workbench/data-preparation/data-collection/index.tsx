@@ -180,26 +180,11 @@ export function Component() {
             >
               <ApartmentOutlined style={{ marginRight: 3, fontSize: 12 }} />元数据分析
             </AButton>
-            <Dropdown
-              menu={{
-                items: [
-                  { type: 'divider' },
-                  {
-                    key: 'delete',
-                    danger: true,
-                    label: (
-                      <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.viewId)}>
-                        <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
-                      </APopconfirm>
-                    ),
-                  },
-                ],
-              }}
-            >
+            <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.viewId)}>
               <AButton className="abi-action-link" size="small" variant="link">
-                更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+                <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
               </AButton>
-            </Dropdown>
+            </APopconfirm>
           </div>
         ),
         title: t('common.operate')

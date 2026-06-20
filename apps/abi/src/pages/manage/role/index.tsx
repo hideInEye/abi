@@ -27,10 +27,10 @@ import { getAuthorization, getUserId } from '@/service/request/shared';
 import { getServiceBaseURL } from '@/utils/service';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
-import { useRouter } from '~/packages/simple-router/src/hooks/useRouter';
 
 const RoleOperateDrawer = lazy(() => import('./modules/role-operate-drawer'));
 const RolePermissionDrawer = lazy(() => import('./modules/role-permission-drawer'));
+const RoleAuthDrawer = lazy(() => import('./modules/role-auth-drawer'));
 
 const isHttpProxy = import.meta.env.DEV && import.meta.env.VITE_HTTP_PROXY === 'Y';
 const { apiURL } = getServiceBaseURL(import.meta.env, isHttpProxy);
@@ -50,7 +50,8 @@ export function Component() {
 
   const [visible, setVisible] = useState(false);
   const [roleId, setRoleId] = useState<number>(0);
-  const router = useRouter();
+  const [authDrawerVisible, setAuthDrawerVisible] = useState(false);
+  const [authRoleId, setAuthRoleId] = useState<number>(0);
 
   // Search state
   const [searchRoleName, setSearchRoleName] = useState('');
@@ -172,7 +173,7 @@ export function Component() {
                       {
                         key: 'assignUser',
                         label: (
-                          <span onClick={() => router.push(`/manage/role-auth/${record.roleId}`)}>
+                          <span onClick={() => { setAuthRoleId(record.roleId); setAuthDrawerVisible(true); }}>
                             <UserOutlined style={{ marginRight: 4 }} />分配用户
                           </span>
                         ),
@@ -544,6 +545,14 @@ export function Component() {
         onClose={() => setVisible(false)}
         onSubmit={handDataPermissionSubmit}
       />
+
+      <Suspense>
+        <RoleAuthDrawer
+          roleId={authRoleId}
+          visible={authDrawerVisible}
+          onClose={() => setAuthDrawerVisible(false)}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -1,9 +1,20 @@
-import { DeleteOutlined, DownOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { Dropdown, message } from 'antd';
+import { EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined, DeleteOutlined } from '@ant-design/icons';
+import { message } from 'antd';
 import React, { Suspense } from 'react';
 
 import { enableStatusRecord } from '@/constants/business';
 import { addDeptApi, deleteDeptApi, getDeptInfoApi, getDeptListApi, updateDeptApi } from '@/service/api/dept';
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
+
+// Column definitions for picker
+const ALL_COLUMNS: ColumnOption[] = [
+  { key: 'deptName', label: '机构名称', visible: true },
+  { key: 'deptId', label: '机构编号', visible: true },
+  { key: 'orderNum', label: '排序', visible: true },
+  { key: 'status', label: '状态', visible: true },
+  { key: 'createTime', label: '创建时间', visible: true },
+];
 
 const DeptOperateDrawer = lazy(() => import('./modules/dept-operate-drawer'));
 
@@ -13,6 +24,13 @@ export function Component() {
   const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
   const [searchDeptName, setSearchDeptName] = useState('');
   const [searchStatus, setSearchStatus] = useState<string | undefined>(undefined);
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
+
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
+
+  const visibleKeys = useMemo(() => new Set(columnOptions.filter(c => c.visible).map(c => c.key)), [columnOptions]);
 
   const { columnChecks, data, run, setColumnChecks, tableProps } = useTreeTable({
     apiFn: getDeptListApi as any,
@@ -87,29 +105,15 @@ export function Component() {
               >
                 <PlusOutlined style={{ marginRight: 3, fontSize: 12 }} />新增子级
               </AButton>
-              <Dropdown
-                menu={{
-                  items: [
-                    {
-                      key: 'delete',
-                      danger: true,
-                      label: (
-                        <APopconfirm
-                          title="提示"
-                          description={t('common.confirmDelete')}
-                          onConfirm={() => handleDelete(record.deptId)}
-                        >
-                          <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
-                        </APopconfirm>
-                      ),
-                    },
-                  ],
-                }}
+              <APopconfirm
+                title="提示"
+                description={t('common.confirmDelete')}
+                onConfirm={() => handleDelete(record.deptId)}
               >
                 <AButton className="abi-action-link" size="small" variant="link">
-                  更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+                  <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
                 </AButton>
-              </Dropdown>
+              </APopconfirm>
             </div>
           ),
           title: t('common.operate'),
@@ -140,6 +144,12 @@ export function Component() {
     },
     true
   );
+
+  const filteredColumns = useMemo(() => {
+    const cols = tableProps.columns as any[];
+    if (!cols) return cols;
+    return cols.filter((col: any) => col.key === 'operate' || visibleKeys.has(col.key));
+  }, [tableProps.columns, visibleKeys]);
 
   async function add(parentId: number | string) {
     handleAdd({
@@ -255,6 +265,11 @@ export function Component() {
               批量删除
             </AButton>
           </div>
+          <ViewControls
+            hideViewToggle
+            columns={columnOptions}
+            onColumnToggle={handleColumnToggle}
+          />
         </div>
 
         {/* Table */}
@@ -271,7 +286,7 @@ export function Component() {
           >
             <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
               <ATable
-                columns={tableProps.columns as any}
+                columns={filteredColumns as any}
                 dataSource={tableProps.dataSource}
                 loading={tableProps.loading}
                 pagination={false}

@@ -74,9 +74,6 @@
 .model-table .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td.ant-table-cell-fix-left {
   background: #eef2ff !important;
 }
-.model-table .ant-table-cell-fix-left-last::after {
-  box-shadow: inset 8px 0 8px -6px rgba(130, 140, 200, 0.15) !important;
-}
 
 /* col-first-data extra left padding */
 .model-table .ant-table-thead > tr > th.col-first-data,

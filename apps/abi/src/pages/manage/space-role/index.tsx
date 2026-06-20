@@ -169,7 +169,7 @@ export function Component() {
                   title={t('common.confirmDelete')}
                   onConfirm={() => handleDelete(record.roleId)}
                 >
-                  <AButton className="abi-action-link" size="small" variant="link" danger>
+                  <AButton className="abi-action-link" size="small" variant="link">
                     <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
                   </AButton>
                 </APopconfirm>

@@ -1,5 +1,6 @@
-import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
-import { Dropdown, Empty, Popconfirm, Select, Switch, message } from 'antd';
+import { DeleteOutlined, EditOutlined, LeftOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined, ApartmentOutlined, DownOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Dropdown, Empty, Popconfirm, Select, Spin, Splitter, Switch, message } from 'antd';
+// import PageTitle from '@/components/stateless/common/PageTitle';
 import type { TableProps } from 'antd';
 
 import { Group } from '@/components/stateful/group/Group';
@@ -8,8 +9,20 @@ import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnaly
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
+import { getSpaceId } from '@/store/slice/app';
+import { useAppSelector } from '@/hooks/business/useStore';
+import { fetchAppListApi, deleteAppApi } from '@/service/api/abi-chat-app';
 
 import AssistantEditDrawer, { type AgentMock } from './modules/assistant-edit-drawer';
+
+const MOCK_AGENTS: AgentCard[] = [
+  { id: 1, name: '投资顾问', description: '你是一个投资顾问，专门利用先进的技术和算法，为用户提供实时的股票价格查询和市场行情分析。', iconBg: '#fa8c16', iconLetter: '投', status: '1', createBy: '张三', createTime: '2024-01-15 10:30:00', updateTime: '2024-01-20 14:20:00', groupId: 1, type: '助手' },
+  { id: 2, name: '数据分析师', description: '帮助用户分析业务数据，生成可视化报表和数据洞察。', iconBg: '#1677ff', iconLetter: '数', status: '0', createBy: '李四', createTime: '2024-02-01 09:00:00', updateTime: '2024-02-05 16:45:00', groupId: 1, type: '助手' },
+  { id: 3, name: '文档助手', description: '协助用户快速生成、编辑和优化各类文档内容。', iconBg: '#52c41a', iconLetter: '文', status: '1', createBy: '王五', createTime: '2024-03-10 11:20:00', updateTime: '2024-03-12 08:30:00', groupId: 2, type: '助手' },
+  { id: 4, name: '代码审查', description: '自动审查代码质量，发现潜在 bug 和安全漏洞。', iconBg: '#722ed1', iconLetter: '码', status: '2', createBy: '赵六', createTime: '2024-04-05 15:00:00', updateTime: '2024-04-08 10:10:00', groupId: 2, type: '助手' },
+  { id: 5, name: '会议记录', description: '实时转录会议内容，自动生成会议纪要。', iconBg: '#eb2f96', iconLetter: '会', status: '1', createBy: '孙七', createTime: '2024-05-20 13:45:00', updateTime: '2024-05-22 09:30:00', groupId: 1, type: '助手' },
+  { id: 6, name: '客服机器人', description: '7x24小时自动回复客户咨询，处理常见问题。', iconBg: '#13c2c2', iconLetter: '客', status: '0', createBy: '周八', createTime: '2024-06-01 08:00:00', updateTime: '2024-06-03 17:20:00', groupId: 3, type: '助手' },
+];
 
 /** 助手分组配置，复用通用 Group 组件 */
 const ASSISTANT_GROUP_CONFIG: GroupProps['config'] = {
@@ -23,6 +36,10 @@ const ASSISTANT_GROUP_CONFIG: GroupProps['config'] = {
   type: 'assistant' as any
 };
 
+/**
+ * AI 助手列表页
+ */
+
 interface AgentCard extends AgentMock {
   type: '助手' | '技能';
   iconBg: string;
@@ -34,188 +51,15 @@ interface AgentCard extends AgentMock {
   updateTime?: string;
 }
 
-const MOCK_AGENTS: AgentCard[] = [
-  {
-    createBy: 'admin',
-    createTime: '2024-01-15 10:30:00',
-    updateTime: '2024-01-20 14:20:00',
-    description: '提供股票、指数的实时行情以及历史行情查询，以及市场情况分析、投资知识普及。',
-    groupId: 1,
-    iconBg: '#fa8c16',
-    iconLetter: '=',
-    id: 1,
-    name: '预置勿动_智能投顾助手',
-    selected: true,
-    status: '2',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-16 09:15:00',
-    updateTime: '2024-01-18 16:45:00',
-    description: 'test',
-    groupId: 3,
-    iconBg: '#52c41a',
-    iconLetter: '✦',
-    id: 2,
-    name: 'AutoGen_Sara回归技能模板',
-    type: '技能'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-17 11:20:00',
-    updateTime: '2024-01-19 10:30:00',
-    description: '提供实时股票价格查询和市场行情分析服务。',
-    groupId: 5,
-    iconBg: '#7cb305',
-    iconLetter: '=',
-    id: 3,
-    name: '投顾助手',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-18 14:00:00',
-    updateTime: '2024-01-20 09:15:00',
-    description: '根据提示词创作玄幻小说，包括大章划分和各章节内容概述。',
-    groupId: 4,
-    iconBg: '#722ed1',
-    iconLetter: '=',
-    id: 4,
-    name: '小说生成',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-19 16:30:00',
-    updateTime: '2024-01-21 11:45:00',
-    description: '回答关于金融风控方面的问题。',
-    groupId: 6,
-    iconBg: '#fa541c',
-    iconLetter: '=',
-    id: 5,
-    name: '预置勿动_互联网金融风控答疑助手',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-20 08:45:00',
-    updateTime: '2024-01-22 15:20:00',
-    description: '快速查询宏观经济数据以及图表绘制，提供辅助研究服务。',
-    groupId: 1,
-    iconBg: '#fa8c16',
-    iconLetter: '=',
-    id: 6,
-    name: '预置勿动_宏观研究员助手',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-21 13:15:00',
-    updateTime: '2024-01-23 10:00:00',
-    description: '为您提供全面的 SWOT 公司分析报告，帮助您详细了解指定公司的优势、劣势、机会和威胁。',
-    groupId: 1,
-    iconBg: '#52c41a',
-    iconLetter: '=',
-    id: 7,
-    name: '预置勿动_公司分析助手',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-22 10:00:00',
-    updateTime: '2024-01-24 14:30:00',
-    description: '一名 Excel 全能助手，可以帮助你解决 Excel 相关的问题和提供高效的数据处理方案。',
-    groupId: 2,
-    iconBg: '#13c2c2',
-    iconLetter: '=',
-    id: 8,
-    name: '预置勿动_Excel助手',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-23 15:45:00',
-    updateTime: '2024-01-25 09:30:00',
-    description: '为你生成专业、结构化的中文周报。',
-    groupId: 2,
-    iconBg: '#1677ff',
-    iconLetter: '=',
-    id: 9,
-    name: '预置勿动_周报写作助手',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-24 11:30:00',
-    updateTime: '2024-01-26 16:15:00',
-    description: '解决电脑，手机，打印机，投影仪，路由器等电器问题',
-    groupId: 2,
-    iconBg: '#fa541c',
-    iconLetter: '=',
-    id: 10,
-    name: '预置勿动_电脑助手',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-25 09:00:00',
-    updateTime: '2024-01-27 13:45:00',
-    description: '提供各种与税法相关的帮助和信息',
-    groupId: 1,
-    iconBg: '#722ed1',
-    iconLetter: '=',
-    id: 11,
-    name: '预置勿动_税法助手',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-26 14:20:00',
-    updateTime: '2024-01-28 10:30:00',
-    description: '给代码生成单元测试',
-    groupId: 3,
-    iconBg: '#52c41a',
-    iconLetter: '=',
-    id: 12,
-    name: '预置勿动_开发测试助手',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-27 16:00:00',
-    updateTime: '2024-01-29 11:15:00',
-    description: '一名全能的编程专家，擅长项目设计以及具体的编码。',
-    groupId: 3,
-    iconBg: '#1677ff',
-    iconLetter: '=',
-    id: 13,
-    name: '预置勿动_编程助手',
-    type: '助手'
-  },
-  {
-    createBy: 'admin',
-    createTime: '2024-01-28 10:45:00',
-    updateTime: '2024-01-30 15:00:00',
-    description: '在准确表达原文事实和背景的基础上，进一步润色使得符合中文表达习惯。',
-    groupId: 4,
-    iconBg: '#fa8c16',
-    iconLetter: '=',
-    id: 14,
-    name: '预置勿动_高级翻译助手',
-    type: '助手'
-  }
-];
-
 export function Component() {
+  const spaceId = useAppSelector(getSpaceId);
   const [keyword, setKeyword] = useState('');
   const [editVisible, setEditVisible] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AgentCard | null>(null);
   const [selectedId, setSelectedId] = useState<string | number>(1);
   const [groupId, setGroupId] = useState<number>(0);
-  const [agents, setAgents] = useState<AgentCard[]>(() =>
-    MOCK_AGENTS.map(a => ({ createBy: 'admin', status: '1' as const, ...a }))
-  );
+  const [agents, setAgents] = useState<AgentCard[]>([]);
+  const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
@@ -233,6 +77,15 @@ export function Component() {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
 
+  /** 拉取助手列表（mock） */
+  function fetchList() {
+    setAgents(MOCK_AGENTS);
+  }
+
+  useEffect(() => {
+    fetchList();
+  }, []);
+
   const handleSearch = () => {
     setCurrentPage(1);
   };
@@ -245,9 +98,10 @@ export function Component() {
 
   const list = useMemo(() => {
     let arr = agents;
-    // 按分组过滤
+    // 按分组过滤（过滤后为空则回退全部，避免 Group 自动选择导致空列表）
     if (groupId > 0) {
-      arr = arr.filter(it => it.groupId === groupId);
+      const filtered = arr.filter(it => it.groupId == groupId);
+      arr = filtered.length > 0 ? filtered : arr;
     }
     // 关键字搜索
     const k = keyword.trim();
@@ -388,7 +242,11 @@ export function Component() {
 
   const tableColumns = useMemo(() => {
     const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
-    return allTableColumns!.filter(col => col.key === 'operate' || visibleKeys.has(col.key));
+    return allTableColumns!.filter(col => {
+      if (col.key === 'operate') return true;
+      if (col.key == null) return false;
+      return visibleKeys.has(String(col.key));
+    });
   }, [columnOptions, allTableColumns]);
 
   const handleAdd = () => {
@@ -404,8 +262,10 @@ export function Component() {
 
   /** 开关切换: ON=发布(status='1') OFF=下线(status='2') */
   const handleToggle = (id: AgentCard['id'], checked: boolean) => {
-    setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: checked ? '1' : '2' } : it)));
-    message.success(checked ? '已发布' : '已下线');
+    const nextStatus = checked ? '1' : '2';
+    setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: nextStatus } : it)));
+    // TODO: 接口对接：待后端提供更新状态接口后替换
+    message.success(String(checked ? '已发布' : '已下线'));
   };
 
   const handleDelete = (id: AgentCard['id']) => {
@@ -426,6 +286,7 @@ export function Component() {
   };
 
   const rowSelection: TableProps<AgentCard>['rowSelection'] = {
+    columnWidth: 48,
     fixed: true,
     selectedRowKeys: checkedRowKeys,
     onChange: (keys, rows) => {
@@ -572,14 +433,18 @@ export function Component() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      {/* v5 Tree Panel — left sidebar */}
-      <div className="abi-group-sidebar">
-        <Group config={ASSISTANT_GROUP_CONFIG} onGroupId={setGroupId} />
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <Splitter style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {/* v5 Tree Panel — left sidebar */}
+        <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
+          <div className="abi-group-sidebar" style={{ height: '100%' }}>
+            <Group config={ASSISTANT_GROUP_CONFIG} onGroupId={setGroupId} />
+          </div>
+        </Splitter.Panel>
 
-      {/* Right content area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        {/* Right content area */}
+        <Splitter.Panel>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
         {/* v5 Searchbar */}
         <section className="abi-searchbar">
           <div className="abi-search-row">
@@ -634,7 +499,8 @@ export function Component() {
             />
           </div>
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-            {list.length === 0 ? (
+            <Spin spinning={loading}>
+            {list.length === 0 && !loading ? (
               <div style={{ marginTop: 80 }}>
                 <Empty description="暂无助手" />
               </div>
@@ -664,6 +530,7 @@ export function Component() {
             ) : (
               renderCardGrid()
             )}
+            </Spin>
           </div>
           <div className="data-source-pagination">
             <span className="total-text">共 {totalCount} 条</span>
@@ -701,7 +568,9 @@ export function Component() {
             </div>
           </div>
         </section>
-      </div>
+          </div>
+        </Splitter.Panel>
+      </Splitter>
 
       <AssistantEditDrawer
         visible={editVisible}

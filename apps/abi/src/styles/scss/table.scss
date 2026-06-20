@@ -344,10 +344,7 @@
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td.ant-table-cell-fix-left {
     background: #eef2ff !important;
   }
-  // 固定列右侧阴影，创建视觉分隔
-  .ant-table-cell-fix-left-last::after {
-    box-shadow: inset 8px 0 8px -6px rgba(130, 140, 200, 0.15) !important;
-  }
+
   // 第一个非固定列增加左内边距，与复选框列保持距离
   .ant-table-thead > tr > th.col-biz-name,
   .ant-table-tbody > tr > td.col-biz-name {
@@ -395,10 +392,7 @@
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td.ant-table-cell-fix-left {
     background: #eef2ff !important;
   }
-  // 固定列右侧阴影
-  .ant-table-cell-fix-left-last::after {
-    box-shadow: inset 8px 0 8px -6px rgba(130, 140, 200, 0.15) !important;
-  }
+
   // 第一个非固定列增加左内边距，与复选框列保持距离
   .ant-table-thead > tr > th:nth-child(2),
   .ant-table-tbody > tr > td:nth-child(2) {
@@ -446,10 +440,7 @@
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td.ant-table-cell-fix-left {
     background: #eef2ff !important;
   }
-  // 固定列右侧阴影
-  .ant-table-cell-fix-left-last::after {
-    box-shadow: inset 8px 0 8px -6px rgba(130, 140, 200, 0.15) !important;
-  }
+
   // 第一个非固定列增加左内边距
   .ant-table-thead > tr > th:nth-child(2),
   .ant-table-tbody > tr > td:nth-child(2) {
@@ -497,10 +488,7 @@
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td.ant-table-cell-fix-left {
     background: #eef2ff !important;
   }
-  // 固定列右侧阴影
-  .ant-table-cell-fix-left-last::after {
-    box-shadow: inset 8px 0 8px -6px rgba(130, 140, 200, 0.15) !important;
-  }
+
   // 第一个非固定列增加左内边距
   .ant-table-thead > tr > th:nth-child(2),
   .ant-table-tbody > tr > td:nth-child(2) {
@@ -557,10 +545,7 @@
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td.ant-table-cell-fix-left {
     background: #eef2ff !important;
   }
-  // 固定列右侧阴影，创建视觉分隔
-  .ant-table-cell-fix-left-last::after {
-    box-shadow: inset 8px 0 8px -6px rgba(130, 140, 200, 0.15) !important;
-  }
+
   // 第一个非固定列增加左内边距，与复选框列保持距离
   .ant-table-thead > tr > th.col-assistant-name,
   .ant-table-tbody > tr > td.col-assistant-name {
@@ -608,10 +593,7 @@
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td.ant-table-cell-fix-left {
     background: #eef2ff !important;
   }
-  // 固定列右侧阴影
-  .ant-table-cell-fix-left-last::after {
-    box-shadow: inset 8px 0 8px -6px rgba(130, 140, 200, 0.15) !important;
-  }
+
   // 第一个非固定列增加左内边距
   .ant-table-thead > tr > th.col-menu-name,
   .ant-table-tbody > tr > td.col-menu-name {
@@ -2340,10 +2322,8 @@
 .abi-attr-modeling-tabs {
   > .ant-tabs-nav {
     margin-bottom: 0;
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95) 0%, rgba(250, 251, 255, 0.85) 100%);
-    backdrop-filter: blur(12px);
+    background: var(--abi-card-bg);
     border-bottom: 1px solid rgba(130, 140, 200, 0.08);
-    box-shadow: 0 2px 8px rgba(91, 124, 247, 0.04);
 
     &::before {
       display: none;
@@ -3163,9 +3143,7 @@
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td.ant-table-cell-fix-left {
     background: #eef2ff !important;
   }
-  .ant-table-cell-fix-left-last::after {
-    box-shadow: inset 8px 0 8px -6px rgba(130, 140, 200, 0.15) !important;
-  }
+
 
   // 选中行高亮
   .ant-table-tbody > tr.ant-table-row-selected > td {
@@ -4216,6 +4194,9 @@
   min-width: 0;
   padding: 24px 28px;
   overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .sd-v5-field-hint {

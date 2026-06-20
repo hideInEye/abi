@@ -477,6 +477,7 @@ export function Component() {
                     className="skills-table abi-std-table"
                     scroll={pagedList.length > 0 ? { x: 'max-content' } : undefined}
                     rowSelection={{
+                      columnWidth: 48,
                       fixed: true,
                       selectedRowKeys,
                       onChange: (keys) => setSelectedRowKeys(keys),

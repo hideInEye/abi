@@ -7,7 +7,7 @@ import {
   VerticalLeftOutlined,
   VerticalRightOutlined,
 } from '@ant-design/icons';
-import { Button, Dropdown, InputNumber, Select, Spin, Tabs, message } from 'antd';
+import { Button, Dropdown, Input, InputNumber, Select, Spin, Tabs, message } from 'antd';
 import type { Dispatch } from 'react';
 import React, { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
 
@@ -116,10 +116,48 @@ const BottomSql = forwardRef<BottomSqlHandle, PropsType>(
       if (activeKey === key) setActiveKey(newTabs.at(-1)?.key || '');
     };
 
+    const [jumpValue, setJumpValue] = useState('');
+
     const iconCls = (disabled: boolean) =>
           disabled ? `${styles['page-icon']} ${styles['page-icon-disabled']}` : styles['page-icon'];
 
-    /** 分页导航 */
+    /** 底部分页（页码按钮） */
+    const renderPageNumbers = () => {
+      const pages: (number | string)[] = [];
+      const maxVisible = 5;
+      if (totalPages <= maxVisible) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+      } else if (pagination.pageNo <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...', totalPages);
+      } else if (pagination.pageNo >= totalPages - 2) {
+        pages.push(1, '...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1, '...');
+        pages.push(pagination.pageNo - 1, pagination.pageNo, pagination.pageNo + 1);
+        pages.push('...', totalPages);
+      }
+      return pages.map((page, idx) => {
+        if (page === '...') return <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">...</span>;
+        const isActive = page === pagination.pageNo;
+        return (
+          <span key={page} className={`page-item ${isActive ? 'page-active' : ''}`} onClick={() => goPage(page as number)}>
+            {page}
+          </span>
+        );
+      });
+    };
+
+    const handleJump = () => {
+      const page = parseInt(jumpValue, 10);
+      if (!isNaN(page) && page >= 1 && page <= totalPages) {
+        goPage(page);
+        setJumpValue('');
+      }
+    };
+
+    /** 顶部工具栏分页导航 */
     const renderPagination = () => (
       <div className={styles['bottom-sql-toolbar-group']}>
         <VerticalRightOutlined className={iconCls(isFirst)} onClick={() => !isFirst && goPage(1)} />
@@ -145,6 +183,45 @@ const BottomSql = forwardRef<BottomSqlHandle, PropsType>(
           onChange={handlePageSizeChange}
         />
         <Button type="link" size="small" style={{ color: '#3467FF' }}>总数：{activeTab?.total}</Button>
+      </div>
+    );
+
+    /** 底部分页栏（与数据源列表风格一致） */
+    const renderBottomPagination = () => (
+      <div className="data-source-pagination" style={{ padding: '10px 12px', flexShrink: 0 }}>
+        <span className="total-text">共 {activeTab?.total || 0} 条</span>
+        <div className="pagination-controls">
+          <ASelect
+            value={pagination.pageSize}
+            onChange={(val: any) => handlePageSizeChange(val)}
+            options={PAGE_SIZE_OPTIONS.map(o => ({ label: `${o.value}条/页`, value: o.value }))}
+            className="page-size-select"
+          />
+          <button className="page-btn" disabled={isFirst} onClick={() => goPage(1)}>
+            <VerticalRightOutlined style={{ fontSize: 11 }} />
+          </button>
+          <button className="page-btn" disabled={isFirst} onClick={() => goPage(pagination.pageNo - 1)}>
+            <LeftOutlined />
+          </button>
+          {renderPageNumbers()}
+          <button className="page-btn" disabled={isLast} onClick={() => goPage(pagination.pageNo + 1)}>
+            <RightOutlined />
+          </button>
+          <button className="page-btn" disabled={isLast} onClick={() => goPage(totalPages)}>
+            <VerticalLeftOutlined style={{ fontSize: 11 }} />
+          </button>
+          <span className="quick-jumper">
+            前往
+            <AInput
+              className="jump-input"
+              style={{ width: 48, textAlign: 'center' }}
+              value={jumpValue}
+              onChange={(e: any) => setJumpValue(e.target.value)}
+              onPressEnter={handleJump}
+            />
+            页
+          </span>
+        </div>
       </div>
     );
     
@@ -198,6 +275,8 @@ const BottomSql = forwardRef<BottomSqlHandle, PropsType>(
             <div className={styles['bottom-sql-empty']}>暂无数据，请先执行 SQL</div>
           )}
         </div>
+
+        {activeTab && renderBottomPagination()}
       </div>
     );
   },

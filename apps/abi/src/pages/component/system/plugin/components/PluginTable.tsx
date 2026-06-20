@@ -72,6 +72,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
   };
 
   const rowSelection: TableProps<any>['rowSelection'] = {
+    columnWidth: 48,
     fixed: true,
     selectedRowKeys: checkedRowKeys,
     onChange: (keys, rows) => {

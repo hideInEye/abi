@@ -266,7 +266,7 @@ function extractSkillName(fileName: string) {
           </div>
         </div>
       }
-      width={640}
+      width={800}
       destroyOnClose
       closeIcon={null}
       footer={

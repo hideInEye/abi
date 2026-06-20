@@ -6,7 +6,7 @@ import { Group } from '@/components/stateful/group/Group.tsx';
 import { pluginGroupConfig } from '../constans/pluginGroupConfig';
 
 interface PluginGroupProps {
-  readonly onGroupId: (groupId: number) => void;
+  readonly onGroupId: (groupId: number, groupName?: string, groupType?: string) => void;
 }
 
 export const PluginGroup: React.FC<PluginGroupProps> = ({ onGroupId }) => {

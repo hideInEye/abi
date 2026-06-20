@@ -99,7 +99,6 @@ export const SpaceBasicInfo = ({ editSpace }: SpaceBasicInfoProps) => {
                   <span className="sd-v5-label-required" />
                 </span>
               }
-              layout="vertical"
               name="spaceName"
               className="sd-v5-form-item"
               rules={[{ message: '请输入空间名称', required: true }]}
@@ -125,10 +124,8 @@ export const SpaceBasicInfo = ({ editSpace }: SpaceBasicInfoProps) => {
                   空间描述
                 </span>
               }
-              layout="vertical"
               name="remark"
               className="sd-v5-form-item"
-              style={{ marginTop: 16 }}
               rules={[{ message: '请输入空间描述' }]}
               extra={
                 <span className="sd-v5-field-hint">

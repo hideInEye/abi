@@ -98,25 +98,11 @@ export function Component() {
                   <ExceptionOutlined style={{ marginRight: 3, fontSize: 12 }} />查看错误
                 </AButton>
               )}
-              <Dropdown
-                menu={{
-                  items: [
-                    {
-                      key: 'delete',
-                      danger: true,
-                      label: (
-                        <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => handleDelete(record.jobLogId)}>
-                          <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
-                        </APopconfirm>
-                      ),
-                    },
-                  ],
-                }}
-              >
+              <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => handleDelete(record.jobLogId)}>
                 <AButton className="abi-action-link" size="small" variant="link">
-                  更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+                  <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
                 </AButton>
-              </Dropdown>
+              </APopconfirm>
             </div>
           ),
           title: t('common.operate'),

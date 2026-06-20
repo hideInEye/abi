@@ -16,6 +16,25 @@ import WorkbenchEmpty from '@/components/stateless/common/WorkbenchEmpty'
 
 import { $t } from '@/locales';
 import { useMixMenuContext } from '@/hooks/common/menu'
+import { useRouterPush } from '@/hooks/common/routerPush'
+
+// 在菜单树中查找（支持短格式 key）
+function findInMenuTree(menuList: any[], key: string): any {
+  for (const m of menuList) {
+    if (m?.key === key) return m;
+    if (m?.children?.length) {
+      const found = findInMenuTree(m.children, key);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// 获取第一个叶子菜单
+function getFirstLeafMenu(menu: any): any {
+  if (!menu?.children?.length) return menu;
+  return getFirstLeafMenu(menu.children[0]);
+}
 
 interface Props {
   /** Show padding for content */
@@ -34,6 +53,9 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   const currentOutlet = useOutlet()
   const route = useRoute()
   const { push } = useRouter()
+  const routerPush = useRouterPush();
+  const routerPushRef = useRef(routerPush);
+  routerPushRef.current = routerPush;
   const location = useLocation()
   const aliveRef = useKeepAliveRef()
 
@@ -131,18 +153,6 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
     // 构建路径段列表（最后一段用处理后的菜单段名）
     const menuSegs = pathSegs.map((seg, i) => i === pathSegs.length - 1 ? lastMenuSeg : seg);
 
-    // 在菜单树中查找（支持短格式 key，如 data-preparation 而非 workbench_data-preparation）
-    const findInMenuTree = (menuList: any[], key: string): any => {
-      for (const m of menuList) {
-        if (m?.key === key) return m;
-        if (m?.children?.length) {
-          const found = findInMenuTree(m.children, key);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
     // 逐级构建面包屑，在每一级尝试多种 key 格式
     const items: { label: any; key: string }[] = [];
     for (let i = 0; i < menuSegs.length; i++) {
@@ -196,9 +206,18 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
               transition: 'color 0.2s'
             }}
             onClick={() => {
-              if (!isLast) {
-                push(path);
+              if (isLast) return;
+
+              const menuItem = findInMenuTree(menus, item.key);
+              if (menuItem?.children?.length) {
+                const firstLeaf = getFirstLeafMenu(menuItem);
+                if (firstLeaf?.key) {
+                  routerPushRef.current.routerPushByKeyWithMetaQuery(firstLeaf.key);
+                  return;
+                }
               }
+
+              push(path);
             }}
             onMouseEnter={(e) => {
               if (!isLast) {

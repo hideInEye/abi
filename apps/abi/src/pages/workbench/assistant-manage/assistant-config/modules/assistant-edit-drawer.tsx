@@ -14,18 +14,25 @@ import {
   SettingOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons';
-import { Button, Drawer, Input, Modal, Radio, Switch, Tag, message } from 'antd';
-import React, { useMemo, useState } from 'react';
+import { Button, Checkbox, Drawer, Input, Modal, Radio, Spin, Switch, Tag, Tooltip, message } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+
+import { queryToolListApi } from '@/service/api/tool';
+import type { ToolItem } from '@/service/api/tool';
+import { queryMcpList } from '@/service/api/pulg';
+import { getSpaceId } from '@/store/slice/app';
+import { useAppSelector } from '@/hooks/business/useStore';
+import React from 'react';
 
 /**
  * 助手新增/编辑 - 全屏 Drawer
- * 静态页面：左（助手画像）/ 中（基础配置 / 知识 / 能力）/ 右（调试预览）
- * 后期接入接口时只需替换 mock 与事件回调。
+ * 左（助手画像）/ 中（基础配置 / 知识 / 能力）/ 右（调试预览）
  */
 
 interface Props {
   visible?: boolean;
   agent?: AgentMock | null;
+  groupId?: number;
   onClose: (refresh?: boolean) => void;
 }
 
@@ -36,9 +43,14 @@ export interface AgentMock {
   iconLetter?: string;
   description?: string;
   prompt?: string;
+  groupId?: number | string;
   /** status: '0'草稿 | '1'发布 | '2'下线 */
   status?: '0' | '1' | '2';
 }
+
+// ── 工具选择 ──
+type ToolGroupKey = 'mcp' | 'builtin';
+type ToolOption = { id: string; name: string; group: ToolGroupKey; description?: string };
 
 // 默认提示词模板（图片中的"投资顾问"prompt）
 const DEFAULT_PROMPT = `## 角色
@@ -58,14 +70,8 @@ const DEFAULT_PROMPT = `## 角色
 
 ## 限制
 - 仅提供与股票市场相关的信息和分析，不涉及其他类型的投资，如债券、期货、外汇等。
-- 所有提供的数据和分析仅供参考，不构成具体的投资建议。
+- 所有提供的数据和分析仅供参考，不构成具体的投资建议。s
 - 不能提供实时交易或交易执行服务，仅限于提供信息和分析。`;
-
-// 工具 mock
-const TOOL_LIST = [
-  { id: 't1', name: 'GDP', iconBg: 'linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%)', iconColor: '#fa8c16' },
-  { id: 't2', name: '股票实时行情', iconBg: 'linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%)', iconColor: '#fa8c16' }
-];
 
 // 推荐问题
 const RECOMMEND_QUESTIONS = [
@@ -77,10 +83,13 @@ const RECOMMEND_QUESTIONS = [
 // 折叠面板分组
 type SectionKey = 'model' | 'opening' | 'semanticKnowledge' | 'ontologyNetwork' | 'mcpTools' | 'builtinTools' | 'skills' | 'questions';
 
-const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, onClose }) => {
+const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: propsGroupId, onClose }) => {
+  const spaceId = useAppSelector(getSpaceId);
+  const isEdit = !!agent?.id;
   const [name, setName] = useState<string>(agent?.name || '投资顾问');
   const [editingName, setEditingName] = useState(false);
-  const [prompt, setPrompt] = useState<string>(agent?.prompt || DEFAULT_PROMPT);
+  const [prompt, setPrompt] = useState<string>(agent?.prompt || '');
+  const [description, setDescription] = useState<string>(agent?.description || '');
   // status: '0'草稿 '1'发布 '2'下线
   const [status, setStatus] = useState<'0' | '1' | '2'>(agent?.status || '0');
   // 调试模式 enable_debug: '0'禁用 '1'启用
@@ -88,12 +97,10 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, onClose 
   // 公开访问 public_access: '0'关闭(私密) '1'开启(空间可见)
   const [publicAccess, setPublicAccess] = useState<'0' | '1'>('1');
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [saving, setSaving] = useState(false);
   // rec_query 推荐问题列表
-  const [recQuestions, setRecQuestions] = useState<string[]>([
-    '如何查询特定股票的实时价格和交易量？',
-    '市场行情有哪些重要的经济数据和事件需要关注？',
-    '你能提供哪些投资策略和建议来应对当前的市场行情？'
-  ]);
+  const [recQuestions, setRecQuestions] = useState<string[]>([]);
   const [recDrawerOpen, setRecDrawerOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [batchText, setBatchText] = useState('');
@@ -112,6 +119,135 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, onClose 
     setRecQuestions(prev => prev.filter((_, i) => i !== index));
   };
 
+  // ── 工具选择 ──
+
+  const [mcpTools, setMcpTools] = useState<ToolOption[]>([]);
+  const [builtinTools, setBuiltinTools] = useState<ToolOption[]>([]);
+  const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set());
+  const [loadingTools, setLoadingTools] = useState(false);
+
+  /** 加载助手详情（mock：从 agent prop 读取） */
+  function loadDetail() {
+    if (!agent) return;
+    setName(agent.name || '投资顾问');
+    setPrompt(agent.prompt || DEFAULT_PROMPT);
+    setDescription(agent.description || '');
+    setStatus(agent.status || '0');
+  }
+
+  useEffect(() => {
+    if (agent?.id) loadDetail();
+  }, [agent]);
+
+  /** 构建提交数据 */
+  function buildPayload(overrideStatus?: string) {
+    const toolConfigs = Array.from(selectedToolIds).map(id => {
+      const [group, ...rest] = id.split('_');
+      const toolId = rest.join('_');
+      return {
+        toolType: group === 'mcp' ? '2' : '1',
+        toolConfig: [{ type: 'tool', id: Number(toolId) || toolId }]
+      };
+    });
+    const payload: any = {
+      appName: name,
+      spaceId,
+      groupId: isEdit ? (agent?.groupId ?? 0) : (propsGroupId ?? 0),
+      description,
+      appPrompt: prompt,
+      prologue: '',
+      recQuery: recQuestions,
+      status: overrideStatus ?? status,
+      enableDebug: enableDebug ? '1' : '0',
+      publicAccess,
+      tools: toolConfigs,
+    };
+    if (isEdit && agent?.id) {
+      payload.appId = agent.id;
+    }
+    return payload;
+  }
+
+  /** 保存：状态设为草稿（mock） */
+  const handleSave = async () => {
+    setSaving(true);
+    await new Promise(r => setTimeout(r, 300));
+    setStatus('0');
+    message.success('已保存为草稿');
+    onClose(true);
+    setSaving(false);
+  };
+
+  /** 上线：状态设为发布（mock） */
+  const handlePublish = async () => {
+    setSaving(true);
+    await new Promise(r => setTimeout(r, 300));
+    setStatus('1');
+    message.success('已上线，状态设为发布');
+    onClose(true);
+    setSaving(false);
+  };
+
+  async function fetchToolGroups() {
+    setLoadingTools(true);
+    try {
+      const [mcpRes, builtinRes]: any[] = await Promise.all([
+        queryMcpList({ pageNo: 1, pageSize: 200 }),
+        queryToolListApi({})
+      ]);
+      const mcpPayload = mcpRes?.response?.data?.data?.data ?? {};
+      const mcpItems: any[] = mcpPayload.pageItems ?? [];
+      setMcpTools(mcpItems.map((m: any) => ({
+        id: `mcp_${m.id}`,
+        name: m.name || m.pluginName || '-',
+        group: 'mcp' as ToolGroupKey,
+        description: m.description || ''
+      })));
+      const bRows = builtinRes?.response?.data?.data || builtinRes?.data?.data || builtinRes?.data || [];
+      const bList: ToolItem[] = Array.isArray(bRows) ? bRows : [];
+      setBuiltinTools(bList.map(t => ({
+        id: `builtin_${t.toolId}`,
+        name: t.toolName || '-',
+        group: 'builtin' as ToolGroupKey,
+        description: t.description || ''
+      })));
+    } catch {
+      setMcpTools([]);
+      setBuiltinTools([]);
+    } finally {
+      setLoadingTools(false);
+    }
+  }
+
+  useEffect(() => { fetchToolGroups(); }, []);
+
+  const allToolOptions = useMemo(() => [...mcpTools, ...builtinTools], [mcpTools, builtinTools]);
+
+  function handleGroupCheck(group: ToolGroupKey, checked: boolean) {
+    const ids = allToolOptions.filter(t => t.group === group).map(t => t.id);
+    setSelectedToolIds(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => checked ? next.add(id) : next.delete(id));
+      return next;
+    });
+  }
+  function handleToolCheck(id: string, checked: boolean) {
+    setSelectedToolIds(prev => {
+      const next = new Set(prev);
+      checked ? next.add(id) : next.delete(id);
+      return next;
+    });
+  }
+  function isGroupAllChecked(group: ToolGroupKey) {
+    const items = allToolOptions.filter(t => t.group === group);
+    return items.length > 0 && items.every(t => selectedToolIds.has(t.id));
+  }
+  function isGroupIndeterminate(group: ToolGroupKey) {
+    const items = allToolOptions.filter(t => t.group === group);
+    const c = items.filter(t => selectedToolIds.has(t.id)).length;
+    return c > 0 && c < items.length;
+  }
+
   const [openMap, setOpenMap] = useState<Record<SectionKey, boolean>>({
     semanticKnowledge: false,
     model: false,
@@ -124,20 +260,6 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, onClose 
   });
 
   const toggle = (key: SectionKey) => setOpenMap(p => ({ ...p, [key]: !p[key] }));
-
-  /** 保存：状态设为草稿 */
-  const handleSave = () => {
-    setStatus('0');
-    message.success('已保存为草稿');
-    // TODO: 接口对接：create/update 传 status='0'
-  };
-
-  /** 上线：状态设为发布 */
-  const handlePublish = () => {
-    setStatus('1');
-    message.success('已上线，状态设为发布');
-    // TODO: 接口对接：create/update 传 status='1'
-  };
 
   const headerIcon = useMemo(
     () => (
@@ -176,6 +298,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, onClose 
       headerStyle={{ display: 'none' }}
       onClose={() => onClose(false)}
     >
+      <Spin spinning={loadingDetail}>
       {/* 顶部栏 */}
       <div
         style={{
@@ -237,6 +360,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, onClose 
             保存
           </Button>
           <Button
+            loading={saving}
             type="primary"
             onClick={handlePublish}
             style={{
@@ -350,71 +474,53 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, onClose 
             title="MCP"
             onToggle={() => toggle('mcpTools')}
           >
-            {TOOL_LIST.slice(0, 1).map(it => (
-              <div
-                key={it.id}
-                style={{
-                  alignItems: 'center',
-                  display: 'flex',
-                  gap: 12,
-                  padding: '10px 24px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div
-                  style={{
-                    alignItems: 'center',
-                    background: it.iconBg,
-                    borderRadius: 8,
-                    color: it.iconColor,
-                    display: 'flex',
-                    height: 28,
-                    justifyContent: 'center',
-                    width: 28,
-                    boxShadow: '0 2px 6px rgba(250, 140, 22, 0.2)'
-                  }}
-                >
-                  <ThunderboltOutlined style={{ fontSize: 14 }} />
-                </div>
-                <span style={{ fontWeight: 500 }}>{it.name}</span>
-              </div>
-            ))}
-          </CollapseRow>
-          <CollapseRow
-            extra={<PlusOutlined style={{ color: '#5b7cf7' }} />}
-            open={openMap.builtinTools}
-            title="工具"
-            onToggle={() => toggle('builtinTools')}
-          >
-            {TOOL_LIST.slice(1).map(it => (
-              <div
-                key={it.id}
-                style={{
-                  alignItems: 'center',
-                  display: 'flex',
-                  gap: 12,
-                  padding: '10px 24px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div
-                  style={{
-                    alignItems: 'center',
-                    background: it.iconBg,
-                    borderRadius: 8,
-                    color: it.iconColor,
-                    display: 'flex',
-                    height: 28,
-                    justifyContent: 'center',
-                    width: 28,
-                    boxShadow: '0 2px 6px rgba(250, 140, 22, 0.2)'
-                  }}
-                >
-                  <ThunderboltOutlined style={{ fontSize: 14 }} />
-                </div>
-                <span style={{ fontWeight: 500 }}>{it.name}</span>
-              </div>
-            ))}
+            {/* MCP工具分组 */}
+            <div style={{ padding: '4px 24px 8px' }}>
+              <ToolGroupHeader
+                checked={isGroupAllChecked('mcp')}
+                count={mcpTools.length}
+                indeterminate={isGroupIndeterminate('mcp')}
+                title="MCP工具"
+                onChange={checked => handleGroupCheck('mcp', checked)}
+              />
+              {mcpTools.length === 0 ? (
+                <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无MCP工具</div>
+              ) : (
+                mcpTools.map(item => (
+                  <ToolItemRow
+                    key={item.id}
+                    description={item.description}
+                    name={item.name}
+                    selected={selectedToolIds.has(item.id)}
+                    onToggle={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
+                  />
+                ))
+              )}
+            </div>
+
+            {/* 内置工具分组 */}
+            <div style={{ padding: '4px 24px 8px' }}>
+              <ToolGroupHeader
+                checked={isGroupAllChecked('builtin')}
+                count={builtinTools.length}
+                indeterminate={isGroupIndeterminate('builtin')}
+                title="内置工具"
+                onChange={checked => handleGroupCheck('builtin', checked)}
+              />
+              {builtinTools.length === 0 ? (
+                <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无内置工具</div>
+              ) : (
+                builtinTools.map(item => (
+                  <ToolItemRow
+                    key={item.id}
+                    description={item.description}
+                    name={item.name}
+                    selected={selectedToolIds.has(item.id)}
+                    onToggle={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
+                  />
+                ))
+              )}
+            </div>
           </CollapseRow>
 
           <CollapseRow
@@ -719,6 +825,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, onClose 
           </div>
         </div>
       </div>
+      </Spin>
     </Drawer>
   );
 };
@@ -853,6 +960,105 @@ const CollapseRow: React.FC<CollapseRowProps> = ({ children, extra, onToggle, op
           {children}
         </div>
       ) : null}
+    </div>
+  );
+};
+
+// 工具分组全选标题行
+interface ToolGroupHeaderProps {
+  title: string;
+  count: number;
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: (checked: boolean) => void;
+}
+const ToolGroupHeader: React.FC<ToolGroupHeaderProps> = ({ title, count, checked, indeterminate, onChange }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        alignItems: 'center',
+        background: hovered ? 'rgba(91, 124, 247, 0.04)' : 'transparent',
+        borderRadius: 6,
+        cursor: 'pointer',
+        display: 'flex',
+        gap: 8,
+        padding: '6px 8px',
+        userSelect: 'none',
+        transition: 'all 0.2s ease',
+        marginBottom: 4
+      }}
+      onClick={() => onChange(!checked)}
+    >
+      <Checkbox
+        checked={checked}
+        indeterminate={indeterminate}
+        onChange={e => onChange(e.target.checked)}
+        onClick={e => e.stopPropagation()}
+      />
+      <span style={{ fontSize: 12, fontWeight: 600, color: '#595959' }}>{title}</span>
+      <span style={{ color: '#bfbfbf', fontSize: 11 }}>({count})</span>
+    </div>
+  );
+};
+
+// 单个工具项行
+interface ToolItemRowProps {
+  name: string;
+  description?: string;
+  selected: boolean;
+  onToggle: () => void;
+}
+const ToolItemRow: React.FC<ToolItemRowProps> = ({ name, description, selected, onToggle }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        alignItems: 'center',
+        background: selected ? 'rgba(91, 124, 247, 0.06)' : hovered ? 'rgba(91, 124, 247, 0.04)' : 'transparent',
+        borderRadius: 6,
+        cursor: 'pointer',
+        display: 'flex',
+        gap: 10,
+        padding: '6px 8px 6px 28px',
+        userSelect: 'none',
+        transition: 'all 0.2s ease'
+      }}
+      onClick={onToggle}
+    >
+      <Checkbox
+        checked={selected}
+        onChange={() => onToggle()}
+        onClick={e => e.stopPropagation()}
+      />
+      <div style={{
+        alignItems: 'center',
+        background: '#fff7e6',
+        borderRadius: 6,
+        color: '#fa8c16',
+        display: 'flex',
+        height: 24,
+        justifyContent: 'center',
+        width: 24,
+        flexShrink: 0
+      }}>
+        <ThunderboltOutlined style={{ fontSize: 14 }} />
+      </div>
+      <Tooltip title={description || name}>
+        <span style={{
+          color: selected ? '#5b7cf7' : '#1a2744',
+          fontSize: 13,
+          fontWeight: selected ? 500 : 400,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          transition: 'all 0.2s ease'
+        }}>{name}</span>
+      </Tooltip>
     </div>
   );
 };

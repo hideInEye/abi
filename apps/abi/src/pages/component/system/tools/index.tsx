@@ -522,25 +522,11 @@ const TABLE_SCROLL = { x: 'max-content' };
             <Button className="abi-action-link" size="small" variant="link" onClick={() => handleEdit(record)}>
               <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
             </Button>
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: 'delete',
-                    danger: true,
-                    label: (
-                      <span onClick={() => handleDelete(record)}>
-                        <DeleteOutlined style={{ marginRight: 4 }} />删除
-                      </span>
-                    ),
-                  },
-                ],
-              }}
-            >
+            <APopconfirm title="提示" description="确定删除该工具吗？" onConfirm={() => handleDelete(record)}>
               <Button className="abi-action-link" size="small" variant="link">
-                更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+                <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
               </Button>
-            </Dropdown>
+            </APopconfirm>
           </div>
         )
       }
@@ -666,6 +652,7 @@ const TABLE_SCROLL = { x: 'max-content' };
                 className="tools-table abi-std-table"
                 scroll={pagedList.length > 0 ? TABLE_SCROLL : undefined}
                 rowSelection={{
+                  columnWidth: 48,
                   fixed: true,
                   selectedRowKeys,
                   onChange: (keys) => setSelectedRowKeys(keys),

@@ -326,7 +326,7 @@ export function Component() {
                 description="确定删除该空间吗？"
                 onConfirm={() => deleteSpaceHandler(record)}
               >
-                <AButton className="abi-action-link" size="small" variant="link" danger>
+                <AButton className="abi-action-link" size="small" variant="link">
                   <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
                 </AButton>
               </APopconfirm>

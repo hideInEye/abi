@@ -61,6 +61,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
   };
 
   const rowSelection: TableProps<DataType>['rowSelection'] = {
+    columnWidth: 48,
     fixed: true,
     selectedRowKeys: checkedRowKeys,
     onChange: (keys, rows) => {

@@ -1,6 +1,6 @@
-import { DeleteOutlined, DownOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import * as antdIcons from '@ant-design/icons';
-import { Dropdown, message } from 'antd';
+import { message } from 'antd';
 import { Suspense } from 'react';
 
 import { enableStatusRecord } from '@/constants/business';
@@ -169,29 +169,15 @@ export function Component() {
               >
                 <PlusOutlined style={{ marginRight: 3, fontSize: 12 }} />新增子级
               </AButton>
-              <Dropdown
-                menu={{
-                  items: [
-                    {
-                      key: 'delete',
-                      danger: true,
-                      label: (
-                        <APopconfirm
-                          title="提示"
-                          description={t('common.confirmDelete')}
-                          onConfirm={() => handleDelete(record.menuId)}
-                        >
-                          <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
-                        </APopconfirm>
-                      ),
-                    },
-                  ],
-                }}
+              <APopconfirm
+                title="提示"
+                description={t('common.confirmDelete')}
+                onConfirm={() => handleDelete(record.menuId)}
               >
                 <AButton className="abi-action-link" size="small" variant="link">
-                  更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+                  <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
                 </AButton>
-              </Dropdown>
+              </APopconfirm>
             </div>
           ),
           title: t('common.operate'),

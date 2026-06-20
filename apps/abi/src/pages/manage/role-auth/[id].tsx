@@ -138,7 +138,7 @@ export function Component() {
                   description="确定取消该用户的授权吗？"
                   onConfirm={() => handleDelete(record.userId)}
                 >
-                  <AButton className="abi-action-link" size="small" variant="link" danger>
+                  <AButton className="abi-action-link" size="small" variant="link">
                     <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />取消授权
                   </AButton>
                 </APopconfirm>

@@ -1,5 +1,5 @@
-import { DeleteOutlined, DownOutlined, LeftOutlined, PlusOutlined, ReloadOutlined, RightOutlined, SafetyOutlined, SearchOutlined } from '@ant-design/icons';
-import { Dropdown, message } from 'antd';
+import { DeleteOutlined, LeftOutlined, PlusOutlined, ReloadOutlined, RightOutlined, SafetyOutlined, SearchOutlined } from '@ant-design/icons';
+import { message } from 'antd';
 
 import { getSpaceInfo, updateSpaceInfo } from '@/service/api';
 import { useAppSelector } from '@/hooks/business/useStore';
@@ -110,30 +110,15 @@ export function Component() {
               >
                 <SafetyOutlined style={{ marginRight: 3, fontSize: 12 }} />分配角色
               </AButton>
-              <Dropdown
-                menu={{
-                  items: [
-                    {
-                      key: 'delete',
-                      danger: true,
-                      disabled: _.type === 'special-user',
-                      label: (
-                        <APopconfirm
-                          title="提示"
-                          description={t('common.confirmDelete')}
-                          onConfirm={() => handleDelete(_.recordId)}
-                        >
-                          <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
-                        </APopconfirm>
-                      ),
-                    },
-                  ],
-                }}
+              <APopconfirm
+                title="提示"
+                description={t('common.confirmDelete')}
+                onConfirm={() => handleDelete(_.recordId)}
               >
-                <AButton className="abi-action-link" size="small" variant="link">
-                  更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+                <AButton className="abi-action-link" size="small" variant="link" disabled={_.type === 'special-user'}>
+                  <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
                 </AButton>
-              </Dropdown>
+              </APopconfirm>
             </div>
           ),
           title: t('common.operate'),

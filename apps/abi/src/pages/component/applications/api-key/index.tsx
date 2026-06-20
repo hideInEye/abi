@@ -174,25 +174,22 @@ export function Component() {
   const [submitLoading, setSubmitLoading] = useState(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [spaceOptions, setSpaceOptions] = useState<Array<{ label: string; value: number }>>([])
+  const [queryValues, setQueryValues] = useState<ApiKeyQueryValues>({
+    spaceId: currentSpaceId || undefined
+  })
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list')
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'businessSpace', label: '业务空间', visible: true },
     { key: 'clientId', label: 'Client ID', visible: true },
     { key: 'accessKey', label: 'Access Key', visible: true },
-    { key: 'secretKey', label: 'Secret Key', visible: true },
-    { key: 'ipAccessType', label: 'IP访问限制', visible: true },
-    { key: 'timeoutSeconds', label: 'Token超时', visible: true },
-    { key: 'expireTime', label: '过期时间', visible: true },
     { key: 'status', label: '状态', visible: true },
+    { key: 'expireTime', label: '过期时间', visible: true },
     { key: 'createdAt', label: '创建时间', visible: true },
+    { key: 'operate', label: '操作', visible: true },
   ])
-
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c))
   }
-
-  const [queryValues, setQueryValues] = useState<ApiKeyQueryValues>({
-    spaceId: currentSpaceId || undefined
-  })
 
   const loadList = useCallback(
     async (pageNum: number, query: ApiKeyQueryValues) => {
@@ -507,6 +504,7 @@ export function Component() {
           pageSize={PAGE_SIZE}
           selectedRowKeys={selectedRowKeys}
           total={total}
+          viewMode={viewMode}
           onDelete={handleDelete}
           onPageChange={setCurrent}
           onResetSk={handleResetSk}

@@ -18,6 +18,7 @@ export const Component: React.FC = () => {
   const { currentEdit, open, setCurrentEdit, setOpen } = usePluginManagement();
   const spaceId = useAppSelector(getSpaceId);
   const [groupId, setGroupId] = useState(0);
+  const [groupType, setGroupType] = useState<string>('mcp-sse');
   const [fetchKey, setFetchKey] = useState(0);
   const [dataSource, setDataSource] = useState<{
     code: number;
@@ -61,6 +62,7 @@ export const Component: React.FC = () => {
   };
 
   const toDeletePlugin = async (data: PluginList) => {
+    if (!groupId) return;
     await deleteMcp({
       mcpId: data.pluginId.toString(),
       mcpName: data.pluginName,
@@ -70,6 +72,7 @@ export const Component: React.FC = () => {
   };
 
   const updateStatus = async (record: PluginItem) => {
+    if (!groupId) return;
     // 启停切换走更新接口 (PUT)
     await updateMcp({
       namespaceId: `s_${groupId}`,
@@ -77,8 +80,8 @@ export const Component: React.FC = () => {
         id: String(record.pluginId),
         name: record.pluginName,
         version: record.versionDetail?.version || '1.0.0',
-        protocol: 'sse',
-        frontProtocol: 'sse',
+        protocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
+        frontProtocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
         description: record.remark || '',
         remoteServerConfig: {
           url: '',
@@ -93,6 +96,7 @@ export const Component: React.FC = () => {
   };
 
   const handleSearch = (value: string) => {
+    if (!groupId) return;
     setSearchValue(value);
     setcurrent(1);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
@@ -100,6 +104,7 @@ export const Component: React.FC = () => {
   };
 
   const handleSubmit = async (formData: McpForm) => {
+    if (!groupId) return;
     // 根据 HTTP 转 MCP 开关区分两种模式构造接口参数
     let addressWithPort: string;
     let scheme: string;
@@ -131,9 +136,9 @@ export const Component: React.FC = () => {
 
     const serverSpec: Record<string, any> = {
       name: formData.mcp_name,
-      // HTTP 转 MCP 开启时 protocol 为 http/https；关闭时维持 sse
-      protocol: formData.restToMcpSwitch ? scheme : 'sse',
-      frontProtocol: 'sse',
+      // HTTP 转 MCP 开启时 protocol 为 http/https；关闭时根据分组类型决定
+      protocol: formData.restToMcpSwitch ? scheme : (groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse'),
+      frontProtocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
       description: formData.description || '',
       version: formData.version,
       remoteServerConfig: {
@@ -190,12 +195,14 @@ export const Component: React.FC = () => {
   // 空间切换时重置分组 + 强制刷新，让 PluginGroup 重新回调新空间的 groupId
   useEffect(() => {
     setGroupId(0);
+    setGroupType('mcp-sse');
     setcurrent(1);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
     setFetchKey(k => k + 1);
   }, [spaceId]);
 
   const setPage = (page: number) => {
+    if (!groupId) return;
     setcurrent(page);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
     getPluginList(undefined, page);
@@ -207,7 +214,7 @@ export const Component: React.FC = () => {
         {/* v5 Tree Panel — left sidebar */}
         <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
           <div className="abi-group-sidebar" style={{ height: '100%' }}>
-            <PluginGroup onGroupId={setGroupId} />
+            <PluginGroup onGroupId={(id, _name, type) => { setGroupId(id); if (type) setGroupType(type); }} />
           </div>
         </Splitter.Panel>
 
@@ -255,6 +262,7 @@ export const Component: React.FC = () => {
                 groupId={groupId}
                 onAdd={() => { setOpen(true); setCurrentEdit(null); }}
                 onDetail={async record => {
+                  if (!groupId) return;
                   try {
                     const res: any = await getMcpDetail({
                       mcpId: String(record.pluginId),
@@ -268,6 +276,7 @@ export const Component: React.FC = () => {
                   }
                 }}
                 updateCurrentEdit={async record => {
+                  if (!groupId) return;
                   try {
                     const res: any = await getMcpDetail({
                       mcpId: String(record.pluginId),
@@ -289,6 +298,7 @@ export const Component: React.FC = () => {
 
       <PlugUpdate
         currentEdit={currentEdit}
+        groupType={groupType}
         namespaceId={`s_${groupId}`}
         open={open}
         onClose={() => setOpen(false)}

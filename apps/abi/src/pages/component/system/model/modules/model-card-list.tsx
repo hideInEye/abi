@@ -323,6 +323,7 @@ const ModelCardList: FC<Props> = ({
                   className="model-table abi-std-table"
                   scroll={pagedModels.length > 0 ? { x: 'max-content' } : undefined}
                   rowSelection={{
+                    columnWidth: 48,
                     fixed: true,
                     selectedRowKeys,
                     onChange: (keys) => setSelectedRowKeys(keys),
