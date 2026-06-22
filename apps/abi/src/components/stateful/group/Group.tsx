@@ -160,9 +160,8 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     setSelectedKeys([nodeKey]);
     const groupId = Number(nodeKey.replace('group-', ''));
     const group = groups.find(g => g.groupId === groupId);
-    if (group) {
-      onGroupId(group.groupId, undefined, group.groupType);
-    }
+    // 直接用解析出的 groupId 回调，不依赖 groups.find 结果
+    onGroupId(groupId, group?.groupName, group?.groupType);
     // 文件夹节点：点击行切换展开/折叠（对齐 qknow-ui DeptTree 行为）
     if (!info.node.isLeaf) {
       if (expandedKeys.includes(nodeKey)) {

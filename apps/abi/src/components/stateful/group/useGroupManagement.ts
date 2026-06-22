@@ -28,12 +28,13 @@ export const useGroupManagement = (config: GroupProps['config']) => {
   const [editingGroup, setEditingGroup] = useState<QuestionGroupItem | null>(null);
 
   const getGroups = async (searchText?: string) => {
+    if (!spaceId) return;
     const queryTypes = config.queryTypes && config.queryTypes.length > 0
       ? (config.queryTypes as readonly string[])
       : [config.type];
 
-    // 并发查询所有分组类型，合并结果
-    const results = await Promise.all(
+    // 并发查询所有分组类型，合并结果（单个失败不影响其他）
+    const results = await Promise.allSettled(
       queryTypes.map(gt =>
         tableSemanticsGroupList({
           groupName: searchText,
@@ -47,10 +48,13 @@ export const useGroupManagement = (config: GroupProps['config']) => {
 
     const merged: QuestionGroupItem[] = [];
     const seenIds = new Set<number>();
-    for (const res of results) {
+    for (const result of results) {
+      if (result.status !== 'fulfilled') continue;
+      const res = result.value;
       const list: QuestionGroupItem[] = (res as any)?.data ?? [];
+      if (!Array.isArray(list)) continue;
       for (const item of list) {
-        if (!seenIds.has(item.groupId)) {
+        if (item.groupId && !seenIds.has(item.groupId)) {
           seenIds.add(item.groupId);
           merged.push(item);
         }

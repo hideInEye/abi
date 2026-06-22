@@ -150,10 +150,12 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
             <section className="abi-data-area">
                 <div className="abi-data-content">
                     {pageData.records.length > 0 ? (
-                        <div className="project-list">
-                            {pageData.records.map(item => (
-                                <MyScreenItem key={item.id} item={item} onUnpublish={handleUnpublish}/>
-                            ))}
+                        <div className="abi-card-grid">
+                            <div className="abi-card-grid-inner">
+                                {pageData.records.map(item => (
+                                    <MyScreenItem key={item.id} item={item} onUnpublish={handleUnpublish}/>
+                                ))}
+                            </div>
                         </div>
                     ) : (
                         <div className="project-list-empty">

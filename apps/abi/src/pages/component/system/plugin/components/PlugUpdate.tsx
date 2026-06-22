@@ -11,13 +11,15 @@ interface PlugUpdateProps {
   readonly currentEdit: PluginItem | null;
   /** 当前分组的类型，用于限制协议类型选择 */
   readonly groupType?: string;
+  /** 分组名称，用于命名空间展示 */
+  readonly groupName?: string;
   readonly namespaceId: string;
   readonly onClose: () => void;
   readonly onSubmit: (formData: McpForm) => void;
   readonly open: boolean;
 }
 
-export const PlugUpdate = ({ currentEdit, groupType, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
+export const PlugUpdate = ({ currentEdit, groupType, groupName, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
   const [form] = Form.useForm<McpForm>();
   const [restToMcpSwitch, setRestToMcpSwitch] = useState(false);
   const [securitySchemes, setSecuritySchemes] = useState<McpSecurityScheme[]>([]);
@@ -162,7 +164,7 @@ export const PlugUpdate = ({ currentEdit, groupType, namespaceId, onClose, onSub
             </div>
             <div className="section-body">
               <Form.Item label="命名空间" className="form-item-v5">
-                <AInput value={namespaceId} disabled className="form-input-v5" />
+                <AInput value={groupName || namespaceId} disabled className="form-input-v5" />
               </Form.Item>
 
               <Form.Item

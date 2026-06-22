@@ -22,6 +22,11 @@
     padding-left: 1.125rem !important;
   }
 
+  // 名称类表头左对齐
+  .ant-table-thead > tr > th.col-left-header {
+    text-align: left !important;
+  }
+
   // 单元格内边距 & 行高
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row) > td {
     padding: 14px 18px !important;
@@ -1347,6 +1352,20 @@
     background: rgba(91, 124, 247, 0.10) !important;
     color: #5b7cf7 !important;
   }
+
+  &[disabled],
+  &.ant-btn-disabled,
+  &.ant-btn[disabled] {
+    color: #768a9f !important;
+    background: #f5f5f5 !important;
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+
+    &:hover {
+      color: #768a9f !important;
+      background: #f5f5f5 !important;
+    }
+  }
 }
 
 .abi-action-link-danger {
@@ -1625,27 +1644,29 @@
         color: #ef4444;
       }
     }
+  }
 
-    .abi-card-more {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      border: none;
-      background: transparent;
-      color: #8c8c8c;
-      font-size: 16px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-      padding: 0;
-      margin-left: auto;
+  // ── 卡片更多操作按钮（可在 head 或 footer 中使用）──
+  .abi-card-more {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #8c8c8c;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    padding: 0;
+    margin-left: auto;
+    flex-shrink: 0;
 
-      &:hover {
-        background: rgba(91, 124, 247, 0.08);
-        color: #5b7cf7;
-      }
+    &:hover {
+      background: rgba(91, 124, 247, 0.08);
+      color: #5b7cf7;
     }
   }
 }

@@ -13,6 +13,8 @@ import type { PluginItem } from '@/types/plug';
 interface PluginDetailProps {
   readonly open: boolean;
   readonly record: PluginItem | null;
+  /** 分组名称，用于命名空间展示 */
+  readonly groupName?: string;
   readonly onClose: () => void;
 }
 
@@ -82,7 +84,7 @@ const InfoCell = ({ label, value }: { label: React.ReactNode; value: React.React
   </div>
 );
 
-export const PluginDetail: React.FC<PluginDetailProps> = ({ open, record, onClose }) => {
+export const PluginDetail: React.FC<PluginDetailProps> = ({ open, record, groupName, onClose }) => {
   if (!record) {
     return (
       <ADrawer
@@ -226,7 +228,8 @@ export const PluginDetail: React.FC<PluginDetailProps> = ({ open, record, onClos
             <InfoCell
               label="命名空间"
               value={
-                serviceRef?.namespaceId
+                groupName
+                || serviceRef?.namespaceId
                 || (record.spaceId != null ? `s_${record.spaceId}` : '--')
               }
             />

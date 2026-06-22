@@ -212,7 +212,8 @@ export function Component() {
         const resData = await updateSpaceRoleApi({ ...editingData, ...res });
         if (resData.response.data.code !== 200) return false;
       }
-    }
+    },
+    true
   );
 
   async function add() {
@@ -228,14 +229,24 @@ export function Component() {
   }
 
   function edit(id: number) {
-    Promise.all([getSpaceRoleInfoApi(id), getSpaceRoleMenuByRoleIdApi(id)]).then((res: any) => {
-      const [roleInfo, ruleMenus] = res;
-      const values = {
-        ...roleInfo.data,
-        menuIds: ruleMenus?.response?.data?.checkedKeys ?? []
-      };
-      handleEdit(values);
-    });
+    Promise.all([getSpaceRoleInfoApi(id), getSpaceRoleMenuByRoleIdApi(id)])
+      .then((res: any) => {
+        const [roleInfo, ruleMenus] = res;
+        // 检查是否有访问权限
+        const roleRes = roleInfo?.response?.data;
+        if (roleRes?.code !== 200) {
+          message.error(roleRes?.msg || '没有访问权限，请联系管理员授权');
+          return;
+        }
+        const values = {
+          ...roleInfo.data,
+          menuIds: ruleMenus?.response?.data?.checkedKeys ?? []
+        };
+        handleEdit(values);
+      })
+      .catch(() => {
+        message.error('没有访问权限，请联系管理员授权');
+      });
   }
 
   async function deleteBatch() {

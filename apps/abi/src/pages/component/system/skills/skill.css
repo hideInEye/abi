@@ -80,18 +80,6 @@
   cursor: default;
 }
 
-/* ── 技能描述列：2 行截断 + Tooltip ── */
-.skill-summary-cell {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.5;
-  word-break: break-all;
-  cursor: default;
-}
-
 /* 技能卡片 */
 .skill-hub-scope .skill-card-grid {
   display: grid;
