@@ -20,7 +20,7 @@ export default function MyScreenItem({item, onUnpublish}: MyScreenItemProps) {
     return (
         <div className="project-list-item">
             <div className="project-item-cover"
-                 style={{backgroundImage: `url(${cover || defaultSnapshot})`}}>
+                 style={{backgroundImage: `url(${cover || defaultSnapshot})`, aspectRatio: 'unset', height: '105px'}}>
                 <div className="operate-icon-list">
                     <div className="operate-icon">
                         <Popover content="查看项目">

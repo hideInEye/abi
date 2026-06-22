@@ -273,7 +273,7 @@ export function Component() {
         </div>
 
         {/* Table */}
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', marginBottom: 16 }}>
           <div
             className="dept-table-wrapper"
             style={{

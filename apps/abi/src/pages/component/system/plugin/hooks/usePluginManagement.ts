@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { PluginItem } from '@/types/plug';
 
 export const usePluginManagement = () => {
