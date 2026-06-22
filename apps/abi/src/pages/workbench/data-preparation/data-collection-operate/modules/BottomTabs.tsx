@@ -14,9 +14,11 @@ import BatchManage from './BatchManage';
 import CalculatedFieldModal from './CalculatedFieldModal';
 import DataPreview from './DataPreview';
 
-// interface PropsType {}
+interface BottomTabsProps {
+  curDatasource?: any;
+}
 
-const BottomTabs: React.FC = memo(({curDatasource}: any) => {
+const BottomTabs: React.FC<BottomTabsProps> = memo(({ curDatasource }) => {
   const { allFields, nodeData, setAllFields } = useContext(DataCollectionOperateContext);
   const [previewData, setPreviewData] = useState<any>({});
   const [createCalculatedField, setCreateCalculatedField] = useState(false);
@@ -72,7 +74,7 @@ const BottomTabs: React.FC = memo(({curDatasource}: any) => {
   };
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full" style={{ background: '#F9FAFF' }}>
       <Tabs
         className={styles['bottom-tabs-container']}
         defaultActiveKey="1"

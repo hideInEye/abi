@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+import { Splitter } from 'antd'
 
 import { Group } from '@/components/stateful/group/Group.tsx'
 
@@ -42,44 +43,48 @@ const MetricModeling: React.FC = () => {
   }, [])
 
   return (
-    <div className="h-full min-h-0 flex-col-stretch overflow-hidden lt-sm:overflow-auto">
-      <AFlex
-        className="h-full gap-6"
-        style={{ flex: 1, minHeight: 0 }}
-      >
-        <div className="abi-group-sidebar">
-          <Group
-            config={{
-              button: '添加指标组',
-              inputLabel: '指标组名称',
-              inputPlaceholder: '请输入分组名称',
-              modalAddTitle: '新增指标组',
-              modalEditTitle: '编辑指标组',
-              panelTitle: '指标组',
-              rule: [[{ message: '请输入指标组名称', required: true }]],
-              type: KNOWLEDGE_GROUP_TYPE
-            }}
-            onGroupId={handleGroupChange}
-          />
-        </div>
-        <div className="h-full min-h-0 w-40% flex flex-col flex-1 overflow-hidden">
-          <KnowledgeSearchBar
-            addDisabled={!selectedGroup?.groupId}
-            searchParams={searchParams}
-            onAddAtomic={handleAddAtomic}
-            onAddCustom={handleAddCustom}
-            onQuery={handleQuery}
-            onReset={handleReset}
-            onSearchChange={handleSearchChange}
-          />
-          <KnowledgeTable
-            dataSource={tableData}
-            loading={loading}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-          />
-        </div>
-      </AFlex>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <Splitter style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
+          <div className="abi-group-sidebar" style={{ height: '100%' }}>
+            <Group
+              config={{
+                button: '添加指标组',
+                inputLabel: '指标组名称',
+                inputPlaceholder: '请输入分组名称',
+                modalAddTitle: '新增指标组',
+                modalEditTitle: '编辑指标组',
+                panelTitle: '指标组',
+                rule: [[{ message: '请输入指标组名称', required: true }]],
+                type: KNOWLEDGE_GROUP_TYPE
+              }}
+              onGroupId={handleGroupChange}
+            />
+          </div>
+        </Splitter.Panel>
+
+        <Splitter.Panel>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
+            <KnowledgeSearchBar
+              addDisabled={!selectedGroup?.groupId}
+              searchParams={searchParams}
+              onAddAtomic={handleAddAtomic}
+              onAddCustom={handleAddCustom}
+              onQuery={handleQuery}
+              onReset={handleReset}
+              onSearchChange={handleSearchChange}
+            />
+            <section className="abi-data-area">
+              <KnowledgeTable
+                dataSource={tableData}
+                loading={loading}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+              />
+            </section>
+          </div>
+        </Splitter.Panel>
+      </Splitter>
 
       <KnowledgeOperateDrawer
         editingItem={editingItem}

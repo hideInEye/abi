@@ -3,13 +3,10 @@ import React from 'react';
 
 const items = [
   {
-    title: '基本信息'
+    title: '基本信息与字段选择'
   },
   {
-    title: '字段选择'
-  },
-  {
-    title: '表语义配置'
+    title: '数据语义配置'
   }
 ];
 interface DataTableMeaningProps {
@@ -18,18 +15,14 @@ interface DataTableMeaningProps {
 const DataTableMeaning: React.FC<DataTableMeaningProps> = (props: any) => {
   const { data } = props;
   return (
-    <ARow
-      className="py5"
-      justify="center"
-    >
-      <ACol>
-        <Steps
-          current={data}
-          items={items}
-          labelPlacement="vertical"
-        />
-      </ACol>
-    </ARow>
+    <div className="ds-steps-wrapper">
+      <Steps
+        current={data}
+        items={items}
+        labelPlacement="vertical"
+        size="small"
+      />
+    </div>
   );
 };
 

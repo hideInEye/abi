@@ -108,7 +108,7 @@ const Designer = observer((props: DesignerProps) => {
     if (!loaderRef.current?.loaded)
         return <Loading/>;
     return (
-        <div style={{backgroundColor: '#1f1f1f'}}>
+        <div style={{background: 'linear-gradient(135deg, rgba(240, 244, 255, 0.6) 0%, rgba(239, 243, 255, 0.6) 50%, rgba(239, 242, 255, 0.6) 100%)'}}>
             <FrameLayout header={<DesignerHeader/>}
                          left={<DesignerLeft/>}
                          content={<DesignerCanvas/>}

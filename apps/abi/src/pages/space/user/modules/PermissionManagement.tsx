@@ -1,9 +1,11 @@
-import { CloseOutlined } from '@ant-design/icons';
+import { CloseOutlined, SafetyOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 
 import { querySpaceRoleList } from '@/service/api/space';
 import { getSpaceRoleMenuByRoleIdApi } from '@/service/api/space-role';
 import { message } from 'antd';
+
+import './PermissionManagement.scss';
 
 interface PermissionItem {
   admin: false;
@@ -98,23 +100,20 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
 
   function PermissionManagementFooter(sure: () => void, cancel: () => void) {
     return (
-      <AFlex
-        className="gap-6 py-6"
-        justify="flex-end"
-      >
+      <div className="perm-footer-v5">
         <AButton
-          type="default"
+          className="btn-ghost-v5"
           onClick={cancel}
         >
           {t('page.login.common.cancel')}
         </AButton>
         <AButton
-          type="primary"
+          className="btn-accent-gradient"
           onClick={sure}
         >
-          确认
+          <SafetyOutlined style={{ marginRight: 6 }} />确认分配
         </AButton>
-      </AFlex>
+      </div>
     );
   }
 
@@ -162,79 +161,107 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
 
   return (
     <ADrawer
+      className="perm-drawer-v5"
       closeIcon={null}
-      extra={<CloseOutlined onClick={cancel} />}
+      extra={<CloseOutlined className="perm-close-icon" onClick={cancel} />}
       footer={PermissionManagementFooter(sure, cancel)}
       open={open}
-      title={t('page.manage.user.assigningRole')}
-      width={900}
+      title={
+        <div className="perm-title-v5">
+          <SafetyOutlined className="perm-title-icon" />
+          <span>{t('page.manage.user.assigningRole')}</span>
+        </div>
+      }
+      width={960}
       onClose={() => setOpen(false)}
     >
-      <div className="flex gap-4 h-full">
+      <div className="perm-container-v5">
         {/* 左侧：角色列表 */}
-        <div className="w-2/5 border border-gray-2 rd-2 border-solid p-4">
-          <div className="mb-4 text-base font-medium">角色列表</div>
-          <ACheckbox.Group
-            className="flex flex-col gap-3"
-            style={{ width: '100%' }}
-            value={alreadySelectedPermission}
-            onChange={handlePermissionChange}
-          >
-            {permissionList.map(item => (
-              <ACheckbox
-                key={item.roleId}
-                value={item.roleId}
-              >
-                <div className="flex flex-col">
-                  <p className="text-sm font-medium">{item.roleName}</p>
-                  <p className="text-xs text-gray-5">{item.remark || '暂无描述'}</p>
-                </div>
-              </ACheckbox>
-            ))}
-          </ACheckbox.Group>
+        <div className="perm-panel-v5 perm-panel-left">
+          <div className="perm-panel-header">
+            <div className="perm-panel-title">角色列表</div>
+            <div className="perm-panel-subtitle">选择要分配的角色</div>
+          </div>
+          <div className="perm-panel-body">
+            <ACheckbox.Group
+              className="perm-role-group"
+              style={{ width: '100%' }}
+              value={alreadySelectedPermission}
+              onChange={handlePermissionChange}
+            >
+              {permissionList.map(item => {
+                const isSelected = alreadySelectedPermission.includes(item.roleId);
+                return (
+                  <div
+                    key={item.roleId}
+                    className={`perm-role-card ${isSelected ? 'perm-role-selected' : ''}`}
+                  >
+                    <ACheckbox value={item.roleId}>
+                      <div className="perm-role-content">
+                        <div className="perm-role-name">{item.roleName}</div>
+                        <div className="perm-role-desc">{item.remark || '暂无描述'}</div>
+                      </div>
+                    </ACheckbox>
+                  </div>
+                );
+              })}
+            </ACheckbox.Group>
+          </div>
         </div>
 
         {/* 右侧：选中角色的空间菜单 */}
-        <div className="w-3/5 border border-gray-2 rd-2 border-solid p-4">
-          <div className="mb-4 text-base font-medium">已分配的空间菜单</div>
-          <ASpin spinning={loading}>
-            <div className="max-h-[500px] overflow-y-auto">
-              {alreadySelectedPermission.length === 0 ? (
-                <div className="text-center text-gray-5 py-8">请先选择角色</div>
-              ) : (
-                alreadySelectedPermission.map(roleId => {
-                  const role = permissionList.find(r => r.roleId === roleId);
-                  const menus = roleMenuMap[roleId];
-                  const secondLevelMenus = menus ? getSecondLevelMenus(menus) : [];
-                  
-                  return (
-                    <div
-                      key={roleId}
-                      className="mb-6"
-                    >
-                      <div className="mb-3">
-                        <span className="text-sm font-medium text-primary">{role?.roleName}</span>
-                      </div>
-                      {secondLevelMenus.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {secondLevelMenus.map((menuName, index) => (
-                            <ATag
-                              key={`${roleId}-${index}`}
-                              color="blue"
-                            >
-                              {menuName}
-                            </ATag>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-gray-5 pl-4">暂无菜单权限</div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
+        <div className="perm-panel-v5 perm-panel-right">
+          <div className="perm-panel-header">
+            <div className="perm-panel-title">已分配的空间菜单</div>
+            <div className="perm-panel-subtitle">
+              {alreadySelectedPermission.length > 0
+                ? `已选择 ${alreadySelectedPermission.length} 个角色`
+                : '请先选择角色'}
             </div>
-          </ASpin>
+          </div>
+          <div className="perm-panel-body">
+            <ASpin spinning={loading}>
+              {alreadySelectedPermission.length === 0 ? (
+                <div className="perm-empty-state">
+                  <SafetyOutlined className="perm-empty-icon" />
+                  <div className="perm-empty-text">请先选择角色</div>
+                </div>
+              ) : (
+                <div className="perm-menu-list">
+                  {alreadySelectedPermission.map(roleId => {
+                    const role = permissionList.find(r => r.roleId === roleId);
+                    const menus = roleMenuMap[roleId];
+                    const secondLevelMenus = menus ? getSecondLevelMenus(menus) : [];
+                    return (
+                      <div
+                        key={roleId}
+                        className="perm-menu-section"
+                      >
+                        <div className="perm-menu-header">
+                          <span className="perm-menu-role-name">{role?.roleName}</span>
+                          <span className="perm-menu-count">{secondLevelMenus.length} 项</span>
+                        </div>
+                        {secondLevelMenus.length > 0 ? (
+                          <div className="perm-menu-tags">
+                            {secondLevelMenus.map((menuName, index) => (
+                              <span
+                                key={`${roleId}-${index}`}
+                                className="perm-menu-tag"
+                              >
+                                {menuName}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="perm-menu-empty">暂无菜单权限</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ASpin>
+          </div>
         </div>
       </div>
     </ADrawer>

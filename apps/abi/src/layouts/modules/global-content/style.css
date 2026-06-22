@@ -121,7 +121,7 @@
   color: #333;
 }
 
-/* v5 Breadcrumb: font-size 13px */
+/* v5 Breadcrumb: refined style */
 .abi-breadcrumb {
   font-size: 13px !important;
 }
@@ -132,18 +132,111 @@
 }
 
 .abi-breadcrumb .ant-breadcrumb-separator {
-  color: #a3b3c8 !important;
-  font-size: 13px !important;
-  margin: 0 6px;
+  color: #c0cde0 !important;
+  font-size: 11px !important;
+  margin: 0 8px;
 }
 
 .abi-breadcrumb .ant-breadcrumb-link {
   font-size: 13px;
 }
 
+/* Space selector trigger pill */
+.abi-space-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  background: rgba(255, 255, 255, 0.50);
+  border: 1px solid rgba(130, 140, 200, 0.15);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #3e5068;
+  white-space: nowrap;
+}
+
+.abi-space-trigger:hover {
+  background: rgba(255, 255, 255, 0.80);
+  border-color: rgba(91, 124, 247, 0.3);
+  box-shadow: 0 2px 10px rgba(91, 124, 247, 0.08);
+}
+
+.abi-space-trigger-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+  flex-shrink: 0;
+}
+
+.abi-space-trigger-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.abi-space-trigger-arrow {
+  font-size: 11px;
+  color: #768a9f;
+  transition: transform 0.2s;
+}
+
+/* Space dropdown panel */
+.abi-space-dropdown {
+  border-radius: 14px !important;
+  border: 1px solid rgba(130, 140, 200, 0.12) !important;
+  background: rgba(252, 253, 255, 0.96) !important;
+  backdrop-filter: blur(16px) !important;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.10) !important;
+  padding: 8px !important;
+  min-width: 240px !important;
+}
+
+.abi-space-dropdown-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a3b3c8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px 8px;
+}
+
+.abi-space-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #3e5068;
+  text-align: left;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+}
+
+.abi-space-dropdown-item:hover {
+  background: rgba(91, 124, 247, 0.08);
+  color: #5b7cf7;
+}
+
+.abi-space-dropdown-item.active {
+  color: #5b7cf7;
+  font-weight: 600;
+  background: rgba(91, 124, 247, 0.06);
+}
+
 /* 页面内容区统一渐变背景 */
 .page-content-area {
-  background: linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%);
+  background: var(--abi-card-bg);
 }
 
 /* 页面内容区卡片透明化，透出渐变背景 */

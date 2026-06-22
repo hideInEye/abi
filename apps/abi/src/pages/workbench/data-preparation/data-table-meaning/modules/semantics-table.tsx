@@ -1,13 +1,12 @@
-import { CloseOutlined } from '@ant-design/icons';
+import { CloseOutlined, TableOutlined } from '@ant-design/icons';
 import { message } from 'antd';
 
 import { addTableSemantics, editTableSemantics } from '@/service/api/data-table-meaning';
 import { formattedDate } from '@/utils/date';
 
-import DataTableMeaningBaseInfo from '../components/semantics-base-info';
-import { DataTableFieldsSelect } from '../components/semantics-fields-select';
-import DataTableMeaning from '../components/semantics-steps';
+import DataTableMeaningBaseInfoFields from '../components/semantics-base-info-fields';
 import DataTableMeaningTable from '../components/semantics-table-config';
+import DataTableMeaning from '../components/semantics-steps';
 import { useTableStore } from '../store/useTableStore';
 import type { InputField, OutputData, TableSemanticParams } from '../types';
 
@@ -276,7 +275,7 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
     modelDetail: JSON.stringify(assembleData(streamlinedData(fields))),
     relViewId: downSelectVal?.toString() || '',
     remark: desc,
-    schemaId: drawerTitle === '新增表语义' ? '' : editObj.schemaId,
+    schemaId: drawerTitle === '新增数据语义' ? '' : editObj.schemaId,
     spaceId: localStorage.getItem('spaceId'),
     status: '1',
     techName: englishName
@@ -314,11 +313,11 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
       message.error('请选择分组');
       return;
     }
-    const api = drawerTitle === '新增表语义' ? addTableSemantics : editTableSemantics;
+    const api = drawerTitle === '新增数据语义' ? addTableSemantics : editTableSemantics;
     const { response } = await api(params);
 
     if (Number(response.data.code) === 200) {
-      message.success(`${drawerTitle === '新增表语义' ? '新增' : '编辑'}成功`);
+      message.success(`${drawerTitle === '新增数据语义' ? '新增' : '编辑'}成功`);
       handleClose();
       updateTableList();
     }
@@ -334,13 +333,10 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
     try {
       if (stepIndex === 0) {
         await formBaseInfo.validateFields();
-        nextStep();
-        await new Promise(resolve => setTimeout(resolve, 800));
-      } else if (stepIndex === 1) {
         await formFieldsConfig.validateFields();
         nextStep();
         await new Promise(resolve => setTimeout(resolve, 800));
-      } else if (stepIndex === 2) {
+      } else if (stepIndex === 1) {
         try {
           await formTableConfig.validateFields();
         } catch (errorInfo) {
@@ -370,47 +366,44 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
 
   return (
     <ADrawer
+      className="ds-operate-drawer"
       destroyOnClose
       closeIcon={null}
+      extra={<CloseOutlined onClick={() => { setTableModalOpen(false); handleClose(); }} style={{ fontSize: 16, color: '#8c8c8c' }} />}
       open={tableModalOpen}
-      title={drawerTitle}
-      width={1200}
-      extra={
-        <CloseOutlined
-          onClick={() => {
-            setTableModalOpen(false);
-            handleClose();
-          }}
-        />
+      title={
+        <div className="ds-operate-title">
+          <span className="ds-operate-title-icon">
+            <TableOutlined />
+          </span>
+          <span>{drawerTitle}</span>
+        </div>
       }
+      width={1200}
       footer={
-        <AFlex
-          className="mt-4 gap-4"
-          justify="flex-end"
-        >
-          {stepIndex >= 1 && (
+        <div className="ds-operate-footer">
+          <div className="ds-operate-footer-left" />
+          <div className="ds-operate-footer-right">
+            {stepIndex >= 1 && (
+              <AButton
+                className="btn-ghost-v5"
+                disabled={nextLoading}
+                onClick={() => { onPrevStep(); }}
+              >
+                上一步
+              </AButton>
+            )}
             <AButton
-              type="default"
+              className="btn-accent-gradient"
+              loading={nextLoading}
               disabled={nextLoading}
-              onClick={() => {
-                onPrevStep();
-              }}
+              onClick={() => { onNextStep(); }}
             >
-              上一步
+              {stepIndex === 0 && '下一步'}
+              {stepIndex === 1 && '保存'}
             </AButton>
-          )}
-          <AButton
-            type="primary"
-            loading={nextLoading}
-            disabled={nextLoading}
-            onClick={() => {
-              onNextStep();
-            }}
-          >
-            {stepIndex < 2 && '下一步'}
-            {stepIndex === 2 && '完成'}
-          </AButton>
-        </AFlex>
+          </div>
+        </div>
       }
       onClose={() => {
         setTableModalOpen(false);
@@ -420,9 +413,8 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
     >
       <ASpin spinning={nextLoading} tip="正在处理，请稍候">
         <DataTableMeaning data={stepIndex} />
-        {stepIndex === 0 && <DataTableMeaningBaseInfo />}
-        {stepIndex === 1 && <DataTableFieldsSelect />}
-        {stepIndex === 2 && <DataTableMeaningTable />}
+        {stepIndex === 0 && <DataTableMeaningBaseInfoFields />}
+        {stepIndex === 1 && <DataTableMeaningTable />}
       </ASpin>
     </ADrawer>
   );

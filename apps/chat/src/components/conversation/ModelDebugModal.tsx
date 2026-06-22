@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { Drawer, Button, Space, Spin, Collapse, CollapseProps } from 'antd';
-import { CloseOutlined, CopyOutlined, ExpandOutlined } from '@ant-design/icons';
+import { Drawer, Button, Space, Spin, Collapse, CollapseProps, Tag } from 'antd';
+import { CloseOutlined, CopyOutlined, ExpandOutlined, BugOutlined, ClockCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
 import { useDebugStore } from '../../store';
 import { SUB_CHAT_MODE_MAP } from '../../constant/chat';
+import styles from './ModelDebugModal.module.css';
 
 interface Props {
   open: boolean;
@@ -15,22 +16,27 @@ interface Props {
 }
 
 // 提取 CodeEditor 组件，使用 React.memo 优化
-const CodeEditor: React.FC<{ value: string; onCopy: () => void; onExpand: () => void; title: string }> = React.memo(({ value, onCopy, onExpand, title }) => {
+const CodeEditor: React.FC<{ value: string; onCopy: () => void; onExpand: () => void; title: string; icon: React.ReactNode }> = React.memo(({ value, onCopy, onExpand, title, icon }) => {
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="flex justify-between items-center mb-2">
-        <span className="font-medium">{title}</span>
-        <Space>
+    <div className={styles.codeBlock}>
+      <div className={styles.codeBlockHeader}>
+        <div className={styles.codeBlockTitle}>
+          {icon}
+          <span>{title}</span>
+        </div>
+        <Space size={4}>
           <Button 
             type="text" 
+            size="small"
             icon={<CopyOutlined />}
             onClick={onCopy}
-            className="hover:opacity-70"
+            className={styles.codeActionBtn}
           />
           <Button 
             type="text" 
+            size="small"
             icon={<ExpandOutlined />}
-            className="hover:opacity-70"
+            className={styles.codeActionBtn}
             onClick={onExpand}
           />
         </Space>
@@ -40,11 +46,7 @@ const CodeEditor: React.FC<{ value: string; onCopy: () => void; onExpand: () => 
         value={value}
         extensions={[json()]}
         theme="light"
-        style={{
-          fontSize: '14px',
-          borderRadius: '4px',
-          overflow: 'hidden'
-        }}
+        className={styles.codeMirror}
       />
     </div>
   );
@@ -117,42 +119,52 @@ const ModelDebugModal: React.FC<Props> = ({ open, onClose, convUid, roundIndex, 
       return {
         key,
         label: (
-          <div className='flex items-center'>
-            <span className='mr-4'>{getStepName()}</span>
-            <span>（用时{metrics.total_time}秒 | {metrics.total_tokens}tokens）</span>
+          <div className={styles.stepLabel}>
+            <span className={styles.stepIndex}>{index + 1}</span>
+            <span className={styles.stepName}>{getStepName()}</span>
+            <div className={styles.stepMeta}>
+              <Tag icon={<ClockCircleOutlined />} color="blue" bordered={false}>
+                {metrics.total_time}秒
+              </Tag>
+              <Tag icon={<ThunderboltOutlined />} color="purple" bordered={false}>
+                {metrics.total_tokens} tokens
+              </Tag>
+            </div>
           </div>
         ),
         children: (
           <Spin spinning={!!item.loading}>
-            <div className="flex flex-col h-full">
+            <div className={styles.stepContent}>
               {/* 输入区域 - 只在展开时渲染 */}
-              <div className="flex-1 mb-4">
+              <div className={styles.stepSection}>
                 {isActive ? (
                   <CodeEditor 
                     value={inputs}
                     title="输入"
+                    icon={<span className={styles.codeIcon}>IN</span>}
                     onCopy={() => handleCopy(inputs)}
                     onExpand={() => handleToggleExpand(inputs)}
                   />
                 ) : (
-                  <div className="bg-gray-50 rounded-lg p-4 text-gray-400">
-                    展开以查看输入内容
+                  <div className={styles.codePlaceholder}>
+                    <span>展开以查看输入内容</span>
                   </div>
                 )}
               </div>
     
               {/* 输出区域 - 只在展开时渲染 */}
-              <div className="flex-1">
+              <div className={styles.stepSection}>
                 {isActive ? (
                   <CodeEditor 
                     value={outputs}
                     title="输出"
+                    icon={<span className={styles.codeIconOut}>OUT</span>}
                     onCopy={() => handleCopy(outputs)}
                     onExpand={() => handleToggleExpand(outputs)}
                   />
                 ) : (
-                  <div className="bg-gray-50 rounded-lg p-4 text-gray-400">
-                    展开以查看输出内容
+                  <div className={styles.codePlaceholder}>
+                    <span>展开以查看输出内容</span>
                   </div>
                 )}
               </div>
@@ -172,16 +184,21 @@ const ModelDebugModal: React.FC<Props> = ({ open, onClose, convUid, roundIndex, 
     <>
       <Drawer
         title={
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-medium">模型调试</span>
-              {thinkTime ? <span className="text-gray-400 text-sm">(用时{thinkTime}秒)</span> : null}
+          <div className={styles.drawerTitle}>
+            <div className={styles.drawerTitleLeft}>
+              <BugOutlined className={styles.drawerTitleIcon} />
+              <span className={styles.drawerTitleText}>模型调试</span>
+              {thinkTime ? (
+                <Tag icon={<ClockCircleOutlined />} color="default" bordered={false} className={styles.drawerTitleTag}>
+                  用时 {thinkTime} 秒
+                </Tag>
+              ) : null}
             </div>
             <Button
               type="text"
               icon={<CloseOutlined />}
               onClick={onClose}
-              className="hover:opacity-70"
+              className={styles.drawerCloseBtn}
             />
           </div>
         }
@@ -190,23 +207,42 @@ const ModelDebugModal: React.FC<Props> = ({ open, onClose, convUid, roundIndex, 
         open={open}
         width={800}
         closable={false}
+        className={styles.debugDrawer}
       >
         <Spin spinning={loading} className="h-full">
           { items?.length ? (
             <Collapse 
+              className={styles.debugCollapse}
               accordion 
               items={items} 
               activeKey={activeKeys}
               onChange={handleCollapseChange}
             />
-          ) : '无数据' }
+          ) : (
+            <div className={styles.emptyState}>
+              <BugOutlined className={styles.emptyIcon} />
+              <span>暂无调试数据</span>
+            </div>
+          )}
         </Spin>
       </Drawer>
-      { toggleExpand ?  (
-        <Drawer title='内容' width='100vw' height='100vh' open zIndex={1001} onClose={() => {
-          setToggleExpand(false);
-          setExpandJson('');
-        }}>
+      { toggleExpand ? (
+        <Drawer 
+          title={
+            <div className="flex items-center gap-2">
+              <ExpandOutlined />
+              <span>内容预览</span>
+            </div>
+          } 
+          width='100vw' 
+          height='100vh' 
+          open 
+          zIndex={1001} 
+          onClose={() => {
+            setToggleExpand(false);
+            setExpandJson('');
+          }}
+        >
           <CodeMirror
             readOnly
             value={expandJson}
@@ -219,7 +255,6 @@ const ModelDebugModal: React.FC<Props> = ({ open, onClose, convUid, roundIndex, 
           />
         </Drawer>
       ) : null}
-
     </>
   );
 };

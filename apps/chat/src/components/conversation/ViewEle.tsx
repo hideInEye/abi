@@ -222,6 +222,9 @@ const ViewEle: React.FC<PropsType> = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number | string>("auto");
 
+  // 控制图表滚动条显示（通过 CSS 类名控制）
+  const [isChartHovered, setIsChartHovered] = useState(false);
+
   // 动态计算内容高度
   useEffect(() => {
     if (contentRef.current) {
@@ -683,11 +686,8 @@ const ViewEle: React.FC<PropsType> = ({
     // 检查数据是否为空
     if (!chartDataClone.data || chartDataClone.data.length === 0) {
       return (
-        <div className="flex items-center justify-center h-[12.5rem] text-gray-400">
-          <div className="text-center">
-            <SvgIcon localIcon="empty" className="w-12 h-12 mb-2" />
-            <div>暂无数据</div>
-          </div>
+        <div className="flex items-center justify-center py-8">
+          <span style={{ fontSize: '12px', color: '#999' }}>暂无数据</span>
         </div>
       );
     }
@@ -745,7 +745,7 @@ const ViewEle: React.FC<PropsType> = ({
         dataZoom: [
           {
             type: 'slider',
-            show: finalXData.length > 10, // 当数据点超过10个时显示滚动条
+            show: true, // 始终渲染，通过 CSS 控制显隐
             xAxisIndex: 0,
             start: 0,
             end: finalXData.length > 10 ? Math.min(100, (10 / finalXData.length) * 100) : 100, // 默认显示前10个数据点
@@ -1062,7 +1062,11 @@ const ViewEle: React.FC<PropsType> = ({
       color: colors[i % colors.length]
     }));
     return (
-      <div style={{ width: '100%' }}>
+      <div 
+        className={`${styles.chartContainer} ${isChartHovered ? styles.chartContainerHovered : ''}`}
+        onMouseEnter={() => setIsChartHovered(true)}
+        onMouseLeave={() => setIsChartHovered(false)}
+      >
         {isPieOrDonut && legendData.length > 0 && (
           <PieLegend
             data={legendData}
@@ -1094,11 +1098,8 @@ const ViewEle: React.FC<PropsType> = ({
 
     if (activeType !== 'sql' && (!displayData || displayData.length === 0)) {
       return (
-        <div className="flex items-center justify-center h-[12.5rem] text-gray-400">
-          <div className="text-center">
-            <SvgIcon localIcon="empty" className="w-12 h-12 mb-2" />
-            <div>暂无数据</div>
-          </div>
+        <div className="flex items-center justify-center py-8">
+          <span style={{ fontSize: '12px', color: '#999' }}>暂无数据</span>
         </div>
       );
     }
@@ -1201,8 +1202,9 @@ const ViewEle: React.FC<PropsType> = ({
           }
         }
         return (
-          <div className="bg-[#f6f6f6] rounded p-2 relative">
-            <div className="absolute right-3 top-3 z-10 cursor-pointer text-gray-600 hover:text-gray-800 transition-colors">
+          <div className={styles.sqlCodeBlock}>
+            <div className={styles.sqlCodeBlockHeader}>
+              <span>{codeLang === 'sql' ? 'SQL' : 'Python'}</span>
               <Text
                 copyable={{
                   text: displayText,
@@ -1218,10 +1220,10 @@ const ViewEle: React.FC<PropsType> = ({
               showLineNumbers={true}
               customStyle={{
                 margin: 0,
-                borderRadius: '0.25rem',
-                fontSize: '0.875rem',
-                backgroundColor: '#f5f5f5',
-                padding: '0.75rem',
+                borderRadius: '0 0 10px 10px',
+                fontSize: '0.8125rem',
+                backgroundColor: 'transparent',
+                padding: '12px 14px',
               }}
               codeTagProps={{
                 style: {
@@ -1346,8 +1348,8 @@ const ViewEle: React.FC<PropsType> = ({
         {/* 描述分析 / 数据知识 */}
         {data?.describe && (chartData?.chat_mode !== 'chat_with_analysis' && !chartData?.recommendQuestions && !chartData?.rewrite) && (
           <div className="w-full overflow-hidden mb-[0.625rem]">
-            <div className="px-6 pt-2 pb-4 border-b border-[#edf1f5] flex justify-between items-center">
-              <span className="font-semibold text-[#2d2d2d]">{chartData?.chat_mode === 'chat_with_knowledge' ? '数据知识' : '描述分析'}</span>
+            <div className="section-header px-6 pt-3 pb-3 flex justify-between items-center">
+              <span className="chart-header-title font-semibold text-[#2d2d2d]">{chartData?.chat_mode === 'chat_with_knowledge' ? '数据知识' : '描述分析'}</span>
 
               <div className="flex items-center gap-[1.25rem] justify-end">
                 {!data.arrowStatus ? (
@@ -1420,39 +1422,51 @@ const ViewEle: React.FC<PropsType> = ({
                         <div><Button shape="circle" icon={<CloseOutlined />} onClick={() => setDrillDownData(null)} /></div>
                         <Table columns={drillDownData?.columns || []} dataSource={drillDownData?.data || []} />
                       </div> : (
-                        (chartData?.chat_mode === 'chat_with_db_execute' || chartData?.chat_mode === 'chat_excel') && (
-                          <div className="w-full overflow-hidden">
-                            <div className="pt-2 pb-4 border-b border-[#edf1f5]">
-                              <span className="font-semibold text-[#2d2d2d]">图表信息</span>
+                        (chartData?.chat_mode === 'chat_with_db_execute' || chartData?.chat_mode === 'chat_excel') && (() => {
+                          const hasData = (queryResult.data && queryResult.data.length > 0) || (chartData?.data && chartData.data.length > 0);
+                          
+                          return (
+                            <div className="w-full overflow-hidden">
+                              <div className="section-header pt-3 pb-3">
+                                <span className="chart-header-title font-semibold text-[#2d2d2d]">图表信息</span>
+                              </div>
+                              <div className="pt-3">
+                                <ChartHeader
+                                  onTypeChange={handleTypeChange}
+                                  onShareClick={handleShareClick}
+                                  onConfigClick={handleConfigClick}
+                                  onDebugClick={handleDebugClick}
+                                  onFullscreenClick={handleFullscreenClick}
+                                  showChartIcon={showChartIcon}
+                                  chartType={chartType}
+                                  activeType={activeType}
+                                  convUid={convUid}
+                                  chatId={chatId}
+                                  spaceId={spaceId}
+                                  agentId={agentId}
+                                  chatMode={chartData?.chat_mode}
+                                  ansiSql={chartData?.sql}
+                                  onDataFetched={handleDataFetched}
+                                  onExportClick={handleDownload}
+                                  onhandleGetChartType={handleGetChartType}
+                                  currentTableData={queryResult.data || chartData?.data || []}
+                                  showTitle={false}
+                                />
+                                <div className="mt-3">
+                                  {hasData ? (
+                                    renderContent()
+                                  ) : (
+                                    <div className="flex items-center justify-center py-8">
+                                      <span style={{ fontSize: '12px', color: '#999' }}>暂无数据</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <div className="pt-3">
-                            <ChartHeader
-                              onTypeChange={handleTypeChange}
-                              onShareClick={handleShareClick}
-                              onConfigClick={handleConfigClick}
-                              onDebugClick={handleDebugClick}
-                              onFullscreenClick={handleFullscreenClick}
-                              showChartIcon={showChartIcon}
-                              chartType={chartType}
-                              activeType={activeType}
-                              convUid={convUid}
-                              chatId={chatId}
-                              spaceId={spaceId}
-                              agentId={agentId}
-                              chatMode={chartData?.chat_mode}
-                              ansiSql={chartData?.sql}
-                              onDataFetched={handleDataFetched}
-                              onExportClick={handleDownload}
-                              onhandleGetChartType={handleGetChartType}
-                              currentTableData={queryResult.data || chartData?.data || []}
-                              showTitle={false}
-                            />
-                            <div className="mt-3">{renderContent()}</div>
-                            </div>
-                          </div>
-                        )
+                          );
+                        })()
                       )}
-                    </Spin>
+                  </Spin>
 
                   {/* chat_with_analysis 归因分析 - 待补充 */}
                   {
@@ -1469,7 +1483,7 @@ const ViewEle: React.FC<PropsType> = ({
                     </div>
                   )}
                   {/* 点赞、点踩、引用、推荐、归因、预测 */}
-                  {/* {chartData?.chat_mode && (
+                  {chartData?.chat_mode && (
                     <StatisticsAnalysis
                       onAttributionClick={handleAttributionClick}
                       onPredictClick={handlePredictClick}
@@ -1480,8 +1494,9 @@ const ViewEle: React.FC<PropsType> = ({
                       onVoteChange={handleLike}
                       feedback={chartData?.feedback || {}}
                       chatMode={chartData?.chat_mode}
+                      content={chartData?.desc || chartData?.data_knowledge || ''}
                     />
-                  )} */}
+                  )}
                   {
                     // 推荐问题
                     chartData?.recommendQuestions !== undefined && (

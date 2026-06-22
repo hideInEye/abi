@@ -328,7 +328,7 @@ export const initAuthRoute = (): AppThunk => async (dispatch, getState) => {
  * @param redirectKey Redirect route key
  */
 function handleUpdateRootRouteRedirect(redirectKey: LastLevelRouteKey) {
-  const redirect = redirectKey === 'share-manage_my-share' ? 'share-manage/my-share' : getRoutePath(redirectKey);
+  const redirect = getRoutePath(redirectKey);
 
   if (redirect) {
     const rootRoute: CustomRoute = { ...ROOT_ROUTE, redirect };

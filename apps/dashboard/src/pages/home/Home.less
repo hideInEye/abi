@@ -4,7 +4,7 @@
  *
  * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
  *
- * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ * This copyright statement applies to, but is limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
  *
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
@@ -13,8 +13,8 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #1E1E2F;
-  color: #FFFFFF;
+  background: linear-gradient(135deg, rgba(240, 244, 255, 0.6) 0%, rgba(239, 243, 255, 0.6) 50%, rgba(239, 242, 255, 0.6) 100%);
+  color: #1a2744;
   font-family: 'Helvetica Neue', Arial, sans-serif;
 
   .lc-home-header {
@@ -22,9 +22,10 @@
     padding: 0 24px;
     display: flex;
     align-items: center;
-    background-color: #2C2C3E;
-    border-bottom: 1px solid #3A3A4E;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+    box-shadow: 0 2px 12px rgba(91, 124, 247, 0.06);
 
     .logo {
       img {
@@ -43,15 +44,25 @@
     .lc-home-body-left {
       width: 220px;
       height: calc(100vh - 60px);
-      border-right: 1px solid #2e2e2e;
-      background-color: #232323;
+      border-right: 1px solid rgba(130, 140, 200, 0.12);
+      background: rgba(255, 255, 255, 0.55);
+      backdrop-filter: blur(12px);
     }
 
     .lc-home-body-right {
       flex: 1;
-      padding: 24px;
-      background-color: #1E1E2F;
+      padding: 20px;
+      background: transparent;
       overflow-y: auto;
+
+      // 滚动条样式
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: rgba(130, 140, 200, 0.2);
+        border-radius: 6px;
+      }
 
       > * {
         max-width: 1200px;

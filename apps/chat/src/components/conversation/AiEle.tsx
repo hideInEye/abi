@@ -10,8 +10,7 @@ import SvgIcon from "../../components/SvgIcon"
 import styles from './index.module.css';
 import ClarifyComponent from "./components/ClarifyComponent";
 import IntentClarifyV2 from "./components/IntentClarifyV2"; // 澄清处理组件
-import ThinkingStepsDrawer from "./components/ThinkingStepsDrawer";
-import { RightOutlined } from '@ant-design/icons';  // 导入 Ant Design 图标
+import { CheckCircleFilled, DownOutlined, UpOutlined } from '@ant-design/icons';
 import { Typography } from "antd";
 import ReactMarkdown from 'react-markdown';
 import { SUB_CHAT_MODE_MAP } from '../../constant/chat';
@@ -108,8 +107,11 @@ const AiEle: React.FC<PropsType> = ({
   const processContent = (content: string) => {
     // 处理后的内容
     const processed = content
-      .replace(/\n{3,}/g, '\n\n') // 将3个及以上的连续换行符压缩为双换行
-      .replace(/\n\n\n/g, '\n\n') // 再次确保没有三连换行
+      .split('\n')
+      .map(line => line.trim()) // 去除每行首尾空白
+      .filter(line => line.length > 0) // 过滤掉空行
+      .join('\n') // 重新组合
+      .replace(/\n{2,}/g, '\n') // 将多个连续换行符压缩为单个
       .trim();
     
     return processed;
@@ -205,8 +207,8 @@ const AiEle: React.FC<PropsType> = ({
   const [isCollapsed, setIsCollapsed] = useState(true);
   // 实时思考秒数（用于生成中展示）
   const [thinkingSeconds, setThinkingSeconds] = useState(0);
-  // 思考步骤抽屉
-  const [stepsDrawerOpen, setStepsDrawerOpen] = useState(false);
+  // 历史步骤折叠/展开状态
+  const [stepsExpanded, setStepsExpanded] = useState(false);
 
   useEffect(() => {
     // 控制折叠状态
@@ -248,7 +250,7 @@ const AiEle: React.FC<PropsType> = ({
 
   useEffect(() => {
     if (data?.smLoading) {
-      setStepsDrawerOpen(false)
+      setStepsExpanded(false)
     }
   }, [data?.smLoading, data?.order])
 
@@ -264,9 +266,9 @@ const AiEle: React.FC<PropsType> = ({
   const fallbackThinkingContent = processContent(data.context || '')
   const canOpenHistorySteps = showHistoryTrigger && !data?.smLoading && (historySteps.length > 0 || !!fallbackThinkingContent)
 
-  const handleOpenHistorySteps = () => {
+  const handleToggleHistorySteps = () => {
     if (!canOpenHistorySteps) return
-    setStepsDrawerOpen((prev) => !prev)
+    setStepsExpanded((prev) => !prev)
   }
 
   return (
@@ -280,7 +282,11 @@ const AiEle: React.FC<PropsType> = ({
           <div className={styles.thinkingCardHeader}>
             <div className={styles.thinkingStatusWrap}>
               <span className={styles.thinkingStatusIcon}>
-                <SvgIcon className="text-[1rem]" localIcon={data?.smLoading ? 'thinkingblue' : 'thinking'} />
+                {statusLabel === '已完成思考' ? (
+                  <CheckCircleFilled style={{ fontSize: '1rem', color: '#52c41a' }} />
+                ) : (
+                  <SvgIcon className="text-[1rem]" localIcon={data?.smLoading ? 'thinkingblue' : 'thinking'} />
+                )}
               </span>
               <span className={styles.thinkingStatusText}>
                 {statusLabel}
@@ -293,15 +299,54 @@ const AiEle: React.FC<PropsType> = ({
                 <button
                   type="button"
                   className={`${styles.thinkingHistoryTrigger} ${!canOpenHistorySteps ? styles.thinkingHistoryTriggerDisabled : ''}`}
-                  onClick={handleOpenHistorySteps}
+                  onClick={handleToggleHistorySteps}
                   disabled={!canOpenHistorySteps}
                 >
-                  <span>{stepsDrawerOpen ? '收起历史步骤' : '查看历史步骤'}</span>
-                  <RightOutlined className={styles.thinkingHistoryArrow} />
+                  <span>{stepsExpanded ? '收起' : '展开'}</span>
+                  {stepsExpanded ? <UpOutlined className={styles.thinkingHistoryArrow} /> : <DownOutlined className={styles.thinkingHistoryArrow} />}
                 </button>
               ) : null}
             </div>
           </div>
+
+          {/* 历史步骤折叠区域 - 默认显示3行 */}
+          {canOpenHistorySteps && (
+            <div className={styles.thinkingStepsCollapsible}>
+              <div
+                className={styles.thinkingStepsContent}
+                style={{
+                  maxHeight: stepsExpanded ? 'none' : '4.5em',
+                  overflow: stepsExpanded ? 'visible' : 'hidden',
+                }}
+              >
+                {historySteps.length > 0 ? (
+                  historySteps.map((step: any, index: number) => (
+                    <div key={step.id || index} className={styles.thinkingStepItem}>
+                      <span className={styles.thinkingStepIndex}>{index + 1}</span>
+                      <div className={styles.thinkingStepBody}>
+                        <div className={styles.thinkingStepTitle}>{step.name}</div>
+                        <div className={styles.thinkingStepContent}>
+                          <ReactMarkdown>{step.content}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : fallbackThinkingContent ? (
+                  <div className={styles.thinkingStepItem}>
+                    <span className={styles.thinkingStepIndex}>1</span>
+                    <div className={styles.thinkingStepBody}>
+                      <div className={styles.thinkingStepContent}>
+                        <ReactMarkdown>{fallbackThinkingContent}</ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              {/* 渐变遮罩 - 未展开且内容溢出时显示 */}
+              {!stepsExpanded && <div className={styles.thinkingStepsFade} />}
+            </div>
+          )}
+
           {isCollapsed ? null : <div className={styles.thinkingCardBody}>
             <div
               className={styles.thinkingContent}
@@ -361,13 +406,6 @@ const AiEle: React.FC<PropsType> = ({
           </div>}
         </div>
       </div>
-      <ThinkingStepsDrawer
-        open={stepsDrawerOpen}
-        onClose={() => setStepsDrawerOpen(false)}
-        steps={historySteps}
-        fallbackContent={historySteps.length > 0 ? '' : fallbackThinkingContent}
-        thinkTime={displayThinkingSeconds}
-      />
     </div>
   );
 }

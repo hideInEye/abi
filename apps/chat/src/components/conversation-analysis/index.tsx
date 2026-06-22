@@ -319,7 +319,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
   return (
     <Spin spinning={loading} wrapperClassName="h-full">
-      <div className="h-full w-full flex bg-white">
+      <div className="h-full w-full flex" style={{ background: 'transparent' }}>
         {!hideSidebar && (
           <ConverList
             ref={converListRef}

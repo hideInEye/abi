@@ -68,7 +68,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
   } = controller
 
   return (
-    <div className="flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden bg-[#f9f9f9]">
+    <div className="flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden" style={{ background: 'transparent' }}>
       <ChatHeader
         conv={conv}
         ref={chatHeaderRef}

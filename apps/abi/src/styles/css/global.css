@@ -3,10 +3,14 @@
 
 /* ABI v5 全局 CSS 变量 */
 :root {
+  /* 公共面板背景色 —— 卡片/下拉框/抽屉/弹窗 统一适用 */
+  --abi-card-bg: linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%);
   --abi-panel-bg: rgba(255, 255, 255, 0.48);
   --abi-panel-border: rgba(130, 140, 200, 0.18);
   --abi-backdrop: blur(12px);
   --abi-border-light: rgba(130, 140, 200, 0.10);
+  --abi-card-box-draw-pop-bg: #FCFDFF;
+  --abi-input-bg: #F9FAFF;
 }
 
 html,
@@ -73,6 +77,121 @@ html.grayscale {
   background-color: rgba(91, 124, 247, 0.08) !important;
 }
 
+/* Drawer / Modal 背景色统一为卡片背景色 */
+html body .ant-drawer .ant-drawer-content,
+html body .ant-modal .ant-modal-content,
+html body .ant-drawer .ant-drawer-content-wrapper,
+html body .ant-modal .ant-modal-wrap {
+  background: var(--abi-card-box-draw-pop-bg) !important;
+}
+
+html body .ant-drawer .ant-drawer-wrapper-body,
+html body .ant-drawer .ant-drawer-header,
+html body .ant-drawer .ant-drawer-body,
+html body .ant-drawer .ant-drawer-footer,
+html body .ant-modal .ant-modal-header,
+html body .ant-modal .ant-modal-body,
+html body .ant-modal .ant-modal-footer {
+  background: transparent !important;
+}
+
+/* 覆盖 antd cssVar 模式下的背景色变量 */
+.ant-drawer,
+.ant-modal {
+  --ant-color-bg-elevated: transparent !important;
+}
+
+/* 下拉框背景色统一为卡片背景色 */
+/* Select 下拉框 */
+html body .ant-select-dropdown {
+  --ant-color-bg-container: transparent;
+  --ant-color-bg-elevated: transparent;
+  background: var(--abi-card-box-draw-pop-bg) !important;
+}
+
+/* DatePicker 日期选择器 */
+html body .ant-picker-dropdown {
+  --ant-color-bg-container: transparent;
+  --ant-color-bg-elevated: transparent;
+  background: var(--abi-card-box-draw-pop-bg) !important;
+}
+html body .ant-picker-panel-container {
+  --ant-color-bg-container: transparent;
+  background: transparent !important;
+}
+html body .ant-picker-panel {
+  background: transparent !important;
+}
+html body .ant-picker-content,
+html body .ant-picker-header {
+  background: transparent !important;
+}
+
+/* Dropdown 下拉菜单 */
+html body .ant-dropdown-menu {
+  --ant-color-bg-container: transparent;
+  --ant-color-bg-elevated: transparent;
+  background: var(--abi-card-box-draw-pop-bg) !important;
+}
+
+/* Popover 气泡卡片 */
+html body .ant-popover .ant-popover-inner {
+  --ant-color-bg-container: transparent;
+  --ant-color-bg-elevated: transparent;
+  background: var(--abi-card-box-draw-pop-bg) !important;
+}
+/* 输入框背景色统一为 #F9FAFF */
+html body .ant-select-selector,
+html body .ant-input,
+html body .ant-input-affix-wrapper,
+html body .ant-input-number,
+html body .ant-input-number-input,
+html body textarea.ant-input,
+html body .ant-picker {
+  --ant-color-bg-container: var(--abi-input-bg);
+  background: var(--abi-input-bg) !important;
+}
+
+html body .ant-input-affix-wrapper .ant-input {
+  background: transparent !important;
+}
+
+html body .ant-input-number .ant-input-number-input {
+  background: transparent !important;
+}
+
+/* 输入框 placeholder 字体色统一为 #8FA0B5 */
+html body .ant-input,
+html body .ant-input-number,
+html body .ant-input-number-input,
+html body textarea.ant-input,
+html body .ant-picker-input > input {
+  --ant-color-text-placeholder: #8FA0B5;
+}
+
+html body .ant-input::placeholder,
+html body .ant-input-number::placeholder,
+html body .ant-input-number-input::placeholder,
+html body textarea.ant-input::placeholder,
+html body .ant-picker-input > input::placeholder {
+  color: #8FA0B5 !important;
+}
+
+/* Select 组件 placeholder（antd 用 span 渲染，需单独覆盖） */
+html body .ant-select-selection-placeholder {
+  color: #8FA0B5 !important;
+  opacity: 1 !important;
+}
+
 .ant-table-tbody >tr >td {
   border-bottom: 0 !important;
+}
+
+/* Tooltip 背景色统一 */
+.ant-tooltip .ant-tooltip-inner {
+  background: #F8FAFF !important;
+  color: #1f2937 !important;
+}
+.ant-tooltip .ant-tooltip-arrow::before {
+  background: #F8FAFF !important;
 }

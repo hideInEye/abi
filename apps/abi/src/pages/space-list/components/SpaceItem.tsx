@@ -1,15 +1,15 @@
 import { CaretDownOutlined } from '@ant-design/icons'
+import { Dropdown } from 'antd'
+import type { MenuProps } from 'antd'
 import type { FC } from 'react'
 import { useCallback } from 'react'
 
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch'
-
-import type { ISpaceItem } from '../types'
-import s from '../../home/index.module.scss'
-import { Dropdown, Space } from 'antd'
-import { MenuProps } from 'antd/lib'
 import { setSelectedMenuKey } from '@/store/slice/layout'
 import { useRouter } from '~/packages/simple-router/src'
+
+import s from '../../home/index.module.scss'
+import type { ISpaceItem } from '../types'
 interface SpaceItemProps {
   readonly deleteSpace: (space: ISpaceItem) => void
   readonly setEditSpace: (space: ISpaceItem) => void
@@ -93,14 +93,6 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
           </APopover>
         </div>
         <div className={s['space-card-actions']}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setSpaceId(space.spaceId)
-            }}
-          >
-            进入
-          </button>
           <Dropdown menu={{ items, onClick }}>
             <button
               onClick={(e) => {
@@ -115,15 +107,15 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
       </div>
       <div className={s['space-card-meta']}>
         <div className={s['space-card-meta-row']}>
-          <span className={s['space-card-meta-lbl']}>创建人</span>
+          <span className={s['space-card-meta-lbl']}>创建人：</span>
           <span className={s['space-card-meta-val']}>{space.createBy}</span>
         </div>
         <div className={s['space-card-meta-row']}>
-          <span className={s['space-card-meta-lbl']}>创建时间</span>
+          <span className={s['space-card-meta-lbl']}>创建时间：</span>
           <span className={s['space-card-meta-val']}>{space.createTime}</span>
         </div>
         <div className={s['space-card-meta-row']}>
-          <span className={s['space-card-meta-lbl']}>空间 ID</span>
+          <span className={s['space-card-meta-lbl']}>空间 ID：</span>
           <span className={s['space-card-meta-val-id']}>{space.spaceId}</span>
         </div>
       </div>

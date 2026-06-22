@@ -8,20 +8,23 @@ export const BaseData: React.FC<PropsType> = memo(({ curDatasource, sourceId, ta
   const { fieldsList, getFieldsList } = useDatasource();
   const columns = [
     {
+      align: 'center',
       dataIndex: 'originName',
       key: 'originName',
-      title: '字段名称'
+      title: '字段名称',
     },
     {
+      align: 'center',
       dataIndex: 'type',
       key: 'type',
-      title: '字段类型'
+      title: '字段类型',
     },
     {
+      align: 'center',
       dataIndex: 'name',
       key: 'name',
-      title: '描述'
-    }
+      title: '描述',
+    },
   ];
 
   const getTableList = async () => {
@@ -35,11 +38,29 @@ export const BaseData: React.FC<PropsType> = memo(({ curDatasource, sourceId, ta
   }, [tableName]);
 
   return (
-    <ATable<any>
-      columns={columns}
-      dataSource={fieldsList}
-      pagination={false}
-      scroll={{ y: 'calc(100vh - 320px)' }}
-    />
+    <div className="ds-view-tab-content">
+      <div
+        style={{
+          border: '1px solid rgba(130,140,200,0.18)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div className="assistant-table-scroll" style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
+          <ATable<any>
+            columns={columns as any[]}
+            dataSource={fieldsList}
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+            size="middle"
+            className="abi-std-table"
+          />
+        </div>
+      </div>
+    </div>
   );
 });

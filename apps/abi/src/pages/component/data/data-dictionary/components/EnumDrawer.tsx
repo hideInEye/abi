@@ -1,5 +1,6 @@
-import { CloseOutlined } from '@ant-design/icons';
-import React from 'react';
+import { CloseOutlined, OrderedListOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { Button, Drawer, Flex, Input } from 'antd';
+import React, { useEffect, useState } from 'react';
 
 import {
   addDictionaryEnum,
@@ -30,6 +31,7 @@ export const EnumDrawer: React.FC<EnumDrawerProps> = ({ close, enumerationModalO
     total: number;
   }>();
   const [dictNumber, setDictNumber] = useState(1);
+  const [searchValue, setSearchValue] = useState('');
 
   const enumClose = () => {
     setEnumModalOpen(false);
@@ -53,6 +55,7 @@ export const EnumDrawer: React.FC<EnumDrawerProps> = ({ close, enumerationModalO
   }, [enumInfo?.dictId, dictNumber]);
 
   const dictSearch = (value: string) => {
+    setSearchValue(value);
     setDictNumber(1);
     setEnumerationDataSource({
       code: 0,
@@ -64,9 +67,14 @@ export const EnumDrawer: React.FC<EnumDrawerProps> = ({ close, enumerationModalO
     getEnumInfo({
       dictField: enumInfo!.dictField,
       dictLabel: value,
-      pageNum: dictNumber,
+      pageNum: 1,
       pageSize: 10
     });
+  };
+
+  const handleReset = () => {
+    setSearchValue('');
+    dictSearch('');
   };
 
   const refreshEnumInfo = () => {
@@ -106,7 +114,7 @@ export const EnumDrawer: React.FC<EnumDrawerProps> = ({ close, enumerationModalO
       getEnumInfo({
         dictField: enumInfo!.dictField,
         dictLabel: '',
-        pageNum: dictNumber,
+        pageNum: 1,
         pageSize: 10
       });
     }
@@ -117,53 +125,103 @@ export const EnumDrawer: React.FC<EnumDrawerProps> = ({ close, enumerationModalO
     setEnumModalOpen(true);
   };
 
+  const dictField = enumInfo?.dictField || '';
+  const dictName = enumInfo?.dictName || '';
+  const totalCount = enumerationDataSource?.total || 0;
+
   return (
     <>
-      <ADrawer
+      <Drawer
+        className="ds-operate-drawer"
         closeIcon={null}
-        extra={<CloseOutlined onClick={close} />}
+        destroyOnClose
+        extra={<CloseOutlined onClick={close} style={{ color: '#768a9f', fontSize: 16 }} />}
         open={enumerationModalOpen}
-        title="字典枚举"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              alignItems: 'center', background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+              borderRadius: 10, boxShadow: '0 4px 12px rgba(91,124,247,0.3)',
+              color: '#fff', display: 'flex', fontSize: 18, height: 36, justifyContent: 'center', width: 36,
+            }}>
+              <OrderedListOutlined />
+            </div>
+            <div>
+              <div style={{ color: '#1a2744', fontSize: 17, fontWeight: 700, letterSpacing: '0.02em' }}>字典枚举管理</div>
+              <div style={{ color: '#768a9f', fontSize: 12, marginTop: 2 }}>
+                {dictField} {dictName ? `· ${dictName}` : ''} · 共 {totalCount} 个枚举值
+              </div>
+            </div>
+          </div>
+        }
         width={1000}
+        styles={{ body: { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', padding: 0 } }}
         footer={
-          <AFlex className="justify-end gap-2">
-            <AButton
-              type="default"
+          <div style={{ alignItems: 'center', display: 'flex', gap: 12, justifyContent: 'flex-end', padding: '4px 0' }}>
+            <Button
               onClick={close}
+              style={{ background: 'transparent', border: '1px solid rgba(130,140,200,0.18)', borderRadius: 8, color: '#5f7490', fontWeight: 500, height: 38, padding: '0 20px' }}
             >
               取消
-            </AButton>
-            <AButton
-              type="primary"
+            </Button>
+            <Button
               onClick={close}
+              style={{
+                background: 'linear-gradient(135deg, #5b7cf7, #7091fa)', border: 'none',
+                borderRadius: 8, boxShadow: '0 2px 10px rgba(91,124,247,0.3)', fontWeight: 600,
+                height: 38, padding: '0 28px',
+              }}
+              type="primary"
             >
               完成
-            </AButton>
-          </AFlex>
+            </Button>
+          </div>
         }
         onClose={close}
       >
-        <AFlex className="mb2 justify-between gap-2">
-          <AInput
-            className="w-50"
-            placeholder="请输入枚举名称"
-            onChange={e => dictSearch(e.target.value)}
-          />
-          <AButton
-            type="primary"
-            onClick={() => setEnumModalOpen(true)}
-          >
-            新增
-          </AButton>
-        </AFlex>
-        <TableEnum
-          dataSource={enumerationDataSource}
-          dictNumber={dictNumber}
-          onDelete={handleEnumDelete}
-          onEdit={handleEnumEdit}
-          onPageChange={setDictNumber}
-        />
-      </ADrawer>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Searchbar */}
+          <section style={{ flexShrink: 0, padding: '16px 24px', borderBottom: '1px solid rgba(130,140,200,0.10)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Input
+                allowClear
+                placeholder="请输入枚举名称"
+                prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+                value={searchValue}
+                onChange={e => setSearchValue(e.target.value)}
+                onPressEnter={() => dictSearch(searchValue)}
+                className="abi-field-input"
+                style={{ width: '220px' }}
+              />
+              <Button type="primary" className="btn-accent-gradient" onClick={() => dictSearch(searchValue)}>
+                <SearchOutlined /> 查询
+              </Button>
+              <Button className="btn-ghost-v5" onClick={handleReset}>
+                重置
+              </Button>
+              <div style={{ flex: 1 }} />
+              <Button
+                type="primary"
+                className="btn-accent-gradient"
+                onClick={() => { setEnumEditObj(null); setEnumModalOpen(true); }}
+              >
+                <PlusOutlined /> 新增枚举
+              </Button>
+            </div>
+          </section>
+
+          {/* Table area */}
+          <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 24px' }}>
+            <TableEnum
+              dataSource={enumerationDataSource}
+              dictNumber={dictNumber}
+              onDelete={handleEnumDelete}
+              onEdit={handleEnumEdit}
+              onPageChange={setDictNumber}
+            />
+          </div>
+        </div>
+      </Drawer>
       <AddOrEditEnum
         editObj={enumEditObj}
         open={enumModalOpen}

@@ -1,10 +1,12 @@
 // import PageTitle from '@/components/stateless/common/PageTitle'
-import { message } from 'antd'
+import { message, Splitter } from 'antd'
 import { Suspense } from 'react'
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer'
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
 import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList, fetchProviderList, copyModel, setDefaultModel } from '@/service/api'
+import { getSpaceId } from '@/store/slice/app'
+import { useAppSelector } from '@/hooks/business/useStore'
 
 const ModalOperateDrawer = lazy(() => import('./modules/modal-operate-drawer'))
 const ProviderList = lazy(() => import('./modules/provider-list'))
@@ -12,6 +14,7 @@ const ModelCardList = lazy(() => import('./modules/model-card-list'))
 
 export function Component() {
   const { t } = useTranslation()
+  const spaceId = useAppSelector(getSpaceId)
 
   const [searchValue, setSearchValue] = useState('')
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null)
@@ -43,6 +46,23 @@ export function Component() {
     }
   }
 
+  const handleBatchDelete = async (ids: number[]) => {
+    if (ids.length === 0) {
+      message.warning('请先选择要删除的模型')
+      return
+    }
+    const promises = ids.map(id => deleteModel(id))
+    const results = await Promise.all(promises)
+    const allSuccess = results.every((res: any) => res.response.data.code === 200)
+    if (allSuccess) {
+      message.success(`成功删除 ${ids.length} 个模型`)
+      run()
+    } else {
+      message.error('批量删除部分失败')
+      run()
+    }
+  }
+
   const handleCopy = async (id: number) => {
     const res: any = await copyModel(id)
     if (res?.response?.data?.code === 200) {
@@ -65,11 +85,12 @@ export function Component() {
 
   const { data, run, tableProps, updateSearchParams } = useTable({
     apiFn: fetchModelList as any,
-    apiParams: {
+    apiParams: useMemo(() => ({
       pageNum: 1,
       pageSize: 999,
       modelName: searchValue,
-    },
+      spaceId,
+    }), [spaceId]),
     columns: () => [] as any,
     rowKey: 'modelId',
   } as any)
@@ -155,36 +176,26 @@ export function Component() {
   }, [allModels, activeProviderId])
 
   return (
-    <div className="flex flex-col p-6" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', flex: 1, gap: 16, minHeight: 0, overflow: 'hidden' }}>
-        {/* 左侧供应商列表 */}
-        <div
-          style={{
-            width: 280,
-            flexShrink: 0,
-            background: '#fff',
-            borderRadius: 8,
-            border: '1px solid #f0f0f0',
-            padding: '12px 8px',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <Suspense>
-            <ProviderList
-              providers={providers}
-              loading={providersLoading}
-              activeProviderId={activeProviderId}
-              activeTab={activeTab}
-              onSelect={handleSelectProvider}
-              onTabChange={handleTabChange}
-            />
-          </Suspense>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <Splitter style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {/* 左侧供应商列表 — 可调整宽度 */}
+        <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
+          <div className="abi-group-sidebar" style={{ height: '100%' }}>
+            <Suspense>
+              <ProviderList
+                providers={providers}
+                loading={providersLoading}
+                activeProviderId={activeProviderId}
+                activeTab={activeTab}
+                onSelect={handleSelectProvider}
+                onTabChange={handleTabChange}
+              />
+            </Suspense>
+          </div>
+        </Splitter.Panel>
 
-        {/* 右侧卡片网格 */}
-        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        {/* 右侧模型列表 */}
+        <Splitter.Panel>
           <Suspense>
             <ModelCardList
               models={displayModels}
@@ -196,11 +207,12 @@ export function Component() {
               onCopy={handleCopy}
               onSetDefault={handleSetDefault}
               onDelete={handleDelete}
+              onBatchDelete={handleBatchDelete}
               onAnalysis={setAnalysisContext}
             />
           </Suspense>
-        </div>
-      </div>
+        </Splitter.Panel>
+      </Splitter>
 
       <Suspense>
         <ModalOperateDrawer {...generalPopupOperation} providers={providers} />

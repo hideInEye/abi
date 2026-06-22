@@ -48,7 +48,7 @@ export const themePageAnimationModeRecord: Record<UnionKey.ThemePageAnimateMode,
 export const themePageAnimationModeOptions = transformRecordToOption(themePageAnimationModeRecord);
 
 
-export const hideMenuRoute = ['space-list', 'recently-used', 'my-collect', 'share-manage_my-share','home','ai-assistant_conversational-analysis','guide'];
+export const hideMenuRoute = ['space-list', 'workbench_app-workshop_recently-used', 'workbench_app-workshop_my-collect', 'workbench_app-workshop_my-share','home','ai-assistant_conversational-analysis','guide'];
 // export const hideMenuRoute = [];
 // 门户管理菜单
 export const portalManageMenus = [

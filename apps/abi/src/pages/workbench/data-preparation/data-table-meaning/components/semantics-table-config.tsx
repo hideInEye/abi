@@ -1,6 +1,7 @@
 import { useDebounceFn } from 'ahooks';
 import type { TableColumnsType } from 'antd';
 import { Form } from 'antd';
+import { DatabaseOutlined } from '@ant-design/icons';
 import { useEffect, useRef } from 'react';
 
 import Star from '../../../../../components/star/index.tsx';
@@ -152,7 +153,7 @@ export default function DataTableMeaningTable() {
   }, [fields.length, genderOptions]); // 只依赖长度和选项，不依赖整个 fields 数组
 
   useEffect(() => {
-    if (drawerTitle !== '编辑表语义') {
+    if (drawerTitle !== '编辑数据语义') {
       setTimeout(() => {
         updateBizNameOrAlias();
         setBizNameOrAlias();
@@ -223,7 +224,7 @@ export default function DataTableMeaningTable() {
   const handleSemanticsShow = (record: DataTypea) => {
     const { fieldType, originName, tableName } = record;
     // 只在编辑模式下检查是否是数据库映射的主键（一个表只映射第一个）
-    if (drawerTitle === '编辑表语义' && tablePrikey && tablePrikey.length > 0) {
+    if (drawerTitle === '编辑数据语义' && tablePrikey && tablePrikey.length > 0) {
       // 找出当前表的所有主键字段
       const currentTablePrimaryKeys = tablePrikey.filter(item => item.tableName === tableName);
       // 如果有主键，只映射第一个
@@ -498,65 +499,76 @@ export default function DataTableMeaningTable() {
   });
 
   return (
-    <AForm form={form}>
-      <div className="space-y-6">
-        {Object.entries(groupedFields).map(([tableName, tableFields]) => {
-          // 获取表的中文名称，从 union 数据中通过 rtableId 获取 rtableName
-          const firstField = (tableFields as DataTypea[])[0] as any;
-          const rtableId = firstField?.rtableId;
-          const rtableName = rtableId ? (rTableNamesMap[rtableId] || '') : '';
-          const tableChineseName = (firstField?.tableRemarks && firstField.tableRemarks.trim())
-            ? firstField.tableRemarks
-            : (rtableName && rtableName.trim() ? rtableName : '');
-          
-          return (
-            <div key={tableName} className="border border-solid border-gray-300 rounded-lg p-4">
-              <div className="mb-3 flex items-center gap-6">
-                <div className="flex items-center">
-                  <span className="text-base font-medium">表名称：</span>
-                  <span className="text-base font-medium mr-15">{tableName}</span>
+    <div className="ds-table-config-wrapper">
+      <div className="ds-table-config-section-title">
+        <span>字段语义配置</span>
+      </div>
+      <AForm form={form}>
+        <div className="space-y-5">
+          {Object.entries(groupedFields).map(([tableName, tableFields]) => {
+            // 获取表的中文名称，从 union 数据中通过 rtableId 获取 rtableName
+            const firstField = (tableFields as DataTypea[])[0] as any;
+            const rtableId = firstField?.rtableId;
+            const rtableName = rtableId ? (rTableNamesMap[rtableId] || '') : '';
+            const tableChineseName = (firstField?.tableRemarks && firstField.tableRemarks.trim())
+              ? firstField.tableRemarks
+              : (rtableName && rtableName.trim() ? rtableName : '');
+            
+            return (
+              <div key={tableName}>
+                <div className="ds-table-group-header">
+                  <DatabaseOutlined />
+                  <span>{tableName}</span>
+                  {tableChineseName && (
+                    <span style={{ fontWeight: 400, color: '#768a9f', fontSize: 12, marginLeft: 4 }}>
+                      ({tableChineseName})
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center">
-                  <span className="text-base font-medium">中文名称：</span>
-                  <div className="flex items-center">
-                    <Star />
-                    <ATooltip 
-                      placement="top" 
-                      title={form.getFieldValue(`tableHeader[${rtableId || tableName}].rtableName`) || tableChineseName || '请输入表中文名称'}
-                    >
-                      <AForm.Item
-                        className="mb0"
-                        initialValue={tableChineseName}
-                        name={`tableHeader[${rtableId || tableName}].rtableName`}
-                        rules={[{ message: '请输入表中文名称', required: true }, { max: 200, message: '中文名称最多200个字符' }]}
-                      >
-                        <AInput
-                          placeholder="请输入表中文名称"
-                          style={{ width: 200 }}
-                          data-field-type="table-chinese-name"
-                          onChange={e => {
-                            const value = e.target.value;
-                            // 先立即更新表单值，保证 UI 响应流畅
-                            form.setFieldValue(`tableHeader[${rtableId || tableName}].rtableName`, value);
-                            // 防抖更新 store，避免频繁遍历整个 fields 数组
-                            debouncedUpdateTableRemarks(tableName, rtableId, value);
-                          }}
-                        />
-                      </AForm.Item>
-                    </ATooltip>
+                <div className="ds-table-group-table">
+                  <div style={{ padding: '10px 16px 8px', background: 'rgba(246, 247, 255, 0.4)', borderBottom: '1px solid rgba(130, 140, 200, 0.08)', display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#3e5068' }}>表中文名：</span>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <Star />
+                        <ATooltip 
+                          placement="top" 
+                          title={form.getFieldValue(`tableHeader[${rtableId || tableName}].rtableName`) || tableChineseName || '请输入表中文名称'}
+                        >
+                          <AForm.Item
+                            className="mb0"
+                            initialValue={tableChineseName}
+                            name={`tableHeader[${rtableId || tableName}].rtableName`}
+                            rules={[{ message: '请输入表中文名称', required: true }, { max: 200, message: '中文名称最多200个字符' }]}
+                          >
+                            <AInput
+                              placeholder="请输入表中文名称"
+                              style={{ width: 200 }}
+                              data-field-type="table-chinese-name"
+                              onChange={e => {
+                                const value = e.target.value;
+                                form.setFieldValue(`tableHeader[${rtableId || tableName}].rtableName`, value);
+                                debouncedUpdateTableRemarks(tableName, rtableId, value);
+                              }}
+                            />
+                          </AForm.Item>
+                        </ATooltip>
+                      </div>
+                    </div>
                   </div>
+                  <ATable
+                    columns={tableMeanConfig}
+                    dataSource={tableFields as DataTypea[]}
+                    pagination={false}
+                    rowKey="key"
+                    size="small"
+                  />
                 </div>
               </div>
-              <ATable
-                columns={tableMeanConfig}
-                dataSource={tableFields as DataTypea[]}
-                pagination={false}
-                rowKey="key"
-              />
-            </div>
-          );
-        })}
-      </div>
-    </AForm>
+            );
+          })}
+        </div>
+      </AForm>
+    </div>
   );
 }

@@ -14,7 +14,7 @@ import type { GroupProps } from './Group';
 export interface QuestionGroupItem {
   groupId: number;
   groupName: string;
-  groupType: 'question';
+  groupType: string;
   parentId?: number;
   remark: string;
   spaceId: number;
@@ -28,20 +28,41 @@ export const useGroupManagement = (config: GroupProps['config']) => {
   const [editingGroup, setEditingGroup] = useState<QuestionGroupItem | null>(null);
 
   const getGroups = async (searchText?: string) => {
-    const { data } = await tableSemanticsGroupList({
-      groupName: searchText,
-      groupType: config.type,
-      pageNum: 1,
-      pageSize: 60,
-      spaceId
-    });
-    setGroups(data || []);
+    const queryTypes = config.queryTypes && config.queryTypes.length > 0
+      ? (config.queryTypes as readonly string[])
+      : [config.type];
+
+    // 并发查询所有分组类型，合并结果
+    const results = await Promise.all(
+      queryTypes.map(gt =>
+        tableSemanticsGroupList({
+          groupName: searchText,
+          groupType: gt as any,
+          pageNum: 1,
+          pageSize: 60,
+          spaceId
+        })
+      )
+    );
+
+    const merged: QuestionGroupItem[] = [];
+    const seenIds = new Set<number>();
+    for (const res of results) {
+      const list: QuestionGroupItem[] = (res as any)?.data ?? [];
+      for (const item of list) {
+        if (!seenIds.has(item.groupId)) {
+          seenIds.add(item.groupId);
+          merged.push(item);
+        }
+      }
+    }
+    setGroups(merged);
   };
 
   const handleGroupAdd = async (newGroup: QuestionGroupItem & { parentId?: number }) => {
    const res =  await addTableSemanticsGroup({
       groupName: newGroup.groupName,
-      groupType: config.type,
+      groupType: (newGroup.groupType || config.type) as any,
       parentId: newGroup.parentId ?? 0,
       remark: newGroup.remark,
       spaceId
@@ -53,7 +74,7 @@ export const useGroupManagement = (config: GroupProps['config']) => {
   };
 
   const handleGroupEdit = async (updatedItem: QuestionGroupItem) => {
-    const res =  await editTableSemanticsGroup(updatedItem);
+    const res =  await editTableSemanticsGroup(updatedItem as any);
     const { response:{data:{code}}} = res
     if(code as number >200) return
     getGroups();

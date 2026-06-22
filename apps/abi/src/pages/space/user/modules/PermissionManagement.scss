@@ -1,0 +1,296 @@
+/* ============================================================
+ * 分配角色抽屉 v5 玻璃态科技风格
+ * ============================================================ */
+
+/* ── 抽屉整体 ── */
+.perm-drawer-v5 {
+  .ant-drawer-header {
+    background: linear-gradient(135deg, rgba(91, 124, 247, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%);
+    border-bottom: 1px solid rgba(91, 124, 247, 0.1);
+    padding: 20px 24px;
+  }
+
+  .ant-drawer-body {
+    padding: 0;
+    background: linear-gradient(180deg, rgba(248, 250, 255, 0.5) 0%, rgba(255, 255, 255, 0.8) 100%);
+  }
+
+  .ant-drawer-footer {
+    border-top: 1px solid rgba(130, 140, 200, 0.12);
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, 0.6);
+  }
+}
+
+/* ── 标题 ── */
+.perm-title-v5 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a2744;
+}
+
+.perm-title-icon {
+  font-size: 20px;
+  color: #5b7cf7;
+  filter: drop-shadow(0 2px 4px rgba(91, 124, 247, 0.2));
+}
+
+.perm-close-icon {
+  font-size: 16px;
+  color: #768a9f;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: #5b7cf7;
+    transform: rotate(90deg);
+  }
+}
+
+/* ── 容器布局 ── */
+.perm-container-v5 {
+  display: flex;
+  gap: 16px;
+  padding: 20px 24px;
+  height: 100%;
+  min-height: 500px;
+}
+
+/* ── 面板通用样式 ── */
+.perm-panel-v5 {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(130, 140, 200, 0.15);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.04);
+}
+
+.perm-panel-left {
+  flex: 0 0 360px;
+}
+
+.perm-panel-right {
+  flex: 1;
+}
+
+/* ── 面板头部 ── */
+.perm-panel-header {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.04) 0%, rgba(139, 92, 246, 0.02) 100%);
+  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
+}
+
+.perm-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a2744;
+  margin-bottom: 4px;
+}
+
+.perm-panel-subtitle {
+  font-size: 12px;
+  color: #8b9bb5;
+}
+
+/* ── 面板主体 ── */
+.perm-panel-body {
+  flex: 1;
+  padding: 16px 20px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(130, 140, 200, 0.05);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(91, 124, 247, 0.2);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(91, 124, 247, 0.35);
+    }
+  }
+}
+
+/* ── 角色列表 ── */
+.perm-role-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.perm-role-card {
+  position: relative;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(130, 140, 200, 0.12);
+  border-radius: 10px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(91, 124, 247, 0.25);
+    box-shadow: 0 4px 12px rgba(91, 124, 247, 0.08);
+    transform: translateY(-1px);
+  }
+
+  &.perm-role-selected {
+    background: linear-gradient(135deg, rgba(91, 124, 247, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border-color: rgba(91, 124, 247, 0.3);
+    box-shadow: 0 4px 16px rgba(91, 124, 247, 0.12);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 24px;
+      background: linear-gradient(180deg, #5b7cf7 0%, #8b5cf6 100%);
+      border-radius: 0 3px 3px 0;
+    }
+  }
+
+  .ant-checkbox-wrapper {
+    width: 100%;
+    padding-left: 8px;
+  }
+
+  .ant-checkbox {
+    margin-right: 12px;
+  }
+}
+
+.perm-role-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.perm-role-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2744;
+  line-height: 1.4;
+}
+
+.perm-role-desc {
+  font-size: 12px;
+  color: #8b9bb5;
+  line-height: 1.5;
+}
+
+/* ── 菜单列表 ── */
+.perm-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.perm-menu-section {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(130, 140, 200, 0.1);
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(91, 124, 247, 0.2);
+  }
+}
+
+.perm-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+}
+
+.perm-menu-role-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #5b7cf7;
+}
+
+.perm-menu-count {
+  font-size: 12px;
+  color: #8b9bb5;
+  background: rgba(91, 124, 247, 0.06);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.perm-menu-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.perm-menu-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4568e8;
+  background: rgba(91, 124, 247, 0.08);
+  border: 1px solid rgba(91, 124, 247, 0.15);
+  border-radius: 6px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(91, 124, 247, 0.12);
+    border-color: rgba(91, 124, 247, 0.25);
+    transform: translateY(-1px);
+  }
+}
+
+.perm-menu-empty {
+  font-size: 13px;
+  color: #8b9bb5;
+  padding: 8px 0;
+}
+
+/* ── 空状态 ── */
+.perm-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.perm-empty-icon {
+  font-size: 48px;
+  color: rgba(91, 124, 247, 0.2);
+  margin-bottom: 16px;
+}
+
+.perm-empty-text {
+  font-size: 14px;
+  color: #8b9bb5;
+}
+
+/* ── 底部按钮区 ── */
+.perm-footer-v5 {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}

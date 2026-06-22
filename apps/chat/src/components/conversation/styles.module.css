@@ -4,10 +4,12 @@
   }
 
   :global(.ant-table) {
-    border: 0.0625rem solid #e7ebf3;
-    border-radius: 0.875rem;
+    border: 1px solid rgba(130, 140, 200, 0.1);
+    border-radius: 10px;
     overflow: hidden;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 1px 6px rgba(26, 39, 68, 0.05);
   }
 
   :global(.ant-table-container) {
@@ -20,23 +22,29 @@
 
   :global(.ant-table-thead > tr > th) {
     white-space: nowrap;
-    background: #f3f6fc !important;
-    color: #4b5565 !important;
+    background: linear-gradient(180deg, rgba(245, 248, 252, 0.95), rgba(240, 244, 250, 0.9)) !important;
+    color: #3a3f50 !important;
     font-weight: 600 !important;
-    font-size: 1.0625rem !important;
-    line-height: 1.35 !important;
-    border-bottom: 0.0625rem solid #e6ebf3 !important;
-    padding: 0.625rem 0.625rem !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    border-bottom: 1.5px solid rgba(91, 124, 247, 0.12) !important;
+    padding: 10px 14px !important;
+    letter-spacing: 0.02em;
   }
 
   :global(.ant-table-tbody > tr > td) {
     white-space: nowrap;
-    color: #596273 !important;
-    font-size: 1rem !important;
-    line-height: 1.4 !important;
-    border-bottom: 0.0625rem solid #edf1f6 !important;
-    padding: 0.75rem 0.625rem !important;
-    background: #fff;
+    color: #4a5060 !important;
+    font-size: 13.5px !important;
+    line-height: 1.5 !important;
+    border-bottom: 1px solid rgba(130, 140, 200, 0.06) !important;
+    padding: 9px 14px !important;
+    background: transparent;
+    transition: background 0.15s ease;
+  }
+
+  :global(.ant-table-tbody > tr:hover > td) {
+    background: rgba(91, 124, 247, 0.03) !important;
   }
 
   :global(.ant-table-tbody > tr:last-child > td) {
@@ -44,23 +52,165 @@
   }
 
   :global(.ant-table-thead > tr:first-child > th:first-child) {
-    border-top-left-radius: 0.875rem !important;
+    border-top-left-radius: 10px !important;
   }
 
   :global(.ant-table-thead > tr:first-child > th:last-child) {
-    border-top-right-radius: 0.875rem !important;
+    border-top-right-radius: 10px !important;
   }
 
   :global(.ant-table-pagination.ant-pagination) {
-    margin: 1rem 1.125rem 0.75rem !important;
+    margin: 14px 16px 12px !important;
+    padding: 10px 0;
+    border-top: 1px solid rgba(130, 140, 200, 0.06);
+  }
+
+  /* Pagination style */
+  :global(.ant-pagination-item) {
+    border-radius: 6px !important;
+    border: 1px solid rgba(130, 140, 200, 0.15) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  :global(.ant-pagination-item a) {
+    font-size: 13px !important;
+    color: #5a6070 !important;
+  }
+
+  :global(.ant-pagination-item:hover) {
+    border-color: #5b7cf7 !important;
+    background: rgba(91, 124, 247, 0.04) !important;
+  }
+
+  :global(.ant-pagination-item:hover a) {
+    color: #5b7cf7 !important;
+  }
+
+  :global(.ant-pagination-item-active) {
+    background: linear-gradient(135deg, #5b7cf7, #7c9cff) !important;
+    border-color: transparent !important;
+    box-shadow: 0 2px 6px rgba(91, 124, 247, 0.25) !important;
+  }
+
+  :global(.ant-pagination-item-active a) {
+    color: #fff !important;
+    font-weight: 600 !important;
+  }
+
+  :global(.ant-pagination-prev .ant-pagination-item-link),
+  :global(.ant-pagination-next .ant-pagination-item-link) {
+    border-radius: 6px !important;
+    border: 1px solid rgba(130, 140, 200, 0.15) !important;
+    color: #6b7280 !important;
+    transition: all 0.2s ease !important;
+  }
+
+  :global(.ant-pagination-prev:hover .ant-pagination-item-link),
+  :global(.ant-pagination-next:hover .ant-pagination-item-link) {
+    border-color: #5b7cf7 !important;
+    color: #5b7cf7 !important;
+    background: rgba(91, 124, 247, 0.04) !important;
+  }
+
+  :global(.ant-pagination-disabled .ant-pagination-item-link) {
+    color: #c0c4cc !important;
+    border-color: rgba(130, 140, 200, 0.1) !important;
+  }
+
+  :global(.ant-pagination-total-text) {
+    font-size: 13px !important;
+    color: #6b7280 !important;
+    margin-right: 8px !important;
+  }
+
+  :global(.ant-pagination-options) {
+    margin-left: 8px !important;
+  }
+
+  :global(.ant-select-selector) {
+    border-radius: 6px !important;
+    border-color: rgba(130, 140, 200, 0.2) !important;
+    font-size: 13px !important;
+    min-height: 30px !important;
+  }
+
+  :global(.ant-select-selector:hover) {
+    border-color: #5b7cf7 !important;
+  }
+
+  :global(.ant-pagination-options-quick-jumper) {
+    font-size: 13px !important;
+    color: #6b7280 !important;
+  }
+
+  :global(.ant-pagination-options-quick-jumper input) {
+    border-radius: 6px !important;
+    border-color: rgba(130, 140, 200, 0.2) !important;
+    font-size: 13px !important;
+    height: 30px !important;
+  }
+
+  :global(.ant-pagination-options-quick-jumper input:focus) {
+    border-color: #5b7cf7 !important;
+    box-shadow: 0 0 0 2px rgba(91, 124, 247, 0.1) !important;
+  }
+
+  /* Zebra striping for better readability */
+  :global(.ant-table-tbody > tr:nth-child(even) > td) {
+    background: rgba(248, 250, 255, 0.5);
+  }
+  :global(.ant-table-tbody > tr:nth-child(even):hover > td) {
+    background: rgba(91, 124, 247, 0.04) !important;
   }
 }
 
 .tableCellValue {
-  color: #5f6777;
+  color: #4a5060;
 }
 
 .deltaValue {
-  color: #4f98ea;
+  color: #5b7cf7;
   font-weight: 600;
+}
+
+/* ── SQL Code Block ── */
+.sqlCodeBlock {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(130, 140, 200, 0.1);
+  background: linear-gradient(180deg, #fafbfd, #f5f7fb);
+  box-shadow: 0 1px 4px rgba(26, 39, 68, 0.04);
+}
+
+.sqlCodeBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: rgba(245, 248, 252, 0.8);
+  border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ── Chart Container ── */
+.chartContainer {
+  border-radius: 10px;
+  border: 1px solid rgba(130, 140, 200, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(6px);
+  padding: 12px;
+  box-shadow: 0 1px 4px rgba(26, 39, 68, 0.04);
+}
+
+/* 默认隐藏 dataZoom 滚动条 */
+.chartContainer :global(.echarts) > div:last-child {
+  opacity: 0 !important;
+  transition: opacity 0.2s ease;
+}
+
+/* 鼠标悬浮时显示 dataZoom 滚动条 */
+.chartContainerHovered :global(.echarts) > div:last-child {
+  opacity: 1 !important;
 }

@@ -4,29 +4,31 @@
  *
  * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
  *
- * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ * This copyright statement applies to, but is limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
  *
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 .lc-config-menu {
   height: 100%;
   width: 35px;
-  background-color: #f2f3f5;
+  background: rgba(255, 255, 255, 0.40);
+  backdrop-filter: blur(12px);
 
   .menu-list {
     width: 100%;
     height: 100%;
-    background-color: #fff;
+    background: rgba(255, 255, 255, 0.50);
+    backdrop-filter: blur(12px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    color: #555;
-    border-right: 1px solid rgba(5, 5, 5, 0.06);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    color: #5f7490;
+    border-left: 1px solid rgba(130, 140, 200, 0.10);
+    box-shadow: -2px 0 12px rgba(91, 124, 247, 0.04);
 
     .empty-tip {
       writing-mode: vertical-rl;
-      color: #999;
+      color: #768a9f;
       letter-spacing: 4px;
       padding: 16px 4px;
       font-size: 12px;
@@ -38,7 +40,7 @@
       .empty-icon {
         font-size: 16px;
         margin-bottom: 8px;
-        color: #1677ff;
+        color: #5b7cf7;
       }
     }
 
@@ -51,18 +53,19 @@
       font-size: 12px;
       line-height: 16px;
       writing-mode: vertical-lr;
-      transition: color 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       border-left: 2px solid transparent;
       flex-direction: row;
 
       &:hover {
-        color: #1677ff;
+        color: #5b7cf7;
+        background: rgba(91, 124, 247, 0.06);
       }
 
       &.menu-item-active {
-        color: #1677ff;
-        border-left: 2px solid #1677ff;
-        background-color: #e6f4ff;
+        color: #5b7cf7;
+        border-left: 2px solid #5b7cf7;
+        background: rgba(91, 124, 247, 0.08);
       }
 
       .item-icon {
@@ -73,6 +76,7 @@
       .item-content {
         letter-spacing: 2px;
         text-orientation: upright;
+        font-weight: 500;
 
         &.item-content-latin {
           writing-mode: horizontal-tb;

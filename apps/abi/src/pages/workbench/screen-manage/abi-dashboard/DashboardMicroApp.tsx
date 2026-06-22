@@ -4,6 +4,8 @@ import type { CSSProperties } from 'react'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 import { useRoute } from '@sa/simple-router'
 import { handleLoginExpired } from '@/utils/auth'
+import { useAppSelector } from '@/hooks/business/useStore'
+import { getSpaceId } from '@/store/slice/app'
 
 const { VITE_BASE_URL } = import.meta.env
 
@@ -22,6 +24,7 @@ export default function DashboardMicroApp(props: DashboardMicroAppProps) {
   const { className, containerId, initialPath, style } = props
   const route = useRoute()
   const routeTitle = typeof route.meta?.title === 'string' ? route.meta.title.trim() : ''
+  const spaceId = useAppSelector(getSpaceId)
   const microAppRef = useRef<MicroApp | null>(null)
 
   // 初次挂载微应用
@@ -39,6 +42,7 @@ export default function DashboardMicroApp(props: DashboardMicroAppProps) {
         hostBasePath: getDashboardHostBasePath(),
         initialPath,
         pageTitle: routeTitle || undefined,
+        spaceId,
         onTokenExpired: () => {
           handleLoginExpired()
         }
@@ -60,6 +64,15 @@ export default function DashboardMicroApp(props: DashboardMicroAppProps) {
       })
     }
   }, [routeTitle])
+
+  // spaceId 变化时通知微应用刷新
+  useEffect(() => {
+    if (microAppRef.current) {
+      microAppRef.current.update?.({
+        spaceId
+      })
+    }
+  }, [spaceId])
 
   return (
     <div

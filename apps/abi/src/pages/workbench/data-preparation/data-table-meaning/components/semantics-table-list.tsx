@@ -1,4 +1,5 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, MoreOutlined, RightOutlined } from '@ant-design/icons';
+import { Dropdown, Empty, message } from 'antd';
 import type { TableProps } from 'antd';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
@@ -7,7 +8,7 @@ import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 
 const ALL_COLUMNS: ColumnOption[] = [
-  { key: 'bizName', label: '主机名', visible: true },
+  { key: 'bizName', label: '数据语义名称', visible: true },
   { key: 'createBy', label: '创建人', visible: true },
   { key: 'createTime', label: '创建时间', visible: true },
   { key: 'updateBy', label: '操作人', visible: false },
@@ -18,6 +19,7 @@ interface DataType {
   bizName: string;
   createBy: string;
   createTime: string;
+  groupId?: number;
   id?: number | string;
   relViewId?: number | string;
   schemaId?: number | string;
@@ -38,6 +40,8 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
+  const [checkedRowKeys, setCheckedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRows, setSelectedRows] = useState<DataType[]>([]);
 
   const visibleKeys = useMemo(() => new Set(columnOptions.filter(c => c.visible).map(c => c.key)), [columnOptions]);
 
@@ -45,18 +49,39 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
 
+  // Batch delete
+  const handleBatchDelete = () => {
+    if (checkedRowKeys.length === 0) {
+      message.warning('请先选择要删除的数据');
+      return;
+    }
+    selectedRows.forEach(record => deleteTable(record));
+    setCheckedRowKeys([]);
+    setSelectedRows([]);
+  };
+
+  const rowSelection: TableProps<DataType>['rowSelection'] = {
+    columnWidth: 48,
+    fixed: true,
+    selectedRowKeys: checkedRowKeys,
+    onChange: (keys, rows) => {
+      setCheckedRowKeys(keys);
+      setSelectedRows(rows);
+    },
+  };
+
   const allColumns: TableProps<DataType>['columns'] = [
     {
-      align: 'center',
+      align: 'left',
+      className: 'col-biz-name',
       dataIndex: 'bizName',
       key: 'bizName',
-      minWidth: 160,
-      render: text => (
-        <APopover content={text}>
-          <span className="max-w-100 overflow-hidden text-ellipsis">{text && text.length > 10 ? `${text.slice(0, 10)}...` : text}</span>
-        </APopover>
+      minWidth: 200,
+      onHeaderCell: () => ({ className: 'col-biz-name' }),
+      render: (text: string) => (
+        <span style={{ fontWeight: 600 }} title={text}>{text}</span>
       ),
-      title: '主机名'
+      title: '数据语义名称'
     },
     {
       align: 'center',
@@ -69,7 +94,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
       align: 'center',
       dataIndex: 'createTime',
       key: 'createTime',
-      minWidth: 140,
+      minWidth: 150,
       title: '创建时间'
     },
     {
@@ -83,31 +108,47 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
       align: 'center',
       dataIndex: 'updateTime',
       key: 'updateTime',
-      minWidth: 140,
+      minWidth: 150,
       title: '操作时间'
     },
     {
       align: 'center',
       fixed: 'right',
       key: 'action',
-      width: 230,
+      minWidth: 150,
       title: '操作',
       render: (_, record) => (
-        <div className="flex items-center justify-center" style={{ gap: 2 }}>
+        <div className="ds-action-group">
           <AButton className="abi-action-link" size="small" variant="link" onClick={() => editTable(record)}>
-            编辑
+            <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
           </AButton>
-          <AButton
-            className="abi-action-link"
-            size="small"
-            variant="link"
-            onClick={() => setAnalysisContext({ nodeId: record.schemaId, nodeName: record.bizName, nodeType: 'TABLE_SEMANTIC', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'metadata',
+                  label: (
+                    <span><ApartmentOutlined style={{ marginRight: 4 }} />元数据分析</span>
+                  ),
+                  onClick: () => setAnalysisContext({ nodeId: record.schemaId, nodeName: record.bizName, nodeType: 'TABLE_SEMANTIC', spaceId: Number(localStorage.getItem('spaceId')) || undefined })
+                },
+                { type: 'divider' },
+                {
+                  key: 'delete',
+                  danger: true,
+                  label: (
+                    <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => deleteTable(record)}>
+                      <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
+                    </APopconfirm>
+                  ),
+                },
+              ],
+            }}
           >
-            元数据分析
-          </AButton>
-          <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => deleteTable(record)}>
-            <AButton className="abi-action-link-danger" size="small" variant="link">删除</AButton>
-          </APopconfirm>
+            <AButton className="abi-action-link" size="small" variant="link">
+              更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+            </AButton>
+          </Dropdown>
         </div>
       ),
     }
@@ -179,47 +220,85 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
   };
 
   // Card grid
-  const renderCardGrid = () => (
-    <div className="abi-card-grid">
-      <div className="abi-card-grid-inner">
-        {pagedTableSchemaList.map((record: DataType) => (
-          <div key={record.schemaId || record.id} className="abi-data-card">
-            <div className="abi-data-card-head">
-              <div className="abi-data-card-title">{record.bizName}</div>
-              <span style={{ fontSize: 11, color: '#768a9f' }}>{record.techName}</span>
+  const renderCardGrid = () => {
+    if (pagedTableSchemaList.length === 0) {
+      return (
+        <div className="abi-card-empty">
+          <Empty description="暂无数据语义" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        </div>
+      );
+    }
+
+    return (
+      <div className="abi-card-grid">
+        <div className="abi-card-grid-inner">
+          {pagedTableSchemaList.map((record: DataType) => (
+            <div key={record.schemaId || record.id} className="abi-data-card">
+              <div className="abi-data-card-head">
+                <div className="abi-data-card-title">
+                  <span className="abi-data-card-name" title={record.bizName}>{record.bizName}</span>
+                </div>
+                <span className="abi-db-tag tag-default">{record.techName || '-'}</span>
+              </div>
+              <div className="abi-data-card-body">
+                {visibleKeys.has('createBy') && (
+                  <div className="row"><span className="lbl">创建人</span><span className="val">{record.createBy || '-'}</span></div>
+                )}
+                {visibleKeys.has('createTime') && (
+                  <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createTime || '-'}</span></div>
+                )}
+                {visibleKeys.has('updateBy') && (
+                  <div className="row"><span className="lbl">操作人</span><span className="val">{record.updateBy || '-'}</span></div>
+                )}
+                {visibleKeys.has('updateTime') && (
+                  <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime || '-'}</span></div>
+                )}
+              </div>
+              <div className="abi-data-card-footer">
+                <button className="abi-card-act" onClick={() => editTable(record)}>
+                  <EditOutlined style={{ marginRight: 3 }} />编辑
+                </button>
+                <button className="abi-card-act" onClick={() => setAnalysisContext({ nodeId: record.schemaId, nodeName: record.bizName, nodeType: 'TABLE_SEMANTIC', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}>
+                  <ApartmentOutlined style={{ marginRight: 3 }} />元数据
+                </button>
+                <Dropdown
+                  menu={{
+                    items: [
+                      { key: 'delete', danger: true, label: '删除' },
+                    ],
+                    onClick: ({ key, domEvent }) => {
+                      domEvent.stopPropagation();
+                      if (key === 'delete') deleteTable(record);
+                    }
+                  }}
+                  trigger={['click']}
+                >
+                  <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
+                    <MoreOutlined />
+                  </button>
+                </Dropdown>
+              </div>
             </div>
-            <div className="abi-data-card-body">
-              {visibleKeys.has('createBy') && (
-                <div className="row"><span className="lbl">创建人</span><span className="val">{record.createBy}</span></div>
-              )}
-              {visibleKeys.has('createTime') && (
-                <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createTime}</span></div>
-              )}
-              {visibleKeys.has('updateBy') && (
-                <div className="row"><span className="lbl">操作人</span><span className="val">{record.updateBy}</span></div>
-              )}
-              {visibleKeys.has('updateTime') && (
-                <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime}</span></div>
-              )}
-            </div>
-            <div className="abi-data-card-footer">
-              <button className="abi-card-act" onClick={() => editTable(record)}>编辑</button>
-              <button className="abi-card-act" onClick={() => setAnalysisContext({ nodeId: record.schemaId, nodeName: record.bizName, nodeType: 'TABLE_SEMANTIC', spaceId: Number(localStorage.getItem('spaceId')) || undefined })}>元数据分析</button>
-              <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => deleteTable(record)}>
-                <button className="abi-card-act danger">删除</button>
-              </APopconfirm>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-      {/* View controls toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-        {toolbarLeft && <div style={{ marginRight: 'auto' }}>{toolbarLeft}</div>}
+      {/* Toolbar */}
+      <div className="abi-toolbar">
+        <div className="abi-toolbar-left">
+          {toolbarLeft}
+          <AButton
+            className="btn-ghost-v5"
+            disabled={checkedRowKeys.length === 0}
+            onClick={handleBatchDelete}
+          >
+            批量删除
+          </AButton>
+        </div>
         <ViewControls
           viewMode={viewMode}
           onViewModeChange={setViewMode}
@@ -248,6 +327,8 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
               size="middle"
               className="semantics-table abi-std-table"
               pagination={false}
+              rowKey="schemaId"
+              rowSelection={viewMode === 'list' ? rowSelection : undefined}
             />
           </div>
         </div>

@@ -1,12 +1,13 @@
-import { DeleteOutlined, FileSearchOutlined } from '@ant-design/icons';
-// import PageTitle from '@/components/stateless/common/PageTitle';
-import { message } from 'antd';
+import { DeleteOutlined, DownOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { Dropdown, Empty, message } from 'antd';
 
 import { JOB_GROUP_OPTIONS } from '@/constants/job';
 import { cleanJobLog, deleteJobLog, exportJobLog, fetchJobDetail, fetchJobLogList } from '@/service/api/job';
 import { useRoute } from '~/packages/simple-router/src';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
 
 import JobLogDetailDrawer from './modules/job-log-detail-drawer';
 import KeySearch from './modules/key-search';
@@ -17,6 +18,20 @@ export function Component() {
   const spaceId = useAppSelector(getSpaceId);
   const [viewJobLogId, setViewJobLogId] = useState('');
   const [jobDetail, setJobDetail] = useState<any>();
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+
+  // 列选项：用于列选择器
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'executeTime', label: '任务执行时间', visible: true },
+    { key: 'status', label: '任务状态', visible: true },
+    { key: 'resultDescription', label: '结果描述', visible: true },
+    { key: 'operate', label: '操作', visible: true },
+  ]);
+
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
+
   useEffect(() => {
     const { query } = route;
     console.log(query);
@@ -33,7 +48,6 @@ export function Component() {
     apiParams: {
       pageNum: 1,
       pageSize: 10,
-      // sourceName: '',
       spaceId, // 空间id
     },
     columns: () =>
@@ -43,61 +57,52 @@ export function Component() {
           dataIndex: 'executeTime',
           key: 'executeTime',
           title: '任务执行时间',
+          minWidth: 180,
         },
         {
           align: 'center',
           dataIndex: 'status',
           key: 'status',
           title: '任务状态',
+          minWidth: 100,
           render: (val: number) => {
-            const text = {
+            const text: Record<number, string> = {
               0: '正常',
               1: '错误',
               2: '执行中',
             };
-            return <span>{text[val]}</span>;
+            return <span>{text[val] || '-'}</span>;
           },
         },
-        // {
-        //   align: 'center',
-        //   dataIndex: 'jobLogDuration',
-        //   key: 'jobLogDuration',
-        //   title: '任务执行时长'
-        // },
-        // {
-        //   align: 'center',
-        //   dataIndex: 'jobLogRecipients',
-        //   key: 'jobLogRecipients',
-        //   title: '收件人'
-        // },
-        // {
-        //   align: 'center',
-        //   dataIndex: 'jobLogSubject',
-        //   key: 'jobLogSubject',
-        //   title: '邮件标题'
-        // },
         {
           align: 'center',
           dataIndex: 'resultDescription',
           key: 'resultDescription',
           title: '结果描述',
+          minWidth: 200,
         },
         {
           align: 'center',
           fixed: 'right',
           key: 'operate',
+          minWidth: 120,
           render: (_: unknown, record: any) => (
-            <div className="flex-center gap-8px">
+            <div className="ds-action-group">
               {record?.status === '0' && (
-                <ATooltip title="查看报告">
-                  <AButton color="primary" icon={<FileSearchOutlined />} size="small" variant="link" onClick={() => handleView(record)} />
-                </ATooltip>
+                <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleView(record)}>
+                  <FileSearchOutlined style={{ marginRight: 3, fontSize: 12 }} />查看报告
+                </AButton>
               )}
               {record?.status === '1' && (
-                <ATooltip title="查看错误报告">
-                  <AButton color="primary" icon={<FileSearchOutlined />} size="small" variant="link" onClick={() => handleViewError(record)} />
-                </ATooltip>
+                <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleViewError(record)}>
+                  <ExceptionOutlined style={{ marginRight: 3, fontSize: 12 }} />查看错误
+                </AButton>
               )}
+              <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => handleDelete(record.jobLogId)}>
+                <AButton className="abi-action-link" size="small" variant="link">
+                  <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
+                </AButton>
+              </APopconfirm>
             </div>
           ),
           title: t('common.operate'),
@@ -109,8 +114,81 @@ export function Component() {
 
   const { checkedRowKeys, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, async () => {}, true);
 
+  const filteredColumns = useMemo(() => {
+    const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
+    return ((tableProps as any).columns || []).filter((col: any) => visibleKeys.has(col.key || col.dataIndex));
+  }, [columnOptions, tableProps]);
+
+  // 卡片视图渲染
+  const statusMap: Record<string, { text: string; cls: string }> = {
+    '0': { text: '正常', cls: 'status-normal' },
+    '1': { text: '错误', cls: 'status-error' },
+    '2': { text: '执行中', cls: 'status-warning' },
+  };
+
+  const renderCardGrid = () => {
+    const dataSource = (tableProps as any).dataSource || [];
+    if (dataSource.length === 0) {
+      return (
+        <div className="abi-card-empty">
+          <Empty description="暂无调度日志" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        </div>
+      );
+    }
+    return (
+      <div className="abi-card-grid">
+        <div className="abi-card-grid-inner">
+          {dataSource.map((record: any) => {
+            const st = statusMap[String(record.status)] || { text: '-', cls: '' };
+            return (
+              <div key={record.jobLogId} className="abi-data-card">
+                <div className="abi-data-card-head">
+                  <div className="abi-data-card-title">
+                    <span className="abi-data-card-name" title={record.jobName || record.jobLogId}>{record.jobName || record.jobLogId}</span>
+                  </div>
+                  <span className={`abi-status-tag ${st.cls}`}>{st.text}</span>
+                </div>
+                <div className="abi-data-card-body">
+                  <div className="row"><span className="lbl">执行时间</span><span className="val">{record.executeTime || '-'}</span></div>
+                  <div className="row"><span className="lbl">结果描述</span><span className="val">{record.resultDescription || '-'}</span></div>
+                </div>
+                <div className="abi-data-card-footer">
+                  {record.status === '0' && (
+                    <button className="abi-card-act" onClick={() => handleView(record)}>
+                      <FileSearchOutlined style={{ marginRight: 3 }} />查看报告
+                    </button>
+                  )}
+                  {record.status === '1' && (
+                    <button className="abi-card-act" onClick={() => handleViewError(record)}>
+                      <ExceptionOutlined style={{ marginRight: 3 }} />查看错误
+                    </button>
+                  )}
+                  <Dropdown
+                    menu={{
+                      items: [
+                        { key: 'delete', danger: true, label: '删除' },
+                      ],
+                      onClick: ({ key, domEvent }) => {
+                        domEvent.stopPropagation();
+                        if (key === 'delete') handleDelete(record.jobLogId);
+                      }
+                    }}
+                    trigger={['click']}
+                  >
+                    <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
+                      <MoreOutlined />
+                    </button>
+                  </Dropdown>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   async function handleBatchDelete() {
-    // request
     const res = await deleteJobLog(checkedRowKeys.join(','));
     if (res.response.data.code === 200) {
       onBatchDeleted();
@@ -119,7 +197,6 @@ export function Component() {
 
   async function handleDelete(jobLogId: string) {
     const res = await deleteJobLog(jobLogId);
-
     if (res.response.data.code === 200) {
       onDeleted();
     }
@@ -157,86 +234,117 @@ export function Component() {
   };
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-8px overflow-hidden lt-sm:overflow-auto p-6">
-      {/* <PageTitle /> */}
-      <div className="flex items-center gap-4">
-        <KeySearch {...searchProps} />
-        <div className="ml-auto flex items-center gap-3">
-          <AButton
-            type="primary"
-            onClick={searchProps.reset}
-          >
-            重置
-          </AButton>
-          <AButton
-            type="primary"
-            onClick={searchProps.search}
-          >
-            查询
-          </AButton>
-          <AButton
-            type="primary"
-            onClick={handleExport}
-          >
-            导出
-          </AButton>
-
-          <APopconfirm
-            title={t('common.confirmDelete')}
-            onConfirm={handleBatchDelete}
-          >
-            <AButton
-              type="primary"
-              disabled={checkedRowKeys.length === 0}
-            >
-              批量删除
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* v5 Searchbar */}
+      <section className="abi-searchbar">
+        <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }}>
+          <div className="abi-search-row">
+            <KeySearch {...searchProps} />
+            <AButton type="primary" className="btn-accent-gradient" onClick={() => searchProps.search()}>
+              <SearchOutlined /> 查询
             </AButton>
-          </APopconfirm>
-        </div>
-      </div>
-
-      <div
-        ref={tableWrapperRef}
-        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
-      >
-        <div
-          style={{
-            border: '0.0625rem solid #d9d9d9',
-            borderRadius: '0.5rem',
-            overflow: 'hidden',
-            width: '100%',
-            maxHeight: '100%'
-          }}
-        >
-          <div
-            className="assistant-table-scroll"
-            style={{ overflow: 'auto', maxHeight: '100%' }}
-          >
-            <ATable
-              scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content', ...scrollConfig } : undefined}
-              size="small"
-              {...(tableProps as any)}
-              pagination={false}
-              rowSelection={rowSelection}
-            />
+            <AButton className="btn-ghost-v5" onClick={() => { searchProps.reset(); }}>
+              重置
+            </AButton>
           </div>
-        </div>
+        </AForm>
+      </section>
 
-        <div
-          style={{
-            padding: '0.75rem 0',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            marginTop: 'auto'
-          }}
-        >
-          <APagination
-            {...(tableProps.pagination as any)}
-            showSizeChanger
-            style={{ padding: '0' }}
+      {/* v5 Data Area */}
+      <section className="abi-data-area">
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <AButton className="btn-accent-gradient" onClick={handleExport}>
+              导出
+            </AButton>
+            <AButton className="btn-ghost-v5" onClick={handleClean}>
+              清空日志
+            </AButton>
+            <APopconfirm
+              title={t('common.confirmDelete')}
+              onConfirm={handleBatchDelete}
+            >
+              <AButton
+                className="btn-ghost-v5"
+                disabled={checkedRowKeys.length === 0}
+              >
+                批量删除
+              </AButton>
+            </APopconfirm>
+          </div>
+          <ViewControls
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            columns={columnOptions}
+            onColumnToggle={handleColumnToggle}
           />
         </div>
-      </div>
+
+        {/* Content */}
+        <div
+          ref={tableWrapperRef}
+          style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
+        >
+          {viewMode === 'list' ? (
+            <div
+              style={{
+                border: '1px solid rgba(130,140,200,0.18)',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                flex: 1,
+                minHeight: 0,
+              }}
+            >
+              <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+                <ATable
+                  scroll={(tableProps as any).dataSource?.length > 0 ? { x: 'max-content', ...scrollConfig } : undefined}
+                  size="middle"
+                  className="abi-std-table"
+                  {...(tableProps as any)}
+                  columns={filteredColumns as any}
+                  pagination={false}
+                  rowSelection={rowSelection}
+                />
+              </div>
+            </div>
+          ) : (
+            renderCardGrid()
+          )}
+
+          <div className="data-source-pagination">
+            {(() => {
+              const pag = tableProps.pagination as any;
+              const current = pag?.current || 1;
+              const pageSizeVal = pag?.pageSize || 10;
+              const totalVal = pag?.total || 0;
+              const totalPages = Math.max(1, Math.ceil(totalVal / pageSizeVal));
+              const onChange = pag?.onChange;
+              const pages: number[] = [];
+              if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
+              else {
+                pages.push(1);
+                if (current > 3) pages.push(-1);
+                const start = Math.max(2, current - 1);
+                const end = Math.min(totalPages - 1, current + 1);
+                for (let i = start; i <= end; i++) pages.push(i);
+                if (current < totalPages - 2) pages.push(-2);
+                pages.push(totalPages);
+              }
+              return (
+                <>
+                  <span className="total-text">共 {totalVal} 条</span>
+                  <div className="pagination-controls">
+                    <ASelect value={pageSizeVal} onChange={(v: number) => onChange?.(1, v)} options={[{label:'10条/页',value:10},{label:'15条/页',value:15},{label:'20条/页',value:20}]} className="page-size-select" />
+                    <button className="page-btn" disabled={current === 1} onClick={() => onChange?.(current - 1, pageSizeVal)}><LeftOutlined /></button>
+                    {pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === current ? ' page-active' : ''}`} onClick={() => onChange?.(p, pageSizeVal)}>{p}</span>)}
+                    <button className="page-btn" disabled={current >= totalPages} onClick={() => onChange?.(current + 1, pageSizeVal)}><RightOutlined /></button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

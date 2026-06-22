@@ -1,7 +1,9 @@
-import { Button, Form, message } from 'antd';
+import { message } from 'antd';
 
 import { fetchResetPassword } from '@/service/api';
 import { encrypt } from '@/utils/jsencrypt';
+
+import './user-drawer.scss';
 
 interface PropsType {
   onClose: (refresh?: boolean) => void;
@@ -9,9 +11,9 @@ interface PropsType {
 }
 
 const ResetPassword: FC<PropsType> = memo(({ onClose, userId }) => {
-  const [form] = Form.useForm();
-    const {
-    formRules: { pwd}
+  const [form] = AForm.useForm();
+  const {
+    formRules: { pwd }
   } = useFormRules();
 
   const handleOk = async () => {
@@ -23,41 +25,38 @@ const ResetPassword: FC<PropsType> = memo(({ onClose, userId }) => {
       message.success('重置成功');
     }
   };
-  
+
   return (
     <ADrawer
+      className="reset-password-drawer-v5"
       open={true}
       title="重置密码"
       footer={
-        <div className="text-right">
-          <Button
-            className="mr-2"
-            onClick={() => onClose()}
-          >
-            取消
-          </Button>
-          <Button
-            type="primary"
+        <div className="reset-password-drawer-footer-v5">
+          <AButton className="btn-ghost-v5" onClick={() => onClose()}>取消</AButton>
+          <AButton
+            className="btn-accent-gradient"
             onClick={handleOk}
           >
             确认
-          </Button>
+          </AButton>
         </div>
       }
       onClose={() => onClose()}
     >
-      <AForm form={form}>
-        <AForm.Item
-          label="密码"
-          name="password"
-          rules={pwd}
-        >
-          <AInput.Password
-            className="w-200px"
-            placeholder="请输入密码"
-          />
-        </AForm.Item>
-      </AForm>
+      <div className="reset-password-form-panel">
+        <AForm form={form}>
+          <AForm.Item
+            label="密码"
+            name="password"
+            rules={pwd}
+          >
+            <AInput.Password
+              placeholder="请输入密码"
+            />
+          </AForm.Item>
+        </AForm>
+      </div>
     </ADrawer>
   );
 });

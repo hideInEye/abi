@@ -1,7 +1,11 @@
-import { message } from 'antd'
+import { DeleteOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { message, Modal } from 'antd'
 import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
 import type { Dayjs } from 'dayjs'
+
+import { ViewControls } from '@/components/ViewControls'
+import type { ColumnOption } from '@/components/ViewControls'
 
 // import PageTitle from '@/components/stateless/common/PageTitle'
 import {
@@ -15,6 +19,8 @@ import {
   updateAbiClientStatus
 } from '@/service/api/abi-client'
 import { spaceList } from '@/service/api/data-space'
+import { getSpaceId } from '@/store/slice/app'
+import { useAppSelector } from '@/hooks/business/useStore'
 
 import { ApiKeyDrawer } from './components/ApiKeyDrawer'
 import { ApiKeyTable } from './components/ApiKeyTable'
@@ -155,7 +161,8 @@ function mapClientDetailToView(item: AbiClientDetailItem, fallback: ApiKeyItem |
 
 export function Component() {
   const [queryForm] = AForm.useForm()
-  const currentSpaceId = useMemo(() => Number(localStorage.getItem('spaceId')) || 0, [])
+  const reduxSpaceId = useAppSelector(getSpaceId)
+  const currentSpaceId = reduxSpaceId || 0
   const [rows, setRows] = useState<ApiKeyItem[]>([])
   const [total, setTotal] = useState(0)
   const [current, setCurrent] = useState(1)
@@ -165,33 +172,24 @@ export function Component() {
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('create')
   const [currentRecord, setCurrentRecord] = useState<ApiKeyItem | null>(null)
   const [submitLoading, setSubmitLoading] = useState(false)
-
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [spaceOptions, setSpaceOptions] = useState<Array<{ label: string; value: number }>>([])
   const [queryValues, setQueryValues] = useState<ApiKeyQueryValues>({
     spaceId: currentSpaceId || undefined
   })
-
-  const loadSpaceOptions = useCallback(async () => {
-    try {
-      const res = await spaceList({
-        isAsc: 'desc',
-        orderByColumn: 'spaceId',
-        pageNum: 1,
-        pageSize: 1000
-      })
-
-      const list = ((res as any).response?.data?.rows || []) as Array<{ spaceId: number; spaceName: string }>
-
-      const options = list.map(item => ({
-        label: item.spaceName,
-        value: Number(item.spaceId)
-      }))
-
-      setSpaceOptions(options)
-    } catch {
-      message.warning('加载空间列表失败')
-    }
-  }, [])
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list')
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'businessSpace', label: '业务空间', visible: true },
+    { key: 'clientId', label: 'Client ID', visible: true },
+    { key: 'accessKey', label: 'Access Key', visible: true },
+    { key: 'status', label: '状态', visible: true },
+    { key: 'expireTime', label: '过期时间', visible: true },
+    { key: 'createdAt', label: '创建时间', visible: true },
+    { key: 'operate', label: '操作', visible: true },
+  ])
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c))
+  }
 
   const loadList = useCallback(
     async (pageNum: number, query: ApiKeyQueryValues) => {
@@ -230,13 +228,27 @@ export function Component() {
   )
 
   useEffect(() => {
-    loadSpaceOptions()
-  }, [loadSpaceOptions])
-
-  useEffect(() => {
     if (!currentSpaceId) return
     queryForm.setFieldValue('spaceId', currentSpaceId)
+    setQueryValues(prev => ({ ...prev, spaceId: currentSpaceId }))
+    setCurrent(1)
   }, [currentSpaceId, queryForm])
+
+  useEffect(() => {
+    let cancelled = false
+    spaceList({ isAsc: 'asc', orderByColumn: 'createTime', pageNum: 1, pageSize: 200 })
+      .then((res) => {
+        if (cancelled) return
+        const payload = (res as any).response?.data || {}
+        const rows = (payload.rows || []) as Array<{ id: number; spaceName?: string }>
+        const opts = rows
+          .filter(r => r.id)
+          .map(r => ({ label: r.spaceName || `空间${r.id}`, value: Number(r.id) }))
+        setSpaceOptions(opts)
+      })
+      .catch(() => { /* ignore */ })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     loadList(current, queryValues)
@@ -263,9 +275,6 @@ export function Component() {
     const detail = (payload.data || {}) as AbiClientDetailItem
 
     const mapped = mapClientDetailToView(detail, record)
-
-    const matchedSpace = spaceOptions.find(item => item.value === mapped.spaceId)
-    if (matchedSpace) mapped.businessSpace = matchedSpace.label
 
     setDrawerMode('view')
     setCurrentRecord(mapped)
@@ -390,137 +399,123 @@ export function Component() {
     setCurrent(1)
   }
 
-  return (
-    <div className="h-full min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-      <ACard
-        className="h-full flex-col-stretch sm:flex-1-hidden border-0 card-wrapper"
-        styles={{ body: { display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' } }}
-      >
-        {/* <PageTitle style={{ paddingBottom: '0.5rem' }} /> */}
+  const handleBatchDelete = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的 API Key')
+      return
+    }
+    Modal.confirm({
+      title: '批量删除',
+      content: `确定要删除选中的 ${selectedRowKeys.length} 个 API Key 吗？`,
+      okText: '确认',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        let successCount = 0
+        for (const id of selectedRowKeys) {
+          const record = rows.find(r => r.id === id)
+          if (!record) continue
+          const effectiveSpaceId = queryValues.spaceId || record.spaceId || currentSpaceId
+          try {
+            await deleteAbiClient({ id: record.id, spaceId: effectiveSpaceId })
+            successCount++
+          } catch {
+            // continue with others
+          }
+        }
+        message.success(`成功删除 ${successCount} 个 API Key`)
+        setSelectedRowKeys([])
+        refreshList(1)
+      },
+    })
+  }
 
-        <div style={{ color: '#475569', marginBottom: 16 }}>
-          用于管理业务空间下的客户端访问授权凭证，支持 AK/SK 生成、IP 访问限制和启停控制。
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ color: '#475569', padding: '12px 28px 0' }}>
+        用于管理业务空间下的客户端访问授权凭证，支持 AK/SK 生成、IP 访问限制和启停控制。
+      </div>
+      {/* v5 Searchbar */}
+      <section className="abi-searchbar">
+        <div className="abi-search-row">
+          <AInput
+            allowClear
+            placeholder="请输入 Access Key"
+            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+            className="abi-field-input"
+            style={{ width: 200 }}
+            onChange={(e) => queryForm.setFieldValue('accessKey', e.target.value)}
+            onPressEnter={handleSearch}
+          />
+          <ASelect
+            allowClear
+            placeholder="状态"
+            className="abi-field-input"
+            style={{ width: 120 }}
+            options={[
+              { label: '正常', value: 'normal' },
+              { label: '停用', value: 'disabled' }
+            ]}
+            onChange={(v) => queryForm.setFieldValue('status', v)}
+          />
+          <ADatePicker.RangePicker
+            allowClear
+            format="YYYY-MM-DD"
+            placeholder={['开始时间', '结束时间']}
+            className="abi-field-input"
+            onChange={(dates) => queryForm.setFieldValue('createTimeRange', dates)}
+          />
+          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
+            <SearchOutlined /> 查询
+          </AButton>
+          <AButton className="btn-ghost-v5" onClick={handleResetSearch}>
+            <ReloadOutlined /> 重置
+          </AButton>
+        </div>
+      </section>
+
+      {/* v5 Data Area */}
+      <section className="abi-data-area">
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <AButton className="btn-accent-gradient" onClick={openCreate}>
+              <PlusOutlined />新增APIKey
+            </AButton>
+            <AButton
+              className="btn-ghost-v5"
+              disabled={selectedRowKeys.length === 0}
+              onClick={handleBatchDelete}
+            >
+              <DeleteOutlined /> 批量删除
+            </AButton>
+          </div>
+          <ViewControls
+            columns={columnOptions}
+            hideViewToggle
+            onColumnToggle={handleColumnToggle}
+          />
         </div>
 
-        <AForm
-          form={queryForm}
-          layout="inline"
-          onFinish={handleSearch}
-        >
-          <ASpace
-            wrap
-            size={12}
-          >
-            <AForm.Item
-              label="业务空间"
-              name="spaceId"
-              rules={[{ message: '请选择业务空间', required: true }]}
-            >
-              <ASelect
-                options={spaceOptions}
-                placeholder="请选择"
-                style={{ width: 220 }}
-              />
-            </AForm.Item>
-            <AForm.Item
-              label="Client ID"
-              name="clientId"
-            >
-              <AInput
-                allowClear
-                placeholder="请输入"
-                style={{ width: 260 }}
-              />
-            </AForm.Item>
-            <AForm.Item
-              label="Access Key"
-              name="accessKey"
-            >
-              <AInput
-                allowClear
-                placeholder="请输入"
-                style={{ width: 260 }}
-              />
-            </AForm.Item>
-            <AForm.Item
-              label="状态"
-              name="status"
-            >
-              <ASelect
-                allowClear
-                placeholder="请选择"
-                style={{ width: 120 }}
-                options={[
-                  { label: '正常', value: 'normal' },
-                  { label: '停用', value: 'disabled' }
-                ]}
-              />
-            </AForm.Item>
-            <AForm.Item
-              label="IP访问限制"
-              name="ipAccessType"
-            >
-              <ASelect
-                allowClear
-                placeholder="请选择"
-                style={{ width: 140 }}
-                options={[
-                  { label: '不限制', value: 'unlimited' },
-                  { label: '仅白名单', value: 'whitelist' }
-                ]}
-              />
-            </AForm.Item>
-            <AForm.Item
-              label="创建时间"
-              name="createTimeRange"
-            >
-              <ADatePicker.RangePicker
-                allowClear
-                format="YYYY-MM-DD"
-                style={{ width: 300 }}
-              />
-            </AForm.Item>
-            <AForm.Item>
-              <ASpace>
-                <AButton
-                  htmlType="submit"
-                  type="primary"
-                >
-                  查询
-                </AButton>
-                <AButton onClick={handleResetSearch}>重置</AButton>
-              </ASpace>
-            </AForm.Item>
-          </ASpace>
-        </AForm>
-
-        <AFlex
-          justify="end"
-          style={{ marginBottom: 8 }}
-        >
-          <AButton
-            type="primary"
-            onClick={openCreate}
-          >
-            新建 API Key
-          </AButton>
-        </AFlex>
-
         <ApiKeyTable
+          columnOptions={columnOptions}
           current={current}
           dataSource={rows}
           loading={listLoading}
           pageSize={PAGE_SIZE}
+          selectedRowKeys={selectedRowKeys}
           total={total}
+          viewMode={viewMode}
           onDelete={handleDelete}
           onPageChange={setCurrent}
           onResetSk={handleResetSk}
+          onSelectedRowKeysChange={setSelectedRowKeys}
           onToggleStatus={handleToggleStatus}
           onView={openView}
         />
-      </ACard>
+      </section>
 
       <ApiKeyDrawer
+        defaultSpaceId={currentSpaceId}
         mode={drawerMode}
         open={drawerOpen}
         options={spaceOptions}

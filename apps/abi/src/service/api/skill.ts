@@ -246,3 +246,22 @@ export function updateSkillStatusApi(data: { skillId: number | string; status: n
     url: `${SKILL_BASE}/status`
   });
 }
+
+/**
+ * 更新技能基本信息（名称、描述、状态等）
+ *
+ * @param data skillId + bizName + summary + status
+ * @returns boolean
+ */
+export function updateSkillInfoApi(data: {
+  bizName?: string;
+  skillId: number | string;
+  status?: number | string;
+  summary?: string;
+}) {
+  return apiRequest({
+    data,
+    method: 'post',
+    url: `${SKILL_BASE}/update`
+  });
+}

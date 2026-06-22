@@ -1,4 +1,10 @@
-import { CloseOutlined } from '@ant-design/icons';
+import {
+  CheckCircleOutlined,
+  CloseOutlined,
+  EditOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 import { Form, message } from 'antd';
 import { useEffect, useState } from 'react';
@@ -99,7 +105,7 @@ export const SpaceEdit = ({ drawerOpen, editSpace, setDrawerOpen, updateSpace }:
       spaceRoleList({ pageNum: 1, pageSize: 100000 }).then(res => {
         const { data } = res.data as any;
         if (Array.isArray(data)) {
-          const createRole = data.find(i => i.roleKey === 'creator');
+          const createRole = data.find((i: any) => i.roleKey === 'creator');
           if (createRole) {
             setRoleData([
               {
@@ -126,23 +132,33 @@ export const SpaceEdit = ({ drawerOpen, editSpace, setDrawerOpen, updateSpace }:
 
   const tabsData = [
     {
-      children: <SpaceBasicInfo />,
+      children: <SpaceBasicInfo editSpace={editSpace} />,
+      icon: <EditOutlined />,
       key: '0',
-      label: `基本信息`
+      label: '基本信息'
     },
     {
       children: <UserManagement />,
+      icon: <TeamOutlined />,
       key: '1',
-      label: `用户管理`
+      label: '用户管理'
     }
   ];
 
   return (
     <ADrawer
+      className="sd-v5-space-drawer"
       closeIcon={null}
-      extra={<CloseOutlined onClick={() => setDrawerOpen(false)} />}
+      extra={<CloseOutlined className="sd-v5-close" onClick={() => setDrawerOpen(false)} />}
       open={drawerOpen}
-      title={editSpace ? '编辑空间' : '新建空间'}
+      title={
+        <div className="sd-v5-drawer-title">
+          <span className="sd-v5-drawer-title-icon">
+            {editSpace ? <EditOutlined /> : <CheckCircleOutlined />}
+          </span>
+          <span>{editSpace ? '编辑空间' : '新建空间'}</span>
+        </div>
+      }
       width={900}
       footer={
         <SpaceDrawerFooter
@@ -155,22 +171,27 @@ export const SpaceEdit = ({ drawerOpen, editSpace, setDrawerOpen, updateSpace }:
       }
       onClose={() => setDrawerOpen(false)}
     >
-      <AForm form={form}>
-        <ATabs
-          activeKey={tabsData[tabActiveIndex].key}
-          defaultActiveKey={tabsData[tabActiveIndex].key}
-          items={tabsData.map(item => {
-            return {
-              children: item.children,
-              key: item.key,
-              label: item.label
-            };
-          })}
-          onChange={value => {
-            setTabActiveIndex(Number(value));
-          }}
-        />
-      </AForm>
+      {/* v5 Tab navigation */}
+      <div className="sd-v5-tabs">
+        {tabsData.map((item, idx) => (
+          <button
+            key={item.key}
+            className={`sd-v5-tab-btn ${tabActiveIndex === idx ? 'sd-v5-tab-active' : ''}`}
+            onClick={() => setTabActiveIndex(idx)}
+          >
+            <span className="sd-v5-tab-icon">{item.icon}</span>
+            <span className="sd-v5-tab-label">{item.label}</span>
+            {tabActiveIndex === idx && <span className="sd-v5-tab-indicator" />}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div className="sd-v5-tab-content">
+        <AForm form={form} layout="vertical">
+          {tabsData[tabActiveIndex].children}
+        </AForm>
+      </div>
     </ADrawer>
   );
 };
@@ -210,22 +231,13 @@ function SpaceDrawerFooter({
   };
 
   return (
-    <AFlex
-      className="gap-6 py-6"
-      justify="flex-end"
-    >
-      <AButton
-        type="default"
-        onClick={previousStep}
-      >
+    <div className="sd-v5-footer">
+      <AButton className="btn-ghost-v5" onClick={previousStep}>
         {tabIndex === 0 ? '取消' : '上一步'}
       </AButton>
-      <AButton
-        type="primary"
-        onClick={nextStep}
-      >
+      <AButton className="btn-accent-gradient" onClick={nextStep}>
         {tabIndex < 1 ? '下一步' : '完成'}
       </AButton>
-    </AFlex>
+    </div>
   );
 }
