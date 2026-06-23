@@ -307,12 +307,14 @@ export function Component() {
     };
 
     if (sourceType === "Excel") {
+      const sourceId = (editingData as any)?.sourceId;
       let file = res.sourceFile;
       file[0].sheets = res.sheets;
       commonData = {
         configuration: JSON.stringify(file),
         spaceId,
         fileSourceDbType: "mysql",
+        sourceId,
         ...res,
       };
     }
