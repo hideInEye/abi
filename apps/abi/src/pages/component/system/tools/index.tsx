@@ -17,7 +17,7 @@ import {
   FileTextOutlined,
   InfoCircleOutlined
 } from '@ant-design/icons';
-import { App, Button, Checkbox, Divider, Drawer, Dropdown, Form, Input, Select, Space, Table, Tabs, Tag } from 'antd';
+import { App, Button, Checkbox, Divider, Drawer, Dropdown, Form, Input, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -485,10 +485,15 @@ const TABLE_SCROLL = { x: 'max-content' };
         title: '功能描述',
         dataIndex: 'description',
         key: 'description',
-        align: 'center',
-        minWidth: 160,
-        ellipsis: true,
-        render: (text: string) => text || '-'
+        align: 'left' as const,
+        width: 300,
+        minWidth: 200,
+        className: 'col-tool-left',
+        onHeaderCell: () => ({ className: 'col-tool-left' }),
+        onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const, maxWidth: 300 } }),
+        render: (_: any, record: ToolItem) => record.description
+          ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: record.description }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit', maxWidth: 260 }}>{record.description}</Typography.Paragraph>
+          : <span style={{ color: '#9ca3af' }}>-</span>
       },
       {
         title: '状态',

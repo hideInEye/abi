@@ -43,7 +43,7 @@ export const Component: React.FC = () => {
             inputPlaceholder: '请输入问题语义组名称',
             modalAddTitle: '新增问题语义组',
             modalEditTitle: '编辑问题语义组',
-            panelTitle: '问题语义组',
+            panelTitle: '分组目录',
             rule: [[{ message: '请输入问题语义组名称', required: true }]],
             type: 'question'
           }}

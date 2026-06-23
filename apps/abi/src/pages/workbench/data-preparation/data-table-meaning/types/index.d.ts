@@ -143,6 +143,7 @@ export type TableSemanticParams = {
   relViewId: string;
   remark: string;
   schemaId: string;
+  sourceId: string;
   spaceId: string;
   status: string;
   techName: string;

@@ -1,33 +1,23 @@
-import { BarChartOutlined, CloseOutlined, FieldNumberOutlined, FieldStringOutlined, TagOutlined } from '@ant-design/icons';
-import { Collapse, Empty } from 'antd';
-import type { CollapseProps } from 'antd';
-import React, { useState } from 'react';
+import { CloseOutlined } from '@ant-design/icons';
+import React, { useMemo, useState } from 'react';
 
-interface FieldItem {
-  tfieldId?: string | number;
-  tfieldName?: string;
-  tfieldShowName?: string;
-  tfieldType?: 'd' | 'q';
-  fieldType?: string;
-  dataType?: string;
-  originName?: string;
-  [key: string]: any;
-}
+import { FieldItem, FieldListByTable } from './FieldListByTable';
 
 interface DesignerRightPanelProps {
   fields?: FieldItem[];
+  /** 节点数据，用于构建 rtableId -> tableName 映射 */
+  nodeData?: any;
 }
 
 /** 菜单项定义 */
 interface MenuItem {
   key: string;
   name: string;
-  icon: React.ReactNode;
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { key: 'dimensions', name: '维度', icon: <TagOutlined style={{ fontSize: 16 }} /> },
-  { key: 'metrics', name: '指标', icon: <FieldNumberOutlined style={{ fontSize: 16 }} /> },
+  { key: 'dimensions', name: '维度' },
+  { key: 'metrics', name: '指标' },
 ];
 
 /** 根据字段类型推断维度/指标 */
@@ -44,71 +34,7 @@ function inferFieldCategory(field: FieldItem): 'dimension' | 'metric' {
   return 'dimension';
 }
 
-function getFieldDisplayName(field: FieldItem): string {
-  return field.tfieldShowName || field.tfieldName || field.originName || '未命名字段';
-}
-
-/** 字段列表渲染 */
-function FieldList({ items }: { items: FieldItem[] }) {
-  if (items.length === 0) {
-    return (
-      <div style={{ padding: '24px 0' }}>
-        <Empty description="暂无字段" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-      </div>
-    );
-  }
-
-  return (
-    <ul style={{ margin: 0, padding: '4px 0', listStyle: 'none' }}>
-      {items.map((item) => {
-        const category = item.tfieldType
-          ? (item.tfieldType === 'q' ? 'metric' : 'dimension')
-          : inferFieldCategory(item);
-        const icon = category === 'metric'
-          ? <FieldNumberOutlined style={{ color: '#5b7cf7', fontSize: 12 }} />
-          : <FieldStringOutlined style={{ color: '#52c41a', fontSize: 12 }} />;
-
-        return (
-          <li
-            key={item.tfieldId || item.tfieldName || item.originName}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '7px 10px',
-              borderRadius: 6,
-              fontSize: 13,
-              color: '#3e5068',
-              cursor: 'default',
-              transition: 'background 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = 'rgba(91, 124, 247, 0.06)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = 'transparent';
-            }}
-          >
-            {icon}
-            <span
-              style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                flex: 1,
-              }}
-              title={getFieldDisplayName(item)}
-            >
-              {getFieldDisplayName(item)}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [] }) => {
+const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], nodeData }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   const dimensions = fields.filter(f => {
@@ -121,18 +47,26 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [] }) 
     return inferFieldCategory(f) === 'metric';
   });
 
+  const tableMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    const loop = (node: any) => {
+      if (node?.currentDs) {
+        map[node.currentDs.rtableId] = node.currentDs.tableName;
+      }
+      if (node?.childrenDs?.length) {
+        node.childrenDs.forEach(loop);
+      }
+    };
+    if (nodeData) loop(nodeData);
+    return map;
+  }, [nodeData]);
+
   const handleMenuClick = (key: string) => {
     setActiveMenu(prev => prev === key ? null : key);
   };
 
   const handleClose = () => {
     setActiveMenu(null);
-  };
-
-  const getMenuCount = (key: string): number => {
-    if (key === 'dimensions') return dimensions.length;
-    if (key === 'metrics') return metrics.length;
-    return 0;
   };
 
   const renderPanelContent = () => {
@@ -190,7 +124,10 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [] }) 
 
         {/* 面板内容 */}
         <div style={{ flex: 1, overflow: 'auto', padding: '8px 12px' }}>
-          <FieldList items={items} />
+          <FieldListByTable
+            fields={items}
+            getTableName={(field) => (field.rtableId ? tableMap[field.rtableId] : undefined) || '未知表'}
+          />
         </div>
       </div>
     );
@@ -217,7 +154,6 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [] }) 
         }}
       >
         {MENU_ITEMS.map((item) => {
-          const count = getMenuCount(item.key);
           const isActive = activeMenu === item.key;
 
           return (
@@ -236,7 +172,6 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [] }) 
                 borderLeft: isActive ? '2px solid #5b7cf7' : '2px solid transparent',
                 background: isActive ? 'rgba(91, 124, 247, 0.08)' : 'transparent',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                position: 'relative',
               }}
               onClick={() => handleMenuClick(item.key)}
               onMouseEnter={(e) => {
@@ -252,7 +187,6 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [] }) 
                 }
               }}
             >
-              <div style={{ fontSize: 16, marginBottom: 6 }}>{item.icon}</div>
               <div style={{
                 fontWeight: 500,
                 letterSpacing: '2px',
@@ -261,25 +195,6 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [] }) 
               }}>
                 {item.name}
               </div>
-              {count > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 4,
-                  minWidth: 16,
-                  height: 16,
-                  lineHeight: '16px',
-                  textAlign: 'center',
-                  borderRadius: 8,
-                  background: item.key === 'dimensions' ? 'rgba(82, 196, 26, 0.15)' : 'rgba(91, 124, 247, 0.15)',
-                  color: item.key === 'dimensions' ? '#52c41a' : '#5b7cf7',
-                  fontSize: 10,
-                  fontWeight: 600,
-                  padding: '0 4px',
-                }}>
-                  {count}
-                </div>
-              )}
             </div>
           );
         })}

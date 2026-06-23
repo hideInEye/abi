@@ -1,5 +1,5 @@
 import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, MoreOutlined, RightOutlined } from '@ant-design/icons';
-import { Dropdown, Empty, message } from 'antd';
+import { Dropdown, Empty, Typography, message } from 'antd';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
@@ -93,10 +93,16 @@ export const PluginTable: React.FC<PluginTableProps> = ({
       title: 'MCP名称'
     },
     {
-      align: 'center',
+      align: 'left' as const,
+      className: 'col-plugin-desc',
       dataIndex: 'remark',
       key: 'remark',
-      minWidth: 140,
+      minWidth: 200,
+      onHeaderCell: () => ({ className: 'col-plugin-desc' }),
+      onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const, maxWidth: 300 } }),
+      render: (text: string) => text
+        ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: text }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit', maxWidth: 260 }}>{text}</Typography.Paragraph>
+        : <span style={{ color: '#9ca3af' }}>-</span>,
       title: 'MCP描述'
     },
     {

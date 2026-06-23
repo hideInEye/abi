@@ -9,8 +9,6 @@ import { SecuritySchemeSection } from './SecuritySchemeSection';
 
 interface PlugUpdateProps {
   readonly currentEdit: PluginItem | null;
-  /** 当前分组的类型，用于限制协议类型选择 */
-  readonly groupType?: string;
   /** 分组名称，用于命名空间展示 */
   readonly groupName?: string;
   readonly namespaceId: string;
@@ -19,7 +17,7 @@ interface PlugUpdateProps {
   readonly open: boolean;
 }
 
-export const PlugUpdate = ({ currentEdit, groupType, groupName, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
+export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
   const [form] = Form.useForm<McpForm>();
   const [restToMcpSwitch, setRestToMcpSwitch] = useState(false);
   const [securitySchemes, setSecuritySchemes] = useState<McpSecurityScheme[]>([]);
@@ -86,6 +84,8 @@ export const PlugUpdate = ({ currentEdit, groupType, groupName, namespaceId, onC
       const transport: 'HTTP' | 'HTTPS' = /^https:/i.test(url) ? 'HTTPS' : 'HTTP';
       const proto = (currentEdit.protocol || '').toLowerCase();
       const isRestToMcp = proto === 'http' || proto === 'https';
+      // 从编辑记录推断协议类型
+      const protocolValue: 'sse' | 'streamableHttp' = proto === 'streamablehttp' ? 'streamableHttp' : 'sse';
       setRestToMcpSwitch(isRestToMcp);
 
       form.setFieldsValue({
@@ -96,7 +96,8 @@ export const PlugUpdate = ({ currentEdit, groupType, groupName, namespaceId, onC
         address,
         port,
         transport,
-        mcpEndpointUrl: url || (address && port ? `${transport.toLowerCase()}://${address}:${port}` : '')
+        mcpEndpointUrl: url || (address && port ? `${transport.toLowerCase()}://${address}:${port}` : ''),
+        protocol: protocolValue,
       });
 
       setSecuritySchemes(currentEdit.toolSpec?.securitySchemes || []);
@@ -112,7 +113,8 @@ export const PlugUpdate = ({ currentEdit, groupType, groupName, namespaceId, onC
         mcpEndpointUrl: '',
         address: '',
         port: '',
-        transport: 'HTTP'
+        transport: 'HTTP',
+        protocol: 'sse',
       });
     }
   }, [open, currentEdit, form]);
@@ -176,8 +178,8 @@ export const PlugUpdate = ({ currentEdit, groupType, groupName, namespaceId, onC
                 <AInput placeholder="请输入MCP服务名" disabled={!!currentEdit} className="form-input-v5" />
               </Form.Item>
 
-              <Form.Item label="协议类型" className="form-item-v5">
-                <ARadio.Group value={groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse'} disabled className="radio-group-v5">
+              <Form.Item label="协议类型" name="protocol" className="form-item-v5" rules={[{ message: '请选择协议类型', required: true }]}>
+                <ARadio.Group className="radio-group-v5">
                   <ARadio value="sse">SSE (Server-Sent Events)</ARadio>
                   <ARadio value="streamableHttp">Streamable HTTP</ARadio>
                 </ARadio.Group>

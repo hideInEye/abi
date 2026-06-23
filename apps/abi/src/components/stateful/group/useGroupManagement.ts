@@ -29,38 +29,15 @@ export const useGroupManagement = (config: GroupProps['config']) => {
 
   const getGroups = async (searchText?: string) => {
     if (!spaceId) return;
-    const queryTypes = config.queryTypes && config.queryTypes.length > 0
-      ? (config.queryTypes as readonly string[])
-      : [config.type];
-
-    // 并发查询所有分组类型，合并结果（单个失败不影响其他）
-    const results = await Promise.allSettled(
-      queryTypes.map(gt =>
-        tableSemanticsGroupList({
-          groupName: searchText,
-          groupType: gt as any,
-          pageNum: 1,
-          pageSize: 60,
-          spaceId
-        })
-      )
-    );
-
-    const merged: QuestionGroupItem[] = [];
-    const seenIds = new Set<number>();
-    for (const result of results) {
-      if (result.status !== 'fulfilled') continue;
-      const res = result.value;
-      const list: QuestionGroupItem[] = (res as any)?.data ?? [];
-      if (!Array.isArray(list)) continue;
-      for (const item of list) {
-        if (item.groupId && !seenIds.has(item.groupId)) {
-          seenIds.add(item.groupId);
-          merged.push(item);
-        }
-      }
-    }
-    setGroups(merged);
+    const res = await tableSemanticsGroupList({
+      groupName: searchText,
+      groupType: config.type,
+      pageNum: 1,
+      pageSize: 60,
+      spaceId
+    });
+    const list: QuestionGroupItem[] = (res as any)?.data ?? [];
+    setGroups(Array.isArray(list) ? list : []);
   };
 
   const handleGroupAdd = async (newGroup: QuestionGroupItem & { parentId?: number }) => {

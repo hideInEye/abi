@@ -46,7 +46,7 @@ export const Component: React.FC = () => {
             inputPlaceholder: '请输入行业术语组名称',
             modalAddTitle: '新增行业术语组',
             modalEditTitle: '编辑行业术语组',
-            panelTitle: '行业术语组',
+            panelTitle: '分组目录',
             rule: [
               [
                 { message: '请输入行业术语组名称', required: true },

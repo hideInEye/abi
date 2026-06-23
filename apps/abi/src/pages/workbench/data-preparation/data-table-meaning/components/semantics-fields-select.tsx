@@ -37,36 +37,42 @@ interface Data {
 
 function updateTechIdToFields(data: Data, dataSource: any[]): Data {
   const techIdMap: { [key: string]: string } = {};
+  const fieldNameMap: { [key: string]: string } = {};
   const bizNameMap: { [key: string]: string } = {};
   const aliasMap: { [key: string]: string } = {};
 
   data.dimensions.forEach(dim => {
     techIdMap[dim.techId] = dim.techId;
+    fieldNameMap[dim.fieldName] = dim.techId;
     bizNameMap[dim.techId] = dim.bizName;
     aliasMap[dim.techId] = dim.alias;
   });
 
   data.identifiers.forEach(id => {
     techIdMap[id.techId] = id.techId;
+    fieldNameMap[id.fieldName] = id.techId;
     bizNameMap[id.techId] = id.bizName;
     aliasMap[id.techId] = id.alias;
   });
 
   data.measures.forEach(measure => {
     techIdMap[measure.techId] = measure.techId;
+    fieldNameMap[measure.fieldName] = measure.techId;
     bizNameMap[measure.techId] = measure.bizName;
     aliasMap[measure.techId] = measure.alias;
   });
 
   const updatedFields = dataSource
     .map(field => {
-      if (techIdMap[field.tfieldId]) {
+      // tfieldId 每次加载数据集都会重新生成，优先按 techId 匹配，回退到字段名（originName）匹配
+      const matchedTechId = techIdMap[field.tfieldId] || fieldNameMap[field.originName];
+      if (matchedTechId) {
         return {
           ...field,
-          alias: aliasMap[field.tfieldId],
-          bizName: bizNameMap[field.tfieldId],
-          techId: techIdMap[field.tfieldId],
-          tfieldId: techIdMap[field.tfieldId]
+          alias: aliasMap[matchedTechId],
+          bizName: bizNameMap[matchedTechId],
+          techId: techIdMap[matchedTechId]
+          // 保留当前 tfieldId，用于 Transfer targetKeys 与 dataSource key 匹配
         };
       }
       return null;

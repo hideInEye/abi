@@ -359,9 +359,11 @@
 
 // ── MCP服务表格列样式 ──
 .plugin-table {
-  // MCP名称列表头 & 单元格左对齐
+  // MCP名称/描述列表头 & 单元格左对齐
   .ant-table-thead > tr > th.col-plugin-name,
-  .ant-table-tbody > tr > td.col-plugin-name {
+  .ant-table-tbody > tr > td.col-plugin-name,
+  .ant-table-thead > tr > th.col-plugin-desc,
+  .ant-table-tbody > tr > td.col-plugin-desc {
     text-align: left !important;
   }
 
@@ -407,9 +409,11 @@
 
 // ── 数据字典表格列样式 ──
 .dictionary-table {
-  // 字典名称列表头 & 单元格左对齐
+  // 字典名称/描述列表头 & 单元格左对齐
   .ant-table-thead > tr > th.col-dict-name,
-  .ant-table-tbody > tr > td.col-dict-name {
+  .ant-table-tbody > tr > td.col-dict-name,
+  .ant-table-thead > tr > th.col-dict-desc,
+  .ant-table-tbody > tr > td.col-dict-desc {
     text-align: left !important;
   }
 
@@ -512,9 +516,11 @@
 
 // ── 助手编排表格列样式 ──
 .assistant-table {
-  // 助手名称列表头 & 单元格左对齐
+  // 助手名称/描述列表头 & 单元格左对齐
   .ant-table-thead > tr > th.col-assistant-name,
-  .ant-table-tbody > tr > td.col-assistant-name {
+  .ant-table-tbody > tr > td.col-assistant-name,
+  .ant-table-thead > tr > th.col-assistant-desc,
+  .ant-table-tbody > tr > td.col-assistant-desc {
     text-align: left !important;
   }
 
@@ -3137,6 +3143,33 @@
   }
 }
 
+// ── 任务日志表格 ──
+.job-log-table {
+  // 结果描述列表头 & 单元格左对齐
+  .ant-table-thead > tr > th.col-job-log-desc,
+  .ant-table-tbody > tr > td.col-job-log-desc {
+    text-align: left !important;
+  }
+}
+
+// ── AI 助手选择列表表格 ──
+.agent-list-table {
+  // 描述列表头 & 单元格左对齐
+  .ant-table-thead > tr > th.col-agent-desc,
+  .ant-table-tbody > tr > td.col-agent-desc {
+    text-align: left !important;
+  }
+}
+
+// ── 数据源视图基础数据表格 ──
+.base-data-table {
+  // 描述列表头 & 单元格左对齐
+  .ant-table-thead > tr > th.col-base-data-desc,
+  .ant-table-tbody > tr > td.col-base-data-desc {
+    text-align: left !important;
+  }
+}
+
 // ── 内置工具表格 v5 ──
 .tools-table {
   // 隐藏底部水平滚动条 — 覆盖所有层级
@@ -3172,6 +3205,12 @@
   }
   .ant-table-tbody > tr.ant-table-row-selected:hover > td {
     background: rgba(91, 124, 247, 0.12) !important;
+  }
+
+  // 左对齐列（如功能描述）覆盖全局表头居中
+  .ant-table-thead > tr > th.col-tool-left,
+  .ant-table-tbody > tr > td.col-tool-left {
+    text-align: left !important;
   }
 }
 

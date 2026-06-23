@@ -450,7 +450,7 @@ const page: App.I18n.Schema['translation']['page'] = {
       title: 'Skill Manage',
       subtitle: 'Manage the skill packages you publish to your spaces. Click a card to view details or publish a new version.',
       publish: 'Publish Skill',
-      empty: 'No skills yet. Click the button at the top-right to publish your first skill package.',
+      empty: 'No skills yet. Click [Publish Skill] to publish your first skill.',
       view: 'View',
       downloads: 'Downloads',
       detailComingSoon: 'Detail page is coming soon',

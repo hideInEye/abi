@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined, LeftOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined, ApartmentOutlined, DownOutlined, ReloadOutlined } from '@ant-design/icons';
-import { Dropdown, Empty, Popconfirm, Select, Spin, Splitter, Switch, message } from 'antd';
+import { Dropdown, Empty, Popconfirm, Select, Spin, Splitter, Switch, Typography, message } from 'antd';
 // import PageTitle from '@/components/stateless/common/PageTitle';
 import type { TableProps } from 'antd';
 
@@ -143,25 +143,16 @@ export function Component() {
       title: '助手名称'
     },
     {
-      align: 'left',
+      align: 'left' as const,
+      className: 'col-assistant-desc',
       dataIndex: 'description',
       key: 'description',
-      minWidth: 300,
-      render: (text: string) => (
-        <ATooltip title={text} placement="topLeft">
-          <div style={{
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            lineHeight: '1.5',
-            maxHeight: '3em'
-          }}>
-            {text || '-'}
-          </div>
-        </ATooltip>
-      ),
+      minWidth: 200,
+      onHeaderCell: () => ({ className: 'col-assistant-desc' }),
+      onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const, maxWidth: 300 } }),
+      render: (text: string) => text
+        ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: text }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit', maxWidth: 260 }}>{text}</Typography.Paragraph>
+        : <span style={{ color: '#9ca3af' }}>-</span>,
       title: '助手描述'
     },
     {
