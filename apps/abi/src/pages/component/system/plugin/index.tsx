@@ -21,7 +21,6 @@ export const Component: React.FC = () => {
   const groupIdRef = useRef(groupId);
   groupIdRef.current = groupId;
   const [groupName, setGroupName] = useState('');
-  const [groupType, setGroupType] = useState<string>('mcp-sse');
   const [fetchKey, setFetchKey] = useState(0);
   const [dataSource, setDataSource] = useState<{
     code: number;
@@ -83,8 +82,8 @@ export const Component: React.FC = () => {
         id: String(record.pluginId),
         name: record.pluginName,
         version: record.versionDetail?.version || '1.0.0',
-        protocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
-        frontProtocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
+        protocol: record.pluginType || 'sse',
+        frontProtocol: record.pluginType || 'sse',
         description: record.remark || '',
         remoteServerConfig: {
           url: '',
@@ -140,8 +139,8 @@ export const Component: React.FC = () => {
     const serverSpec: Record<string, any> = {
       name: formData.mcp_name,
       // HTTP 转 MCP 开启时 protocol 为 http/https；关闭时根据分组类型决定
-      protocol: formData.restToMcpSwitch ? scheme : (groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse'),
-      frontProtocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
+      protocol: formData.restToMcpSwitch ? scheme : (formData.protocol || 'sse'),
+      frontProtocol: formData.protocol || 'sse',
       description: formData.description || '',
       version: formData.version,
       remoteServerConfig: {
@@ -199,7 +198,6 @@ export const Component: React.FC = () => {
   useEffect(() => {
     setGroupId(0);
     setGroupName('');
-    setGroupType('mcp-sse');
     setcurrent(1);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
     setFetchKey(k => k + 1);
@@ -218,7 +216,7 @@ export const Component: React.FC = () => {
         {/* v5 Tree Panel — left sidebar */}
         <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
           <div className="abi-group-sidebar" style={{ height: '100%' }}>
-            <PluginGroup onGroupId={(id, name, type) => { setGroupId(id); if (name) setGroupName(name); if (type) setGroupType(type); }} />
+            <PluginGroup onGroupId={(id, name) => { setGroupId(id); if (name) setGroupName(name); }} />
           </div>
         </Splitter.Panel>
 
@@ -300,7 +298,6 @@ export const Component: React.FC = () => {
 
       <PlugUpdate
         currentEdit={currentEdit}
-        groupType={groupType}
         groupName={groupName}
         namespaceId={`s_${groupIdRef.current}`}
         open={open}

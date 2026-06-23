@@ -1,5 +1,5 @@
 import { LockOutlined } from '@ant-design/icons';
-import { Radio, Switch, TreeSelect } from 'antd';
+import { Switch, TreeSelect } from 'antd';
 
 import type { GroupProps } from './Group';
 import { useGroupManagement } from './useGroupManagement';
@@ -16,22 +16,6 @@ export const GroupFrom: React.FC<GroupFromProps> = ({ config, parentOptions }: G
   const { editingGroup } = useGroupManagement(config);
   return (
     <div>
-      {/* 分组类型选择（仅当配置了 groupTypeOptions 时显示） */}
-      {config.groupTypeOptions && config.groupTypeOptions.length > 0 && (
-        <AForm.Item
-          label="分组类型"
-          name="groupType"
-          initialValue={editingGroup?.groupType || config.groupTypeOptions[0].value}
-          rules={[{ message: '请选择分组类型', required: true }]}
-          style={{ marginBottom: 12 }}
-        >
-          <Radio.Group disabled={!!editingGroup}>
-            {config.groupTypeOptions.map(opt => (
-              <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>
-            ))}
-          </Radio.Group>
-        </AForm.Item>
-      )}
       {/* 名称 */}
       <AForm.Item
         label={config.inputLabel}

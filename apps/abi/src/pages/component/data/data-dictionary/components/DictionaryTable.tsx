@@ -1,4 +1,5 @@
 import { LeftOutlined, RightOutlined } from '@ant-design/icons'
+import { Typography } from 'antd'
 
 import type { DictionaryItem } from '../types'
 
@@ -92,21 +93,17 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
       title: '状态',
     },
     {
-      align: 'center',
+      align: 'left' as const,
+      className: 'col-dict-desc',
       dataIndex: 'remark',
+      key: 'remark',
       title: '字典描述',
-      minWidth: 120,
-      render: (text: string) => {
-        if (!text) return ''
-        if (text.length > 7) {
-          return (
-            <ATooltip title={text}>
-              <span>{text.slice(0, 7)}...</span>
-            </ATooltip>
-          )
-        }
-        return <span>{text}</span>
-      },
+      minWidth: 200,
+      onHeaderCell: () => ({ className: 'col-dict-desc' }),
+      onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const, maxWidth: 300 } }),
+      render: (text: string) => text
+        ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: text }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit', maxWidth: 260 }}>{text}</Typography.Paragraph>
+        : <span style={{ color: '#9ca3af' }}>-</span>,
     },
     {
       align: 'center',

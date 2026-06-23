@@ -454,7 +454,7 @@ const page: App.I18n.Schema['translation']['page'] = {
       title: '技能管理',
       subtitle: '管理你发布到空间的技能包，点击卡片查看详情或发布新版本。',
       publish: '安装技能',
-      empty: '暂无技能，点击右上角发布你的第一个技能包',
+      empty: '暂无技能，点击【安装技能】发布您的第一个技能',
       view: '查看',
       downloads: '下载量',
       detailComingSoon: '详情页即将上线',

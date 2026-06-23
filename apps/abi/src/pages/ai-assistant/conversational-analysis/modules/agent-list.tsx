@@ -1,6 +1,6 @@
 import { FileTextOutlined } from '@ant-design/icons';
 import type { TableProps } from 'antd';
-import { Table } from 'antd';
+import { Table, Typography } from 'antd';
 import React, { useEffect, useReducer, useState } from 'react';
 
 import { SPACE_ID } from '@/constants/chat';
@@ -45,9 +45,17 @@ const AgentList: React.FC<PropsType> = memo(({ setAgentId }) => {
       title: '数据模型'
     },
     {
+      align: 'left' as const,
+      className: 'col-agent-desc',
       dataIndex: 'remark',
       key: 'remark',
-      title: '描述'
+      title: '描述',
+      minWidth: 200,
+      onHeaderCell: () => ({ className: 'col-agent-desc' }),
+      onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const, maxWidth: 300 } }),
+      render: (text: string) => text
+        ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: text }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit', maxWidth: 260 }}>{text}</Typography.Paragraph>
+        : <span style={{ color: '#9ca3af' }}>-</span>,
     },
     {
       dataIndex: 'createTime',
@@ -90,6 +98,7 @@ const AgentList: React.FC<PropsType> = memo(({ setAgentId }) => {
         <b>已选择：{selectedRow.agentAlias}</b>
       </header>
       <Table
+        className="agent-list-table"
         columns={columns}
         dataSource={dataSource}
         rowKey="agentId"

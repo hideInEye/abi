@@ -1,3 +1,5 @@
+import { Typography } from 'antd'
+
 interface PropsType {
   curDatasource?: any;
   sourceId?: string;
@@ -20,10 +22,17 @@ export const BaseData: React.FC<PropsType> = memo(({ curDatasource, sourceId, ta
       title: '字段类型',
     },
     {
-      align: 'center',
+      align: 'left' as const,
+      className: 'col-base-data-desc',
       dataIndex: 'name',
       key: 'name',
       title: '描述',
+      minWidth: 200,
+      onHeaderCell: () => ({ className: 'col-base-data-desc' }),
+      onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const, maxWidth: 300 } }),
+      render: (text: string) => text
+        ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: text }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit', maxWidth: 260 }}>{text}</Typography.Paragraph>
+        : <span style={{ color: '#9ca3af' }}>-</span>,
     },
   ];
 
@@ -57,7 +66,7 @@ export const BaseData: React.FC<PropsType> = memo(({ curDatasource, sourceId, ta
             pagination={false}
             scroll={{ x: 'max-content' }}
             size="middle"
-            className="abi-std-table"
+            className="base-data-table abi-std-table"
           />
         </div>
       </div>
