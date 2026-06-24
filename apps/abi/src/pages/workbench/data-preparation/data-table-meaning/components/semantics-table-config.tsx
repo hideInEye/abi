@@ -1,10 +1,11 @@
 import { useDebounceFn } from 'ahooks';
 import type { TableColumnsType } from 'antd';
-import { Form } from 'antd';
+import { Form, message } from 'antd';
 import { DatabaseOutlined } from '@ant-design/icons';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import Star from '../../../../../components/star/index.tsx';
+import { semanticModify } from '@/service/api/data-table-meaning';
 import { useTableStore } from '../store/useTableStore.ts';
 import type { DataTypea } from '../types/index';
 import { getSemanticTypeMap } from '../utils/getDefaultField.ts';
@@ -18,6 +19,7 @@ export default function DataTableMeaningTable() {
   const { fields, setFields, tablePrikey, union } = useTableStore();
   const { setFormTableConfig } = useTableStore();
   const { genderOptions } = useTableStore();
+  const [aiLoading, setAiLoading] = useState(false);
 
   // 用于存储待更新的字段值，避免频繁更新 store
   const fieldsRef = useRef(fields);
@@ -500,8 +502,75 @@ export default function DataTableMeaningTable() {
 
   return (
     <div className="ds-table-config-wrapper">
-      <div className="ds-table-config-section-title">
+      <div className="ds-table-config-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span>字段语义配置</span>
+        <AButton
+          className="btn-accent-gradient"
+          loading={aiLoading}
+          size="small"
+          onClick={async () => {
+            const modelDetail = editObj?.modelDetail;
+            if (!modelDetail) {
+              message.warning('暂无语义数据可以提交');
+              return;
+            }
+            try {
+              setAiLoading(true);
+              const res: any = await semanticModify({ dsl: modelDetail });
+              // apiRequest 返回完整 axios 响应，需手动解包
+              const data: any = res?.data?.data ?? res?.response?.data?.data ?? res?.data ?? res;
+              if (!data) {
+                message.error('AI帮填失败');
+                return;
+              }
+
+              // 把 dimensions + measures + identifiers 合并，以 techId 为 key 建立映射表
+              const allItems: any[] = [
+                ...(data.dimensions || []),
+                ...(data.measures || []),
+                ...(data.identifiers || [])
+              ];
+              const techIdMap = new Map<string, any>();
+              allItems.forEach((item: any) => {
+                if (item.techId) {
+                  techIdMap.set(String(item.techId), item);
+                }
+              });
+
+              // 更新 fields store
+              const newFields = fieldsRef.current.map((field: any) => {
+                const matched = techIdMap.get(String(field.tfieldId));
+                if (!matched) return field;
+                return {
+                  ...field,
+                  bizName: matched.bizName ?? field.bizName,
+                  alias: matched.alias ?? field.alias,
+                  fieldDesc: matched.fieldDesc ?? field.fieldDesc,
+                  semanticType: matched.type ?? field.semanticType
+                };
+              });
+              setFields(newFields);
+
+              // 同步更新表单显示
+              newFields.forEach((field: any, index: number) => {
+                form.setFieldsValue({
+                  [`tableConfig[${index}].bizName`]: field.bizName,
+                  [`tableConfig[${index}].alias`]: field.alias,
+                  [`tableConfig[${index}].fieldDesc`]: field.fieldDesc,
+                  [`tableConfig[${index}].semanticType`]: field.semanticType
+                });
+              });
+
+              message.success('AI帮填成功');
+            } catch {
+              message.error('AI帮填失败');
+            } finally {
+              setAiLoading(false);
+            }
+          }}
+        >
+          AI帮填
+        </AButton>
       </div>
       <AForm form={form}>
         <div className="space-y-5">

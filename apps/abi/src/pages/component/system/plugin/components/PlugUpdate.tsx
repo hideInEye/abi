@@ -81,7 +81,8 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
         }
       }
       const url = currentEdit.remoteServerConfig?.url || '';
-      const transport: 'HTTP' | 'HTTPS' = /^https:/i.test(url) ? 'HTTPS' : 'HTTP';
+      const transportProtocol = currentEdit.remoteServerConfig?.serviceRef?.transportProtocol || currentEdit.backendEndpoints?.[0]?.protocol || '';
+      const transport: 'HTTP' | 'HTTPS' = /^https/i.test(transportProtocol) ? 'HTTPS' : 'HTTP';
       const proto = (currentEdit.protocol || '').toLowerCase();
       const isRestToMcp = proto === 'http' || proto === 'https';
       // 从编辑记录推断协议类型
@@ -102,7 +103,14 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
 
       setSecuritySchemes(currentEdit.toolSpec?.securitySchemes || []);
       setSecurityExtensions((currentEdit.toolSpec?.extensions as any) || {});
-      setTools(currentEdit.toolSpec?.tools || []);
+      const toolsMeta = currentEdit.toolSpec?.toolsMeta || {};
+      setTools((currentEdit.toolSpec?.tools || []).map(tool => {
+        const tpl = toolsMeta[tool.name]?.templates?.['json-go-template'];
+        return {
+          ...tool,
+          protocolTemplate: tpl ? JSON.stringify(tpl, null, 2) : tool.protocolTemplate || ''
+        };
+      }));
     } else {
       setRestToMcpSwitch(false);
       form.setFieldsValue({
