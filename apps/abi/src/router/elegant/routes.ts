@@ -691,6 +691,24 @@ export const generatedRoutes: GeneratedRoute[] = [
         },
         children: [
           {
+            name: 'workbench_ontology-kg_entity',
+            path: 'entity',
+            component: 'view.workbench_ontology-kg_entity',
+            meta: {
+              i18nKey: 'route.workbench_ontology-kg_entity',
+              title: 'workbench_ontology-kg_entity'
+            }
+          },
+          {
+            name: 'workbench_ontology-kg_kggraph',
+            path: 'kggraph',
+            component: 'view.workbench_ontology-kg_kggraph',
+            meta: {
+              i18nKey: 'route.workbench_ontology-kg_kggraph',
+              title: 'workbench_ontology-kg_kggraph'
+            }
+          },
+          {
             name: 'workbench_ontology-kg_label-meaning',
             path: 'label-meaning',
             component: 'view.workbench_ontology-kg_label-meaning',
@@ -708,6 +726,15 @@ export const generatedRoutes: GeneratedRoute[] = [
               i18nKey: 'route.assistant-manage_recommended-inquiries',
               order: 4,
               title: 'assistant-manage_recommended-inquiries'
+            }
+          },
+          {
+            name: 'workbench_ontology-kg_relation',
+            path: 'relation',
+            component: 'view.workbench_ontology-kg_relation',
+            meta: {
+              i18nKey: 'route.workbench_ontology-kg_relation',
+              title: 'workbench_ontology-kg_relation'
             }
           },
           {

@@ -114,6 +114,7 @@ export function Component() {
           sourceName: record.sourceName,
           sourceFile: excelConfig,
           excelDatasourceFlag: true,
+          sourceId:record.sourceId
         };
         edit(excelConfig);
       }

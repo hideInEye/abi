@@ -33,7 +33,7 @@ interface IProps {
   readonly type: TableSemanticsGroupType;
 }
 
-export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = false, type }: IProps) => {
+export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = false, type,groupFieldName = 'semanticGroupId' }: IProps) => {
   const spaceId = useAppSelector(getSpaceId);
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: number }[]>([]);
   const [groupId, setGroupId] = useState<number | null>(null);

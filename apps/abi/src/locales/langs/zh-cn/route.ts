@@ -100,7 +100,10 @@ const route: App.I18n.Schema['translation']['route'] = {
   'workbench_app-workshop_my-dashboard': '我的大屏',
   'workbench_app-workshop_my-share': '我的分享',
   'workbench_app-workshop_recently-used': '最近使用',
-  'workbench_ontology-kg_label-meaning': '属性建模'
+  'workbench_ontology-kg_entity': '实体定义',
+  'workbench_ontology-kg_kggraph': '图谱探索',
+  'workbench_ontology-kg_label-meaning': '属性建模',
+  'workbench_ontology-kg_relation': '关系配置',
 
   // 'user-center': '个人中心'
 }
