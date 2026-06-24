@@ -1,6 +1,6 @@
 import { CloseOutlined, CloseCircleFilled } from '@ant-design/icons';
 import Editor from '@monaco-editor/react';
-import { Form, Modal, Tag } from 'antd';
+import { Form, Modal, Tag, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { McpToolItem, McpSecurityScheme } from '@/types/plug';
@@ -162,6 +162,20 @@ export const CreateToolModal = ({ open, initial, schemes = [], onClose, onOk }: 
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
+      // 校验协议转化配置 JSON
+      if (protocolTpl.trim()) {
+        let parsed: Record<string, any>;
+        try {
+          parsed = JSON.parse(protocolTpl);
+        } catch {
+          message.error('协议转化配置 JSON 格式不正确');
+          return;
+        }
+        if (!parsed.requestTemplate) {
+          message.error('协议转化配置缺少 requestTemplate 字段');
+          return;
+        }
+      }
       // 转换 params 为 JSON Schema properties 结构
       const properties: Record<string, any> = {};
       const requiredList: string[] = [];

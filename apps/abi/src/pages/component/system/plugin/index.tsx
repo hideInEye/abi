@@ -75,23 +75,33 @@ export const Component: React.FC = () => {
 
   const updateStatus = async (record: PluginItem) => {
     if (!groupIdRef.current) return;
-    // 启停切换走更新接口 (PUT)
+    const version = record.versionDetail?.version || '1.0.0';
+    const remoteCfg = record.remoteServerConfig || {};
     await updateMcp({
       namespaceId: `s_${groupIdRef.current}`,
       serverSpecification: {
         id: String(record.pluginId),
         name: record.pluginName,
-        version: record.versionDetail?.version || '1.0.0',
-        protocol: record.pluginType || 'sse',
-        frontProtocol: record.pluginType || 'sse',
-        description: record.remark || '',
-        remoteServerConfig: {
-          url: '',
-          connectTimeout: 5000,
-          readTimeout: 30000
-        },
+        protocol: record.protocol || 'sse',
+        frontProtocol: record.frontProtocol || 'sse',
+        description: record.description || '',
+        version,
+        versionDetail: record.versionDetail || { version, release_date: null, is_latest: true },
         enabled: record.status === 0,
-        capabilities: record.capabilities ?? []
+        status: 'active',
+        capabilities: record.capabilities ?? [],
+        remoteServerConfig: remoteCfg.serviceRef
+          ? remoteCfg
+          : {
+              serviceRef: {
+                namespaceId: `s_${groupIdRef.current}`,
+                groupName: groupName || 'mcp-endpoints',
+                serviceName: `${record.pluginName}::${version}`,
+                transportProtocol: (record.protocol || 'sse').toLowerCase()
+              },
+              exportPath: remoteCfg.exportPath || '/mcp',
+              frontEndpointConfigList: remoteCfg.frontEndpointConfigList ?? null
+            }
       }
     });
     getPluginList();
@@ -143,10 +153,23 @@ export const Component: React.FC = () => {
       frontProtocol: formData.protocol || 'sse',
       description: formData.description || '',
       version: formData.version,
+      versionDetail: {
+        version: formData.version,
+        release_date: null,
+        is_latest: true
+      },
+      enabled: true,
+      status: 'active',
+      capabilities: ['TOOL'],
       remoteServerConfig: {
-        url: serverUrl,
-        connectTimeout: 5000,
-        readTimeout: 30000
+        serviceRef: {
+          namespaceId: `s_${groupIdRef.current}`,
+          groupName: groupName || '',
+          serviceName: `${formData.mcp_name}::${formData.version}`,
+          transportProtocol: formData.transport?.toLowerCase() || scheme
+        },
+        exportPath: '/mcp',
+        frontEndpointConfigList: null
       }
     };
     if (currentEdit) {
@@ -155,8 +178,9 @@ export const Component: React.FC = () => {
     const endpointSpec = {
       type: 'DIRECT',
       data: {
-        address: addressWithPort,
-        port: endpointPort
+        address: endpointAddress,
+        port: endpointPort,
+        transportProtocol: scheme
       }
     };
     // 高级配置 + Tools → toolSpecification（均为可选）
@@ -169,6 +193,29 @@ export const Component: React.FC = () => {
     }
     if (formData.tools && formData.tools.length > 0) {
       toolSpec.tools = formData.tools;
+      const defaultTpl = {
+        requestTemplate: { method: 'POST', url: '/api/example', body: '{"foo":"{{.foo}}"}' },
+        responseTemplate: { body: '{{.}}' }
+      };
+      const toolsMeta: Record<string, any> = {};
+      formData.tools.forEach(tool => {
+        let parsed: Record<string, any> = {};
+        if (tool.protocolTemplate) {
+          try {
+            parsed = JSON.parse(tool.protocolTemplate);
+          } catch {
+            parsed = {};
+          }
+        }
+        toolsMeta[tool.name] = {
+          invokeContext: {},
+          enabled: tool.enabled ?? true,
+          templates: {
+            'json-go-template': Object.keys(parsed).length > 0 ? parsed : defaultTpl
+          }
+        };
+      });
+      toolSpec.toolsMeta = toolsMeta;
     }
     try {
       const fn = currentEdit ? updateMcp : registerMcp;
@@ -267,7 +314,7 @@ export const Component: React.FC = () => {
                   setDetailRecord(record);
                   getMcpDetail({
                     mcpId: String(record.pluginId),
-                    mcpName: record.pluginName,
+                    mcpName: '',
                     namespaceId: `s_${groupIdRef.current}`
                   }).then((res: any) => {
                     const remote = res?.data ?? res?.response?.data?.data ?? res?.response?.data;
@@ -281,7 +328,7 @@ export const Component: React.FC = () => {
                   setOpen(true);
                   getMcpDetail({
                     mcpId: String(record.pluginId),
-                    mcpName: record.pluginName,
+                    mcpName: '',
                     namespaceId: `s_${groupIdRef.current}`
                   }).then((res: any) => {
                     const remote = res?.data ?? res?.response?.data?.data ?? res?.response?.data;

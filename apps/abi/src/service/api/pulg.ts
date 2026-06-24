@@ -86,7 +86,7 @@ export function deleteMcp(params: {
 // MCP 详情
 export function getMcpDetail(params: {
   mcpId: string;
-  mcpName: string;
+  mcpName?: string;
   version?: string;
   namespaceId?: string;
 }) {
