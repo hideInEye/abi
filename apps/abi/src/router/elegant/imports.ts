@@ -65,8 +65,11 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   workbench_job_time: () => import("@/pages/workbench/job/time/index.tsx"),
   "workbench_job_time_modules_editor-quill": () => import("@/pages/workbench/job/time/modules/editor-quill/index.tsx"),
   "workbench_job_time_modules_share-email-setting": () => import("@/pages/workbench/job/time/modules/share-email-setting/index.tsx"),
+  "workbench_ontology-kg_entity": () => import("@/pages/workbench/ontology-kg/entity/index.tsx"),
+  "workbench_ontology-kg_kggraph": () => import("@/pages/workbench/ontology-kg/kggraph/index.tsx"),
   "workbench_ontology-kg_label-meaning": () => import("@/pages/workbench/ontology-kg/label-meaning/index.tsx"),
   "workbench_ontology-kg_recommended-inquiries": () => import("@/pages/workbench/ontology-kg/recommended-inquiries/index.tsx"),
+  "workbench_ontology-kg_relation": () => import("@/pages/workbench/ontology-kg/relation/index.tsx"),
   "workbench_ontology-kg_technical-jargon": () => import("@/pages/workbench/ontology-kg/technical-jargon/index.tsx"),
   "workbench_screen-manage_abi-dashboard": () => import("@/pages/workbench/screen-manage/abi-dashboard/index.tsx"),
 };

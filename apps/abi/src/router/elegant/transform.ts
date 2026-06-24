@@ -268,8 +268,11 @@ const routeMap: RouteMap = {
   "workbench_job_time_modules_editor-quill": "editor-quill",
   "workbench_job_time_modules_share-email-setting": "share-email-setting",
   "workbench_ontology-kg": "ontology-kg",
+  "workbench_ontology-kg_entity": "entity",
+  "workbench_ontology-kg_kggraph": "kggraph",
   "workbench_ontology-kg_label-meaning": "label-meaning",
   "workbench_ontology-kg_recommended-inquiries": "recommended-inquiries",
+  "workbench_ontology-kg_relation": "relation",
   "workbench_ontology-kg_technical-jargon": "technical-jargon",
   "workbench_screen-manage": "screen-manage",
   "workbench_screen-manage_abi-dashboard": "abi-dashboard"
