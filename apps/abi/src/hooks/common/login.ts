@@ -1,10 +1,8 @@
 import { useLoading } from '@sa/hooks';
 import { useTranslation } from 'react-i18next';
 
-import { router } from '@/router';
-import { store } from '@/store';
-import { getUerName, login, resetStore } from '@/store/slice/auth';
-import { getRouteHome, initAuthRoute, resetRouteStore } from '@/store/slice/route';
+import { getUerName, login } from '@/store/slice/auth';
+import { initAuthRoute, resetRouteStore } from '@/store/slice/route';
 import { resetLoginExpiredState } from '@/utils/auth';
 
 import { useAppDispatch } from '../business/useStore';
@@ -18,40 +16,38 @@ export function useLogin() {
 
   const dispatch = useAppDispatch();
 
-  async function toLogin(params: { password: string; username: string; code?: string; uuid?: string },captchaRef:any) {
+  async function toLogin(params: { password: string; username: string; code?: string; uuid?: string }, captchaRef: any) {
     startLoading();
 
-    // 在登录前彻底重置路由状态
-    await dispatch(resetRouteStore());
+    try {
+      // 在登录前彻底重置路由状态
+      await dispatch(resetRouteStore());
 
-    const {payload} =  await dispatch(login(params));
-    if(!payload){
-      captchaRef.current?.refresh();
+      const { payload } = await dispatch(login(params));
+      if (!payload) {
+        captchaRef.current?.refresh();
+        return false;
+      }
+
+      const userName = dispatch(getUerName());
+
+      if (userName) {
+        resetLoginExpiredState();
+        await dispatch(initAuthRoute());
+
+        // 等待路由初始化完成后再跳转
+        await redirectFromLogin();
+
+        window.$notification?.success({
+          description: t('page.login.common.welcomeBack', { userName }),
+          message: t('page.login.common.loginSuccess')
+        });
+      }
+
+      return Boolean(userName);
+    } finally {
+      endLoading();
     }
-    const userName = dispatch(getUerName());
-
-    if (userName) {
-      resetLoginExpiredState();
-      await dispatch(initAuthRoute());
-
-      // console.log('登录路由初始化完成，当前路由数:', {
-      //   // matcherRoutes: router.matcher.getRoutes().length,
-      //   reactRouteslength: router.reactRouter.routes.length,
-      //   reactRoutes: router.reactRouter.routes,
-      //   curRoutes: router.getRoutes()
-      // });
-
-      // 等待路由初始化完成后再跳转
-      await redirectFromLogin();
-
-      window.$notification?.success({
-        description: t('page.login.common.welcomeBack', { userName }),
-        message: t('page.login.common.loginSuccess')
-      });
-    } else {
-      // dispatch(resetStore());
-    }
-    endLoading();
   }
 
   return {

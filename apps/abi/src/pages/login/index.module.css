@@ -369,10 +369,11 @@
 }
 
 .copyrightText {
-  color: rgba(255, 255, 255, 0.96);
-  font-size: clamp(0.8125rem, 0.75rem + 0.22vw, 0.9375rem);
-  font-weight: 700;
-  text-shadow: 0 0.0625rem 0.25rem rgba(0, 30, 80, 0.22);
+  color: rgba(39, 52, 82, 0.68);
+  letter-spacing: 0.03em;
+  font-size: .75rem;
+  font-weight: 400;
+  /* text-shadow: 0 0.0625rem 0.25rem rgba(0, 30, 80, 0.22); */
 }
 
 @media (max-width: 72rem) {

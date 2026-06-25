@@ -1,7 +1,10 @@
-import type { RouteKey } from '@elegant-router/types';
+import type { ElegantConstRoute, RouteKey } from '@elegant-router/types';
 import { useRoute, useRouter } from '@sa/simple-router';
 import type { RouteLocationNamedRaw } from '@sa/simple-router';
 
+import { getRouteName, getRoutePath } from '@/router/elegant/transform';
+import { store } from '@/store';
+import { getAuthRoutes, getConstantRoutes, getRouteHome } from '@/store/slice/route';
 import { getChatStandaloneUrl } from '@/utils/chatWindow';
 import { localStg } from '@/utils/storage';
 
@@ -9,6 +12,15 @@ interface RouterPushOptions {
   params?: Record<string, string>;
   query?: Record<string, string>;
 }
+
+type AppRouter = ReturnType<typeof useRouter>;
+
+type LoginRedirectTarget =
+  | { path: string; type: 'chat' | 'internal' }
+  | { type: 'fallback' };
+
+const BLOCKED_LOGIN_REDIRECT_NAMES = new Set(['login', 'logout', '403', 'not-found']);
+const BLOCKED_LOGIN_REDIRECT_PATHS = ['/login', '/logout', '/403', '/404'];
 
 function isNormalRole(roles: any[]): boolean {
   if (!Array.isArray(roles) || !roles.length) {
@@ -34,6 +46,83 @@ function isNormalRole(roles: any[]): boolean {
   });
 }
 
+function getRedirectUrl(redirect: string) {
+  try {
+    return new URL(redirect, window.location.origin);
+  } catch {
+    return null;
+  }
+}
+
+function hasPathSegment(pathname: string, segment: string) {
+  return pathname.split('/').filter(Boolean).includes(segment);
+}
+
+function isAiAssistantConversationPath(pathname: string) {
+  return pathname === '/ai-assistant/conversational-analysis' || pathname.endsWith('/ai-assistant/conversational-analysis');
+}
+
+function isChatRedirect(redirect: string): boolean {
+  if (!redirect) {
+    return false;
+  }
+
+  if (redirect.startsWith('#/chat/')) return true;
+
+  const redirectUrl = getRedirectUrl(redirect);
+  if (!redirectUrl) return false;
+
+  return (
+    hasPathSegment(redirectUrl.pathname, 'chat-ui') ||
+    redirectUrl.hash.startsWith('#/chat/') ||
+    isAiAssistantConversationPath(redirectUrl.pathname)
+  );
+}
+
+function getSafeLoginRedirectPath(redirect?: string | null) {
+  if (!redirect) return '';
+
+  const trimmedRedirect = redirect.trim();
+  if (!trimmedRedirect || trimmedRedirect.startsWith('//')) return '';
+
+  if (trimmedRedirect.startsWith('#/')) {
+    return isChatRedirect(trimmedRedirect) ? trimmedRedirect : '';
+  }
+
+  let normalizedPath = trimmedRedirect;
+
+  try {
+    const redirectUrl = new URL(trimmedRedirect, window.location.origin);
+    if (redirectUrl.origin !== window.location.origin) return '';
+    normalizedPath = `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`;
+  } catch {
+    return '';
+  }
+
+  if (!normalizedPath.startsWith('/')) return '';
+
+  const pathname = getRedirectPathname(normalizedPath);
+  if (isBlockedLoginRedirectPath(pathname)) return '';
+
+  return normalizedPath;
+}
+
+function isBlockedLoginRedirectPath(pathname: string) {
+  return BLOCKED_LOGIN_REDIRECT_PATHS.some(blockedPath => {
+    return pathname === blockedPath || pathname.startsWith(`${blockedPath}/`);
+  });
+}
+
+function getRedirectPathname(redirect: string) {
+  if (!redirect || redirect.startsWith('#/')) return '';
+
+  try {
+    return new URL(redirect, window.location.origin).pathname;
+  } catch {
+    return '';
+  }
+}
+
 function parseChatRedirectSpaceId(redirect: string): string | undefined {
   if (!redirect) {
     return undefined;
@@ -47,29 +136,18 @@ function parseChatRedirectSpaceId(redirect: string): string | undefined {
   return undefined;
 }
 
-function isChatRedirect(redirect: string): boolean {
-  if (!redirect) {
-    return false;
-  }
-
-  return (
-    redirect.includes('/chat-ui') ||
-    redirect.includes('#/chat/') ||
-    redirect.includes('/ai-assistant/conversational-analysis')
-  );
-}
-
 function buildChatStandaloneRedirectUrl(redirect: string): string {
   const spaceId = parseChatRedirectSpaceId(redirect);
   const fallbackUrl = getChatStandaloneUrl({
     spaceId: spaceId && spaceId !== '0' ? spaceId : undefined
   });
 
-  if (redirect.includes('/chat-ui')) {
-    return redirect;
+  const redirectUrl = getRedirectUrl(redirect);
+  if (redirectUrl && hasPathSegment(redirectUrl.pathname, 'chat-ui')) {
+    return `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`;
   }
 
-  const hash = redirect.split('#')[1];
+  const hash = redirect.startsWith('#') ? redirect.slice(1) : redirect.split('#')[1];
   if (hash?.startsWith('/chat/')) {
     const chatHostUrl = fallbackUrl.split('#')[0];
     return `${chatHostUrl}#${hash}`;
@@ -81,6 +159,71 @@ function buildChatStandaloneRedirectUrl(redirect: string): string {
 function replaceStandaloneChatByRedirect(redirect: string) {
   const chatUrl = buildChatStandaloneRedirectUrl(redirect);
   window.location.replace(chatUrl);
+}
+
+function isRouteNameInRoutes(routeName: string, routes: ElegantConstRoute[]): boolean {
+  return routes.some(route => {
+    if (route.name === routeName) return true;
+    if (route.children?.length) return isRouteNameInRoutes(routeName, route.children as ElegantConstRoute[]);
+    return false;
+  });
+}
+
+function getRouteNameByRedirect(router: AppRouter, redirect: string) {
+  const pathname = getRedirectPathname(redirect);
+  if (!pathname) return '';
+
+  try {
+    const redirectUrl = new URL(redirect, window.location.origin);
+    const resolvedRoute = router.resolve({
+      hash: redirectUrl.hash,
+      key: 'login-redirect',
+      pathname: redirectUrl.pathname,
+      search: redirectUrl.search,
+      state: null
+    });
+
+    if (resolvedRoute.name && resolvedRoute.name !== 'not-found') {
+      return String(resolvedRoute.name);
+    }
+  } catch {}
+
+  return String(getRouteName(pathname as any) || '');
+}
+
+function canAccessRoute(router: AppRouter, redirect: string) {
+  const pathname = getRedirectPathname(redirect);
+  const routeName = getRouteNameByRedirect(router, redirect);
+
+  if (!routeName) return false;
+  if (BLOCKED_LOGIN_REDIRECT_NAMES.has(routeName)) return false;
+  if (isBlockedLoginRedirectPath(pathname)) return false;
+  if (!router.getRouteByName(routeName)) return false;
+
+  const state = store.getState();
+  return (
+    isRouteNameInRoutes(routeName, getAuthRoutes(state)) ||
+    isRouteNameInRoutes(routeName, getConstantRoutes(state))
+  );
+}
+
+function canAccessChatRedirect(router: AppRouter, _redirect: string) {
+  return canAccessRoute(router, '/ai-assistant/conversational-analysis');
+}
+
+function resolveLoginRedirectTarget(router: AppRouter, redirect?: string | null): LoginRedirectTarget {
+  const safeRedirect = getSafeLoginRedirectPath(redirect);
+  if (!safeRedirect) return { type: 'fallback' };
+
+  if (isChatRedirect(safeRedirect)) {
+    return canAccessChatRedirect(router, safeRedirect)
+      ? { path: safeRedirect, type: 'chat' }
+      : { type: 'fallback' };
+  }
+
+  return canAccessRoute(router, safeRedirect)
+    ? { path: safeRedirect, type: 'internal' }
+    : { type: 'fallback' };
 }
 
 /**
@@ -98,6 +241,14 @@ export function useRouterPush() {
   const routerPush = router.push;
 
   const routerBack = router.back;
+
+  function getLoginFallbackPath() {
+    const routeHome = getRouteHome(store.getState()) as RouteKey;
+    const homeRoute = routeHome ? router.getRouteByName(routeHome) : undefined;
+    const homePath = homeRoute?.path || getRoutePath(routeHome) || '/';
+
+    return homePath.startsWith('/') ? homePath : `/${homePath}`;
+  }
 
   async function routerPushByKey(key: RouteKey, options?: RouterPushOptions) {
     const { params, query } = options || {};
@@ -141,7 +292,7 @@ export function useRouterPush() {
   }
 
   async function toHome() {
-    return routerPush('/');
+    return routerPush(getLoginFallbackPath());
   }
 
   /**
@@ -152,11 +303,13 @@ export function useRouterPush() {
   async function toLogin(redirectUrl?: string) {
     const options: RouterPushOptions = {};
 
-    const redirect = redirectUrl || route.fullPath;
+    const redirect = getSafeLoginRedirectPath(redirectUrl || route.fullPath);
 
-    options.query = {
-      redirect
-    };
+    if (redirect) {
+      options.query = {
+        redirect
+      };
+    }
 
     return routerPushByKey('login', options);
   }
@@ -168,14 +321,15 @@ export function useRouterPush() {
    */
   async function redirectFromLogin(needRedirect = true) {
     const redirect = searchParams.get('redirect');
+    const target: LoginRedirectTarget = needRedirect ? resolveLoginRedirectTarget(router, redirect) : { type: 'fallback' };
 
-    if (needRedirect && redirect) {
-      if (isChatRedirect(redirect)) {
-        replaceStandaloneChatByRedirect(redirect);
-        return true;
-      }
+    if (target.type === 'chat') {
+      replaceStandaloneChatByRedirect(target.path);
+      return true;
+    }
 
-      return routerPush(redirect);
+    if (target.type === 'internal') {
+      return routerPush(target.path);
     }
 
     const userInfo: any = localStg.get('userInfo') || {};
