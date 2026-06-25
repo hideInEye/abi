@@ -1,11 +1,12 @@
 import { useDebounceFn } from 'ahooks';
 import type { TableColumnsType } from 'antd';
 import { Form, message } from 'antd';
-import { DatabaseOutlined } from '@ant-design/icons';
+import { BulbOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { useEffect, useRef, useState } from 'react';
 
 import Star from '../../../../../components/star/index.tsx';
 import { semanticModify } from '@/service/api/data-table-meaning';
+import { assembleData, streamlinedData } from '../modules/semantics-table';
 import { useTableStore } from '../store/useTableStore.ts';
 import type { DataTypea } from '../types/index';
 import { getSemanticTypeMap } from '../utils/getDefaultField.ts';
@@ -503,14 +504,20 @@ export default function DataTableMeaningTable() {
   return (
     <div className="ds-table-config-wrapper">
       <div className="ds-table-config-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>字段语义配置</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 3, height: 16, borderRadius: 2, background: 'linear-gradient(180deg, #5b7cf7, #7091fa)', flexShrink: 0, display: 'inline-block' }} />
+          字段语义配置
+        </span>
         <AButton
-          className="btn-accent-gradient"
+          className="btn-ghost-v5"
+          icon={<BulbOutlined />}
           loading={aiLoading}
           size="small"
           onClick={async () => {
-            const modelDetail = editObj?.modelDetail;
-            if (!modelDetail) {
+            // 编辑模式用已保存的 modelDetail，新增模式用当前 fields 实时构造
+            const modelDetail = editObj?.modelDetail
+              || JSON.stringify(assembleData(streamlinedData(fieldsRef.current)));
+            if (!modelDetail || modelDetail === '{}') {
               message.warning('暂无语义数据可以提交');
               return;
             }

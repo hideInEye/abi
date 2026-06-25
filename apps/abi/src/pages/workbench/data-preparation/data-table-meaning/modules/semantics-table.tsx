@@ -10,7 +10,7 @@ import DataTableMeaning from '../components/semantics-steps';
 import { useTableStore } from '../store/useTableStore';
 import type { InputField, OutputData, TableSemanticParams } from '../types';
 
-function streamlinedData(data: any[]): InputField[] {
+export function streamlinedData(data: any[]): InputField[] {
   return data.map(item => ({
     ...item,
     agg: item.agg || '',
@@ -61,7 +61,7 @@ function createDimensionObject(field: InputField) {
   };
 }
 
-function assembleData(input: InputField[]): OutputData {
+export function assembleData(input: InputField[]): OutputData {
   const result: OutputData = {
     // 维度
     dimensions: [],
@@ -385,6 +385,14 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
         <div className="ds-operate-footer">
           <div className="ds-operate-footer-left" />
           <div className="ds-operate-footer-right">
+            {stepIndex >= 1 && (
+              <AButton
+                className="btn-accent-gradient"
+                onClick={() => window.open('/ai-assistant/conversational-analysis', '_blank')}
+              >
+                开始对话
+              </AButton>
+            )}
             {stepIndex >= 1 && (
               <AButton
                 className="btn-ghost-v5"
