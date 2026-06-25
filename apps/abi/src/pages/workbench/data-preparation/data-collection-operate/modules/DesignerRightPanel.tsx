@@ -48,10 +48,13 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
   });
 
   const tableMap = useMemo(() => {
-    const map: Record<string, string> = {};
+    const map: Record<string, { tableName: string; remark: string }> = {};
     const loop = (node: any) => {
       if (node?.currentDs) {
-        map[node.currentDs.rtableId] = node.currentDs.tableName;
+        map[node.currentDs.rtableId] = {
+          tableName: node.currentDs.tableName || '',
+          remark: node.currentDs.rtableName || '',
+        };
       }
       if (node?.childrenDs?.length) {
         node.childrenDs.forEach(loop);
@@ -126,7 +129,8 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
         <div style={{ flex: 1, overflow: 'auto', padding: '8px 12px' }}>
           <FieldListByTable
             fields={items}
-            getTableName={(field) => (field.rtableId ? tableMap[field.rtableId] : undefined) || '未知表'}
+            getTableName={(field) => (field.rtableId ? tableMap[field.rtableId]?.tableName : undefined) || '未知表'}
+            getTableRemark={(field: FieldItem) => (field.rtableId ? tableMap[field.rtableId]?.remark : undefined) || ''}
           />
         </div>
       </div>
@@ -149,11 +153,13 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
           boxShadow: '-2px 0 12px rgba(91, 124, 247, 0.04)',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
+          alignItems: 'flex-start',
+          justifyContent: 'flex-start',
           flexShrink: 0,
         }}
       >
-        {MENU_ITEMS.map((item) => {
+          <div style={{ paddingTop: 8, width: '100%' }}>
+          {MENU_ITEMS.map((item) => {
           const isActive = activeMenu === item.key;
 
           return (
@@ -165,13 +171,13 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
                 flexDirection: 'column',
                 alignItems: 'center',
                 cursor: 'pointer',
-                padding: '14px 0 10px',
-                fontSize: 12,
-                lineHeight: '16px',
-                color: isActive ? '#5b7cf7' : '#5f7490',
+                padding: '18px 0 14px',
+                fontSize: 13,
+                lineHeight: '18px',
+                color: isActive ? '#5b7cf7' : '#3e5068',
                 borderLeft: isActive ? '2px solid #5b7cf7' : '2px solid transparent',
                 background: isActive ? 'rgba(91, 124, 247, 0.08)' : 'transparent',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'background 0.2s, color 0.2s',
               }}
               onClick={() => handleMenuClick(item.key)}
               onMouseEnter={(e) => {
@@ -182,13 +188,14 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
-                  (e.currentTarget as HTMLElement).style.color = '#5f7490';
+                  (e.currentTarget as HTMLElement).style.color = '#3e5068';
                   (e.currentTarget as HTMLElement).style.background = 'transparent';
                 }
               }}
             >
               <div style={{
-                fontWeight: 500,
+                fontWeight: 700,
+                fontFamily: 'SimHei, "Microsoft YaHei", "黑体", sans-serif',
                 letterSpacing: '2px',
                 writingMode: 'vertical-lr',
                 textOrientation: 'upright',
@@ -198,6 +205,7 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );

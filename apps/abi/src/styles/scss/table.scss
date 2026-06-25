@@ -2140,15 +2140,6 @@
   color: #1a2744;
   margin-bottom: 16px;
   letter-spacing: 0.02em;
-
-  &::before {
-    content: '';
-    width: 3px;
-    height: 16px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, #5b7cf7, #7091fa);
-    flex-shrink: 0;
-  }
 }
 
 // 表内分组标题
