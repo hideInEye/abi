@@ -86,7 +86,10 @@ const route: App.I18n.Schema['translation']['route'] = {
   'workbench_app-workshop_my-dashboard': 'My Screen',
   'workbench_app-workshop_my-share': 'My Share',
   'workbench_app-workshop_recently-used': 'Recently Used',
-  'workbench_ontology-kg_label-meaning': 'Attribute Modeling'
+  'workbench_ontology-kg_entity': 'Entity Definition',
+  'workbench_ontology-kg_kggraph': 'Graph Exploration',
+  'workbench_ontology-kg_label-meaning': 'Attribute Modeling',
+  'workbench_ontology-kg_relation': 'Relationship Configuration',
   // 'user-center': 'User Center'
 }
 
