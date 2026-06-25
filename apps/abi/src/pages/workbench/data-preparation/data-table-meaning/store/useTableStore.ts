@@ -27,11 +27,15 @@ const createTableModalSlice = (set: any): TableModalState => ({
 
 type BaseInfoState = {
   chineseName: string;
+  dbName: string;
+  dbType: string;
   desc: string;
   downSelectLabel: number | null;
   downSelectVal: string | null;
   englishName: string;
+  sourceId: string;
   setChinaname: (chinaname: string) => void;
+  setDataSourceInfo: (info: { dbName?: string; dbType?: string; sourceId?: string }) => void;
   setDescribe: (describe: string) => void;
   setDownSelectLabel: (downSelectLabel: number) => void;
   setDownSelectVal: (downSelectVal: string) => void;
@@ -40,11 +44,20 @@ type BaseInfoState = {
 
 const createBaseInfoSlice = (set: any): BaseInfoState => ({
   chineseName: '',
+  dbName: '',
+  dbType: '',
   desc: '',
   downSelectLabel: null,
   downSelectVal: null,
   englishName: '',
+  sourceId: '',
   setChinaname: (chineseName: string) => set({ chineseName }),
+  setDataSourceInfo: (info: { dbName?: string; dbType?: string; sourceId?: string }) =>
+    set((state: BaseInfoState) => ({
+      dbName: info.dbName ?? state.dbName,
+      dbType: info.dbType ?? state.dbType,
+      sourceId: info.sourceId ?? state.sourceId
+    })),
   setDescribe: (desc: string) => set({ desc }),
   setDownSelectLabel: (downSelectLabel: number) => set({ downSelectLabel }),
   setDownSelectVal: (downSelectVal: string) => set({ downSelectVal }),
@@ -107,12 +120,15 @@ const createResetSlice = (set: any): ResetState => ({
   resetStore: () =>
     set({
       chineseName: '',
+      dbName: '',
+      dbType: '',
       desc: '',
       downSelectLabel: null,
       downSelectVal: null,
       editObj: {},
       englishName: '',
       fields: [],
+      sourceId: '',
       genderOptions: [
         { disabled: false, label: '主键', value: 'primary_key' },
         { disabled: false, label: '维度', value: 'categorical' },

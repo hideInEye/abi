@@ -240,10 +240,10 @@ export function Component() {
       .then((res) => {
         if (cancelled) return
         const payload = (res as any).response?.data || {}
-        const rows = (payload.rows || []) as Array<{ id: number; spaceName?: string }>
+        const rows = (payload.rows || []) as Array<{ spaceId: number; spaceName?: string }>
         const opts = rows
-          .filter(r => r.id)
-          .map(r => ({ label: r.spaceName || `空间${r.id}`, value: Number(r.id) }))
+          .filter(r => r.spaceId)
+          .map(r => ({ label: r.spaceName || `空间${r.spaceId}`, value: Number(r.spaceId) }))
         setSpaceOptions(opts)
       })
       .catch(() => { /* ignore */ })

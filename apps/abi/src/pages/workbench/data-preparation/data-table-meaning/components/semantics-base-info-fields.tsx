@@ -120,7 +120,7 @@ function uniqueKey(keys: string[]) {
 export default function DataTableMeaningBaseInfoFields() {
   const [form] = Form.useForm();
   const { setFormBaseInfo, setFormFieldsConfig } = useTableStore();
-  const { drawerTitle, setChinaname, setDescribe, setDownSelectLabel, setDownSelectVal, setEnglishname } =
+  const { drawerTitle, setChinaname, setDataSourceInfo, setDescribe, setDownSelectLabel, setDownSelectVal, setEnglishname } =
     useTableStore();
   const { chineseName, desc, downSelectLabel, downSelectVal, englishName } = useTableStore();
   const { downSelectVal: selectedDownSelectVal } = useTableStore();
@@ -175,8 +175,11 @@ export default function DataTableMeaningBaseInfoFields() {
     });
 
     const { data } = response.data as { data: any };
-    if (data.allFields.length > 0) {
-      const rTableNamesMap = !drawerTitle ? getRTableName(data) : getTableNames();
+    const sourceId = data?.union?.[0]?.currentDs?.sourceId || data?.allFields?.[0]?.sourceId || '';
+    setDataSourceInfo({ sourceId });
+
+    if (data?.allFields?.length > 0) {
+      const rTableNamesMap = !drawerTitle ? getRTableNames(data) : getTableNames();
       const allFs = data.allFields.map((field: any) => {
         return {
           tableRemarks: rTableNamesMap[field.rtableId] || '',
@@ -190,7 +193,7 @@ export default function DataTableMeaningBaseInfoFields() {
       setUnion(data.union);
     }
     setLoading(false);
-  }
+  };
 
   function updateTechId(data: any[], techIds: []) {
     return data.map((i: any) => {
