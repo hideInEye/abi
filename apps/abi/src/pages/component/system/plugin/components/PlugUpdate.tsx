@@ -180,7 +180,13 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
               <Form.Item
                 label="MCP服务名"
                 name="mcp_name"
-                rules={[{ message: '请输入MCP服务名', required: true }]}
+                rules={[
+                  { message: '请输入MCP服务名', required: true },
+                  {
+                    message: 'MCP Server name 仅支持字母、数字、下划线(_)、中划线(-)',
+                    pattern: /^[a-zA-Z0-9_-]+$/
+                  }
+                ]}
                 className="form-item-v5"
               >
                 <AInput placeholder="请输入MCP服务名" disabled={!!currentEdit} className="form-input-v5" />

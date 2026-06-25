@@ -41,6 +41,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
   }
 
   const rowSelection = {
+    columnWidth: 48,
     fixed: true,
     selectedRowKeys,
     onChange: (keys: React.Key[]) => onSelectedRowKeysChange(keys),
@@ -50,10 +51,13 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
 
   const columns: any[] = [
     {
-      align: 'center',
+      align: 'left' as const,
+      className: 'col-dict-name',
       dataIndex: 'dictField',
+      key: 'dictField',
       title: '字典名称',
-      minWidth: 120,
+      minWidth: 160,
+      onHeaderCell: () => ({ className: 'col-dict-name' }),
       render: (text: string) => {
         if (!text) return ''
         if (text.length > 10) {
@@ -67,10 +71,13 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
       },
     },
     {
-      align: 'center',
+      align: 'left' as const,
+      className: 'col-dict-name',
       dataIndex: 'dictName',
+      key: 'dictName',
       title: '中文名称',
-      minWidth: 120,
+      minWidth: 160,
+      onHeaderCell: () => ({ className: 'col-dict-name' }),
       render: (text: string) => {
         if (!text) return ''
         if (text.length > 7) {
@@ -113,7 +120,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
     },
     {
       align: 'center',
-      minWidth: 160,
+      minWidth: 200,
       fixed: 'right',
       dataIndex: '操作',
       render: (_: any, record: DictionaryItem) => {
@@ -131,7 +138,8 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
     },
   ]
   const getColumnWidth = useMemo(() => {
-    return columns.reduce((total, column: any) => total + (column.minWidth || column.width || 100), 0)
+    // 55 for rowSelection checkbox column
+    return columns.reduce((total, column: any) => total + (column.minWidth || column.width || 100), 55)
   }, [columns])
   const pageSize = 10
   const totalCount = dataSource.total || 0
