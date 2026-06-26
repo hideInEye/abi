@@ -54,7 +54,32 @@ async function resetAuthState() {
 }
 
 function getCurrentPath() {
-  return window.location.pathname + (window.location.search || '');
+  return window.location.pathname + (window.location.search || '') + (window.location.hash || '');
+}
+
+const BLOCKED_LOGIN_REDIRECT_PATHS = ['/login', '/logout', '/403', '/404'];
+
+function getSafeLoginRedirectPath(redirectPath?: string) {
+  if (!redirectPath) return '';
+
+  const trimmedPath = redirectPath.trim();
+  if (!trimmedPath || trimmedPath.startsWith('//')) return '';
+
+  try {
+    const redirectUrl = new URL(trimmedPath, window.location.origin);
+    if (redirectUrl.origin !== window.location.origin) return '';
+
+    const pathname = redirectUrl.pathname;
+    const isBlocked = BLOCKED_LOGIN_REDIRECT_PATHS.some(blockedPath => {
+      return pathname === blockedPath || pathname.startsWith(`${blockedPath}/`);
+    });
+
+    if (isBlocked) return '';
+
+    return `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`;
+  } catch {
+    return '';
+  }
 }
 
 function notifyAuthExpired({
@@ -79,8 +104,10 @@ async function redirectToLogin({
   preserveRedirect: boolean;
   redirectPath?: string;
 }) {
+  const safeRedirectPath = preserveRedirect ? getSafeLoginRedirectPath(redirectPath) : '';
+
   if (qiankunWindow.__POWERED_BY_QIANKUN__) {
-    const loginUrl = preserveRedirect && redirectPath ? `/login?redirect=${encodeURIComponent(redirectPath)}` : '/login';
+    const loginUrl = safeRedirectPath ? `/login?redirect=${encodeURIComponent(safeRedirectPath)}` : '/login';
     window.location.href = loginUrl;
     return;
   }
@@ -88,15 +115,15 @@ async function redirectToLogin({
   try {
     const { router } = await import('@/router');
     await router.push(
-      preserveRedirect && redirectPath
+      safeRedirectPath
         ? {
             name: 'login',
-            query: { redirect: redirectPath }
+            query: { redirect: safeRedirectPath }
           }
         : { name: 'login' }
     );
   } catch {
-    const loginUrl = preserveRedirect && redirectPath ? `/login?redirect=${encodeURIComponent(redirectPath)}` : '/login';
+    const loginUrl = safeRedirectPath ? `/login?redirect=${encodeURIComponent(safeRedirectPath)}` : '/login';
     window.location.assign(loginUrl);
   }
 }
