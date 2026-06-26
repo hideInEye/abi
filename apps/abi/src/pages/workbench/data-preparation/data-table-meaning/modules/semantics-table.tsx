@@ -1,6 +1,7 @@
 import { CloseOutlined, TableOutlined } from '@ant-design/icons';
 import { message } from 'antd';
 
+import { useDatasource } from '@/hooks/data-preparation/useDataSource';
 import { addTableSemantics, editTableSemantics } from '@/service/api/data-table-meaning';
 import { formattedDate } from '@/utils/date';
 
@@ -10,7 +11,7 @@ import DataTableMeaning from '../components/semantics-steps';
 import { useTableStore } from '../store/useTableStore';
 import type { InputField, OutputData, TableSemanticParams } from '../types';
 
-function streamlinedData(data: any[]): InputField[] {
+export function streamlinedData(data: any[]): InputField[] {
   return data.map(item => ({
     ...item,
     agg: item.agg || '',
@@ -61,7 +62,7 @@ function createDimensionObject(field: InputField) {
   };
 }
 
-function assembleData(input: InputField[]): OutputData {
+export function assembleData(input: InputField[]): OutputData {
   const result: OutputData = {
     // 维度
     dimensions: [],
@@ -239,6 +240,8 @@ function setTableName(fields: any[], union: any[], tablePrikey: any[] = []) {
 export function SemanticsTable({ updateTableList }: { readonly updateTableList: () => void }) {
   const {
     chineseName,
+    dbName,
+    dbType,
     desc,
     downSelectVal,
     drawerTitle,
@@ -247,8 +250,10 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
     fields,
     groupId,
     resetStore,
+    setDataSourceInfo,
     setStepIndex,
     setTableModalOpen,
+    sourceId,
     stepIndex,
     tableModalOpen,
     tablePrikey,
@@ -257,6 +262,28 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
 
   const { formBaseInfo, formFieldsConfig, formTableConfig, nextStep, prevStep } = useTableStore();
   const [nextLoading, setNextLoading] = useState(false);
+  const { dataSourceList, getDatasourceList } = useDatasource();
+
+  useEffect(() => {
+    getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) });
+  }, []);
+
+  useEffect(() => {
+    if (!sourceId || !dataSourceList.length) return;
+    const ds = dataSourceList.find((item: any) => String(item.sourceId) === String(sourceId));
+    if (!ds) return;
+    let dbName = '';
+    try {
+      const configuration = typeof ds.configuration === 'string' ? JSON.parse(ds.configuration) : ds.configuration;
+      dbName = configuration?.dbName || '';
+    } catch {
+      dbName = '';
+    }
+    setDataSourceInfo({
+      dbName,
+      dbType: ds.sourceType || ''
+    });
+  }, [sourceId, dataSourceList]);
 
   const handleClose = () => {
     setTableModalOpen(false);
@@ -269,6 +296,8 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
 
   const buildTableSemanticParams = (): TableSemanticParams => ({
     bizName: chineseName,
+    dbName,
+    dbType,
     drillDim: null,
     filters: null,
     groupId,
@@ -385,6 +414,14 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
         <div className="ds-operate-footer">
           <div className="ds-operate-footer-left" />
           <div className="ds-operate-footer-right">
+            {stepIndex >= 1 && (
+              <AButton
+                className="btn-accent-gradient"
+                onClick={() => window.open('/ai-assistant/conversational-analysis', '_blank')}
+              >
+                开始对话
+              </AButton>
+            )}
             {stepIndex >= 1 && (
               <AButton
                 className="btn-ghost-v5"

@@ -147,11 +147,11 @@ export function Component() {
       className: 'col-assistant-desc',
       dataIndex: 'description',
       key: 'description',
-      minWidth: 200,
+      width: 300,
       onHeaderCell: () => ({ className: 'col-assistant-desc' }),
-      onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const, maxWidth: 300 } }),
+      onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const } }),
       render: (text: string) => text
-        ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: text }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit', maxWidth: 260 }}>{text}</Typography.Paragraph>
+        ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: text }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit' }}>{text}</Typography.Paragraph>
         : <span style={{ color: '#9ca3af' }}>-</span>,
       title: '助手描述'
     },

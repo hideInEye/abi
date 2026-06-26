@@ -77,7 +77,14 @@ export function DataAssets({ homeData }: { readonly homeData: DataAssetsProps })
         <div
           className={s['stat-card']}
           key={item.title}
-          onClick={() => item.href && push(item.href)}
+          onClick={() => {
+            if (!item.href) return
+            if (item.href === '/ai-assistant/conversational-analysis') {
+              window.open(item.href, '_blank')
+            } else {
+              push(item.href)
+            }
+          }}
         >
           <div className={`${s['stat-icon']} ${s[item.colorClass]}`}>
             <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: item.iconSvg }} />

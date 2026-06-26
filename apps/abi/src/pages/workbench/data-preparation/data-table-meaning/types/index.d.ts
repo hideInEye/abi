@@ -136,6 +136,8 @@ export interface OutputData {
 
 export type TableSemanticParams = {
   bizName: string;
+  dbName: string;
+  dbType: string;
   drillDim: null;
   filters: null;
   groupId: number | null | string;
