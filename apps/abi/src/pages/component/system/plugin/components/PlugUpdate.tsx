@@ -135,7 +135,7 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
         restToMcpSwitch,
         securitySchemes: securitySchemes.filter(s => s.id),
         securityExtensions,
-        tools
+        tools: restToMcpSwitch ? tools : []
       });
     } catch (error) {
       console.error('Form validation failed:', error);
@@ -336,73 +336,75 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
           </div>
 
           {/* Tools 区 */}
-          <div className="form-section">
-            <div className="section-header">
-              <ToolOutlined className="section-icon" />
-              <span className="section-title">Tools 工具集</span>
-            </div>
-            <div className="section-body">
-              <Form.Item label="可用工具" className="form-item-v5">
-                {tools.length === 0 ? (
-                  <div className="tools-empty-v5">
-                    <div className="empty-icon">
-                      <ToolOutlined />
-                    </div>
-                    <div className="empty-text">暂无可用的 Tools</div>
-                    <div className="empty-actions">
-                      <AButton type="primary" className="btn-accent-gradient" onClick={openCreateTool}>
-                        <PlusOutlined /> 添加工具
-                      </AButton>
-                      <AButton className="btn-ghost-v5" onClick={openImportOpenApi}>
-                        <ImportOutlined /> 从 OpenAPI 导入
-                      </AButton>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="tools-list-v5">
-                    {tools.map((tool, idx) => (
-                      <div key={idx} className="tool-card-v5">
-                        <div className="tool-icon">
-                          <ToolOutlined />
-                        </div>
-                        <div className="tool-info">
-                          <div className="tool-name">{tool.name || '(未命名)'}</div>
-                          {tool.description && (
-                            <div className="tool-desc">{tool.description}</div>
-                          )}
-                        </div>
-                        <div className="tool-actions">
-                          <AButton
-                            type="text"
-                            size="small"
-                            icon={<EditOutlined />}
-                            onClick={() => openEditTool(idx)}
-                            className="tool-action-btn"
-                          />
-                          <AButton
-                            danger
-                            type="text"
-                            size="small"
-                            icon={<DeleteOutlined />}
-                            onClick={() => removeTool(idx)}
-                            className="tool-action-btn danger"
-                          />
-                        </div>
+          {restToMcpSwitch && (
+            <div className="form-section">
+              <div className="section-header">
+                <ToolOutlined className="section-icon" />
+                <span className="section-title">Tools 工具集</span>
+              </div>
+              <div className="section-body">
+                <Form.Item label="可用工具" className="form-item-v5">
+                  {tools.length === 0 ? (
+                    <div className="tools-empty-v5">
+                      <div className="empty-icon">
+                        <ToolOutlined />
                       </div>
-                    ))}
-                    <div className="tools-actions-v5">
-                      <AButton type="primary" className="btn-accent-gradient" onClick={openCreateTool}>
-                        <PlusOutlined /> 添加工具
-                      </AButton>
-                      <AButton className="btn-ghost-v5" onClick={openImportOpenApi}>
-                        <ImportOutlined /> 从 OpenAPI 导入
-                      </AButton>
+                      <div className="empty-text">暂无可用的 Tools</div>
+                      <div className="empty-actions">
+                        <AButton type="primary" className="btn-accent-gradient" onClick={openCreateTool}>
+                          <PlusOutlined /> 添加工具
+                        </AButton>
+                        <AButton className="btn-ghost-v5" onClick={openImportOpenApi}>
+                          <ImportOutlined /> 从 OpenAPI 导入
+                        </AButton>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </Form.Item>
+                  ) : (
+                    <div className="tools-list-v5">
+                      {tools.map((tool, idx) => (
+                        <div key={idx} className="tool-card-v5">
+                          <div className="tool-icon">
+                            <ToolOutlined />
+                          </div>
+                          <div className="tool-info">
+                            <div className="tool-name">{tool.name || '(未命名)'}</div>
+                            {tool.description && (
+                              <div className="tool-desc">{tool.description}</div>
+                            )}
+                          </div>
+                          <div className="tool-actions">
+                            <AButton
+                              type="text"
+                              size="small"
+                              icon={<EditOutlined />}
+                              onClick={() => openEditTool(idx)}
+                              className="tool-action-btn"
+                            />
+                            <AButton
+                              danger
+                              type="text"
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={() => removeTool(idx)}
+                              className="tool-action-btn danger"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      <div className="tools-actions-v5">
+                        <AButton type="primary" className="btn-accent-gradient" onClick={openCreateTool}>
+                          <PlusOutlined /> 添加工具
+                        </AButton>
+                        <AButton className="btn-ghost-v5" onClick={openImportOpenApi}>
+                          <ImportOutlined /> 从 OpenAPI 导入
+                        </AButton>
+                      </div>
+                    </div>
+                  )}
+                </Form.Item>
+              </div>
             </div>
-          </div>
+          )}
         </AForm>
       </div>
 

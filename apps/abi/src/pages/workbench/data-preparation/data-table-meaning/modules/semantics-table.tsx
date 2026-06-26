@@ -15,25 +15,27 @@ export function streamlinedData(data: any[]): InputField[] {
   return data.map(item => ({
     ...item,
     agg: item.agg || '',
-    alias: item.alias,
+    alias: item.alias || item.tfieldAlias,
     bizName: item.bizName || item.tfieldAlias,
     dataType: item.fieldType,
     expand: item.expand || {},
     expr: item.expr || '',
-    fieldDesc: item.fieldDesc,
+    fieldDesc: item.fieldDesc || '',
     fieldName: item.originName,
     fieldType: item.fieldType,
     isCreateDimension: 1,
     isCreateMetric: 1,
     originName: item.originName,
-    primaryKey: item.primaryKey,
+    primaryKey: item.primaryKey || '',
+    rtableId: item.rtableId,
     rtableName: item.tableRemarks,
-    semanticType: item.semanticType,
+    semanticType: item.semanticType || '',
     sourceId: item.sourceId,
     tableName: item.tableName,
+    tableRemarks: item.tableRemarks || '',
     // 表别名 无
     tdesc: item.tableRemarks,
-    techId: item.tfieldId,
+    techId: item.techId || item.tfieldId,
     techName: item.originName,
     tfieldId: item.tfieldId,
     tfieldName: item.tfieldName,
@@ -135,7 +137,34 @@ export function assembleData(input: InputField[]): OutputData {
   const tableNames = new Map<string, string>();
   
   input.forEach(field => {
-    const handler = semanticTypeHandlers[field.semanticType as SemanticType];
+    // 如果没有设置 semanticType，先使用默认值
+    let semanticType = field.semanticType;
+    if (!semanticType) {
+      // 简单的字段类型推断
+      const lowerFieldType = (field.fieldType || '').toLowerCase();
+      const upperFieldType = (field.fieldType || '').toUpperCase();
+      
+      if (upperFieldType === 'DATETIME' || 
+          upperFieldType === 'DATETIME64' || 
+          upperFieldType === 'DATE' || 
+          upperFieldType === 'TIME' || 
+          upperFieldType.includes('TIMESTAMP')) {
+        semanticType = 'datetime';
+      } else if (lowerFieldType.includes('int') || 
+                 lowerFieldType.includes('float') || 
+                 lowerFieldType.includes('decimal') ||
+                 lowerFieldType.includes('integer') ||
+                 lowerFieldType.includes('double') ||
+                 upperFieldType.includes('NUMBER') ||
+                 upperFieldType.includes('NUMERIC') ||
+                 upperFieldType.includes('LONG')) {
+        semanticType = 'measure';
+      } else {
+        semanticType = 'categorical';
+      }
+    }
+
+    const handler = semanticTypeHandlers[semanticType as SemanticType];
     if (handler) {
       handler(field);
     }
@@ -144,12 +173,12 @@ export function assembleData(input: InputField[]): OutputData {
       fieldName: field.fieldName
     });
     
-    if(!tableNames.has(field.rtableId!)) {
+    if(field.rtableId && !tableNames.has(field.rtableId)) {
       result.tableNames.push({
-        tableName: field.tableRemarks!,
-        rtableId: field.rtableId!
+        tableName: field.tableRemarks || '',
+        rtableId: field.rtableId
       })
-      tableNames.set(field.rtableId!, field.tableRemarks!);
+      tableNames.set(field.rtableId, field.tableRemarks || '');
     }
   });
   return result;
@@ -417,7 +446,12 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
             {stepIndex >= 1 && (
               <AButton
                 className="btn-accent-gradient"
-                onClick={() => window.open('/ai-assistant/conversational-analysis', '_blank')}
+                onClick={() => {
+                  window.open('/ai-assistant/conversational-analysis', '_blank');
+                  setTableModalOpen(false);
+                  resetStore();
+                  handleClose();
+                }}
               >
                 开始对话
               </AButton>

@@ -13,8 +13,6 @@ const { Title, Text } = Typography;
 
 function HookSupportChecker() {
   try {
-    // 尝试使用一个简单的 Hook
-
     const error = useRouteError() as Error;
     const nav = useNavigate()
 
@@ -22,16 +20,15 @@ function HookSupportChecker() {
       nav(0)
     }
 
-    return { update, error }; // 如果没有抛出异常，则支持 Hook
+    return { update, error };
   } catch (error) {
-    return false; // 如果抛出异常，则不支持 Hook
+    return false;
   }
 }
 
 const theme = localStg.get('themeColor') || '#646cff'
 const ErrorPage: FC<Props> = ({ error, resetErrorBoundary }) => {
 
-  // 可以在这里根据不同的业务逻辑处理错误或者上报给日志服务
   const hook = HookSupportChecker()
 
   console.error(error);
@@ -41,7 +38,7 @@ const ErrorPage: FC<Props> = ({ error, resetErrorBoundary }) => {
       <div className="flex text-400px text-primary">
         <SvgIcon localIcon="error" />
       </div>
-      {isDev ? <Text code>{hook ? hook.error.message : error.message}</Text> : <Title level={3}>{$t('common.errorHint')}</Title>}
+      {isDev ? <Text code>{hook ? hook.error.message : error?.message}</Text> : <Title level={3}>{$t('common.errorHint')}</Title>}
       <Button style={{ backgroundColor: theme }} type='primary' onClick={hook ? hook.update : resetErrorBoundary} >{$t('common.tryAlign')}</Button>
     </div>
   );
