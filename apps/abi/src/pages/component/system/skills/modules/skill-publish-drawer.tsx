@@ -270,7 +270,7 @@ function extractSkillName(fileName: string) {
       destroyOnClose
       closeIcon={null}
       footer={
-        <div style={{ alignItems: 'center', display: 'flex', gap: 12, justifyContent: 'flex-end', padding: '4px 0' }}>
+        <div style={{ alignItems: 'center', display: 'flex', gap: 12, justifyContent: 'flex-end', padding: '12px 28px' }}>
           <Button
             onClick={onClose}
             style={{ background: 'transparent', border: '1px solid rgba(130,140,200,0.18)', color: '#5f7490', fontWeight: 500, height: 38, padding: '0 20px', borderRadius: 8 }}
@@ -293,6 +293,7 @@ function extractSkillName(fileName: string) {
       }
       onClose={onClose}
     >
+      <div style={{ padding: '24px 28px' }}>
       <div className="skill-hero mb-16px">
         <div className="skill-hero__title text-brand-gradient">
           {isUpdate
@@ -401,6 +402,7 @@ function extractSkillName(fileName: string) {
           </div>
         </Form.Item>
       </Form>
+      </div>
     </Drawer>
   );
 };

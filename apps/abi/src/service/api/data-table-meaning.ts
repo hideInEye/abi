@@ -125,3 +125,13 @@ export function getCode() {
     url: '/api/code'
   })
 }
+
+/** AI帮填 - 语义修改 */
+export function semanticModify(data: { dsl: string }) {
+  return apiRequest({
+    data,
+    method: 'post',
+    timeout: 120 * 1000,
+    url: '/api/chat-proxy/api/v1/semantic/modify'
+  })
+}

@@ -60,15 +60,22 @@ export interface PluginItem extends PluginAddParams {
   remoteServerConfig?: {
     url?: string;
     exportPath?: string;
+    frontEndpointConfigList?: any;
     serviceRef?: {
       namespaceId?: string;
       groupName?: string;
       serviceName?: string;
+      transportProtocol?: string;
     };
   };
-  backendEndpoints?: Array<{ address?: string; port?: number }>;
+  backendEndpoints?: Array<{ address?: string; port?: number; protocol?: string; path?: string }>;
   toolSpec?: {
     tools?: McpToolItem[];
+    toolsMeta?: Record<string, {
+      invokeContext?: Record<string, any>;
+      enabled?: boolean;
+      templates?: Record<string, any>;
+    }>;
     securitySchemes?: McpSecurityScheme[];
     extensions?: McpSecurityExtensions;
   } | null;
@@ -122,6 +129,8 @@ export interface McpForm {
   address?: string;
   port?: string;
   transport?: 'HTTP' | 'HTTPS';
+  /** 协议类型：sse 或 streamableHttp */
+  protocol?: 'sse' | 'streamableHttp';
   securitySchemes?: McpSecurityScheme[];
   securityExtensions?: McpSecurityExtensions;
   tools?: McpToolItem[];

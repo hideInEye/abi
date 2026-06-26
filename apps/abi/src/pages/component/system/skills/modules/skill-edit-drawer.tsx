@@ -8,11 +8,14 @@ import '../skill.css';
 
 type SkillItem = {
   bizName?: string;
+  createdBy?: string;
+  createTime?: string;
   id?: number | string;
   spaceId?: number | string;
   spaceName?: string;
   status?: string;
   summary?: string;
+  updateTime?: string;
 };
 
 type Props = {
@@ -33,9 +36,8 @@ const SkillEditDrawer: FC<Props> = ({ onClose, onSuccess, open, skill }) => {
     if (open && skill?.id) {
       form.resetFields();
       setLoadingDetail(true);
-      // 先用列表数据预填充
+      // 先用列表数据预填充（仅可编辑字段）
       form.setFieldsValue({
-        bizName: skill.bizName,
         status: skill.status ?? '1',
         summary: skill.summary,
       });
@@ -45,7 +47,6 @@ const SkillEditDrawer: FC<Props> = ({ onClose, onSuccess, open, skill }) => {
           if (d && Object.keys(d).length) {
             setDetail(d);
             form.setFieldsValue({
-              bizName: d.bizName || skill.bizName,
               status: d.status ?? skill.status ?? '1',
               summary: d.summary || skill.summary,
             });
@@ -64,7 +65,6 @@ const SkillEditDrawer: FC<Props> = ({ onClose, onSuccess, open, skill }) => {
       const values = await form.validateFields();
       setSaving(true);
       const res: any = await updateSkillInfoApi({
-        bizName: values.bizName,
         skillId: skill?.id!,
         status: values.status,
         summary: values.summary,
@@ -155,13 +155,16 @@ const SkillEditDrawer: FC<Props> = ({ onClose, onSuccess, open, skill }) => {
             <span style={{ color: '#1a2744', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em' }}>基本信息</span>
           </div>
 
-          <Form.Item
-            label={<span style={{ color: '#3e5068', fontWeight: 500 }}>技能名称</span>}
-            name="bizName"
-            rules={[{ message: '请输入技能名称', required: true }]}
-          >
-            <Input placeholder="请输入技能名称" />
-          </Form.Item>
+          {/* 技能名称（只读，不可编辑） */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ color: '#3e5068', fontWeight: 500, marginBottom: 6, fontSize: 14 }}>技能名称</div>
+            <div style={{
+              background: '#f5f7fb', border: '1px solid rgba(130,140,200,0.18)', borderRadius: 8,
+              color: '#1a2744', fontSize: 14, padding: '6px 12px', lineHeight: '22px',
+            }}>
+              {skill?.bizName || detail?.bizName || '-'}
+            </div>
+          </div>
 
           <Form.Item
             label={<span style={{ color: '#3e5068', fontWeight: 500 }}>技能描述</span>}

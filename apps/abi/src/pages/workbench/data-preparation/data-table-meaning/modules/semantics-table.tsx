@@ -276,6 +276,7 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
     relViewId: downSelectVal?.toString() || '',
     remark: desc,
     schemaId: drawerTitle === '新增数据语义' ? '' : editObj.schemaId,
+    sourceId: fields[0]?.sourceId || '',
     spaceId: localStorage.getItem('spaceId'),
     status: '1',
     techName: englishName

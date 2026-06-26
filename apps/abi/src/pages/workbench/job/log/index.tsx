@@ -1,5 +1,5 @@
 import { DeleteOutlined, DownOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
-import { Dropdown, Empty, message } from 'antd';
+import { Dropdown, Empty, Typography, message } from 'antd';
 
 import { JOB_GROUP_OPTIONS } from '@/constants/job';
 import { cleanJobLog, deleteJobLog, exportJobLog, fetchJobDetail, fetchJobLogList } from '@/service/api/job';
@@ -75,11 +75,17 @@ export function Component() {
           },
         },
         {
-          align: 'center',
+          align: 'left' as const,
+          className: 'col-job-log-desc',
           dataIndex: 'resultDescription',
           key: 'resultDescription',
           title: '结果描述',
           minWidth: 200,
+          onHeaderCell: () => ({ className: 'col-job-log-desc' }),
+          onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const, maxWidth: 300 } }),
+          render: (text: string) => text
+            ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: text }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit', maxWidth: 260 }}>{text}</Typography.Paragraph>
+            : <span style={{ color: '#9ca3af' }}>-</span>,
         },
         {
           align: 'center',
@@ -299,7 +305,7 @@ export function Component() {
                 <ATable
                   scroll={(tableProps as any).dataSource?.length > 0 ? { x: 'max-content', ...scrollConfig } : undefined}
                   size="middle"
-                  className="abi-std-table"
+                  className="job-log-table abi-std-table"
                   {...(tableProps as any)}
                   columns={filteredColumns as any}
                   pagination={false}

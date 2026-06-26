@@ -47,7 +47,7 @@ export function Component() {
   const [total, setTotal] = useState(0);
   const [jumpValue, setJumpValue] = useState('');
 
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
   const [searchValue, setSearchValue] = useState('');
 
@@ -268,11 +268,11 @@ export function Component() {
   const tableColumns: any[] = [
     {
       align: 'left',
-      className: 'col-space-name',
+      className: 'col-left-header',
       dataIndex: 'spaceName',
       key: 'spaceName',
       minWidth: 200,
-      onHeaderCell: () => ({ className: 'col-space-name' }),
+      onHeaderCell: () => ({ className: 'col-left-header' }),
       render: (text: string, record: ISpaceItem) => (
         <span className="source-name-cell" style={{ cursor: 'pointer' }} onClick={() => enterSpace(record.spaceId)}>
           <span className="source-name-text" title={text}>{text}</span>
@@ -320,7 +320,7 @@ export function Component() {
             <AButton className="abi-action-link" size="small" variant="link" onClick={() => editSpaceHandler(record)}>
               <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
             </AButton>
-            {canDelete && (
+            {canDelete ? (
               <APopconfirm
                 title="删除空间"
                 description="确定删除该空间吗？"
@@ -330,6 +330,10 @@ export function Component() {
                   <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
                 </AButton>
               </APopconfirm>
+            ) : (
+              <AButton className="abi-action-link" size="small" variant="link" disabled>
+                <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
+              </AButton>
             )}
           </div>
         );
@@ -374,9 +378,10 @@ export function Component() {
                           label: '编辑',
                           onClick: ({ domEvent }: any) => { domEvent.stopPropagation(); editSpaceHandler(record); },
                         },
-                        ...(canDelete ? [{
+                        {
                           key: 'delete',
                           danger: true,
+                          disabled: !canDelete,
                           label: '删除',
                           onClick: ({ domEvent }: any) => {
                             domEvent.stopPropagation();
@@ -386,7 +391,7 @@ export function Component() {
                               title: '删除空间',
                             });
                           },
-                        }] : []),
+                        },
                       ],
                     }}
                     trigger={['click']}

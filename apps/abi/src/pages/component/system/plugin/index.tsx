@@ -1,5 +1,5 @@
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Splitter } from 'antd';
 
 import { deleteMcp, getMcpDetail, queryMcpList, registerMcp, updateMcp } from '@/service/api/pulg';
@@ -18,7 +18,9 @@ export const Component: React.FC = () => {
   const { currentEdit, open, setCurrentEdit, setOpen } = usePluginManagement();
   const spaceId = useAppSelector(getSpaceId);
   const [groupId, setGroupId] = useState(0);
-  const [groupType, setGroupType] = useState<string>('mcp-sse');
+  const groupIdRef = useRef(groupId);
+  groupIdRef.current = groupId;
+  const [groupName, setGroupName] = useState('');
   const [fetchKey, setFetchKey] = useState(0);
   const [dataSource, setDataSource] = useState<{
     code: number;
@@ -38,7 +40,7 @@ export const Component: React.FC = () => {
       pageSize,
       mcpName: mcpName || undefined,
       search: 'blur',
-      namespaceId: `s_${groupId}`
+      namespaceId: `s_${groupIdRef.current}`
     });
 
     // 新接口字段适配：pageItems → rows
@@ -62,41 +64,51 @@ export const Component: React.FC = () => {
   };
 
   const toDeletePlugin = async (data: PluginList) => {
-    if (!groupId) return;
+    if (!groupIdRef.current) return;
     await deleteMcp({
       mcpId: data.pluginId.toString(),
       mcpName: data.pluginName,
-      namespaceId: `s_${groupId}`
+      namespaceId: `s_${groupIdRef.current}`
     });
     getPluginList();
   };
 
   const updateStatus = async (record: PluginItem) => {
-    if (!groupId) return;
-    // 启停切换走更新接口 (PUT)
+    if (!groupIdRef.current) return;
+    const version = record.versionDetail?.version || '1.0.0';
+    const remoteCfg = record.remoteServerConfig || {};
     await updateMcp({
-      namespaceId: `s_${groupId}`,
+      namespaceId: `s_${groupIdRef.current}`,
       serverSpecification: {
         id: String(record.pluginId),
         name: record.pluginName,
-        version: record.versionDetail?.version || '1.0.0',
-        protocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
-        frontProtocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
-        description: record.remark || '',
-        remoteServerConfig: {
-          url: '',
-          connectTimeout: 5000,
-          readTimeout: 30000
-        },
+        protocol: record.protocol || 'sse',
+        frontProtocol: record.frontProtocol || 'sse',
+        description: record.description || '',
+        version,
+        versionDetail: record.versionDetail || { version, release_date: null, is_latest: true },
         enabled: record.status === 0,
-        capabilities: record.capabilities ?? []
+        status: 'active',
+        capabilities: record.capabilities ?? [],
+        remoteServerConfig: remoteCfg.serviceRef
+          ? remoteCfg
+          : {
+              serviceRef: {
+                namespaceId: `s_${groupIdRef.current}`,
+                groupName: groupName || 'mcp-endpoints',
+                serviceName: `${record.pluginName}::${version}`,
+                transportProtocol: (record.protocol || 'sse').toLowerCase()
+              },
+              exportPath: remoteCfg.exportPath || '/mcp',
+              frontEndpointConfigList: remoteCfg.frontEndpointConfigList ?? null
+            }
       }
     });
     getPluginList();
   };
 
   const handleSearch = (value: string) => {
-    if (!groupId) return;
+    if (!groupIdRef.current) return;
     setSearchValue(value);
     setcurrent(1);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
@@ -104,7 +116,7 @@ export const Component: React.FC = () => {
   };
 
   const handleSubmit = async (formData: McpForm) => {
-    if (!groupId) return;
+    if (!groupIdRef.current) return;
     // 根据 HTTP 转 MCP 开关区分两种模式构造接口参数
     let addressWithPort: string;
     let scheme: string;
@@ -137,14 +149,27 @@ export const Component: React.FC = () => {
     const serverSpec: Record<string, any> = {
       name: formData.mcp_name,
       // HTTP 转 MCP 开启时 protocol 为 http/https；关闭时根据分组类型决定
-      protocol: formData.restToMcpSwitch ? scheme : (groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse'),
-      frontProtocol: groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse',
+      protocol: formData.restToMcpSwitch ? scheme : (formData.protocol || 'sse'),
+      frontProtocol: formData.protocol || 'sse',
       description: formData.description || '',
       version: formData.version,
+      versionDetail: {
+        version: formData.version,
+        release_date: null,
+        is_latest: true
+      },
+      enabled: true,
+      status: 'active',
+      capabilities: ['TOOL'],
       remoteServerConfig: {
-        url: serverUrl,
-        connectTimeout: 5000,
-        readTimeout: 30000
+        serviceRef: {
+          namespaceId: `s_${groupIdRef.current}`,
+          groupName: groupName || '',
+          serviceName: `${formData.mcp_name}::${formData.version}`,
+          transportProtocol: formData.transport?.toLowerCase() || scheme
+        },
+        exportPath: '/mcp',
+        frontEndpointConfigList: null
       }
     };
     if (currentEdit) {
@@ -153,8 +178,9 @@ export const Component: React.FC = () => {
     const endpointSpec = {
       type: 'DIRECT',
       data: {
-        address: addressWithPort,
-        port: endpointPort
+        address: endpointAddress,
+        port: endpointPort,
+        transportProtocol: scheme
       }
     };
     // 高级配置 + Tools → toolSpecification（均为可选）
@@ -167,11 +193,34 @@ export const Component: React.FC = () => {
     }
     if (formData.tools && formData.tools.length > 0) {
       toolSpec.tools = formData.tools;
+      const defaultTpl = {
+        requestTemplate: { method: 'POST', url: '/api/example', body: '{"foo":"{{.foo}}"}' },
+        responseTemplate: { body: '{{.}}' }
+      };
+      const toolsMeta: Record<string, any> = {};
+      formData.tools.forEach(tool => {
+        let parsed: Record<string, any> = {};
+        if (tool.protocolTemplate) {
+          try {
+            parsed = JSON.parse(tool.protocolTemplate);
+          } catch {
+            parsed = {};
+          }
+        }
+        toolsMeta[tool.name] = {
+          invokeContext: {},
+          enabled: tool.enabled ?? true,
+          templates: {
+            'json-go-template': Object.keys(parsed).length > 0 ? parsed : defaultTpl
+          }
+        };
+      });
+      toolSpec.toolsMeta = toolsMeta;
     }
     try {
       const fn = currentEdit ? updateMcp : registerMcp;
       await fn({
-        namespaceId: `s_${groupId}`,
+        namespaceId: `s_${groupIdRef.current}`,
         serverSpecification: serverSpec,
         endpointSpecification: endpointSpec,
         ...(Object.keys(toolSpec).length > 0 ? { toolSpecification: toolSpec } : {})
@@ -195,14 +244,14 @@ export const Component: React.FC = () => {
   // 空间切换时重置分组 + 强制刷新，让 PluginGroup 重新回调新空间的 groupId
   useEffect(() => {
     setGroupId(0);
-    setGroupType('mcp-sse');
+    setGroupName('');
     setcurrent(1);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
     setFetchKey(k => k + 1);
   }, [spaceId]);
 
   const setPage = (page: number) => {
-    if (!groupId) return;
+    if (!groupIdRef.current) return;
     setcurrent(page);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });
     getPluginList(undefined, page);
@@ -214,7 +263,7 @@ export const Component: React.FC = () => {
         {/* v5 Tree Panel — left sidebar */}
         <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
           <div className="abi-group-sidebar" style={{ height: '100%' }}>
-            <PluginGroup onGroupId={(id, _name, type) => { setGroupId(id); if (type) setGroupType(type); }} />
+            <PluginGroup onGroupId={(id, name) => { setGroupId(id); if (name) setGroupName(name); }} />
           </div>
         </Splitter.Panel>
 
@@ -261,34 +310,32 @@ export const Component: React.FC = () => {
                 updateStatus={updateStatus}
                 groupId={groupId}
                 onAdd={() => { setOpen(true); setCurrentEdit(null); }}
-                onDetail={async record => {
-                  if (!groupId) return;
-                  try {
-                    const res: any = await getMcpDetail({
-                      mcpId: String(record.pluginId),
-                      mcpName: record.pluginName,
-                      namespaceId: `s_${groupId}`
-                    });
-                    const remote = res?.response?.data?.data ?? res?.response?.data;
-                    setDetailRecord({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
-                  } catch {
-                    setDetailRecord(record);
-                  }
+                onDetail={record => {
+                  setDetailRecord(record);
+                  getMcpDetail({
+                    mcpId: String(record.pluginId),
+                    mcpName: '',
+                    namespaceId: `s_${groupIdRef.current}`
+                  }).then((res: any) => {
+                    const remote = res?.data ?? res?.response?.data?.data ?? res?.response?.data;
+                    if (remote && typeof remote === 'object') {
+                      setDetailRecord(prev => prev ? { ...prev, ...remote } : record);
+                    }
+                  }).catch(() => {});
                 }}
-                updateCurrentEdit={async record => {
-                  if (!groupId) return;
-                  try {
-                    const res: any = await getMcpDetail({
-                      mcpId: String(record.pluginId),
-                      mcpName: record.pluginName,
-                      namespaceId: `s_${groupId}`
-                    });
-                    const remote = res?.response?.data?.data ?? res?.response?.data;
-                    setCurrentEdit({ ...record, ...(remote && typeof remote === 'object' ? remote : {}) });
-                  } catch {
-                    setCurrentEdit(record);
-                  }
+                updateCurrentEdit={record => {
+                  setCurrentEdit(record);
                   setOpen(true);
+                  getMcpDetail({
+                    mcpId: String(record.pluginId),
+                    mcpName: '',
+                    namespaceId: `s_${groupIdRef.current}`
+                  }).then((res: any) => {
+                    const remote = res?.data ?? res?.response?.data?.data ?? res?.response?.data;
+                    if (remote && typeof remote === 'object') {
+                      setCurrentEdit(prev => prev ? { ...prev, ...remote } : record);
+                    }
+                  }).catch(() => {});
                 }}
               />
             </section>
@@ -298,8 +345,8 @@ export const Component: React.FC = () => {
 
       <PlugUpdate
         currentEdit={currentEdit}
-        groupType={groupType}
-        namespaceId={`s_${groupId}`}
+        groupName={groupName}
+        namespaceId={`s_${groupIdRef.current}`}
         open={open}
         onClose={() => setOpen(false)}
         onSubmit={handleSubmit}
@@ -308,6 +355,7 @@ export const Component: React.FC = () => {
       <PluginDetail
         open={Boolean(detailRecord)}
         record={detailRecord}
+        groupName={groupName}
         onClose={() => setDetailRecord(null)}
       />
     </div>

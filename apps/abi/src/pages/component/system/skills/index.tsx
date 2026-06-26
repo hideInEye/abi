@@ -1,6 +1,6 @@
 import { DeleteOutlined, DownOutlined, EditOutlined, EyeOutlined, LeftOutlined, MoreOutlined, ReloadOutlined, RightOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
-import { App, Button, Dropdown, Empty, Input, Select, Spin, Switch, Tabs, Tooltip } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { App, Button, Dropdown, Empty, Input, Select, Spin, Switch, Tabs, Tooltip, Typography } from 'antd';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 // import PageTitle from '@/components/stateless/common/PageTitle';
 import { deleteSkillApi, querySkillListApi, updateSkillStatusApi } from '@/service/api/skill';
@@ -52,16 +52,6 @@ function NameCell({ text }: { text?: string }) {
   );
 }
 
-/** 技能描述列：2行截断 + Tooltip 悬浮显示全文 */
-function SummaryCell({ text }: { text?: string }) {
-  if (!text) return <span style={{ color: '#9ca3af' }}>-</span>;
-  return (
-    <Tooltip title={text} placement="topLeft">
-      <span className="skill-summary-cell">{text}</span>
-    </Tooltip>
-  );
-}
-
 export function Component() {
   const { t } = useTranslation();
   const { message, modal } = App.useApp();
@@ -83,6 +73,8 @@ export function Component() {
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  // 标记刚刚点击了 Dropdown 菜单项，阻止卡片 onClick 冒泡触发详情弹窗
+  const menuActionRef = useRef(false);
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'bizName', label: '技能名称', visible: true },
     { key: 'summary', label: '技能描述', visible: true },
@@ -274,15 +266,18 @@ export function Component() {
     },
     {
       title: '技能描述', dataIndex: 'summary', key: 'summary',
-      align: 'left' as const, minWidth: 200,
+      align: 'left' as const, width: 300, minWidth: 200,
       className: 'col-skill-left',
       onHeaderCell: () => ({ className: 'col-skill-left' }),
-      render: (_: any, record: SkillItem) => <SummaryCell text={record.summary} />,
+      onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const, maxWidth: 300 } }),
+      render: (_: any, record: SkillItem) => record.summary
+        ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: record.summary }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit', maxWidth: 260 }}>{record.summary}</Typography.Paragraph>
+        : <span style={{ color: '#9ca3af' }}>-</span>,
     },
     {
       title: '状态', dataIndex: 'status', key: 'status',
       align: 'center' as const, minWidth: 80,
-      render: (_: any, record: SkillItem) => <Switch checked={String(record.status) === '1'} size="small" onChange={checked => toggleSkillStatus(record, checked)} />
+      render: (_: any, record: SkillItem) => <Switch checked={String(record.status) === '1'} size="default" onChange={checked => toggleSkillStatus(record, checked)} />
     },
     {
       title: '空间', dataIndex: 'spaceName', key: 'spaceName',
@@ -498,7 +493,10 @@ export function Component() {
                         <div
                           key={item.id}
                           className="abi-data-card"
-                          onClick={() => goDetail(item)}
+                          onClick={() => {
+                            if (menuActionRef.current) { menuActionRef.current = false; return; }
+                            goDetail(item);
+                          }}
                         >
                           <div className="abi-data-card-head">
                             <div className="abi-data-card-title">
@@ -528,14 +526,14 @@ export function Component() {
                                   {
                                     key: 'update',
                                     label: '更新技能',
-                                    onClick: () => openUpdate(item),
+                                    onClick: () => { menuActionRef.current = true; openUpdate(item); },
                                   },
                                   { type: 'divider' },
                                   {
                                     key: 'delete',
                                     danger: true,
                                     label: '删除',
-                                    onClick: () => confirmDelete(item),
+                                    onClick: () => { menuActionRef.current = true; confirmDelete(item); },
                                   },
                                 ],
                               }}

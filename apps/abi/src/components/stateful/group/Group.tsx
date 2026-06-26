@@ -48,12 +48,8 @@ export interface GroupProps {
     remark?: string;
     rule: any[];
     type: TableSemanticsGroupType;
-    /** 创建分组时可选的分组类型选项 */
-    groupTypeOptions?: { label: string; value: string }[];
-    /** 查询分组时同时拉取的类型列表（默认仅查 config.type） */
-    queryTypes?: readonly string[];
   };
-  readonly onGroupId: (groupId: number, groupName?: string, groupType?: string) => void;
+  readonly onGroupId: (groupId: number, groupName?: string) => void;
 }
 
 export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
@@ -84,7 +80,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     if (groups.length > 0) {
       const firstKey = `group-${groups[0].groupId}`;
       setSelectedKeys([firstKey]);
-      onGroupId(groups[0].groupId, groups[0].groupName, groups[0].groupType);
+      onGroupId(groups[0].groupId, groups[0].groupName);
     } else {
       // 分组为空时通知父组件清空数据
       onGroupId(0);
@@ -108,14 +104,14 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       const values = await form.validateFields();
       let flag:any = true
       if (editingGroup) {
-        // 编辑模式：保留原始 groupType（编辑时不允许修改类型）
+        // 编辑模式
        flag = await handleGroupEdit({ ...editingGroup, ...values, groupType: editingGroup.groupType || config.type });
              
       } else {
-        // 新增模式：parentId 来自表单选择（未选则是 0），groupType 来自表单选择
+        // 新增模式：parentId 来自表单选择（未选则是 0）
         flag = !!(await handleGroupAdd({
           ...values,
-          groupType: values.groupType || config.type,
+          groupType: config.type,
           parentId: values.parentId ?? 0,
           isPrivate: values.isPrivate ?? false
         }));
@@ -160,9 +156,8 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     setSelectedKeys([nodeKey]);
     const groupId = Number(nodeKey.replace('group-', ''));
     const group = groups.find(g => g.groupId === groupId);
-    if (group) {
-      onGroupId(group.groupId, undefined, group.groupType);
-    }
+    // 直接用解析出的 groupId 回调，不依赖 groups.find 结果
+    onGroupId(groupId, group?.groupName);
     // 文件夹节点：点击行切换展开/折叠（对齐 qknow-ui DeptTree 行为）
     if (!info.node.isLeaf) {
       if (expandedKeys.includes(nodeKey)) {

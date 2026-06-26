@@ -9,15 +9,15 @@ import { SecuritySchemeSection } from './SecuritySchemeSection';
 
 interface PlugUpdateProps {
   readonly currentEdit: PluginItem | null;
-  /** 当前分组的类型，用于限制协议类型选择 */
-  readonly groupType?: string;
+  /** 分组名称，用于命名空间展示 */
+  readonly groupName?: string;
   readonly namespaceId: string;
   readonly onClose: () => void;
   readonly onSubmit: (formData: McpForm) => void;
   readonly open: boolean;
 }
 
-export const PlugUpdate = ({ currentEdit, groupType, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
+export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
   const [form] = Form.useForm<McpForm>();
   const [restToMcpSwitch, setRestToMcpSwitch] = useState(false);
   const [securitySchemes, setSecuritySchemes] = useState<McpSecurityScheme[]>([]);
@@ -81,9 +81,12 @@ export const PlugUpdate = ({ currentEdit, groupType, namespaceId, onClose, onSub
         }
       }
       const url = currentEdit.remoteServerConfig?.url || '';
-      const transport: 'HTTP' | 'HTTPS' = /^https:/i.test(url) ? 'HTTPS' : 'HTTP';
+      const transportProtocol = currentEdit.remoteServerConfig?.serviceRef?.transportProtocol || currentEdit.backendEndpoints?.[0]?.protocol || '';
+      const transport: 'HTTP' | 'HTTPS' = /^https/i.test(transportProtocol) ? 'HTTPS' : 'HTTP';
       const proto = (currentEdit.protocol || '').toLowerCase();
       const isRestToMcp = proto === 'http' || proto === 'https';
+      // 从编辑记录推断协议类型
+      const protocolValue: 'sse' | 'streamableHttp' = proto === 'streamablehttp' ? 'streamableHttp' : 'sse';
       setRestToMcpSwitch(isRestToMcp);
 
       form.setFieldsValue({
@@ -94,12 +97,20 @@ export const PlugUpdate = ({ currentEdit, groupType, namespaceId, onClose, onSub
         address,
         port,
         transport,
-        mcpEndpointUrl: url || (address && port ? `${transport.toLowerCase()}://${address}:${port}` : '')
+        mcpEndpointUrl: url || (address && port ? `${transport.toLowerCase()}://${address}:${port}` : ''),
+        protocol: protocolValue,
       });
 
       setSecuritySchemes(currentEdit.toolSpec?.securitySchemes || []);
       setSecurityExtensions((currentEdit.toolSpec?.extensions as any) || {});
-      setTools(currentEdit.toolSpec?.tools || []);
+      const toolsMeta = currentEdit.toolSpec?.toolsMeta || {};
+      setTools((currentEdit.toolSpec?.tools || []).map(tool => {
+        const tpl = toolsMeta[tool.name]?.templates?.['json-go-template'];
+        return {
+          ...tool,
+          protocolTemplate: tpl ? JSON.stringify(tpl, null, 2) : tool.protocolTemplate || ''
+        };
+      }));
     } else {
       setRestToMcpSwitch(false);
       form.setFieldsValue({
@@ -110,7 +121,8 @@ export const PlugUpdate = ({ currentEdit, groupType, namespaceId, onClose, onSub
         mcpEndpointUrl: '',
         address: '',
         port: '',
-        transport: 'HTTP'
+        transport: 'HTTP',
+        protocol: 'sse',
       });
     }
   }, [open, currentEdit, form]);
@@ -162,7 +174,7 @@ export const PlugUpdate = ({ currentEdit, groupType, namespaceId, onClose, onSub
             </div>
             <div className="section-body">
               <Form.Item label="命名空间" className="form-item-v5">
-                <AInput value={namespaceId} disabled className="form-input-v5" />
+                <AInput value={groupName || namespaceId} disabled className="form-input-v5" />
               </Form.Item>
 
               <Form.Item
@@ -174,8 +186,8 @@ export const PlugUpdate = ({ currentEdit, groupType, namespaceId, onClose, onSub
                 <AInput placeholder="请输入MCP服务名" disabled={!!currentEdit} className="form-input-v5" />
               </Form.Item>
 
-              <Form.Item label="协议类型" className="form-item-v5">
-                <ARadio.Group value={groupType === 'mcp-streamable' ? 'streamableHttp' : 'sse'} disabled className="radio-group-v5">
+              <Form.Item label="协议类型" name="protocol" className="form-item-v5" rules={[{ message: '请选择协议类型', required: true }]}>
+                <ARadio.Group className="radio-group-v5">
                   <ARadio value="sse">SSE (Server-Sent Events)</ARadio>
                   <ARadio value="streamableHttp">Streamable HTTP</ARadio>
                 </ARadio.Group>

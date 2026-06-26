@@ -497,7 +497,7 @@ export function Component() {
               </Splitter>
 
               {/* 右侧垂直导航栏 + 维度/指标配置面板 */}
-              <DesignerRightPanel fields={panelFields} />
+              <DesignerRightPanel fields={panelFields} nodeData={nodeData} />
           </div>
         </ACard>
 
