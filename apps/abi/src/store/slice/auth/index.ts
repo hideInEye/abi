@@ -96,40 +96,53 @@ export const authSlice = createAppSlice({
   reducers: create => ({
     login: create.asyncThunk(
       async ({ password, username, code, uuid }: { password: string; username: string; code?: string; uuid?: string }) => {
-        const psd = encrypt(password) as string;
-        const { data, error } = await fetchLogin(username, psd, code, uuid);
-        const loginToken = {
-          ...data,
-          refreshToken: data?.refresh_token || '',
-          token: data?.access_token || '',
-          userId: data?.userId || ''
-        };
+        try {
+          const psd = encrypt(password) as string;
+          const { data, error } = await fetchLogin(username, psd, code, uuid);
 
-        // 1. stored in the localStorage, the later requests need it in headers
-        if (!error) {
+          if (error) {
+            clearAuthStorage();
+            return false;
+          }
+
+          const loginToken = {
+            ...data,
+            refreshToken: data?.refresh_token || '',
+            token: data?.access_token || '',
+            userId: data?.userId || ''
+          };
+
+          // 1. stored in the localStorage, the later requests need it in headers
           localStg.set('token', loginToken.token);
           localStg.set('refreshToken', loginToken.refreshToken);
           localStg.set('userId', loginToken.userId);
 
           const { error: userInfoError, response } = await fetchGetUserInfo();
-          const { user } = response.data as any;
-          if (!userInfoError) {
-            const { roles } = user
-            const isRole = roles.some(item => item.status =='0')
-            if(!isRole){
-              message.error('未分配角色无法登陆您当前账号未分配任何角色，无法登录系统。请联系系统管理员为您分配相应角色后再试。')
-              return false
-            }
-            // 2. store user info
-            localStg.set('userInfo', user);
-            return {
-              token: loginToken.token,
-              userInfo: user
-            };
+          if (userInfoError) {
+            clearAuthStorage();
+            return false;
           }
-        }
 
-        return false;
+          const user = (response?.data as any)?.user;
+          const roles = Array.isArray(user?.roles) ? user.roles : [];
+          const hasEnabledRole = roles.some((item: any) => String(item?.status) === '0');
+
+          if (!hasEnabledRole) {
+            clearAuthStorage();
+            message.error('未分配角色无法登陆您当前账号未分配任何角色，无法登录系统。请联系系统管理员为您分配相应角色后再试。');
+            return false;
+          }
+
+          // 2. store user info
+          localStg.set('userInfo', user);
+          return {
+            token: loginToken.token,
+            userInfo: user
+          };
+        } catch {
+          clearAuthStorage();
+          return false;
+        }
       },
 
       {
@@ -137,6 +150,14 @@ export const authSlice = createAppSlice({
           if (payload) {
             state.token = payload.token;
             state.userInfo = payload.userInfo;
+          } else {
+            state.token = '';
+            state.userInfo = {
+              buttons: [],
+              roles: [],
+              userId: '',
+              userName: ''
+            };
           }
         }
       }
