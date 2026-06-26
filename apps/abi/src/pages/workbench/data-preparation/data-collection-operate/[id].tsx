@@ -1,4 +1,3 @@
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { Checkbox, Form, Input, Modal, Select, Splitter, message } from 'antd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -45,7 +44,6 @@ export function Component() {
   const [nodeData, setNodeData] = useState<any>({}); // 单独拎出来的节点图数据
   const [allFields, setAllFields] = useState<any[]>([]); // 单独拎出来的字段列表数据
   const [sqlVal, setSqlVal] = useState(''); // 单独拎出来的sql
-  const [unfold, setUnfold] = useState(true);
   const [leftPanelSize, setLeftPanelSize] = useState<number | string>(220);
   const [saveForm] = Form.useForm();
   const { dataSourceList, getDatasourceList, getTableListBySource, tableList } = useDatasource();
@@ -161,10 +159,6 @@ export function Component() {
     setVisible(false);
     setBack(false);
     saveForm.resetFields();
-  };
-
-  const handleToggleUnfold = () => {
-    setUnfold(!unfold);
   };
 
   const saveNodeData: any = async () => {
@@ -313,26 +307,16 @@ export function Component() {
       >
         <ACard className={styles.container}>
           <div className="relative h-full flex">
-            {unfold ? null : (
-              <span
-                className={`${styles.unfold} left-[-24px] !right-auto`}
-                onClick={handleToggleUnfold}
-              >
-                <RightOutlined />
-              </span>
-            )}
-
-              <Splitter
-                style={{ flex: 1, minHeight: 0, height: '100%' }}
-                onResize={(sizes) => {
-                  if (sizes && sizes[0]) {
-                    setLeftPanelSize(sizes[0]);
-                  }
-                }}
-              >
+            <Splitter
+              style={{ flex: 1, minHeight: 0, height: '100%' }}
+              onResize={(sizes) => {
+                if (sizes && sizes[0]) {
+                  setLeftPanelSize(sizes[0]);
+                }
+              }}
+            >
                 {/* 左边 - 使用 Splitter.Panel */}
                 <Splitter.Panel
-                  collapsible
                   defaultSize="220"
                 >
                   <div className="relative h-full pr-16px overflow-hidden" style={{

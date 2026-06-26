@@ -120,8 +120,9 @@ export function Component() {
                   status: newStatus
                 };
                 const res = await updateRoleStatusAPi(params);
-                if (res.response.data.code !== 200) {
-                  message.error(res.response.data.msg || '更新失败');
+                if (res?.response?.data?.code !== 200) {
+                  message.error(res?.response?.data?.msg || '更新失败');
+                  return;
                 }
                 message.success('更新成功');
                 await run(false);
@@ -232,10 +233,10 @@ export function Component() {
     async (res, type) => {
       if (type === 'add') {
         const resData = await createRoleSubmit(res);
-        if (resData.response.data.code !== 200) return false;
+        if (resData?.response?.data?.code !== 200) return false;
       } else {
         const resData = await updateRole({ ...editingData, ...res });
-        if (resData.response.data.code !== 200) return false;
+        if (resData?.response?.data?.code !== 200) return false;
       }
     },
     true
@@ -249,7 +250,7 @@ export function Component() {
 
   async function handleDelete(id: number) {
     const resData = await fetchDelRole(id);
-    if (resData.response.data.code !== 200) return false;
+    if (resData?.response?.data?.code !== 200) return false;
     return onDeleted();
   }
 
@@ -270,7 +271,7 @@ export function Component() {
       return;
     }
     const resData = await fetchDelRole(checkedRowKeys.join(','));
-    if (resData.response.data.code !== 200) return false;
+    if (resData?.response?.data?.code !== 200) return false;
     return onBatchDeleted();
   }
 
@@ -325,11 +326,11 @@ export function Component() {
 
   async function handDataPermissionSubmit(params: any) {
     const res = await assignDataPermissionSubmit(params);
-    if (res.response.data.code === 200) {
+    if (res?.response?.data?.code === 200) {
       message.success('分配数据权限成功');
       setVisible(false);
     } else {
-      message.error(res.response.data.msg || '分配数据权限失败');
+      message.error(res?.response?.data?.msg || '分配数据权限失败');
     }
   }
 

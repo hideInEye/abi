@@ -154,7 +154,7 @@ const RoleAuthDrawer: React.FC<RoleAuthDrawerProps> = ({ roleId, visible, onClos
   async function handleDelete(userId: number) {
     const params = { roleId, userId };
     const res: any = await cancelAuthorizationApi(params);
-    if (res.response.data.code !== 200) return false;
+    if (res?.response?.data?.code !== 200) return false;
     message.success('取消授权成功');
     run();
   }
@@ -166,7 +166,7 @@ const RoleAuthDrawer: React.FC<RoleAuthDrawerProps> = ({ roleId, visible, onClos
     }
     const params = { roleId, userIds: checkedRowKeys.join(',') };
     const res: any = await batchCancelAuthorizationApi(params);
-    if (res.response.data.code !== 200) return false;
+    if (res?.response?.data?.code !== 200) return false;
     message.success('批量取消授权成功');
     setCheckedRowKeys([]);
     run();
@@ -175,12 +175,12 @@ const RoleAuthDrawer: React.FC<RoleAuthDrawerProps> = ({ roleId, visible, onClos
   async function handleSelectUserSubmit(keys: []) {
     const params = { roleId, userIds: keys.join(',') };
     const res: any = await assignUserSubmit(params);
-    if (res.response.data.code === 200) {
+    if (res?.response?.data?.code === 200) {
       message.success('添加用户成功');
       run();
       setAddUserVisible(false);
     } else {
-      message.error(res.response.data.msg || '分配用户失败');
+      message.error(res?.response?.data?.msg || '分配用户失败');
     }
   }
 
