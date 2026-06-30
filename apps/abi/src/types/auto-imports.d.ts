@@ -141,6 +141,8 @@ declare global {
   const captchaCode: typeof import('../components/captcha-code')['default']
   const createRef: typeof import('react')['createRef']
   const forwardRef: typeof import('react')['forwardRef']
+  const getGroupNodeKey: typeof import('../components/stateful/group/group-selection')['getGroupNodeKey']
+  const getInitialGroupSelection: typeof import('../components/stateful/group/group-selection')['getInitialGroupSelection']
   const lazy: typeof import('react')['lazy']
   const memo: typeof import('react')['memo']
   const normalizeRelations: typeof import('../components/metadata-analysis/adapter')['normalizeRelations']
