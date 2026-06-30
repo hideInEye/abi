@@ -1,7 +1,12 @@
-import { LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { Popconfirm, Table, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
-import React from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+
+import { OntologyCardList } from '@/pages/workbench/ontology-kg/components/OntologyCardList'
+import { OntologyTablePagination } from '@/pages/workbench/ontology-kg/components/OntologyTablePagination'
+import type { OntologyViewMode } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
+import { formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display'
+import { shouldDisplayColumn } from '@/pages/workbench/ontology-kg/utils/view-controls'
 
 import { INDICATOR_TYPE_TEXT_MAP, STATUS_TEXT_MAP } from '../constants/metricModeling.constants'
 import type { KnowledgeIndicatorItem } from '../types/metricModeling.types'
@@ -11,6 +16,8 @@ interface Props {
   readonly loading?: boolean
   readonly onDelete: (record: KnowledgeIndicatorItem) => void
   readonly onEdit: (record: KnowledgeIndicatorItem) => void
+  readonly viewMode: OntologyViewMode
+  readonly visibleColumnKeys: ReadonlySet<string>
 }
 
 const statusColorMap: Record<string, string> = {
@@ -19,9 +26,17 @@ const statusColorMap: Record<string, string> = {
   '2': 'processing'
 }
 
-export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete, onEdit }) => {
+export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete, onEdit, viewMode, visibleColumnKeys }) => {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const renderIndicatorClass = useCallback((value: string) => {
+    const text = INDICATOR_TYPE_TEXT_MAP[value] || formatDisplayValue(value)
+    return <Tag color="blue">{text}</Tag>
+  }, [])
+  const renderStatus = useCallback((value: string | number) => {
+    const key = String(value ?? '2')
+    return <Tag color={statusColorMap[key] || 'default'}>{STATUS_TEXT_MAP[key] || '草稿'}</Tag>
+  }, [])
 
   const columns = useMemo<TableColumnsType<KnowledgeIndicatorItem>>(
     () => [
@@ -38,7 +53,7 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
         dataIndex: 'indicatorCode',
         ellipsis: true,
         key: 'indicatorCode',
-        render: (value: string) => value || '-',
+        render: formatDisplayValue,
         title: '指标编码',
         width: 180
       },
@@ -46,22 +61,16 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
         align: 'center',
         dataIndex: 'indicatorClass',
         key: 'indicatorClass',
-        render: (value: string) => {
-          const text = INDICATOR_TYPE_TEXT_MAP[value] || value || '-'
-          return <Tag color="blue">{text}</Tag>
-        },
+        render: renderIndicatorClass,
         title: '指标类型',
         width: 130
       },
-      { align: 'center', dataIndex: 'qualityLevel', key: 'qualityLevel', render: (value: string) => value || '-', title: '质量等级', width: 120 },
+      { align: 'center', dataIndex: 'qualityLevel', key: 'qualityLevel', render: formatDisplayValue, title: '质量等级', width: 120 },
       {
         align: 'center',
         dataIndex: 'status',
         key: 'status',
-        render: (value: string | number) => {
-          const key = String(value ?? '2')
-          return <Tag color={statusColorMap[key] || 'default'}>{STATUS_TEXT_MAP[key] || '草稿'}</Tag>
-        },
+        render: renderStatus,
         title: '状态',
         width: 100
       },
@@ -89,20 +98,21 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
         width: 140
       }
     ],
-    [onDelete, onEdit]
+    [onDelete, onEdit, renderIndicatorClass, renderStatus]
   )
 
-  const tableWidth = useMemo(() => columns.reduce((sum, item) => sum + (Number(item.width) || 120), 0), [columns])
+  const visibleColumns = useMemo(() => columns.filter(column => shouldDisplayColumn(column.key, visibleColumnKeys)), [columns, visibleColumnKeys])
+  const tableWidth = useMemo(() => visibleColumns.reduce((sum, item) => sum + (Number(item.width) || 120), 0), [visibleColumns])
   const tableColumns = useMemo(
     () =>
       dataSource.length
-        ? columns
-        : columns.map((item) => ({
+        ? visibleColumns
+        : visibleColumns.map((item) => ({
             ...item,
             fixed: undefined,
             width: undefined
           })) as TableColumnsType<KnowledgeIndicatorItem>,
-    [columns, dataSource.length]
+    [dataSource.length, visibleColumns]
   )
   const pagedDataSource = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize
@@ -113,61 +123,62 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
     setCurrentPage(1)
   }, [dataSource, pageSize])
 
-  const handlePageChange = (page: number) => {
-    const totalPages = Math.ceil(dataSource.length / pageSize) || 1
-    if (page >= 1 && page <= totalPages) setCurrentPage(page)
-  }
-  const handlePrev = () => { if (currentPage > 1) handlePageChange(currentPage - 1) }
-  const handleNext = () => { if (currentPage < Math.ceil(dataSource.length / pageSize)) handlePageChange(currentPage + 1) }
+  const handlePaginationChange = useCallback((page: number, size: number): void => {
+    setCurrentPage(page)
+    setPageSize(size)
+  }, [])
+  const cardFields = useMemo(
+    () =>
+      [
+        { key: 'indicatorCode', label: '指标编码', render: (record: KnowledgeIndicatorItem) => formatDisplayValue(record.indicatorCode) },
+        { key: 'indicatorClass', label: '指标类型', render: (record: KnowledgeIndicatorItem) => renderIndicatorClass(record.indicatorClass || '') },
+        { key: 'qualityLevel', label: '质量等级', render: (record: KnowledgeIndicatorItem) => formatDisplayValue(record.qualityLevel) },
+        { key: 'status', label: '状态', render: (record: KnowledgeIndicatorItem) => renderStatus(record.status ?? '') },
+      ].filter(field => visibleColumnKeys.has(field.key)),
+    [renderIndicatorClass, renderStatus, visibleColumnKeys],
+  )
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-      <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0, width: '100%' }}>
-        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-          <Table
-            className="assistant-table-scroll abi-std-table"
-            columns={tableColumns}
-            dataSource={pagedDataSource}
-            loading={loading}
-            pagination={false}
-            rowKey={record => String(record.indId || record.termId || record.techName || record.bizName)}
-            scroll={pagedDataSource.length > 0 ? { x: tableWidth } : undefined}
-            size="middle"
-          />
+      {viewMode === 'card' ? (
+        <OntologyCardList
+          actions={record => (
+            <div className="flex items-center gap-1">
+              <AButton className="abi-action-link" size="small" variant="link" onClick={() => onEdit(record)}>
+                编辑
+              </AButton>
+              <Popconfirm cancelText="取消" description="确定删除该指标吗？" okText="确定" title="提示" onConfirm={() => onDelete(record)}>
+                <AButton className="abi-action-link-danger" size="small" variant="link">
+                  删除
+                </AButton>
+              </Popconfirm>
+            </div>
+          )}
+          dataSource={pagedDataSource}
+          emptyText="暂无指标"
+          fields={cardFields}
+          loading={loading}
+          rowKey={record => String(record.indId || record.termId || record.techName || record.bizName)}
+          title={record => formatDisplayValue(record.techName)}
+          titleExtra={record => renderIndicatorClass(record.indicatorClass || '')}
+        />
+      ) : (
+        <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0, width: '100%' }}>
+          <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+            <Table
+              className="assistant-table-scroll abi-std-table"
+              columns={tableColumns}
+              dataSource={pagedDataSource}
+              loading={loading}
+              pagination={false}
+              rowKey={record => String(record.indId || record.termId || record.techName || record.bizName)}
+              scroll={pagedDataSource.length > 0 ? { x: tableWidth } : undefined}
+              size="middle"
+            />
+          </div>
         </div>
-      </div>
-      <div className="data-source-pagination">
-        <span className="total-text">共 {dataSource.length} 条</span>
-        <div className="pagination-controls">
-          <ASelect
-            value={pageSize}
-            onChange={(val: number) => { setPageSize(val); setCurrentPage(1); }}
-            options={[
-              { label: '10条/页', value: 10 },
-              { label: '15条/页', value: 15 },
-              { label: '20条/页', value: 20 },
-              { label: '25条/页', value: 25 },
-              { label: '30条/页', value: 30 },
-            ]}
-            className="page-size-select"
-          />
-          <button className="page-btn" disabled={currentPage === 1} onClick={handlePrev}>
-            <LeftOutlined />
-          </button>
-          {Array.from({ length: Math.ceil(dataSource.length / pageSize) || 1 }, (_, i) => i + 1).map(page => (
-            <span
-              key={page}
-              className={`page-item ${page === currentPage ? 'page-active' : ''}`}
-              onClick={() => handlePageChange(page)}
-            >
-              {page}
-            </span>
-          ))}
-          <button className="page-btn" disabled={currentPage >= Math.ceil(dataSource.length / pageSize)} onClick={handleNext}>
-            <RightOutlined />
-          </button>
-        </div>
-      </div>
+      )}
+      <OntologyTablePagination current={currentPage} pageSize={pageSize} total={dataSource.length} onChange={handlePaginationChange} />
     </div>
   )
 }

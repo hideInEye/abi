@@ -271,7 +271,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
   const [allFields, setAllFields] = useState<KnowledgeTechField[]>([])
   const [atomicIndicatorOptions, setAtomicIndicatorOptions] = useState<AtomicIndicatorOption[]>([])
   const formValuesRef = useRef<Partial<KnowledgeFormValues>>({})
-
+  const templateTypeVal = AForm.useWatch('templateType',form)
+  
   const isEditing = Boolean(editingItem)
   const isAtomicEditing = normalizeIndicatorClass(editingItem?.indicatorClass) === 'atomic'
   const indicatorClass = normalizeIndicatorClass(String(form.getFieldValue('indicatorClass') || selectedIndicatorClass || 'derived'))
@@ -563,7 +564,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
             atomicMetricOptions={atomicIndicatorOptions}
             form={form}
             indicatorClass={indicatorClass}
-            templateTypeVal={String(form.getFieldValue('templateType') || '')}
+            templateTypeVal={templateTypeVal}
             validateAccumulationDate={validateAccumulationDate}
             validateCustomExpression={validateCustomExpression}
             validatePercentile={validatePercentile}

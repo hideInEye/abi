@@ -1,7 +1,7 @@
 import { DownOutlined, SearchOutlined } from '@ant-design/icons'
 import { Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
-import React from 'react'
+import React, { useMemo } from 'react'
 
 import { INDICATOR_TYPE_FILTER_OPTIONS, STATUS_OPTIONS } from '../constants/metricModeling.constants'
 import type { KnowledgeSearchParams } from '../types/metricModeling.types'
