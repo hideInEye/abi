@@ -85,8 +85,10 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
       const transport: 'HTTP' | 'HTTPS' = /^https/i.test(transportProtocol) ? 'HTTPS' : 'HTTP';
       const proto = (currentEdit.protocol || '').toLowerCase();
       const isRestToMcp = proto === 'http' || proto === 'https';
-      // 从编辑记录推断协议类型
-      const protocolValue: 'sse' | 'streamableHttp' = proto === 'streamablehttp' ? 'streamableHttp' : 'sse';
+      // 从编辑记录推断协议类型：优先使用 frontProtocol（HTTP转MCP模式下真实MCP协议存在 frontProtocol）
+      const frontProto = (currentEdit.frontProtocol || '').toLowerCase();
+      const effectiveProto = isRestToMcp ? frontProto : proto;
+      const protocolValue: 'sse' | 'streamableHttp' = effectiveProto === 'streamablehttp' ? 'streamableHttp' : 'sse';
       setRestToMcpSwitch(isRestToMcp);
 
       form.setFieldsValue({

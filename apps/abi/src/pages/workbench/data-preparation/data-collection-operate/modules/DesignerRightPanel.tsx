@@ -1,5 +1,9 @@
 import { CloseOutlined } from '@ant-design/icons';
-import React, { useMemo, useState } from 'react';
+import { message } from 'antd';
+import { cloneDeep } from 'lodash';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
+
+import { DataCollectionOperateContext } from '../context';
 
 import { FieldItem, FieldListByTable } from './FieldListByTable';
 
@@ -36,6 +40,7 @@ function inferFieldCategory(field: FieldItem): 'dimension' | 'metric' {
 
 const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], nodeData }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const { setAllFields } = useContext(DataCollectionOperateContext);
 
   const dimensions = fields.filter(f => {
     if (f.tfieldType) return f.tfieldType === 'd';
@@ -63,6 +68,21 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
     if (nodeData) loop(nodeData);
     return map;
   }, [nodeData]);
+
+  /** 维度/指标互转回调 */
+  const handleSwitch = useCallback((field: FieldItem) => {
+    const isCurrentMetric = field.tfieldType === 'q';
+    setAllFields((state: any) => {
+      const newFields = cloneDeep(state);
+      const idx = newFields.findIndex((item: any) => item.tfieldId === field.tfieldId);
+      if (idx !== -1) {
+        newFields[idx].tfieldType = newFields[idx].tfieldType === 'd' ? 'q' : 'd';
+      }
+      return newFields;
+    });
+    const name = field.tfieldShowName || field.originName || '字段';
+    message.success(`「${name}」已转换为${isCurrentMetric ? '维度' : '指标'}`);
+  }, [setAllFields]);
 
   const handleMenuClick = (key: string) => {
     setActiveMenu(prev => prev === key ? null : key);
@@ -131,6 +151,7 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
             fields={items}
             getTableName={(field) => (field.rtableId ? tableMap[field.rtableId]?.tableName : undefined) || '未知表'}
             getTableRemark={(field: FieldItem) => (field.rtableId ? tableMap[field.rtableId]?.remark : undefined) || ''}
+            onSwitch={handleSwitch}
           />
         </div>
       </div>

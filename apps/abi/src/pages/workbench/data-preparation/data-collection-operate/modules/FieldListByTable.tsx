@@ -1,4 +1,4 @@
-import { FieldNumberOutlined, FieldStringOutlined } from '@ant-design/icons';
+import { FieldNumberOutlined, FieldStringOutlined, SwapOutlined } from '@ant-design/icons';
 import { Empty, Tooltip } from 'antd';
 import React, { useMemo } from 'react';
 
@@ -24,6 +24,8 @@ export interface FieldListByTableProps {
   defaultTableName?: string;
   /** 空状态提示 */
   emptyText?: string;
+  /** 维度/指标转换回调 */
+  onSwitch?: (field: FieldItem) => void;
 }
 
 function inferFieldCategory(field: FieldItem): 'dimension' | 'metric' {
@@ -53,7 +55,8 @@ export const FieldListByTable: React.FC<FieldListByTableProps> = ({
   getTableName,
   getTableRemark,
   defaultTableName = '其他',
-  emptyText = '暂无字段'
+  emptyText = '暂无字段',
+  onSwitch,
 }) => {
   const grouped = useMemo(() => {
     const map = new Map<string, FieldItem[]>();
@@ -192,6 +195,27 @@ export const FieldListByTable: React.FC<FieldListByTableProps> = ({
                     >
                       {remark}
                     </span>
+                  )}
+                  {onSwitch && (
+                    <Tooltip title={isMetric ? '转换为维度' : '转换为指标'}>
+                      <SwapOutlined
+                        style={{
+                          fontSize: 13,
+                          color: '#8fa0b5',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          marginLeft: 'auto',
+                          transition: 'color 0.2s',
+                        }}
+                        onClick={() => onSwitch(item)}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.color = '#5b7cf7';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.color = '#8fa0b5';
+                        }}
+                      />
+                    </Tooltip>
                   )}
                 </li>
               );

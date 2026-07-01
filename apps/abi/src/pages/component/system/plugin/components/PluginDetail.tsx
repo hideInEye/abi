@@ -98,8 +98,9 @@ export const PluginDetail: React.FC<PluginDetailProps> = ({ open, record, groupN
     );
   }
 
-  const protocolLabel = record.frontProtocol || record.protocol || 'unknown';
-  const isHttp = record.protocol === 'http' || record.protocol === 'https';
+  const rawProto = (record.frontProtocol || record.protocol || '');
+  const protocolLabel = rawProto || 'unknown';
+  const isLegacy = record.protocol === 'http' || record.protocol === 'https';
   const tools = record.toolSpec?.tools || [];
   const schemes = record.toolSpec?.securitySchemes || [];
   const endpoints = record.backendEndpoints || [];
@@ -161,16 +162,17 @@ export const PluginDetail: React.FC<PluginDetailProps> = ({ open, record, groupN
                   alignItems: 'center',
                   padding: '2px 10px',
                   borderRadius: 12,
-                  background: isHttp
-                    ? 'linear-gradient(135deg, rgba(250, 173, 20, 0.15) 0%, rgba(250, 219, 20, 0.15) 100%)'
-                    : 'linear-gradient(135deg, rgba(91, 124, 247, 0.15) 0%, rgba(112, 145, 250, 0.15) 100%)',
-                  color: isHttp ? '#fa8c16' : GRADIENT_START,
+                  background: 'linear-gradient(135deg, rgba(91, 124, 247, 0.15) 0%, rgba(112, 145, 250, 0.15) 100%)',
+                  color: GRADIENT_START,
                   fontSize: 12,
                   fontWeight: 600
                 }}
               >
-                {isHttp ? 'http转换' : protocolLabel}
+                {protocolLabel}
               </span>
+              {isLegacy && (
+                <ATag color="green" style={{ margin: 0 }}>存量转化</ATag>
+              )}
               {record.versionDetail?.version && (
                 <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>v{record.versionDetail.version}</span>
               )}
@@ -223,7 +225,12 @@ export const PluginDetail: React.FC<PluginDetailProps> = ({ open, record, groupN
             )}
           </div>
           <div>
-            <InfoCell label="协议" value={isHttp ? 'http转换' : protocolLabel} />
+            <InfoCell label="协议" value={
+              <ASpace size={4}>
+                <span>{protocolLabel}</span>
+                {isLegacy && <ATag color="green" style={{ margin: 0 }}>存量转化</ATag>}
+              </ASpace>
+            } />
             <div style={{ borderTop: `1px solid ${BORDER}` }} />
             <InfoCell
               label="命名空间"
