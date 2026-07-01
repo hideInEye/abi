@@ -5,19 +5,18 @@ import { flushSync } from 'react-dom'
 import cloneDeep from 'lodash/cloneDeep'
 
 import { fetchOperate, fetchShareEmail } from '../../../service/api/abi-system'
+import { fetchSessionMessages } from '../../../service/api/app'
 import {
-  fetchConvHistoryRoundGrouped,
   fetchConvMaxRound,
   fetchDimension,
   fetchExceptionGuidance,
   groupMessagesByOrder,
   fetchQueryRewrite,
   fetchRecommendQuestion,
-  fetchRecommendedQuestionOpenings,
   streamConvAnswer
 } from '../../../service/api/conv'
 import { useDebugStore } from '../../../store'
-import { getHumanInHistoryByOrderIndex, getOpeningText } from '../../../utils'
+import { getHumanInHistoryByOrderIndex } from '../../../utils'
 import { useScreenshot } from '../useScreenShot'
 
 import type { chatHeaderRefMethod } from '../../../types'
@@ -27,6 +26,9 @@ export interface ConversationProps {
   onClose: () => void
   onUpdateList: (data: any) => void
   fold: boolean
+  selectedModel?: string
+  pendingQuestion?: string
+  onPendingQuestionConsumed?: () => void
 }
 
 const groupConversationByOrder = (messages: any[]) => {
@@ -90,7 +92,14 @@ export const useConversationController = (
   props: ConversationProps,
   ref: React.Ref<{ setConvContent: (content: any[]) => void }>
 ) => {
-  const { conv, onClose, onUpdateList } = props
+  const { conv, onClose, onUpdateList, pendingQuestion, onPendingQuestionConsumed } = props
+  // 用 ref 存储最新 conv，避免 useEffect 依赖整个对象
+  const convRef = useRef(conv)
+  convRef.current = conv
+  // 用 ref 存储最新 paramsData，确保异步回调中始终取到最新值
+  const paramsDataRef = useRef<any>(null)
+  // 自动发送待处理问题的标记 ref
+  const pendingQuestionSentRef = useRef<string>('')
   const [confirmShareType, setConfirmShareType] = useState('')
   const [shareEmailForm] = Form.useForm()
   const [shareStep, setShareStep] = useState(1)
@@ -216,9 +225,10 @@ export const useConversationController = (
     setHistoryLoading(true)
 
     try {
-      const res = await fetchConvHistoryRoundGrouped({
-        conv_uid: conv.conv_uid,
-        round_index: minRoundIndex
+      const res = await fetchSessionMessages({
+        convUid: conv.conv_uid,
+        pageNum: 1,
+        pageSize: 20
       })
 
       const newMessages = (res?.data || []).flat()
@@ -239,16 +249,7 @@ export const useConversationController = (
         }))
 
         flushSync(() => {
-          setConvContent((prev) => {
-            const opening = prev.length > 0 ? prev[0] : null
-            const rest = prev.length > 0 ? prev.slice(1) : []
-            const hasOpening = opening && opening.role === 'first'
-
-            if (hasOpening) {
-              return [opening, ...processedMessages, ...rest]
-            }
-            return [...processedMessages, ...prev]
-          })
+          setConvContent((prev) => [...processedMessages, ...prev])
         })
 
         maintainScroll()
@@ -344,7 +345,14 @@ export const useConversationController = (
     }
   }, [convContent, currentMessage, userScrolled, historyLoading])
 
+  // 用 conv_uid 作为依赖，避免对象引用变化导致重复请求
+  const convUid = conv?.conv_uid
+  const convChatId = conv?.chat_id
+  // 仅在会话切换时触发（不包含 selectedModel，避免模型切换导致重复请求和 abort）
   useEffect(() => {
+    const currentConv = convRef.current
+    if (!currentConv || (!currentConv.conv_uid && !currentConv.chat_id)) return
+
     const requestToken = nextRequestToken()
     if (isRequesting.current) {
       stopGenerating()
@@ -358,13 +366,12 @@ export const useConversationController = (
       wsTimeoutRef.current = null
     }
 
-    const currentSpaceId = conv.space_id
+    const currentSpaceId = currentConv.space_id
     if (prevSpaceId.current !== undefined && prevSpaceId.current !== currentSpaceId) {
       // cache cleared
     }
     prevSpaceId.current = currentSpaceId
     handleCollect()
-    chatHeaderRef.current?.handleIsFavorite()
     setSelectedExcel({})
     setReferenceDialog({})
 
@@ -374,12 +381,15 @@ export const useConversationController = (
     canLoadMore.current = false
     isLoadingHistory.current = false
 
-    handleChatHistory(requestToken)
+    // 新建对话没有历史消息，跳过 query 请求
+    if (!pendingQuestion) {
+      handleChatHistory(requestToken)
+    }
 
-    const { model_name, biz_name, chat_config, ...elseCov } = conv
+    const { model_name, biz_name, chat_config, ...elseCov } = currentConv
     const context = {
       ...elseCov,
-      app_code: conv.app_code || conv.chat_mode,
+      app_code: currentConv.app_code || currentConv.chat_mode,
       extra: {
         db_name: '',
         if_debug: true,
@@ -390,7 +400,7 @@ export const useConversationController = (
       }
     }
     const paramData = {
-      model: window.APP_CONFIG.VITE_CHAT_MODEL || 'qwen3:30b-a3b-fp16',
+      model: props.selectedModel || window.APP_CONFIG.VITE_CHAT_MODEL || 'qwen3:30b-a3b-fp16',
       stream: true,
       temperature: 0.0,
       max_new_tokens: 4096,
@@ -399,10 +409,37 @@ export const useConversationController = (
       context: context
     }
     setParamsData(paramData)
-  }, [conv])
+    paramsDataRef.current = paramData
+
+    // 直接在 paramsData 准备好后触发 auto-send
+    let autoSendTimer: ReturnType<typeof setTimeout> | null = null
+    if (pendingQuestion && pendingQuestionSentRef.current !== pendingQuestion) {
+      pendingQuestionSentRef.current = pendingQuestion
+      autoSendTimer = setTimeout(() => {
+        if (!isRequesting.current && paramsDataRef.current) {
+          const messageContent = { question: pendingQuestion }
+          getAnswer(messageContent)
+        }
+        onPendingQuestionConsumed?.()
+      }, 400)
+    }
+
+    return () => {
+      if (autoSendTimer) clearTimeout(autoSendTimer)
+    }
+  }, [convUid, convChatId])
+
+  // 模型切换时仅更新 paramsData，不重载历史、不 abort 请求
+  useEffect(() => {
+    if (!props.selectedModel) return // 空字符串不处理（初始值）
+    if (!paramsDataRef.current) return // 还没初始化过
+    const updated = { ...paramsDataRef.current, model: props.selectedModel }
+    setParamsData(updated)
+    paramsDataRef.current = updated
+  }, [props.selectedModel])
 
   const handleChatHistory = async (requestToken: number) => {
-    if (conv && conv.conv_uid) {
+    if (conv && conv.chat_id) {
       let isUpdate = false
       let maxOrder = 0
       await getHistory(isUpdate, maxOrder, requestToken)
@@ -411,71 +448,12 @@ export const useConversationController = (
 
   const getHistory = async (isUpdate: boolean, maxOrder: number, requestToken: number) => {
     let conversationList: any = []
-    const { conv_uid: convUid = '', agent_id: agentId = '' } = conv
-    const text: string = getOpeningText(false)
-    let openingMessage = {
-      question: {
-        items: [],
-        page: 1,
-        page_size: 0,
-        total_count: 0,
-        total_pages: 1
-      },
-      context: text,
-      role: 'first',
-      id: `opening_${convUid}`,
-      timestamp: Date.now()
-    }
-    try {
-      let questionData = []
-      if (agentId) {
-        const res2: any = await fetchRecommendedQuestionOpenings({
-          agent_id: agentId,
-          page_size: 100,
-          page: 3
-        })
-        if (!isRequestTokenActive(requestToken)) return
+    const { chat_id: sessionId = '', agent_id: agentId = '' } = conv
 
-        questionData = res2?.data?.items || []
-        if (!res2?.success || !res2) {
-          openingMessage = {
-            question: {
-              items: [],
-              page: 1,
-              page_size: 0,
-              total_count: 0,
-              total_pages: 1
-            },
-            context: getOpeningText(false),
-            role: 'first',
-            id: `opening_${convUid}`,
-            timestamp: Date.now()
-          }
-        }
-      }
-
-      let text: string = getOpeningText(questionData.length > 0)
-
-      openingMessage = {
-        question: {
-          items: questionData,
-          page: 1,
-          page_size: questionData.length,
-          total_count: questionData.length,
-          total_pages: 1
-        },
-        context: text,
-        role: 'first',
-        id: `opening_${convUid}`,
-        timestamp: Date.now()
-      }
-    } catch {}
-
-    if (convUid) {
+    if (sessionId) {
       let result: any = []
-      conversationList = [openingMessage]
-      result = await fetchConvHistoryRoundGrouped({
-        conv_uid: convUid
+      result = await fetchSessionMessages({
+        convUid: conv.conv_uid
       })
       if (!isRequestTokenActive(requestToken)) return
 
@@ -502,7 +480,7 @@ export const useConversationController = (
       } else {
         setHasMoreHistory(false)
       }
-      conversationList = conversationList.concat(flatHistory)
+      conversationList = flatHistory
     }
 
     if (!isRequestTokenActive(requestToken)) return
@@ -724,7 +702,7 @@ export const useConversationController = (
     setTimeout(scrollToBottom, 300)
     abortController.current = new AbortController()
     isAborting.current = false
-    const params = cloneDeep(paramsData)
+    const params = cloneDeep(paramsDataRef.current || paramsData)
     params.context.extra.db_name = ''
     params.context.extra.modelName = ''
     params.messages = question
@@ -1334,6 +1312,23 @@ export const useConversationController = (
       }
     }
   }, [])
+
+  // 备用：当 pendingQuestion 在 conv 切换之后才到达时触发
+  useEffect(() => {
+    if (!pendingQuestion) return
+    if (pendingQuestionSentRef.current === pendingQuestion) return
+    if (!paramsDataRef.current) return
+
+    pendingQuestionSentRef.current = pendingQuestion
+    const timer = setTimeout(() => {
+      if (!isRequesting.current && paramsDataRef.current) {
+        const messageContent = { question: pendingQuestion }
+        getAnswer(messageContent)
+      }
+      onPendingQuestionConsumed?.()
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [pendingQuestion, paramsData])
 
   const updateAiMessage = (updateData: any) => {
     setConvContent((prevState: any[]) => {

@@ -11,11 +11,11 @@
   --glass-strong: rgba(255, 255, 255, 0.78);
   --glass-border: rgba(255, 255, 255, 0.6);
   
-  /* ── Improved Ink Colors (darker for better contrast) ── */
-  --ink: #333333;
-  --ink-2: #444444;
-  --ink-3: #888888;
-  --ink-4: #999999;
+  /* ── Ink Colors ── */
+  --ink: #1a2744;
+  --ink-2: #475875;
+  --ink-3: #8494ad;
+  --ink-4: #b0bdd0;
   
   /* ── Primary Accent (Blue) ── */
   --accent: #5b7cf7;
@@ -78,6 +78,27 @@ body {
   min-width: 320px;
   height: 100vh;
   background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 45%, var(--bg-3) 100%);
+  position: relative;
+  overflow: hidden;
+  font-size: 14px;
+}
+body::before {
+  content: '';
+  position: fixed;
+  top: -30%; right: -15%;
+  width: 55%; height: 70%;
+  background: radial-gradient(ellipse, rgba(139, 92, 246, 0.07) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -25%; left: -10%;
+  width: 50%; height: 65%;
+  background: radial-gradient(ellipse, rgba(91, 124, 247, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 h1 {
@@ -217,6 +238,7 @@ button {
 
 /* ── Input Toolbar Buttons (icon-only) ── */
 .input-tool-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -354,6 +376,30 @@ button {
 .header-icon-btn.starred {
   color: #f59e0b;
 }
+/* ── Header Schedule Task Button ── */
+.header-schedule-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--ink-3);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s var(--ease);
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.header-schedule-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .header-icon-btn.starred:hover {
   background: rgba(245, 158, 11, 0.1);
   color: #f59e0b;
@@ -433,6 +479,36 @@ button {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
+/* ── New Chat Primary Button (blue filled, matches reference) ── */
+.new-chat-primary-btn {
+  padding: 10px 18px;
+  background: linear-gradient(135deg, var(--accent), #7091fa);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s var(--ease);
+  font-family: var(--font);
+  box-shadow: 0 4px 14px rgba(91, 124, 247, 0.35);
+  flex: 1;
+  letter-spacing: 0.03em;
+}
+.new-chat-primary-btn:hover {
+  box-shadow: 0 6px 20px rgba(91, 124, 247, 0.45);
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+.new-chat-primary-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3);
+}
+
 /* ── Collapse Sidebar Button ── */
 .collapse-sidebar-btn {
   width: 38px;
@@ -491,11 +567,189 @@ button {
 /* ── Footer ── */
 .chat-footer {
   text-align: center;
-  padding: 5px 0 10px;
+  padding: 6px 0 10px;
   font-size: 11px;
   color: var(--ink-4);
   flex-shrink: 0;
 }
+
+/* ── Welcome View ── */
+.welcome-view { display: flex; flex-direction: column; align-items: center; padding: 24px 28px 20px; min-height: auto; width: 100% }
+.welcome-logo {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 32px rgba(91,124,247,0.3), 0 0 48px rgba(139,92,246,0.12), inset 0 1px 0 rgba(255,255,255,0.25);
+  margin-bottom: 18px; position: relative; animation: welcomePulse 3s ease-in-out infinite;
+}
+.welcome-logo::after {
+  content: ''; position: absolute; inset: -6px; border-radius: 22px;
+  background: linear-gradient(135deg, rgba(91,124,247,0.2), rgba(139,92,246,0.2));
+  z-index: -1; filter: blur(16px); opacity: 0.6;
+}
+@keyframes welcomePulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 8px 32px rgba(91,124,247,0.3), 0 0 48px rgba(139,92,246,0.12) }
+  50% { transform: scale(1.03); box-shadow: 0 12px 40px rgba(91,124,247,0.35), 0 0 60px rgba(139,92,246,0.18) }
+}
+.welcome-title {
+  font-size: 22px; font-weight: 700;
+  background: linear-gradient(135deg, #1a1a1a, #333);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 8px; letter-spacing: -0.02em;
+}
+.welcome-subtitle { font-size: 13px; color: var(--ink-3); text-align: center; max-width: 520px; margin-bottom: 20px; line-height: 1.5 }
+.welcome-section-title {
+  font-size: 11px; font-weight: 600; color: var(--ink-4); text-align: center;
+  margin: 20px 0 12px; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.welcome-section-title::before, .welcome-section-title::after {
+  content: ''; display: inline-block; width: 24px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ink-4)); vertical-align: middle; margin: 0 8px;
+}
+.welcome-section-title::after { background: linear-gradient(90deg, var(--ink-4), transparent) }
+.welcome-cases-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 880px; margin: 0 auto }
+.welcome-case-card {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 14px 10px 12px; background: rgba(255,255,255,0.45); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4,0,0.2,1); position: relative; overflow: hidden;
+}
+.welcome-case-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(91,124,247,0.4), transparent); opacity: 0; transition: opacity 0.3s;
+}
+.welcome-case-card:hover {
+  background: rgba(255,255,255,0.7); border-color: rgba(91,124,247,0.3);
+  transform: translateY(-2px); box-shadow: 0 4px 16px rgba(91,124,247,0.15);
+}
+.welcome-case-card:hover::before { opacity: 1 }
+.welcome-case-card .case-icon {
+  width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; margin-bottom: 8px; flex-shrink: 0; font-size: 18px;
+  transition: transform 0.25s;
+}
+.welcome-case-card:hover .case-icon { transform: scale(1.05) }
+.welcome-case-card.blue .case-icon { background: linear-gradient(135deg, #E6F7FF, #BAE7FF); color: #1890ff }
+.welcome-case-card.green .case-icon { background: linear-gradient(135deg, #F0FFF0, #D9F7BE); color: #52c41a }
+.welcome-case-card.purple .case-icon { background: linear-gradient(135deg, #F9F0FF, #EFDBFF); color: #722ed1 }
+.welcome-case-card.orange .case-icon { background: linear-gradient(135deg, #FFF8E6, #FFE7BA); color: #fa8c16 }
+.welcome-case-card .case-content { flex: 1; min-width: 0; width: 100% }
+.welcome-case-card .case-title { font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 2px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.welcome-case-card .case-desc { font-size: 10px; color: var(--ink-3); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden }
+
+/* ── Input Area (reference-aligned) ── */
+.input-area { flex-shrink: 0; padding: 0 28px 12px; background: rgba(255,255,255,0.04); width: 100%; max-width: 800px; margin: 0 auto }
+.input-inner { max-width: 800px; margin: 0 auto }
+.input-box {
+  background: rgba(255,255,255,0.65); backdrop-filter: blur(16px);
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  transition: all 0.2s var(--ease); overflow: visible;
+}
+.input-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-m); background: rgba(255,255,255,0.85) }
+.input-toolbar { display: flex; align-items: center; padding: 6px 10px 8px; gap: 4px }
+.input-tool {
+  width: 34px; height: 34px; border-radius: var(--r-sm); border: none; background: transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--ink-4); transition: all 0.15s var(--ease); position: relative;
+}
+.input-tool:hover { background: var(--accent-soft); color: var(--accent) }
+.input-tool .tool-label { font-size: 11px; font-weight: 600; margin-left: 2px }
+.input-tool:has(.tool-label) { width: auto; padding: 0 10px; gap: 4px }
+.input-tool.active { color: var(--accent); background: var(--accent-soft) }
+.input-spacer { flex: 1 }
+
+/* ── Send Button ── */
+.send-btn {
+  width: 36px; height: 36px; border-radius: var(--r-sm); border: none;
+  background: linear-gradient(135deg, var(--accent), #7091fa); color: #fff;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s var(--ease); box-shadow: 0 2px 8px rgba(91,124,247,0.3);
+}
+.send-btn:hover { box-shadow: 0 4px 16px rgba(91,124,247,0.4); transform: translateY(-1px) }
+.send-btn:active { transform: translateY(0) }
+
+/* ── Data Switcher ── */
+.data-switcher {
+  position: relative; display: flex; align-items: center; gap: 6px; padding: 5px 14px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); background: rgba(255,255,255,0.4);
+  font-size: 11.5px; font-weight: 600; color: var(--ink-3); cursor: pointer;
+  transition: all 0.15s var(--ease); font-family: var(--font); user-select: none; margin-left: 4px;
+}
+.data-switcher:hover, .data-switcher.open { background: var(--accent-soft); color: var(--accent); border-color: var(--accent) }
+
+/* ── Mode Switcher ── */
+.mode-switcher {
+  position: relative; display: flex; align-items: center; gap: 6px; padding: 5px 14px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); background: rgba(255,255,255,0.4);
+  font-size: 11.5px; font-weight: 600; color: var(--ink-3); cursor: pointer;
+  transition: all 0.15s var(--ease); font-family: var(--font); user-select: none; margin-left: 4px;
+}
+.mode-switcher:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent) }
+
+/* ── Popup Items ── */
+.upload-popup-item, .mode-popup-item, .more-popup-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+  font-size: 12.5px; color: var(--ink-2); cursor: pointer; transition: background 0.1s;
+}
+.upload-popup-item:hover, .mode-popup-item:hover, .more-popup-item:hover { background: var(--accent-soft); color: var(--accent) }
+.mode-popup-item.active { color: var(--accent); font-weight: 600 }
+
+/* ── Popover Back Button ── */
+.popover-back-btn {
+  display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+  font-size: 12px; font-weight: 600; color: var(--accent); cursor: pointer;
+  border-bottom: 1px solid var(--border-2); margin-bottom: 4px; transition: background 0.1s;
+}
+.popover-back-btn:hover { background: var(--accent-soft) }
+
+/* ── Skill Popup ── */
+.skill-popup-item {
+  display: flex; align-items: center; gap: 8px; padding: 7px 14px;
+  font-size: 12.5px; color: var(--ink-2); cursor: pointer; transition: all 0.15s var(--ease); position: relative;
+}
+.skill-popup-item:hover { background: var(--accent-soft); color: var(--accent) }
+.skill-popup-item.active { color: var(--accent); font-weight: 600 }
+.skill-tag { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; margin-left: auto }
+.skill-tag.builtin { background: rgba(16,185,129,0.08); color: #059669 }
+.skill-tag.custom { background: rgba(91,124,247,0.08); color: var(--accent) }
+.skill-tag.plugin { background: rgba(139,92,246,0.08); color: var(--accent-2) }
+.skill-popup-header { padding: 6px 14px 4px; font-size: 10px; font-weight: 600; color: var(--ink-3); border-bottom: 1px solid var(--border-2); margin-bottom: 4px }
+
+/* ── MCP Dropdown ── */
+.mcp-group { margin-bottom: 4px }
+.mcp-group-label {
+  padding: 10px 14px; font-size: 11px; font-weight: 700; color: var(--ink-2);
+  text-transform: uppercase; letter-spacing: 0.06em; display: flex; align-items: center; gap: 8px;
+  cursor: pointer; transition: all 0.15s var(--ease); user-select: none;
+  background: rgba(91,124,247,0.03); border-radius: 4px; margin: 0 6px;
+}
+.mcp-group-label:hover { background: rgba(91,124,247,0.06); color: var(--ink) }
+.mcp-group-label::before {
+  content: ''; width: 3px; height: 12px; border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent)); flex-shrink: 0;
+}
+.mcp-group-count {
+  font-size: 10px; font-weight: 600; color: var(--ink-4);
+  background: rgba(130,140,200,0.12); padding: 2px 8px; border-radius: 10px; margin-left: 4px;
+}
+.mcp-option {
+  display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 28px;
+  font-size: 12.5px; color: var(--ink-2); cursor: pointer; transition: all 0.12s var(--ease);
+  position: relative; font-family: var(--mono); letter-spacing: -0.01em;
+}
+.mcp-option:hover { background: var(--accent-soft); color: var(--ink) }
+.mcp-option.selected { color: var(--accent); font-weight: 600; background: var(--accent-soft) }
+.mcp-option.selected::after {
+  content: ''; position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+}
+.mcp-opt-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0 }
+.mcp-opt-dot.on { background: var(--success); box-shadow: 0 0 6px rgba(16,185,129,0.4) }
+.mcp-opt-dot.off { background: var(--ink-4); opacity: 0.5 }
+.mcp-opt-desc { font-size: 11px; color: var(--ink-4); margin-left: auto; font-family: var(--font); font-weight: 400 }
+
+/* ── Semantic Option ── */
+.sem-option:hover { background: var(--accent-soft); color: var(--ink) }
 
 /* ── Composer Wrapper ── */
 .composer-wrap {
@@ -761,6 +1015,24 @@ code, pre {
   background: var(--accent);
   color: #fff;
   box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3);
+}
+
+/* ── Typing Dot Animation ── */
+.typing-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3);
+  display: inline-block; animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-dot::before, .typing-dot::after {
+  content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ink-3); margin: 0 4px; vertical-align: middle;
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-dot::before { animation-delay: -0.4s }
+.typing-dot::after { animation-delay: 0.4s }
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4 }
+  30% { transform: translateY(-4px); opacity: 1 }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,12 +1,8 @@
 import { PlusOutlined } from '@ant-design/icons'
 import { useNavigate } from '@tanstack/react-router'
-import { message } from 'antd'
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 
-import CreateModal from '@/components/conversation-analysis/CreateModal'
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
-import { createApp } from '@/service/api/app'
-import { newConv } from '@/service/api/conv'
 
 interface CreateConversationButtonProps {
   collapsed: boolean
@@ -37,69 +33,34 @@ function ExpandIcon() {
 
 export function CreateConversationButton({ collapsed, onCreated, onToggleCollapse }: CreateConversationButtonProps) {
   const navigate = useNavigate()
-  const [createModalVisible, setCreateModalVisible] = useState(false)
 
-  const handleOpenCreateModal = useCallback(() => {
-    setCreateModalVisible(true)
-  }, [])
-
-  const handleCreateModalClose = useCallback(
-    async (formValue?: any) => {
-      if (!formValue) {
-        setCreateModalVisible(false)
-        return Promise.resolve()
-      }
-
-      try {
-        const createAppRes = await createApp(formValue)
-        const createdApp = createAppRes?.data
-        if (!createdApp?.chat_id) {
-          throw new Error('chat_id missing')
-        }
-
-        await newConv(createdApp)
-
-        const taskId = String(createdApp.chat_id)
-        localStorage.setItem('chatId', taskId)
-        setCreateModalVisible(false)
-        onCreated?.()
-
-        navigate({
-          to: TASK_DETAIL_ROUTE,
-          params: { taskId },
-        })
-        return Promise.resolve()
-      } catch (error) {
-        message.error('创建失败')
-        return Promise.reject(error)
-      }
-    },
-    [navigate, onCreated],
-  )
+  const handleCreateNewChat = useCallback(() => {
+    onCreated?.()
+    navigate({
+      to: TASK_DETAIL_ROUTE,
+      params: { taskId: 'new' },
+    })
+  }, [navigate, onCreated])
 
   return (
-    <>
-      <div className="shrink-0 flex items-center gap-2 mx-4 mb-3">
-        <button
-          type="button"
-          className="new-chat-capsule-btn"
-          onClick={handleOpenCreateModal}
-          style={{ padding: collapsed ? '10px 0' : '10px 18px' }}
-        >
-          <PlusOutlined style={{ fontSize: 14, fontWeight: 600 }} />
-          {!collapsed && '新建对话'}
-        </button>
-        <button
-          type="button"
-          className="collapse-sidebar-btn"
-          onClick={onToggleCollapse}
-          title={collapsed ? '展开侧边栏' : '收起侧边栏'}
-        >
-          {collapsed ? <ExpandIcon /> : <CollapseIcon />}
-        </button>
-      </div>
-
-      <CreateModal visible={createModalVisible} onClose={handleCreateModalClose} />
-    </>
+    <div className="shrink-0 flex items-center gap-2 mx-4 mb-3">
+      <button
+        type="button"
+        className="new-chat-primary-btn"
+        onClick={handleCreateNewChat}
+        style={{ padding: collapsed ? '10px 0' : '10px 18px' }}
+      >
+        <PlusOutlined style={{ fontSize: 14, fontWeight: 600 }} />
+        {!collapsed && '新建对话'}
+      </button>
+      <button
+        type="button"
+        className="collapse-sidebar-btn"
+        onClick={onToggleCollapse}
+        title={collapsed ? '展开侧边栏' : '收起侧边栏'}
+      >
+        {collapsed ? <ExpandIcon /> : <CollapseIcon />}
+      </button>
+    </div>
   )
 }

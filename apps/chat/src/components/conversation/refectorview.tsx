@@ -1,9 +1,10 @@
 import { Button, Form, Modal } from 'antd'
-import React from 'react'
+import React, { useState } from 'react'
 import { flushSync } from 'react-dom'
 import dayjs from 'dayjs'
 
 import ChatHeader from './components/chat-header'
+import type { ModelOption } from './components/chat-header'
 import Composer from './components/Composer'
 import DebugPanel from './components/DebugPanel'
 import MessageList from './components/MessageList'
@@ -12,7 +13,8 @@ import { useConversationController, type ConversationProps } from './hooks/useCo
 
 const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void }, ConversationProps>((props, ref) => {
   const { conv, fold } = props
-  const controller = useConversationController(props, ref)
+  const [selectedModel, setSelectedModel] = useState<string>('')
+  const controller = useConversationController({ ...props, selectedModel }, ref)
 
   const {
     chatContainerRef,
@@ -76,6 +78,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
         onUpdateList={onUpdateList}
         setIsSharing={setIsSharing}
         onClose={onClose}
+        onModelChange={(model: ModelOption) => setSelectedModel(model.key)}
       />
 
       <MessageList
