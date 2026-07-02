@@ -1,6 +1,11 @@
-import { LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { Popconfirm, Table, Tag } from 'antd'
-import React from 'react'
+import React, { useMemo } from 'react'
+
+import { OntologyCardList } from '@/pages/workbench/ontology-kg/components/OntologyCardList'
+import { OntologyTablePagination } from '@/pages/workbench/ontology-kg/components/OntologyTablePagination'
+import type { OntologyViewMode } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
+import { formatDateTime, formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display'
+import { shouldDisplayColumn } from '@/pages/workbench/ontology-kg/utils/view-controls'
 
 import { DIMENSION_STATUS_TEXT_MAP, DIMENSION_TYPE_TEXT_MAP } from '../constants/dimensionModeling.constants'
 import type { DimensionModelItem, DimensionPagination } from '../types/dimensionModeling.types'
@@ -13,6 +18,8 @@ interface Props {
   readonly onHierarchy: (record: DimensionModelItem) => void
   readonly onPaginationChange: (page: number, pageSize: number) => void
   readonly pagination: DimensionPagination
+  readonly viewMode: OntologyViewMode
+  readonly visibleColumnKeys: ReadonlySet<string>
 }
 
 const statusColorMap: Record<string, string> = {
@@ -27,8 +34,15 @@ export const DimensionTable: React.FC<Props> = ({
   onEdit,
   onHierarchy,
   onPaginationChange,
-  pagination
+  pagination,
+  viewMode,
+  visibleColumnKeys
 }) => {
+  const renderStatus = (value: string | number) => {
+    const key = String(value ?? '0')
+    return <Tag color={statusColorMap[key] || 'default'}>{DIMENSION_STATUS_TEXT_MAP[key] || '禁用'}</Tag>
+  }
+
   const columns = useMemo(
     () => [
       {
@@ -51,7 +65,7 @@ export const DimensionTable: React.FC<Props> = ({
         align: 'center',
         dataIndex: 'dimType',
         key: 'dimType',
-        render: (value: string) => DIMENSION_TYPE_TEXT_MAP[value] || value || '-',
+        render: (value: string) => DIMENSION_TYPE_TEXT_MAP[value] || formatDisplayValue(value),
         title: '维度类型',
         width: 120
       },
@@ -75,10 +89,7 @@ export const DimensionTable: React.FC<Props> = ({
         align: 'center',
         dataIndex: 'status',
         key: 'status',
-        render: (value: string | number) => {
-          const key = String(value ?? '0')
-          return <Tag color={statusColorMap[key] || 'default'}>{DIMENSION_STATUS_TEXT_MAP[key] || '禁用'}</Tag>
-        },
+        render: renderStatus,
         title: '状态',
         width: 100
       },
@@ -86,6 +97,7 @@ export const DimensionTable: React.FC<Props> = ({
         align: 'center',
         dataIndex: 'updateTime',
         key: 'updateTime',
+        render: formatDateTime,
         title: '更新时间',
         width: 180
       },
@@ -119,67 +131,76 @@ export const DimensionTable: React.FC<Props> = ({
     [onDelete, onEdit, onHierarchy]
   )
 
-  const tableWidth = useMemo(() => columns.reduce((sum, item: any) => sum + (item.width || 120), 0), [columns])
+  const visibleColumns = useMemo(() => columns.filter((column: any) => shouldDisplayColumn(column.key, visibleColumnKeys)), [columns, visibleColumnKeys])
+  const tableWidth = useMemo(() => visibleColumns.reduce((sum, item: any) => sum + (item.width || 120), 0), [visibleColumns])
   const tableColumns = useMemo(
     () =>
       dataSource.length
-        ? columns
-        : columns.map((item: any) => ({
+        ? visibleColumns
+        : visibleColumns.map((item: any) => ({
             ...item,
             fixed: undefined,
             width: undefined
           })),
-    [columns, dataSource.length]
+    [dataSource.length, visibleColumns]
+  )
+  const cardFields = useMemo(
+    () =>
+      [
+        { key: 'englishName', label: '英文名', render: (record: DimensionModelItem) => formatDisplayValue(record.englishName) },
+        { key: 'dimType', label: '维度类型', render: (record: DimensionModelItem) => DIMENSION_TYPE_TEXT_MAP[record.dimType] || formatDisplayValue(record.dimType) },
+        { key: 'path', label: '维度路径(目录)', render: (record: DimensionModelItem) => formatDisplayValue(record.path) },
+        { key: 'owner', label: '负责人', render: (record: DimensionModelItem) => formatDisplayValue(record.owner) },
+        { key: 'status', label: '状态', render: (record: DimensionModelItem) => renderStatus(record.status) },
+        { key: 'updateTime', label: '更新时间', render: (record: DimensionModelItem) => formatDateTime(record.updateTime) },
+      ].filter(field => visibleColumnKeys.has(field.key)),
+    [visibleColumnKeys],
   )
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-      <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0, width: '100%' }}>
-        <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-          <Table
-            className="assistant-table-scroll abi-std-table"
-            columns={tableColumns as any}
-            dataSource={dataSource}
-            loading={loading}
-            rowKey={record => String(record.id)}
-            scroll={dataSource.length > 0 ? { x: tableWidth } : undefined}
-            size="middle"
-            pagination={false}
-          />
+      {viewMode === 'card' ? (
+        <OntologyCardList
+          actions={record => (
+            <div className="flex items-center gap-1">
+              <AButton className="abi-action-link" size="small" variant="link" onClick={() => onEdit(record)}>
+                编辑
+              </AButton>
+              <AButton className="abi-action-link" size="small" variant="link" onClick={() => onHierarchy(record)}>
+                层级配置
+              </AButton>
+              <Popconfirm cancelText="取消" description="确定删除该维度吗？" okText="确定" title="提示" onConfirm={() => onDelete(record)}>
+                <AButton className="abi-action-link-danger" size="small" variant="link">
+                  删除
+                </AButton>
+              </Popconfirm>
+            </div>
+          )}
+          dataSource={dataSource}
+          emptyText="暂无维度"
+          fields={cardFields}
+          loading={loading}
+          rowKey={record => String(record.id)}
+          title={record => formatDisplayValue(record.zhName)}
+          titleExtra={record => renderStatus(record.status)}
+        />
+      ) : (
+        <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0, width: '100%' }}>
+          <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+            <Table
+              className="assistant-table-scroll abi-std-table"
+              columns={tableColumns as any}
+              dataSource={dataSource}
+              loading={loading}
+              rowKey={record => String(record.id)}
+              scroll={dataSource.length > 0 ? { x: tableWidth } : undefined}
+              size="middle"
+              pagination={false}
+            />
+          </div>
         </div>
-      </div>
-      <div className="data-source-pagination">
-        <span className="total-text">共 {pagination.total} 条</span>
-        <div className="pagination-controls">
-          <ASelect
-            value={pagination.pageSize}
-            onChange={(size: number) => onPaginationChange(pagination.current, size)}
-            options={[
-              { label: '10条/页', value: 10 },
-              { label: '15条/页', value: 15 },
-              { label: '20条/页', value: 20 },
-              { label: '25条/页', value: 25 },
-              { label: '30条/页', value: 30 },
-            ]}
-            className="page-size-select"
-          />
-          <button className="page-btn" disabled={pagination.current === 1} onClick={() => onPaginationChange(pagination.current - 1, pagination.pageSize)}>
-            <LeftOutlined />
-          </button>
-          {Array.from({ length: Math.ceil(pagination.total / pagination.pageSize) || 1 }, (_, i) => i + 1).map(page => (
-            <span
-              key={page}
-              className={`page-item ${page === pagination.current ? 'page-active' : ''}`}
-              onClick={() => onPaginationChange(page, pagination.pageSize)}
-            >
-              {page}
-            </span>
-          ))}
-          <button className="page-btn" disabled={pagination.current >= Math.ceil(pagination.total / pagination.pageSize)} onClick={() => onPaginationChange(pagination.current + 1, pagination.pageSize)}>
-            <RightOutlined />
-          </button>
-        </div>
-      </div>
+      )}
+      <OntologyTablePagination {...pagination} onChange={onPaginationChange} />
     </div>
   )
 }

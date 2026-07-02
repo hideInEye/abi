@@ -1,0 +1,115 @@
+.dimensionTree {
+  padding: 8px 10px;
+  color: #1f2937;
+  font-size: 14px;
+
+  :global(.ant-tree-list-holder-inner) {
+    gap: 2px;
+  }
+
+  :global(.ant-tree-treenode) {
+    width: 100%;
+    min-height: 34px;
+    padding: 0 0 4px;
+    align-items: center;
+  }
+
+  :global(.ant-tree-switcher) {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 24px !important;
+    height: 32px;
+    line-height: 32px;
+    color: #1f2937;
+    flex-shrink: 0;
+  }
+
+  :global(.ant-tree-checkbox) {
+    margin: 6px 8px 0 0;
+  }
+
+  :global(.ant-tree-node-content-wrapper) {
+    display: inline-flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+    line-height: 32px;
+  }
+
+  :global(.ant-tree-node-content-wrapper:hover) {
+    background: rgba(91, 124, 247, 0.08);
+  }
+
+  :global(.ant-tree-node-selected) {
+    background: transparent !important;
+    color: #1f2937;
+  }
+
+  :global(.ant-tree-node-selected .ant-tree-title) {
+    color: #1f2937 !important;
+    font-weight: 400 !important;
+  }
+
+  :global(.ant-tree-indent-unit) {
+    width: 20px;
+  }
+
+  :global(.ant-tree-title) {
+    display: inline-flex !important;
+    min-width: 0;
+    width: auto !important;
+  }
+}
+
+.groupNode {
+  :global(.ant-tree-switcher) {
+    color: #1f2937;
+  }
+
+  :global(.ant-tree-checkbox) {
+    display: none;
+  }
+
+  :global(.ant-tree-node-content-wrapper) {
+    margin-left: 0;
+  }
+
+  &:global(.ant-tree-treenode-selected) {
+    :global(.ant-tree-node-content-wrapper) {
+      background: transparent !important;
+      color: #1f2937;
+    }
+  }
+}
+
+.treeNodeTitle {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.folderIcon {
+  flex: 0 0 auto;
+  color: currentColor;
+  font-size: 16px;
+}
+
+.fileIcon {
+  flex: 0 0 auto;
+  color: currentColor;
+  font-size: 15px;
+}
+
+.nodeText {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+}

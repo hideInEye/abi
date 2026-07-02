@@ -108,7 +108,7 @@ export interface DimensionFormValues {
 }
 
 export interface DimensionPagination {
-  current: number
+  pageNum: number
   pageSize: number
   total: number
 }

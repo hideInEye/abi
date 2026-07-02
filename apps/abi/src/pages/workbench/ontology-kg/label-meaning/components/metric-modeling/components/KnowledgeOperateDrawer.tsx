@@ -6,9 +6,18 @@ import React from 'react'
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
 
 import { INDICATOR_TYPE_OPTIONS } from '../constants/metricModeling.constants'
-import type { KnowledgeFormValues, KnowledgeIndicatorItem, KnowledgeSubmitPayload, KnowledgeTechField, KnowledgeTemplateParams } from '../types/metricModeling.types'
+import type {
+  KnowledgeAtomicMetricMeta,
+  KnowledgeExpressionFieldMeta,
+  KnowledgeFormValues,
+  KnowledgeIndicatorItem,
+  KnowledgeSubmitPayload,
+  KnowledgeTechField,
+  KnowledgeTemplateParams,
+} from '../types/metricModeling.types'
 import { extractUniqueIds, getStepItems, parseTemplateParams } from '../utils/knowledgeOperateDrawer.utils'
 import { createKnowledgeOperateValidators } from '../utils/knowledgeOperateDrawer.validators'
+import { parseKnowledgeCalcLogicFormValues } from '../utils/knowledgeSubmitPayload'
 import { getKnowledgeSpaceId } from '../utils/space'
 
 import { KnowledgeOperateBusinessStep } from './knowledgeOperateDrawer.BusinessStep'
@@ -60,6 +69,7 @@ const DERIVATIVE_TEMPLATE_FIELDS: Array<keyof KnowledgeFormValues> = [
 const DERIVED_ONLY_FIELDS: Array<keyof KnowledgeFormValues> = [
   'derivedConditionExpr',
   'derivedConditions',
+  'derivedExpressions',
   'projectionFunc',
   'techId',
 ]
@@ -170,6 +180,42 @@ function extractAtomicFields(item?: KnowledgeIndicatorItem) {
   return Array.from(fieldMap.values())
 }
 
+function buildAtomicMetricMetaMap(options: AtomicIndicatorOption[]) {
+  return options.reduce<Record<string, KnowledgeAtomicMetricMeta>>((acc, option) => {
+    const key = String(option.value || '').trim()
+    if (!key) {
+      return acc
+    }
+
+    acc[key] = {
+      field: String(option.item.indicatorCode || key).trim(),
+      fieldName: String(option.item.techName || option.label || key).trim(),
+      id: option.item.indId ?? option.item.termId ?? key,
+      label: option.label,
+      value: key,
+    }
+
+    return acc
+  }, {})
+}
+
+function buildDerivedExpressionFieldMetaMap(fields: KnowledgeTechField[]) {
+  return fields.reduce<Record<string, KnowledgeExpressionFieldMeta>>((acc, item) => {
+    const key = String(item.techId || item.fieldName || item.name || '').trim()
+    if (!key) {
+      return acc
+    }
+
+    acc[key] = {
+      field: String(item.fieldName || item.originName || item.name || key).trim(),
+      fieldName: String(item.bizName || item.tfieldAlias || item.fieldName || item.name || key).trim(),
+      value: key,
+    }
+
+    return acc
+  }, {})
+}
+
 function splitAliasTags(value: unknown) {
   if (Array.isArray(value)) {
     return value
@@ -178,6 +224,59 @@ function splitAliasTags(value: unknown) {
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)
+}
+
+function resolveDerivedConditionMetrics(
+  conditions: KnowledgeFormValues['derivedConditions'],
+  fields: KnowledgeTechField[],
+) {
+  if (!conditions?.length || !fields.length) {
+    return conditions
+  }
+
+  const fieldKeyMap = new Map<string, string>()
+  fields.forEach(item => {
+    const key = String(item.techId || item.fieldName || item.name || '').trim()
+    if (!key) {
+      return
+    }
+
+    [
+      key,
+      item.fieldName,
+      item.originName,
+      item.name,
+      item.bizName,
+      item.tfieldAlias,
+    ].forEach(value => {
+      const text = String(value || '').trim()
+      if (text) {
+        fieldKeyMap.set(text, key)
+      }
+    })
+  })
+
+  return conditions.map(item => {
+    const metric = String(item?.metric || '').trim()
+    return {
+      ...item,
+      metric: fieldKeyMap.get(metric) || metric,
+    }
+  })
+}
+
+function resolveDerivedExpressionMetrics(
+  expressions: KnowledgeFormValues['derivedExpressions'],
+  fields: KnowledgeTechField[],
+) {
+  if (!expressions?.length) {
+    return expressions
+  }
+
+  return expressions.map(expression => ({
+    ...expression,
+    conditions: resolveDerivedConditionMetrics(expression.conditions, fields)
+  }))
 }
 
 function compactTemplateParams(params: KnowledgeTemplateParams): KnowledgeTemplateParams | undefined {
@@ -252,9 +351,11 @@ function buildTemplateParams(values: KnowledgeFormValues, indicatorClass: Indica
 
 function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormValues {
   const templateValues = parseTemplateParams(item.templateParams) as Partial<KnowledgeFormValues>
+  const calcLogicValues = parseKnowledgeCalcLogicFormValues(item.calcLogic) as Partial<KnowledgeFormValues>
   const values: KnowledgeFormValues = {
     ...item,
     ...templateValues,
+    ...calcLogicValues,
     dimensionFieldIds: item.dimensionFieldIds ?? item.relateDims,
     indAlias: splitAliasTags(item.indAlias),
   }
@@ -269,14 +370,28 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
   const [current, setCurrent] = useState(0)
   const [selectedIndicatorClass, setSelectedIndicatorClass] = useState<IndicatorType>('derived')
   const [allFields, setAllFields] = useState<KnowledgeTechField[]>([])
-  const [atomicIndicatorOptions, setAtomicIndicatorOptions] = useState<AtomicIndicatorOption[]>([])
+  const [indicatorOptionSource, setIndicatorOptionSource] = useState<KnowledgeIndicatorItem[]>([])
+  const editMatchedRef = useRef(false)
   const formValuesRef = useRef<Partial<KnowledgeFormValues>>({})
-
+  const templateTypeVal = AForm.useWatch('templateType',form)!
+  
   const isEditing = Boolean(editingItem)
   const isAtomicEditing = normalizeIndicatorClass(editingItem?.indicatorClass) === 'atomic'
   const indicatorClass = normalizeIndicatorClass(String(form.getFieldValue('indicatorClass') || selectedIndicatorClass || 'derived'))
   const stepItems = useMemo(() => getStepItems(true, isAtomicEditing), [isAtomicEditing])
   const currentStepKey = stepItems[current]?.key
+  const atomicIndicatorOptions = useMemo(() => {
+    const allowedClasses = indicatorClass === 'derivative' ? new Set(['atomic', 'derived']) : new Set(['atomic'])
+
+    return indicatorOptionSource
+      .filter((item) => allowedClasses.has(normalizeIndicatorClass(item.indicatorClass)))
+      .map((item) => ({
+        item,
+        label: String(item.techName || item.bizName || item.indicatorCode || '-'),
+        value: normalizeAtomicSelectValue(item),
+      }))
+      .filter((item) => item.value)
+  }, [indicatorClass, indicatorOptionSource])
 
   const {
     validateAccumulationDate,
@@ -307,18 +422,10 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
         pageSize: 1000,
         spaceId: getKnowledgeSpaceId(),
       })
-      const allList = (res?.response?.data?.data?.list || []) as KnowledgeIndicatorItem[]
-      const options = allList
-        .filter((item) => normalizeIndicatorClass(item.indicatorClass) === 'atomic')
-        .map((item) => ({
-          item,
-          label: String(item.techName || item.bizName || item.indicatorCode || '-'),
-          value: normalizeAtomicSelectValue(item),
-        }))
-        .filter((item) => item.value)
-      setAtomicIndicatorOptions(options)
+      const allList = (res?.data?.list || []) as KnowledgeIndicatorItem[]
+      setIndicatorOptionSource(allList)
     } catch {
-      setAtomicIndicatorOptions([])
+      setIndicatorOptionSource([])
     }
   }, [])
 
@@ -331,9 +438,11 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
 
   useEffect(() => {
     if (!open) {
+      editMatchedRef.current = false
       return
     }
     form.resetFields()
+    editMatchedRef.current = false
     formValuesRef.current = {}
     setCurrent(0)
 
@@ -343,17 +452,10 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       editValues.indicatorClass = indicatorClassValue
 
       if (!isAtomicEditing) {
-        const currentTechIdentity = resolveTechFieldIdentity(editingItem.techId)
-        const matchedOption = atomicIndicatorOptions.find((item) => {
-          const optionTechIdentity = resolveTechFieldIdentity(item.item.techId)
-          return optionTechIdentity && optionTechIdentity === currentTechIdentity
-        })
-        if (matchedOption) {
-          editValues.techId = matchedOption.value
-          setAllFields(extractAtomicFields(matchedOption.item))
-        } else {
-          setAllFields(extractAtomicFields(editingItem))
-        }
+        const nextAllFields = extractAtomicFields(editingItem)
+        editValues.derivedConditions = resolveDerivedConditionMetrics(editValues.derivedConditions, nextAllFields)
+        editValues.derivedExpressions = resolveDerivedExpressionMetrics(editValues.derivedExpressions, nextAllFields)
+        setAllFields(nextAllFields)
       } else {
         setAllFields([])
       }
@@ -365,6 +467,14 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       return
     }
     const nextValues = {
+      derivedExpressions: [{
+        conditions: [{
+          metric: '',
+          operator: '=',
+          value: ''
+        }],
+        innerLogic: 'AND'
+      }],
       indAlias: [],
       variableMappings: [],
     }
@@ -372,6 +482,36 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     formValuesRef.current = nextValues
     setSelectedIndicatorClass('derived')
     setAllFields([])
+  }, [editingItem, form, isAtomicEditing, open])
+
+  useEffect(() => {
+    if (!open || !editingItem || isAtomicEditing || editMatchedRef.current || !atomicIndicatorOptions.length) {
+      return
+    }
+
+    const currentTechIdentity = resolveTechFieldIdentity(editingItem.techId)
+    const matchedOption = atomicIndicatorOptions.find((item) => {
+      const optionTechIdentity = resolveTechFieldIdentity(item.item.techId)
+      return optionTechIdentity && optionTechIdentity === currentTechIdentity
+    })
+
+    if (!matchedOption) {
+      return
+    }
+
+    const nextAllFields = extractAtomicFields(matchedOption.item)
+    const nextValues: Partial<KnowledgeFormValues> = {
+      derivedConditions: resolveDerivedConditionMetrics(form.getFieldValue('derivedConditions'), nextAllFields),
+      derivedExpressions: resolveDerivedExpressionMetrics(form.getFieldValue('derivedExpressions'), nextAllFields),
+      techId: matchedOption.value,
+    }
+    form.setFieldsValue(nextValues)
+    formValuesRef.current = {
+      ...formValuesRef.current,
+      ...nextValues,
+    }
+    setAllFields(nextAllFields)
+    editMatchedRef.current = true
   }, [atomicIndicatorOptions, editingItem, form, isAtomicEditing, open])
 
   useEffect(() => {
@@ -382,7 +522,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
 
   const getTechnicalRequiredFields = () => {
     if (indicatorClass === 'derived') {
-      return ['indicatorCode', 'techId', 'projectionFunc', 'derivedConditions']
+      return ['indicatorCode', 'techId', 'projectionFunc', 'derivedExpressions']
     }
 
     const templateType = String(form.getFieldValue('templateType') || '')
@@ -497,6 +637,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     const payload: KnowledgeSubmitPayload = {
       ...editingItem,
       ...values,
+      atomicMetricMetaMap: buildAtomicMetricMetaMap(atomicIndicatorOptions),
+      derivedExpressionFieldMetaMap: buildDerivedExpressionFieldMetaMap(allFields),
       dimensionFieldIds: values.dimensionFieldIds ?? editingItem?.dimensionFieldIds ?? '',
       groupId,
       indAlias: aliasText,
@@ -563,7 +705,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
             atomicMetricOptions={atomicIndicatorOptions}
             form={form}
             indicatorClass={indicatorClass}
-            templateTypeVal={String(form.getFieldValue('templateType') || '')}
+            templateTypeVal={templateTypeVal}
             validateAccumulationDate={validateAccumulationDate}
             validateCustomExpression={validateCustomExpression}
             validatePercentile={validatePercentile}

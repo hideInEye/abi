@@ -34,9 +34,20 @@ const initialSearchParams: DimensionSearchParams = {
 }
 
 const initialPagination: DimensionPagination = {
-  current: 1,
+  pageNum: 1,
   pageSize: 10,
   total: 0
+}
+
+function getResponseTotal(res: any, fallback = 0) {
+  const value =
+    res?.data?.total ??
+    res?.response?.data?.data?.total ??
+    res?.response?.data?.total ??
+    res?.total ??
+    fallback
+  const total = Number(value)
+  return Number.isNaN(total) ? fallback : total
 }
 
 function toNumber(value: any) {
@@ -63,7 +74,6 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [loading, setLoading] = useState(false)
   const [searchParams, setSearchParams] = useState<DimensionSearchParams>(initialSearchParams)
   const [queryKeyword, setQueryKeyword] = useState('')
-  const [allData, setAllData] = useState<DimensionModelItem[]>([])
   const [tableData, setTableData] = useState<DimensionModelItem[]>([])
   const [pagination, setPagination] = useState<DimensionPagination>(initialPagination)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -73,43 +83,8 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [hierarchyItems, setHierarchyItems] = useState<DimensionHierarchyEditItem[]>([])
   const [hierarchyLoading, setHierarchyLoading] = useState(false)
 
-  const filteredList = useMemo(() => {
-    const keyword = queryKeyword.trim()
-    const list = allData.filter(item => {
-      const inGroup = selectedGroup?.groupId ? Number(item.groupId) === Number(selectedGroup.groupId) : false
-      if (!inGroup) {
-        return false
-      }
-      if (!keyword) {
-        return true
-      }
-      return (
-        String(item.zhName || '').includes(keyword) ||
-        String(item.englishName || '').includes(keyword) ||
-        String(item.path || '').includes(keyword) ||
-        String(item.owner || '').includes(keyword)
-      )
-    })
-    return list
-  }, [allData, queryKeyword, selectedGroup?.groupId])
-
-  const updateTableByPagination = (list: DimensionModelItem[], next: DimensionPagination) => {
-    const start = (next.current - 1) * next.pageSize
-    const end = start + next.pageSize
-    setTableData(list.slice(start, end))
-    setPagination({
-      ...next,
-      total: list.length
-    })
-  }
-
-  useEffect(() => {
-    updateTableByPagination(filteredList, pagination)
-  }, [filteredList])
-
-  const fetchTableData = async (keyword = queryKeyword) => {
+  const fetchTableData = async (keyword = queryKeyword, nextPagination: DimensionPagination = pagination) => {
     if (!selectedGroup?.groupId) {
-      setAllData([])
       setTableData([])
       setPagination(initialPagination)
       return
@@ -119,8 +94,8 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
       const res = await queryDimensionList({
         bizName: keyword.trim(),
         groupId: selectedGroup.groupId,
-        pageNum: 1,
-        pageSize: 1000,
+        pageNum: nextPagination.pageNum,
+        pageSize: nextPagination.pageSize,
         spaceId: Number(localStorage.getItem('spaceId')),
         techName: keyword.trim()
       })
@@ -132,11 +107,12 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
           groupName: item.groupName ?? selectedGroup.groupName
         })
       )
-      setAllData(list)
-      setPagination(prev => ({
-        ...prev,
-        current: 1,
-        total: list.length
+      setTableData(list)
+      setPagination(current => ({
+        ...current,
+        pageNum: nextPagination.pageNum,
+        pageSize: nextPagination.pageSize,
+        total: getResponseTotal(res)
       }))
     } finally {
       setLoading(false)
@@ -157,13 +133,13 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const handleQuery = async () => {
     const keyword = searchParams.keyword
     setQueryKeyword(keyword)
-    await fetchTableData(keyword)
+    await fetchTableData(keyword, { ...pagination, pageNum: 1 })
   }
 
   const handleReset = async () => {
     setSearchParams(initialSearchParams)
     setQueryKeyword('')
-    await fetchTableData('')
+    await fetchTableData('', { ...pagination, pageNum: 1 })
   }
 
   const handleAdd = () => {
@@ -239,10 +215,10 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   }
 
   const handlePaginationChange = (page: number, pageSize: number) => {
-    updateTableByPagination(filteredList, {
-      current: page,
+    fetchTableData(queryKeyword, {
+      pageNum: page,
       pageSize,
-      total: filteredList.length
+      total: pagination.total
     })
   }
 

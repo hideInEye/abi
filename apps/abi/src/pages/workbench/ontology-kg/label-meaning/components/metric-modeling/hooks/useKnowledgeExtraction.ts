@@ -9,8 +9,9 @@ import {
   syncAtomicIndicators
 } from '@/service/api/knowledge-extraction'
 
-import type { AtomicMappingPayload, KnowledgeGroupItem, KnowledgeIndicatorItem, KnowledgeSearchParams, KnowledgeSubmitPayload } from '../types/metricModeling.types'
+import type { AtomicMappingPayload, KnowledgeGroupItem, KnowledgeIndicatorItem, KnowledgePagination, KnowledgeSearchParams, KnowledgeSubmitPayload } from '../types/metricModeling.types'
 import { getKnowledgeSpaceId } from '../utils/space'
+import { buildKnowledgeCalcLogic } from '../utils/knowledgeSubmitPayload'
 
 const UI_TO_API_QUALITY_LEVEL: Record<string, string> = {
   p0: 'P0-核心',
@@ -36,6 +37,21 @@ const initialSearchParams: KnowledgeSearchParams = {
   techName: '',
   status: undefined,
   type: ''
+}
+
+const initialPagination: KnowledgePagination = {
+  pageNum: 1,
+  pageSize: 10,
+  total: 0
+}
+
+function getIndicatorPageData(res: any) {
+  return res?.data ?? res?.response?.data?.data ?? res?.response?.data ?? {}
+}
+
+function getIndicatorTotal(res: any, fallback = 0) {
+  const total = Number(getIndicatorPageData(res)?.total ?? fallback)
+  return Number.isNaN(total) ? fallback : total
 }
 
 function trimOrUndefined(value: unknown) {
@@ -124,41 +140,6 @@ function normalizeDetail(res: ApiResponseLike): KnowledgeIndicatorItem | null {
   return data as KnowledgeIndicatorItem
 }
 
-function buildCalcLogic(values: KnowledgeSubmitPayload) {
-  return compactPayload({
-    accumulateStartDate: values.accumulateStartDate,
-    projectionFunc: values.projectionFunc,
-    calcPeriod: values.calcPeriod,
-    compareMetricId: values.compareMetricId,
-    comparePeriod: values.comparePeriod,
-    compareType: values.compareType,
-    comparisonOutputType: values.comparisonOutputType,
-    cumulativeMetricId: values.cumulativeMetricId,
-    cumulativeMode: values.cumulativeMode,
-    cumulativeTimeRange: values.cumulativeTimeRange,
-    derivedConditionExpr: values.derivedConditionExpr,
-    derivedConditions: values.derivedConditions,
-    divideZeroStrategy: values.divideZeroStrategy,
-    expr: values.expr,
-    nullStrategy: values.nullStrategy,
-    percentileValue: values.percentileValue,
-    ratioDenominatorId: values.ratioDenominatorId,
-    ratioNumeratorId: values.ratioNumeratorId,
-    ratioPrecision: values.ratioPrecision,
-    relItemId: values.relItemId,
-    rollingWindowSize: values.rollingWindowSize,
-    techId: values.techId,
-    templateType: values.templateType,
-    thresholdMax: values.thresholdMax,
-    thresholdMin: values.thresholdMin,
-    variableMappings: values.variableMappings,
-    variableName: values.variableName,
-    volatilityDataRange: values.volatilityDataRange,
-    volatilityMethod: values.volatilityMethod,
-    volatilityMetricId: values.volatilityMetricId
-  })
-}
-
 function buildSubmitPayload(payload: KnowledgeSubmitPayload, selectedGroup: KnowledgeGroupItem | null) {
   const selectedGroupId = toNumberOrUndefined(selectedGroup?.groupId)
 
@@ -166,7 +147,7 @@ function buildSubmitPayload(payload: KnowledgeSubmitPayload, selectedGroup: Know
     alertConfig: payload.alertConfig,
     bizName: trimOrUndefined(payload.bizName),
     businessDefinition: trimOrUndefined(payload.businessDefinition),
-    calcLogic: buildCalcLogic(payload),
+    calcLogic: buildKnowledgeCalcLogic(payload),
     dataType: trimOrUndefined(payload.dataType),
     groupId: selectedGroupId ?? toNumberOrUndefined(payload.groupId),
     indAlias: trimOrUndefined(payload.indAlias),
@@ -198,13 +179,15 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
   const [loading, setLoading] = useState(false)
   const [tableData, setTableData] = useState<KnowledgeIndicatorItem[]>([])
   const [searchParams, setSearchParams] = useState<KnowledgeSearchParams>(initialSearchParams)
+  const [pagination, setPagination] = useState<KnowledgePagination>(initialPagination)
   const [customDrawerOpen, setCustomDrawerOpen] = useState(false)
   const [atomicDrawerOpen, setAtomicDrawerOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<KnowledgeIndicatorItem | null>(null)
 
-  const fetchTableData = async (params?: Partial<KnowledgeSearchParams>) => {
+  const fetchTableData = async (params?: Partial<KnowledgeSearchParams>, nextPagination: KnowledgePagination = pagination) => {
     if (!selectedGroup?.groupId) {
       setTableData([])
+      setPagination(initialPagination)
       return
     }
     const queryParams = {
@@ -217,13 +200,20 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
         groupId: selectedGroup.groupId,
         indicatorClass: queryParams.type || undefined,
         techName: queryParams.techName || undefined,
-        pageNum: 1,
-        pageSize: 10,
+        pageNum: nextPagination.pageNum,
+        pageSize: nextPagination.pageSize,
         spaceId: getKnowledgeSpaceId(),
         status: queryParams.status
       })
-      const list = (res?.response?.data?.data?.list || []) as KnowledgeIndicatorItem[]
+      const pageData = getIndicatorPageData(res)
+      const list = (pageData?.list || []) as KnowledgeIndicatorItem[]
       setTableData(list)
+      setPagination(current => ({
+        ...current,
+        pageNum: nextPagination.pageNum,
+        pageSize: nextPagination.pageSize,
+        total: getIndicatorTotal(res)
+      }))
     } finally {
       setLoading(false)
     }
@@ -242,12 +232,20 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
   }
 
   const handleQuery = () => {
-    fetchTableData(searchParams)
+    fetchTableData(searchParams, { ...pagination, pageNum: 1 })
   }
 
   const handleReset = () => {
     setSearchParams(initialSearchParams)
-    fetchTableData(initialSearchParams)
+    fetchTableData(initialSearchParams, { ...pagination, pageNum: 1 })
+  }
+
+  const handlePaginationChange = (pageNum: number, pageSize: number) => {
+    fetchTableData(searchParams, {
+      pageNum,
+      pageSize,
+      total: pagination.total
+    })
   }
 
   const handleAddCustom = () => {
@@ -367,6 +365,8 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     handleSubmit,
     loading,
     searchParams,
-    tableData
+    tableData,
+    pagination,
+    handlePaginationChange
   }
 }

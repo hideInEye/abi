@@ -56,7 +56,7 @@ export function useOntologyGraph(spaceId: OntologyNetworkId): UseOntologyGraphRe
         setLoading(true)
         try {
           const { data } = await queryOntologyGraph({
-            degree: values.degree,
+            degree: values.degree ?? 2,
             endEntityId: values.endEntityId,
             relationKeyword: values.relationKeyword.trim() || undefined,
             spaceId,

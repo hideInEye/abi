@@ -2,7 +2,10 @@ import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { Select, message } from 'antd'
 import React, { useCallback, useState } from 'react'
 
+import { ViewControls } from '@/components/ViewControls'
+import type { ColumnOption } from '@/components/ViewControls'
 import { useAppSelector } from '@/hooks/business/useStore'
+import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import type { OntologyNetworkId, OntologyRelation } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { getSpaceId } from '@/store/slice/app'
 
@@ -11,6 +14,15 @@ import RelationTable from './components/RelationTable'
 import { useRelationManagement } from './hooks/useRelationManagement'
 import type { RelationFormValues, RelationSearchValues } from './types'
 
+const RELATION_COLUMN_OPTIONS: ColumnOption[] = [
+  { key: 'startEntityId', label: '开始节点', visible: true },
+  { key: 'relation', label: '关系名称', visible: true },
+  { key: 'endEntityId', label: '结束节点', visible: true },
+  { key: 'inverseFlag', label: '是否可逆', visible: true },
+  { key: 'createBy', label: '创建人', visible: true },
+  { key: 'createTime', label: '创建时间', visible: true },
+]
+
 export const Component: React.FC = () => {
   const spaceId = useAppSelector(getSpaceId)
   const { deleteRelation, entities, entityNameMap, loading, pagination, relations, draftSearchValues, resetSearch, saveRelation, setPage, setDraftSearchValues, submitSearch } =
@@ -18,6 +30,7 @@ export const Component: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingRelation, setEditingRelation] = useState<OntologyRelation | null>(null)
   const [saving, setSaving] = useState(false)
+  const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(RELATION_COLUMN_OPTIONS)
 
   const updateSearch = useCallback(
     (patch: Partial<RelationSearchValues>): void => {
@@ -127,10 +140,19 @@ export const Component: React.FC = () => {
               <PlusOutlined /> 新增关系
             </AButton>
           </div>
+          <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
         </div>
-        <div className="assistant-table-scroll min-h-0 flex-1 overflow-auto">
-          <RelationTable entityNameMap={entityNameMap} loading={loading} pagination={pagination} relations={relations} onDelete={handleDelete} onEdit={handleEdit} onPageChange={setPage} />
-        </div>
+        <RelationTable
+          entityNameMap={entityNameMap}
+          loading={loading}
+          pagination={pagination}
+          relations={relations}
+          viewMode={viewMode}
+          visibleColumnKeys={visibleColumnKeys}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+          onPageChange={setPage}
+        />
       </section>
       <RelationDrawer entities={entities} loading={saving} open={drawerOpen} relation={editingRelation} onClose={() => setDrawerOpen(false)} onSave={handleSave} />
     </div>
