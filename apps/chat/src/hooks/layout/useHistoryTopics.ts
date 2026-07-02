@@ -13,6 +13,7 @@ type FetchAppListResponse = {
 
 export function useHistoryTopics() {
   const mountedRef = useRef(true)
+  const loadingRef = useRef(false)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyTopics, setHistoryTopics] = useState<TopicItem[]>(fallbackTopics)
   const [historyApps, setHistoryApps] = useState<any[]>([])
@@ -24,9 +25,12 @@ export function useHistoryTopics() {
     }
   }, [])
 
-  const loadHistoryTopics = useCallback(async () => {
+  const loadHistoryTopics = useCallback(async (options?: { silent?: boolean }) => {
     if (!mountedRef.current) return
-    setHistoryLoading(true)
+    // 防止并发重复调用
+    if (loadingRef.current) return
+    loadingRef.current = true
+    if (!options?.silent) setHistoryLoading(true)
 
     try {
       const user = getCurrentUser()
@@ -50,10 +54,20 @@ export function useHistoryTopics() {
         setHistoryTopics(fallbackTopics)
       }
     } finally {
+      loadingRef.current = false
       if (mountedRef.current) {
         setHistoryLoading(false)
       }
     }
+  }, [])
+
+  // 乐观删除：立即从本地列表中移除，不等待服务端响应
+  const removeTopicById = useCallback((chatId: string) => {
+    setHistoryApps((prev) => prev.filter((app) => String(app.chat_id) !== String(chatId)))
+    setHistoryTopics((prev) => {
+      const next = prev.filter((t) => String(t.chatId) !== String(chatId))
+      return next.length ? next : fallbackTopics
+    })
   }, [])
 
   return {
@@ -61,5 +75,6 @@ export function useHistoryTopics() {
     historyTopics,
     historyApps,
     loadHistoryTopics,
+    removeTopicById,
   }
 }

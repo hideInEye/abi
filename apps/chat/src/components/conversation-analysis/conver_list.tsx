@@ -1,31 +1,32 @@
-import { DoubleRightOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons'
-import { Dropdown, Empty, Flex, Input, message, Modal, Popover, Space } from 'antd'
+import { MoreOutlined, SearchOutlined } from '@ant-design/icons'
+import { Dropdown, Empty, Flex, Input, Popover, Space } from 'antd'
 import React, { useEffect, useImperativeHandle, useState } from 'react'
 import SvgIcon from '../../components/SvgIcon'
 import left_online from '@/assets/svg-icon/left_online.svg'
 import right_online from '@/assets/svg-icon/right_online.svg'
 import { MenuProps } from 'antd'
-import { clearConvHistory, fetchConvList } from '../../service/api/conv'
-import { CHAT_MODE } from '../../constant'
-import { formatTimeDiff, getSpaceId } from '../../utils'
-import SaveDrawer from '../conversation/SaveDrawer'
+import { formatTimeDiff } from '../../utils'
+
+// 分组定义
+const GROUPS = [
+  { id: 'analysis', name: '对话分析' },
+  { id: 'semantics', name: '数据语义' },
+  { id: 'knowledge', name: '知识图谱' },
+]
+
 interface converListProps {
   appList: any[]
   handleSetCurApp: (item: any) => void
   handleDeleteApp: (item: any) => void
-  setShowAllConversations: (showAllConversations: boolean) => void
   handleEdit: (key: string, item?: any) => void
-  handleClearConvHistory: () => void
-  onUpdateList: (data: any) => void
   setFold: (fold: boolean) => void
   fold: boolean
 }
 
 const ConverList = React.forwardRef((props: converListProps, ref) => {
-  const { appList, handleSetCurApp, handleDeleteApp, setShowAllConversations, handleEdit, handleClearConvHistory, onUpdateList, setFold, fold } = props
-  const [saveVisible, setSaveVisible] = useState(false)
-  const [saveData, setSaveData] = useState<any>({})
+  const { appList, handleSetCurApp, handleDeleteApp, handleEdit, setFold, fold } = props
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null)
+  const [selectedGroup, setSelectedGroup] = useState<string>('analysis')
   useImperativeHandle(ref, () => ({
     setSelectedChatId,
   }))
@@ -49,38 +50,6 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
         </Space>
       ),
     },
-    // {
-    //   key: 'rename',
-    //   label: (
-    //     <Space>
-    //       <SvgIcon localIcon="drown_rename" className="w-5 h-[1.375rem] cursor-pointer" onClick={handleEdit} />
-    //       重命名
-    //     </Space>
-    //   ),
-    //   onClick: ({ domEvent }) => {
-    //     domEvent.stopPropagation()
-    //     domEvent.preventDefault()
-    //     handleEdit()
-    //   },
-    // },
-    {
-      key: 'save',
-      label: (
-        <Space>
-          <SvgIcon localIcon="drown_save" className="w-5 h-[1.375rem] cursor-pointer" />
-          另存
-        </Space>
-      ),
-    },
-    {
-      key: 'clear',
-      label: (
-        <Space>
-          <SvgIcon localIcon="drown_clear" className="w-5 h-[1.375rem] cursor-pointer" />
-          清空
-        </Space>
-      ),
-    },
     {
       key: 'delete',
       label: (
@@ -92,49 +61,6 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
     },
   ]
 
-  const handleClear = (item: any) => {
-    Modal.confirm({
-      title: '确认清空对话',
-      content: '是否确认清空当前对话？清空后无法恢复。',
-      okText: '确认',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          const res = await fetchConvList({
-            chat_id: item.chat_id,
-            chat_mode: CHAT_MODE,
-            space_id: getSpaceId(),
-          })
-          if (res.data?.length) {
-            const [first] = res.data
-            const result: any = await clearConvHistory({
-              conv_uid: first.conv_uid,
-            })
-            if (result.success) {
-              handleClearConvHistory()
-              message.success('对话已清空')
-            }
-          }
-        } catch (error) {
-          message.error('清空对话失败')
-        }
-      },
-    })
-  }
-
-  const handleSave = async (item: any) => {
-    const res = await fetchConvList({
-      chat_id: item.chat_id,
-      chat_mode: CHAT_MODE,
-      space_id: getSpaceId(),
-    })
-    if (res.data?.length) {
-      const [first] = res.data
-      setSaveData({ ...item, ...first })
-      setSaveVisible(true)
-    }
-  }
-
   const handleMenuClick = (e: any, item: any) => {
     e?.domEvent?.stopPropagation()
     e?.domEvent?.preventDefault()
@@ -142,26 +68,10 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
       case 'edit':
         handleEdit('edit', item)
         break
-      case 'rename':
-        handleEdit('rename')
-        break
-      case 'save':
-        handleSave(item)
-        break
-      case 'clear':
-        handleClear(item)
-        break
       case 'delete':
         handleDeleteApp(item)
         break
     }
-  }
-
-  const saveDrawerClose = (refresh?: boolean, payload?: any) => {
-    if (refresh) {
-      onUpdateList && onUpdateList(payload)
-    }
-    setSaveVisible(false)
   }
 
   return (
@@ -174,6 +84,26 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
           </Flex>
         )}
       </header>
+      
+      {/* 分组选择器 */}
+      {!fold && (
+        <div className="px-3 mb-3">
+          {GROUPS.map((group) => (
+            <div
+              key={group.id}
+              className={`px-3 py-2 rounded cursor-pointer mb-1 transition-all ${
+                selectedGroup === group.id 
+                  ? 'bg-[#5b7cf7] text-white' 
+                  : 'hover:bg-[#EEEDED] text-[#333]'
+              }`}
+              onClick={() => setSelectedGroup(group.id)}
+            >
+              {group.name}
+            </div>
+          ))}
+        </div>
+      )}
+      
       <span
         className={`absolute transition-all duration-300 ease-in-out top-1/2 -translate-y-1/2 z-10 cursor-pointer select-none ${fold ? 'right-[-0.9375rem]' : 'right-[-0.75rem]'}`}
         onClick={() => {
@@ -234,21 +164,6 @@ const ConverList = React.forwardRef((props: converListProps, ref) => {
             <Empty description="暂无数据" />
           </div>
         ))}
-      <div
-        className={`mt-auto pt-2 pr-6 transition-opacity duration-300 ease-in-out ${fold ? 'opacity-0' : 'opacity-100'}`}
-        style={{ display: fold ? 'none' : 'block', transitionDelay: fold ? '0ms' : '150ms' }}
-      >
-        <div
-          className="block text-[#666666] text-base cursor-pointer text-right"
-          onClick={() => {
-            setShowAllConversations(true)
-          }}
-        >
-          更多
-          <DoubleRightOutlined className="ml-2" />
-        </div>
-      </div>
-      <SaveDrawer open={saveVisible} onClose={(refresh?: boolean, payload?: any) => saveDrawerClose(refresh, payload)} conv={saveData} />
     </div>
   )
 })

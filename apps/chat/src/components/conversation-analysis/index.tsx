@@ -1,43 +1,24 @@
-import { Empty, Modal, Spin } from 'antd'
-import React, { useEffect, useCallback, useRef } from 'react'
-import { useState } from 'react'
-import { deleteConv, fetchConvList, newConv } from '../../service/api/conv'
+import { Modal } from 'antd'
+import React, { useEffect, useCallback, useRef, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { newConv } from '../../service/api/conv'
 import CreateModal from './CreateModal'
-import { createApp, fetchAppList, updateApp } from '../../service/api/app'
+import EditSessionModal from './EditSessionModal'
+import { createApp, deleteSession, fetchAppList, updateApp } from '../../service/api/app'
+import { fetchSemanticGroups, fetchSemanticSchemas } from '../../service/api/semantic'
+import { fetchModelList } from '../../service/api/abi-system'
 import { CHAT_MODE } from '../../constant'
+import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import Conversation from '../conversation'
-import AllConversations from './AllConversations'
+import type { ConversationHandle } from '../conversation'
+import ChatHeader from '../conversation/components/chat-header'
+import type { ModelOption } from '../conversation/components/chat-header'
+import NewChatWelcome from './NewChatWelcome'
+import ChatInput from '../conversation/components/chat-input'
+import type { SemanticSelectedData } from '../conversation/components/chat-input'
 import { message } from 'antd'
 import { getSpaceId } from '../../utils'
 import ConverList from './conver_list'
-// redux hooks已注释
-// import { useAppDispatch, useAppSelector } from '../../store/redux/hooks';
-// import { setConvListForChat, upsertConvForChat, removeConvForChat, clearConvListForChat, selectConvListByChatId, setDatasourceCache, selectDatasourceCache } from '../../store/redux/slices/conversations';
-
-const LAST_CONV_UID_MAP_KEY = 'SOY-REACT_lastConvUidByChatId'
-
-const getLastConvUidByChatId = (chatId?: string | number) => {
-  if (!chatId) return ''
-  try {
-    const cache = JSON.parse(localStorage.getItem(LAST_CONV_UID_MAP_KEY) || '{}')
-    return cache[String(chatId)] || ''
-  } catch {
-    return ''
-  }
-}
-
-const setLastConvUidByChatId = (chatId?: string | number, convUid?: string) => {
-  if (!chatId) return
-  try {
-    const cache = JSON.parse(localStorage.getItem(LAST_CONV_UID_MAP_KEY) || '{}')
-    if (convUid) {
-      cache[String(chatId)] = convUid
-    } else {
-      delete cache[String(chatId)]
-    }
-    localStorage.setItem(LAST_CONV_UID_MAP_KEY, JSON.stringify(cache))
-  } catch {}
-}
 
 interface ConversationAnalysisProps {
   spaceId?: number
@@ -50,19 +31,114 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const [curApp, setCurApp] = useState<any>({})
   const [appList, setAppList] = useState<any[]>([])
   const [curConv, setCurConv] = useState<any>()
-  const [showAllConversations, setShowAllConversations] = useState(false)
   const [loading, setLoading] = useState(false)
   const lastSpaceIdRef = useRef<number | null>(null)
-  const skipNextConvFetchRef = useRef(false)
   const [isEdit, setIsEdit] = useState(false)
   const [EditData, setEditData] = useState<any>({})
-  const conversationRef = useRef<any>(null)
+  const [editVisible, setEditVisible] = useState(false)
+  const navigate = useNavigate()
+  const [editItem, setEditItem] = useState<any>()
+  const conversationRef = useRef<ConversationHandle>(null)
   const converListRef = useRef<any>(null)
   const [fold, setFold] = useState(false)
+  const justCreatedRef = useRef(false)
   const [currentSpaceId, setCurrentSpaceId] = useState<number>(() => {
     return propSpaceId !== undefined ? Number(propSpaceId) : getSpaceId()
   })
 
+  // ── 统一输入框状态 ──
+  const [convLoading, setConvLoading] = useState(false)
+  const [deepThinkEnabled, setDeepThinkEnabled] = useState(false)
+  const [uploadFileEnabled, setUploadFileEnabled] = useState(false)
+  const [externalInputValue, setExternalInputValue] = useState('')
+  const [creating, setCreating] = useState(false)
+  const chatHeaderRef = useRef<any>(null)
+
+  // ── 模型列表状态（全局加载一次）──
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
+  const [currentModel, setCurrentModel] = useState<ModelOption | null>(null)
+  const [embedModelId, setEmbedModelId] = useState<string | number>('')
+  const modelLoadedRef = useRef(false)
+
+  // ── 数据语义状态（从 NewChatWelcome 迁移）──
+  const [semanticGroups, setSemanticGroups] = useState<any[]>([])
+  const [semanticGroupSchemas, setSemanticGroupSchemas] = useState<Map<string, any[]>>(new Map())
+  const [expandedSemGroups, setExpandedSemGroups] = useState<Set<string>>(new Set())
+  const [selectedData, setSelectedData] = useState<SemanticSelectedData | null>(null)
+  const [semLoading, setSemLoading] = useState(false)
+  const semGroupsLoadedRef = useRef(false)
+
+  // ── 模型列表加载（只调一次）──
+  useEffect(() => {
+    if (modelLoadedRef.current) return
+    modelLoadedRef.current = true
+    fetchModelList({ spaceId: currentSpaceId })
+      .then((res: any) => {
+        const list = res?.data?.data || res?.data || []
+        if (Array.isArray(list) && list.length > 0) {
+          // 找到嵌入模型（从完整列表中查找）
+          const embedModel = list.find((item: any) => item.modelKey === 'bge-large')
+          if (embedModel) {
+            setEmbedModelId(embedModel.modelId ?? embedModel.id ?? embedModel.llmId)
+          }
+          // 只筛选 status 为 1 的大模型（modelType='1' 为语言模型，排除 modelType='2' 向量/嵌入模型）
+          const filteredList = list.filter(
+            (item: any) => String(item.status) === '1' && String(item.modelType) === '1',
+          )
+          const options: ModelOption[] = filteredList.map((item: any) => ({
+            id: item.modelId ?? item.id ?? item.llmId ?? '',
+            key: item.modelKey || item.model_name || item.key || '',
+            label: item.modelName || item.model_name || item.llmModel || item.label || '',
+            desc: item.remark || item.description || item.desc || '',
+          }))
+          setModelOptions(options)
+          if (options.length > 0) {
+            setCurrentModel(options[0])
+          }
+        }
+      })
+      .catch(() => {})
+  }, [currentSpaceId])
+
+  const handleModelChange = useCallback((model: ModelOption) => {
+    setCurrentModel(model)
+  }, [])
+
+  // ── 数据语义加载 ──
+  useEffect(() => {
+    if (semGroupsLoadedRef.current) return
+    semGroupsLoadedRef.current = true
+    setSemLoading(true)
+    fetchSemanticGroups({ groupType: 'shema', pageNum: 1, pageSize: 100, spaceId: currentSpaceId })
+      .then((res: any) => {
+        const list = res?.data || res?.rows || []
+        setSemanticGroups(Array.isArray(list) ? list : [])
+      })
+      .catch(() => {})
+      .finally(() => setSemLoading(false))
+  }, [currentSpaceId])
+
+  const toggleSemGroup = useCallback((groupId: string) => {
+    setExpandedSemGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(groupId)) {
+        next.delete(groupId)
+      } else {
+        next.add(groupId)
+        if (!semanticGroupSchemas.has(groupId)) {
+          fetchSemanticSchemas({ groupId: Number(groupId), pageNum: 1, pageSize: 100 })
+            .then((res: any) => {
+              const list = res?.data || res?.rows || []
+              setSemanticGroupSchemas(prev => new Map(prev).set(groupId, Array.isArray(list) ? list : []))
+            })
+            .catch(() => {})
+        }
+      }
+      return next
+    })
+  }, [semanticGroupSchemas])
+
+  // ── SpaceId 同步 ──
   useEffect(() => {
     if (propSpaceId === undefined) return
     const next = Number(propSpaceId)
@@ -80,45 +156,36 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         setCurApp({})
         setCurConv(null)
         converListRef.current?.setSelectedChatId(null)
+        // 重新加载语义
+        semGroupsLoadedRef.current = false
       }
     }
     window.addEventListener('space-change', handleSpaceChange)
-    return () => {
-      window.removeEventListener('space-change', handleSpaceChange)
-    }
+    return () => { window.removeEventListener('space-change', handleSpaceChange) }
   }, [])
 
-  // 按 create_time 排序
+  // ── App 列表 ──
   const sortAppList = (list: any[]) => {
-    return list.sort((a, b) => {
-      return new Date(b.create_time).getTime() - new Date(a.create_time).getTime()
-    })
+    return list.sort((a, b) => new Date(b.create_time).getTime() - new Date(a.create_time).getTime())
   }
 
-  const handleClearConvHistory = () => {
-    conversationRef.current?.setConvContent([])
-  }
-
-  // 获取app列表
-  const getAppList = useCallback(async () => {
-    const userInfoString = JSON.parse(localStorage.getItem('SOY-REACT_userInfo')! || '')
-    console.log(userInfoString)
-
+  const getAppList = useCallback(async (options?: { silent?: boolean }) => {
+    const userInfoString = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}')
     try {
-      setLoading(true)
+      if (!options?.silent) setLoading(true)
       const res = await fetchAppList({
         chat_mode: CHAT_MODE,
         space_id: currentSpaceId,
         create_by: userInfoString?.userName,
-        // space_id: 73 //测试对话
       })
       const data = sortAppList(res.data) || []
       setAppList(data)
-      const preferredChatId = routeChatId || localStorage.getItem('chatId') || ''
-      const targetApp = (preferredChatId && data.find((item) => String(item.chat_id) === String(preferredChatId))) || data[0]
-
+      if (options?.silent) return res.data
+      const chatId = localStorage.getItem('chatId') || ''
+      const targetApp = (chatId && data.find((item: any) => String(item.chat_id) === String(chatId))) || data[0]
       if (targetApp) {
         setCurApp({ ...targetApp })
+        setCurConv(targetApp.conv_uid ? { ...targetApp } : undefined)
         localStorage.setItem('chatId', String(targetApp.chat_id))
       } else {
         setCurApp(undefined)
@@ -127,81 +194,121 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       }
       return res.data
     } finally {
-      setLoading(false)
+      if (!options?.silent) setLoading(false)
     }
-  }, [currentSpaceId, routeChatId])
+  }, [currentSpaceId])
 
   useEffect(() => {
-    // 防止StrictMode导致的重复调用，同时在 spaceId 变化时刷新列表
     if (currentSpaceId === null || Number.isNaN(currentSpaceId)) return
     if (lastSpaceIdRef.current === currentSpaceId) return
     lastSpaceIdRef.current = currentSpaceId
-    getAppList()
-  }, [currentSpaceId, getAppList])
-
-  // 获取会话列表
-  const getConvList = async () => {
-    try {
-      setLoading(true)
-
-      const res = await fetchConvList({
-        chat_id: curApp.chat_id,
-        chat_mode: CHAT_MODE,
-        space_id: currentSpaceId,
-        // space_id: 73,
-      })
-      const convList = res.data || []
-      if (convList.length) {
-        const lastConvUid = getLastConvUidByChatId(curApp.chat_id)
-        const targetConv = convList.find((item: any) => item.conv_uid === lastConvUid) || convList[0]
-        setCurConv({ ...targetConv, ...curApp })
-        setLastConvUidByChatId(curApp.chat_id, targetConv.conv_uid)
-      } else {
-        setCurConv(undefined)
-        setLastConvUidByChatId(curApp.chat_id)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
+    getAppList(routeChatId === 'new' ? { silent: true } : undefined)
+  }, [currentSpaceId, getAppList, routeChatId])
 
   useEffect(() => {
-    // 如果有选中的app就获取会话列表
-    if (curApp&&curApp.chat_id) {
-      if (skipNextConvFetchRef.current) {
-        skipNextConvFetchRef.current = false
-      } else {
-        getConvList()
-      }
+    if (!routeChatId || routeChatId === 'new' || !appList.length) return
+    if (justCreatedRef.current) {
+      justCreatedRef.current = false
+      return
     }
-  }, [curApp])
-
-  useEffect(() => {
-    if (!routeChatId || !appList.length) return
+    if (curConv && String(curConv.chat_id) === String(routeChatId)) return
     const nextApp = appList.find((item) => String(item.chat_id) === String(routeChatId))
     if (!nextApp) return
-    if (String(curApp?.chat_id) === String(nextApp.chat_id)) return
     setCurApp({ ...nextApp })
+    setCurConv(nextApp.conv_uid ? { ...nextApp } : undefined)
     localStorage.setItem('chatId', String(nextApp.chat_id))
-    setShowAllConversations(false)
-  }, [routeChatId, appList, curApp?.chat_id])
+  }, [routeChatId, appList.length])
 
+  // 路由变为 'new' 时清除当前会话，确保展示欢迎页
+  useEffect(() => {
+    if (routeChatId === 'new') {
+      setCurConv(undefined)
+    }
+  }, [routeChatId])
+
+  // ── 统一发送逻辑 ──
+  const handleUnifiedSend = useCallback(async (value: string) => {
+    if (creating) return
+
+    const meta = {
+      groupName: curConv?.groupName || curConv?.group_name || '',
+      semanticName: selectedData?.name || '',
+      semanticSchemaId: selectedData?.schemaId,
+    }
+
+    // 已有会话 → 直接通过 ref 发送
+    if (curConv && conversationRef.current) {
+      conversationRef.current.handleSend(value, meta)
+      return
+    }
+
+    // 无会话 → 先创建，再发送
+    setCreating(true)
+    try {
+      const appRes: any = await createApp({ space_id: currentSpaceId })
+      const rawApp = appRes?.data ?? appRes
+      const app = {
+        ...rawApp,
+        chat_id: rawApp?.chat_id ?? rawApp?.sessionId ?? rawApp?.session_id ?? rawApp?.chatId,
+        space_id: rawApp?.space_id ?? rawApp?.spaceId,
+        app_code: rawApp?.app_code ?? rawApp?.appCode,
+        agent_id: rawApp?.agent_id ?? rawApp?.agentId,
+        conv_uid: rawApp?.conv_uid ?? rawApp?.convUid,
+      }
+      if (!app.chat_id) {
+        message.error('创建会话失败')
+        setCreating(false)
+        return
+      }
+
+      justCreatedRef.current = true
+      const newApp = { ...app, title: app.title || '新建对话', biz_name: app.title || '新建对话' }
+      setCurApp(newApp)
+      setCurConv(newApp)
+      localStorage.setItem('chatId', String(app.chat_id))
+      setAppList((prev) => [newApp, ...prev])
+
+      navigate({
+        to: TASK_DETAIL_ROUTE,
+        params: { taskId: String(app.chat_id) },
+      })
+      window.dispatchEvent(new CustomEvent('conversation-created'))
+
+      // 等待 Conversation mount 后通过 ref 发送
+      const waitAndSend = (retries = 0) => {
+        if (retries > 20) { setCreating(false); return }
+        requestAnimationFrame(() => {
+          if (conversationRef.current?.handleSend) {
+            conversationRef.current.handleSend(value, meta)
+            setCreating(false)
+          } else {
+            setTimeout(() => waitAndSend(retries + 1), 50)
+          }
+        })
+      }
+      waitAndSend()
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        message.error(err?.message || '创建会话失败')
+      }
+      setCreating(false)
+    }
+  }, [curConv, creating, currentSpaceId, navigate, selectedData])
+
+  // ── 回调 ──
   const handleSetCurApp = useCallback((item: any) => {
     if (!item) return
     setCurApp({ ...item })
+    setCurConv(item.conv_uid ? { ...item } : undefined)
     localStorage.setItem('chatId', String(item.chat_id))
-    setShowAllConversations(false)
   }, [])
 
   const onClose = async (val?: any) => {
     if (val) {
       try {
-        // console.log(val,'创建接口 - push')
-        // console.log( JSON.parse(val.chat_config) ,'--------- config')
         if (isEdit) {
           const res = await updateApp(val)
           if (res?.success) {
-            // message.success('更新成功');
             setIsEdit(false)
             setVisible(false)
             setEditData({})
@@ -209,34 +316,19 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
           }
           return Promise.resolve()
         }
-        // 1. 创建应用
         const res = await createApp(val)
-        // console.log(val,'创建接口- data')
         setIsEdit(false)
-        // 2. 刷新应用列表
         await getAppList()
-
         const currentApp = { ...res.data }
         setCurApp(currentApp)
         localStorage.setItem('chatId', String(currentApp.chat_id))
-
-        // 4. 创建新会话
         const newConvRes = await newConv(currentApp)
-
-        // 5. 获取会话列表
-        // await getConvList();
-
-        // 6. 设置当前会话
         setCurConv({ ...newConvRes.data, ...currentApp })
-        setLastConvUidByChatId(currentApp.chat_id, newConvRes?.data?.conv_uid)
-
-        setShowAllConversations(false)
         setVisible(false)
         return Promise.resolve()
       } catch (e) {
         message.error('创建失败')
         return Promise.reject()
-      } finally {
       }
     } else {
       setVisible(false)
@@ -255,18 +347,10 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       onOk: async () => {
         try {
           setLoading(true)
-          const res = await fetchConvList({
-            chat_id: item.chat_id,
-            chat_mode: CHAT_MODE,
-            space_id: currentSpaceId,
-          })
-          if (res.data?.length) {
-            await Promise.all(res.data.map((conv: any) => deleteConv({ conv_uid: conv.conv_uid })))
-            message.success('对话已删除')
-          }
+          await deleteSession({ sessionId: item.chat_id })
+          message.success('对话已删除')
           if (curApp.chat_id === item.chat_id) {
             setCurConv(undefined)
-            setLastConvUidByChatId(item.chat_id)
           }
           getAppList()
         } catch (error) {
@@ -283,23 +367,18 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     const newConv = data?.newConv
     if (newApp) {
       setAppList((prev) => [newApp, ...prev.filter((a) => a.chat_id !== newApp.chat_id)])
-      skipNextConvFetchRef.current = true
       setCurApp(newApp)
+      setCurConv(newApp.conv_uid ? { ...newApp } : undefined)
       localStorage.setItem('chatId', String(newApp.chat_id))
       if (newConv) {
         setCurConv({ ...newConv, ...newApp })
-        setLastConvUidByChatId(newApp.chat_id, newConv.conv_uid)
       }
-      setShowAllConversations(false)
       return
     }
     if (data) {
-      // 更新curConv
       if (data.conv_uid) {
         setCurConv((prev: any) => ({ ...prev, ...data }))
-        setLastConvUidByChatId(data.chat_id || curApp.chat_id, data.conv_uid)
       }
-      // 同步更新appList和curApp（编辑对话名称等信息）
       if (data.chat_id) {
         setAppList((prev) => prev.map((app) => (app.chat_id === data.chat_id ? { ...app, ...data } : app)))
         if (curApp.chat_id === data.chat_id) {
@@ -310,6 +389,11 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   }, [])
 
   const handleEdit = useCallback((key?: string, item?: any) => {
+    if (key === 'edit' && item) {
+      setEditItem(item)
+      setEditVisible(true)
+      return
+    }
     setIsEdit(key === 'edit')
     setVisible(true)
     if (item) {
@@ -317,8 +401,23 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     }
   }, [])
 
+  const handleEditOk = useCallback(
+    async (values: { sessionId: string | number; title: string }) => {
+      await updateApp(values)
+      message.success('更新成功')
+      setEditVisible(false)
+      await getAppList()
+    },
+    [],
+  )
+
+  // 推荐示例点击 → 填入输入框
+  const handleExampleClick = useCallback((text: string) => {
+    setExternalInputValue(text)
+  }, [])
+
   return (
-    <Spin spinning={loading} wrapperClassName="h-full">
+    <div className="h-full w-full" style={{ background: 'transparent' }}>
       <div className="h-full w-full flex" style={{ background: 'transparent' }}>
         {!hideSidebar && (
           <ConverList
@@ -327,35 +426,75 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
             appList={appList}
             handleSetCurApp={handleSetCurApp}
             handleDeleteApp={handleDeleteApp}
-            setShowAllConversations={setShowAllConversations}
-            onUpdateList={handleUpdateList}
-            handleClearConvHistory={handleClearConvHistory}
             setFold={setFold}
             fold={fold}
           />
         )}
-        <div className="flex-1 min-w-0">
-          {curConv && !showAllConversations && (
-            <Conversation
-              fold={hideSidebar ? false : fold}
-              conv={curConv}
-              ref={conversationRef}
-              onClose={() => setCurConv(undefined)}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* 顶部 header（永驻） */}
+          {!curConv && (
+            <ChatHeader
+              conv={curApp || {}}
+              ref={chatHeaderRef}
+              setConvContent={() => {}}
               onUpdateList={handleUpdateList}
+              setIsSharing={() => {}}
+              onClose={() => {}}
+              modelOptions={modelOptions}
+              currentModel={currentModel}
+              onModelChange={handleModelChange}
+              onEmbedModelFound={(id) => setEmbedModelId(id)}
             />
           )}
-          {!curConv && !showAllConversations && (
-            <div className="h-full w-full flex items-center justify-center">
-              <Empty description="暂无可用对话" />
+          {/* 内容区域 */}
+          <div className="flex-1 min-h-0">
+            {(routeChatId === 'new' && !curConv) ? (
+              <NewChatWelcome onExampleClick={handleExampleClick} />
+            ) : curConv ? (
+              <Conversation
+                fold={hideSidebar ? false : fold}
+                conv={curConv}
+                ref={conversationRef}
+                onClose={() => setCurConv(undefined)}
+                onUpdateList={handleUpdateList}
+                onLoadingChange={setConvLoading}
+                semanticId={selectedData?.schemaId}
+                modelOptions={modelOptions}
+                currentModel={currentModel}
+                onModelChange={handleModelChange}
+                embedModelId={embedModelId}
+              />
+            ) : (!routeChatId || routeChatId === 'new') ? (
+              <NewChatWelcome onExampleClick={handleExampleClick} />
+            ) : null}
+          </div>
+
+          {/* 统一输入框（永驻） */}
+          <div className="composer-wrap">
+            <div className="w-[53.75rem] m-auto">
+              <ChatInput
+                conv={curConv}
+                loading={convLoading || creating}
+                onSend={handleUnifiedSend}
+                onStop={() => conversationRef.current?.stopGenerating()}
+                deepThinkEnabled={deepThinkEnabled}
+                uploadFileEnabled={uploadFileEnabled}
+                onToggleDeepThink={() => setDeepThinkEnabled(!deepThinkEnabled)}
+                onToggleUploadFile={() => setUploadFileEnabled(!uploadFileEnabled)}
+                spaceId={currentSpaceId}
+                semanticGroups={semanticGroups}
+                semanticGroupSchemas={semanticGroupSchemas}
+                selectedData={selectedData}
+                onSelectData={setSelectedData}
+                semLoading={semLoading}
+                expandedSemGroups={expandedSemGroups}
+                onToggleSemGroup={toggleSemGroup}
+                externalValue={externalInputValue}
+                onExternalValueConsumed={() => setExternalInputValue('')}
+              />
             </div>
-          )}
-          {showAllConversations && (
-            <AllConversations
-              onClose={() => setShowAllConversations(false)}
-              onSelectApp={(item) => handleSetCurApp(item)}
-              onUpdateList={handleUpdateList}
-            />
-          )}
+            <div className="chat-footer">内容由 AI 生成，请注意甄别</div>
+          </div>
         </div>
       </div>
       <CreateModal
@@ -368,7 +507,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         isEdit={isEdit}
         visible={visible}
       />
-    </Spin>
+      <EditSessionModal
+        visible={editVisible}
+        initialValues={editItem}
+        onClose={() => setEditVisible(false)}
+        onOk={handleEditOk}
+      />
+    </div>
   )
 }
 

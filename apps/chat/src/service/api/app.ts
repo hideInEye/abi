@@ -2,6 +2,83 @@ import request from "../request/index";
 // 获取基础API地址
 import { getChatbiBaseApi } from "../../utils/index";
 
+function getCurrentUserId(): number | undefined {
+  try {
+    const userInfoStr = localStorage.getItem('SOY-REACT_userInfo')
+    if (userInfoStr) {
+      const userInfo = JSON.parse(userInfoStr)
+      if (userInfo.userId != null) return Number(userInfo.userId)
+    }
+    const uid = localStorage.getItem('userId')
+    if (uid != null) return Number(uid)
+  } catch {
+    // ignore
+  }
+  return undefined
+}
+
+function mapAppListParams(params: any) {
+  return {
+    spaceId: params.space_id ?? params.spaceId,
+    userId: params.userId ?? getCurrentUserId(),
+  }
+}
+
+function mapAppCreateParams(data: any) {
+  return {
+    appId: 0,
+    spaceId: data.space_id ?? data.spaceId,
+    title: data.title ?? '新建对话',
+    userId: data.userId ?? getCurrentUserId(),
+    groupId: data.groupId ?? '0',
+    remark: data.remark,
+  }
+}
+
+function mapAppItemToLegacy(item: any) {
+  if (!item || typeof item !== 'object') return item
+
+  // 优先使用 sessionId 作为唯一标识（后端返回的就是 string）
+  const chatId = item.sessionId ?? item.session_id ?? item.chat_id ?? item.chatId
+
+  return {
+    ...item,
+    chat_id: chatId,
+    biz_name: item.biz_name ?? item.title,
+    title: item.title ?? item.biz_name,
+    space_id: item.space_id ?? item.spaceId,
+    app_code: item.app_code ?? item.appCode,
+    agent_id: item.agent_id ?? item.agentId,
+    conv_uid: item.conv_uid ?? item.convUid,
+    create_time: item.create_time ?? item.createTime,
+    update_time: item.update_time ?? item.updateTime,
+  }
+}
+
+function mapAppListResponse(res: any) {
+  if (Array.isArray(res)) {
+    return { data: res.map(mapAppItemToLegacy) }
+  }
+  if (res && Array.isArray(res.data)) {
+    return { ...res, data: res.data.map(mapAppItemToLegacy) }
+  }
+  if (res?.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
+    const items = res.data.items || res.data.list || res.data.records
+    if (Array.isArray(items)) {
+      return { ...res, data: items.map(mapAppItemToLegacy) }
+    }
+  }
+  return res
+}
+
+function mapAppCreateResponse(res: any) {
+  if (!res || !res.data) return res
+  return {
+    ...res,
+    data: mapAppItemToLegacy(res.data),
+  }
+}
+
 // 获取助手列表
 export function fetchAgentList(params: any) {
   return request({
@@ -42,11 +119,11 @@ export function fetchDatasourceById(agentId: number) {
 //新建app
 export function createApp(data: any) {
   return request({
-    url: "/chat-proxy/api/v1/chat/app/add",
+    url: "/abi-chat/v1/app/session/add",
     method: "post",
-    data,
+    data: mapAppCreateParams(data),
     baseURL: window.APP_CONFIG?.VITE_BASE_API, // 设置基础 URL，根据实际情况修改 '/接口前缀', //import.meta.env.VITE_BASE_URL
-  });
+  }).then(mapAppCreateResponse);
 }
 
 // 查询name是否存在
@@ -59,26 +136,21 @@ export function checkAppNameExists(data:{ biz_name: string,space_id: number}) {
   });
 }
 
+// 请求去重：同一时刻只允许一个 fetchAppList 在飞行中，后续调用复用同一 promise
+let _appListInflight: Promise<any> | null = null
+
 // 获取app列表
 export function fetchAppList(params: any) {
-  console.log('fetchAppList', params)
-  return request({
-    url: "/chat-proxy/api/v1/chat/app/list",
-    method: "get",
-    params,
-    baseURL: window.APP_CONFIG?.VITE_BASE_API, // 设置基础 URL，根据实际情况修改 '/接口前缀', //import.meta.env.VITE_BASE_URL
-  });
+  if (_appListInflight) return _appListInflight
+  _appListInflight = request({
+    url: "/abi-chat/v1/app/session/list",
+    method: "post",
+    data: mapAppListParams(params),
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  }).then(mapAppListResponse).finally(() => { _appListInflight = null })
+  return _appListInflight
 }
 
-// 获取app列表分页
-export function fetchAppListPages(data: {page: number; pageSize: number; spaceId: number; create_by: string; biz_name?: string}) {
-  return request({
-    url: "/chat-proxy/api/v1/chat/app/query_page?page=" + data.page + "&page_size=" + data.pageSize,
-    method: "post",
-    data: {space_id: data.spaceId, create_by: data.create_by, biz_name: data.biz_name},
-    baseURL: window.APP_CONFIG?.VITE_BASE_API, // 设置基础 URL，根据实际情况修改 '/接口前缀', //import.meta.env.VITE_BASE_URL
-  });
-}
 
 // 删除app
 export function deleteApp(data: any) {
@@ -88,6 +160,26 @@ export function deleteApp(data: any) {
     data,
     baseURL: window.APP_CONFIG?.VITE_BASE_API, // 设置基础 URL，根据实际情况修改 '/接口前缀', //import.meta.env.VITE_BASE_URL
   });
+}
+
+// 删除会话
+export function deleteSession(params: { sessionId: string }) {
+  return request({
+    url: "/abi-chat/v1/app/session/delete",
+    method: "post",
+    data: { sessionId: params.sessionId },
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
+}
+
+// 删除对话消息
+export function deleteMessage(params: { convUid: string }) {
+  return request({
+    url: "/abi-chat/v1/app/message/delete",
+    method: "post",
+    data: { convUid: params.convUid },
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
 }
 
 // 保存为app
@@ -100,12 +192,147 @@ export function saveAsApp(data: any) {
   });
 }
 
-// 更新app
-export function updateApp(data: any) :Promise<any> {
+// 获取会话消息列表
+export function fetchSessionMessages(params: { convUid: string | number; pageNum?: number; pageSize?: number }) {
   return request({
-    url: "/chat-proxy/api/v1/chat/app/update",
+    url: "/abi-chat/v1/app/message/query",
+    method: "post",
+    data: params,
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
+}
+
+// 获取会话详情
+export function fetchSessionDetail(params: { sessionId: string | number }) {
+  return request({
+    url: "/abi-chat/v1/app/session/get",
+    method: "post",
+    data: params,
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
+}
+
+// 更新会话
+export function updateApp(data: any): Promise<any> {
+  const sessionId = data.sessionId ?? data.chat_id ?? data.session_id
+  return request({
+    url: "/abi-chat/v1/app/session/update",
+    method: "post",
+    data: {
+      sessionId,
+      title: data.title ?? data.biz_name,
+      spaceId: data.spaceId ?? data.space_id ?? getSpaceId(),
+      userId: data.userId ?? getCurrentUserId(),
+    },
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
+}
+
+function getSpaceId() {
+  try {
+    const raw = localStorage.getItem('SOY-REACT_spaceId') || localStorage.getItem('spaceId')
+    return raw ? Number(raw) : undefined
+  } catch { return undefined }
+}
+
+// ============ 会话分组管理接口 ============
+
+export interface SessionGroup {
+  groupId: string
+  groupName: string
+  spaceId: number
+  status?: string // '0'-禁用 '1'-启用
+  parentId?: string
+  level?: number
+  sortOrder?: number
+  remark?: string
+}
+
+export interface AddGroupParams {
+  groupName: string
+  spaceId: number
+  status?: string
+  parentId?: number
+  level?: number
+  sortOrder?: number
+  remark?: string
+}
+
+export interface UpdateGroupParams {
+  groupId: string
+  groupName?: string
+  spaceId?: number
+  status?: string
+  parentId?: string
+  level?: number
+  sortOrder?: number
+  remark?: string
+}
+
+export interface ListGroupParams {
+  spaceId?: number
+  groupName?: string
+  status?: string
+  parentId?: number
+}
+
+// 新增分组
+export function addSessionGroup(data: AddGroupParams) {
+  return request({
+    url: "/abi-chat/v1/app/session/group/add",
     method: "post",
     data,
-    baseURL: window.APP_CONFIG?.VITE_BASE_API, // 设置基础 URL，根据实际情况修改 '/接口前缀', //import.meta.env.VITE_BASE_URL
-  });
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
+}
+
+// 更新分组
+export function updateSessionGroup(data: UpdateGroupParams) {
+  return request({
+    url: "/abi-chat/v1/app/session/group/update",
+    method: "post",
+    data,
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
+}
+
+// 请求去重：同一时刻只允许一个 fetchSessionGroupList 在飞行中
+let _groupListInflight: Promise<any> | null = null
+
+// 查询分组列表
+export function fetchSessionGroupList(data: ListGroupParams) {
+  if (_groupListInflight) return _groupListInflight
+  _groupListInflight = request({
+    url: "/abi-chat/v1/app/session/group/list",
+    method: "post",
+    data,
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  }).finally(() => { _groupListInflight = null })
+  return _groupListInflight
+}
+
+// 删除分组
+export function deleteSessionGroup(data: { groupId: string }) {
+  return request({
+    url: "/abi-chat/v1/app/session/group/delete",
+    method: "post",
+    data,
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
+}
+
+// 移动会话到分组
+export function moveSessionToGroup(data: { sessionId: string; groupId: string; title: string }) {
+  return request({
+    url: "/abi-chat/v1/app/session/update",
+    method: "post",
+    data: {
+      sessionId: data.sessionId,
+      groupId: data.groupId,
+      title: data.title,
+      userId: getCurrentUserId(),
+      spaceId: getSpaceId(),
+    },
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
 }

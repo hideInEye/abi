@@ -1,12 +1,23 @@
-import { AudioOutlined, BulbOutlined, CompassOutlined, DownOutlined, FileTextOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, SendOutlined, StopOutlined, ThunderboltOutlined, DatabaseOutlined } from '@ant-design/icons';
-import { Dropdown, Input, message, Modal } from 'antd';
+import { AudioOutlined, BulbOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, SearchOutlined, SendOutlined, StopOutlined, ThunderboltOutlined, DatabaseOutlined, EditOutlined, ToolOutlined } from '@ant-design/icons';
+import { Dropdown, Input, message, Popover } from 'antd';
 import type { MenuProps } from 'antd';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AudioRecorder from '../../../../components/AudioRecorder';
 import UploadDrawer from '../../UploadDrawer';
+import { querySkillList } from '../../../../service/api/skill';
+import { queryMcpList } from '../../../../service/api/mcp';
+import { fetchSemanticGroups, fetchSemanticDetail } from '../../../../service/api/semantic';
+import SchemaFieldsModal from '../../../conversation-analysis/SchemaFieldsModal';
+import type { SchemaTable, SchemaField } from '../../../conversation-analysis/SchemaFieldsModal';
+import { getSpaceId } from '../../../../utils';
+
+export interface SemanticSelectedData {
+  name: string
+  schemaId?: number | string
+}
 
 interface ChatInputProps {
-  conv: any;
+  conv?: any;
   loading: boolean;
   onSend: (value: string) => void;
   onStop: () => void;
@@ -14,29 +25,158 @@ interface ChatInputProps {
   uploadFileEnabled: boolean;
   onToggleDeepThink: () => void;
   onToggleUploadFile: () => void;
-  setSelectedExcel: (file: any) => void;
+  setSelectedExcel?: (file: any) => void;
+  spaceId?: number;
+  // 数据语义 props
+  semanticGroups?: any[];
+  semanticGroupSchemas?: Map<string, any[]>;
+  selectedData?: SemanticSelectedData | null;
+  onSelectData?: (data: SemanticSelectedData) => void;
+  semLoading?: boolean;
+  expandedSemGroups?: Set<string>;
+  onToggleSemGroup?: (groupId: string) => void;
+  // 外部控制输入值
+  externalValue?: string;
+  onExternalValueConsumed?: () => void;
 }
 
-// 示例数据语义列表
-const SEMANTICS_LIST = [
-  { id: 1, name: '电商销售预测分析' },
-  { id: 2, name: '用户行为分析' },
-  { id: 3, name: '财务数据分析' },
-]
-
 const ChatInput: React.FC<ChatInputProps> = React.memo(
-  ({ loading, onSend, onStop, deepThinkEnabled, uploadFileEnabled, setSelectedExcel, conv, onToggleDeepThink, onToggleUploadFile }) => {
+  ({ loading, onSend, onStop, deepThinkEnabled, uploadFileEnabled, setSelectedExcel, conv, onToggleDeepThink, onToggleUploadFile,
+    spaceId,
+    semanticGroups = [], semanticGroupSchemas, selectedData, onSelectData, semLoading, expandedSemGroups, onToggleSemGroup,
+    externalValue, onExternalValueConsumed
+  }) => {
     const [value, setValue] = useState('');
     const isComposingRef = useRef(false);
     const [uploadFileVisible, setUploadFileVisible] = useState(false);
-    const [dataModalVisible, setDataModalVisible] = useState(false);
-    const [selectedData, setSelectedData] = useState<any>(null);
+    const [semDropdownOpen, setSemDropdownOpen] = useState(false);
+    const [morePopupOpen, setMorePopupOpen] = useState(false);
+    const [skillPopOpen, setSkillPopOpen] = useState(false);
+    const [mcpPopOpen, setMcpPopOpen] = useState(false);
     const [selectedMode, setSelectedMode] = useState<any>({ key: 'interact', label: '交互', icon: <MessageOutlined /> });
 
-    const handleSend = useCallback(() => {
-      if (!value.trim() || loading) {
-        return;
+    // ── 技能状态 ──
+    const [skillList, setSkillList] = useState<any[]>([]);
+    const [skillLoading, setSkillLoading] = useState(false);
+    const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set());
+
+    // ── MCP 状态 ──
+    const [mcpGroups, setMcpGroups] = useState<any[]>([]);
+    const [mcpGroupItems, setMcpGroupItems] = useState<Map<number, any[]>>(new Map());
+    const [expandedMcpGroups, setExpandedMcpGroups] = useState<Set<number>>(new Set());
+    const [selectedMCPs, setSelectedMCPs] = useState<Set<string>>(new Set());
+    const [mcpLoading, setMcpLoading] = useState(false);
+
+    // ── 查看语义 Modal 状态 ──
+    const [semModalOpen, setSemModalOpen] = useState(false);
+    const [semModalTables, setSemModalTables] = useState<SchemaTable[]>([]);
+
+    // 外部注入文本（如推荐示例点击）
+    useEffect(() => {
+      if (externalValue) {
+        setValue(externalValue);
+        onExternalValueConsumed?.();
       }
+    }, [externalValue, onExternalValueConsumed]);
+
+    // 懒加载技能列表
+    useEffect(() => {
+      if (!skillPopOpen || skillList.length > 0) return;
+      setSkillLoading(true);
+      querySkillList({ spaceId: spaceId || getSpaceId(), status: '1' })
+        .then((res: any) => {
+          const list = res?.data?.data?.pageItems || res?.data?.list || (Array.isArray(res?.data) ? res.data : []) || res?.rows || [];
+          setSkillList(Array.isArray(list) ? list : []);
+        })
+        .catch(() => {})
+        .finally(() => setSkillLoading(false));
+    }, [skillPopOpen]);
+
+    // 懒加载 MCP 分组
+    useEffect(() => {
+      if (!mcpPopOpen || mcpGroups.length > 0) return;
+      setMcpLoading(true);
+      fetchSemanticGroups({ groupType: 'mcp', pageNum: 1, pageSize: 100, spaceId: spaceId || getSpaceId() })
+        .then((res: any) => {
+          const list = res?.data?.data?.pageItems || res?.data || res?.rows || [];
+          setMcpGroups(Array.isArray(list) ? list : []);
+        })
+        .catch(() => {})
+        .finally(() => setMcpLoading(false));
+    }, [mcpPopOpen]);
+
+    // 展开 MCP 分组时懒加载服务列表
+    const toggleMcpGroup = (groupId: number) => {
+      setExpandedMcpGroups(prev => {
+        const next = new Set(prev);
+        if (next.has(groupId)) {
+          next.delete(groupId);
+        } else {
+          next.add(groupId);
+          if (!mcpGroupItems.has(groupId)) {
+            queryMcpList({ pageNo: 1, pageSize: 100, namespaceId: `s_${groupId}` })
+              .then((res: any) => {
+                const list = res?.data?.data?.pageItems || res?.data?.records || res?.data?.list || (Array.isArray(res?.data) ? res.data : []);
+                setMcpGroupItems(prev => new Map(prev).set(groupId, Array.isArray(list) ? list : []));
+              })
+              .catch(() => {});
+          }
+        }
+        return next;
+      });
+    };
+
+    // 查看语义
+    const openSchemaModal = () => {
+      setMorePopupOpen(false);
+      if (!selectedData?.schemaId) { message.info('请先选择数据语义表'); return; }
+      const table: SchemaTable = {
+        schemaId: selectedData.schemaId,
+        bizName: selectedData.name,
+        fields: [],
+        loading: true,
+      };
+      setSemModalTables([table]);
+      setSemModalOpen(true);
+      fetchSemanticDetail(selectedData.schemaId)
+        .then((res: any) => {
+          const detail = res?.data?.data || res?.data || res;
+          const modelDetail = detail?.modelDetail;
+          const fields = modelDetail ? parseFieldsFromModelDetail(modelDetail) : [];
+          setSemModalTables([{ ...table, fields, loading: false, description: detail?.description || detail?.remark || '' }]);
+        })
+        .catch(() => setSemModalTables([{ ...table, loading: false }]));
+    };
+
+    // 解析 modelDetail 提取字段
+    function parseFieldsFromModelDetail(modelDetailStr: string): SchemaField[] {
+      try {
+        const detail = typeof modelDetailStr === 'string' ? JSON.parse(modelDetailStr) : modelDetailStr;
+        const fields: SchemaField[] = [];
+        const addFields = (items: any[], semantic: SchemaField['semantic'], semLabel: string) => {
+          (items || []).forEach(item => {
+            fields.push({
+              name: item.originName || item.fieldName || item.techName || '',
+              type: item.fieldType || '',
+              semantic,
+              semLabel,
+              description: item.fieldDesc || '',
+              tableName: item.tableName || '',
+              tableDesc: item.tdesc || item.rtableName || '',
+            });
+          });
+        };
+        addFields(detail.identifiers, 'pk', '主键');
+        const dimensions = detail.dimensions || [];
+        addFields(dimensions.filter((d: any) => d.type === 'datetime'), 'date', '日期');
+        addFields(dimensions.filter((d: any) => d.type !== 'datetime'), 'dim', '维度');
+        addFields(detail.measures, 'metric', '指标');
+        return fields;
+      } catch { return []; }
+    }
+
+    const handleSend = useCallback(() => {
+      if (!value.trim() || loading) return;
       onSend(value);
       setValue('');
     }, [loading, onSend, value]);
@@ -44,9 +184,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
-          if (isComposingRef.current) {
-            return;
-          }
+          if (isComposingRef.current) return;
           e.preventDefault();
           handleSend();
         }
@@ -54,24 +192,10 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       [handleSend]
     );
 
-    const handleCompositionStart = useCallback(() => {
-      isComposingRef.current = true;
-    }, []);
-
-    const handleCompositionEnd = useCallback(() => {
-      isComposingRef.current = false;
-    }, []);
-
-    const handleChange = useCallback(
-      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setValue(e.target.value);
-      },
-      []
-    );
-
-    const handleTranscribed = useCallback((text: string) => {
-      setValue(text);
-    }, []);
+    const handleCompositionStart = useCallback(() => { isComposingRef.current = true; }, []);
+    const handleCompositionEnd = useCallback(() => { isComposingRef.current = false; }, []);
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => { setValue(e.target.value); }, []);
+    const handleTranscribed = useCallback((text: string) => { setValue(text); }, []);
 
     const handleUploadBtnClick = useCallback(() => {
       onToggleUploadFile();
@@ -79,7 +203,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     }, [onToggleUploadFile]);
 
     const handleUploadOk = (file: any) => {
-      setSelectedExcel(file);
+      setSelectedExcel?.(file);
       setUploadFileVisible(false);
       onToggleUploadFile();
     };
@@ -90,53 +214,183 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     }, [onToggleUploadFile]);
 
     // ── Dropdown menus ──
-
-    /** + dropdown: 上传文件, 上传图片 (占位) */
     const plusMenuItems: MenuProps['items'] = [
-      {
-        key: 'upload-file',
-        icon: <PaperClipOutlined />,
-        label: '上传文件',
-        onClick: () => handleUploadBtnClick(),
-      },
-      {
-        key: 'upload-image',
-        icon: <PictureOutlined />,
-        label: '上传图片',
-        onClick: () => message.info('图片上传功能即将上线'),
-      },
+      { key: 'upload-file', icon: <PaperClipOutlined />, label: '上传文件', onClick: () => handleUploadBtnClick() },
+      { key: 'upload-image', icon: <PictureOutlined />, label: '上传图片', onClick: () => message.info('图片上传功能即将上线') },
     ];
 
-    /** 交互 dropdown: 交互, 探索, 报告 with icons */
-  const modeMenuItems: MenuProps['items'] = [
-    {
-      key: 'interact',
-      icon: <MessageOutlined />,
-      label: '交互',
-      onClick: () => {
-        setSelectedMode({ key: 'interact', label: '交互', icon: <MessageOutlined /> });
-        message.info('已切换到交互模式');
-      },
-    },
-    {
-      key: 'explore',
-      icon: <CompassOutlined />,
-      label: '探索',
-      onClick: () => {
-        setSelectedMode({ key: 'explore', label: '探索', icon: <CompassOutlined /> });
-        message.info('已切换到探索模式');
-      },
-    },
-    {
-      key: 'report',
-      icon: <FileTextOutlined />,
-      label: '报告',
-      onClick: () => {
-        setSelectedMode({ key: 'report', label: '报告', icon: <FileTextOutlined /> });
-        message.info('已切换到报告模式');
-      },
-    },
-  ];
+    const modeMenuItems: MenuProps['items'] = [
+      { key: 'interact', icon: <MessageOutlined />, label: '交互', onClick: () => { setSelectedMode({ key: 'interact', label: '交互', icon: <MessageOutlined /> }); message.info('已切换到交互模式'); } },
+      { key: 'explore', icon: <CompassOutlined />, label: '探索', onClick: () => { setSelectedMode({ key: 'explore', label: '探索', icon: <CompassOutlined /> }); message.info('已切换到探索模式'); } },
+      { key: 'report', icon: <FileTextOutlined />, label: '报告', onClick: () => { setSelectedMode({ key: 'report', label: '报告', icon: <FileTextOutlined /> }); message.info('已切换到报告模式'); } },
+    ];
+
+    /** 数据语义 Popover 内容 */
+    const semanticPopoverContent = (
+      <div style={{ width: 260, maxHeight: 360, overflowY: 'auto' }}>
+        {semLoading ? (
+          <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>加载中...</div>
+        ) : semanticGroups.length === 0 ? (
+          <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>暂无数据语义</div>
+        ) : (
+          semanticGroups.map((g: any) => {
+            const gid = g.groupId;
+            const isExpanded = expandedSemGroups?.has(gid);
+            const schemas = semanticGroupSchemas?.get(gid) || [];
+            return (
+              <div key={gid}>
+                <div
+                  style={{ padding: '9px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6 }}
+                  onClick={() => onToggleSemGroup?.(gid)}
+                >
+                  <DownOutlined style={{ fontSize: 9, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', color: 'var(--ink-3)' }} />
+                  <span style={{ fontWeight: 600, flex: 1 }}>{g.groupName}</span>
+                  <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{schemas.length > 0 ? schemas.length : ''}</span>
+                </div>
+                {isExpanded && (
+                  schemas.length === 0 ? (
+                    <div style={{ padding: '8px 12px 8px 28px', fontSize: 12, color: 'var(--ink-3)' }}>暂无表数据</div>
+                  ) : (
+                    schemas.map((s: any) => (
+                      <div key={s.schemaId} className="sem-option" style={{ padding: '7px 12px 7px 28px', fontSize: 12.5, cursor: 'pointer' }}
+                        onClick={() => { onSelectData?.({ name: s.bizName, schemaId: s.schemaId }); setSemDropdownOpen(false); }}
+                      >
+                        <div style={{ fontWeight: 500 }}>{s.bizName}</div>
+                        {s.techName && <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{s.techName}</div>}
+                      </div>
+                    ))
+                  )
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    );
+
+    /** 更多 Popover 完整内容 */
+    const morePopoverContent = (
+      <div style={{ width: 260, maxHeight: 380, overflow: 'visible' }}>
+        {/* 查看语义 */}
+        <div className="more-popup-item" onClick={openSchemaModal}>
+          <EyeOutlined style={{ fontSize: 14 }} /> 查看语义
+        </div>
+        {/* 技能（嵌套 Popover） */}
+        <Popover
+          content={
+            <div style={{ width: 280, maxHeight: 400, overflowY: 'auto' }}>
+              <div className="popover-back-btn" onClick={() => setSkillPopOpen(false)}>
+                <DownOutlined style={{ fontSize: 10, transform: 'rotate(90deg)' }} /> 返回
+              </div>
+              <div className="skill-popup-header">技能列表</div>
+              {skillLoading ? (
+                <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>加载中...</div>
+              ) : skillList.length === 0 ? (
+                <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>暂无可用技能</div>
+              ) : (
+                skillList.map((s: any) => {
+                  const sid = String(s.id);
+                  return (
+                    <div key={sid} className={`skill-popup-item ${selectedSkills.has(sid) ? 'active' : ''}`}
+                      onClick={() => setSelectedSkills((prev) => { const n = new Set(prev); n.has(sid) ? n.delete(sid) : n.add(sid); return n; })}
+                    >
+                      <ToolOutlined style={{ fontSize: 13 }} />
+                      {s.bizName}
+                      {s.status === 1 && <span className="skill-tag builtin">启用</span>}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          }
+          trigger="click"
+          placement="rightTop"
+          open={skillPopOpen}
+          onOpenChange={setSkillPopOpen}
+          getPopupContainer={(triggerNode) => triggerNode as HTMLElement}
+          overlayInnerStyle={{ padding: '4px 0' }}
+        >
+          <div className="more-popup-item" onClick={() => setSkillPopOpen(true)}>
+            <ToolOutlined style={{ fontSize: 14 }} /> 技能
+            <DownOutlined style={{ marginLeft: 'auto', fontSize: 10, transform: 'rotate(-90deg)' }} />
+          </div>
+        </Popover>
+        {/* MCP（嵌套 Popover） */}
+        <Popover
+          content={
+            <div style={{ width: 300, maxHeight: 400, overflowY: 'auto' }}>
+              <div className="popover-back-btn" onClick={() => setMcpPopOpen(false)}>
+                <DownOutlined style={{ fontSize: 10, transform: 'rotate(90deg)' }} /> 返回
+              </div>
+              {mcpLoading ? (
+                <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>加载中...</div>
+              ) : mcpGroups.length === 0 ? (
+                <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>暂无 MCP 分组</div>
+              ) : (
+                mcpGroups.map((g: any) => {
+                  const gid = g.groupId;
+                  const isExpanded = expandedMcpGroups.has(gid);
+                  const items = mcpGroupItems.get(gid) || [];
+                  return (
+                    <div key={gid}>
+                      <div style={{ padding: '9px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6 }}
+                        onClick={() => toggleMcpGroup(gid)}
+                      >
+                        <DownOutlined style={{ fontSize: 9, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', color: 'var(--ink-3)' }} />
+                        <span style={{ fontWeight: 600, flex: 1 }}>{g.groupName}</span>
+                        <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{items.length > 0 ? items.length : ''}</span>
+                      </div>
+                      {isExpanded && (
+                        items.length === 0 ? (
+                          <div style={{ padding: '8px 12px 8px 28px', fontSize: 12, color: 'var(--ink-3)' }}>该分组下暂无 MCP 服务</div>
+                        ) : (
+                          items.map((m: any) => {
+                            const mid = String(m.id);
+                            const mName = m.name ?? mid;
+                            return (
+                              <div key={mid} className={`mcp-option ${selectedMCPs.has(mid) ? 'selected' : ''}`} style={{ paddingLeft: 28 }}
+                                onClick={() => setSelectedMCPs((prev) => { const n = new Set(prev); n.has(mid) ? n.delete(mid) : n.add(mid); return n; })}
+                              >
+                                <span className={`mcp-opt-dot ${selectedMCPs.has(mid) ? 'on' : 'off'}`} />
+                                {mName}
+                                {m.description && <span className="mcp-opt-desc">{m.description}</span>}
+                              </div>
+                            );
+                          })
+                        )
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          }
+          trigger="click"
+          placement="rightTop"
+          open={mcpPopOpen}
+          onOpenChange={setMcpPopOpen}
+          getPopupContainer={(triggerNode) => triggerNode as HTMLElement}
+          overlayInnerStyle={{ padding: '4px 0' }}
+        >
+          <div className="more-popup-item" onClick={() => setMcpPopOpen(true)}>
+            <EllipsisOutlined style={{ fontSize: 14, transform: 'rotate(90deg)' }} /> MCP
+            <DownOutlined style={{ marginLeft: 'auto', fontSize: 10, transform: 'rotate(-90deg)' }} />
+          </div>
+        </Popover>
+        {/* 联网搜索 */}
+        <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('联网搜索功能即将上线'); }}>
+          <SearchOutlined style={{ fontSize: 14 }} /> 联网搜索
+        </div>
+        {/* 代码执行 */}
+        <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('代码执行功能即将上线'); }}>
+          <ToolOutlined style={{ fontSize: 14 }} /> 代码执行
+        </div>
+        {/* Markdown */}
+        <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('Markdown功能即将上线'); }}>
+          <EditOutlined style={{ fontSize: 14 }} /> Markdown
+        </div>
+      </div>
+    );
 
     return (
       <div className="chat-input-glass" style={{ overflow: 'visible' }}>
@@ -147,10 +401,8 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             id="input-textarea"
             disabled={loading}
             placeholder={
-              loading
-                ? '正在思考中,请稍后输入'
-                : deepThinkEnabled
-                  ? '深度思考模式已开启，请输入您的问题'
+              loading ? '正在思考中,请稍后输入'
+                : deepThinkEnabled ? '深度思考模式已开启，请输入您的问题'
                   : '请输入问题，快速获取结果'
             }
             value={value}
@@ -159,42 +411,23 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
             autoSize={{ minRows: 1, maxRows: 4 }}
-            style={{
-              border: 'none',
-              boxShadow: 'none',
-              padding: '0',
-              resize: 'none',
-              backgroundColor: 'transparent',
-              cursor: loading ? 'not-allowed' : 'text',
-              fontSize: 13,
-              color: 'var(--ink)',
-              lineHeight: 1.5,
-              fontFamily: 'var(--font)',
-            }}
-            styles={{
-              textarea: {
-                border: 'none',
-                boxShadow: 'none',
-                backgroundColor: 'transparent',
-              },
-            }}
+            style={{ border: 'none', boxShadow: 'none', padding: '0', resize: 'none', backgroundColor: 'transparent', cursor: loading ? 'not-allowed' : 'text', fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, fontFamily: 'var(--font)' }}
+            styles={{ textarea: { border: 'none', boxShadow: 'none', backgroundColor: 'transparent' } }}
           />
         </div>
 
         {/* Toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 10px', gap: 6 }}>
-          {/* ── Left side ── */}
-
-          {/* 数据选择 */}
-          <button
-            type="button"
-            className="input-label-btn"
-            onClick={() => setDataModalVisible(true)}
-            title="选择数据"
-          >
-            <DatabaseOutlined style={{ fontSize: 14 }} />
-            <span>数据</span>
-          </button>
+          {/* 数据选择 Popover */}
+          <Popover content={semanticPopoverContent} trigger="click" placement="topLeft" open={semDropdownOpen} onOpenChange={setSemDropdownOpen}>
+            <button type="button" className={`input-label-btn ${semDropdownOpen ? 'active' : ''}`} title="选择数据">
+              <DatabaseOutlined style={{ fontSize: 14 }} />
+              <span style={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {selectedData?.name || '数据'}
+              </span>
+              <DownOutlined style={{ fontSize: 9, transition: 'transform 0.2s', transform: semDropdownOpen ? 'rotate(180deg)' : 'none' }} />
+            </button>
+          </Popover>
 
           {/* + (upload dropdown) */}
           <Dropdown menu={{ items: plusMenuItems }} trigger={['click']} placement="topLeft">
@@ -212,36 +445,32 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             </button>
           </Dropdown>
 
-          {/* 思考 (deep think toggle) - BulbOutlined */}
-          <button
-            type="button"
-            className={`input-label-btn ${deepThinkEnabled ? 'active' : ''}`}
-            onClick={onToggleDeepThink}
-          >
+          {/* 思考 (deep think toggle) */}
+          <button type="button" className={`input-label-btn ${deepThinkEnabled ? 'active' : ''}`} onClick={onToggleDeepThink}>
             <BulbOutlined style={{ fontSize: 14 }} />
             <span>思考</span>
           </button>
 
-          {/* 技能 (placeholder) */}
-          <button
-            type="button"
-            className="input-label-btn"
-            onClick={() => message.info('技能功能即将上线')}
+          {/* 更多 (...) */}
+          <Popover
+            content={morePopoverContent}
+            trigger="click"
+            placement="topRight"
+            open={morePopupOpen}
+            onOpenChange={(open) => { setMorePopupOpen(open); if (!open) { setSkillPopOpen(false); setMcpPopOpen(false); } }}
+            destroyTooltipOnHide
+            overlayInnerStyle={{ padding: '4px 0', overflow: 'visible' }}
           >
-            <ThunderboltOutlined style={{ fontSize: 13 }} />
-            <span>技能</span>
-          </button>
+            <button type="button" className="input-label-btn" title="更多">
+              <EllipsisOutlined style={{ fontSize: 16 }} />
+            </button>
+          </Popover>
 
           {/* Spacer */}
           <div style={{ flex: 1 }} />
 
-          {/* ── Right side ── */}
-
           {/* Voice Input */}
-          <AudioRecorder
-            onTranscribed={handleTranscribed}
-            disabled={loading}
-          />
+          <AudioRecorder onTranscribed={handleTranscribed} disabled={loading} />
 
           {/* Send / Stop Button */}
           <button
@@ -250,51 +479,14 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             onClick={loading ? onStop : handleSend}
             style={loading ? { background: 'var(--danger)', boxShadow: '0 2px 8px rgba(239,68,68,0.3)' } : {}}
           >
-            {loading ? (
-              <StopOutlined style={{ fontSize: 16 }} />
-            ) : (
-              <SendOutlined style={{ fontSize: 16 }} />
-            )}
+            {loading ? <StopOutlined style={{ fontSize: 16 }} /> : <SendOutlined style={{ fontSize: 16 }} />}
           </button>
         </div>
 
-        <UploadDrawer
-          open={uploadFileVisible}
-          conv={conv}
-          onOk={handleUploadOk}
-          onClose={handleUploadClose}
-        />
+        <UploadDrawer open={uploadFileVisible} conv={conv} onOk={handleUploadOk} onClose={handleUploadClose} />
 
-        {/* 数据选择模态框 */}
-        <Modal
-          title="选择数据"
-          open={dataModalVisible}
-          onCancel={() => setDataModalVisible(false)}
-          onOk={() => {
-            setDataModalVisible(false);
-            message.success('已选择数据');
-          }}
-        >
-          <div style={{ padding: '8px 0' }}>
-            {SEMANTICS_LIST.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  padding: '12px 16px',
-                  marginBottom: '8px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  border: selectedData?.id === item.id ? '2px solid #5b7cf7' : '1px solid #e5e7eb',
-                  background: selectedData?.id === item.id ? 'rgba(91, 124, 247, 0.05)' : 'white',
-                  transition: 'all 0.2s ease',
-                }}
-                onClick={() => setSelectedData(item)}
-              >
-                {item.name}
-              </div>
-            ))}
-          </div>
-        </Modal>
+        {/* 查看语义 Modal */}
+        <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
       </div>
     );
   }

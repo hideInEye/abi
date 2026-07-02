@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, MoreOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, ExportOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { Dropdown, Input, message, Modal, Spin } from 'antd'
 import type { MenuProps } from 'antd'
@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { useConversationGroups } from '@/hooks/layout/useConversationGroups'
 import { useHistoryTopics } from '@/hooks/layout/useHistoryTopics'
+import { moveSessionToGroup } from '@/service/api/app'
 import type { SessionGroup } from '@/service/api/app'
 
 type ConversationGroupsProps = {
@@ -40,12 +41,13 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
     }
   }, [collapsed, loadGroups, loadHistoryTopics, refreshKey])
 
-  // 按 groupId 将会话分配到各分组
+  // 按 groupId 将会话分配到各分组（排除无效值）
   const sessionsByGroupId = useMemo(() => {
+    const invalidGroupIds = new Set([null, undefined, '', '0', 0, 'null'])
     const map: Record<string, any[]> = {}
     for (const app of historyApps) {
       const gid = app.groupId ?? app.group_id
-      if (gid) {
+      if (!invalidGroupIds.has(gid)) {
         const key = String(gid)
         if (!map[key]) map[key] = []
         map[key].push(app)
@@ -120,6 +122,70 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
     },
     [removeGroup],
   )
+
+  // 移出分组（groupId 置空）
+  const handleMoveOutOfGroup = useCallback(
+    async (app: any) => {
+      try {
+        await moveSessionToGroup({ sessionId: String(app.chat_id), groupId: '0', title: app.title || app.biz_name || '' })
+        message.success('已移出分组')
+        await loadHistoryTopics({ silent: true })
+        window.dispatchEvent(new Event('conversation-created'))
+      } catch {
+        message.error('移出失败')
+      }
+    },
+    [loadHistoryTopics],
+  )
+
+  // 移动到其他分组
+  const handleMoveToOtherGroup = useCallback(
+    async (app: any, targetGroupId: string) => {
+      try {
+        await moveSessionToGroup({ sessionId: String(app.chat_id), groupId: targetGroupId, title: app.title || app.biz_name || '' })
+        message.success('已移动到分组')
+        await loadHistoryTopics({ silent: true })
+        window.dispatchEvent(new Event('conversation-created'))
+      } catch {
+        message.error('移动失败')
+      }
+    },
+    [loadHistoryTopics],
+  )
+
+  // 分组内会话的操作菜单
+  const buildSessionMenu = (app: any, currentGroupId: string): MenuProps => ({
+    items: [
+      {
+        key: 'move-to-group',
+        icon: <FolderOutlined />,
+        label: '移动到分组',
+        children: [
+          ...groups
+            .filter((g) => g.groupId !== currentGroupId)
+            .map((g) => ({
+              key: `move-group-${g.groupId}`,
+              label: g.groupName,
+            })),
+          ...(groups.length > 1 ? [{ type: 'divider' as const }] : []),
+          {
+            key: 'move-out',
+            icon: <ExportOutlined />,
+            label: '移出分组',
+          },
+        ],
+      },
+    ],
+    onClick: ({ key, domEvent }) => {
+      domEvent.stopPropagation()
+      if (key === 'move-out') {
+        handleMoveOutOfGroup(app)
+      } else if (key.startsWith('move-group-')) {
+        const targetGroupId = key.replace('move-group-', '')
+        handleMoveToOtherGroup(app, targetGroupId)
+      }
+    },
+  })
 
   const buildGroupMenu = (group: SessionGroup): MenuProps => ({
     items: [
@@ -255,7 +321,7 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
                       return (
                         <div
                           key={chatId}
-                          className="flex items-center gap-2 cursor-pointer transition-colors duration-150"
+                          className="group/session flex items-center gap-2 cursor-pointer transition-colors duration-150"
                           style={{
                             padding: '7px 12px 7px 32px',
                             borderRadius: 'var(--r-xs)',
@@ -280,6 +346,22 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
                           }}
                         >
                           <span className="truncate flex-1">{app.title || app.biz_name || '未命名对话'}</span>
+                          <Dropdown
+                            trigger={['click']}
+                            menu={buildSessionMenu(app, group.groupId)}
+                            placement="bottomRight"
+                          >
+                            <span
+                              className="shrink-0 px-1 py-1 opacity-0 group-hover/session:opacity-100 transition-opacity"
+                              style={{ color: 'var(--ink-3)' }}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                              }}
+                            >
+                              <MoreOutlined style={{ fontSize: 12 }} />
+                            </span>
+                          </Dropdown>
                         </div>
                       )
                     })

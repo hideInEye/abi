@@ -146,7 +146,14 @@ export function createFlatRequest<ResponseData = any, State = Record<string, unk
 
       return { data: response.data as MappedType<R, T>, error: null }
     } catch (error) {
-      return { data: null, error, response: (error as AxiosError<ResponseData>).response }
+      const axiosError = error as AxiosError<ResponseData>
+      return {
+        data: null,
+        error,
+        response: axiosError.response || {
+          data: { code: 500, msg: axiosError.message || '请求失败，请稍后再试' }
+        } as AxiosResponse<ResponseData>
+      }
     }
   } as FlatRequestInstance<State, ResponseData>
 

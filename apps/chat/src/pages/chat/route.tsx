@@ -79,6 +79,17 @@ function ChatWorkbenchLayout() {
     setHistoryRefreshKey((key) => key + 1)
   }, [])
 
+  // 监听会话创建事件，自动刷新侧边栏列表
+  useEffect(() => {
+    const handleConversationCreated = () => {
+      setHistoryRefreshKey((key) => key + 1)
+    }
+    window.addEventListener('conversation-created', handleConversationCreated)
+    return () => {
+      window.removeEventListener('conversation-created', handleConversationCreated)
+    }
+  }, [])
+
   const handleBackFromSkillStore = useCallback(() => {
     setShowSkillStore(false)
   }, [])
@@ -106,7 +117,6 @@ function ChatWorkbenchLayout() {
 
           <CreateConversationButton
             collapsed={collapsed}
-            onCreated={() => setHistoryRefreshKey((key) => key + 1)}
             onToggleCollapse={handleToggleCollapse}
           />
 
@@ -116,7 +126,7 @@ function ChatWorkbenchLayout() {
               activeKey={showSkillStore ? SKILL_STORE_MENU_KEY : undefined}
               onItemClick={handleNavItemClick}
             />
-            <ConversationGroups collapsed={collapsed} />
+            <ConversationGroups collapsed={collapsed} refreshKey={historyRefreshKey} />
             <SidebarHistoryTopics collapsed={collapsed} refreshKey={historyRefreshKey} />
           </div>
 

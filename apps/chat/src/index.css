@@ -574,18 +574,19 @@ button {
 }
 
 /* ── Welcome View ── */
-.welcome-view { display: flex; flex-direction: column; align-items: center; padding: 24px 28px 20px; min-height: auto; width: 100% }
+.welcome-view { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 28px 20px; padding-bottom: 18%; min-height: 100%; width: 100% }
 .welcome-logo {
-  width: 56px; height: 56px; border-radius: 16px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  width: 64px; height: 64px; border-radius: 50%;
+  background: transparent;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 8px 32px rgba(91,124,247,0.3), 0 0 48px rgba(139,92,246,0.12), inset 0 1px 0 rgba(255,255,255,0.25);
-  margin-bottom: 18px; position: relative; animation: welcomePulse 3s ease-in-out infinite;
+  box-shadow: 0 8px 32px rgba(91,124,247,0.25), 0 0 48px rgba(139,92,246,0.1);
+  margin-bottom: 20px; position: relative; animation: welcomePulse 3s ease-in-out infinite;
+  overflow: hidden;
 }
 .welcome-logo::after {
-  content: ''; position: absolute; inset: -6px; border-radius: 22px;
-  background: linear-gradient(135deg, rgba(91,124,247,0.2), rgba(139,92,246,0.2));
-  z-index: -1; filter: blur(16px); opacity: 0.6;
+  content: ''; position: absolute; inset: -8px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(91,124,247,0.15), rgba(139,92,246,0.15));
+  z-index: -1; filter: blur(16px); opacity: 0.5;
 }
 @keyframes welcomePulse {
   0%, 100% { transform: scale(1); box-shadow: 0 8px 32px rgba(91,124,247,0.3), 0 0 48px rgba(139,92,246,0.12) }
@@ -595,23 +596,23 @@ button {
   font-size: 22px; font-weight: 700;
   background: linear-gradient(135deg, #1a1a1a, #333);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  margin-bottom: 8px; letter-spacing: -0.02em;
+  margin-bottom: 10px; letter-spacing: -0.02em;
 }
-.welcome-subtitle { font-size: 13px; color: var(--ink-3); text-align: center; max-width: 520px; margin-bottom: 20px; line-height: 1.5 }
+.welcome-subtitle { font-size: 13px; color: var(--ink-3); text-align: center; max-width: 540px; margin-bottom: 28px; line-height: 1.6 }
 .welcome-section-title {
   font-size: 11px; font-weight: 600; color: var(--ink-4); text-align: center;
-  margin: 20px 0 12px; letter-spacing: 0.1em; text-transform: uppercase;
+  margin: 4px 0 16px; letter-spacing: 0.1em; text-transform: uppercase;
 }
 .welcome-section-title::before, .welcome-section-title::after {
   content: ''; display: inline-block; width: 24px; height: 1px;
   background: linear-gradient(90deg, transparent, var(--ink-4)); vertical-align: middle; margin: 0 8px;
 }
 .welcome-section-title::after { background: linear-gradient(90deg, var(--ink-4), transparent) }
-.welcome-cases-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 880px; margin: 0 auto }
+.welcome-cases-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; max-width: 880px; margin: 0 auto }
 .welcome-case-card {
   display: flex; flex-direction: column; align-items: center; text-align: center;
-  padding: 14px 10px 12px; background: rgba(255,255,255,0.45); backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.5); border-radius: 10px; cursor: pointer;
+  padding: 16px 12px 14px; background: rgba(255,255,255,0.45); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.5); border-radius: 12px; cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4,0,0.2,1); position: relative; overflow: hidden;
 }
 .welcome-case-card::before {
@@ -624,8 +625,8 @@ button {
 }
 .welcome-case-card:hover::before { opacity: 1 }
 .welcome-case-card .case-icon {
-  width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center;
-  justify-content: center; margin-bottom: 8px; flex-shrink: 0; font-size: 18px;
+  width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
+  justify-content: center; margin-bottom: 10px; flex-shrink: 0; font-size: 18px;
   transition: transform 0.25s;
 }
 .welcome-case-card:hover .case-icon { transform: scale(1.05) }
@@ -634,8 +635,8 @@ button {
 .welcome-case-card.purple .case-icon { background: linear-gradient(135deg, #F9F0FF, #EFDBFF); color: #722ed1 }
 .welcome-case-card.orange .case-icon { background: linear-gradient(135deg, #FFF8E6, #FFE7BA); color: #fa8c16 }
 .welcome-case-card .case-content { flex: 1; min-width: 0; width: 100% }
-.welcome-case-card .case-title { font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 2px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-.welcome-case-card .case-desc { font-size: 10px; color: var(--ink-3); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden }
+.welcome-case-card .case-title { font-size: 12.5px; font-weight: 600; color: var(--ink); margin-bottom: 3px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.welcome-case-card .case-desc { font-size: 10.5px; color: var(--ink-3); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden }
 
 /* ── Input Area (reference-aligned) ── */
 .input-area { flex-shrink: 0; padding: 0 28px 12px; background: rgba(255,255,255,0.04); width: 100%; max-width: 800px; margin: 0 auto }
@@ -764,10 +765,10 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px 16px;
   border: none;
-  border-radius: 8px;
-  background: transparent;
+  border-radius: 20px;
+  background: #F7F9FF;
   cursor: pointer;
   transition: all 0.2s var(--ease);
   font-family: var(--font);
