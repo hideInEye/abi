@@ -1,4 +1,4 @@
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { ReloadOutlined } from '@ant-design/icons';
 import type { TabsProps } from 'antd';
 import { Tabs } from 'antd';
 import { cloneDeep } from 'lodash';
@@ -44,11 +44,11 @@ const BottomTabs: React.FC<BottomTabsProps> = memo(({ curDatasource }) => {
       key: '1',
       label: '数据预览'
     },
-    // {
-    //   children: <BatchManage />,
-    //   key: '2',
-    //   label: '批量管理'
-    // }
+    {
+      children: <BatchManage />,
+      key: '2',
+      label: '批量管理'
+    }
   ];
 
   const handlePreview = async () => {

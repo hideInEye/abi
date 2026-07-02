@@ -514,9 +514,8 @@ export default function DataTableMeaningTable() {
           loading={aiLoading}
           size="small"
           onClick={async () => {
-            // 编辑模式用已保存的 modelDetail，新增模式用当前 fields 实时构造
-            const modelDetail = editObj?.modelDetail
-              || JSON.stringify(assembleData(streamlinedData(fieldsRef.current)));
+            // 统一使用当前 fields 实时构造数据（新增、编辑模式一致）
+            const modelDetail = JSON.stringify(assembleData(streamlinedData(fieldsRef.current)));
             if (!modelDetail || modelDetail === '{}') {
               message.warning('暂无语义数据可以提交');
               return;
@@ -544,31 +543,51 @@ export default function DataTableMeaningTable() {
                 }
               });
 
-              // 更新 fields store
+              // 填充逻辑：有值就用接口返回值，空值保留原有值（新增/编辑模式统一）
               const newFields = fieldsRef.current.map((field: any) => {
                 const matched = techIdMap.get(String(field.tfieldId));
                 if (!matched) return field;
                 return {
                   ...field,
-                  bizName: matched.bizName ?? field.bizName,
-                  alias: matched.alias ?? field.alias,
-                  fieldDesc: matched.fieldDesc ?? field.fieldDesc,
-                  semanticType: matched.type ?? field.semanticType
+                  bizName: (matched.bizName && String(matched.bizName).trim()) ? matched.bizName : field.bizName,
+                  alias: (matched.alias && String(matched.alias).trim()) ? matched.alias : field.alias,
+                  fieldDesc: (matched.fieldDesc && String(matched.fieldDesc).trim()) ? matched.fieldDesc : field.fieldDesc,
+                  semanticType: (matched.type && String(matched.type).trim()) ? matched.type : field.semanticType
                 };
+              });
+
+              // 填充完成后，检查仍然缺少必填项的字段并提示（不阻止填充）
+              const missingItems: string[] = [];
+              newFields.forEach((field: any) => {
+                const missing: string[] = [];
+                if (!field.bizName || !String(field.bizName).trim()) missing.push('中文名称');
+                if (!field.alias || !String(field.alias).trim()) missing.push('别名');
+                if (!field.semanticType || !String(field.semanticType).trim()) missing.push('语义类型');
+                if (missing.length > 0) {
+                  const fieldName = field.originName || field.tfieldAlias || String(field.tfieldId);
+                  missingItems.push(`${fieldName}（缺少${missing.join('、')}）`);
+                }
               });
               setFields(newFields);
 
-              // 同步更新表单显示
+              // 同步更新表单显示（bizName/alias 无值时用 tfieldAlias 兜底，与 initForm 保持一致）
               newFields.forEach((field: any, index: number) => {
                 form.setFieldsValue({
-                  [`tableConfig[${index}].bizName`]: field.bizName,
-                  [`tableConfig[${index}].alias`]: field.alias,
+                  [`tableConfig[${index}].bizName`]: (field.bizName && field.bizName.trim()) ? field.bizName : field.tfieldAlias,
+                  [`tableConfig[${index}].alias`]: (field.alias && field.alias.trim()) ? field.alias : field.tfieldAlias,
                   [`tableConfig[${index}].fieldDesc`]: field.fieldDesc,
                   [`tableConfig[${index}].semanticType`]: field.semanticType
                 });
               });
 
-              message.success('AI帮填成功');
+              if (missingItems.length > 0) {
+                const displayItems = missingItems.length > 3
+                  ? [...missingItems.slice(0, 3), `等${missingItems.length}个字段`]
+                  : missingItems;
+                message.warning(`AI帮填完成，但以下字段仍缺少必填项：${displayItems.join('；')}`, 5);
+              } else {
+                message.success('AI帮填成功');
+              }
             } catch {
               message.error('AI帮填失败');
             } finally {
