@@ -200,7 +200,7 @@ export const DimensionTable: React.FC<Props> = ({
           </div>
         </div>
       )}
-      <OntologyTablePagination current={pagination.current} pageSize={pagination.pageSize} total={pagination.total} onChange={onPaginationChange} />
+      <OntologyTablePagination {...pagination} onChange={onPaginationChange} />
     </div>
   )
 }

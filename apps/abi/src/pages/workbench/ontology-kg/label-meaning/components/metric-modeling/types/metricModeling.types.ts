@@ -22,6 +22,33 @@ export interface KnowledgeTechField {
   tfieldType?: string
 }
 
+export interface KnowledgeAtomicMetricMeta {
+  field?: string
+  fieldName?: string
+  id?: number | string
+  label?: string
+  value: string
+}
+
+export interface KnowledgeExpressionFieldMeta {
+  field: string
+  fieldName: string
+  value: string
+}
+
+export interface KnowledgeDerivedCondition {
+  logic?: 'AND' | 'OR'
+  metric?: string
+  operator?: string
+  value?: string
+}
+
+export interface KnowledgeDerivedExpression {
+  conditions?: KnowledgeDerivedCondition[]
+  innerLogic?: 'AND' | 'OR'
+  name?: string
+}
+
 export type KnowledgeTemplateParams = Partial<
   Pick<
     KnowledgeFormValues,
@@ -51,6 +78,8 @@ export type KnowledgeTemplateParams = Partial<
 
 export interface KnowledgeSubmitPayload extends KnowledgeFormValues {
   alertConfig?: JsonRecord | string
+  atomicMetricMetaMap?: Record<string, KnowledgeAtomicMetricMeta>
+  derivedExpressionFieldMetaMap?: Record<string, KnowledgeExpressionFieldMeta>
   dimensionFieldIds?: string
   groupId: number
   indAlias?: string
@@ -96,8 +125,9 @@ export interface KnowledgeIndicatorItem {
   cumulativeTimeRange?: string
   createTime?: string
   dataType?: string
-  derivedConditions?: Array<{ logic?: 'AND' | 'OR'; metric?: string; operator?: string; value?: string }>
+  derivedConditions?: KnowledgeDerivedCondition[]
   derivedConditionExpr?: string
+  derivedExpressions?: KnowledgeDerivedExpression[]
   dimensionFieldIds?: string
   divideZeroStrategy?: string
   expr?: string
@@ -163,8 +193,9 @@ export interface KnowledgeFormValues {
   cumulativeTimeRange?: string
   updateFrequency?: string
   dataType?: string
-  derivedConditions?: Array<{ logic?: 'AND' | 'OR'; metric?: string; operator?: string; value?: string }>
+  derivedConditions?: KnowledgeDerivedCondition[]
   derivedConditionExpr?: string
+  derivedExpressions?: KnowledgeDerivedExpression[]
   dimensionFieldIds?: string
   divideZeroStrategy?: string
   expr?: string
@@ -210,4 +241,10 @@ export interface KnowledgeSearchParams {
   techName: string
   status?: number
   type: string
+}
+
+export interface KnowledgePagination {
+  pageNum: number
+  pageSize: number
+  total: number
 }

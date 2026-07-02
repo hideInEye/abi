@@ -155,7 +155,7 @@ export const EntityTable: React.FC<EntityTableProps> = ({
           </div>
         </div>
       )}
-      <OntologyTablePagination current={pagination.pageNum} pageSize={pagination.pageSize} total={pagination.total} onChange={onPageChange} />
+      <OntologyTablePagination {...pagination} onChange={onPageChange} />
     </div>
   )
 }

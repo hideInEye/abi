@@ -61,7 +61,7 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
       })
       if (requestId !== entityRequestSequence.current) return
       setEntities(getOntologyNetworkRecords(data))
-      setPagination((current) => ({ ...current, pageNum: data?.current ?? current.pageNum, pageSize: data?.size ?? current.pageSize, total: data?.total ?? 0 }))
+      setPagination((current) => ({ ...current, total: data?.total ?? 0 }))
     } catch {
       if (requestId === entityRequestSequence.current) message.error('实体列表加载失败，请稍后重试')
     } finally {

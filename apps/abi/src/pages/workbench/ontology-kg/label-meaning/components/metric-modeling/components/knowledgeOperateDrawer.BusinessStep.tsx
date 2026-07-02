@@ -17,6 +17,8 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
   validateIndicatorName,
   validateMeasurementUnit,
 }) => {
+  const { patternRules } = useFormRules()
+
   return (
     <>
       <div className="mb-4 text-lg font-semibold">一、业务属性</div>
@@ -60,10 +62,10 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
           <AForm.Item label="负责人" name="indicatorOwner">
             <AInput placeholder="请输入负责人" />
           </AForm.Item>
-          <AForm.Item label="负责人邮箱" name="ownerEmail">
+          <AForm.Item label="负责人邮箱" name="ownerEmail" rules={[patternRules.email]}>
             <AInput placeholder="请输入负责人邮箱" />
           </AForm.Item>
-          <AForm.Item label="负责人电话" name="ownerPhone">
+          <AForm.Item label="负责人电话" name="ownerPhone" rules={[patternRules.phone]}>
             <AInput placeholder="请输入负责人电话" />
           </AForm.Item>
           <AForm.Item label="是否公开" name="isPublic" valuePropName="checked">

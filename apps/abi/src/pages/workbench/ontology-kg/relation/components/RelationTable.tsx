@@ -142,7 +142,7 @@ export const RelationTable: React.FC<RelationTableProps> = ({ entityNameMap, loa
           </div>
         </div>
       )}
-      <OntologyTablePagination current={pagination.pageNum} pageSize={pagination.pageSize} total={pagination.total} onChange={onPageChange} />
+      <OntologyTablePagination {...pagination} onChange={onPageChange} />
     </div>
   )
 }

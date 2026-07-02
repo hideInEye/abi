@@ -159,7 +159,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
           </div>
         </div>
       )}
-      <OntologyTablePagination current={currentPage} pageSize={pageSize} total={totalCount} onChange={handlePaginationChange} />
+      <OntologyTablePagination pageNum={currentPage} pageSize={pageSize} total={totalCount} onChange={handlePaginationChange} />
     </div>
   );
 };

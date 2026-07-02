@@ -7,47 +7,16 @@ import { INDICATOR_TYPE_FILTER_OPTIONS, STATUS_OPTIONS } from '../constants/metr
 import type { KnowledgeSearchParams } from '../types/metricModeling.types'
 
 interface Props {
-  readonly addDisabled?: boolean
-  readonly onAddAtomic: () => void
-  readonly onAddCustom: () => void
   readonly onQuery: () => void
   readonly onReset: () => void
   readonly onSearchChange: (value: Partial<KnowledgeSearchParams>) => void
   readonly searchParams: KnowledgeSearchParams
 }
 
-export const KnowledgeSearchBar: React.FC<Props> = ({ addDisabled, onAddAtomic, onAddCustom, onQuery, onReset, onSearchChange, searchParams }) => {
-  const addMenus = useMemo<MenuProps['items']>(
-    () => [
-      {
-        key: 'atomic',
-        label: (
-          <div className="py-1">
-            <div className="text-base font-semibold">原子指标映射</div>
-            <div className="mt-1 text-sm text-gray-400">配置来源字段并生成原子指标</div>
-          </div>
-        ),
-      },
-      {
-        key: 'custom',
-        label: (
-          <div className="py-1">
-            <div className="text-base font-semibold">指标自定义</div>
-            <div className="mt-1 text-sm text-gray-400">创建派生指标或衍生指标</div>
-          </div>
-        ),
-      },
-    ],
-    [],
-  )
+export const KnowledgeSearchBar: React.FC<Props> = ({   onQuery, onReset, onSearchChange, searchParams }) => {
 
-  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
-    if (key === 'atomic') {
-      onAddAtomic()
-      return
-    }
-    onAddCustom()
-  }
+
+
 
   return (
     <section className="abi-searchbar">
@@ -82,16 +51,7 @@ export const KnowledgeSearchBar: React.FC<Props> = ({ addDisabled, onAddAtomic, 
         <AButton className="btn-ghost-v5" onClick={onReset}>
           重置
         </AButton>
-        <Dropdown.Button
-          className="ml-auto btn-accent-dropdown"
-          disabled={addDisabled}
-          icon={<DownOutlined />}
-          menu={{ items: addMenus, onClick: handleMenuClick }}
-          type="primary"
-          onClick={onAddAtomic}
-        >
-          + 新增
-        </Dropdown.Button>
+      
       </div>
     </section>
   )

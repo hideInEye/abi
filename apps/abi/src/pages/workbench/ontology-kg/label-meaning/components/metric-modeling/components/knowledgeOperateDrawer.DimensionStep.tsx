@@ -1,3 +1,4 @@
+import { FileTextOutlined, FolderOpenOutlined, FolderOutlined } from '@ant-design/icons'
 import { Spin, Transfer, Tree, message } from 'antd'
 import type { FormInstance, TransferProps } from 'antd'
 import React from 'react'
@@ -7,6 +8,8 @@ import { tableSemanticsGroupList } from '@/service/api/table-semantics'
 
 import type { KnowledgeFormValues } from '../types/metricModeling.types'
 import { getKnowledgeSpaceId } from '../utils/space'
+
+import styles from './knowledgeOperateDrawer.DimensionStep.module.scss'
 
 interface DimensionGroupItem {
   groupId: number
@@ -150,6 +153,7 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
   const [expandedKeys, setExpandedKeys] = useState<string[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
   const [loadingDimensionGroupIds, setLoadingDimensionGroupIds] = useState<string[]>([])
+  const loadingDimensionGroupIdsRef = React.useRef<Set<string>>(new Set())
   const [targetKeys, setTargetKeys] = useState<string[]>([])
   const [selectedSnapshotMap, setSelectedSnapshotMap] = useState<Record<string, SelectedDimensionSnapshot>>({})
 
@@ -192,10 +196,11 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
   const fetchDimensionsByGroup = useCallback(
     async (groupId: number) => {
       const groupKey = String(groupId)
-      if (dimensionMap[groupKey] || loadingDimensionGroupIds.includes(groupKey)) {
+      if (loadingDimensionGroupIdsRef.current.has(groupKey)) {
         return
       }
 
+      loadingDimensionGroupIdsRef.current.add(groupKey)
       setLoadingDimensionGroupIds(prev => [...prev, groupKey])
       try {
         const rows = normalizeRows(
@@ -213,10 +218,11 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
       } catch {
         message.error('维度列表查询失败')
       } finally {
+        loadingDimensionGroupIdsRef.current.delete(groupKey)
         setLoadingDimensionGroupIds(prev => prev.filter(item => item !== groupKey))
       }
     },
-    [dimensionMap, loadingDimensionGroupIds]
+    []
   )
 
   const loadedDimensionOptions = useMemo(() => {
@@ -242,19 +248,38 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
       const groupKey = String(group.groupId)
       const children = dimensionMap[groupKey]?.map(item => ({
         disabled: targetKeys.includes(item.key),
+        isLeaf: true,
         key: item.key,
-        title: item.title
+        title: (
+          <span className={styles.treeNodeTitle}>
+            <FileTextOutlined className={styles.fileIcon} />
+            <span className={styles.nodeText}>{item.title}</span>
+          </span>
+        )
       }))
+      const treeKey = `group-${group.groupId}`
+      const isExpanded = expandedKeys.includes(treeKey)
 
       return {
+        checkable: false,
         children,
-        disabled: true,
+        className: styles.groupNode,
+        disableCheckbox: true,
         isLeaf: false,
-        key: `group-${group.groupId}`,
-        title: group.groupName
+        key: treeKey,
+        title: (
+          <span className={styles.treeNodeTitle}>
+            {isExpanded ? (
+              <FolderOpenOutlined className={styles.folderIcon} />
+            ) : (
+              <FolderOutlined className={styles.folderIcon} />
+            )}
+            <span className={styles.nodeText}>{group.groupName}</span>
+          </span>
+        )
       }
     })
-  }, [dimensionGroups, dimensionMap, targetKeys])
+  }, [dimensionGroups, dimensionMap, expandedKeys, targetKeys])
 
   const handleTransferChange: TransferProps['onChange'] = nextTargetKeys => {
     const nextKeys = nextTargetKeys.map(item => String(item))
@@ -276,6 +301,15 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
       return
     }
     await fetchDimensionsByGroup(Number(key.replace('group-', '')))
+  }
+
+  const handleGroupSelect = (key: string) => {
+    const groupId = Number(key.replace('group-', ''))
+    const isExpanded = expandedKeys.includes(key)
+    setExpandedKeys(isExpanded ? expandedKeys.filter(item => item !== key) : [...expandedKeys, key])
+    if (!isExpanded) {
+      fetchDimensionsByGroup(groupId)
+    }
   }
 
   const renderRightList = ({
@@ -349,16 +383,33 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
                 blockNode
                 checkable
                 checkedKeys={[...selectedKeys, ...targetKeys]}
+                className={styles.dimensionTree}
                 expandedKeys={expandedKeys}
                 loadData={handleLoadTreeData}
+                selectedKeys={[]}
                 treeData={treeData}
-                onExpand={keys => setExpandedKeys(keys.map(item => String(item)))}
                 onCheck={(_, info) => {
                   const key = String(info.node.key)
                   if (key.startsWith('group-')) {
                     return
                   }
                   onItemSelect(key, !selectedKeys.includes(key))
+                }}
+                onExpand={(keys, info) => {
+                  const nextKeys = keys.map(item => String(item))
+                  setExpandedKeys(nextKeys)
+                  const key = String(info.node.key)
+                  if (info.expanded && key.startsWith('group-')) {
+                    fetchDimensionsByGroup(Number(key.replace('group-', '')))
+                  }
+                }}
+                onSelect={(_, info) => {
+                  const key = String(info.node.key)
+                  if (!key.startsWith('group-')) {
+                    onItemSelect(key, !selectedKeys.includes(key))
+                    return
+                  }
+                  handleGroupSelect(key)
                 }}
               />
             )
