@@ -1,18 +1,28 @@
 import { Button, Form, Modal } from 'antd'
-import React from 'react'
+import React, { useEffect, useImperativeHandle, useState } from 'react'
 import { flushSync } from 'react-dom'
 import dayjs from 'dayjs'
 
 import ChatHeader from './components/chat-header'
-import Composer from './components/Composer'
+import type { ModelOption } from './components/chat-header'
 import DebugPanel from './components/DebugPanel'
 import MessageList from './components/MessageList'
 import ShareEmailSetting from './components/share-email-setting'
 import { useConversationController, type ConversationProps } from './hooks/useConversationController'
 
-const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void }, ConversationProps>((props, ref) => {
-  const { conv } = props
-  const controller = useConversationController(props, ref)
+export interface ConversationHandle {
+  setConvContent: (content: any[]) => void
+  handleSend: (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string }) => void
+  stopGenerating: () => void
+  loading: boolean
+}
+
+const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((props, ref) => {
+  const { conv, onLoadingChange, modelOptions, currentModel, onModelChange } = props
+  const [selectedModel, setSelectedModel] = useState<string>(currentModel?.label || '')
+  const [selectedModelId, setSelectedModelId] = useState<string | number>(currentModel?.id || '')
+  const [embedModelId, setEmbedModelId] = useState<string | number>(props.embedModelId || '')
+  const controller = useConversationController({ ...props, selectedModel, selectedModelId, embedModelId })
 
   const {
     chatContainerRef,
@@ -22,15 +32,12 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
     convContent3d,
     setConvContent,
     checkAll,
-    setCheckAll,
     isSharing,
     setIsSharing,
     sharingList,
     setSharingList,
     confirmShareType,
-    setConfirmShareType,
     confirmShareVisible,
-    setConfirmShareVisible,
     confirmShareLoading,
     setConfirmShareLoading,
     shareStep,
@@ -39,15 +46,6 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
     handleConfirmCancel,
     handleShareOk,
     handleShareEmail,
-    selectedExcel,
-    setSelectedExcel,
-    referenceDialog,
-    handleRemoveExcel,
-    handleRemoveDialog,
-    deepThinkEnabled,
-    setDeepThinkEnabled,
-    uploadFileEnabled,
-    setUploadFileEnabled,
     handleSend,
     stopGenerating,
     loading,
@@ -67,6 +65,34 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
     onUpdateList
   } = controller
 
+  // 暴露给父级调用
+  useImperativeHandle(ref, () => ({
+    setConvContent,
+    handleSend,
+    stopGenerating,
+    loading
+  }), [setConvContent, handleSend, stopGenerating, loading])
+
+  // 通知父级 loading 变化
+  useEffect(() => {
+    onLoadingChange?.(loading)
+  }, [loading, onLoadingChange])
+
+  // 同步父级传入的 currentModel
+  useEffect(() => {
+    if (currentModel) {
+      setSelectedModel(currentModel.label)
+      setSelectedModelId(currentModel.id)
+    }
+  }, [currentModel])
+
+  // 同步父级传入的 embedModelId
+  useEffect(() => {
+    if (props.embedModelId) {
+      setEmbedModelId(props.embedModelId)
+    }
+  }, [props.embedModelId])
+
   return (
     <div className="flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden" style={{ background: 'transparent' }}>
       <ChatHeader
@@ -76,6 +102,14 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
         onUpdateList={onUpdateList}
         setIsSharing={setIsSharing}
         onClose={onClose}
+        modelOptions={modelOptions}
+        currentModel={currentModel}
+        onModelChange={(model: ModelOption) => {
+          setSelectedModel(model.label)
+          setSelectedModelId(model.id)
+          onModelChange?.(model)
+        }}
+        onEmbedModelFound={(id) => setEmbedModelId(id)}
       />
 
       <MessageList
@@ -99,32 +133,6 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
         chatContainerRef={chatContainerRef}
       />
 
-      <Composer
-        conv={conv}
-        convContent={convContent}
-        loading={loading}
-        isSharing={isSharing}
-        checkAll={checkAll}
-        sharingList={sharingList}
-        confirmVisible={confirmShareVisible}
-        setCheckAll={setCheckAll}
-        setIsSharing={setIsSharing}
-        onConfirmShare={(type) => {
-          setConfirmShareType(type)
-          setConfirmShareVisible(true)
-        }}
-        onSend={handleSend}
-        onStop={stopGenerating}
-        setSelectedExcel={setSelectedExcel}
-        deepThinkEnabled={deepThinkEnabled}
-        uploadFileEnabled={uploadFileEnabled}
-        onToggleDeepThink={() => setDeepThinkEnabled(!deepThinkEnabled)}
-        onToggleUploadFile={() => setUploadFileEnabled(!uploadFileEnabled)}
-        selectedExcel={selectedExcel}
-        referenceDialog={referenceDialog}
-        onRemoveExcel={handleRemoveExcel}
-        onRemoveDialog={handleRemoveDialog}
-      />
 
       <Modal
         width="60%"

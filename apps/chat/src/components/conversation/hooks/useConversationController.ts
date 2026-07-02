@@ -1,32 +1,101 @@
 import { Form, message } from 'antd'
 import dayjs from 'dayjs'
-import { useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import cloneDeep from 'lodash/cloneDeep'
 
 import { fetchOperate, fetchShareEmail } from '../../../service/api/abi-system'
+import { fetchSessionMessages } from '../../../service/api/app'
 import {
-  fetchConvHistoryRoundGrouped,
   fetchConvMaxRound,
   fetchDimension,
   fetchExceptionGuidance,
   groupMessagesByOrder,
   fetchQueryRewrite,
   fetchRecommendQuestion,
-  fetchRecommendedQuestionOpenings,
   streamConvAnswer
 } from '../../../service/api/conv'
 import { useDebugStore } from '../../../store'
-import { getHumanInHistoryByOrderIndex, getOpeningText } from '../../../utils'
+import { getHumanInHistoryByOrderIndex } from '../../../utils'
 import { useScreenshot } from '../useScreenShot'
 
 import type { chatHeaderRefMethod } from '../../../types'
+import type { ModelOption } from '../components/chat-header'
 
 export interface ConversationProps {
   conv: any
   onClose: () => void
   onUpdateList: (data: any) => void
   fold: boolean
+  selectedModel?: string
+  selectedModelId?: string | number
+  embedModelId?: string | number
+  semanticId?: number | string
+  onLoadingChange?: (loading: boolean) => void
+  modelOptions?: ModelOption[]
+  currentModel?: ModelOption | null
+  onModelChange?: (model: ModelOption) => void
+}
+
+/**
+ * 从 AI 历史消息内容中剥离尾部嵌入的 JSON 对象，
+ * 仅保留可读的推理文本供 AiEle 渲染。
+ * 策略：寻找最后一个顶级 { 并验证到末尾是否为合法 JSON。
+ */
+const stripTrailingJsonFromAiContent = (content: string): string => {
+  if (!content || typeof content !== 'string') return content
+
+  const trimmed = content.trim()
+  if (!trimmed.endsWith('}')) return content
+
+  // 从后往前找最外层匹配的 {
+  let depth = 0
+  for (let i = trimmed.length - 1; i >= 0; i--) {
+    if (trimmed[i] === '}') depth++
+    else if (trimmed[i] === '{') {
+      depth--
+      if (depth === 0) {
+        // 确保前面不是 JSON 的一部分（前一个非空字符不能是 , : 等）
+        const before = trimmed.substring(0, i).trimEnd()
+        const lastChar = before[before.length - 1]
+        if (lastChar && lastChar !== ',' && lastChar !== ':' && lastChar !== '{' && lastChar !== '[') {
+          return before
+        }
+        break
+      }
+    }
+  }
+  return content
+}
+
+/**
+ * 将历史消息接口（/abi-chat/v1/app/message/query）返回的消息
+ * 映射为内部渲染所需的统一格式（role / context / order / roundIndex）
+ */
+const mapHistoryMessage = (item: any) => {
+  const roleType = item?.roleType || item?.messageDetail?.type
+  let content = item?.messageDetail?.data?.content ?? ''
+  const roundIndex = item?.roundIndex ?? item?.index ?? 0
+  const name = item?.messageDetail?.data?.name || item?.messageDetail?.data?.additional_kwargs?.model_name || ''
+
+  // AI 消息的内容通常包含推理文本 + 尾部嵌入的结构化 JSON（DSL/SQL 等），
+  // 渲染时只需要推理文本部分，JSON 数据由 view 消息负责展示
+  if (roleType === 'ai' && typeof content === 'string') {
+    content = stripTrailingJsonFromAiContent(content)
+  }
+
+  return {
+    ...item,
+    role: roleType,
+    context: content,
+    order: roundIndex,
+    roundIndex,
+    name,
+    describe: true,
+    arrowStatus: true,
+    isDone: true,
+    feedback: item?.feedbackStatus,
+  }
 }
 
 const groupConversationByOrder = (messages: any[]) => {
@@ -88,9 +157,13 @@ const groupConversationByOrder3d = (groups2d: any[][]) => {
 
 export const useConversationController = (
   props: ConversationProps,
-  ref: React.Ref<{ setConvContent: (content: any[]) => void }>
 ) => {
   const { conv, onClose, onUpdateList } = props
+  // 用 ref 存储最新 conv，避免 useEffect 依赖整个对象
+  const convRef = useRef(conv)
+  convRef.current = conv
+  // 用 ref 存储最新 paramsData，确保异步回调中始终取到最新值
+  const paramsDataRef = useRef<any>(null)
   const [confirmShareType, setConfirmShareType] = useState('')
   const [shareEmailForm] = Form.useForm()
   const [shareStep, setShareStep] = useState(1)
@@ -157,10 +230,6 @@ export const useConversationController = (
 
   const isRequestTokenActive = (token: number) => requestTokenRef.current === token
 
-  useImperativeHandle(ref, () => ({
-    setConvContent
-  }))
-
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
@@ -216,39 +285,27 @@ export const useConversationController = (
     setHistoryLoading(true)
 
     try {
-      const res = await fetchConvHistoryRoundGrouped({
-        conv_uid: conv.conv_uid,
-        round_index: minRoundIndex
+      const result: any = await fetchSessionMessages({
+        convUid: conv.conv_uid,
+        pageNum: 1,
+        pageSize: 20
       })
 
-      const newMessages = (res?.data || []).flat()
+      const rawList = result?.data?.data || result?.data || []
+      const newMessages = Array.isArray(rawList) ? rawList.flat() : []
       if (newMessages.length < 10) {
         setHasMoreHistory(false)
       }
 
       if (newMessages.length > 0) {
-        const orders = newMessages.map((item: any) => item.order)
+        const orders = newMessages.map((item: any) => item.roundIndex ?? item.order ?? item.index ?? 0)
         const newMin = Math.min(...orders)
         setMinRoundIndex(newMin)
 
-        const processedMessages = newMessages.map((item: any) => ({
-          ...item,
-          roundIndex: item.order,
-          describe: true,
-          arrowStatus: true
-        }))
+        const processedMessages = newMessages.map((item: any) => mapHistoryMessage(item))
 
         flushSync(() => {
-          setConvContent((prev) => {
-            const opening = prev.length > 0 ? prev[0] : null
-            const rest = prev.length > 0 ? prev.slice(1) : []
-            const hasOpening = opening && opening.role === 'first'
-
-            if (hasOpening) {
-              return [opening, ...processedMessages, ...rest]
-            }
-            return [...processedMessages, ...prev]
-          })
+          setConvContent((prev) => [...processedMessages, ...prev])
         })
 
         maintainScroll()
@@ -344,7 +401,14 @@ export const useConversationController = (
     }
   }, [convContent, currentMessage, userScrolled, historyLoading])
 
+  // 用 conv_uid 作为依赖，避免对象引用变化导致重复请求
+  const convUid = conv?.conv_uid
+  const convChatId = conv?.chat_id
+  // 仅在会话切换时触发（不包含 selectedModel，避免模型切换导致重复请求和 abort）
   useEffect(() => {
+    const currentConv = convRef.current
+    if (!currentConv || (!currentConv.conv_uid && !currentConv.chat_id)) return
+
     const requestToken = nextRequestToken()
     if (isRequesting.current) {
       stopGenerating()
@@ -358,13 +422,12 @@ export const useConversationController = (
       wsTimeoutRef.current = null
     }
 
-    const currentSpaceId = conv.space_id
+    const currentSpaceId = currentConv.space_id
     if (prevSpaceId.current !== undefined && prevSpaceId.current !== currentSpaceId) {
       // cache cleared
     }
     prevSpaceId.current = currentSpaceId
     handleCollect()
-    chatHeaderRef.current?.handleIsFavorite()
     setSelectedExcel({})
     setReferenceDialog({})
 
@@ -374,35 +437,65 @@ export const useConversationController = (
     canLoadMore.current = false
     isLoadingHistory.current = false
 
+    // 新建对话没有历史消息也正常加载（空状态）
     handleChatHistory(requestToken)
 
-    const { model_name, biz_name, chat_config, ...elseCov } = conv
+    // 获取用户ID
+    let userId = 0
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}')
+      userId = userInfo.userId != null ? Number(userInfo.userId) : 0
+    } catch {}
+
     const context = {
-      ...elseCov,
-      app_code: conv.app_code || conv.chat_mode,
+      session_id: currentConv.chat_id,
+      conv_uid: currentConv.conv_uid,
+      chat_model_id: props.selectedModelId || 0,
+      space_id: currentConv.space_id,
+      app_id: currentConv.appId || 0,
+      user_id: userId,
+      chat_mode: 'chat_with_db_execute',
+      embed_model_id: props.embedModelId || 0,
+      last_question: currentConv.last_question || null,
       extra: {
-        db_name: '',
         if_debug: true,
-        dsl_or_db: 'db',
-        predict_type: 'time_series_predict',
-        predict_param: {},
-        sql: ''
+        semantic_id: props.semanticId ?? null,
+        extra_body: {
+          enable_thinking: deepThinkEnabled
+        }
       }
     }
     const paramData = {
-      model: window.APP_CONFIG.VITE_CHAT_MODEL || 'qwen3:30b-a3b-fp16',
+      model: props.selectedModel || window.APP_CONFIG.VITE_CHAT_MODEL || 'qwen3:30b-a3b-fp16',
       stream: true,
-      temperature: 0.0,
+      temperature: 0,
       max_new_tokens: 4096,
       incremental: true,
       enable_vis: false,
       context: context
     }
     setParamsData(paramData)
-  }, [conv])
+    paramsDataRef.current = paramData
+  }, [convUid, convChatId])
+
+  // 模型切换时仅更新 paramsData，不重载历史、不 abort 请求
+  useEffect(() => {
+    if (!props.selectedModel) return
+    if (!paramsDataRef.current) return
+    const updated = {
+      ...paramsDataRef.current,
+      model: props.selectedModel,
+      context: {
+        ...paramsDataRef.current.context,
+        chat_model_id: props.selectedModelId || paramsDataRef.current.context.chat_model_id,
+      }
+    }
+    setParamsData(updated)
+    paramsDataRef.current = updated
+  }, [props.selectedModel, props.selectedModelId])
 
   const handleChatHistory = async (requestToken: number) => {
-    if (conv && conv.conv_uid) {
+    if (conv && conv.chat_id) {
       let isUpdate = false
       let maxOrder = 0
       await getHistory(isUpdate, maxOrder, requestToken)
@@ -411,78 +504,19 @@ export const useConversationController = (
 
   const getHistory = async (isUpdate: boolean, maxOrder: number, requestToken: number) => {
     let conversationList: any = []
-    const { conv_uid: convUid = '', agent_id: agentId = '' } = conv
-    const text: string = getOpeningText(false)
-    let openingMessage = {
-      question: {
-        items: [],
-        page: 1,
-        page_size: 0,
-        total_count: 0,
-        total_pages: 1
-      },
-      context: text,
-      role: 'first',
-      id: `opening_${convUid}`,
-      timestamp: Date.now()
-    }
-    try {
-      let questionData = []
-      if (agentId) {
-        const res2: any = await fetchRecommendedQuestionOpenings({
-          agent_id: agentId,
-          page_size: 100,
-          page: 3
-        })
-        if (!isRequestTokenActive(requestToken)) return
+    const { chat_id: sessionId = '', agent_id: agentId = '' } = conv
 
-        questionData = res2?.data?.items || []
-        if (!res2?.success || !res2) {
-          openingMessage = {
-            question: {
-              items: [],
-              page: 1,
-              page_size: 0,
-              total_count: 0,
-              total_pages: 1
-            },
-            context: getOpeningText(false),
-            role: 'first',
-            id: `opening_${convUid}`,
-            timestamp: Date.now()
-          }
-        }
-      }
-
-      let text: string = getOpeningText(questionData.length > 0)
-
-      openingMessage = {
-        question: {
-          items: questionData,
-          page: 1,
-          page_size: questionData.length,
-          total_count: questionData.length,
-          total_pages: 1
-        },
-        context: text,
-        role: 'first',
-        id: `opening_${convUid}`,
-        timestamp: Date.now()
-      }
-    } catch {}
-
-    if (convUid) {
-      let result: any = []
-      conversationList = [openingMessage]
-      result = await fetchConvHistoryRoundGrouped({
-        conv_uid: convUid
+    if (sessionId) {
+      const result: any = await fetchSessionMessages({
+        convUid: conv.conv_uid
       })
       if (!isRequestTokenActive(requestToken)) return
 
-      const flatHistory = (result?.data || []).flat()
+      const rawList = result?.data?.data || result?.data || []
+      const flatHistory = Array.isArray(rawList) ? rawList.flat() : []
 
       if (flatHistory.length > 0) {
-        const orders = flatHistory.map((item: any) => item.order)
+        const orders = flatHistory.map((item: any) => item.roundIndex ?? item.order ?? item.index ?? 0)
         const minOrder = Math.min(...orders)
         if (!isRequestTokenActive(requestToken)) return
         setMinRoundIndex(minOrder)
@@ -494,28 +528,22 @@ export const useConversationController = (
         }
 
         flatHistory.forEach((item: any) => {
+          const order = item.roundIndex ?? item.order ?? item.index ?? 0
           setUserDebugInfoMap({
-            order: item.order,
-            roundIndex: item.order
+            order,
+            roundIndex: order
           })
         })
       } else {
         setHasMoreHistory(false)
       }
-      conversationList = conversationList.concat(flatHistory)
+      conversationList = flatHistory.map((item: any) => mapHistoryMessage(item))
     }
 
     if (!isRequestTokenActive(requestToken)) return
-    setConvContent(
-      conversationList.map((item: any) => {
-        return {
-          ...item,
-          roundIndex: item.order,
-          describe: true,
-          arrowStatus: true
-        }
-      })
-    )
+    // 如果当前正在流式请求中，不覆盖已有的消息（避免竞态条件清空正在进行的对话）
+    if (isRequesting.current) return
+    setConvContent(conversationList)
 
     setTimeout(() => {
       if (!isRequestTokenActive(requestToken)) return
@@ -714,7 +742,7 @@ export const useConversationController = (
     })
   }
 
-  const getAnswer = async ({ question, IC }: any) => {
+  const getAnswer = async ({ question, IC, _meta }: any) => {
     if (isRequesting.current) {
       return
     }
@@ -724,21 +752,23 @@ export const useConversationController = (
     setTimeout(scrollToBottom, 300)
     abortController.current = new AbortController()
     isAborting.current = false
-    const params = cloneDeep(paramsData)
-    params.context.extra.db_name = ''
-    params.context.extra.modelName = ''
-    params.messages = question
-    params.context.extra.sql_command = ''
-    if (!deepThinkEnabled) {
-      params.context.extra.quick_mode = true
+    const params = cloneDeep(paramsDataRef.current || paramsData)
+    // 每次发送时注入最新的 deepThink 状态和 semanticId
+    if (params.context?.extra) {
+      params.context.extra.extra_body = { enable_thinking: deepThinkEnabled }
+      params.context.extra.semantic_id = props.semanticId ?? null
     }
+    params.messages = question
 
     const userMessage = {
       context: question,
       role: 'human',
       id: Date.now(),
       order: tempUserId,
-      roundIndex: tempUserId
+      roundIndex: tempUserId,
+      _groupName: _meta?.groupName,
+      _semanticName: _meta?.semanticName,
+      _semanticSchemaId: _meta?.semanticSchemaId,
     }
     setConvContent((state) => [...state, userMessage])
 
@@ -758,27 +788,6 @@ export const useConversationController = (
 
       hasTriggeredIsGetting.current = false
       setIsGettingData(false)
-
-      if (selectedExcel?.file_id) {
-        params.context.app_code = 'chat_excel'
-        params.context.chat_mode = 'chat_excel'
-        params.context.extra.excel_file_id = selectedExcel.file_id
-      }
-      if (referenceDialog?.order) {
-        params.context.extra.conv_uid = conv.conv_uid
-        params.context.extra.round_index = referenceDialog.order
-      }
-
-      if (IC) {
-        params.context.extra.clarify_flag = IC.clarify_flag
-        params.context.extra.chat_mode = IC.chat_mode
-        if (IC.extra) {
-          Object.assign(params.context.extra, IC.extra)
-        }
-        if (IC.structured_data) {
-          params.context.extra.structured_data = IC.structured_data
-        }
-      }
 
       let roundIndex: any = undefined
       let retryCount = 0
@@ -804,86 +813,7 @@ export const useConversationController = (
         },
         async onmessage(event) {
           if (event.data) {
-            if (event.data.includes('round_index')) {
-              const roundIndexMatch = event.data.match(/round_index:(\d+)/)
-              if (roundIndexMatch) {
-                const extractedRoundIndex = parseInt(roundIndexMatch[1], 10)
-                roundIndex = Number(extractedRoundIndex)
-                setLoadingRoundIndex(roundIndex)
-                setUserDebugInfoMap({
-                  order: tempUserId,
-                  roundIndex
-                })
-                setUserDebugInfoMap({
-                  order: roundIndex,
-                  roundIndex
-                })
-                syncTempOrderToRoundIndex(tempUserId, roundIndex)
-              }
-            }
-
-            if (!event.data.includes('chatcmpl')) {
-              messageRef.current += event.data
-
-              const startCount = (messageRef.current.match(/<think>/g) || []).length
-              const endCount = (messageRef.current.match(/<\/think>/g) || []).length
-
-              if (endCount > closedGroupCountRef.current) {
-                closedGroupCountRef.current = endCount
-              }
-
-              if (startCount > groupCountRef.current) {
-                updateAiMessage({ smLoading: false, isDone: true })
-
-                if (!isAborting.current) {
-                  let currentSubChatMode = undefined
-                  if (event.data.includes('sub_chat_mode')) {
-                    const subChatModeMatch = event.data.match(/sub_chat_mode:(\w+)/)
-                    if (subChatModeMatch) {
-                      currentSubChatMode = subChatModeMatch[1]
-                    }
-                  }
-
-                  setConvContent((state) => [
-                    ...state,
-                    {
-                      context: '',
-                      role: 'ai',
-                      useSimpleStyle: false,
-                      smLoading: true,
-                      isStreaming: true,
-                      isDone: false,
-                      sub_chat_mode: currentSubChatMode,
-                      order: tempUserId,
-                      roundIndex
-                    }
-                  ])
-                }
-                groupCountRef.current = startCount
-              } else if (event.data.includes('sub_chat_mode')) {
-                const subChatModeMatch = event.data.match(/sub_chat_mode:(\w+)/)
-                if (subChatModeMatch) {
-                  const extractedSubChatMode = subChatModeMatch[1]
-                  updateAiMessage({
-                    sub_chat_mode: extractedSubChatMode
-                  })
-                }
-              }
-
-              let displayMessage = ''
-              const lastOpen = messageRef.current.lastIndexOf('<think>')
-              if (lastOpen >= 0) {
-                displayMessage = messageRef.current.substring(lastOpen + 7)
-                const closeIdx = displayMessage.indexOf('</think>')
-                if (closeIdx >= 0) {
-                  displayMessage = displayMessage.substring(0, closeIdx)
-                }
-              }
-              displayMessage = displayMessage.replace(/round_index:\d+,?\s*/, '')
-              displayMessage = displayMessage.replace(/"illegal_query":\s*"([^"]+)"/, '$1')
-              setCurrentMessage(displayMessage.replace(/\\n/g, '\n'))
-            }
-
+            // 处理 [DONE] 信号
             if (event.data === '[DONE]') {
               const endTime = performance.now()
               const thinkTimeMs = endTime - startTimeRef.current
@@ -941,48 +871,149 @@ export const useConversationController = (
               return
             }
 
-            if (event.data.includes('illegal_query')) {
-              const data = event.data
-              const regex = /<think>"illegal_query":\s?"(.*?)"<\/think>/
-              const match: any = data.match(regex)
-
-              updateAiMessage({
-                context: match[1],
-                isStreaming: false,
-                smLoading: false,
-                isDone: true,
-                isIllegalQuery: true
-              })
-
-              setLoading(false)
-              setIsGettingData(false)
-              setSmLoading(false)
-              isRequesting.current = false
-              abortController.current = null
-              return
-            }
-
-            if (event.data.includes('intent_clarify')) {
-              const data = JSON.parse(event.data)
-              const assemble = {
-                data: data || {},
-                context: '您好，系统检测到您当前提出的问题意图尚不明确，需进一步澄清。'
+            // 从 OpenAI 兼容格式提取 content
+            let chunk = event.data
+            try {
+              const parsed = JSON.parse(event.data)
+              const delta = parsed?.choices?.[0]?.delta
+              if (delta?.content !== undefined && delta?.content !== null) {
+                chunk = delta.content
+              } else {
+                // 没有 content 的事件（如首条仅含 role 的事件）跳过
+                return
               }
-              updateAiMessage({
-                context: assemble.context,
-                questionData: assemble.data,
-                isStreaming: false,
-                smLoading: false,
-                isDone: true
-              })
-
-              setLoading(false)
-              setIsGettingData(false)
-              setSmLoading(false)
-              isRequesting.current = false
-              abortController.current = null
-              return
+            } catch {
+              // 非 JSON 格式，直接使用原始 event.data（兼容旧格式）
             }
+
+            // 提取 round_index
+            if (chunk.includes('round_index')) {
+              const roundIndexMatch = chunk.match(/round_index:(\d+)/)
+              if (roundIndexMatch) {
+                const extractedRoundIndex = parseInt(roundIndexMatch[1], 10)
+                roundIndex = Number(extractedRoundIndex)
+                setLoadingRoundIndex(roundIndex)
+                setUserDebugInfoMap({
+                  order: tempUserId,
+                  roundIndex
+                })
+                setUserDebugInfoMap({
+                  order: roundIndex,
+                  roundIndex
+                })
+                syncTempOrderToRoundIndex(tempUserId, roundIndex)
+              }
+            }
+
+            // 累积内容
+            messageRef.current += chunk
+
+            // 处理 illegal_query
+            if (messageRef.current.includes('illegal_query')) {
+              const regex = /<think>"illegal_query":\s?"(.*?)"<\/think>/
+              const match: any = messageRef.current.match(regex)
+              if (match) {
+                updateAiMessage({
+                  context: match[1],
+                  isStreaming: false,
+                  smLoading: false,
+                  isDone: true,
+                  isIllegalQuery: true
+                })
+
+                setLoading(false)
+                setIsGettingData(false)
+                setSmLoading(false)
+                isRequesting.current = false
+                abortController.current = null
+                return
+              }
+            }
+
+            // 处理 intent_clarify
+            if (chunk.includes('intent_clarify')) {
+              try {
+                const data = JSON.parse(chunk)
+                const assemble = {
+                  data: data || {},
+                  context: '您好，系统检测到您当前提出的问题意图尚不明确，需进一步澄清。'
+                }
+                updateAiMessage({
+                  context: assemble.context,
+                  questionData: assemble.data,
+                  isStreaming: false,
+                  smLoading: false,
+                  isDone: true
+                })
+
+                setLoading(false)
+                setIsGettingData(false)
+                setSmLoading(false)
+                isRequesting.current = false
+                abortController.current = null
+                return
+              } catch {}
+            }
+
+            const startCount = (messageRef.current.match(/<think>/g) || []).length
+            const endCount = (messageRef.current.match(/<\/think>/g) || []).length
+
+            if (endCount > closedGroupCountRef.current) {
+              closedGroupCountRef.current = endCount
+            }
+
+            if (startCount > groupCountRef.current) {
+              updateAiMessage({ smLoading: false, isDone: true })
+
+              if (!isAborting.current) {
+                let currentSubChatMode = undefined
+                if (chunk.includes('sub_chat_mode')) {
+                  const subChatModeMatch = chunk.match(/sub_chat_mode:(\w+)/)
+                  if (subChatModeMatch) {
+                    currentSubChatMode = subChatModeMatch[1]
+                  }
+                }
+
+                setConvContent((state) => [
+                  ...state,
+                  {
+                    context: '',
+                    role: 'ai',
+                    useSimpleStyle: false,
+                    smLoading: true,
+                    isStreaming: true,
+                    isDone: false,
+                    sub_chat_mode: currentSubChatMode,
+                    order: tempUserId,
+                    roundIndex
+                  }
+                ])
+              }
+              groupCountRef.current = startCount
+            } else if (chunk.includes('sub_chat_mode')) {
+              const subChatModeMatch = chunk.match(/sub_chat_mode:(\w+)/)
+              if (subChatModeMatch) {
+                const extractedSubChatMode = subChatModeMatch[1]
+                updateAiMessage({
+                  sub_chat_mode: extractedSubChatMode
+                })
+              }
+            }
+
+            // 提取当前显示内容（<think>...</think> 内部）
+            let displayMessage = ''
+            const lastOpen = messageRef.current.lastIndexOf('<think>')
+            if (lastOpen >= 0) {
+              displayMessage = messageRef.current.substring(lastOpen + 7)
+              const closeIdx = displayMessage.indexOf('</think>')
+              if (closeIdx >= 0) {
+                displayMessage = displayMessage.substring(0, closeIdx)
+              }
+            }
+            displayMessage = displayMessage.replace(/round_index:\d+,?\s*/, '')
+            displayMessage = displayMessage.replace(/sub_chat_mode:\w+,?\s*/, '')
+            displayMessage = displayMessage.replace(/"illegal_query":\s*"([^"]+)"/, '$1')
+            setCurrentMessage(displayMessage.replace(/\\n/g, '\n'))
           }
         },
         onclose() {
@@ -1292,7 +1323,7 @@ export const useConversationController = (
     }
   }
 
-  const handleSend = (value: string) => {
+  const handleSend = (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string }) => {
     if (!value.trim() || loading) return
     handleCollect()
     const messageContent = {
@@ -1300,7 +1331,8 @@ export const useConversationController = (
       file_id: selectedExcel?.file_id,
       file_name: selectedExcel?.file_name,
       reference_order: referenceDialog?.order,
-      reference_context: referenceDialog?.context
+      reference_context: referenceDialog?.context,
+      _meta: meta,
     }
 
     getAnswer(messageContent)

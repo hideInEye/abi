@@ -1,9 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/chat/')({
-  component: ChatEmptyPage,
+  beforeLoad: () => {
+    throw redirect({ to: '/chat/task/$taskId', params: { taskId: 'new' } })
+  },
 })
-
-function ChatEmptyPage() {
-  return <div className="h-full w-full" style={{ background: 'transparent' }} />
-}

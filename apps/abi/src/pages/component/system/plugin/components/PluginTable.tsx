@@ -85,6 +85,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
     {
       align: 'left',
       dataIndex: 'pluginName',
+      className: 'col-plugin-name',
       key: 'pluginName',
       minWidth: 160,
       render: (text: string) => (
@@ -127,13 +128,19 @@ export const PluginTable: React.FC<PluginTableProps> = ({
       align: 'center',
       dataIndex: 'pluginType',
       key: 'pluginType',
-      minWidth: 120,
+      minWidth: 220,
+      width: 220,
       title: 'MCP类型',
       render: (_: unknown, record: any) => {
-        const isHttp = record.protocol === 'http' || record.protocol === 'https';
-        return isHttp
-          ? <ATag color="orange">http转换</ATag>
-          : <span>{record.pluginType || '--'}</span>;
+        // 对齐 Nacos 官方：显示协议原文 + 存量转化标签
+        const rp = (record.frontProtocol || record.protocol || '');
+        const isLegacy = record.protocol === 'http' || record.protocol === 'https';
+        return (
+          <ASpace size={4} style={{ whiteSpace: 'nowrap' }}>
+            <span>{rp || '--'}</span>
+            {isLegacy && <ATag color="green" style={{ margin: 0 }}>存量转化</ATag>}
+          </ASpace>
+        );
       }
     },
     {
@@ -311,9 +318,16 @@ export const PluginTable: React.FC<PluginTableProps> = ({
                   <div className="row">
                     <span className="lbl">类型</span>
                     <span className="val">
-                      {(record.protocol === 'http' || record.protocol === 'https')
-                        ? <ATag color="orange">http转换</ATag>
-                        : (record.pluginType || '-')}
+                      {(() => {
+                        const rp = record.frontProtocol || record.protocol || '';
+                        const isLegacy = record.protocol === 'http' || record.protocol === 'https';
+                        return (
+                          <ASpace size={4}>
+                            <span>{rp || '-'}</span>
+                            {isLegacy && <ATag color="green" style={{ margin: 0 }}>存量转化</ATag>}
+                          </ASpace>
+                        );
+                      })()}
                     </span>
                   </div>
                 )}

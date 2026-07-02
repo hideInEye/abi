@@ -10,7 +10,6 @@ import { getAllFieldsByNodeData } from '@/utils/data-collection-operate';
 import { DataCollectionOperateContext } from '../context';
 import styles from '../index.module.css';
 
-import BatchManage from './BatchManage';
 import CalculatedFieldModal from './CalculatedFieldModal';
 import DataPreview from './DataPreview';
 
@@ -43,11 +42,6 @@ const BottomTabs: React.FC<BottomTabsProps> = memo(({ curDatasource }) => {
       children: <DataPreview previewData={previewData} />,
       key: '1',
       label: '数据预览'
-    },
-    {
-      children: <BatchManage />,
-      key: '2',
-      label: '批量管理'
     }
   ];
 

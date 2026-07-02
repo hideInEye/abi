@@ -79,13 +79,16 @@ export function fetchConvHistory(data: any) {
   });
 }
 
+// 接口已废弃，保留逻辑不请求
 export function fetchConvHistoryRound(data: any) {
-  return request({
-    url: "/chat-proxy/api/v1/chat/conv/messages/history_round",
-    method: "post",
-    data,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
-  });
+  // TODO: 接口已停用，恢复时取消注释
+  // return request({
+  //   url: "/chat-proxy/api/v1/chat/conv/messages/history_round",
+  //   method: "post",
+  //   data,
+  //   baseURL: window.APP_CONFIG.VITE_BASE_API
+  // });
+  return Promise.resolve({ data: [] })
 }
 
 export const groupMessagesByOrder = (messages: any[]) => {

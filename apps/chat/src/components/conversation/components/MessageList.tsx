@@ -1,11 +1,15 @@
 import type { RefObject } from 'react'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { EyeOutlined } from '@ant-design/icons'
 
 import AiEle from '../AiEle'
 import CheckboxWrapCom from '../CheckboxWrapCom'
 import HumanEle from '../HumanEle'
 import OpeningsEle from '../OpeningsEle'
 import ViewEle from '../ViewEle'
+import SchemaFieldsModal from '../../conversation-analysis/SchemaFieldsModal'
+import type { SchemaTable, SchemaField } from '../../conversation-analysis/SchemaFieldsModal'
+import { fetchSemanticDetail } from '../../../service/api/semantic'
 
 type MessageListProps = {
   mode?: 'default' | 'share'
@@ -63,6 +67,56 @@ const MessageList = ({
   const containerRef = chatContainerRef ?? useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [containerHeight, setContainerHeight] = useState(0)
+
+  // ── 查看语义 Modal 状态 ──
+  const [semModalOpen, setSemModalOpen] = useState(false)
+  const [semModalTables, setSemModalTables] = useState<SchemaTable[]>([])
+
+  // 解析 modelDetail 提取字段
+  function parseFieldsFromModelDetail(modelDetailStr: string): SchemaField[] {
+    try {
+      const detail = typeof modelDetailStr === 'string' ? JSON.parse(modelDetailStr) : modelDetailStr
+      const fields: SchemaField[] = []
+      const addFields = (items: any[], semantic: SchemaField['semantic'], semLabel: string) => {
+        (items || []).forEach(item => {
+          fields.push({
+            name: item.originName || item.fieldName || item.techName || '',
+            type: item.fieldType || '',
+            semantic,
+            semLabel,
+            description: item.fieldDesc || '',
+            tableName: item.tableName || '',
+            tableDesc: item.tdesc || item.rtableName || '',
+          })
+        })
+      }
+      addFields(detail.identifiers, 'pk', '主键')
+      const dimensions = detail.dimensions || []
+      addFields(dimensions.filter((d: any) => d.type === 'datetime'), 'date', '日期')
+      addFields(dimensions.filter((d: any) => d.type !== 'datetime'), 'dim', '维度')
+      addFields(detail.measures, 'metric', '指标')
+      return fields
+    } catch { return [] }
+  }
+
+  const openSchemaModal = (schemaId: number | string, bizName: string) => {
+    const table: SchemaTable = {
+      schemaId,
+      bizName,
+      fields: [],
+      loading: true,
+    }
+    setSemModalTables([table])
+    setSemModalOpen(true)
+    fetchSemanticDetail(schemaId)
+      .then((res: any) => {
+        const detail = res?.data?.data || res?.data || res
+        const modelDetail = detail?.modelDetail
+        const fields = modelDetail ? parseFieldsFromModelDetail(modelDetail) : []
+        setSemModalTables([{ ...table, fields, loading: false, description: detail?.description || detail?.remark || '' }])
+      })
+      .catch(() => setSemModalTables([{ ...table, loading: false }]))
+  }
 
   const groupedData = useMemo(() => {
     const baseGroups3d = convContent3d.length
@@ -179,6 +233,13 @@ const MessageList = ({
       return renderItem(group[0][0], `opening-${groupKey}`)
     }
 
+    // 从 human 消息中提取元数据(分组/数据语义)
+    const humanMsg = flatGroup.find((item: any) => item.role === 'human')
+    const msgGroupName = humanMsg?._groupName || ''
+    const msgSemanticName = humanMsg?._semanticName || ''
+    const msgSemanticSchemaId = humanMsg?._semanticSchemaId
+    const showInfoBar = mode !== 'share' && (msgGroupName || msgSemanticName)
+
     return (
       <div key={`group-${groupKey}-${index}`} className="mb-5">
         {group.map((section: any[], sectionIndex: number) => {
@@ -198,6 +259,65 @@ const MessageList = ({
           if (hasBodyContent) {
             return (
               <div key={`${sectionKey}-body`} className="rounded-[1.25rem] border border-[#e9edf4] bg-white px-[0.875rem] py-[0.75rem] shadow-[0_0.125rem_0.5rem_rgba(15,23,42,0.04)]">
+                {/* 信息条：分组 + 数据语义 + 查看 */}
+                {showInfoBar && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 16,
+                      padding: '8px 12px',
+                      marginBottom: 8,
+                      background: 'rgba(91,124,247,0.04)',
+                      borderRadius: 10,
+                      border: '1px solid rgba(91,124,247,0.1)',
+                      fontSize: 13,
+                      color: '#546074',
+                    }}
+                  >
+                    <span>
+                      <span style={{ color: '#8a95a8' }}>分组：</span>
+                      <span style={{ color: '#5b7cf7', fontWeight: 500 }}>{msgGroupName || '无'}</span>
+                    </span>
+                    <span style={{ color: '#e0e4ea' }}>|</span>
+                    <span>
+                      <span style={{ color: '#8a95a8' }}>数据语义：</span>
+                      <span style={{ color: '#5b7cf7', fontWeight: 500 }}>{msgSemanticName || '无'}</span>
+                    </span>
+                    {msgSemanticSchemaId && (
+                      <>
+                        <span style={{ color: '#e0e4ea' }}>|</span>
+                        <button
+                          type="button"
+                          onClick={() => openSchemaModal(msgSemanticSchemaId, msgSemanticName)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '2px 10px',
+                            border: '1px solid rgba(91,124,247,0.25)',
+                            borderRadius: 6,
+                            background: 'rgba(91,124,247,0.06)',
+                            color: '#5b7cf7',
+                            fontSize: 12,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLElement).style.background = 'rgba(91,124,247,0.12)'
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.background = 'rgba(91,124,247,0.06)'
+                          }}
+                        >
+                          <EyeOutlined style={{ fontSize: 12 }} />
+                          查看
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
                 {section.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`))}
               </div>
             )
@@ -223,6 +343,7 @@ const MessageList = ({
         <div className="w-[53.75rem] m-auto">
           {groupedData.map(renderGroup)}
         </div>
+        <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
       </div>
     )
   }
@@ -244,6 +365,7 @@ const MessageList = ({
         <div style={{ transform: `translateY(${offsetTop / 16}rem)` }}>{visibleItems.map((item, index) => renderItem(item, startIndex + index))}</div>
       </div>
       </div>
+      <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
     </div>
   )
 }
