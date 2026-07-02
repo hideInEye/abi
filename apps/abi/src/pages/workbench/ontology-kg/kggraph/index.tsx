@@ -1,4 +1,4 @@
-import { LeftOutlined, ReloadOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons'
+import { DownOutlined, LeftOutlined, ReloadOutlined, RightOutlined, SearchOutlined, UpOutlined } from '@ant-design/icons'
 import { Checkbox, InputNumber, Select, Spin, message } from 'antd'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -10,7 +10,7 @@ import GraphDetailPanel from './components/GraphDetailPanel'
 import OntologyGraphCanvas from './components/OntologyGraphCanvas'
 import { useOntologyGraph } from './hooks/useOntologyGraph'
 import type { GraphQueryValues, GraphSelection } from './types'
-import { filterGraphData } from './utils/graph'
+import { filterGraphData, splitGraphByDegree } from './utils/graph'
 
 const INITIAL_QUERY: GraphQueryValues = { degree: 2, relationKeyword: '' }
 
@@ -23,6 +23,7 @@ export const Component: React.FC = () => {
   const [selection, setSelection] = useState<GraphSelection | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [filterCollapsed, setFilterCollapsed] = useState(false)
+  const [isolatedExpanded, setIsolatedExpanded] = useState(false)
 
   const entityIds = useMemo(
     () => (entities.length > 0 ? entities.map((entity) => String(entity.id)) : graphData.nodes.map((node) => String(node.id))),
@@ -42,6 +43,12 @@ export const Component: React.FC = () => {
   }, [entityIds, relationNames])
 
   const filteredGraph = useMemo(() => filterGraphData(graphData, selectedEntityIds, selectedRelations), [graphData, selectedEntityIds, selectedRelations])
+  const splitGraph = useMemo(() => splitGraphByDegree(filteredGraph), [filteredGraph])
+
+  useEffect(() => {
+    setIsolatedExpanded(false)
+  }, [filteredGraph])
+
   const selectedNode = useMemo<OntologyGraphNode | null>(
     () => (selection?.type === 'node' ? (graphData.nodes.find((node) => String(node.id) === selection.id) ?? null) : null),
     [graphData.nodes, selection],
@@ -56,7 +63,7 @@ export const Component: React.FC = () => {
   }, [])
 
   const handleQuery = useCallback((): void => {
-    queryGraph(queryValues)
+    queryGraph({ ...queryValues, degree: queryValues.degree ?? INITIAL_QUERY.degree })
   }, [queryGraph, queryValues])
 
   const handleResetQuery = useCallback((): void => {
@@ -76,6 +83,24 @@ export const Component: React.FC = () => {
     setSelection(nextSelection)
     setDetailOpen(true)
   }, [])
+
+  const handleSetStartEntity = useCallback((node: OntologyGraphNode): void => {
+    updateQuery({ startEntityId: node.id })
+    message.success(`已设置开始节点：${node.entityName}`)
+  }, [updateQuery])
+
+  const handleViewIsolatedNode = useCallback((node: OntologyGraphNode): void => {
+    setSelection({ id: String(node.id), type: 'node' })
+    setDetailOpen(true)
+  }, [])
+
+  const handleRequeryIsolatedNode = useCallback((node: OntologyGraphNode): void => {
+    const nextQuery = { ...queryValues, degree: queryValues.degree ?? INITIAL_QUERY.degree, startEntityId: node.id }
+    setQueryValues(nextQuery)
+    setSelection(null)
+    setDetailOpen(false)
+    void queryGraph(nextQuery)
+  }, [queryGraph, queryValues])
 
   const handleCloseDetails = useCallback((): void => {
     setDetailOpen(false)
@@ -157,7 +182,7 @@ export const Component: React.FC = () => {
               placeholder="关系跳数"
               style={{ width: 130 }}
               value={queryValues.degree}
-              onChange={(value) => updateQuery({ degree: typeof value === 'number' ? value : 2 })}
+              onChange={(value) => updateQuery({ degree: typeof value === 'number' ? value : undefined })}
             />
             <AButton className="btn-accent-gradient" type="primary" onClick={handleQuery}>
               <SearchOutlined /> 查询
@@ -168,12 +193,57 @@ export const Component: React.FC = () => {
           </header>
           <div className="relative min-h-0 flex-1">
             <OntologyGraphCanvas
-              emptyDescription={filtersLoaded && !hasFilterOptions ? '暂无可探索的实体或关系' : undefined}
-              edges={filteredGraph.edges}
-              nodes={filteredGraph.nodes}
+              degreeMap={splitGraph.degreeMap}
+              emptyDescription={
+                splitGraph.connectedEdges.length === 0
+                  ? `当前筛选结果暂无关系。已筛选 ${filteredGraph.nodes.length} 个实体，但没有匹配到符合条件的关系。`
+                  : filtersLoaded && !hasFilterOptions
+                    ? '暂无可探索的实体或关系'
+                    : undefined
+              }
+              edges={splitGraph.connectedEdges}
+              nodes={splitGraph.connectedNodes}
               selection={selection}
               onSelect={handleSelect}
             />
+            {splitGraph.isolatedNodes.length > 0 && (
+              <div className="absolute bottom-5 left-5 z-30 max-w-[min(720px,calc(100%-40px))] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)] backdrop-blur">
+                <button
+                  className="flex w-full items-center justify-between gap-4 border-0 bg-transparent p-0 text-left text-sm font-600 text-slate-700"
+                  type="button"
+                  onClick={() => setIsolatedExpanded((value) => !value)}
+                >
+                  <span>未关联实体 {splitGraph.isolatedNodes.length} 个</span>
+                  <span className="flex items-center gap-1 text-blue-600">
+                    {isolatedExpanded ? '收起' : '展开查看'}
+                    {isolatedExpanded ? <UpOutlined /> : <DownOutlined />}
+                  </span>
+                </button>
+                {isolatedExpanded && (
+                  <div className="mt-3 grid max-h-240px grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2 overflow-auto">
+                    {splitGraph.isolatedNodes.map((node) => (
+                      <div key={String(node.id)} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: node.color || '#5B7CF7' }} />
+                          <span className="min-w-0 truncate text-sm font-600 text-slate-800">{node.entityName}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          <AButton size="small" type="link" onClick={() => handleSetStartEntity(node)}>
+                            设为开始节点
+                          </AButton>
+                          <AButton size="small" type="link" onClick={() => handleViewIsolatedNode(node)}>
+                            查看详情
+                          </AButton>
+                          <AButton size="small" type="link" onClick={() => handleRequeryIsolatedNode(node)}>
+                            重新查询关系
+                          </AButton>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {loading && (
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
                 <Spin />

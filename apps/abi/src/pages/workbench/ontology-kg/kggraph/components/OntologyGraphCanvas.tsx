@@ -8,6 +8,7 @@ import type { OntologyGraphEdge, OntologyGraphNode } from '@/pages/workbench/ont
 import type { GraphSelection } from '../types'
 
 interface OntologyGraphCanvasProps {
+  readonly degreeMap: Record<string, number>
   readonly emptyDescription?: string
   readonly edges: OntologyGraphEdge[]
   readonly nodes: OntologyGraphNode[]
@@ -16,10 +17,13 @@ interface OntologyGraphCanvasProps {
 }
 
 interface EntityNodeData {
+  degree: number
+  entity: OntologyGraphNode
   selected: boolean
 }
 
 interface RelationEdgeData {
+  edge: OntologyGraphEdge
   relation: string
   selected: boolean
 }
@@ -49,6 +53,7 @@ Graph.registerNode(
         y: 0,
       },
       dot: { cx: 28, cy: 36, fill: '#5B7CF7', r: 7 },
+      degree: { fill: '#64748B', fontFamily: GRAPH_FONT_FAMILY, fontSize: 12, fontWeight: 500, textAnchor: 'start', x: 52, y: 58 },
       shadow: {
         fill: '#AAB6C8',
         height: 66,
@@ -59,7 +64,7 @@ Graph.registerNode(
         x: 7,
         y: 9,
       },
-      title: { fill: '#1F2937', fontFamily: GRAPH_FONT_FAMILY, fontSize: 16, fontWeight: 600, textAnchor: 'start', x: 52, y: 42 },
+      title: { fill: '#1F2937', fontFamily: GRAPH_FONT_FAMILY, fontSize: 16, fontWeight: 600, textAnchor: 'start', x: 52, y: 34 },
     },
     height: CARD_HEIGHT,
     markup: [
@@ -67,6 +72,7 @@ Graph.registerNode(
       { selector: 'body', tagName: 'rect' },
       { selector: 'dot', tagName: 'circle' },
       { selector: 'title', tagName: 'text' },
+      { selector: 'degree', tagName: 'text' },
     ],
     width: CARD_WIDTH,
   },
@@ -112,6 +118,17 @@ function createRelationLabel(relation: string, selected = false, hovered = false
   }
 }
 
+function createTargetMarker(stroke: string) {
+  return {
+    fill: stroke,
+    height: 8,
+    name: 'block',
+    stroke,
+    strokeWidth: 0,
+    width: 12,
+  }
+}
+
 function getDefaultNodePosition(index: number, count: number, width: number, height: number): NodePosition {
   if (count <= 1) return { x: Math.max(48, width / 2 - CARD_WIDTH / 2), y: Math.max(48, height / 2 - CARD_HEIGHT / 2) }
 
@@ -149,13 +166,18 @@ function animateZoom(graph: Graph, factor: number): void {
 }
 
 function setNodeVisualState(node: Node, selected: boolean, hovered: boolean): void {
+  const degree = node.getData<EntityNodeData>()?.degree ?? 0
+  const prominence = Math.min(1, degree / 6)
   node.attr({
     body: {
       fill: '#FFFFFF',
       stroke: selected ? '#4169F6' : hovered ? '#B7C5DA' : '#DFE5EE',
-      strokeWidth: selected ? 4 : 1,
+      strokeWidth: selected ? 4 : hovered ? 2 : 1 + prominence,
     },
-    shadow: { fill: selected ? '#9FB3FF' : '#AAB6C8', opacity: selected ? 0.3 : hovered ? 0.28 : 0.18 },
+    dot: {
+      r: 7 + prominence * 3,
+    },
+    shadow: { fill: selected ? '#9FB3FF' : '#AAB6C8', opacity: selected ? 0.3 : hovered ? 0.28 : 0.16 + prominence * 0.14 },
   })
 }
 
@@ -164,20 +186,15 @@ function setEdgeVisualState(edge: Edge, selected: boolean, hovered: boolean): vo
   const stroke = selected ? '#3B82F6' : hovered ? '#7C93B7' : '#B5BECC'
 
   edge.attr('line', {
+    opacity: selected ? 0.95 : hovered ? 0.9 : 0.78,
     stroke,
     strokeWidth: selected ? 2.4 : hovered ? 1.8 : 1.3,
-    targetMarker: {
-      d: 'M 9 -5 L 0 0 L 9 5',
-      fill: 'none',
-      name: 'path',
-      stroke,
-      strokeWidth: 1.5,
-    },
+    targetMarker: createTargetMarker(stroke),
   })
   edge.setLabelAt(0, createRelationLabel(relation, selected, hovered))
 }
 
-export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ emptyDescription, edges, nodes, onSelect, selection }) => {
+export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ degreeMap, emptyDescription, edges, nodes, onSelect, selection }) => {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const graphRef = useRef<Graph | null>(null)
@@ -241,10 +258,14 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ emptyD
       setEdgeVisualState(edge, selected, false)
     })
     graph.on('node:click', ({ node }) => {
-      onSelectRef.current({ id: node.id, type: 'node' })
+      const entity = node.getData<EntityNodeData>()?.entity
+      onSelectRef.current({ id: String(entity?.id ?? node.id), type: 'node' })
     })
     graph.on('edge:click', ({ e, edge }) => {
-      if (isRelationLabelTarget(e.target)) onSelectRef.current({ id: edge.id.replace(/^relation-/, ''), type: 'edge' })
+      if (isRelationLabelTarget(e.target)) {
+        const relation = edge.getData<RelationEdgeData>()?.edge
+        onSelectRef.current({ id: String(relation?.id ?? edge.id.replace(/^relation-/, '')), type: 'edge' })
+      }
     })
     graph.on('node:change:position', ({ node }) => {
       const position = node.getPosition()
@@ -257,7 +278,7 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ emptyD
       resizeFrame = requestAnimationFrame(() => {
         resizeFrame = undefined
         graph.resize(Math.max(host.clientWidth, 1), Math.max(host.clientHeight, 1))
-        if (graph.getCells().length > 0) graph.centerContent({ padding: 120 })
+        if (graph.getCells().length > 0) graph.zoomToFit({ maxScale: 1.2, minScale: 0.5, padding: 80 })
       })
     })
     resizeObserver.observe(host)
@@ -280,18 +301,26 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ emptyD
       setGraphError(null)
       const width = Math.max(host.clientWidth, CARD_WIDTH * 2 + 96)
       const height = Math.max(host.clientHeight, CARD_HEIGHT * 2 + 96)
+
+      if (edges.length === 0) {
+        graph.clearCells()
+        return
+      }
+
       const graphNodes = nodes.map((node, index) => {
         const id = String(node.id)
+        const degree = degreeMap[id] || 0
         const position = nodePositionsRef.current.get(id) ?? getDefaultNodePosition(index, nodes.length, width, height)
         nodePositionsRef.current.set(id, position)
         return graph.createNode({
           attrs: {
             body: { fill: '#FFFFFF', stroke: '#DFE5EE', strokeWidth: 1 },
             dot: { fill: node.color || '#5B7CF7' },
+            degree: { text: `关系 ${degree} 条` },
             shadow: { fill: '#AAB6C8', opacity: 0.18 },
             title: { text: node.entityName },
           },
-          data: { selected: false },
+          data: { degree, entity: node, selected: false },
           id,
           position,
           shape: 'ontology-entity-card',
@@ -308,45 +337,41 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ emptyD
           attrs: {
             line: {
               sourceMarker: null,
+              opacity: 0.78,
               stroke: '#B5BECC',
+              strokeLinecap: 'round',
               strokeWidth: 1.3,
-              targetMarker: {
-                d: 'M 9 -5 L 0 0 L 9 5',
-                fill: 'none',
-                name: 'path',
-                stroke: '#B5BECC',
-                strokeWidth: 1.5,
-              },
+              targetMarker: createTargetMarker('#B5BECC'),
             },
           },
           connector: { name: 'smooth' },
-          data: { relation: edge.relation, selected: false },
+          data: { edge, relation: edge.relation, selected: false },
           defaultLabel: createRelationLabel(''),
           id: `relation-${id}`,
           labels: [createRelationLabel(edge.relation)],
-          source: sourceId,
-          target: targetId,
-          zIndex: 1,
+          source: { cell: sourceId, connectionPoint: { name: 'boundary' } },
+          target: { cell: targetId, connectionPoint: { name: 'boundary' } },
+          zIndex: 3,
         })
       })
-      graph.resetCells([...graphNodes, ...graphEdges])
+      graph.fromJSON({ cells: [...graphNodes, ...graphEdges].map((cell) => cell.toJSON()) })
       graph.getNodes().forEach((node) => {
         const selected = selection?.type === 'node' && selection.id === node.id
-        node.setData({ selected })
+        node.setData({ ...node.getData<EntityNodeData>(), selected })
         setNodeVisualState(node, selected, false)
       })
       graph.getEdges().forEach((edge) => {
         const selected = selection?.type === 'edge' && selection.id === edge.id.replace(/^relation-/, '')
-        edge.setData({ selected })
+        edge.setData({ ...edge.getData<RelationEdgeData>(), selected })
         setEdgeVisualState(edge, selected, false)
       })
 
-      if (nodes.length > 0) graph.centerContent({ padding: 120 })
+      if (nodes.length > 0) graph.zoomToFit({ maxScale: 1.2, minScale: 0.5, padding: 80 })
     } catch (error) {
       console.error('[OntologyGraphCanvas] X6 operation failed', error)
       setGraphError('图谱渲染失败，可重新查询后再试')
     }
-  }, [edges, layoutVersion, nodes])
+  }, [degreeMap, edges, layoutVersion, nodes])
 
   useEffect(() => {
     const graph = graphRef.current
@@ -354,36 +379,29 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ emptyD
 
     graph.getNodes().forEach((node) => {
       const selected = selection?.type === 'node' && selection.id === node.id
-      node.setData({ selected })
+      node.setData({ ...node.getData<EntityNodeData>(), selected })
       setNodeVisualState(node, selected, false)
     })
     graph.getEdges().forEach((edge) => {
       const selected = selection?.type === 'edge' && selection.id === edge.id.replace(/^relation-/, '')
-      edge.setData({ selected })
+      edge.setData({ ...edge.getData<RelationEdgeData>(), selected })
       setEdgeVisualState(edge, selected, false)
     })
   }, [selection])
 
-  const noNodes = nodes.length === 0
-  const hasNoRelations = nodes.length > 0 && edges.length === 0
+  const noGraphRelations = edges.length === 0
 
   return (
     <div className="relative isolate h-full min-h-500px w-full overflow-hidden rounded-16px border border-slate-200 bg-slate-50 shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
       <div ref={hostRef} className="relative h-full min-h-500px w-full">
         <div ref={containerRef} className="absolute inset-0 h-full w-full" />
       </div>
-      {noNodes && (
+      {noGraphRelations && (
         <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center text-slate-400">
           <div className="relative z-10 rounded-full bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} imageStyle={{ height: 56, margin: 0 }} description={false} />
           </div>
           <span className="relative z-0 mt-3 text-sm">{emptyDescription ?? '暂无匹配的实体或关系'}</span>
-        </div>
-      )}
-      {hasNoRelations && (
-        <div className="pointer-events-none absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white/94 px-4 py-2 text-xs text-slate-500 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur">
-          <span className="relative z-10 h-2 w-2 rounded-full bg-amber-400" />
-          <span className="relative z-0">暂无可展示关系</span>
         </div>
       )}
       {graphError && <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-white/75 text-sm text-slate-500 backdrop-blur-sm">{graphError}</div>}
