@@ -63,7 +63,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   lineage_query: '查询中心',
   login: '登录',
   logout: '退出登录',
-  manage: '门户管理',
+  manage: '系统管理',
   manage_dept: '机构管理',
   manage_group: '组织管理',
   manage_menu: '菜单管理',
