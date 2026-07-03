@@ -54,11 +54,13 @@ declare module "@elegant-router/types" {
     "manage_post": "post";
     "manage_role": "role";
     "manage_role-auth": "role-auth/:id";
-    "manage_space-menu": "space-menu";
-    "manage_space-role": "space-role";
     "manage_user": "user";
     "manage_user-role": "user-role/:id";
     "space": "/space";
+    "space_component": "component";
+    "space_component_icon-selector": "icon-selector";
+    "space_space-menu": "space-menu";
+    "space_space-role": "space-role";
     "space_user": "user";
     "space-list": "/space-list";
     "view": "/view";
@@ -188,11 +190,12 @@ declare module "@elegant-router/types" {
     | "manage_post"
     | "manage_role-auth"
     | "manage_role"
-    | "manage_space-menu"
-    | "manage_space-role"
     | "manage_user-role"
     | "manage_user"
     | "space-list"
+    | "space_component_icon-selector"
+    | "space_space-menu"
+    | "space_space-role"
     | "space_user"
     | "view"
     | "workbench_app-workshop_my-collect"
