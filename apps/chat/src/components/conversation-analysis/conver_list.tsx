@@ -7,13 +7,6 @@ import right_online from '@/assets/svg-icon/right_online.svg'
 import { MenuProps } from 'antd'
 import { formatTimeDiff } from '../../utils'
 
-// 分组定义
-const GROUPS = [
-  { id: 'analysis', name: '对话分析' },
-  { id: 'semantics', name: '数据语义' },
-  { id: 'knowledge', name: '知识图谱' },
-]
-
 interface converListProps {
   appList: any[]
   handleSetCurApp: (item: any) => void

@@ -62,7 +62,7 @@ export const ViewData: React.FC<PropsType> = memo(({ sourceId, tableName }) => {
 
   useEffect(() => {
     getTableInfo();
-  }, [tableName]);
+  }, [sourceId, tableName]);
 
   return (
     <div className="ds-view-tab-content">

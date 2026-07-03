@@ -36,11 +36,13 @@ export function Component() {
   const items: TabsProps['items'] = [
     {
       children: (
-        <ViewData
+        <BaseData
+          curDatasource={curDatasource}
           sourceId={datasource}
           tableName={selectedTable}
         />
       ),
+      forceRender: true,
       key: '1',
       label: (
         <span className="ds-view-tab-label">
@@ -51,12 +53,12 @@ export function Component() {
     },
     {
       children: (
-        <BaseData
-          curDatasource={curDatasource}
+        <ViewData
           sourceId={datasource}
           tableName={selectedTable}
         />
       ),
+      forceRender: true,
       key: '2',
       label: (
         <span className="ds-view-tab-label">

@@ -32,11 +32,13 @@ const DataSourcePreviewDrawer: React.FC<Props> = memo(({ onClose, open, sourceId
   const items: TabsProps['items'] = [
     {
       children: (
-        <ViewData
+        <BaseData
+          curDatasource={curDatasource}
           sourceId={dataSource}
           tableName={selectedTable!}
         />
       ),
+      forceRender: true,
       key: '1',
       label: (
         <span className="ds-view-tab-label">
@@ -47,12 +49,12 @@ const DataSourcePreviewDrawer: React.FC<Props> = memo(({ onClose, open, sourceId
     },
     {
       children: (
-        <BaseData
-          curDatasource={curDatasource}
+        <ViewData
           sourceId={dataSource}
           tableName={selectedTable!}
         />
       ),
+      forceRender: true,
       key: '2',
       label: (
         <span className="ds-view-tab-label">
