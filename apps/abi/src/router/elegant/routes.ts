@@ -334,29 +334,6 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       },
       {
-        name: 'manage_space-menu',
-        path: 'space-menu',
-        component: 'view.manage_space-menu',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.manage_space-menu',
-          icon: 'material-symbols:route',
-          keepAlive: true,
-          title: 'manage_space-menu'
-        }
-      },
-      {
-        name: 'manage_space-role',
-        path: 'space-role',
-        component: 'view.manage_space-role',
-        meta: {
-          hideInMenu: false,
-          i18nKey: 'route.manage_space-role',
-          icon: 'carbon:user-role',
-          title: 'manage_space-role'
-        }
-      },
-      {
         name: 'manage_user',
         path: 'user',
         component: 'view.manage_user',
@@ -388,6 +365,48 @@ export const generatedRoutes: GeneratedRoute[] = [
       title: 'space'
     },
     children: [
+      {
+        name: 'space_component',
+        path: 'component',
+        meta: {
+          i18nKey: 'route.space_component',
+          title: 'space_component'
+        },
+        children: [
+          {
+            name: 'space_component_icon-selector',
+            path: 'icon-selector',
+            component: 'view.space_component_icon-selector',
+            meta: {
+              i18nKey: 'route.space_component_icon-selector',
+              title: 'space_component_icon-selector'
+            }
+          }
+        ]
+      },
+      {
+        name: 'space_space-menu',
+        path: 'space-menu',
+        component: 'view.space_space-menu',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.manage_space-menu',
+          icon: 'material-symbols:route',
+          keepAlive: true,
+          title: 'manage_space-menu'
+        }
+      },
+      {
+        name: 'space_space-role',
+        path: 'space-role',
+        component: 'view.space_space-role',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.manage_space-role',
+          icon: 'carbon:user-role',
+          title: 'manage_space-role'
+        }
+      },
       {
         name: 'space_user',
         path: 'user',
