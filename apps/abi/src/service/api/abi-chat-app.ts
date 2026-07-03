@@ -7,7 +7,7 @@ export interface AppItem {
   appId: number | string;
   appName: string;
   spaceId?: number | string;
-  groupId?: number | string;
+  groupId?: string;
   description?: string;
   icon?: string;
   appType?: string;
@@ -35,7 +35,7 @@ export interface AppItem {
 export function fetchAppListApi(data?: {
   appName?: string;
   spaceId?: number | string;
-  groupId?: number | string;
+  groupId?: string;
   status?: string;
   enableDebug?: string;
   publicAccess?: string;

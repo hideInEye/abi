@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { queryToolListApi } from '@/service/api/tool';
 import type { ToolItem } from '@/service/api/tool';
 import { queryMcpList } from '@/service/api/pulg';
+import { addAppApi, updateAppApi, fetchAppDetailApi } from '@/service/api/abi-chat-app';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import React from 'react';
@@ -32,7 +33,7 @@ import React from 'react';
 interface Props {
   visible?: boolean;
   agent?: AgentMock | null;
-  groupId?: number;
+  groupId?: string;
   onClose: (refresh?: boolean) => void;
 }
 
@@ -43,7 +44,7 @@ export interface AgentMock {
   iconLetter?: string;
   description?: string;
   prompt?: string;
-  groupId?: number | string;
+  groupId?: string;
   /** status: '0'草稿 | '1'发布 | '2'下线 */
   status?: '0' | '1' | '2';
 }
@@ -52,41 +53,13 @@ export interface AgentMock {
 type ToolGroupKey = 'mcp' | 'builtin';
 type ToolOption = { id: string; name: string; group: ToolGroupKey; description?: string };
 
-// 默认提示词模板（图片中的"投资顾问"prompt）
-const DEFAULT_PROMPT = `## 角色
-你是一个投资顾问，专门利用先进的技术和算法，为用户提供实时的股票价格查询和市场行情分析，帮助用户做出更明智的投资决策。
-
-## 技能
-1. 实时股票价格查询：
-  - 提供实时的股票价格信息，包括开盘价、最高价、最低价和收盘价等。
-  - 支持多个股票市场和交易所的股票价格查询，包括但不限于美股、港股和A股等。
-  - 提供股票的实时交易量和市值等额外信息，帮助用户更全面地了解股票的实时表现。
-
-2. 市场行情分析：
-  - 分析股票市场的整体趋势，包括市场上涨或下跌的原因分析。
-  - 提供重要经济数据和事件的分析，如GDP增长率、失业率、利率变动等，以及这些数据和事件对市场的潜在影响。
-  - 分析个股的表现，包括财务报告分析、行业地位、竞争对手比较等，以提供更深入的个股研究。
-  - 提供投资策略和建议，如分散投资、长期持有等，帮助用户根据市场行情做出投资决策。
-
-## 限制
-- 仅提供与股票市场相关的信息和分析，不涉及其他类型的投资，如债券、期货、外汇等。
-- 所有提供的数据和分析仅供参考，不构成具体的投资建议。s
-- 不能提供实时交易或交易执行服务，仅限于提供信息和分析。`;
-
-// 推荐问题
-const RECOMMEND_QUESTIONS = [
-  '如何查询特定股票的实时价格和交易量？',
-  '市场行情有哪些重要的经济数据和事件需要关注？',
-  '你能提供哪些投资策略和建议来应对当前的市场行情？'
-];
-
-// 折叠面板分组
+/// 折叠面板分组
 type SectionKey = 'model' | 'opening' | 'semanticKnowledge' | 'ontologyNetwork' | 'mcpTools' | 'builtinTools' | 'skills' | 'questions';
 
 const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: propsGroupId, onClose }) => {
   const spaceId = useAppSelector(getSpaceId);
   const isEdit = !!agent?.id;
-  const [name, setName] = useState<string>(agent?.name || '投资顾问');
+  const [name, setName] = useState<string>('');
   const [editingName, setEditingName] = useState(false);
   const [prompt, setPrompt] = useState<string>(agent?.prompt || '');
   const [description, setDescription] = useState<string>(agent?.description || '');
@@ -126,18 +99,61 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
   const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set());
   const [loadingTools, setLoadingTools] = useState(false);
 
-  /** 加载助手详情（mock：从 agent prop 读取） */
-  function loadDetail() {
-    if (!agent) return;
-    setName(agent.name || '投资顾问');
-    setPrompt(agent.prompt || DEFAULT_PROMPT);
-    setDescription(agent.description || '');
-    setStatus(agent.status || '0');
+  /** 加载助手详情 */
+  async function loadDetail() {
+    if (!agent?.id) return;
+    setLoadingDetail(true);
+    try {
+      const res: any = await fetchAppDetailApi({ appId: agent.id });
+      const detail = res?.data || {};
+      setName(detail.appName || agent.name || '');
+      setPrompt(detail.appPrompt || '');
+      setDescription(detail.description || '');
+      setStatus(detail.status || '0');
+      setEnableDebug(detail.enableDebug === '1');
+      setPublicAccess(detail.publicAccess === '1' ? '1' : '0');
+      // 推荐问题
+      if (Array.isArray(detail.recQuery)) {
+        setRecQuestions(detail.recQuery);
+      }
+      // 工具选中回显
+      if (Array.isArray(detail.tools) && detail.tools.length > 0) {
+        const ids = new Set<string>();
+        detail.tools.forEach((t: any) => {
+          const prefix = t.toolType === '2' ? 'mcp' : 'builtin';
+          if (Array.isArray(t.toolConfig)) {
+            t.toolConfig.forEach((c: any) => {
+              if (c.id != null) ids.add(`${prefix}_${c.id}`);
+            });
+          }
+        });
+        setSelectedToolIds(ids);
+      }
+    } catch {
+      // 降级：从列表 prop 读取基本信息
+      setName(agent.name || '');
+      setDescription(agent.description || '');
+      setStatus(agent.status || '0');
+    } finally {
+      setLoadingDetail(false);
+    }
   }
 
   useEffect(() => {
-    if (agent?.id) loadDetail();
-  }, [agent]);
+    if (visible && agent?.id) {
+      loadDetail();
+    } else if (visible && !agent?.id) {
+      // 新增模式：重置表单
+      setName('');
+      setPrompt('');
+      setDescription('');
+      setStatus('0');
+      setEnableDebug(false);
+      setPublicAccess('1');
+      setRecQuestions([]);
+      setSelectedToolIds(new Set());
+    }
+  }, [visible, agent]);
 
   /** 构建提交数据 */
   function buildPayload(overrideStatus?: string) {
@@ -152,7 +168,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
     const payload: any = {
       appName: name,
       spaceId,
-      groupId: isEdit ? (agent?.groupId ?? 0) : (propsGroupId ?? 0),
+      groupId: String(isEdit ? (agent?.groupId ?? '0') : (propsGroupId ?? '0')),
       description,
       appPrompt: prompt,
       prologue: '',
@@ -168,24 +184,44 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
     return payload;
   }
 
-  /** 保存：状态设为草稿（mock） */
+  /** 保存：状态设为草稿 */
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 300));
-    setStatus('0');
-    message.success('已保存为草稿');
-    onClose(true);
-    setSaving(false);
+    try {
+      const payload = buildPayload('0');
+      if (isEdit) {
+        await updateAppApi(payload);
+      } else {
+        await addAppApi(payload);
+      }
+      setStatus('0');
+      message.success('已保存为草稿');
+      onClose(true);
+    } catch {
+      message.error('保存失败');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  /** 上线：状态设为发布（mock） */
+  /** 上线：状态设为发布 */
   const handlePublish = async () => {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 300));
-    setStatus('1');
-    message.success('已上线，状态设为发布');
-    onClose(true);
-    setSaving(false);
+    try {
+      const payload = buildPayload('1');
+      if (isEdit) {
+        await updateAppApi(payload);
+      } else {
+        await addAppApi(payload);
+      }
+      setStatus('1');
+      message.success('已上线，状态设为发布');
+      onClose(true);
+    } catch {
+      message.error('发布失败');
+    } finally {
+      setSaving(false);
+    }
   };
 
   async function fetchToolGroups() {
@@ -781,7 +817,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
                   border: '1px solid rgba(130, 140, 200, 0.1)'
                 }}
               >
-                你好，我是你的{name}，专注于利用先进技术和算法，为你提供实时的股票价格查询和市场行情分析，帮助你做出更明智的投资决策。
+                {description || `你好，我是你的${name || '智能助手'}，有什么可以帮助你的？`}
               </div>
             </div>
           </div>
@@ -790,7 +826,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
           <div style={{ padding: '10px 24px 18px' }}>
             <div style={{ color: '#5f7490', fontSize: 12, marginBottom: 10, fontWeight: 500 }}>推荐问题</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-              {RECOMMEND_QUESTIONS.map(q => (
+              {recQuestions.length > 0 ? recQuestions.map((q: string) => (
                 <Tag
                   key={q}
                   color="processing"
@@ -810,7 +846,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
                 >
                   {q}
                 </Tag>
-              ))}
+              )) : <span style={{ color: '#9ca3af', fontSize: 12 }}>暂无推荐问题</span>}
             </div>
             <Input
               placeholder="请输入问题"

@@ -126,7 +126,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       } else {
         next.add(groupId)
         if (!semanticGroupSchemas.has(groupId)) {
-          fetchSemanticSchemas({ groupId: Number(groupId), pageNum: 1, pageSize: 100 })
+          fetchSemanticSchemas({ groupId: groupId, pageNum: 1, pageSize: 100 })
             .then((res: any) => {
               const list = res?.data || res?.rows || []
               setSemanticGroupSchemas(prev => new Map(prev).set(groupId, Array.isArray(list) ? list : []))

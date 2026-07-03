@@ -1,5 +1,7 @@
-import { SettingOutlined } from '@ant-design/icons'
-import { Avatar } from 'antd'
+import { LogoutOutlined, SettingOutlined } from '@ant-design/icons'
+import { Avatar, Dropdown, Modal } from 'antd'
+import type { MenuProps } from 'antd'
+import { authManager } from '../../utils/auth'
 
 type UserProfileCardProps = {
   collapsed: boolean
@@ -12,6 +14,26 @@ function getUserInitial(userName: string): string {
 }
 
 export function UserProfileCard({ collapsed, userName }: UserProfileCardProps) {
+  const handleLogout = () => {
+    Modal.confirm({
+      title: '提示',
+      content: '确定要退出登录吗？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        await authManager.logout({ preserveRedirect: false })
+      },
+    })
+  }
+
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      onClick: handleLogout,
+    },
+  ]
   return (
     <div
       className="user-bar-glass"
@@ -51,15 +73,17 @@ export function UserProfileCard({ collapsed, userName }: UserProfileCardProps) {
               数据分析师
             </div>
           </div>
-          <SettingOutlined
-            style={{
-              fontSize: 16,
-              color: 'var(--ink-3)',
-              cursor: 'pointer',
-              transition: 'color 0.2s',
-            }}
-            className="hover:text-[var(--accent)]"
-          />
+          <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="topRight">
+            <SettingOutlined
+              style={{
+                fontSize: 16,
+                color: 'var(--ink-3)',
+                cursor: 'pointer',
+                transition: 'color 0.2s',
+              }}
+              className="hover:text-[var(--accent)]"
+            />
+          </Dropdown>
         </>
       )}
     </div>

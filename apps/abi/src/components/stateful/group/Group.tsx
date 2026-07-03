@@ -140,7 +140,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     setEditingGroup(group);
     form.setFieldsValue({
       ...group,
-      parentId: group.parentId || undefined,
+      parentId: (group.parentId && String(group.parentId) !== '0') ? group.parentId : undefined,
     });
     setIsModalOpen(true);
   };
