@@ -8,13 +8,13 @@ import { type QuestionGroupItem } from './useGroupManagement';
 
 interface GroupListProps {
   readonly groups: QuestionGroupItem[];
-  readonly onDelete: (itemId: number) => void;
+  readonly onDelete: (itemId: string) => void;
   readonly onEdit: (item: QuestionGroupItem) => void;
-  readonly onGroupId: (groupId: number) => void;
+  readonly onGroupId: (groupId: string) => void;
 }
 
 const GroupList: React.FC<GroupListProps> = ({ groups, onDelete, onEdit, onGroupId }) => {
-  const [selectedTagId, setSelectedTagId] = useState<number | null>();
+  const [selectedTagId, setSelectedTagId] = useState<string | null>();
   const { setGroupInfo } = useDataPreparationStore();
 
   useEffect(() => {

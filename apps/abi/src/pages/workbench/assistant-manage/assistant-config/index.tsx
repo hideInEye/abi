@@ -57,7 +57,7 @@ export function Component() {
   const [editVisible, setEditVisible] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AgentCard | null>(null);
   const [selectedId, setSelectedId] = useState<string | number>(1);
-  const [groupId, setGroupId] = useState<number>(0);
+  const [groupId, setGroupId] = useState<string>('');
   const [agents, setAgents] = useState<AgentCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
@@ -99,8 +99,8 @@ export function Component() {
   const list = useMemo(() => {
     let arr = agents;
     // 按分组过滤（过滤后为空则回退全部，避免 Group 自动选择导致空列表）
-    if (groupId > 0) {
-      const filtered = arr.filter(it => it.groupId == groupId);
+    if (groupId && groupId !== '0') {
+      const filtered = arr.filter(it => String(it.groupId) === groupId);
       arr = filtered.length > 0 ? filtered : arr;
     }
     // 关键字搜索

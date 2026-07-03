@@ -1,9 +1,9 @@
 import { buildGroupTree } from '../../../pages/workbench/data-preparation/data-table-meaning/utils/helper';
 
 export interface GroupSelectionItem {
-  groupId: number;
+  groupId: string;
   groupName?: string;
-  parentId?: number;
+  parentId?: string;
   sortOrder?: number;
   children?: GroupSelectionItem[];
 }
@@ -14,7 +14,7 @@ export interface InitialGroupSelection {
   selectedKeys: string[];
 }
 
-export function getGroupNodeKey(groupId: number) {
+export function getGroupNodeKey(groupId: string) {
   return `group-${groupId}`;
 }
 
