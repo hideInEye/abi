@@ -101,7 +101,7 @@ const UserAvatar = memo(() => {
             label: (
               <div className="flex-center gap-8px">
                 <SettingOutlined />
-                门户管理
+                系统管理
               </div>
             ),
             routeName: manageMenus[0].routeName
