@@ -3,8 +3,12 @@ import { Button, Popconfirm, Table, Tooltip } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React, { useCallback, useMemo } from 'react'
 
+import { OntologyCardList } from '@/pages/workbench/ontology-kg/components/OntologyCardList'
+import { OntologyTablePagination } from '@/pages/workbench/ontology-kg/components/OntologyTablePagination'
+import type { OntologyViewMode } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import type { OntologyEntity, OntologyLabel, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { formatBoolean, formatDateTime, formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display'
+import { shouldDisplayColumn } from '@/pages/workbench/ontology-kg/utils/view-controls'
 
 import type { EntityPagination } from '../types'
 
@@ -18,9 +22,23 @@ interface EntityTableProps {
   readonly onEdit: (entity: OntologyEntity) => void
   readonly onPageChange: (page: number, pageSize: number) => void
   readonly pagination: EntityPagination
+  readonly viewMode: OntologyViewMode
+  readonly visibleColumnKeys: ReadonlySet<string>
 }
 
-export const EntityTable: React.FC<EntityTableProps> = ({ data, deletingId, labels, loading, onAttributes, onDelete, onEdit, onPageChange, pagination }) => {
+export const EntityTable: React.FC<EntityTableProps> = ({
+  data,
+  deletingId,
+  labels,
+  loading,
+  onAttributes,
+  onDelete,
+  onEdit,
+  onPageChange,
+  pagination,
+  viewMode,
+  visibleColumnKeys,
+}) => {
   const labelMap = useMemo(() => new Map(labels.map((label) => [String(label.id), label.bizName])), [labels])
 
   const renderActions = useCallback(
@@ -73,23 +91,71 @@ export const EntityTable: React.FC<EntityTableProps> = ({ data, deletingId, labe
     ],
     [labelMap, renderActions],
   )
+  const visibleColumns = useMemo(() => columns.filter(column => shouldDisplayColumn(column.key, visibleColumnKeys)), [columns, visibleColumnKeys])
+  const tableColumns = useMemo(
+    () =>
+      data.length
+        ? visibleColumns
+        : visibleColumns.map((column) => ({
+            ...column,
+            fixed: undefined,
+            width: undefined,
+          })),
+    [data.length, visibleColumns],
+  )
+  const tableWidth = useMemo(() => visibleColumns.reduce((sum, column) => sum + (Number(column.width) || 120), 0), [visibleColumns])
+  const cardFields = useMemo(
+    () =>
+      [
+        { key: 'entityCode', label: '实体编码', render: (record: OntologyEntity) => formatDisplayValue(record.entityCode) },
+        { key: 'labelId', label: '标签类型', render: (record: OntologyEntity) => formatDisplayValue(record.labelId === null ? undefined : labelMap.get(String(record.labelId))) },
+        {
+          key: 'color',
+          label: '颜色',
+          render: (record: OntologyEntity) =>
+            record.color ? <span aria-label={`颜色 ${record.color}`} style={{ background: record.color, borderRadius: '50%', display: 'inline-block', height: 14, width: 14 }} /> : '-',
+        },
+        { key: 'attributeCount', label: '属性数量', render: (record: OntologyEntity) => formatDisplayValue(record.attributeCount) },
+        { key: 'validFlag', label: '有效状态', render: (record: OntologyEntity) => formatBoolean(record.validFlag, '有效', '无效') },
+        { key: 'createBy', label: '创建人', render: (record: OntologyEntity) => formatDisplayValue(record.createBy) },
+        { key: 'createTime', label: '创建时间', render: (record: OntologyEntity) => formatDateTime(record.createTime) },
+      ].filter(field => visibleColumnKeys.has(field.key)),
+    [labelMap, visibleColumnKeys],
+  )
 
   return (
-    <Table<OntologyEntity>
-      className="abi-std-table"
-      columns={columns}
-      dataSource={data}
-      loading={loading}
-      pagination={{
-        current: pagination.pageNum,
-        pageSize: pagination.pageSize,
-        showSizeChanger: true,
-        showTotal: (total) => `共 ${total} 条`,
-        total: pagination.total,
-        onChange: onPageChange,
-      }}
-      rowKey="id"
-      scroll={{ x: 1180 }}
-    />
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {viewMode === 'card' ? (
+        <OntologyCardList
+          actions={renderActions}
+          dataSource={data}
+          emptyText="暂无实体"
+          fields={cardFields}
+          loading={loading}
+          rowKey={record => record.id}
+          title={record => formatDisplayValue(record.entityName)}
+          titleExtra={record => (record.labelId === null ? null : <span className="abi-db-tag tag-default">{formatDisplayValue(labelMap.get(String(record.labelId)))}</span>)}
+          titlePrefix={record =>
+            record.color ? <span aria-label={`颜色 ${record.color}`} style={{ background: record.color, borderRadius: '50%', display: 'inline-block', height: 14, width: 14 }} /> : null
+          }
+        />
+      ) : (
+        <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', flex: 1, minHeight: 0, overflow: 'hidden', width: '100%' }}>
+          <div className="assistant-table-scroll" style={{ maxHeight: '100%', overflow: 'auto' }}>
+            <Table<OntologyEntity>
+              className="entity-table abi-std-table"
+              columns={tableColumns}
+              dataSource={data}
+              loading={loading}
+              pagination={false}
+              rowKey="id"
+              scroll={data.length > 0 ? { x: tableWidth } : undefined}
+              size="middle"
+            />
+          </div>
+        </div>
+      )}
+      <OntologyTablePagination {...pagination} onChange={onPageChange} />
+    </div>
   )
 }

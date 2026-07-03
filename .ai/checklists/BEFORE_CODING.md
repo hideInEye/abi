@@ -1,0 +1,21 @@
+# 当前项目专用检查项
+
+- [ ] 已读取 `AGENTS.md`
+- [ ] 已读取 `.ai/README.md`
+- [ ] 已读取 `.ai/requirements/CURRENT_REQUIREMENT.md`
+- [ ] 已检查 `git status`，确认不恢复 README/ref-request 既有删除
+- [ ] 已判断需求属于 `apps/abi`、`apps/chat`、`apps/dashboard` 或 `packages/*`
+- [ ] ABI 改动已读取 `apps/abi/src/service/request/index.ts`、`apps/abi/src/router/guard/index.ts` 或相关 domain
+- [ ] Chat 改动已读取 `apps/chat/src/service/request/index.ts`、`apps/chat/src/router/index.tsx`
+- [ ] Dashboard 改动已读取 `apps/dashboard/src/utils/FetchUtil.ts` 或 `apps/dashboard/src/designer`
+- [ ] 已确认测试命令：`pnpm test`
+- [ ] 已确认根 `pnpm lint` 和 `pnpm type-check` 当前不可作为通过门禁
+- [ ] UI 改动已确认所属 app 样式系统
+
+# 空白模板版
+
+- [ ] 是否读取项目上下文
+- [ ] 是否读取当前需求
+- [ ] 是否理解目标/非目标/影响范围
+- [ ] 是否确认测试策略
+- [ ] 是否制定计划

@@ -2,7 +2,10 @@ import { PlusOutlined } from '@ant-design/icons'
 import { Button, message } from 'antd'
 import React, { useCallback, useState } from 'react'
 
+import { ViewControls } from '@/components/ViewControls'
+import type { ColumnOption } from '@/components/ViewControls'
 import { useAppSelector } from '@/hooks/business/useStore'
+import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import type { OntologyEntity } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { getSpaceId } from '@/store/slice/app'
 
@@ -13,6 +16,17 @@ import { EntityTable } from './components/EntityTable'
 import { useEntityManagement } from './hooks/useEntityManagement'
 import type { EntitySearchValues } from './types'
 
+const ENTITY_COLUMN_OPTIONS: ColumnOption[] = [
+  { key: 'entityName', label: '实体名称', visible: true },
+  { key: 'entityCode', label: '实体编码', visible: true },
+  { key: 'labelId', label: '标签类型', visible: true },
+  { key: 'color', label: '颜色', visible: true },
+  { key: 'attributeCount', label: '属性数量', visible: true },
+  { key: 'validFlag', label: '有效状态', visible: true },
+  { key: 'createBy', label: '创建人', visible: true },
+  { key: 'createTime', label: '创建时间', visible: true },
+]
+
 export const Component: React.FC = () => {
   const spaceId = useAppSelector(getSpaceId)
   const [entityDrawerOpen, setEntityDrawerOpen] = useState(false)
@@ -21,6 +35,7 @@ export const Component: React.FC = () => {
   const [editingEntity, setEditingEntity] = useState<OntologyEntity>()
   const [attributeEntity, setAttributeEntity] = useState<OntologyEntity>()
   const { deleteEntity, entities, labels, loading, pagination, refresh, resetSearch, saveEntity, searchValues, setPage, setSearchValues } = useEntityManagement(spaceId)
+  const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(ENTITY_COLUMN_OPTIONS)
 
   const openCreate = useCallback((): void => {
     setEditingEntity(undefined)
@@ -72,20 +87,21 @@ export const Component: React.FC = () => {
               新增实体
             </Button>
           </div>
+          <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
         </div>
-        <div className="assistant-table-scroll min-h-0 flex-1 overflow-auto">
-          <EntityTable
-            data={entities}
-            deletingId={deletingEntityId}
-            labels={labels}
-            loading={loading}
-            pagination={pagination}
-            onAttributes={openAttributes}
-            onDelete={handleDelete}
-            onEdit={openEdit}
-            onPageChange={setPage}
-          />
-        </div>
+        <EntityTable
+          data={entities}
+          deletingId={deletingEntityId}
+          labels={labels}
+          loading={loading}
+          pagination={pagination}
+          viewMode={viewMode}
+          visibleColumnKeys={visibleColumnKeys}
+          onAttributes={openAttributes}
+          onDelete={handleDelete}
+          onEdit={openEdit}
+          onPageChange={setPage}
+        />
       </main>
       <EntityDrawer entity={editingEntity} labels={labels} open={entityDrawerOpen} onClose={closeEntityDrawer} onSave={saveEntity} />
       <AttributeDrawer entity={attributeEntity} labels={labels} open={attributeDrawerOpen} onClose={closeAttributeDrawer} onSaved={refresh} />

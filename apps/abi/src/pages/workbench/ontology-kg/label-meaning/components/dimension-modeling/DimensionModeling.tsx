@@ -1,7 +1,10 @@
 import React, { useCallback, useState } from 'react'
 import { Splitter } from 'antd'
 
+import { ViewControls } from '@/components/ViewControls'
+import type { ColumnOption } from '@/components/ViewControls'
 import { Group } from '@/components/stateful/group/Group.tsx'
+import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 
 import { DimensionOperateDrawer } from './components/DimensionOperateDrawer'
 import { DimensionSearchBar } from './components/DimensionSearchBar'
@@ -11,8 +14,19 @@ import { DIMENSION_GROUP_TYPE } from './constants/dimensionModeling.constants'
 import { useDimensionModeling } from './hooks/useDimensionModeling'
 import type { DimensionGroup } from './types/dimensionModeling.types'
 
+const DIMENSION_COLUMN_OPTIONS: ColumnOption[] = [
+  { key: 'zhName', label: '中文名', visible: true },
+  { key: 'englishName', label: '英文名', visible: true },
+  { key: 'dimType', label: '维度类型', visible: true },
+  { key: 'path', label: '维度路径(目录)', visible: true },
+  { key: 'owner', label: '负责人', visible: true },
+  { key: 'status', label: '状态', visible: true },
+  { key: 'updateTime', label: '更新时间', visible: true },
+]
+
 const DimensionModeling: React.FC = () => {
   const [selectedGroup, setSelectedGroup] = useState<DimensionGroup | null>(null)
+  const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(DIMENSION_COLUMN_OPTIONS)
   const {
     closeDrawer,
     closeHierarchyModal,
@@ -77,20 +91,25 @@ const DimensionModeling: React.FC = () => {
               onSearchChange={handleSearchChange}
             />
             <section className="abi-data-area">
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                <AButton
-                  type="primary"
-                  className="btn-accent-gradient"
-                  disabled={!selectedGroup?.groupId}
-                  onClick={handleAdd}
-                >
-                  + 新增维度
-                </AButton>
+              <div className="abi-toolbar">
+                <div className="abi-toolbar-left">
+                  <AButton
+                    type="primary"
+                    className="btn-accent-gradient"
+                    disabled={!selectedGroup?.groupId}
+                    onClick={handleAdd}
+                  >
+                    + 新增维度
+                  </AButton>
+                </div>
+                <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
               </div>
               <DimensionTable
                 dataSource={tableData}
                 loading={loading}
                 pagination={pagination}
+                viewMode={viewMode}
+                visibleColumnKeys={visibleColumnKeys}
                 onDelete={handleDelete}
                 onEdit={handleEdit}
                 onHierarchy={openHierarchyModal}

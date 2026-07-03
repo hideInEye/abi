@@ -1,7 +1,10 @@
-import React, { useCallback, useState } from 'react'
-import { Splitter } from 'antd'
+import React, { useCallback, useMemo, useState } from 'react'
+import { Dropdown, Splitter } from 'antd'
 
+import { ViewControls } from '@/components/ViewControls'
+import type { ColumnOption } from '@/components/ViewControls'
 import { Group } from '@/components/stateful/group/Group.tsx'
+import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 
 import { KnowledgeAtomicMappingDrawer } from './components/KnowledgeAtomicMappingDrawer'
 import { KnowledgeOperateDrawer } from './components/KnowledgeOperateDrawer'
@@ -10,9 +13,20 @@ import { KnowledgeTable } from './components/KnowledgeTable'
 import { KNOWLEDGE_GROUP_TYPE } from './constants/metricModeling.constants'
 import { useKnowledgeExtraction } from './hooks/useKnowledgeExtraction'
 import type { KnowledgeGroupItem } from './types/metricModeling.types'
+import { DownOutlined } from '@ant-design/icons'
+import { MenuProps } from 'antd/lib'
+
+const KNOWLEDGE_COLUMN_OPTIONS: ColumnOption[] = [
+  { key: 'techName', label: '指标名称', visible: true },
+  { key: 'indicatorCode', label: '指标编码', visible: true },
+  { key: 'indicatorClass', label: '指标类型', visible: true },
+  { key: 'qualityLevel', label: '质量等级', visible: true },
+  { key: 'status', label: '状态', visible: true },
+]
 
 const MetricModeling: React.FC = () => {
   const [selectedGroup, setSelectedGroup] = useState<KnowledgeGroupItem | null>(null)
+  const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(KNOWLEDGE_COLUMN_OPTIONS)
   const {
     atomicDrawerOpen,
     closeAtomicDrawer,
@@ -25,22 +39,56 @@ const MetricModeling: React.FC = () => {
     handleDelete,
     handleEdit,
     handleQuery,
+    handlePaginationChange,
     handleReset,
     handleSearchChange,
     handleSubmit,
     loading,
+    pagination,
     searchParams,
-    tableData
+    tableData,
   } = useKnowledgeExtraction(selectedGroup)
 
   const handleGroupChange = useCallback((groupId: number, groupName?: string) => {
-    setSelectedGroup(prev => {
+    setSelectedGroup((prev) => {
       if (prev?.groupId === groupId && prev?.groupName === (groupName || '')) {
         return prev
       }
       return { groupId, groupName: groupName || '' }
     })
   }, [])
+
+    const addMenus = useMemo<MenuProps['items']>(
+    () => [
+      {
+        key: 'atomic',
+        label: (
+          <div className="py-1">
+            <div className="text-base font-semibold">原子指标映射</div>
+            <div className="mt-1 text-sm text-gray-400">配置来源字段并生成原子指标</div>
+          </div>
+        ),
+      },
+      {
+        key: 'custom',
+        label: (
+          <div className="py-1">
+            <div className="text-base font-semibold">指标自定义</div>
+            <div className="mt-1 text-sm text-gray-400">创建派生指标或衍生指标</div>
+          </div>
+        ),
+      },
+    ],
+    [],
+  )
+
+    const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === 'atomic') {
+      handleAddAtomic()
+      return
+    }
+    handleAddCustom()
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
@@ -56,7 +104,7 @@ const MetricModeling: React.FC = () => {
                 modalEditTitle: '编辑指标组',
                 panelTitle: '指标组',
                 rule: [[{ message: '请输入指标组名称', required: true }]],
-                type: KNOWLEDGE_GROUP_TYPE
+                type: KNOWLEDGE_GROUP_TYPE,
               }}
               onGroupId={handleGroupChange}
             />
@@ -66,20 +114,36 @@ const MetricModeling: React.FC = () => {
         <Splitter.Panel>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             <KnowledgeSearchBar
-              addDisabled={!selectedGroup?.groupId}
               searchParams={searchParams}
-              onAddAtomic={handleAddAtomic}
-              onAddCustom={handleAddCustom}
               onQuery={handleQuery}
               onReset={handleReset}
               onSearchChange={handleSearchChange}
             />
             <section className="abi-data-area">
+              <div className="abi-toolbar">
+                <div className="abi-toolbar-left">
+                  <Dropdown.Button
+                    className="ml-auto btn-accent-dropdown"
+                    disabled={!selectedGroup?.groupId}
+                    icon={<DownOutlined />}
+                    menu={{ items: addMenus, onClick: handleMenuClick }}
+                    type="primary"
+                    onClick={handleAddAtomic}
+                  >
+                    + 新增
+                  </Dropdown.Button>
+                </div>
+                <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
+              </div>
               <KnowledgeTable
                 dataSource={tableData}
                 loading={loading}
+                pagination={pagination}
+                viewMode={viewMode}
+                visibleColumnKeys={visibleColumnKeys}
                 onDelete={handleDelete}
                 onEdit={handleEdit}
+                onPaginationChange={handlePaginationChange}
               />
             </section>
           </div>
@@ -96,13 +160,7 @@ const MetricModeling: React.FC = () => {
         onSubmit={handleSubmit}
       />
 
-      <KnowledgeAtomicMappingDrawer
-        groupName={selectedGroup?.groupName}
-        open={atomicDrawerOpen}
-        onClose={closeAtomicDrawer}
-        groupId={selectedGroup?.groupId}
-        onSubmit={handleAtomicMappingSubmit}
-      />
+      <KnowledgeAtomicMappingDrawer groupName={selectedGroup?.groupName} open={atomicDrawerOpen} onClose={closeAtomicDrawer} groupId={selectedGroup?.groupId} onSubmit={handleAtomicMappingSubmit} />
     </div>
   )
 }

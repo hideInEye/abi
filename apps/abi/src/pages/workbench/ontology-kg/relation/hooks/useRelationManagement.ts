@@ -68,7 +68,7 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
         })
         if (requestId !== relationRequestRef.current) return
         setRelations(getOntologyNetworkRecords(data))
-        setPagination((current) => ({ ...current, pageNum: data?.current ?? current.pageNum, pageSize: data?.size ?? current.pageSize, total: data?.total ?? 0 }))
+        setPagination((current) => ({ ...current, total: data?.total ?? 0 }))
       } catch {
         if (requestId === relationRequestRef.current) message.error('关系列表加载失败，请稍后重试')
       } finally {

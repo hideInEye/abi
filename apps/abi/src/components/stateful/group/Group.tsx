@@ -1,7 +1,7 @@
 import { DeleteOutlined, EllipsisOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics';
 import { buildGroupTree, getAllDescendantIds } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
@@ -31,6 +31,7 @@ function buildParentTreeOptions(list: any[], excludeId?: number): any[] {
 }
 
 import { GroupFrom } from './GroupFrom';
+import { getInitialGroupSelection } from './group-selection';
 import { type QuestionGroupItem, useGroupManagement } from './useGroupManagement';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
@@ -74,13 +75,17 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
   useEffect(() => {
     getGroups();
     setSelectedKeys([]);
+    setExpandedKeys([]);
   }, [spaceId]);
 
   useEffect(() => {
-    if (groups.length > 0) {
-      const firstKey = `group-${groups[0].groupId}`;
-      setSelectedKeys([firstKey]);
-      onGroupId(groups[0].groupId, groups[0].groupName);
+    const initialSelection = getInitialGroupSelection(groups);
+
+    setSelectedKeys(initialSelection.selectedKeys);
+    setExpandedKeys(initialSelection.expandedKeys);
+
+    if (initialSelection.selectedGroup) {
+      onGroupId(initialSelection.selectedGroup.groupId, initialSelection.selectedGroup.groupName);
     } else {
       // 分组为空时通知父组件清空数据
       onGroupId(0);
@@ -160,11 +165,11 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     onGroupId(groupId, group?.groupName);
     // 文件夹节点：点击行切换展开/折叠（对齐 qknow-ui DeptTree 行为）
     if (!info.node.isLeaf) {
-      if (expandedKeys.includes(nodeKey)) {
-        setExpandedKeys(expandedKeys.filter(k => k !== nodeKey));
-      } else {
-        setExpandedKeys([...expandedKeys, nodeKey]);
-      }
+      setExpandedKeys(currentKeys =>
+        currentKeys.includes(nodeKey)
+          ? currentKeys.filter(key => key !== nodeKey)
+          : [...currentKeys, nodeKey]
+      );
     }
   };
 
