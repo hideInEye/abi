@@ -2671,13 +2671,14 @@
       flex-direction: column;
 
       > .ant-tabs-tabpane {
-        height: 100%;
-        display: flex;
         flex-direction: column;
         overflow: hidden;
       }
 
       > .ant-tabs-tabpane-active {
+        height: 100%;
+        display: flex !important;
+        flex-direction: column;
         flex: 1;
         min-height: 0;
       }
@@ -4010,7 +4011,7 @@
   display: flex;
   flex-direction: column;
   gap: 28px;
-  max-width: 720px;
+  max-width: 100%;
 }
 
 // ── Hero banner ──

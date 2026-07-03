@@ -3,7 +3,9 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
 import { DATA_COLLECTION_CONFIG_TYPE_OPTIONS } from '@/constants/data-preparation';
+import { useAppSelector } from '@/hooks/business/useStore';
 import { addDataSet, getCollectionDetail, getFieldsBySql, saveDataSet } from '@/service/api';
+import { getSpaceId } from '@/store/slice/app';
 import { formatNodeData, genUniqueId, getTableArr, updateNodeDataByAllFields } from '@/utils/data-collection-operate';
 import { useRoute, useRouter } from '~/packages/simple-router/src';
 
@@ -50,6 +52,7 @@ export function Component() {
   const [datasource, setDatasource] = useState<string | undefined>(undefined);
   const [curDatasource, setCurDatasource] = useState<any>(undefined);
   const [dataTableKeyword, setDataTableKeyword] = useState('');
+  const spaceId = useAppSelector(getSpaceId);
   const [connectMode, setConnectMode] = useState([1, 2]); // 一期没用到
   const [loading, setLoading] = useState(false);
   const [runLoading, setRunLoading] = useState(false);
@@ -155,6 +158,22 @@ export function Component() {
     }
   }, [datasource, dataSourceList]);
 
+  // 切换空间时退出编辑页，返回数据集列表页
+  const prevSpaceIdRef = useRef(spaceId);
+  const isFirstRenderRef = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      prevSpaceIdRef.current = spaceId;
+      return;
+    }
+    if (prevSpaceIdRef.current !== spaceId) {
+      prevSpaceIdRef.current = spaceId;
+      push('/workbench/data-preparation/data-collection');
+    }
+  }, [spaceId, push]);
+
   const handleCloseModal = () => {
     setVisible(false);
     setBack(false);
@@ -170,7 +189,7 @@ export function Component() {
     const {  ...elseCollectionData } = collectionData;
     const viewName = saveForm.getFieldValue('viewName');
     const paramsData = { ...elseCollectionData, allFields, union: [resNodeData], viewName: viewName.trim() };
-    paramsData.spaceId = Number(localStorage.getItem('spaceId'));
+    paramsData.spaceId = spaceId;
     let res = null;
     if (Number(id)) {
       res = await saveDataSet(paramsData);
@@ -219,7 +238,7 @@ export function Component() {
       ...collectionData,
       viewName: saveForm.getFieldValue('viewName'),
       allFields: fields,
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId,
       unionSql: JSON.stringify(unionData),
       union: unionData
     };
