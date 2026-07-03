@@ -21,6 +21,8 @@ type LoginRedirectTarget =
 
 const BLOCKED_LOGIN_REDIRECT_NAMES = new Set(['login', 'logout', '403', 'not-found']);
 const BLOCKED_LOGIN_REDIRECT_PATHS = ['/login', '/logout', '/403', '/404'];
+const LEGACY_CHAT_ROUTE_NAME = 'ai-assistant_conversational-analysis' as RouteKey;
+const LEGACY_CHAT_ROUTE_PATH = '/ai-assistant/conversational-analysis';
 
 function isNormalRole(roles: any[]): boolean {
   if (!Array.isArray(roles) || !roles.length) {
@@ -59,7 +61,7 @@ function hasPathSegment(pathname: string, segment: string) {
 }
 
 function isAiAssistantConversationPath(pathname: string) {
-  return pathname === '/ai-assistant/conversational-analysis' || pathname.endsWith('/ai-assistant/conversational-analysis');
+  return pathname === LEGACY_CHAT_ROUTE_PATH || pathname.endsWith(LEGACY_CHAT_ROUTE_PATH);
 }
 
 function isChatRedirect(redirect: string): boolean {
@@ -136,8 +138,17 @@ function parseChatRedirectSpaceId(redirect: string): string | undefined {
   return undefined;
 }
 
+function getStoredSpaceId(): string | undefined {
+  try {
+    const spaceId = localStorage.getItem('spaceId');
+    return spaceId && spaceId !== '0' ? spaceId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function buildChatStandaloneRedirectUrl(redirect: string): string {
-  const spaceId = parseChatRedirectSpaceId(redirect);
+  const spaceId = parseChatRedirectSpaceId(redirect) || getStoredSpaceId();
   const fallbackUrl = getChatStandaloneUrl({
     spaceId: spaceId && spaceId !== '0' ? spaceId : undefined
   });
@@ -208,7 +219,7 @@ function canAccessRoute(router: AppRouter, redirect: string) {
 }
 
 function canAccessChatRedirect(router: AppRouter, _redirect: string) {
-  return canAccessRoute(router, '/ai-assistant/conversational-analysis');
+  return canAccessRoute(router, LEGACY_CHAT_ROUTE_PATH);
 }
 
 function resolveLoginRedirectTarget(router: AppRouter, redirect?: string | null): LoginRedirectTarget {
@@ -242,8 +253,11 @@ export function useRouterPush() {
 
   const routerBack = router.back;
 
-  function getLoginFallbackPath() {
-    const routeHome = getRouteHome(store.getState()) as RouteKey;
+  function getLoginFallbackRouteName() {
+    return getRouteHome(store.getState()) as RouteKey;
+  }
+
+  function getLoginFallbackPath(routeHome = getLoginFallbackRouteName()) {
     const homeRoute = routeHome ? router.getRouteByName(routeHome) : undefined;
     const homePath = homeRoute?.path || getRoutePath(routeHome) || '/';
 
@@ -292,7 +306,16 @@ export function useRouterPush() {
   }
 
   async function toHome() {
-    return routerPush(getLoginFallbackPath());
+    const fallbackRouteName = getLoginFallbackRouteName();
+    const fallbackPath = getLoginFallbackPath(fallbackRouteName);
+
+    if (fallbackRouteName === LEGACY_CHAT_ROUTE_NAME || isChatRedirect(fallbackPath)) {
+      const chatRedirect = fallbackRouteName === LEGACY_CHAT_ROUTE_NAME ? LEGACY_CHAT_ROUTE_PATH : fallbackPath;
+      replaceStandaloneChatByRedirect(chatRedirect);
+      return true;
+    }
+
+    return routerPush(fallbackPath);
   }
 
   /**
