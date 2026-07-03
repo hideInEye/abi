@@ -164,12 +164,14 @@
     }
   }
 
-  .ant-checkbox-wrapper {
+  .ant-checkbox-wrapper,
+  .ant-radio-wrapper {
     width: 100%;
     padding-left: 8px;
   }
 
-  .ant-checkbox {
+  .ant-checkbox,
+  .ant-radio {
     margin-right: 12px;
   }
 }

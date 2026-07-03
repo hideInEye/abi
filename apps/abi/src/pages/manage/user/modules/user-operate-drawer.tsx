@@ -27,7 +27,7 @@ const UserOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
   const getPostSelectList = async () => {
     const res = await getPostSelectListApi();
     if (Array.isArray(res.data)) {
-      const curPostList = res.data.map(item => {
+      const curPostList = res.data.map((item: any) => {
         return {
           label: item.postName,
           value: item.postId
@@ -187,7 +187,6 @@ const UserOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
             rules={[{ required: true }]}
           >
             <ASelect
-              mode="multiple"
               options={roleOptions}
               placeholder={t('page.manage.user.form.userRole')}
             />

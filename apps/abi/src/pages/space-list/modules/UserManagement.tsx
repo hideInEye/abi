@@ -91,7 +91,7 @@ export const UserManagement = () => {
             onClick={() => {
               setCurrentPermissionItemIndex(_.recordId);
               setPermissionDrawerOpen(true);
-              const roleIds = _.roles.map((item: any) => item.roleId);
+              const roleIds = Array.isArray(_.roles) ? _.roles.map((item: any) => item.roleId).slice(0, 1) : [];
               setDefaultPermissionKeys(roleIds);
             }}
           >
@@ -122,7 +122,7 @@ export const UserManagement = () => {
     const newRoleData = roleData.map(item => {
       const Item = item;
       if (item.recordId === currentPermissionItemIndex) {
-        Item.roles = permission;
+        Item.roles = permission.slice(0, 1);
       }
       return Item;
     });

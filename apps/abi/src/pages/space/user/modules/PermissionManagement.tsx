@@ -40,6 +40,11 @@ interface PermissionManagementProps {
   setOpen: (open: boolean) => void;
 }
 
+function normalizePermissionKeys(keys: any[]) {
+  if (!Array.isArray(keys)) return [];
+  return keys.filter(key => key !== undefined && key !== null && key !== '').slice(0, 1);
+}
+
 export const PermissionManagement: FC<PermissionManagementProps> = ({
   defaultPermissionKeys,
   open,
@@ -49,18 +54,17 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
 }) => {
   const { t } = useTranslation();
   const [permissionList, setPermissionList] = useState<PermissionItem[]>([]);
-  const [alreadySelectedPermission, setAlreadySelectedPermission] = useState<any[]>(defaultPermissionKeys);
+  const [alreadySelectedPermission, setAlreadySelectedPermission] = useState<any[]>(normalizePermissionKeys(defaultPermissionKeys));
   const [roleMenuMap, setRoleMenuMap] = useState<Record<number, MenuTreeItem[]>>({});
   const [loading, setLoading] = useState(false);
 
-  function handlePermissionChange(value: any[]) {
-    setAlreadySelectedPermission(value);
-    // 加载新选中角色的菜单
-    value.forEach(roleId => {
-      if (!roleMenuMap[roleId]) {
-        loadRoleMenu(roleId);
-      }
-    });
+  function handlePermissionChange(roleId: any) {
+    const nextSelected = normalizePermissionKeys([roleId]);
+    setAlreadySelectedPermission(nextSelected);
+    const selectedRoleId = nextSelected[0];
+    if (selectedRoleId !== undefined && !roleMenuMap[selectedRoleId]) {
+      loadRoleMenu(selectedRoleId);
+    }
   }
 
   async function getSpaceRoleList() {
@@ -183,11 +187,11 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
             <div className="perm-panel-subtitle">选择要分配的角色</div>
           </div>
           <div className="perm-panel-body">
-            <ACheckbox.Group
+            <ARadio.Group
               className="perm-role-group"
               style={{ width: '100%' }}
-              value={alreadySelectedPermission}
-              onChange={handlePermissionChange}
+              value={alreadySelectedPermission[0]}
+              onChange={event => handlePermissionChange(event.target.value)}
             >
               {permissionList.map(item => {
                 const isSelected = alreadySelectedPermission.includes(item.roleId);
@@ -196,16 +200,16 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
                     key={item.roleId}
                     className={`perm-role-card ${isSelected ? 'perm-role-selected' : ''}`}
                   >
-                    <ACheckbox value={item.roleId}>
+                    <ARadio value={item.roleId}>
                       <div className="perm-role-content">
                         <div className="perm-role-name">{item.roleName}</div>
                         <div className="perm-role-desc">{item.remark || '暂无描述'}</div>
                       </div>
-                    </ACheckbox>
+                    </ARadio>
                   </div>
                 );
               })}
-            </ACheckbox.Group>
+            </ARadio.Group>
           </div>
         </div>
 

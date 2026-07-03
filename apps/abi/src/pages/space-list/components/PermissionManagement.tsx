@@ -20,6 +20,11 @@ interface PermissionManagementProps {
   setOpen: (open: boolean) => void;
 }
 
+function normalizePermissionKeys(keys: any[]) {
+  if (!Array.isArray(keys)) return [];
+  return keys.filter(key => key !== undefined && key !== null && key !== '').slice(0, 1);
+}
+
 export const PermissionManagement: FC<PermissionManagementProps> = ({
   defaultPermissionKeys,
   open,
@@ -28,10 +33,10 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
   setOpen
 }) => {
   const [permissionList, setPermissionList] = useState<PermissionItem[]>([]);
-  const [alreadySelectedPermission, setAlreadySelectedPermission] = useState<any[]>(defaultPermissionKeys);
+  const [alreadySelectedPermission, setAlreadySelectedPermission] = useState<any[]>(normalizePermissionKeys(defaultPermissionKeys));
 
-  function handlePermissionChange(value: any[]) {
-    setAlreadySelectedPermission(value);
+  function handlePermissionChange(roleId: any) {
+    setAlreadySelectedPermission(normalizePermissionKeys([roleId]));
   }
 
   async function getSpaceRoleList() {
@@ -114,17 +119,17 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
       {/* Role list */}
       <div className="sd-v5-perm-section">
         <div className="sd-v5-perm-section-title">选择空间角色</div>
-        <ACheckbox.Group
+        <ARadio.Group
           className="sd-v5-perm-list"
           style={{ width: '100%' }}
-          value={alreadySelectedPermission}
-          onChange={handlePermissionChange}
+          value={alreadySelectedPermission[0]}
+          onChange={event => handlePermissionChange(event.target.value)}
         >
           {permissionList.map(item => {
             const isActive = alreadySelectedPermission.includes(item.roleId);
             return (
               <div key={item.roleId} className={`sd-v5-perm-card ${isActive ? 'sd-v5-perm-card-active' : ''}`}>
-                <ACheckbox value={item.roleId}>
+                <ARadio value={item.roleId}>
                   <div className="sd-v5-perm-card-inner">
                     <div className="sd-v5-perm-card-icon">
                       <SafetyOutlined />
@@ -139,11 +144,11 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
                       </div>
                     )}
                   </div>
-                </ACheckbox>
+                </ARadio>
               </div>
             );
           })}
-        </ACheckbox.Group>
+        </ARadio.Group>
       </div>
     </ADrawer>
   );

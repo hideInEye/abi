@@ -4599,7 +4599,8 @@
     box-shadow: 0 0 0 2px rgba(91, 124, 247, 0.08), 0 4px 16px rgba(91, 124, 247, 0.06);
   }
 
-  .ant-checkbox-wrapper {
+  .ant-checkbox-wrapper,
+  .ant-radio-wrapper {
     width: 100%;
     padding: 16px 20px;
     display: flex;

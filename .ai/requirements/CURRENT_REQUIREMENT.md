@@ -1,120 +1,76 @@
-# 项目实例版：新增本体知识图谱关系筛选优化
+# 角色选择单选改造
 
 ## 需求类型
 
-新功能
+UI 调整 / 表单行为调整
 
 ## 背景
 
-当前仓库的主业务应用是 `apps/abi`，其中本体知识图谱模块位于 `apps/abi/src/pages/workbench/ontology-kg/`。已有测试覆盖了 `shared-network-types.ts` 和 `kggraph/utils/graph.ts`，说明该模块适合继续用 Vitest 做 characterization/unit tests。
+当前主业务应用 `apps/abi` 中，多个用户管理相关页面的角色选择允许多选。业务要求将这些角色选择改为只能选择一个选项。
 
 ## 目标
 
-在本体知识图谱图谱视图中，为关系筛选逻辑补充“空筛选时保持当前空态、不请求图谱”的行为保护，并准备后续扩展筛选 UI 的测试基础。
+- 将空间用户管理 `/space/user` 的新建、编辑用户角色选择改为单选。
+- 将用户管理 `/manage/user` 的新建、编辑用户角色选择改为单选。
+- 将新建、编辑空间时，空间用户管理中“分配角色”的选择改为单选。
+- 保持现有接口调用、页面结构和样式风格尽量不变。
 
 ## 非目标
 
-- 不重构整个 `ontology-kg` 模块。
-- 不修改 `packages/simple-router` 或全局路由。
+- 不重构用户管理、空间管理或角色管理模块。
 - 不新增后端接口。
-- 不调整 `apps/chat` 或 `apps/dashboard`。
+- 不调整角色权限、菜单权限、数据权限等其他业务逻辑。
+- 不修改 `apps/chat`、`apps/dashboard` 或共享 `packages/*`。
 
 ## 用户流程 / 使用场景
 
-用户进入 `apps/abi/src/pages/workbench/ontology-kg/kggraph` 相关页面后，在实体或关系筛选项为空时，页面不应发起无意义图谱请求；有实体或关系筛选项时，才允许请求图谱数据。
+用户在 `/space/user`、`/manage/user` 或空间新建/编辑中的用户管理分配角色场景里新增或编辑用户时，角色字段只能选择一个角色；如果已有数据包含多个角色，表单展示和提交需按单选规则处理为一个角色。
 
 ## 影响范围预期
 
-- `apps/abi/src/pages/workbench/ontology-kg/kggraph/utils/graph.ts`
-- `apps/abi/src/pages/workbench/ontology-kg/kggraph/utils/graph.test.ts`
-- 可能涉及 `apps/abi/src/pages/workbench/ontology-kg/shared-network-types.ts`
+- `apps/abi/src/pages/space/user/**`
+- `apps/abi/src/pages/manage/user/**`
+- 空间新建/编辑相关用户管理或分配角色组件
+- 可能涉及 `apps/abi/src/service/api/**` 中已有用户/空间接口调用的参数适配
 
 ## 详细需求
 
-- 保持 `shouldRequestGraph(filtersLoaded, entities, relations)` 的现有语义：筛选加载完成且实体/关系至少一个非空时才返回 true。
-- 为后续新增筛选 UI 时的 graph data filter 逻辑补充测试样例。
-- ID 处理必须遵循 `OntologyNetworkId = string | number`，不得强制转为 number。
+- 移除目标角色选择控件的多选模式。
+- 表单字段值需要从多选数组适配为单选值，或在提交前兼容后端原有数组/字符串字段要求。
+- 编辑回显时，如果后端返回多个角色，只保留第一个有效角色作为当前选择。
+- 清空、校验、禁用、loading 等既有交互保持原样。
 
 ## 验收标准
 
-- `pnpm test -- apps/abi/src/pages/workbench/ontology-kg/kggraph/utils/graph.test.ts` 通过。
-- `pnpm test` 通过。
-- 不修改业务无关文件。
+- `/space/user` 新建和编辑用户时，角色选择只能选一个。
+- `/manage/user` 新建和编辑用户时，角色选择只能选一个。
+- 新建/编辑空间中的用户管理分配角色只能选一个。
+- 不影响列表查询、新增、编辑提交的其他字段。
+- 修改范围局限在当前需求相关文件。
 
 ## 测试要求
 
-使用 Vitest，测试文件继续放在 `apps/abi/src/pages/workbench/ontology-kg/kggraph/utils/graph.test.ts`。
+- 优先运行 `pnpm --filter chatbi typecheck`。
+- 视改动范围运行 `pnpm --filter chatbi build` 或根 `pnpm build`。
+- 如发现纯函数/参数适配逻辑可独立测试，应补充 Vitest；若只是 Ant Design 表单配置调整，可说明未新增测试原因。
 
 ## UI / 样式要求
 
-本示例不涉及 UI。如果后续涉及 ABI 页面 UI，应遵守 `apps/abi/src/styles/css/global.css`、`apps/abi/uno.config.ts` 和 Ant Design 主题规则。
+- 遵守 ABI 现有 Ant Design 与 UnoCSS/SCSS 风格。
+- 不改动整体布局和视觉风格。
 
 ## 数据 / 接口要求
 
-不新增接口。若后续调用 API，应复用 `apps/abi/src/service/request/index.ts` 中的 `apiRequest` 或对应领域 service。
+- 复用现有 `apps/abi` service/api 和 request 封装。
+- 若接口仍要求数组字段，提交时由单选值转换为单元素数组。
+- 不改变接口 URL、请求方式或响应处理。
 
 ## 风险和限制
 
-- `ontology-kg` ID 可能超过 JS 安全整数，不能强制转 number。
-- 根 `pnpm lint` 当前不可用，原因是 ESLint flat config 不支持根脚本 `--ext` 参数。
-- 根 `pnpm type-check` 当前不可用，根目录没有 `tsconfig.json`。
+- 后端历史数据可能存在多个角色，需要前端编辑回显时兼容。
+- 根 `pnpm lint` 和 `pnpm type-check` 已知存在项目级阻塞，不作为本次通过门禁。
+- 必须避免恢复或覆盖用户未说明改动。
 
 ## 备注
 
-这是项目实例版，真实开发前请把下面空白模板版复制到本文件并改成实际需求。
-
----
-
-# 空白模板版
-
-## 需求类型
-
-新功能 / Bug 修复 / 重构 / 性能优化 / UI 调整 / 测试补充 / 文档更新 / 其他
-
-## 背景
-
-说明为什么要做这个需求。
-
-## 目标
-
-这次必须完成什么。
-
-## 非目标
-
-这次明确不做什么。
-
-## 用户流程 / 使用场景
-
-用户如何使用，或者系统在哪个场景触发。
-
-## 影响范围预期
-
-可能影响哪些模块、页面、接口、数据结构或配置。
-
-## 详细需求
-
-写清楚功能点、规则、边界条件。
-
-## 验收标准
-
-如何判断完成。
-
-## 测试要求
-
-需要新增或更新哪些测试。
-
-## UI / 样式要求
-
-如果涉及 UI，说明视觉、交互、响应式要求。
-
-## 数据 / 接口要求
-
-如果涉及数据或接口，说明字段、协议、兼容性要求。
-
-## 风险和限制
-
-不能破坏什么，不能改什么，不能引入什么。
-
-## 备注
-
-其他补充。
+用户已明确要求创建 agent 进行构建测试，本轮将使用测试 agent 协助验证构建/类型检查入口和结果。
