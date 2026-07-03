@@ -72,7 +72,9 @@ export function Component() {
       pageSize: 10,
       roleKey: '',
       roleName: '',
-      status: ''
+      status: '',
+      orderByColumn: 'roleSort',
+      isAsc: 'asc'
     },
     columns: () =>
       [

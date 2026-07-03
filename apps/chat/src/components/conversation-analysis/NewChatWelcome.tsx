@@ -1,32 +1,33 @@
 import React from 'react'
+import { BarChartOutlined, FileSearchOutlined, FundOutlined, LineChartOutlined } from '@ant-design/icons'
 
 const examples = [
   {
     key: 'sales',
-    icon: '📊',
+    icon: <BarChartOutlined />,
     title: '沃尔玛销售数据分析',
-    desc: '分析沃尔玛近一年的销售数据...',
+    desc: '分析沃尔玛近一年的销售数据，识别趋势、异常和增长机会',
     color: 'blue',
   },
   {
     key: 'profile',
-    icon: '🗂️',
+    icon: <FileSearchOutlined />,
     title: '数据库画像与分析报告',
-    desc: '基于用户行为数据，生成用户...',
+    desc: '基于用户行为数据，生成用户画像与分析报告',
     color: 'green',
   },
   {
     key: 'finance',
-    icon: '📈',
+    icon: <FundOutlined />,
     title: '金融财报深度分析',
-    desc: '解读上市公司年度财报，进行...',
+    desc: '解读上市公司年度财报，进行深度财务分析',
     color: 'purple',
   },
   {
     key: 'predict',
-    icon: '🔧',
+    icon: <LineChartOutlined />,
     title: '电商销售预测分析',
-    desc: '基于历史数据预测未来三个月...',
+    desc: '基于历史数据预测未来三个月的销售趋势与走向',
     color: 'orange',
   },
 ]
@@ -40,9 +41,6 @@ const NewChatWelcome: React.FC<NewChatWelcomeProps> = ({ onExampleClick }) => {
     <div className="h-full w-full flex flex-col overflow-hidden" style={{ background: 'transparent' }}>
       {/* Main content */}
       <div className="welcome-view flex-1 min-h-0 overflow-y-auto">
-        <div className="welcome-logo">
-          <img src="/abi_logo.png" alt="ABI" style={{ width: '100%', height: '100%', borderRadius: '16px', objectFit: 'cover' }} />
-        </div>
         <div className="welcome-title">TrustABI · 芯智</div>
         <p className="welcome-subtitle">
           您的全能数据智能专家。从智能问数到归因预测，再到一键生成报告，芯智助您高效挖掘数据价值，精准获取商业洞察。

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import Star from '../../../../../components/star/index.tsx';
 import { semanticModify } from '@/service/api/data-table-meaning';
+import { fetchModelList } from '@/service/api/system-manage';
 import { assembleData, streamlinedData } from '../modules/semantics-table';
 import { useTableStore } from '../store/useTableStore.ts';
 import type { DataTypea } from '../types/index';
@@ -522,7 +523,18 @@ export default function DataTableMeaningTable() {
             }
             try {
               setAiLoading(true);
-              const res: any = await semanticModify({ dsl: modelDetail });
+              // 查询模型列表，找到指定模型的 modelId
+              const AI_FILL_MODEL_NAME = 'deepseek-v4-flash';
+              let targetModelId: number | undefined;
+              try {
+                const modelRes: any = await fetchModelList({ pageNum: 1, pageSize: 999, modelName: AI_FILL_MODEL_NAME });
+                const modelRows = modelRes?.data?.data || modelRes?.response?.data?.rows || [];
+                const targetModel = Array.isArray(modelRows) ? modelRows.find((m: any) => m.modelName === AI_FILL_MODEL_NAME) : undefined;
+                targetModelId = targetModel?.modelId;
+              } catch {
+                // 模型查询失败不阻断AI帮填
+              }
+              const res: any = await semanticModify({ dsl: modelDetail, chat_model_id: targetModelId });
               // apiRequest 返回完整 axios 响应，需手动解包
               const data: any = res?.data?.data ?? res?.response?.data?.data ?? res?.data ?? res;
               if (!data) {

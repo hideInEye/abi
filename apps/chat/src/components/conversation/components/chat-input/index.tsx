@@ -378,17 +378,17 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           </div>
         </Popover>
         {/* 联网搜索 */}
-        <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('联网搜索功能即将上线'); }}>
+        {/* <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('联网搜索功能即将上线'); }}>
           <SearchOutlined style={{ fontSize: 14 }} /> 联网搜索
-        </div>
+        </div> */}
         {/* 代码执行 */}
-        <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('代码执行功能即将上线'); }}>
+        {/* <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('代码执行功能即将上线'); }}>
           <ToolOutlined style={{ fontSize: 14 }} /> 代码执行
-        </div>
+        </div> */}
         {/* Markdown */}
-        <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('Markdown功能即将上线'); }}>
+        {/* <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('Markdown功能即将上线'); }}>
           <EditOutlined style={{ fontSize: 14 }} /> Markdown
-        </div>
+        </div> */}
       </div>
     );
 

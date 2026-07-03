@@ -10,7 +10,7 @@ export function fetchSemanticGroups(params: { groupType?: string; pageNum?: numb
 }
 
 // 获取数据语义列表（表列表）
-export function fetchSemanticSchemas(params: { bizName?: string; groupId?: number; pageNum?: number; pageSize?: number }) {
+export function fetchSemanticSchemas(params: { bizName?: string; groupId?: number | string; pageNum?: number; pageSize?: number }) {
   return request({
     url: '/api/copilot/v1/schema/list',
     method: 'get',
