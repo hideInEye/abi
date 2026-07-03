@@ -32,7 +32,7 @@ interface PluginTableProps {
   readonly updateCurrentEdit: (currentEdit: PluginItem) => void;
   readonly updateStatus: (record: PluginItem) => void;
   readonly onDetail?: (record: PluginItem) => void;
-  readonly groupId: number;
+  readonly groupId: string;
   readonly onAdd: () => void;
 }
 

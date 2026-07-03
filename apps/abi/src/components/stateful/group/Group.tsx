@@ -11,11 +11,11 @@ import { buildGroupTree, getAllDescendantIds } from '@/pages/workbench/data-prep
  * @param list 平铺分组数组
  * @param excludeId 编辑时需排除的分组 ID（排除自身及所有后代，防止循环引用）
  */
-function buildParentTreeOptions(list: any[], excludeId?: number): any[] {
+function buildParentTreeOptions(list: any[], excludeId?: string): any[] {
   // 编辑模式：过滤掉自身及其所有后代节点，防止选自己或子文件夹作为父级
   const excludeIds = excludeId != null
     ? new Set([excludeId, ...getAllDescendantIds(list, excludeId)])
-    : new Set<number>();
+    : new Set<string>();
 
   const filteredList = excludeIds.size > 0
     ? list.filter(item => !excludeIds.has(item.groupId))
@@ -50,7 +50,7 @@ export interface GroupProps {
     rule: any[];
     type: TableSemanticsGroupType;
   };
-  readonly onGroupId: (groupId: number, groupName?: string) => void;
+  readonly onGroupId: (groupId: string, groupName?: string) => void;
 }
 
 export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
@@ -88,7 +88,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       onGroupId(initialSelection.selectedGroup.groupId, initialSelection.selectedGroup.groupName);
     } else {
       // 分组为空时通知父组件清空数据
-      onGroupId(0);
+      onGroupId('');
     }
   }, [groups]);
 
@@ -150,7 +150,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     showAddModal();
   };
 
-  const handleDeleteGroup = async (groupId: number, e?: React.MouseEvent) => {
+  const handleDeleteGroup = async (groupId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     await handleGroupDelete(groupId);
   };
@@ -159,10 +159,10 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     const nodeKey = info.node.key as string;
     // 始终选中当前点击节点
     setSelectedKeys([nodeKey]);
-    const groupId = Number(nodeKey.replace('group-', ''));
-    const group = groups.find(g => g.groupId === groupId);
+    const groupIdStr = nodeKey.replace('group-', '');
+    const group = groups.find(g => String(g.groupId) === groupIdStr);
     // 直接用解析出的 groupId 回调，不依赖 groups.find 结果
-    onGroupId(groupId, group?.groupName);
+    onGroupId(groupIdStr, group?.groupName);
     // 文件夹节点：点击行切换展开/折叠（对齐 qknow-ui DeptTree 行为）
     if (!info.node.isLeaf) {
       setExpandedKeys(currentKeys =>

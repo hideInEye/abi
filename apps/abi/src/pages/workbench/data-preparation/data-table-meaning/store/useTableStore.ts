@@ -89,13 +89,13 @@ const createTableConfigSlice = (set: any): TableConfigState => ({
 });
 
 type GroupConfigState = {
-  groupId: number;
-  setGroupId: (groupId: number) => void;
+  groupId: string;
+  setGroupId: (groupId: string) => void;
 };
 
 const createGroupConfigSlice = (set: any): GroupConfigState => ({
-  groupId: 0,
-  setGroupId: (groupId: number) => set({ groupId })
+  groupId: '',
+  setGroupId: (groupId: string) => set({ groupId })
 });
 
 type BaseConfigState = {

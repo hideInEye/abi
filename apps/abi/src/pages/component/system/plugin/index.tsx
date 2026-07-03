@@ -17,7 +17,7 @@ import { message } from 'antd';
 export const Component: React.FC = () => {
   const { currentEdit, open, setCurrentEdit, setOpen } = usePluginManagement();
   const spaceId = useAppSelector(getSpaceId);
-  const [groupId, setGroupId] = useState(0);
+  const [groupId, setGroupId] = useState<string>('');
   const groupIdRef = useRef(groupId);
   groupIdRef.current = groupId;
   const [groupName, setGroupName] = useState('');
@@ -243,7 +243,7 @@ export const Component: React.FC = () => {
 
   // 空间切换时重置分组 + 强制刷新，让 PluginGroup 重新回调新空间的 groupId
   useEffect(() => {
-    setGroupId(0);
+    setGroupId('');
     setGroupName('');
     setcurrent(1);
     setDataSource({ code: 0, msg: '', rows: [], total: 0 });

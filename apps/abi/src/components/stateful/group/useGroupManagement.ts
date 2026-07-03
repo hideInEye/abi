@@ -12,10 +12,10 @@ import { getSpaceId } from '@/store/slice/app';
 import type { GroupProps } from './Group';
 
 export interface QuestionGroupItem {
-  groupId: number;
+  groupId: string;
   groupName: string;
   groupType: string;
-  parentId?: number;
+  parentId?: string;
   remark: string;
   spaceId: number;
   status: string;
@@ -62,9 +62,9 @@ export const useGroupManagement = (config: GroupProps['config']) => {
     return true
   };
 
-  const handleGroupDelete = async (groupId: number) => {
+  const handleGroupDelete = async (groupId: string) => {
     // setGroups(prevGroups => prevGroups.filter(group => group.groupId !== groupId));
-    await deleteTableSemanticsGroup(groupId);
+    await deleteTableSemanticsGroup(groupId as any);
     getGroups();
   };
 

@@ -37,7 +37,7 @@ export function Component() {
   const [searchValue, setSearchValue] = useState('');
   const [dateRange, setDateRange] = useState<any>(null);
 
-  function handleGroupId(gId: number) {
+  function handleGroupId(gId: string) {
     setGroupId(gId);
     if (gId) {
       fetchTableSchemaList(100, gId);
