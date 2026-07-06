@@ -189,7 +189,8 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
 
   const buildGroupMenu = (group: SessionGroup): MenuProps => ({
     items: [
-      { key: 'edit', icon: <EditOutlined />, label: '编辑' },
+      { key: 'edit', icon: <EditOutlined />, label: '重命名' },
+      { type: 'divider' as const },
       { key: 'delete', icon: <DeleteOutlined />, label: '删除', danger: true },
     ],
     onClick: ({ key, domEvent }) => {

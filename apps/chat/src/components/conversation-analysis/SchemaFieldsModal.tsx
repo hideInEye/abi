@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Drawer, Input, Spin, Empty, Tag, Select } from 'antd'
-import { SearchOutlined, DatabaseOutlined, CloseOutlined } from '@ant-design/icons'
+import { SearchOutlined, DatabaseOutlined, CloseOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons'
 
 export interface SchemaField {
   name: string           // originName/fieldName - 字段名
@@ -10,6 +10,8 @@ export interface SchemaField {
   description?: string   // fieldDesc - 描述
   tableName?: string     // 所属表名
   tableDesc?: string     // 表描述/中文名
+  bizName?: string       // 中文名称
+  alias?: string         // 别名
 }
 
 export interface SchemaTable {
@@ -162,6 +164,17 @@ function StatItem({ label, value, color }: { label: string; value: number; color
 }
 
 function TableGroupCard({ tableName, tableDesc, fields }: { tableName: string; tableDesc: string; fields: SchemaField[] }) {
+  const [expanded, setExpanded] = useState<Set<number>>(new Set())
+
+  const toggle = (idx: number) => {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
+
   return (
     <div style={{
       background: '#fff', border: '1px solid #eef0f4',
@@ -194,31 +207,83 @@ function TableGroupCard({ tableName, tableDesc, fields }: { tableName: string; t
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
+            <th style={{ ...thStyle, width: 40, textAlign: 'center' }}></th>
             <th style={thStyle}>字段名</th>
             <th style={thStyle}>原始类型</th>
             <th style={{ ...thStyle, textAlign: 'center' }}>语义类型</th>
-            <th style={thStyle}>描述</th>
+            <th style={thStyle}>语义说明</th>
           </tr>
         </thead>
         <tbody>
-          {fields.map((f, i) => (
-            <tr key={i} style={{ transition: 'background 0.1s' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(91,124,247,0.02)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
-              <td style={{ ...tdStyle, fontFamily: 'monospace', fontWeight: 600, color: '#1f2937' }}>{f.name}</td>
-              <td style={tdStyle}>
-                <span style={{
-                  fontFamily: 'monospace', fontSize: 11.5, color: '#6b7280',
-                  background: 'rgba(130,140,200,0.08)', padding: '2px 8px', borderRadius: 4, display: 'inline-block',
-                }}>{f.type}</span>
-              </td>
-              <td style={{ ...tdStyle, textAlign: 'center' }}>
-                <SemTag semantic={f.semantic} label={f.semLabel} />
-              </td>
-              <td style={{ ...tdStyle, color: '#6b7280' }}>{f.description || '—'}</td>
-            </tr>
-          ))}
+          {fields.map((f, i) => {
+            const isExpanded = expanded.has(i)
+            return (
+              <React.Fragment key={i}>
+                <tr style={{ transition: 'background 0.1s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(91,124,247,0.02)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td style={{ ...tdStyle, textAlign: 'center', verticalAlign: 'middle' }}>
+                    <div
+                      onClick={() => toggle(i)}
+                      style={{
+                        width: 20, height: 20, borderRadius: 6,
+                        border: '1px solid #c7d2fe', display: 'inline-flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', color: '#5b7cf7', fontSize: 10,
+                        background: isExpanded ? 'rgba(91,124,247,0.12)' : '#fff',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {isExpanded ? <MinusOutlined /> : <PlusOutlined />}
+                    </div>
+                  </td>
+                  <td style={{ ...tdStyle, fontFamily: 'monospace', fontWeight: 600, color: '#1f2937' }}>{f.name}</td>
+                  <td style={tdStyle}>
+                    <span style={{
+                      fontFamily: 'monospace', fontSize: 11.5, color: '#6b7280',
+                      background: 'rgba(130,140,200,0.08)', padding: '2px 8px', borderRadius: 4, display: 'inline-block',
+                    }}>{f.type}</span>
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'center' }}>
+                    <SemTag semantic={f.semantic} label={f.semLabel} />
+                  </td>
+                  <td style={{ ...tdStyle, color: '#6b7280' }}>{f.bizName || '—'}</td>
+                </tr>
+                {isExpanded && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 0, borderBottom: '1px solid #f8f9fa' }}>
+                      <div style={{
+                        margin: '4px 16px 16px',
+                        padding: '16px 18px',
+                        background: '#FAFAFA',
+                        borderRadius: 10,
+                        border: '1px solid #e5e7eb',
+                      }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1f2937', marginBottom: 12 }}>
+                          字段详细信息
+                        </div>
+                        <div style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid #d1d5db' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, background: '#FAFAFA' }}>
+                            <tbody>
+                              <tr>
+                                <td style={{ ...detailLabelStyle, borderRight: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db' }}>别名</td>
+                                <td style={{ ...detailValueStyle, borderBottom: '1px solid #d1d5db' }}>{f.alias || '—'}</td>
+                              </tr>
+                              <tr>
+                                <td style={{ ...detailLabelStyle, borderRight: '1px solid #d1d5db' }}>字段描述</td>
+                                <td style={detailValueStyle}>{f.description || '—'}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -248,4 +313,14 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   padding: '12px 16px', fontSize: 13, color: '#4b5563',
   borderBottom: '1px solid #f8f9fa',
+}
+
+const detailLabelStyle: React.CSSProperties = {
+  width: 90, padding: '12px 16px', color: '#4b5563', fontWeight: 600,
+  background: '#FAFAFA', verticalAlign: 'top',
+}
+
+const detailValueStyle: React.CSSProperties = {
+  padding: '12px 16px', color: '#374151',
+  background: '#FAFAFA', lineHeight: 1.6,
 }

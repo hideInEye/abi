@@ -1,6 +1,5 @@
 import type { RefObject } from 'react'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { EyeOutlined } from '@ant-design/icons'
 
 import AiEle from '../AiEle'
 import CheckboxWrapCom from '../CheckboxWrapCom'
@@ -87,6 +86,8 @@ const MessageList = ({
             description: item.fieldDesc || '',
             tableName: item.tableName || '',
             tableDesc: item.tdesc || item.rtableName || '',
+            bizName: item.bizName || '',
+            alias: item.alias || '',
           })
         })
       }
@@ -276,46 +277,38 @@ const MessageList = ({
                     }}
                   >
                     <span>
-                      <span style={{ color: '#8a95a8' }}>分组：</span>
+                      <span style={{ color: '#8a95a8' }}>数据分组：</span>
                       <span style={{ color: '#5b7cf7', fontWeight: 500 }}>{msgGroupName || '无'}</span>
                     </span>
                     <span style={{ color: '#e0e4ea' }}>|</span>
                     <span>
                       <span style={{ color: '#8a95a8' }}>数据语义：</span>
-                      <span style={{ color: '#5b7cf7', fontWeight: 500 }}>{msgSemanticName || '无'}</span>
+                      <span
+                        style={{
+                          color: '#5b7cf7',
+                          fontWeight: 500,
+                          cursor: msgSemanticSchemaId ? 'pointer' : 'default',
+                          transition: 'opacity 0.15s',
+                        }}
+                        onClick={() => {
+                          if (msgSemanticSchemaId) {
+                            openSchemaModal(msgSemanticSchemaId, msgSemanticName)
+                          }
+                        }}
+                        onMouseEnter={(e) => {
+                          if (msgSemanticSchemaId) {
+                            (e.currentTarget as HTMLElement).style.opacity = '0.7'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (msgSemanticSchemaId) {
+                            (e.currentTarget as HTMLElement).style.opacity = '1'
+                          }
+                        }}
+                      >
+                        {msgSemanticName || '无'}
+                      </span>
                     </span>
-                    {msgSemanticSchemaId && (
-                      <>
-                        <span style={{ color: '#e0e4ea' }}>|</span>
-                        <button
-                          type="button"
-                          onClick={() => openSchemaModal(msgSemanticSchemaId, msgSemanticName)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            padding: '2px 10px',
-                            border: '1px solid rgba(91,124,247,0.25)',
-                            borderRadius: 6,
-                            background: 'rgba(91,124,247,0.06)',
-                            color: '#5b7cf7',
-                            fontSize: 12,
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = 'rgba(91,124,247,0.12)'
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = 'rgba(91,124,247,0.06)'
-                          }}
-                        >
-                          <EyeOutlined style={{ fontSize: 12 }} />
-                          查看
-                        </button>
-                      </>
-                    )}
                   </div>
                 )}
                 {section.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`))}
