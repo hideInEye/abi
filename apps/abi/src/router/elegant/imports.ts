@@ -46,7 +46,7 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   "space_component_icon-selector": () => import("@/pages/space/component/icon-selector/index.tsx"),
   "space_space-menu": () => import("@/pages/space/space-menu/index.tsx"),
   "space_space-role": () => import("@/pages/space/space-role/index.tsx"),
-  space_user: () => import("@/pages/space/user/index.tsx"),
+  "space_space-user": () => import("@/pages/space/space-user/index.tsx"),
   view: () => import("@/pages/view/index.tsx"),
   "workbench_app-workshop_my-collect": () => import("@/pages/workbench/app-workshop/my-collect/index.tsx"),
   "workbench_app-workshop_my-dashboard": () => import("@/pages/workbench/app-workshop/my-dashboard/index.tsx"),

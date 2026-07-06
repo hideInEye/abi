@@ -9,7 +9,7 @@ import {
 import { Empty, type TableProps } from 'antd';
 import { useState } from 'react';
 
-import { DeptSelector } from '@/pages/space/user/modules/dept';
+import { DeptSelector } from '@/pages/space/space-user/modules/dept';
 
 import { NewCreateUser } from '../components/NewCreateUser';
 import { PermissionManagement } from '../components/PermissionManagement';
