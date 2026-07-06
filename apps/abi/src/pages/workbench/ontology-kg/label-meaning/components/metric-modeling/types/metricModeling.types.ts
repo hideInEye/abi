@@ -81,7 +81,7 @@ export interface KnowledgeSubmitPayload extends KnowledgeFormValues {
   atomicMetricMetaMap?: Record<string, KnowledgeAtomicMetricMeta>
   derivedExpressionFieldMetaMap?: Record<string, KnowledgeExpressionFieldMeta>
   dimensionFieldIds?: string
-  groupId: number
+  groupId: string
   indAlias?: string
   indId?: number
   relItemId?: string
@@ -92,7 +92,7 @@ export interface KnowledgeSubmitPayload extends KnowledgeFormValues {
 }
 
 export interface AtomicMappingPayload {
-  groupId?: number
+  groupId?: string
   relSchemaId: number
   spaceId: number
   techId: KnowledgeTechField[]
@@ -103,7 +103,7 @@ export interface KnowledgeGroupItem {
   groupAlias?: string
   groupCode?: string
   groupDesc?: string
-  groupId: number
+  groupId: string
   groupName: string
   parentId?: number
   businessDefinition?: string
@@ -131,7 +131,7 @@ export interface KnowledgeIndicatorItem {
   dimensionFieldIds?: string
   divideZeroStrategy?: string
   expr?: string
-  groupId?: number
+  groupId?: string
   groupName?: string
   indAlias?: string
   indId?: number

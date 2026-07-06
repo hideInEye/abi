@@ -1,95 +1,96 @@
-import { ApiOutlined, CloudServerOutlined, SafetyCertificateOutlined, ToolOutlined, CloseOutlined, EditOutlined, DeleteOutlined, ImportOutlined, PlusOutlined } from '@ant-design/icons';
-import { Form } from 'antd';
-import { useEffect, useState } from 'react';
-import type { McpForm, McpSecurityScheme, McpSecurityExtensions, McpToolItem, PluginItem } from '@/types/plug';
+import { ApiOutlined, CloudServerOutlined, SafetyCertificateOutlined, ToolOutlined, CloseOutlined, EditOutlined, DeleteOutlined, ImportOutlined, PlusOutlined } from '@ant-design/icons'
+import { Form } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+import { useEffect, useState } from 'react'
+import type { McpForm, McpSecurityScheme, McpSecurityExtensions, McpToolItem, PluginItem } from '@/types/plug'
 
-import { CreateToolModal } from './CreateToolModal';
-import { ImportOpenApiModal } from './ImportOpenApiModal';
-import { SecuritySchemeSection } from './SecuritySchemeSection';
+import { CreateToolModal } from './CreateToolModal'
+import { ImportOpenApiModal } from './ImportOpenApiModal'
+import { SecuritySchemeSection } from './SecuritySchemeSection'
 
 interface PlugUpdateProps {
-  readonly currentEdit: PluginItem | null;
+  readonly currentEdit: PluginItem | null
   /** 分组名称，用于命名空间展示 */
-  readonly groupName?: string;
-  readonly namespaceId: string;
-  readonly onClose: () => void;
-  readonly onSubmit: (formData: McpForm) => void;
-  readonly open: boolean;
+  readonly groupName?: string
+  readonly namespaceId: string
+  readonly onClose: () => void
+  readonly onSubmit: (formData: McpForm) => void
+  readonly open: boolean
 }
 
 export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSubmit, open }: PlugUpdateProps) => {
-  const [form] = Form.useForm<McpForm>();
-  const [restToMcpSwitch, setRestToMcpSwitch] = useState(false);
-  const [securitySchemes, setSecuritySchemes] = useState<McpSecurityScheme[]>([]);
-  const [securityExtensions, setSecurityExtensions] = useState<McpSecurityExtensions>({});
-  const [tools, setTools] = useState<McpToolItem[]>([]);
-  const [toolModalOpen, setToolModalOpen] = useState(false);
-  const [editingToolIdx, setEditingToolIdx] = useState<number | null>(null);
-  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [form] = Form.useForm<McpForm>()
+  const [restToMcpSwitch, setRestToMcpSwitch] = useState(false)
+  const [securitySchemes, setSecuritySchemes] = useState<McpSecurityScheme[]>([])
+  const [securityExtensions, setSecurityExtensions] = useState<McpSecurityExtensions>({})
+  const [tools, setTools] = useState<McpToolItem[]>([])
+  const [toolModalOpen, setToolModalOpen] = useState(false)
+  const [editingToolIdx, setEditingToolIdx] = useState<number | null>(null)
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
-  const openImportOpenApi = () => setImportModalOpen(true);
+  const openImportOpenApi = () => setImportModalOpen(true)
   const handleImportOpenApi = (data: { tools: McpToolItem[]; schemes: McpSecurityScheme[] }) => {
-    setTools(prev => [...prev, ...data.tools]);
-    setSecuritySchemes(prev => {
-      const map = new Map(prev.map(s => [s.id, s] as const));
-      data.schemes.forEach(s => {
-        if (s.id && !map.has(s.id)) map.set(s.id, s);
-      });
-      return Array.from(map.values());
-    });
-    setImportModalOpen(false);
-  };
+    setTools((prev) => [...prev, ...data.tools])
+    setSecuritySchemes((prev) => {
+      const map = new Map(prev.map((s) => [s.id, s] as const))
+      data.schemes.forEach((s) => {
+        if (s.id && !map.has(s.id)) map.set(s.id, s)
+      })
+      return Array.from(map.values())
+    })
+    setImportModalOpen(false)
+  }
 
-  const removeTool = (idx: number) => setTools(prev => prev.filter((_, i) => i !== idx));
+  const removeTool = (idx: number) => setTools((prev) => prev.filter((_, i) => i !== idx))
   const openCreateTool = () => {
-    setEditingToolIdx(null);
-    setToolModalOpen(true);
-  };
+    setEditingToolIdx(null)
+    setToolModalOpen(true)
+  }
   const openEditTool = (idx: number) => {
-    setEditingToolIdx(idx);
-    setToolModalOpen(true);
-  };
+    setEditingToolIdx(idx)
+    setToolModalOpen(true)
+  }
   const handleToolModalOk = (tool: McpToolItem) => {
-    setTools(prev => {
-      if (editingToolIdx === null) return [...prev, tool];
-      return prev.map((t, i) => (i === editingToolIdx ? tool : t));
-    });
-    setToolModalOpen(false);
-  };
+    setTools((prev) => {
+      if (editingToolIdx === null) return [...prev, tool]
+      return prev.map((t, i) => (i === editingToolIdx ? tool : t))
+    })
+    setToolModalOpen(false)
+  }
 
   useEffect(() => {
     if (!open) {
-      form.resetFields();
-      setRestToMcpSwitch(false);
-      setSecuritySchemes([]);
-      setSecurityExtensions({});
-      setTools([]);
-      return;
+      form.resetFields()
+      setRestToMcpSwitch(false)
+      setSecuritySchemes([])
+      setSecurityExtensions({})
+      setTools([])
+      return
     }
 
     if (currentEdit) {
-      const endpoint = currentEdit.backendEndpoints?.[0];
-      const rawAddress = endpoint?.address || '';
-      const rawPort = endpoint?.port != null ? String(endpoint.port) : '';
-      let address = rawAddress;
-      let port = rawPort;
+      const endpoint = currentEdit.backendEndpoints?.[0]
+      const rawAddress = endpoint?.address || ''
+      const rawPort = endpoint?.port != null ? String(endpoint.port) : ''
+      let address = rawAddress
+      let port = rawPort
       if (rawAddress.includes(':')) {
-        const [host, portPart] = rawAddress.split(':');
-        address = host;
+        const [host, portPart] = rawAddress.split(':')
+        address = host
         if (!port && portPart && /^\d+$/.test(portPart)) {
-          port = portPart;
+          port = portPart
         }
       }
-      const url = currentEdit.remoteServerConfig?.url || '';
-      const transportProtocol = currentEdit.remoteServerConfig?.serviceRef?.transportProtocol || currentEdit.backendEndpoints?.[0]?.protocol || '';
-      const transport: 'HTTP' | 'HTTPS' = /^https/i.test(transportProtocol) ? 'HTTPS' : 'HTTP';
-      const proto = (currentEdit.protocol || '').toLowerCase();
-      const isRestToMcp = proto === 'http' || proto === 'https';
+      const url = currentEdit.remoteServerConfig?.url || ''
+      const transportProtocol = currentEdit.remoteServerConfig?.serviceRef?.transportProtocol || currentEdit.backendEndpoints?.[0]?.protocol || ''
+      const transport: 'HTTP' | 'HTTPS' = /^https/i.test(transportProtocol) ? 'HTTPS' : 'HTTP'
+      const proto = (currentEdit.protocol || '').toLowerCase()
+      const isRestToMcp = proto === 'http' || proto === 'https'
       // 从编辑记录推断协议类型：优先使用 frontProtocol（HTTP转MCP模式下真实MCP协议存在 frontProtocol）
-      const frontProto = (currentEdit.frontProtocol || '').toLowerCase();
-      const effectiveProto = isRestToMcp ? frontProto : proto;
-      const protocolValue: 'sse' | 'streamableHttp' = effectiveProto === 'streamablehttp' ? 'streamableHttp' : 'sse';
-      setRestToMcpSwitch(isRestToMcp);
+      const frontProto = (currentEdit.frontProtocol || '').toLowerCase()
+      const effectiveProto = isRestToMcp ? frontProto : proto
+      const protocolValue: 'sse' | 'streamableHttp' = effectiveProto === 'streamablehttp' ? 'streamableHttp' : 'sse'
+      setRestToMcpSwitch(isRestToMcp)
 
       form.setFieldsValue({
         mcp_name: currentEdit.name || currentEdit.pluginName,
@@ -101,20 +102,22 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
         transport,
         mcpEndpointUrl: url || (address && port ? `${transport.toLowerCase()}://${address}:${port}` : ''),
         protocol: protocolValue,
-      });
+      })
 
-      setSecuritySchemes(currentEdit.toolSpec?.securitySchemes || []);
-      setSecurityExtensions((currentEdit.toolSpec?.extensions as any) || {});
-      const toolsMeta = currentEdit.toolSpec?.toolsMeta || {};
-      setTools((currentEdit.toolSpec?.tools || []).map(tool => {
-        const tpl = toolsMeta[tool.name]?.templates?.['json-go-template'];
-        return {
-          ...tool,
-          protocolTemplate: tpl ? JSON.stringify(tpl, null, 2) : tool.protocolTemplate || ''
-        };
-      }));
+      setSecuritySchemes(currentEdit.toolSpec?.securitySchemes || [])
+      setSecurityExtensions((currentEdit.toolSpec?.extensions as any) || {})
+      const toolsMeta = currentEdit.toolSpec?.toolsMeta || {}
+      setTools(
+        (currentEdit.toolSpec?.tools || []).map((tool) => {
+          const tpl = toolsMeta[tool.name]?.templates?.['json-go-template']
+          return {
+            ...tool,
+            protocolTemplate: tpl ? JSON.stringify(tpl, null, 2) : tool.protocolTemplate || '',
+          }
+        }),
+      )
     } else {
-      setRestToMcpSwitch(false);
+      setRestToMcpSwitch(false)
       form.setFieldsValue({
         mcp_name: '',
         version: '1.0.0',
@@ -125,42 +128,30 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
         port: '',
         transport: 'HTTP',
         protocol: 'sse',
-      });
+      })
     }
-  }, [open, currentEdit, form]);
+  }, [open, currentEdit, form])
 
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields()
       onSubmit({
         ...values,
         restToMcpSwitch,
-        securitySchemes: securitySchemes.filter(s => s.id),
+        securitySchemes: securitySchemes.filter((s) => s.id),
         securityExtensions,
-        tools: restToMcpSwitch ? tools : []
-      });
+        tools: restToMcpSwitch ? tools : [],
+      })
     } catch (error) {
-      console.error('Form validation failed:', error);
+      console.error('Form validation failed:', error)
     }
-  };
+  }
 
   return (
-    <ADrawer
-      closeIcon={null}
-      extra={
-        <div className="drawer-close-btn" onClick={onClose}>
-          <CloseOutlined />
-        </div>
-      }
+    <CommonDrawer
       open={open}
-      title={
-        <div className="drawer-title-v5">
-          <div className="drawer-title-icon">
-            <ApiOutlined />
-          </div>
-          <span>{currentEdit ? '编辑MCP服务' : '新增MCP服务'}</span>
-        </div>
-      }
+      icon={<ApiOutlined />}
+      title={currentEdit ? '编辑MCP服务' : '新增MCP服务'}
       width={1000}
       className="mcp-edit-drawer"
       footer={<DrawerFooter onClose={onClose} onSubmit={handleSubmit} />}
@@ -186,8 +177,8 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
                   { message: '请输入MCP服务名', required: true },
                   {
                     message: 'MCP Server name 仅支持字母、数字、下划线(_)、中划线(-)',
-                    pattern: /^[a-zA-Z0-9_-]+$/
-                  }
+                    pattern: /^[a-zA-Z0-9_-]+$/,
+                  },
                 ]}
                 className="form-item-v5"
               >
@@ -220,23 +211,12 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
             <div className="section-body">
               <Form.Item label="HTTP 转 MCP 服务" required className="form-item-v5">
                 <div className="switch-wrapper-v5">
-                  <ASwitch
-                    checked={restToMcpSwitch}
-                    checkedChildren="开启"
-                    unCheckedChildren="关闭"
-                    onChange={setRestToMcpSwitch}
-                    className="switch-v5"
-                  />
+                  <ASwitch checked={restToMcpSwitch} checkedChildren="开启" unCheckedChildren="关闭" onChange={setRestToMcpSwitch} className="switch-v5" />
                   <span className="switch-label">{restToMcpSwitch ? '已开启' : '已关闭'}</span>
                 </div>
                 <div className="form-hint-v5">
                   存量 HTTP 服务转化为 MCP 服务需要搭配网关使用，请参考文档
-                  <a
-                    href="https://nacos.io/docs/v3.0/manual/user/mcp-template"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hint-link"
-                  >
+                  <a href="https://nacos.io/docs/v3.0/manual/user/mcp-template" target="_blank" rel="noreferrer" className="hint-link">
                     MCP模板配置指南
                   </a>
                 </div>
@@ -245,35 +225,17 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
               {restToMcpSwitch ? (
                 <Form.Item label="新建服务" required className="form-item-v5" style={{ marginBottom: 24 }}>
                   <div className="endpoint-grid">
-                    <Form.Item
-                      name="address"
-                      label="服务地址"
-                      required={false}
-                      rules={[{ message: '请输入服务地址', required: true }]}
-                      className="endpoint-item endpoint-item-wide"
-                    >
+                    <Form.Item name="address" label="服务地址" required={false} rules={[{ message: '请输入服务地址', required: true }]} className="endpoint-item endpoint-item-wide">
                       <AInput placeholder="localhost" className="form-input-v5" />
                     </Form.Item>
-                    <Form.Item
-                      name="port"
-                      label="端口"
-                      required={false}
-                      rules={[{ message: '请输入端口', required: true }]}
-                      className="endpoint-item endpoint-item-narrow"
-                    >
+                    <Form.Item name="port" label="端口" required={false} rules={[{ message: '请输入端口', required: true }]} className="endpoint-item endpoint-item-narrow">
                       <AInput placeholder="8080" className="form-input-v5" />
                     </Form.Item>
-                    <Form.Item
-                      name="transport"
-                      label="传输协议"
-                      required={false}
-                      rules={[{ message: '请选择传输协议', required: true }]}
-                      className="endpoint-item endpoint-item-medium"
-                    >
+                    <Form.Item name="transport" label="传输协议" required={false} rules={[{ message: '请选择传输协议', required: true }]} className="endpoint-item endpoint-item-medium">
                       <ASelect
                         options={[
                           { label: 'HTTP', value: 'HTTP' },
-                          { label: 'HTTPS', value: 'HTTPS' }
+                          { label: 'HTTPS', value: 'HTTPS' },
                         ]}
                         className="form-select-v5"
                       />
@@ -288,15 +250,15 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
                     { message: '请输入完整的 MCP 服务端点 URL', required: true },
                     {
                       validator: (_: any, value: string) => {
-                        if (!value) return Promise.resolve();
+                        if (!value) return Promise.resolve()
                         try {
-                          new URL(value);
-                          return Promise.resolve();
+                          new URL(value)
+                          return Promise.resolve()
                         } catch {
-                          return Promise.reject(new Error('URL 格式不正确，例如：http://example.com/sse'));
+                          return Promise.reject(new Error('URL 格式不正确，例如：http://example.com/sse'))
                         }
-                      }
-                    }
+                      },
+                    },
                   ]}
                   className="form-item-v5"
                   extra="请输入完整的 MCP 服务端点 URL，例如：http://example.com/sse"
@@ -322,15 +284,8 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
                     {
                       key: 'security',
                       label: '配置安全认证方案（可选）',
-                      children: (
-                        <SecuritySchemeSection
-                          schemes={securitySchemes}
-                          extensions={securityExtensions}
-                          onSchemesChange={setSecuritySchemes}
-                          onExtensionsChange={setSecurityExtensions}
-                        />
-                      )
-                    }
+                      children: <SecuritySchemeSection schemes={securitySchemes} extensions={securityExtensions} onSchemesChange={setSecuritySchemes} onExtensionsChange={setSecurityExtensions} />,
+                    },
                   ]}
                 />
               </Form.Item>
@@ -370,26 +325,11 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
                           </div>
                           <div className="tool-info">
                             <div className="tool-name">{tool.name || '(未命名)'}</div>
-                            {tool.description && (
-                              <div className="tool-desc">{tool.description}</div>
-                            )}
+                            {tool.description && <div className="tool-desc">{tool.description}</div>}
                           </div>
                           <div className="tool-actions">
-                            <AButton
-                              type="text"
-                              size="small"
-                              icon={<EditOutlined />}
-                              onClick={() => openEditTool(idx)}
-                              className="tool-action-btn"
-                            />
-                            <AButton
-                              danger
-                              type="text"
-                              size="small"
-                              icon={<DeleteOutlined />}
-                              onClick={() => removeTool(idx)}
-                              className="tool-action-btn danger"
-                            />
+                            <AButton type="text" size="small" icon={<EditOutlined />} onClick={() => openEditTool(idx)} className="tool-action-btn" />
+                            <AButton danger type="text" size="small" icon={<DeleteOutlined />} onClick={() => removeTool(idx)} className="tool-action-btn danger" />
                           </div>
                         </div>
                       ))}
@@ -418,18 +358,14 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
         onOk={handleToolModalOk}
       />
 
-      <ImportOpenApiModal
-        open={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        onOk={handleImportOpenApi}
-      />
-    </ADrawer>
-  );
-};
+      <ImportOpenApiModal open={importModalOpen} onClose={() => setImportModalOpen(false)} onOk={handleImportOpenApi} />
+    </CommonDrawer>
+  )
+}
 
 interface DrawerFooterProps {
-  readonly onClose: () => void;
-  readonly onSubmit: () => void;
+  readonly onClose: () => void
+  readonly onSubmit: () => void
 }
 
 function DrawerFooter({ onClose, onSubmit }: DrawerFooterProps) {
@@ -442,5 +378,5 @@ function DrawerFooter({ onClose, onSubmit }: DrawerFooterProps) {
         确认提交
       </AButton>
     </div>
-  );
+  )
 }

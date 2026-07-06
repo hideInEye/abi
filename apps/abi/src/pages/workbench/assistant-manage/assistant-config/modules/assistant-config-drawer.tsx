@@ -1,27 +1,20 @@
-import {
-  AuditOutlined,
-  BarcodeOutlined,
-  BookOutlined,
-  CloseOutlined,
-  EditOutlined,
-  PlayCircleOutlined,
-  QuestionCircleOutlined
-} from '@ant-design/icons';
-import { Drawer, Space, Tabs, message } from 'antd';
+import { AuditOutlined, BarcodeOutlined, BookOutlined, CloseOutlined, EditOutlined, PlayCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons'
+import { Space, Tabs, message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
-import { fetchTerms, getAgentDetailById, putAgentConfig, syncKnowledgeBase } from '@/service/api/assistant-manage';
-import { openChatConversationWindow } from '@/utils/chatWindow';
+import { fetchTerms, getAgentDetailById, putAgentConfig, syncKnowledgeBase } from '@/service/api/assistant-manage'
+import { openChatConversationWindow } from '@/utils/chatWindow'
 
-import Dictionaries from './config/dictionaries';
-import IndustryTerminology from './config/industry-terminology';
-import LabelSemantics from './config/label-semantics';
-import MemoryManagement from './config/memory-management';
-import RecommendedQuestions from './config/recommended-questions';
-import ThreePartyPlugin from './config/three-party-plugin';
+import Dictionaries from './config/dictionaries'
+import IndustryTerminology from './config/industry-terminology'
+import LabelSemantics from './config/label-semantics'
+import MemoryManagement from './config/memory-management'
+import RecommendedQuestions from './config/recommended-questions'
+import ThreePartyPlugin from './config/three-party-plugin'
 
 interface Props {
-  agentId?: number;
-  onClose: (ok?: boolean) => void;
+  agentId?: number
+  onClose: (ok?: boolean) => void
 }
 
 const initState = {
@@ -31,7 +24,7 @@ const initState = {
   llms: [],
   memory: [],
   plugin: [],
-  term: []
+  term: [],
   // modelConfigs: [
   //   {
   //     labels: [1,2,3], // 标签语义 TODO
@@ -43,24 +36,24 @@ const initState = {
   //     llms: [], // 模型列表（只有一个）
   //   }
   // ]
-};
+}
 
 const reducer = (state: typeof initState, field: any) => {
   return {
     ...state,
-    ...field
-  };
-};
+    ...field,
+  }
+}
 
 function formatData(data: any) {
-  const { modelConfig, ...elseData } = data;
-  let modelConfigObj: any = {};
+  const { modelConfig, ...elseData } = data
+  let modelConfigObj: any = {}
   try {
     if (modelConfig) {
-      modelConfigObj = JSON.parse(modelConfig)?.modelConfigs?.[0];
+      modelConfigObj = JSON.parse(modelConfig)?.modelConfigs?.[0]
     }
   } catch (error) {
-    console.log(error);
+    console.log(error)
   }
   //     labels: [1,2,3], // 标签语义 TODO
   //     dictgroups: [], // 数据字典
@@ -70,20 +63,7 @@ function formatData(data: any) {
   //     llms: [1], // 模型列表（只有一个）
   //     memory: [1,2,3], // 记忆管理 TODO
   // const { dates = [], dimensions = [], llms = [], metrics = [], primarykeys = [] } = modelConfigObj;
-  const {
-    dictgroups = [],
-    dictionariesGroupId,
-    example = [],
-    exampleGroupId,
-    labels = [],
-    labelsGroupId,
-    llms = [],
-    memory = [],
-    plugin = [],
-    pluginGroupId,
-    term = [],
-    termGroupId
-  } = modelConfigObj;
+  const { dictgroups = [], dictionariesGroupId, example = [], exampleGroupId, labels = [], labelsGroupId, llms = [], memory = [], plugin = [], pluginGroupId, term = [], termGroupId } = modelConfigObj
 
   return {
     ...elseData,
@@ -99,127 +79,81 @@ function formatData(data: any) {
     plugin,
     pluginGroupId,
     term: (term || []).map((k: any) => `${k}`),
-    termGroupId
-  };
+    termGroupId,
+  }
 }
 
 const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
-  const [state, dispatch] = useReducer(reducer, initState);
-  const [initialState, setInitialState] = useState();
+  const [state, dispatch] = useReducer(reducer, initState)
+  const [initialState, setInitialState] = useState()
 
   const getHasChange = useCallback(() => {
-    if (!initialState) return false;
-    let hasChange = false;
+    if (!initialState) return false
+    let hasChange = false
     // 比较当前状态和初始状态是否有变化
-    Object.keys(state).forEach(key => {
+    Object.keys(state).forEach((key) => {
       if (state[key] !== initialState[key]) {
-        hasChange = true;
+        hasChange = true
       }
-    });
-    return hasChange;
-  }, [state, initialState]);
+    })
+    return hasChange
+  }, [state, initialState])
 
   const getDetail = async () => {
     if (agentId) {
-      const res = await getAgentDetailById(agentId);
+      const res = await getAgentDetailById(agentId)
       if (res?.data) {
-        const resData: any = formatData(res.data);
-        setInitialState(resData);
-        dispatch(resData);
+        const resData: any = formatData(res.data)
+        setInitialState(resData)
+        dispatch(resData)
       }
     }
-  };
+  }
 
   useEffect(() => {
-    getDetail();
-  }, [agentId]);
+    getDetail()
+  }, [agentId])
 
   const items = useMemo(() => {
     return [
       {
-        children: (
-          <LabelSemantics
-            dispatch={dispatch}
-            schemaId={initialState?.schemaId}
-            state={state}
-          />
-        ),
+        children: <LabelSemantics dispatch={dispatch} schemaId={initialState?.schemaId} state={state} />,
         key: '1',
-        label: '标签语义'
+        label: '标签语义',
       },
       {
-        children: (
-          <IndustryTerminology
-            dispatch={dispatch}
-            schemaId={initialState?.schemaId}
-            state={state}
-          />
-        ),
+        children: <IndustryTerminology dispatch={dispatch} schemaId={initialState?.schemaId} state={state} />,
         key: '2',
-        label: '行业术语'
+        label: '行业术语',
       },
       {
-        children: (
-          <RecommendedQuestions
-            dispatch={dispatch}
-            state={state}
-          />
-        ),
+        children: <RecommendedQuestions dispatch={dispatch} state={state} />,
         key: '3',
-        label: '推荐问题'
+        label: '推荐问题',
       },
       {
-        children: (
-          <ThreePartyPlugin
-            dispatch={dispatch}
-            state={state}
-          />
-        ),
+        children: <ThreePartyPlugin dispatch={dispatch} state={state} />,
         key: '4',
-        label: '三方插件'
+        label: '三方插件',
       },
       {
-        children: (
-          <MemoryManagement
-            agentId={agentId}
-            dispatch={dispatch}
-            state={state}
-          />
-        ),
+        children: <MemoryManagement agentId={agentId} dispatch={dispatch} state={state} />,
         key: '5',
-        label: '记忆管理'
+        label: '记忆管理',
       },
       {
-        children: (
-          <Dictionaries
-            dispatch={dispatch}
-            state={state}
-          />
-        ),
+        children: <Dictionaries dispatch={dispatch} state={state} />,
         key: '6',
-        label: '数据字典'
-      }
-    ];
-  }, [state]);
+        label: '数据字典',
+      },
+    ]
+  }, [state])
 
   async function handleSubmit() {
-    const {
-      dictgroups,
-      dictionariesGroupId,
-      example,
-      exampleGroupId,
-      labels,
-      labelsGroupId,
-      memory,
-      plugin,
-      pluginGroupId,
-      term,
-      termGroupId,
-      ...elseState
-    } = state;
+    const { dictgroups, dictionariesGroupId, example, exampleGroupId, labels, labelsGroupId, memory, plugin, pluginGroupId, term, termGroupId, ...elseState } = state
 
-    const originModelConfig = state.modelConfig ? JSON.parse(state.modelConfig) : {};
-    const originModelConfigObj = originModelConfig?.modelConfigs?.[0];
+    const originModelConfig = state.modelConfig ? JSON.parse(state.modelConfig) : {}
+    const originModelConfigObj = originModelConfig?.modelConfigs?.[0]
     const params = {
       spaceId: Number(localStorage.getItem('spaceId')),
       status: 1, // 写死
@@ -238,71 +172,71 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
             plugin,
             pluginGroupId,
             term,
-            termGroupId
-          }
-        ]
-      })
-    };
-    console.log(params);
-    await putAgentConfig(params);
+            termGroupId,
+          },
+        ],
+      }),
+    }
+    console.log(params)
+    await putAgentConfig(params)
     // 检查是否有变更
-    const hasChange = getHasChange();
-    const hasSelections = (Array.isArray(labels) && labels.length > 0) || (Array.isArray(term) && term.length > 0) || (Array.isArray(dictgroups) && dictgroups.length > 0);
+    const hasChange = getHasChange()
+    const hasSelections = (Array.isArray(labels) && labels.length > 0) || (Array.isArray(term) && term.length > 0) || (Array.isArray(dictgroups) && dictgroups.length > 0)
     // 只有在有变更且有知识库内容时才弹窗询问同步
     if (!hasChange || !hasSelections) {
-      message.success('操作成功');
-      onClose(true);
-      return;
+      message.success('操作成功')
+      onClose(true)
+      return
     }
     AModal.confirm({
       cancelText: '取消',
       content: '是否需要同步知识库？将同步标签、术语等配置到本地。',
       okText: '确认',
       onCancel: () => {
-        message.success('操作成功');
-        onClose(true);
+        message.success('操作成功')
+        onClose(true)
       },
       onOk: async () => {
         try {
-          const detailRes = await getAgentDetailById(agentId!);
-          const data = detailRes.data;
-          const modelConfig = JSON.parse(data.modelConfig || '{}');
-          const cfg = modelConfig?.modelConfigs?.[0] || {};
-          let dslObj = modelConfig?.mdlConfigs || {};
+          const detailRes = await getAgentDetailById(agentId!)
+          const data = detailRes.data
+          const modelConfig = JSON.parse(data.modelConfig || '{}')
+          const cfg = modelConfig?.modelConfigs?.[0] || {}
+          let dslObj = modelConfig?.mdlConfigs || {}
           try {
             if (cfg?.termGroupId) {
-              const termRes = await fetchTerms({ groupId: cfg.termGroupId, spaceId: Number(data.spaceId), termName: '' });
-              const termMap: Record<string, string> = {};
-              (termRes?.data || []).forEach((it: any) => {
-                if (it?.techName) termMap[it.techName] = it.bizName;
-                if (it?.engName) termMap[it.engName] = it.bizName;
-              });
+              const termRes = await fetchTerms({ groupId: cfg.termGroupId, spaceId: Number(data.spaceId), termName: '' })
+              const termMap: Record<string, string> = {}
+              ;(termRes?.data || []).forEach((it: any) => {
+                if (it?.techName) termMap[it.techName] = it.bizName
+                if (it?.engName) termMap[it.engName] = it.bizName
+              })
               const rewrite = (node: any) => {
-                if (!node || typeof node !== 'object') return;
+                if (!node || typeof node !== 'object') return
                 if (typeof node.displayName === 'string') {
-                  const v = termMap[node.displayName];
-                  if (v) node.displayName = v;
+                  const v = termMap[node.displayName]
+                  if (v) node.displayName = v
                 }
-                Object.keys(node).forEach(k => rewrite(node[k]));
-              };
-              rewrite(dslObj);
+                Object.keys(node).forEach((k) => rewrite(node[k]))
+              }
+              rewrite(dslObj)
             }
           } catch {}
           // console.log('KB sync DSL:', dslObj);
           await syncKnowledgeBase({
             agent_id: `${data?.agentId}`,
             dsl: JSON.stringify(dslObj || {}),
-            space_id: `${data.spaceId}`
-          });
-          message.success('同步知识库成功');
-          onClose(true);
+            space_id: `${data.spaceId}`,
+          })
+          message.success('同步知识库成功')
+          onClose(true)
         } catch (error) {
-          message.error('同步知识库失败');
-          console.log('同步知识库失败:', error);
+          message.error('同步知识库失败')
+          console.log('同步知识库失败:', error)
         }
       },
-      title: '同步知识库'
-    });
+      title: '同步知识库',
+    })
   }
 
   const handleStartChat = () => {
@@ -312,57 +246,46 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
       content: '是否需要同步知识库？将同步标签、术语等配置到本地。',
       okText: '确认',
       onCancel: () => {
-        openChatConversationWindow({ spaceId: data?.spaceId });
+        openChatConversationWindow({ spaceId: data?.spaceId })
       },
       onOk: async () => {
         try {
-          const detailRes = await getAgentDetailById(agentId!);
-          const data = detailRes.data;
-          const modelConfig = JSON.parse(data.modelConfig);
+          const detailRes = await getAgentDetailById(agentId!)
+          const data = detailRes.data
+          const modelConfig = JSON.parse(data.modelConfig)
           await syncKnowledgeBase({
             agent_id: `${data?.agentId}`,
             dsl: modelConfig.mdlConfigs ? JSON.stringify(modelConfig.mdlConfigs) : '',
-            space_id: `${data.spaceId}`
-          });
-          message.success('同步知识库成功');
-          openChatConversationWindow({ spaceId: data?.spaceId });
+            space_id: `${data.spaceId}`,
+          })
+          message.success('同步知识库成功')
+          openChatConversationWindow({ spaceId: data?.spaceId })
         } catch (error) {
-          message.error('同步知识库失败');
-          console.log('同步知识库失败:', error);
-          openChatConversationWindow({ spaceId: data?.spaceId });
+          message.error('同步知识库失败')
+          console.log('同步知识库失败:', error)
+          openChatConversationWindow({ spaceId: data?.spaceId })
         }
       },
-      title: '同步知识库'
-    });
-  };
+      title: '同步知识库',
+    })
+  }
 
   return (
-    <Drawer
-      closeIcon={false}
+    <CommonDrawer
       open={true}
       size="large"
       title="助手配置"
       width="60%"
       styles={{
         header: {
-          paddingBottom: 0
-        }
+          paddingBottom: 0,
+        },
       }}
-      extra={
-        <AButton
-          icon={<CloseOutlined />}
-          type="text"
-          onClick={() => onClose()}
-        />
-      }
       footer={
         <AFlex justify="flex-end">
           <Space>
             <AButton onClick={() => onClose()}>取消</AButton>
-            <AButton
-              type="primary"
-              onClick={handleSubmit}
-            >
+            <AButton type="primary" onClick={handleSubmit}>
               确定
             </AButton>
             {/* <AButton
@@ -376,12 +299,8 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
       }
       onClose={() => onClose()}
     >
-      <Tabs
-        defaultActiveKey="1"
-        tabBarStyle={{ marginBottom: 0 }}
-        items={items}
-      />
-    </Drawer>
-  );
-});
-export default DatasourceConfigDrawer;
+      <Tabs defaultActiveKey="1" tabBarStyle={{ marginBottom: 0 }} items={items} />
+    </CommonDrawer>
+  )
+})
+export default DatasourceConfigDrawer

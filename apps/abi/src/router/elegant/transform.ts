@@ -242,7 +242,7 @@ const routeMap: RouteMap = {
   "space_component_icon-selector": "icon-selector",
   "space_space-menu": "space-menu",
   "space_space-role": "space-role",
-  "space_user": "user",
+  "space_space-user": "space-user",
   "space-list": "/space-list",
   "view": "/view",
   "workbench": "/workbench",

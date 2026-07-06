@@ -6,7 +6,7 @@ const HIERARCHY_API_PREFIX = '/api/abi-ontology/api/v1/ontology/hierarchy'
 export function queryDimensionList(params: {
   bizName?: string
   dimCategory?: string
-  groupId?: number
+  groupId?: number | string
   pageNum?: number
   pageSize?: number
   semanticType?: string
@@ -45,6 +45,16 @@ export function deleteDimensionModel(params: { id: number }) {
   return apiRequest({
     method: 'delete',
     url: `${DIMENSION_API_PREFIX}/delete/${params.id}`
+  })
+}
+
+export function deleteDimensionModelBatch(params: { ids: number[] }) {
+  return apiRequest({
+    data: {
+      ids: params.ids
+    },
+    method: 'post',
+    url: `${DIMENSION_API_PREFIX}/deleteBatch`
   })
 }
 

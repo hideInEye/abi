@@ -17,7 +17,9 @@ interface Props {
   readonly onEdit: (record: DimensionModelItem) => void
   readonly onHierarchy: (record: DimensionModelItem) => void
   readonly onPaginationChange: (page: number, pageSize: number) => void
+  readonly onSelectedRowKeysChange: (keys: string[]) => void
   readonly pagination: DimensionPagination
+  readonly selectedRowKeys: string[]
   readonly viewMode: OntologyViewMode
   readonly visibleColumnKeys: ReadonlySet<string>
 }
@@ -34,7 +36,9 @@ export const DimensionTable: React.FC<Props> = ({
   onEdit,
   onHierarchy,
   onPaginationChange,
+  onSelectedRowKeysChange,
   pagination,
+  selectedRowKeys,
   viewMode,
   visibleColumnKeys
 }) => {
@@ -193,6 +197,10 @@ export const DimensionTable: React.FC<Props> = ({
               dataSource={dataSource}
               loading={loading}
               rowKey={record => String(record.id)}
+              rowSelection={{
+                selectedRowKeys,
+                onChange: keys => onSelectedRowKeysChange(keys.map(String))
+              }}
               scroll={dataSource.length > 0 ? { x: tableWidth } : undefined}
               size="middle"
               pagination={false}

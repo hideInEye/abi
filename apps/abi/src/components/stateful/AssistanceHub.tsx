@@ -1,57 +1,46 @@
-import { Tree } from 'antd';
-import type { GetProps, TreeDataNode } from 'antd';
-import React from 'react';
+import { Tree } from 'antd'
+import type { GetProps, TreeDataNode } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+import React from 'react'
 
-type DirectoryTreeProps = GetProps<typeof Tree.DirectoryTree>;
+type DirectoryTreeProps = GetProps<typeof Tree.DirectoryTree>
 
-const { DirectoryTree } = Tree;
+const { DirectoryTree } = Tree
 
 const treeData: TreeDataNode[] = [
   {
     children: [
       { isLeaf: true, key: '0-0-0', title: '快速入门' },
-      { isLeaf: true, key: '0-0-1', title: '快速注销' }
+      { isLeaf: true, key: '0-0-1', title: '快速注销' },
     ],
     key: '0-0',
-    title: '快速入门'
+    title: '快速入门',
   },
   {
     children: [
       { isLeaf: true, key: '0-1-0', title: '数据准备与建模' },
-      { isLeaf: true, key: '0-1-1', title: '数据准备与建模' }
+      { isLeaf: true, key: '0-1-1', title: '数据准备与建模' },
     ],
     key: '0-1',
-    title: '数据准备与建模'
-  }
-];
+    title: '数据准备与建模',
+  },
+]
 
 const AssistanceHub: React.FC = () => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(true)
 
   const onSelect: DirectoryTreeProps['onSelect'] = (keys, info) => {
-    console.log('Trigger Select', keys, info);
-  };
+    console.log('Trigger Select', keys, info)
+  }
 
   const onExpand: DirectoryTreeProps['onExpand'] = (keys, info) => {
-    console.log('Trigger Expand', keys, info);
-  };
+    console.log('Trigger Expand', keys, info)
+  }
 
   return (
-    <ADrawer
-      open={open}
-      title="帮助中心"
-      width={800}
-      onClose={() => setOpen(false)}
-    >
+    <CommonDrawer open={open} title="帮助中心" width={800} onClose={() => setOpen(false)}>
       <div className="grid grid-cols-[1fr_2fr] gap-1">
-        <DirectoryTree
-          defaultExpandAll
-          draggable
-          multiple
-          treeData={treeData}
-          onExpand={onExpand}
-          onSelect={onSelect}
-        />
+        <DirectoryTree defaultExpandAll draggable multiple treeData={treeData} onExpand={onExpand} onSelect={onSelect} />
         <div>
           <p className="text-lg font-bold">帮助中心</p>
           <p className="mt-4 rounded-lg bg-gray-100/70 p-4 line-height-7">
@@ -59,8 +48,8 @@ const AssistanceHub: React.FC = () => {
           </p>
         </div>
       </div>
-    </ADrawer>
-  );
-};
+    </CommonDrawer>
+  )
+}
 
-export default AssistanceHub;
+export default AssistanceHub

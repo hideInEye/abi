@@ -1,33 +1,28 @@
-import {
-  CloseOutlined,
-  DatabaseOutlined,
-  LinkOutlined,
-  TableOutlined,
-} from '@ant-design/icons';
+import { DatabaseOutlined, LinkOutlined, TableOutlined } from '@ant-design/icons'
 
-type Props = Page.OperateDrawerProps;
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+
+type Props = Page.OperateDrawerProps
 
 const DataCollectionOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
 
   const handleClose = () => {
-    onClose();
-  };
+    onClose()
+  }
 
   const submit = async () => {
     try {
-      await form.validateFields();
-      await handleSubmit();
+      await form.validateFields()
+      await handleSubmit()
     } catch (err) {
-      console.log(err);
+      console.log(err)
     }
-  };
+  }
 
   return (
-    <ADrawer
+    <CommonDrawer
       className="ds-operate-drawer"
-      closeIcon={null}
-      extra={<CloseOutlined onClick={handleClose} style={{ fontSize: 16, color: '#8c8c8c' }} />}
       open={open}
       size="large"
       footer={
@@ -41,31 +36,17 @@ const DataCollectionOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClo
           </div>
         </div>
       }
-      title={
-        <div className="ds-operate-title">
-          <span className="ds-operate-title-icon">
-            <TableOutlined />
-          </span>
-          <span>{operateType === 'add' ? '新增数据集' : '编辑数据集'}</span>
-        </div>
-      }
+      icon={<TableOutlined />}
+      title={operateType === 'add' ? '新增数据集' : '编辑数据集'}
       onClose={handleClose}
     >
-      <AForm
-        form={form}
-        layout="vertical"
-        className="ds-operate-form"
-      >
+      <AForm form={form} layout="vertical" className="ds-operate-form">
         <div className="ds-form-section">
           <div className="ds-form-section-title">
             <DatabaseOutlined />
             基本信息
           </div>
-          <AForm.Item
-            label={t('page.dataPreparation.dataCollection.name')}
-            name="name"
-            rules={[{ required: true, message: '请输入数据集名称' }]}
-          >
+          <AForm.Item label={t('page.dataPreparation.dataCollection.name')} name="name" rules={[{ required: true, message: '请输入数据集名称' }]}>
             <AInput placeholder={t('page.dataPreparation.dataCollection.form.name')} />
           </AForm.Item>
         </div>
@@ -75,31 +56,19 @@ const DataCollectionOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClo
             <LinkOutlined />
             连接配置
           </div>
-          <AForm.Item
-            label={t('page.dataPreparation.dataCollection.collection')}
-            name="collection"
-            rules={[{ required: true, message: '请输入集合名称' }]}
-          >
+          <AForm.Item label={t('page.dataPreparation.dataCollection.collection')} name="collection" rules={[{ required: true, message: '请输入集合名称' }]}>
             <AInput placeholder={t('page.dataPreparation.dataCollection.form.collection')} />
           </AForm.Item>
-          <AForm.Item
-            label={t('page.dataPreparation.dataCollection.username')}
-            name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
-          >
+          <AForm.Item label={t('page.dataPreparation.dataCollection.username')} name="username" rules={[{ required: true, message: '请输入用户名' }]}>
             <AInput placeholder={t('page.dataPreparation.dataCollection.form.username')} />
           </AForm.Item>
-          <AForm.Item
-            label={t('page.dataPreparation.dataCollection.password')}
-            name="password"
-            rules={[{ required: true, message: '请输入密码' }]}
-          >
+          <AForm.Item label={t('page.dataPreparation.dataCollection.password')} name="password" rules={[{ required: true, message: '请输入密码' }]}>
             <AInput.Password placeholder={t('page.dataPreparation.dataCollection.form.password')} />
           </AForm.Item>
         </div>
       </AForm>
-    </ADrawer>
-  );
-});
+    </CommonDrawer>
+  )
+})
 
-export default DataCollectionOperateDrawer;
+export default DataCollectionOperateDrawer

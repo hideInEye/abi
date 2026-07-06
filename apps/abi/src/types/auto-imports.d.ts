@@ -67,6 +67,7 @@ declare global {
   const BeyondHiding: typeof import('../components/stateless/custom/BeyondHiding')['default']
   const ButtonIcon: typeof import('../components/stateless/custom/ButtonIcon')['default']
   const CodeMirror: typeof import('../components/form/CodeMirror')['default']
+  const CommonDrawer: typeof import('../components/stateless/common/CommonDrawer/index')['default']
   const DarkModeContainer: typeof import('../components/stateless/common/DarkModeContainer')['default']
   const DragContent: typeof import('../components/advanced/DragContent')['default']
   const ExceptionBase: typeof import('../components/stateless/common/ExceptionBase')['default']

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react'
-import { Splitter } from 'antd'
+import { Popconfirm, Splitter } from 'antd'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
@@ -33,6 +33,7 @@ const DimensionModeling: React.FC = () => {
     drawerOpen,
     editingItem,
     handleAdd,
+    handleBatchDelete,
     handleDelete,
     handleEdit,
     handlePaginationChange,
@@ -49,6 +50,8 @@ const DimensionModeling: React.FC = () => {
     pagination,
     saveHierarchyConfig,
     searchParams,
+    selectedRowKeys,
+    setSelectedRowKeys,
     tableData
   } = useDimensionModeling(selectedGroup)
 
@@ -101,6 +104,18 @@ const DimensionModeling: React.FC = () => {
                   >
                     + 新增维度
                   </AButton>
+                  <Popconfirm
+                    cancelText="取消"
+                    description={`确定删除选中的 ${selectedRowKeys.length} 条维度吗？`}
+                    disabled={!selectedRowKeys.length}
+                    okText="确定"
+                    title="提示"
+                    onConfirm={handleBatchDelete}
+                  >
+                    <AButton danger disabled={!selectedRowKeys.length}>
+                      批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
+                    </AButton>
+                  </Popconfirm>
                 </div>
                 <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
               </div>
@@ -114,6 +129,8 @@ const DimensionModeling: React.FC = () => {
                 onEdit={handleEdit}
                 onHierarchy={openHierarchyModal}
                 onPaginationChange={handlePaginationChange}
+                onSelectedRowKeysChange={setSelectedRowKeys}
+                selectedRowKeys={selectedRowKeys}
               />
             </section>
           </div>

@@ -1,4 +1,5 @@
 import { message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React from 'react'
 
 import { DEFAULT_FORM_VALUES } from '../constants/dimensionModeling.constants'
@@ -16,24 +17,11 @@ interface Props {
   readonly groupName?: string
   readonly onClose: (refresh?: boolean) => void
   readonly onOpenHierarchy: (record: DimensionModelItem) => void
-  readonly onSubmit: (params: {
-    formValues: DimensionFormValues
-    id?: number
-    relatedFields: DimensionFieldOption[]
-    selectedSchema?: DimensionSchemaInfo
-  }) => Promise<boolean>
+  readonly onSubmit: (params: { formValues: DimensionFormValues; id?: number; relatedFields: DimensionFieldOption[]; selectedSchema?: DimensionSchemaInfo }) => Promise<boolean>
   readonly open: boolean
 }
 
-export const DimensionOperateDrawer: React.FC<Props> = ({
-  editingItem,
-  groupId,
-  groupName,
-  onClose,
-  onOpenHierarchy,
-  onSubmit,
-  open
-}) => {
+export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, groupName, onClose, onOpenHierarchy, onSubmit, open }) => {
   const [form] = AForm.useForm<DimensionFormValues>()
   const [activeTab, setActiveTab] = useState('base')
   const [schemaOptions, setSchemaOptions] = useState<DimensionSchemaInfo[]>([])
@@ -45,26 +33,18 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
   const selectedDimType = (AForm.useWatch('dimType', form) || DEFAULT_FORM_VALUES.dimType) as 'std' | 'time'
   const selectedSchemaId = AForm.useWatch('semanticSchemaId', form)
 
-  const selectedSchema = useMemo(
-    () => schemaOptions.find(item => Number(item.schemaId) === Number(selectedSchemaId)),
-    [schemaOptions, selectedSchemaId]
-  )
+  const selectedSchema = useMemo(() => schemaOptions.find((item) => Number(item.schemaId) === Number(selectedSchemaId)), [schemaOptions, selectedSchemaId])
 
   const allSchemaFields = useMemo(() => buildSchemaFieldOptions(selectedSchema), [selectedSchema])
-  const filteredFields = useMemo(
-    () => filterSelectableFields(allSchemaFields, selectedDimType),
-    [allSchemaFields, selectedDimType]
-  )
+  const filteredFields = useMemo(() => filterSelectableFields(allSchemaFields, selectedDimType), [allSchemaFields, selectedDimType])
 
   const selectedFields = useMemo(() => {
     if (!selectedFieldKeys.length) {
       return []
     }
-    const fallbackFieldMap = new Map((editingItem?.relatedFields || []).map(item => [item.key, item]))
-    const schemaFieldMap = new Map(filteredFields.map(item => [item.key, item]))
-    return selectedFieldKeys
-      .map(key => schemaFieldMap.get(key) || fallbackFieldMap.get(key))
-      .filter((item): item is DimensionFieldOption => Boolean(item))
+    const fallbackFieldMap = new Map((editingItem?.relatedFields || []).map((item) => [item.key, item]))
+    const schemaFieldMap = new Map(filteredFields.map((item) => [item.key, item]))
+    return selectedFieldKeys.map((key) => schemaFieldMap.get(key) || fallbackFieldMap.get(key)).filter((item): item is DimensionFieldOption => Boolean(item))
   }, [editingItem?.relatedFields, filteredFields, selectedFieldKeys])
 
   useEffect(() => {
@@ -72,7 +52,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
       return
     }
     const keySet = new Set(selectedFieldKeys)
-    const safeKeys = filteredFields.filter(field => keySet.has(field.key)).map(item => item.key)
+    const safeKeys = filteredFields.filter((field) => keySet.has(field.key)).map((item) => item.key)
     if (safeKeys.length !== selectedFieldKeys.length) {
       setSelectedFieldKeys(safeKeys)
       form.setFieldValue('relatedFieldKeys', safeKeys)
@@ -93,7 +73,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
       form.setFieldsValue({
         ...DEFAULT_FORM_VALUES,
         ...editValues,
-        groupId: groupId || editingItem.groupId
+        groupId: groupId || editingItem.groupId,
       })
       setSelectedFieldKeys(editValues.relatedFieldKeys || [])
       return
@@ -101,26 +81,18 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
 
     form.setFieldsValue({
       ...DEFAULT_FORM_VALUES,
-      groupId
+      groupId,
     })
     setSelectedFieldKeys([])
   }, [editingItem, form, groupId, open])
 
-  const getSchemaId = ({
-    semanticSchemaId,
-    semanticsGroupId,
-    viewId: nextViewId
-  }: {
-    semanticSchemaId: number
-    semanticsGroupId: number | null
-    viewId: number
-  }) => {
+  const getSchemaId = ({ semanticSchemaId, semanticsGroupId, viewId: nextViewId }: { semanticSchemaId: number; semanticsGroupId: number | null; viewId: number }) => {
     setViewId(nextViewId)
     setSelectedFieldKeys([])
     form.setFieldsValue({
       relatedFieldKeys: [],
       semanticSchemaId,
-      semanticsGroupId: semanticsGroupId || undefined
+      semanticsGroupId: semanticsGroupId || undefined,
     })
   }
 
@@ -134,7 +106,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
       formValues: values,
       id: editingItem?.id,
       relatedFields: selectedFields,
-      selectedSchema
+      selectedSchema,
     })
     if (!success) {
       return
@@ -152,7 +124,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
       status: values.status,
       updateTime: editingItem?.updateTime || '-',
       viewId,
-      zhName: values.zhName
+      zhName: values.zhName,
     }
 
     if (openHierarchyAfterSave) {
@@ -166,10 +138,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
   const createFooter = (
     <div className="flex justify-end gap-3">
       <AButton onClick={() => handleDrawerClose()}>取消</AButton>
-      <AButton
-        type="primary"
-        onClick={() => handleSave(false)}
-      >
+      <AButton type="primary" onClick={() => handleSave(false)}>
         保存
       </AButton>
       <AButton onClick={() => handleSave(true)}>保存并配置层级</AButton>
@@ -179,10 +148,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
   const editFooter = (
     <div className="flex justify-end gap-3">
       <AButton onClick={() => handleDrawerClose()}>取消</AButton>
-      <AButton
-        type="primary"
-        onClick={() => handleSave(false)}
-      >
+      <AButton type="primary" onClick={() => handleSave(false)}>
         保存修改
       </AButton>
     </div>
@@ -205,7 +171,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
 
   return (
     <>
-      <ADrawer
+      <CommonDrawer
         destroyOnClose
         extra={editingItem ? null : <span className="text-xs text-gray-400">所在分组：{groupName || '-'}</span>}
         footer={editingItem ? editFooter : createFooter}
@@ -221,7 +187,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
             items={[
               { key: 'base', label: '基础信息' },
               { key: 'metrics', label: `相关指标 (${relatedMetricTotal})` },
-              { key: 'preview', label: '预览数据' }
+              { key: 'preview', label: '预览数据' },
             ]}
             onChange={setActiveTab}
           />
@@ -231,7 +197,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
           <AForm<DimensionFormValues>
             form={form}
             layout="vertical"
-            onValuesChange={changeValues => {
+            onValuesChange={(changeValues) => {
               if (Object.hasOwn(changeValues, 'semanticSchemaId')) {
                 setSelectedFieldKeys([])
                 form.setFieldValue('relatedFieldKeys', [])
@@ -257,29 +223,17 @@ export const DimensionOperateDrawer: React.FC<Props> = ({
           </AForm>
         ) : null}
 
-        {activeTab === 'metrics' ? (
-          <RelatedMetricsTab
-            record={editingItem}
-            onTotalChange={setRelatedMetricTotal}
-          />
-        ) : null}
+        {activeTab === 'metrics' ? <RelatedMetricsTab record={editingItem} onTotalChange={setRelatedMetricTotal} /> : null}
 
-        {activeTab === 'preview' ? (
-          <PreviewDataTab
-            dimId={editingItem?.id}
-            fieldTableData={selectedFields}
-            sampleValues={form.getFieldValue('sampleValues')}
-            type={selectedDimType}
-          />
-        ) : null}
-      </ADrawer>
+        {activeTab === 'preview' ? <PreviewDataTab dimId={editingItem?.id} fieldTableData={selectedFields} sampleValues={form.getFieldValue('sampleValues')} type={selectedDimType} /> : null}
+      </CommonDrawer>
 
       <FieldSelectModal
         open={fieldModalOpen}
         options={filteredFields}
         selectedKeys={selectedFieldKeys}
         onCancel={() => setFieldModalOpen(false)}
-        onConfirm={keys => {
+        onConfirm={(keys) => {
           setSelectedFieldKeys(keys)
           form.setFieldValue('relatedFieldKeys', keys)
           setFieldModalOpen(false)

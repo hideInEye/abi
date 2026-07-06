@@ -41,6 +41,16 @@ export function deleteKnowledgeIndicator(params: { id: number; spaceId: number; 
   })
 }
 
+export function deleteKnowledgeIndicatorBatch(params: { ids: number[] }) {
+  return apiRequest({
+    data: {
+      ids: params.ids
+    },
+    method: 'post',
+    url: `${INDICATOR_API_PREFIX}/deleteBatch`
+  })
+}
+
 export function queryKnowledgeIndicatorDetail(params: { id: number; }) {
   return apiRequest({
     method: 'get',

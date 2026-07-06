@@ -2,6 +2,7 @@ import { message } from 'antd'
 
 import {
   addDimensionModel,
+  deleteDimensionModelBatch,
   deleteDimensionModel,
   editDimensionHierarchy,
   editDimensionModel,
@@ -82,6 +83,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [hierarchyTarget, setHierarchyTarget] = useState<DimensionModelItem | null>(null)
   const [hierarchyItems, setHierarchyItems] = useState<DimensionHierarchyEditItem[]>([])
   const [hierarchyLoading, setHierarchyLoading] = useState(false)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
 
   const fetchTableData = async (keyword = queryKeyword, nextPagination: DimensionPagination = pagination) => {
     if (!selectedGroup?.groupId) {
@@ -108,6 +110,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
         })
       )
       setTableData(list)
+      setSelectedRowKeys([])
       setPagination(current => ({
         ...current,
         pageNum: nextPagination.pageNum,
@@ -186,6 +189,21 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
       return
     }
     message.success('删除成功')
+    await fetchTableData()
+  }
+
+  const handleBatchDelete = async () => {
+    const ids = selectedRowKeys.map(item => Number(item)).filter(item => !Number.isNaN(item))
+    if (!ids.length) {
+      message.warning('请先选择要删除的维度')
+      return
+    }
+    const res = await deleteDimensionModelBatch({ ids })
+    if (!isApiSuccess(res)) {
+      message.error(getApiErrorMessage(res, '批量删除失败'))
+      return
+    }
+    message.success('批量删除成功')
     await fetchTableData()
   }
 
@@ -281,6 +299,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     drawerOpen,
     editingItem,
     handleAdd,
+    handleBatchDelete,
     handleDelete,
     handleEdit,
     handlePaginationChange,
@@ -297,6 +316,8 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     pagination,
     saveHierarchyConfig,
     searchParams,
+    selectedRowKeys,
+    setSelectedRowKeys,
     tableData
   }
 }

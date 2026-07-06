@@ -12,7 +12,7 @@ import { getKnowledgeSpaceId } from '../utils/space'
 import styles from './knowledgeOperateDrawer.DimensionStep.module.scss'
 
 interface DimensionGroupItem {
-  groupId: number
+  groupId: string
   groupName: string
 }
 
@@ -76,7 +76,7 @@ function normalizeRows(res: unknown): unknown[] {
 
 function normalizeDimensionGroup(item: unknown): DimensionGroupItem | null {
   const source = item as UnknownRecord
-  const groupId = Number(source?.groupId ?? source?.id)
+  const groupId = String(source?.groupId ?? source?.id ?? '').trim()
   const groupName = String(source?.groupName ?? source?.name ?? '').trim()
   if (!groupId || !groupName) {
     return null
@@ -194,7 +194,7 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
   }, [])
 
   const fetchDimensionsByGroup = useCallback(
-    async (groupId: number) => {
+    async (groupId: string) => {
       const groupKey = String(groupId)
       if (loadingDimensionGroupIdsRef.current.has(groupKey)) {
         return
@@ -300,11 +300,11 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
     if (!key.startsWith('group-')) {
       return
     }
-    await fetchDimensionsByGroup(Number(key.replace('group-', '')))
+    await fetchDimensionsByGroup(key.replace('group-', ''))
   }
 
   const handleGroupSelect = (key: string) => {
-    const groupId = Number(key.replace('group-', ''))
+    const groupId = key.replace('group-', '')
     const isExpanded = expandedKeys.includes(key)
     setExpandedKeys(isExpanded ? expandedKeys.filter(item => item !== key) : [...expandedKeys, key])
     if (!isExpanded) {
@@ -400,7 +400,7 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
                   setExpandedKeys(nextKeys)
                   const key = String(info.node.key)
                   if (info.expanded && key.startsWith('group-')) {
-                    fetchDimensionsByGroup(Number(key.replace('group-', '')))
+                    fetchDimensionsByGroup(key.replace('group-', ''))
                   }
                 }}
                 onSelect={(_, info) => {

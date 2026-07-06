@@ -46,7 +46,7 @@ const getSelectedMenuKeyPath = (matches: RouteRecordNormalized[]) => {
 const MENU_LABELS: Record<string, string> = {
   workbench: '工作台导航',
   component: '组件导航',
-  manage: '门户管理导航',
+  manage: '系统管理导航',
   space: '空间管理导航',
 };
 

@@ -1,33 +1,26 @@
-import {
-  ApiOutlined,
-  CheckCircleOutlined,
-  CloseOutlined,
-  CloudUploadOutlined,
-  DatabaseOutlined,
-  FileExcelOutlined,
-  LinkOutlined,
-} from '@ant-design/icons';
-import { message, Modal } from 'antd';
+import { ApiOutlined, CheckCircleOutlined, CloseOutlined, CloudUploadOutlined, DatabaseOutlined, FileExcelOutlined, LinkOutlined } from '@ant-design/icons'
+import { message, Modal } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
-import { useDatasource } from '@/hooks/data-preparation/useDataSource';
-import { validDataSource } from '@/service/api';
-import clickhouseIcon from '@/assets/imgs/home/ClickHouse.svg';
-import dmIcon from '@/assets/imgs/home/dm.svg';
-import dorisIcon from '@/assets/imgs/home/doris.svg';
-import excelIcon from '@/assets/imgs/home/excel.svg';
-import hiveIcon from '@/assets/imgs/home/Hive.svg';
-import mysqlIcon from '@/assets/imgs/home/MySQL.svg';
-import oracleIcon from '@/assets/imgs/home/Oracle.svg';
-import postgresqlIcon from '@/assets/imgs/home/PostgreSQL.svg';
-import starrocksIcon from '@/assets/imgs/home/starrocks.svg';
-import kingbaseIcon from '@/assets/imgs/home/dekingbase.svg';
+import { useDatasource } from '@/hooks/data-preparation/useDataSource'
+import { validDataSource } from '@/service/api'
+import clickhouseIcon from '@/assets/imgs/home/ClickHouse.svg'
+import dmIcon from '@/assets/imgs/home/dm.svg'
+import dorisIcon from '@/assets/imgs/home/doris.svg'
+import excelIcon from '@/assets/imgs/home/excel.svg'
+import hiveIcon from '@/assets/imgs/home/Hive.svg'
+import mysqlIcon from '@/assets/imgs/home/MySQL.svg'
+import oracleIcon from '@/assets/imgs/home/Oracle.svg'
+import postgresqlIcon from '@/assets/imgs/home/PostgreSQL.svg'
+import starrocksIcon from '@/assets/imgs/home/starrocks.svg'
+import kingbaseIcon from '@/assets/imgs/home/dekingbase.svg'
 
-import DataPreview from './data-preview';
-import Uploader from './uploader';
+import DataPreview from './data-preview'
+import Uploader from './uploader'
 
 type Props = Page.OperateDrawerProps & {
-  editingData?: any;
-};
+  editingData?: any
+}
 
 const DB_TYPE_ICON_MAP: Record<string, string> = {
   clickhouse: clickhouseIcon,
@@ -40,104 +33,102 @@ const DB_TYPE_ICON_MAP: Record<string, string> = {
   postgresql: postgresqlIcon,
   starrocks: starrocksIcon,
   kingbase: kingbaseIcon,
-};
+}
 
 function getDbIcon(name?: string, sourceType?: string): string | undefined {
-  const n = name?.toLowerCase().trim() || '';
-  const st = sourceType?.toLowerCase().trim() || '';
-  if (DB_TYPE_ICON_MAP[n]) return DB_TYPE_ICON_MAP[n];
-  if (DB_TYPE_ICON_MAP[st]) return DB_TYPE_ICON_MAP[st];
-  const nNoSpace = n.replace(/\s+/g, '');
-  if (DB_TYPE_ICON_MAP[nNoSpace]) return DB_TYPE_ICON_MAP[nNoSpace];
+  const n = name?.toLowerCase().trim() || ''
+  const st = sourceType?.toLowerCase().trim() || ''
+  if (DB_TYPE_ICON_MAP[n]) return DB_TYPE_ICON_MAP[n]
+  if (DB_TYPE_ICON_MAP[st]) return DB_TYPE_ICON_MAP[st]
+  const nNoSpace = n.replace(/\s+/g, '')
+  if (DB_TYPE_ICON_MAP[nNoSpace]) return DB_TYPE_ICON_MAP[nNoSpace]
   for (const key of Object.keys(DB_TYPE_ICON_MAP)) {
     if (n.includes(key) || st.includes(key)) {
-      return DB_TYPE_ICON_MAP[key];
+      return DB_TYPE_ICON_MAP[key]
     }
   }
-  return undefined;
+  return undefined
 }
 
 const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType, editingData }) => {
-  const { t } = useTranslation();
-  const [submitDisabled, setSubmitDisabled] = useState(true);
-  const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const sourceTypeVal = AForm.useWatch('sourceType', form);
-  const sourceFileVal = AForm.useWatch('sourceFile', form);
-  const [uploadError, setUploadError] = useState({ messageTitle: '上传失败', message: '请检查文件格式和内容是否正确' });
-  const [previewVisible, setPreviewVisible] = useState(false);
+  const { t } = useTranslation()
+  const [submitDisabled, setSubmitDisabled] = useState(true)
+  const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const sourceTypeVal = AForm.useWatch('sourceType', form)
+  const sourceFileVal = AForm.useWatch('sourceFile', form)
+  const [uploadError, setUploadError] = useState({ messageTitle: '上传失败', message: '请检查文件格式和内容是否正确' })
+  const [previewVisible, setPreviewVisible] = useState(false)
 
-  const { getSourceTypeOptions, sourceTypeOptions } = useDatasource();
+  const { getSourceTypeOptions, sourceTypeOptions } = useDatasource()
 
   useEffect(() => {
-    getSourceTypeOptions();
-  }, []);
+    getSourceTypeOptions()
+  }, [])
 
   useEffect(() => {
     if (sourceFileVal && sourceFileVal.length > 0 && sourceFileVal[0].sheets && sourceFileVal[0].sheets.length > 0) {
-      form.setFieldValue('dbTableName', sourceFileVal[0]?.dbTableName);
+      form.setFieldValue('dbTableName', sourceFileVal[0]?.dbTableName)
     }
-  }, [sourceFileVal]);
+  }, [sourceFileVal])
 
   const handleTest = async () => {
-    const values = await form.validateFields();
+    const values = await form.validateFields()
     if (values.sourceName) {
-      values.sourceName = values.sourceName.trim();
+      values.sourceName = values.sourceName.trim()
     }
-    const { sourceId, sourceName, sourceType, ...elseValues } = values;
-    const configuration = JSON.stringify({ ...elseValues, extraParams: 'compress_algorithm=gzip' });
+    const { sourceId, sourceName, sourceType, ...elseValues } = values
+    const configuration = JSON.stringify({ ...elseValues, extraParams: 'compress_algorithm=gzip' })
     const formatParams = {
       configuration,
       sourceId,
       sourceName,
       sourceType,
       spaceId: Number(localStorage.getItem('spaceId')),
-    };
+    }
 
     try {
-      const res = await validDataSource(formatParams);
+      const res = await validDataSource(formatParams)
       if (!res.error) {
-        message.destroy();
-        message.success('测试连接成功');
-        setTestStatus('success');
-        setSubmitDisabled(false);
+        message.destroy()
+        message.success('测试连接成功')
+        setTestStatus('success')
+        setSubmitDisabled(false)
       } else {
-        setTestStatus('error');
+        setTestStatus('error')
       }
     } catch {
-      setTestStatus('error');
+      setTestStatus('error')
     }
-  };
+  }
 
   const handleClose = () => {
-    setSubmitDisabled(true);
-    setTestStatus('idle');
-    onClose();
-  };
+    setSubmitDisabled(true)
+    setTestStatus('idle')
+    onClose()
+  }
 
   const submit = async () => {
     try {
-      const values = await form.validateFields();
-      await handleSubmit({ ...values });
-      setSubmitDisabled(true);
-      setTestStatus('idle');
+      const values = await form.validateFields()
+      await handleSubmit({ ...values })
+      setSubmitDisabled(true)
+      setTestStatus('idle')
     } catch (err) {
-      console.log(err);
+      console.log(err)
     }
-  };
+  }
 
   const sourceTypeDisabled = useMemo(() => {
-    if (!editingData) return false;
-    if (editingData?.excelDatasourceFlag) return true;
-    return false;
-  }, [editingData]);
+    if (!editingData) return false
+    if (editingData?.excelDatasourceFlag) return true
+    return false
+  }, [editingData])
 
-  const isExcel = sourceTypeVal === 'Excel';
-  const selectedIcon = sourceTypeVal ? getDbIcon(sourceTypeVal, sourceTypeVal) : undefined;
+  const isExcel = sourceTypeVal === 'Excel'
+  const selectedIcon = sourceTypeVal ? getDbIcon(sourceTypeVal, sourceTypeVal) : undefined
 
   return (
-    <ADrawer
-      closeIcon={null}
-      extra={<CloseOutlined onClick={handleClose} style={{ fontSize: 16, color: '#8c8c8c' }} />}
+    <CommonDrawer
       open={open}
       size="large"
       className="ds-operate-drawer"
@@ -158,73 +149,50 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
           <div className="ds-operate-footer-right">
             <AButton onClick={handleClose}>取消</AButton>
             {!isExcel && (
-              <AButton
-                className="btn-ghost-v5"
-                icon={<ApiOutlined />}
-                onClick={handleTest}
-              >
+              <AButton className="btn-ghost-v5" icon={<ApiOutlined />} onClick={handleTest}>
                 测试连接
               </AButton>
             )}
-            <AButton
-              className="btn-accent-gradient"
-              disabled={submitDisabled && !isExcel}
-              onClick={submit}
-            >
+            <AButton className="btn-accent-gradient" disabled={submitDisabled && !isExcel} onClick={submit}>
               {t('common.confirm')}
             </AButton>
           </div>
         </div>
       }
-      title={
-        <div className="ds-operate-title">
-          <span className="ds-operate-title-icon">
-            {isExcel ? <FileExcelOutlined /> : <DatabaseOutlined />}
-          </span>
-          <span>{operateType === 'add' ? '新增数据源' : '编辑数据源'}</span>
-        </div>
-      }
+      icon={isExcel ? <FileExcelOutlined /> : <DatabaseOutlined />}
+      title={operateType === 'add' ? '新增数据源' : '编辑数据源'}
       onClose={handleClose}
     >
-      <AForm
-        form={form}
-        initialValues={{ connectionType: 'sid' }}
-        layout="vertical"
-        className="ds-operate-form"
-      >
+      <AForm form={form} initialValues={{ connectionType: 'sid' }} layout="vertical" className="ds-operate-form">
         {/* Section: 数据源类型 */}
         <div className="ds-form-section">
           <div className="ds-form-section-title">
             <DatabaseOutlined />
             数据源类型
           </div>
-          <AForm.Item
-            label="类型"
-            name="sourceType"
-            rules={[{ required: true }]}
-          >
+          <AForm.Item label="类型" name="sourceType" rules={[{ required: true }]}>
             <ASelect
               fieldNames={{ label: 'name', value: 'sourceType' }}
               options={sourceTypeOptions}
               disabled={operateType === 'edit' && sourceTypeVal === 'Excel' && sourceTypeDisabled}
               placeholder="请选择数据源类型"
               optionRender={(option: any) => {
-                const icon = getDbIcon(option.data.name, option.data.sourceType);
+                const icon = getDbIcon(option.data.name, option.data.sourceType)
                 return (
                   <div className="ds-type-option">
                     {icon && <img src={icon} alt="" className="ds-type-option-icon" />}
                     <span>{option.data.name}</span>
                   </div>
-                );
+                )
               }}
               labelRender={(props: any) => {
-                const icon = getDbIcon(props.label, props.value);
+                const icon = getDbIcon(props.label, props.value)
                 return (
                   <div className="ds-type-option">
                     {icon && <img src={icon} alt="" className="ds-type-option-icon" />}
                     <span>{props.label}</span>
                   </div>
-                );
+                )
               }}
             />
           </AForm.Item>
@@ -237,16 +205,11 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
               <CloudUploadOutlined />
               文件上传
             </div>
-            <AForm.Item
-              label="上传文件"
-              name="sourceFile"
-              rules={[{ required: true, message: '请选择文件' }]}
-              hidden={!!sourceFileVal}
-            >
+            <AForm.Item label="上传文件" name="sourceFile" rules={[{ required: true, message: '请选择文件' }]} hidden={!!sourceFileVal}>
               <Uploader
                 setData={(val) => {
-                  form.setFieldValue('sheets', val);
-                  form.setFieldValue('sourceName', val[0].fileName);
+                  form.setFieldValue('sheets', val)
+                  form.setFieldValue('sourceName', val[0].fileName)
                 }}
                 setPreviewVisible={setPreviewVisible}
                 maxSize={10 * 1024 * 1024}
@@ -278,18 +241,10 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
 
             {sourceFileVal?.length > 0 && (
               <>
-                <AForm.Item
-                  label="数据源名称"
-                  name="sourceName"
-                  rules={[{ required: true }]}
-                >
+                <AForm.Item label="数据源名称" name="sourceName" rules={[{ required: true }]}>
                   <AInput maxLength={50} placeholder="请输入数据源名称" />
                 </AForm.Item>
-                <AForm.Item
-                  label="数据表名称"
-                  name="dbTableName"
-                  rules={[{ required: true }]}
-                >
+                <AForm.Item label="数据表名称" name="dbTableName" rules={[{ required: true }]}>
                   <AInput disabled placeholder="请输入数据表名称" />
                 </AForm.Item>
                 <AForm.Item label="数据预览" name="sheets">
@@ -307,16 +262,8 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                 <LinkOutlined />
                 基本信息
               </div>
-              <AForm.Item
-                label="数据源名称"
-                name="sourceName"
-                rules={[{ required: true }]}
-              >
-                <AInput
-                  maxLength={50}
-                  placeholder="请输入数据源名称"
-                  prefix={selectedIcon ? <img src={selectedIcon} alt="" style={{ width: 18, height: 14, objectFit: 'contain' }} /> : undefined}
-                />
+              <AForm.Item label="数据源名称" name="sourceName" rules={[{ required: true }]}>
+                <AInput maxLength={50} placeholder="请输入数据源名称" prefix={selectedIcon ? <img src={selectedIcon} alt="" style={{ width: 18, height: 14, objectFit: 'contain' }} /> : undefined} />
               </AForm.Item>
             </div>
 
@@ -326,26 +273,11 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                 连接配置
               </div>
               <div className="ds-form-row">
-                <AForm.Item
-                  className="ds-form-col-2"
-                  label="数据库地址"
-                  name="host"
-                  rules={[{ required: true }]}
-                >
+                <AForm.Item className="ds-form-col-2" label="数据库地址" name="host" rules={[{ required: true }]}>
                   <AInput placeholder="例如: 192.168.1.100" />
                 </AForm.Item>
-                <AForm.Item
-                  className="ds-form-col-1"
-                  label="端口"
-                  name="port"
-                  rules={[{ required: true }]}
-                >
-                  <AInputNumber
-                    className="w-full"
-                    min={0}
-                    placeholder="例如: 3306"
-                    precision={0}
-                  />
+                <AForm.Item className="ds-form-col-1" label="端口" name="port" rules={[{ required: true }]}>
+                  <AInputNumber className="w-full" min={0} placeholder="例如: 3306" precision={0} />
                 </AForm.Item>
               </div>
               <AForm.Item
@@ -367,18 +299,10 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                 <DatabaseOutlined />
                 认证信息
               </div>
-              <AForm.Item
-                label="用户名"
-                name="userName"
-                rules={[{ required: true }]}
-              >
+              <AForm.Item label="用户名" name="userName" rules={[{ required: true }]}>
                 <AInput placeholder="请输入用户名" />
               </AForm.Item>
-              <AForm.Item
-                label="密码"
-                name="password"
-                rules={[{ required: true }]}
-              >
+              <AForm.Item label="密码" name="password" rules={[{ required: true }]}>
                 <AInput.Password placeholder="请输入密码" />
               </AForm.Item>
             </div>
@@ -387,11 +311,7 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
       </AForm>
 
       <AModal
-        title={
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#1a2744' }}>
-            文件导入 - 本地文件
-          </div>
-        }
+        title={<div style={{ fontSize: 16, fontWeight: 600, color: '#1a2744' }}>文件导入 - 本地文件</div>}
         open={previewVisible}
         onCancel={() => setPreviewVisible(false)}
         width={520}
@@ -399,18 +319,14 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
         className="ds-upload-error-modal"
       >
         <div className="ds-upload-error-body">
-          <div className="ds-upload-error-title">
-            {uploadError?.messageTitle || '导入失败'}
-          </div>
-          <div className="ds-upload-error-msg">
-            {uploadError?.message || '请检查文件格式和大小后重试'}
-          </div>
+          <div className="ds-upload-error-title">{uploadError?.messageTitle || '导入失败'}</div>
+          <div className="ds-upload-error-msg">{uploadError?.message || '请检查文件格式和大小后重试'}</div>
         </div>
         <div className="ds-upload-error-footer">
           <AButton
             onClick={() => {
-              setPreviewVisible(false);
-              handleClose();
+              setPreviewVisible(false)
+              handleClose()
             }}
           >
             关闭
@@ -420,8 +336,8 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
           </AButton>
         </div>
       </AModal>
-    </ADrawer>
-  );
-});
+    </CommonDrawer>
+  )
+})
 
-export default DatasourceOperateDrawer;
+export default DatasourceOperateDrawer

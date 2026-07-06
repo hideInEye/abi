@@ -8,6 +8,12 @@ import { getSpaceId } from '@/store/slice/app';
 import { PermissionManagement } from './modules/PermissionManagement';
 import { DeptSelector } from './modules/dept';
 
+function getFirstRoleIdList(roles: any[]) {
+  if (!Array.isArray(roles)) return [];
+  const roleId = roles.find((item: any) => item?.roleId !== undefined && item?.roleId !== null)?.roleId;
+  return roleId === undefined || roleId === null ? [] : [roleId];
+}
+
 export function Component() {
   const { t } = useTranslation();
   const spaceId = useAppSelector(getSpaceId);
@@ -163,10 +169,10 @@ export function Component() {
   );
 
   async function handlePermissionSure(permission: any[]) {
-    const userData = data.map(item => {
+    const userData = data.map((item: any) => {
       const Item = item;
       if (item.recordId === currentPermissionItemIndex) {
-        Item.roles = permission;
+        Item.roles = permission.slice(0, 1);
       }
       return Item;
     });
@@ -210,15 +216,9 @@ export function Component() {
   }
 
   function openDistributeRole(user: any) {
-    const roleIds: any[] = [];
-    if (user && Array.isArray(user.roles)) {
-      user.roles.forEach((i: any) => {
-        roleIds.push(i.roleId);
-      });
-    }
     setCurrentPermissionItemIndex(user.recordId);
     setPermissionDrawerOpen(true);
-    setDefaultPermissionKeys(roleIds);
+    setDefaultPermissionKeys(getFirstRoleIdList(user?.roles));
   }
 
   async function handleDelete(index: number) {

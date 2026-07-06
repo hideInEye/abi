@@ -33,6 +33,15 @@ import UserOperateDrawer from './modules/user-operate-drawer';
 const isHttpProxy = import.meta.env.DEV && import.meta.env.VITE_HTTP_PROXY === 'Y';
 const { apiURL } = getServiceBaseURL(import.meta.env, isHttpProxy);
 
+function getFirstRoleId(roleIds: any) {
+  return Array.isArray(roleIds) ? roleIds[0] : roleIds;
+}
+
+function normalizeRoleIds(roleIds: any) {
+  const roleId = getFirstRoleId(roleIds);
+  return roleId === undefined || roleId === null || roleId === '' ? [] : [roleId];
+}
+
 // Column definitions for picker
 const ALL_COLUMNS: ColumnOption[] = [
   { key: 'userId', label: '序号', visible: true },
@@ -239,6 +248,7 @@ export function Component() {
     // eslint-disable-next-line
     async (res: any, type) => {
       const params = { ...res };
+      params.roleIds = normalizeRoleIds(res.roleIds);
       if (type === 'add') {
         params.password = encrypt(res.password);
         const resData = await fetchAddUser(params);
@@ -256,7 +266,7 @@ export function Component() {
     handleEdit({
       ...res.data.data,
       postIds: res?.data?.postIds || [],
-      roleIds: res?.data?.roleIds || []
+      roleIds: getFirstRoleId(res?.data?.roleIds || [])
     });
   }
 

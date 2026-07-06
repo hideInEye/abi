@@ -1,43 +1,29 @@
-import {
-  CloseOutlined,
-  DatabaseOutlined,
-  EyeOutlined,
-  SearchOutlined,
-  TableOutlined,
-} from '@ant-design/icons';
-import type { TabsProps } from 'antd';
+import { CloseOutlined, DatabaseOutlined, EyeOutlined, SearchOutlined, TableOutlined } from '@ant-design/icons'
+import type { TabsProps } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
-import styles from '../../data-source-view/index.module.css';
-import { BaseData } from '../../data-source-view/modules/base-data';
-import { ViewData } from '../../data-source-view/modules/view-data';
+import styles from '../../data-source-view/index.module.css'
+import { BaseData } from '../../data-source-view/modules/base-data'
+import { ViewData } from '../../data-source-view/modules/view-data'
 
 interface Props {
-  onClose: () => void;
-  open: boolean;
-  sourceId?: string;
+  onClose: () => void
+  open: boolean
+  sourceId?: string
 }
 
 const DataSourcePreviewDrawer: React.FC<Props> = memo(({ onClose, open, sourceId }) => {
-  const [dataSource, setDataSource] = useState<string | undefined>(undefined);
-  const [dataTableKeyword, setDataTableKeyword] = useState('');
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
-  const [tabKey, setTabKey] = useState('1');
-  const { dataSourceList, getDatasourceList, getTableListBySource, tableList = [] } = useDatasource();
+  const [dataSource, setDataSource] = useState<string | undefined>(undefined)
+  const [dataTableKeyword, setDataTableKeyword] = useState('')
+  const [selectedTable, setSelectedTable] = useState<string | null>(null)
+  const [tabKey, setTabKey] = useState('1')
+  const { dataSourceList, getDatasourceList, getTableListBySource, tableList = [] } = useDatasource()
 
-  const curDatasource = useMemo(
-    () => dataSourceList.find((item: any) => item.sourceId === dataSource),
-    [dataSourceList, dataSource],
-  );
+  const curDatasource = useMemo(() => dataSourceList.find((item: any) => item.sourceId === dataSource), [dataSourceList, dataSource])
 
   const items: TabsProps['items'] = [
     {
-      children: (
-        <BaseData
-          curDatasource={curDatasource}
-          sourceId={dataSource}
-          tableName={selectedTable!}
-        />
-      ),
+      children: <BaseData curDatasource={curDatasource} sourceId={dataSource} tableName={selectedTable!} />,
       forceRender: true,
       key: '1',
       label: (
@@ -48,12 +34,7 @@ const DataSourcePreviewDrawer: React.FC<Props> = memo(({ onClose, open, sourceId
       ),
     },
     {
-      children: (
-        <ViewData
-          sourceId={dataSource}
-          tableName={selectedTable!}
-        />
-      ),
+      children: <ViewData sourceId={dataSource} tableName={selectedTable!} />,
       forceRender: true,
       key: '2',
       label: (
@@ -63,32 +44,29 @@ const DataSourcePreviewDrawer: React.FC<Props> = memo(({ onClose, open, sourceId
         </span>
       ),
     },
-  ];
+  ]
 
   const filterTableList = useMemo(
-    () =>
-      dataTableKeyword
-        ? tableList.filter((item: any) => item.tableName.toLowerCase().includes(dataTableKeyword.toLowerCase()))
-        : tableList,
+    () => (dataTableKeyword ? tableList.filter((item: any) => item.tableName.toLowerCase().includes(dataTableKeyword.toLowerCase())) : tableList),
     [tableList, dataTableKeyword],
-  );
+  )
 
   // Init on open
   useEffect(() => {
     if (open) {
-      getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) });
-      setDataTableKeyword('');
-      setSelectedTable(null);
-      setTabKey('1');
+      getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) })
+      setDataTableKeyword('')
+      setSelectedTable(null)
+      setTabKey('1')
     }
-  }, [open]);
+  }, [open])
 
   // Set datasource from sourceId prop
   useEffect(() => {
     if (open && sourceId) {
-      setDataSource(sourceId);
+      setDataSource(sourceId)
     }
-  }, [open, sourceId]);
+  }, [open, sourceId])
 
   // Load table list when datasource changes
   useEffect(() => {
@@ -97,38 +75,28 @@ const DataSourcePreviewDrawer: React.FC<Props> = memo(({ onClose, open, sourceId
         sourceId: dataSource,
         sourceType: curDatasource?.sourceType,
         spaceId: Number(localStorage.getItem('spaceId')),
-      });
-      setSelectedTable(null);
+      })
+      setSelectedTable(null)
     }
-  }, [dataSource, curDatasource]);
+  }, [dataSource, curDatasource])
 
   const handleSourceChange = (val: string) => {
-    setDataSource(val);
-    setSelectedTable(null);
-    setTabKey('1');
-  };
+    setDataSource(val)
+    setSelectedTable(null)
+    setTabKey('1')
+  }
 
   return (
-    <ADrawer
+    <CommonDrawer
       className="ds-preview-drawer"
-      closeIcon={null}
       destroyOnClose={false}
-      extra={<CloseOutlined onClick={onClose} style={{ fontSize: 16, color: '#8c8c8c' }} />}
       open={open}
       styles={{
         body: { padding: 0, display: 'flex', flexDirection: 'column' },
       }}
-      title={
-        <div className="ds-view-drawer-title">
-          <span className="ds-view-drawer-title-icon">
-            <EyeOutlined />
-          </span>
-          <span>数据源预览</span>
-          {curDatasource && (
-            <span className="ds-view-drawer-title-sub">{curDatasource.sourceName}</span>
-          )}
-        </div>
-      }
+      description={curDatasource?.sourceName}
+      icon={<EyeOutlined />}
+      title="数据源预览"
       width={1200}
       onClose={onClose}
     >
@@ -168,18 +136,14 @@ const DataSourcePreviewDrawer: React.FC<Props> = memo(({ onClose, open, sourceId
             />
           </div>
           <div className={styles['table-data-container']} style={{ marginTop: '8px' }}>
-            {filterTableList?.length === 0 && (
-              <div className="ds-view-sidebar-empty">
-                {dataTableKeyword ? '无匹配结果' : '暂无数据表'}
-              </div>
-            )}
+            {filterTableList?.length === 0 && <div className="ds-view-sidebar-empty">{dataTableKeyword ? '无匹配结果' : '暂无数据表'}</div>}
             {filterTableList?.map((item: any) => (
               <div
                 className={`ds-view-table-item ${item.tableName === selectedTable ? 'active' : ''}`}
                 key={item.tableName}
                 onClick={() => {
-                  setSelectedTable(item.tableName);
-                  setTabKey('1');
+                  setSelectedTable(item.tableName)
+                  setTabKey('1')
                 }}
               >
                 <TableOutlined className="ds-view-table-item-icon" />
@@ -199,17 +163,12 @@ const DataSourcePreviewDrawer: React.FC<Props> = memo(({ onClose, open, sourceId
               <p>请从左侧选择一个数据表查看详情</p>
             </div>
           ) : (
-            <ATabs
-              activeKey={tabKey}
-              items={items}
-              className="ds-view-tabs"
-              onChange={(key) => setTabKey(key)}
-            />
+            <ATabs activeKey={tabKey} items={items} className="ds-view-tabs" onChange={(key) => setTabKey(key)} />
           )}
         </div>
       </div>
-    </ADrawer>
-  );
-});
+    </CommonDrawer>
+  )
+})
 
-export default DataSourcePreviewDrawer;
+export default DataSourcePreviewDrawer

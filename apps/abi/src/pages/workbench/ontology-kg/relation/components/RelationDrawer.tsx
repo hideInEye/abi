@@ -1,4 +1,5 @@
-import { Drawer, Form, Input, Select, Switch } from 'antd'
+import { Form, Input, Select, Switch } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import type { OntologyEntity, OntologyNetworkId, OntologyRelation } from '@/pages/workbench/ontology-kg/shared-network-types'
@@ -36,7 +37,11 @@ export const RelationDrawer: React.FC<RelationDrawerProps> = ({ entities, loadin
   }, [form, open, relation])
 
   const relationRules = useMemo(
-    () => [{ message: '请输入关系名称', required: true }, { max: 50, message: '关系名称长度为 2-50 个字符' }, { min: 2, message: '关系名称长度为 2-50 个字符' }],
+    () => [
+      { message: '请输入关系名称', required: true },
+      { max: 50, message: '关系名称长度为 2-50 个字符' },
+      { min: 2, message: '关系名称长度为 2-50 个字符' },
+    ],
     [],
   )
 
@@ -63,7 +68,7 @@ export const RelationDrawer: React.FC<RelationDrawerProps> = ({ entities, loadin
   }, [form])
 
   return (
-    <Drawer
+    <CommonDrawer
       destroyOnClose
       open={open}
       title={title}
@@ -85,19 +90,14 @@ export const RelationDrawer: React.FC<RelationDrawerProps> = ({ entities, loadin
         <Form.Item label="结束节点" name="endEntityId" rules={[{ message: '请选择结束节点', required: true }, { validator: validateDifferentEntities }]}>
           <Select<OntologyNetworkId> allowClear fieldNames={{ label: 'entityName', value: 'id' }} options={entities} placeholder="请选择结束节点" showSearch optionFilterProp="entityName" />
         </Form.Item>
-        <Form.Item
-          getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
-          getValueProps={(value: number | undefined) => ({ checked: value === 1 })}
-          label="是否可逆"
-          name="inverseFlag"
-        >
+        <Form.Item getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(value: number | undefined) => ({ checked: value === 1 })} label="是否可逆" name="inverseFlag">
           <Switch checkedChildren="是" unCheckedChildren="否" />
         </Form.Item>
         <Form.Item label="备注说明" name="remark" rules={[{ max: 500, message: '备注说明不能超过 500 个字符' }]}>
           <Input.TextArea maxLength={500} placeholder="请输入备注说明" rows={4} showCount />
         </Form.Item>
       </Form>
-    </Drawer>
+    </CommonDrawer>
   )
 }
 
