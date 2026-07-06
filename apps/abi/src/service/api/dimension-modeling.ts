@@ -6,7 +6,7 @@ const HIERARCHY_API_PREFIX = '/api/abi-ontology/api/v1/ontology/hierarchy'
 export function queryDimensionList(params: {
   bizName?: string
   dimCategory?: string
-  groupId?: number
+  groupId?: number | string
   pageNum?: number
   pageSize?: number
   semanticType?: string
