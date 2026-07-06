@@ -408,9 +408,9 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       },
       {
-        name: 'space_user',
-        path: 'user',
-        component: 'view.space_user',
+        name: 'space_space-user',
+        path: 'space-user',
+        component: 'view.space_space-user',
         meta: {
           hideInMenu: false,
           i18nKey: 'route.system_space-user',

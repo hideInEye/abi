@@ -4,6 +4,7 @@ import { CloseOutlined, NodeIndexOutlined } from '@ant-design/icons'
 import { buildNodeDetail } from '@/components/metadata-analysis/adapter'
 import { RELATION_TYPE_LABELS, STATUS_LABELS } from '@/components/metadata-analysis/constants'
 import type { LineageNode, LineageRelation } from '@/components/metadata-analysis/types'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
 interface Props {
   node: LineageNode | null
@@ -24,56 +25,37 @@ const NodeDetailDrawer: React.FC<Props> = ({ node, onClose, open, relations }) =
       key: 'source',
       render: (_: string, row: LineageRelation) => (
         <ATooltip title={row.source_node_name || '-'}>
-          <span className="ma-cell-ellipsis">
-            {row.source_node_name || '-'}
-          </span>
+          <span className="ma-cell-ellipsis">{row.source_node_name || '-'}</span>
         </ATooltip>
       ),
-      title: '源节点'
+      title: '源节点',
     },
     {
       dataIndex: 'target_node_name',
       key: 'target',
       render: (_: string, row: LineageRelation) => (
         <ATooltip title={row.target_node_name || '-'}>
-          <span className="ma-cell-ellipsis">
-            {row.target_node_name || '-'}
-          </span>
+          <span className="ma-cell-ellipsis">{row.target_node_name || '-'}</span>
         </ATooltip>
       ),
-      title: '目标节点'
+      title: '目标节点',
     },
     {
       dataIndex: 'relation_type',
       key: 'relation_type',
       render: (value: string) => RELATION_TYPE_LABELS[value] || value,
-      title: '关系类型'
+      title: '关系类型',
     },
     {
       dataIndex: 'status',
       key: 'status',
       render: (value: '0' | '1') => <ATag color={value === '0' ? 'green' : 'default'}>{STATUS_LABELS[value]}</ATag>,
-      title: '状态'
-    }
+      title: '状态',
+    },
   ]
 
   return (
-    <ADrawer
-      className="ma-node-drawer"
-      closeIcon={null}
-      extra={<CloseOutlined onClick={onClose} style={{ fontSize: 16, color: '#8c8c8c' }} />}
-      open={open}
-      title={
-        <div className="ma-drawer-title">
-          <span className="ma-drawer-title-icon">
-            <NodeIndexOutlined />
-          </span>
-          <span>节点详情</span>
-        </div>
-      }
-      width={720}
-      onClose={onClose}
-    >
+    <CommonDrawer className="ma-node-drawer" open={open} icon={<NodeIndexOutlined />} title="节点详情" width={720} onClose={onClose}>
       {!node || !detail ? (
         <div className="ma-panel">
           <AEmpty description="暂无数据" image={AEmpty.PRESENTED_IMAGE_SIMPLE} />
@@ -87,14 +69,20 @@ const NodeDetailDrawer: React.FC<Props> = ({ node, onClose, open, relations }) =
             </div>
             <div className="ma-node-info-card ma-node-info-card-wide">
               <span className="ma-node-info-label">节点名称</span>
-              <span className="ma-node-info-value" title={node.label || '-'}>{node.label || '-'}</span>
+              <span className="ma-node-info-value" title={node.label || '-'}>
+                {node.label || '-'}
+              </span>
             </div>
             <div className="ma-node-info-card ma-node-info-card-stat">
-              <span className="ma-node-info-stat-num" style={{ color: '#5b7cf7' }}>{detail.inCount}</span>
+              <span className="ma-node-info-stat-num" style={{ color: '#5b7cf7' }}>
+                {detail.inCount}
+              </span>
               <span className="ma-node-info-label">上游关系</span>
             </div>
             <div className="ma-node-info-card ma-node-info-card-stat">
-              <span className="ma-node-info-stat-num" style={{ color: '#059669' }}>{detail.outCount}</span>
+              <span className="ma-node-info-stat-num" style={{ color: '#059669' }}>
+                {detail.outCount}
+              </span>
               <span className="ma-node-info-label">下游关系</span>
             </div>
           </div>
@@ -122,7 +110,7 @@ const NodeDetailDrawer: React.FC<Props> = ({ node, onClose, open, relations }) =
                   </div>
                 ),
                 key: 'inbound',
-                label: `上游关系 (${detail.inCount})`
+                label: `上游关系 (${detail.inCount})`,
               },
               {
                 children: (
@@ -144,13 +132,13 @@ const NodeDetailDrawer: React.FC<Props> = ({ node, onClose, open, relations }) =
                   </div>
                 ),
                 key: 'outbound',
-                label: `下游关系 (${detail.outCount})`
-              }
+                label: `下游关系 (${detail.outCount})`,
+              },
             ]}
           />
         </div>
       )}
-    </ADrawer>
+    </CommonDrawer>
   )
 }
 

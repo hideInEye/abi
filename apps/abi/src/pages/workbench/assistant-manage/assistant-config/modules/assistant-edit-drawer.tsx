@@ -12,18 +12,19 @@ import {
   SecurityScanOutlined,
   SendOutlined,
   SettingOutlined,
-  ThunderboltOutlined
-} from '@ant-design/icons';
-import { Button, Checkbox, Drawer, Input, Modal, Radio, Spin, Switch, Tag, Tooltip, message } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+  ThunderboltOutlined,
+} from '@ant-design/icons'
+import { Button, Checkbox, Input, Modal, Radio, Spin, Switch, Tag, Tooltip, message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+import { useEffect, useMemo, useState } from 'react'
 
-import { queryToolListApi } from '@/service/api/tool';
-import type { ToolItem } from '@/service/api/tool';
-import { queryMcpList } from '@/service/api/pulg';
-import { addAppApi, updateAppApi, fetchAppDetailApi } from '@/service/api/abi-chat-app';
-import { getSpaceId } from '@/store/slice/app';
-import { useAppSelector } from '@/hooks/business/useStore';
-import React from 'react';
+import { queryToolListApi } from '@/service/api/tool'
+import type { ToolItem } from '@/service/api/tool'
+import { queryMcpList } from '@/service/api/pulg'
+import { addAppApi, updateAppApi, fetchAppDetailApi } from '@/service/api/abi-chat-app'
+import { getSpaceId } from '@/store/slice/app'
+import { useAppSelector } from '@/hooks/business/useStore'
+import React from 'react'
 
 /**
  * 助手新增/编辑 - 全屏 Drawer
@@ -31,140 +32,143 @@ import React from 'react';
  */
 
 interface Props {
-  visible?: boolean;
-  agent?: AgentMock | null;
-  groupId?: string;
-  onClose: (refresh?: boolean) => void;
+  visible?: boolean
+  agent?: AgentMock | null
+  groupId?: string
+  onClose: (refresh?: boolean) => void
 }
 
 export interface AgentMock {
-  id: string | number;
-  name: string;
-  iconBg?: string;
-  iconLetter?: string;
-  description?: string;
-  prompt?: string;
-  groupId?: string;
+  id: string | number
+  name: string
+  iconBg?: string
+  iconLetter?: string
+  description?: string
+  prompt?: string
+  groupId?: string
   /** status: '0'草稿 | '1'发布 | '2'下线 */
-  status?: '0' | '1' | '2';
+  status?: '0' | '1' | '2'
 }
 
 // ── 工具选择 ──
-type ToolGroupKey = 'mcp' | 'builtin';
-type ToolOption = { id: string; name: string; group: ToolGroupKey; description?: string };
+type ToolGroupKey = 'mcp' | 'builtin'
+type ToolOption = { id: string; name: string; group: ToolGroupKey; description?: string }
 
 /// 折叠面板分组
-type SectionKey = 'model' | 'opening' | 'semanticKnowledge' | 'ontologyNetwork' | 'mcpTools' | 'builtinTools' | 'skills' | 'questions';
+type SectionKey = 'model' | 'opening' | 'semanticKnowledge' | 'ontologyNetwork' | 'mcpTools' | 'builtinTools' | 'skills' | 'questions'
 
-const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: propsGroupId, onClose }) => {
-  const spaceId = useAppSelector(getSpaceId);
-  const isEdit = !!agent?.id;
-  const [name, setName] = useState<string>('');
-  const [editingName, setEditingName] = useState(false);
-  const [prompt, setPrompt] = useState<string>(agent?.prompt || '');
-  const [description, setDescription] = useState<string>(agent?.description || '');
+const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId: propsGroupId, onClose }) => {
+  const spaceId = useAppSelector(getSpaceId)
+  const isEdit = !!agent?.id
+  const [name, setName] = useState<string>('')
+  const [editingName, setEditingName] = useState(false)
+  const [prompt, setPrompt] = useState<string>(agent?.prompt || '')
+  const [description, setDescription] = useState<string>(agent?.description || '')
   // status: '0'草稿 '1'发布 '2'下线
-  const [status, setStatus] = useState<'0' | '1' | '2'>(agent?.status || '0');
+  const [status, setStatus] = useState<'0' | '1' | '2'>(agent?.status || '0')
   // 调试模式 enable_debug: '0'禁用 '1'启用
-  const [enableDebug, setEnableDebug] = useState(false);
+  const [enableDebug, setEnableDebug] = useState(false)
   // 公开访问 public_access: '0'关闭(私密) '1'开启(空间可见)
-  const [publicAccess, setPublicAccess] = useState<'0' | '1'>('1');
-  const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [publicAccess, setPublicAccess] = useState<'0' | '1'>('1')
+  const [visibilityModalOpen, setVisibilityModalOpen] = useState(false)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [saving, setSaving] = useState(false)
   // rec_query 推荐问题列表
-  const [recQuestions, setRecQuestions] = useState<string[]>([]);
-  const [recDrawerOpen, setRecDrawerOpen] = useState(false);
-  const [batchModalOpen, setBatchModalOpen] = useState(false);
-  const [batchText, setBatchText] = useState('');
+  const [recQuestions, setRecQuestions] = useState<string[]>([])
+  const [recDrawerOpen, setRecDrawerOpen] = useState(false)
+  const [batchModalOpen, setBatchModalOpen] = useState(false)
+  const [batchText, setBatchText] = useState('')
 
   const handleBatchAdd = () => {
-    const lines = batchText.split('\n').map(l => l.trim()).filter(Boolean);
+    const lines = batchText
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
     if (lines.length > 0) {
-      setRecQuestions(prev => [...prev, ...lines]);
-      message.success(`已添加 ${lines.length} 个推荐问题`);
+      setRecQuestions((prev) => [...prev, ...lines])
+      message.success(`已添加 ${lines.length} 个推荐问题`)
     }
-    setBatchText('');
-    setBatchModalOpen(false);
-  };
+    setBatchText('')
+    setBatchModalOpen(false)
+  }
 
   const handleDeleteQuestion = (index: number) => {
-    setRecQuestions(prev => prev.filter((_, i) => i !== index));
-  };
+    setRecQuestions((prev) => prev.filter((_, i) => i !== index))
+  }
 
   // ── 工具选择 ──
 
-  const [mcpTools, setMcpTools] = useState<ToolOption[]>([]);
-  const [builtinTools, setBuiltinTools] = useState<ToolOption[]>([]);
-  const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set());
-  const [loadingTools, setLoadingTools] = useState(false);
+  const [mcpTools, setMcpTools] = useState<ToolOption[]>([])
+  const [builtinTools, setBuiltinTools] = useState<ToolOption[]>([])
+  const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set())
+  const [loadingTools, setLoadingTools] = useState(false)
 
   /** 加载助手详情 */
   async function loadDetail() {
-    if (!agent?.id) return;
-    setLoadingDetail(true);
+    if (!agent?.id) return
+    setLoadingDetail(true)
     try {
-      const res: any = await fetchAppDetailApi({ appId: agent.id });
-      const detail = res?.data || {};
-      setName(detail.appName || agent.name || '');
-      setPrompt(detail.appPrompt || '');
-      setDescription(detail.description || '');
-      setStatus(detail.status || '0');
-      setEnableDebug(detail.enableDebug === '1');
-      setPublicAccess(detail.publicAccess === '1' ? '1' : '0');
+      const res: any = await fetchAppDetailApi({ appId: agent.id })
+      const detail = res?.data || {}
+      setName(detail.appName || agent.name || '')
+      setPrompt(detail.appPrompt || '')
+      setDescription(detail.description || '')
+      setStatus(detail.status || '0')
+      setEnableDebug(detail.enableDebug === '1')
+      setPublicAccess(detail.publicAccess === '1' ? '1' : '0')
       // 推荐问题
       if (Array.isArray(detail.recQuery)) {
-        setRecQuestions(detail.recQuery);
+        setRecQuestions(detail.recQuery)
       }
       // 工具选中回显
       if (Array.isArray(detail.tools) && detail.tools.length > 0) {
-        const ids = new Set<string>();
+        const ids = new Set<string>()
         detail.tools.forEach((t: any) => {
-          const prefix = t.toolType === '2' ? 'mcp' : 'builtin';
+          const prefix = t.toolType === '2' ? 'mcp' : 'builtin'
           if (Array.isArray(t.toolConfig)) {
             t.toolConfig.forEach((c: any) => {
-              if (c.id != null) ids.add(`${prefix}_${c.id}`);
-            });
+              if (c.id != null) ids.add(`${prefix}_${c.id}`)
+            })
           }
-        });
-        setSelectedToolIds(ids);
+        })
+        setSelectedToolIds(ids)
       }
     } catch {
       // 降级：从列表 prop 读取基本信息
-      setName(agent.name || '');
-      setDescription(agent.description || '');
-      setStatus(agent.status || '0');
+      setName(agent.name || '')
+      setDescription(agent.description || '')
+      setStatus(agent.status || '0')
     } finally {
-      setLoadingDetail(false);
+      setLoadingDetail(false)
     }
   }
 
   useEffect(() => {
     if (visible && agent?.id) {
-      loadDetail();
+      loadDetail()
     } else if (visible && !agent?.id) {
       // 新增模式：重置表单
-      setName('');
-      setPrompt('');
-      setDescription('');
-      setStatus('0');
-      setEnableDebug(false);
-      setPublicAccess('1');
-      setRecQuestions([]);
-      setSelectedToolIds(new Set());
+      setName('')
+      setPrompt('')
+      setDescription('')
+      setStatus('0')
+      setEnableDebug(false)
+      setPublicAccess('1')
+      setRecQuestions([])
+      setSelectedToolIds(new Set())
     }
-  }, [visible, agent]);
+  }, [visible, agent])
 
   /** 构建提交数据 */
   function buildPayload(overrideStatus?: string) {
-    const toolConfigs = Array.from(selectedToolIds).map(id => {
-      const [group, ...rest] = id.split('_');
-      const toolId = rest.join('_');
+    const toolConfigs = Array.from(selectedToolIds).map((id) => {
+      const [group, ...rest] = id.split('_')
+      const toolId = rest.join('_')
       return {
         toolType: group === 'mcp' ? '2' : '1',
-        toolConfig: [{ type: 'tool', id: Number(toolId) || toolId }]
-      };
-    });
+        toolConfig: [{ type: 'tool', id: Number(toolId) || toolId }],
+      }
+    })
     const payload: any = {
       appName: name,
       spaceId,
@@ -177,111 +181,114 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
       enableDebug: enableDebug ? '1' : '0',
       publicAccess,
       tools: toolConfigs,
-    };
-    if (isEdit && agent?.id) {
-      payload.appId = agent.id;
     }
-    return payload;
+    if (isEdit && agent?.id) {
+      payload.appId = agent.id
+    }
+    return payload
   }
 
   /** 保存：状态设为草稿 */
   const handleSave = async () => {
-    setSaving(true);
+    setSaving(true)
     try {
-      const payload = buildPayload('0');
+      const payload = buildPayload('0')
       if (isEdit) {
-        await updateAppApi(payload);
+        await updateAppApi(payload)
       } else {
-        await addAppApi(payload);
+        await addAppApi(payload)
       }
-      setStatus('0');
-      message.success('已保存为草稿');
-      onClose(true);
+      setStatus('0')
+      message.success('已保存为草稿')
+      onClose(true)
     } catch {
-      message.error('保存失败');
+      message.error('保存失败')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   /** 上线：状态设为发布 */
   const handlePublish = async () => {
-    setSaving(true);
+    setSaving(true)
     try {
-      const payload = buildPayload('1');
+      const payload = buildPayload('1')
       if (isEdit) {
-        await updateAppApi(payload);
+        await updateAppApi(payload)
       } else {
-        await addAppApi(payload);
+        await addAppApi(payload)
       }
-      setStatus('1');
-      message.success('已上线，状态设为发布');
-      onClose(true);
+      setStatus('1')
+      message.success('已上线，状态设为发布')
+      onClose(true)
     } catch {
-      message.error('发布失败');
+      message.error('发布失败')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   async function fetchToolGroups() {
-    setLoadingTools(true);
+    setLoadingTools(true)
     try {
-      const [mcpRes, builtinRes]: any[] = await Promise.all([
-        queryMcpList({ pageNo: 1, pageSize: 200 }),
-        queryToolListApi({})
-      ]);
-      const mcpPayload = mcpRes?.response?.data?.data?.data ?? {};
-      const mcpItems: any[] = mcpPayload.pageItems ?? [];
-      setMcpTools(mcpItems.map((m: any) => ({
-        id: `mcp_${m.id}`,
-        name: m.name || m.pluginName || '-',
-        group: 'mcp' as ToolGroupKey,
-        description: m.description || ''
-      })));
-      const bRows = builtinRes?.response?.data?.data || builtinRes?.data?.data || builtinRes?.data || [];
-      const bList: ToolItem[] = Array.isArray(bRows) ? bRows : [];
-      setBuiltinTools(bList.map(t => ({
-        id: `builtin_${t.toolId}`,
-        name: t.toolName || '-',
-        group: 'builtin' as ToolGroupKey,
-        description: t.description || ''
-      })));
+      const [mcpRes, builtinRes]: any[] = await Promise.all([queryMcpList({ pageNo: 1, pageSize: 200 }), queryToolListApi({})])
+      const mcpPayload = mcpRes?.response?.data?.data?.data ?? {}
+      const mcpItems: any[] = mcpPayload.pageItems ?? []
+      setMcpTools(
+        mcpItems.map((m: any) => ({
+          id: `mcp_${m.id}`,
+          name: m.name || m.pluginName || '-',
+          group: 'mcp' as ToolGroupKey,
+          description: m.description || '',
+        })),
+      )
+      const bRows = builtinRes?.response?.data?.data || builtinRes?.data?.data || builtinRes?.data || []
+      const bList: ToolItem[] = Array.isArray(bRows) ? bRows : []
+      setBuiltinTools(
+        bList.map((t) => ({
+          id: `builtin_${t.toolId}`,
+          name: t.toolName || '-',
+          group: 'builtin' as ToolGroupKey,
+          description: t.description || '',
+        })),
+      )
     } catch {
-      setMcpTools([]);
-      setBuiltinTools([]);
+      setMcpTools([])
+      setBuiltinTools([])
     } finally {
-      setLoadingTools(false);
+      setLoadingTools(false)
     }
   }
 
-  useEffect(() => { fetchToolGroups(); }, []);
+  useEffect(() => {
+    fetchToolGroups()
+  }, [])
 
-  const allToolOptions = useMemo(() => [...mcpTools, ...builtinTools], [mcpTools, builtinTools]);
+  const allToolOptions = useMemo(() => [...mcpTools, ...builtinTools], [mcpTools, builtinTools])
 
   function handleGroupCheck(group: ToolGroupKey, checked: boolean) {
-    const ids = allToolOptions.filter(t => t.group === group).map(t => t.id);
-    setSelectedToolIds(prev => {
-      const next = new Set(prev);
-      ids.forEach(id => checked ? next.add(id) : next.delete(id));
-      return next;
-    });
+    const ids = allToolOptions.filter((t) => t.group === group).map((t) => t.id)
+    setSelectedToolIds((prev) => {
+      const next = new Set(prev)
+      ids.forEach((id) => (checked ? next.add(id) : next.delete(id)))
+      return next
+    })
   }
   function handleToolCheck(id: string, checked: boolean) {
-    setSelectedToolIds(prev => {
-      const next = new Set(prev);
-      checked ? next.add(id) : next.delete(id);
-      return next;
-    });
+    setSelectedToolIds((prev) => {
+      const next = new Set(prev)
+      checked ? next.add(id) : next.delete(id)
+      return next
+    })
   }
   function isGroupAllChecked(group: ToolGroupKey) {
-    const items = allToolOptions.filter(t => t.group === group);
-    return items.length > 0 && items.every(t => selectedToolIds.has(t.id));
+    const items = allToolOptions.filter((t) => t.group === group)
+    return items.length > 0 && items.every((t) => selectedToolIds.has(t.id))
   }
   function isGroupIndeterminate(group: ToolGroupKey) {
-    const items = allToolOptions.filter(t => t.group === group);
-    const c = items.filter(t => selectedToolIds.has(t.id)).length;
-    return c > 0 && c < items.length;
+    const items = allToolOptions.filter((t) => t.group === group)
+    const c = items.filter((t) => selectedToolIds.has(t.id)).length
+    return c > 0 && c < items.length
   }
 
   const [openMap, setOpenMap] = useState<Record<SectionKey, boolean>>({
@@ -292,10 +299,10 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
     opening: false,
     questions: false,
     skills: false,
-    builtinTools: false
-  });
+    builtinTools: false,
+  })
 
-  const toggle = (key: SectionKey) => setOpenMap(p => ({ ...p, [key]: !p[key] }));
+  const toggle = (key: SectionKey) => setOpenMap((p) => ({ ...p, [key]: !p[key] }))
 
   const headerIcon = useMemo(
     () => (
@@ -311,17 +318,17 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
           height: 28,
           justifyContent: 'center',
           width: 28,
-          boxShadow: '0 2px 8px rgba(250, 140, 22, 0.3)'
+          boxShadow: '0 2px 8px rgba(250, 140, 22, 0.3)',
         }}
       >
         =
       </div>
     ),
-    []
-  );
+    [],
+  )
 
   return (
-    <Drawer
+    <CommonDrawer
       open={visible}
       destroyOnClose
       closable={false}
@@ -329,543 +336,508 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
       width="100%"
       bodyStyle={{
         background: 'linear-gradient(135deg, rgba(240, 244, 255, 0.6) 0%, rgba(239, 243, 255, 0.6) 50%, rgba(239, 242, 255, 0.6) 100%)',
-        padding: 0
+        padding: 0,
       }}
       headerStyle={{ display: 'none' }}
       onClose={() => onClose(false)}
     >
       <Spin spinning={loadingDetail}>
-      {/* 顶部栏 */}
-      <div
-        style={{
-          alignItems: 'center',
-          background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 255, 0.95) 100%)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(130, 140, 200, 0.15)',
-          display: 'flex',
-          height: 60,
-          padding: '0 20px',
-          boxShadow: '0 2px 12px rgba(91, 124, 247, 0.08)'
-        }}
-      >
-        <Button
-          icon={<ArrowLeftOutlined />}
-          type="text"
-          onClick={() => onClose(false)}
-          style={{
-            borderRadius: 8,
-            transition: 'all 0.3s ease'
-          }}
-        />
-        <div style={{ alignItems: 'center', display: 'flex', gap: 10, marginLeft: 10 }}>
-          {headerIcon}
-          {editingName ? (
-            <Input
-              autoFocus
-              size="small"
-              style={{
-                width: 200,
-                borderRadius: 8,
-                border: '1px solid rgba(130, 140, 200, 0.2)'
-              }}
-              value={name}
-              onBlur={() => setEditingName(false)}
-              onChange={e => setName(e.target.value)}
-              onPressEnter={() => setEditingName(false)}
-            />
-          ) : (
-            <>
-              <span style={{ fontSize: 17, fontWeight: 600, color: '#1a2744' }}>{name}</span>
-              <EditOutlined
-                style={{ color: '#5b7cf7', cursor: 'pointer', transition: 'all 0.2s ease' }}
-                onClick={() => setEditingName(true)}
-              />
-            </>
-          )}
-        </div>
-        <div style={{ alignItems: 'center', display: 'flex', gap: 12, marginLeft: 'auto' }}>
-          <Button
-            onClick={handleSave}
-            style={{
-              borderRadius: 8,
-              border: '1px solid rgba(130, 140, 200, 0.2)',
-              fontWeight: 500,
-              transition: 'all 0.3s ease'
-            }}
-          >
-            保存
-          </Button>
-          <Button
-            loading={saving}
-            type="primary"
-            onClick={handlePublish}
-            style={{
-              background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
-              border: 'none',
-              borderRadius: 8,
-              boxShadow: '0 4px 12px rgba(91, 124, 247, 0.3)',
-              fontWeight: 600,
-              transition: 'all 0.3s ease'
-            }}
-          >
-            上线
-          </Button>
-        </div>
-      </div>
-
-      {/* 三栏主体 */}
-      <div
-        style={{
-          display: 'grid',
-          gap: 0,
-          gridTemplateColumns: '1fr 1fr 1fr',
-          height: 'calc(100vh - 60px)'
-        }}
-      >
-        {/* 左：助手画像 */}
+        {/* 顶部栏 */}
         <div
           style={{
-            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(248, 250, 255, 0.6) 100%)',
-            backdropFilter: 'blur(8px)',
-            borderRight: '1px solid rgba(130, 140, 200, 0.12)',
+            alignItems: 'center',
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 255, 0.95) 100%)',
+            backdropFilter: 'blur(10px)',
+            borderBottom: '1px solid rgba(130, 140, 200, 0.15)',
             display: 'flex',
-            flexDirection: 'column'
+            height: 60,
+            padding: '0 20px',
+            boxShadow: '0 2px 12px rgba(91, 124, 247, 0.08)',
           }}
         >
-          <SectionHeader title="助手配置" />
-          <div style={{ padding: '14px 18px 0' }}>
-            <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 600, color: '#3e5068' }}>助手画像</span>
-              <Button
-                icon={<ThunderboltOutlined />}
+          <Button
+            icon={<ArrowLeftOutlined />}
+            type="text"
+            onClick={() => onClose(false)}
+            style={{
+              borderRadius: 8,
+              transition: 'all 0.3s ease',
+            }}
+          />
+          <div style={{ alignItems: 'center', display: 'flex', gap: 10, marginLeft: 10 }}>
+            {headerIcon}
+            {editingName ? (
+              <Input
+                autoFocus
                 size="small"
                 style={{
-                  color: '#5b7cf7',
-                  fontWeight: 500
+                  width: 200,
+                  borderRadius: 8,
+                  border: '1px solid rgba(130, 140, 200, 0.2)',
                 }}
-                type="link"
-              >
-                自动优化
-              </Button>
-            </div>
-          </div>
-          <div style={{ flex: 1, overflow: 'hidden', padding: '10px 18px 18px' }}>
-            <Input.TextArea
-              bordered={false}
-              placeholder={`请输入您的专属AI角色设定提示词。建议包含：身份背景、性格语气、专业领域及输出要求。设定越清晰，AI的回答越精准。\n\n一键套用模板：角色：[资深数据分析师] + 语气：[客观严谨/通俗易懂] + 任务：[生成Q3财报解读] + 格式：[Markdown/要点列表]。\n\n参考示例：你现在是一位拥有10年经验的资深商业数据分析师，性格严谨客观，擅长从复杂数据中挖掘业务洞察。请基于我提供的原始数据，输出一份结构清晰的月度销售数据报告。要求：必须包含核心指标摘要、数据可视化建议、异常波动归因分析，以及3条可落地的业务优化策略。语言风格需保持专业、精炼，杜绝主观臆断。`}
-              style={{
-                height: '100%',
-                resize: 'none',
-                background: 'rgba(255, 255, 255, 0.6)',
-                borderRadius: 10,
-                padding: '12px 14px',
-                fontSize: 13,
-                lineHeight: 1.6
-              }}
-              value={prompt}
-              onChange={e => setPrompt(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* 中：基础配置 / 知识 / 能力 */}
-        <div
-          style={{
-            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(248, 250, 255, 0.7) 50%, rgba(246, 247, 255, 0.65) 100%)',
-            backdropFilter: 'blur(12px)',
-            borderRight: '1px solid rgba(130, 140, 200, 0.15)',
-            overflow: 'auto',
-            position: 'relative'
-          }}
-        >
-          <GroupTitle title="基础配置" color="#5b7cf7" icon={<SettingOutlined />} />
-          <CollapseRow
-            open={openMap.model}
-            title="AI模型配置"
-            onToggle={() => toggle('model')}
-          />
-          <CollapseRow
-            open={openMap.opening}
-            title="开场引导"
-            onToggle={() => toggle('opening')}
-          />
-
-          <GroupTitle title="知识语义" color="#10b981" icon={<BookOutlined />} />
-          <CollapseRow
-            extra={<PlusOutlined style={{ color: '#5b7cf7' }} />}
-            open={openMap.semanticKnowledge}
-            title="数据语义"
-            onToggle={() => toggle('semanticKnowledge')}
-          />
-          <CollapseRow
-            extra={<PlusOutlined style={{ color: '#5b7cf7' }} />}
-            open={openMap.ontologyNetwork}
-            title="本体网络"
-            onToggle={() => toggle('ontologyNetwork')}
-          />
-
-          <GroupTitle title="扩展能力" color="#f59e0b" icon={<ThunderboltOutlined />} />
-          <CollapseRow
-            extra={<PlusOutlined style={{ color: '#5b7cf7' }} />}
-            open={openMap.mcpTools}
-            title="MCP"
-            onToggle={() => toggle('mcpTools')}
-          >
-            {/* MCP工具分组 */}
-            <div style={{ padding: '4px 24px 8px' }}>
-              <ToolGroupHeader
-                checked={isGroupAllChecked('mcp')}
-                count={mcpTools.length}
-                indeterminate={isGroupIndeterminate('mcp')}
-                title="MCP工具"
-                onChange={checked => handleGroupCheck('mcp', checked)}
+                value={name}
+                onBlur={() => setEditingName(false)}
+                onChange={(e) => setName(e.target.value)}
+                onPressEnter={() => setEditingName(false)}
               />
-              {mcpTools.length === 0 ? (
-                <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无MCP工具</div>
-              ) : (
-                mcpTools.map(item => (
-                  <ToolItemRow
-                    key={item.id}
-                    description={item.description}
-                    name={item.name}
-                    selected={selectedToolIds.has(item.id)}
-                    onToggle={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
-                  />
-                ))
-              )}
-            </div>
-
-            {/* 内置工具分组 */}
-            <div style={{ padding: '4px 24px 8px' }}>
-              <ToolGroupHeader
-                checked={isGroupAllChecked('builtin')}
-                count={builtinTools.length}
-                indeterminate={isGroupIndeterminate('builtin')}
-                title="内置工具"
-                onChange={checked => handleGroupCheck('builtin', checked)}
-              />
-              {builtinTools.length === 0 ? (
-                <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无内置工具</div>
-              ) : (
-                builtinTools.map(item => (
-                  <ToolItemRow
-                    key={item.id}
-                    description={item.description}
-                    name={item.name}
-                    selected={selectedToolIds.has(item.id)}
-                    onToggle={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
-                  />
-                ))
-              )}
-            </div>
-          </CollapseRow>
-
-          <CollapseRow
-            extra={
-              <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
-                <QuestionCircleOutlined style={{ color: '#8fa0b5' }} />
-                <PlusOutlined style={{ color: '#5b7cf7' }} />
-              </span>
-            }
-            open={openMap.skills}
-            title="技能"
-            titleExtra={<QuestionCircleOutlined style={{ color: '#8fa0b5', marginLeft: 4 }} />}
-            onToggle={() => toggle('skills')}
-          />
-
-          {/* 推荐问题 */}
-          <CollapseRow
-            extra={
-              <PlusOutlined
-                style={{ color: '#5b7cf7' }}
-                onClick={e => { e.stopPropagation(); setRecDrawerOpen(true); }}
-              />
-            }
-            open={openMap.questions}
-            title="示例"
-            onToggle={() => toggle('questions')}
-          >
-            {recQuestions.length === 0 ? (
-              <div style={{ color: '#8fa0b5', fontSize: 13, padding: '8px 24px' }}>暂无推荐问题</div>
             ) : (
-              recQuestions.slice(0, 3).map((q, i) => (
-                <div
-                  key={i}
-                  style={{ color: '#3e5068', fontSize: 13, padding: '6px 24px', lineHeight: 1.6 }}
-                >
-                  {i + 1}. {q}
-                </div>
-              ))
+              <>
+                <span style={{ fontSize: 17, fontWeight: 600, color: '#1a2744' }}>{name}</span>
+                <EditOutlined style={{ color: '#5b7cf7', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setEditingName(true)} />
+              </>
             )}
-            {recQuestions.length > 3 && (
-              <div
-                style={{ color: '#5b7cf7', cursor: 'pointer', fontSize: 12, padding: '6px 24px', fontWeight: 500 }}
-                onClick={() => setRecDrawerOpen(true)}
-              >
-                查看全部 {recQuestions.length} 条
-              </div>
-            )}
-          </CollapseRow>
-
-          {/* 开启调试模式 */}
-          <div
-            style={{
-              alignItems: 'center',
-              borderTop: '1px solid rgba(130, 140, 200, 0.1)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              padding: '18px 24px',
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.04) 0%, rgba(139, 92, 246, 0.02) 100%)',
-              gap: 12,
-              boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#fff',
-                  fontSize: 16,
-                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
-                  flexShrink: 0
-                }}
-              >
-                <ExperimentOutlined />
-              </div>
-              <span style={{ color: '#1a2744', fontSize: 15, fontWeight: 500, letterSpacing: '0.03em' }}>开启调试模式</span>
-            </div>
-            <Switch
-              checked={enableDebug}
-              onChange={setEnableDebug}
-            />
           </div>
-
-          {/* 访问权限 */}
-          <div
-            style={{
-              alignItems: 'center',
-              borderTop: '1px solid rgba(130, 140, 200, 0.1)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              padding: '18px 24px',
-              background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.04) 0%, rgba(236, 72, 153, 0.02) 100%)',
-              gap: 12,
-              boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  background: 'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#fff',
-                  fontSize: 16,
-                  boxShadow: '0 4px 12px rgba(236, 72, 153, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
-                  flexShrink: 0
-                }}
-              >
-                <SecurityScanOutlined />
-              </div>
-              <span style={{ color: '#1a2744', fontSize: 15, fontWeight: 500, letterSpacing: '0.03em' }}>访问权限</span>
-            </div>
-            <Switch
-              checked={publicAccess === '1'}
-              onChange={(checked) => setPublicAccess(checked ? '1' : '0')}
-              checkedChildren="空间可见"
-              unCheckedChildren="仅自己可见"
-            />
-          </div>
-        </div>
-
-        {/* 推荐问题管理抖幕 */}
-        <Drawer
-          destroyOnClose
-          open={recDrawerOpen}
-          placement="right"
-          title="推荐问题"
-          width={400}
-          extra={
+          <div style={{ alignItems: 'center', display: 'flex', gap: 12, marginLeft: 'auto' }}>
             <Button
-              size="small"
+              onClick={handleSave}
+              style={{
+                borderRadius: 8,
+                border: '1px solid rgba(130, 140, 200, 0.2)',
+                fontWeight: 500,
+                transition: 'all 0.3s ease',
+              }}
+            >
+              保存
+            </Button>
+            <Button
+              loading={saving}
               type="primary"
-              onClick={() => setBatchModalOpen(true)}
+              onClick={handlePublish}
               style={{
                 background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
                 border: 'none',
-                borderRadius: 6
+                borderRadius: 8,
+                boxShadow: '0 4px 12px rgba(91, 124, 247, 0.3)',
+                fontWeight: 600,
+                transition: 'all 0.3s ease',
               }}
             >
-              批量添加
+              上线
             </Button>
-          }
-          onClose={() => setRecDrawerOpen(false)}
-        >
-          {recQuestions.length === 0 ? (
-            <div style={{ color: '#8fa0b5', padding: '32px 0', textAlign: 'center' }}>暂无推荐问题</div>
-          ) : (
-            recQuestions.map((q, i) => (
-              <div
-                key={i}
-                style={{
-                  alignItems: 'center',
-                  borderBottom: '1px solid rgba(130, 140, 200, 0.08)',
-                  display: 'flex',
-                  gap: 8,
-                  padding: '12px 0'
-                }}
-              >
-                <span style={{ color: '#8fa0b5', flexShrink: 0, fontSize: 13, width: 24 }}>{i + 1}.</span>
-                <span style={{ flex: 1, fontSize: 13, color: '#3e5068' }}>{q}</span>
-                <AButton
-                  danger
-                  size="small"
-                  type="link"
-                  onClick={() => handleDeleteQuestion(i)}
-                >
-                  删除
-                </AButton>
-              </div>
-            ))
-          )}
-        </Drawer>
-
-        {/* 批量添加问题 Modal */}
-        <Modal
-          centered
-          destroyOnClose
-          okText="确认"
-          cancelText="取消"
-          open={batchModalOpen}
-          title="批量添加问题"
-          width={560}
-          onOk={handleBatchAdd}
-          onCancel={() => { setBatchModalOpen(false); setBatchText(''); }}
-        >
-          <div style={{ color: '#3e5068', fontSize: 13, marginBottom: 12 }}>
-            每行一个问题，提交后将批量创建。
-          </div>
-          <Input.TextArea
-            autoSize={{ minRows: 10, maxRows: 16 }}
-            placeholder={`请输入问题，每行一个问题\n例如：\n如何使用这个系统？\n系统支持哪些功能？\n如何导出数据？`}
-            value={batchText}
-            onChange={e => setBatchText(e.target.value)}
-            style={{
-              borderRadius: 8,
-              border: '1px solid rgba(130, 140, 200, 0.2)'
-            }}
-          />
-        </Modal>
-
-        {/* 右：调试预览 */}
-        <div
-          style={{
-            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(248, 250, 255, 0.6) 100%)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
-          <SectionHeader icon={headerIcon} title="调试预览" />
-          <div style={{ flex: 1, overflow: 'auto', padding: '18px 24px' }}>
-            <div style={{
-              color: '#8fa0b5',
-              fontSize: 12,
-              marginBottom: 18,
-              textAlign: 'center',
-              fontWeight: 500
-            }}>
-              ----------- 配置已更新 -----------
-            </div>
-            <div style={{ alignItems: 'flex-start', display: 'flex', gap: 10 }}>
-              <div
-                style={{
-                  alignItems: 'center',
-                  background: 'linear-gradient(135deg, #fa8c16 0%, #fa541c 100%)',
-                  borderRadius: 8,
-                  color: '#fff',
-                  display: 'flex',
-                  flexShrink: 0,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  height: 28,
-                  justifyContent: 'center',
-                  width: 28,
-                  boxShadow: '0 2px 8px rgba(250, 140, 22, 0.3)'
-                }}
-              >
-                =
-              </div>
-              <div
-                style={{
-                  background: 'rgba(246, 247, 255, 0.8)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: 10,
-                  fontSize: 13,
-                  lineHeight: 1.7,
-                  padding: '12px 16px',
-                  color: '#3e5068',
-                  border: '1px solid rgba(130, 140, 200, 0.1)'
-                }}
-              >
-                {description || `你好，我是你的${name || '智能助手'}，有什么可以帮助你的？`}
-              </div>
-            </div>
-          </div>
-
-          {/* 推荐问题 + 输入栏 */}
-          <div style={{ padding: '10px 24px 18px' }}>
-            <div style={{ color: '#5f7490', fontSize: 12, marginBottom: 10, fontWeight: 500 }}>推荐问题</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-              {recQuestions.length > 0 ? recQuestions.map((q: string) => (
-                <Tag
-                  key={q}
-                  color="processing"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(91, 124, 247, 0.08) 0%, rgba(112, 145, 250, 0.08) 100%)',
-                    border: '1px solid rgba(91, 124, 247, 0.2)',
-                    borderRadius: 8,
-                    color: '#5b7cf7',
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    margin: 0,
-                    padding: '6px 12px',
-                    width: 'fit-content',
-                    fontWeight: 500,
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {q}
-                </Tag>
-              )) : <span style={{ color: '#9ca3af', fontSize: 12 }}>暂无推荐问题</span>}
-            </div>
-            <Input
-              placeholder="请输入问题"
-              size="large"
-              suffix={<SendOutlined style={{ color: '#5b7cf7' }} />}
-              style={{
-                borderRadius: 10,
-                border: '1px solid rgba(130, 140, 200, 0.2)',
-                background: 'rgba(255, 255, 255, 0.6)'
-              }}
-            />
           </div>
         </div>
-      </div>
+
+        {/* 三栏主体 */}
+        <div
+          style={{
+            display: 'grid',
+            gap: 0,
+            gridTemplateColumns: '1fr 1fr 1fr',
+            height: 'calc(100vh - 60px)',
+          }}
+        >
+          {/* 左：助手画像 */}
+          <div
+            style={{
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(248, 250, 255, 0.6) 100%)',
+              backdropFilter: 'blur(8px)',
+              borderRight: '1px solid rgba(130, 140, 200, 0.12)',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <SectionHeader title="助手配置" />
+            <div style={{ padding: '14px 18px 0' }}>
+              <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600, color: '#3e5068' }}>助手画像</span>
+                <Button
+                  icon={<ThunderboltOutlined />}
+                  size="small"
+                  style={{
+                    color: '#5b7cf7',
+                    fontWeight: 500,
+                  }}
+                  type="link"
+                >
+                  自动优化
+                </Button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden', padding: '10px 18px 18px' }}>
+              <Input.TextArea
+                bordered={false}
+                style={{
+                  height: '100%',
+                  resize: 'none',
+                  background: 'rgba(255, 255, 255, 0.6)',
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                }}
+                placeholder={`请输入您的专属AI角色设定提示词。建议包含：身份背景、性格语气、专业领域及输出要求。设定越清晰，AI的回答越精准。\n\n一键套用模板：角色：[资深数据分析师] + 语气：[客观严谨/通俗易懂] + 任务：[生成Q3财报解读] + 格式：[Markdown/要点列表]。\n\n参考示例：你现在是一位拥有10年经验的资深商业数据分析师，性格严谨客观，擅长从复杂数据中挖掘业务洞察。请基于我提供的原始数据，输出一份结构清晰的月度销售数据报告。要求：必须包含核心指标摘要、数据可视化建议、异常波动归因分析，以及3条可落地的业务优化策略。语言风格需保持专业、精炼，杜绝主观臆断。`}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* 中：基础配置 / 知识 / 能力 */}
+          <div
+            style={{
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(248, 250, 255, 0.7) 50%, rgba(246, 247, 255, 0.65) 100%)',
+              backdropFilter: 'blur(12px)',
+              borderRight: '1px solid rgba(130, 140, 200, 0.15)',
+              overflow: 'auto',
+              position: 'relative',
+            }}
+          >
+            <GroupTitle title="基础配置" color="#5b7cf7" icon={<SettingOutlined />} />
+            <CollapseRow open={openMap.model} title="AI模型配置" onToggle={() => toggle('model')} />
+            <CollapseRow open={openMap.opening} title="开场引导" onToggle={() => toggle('opening')} />
+
+            <GroupTitle title="知识语义" color="#10b981" icon={<BookOutlined />} />
+            <CollapseRow extra={<PlusOutlined style={{ color: '#5b7cf7' }} />} open={openMap.semanticKnowledge} title="数据语义" onToggle={() => toggle('semanticKnowledge')} />
+            <CollapseRow extra={<PlusOutlined style={{ color: '#5b7cf7' }} />} open={openMap.ontologyNetwork} title="本体网络" onToggle={() => toggle('ontologyNetwork')} />
+
+            <GroupTitle title="扩展能力" color="#f59e0b" icon={<ThunderboltOutlined />} />
+            <CollapseRow extra={<PlusOutlined style={{ color: '#5b7cf7' }} />} open={openMap.mcpTools} title="MCP" onToggle={() => toggle('mcpTools')}>
+              {/* MCP工具分组 */}
+              <div style={{ padding: '4px 24px 8px' }}>
+                <ToolGroupHeader
+                  checked={isGroupAllChecked('mcp')}
+                  count={mcpTools.length}
+                  indeterminate={isGroupIndeterminate('mcp')}
+                  title="MCP工具"
+                  onChange={(checked) => handleGroupCheck('mcp', checked)}
+                />
+                {mcpTools.length === 0 ? (
+                  <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无MCP工具</div>
+                ) : (
+                  mcpTools.map((item) => (
+                    <ToolItemRow
+                      key={item.id}
+                      description={item.description}
+                      name={item.name}
+                      selected={selectedToolIds.has(item.id)}
+                      onToggle={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
+                    />
+                  ))
+                )}
+              </div>
+
+              {/* 内置工具分组 */}
+              <div style={{ padding: '4px 24px 8px' }}>
+                <ToolGroupHeader
+                  checked={isGroupAllChecked('builtin')}
+                  count={builtinTools.length}
+                  indeterminate={isGroupIndeterminate('builtin')}
+                  title="内置工具"
+                  onChange={(checked) => handleGroupCheck('builtin', checked)}
+                />
+                {builtinTools.length === 0 ? (
+                  <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无内置工具</div>
+                ) : (
+                  builtinTools.map((item) => (
+                    <ToolItemRow
+                      key={item.id}
+                      description={item.description}
+                      name={item.name}
+                      selected={selectedToolIds.has(item.id)}
+                      onToggle={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
+                    />
+                  ))
+                )}
+              </div>
+            </CollapseRow>
+
+            <CollapseRow
+              extra={
+                <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+                  <QuestionCircleOutlined style={{ color: '#8fa0b5' }} />
+                  <PlusOutlined style={{ color: '#5b7cf7' }} />
+                </span>
+              }
+              open={openMap.skills}
+              title="技能"
+              titleExtra={<QuestionCircleOutlined style={{ color: '#8fa0b5', marginLeft: 4 }} />}
+              onToggle={() => toggle('skills')}
+            />
+
+            {/* 推荐问题 */}
+            <CollapseRow
+              extra={
+                <PlusOutlined
+                  style={{ color: '#5b7cf7' }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setRecDrawerOpen(true)
+                  }}
+                />
+              }
+              open={openMap.questions}
+              title="示例"
+              onToggle={() => toggle('questions')}
+            >
+              {recQuestions.length === 0 ? (
+                <div style={{ color: '#8fa0b5', fontSize: 13, padding: '8px 24px' }}>暂无推荐问题</div>
+              ) : (
+                recQuestions.slice(0, 3).map((q, i) => (
+                  <div key={i} style={{ color: '#3e5068', fontSize: 13, padding: '6px 24px', lineHeight: 1.6 }}>
+                    {i + 1}. {q}
+                  </div>
+                ))
+              )}
+              {recQuestions.length > 3 && (
+                <div style={{ color: '#5b7cf7', cursor: 'pointer', fontSize: 12, padding: '6px 24px', fontWeight: 500 }} onClick={() => setRecDrawerOpen(true)}>
+                  查看全部 {recQuestions.length} 条
+                </div>
+              )}
+            </CollapseRow>
+
+            {/* 开启调试模式 */}
+            <div
+              style={{
+                alignItems: 'center',
+                borderTop: '1px solid rgba(130, 140, 200, 0.1)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '18px 24px',
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.04) 0%, rgba(139, 92, 246, 0.02) 100%)',
+                gap: 12,
+                boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 10,
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontSize: 16,
+                    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <ExperimentOutlined />
+                </div>
+                <span style={{ color: '#1a2744', fontSize: 15, fontWeight: 500, letterSpacing: '0.03em' }}>开启调试模式</span>
+              </div>
+              <Switch checked={enableDebug} onChange={setEnableDebug} />
+            </div>
+
+            {/* 访问权限 */}
+            <div
+              style={{
+                alignItems: 'center',
+                borderTop: '1px solid rgba(130, 140, 200, 0.1)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '18px 24px',
+                background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.04) 0%, rgba(236, 72, 153, 0.02) 100%)',
+                gap: 12,
+                boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 10,
+                    background: 'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontSize: 16,
+                    boxShadow: '0 4px 12px rgba(236, 72, 153, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <SecurityScanOutlined />
+                </div>
+                <span style={{ color: '#1a2744', fontSize: 15, fontWeight: 500, letterSpacing: '0.03em' }}>访问权限</span>
+              </div>
+              <Switch checked={publicAccess === '1'} onChange={(checked) => setPublicAccess(checked ? '1' : '0')} checkedChildren="空间可见" unCheckedChildren="仅自己可见" />
+            </div>
+          </div>
+
+          {/* 推荐问题管理抖幕 */}
+          <CommonDrawer
+            destroyOnClose
+            open={recDrawerOpen}
+            placement="right"
+            title="推荐问题"
+            width={400}
+            extra={
+              <Button
+                size="small"
+                type="primary"
+                onClick={() => setBatchModalOpen(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+                  border: 'none',
+                  borderRadius: 6,
+                }}
+              >
+                批量添加
+              </Button>
+            }
+            onClose={() => setRecDrawerOpen(false)}
+          >
+            {recQuestions.length === 0 ? (
+              <div style={{ color: '#8fa0b5', padding: '32px 0', textAlign: 'center' }}>暂无推荐问题</div>
+            ) : (
+              recQuestions.map((q, i) => (
+                <div
+                  key={i}
+                  style={{
+                    alignItems: 'center',
+                    borderBottom: '1px solid rgba(130, 140, 200, 0.08)',
+                    display: 'flex',
+                    gap: 8,
+                    padding: '12px 0',
+                  }}
+                >
+                  <span style={{ color: '#8fa0b5', flexShrink: 0, fontSize: 13, width: 24 }}>{i + 1}.</span>
+                  <span style={{ flex: 1, fontSize: 13, color: '#3e5068' }}>{q}</span>
+                  <AButton danger size="small" type="link" onClick={() => handleDeleteQuestion(i)}>
+                    删除
+                  </AButton>
+                </div>
+              ))
+            )}
+          </CommonDrawer>
+
+          {/* 批量添加问题 Modal */}
+          <Modal
+            centered
+            destroyOnClose
+            okText="确认"
+            cancelText="取消"
+            open={batchModalOpen}
+            title="批量添加问题"
+            width={560}
+            onOk={handleBatchAdd}
+            onCancel={() => {
+              setBatchModalOpen(false)
+              setBatchText('')
+            }}
+          >
+            <div style={{ color: '#3e5068', fontSize: 13, marginBottom: 12 }}>每行一个问题，提交后将批量创建。</div>
+            <Input.TextArea
+              autoSize={{ minRows: 10, maxRows: 16 }}
+              placeholder={`请输入问题，每行一个问题\n例如：\n如何使用这个系统？\n系统支持哪些功能？\n如何导出数据？`}
+              value={batchText}
+              onChange={(e) => setBatchText(e.target.value)}
+              style={{
+                borderRadius: 8,
+                border: '1px solid rgba(130, 140, 200, 0.2)',
+              }}
+            />
+          </Modal>
+
+          {/* 右：调试预览 */}
+          <div
+            style={{
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(248, 250, 255, 0.6) 100%)',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <SectionHeader icon={headerIcon} title="调试预览" />
+            <div style={{ flex: 1, overflow: 'auto', padding: '18px 24px' }}>
+              <div
+                style={{
+                  color: '#8fa0b5',
+                  fontSize: 12,
+                  marginBottom: 18,
+                  textAlign: 'center',
+                  fontWeight: 500,
+                }}
+              >
+                ----------- 配置已更新 -----------
+              </div>
+              <div style={{ alignItems: 'flex-start', display: 'flex', gap: 10 }}>
+                <div
+                  style={{
+                    alignItems: 'center',
+                    background: 'linear-gradient(135deg, #fa8c16 0%, #fa541c 100%)',
+                    borderRadius: 8,
+                    color: '#fff',
+                    display: 'flex',
+                    flexShrink: 0,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    height: 28,
+                    justifyContent: 'center',
+                    width: 28,
+                    boxShadow: '0 2px 8px rgba(250, 140, 22, 0.3)',
+                  }}
+                >
+                  =
+                </div>
+                <div
+                  style={{
+                    background: 'rgba(246, 247, 255, 0.8)',
+                    backdropFilter: 'blur(8px)',
+                    borderRadius: 10,
+                    fontSize: 13,
+                    lineHeight: 1.7,
+                    padding: '12px 16px',
+                    color: '#3e5068',
+                    border: '1px solid rgba(130, 140, 200, 0.1)',
+                  }}
+                >
+                  {description || `你好，我是你的${name || '智能助手'}，有什么可以帮助你的？`}
+                </div>
+              </div>
+            </div>
+
+            {/* 推荐问题 + 输入栏 */}
+            <div style={{ padding: '10px 24px 18px' }}>
+              <div style={{ color: '#5f7490', fontSize: 12, marginBottom: 10, fontWeight: 500 }}>推荐问题</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                {recQuestions.length > 0 ? (
+                  recQuestions.map((q: string) => (
+                    <Tag
+                      key={q}
+                      color="processing"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(91, 124, 247, 0.08) 0%, rgba(112, 145, 250, 0.08) 100%)',
+                        border: '1px solid rgba(91, 124, 247, 0.2)',
+                        borderRadius: 8,
+                        color: '#5b7cf7',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        margin: 0,
+                        padding: '6px 12px',
+                        width: 'fit-content',
+                        fontWeight: 500,
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {q}
+                    </Tag>
+                  ))
+                ) : (
+                  <span style={{ color: '#9ca3af', fontSize: 12 }}>暂无推荐问题</span>
+                )}
+              </div>
+              <Input
+                placeholder="请输入问题"
+                size="large"
+                suffix={<SendOutlined style={{ color: '#5b7cf7' }} />}
+                style={{
+                  borderRadius: 10,
+                  border: '1px solid rgba(130, 140, 200, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.6)',
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </Spin>
-    </Drawer>
-  );
-};
+    </CommonDrawer>
+  )
+}
 
 // 区域大标题（带浅灰背景）
 const SectionHeader: React.FC<{ title: string; icon?: React.ReactNode }> = ({ icon, title }) => (
@@ -878,13 +850,13 @@ const SectionHeader: React.FC<{ title: string; icon?: React.ReactNode }> = ({ ic
       display: 'flex',
       gap: 10,
       height: 44,
-      padding: '0 18px'
+      padding: '0 18px',
     }}
   >
     {icon}
     <span style={{ fontWeight: 600, color: '#3e5068' }}>{title}</span>
   </div>
-);
+)
 
 // 中栏分组小标题
 const GroupTitle: React.FC<{ title: string; color?: string; icon?: React.ReactNode }> = ({ title, color = '#5b7cf7', icon }) => (
@@ -901,7 +873,7 @@ const GroupTitle: React.FC<{ title: string; color?: string; icon?: React.ReactNo
       gap: 12,
       boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
       position: 'relative',
-      overflow: 'hidden'
+      overflow: 'hidden',
     }}
   >
     {icon && (
@@ -917,7 +889,7 @@ const GroupTitle: React.FC<{ title: string; color?: string; icon?: React.ReactNo
           color: '#fff',
           fontSize: 16,
           boxShadow: `0 4px 12px ${color}50, inset 0 1px 0 rgba(255, 255, 255, 0.3)`,
-          flexShrink: 0
+          flexShrink: 0,
         }}
       >
         {icon}
@@ -925,25 +897,25 @@ const GroupTitle: React.FC<{ title: string; color?: string; icon?: React.ReactNo
     )}
     <span style={{ letterSpacing: '0.03em', fontSize: 15 }}>{title}</span>
   </div>
-);
+)
 
 // 折叠行
 interface CollapseRowProps {
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  extra?: React.ReactNode;
-  titleExtra?: React.ReactNode;
-  children?: React.ReactNode;
+  title: string
+  open: boolean
+  onToggle: () => void
+  extra?: React.ReactNode
+  titleExtra?: React.ReactNode
+  children?: React.ReactNode
 }
 const CollapseRow: React.FC<CollapseRowProps> = ({ children, extra, onToggle, open, title, titleExtra }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  
+  const [isHovered, setIsHovered] = useState(false)
+
   return (
-    <div 
-      style={{ 
+    <div
+      style={{
         borderBottom: '1px solid rgba(130, 140, 200, 0.08)',
-        transition: 'all 0.2s ease'
+        transition: 'all 0.2s ease',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -956,7 +928,7 @@ const CollapseRow: React.FC<CollapseRowProps> = ({ children, extra, onToggle, op
           height: 48,
           padding: '0 20px',
           transition: 'all 0.2s ease',
-          background: isHovered ? 'rgba(91, 124, 247, 0.03)' : 'transparent'
+          background: isHovered ? 'rgba(91, 124, 247, 0.03)' : 'transparent',
         }}
         onClick={onToggle}
       >
@@ -971,46 +943,42 @@ const CollapseRow: React.FC<CollapseRowProps> = ({ children, extra, onToggle, op
             justifyContent: 'center',
             marginRight: 12,
             transition: 'all 0.3s ease',
-            boxShadow: open ? '0 2px 8px rgba(91, 124, 247, 0.3)' : 'none'
+            boxShadow: open ? '0 2px 8px rgba(91, 124, 247, 0.3)' : 'none',
           }}
         >
-          {open ? (
-            <CaretDownOutlined style={{ color: '#fff', fontSize: 10 }} />
-          ) : (
-            <CaretRightOutlined style={{ color: '#8fa0b5', fontSize: 10 }} />
-          )}
+          {open ? <CaretDownOutlined style={{ color: '#fff', fontSize: 10 }} /> : <CaretRightOutlined style={{ color: '#8fa0b5', fontSize: 10 }} />}
         </div>
         <span style={{ fontWeight: 500, color: '#1a2744', fontSize: 13 }}>{title}</span>
         {titleExtra}
-        <span style={{ marginLeft: 'auto' }} onClick={e => e.stopPropagation()}>
+        <span style={{ marginLeft: 'auto' }} onClick={(e) => e.stopPropagation()}>
           {extra}
         </span>
       </div>
       {open && children ? (
-        <div 
-          style={{ 
+        <div
+          style={{
             paddingBottom: 12,
             background: 'rgba(248, 250, 255, 0.3)',
-            animation: 'fadeIn 0.3s ease'
+            animation: 'fadeIn 0.3s ease',
           }}
         >
           {children}
         </div>
       ) : null}
     </div>
-  );
-};
+  )
+}
 
 // 工具分组全选标题行
 interface ToolGroupHeaderProps {
-  title: string;
-  count: number;
-  checked: boolean;
-  indeterminate: boolean;
-  onChange: (checked: boolean) => void;
+  title: string
+  count: number
+  checked: boolean
+  indeterminate: boolean
+  onChange: (checked: boolean) => void
 }
 const ToolGroupHeader: React.FC<ToolGroupHeaderProps> = ({ title, count, checked, indeterminate, onChange }) => {
-  const [hovered, setHovered] = useState(false);
+  const [hovered, setHovered] = useState(false)
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -1025,31 +993,26 @@ const ToolGroupHeader: React.FC<ToolGroupHeaderProps> = ({ title, count, checked
         padding: '6px 8px',
         userSelect: 'none',
         transition: 'all 0.2s ease',
-        marginBottom: 4
+        marginBottom: 4,
       }}
       onClick={() => onChange(!checked)}
     >
-      <Checkbox
-        checked={checked}
-        indeterminate={indeterminate}
-        onChange={e => onChange(e.target.checked)}
-        onClick={e => e.stopPropagation()}
-      />
+      <Checkbox checked={checked} indeterminate={indeterminate} onChange={(e) => onChange(e.target.checked)} onClick={(e) => e.stopPropagation()} />
       <span style={{ fontSize: 12, fontWeight: 600, color: '#595959' }}>{title}</span>
       <span style={{ color: '#bfbfbf', fontSize: 11 }}>({count})</span>
     </div>
-  );
-};
+  )
+}
 
 // 单个工具项行
 interface ToolItemRowProps {
-  name: string;
-  description?: string;
-  selected: boolean;
-  onToggle: () => void;
+  name: string
+  description?: string
+  selected: boolean
+  onToggle: () => void
 }
 const ToolItemRow: React.FC<ToolItemRowProps> = ({ name, description, selected, onToggle }) => {
-  const [hovered, setHovered] = useState(false);
+  const [hovered, setHovered] = useState(false)
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -1063,41 +1026,43 @@ const ToolItemRow: React.FC<ToolItemRowProps> = ({ name, description, selected, 
         gap: 10,
         padding: '6px 8px 6px 28px',
         userSelect: 'none',
-        transition: 'all 0.2s ease'
+        transition: 'all 0.2s ease',
       }}
       onClick={onToggle}
     >
-      <Checkbox
-        checked={selected}
-        onChange={() => onToggle()}
-        onClick={e => e.stopPropagation()}
-      />
-      <div style={{
-        alignItems: 'center',
-        background: '#fff7e6',
-        borderRadius: 6,
-        color: '#fa8c16',
-        display: 'flex',
-        height: 24,
-        justifyContent: 'center',
-        width: 24,
-        flexShrink: 0
-      }}>
+      <Checkbox checked={selected} onChange={() => onToggle()} onClick={(e) => e.stopPropagation()} />
+      <div
+        style={{
+          alignItems: 'center',
+          background: '#fff7e6',
+          borderRadius: 6,
+          color: '#fa8c16',
+          display: 'flex',
+          height: 24,
+          justifyContent: 'center',
+          width: 24,
+          flexShrink: 0,
+        }}
+      >
         <ThunderboltOutlined style={{ fontSize: 14 }} />
       </div>
       <Tooltip title={description || name}>
-        <span style={{
-          color: selected ? '#5b7cf7' : '#1a2744',
-          fontSize: 13,
-          fontWeight: selected ? 500 : 400,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          transition: 'all 0.2s ease'
-        }}>{name}</span>
+        <span
+          style={{
+            color: selected ? '#5b7cf7' : '#1a2744',
+            fontSize: 13,
+            fontWeight: selected ? 500 : 400,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {name}
+        </span>
       </Tooltip>
     </div>
-  );
-};
+  )
+}
 
-export default AssistantEditDrawer;
+export default AssistantEditDrawer

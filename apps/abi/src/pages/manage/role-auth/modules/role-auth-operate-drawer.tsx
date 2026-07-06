@@ -1,32 +1,33 @@
-import { LeftOutlined, ReloadOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
-import { Form, message } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { LeftOutlined, ReloadOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons'
+import { Form, message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+import React, { useEffect, useState } from 'react'
 
-import { enableStatusRecord } from '@/constants/business';
-import { assignUserUnallocatedList } from '@/service/api/role';
+import { enableStatusRecord } from '@/constants/business'
+import { assignUserUnallocatedList } from '@/service/api/role'
 
 // 定义类型接口
 interface RolePermissioDrawerProps {
-  onClose: () => void;
-  onSubmit: (params: any) => Promise<void>;
-  roleId: number | string;
-  visible: boolean;
+  onClose: () => void
+  onSubmit: (params: any) => Promise<void>
+  roleId: number | string
+  visible: boolean
 }
-type ReadonlyRolePermissioDrawerProps = Readonly<RolePermissioDrawerProps>;
+type ReadonlyRolePermissioDrawerProps = Readonly<RolePermissioDrawerProps>
 
 const MultiSelectTableDrawer: React.FC<ReadonlyRolePermissioDrawerProps> = ({ roleId, visible, onClose, onSubmit }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
 
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
-  const [pageNum, setPageNum] = useState(1);
-  const [pageSizeVal, setPageSizeVal] = useState(10);
-  const [total, setTotal] = useState(0);
-  const [jumpValue, setJumpValue] = useState('');
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [searchUserName, setSearchUserName] = useState('');
-  const [searchPhone, setSearchPhone] = useState('');
+  const [form] = Form.useForm()
+  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState([])
+  const [pageNum, setPageNum] = useState(1)
+  const [pageSizeVal, setPageSizeVal] = useState(10)
+  const [total, setTotal] = useState(0)
+  const [jumpValue, setJumpValue] = useState('')
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [searchUserName, setSearchUserName] = useState('')
+  const [searchPhone, setSearchPhone] = useState('')
 
   const columns = [
     {
@@ -34,197 +35,205 @@ const MultiSelectTableDrawer: React.FC<ReadonlyRolePermissioDrawerProps> = ({ ro
       dataIndex: 'userName',
       key: 'userName',
       minWidth: 120,
-      title: t('page.manage.user.userName')
+      title: t('page.manage.user.userName'),
     },
     {
       align: 'center',
       dataIndex: 'nickName',
       key: 'nickName',
       minWidth: 120,
-      title: t('page.manage.user.nickName')
+      title: t('page.manage.user.nickName'),
     },
     {
       align: 'center',
       dataIndex: 'email',
       key: 'email',
       minWidth: 150,
-      title: t('page.manage.common.email')
+      title: t('page.manage.common.email'),
     },
     {
       align: 'center',
       dataIndex: 'phonenumber',
       key: 'phonenumber',
       minWidth: 130,
-      title: t('page.manage.user.phonenumber')
+      title: t('page.manage.user.phonenumber'),
     },
     {
       align: 'center' as const,
       dataIndex: 'status',
       key: 'status',
       render: (_: any, record: any) => {
-        const label = t(enableStatusRecord[record.status as Api.Common.EnableStatus]);
+        const label = t(enableStatusRecord[record.status as Api.Common.EnableStatus])
         if (record.status === '0') {
-          return <ATag color="success">{label}</ATag>;
+          return <ATag color="success">{label}</ATag>
         }
-        return <ATag color="error">{label}</ATag>;
+        return <ATag color="error">{label}</ATag>
       },
       title: t('page.manage.role.status'),
-      width: 100
+      width: 100,
     },
     {
       align: 'center',
       dataIndex: 'createTime',
       key: 'createTime',
       minWidth: 160,
-      title: t('page.manage.role.createTime')
-    }
-  ];
+      title: t('page.manage.role.createTime'),
+    },
+  ]
 
   const fetchData = async (params: any) => {
-    setLoading(true);
+    setLoading(true)
     try {
       const curParams = {
         pageNum: params.pageNum,
         pageSize: params.pageSize,
         roleId,
-        ...form.getFieldsValue()
-      };
+        ...form.getFieldsValue(),
+      }
 
-      const res: any = await assignUserUnallocatedList(curParams);
+      const res: any = await assignUserUnallocatedList(curParams)
       if (res?.response?.data?.rows) {
-        const { rows, total: totalCount } = res.response.data;
-        setData(rows);
-        setTotal(totalCount);
+        const { rows, total: totalCount } = res.response.data
+        setData(rows)
+        setTotal(totalCount)
       }
     } catch (error) {
-      message.error('获取列表数据失败');
+      message.error('获取列表数据失败')
       // eslint-disable-next-line
-      console.error('Fetch list error:', error);
+      console.error('Fetch list error:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const rowSelection = {
     onChange: (selectedKeys: React.Key[]) => {
-      setSelectedRowKeys(selectedKeys);
+      setSelectedRowKeys(selectedKeys)
     },
-    selectedRowKeys
-  };
+    selectedRowKeys,
+  }
 
   function handleSubmit() {
-    onSubmit(selectedRowKeys);
+    onSubmit(selectedRowKeys)
   }
 
   // Search handlers
   const handleSearch = () => {
     form.setFieldsValue({
       userName: searchUserName.trim(),
-      phonenumber: searchPhone.trim()
-    });
-    setPageNum(1);
+      phonenumber: searchPhone.trim(),
+    })
+    setPageNum(1)
     fetchData({
       pageNum: 1,
-      pageSize: pageSizeVal
-    });
-  };
+      pageSize: pageSizeVal,
+    })
+  }
 
   const handleReset = () => {
-    setSearchUserName('');
-    setSearchPhone('');
-    form.resetFields();
-    setPageNum(1);
+    setSearchUserName('')
+    setSearchPhone('')
+    form.resetFields()
+    setPageNum(1)
     fetchData({
       pageNum: 1,
-      pageSize: pageSizeVal
-    });
-  };
+      pageSize: pageSizeVal,
+    })
+  }
 
   // Pagination logic
-  const totalPages = Math.ceil(total / pageSizeVal) || 1;
+  const totalPages = Math.ceil(total / pageSizeVal) || 1
 
   const handlePageSizeChange = (value: number) => {
-    setPageSizeVal(value);
-    setPageNum(1);
+    setPageSizeVal(value)
+    setPageNum(1)
     fetchData({
       pageNum: 1,
-      pageSize: value
-    });
-  };
+      pageSize: value,
+    })
+  }
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
-      setPageNum(page);
+      setPageNum(page)
       fetchData({
         pageNum: page,
-        pageSize: pageSizeVal
-      });
+        pageSize: pageSizeVal,
+      })
     }
-  };
+  }
 
-  const handlePrev = () => { if (pageNum > 1) handlePageChange(pageNum - 1); };
-  const handleNext = () => { if (pageNum < totalPages) handlePageChange(pageNum + 1); };
+  const handlePrev = () => {
+    if (pageNum > 1) handlePageChange(pageNum - 1)
+  }
+  const handleNext = () => {
+    if (pageNum < totalPages) handlePageChange(pageNum + 1)
+  }
 
   const handleJump = () => {
-    const page = parseInt(jumpValue, 10);
+    const page = parseInt(jumpValue, 10)
     if (!isNaN(page) && page >= 1 && page <= totalPages) {
-      handlePageChange(page);
-      setJumpValue('');
+      handlePageChange(page)
+      setJumpValue('')
     }
-  };
+  }
 
   const renderPageNumbers = () => {
-    const pages: (number | string)[] = [];
-    const maxVisible = 5;
+    const pages: (number | string)[] = []
+    const maxVisible = 5
     if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
     } else if (pageNum <= 3) {
-      for (let i = 1; i <= 4; i++) pages.push(i);
-      pages.push('...', totalPages);
+      for (let i = 1; i <= 4; i++) pages.push(i)
+      pages.push('...', totalPages)
     } else if (pageNum >= totalPages - 2) {
-      pages.push(1, '...');
-      for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      pages.push(1, '...')
+      for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i)
     } else {
-      pages.push(1, '...');
-      pages.push(pageNum - 1, pageNum, pageNum + 1);
-      pages.push('...', totalPages);
+      pages.push(1, '...')
+      pages.push(pageNum - 1, pageNum, pageNum + 1)
+      pages.push('...', totalPages)
     }
     return pages.map((page, idx) => {
-      if (page === '...') return <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">...</span>;
-      const isActive = page === pageNum;
+      if (page === '...')
+        return (
+          <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">
+            ...
+          </span>
+        )
+      const isActive = page === pageNum
       return (
         <span key={page} className={`page-item ${isActive ? 'page-active' : ''}`} onClick={() => handlePageChange(page as number)}>
           {page}
         </span>
-      );
-    });
-  };
+      )
+    })
+  }
 
   // 初始化加载数据
   useEffect(() => {
     if (roleId) {
-      setData([]);
-      setSelectedRowKeys([]);
-      setPageNum(1);
+      setData([])
+      setSelectedRowKeys([])
+      setPageNum(1)
 
       if (visible) {
-        fetchData({ pageNum: 1, pageSize: pageSizeVal });
+        fetchData({ pageNum: 1, pageSize: pageSizeVal })
       }
     }
-  }, [roleId, visible]);
+  }, [roleId, visible])
 
   return (
-    <ADrawer
+    <CommonDrawer
       open={visible}
       title={t('page.manage.role.selectUser')}
       width={1000}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-          <AButton className="btn-ghost-v5" onClick={onClose}>{t('common.cancel')}</AButton>
-          <AButton
-            className="btn-accent-gradient"
-            onClick={handleSubmit}
-          >
+          <AButton className="btn-ghost-v5" onClick={onClose}>
+            {t('common.cancel')}
+          </AButton>
+          <AButton className="btn-accent-gradient" onClick={handleSubmit}>
             {t('common.confirm')}
           </AButton>
         </div>
@@ -272,7 +281,7 @@ const MultiSelectTableDrawer: React.FC<ReadonlyRolePermissioDrawerProps> = ({ ro
               borderRadius: '12px',
               overflow: 'hidden',
               flex: 1,
-              minHeight: 0
+              minHeight: 0,
             }}
           >
             <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
@@ -315,21 +324,14 @@ const MultiSelectTableDrawer: React.FC<ReadonlyRolePermissioDrawerProps> = ({ ro
               </button>
               <span className="quick-jumper">
                 前往
-                <AInput
-                  className="jump-input"
-                  style={{ width: 48, textAlign: 'center' }}
-                  value={jumpValue}
-                  onChange={(e) => setJumpValue(e.target.value)}
-                  onPressEnter={handleJump}
-                />
-                页
+                <AInput className="jump-input" style={{ width: 48, textAlign: 'center' }} value={jumpValue} onChange={(e) => setJumpValue(e.target.value)} onPressEnter={handleJump} />页
               </span>
             </div>
           </div>
         </div>
       </div>
-    </ADrawer>
-  );
-};
+    </CommonDrawer>
+  )
+}
 
-export default MultiSelectTableDrawer;
+export default MultiSelectTableDrawer

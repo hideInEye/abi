@@ -1,15 +1,16 @@
-import { CloseOutlined } from '@ant-design/icons';
-import { Steps, message } from 'antd'; // 新增配置列表
-import { useForm } from 'antd/es/form/Form';
+import { CloseOutlined } from '@ant-design/icons'
+import { Steps, message } from 'antd' // 新增配置列表
+import { useForm } from 'antd/es/form/Form'
 
-import { useAppSelector } from '@/hooks/business/useStore';
-import { addTerms, editTerms } from '@/service/api/Industry.ts';
-import { getSpaceId } from '@/store/slice/app';
+import { useAppSelector } from '@/hooks/business/useStore'
+import { addTerms, editTerms } from '@/service/api/Industry.ts'
+import { getSpaceId } from '@/store/slice/app'
 
-import type { TagGroup } from '../types/index.ts';
+import type { TagGroup } from '../types/index.ts'
 
-import BasicInformation from './BasicInformation.tsx';
-import CalculateCom from './CalculateCom.tsx';
+import BasicInformation from './BasicInformation.tsx'
+import CalculateCom from './CalculateCom.tsx'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 // import { fetchAssistantConfigList, getAgentConfig } from '@/service/api/assistant-manage';
 
 const initState = {
@@ -22,50 +23,50 @@ const initState = {
   relViewid: undefined,
   remark: '',
   techName: '',
-  termAlias: ''
-};
+  termAlias: '',
+}
 
 const reducer = (state: typeof initState, field: any) => {
   return {
     ...state,
-    ...field
-  };
-};
+    ...field,
+  }
+}
 
 interface Props {
-  readonly editingGroup: TagGroup | null;
-  readonly groupId?: number;
-  readonly onClose: (refresh?: boolean) => void;
-  isEdit?: boolean; // 新增
+  readonly editingGroup: TagGroup | null
+  readonly groupId?: number
+  readonly onClose: (refresh?: boolean) => void
+  isEdit?: boolean // 新增
 }
 const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, onClose, isEdit }) => {
-  const spaceId = useAppSelector(getSpaceId) || 0;
-  const [state, dispatch] = useReducer(reducer, initState);
-  const [form] = useForm();
+  const spaceId = useAppSelector(getSpaceId) || 0
+  const [state, dispatch] = useReducer(reducer, initState)
+  const [form] = useForm()
 
   useEffect(() => {
     if (editingGroup) {
-      dispatch(editingGroup);
+      dispatch(editingGroup)
     }
-  }, [editingGroup]);
+  }, [editingGroup])
 
-  const handleCb = async (res:any) => {
-   if(res.response.data.code>200){
-    message.error(res.response.data.msg)
-    return
-   }
-    
-    message.success('操作成功');
-    onClose(true);
-  };
+  const handleCb = async (res: any) => {
+    if (res.response.data.code > 200) {
+      message.error(res.response.data.msg)
+      return
+    }
+
+    message.success('操作成功')
+    onClose(true)
+  }
 
   async function handleSubmit() {
     if (!groupId) {
-      message.error('请先创建行业术语组');
-      return;
+      message.error('请先创建行业术语组')
+      return
     }
 
-    await form.validateFields();
+    await form.validateFields()
     const params = {
       ...state,
       // 英文名称同时写入 techName 与 engName，确保唯一性校验字段一致
@@ -73,15 +74,15 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
       engName: state.techName,
       groupId,
       spaceId,
-      status: 1 // 写死
-    };
+      status: 1, // 写死
+    }
 
     if (editingGroup) {
-      delete params.updateTime;
-      delete params.createTime;
-      editTerms(params).then(handleCb);
+      delete params.updateTime
+      delete params.createTime
+      editTerms(params).then(handleCb)
     } else {
-      addTerms(params).then(handleCb);
+      addTerms(params).then(handleCb)
     }
   }
   const steps = [
@@ -94,7 +95,7 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
           // 不传 isEdit，保持可编辑
         />
       ),
-      title: '基本信息'
+      title: '基本信息',
     },
     {
       content: (
@@ -105,60 +106,43 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
           isEdit={isEdit} // 只这里传递
         />
       ),
-      title: '计算加工'
-    }
-  ];
+      title: '计算加工',
+    },
+  ]
 
   // const { token } = theme.useToken();
-  const [current, setCurrent] = useState(0);
+  const [current, setCurrent] = useState(0)
 
   const next = async () => {
-    await form.validateFields();
-    setCurrent(current + 1);
-  };
+    await form.validateFields()
+    setCurrent(current + 1)
+  }
 
   const prev = () => {
-    setCurrent(current - 1);
-  };
+    setCurrent(current - 1)
+  }
 
-  const items = steps.map(item => ({ key: item.title, title: item.title }));
+  const items = steps.map((item) => ({ key: item.title, title: item.title }))
 
   return (
-    <ADrawer
-      closeIcon={null}
+    <CommonDrawer
       open={true}
       title={editingGroup ? '编辑行业术语' : '新建行业术语'}
       width={800}
-      extra={
-        <AButton
-          icon={<CloseOutlined />}
-          type="text"
-          onClick={() => onClose()}
-        />
-      }
       footer={
         <ASpace className="flex justify-end">
           {current > 0 && (
-            <AButton
-              style={{ margin: '0 8px' }}
-              onClick={() => prev()}
-            >
+            <AButton style={{ margin: '0 8px' }} onClick={() => prev()}>
               上一步
             </AButton>
           )}
           {current < steps.length - 1 && (
-            <AButton
-              type="primary"
-              onClick={() => next()}
-            >
+            <AButton type="primary" onClick={() => next()}>
               下一步
             </AButton>
           )}
           {current === steps.length - 1 && (
-            <AButton
-              type="primary"
-              onClick={handleSubmit}
-            >
+            <AButton type="primary" onClick={handleSubmit}>
               确认
             </AButton>
           )}
@@ -167,14 +151,11 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
       onClose={() => onClose()}
     >
       <div className="mb-4 px-[150px]">
-        <Steps
-          current={current}
-          items={items}
-        />
+        <Steps current={current} items={items} />
       </div>
       <div>{steps[current].content}</div>
-    </ADrawer>
-  );
-});
+    </CommonDrawer>
+  )
+})
 
-export default TechnicalJargonOperateDrawer;
+export default TechnicalJargonOperateDrawer

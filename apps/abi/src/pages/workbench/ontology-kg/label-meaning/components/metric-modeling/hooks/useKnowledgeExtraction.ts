@@ -2,6 +2,7 @@ import { message } from 'antd'
 
 import {
   addKnowledgeIndicator,
+  deleteKnowledgeIndicatorBatch,
   deleteKnowledgeIndicator,
   editKnowledgeIndicator,
   queryKnowledgeIndicatorDetail,
@@ -141,15 +142,13 @@ function normalizeDetail(res: ApiResponseLike): KnowledgeIndicatorItem | null {
 }
 
 function buildSubmitPayload(payload: KnowledgeSubmitPayload, selectedGroup: KnowledgeGroupItem | null) {
-  const selectedGroupId = toNumberOrUndefined(selectedGroup?.groupId)
-
   return compactPayload({
     alertConfig: payload.alertConfig,
     bizName: trimOrUndefined(payload.bizName),
     businessDefinition: trimOrUndefined(payload.businessDefinition),
     calcLogic: buildKnowledgeCalcLogic(payload),
     dataType: trimOrUndefined(payload.dataType),
-    groupId: selectedGroupId ?? toNumberOrUndefined(payload.groupId),
+    groupId: selectedGroup?.groupId ?? payload.groupId,
     indAlias: trimOrUndefined(payload.indAlias),
     indicatorClass: trimOrUndefined(payload.indicatorClass),
     indicatorCode: trimOrUndefined(payload.indicatorCode),
@@ -183,6 +182,7 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
   const [customDrawerOpen, setCustomDrawerOpen] = useState(false)
   const [atomicDrawerOpen, setAtomicDrawerOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<KnowledgeIndicatorItem | null>(null)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
 
   const fetchTableData = async (params?: Partial<KnowledgeSearchParams>, nextPagination: KnowledgePagination = pagination) => {
     if (!selectedGroup?.groupId) {
@@ -208,6 +208,7 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
       const pageData = getIndicatorPageData(res)
       const list = (pageData?.list || []) as KnowledgeIndicatorItem[]
       setTableData(list)
+      setSelectedRowKeys([])
       setPagination(current => ({
         ...current,
         pageNum: nextPagination.pageNum,
@@ -309,6 +310,21 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     fetchTableData()
   }
 
+  const handleBatchDelete = async () => {
+    const ids = selectedRowKeys.map(item => Number(item)).filter(item => !Number.isNaN(item))
+    if (!ids.length) {
+      message.warning('请先选择要删除的指标')
+      return
+    }
+    const res = await deleteKnowledgeIndicatorBatch({ ids })
+    if (!isApiSuccess(res)) {
+      message.error(getApiErrorMessage(res, '批量删除失败'))
+      return
+    }
+    message.success('批量删除成功')
+    await fetchTableData()
+  }
+
   const handleSubmit = async (payload: KnowledgeSubmitPayload, isEdit: boolean) => {
     const params = buildSubmitPayload(payload, selectedGroup)
     const res = isEdit ? await editKnowledgeIndicator(params) : await addKnowledgeIndicator(params)
@@ -356,6 +372,7 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     editingItem,
     handleAddAtomic,
     handleAddCustom,
+    handleBatchDelete,
     handleDelete,
     handleEdit,
     handleAtomicMappingSubmit,
@@ -365,6 +382,8 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     handleSubmit,
     loading,
     searchParams,
+    selectedRowKeys,
+    setSelectedRowKeys,
     tableData,
     pagination,
     handlePaginationChange

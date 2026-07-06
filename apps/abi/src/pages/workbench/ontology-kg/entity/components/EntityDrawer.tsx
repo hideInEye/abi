@@ -1,5 +1,6 @@
 import { CloseOutlined } from '@ant-design/icons'
-import { Button, Drawer, Form, Input, Select, Space, message } from 'antd'
+import { Button, Form, Input, Select, Space, message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { OntologyEntity, OntologyLabel, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
@@ -63,9 +64,7 @@ export const EntityDrawer: React.FC<EntityDrawerProps> = ({ entity, labels, onCl
   }, [form, onClose])
 
   return (
-    <Drawer
-      closeIcon={null}
-      extra={<Button icon={<CloseOutlined />} type="text" onClick={handleClose} />}
+    <CommonDrawer
       footer={
         <Space className="flex justify-end">
           <Button onClick={handleClose}>取消</Button>
@@ -111,12 +110,12 @@ export const EntityDrawer: React.FC<EntityDrawerProps> = ({ entity, labels, onCl
           )}
         </Form.Item>
         <Form.Item label="实体颜色" name="color" rules={[{ message: '请选择实体颜色', required: true }]}>
-          <input aria-label="实体颜色" style={{ height: 32, padding: 0, width: 32, borderRadius:'50%' }} type="color" />
+          <input aria-label="实体颜色" style={{ height: 32, padding: 0, width: 32, borderRadius: '50%' }} type="color" />
         </Form.Item>
         <Form.Item label="备注" name="remark" rules={[{ max: 500, message: '备注最多500个字符' }]}>
           <Input.TextArea maxLength={500} placeholder="请输入备注" rows={4} showCount />
         </Form.Item>
       </Form>
-    </Drawer>
+    </CommonDrawer>
   )
 }

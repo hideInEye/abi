@@ -4,12 +4,6 @@
 
 /* ── 抽屉整体 ── */
 .dept-drawer-v5 {
-  .ant-drawer-header {
-    background: linear-gradient(135deg, rgba(91, 124, 247, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%);
-    border-bottom: 1px solid rgba(91, 124, 247, 0.1);
-    padding: 20px 24px;
-  }
-
   .ant-drawer-body {
     padding: 24px;
     background: linear-gradient(180deg, rgba(248, 250, 255, 0.5) 0%, rgba(255, 255, 255, 0.8) 100%);
@@ -19,34 +13,6 @@
     border-top: 1px solid rgba(130, 140, 200, 0.12);
     padding: 16px 24px;
     background: rgba(255, 255, 255, 0.6);
-  }
-
-  /* ── 标题 ── */
-  .dept-drawer-title-v5 {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #1a2744;
-  }
-
-  .dept-drawer-title-icon {
-    font-size: 20px;
-    color: #5b7cf7;
-    filter: drop-shadow(0 2px 4px rgba(91, 124, 247, 0.2));
-  }
-
-  .dept-drawer-close-icon {
-    font-size: 16px;
-    color: #768a9f;
-    cursor: pointer;
-    transition: all 0.2s;
-
-    &:hover {
-      color: #5b7cf7;
-      transform: rotate(90deg);
-    }
   }
 
   /* ── 表单面板 ── */
@@ -93,7 +59,7 @@
         &.ant-select-focused .ant-select-selector {
           border-color: #5b7cf7 !important;
           background: rgba(255, 255, 255, 0.88) !important;
-          box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.10) !important;
+          box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.1) !important;
         }
       }
 

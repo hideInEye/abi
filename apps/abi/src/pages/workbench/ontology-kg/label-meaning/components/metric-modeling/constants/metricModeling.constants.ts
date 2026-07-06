@@ -68,7 +68,7 @@ export const EXTENDED_TEMPLATE_DESC_MAP: Record<string, string> = {
 }
 
 export const RATIO_PRECISION_OPTIONS = [
-  { label: '保留 0 位小数', value: '0' },
+  { label: '保留整数', value: '0' },
   { label: '保留 1 位小数', value: '1' },
   { label: '保留 2 位小数', value: '2' },
   { label: '保留 3 位小数', value: '3' },

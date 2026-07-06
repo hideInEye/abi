@@ -1,5 +1,6 @@
 import { CloseOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Drawer, Empty, Form, Input, Select, Space, Table, Tabs, message } from 'antd'
+import { Button, Empty, Form, Input, Select, Space, Table, Tabs, message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import type { ColumnsType } from 'antd/es/table'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -234,9 +235,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
   const labelName = renderedEntity?.labelId === null || renderedEntity?.labelId === undefined ? '-' : (labels.find((label) => String(label.id) === String(renderedEntity.labelId))?.bizName ?? '-')
 
   return (
-    <Drawer
-      closeIcon={null}
-      extra={<Button icon={<CloseOutlined />} type="text" onClick={onClose} />}
+    <CommonDrawer
       footer={
         <Space className="flex justify-end">
           <Button onClick={onClose}>取消</Button>
@@ -309,6 +308,6 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
           rowKey={(attribute) => `${attribute.attributeType}-${attribute.attributeCode}`}
         />
       )}
-    </Drawer>
+    </CommonDrawer>
   )
 }

@@ -1,20 +1,21 @@
-import { CloseOutlined, DeleteOutlined, EditOutlined, TeamOutlined } from '@ant-design/icons';
-import { useEffect, useRef, useState } from 'react';
+import { CloseOutlined, DeleteOutlined, EditOutlined, TeamOutlined } from '@ant-design/icons'
+import { useEffect, useRef, useState } from 'react'
 
-import SpaceFeatureSet from './SpaceFeatureSet';
+import SpaceFeatureSet from './SpaceFeatureSet'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
 export default function SpaceCollection() {
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const [timerWidth, setTimerWidth] = useState<number>(0);
-  const timerRef = useRef<HTMLSpanElement>(null);
+  const [timerWidth, setTimerWidth] = useState<number>(0)
+  const timerRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     if (timerRef.current) {
-      const width = timerRef.current.getBoundingClientRect().width;
-      setTimerWidth(width);
+      const width = timerRef.current.getBoundingClientRect().width
+      setTimerWidth(width)
     }
-  }, []);
+  }, [])
 
   const dataAssets = [
     {
@@ -23,7 +24,7 @@ export default function SpaceCollection() {
       id: '1',
       name: '风控空间',
       num: 38,
-      tag: '风控'
+      tag: '风控',
     },
     {
       createPerson: '李四',
@@ -31,7 +32,7 @@ export default function SpaceCollection() {
       id: '2',
       name: '数据分析空间',
       num: 38,
-      tag: '数据分析'
+      tag: '数据分析',
     },
     {
       createPerson: '王五',
@@ -39,7 +40,7 @@ export default function SpaceCollection() {
       id: '3',
       name: '数据分析空间',
       num: 38,
-      tag: '数据分析'
+      tag: '数据分析',
     },
     {
       createPerson: '赵六',
@@ -47,7 +48,7 @@ export default function SpaceCollection() {
       id: '4',
       name: '数据分析空间',
       num: 38,
-      tag: '数据分析'
+      tag: '数据分析',
     },
     {
       createPerson: '赵六',
@@ -55,7 +56,7 @@ export default function SpaceCollection() {
       id: '5',
       name: '数据分析空间',
       num: 38,
-      tag: '数据分析'
+      tag: '数据分析',
     },
     {
       createPerson: '张三',
@@ -63,7 +64,7 @@ export default function SpaceCollection() {
       id: '6',
       name: '风控空间',
       num: 38,
-      tag: '风控'
+      tag: '风控',
     },
     {
       createPerson: '李四',
@@ -71,7 +72,7 @@ export default function SpaceCollection() {
       id: '7',
       name: '数据分析空间',
       num: 38,
-      tag: '数据分析'
+      tag: '数据分析',
     },
     {
       createPerson: '王五',
@@ -79,7 +80,7 @@ export default function SpaceCollection() {
       id: '8',
       name: '数据分析空间',
       num: 38,
-      tag: '数据分析'
+      tag: '数据分析',
     },
     {
       createPerson: '赵六',
@@ -87,7 +88,7 @@ export default function SpaceCollection() {
       id: '9',
       name: '数据分析空间',
       num: 38,
-      tag: '数据分析'
+      tag: '数据分析',
     },
     {
       createPerson: '赵六',
@@ -95,44 +96,32 @@ export default function SpaceCollection() {
       id: '10',
       name: '数据分析空间',
       num: 38,
-      tag: '数据分析'
-    }
-  ];
+      tag: '数据分析',
+    },
+  ]
 
   return (
     <section>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        {dataAssets.map(item => (
-          <ACard
-            className="flex flex-col"
-            key={item.id}
-          >
+        {dataAssets.map((item) => (
+          <ACard className="flex flex-col" key={item.id}>
             <div className="flex flex-col text-sm font-bold">{item.name}</div>
             <div className="mt-2 flex flex-col gap-2 border-t border-gray-100 pt-2 text-xs op80">
               <div className="flex justify-between">
                 <span className="w-13">创建人</span>
-                <span
-                  className="text-left"
-                  style={{ width: timerWidth }}
-                >
+                <span className="text-left" style={{ width: timerWidth }}>
                   {item.createPerson}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="w-13">标签</span>
-                <span
-                  className="text-left"
-                  style={{ width: timerWidth }}
-                >
+                <span className="text-left" style={{ width: timerWidth }}>
                   {item.tag}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="w-13">创建时间</span>
-                <span
-                  className="timeer text-left"
-                  ref={timerRef}
-                >
+                <span className="timeer text-left" ref={timerRef}>
                   {item.createTime}
                 </span>
               </div>
@@ -144,19 +133,8 @@ export default function SpaceCollection() {
                 <span className="text-xs font-400">{item.num}</span>
               </div>
               <div className="flex justify-end">
-                <AButton
-                  color="primary"
-                  icon={<EditOutlined />}
-                  size="small"
-                  variant="link"
-                  onClick={() => setDrawerOpen(!drawerOpen)}
-                />
-                <AButton
-                  color="danger"
-                  icon={<DeleteOutlined />}
-                  size="small"
-                  variant="link"
-                />
+                <AButton color="primary" icon={<EditOutlined />} size="small" variant="link" onClick={() => setDrawerOpen(!drawerOpen)} />
+                <AButton color="danger" icon={<DeleteOutlined />} size="small" variant="link" />
               </div>
             </div>
           </ACard>
@@ -164,33 +142,19 @@ export default function SpaceCollection() {
       </div>
 
       <div className="flex justify-end gap-6 py6">
-        <APagination
-          defaultCurrent={6}
-          total={500}
-        />
+        <APagination defaultCurrent={6} total={500} />
       </div>
 
-      <ADrawer
-        closeIcon={null}
-        extra={<CloseOutlined onClick={() => setDrawerOpen(false)} />}
+      <CommonDrawer
         open={drawerOpen}
         title="编辑空间"
         width={900}
         footer={
-          <AFlex
-            className="gap-6 py-6"
-            justify="flex-end"
-          >
-            <AButton
-              type="default"
-              onClick={() => setDrawerOpen(false)}
-            >
+          <AFlex className="gap-6 py-6" justify="flex-end">
+            <AButton type="default" onClick={() => setDrawerOpen(false)}>
               取消
             </AButton>
-            <AButton
-              type="primary"
-              onClick={() => setDrawerOpen(false)}
-            >
+            <AButton type="primary" onClick={() => setDrawerOpen(false)}>
               确定
             </AButton>
           </AFlex>
@@ -198,7 +162,7 @@ export default function SpaceCollection() {
         onClose={() => setDrawerOpen(false)}
       >
         <SpaceFeatureSet />
-      </ADrawer>
+      </CommonDrawer>
     </section>
-  );
+  )
 }

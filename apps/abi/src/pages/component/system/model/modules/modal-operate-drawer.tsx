@@ -1,245 +1,220 @@
-import { CloseOutlined, SettingOutlined, SlidersOutlined, ThunderboltOutlined } from '@ant-design/icons';
-import { Form, Radio, Tabs, message } from 'antd';
+import { CloseOutlined, SettingOutlined, SlidersOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { Form, Radio, Tabs, message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
-import { MODAL_TYPE_OPTIONS } from '@/constants/manage';
-import { fetchTestModel } from '@/service/api';
+import { MODAL_TYPE_OPTIONS } from '@/constants/manage'
+import { fetchTestModel } from '@/service/api'
 
-import SliderAndInput from './slider-and-input';
+import SliderAndInput from './slider-and-input'
 
 interface ProviderItem {
-  providerId: number;
-  providerName: string;
-  providerKey: string;
-  providerType: string;
-  iconUrl?: string;
+  providerId: number
+  providerName: string
+  providerKey: string
+  providerType: string
+  iconUrl?: string
 }
 
 type Props = Page.OperateDrawerProps & {
-  providers?: ProviderItem[];
-};
+  providers?: ProviderItem[]
+}
 
 const MODEL_SOURCE_OPTIONS = [
   { label: '公有', value: '1' },
   { label: '本地', value: '2' },
-];
+]
 
 /** v5 分区标题 — 简洁风格，无色彩竖线 */
 const SectionTitle: FC<{ icon: React.ReactNode; title: string; color?: string }> = ({ icon, title, color = '#5b7cf7' }) => (
-  <div style={{
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    padding: '10px 0',
-    marginBottom: 16,
-    borderBottom: '1px solid rgba(130, 140, 200, 0.10)',
-  }}>
-    <div style={{
-      width: 26,
-      height: 26,
-      borderRadius: 7,
-      background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+  <div
+    style={{
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
-      color: '#fff',
-      fontSize: 13,
-      boxShadow: `0 2px 8px ${color}30`,
-    }}>
+      gap: 10,
+      padding: '10px 0',
+      marginBottom: 16,
+      borderBottom: '1px solid rgba(130, 140, 200, 0.10)',
+    }}
+  >
+    <div
+      style={{
+        width: 26,
+        height: 26,
+        borderRadius: 7,
+        background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontSize: 13,
+        boxShadow: `0 2px 8px ${color}30`,
+      }}
+    >
       {icon}
     </div>
     <span style={{ fontSize: 14, fontWeight: 600, color: '#1a2744', letterSpacing: '0.02em' }}>{title}</span>
   </div>
-);
+)
 
 const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType, providers = [] }) => {
-  const { t } = useTranslation();
-  const modelTypeVal = Form.useWatch('modelType', form);
-  const modelSourceVal = Form.useWatch('modelSource', form);
-  const providerIdVal = Form.useWatch('providerId', form);
-  const [submitDisabled, setSubmitDisabled] = useState(true);
-  const [testLoading, setTestLoading] = useState(false);
-  const originalApiKeyRef = useRef<string | undefined>();
+  const { t } = useTranslation()
+  const modelTypeVal = Form.useWatch('modelType', form)
+  const modelSourceVal = Form.useWatch('modelSource', form)
+  const providerIdVal = Form.useWatch('providerId', form)
+  const [submitDisabled, setSubmitDisabled] = useState(true)
+  const [testLoading, setTestLoading] = useState(false)
+  const originalApiKeyRef = useRef<string | undefined>()
   const maskValue = useCallback((val?: string) => {
-    if (!val) return '';
-    const startKeep = 8;
-    const endKeep = 4;
-    if (val.length <= startKeep + endKeep) return val;
-    const maskedLen = Math.max(4, val.length - startKeep - endKeep);
-    return `${val.slice(0, startKeep)}${'*'.repeat(maskedLen)}${val.slice(-endKeep)}`;
-  }, []);
-  const unmaskIfUnchanged = useCallback((inputVal?: string, original?: string) => {
-    if (!original) return inputVal || '';
-    const masked = maskValue(original);
-    return inputVal === masked ? original : (inputVal || '');
-  }, [maskValue]);
+    if (!val) return ''
+    const startKeep = 8
+    const endKeep = 4
+    if (val.length <= startKeep + endKeep) return val
+    const maskedLen = Math.max(4, val.length - startKeep - endKeep)
+    return `${val.slice(0, startKeep)}${'*'.repeat(maskedLen)}${val.slice(-endKeep)}`
+  }, [])
+  const unmaskIfUnchanged = useCallback(
+    (inputVal?: string, original?: string) => {
+      if (!original) return inputVal || ''
+      const masked = maskValue(original)
+      return inputVal === masked ? original : inputVal || ''
+    },
+    [maskValue],
+  )
 
   // 当模型来源或供应商变化时自动清空供应商/基础模型
-  const prevModelSourceRef = useRef<string | undefined>();
-  const prevProviderRef = useRef<string | undefined>();
-  const initialSourceRef = useRef<string | undefined>();
-  const initialProviderRef = useRef<number | undefined>();
-  const initialModelKeyRef = useRef<string | undefined>();
+  const prevModelSourceRef = useRef<string | undefined>()
+  const prevProviderRef = useRef<string | undefined>()
+  const initialSourceRef = useRef<string | undefined>()
+  const initialProviderRef = useRef<number | undefined>()
+  const initialModelKeyRef = useRef<string | undefined>()
   useEffect(() => {
-    if (!open) return;
+    if (!open) return
     if (prevModelSourceRef.current !== undefined && prevModelSourceRef.current !== modelSourceVal) {
       if (operateType === 'edit' && modelSourceVal === initialSourceRef.current) {
         form.setFieldsValue({
           providerId: initialProviderRef.current,
           modelKey: initialModelKeyRef.current,
-        });
+        })
       } else {
-        form.setFieldsValue({ providerId: undefined, modelKey: undefined });
+        form.setFieldsValue({ providerId: undefined, modelKey: undefined })
       }
     }
-    prevModelSourceRef.current = modelSourceVal;
-  }, [modelSourceVal]);
+    prevModelSourceRef.current = modelSourceVal
+  }, [modelSourceVal])
   useEffect(() => {
-    if (!open) return;
+    if (!open) return
     if (prevProviderRef.current !== undefined && prevProviderRef.current !== providerIdVal) {
       if (operateType === 'edit' && providerIdVal === initialProviderRef.current) {
-        form.setFieldsValue({ modelKey: initialModelKeyRef.current });
+        form.setFieldsValue({ modelKey: initialModelKeyRef.current })
       } else {
-        form.setFieldsValue({ modelKey: undefined });
+        form.setFieldsValue({ modelKey: undefined })
       }
     }
-    prevProviderRef.current = providerIdVal;
-  }, [providerIdVal]);
+    prevProviderRef.current = providerIdVal
+  }, [providerIdVal])
 
   useEffect(() => {
     if (open && operateType === 'edit') {
-      const ak = form.getFieldValue('apiKey');
-      originalApiKeyRef.current = ak;
-      if (ak) form.setFieldsValue({ apiKey: maskValue(ak) });
-      initialSourceRef.current = form.getFieldValue('modelSource');
-      initialProviderRef.current = form.getFieldValue('providerId');
-      initialModelKeyRef.current = form.getFieldValue('modelKey');
+      const ak = form.getFieldValue('apiKey')
+      originalApiKeyRef.current = ak
+      if (ak) form.setFieldsValue({ apiKey: maskValue(ak) })
+      initialSourceRef.current = form.getFieldValue('modelSource')
+      initialProviderRef.current = form.getFieldValue('providerId')
+      initialModelKeyRef.current = form.getFieldValue('modelKey')
     }
     if (!open) {
-      originalApiKeyRef.current = undefined;
-      prevModelSourceRef.current = undefined;
-      prevProviderRef.current = undefined;
-      initialSourceRef.current = undefined;
-      initialProviderRef.current = undefined;
-      initialModelKeyRef.current = undefined;
+      originalApiKeyRef.current = undefined
+      prevModelSourceRef.current = undefined
+      prevProviderRef.current = undefined
+      initialSourceRef.current = undefined
+      initialProviderRef.current = undefined
+      initialModelKeyRef.current = undefined
     }
-  }, [open, operateType, form, maskValue]);
+  }, [open, operateType, form, maskValue])
 
   const filteredProviders = useMemo(() => {
-    if (!modelSourceVal) return providers;
-    return providers.filter((p: ProviderItem) => p.providerType === modelSourceVal);
-  }, [modelSourceVal, providers]);
+    if (!modelSourceVal) return providers
+    return providers.filter((p: ProviderItem) => p.providerType === modelSourceVal)
+  }, [modelSourceVal, providers])
 
   const selectedProvider = useMemo(() => {
-    return providers.find((p: ProviderItem) => p.providerId === providerIdVal);
-  }, [providerIdVal, providers]);
+    return providers.find((p: ProviderItem) => p.providerId === providerIdVal)
+  }, [providerIdVal, providers])
 
   const handleTest = async () => {
     try {
-      setTestLoading(true);
-      const values = await form.validateFields(['providerId', 'modelKey', 'apiKey', 'apiBase', 'modelType']);
+      setTestLoading(true)
+      const values = await form.validateFields(['providerId', 'modelKey', 'apiKey', 'apiBase', 'modelType'])
       const params = {
         providerId: String(values.providerId),
         modelKey: values.modelKey || '',
-        apiKey: operateType === 'edit' ? unmaskIfUnchanged(values.apiKey, originalApiKeyRef.current) : (values.apiKey || ''),
+        apiKey: operateType === 'edit' ? unmaskIfUnchanged(values.apiKey, originalApiKeyRef.current) : values.apiKey || '',
         apiBase: (values.apiBase || '').trim().replace(/`/g, ''),
         modelType: values.modelType ? String(values.modelType) : '',
-      };
-      const res: any = await fetchTestModel(params);
+      }
+      const res: any = await fetchTestModel(params)
       if (!res.error && res?.response?.data?.code === 200) {
-        message.success('测试连接成功');
-        setSubmitDisabled(false);
+        message.success('测试连接成功')
+        setSubmitDisabled(false)
       } else {
-        message.error(res?.response?.data?.msg || res?.response?.data?.err_msg || '测试连接失败');
+        message.error(res?.response?.data?.msg || res?.response?.data?.err_msg || '测试连接失败')
       }
     } catch (error: any) {
-      const errMsg = error?.response?.data?.msg || error?.response?.data?.err_msg || error?.message || '测试连接失败';
-      message.error(errMsg);
+      const errMsg = error?.response?.data?.msg || error?.response?.data?.err_msg || error?.message || '测试连接失败'
+      message.error(errMsg)
     } finally {
-      setTestLoading(false);
+      setTestLoading(false)
     }
-  };
+  }
 
   const handleClose = () => {
-    setSubmitDisabled(true);
-    onClose();
-  };
+    setSubmitDisabled(true)
+    onClose()
+  }
 
   const submit = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields()
       const submitValues = {
         ...values,
-        apiKey: operateType === 'edit' ? unmaskIfUnchanged(values.apiKey, originalApiKeyRef.current) : (values.apiKey || ''),
-      };
-      await handleSubmit(submitValues);
-      setSubmitDisabled(true);
+        apiKey: operateType === 'edit' ? unmaskIfUnchanged(values.apiKey, originalApiKeyRef.current) : values.apiKey || '',
+      }
+      await handleSubmit(submitValues)
+      setSubmitDisabled(true)
     } catch (err) {
-      console.log(err);
+      console.log(err)
     }
-  };
+  }
 
   const drawerTitle = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff',
-        fontSize: 18,
-        boxShadow: '0 4px 12px rgba(91, 124, 247, 0.3)',
-      }}>
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          fontSize: 18,
+          boxShadow: '0 4px 12px rgba(91, 124, 247, 0.3)',
+        }}
+      >
         <ThunderboltOutlined />
       </div>
       <div>
-        <div style={{ fontSize: 17, fontWeight: 700, color: '#1a2744', letterSpacing: '0.02em' }}>
-          {operateType === 'add' ? '添加大模型' : '编辑大模型'}
-        </div>
-        <div style={{ fontSize: 12, color: '#768a9f', marginTop: 2 }}>
-          {operateType === 'add' ? '配置并接入新的大语言模型' : '修改模型配置参数'}
-        </div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: '#1a2744', letterSpacing: '0.02em' }}>{operateType === 'add' ? '添加大模型' : '编辑大模型'}</div>
+        <div style={{ fontSize: 12, color: '#768a9f', marginTop: 2 }}>{operateType === 'add' ? '配置并接入新的大语言模型' : '修改模型配置参数'}</div>
       </div>
     </div>
-  );
+  )
 
   return (
-    <ADrawer
+    <CommonDrawer
       className="ds-operate-drawer"
-      closeIcon={null}
       destroyOnClose
-      extra={
-        <div
-          onClick={handleClose}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: 'rgba(255,255,255,0.6)',
-            border: '1px solid rgba(130, 140, 200, 0.18)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            color: '#8fa0b5',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.9)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91, 124, 247, 0.4)';
-            (e.currentTarget as HTMLElement).style.color = '#5b7cf7';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.6)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(130, 140, 200, 0.18)';
-            (e.currentTarget as HTMLElement).style.color = '#8fa0b5';
-          }}
-        >
-          <CloseOutlined style={{ fontSize: 14 }} />
-        </div>
-      }
       open={open}
       size="large"
       title={drawerTitle}
@@ -306,7 +281,8 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
               key: 'basic',
               label: (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <SettingOutlined />基础设置
+                  <SettingOutlined />
+                  基础设置
                 </span>
               ),
               children: (
@@ -315,18 +291,17 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
 
                   {/* 模型来源 */}
                   <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>模型来源</span>} name="modelSource" initialValue="1">
-                    <Radio.Group
-                      options={MODEL_SOURCE_OPTIONS}
-                      optionType="button"
-                      buttonStyle="solid"
-                    />
+                    <Radio.Group options={MODEL_SOURCE_OPTIONS} optionType="button" buttonStyle="solid" />
                   </AForm.Item>
 
                   {/* 模型名称 */}
                   <AForm.Item
                     label={<span style={{ fontWeight: 500, color: '#3e5068' }}>模型名称</span>}
                     name="modelName"
-                    rules={[{ required: true, message: '请输入模型名称' }, { max: 100, message: '模型名称不能超过100个字符' }]}
+                    rules={[
+                      { required: true, message: '请输入模型名称' },
+                      { max: 100, message: '模型名称不能超过100个字符' },
+                    ]}
                   >
                     <AInput placeholder="请输入模型名称" />
                   </AForm.Item>
@@ -334,29 +309,13 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                   <SectionTitle icon={<SettingOutlined />} title="接入配置" color="#10b981" />
 
                   {/* 供应商 */}
-                  <AForm.Item
-                    label={<span style={{ fontWeight: 500, color: '#3e5068' }}>供应商</span>}
-                    name="providerId"
-                    rules={[{ required: true, message: '请选择供应商' }]}
-                  >
-                    <ASelect
-                      options={filteredProviders.map((p: ProviderItem) => ({ label: p.providerName, value: p.providerId }))}
-                      placeholder="请选择供应商"
-                      showSearch
-                      allowClear
-                    />
+                  <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>供应商</span>} name="providerId" rules={[{ required: true, message: '请选择供应商' }]}>
+                    <ASelect options={filteredProviders.map((p: ProviderItem) => ({ label: p.providerName, value: p.providerId }))} placeholder="请选择供应商" showSearch allowClear />
                   </AForm.Item>
 
                   {/* 模型类型 */}
-                  <AForm.Item
-                    label={<span style={{ fontWeight: 500, color: '#3e5068' }}>模型类型</span>}
-                    name="modelType"
-                    rules={[{ required: true, message: '请选择模型类型' }]}
-                  >
-                    <ASelect
-                      options={MODAL_TYPE_OPTIONS}
-                      placeholder="请选择模型类型"
-                    />
+                  <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>模型类型</span>} name="modelType" rules={[{ required: true, message: '请选择模型类型' }]}>
+                    <ASelect options={MODAL_TYPE_OPTIONS} placeholder="请选择模型类型" />
                   </AForm.Item>
 
                   {/* 基础模型 (modelKey) */}
@@ -371,13 +330,7 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
 
                   {/* API Base */}
                   <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>API Base</span>} name="apiBase">
-                    <AInput
-                      placeholder={
-                        modelSourceVal === '1'
-                          ? '可选，不填则使用供应商默认地址'
-                          : '请输入本地服务地址'
-                      }
-                    />
+                    <AInput placeholder={modelSourceVal === '1' ? '可选，不填则使用供应商默认地址' : '请输入本地服务地址'} />
                   </AForm.Item>
 
                   <SectionTitle icon={<SettingOutlined />} title="状态与描述" color="#f59e0b" />
@@ -387,13 +340,10 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                     label={<span style={{ fontWeight: 500, color: '#3e5068' }}>状态</span>}
                     name="status"
                     valuePropName="checked"
-                    getValueFromEvent={(checked: boolean) => checked ? '1' : '0'}
+                    getValueFromEvent={(checked: boolean) => (checked ? '1' : '0')}
                     getValueProps={(value: string) => ({ checked: value === '1' || value === undefined })}
                   >
-                    <ASwitch
-                      checkedChildren="启用"
-                      unCheckedChildren="禁用"
-                    />
+                    <ASwitch checkedChildren="启用" unCheckedChildren="禁用" />
                   </AForm.Item>
 
                   {/* 描述 */}
@@ -407,7 +357,8 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
               key: 'advanced',
               label: (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <SlidersOutlined />高级设置
+                  <SlidersOutlined />
+                  高级设置
                 </span>
               ),
               children: (
@@ -444,8 +395,8 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
           ]}
         />
       </AForm>
-    </ADrawer>
-  );
-});
+    </CommonDrawer>
+  )
+})
 
-export default DatasourceOperateDrawer;
+export default DatasourceOperateDrawer

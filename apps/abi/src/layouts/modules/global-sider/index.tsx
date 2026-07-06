@@ -81,13 +81,13 @@ const GlobalSider: FC = memo(() => {
         label: (
           <div className="abi-user-dropdown-item-new">
             <SettingOutlined className="abi-user-dropdown-icon-new" />
-            <span className="abi-user-dropdown-label-new">门户管理</span>
+            <span className="abi-user-dropdown-label-new">系统管理</span>
           </div>
         ),
         className: 'abi-user-dropdown-menu-item',
       })
       items.push({
-        key: 'space_user',
+        key: 'space_space-user',
         label: (
           <div className="abi-user-dropdown-item-new">
             <TeamOutlined className="abi-user-dropdown-icon-new" />

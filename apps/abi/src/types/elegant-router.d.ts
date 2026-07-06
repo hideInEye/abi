@@ -61,7 +61,7 @@ declare module "@elegant-router/types" {
     "space_component_icon-selector": "icon-selector";
     "space_space-menu": "space-menu";
     "space_space-role": "space-role";
-    "space_user": "user";
+    "space_space-user": "space-user";
     "space-list": "/space-list";
     "view": "/view";
     "workbench": "/workbench";
@@ -196,7 +196,7 @@ declare module "@elegant-router/types" {
     | "space_component_icon-selector"
     | "space_space-menu"
     | "space_space-role"
-    | "space_user"
+    | "space_space-user"
     | "view"
     | "workbench_app-workshop_my-collect"
     | "workbench_app-workshop_my-dashboard"

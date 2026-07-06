@@ -15,6 +15,7 @@
 - 状态组件：`GlobalLoading`、`TableEmpty`、Ant Design message/modal/drawer。
 - 图标：Iconify、vite-plugin-svg-icons，本地图标由 `VITE_ICON_LOCAL_PREFIX` 和 SVG assets 支持。
 - 规则：新增 ABI 页面优先使用 Ant Design + 当前主题变量 + UnoCSS shortcuts，不要新建孤立视觉体系。
+- 抽屉规则：ABI 中新增或修改抽屉弹窗必须优先使用 `apps/abi/src/components/stateless/common/CommonDrawer`，不要在业务组件中直接使用 Ant Design `Drawer`/全局 `ADrawer` 拼接标题图标块、关闭按钮或头部样式；标题图标通过 `icon` 传入，副标题通过 `description` 传入，业务头部操作通过 `extra` 传入并由公共组件统一并排关闭按钮。
 
 ## apps/chat
 

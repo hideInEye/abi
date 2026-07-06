@@ -1,6 +1,7 @@
 /* eslint-disable complexity */
 import { CloseOutlined } from '@ant-design/icons'
 import { message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React from 'react'
 
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
@@ -35,7 +36,7 @@ interface AtomicIndicatorOption {
 interface Props {
   readonly editingItem: KnowledgeIndicatorItem | null
   readonly existingItems?: KnowledgeIndicatorItem[]
-  readonly groupId?: number
+  readonly groupId?: string
   readonly groupName?: string
   readonly onClose: (refresh?: boolean) => void
   readonly onSubmit: (payload: KnowledgeSubmitPayload, isEdit: boolean) => Promise<boolean>
@@ -66,13 +67,7 @@ const DERIVATIVE_TEMPLATE_FIELDS: Array<keyof KnowledgeFormValues> = [
   'volatilityMetricId',
 ]
 
-const DERIVED_ONLY_FIELDS: Array<keyof KnowledgeFormValues> = [
-  'derivedConditionExpr',
-  'derivedConditions',
-  'derivedExpressions',
-  'projectionFunc',
-  'techId',
-]
+const DERIVED_ONLY_FIELDS: Array<keyof KnowledgeFormValues> = ['derivedConditionExpr', 'derivedConditions', 'derivedExpressions', 'projectionFunc', 'techId']
 
 function normalizeIndicatorClass(value?: string): IndicatorType {
   const text = String(value || '').trim()
@@ -226,29 +221,19 @@ function splitAliasTags(value: unknown) {
     .filter(Boolean)
 }
 
-function resolveDerivedConditionMetrics(
-  conditions: KnowledgeFormValues['derivedConditions'],
-  fields: KnowledgeTechField[],
-) {
+function resolveDerivedConditionMetrics(conditions: KnowledgeFormValues['derivedConditions'], fields: KnowledgeTechField[]) {
   if (!conditions?.length || !fields.length) {
     return conditions
   }
 
   const fieldKeyMap = new Map<string, string>()
-  fields.forEach(item => {
+  fields.forEach((item) => {
     const key = String(item.techId || item.fieldName || item.name || '').trim()
     if (!key) {
       return
     }
 
-    [
-      key,
-      item.fieldName,
-      item.originName,
-      item.name,
-      item.bizName,
-      item.tfieldAlias,
-    ].forEach(value => {
+    ;[key, item.fieldName, item.originName, item.name, item.bizName, item.tfieldAlias].forEach((value) => {
       const text = String(value || '').trim()
       if (text) {
         fieldKeyMap.set(text, key)
@@ -256,7 +241,7 @@ function resolveDerivedConditionMetrics(
     })
   })
 
-  return conditions.map(item => {
+  return conditions.map((item) => {
     const metric = String(item?.metric || '').trim()
     return {
       ...item,
@@ -265,17 +250,14 @@ function resolveDerivedConditionMetrics(
   })
 }
 
-function resolveDerivedExpressionMetrics(
-  expressions: KnowledgeFormValues['derivedExpressions'],
-  fields: KnowledgeTechField[],
-) {
+function resolveDerivedExpressionMetrics(expressions: KnowledgeFormValues['derivedExpressions'], fields: KnowledgeTechField[]) {
   if (!expressions?.length) {
     return expressions
   }
 
-  return expressions.map(expression => ({
+  return expressions.map((expression) => ({
     ...expression,
-    conditions: resolveDerivedConditionMetrics(expression.conditions, fields)
+    conditions: resolveDerivedConditionMetrics(expression.conditions, fields),
   }))
 }
 
@@ -373,8 +355,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
   const [indicatorOptionSource, setIndicatorOptionSource] = useState<KnowledgeIndicatorItem[]>([])
   const editMatchedRef = useRef(false)
   const formValuesRef = useRef<Partial<KnowledgeFormValues>>({})
-  const templateTypeVal = AForm.useWatch('templateType',form)!
-  
+  const templateTypeVal = AForm.useWatch('templateType', form)!
+
   const isEditing = Boolean(editingItem)
   const isAtomicEditing = normalizeIndicatorClass(editingItem?.indicatorClass) === 'atomic'
   const indicatorClass = normalizeIndicatorClass(String(form.getFieldValue('indicatorClass') || selectedIndicatorClass || 'derived'))
@@ -467,14 +449,18 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       return
     }
     const nextValues = {
-      derivedExpressions: [{
-        conditions: [{
-          metric: '',
-          operator: '=',
-          value: ''
-        }],
-        innerLogic: 'AND'
-      }],
+      derivedExpressions: [
+        {
+          conditions: [
+            {
+              metric: '',
+              operator: '=',
+              value: '',
+            },
+          ],
+          innerLogic: 'AND',
+        },
+      ],
       indAlias: [],
       variableMappings: [],
     }
@@ -585,7 +571,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
 
     if (Object.hasOwn(changeValues, 'templateType')) {
-      clearFields(DERIVATIVE_TEMPLATE_FIELDS.filter(field => field !== 'templateType'))
+      clearFields(DERIVATIVE_TEMPLATE_FIELDS.filter((field) => field !== 'templateType'))
     }
 
     if (Object.hasOwn(changeValues, 'techId') && !isAtomicEditing) {
@@ -657,12 +643,10 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
   }
 
   return (
-    <ADrawer
-      closeIcon={null}
+    <CommonDrawer
       open={open}
       title={isEditing ? '编辑指标建模原型' : '新建指标建模原型'}
       width={1180}
-      extra={<AButton icon={<CloseOutlined />} type="text" onClick={() => onClose()} />}
       footer={
         <ASpace className="w-full justify-end">
           <AButton onClick={() => onClose()}>取消</AButton>
@@ -720,6 +704,6 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
 
         {currentStepKey === 'dimension' ? <KnowledgeOperateDimensionStep form={form} /> : null}
       </AForm>
-    </ADrawer>
+    </CommonDrawer>
   )
 }

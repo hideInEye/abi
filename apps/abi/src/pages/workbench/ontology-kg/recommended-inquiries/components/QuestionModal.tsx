@@ -1,93 +1,77 @@
-import { Form } from 'antd';
-import React from 'react';
+import { Form } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+import React from 'react'
 
-import { useAssistant } from '../hooks/useAssistant.ts';
-import type { QuestionTableData } from '../types/index.ts';
-import { CloseOutlined } from '@ant-design/icons';
+import { useAssistant } from '../hooks/useAssistant.ts'
+import type { QuestionTableData } from '../types/index.ts'
+import { CloseOutlined } from '@ant-design/icons'
 
 interface TagModalProps {
-  readonly editingGroup: QuestionTableData | null;
-  readonly isModalOpen: boolean;
-  readonly isReset?: boolean;
-  readonly mode: 'add' | 'edit';
-  readonly onSave: (values: QuestionTableData) => void;
-  readonly setIsModalOpen: (isOpen: boolean) => void;
+  readonly editingGroup: QuestionTableData | null
+  readonly isModalOpen: boolean
+  readonly isReset?: boolean
+  readonly mode: 'add' | 'edit'
+  readonly onSave: (values: QuestionTableData) => void
+  readonly setIsModalOpen: (isOpen: boolean) => void
 }
 
-export const QuestionModal: React.FC<TagModalProps> = ({
-  editingGroup,
-  isModalOpen,
-  isReset,
-  mode,
-  onSave,
-  setIsModalOpen
-}) => {
-  const [form] = Form.useForm();
-  const { getAssistantConfigList } = useAssistant();
+export const QuestionModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, isReset, mode, onSave, setIsModalOpen }) => {
+  const [form] = Form.useForm()
+  const { getAssistantConfigList } = useAssistant()
 
   useEffect(() => {
     if (mode === 'add') {
-      form.resetFields();
+      form.resetFields()
     }
 
     if (isReset) {
-      form.resetFields();
+      form.resetFields()
     }
-  }, [mode, isModalOpen]);
+  }, [mode, isModalOpen])
 
   useEffect(() => {
-    getAssistantConfigList();
-  }, []);
+    getAssistantConfigList()
+  }, [])
 
   const handleModalCancel = () => {
-    form.resetFields();
-    setIsModalOpen(false);
-  };
+    form.resetFields()
+    setIsModalOpen(false)
+  }
 
   const handleModalOk = async () => {
     try {
-      const values = await form.validateFields();
-      onSave(values);
+      const values = await form.validateFields()
+      onSave(values)
     } catch (error) {
-      console.error('Validation failed:', error);
+      console.error('Validation failed:', error)
     }
-  };
+  }
 
   useEffect(() => {
     if (editingGroup) {
       form.setFieldsValue({
         agentId: editingGroup.agentId,
-        question: editingGroup.question
-      });
+        question: editingGroup.question,
+      })
     }
-  }, [editingGroup]);
+  }, [editingGroup])
 
   return (
-    <ADrawer
-      closeIcon={null}
-      extra={<CloseOutlined onClick={handleModalCancel} />}
+    <CommonDrawer
       open={isModalOpen}
       title={editingGroup ? '编辑问题' : '新增问题'}
       width={600}
       footer={
         <ASpace className="w-full justify-end">
           <AButton onClick={handleModalCancel}>取消</AButton>
-          <AButton
-            type="primary"
-            onClick={handleModalOk}
-          >
+          <AButton type="primary" onClick={handleModalOk}>
             确认
           </AButton>
         </ASpace>
       }
       onClose={handleModalCancel}
     >
-      <Form
-        className="mt-5"
-        form={form}
-        initialValues={editingGroup || { tagName: '' }}
-        layout="vertical"
-      >
+      <Form className="mt-5" form={form} initialValues={editingGroup || { tagName: '' }} layout="vertical">
         {/* <Form.Item
           label="选择助手"
           name="agentId"
@@ -111,13 +95,13 @@ export const QuestionModal: React.FC<TagModalProps> = ({
             { max: 50, message: '不能超过50个字符' },
             {
               message: '请输入问题',
-              required: true
-            }
+              required: true,
+            },
           ]}
         >
           <AInput placeholder="请输入问题" />
         </Form.Item>
       </Form>
-    </ADrawer>
-  );
-};
+    </CommonDrawer>
+  )
+}

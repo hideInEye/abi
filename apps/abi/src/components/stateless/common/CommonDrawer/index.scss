@@ -1,0 +1,95 @@
+.abi-common-drawer {
+  .ant-drawer-header {
+    padding: 20px 28px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.8) 100%);
+    border-bottom: 1px solid rgba(130, 140, 200, 0.15);
+    box-shadow: 0 2px 12px rgba(91, 124, 247, 0.06);
+    backdrop-filter: blur(10px);
+  }
+
+  .ant-drawer-title {
+    min-width: 0;
+  }
+
+  .ant-drawer-extra {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.abi-common-drawer-extra {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.abi-common-drawer-title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+  color: #1a2744;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.abi-common-drawer-title-icon {
+  position: relative;
+  display: flex;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  color: #fff;
+  font-size: 18px;
+  background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(91, 124, 247, 0.3);
+
+  &::before {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    content: '';
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+  }
+}
+
+.abi-common-drawer-title-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.abi-common-drawer-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.abi-common-drawer-title-desc {
+  min-width: 0;
+  overflow: hidden;
+  color: #768a9f;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.abi-common-drawer-close {
+  color: #8c8c8c;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #5b7cf7;
+  }
+}
