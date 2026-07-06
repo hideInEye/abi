@@ -1,181 +1,148 @@
-import { CloseOutlined, SafetyOutlined } from '@ant-design/icons';
-import PropTypes from 'prop-types';
+import { SafetyOutlined } from '@ant-design/icons'
 
-import { querySpaceRoleList } from '@/service/api/space';
-import { getSpaceRoleMenuByRoleIdApi } from '@/service/api/space-role';
-import { message } from 'antd';
+import { querySpaceRoleList } from '@/service/api/space'
+import { getSpaceRoleMenuByRoleIdApi } from '@/service/api/space-role'
+import { message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
-import './PermissionManagement.scss';
+import { getCheckedPermissionMenus } from './permission-menu'
+import type { PermissionMenuPayload } from './permission-menu'
+
+import './PermissionManagement.scss'
 
 interface PermissionItem {
-  admin: false;
-  createBy: null;
-  dataScope: string;
-  dataSource: number;
-  delFlag: string;
-  deptCheckStrictly: false;
-  deptIds: null;
-  flag: false;
-  menuCheckStrictly: false;
-  menuIds: null;
-  permissions: null;
-  remark: null;
-  roleId: number;
-  roleKey: string;
-  roleName: string;
-  roleSort: number;
-}
-
-interface MenuTreeItem {
-  id: number;
-  label: string;
-  children?: MenuTreeItem[];
+  admin: false
+  createBy: null
+  dataScope: string
+  dataSource: number
+  delFlag: string
+  deptCheckStrictly: false
+  deptIds: null
+  flag: false
+  menuCheckStrictly: false
+  menuIds: null
+  permissions: null
+  remark: null
+  roleId: number
+  roleKey: string
+  roleName: string
+  roleSort: number
 }
 
 interface PermissionManagementProps {
-  defaultPermissionKeys: any[];
-  open: boolean;
-  permissionCancel: () => void;
-  permissionSure: (permission: any[]) => void;
-  setOpen: (open: boolean) => void;
+  defaultPermissionKeys: any[]
+  open: boolean
+  permissionCancel: () => void
+  permissionSure: (permission: any[]) => void
+  setOpen: (open: boolean) => void
 }
 
 function normalizePermissionKeys(keys: any[]) {
-  if (!Array.isArray(keys)) return [];
-  return keys.filter(key => key !== undefined && key !== null && key !== '').slice(0, 1);
+  if (!Array.isArray(keys)) return []
+  return keys.filter((key) => key !== undefined && key !== null && key !== '').slice(0, 1)
 }
 
-export const PermissionManagement: FC<PermissionManagementProps> = ({
-  defaultPermissionKeys,
-  open,
-  permissionCancel,
-  permissionSure,
-  setOpen
-}) => {
-  const { t } = useTranslation();
-  const [permissionList, setPermissionList] = useState<PermissionItem[]>([]);
-  const [alreadySelectedPermission, setAlreadySelectedPermission] = useState<any[]>(normalizePermissionKeys(defaultPermissionKeys));
-  const [roleMenuMap, setRoleMenuMap] = useState<Record<number, MenuTreeItem[]>>({});
-  const [loading, setLoading] = useState(false);
+export const PermissionManagement: FC<PermissionManagementProps> = ({ defaultPermissionKeys, open, permissionCancel, permissionSure, setOpen }) => {
+  const { t } = useTranslation()
+  const [permissionList, setPermissionList] = useState<PermissionItem[]>([])
+  const [alreadySelectedPermission, setAlreadySelectedPermission] = useState<any[]>(normalizePermissionKeys(defaultPermissionKeys))
+  const [roleMenuMap, setRoleMenuMap] = useState<Record<number, PermissionMenuPayload>>({})
+  const [loading, setLoading] = useState(false)
 
   function handlePermissionChange(roleId: any) {
-    const nextSelected = normalizePermissionKeys([roleId]);
-    setAlreadySelectedPermission(nextSelected);
-    const selectedRoleId = nextSelected[0];
-    if (selectedRoleId !== undefined && !roleMenuMap[selectedRoleId]) {
-      loadRoleMenu(selectedRoleId);
-    }
+    const nextSelected = normalizePermissionKeys([roleId])
+    setAlreadySelectedPermission(nextSelected)
   }
 
   async function getSpaceRoleList() {
-    const { data } = await querySpaceRoleList();
-    setPermissionList(data);
+    const { data } = await querySpaceRoleList()
+    setPermissionList(data)
   }
 
   async function loadRoleMenu(roleId: number) {
     try {
-      setLoading(true);
-      const res: any = await getSpaceRoleMenuByRoleIdApi(roleId);
-      if (res?.response?.data?.menus) {
-        setRoleMenuMap(prev => ({
+      setLoading(true)
+      const res: any = await getSpaceRoleMenuByRoleIdApi(roleId)
+      const responseData = res?.response?.data
+      if (responseData?.menus) {
+        setRoleMenuMap((prev) => ({
           ...prev,
-          [roleId]: res.response.data.menus
-        }));
+          [roleId]: {
+            checkedKeys: responseData.checkedKeys || [],
+            menus: responseData.menus || [],
+          },
+        }))
       }
     } catch (error) {
-      console.error('Failed to load role menu:', error);
+      console.error('Failed to load role menu:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }
-
-  // 获取二级菜单（只展示子菜单）
-  function getSecondLevelMenus(menus: MenuTreeItem[]): string[] {
-    const secondLevelMenus: string[] = [];
-    menus?.forEach(menu => {
-      if (menu.children && menu.children.length > 0) {
-        menu.children.forEach(child => {
-          secondLevelMenus.push(child.label);
-        });
-      }
-    });
-    return secondLevelMenus;
   }
 
   function PermissionManagementFooter(sure: () => void, cancel: () => void) {
     return (
       <div className="perm-footer-v5">
-        <AButton
-          className="btn-ghost-v5"
-          onClick={cancel}
-        >
+        <AButton className="btn-ghost-v5" onClick={cancel}>
           {t('page.login.common.cancel')}
         </AButton>
-        <AButton
-          className="btn-accent-gradient"
-          onClick={sure}
-        >
-          <SafetyOutlined style={{ marginRight: 6 }} />确认分配
+        <AButton className="btn-accent-gradient" onClick={sure}>
+          <SafetyOutlined style={{ marginRight: 6 }} />
+          确认分配
         </AButton>
       </div>
-    );
+    )
   }
 
   useEffect(() => {
-    getSpaceRoleList();
-  }, []);
+    getSpaceRoleList()
+  }, [])
 
   useEffect(() => {
     if (open && alreadySelectedPermission.length > 0) {
-      alreadySelectedPermission.forEach(roleId => {
+      alreadySelectedPermission.forEach((roleId) => {
         if (!roleMenuMap[roleId]) {
-          loadRoleMenu(roleId);
+          loadRoleMenu(roleId)
         }
-      });
+      })
     }
-  }, [open, alreadySelectedPermission]);
+  }, [open, alreadySelectedPermission])
 
   const sure = () => {
     if (alreadySelectedPermission.length === 0) {
-      message.warning('未选择空间角色权限');
-      return;
+      message.warning('未选择空间角色权限')
+      return
     }
 
-    const spaceRole = alreadySelectedPermission.map(key => {
-      const role = permissionList.find((item: any) => item.roleId === key);
+    const spaceRole = alreadySelectedPermission.map((key) => {
+      const role = permissionList.find((item: any) => item.roleId === key)
       if (role) {
         return {
           roleId: role.roleId,
-          roleName: role.roleName
-        };
+          roleName: role.roleName,
+        }
       }
-      return null;
-    });
+      return null
+    })
 
-    permissionSure(spaceRole);
-    setAlreadySelectedPermission([]);
-    setOpen(false);
-  };
+    permissionSure(spaceRole)
+    setAlreadySelectedPermission([])
+    setOpen(false)
+  }
 
   const cancel = () => {
-    permissionCancel();
-    setOpen(false);
-    setAlreadySelectedPermission([]);
-  };
+    permissionCancel()
+    setOpen(false)
+    setAlreadySelectedPermission([])
+  }
 
   return (
-    <ADrawer
+    <CommonDrawer
       className="perm-drawer-v5"
-      closeIcon={null}
-      extra={<CloseOutlined className="perm-close-icon" onClick={cancel} />}
       footer={PermissionManagementFooter(sure, cancel)}
       open={open}
-      title={
-        <div className="perm-title-v5">
-          <SafetyOutlined className="perm-title-icon" />
-          <span>{t('page.manage.user.assigningRole')}</span>
-        </div>
-      }
+      icon={<SafetyOutlined />}
+      title={t('page.manage.user.assigningRole')}
       width={960}
       onClose={() => setOpen(false)}
     >
@@ -187,19 +154,11 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
             <div className="perm-panel-subtitle">选择要分配的角色</div>
           </div>
           <div className="perm-panel-body">
-            <ARadio.Group
-              className="perm-role-group"
-              style={{ width: '100%' }}
-              value={alreadySelectedPermission[0]}
-              onChange={event => handlePermissionChange(event.target.value)}
-            >
-              {permissionList.map(item => {
-                const isSelected = alreadySelectedPermission.includes(item.roleId);
+            <ARadio.Group className="perm-role-group" style={{ width: '100%' }} value={alreadySelectedPermission[0]} onChange={(event) => handlePermissionChange(event.target.value)}>
+              {permissionList.map((item) => {
+                const isSelected = alreadySelectedPermission.includes(item.roleId)
                 return (
-                  <div
-                    key={item.roleId}
-                    className={`perm-role-card ${isSelected ? 'perm-role-selected' : ''}`}
-                  >
+                  <div key={item.roleId} className={`perm-role-card ${isSelected ? 'perm-role-selected' : ''}`}>
                     <ARadio value={item.roleId}>
                       <div className="perm-role-content">
                         <div className="perm-role-name">{item.roleName}</div>
@@ -207,7 +166,7 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
                       </div>
                     </ARadio>
                   </div>
-                );
+                )
               })}
             </ARadio.Group>
           </div>
@@ -217,11 +176,7 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
         <div className="perm-panel-v5 perm-panel-right">
           <div className="perm-panel-header">
             <div className="perm-panel-title">已分配的空间菜单</div>
-            <div className="perm-panel-subtitle">
-              {alreadySelectedPermission.length > 0
-                ? `已选择 ${alreadySelectedPermission.length} 个角色`
-                : '请先选择角色'}
-            </div>
+            <div className="perm-panel-subtitle">{alreadySelectedPermission.length > 0 ? `已选择 ${alreadySelectedPermission.length} 个角色` : '请先选择角色'}</div>
           </div>
           <div className="perm-panel-body">
             <ASpin spinning={loading}>
@@ -232,27 +187,20 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
                 </div>
               ) : (
                 <div className="perm-menu-list">
-                  {alreadySelectedPermission.map(roleId => {
-                    const role = permissionList.find(r => r.roleId === roleId);
-                    const menus = roleMenuMap[roleId];
-                    const secondLevelMenus = menus ? getSecondLevelMenus(menus) : [];
+                  {alreadySelectedPermission.map((roleId) => {
+                    const role = permissionList.find((r) => r.roleId === roleId)
+                    const checkedMenus = getCheckedPermissionMenus(roleMenuMap[roleId])
                     return (
-                      <div
-                        key={roleId}
-                        className="perm-menu-section"
-                      >
+                      <div key={roleId} className="perm-menu-section">
                         <div className="perm-menu-header">
                           <span className="perm-menu-role-name">{role?.roleName}</span>
-                          <span className="perm-menu-count">{secondLevelMenus.length} 项</span>
+                          <span className="perm-menu-count">{checkedMenus.length} 项</span>
                         </div>
-                        {secondLevelMenus.length > 0 ? (
+                        {checkedMenus.length > 0 ? (
                           <div className="perm-menu-tags">
-                            {secondLevelMenus.map((menuName, index) => (
-                              <span
-                                key={`${roleId}-${index}`}
-                                className="perm-menu-tag"
-                              >
-                                {menuName}
+                            {checkedMenus.map((menu) => (
+                              <span key={`${roleId}-${menu.id}`} className="perm-menu-tag">
+                                {menu.label}
                               </span>
                             ))}
                           </div>
@@ -260,7 +208,7 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
                           <div className="perm-menu-empty">暂无菜单权限</div>
                         )}
                       </div>
-                    );
+                    )
                   })}
                 </div>
               )}
@@ -268,14 +216,6 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
           </div>
         </div>
       </div>
-    </ADrawer>
-  );
-};
-
-PermissionManagement.propTypes = {
-  defaultPermissionKeys: PropTypes.array.isRequired,
-  open: PropTypes.bool.isRequired,
-  permissionCancel: PropTypes.func.isRequired,
-  permissionSure: PropTypes.func.isRequired,
-  setOpen: PropTypes.func.isRequired
-};
+    </CommonDrawer>
+  )
+}

@@ -1,98 +1,80 @@
-import {
-  CheckCircleFilled,
-  CloseOutlined,
-  SafetyCertificateOutlined,
-  SafetyOutlined,
-} from '@ant-design/icons';
-import { message } from 'antd';
-import type { FC } from 'react';
-import { useEffect, useState } from 'react';
+import { CheckCircleFilled, CloseOutlined, SafetyCertificateOutlined, SafetyOutlined } from '@ant-design/icons'
+import { message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+import type { FC } from 'react'
+import { useEffect, useState } from 'react'
 
-import { querySpaceRoleList } from '@/service/api/space';
+import { querySpaceRoleList } from '@/service/api/space'
 
-import type { PermissionItem } from '../types';
+import type { PermissionItem } from '../types'
 
 interface PermissionManagementProps {
-  defaultPermissionKeys: any[];
-  open: boolean;
-  permissionCancel: () => void;
-  permissionSure: (permission: any[]) => void;
-  setOpen: (open: boolean) => void;
+  defaultPermissionKeys: any[]
+  open: boolean
+  permissionCancel: () => void
+  permissionSure: (permission: any[]) => void
+  setOpen: (open: boolean) => void
 }
 
 function normalizePermissionKeys(keys: any[]) {
-  if (!Array.isArray(keys)) return [];
-  return keys.filter(key => key !== undefined && key !== null && key !== '').slice(0, 1);
+  if (!Array.isArray(keys)) return []
+  return keys.filter((key) => key !== undefined && key !== null && key !== '').slice(0, 1)
 }
 
-export const PermissionManagement: FC<PermissionManagementProps> = ({
-  defaultPermissionKeys,
-  open,
-  permissionCancel,
-  permissionSure,
-  setOpen
-}) => {
-  const [permissionList, setPermissionList] = useState<PermissionItem[]>([]);
-  const [alreadySelectedPermission, setAlreadySelectedPermission] = useState<any[]>(normalizePermissionKeys(defaultPermissionKeys));
+export const PermissionManagement: FC<PermissionManagementProps> = ({ defaultPermissionKeys, open, permissionCancel, permissionSure, setOpen }) => {
+  const [permissionList, setPermissionList] = useState<PermissionItem[]>([])
+  const [alreadySelectedPermission, setAlreadySelectedPermission] = useState<any[]>(normalizePermissionKeys(defaultPermissionKeys))
 
   function handlePermissionChange(roleId: any) {
-    setAlreadySelectedPermission(normalizePermissionKeys([roleId]));
+    setAlreadySelectedPermission(normalizePermissionKeys([roleId]))
   }
 
   async function getSpaceRoleList() {
-    const { data } = await querySpaceRoleList();
-    setPermissionList(data);
+    const { data } = await querySpaceRoleList()
+    setPermissionList(data)
   }
 
   useEffect(() => {
-    getSpaceRoleList();
-  }, []);
+    getSpaceRoleList()
+  }, [])
 
   const sure = () => {
     if (alreadySelectedPermission.length === 0) {
-      message.warning('未选择空间角色权限');
-      return;
+      message.warning('未选择空间角色权限')
+      return
     }
 
-    const spaceRole = alreadySelectedPermission.map(key => {
-      const role = permissionList.find((item: any) => item.roleId === key);
+    const spaceRole = alreadySelectedPermission.map((key) => {
+      const role = permissionList.find((item: any) => item.roleId === key)
       if (role) {
         return {
           roleId: role.roleId,
-          roleName: role.roleName
-        };
+          roleName: role.roleName,
+        }
       }
-      return null;
-    });
+      return null
+    })
 
-    permissionSure(spaceRole);
-    setAlreadySelectedPermission([]);
-    setOpen(false);
-  };
+    permissionSure(spaceRole)
+    setAlreadySelectedPermission([])
+    setOpen(false)
+  }
 
   const cancel = () => {
-    permissionCancel();
-    setOpen(false);
-    setAlreadySelectedPermission([]);
-  };
+    permissionCancel()
+    setOpen(false)
+    setAlreadySelectedPermission([])
+  }
 
-  const selectedCount = alreadySelectedPermission.length;
+  const selectedCount = alreadySelectedPermission.length
 
   return (
-    <ADrawer
+    <CommonDrawer
       className="sd-v5-perm-drawer"
-      closeIcon={null}
-      extra={<CloseOutlined className="sd-v5-close" onClick={cancel} />}
       footer={<PermDrawerFooter sure={sure} cancel={cancel} selectedCount={selectedCount} />}
       open={open}
-      title={
-        <div className="sd-v5-drawer-title">
-          <span className="sd-v5-drawer-title-icon">
-            <SafetyOutlined />
-          </span>
-          <span>权限管理</span>
-        </div>
-      }
+      icon={<SafetyOutlined />}
+      title="权限管理"
       width={680}
       onClose={() => setOpen(false)}
     >
@@ -105,12 +87,7 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
           </span>
         </div>
         {selectedCount > 0 && (
-          <AButton
-            type="link"
-            size="small"
-            onClick={() => setAlreadySelectedPermission([])}
-            className="sd-v5-perm-clear"
-          >
+          <AButton type="link" size="small" onClick={() => setAlreadySelectedPermission([])} className="sd-v5-perm-clear">
             清空选择
           </AButton>
         )}
@@ -119,14 +96,9 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
       {/* Role list */}
       <div className="sd-v5-perm-section">
         <div className="sd-v5-perm-section-title">选择空间角色</div>
-        <ARadio.Group
-          className="sd-v5-perm-list"
-          style={{ width: '100%' }}
-          value={alreadySelectedPermission[0]}
-          onChange={event => handlePermissionChange(event.target.value)}
-        >
-          {permissionList.map(item => {
-            const isActive = alreadySelectedPermission.includes(item.roleId);
+        <ARadio.Group className="sd-v5-perm-list" style={{ width: '100%' }} value={alreadySelectedPermission[0]} onChange={(event) => handlePermissionChange(event.target.value)}>
+          {permissionList.map((item) => {
+            const isActive = alreadySelectedPermission.includes(item.roleId)
             return (
               <div key={item.roleId} className={`sd-v5-perm-card ${isActive ? 'sd-v5-perm-card-active' : ''}`}>
                 <ARadio value={item.roleId}>
@@ -146,23 +118,25 @@ export const PermissionManagement: FC<PermissionManagementProps> = ({
                   </div>
                 </ARadio>
               </div>
-            );
+            )
           })}
         </ARadio.Group>
       </div>
-    </ADrawer>
-  );
-};
+    </CommonDrawer>
+  )
+}
 
 function PermDrawerFooter({ sure, cancel, selectedCount }: { sure: () => void; cancel: () => void; selectedCount: number }) {
   return (
     <div className="sd-v5-footer">
-      <span className="sd-v5-perm-footer-hint">
-        {selectedCount > 0 ? `已选 ${selectedCount} 个角色` : '请至少选择一个角色'}
-      </span>
+      <span className="sd-v5-perm-footer-hint">{selectedCount > 0 ? `已选 ${selectedCount} 个角色` : '请至少选择一个角色'}</span>
       <div style={{ flex: 1 }} />
-      <AButton className="btn-ghost-v5" onClick={cancel}>取消</AButton>
-      <AButton className="btn-accent-gradient" onClick={sure}>完成</AButton>
+      <AButton className="btn-ghost-v5" onClick={cancel}>
+        取消
+      </AButton>
+      <AButton className="btn-accent-gradient" onClick={sure}>
+        完成
+      </AButton>
     </div>
-  );
+  )
 }

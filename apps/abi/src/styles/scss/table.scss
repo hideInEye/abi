@@ -32,7 +32,7 @@
     padding: 14px 18px !important;
     font-size: 14px;
     color: #1a2744;
-    border-bottom: 1px solid rgba(130, 140, 200, 0.10) !important;
+    border-bottom: 1px solid rgba(130, 140, 200, 0.1) !important;
   }
 
   // 第一列单元格左缩进
@@ -42,7 +42,7 @@
 
   // 表格内容背景色 — 高不透明度，防止fixed列透出下方内容
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row) > td {
-    background-color: #F6F7FF  !important;
+    background-color: #f6f7ff !important;
   }
 
   // hover 行温和反馈
@@ -52,7 +52,7 @@
 
   // ── Fixed right 列: 完全不透明背景，防止看到滚动列文字 ──
   .ant-table-cell-fix-right {
-    background-color: #F6F7FF !important;
+    background-color: #f6f7ff !important;
     z-index: 2 !important;
   }
   // Fixed列的表头也需要不透明
@@ -184,7 +184,7 @@
 
   .ant-table-tbody {
     height: 100%;
-    background-color: #F6F7FF;
+    background-color: #f6f7ff;
   }
 
   .ant-table-tbody > tr.ant-table-placeholder {
@@ -193,7 +193,7 @@
 
   .ant-table-tbody > tr.ant-table-placeholder > td {
     height: 100%;
-    background-color: #F6F7FF !important;
+    background-color: #f6f7ff !important;
     padding: 0 !important;
     vertical-align: middle;
   }
@@ -335,7 +335,7 @@
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
-    background-color: #F6F7FF !important;
+    background-color: #f6f7ff !important;
     z-index: 2 !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
@@ -385,7 +385,7 @@
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
-    background-color: #F6F7FF !important;
+    background-color: #f6f7ff !important;
     z-index: 2 !important;
     padding-left: 16px !important;
     padding-right: 16px !important;
@@ -435,7 +435,7 @@
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
-    background-color: #F6F7FF !important;
+    background-color: #f6f7ff !important;
     z-index: 2 !important;
     padding-left: 16px !important;
     padding-right: 16px !important;
@@ -483,7 +483,7 @@
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
-    background-color: #F6F7FF !important;
+    background-color: #f6f7ff !important;
     z-index: 2 !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
@@ -542,7 +542,7 @@
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
-    background-color: #F6F7FF !important;
+    background-color: #f6f7ff !important;
     z-index: 2 !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
@@ -590,7 +590,7 @@
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
-    background-color: #F6F7FF !important;
+    background-color: #f6f7ff !important;
     z-index: 2 !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
@@ -720,7 +720,7 @@
       align-items: center;
       justify-content: center;
       border: 1px solid rgba(130, 140, 200, 0.18);
-      background: rgba(255, 255, 255, 0.40);
+      background: rgba(255, 255, 255, 0.4);
       color: #3e5068;
       border-radius: 8px;
       cursor: pointer;
@@ -736,7 +736,7 @@
       &:hover:not(:disabled) {
         border-color: #5b7cf7;
         color: #5b7cf7;
-        background: rgba(91, 124, 247, 0.10);
+        background: rgba(91, 124, 247, 0.1);
       }
     }
 
@@ -748,7 +748,7 @@
       align-items: center;
       justify-content: center;
       border: 1px solid rgba(130, 140, 200, 0.18);
-      background: rgba(255, 255, 255, 0.40);
+      background: rgba(255, 255, 255, 0.4);
       color: #3e5068;
       border-radius: 8px;
       cursor: pointer;
@@ -760,7 +760,7 @@
       &:hover:not(.page-active):not(.page-ellipsis) {
         border-color: #5b7cf7;
         color: #5b7cf7;
-        background: rgba(91, 124, 247, 0.10);
+        background: rgba(91, 124, 247, 0.1);
       }
 
       &.page-active {
@@ -897,12 +897,7 @@
 // ── 机构目录树面板 v5 Glass Style ──
 .dept-tree-panel {
   height: 100%;
-  background: linear-gradient(
-    160deg,
-    rgba(242, 245, 252, 0.85) 0%,
-    rgba(236, 240, 255, 0.80) 50%,
-    rgba(240, 243, 255, 0.85) 100%
-  );
+  background: linear-gradient(160deg, rgba(242, 245, 252, 0.85) 0%, rgba(236, 240, 255, 0.8) 50%, rgba(240, 243, 255, 0.85) 100%);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(130, 140, 200, 0.12);
   border-radius: 14px;
@@ -920,14 +915,7 @@
     left: 16px;
     right: 16px;
     height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(91, 124, 247, 0.25) 30%,
-      rgba(112, 145, 250, 0.35) 50%,
-      rgba(91, 124, 247, 0.25) 70%,
-      transparent 100%
-    );
+    background: linear-gradient(90deg, transparent 0%, rgba(91, 124, 247, 0.25) 30%, rgba(112, 145, 250, 0.35) 50%, rgba(91, 124, 247, 0.25) 70%, transparent 100%);
     z-index: 1;
   }
 }
@@ -1081,7 +1069,7 @@
 
       &.ant-tree-treenode-selected {
         .ant-tree-node-content-wrapper {
-          background: rgba(91, 124, 247, 0.10) !important;
+          background: rgba(91, 124, 247, 0.1) !important;
         }
         .ant-tree-title {
           color: #5b7cf7 !important;
@@ -1175,7 +1163,7 @@
 // ── 搜索栏统一 v5 — field style with translucent bg ──
 .abi-searchbar {
   padding: 16px 28px;
-  border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
   background: rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
@@ -1237,14 +1225,14 @@
   }
 
   input::placeholder {
-    color: #8FA0B5 !important;
+    color: #8fa0b5 !important;
   }
 
   &:focus,
   &.ant-input-affix-wrapper-focused {
     border-color: #5b7cf7 !important;
     background: rgba(255, 255, 255, 0.88) !important;
-    box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.10) !important;
+    box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.1) !important;
   }
 }
 
@@ -1269,17 +1257,83 @@
     flex-shrink: 0;
   }
 
-  &.tag-mysql       { background: rgba(91,124,247,0.10);  color: #4568e8; &::before { background: #4568e8; } }
-  &.tag-postgresql  { background: rgba(16,185,129,0.10);  color: #059669; &::before { background: #059669; } }
-  &.tag-oracle      { background: rgba(239,68,68,0.10);   color: #dc2626; &::before { background: #dc2626; } }
-  &.tag-clickhouse  { background: rgba(245,158,11,0.10);  color: #d97706; &::before { background: #d97706; } }
-  &.tag-doris       { background: rgba(139,92,246,0.10);   color: #7c3aed; &::before { background: #7c3aed; } }
-  &.tag-starrocks   { background: rgba(236,72,153,0.10);  color: #db2777; &::before { background: #db2777; } }
-  &.tag-hive        { background: rgba(245,158,11,0.10);  color: #d97706; &::before { background: #d97706; } }
-  &.tag-dm          { background: rgba(20,184,166,0.10);   color: #0d9488; &::before { background: #0d9488; } }
-  &.tag-kingbase    { background: rgba(99,102,241,0.10);   color: #6366f1; &::before { background: #6366f1; } }
-  &.tag-excel       { background: rgba(16,185,129,0.10);  color: #059669; &::before { background: #059669; } }
-  &.tag-default     { background: rgba(130,140,200,0.10);  color: #768a9f; &::before { background: #768a9f; } }
+  &.tag-mysql {
+    background: rgba(91, 124, 247, 0.1);
+    color: #4568e8;
+    &::before {
+      background: #4568e8;
+    }
+  }
+  &.tag-postgresql {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    &::before {
+      background: #059669;
+    }
+  }
+  &.tag-oracle {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    &::before {
+      background: #dc2626;
+    }
+  }
+  &.tag-clickhouse {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    &::before {
+      background: #d97706;
+    }
+  }
+  &.tag-doris {
+    background: rgba(139, 92, 246, 0.1);
+    color: #7c3aed;
+    &::before {
+      background: #7c3aed;
+    }
+  }
+  &.tag-starrocks {
+    background: rgba(236, 72, 153, 0.1);
+    color: #db2777;
+    &::before {
+      background: #db2777;
+    }
+  }
+  &.tag-hive {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    &::before {
+      background: #d97706;
+    }
+  }
+  &.tag-dm {
+    background: rgba(20, 184, 166, 0.1);
+    color: #0d9488;
+    &::before {
+      background: #0d9488;
+    }
+  }
+  &.tag-kingbase {
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+    &::before {
+      background: #6366f1;
+    }
+  }
+  &.tag-excel {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    &::before {
+      background: #059669;
+    }
+  }
+  &.tag-default {
+    background: rgba(130, 140, 200, 0.1);
+    color: #768a9f;
+    &::before {
+      background: #768a9f;
+    }
+  }
 }
 
 // ── 状态标签 v5 status tag 色块 ──
@@ -1302,7 +1356,7 @@
   }
 
   &.status-normal {
-    background: rgba(16, 185, 129, 0.10);
+    background: rgba(16, 185, 129, 0.1);
     color: #059669;
 
     &::before {
@@ -1311,7 +1365,7 @@
   }
 
   &.status-error {
-    background: rgba(239, 68, 68, 0.10);
+    background: rgba(239, 68, 68, 0.1);
     color: #dc2626;
 
     &::before {
@@ -1320,7 +1374,7 @@
   }
 
   &.status-warning {
-    background: rgba(245, 158, 11, 0.10);
+    background: rgba(245, 158, 11, 0.1);
     color: #d97706;
 
     &::before {
@@ -1329,7 +1383,7 @@
   }
 
   &.status-disabled {
-    background: rgba(139, 139, 139, 0.10);
+    background: rgba(139, 139, 139, 0.1);
     color: #8c8c8c;
 
     &::before {
@@ -1355,7 +1409,7 @@
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
 
   &:hover {
-    background: rgba(91, 124, 247, 0.10) !important;
+    background: rgba(91, 124, 247, 0.1) !important;
     color: #5b7cf7 !important;
   }
 
@@ -1414,7 +1468,7 @@
     padding: 0;
 
     &:hover {
-      background: rgba(91, 124, 247, 0.10);
+      background: rgba(91, 124, 247, 0.1);
       color: #5b7cf7;
     }
 
@@ -1450,7 +1504,7 @@
     &:hover {
       border-color: #5b7cf7;
       color: #5b7cf7;
-      background: rgba(91, 124, 247, 0.10);
+      background: rgba(91, 124, 247, 0.1);
     }
   }
 
@@ -1478,7 +1532,7 @@
       transition: background 0.1s;
 
       &:hover {
-        background: rgba(91, 124, 247, 0.10);
+        background: rgba(91, 124, 247, 0.1);
       }
     }
 
@@ -1536,7 +1590,9 @@
 
   &:hover {
     background: rgba(255, 255, 255, 0.85);
-    box-shadow: 0 8px 28px rgba(26, 39, 68, 0.08), 0 2px 8px rgba(91, 124, 247, 0.06);
+    box-shadow:
+      0 8px 28px rgba(26, 39, 68, 0.08),
+      0 2px 8px rgba(91, 124, 247, 0.06);
     transform: translateY(-2px);
     border-color: rgba(91, 124, 247, 0.25);
   }
@@ -1641,7 +1697,7 @@
       align-items: center;
 
       &:hover {
-        background: rgba(91, 124, 247, 0.10);
+        background: rgba(91, 124, 247, 0.1);
         color: #5b7cf7;
       }
 
@@ -1665,7 +1721,9 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
     padding: 0;
     margin-left: auto;
     flex-shrink: 0;
@@ -1685,9 +1743,15 @@
   flex-shrink: 0;
   display: inline-block;
 
-  &--blue { background: #5b7cf7; }
-  &--purple { background: #a78bfa; }
-  &--green { background: #34d399; }
+  &--blue {
+    background: #5b7cf7;
+  }
+  &--purple {
+    background: #a78bfa;
+  }
+  &--green {
+    background: #34d399;
+  }
 }
 
 .ant-drawer .ant-spin-container {
@@ -1699,14 +1763,6 @@
   .ant-drawer-content {
     background: linear-gradient(135deg, rgba(240, 244, 255, 0.95) 0%, rgba(239, 243, 255, 0.95) 45%, rgba(239, 242, 255, 0.95) 100%);
     backdrop-filter: blur(20px);
-  }
-
-  .ant-drawer-header {
-    border-bottom: 1px solid rgba(130, 140, 200, 0.15);
-    padding: 20px 28px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.8) 100%);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 2px 12px rgba(91, 124, 247, 0.06);
   }
 
   .ant-drawer-body {
@@ -1723,42 +1779,13 @@
     box-shadow: 0 -2px 12px rgba(91, 124, 247, 0.06);
   }
 
-  // 关闭按钮增强
-  .ant-drawer-close {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(130, 140, 200, 0.18);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    
-    &:hover {
-      background: rgba(255, 255, 255, 0.9);
-      border-color: rgba(91, 124, 247, 0.4);
-      box-shadow: 0 2px 8px rgba(91, 124, 247, 0.15);
-      
-      .anticon {
-        color: #5b7cf7;
-      }
-    }
-
-    .anticon {
-      font-size: 14px;
-      color: #8fa0b5;
-      transition: all 0.2s ease;
-    }
-  }
-
   // Drawer 内部 Tabs 样式优化
   .ant-tabs {
     .ant-tabs-nav {
       margin-bottom: 0;
       padding: 0 24px;
       background: rgba(255, 255, 255, 0.4);
-      border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+      border-bottom: 1px solid rgba(130, 140, 200, 0.1);
 
       &::before {
         display: none;
@@ -1823,7 +1850,7 @@
       &:focus,
       &.ant-input-affix-wrapper-focused {
         border-color: #5b7cf7 !important;
-        box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.10) !important;
+        box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.1) !important;
       }
     }
 
@@ -1845,42 +1872,6 @@
         border-color: #5b7cf7;
         box-shadow: 0 2px 8px rgba(91, 124, 247, 0.25);
       }
-    }
-  }
-}
-
-.ds-operate-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 17px;
-  font-weight: 700;
-  color: #1a2744;
-  letter-spacing: 0.02em;
-
-  .ds-operate-title-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    box-shadow: 0 4px 12px rgba(91, 124, 247, 0.3);
-    position: relative;
-    overflow: hidden;
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
-      pointer-events: none;
     }
   }
 }
@@ -1913,12 +1904,12 @@
   font-weight: 600;
 
   &.ds-test-badge-success {
-    background: rgba(16, 185, 129, 0.10);
+    background: rgba(16, 185, 129, 0.1);
     color: #059669;
   }
 
   &.ds-test-badge-error {
-    background: rgba(239, 68, 68, 0.10);
+    background: rgba(239, 68, 68, 0.1);
     color: #dc2626;
   }
 }
@@ -2152,7 +2143,7 @@
   margin-bottom: 2px;
   background: linear-gradient(135deg, rgba(91, 124, 247, 0.06), rgba(112, 145, 250, 0.04));
   border-radius: 8px 8px 0 0;
-  border: 1px solid rgba(130, 140, 200, 0.10);
+  border: 1px solid rgba(130, 140, 200, 0.1);
   border-bottom: none;
   font-size: 13px;
   font-weight: 700;
@@ -2170,7 +2161,7 @@
   margin-bottom: 20px;
   border-radius: 0 0 8px 8px;
   overflow: hidden;
-  border: 1px solid rgba(130, 140, 200, 0.10);
+  border: 1px solid rgba(130, 140, 200, 0.1);
   border-top: none;
 
   .ant-table {
@@ -2244,7 +2235,7 @@
 
 .ds-upload-tips {
   background: rgba(91, 124, 247, 0.04);
-  border: 1px solid rgba(91, 124, 247, 0.10);
+  border: 1px solid rgba(91, 124, 247, 0.1);
   border-radius: 10px;
   padding: 14px 18px;
   margin-top: 4px;
@@ -2417,7 +2408,7 @@
   justify-content: space-between;
   padding: 14px 24px;
   background: rgba(255, 255, 255, 0.08);
-  border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
   flex-shrink: 0;
 }
 
@@ -2537,7 +2528,7 @@
   font-size: 11px;
   font-weight: 600;
   color: #5b7cf7;
-  background: rgba(91, 124, 247, 0.10);
+  background: rgba(91, 124, 247, 0.1);
   padding: 1px 8px;
   border-radius: 10px;
 }
@@ -2585,7 +2576,7 @@
   }
 
   &.active {
-    background: rgba(91, 124, 247, 0.10);
+    background: rgba(91, 124, 247, 0.1);
     color: #5b7cf7;
     font-weight: 600;
   }
@@ -2719,7 +2710,7 @@
 // ── 数据源预览抽屉 v5 ──
 .ds-preview-drawer {
   .ant-drawer-header {
-    border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+    border-bottom: 1px solid rgba(130, 140, 200, 0.1);
     padding: 16px 24px;
   }
 
@@ -2729,34 +2720,6 @@
     flex-direction: column;
     overflow: hidden;
   }
-}
-
-.ds-view-drawer-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #1a2744;
-}
-
-.ds-view-drawer-title-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #5b7cf7, #7091fa);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-}
-
-.ds-view-drawer-title-sub {
-  font-size: 13px;
-  font-weight: 500;
-  color: #768a9f;
-  margin-left: 4px;
 }
 
 .ds-view-drawer-toolbar {
@@ -2790,7 +2753,7 @@
 // ── 元数据分析 Drawer v5 ──
 .ma-drawer {
   .ant-drawer-header {
-    border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+    border-bottom: 1px solid rgba(130, 140, 200, 0.1);
     padding: 16px 24px;
   }
 
@@ -2800,27 +2763,6 @@
     flex-direction: column;
     height: 100%;
   }
-}
-
-.ma-drawer-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #1a2744;
-}
-
-.ma-drawer-title-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #5b7cf7, #7091fa);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
 }
 
 // Toolbar
@@ -2874,7 +2816,7 @@
   font-size: 11px;
   font-weight: 600;
   color: #5b7cf7;
-  background: rgba(91, 124, 247, 0.10);
+  background: rgba(91, 124, 247, 0.1);
   padding: 1px 8px;
   border-radius: 10px;
   white-space: nowrap;
@@ -3010,7 +2952,7 @@
   font-size: 11px;
   font-weight: 600;
   color: #5b7cf7;
-  background: rgba(91, 124, 247, 0.10);
+  background: rgba(91, 124, 247, 0.1);
   padding: 1px 8px;
   border-radius: 10px;
 }
@@ -3057,7 +2999,7 @@
 // ── 节点详情 Drawer v5 ──
 .ma-node-drawer {
   .ant-drawer-header {
-    border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+    border-bottom: 1px solid rgba(130, 140, 200, 0.1);
     padding: 16px 24px;
   }
 
@@ -3178,7 +3120,7 @@
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
-    background-color: #F6F7FF !important;
+    background-color: #f6f7ff !important;
     z-index: 2 !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
@@ -3190,7 +3132,6 @@
   .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row):hover > td.ant-table-cell-fix-left {
     background: #eef2ff !important;
   }
-
 
   // 选中行高亮
   .ant-table-tbody > tr.ant-table-row-selected > td {
@@ -3239,51 +3180,6 @@
   }
 }
 
-// 抽屉标题
-.drawer-title-v5 {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a2744;
-
-  .drawer-title-icon {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #5b7cf7, #7091fa);
-    border-radius: 10px;
-    color: #fff;
-    font-size: 18px;
-    box-shadow: 0 4px 12px rgba(91, 124, 247, 0.3);
-  }
-}
-
-// 关闭按钮
-.drawer-close-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(130, 140, 200, 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #8fa0b5;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.9);
-    border-color: rgba(91, 124, 247, 0.4);
-    box-shadow: 0 2px 8px rgba(91, 124, 247, 0.15);
-    color: #5b7cf7;
-  }
-}
-
 // 表单容器
 .mcp-form-container {
   padding: 24px 28px;
@@ -3316,7 +3212,9 @@
 
   &:hover {
     background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 8px 24px rgba(26, 39, 68, 0.06), 0 2px 8px rgba(91, 124, 247, 0.04);
+    box-shadow:
+      0 8px 24px rgba(26, 39, 68, 0.06),
+      0 2px 8px rgba(91, 124, 247, 0.04);
     border-color: rgba(91, 124, 247, 0.2);
   }
 }
@@ -3327,7 +3225,7 @@
   gap: 10px;
   padding: 16px 20px;
   background: linear-gradient(135deg, rgba(242, 245, 252, 0.6) 0%, rgba(239, 243, 255, 0.6) 100%);
-  border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
 
   .section-icon {
     font-size: 18px;
@@ -3498,7 +3396,7 @@
   }
 
   .ant-collapse-content {
-    border-top: 1px solid rgba(130, 140, 200, 0.10) !important;
+    border-top: 1px solid rgba(130, 140, 200, 0.1) !important;
   }
 
   .ant-collapse-content-box {
@@ -3635,7 +3533,7 @@
   gap: 12px;
   margin-top: 8px;
   padding-top: 16px;
-  border-top: 1px solid rgba(130, 140, 200, 0.10);
+  border-top: 1px solid rgba(130, 140, 200, 0.1);
 }
 
 // 底部按钮
@@ -3910,36 +3808,6 @@
   }
 }
 
-// ── Drawer title ──
-.sd-v5-drawer-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 17px;
-  font-weight: 700;
-  color: #1a2744;
-}
-
-.sd-v5-drawer-title-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-
-.sd-v5-close {
-  font-size: 14px;
-  color: #8c8c8c;
-  transition: color 0.2s;
-  &:hover { color: #5b7cf7; }
-}
-
 // ── v5 Tab navigation ──
 .sd-v5-tabs {
   display: flex;
@@ -4060,14 +3928,19 @@
     height: 50px;
     top: 10px;
     left: 60%;
-    background: rgba(255,255,255,0.4);
+    background: rgba(255, 255, 255, 0.4);
     animation: sd-v5-float 5s ease-in-out infinite 1s;
   }
 }
 
 @keyframes sd-v5-float {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-8px) scale(1.05); }
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.05);
+  }
 }
 
 .sd-v5-hero-content {
@@ -4130,7 +4003,7 @@
   padding: 14px 16px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(130, 140, 200, 0.10);
+  border: 1px solid rgba(130, 140, 200, 0.1);
   backdrop-filter: blur(8px);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -4218,7 +4091,7 @@
   display: flex;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(130, 140, 200, 0.10);
+  border: 1px solid rgba(130, 140, 200, 0.1);
   backdrop-filter: blur(8px);
   overflow: visible;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -4417,7 +4290,7 @@
   flex-direction: column;
   gap: 18px;
   background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(130, 140, 200, 0.10);
+  border: 1px solid rgba(130, 140, 200, 0.1);
   border-radius: 12px;
   padding: 20px;
   backdrop-filter: blur(8px);
@@ -4470,7 +4343,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(91, 124, 247, 0.15), rgba(112, 145, 250, 0.10));
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.15), rgba(112, 145, 250, 0.1));
   color: #5b7cf7;
   display: inline-flex;
   align-items: center;
@@ -4532,7 +4405,7 @@
   margin: 24px 40px 0;
   padding: 14px 20px;
   background: rgba(91, 124, 247, 0.04);
-  border: 1px solid rgba(91, 124, 247, 0.10);
+  border: 1px solid rgba(91, 124, 247, 0.1);
   border-radius: 10px;
   backdrop-filter: blur(6px);
 }
@@ -4598,7 +4471,9 @@
   &.sd-v5-perm-card-active {
     border-color: #5b7cf7;
     background: linear-gradient(135deg, rgba(91, 124, 247, 0.04) 0%, rgba(112, 145, 250, 0.02) 100%);
-    box-shadow: 0 0 0 2px rgba(91, 124, 247, 0.08), 0 4px 16px rgba(91, 124, 247, 0.06);
+    box-shadow:
+      0 0 0 2px rgba(91, 124, 247, 0.08),
+      0 4px 16px rgba(91, 124, 247, 0.06);
   }
 
   .ant-checkbox-wrapper,
@@ -4622,7 +4497,7 @@
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: linear-gradient(135deg, rgba(91, 124, 247, 0.10), rgba(112, 145, 250, 0.05));
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.1), rgba(112, 145, 250, 0.05));
   display: flex;
   align-items: center;
   justify-content: center;

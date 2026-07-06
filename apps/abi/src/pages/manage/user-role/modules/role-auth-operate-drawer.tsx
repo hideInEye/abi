@@ -1,166 +1,161 @@
-import { Form, message } from 'antd';
-import React, { useState, useEffect } from 'react';
+import { Form, message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+import React, { useState, useEffect } from 'react'
 
-import { enableStatusRecord } from '@/constants/business';
-import { assignUserUnallocatedList } from '@/service/api/role';
+import { enableStatusRecord } from '@/constants/business'
+import { assignUserUnallocatedList } from '@/service/api/role'
 
 // 定义类型接口
 interface RolePermissioDrawerProps {
-  onClose: () => void;
-  onSubmit: (params: any) => Promise<void>;
-  roleId: number | string; // 修改返回类型
-  visible: boolean;
+  onClose: () => void
+  onSubmit: (params: any) => Promise<void>
+  roleId: number | string // 修改返回类型
+  visible: boolean
 }
-type ReadonlyRolePermissioDrawerProps = Readonly<RolePermissioDrawerProps>;
+type ReadonlyRolePermissioDrawerProps = Readonly<RolePermissioDrawerProps>
 
 const MultiSelectTableDrawer: React.FC<ReadonlyRolePermissioDrawerProps> = ({ roleId, visible, onClose, onSubmit }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
 
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [form] = Form.useForm()
+  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState([])
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
 
   const columns = [
     {
       align: 'center',
       dataIndex: 'userName',
       key: 'userName',
-      title: t('page.manage.user.userName')
+      title: t('page.manage.user.userName'),
     },
     {
       align: 'center',
       dataIndex: 'nickName',
       key: 'nickName',
-      title: t('page.manage.user.nickName')
+      title: t('page.manage.user.nickName'),
     },
     {
       align: 'center',
       dataIndex: 'email',
       key: 'email',
-      title: t('page.manage.common.email')
+      title: t('page.manage.common.email'),
     },
     {
       align: 'center',
       dataIndex: 'phonenumber',
       key: 'phonenumber',
-      title: t('page.manage.user.phonenumber')
+      title: t('page.manage.user.phonenumber'),
     },
     {
       align: 'center',
       dataIndex: 'status',
       key: 'status',
       render: (_: unknown, record: { status: Api.Common.EnableStatus }) => {
-        const label = t(enableStatusRecord[record.status]);
+        const label = t(enableStatusRecord[record.status])
         if (record.status === '0') {
-          return <ATag color="success">{label}</ATag>;
+          return <ATag color="success">{label}</ATag>
         }
-        return <ATag color="error">{label}</ATag>;
+        return <ATag color="error">{label}</ATag>
       },
-      title: t('page.manage.role.status')
+      title: t('page.manage.role.status'),
     },
     {
       align: 'center',
       dataIndex: 'createTime',
       key: 'createTime',
       title: t('page.manage.role.createTime'),
-      width: 200
-    }
-  ];
+      width: 200,
+    },
+  ]
 
   const fetchData = async (params: any) => {
-    setLoading(true);
+    setLoading(true)
     try {
       const curparams = {
         pageNum: params.current,
         pageSize: params.pageSize,
         roleId,
-        ...form.getFieldsValue()
-      };
+        ...form.getFieldsValue(),
+      }
 
-      const res: any = await assignUserUnallocatedList(curparams);
+      const res: any = await assignUserUnallocatedList(curparams)
       if (res?.response?.data?.rows) {
-        const { rows, total } = res.response.data;
-        setData(rows);
-        setPagination(prev => ({
+        const { rows, total } = res.response.data
+        setData(rows)
+        setPagination((prev) => ({
           ...prev,
-          total
-        }));
+          total,
+        }))
       }
     } catch (error) {
-      message.error('获取列表数据失败');
+      message.error('获取列表数据失败')
 
       // eslint-disable-next-line
-      console.error('Fetch list error:', error);
+      console.error('Fetch list error:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleTableChange = (newPagination: any) => {
-    setPagination(newPagination);
-    fetchData(newPagination);
-  };
+    setPagination(newPagination)
+    fetchData(newPagination)
+  }
 
   const rowSelection = {
     onChange: (selectedKeys: React.Key[]) => {
-      setSelectedRowKeys(selectedKeys);
+      setSelectedRowKeys(selectedKeys)
     },
-    selectedRowKeys
-  };
+    selectedRowKeys,
+  }
 
   function handleSubmit() {
-    onSubmit(selectedRowKeys);
+    onSubmit(selectedRowKeys)
   }
 
   const onReset = () => {
-    form.resetFields();
-    setPagination(prev => ({ ...prev, current: 1 }));
+    form.resetFields()
+    setPagination((prev) => ({ ...prev, current: 1 }))
     fetchData({
       current: 1,
       pageSize: pagination.pageSize,
-      total: pagination.total
-    });
-  };
+      total: pagination.total,
+    })
+  }
 
   const onSearch = () => {
-    setPagination(prev => ({ ...prev, current: 1 }));
+    setPagination((prev) => ({ ...prev, current: 1 }))
     fetchData({
       current: 1,
       pageSize: pagination.pageSize,
-      total: pagination.total
-    });
-  };
+      total: pagination.total,
+    })
+  }
 
   // 初始化加载数据
   useEffect(() => {
     if (roleId) {
-      setData([]);
-      setSelectedRowKeys([]);
-      setPagination(prev => ({ ...prev, current: 1 }));
+      setData([])
+      setSelectedRowKeys([])
+      setPagination((prev) => ({ ...prev, current: 1 }))
 
       if (visible) {
-        fetchData(pagination);
+        fetchData(pagination)
       }
     }
-  }, [roleId, visible]);
+  }, [roleId, visible])
 
   return (
-    <ADrawer
+    <CommonDrawer
       open={visible}
       title={t('page.manage.role.selectUser')}
       width={1000}
       footer={
-        <AFlex
-          gap={20}
-          justify="flex-end"
-        >
+        <AFlex gap={20} justify="flex-end">
           <AButton onClick={onClose}>{t('common.cancel')}</AButton>
-          <AButton
-            type="primary"
-            onClick={handleSubmit}
-          >
+          <AButton type="primary" onClick={handleSubmit}>
             {t('common.confirm')}
           </AButton>
         </AFlex>
@@ -171,69 +166,30 @@ const MultiSelectTableDrawer: React.FC<ReadonlyRolePermissioDrawerProps> = ({ ro
         form={form}
         labelCol={{
           md: 7,
-          span: 5
+          span: 5,
         }}
       >
-        <ARow
-          wrap
-          gutter={[16, 16]}
-        >
-          <ACol
-            lg={6}
-            md={12}
-            span={24}
-          >
-            <AForm.Item
-              className="m-0"
-              label={t('page.manage.user.userName')}
-              name="userName"
-            >
+        <ARow wrap gutter={[16, 16]}>
+          <ACol lg={6} md={12} span={24}>
+            <AForm.Item className="m-0" label={t('page.manage.user.userName')} name="userName">
               <AInput placeholder={t('page.manage.user.form.userName')} />
             </AForm.Item>
           </ACol>
 
-          <ACol
-            lg={6}
-            md={12}
-            span={24}
-          >
-            <AForm.Item
-              className="m-0"
-              label={t('page.manage.user.phonenumber')}
-              name="phonenumber"
-            >
+          <ACol lg={6} md={12} span={24}>
+            <AForm.Item className="m-0" label={t('page.manage.user.phonenumber')} name="phonenumber">
               <AInput placeholder={t('page.manage.user.form.phonenumber')} />
             </AForm.Item>
           </ACol>
 
-          <ACol
-            lg={6}
-            md={12}
-            span={24}
-          />
+          <ACol lg={6} md={12} span={24} />
 
-          <ACol
-            lg={6}
-            md={12}
-            span={24}
-          >
-            <AFlex
-              align="center"
-              gap={12}
-              justify="end"
-            >
-              <AButton
-                icon={<IconIcRoundRefresh />}
-                onClick={onReset}
-              >
+          <ACol lg={6} md={12} span={24}>
+            <AFlex align="center" gap={12} justify="end">
+              <AButton icon={<IconIcRoundRefresh />} onClick={onReset}>
                 {t('common.reset')}
               </AButton>
-              <AButton
-                ghost
-                icon={<IconIcRoundSearch />}
-                type="primary"
-                onClick={onSearch}
-              >
+              <AButton ghost icon={<IconIcRoundSearch />} type="primary" onClick={onSearch}>
                 {t('common.search')}
               </AButton>
             </AFlex>
@@ -241,18 +197,9 @@ const MultiSelectTableDrawer: React.FC<ReadonlyRolePermissioDrawerProps> = ({ ro
         </ARow>
       </AForm>
 
-      <ATable
-        columns={columns}
-        dataSource={data}
-        loading={loading}
-        pagination={pagination}
-        rowKey="userId"
-        rowSelection={rowSelection}
-        scroll={{ y: 600 }}
-        onChange={handleTableChange}
-      />
-    </ADrawer>
-  );
-};
+      <ATable columns={columns} dataSource={data} loading={loading} pagination={pagination} rowKey="userId" rowSelection={rowSelection} scroll={{ y: 600 }} onChange={handleTableChange} />
+    </CommonDrawer>
+  )
+}
 
-export default MultiSelectTableDrawer;
+export default MultiSelectTableDrawer

@@ -1,4 +1,5 @@
-import { Drawer, Empty, Tag } from 'antd'
+import { Empty, Tag } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React, { useMemo } from 'react'
 
 import type { OntologyEntityAttribute, OntologyGraphEdge, OntologyGraphNode } from '@/pages/workbench/ontology-kg/shared-network-types'
@@ -28,7 +29,7 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({ edge, entity
   else if (edge) title = '关系详情'
 
   return (
-    <Drawer open={open} title={title} width={380} onClose={onClose}>
+    <CommonDrawer open={open} title={title} width={380} onClose={onClose}>
       {node && (
         <div className="flex flex-col gap-5">
           <section>
@@ -84,10 +85,8 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({ edge, entity
           <span>{edge.createTime || '-'}</span>
         </div>
       )}
-      {!node && !edge && (
-        <Empty description="请选择实体或关系" />
-      )}
-    </Drawer>
+      {!node && !edge && <Empty description="请选择实体或关系" />}
+    </CommonDrawer>
   )
 }
 

@@ -1,76 +1,46 @@
-# 角色选择单选改造
+# /space/user 已分配空间菜单按 checkedKeys 展示
 
 ## 需求类型
 
-UI 调整 / 表单行为调整
+UI 数据展示调整
 
 ## 背景
 
-当前主业务应用 `apps/abi` 中，多个用户管理相关页面的角色选择允许多选。业务要求将这些角色选择改为只能选择一个选项。
+在 `/space/user` 页面打开“分配角色”抽屉后，点击左侧角色会请求角色菜单接口。接口返回 `menus` 树和 `checkedKeys`，右侧“已分配的空间菜单”需要根据接口实际勾选结果展示，而不是展示固定层级菜单。
 
 ## 目标
 
-- 将空间用户管理 `/space/user` 的新建、编辑用户角色选择改为单选。
-- 将用户管理 `/manage/user` 的新建、编辑用户角色选择改为单选。
-- 将新建、编辑空间时，空间用户管理中“分配角色”的选择改为单选。
-- 保持现有接口调用、页面结构和样式风格尽量不变。
+- 点击左侧角色后，读取接口返回的 `menus` 和 `checkedKeys`。
+- 使用 lodash 方法将 `menus` 树平铺为数组。
+- 只展示平铺后 `id` 命中 `checkedKeys` 的菜单项。
+- 右侧菜单数量和标签列表保持同一份过滤结果。
 
 ## 非目标
 
-- 不重构用户管理、空间管理或角色管理模块。
-- 不新增后端接口。
-- 不调整角色权限、菜单权限、数据权限等其他业务逻辑。
-- 不修改 `apps/chat`、`apps/dashboard` 或共享 `packages/*`。
-
-## 用户流程 / 使用场景
-
-用户在 `/space/user`、`/manage/user` 或空间新建/编辑中的用户管理分配角色场景里新增或编辑用户时，角色字段只能选择一个角色；如果已有数据包含多个角色，表单展示和提交需按单选规则处理为一个角色。
+- 不修改角色列表接口、角色菜单接口、提交接口或请求参数。
+- 不修改角色单选逻辑。
+- 不调整 `/manage/user` 或无右侧空间菜单展示的空间列表分配角色组件。
+- 不大范围重构抽屉样式。
 
 ## 影响范围预期
 
-- `apps/abi/src/pages/space/user/**`
-- `apps/abi/src/pages/manage/user/**`
-- 空间新建/编辑相关用户管理或分配角色组件
-- 可能涉及 `apps/abi/src/service/api/**` 中已有用户/空间接口调用的参数适配
-
-## 详细需求
-
-- 移除目标角色选择控件的多选模式。
-- 表单字段值需要从多选数组适配为单选值，或在提交前兼容后端原有数组/字符串字段要求。
-- 编辑回显时，如果后端返回多个角色，只保留第一个有效角色作为当前选择。
-- 清空、校验、禁用、loading 等既有交互保持原样。
+- `apps/abi/src/pages/space/user/modules/PermissionManagement.tsx`
+- `apps/abi/src/pages/space/user/modules/permission-menu.ts`
+- `apps/abi/src/pages/space/user/modules/permission-menu.test.ts`
+- `.ai/runs/<date>-space-user-checked-menu-display/`
 
 ## 验收标准
 
-- `/space/user` 新建和编辑用户时，角色选择只能选一个。
-- `/manage/user` 新建和编辑用户时，角色选择只能选一个。
-- 新建/编辑空间中的用户管理分配角色只能选一个。
-- 不影响列表查询、新增、编辑提交的其他字段。
-- 修改范围局限在当前需求相关文件。
+- 角色菜单接口返回 `menus` 和 `checkedKeys` 后，右侧只显示 `checkedKeys` 对应的菜单。
+- 右侧“X 项”数量与实际显示标签数量一致。
+- 未命中 `checkedKeys` 的菜单不展示。
+- 打开默认已选角色和点击切换角色时均使用同一显示规则。
+- 必要测试、静态检查和构建验证通过，或记录无法通过的原因。
 
 ## 测试要求
 
-- 优先运行 `pnpm --filter chatbi typecheck`。
-- 视改动范围运行 `pnpm --filter chatbi build` 或根 `pnpm build`。
-- 如发现纯函数/参数适配逻辑可独立测试，应补充 Vitest；若只是 Ant Design 表单配置调整，可说明未新增测试原因。
-
-## UI / 样式要求
-
-- 遵守 ABI 现有 Ant Design 与 UnoCSS/SCSS 风格。
-- 不改动整体布局和视觉风格。
-
-## 数据 / 接口要求
-
-- 复用现有 `apps/abi` service/api 和 request 封装。
-- 若接口仍要求数组字段，提交时由单选值转换为单元素数组。
-- 不改变接口 URL、请求方式或响应处理。
-
-## 风险和限制
-
-- 后端历史数据可能存在多个角色，需要前端编辑回显时兼容。
-- 根 `pnpm lint` 和 `pnpm type-check` 已知存在项目级阻塞，不作为本次通过门禁。
-- 必须避免恢复或覆盖用户未说明改动。
-
-## 备注
-
-用户已明确要求创建 agent 进行构建测试，本轮将使用测试 agent 协助验证构建/类型检查入口和结果。
+- 为菜单树平铺与 `checkedKeys` 匹配逻辑补充 Vitest。
+- 运行相关 Vitest。
+- 运行 `git diff --check`。
+- 对修改的 TS/TSX 做 parse 检查。
+- 运行 `pnpm --filter chatbi build`。

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import { Dropdown, Splitter } from 'antd'
+import { Dropdown, Popconfirm, Splitter } from 'antd'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
@@ -36,6 +36,7 @@ const MetricModeling: React.FC = () => {
     handleAddAtomic,
     handleAddCustom,
     handleAtomicMappingSubmit,
+    handleBatchDelete,
     handleDelete,
     handleEdit,
     handleQuery,
@@ -46,16 +47,13 @@ const MetricModeling: React.FC = () => {
     loading,
     pagination,
     searchParams,
+    selectedRowKeys,
+    setSelectedRowKeys,
     tableData,
   } = useKnowledgeExtraction(selectedGroup)
 
-  const handleGroupChange = useCallback((groupId: number, groupName?: string) => {
-    setSelectedGroup((prev) => {
-      if (prev?.groupId === groupId && prev?.groupName === (groupName || '')) {
-        return prev
-      }
-      return { groupId, groupName: groupName || '' }
-    })
+  const handleGroupChange = useCallback((groupId: string, groupName?: string) => {
+    setSelectedGroup({ groupId, groupName: groupName || '' })
   }, [])
 
     const addMenus = useMemo<MenuProps['items']>(
@@ -132,6 +130,18 @@ const MetricModeling: React.FC = () => {
                   >
                     + 新增
                   </Dropdown.Button>
+                  <Popconfirm
+                    cancelText="取消"
+                    description={`确定删除选中的 ${selectedRowKeys.length} 条指标吗？`}
+                    disabled={!selectedRowKeys.length}
+                    okText="确定"
+                    title="提示"
+                    onConfirm={handleBatchDelete}
+                  >
+                    <AButton danger disabled={!selectedRowKeys.length}>
+                      批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
+                    </AButton>
+                  </Popconfirm>
                 </div>
                 <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
               </div>
@@ -144,6 +154,8 @@ const MetricModeling: React.FC = () => {
                 onDelete={handleDelete}
                 onEdit={handleEdit}
                 onPaginationChange={handlePaginationChange}
+                onSelectedRowKeysChange={setSelectedRowKeys}
+                selectedRowKeys={selectedRowKeys}
               />
             </section>
           </div>

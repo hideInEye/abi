@@ -17,7 +17,9 @@ interface Props {
   readonly onDelete: (record: KnowledgeIndicatorItem) => void
   readonly onEdit: (record: KnowledgeIndicatorItem) => void
   readonly onPaginationChange: (page: number, pageSize: number) => void
+  readonly onSelectedRowKeysChange: (keys: string[]) => void
   readonly pagination: KnowledgePagination
+  readonly selectedRowKeys: string[]
   readonly viewMode: OntologyViewMode
   readonly visibleColumnKeys: ReadonlySet<string>
 }
@@ -28,7 +30,18 @@ const statusColorMap: Record<string, string> = {
   '2': 'processing',
 }
 
-export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete, onEdit, onPaginationChange, pagination, viewMode, visibleColumnKeys }) => {
+export const KnowledgeTable: React.FC<Props> = ({
+  dataSource,
+  loading,
+  onDelete,
+  onEdit,
+  onPaginationChange,
+  onSelectedRowKeysChange,
+  pagination,
+  selectedRowKeys,
+  viewMode,
+  visibleColumnKeys
+}) => {
   const renderIndicatorClass = useCallback((value: string) => {
     const text = INDICATOR_TYPE_TEXT_MAP[value] || formatDisplayValue(value)
     return <Tag color="blue">{text}</Tag>
@@ -159,6 +172,10 @@ export const KnowledgeTable: React.FC<Props> = ({ dataSource, loading, onDelete,
               loading={loading}
               pagination={false}
               rowKey={(record) => String(record.indId || record.termId || record.techName || record.bizName)}
+              rowSelection={{
+                selectedRowKeys,
+                onChange: keys => onSelectedRowKeysChange(keys.map(String))
+              }}
               scroll={dataSource.length > 0 ? { x: tableWidth } : undefined}
               size="middle"
             />

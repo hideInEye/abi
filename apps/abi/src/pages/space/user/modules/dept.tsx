@@ -1,128 +1,113 @@
-import classNames from "classnames";
-import PropTypes from "prop-types";
-import { qiankunWindow } from "vite-plugin-qiankun/dist/helper";
+import classNames from 'classnames'
+import PropTypes from 'prop-types'
+import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
-import { queryDeptList, queryUserList } from "@/service/api/space";
-import { CloseOutlined } from "@ant-design/icons";
+import { queryDeptList, queryUserList } from '@/service/api/space'
+import { CloseOutlined } from '@ant-design/icons'
 
-import type { CheckboxChangeEvent } from "antd/es/checkbox";
-import type { ChangeEvent } from "react";
-import type { DeptItem, UserItem } from "../types";
-import SearchUser from "./search-user";
+import type { CheckboxChangeEvent } from 'antd/es/checkbox'
+import type { ChangeEvent } from 'react'
+import type { DeptItem, UserItem } from '../types'
+import SearchUser from './search-user'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 interface DeptSelectorProps {
-  defaultUserKeys?: React.Key[];
-  defaultUserRoles?: any[];
-  onCancel: () => void;
-  onConfirm: (params: any[]) => void;
-  open: boolean;
+  defaultUserKeys?: React.Key[]
+  defaultUserRoles?: any[]
+  onCancel: () => void
+  onConfirm: (params: any[]) => void
+  open: boolean
 }
 
-const DEFAULT_PLACEHOLDER = "搜索部门或人员";
+const DEFAULT_PLACEHOLDER = '搜索部门或人员'
 
 function findRootDept(list: DeptItem[]) {
   if (!list.length) {
-    return null;
+    return null
   }
-  const root = list.find((item) => !item.parentId || item.parentId === 0);
-  return root ?? list[0];
+  const root = list.find((item) => !item.parentId || item.parentId === 0)
+  return root ?? list[0]
 }
 
-export const DeptSelector: FC<DeptSelectorProps> = ({
-  defaultUserKeys = [],
-  defaultUserRoles = [],
-  onCancel,
-  onConfirm,
-  open,
-}) => {
-  const [deptList, setDeptList] = useState<DeptItem[]>([]);
-  const [currentDeptId, setCurrentDeptId] = useState<number | null>(null);
-  const [flatDeptList, setFlatDeptList] = useState<DeptItem[]>([]);
-  const [breadcrumbs, setBreadcrumbs] = useState<DeptItem[]>([]);
-  const [currentUsers, setCurrentUsers] = useState<UserItem[]>([]);
-  const [deptLoading, setDeptLoading] = useState(false);
-  const [userLoading, setUserLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const [checkedKeys, setCheckedKeys] = useState<React.Key[]>(defaultUserKeys);
-  const [roleData, setRoleData] = useState<any[]>(defaultUserRoles);
-  const [searchedUserMap, setSearchedUserMap] = useState<Record<string, any>>(
-    {},
-  );
+export const DeptSelector: FC<DeptSelectorProps> = ({ defaultUserKeys = [], defaultUserRoles = [], onCancel, onConfirm, open }) => {
+  const [deptList, setDeptList] = useState<DeptItem[]>([])
+  const [currentDeptId, setCurrentDeptId] = useState<number | null>(null)
+  const [flatDeptList, setFlatDeptList] = useState<DeptItem[]>([])
+  const [breadcrumbs, setBreadcrumbs] = useState<DeptItem[]>([])
+  const [currentUsers, setCurrentUsers] = useState<UserItem[]>([])
+  const [deptLoading, setDeptLoading] = useState(false)
+  const [userLoading, setUserLoading] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const [checkedKeys, setCheckedKeys] = useState<React.Key[]>(defaultUserKeys)
+  const [roleData, setRoleData] = useState<any[]>(defaultUserRoles)
+  const [searchedUserMap, setSearchedUserMap] = useState<Record<string, any>>({})
   const selectedUserIds = useMemo(() => {
-    return roleData
-      .filter((item) => item.otype === 1)
-      .map((item) => item.recordId);
-  }, [roleData]);
+    return roleData.filter((item) => item.otype === 1).map((item) => item.recordId)
+  }, [roleData])
   const handleDeptList = (list: DeptItem[] = []) => {
-    const data: DeptItem[] = [];
+    const data: DeptItem[] = []
     for (let i = 0; i < list.length; i++) {
       if (list[i].children) {
-        data.push(...handleDeptList(list[i].children));
+        data.push(...handleDeptList(list[i].children))
       }
-      data.push(list[i]);
+      data.push(list[i])
     }
-    return data;
-  };
+    return data
+  }
 
   const childDepartments = useMemo(() => {
     if (!currentDeptId) {
-      return [];
+      return []
     }
 
-    return flatDeptList.filter((item) => item.parentId === currentDeptId);
-  }, [currentDeptId, flatDeptList]);
+    return flatDeptList.filter((item) => item.parentId === currentDeptId)
+  }, [currentDeptId, flatDeptList])
 
-  const currentUsersKeys = currentUsers.map((item) => item.userUuid);
-  const currentDeptKeys = childDepartments.map((item) => item.deptUuid);
-  const visibleKeys: React.Key[] = [...currentDeptKeys, ...currentUsersKeys];
-  const selectedVisibleCount = visibleKeys.filter((key) =>
-    checkedKeys.includes(key),
-  ).length;
-  const allVisibleChecked =
-    visibleKeys.length > 0 && selectedVisibleCount === visibleKeys.length;
-  const partiallyChecked =
-    selectedVisibleCount > 0 && selectedVisibleCount < visibleKeys.length;
+  const currentUsersKeys = currentUsers.map((item) => item.userUuid)
+  const currentDeptKeys = childDepartments.map((item) => item.deptUuid)
+  const visibleKeys: React.Key[] = [...currentDeptKeys, ...currentUsersKeys]
+  const selectedVisibleCount = visibleKeys.filter((key) => checkedKeys.includes(key)).length
+  const allVisibleChecked = visibleKeys.length > 0 && selectedVisibleCount === visibleKeys.length
+  const partiallyChecked = selectedVisibleCount > 0 && selectedVisibleCount < visibleKeys.length
 
-  const handleDeptCheckboxChange =
-    (deptId: number) => (e: CheckboxChangeEvent) => {
-      const { checked } = e.target;
-      setCheckedKeys((prev) => {
-        if (checked) {
-          return Array.from(new Set([...prev, deptId]));
-        }
-        return prev.filter((key) => key !== deptId);
-      });
-    };
+  const handleDeptCheckboxChange = (deptId: number) => (e: CheckboxChangeEvent) => {
+    const { checked } = e.target
+    setCheckedKeys((prev) => {
+      if (checked) {
+        return Array.from(new Set([...prev, deptId]))
+      }
+      return prev.filter((key) => key !== deptId)
+    })
+  }
 
-  const handleUserCheckboxChange =
-    (userId: React.Key) => (e: CheckboxChangeEvent) => {
-      const { checked } = e.target;
-      setCheckedKeys((prev) => {
-        if (checked) {
-          return Array.from(new Set([...prev, userId]));
-        }
-        return prev.filter((key) => key !== userId);
-      });
-    };
+  const handleUserCheckboxChange = (userId: React.Key) => (e: CheckboxChangeEvent) => {
+    const { checked } = e.target
+    setCheckedKeys((prev) => {
+      if (checked) {
+        return Array.from(new Set([...prev, userId]))
+      }
+      return prev.filter((key) => key !== userId)
+    })
+  }
 
   const handleToggleAll = (_e: CheckboxChangeEvent) => {
     if (!visibleKeys.length) {
-      return;
+      return
     }
     setCheckedKeys((prev) => {
       if (allVisibleChecked) {
-        return prev.filter((key) => !visibleKeys.includes(key));
+        return prev.filter((key) => !visibleKeys.includes(key))
       }
-      const next = new Set(prev);
-      visibleKeys.forEach((key) => next.add(key));
-      return Array.from(next);
-    });
-  };
+      const next = new Set(prev)
+      visibleKeys.forEach((key) => next.add(key))
+      return Array.from(next)
+    })
+  }
 
   const generateRoleItems = useCallback(
     (keys: React.Key[]) => {
       return keys
         .map((key) => {
-          const dept = flatDeptList.find((item) => item.deptUuid === key);
+          const dept = flatDeptList.find((item) => item.deptUuid === key)
 
           if (dept) {
             return {
@@ -135,9 +120,9 @@ export const DeptSelector: FC<DeptSelectorProps> = ({
               orgName: dept.parentName,
               otype: 2,
               roles: [],
-            };
+            }
           }
-          const user = currentUsers.find((item) => item.userUuid === key);
+          const user = currentUsers.find((item) => item.userUuid === key)
           if (user) {
             return {
               // ...user,
@@ -148,18 +133,18 @@ export const DeptSelector: FC<DeptSelectorProps> = ({
               orgName: user.dept?.deptName,
               otype: 1,
               roles: [],
-            };
+            }
           }
-          const searched = searchedUserMap[String(key)];
+          const searched = searchedUserMap[String(key)]
           if (searched) {
-            return searched;
+            return searched
           }
-          return null;
+          return null
         })
-        .filter(Boolean);
+        .filter(Boolean)
     },
     [currentUsers, flatDeptList, searchedUserMap],
-  );
+  )
 
   // useEffect(() => {
   //   setCheckedKeys(defaultUserKeys);
@@ -168,120 +153,113 @@ export const DeptSelector: FC<DeptSelectorProps> = ({
 
   useEffect(() => {
     if (!open) {
-      return;
+      return
     }
     async function fetchDept() {
-      setDeptLoading(true);
+      setDeptLoading(true)
       try {
         const { data } = await queryDeptList({
           dataSource: qiankunWindow.__POWERED_BY_QIANKUN__ ? 3 : 0,
-          onenetToken: qiankunWindow.__POWERED_BY_QIANKUN__
-            ? localStorage.getItem("SOY-REACT_token") || ""
-            : "",
-        });
-        setDeptList(data);
-        const flatList = handleDeptList(data);
-        setFlatDeptList(flatList);
-        const root = findRootDept(flatList);
+          onenetToken: qiankunWindow.__POWERED_BY_QIANKUN__ ? localStorage.getItem('SOY-REACT_token') || '' : '',
+        })
+        setDeptList(data)
+        const flatList = handleDeptList(data)
+        setFlatDeptList(flatList)
+        const root = findRootDept(flatList)
         if (root) {
-          setCurrentDeptId(root.deptId);
-          setBreadcrumbs([root]);
+          setCurrentDeptId(root.deptId)
+          setBreadcrumbs([root])
         } else {
-          setCurrentDeptId(null);
-          setBreadcrumbs([]);
+          setCurrentDeptId(null)
+          setBreadcrumbs([])
         }
       } finally {
-        setDeptLoading(false);
+        setDeptLoading(false)
       }
     }
-    fetchDept();
-  }, [open]);
+    fetchDept()
+  }, [open])
 
   useEffect(() => {
     if (!currentDeptId || !open) {
-      setCurrentUsers([]);
-      return;
+      setCurrentUsers([])
+      return
     }
     async function fetchUsers() {
-      setUserLoading(true);
+      setUserLoading(true)
       try {
         const { data } = await queryUserList({
           deptId: currentDeptId!,
-        });
-        setCurrentUsers(data);
+        })
+        setCurrentUsers(data)
       } finally {
-        setUserLoading(false);
+        setUserLoading(false)
       }
     }
-    fetchUsers();
-  }, [currentDeptId, open]);
+    fetchUsers()
+  }, [currentDeptId, open])
 
   useEffect(() => {
     setRoleData((prev) => {
-      const selectedKeySet = new Set(checkedKeys);
-      const kept = prev.filter((item) => selectedKeySet.has(item.recordId));
-      const keptKeySet = new Set(kept.map((item) => item.recordId));
-      const needGenerate = checkedKeys.filter((key) => !keptKeySet.has(key));
+      const selectedKeySet = new Set(checkedKeys)
+      const kept = prev.filter((item) => selectedKeySet.has(item.recordId))
+      const keptKeySet = new Set(kept.map((item) => item.recordId))
+      const needGenerate = checkedKeys.filter((key) => !keptKeySet.has(key))
       if (!needGenerate.length) {
-        return kept;
+        return kept
       }
-      const addition = generateRoleItems(needGenerate);
+      const addition = generateRoleItems(needGenerate)
 
-      return [...kept, ...addition];
-    });
-  }, [checkedKeys, generateRoleItems]);
+      return [...kept, ...addition]
+    })
+  }, [checkedKeys, generateRoleItems])
 
   const handleEnterDept = (dept: DeptItem) => {
     setBreadcrumbs((prev) => {
       if (!prev.length) {
-        return [dept];
+        return [dept]
       }
-      const parentIndex =
-        typeof dept.parentId !== "undefined"
-          ? prev.findIndex((item) => item.deptId === dept.parentId)
-          : -1;
+      const parentIndex = typeof dept.parentId !== 'undefined' ? prev.findIndex((item) => item.deptId === dept.parentId) : -1
       if (parentIndex >= 0) {
-        const nextPath = prev.slice(0, parentIndex + 1);
+        const nextPath = prev.slice(0, parentIndex + 1)
         if (nextPath[nextPath.length - 1]?.deptId === dept.deptId) {
-          return nextPath;
+          return nextPath
         }
-        return [...nextPath, dept];
+        return [...nextPath, dept]
       }
       if (prev[prev.length - 1]?.deptId === dept.deptId) {
-        return prev;
+        return prev
       }
-      return [...prev, dept];
-    });
-    setCurrentDeptId(dept.deptId);
-  };
+      return [...prev, dept]
+    })
+    setCurrentDeptId(dept.deptId)
+  }
 
   const handleBack = (deptId: number) => {
     if (breadcrumbs.length <= 1) {
-      return;
+      return
     }
-    const index = breadcrumbs.findIndex((item) => item.deptId === deptId);
+    const index = breadcrumbs.findIndex((item) => item.deptId === deptId)
 
-    const next = breadcrumbs.slice(0, index + 1);
-    setBreadcrumbs(next);
-    setCurrentDeptId(next[next.length - 1].deptId);
-  };
+    const next = breadcrumbs.slice(0, index + 1)
+    setBreadcrumbs(next)
+    setCurrentDeptId(next[next.length - 1].deptId)
+  }
 
   const handleRemoveSelected = (key: React.Key) => {
-    setCheckedKeys((prev) => prev.filter((item) => item !== key));
-  };
+    setCheckedKeys((prev) => prev.filter((item) => item !== key))
+  }
 
   const handleConfirm = () => {
-
-    onConfirm(roleData);
-  };
+    onConfirm(roleData)
+  }
 
   const handleSearchUser = (option: { label: string; value: React.Key }) => {
     if (!option?.value) {
-      return;
+      return
     }
-    const key = option.value;
-    const name =
-      typeof option.label === "string" ? option.label : String(option.label);
+    const key = option.value
+    const name = typeof option.label === 'string' ? option.label : String(option.label)
     const data = {
       oid: key,
       recordId: key,
@@ -290,101 +268,71 @@ export const DeptSelector: FC<DeptSelectorProps> = ({
       orgName: name,
       otype: 1,
       roles: [],
-    };
+    }
     setSearchedUserMap((prev) => {
-      const recordKey = String(key);
+      const recordKey = String(key)
       if (prev[recordKey] && prev[recordKey].oname === data.oname) {
-        return prev;
+        return prev
       }
       return {
         ...prev,
         [recordKey]: data,
-      };
-    });
+      }
+    })
     setCheckedKeys((prev) => {
       if (prev.includes(key)) {
-        return prev;
+        return prev
       }
-      return [...prev, key];
-    });
-  };
+      return [...prev, key]
+    })
+  }
 
   const renderDeptRow = (item: DeptItem) => {
     return (
-      <div
-        className="flex items-center justify-between px4 py3 hover:bg-gray-1/40"
-        key={item.deptId}
-      >
+      <div className="flex items-center justify-between px4 py3 hover:bg-gray-1/40" key={item.deptId}>
         <div className="flex flex-1 items-center gap-3">
-          <ACheckbox
-            checked={checkedKeys.includes(item.deptUuid!)}
-            onChange={handleDeptCheckboxChange(item.deptUuid!)}
-          />
+          <ACheckbox checked={checkedKeys.includes(item.deptUuid!)} onChange={handleDeptCheckboxChange(item.deptUuid!)} />
           <div className="flex-1">
             <div className="text-base text-gray-8">{item.deptName}</div>
-            {typeof item.parentName === "string" && (
-              <div className="text-12px text-gray-5">{item.parentName}</div>
-            )}
+            {typeof item.parentName === 'string' && <div className="text-12px text-gray-5">{item.parentName}</div>}
           </div>
         </div>
         <span
-          className={`${checkedKeys.includes(item.deptId) ? "pointer-events-none cursor-not-allowed text-[#ccc]" : "cursor-pointer text-blue"} text-12px `}
+          className={`${checkedKeys.includes(item.deptId) ? 'pointer-events-none cursor-not-allowed text-[#ccc]' : 'cursor-pointer text-blue'} text-12px `}
           onClick={() => {
-            handleEnterDept(item);
+            handleEnterDept(item)
           }}
         >
           下级
         </span>
       </div>
-    );
-  };
+    )
+  }
 
   const renderUserRow = (user: UserItem) => {
-    const initial = user.userName?.charAt(0) ?? "";
+    const initial = user.userName?.charAt(0) ?? ''
     return (
-      <div
-        className="flex items-center gap-3 px4 py3 hover:bg-gray-1/40"
-        key={user.userId}
-      >
-        <ACheckbox
-          checked={checkedKeys.includes(user.userUuid!)}
-          onChange={handleUserCheckboxChange(user.userUuid!)}
-        />
+      <div className="flex items-center gap-3 px4 py3 hover:bg-gray-1/40" key={user.userId}>
+        <ACheckbox checked={checkedKeys.includes(user.userUuid!)} onChange={handleUserCheckboxChange(user.userUuid!)} />
         <div className="flex items-center gap-3">
-          <div className="h-32px w-32px flex items-center justify-center rounded-full bg-gray-2 text-12px text-gray-7">
-            {initial}
-          </div>
+          <div className="h-32px w-32px flex items-center justify-center rounded-full bg-gray-2 text-12px text-gray-7">{initial}</div>
           <div>
             <div className="text-base text-gray-8">{user.userName}</div>
             <div className="text-12px text-gray-5">{user.dept?.deptName}</div>
           </div>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
-  const showEmpty =
-    !deptLoading &&
-    !userLoading &&
-    !childDepartments.length &&
-    !currentUsers.length;
+  const showEmpty = !deptLoading && !userLoading && !childDepartments.length && !currentUsers.length
 
   return (
-    <ADrawer
-      destroyOnClose
-      open={open}
-      title="选择协作者"
-      width={1000}
-      footer={<DrawerFooter onCancel={onCancel} onConfirm={handleConfirm} />}
-      onClose={onCancel}
-    >
+    <CommonDrawer destroyOnClose open={open} title="选择协作者" width={1000} footer={<DrawerFooter onCancel={onCancel} onConfirm={handleConfirm} />} onClose={onCancel}>
       <div className="h-600px flex gap-4">
         <div className="flex flex-col flex-1 rounded-2xl bg-white shadow-sm">
           <div className="px4 py3">
-            <SearchUser
-              disabledValues={selectedUserIds}
-              onChange={handleSearchUser}
-            />
+            <SearchUser disabledValues={selectedUserIds} onChange={handleSearchUser} />
           </div>
           <div className="flex items-center gap-3 px4 py3">
             <span className="text-base text-gray-8 font-medium text-center">
@@ -392,25 +340,21 @@ export const DeptSelector: FC<DeptSelectorProps> = ({
               {breadcrumbs.map((item, index) => {
                 return (
                   <span
-                    style={{ color: "#3467FF" }}
+                    style={{ color: '#3467FF' }}
                     className="cursor-pointer text-gray-5"
                     onClick={() => {
-                      handleBack(item.deptId);
+                      handleBack(item.deptId)
                     }}
                   >
                     {item.deptName}
-                    {index < breadcrumbs.length - 1 && " > "}
+                    {index < breadcrumbs.length - 1 && ' > '}
                   </span>
-                );
-              }) ?? "暂无部门"}
+                )
+              }) ?? '暂无部门'}
             </span>
           </div>
           <div className="border-t border-gray-2 border-solid px4 py3">
-            <ACheckbox
-              checked={allVisibleChecked}
-              indeterminate={partiallyChecked}
-              onChange={handleToggleAll}
-            >
+            <ACheckbox checked={allVisibleChecked} indeterminate={partiallyChecked} onChange={handleToggleAll}>
               全选
             </ACheckbox>
           </div>
@@ -429,27 +373,20 @@ export const DeptSelector: FC<DeptSelectorProps> = ({
         </div>
         <div className="w-2/5 flex flex-col rounded-2xl bg-white p4 shadow-sm">
           <div className="mb4 flex items-center justify-between">
-            <span className="text-base text-gray-8 font-medium">
-              已选择（{roleData.length}）
-            </span>
+            <span className="text-base text-gray-8 font-medium">已选择（{roleData.length}）</span>
             {roleData.length > 0 && (
-              <span
-                className="cursor-pointer text-12px text-gray-5 hover:text-gray-7"
-                onClick={() => setCheckedKeys([])}
-              >
+              <span className="cursor-pointer text-12px text-gray-5 hover:text-gray-7" onClick={() => setCheckedKeys([])}>
                 清空
               </span>
             )}
           </div>
           <div className="flex flex-wrap gap-3 overflow-y-auto">
-            {roleData.length === 0 && (
-              <span className="text-13px text-gray-5">暂无选择</span>
-            )}
+            {roleData.length === 0 && <span className="text-13px text-gray-5">暂无选择</span>}
             {roleData.map((item) => (
               <ATag
                 closable
-                closeIcon={<CloseOutlined style={{ color: "#3467FF" }} />}
-                style={{ color: "#3467FF", background: "#fff", border: "1px solid #3467FF" }}
+                closeIcon={<CloseOutlined style={{ color: '#3467FF' }} />}
+                style={{ color: '#3467FF', background: '#fff', border: '1px solid #3467FF' }}
                 key={item.recordId}
                 onClose={() => handleRemoveSelected(item.recordId)}
               >
@@ -459,9 +396,9 @@ export const DeptSelector: FC<DeptSelectorProps> = ({
           </div>
         </div>
       </div>
-    </ADrawer>
-  );
-};
+    </CommonDrawer>
+  )
+}
 
 DeptSelector.propTypes = {
   defaultUserKeys: PropTypes.array,
@@ -469,15 +406,9 @@ DeptSelector.propTypes = {
   onCancel: PropTypes.func.isRequired,
   onConfirm: PropTypes.func.isRequired,
   open: PropTypes.bool.isRequired,
-};
+}
 
-function DrawerFooter({
-  onCancel,
-  onConfirm,
-}: {
-  readonly onCancel: () => void;
-  readonly onConfirm: () => void;
-}) {
+function DrawerFooter({ onCancel, onConfirm }: { readonly onCancel: () => void; readonly onConfirm: () => void }) {
   return (
     <AFlex className="gap-4" justify="flex-end">
       <AButton onClick={onCancel}>取消</AButton>
@@ -485,5 +416,5 @@ function DrawerFooter({
         确定
       </AButton>
     </AFlex>
-  );
+  )
 }

@@ -2,6 +2,7 @@
 import { CloseOutlined } from '@ant-design/icons'
 import { message } from 'antd'
 import type { TableColumnsType } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React from 'react'
 
 import { TableSemantics } from '@/components/tableSemantics'
@@ -31,7 +32,7 @@ interface Props {
   readonly onClose: (refresh?: boolean) => void
   readonly onSubmit: (payload: AtomicMappingPayload[]) => Promise<boolean>
   readonly open: boolean
-  readonly groupId?: number
+  readonly groupId?: string
 }
 
 // eslint-disable-next-line complexity
@@ -48,11 +49,8 @@ function parseMeasureFields(modelDetail: unknown): MeasureFieldItem[] {
         if (!key) {
           return null
         }
-        const englishName =
-          String(item?.originName || item?.fieldName || item?.techName || item?.tfieldName || key).trim() || key
-        const bizName =
-          String(item?.bizName || item?.tfieldAlias || item?.fieldShortName || item?.fieldName || englishName).trim() ||
-          englishName
+        const englishName = String(item?.originName || item?.fieldName || item?.techName || item?.tfieldName || key).trim() || key
+        const bizName = String(item?.bizName || item?.tfieldAlias || item?.fieldShortName || item?.fieldName || englishName).trim() || englishName
         return {
           alias: String(item?.alias || bizName).trim() || bizName,
           bizName,
@@ -62,8 +60,8 @@ function parseMeasureFields(modelDetail: unknown): MeasureFieldItem[] {
           key,
           raw: {
             ...item,
-            techId: key
-          }
+            techId: key,
+          },
         }
       })
       .filter(Boolean) as MeasureFieldItem[]
@@ -79,12 +77,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
   const [loadingFields, setLoadingFields] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const handleSchemaChange = async ({ semanticSchemaId }: {
-    semanticGroupId: number | null
-    semanticSchemaId: number
-    semanticsGroupId: number | null
-    viewId: number
-  }) => {
+  const handleSchemaChange = async ({ semanticSchemaId }: { semanticGroupId: number | null; semanticSchemaId: number; semanticsGroupId: number | null; viewId: number }) => {
     setLoadingFields(true)
     try {
       const res = await queryTableSemanticsDetail(semanticSchemaId)
@@ -124,20 +117,22 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       return
     }
 
-    const selectedRows = fieldRows.filter(item => selectedRowKeys.includes(item.key))
-    const payload: AtomicMappingPayload[] = selectedRows.map(item => ({
+    const selectedRows = fieldRows.filter((item) => selectedRowKeys.includes(item.key))
+    const payload: AtomicMappingPayload[] = selectedRows.map((item) => ({
       relSchemaId: values.semanticSchemaId,
       spaceId: getKnowledgeSpaceId(),
       groupId: groupId,
-      techId: [{
-        ...item.raw,
-        alias: item.alias,
-        bizName: item.bizName,
-        description: item.description,
-        englishName: item.englishName,
-        fieldType: item.fieldType,
-        techId: String(item.raw?.techId ?? item.key)
-      }]
+      techId: [
+        {
+          ...item.raw,
+          alias: item.alias,
+          bizName: item.bizName,
+          description: item.description,
+          englishName: item.englishName,
+          fieldType: item.fieldType,
+          techId: String(item.raw?.techId ?? item.key),
+        },
+      ],
     }))
 
     setSaving(true)
@@ -156,23 +151,17 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
     {
       dataIndex: 'englishName',
       key: 'englishName',
-      title: '英文名称'
+      title: '英文名称',
     },
     {
       dataIndex: 'fieldType',
       key: 'fieldType',
-      title: '字段类型'
+      title: '字段类型',
     },
     {
       key: 'semanticType',
-      render: () => (
-        <ASelect
-          disabled
-          options={[{ label: '度量', value: 'measure' }]}
-          value="measure"
-        />
-      ),
-      title: '语义类型'
+      render: () => <ASelect disabled options={[{ label: '度量', value: 'measure' }]} value="measure" />,
+      title: '语义类型',
     },
     {
       dataIndex: 'bizName',
@@ -180,13 +169,13 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       render: (value: string, record: MeasureFieldItem) => (
         <AInput
           value={value}
-          onChange={e => {
+          onChange={(e) => {
             const nextValue = e.target.value
-            setFieldRows(prev => prev.map(item => (item.key === record.key ? { ...item, bizName: nextValue } : item)))
+            setFieldRows((prev) => prev.map((item) => (item.key === record.key ? { ...item, bizName: nextValue } : item)))
           }}
         />
       ),
-      title: '中文名称'
+      title: '中文名称',
     },
     {
       dataIndex: 'alias',
@@ -194,13 +183,13 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       render: (value: string, record: MeasureFieldItem) => (
         <AInput
           value={value}
-          onChange={e => {
+          onChange={(e) => {
             const nextValue = e.target.value
-            setFieldRows(prev => prev.map(item => (item.key === record.key ? { ...item, alias: nextValue } : item)))
+            setFieldRows((prev) => prev.map((item) => (item.key === record.key ? { ...item, alias: nextValue } : item)))
           }}
         />
       ),
-      title: '别名'
+      title: '别名',
     },
     {
       dataIndex: 'description',
@@ -208,39 +197,25 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       render: (value: string, record: MeasureFieldItem) => (
         <AInput
           value={value}
-          onChange={e => {
+          onChange={(e) => {
             const nextValue = e.target.value
-            setFieldRows(prev =>
-              prev.map(item => (item.key === record.key ? { ...item, description: nextValue } : item))
-            )
+            setFieldRows((prev) => prev.map((item) => (item.key === record.key ? { ...item, description: nextValue } : item)))
           }}
         />
       ),
-      title: '字段描述'
-    }
+      title: '字段描述',
+    },
   ]
 
   return (
-    <ADrawer
-      closeIcon={null}
+    <CommonDrawer
       open={open}
       title="原子指标映射配置"
       width="60%"
-      extra={
-        <AButton
-          icon={<CloseOutlined />}
-          type="text"
-          onClick={() => onClose()}
-        />
-      }
       footer={
         <ASpace className="w-full justify-end">
           <AButton onClick={() => onClose()}>取消</AButton>
-          <AButton
-            loading={saving}
-            type="primary"
-            onClick={handleSave}
-          >
+          <AButton loading={saving} type="primary" onClick={handleSave}>
             保存绑定并映射
           </AButton>
         </ASpace>
@@ -248,16 +223,8 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       onClose={() => onClose()}
     >
       <div className="mb-4 rounded bg-gray-50 px-3 py-2 text-sm">当前分组：{groupName || '-'}</div>
-      <AForm<MappingFormValues>
-        form={form}
-        layout="vertical"
-      >
-        <TableSemantics
-          form={form}
-          getSchemaId={handleSchemaChange}
-          getSchemaOptions={(_: TableSemanticParams[]) => {}}
-          type="shema"
-        />
+      <AForm<MappingFormValues> form={form} layout="vertical">
+        <TableSemantics form={form} getSchemaId={handleSchemaChange} getSchemaOptions={(_: TableSemanticParams[]) => {}} type="shema" />
       </AForm>
 
       <div className="mb-4 mt-2 text-4 font-semibold">字段映射原子指标</div>
@@ -269,10 +236,10 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
         rowKey="key"
         rowSelection={{
           selectedRowKeys,
-          onChange: keys => setSelectedRowKeys(keys)
+          onChange: (keys) => setSelectedRowKeys(keys),
         }}
         scroll={{ x: 1200, y: 520 }}
       />
-    </ADrawer>
+    </CommonDrawer>
   )
 }

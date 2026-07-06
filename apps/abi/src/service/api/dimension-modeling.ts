@@ -48,6 +48,16 @@ export function deleteDimensionModel(params: { id: number }) {
   })
 }
 
+export function deleteDimensionModelBatch(params: { ids: number[] }) {
+  return apiRequest({
+    data: {
+      ids: params.ids
+    },
+    method: 'post',
+    url: `${DIMENSION_API_PREFIX}/deleteBatch`
+  })
+}
+
 export function queryDimensionDetail(params: { id: number }) {
   return apiRequest({
     method: 'get',

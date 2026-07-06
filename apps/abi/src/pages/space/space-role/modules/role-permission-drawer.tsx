@@ -1,108 +1,102 @@
-import { Form } from 'antd';
+import { Form } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
-import { permissonRanaeOptions } from '@/constants/business';
-import { roleIdMenuTree, roleInfo } from '@/service/api/role';
+import { permissonRanaeOptions } from '@/constants/business'
+import { roleIdMenuTree, roleInfo } from '@/service/api/role'
 
 interface RolePermissioDrawerProps {
-  roleId: number;
-  visible: boolean;
-  onClose: () => void;
-  onSubmit: (params: any) => Promise<void>;
+  roleId: number
+  visible: boolean
+  onClose: () => void
+  onSubmit: (params: any) => Promise<void>
 }
 
 const RoleOperateDrawer: React.FC<RolePermissioDrawerProps> = ({ roleId, visible, onClose, onSubmit }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
 
-  const [form] = AForm.useForm();
+  const [form] = AForm.useForm()
 
-  const [treeData, setTreeData] = useState([]);
+  const [treeData, setTreeData] = useState([])
 
-  const [checkedKeys, setCheckedKeys] = useState<number[]>([]);
-  const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
+  const [checkedKeys, setCheckedKeys] = useState<number[]>([])
+  const [expandedKeys, setExpandedKeys] = useState<number[]>([])
 
-  const dataScope = Form.useWatch('dataScope', form); // 监听 menuType
+  const dataScope = Form.useWatch('dataScope', form) // 监听 menuType
 
   // 处理树形组件选中变化
   const handleDeptChange = (curCheckedKeys: number[]) => {
-    setCheckedKeys(curCheckedKeys);
-    form.setFieldsValue({ deptIds: curCheckedKeys });
-  };
+    setCheckedKeys(curCheckedKeys)
+    form.setFieldsValue({ deptIds: curCheckedKeys })
+  }
 
-  const permissonRanaeList = permissonRanaeOptions.map(item => {
+  const permissonRanaeList = permissonRanaeOptions.map((item) => {
     return {
       label: t(item.label),
-      value: item.value
-    };
-  });
+      value: item.value,
+    }
+  })
 
   async function getRoleInfo(id: number) {
-    const res = await roleInfo(id);
+    const res = await roleInfo(id)
     if (res.data) {
       form.setFieldsValue({
         dataScope: res.data.dataScope,
         roleId: res.data.roleId,
         roleKey: res.data.roleKey,
-        roleName: res.data.roleName
-      });
+        roleName: res.data.roleName,
+      })
     }
   }
 
   async function getTreeByRoleId(id: number) {
-    const res: any = await roleIdMenuTree(id);
+    const res: any = await roleIdMenuTree(id)
     if (res?.response?.data) {
       form.setFieldsValue({
-        deptIds: res?.response?.data.checkedKeys
-      });
-      setCheckedKeys(res?.response?.data.checkedKeys);
-      setExpandedKeys(res?.response?.data.checkedKeys);
+        deptIds: res?.response?.data.checkedKeys,
+      })
+      setCheckedKeys(res?.response?.data.checkedKeys)
+      setExpandedKeys(res?.response?.data.checkedKeys)
       if (Array.isArray(res.response.data.depts)) {
-        setTreeData(res.response.data.depts);
+        setTreeData(res.response.data.depts)
       }
     }
   }
 
   const handDataScopeChange = (val: string) => {
     if (val !== '2') {
-      setCheckedKeys([]);
+      setCheckedKeys([])
       form.setFieldsValue({
-        deptIds: []
-      });
+        deptIds: [],
+      })
     }
-  };
+  }
 
   function handleSubmit() {
-    onSubmit(form.getFieldsValue());
+    onSubmit(form.getFieldsValue())
   }
 
   useEffect(() => {
     if (roleId) {
-      getRoleInfo(roleId);
-      getTreeByRoleId(roleId);
+      getRoleInfo(roleId)
+      getTreeByRoleId(roleId)
     }
-  }, [roleId]);
+  }, [roleId])
 
   return (
-    <ADrawer
+    <CommonDrawer
       open={visible}
       title={t('page.manage.role.assignDataPermissions')}
       footer={
         <AFlex justify="space-between">
           <AButton onClick={onClose}>{t('common.cancel')}</AButton>
-          <AButton
-            type="primary"
-            onClick={handleSubmit}
-          >
+          <AButton type="primary" onClick={handleSubmit}>
             {t('common.confirm')}
           </AButton>
         </AFlex>
       }
       onClose={onClose}
     >
-      <AForm
-        form={form}
-        initialValues={{ status: '0' }}
-        layout="vertical"
-      >
+      <AForm form={form} initialValues={{ status: '0' }} layout="vertical">
         <AForm.Item
           name="roleId"
           style={{ display: 'none' }} // 隐藏字段
@@ -110,46 +104,19 @@ const RoleOperateDrawer: React.FC<RolePermissioDrawerProps> = ({ roleId, visible
           <AInput disabled />
         </AForm.Item>
 
-        <AForm.Item
-          label={t('page.manage.role.roleName')}
-          name="roleName"
-          rules={[{ required: true }]}
-        >
-          <AInput
-            disabled
-            placeholder={t('page.manage.role.form.roleName')}
-          />
+        <AForm.Item label={t('page.manage.role.roleName')} name="roleName" rules={[{ required: true }]}>
+          <AInput disabled placeholder={t('page.manage.role.form.roleName')} />
         </AForm.Item>
 
-        <AForm.Item
-          label={t('page.manage.role.permission')}
-          name="roleKey"
-          rules={[{ required: true }]}
-        >
-          <AInput
-            disabled
-            placeholder={t('page.manage.role.form.roleKey')}
-          />
+        <AForm.Item label={t('page.manage.role.permission')} name="roleKey" rules={[{ required: true }]}>
+          <AInput disabled placeholder={t('page.manage.role.form.roleKey')} />
         </AForm.Item>
 
-        <AForm.Item
-          label={t('page.manage.role.permissionRange')}
-          name="dataScope"
-          rules={[{ required: true }]}
-        >
-          <ASelect
-            allowClear
-            options={permissonRanaeList}
-            placeholder={t('page.manage.role.form.permissionRange')}
-            onChange={handDataScopeChange}
-          />
+        <AForm.Item label={t('page.manage.role.permissionRange')} name="dataScope" rules={[{ required: true }]}>
+          <ASelect allowClear options={permissonRanaeList} placeholder={t('page.manage.role.form.permissionRange')} onChange={handDataScopeChange} />
         </AForm.Item>
 
-        <AForm.Item
-          label={t('page.manage.role.dataPermissions')}
-          name="deptIds"
-          style={{ display: dataScope !== '2' ? 'none' : 'block' }}
-        >
+        <AForm.Item label={t('page.manage.role.dataPermissions')} name="deptIds" style={{ display: dataScope !== '2' ? 'none' : 'block' }}>
           <ATree
             checkable
             checkedKeys={checkedKeys}
@@ -159,17 +126,17 @@ const RoleOperateDrawer: React.FC<RolePermissioDrawerProps> = ({ roleId, visible
             fieldNames={{
               children: 'children',
               key: 'id',
-              title: 'label'
+              title: 'label',
             }}
             onCheck={handleDeptChange}
-            onExpand={keys => {
+            onExpand={(keys) => {
               setExpandedKeys(keys)
             }}
           />
         </AForm.Item>
       </AForm>
-    </ADrawer>
-  );
-};
+    </CommonDrawer>
+  )
+}
 
-export default RoleOperateDrawer;
+export default RoleOperateDrawer

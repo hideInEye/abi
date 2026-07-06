@@ -1,42 +1,42 @@
-import { enableStatusOptions } from '@/constants/business';
+import { enableStatusOptions } from '@/constants/business'
 
-import RoleAuth from './role-auth';
-import './role-drawer.scss';
+import RoleAuth from './role-auth'
+import './role-drawer.scss'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
-type Props = Page.OperateDrawerProps & { rowId: number };
+type Props = Page.OperateDrawerProps & { rowId: number }
 
 const RoleOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
 
   const submit = async () => {
     try {
-      let values = await form.validateFields();
+      let values = await form.validateFields()
       values = {
         ...values,
         deptCheckStrictly: values.deptCheckStrictly || true,
         deptIds: values.deptIds || [],
         menuCheckStrictly: values.menuCheckStrictly || true,
-        menuIds: values.menuIds || []
-      };
-      handleSubmit({ ...values });
+        menuIds: values.menuIds || [],
+      }
+      handleSubmit({ ...values })
     } catch (err) {
       // eslint-disable-next-line
-      console.log(err);
+      console.log(err)
     }
-  };
+  }
 
   return (
-    <ADrawer
+    <CommonDrawer
       className="role-drawer-v5"
       open={open}
       title={operateType === 'add' ? t('page.manage.role.addRole') : t('page.manage.role.editRole')}
       footer={
         <div className="role-drawer-footer-v5">
-          <AButton className="btn-ghost-v5" onClick={onClose}>{t('common.cancel')}</AButton>
-          <AButton
-            className="btn-accent-gradient"
-            onClick={submit}
-          >
+          <AButton className="btn-ghost-v5" onClick={onClose}>
+            {t('common.cancel')}
+          </AButton>
+          <AButton className="btn-accent-gradient" onClick={submit}>
             {t('common.confirm')}
           </AButton>
         </div>
@@ -44,74 +44,40 @@ const RoleOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
       onClose={onClose}
     >
       <div className="role-form-panel">
-        <AForm
-          form={form}
-          initialValues={{ status: '0' }}
-          layout="vertical"
-        >
-          <AForm.Item
-            label={t('page.manage.role.roleName')}
-            name="roleName"
-            rules={[{ required: true }]}
-          >
+        <AForm form={form} initialValues={{ status: '0' }} layout="vertical">
+          <AForm.Item label={t('page.manage.role.roleName')} name="roleName" rules={[{ required: true }]}>
             <AInput placeholder={t('page.manage.role.form.roleName')} />
           </AForm.Item>
 
-          <AForm.Item
-            label={t('page.manage.role.permission')}
-            name="roleKey"
-            rules={[{ required: true }]}
-          >
+          <AForm.Item label={t('page.manage.role.permission')} name="roleKey" rules={[{ required: true }]}>
             <AInput placeholder={t('page.manage.role.form.roleKey')} />
           </AForm.Item>
 
-          <AForm.Item
-            label={t('page.manage.role.roleSort')}
-            name="roleSort"
-            rules={[{ required: true }]}
-          >
-            <AInputNumber
-              className="w-full"
-              min={1}
-              placeholder={t('page.manage.role.form.roleSort')}
-              precision={0}
-            />
+          <AForm.Item label={t('page.manage.role.roleSort')} name="roleSort" rules={[{ required: true }]}>
+            <AInputNumber className="w-full" min={1} placeholder={t('page.manage.role.form.roleSort')} precision={0} />
           </AForm.Item>
 
-          <AForm.Item
-            label={t('page.manage.role.roleStatus')}
-            name="status"
-            rules={[{ required: true }]}
-          >
+          <AForm.Item label={t('page.manage.role.roleStatus')} name="status" rules={[{ required: true }]}>
             <ARadio.Group>
-              {enableStatusOptions.map(item => (
-                <ARadio
-                  key={item.value}
-                  value={item.value}
-                >
+              {enableStatusOptions.map((item) => (
+                <ARadio key={item.value} value={item.value}>
                   {t(item.label)}
                 </ARadio>
               ))}
             </ARadio.Group>
           </AForm.Item>
 
-          <AForm.Item
-            label={t('page.manage.role.menuAuth')}
-            name="menuIds"
-          >
+          <AForm.Item label={t('page.manage.role.menuAuth')} name="menuIds">
             <RoleAuth />
           </AForm.Item>
 
-          <AForm.Item
-            label={t('page.manage.role.remark')}
-            name="remark"
-          >
+          <AForm.Item label={t('page.manage.role.remark')} name="remark">
             <AInput.TextArea placeholder={t('page.manage.role.form.remark')} rows={3} />
           </AForm.Item>
         </AForm>
       </div>
-    </ADrawer>
-  );
-});
+    </CommonDrawer>
+  )
+})
 
-export default RoleOperateDrawer;
+export default RoleOperateDrawer
