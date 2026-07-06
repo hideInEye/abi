@@ -6,7 +6,7 @@ import { Group } from '@/components/stateful/group/Group.tsx';
 import { dictionaryGroupConfig } from '../constans/dictionaryGroupConfig';
 
 interface DictionaryGroupProps {
-  readonly onGroupId: (groupId: number) => void;
+  readonly onGroupId: (groupId: string) => void;
 }
 
 export const DictionaryGroup: React.FC<DictionaryGroupProps> = ({ onGroupId }) => {

@@ -11,18 +11,38 @@ import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
-import { fetchAppListApi, deleteAppApi } from '@/service/api/abi-chat-app';
+import { fetchAppListApi, deleteAppApi, updateAppApi } from '@/service/api/abi-chat-app';
 
 import AssistantEditDrawer, { type AgentMock } from './modules/assistant-edit-drawer';
 
-const MOCK_AGENTS: AgentCard[] = [
-  { id: 1, name: '投资顾问', description: '你是一个投资顾问，专门利用先进的技术和算法，为用户提供实时的股票价格查询和市场行情分析。', iconBg: '#fa8c16', iconLetter: '投', status: '1', createBy: '张三', createTime: '2024-01-15 10:30:00', updateTime: '2024-01-20 14:20:00', groupId: 1, type: '助手' },
-  { id: 2, name: '数据分析师', description: '帮助用户分析业务数据，生成可视化报表和数据洞察。', iconBg: '#1677ff', iconLetter: '数', status: '0', createBy: '李四', createTime: '2024-02-01 09:00:00', updateTime: '2024-02-05 16:45:00', groupId: 1, type: '助手' },
-  { id: 3, name: '文档助手', description: '协助用户快速生成、编辑和优化各类文档内容。', iconBg: '#52c41a', iconLetter: '文', status: '1', createBy: '王五', createTime: '2024-03-10 11:20:00', updateTime: '2024-03-12 08:30:00', groupId: 2, type: '助手' },
-  { id: 4, name: '代码审查', description: '自动审查代码质量，发现潜在 bug 和安全漏洞。', iconBg: '#722ed1', iconLetter: '码', status: '2', createBy: '赵六', createTime: '2024-04-05 15:00:00', updateTime: '2024-04-08 10:10:00', groupId: 2, type: '助手' },
-  { id: 5, name: '会议记录', description: '实时转录会议内容，自动生成会议纪要。', iconBg: '#eb2f96', iconLetter: '会', status: '1', createBy: '孙七', createTime: '2024-05-20 13:45:00', updateTime: '2024-05-22 09:30:00', groupId: 1, type: '助手' },
-  { id: 6, name: '客服机器人', description: '7x24小时自动回复客户咨询，处理常见问题。', iconBg: '#13c2c2', iconLetter: '客', status: '0', createBy: '周八', createTime: '2024-06-01 08:00:00', updateTime: '2024-06-03 17:20:00', groupId: 3, type: '助手' },
-];
+/** 从应用名称中取首字作为图标文字 */
+function getIconLetter(name?: string) {
+  return name ? name.charAt(0) : '助';
+}
+
+/** 根据 appId 生成确定性图标背景色 */
+const ICON_COLORS = ['#fa8c16', '#1677ff', '#52c41a', '#722ed1', '#eb2f96', '#13c2c2', '#f5222d', '#2f54eb'];
+function getIconBg(id: number | string) {
+  const n = typeof id === 'number' ? id : parseInt(String(id), 10) || 0;
+  return ICON_COLORS[n % ICON_COLORS.length];
+}
+
+/** 将接口返回的 AppItem 映射为页面卡片数据结构 */
+function mapAppToCard(item: any): AgentCard {
+  return {
+    id: item.appId,
+    name: item.appName || '',
+    description: item.description || '',
+    iconBg: getIconBg(item.appId),
+    iconLetter: getIconLetter(item.appName),
+    status: item.status ?? '0',
+    createBy: item.createBy || '-',
+    createTime: item.createTime || '-',
+    updateTime: item.updateTime || '-',
+    groupId: (item.groupId && String(item.groupId) !== '0') ? String(item.groupId) : undefined,
+    type: '助手',
+  };
+}
 
 /** 助手分组配置，复用通用 Group 组件 */
 const ASSISTANT_GROUP_CONFIG: GroupProps['config'] = {
@@ -46,7 +66,7 @@ interface AgentCard extends AgentMock {
   iconLetter: string;
   selected?: boolean;
   createBy?: string;
-  groupId?: number;
+  groupId?: string;
   createTime?: string;
   updateTime?: string;
 }
@@ -57,7 +77,7 @@ export function Component() {
   const [editVisible, setEditVisible] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AgentCard | null>(null);
   const [selectedId, setSelectedId] = useState<string | number>(1);
-  const [groupId, setGroupId] = useState<number>(0);
+  const [groupId, setGroupId] = useState<string>('');
   const [agents, setAgents] = useState<AgentCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
@@ -77,39 +97,42 @@ export function Component() {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
 
-  /** 拉取助手列表（mock） */
-  function fetchList() {
-    setAgents(MOCK_AGENTS);
+  /** 拉取助手列表 */
+  async function fetchList() {
+    setLoading(true);
+    try {
+      const res: any = await fetchAppListApi({
+        spaceId: spaceId || undefined,
+        appName: keyword.trim() || undefined,
+        groupId: groupId && groupId !== '0' ? groupId : undefined,
+      });
+      const list = res?.data?.rows || res?.data || [];
+      const items = Array.isArray(list) ? list.map(mapAppToCard) : [];
+      setAgents(items);
+    } catch (e) {
+      console.error('拉取助手列表失败', e);
+      message.error('拉取助手列表失败');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     fetchList();
-  }, []);
+  }, [spaceId, groupId]);
 
   const handleSearch = () => {
     setCurrentPage(1);
+    fetchList();
   };
 
   const handleReset = () => {
     setKeyword('');
     setDateRange(null);
     setCurrentPage(1);
+    // 重置后重新拉取（keyword 已清空，但 setState 异步，直接调用则传空）
+    fetchList();
   };
-
-  const list = useMemo(() => {
-    let arr = agents;
-    // 按分组过滤（过滤后为空则回退全部，避免 Group 自动选择导致空列表）
-    if (groupId > 0) {
-      const filtered = arr.filter(it => it.groupId == groupId);
-      arr = filtered.length > 0 ? filtered : arr;
-    }
-    // 关键字搜索
-    const k = keyword.trim();
-    if (k) {
-      arr = arr.filter(it => it.name.includes(k) || (it.description || '').includes(k));
-    }
-    return arr;
-  }, [keyword, agents, groupId]);
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -119,14 +142,14 @@ export function Component() {
   // 筛选条件变化时重置到第一页
   useEffect(() => {
     setCurrentPage(1);
-  }, [keyword, groupId]);
+  }, [agents]);
 
-  const totalCount = list.length;
+  const totalCount = agents.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const pagedList = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return list.slice(start, start + pageSize);
-  }, [list, currentPage, pageSize]);
+    return agents.slice(start, start + pageSize);
+  }, [agents, currentPage, pageSize]);
 
   // 表格列定义
   const allTableColumns: TableProps<AgentCard>['columns'] = [
@@ -252,28 +275,45 @@ export function Component() {
   };
 
   /** 开关切换: ON=发布(status='1') OFF=下线(status='2') */
-  const handleToggle = (id: AgentCard['id'], checked: boolean) => {
+  const handleToggle = async (id: AgentCard['id'], checked: boolean) => {
     const nextStatus = checked ? '1' : '2';
     setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: nextStatus } : it)));
-    // TODO: 接口对接：待后端提供更新状态接口后替换
-    message.success(String(checked ? '已发布' : '已下线'));
+    try {
+      await updateAppApi({ appId: id, status: nextStatus });
+      message.success(checked ? '已发布' : '已下线');
+    } catch {
+      // 回滚
+      setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: checked ? '2' : '1' } : it)));
+      message.error('状态更新失败');
+    }
   };
 
-  const handleDelete = (id: AgentCard['id']) => {
-    setAgents(prev => prev.filter(it => it.id !== id));
-    message.success('已删除');
+  const handleDelete = async (id: AgentCard['id']) => {
+    try {
+      await deleteAppApi({ appId: id });
+      setAgents(prev => prev.filter(it => it.id !== id));
+      message.success('已删除');
+    } catch {
+      message.error('删除失败');
+    }
   };
 
   // Batch delete
-  const handleBatchDelete = () => {
+  const handleBatchDelete = async () => {
     if (checkedRowKeys.length === 0) {
       message.warning('请先选择要删除的助手');
       return;
     }
-    setAgents(prev => prev.filter(it => !checkedRowKeys.includes(it.id)));
-    setCheckedRowKeys([]);
-    setSelectedRows([]);
-    message.success(`成功删除 ${checkedRowKeys.length} 个助手`);
+    try {
+      await Promise.all(checkedRowKeys.map(id => deleteAppApi({ appId: id as number | string })));
+      setAgents(prev => prev.filter(it => !checkedRowKeys.includes(it.id)));
+      setCheckedRowKeys([]);
+      setSelectedRows([]);
+      message.success(`成功删除 ${checkedRowKeys.length} 个助手`);
+    } catch {
+      message.error('批量删除失败');
+      fetchList();
+    }
   };
 
   const rowSelection: TableProps<AgentCard>['rowSelection'] = {
@@ -491,7 +531,7 @@ export function Component() {
           </div>
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
             <Spin spinning={loading}>
-            {list.length === 0 && !loading ? (
+            {agents.length === 0 && !loading ? (
               <div style={{ marginTop: 80 }}>
                 <Empty description="暂无助手" />
               </div>
@@ -565,8 +605,12 @@ export function Component() {
 
       <AssistantEditDrawer
         visible={editVisible}
-        onClose={() => setEditVisible(false)}
+        onClose={(refresh) => {
+          setEditVisible(false);
+          if (refresh) fetchList();
+        }}
         agent={editingAgent}
+        groupId={groupId && groupId !== '0' ? groupId : undefined}
       />
 
       <MetadataAnalysisDrawer

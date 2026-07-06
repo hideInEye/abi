@@ -1930,7 +1930,7 @@
 
 // ── 步骤条样式 ──
 .ds-steps-wrapper {
-  padding: 20px 40px 12px;
+  padding: 12px 40px;
   border-bottom: 1px solid rgba(130, 140, 200, 0.08);
   background: rgba(255, 255, 255, 0.4);
 
@@ -1938,6 +1938,7 @@
     font-size: 13px !important;
     font-weight: 600 !important;
     color: #3e5068 !important;
+    white-space: nowrap !important;
   }
 
   .ant-steps-item-active .ant-steps-item-title {
@@ -2671,13 +2672,14 @@
       flex-direction: column;
 
       > .ant-tabs-tabpane {
-        height: 100%;
-        display: flex;
         flex-direction: column;
         overflow: hidden;
       }
 
       > .ant-tabs-tabpane-active {
+        height: 100%;
+        display: flex !important;
+        flex-direction: column;
         flex: 1;
         min-height: 0;
       }
@@ -4010,7 +4012,7 @@
   display: flex;
   flex-direction: column;
   gap: 28px;
-  max-width: 720px;
+  max-width: 100%;
 }
 
 // ── Hero banner ──

@@ -95,7 +95,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
   const [form] = Form.useForm<AttributeBindingValues>()
   const [activeTab, setActiveTab] = useState<AttributeTab>('all')
   const [selectedType, setSelectedType] = useState<SupportedAttributeType | undefined>()
-  const [selectedGroupId, setSelectedGroupId] = useState<number>()
+  const [selectedGroupId, setSelectedGroupId] = useState<string>()
   const [adding, setAdding] = useState(false)
   const addLock = useRef(false)
   const { assets, clearAssets, loading: loadingAssets, loadAssets } = useAttributeAssets(spaceId)
@@ -121,7 +121,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
   )
 
   const handleGroupChange = useCallback(
-    (groupId: number): void => {
+    (groupId: string): void => {
       clearAssets()
       if (!selectedType || !groupId) {
         setSelectedGroupId(undefined)
@@ -130,7 +130,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
       }
       setSelectedGroupId(groupId)
       form.setFieldsValue({ assetCode: undefined })
-      loadAssets(selectedType, groupId)
+      loadAssets(selectedType, groupId as any)
     },
     [clearAssets, form, loadAssets, selectedType],
   )

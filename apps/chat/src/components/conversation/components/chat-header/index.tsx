@@ -1,4 +1,4 @@
-import { DownOutlined } from '@ant-design/icons'
+import { CheckOutlined, DownOutlined } from '@ant-design/icons'
 import { Dropdown, message } from 'antd'
 import type { MenuProps } from 'antd'
 import React, { useState } from 'react'
@@ -42,19 +42,28 @@ const ChatHeader = React.forwardRef<any, ChatHeaderProps>((props, ref) => {
   }
 
   /** Model switcher menu items */
-  const modelMenuItems: MenuProps['items'] = modelOptions.map((model) => ({
-    key: String(model.id),
-    label: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span style={{ fontWeight: 600, fontSize: 13 }}>{model.label}</span>
-        {model.desc && <span style={{ fontSize: 11, color: '#888', fontWeight: 400 }}>{model.desc}</span>}
-      </div>
-    ),
-    onClick: () => {
-      onModelChange?.(model)
-      message.info(`已切换到 ${model.label}`)
-    },
-  }))
+  const modelMenuItems: MenuProps['items'] = modelOptions.map((model) => {
+    const isSelected = currentModel && String(currentModel.id) === String(model.id)
+    return {
+      key: String(model.id),
+      label: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0', minWidth: 260 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>{model.label}</span>
+            {model.desc && <span style={{ fontSize: 11, color: '#999', fontWeight: 400 }}>{model.desc}</span>}
+          </div>
+          {isSelected && (
+            <CheckOutlined style={{ color: '#5b7cf7', fontSize: 14, marginLeft: 12 }} />
+          )}
+        </div>
+      ),
+      style: isSelected ? { background: 'rgba(91, 124, 247, 0.06)' } : undefined,
+      onClick: () => {
+        onModelChange?.(model)
+        message.info(`已切换到 ${model.label}`)
+      },
+    }
+  })
 
   return (
     <>

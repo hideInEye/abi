@@ -19,10 +19,10 @@ export function formatField(field: string) {
  * @param parentId 当前父节点 ID，默认 0
  * @returns 多级树数组
  */
-export function buildGroupTree(list: any[], parentId = 0): any[] {
+export function buildGroupTree(list: any[], parentId: string = '0'): any[] {
   if (!Array.isArray(list)) return [];
   return list
-    .filter(item => item.parentId === parentId)
+    .filter(item => String(item.parentId) === String(parentId))
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     .map(item => {
       const children = buildGroupTree(list, item.groupId);
@@ -37,12 +37,12 @@ export function buildGroupTree(list: any[], parentId = 0): any[] {
  * @param groupId 当前分组 ID
  * @returns 包含所有后代 ID 的 Set
  */
-export function getAllDescendantIds(list: any[], groupId: number): Set<number> {
-  const descendants = new Set<number>();
+export function getAllDescendantIds(list: any[], groupId: string): Set<string> {
+  const descendants = new Set<string>();
 
-  function collectDescendants(parentId: number) {
+  function collectDescendants(parentId: string) {
     list.forEach((item) => {
-      if (item.parentId === parentId && !descendants.has(item.groupId)) {
+      if (String(item.parentId) === String(parentId) && !descendants.has(item.groupId)) {
         descendants.add(item.groupId);
         collectDescendants(item.groupId);
       }

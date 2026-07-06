@@ -3,11 +3,11 @@ import { deleteTableSemantics, schemalist } from '@/service/api/data-table-meani
 export function useSemanticsTable() {
   const [tableSchemaList, setTableSchemaList] = useState<any[]>([]);
 
-  async function fetchTableSchemaList(grouppageSize: number, gpId: number, bizName = '', startTime?: string, endTime?: string) {
+  async function fetchTableSchemaList(grouppageSize: number, gpId: string, bizName = '', startTime?: string, endTime?: string) {
     const { response } = await schemalist({
       bizName,
       endTime,
-      groupId: gpId,
+      groupId: gpId as any,
       pageNum: 1,
       pageSize: grouppageSize,
       startTime

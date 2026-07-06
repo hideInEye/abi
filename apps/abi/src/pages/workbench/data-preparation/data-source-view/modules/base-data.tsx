@@ -44,7 +44,7 @@ export const BaseData: React.FC<PropsType> = memo(({ curDatasource, sourceId, ta
 
   useEffect(() => {
     getTableList();
-  }, [tableName]);
+  }, [sourceId, tableName]);
 
   return (
     <div className="ds-view-tab-content">
