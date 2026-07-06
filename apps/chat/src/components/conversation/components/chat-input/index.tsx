@@ -1,4 +1,4 @@
-import { AudioOutlined, BulbOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, SearchOutlined, SendOutlined, StopOutlined, ThunderboltOutlined, DatabaseOutlined, EditOutlined, ToolOutlined } from '@ant-design/icons';
+import { ApiOutlined, AudioOutlined, BulbOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, SearchOutlined, SendOutlined, StopOutlined, ThunderboltOutlined, DatabaseOutlined, EditOutlined, ToolOutlined } from '@ant-design/icons';
 import { Dropdown, Input, message, Popover } from 'antd';
 import type { MenuProps } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -14,6 +14,8 @@ import { getSpaceId } from '../../../../utils';
 export interface SemanticSelectedData {
   name: string
   schemaId?: number | string
+  /** 数据语义所属分组名（不是对话分组） */
+  groupName?: string
 }
 
 interface ChatInputProps {
@@ -163,6 +165,8 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               description: item.fieldDesc || '',
               tableName: item.tableName || '',
               tableDesc: item.tdesc || item.rtableName || '',
+              bizName: item.bizName || '',
+              alias: item.alias || '',
             });
           });
         };
@@ -253,7 +257,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
                   ) : (
                     schemas.map((s: any) => (
                       <div key={s.schemaId} className="sem-option" style={{ padding: '7px 12px 7px 28px', fontSize: 12.5, cursor: 'pointer' }}
-                        onClick={() => { onSelectData?.({ name: s.bizName, schemaId: s.schemaId }); setSemDropdownOpen(false); }}
+                        onClick={() => { onSelectData?.({ name: s.bizName, schemaId: s.schemaId, groupName: g.groupName }); setSemDropdownOpen(false); }}
                       >
                         <div style={{ fontWeight: 500 }}>{s.bizName}</div>
                         {s.techName && <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{s.techName}</div>}
@@ -270,7 +274,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
 
     /** 更多 Popover 完整内容 */
     const morePopoverContent = (
-      <div style={{ width: 260, maxHeight: 380, overflow: 'visible' }}>
+      <div style={{ width: 180, maxHeight: 380, overflow: 'visible' }}>
         {/* 查看语义 */}
         <div className="more-popup-item" onClick={openSchemaModal}>
           <EyeOutlined style={{ fontSize: 14 }} /> 查看语义
@@ -373,7 +377,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           overlayInnerStyle={{ padding: '4px 0' }}
         >
           <div className="more-popup-item" onClick={() => setMcpPopOpen(true)}>
-            <EllipsisOutlined style={{ fontSize: 14, transform: 'rotate(90deg)' }} /> MCP
+            <ApiOutlined style={{ fontSize: 14 }} /> MCP
             <DownOutlined style={{ marginLeft: 'auto', fontSize: 10, transform: 'rotate(-90deg)' }} />
           </div>
         </Popover>

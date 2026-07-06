@@ -452,6 +452,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false,agent, groupId: 
           <div style={{ flex: 1, overflow: 'hidden', padding: '10px 18px 18px' }}>
             <Input.TextArea
               bordered={false}
+              placeholder={`请输入您的专属AI角色设定提示词。建议包含：身份背景、性格语气、专业领域及输出要求。设定越清晰，AI的回答越精准。\n\n一键套用模板：角色：[资深数据分析师] + 语气：[客观严谨/通俗易懂] + 任务：[生成Q3财报解读] + 格式：[Markdown/要点列表]。\n\n参考示例：你现在是一位拥有10年经验的资深商业数据分析师，性格严谨客观，擅长从复杂数据中挖掘业务洞察。请基于我提供的原始数据，输出一份结构清晰的月度销售数据报告。要求：必须包含核心指标摘要、数据可视化建议、异常波动归因分析，以及3条可落地的业务优化策略。语言风格需保持专业、精炼，杜绝主观臆断。`}
               style={{
                 height: '100%',
                 resize: 'none',

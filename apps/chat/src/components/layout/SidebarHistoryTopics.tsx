@@ -217,7 +217,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
 
   const buildMenu = (chatId: string): MenuProps => ({
     items: [
-      { key: 'edit', icon: <EditOutlined />, label: '编辑' },
+      { key: 'edit', icon: <EditOutlined />, label: '重命名' },
       {
         key: 'move-to-group',
         icon: <FolderOutlined />,
@@ -235,6 +235,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
           },
         ],
       },
+      { type: 'divider' as const },
       { key: 'delete', icon: <DeleteOutlined />, label: '删除', danger: true },
     ],
     onClick: ({ key, domEvent }) => {

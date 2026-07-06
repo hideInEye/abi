@@ -525,12 +525,12 @@ export default function DataTableMeaningTable() {
               setAiLoading(true);
               // 查询模型列表，找到指定模型的 modelId
               const AI_FILL_MODEL_NAME = 'deepseek-v4-flash';
-              let targetModelId: number | undefined;
+              let targetModelId: string | undefined;
               try {
                 const modelRes: any = await fetchModelList({ pageNum: 1, pageSize: 999, modelName: AI_FILL_MODEL_NAME });
                 const modelRows = modelRes?.data?.data || modelRes?.response?.data?.rows || [];
                 const targetModel = Array.isArray(modelRows) ? modelRows.find((m: any) => m.modelName === AI_FILL_MODEL_NAME) : undefined;
-                targetModelId = targetModel?.modelId;
+                targetModelId = targetModel?.modelId != null ? String(targetModel.modelId) : undefined;
               } catch {
                 // 模型查询失败不阻断AI帮填
               }

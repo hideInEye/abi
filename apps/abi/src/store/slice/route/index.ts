@@ -4,6 +4,7 @@ import { createSelector } from '@reduxjs/toolkit';
 
 import { SUB_APP_TOP_LEVEL_WHITE_ROUTE_NAMES } from '@/constants/sub-app';
 import { router } from '@/router';
+import { pages } from '@/router/elegant/imports';
 import { getRoutePath } from '@/router/elegant/transform';
 import { createStaticRoutes } from '@/router/routes';
 import { ROOT_ROUTE } from '@/router/routes/builtin';
@@ -191,6 +192,176 @@ function appendSubAppWhiteRoutes(routes: ElegantConstRoute[]): ElegantConstRoute
 }
 
 /**
+ * 将静态路由中隐藏的子路由合并到动态路由中
+ * 解决后端不返回 hideInMenu 路由导致页面 404 的问题
+ * 使用 path 匹配（动态路由的 name 来自后端，与静态路由 name 不一致）
+ */
+function mergeHiddenChildRoutes(dynamicRoutes: ElegantConstRoute[]): ElegantConstRoute[] {
+  const { authRoutes: staticAuthRoutes } = createStaticRoutes();
+
+  // 归一化路径：去掉开头的 / 和动态参数段（/:xxx）以及末尾斜杠
+  const normalize = (p: string) => (p || '').replace(/^\//, '').replace(/\/:[^/]+/g, '').replace(/\/+$/, '');
+
+  // 根据 path 在静态路由列表中查找对应路由
+  function findStaticByPath(staticRoutes: ElegantConstRoute[], targetPath: string): ElegantConstRoute | undefined {
+    const normalizedTarget = normalize(targetPath);
+    return staticRoutes.find(r => normalize(r.path as string) === normalizedTarget);
+  }
+
+  // 递归合并隐藏子路由，同时传入当前层级对应的静态路由列表
+  function mergeChildren(dynamicRoute: ElegantConstRoute, staticSiblings: ElegantConstRoute[]): ElegantConstRoute {
+    if (!dynamicRoute.children?.length) return dynamicRoute;
+
+    // 通过 path 找到动态路由在静态路由中对应的节点
+    const staticMatch = findStaticByPath(staticSiblings, dynamicRoute.path as string);
+    const staticChildren = (staticMatch?.children || []) as ElegantConstRoute[];
+
+    // 递归处理已有子路由
+    const mergedChildren = dynamicRoute.children.map(child =>
+      mergeChildren(child as ElegantConstRoute, staticChildren)
+    );
+
+    // 找出静态路由中隐藏且在动态路由中缺失的子路由
+    if (staticChildren.length) {
+      const existingPaths = new Set(
+        mergedChildren.map(c => normalize(c.path as string || ''))
+      );
+      const missingHiddenChildren = staticChildren.filter(child => {
+        const childBasePath = normalize(child.path as string || '');
+        return child.meta?.hideInMenu && !existingPaths.has(childBasePath);
+      });
+      if (missingHiddenChildren.length) {
+        return { ...dynamicRoute, children: [...mergedChildren, ...missingHiddenChildren] };
+      }
+    }
+
+    return { ...dynamicRoute, children: mergedChildren };
+  }
+
+  return dynamicRoutes.map(route => mergeChildren(route, staticAuthRoutes));
+}
+
+/**
+ * 路由注册后的补丁：确保隐藏路由在 matcher 和 react-router 路由树中都正确存在
+ * 解决 transformElegantRouteToReactRoute 对无 component 的中间节点 early return 导致子路由丢失的问题
+ */
+function patchMissingHiddenRoutes() {
+  const { authRoutes: staticAuthRoutes } = createStaticRoutes();
+
+  interface HiddenRouteInfo {
+    route: ElegantConstRoute;
+    fullPath: string;
+    relativePath: string;
+  }
+
+  function collectHiddenLeafRoutes(routes: ElegantConstRoute[], parentPath = ''): HiddenRouteInfo[] {
+    const result: HiddenRouteInfo[] = [];
+    for (const route of routes) {
+      const rawPath = (route.path as string) || '';
+      const isAbs = rawPath.startsWith('/');
+      const currentSeg = rawPath.replace(/^\//, '');
+      const fullPath = isAbs ? rawPath : (parentPath ? `${parentPath}/${currentSeg}` : `/${currentSeg}`);
+
+      if (route.meta?.hideInMenu && !route.children?.length) {
+        result.push({ route, fullPath, relativePath: currentSeg });
+      }
+      if (route.children?.length) {
+        const cleanPath = fullPath.replace(/\/:[^/]+/g, '');
+        result.push(...collectHiddenLeafRoutes(route.children as ElegantConstRoute[], cleanPath));
+      }
+    }
+    return result;
+  }
+
+  const hiddenRoutes = collectHiddenLeafRoutes(staticAuthRoutes);
+
+  // 在 react-router 路由树中查找匹配指定路径的路由节点
+  function findRouteInTree(routes: any[], targetPath: string): any | null {
+    for (const r of routes) {
+      const rPath = (r.path || '').replace(/^\//, '').replace(/\/+$/, '');
+      const target = targetPath.replace(/^\//, '').replace(/\/+$/, '');
+      if (rPath === target) return r;
+      if (Array.isArray(r.children)) {
+        const found = findRouteInTree(r.children, targetPath);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  const reactRouterRoutes = (router.reactRouter as any).routes;
+
+  for (const { route, fullPath, relativePath } of hiddenRoutes) {
+    const alreadyInMatcher = !!router.getRouteByName(route.name);
+
+    // 计算父路由路径段
+    const pathSegs = fullPath.replace(/^\//, '').split('/');
+    const relativeSegCount = relativePath.split('/').length;
+    const parentPathSegs = pathSegs.slice(0, pathSegs.length - relativeSegCount);
+
+    let parentRouteId: string | null = null;
+    let parentRoute: any = null;
+
+    if (parentPathSegs.length > 0) {
+      const topPath = '/' + parentPathSegs[0];
+      let current = findRouteInTree(reactRouterRoutes, topPath);
+      for (let i = 1; i < parentPathSegs.length && current; i++) {
+        if (Array.isArray(current.children)) {
+          current = findRouteInTree(current.children, parentPathSegs[i]);
+        } else {
+          current = null;
+        }
+      }
+      if (current) {
+        parentRoute = current;
+        parentRouteId = current.id || null;
+      }
+    }
+
+    // 如果 matcher 中没有，注册到 matcher
+    if (!alreadyInMatcher) {
+      router.addReactRoutes([{
+        ...route,
+        path: fullPath
+      } as ElegantConstRoute]);
+    }
+
+    // 检查 react-router 树中该路由是否已存在于正确的父级位置
+    const viewKey = ((route.component as string) || '').replace('view.', '');
+    const lazyFn = pages[viewKey as keyof typeof pages];
+
+    if (parentRoute && lazyFn) {
+      const children = parentRoute.children || [];
+      const normalizePathForCompare = (p: string) => (p || '').replace(/^\//, '').replace(/\/+$/, '');
+      const alreadyInTree = children.some(
+        (c: any) => normalizePathForCompare(c.path) === normalizePathForCompare(relativePath) ||
+                    c.id === route.name
+      );
+
+      if (!alreadyInTree) {
+        // 在 react-router 路由树的正确嵌套位置添加路由
+        if (parentRouteId) {
+          (router.reactRouter as any).patchRoutes(parentRouteId, [{
+            id: route.name as string,
+            path: relativePath,
+            lazy: lazyFn,
+            handle: { ...route.meta }
+          }]);
+        } else {
+          // 父级无 id 时直接操作 children 数组
+          parentRoute.children = [...children, {
+            id: route.name as string,
+            path: relativePath,
+            lazy: lazyFn,
+            handle: { ...route.meta }
+          }];
+        }
+      }
+    }
+  }
+}
+
+/**
  * Get cache routes
  *
  * @param routes Vue routes
@@ -218,6 +389,11 @@ const handleConstantOrAuthRoutes =
       const sortRoutes = sortRoutesByOrder(routes);
 
       router.addReactRoutes(sortRoutes);
+
+      // 动态路由注册完成后，补充缺失的隐藏子路由（如 data-collection-operate/:id）
+      if (mode === 'auth') {
+        patchMissingHiddenRoutes();
+      }
 
       // 移除 workbench/component 自动生成的 index route 重定向
       cleanIndexRedirectRoutes((router.reactRouter as any).routes);
@@ -290,6 +466,7 @@ const initDynamicAuthRoute = (): AppThunk => async dispatch => {
 
     soybeanRoutes = filterBuiltinDashboardRoutes(soybeanRoutes);
     soybeanRoutes = appendSubAppWhiteRoutes(soybeanRoutes);
+    soybeanRoutes = mergeHiddenChildRoutes(soybeanRoutes);
 
     dispatch(setAuthRoutes(soybeanRoutes));
 
