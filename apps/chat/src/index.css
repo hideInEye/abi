@@ -754,7 +754,8 @@ button {
 
 /* ── Composer Wrapper ── */
 .composer-wrap {
-  padding: 0 24px 0;
+  padding: 0 0 0;
+  padding-right: var(--scrollbar-width, 17px);
   position: sticky;
   bottom: 0;
   background: transparent;

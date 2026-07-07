@@ -35,6 +35,7 @@ export interface ConversationProps {
   modelOptions?: ModelOption[]
   currentModel?: ModelOption | null
   onModelChange?: (model: ModelOption) => void
+  deepThinkEnabled?: boolean
 }
 
 /**
@@ -182,6 +183,9 @@ export const useConversationController = (
   const isFirstMessage = useRef(true)
   const isRequesting = useRef(false)
   const messageRef = useRef('')
+  const isReasoningRef = useRef(false)
+  // 记录上一次已追加的完整 content，用于过滤后端重复发送的固定前缀
+  const lastContentRef = useRef('')
   const groupCountRef = useRef(0)
   const closedGroupCountRef = useRef(0)
   const abortController = useRef<AbortController | null>(null)
@@ -192,6 +196,10 @@ export const useConversationController = (
   const [selectedExcel, setSelectedExcel] = useState<any>({})
   const [referenceDialog, setReferenceDialog] = useState<any>({})
   const [deepThinkEnabled, setDeepThinkEnabled] = useState(false)
+  // 支持外部（如 conversation-analysis 的统一输入框）透传思考开关状态，避免 UI 与请求参数不一致
+  const effectiveDeepThinkEnabled = props.deepThinkEnabled !== undefined ? props.deepThinkEnabled : deepThinkEnabled
+  const effectiveDeepThinkEnabledRef = useRef(effectiveDeepThinkEnabled)
+  effectiveDeepThinkEnabledRef.current = effectiveDeepThinkEnabled
   const [uploadFileEnabled, setUploadFileEnabled] = useState(false)
   const [cur, setCur] = useState<any>()
   const [debugModalVisible, setDebugModalVisible] = useState(false)
@@ -236,6 +244,7 @@ export const useConversationController = (
     }
   }
 
+  /* 暂时禁用下滑加载更多历史：该功能目前历史数据接口存在问题，先整体注释避免误触发
   const loadMoreHistory = async () => {
     if (historyLoading || !hasMoreHistory || minRoundIndex === undefined) return
 
@@ -345,6 +354,7 @@ export const useConversationController = (
       canLoadMore.current = true
     }
   }
+  */
 
   const [userScrolled, setUserScrolled] = useState(false)
   const lastScrollTop = useRef(0)
@@ -379,14 +389,15 @@ export const useConversationController = (
         setUserScrolled(false)
       }
 
-      if (canLoadMore.current && isScrollingUp && hasMoreHistory && !historyLoading && minRoundIndex !== undefined) {
-        const getMsgId = document.querySelector(`#human-msg-${minRoundIndex + 2}`)?.getBoundingClientRect()
-        const containerRect = chatContainer.getBoundingClientRect()
-        if (getMsgId && getMsgId.top <= containerRect.bottom && getMsgId.bottom >= containerRect.top) {
-          canLoadMore.current = false
-          loadMoreHistory()
-        }
-      }
+      // 暂时禁用下滑加载更多历史：该功能目前历史数据接口存在问题，先注释避免误触发
+      // if (canLoadMore.current && isScrollingUp && hasMoreHistory && !historyLoading && minRoundIndex !== undefined) {
+      //   const getMsgId = document.querySelector(`#human-msg-${minRoundIndex + 2}`)?.getBoundingClientRect()
+      //   const containerRect = chatContainer.getBoundingClientRect()
+      //   if (getMsgId && getMsgId.top <= containerRect.bottom && getMsgId.bottom >= containerRect.top) {
+      //     canLoadMore.current = false
+      //     loadMoreHistory()
+      //   }
+      // }
 
       lastScrollTop.current = scrollTop
     }
@@ -461,7 +472,7 @@ export const useConversationController = (
         if_debug: true,
         semantic_id: props.semanticId ?? null,
         extra_body: {
-          enable_thinking: deepThinkEnabled
+          enable_thinking: effectiveDeepThinkEnabledRef.current
         }
       }
     }
@@ -755,7 +766,8 @@ export const useConversationController = (
     const params = cloneDeep(paramsDataRef.current || paramsData)
     // 每次发送时注入最新的 deepThink 状态和 semanticId
     if (params.context?.extra) {
-      params.context.extra.extra_body = { enable_thinking: deepThinkEnabled }
+      console.log('[request enable_thinking]', effectiveDeepThinkEnabledRef.current)
+      params.context.extra.extra_body = { enable_thinking: effectiveDeepThinkEnabledRef.current }
       params.context.extra.semantic_id = props.semanticId ?? null
     }
     params.messages = question
@@ -776,6 +788,8 @@ export const useConversationController = (
     setLoading(true)
     isRequesting.current = true
     messageRef.current = ''
+    isReasoningRef.current = false
+    lastContentRef.current = ''
     startTimeRef.current = startTime
     isMessageAdded.current = false
     webSocketViewAdded.current = false
@@ -812,9 +826,16 @@ export const useConversationController = (
           }
         },
         async onmessage(event) {
+          console.log('[SSE raw]', event.data)
           if (event.data) {
             // 处理 [DONE] 信号
             if (event.data === '[DONE]') {
+              // 流结束时如果仍在推理段，自动闭合 think 标签
+              if (isReasoningRef.current) {
+                messageRef.current += '</think>'
+                isReasoningRef.current = false
+              }
+
               const endTime = performance.now()
               const thinkTimeMs = endTime - startTimeRef.current
               const calculatedThinkTime = Math.round(thinkTimeMs / 1000)
@@ -871,17 +892,58 @@ export const useConversationController = (
               return
             }
 
-            // 从 OpenAI 兼容格式提取 content
+            // 从 OpenAI 兼容格式提取 content / reasoning_content
             let chunk = event.data
             try {
               const parsed = JSON.parse(event.data)
               const delta = parsed?.choices?.[0]?.delta
+              let chunkText = ''
+
+              // 优先处理 reasoning_content（仅在开启深度思考时展示）
+              console.log('[deepThink flag]', effectiveDeepThinkEnabledRef.current, 'reasoning:', delta?.reasoning_content)
+              if (
+                effectiveDeepThinkEnabledRef.current &&
+                delta?.reasoning_content !== undefined &&
+                delta?.reasoning_content !== null
+              ) {
+                if (!isReasoningRef.current) {
+                  chunkText += '<think>' + delta.reasoning_content
+                  isReasoningRef.current = true
+                } else {
+                  chunkText += delta.reasoning_content
+                }
+              }
+
+              // 处理 content，过滤后端重复发送的固定前缀/完整内容
               if (delta?.content !== undefined && delta?.content !== null) {
-                chunk = delta.content
-              } else {
-                // 没有 content 的事件（如首条仅含 role 的事件）跳过
+                const currentContent = delta.content
+                let contentToAppend = ''
+                if (
+                  lastContentRef.current &&
+                  currentContent.startsWith(lastContentRef.current)
+                ) {
+                  contentToAppend = currentContent.slice(lastContentRef.current.length)
+                } else {
+                  contentToAppend = currentContent
+                }
+                lastContentRef.current = currentContent
+
+                if (contentToAppend) {
+                  // 从 reasoning_content 切换到 content 时需要先闭合 think 标签
+                  if (isReasoningRef.current) {
+                    chunkText += '</think>' + contentToAppend
+                    isReasoningRef.current = false
+                  } else {
+                    chunkText += contentToAppend
+                  }
+                }
+              }
+
+              if (!chunkText) {
+                // 没有有效 content 和 reasoning_content 的事件跳过
                 return
               }
+              chunk = chunkText
             } catch {
               // 非 JSON 格式，直接使用原始 event.data（兼容旧格式）
             }
@@ -907,6 +969,8 @@ export const useConversationController = (
 
             // 累积内容
             messageRef.current += chunk
+            console.log('[parsed chunk]', chunk)
+            console.log('[messageRef]', messageRef.current.slice(0, 200) + (messageRef.current.length > 200 ? '...' : ''))
 
             // 处理 illegal_query
             if (messageRef.current.includes('illegal_query')) {

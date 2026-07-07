@@ -18,11 +18,11 @@ export interface ConversationHandle {
 }
 
 const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((props, ref) => {
-  const { conv, onLoadingChange, modelOptions, currentModel, onModelChange } = props
+  const { conv, onLoadingChange, modelOptions, currentModel, onModelChange, deepThinkEnabled } = props
   const [selectedModel, setSelectedModel] = useState<string>(currentModel?.label || '')
   const [selectedModelId, setSelectedModelId] = useState<string | number>(currentModel?.id || '')
   const [embedModelId, setEmbedModelId] = useState<string | number>(props.embedModelId || '')
-  const controller = useConversationController({ ...props, selectedModel, selectedModelId, embedModelId })
+  const controller = useConversationController({ ...props, selectedModel, selectedModelId, embedModelId, deepThinkEnabled })
 
   const {
     chatContainerRef,
