@@ -231,7 +231,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     if (creating) return
 
     const meta = {
-      groupName: curConv?.groupName || curConv?.group_name || '',
+      // 这里的分组是数据语义所属分组，不是对话分组
+      groupName: selectedData?.groupName || '',
       semanticName: selectedData?.name || '',
       semanticSchemaId: selectedData?.schemaId,
     }

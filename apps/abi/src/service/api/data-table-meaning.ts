@@ -127,7 +127,7 @@ export function getCode() {
 }
 
 /** AI帮填 - 语义修改 */
-export function semanticModify(data: { dsl: string; chat_model_id?: number }) {
+export function semanticModify(data: { dsl: string; chat_model_id?: string }) {
   return apiRequest({
     data,
     method: 'post',

@@ -136,7 +136,7 @@ export function Component() {
       if (id) {
         setDatasource(id);
       }
-    } else if (Number(id)) {
+    } else if (id && id !== '0') {
       getDetail();
     }
   }, [id, isFromDatasource]);
@@ -191,7 +191,7 @@ export function Component() {
     const paramsData = { ...elseCollectionData, allFields, union: [resNodeData], viewName: viewName.trim() };
     paramsData.spaceId = spaceId;
     let res = null;
-    if (Number(id)) {
+    if (id && id !== '0') {
       res = await saveDataSet(paramsData);
     } else {
       res = await addDataSet(paramsData);

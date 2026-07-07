@@ -1,6 +1,6 @@
-import { LogoutOutlined, SettingOutlined } from '@ant-design/icons'
-import { Avatar, Dropdown, Modal } from 'antd'
-import type { MenuProps } from 'antd'
+import { LogoutOutlined } from '@ant-design/icons'
+import { Popover, Modal } from 'antd'
+import { useState } from 'react'
 import { authManager } from '../../utils/auth'
 
 type UserProfileCardProps = {
@@ -14,7 +14,10 @@ function getUserInitial(userName: string): string {
 }
 
 export function UserProfileCard({ collapsed, userName }: UserProfileCardProps) {
+  const [popOpen, setPopOpen] = useState(false)
+
   const handleLogout = () => {
+    setPopOpen(false)
     Modal.confirm({
       title: '提示',
       content: '确定要退出登录吗？',
@@ -26,66 +29,76 @@ export function UserProfileCard({ collapsed, userName }: UserProfileCardProps) {
     })
   }
 
-  const menuItems: MenuProps['items'] = [
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: '退出登录',
-      onClick: handleLogout,
-    },
-  ]
-  return (
+  const popContent = (
     <div
-      className="user-bar-glass"
-      style={{
-        padding: collapsed ? '8px 0' : '8px 12px',
-        justifyContent: collapsed ? 'center' : 'flex-start',
-      }}
+      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer', fontSize: 13, color: 'var(--ink)' }}
+      onClick={handleLogout}
+    >
+      <LogoutOutlined style={{ fontSize: 14 }} />
+      <span>退出登录</span>
+    </div>
+  )
+
+  return (
+    <Popover
+      content={popContent}
+      trigger="click"
+      placement="top"
+      arrow={false}
+      open={popOpen}
+      onOpenChange={setPopOpen}
+      overlayInnerStyle={{ padding: '8px 12px', minWidth: 0 }}
+      overlayStyle={{ width: 'calc(100% - 32px)' }}
+      getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
     >
       <div
+        className="user-bar-glass"
         style={{
-          width: 38,
-          height: 38,
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #6366f1, #818cf8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 14,
-          fontWeight: 700,
-          color: '#fff',
-          flexShrink: 0,
-          boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
+          position: 'relative',
+          padding: collapsed ? '8px 0' : '8px 12px',
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          cursor: 'pointer',
         }}
       >
-        {getUserInitial(userName)}
-      </div>
-      {!collapsed && (
-        <>
-          <div className="flex-1 min-w-0">
-            <div
-              className="truncate"
-              style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}
-            >
-              {userName}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>
-              数据分析师
-            </div>
+        <div
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+            fontWeight: 700,
+            color: '#fff',
+            flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
+            zIndex: 1,
+          }}
+        >
+          {getUserInitial(userName)}
+        </div>
+        {!collapsed && (
+          <div
+            className="truncate"
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              fontSize: 14,
+              fontWeight: 600,
+              color: 'var(--ink)',
+              maxWidth: 'calc(100% - 80px)',
+              textAlign: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            {userName}
           </div>
-          <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="topRight">
-            <SettingOutlined
-              style={{
-                fontSize: 16,
-                color: 'var(--ink-3)',
-                cursor: 'pointer',
-                transition: 'color 0.2s',
-              }}
-              className="hover:text-[var(--accent)]"
-            />
-          </Dropdown>
-        </>
-      )}
-    </div>
+        )}
+      </div>
+    </Popover>
   )
 }
