@@ -1333,8 +1333,8 @@ const ViewEle: React.FC<PropsType> = ({
   const desc = chartData?.chat_mode === 'chat_with_knowledge' 
     ? (chartData?.data_knowledge || '') 
     : (chartData?.desc || '');
-  // 先移除HTML标签，再处理markdown
-  const cleanDesc = stripHtmlTags(desc);
+  // 先移除HTML标签，再处理markdown；压缩 3 个以上连续换行为段落分隔
+  const cleanDesc = stripHtmlTags(desc).replace(/\n{3,}/g, '\n\n').trim();
   const html: any = marked(cleanDesc)
 
   return (
@@ -1364,7 +1364,7 @@ const ViewEle: React.FC<PropsType> = ({
            {(data.arrowStatus || !isCollapsed) ? <div className="px-6 py-4">
               <div
                 ref={contentRef}
-                className="whitespace-pre-wrap text-sm text-gray-700 transition-all duration-300 ease-in-out relative"
+                className="text-sm text-gray-700 transition-all duration-300 ease-in-out relative"
                 style={{
                   maxHeight: data.arrowStatus ? 'none' : contentHeight,
                   overflow: data.arrowStatus ? 'visible' : (isCollapsed ? 'hidden' : 'visible'),
@@ -1376,7 +1376,7 @@ const ViewEle: React.FC<PropsType> = ({
                   </div>
                 ) : (
                   <div
-                    className={`${s['markdown-content']} text-left whitespace-pre-wrap`}
+                    className={`${s['markdown-content']} text-left`}
                     dangerouslySetInnerHTML={{ __html: html }}
                     style={{ width: '100%'}}
                   ></div>

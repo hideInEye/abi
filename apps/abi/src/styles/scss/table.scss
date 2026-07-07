@@ -3788,7 +3788,7 @@
 
   .ant-drawer-header {
     border-bottom: 1px solid rgba(130, 140, 200, 0.15);
-    padding: 20px 28px;
+    padding: 20px 40px;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.8) 100%);
     backdrop-filter: blur(10px);
     box-shadow: 0 2px 12px rgba(91, 124, 247, 0.06);
@@ -3888,7 +3888,7 @@
   position: relative;
   border-radius: 16px;
   overflow: hidden;
-  padding: 32px 36px;
+  padding: 32px 40px;
   background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 50%, #8ba5fc 100%);
   box-shadow: 0 8px 32px rgba(91, 124, 247, 0.18);
 }
@@ -4118,7 +4118,7 @@
 .sd-v5-field-card-body {
   flex: 1;
   min-width: 0;
-  padding: 24px 28px;
+  padding: 24px 40px;
   overflow: visible;
   display: flex;
   flex-direction: column;

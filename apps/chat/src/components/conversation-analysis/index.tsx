@@ -230,6 +230,12 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const handleUnifiedSend = useCallback(async (value: string) => {
     if (creating) return
 
+    // 校验是否已选数据语义
+    if (!selectedData?.schemaId) {
+      message.warning('发起对话前，请先选择数据')
+      return
+    }
+
     const meta = {
       // 这里的分组是数据语义所属分组，不是对话分组
       groupName: selectedData?.groupName || '',
@@ -464,6 +470,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 currentModel={currentModel}
                 onModelChange={handleModelChange}
                 embedModelId={embedModelId}
+                deepThinkEnabled={deepThinkEnabled}
               />
             ) : (!routeChatId || routeChatId === 'new') ? (
               <NewChatWelcome onExampleClick={handleExampleClick} />
@@ -472,7 +479,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
           {/* 统一输入框（永驻） */}
           <div className="composer-wrap">
-            <div className="w-[53.75rem] m-auto">
+            <div className="max-w-[53.75rem] w-full m-auto">
               <ChatInput
                 conv={curConv}
                 loading={convLoading || creating}
