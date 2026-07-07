@@ -1,19 +1,12 @@
 import {
   DeleteOutlined,
-  DownOutlined,
   EditOutlined,
   LeftOutlined,
   PlusOutlined,
   ReloadOutlined,
   RightOutlined,
-  SearchOutlined,
-  SafetyOutlined,
-  UserOutlined,
-  VerticalAlignBottomOutlined
-} from '@ant-design/icons';
-import { Dropdown, message } from 'antd';
-import axios from 'axios';
-import type { AxiosResponse } from 'axios';
+  SearchOutlined} from '@ant-design/icons';
+import { message } from 'antd';
 import { Suspense } from 'react';
 
 import {
@@ -26,7 +19,6 @@ import {
   updateSpaceRoleApi,
   updateSpaceRoleStatusAPi
 } from '@/service/api/space-role';
-import { getAuthorization, getUserId } from '@/service/request/shared';
 import { getServiceBaseURL } from '@/utils/service';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
