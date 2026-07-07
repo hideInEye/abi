@@ -1,46 +1,49 @@
-# /space/user 已分配空间菜单按 checkedKeys 展示
+# 指标创建/编辑第二步自定义衍生计算逻辑引用分组调整
 
 ## 需求类型
 
-UI 数据展示调整
+限定范围前端 UI 数据展示与交互逻辑调整
 
 ## 背景
 
-在 `/space/user` 页面打开“分配角色”抽屉后，点击左侧角色会请求角色菜单接口。接口返回 `menus` 树和 `checkedKeys`，右侧“已分配的空间菜单”需要根据接口实际勾选结果展示，而不是展示固定层级菜单。
+指标创建/编辑第二步中，当指标类型为“衍生指标”且衍生模板为“自定义类”时，计算逻辑区域右侧“点击引用字段”当前按维度/度量/日期及旧逻辑展示，需要改为按可引用指标类型展示。
 
 ## 目标
 
-- 点击左侧角色后，读取接口返回的 `menus` 和 `checkedKeys`。
-- 使用 lodash 方法将 `menus` 树平铺为数组。
-- 只展示平铺后 `id` 命中 `checkedKeys` 的菜单项。
-- 右侧菜单数量和标签列表保持同一份过滤结果。
+- 将右侧“点击引用字段”展示分组改为“原子指标”和“派生指标”。
+- 数据来源沿用当前第二步已查询/可用的指标列表逻辑。
+- 原子指标筛选条件为 `indicatorClass === 'atomic'`。
+- 派生指标筛选条件为 `indicatorClass === 'derived'`。
+- 点击任意原子指标或派生指标项时，仍插入到左侧计算逻辑编辑器中。
+- 保留现有插入交互方式。
 
 ## 非目标
 
-- 不修改角色列表接口、角色菜单接口、提交接口或请求参数。
-- 不修改角色单选逻辑。
-- 不调整 `/manage/user` 或无右侧空间菜单展示的空间列表分配角色组件。
-- 不大范围重构抽屉样式。
+- 不再使用维度/度量/日期分类。
+- 不修改样式 class。
+- 不做视觉调整。
+- 不大范围重构指标建模模块。
+- 不修改与本次计算逻辑引用分组无关的业务流程。
+- 本轮不运行构建/测试，由主线程执行。
 
 ## 影响范围预期
 
-- `apps/abi/src/pages/space/user/modules/PermissionManagement.tsx`
-- `apps/abi/src/pages/space/user/modules/permission-menu.ts`
-- `apps/abi/src/pages/space/user/modules/permission-menu.test.ts`
-- `.ai/runs/<date>-space-user-checked-menu-display/`
+- `apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/metric-modeling/KnowledgeOperateDrawer`
+- `apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/metric-modeling/TechnicalStep`
+- 指标建模中自定义衍生逻辑/计算逻辑相关组件和 utils。
+- `.ai/runs/<date>-metric-custom-derived-reference-groups/`
 
 ## 验收标准
 
-- 角色菜单接口返回 `menus` 和 `checkedKeys` 后，右侧只显示 `checkedKeys` 对应的菜单。
-- 右侧“X 项”数量与实际显示标签数量一致。
-- 未命中 `checkedKeys` 的菜单不展示。
-- 打开默认已选角色和点击切换角色时均使用同一显示规则。
-- 必要测试、静态检查和构建验证通过，或记录无法通过的原因。
+- 仅在“衍生指标 + 自定义类”计算逻辑区域右侧引用列表中展示“原子指标”和“派生指标”两组。
+- 原子指标组只包含 `indicatorClass === 'atomic'` 的指标。
+- 派生指标组只包含 `indicatorClass === 'derived'` 的指标。
+- 点击两组中的任一指标后，能沿用原插入方式插入到左侧计算逻辑编辑器。
+- 不修改样式 class、不引入视觉调整。
+- 不回退或覆盖用户已有改动。
 
 ## 测试要求
 
-- 为菜单树平铺与 `checkedKeys` 匹配逻辑补充 Vitest。
-- 运行相关 Vitest。
-- 运行 `git diff --check`。
-- 对修改的 TS/TSX 做 parse 检查。
-- 运行 `pnpm --filter chatbi build`。
+- 本轮按用户要求不运行构建/测试。
+- 进行代码级回归检查，确认引用列表数据来源、分组过滤和点击插入逻辑满足需求。
+- 运行记录中说明未运行构建/测试的原因。

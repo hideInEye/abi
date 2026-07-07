@@ -85,7 +85,7 @@ const DimensionModeling: React.FC = () => {
           </div>
         </Splitter.Panel>
 
-        <Splitter.Panel>
+        <Splitter.Panel style={{ minWidth: 0, overflow: 'hidden' }}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             <DimensionSearchBar
               searchParams={searchParams}

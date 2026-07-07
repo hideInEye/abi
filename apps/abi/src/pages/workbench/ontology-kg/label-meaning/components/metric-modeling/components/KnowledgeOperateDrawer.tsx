@@ -374,6 +374,18 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       }))
       .filter((item) => item.value)
   }, [indicatorClass, indicatorOptionSource])
+  const referenceMetricOptions = useMemo(
+    () =>
+      indicatorOptionSource
+        .filter((item) => item.indicatorClass === 'atomic' || item.indicatorClass === 'derived')
+        .map((item) => ({
+          item,
+          label: String(item.techName || item.bizName || item.indicatorCode || '-'),
+          value: normalizeAtomicSelectValue(item),
+        }))
+        .filter((item) => item.value),
+    [indicatorOptionSource],
+  )
 
   const {
     validateAccumulationDate,
@@ -689,6 +701,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
             atomicMetricOptions={atomicIndicatorOptions}
             form={form}
             indicatorClass={indicatorClass}
+            referenceMetricOptions={referenceMetricOptions}
             templateTypeVal={templateTypeVal}
             validateAccumulationDate={validateAccumulationDate}
             validateCustomExpression={validateCustomExpression}

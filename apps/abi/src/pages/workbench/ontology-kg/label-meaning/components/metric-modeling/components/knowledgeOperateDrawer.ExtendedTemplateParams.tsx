@@ -11,11 +11,12 @@ import {
   VOLATILITY_DATA_RANGE_OPTIONS,
   VOLATILITY_METHOD_OPTIONS
 } from '../constants/metricModeling.constants'
-import type { KnowledgeFormValues, KnowledgeTechField } from '../types/metricModeling.types'
+import type { KnowledgeFormValues, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
 
 import { KnowledgeOperateExpressionEditor } from './knowledgeOperateDrawer.ExpressionEditor'
 
 interface AtomicMetricOption {
+  item?: KnowledgeIndicatorItem
   label: string
   value: string
 }
@@ -24,6 +25,7 @@ interface Props {
   readonly allFields: KnowledgeTechField[]
   readonly atomicMetricOptions: AtomicMetricOption[]
   readonly form: FormInstance<KnowledgeFormValues>
+  readonly referenceMetricOptions: AtomicMetricOption[]
   readonly templateTypeVal: string
   readonly validateAccumulationDate: (_: unknown, value?: string) => Promise<void>
   readonly validateCustomExpression: (_: unknown, value?: string) => Promise<void>
@@ -38,10 +40,19 @@ function getLabel(options: AtomicMetricOption[], value?: string | number) {
   return options.find(item => String(item.value) === String(value || ''))?.label || '指标'
 }
 
+function formatCustomExpressionPreview(expression: unknown, options: AtomicMetricOption[]) {
+  const text = String(expression || '').trim()
+  if (!text) {
+    return '请填写计算逻辑'
+  }
+  return text.replace(/##([^#]+)##/g, (_match, id) => getLabel(options, id))
+}
+
 function buildExtendedExpressionPreview(
   templateType: string,
   values: Partial<KnowledgeFormValues>,
-  options: AtomicMetricOption[]
+  options: AtomicMetricOption[],
+  referenceOptions: AtomicMetricOption[] = options
 ) {
   if (templateType === 'ratio') {
     const numerator = getLabel(options, values.ratioNumeratorId)
@@ -87,7 +98,7 @@ function buildExtendedExpressionPreview(
   }
 
   return {
-    expression: String(values.expr || '').trim() || '请填写计算逻辑'
+    expression: formatCustomExpressionPreview(values.expr, referenceOptions)
   }
 }
 
@@ -95,6 +106,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   allFields,
   atomicMetricOptions,
   form,
+  referenceMetricOptions,
   templateTypeVal,
   validateAccumulationDate,
   validateCustomExpression,
@@ -141,7 +153,8 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
           volatilityMethod,
           volatilityMetricId
         },
-        atomicMetricOptions
+        atomicMetricOptions,
+        referenceMetricOptions
       ),
     [
       atomicMetricOptions,
@@ -157,6 +170,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
       ratioNumeratorId,
       ratioPrecision,
       rollingWindowSize,
+      referenceMetricOptions,
       templateTypeVal,
       techId,
       volatilityMethod,
@@ -372,6 +386,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
             strictCustom
             allFields={allFields}
             form={form}
+            referenceMetricOptions={referenceMetricOptions}
             validateCustomExpression={validateCustomExpression}
             validateSqlExpression={validateCustomExpression}
           />
