@@ -78,13 +78,10 @@ export function createKnowledgeOperateValidators({ form }: CreateValidatorsParam
   const validateTechName = (_: unknown, value?: string) => {
     const text = String(value || '').trim()
     if (!text) {
-      return Promise.reject(new Error('请输入合法的指标编码（大写字母开头，仅支持字母/数字/下划线）'))
+      return Promise.reject(new Error('请输入指标编码'))
     }
-    if (text.length < 3 || text.length > 50) {
-      return Promise.reject(new Error('请输入合法的指标编码（大写字母开头，仅支持字母/数字/下划线）'))
-    }
-    if (!/^[A-Z][A-Z0-9_]*$/.test(text)) {
-      return Promise.reject(new Error('请输入合法的指标编码（大写字母开头，仅支持字母/数字/下划线）'))
+    if (!/^(?=.*[A-Za-z])[A-Za-z_]+$/.test(text)) {
+      return Promise.reject(new Error('指标编码仅支持字母和下划线'))
     }
 
     return Promise.resolve()
