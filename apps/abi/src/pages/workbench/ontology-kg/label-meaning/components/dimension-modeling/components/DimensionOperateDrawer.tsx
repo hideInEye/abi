@@ -195,6 +195,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
 
         {activeTab === 'base' ? (
           <AForm<DimensionFormValues>
+            className="ds-form-section"
             form={form}
             layout="vertical"
             onValuesChange={(changeValues) => {

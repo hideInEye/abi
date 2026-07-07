@@ -672,7 +672,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
         </div>
       ) : null}
 
-      <AForm preserve requiredMark form={form} layout="vertical" onValuesChange={handleValuesChange}>
+      <AForm className="ds-form-section" preserve requiredMark form={form} layout="vertical" onValuesChange={handleValuesChange}>
         {currentStepKey === 'business' ? (
           <KnowledgeOperateBusinessStep
             indicatorNameDisabled={false}

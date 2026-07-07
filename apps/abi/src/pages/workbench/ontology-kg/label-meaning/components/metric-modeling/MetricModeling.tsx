@@ -62,8 +62,8 @@ const MetricModeling: React.FC = () => {
         key: 'atomic',
         label: (
           <div className="py-1">
-            <div className="text-base font-semibold">原子指标映射</div>
-            <div className="mt-1 text-sm text-gray-400">配置来源字段并生成原子指标</div>
+            <div className="text-sm font-semibold">原子指标映射</div>
+            <div className="mt-1 text-xs text-gray-400">配置来源字段并生成原子指标</div>
           </div>
         ),
       },
@@ -71,8 +71,8 @@ const MetricModeling: React.FC = () => {
         key: 'custom',
         label: (
           <div className="py-1">
-            <div className="text-base font-semibold">指标自定义</div>
-            <div className="mt-1 text-sm text-gray-400">创建派生指标或衍生指标</div>
+            <div className="text-sm font-semibold">指标自定义</div>
+            <div className="mt-1 text-xs text-gray-400">创建派生指标或衍生指标</div>
           </div>
         ),
       },
@@ -127,6 +127,7 @@ const MetricModeling: React.FC = () => {
                     menu={{ items: addMenus, onClick: handleMenuClick }}
                     type="primary"
                     onClick={handleAddAtomic}
+                    placement="bottom"
                   >
                     + 新增
                   </Dropdown.Button>

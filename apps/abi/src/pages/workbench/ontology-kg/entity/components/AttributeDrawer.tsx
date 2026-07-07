@@ -265,9 +265,8 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
           </span>
         </Space>
       </section>
-      <section style={{ border: '1px solid #edf0f5', borderRadius: 8, marginBottom: 16, padding: 16 }}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>新增属性绑定</div>
-        <Form<AttributeBindingValues> form={form} layout="vertical">
+      <section>
+        <Form<AttributeBindingValues> className="ds-form-section" form={form} layout="vertical">
           <Form.Item label="属性类型" name="attributeType" rules={[{ message: '请选择属性类型', required: true }]}>
             <Select<SupportedAttributeType>
               options={(Object.keys(TYPE_LABELS) as SupportedAttributeType[]).map((type) => ({ label: TYPE_LABELS[type], value: type }))}

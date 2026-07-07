@@ -80,7 +80,7 @@ export const RelationDrawer: React.FC<RelationDrawerProps> = ({ entities, loadin
         </AButton>
       }
     >
-      <Form form={form} layout="vertical">
+      <Form className="ds-form-section" form={form} layout="vertical">
         <Form.Item label="开始节点" name="startEntityId" rules={[{ message: '请选择开始节点', required: true }, { validator: validateDifferentEntities }]}>
           <Select<OntologyNetworkId> allowClear fieldNames={{ label: 'entityName', value: 'id' }} options={entities} placeholder="请选择开始节点" showSearch optionFilterProp="entityName" />
         </Form.Item>
