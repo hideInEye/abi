@@ -25,6 +25,10 @@ export const Component: React.FC = () => {
     setActiveTab(key as AttributeModelingTabKey)
   }, [])
 
+  const switchToMetricTab = useCallback(() => {
+    setActiveTab('metric')
+  }, [])
+
   useEffect(() => {
     setActiveTab(normalizeTabKey(queryTab))
   }, [queryTab])
@@ -34,7 +38,7 @@ export const Component: React.FC = () => {
       {
         children: (
           <div className="h-full min-h-0">
-            <DimensionModeling />
+            <DimensionModeling onGoMetricModeling={switchToMetricTab} />
           </div>
         ),
         key: 'dimension',
@@ -59,7 +63,7 @@ export const Component: React.FC = () => {
         label: '标签语义',
       },
     ],
-    [],
+    [switchToMetricTab],
   )
 
   return (

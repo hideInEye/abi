@@ -24,7 +24,11 @@ const DIMENSION_COLUMN_OPTIONS: ColumnOption[] = [
   { key: 'updateTime', label: '更新时间', visible: true },
 ]
 
-const DimensionModeling: React.FC = () => {
+interface Props {
+  readonly onGoMetricModeling?: () => void
+}
+
+const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
   const [selectedGroup, setSelectedGroup] = useState<DimensionGroup | null>(null)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(DIMENSION_COLUMN_OPTIONS)
   const {
@@ -143,6 +147,7 @@ const DimensionModeling: React.FC = () => {
         groupName={selectedGroup?.groupName}
         open={drawerOpen}
         onClose={closeDrawer}
+        onGoMetricModeling={onGoMetricModeling}
         onOpenHierarchy={openHierarchyModal}
         onSubmit={handleSubmit}
       />
