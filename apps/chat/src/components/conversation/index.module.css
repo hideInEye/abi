@@ -167,13 +167,12 @@
 }
 
 .thinkingStepItem {
-  display: flex;
-  gap: 10px;
-  padding: 6px 0;
+  display: block;
+  padding: 2px 0;
 }
 
 .thinkingStepItem + .thinkingStepItem {
-  border-top: 1px dashed rgba(139, 92, 246, 0.08);
+  margin-top: 0.5rem;
 }
 
 .thinkingStepIndex {
@@ -204,13 +203,29 @@
 }
 
 .thinkingStepContent {
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--ink-3);
+  font-size: 14.5px;
+  line-height: 1.9;
+  color: #8c8c8c;
 }
 
 .thinkingStepContent p {
-  margin: 0 !important;
+  margin: 0 0 0.7rem 0 !important;
+  line-height: 1.9 !important;
+}
+
+.thinkingStepContent p:last-child {
+  margin-bottom: 0 !important;
+}
+
+.thinkingStepContent ul,
+.thinkingStepContent ol {
+  margin: 0 0 0.7rem 0;
+  padding-left: 1.4rem;
+}
+
+.thinkingStepContent li {
+  margin-bottom: 0.35rem;
+  line-height: 1.9;
 }
 
 .thinkingCardBody {
@@ -220,12 +235,26 @@
 
 .thinkingContent {
   position: relative;
-  color: var(--ink-3);
-  font-size: 12px;
-  line-height: 1.6;
+  color: #8c8c8c;
+  font-size: 14.5px;
+  line-height: 1.9;
   max-height: 300px;
   overflow: auto;
-  font-style: italic;
+}
+
+/* 实时思考内容复用了 .markdown-content，需在思考区强制浅灰，避免继承描述分析的深色 */
+.thinkingContent .markdown-content,
+.thinkingContent .markdown-content p,
+.thinkingContent .markdown-content li,
+.thinkingContent .markdown-content span,
+.thinkingContent .markdown-content strong,
+.thinkingContent .markdown-content h1,
+.thinkingContent .markdown-content h2,
+.thinkingContent .markdown-content h3,
+.thinkingContent .markdown-content h4,
+.thinkingContent .markdown-content h5,
+.thinkingContent .markdown-content h6 {
+  color: #8c8c8c !important;
 }
 
 .thinkingCopy {
@@ -334,9 +363,9 @@
 
 /* ── Markdown Content (glassmorphism-aware) ── */
 .markdown-content {
-  color: #444444;
-  font-size: 13px;
-  line-height: 1.5;
+  color: #262626;
+  font-size: 15px;
+  line-height: 1.9;
 
   & > * {
     padding: 0 !important;
@@ -351,8 +380,9 @@
 
   & > p,
   & p {
-    margin: 0 0 0.4rem 0 !important;
-    color: #444444;
+    margin: 0 0 0.85rem 0 !important;
+    color: #262626;
+    line-height: 1.9 !important;
   }
 
   & > p:empty,
@@ -373,46 +403,47 @@
 
   /* Headings with enhanced contrast */
   & h1 { 
-    font-size: 1.15rem !important; 
-    font-weight: 800 !important;
-    color: #111111 !important;
+    font-size: 1.3rem !important; 
+    font-weight: 700 !important;
+    color: #1a1a1a !important;
   }
   & h2 { 
+    font-size: 1.18rem !important; 
+    font-weight: 700 !important;
+    color: #1a1a1a !important;
+  }
+  & h3 { 
     font-size: 1.05rem !important; 
     font-weight: 700 !important;
     color: #222222 !important;
   }
-  & h3 { 
-    font-size: 0.95rem !important; 
-    font-weight: 700 !important;
-    color: #222222 !important;
-  }
   & h4, & h5, & h6 { 
-    font-size: 0.875rem !important; 
+    font-size: 1rem !important; 
     font-weight: 600 !important;
     color: #333333 !important;
   }
 
   & h1, & h2, & h3, & h4, & h5, & h6 {
-    margin: 0.6rem 0 0.4rem 0 !important;
-    line-height: 1.4 !important;
+    margin: 1.2rem 0 0.7rem 0 !important;
+    line-height: 1.5 !important;
     letter-spacing: -0.01em !important;
   }
 
   & ul, & ol {
     list-style-position: outside !important;
-    margin: 0 !important;
-    padding: 0 0 0 1.25rem !important;
+    margin: 0 0 0.85rem 0 !important;
+    padding: 0 0 0 1.5rem !important;
   }
 
   & > ul > li, & > ol > li {
     padding: 0 !important;
-    margin: 0 0 0.1rem 0 !important;
+    margin: 0 0 0.5rem 0 !important;
+    line-height: 1.9 !important;
   }
 
   & ul ul, & ol ol, & ul ol, & ol ul {
-    margin: 0 !important;
-    padding: 0 0 0 1rem !important;
+    margin: 0.4rem 0 0 0 !important;
+    padding: 0 0 0 1.2rem !important;
   }
 
   & li > p {
@@ -448,32 +479,38 @@
   }
 
   & td, & th {
-    padding: 5px 10px !important;
-    border: 1px solid rgba(130, 140, 200, 0.12) !important;
-    font-family: var(--mono) !important;
-    color: #444444 !important;
+    padding: 11px 16px !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(130, 140, 200, 0.14) !important;
+    color: #333333 !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    text-align: left !important;
   }
 
   & table {
     border-collapse: collapse !important;
     width: 100% !important;
-    font-size: 12px !important;
-    margin: 0.4rem 0 !important;
-    font-family: var(--mono) !important;
+    font-size: 14px !important;
+    margin: 0.8rem 0 !important;
     border-radius: var(--r-sm) !important;
     overflow: hidden !important;
-    border: 1px solid var(--border) !important;
+    border: 1px solid rgba(130, 140, 200, 0.16) !important;
     box-shadow: 0 1px 4px rgba(26, 39, 68, 0.04) !important;
   }
 
   & thead {
-    background: rgba(245, 248, 252, 0.8) !important;
+    background: rgba(248, 250, 253, 0.9) !important;
   }
 
   & thead th {
     font-weight: 700 !important;
-    color: #222222 !important;
-    border-bottom: 2px solid var(--border) !important;
+    color: #1a1a1a !important;
+    border-bottom: 1.5px solid rgba(130, 140, 200, 0.2) !important;
+  }
+
+  & tbody tr:last-child td {
+    border-bottom: none !important;
   }
 
   & tbody tr:hover {

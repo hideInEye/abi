@@ -555,13 +555,48 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
+  padding: 8px 12px;  
   border-radius: var(--r-sm);
   cursor: pointer;
   transition: all 0.18s var(--ease);
 }
 .user-bar-glass:hover {
   background: rgba(130, 140, 200, 0.06);
+}
+
+/* ── User Logout Dropdown (aligned with admin side) ── */
+.chat-user-logout-item {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: 0;
+  white-space: nowrap;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.chat-user-logout-item > .anticon {
+  font-size: 16px;
+  color: var(--ink);
+  width: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chat-user-logout-item > span {
+  flex: 0 1 auto;
+  white-space: nowrap;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.chat-user-logout-item:hover {
+  background: rgba(130, 140, 200, 0.08);
 }
 
 /* ── Footer ── */
@@ -574,7 +609,7 @@ button {
 }
 
 /* ── Welcome View ── */
-.welcome-view { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 28px 20px; padding-bottom: 18%; min-height: 100%; width: 100% }
+.welcome-view { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 28px 20px; padding-bottom: 6%; min-height: 100%; width: 100% }
 .welcome-logo {
   width: 64px; height: 64px; border-radius: 50%;
   background: transparent;

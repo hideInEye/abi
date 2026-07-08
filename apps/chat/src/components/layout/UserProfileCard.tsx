@@ -30,11 +30,8 @@ export function UserProfileCard({ collapsed, userName }: UserProfileCardProps) {
   }
 
   const popContent = (
-    <div
-      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer', fontSize: 13, color: 'var(--ink)' }}
-      onClick={handleLogout}
-    >
-      <LogoutOutlined style={{ fontSize: 14 }} />
+    <div className="chat-user-logout-item" onClick={handleLogout}>
+      <LogoutOutlined />
       <span>退出登录</span>
     </div>
   )
@@ -47,7 +44,7 @@ export function UserProfileCard({ collapsed, userName }: UserProfileCardProps) {
       arrow={false}
       open={popOpen}
       onOpenChange={setPopOpen}
-      overlayInnerStyle={{ padding: '8px 12px', minWidth: 0 }}
+      overlayInnerStyle={{ padding: '8px 12px', borderRadius: 12, minWidth: 0 }}
       overlayStyle={{ width: 'calc(100% - 32px)' }}
       getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
     >

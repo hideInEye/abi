@@ -397,7 +397,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     );
 
     return (
-      <div className="chat-input-glass" style={{ overflow: 'visible' }}>
+      <div className="chat-input-glass">
         {/* Textarea area */}
         <div style={{ padding: '16px 18px 8px' }}>
           <Input.TextArea

@@ -150,7 +150,7 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
       <div key={group.groupId} className="mb-0.5">
         <div
           className="conv-group-label group flex items-center"
-          onClick={() => navigate({ to: '/chat/group/$groupId', params: { groupId: group.groupId } })}
+          onClick={() => navigate({ to: '/chat/task/$taskId', params: { taskId: 'new' }, search: { groupId: group.groupId } })}
         >
           <SmileOutlined style={{ fontSize: 13, color: 'var(--ink-4)', paddingLeft: 4 }} />
           <span className="flex-1 truncate" style={{ paddingLeft: 8 }}>

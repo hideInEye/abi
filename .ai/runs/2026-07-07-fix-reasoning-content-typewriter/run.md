@@ -31,3 +31,55 @@
 - `<think>` 自动包裹后，现有 `AiEle` 思考节点解析、思考时间计算逻辑均可继续工作。
 - 当后端同时返回 `content` 和 `reasoning_content` 时，两者会分别追加：reasoning 内容置于 `<think>` 内，content 增量置于 `<think>` 外，避免前缀重复。
 - reasoning_content 的展示受「思考」开关控制：未开启时 reasoning_content 会被跳过，不触发实时打字机效果。
+
+## 数据渲染排查
+
+### 参考项目 chat 的处理方式
+
+参考项目 `trust-abi-web/chat` 同样使用 `/chat-proxy/api/v2/workflow/chat/completions` 流式接口：
+
+- `[DONE]` 时前端添加 `role: 'view'`、`context: 'describe'` 的消息。
+- `ViewEle` 渲染该 view 消息后，自动调用 `searchConv` 查询后端存储的 view 消息（含 `data` + `sql`）。
+- 参考项目的 `PredictionAnalysis` 组件接收 `data.result_df` 渲染预测图表。
+
+因此参考项目也依赖后端生成 view 消息；若后端未生成，同样会出现“无数据”。
+
+### 当前问题根因
+
+用户提供的 `预测分析.txt`（deepseek-v4-flash SSE）中，流式返回的 JSON 是 DSL 形态：
+
+```json
+{
+  "thoughts": "...",
+  "chat_mode": "chat_with_db_execute",
+  "metrics": "SUM(t_order.total_amount)",
+  "dimensions": ["t_order.order_date"],
+  "filters": [],
+  "display_type": "response_line_chart",
+  "dialect": "mysql"
+}
+```
+
+该 JSON **没有 `sql` 和 `data`**。当前 `[DONE]` 时只添加 `context: 'describe'`，`ViewEle` 调用 `searchConv` 查询 view 消息，但后端未生成 view 消息，故无数据。
+
+对比 `apps/abi/.../conversation/conversation.tsx`：该模块使用 `/v1/chat/completions`，返回的 JSON 含 `sql`，前端在 `[DONE]` 后主动调用 `fetchDataBySql` 查询数据并刷新历史。当前 chat 应用缺少这一主动查询步骤。
+
+### 本次新增修复
+
+- `useConversationController.ts`
+  - 导入 `fetchDataBySql`。
+  - 新增 `extractTrailingJson` 工具函数，用于从 `messageRef` 尾部提取结构化 JSON。
+  - `[DONE]` 处理中：若提取到的 JSON 包含 `sql` 且 `conv.dbName` 存在，主动调用 `fetchDataBySql` 查询数据，将 `{ ...json, data, sql }` 作为 view 消息的 `context`，并设置 `arrowStatus: true`，让 `ViewEle` 直接渲染而无需再调用 `searchConv`。
+  - 清理了之前添加的调试 `console.log`。
+
+### 验证
+
+- `pnpm --filter ai-bot exec tsc --noEmit` 通过。
+
+### 风险与备注
+
+- 本次修复可解决 SSE 返回的 JSON 中直接包含 `sql` 的场景。
+- 对于 `预测分析.txt` 这种仅返回 DSL（metrics/dimensions/filters/display_type/dialect）的场景，仍缺少把 DSL 转成 `sql` + `data` 的环节，需要进一步确认：
+  1. 后端是否应当在 `/chat-proxy/api/v2/workflow/chat/completions` 流式输出中返回完整 JSON（含 `sql`/`data`）？
+  2. 或者前端应调用哪个接口把该 DSL 转成 SQL 并查询数据（如 `/chat-proxy/api/v1/chat/completions` 非流式、`/chat/v1/chat/assembleSql` 等）？
+  3. 或者当前 chat 应用是否应切换到 `/v1/chat/completions` 以复用 ABI 应用的 `sql` 返回模式？
