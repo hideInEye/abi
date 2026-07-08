@@ -1,17 +1,23 @@
-import { InfoCircleOutlined } from '@ant-design/icons'
+import { InfoCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import type { FormInstance } from 'antd'
-import React from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 
 import Editor from '@/pages/workbench/data-preparation/data-collection-operate/modules/InsetCodemirror'
 import QuoteFun from '@/pages/workbench/data-preparation/data-collection-operate/modules/QuoteFun'
-import QuoteField from '@/pages/workbench/ontology-kg/technical-jargon/components/QuoteField'
 
-import type { KnowledgeFormValues, KnowledgeTechField } from '../types/metricModeling.types'
+import type { KnowledgeFormValues, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
 import { extractUniqueIds } from '../utils/knowledgeOperateDrawer.utils'
+
+interface ReferenceMetricOption {
+  readonly item?: KnowledgeIndicatorItem
+  readonly label: string
+  readonly value: string
+}
 
 interface Props {
   readonly allFields: KnowledgeTechField[]
   readonly form: FormInstance<KnowledgeFormValues>
+  readonly referenceMetricOptions: ReferenceMetricOption[]
   readonly strictCustom?: boolean
   readonly validateCustomExpression: (_: unknown, value?: string) => Promise<void>
   readonly validateSqlExpression: (_: unknown, value?: string) => Promise<void>
@@ -21,21 +27,122 @@ interface ExpressionEditorRef {
   insertText?: (value: string, replace?: boolean) => void
 }
 
+function getIndicatorClass(option: ReferenceMetricOption) {
+  return String(option.item?.indicatorClass || '').trim()
+}
+
+function toReferenceField(option: ReferenceMetricOption): KnowledgeTechField {
+  const label = String(option.label || option.value || '-')
+  const value = String(option.value || '')
+
+  return {
+    bizName: label,
+    fieldName: label,
+    name: label,
+    originName: label,
+    techId: value,
+    tfieldId: value,
+    tfieldType: 'q',
+  }
+}
+
+const ReferenceMetricField: React.FC<{
+  readonly height: string
+  readonly options: ReferenceMetricOption[]
+  readonly onSelect: (val: KnowledgeTechField) => void
+}> = ({ height, options, onSelect }) => {
+  const [search, setSearch] = useState('')
+
+  const treeData = useMemo(() => {
+    const keyword = search.trim().toLowerCase()
+    const createChildren = (indicatorClass: 'atomic' | 'derived') =>
+      options
+        .filter((option) => getIndicatorClass(option) === indicatorClass)
+        .filter((option) => !keyword || String(option.label || '').toLowerCase().includes(keyword))
+        .map((option) => {
+          const field = toReferenceField(option)
+
+          return {
+            ...field,
+            isLeaf: true,
+            key: `${indicatorClass}-${option.value}`,
+            title: option.label,
+          }
+        })
+
+    return [
+      {
+        children: createChildren('atomic'),
+        key: 'atomic',
+        title: '原子指标',
+      },
+      {
+        children: createChildren('derived'),
+        key: 'derived',
+        title: '派生指标',
+      },
+    ]
+  }, [options, search])
+
+  return (
+    <div className="w-25% pr-10px">
+      <header className="pb-8px">
+        <span className="mr-1">点击引用字段</span>
+        <ATooltip
+          title={
+            <div>
+              <div>引用字段以 &quot;[&quot; 开始， &quot;]&quot; 结束</div>
+              <div>请勿修改引用内容，否则将引用失败</div>
+              <div>若输入与引用字段相同格式的内容，将被当作引用字段处理</div>
+            </div>
+          }
+        >
+          <InfoCircleOutlined />
+        </ATooltip>
+      </header>
+      <div className="overflow-auto border rounded p-10px" style={{ height }}>
+        <AInput
+          className="mb-16px"
+          placeholder="通过名称搜索"
+          prefix={<SearchOutlined />}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <ATree
+          defaultExpandedKeys={['atomic', 'derived']}
+          treeData={treeData}
+          onSelect={(_, e) => {
+            const node = e.selectedNodes[0] as (KnowledgeTechField & { isLeaf?: boolean }) | undefined
+            if (!node || !node.isLeaf) {
+              return
+            }
+            onSelect(node)
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
 export const KnowledgeOperateExpressionEditor: React.FC<Props> = ({
   allFields,
   form,
+  referenceMetricOptions,
   strictCustom,
   validateCustomExpression,
   validateSqlExpression
 }) => {
-  const [target, setTarget] = useState<KnowledgeTechField[]>([])
   const editorRef = useRef<ExpressionEditorRef | null>(null)
-  const tfieldId = useMemo(() => `${Date.now()}`, [])
+  const referenceFields = useMemo(() => referenceMetricOptions.map(toReferenceField), [referenceMetricOptions])
 
   const insertCode = (val: unknown) => {
     const field = val as KnowledgeTechField | null
     if (field && typeof field === 'object' && field.techId) {
       const token = `##${field.techId}##`
+      if (editorRef.current?.insertText) {
+        editorRef.current.insertText(token, false)
+        return
+      }
       const currentExpr = form.getFieldValue('expr') || ''
       const nextExpr = `${currentExpr}${token}`
       form.setFieldValue('expr', nextExpr)
@@ -100,7 +207,7 @@ export const KnowledgeOperateExpressionEditor: React.FC<Props> = ({
         >
           <Editor
             isExpr
-            fieldOptions={[...allFields, ...target]}
+            fieldOptions={[...allFields, ...referenceFields]}
             functions={[]}
             height="220px"
             mode="name"
@@ -126,13 +233,9 @@ export const KnowledgeOperateExpressionEditor: React.FC<Props> = ({
             }}
           />
         </AForm.Item>
-        <QuoteField
-          notAddTarget
-          allFields={allFields}
+        <ReferenceMetricField
           height="220px"
-          setTarget={setTarget}
-          target={target}
-          tfieldId={tfieldId}
+          options={referenceMetricOptions}
           onSelect={insertCode}
         />
         <QuoteFun

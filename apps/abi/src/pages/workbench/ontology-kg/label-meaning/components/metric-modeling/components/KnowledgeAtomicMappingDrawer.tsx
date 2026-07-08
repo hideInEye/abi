@@ -223,7 +223,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       onClose={() => onClose()}
     >
       <div className="mb-4 rounded bg-gray-50 px-3 py-2 text-sm">当前分组：{groupName || '-'}</div>
-      <AForm<MappingFormValues> form={form} layout="vertical">
+      <AForm<MappingFormValues> className="ds-form-section" form={form} layout="vertical">
         <TableSemantics form={form} getSchemaId={handleSchemaChange} getSchemaOptions={(_: TableSemanticParams[]) => {}} type="shema" />
       </AForm>
 

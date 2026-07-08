@@ -68,7 +68,7 @@ export function extractUniqueIds(expression: string): string[] {
   if (!expression) {
     return []
   }
-  const regex = /##(\d+)##/g
+  const regex = /##([^#]+)##/g
   const matches = expression.matchAll(regex)
   const idSet = new Set<string>()
   for (const match of matches) {

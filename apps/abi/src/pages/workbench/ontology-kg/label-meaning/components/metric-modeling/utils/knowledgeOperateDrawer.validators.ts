@@ -3,7 +3,7 @@ import type { FormInstance } from 'antd'
 import type { KnowledgeFormValues } from '../types/metricModeling.types'
 
 import { hasSqlSyntaxError } from './knowledgeOperateDrawer.sql'
-import { compactArray, isBalancedParentheses, isFieldNameLike, isValidNumberInput } from './knowledgeOperateDrawer.utils'
+import { compactArray, extractUniqueIds, isBalancedParentheses, isFieldNameLike, isValidNumberInput } from './knowledgeOperateDrawer.utils'
 
 interface CreateValidatorsParams {
   form: FormInstance<KnowledgeFormValues>
@@ -227,12 +227,13 @@ export function createKnowledgeOperateValidators({ form }: CreateValidatorsParam
       ...compactArray((form.getFieldValue('variableMappings') || []) as Array<{ variableName?: string }>).map((item) => String(item?.variableName || '').trim()),
     ]).filter(Boolean)
 
-    if (!vars.length) {
+    const referencedIds = extractUniqueIds(expr)
+    if (!vars.length && !referencedIds.length) {
       return Promise.reject(new Error('表达式未引用任何变量或指标'))
     }
 
     const hasVar = vars.some((item) => new RegExp(`\\b${item}\\b`).test(expr))
-    if (!hasVar) {
+    if (!hasVar && !referencedIds.length) {
       return Promise.reject(new Error('表达式未引用任何变量或指标'))
     }
     if (hasSqlSyntaxError(expr)) {

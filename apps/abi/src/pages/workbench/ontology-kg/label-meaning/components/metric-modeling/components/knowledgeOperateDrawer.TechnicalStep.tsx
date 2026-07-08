@@ -18,6 +18,7 @@ interface Props {
   atomicMetricOptions: AtomicMetricOption[]
   form: FormInstance<KnowledgeFormValues>
   indicatorClass: string
+  referenceMetricOptions: AtomicMetricOption[]
   templateTypeVal: string
   validateAccumulationDate: (_: unknown, value?: string) => Promise<void>
   validateCustomExpression: (_: unknown, value?: string) => Promise<void>
@@ -35,6 +36,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
   atomicMetricOptions,
   form,
   indicatorClass,
+  referenceMetricOptions,
   templateTypeVal,
   validateAccumulationDate,
   validateCustomExpression,
@@ -77,6 +79,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
             allFields={allFields}
             atomicMetricOptions={atomicMetricOptions}
             form={form}
+            referenceMetricOptions={referenceMetricOptions}
             templateTypeVal={templateTypeVal}
             validateAccumulationDate={validateAccumulationDate}
             validateCustomExpression={validateCustomExpression}

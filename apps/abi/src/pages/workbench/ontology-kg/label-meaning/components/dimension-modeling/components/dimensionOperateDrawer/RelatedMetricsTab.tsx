@@ -1,11 +1,11 @@
 import React from 'react'
 
-import { useRouterPush } from '@/hooks/common/routerPush'
 import { queryKnowledgeIndicatorDetailList } from '@/service/api/knowledge-extraction'
 
 import type { DimensionModelItem } from '../../types/dimensionModeling.types'
 
 interface Props {
+  readonly onGoMetricModeling?: () => void
   readonly onTotalChange?: (total: number) => void
   readonly record?: DimensionModelItem | null
 }
@@ -20,8 +20,7 @@ function getMetricListPayload(res: any) {
   }
 }
 
-export const RelatedMetricsTab: React.FC<Props> = ({ onTotalChange, record }) => {
-  const { routerPushByKey } = useRouterPush()
+export const RelatedMetricsTab: React.FC<Props> = ({ onGoMetricModeling, onTotalChange, record }) => {
   const [keyword, setKeyword] = React.useState('')
   const [loading, setLoading] = React.useState(false)
   const [pagination, setPagination] = React.useState({ current: 1, pageSize: 10, total: 0 })
@@ -84,10 +83,6 @@ export const RelatedMetricsTab: React.FC<Props> = ({ onTotalChange, record }) =>
 
   const tabCount = pagination.total || dataSource.length
 
-  const goIndicatorModeling = () => {
-    routerPushByKey('workbench_ontology-kg_label-meaning', { query: { tab: 'metric' } })
-  }
-
   return (
     <div className="space-y-4">
       <AAlert
@@ -109,7 +104,7 @@ export const RelatedMetricsTab: React.FC<Props> = ({ onTotalChange, record }) =>
         <AButton onClick={handleSearch}>查询</AButton>
         <AButton
           type="primary"
-          onClick={goIndicatorModeling}
+          onClick={onGoMetricModeling}
         >
           去指标建模配置
         </AButton>
@@ -130,7 +125,7 @@ export const RelatedMetricsTab: React.FC<Props> = ({ onTotalChange, record }) =>
               <AButton
                 className="px-0 font-semibold"
                 type="link"
-                onClick={goIndicatorModeling}
+                onClick={onGoMetricModeling}
               >
                 {value || '-'}
               </AButton>

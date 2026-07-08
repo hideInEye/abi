@@ -78,7 +78,7 @@ export const EntityDrawer: React.FC<EntityDrawerProps> = ({ entity, labels, onCl
       width={560}
       onClose={handleClose}
     >
-      <Form<EntityFormValues> form={form} layout="vertical">
+      <Form<EntityFormValues> className="ds-form-section" form={form} layout="vertical">
         <Form.Item
           label="实体名称"
           name="entityName"
