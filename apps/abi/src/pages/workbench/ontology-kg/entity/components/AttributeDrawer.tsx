@@ -1,4 +1,4 @@
-import { CloseOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Empty, Form, Input, Select, Space, Table, Tabs, message } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import type { ColumnsType } from 'antd/es/table'
@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Group } from '@/components/stateful/group/Group'
 import { useAppSelector } from '@/hooks/business/useStore'
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { OntologyEntity, OntologyEntityAttribute, OntologyLabel } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display'
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics'
@@ -267,6 +268,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
       </section>
       <section>
         <Form<AttributeBindingValues> className="ds-form-section" form={form} layout="vertical">
+          <OntologyFormSectionTitle icon={<ApartmentOutlined />}>绑定配置</OntologyFormSectionTitle>
           <Form.Item label="属性类型" name="attributeType" rules={[{ message: '请选择属性类型', required: true }]}>
             <Select<SupportedAttributeType>
               options={(Object.keys(TYPE_LABELS) as SupportedAttributeType[]).map((type) => ({ label: TYPE_LABELS[type], value: type }))}

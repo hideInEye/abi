@@ -1,8 +1,9 @@
-import { CloseOutlined } from '@ant-design/icons'
+import { DeploymentUnitOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Select, Space, message } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { OntologyEntity, OntologyLabel, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
 
 import type { EntityFormValues } from '../types'
@@ -79,6 +80,7 @@ export const EntityDrawer: React.FC<EntityDrawerProps> = ({ entity, labels, onCl
       onClose={handleClose}
     >
       <Form<EntityFormValues> className="ds-form-section" form={form} layout="vertical">
+        <OntologyFormSectionTitle icon={<DeploymentUnitOutlined />}>基本信息</OntologyFormSectionTitle>
         <Form.Item
           label="实体名称"
           name="entityName"

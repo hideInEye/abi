@@ -1,7 +1,9 @@
+import { BranchesOutlined } from '@ant-design/icons'
 import { Form, Input, Select, Switch } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { OntologyEntity, OntologyNetworkId, OntologyRelation } from '@/pages/workbench/ontology-kg/shared-network-types'
 
 import type { RelationFormValues } from '../types'
@@ -81,6 +83,7 @@ export const RelationDrawer: React.FC<RelationDrawerProps> = ({ entities, loadin
       }
     >
       <Form className="ds-form-section" form={form} layout="vertical">
+        <OntologyFormSectionTitle icon={<BranchesOutlined />}>基本信息</OntologyFormSectionTitle>
         <Form.Item label="开始节点" name="startEntityId" rules={[{ message: '请选择开始节点', required: true }, { validator: validateDifferentEntities }]}>
           <Select<OntologyNetworkId> allowClear fieldNames={{ label: 'entityName', value: 'id' }} options={entities} placeholder="请选择开始节点" showSearch optionFilterProp="entityName" />
         </Form.Item>

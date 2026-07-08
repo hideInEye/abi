@@ -3,6 +3,7 @@ import { Spin, Transfer, Tree, message } from 'antd'
 import type { FormInstance, TransferProps } from 'antd'
 import React from 'react'
 
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import { queryDimensionList } from '@/service/api/dimension-modeling'
 import { tableSemanticsGroupList } from '@/service/api/table-semantics'
 
@@ -353,7 +354,7 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
 
   return (
     <>
-      <div className="mb-4 text-lg font-semibold">三、维度配置</div>
+      <OntologyFormSectionTitle icon={<FolderOpenOutlined />}>三、维度配置</OntologyFormSectionTitle>
       <AForm.Item
         hidden
         name="dimensionFieldIds"

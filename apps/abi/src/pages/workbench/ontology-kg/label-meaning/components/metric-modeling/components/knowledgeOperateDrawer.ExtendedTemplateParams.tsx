@@ -1,5 +1,8 @@
+import { CheckCircleOutlined, CodeOutlined } from '@ant-design/icons'
 import type { FormInstance } from 'antd'
 import React from 'react'
+
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
 import {
   COMPARISON_OUTPUT_OPTIONS,
@@ -187,7 +190,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   return (
     <>
       <div className="mb-4 border border-gray-200 rounded p-4">
-        <div className="mb-2 text-base font-semibold">衍生逻辑配置</div>
+        <OntologyFormSectionTitle icon={<CodeOutlined />}>衍生逻辑配置</OntologyFormSectionTitle>
         <div className="mb-3 text-gray-400">{EXTENDED_TEMPLATE_DESC_MAP[templateTypeVal] || '请选择衍生模板'}</div>
 
         {templateTypeVal === 'ratio' ? (
@@ -394,7 +397,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
       </div>
 
       <div className="mb-4 border border-gray-200 rounded bg-gray-50 p-4">
-        <div className="mb-2 text-base font-semibold">衍生逻辑生成结果</div>
+        <OntologyFormSectionTitle icon={<CheckCircleOutlined />}>衍生逻辑生成结果</OntologyFormSectionTitle>
         <div className="mb-2 border border-gray-200 rounded bg-white p-3">
           <div className="mb-1 text-gray-400">表达式预览</div>
           <div className="text-blue-600">{preview.expression}</div>
