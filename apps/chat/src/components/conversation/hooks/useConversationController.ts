@@ -8,6 +8,7 @@ import { fetchOperate, fetchShareEmail } from '../../../service/api/abi-system'
 import { fetchSessionMessages } from '../../../service/api/app'
 import {
   fetchConvMaxRound,
+  fetchDataBySql,
   fetchDimension,
   fetchExceptionGuidance,
   groupMessagesByOrder,
@@ -67,6 +68,38 @@ const stripTrailingJsonFromAiContent = (content: string): string => {
     }
   }
   return content
+}
+
+/**
+ * 从 AI 消息内容中提取尾部嵌入的 JSON 对象。
+ * 策略：寻找最后一个顶级 { 并验证到末尾是否为合法 JSON。
+ */
+const extractTrailingJson = (content: string): any => {
+  if (!content || typeof content !== 'string') return null
+
+  const trimmed = content.trim()
+  if (!trimmed.endsWith('}')) return null
+
+  let depth = 0
+  for (let i = trimmed.length - 1; i >= 0; i--) {
+    if (trimmed[i] === '}') depth++
+    else if (trimmed[i] === '{') {
+      depth--
+      if (depth === 0) {
+        const before = trimmed.substring(0, i).trimEnd()
+        const lastChar = before[before.length - 1]
+        if (lastChar && lastChar !== ',' && lastChar !== ':' && lastChar !== '{' && lastChar !== '[') {
+          try {
+            return JSON.parse(trimmed.substring(i))
+          } catch {
+            return null
+          }
+        }
+        break
+      }
+    }
+  }
+  return null
 }
 
 /**
@@ -766,7 +799,6 @@ export const useConversationController = (
     const params = cloneDeep(paramsDataRef.current || paramsData)
     // 每次发送时注入最新的 deepThink 状态和 semanticId
     if (params.context?.extra) {
-      console.log('[request enable_thinking]', effectiveDeepThinkEnabledRef.current)
       params.context.extra.extra_body = { enable_thinking: effectiveDeepThinkEnabledRef.current }
       params.context.extra.semantic_id = props.semanticId ?? null
     }
@@ -826,7 +858,6 @@ export const useConversationController = (
           }
         },
         async onmessage(event) {
-          console.log('[SSE raw]', event.data)
           if (event.data) {
             // 处理 [DONE] 信号
             if (event.data === '[DONE]') {
@@ -875,14 +906,41 @@ export const useConversationController = (
 
               const isExcelScenario = params?.context?.chat_mode === 'chat_excel'
 
+              // 尝试从 AI 消息中提取结构化 JSON，若包含 sql 则主动查询数据，
+              // 避免依赖后端异步生成 view 消息导致 ViewEle 无数据。
+              const responseJson = extractTrailingJson(messageRef.current)
+              let viewContext: any = 'describe'
+              let viewArrowStatus = false
+
+              if (responseJson?.sql && convRef.current?.dbName) {
+                try {
+                  setIsGettingData(true)
+                  const queryRes: any = await fetchDataBySql({
+                    db_name: convRef.current.dbName,
+                    query_sql: responseJson.sql
+                  })
+                  const queryData = queryRes?.data?.data ?? queryRes?.data
+                  viewContext = JSON.stringify({
+                    ...responseJson,
+                    data: queryData,
+                    sql: responseJson.sql
+                  })
+                  viewArrowStatus = true
+                } catch (error) {
+                  console.error('根据 SQL 查询数据失败:', error)
+                } finally {
+                  setIsGettingData(false)
+                }
+              }
+
               if (isExcelScenario || !webSocketViewAdded.current) {
                 setConvContent((state: any) => [
                   ...state,
                   {
-                    context: 'describe',
+                    context: viewContext,
                     describe: true,
                     role: 'view',
-                    arrowStatus: false,
+                    arrowStatus: viewArrowStatus,
                     order: roundIndex || tempUserId,
                     roundIndex
                   }
@@ -900,7 +958,6 @@ export const useConversationController = (
               let chunkText = ''
 
               // 优先处理 reasoning_content（仅在开启深度思考时展示）
-              console.log('[deepThink flag]', effectiveDeepThinkEnabledRef.current, 'reasoning:', delta?.reasoning_content)
               if (
                 effectiveDeepThinkEnabledRef.current &&
                 delta?.reasoning_content !== undefined &&
@@ -969,8 +1026,6 @@ export const useConversationController = (
 
             // 累积内容
             messageRef.current += chunk
-            console.log('[parsed chunk]', chunk)
-            console.log('[messageRef]', messageRef.current.slice(0, 200) + (messageRef.current.length > 200 ? '...' : ''))
 
             // 处理 illegal_query
             if (messageRef.current.includes('illegal_query')) {

@@ -3,7 +3,7 @@ import type { MenuProps } from 'antd'
 
 import type { TopicItem } from '@/types/layout'
 
-export const SIDER_WIDTH = 280
+export const SIDER_WIDTH = 240
 export const SIDER_COLLAPSED_WIDTH = 72
 export const HISTORY_MENU_KEY = 'history-topic'
 export const HISTORY_ROUTE_PREFIX = '/chat/history'

@@ -31,8 +31,8 @@ import CausalAnalysis from "./components/CausalAnalysis";
 import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEmptyObject, getUserName, isSingleMetricData, stripHtmlTags } from '@/utils';
 import { handleDataExport, handleImageExport, handleExcelFileExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
-import { fetchDrillDown, fetchQueryRewrite, fetchRecommendQuestion, setExperteval, searchConv } from '../../service/api/conv';
-import { CloseOutlined, RedoOutlined } from "@ant-design/icons";
+import { fetchDrillDown, fetchQueryRewrite, fetchRecommendQuestion, setExperteval, searchConv, fetchAssembleSql, fetchSelectDataBySql } from '../../service/api/conv';
+import { CloseOutlined, RedoOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { marked } from 'marked';
 import { CHAT_MODE_MAP } from '../../constant/chat';
 
@@ -155,6 +155,9 @@ const ViewEle: React.FC<PropsType> = ({
   const [queryResult, setQueryResult] = React.useState<{ sql?: string; data?: any[] }>({});
   const [contextError, setContextError] = React.useState<any>(null);
   const [batchIndex, setBatchIndex] = useState(0);
+  // 推荐问题内嵌展示（点击底部灯泡后，直接在当前回答下方展示，不新增消息）
+  const [recList, setRecList] = useState<string[]>([]);
+  const [recBatch, setRecBatch] = useState(0);
   const [loading, setLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<{ data: any[]; columns: any[]; } | null>(null);
   // 添加图表相关的状态
@@ -499,27 +502,61 @@ const ViewEle: React.FC<PropsType> = ({
     onReferenceClick && onReferenceClick(data.order);
   }
 
-  // 推荐问题
+  // 推荐问题：调用接口获取，直接在当前回答下方内嵌展示（不新增用户消息/新框）
   const handleQaClick = async () => {
-    if (getRecommend) {
-      const params = getRecommendParams(conv, data, 'getQa')
-      getRecommend({ type: 'getQa', params });
+    try {
+      const params = getRecommendParams(conv, data, 'getQa');
+      const res = await fetchRecommendQuestion(params);
+      const list = res?.data?.recommend_questions || [];
+      setRecBatch(0);
+      setRecList(list);
+    } catch (error) {
+      console.error('获取推荐问题失败:', error);
+      message.error('获取推荐问题失败');
     }
   };
 
-  // 推荐指标
-  const handleIndexClick = () => {
-    if (getRecommend) {
-      const params = getRecommendParams(conv, data, 'getI')
-      getRecommend({ type: 'getI', params });
-    }
+  // 推荐问题-换一批（每批 oneBatch 个，循环切换 问数/归因/预测）
+  const handleRecChangeBatch = () => {
+    setRecBatch((prev) => ((prev + 1) * oneBatch >= recList.length ? 0 : prev + 1));
   };
 
-  // 推荐维度
-  const handleDimensionClick = () => {
-    if (getRecommend) {
-      const params = getRecommendParams(conv, data, 'getD')
-      getRecommend({ type: 'getD', params });
+  // 重新生成：清空筛选条件，按原始SQL重新查询数据
+  const handleRegenerate = async () => {
+    if (!chartData?.sql) {
+      message.warning('暂无可重新生成的数据');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetchAssembleSql({
+        convUid,
+        chatId,
+        spaceId,
+        agentId,
+        chatMode: chartData?.chat_mode,
+        unionSql: chartData?.sql,
+        filteredFields: [],
+      });
+      if (res.data) {
+        const newSql = res.data.unionSql;
+        const dataRes = await fetchSelectDataBySql({
+          convUid,
+          chatId,
+          spaceId,
+          agentId,
+          chatMode: chartData?.chat_mode,
+          unionSql: newSql,
+        });
+        if (dataRes.data) {
+          handleDataFetched({ data: dataRes.data.data.data, sql: newSql });
+        }
+      }
+    } catch (error) {
+      console.error('重新生成失败:', error);
+      message.error('重新生成失败，请重试');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1488,33 +1525,60 @@ const ViewEle: React.FC<PropsType> = ({
                       onAttributionClick={handleAttributionClick}
                       onPredictClick={handlePredictClick}
                       onReferenceClick={handleReferenceClick}
-                      onDimensionClick={handleDimensionClick}
-                      onIndexClick={handleIndexClick}
                       onQaClick={handleQaClick}
+                      onRegenerateClick={handleRegenerate}
                       onVoteChange={handleLike}
                       feedback={chartData?.feedback || {}}
                       chatMode={chartData?.chat_mode}
                       content={chartData?.desc || chartData?.data_knowledge || ''}
                     />
                   )}
+
+                  {/* 推荐问题 - 点击底部灯泡后，直接在当前回答下方内嵌展示 */}
+                  {recList.length > 0 && (
+                    <div className="recommend-questions">
+                      <div className="recommend-questions-list">
+                        {recList.slice(oneBatch * recBatch, oneBatch * (recBatch + 1)).map((question: string) => (
+                          <div
+                            key={question}
+                            className="recommend-question-item"
+                            onClick={() => getAnswer!({ question })}
+                          >
+                            <span className="recommend-question-text">{question}</span>
+                            <ArrowRightOutlined className="recommend-question-arrow" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="recommend-questions-footer">
+                        <span className="recommend-change-batch" onClick={handleRecChangeBatch}>换一批</span>
+                      </div>
+                    </div>
+                  )}
                   {
                     // 推荐问题
                     chartData?.recommendQuestions !== undefined && (
                       chartData.recommendQuestions?.length ? (
-                        <>
-                          {
-                            chartData?.recommendQuestions.slice(oneBatch * batchIndex, oneBatch * (batchIndex + 1)).map((question: string) => (
-                              <p key={question} className="mb-2">
-                                <a onClick={() => {
-                                  getAnswer!({ question });
-                                }}>{question}</a>
-                              </p>
-                            ))
-                          }
-                          <div className="flex items-center justify-center mt-4 mb-2">
-                            <a onClick={() => handleChangeBatch(chartData?.recommendQuestions)}><RedoOutlined />再换一批</a>
+                        <div className="recommend-questions">
+                          <div className="recommend-questions-list">
+                            {
+                              chartData?.recommendQuestions.slice(oneBatch * batchIndex, oneBatch * (batchIndex + 1)).map((question: string) => (
+                                <div
+                                  key={question}
+                                  className="recommend-question-item"
+                                  onClick={() => {
+                                    getAnswer!({ question });
+                                  }}
+                                >
+                                  <span className="recommend-question-text">{question}</span>
+                                  <ArrowRightOutlined className="recommend-question-arrow" />
+                                </div>
+                              ))
+                            }
                           </div>
-                        </>
+                          <div className="recommend-questions-footer">
+                            <a className="recommend-change-batch" onClick={() => handleChangeBatch(chartData?.recommendQuestions)}><RedoOutlined />换一批</a>
+                          </div>
+                        </div>
                       ) : '暂无相关推荐内容'
                     )
                   }

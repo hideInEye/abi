@@ -14,6 +14,7 @@ import type { ConversationHandle } from '../conversation'
 import ChatHeader from '../conversation/components/chat-header'
 import type { ModelOption } from '../conversation/components/chat-header'
 import NewChatWelcome from './NewChatWelcome'
+import GroupSessionListView from './GroupSessionListView'
 import ChatInput from '../conversation/components/chat-input'
 import type { SemanticSelectedData } from '../conversation/components/chat-input'
 import { message } from 'antd'
@@ -24,9 +25,10 @@ interface ConversationAnalysisProps {
   spaceId?: number
   chatId?: string
   hideSidebar?: boolean
+  groupId?: string
 }
 
-const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false }) => {
+const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false, groupId }) => {
   const [visible, setVisible] = useState(false)
   const [curApp, setCurApp] = useState<any>({})
   const [appList, setAppList] = useState<any[]>([])
@@ -52,6 +54,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const [uploadFileEnabled, setUploadFileEnabled] = useState(false)
   const [externalInputValue, setExternalInputValue] = useState('')
   const [creating, setCreating] = useState(false)
+  const [groupRefreshKey, setGroupRefreshKey] = useState(0)
   const chatHeaderRef = useRef<any>(null)
 
   // ── 模型列表状态（全局加载一次）──
@@ -219,12 +222,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     localStorage.setItem('chatId', String(nextApp.chat_id))
   }, [routeChatId, appList.length])
 
-  // 路由变为 'new' 时清除当前会话，确保展示欢迎页
+  // 路由变为 'new' 时清除当前会话，确保展示欢迎页或分组列表
+  // 同时加入 groupId 依赖：从对话切回分组视图时，即使 routeChatId 未变也会强制清除 curConv
   useEffect(() => {
-    if (routeChatId === 'new') {
+    if (routeChatId === 'new' || groupId) {
       setCurConv(undefined)
     }
-  }, [routeChatId])
+  }, [routeChatId, groupId])
 
   // ── 统一发送逻辑 ──
   const handleUnifiedSend = useCallback(async (value: string) => {
@@ -252,7 +256,10 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     // 无会话 → 先创建，再发送
     setCreating(true)
     try {
-      const appRes: any = await createApp({ space_id: currentSpaceId })
+      const appRes: any = await createApp({
+        space_id: currentSpaceId,
+        ...(groupId ? { groupId: String(groupId) } : {}),
+      })
       const rawApp = appRes?.data ?? appRes
       const app = {
         ...rawApp,
@@ -423,6 +430,26 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     setExternalInputValue(text)
   }, [])
 
+  // 分组视图：打开已有会话（复用同一路由，只切中间内容）
+  const openSession = useCallback(
+    (chatId: string) => {
+      navigate({ to: TASK_DETAIL_ROUTE, params: { taskId: String(chatId) } })
+    },
+    [navigate],
+  )
+
+  // 分组视图：当前分组被删除后回到欢迎页
+  const handleGroupDeleted = useCallback(() => {
+    navigate({ to: TASK_DETAIL_ROUTE, params: { taskId: 'new' } })
+  }, [navigate])
+
+  // 分组列表刷新信号（会话创建/删除/移动时）
+  useEffect(() => {
+    const handler = () => setGroupRefreshKey((k) => k + 1)
+    window.addEventListener('conversation-created', handler)
+    return () => window.removeEventListener('conversation-created', handler)
+  }, [])
+
   return (
     <div className="h-full w-full" style={{ background: 'transparent' }}>
       <div className="h-full w-full flex" style={{ background: 'transparent' }}>
@@ -455,9 +482,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
           )}
           {/* 内容区域 */}
           <div className="flex-1 min-h-0">
-            {(routeChatId === 'new' && !curConv) ? (
-              <NewChatWelcome onExampleClick={handleExampleClick} />
-            ) : curConv ? (
+            {curConv ? (
               <Conversation
                 fold={hideSidebar ? false : fold}
                 conv={curConv}
@@ -471,6 +496,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onModelChange={handleModelChange}
                 embedModelId={embedModelId}
                 deepThinkEnabled={deepThinkEnabled}
+              />
+            ) : groupId ? (
+              <GroupSessionListView
+                groupId={groupId}
+                onOpenSession={openSession}
+                onGroupDeleted={handleGroupDeleted}
+                refreshKey={groupRefreshKey}
               />
             ) : (!routeChatId || routeChatId === 'new') ? (
               <NewChatWelcome onExampleClick={handleExampleClick} />

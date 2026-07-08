@@ -253,20 +253,20 @@
   }
 }
 
-/* Danger item (logout) */
+/* Danger item (logout) — color unified to black */
 .abi-user-dropdown-danger-new {
-  color: #dc2626 !important;
+  color: #1a2744 !important;
   
   .abi-user-dropdown-icon-new {
-    color: #dc2626 !important;
+    color: #1a2744 !important;
   }
   
   &:hover {
-    background: rgba(220, 38, 38, 0.06) !important;
-    color: #dc2626 !important;
+    background: rgba(91, 124, 247, 0.08) !important;
+    color: #1a2744 !important;
     
     .abi-user-dropdown-icon-new {
-      color: #dc2626 !important;
+      color: #1a2744 !important;
     }
   }
 }
