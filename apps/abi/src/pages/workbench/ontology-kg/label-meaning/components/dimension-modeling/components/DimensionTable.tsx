@@ -192,12 +192,13 @@ export const DimensionTable: React.FC<Props> = ({
         <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0, width: '100%' }}>
           <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
             <Table
-              className="assistant-table-scroll abi-std-table"
+              className="abi-std-table"
               columns={tableColumns as any}
               dataSource={dataSource}
               loading={loading}
               rowKey={record => String(record.id)}
               rowSelection={{
+                columnWidth: 48,
                 selectedRowKeys,
                 onChange: keys => onSelectedRowKeysChange(keys.map(String))
               }}

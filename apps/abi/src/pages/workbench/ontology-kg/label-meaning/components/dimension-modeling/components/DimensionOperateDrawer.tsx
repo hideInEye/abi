@@ -16,12 +16,13 @@ interface Props {
   readonly groupId?: number
   readonly groupName?: string
   readonly onClose: (refresh?: boolean) => void
+  readonly onGoMetricModeling?: () => void
   readonly onOpenHierarchy: (record: DimensionModelItem) => void
   readonly onSubmit: (params: { formValues: DimensionFormValues; id?: number; relatedFields: DimensionFieldOption[]; selectedSchema?: DimensionSchemaInfo }) => Promise<boolean>
   readonly open: boolean
 }
 
-export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, groupName, onClose, onOpenHierarchy, onSubmit, open }) => {
+export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, groupName, onClose, onGoMetricModeling, onOpenHierarchy, onSubmit, open }) => {
   const [form] = AForm.useForm<DimensionFormValues>()
   const [activeTab, setActiveTab] = useState('base')
   const [schemaOptions, setSchemaOptions] = useState<DimensionSchemaInfo[]>([])
@@ -169,6 +170,11 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     onClose(refresh)
   }
 
+  function handleGoMetricModeling() {
+    handleDrawerClose()
+    onGoMetricModeling?.()
+  }
+
   return (
     <>
       <CommonDrawer
@@ -195,6 +201,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
 
         {activeTab === 'base' ? (
           <AForm<DimensionFormValues>
+            className="ds-form-section"
             form={form}
             layout="vertical"
             onValuesChange={(changeValues) => {
@@ -223,7 +230,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
           </AForm>
         ) : null}
 
-        {activeTab === 'metrics' ? <RelatedMetricsTab record={editingItem} onTotalChange={setRelatedMetricTotal} /> : null}
+        {activeTab === 'metrics' ? <RelatedMetricsTab record={editingItem} onGoMetricModeling={handleGoMetricModeling} onTotalChange={setRelatedMetricTotal} /> : null}
 
         {activeTab === 'preview' ? <PreviewDataTab dimId={editingItem?.id} fieldTableData={selectedFields} sampleValues={form.getFieldValue('sampleValues')} type={selectedDimType} /> : null}
       </CommonDrawer>

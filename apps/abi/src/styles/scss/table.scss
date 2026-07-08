@@ -79,9 +79,19 @@
   }
 
   // ── 复选框列样式 ──
-  .ant-table-selection-column {
-    padding-left: 16px !important;
-    padding-right: 0 !important;
+  .ant-table-thead > tr > th.ant-table-selection-column,
+  .ant-table-tbody > tr:not(.ant-table-placeholder):not(.ant-table-measure-row) > td.ant-table-selection-column {
+    width: 48px !important;
+    min-width: 48px !important;
+    padding: 0 !important;
+    text-align: center !important;
+  }
+
+  .ant-table-selection-column .ant-checkbox-wrapper,
+  .ant-table-selection-column .ant-checkbox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 

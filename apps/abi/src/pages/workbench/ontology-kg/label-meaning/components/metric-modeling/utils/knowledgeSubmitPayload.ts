@@ -596,7 +596,7 @@ export function buildKnowledgeCalcLogic(values: KnowledgeSubmitPayload): JsonRec
 
   if (indicatorClass === 'derivative') {
     return compactRecord({
-      ...buildBaseCalcLogic(values),
+      calcPeriod: values.calcPeriod,
       indicator_templates: buildDerivativeIndicatorTemplates(values),
     }) as JsonRecord
   }

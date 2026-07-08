@@ -129,7 +129,7 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
       }
       onClose={handleModalCancel}
     >
-      <AForm className="mt-5" form={form} initialValues={formInitData || {}} layout="vertical">
+      <AForm className="mt-5 ds-form-section" form={form} initialValues={formInitData || {}} layout="vertical">
         <TableSemantics form={form} getSchemaId={getSchemaId} getSchemaOptions={getSchemaOptions} isEdit={Boolean(editingGroup)} type="shema" />
         <TagInput />
         <AForm.Item

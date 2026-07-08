@@ -1,6 +1,6 @@
-import { MinusOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { FullscreenExitOutlined, FullscreenOutlined, MinusOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import { Graph, type Edge, type Node } from '@antv/x6'
-import { Empty, Tooltip } from 'antd'
+import { Tooltip } from 'antd'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { OntologyGraphEdge, OntologyGraphNode } from '@/pages/workbench/ontology-kg/shared-network-types'
@@ -195,12 +195,14 @@ function setEdgeVisualState(edge: Edge, selected: boolean, hovered: boolean): vo
 }
 
 export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ degreeMap, emptyDescription, edges, nodes, onSelect, selection }) => {
+  const canvasShellRef = useRef<HTMLDivElement | null>(null)
   const hostRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const graphRef = useRef<Graph | null>(null)
   const nodePositionsRef = useRef<Map<string, NodePosition>>(new Map())
   const onSelectRef = useRef(onSelect)
   const [graphError, setGraphError] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [layoutVersion, setLayoutVersion] = useState(0)
 
   useEffect(() => {
@@ -220,6 +222,31 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ degree
   const resetView = useCallback((): void => {
     nodePositionsRef.current.clear()
     setLayoutVersion((value) => value + 1)
+  }, [])
+
+  const toggleFullscreen = useCallback(async (): Promise<void> => {
+    const shell = canvasShellRef.current
+    if (!shell) return
+
+    try {
+      if (document.fullscreenElement === shell) {
+        await document.exitFullscreen()
+      } else {
+        await shell.requestFullscreen()
+      }
+    } catch (error) {
+      console.error('[OntologyGraphCanvas] fullscreen operation failed', error)
+      setGraphError('全屏切换失败，请检查浏览器权限')
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleFullscreenChange = (): void => {
+      setIsFullscreen(document.fullscreenElement === canvasShellRef.current)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
   useEffect(() => {
@@ -392,16 +419,13 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ degree
   const noGraphRelations = edges.length === 0
 
   return (
-    <div className="relative isolate h-full min-h-500px w-full overflow-hidden rounded-16px border border-slate-200 bg-slate-50 shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
+    <div ref={canvasShellRef} className={`relative isolate w-full overflow-hidden bg-slate-50 ${isFullscreen ? 'h-screen min-h-screen' : 'h-full min-h-500px'}`}>
       <div ref={hostRef} className="relative h-full min-h-500px w-full">
         <div ref={containerRef} className="absolute inset-0 h-full w-full" />
       </div>
       {noGraphRelations && (
-        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center text-slate-400">
-          <div className="relative z-10 rounded-full bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} imageStyle={{ height: 56, margin: 0 }} description={false} />
-          </div>
-          <span className="relative z-0 mt-3 text-sm">{emptyDescription ?? '暂无匹配的实体或关系'}</span>
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-8 text-center text-13px text-slate-400">
+          <span>{emptyDescription ?? '暂无匹配的实体或关系'}</span>
         </div>
       )}
       {graphError && <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-white/75 text-sm text-slate-500 backdrop-blur-sm">{graphError}</div>}
@@ -414,6 +438,9 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ degree
         </Tooltip>
         <Tooltip title="重置视图">
           <AButton icon={<ReloadOutlined />} type="text" onClick={resetView} />
+        </Tooltip>
+        <Tooltip title={isFullscreen ? '退出全屏' : '全屏'}>
+          <AButton icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />} type="text" onClick={toggleFullscreen} />
         </Tooltip>
       </div>
     </div>
