@@ -56,39 +56,54 @@ const StatisticsAnalysis: React.FC<Props> = ({
     setLocalFeedback(feedback);
   }, [feedback]);
   
-  // 判断是否可操作
-  const canOperate = () => {
-    if (Object.keys(feedback).length === 0) return true;
-    return feedback.status === '2';
+  // 从 feedback 中解析反馈状态值：0=无评价, 1=点赞, -1=点踩
+  // 兼容两种来源：
+  //   1) 历史列表接口的 feedbackStatus（数字/字符串）
+  //   2) 点击后本地构造的对象 { status, eval_user }
+  const getFeedbackStatus = (fb: any): number => {
+    if (fb === null || fb === undefined || fb === '') return 0;
+    if (typeof fb === 'number') return fb;
+    if (typeof fb === 'string') {
+      const n = Number(fb);
+      return Number.isNaN(n) ? 0 : n;
+    }
+    if (typeof fb === 'object') {
+      if (fb.status !== undefined && fb.status !== null && fb.status !== '') {
+        const n = Number(fb.status);
+        if (!Number.isNaN(n)) return n;
+      }
+      if (fb.eval_user === '0') return 1;
+      if (fb.eval_user === '1') return -1;
+    }
+    return 0;
   };
 
+  // 判断是否可操作（已评价仍可在赞/踩之间切换）
+  const canOperate = () => true;
+
   // 判断是否已点赞
-  const hasLiked = () => {
-    if (Object.keys(feedback).length === 0) return false;
-    return feedback.eval_user === '0';
-  };
-  
+  const hasLiked = () => getFeedbackStatus(feedback) === 1;
+
   // 判断是否已点踩
-  const hasDisliked = () => {
-    if (Object.keys(feedback).length === 0) return false;
-    return feedback.eval_user === '1';
-  };
+  const hasDisliked = () => getFeedbackStatus(feedback) === -1;
 
   const handleVote = async (value: '0' | '1') => {
     if (!canOperate() || loading) return;
     
     setLoading(true);
     try {
+      // status: 0=无评价, 1=点赞, -1=点踩
       const payload = {
         fb_id: feedback?.fb_id || null,
-        eval_user: value
+        eval_user: value,
+        status: value === '0' ? 1 : -1,
       };
       
       onVoteChange && onVoteChange(payload);
     } catch (error) {
       console.error('操作失败:', error);
       // 可添加错误提示
-    } finally {
+    } finally { 
       setLoading(false);
     }
   };

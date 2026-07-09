@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table } from 'antd';
 import { EChart } from '../../../components/react-echarts';
+import type { EChartsOption } from 'echarts';
 
 /**
  * 定义图表数据项的接口
@@ -250,7 +251,7 @@ const PredictionAnalysis: React.FC<PropsType> = ({ data }) => {
   /**
    * 图表配置对象
    */
-  const option = React.useMemo(() => {
+  const option = React.useMemo((): EChartsOption => {
     // 准备数据
     const dates = chartData.map(item => item.date);
     const actualData = chartData.filter(item => item.type === 'actual').map(item => item.value);
@@ -264,19 +265,19 @@ const PredictionAnalysis: React.FC<PropsType> = ({ data }) => {
         axisPointer: {
           type: 'cross'
         },
-        formatter: function(params: any[]) {
+        formatter: function(params: any) {
           // 过滤掉无效数据
           const validParams = params.filter((param: { seriesIndex: number; dataIndex: number; }) => {
             if (param.seriesIndex === 0) return true;
             return param.seriesIndex === 1 && param.dataIndex >= actualDataLen;
           });
           
-          if (validParams.length === 0) return null;
+          if (validParams.length === 0) return '';
           
           const date = validParams[0].axisValue;
           let tooltip = `<div style="margin-bottom: 5px;">${date}</div>`;
           
-          validParams.forEach(param => {
+          validParams.forEach((param: any) => {
             const color = param.seriesIndex === 0 ? '#5470C6' : '#91CC75';
             const name = param.seriesIndex === 0 ? '实际值' : '预测值';
             tooltip += `
@@ -296,12 +297,12 @@ const PredictionAnalysis: React.FC<PropsType> = ({ data }) => {
         }
       },
       xAxis: {
-        type: 'category',
+        type: 'category' as const,
         boundaryGap: false,
         data: dates
       },
       yAxis: {
-        type: 'value',
+        type: 'value' as const,
         axisPointer: {
           snap: true
         }
@@ -329,7 +330,7 @@ const PredictionAnalysis: React.FC<PropsType> = ({ data }) => {
             color: '#91CC75'
           },
           itemStyle: {
-            color: function(params: { dataIndex: number; }) {
+            color: function(params: any) {
               return params.dataIndex === actualDataLen - 1 ? 'transparent' : '#91CC75';
             }
           },

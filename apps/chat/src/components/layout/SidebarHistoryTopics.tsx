@@ -9,7 +9,7 @@ import EditSessionModal from '@/components/conversation-analysis/EditSessionModa
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { useConversationGroups } from '@/hooks/layout/useConversationGroups'
 import { useHistoryTopics } from '@/hooks/layout/useHistoryTopics'
-import { deleteSession, deleteMessage, moveSessionToGroup, updateApp } from '@/service/api/app'
+import { deleteSession, moveSessionToGroup, updateApp } from '@/service/api/app'
 import { getSpaceId } from '@/utils'
 
 type SidebarHistoryTopicsProps = {
@@ -146,10 +146,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
         cancelText: '取消',
         onOk: async () => {
           try {
-            await Promise.all([
-              deleteSession({ sessionId: app.chat_id }),
-              deleteMessage({ convUid: app.conv_uid }),
-            ])
+            await deleteSession({ sessionId: app.chat_id, convUid: app.conv_uid })
             message.success('删除对话成功')
             // 乐观删除：立即从本地列表移除，不依赖重新拉取
             removeTopicById(chatId)

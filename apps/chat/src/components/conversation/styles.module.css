@@ -197,11 +197,8 @@
 /* ── Chart Container ── */
 .chartContainer {
   border-radius: 10px;
-  border: 1px solid rgba(130, 140, 200, 0.08);
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(6px);
-  padding: 12px;
-  box-shadow: 0 1px 4px rgba(26, 39, 68, 0.04);
+  background: transparent;
+  padding: 0;
 }
 
 /* 默认隐藏 dataZoom 滚动条 */

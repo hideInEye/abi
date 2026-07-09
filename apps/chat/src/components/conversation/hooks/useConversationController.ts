@@ -32,6 +32,7 @@ export interface ConversationProps {
   selectedModelId?: string | number
   embedModelId?: string | number
   semanticId?: number | string
+  selectedExcel?: any
   onLoadingChange?: (loading: boolean) => void
   modelOptions?: ModelOption[]
   currentModel?: ModelOption | null
@@ -227,6 +228,10 @@ export const useConversationController = (
   const [isGettingData, setIsGettingData] = useState(false)
   const hasTriggeredIsGetting = useRef(false)
   const [selectedExcel, setSelectedExcel] = useState<any>({})
+  // 支持外部（如 conversation-analysis 的统一输入框）透传已选 Excel，避免 UI 与请求参数不一致
+  const effectiveSelectedExcel = props.selectedExcel !== undefined ? props.selectedExcel : selectedExcel
+  const effectiveSelectedExcelRef = useRef(effectiveSelectedExcel)
+  effectiveSelectedExcelRef.current = effectiveSelectedExcel
   const [referenceDialog, setReferenceDialog] = useState<any>({})
   const [deepThinkEnabled, setDeepThinkEnabled] = useState(false)
   // 支持外部（如 conversation-analysis 的统一输入框）透传思考开关状态，避免 UI 与请求参数不一致
@@ -786,7 +791,7 @@ export const useConversationController = (
     })
   }
 
-  const getAnswer = async ({ question, IC, _meta }: any) => {
+  const getAnswer = async ({ question, IC, _meta, file_id, file_name, reference_order, reference_context }: any) => {
     if (isRequesting.current) {
       return
     }
@@ -797,15 +802,42 @@ export const useConversationController = (
     abortController.current = new AbortController()
     isAborting.current = false
     const params = cloneDeep(paramsDataRef.current || paramsData)
-    // 每次发送时注入最新的 deepThink 状态和 semanticId
+    // 优先使用本次消息传入的 Excel 信息（新建会话时通过 meta 透传），否则回退到组件状态
+    const activeExcel = (file_id && file_name)
+      ? { file_id, file_name }
+      : effectiveSelectedExcelRef.current?.file_id
+        ? effectiveSelectedExcelRef.current
+        : null
+    const hasExcel = !!activeExcel?.file_id
+    // 每次发送时注入最新的 deepThink 状态、数据语义元信息及 Excel 文件信息
+    if (params.context) {
+      params.context.chat_mode = hasExcel ? 'chat_excel' : 'chat_with_db_execute'
+    }
     if (params.context?.extra) {
       params.context.extra.extra_body = { enable_thinking: effectiveDeepThinkEnabledRef.current }
-      params.context.extra.semantic_id = props.semanticId ?? null
+      params.context.extra.semantic_id = _meta?.semanticSchemaId ?? props.semanticId ?? null
+      params.context.extra.semantic_group_name = _meta?.groupName || ''
+      params.context.extra.semantic_name = _meta?.semanticName || ''
+      if (hasExcel) {
+        params.context.extra.file_id = activeExcel.file_id
+        params.context.extra.file_name = activeExcel.file_name
+      } else {
+        const { file_id, file_name, ...restExtra } = params.context.extra
+        params.context.extra = restExtra
+      }
     }
     params.messages = question
 
+    const userMessageContext = hasExcel
+      ? JSON.stringify({
+          question,
+          file_id: activeExcel.file_id,
+          file_name: activeExcel.file_name,
+        })
+      : question
+
     const userMessage = {
-      context: question,
+      context: userMessageContext,
       role: 'human',
       id: Date.now(),
       order: tempUserId,
@@ -1217,93 +1249,37 @@ export const useConversationController = (
     }
   }
 
-  const getRecommend = async ({ type, params }: any) => {
-    if (isRequesting.current) {
-      return
+  // 推荐问题：按 query_recommend 接口参数请求，返回推荐问题数组（无副作用，不新增消息，供 ViewEle 内嵌展示）
+  const getRecommend = async (options: any = {}) => {
+    const question =
+      typeof options === 'string'
+        ? options
+        : options?.question ?? options?.messages ?? ''
+    const base = paramsDataRef.current || paramsData
+    const ctx = base?.context || {}
+    const params = {
+      messages: question || ctx.last_question || '',
+      stream: true,
+      context: {
+        embed_model_id: ctx.embed_model_id ?? '',
+        chat_model_id: ctx.chat_model_id ?? '',
+        conv_uid: ctx.conv_uid ?? '',
+        chat_mode: 'query',
+        app_id: ctx.app_id ?? 0,
+        space_id: ctx.space_id ?? '',
+        extra: {
+          semantic_id: ctx.extra?.semantic_id ?? null,
+        },
+      },
     }
-    setLoading(true)
-    isRequesting.current = true
-    abortController.current = new AbortController()
-
-    setConvContent((state) => [...state, { context: params.messages, role: 'human' }])
-    setUserScrolled(false)
-
-    webSocketViewAdded.current = false
-
     try {
-      setCurrentMessage('')
-
-      let res
-      if (type === 'getQa') {
-        res = await fetchRecommendQuestion(params)
-      } else {
-        res = await fetchDimension(params)
-      }
-
-      setConvContent((prevState: any) => {
-        const state = prevState.map((item: any) => {
-          if (item.role === 'ai' && item.smLoading) {
-            return {
-              ...item,
-              smLoading: false,
-              isStreaming: false,
-              isDone: true
-            }
-          }
-          return item
-        })
-        return [
-          ...state,
-          {
-            context:
-              type === 'getQa'
-                ? {
-                    recommendQuestions: res?.data?.recommend_questions
-                  }
-                : {
-                    rewrite: type === 'getD' ? res?.data?.items?.rec_dim : res?.data?.items?.rec_ind
-                  },
-            role: 'view'
-          }
-        ]
-      })
+      const res: any = await fetchRecommendQuestion(params)
+      return res?.data?.recommend_questions || res?.recommend_questions || []
     } catch (error: any) {
-      if (error.name !== 'AbortError') {
-        message.error('获取失败')
+      if (error?.name !== 'AbortError') {
+        message.error('获取推荐问题失败')
       }
-      setConvContent((prevState: any[]) => {
-        return prevState.map((item: any) => {
-          if (item.role === 'ai' && item.smLoading) {
-            return {
-              ...item,
-              smLoading: false,
-              isStreaming: false,
-              isDone: true
-            }
-          }
-          return item
-        })
-      })
-    } finally {
-      setConvContent((prevState: any[]) => {
-        return prevState.map((item: any) => {
-          if (item.role === 'ai' && item.smLoading) {
-            return {
-              ...item,
-              smLoading: false,
-              isStreaming: false,
-              isDone: true
-            }
-          }
-          return item
-        })
-      })
-      setLoading(false)
-      setIsGettingData(false)
-      isRequesting.current = false
-      abortController.current = null
-      isMessageAdded.current = false
-      hasTriggeredIsGetting.current = false
+      return []
     }
   }
 
@@ -1442,13 +1418,15 @@ export const useConversationController = (
     }
   }
 
-  const handleSend = (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string }) => {
+  const handleSend = (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; selectedExcel?: any }) => {
     if (!value.trim() || loading) return
     handleCollect()
+    // 新建会话时，Excel 信息通过 meta 透传（此时组件状态可能已被清空）
+    const metaExcel = meta?.selectedExcel?.file_id ? meta.selectedExcel : null
     const messageContent = {
       question: value,
-      file_id: selectedExcel?.file_id,
-      file_name: selectedExcel?.file_name,
+      file_id: metaExcel?.file_id || effectiveSelectedExcelRef.current?.file_id,
+      file_name: metaExcel?.file_name || effectiveSelectedExcelRef.current?.file_name,
       reference_order: referenceDialog?.order,
       reference_context: referenceDialog?.context,
       _meta: meta,

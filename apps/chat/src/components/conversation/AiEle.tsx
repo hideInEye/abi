@@ -277,7 +277,7 @@ const AiEle: React.FC<PropsType> = ({
         className="mt-[0.375rem] text-[1.875rem]"
         localIcon="bot"
       /> */}
-      <div className="w-full px-2 text-left">
+      <div className="w-full text-left">
         <div className={styles.thinkingCard}>
           <div className={styles.thinkingCardHeader}>
             <div className={styles.thinkingStatusWrap}>

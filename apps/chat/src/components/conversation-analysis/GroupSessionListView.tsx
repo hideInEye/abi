@@ -90,7 +90,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
     return sessions.filter(
       (s) =>
         (s.title || s.biz_name || '').toLowerCase().includes(lower) ||
-        (s.content || '').toLowerCase().includes(lower),
+        (s.remark || '').toLowerCase().includes(lower),
     )
   }, [sessions, keyword])
 
@@ -170,7 +170,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
         cancelText: '取消',
         onOk: async () => {
           try {
-            await deleteSession({ sessionId: String(session.chat_id) })
+            await deleteSession({ sessionId: String(session.chat_id), convUid: session.conv_uid })
             message.success('删除成功')
             window.dispatchEvent(new Event('conversation-created'))
             loadData()
@@ -468,7 +468,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
                     </div>
                   </div>
                   <div className="truncate" style={{ fontSize: 13, color: 'var(--ink-3)' }}>
-                    {session.content || '暂无会话内容'}
+                    {session.remark || '暂无会话内容'}
                   </div>
                 </div>
               ))}
