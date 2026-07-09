@@ -12,7 +12,7 @@ import { useConversationController, type ConversationProps } from './hooks/useCo
 
 export interface ConversationHandle {
   setConvContent: (content: any[]) => void
-  handleSend: (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string }) => void
+  handleSend: (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; selectedExcel?: { file_id: string | number; file_name: string } }) => void
   stopGenerating: () => void
   loading: boolean
 }

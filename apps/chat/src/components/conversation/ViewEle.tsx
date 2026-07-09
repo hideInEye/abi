@@ -31,10 +31,11 @@ import CausalAnalysis from "./components/CausalAnalysis";
 import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEmptyObject, getUserName, isSingleMetricData, stripHtmlTags } from '@/utils';
 import { handleDataExport, handleImageExport, handleExcelFileExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
-import { fetchDrillDown, fetchQueryRewrite, fetchRecommendQuestion, setExperteval, searchConv, fetchAssembleSql, fetchSelectDataBySql } from '../../service/api/conv';
+import { fetchDrillDown, fetchQueryRewrite, setExperteval, searchConv, fetchAssembleSql, fetchSelectDataBySql } from '../../service/api/conv';
 import { CloseOutlined, RedoOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { marked } from 'marked';
 import { CHAT_MODE_MAP } from '../../constant/chat';
+import { useDebugStore } from '../../store';
 
 /**
  * 组件属性接口定义
@@ -60,7 +61,7 @@ interface PropsType {
     arrowStatus?: boolean;
   };
   getAnswer?: (props: any) => void;
-  getRecommend?: (props: any) => void;
+  getRecommend?: (props: any) => Promise<any> | any;
   getQueryRewrite?: (props: any) => void;
   convUid?: string;
   chatId?: string;
@@ -165,6 +166,10 @@ const ViewEle: React.FC<PropsType> = ({
   const [configModalVisible, setConfigModalVisible] = React.useState(false);
   const [debugModalVisible, setDebugModalVisible] = React.useState(false);
   const [fullscreenModalVisible, setFullscreenModalVisible] = React.useState(false);
+  // 模型调试数据流 WebSocket 引用
+  const wsRef = useRef<WebSocket | null>(null);
+  const wsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { setDebugInfoMap } = useDebugStore();
   const [activeType, setActiveType] = React.useState('table');
   // 图表配置状态
   const [chartConfig, setChartConfig] = React.useState<ChartConfig>({
@@ -408,9 +413,114 @@ const ViewEle: React.FC<PropsType> = ({
     setConfigModalVisible(true);
   };
 
+  // 建立 WebSocket 连接，拉取模型调试数据流
+  const connectDebugWebSocket = useCallback((cUid: string, rIndex: number) => {
+    // 关闭现有连接
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (!cUid) {
+      console.warn('缺少 conv_uid，无法建立模型调试连接');
+      return;
+    }
+    try {
+      const baseUrl = window.APP_CONFIG?.VITE_WEBSOCKET_API || '';
+      if (!baseUrl) {
+        message.error('未配置 WebSocket 地址，无法获取调试数据');
+        return;
+      }
+      const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      const url = `${normalizedBaseUrl}/ws-proxy/abi-debug/ws/stream/consume?convUid=${cUid}&roundIndex=${rIndex}`;
+
+      wsRef.current = new WebSocket(url);
+
+      // 连接超时定时器
+      if (wsTimeoutRef.current) clearTimeout(wsTimeoutRef.current);
+      wsTimeoutRef.current = setTimeout(() => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) {
+          console.warn('WebSocket连接超时');
+          wsRef.current.close();
+          message.error('WebSocket连接超时，请重试');
+        }
+        wsTimeoutRef.current = null;
+      }, 10000);
+
+      // 连接打开：写入初始 loading 占位
+      wsRef.current.onopen = () => {
+        if (wsTimeoutRef.current) {
+          clearTimeout(wsTimeoutRef.current);
+          wsTimeoutRef.current = null;
+        }
+        setDebugInfoMap({
+          uid: `${cUid}_${rIndex}`,
+          metrics: { current_stage: 1 },
+          loading: true,
+        });
+      };
+
+      // 接收消息：分段拼接后解析完整 JSON
+      let partialMessage = '';
+      wsRef.current.onmessage = (event: MessageEvent) => {
+        const msg = event.data;
+        if (!msg) return;
+        partialMessage += msg;
+        while (partialMessage.startsWith('{') && partialMessage.endsWith('}')) {
+          try {
+            const debugInfo = JSON.parse(partialMessage);
+            setDebugInfoMap({ ...debugInfo, name: debugInfo.name || {} });
+            partialMessage = '';
+          } catch {
+            // JSON 尚未完整，等待更多数据
+            break;
+          }
+        }
+      };
+
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        if (wsTimeoutRef.current) {
+          clearTimeout(wsTimeoutRef.current);
+          wsTimeoutRef.current = null;
+        }
+        message.error('WebSocket连接异常，请重试');
+      };
+
+      wsRef.current.onclose = () => {
+        if (wsTimeoutRef.current) {
+          clearTimeout(wsTimeoutRef.current);
+          wsTimeoutRef.current = null;
+        }
+      };
+    } catch (error) {
+      console.error('建立模型调试连接失败:', error);
+      message.error('建立模型调试连接失败');
+    }
+  }, [setDebugInfoMap]);
+
+  // 关闭模型调试连接
+  const closeDebugWebSocket = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (wsTimeoutRef.current) {
+      clearTimeout(wsTimeoutRef.current);
+      wsTimeoutRef.current = null;
+    }
+  }, []);
+
   const handleDebugClick = () => {
     setDebugModalVisible(true);
+    connectDebugWebSocket(conv?.conv_uid, data?.roundIndex ?? 0);
   };
+
+  // 组件卸载时清理 WebSocket
+  useEffect(() => {
+    return () => {
+      closeDebugWebSocket();
+    };
+  }, [closeDebugWebSocket]);
 
   const handleFullscreenClick = () => {
     setFullscreenModalVisible(true);
@@ -454,30 +564,29 @@ const ViewEle: React.FC<PropsType> = ({
     setConfigModalVisible(false);
   };
 
-  // 处理点赞
+  // 处理点赞（新接口只传 convUid + roundIndex + status）
   const handleLike = async (payload: any) => {
     try {
-      const createBy = getUserName();
       const res: any = await setExperteval({
-        conv_uid: convUid,
-        chat_id: chatId,
-        space_id: spaceId,
-        agent_id: agentId,
-        round_index: data.order || data.roundIndex,
-        create_by: createBy,
-        ...payload
+        convUid,
+        roundIndex: data.order || data.roundIndex,
+        status: payload?.status, // 0=无评价, 1=点赞, -1=点踩
       });
-      if (res?.success) {
-        const msg = payload?.eval_user === '0' ? '感谢您的点赞' : '感谢您的反馈';
+      // 兼容两种响应结构：{ success: true, ... } 与 { code: 200, data: ..., msg: ... }
+      const isSuccess = res?.success === true || Number(res?.code) === 200;
+      if (isSuccess) {
+        const msg = payload?.status === 1 ? '感谢您的点赞' : '感谢您的反馈';
         message.success(msg)
-        setChartData({ ...chartData, feedback: res?.data || {} });
+        // 后端仅返回 true，本地用本次操作值构造 feedback，保证图标高亮状态
+        setChartData({ ...chartData, feedback: { status: payload?.status, eval_user: payload?.eval_user } });
       }
       else {
-        message.error(res?.err_msg || '操作失败');
+        message.error(res?.msg || res?.err_msg || '操作失败');
       }
     }
     catch (error) {
       console.error('操作:', error);
+      message.error('操作失败');
     }
   };
 
@@ -504,12 +613,11 @@ const ViewEle: React.FC<PropsType> = ({
 
   // 推荐问题：调用接口获取，直接在当前回答下方内嵌展示（不新增用户消息/新框）
   const handleQaClick = async () => {
+    if (!getRecommend) return
     try {
-      const params = getRecommendParams(conv, data, 'getQa');
-      const res = await fetchRecommendQuestion(params);
-      const list = res?.data?.recommend_questions || [];
+      const list = await getRecommend({ question: '' });
       setRecBatch(0);
-      setRecList(list);
+      setRecList(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error('获取推荐问题失败:', error);
       message.error('获取推荐问题失败');
@@ -1381,7 +1489,7 @@ const ViewEle: React.FC<PropsType> = ({
         localIcon="view"
       /> */}
 
-      <div className="flex flex-col w-full px-2 text-left">
+      <div className="flex flex-col w-full text-left">
         {/* 描述分析 / 数据知识 */}
         {data?.describe && (chartData?.chat_mode !== 'chat_with_analysis' && !chartData?.recommendQuestions && !chartData?.rewrite) && (
           <div className="w-full overflow-hidden mb-[0.625rem]">
@@ -1489,7 +1597,10 @@ const ViewEle: React.FC<PropsType> = ({
                                   currentTableData={queryResult.data || chartData?.data || []}
                                   showTitle={false}
                                 />
-                                <div className="mt-3">
+                                <div
+                                  className="mt-3"
+                                  style={activeType === 'chart' ? { background: '#F2F3F5', borderRadius: '8px', padding: '12px' } : undefined}
+                                >
                                   {hasData ? (
                                     renderContent()
                                   ) : (
@@ -1626,7 +1737,10 @@ const ViewEle: React.FC<PropsType> = ({
         convUid={conv.conv_uid}
         roundIndex={data.roundIndex}
         open={debugModalVisible}
-        onClose={() => setDebugModalVisible(false)}
+        onClose={() => {
+          setDebugModalVisible(false);
+          closeDebugWebSocket();
+        }}
       />
       <FullscreenModal
         open={fullscreenModalVisible}

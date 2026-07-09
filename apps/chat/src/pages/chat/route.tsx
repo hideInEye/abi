@@ -1,6 +1,6 @@
 import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Layout } from 'antd'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   SKILL_STORE_MENU_KEY,
@@ -31,6 +31,7 @@ function ChatWorkbenchLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const [showSkillStore, setShowSkillStore] = useState(false)
+  const [newChatNonce, setNewChatNonce] = useState(0)
   const prevPathnameRef = useRef(pathname)
 
   const userName = useMemo(() => getCurrentUserName(), [])
@@ -94,6 +95,11 @@ function ChatWorkbenchLayout() {
     setShowSkillStore(false)
   }, [])
 
+  const handleCreateNewChat = useCallback(() => {
+    setShowSkillStore(false)
+    setNewChatNonce((n) => n + 1)
+  }, [])
+
   return (
     <Layout
       className="h-[100dvh] overflow-hidden app-bg-decor"
@@ -117,6 +123,7 @@ function ChatWorkbenchLayout() {
 
           <CreateConversationButton
             collapsed={collapsed}
+            onCreated={handleCreateNewChat}
             onToggleCollapse={handleToggleCollapse}
           />
 
@@ -149,7 +156,9 @@ function ChatWorkbenchLayout() {
           {showSkillStore ? (
             <SkillStoreView onBack={handleBackFromSkillStore} />
           ) : (
-            <Outlet />
+            <Fragment key={newChatNonce}>
+              <Outlet />
+            </Fragment>
           )}
         </Content>
       </Layout>

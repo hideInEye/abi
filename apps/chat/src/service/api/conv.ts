@@ -463,17 +463,17 @@ export function fetchExceptionGuidance(data: any) {
 // 点赞点踩
 export function setExperteval(data: any) {
   return request({
-    url: "/chat-proxy/api/v1/feedback/experteval",
+    url: "/abi-chat/v1/app/message/feedback/add",
     method: "post",
     data,
-    baseURL: window.APP_CONFIG.VITE_BASE_API
+    baseURL: window.APP_CONFIG?.VITE_BASE_API
   });
 }
 
-// 获取推荐问题
+// 获取推荐问题（问数/归因/预测）
 export function fetchRecommendQuestion(data: any) {
   return request({
-    url: "/chat-proxy/api/v2/workflow/chat/recommend_question",
+    url: "/chat-proxy/api/v2/workflow/chat/query_recommend",
     method: "post",
     data,
     baseURL: window.APP_CONFIG.VITE_BASE_API,
