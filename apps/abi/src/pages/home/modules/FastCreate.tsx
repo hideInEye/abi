@@ -21,8 +21,8 @@ const guideSteps = [
   },
   {
     key: '3',
-    title: '助手配置',
-    description: '让每个人拥有个性化\n数据分析助手',
+    title: '本体网络',
+    description: '个性化表达数据，\n洞察赋能业务决策',
     colorClass: 's3',
     href: '/workbench/assistant-manage',
     iconSvg: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
@@ -30,7 +30,7 @@ const guideSteps = [
   {
     key: '4',
     title: '智能对话',
-    description: '通过可视化组件\n进行交互式分析',
+    description: '支持交互分析、\n自主智能洞察、报告生成',
     colorClass: 's4',
     href: '/ai-assistant/conversational-analysis',
     iconSvg: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>',

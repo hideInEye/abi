@@ -118,6 +118,10 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
           <span className={s['space-card-meta-lbl']}>空间 ID：</span>
           <span className={s['space-card-meta-val-id']}>{space.spaceId}</span>
         </div>
+        <div className={s['space-card-meta-row']}>
+          <span className={s['space-card-meta-lbl']}>空间描述：</span>
+          <span className={s['space-card-meta-desc']}>{space.remark || '空间暂无描述'}</span>
+        </div>
       </div>
     </div>
   )

@@ -79,6 +79,11 @@ export function Component() {
     setEditSpace(space)
   }
 
+  function createSpaceHandler() {
+    setEditSpace(null)
+    setDrawerOpen(true)
+  }
+
   function updateSpace() {
     getHomeData()
   }
@@ -90,21 +95,25 @@ export function Component() {
 
       <HomeTitle
         title="我的空间"
+        className={s['section-title-spacious']}
         action={
-          <span>查看更多</span>
+          <span>更多空间</span>
         }
         onAction={() => push('/space-list')}
       />
       <div className={s['space-grid']}>
-        {homeData &&
-          homeData?.spaceList?.map((item: ISpaceItem, index: number) =>
-            item.type === 'add' ? <ApprovSpace key="add" /> : <SpaceItem deleteSpace={deleteSpaceHandler} index={index} key={item.spaceId} setEditSpace={editSpaceHandler} space={item} />,
-          )}
+        <ApprovSpace key="create" onClick={createSpaceHandler} />
+        {homeData?.spaceList
+          ?.filter((item: ISpaceItem) => item.type !== 'add')
+          ?.slice(0, 7)
+          ?.map((item: ISpaceItem, index: number) => (
+            <SpaceItem deleteSpace={deleteSpaceHandler} index={index} key={item.spaceId} setEditSpace={editSpaceHandler} space={item} />
+          ))}
       </div>
 
       {drawerOpen && <SpaceEdit drawerOpen={drawerOpen} editSpace={editSpace} setDrawerOpen={setDrawerOpen} updateSpace={updateSpace} />}
 
-      <HomeTitle title="创建引导" />
+      <HomeTitle title="创建引导" className={s['section-title-spacious']} />
       <FastCreate />
     </div>
   )

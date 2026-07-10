@@ -2,7 +2,7 @@ import './style.css'
 import ClassNames from 'classnames'
 import KeepAlive, { useKeepAliveRef } from 'keepalive-for-react'
 import { Breadcrumb, Dropdown, Spin, Empty } from 'antd';
-import { CheckOutlined, DownOutlined } from '@ant-design/icons';
+import { CheckOutlined, DownOutlined, MessageOutlined, SearchOutlined, TeamOutlined } from '@ant-design/icons';
 import { useRequest } from '@sa/hooks';
 import { spaceList } from '@/service/api/data-space';
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
@@ -17,6 +17,30 @@ import WorkbenchEmpty from '@/components/stateless/common/WorkbenchEmpty'
 import { $t } from '@/locales';
 import { useMixMenuContext } from '@/hooks/common/menu'
 import { useRouterPush } from '@/hooks/common/routerPush'
+
+const SPACE_AVATAR_COLORS = [
+  { bg: 'linear-gradient(135deg, #6366f1, #5b7cf7)', shadow: 'rgba(91,124,247,0.35)' },
+  { bg: 'linear-gradient(135deg, #a855f7, #8b5cf6)', shadow: 'rgba(139,92,246,0.35)' },
+  { bg: 'linear-gradient(135deg, #10b981, #059669)', shadow: 'rgba(16,185,129,0.35)' },
+  { bg: 'linear-gradient(135deg, #f59e0b, #f97316)', shadow: 'rgba(245,158,11,0.35)' },
+  { bg: 'linear-gradient(135deg, #ec4899, #f43f5e)', shadow: 'rgba(236,72,153,0.35)' },
+  { bg: 'linear-gradient(135deg, #06b6d4, #0ea5e9)', shadow: 'rgba(6,182,212,0.35)' },
+];
+
+function getSpaceColor(name: string) {
+  let hash = 0;
+  const value = name || '';
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return SPACE_AVATAR_COLORS[Math.abs(hash) % SPACE_AVATAR_COLORS.length];
+}
+
+function getSpaceInitial(name: string) {
+  const trimmed = (name || '').trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
+}
 
 // 在菜单树中查找（支持短格式 key）
 function findInMenuTree(menuList: any[], key: string): any {
@@ -72,6 +96,7 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
   const [currentSpaceName, setCurrentSpaceName] = useState('');
   const [currentSpace, setCurrentSpace] = useState<number | null>(currentSpaceId);
   const [spaceDropdownOpen, setSpaceDropdownOpen] = useState(false);
+  const [spaceSearch, setSpaceSearch] = useState('');
 
   const { data: curspaceList, run: getSpaceList } = useRequest(spaceList, {
     manual: true
@@ -82,7 +107,18 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
       label: space.spaceName,
       value: space.spaceId,
       key: space.spaceId,
+      remark: space.remark,
+      userCount: space.userCount,
+      chatCount: space.chatCount,
     })) || [];
+
+  const filteredSpaceOptions = (() => {
+    const keyword = spaceSearch.trim().toLowerCase();
+    if (!keyword) return spaceOptions;
+    return spaceOptions.filter((space: any) =>
+      String(space.label || '').toLowerCase().includes(keyword),
+    );
+  })();
 
   useEffect(() => {
     getSpaceList({
@@ -260,22 +296,56 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
                 onOpenChange={setSpaceDropdownOpen}
                 trigger={['click']}
                 dropdownRender={() => (
-                  <div className="abi-space-dropdown">
-                    <div className="abi-space-dropdown-title">空间</div>
+                  <div className="space-picker-panel">
+                    <div className="space-picker-header">
+                      <span className="space-picker-title">选择工作空间</span>
+                      <span className="space-picker-count">{spaceOptions.length} 个空间</span>
+                    </div>
+                    <div className="space-picker-search">
+                      <SearchOutlined className="space-picker-search-icon" />
+                      <input
+                        className="space-picker-search-input"
+                        placeholder="搜索空间..."
+                        value={spaceSearch}
+                        onChange={(e) => setSpaceSearch(e.target.value)}
+                      />
+                    </div>
                     <Spin spinning={!curspaceList}>
-                      <div className="max-h-[280px] overflow-y-auto">
-                        {spaceOptions.length ? (
-                          spaceOptions.map((space: any) => {
+                      <div className="space-picker-list">
+                        {filteredSpaceOptions.length ? (
+                          filteredSpaceOptions.map((space: any) => {
                             const isActive = space.value === currentSpace;
+                            const color = getSpaceColor(space.label);
                             return (
                               <button
                                 type="button"
                                 key={space.key}
-                                className={`abi-space-dropdown-item ${isActive ? 'active' : ''}`}
+                                className={`space-picker-item ${isActive ? 'active' : ''}`}
                                 onClick={() => handleSpaceClick(space.value, space.label)}
                               >
-                                <span className="truncate">{space.label}</span>
-                                {isActive ? <CheckOutlined style={{ fontSize: 13, flexShrink: 0 }} /> : null}
+                                <span
+                                  className="space-picker-avatar"
+                                  style={{ background: color.bg, boxShadow: `0 4px 10px ${color.shadow}` }}
+                                >
+                                  {getSpaceInitial(space.label)}
+                                </span>
+                                <span className="space-picker-item-main">
+                                  <span className="space-picker-item-name">{space.label}</span>
+                                  <span className="space-picker-item-desc">
+                                    {(space.remark || '').trim() || '空间暂无描述'}
+                                  </span>
+                                  <span className="space-picker-item-meta">
+                                    <TeamOutlined />
+                                    <span>{space.userCount ?? 0} 成员</span>
+                                    <MessageOutlined style={{ marginLeft: 10 }} />
+                                    <span>{space.chatCount ?? 0} 对话</span>
+                                  </span>
+                                </span>
+                                {isActive ? (
+                                  <span className="space-picker-check">
+                                    <CheckOutlined />
+                                  </span>
+                                ) : null}
                               </button>
                             );
                           })
@@ -288,7 +358,12 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
                 )}
               >
                 <div className="abi-space-trigger">
-                  <span className="abi-space-trigger-dot" />
+                  <span
+                    className="space-picker-avatar space-picker-avatar--sm"
+                    style={{ background: getSpaceColor(currentSpaceName || '').bg }}
+                  >
+                    {getSpaceInitial(currentSpaceName || '')}
+                  </span>
                   <span className="abi-space-trigger-name">{currentSpaceName || '选择空间'}</span>
                   <DownOutlined className="abi-space-trigger-arrow" />
                 </div>
