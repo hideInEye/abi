@@ -1,5 +1,5 @@
 /* eslint-disable complexity */
-import { CloseOutlined } from '@ant-design/icons'
+import { LinkOutlined, TableOutlined } from '@ant-design/icons'
 import { message } from 'antd'
 import type { TableColumnsType } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
@@ -7,6 +7,7 @@ import React from 'react'
 
 import { TableSemantics } from '@/components/tableSemantics'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
 
 import type { AtomicMappingPayload, KnowledgeTechField } from '../types/metricModeling.types'
@@ -224,22 +225,25 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
     >
       <div className="mb-4 rounded bg-gray-50 px-3 py-2 text-sm">当前分组：{groupName || '-'}</div>
       <AForm<MappingFormValues> className="ds-form-section" form={form} layout="vertical">
+        <OntologyFormSectionTitle icon={<LinkOutlined />}>语义来源</OntologyFormSectionTitle>
         <TableSemantics form={form} getSchemaId={handleSchemaChange} getSchemaOptions={(_: TableSemanticParams[]) => {}} type="shema" />
       </AForm>
 
-      <div className="mb-4 mt-2 text-4 font-semibold">字段映射原子指标</div>
-      <ATable
-        columns={columns}
-        dataSource={fieldRows}
-        loading={loadingFields}
-        pagination={false}
-        rowKey="key"
-        rowSelection={{
-          selectedRowKeys,
-          onChange: (keys) => setSelectedRowKeys(keys),
-        }}
-        scroll={{ x: 1200, y: 520 }}
-      />
+      <div className="ds-form-section mt-4">
+        <OntologyFormSectionTitle icon={<TableOutlined />}>字段映射原子指标</OntologyFormSectionTitle>
+        <ATable
+          columns={columns}
+          dataSource={fieldRows}
+          loading={loadingFields}
+          pagination={false}
+          rowKey="key"
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (keys) => setSelectedRowKeys(keys),
+          }}
+          scroll={{ x: 1200, y: 520 }}
+        />
+      </div>
     </CommonDrawer>
   )
 }

@@ -39,16 +39,16 @@ const RoleOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
   const submit = async () => {
     try {
       const values = await form.validateFields()
-    
+
       handleSubmit({ ...values })
     } catch (err) {
       console.error(err)
     }
   }
 
-  const handleTreeData = useMemo(()=>{
+  const handleTreeData = useMemo(() => {
     return menuTree ? recursiveTransform(menuTree) : []
-  },[menuTree])
+  }, [menuTree])
 
   return (
     <CommonDrawer
@@ -92,7 +92,7 @@ const RoleOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, 
           </AForm.Item>
 
           <AForm.Item label={t('page.manage.role.menuAuth')} name="menuIds">
-            <RoleAuth treeData={handleTreeData}  />
+            <RoleAuth open={open} treeData={handleTreeData} />
           </AForm.Item>
 
           <AForm.Item label={t('page.manage.role.remark')} name="remark">

@@ -30,7 +30,16 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(130, 140, 200, 0.2) transparent;
+  scrollbar-color: rgba(91, 124, 247, 0.10) transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(91, 124, 247, 0.10);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(91, 124, 247, 0.10);
 }
 
 .ant-table-header::-webkit-scrollbar {

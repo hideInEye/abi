@@ -1,5 +1,8 @@
+import { BranchesOutlined, CodeOutlined } from '@ant-design/icons'
 import React from 'react'
 import type { FormInstance } from 'antd'
+
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
 import { AGG_METHOD_OPTIONS, EXTENDED_TEMPLATE_OPTIONS } from '../constants/metricModeling.constants'
 import type { KnowledgeFormValues, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
@@ -50,11 +53,11 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
 }) => {
   return (
     <>
-      <div className="mb-4 text-lg font-semibold">二、技术属性</div>
+      <OntologyFormSectionTitle icon={<CodeOutlined />}>二、技术属性</OntologyFormSectionTitle>
 
       {indicatorClass === 'derived' && (
         <div className="mb-4 border border-gray-200 rounded bg-white p-4">
-          <div className="mb-3 text-base font-semibold">继承与来源</div>
+          <OntologyFormSectionTitle icon={<BranchesOutlined />}>继承与来源</OntologyFormSectionTitle>
           <div className="grid grid-cols-2 gap-x-4">
             <AForm.Item required label="指标编码" name="indicatorCode" rules={[{ validator: validateTechName }]}>
               <AInput placeholder="请输入指标编码" />

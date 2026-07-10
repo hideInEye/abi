@@ -1,6 +1,8 @@
-import { DeleteOutlined, MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, MinusCircleOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons';
 import { Button, Form, Input, Select, TreeSelect } from 'antd';
 import React from 'react';
+
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle';
 
 import Star from '@/components/star';
 import { inequalityOptions, logicalOperators } from '../../constants';
@@ -111,7 +113,7 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({ allFields }) => {
       {(fields, { add, remove }) => (
         <div className="my10">
           <div className="flex items-center gap-2">
-            <div>表达式定义</div>
+            <OntologyFormSectionTitle className="!mb-0" icon={<ProfileOutlined />}>表达式定义</OntologyFormSectionTitle>
             <Button
               shape="round"
               size="small"
