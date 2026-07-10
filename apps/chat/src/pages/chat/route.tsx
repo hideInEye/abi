@@ -143,7 +143,6 @@ function ChatWorkbenchLayout() {
               borderTop: '1px solid var(--border-2)',
             }}
           >
-            <SpaceSelector collapsed={collapsed} onSpaceChanged={handleSpaceChanged} />
             <div className="px-4">
               <UserProfileCard collapsed={collapsed} userName={userName} />
             </div>
@@ -152,7 +151,10 @@ function ChatWorkbenchLayout() {
       </Sider>
 
       <Layout className="min-w-0" style={{ background: 'transparent' }}>
-        <Content className="content-glass h-full min-h-0 overflow-hidden">
+        <Content className="content-glass relative h-full min-h-0 overflow-hidden">
+          <div className="chat-space-topright">
+            <SpaceSelector collapsed={false} onSpaceChanged={handleSpaceChanged} />
+          </div>
           {showSkillStore ? (
             <SkillStoreView onBack={handleBackFromSkillStore} />
           ) : (
