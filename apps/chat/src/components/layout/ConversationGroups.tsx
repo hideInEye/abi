@@ -356,7 +356,7 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
       </div>
 
       {/* Groups */}
-      <Spin spinning={loading} size="small">
+      <div>
         {groups.length > 0 ? (
           (() => {
             const sortedGroups = [...groups].sort((a, b) => {
@@ -397,7 +397,7 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
             暂无分组，点击上方 + 创建
           </div>
         ) : null}
-      </Spin>
+      </div>
 
       {/* 编辑分组弹窗 */}
       <Modal
