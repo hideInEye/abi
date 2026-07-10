@@ -31,10 +31,11 @@ import CausalAnalysis from "./components/CausalAnalysis";
 import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEmptyObject, getUserName, isSingleMetricData, stripHtmlTags } from '@/utils';
 import { handleDataExport, handleImageExport, handleExcelFileExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
-import { fetchDrillDown, fetchQueryRewrite, fetchRecommendQuestion, setExperteval, searchConv } from '../../service/api/conv';
-import { CloseOutlined, RedoOutlined } from "@ant-design/icons";
+import { fetchDrillDown, fetchQueryRewrite, setExperteval, searchConv, fetchAssembleSql, fetchSelectDataBySql } from '../../service/api/conv';
+import { CloseOutlined, RedoOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { marked } from 'marked';
 import { CHAT_MODE_MAP } from '../../constant/chat';
+import { useDebugStore } from '../../store';
 
 /**
  * 组件属性接口定义
@@ -60,7 +61,7 @@ interface PropsType {
     arrowStatus?: boolean;
   };
   getAnswer?: (props: any) => void;
-  getRecommend?: (props: any) => void;
+  getRecommend?: (props: any) => Promise<any> | any;
   getQueryRewrite?: (props: any) => void;
   convUid?: string;
   chatId?: string;
@@ -155,6 +156,9 @@ const ViewEle: React.FC<PropsType> = ({
   const [queryResult, setQueryResult] = React.useState<{ sql?: string; data?: any[] }>({});
   const [contextError, setContextError] = React.useState<any>(null);
   const [batchIndex, setBatchIndex] = useState(0);
+  // 推荐问题内嵌展示（点击底部灯泡后，直接在当前回答下方展示，不新增消息）
+  const [recList, setRecList] = useState<string[]>([]);
+  const [recBatch, setRecBatch] = useState(0);
   const [loading, setLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<{ data: any[]; columns: any[]; } | null>(null);
   // 添加图表相关的状态
@@ -162,6 +166,10 @@ const ViewEle: React.FC<PropsType> = ({
   const [configModalVisible, setConfigModalVisible] = React.useState(false);
   const [debugModalVisible, setDebugModalVisible] = React.useState(false);
   const [fullscreenModalVisible, setFullscreenModalVisible] = React.useState(false);
+  // 模型调试数据流 WebSocket 引用
+  const wsRef = useRef<WebSocket | null>(null);
+  const wsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { setDebugInfoMap } = useDebugStore();
   const [activeType, setActiveType] = React.useState('table');
   // 图表配置状态
   const [chartConfig, setChartConfig] = React.useState<ChartConfig>({
@@ -405,9 +413,114 @@ const ViewEle: React.FC<PropsType> = ({
     setConfigModalVisible(true);
   };
 
+  // 建立 WebSocket 连接，拉取模型调试数据流
+  const connectDebugWebSocket = useCallback((cUid: string, rIndex: number) => {
+    // 关闭现有连接
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (!cUid) {
+      console.warn('缺少 conv_uid，无法建立模型调试连接');
+      return;
+    }
+    try {
+      const baseUrl = window.APP_CONFIG?.VITE_WEBSOCKET_API || '';
+      if (!baseUrl) {
+        message.error('未配置 WebSocket 地址，无法获取调试数据');
+        return;
+      }
+      const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      const url = `${normalizedBaseUrl}/ws-proxy/abi-debug/ws/stream/consume?convUid=${cUid}&roundIndex=${rIndex}`;
+
+      wsRef.current = new WebSocket(url);
+
+      // 连接超时定时器
+      if (wsTimeoutRef.current) clearTimeout(wsTimeoutRef.current);
+      wsTimeoutRef.current = setTimeout(() => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) {
+          console.warn('WebSocket连接超时');
+          wsRef.current.close();
+          message.error('WebSocket连接超时，请重试');
+        }
+        wsTimeoutRef.current = null;
+      }, 10000);
+
+      // 连接打开：写入初始 loading 占位
+      wsRef.current.onopen = () => {
+        if (wsTimeoutRef.current) {
+          clearTimeout(wsTimeoutRef.current);
+          wsTimeoutRef.current = null;
+        }
+        setDebugInfoMap({
+          uid: `${cUid}_${rIndex}`,
+          metrics: { current_stage: 1 },
+          loading: true,
+        });
+      };
+
+      // 接收消息：分段拼接后解析完整 JSON
+      let partialMessage = '';
+      wsRef.current.onmessage = (event: MessageEvent) => {
+        const msg = event.data;
+        if (!msg) return;
+        partialMessage += msg;
+        while (partialMessage.startsWith('{') && partialMessage.endsWith('}')) {
+          try {
+            const debugInfo = JSON.parse(partialMessage);
+            setDebugInfoMap({ ...debugInfo, name: debugInfo.name || {} });
+            partialMessage = '';
+          } catch {
+            // JSON 尚未完整，等待更多数据
+            break;
+          }
+        }
+      };
+
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        if (wsTimeoutRef.current) {
+          clearTimeout(wsTimeoutRef.current);
+          wsTimeoutRef.current = null;
+        }
+        message.error('WebSocket连接异常，请重试');
+      };
+
+      wsRef.current.onclose = () => {
+        if (wsTimeoutRef.current) {
+          clearTimeout(wsTimeoutRef.current);
+          wsTimeoutRef.current = null;
+        }
+      };
+    } catch (error) {
+      console.error('建立模型调试连接失败:', error);
+      message.error('建立模型调试连接失败');
+    }
+  }, [setDebugInfoMap]);
+
+  // 关闭模型调试连接
+  const closeDebugWebSocket = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (wsTimeoutRef.current) {
+      clearTimeout(wsTimeoutRef.current);
+      wsTimeoutRef.current = null;
+    }
+  }, []);
+
   const handleDebugClick = () => {
     setDebugModalVisible(true);
+    connectDebugWebSocket(conv?.conv_uid, data?.roundIndex ?? 0);
   };
+
+  // 组件卸载时清理 WebSocket
+  useEffect(() => {
+    return () => {
+      closeDebugWebSocket();
+    };
+  }, [closeDebugWebSocket]);
 
   const handleFullscreenClick = () => {
     setFullscreenModalVisible(true);
@@ -451,30 +564,29 @@ const ViewEle: React.FC<PropsType> = ({
     setConfigModalVisible(false);
   };
 
-  // 处理点赞
+  // 处理点赞（新接口只传 convUid + roundIndex + status）
   const handleLike = async (payload: any) => {
     try {
-      const createBy = getUserName();
       const res: any = await setExperteval({
-        conv_uid: convUid,
-        chat_id: chatId,
-        space_id: spaceId,
-        agent_id: agentId,
-        round_index: data.order || data.roundIndex,
-        create_by: createBy,
-        ...payload
+        convUid,
+        roundIndex: data.order || data.roundIndex,
+        status: payload?.status, // 0=无评价, 1=点赞, -1=点踩
       });
-      if (res?.success) {
-        const msg = payload?.eval_user === '0' ? '感谢您的点赞' : '感谢您的反馈';
+      // 兼容两种响应结构：{ success: true, ... } 与 { code: 200, data: ..., msg: ... }
+      const isSuccess = res?.success === true || Number(res?.code) === 200;
+      if (isSuccess) {
+        const msg = payload?.status === 1 ? '感谢您的点赞' : '感谢您的反馈';
         message.success(msg)
-        setChartData({ ...chartData, feedback: res?.data || {} });
+        // 后端仅返回 true，本地用本次操作值构造 feedback，保证图标高亮状态
+        setChartData({ ...chartData, feedback: { status: payload?.status, eval_user: payload?.eval_user } });
       }
       else {
-        message.error(res?.err_msg || '操作失败');
+        message.error(res?.msg || res?.err_msg || '操作失败');
       }
     }
     catch (error) {
       console.error('操作:', error);
+      message.error('操作失败');
     }
   };
 
@@ -499,27 +611,60 @@ const ViewEle: React.FC<PropsType> = ({
     onReferenceClick && onReferenceClick(data.order);
   }
 
-  // 推荐问题
+  // 推荐问题：调用接口获取，直接在当前回答下方内嵌展示（不新增用户消息/新框）
   const handleQaClick = async () => {
-    if (getRecommend) {
-      const params = getRecommendParams(conv, data, 'getQa')
-      getRecommend({ type: 'getQa', params });
+    if (!getRecommend) return
+    try {
+      const list = await getRecommend({ question: '' });
+      setRecBatch(0);
+      setRecList(Array.isArray(list) ? list : []);
+    } catch (error) {
+      console.error('获取推荐问题失败:', error);
+      message.error('获取推荐问题失败');
     }
   };
 
-  // 推荐指标
-  const handleIndexClick = () => {
-    if (getRecommend) {
-      const params = getRecommendParams(conv, data, 'getI')
-      getRecommend({ type: 'getI', params });
-    }
+  // 推荐问题-换一批（每批 oneBatch 个，循环切换 问数/归因/预测）
+  const handleRecChangeBatch = () => {
+    setRecBatch((prev) => ((prev + 1) * oneBatch >= recList.length ? 0 : prev + 1));
   };
 
-  // 推荐维度
-  const handleDimensionClick = () => {
-    if (getRecommend) {
-      const params = getRecommendParams(conv, data, 'getD')
-      getRecommend({ type: 'getD', params });
+  // 重新生成：清空筛选条件，按原始SQL重新查询数据
+  const handleRegenerate = async () => {
+    if (!chartData?.sql) {
+      message.warning('暂无可重新生成的数据');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetchAssembleSql({
+        convUid,
+        chatId,
+        spaceId,
+        agentId,
+        chatMode: chartData?.chat_mode,
+        unionSql: chartData?.sql,
+        filteredFields: [],
+      });
+      if (res.data) {
+        const newSql = res.data.unionSql;
+        const dataRes = await fetchSelectDataBySql({
+          convUid,
+          chatId,
+          spaceId,
+          agentId,
+          chatMode: chartData?.chat_mode,
+          unionSql: newSql,
+        });
+        if (dataRes.data) {
+          handleDataFetched({ data: dataRes.data.data.data, sql: newSql });
+        }
+      }
+    } catch (error) {
+      console.error('重新生成失败:', error);
+      message.error('重新生成失败，请重试');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1333,8 +1478,8 @@ const ViewEle: React.FC<PropsType> = ({
   const desc = chartData?.chat_mode === 'chat_with_knowledge' 
     ? (chartData?.data_knowledge || '') 
     : (chartData?.desc || '');
-  // 先移除HTML标签，再处理markdown
-  const cleanDesc = stripHtmlTags(desc);
+  // 先移除HTML标签，再处理markdown；压缩 3 个以上连续换行为段落分隔
+  const cleanDesc = stripHtmlTags(desc).replace(/\n{3,}/g, '\n\n').trim();
   const html: any = marked(cleanDesc)
 
   return (
@@ -1344,7 +1489,7 @@ const ViewEle: React.FC<PropsType> = ({
         localIcon="view"
       /> */}
 
-      <div className="flex flex-col w-full px-2 text-left">
+      <div className="flex flex-col w-full text-left">
         {/* 描述分析 / 数据知识 */}
         {data?.describe && (chartData?.chat_mode !== 'chat_with_analysis' && !chartData?.recommendQuestions && !chartData?.rewrite) && (
           <div className="w-full overflow-hidden mb-[0.625rem]">
@@ -1364,7 +1509,7 @@ const ViewEle: React.FC<PropsType> = ({
            {(data.arrowStatus || !isCollapsed) ? <div className="px-6 py-4">
               <div
                 ref={contentRef}
-                className="whitespace-pre-wrap text-sm text-gray-700 transition-all duration-300 ease-in-out relative"
+                className="text-sm text-gray-700 transition-all duration-300 ease-in-out relative"
                 style={{
                   maxHeight: data.arrowStatus ? 'none' : contentHeight,
                   overflow: data.arrowStatus ? 'visible' : (isCollapsed ? 'hidden' : 'visible'),
@@ -1376,7 +1521,7 @@ const ViewEle: React.FC<PropsType> = ({
                   </div>
                 ) : (
                   <div
-                    className={`${s['markdown-content']} text-left whitespace-pre-wrap`}
+                    className={`${s['markdown-content']} text-left`}
                     dangerouslySetInnerHTML={{ __html: html }}
                     style={{ width: '100%'}}
                   ></div>
@@ -1452,7 +1597,10 @@ const ViewEle: React.FC<PropsType> = ({
                                   currentTableData={queryResult.data || chartData?.data || []}
                                   showTitle={false}
                                 />
-                                <div className="mt-3">
+                                <div
+                                  className="mt-3"
+                                  style={activeType === 'chart' ? { background: '#F2F3F5', borderRadius: '8px', padding: '12px' } : undefined}
+                                >
                                   {hasData ? (
                                     renderContent()
                                   ) : (
@@ -1488,33 +1636,60 @@ const ViewEle: React.FC<PropsType> = ({
                       onAttributionClick={handleAttributionClick}
                       onPredictClick={handlePredictClick}
                       onReferenceClick={handleReferenceClick}
-                      onDimensionClick={handleDimensionClick}
-                      onIndexClick={handleIndexClick}
                       onQaClick={handleQaClick}
+                      onRegenerateClick={handleRegenerate}
                       onVoteChange={handleLike}
                       feedback={chartData?.feedback || {}}
                       chatMode={chartData?.chat_mode}
                       content={chartData?.desc || chartData?.data_knowledge || ''}
                     />
                   )}
+
+                  {/* 推荐问题 - 点击底部灯泡后，直接在当前回答下方内嵌展示 */}
+                  {recList.length > 0 && (
+                    <div className="recommend-questions">
+                      <div className="recommend-questions-list">
+                        {recList.slice(oneBatch * recBatch, oneBatch * (recBatch + 1)).map((question: string) => (
+                          <div
+                            key={question}
+                            className="recommend-question-item"
+                            onClick={() => getAnswer!({ question })}
+                          >
+                            <span className="recommend-question-text">{question}</span>
+                            <ArrowRightOutlined className="recommend-question-arrow" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="recommend-questions-footer">
+                        <span className="recommend-change-batch" onClick={handleRecChangeBatch}>换一批</span>
+                      </div>
+                    </div>
+                  )}
                   {
                     // 推荐问题
                     chartData?.recommendQuestions !== undefined && (
                       chartData.recommendQuestions?.length ? (
-                        <>
-                          {
-                            chartData?.recommendQuestions.slice(oneBatch * batchIndex, oneBatch * (batchIndex + 1)).map((question: string) => (
-                              <p key={question} className="mb-2">
-                                <a onClick={() => {
-                                  getAnswer!({ question });
-                                }}>{question}</a>
-                              </p>
-                            ))
-                          }
-                          <div className="flex items-center justify-center mt-4 mb-2">
-                            <a onClick={() => handleChangeBatch(chartData?.recommendQuestions)}><RedoOutlined />再换一批</a>
+                        <div className="recommend-questions">
+                          <div className="recommend-questions-list">
+                            {
+                              chartData?.recommendQuestions.slice(oneBatch * batchIndex, oneBatch * (batchIndex + 1)).map((question: string) => (
+                                <div
+                                  key={question}
+                                  className="recommend-question-item"
+                                  onClick={() => {
+                                    getAnswer!({ question });
+                                  }}
+                                >
+                                  <span className="recommend-question-text">{question}</span>
+                                  <ArrowRightOutlined className="recommend-question-arrow" />
+                                </div>
+                              ))
+                            }
                           </div>
-                        </>
+                          <div className="recommend-questions-footer">
+                            <a className="recommend-change-batch" onClick={() => handleChangeBatch(chartData?.recommendQuestions)}><RedoOutlined />换一批</a>
+                          </div>
+                        </div>
                       ) : '暂无相关推荐内容'
                     )
                   }
@@ -1562,7 +1737,10 @@ const ViewEle: React.FC<PropsType> = ({
         convUid={conv.conv_uid}
         roundIndex={data.roundIndex}
         open={debugModalVisible}
-        onClose={() => setDebugModalVisible(false)}
+        onClose={() => {
+          setDebugModalVisible(false);
+          closeDebugWebSocket();
+        }}
       />
       <FullscreenModal
         open={fullscreenModalVisible}

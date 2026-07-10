@@ -1,6 +1,6 @@
 import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Layout } from 'antd'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   SKILL_STORE_MENU_KEY,
@@ -33,6 +33,7 @@ function ChatWorkbenchLayout() {
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const [showSkillStore, setShowSkillStore] = useState(false)
   const [routeLoading, setRouteLoading] = useState(true)
+  const [newChatNonce, setNewChatNonce] = useState(0)
   const prevPathnameRef = useRef(pathname)
 
   const userName = useMemo(() => getCurrentUserName(), [])
@@ -119,6 +120,11 @@ function ChatWorkbenchLayout() {
     setShowSkillStore(false)
   }, [])
 
+  const handleCreateNewChat = useCallback(() => {
+    setShowSkillStore(false)
+    setNewChatNonce((n) => n + 1)
+  }, [])
+
   return (
     <Layout
       className="h-[100dvh] overflow-hidden app-bg-decor"
@@ -142,6 +148,7 @@ function ChatWorkbenchLayout() {
 
           <CreateConversationButton
             collapsed={collapsed}
+            onCreated={handleCreateNewChat}
             onToggleCollapse={handleToggleCollapse}
           />
 
@@ -161,7 +168,6 @@ function ChatWorkbenchLayout() {
               borderTop: '1px solid var(--border-2)',
             }}
           >
-            <SpaceSelector collapsed={collapsed} onSpaceChanged={handleSpaceChanged} />
             <div className="px-4">
               <UserProfileCard collapsed={collapsed} userName={userName} />
             </div>
@@ -170,11 +176,16 @@ function ChatWorkbenchLayout() {
       </Sider>
 
       <Layout className="min-w-0" style={{ background: 'transparent' }}>
-        <Content className="content-glass h-full min-h-0 overflow-hidden relative">
+        <Content className="content-glass relative h-full min-h-0 overflow-hidden">
+          <div className="chat-space-topright">
+            <SpaceSelector collapsed={false} onSpaceChanged={handleSpaceChanged} />
+          </div>
           {showSkillStore ? (
             <SkillStoreView onBack={handleBackFromSkillStore} />
           ) : (
-            <Outlet />
+            <Fragment key={newChatNonce}>
+              <Outlet />
+            </Fragment>
           )}
           {routeLoading && !showSkillStore && <ChatRouteLoading />}
         </Content>

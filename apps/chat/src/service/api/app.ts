@@ -162,12 +162,12 @@ export function deleteApp(data: any) {
   });
 }
 
-// 删除会话
-export function deleteSession(params: { sessionId: string }) {
+// 删除会话（后端已将会话与对话消息删除合并，一次调用传 sessionId + convUid）
+export function deleteSession(params: { sessionId: string; convUid?: string }) {
   return request({
     url: "/abi-chat/v1/app/session/delete",
     method: "post",
-    data: { sessionId: params.sessionId },
+    data: { sessionId: params.sessionId, convUid: params.convUid },
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
   })
 }

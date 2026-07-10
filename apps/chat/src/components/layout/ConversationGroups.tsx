@@ -1,13 +1,11 @@
-import { DeleteOutlined, EditOutlined, ExportOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons'
-import { useNavigate, useRouterState } from '@tanstack/react-router'
-import { Dropdown, Input, message, Modal, Spin } from 'antd'
+import { CloseOutlined, DeleteOutlined, DownOutlined, EditOutlined, MoreOutlined, PlusOutlined, PushpinOutlined, SmileOutlined, UpOutlined } from '@ant-design/icons'
+import { useNavigate } from '@tanstack/react-router'
+import { Dropdown, Input, message, Modal, Popover, Spin } from 'antd'
 import type { MenuProps } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { useConversationGroups } from '@/hooks/layout/useConversationGroups'
 import { useHistoryTopics } from '@/hooks/layout/useHistoryTopics'
-import { moveSessionToGroup } from '@/service/api/app'
 import type { SessionGroup } from '@/service/api/app'
 
 type ConversationGroupsProps = {
@@ -15,24 +13,17 @@ type ConversationGroupsProps = {
   refreshKey?: number
 }
 
-function getActiveTaskId(pathname: string) {
-  const match = pathname.match(/^\/chat\/task\/([^/?#]+)/)
-  return match?.[1] ?? ''
-}
-
 export function ConversationGroups({ collapsed, refreshKey }: ConversationGroupsProps) {
   const navigate = useNavigate()
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const activeTaskId = useMemo(() => getActiveTaskId(pathname), [pathname])
 
   const { loading, groups, loadGroups, addGroup, editGroup, removeGroup } = useConversationGroups()
   const { historyApps, loadHistoryTopics } = useHistoryTopics()
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [editingGroup, setEditingGroup] = useState<SessionGroup | null>(null)
   const [inputName, setInputName] = useState('')
+  const [moreOpen, setMoreOpen] = useState(false)
 
   useEffect(() => {
     if (!collapsed) {
@@ -41,7 +32,7 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
     }
   }, [collapsed, loadGroups, loadHistoryTopics, refreshKey])
 
-  // 按 groupId 将会话分配到各分组（排除无效值）
+  // 分组内会话数量
   const sessionsByGroupId = useMemo(() => {
     const invalidGroupIds = new Set([null, undefined, '', '0', 0, 'null'])
     const map: Record<string, any[]> = {}
@@ -55,18 +46,6 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
     }
     return map
   }, [historyApps])
-
-  const toggleGroup = useCallback((groupId: string) => {
-    setOpenGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }))
-  }, [])
-
-  const handleSelectTopic = useCallback(
-    (chatId: string) => {
-      if (!chatId) return
-      navigate({ to: TASK_DETAIL_ROUTE, params: { taskId: chatId } })
-    },
-    [navigate],
-  )
 
   // 新建分组
   const handleAddGroup = useCallback(async () => {
@@ -123,75 +102,33 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
     [removeGroup],
   )
 
-  // 移出分组（groupId 置空）
-  const handleMoveOutOfGroup = useCallback(
-    async (app: any) => {
+  // 置顶/取消置顶：通过 sortOrder 字段持久化
+  const handlePinGroup = useCallback(
+    async (group: SessionGroup) => {
+      const isPinned = (group.sortOrder ?? 0) > 0
       try {
-        await moveSessionToGroup({ sessionId: String(app.chat_id), groupId: '0', title: app.title || app.biz_name || '' })
-        message.success('已移出分组')
-        await loadHistoryTopics({ silent: true })
-        window.dispatchEvent(new Event('conversation-created'))
+        let newSortOrder = 0
+        if (!isPinned) {
+          const maxPinned = groups
+            .filter((g) => (g.sortOrder ?? 0) > 0)
+            .reduce((max, g) => Math.max(max, g.sortOrder ?? 0), 0)
+          newSortOrder = maxPinned + 1
+        }
+        await editGroup({ groupId: group.groupId, groupName: group.groupName, sortOrder: newSortOrder })
+        message.success(isPinned ? '已取消置顶' : '已置顶')
       } catch {
-        message.error('移出失败')
+        message.error('操作失败')
       }
     },
-    [loadHistoryTopics],
+    [editGroup, groups],
   )
-
-  // 移动到其他分组
-  const handleMoveToOtherGroup = useCallback(
-    async (app: any, targetGroupId: string) => {
-      try {
-        await moveSessionToGroup({ sessionId: String(app.chat_id), groupId: targetGroupId, title: app.title || app.biz_name || '' })
-        message.success('已移动到分组')
-        await loadHistoryTopics({ silent: true })
-        window.dispatchEvent(new Event('conversation-created'))
-      } catch {
-        message.error('移动失败')
-      }
-    },
-    [loadHistoryTopics],
-  )
-
-  // 分组内会话的操作菜单
-  const buildSessionMenu = (app: any, currentGroupId: string): MenuProps => ({
-    items: [
-      {
-        key: 'move-to-group',
-        icon: <FolderOutlined />,
-        label: '移动到分组',
-        children: [
-          ...groups
-            .filter((g) => g.groupId !== currentGroupId)
-            .map((g) => ({
-              key: `move-group-${g.groupId}`,
-              label: g.groupName,
-            })),
-          ...(groups.length > 1 ? [{ type: 'divider' as const }] : []),
-          {
-            key: 'move-out',
-            icon: <ExportOutlined />,
-            label: '移出分组',
-          },
-        ],
-      },
-    ],
-    onClick: ({ key, domEvent }) => {
-      domEvent.stopPropagation()
-      if (key === 'move-out') {
-        handleMoveOutOfGroup(app)
-      } else if (key.startsWith('move-group-')) {
-        const targetGroupId = key.replace('move-group-', '')
-        handleMoveToOtherGroup(app, targetGroupId)
-      }
-    },
-  })
 
   const buildGroupMenu = (group: SessionGroup): MenuProps => ({
     items: [
       { key: 'edit', icon: <EditOutlined />, label: '重命名' },
+      { key: 'pin', icon: <PushpinOutlined />, label: (group.sortOrder ?? 0) > 0 ? '取消置顶' : '置顶此分组' },
       { type: 'divider' as const },
-      { key: 'delete', icon: <DeleteOutlined />, label: '删除', danger: true },
+      { key: 'delete', icon: <DeleteOutlined />, label: '删除此分组', danger: true },
     ],
     onClick: ({ key, domEvent }) => {
       domEvent.stopPropagation()
@@ -199,11 +136,62 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
         setEditingGroup(group)
         setInputName(group.groupName)
         setEditModalVisible(true)
+      } else if (key === 'pin') {
+        handlePinGroup(group)
       } else if (key === 'delete') {
         handleDeleteGroup(group)
       }
     },
   })
+
+  const renderGroupItem = (group: SessionGroup) => {
+    const sessions = sessionsByGroupId[group.groupId] || []
+    return (
+      <div key={group.groupId} className="mb-0.5">
+        <div
+          className="conv-group-label group flex items-center"
+          onClick={() => navigate({ to: '/chat/task/$taskId', params: { taskId: 'new' }, search: { groupId: group.groupId } })}
+        >
+          <SmileOutlined style={{ fontSize: 13, color: 'var(--ink-4)', paddingLeft: 4 }} />
+          <span className="flex-1 truncate" style={{ paddingLeft: 8 }}>
+            {group.groupName}
+            {(group.sortOrder ?? 0) > 0 && (
+              <PushpinOutlined style={{ fontSize: 10, color: 'var(--accent)', marginLeft: 4, opacity: 0.8 }} />
+            )}
+          </span>
+          <span
+            style={{
+              marginRight: 4,
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--ink-4)',
+              background: 'rgba(130,140,200,0.1)',
+              padding: '1px 6px',
+              borderRadius: 8,
+            }}
+          >
+            {sessions.length}
+          </span>
+          <Dropdown
+            trigger={['click']}
+            menu={buildGroupMenu(group)}
+            placement="bottomRight"
+          >
+            <span
+              className="shrink-0 px-1 py-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ color: 'var(--ink-3)' }}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+            >
+              <MoreOutlined style={{ fontSize: 12 }} />
+            </span>
+          </Dropdown>
+        </div>
+      </div>
+    )
+  }
 
   if (collapsed) return null
 
@@ -221,195 +209,195 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
         }}
       >
         <span>对话分组</span>
-        <span
-          className="cursor-pointer transition-all duration-150"
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: 6,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--accent-soft)',
-            color: '#333',
-            fontWeight: 700,
+        <Popover
+          trigger="click"
+          placement="rightTop"
+          arrow={false}
+          open={addModalVisible}
+          onOpenChange={(open) => {
+            setAddModalVisible(open)
+            if (!open) setInputName('')
           }}
-          title="新建分组"
-          onClick={() => {
-            setInputName('')
-            setAddModalVisible(true)
-          }}
-          onMouseEnter={(e) => {
-            ;(e.currentTarget as HTMLElement).style.background = 'var(--accent)'
-            ;(e.currentTarget as HTMLElement).style.color = '#fff'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 2px 6px rgba(91,124,247,0.3)'
-          }}
-          onMouseLeave={(e) => {
-            ;(e.currentTarget as HTMLElement).style.background = 'var(--accent-soft)'
-            ;(e.currentTarget as HTMLElement).style.color = '#333'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
-          }}
+          overlayInnerStyle={{ padding: 0, boxShadow: '0 8px 32px rgba(15,23,42,0.12)' }}
+          content={(
+            <div
+              style={{
+                width: 360,
+                padding: '20px 22px',
+                borderRadius: 14,
+                background: '#fff',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>创建分组</span>
+                <CloseOutlined
+                  style={{ cursor: 'pointer', color: 'var(--ink-3)', fontSize: 14 }}
+                  onClick={() => {
+                    setAddModalVisible(false)
+                    setInputName('')
+                  }}
+                />
+              </div>
+              <p style={{ fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.6, margin: '0 0 14px' }}>
+                分组功能可将对话集中归类管理，并支持自定义指示，让对话更加自然有序。
+              </p>
+              <Input
+                prefix={<SmileOutlined style={{ color: 'var(--ink-4)' }} />}
+                placeholder="请输入分组名称"
+                value={inputName}
+                onChange={(e) => setInputName(e.target.value)}
+                onPressEnter={handleAddGroup}
+                maxLength={50}
+                autoFocus
+                style={{ borderRadius: 10 }}
+              />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                {['风控', '客服', '供应链', '运营'].map((tag) => (
+                  <span
+                    key={tag}
+                    onClick={() => setInputName(tag)}
+                    style={{
+                      cursor: 'pointer',
+                      padding: '5px 12px',
+                      fontSize: 12.5,
+                      borderRadius: 7,
+                      border: '1px solid var(--border)',
+                      color: 'var(--ink-2)',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'
+                      ;(e.currentTarget as HTMLElement).style.color = 'var(--accent)'
+                    }}
+                    onMouseLeave={(e) => {
+                      ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+                      ;(e.currentTarget as HTMLElement).style.color = 'var(--ink-2)'
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                <button
+                  type="button"
+                  style={{
+                    borderRadius: 10,
+                    border: '1px solid var(--border)',
+                    color: 'var(--ink-2)',
+                    background: '#fff',
+                    padding: '5px 14px',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'
+                    ;(e.currentTarget as HTMLElement).style.color = 'var(--accent)'
+                  }}
+                  onMouseLeave={(e) => {
+                    ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+                    ;(e.currentTarget as HTMLElement).style.color = 'var(--ink-2)'
+                  }}
+                  onClick={() => {
+                    setAddModalVisible(false)
+                    setInputName('')
+                  }}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  disabled={!inputName.trim()}
+                  onClick={handleAddGroup}
+                  style={{
+                    borderRadius: 10,
+                    padding: '5px 14px',
+                    background: !inputName.trim() ? '#e5e7eb' : 'var(--accent)',
+                    border: '1px solid',
+                    borderColor: !inputName.trim() ? '#e5e7eb' : 'var(--accent)',
+                    color: !inputName.trim() ? '#9ca3af' : '#fff',
+                    cursor: !inputName.trim() ? 'not-allowed' : 'pointer',
+                    boxShadow: 'none',
+                  }}
+                >
+                  确定
+                </button>
+              </div>
+            </div>
+          )}
         >
-          <PlusOutlined style={{ fontSize: 12, fontWeight: 700 }} />
-        </span>
+          <span
+            className="cursor-pointer transition-all duration-150"
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--accent-soft)',
+              color: '#333',
+              fontWeight: 700,
+            }}
+            title="新建分组"
+            onMouseEnter={(e) => {
+              ;(e.currentTarget as HTMLElement).style.background = 'var(--accent)'
+              ;(e.currentTarget as HTMLElement).style.color = '#fff'
+              ;(e.currentTarget as HTMLElement).style.boxShadow = '0 2px 6px rgba(91,124,247,0.3)'
+            }}
+            onMouseLeave={(e) => {
+              ;(e.currentTarget as HTMLElement).style.background = 'var(--accent-soft)'
+              ;(e.currentTarget as HTMLElement).style.color = '#333'
+              ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+            }}
+          >
+            <PlusOutlined style={{ fontSize: 12, fontWeight: 700 }} />
+          </span>
+        </Popover>
       </div>
 
       {/* Groups */}
       <div>
         {groups.length > 0 ? (
-          groups.map((group) => {
-            const isOpen = openGroups[group.groupId] ?? false
-            const sessions = sessionsByGroupId[group.groupId] || []
+          (() => {
+            const sortedGroups = [...groups].sort((a, b) => {
+              const aOrder = a.sortOrder ?? 0
+              const bOrder = b.sortOrder ?? 0
+              if (aOrder > 0 && bOrder > 0) return aOrder - bOrder
+              if (aOrder > 0) return -1
+              if (bOrder > 0) return 1
+              return 0
+            })
+            const visibleGroups = sortedGroups.slice(0, 3)
+            const hiddenGroups = sortedGroups.slice(3)
             return (
-              <div key={group.groupId} className="mb-0.5">
-                <div
-                  className="conv-group-label group flex items-center"
-                  onClick={() => toggleGroup(group.groupId)}
-                >
-                  <RightOutlined
-                    className="transition-transform duration-200"
-                    style={{
-                      fontSize: 12,
-                      transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-                      opacity: 0.5,
-                      padding: 4,
-                      cursor: 'pointer',
-                    }}
-                  />
-                  <span className="flex-1 truncate">{group.groupName}</span>
-                  <span
-                    style={{
-                      marginRight: 4,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: 'var(--ink-4)',
-                      background: 'rgba(130,140,200,0.1)',
-                      padding: '1px 6px',
-                      borderRadius: 8,
-                    }}
-                  >
-                    {sessions.length}
-                  </span>
-                  <Dropdown
-                    trigger={['click']}
-                    menu={buildGroupMenu(group)}
-                    placement="bottomRight"
-                  >
-                    <span
-                      className="shrink-0 px-1 py-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: 'var(--ink-3)' }}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                      }}
-                    >
-                      <MoreOutlined style={{ fontSize: 12 }} />
-                    </span>
-                  </Dropdown>
-                </div>
-
-                <div
-                  style={{
-                    maxHeight: isOpen ? 600 : 0,
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s cubic-bezier(0.4,0,0.2,1)',
-                  }}
-                >
-                  {sessions.length > 0 ? (
-                    sessions.map((app) => {
-                      const chatId = String(app.chat_id)
-                      const isActive = chatId === activeTaskId
-                      return (
-                        <div
-                          key={chatId}
-                          className="group/session flex items-center gap-2 cursor-pointer transition-colors duration-150"
-                          style={{
-                            padding: '7px 12px 7px 32px',
-                            borderRadius: 'var(--r-xs)',
-                            fontSize: 12.5,
-                            color: isActive ? 'var(--accent)' : 'var(--ink-3)',
-                            fontWeight: isActive ? 600 : 400,
-                            background: isActive ? 'var(--accent-soft)' : 'transparent',
-                            position: 'relative',
-                          }}
-                          onClick={() => handleSelectTopic(chatId)}
-                          onMouseEnter={(e) => {
-                            if (!isActive) {
-                              ;(e.currentTarget as HTMLElement).style.background = 'rgba(130,140,200,0.08)'
-                              ;(e.currentTarget as HTMLElement).style.color = 'var(--ink)'
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isActive) {
-                              ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-                              ;(e.currentTarget as HTMLElement).style.color = 'var(--ink-3)'
-                            }
-                          }}
-                        >
-                          <span className="truncate flex-1">{app.title || app.biz_name || '未命名对话'}</span>
-                          <Dropdown
-                            trigger={['click']}
-                            menu={buildSessionMenu(app, group.groupId)}
-                            placement="bottomRight"
-                          >
-                            <span
-                              className="shrink-0 px-1 py-1 opacity-0 group-hover/session:opacity-100 transition-opacity"
-                              style={{ color: 'var(--ink-3)' }}
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                              }}
-                            >
-                              <MoreOutlined style={{ fontSize: 12 }} />
-                            </span>
-                          </Dropdown>
-                        </div>
-                      )
-                    })
-                  ) : (
-                    <div
-                      style={{
-                        padding: '6px 12px 6px 32px',
-                        fontSize: 11.5,
-                        color: 'var(--ink-4)',
-                      }}
-                    >
-                      暂无对话
+              <>
+                {visibleGroups.map((group) => renderGroupItem(group))}
+                {hiddenGroups.length > 0 && (
+                  <>
+                    {moreOpen && hiddenGroups.map((group) => renderGroupItem(group))}
+                    <div className="mb-0.5">
+                      <div
+                        className="conv-group-label group flex items-center"
+                        onClick={() => setMoreOpen((prev) => !prev)}
+                      >
+                        <span style={{ paddingLeft: 4, fontSize: 13, color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {moreOpen
+                            ? <><UpOutlined style={{ fontSize: 10 }} />收起</>
+                            : <><DownOutlined style={{ fontSize: 10 }} />更多</>}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
+                  </>
+                )}
+              </>
             )
-          })
+          })()
         ) : !loading ? (
           <div className="px-3 py-2 text-center" style={{ fontSize: 11.5, color: 'var(--ink-4)' }}>
             暂无分组，点击上方 + 创建
           </div>
         ) : null}
       </div>
-
-      {/* 新建分组弹窗 */}
-      <Modal
-        title="新建分组"
-        open={addModalVisible}
-        onOk={handleAddGroup}
-        onCancel={() => {
-          setAddModalVisible(false)
-          setInputName('')
-        }}
-        okText="确定"
-        cancelText="取消"
-        destroyOnClose
-      >
-        <Input
-          placeholder="请输入分组名称"
-          value={inputName}
-          onChange={(e) => setInputName(e.target.value)}
-          onPressEnter={handleAddGroup}
-          maxLength={50}
-          autoFocus
-        />
-      </Modal>
 
       {/* 编辑分组弹窗 */}
       <Modal

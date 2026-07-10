@@ -8,7 +8,6 @@ import {
   BarChartOutlined,
   TableOutlined,
   CodeOutlined,
-  ReloadOutlined,
   SettingOutlined,
   FullscreenOutlined,
   BugOutlined,
@@ -178,13 +177,6 @@ const ChartHeader: React.FC<Props> = ({
       ...prev,
       [field]: value,
     }))
-  }
-
-  // 刷新
-  const onRefreshClick = () => {
-    resetFilters()
-    setFilterValuesLen(0)
-    handleSearch(true)
   }
 
   // 查询,根据筛选和上一次的sql条件转sql，再查数据
@@ -530,11 +522,6 @@ const ChartHeader: React.FC<Props> = ({
             <SvgIcon className="text-[1rem]" localIcon="share" />
           </span>
           */}
-          <Tooltip title="重新生成">
-            <span className="chart-header-icon" onClick={onRefreshClick}>
-              <ReloadOutlined />
-            </span>
-          </Tooltip>
           {showChartIcon && (
             <Tooltip title="图表配置">
               <span className="chart-header-icon" onClick={onConfigClick}>

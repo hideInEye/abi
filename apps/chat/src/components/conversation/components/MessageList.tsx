@@ -150,6 +150,20 @@ const MessageList = ({
     return () => observer.disconnect()
   }, [virtualized, containerRef])
 
+  // 测量滚动条宽度，注入 CSS 变量供输入框对齐
+  useLayoutEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const measure = () => {
+      const scrollbarWidth = el.offsetWidth - el.clientWidth
+      document.documentElement.style.setProperty('--scrollbar-width', `${scrollbarWidth}px`)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [containerRef])
+
   const renderItem = (item: any, key: string | number) => {
     if (item.role === 'human') {
       const anchorId = `human-msg-${item.order}`
@@ -332,8 +346,12 @@ const MessageList = ({
 
   if (!virtualized) {
     return (
-      <div ref={containerRef} className={containerClassName ?? 'overflow-y-auto w-full flex-1 scroll-smooth'}>
-        <div className="w-[53.75rem] m-auto">
+      <div
+        ref={containerRef}
+        className={containerClassName ?? 'overflow-y-auto overflow-x-hidden w-full flex-1 scroll-smooth'}
+        style={{ scrollbarGutter: 'stable' }}
+      >
+        <div className="max-w-[53.75rem] w-full m-auto">
           {groupedData.map(renderGroup)}
         </div>
         <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
@@ -350,10 +368,11 @@ const MessageList = ({
   return (
     <div
       ref={containerRef}
-      className={containerClassName ?? 'overflow-y-auto bg-white w-full flex-1 scroll-smooth'}
+      className={containerClassName ?? 'overflow-y-auto overflow-x-hidden bg-white w-full flex-1 scroll-smooth'}
+      style={{ scrollbarGutter: 'stable' }}
       onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
     >
-     <div className="w-[53.75rem] m-auto p-4">
+     <div className="max-w-[53.75rem] w-full m-auto p-4">
       <div style={{ height: totalHeight, position: 'relative' }}>
         <div style={{ transform: `translateY(${offsetTop / 16}rem)` }}>{visibleItems.map((item, index) => renderItem(item, startIndex + index))}</div>
       </div>

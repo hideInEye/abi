@@ -111,3 +111,66 @@
   color: #8c8c8c;
   background: transparent;
 } 
+
+/* ── 推荐问题 ── */
+.recommend-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.recommend-questions-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.recommend-question-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 320px;
+  max-width: 520px;
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border-radius: 10px;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.recommend-question-item:hover {
+  background: #ececec;
+}
+
+.recommend-question-text {
+  flex: 1;
+}
+
+.recommend-question-arrow {
+  flex-shrink: 0;
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+.recommend-questions-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.recommend-change-batch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #5b7cf7;
+  cursor: pointer;
+}
+
+.recommend-change-batch:hover {
+  opacity: 0.85;
+}

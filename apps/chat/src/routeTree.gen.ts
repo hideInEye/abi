@@ -15,6 +15,7 @@ import { Route as ChatIndexRouteImport } from './pages/chat/index'
 import { Route as ChatHistoryRouteImport } from './pages/chat/history'
 import { Route as ChatConversationIndexRouteImport } from './pages/chat/conversation/index'
 import { Route as ChatTaskTaskIdRouteImport } from './pages/chat/task/$taskId'
+import { Route as ChatGroupGroupIdRouteImport } from './pages/chat/group/$groupId'
 import { Route as ChatConversationConversationIdRouteImport } from './pages/chat/conversation/$conversationId'
 
 const ChatRouteRoute = ChatRouteRouteImport.update({
@@ -47,6 +48,11 @@ const ChatTaskTaskIdRoute = ChatTaskTaskIdRouteImport.update({
   path: '/task/$taskId',
   getParentRoute: () => ChatRouteRoute,
 } as any)
+const ChatGroupGroupIdRoute = ChatGroupGroupIdRouteImport.update({
+  id: '/group/$groupId',
+  path: '/group/$groupId',
+  getParentRoute: () => ChatRouteRoute,
+} as any)
 const ChatConversationConversationIdRoute =
   ChatConversationConversationIdRouteImport.update({
     id: '/conversation/$conversationId',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/chat/history': typeof ChatHistoryRoute
   '/chat/': typeof ChatIndexRoute
   '/chat/conversation/$conversationId': typeof ChatConversationConversationIdRoute
+  '/chat/group/$groupId': typeof ChatGroupGroupIdRoute
   '/chat/task/$taskId': typeof ChatTaskTaskIdRoute
   '/chat/conversation/': typeof ChatConversationIndexRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/chat/history': typeof ChatHistoryRoute
   '/chat': typeof ChatIndexRoute
   '/chat/conversation/$conversationId': typeof ChatConversationConversationIdRoute
+  '/chat/group/$groupId': typeof ChatGroupGroupIdRoute
   '/chat/task/$taskId': typeof ChatTaskTaskIdRoute
   '/chat/conversation': typeof ChatConversationIndexRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/chat/history': typeof ChatHistoryRoute
   '/chat/': typeof ChatIndexRoute
   '/chat/conversation/$conversationId': typeof ChatConversationConversationIdRoute
+  '/chat/group/$groupId': typeof ChatGroupGroupIdRoute
   '/chat/task/$taskId': typeof ChatTaskTaskIdRoute
   '/chat/conversation/': typeof ChatConversationIndexRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/chat/history'
     | '/chat/'
     | '/chat/conversation/$conversationId'
+    | '/chat/group/$groupId'
     | '/chat/task/$taskId'
     | '/chat/conversation/'
   fileRoutesByTo: FileRoutesByTo
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/chat/history'
     | '/chat'
     | '/chat/conversation/$conversationId'
+    | '/chat/group/$groupId'
     | '/chat/task/$taskId'
     | '/chat/conversation'
   id:
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/chat/history'
     | '/chat/'
     | '/chat/conversation/$conversationId'
+    | '/chat/group/$groupId'
     | '/chat/task/$taskId'
     | '/chat/conversation/'
   fileRoutesById: FileRoutesById
@@ -159,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatTaskTaskIdRouteImport
       parentRoute: typeof ChatRouteRoute
     }
+    '/chat/group/$groupId': {
+      id: '/chat/group/$groupId'
+      path: '/group/$groupId'
+      fullPath: '/chat/group/$groupId'
+      preLoaderRoute: typeof ChatGroupGroupIdRouteImport
+      parentRoute: typeof ChatRouteRoute
+    }
     '/chat/conversation/$conversationId': {
       id: '/chat/conversation/$conversationId'
       path: '/conversation/$conversationId'
@@ -173,6 +192,7 @@ interface ChatRouteRouteChildren {
   ChatHistoryRoute: typeof ChatHistoryRoute
   ChatIndexRoute: typeof ChatIndexRoute
   ChatConversationConversationIdRoute: typeof ChatConversationConversationIdRoute
+  ChatGroupGroupIdRoute: typeof ChatGroupGroupIdRoute
   ChatTaskTaskIdRoute: typeof ChatTaskTaskIdRoute
   ChatConversationIndexRoute: typeof ChatConversationIndexRoute
 }
@@ -181,6 +201,7 @@ const ChatRouteRouteChildren: ChatRouteRouteChildren = {
   ChatHistoryRoute: ChatHistoryRoute,
   ChatIndexRoute: ChatIndexRoute,
   ChatConversationConversationIdRoute: ChatConversationConversationIdRoute,
+  ChatGroupGroupIdRoute: ChatGroupGroupIdRoute,
   ChatTaskTaskIdRoute: ChatTaskTaskIdRoute,
   ChatConversationIndexRoute: ChatConversationIndexRoute,
 }

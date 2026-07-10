@@ -8,6 +8,7 @@ import { fetchOperate, fetchShareEmail } from '../../../service/api/abi-system'
 import { fetchSessionMessages } from '../../../service/api/app'
 import {
   fetchConvMaxRound,
+  fetchDataBySql,
   fetchDimension,
   fetchExceptionGuidance,
   groupMessagesByOrder,
@@ -31,10 +32,12 @@ export interface ConversationProps {
   selectedModelId?: string | number
   embedModelId?: string | number
   semanticId?: number | string
+  selectedExcel?: any
   onLoadingChange?: (loading: boolean) => void
   modelOptions?: ModelOption[]
   currentModel?: ModelOption | null
   onModelChange?: (model: ModelOption) => void
+  deepThinkEnabled?: boolean
 }
 
 /**
@@ -66,6 +69,38 @@ const stripTrailingJsonFromAiContent = (content: string): string => {
     }
   }
   return content
+}
+
+/**
+ * 从 AI 消息内容中提取尾部嵌入的 JSON 对象。
+ * 策略：寻找最后一个顶级 { 并验证到末尾是否为合法 JSON。
+ */
+const extractTrailingJson = (content: string): any => {
+  if (!content || typeof content !== 'string') return null
+
+  const trimmed = content.trim()
+  if (!trimmed.endsWith('}')) return null
+
+  let depth = 0
+  for (let i = trimmed.length - 1; i >= 0; i--) {
+    if (trimmed[i] === '}') depth++
+    else if (trimmed[i] === '{') {
+      depth--
+      if (depth === 0) {
+        const before = trimmed.substring(0, i).trimEnd()
+        const lastChar = before[before.length - 1]
+        if (lastChar && lastChar !== ',' && lastChar !== ':' && lastChar !== '{' && lastChar !== '[') {
+          try {
+            return JSON.parse(trimmed.substring(i))
+          } catch {
+            return null
+          }
+        }
+        break
+      }
+    }
+  }
+  return null
 }
 
 /**
@@ -182,6 +217,9 @@ export const useConversationController = (
   const isFirstMessage = useRef(true)
   const isRequesting = useRef(false)
   const messageRef = useRef('')
+  const isReasoningRef = useRef(false)
+  // 记录上一次已追加的完整 content，用于过滤后端重复发送的固定前缀
+  const lastContentRef = useRef('')
   const groupCountRef = useRef(0)
   const closedGroupCountRef = useRef(0)
   const abortController = useRef<AbortController | null>(null)
@@ -190,8 +228,16 @@ export const useConversationController = (
   const [isGettingData, setIsGettingData] = useState(false)
   const hasTriggeredIsGetting = useRef(false)
   const [selectedExcel, setSelectedExcel] = useState<any>({})
+  // 支持外部（如 conversation-analysis 的统一输入框）透传已选 Excel，避免 UI 与请求参数不一致
+  const effectiveSelectedExcel = props.selectedExcel !== undefined ? props.selectedExcel : selectedExcel
+  const effectiveSelectedExcelRef = useRef(effectiveSelectedExcel)
+  effectiveSelectedExcelRef.current = effectiveSelectedExcel
   const [referenceDialog, setReferenceDialog] = useState<any>({})
   const [deepThinkEnabled, setDeepThinkEnabled] = useState(false)
+  // 支持外部（如 conversation-analysis 的统一输入框）透传思考开关状态，避免 UI 与请求参数不一致
+  const effectiveDeepThinkEnabled = props.deepThinkEnabled !== undefined ? props.deepThinkEnabled : deepThinkEnabled
+  const effectiveDeepThinkEnabledRef = useRef(effectiveDeepThinkEnabled)
+  effectiveDeepThinkEnabledRef.current = effectiveDeepThinkEnabled
   const [uploadFileEnabled, setUploadFileEnabled] = useState(false)
   const [cur, setCur] = useState<any>()
   const [debugModalVisible, setDebugModalVisible] = useState(false)
@@ -236,6 +282,7 @@ export const useConversationController = (
     }
   }
 
+  /* 暂时禁用下滑加载更多历史：该功能目前历史数据接口存在问题，先整体注释避免误触发
   const loadMoreHistory = async () => {
     if (historyLoading || !hasMoreHistory || minRoundIndex === undefined) return
 
@@ -345,6 +392,7 @@ export const useConversationController = (
       canLoadMore.current = true
     }
   }
+  */
 
   const [userScrolled, setUserScrolled] = useState(false)
   const lastScrollTop = useRef(0)
@@ -379,14 +427,15 @@ export const useConversationController = (
         setUserScrolled(false)
       }
 
-      if (canLoadMore.current && isScrollingUp && hasMoreHistory && !historyLoading && minRoundIndex !== undefined) {
-        const getMsgId = document.querySelector(`#human-msg-${minRoundIndex + 2}`)?.getBoundingClientRect()
-        const containerRect = chatContainer.getBoundingClientRect()
-        if (getMsgId && getMsgId.top <= containerRect.bottom && getMsgId.bottom >= containerRect.top) {
-          canLoadMore.current = false
-          loadMoreHistory()
-        }
-      }
+      // 暂时禁用下滑加载更多历史：该功能目前历史数据接口存在问题，先注释避免误触发
+      // if (canLoadMore.current && isScrollingUp && hasMoreHistory && !historyLoading && minRoundIndex !== undefined) {
+      //   const getMsgId = document.querySelector(`#human-msg-${minRoundIndex + 2}`)?.getBoundingClientRect()
+      //   const containerRect = chatContainer.getBoundingClientRect()
+      //   if (getMsgId && getMsgId.top <= containerRect.bottom && getMsgId.bottom >= containerRect.top) {
+      //     canLoadMore.current = false
+      //     loadMoreHistory()
+      //   }
+      // }
 
       lastScrollTop.current = scrollTop
     }
@@ -461,7 +510,7 @@ export const useConversationController = (
         if_debug: true,
         semantic_id: props.semanticId ?? null,
         extra_body: {
-          enable_thinking: deepThinkEnabled
+          enable_thinking: effectiveDeepThinkEnabledRef.current
         }
       }
     }
@@ -742,7 +791,7 @@ export const useConversationController = (
     })
   }
 
-  const getAnswer = async ({ question, IC, _meta }: any) => {
+  const getAnswer = async ({ question, IC, _meta, file_id, file_name, reference_order, reference_context }: any) => {
     if (isRequesting.current) {
       return
     }
@@ -753,15 +802,42 @@ export const useConversationController = (
     abortController.current = new AbortController()
     isAborting.current = false
     const params = cloneDeep(paramsDataRef.current || paramsData)
-    // 每次发送时注入最新的 deepThink 状态和 semanticId
+    // 优先使用本次消息传入的 Excel 信息（新建会话时通过 meta 透传），否则回退到组件状态
+    const activeExcel = (file_id && file_name)
+      ? { file_id, file_name }
+      : effectiveSelectedExcelRef.current?.file_id
+        ? effectiveSelectedExcelRef.current
+        : null
+    const hasExcel = !!activeExcel?.file_id
+    // 每次发送时注入最新的 deepThink 状态、数据语义元信息及 Excel 文件信息
+    if (params.context) {
+      params.context.chat_mode = hasExcel ? 'chat_excel' : 'chat_with_db_execute'
+    }
     if (params.context?.extra) {
-      params.context.extra.extra_body = { enable_thinking: deepThinkEnabled }
-      params.context.extra.semantic_id = props.semanticId ?? null
+      params.context.extra.extra_body = { enable_thinking: effectiveDeepThinkEnabledRef.current }
+      params.context.extra.semantic_id = _meta?.semanticSchemaId ?? props.semanticId ?? null
+      params.context.extra.semantic_group_name = _meta?.groupName || ''
+      params.context.extra.semantic_name = _meta?.semanticName || ''
+      if (hasExcel) {
+        params.context.extra.file_id = activeExcel.file_id
+        params.context.extra.file_name = activeExcel.file_name
+      } else {
+        const { file_id, file_name, ...restExtra } = params.context.extra
+        params.context.extra = restExtra
+      }
     }
     params.messages = question
 
+    const userMessageContext = hasExcel
+      ? JSON.stringify({
+          question,
+          file_id: activeExcel.file_id,
+          file_name: activeExcel.file_name,
+        })
+      : question
+
     const userMessage = {
-      context: question,
+      context: userMessageContext,
       role: 'human',
       id: Date.now(),
       order: tempUserId,
@@ -776,6 +852,8 @@ export const useConversationController = (
     setLoading(true)
     isRequesting.current = true
     messageRef.current = ''
+    isReasoningRef.current = false
+    lastContentRef.current = ''
     startTimeRef.current = startTime
     isMessageAdded.current = false
     webSocketViewAdded.current = false
@@ -815,6 +893,12 @@ export const useConversationController = (
           if (event.data) {
             // 处理 [DONE] 信号
             if (event.data === '[DONE]') {
+              // 流结束时如果仍在推理段，自动闭合 think 标签
+              if (isReasoningRef.current) {
+                messageRef.current += '</think>'
+                isReasoningRef.current = false
+              }
+
               const endTime = performance.now()
               const thinkTimeMs = endTime - startTimeRef.current
               const calculatedThinkTime = Math.round(thinkTimeMs / 1000)
@@ -854,14 +938,41 @@ export const useConversationController = (
 
               const isExcelScenario = params?.context?.chat_mode === 'chat_excel'
 
+              // 尝试从 AI 消息中提取结构化 JSON，若包含 sql 则主动查询数据，
+              // 避免依赖后端异步生成 view 消息导致 ViewEle 无数据。
+              const responseJson = extractTrailingJson(messageRef.current)
+              let viewContext: any = 'describe'
+              let viewArrowStatus = false
+
+              if (responseJson?.sql && convRef.current?.dbName) {
+                try {
+                  setIsGettingData(true)
+                  const queryRes: any = await fetchDataBySql({
+                    db_name: convRef.current.dbName,
+                    query_sql: responseJson.sql
+                  })
+                  const queryData = queryRes?.data?.data ?? queryRes?.data
+                  viewContext = JSON.stringify({
+                    ...responseJson,
+                    data: queryData,
+                    sql: responseJson.sql
+                  })
+                  viewArrowStatus = true
+                } catch (error) {
+                  console.error('根据 SQL 查询数据失败:', error)
+                } finally {
+                  setIsGettingData(false)
+                }
+              }
+
               if (isExcelScenario || !webSocketViewAdded.current) {
                 setConvContent((state: any) => [
                   ...state,
                   {
-                    context: 'describe',
+                    context: viewContext,
                     describe: true,
                     role: 'view',
-                    arrowStatus: false,
+                    arrowStatus: viewArrowStatus,
                     order: roundIndex || tempUserId,
                     roundIndex
                   }
@@ -871,17 +982,57 @@ export const useConversationController = (
               return
             }
 
-            // 从 OpenAI 兼容格式提取 content
+            // 从 OpenAI 兼容格式提取 content / reasoning_content
             let chunk = event.data
             try {
               const parsed = JSON.parse(event.data)
               const delta = parsed?.choices?.[0]?.delta
+              let chunkText = ''
+
+              // 优先处理 reasoning_content（仅在开启深度思考时展示）
+              if (
+                effectiveDeepThinkEnabledRef.current &&
+                delta?.reasoning_content !== undefined &&
+                delta?.reasoning_content !== null
+              ) {
+                if (!isReasoningRef.current) {
+                  chunkText += '<think>' + delta.reasoning_content
+                  isReasoningRef.current = true
+                } else {
+                  chunkText += delta.reasoning_content
+                }
+              }
+
+              // 处理 content，过滤后端重复发送的固定前缀/完整内容
               if (delta?.content !== undefined && delta?.content !== null) {
-                chunk = delta.content
-              } else {
-                // 没有 content 的事件（如首条仅含 role 的事件）跳过
+                const currentContent = delta.content
+                let contentToAppend = ''
+                if (
+                  lastContentRef.current &&
+                  currentContent.startsWith(lastContentRef.current)
+                ) {
+                  contentToAppend = currentContent.slice(lastContentRef.current.length)
+                } else {
+                  contentToAppend = currentContent
+                }
+                lastContentRef.current = currentContent
+
+                if (contentToAppend) {
+                  // 从 reasoning_content 切换到 content 时需要先闭合 think 标签
+                  if (isReasoningRef.current) {
+                    chunkText += '</think>' + contentToAppend
+                    isReasoningRef.current = false
+                  } else {
+                    chunkText += contentToAppend
+                  }
+                }
+              }
+
+              if (!chunkText) {
+                // 没有有效 content 和 reasoning_content 的事件跳过
                 return
               }
+              chunk = chunkText
             } catch {
               // 非 JSON 格式，直接使用原始 event.data（兼容旧格式）
             }
@@ -1098,93 +1249,37 @@ export const useConversationController = (
     }
   }
 
-  const getRecommend = async ({ type, params }: any) => {
-    if (isRequesting.current) {
-      return
+  // 推荐问题：按 query_recommend 接口参数请求，返回推荐问题数组（无副作用，不新增消息，供 ViewEle 内嵌展示）
+  const getRecommend = async (options: any = {}) => {
+    const question =
+      typeof options === 'string'
+        ? options
+        : options?.question ?? options?.messages ?? ''
+    const base = paramsDataRef.current || paramsData
+    const ctx = base?.context || {}
+    const params = {
+      messages: question || ctx.last_question || '',
+      stream: true,
+      context: {
+        embed_model_id: ctx.embed_model_id ?? '',
+        chat_model_id: ctx.chat_model_id ?? '',
+        conv_uid: ctx.conv_uid ?? '',
+        chat_mode: 'query',
+        app_id: ctx.app_id ?? 0,
+        space_id: ctx.space_id ?? '',
+        extra: {
+          semantic_id: ctx.extra?.semantic_id ?? null,
+        },
+      },
     }
-    setLoading(true)
-    isRequesting.current = true
-    abortController.current = new AbortController()
-
-    setConvContent((state) => [...state, { context: params.messages, role: 'human' }])
-    setUserScrolled(false)
-
-    webSocketViewAdded.current = false
-
     try {
-      setCurrentMessage('')
-
-      let res
-      if (type === 'getQa') {
-        res = await fetchRecommendQuestion(params)
-      } else {
-        res = await fetchDimension(params)
-      }
-
-      setConvContent((prevState: any) => {
-        const state = prevState.map((item: any) => {
-          if (item.role === 'ai' && item.smLoading) {
-            return {
-              ...item,
-              smLoading: false,
-              isStreaming: false,
-              isDone: true
-            }
-          }
-          return item
-        })
-        return [
-          ...state,
-          {
-            context:
-              type === 'getQa'
-                ? {
-                    recommendQuestions: res?.data?.recommend_questions
-                  }
-                : {
-                    rewrite: type === 'getD' ? res?.data?.items?.rec_dim : res?.data?.items?.rec_ind
-                  },
-            role: 'view'
-          }
-        ]
-      })
+      const res: any = await fetchRecommendQuestion(params)
+      return res?.data?.recommend_questions || res?.recommend_questions || []
     } catch (error: any) {
-      if (error.name !== 'AbortError') {
-        message.error('获取失败')
+      if (error?.name !== 'AbortError') {
+        message.error('获取推荐问题失败')
       }
-      setConvContent((prevState: any[]) => {
-        return prevState.map((item: any) => {
-          if (item.role === 'ai' && item.smLoading) {
-            return {
-              ...item,
-              smLoading: false,
-              isStreaming: false,
-              isDone: true
-            }
-          }
-          return item
-        })
-      })
-    } finally {
-      setConvContent((prevState: any[]) => {
-        return prevState.map((item: any) => {
-          if (item.role === 'ai' && item.smLoading) {
-            return {
-              ...item,
-              smLoading: false,
-              isStreaming: false,
-              isDone: true
-            }
-          }
-          return item
-        })
-      })
-      setLoading(false)
-      setIsGettingData(false)
-      isRequesting.current = false
-      abortController.current = null
-      isMessageAdded.current = false
-      hasTriggeredIsGetting.current = false
+      return []
     }
   }
 
@@ -1323,13 +1418,15 @@ export const useConversationController = (
     }
   }
 
-  const handleSend = (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string }) => {
+  const handleSend = (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; selectedExcel?: any }) => {
     if (!value.trim() || loading) return
     handleCollect()
+    // 新建会话时，Excel 信息通过 meta 透传（此时组件状态可能已被清空）
+    const metaExcel = meta?.selectedExcel?.file_id ? meta.selectedExcel : null
     const messageContent = {
       question: value,
-      file_id: selectedExcel?.file_id,
-      file_name: selectedExcel?.file_name,
+      file_id: metaExcel?.file_id || effectiveSelectedExcelRef.current?.file_id,
+      file_name: metaExcel?.file_name || effectiveSelectedExcelRef.current?.file_name,
       reference_order: referenceDialog?.order,
       reference_context: referenceDialog?.context,
       _meta: meta,

@@ -277,7 +277,7 @@ const AiEle: React.FC<PropsType> = ({
         className="mt-[0.375rem] text-[1.875rem]"
         localIcon="bot"
       /> */}
-      <div className="w-full px-2 text-left">
+      <div className="w-full text-left">
         <div className={styles.thinkingCard}>
           <div className={styles.thinkingCardHeader}>
             <div className={styles.thinkingStatusWrap}>
@@ -322,9 +322,7 @@ const AiEle: React.FC<PropsType> = ({
                 {historySteps.length > 0 ? (
                   historySteps.map((step: any, index: number) => (
                     <div key={step.id || index} className={styles.thinkingStepItem}>
-                      <span className={styles.thinkingStepIndex}>{index + 1}</span>
                       <div className={styles.thinkingStepBody}>
-                        <div className={styles.thinkingStepTitle}>{step.name}</div>
                         <div className={styles.thinkingStepContent}>
                           <ReactMarkdown>{step.content}</ReactMarkdown>
                         </div>
@@ -333,7 +331,6 @@ const AiEle: React.FC<PropsType> = ({
                   ))
                 ) : fallbackThinkingContent ? (
                   <div className={styles.thinkingStepItem}>
-                    <span className={styles.thinkingStepIndex}>1</span>
                     <div className={styles.thinkingStepBody}>
                       <div className={styles.thinkingStepContent}>
                         <ReactMarkdown>{fallbackThinkingContent}</ReactMarkdown>

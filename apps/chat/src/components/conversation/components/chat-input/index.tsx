@@ -4,6 +4,7 @@ import type { MenuProps } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AudioRecorder from '../../../../components/AudioRecorder';
 import UploadDrawer from '../../UploadDrawer';
+import FileTag from '../../../../components/FileTag';
 import { querySkillList } from '../../../../service/api/skill';
 import { queryMcpList } from '../../../../service/api/mcp';
 import { fetchSemanticGroups, fetchSemanticDetail } from '../../../../service/api/semantic';
@@ -20,6 +21,8 @@ export interface SemanticSelectedData {
 
 interface ChatInputProps {
   conv?: any;
+  /** 确保存在可用会话（无会话时先创建），返回会话对象 */
+  ensureConv?: () => Promise<any>;
   loading: boolean;
   onSend: (value: string) => void;
   onStop: () => void;
@@ -28,6 +31,7 @@ interface ChatInputProps {
   onToggleDeepThink: () => void;
   onToggleUploadFile: () => void;
   setSelectedExcel?: (file: any) => void;
+  selectedExcel?: any;
   spaceId?: number;
   // 数据语义 props
   semanticGroups?: any[];
@@ -43,7 +47,7 @@ interface ChatInputProps {
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
-  ({ loading, onSend, onStop, deepThinkEnabled, uploadFileEnabled, setSelectedExcel, conv, onToggleDeepThink, onToggleUploadFile,
+  ({ loading, onSend, onStop, deepThinkEnabled, uploadFileEnabled, setSelectedExcel, selectedExcel, conv, ensureConv, onToggleDeepThink, onToggleUploadFile,
     spaceId,
     semanticGroups = [], semanticGroupSchemas, selectedData, onSelectData, semLoading, expandedSemGroups, onToggleSemGroup,
     externalValue, onExternalValueConsumed
@@ -201,15 +205,27 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => { setValue(e.target.value); }, []);
     const handleTranscribed = useCallback((text: string) => { setValue(text); }, []);
 
-    const handleUploadBtnClick = useCallback(() => {
+    const handleUploadBtnClick = useCallback(async () => {
+      // 上传需要 conv_uid，若当前无会话（如欢迎页）则先创建会话
+      if (!conv?.conv_uid && ensureConv) {
+        const created = await ensureConv();
+        if (!created?.conv_uid) {
+          message.error('会话创建失败，无法上传文件');
+          return;
+        }
+      }
       onToggleUploadFile();
       setUploadFileVisible(true);
-    }, [onToggleUploadFile]);
+    }, [conv, ensureConv, onToggleUploadFile]);
 
     const handleUploadOk = (file: any) => {
       setSelectedExcel?.(file);
       setUploadFileVisible(false);
       onToggleUploadFile();
+    };
+
+    const handleRemoveExcel = () => {
+      setSelectedExcel?.(null);
     };
 
     const handleUploadClose = useCallback(() => {
@@ -397,7 +413,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     );
 
     return (
-      <div className="chat-input-glass" style={{ overflow: 'visible' }}>
+      <div className="chat-input-glass">
         {/* Textarea area */}
         <div style={{ padding: '16px 18px 8px' }}>
           <Input.TextArea
@@ -420,8 +436,34 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           />
         </div>
 
+        {/* Selected Excel tag */}
+        {selectedExcel?.file_id && selectedExcel?.file_name && (
+          <div style={{ padding: '0 18px 6px' }}>
+            <FileTag
+              fileId={selectedExcel.file_id}
+              fileName={selectedExcel.file_name}
+              onClose={handleRemoveExcel}
+              showDownloadIcon={false}
+              backgroundColor="rgba(255,255,255,0.5)"
+              textColor="var(--ink-2)"
+              style={{
+                backdropFilter: 'blur(8px)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-xs)',
+              }}
+            />
+          </div>
+        )}
+
         {/* Toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 10px', gap: 6 }}>
+          {/* + (upload dropdown) */}
+          <Dropdown menu={{ items: plusMenuItems }} trigger={['click']} placement="topLeft">
+            <button type="button" className="input-label-btn" title="更多操作">
+              <PlusOutlined style={{ fontSize: 14 }} />
+            </button>
+          </Dropdown>
+
           {/* 数据选择 Popover */}
           <Popover content={semanticPopoverContent} trigger="click" placement="topLeft" open={semDropdownOpen} onOpenChange={setSemDropdownOpen}>
             <button type="button" className={`input-label-btn ${semDropdownOpen ? 'active' : ''}`} title="选择数据">
@@ -432,13 +474,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               <DownOutlined style={{ fontSize: 9, transition: 'transform 0.2s', transform: semDropdownOpen ? 'rotate(180deg)' : 'none' }} />
             </button>
           </Popover>
-
-          {/* + (upload dropdown) */}
-          <Dropdown menu={{ items: plusMenuItems }} trigger={['click']} placement="topLeft">
-            <button type="button" className="input-label-btn" title="更多操作">
-              <PlusOutlined style={{ fontSize: 14 }} />
-            </button>
-          </Dropdown>
 
           {/* 交互 (mode switcher dropdown) */}
           <Dropdown menu={{ items: modeMenuItems }} trigger={['click']} placement="topLeft">

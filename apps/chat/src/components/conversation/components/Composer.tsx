@@ -63,7 +63,7 @@ const Composer = ({
           confirmVisible={confirmVisible}
         />
       ) : (
-        <div className="w-[53.75rem] m-auto">
+        <div className="max-w-[53.75rem] w-full m-auto">
           <div className="mb-2">
             {selectedExcel.file_id && (
               <FileTag fileId={selectedExcel.file_id} fileName={selectedExcel.file_name} onClose={onRemoveExcel} />

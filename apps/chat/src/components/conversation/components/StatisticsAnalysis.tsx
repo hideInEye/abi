@@ -11,10 +11,8 @@ import {
   BulbOutlined,
   FunnelPlotOutlined,
   FundOutlined,
-  DashboardOutlined,
-  LineChartOutlined,
   CopyOutlined,
-  MoreOutlined,
+  ReloadOutlined,
   FileTextOutlined,
   SnippetsOutlined,
 } from '@ant-design/icons';
@@ -24,8 +22,7 @@ interface Props {
   onPredictClick: () => void;
   onReferenceClick?: () => void;
   onQaClick?: () => void;
-  onDimensionClick?: () => void;
-  onIndexClick?: () => void;
+  onRegenerateClick?: () => void;
   onVoteChange: (payload: any) => void;
   chatMode: string;
   feedback: any;
@@ -39,8 +36,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
   onReferenceClick,
   onPredictClick,
   onQaClick,
-  onDimensionClick,
-  onIndexClick,
+  onRegenerateClick,
   feedback,
   content = ''
 }) => {
@@ -48,7 +44,8 @@ const StatisticsAnalysis: React.FC<Props> = ({
   const showReferenceButton = getModulesByChatMode(chatMode, ModulesMap[8]); // 是否显示引用按钮
   const showAttributionButton = getModulesByChatMode(chatMode, ModulesMap[12]); // 是否显示归因分析按钮
   const showPredictButton = getModulesByChatMode(chatMode, ModulesMap[13]); // 是否显示预测分析按钮
-  const showRecommend = getModulesByChatMode(chatMode, ModulesMap[9]); // 是否展示推荐问题、推荐维度、推荐指标
+  const showRecommend = getModulesByChatMode(chatMode, ModulesMap[9]); // 是否展示推荐问题
+  const showRegenerate = chatMode === 'chat_with_db_execute' || chatMode === 'chat_excel'; // 是否显示重新生成按钮
 
   // 内部状态管理
   const [localFeedback, setLocalFeedback] = useState({});
@@ -59,39 +56,54 @@ const StatisticsAnalysis: React.FC<Props> = ({
     setLocalFeedback(feedback);
   }, [feedback]);
   
-  // 判断是否可操作
-  const canOperate = () => {
-    if (Object.keys(feedback).length === 0) return true;
-    return feedback.status === '2';
+  // 从 feedback 中解析反馈状态值：0=无评价, 1=点赞, -1=点踩
+  // 兼容两种来源：
+  //   1) 历史列表接口的 feedbackStatus（数字/字符串）
+  //   2) 点击后本地构造的对象 { status, eval_user }
+  const getFeedbackStatus = (fb: any): number => {
+    if (fb === null || fb === undefined || fb === '') return 0;
+    if (typeof fb === 'number') return fb;
+    if (typeof fb === 'string') {
+      const n = Number(fb);
+      return Number.isNaN(n) ? 0 : n;
+    }
+    if (typeof fb === 'object') {
+      if (fb.status !== undefined && fb.status !== null && fb.status !== '') {
+        const n = Number(fb.status);
+        if (!Number.isNaN(n)) return n;
+      }
+      if (fb.eval_user === '0') return 1;
+      if (fb.eval_user === '1') return -1;
+    }
+    return 0;
   };
 
+  // 判断是否可操作（已评价仍可在赞/踩之间切换）
+  const canOperate = () => true;
+
   // 判断是否已点赞
-  const hasLiked = () => {
-    if (Object.keys(feedback).length === 0) return false;
-    return feedback.eval_user === '0';
-  };
-  
+  const hasLiked = () => getFeedbackStatus(feedback) === 1;
+
   // 判断是否已点踩
-  const hasDisliked = () => {
-    if (Object.keys(feedback).length === 0) return false;
-    return feedback.eval_user === '1';
-  };
+  const hasDisliked = () => getFeedbackStatus(feedback) === -1;
 
   const handleVote = async (value: '0' | '1') => {
     if (!canOperate() || loading) return;
     
     setLoading(true);
     try {
+      // status: 0=无评价, 1=点赞, -1=点踩
       const payload = {
         fb_id: feedback?.fb_id || null,
-        eval_user: value
+        eval_user: value,
+        status: value === '0' ? 1 : -1,
       };
       
       onVoteChange && onVoteChange(payload);
     } catch (error) {
       console.error('操作失败:', error);
       // 可添加错误提示
-    } finally {
+    } finally { 
       setLoading(false);
     }
   };
@@ -174,50 +186,6 @@ const StatisticsAnalysis: React.FC<Props> = ({
     },
   ];
 
-  // 更多操作下拉菜单
-  const moreMenuItems: MenuProps['items'] = [
-    ...(showRecommend ? [{
-      key: 'dimension',
-      label: (
-        <span className="flex items-center gap-2">
-          <DashboardOutlined />
-          推荐维度
-        </span>
-      ),
-      onClick: onDimensionClick,
-    }] : []),
-    ...(showRecommend ? [{
-      key: 'index',
-      label: (
-        <span className="flex items-center gap-2">
-          <LineChartOutlined />
-          推荐指标
-        </span>
-      ),
-      onClick: onIndexClick,
-    }] : []),
-    ...(showAttributionButton ? [{
-      key: 'attribution',
-      label: (
-        <span className="flex items-center gap-2">
-          <FunnelPlotOutlined />
-          归因分析
-        </span>
-      ),
-      onClick: onAttributionClick,
-    }] : []),
-    ...(showPredictButton ? [{
-      key: 'predict',
-      label: (
-        <span className="flex items-center gap-2">
-          <FundOutlined />
-          预测分析
-        </span>
-      ),
-      onClick: onPredictClick,
-    }] : []),
-  ];
-
   const renderLikeButtons = () => {
     if (!showLikeButton) return null;
     
@@ -252,7 +220,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
       {/* 操作栏 - 左对齐 */}
       <div className="action-bar">
         <div className="action-bar-left">
-          {/* 复制按钮 */}
+          {/* 复制 */}
           <Dropdown menu={{ items: copyMenuItems }} trigger={['click']} placement="topLeft">
             <Tooltip title="复制">
               <span className="action-icon">
@@ -264,6 +232,15 @@ const StatisticsAnalysis: React.FC<Props> = ({
           {/* 点赞、点踩 */}
           {renderLikeButtons()}
 
+          {/* 重新生成 */}
+          {showRegenerate && (
+            <Tooltip title="重新生成">
+              <span className="action-icon" onClick={onRegenerateClick}>
+                <ReloadOutlined />
+              </span>
+            </Tooltip>
+          )}
+
           {/* 推荐问题 */}
           {showRecommend && (
             <Tooltip title="推荐问题">
@@ -273,15 +250,22 @@ const StatisticsAnalysis: React.FC<Props> = ({
             </Tooltip>
           )}
 
-          {/* 更多操作 */}
-          {moreMenuItems && moreMenuItems.length > 0 && (
-            <Dropdown menu={{ items: moreMenuItems }} trigger={['click']} placement="topLeft">
-              <Tooltip title="更多">
-                <span className="action-icon">
-                  <MoreOutlined />
-                </span>
-              </Tooltip>
-            </Dropdown>
+          {/* 归因分析 */}
+          {showAttributionButton && (
+            <Tooltip title="归因分析">
+              <span className="action-icon" onClick={onAttributionClick}>
+                <FunnelPlotOutlined />
+              </span>
+            </Tooltip>
+          )}
+
+          {/* 预测分析 */}
+          {showPredictButton && (
+            <Tooltip title="预测分析">
+              <span className="action-icon" onClick={onPredictClick}>
+                <FundOutlined />
+              </span>
+            </Tooltip>
           )}
         </div>
       </div>
