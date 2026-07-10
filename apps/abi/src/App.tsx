@@ -10,6 +10,7 @@ import { localStg } from '@/utils/storage';
 
 import AppProvider from './components/stateful/AppProvider';
 import GlobalLoading from './components/stateful/GlobalLoading';
+import GlobalLoadingContainer from './components/stateless/common/GlobalLoadingContainer';
 import TableEmpty from './components/stateless/common/TableEmpty';
 import { antdLocales } from './locales/antd';
 
@@ -65,7 +66,7 @@ const App = () => {
         >
           <GlobalLoading />
           <RouterProvider
-            fallback={null}
+            fallback={<GlobalLoadingContainer />}
             router={router}
           />
         </AWatermark>

@@ -19,6 +19,7 @@ import { getCurrentUserName } from '@/utils/layout'
 
 const { Content, Sider } = Layout
 const appLogoUrl = new URL('../../assets/imgs/home_logo.png', import.meta.url).href
+const ROUTE_LOADING_MIN_DURATION = 420
 
 export const Route = createFileRoute('/chat')({
   component: ChatWorkbenchLayout,
@@ -31,6 +32,7 @@ function ChatWorkbenchLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const [showSkillStore, setShowSkillStore] = useState(false)
+  const [routeLoading, setRouteLoading] = useState(true)
   const prevPathnameRef = useRef(pathname)
 
   const userName = useMemo(() => getCurrentUserName(), [])
@@ -48,6 +50,29 @@ function ChatWorkbenchLayout() {
   useEffect(() => {
     document.title = pageTitle
   }, [pageTitle])
+
+  useEffect(() => {
+    if (showSkillStore) {
+      setRouteLoading(false)
+      return
+    }
+
+    setRouteLoading(true)
+
+    let frameId = 0
+    const timerId = window.setTimeout(() => {
+      frameId = window.requestAnimationFrame(() => {
+        setRouteLoading(false)
+      })
+    }, ROUTE_LOADING_MIN_DURATION)
+
+    return () => {
+      window.clearTimeout(timerId)
+      if (frameId) {
+        window.cancelAnimationFrame(frameId)
+      }
+    }
+  }, [pathname, showSkillStore])
 
   /* 3. Auto-close skill store when user navigates to a conversation */
   useEffect(() => {
@@ -145,14 +170,26 @@ function ChatWorkbenchLayout() {
       </Sider>
 
       <Layout className="min-w-0" style={{ background: 'transparent' }}>
-        <Content className="content-glass h-full min-h-0 overflow-hidden">
+        <Content className="content-glass h-full min-h-0 overflow-hidden relative">
           {showSkillStore ? (
             <SkillStoreView onBack={handleBackFromSkillStore} />
           ) : (
             <Outlet />
           )}
+          {routeLoading && !showSkillStore && <ChatRouteLoading />}
         </Content>
       </Layout>
     </Layout>
+  )
+}
+
+function ChatRouteLoading() {
+  return (
+    <div className="chat-route-loading" role="status" aria-label="加载中">
+      <div className="chat-route-loading__inner">
+        <div className="chat-route-loading__spinner" />
+        <span className="chat-route-loading__text">加载中...</span>
+      </div>
+    </div>
   )
 }
