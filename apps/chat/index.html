@@ -5,9 +5,48 @@
     <link rel="icon" type="image/png" href="abi_logo.png?v=20260525" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>芯智ABI</title>
+    <style>
+      html,
+      body,
+      #root {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      .chat-startup-loading {
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #d5daf5 0%, #dfe6f8 45%, #e2d9f3 100%);
+      }
+
+      .chat-startup-loading__spinner {
+        width: 42px;
+        height: 42px;
+        border: 3px solid rgba(91, 124, 247, 0.18);
+        border-top-color: #5b7cf7;
+        border-radius: 50%;
+        animation: chat-startup-spin 0.8s linear infinite;
+      }
+
+      @keyframes chat-startup-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="chat-startup-loading" aria-label="加载中">
+        <div class="chat-startup-loading__spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
