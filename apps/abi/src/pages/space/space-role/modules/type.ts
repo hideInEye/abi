@@ -10,6 +10,7 @@ export interface ModulesProps {
         }
       | Key[],
   ) => void
+  open?: boolean
   treeData: DataNode[]
-  value?: number[] // 添加这个属性
+  value?: Key[] // 添加这个属性
 }

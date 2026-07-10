@@ -45,7 +45,7 @@ export interface GroupProps {
     inputPlaceholderEn?: string;
     modalAddTitle: string;
     modalEditTitle: string;
-    panelTitle: string;
+    panelTitle?: string;
     remark?: string;
     rule: any[];
     type: TableSemanticsGroupType;
@@ -225,7 +225,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       <div className="group-panel">
         <div className="group-header">
           <div className="group-header-title">
-            {config.panelTitle}
+            分组目录
             <Tooltip title="添加组">
               <div className="group-add-btn" onClick={(e) => handleAddGroup(e as any)}>
                 <PlusOutlined />
