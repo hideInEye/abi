@@ -236,20 +236,26 @@
 
 /* Space Picker Dropdown (unified with chat side) */
 .space-picker-panel {
-  width: 320px;
+  width: 380px;
   max-width: calc(100vw - 32px);
-  padding: 12px;
+  padding: 0;
+  overflow: hidden;
   background: rgba(252, 253, 255, 0.97);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(130, 140, 200, 0.12);
   border-radius: 14px;
   box-shadow: 0 12px 36px rgba(15, 23, 42, 0.10);
 }
+.space-picker-top {
+  padding: 14px 16px 12px;
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.05), rgba(139, 92, 246, 0.05));
+  border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+}
 .space-picker-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 4px 10px;
+  padding: 0 2px 10px;
 }
 .space-picker-title {
   font-size: 14px;
@@ -268,9 +274,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  background: rgba(130, 140, 200, 0.06);
+  height: 35px;
+  padding: 0 12px;
+  margin-bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(130, 140, 200, 0.15);
   border-radius: 10px;
 }
@@ -281,12 +288,15 @@
 .space-picker-search-input {
   flex: 1;
   min-width: 0;
+  height: 100%;
   border: none;
   outline: none;
   background: transparent;
   font-size: 13px;
+  line-height: 20px;
   color: #3e5068;
   font-family: inherit;
+  padding: 0;
 }
 .space-picker-search-input::placeholder {
   color: #a3b3c8;
@@ -297,6 +307,19 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding: 8px 12px 8px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(130, 140, 200, 0.30) transparent;
+}
+.space-picker-list::-webkit-scrollbar {
+  width: 6px;
+}
+.space-picker-list::-webkit-scrollbar-thumb {
+  background: rgba(130, 140, 200, 0.30);
+  border-radius: 4px;
+}
+.space-picker-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 .space-picker-item {
   display: flex;
@@ -334,7 +357,7 @@
 .space-picker-avatar--sm {
   width: 22px;
   height: 22px;
-  border-radius: 7px;
+  border-radius: 50%;
   font-size: 11px;
 }
 .space-picker-item-main {

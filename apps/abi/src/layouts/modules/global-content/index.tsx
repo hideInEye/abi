@@ -27,14 +27,10 @@ const SPACE_AVATAR_COLORS = [
   { bg: 'linear-gradient(135deg, #06b6d4, #0ea5e9)', shadow: 'rgba(6,182,212,0.35)' },
 ];
 
-function getSpaceColor(name: string) {
-  let hash = 0;
-  const value = name || '';
-  for (let i = 0; i < value.length; i++) {
-    hash = (hash << 5) - hash + value.charCodeAt(i);
-    hash |= 0;
-  }
-  return SPACE_AVATAR_COLORS[Math.abs(hash) % SPACE_AVATAR_COLORS.length];
+// 按列表顺序取色，保证相邻空间不撞色
+function getSpaceColorByIndex(index: number) {
+  const len = SPACE_AVATAR_COLORS.length;
+  return SPACE_AVATAR_COLORS[((index % len) + len) % len];
 }
 
 function getSpaceInitial(name: string) {
@@ -297,25 +293,28 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
                 trigger={['click']}
                 dropdownRender={() => (
                   <div className="space-picker-panel">
-                    <div className="space-picker-header">
-                      <span className="space-picker-title">选择工作空间</span>
-                      <span className="space-picker-count">{spaceOptions.length} 个空间</span>
-                    </div>
-                    <div className="space-picker-search">
-                      <SearchOutlined className="space-picker-search-icon" />
-                      <input
-                        className="space-picker-search-input"
-                        placeholder="搜索空间..."
-                        value={spaceSearch}
-                        onChange={(e) => setSpaceSearch(e.target.value)}
-                      />
+                    <div className="space-picker-top">
+                      <div className="space-picker-header">
+                        <span className="space-picker-title">选择工作空间</span>
+                        <span className="space-picker-count">{spaceOptions.length} 个空间</span>
+                      </div>
+                      <div className="space-picker-search">
+                        <SearchOutlined className="space-picker-search-icon" />
+                        <input
+                          className="space-picker-search-input"
+                          placeholder="搜索空间..."
+                          value={spaceSearch}
+                          onChange={(e) => setSpaceSearch(e.target.value)}
+                        />
+                      </div>
                     </div>
                     <Spin spinning={!curspaceList}>
                       <div className="space-picker-list">
                         {filteredSpaceOptions.length ? (
                           filteredSpaceOptions.map((space: any) => {
                             const isActive = space.value === currentSpace;
-                            const color = getSpaceColor(space.label);
+                            const realIndex = spaceOptions.findIndex((s: any) => s.value === space.value);
+                            const color = getSpaceColorByIndex(realIndex >= 0 ? realIndex : 0);
                             return (
                               <button
                                 type="button"
@@ -360,7 +359,7 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
                 <div className="abi-space-trigger">
                   <span
                     className="space-picker-avatar space-picker-avatar--sm"
-                    style={{ background: getSpaceColor(currentSpaceName || '').bg }}
+                    style={{ background: getSpaceColorByIndex(Math.max(spaceOptions.findIndex((s: any) => s.value === currentSpace), 0)).bg }}
                   >
                     {getSpaceInitial(currentSpaceName || '')}
                   </span>
