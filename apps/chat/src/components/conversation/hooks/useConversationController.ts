@@ -819,10 +819,10 @@ export const useConversationController = (
       params.context.extra.semantic_group_name = _meta?.groupName || ''
       params.context.extra.semantic_name = _meta?.semanticName || ''
       if (hasExcel) {
-        params.context.extra.file_id = activeExcel.file_id
-        params.context.extra.file_name = activeExcel.file_name
+        params.context.extra.excel_file_id = activeExcel.file_id
+        params.context.extra.excel_file_name = activeExcel.file_name
       } else {
-        const { file_id, file_name, ...restExtra } = params.context.extra
+        const { excel_file_id, excel_file_name, ...restExtra } = params.context.extra
         params.context.extra = restExtra
       }
     }
@@ -841,8 +841,7 @@ export const useConversationController = (
       role: 'human',
       id: Date.now(),
       order: tempUserId,
-      roundIndex: tempUserId,
-      _groupName: _meta?.groupName,
+      roundIndex: tempUserId, 
       _semanticName: _meta?.semanticName,
       _semanticSchemaId: _meta?.semanticSchemaId,
     }

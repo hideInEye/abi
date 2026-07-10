@@ -20,14 +20,10 @@ const SPACE_AVATAR_COLORS = [
   { bg: 'linear-gradient(135deg, #06b6d4, #0ea5e9)', shadow: 'rgba(6,182,212,0.35)' },
 ]
 
-function getSpaceColor(name: string) {
-  let hash = 0
-  const value = name || ''
-  for (let i = 0; i < value.length; i++) {
-    hash = (hash << 5) - hash + value.charCodeAt(i)
-    hash |= 0
-  }
-  return SPACE_AVATAR_COLORS[Math.abs(hash) % SPACE_AVATAR_COLORS.length]
+// 按列表顺序取色，保证相邻空间不撞色
+function getSpaceColorByIndex(index: number) {
+  const len = SPACE_AVATAR_COLORS.length
+  return SPACE_AVATAR_COLORS[((index % len) + len) % len]
 }
 
 function getSpaceInitial(name: string) {
@@ -151,12 +147,13 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
       )
 
       onSpaceChanged?.(space)
-      await navigate({ to: '/chat/' })
+      await navigate({ to: '/chat' })
     },
     [navigate, onSpaceChanged],
   )
 
-  const currentColor = getSpaceColor(currentSpace?.spaceName || '')
+  const currentIndex = spaceList.findIndex((space) => space.spaceId === selectedSpaceId)
+  const currentColor = getSpaceColorByIndex(Math.max(currentIndex, 0))
   const triggerNode = (
     <div
       className="space-switcher-glass"
@@ -191,25 +188,28 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
         placement="bottomRight"
         dropdownRender={() => (
           <div className="space-picker-panel">
-            <div className="space-picker-header">
-              <span className="space-picker-title">选择工作空间</span>
-              <span className="space-picker-count">{spaceList.length} 个空间</span>
-            </div>
-            <div className="space-picker-search">
-              <SearchOutlined className="space-picker-search-icon" />
-              <input
-                className="space-picker-search-input"
-                placeholder="搜索空间..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-              />
+            <div className="space-picker-top">
+              <div className="space-picker-header">
+                <span className="space-picker-title">选择工作空间</span>
+                <span className="space-picker-count">{spaceList.length} 个空间</span>
+              </div>
+              <div className="space-picker-search">
+                <SearchOutlined className="space-picker-search-icon" />
+                <input
+                  className="space-picker-search-input"
+                  placeholder="搜索空间..."
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                />
+              </div>
             </div>
             <Spin spinning={loading}>
               <div className="space-picker-list">
                 {filteredSpaceList.length ? (
                   filteredSpaceList.map((space) => {
                     const isActive = space.spaceId === selectedSpaceId
-                    const color = getSpaceColor(space.spaceName)
+                    const realIndex = spaceList.findIndex((s) => s.spaceId === space.spaceId)
+                    const color = getSpaceColorByIndex(realIndex >= 0 ? realIndex : 0)
                     return (
                       <button
                         type="button"
