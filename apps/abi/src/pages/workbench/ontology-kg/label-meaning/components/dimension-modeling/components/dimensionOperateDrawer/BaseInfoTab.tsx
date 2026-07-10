@@ -1,6 +1,8 @@
+import { ApartmentOutlined, InfoCircleOutlined, LinkOutlined, ProfileOutlined, TeamOutlined } from '@ant-design/icons'
 import React from 'react'
 
 import { TableSemantics } from '@/components/tableSemantics'
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
 import {
   DIMENSION_CATEGORY_OPTIONS,
@@ -59,7 +61,7 @@ export const BaseInfoTab: React.FC<Props> = ({
 
   return (
     <>
-      <div className="mb-4 text-lg font-semibold">基础信息</div>
+      <OntologyFormSectionTitle icon={<ProfileOutlined />}>基础信息</OntologyFormSectionTitle>
       <div className="grid grid-cols-2 gap-x-4">
         <AForm.Item
           label="中文名"
@@ -127,7 +129,7 @@ export const BaseInfoTab: React.FC<Props> = ({
         </AForm.Item>
       </div>
 
-      <div className="mb-4 text-lg font-semibold">语义来源</div>
+      <OntologyFormSectionTitle icon={<LinkOutlined />}>语义来源</OntologyFormSectionTitle>
       <TableSemantics
         form={form}
         getSchemaId={getSchemaId}
@@ -138,7 +140,7 @@ export const BaseInfoTab: React.FC<Props> = ({
       />
 
       <div className="mb-3 mt-2 flex items-center justify-between">
-        <div className="text-lg font-semibold">关联字段</div>
+        <OntologyFormSectionTitle className="!mb-0" icon={<ApartmentOutlined />}>关联字段</OntologyFormSectionTitle>
         <AButton
           size="small"
           type="primary"
@@ -222,7 +224,7 @@ export const BaseInfoTab: React.FC<Props> = ({
         />
       </AForm.Item>
 
-      <div className="mb-4 mt-6 text-lg font-semibold">管理信息</div>
+      <OntologyFormSectionTitle icon={<TeamOutlined />}>管理信息</OntologyFormSectionTitle>
       <div className="grid grid-cols-2 gap-x-4">
         <AForm.Item
           label="维度责任人 (dim_owner)"
@@ -249,7 +251,7 @@ export const BaseInfoTab: React.FC<Props> = ({
         </AForm.Item>
       </div>
 
-      <div className="mb-4 mt-6 text-lg font-semibold">说明信息</div>
+      <OntologyFormSectionTitle icon={<InfoCircleOutlined />}>说明信息</OntologyFormSectionTitle>
       <AForm.Item
         label="别名"
         name="alias"

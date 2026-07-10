@@ -8,6 +8,7 @@ import type { OntologyGraphEdge, OntologyGraphNode } from '@/pages/workbench/ont
 import type { GraphSelection } from '../types'
 
 interface OntologyGraphCanvasProps {
+  readonly backgroundColor?: string
   readonly degreeMap: Record<string, number>
   readonly emptyDescription?: string
   readonly edges: OntologyGraphEdge[]
@@ -194,7 +195,7 @@ function setEdgeVisualState(edge: Edge, selected: boolean, hovered: boolean): vo
   edge.setLabelAt(0, createRelationLabel(relation, selected, hovered))
 }
 
-export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ degreeMap, emptyDescription, edges, nodes, onSelect, selection }) => {
+export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgroundColor = 'var(--abi-card-bg)', degreeMap, emptyDescription, edges, nodes, onSelect, selection }) => {
   const canvasShellRef = useRef<HTMLDivElement | null>(null)
   const hostRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -257,7 +258,7 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ degree
     const initialHeight = Math.max(host.clientHeight, 1)
 
     const graph = new Graph({
-      background: { color: '#F8FAFC' },
+      background: { color: 'transparent' },
       container,
       grid: { args: { color: '#E7ECF4', thickness: 3 }, type: 'dot', visible: true },
       height: initialHeight,
@@ -317,7 +318,7 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ degree
       graph.dispose()
       if (graphRef.current === graph) graphRef.current = null
     }
-  }, [])
+  }, [backgroundColor])
 
   useEffect(() => {
     const graph = graphRef.current
@@ -419,7 +420,7 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ degree
   const noGraphRelations = edges.length === 0
 
   return (
-    <div ref={canvasShellRef} className={`relative isolate w-full overflow-hidden bg-slate-50 ${isFullscreen ? 'h-screen min-h-screen' : 'h-full min-h-500px'}`}>
+    <div ref={canvasShellRef} className={`relative isolate w-full overflow-hidden ${isFullscreen ? 'h-screen min-h-screen' : 'h-full min-h-500px'}`} style={{ background: backgroundColor }}>
       <div ref={hostRef} className="relative h-full min-h-500px w-full">
         <div ref={containerRef} className="absolute inset-0 h-full w-full" />
       </div>

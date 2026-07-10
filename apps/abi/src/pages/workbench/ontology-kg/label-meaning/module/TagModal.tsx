@@ -1,10 +1,11 @@
-import { CloseOutlined } from '@ant-design/icons'
+import { TagsOutlined } from '@ant-design/icons'
 import { Form, Input } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React from 'react'
 
 import { TableSemantics } from '@/components/tableSemantics'
 import ExpressionBuilder from '@/pages/workbench/ontology-kg/label-meaning/components/semantic-tag/Expr.tsx'
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types/index.js'
 
 import { TagInput } from '../components/semantic-tag/Model/TagInput.tsx'
@@ -130,6 +131,7 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
       onClose={handleModalCancel}
     >
       <AForm className="mt-5 ds-form-section" form={form} initialValues={formInitData || {}} layout="vertical">
+        <OntologyFormSectionTitle icon={<TagsOutlined />}>基础信息</OntologyFormSectionTitle>
         <TableSemantics form={form} getSchemaId={getSchemaId} getSchemaOptions={getSchemaOptions} isEdit={Boolean(editingGroup)} type="shema" />
         <TagInput />
         <AForm.Item

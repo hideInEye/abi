@@ -1,6 +1,8 @@
-import { MinusOutlined, PlusOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, FilterOutlined, MinusOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons'
 import type { FormInstance } from 'antd'
 import React from 'react'
+
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
 import { DATA_FREQUENCY_OPTIONS, DERIVED_LOGIC_OPTIONS, DERIVED_OPERATOR_OPTIONS } from '../constants/metricModeling.constants'
 import type { KnowledgeDerivedCondition, KnowledgeDerivedExpression, KnowledgeFormValues, KnowledgeTechField } from '../types/metricModeling.types'
@@ -193,21 +195,7 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
   return (
     <>
       <div className="mb-4 border border-gray-200 rounded p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <span className="text-base font-semibold">业务限定表达式</span>
-          <AButton
-            size="small"
-            type="primary"
-            onClick={() => {
-              const current = (form.getFieldValue('derivedExpressions') || []) as KnowledgeDerivedExpression[]
-              form.setFieldValue('derivedExpressions', [...current, createDefaultExpression()])
-            }}
-          >
-            新增表达式
-          </AButton>
-        </div>
-
-        <div className="mb-3 text-sm font-semibold">表达式定义</div>
+        <OntologyFormSectionTitle icon={<ProfileOutlined />}>表达式定义</OntologyFormSectionTitle>
         <AForm.List name="derivedExpressions">
           {(expressionFields, { add: addExpression, remove: removeExpression }) => (
             <div className="flex flex-col gap-4">
@@ -262,18 +250,16 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
                 </div>
               ))}
 
-              {expressionFields.length === 0 ? (
-                <AButton icon={<PlusOutlined />} onClick={() => addExpression(createDefaultExpression())}>
-                  新增表达式
-                </AButton>
-              ) : null}
+              <AButton icon={<PlusOutlined />} onClick={() => addExpression(createDefaultExpression())}>
+                新增表达式
+              </AButton>
             </div>
           )}
         </AForm.List>
       </div>
 
       <div className="mb-4 border border-gray-200 rounded bg-gray-50 p-4">
-        <div className="mb-3 text-base font-semibold">派生逻辑生成结果</div>
+        <OntologyFormSectionTitle icon={<CheckCircleOutlined />}>派生逻辑生成结果</OntologyFormSectionTitle>
         <div className="mb-3 flex flex-wrap gap-2">
           <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">原子指标：{result.metricLabel}</span>
           <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">数据频度：{result.frequencyLabel}</span>

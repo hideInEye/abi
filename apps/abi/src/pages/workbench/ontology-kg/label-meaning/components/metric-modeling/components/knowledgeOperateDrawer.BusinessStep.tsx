@@ -1,4 +1,7 @@
+import { BarChartOutlined, ProfileOutlined, TagsOutlined, TeamOutlined } from '@ant-design/icons'
 import React from 'react'
+
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
 import { DATA_FREQUENCY_OPTIONS, INDICATOR_TYPE_OPTIONS, KNOWLEDGE_DATA_TYPE_OPTIONS, QUALITY_LEVEL_OPTIONS, STATUS_OPTIONS } from '../constants/metricModeling.constants'
 
@@ -21,10 +24,10 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
 
   return (
     <>
-      <div className="mb-4 text-lg font-semibold">一、业务属性</div>
+      <OntologyFormSectionTitle icon={<ProfileOutlined />}>一、业务属性</OntologyFormSectionTitle>
 
       <div className="mb-4 border border-gray-200 rounded bg-white p-4">
-        <div className="mb-3 text-base font-semibold">基础信息</div>
+        <OntologyFormSectionTitle icon={<ProfileOutlined />}>基础信息</OntologyFormSectionTitle>
         <div className="grid grid-cols-2 gap-x-4">
           <AForm.Item required label="指标名称" name="techName" rules={[{ validator: validateIndicatorName }]}>
             <AInput disabled={indicatorNameDisabled} placeholder="请输入指标名称" />
@@ -39,7 +42,7 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
       </div>
 
       <div className="mb-4 border border-gray-200 rounded bg-white p-4">
-        <div className="mb-3 text-base font-semibold">统计属性</div>
+        <OntologyFormSectionTitle icon={<BarChartOutlined />}>统计属性</OntologyFormSectionTitle>
         <div className="grid grid-cols-2 gap-x-4">
           <AForm.Item label="数据频度" name="updateFrequency" rules={[{ message: '请选择数据频度', required: true }]}>
             <ASelect options={DATA_FREQUENCY_OPTIONS} placeholder="请选择数据频度" />
@@ -57,7 +60,7 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
       </div>
 
       <div className="mb-4 border border-gray-200 rounded bg-white p-4">
-        <div className="mb-3 text-base font-semibold">管理信息</div>
+        <OntologyFormSectionTitle icon={<TeamOutlined />}>管理信息</OntologyFormSectionTitle>
         <div className="grid grid-cols-2 gap-x-4">
           <AForm.Item label="负责人" name="indicatorOwner">
             <AInput placeholder="请输入负责人" />
@@ -78,7 +81,7 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
       </div>
 
       <div className="mb-4 border border-gray-200 rounded bg-white p-4">
-        <div className="mb-3 text-base font-semibold">语义信息</div>
+        <OntologyFormSectionTitle icon={<TagsOutlined />}>语义信息</OntologyFormSectionTitle>
         <AForm.Item extra="用于 ChatBI 对业务术语的识别与召回" label="指标别名" name="indAlias" rules={[{ validator: validateAliasTags }]}>
           <ASelect mode="tags" open={false} placeholder="输入后按回车生成标签" tokenSeparators={[',']} />
         </AForm.Item>

@@ -20,7 +20,7 @@ export default defineConfig({
                 changeOrigin: true,
             },
             '^/chat-proxy/.*': {
-                target: 'https://192.168.1.251',
+                target: 'https://192.168.1.195',
                 changeOrigin: true,
                 secure: false,
             }

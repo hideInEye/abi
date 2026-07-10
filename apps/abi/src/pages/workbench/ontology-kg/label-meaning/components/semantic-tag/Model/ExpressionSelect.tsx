@@ -1,5 +1,7 @@
-import { MinusOutlined, PlusOutlined } from '@ant-design/icons';
+import { MinusOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
+
+import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle';
 
 import { inequalityOptions, letters, logicalOperators } from '../../../constants/index.ts';
 import type { IAllFields } from '../../../types/index.ts';
@@ -96,7 +98,7 @@ export function ExpressionSelect({ allFields, expList, form, LogicalOperatorsPos
 
   return (
     <>
-      <h3 className="my-5 font-bold">字段表达式</h3>
+      <OntologyFormSectionTitle icon={<ProfileOutlined />}>字段表达式</OntologyFormSectionTitle>
       <div className="grid grid-cols-1 gap-2">
         {expression.map((item, expressionIndex) => (
           <ASpace key={expressionIndex}>
