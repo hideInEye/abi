@@ -21,17 +21,6 @@ const configPath = `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}config.json`
 let root: ReturnType<typeof createRoot> | null = null
 let configAbortController: AbortController | null = null
 
-function showStartupLoading() {
-  const containerEl = document.getElementById('root')
-  if (!containerEl || containerEl.hasChildNodes()) return
-
-  containerEl.innerHTML = `
-    <div class="chat-startup-loading" aria-label="加载中">
-      <div class="chat-startup-loading__spinner"></div>
-    </div>
-  `
-}
-
 function mountApp() {
   syncBootParamsFromUrl()
 
@@ -52,7 +41,6 @@ function mountApp() {
 }
 
 function render() {
-  showStartupLoading()
 
   // 取消上一轮（防止快速 mount/unmount 或重复 mount 时泄漏/竞态）
   configAbortController?.abort()

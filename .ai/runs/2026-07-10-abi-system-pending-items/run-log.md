@@ -12,12 +12,13 @@
 
 ## 需求摘要
 
-处理 2026-07-09 ABI 系统待完成事项：入口/跳转加载空白、分组组件标题、滚动条颜色统一、空间角色管理角色弹窗首次打开树层级展示不完整。
+处理 2026-07-09 ABI 系统待完成事项：chat 对话界面入口/跳转加载空白、ABI 分组组件标题、ABI 滚动条颜色统一、空间角色管理角色弹窗首次打开树层级展示不完整。
+
+> 2026-07-10 修正：第 1 条“跳转到对话界面短暂空白”归属 `apps/chat`，不应修改 ABI 入口 HTML 或 ABI Router fallback。已在后续修正中撤回 ABI 入口 loading 相关改动。
 
 ## 影响范围
 
-- ABI 入口与路由 fallback：`apps/abi/index.html`、`apps/abi/src/App.tsx`
-- 对话子应用入口加载：`apps/chat/src/main.tsx`、`apps/chat/src/index.css`
+- 对话子应用入口加载：`apps/chat/index.html`、`apps/chat/src/main.tsx`、`apps/chat/src/index.css`
 - ABI 分组组件：`apps/abi/src/components/stateful/group/Group.tsx`、`group.scss`
 - 全局/菜单滚动条样式：`apps/abi/src/styles/css/global.css`、`apps/abi/src/layouts/modules/global-menu/components/index.scss`
 - 空间角色管理弹窗权限树：`apps/abi/src/pages/space/space-role/modules/role-auth.tsx`、`role-operate-drawer.tsx`、`type.ts`
@@ -25,8 +26,6 @@
 ## 修改文件
 
 - `.ai/requirements/CURRENT_REQUIREMENT.md`
-- `apps/abi/index.html`
-- `apps/abi/src/App.tsx`
 - `apps/abi/src/components/stateful/group/Group.tsx`
 - `apps/abi/src/components/stateful/group/group.scss`
 - `apps/abi/src/layouts/modules/global-menu/components/index.scss`
@@ -34,14 +33,15 @@
 - `apps/abi/src/pages/space/space-role/modules/role-operate-drawer.tsx`
 - `apps/abi/src/pages/space/space-role/modules/type.ts`
 - `apps/abi/src/styles/css/global.css`
+- `apps/chat/index.html`
 - `apps/chat/src/index.css`
 - `apps/chat/src/main.tsx`
 
 ## 实现说明
 
-- ABI HTML 根节点增加内联启动 loading，避免 JS/main 初始化前空白。
-- ABI `RouterProvider` fallback 从 `null` 改为现有 `GlobalLoadingContainer`，覆盖路由懒加载切换空白。
-- chat 入口在拉取 `config.json` 前写入启动 loading，应用挂载后由 React 渲染替换。
+- chat HTML 根节点内置启动 loading 和关键内联样式，覆盖 main.ts bundle 加载前的空白阶段。
+- chat 入口在拉取 `config.json` 前仍保留写入启动 loading 的兜底，应用挂载后由 React 渲染替换。
+- ABI 入口 HTML 和 ABI `RouterProvider` fallback 不属于第 1 条影响范围，后续修正已恢复为原状态。
 - 通用 `Group` 标题固定展示“分组目录”，`panelTitle` 字段改为可选并保留。
 - 全局、左侧菜单、分组树滚动条 thumb 和 hover 统一为图标浅蓝背景色 `rgba(91, 124, 247, 0.10)`。
 - 空间角色权限树改为受控 `expandedKeys`，在弹窗打开或异步树数据变化时展开所有有子节点的层级。
@@ -69,9 +69,7 @@
 
 ## 回归检查
 
-- ABI 启动时 `#root` 不再为空，main 加载前有启动 spinner；React 挂载后会替换该占位。
-- ABI 路由懒加载 fallback 不再为 `null`，页面切换时使用现有全局 loading 容器。
-- chat 在 `config.json` 请求完成前显示启动 spinner；已有子节点时不重复写入占位，避免影响重复 render。
+- chat 在 HTML/main.ts/config.json 加载阶段显示启动 spinner；已有子节点时不重复写入占位，避免影响重复 render。
 - `Group` 调用方保留 `panelTitle` 字段也不会影响标题展示，标题统一为“分组目录”。
 - 空间角色弹窗每次打开都会按当前树数据计算可展开节点；异步树数据首次返回时也会展开二、三级层级。
 - 构建产物 `dist` 未进入 git diff。
@@ -121,7 +119,7 @@
 ## 后续建议
 
 - 后续可单独治理 `chatbi typecheck` 的历史类型错误，让类型检查恢复成有效门禁。
-- 如对启动 loading 有品牌化要求，可把 ABI/chat 启动占位抽成统一资源或样式规范。
+- 如对 chat 启动 loading 有品牌化要求，可单独沉淀 chat 入口占位样式规范。
 
 ## 未解决问题
 

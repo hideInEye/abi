@@ -31,6 +31,7 @@ const ALL_COLUMNS: ColumnOption[] = [
   { key: 'createTime', label: '创建时间', visible: true },
   { key: 'updateBy', label: '操作人', visible: false },
   { key: 'updateTime', label: '操作时间', visible: true },
+  { key: 'remark', label: '空间描述', visible: true },
 ];
 
 const dotColors = ['blue', 'purple', 'green'] as const;
@@ -358,7 +359,7 @@ export function Component() {
     }
 
     return (
-      <div className="abi-card-grid">
+      <div className="abi-card-grid abi-card-grid--space">
         <div className="abi-card-grid-inner">
           {spaceData.map((record: ISpaceItem, idx: number) => {
             const dotColor = dotColors[idx % dotColors.length];
@@ -417,6 +418,9 @@ export function Component() {
                   )}
                   {visibleKeys.has('updateTime') && (
                     <div className="row"><span className="lbl">操作时间</span><span className="val">{record.updateTime || '-'}</span></div>
+                  )}
+                  {visibleKeys.has('remark') && (
+                    <div className="row"><span className="lbl">空间描述</span><span className="val val--multiline">{record.remark || '空间暂无描述'}</span></div>
                   )}
                 </div>
               </div>

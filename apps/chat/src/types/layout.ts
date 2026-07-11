@@ -14,4 +14,7 @@ export type UserInfo = {
 export type SpaceInfo = {
   spaceId: number
   spaceName: string
+  remark?: string
+  userCount?: number
+  chatCount?: number
 }

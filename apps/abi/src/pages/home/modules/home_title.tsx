@@ -1,15 +1,16 @@
-import { RightOutlined } from '@ant-design/icons'
 import s from '../index.module.scss'
 
-export const HomeTitle = ({ title, action, onAction }: { title: string; action?: React.ReactNode; onAction?: () => void }) => {
+export const HomeTitle = ({ title, action, onAction, className }: { title: string; action?: React.ReactNode; onAction?: () => void; className?: string }) => {
   return (
-    <div className={s['section-title']}>
+    <div className={`${s['section-title']}${className ? ` ${className}` : ''}`}>
       <div className={s['section-title-bar']}></div>
       <span>{title}</span>
       {action && (
         <div className={s['section-title-action']} onClick={onAction}>
           {action}
-          <RightOutlined style={{ fontSize: '0.625rem' }} />
+          <svg viewBox="0 0 24 24">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
         </div>
       )}
     </div>
