@@ -1,0 +1,214 @@
+/* ============================================================
+ * 图谱详情弹窗 — 简洁高级感 · 科技感
+ * ============================================================ */
+
+/* Modal 包装器：右侧定位 */
+.detailModalWrap :global(.ant-modal) {
+  position: absolute !important;
+  right: 24px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  padding: 0 !important;
+}
+
+.detailModalWrap :global(.ant-modal-content) {
+  padding: 0 !important;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.97) !important;
+  backdrop-filter: blur(24px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.6) !important;
+  border: 1px solid rgba(91, 124, 247, 0.16) !important;
+  box-shadow:
+    0 20px 48px rgba(91, 124, 247, 0.14),
+    0 8px 20px rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden !important;
+}
+
+.detailModalWrap :global(.ant-modal-body) {
+  padding: 0 !important;
+}
+
+/* Modal 内容容器 */
+.detailModal {
+  display: flex;
+  flex-direction: column;
+  max-height: 75vh;
+  min-height: 240px;
+}
+
+/* 头部 */
+.detailHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(91, 124, 247, 0.1);
+}
+
+.detailHeaderTitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a2744;
+  letter-spacing: 0.3px;
+}
+
+.detailHeaderIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #5b7cf7;
+  color: #fff;
+  font-size: 17px;
+}
+
+.detailCloseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(91, 124, 247, 0.15);
+  border-radius: 8px;
+  background: transparent;
+  color: #8fa0b5;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.detailCloseBtn:hover {
+  background: rgba(91, 124, 247, 0.06);
+  border-color: rgba(91, 124, 247, 0.3);
+  color: #5b7cf7;
+}
+
+/* 内容区域 */
+.detailBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+  color: #1a2744;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(91, 124, 247, 0.12) transparent;
+}
+
+.detailBody::-webkit-scrollbar {
+  width: 5px;
+}
+
+.detailBody::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.detailBody::-webkit-scrollbar-thumb {
+  background: rgba(91, 124, 247, 0.15);
+  border-radius: 3px;
+}
+
+.detailBody::-webkit-scrollbar-thumb:hover {
+  background: rgba(91, 124, 247, 0.25);
+}
+
+/* 信息网格 — 紧凑 */
+.infoGrid {
+  margin-top: 12px;
+  gap: 8px 14px !important;
+}
+
+.infoLabel {
+  color: #768a9f;
+  font-weight: 500;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+}
+
+.infoValue {
+  color: #1a2744;
+  font-weight: 500;
+  font-size: 13px;
+  padding: 6px 10px;
+  background: rgba(91, 124, 247, 0.03);
+  border-radius: 6px;
+  border: 1px solid rgba(91, 124, 247, 0.06);
+}
+
+/* 属性标签 */
+.attrTag {
+  border-radius: 6px !important;
+  border: 1px solid rgba(91, 124, 247, 0.18) !important;
+  background: rgba(91, 124, 247, 0.05) !important;
+  color: #5b7cf7 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 4px 12px !important;
+}
+
+.attrTag:hover {
+  border-color: rgba(91, 124, 247, 0.35) !important;
+  background: rgba(91, 124, 247, 0.08) !important;
+}
+
+.emptyText {
+  font-size: 13px;
+  color: #8fa0b5;
+  padding: 8px 0;
+}
+
+/* Section 标题 */
+.detailBody :global(.ds-form-section-title) {
+  margin-bottom: 10px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px solid rgba(91, 124, 247, 0.08) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #1a2744 !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detailBody :global(.ds-form-section-title)::before {
+  display: none !important;
+}
+
+.detailBody :global(.ds-form-section-title > svg),
+.detailBody :global(.ds-form-section-title > .anticon) {
+  color: #5b7cf7 !important;
+  font-size: 15px !important;
+}
+
+/* Section 间距 */
+.detailBody section {
+  margin-bottom: 20px;
+}
+
+.detailBody section:last-child {
+  margin-bottom: 0;
+}
+
+/* 颜色指示器 */
+.detailBody i[style*="background-color"] {
+  border-radius: 50%;
+  width: 14px !important;
+  height: 14px !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Empty 状态 */
+.detailBody :global(.ant-empty-description) {
+  color: #8fa0b5 !important;
+  font-size: 13px !important;
+}
+
+.detailBody :global(.ant-empty-image) {
+  opacity: 0.5;
+}
