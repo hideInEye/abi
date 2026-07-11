@@ -1,30 +1,38 @@
 import { FullscreenExitOutlined, FullscreenOutlined, MinusOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import { Graph, type Edge, type Node } from '@antv/x6'
+import { MiniMap } from '@antv/x6/es/plugin/minimap'
 import { Tooltip } from 'antd'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { OntologyGraphEdge, OntologyGraphNode } from '@/pages/workbench/ontology-kg/shared-network-types'
 
 import type { GraphSelection } from '../types'
+import { computeForceLayout } from '../utils/forceLayout'
+import { getLabelColorScheme, getNodeBackground, getNodeBorderColor, getNodeShadowColor } from '../utils/labelColors'
+import styles from './canvas.module.css'
 
 interface OntologyGraphCanvasProps {
   readonly backgroundColor?: string
   readonly degreeMap: Record<string, number>
   readonly emptyDescription?: string
   readonly edges: OntologyGraphEdge[]
+  readonly isFullscreen: boolean
   readonly nodes: OntologyGraphNode[]
   readonly onSelect: (selection: GraphSelection) => void
+  readonly onToggleFullscreen: () => void
   readonly selection: GraphSelection | null
 }
 
 interface EntityNodeData {
   degree: number
   entity: OntologyGraphNode
+  hovered: boolean
   selected: boolean
 }
 
 interface RelationEdgeData {
   edge: OntologyGraphEdge
+  hovered: boolean
   relation: string
   selected: boolean
 }
@@ -34,46 +42,64 @@ interface NodePosition {
   y: number
 }
 
-const CARD_WIDTH = 238
-const CARD_HEIGHT = 76
+const CARD_WIDTH = 240
+const CARD_HEIGHT = 80
 const GRAPH_FONT_FAMILY = '"SF Pro Display", "PingFang SC", "Hiragino Sans GB", sans-serif'
 
 Graph.registerNode(
   'ontology-entity-card',
   {
     attrs: {
-      body: {
+      bg: {
         fill: '#FFFFFF',
-        height: 72,
-        rx: 10,
-        ry: 10,
-        stroke: '#DFE5EE',
-        strokeWidth: 1,
-        width: 236,
+        height: 76,
+        rx: 14,
+        ry: 14,
+        width: 238,
         x: 0,
         y: 0,
       },
-      dot: { cx: 28, cy: 36, fill: '#5B7CF7', r: 7 },
-      degree: { fill: '#64748B', fontFamily: GRAPH_FONT_FAMILY, fontSize: 12, fontWeight: 500, textAnchor: 'start', x: 52, y: 58 },
+      body: {
+        fill: 'transparent',
+        height: 76,
+        rx: 14,
+        ry: 14,
+        stroke: 'rgba(130, 140, 200, 0.3)',
+        strokeWidth: 2,
+        width: 238,
+        x: 0,
+        y: 0,
+      },
+      dot: { cx: 30, cy: 38, fill: '#5B7CF7', r: 8 },
+      degree: { fill: '#8fa0b5', fontFamily: GRAPH_FONT_FAMILY, fontSize: 11, fontWeight: 400, textAnchor: 'start', x: 54, y: 62 },
       shadow: {
         fill: '#AAB6C8',
-        height: 66,
-        opacity: 0.18,
-        rx: 10,
-        ry: 10,
-        width: 228,
-        x: 7,
-        y: 9,
+        height: 70,
+        opacity: 0.15,
+        rx: 14,
+        ry: 14,
+        width: 230,
+        x: 8,
+        y: 10,
       },
-      title: { fill: '#1F2937', fontFamily: GRAPH_FONT_FAMILY, fontSize: 16, fontWeight: 600, textAnchor: 'start', x: 52, y: 34 },
+      title: { fill: '#1a2744', fontFamily: GRAPH_FONT_FAMILY, fontSize: 17, fontWeight: 700, textAnchor: 'start', x: 54, y: 36 },
+      portTop: { cx: 120, cy: 0, r: 5, fill: '#FFFFFF', stroke: '#5B7CF7', strokeWidth: 1.5, opacity: 0 },
+      portBottom: { cx: 120, cy: 80, r: 5, fill: '#FFFFFF', stroke: '#5B7CF7', strokeWidth: 1.5, opacity: 0 },
+      portLeft: { cx: 0, cy: 40, r: 5, fill: '#FFFFFF', stroke: '#5B7CF7', strokeWidth: 1.5, opacity: 0 },
+      portRight: { cx: 240, cy: 40, r: 5, fill: '#FFFFFF', stroke: '#5B7CF7', strokeWidth: 1.5, opacity: 0 },
     },
     height: CARD_HEIGHT,
     markup: [
       { selector: 'shadow', tagName: 'rect' },
+      { selector: 'bg', tagName: 'rect' },
       { selector: 'body', tagName: 'rect' },
       { selector: 'dot', tagName: 'circle' },
       { selector: 'title', tagName: 'text' },
       { selector: 'degree', tagName: 'text' },
+      { className: 'port-anchor', selector: 'portTop', tagName: 'circle' },
+      { className: 'port-anchor', selector: 'portBottom', tagName: 'circle' },
+      { className: 'port-anchor', selector: 'portLeft', tagName: 'circle' },
+      { className: 'port-anchor', selector: 'portRight', tagName: 'circle' },
     ],
     width: CARD_WIDTH,
   },
@@ -83,28 +109,29 @@ Graph.registerNode(
 function isRelationLabelTarget(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('.x6-edge-label') !== null
 }
-
-function createRelationLabel(relation: string, selected = false, hovered = false) {
-  const stroke = selected ? '#3B82F6' : hovered ? '#7C93B7' : '#B5BECC'
-
+// 关系标签 — 浅色胶囊
+function createRelationLabel(relation: string, selected = false, hovered = false, dimmed = false) {
+  const baseOpacity = dimmed ? 0.15 : 1
   return {
     attrs: {
       body: {
-        fill: '#FFFFFF',
-        height: 24,
-        rx: 8,
-        ry: 8,
-        stroke: selected ? '#93C5FD' : '#E6EAF0',
-        strokeWidth: 1,
-        width: 88,
-        x: -44,
-        y: -16,
+        fill: selected ? 'rgba(91, 124, 247, 0.15)' : hovered ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.85)',
+        height: 26,
+        opacity: baseOpacity,
+        rx: 10,
+        ry: 10,
+        stroke: selected ? '#5b7cf7' : hovered ? 'rgba(91, 124, 247, 0.4)' : 'rgba(130, 140, 200, 0.25)',
+        strokeWidth: 1.5,
+        width: 92,
+        x: -46,
+        y: -17,
       },
       label: {
-        fill: selected ? '#2563EB' : '#586579',
+        fill: selected ? '#5b7cf7' : hovered ? '#3d4f6f' : '#64748b',
         fontFamily: GRAPH_FONT_FAMILY,
         fontSize: 12,
-        fontWeight: selected ? 600 : 500,
+        fontWeight: selected ? 700 : hovered ? 600 : 500,
+        opacity: baseOpacity,
         text: relation,
         textAnchor: 'middle',
         x: 0,
@@ -115,96 +142,167 @@ function createRelationLabel(relation: string, selected = false, hovered = false
       { selector: 'body', tagName: 'rect' },
       { selector: 'label', tagName: 'text' },
     ],
-    position: { distance: 0.5, offset: -14 },
+    position: { distance: 0.5, offset: -15 },
   }
 }
 
 function createTargetMarker(stroke: string) {
   return {
     fill: stroke,
-    height: 8,
+    height: 9,
     name: 'block',
     stroke,
     strokeWidth: 0,
-    width: 12,
+    width: 13,
   }
 }
 
-function getDefaultNodePosition(index: number, count: number, width: number, height: number): NodePosition {
-  if (count <= 1) return { x: Math.max(48, width / 2 - CARD_WIDTH / 2), y: Math.max(48, height / 2 - CARD_HEIGHT / 2) }
+type AnchorSide = 'top' | 'bottom' | 'left' | 'right'
 
-  const horizontalGap = 96
-  const verticalGap = 96
-  const horizontalStep = CARD_WIDTH + horizontalGap
-  const verticalStep = CARD_HEIGHT + verticalGap
-  const columns = Math.max(2, Math.floor((Math.max(width, CARD_WIDTH * 2 + horizontalGap) - 64) / horizontalStep))
-  const rows = Math.ceil(count / columns)
-  const currentRow = Math.floor(index / columns)
-  const currentColumn = index % columns
-  const layoutWidth = Math.min(count, columns) * CARD_WIDTH + Math.max(0, Math.min(count, columns) - 1) * horizontalGap
-  const layoutHeight = rows * CARD_HEIGHT + Math.max(0, rows - 1) * verticalGap
-
-  return {
-    x: Math.max(32, (width - layoutWidth) / 2) + currentColumn * horizontalStep,
-    y: Math.max(32, (height - layoutHeight) / 2) + currentRow * verticalStep,
+/** Pick which port anchor side to connect from/to, based on relative node positions. */
+function pickAnchorSide(fromPos: NodePosition, toPos: NodePosition): AnchorSide {
+  const dx = toPos.x - fromPos.x
+  const dy = toPos.y - fromPos.y
+  // Weight by card aspect ratio so the chosen side faces the other node
+  if (Math.abs(dx) * CARD_HEIGHT >= Math.abs(dy) * CARD_WIDTH) {
+    return dx >= 0 ? 'right' : 'left'
   }
+  return dy >= 0 ? 'bottom' : 'top'
 }
 
-function animateZoom(graph: Graph, factor: number): void {
-  const startZoom = graph.zoom()
-  const targetZoom = Math.min(2.4, Math.max(0.35, startZoom * factor))
-  const startedAt = performance.now()
-  const duration = 180
-
-  const step = (now: number): void => {
-    const progress = Math.min(1, (now - startedAt) / duration)
-    const easedProgress = 1 - (1 - progress) ** 3
-    graph.zoom(startZoom + (targetZoom - startZoom) * easedProgress, { absolute: true })
-    if (progress < 1) requestAnimationFrame(step)
-  }
-
-  requestAnimationFrame(step)
+/** Composite a semi-transparent color onto white, returning an opaque hex string. */
+function compositeOnWhite(color: string): string {
+  const match = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)/)
+  if (!match) return color // already hex or unrecognized — pass through
+  const r = Number(match[1])
+  const g = Number(match[2])
+  const b = Number(match[3])
+  const a = match[4] !== undefined ? Number(match[4]) : 1
+  const cr = Math.round(r * a + 255 * (1 - a))
+  const cg = Math.round(g * a + 255 * (1 - a))
+  const cb = Math.round(b * a + 255 * (1 - a))
+  return `#${cr.toString(16).padStart(2, '0')}${cg.toString(16).padStart(2, '0')}${cb.toString(16).padStart(2, '0')}`
 }
 
-function setNodeVisualState(node: Node, selected: boolean, hovered: boolean): void {
-  const degree = node.getData<EntityNodeData>()?.degree ?? 0
+function setNodeVisualState(node: Node, selected: boolean, hovered: boolean, dimmed = false): void {
+  const data = node.getData<EntityNodeData>()
+  const degree = data?.degree ?? 0
+  const entity = data?.entity
+  const labelId = entity?.labelId
   const prominence = Math.min(1, degree / 6)
-  node.attr({
-    body: {
-      fill: '#FFFFFF',
-      stroke: selected ? '#4169F6' : hovered ? '#B7C5DA' : '#DFE5EE',
-      strokeWidth: selected ? 4 : hovered ? 2 : 1 + prominence,
-    },
-    dot: {
-      r: 7 + prominence * 3,
-    },
-    shadow: { fill: selected ? '#9FB3FF' : '#AAB6C8', opacity: selected ? 0.3 : hovered ? 0.28 : 0.16 + prominence * 0.14 },
+
+  const borderColor = getNodeBorderColor(labelId, selected, hovered)
+  const backgroundColor = getNodeBackground(labelId, selected, hovered)
+  const shadowColor = getNodeShadowColor(labelId, selected, hovered)
+  const scheme = getLabelColorScheme(labelId)
+
+  const baseOpacity = dimmed ? 0.25 : 1
+
+  // body: stroke rendered BEHIND fill via paint-order, fill covers inner stroke half
+  // Pre-composite semi-transparent color onto white for opaque fill — eliminates edge blending
+  const bodyFill = (hovered || selected) ? compositeOnWhite(backgroundColor) : '#FFFFFF'
+
+  // bg rect: same fill as body so sub-pixel gaps at stroke outer edge are invisible
+  node.attr('bg', {
+    fill: bodyFill,
+    opacity: baseOpacity,
   })
+
+  node.attr('body', {
+    fill: bodyFill,
+    stroke: borderColor,
+    strokeWidth: 2,
+    paintOrder: 'stroke',
+    opacity: baseOpacity,
+  })
+
+  node.attr('dot', {
+    fill: scheme.accent,
+    r: 8 + prominence * 3,
+    opacity: baseOpacity,
+  })
+
+  node.attr('shadow', {
+    fill: shadowColor,
+    opacity: dimmed ? 0.05 : (selected ? 0.35 : hovered ? 0.25 : 0.12 + prominence * 0.08),
+  })
+
+  node.attr('title', {
+    fill: '#1a2744',
+    fontWeight: 700,
+    opacity: baseOpacity,
+  })
+
+  node.attr('degree', {
+    fill: '#8fa0b5',
+    fontWeight: 400,
+    opacity: baseOpacity,
+  })
+
+  // Port anchor points: visible on hover/selected, hidden otherwise
+  const portOpacity = (hovered || selected) ? baseOpacity : 0
+  node.attr('portTop', { opacity: portOpacity, stroke: scheme.accent })
+  node.attr('portBottom', { opacity: portOpacity, stroke: scheme.accent })
+  node.attr('portLeft', { opacity: portOpacity, stroke: scheme.accent })
+  node.attr('portRight', { opacity: portOpacity, stroke: scheme.accent })
 }
 
-function setEdgeVisualState(edge: Edge, selected: boolean, hovered: boolean): void {
+function setEdgeVisualState(edge: Edge, selected: boolean, hovered: boolean, dimmed = false): void {
   const relation = edge.getData<RelationEdgeData>()?.relation ?? ''
-  const stroke = selected ? '#3B82F6' : hovered ? '#7C93B7' : '#B5BECC'
+  const stroke = selected ? '#5b7cf7' : hovered ? '#5b7cf7' : '#64748b'
+  const lineOpacity = dimmed ? 0.12 : (selected ? 1 : hovered ? 0.9 : 0.55)
 
   edge.attr('line', {
-    opacity: selected ? 0.95 : hovered ? 0.9 : 0.78,
+    opacity: lineOpacity,
     stroke,
-    strokeWidth: selected ? 2.4 : hovered ? 1.8 : 1.3,
+    strokeWidth: selected ? 2.5 : hovered ? 2 : 1.5,
     targetMarker: createTargetMarker(stroke),
   })
-  edge.setLabelAt(0, createRelationLabel(relation, selected, hovered))
+  edge.setLabelAt(0, createRelationLabel(relation, selected, hovered, dimmed))
 }
 
-export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgroundColor = 'var(--abi-card-bg)', degreeMap, emptyDescription, edges, nodes, onSelect, selection }) => {
-  const canvasShellRef = useRef<HTMLDivElement | null>(null)
+function getHopNeighborhood(graph: Graph, startNodeId: string, maxHops: number): { nodeIds: Set<string>; edgeIds: Set<string> } {
+  const nodeIds = new Set<string>([startNodeId])
+  const edgeIds = new Set<string>()
+  let frontier = [startNodeId]
+
+  for (let hop = 0; hop < maxHops; hop++) {
+    const nextFrontier: string[] = []
+    for (const nid of frontier) {
+      for (const edge of graph.getConnectedEdges(nid)) {
+        const eid = edge.id
+        if (!edgeIds.has(eid)) {
+          edgeIds.add(eid)
+          const sourceId = edge.getSourceCellId()
+          const targetId = edge.getTargetCellId()
+          if (!nodeIds.has(sourceId)) {
+            nodeIds.add(sourceId)
+            nextFrontier.push(sourceId)
+          }
+          if (!nodeIds.has(targetId)) {
+            nodeIds.add(targetId)
+            nextFrontier.push(targetId)
+          }
+        }
+      }
+    }
+    frontier = nextFrontier
+  }
+
+  return { nodeIds, edgeIds }
+}
+
+export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgroundColor = 'transparent', degreeMap, emptyDescription, edges, isFullscreen, nodes, onSelect, onToggleFullscreen, selection }) => {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const minimapContainerRef = useRef<HTMLDivElement | null>(null)
+  const shellRef = useRef<HTMLDivElement | null>(null)
   const graphRef = useRef<Graph | null>(null)
   const nodePositionsRef = useRef<Map<string, NodePosition>>(new Map())
   const onSelectRef = useRef(onSelect)
   const [graphError, setGraphError] = useState<string | null>(null)
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [layoutVersion, setLayoutVersion] = useState(0)
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
 
   useEffect(() => {
     onSelectRef.current = onSelect
@@ -212,42 +310,39 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
 
   const zoomIn = useCallback((): void => {
     const graph = graphRef.current
-    if (graph) animateZoom(graph, 1.16)
+    if (!graph) return
+    const startZoom = graph.zoom()
+    const targetZoom = Math.min(2.4, startZoom * 1.18)
+    const startedAt = performance.now()
+    const duration = 200
+    const step = (now: number): void => {
+      const progress = Math.min(1, (now - startedAt) / duration)
+      const easedProgress = 1 - (1 - progress) ** 3
+      graph.zoom(startZoom + (targetZoom - startZoom) * easedProgress, { absolute: true })
+      if (progress < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
   }, [])
 
   const zoomOut = useCallback((): void => {
     const graph = graphRef.current
-    if (graph) animateZoom(graph, 0.86)
+    if (!graph) return
+    const startZoom = graph.zoom()
+    const targetZoom = Math.max(0.35, startZoom * 0.85)
+    const startedAt = performance.now()
+    const duration = 200
+    const step = (now: number): void => {
+      const progress = Math.min(1, (now - startedAt) / duration)
+      const easedProgress = 1 - (1 - progress) ** 3
+      graph.zoom(startZoom + (targetZoom - startZoom) * easedProgress, { absolute: true })
+      if (progress < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
   }, [])
 
   const resetView = useCallback((): void => {
     nodePositionsRef.current.clear()
     setLayoutVersion((value) => value + 1)
-  }, [])
-
-  const toggleFullscreen = useCallback(async (): Promise<void> => {
-    const shell = canvasShellRef.current
-    if (!shell) return
-
-    try {
-      if (document.fullscreenElement === shell) {
-        await document.exitFullscreen()
-      } else {
-        await shell.requestFullscreen()
-      }
-    } catch (error) {
-      console.error('[OntologyGraphCanvas] fullscreen operation failed', error)
-      setGraphError('全屏切换失败，请检查浏览器权限')
-    }
-  }, [])
-
-  useEffect(() => {
-    const handleFullscreenChange = (): void => {
-      setIsFullscreen(document.fullscreenElement === canvasShellRef.current)
-    }
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
   useEffect(() => {
@@ -260,29 +355,64 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
     const graph = new Graph({
       background: { color: 'transparent' },
       container,
-      grid: { args: { color: '#E7ECF4', thickness: 3 }, type: 'dot', visible: true },
+      grid: { args: { color: 'rgba(130, 140, 200, 0.12)', thickness: 2 }, type: 'dot', visible: true },
       height: initialHeight,
       interacting: { edgeMovable: false, nodeMovable: true },
       mousewheel: { enabled: true, maxScale: 2.4, minScale: 0.35, modifiers: null },
-      panning: { enabled: true, eventTypes: ['leftMouseDown'], modifiers: 'space' },
+      panning: { enabled: true, eventTypes: ['leftMouseDown'] },
       width: initialWidth,
     })
-    graph.zoom(0.86, { absolute: true })
+    graph.zoom(0.88, { absolute: true })
 
     graph.on('node:mouseenter', ({ node }) => {
-      const selected = node.getData<EntityNodeData>()?.selected ?? false
-      setNodeVisualState(node, selected, true)
+      const data = node.getData<EntityNodeData>()
+      const selected = data?.selected ?? false
+      const neighborhood = getHopNeighborhood(graph, node.id, 2)
+      setNodeVisualState(node, selected, true, false)
+      setHoveredNodeId(node.id)
+
+      // Highlight 2-hop neighbors, dim others
+      for (const otherNode of graph.getNodes()) {
+        if (otherNode.id === node.id) continue
+        const otherData = otherNode.getData<EntityNodeData>()
+        const otherSelected = otherData?.selected ?? false
+        const inNeighborhood = neighborhood.nodeIds.has(otherNode.id)
+        setNodeVisualState(otherNode, otherSelected, false, !inNeighborhood)
+      }
+      for (const otherEdge of graph.getEdges()) {
+        const otherData = otherEdge.getData<RelationEdgeData>()
+        const otherSelected = otherData?.selected ?? false
+        const inNeighborhood = neighborhood.edgeIds.has(otherEdge.id)
+        setEdgeVisualState(otherEdge, otherSelected, false, !inNeighborhood)
+      }
     })
     graph.on('node:mouseleave', ({ node }) => {
-      const selected = node.getData<EntityNodeData>()?.selected ?? false
-      setNodeVisualState(node, selected, false)
+      const data = node.getData<EntityNodeData>()
+      const selected = data?.selected ?? false
+      setNodeVisualState(node, selected, false, false)
+      setHoveredNodeId(null)
+
+      // Restore all nodes/edges to normal state
+      for (const otherNode of graph.getNodes()) {
+        if (otherNode.id === node.id) continue
+        const otherData = otherNode.getData<EntityNodeData>()
+        const otherSelected = otherData?.selected ?? false
+        setNodeVisualState(otherNode, otherSelected, false, false)
+      }
+      for (const otherEdge of graph.getEdges()) {
+        const otherData = otherEdge.getData<RelationEdgeData>()
+        const otherSelected = otherData?.selected ?? false
+        setEdgeVisualState(otherEdge, otherSelected, false, false)
+      }
     })
     graph.on('edge:mouseenter', ({ edge }) => {
-      const selected = edge.getData<RelationEdgeData>()?.selected ?? false
+      const data = edge.getData<RelationEdgeData>()
+      const selected = data?.selected ?? false
       setEdgeVisualState(edge, selected, true)
     })
     graph.on('edge:mouseleave', ({ edge }) => {
-      const selected = edge.getData<RelationEdgeData>()?.selected ?? false
+      const data = edge.getData<RelationEdgeData>()
+      const selected = data?.selected ?? false
       setEdgeVisualState(edge, selected, false)
     })
     graph.on('node:click', ({ node }) => {
@@ -312,6 +442,17 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
     resizeObserver.observe(host)
     graphRef.current = graph
 
+    if (minimapContainerRef.current) {
+      graph.use(
+        new MiniMap({
+          container: minimapContainerRef.current,
+          width: 180,
+          height: 120,
+          padding: 20,
+        }),
+      )
+    }
+
     return () => {
       resizeObserver.disconnect()
       if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame)
@@ -320,35 +461,42 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
     }
   }, [backgroundColor])
 
+  const forceLayout = useMemo(() => {
+    const host = hostRef.current
+    if (!host) return null
+    const width = Math.max(host.clientWidth, CARD_WIDTH * 2 + 100)
+    const height = Math.max(host.clientHeight, CARD_HEIGHT * 2 + 100)
+    return computeForceLayout(nodes, edges, width, height)
+  }, [nodes, edges, layoutVersion])
+
   useEffect(() => {
     const graph = graphRef.current
     const host = hostRef.current
-    if (!graph || !host) return
+    if (!graph || !host || !forceLayout) return
 
     try {
       setGraphError(null)
-      const width = Math.max(host.clientWidth, CARD_WIDTH * 2 + 96)
-      const height = Math.max(host.clientHeight, CARD_HEIGHT * 2 + 96)
 
       if (edges.length === 0) {
         graph.clearCells()
         return
       }
 
-      const graphNodes = nodes.map((node, index) => {
+      const graphNodes = nodes.map((node) => {
         const id = String(node.id)
         const degree = degreeMap[id] || 0
-        const position = nodePositionsRef.current.get(id) ?? getDefaultNodePosition(index, nodes.length, width, height)
+        const position = nodePositionsRef.current.get(id) ?? forceLayout.positions.get(id) ?? { x: 100, y: 100 }
         nodePositionsRef.current.set(id, position)
+        const scheme = getLabelColorScheme(node.labelId)
         return graph.createNode({
           attrs: {
-            body: { fill: '#FFFFFF', stroke: '#DFE5EE', strokeWidth: 1 },
-            dot: { fill: node.color || '#5B7CF7' },
-            degree: { text: `关系 ${degree} 条` },
-            shadow: { fill: '#AAB6C8', opacity: 0.18 },
+            body: { fill: '#FFFFFF', stroke: `${scheme.border}80`, strokeWidth: 2 },
+            dot: { fill: scheme.accent },
+            degree: { text: `${degree} 条关系` },
+            shadow: { fill: '#AAB6C8', opacity: 0.15 },
             title: { text: node.entityName },
           },
-          data: { degree, entity: node, selected: false },
+          data: { degree, entity: node, hovered: false, selected: false },
           id,
           position,
           shape: 'ontology-entity-card',
@@ -361,24 +509,28 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
         const sourceId = String(edge.startEntityId)
         const targetId = String(edge.endEntityId)
         if (!nodeIds.has(sourceId) || !nodeIds.has(targetId)) return []
+        const srcPos = nodePositionsRef.current.get(sourceId) ?? { x: 0, y: 0 }
+        const tgtPos = nodePositionsRef.current.get(targetId) ?? { x: 0, y: 0 }
+        const srcAnchor = pickAnchorSide(srcPos, tgtPos)
+        const tgtAnchor = pickAnchorSide(tgtPos, srcPos)
         return graph.createEdge({
           attrs: {
             line: {
               sourceMarker: null,
-              opacity: 0.78,
-              stroke: '#B5BECC',
+              opacity: 0.55,
+              stroke: '#64748b',
               strokeLinecap: 'round',
-              strokeWidth: 1.3,
-              targetMarker: createTargetMarker('#B5BECC'),
+              strokeWidth: 1.5,
+              targetMarker: createTargetMarker('#64748b'),
             },
           },
           connector: { name: 'smooth' },
-          data: { edge, relation: edge.relation, selected: false },
+          data: { edge, hovered: false, relation: edge.relation, selected: false },
           defaultLabel: createRelationLabel(''),
           id: `relation-${id}`,
           labels: [createRelationLabel(edge.relation)],
-          source: { cell: sourceId, connectionPoint: { name: 'boundary' } },
-          target: { cell: targetId, connectionPoint: { name: 'boundary' } },
+          source: { anchor: { name: srcAnchor }, cell: sourceId, connectionPoint: { name: 'anchor' } },
+          target: { anchor: { name: tgtAnchor }, cell: targetId, connectionPoint: { name: 'anchor' } },
           zIndex: 3,
         })
       })
@@ -399,7 +551,7 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
       console.error('[OntologyGraphCanvas] X6 operation failed', error)
       setGraphError('图谱渲染失败，可重新查询后再试')
     }
-  }, [degreeMap, edges, layoutVersion, nodes])
+  }, [degreeMap, edges, forceLayout, layoutVersion, nodes, selection])
 
   useEffect(() => {
     const graph = graphRef.current
@@ -417,33 +569,49 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
     })
   }, [selection])
 
+  const hoveredNode = useMemo(() => {
+    if (!hoveredNodeId) return null
+    return nodes.find((n) => String(n.id) === hoveredNodeId) ?? null
+  }, [hoveredNodeId, nodes])
+
   const noGraphRelations = edges.length === 0
 
   return (
-    <div ref={canvasShellRef} className={`relative isolate w-full overflow-hidden ${isFullscreen ? 'h-screen min-h-screen' : 'h-full min-h-500px'}`} style={{ background: backgroundColor }}>
-      <div ref={hostRef} className="relative h-full min-h-500px w-full">
-        <div ref={containerRef} className="absolute inset-0 h-full w-full" />
+    <div ref={shellRef} className={styles.canvasShell}>
+      <div ref={hostRef} className={styles.canvasHost}>
+        <div ref={containerRef} className={styles.canvasContainer} />
       </div>
       {noGraphRelations && (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-8 text-center text-13px text-slate-400">
+        <div className={styles.emptyOverlay}>
           <span>{emptyDescription ?? '暂无匹配的实体或关系'}</span>
         </div>
       )}
-      {graphError && <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-white/75 text-sm text-slate-500 backdrop-blur-sm">{graphError}</div>}
-      <div className="absolute right-5 top-5 z-30 flex overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.1)] backdrop-blur">
-        <Tooltip title="放大">
+      {graphError && <div className={styles.errorOverlay}>{graphError}</div>}
+      {hoveredNode && (
+        <div className={styles.nodeTooltip}>
+          <div className={styles.nodeTooltipTitle}>{hoveredNode.entityName}</div>
+          <div className={styles.nodeTooltipMeta}>
+            <span className={styles.nodeTooltipDot} style={{ backgroundColor: getLabelColorScheme(hoveredNode.labelId).accent }} />
+            <span>编码: {hoveredNode.entityCode}</span>
+          </div>
+          {hoveredNode.remark && <div className={styles.nodeTooltipRemark}>{hoveredNode.remark}</div>}
+        </div>
+      )}
+      <div className={styles.controls}>
+        <Tooltip getPopupContainer={() => shellRef.current || document.body} title="放大">
           <AButton icon={<PlusOutlined />} type="text" onClick={zoomIn} />
         </Tooltip>
-        <Tooltip title="缩小">
+        <Tooltip getPopupContainer={() => shellRef.current || document.body} title="缩小">
           <AButton icon={<MinusOutlined />} type="text" onClick={zoomOut} />
         </Tooltip>
-        <Tooltip title="重置视图">
+        <Tooltip getPopupContainer={() => shellRef.current || document.body} title="重置视图">
           <AButton icon={<ReloadOutlined />} type="text" onClick={resetView} />
         </Tooltip>
-        <Tooltip title={isFullscreen ? '退出全屏' : '全屏'}>
-          <AButton icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />} type="text" onClick={toggleFullscreen} />
+        <Tooltip getPopupContainer={() => shellRef.current || document.body} title={isFullscreen ? '退出全屏' : '全屏'}>
+          <AButton icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />} type="text" onClick={onToggleFullscreen} />
         </Tooltip>
       </div>
+      <div ref={minimapContainerRef} className={styles.minimap} />
     </div>
   )
 }

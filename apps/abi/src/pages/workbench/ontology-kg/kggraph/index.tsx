@@ -1,5 +1,18 @@
-import { DownOutlined, FilterOutlined, MinusOutlined, PicLeftOutlined, PicRightOutlined, PlusOutlined, ReloadOutlined, SearchOutlined, UpOutlined } from '@ant-design/icons'
-import { Checkbox, Popover, Select, Spin, message } from 'antd'
+import {
+  ApartmentOutlined,
+  AppstoreOutlined,
+  CloseOutlined,
+  DownOutlined,
+  FilterOutlined,
+  FullscreenExitOutlined,
+  FullscreenOutlined,
+  MinusOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  UpOutlined,
+} from '@ant-design/icons'
+import { Checkbox, Popover, Select, Spin, Tooltip, message } from 'antd'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAppSelector } from '@/hooks/business/useStore'
@@ -9,18 +22,12 @@ import { getSpaceId } from '@/store/slice/app'
 import GraphDetailPanel from './components/GraphDetailPanel'
 import OntologyGraphCanvas from './components/OntologyGraphCanvas'
 import { useOntologyGraph } from './hooks/useOntologyGraph'
+import styles from './index.module.css'
 import type { GraphQueryValues, GraphSelection } from './types'
 import { filterGraphData, splitGraphByDegree } from './utils/graph'
 
 const INITIAL_QUERY: GraphQueryValues = { degree: 2, relationKeyword: '' }
-const RELATION_COLORS = ['#CF6042', '#F0A12B', '#7C5BEF', '#4DBB83', '#4A90E2', '#D94FB5']
-const GRAPH_SURFACE_BACKGROUND = 'var(--abi-card-bg)'
 const NAME_SEARCH_DEBOUNCE_MS = 400
-
-function getRelationColor(relation: string): string {
-  const hash = relation.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)
-  return RELATION_COLORS[hash % RELATION_COLORS.length]
-}
 
 export const Component: React.FC = () => {
   const spaceId = useAppSelector(getSpaceId)
@@ -30,10 +37,34 @@ export const Component: React.FC = () => {
   const [selectedRelations, setSelectedRelations] = useState<string[]>([])
   const [selection, setSelection] = useState<GraphSelection | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
-  const [filterCollapsed, setFilterCollapsed] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(false)
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false)
   const [isolatedExpanded, setIsolatedExpanded] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const canvasRootRef = useRef<HTMLDivElement | null>(null)
   const nameSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const toggleFullscreen = useCallback(async (): Promise<void> => {
+    const root = canvasRootRef.current
+    if (!root) return
+    try {
+      if (document.fullscreenElement === root) {
+        await document.exitFullscreen()
+      } else {
+        await root.requestFullscreen()
+      }
+    } catch (error) {
+      console.error('[GraphExplorer] fullscreen operation failed', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleChange = (): void => {
+      setIsFullscreen(document.fullscreenElement === canvasRootRef.current)
+    }
+    document.addEventListener('fullscreenchange', handleChange)
+    return () => document.removeEventListener('fullscreenchange', handleChange)
+  }, [])
 
   const entityIds = useMemo(() => (entities.length > 0 ? entities.map((entity) => String(entity.id)) : graphData.nodes.map((node) => String(node.id))), [entities, graphData.nodes])
   const relationNames = useMemo(
@@ -151,7 +182,7 @@ export const Component: React.FC = () => {
   const handleSetStartEntity = useCallback(
     (node: OntologyGraphNode): void => {
       updateQuery({ startEntityId: node.id })
-      message.success(`已设置开始节点：${node.entityName}`)
+      message.success({ content: `已设置开始节点：${node.entityName}`, getContainer: () => canvasRootRef.current || document.body })
     },
     [updateQuery],
   )
@@ -185,21 +216,91 @@ export const Component: React.FC = () => {
     [queryValues.degree, updateQuery],
   )
 
-  const handleFilterToggleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-    event.preventDefault()
-    setFilterCollapsed((value) => !value)
-  }, [])
+  const filterContent = (
+    <div className={styles.filterPanel}>
+      <div className={styles.filterHeader}>
+        <span className={styles.filterTitle}>图谱筛选</span>
+        <AButton className={styles.filterCloseBtn} icon={<CloseOutlined />} type="text" onClick={() => setFilterOpen(false)} />
+      </div>
+      <div className={styles.filterBody}>
+        <div className={styles.filterSection}>
+          <div className={styles.filterSectionLabel}>
+            <Checkbox
+              checked={allEntitiesSelected}
+              disabled={entityIds.length === 0}
+              indeterminate={entitySelectionIndeterminate}
+              onChange={(event) => handleToggleAllEntities(event.target.checked)}
+            >
+              实体筛选
+            </Checkbox>
+          </div>
+          <Checkbox.Group
+            className={styles.filterCheckboxGroup}
+            options={entities.map((entity) => ({
+              label: (
+                <span className={styles.filterCheckboxItem}>
+                  <span className={styles.entityDot} style={{ backgroundColor: entity.color || '#5B7CF7' }} />
+                  <span>{entity.entityName}</span>
+                </span>
+              ),
+              value: String(entity.id),
+            }))}
+            value={selectedEntityIds}
+            onChange={(values) => setSelectedEntityIds(values.map(String))}
+          />
+        </div>
+
+        <div className={styles.filterDivider} />
+
+        <div className={styles.filterSection}>
+          <div className={styles.filterSectionLabel}>
+            <Checkbox
+              checked={allRelationsSelected}
+              disabled={relationNames.length === 0}
+              indeterminate={relationSelectionIndeterminate}
+              onChange={(event) => handleToggleAllRelations(event.target.checked)}
+            >
+              关系筛选
+            </Checkbox>
+          </div>
+          <Checkbox.Group
+            className={styles.filterCheckboxGroup}
+            options={relationNames.map((relation) => ({
+              label: (
+                <span className={styles.filterCheckboxItem}>
+                  <span className={styles.entityDot} style={{ backgroundColor: '#F59E0B' }} />
+                  <span>{relation}</span>
+                </span>
+              ),
+              value: relation,
+            }))}
+            value={selectedRelations}
+            onChange={(values) => setSelectedRelations(values.map(String))}
+          />
+        </div>
+      </div>
+    </div>
+  )
+
+  const labelOptions = useMemo(() => {
+    const labelMap = new Map<string, string>()
+    for (const entity of entities) {
+      if (entity.labelId != null && !labelMap.has(String(entity.labelId))) {
+        labelMap.set(String(entity.labelId), String(entity.labelId))
+      }
+    }
+    return Array.from(labelMap.entries()).map(([id]) => ({ label: id, value: id }))
+  }, [entities])
 
   const advancedSearchContent = (
-    <div className="w-560px max-w-[calc(100vw-80px)]">
+    <div className={styles.advancedSearchPanel}>
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-        <label className="flex flex-col gap-2 text-12px font-500 text-slate-600">
+        <label className="flex flex-col gap-2 text-12px font-500">
           <span>开始节点</span>
           <Select
             allowClear
-            className="abi-field-input"
             fieldNames={{ label: 'entityName', value: 'id' }}
+            getPopupContainer={(trigger) => trigger.closest('.ant-popover-inner') as HTMLElement || trigger.parentNode as HTMLElement}
             options={entities}
             placeholder="全部"
             showSearch
@@ -208,12 +309,12 @@ export const Component: React.FC = () => {
             onChange={(value: OntologyNetworkId | undefined) => updateQuery({ startEntityId: value })}
           />
         </label>
-        <label className="flex flex-col gap-2 text-12px font-500 text-slate-600">
+        <label className="flex flex-col gap-2 text-12px font-500">
           <span>结束节点</span>
           <Select
             allowClear
-            className="abi-field-input"
             fieldNames={{ label: 'entityName', value: 'id' }}
+            getPopupContainer={(trigger) => trigger.closest('.ant-popover-inner') as HTMLElement || trigger.parentNode as HTMLElement}
             options={entities}
             placeholder="全部"
             showSearch
@@ -222,25 +323,36 @@ export const Component: React.FC = () => {
             onChange={(value: OntologyNetworkId | undefined) => updateQuery({ endEntityId: value })}
           />
         </label>
-        <div className="flex flex-col gap-2 text-12px font-500 text-slate-600">
+        <label className="flex flex-col gap-2 text-12px font-500">
+          <span>标签类型</span>
+          <Select
+            allowClear
+            getPopupContainer={(trigger) => trigger.closest('.ant-popover-inner') as HTMLElement || trigger.parentNode as HTMLElement}
+            options={labelOptions}
+            placeholder="全部"
+            showSearch
+            value={queryValues.labelId}
+            optionFilterProp="label"
+            onChange={(value: OntologyNetworkId | undefined) => updateQuery({ labelId: value })}
+          />
+        </label>
+        <div className="flex flex-col gap-2 text-12px font-500">
           <span>关系跳数</span>
           <div className="flex items-center gap-2">
-            <AButton className="h-34px w-34px px-0" onClick={() => adjustDegree(-1)}>
+            <AButton className={styles.degreeBtn} onClick={() => adjustDegree(-1)}>
               <MinusOutlined />
             </AButton>
-            <div className="flex h-34px w-50px items-center justify-center rounded-8px border border-slate-200 bg-[var(--abi-input-bg)] text-15px font-600 text-slate-900">
-              {queryValues.degree ?? INITIAL_QUERY.degree}
-            </div>
-            <AButton className="h-34px w-34px px-0" onClick={() => adjustDegree(1)}>
+            <div className={styles.degreeDisplay}>{queryValues.degree ?? INITIAL_QUERY.degree}</div>
+            <AButton className={styles.degreeBtn} onClick={() => adjustDegree(1)}>
               <PlusOutlined />
             </AButton>
           </div>
         </div>
-        <div className="flex items-end justify-end gap-3">
-          <AButton icon={<ReloadOutlined />} onClick={handleAdvancedReset}>
+        <div className="flex items-end justify-end gap-3 col-span-2">
+          <AButton className={styles.advancedResetBtn} icon={<ReloadOutlined />} onClick={handleAdvancedReset}>
             重置
           </AButton>
-          <AButton className="btn-accent-gradient" type="primary" onClick={handleAdvancedQuery}>
+          <AButton className={styles.advancedQueryBtn} type="primary" onClick={handleAdvancedQuery}>
             <SearchOutlined /> 查询
           </AButton>
         </div>
@@ -249,162 +361,113 @@ export const Component: React.FC = () => {
   )
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden" style={{ background: GRAPH_SURFACE_BACKGROUND }}>
-      <section className="relative flex min-h-0 w-full flex-1 overflow-hidden bg-transparent">
-        <aside className={`h-full min-h-500px shrink-0 overflow-hidden border-r border-slate-200 transition-all duration-200 ${filterCollapsed ? 'w-48px' : 'w-200px'}`}>
-          {filterCollapsed ? (
-            <div className="flex h-full min-h-500px flex-col items-center py-5">
-              <AButton aria-label="展开图谱筛选" className="h-28px w-28px p-0 text-18px text-slate-500" icon={<PicRightOutlined />} type="text" onClick={() => setFilterCollapsed(false)} />
-              <div
-                className="mt-4 cursor-pointer text-center text-13px font-600 tracking-4px text-slate-500 hover:text-blue-500"
-                role="button"
-                tabIndex={0}
-                style={{ writingMode: 'vertical-rl' }}
-                onClick={() => setFilterCollapsed(false)}
-                onKeyDown={handleFilterToggleKeyDown}
-              >
-                图谱筛选
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-full min-h-500px flex-col px-5 py-5">
-              <div className="mb-5 flex items-center justify-between">
-                <h2 className="m-0 text-16px font-700 text-slate-900">图谱筛选</h2>
-                <AButton aria-label="收起图谱筛选" className="h-28px w-28px p-0 text-18px text-slate-500" icon={<PicLeftOutlined />} type="text" onClick={() => setFilterCollapsed(true)} />
-              </div>
-              <div className="min-h-0 flex-1 overflow-auto pr-1">
-                <div className="mb-5">
-                  <div className="mb-3 flex items-center gap-2 text-13px font-500 text-slate-600">
-                    <Checkbox checked={allEntitiesSelected} disabled={entityIds.length === 0} indeterminate={entitySelectionIndeterminate} onChange={(event) => handleToggleAllEntities(event.target.checked)}>
-                      实体筛选
-                    </Checkbox>
+    <div ref={canvasRootRef} className={`${styles.canvasRoot} ${isFullscreen ? styles.fullscreen : ''}`}>
+      {/* ── 画布主体 ── */}
+      <div className={styles.canvasArea}>
+        <OntologyGraphCanvas
+          backgroundColor="transparent"
+          degreeMap={splitGraph.degreeMap}
+          emptyDescription={
+            splitGraph.connectedEdges.length === 0
+              ? `当前筛选结果暂无关系。已筛选 ${filteredGraph.nodes.length} 个实体，但没有匹配到符合条件的关系。`
+              : filtersLoaded && !hasFilterOptions
+                ? '暂无可探索的实体或关系'
+                : undefined
+          }
+          edges={splitGraph.connectedEdges}
+          isFullscreen={isFullscreen}
+          nodes={splitGraph.connectedNodes}
+          selection={selection}
+          onSelect={handleSelect}
+          onToggleFullscreen={toggleFullscreen}
+        />
+      </div>
+
+      {/* ── 顶部工具栏 ── */}
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarRight}>
+          <div className={styles.searchCapsule}>
+            <AInput
+              allowClear
+              placeholder="搜索关系名称..."
+              prefix={<SearchOutlined />}
+              value={queryValues.relationKeyword}
+              onChange={(event) => handleNameSearchChange(event.target.value)}
+              onPressEnter={handleQuery}
+            />
+          </div>
+          <Popover content={filterContent} getPopupContainer={() => canvasRootRef.current || document.body} open={filterOpen} placement="bottomRight" trigger="click" onOpenChange={setFilterOpen}>
+            <Tooltip getPopupContainer={() => canvasRootRef.current || document.body} title="图谱筛选">
+              <AButton className={styles.toolbarBtn} icon={<AppstoreOutlined />} type="text" />
+            </Tooltip>
+          </Popover>
+          <Popover
+            content={advancedSearchContent}
+            getPopupContainer={() => canvasRootRef.current || document.body}
+            open={advancedSearchOpen}
+            placement="bottomRight"
+            trigger="click"
+            onOpenChange={setAdvancedSearchOpen}
+          >
+            <Tooltip getPopupContainer={() => canvasRootRef.current || document.body} title="高级搜索">
+              <AButton className={styles.toolbarBtn} icon={<FilterOutlined />} type="text" />
+            </Tooltip>
+          </Popover>
+        </div>
+      </div>
+
+      {/* ── 未关联实体面板 ── */}
+      {splitGraph.isolatedNodes.length > 0 && (
+        <div className={styles.isolatedPanel}>
+          <button
+            className={styles.isolatedToggle}
+            type="button"
+            onClick={() => setIsolatedExpanded((value) => !value)}
+          >
+            <span className={styles.isolatedToggleLabel}>
+              <ApartmentOutlined style={{ marginRight: 8 }} />
+              未关联实体 {splitGraph.isolatedNodes.length} 个
+            </span>
+            <span className={styles.isolatedToggleAction}>
+              {isolatedExpanded ? '收起' : '展开'}
+              {isolatedExpanded ? <UpOutlined /> : <DownOutlined />}
+            </span>
+          </button>
+          {isolatedExpanded && (
+            <div className={styles.isolatedGrid}>
+              {splitGraph.isolatedNodes.map((node) => (
+                <div key={String(node.id)} className={styles.isolatedCard}>
+                  <div className={styles.isolatedCardName}>
+                    <span className={styles.entityDot} style={{ backgroundColor: node.color || '#5B7CF7', color: node.color || '#5B7CF7' }} />
+                    <span>{node.entityName}</span>
                   </div>
-                  <Checkbox.Group
-                    className="flex flex-col gap-2.5"
-                    options={entities.map((entity) => ({
-                      label: (
-                        <span className="inline-flex items-center gap-2 text-13px text-slate-800">
-                          <span className="h-8px w-8px rounded-full" style={{ backgroundColor: entity.color || '#5B7CF7' }} />
-                          <span>{entity.entityName}</span>
-                        </span>
-                      ),
-                      value: String(entity.id),
-                    }))}
-                    value={selectedEntityIds}
-                    onChange={(values) => setSelectedEntityIds(values.map(String))}
-                  />
-                </div>
-                <div className="border-t border-slate-200 pt-5">
-                  <div className="mb-3 flex items-center gap-2 text-13px font-500 text-slate-600">
-                    <Checkbox checked={allRelationsSelected} disabled={relationNames.length === 0} indeterminate={relationSelectionIndeterminate} onChange={(event) => handleToggleAllRelations(event.target.checked)}>
-                      关系筛选
-                    </Checkbox>
+                  <div className={styles.isolatedCardActions}>
+                    <AButton size="small" type="link" onClick={() => handleSetStartEntity(node)}>
+                      设为起点
+                    </AButton>
+                    <AButton size="small" type="link" onClick={() => handleViewIsolatedNode(node)}>
+                      详情
+                    </AButton>
+                    <AButton size="small" type="link" onClick={() => handleRequeryIsolatedNode(node)}>
+                      查询
+                    </AButton>
                   </div>
-                  <Checkbox.Group
-                    className="flex flex-col gap-2.5"
-                    options={relationNames.map((relation) => ({
-                      label: (
-                        <span className="inline-flex items-center gap-2 text-13px text-slate-800">
-                          <span className="h-8px w-8px rounded-full" style={{ backgroundColor: getRelationColor(relation) }} />
-                          <span>{relation}</span>
-                        </span>
-                      ),
-                      value: relation,
-                    }))}
-                    value={selectedRelations}
-                    onChange={(values) => setSelectedRelations(values.map(String))}
-                  />
                 </div>
-              </div>
+              ))}
             </div>
           )}
-        </aside>
-        <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
-          <header className="relative z-20 border-b border-slate-200 px-5 py-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
-                <label className="flex w-260px flex-col gap-2 text-12px font-500 text-slate-600">
-                  <AInput
-                    allowClear
-                    className="abi-field-input"
-                    placeholder="输入关系名称关键词"
-                    prefix={<SearchOutlined />}
-                    value={queryValues.relationKeyword}
-                    onChange={(event) => handleNameSearchChange(event.target.value)}
-                    onPressEnter={handleQuery}
-                  />
-                </label>
-                <Popover content={advancedSearchContent} open={advancedSearchOpen} placement="bottom" trigger="click" onOpenChange={setAdvancedSearchOpen}>
-                  <AButton type="text">
-                    <FilterOutlined /> 高级搜索 {advancedSearchOpen ? <UpOutlined /> : <DownOutlined />}
-                  </AButton>
-                </Popover>
-              </div>
-            </div>
-          </header>
-          <div className="relative min-h-0 flex-1">
-            <OntologyGraphCanvas
-              backgroundColor={GRAPH_SURFACE_BACKGROUND}
-              degreeMap={splitGraph.degreeMap}
-              emptyDescription={
-                splitGraph.connectedEdges.length === 0
-                  ? `当前筛选结果暂无关系。已筛选 ${filteredGraph.nodes.length} 个实体，但没有匹配到符合条件的关系。`
-                  : filtersLoaded && !hasFilterOptions
-                    ? '暂无可探索的实体或关系'
-                    : undefined
-              }
-              edges={splitGraph.connectedEdges}
-              nodes={splitGraph.connectedNodes}
-              selection={selection}
-              onSelect={handleSelect}
-            />
-            {splitGraph.isolatedNodes.length > 0 && (
-              <div className="absolute bottom-5 left-5 z-30 max-w-[min(720px,calc(100%-40px))] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)] backdrop-blur">
-                <button
-                  className="flex w-full items-center justify-between gap-4 border-0 bg-transparent p-0 text-left text-sm font-600 text-slate-700"
-                  type="button"
-                  onClick={() => setIsolatedExpanded((value) => !value)}
-                >
-                  <span>未关联实体 {splitGraph.isolatedNodes.length} 个</span>
-                  <span className="flex items-center gap-1 text-blue-600">
-                    {isolatedExpanded ? '收起' : '展开查看'}
-                    {isolatedExpanded ? <UpOutlined /> : <DownOutlined />}
-                  </span>
-                </button>
-                {isolatedExpanded && (
-                  <div className="mt-3 grid max-h-240px grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2 overflow-auto">
-                    {splitGraph.isolatedNodes.map((node) => (
-                      <div key={String(node.id)} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                        <div className="mb-2 flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: node.color || '#5B7CF7' }} />
-                          <span className="min-w-0 truncate text-sm font-600 text-slate-800">{node.entityName}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          <AButton size="small" type="link" onClick={() => handleSetStartEntity(node)}>
-                            设为开始节点
-                          </AButton>
-                          <AButton size="small" type="link" onClick={() => handleViewIsolatedNode(node)}>
-                            查看详情
-                          </AButton>
-                          <AButton size="small" type="link" onClick={() => handleRequeryIsolatedNode(node)}>
-                            重新查询关系
-                          </AButton>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {loading && (
-              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                <Spin />
-              </div>
-            )}
-          </div>
-        </main>
-      </section>
-      <GraphDetailPanel edge={selectedEdge} entityNameMap={entityNameMap} node={selectedNode} open={detailOpen} onClose={handleCloseDetails} />
+        </div>
+      )}
+
+      {/* ── 加载状态 ── */}
+      {loading && (
+        <div className={styles.loadingOverlay}>
+          <Spin />
+        </div>
+      )}
+
+      {/* ── 详情面板 ── */}
+      <GraphDetailPanel edge={selectedEdge} entityNameMap={entityNameMap} getContainer={() => canvasRootRef.current || document.body} node={selectedNode} open={detailOpen} onClose={handleCloseDetails} />
     </div>
   )
 }
