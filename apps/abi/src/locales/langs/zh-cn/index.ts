@@ -42,6 +42,7 @@ const local: App.I18n.Schema['translation'] = {
   system: {
     errorReason: '错误原因',
     reload: '重新渲染页面',
+    loading: '正在整理工作台环境...',
     title: 'ABI 管理系统',
     updateCancel: '稍后再说',
     updateConfirm: '立即刷新',
