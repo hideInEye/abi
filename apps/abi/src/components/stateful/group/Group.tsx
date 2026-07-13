@@ -218,7 +218,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     });
   };
 
-  const treeData = useMemo(() => buildTreeNodes(buildGroupTree(groups), expandedKeys), [groups, expandedKeys]);
+  const treeData = useMemo(() => buildTreeNodes(buildGroupTree(groups, '0', true), expandedKeys), [groups, expandedKeys]);
 
   return (
     <>

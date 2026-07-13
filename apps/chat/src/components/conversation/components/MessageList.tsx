@@ -10,6 +10,36 @@ import SchemaFieldsModal from '../../conversation-analysis/SchemaFieldsModal'
 import type { SchemaTable, SchemaField } from '../../conversation-analysis/SchemaFieldsModal'
 import { fetchSemanticDetail } from '../../../service/api/semantic'
 
+// 从消息内容（view 的 chart-view 或内嵌 JSON）中解析数据分组/语义元信息，
+// 用于历史会话回填信息条（历史 human 消息不携带 _groupName/_semanticName）
+const extractSemanticMeta = (messages: any[]) => {
+  for (const msg of messages) {
+    const ctx = msg?.context
+    if (typeof ctx !== 'string') continue
+    let json: any = null
+    if (ctx.includes('<chart-view')) {
+      const match = ctx.match(/<chart-view content="([\s\S]*?)"\s*\/>/)
+      if (match) {
+        try {
+          json = JSON.parse(match[1].replace(/&quot;/g, '"').replace(/NaN/g, 'null'))
+        } catch { /* ignore */ }
+      }
+    } else if (ctx.includes('semantic_group_name') || ctx.includes('semantic_name')) {
+      try {
+        json = JSON.parse(ctx)
+      } catch { /* ignore */ }
+    }
+    if (json && (json.semantic_group_name || json.semantic_name || json.semantic_id != null)) {
+      return {
+        groupName: json.semantic_group_name || '',
+        semanticName: json.semantic_name || '',
+        semanticId: json.semantic_id,
+      }
+    }
+  }
+  return { groupName: '', semanticName: '', semanticId: undefined as any }
+}
+
 type MessageListProps = {
   mode?: 'default' | 'share'
   conv: any
@@ -250,9 +280,11 @@ const MessageList = ({
 
     // 从 human 消息中提取元数据(分组/数据语义)
     const humanMsg = flatGroup.find((item: any) => item.role === 'human')
-    const msgGroupName = humanMsg?._groupName || ''
-    const msgSemanticName = humanMsg?._semanticName || ''
-    const msgSemanticSchemaId = humanMsg?._semanticSchemaId
+    // 历史会话的 human 消息不携带语义元信息，回退到 view 消息内容中解析
+    const semanticFromView = extractSemanticMeta(flatGroup)
+    const msgGroupName = humanMsg?._groupName || semanticFromView.groupName || ''
+    const msgSemanticName = humanMsg?._semanticName || semanticFromView.semanticName || ''
+    const msgSemanticSchemaId = humanMsg?._semanticSchemaId ?? semanticFromView.semanticId
     const showInfoBar = mode !== 'share' && (msgGroupName || msgSemanticName)
 
     return (
@@ -280,48 +312,90 @@ const MessageList = ({
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 16,
-                      padding: '8px 12px',
+                      gap: 10,
+                      padding: '8px 14px',
                       marginBottom: 8,
-                      background: 'rgba(91,124,247,0.04)',
-                      borderRadius: 10,
-                      border: '1px solid rgba(91,124,247,0.1)',
-                      fontSize: 13,
+                      background: 'rgba(255,255,255,0.55)',
+                      backdropFilter: 'blur(8px)',
+                      borderRadius: 12,
+                      border: '1px solid rgba(130,140,200,0.12)',
+                      fontSize: 12,
                       color: '#546074',
+                      flexWrap: 'wrap',
                     }}
                   >
-                    <span>
-                      <span style={{ color: '#8a95a8' }}>数据分组：</span>
-                      <span style={{ color: '#5b7cf7', fontWeight: 500 }}>{msgGroupName || '无'}</span>
-                    </span>
-                    <span style={{ color: '#e0e4ea' }}>|</span>
-                    <span>
-                      <span style={{ color: '#8a95a8' }}>数据语义：</span>
+                    <span style={{ color: '#1a2744', fontWeight: 500, fontSize: 12 }}>分组</span>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '4px 12px',
+                        borderRadius: 20,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(91,124,247,0.06))',
+                        color: '#8b5cf6',
+                        border: '1px solid rgba(139,92,246,0.18)',
+                        boxShadow: '0 1px 4px rgba(139,92,246,0.08)',
+                      }}
+                    >
                       <span
                         style={{
-                          color: '#5b7cf7',
-                          fontWeight: 500,
-                          cursor: msgSemanticSchemaId ? 'pointer' : 'default',
-                          transition: 'opacity 0.15s',
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                          background: '#8b5cf6',
+                          boxShadow: '0 0 6px rgba(139,92,246,0.5)',
                         }}
-                        onClick={() => {
-                          if (msgSemanticSchemaId) {
-                            openSchemaModal(msgSemanticSchemaId, msgSemanticName)
-                          }
+                      />
+                      {msgGroupName || '无'}
+                    </span>
+                    <span style={{ color: '#1a2744', fontWeight: 500, fontSize: 12 }}>数据语义</span>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '4px 12px',
+                        borderRadius: 20,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        background: 'linear-gradient(135deg, rgba(91,124,247,0.12), rgba(16,185,129,0.04))',
+                        color: '#5b7cf7',
+                        border: '1px solid rgba(91,124,247,0.18)',
+                        boxShadow: '0 1px 4px rgba(91,124,247,0.08)',
+                        cursor: msgSemanticSchemaId ? 'pointer' : 'default',
+                        transition: 'opacity 0.15s',
+                      }}
+                      onClick={() => {
+                        if (msgSemanticSchemaId) {
+                          openSchemaModal(msgSemanticSchemaId, msgSemanticName)
+                        }
+                      }}
+                      onMouseEnter={(e) => {
+                        if (msgSemanticSchemaId) {
+                          (e.currentTarget as HTMLElement).style.opacity = '0.7'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (msgSemanticSchemaId) {
+                          (e.currentTarget as HTMLElement).style.opacity = '1'
+                        }
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                          background: '#5b7cf7',
+                          boxShadow: '0 0 6px rgba(91,124,247,0.5)',
                         }}
-                        onMouseEnter={(e) => {
-                          if (msgSemanticSchemaId) {
-                            (e.currentTarget as HTMLElement).style.opacity = '0.7'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (msgSemanticSchemaId) {
-                            (e.currentTarget as HTMLElement).style.opacity = '1'
-                          }
-                        }}
-                      >
-                        {msgSemanticName || '无'}
-                      </span>
+                      />
+                      {msgSemanticName || '无'}
                     </span>
                   </div>
                 )}

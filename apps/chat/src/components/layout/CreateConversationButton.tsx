@@ -34,12 +34,14 @@ function ExpandIcon() {
 export function CreateConversationButton({ collapsed, onCreated, onToggleCollapse }: CreateConversationButtonProps) {
   const navigate = useNavigate()
 
-  const handleCreateNewChat = useCallback(() => {
-    onCreated?.()
-    navigate({
+  const handleCreateNewChat = useCallback(async () => {
+    // 先完成路由跳转再触发重新挂载，避免 Outlet 在旧 routeChatId 下先 remount
+    // 导致 getAppList 非静默拉取后把 curConv 恢复成上一个会话，从而闪回旧页面
+    await navigate({
       to: TASK_DETAIL_ROUTE,
       params: { taskId: 'new' },
     })
+    onCreated?.()
   }, [navigate, onCreated])
 
   return (

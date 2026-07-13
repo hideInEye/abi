@@ -43,6 +43,46 @@
 - 空间角色管理新建/编辑角色弹窗首次打开就能展示已有的二级、三级权限/菜单层级。
 - 不覆盖用户已有未说明改动。
 
+## 2026-07-13 追加：效果评审页面迁移
+
+### 需求类型
+
+前端功能迁移与页面新增
+
+### 背景
+
+用户提供的截图显示，需将原先「助手配置」抽屉中的「效果评估/效果评审」tab 页，迁移到「组件 > 数据资产」菜单下。当前代码中该 tab 实际命名为「记忆管理」，位于 `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/config/memory-management.tsx`。
+
+### 目标
+
+- 在「组件 > 数据资产」菜单下新增独立「效果评审」页面。
+- 复用原「记忆管理」的列表、搜索、人工评估、模型评估、删除等核心能力。
+- 从「助手配置」抽屉中移除「记忆管理」tab。
+- 新页面视觉风格对齐数据源列表页，使用 v5 统一样式类（`abi-searchbar`、`abi-data-area`、`assistant-table-scroll`、`btn-accent-gradient` 等）。
+
+### 非目标
+
+- 不修改后端 API 协议。
+- 不改动其他助手配置 tab。
+- 不删除原 `memory-management.tsx` 文件，仅移除其在抽屉中的引用。
+- 不处理后端菜单动态加载配置，仅完成前端路由与页面实现；菜单显示需后端在「门户管理→菜单管理」中配置。
+
+### 影响范围预期
+
+- 新增：`apps/abi/src/pages/component/data/effect-evaluation/`
+- 修改：`apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-config-drawer.tsx`
+- 修改：`apps/abi/src/router/elegant/routes.ts`、`imports.ts`、`transform.ts`
+- 修改：`apps/abi/src/types/elegant-router.d.ts`
+- 修改：`apps/abi/src/locales/langs/zh-cn/route.ts`、`en-us/route.ts`
+- 新增 run log：`.ai/runs/2026-07-13-effect-evaluation-migration/`
+
+### 验收标准
+
+- 可通过 `/component/data/effect-evaluation` 访问效果评审页面。
+- 页面列表、搜索、重置、分页、人工评估、模型评估、删除功能可用。
+- 助手配置抽屉中不再显示「记忆管理」tab。
+- 构建与类型检查不引入新错误。
+
 ## 测试要求
 
 - 优先运行与 chat 和 ABI 相关的类型检查、测试或构建命令；如项目门禁本身不可用，需说明原因。
