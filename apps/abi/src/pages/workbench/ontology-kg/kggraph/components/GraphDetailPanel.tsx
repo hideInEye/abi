@@ -1,14 +1,16 @@
-import { ApartmentOutlined, BarChartOutlined, BranchesOutlined, ProfileOutlined, TagsOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, BarChartOutlined, BranchesOutlined, CloseOutlined, ProfileOutlined, TagsOutlined } from '@ant-design/icons'
 import { Empty, Tag } from 'antd'
-import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React, { useMemo } from 'react'
 
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { OntologyEntityAttribute, OntologyGraphEdge, OntologyGraphNode } from '@/pages/workbench/ontology-kg/shared-network-types'
 
+import styles from './detail.module.css'
+
 interface GraphDetailPanelProps {
   readonly edge: OntologyGraphEdge | null
   readonly entityNameMap: Map<string, string>
+  readonly getContainer?: () => HTMLElement
   readonly node: OntologyGraphNode | null
   readonly onClose: () => void
   readonly open: boolean
@@ -20,7 +22,7 @@ const ATTRIBUTE_TITLES: Array<{ icon: React.ReactNode; key: OntologyEntityAttrib
   { icon: <TagsOutlined />, key: 'label', title: '标签属性' },
 ]
 
-export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({ edge, entityNameMap, node, open, onClose }) => {
+export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({ edge, entityNameMap, getContainer, node, open, onClose }) => {
   const groupedAttributes = useMemo(() => {
     const attributes = node?.attributes ?? []
     return new Map(ATTRIBUTE_TITLES.map((item) => [item.key, attributes.filter((attribute) => attribute.attributeType === item.key)]))
@@ -31,67 +33,97 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({ edge, entity
   else if (edge) title = '关系详情'
 
   return (
-    <CommonDrawer open={open} title={title} width={380} onClose={onClose}>
-      {node && (
-        <div className="ds-form-section flex flex-col gap-5">
-          <section>
-            <OntologyFormSectionTitle icon={<ProfileOutlined />}>基本信息</OntologyFormSectionTitle>
-            <div className="grid grid-cols-[88px_1fr] gap-y-3 text-sm">
-              <span className="text-gray-500">实体名称</span>
-              <span>{node.entityName}</span>
-              <span className="text-gray-500">实体编码</span>
-              <span>{node.entityCode}</span>
-              <span className="text-gray-500">实体颜色</span>
-              <span className="flex items-center gap-2">
-                <i className="h-3 w-3 rounded-full" style={{ backgroundColor: node.color }} />
-                {node.color || '-'}
-              </span>
-              <span className="text-gray-500">备注</span>
-              <span>{node.remark || '-'}</span>
-            </div>
-          </section>
-          {ATTRIBUTE_TITLES.map((item) => {
-            const attributes = groupedAttributes.get(item.key) ?? []
-            return (
-              <section key={item.key}>
-                <OntologyFormSectionTitle icon={item.icon}>{item.title}</OntologyFormSectionTitle>
-                {attributes.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {attributes.map((attribute) => (
-                      <Tag key={`${attribute.attributeType}-${attribute.attributeCode}`}>{attribute.attributeName}</Tag>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-sm text-gray-400">暂无属性</span>
-                )}
-              </section>
-            )
-          })}
-        </div>
-      )}
-      {!node && edge && (
-        <div className="ds-form-section">
-          <OntologyFormSectionTitle icon={<BranchesOutlined />}>基本信息</OntologyFormSectionTitle>
-          <div className="grid grid-cols-[96px_1fr] gap-y-4 text-sm">
-            <span className="text-gray-500">开始节点</span>
-            <span>{entityNameMap.get(String(edge.startEntityId)) ?? '-'}</span>
-            <span className="text-gray-500">关系名称</span>
-            <span>{edge.relation}</span>
-            <span className="text-gray-500">结束节点</span>
-            <span>{entityNameMap.get(String(edge.endEntityId)) ?? '-'}</span>
-            <span className="text-gray-500">是否可逆</span>
-            <span>{Number(edge.inverseFlag) === 1 ? '是' : '否'}</span>
-            <span className="text-gray-500">备注</span>
-            <span>{edge.remark || '-'}</span>
-            <span className="text-gray-500">创建人</span>
-            <span>{edge.createBy || '-'}</span>
-            <span className="text-gray-500">创建时间</span>
-            <span>{edge.createTime || '-'}</span>
+    <AModal
+      closable={false}
+      footer={null}
+      getContainer={getContainer}
+      open={open}
+      width={400}
+      wrapClassName={styles.detailModalWrap}
+      onCancel={onClose}
+    >
+      <div className={styles.detailModal}>
+        {/* 头部 */}
+        <div className={styles.detailHeader}>
+          <div className={styles.detailHeaderTitle}>
+            <span className={styles.detailHeaderIcon}>
+              {node ? <ProfileOutlined /> : <BranchesOutlined />}
+            </span>
+            <span>{title}</span>
           </div>
+          <button className={styles.detailCloseBtn} onClick={onClose} type="button">
+            <CloseOutlined />
+          </button>
         </div>
-      )}
-      {!node && !edge && <Empty description="请选择实体或关系" />}
-    </CommonDrawer>
+
+        {/* 内容 */}
+        <div className={styles.detailBody}>
+          {node && (
+            <div className="ds-form-section flex flex-col gap-3">
+              <section>
+                <OntologyFormSectionTitle icon={<ProfileOutlined />}>基本信息</OntologyFormSectionTitle>
+                <div className={`${styles.infoGrid} grid grid-cols-[88px_1fr] gap-y-2 text-sm`}>
+                  <span className={styles.infoLabel}>实体名称</span>
+                  <span className={styles.infoValue}>{node.entityName}</span>
+                  <span className={styles.infoLabel}>实体编码</span>
+                  <span className={styles.infoValue}>{node.entityCode}</span>
+                  <span className={styles.infoLabel}>实体颜色</span>
+                  <span className={styles.infoValue}>
+                    <span className="flex items-center gap-2">
+                      <i className="h-3 w-3 rounded-full" style={{ backgroundColor: node.color }} />
+                      {node.color || '-'}
+                    </span>
+                  </span>
+                  <span className={styles.infoLabel}>备注</span>
+                  <span className={styles.infoValue}>{node.remark || '-'}</span>
+                </div>
+              </section>
+              {ATTRIBUTE_TITLES.map((item) => {
+                const attributes = groupedAttributes.get(item.key) ?? []
+                return (
+                  <section key={item.key}>
+                    <OntologyFormSectionTitle icon={item.icon}>{item.title}</OntologyFormSectionTitle>
+                    {attributes.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {attributes.map((attribute) => (
+                          <Tag key={`${attribute.attributeType}-${attribute.attributeCode}`} className={styles.attrTag}>
+                            {attribute.attributeName}
+                          </Tag>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className={styles.emptyText}>暂无属性</span>
+                    )}
+                  </section>
+                )
+              })}
+            </div>
+          )}
+          {!node && edge && (
+            <div className="ds-form-section">
+              <OntologyFormSectionTitle icon={<BranchesOutlined />}>基本信息</OntologyFormSectionTitle>
+              <div className={`${styles.infoGrid} grid grid-cols-[96px_1fr] gap-y-2 text-sm`}>
+                <span className={styles.infoLabel}>开始节点</span>
+                <span className={styles.infoValue}>{entityNameMap.get(String(edge.startEntityId)) ?? '-'}</span>
+                <span className={styles.infoLabel}>关系名称</span>
+                <span className={styles.infoValue}>{edge.relation}</span>
+                <span className={styles.infoLabel}>结束节点</span>
+                <span className={styles.infoValue}>{entityNameMap.get(String(edge.endEntityId)) ?? '-'}</span>
+                <span className={styles.infoLabel}>是否可逆</span>
+                <span className={styles.infoValue}>{Number(edge.inverseFlag) === 1 ? '是' : '否'}</span>
+                <span className={styles.infoLabel}>备注</span>
+                <span className={styles.infoValue}>{edge.remark || '-'}</span>
+                <span className={styles.infoLabel}>创建人</span>
+                <span className={styles.infoValue}>{edge.createBy || '-'}</span>
+                <span className={styles.infoLabel}>创建时间</span>
+                <span className={styles.infoValue}>{edge.createTime || '-'}</span>
+              </div>
+            </div>
+          )}
+          {!node && !edge && <Empty description="请选择实体或关系" />}
+        </div>
+      </div>
+    </AModal>
   )
 }
 

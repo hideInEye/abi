@@ -26,7 +26,7 @@ const GlobalLoadings = memo(() => {
           })}
         </div>
       </div>
-      <h2 className="text-28px text-#646464 font-500">{t('system.title')}</h2>
+      <h2 className="text-28px text-#646464 font-500">{t('system.loading')}</h2>
     </div>
   );
 });
