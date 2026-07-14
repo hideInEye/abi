@@ -17,17 +17,28 @@ export function formatField(field: string) {
  *
  * @param list 平铺分组数组
  * @param parentId 当前父节点 ID，默认 0
+ * @param folderFirst 是否在同一父级下将文件夹（有子节点）排在叶子节点前面
  * @returns 多级树数组
  */
-export function buildGroupTree(list: any[], parentId: string = '0'): any[] {
+export function buildGroupTree(list: any[], parentId: string = '0', folderFirst: boolean = false): any[] {
   if (!Array.isArray(list)) return [];
-  return list
+  const nodes = list
     .filter(item => String(item.parentId) === String(parentId))
-    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     .map(item => {
-      const children = buildGroupTree(list, item.groupId);
+      const children = buildGroupTree(list, item.groupId, folderFirst);
       return children.length > 0 ? { ...item, children } : { ...item };
     });
+
+  return nodes.sort((a, b) => {
+    if (folderFirst) {
+      const aHasChildren = a.children && a.children.length > 0;
+      const bHasChildren = b.children && b.children.length > 0;
+      if (aHasChildren !== bHasChildren) {
+        return aHasChildren ? -1 : 1;
+      }
+    }
+    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+  });
 }
 
 /**

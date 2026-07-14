@@ -34,6 +34,7 @@ declare module "@elegant-router/types" {
     "component_applications_api-key": "api-key";
     "component_data": "data";
     "component_data_data-dictionary": "data-dictionary";
+    "component_data_effect-review": "effect-review";
     "component_system": "system";
     "component_system_model": "model";
     "component_system_plugin": "plugin";
@@ -174,6 +175,7 @@ declare module "@elegant-router/types" {
     | "ai-assistant_conversational-analysis"
     | "component_applications_api-key"
     | "component_data_data-dictionary"
+    | "component_data_effect-review"
     | "component_system_model"
     | "component_system_plugin"
     | "component_system_skills"

@@ -17,7 +17,7 @@ import {
   streamConvAnswer
 } from '../../../service/api/conv'
 import { useDebugStore } from '../../../store'
-import { getHumanInHistoryByOrderIndex } from '../../../utils'
+import { getHumanInHistoryByOrderIndex, parseMessageContent } from '../../../utils'
 import { useScreenshot } from '../useScreenShot'
 
 import type { chatHeaderRefMethod } from '../../../types'
@@ -38,6 +38,82 @@ export interface ConversationProps {
   currentModel?: ModelOption | null
   onModelChange?: (model: ModelOption) => void
   deepThinkEnabled?: boolean
+}
+
+/**
+ * 深度思考内容现在可能直接通过 delta.content 传输，并使用 Markdown 标题标记边界。
+ * 开始标记：## 1. 🧠 思考过程
+ * 结束标记：## 3. 🔧 查询模式
+ */
+const THINK_START_REGEX = /##\s*1\.\s*🧠\s*思考过程/
+const THINK_END_REGEX = /##\s*3\.\s*🔧\s*查询模式/
+
+/**
+ * 把 content 中内联的深度思考内容包装为 <think>...</think>，复用现有渲染链路。
+ * 当未启用深度思考时，直接过滤掉思考段内容，不向下游渲染。
+ * @param content 当前 chunk 的 content
+ * @param isReasoning 当前是否已处于思考段中
+ * @param enabled 是否启用深度思考展示
+ * @returns 包装后的文本和最新的思考段状态
+ */
+const processContentWithInlineThinking = (
+  content: string,
+  isReasoning: boolean,
+  enabled: boolean
+): { text: string; isReasoning: boolean } => {
+  if (enabled) {
+    if (isReasoning) {
+      const endMatch = content.match(THINK_END_REGEX)
+      if (endMatch) {
+        const thinkBody = content.slice(0, endMatch.index)
+        const afterThink = content.slice(endMatch.index! + endMatch[0].length)
+        return { text: thinkBody + '</think>' + afterThink, isReasoning: false }
+      }
+      return { text: content, isReasoning: true }
+    }
+
+    const startMatch = content.match(THINK_START_REGEX)
+    if (startMatch) {
+      const beforeThink = content.slice(0, startMatch.index)
+      const afterStart = content.slice(startMatch.index! + startMatch[0].length)
+      const endMatch = afterStart.match(THINK_END_REGEX)
+
+      if (endMatch) {
+        const thinkBody = afterStart.slice(0, endMatch.index)
+        const afterThink = afterStart.slice(endMatch.index! + endMatch[0].length)
+        return { text: beforeThink + '<think>' + thinkBody + '</think>' + afterThink, isReasoning: false }
+      }
+
+      return { text: beforeThink + '<think>' + afterStart, isReasoning: true }
+    }
+
+    return { text: content, isReasoning: false }
+  }
+
+  // 未启用深度思考：过滤思考段，只保留非思考内容
+  if (isReasoning) {
+    const endMatch = content.match(THINK_END_REGEX)
+    if (endMatch) {
+      const afterThink = content.slice(endMatch.index! + endMatch[0].length)
+      return { text: afterThink, isReasoning: false }
+    }
+    return { text: '', isReasoning: true }
+  }
+
+  const startMatch = content.match(THINK_START_REGEX)
+  if (startMatch) {
+    const afterStart = content.slice(startMatch.index! + startMatch[0].length)
+    const endMatch = afterStart.match(THINK_END_REGEX)
+
+    if (endMatch) {
+      const afterThink = afterStart.slice(endMatch.index! + endMatch[0].length)
+      return { text: afterThink, isReasoning: false }
+    }
+
+    return { text: '', isReasoning: true }
+  }
+
+  return { text: content, isReasoning: false }
 }
 
 /**
@@ -702,6 +778,9 @@ export const useConversationController = (
               try {
                 const debugInfo = JSON.parse(partialMessage)
 
+                // [临时调试] 打印后端推送的 metrics，核对 total_tokens/total_time
+                console.log('[模型调试][useConversationController] metrics:', debugInfo?.metrics, 'full:', debugInfo)
+
                 if (debugInfo.logs?.length > 0 && debugInfo.logs[0] && !exceptionGuidanceLoading) {
                   handleExceptionGuidance({
                     conv_uid: convUid,
@@ -798,6 +877,9 @@ export const useConversationController = (
     const tempUserId = `${baseId}-${Date.now()}`
     setTempUserId(tempUserId)
 
+    // 在请求开始时固定本次对话的思考开关状态，避免流式过程中用户切换开关导致渲染状态变化
+    const currentDeepThinkEnabled = effectiveDeepThinkEnabledRef.current
+
     setTimeout(scrollToBottom, 300)
     abortController.current = new AbortController()
     isAborting.current = false
@@ -814,7 +896,7 @@ export const useConversationController = (
       params.context.chat_mode = hasExcel ? 'chat_excel' : 'chat_with_db_execute'
     }
     if (params.context?.extra) {
-      params.context.extra.extra_body = { enable_thinking: effectiveDeepThinkEnabledRef.current }
+      params.context.extra.extra_body = { enable_thinking: currentDeepThinkEnabled }
       params.context.extra.semantic_id = _meta?.semanticSchemaId ?? props.semanticId ?? null
       params.context.extra.semantic_group_name = _meta?.groupName || ''
       params.context.extra.semantic_name = _meta?.semanticName || ''
@@ -842,6 +924,7 @@ export const useConversationController = (
       id: Date.now(),
       order: tempUserId,
       roundIndex: tempUserId, 
+      _groupName: _meta?.groupName,
       _semanticName: _meta?.semanticName,
       _semanticSchemaId: _meta?.semanticSchemaId,
     }
@@ -981,26 +1064,12 @@ export const useConversationController = (
               return
             }
 
-            // 从 OpenAI 兼容格式提取 content / reasoning_content
+            // 从 OpenAI 兼容格式提取 content
             let chunk = event.data
             try {
               const parsed = JSON.parse(event.data)
               const delta = parsed?.choices?.[0]?.delta
               let chunkText = ''
-
-              // 优先处理 reasoning_content（仅在开启深度思考时展示）
-              if (
-                effectiveDeepThinkEnabledRef.current &&
-                delta?.reasoning_content !== undefined &&
-                delta?.reasoning_content !== null
-              ) {
-                if (!isReasoningRef.current) {
-                  chunkText += '<think>' + delta.reasoning_content
-                  isReasoningRef.current = true
-                } else {
-                  chunkText += delta.reasoning_content
-                }
-              }
 
               // 处理 content，过滤后端重复发送的固定前缀/完整内容
               if (delta?.content !== undefined && delta?.content !== null) {
@@ -1017,18 +1086,19 @@ export const useConversationController = (
                 lastContentRef.current = currentContent
 
                 if (contentToAppend) {
-                  // 从 reasoning_content 切换到 content 时需要先闭合 think 标签
-                  if (isReasoningRef.current) {
-                    chunkText += '</think>' + contentToAppend
-                    isReasoningRef.current = false
-                  } else {
-                    chunkText += contentToAppend
-                  }
+                  // 后端把思考内容直接放在 content 中并用 Markdown 标题标记边界
+                  const processed = processContentWithInlineThinking(
+                    contentToAppend,
+                    isReasoningRef.current,
+                    currentDeepThinkEnabled
+                  )
+                  chunkText += processed.text
+                  isReasoningRef.current = processed.isReasoning
                 }
               }
 
               if (!chunkText) {
-                // 没有有效 content 和 reasoning_content 的事件跳过
+                // 没有有效 content 的事件跳过
                 return
               }
               chunk = chunkText
@@ -1249,15 +1319,45 @@ export const useConversationController = (
   }
 
   // 推荐问题：按 query_recommend 接口参数请求，返回推荐问题数组（无副作用，不新增消息，供 ViewEle 内嵌展示）
+  // messages 取该轮次用户问题；semantic_id 实时对话取发送时选中的语义（human._semanticSchemaId），历史对话取该回答内嵌的数据语义（options.semanticId）
   const getRecommend = async (options: any = {}) => {
-    const question =
+    const explicitQuestion =
       typeof options === 'string'
         ? options
         : options?.question ?? options?.messages ?? ''
+
+    // 定位该轮次的用户消息，用于回填 messages 与实时选中的语义
+    const roundOrder = typeof options === 'object' ? (options?.order ?? options?.roundIndex) : undefined
+    const humanMsg =
+      roundOrder !== undefined
+        ? convContent.find(
+            (item: any) =>
+              item.role === 'human' && (item.order === roundOrder || item.roundIndex === roundOrder)
+          )
+        : undefined
+    const humanQuestion = humanMsg
+      ? parseMessageContent(humanMsg.context)?.question ||
+        (typeof humanMsg.context === 'string' ? humanMsg.context : '')
+      : ''
+
     const base = paramsDataRef.current || paramsData
     const ctx = base?.context || {}
+
+    const messages = explicitQuestion || humanQuestion || ctx.last_question || ''
+    // 实时对话优先取发送时选中的语义；历史对话取回答内嵌的数据语义；最后回退到会话级/props
+    const semanticId =
+      humanMsg?._semanticSchemaId ??
+      (typeof options === 'object' ? options?.semanticId : undefined) ??
+      ctx.extra?.semantic_id ??
+      props.semanticId ??
+      null
+
+    // recommend_chat_mode：归因=analysis，预测=forecast，普通推荐问题=不填（不下发该字段）
+    const recommendChatMode = typeof options === 'object' ? (options?.recommendChatMode || '') : ''
+
     const params = {
-      messages: question || ctx.last_question || '',
+      messages,
+      model: '',
       stream: true,
       context: {
         embed_model_id: ctx.embed_model_id ?? '',
@@ -1267,7 +1367,8 @@ export const useConversationController = (
         app_id: ctx.app_id ?? 0,
         space_id: ctx.space_id ?? '',
         extra: {
-          semantic_id: ctx.extra?.semantic_id ?? null,
+          semantic_id: semanticId,
+          ...(recommendChatMode ? { recommend_chat_mode: recommendChatMode } : {}),
         },
       },
     }

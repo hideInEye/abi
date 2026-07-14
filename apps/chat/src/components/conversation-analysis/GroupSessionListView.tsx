@@ -115,11 +115,17 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
 
   const handleEditGroup = useCallback(async () => {
     if (!group || !editName.trim()) return
+    const newName = editName.trim()
     try {
-      await updateSessionGroup({ groupId: group.groupId, groupName: editName.trim() })
+      await updateSessionGroup({ groupId: group.groupId, groupName: newName, spaceId: getSpaceId() })
+      // 乐观更新：避免后端列表查询延迟/缓存导致页面仍显示旧名称
+      setGroup((prev) => (prev ? { ...prev, groupName: newName } : prev))
       message.success('更新分组成功')
       setEditVisible(false)
-      loadData()
+      setEditName('')
+      await loadData()
+      // 同步刷新侧边栏分组列表
+      window.dispatchEvent(new Event('conversation-created'))
     } catch {
       message.error('更新分组失败')
     }
@@ -127,17 +133,26 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
 
   const handleRenameSession = useCallback(async () => {
     if (!renamingSession || !renameValue.trim()) return
+    const newTitle = renameValue.trim()
+    const sessionId = String(renamingSession.chat_id)
     try {
       await updateApp({
-        sessionId: String(renamingSession.chat_id),
-        title: renameValue.trim(),
+        sessionId,
+        title: newTitle,
       })
+      // 乐观更新：避免后端列表查询延迟/缓存导致卡片仍显示旧名称
+      setSessions((prev) =>
+        prev.map((s) =>
+          String(s.chat_id) === sessionId ? { ...s, title: newTitle, biz_name: newTitle } : s,
+        ),
+      )
       message.success('重命名成功')
       setRenameVisible(false)
       setRenameValue('')
       setRenamingSession(null)
+      await loadData()
+      // 同步刷新侧边栏会话列表
       window.dispatchEvent(new Event('conversation-created'))
-      loadData()
     } catch {
       message.error('重命名失败')
     }

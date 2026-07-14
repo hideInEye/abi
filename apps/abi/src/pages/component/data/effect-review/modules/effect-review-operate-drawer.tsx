@@ -1,13 +1,13 @@
 import { DislikeOutlined, LikeOutlined } from '@ant-design/icons'
 import { Form } from 'antd'
-import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import dayjs from 'dayjs'
 
-import { EVAL_EXPERT_OPTIONS, EVAL_LLM_OPTIONS, MANUAL_OPTIONS, MEMORY_CHAT_MODE_OPTIONS, SAMPLE_TYPE_OPTIONS } from '@/constants/assistant-config'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+import { EVAL_EXPERT_OPTIONS, EVAL_LLM_OPTIONS, MEMORY_CHAT_MODE_OPTIONS } from '@/constants/assistant-config'
 
 type Props = Page.OperateDrawerProps
 
-const MemoryOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType }) => {
+const EffectReviewOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType }) => {
   const { t } = useTranslation()
 
   const manualVal = Form.useWatch('manual', form)
@@ -29,11 +29,10 @@ const MemoryOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open
     <CommonDrawer
       open={open}
       size="large"
-      title={operateType === 'add' ? '添加记忆' : '人工评估'}
+      title={operateType === 'add' ? '添加记录' : '人工评估'}
       footer={
         <AFlex justify="flex-end">
           <AButton onClick={handleClose}>{t('common.cancel')}</AButton>
-
           <AButton className="ml-2" type="primary" onClick={submit}>
             {t('common.confirm')}
           </AButton>
@@ -62,7 +61,6 @@ const MemoryOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open
         </AForm.Item>
         <AForm.Item label="提交意见" name="eval_user">
           <span className="pl-4">
-            {/* eslint-disable-next-line no-nested-ternary */}
             {form.getFieldValue('eval_user') === '0' ? <LikeOutlined /> : form.getFieldValue('eval_user') === '1' ? <DislikeOutlined /> : '无'}
           </span>
         </AForm.Item>
@@ -75,18 +73,10 @@ const MemoryOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open
         </div>
         {form.getFieldValue('eval_llm') ? (
           <>
-            <AForm.Item
-              label="结果"
-              name="eval_llm"
-              // rules={[{ required: true }]}
-            >
+            <AForm.Item label="结果" name="eval_llm">
               <span className="pl-4">{EVAL_LLM_OPTIONS.find((item: any) => item.value === form.getFieldValue('eval_llm'))?.label || ''}</span>
             </AForm.Item>
-            <AForm.Item
-              label="意见"
-              name="llm_opinion"
-              // rules={[{ required: true }]}
-            >
+            <AForm.Item label="意见" name="llm_opinion">
               <AInput.TextArea readOnly variant="borderless" />
             </AForm.Item>
           </>
@@ -100,27 +90,14 @@ const MemoryOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open
         <AForm.Item label="评估结果" name="status" rules={[{ required: true }]}>
           <ARadio.Group options={EVAL_EXPERT_OPTIONS} />
         </AForm.Item>
-        <AForm.Item
-          label="评估意见"
-          name="expert_opinion"
-          // rules={[{ required: true }]}
-        >
+        <AForm.Item label="评估意见" name="expert_opinion">
           <AInput.TextArea />
         </AForm.Item>
-        <AForm.Item
-          label="人工调整"
-          name="manual"
-          valuePropName="checked"
-          // rules={[{ required: true }]}
-        >
+        <AForm.Item label="人工调整" name="manual" valuePropName="checked">
           <ASwitch />
         </AForm.Item>
         {manualVal && (
-          <AForm.Item
-            label="ai信息"
-            name="ai_response"
-            // rules={[{ required: true }]}
-          >
+          <AForm.Item label="ai信息" name="ai_response">
             <ACodemirror />
           </AForm.Item>
         )}
@@ -129,4 +106,4 @@ const MemoryOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open
   )
 })
 
-export default MemoryOperateDrawer
+export default EffectReviewOperateDrawer

@@ -105,16 +105,30 @@ const AiEle: React.FC<PropsType> = ({
    * @returns {string} 处理后的消息内容
    */
   const processContent = (content: string) => {
-    // 处理后的内容
-    const processed = content
+    // 处理后的内容：保留段落结构（空行=段落分隔），避免多个换行被压缩后 Markdown 将其折叠为空格
+    const processed = String(content || '')
+      .replace(/\r\n/g, '\n')
       .split('\n')
       .map(line => line.trim()) // 去除每行首尾空白
-      .filter(line => line.length > 0) // 过滤掉空行
-      .join('\n') // 重新组合
-      .replace(/\n{2,}/g, '\n') // 将多个连续换行符压缩为单个
+      .join('\n') // 重新组合，保留空行
+      .replace(/\n{3,}/g, '\n\n') // 将多个连续空行压缩为单个段落分隔
       .trim();
-    
+
     return processed;
+  };
+
+  /**
+   * 思考内容专用渲染处理：在保留段落分隔的基础上，把段落内的单个换行也转成 Markdown 硬换行（<br>）
+   * 用于实时对话与历史对话的思考内容展示，确保后端返回的 \n / \n\n 都能真实换行
+   */
+  const toThinkingMarkdown = (content: string) => {
+    const normalized = processContent(content);
+    if (!normalized) return '';
+    // 非空行结尾追加两个空格 => Markdown 硬换行；空行保持为段落分隔
+    return normalized
+      .split('\n')
+      .map(line => (line === '' ? '' : `${line}  `))
+      .join('\n');
   };
 
   const normalizeStepContent = (rawContent: string, stepAssistantName: string) => {
@@ -263,7 +277,7 @@ const AiEle: React.FC<PropsType> = ({
     : (displayThinkingSeconds > 0 ? '思考了' : '已完成思考')
 
   const showHistoryTrigger = !questionData?.agent_label && !data?.isIllegalQuery
-  const fallbackThinkingContent = processContent(data.context || '')
+  const fallbackThinkingContent = toThinkingMarkdown(data.context || '')
   const canOpenHistorySteps = showHistoryTrigger && !data?.smLoading && (historySteps.length > 0 || !!fallbackThinkingContent)
 
   const handleToggleHistorySteps = () => {
@@ -324,7 +338,7 @@ const AiEle: React.FC<PropsType> = ({
                     <div key={step.id || index} className={styles.thinkingStepItem}>
                       <div className={styles.thinkingStepBody}>
                         <div className={styles.thinkingStepContent}>
-                          <ReactMarkdown>{step.content}</ReactMarkdown>
+                          <ReactMarkdown>{toThinkingMarkdown(step.content)}</ReactMarkdown>
                         </div>
                       </div>
                     </div>
@@ -371,7 +385,7 @@ const AiEle: React.FC<PropsType> = ({
                   {thinkNodes.map((node, index) => (
                     <div key={index} className={styles.thinkingNode}>
                       <div className={styles['markdown-content']}>
-                        <ReactMarkdown>{processContent(node.content)}</ReactMarkdown>
+                        <ReactMarkdown>{toThinkingMarkdown(node.content)}</ReactMarkdown>
                       </div>
                     </div>
                   ))}
@@ -379,7 +393,7 @@ const AiEle: React.FC<PropsType> = ({
               ) : (
                 <div className="mb-4">
                   <div className={styles['markdown-content']}>
-                    <ReactMarkdown>{processContent(data.context || '')}</ReactMarkdown>
+                    <ReactMarkdown>{toThinkingMarkdown(data.context || '')}</ReactMarkdown>
                   </div>
                 </div>
               )}

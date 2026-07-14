@@ -1,3 +1,4 @@
+import { ClockCircleOutlined } from '@ant-design/icons'
 import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Layout } from 'antd'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -10,6 +11,7 @@ import {
 import { BrandHeader } from '@/components/layout/BrandHeader'
 import { ConversationGroups } from '@/components/layout/ConversationGroups'
 import { CreateConversationButton } from '@/components/layout/CreateConversationButton'
+import { ScheduleTaskDrawer } from '@/components/layout/ScheduleTaskDrawer'
 import { SidebarHistoryTopics } from '@/components/layout/SidebarHistoryTopics'
 import { SkillStoreView } from '@/components/layout/SkillStoreView'
 import { SpaceSelector } from '@/components/layout/SpaceSelector'
@@ -34,6 +36,7 @@ function ChatWorkbenchLayout() {
   const [showSkillStore, setShowSkillStore] = useState(false)
   const [routeLoading, setRouteLoading] = useState(true)
   const [newChatNonce, setNewChatNonce] = useState(0)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
   const prevPathnameRef = useRef(pathname)
 
   const userName = useMemo(() => getCurrentUserName(), [])
@@ -178,7 +181,16 @@ function ChatWorkbenchLayout() {
       <Layout className="min-w-0" style={{ background: 'transparent' }}>
         <Content className="content-glass relative h-full min-h-0 overflow-hidden">
           <div className="chat-space-topright">
+            <button
+              type="button"
+              className="header-schedule-btn"
+              onClick={() => setScheduleOpen(true)}
+            >
+              <ClockCircleOutlined />
+              定时任务
+            </button>
             <SpaceSelector collapsed={false} onSpaceChanged={handleSpaceChanged} />
+            <ScheduleTaskDrawer open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
           </div>
           {showSkillStore ? (
             <SkillStoreView onBack={handleBackFromSkillStore} />

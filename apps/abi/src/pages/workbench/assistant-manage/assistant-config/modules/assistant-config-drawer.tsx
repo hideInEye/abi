@@ -8,7 +8,6 @@ import { openChatConversationWindow } from '@/utils/chatWindow'
 import Dictionaries from './config/dictionaries'
 import IndustryTerminology from './config/industry-terminology'
 import LabelSemantics from './config/label-semantics'
-import MemoryManagement from './config/memory-management'
 import RecommendedQuestions from './config/recommended-questions'
 import ThreePartyPlugin from './config/three-party-plugin'
 
@@ -137,13 +136,8 @@ const DatasourceConfigDrawer: FC<Props> = memo(({ agentId, onClose }) => {
         label: '三方插件',
       },
       {
-        children: <MemoryManagement agentId={agentId} dispatch={dispatch} state={state} />,
-        key: '5',
-        label: '记忆管理',
-      },
-      {
         children: <Dictionaries dispatch={dispatch} state={state} />,
-        key: '6',
+        key: '5',
         label: '数据字典',
       },
     ]

@@ -22,7 +22,7 @@ export function getGroupNodeKey(groupId: string) {
  * 初始化时必须以树结构的第一个顶级分组为准，不能直接使用平铺数组第一项。
  */
 export function getInitialGroupSelection(groups: GroupSelectionItem[]): InitialGroupSelection {
-  const tree = buildGroupTree(groups);
+  const tree = buildGroupTree(groups, '0', true);
   const firstTopGroup = tree[0] as GroupSelectionItem | undefined;
 
   if (!firstTopGroup) {

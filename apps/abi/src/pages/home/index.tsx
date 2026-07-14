@@ -90,7 +90,7 @@ export function Component() {
 
   return (
     <div className={s.container}>
-      <HomeTitle title="数据资产" />
+      <HomeTitle title="数据资产" className={s['section-title-spacious']} />
       <DataAssets homeData={homeData} />
 
       <HomeTitle

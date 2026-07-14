@@ -295,6 +295,9 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         <div className="more-popup-item" onClick={openSchemaModal}>
           <EyeOutlined style={{ fontSize: 14 }} /> 查看语义
         </div>
+        {/* 交互模式下隐藏 技能 / MCP 入口 */}
+        {selectedMode.key !== 'interact' && (
+        <>
         {/* 技能（嵌套 Popover） */}
         <Popover
           content={
@@ -397,6 +400,8 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             <DownOutlined style={{ marginLeft: 'auto', fontSize: 10, transform: 'rotate(-90deg)' }} />
           </div>
         </Popover>
+        </>
+        )}
         {/* 联网搜索 */}
         {/* <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('联网搜索功能即将上线'); }}>
           <SearchOutlined style={{ fontSize: 14 }} /> 联网搜索

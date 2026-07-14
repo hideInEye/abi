@@ -158,7 +158,8 @@ const ViewEle: React.FC<PropsType> = ({
   const [batchIndex, setBatchIndex] = useState(0);
   // 推荐问题内嵌展示（点击底部灯泡后，直接在当前回答下方展示，不新增消息）
   const [recList, setRecList] = useState<string[]>([]);
-  const [recBatch, setRecBatch] = useState(0);
+  // 换一批循环模式：0=不填(普通推荐问题) 1=analysis(归因) 2=forecast(预测)，循环切换并每次重新调接口
+  const [recMode, setRecMode] = useState(0);
   const [loading, setLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<{ data: any[]; columns: any[]; } | null>(null);
   // 添加图表相关的状态
@@ -468,6 +469,8 @@ const ViewEle: React.FC<PropsType> = ({
         while (partialMessage.startsWith('{') && partialMessage.endsWith('}')) {
           try {
             const debugInfo = JSON.parse(partialMessage);
+            // [临时调试] 打印后端推送的 metrics，核对 total_tokens/total_time
+            console.log('[模型调试][ViewEle] metrics:', debugInfo?.metrics, 'full:', debugInfo);
             setDebugInfoMap({ ...debugInfo, name: debugInfo.name || {} });
             partialMessage = '';
           } catch {
@@ -590,20 +593,16 @@ const ViewEle: React.FC<PropsType> = ({
     }
   };
 
-  // 处理预测分析点击
+  // 处理预测分析点击：复用推荐问题接口（getRecommend），recommend_chat_mode=forecast，结果内嵌展示
   const handlePredictClick = () => {
-    if (getQueryRewrite) {
-      const params = getRecommendParams(conv, data, '', '推荐与当前问题相关的预测分析问题')
-      getQueryRewrite(params);
-    }
+    setRecMode(2);
+    fetchRecommendByMode(2);
   };
 
-  // 处理归因分析点击
+  // 处理归因分析点击：复用推荐问题接口（getRecommend），recommend_chat_mode=analysis，结果内嵌展示
   const handleAttributionClick = () => {
-    if (getQueryRewrite) {
-      const params = getRecommendParams(conv, data, '', '推荐与当前问题相关的归因分析问题')
-      getQueryRewrite(params);
-    }
+    setRecMode(1);
+    fetchRecommendByMode(1);
   };
 
   // 处理引用
@@ -611,12 +610,20 @@ const ViewEle: React.FC<PropsType> = ({
     onReferenceClick && onReferenceClick(data.order);
   }
 
-  // 推荐问题：调用接口获取，直接在当前回答下方内嵌展示（不新增用户消息/新框）
-  const handleQaClick = async () => {
+  // 换一批循环的 recommend_chat_mode：不填 → 归因 → 预测 → 回到不填
+  const REC_MODE_CYCLE = ['', 'analysis', 'forecast'];
+
+  // 按指定模式调用推荐问题接口（每次返回一批，直接替换展示内容）
+  const fetchRecommendByMode = async (modeIndex: number) => {
     if (!getRecommend) return
     try {
-      const list = await getRecommend({ question: '' });
-      setRecBatch(0);
+      // 传入本轮次 order/roundIndex（供 hook 回填用户问题与实时选中语义）、回答内嵌的数据语义（历史对话用）以及当前推荐模式
+      const list = await getRecommend({
+        order: data?.order,
+        roundIndex: data?.roundIndex,
+        semanticId: chartData?.semantic_id,
+        recommendChatMode: REC_MODE_CYCLE[modeIndex] || '',
+      });
       setRecList(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error('获取推荐问题失败:', error);
@@ -624,9 +631,17 @@ const ViewEle: React.FC<PropsType> = ({
     }
   };
 
-  // 推荐问题-换一批（每批 oneBatch 个，循环切换 问数/归因/预测）
+  // 推荐问题：点击底部灯泡，从不填模式开始获取并内嵌展示
+  const handleQaClick = async () => {
+    setRecMode(0);
+    await fetchRecommendByMode(0);
+  };
+
+  // 换一批：循环切换 recommend_chat_mode（不填→归因→预测→不填）并重新调接口
   const handleRecChangeBatch = () => {
-    setRecBatch((prev) => ((prev + 1) * oneBatch >= recList.length ? 0 : prev + 1));
+    const nextMode = (recMode + 1) % REC_MODE_CYCLE.length;
+    setRecMode(nextMode);
+    fetchRecommendByMode(nextMode);
   };
 
   // 重新生成：清空筛选条件，按原始SQL重新查询数据
@@ -1599,7 +1614,7 @@ const ViewEle: React.FC<PropsType> = ({
                                 />
                                 <div
                                   className="mt-3"
-                                  style={activeType === 'chart' ? { background: '#F2F3F5', borderRadius: '8px', padding: '12px' } : undefined}
+                                  style={activeType === 'chart' || !hasData ? { background: '#F2F3F5', borderRadius: '8px', padding: '12px' } : undefined}
                                 >
                                   {hasData ? (
                                     renderContent()
@@ -1649,7 +1664,7 @@ const ViewEle: React.FC<PropsType> = ({
                   {recList.length > 0 && (
                     <div className="recommend-questions">
                       <div className="recommend-questions-list">
-                        {recList.slice(oneBatch * recBatch, oneBatch * (recBatch + 1)).map((question: string) => (
+                        {recList.map((question: string) => (
                           <div
                             key={question}
                             className="recommend-question-item"
@@ -1661,7 +1676,10 @@ const ViewEle: React.FC<PropsType> = ({
                         ))}
                       </div>
                       <div className="recommend-questions-footer">
-                        <span className="recommend-change-batch" onClick={handleRecChangeBatch}>换一批</span>
+                        {/* 仅普通推荐问题（recMode===0）显示「换一批」；归因/预测结果区不显示 */}
+                        {recMode === 0 && (
+                          <span className="recommend-change-batch" onClick={handleRecChangeBatch}>换一批</span>
+                        )}
                       </div>
                     </div>
                   )}

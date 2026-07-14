@@ -117,6 +117,15 @@ export const generatedRoutes: GeneratedRoute[] = [
               i18nKey: 'route.component_data_data-dictionary',
               title: 'component_data_data-dictionary'
             }
+          },
+          {
+            name: 'component_data_effect-review',
+            path: 'effect-review',
+            component: 'view.component_data_effect-review',
+            meta: {
+              i18nKey: 'route.component_data_effect-review',
+              title: 'component_data_effect-review'
+            }
           }
         ]
       },
