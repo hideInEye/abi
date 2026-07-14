@@ -33,6 +33,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
   refreshKey = 0,
 }) => {
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [group, setGroup] = useState<SessionGroup | null>(null)
   const [groups, setGroups] = useState<SessionGroup[]>([])
   const [sessions, setSessions] = useState<any[]>([])
@@ -50,6 +51,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
 
   const loadData = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const spaceId = getSpaceId()
       const [groupRes, sessionRes] = await Promise.all([
@@ -73,6 +75,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
       )
       setSessions(groupSessions)
     } catch {
+      setLoadError(true)
       message.error('加载分组数据失败')
     } finally {
       setLoading(false)
@@ -279,6 +282,24 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
     return (
       <div className="h-full flex items-center justify-center">
         <Spin />
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div
+        className="h-full flex flex-col items-center justify-center"
+        style={{ color: 'var(--ink-3)', gap: 12 }}
+      >
+        <div>加载分组数据失败，请稍后重试</div>
+        <span
+          className="cursor-pointer"
+          style={{ color: 'var(--accent)' }}
+          onClick={() => loadData()}
+        >
+          点击重试
+        </span>
       </div>
     )
   }

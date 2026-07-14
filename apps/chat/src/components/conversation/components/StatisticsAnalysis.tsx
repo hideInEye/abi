@@ -15,6 +15,10 @@ import {
   ReloadOutlined,
   FileTextOutlined,
   SnippetsOutlined,
+  DeleteOutlined,
+  EllipsisOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 
 interface Props {
@@ -23,10 +27,13 @@ interface Props {
   onReferenceClick?: () => void;
   onQaClick?: () => void;
   onRegenerateClick?: () => void;
+  onDeleteClick?: () => void;
   onVoteChange: (payload: any) => void;
   chatMode: string;
   feedback: any;
   content?: string; // 用于复制的内容
+  isLast?: boolean; // 仅最后一组对话显示重新生成
+  versionInfo?: { activeIndex: number; total: number; onChange: (i: number) => void }; // 多版本分页
 }
 
 const StatisticsAnalysis: React.FC<Props> = ({
@@ -37,8 +44,11 @@ const StatisticsAnalysis: React.FC<Props> = ({
   onPredictClick,
   onQaClick,
   onRegenerateClick,
+  onDeleteClick,
   feedback,
-  content = ''
+  content = '',
+  isLast,
+  versionInfo,
 }) => {
   const showLikeButton = getModulesByChatMode(chatMode, ModulesMap[7]); // 是否显示点赞点踩按钮
   const showReferenceButton = getModulesByChatMode(chatMode, ModulesMap[8]); // 是否显示引用按钮
@@ -216,7 +226,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
   };
 
   return (
-    <div className='my-2'>
+    <div className='my-1'>
       {/* 操作栏 - 左对齐 */}
       <div className="action-bar">
         <div className="action-bar-left">
@@ -232,8 +242,8 @@ const StatisticsAnalysis: React.FC<Props> = ({
           {/* 点赞、点踩 */}
           {renderLikeButtons()}
 
-          {/* 重新生成 */}
-          {showRegenerate && (
+          {/* 重新生成（仅最后一组对话） */}
+          {showRegenerate && isLast && onRegenerateClick && (
             <Tooltip title="重新生成">
               <span className="action-icon" onClick={onRegenerateClick}>
                 <ReloadOutlined />
@@ -241,31 +251,75 @@ const StatisticsAnalysis: React.FC<Props> = ({
             </Tooltip>
           )}
 
-          {/* 推荐问题 */}
-          {showRecommend && (
-            <Tooltip title="推荐问题">
-              <span className="action-icon" onClick={onQaClick}>
-                <BulbOutlined />
+          {/* 更多（推荐问题/归因分析/预测分析/删除收进「...」菜单，后续可扩展） */}
+          {(() => {
+            const moreItems: MenuProps['items'] = [];
+            if (showRecommend) {
+              moreItems.push({
+                key: 'qa',
+                label: (<span className="flex items-center gap-2"><BulbOutlined />推荐问题</span>),
+                onClick: () => onQaClick?.(),
+              });
+            }
+            if (showAttributionButton) {
+              moreItems.push({
+                key: 'attribution',
+                label: (<span className="flex items-center gap-2"><FunnelPlotOutlined />归因分析</span>),
+                onClick: () => onAttributionClick?.(),
+              });
+            }
+            if (showPredictButton) {
+              moreItems.push({
+                key: 'predict',
+                label: (<span className="flex items-center gap-2"><FundOutlined />预测分析</span>),
+                onClick: () => onPredictClick?.(),
+              });
+            }
+            if (onDeleteClick && chatMode !== 'chat_excel') {
+              moreItems.push({
+                key: 'delete',
+                label: (<span className="flex items-center gap-2"><DeleteOutlined />删除</span>),
+                onClick: () => onDeleteClick?.(),
+              });
+            }
+            if (!moreItems.length) return null;
+            return (
+              <Dropdown menu={{ items: moreItems }} trigger={['click']} placement="topLeft">
+                <Tooltip title="更多">
+                  <span className="action-icon">
+                    <EllipsisOutlined />
+                  </span>
+                </Tooltip>
+              </Dropdown>
+            );
+          })()}
+
+          {/* 删除（excel 模式单独展示，不收进「...」） */}
+          {chatMode === 'chat_excel' && onDeleteClick && (
+            <Tooltip title="删除">
+              <span className="action-icon" onClick={onDeleteClick}>
+                <DeleteOutlined />
               </span>
             </Tooltip>
           )}
 
-          {/* 归因分析 */}
-          {showAttributionButton && (
-            <Tooltip title="归因分析">
-              <span className="action-icon" onClick={onAttributionClick}>
-                <FunnelPlotOutlined />
+          {/* 多版本切换（重新生成后展示层合并） */}
+          {versionInfo && versionInfo.total > 1 && (
+            <div className="flex items-center gap-1 ml-1 text-[13px] text-[#8a94a6] select-none">
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-md ${versionInfo.activeIndex <= 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-[#f0f2f5]'}`}
+                onClick={() => { if (versionInfo.activeIndex > 0) versionInfo.onChange(versionInfo.activeIndex - 1); }}
+              >
+                <LeftOutlined style={{ fontSize: 12 }} />
               </span>
-            </Tooltip>
-          )}
-
-          {/* 预测分析 */}
-          {showPredictButton && (
-            <Tooltip title="预测分析">
-              <span className="action-icon" onClick={onPredictClick}>
-                <FundOutlined />
+              <span>{versionInfo.activeIndex + 1} / {versionInfo.total}</span>
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-md ${versionInfo.activeIndex >= versionInfo.total - 1 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-[#f0f2f5]'}`}
+                onClick={() => { if (versionInfo.activeIndex < versionInfo.total - 1) versionInfo.onChange(versionInfo.activeIndex + 1); }}
+              >
+                <RightOutlined style={{ fontSize: 12 }} />
               </span>
-            </Tooltip>
+            </div>
           )}
         </div>
       </div>

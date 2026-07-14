@@ -5,7 +5,7 @@
  * @module AiEle
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import SvgIcon from "../../components/SvgIcon"
 import styles from './index.module.css';
 import ClarifyComponent from "./components/ClarifyComponent";
@@ -224,6 +224,36 @@ const AiEle: React.FC<PropsType> = ({
   // 历史步骤折叠/展开状态
   const [stepsExpanded, setStepsExpanded] = useState(false);
 
+  // 思考内容滚动容器
+  const thinkingContentRef = useRef<HTMLDivElement>(null);
+  // 是否自动跟随最新内容下滚（用户手动上滑后置为 false，暂停自动滚动）
+  const autoFollowRef = useRef(true);
+
+  // 监听用户滚动：贴近底部时恢复自动跟随，向上滑动则暂停
+  const handleThinkingScroll = () => {
+    const el = thinkingContentRef.current;
+    if (!el) return;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    // 距底部小于阈值视为“贴底”，继续自动跟随
+    autoFollowRef.current = distanceToBottom <= 40;
+  };
+
+  // 每轮新的思考开始时（smLoading 置为 true）重置为自动跟随
+  useEffect(() => {
+    if (data?.smLoading) {
+      autoFollowRef.current = true;
+    }
+  }, [data?.smLoading, data?.order]);
+
+  // 思考内容流式更新时，若处于自动跟随状态则滚动到底部
+  useEffect(() => {
+    if (!data?.smLoading) return;
+    if (!autoFollowRef.current) return;
+    const el = thinkingContentRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [data?.context, data?.smLoading]);
+
   useEffect(() => {
     // 控制折叠状态
     if (data?.questionData?.agent_label === 'intent_clarify' || data.smLoading || data.isIllegalQuery) {
@@ -360,6 +390,8 @@ const AiEle: React.FC<PropsType> = ({
 
           {isCollapsed ? null : <div className={styles.thinkingCardBody}>
             <div
+              ref={thinkingContentRef}
+              onScroll={handleThinkingScroll}
               className={styles.thinkingContent}
               style={{
                 paddingTop: '1.25rem'
