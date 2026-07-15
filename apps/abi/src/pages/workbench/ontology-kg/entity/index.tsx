@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { Button, message } from 'antd'
+import { Button, Popconfirm, message } from 'antd'
 import React, { useCallback, useState } from 'react'
 
 import { ViewControls } from '@/components/ViewControls'
@@ -34,7 +34,8 @@ export const Component: React.FC = () => {
   const [deletingEntityId, setDeletingEntityId] = useState<OntologyEntity['id']>()
   const [editingEntity, setEditingEntity] = useState<OntologyEntity>()
   const [attributeEntity, setAttributeEntity] = useState<OntologyEntity>()
-  const { deleteEntity, entities, labels, loading, pagination, refresh, resetSearch, saveEntity, searchValues, setPage, setSearchValues } = useEntityManagement(spaceId)
+  const { batchDeleteEntities, deleteEntity, entities, labels, loading, pagination, refresh, resetSearch, saveEntity, searchValues, selectedRowKeys, setPage, setSearchValues, setSelectedRowKeys } =
+    useEntityManagement(spaceId)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(ENTITY_COLUMN_OPTIONS)
 
   const openCreate = useCallback((): void => {
@@ -74,6 +75,16 @@ export const Component: React.FC = () => {
     },
     [deleteEntity],
   )
+  const handleBatchDelete = useCallback((): void => {
+    ;(async () => {
+      try {
+        await batchDeleteEntities()
+        message.success('批量删除成功')
+      } catch {
+        // The request layer has already displayed the backend error message.
+      }
+    })()
+  }, [batchDeleteEntities])
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -86,6 +97,18 @@ export const Component: React.FC = () => {
             <Button className="btn-accent-gradient" icon={<PlusOutlined />} type="primary" onClick={openCreate}>
               新增实体
             </Button>
+            <Popconfirm
+              cancelText="取消"
+              description={`确定删除选中的 ${selectedRowKeys.length} 条实体吗？`}
+              disabled={!selectedRowKeys.length}
+              okText="确定"
+              title="提示"
+              onConfirm={handleBatchDelete}
+            >
+              <Button danger disabled={!selectedRowKeys.length}>
+                批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
+              </Button>
+            </Popconfirm>
           </div>
           <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
         </div>
@@ -95,12 +118,14 @@ export const Component: React.FC = () => {
           labels={labels}
           loading={loading}
           pagination={pagination}
+          selectedRowKeys={selectedRowKeys}
           viewMode={viewMode}
           visibleColumnKeys={visibleColumnKeys}
           onAttributes={openAttributes}
           onDelete={handleDelete}
           onEdit={openEdit}
           onPageChange={setPage}
+          onSelectedRowKeysChange={setSelectedRowKeys}
         />
       </main>
       <EntityDrawer entity={editingEntity} labels={labels} open={entityDrawerOpen} onClose={closeEntityDrawer} onSave={saveEntity} />

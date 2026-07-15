@@ -9,7 +9,7 @@ import type { OntologyViewMode } from '@/pages/workbench/ontology-kg/hooks/useOn
 import { formatDateTime, formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display'
 import { shouldDisplayColumn } from '@/pages/workbench/ontology-kg/utils/view-controls'
 
-import { INDICATOR_TYPE_TEXT_MAP, STATUS_TEXT_MAP } from '../constants/metricModeling.constants'
+import { INDICATOR_TYPE_TEXT_MAP, QUALITY_LEVEL_DISPLAY_TEXT_MAP, STATUS_TEXT_MAP } from '../constants/metricModeling.constants'
 import type { KnowledgeIndicatorItem, KnowledgePagination } from '../types/metricModeling.types'
 
 interface Props {
@@ -51,6 +51,10 @@ export const KnowledgeTable: React.FC<Props> = ({
     const key = String(value ?? '2')
     return <Tag color={statusColorMap[key] || 'default'}>{STATUS_TEXT_MAP[key] || '草稿'}</Tag>
   }, [])
+  const renderQualityLevel = useCallback((value: string | number) => {
+    const key = String(value ?? '').toLowerCase()
+    return QUALITY_LEVEL_DISPLAY_TEXT_MAP[key] || formatDisplayValue(value)
+  }, [])
 
   const columns = useMemo<TableColumnsType<KnowledgeIndicatorItem>>(
     () => [
@@ -60,7 +64,7 @@ export const KnowledgeTable: React.FC<Props> = ({
         ellipsis: true,
         key: 'techName',
         title: '指标名称',
-        width: 180,
+        width: 180
       },
       {
         align: 'center',
@@ -79,7 +83,7 @@ export const KnowledgeTable: React.FC<Props> = ({
         title: '指标类型',
         width: 130,
       },
-      { align: 'center', dataIndex: 'qualityLevel', key: 'qualityLevel', render: formatDisplayValue, title: '质量等级', width: 120 },
+      { align: 'center', dataIndex: 'qualityLevel', key: 'qualityLevel', render: renderQualityLevel, title: '质量等级', width: 120 },
       {
         align: 'center',
         dataIndex: 'status',
@@ -108,7 +112,7 @@ export const KnowledgeTable: React.FC<Props> = ({
         width: 168,
       },
     ],
-    [onDelete, onEdit, renderIndicatorClass, renderStatus],
+    [onDelete, onEdit, renderIndicatorClass, renderQualityLevel, renderStatus],
   )
 
   const visibleColumns = useMemo(() => columns.filter((column) => shouldDisplayColumn(column.key, visibleColumnKeys)), [columns, visibleColumnKeys])
@@ -174,6 +178,7 @@ export const KnowledgeTable: React.FC<Props> = ({
               rowKey={(record) => String(record.indId || record.termId || record.techName || record.bizName)}
               rowSelection={{
                 columnWidth: 48,
+                fixed: true,
                 selectedRowKeys,
                 onChange: keys => onSelectedRowKeysChange(keys.map(String))
               }}
