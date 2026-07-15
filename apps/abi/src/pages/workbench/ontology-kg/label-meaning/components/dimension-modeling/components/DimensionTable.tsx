@@ -56,8 +56,7 @@ export const DimensionTable: React.FC<Props> = ({
         ellipsis: true,
         key: 'zhName',
         title: '中文名',
-        width: 180,
-        fixed:'left'
+        width: 180
       },
       {
         align: 'center',
@@ -211,6 +210,7 @@ export const DimensionTable: React.FC<Props> = ({
               rowKey={record => String(record.id)}
               rowSelection={{
                 columnWidth: 48,
+                fixed: true,
                 selectedRowKeys,
                 onChange: keys => onSelectedRowKeysChange(keys.map(String))
               }}

@@ -107,7 +107,7 @@ export const EntityTable: React.FC<EntityTableProps> = ({
 
   const columns = useMemo<ColumnsType<OntologyEntity>>(
     () => [
-      { align: 'center', dataIndex: 'entityName', ellipsis: true, fixed: 'left', key: 'entityName', render: formatDisplayValue, title: '实体名称', width: 160 },
+      { align: 'center', dataIndex: 'entityName', ellipsis: true, key: 'entityName', render: formatDisplayValue, title: '实体名称', width: 160 },
       { align: 'center', dataIndex: 'entityCode', ellipsis: true, key: 'entityCode', render: formatDisplayValue, title: '实体编码', width: 160 },
       {
         align: 'center',
@@ -181,9 +181,10 @@ export const EntityTable: React.FC<EntityTableProps> = ({
               dataSource={data}
               loading={loading}
               pagination={false}
-              rowKey="id"
+              rowKey={record => String(record.id)}
               rowSelection={{
                 columnWidth: 48,
+                fixed: true,
                 selectedRowKeys,
                 onChange: keys => onSelectedRowKeysChange(keys.map(String)),
               }}

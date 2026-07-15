@@ -1,5 +1,5 @@
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
-import { Select, message } from 'antd'
+import { Popconfirm, Select, message } from 'antd'
 import React, { useCallback, useState } from 'react'
 
 import { ViewControls } from '@/components/ViewControls'
@@ -25,7 +25,7 @@ const RELATION_COLUMN_OPTIONS: ColumnOption[] = [
 
 export const Component: React.FC = () => {
   const spaceId = useAppSelector(getSpaceId)
-  const { deleteRelation, entities, entityNameMap, loading, pagination, relations, draftSearchValues, resetSearch, saveRelation, setPage, setDraftSearchValues, submitSearch } =
+  const { batchDeleteRelations, deleteRelation, entities, entityNameMap, loading, pagination, relations, draftSearchValues, resetSearch, saveRelation, selectedRowKeys, setPage, setDraftSearchValues, setSelectedRowKeys, submitSearch } =
     useRelationManagement(spaceId)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingRelation, setEditingRelation] = useState<OntologyRelation | null>(null)
@@ -86,6 +86,16 @@ export const Component: React.FC = () => {
     },
     [deleteRelation],
   )
+  const handleBatchDelete = useCallback((): void => {
+    ;(async () => {
+      try {
+        await batchDeleteRelations()
+        message.success('批量删除成功')
+      } catch {
+        // The request layer has already displayed the backend error message.
+      }
+    })()
+  }, [batchDeleteRelations])
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -139,6 +149,18 @@ export const Component: React.FC = () => {
             <AButton className="btn-accent-gradient" type="primary" onClick={handleCreate}>
               <PlusOutlined /> 新增关系
             </AButton>
+            <Popconfirm
+              cancelText="取消"
+              description={`确定删除选中的 ${selectedRowKeys.length} 条关系吗？`}
+              disabled={!selectedRowKeys.length}
+              okText="确定"
+              title="提示"
+              onConfirm={handleBatchDelete}
+            >
+              <AButton danger disabled={!selectedRowKeys.length}>
+                批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
+              </AButton>
+            </Popconfirm>
           </div>
           <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
         </div>
@@ -147,11 +169,13 @@ export const Component: React.FC = () => {
           loading={loading}
           pagination={pagination}
           relations={relations}
+          selectedRowKeys={selectedRowKeys}
           viewMode={viewMode}
           visibleColumnKeys={visibleColumnKeys}
           onDelete={handleDelete}
           onEdit={handleEdit}
           onPageChange={setPage}
+          onSelectedRowKeysChange={setSelectedRowKeys}
         />
       </section>
       <RelationDrawer entities={entities} loading={saving} open={drawerOpen} relation={editingRelation} onClose={() => setDrawerOpen(false)} onSave={handleSave} />
