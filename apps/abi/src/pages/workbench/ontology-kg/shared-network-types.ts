@@ -83,6 +83,7 @@ export interface OntologyEntity {
   entityName: string
   id: OntologyNetworkId
   labelId: OntologyNetworkId | null
+  labelType?: string
   remark: string | null
   spaceId: OntologyNetworkId
   updateTime: string

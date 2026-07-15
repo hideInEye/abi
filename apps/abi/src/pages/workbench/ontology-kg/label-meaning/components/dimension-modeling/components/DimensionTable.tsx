@@ -1,4 +1,5 @@
-import { Popconfirm, Table, Tag } from 'antd'
+import { DeleteOutlined, DownOutlined, EditOutlined, PartitionOutlined } from '@ant-design/icons'
+import { Dropdown, Popconfirm, Table, Tag } from 'antd'
 import React, { useMemo } from 'react'
 
 import { OntologyCardList } from '@/pages/workbench/ontology-kg/components/OntologyCardList'
@@ -110,26 +111,39 @@ export const DimensionTable: React.FC<Props> = ({
         fixed: 'right',
         key: 'action',
         render: (_: unknown, record: DimensionModelItem) => (
-          <div className="flex items-center justify-center" style={{ gap: 2 }}>
-            <AButton className="abi-action-link" size="small" variant="link" onClick={() => onEdit(record)}>
+          <div className="ds-action-group">
+            <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
               编辑
             </AButton>
-            <AButton className="abi-action-link" size="small" variant="link" onClick={() => onHierarchy(record)}>
-              层级配置
-            </AButton>
-            <Popconfirm
-              cancelText="取消"
-              description="确定删除该维度吗？"
-              okText="确定"
-              title="提示"
-              onConfirm={() => onDelete(record)}
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'hierarchy',
+                    label: <span><PartitionOutlined style={{ marginRight: 4 }} />层级配置</span>,
+                    onClick: () => onHierarchy(record)
+                  },
+                  { type: 'divider' },
+                  {
+                    key: 'delete',
+                    danger: true,
+                    label: (
+                      <Popconfirm cancelText="取消" description="确定删除该维度吗？" okText="确定" title="提示" onConfirm={() => onDelete(record)}>
+                        <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
+                      </Popconfirm>
+                    )
+                  }
+                ]
+              }}
             >
-              <AButton className="abi-action-link-danger" size="small" variant="link">删除</AButton>
-            </Popconfirm>
+              <AButton className="abi-action-link" size="small" variant="link">
+                更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+              </AButton>
+            </Dropdown>
           </div>
         ),
         title: '操作',
-        width: 180
+        width: 168
       }
     ],
     [onDelete, onEdit, onHierarchy]
@@ -151,14 +165,11 @@ export const DimensionTable: React.FC<Props> = ({
   const cardFields = useMemo(
     () =>
       [
-        { key: 'englishName', label: '英文名', render: (record: DimensionModelItem) => formatDisplayValue(record.englishName) },
-        { key: 'dimType', label: '维度类型', render: (record: DimensionModelItem) => DIMENSION_TYPE_TEXT_MAP[record.dimType] || formatDisplayValue(record.dimType) },
-        { key: 'path', label: '维度路径(目录)', render: (record: DimensionModelItem) => formatDisplayValue(record.path) },
-        { key: 'owner', label: '负责人', render: (record: DimensionModelItem) => formatDisplayValue(record.owner) },
-        { key: 'status', label: '状态', render: (record: DimensionModelItem) => renderStatus(record.status) },
-        { key: 'updateTime', label: '更新时间', render: (record: DimensionModelItem) => formatDateTime(record.updateTime) },
-      ].filter(field => visibleColumnKeys.has(field.key)),
-    [visibleColumnKeys],
+        { key: 'createBy', label: '创建人', render: (record: DimensionModelItem) => formatDisplayValue(record.createBy) },
+        { key: 'createTime', label: '创建时间', render: (record: DimensionModelItem) => formatDateTime(record.createTime) },
+        { key: 'updateTime', label: '操作时间', render: (record: DimensionModelItem) => formatDateTime(record.updateTime) },
+      ],
+    [],
   )
 
   return (
@@ -167,14 +178,14 @@ export const DimensionTable: React.FC<Props> = ({
         <OntologyCardList
           actions={record => (
             <div className="flex items-center gap-1">
-              <AButton className="abi-action-link" size="small" variant="link" onClick={() => onEdit(record)}>
+              <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
                 编辑
               </AButton>
-              <AButton className="abi-action-link" size="small" variant="link" onClick={() => onHierarchy(record)}>
+              <AButton className="abi-action-link" icon={<PartitionOutlined />} size="small" variant="link" onClick={() => onHierarchy(record)}>
                 层级配置
               </AButton>
               <Popconfirm cancelText="取消" description="确定删除该维度吗？" okText="确定" title="提示" onConfirm={() => onDelete(record)}>
-                <AButton className="abi-action-link-danger" size="small" variant="link">
+                <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" variant="link">
                   删除
                 </AButton>
               </Popconfirm>

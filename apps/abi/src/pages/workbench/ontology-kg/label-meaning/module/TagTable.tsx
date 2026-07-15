@@ -1,10 +1,11 @@
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { Popconfirm, Table } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { OntologyCardList } from '@/pages/workbench/ontology-kg/components/OntologyCardList';
 import { OntologyTablePagination } from '@/pages/workbench/ontology-kg/components/OntologyTablePagination';
 import type { OntologyViewMode } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls';
-import { formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display';
+import { formatDateTime, formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display';
 import { shouldDisplayColumn } from '@/pages/workbench/ontology-kg/utils/view-controls';
 
 import { tabTypeOptions } from '../constants';
@@ -20,14 +21,29 @@ interface TagTableProps {
 
 export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit, viewMode, visibleColumnKeys }) => {
   const renderTagType = useCallback((tagType: string) => formatDisplayValue(tabTypeOptions.find(item => item.value === tagType)?.label), []);
-  const renderActions = useCallback(
+  const renderTableActions = useCallback(
     (record: TagGroup) => (
-      <div className="flex items-center justify-center" style={{ gap: 2 }}>
-        <AButton className="abi-action-link" size="small" variant="link" onClick={() => onEdit(record)}>
+      <div className="ds-action-group">
+        <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
           编辑
         </AButton>
         <Popconfirm cancelText="取消" description="确定要删除吗？" okText="确定" title="提示" onConfirm={() => onDelete(record.tagId)}>
-          <AButton className="abi-action-link-danger" size="small" variant="link">
+          <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" variant="link">
+            删除
+          </AButton>
+        </Popconfirm>
+      </div>
+    ),
+    [onDelete, onEdit],
+  );
+  const renderCardActions = useCallback(
+    (record: TagGroup) => (
+      <div className="flex items-center gap-1">
+        <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
+          编辑
+        </AButton>
+        <Popconfirm cancelText="取消" description="确定要删除吗？" okText="确定" title="提示" onConfirm={() => onDelete(record.tagId)}>
+          <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" variant="link">
             删除
           </AButton>
         </Popconfirm>
@@ -83,11 +99,11 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
         fixed: 'right',
         key: 'action',
         title: '操作',
-        width: 140,
-        render: (_: any, record: TagGroup) => renderActions(record),
+        width: 168,
+        render: (_: any, record: TagGroup) => renderTableActions(record),
       }
     ],
-    [renderActions, renderTagType],
+    [renderTableActions, renderTagType],
   );
 
   const visibleColumns = useMemo(() => columns.filter((column: any) => shouldDisplayColumn(column.key, visibleColumnKeys)), [columns, visibleColumnKeys]);
@@ -115,19 +131,18 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
   const cardFields = useMemo(
     () =>
       [
-        { key: 'engName', label: '英文名', render: (record: TagGroup) => formatDisplayValue(record.engName) },
-        { key: 'tagType', label: '标准类型', render: (record: TagGroup) => renderTagType(record.tagType) },
-        { key: 'alias', label: '别名', render: (record: TagGroup) => formatDisplayValue(record.alias) },
-        { key: 'remark', label: '文本定义', render: (record: TagGroup) => formatDisplayValue(record.remark) },
-      ].filter(field => visibleColumnKeys.has(field.key)),
-    [renderTagType, visibleColumnKeys],
+        { key: 'createBy', label: '创建人', render: (record: TagGroup) => formatDisplayValue(record.createBy) },
+        { key: 'createTime', label: '创建时间', render: (record: TagGroup) => formatDateTime(record.createTime) },
+        { key: 'updateTime', label: '操作时间', render: (record: TagGroup) => formatDateTime(record.updateTime) },
+      ],
+    [],
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {viewMode === 'card' ? (
         <OntologyCardList
-          actions={renderActions}
+          actions={renderCardActions}
           dataSource={pagedDataSource}
           emptyText="暂无标签语义"
           fields={cardFields}
