@@ -658,7 +658,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     <CommonDrawer
       open={open}
       title={isEditing ? '编辑指标建模原型' : '新建指标建模原型'}
-      width={1180}
+      width="60%"
       footer={
         <ASpace className="w-full justify-end">
           <AButton onClick={() => onClose()}>取消</AButton>

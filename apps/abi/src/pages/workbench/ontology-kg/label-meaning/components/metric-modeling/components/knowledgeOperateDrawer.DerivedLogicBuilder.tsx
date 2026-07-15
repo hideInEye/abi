@@ -1,10 +1,10 @@
-import { CheckCircleOutlined, FilterOutlined, MinusOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, MinusOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons'
 import type { FormInstance } from 'antd'
 import React from 'react'
 
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
-import { DATA_FREQUENCY_OPTIONS, DERIVED_LOGIC_OPTIONS, DERIVED_OPERATOR_OPTIONS } from '../constants/metricModeling.constants'
+import { DATA_FREQUENCY_OPTIONS, DERIVED_OPERATOR_OPTIONS } from '../constants/metricModeling.constants'
 import type { KnowledgeDerivedCondition, KnowledgeDerivedExpression, KnowledgeFormValues, KnowledgeTechField } from '../types/metricModeling.types'
 
 interface AtomicMetricOption {
@@ -192,6 +192,11 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
     form.setFieldValue('expr', result.sqlPreview)
   }, [form, result.sqlPreview, result.whereClause])
 
+  function toggleExpressionLogic(expressionName: number) {
+    const currentLogic = form.getFieldValue(['derivedExpressions', expressionName, 'innerLogic']) === 'OR' ? 'OR' : 'AND'
+    form.setFieldValue(['derivedExpressions', expressionName, 'innerLogic'], currentLogic === 'OR' ? 'AND' : 'OR')
+  }
+
   return (
     <>
       <div className="mb-4 border border-gray-200 rounded p-4">
@@ -199,56 +204,72 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
         <AForm.List name="derivedExpressions">
           {(expressionFields, { add: addExpression, remove: removeExpression }) => (
             <div className="flex flex-col gap-4">
-              {expressionFields.map((expressionField, expressionIndex) => (
-                <div className="rounded-xl border border-gray-100 bg-white p-4" key={expressionField.key}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="rounded bg-gray-50 px-4 py-2 text-base font-semibold">表达式{expressionIndex + 1}</div>
-                    <AButton danger type="text" onClick={() => removeExpression(expressionField.name)}>
-                      删除表达式
-                    </AButton>
-                  </div>
+              {expressionFields.map((expressionField, expressionIndex) => {
+                const expressionLogic = derivedExpressions?.[expressionField.name]?.innerLogic === 'OR' ? 'OR' : 'AND'
+                const logicLabel = expressionLogic === 'OR' ? '或' : '且'
 
-                  <AForm.List name={[expressionField.name, 'conditions']}>
-                    {(conditionFields, { add: addCondition, remove: removeCondition }) => (
-                      <div className="relative pl-8">
-                        {conditionFields.length > 1 ? <div className="absolute bottom-14 left-3 top-6 w-1px bg-blue-100" /> : null}
-                        {conditionFields.length > 1 ? (
-                          <AForm.Item className="absolute top-8 mb-0 w-7 -left-1" name={[expressionField.name, 'innerLogic']} initialValue="AND">
-                            <ASelect  className="knowledge-derived-logic-node" options={DERIVED_LOGIC_OPTIONS} popupMatchSelectWidth={80} />
-                          </AForm.Item>
-                        ) : null}
+                return (
+                  <div className="rounded-xl border border-gray-100 bg-white px-6 py-5" key={expressionField.key}>
+                    <div className="mb-5 flex items-center justify-between">
+                      <div className="min-w-36 rounded-md bg-gray-50 px-5 py-3 text-lg font-semibold text-gray-900">表达式{expressionIndex + 1}</div>
+                      <AButton danger type="text" onClick={() => removeExpression(expressionField.name)}>
+                        删除表达式
+                      </AButton>
+                    </div>
 
-                        {conditionFields.map(conditionField => (
-                          <div className="relative" key={conditionField.key}>
-                            <div className="mb-3 grid grid-cols-[minmax(220px,1fr)_140px_minmax(240px,1.4fr)_88px] items-start gap-x-3">
-                              <AForm.Item {...conditionField} name={[conditionField.name, 'metric']} rules={[{ message: '请选择字段', required: true }]}>
-                                <ASelect showSearch options={fieldOptions} placeholder="请选择字段" />
-                              </AForm.Item>
+                    <AForm.Item hidden initialValue="AND" name={[expressionField.name, 'innerLogic']}>
+                      <AInput />
+                    </AForm.Item>
 
-                              <AForm.Item {...conditionField} name={[conditionField.name, 'operator']} rules={[{ message: '请选择操作符', required: true }]}>
-                                <ASelect options={DERIVED_OPERATOR_OPTIONS} placeholder="请选择操作符" />
-                              </AForm.Item>
+                    <AForm.List name={[expressionField.name, 'conditions']}>
+                      {(conditionFields, { add: addCondition, remove: removeCondition }) => (
+                        <div className="relative pl-16">
+                          {conditionFields.length > 1 ? (
+                            <>
+                              <div className="absolute bottom-20 left-8 top-10 w-px bg-blue-100" />
+                              <button
+                                className="absolute left-[17px] top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border-2 border-blue-200 bg-white text-base font-semibold text-blue-600 shadow-sm transition hover:border-blue-400 hover:text-blue-700"
+                                type="button"
+                                onClick={() => toggleExpressionLogic(expressionField.name)}
+                              >
+                                {logicLabel}
+                              </button>
+                            </>
+                          ) : null}
 
-                              <AForm.Item className="m-0" {...conditionField} name={[conditionField.name, 'value']}>
-                                <AInput placeholder="请输入值" />
-                              </AForm.Item>
+                          {conditionFields.map(conditionField => (
+                            <div className="relative" key={conditionField.key}>
+                              <div className="absolute -left-8 top-6 h-px w-8 bg-blue-100" />
+                              <div className="mb-3 grid grid-cols-[minmax(220px,1fr)_140px_minmax(240px,1.4fr)_88px] items-start gap-x-3">
+                                <AForm.Item {...conditionField} name={[conditionField.name, 'metric']} rules={[{ message: '请选择字段', required: true }]}>
+                                  <ASelect showSearch options={fieldOptions} placeholder="请选择字段" />
+                                </AForm.Item>
 
-                              <div className="flex gap-2">
-                                <AButton icon={<MinusOutlined />} onClick={() => removeCondition(conditionField.name)} />
-                                <AButton icon={<PlusOutlined />} onClick={() => addCondition({ ...defaultCondition }, conditionField.name + 1)} />
+                                <AForm.Item {...conditionField} name={[conditionField.name, 'operator']} rules={[{ message: '请选择操作符', required: true }]}>
+                                  <ASelect options={DERIVED_OPERATOR_OPTIONS} placeholder="请选择操作符" />
+                                </AForm.Item>
+
+                                <AForm.Item className="m-0" {...conditionField} name={[conditionField.name, 'value']}>
+                                  <AInput placeholder="请输入值" />
+                                </AForm.Item>
+
+                                <div className="flex gap-2">
+                                  <AButton icon={<MinusOutlined />} onClick={() => removeCondition(conditionField.name)} />
+                                  <AButton icon={<PlusOutlined />} onClick={() => addCondition({ ...defaultCondition }, conditionField.name + 1)} />
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
 
-                        <AButton icon={<PlusOutlined />} type="link" onClick={() => addCondition({ ...defaultCondition })}>
-                          添加一个分支
-                        </AButton>
-                      </div>
-                    )}
-                  </AForm.List>
-                </div>
-              ))}
+                          <AButton className="mt-2 pl-0" icon={<PlusOutlined />} type="link" onClick={() => addCondition({ ...defaultCondition })}>
+                            添加一个分支
+                          </AButton>
+                        </div>
+                      )}
+                    </AForm.List>
+                  </div>
+                )
+              })}
 
               <AButton icon={<PlusOutlined />} onClick={() => addExpression(createDefaultExpression())}>
                 新增表达式

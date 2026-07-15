@@ -26,10 +26,10 @@ export interface DimensionHierarchyNode {
 
 export interface DimensionHierarchyEditItem {
   childDimId?: number
-  configJson?: string
+  configJson?: Record<string, unknown> | string
   dimId: number
   drillDirection?: 'DOWN' | 'UP'
-  hierarchyId?: number
+  hierarchyId?: null | number
   hierarchyName: string
   isDefault?: '0' | '1'
   levelName: string
@@ -55,6 +55,8 @@ export interface DimensionModelItem {
   dimType: DimensionType
   drillDirection?: string
   englishName: string
+  createBy?: string
+  createTime?: string
   groupId?: number
   groupName?: string
   id: number

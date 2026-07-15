@@ -3,7 +3,7 @@ import type { OntologyGraphEdge, OntologyGraphNode, OntologyNetworkId } from '@/
 export interface GraphQueryValues {
   degree?: number
   endEntityId?: OntologyNetworkId
-  labelId?: OntologyNetworkId
+  labelType?: OntologyNetworkId
   relationKeyword: string
   startEntityId?: OntologyNetworkId
 }

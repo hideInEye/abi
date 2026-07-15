@@ -133,7 +133,7 @@ const IconSelector = forwardRef<HTMLDivElement, IconSelectorProps>(({
     return (
         <ATooltip
             title={showTooltip ? tooltipText : null}
-            placement="top"
+            placement="bottom"
             overlayStyle={{ maxWidth: 300 }}
             open={showTooltip && !open ? undefined : false}
         >

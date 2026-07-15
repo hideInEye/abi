@@ -1,5 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react'
+import { DownOutlined } from '@ant-design/icons'
 import { Dropdown, Popconfirm, Splitter } from 'antd'
+import type { MenuProps } from 'antd'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
@@ -13,8 +15,6 @@ import { KnowledgeTable } from './components/KnowledgeTable'
 import { KNOWLEDGE_GROUP_TYPE } from './constants/metricModeling.constants'
 import { useKnowledgeExtraction } from './hooks/useKnowledgeExtraction'
 import type { KnowledgeGroupItem } from './types/metricModeling.types'
-import { DownOutlined } from '@ant-design/icons'
-import { MenuProps } from 'antd/lib'
 
 const KNOWLEDGE_COLUMN_OPTIONS: ColumnOption[] = [
   { key: 'techName', label: '指标名称', visible: true },
@@ -56,7 +56,9 @@ const MetricModeling: React.FC = () => {
     setSelectedGroup({ groupId, groupName: groupName || '' })
   }, [])
 
-    const addMenus = useMemo<MenuProps['items']>(
+  const canCreateCustom = tableData.length > 0 || pagination.total > 0
+
+  const addMenus = useMemo<MenuProps['items']>(
     () => [
       {
         key: 'atomic',
@@ -68,6 +70,7 @@ const MetricModeling: React.FC = () => {
         ),
       },
       {
+        disabled: !canCreateCustom,
         key: 'custom',
         label: (
           <div className="py-1">
@@ -77,12 +80,15 @@ const MetricModeling: React.FC = () => {
         ),
       },
     ],
-    [],
+    [canCreateCustom],
   )
 
-    const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
     if (key === 'atomic') {
       handleAddAtomic()
+      return
+    }
+    if (!canCreateCustom) {
       return
     }
     handleAddCustom()

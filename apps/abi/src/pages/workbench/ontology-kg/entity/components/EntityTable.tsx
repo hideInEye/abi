@@ -1,5 +1,5 @@
-import { DeleteOutlined, SettingOutlined } from '@ant-design/icons'
-import { Button, Popconfirm, Table, Tooltip } from 'antd'
+import { DeleteOutlined, DownOutlined, EditOutlined, SettingOutlined } from '@ant-design/icons'
+import { Button, Dropdown, Popconfirm, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React, { useCallback, useMemo } from 'react'
 
@@ -41,21 +41,59 @@ export const EntityTable: React.FC<EntityTableProps> = ({
 }) => {
   const labelMap = useMemo(() => new Map(labels.map((label) => [String(label.id), label.bizName])), [labels])
 
-  const renderActions = useCallback(
+  const renderTableActions = useCallback(
+    (record: OntologyEntity): React.ReactNode => {
+      const deleting = String(deletingId) === String(record.id)
+      return (
+        <div className="ds-action-group">
+          <Button className="abi-action-link" icon={<EditOutlined />} size="small" type="link" onClick={() => onEdit(record)}>
+            编辑
+          </Button>
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'attributes',
+                  label: <span><SettingOutlined style={{ marginRight: 4 }} />属性配置</span>,
+                  onClick: () => onAttributes(record)
+                },
+                { type: 'divider' },
+                {
+                  key: 'delete',
+                  danger: true,
+                  label: (
+                    <Popconfirm cancelText="取消" description="删除实体后不可恢复，确定要删除吗？" disabled={deleting} okText="确定" title="删除确认" onConfirm={() => onDelete(record.id)}>
+                      <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
+                    </Popconfirm>
+                  )
+                }
+              ]
+            }}
+          >
+            <Button className="abi-action-link" loading={deleting} size="small" type="link">
+              更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+            </Button>
+          </Dropdown>
+        </div>
+      )
+    },
+    [deletingId, onAttributes, onDelete, onEdit],
+  )
+  const renderCardActions = useCallback(
     (record: OntologyEntity): React.ReactNode => {
       const deleting = String(deletingId) === String(record.id)
       return (
         <div className="flex items-center justify-center" style={{ gap: 4 }}>
-          <Button className="abi-action-link" size="small" type="link" onClick={() => onEdit(record)}>
+          <Button className="abi-action-link" icon={<EditOutlined />} size="small" type="link" onClick={() => onEdit(record)}>
             编辑
           </Button>
-          <Tooltip title="属性配置">
-            <Button className="abi-action-link" icon={<SettingOutlined />} size="small" type="link" onClick={() => onAttributes(record)} />
-          </Tooltip>
+          <Button className="abi-action-link" icon={<SettingOutlined />} size="small" type="link" onClick={() => onAttributes(record)}>
+            属性配置
+          </Button>
           <Popconfirm cancelText="取消" description="删除实体后不可恢复，确定要删除吗？" disabled={deleting} okText="确定" title="删除确认" onConfirm={() => onDelete(record.id)}>
-            <Tooltip title="删除">
-              <Button className="abi-action-link-danger" icon={<DeleteOutlined />} loading={deleting} size="small" type="link" />
-            </Tooltip>
+            <Button className="abi-action-link-danger" icon={<DeleteOutlined />} loading={deleting} size="small" type="link">
+              删除
+            </Button>
           </Popconfirm>
         </div>
       )
@@ -87,9 +125,9 @@ export const EntityTable: React.FC<EntityTableProps> = ({
       { align: 'center', dataIndex: 'validFlag', key: 'validFlag', render: (value: string) => formatBoolean(value, '有效', '无效'), title: '有效状态', width: 100 },
       { align: 'center', dataIndex: 'createBy', ellipsis: true, key: 'createBy', title: '创建人', width: 120, render: formatDisplayValue },
       { align: 'center', dataIndex: 'createTime', ellipsis: true, key: 'createTime', render: formatDateTime, title: '创建时间', width: 180 },
-      { align: 'center', fixed: 'right', key: 'actions', render: (_, record) => renderActions(record), title: '操作', width: 150 },
+      { align: 'center', fixed: 'right', key: 'actions', render: (_, record) => renderTableActions(record), title: '操作', width: 168 },
     ],
-    [labelMap, renderActions],
+    [labelMap, renderTableActions],
   )
   const visibleColumns = useMemo(() => columns.filter(column => shouldDisplayColumn(column.key, visibleColumnKeys)), [columns, visibleColumnKeys])
   const tableColumns = useMemo(
@@ -107,27 +145,18 @@ export const EntityTable: React.FC<EntityTableProps> = ({
   const cardFields = useMemo(
     () =>
       [
-        { key: 'entityCode', label: '实体编码', render: (record: OntologyEntity) => formatDisplayValue(record.entityCode) },
-        { key: 'labelId', label: '标签类型', render: (record: OntologyEntity) => formatDisplayValue(record.labelId === null ? undefined : labelMap.get(String(record.labelId))) },
-        {
-          key: 'color',
-          label: '颜色',
-          render: (record: OntologyEntity) =>
-            record.color ? <span aria-label={`颜色 ${record.color}`} style={{ background: record.color, borderRadius: '50%', display: 'inline-block', height: 14, width: 14 }} /> : '-',
-        },
-        { key: 'attributeCount', label: '属性数量', render: (record: OntologyEntity) => formatDisplayValue(record.attributeCount) },
-        { key: 'validFlag', label: '有效状态', render: (record: OntologyEntity) => formatBoolean(record.validFlag, '有效', '无效') },
         { key: 'createBy', label: '创建人', render: (record: OntologyEntity) => formatDisplayValue(record.createBy) },
         { key: 'createTime', label: '创建时间', render: (record: OntologyEntity) => formatDateTime(record.createTime) },
-      ].filter(field => visibleColumnKeys.has(field.key)),
-    [labelMap, visibleColumnKeys],
+        { key: 'updateTime', label: '操作时间', render: (record: OntologyEntity) => formatDateTime(record.updateTime) },
+      ],
+    [],
   )
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {viewMode === 'card' ? (
         <OntologyCardList
-          actions={renderActions}
+          actions={renderCardActions}
           dataSource={data}
           emptyText="暂无实体"
           fields={cardFields}

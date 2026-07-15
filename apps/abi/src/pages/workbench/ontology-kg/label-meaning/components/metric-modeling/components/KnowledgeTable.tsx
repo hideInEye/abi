@@ -1,3 +1,4 @@
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
 import { Popconfirm, Table, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
 import React, { useCallback, useMemo } from 'react'
@@ -5,7 +6,7 @@ import React, { useCallback, useMemo } from 'react'
 import { OntologyCardList } from '@/pages/workbench/ontology-kg/components/OntologyCardList'
 import { OntologyTablePagination } from '@/pages/workbench/ontology-kg/components/OntologyTablePagination'
 import type { OntologyViewMode } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
-import { formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display'
+import { formatDateTime, formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display'
 import { shouldDisplayColumn } from '@/pages/workbench/ontology-kg/utils/view-controls'
 
 import { INDICATOR_TYPE_TEXT_MAP, STATUS_TEXT_MAP } from '../constants/metricModeling.constants'
@@ -92,19 +93,19 @@ export const KnowledgeTable: React.FC<Props> = ({
         fixed: 'right',
         key: 'action',
         render: (_: unknown, record: KnowledgeIndicatorItem) => (
-          <div className="flex items-center justify-center" style={{ gap: 2 }}>
-            <AButton className="abi-action-link" size="small" variant="link" onClick={() => onEdit(record)}>
+          <div className="ds-action-group">
+            <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
               编辑
             </AButton>
             <Popconfirm cancelText="取消" description="确定删除该指标吗？" okText="确定" title="提示" onConfirm={() => onDelete(record)}>
-              <AButton className="abi-action-link-danger" size="small" variant="link">
+              <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" variant="link">
                 删除
               </AButton>
             </Popconfirm>
           </div>
         ),
         title: '操作',
-        width: 140,
+        width: 168,
       },
     ],
     [onDelete, onEdit, renderIndicatorClass, renderStatus],
@@ -130,12 +131,11 @@ export const KnowledgeTable: React.FC<Props> = ({
   const cardFields = useMemo(
     () =>
       [
-        { key: 'indicatorCode', label: '指标编码', render: (record: KnowledgeIndicatorItem) => formatDisplayValue(record.indicatorCode) },
-        { key: 'indicatorClass', label: '指标类型', render: (record: KnowledgeIndicatorItem) => renderIndicatorClass(record.indicatorClass || '') },
-        { key: 'qualityLevel', label: '质量等级', render: (record: KnowledgeIndicatorItem) => formatDisplayValue(record.qualityLevel) },
-        { key: 'status', label: '状态', render: (record: KnowledgeIndicatorItem) => renderStatus(record.status ?? '') },
-      ].filter((field) => visibleColumnKeys.has(field.key)),
-    [renderIndicatorClass, renderStatus, visibleColumnKeys],
+        { key: 'createBy', label: '创建人', render: (record: KnowledgeIndicatorItem) => formatDisplayValue(record.createBy) },
+        { key: 'createTime', label: '创建时间', render: (record: KnowledgeIndicatorItem) => formatDateTime(record.createTime) },
+        { key: 'updateTime', label: '操作时间', render: (record: KnowledgeIndicatorItem) => formatDateTime(record.updateTime) },
+      ],
+    [],
   )
 
   return (
@@ -144,11 +144,11 @@ export const KnowledgeTable: React.FC<Props> = ({
         <OntologyCardList
           actions={(record) => (
             <div className="flex items-center gap-1">
-              <AButton className="abi-action-link" size="small" variant="link" onClick={() => onEdit(record)}>
+              <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
                 编辑
               </AButton>
               <Popconfirm cancelText="取消" description="确定删除该指标吗？" okText="确定" title="提示" onConfirm={() => onDelete(record)}>
-                <AButton className="abi-action-link-danger" size="small" variant="link">
+                <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" variant="link">
                   删除
                 </AButton>
               </Popconfirm>

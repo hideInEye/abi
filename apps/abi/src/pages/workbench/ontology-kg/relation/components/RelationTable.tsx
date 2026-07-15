@@ -1,3 +1,4 @@
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
 import { Popconfirm, Table } from 'antd'
 import type { TableColumnsType } from 'antd'
 import React, { useMemo } from 'react'
@@ -60,19 +61,19 @@ export const RelationTable: React.FC<RelationTableProps> = ({ entityNameMap, loa
         fixed: 'right',
         key: 'action',
         render: (_, record) => (
-          <div className="flex items-center justify-center gap-2">
-            <AButton className="abi-action-link" size="small" type="link" onClick={() => onEdit(record)}>
+          <div className="ds-action-group">
+            <AButton className="abi-action-link" icon={<EditOutlined />} size="small" type="link" onClick={() => onEdit(record)}>
               编辑
             </AButton>
             <Popconfirm cancelText="取消" description="删除后无法恢复，确定删除该关系吗？" okText="确定" title="删除关系" onConfirm={() => onDelete(record)}>
-              <AButton className="abi-action-link-danger" size="small" type="link">
+              <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" type="link">
                 删除
               </AButton>
             </Popconfirm>
           </div>
         ),
         title: '操作',
-        width: 140,
+        width: 168,
       },
     ],
     [entityNameMap, onDelete, onEdit],
@@ -93,13 +94,11 @@ export const RelationTable: React.FC<RelationTableProps> = ({ entityNameMap, loa
   const cardFields = useMemo(
     () =>
       [
-        { key: 'startEntityId', label: '开始节点', render: (record: OntologyRelation) => formatDisplayValue(entityNameMap.get(String(record.startEntityId))) },
-        { key: 'endEntityId', label: '结束节点', render: (record: OntologyRelation) => formatDisplayValue(entityNameMap.get(String(record.endEntityId))) },
-        { key: 'inverseFlag', label: '是否可逆', render: (record: OntologyRelation) => formatBoolean(record.inverseFlag) },
         { key: 'createBy', label: '创建人', render: (record: OntologyRelation) => formatDisplayValue(record.createBy) },
         { key: 'createTime', label: '创建时间', render: (record: OntologyRelation) => formatDateTime(record.createTime) },
-      ].filter(field => visibleColumnKeys.has(field.key)),
-    [entityNameMap, visibleColumnKeys],
+        { key: 'updateTime', label: '操作时间', render: (record: OntologyRelation) => formatDateTime(record.updateTime) },
+      ],
+    [],
   )
 
   return (
@@ -108,11 +107,11 @@ export const RelationTable: React.FC<RelationTableProps> = ({ entityNameMap, loa
         <OntologyCardList
           actions={record => (
             <div className="flex items-center gap-1">
-              <AButton className="abi-action-link" size="small" type="link" onClick={() => onEdit(record)}>
+              <AButton className="abi-action-link" icon={<EditOutlined />} size="small" type="link" onClick={() => onEdit(record)}>
                 编辑
               </AButton>
               <Popconfirm cancelText="取消" description="删除后无法恢复，确定删除该关系吗？" okText="确定" title="删除关系" onConfirm={() => onDelete(record)}>
-                <AButton className="abi-action-link-danger" size="small" type="link">
+                <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" type="link">
                   删除
                 </AButton>
               </Popconfirm>

@@ -124,6 +124,7 @@ export interface KnowledgeIndicatorItem {
   cumulativeMode?: string
   cumulativeTimeRange?: string
   createTime?: string
+  createBy?: string
   dataType?: string
   derivedConditions?: KnowledgeDerivedCondition[]
   derivedConditionExpr?: string

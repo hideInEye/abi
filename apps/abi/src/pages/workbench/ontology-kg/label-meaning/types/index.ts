@@ -16,6 +16,8 @@ export interface TagGroup {
   spaceId: number;
   tagId: number;
   tagName: string;
+  createBy?: string;
+  createTime?: string;
   updateBy?: string;
   updateTime?: string;
 

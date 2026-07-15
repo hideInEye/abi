@@ -36,6 +36,17 @@ interface HierarchyCardItem {
   title: string
 }
 
+type DragPayload =
+  | {
+      fieldKey: string
+      type: 'field'
+    }
+  | {
+      cardId: string
+      fieldKey: string
+      type: 'level'
+    }
+
 const TIME_TEMPLATE_OPTIONS: Array<{ key: TimeTemplateKey; label: string; title: string; units: TimeUnit[] }> = [
   { key: 'year', label: '年', title: '年分析', units: ['year'] },
   { key: 'half_year', label: '半年', title: '半年分析', units: ['year', 'half_year'] },
@@ -99,18 +110,18 @@ function buildPayload(record: DimensionModelItem | null | undefined, cards: Hier
 
   return cards.flatMap((card, cardIndex) =>
     card.levels.map((level, levelIndex) => {
-      const configJson = JSON.stringify({
+      const configJson = {
         fieldKey: level.key,
         fieldName: level.levelName,
         techId: level.techId
-      })
+      }
       return {
         childDimId: level.childDimId,
         configJson,
         dimId,
         drillDirection: level.drillDirection || 'DOWN',
-        hierarchyId: level.hierarchyId ? Number(level.hierarchyId) : undefined,
-        hierarchyName: card.title,
+        hierarchyId: level.hierarchyId ? Number(level.hierarchyId) : null,
+        hierarchyName: card.title.trim() || '层级结构',
         isDefault: level.isDefault || (cardIndex === 0 ? '0' : '1'),
         levelName: level.levelName,
         levelOrder: levelIndex + 1,
@@ -246,6 +257,29 @@ function resolveTemplateKeys(cards: HierarchyCardItem[]) {
   return keys.length ? keys : TIME_TEMPLATE_OPTIONS.map(item => item.key)
 }
 
+function createCardId() {
+  return `hierarchy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function parseDragPayload(event: React.DragEvent): DragPayload | null {
+  const text = event.dataTransfer.getData('application/json') || event.dataTransfer.getData('text/plain')
+  if (!text) {
+    return null
+  }
+  try {
+    const payload = JSON.parse(text) as DragPayload
+    if (payload?.type && payload?.fieldKey) {
+      return payload
+    }
+  } catch {
+    return {
+      fieldKey: text,
+      type: 'field'
+    }
+  }
+  return null
+}
+
 export const HierarchyModal: React.FC<Props> = ({
   hierarchyItems = [],
   loading = false,
@@ -298,15 +332,8 @@ export const HierarchyModal: React.FC<Props> = ({
       return
     }
 
-    const defaultTitle = record?.zhName ? `${record.zhName}层级` : '层级结构'
-    setCards([
-      {
-        id: 'default-std',
-        levels: [],
-        title: defaultTitle
-      }
-    ])
-    setActiveCardId('default-std')
+    setCards([])
+    setActiveCardId('')
   }, [availableFieldMap, availableFields, hierarchyItems, isTimeDimension, open, record])
 
   function updateCardLevels(cardId: string, nextLevels: HierarchyFieldItem[]) {
@@ -320,19 +347,135 @@ export const HierarchyModal: React.FC<Props> = ({
     )
   }
 
+  function updateCardTitle(cardId: string, title: string) {
+    setCards(prev => prev.map(item => (item.id === cardId ? { ...item, title } : item)))
+  }
+
+  function removeCard(cardId: string) {
+    setCards(prev => {
+      const nextCards = prev.filter(item => item.id !== cardId)
+      setActiveCardId(current => (current === cardId ? nextCards[0]?.id || '' : current))
+      return nextCards
+    })
+  }
+
+  function createCardWithField(field: HierarchyFieldItem) {
+    const nextCard: HierarchyCardItem = {
+      id: createCardId(),
+      levels: [field],
+      title: field.levelName ? `${field.levelName}层级` : '层级结构'
+    }
+    setCards(prev => [...prev, nextCard])
+    setActiveCardId(nextCard.id)
+  }
+
   function addFieldToCard(field: HierarchyFieldItem, cardId?: string) {
     const targetId = cardId || activeCardId
     if (!targetId) {
+      createCardWithField(field)
       return
     }
     const target = cards.find(item => item.id === targetId)
     if (!target) {
+      createCardWithField(field)
       return
     }
     if (target.levels.some(item => item.key === field.key)) {
       return
     }
     updateCardLevels(targetId, [...target.levels, field])
+  }
+
+  function moveLevelToCard(payload: Extract<DragPayload, { type: 'level' }>, targetCardId: string, targetFieldKey?: string) {
+    if (payload.cardId === targetCardId && payload.fieldKey === targetFieldKey) {
+      return
+    }
+    const sourceCard = cards.find(item => item.id === payload.cardId)
+    const targetCard = cards.find(item => item.id === targetCardId)
+    if (!sourceCard || !targetCard) {
+      return
+    }
+    const movingLevel = sourceCard.levels.find(item => item.key === payload.fieldKey)
+    if (!movingLevel) {
+      return
+    }
+    if (payload.cardId !== targetCardId && targetCard.levels.some(item => item.key === payload.fieldKey)) {
+      return
+    }
+
+    setCards(prev => {
+      const withoutMoving = prev.map(card => {
+        if (card.id !== payload.cardId) {
+          return card
+        }
+        return {
+          ...card,
+          levels: card.levels.filter(level => level.key !== payload.fieldKey)
+        }
+      })
+
+      return withoutMoving.map(card => {
+        if (card.id !== targetCardId) {
+          return card
+        }
+        const levels = card.levels.filter(level => level.key !== payload.fieldKey)
+        const targetIndex = targetFieldKey ? levels.findIndex(level => level.key === targetFieldKey) : -1
+        if (targetIndex < 0) {
+          return {
+            ...card,
+            levels: [...levels, movingLevel]
+          }
+        }
+        return {
+          ...card,
+          levels: [...levels.slice(0, targetIndex), movingLevel, ...levels.slice(targetIndex)]
+        }
+      })
+    })
+    setActiveCardId(targetCardId)
+  }
+
+  function handleDropOnCard(event: React.DragEvent, cardId: string, targetFieldKey?: string) {
+    event.preventDefault()
+    event.stopPropagation()
+    const payload = parseDragPayload(event)
+    if (!payload) {
+      return
+    }
+    if (payload.type === 'level') {
+      moveLevelToCard(payload, cardId, targetFieldKey)
+      return
+    }
+    const field = availableFieldMap.get(payload.fieldKey)
+    if (!field) {
+      return
+    }
+    const target = cards.find(item => item.id === cardId)
+    if (target?.levels.some(item => item.key === field.key)) {
+      return
+    }
+    if (targetFieldKey) {
+      const nextLevels = [...(target?.levels || [])]
+      const targetIndex = nextLevels.findIndex(item => item.key === targetFieldKey)
+      const insertIndex = targetIndex < 0 ? nextLevels.length : targetIndex
+      nextLevels.splice(insertIndex, 0, field)
+      updateCardLevels(cardId, nextLevels)
+      return
+    }
+    addFieldToCard(field, cardId)
+  }
+
+  function handleDropOnCanvas(event: React.DragEvent) {
+    event.preventDefault()
+    const payload = parseDragPayload(event)
+    if (!payload || payload.type !== 'field') {
+      return
+    }
+    const field = availableFieldMap.get(payload.fieldKey)
+    if (!field) {
+      return
+    }
+    createCardWithField(field)
   }
 
   function removeField(cardId: string, fieldKey: string) {
@@ -419,7 +562,16 @@ export const HierarchyModal: React.FC<Props> = ({
                     className="cursor-move border border-[#d7def0] rounded bg-white px-2 py-1 text-3 font-medium hover:border-[#3d5afe]"
                     key={item.key}
                     onClick={() => addFieldToCard(item)}
-                    onDragStart={event => event.dataTransfer.setData('text/plain', item.key)}
+                    onDragStart={event => {
+                      event.dataTransfer.effectAllowed = 'copy'
+                      event.dataTransfer.setData(
+                        'application/json',
+                        JSON.stringify({
+                          fieldKey: item.key,
+                          type: 'field'
+                        } satisfies DragPayload)
+                      )
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <span>{item.displayName}</span>
@@ -430,11 +582,15 @@ export const HierarchyModal: React.FC<Props> = ({
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-auto p-3">
+            <div
+              className="min-h-0 flex-1 overflow-auto p-3"
+              onDragOver={event => event.preventDefault()}
+              onDrop={handleDropOnCanvas}
+            >
               <div className="mb-2 text-4 text-[#1f2a44] font-semibold">
                 {isTimeDimension ? '时间层级结构构建' : '层级结构构建'}
               </div>
-              <div className={isTimeDimension ? 'grid grid-cols-3 gap-2' : 'max-w-320px'}>
+              <div className={isTimeDimension ? 'grid grid-cols-3 gap-2' : 'grid max-w-720px grid-cols-2 gap-3'}>
                 {cards.map(card => (
                   <div
                     key={card.id}
@@ -443,15 +599,47 @@ export const HierarchyModal: React.FC<Props> = ({
                     }`}
                     onClick={() => setActiveCardId(card.id)}
                   >
-                    <div className="border-b border-[#d7def0] bg-[#f3f6fd] px-2 py-1 text-center text-3 text-[#1f2a44] font-semibold">
-                      {card.title}
+                    <div className="flex items-center gap-2 border-b border-[#d7def0] bg-[#f3f6fd] px-2 py-1">
+                      <AInput
+                        className="text-center text-3 font-semibold"
+                        value={card.title}
+                        variant="borderless"
+                        onChange={event => updateCardTitle(card.id, event.target.value)}
+                        onClick={event => event.stopPropagation()}
+                      />
+                      <AButton
+                        danger
+                        size="small"
+                        type="text"
+                        onClick={event => {
+                          event.stopPropagation()
+                          removeCard(card.id)
+                        }}
+                      >
+                        ×
+                      </AButton>
                     </div>
 
                     <div className="p-2 space-y-2">
                       {card.levels.map((level, index) => (
                         <div
-                          className="relative border border-[#cbd8f8] rounded bg-white px-2 py-1 text-[#3d5afe]"
+                          draggable
+                          className="relative cursor-move border border-[#cbd8f8] rounded bg-white px-2 py-1 text-[#3d5afe] transition hover:border-[#3d5afe] hover:shadow-sm"
                           key={`${card.id}-${level.key}`}
+                          onDragOver={event => event.preventDefault()}
+                          onDragStart={event => {
+                            event.stopPropagation()
+                            event.dataTransfer.effectAllowed = 'move'
+                            event.dataTransfer.setData(
+                              'application/json',
+                              JSON.stringify({
+                                cardId: card.id,
+                                fieldKey: level.key,
+                                type: 'level'
+                              } satisfies DragPayload)
+                            )
+                          }}
+                          onDrop={event => handleDropOnCard(event, card.id, level.key)}
                         >
                           <div className="flex items-center justify-between text-3 font-semibold">
                             <span>{`${index + 1}. ${level.displayName}`}</span>
@@ -472,21 +660,18 @@ export const HierarchyModal: React.FC<Props> = ({
                       <div
                         className="border border-[#cdd6ea] rounded border-dashed px-2 py-1 text-center text-4 text-[#97a3bb]"
                         onDragOver={event => event.preventDefault()}
-                        onDrop={event => {
-                          event.preventDefault()
-                          const fieldKey = event.dataTransfer.getData('text/plain')
-                          const field = availableFieldMap.get(fieldKey)
-                          if (!field) {
-                            return
-                          }
-                          addFieldToCard(field, card.id)
-                        }}
+                        onDrop={event => handleDropOnCard(event, card.id)}
                       >
                         + 拖入层级组件继续扩展
                       </div>
                     </div>
                   </div>
                 ))}
+                {!cards.length ? (
+                  <div className="col-span-full flex min-h-180px items-center justify-center rounded border border-dashed border-[#cdd6ea] bg-[#fbfcff] text-4 text-[#97a3bb]">
+                    从左侧拖入字段生成层级结构
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

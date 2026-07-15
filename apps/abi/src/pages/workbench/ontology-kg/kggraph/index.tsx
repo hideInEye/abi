@@ -211,7 +211,7 @@ export const Component: React.FC = () => {
   const adjustDegree = useCallback(
     (step: number): void => {
       const currentDegree = queryValues.degree ?? INITIAL_QUERY.degree
-      updateQuery({ degree: Math.min(5, Math.max(1, currentDegree + step)) })
+      updateQuery({ degree: Math.min(5, Math.max(1, currentDegree! + step)) })
     },
     [queryValues.degree, updateQuery],
   )
@@ -286,10 +286,12 @@ export const Component: React.FC = () => {
     const labelMap = new Map<string, string>()
     for (const entity of entities) {
       if (entity.labelId != null && !labelMap.has(String(entity.labelId))) {
-        labelMap.set(String(entity.labelId), String(entity.labelId))
+        labelMap.set(String(entity.labelId), String(entity.labelType))
       }
     }
-    return Array.from(labelMap.entries()).map(([id]) => ({ label: id, value: id }))
+    return Array.from(labelMap.entries()).map(([id,name]) => {
+      return({ label: name, value: id })
+    })
   }, [entities])
 
   const advancedSearchContent = (
@@ -331,9 +333,9 @@ export const Component: React.FC = () => {
             options={labelOptions}
             placeholder="全部"
             showSearch
-            value={queryValues.labelId}
+            value={queryValues.labelType}
             optionFilterProp="label"
-            onChange={(value: OntologyNetworkId | undefined) => updateQuery({ labelId: value })}
+            onChange={(value: OntologyNetworkId | undefined) => updateQuery({ labelType: value })}
           />
         </label>
         <div className="flex flex-col gap-2 text-12px font-500">
