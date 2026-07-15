@@ -373,7 +373,6 @@ const MessageList = ({
     const roundChecked = deleteRounds.length > 0 && deleteRounds.every((r) => deleteSelectedRounds.includes(r))
     const renderRoundCheckbox = () => (
       <Checkbox
-        className="mt-3"
         checked={roundChecked}
         onChange={(e) => deleteRounds.forEach((r) => onToggleDeleteRound?.(r, e.target.checked))}
       />
@@ -400,16 +399,16 @@ const MessageList = ({
           const hasBodyContent = section.some((item: any) => item.role !== 'human' && item.role !== 'first')
 
           if (isHumanSection) {
-            const humanInner = (
-              <div>
-                {section.map((item: any, itemIndex: number) => renderItem(item, `human-${groupKey}-${itemIndex}`))}
-              </div>
-            )
-            if (!showCheckbox) return <div key={`${sectionKey}-human`}>{humanInner}</div>
             return (
-              <div key={`${sectionKey}-human`} className="flex items-start gap-2">
-                {renderRoundCheckbox()}
-                <div className="flex-1 min-w-0">{humanInner}</div>
+              <div key={`${sectionKey}-human`} className="relative">
+                {showCheckbox && (
+                  <div className="absolute -left-9 top-2 z-10">
+                    {renderRoundCheckbox()}
+                  </div>
+                )}
+                <div>
+                  {section.map((item: any, itemIndex: number) => renderItem(item, `human-${groupKey}-${itemIndex}`))}
+                </div>
               </div>
             )
           }
@@ -423,7 +422,7 @@ const MessageList = ({
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 10,
+                      // gap: 10,
                       padding: '8px 14px',
                       marginBottom: 8,
                       background: 'rgba(255,255,255,0.55)',
@@ -435,7 +434,7 @@ const MessageList = ({
                       flexWrap: 'wrap',
                     }}
                   >
-                    <span style={{ color: '#1a2744', fontWeight: 500, fontSize: 12 }}>分组</span>
+                    <span style={{ color: '#1a2744', fontWeight: 500, fontSize: 13 }}>分组：</span>
                     <span
                       style={{
                         display: 'inline-flex',
@@ -463,7 +462,7 @@ const MessageList = ({
                       />
                       {msgGroupName || '无'}
                     </span>
-                    <span style={{ color: '#1a2744', fontWeight: 500, fontSize: 12 }}>数据语义</span>
+                    <span style={{ color: '#1a2744', fontWeight: 500, fontSize: 13, marginLeft: '2em' }}>数据语义：</span>
                     <span
                       style={{
                         display: 'inline-flex',
@@ -513,11 +512,14 @@ const MessageList = ({
                 {section.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`, isLast, versionInfo))}
               </div>
             )
-            if (!showCheckbox) return <div key={`${sectionKey}-body`}>{bodyCard}</div>
             return (
-              <div key={`${sectionKey}-body`} className="flex items-start gap-2">
-                {renderRoundCheckbox()}
-                <div className="flex-1 min-w-0">{bodyCard}</div>
+              <div key={`${sectionKey}-body`} className="relative">
+                {showCheckbox && (
+                  <div className="absolute -left-9 top-3 z-10">
+                    {renderRoundCheckbox()}
+                  </div>
+                )}
+                {bodyCard}
               </div>
             )
           }

@@ -425,20 +425,38 @@ export function Component() {
       <section className="abi-data-area">
         <div className="abi-toolbar">
           <div className="abi-toolbar-left">
-            <Dropdown
-              trigger={['click']}
+            <Dropdown.Button
+              className="btn-accent-dropdown"
+              icon={<DownOutlined />}
               menu={{
                 items: [
-                  { key: 'union', label: '快速创建' },
-                  { key: 'sql', label: 'SQL创建' },
+                  {
+                    key: 'union',
+                    label: (
+                      <div className="py-1">
+                        <div className="text-sm font-semibold">快速创建</div>
+                        <div className="mt-1 text-xs text-gray-400">拖放式快速构建数据集</div>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'sql',
+                    label: (
+                      <div className="py-1">
+                        <div className="text-sm font-semibold">SQL创建</div>
+                        <div className="mt-1 text-xs text-gray-400">编写SQL语句创建数据集</div>
+                      </div>
+                    ),
+                  },
                 ],
                 onClick: ({ key }) => push(`/workbench/data-preparation/data-collection-operate/0?viewType=${key}`),
               }}
+              placement="bottom"
+              type="primary"
+              onClick={() => push('/workbench/data-preparation/data-collection-operate/0?viewType=union')}
             >
-              <AButton className="btn-accent-gradient">
-                <PlusOutlined />新增数据集<DownOutlined />
-              </AButton>
-            </Dropdown>
+              <PlusOutlined />新增数据集
+            </Dropdown.Button>
             <APopconfirm
               title="提示"
               description={`确定要删除选中的 ${checkedRowKeys?.length || 0} 个数据集吗？`}
