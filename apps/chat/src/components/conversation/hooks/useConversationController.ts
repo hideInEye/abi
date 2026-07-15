@@ -502,14 +502,17 @@ export const useConversationController = (
         pageSize: 20
       })
 
-      const rawList = result?.data?.data || result?.data || []
-      const newMessages = Array.isArray(rawList) ? rawList.flat() : []
+      // 新版历史接口返回结构：{ data: { total, data: [{ roundIndex, messages: [...] }, ...] } }
+      const roundGroups = Array.isArray(result?.data?.data) ? result.data.data : []
+      const newMessages: any[] = roundGroups.flatMap((group: any) =>
+        Array.isArray(group?.messages) ? group.messages : []
+      )
       if (newMessages.length < 10) {
         setHasMoreHistory(false)
       }
 
       if (newMessages.length > 0) {
-        const orders = newMessages.map((item: any) => item.roundIndex ?? item.order ?? item.index ?? 0)
+        const orders = newMessages.map((item: any) => item.roundIndex ?? item.index ?? 0)
         const newMin = Math.min(...orders)
         setMinRoundIndex(newMin)
 
@@ -725,23 +728,24 @@ export const useConversationController = (
       })
       if (!isRequestTokenActive(requestToken)) return
 
-      const rawList = result?.data?.data || result?.data || []
-      const flatHistory = Array.isArray(rawList) ? rawList.flat() : []
+      // 新版历史接口返回结构：{ data: { total, data: [{ roundIndex, messages: [...] }, ...] } }
+      // 需按 roundIndex 分组，取出每组内的 messages 后再统一映射为渲染格式。
+      const roundGroups = Array.isArray(result?.data?.data) ? result.data.data : []
+      const flatHistory: any[] = roundGroups.flatMap((group: any) =>
+        Array.isArray(group?.messages) ? group.messages : []
+      )
 
       if (flatHistory.length > 0) {
-        const orders = flatHistory.map((item: any) => item.roundIndex ?? item.order ?? item.index ?? 0)
+        const orders = flatHistory.map((item: any) => item.roundIndex ?? item.index ?? 0)
         const minOrder = Math.min(...orders)
         if (!isRequestTokenActive(requestToken)) return
         setMinRoundIndex(minOrder)
 
-        if (flatHistory.length < 10) {
-          setHasMoreHistory(false)
-        } else {
-          setHasMoreHistory(true)
-        }
+        // 当前接口一次返回全部轮次，无需分页加载
+        setHasMoreHistory(false)
 
         flatHistory.forEach((item: any) => {
-          const order = item.roundIndex ?? item.order ?? item.index ?? 0
+          const order = item.roundIndex ?? item.index ?? 0
           setUserDebugInfoMap({
             order,
             roundIndex: order
