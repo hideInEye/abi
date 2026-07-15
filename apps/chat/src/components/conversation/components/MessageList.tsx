@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Checkbox } from 'antd'
 
 import AiEle from '../AiEle'
 import CheckboxWrapCom from '../CheckboxWrapCom'
@@ -9,6 +10,7 @@ import ViewEle from '../ViewEle'
 import SchemaFieldsModal from '../../conversation-analysis/SchemaFieldsModal'
 import type { SchemaTable, SchemaField } from '../../conversation-analysis/SchemaFieldsModal'
 import { fetchSemanticDetail } from '../../../service/api/semantic'
+import { parseMessageContent } from '../../../utils'
 
 // 从消息内容（view 的 chart-view 或内嵌 JSON）中解析数据分组/语义元信息，
 // 用于历史会话回填信息条（历史 human 消息不携带 _groupName/_semanticName）
@@ -65,6 +67,15 @@ type MessageListProps = {
   virtualized?: boolean
   estimatedItemHeight?: number
   overscan?: number
+  // 批量删除（Qwen 风格）
+  isDeleting?: boolean
+  deleteSelectedRounds?: number[]
+  onEnterDeleteMode?: (item: any) => void
+  onToggleDeleteRound?: (round: number, checked: boolean) => void
+  // 编辑用户消息后重新发送
+  onEditMessage?: (text: string, item: any) => void
+  // 重新生成（以相同问题重新发起一轮）
+  onRegenerate?: (item: any) => void
 }
 
 const MessageList = ({
@@ -92,6 +103,12 @@ const MessageList = ({
   virtualized = false,
   estimatedItemHeight = 120,
   overscan = 6,
+  isDeleting = false,
+  deleteSelectedRounds = [],
+  onEnterDeleteMode,
+  onToggleDeleteRound,
+  onEditMessage,
+  onRegenerate,
 }: MessageListProps) => {
   const containerRef = chatContainerRef ?? useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
@@ -100,6 +117,11 @@ const MessageList = ({
   // ── 查看语义 Modal 状态 ──
   const [semModalOpen, setSemModalOpen] = useState(false)
   const [semModalTables, setSemModalTables] = useState<SchemaTable[]>([])
+
+  // ── 重新生成版本切换（千问式）──
+  // 相邻且问题相同的轮次合并为一个多版本块，versionSel 记录用户手动选中的版本下标
+  const [versionSel, setVersionSel] = useState<Record<string, number>>({})
+  const prevVersionCountRef = useRef<Record<string, number>>({})
 
   // 解析 modelDetail 提取字段
   function parseFieldsFromModelDetail(modelDetailStr: string): SchemaField[] {
@@ -169,6 +191,49 @@ const MessageList = ({
 
   const flatData = useMemo(() => groupedData.flat(2), [groupedData])
 
+  // 将“相邻 + 问题文本完全相同”的轮次合并为一个多版本条目
+  // （分享模式不合并，仍逐轮展示）
+  const mergedGroups = useMemo(() => {
+    const getQuestion = (group: any[][]) => {
+      const human = group.flat().find((it: any) => it?.role === 'human')
+      if (!human) return ''
+      const parsed = parseMessageContent(human.context)
+      if (parsed && typeof parsed === 'object' && parsed.question) return String(parsed.question)
+      return typeof human.context === 'string' ? human.context : ''
+    }
+    const entries: { key: string; questionText: string; versions: any[][][] }[] = []
+    groupedData.forEach((group: any[][], i: number) => {
+      const q = getQuestion(group).trim()
+      const prev = entries[entries.length - 1]
+      if (q && prev && prev.questionText === q) {
+        prev.versions.push(group)
+      } else {
+        entries.push({ key: `${i}:${q}`, questionText: q, versions: [group] })
+      }
+    })
+    return entries
+  }, [groupedData])
+
+  // 某个条目的版本数变化时（如重新生成完成）自动跳到最新版本
+  useEffect(() => {
+    const changedKeys: string[] = []
+    const nextCounts: Record<string, number> = {}
+    for (const e of mergedGroups) {
+      nextCounts[e.key] = e.versions.length
+      if (prevVersionCountRef.current[e.key] !== e.versions.length) changedKeys.push(e.key)
+    }
+    prevVersionCountRef.current = nextCounts
+    if (changedKeys.length) {
+      setVersionSel((sel) => {
+        const updated = { ...sel }
+        for (const e of mergedGroups) {
+          if (changedKeys.includes(e.key)) updated[e.key] = e.versions.length - 1
+        }
+        return updated
+      })
+    }
+  }, [mergedGroups])
+
   useLayoutEffect(() => {
     if (!virtualized) return
     const el = containerRef.current
@@ -194,10 +259,15 @@ const MessageList = ({
     return () => observer.disconnect()
   }, [containerRef])
 
-  const renderItem = (item: any, key: string | number) => {
+  const renderItem = (
+    item: any,
+    key: string | number,
+    isLast = false,
+    versionInfo?: { activeIndex: number; total: number; onChange: (i: number) => void },
+  ) => {
     if (item.role === 'human') {
       const anchorId = `human-msg-${item.order}`
-      const content = <HumanEle data={item} id={anchorId} />
+      const content = <HumanEle data={item} id={anchorId} onDelete={onEnterDeleteMode} onEditSubmit={onEditMessage} />
       if (mode === 'share') return <HumanEle key={key} data={item} id={anchorId} />
       return (
         <CheckboxWrapCom key={key} convContent={convContent} checkAll={checkAll} setSharingList={setSharingList!} isSharing={isSharing} data={item}>
@@ -259,6 +329,10 @@ const MessageList = ({
           isDone={isDone}
           isGettingData={isGettingData}
           setConvContent={setConvContent}
+          onDelete={onEnterDeleteMode}
+          onRegenerate={onRegenerate}
+          isLast={isLast}
+          versionInfo={versionInfo}
           onMessageUpdate={() => {}}
         />
       )
@@ -271,9 +345,39 @@ const MessageList = ({
     return null
   }
 
-  const renderGroup = (group: any[][], index: number) => {
+  const renderGroup = (
+    group: any[][],
+    index: number,
+    opts?: {
+      isLast?: boolean
+      groupRounds?: number[]
+      versionInfo?: { activeIndex: number; total: number; onChange: (i: number) => void }
+    },
+  ) => {
+    const isLast = opts?.isLast ?? false
+    const versionInfo = opts?.versionInfo
     const flatGroup = group.flat()
     const groupKey = flatGroup[0]?.order ?? flatGroup[0]?.id ?? index
+    // 当前轮次（仅取数字 roundIndex/order，用于批量删除选择）
+    let groupRound: number | undefined = undefined
+    for (const it of flatGroup) {
+      if (it?.role === 'first') continue
+      const r = it?.roundIndex ?? it?.order
+      if (typeof r === 'number') { groupRound = r; break }
+    }
+    // 合并多版本块的删除以整块（含全部版本轮次）为单位
+    const deleteRounds = (opts?.groupRounds && opts.groupRounds.length)
+      ? opts.groupRounds
+      : (groupRound !== undefined ? [groupRound] : [])
+    const showCheckbox = isDeleting && deleteRounds.length > 0
+    const roundChecked = deleteRounds.length > 0 && deleteRounds.every((r) => deleteSelectedRounds.includes(r))
+    const renderRoundCheckbox = () => (
+      <Checkbox
+        className="mt-3"
+        checked={roundChecked}
+        onChange={(e) => deleteRounds.forEach((r) => onToggleDeleteRound?.(r, e.target.checked))}
+      />
+    )
     if (group.length === 1 && group[0]?.length === 1 && group[0][0]?.role === 'first') {
       return renderItem(group[0][0], `opening-${groupKey}`)
     }
@@ -296,16 +400,23 @@ const MessageList = ({
           const hasBodyContent = section.some((item: any) => item.role !== 'human' && item.role !== 'first')
 
           if (isHumanSection) {
-            return (
-              <div key={`${sectionKey}-human`}>
+            const humanInner = (
+              <div>
                 {section.map((item: any, itemIndex: number) => renderItem(item, `human-${groupKey}-${itemIndex}`))}
+              </div>
+            )
+            if (!showCheckbox) return <div key={`${sectionKey}-human`}>{humanInner}</div>
+            return (
+              <div key={`${sectionKey}-human`} className="flex items-start gap-2">
+                {renderRoundCheckbox()}
+                <div className="flex-1 min-w-0">{humanInner}</div>
               </div>
             )
           }
 
           if (hasBodyContent) {
-            return (
-              <div key={`${sectionKey}-body`} className="rounded-[1.25rem] border border-[#e9edf4] bg-white px-[0.875rem] py-[0.75rem] shadow-[0_0.125rem_0.5rem_rgba(15,23,42,0.04)]">
+            const bodyCard = (
+              <div className="rounded-[1.25rem] border border-[#e9edf4] bg-white px-[0.875rem] pt-[0.75rem] shadow-[0_0.125rem_0.5rem_rgba(15,23,42,0.04)]">
                 {/* 信息条：分组 + 数据语义 + 查看 */}
                 {showInfoBar && (
                   <div
@@ -399,7 +510,14 @@ const MessageList = ({
                     </span>
                   </div>
                 )}
-                {section.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`))}
+                {section.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`, isLast, versionInfo))}
+              </div>
+            )
+            if (!showCheckbox) return <div key={`${sectionKey}-body`}>{bodyCard}</div>
+            return (
+              <div key={`${sectionKey}-body`} className="flex items-start gap-2">
+                {renderRoundCheckbox()}
+                <div className="flex-1 min-w-0">{bodyCard}</div>
               </div>
             )
           }
@@ -414,8 +532,41 @@ const MessageList = ({
     )
   }
 
+  // 渲染一个合并条目：单版本直接渲染；多版本时取 v0 的问题 + 当前版本的答案，并在底部显示分页
+  const renderMergedEntry = (entry: { key: string; questionText: string; versions: any[][][] }, index: number) => {
+    const isLast = index === mergedGroups.length - 1
+    // 收集该条目全部版本的轮次（用于批量删除整块）
+    const groupRounds: number[] = []
+    entry.versions.forEach((g) => g.flat().forEach((it: any) => {
+      if (it?.role === 'first') return
+      const r = it?.roundIndex ?? it?.order
+      if (typeof r === 'number' && !groupRounds.includes(r)) groupRounds.push(r)
+    }))
+    if (entry.versions.length <= 1) {
+      return renderGroup(entry.versions[0], index, { isLast, groupRounds })
+    }
+    const total = entry.versions.length
+    const activeIndex = Math.min(versionSel[entry.key] ?? total - 1, total - 1)
+    const isHumanSection = (section: any[]) => {
+      const roles = new Set(section.map((it: any) => it?.role))
+      return roles.size === 1 && roles.has('human')
+    }
+    const humanSections = entry.versions[0].filter(isHumanSection)
+    const bodySections = entry.versions[activeIndex].filter((s: any[]) => !isHumanSection(s))
+    const displayGroup = [...humanSections, ...bodySections]
+    return renderGroup(displayGroup, index, {
+      isLast,
+      groupRounds,
+      versionInfo: {
+        activeIndex,
+        total,
+        onChange: (i: number) => setVersionSel((sel) => ({ ...sel, [entry.key]: i })),
+      },
+    })
+  }
+
   if (mode === 'share') {
-    return <>{groupedData.map(renderGroup)}</>
+    return <>{groupedData.map((g: any[][], i: number) => renderGroup(g, i))}</>
   }
 
   if (!virtualized) {
@@ -426,7 +577,7 @@ const MessageList = ({
         style={{ scrollbarGutter: 'stable' }}
       >
         <div className="max-w-[53.75rem] w-full m-auto">
-          {groupedData.map(renderGroup)}
+          {mergedGroups.map(renderMergedEntry)}
         </div>
         <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
       </div>

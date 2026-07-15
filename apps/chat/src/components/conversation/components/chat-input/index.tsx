@@ -241,8 +241,8 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
 
     const modeMenuItems: MenuProps['items'] = [
       { key: 'interact', icon: <MessageOutlined />, label: '交互', onClick: () => { setSelectedMode({ key: 'interact', label: '交互', icon: <MessageOutlined /> }); message.info('已切换到交互模式'); } },
-      { key: 'explore', icon: <CompassOutlined />, label: '探索', onClick: () => { setSelectedMode({ key: 'explore', label: '探索', icon: <CompassOutlined /> }); message.info('已切换到探索模式'); } },
-      { key: 'report', icon: <FileTextOutlined />, label: '报告', onClick: () => { setSelectedMode({ key: 'report', label: '报告', icon: <FileTextOutlined /> }); message.info('已切换到报告模式'); } },
+      { key: 'explore', icon: <CompassOutlined />, label: '探索', onClick: () => { message.info('功能开发中...'); setSelectedMode({ key: 'interact', label: '交互', icon: <MessageOutlined /> }); } },
+      { key: 'report', icon: <FileTextOutlined />, label: '报告', onClick: () => { message.info('功能开发中...'); setSelectedMode({ key: 'interact', label: '交互', icon: <MessageOutlined /> }); } },
     ];
 
     /** 数据语义 Popover 内容 */

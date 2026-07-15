@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom'
 import cloneDeep from 'lodash/cloneDeep'
 
 import { fetchOperate, fetchShareEmail } from '../../../service/api/abi-system'
-import { fetchSessionMessages } from '../../../service/api/app'
+import { fetchSessionMessages, deleteMessageByRound } from '../../../service/api/app'
 import {
   fetchConvMaxRound,
   fetchDataBySql,
@@ -209,6 +209,32 @@ const mapHistoryMessage = (item: any) => {
   }
 }
 
+// 从一轮消息的 view/ai 内容（chart-view 或内嵌 JSON）中解析数据语义元信息。
+// 历史会话的 human 消息不携带 _groupName/_semanticName/_semanticSchemaId，需从同轮答案回填。
+const extractSemanticMetaFromMessages = (messages: any[]) => {
+  for (const msg of messages) {
+    const ctx = msg?.context
+    if (typeof ctx !== 'string') continue
+    let json: any = null
+    if (ctx.includes('<chart-view')) {
+      const match = ctx.match(/<chart-view content="([\s\S]*?)"\s*\/>/)
+      if (match) {
+        try { json = JSON.parse(match[1].replace(/&quot;/g, '"').replace(/NaN/g, 'null')) } catch { /* ignore */ }
+      }
+    } else if (ctx.includes('semantic_group_name') || ctx.includes('semantic_name')) {
+      try { json = JSON.parse(ctx) } catch { /* ignore */ }
+    }
+    if (json && (json.semantic_group_name || json.semantic_name || json.semantic_id != null)) {
+      return {
+        groupName: json.semantic_group_name || '',
+        semanticName: json.semantic_name || '',
+        semanticId: json.semantic_id,
+      }
+    }
+  }
+  return { groupName: '', semanticName: '', semanticId: undefined as any }
+}
+
 const groupConversationByOrder = (messages: any[]) => {
   const firstMessageGroups = messages
     .filter((item: any) => item?.role === 'first')
@@ -335,6 +361,68 @@ export const useConversationController = (
   const [minRoundIndex, setMinRoundIndex] = useState<number | undefined>(undefined)
   const [hasMoreHistory, setHasMoreHistory] = useState(true)
   const [historyLoading, setHistoryLoading] = useState(false)
+
+  // ── 批量删除（Qwen 风格：进入选择模式后按轮次多选删除）──
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteSelectedRounds, setDeleteSelectedRounds] = useState<number[]>([])
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  // 所有可删除的轮次（仅持久化、roundIndex 为数字的消息，排除开场白与流式临时消息）
+  const deletableRounds = useMemo(() => {
+    const rounds = new Set<number>()
+    convContent.forEach((item: any) => {
+      if (item?.role === 'first') return
+      const round = item?.roundIndex ?? item?.order
+      if (typeof round === 'number') rounds.add(round)
+    })
+    return Array.from(rounds)
+  }, [convContent])
+  const deleteCheckAll = deletableRounds.length > 0 && deleteSelectedRounds.length === deletableRounds.length
+
+  // 进入删除模式；若来源消息可删除则默认勾选该轮次
+  const enterDeleteMode = (item?: any) => {
+    const round = item?.roundIndex ?? item?.order
+    setIsDeleting(true)
+    setDeleteSelectedRounds(typeof round === 'number' ? [round] : [])
+  }
+
+  const exitDeleteMode = () => {
+    setIsDeleting(false)
+    setDeleteSelectedRounds([])
+  }
+
+  const toggleDeleteRound = (round: number, checked: boolean) => {
+    if (typeof round !== 'number') return
+    setDeleteSelectedRounds((prev) => {
+      if (checked) return prev.includes(round) ? prev : [...prev, round]
+      return prev.filter((r) => r !== round)
+    })
+  }
+
+  const toggleDeleteAll = (checked: boolean) => {
+    setDeleteSelectedRounds(checked ? [...deletableRounds] : [])
+  }
+
+  const confirmDelete = async () => {
+    const rounds = deleteSelectedRounds.filter((r) => typeof r === 'number')
+    if (!rounds.length) {
+      message.warning('请选择要删除的对话')
+      return
+    }
+    setDeleteLoading(true)
+    try {
+      await deleteMessageByRound({ convUid: conv.conv_uid, roundIndex: rounds })
+      setConvContent((prev) => prev.filter((item: any) => {
+        const round = item?.roundIndex ?? item?.order
+        return !(typeof round === 'number' && rounds.includes(round))
+      }))
+      message.success('删除成功')
+      exitDeleteMode()
+    } catch {
+      message.error('删除失败，请重试')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
 
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const chatHeaderRef = useRef<chatHeaderRefMethod>(null)
@@ -1374,12 +1462,19 @@ export const useConversationController = (
     }
     try {
       const res: any = await fetchRecommendQuestion(params)
-      return res?.data?.recommend_questions || res?.recommend_questions || []
+      // 接口一次性返回三类问题，统一返回结构化对象，由 ViewEle 本地切片展示（每类每次 3 个）：
+      // ask=问数(ask_data)，root=归因(root_cause_analysis)，forecast=预测(forecast)
+      const data = res?.data || res || {}
+      return {
+        ask: Array.isArray(data.ask_data) ? data.ask_data : [],
+        root: Array.isArray(data.root_cause_analysis) ? data.root_cause_analysis : [],
+        forecast: Array.isArray(data.forecast) ? data.forecast : [],
+      }
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
         message.error('获取推荐问题失败')
       }
-      return []
+      return { ask: [], root: [], forecast: [] }
     }
   }
 
@@ -1534,6 +1629,61 @@ export const useConversationController = (
 
     getAnswer(messageContent)
     handleRemoveDialog()
+  }
+
+  // 编辑用户消息后重新发送：不修改原消息，直接以编辑后的文本在底部发起新一轮对话
+  const handleEditResend = (newText: string, item: any) => {
+    const text = (newText || '').trim()
+    if (!text || loading) return
+    const parsed = parseMessageContent(item?.context)
+    const selectedExcel = (parsed && typeof parsed === 'object' && parsed.file_id && parsed.file_name)
+      ? { file_id: parsed.file_id, file_name: parsed.file_name }
+      : undefined
+    // 实时对话优先用 human 消息携带的语义元信息；
+    // 历史对话的 human 不携带，从同轮答案（view/ai）内容中回填
+    const round = item?.roundIndex ?? item?.order
+    const roundMessages = convContent.filter((m: any) => {
+      const r = m?.roundIndex ?? m?.order
+      return r !== undefined && r === round
+    })
+    const fromHistory = extractSemanticMetaFromMessages(roundMessages)
+    handleSend(text, {
+      groupName: item?._groupName || fromHistory.groupName || '',
+      semanticName: item?._semanticName || fromHistory.semanticName || '',
+      semanticSchemaId: item?._semanticSchemaId ?? fromHistory.semanticId ?? props.semanticId ?? null,
+      selectedExcel,
+    })
+  }
+
+  // 重新生成：以该轮相同的问题重新发起一轮对话（追加到底部）。
+  // 相邻且问题相同的轮次会在展示层合并为多版本块，默认展示最新版本，从而实现
+  // “原答案隐藏 / 新答案显示 / 可切换”的千问式效果。
+  const regenerateRound = (item: any) => {
+    if (loading) return
+    const round = item?.roundIndex ?? item?.order
+    if (round === undefined || round === null) return
+    const roundMessages = convContent.filter((m: any) => {
+      const r = m?.roundIndex ?? m?.order
+      return r !== undefined && r === round
+    })
+    const humanMsg = roundMessages.find((m: any) => m?.role === 'human')
+    if (!humanMsg) return
+    const parsed = parseMessageContent(humanMsg.context)
+    const question = (parsed && typeof parsed === 'object' && parsed.question)
+      ? String(parsed.question)
+      : (typeof humanMsg.context === 'string' ? humanMsg.context : '')
+    if (!question.trim()) return
+    const selectedExcel = (parsed && typeof parsed === 'object' && parsed.file_id && parsed.file_name)
+      ? { file_id: parsed.file_id, file_name: parsed.file_name }
+      : undefined
+    // 语义元信息：优先 human 携带的，其次从同轮答案内容回填
+    const fromHistory = extractSemanticMetaFromMessages(roundMessages)
+    handleSend(question, {
+      groupName: humanMsg?._groupName || fromHistory.groupName || '',
+      semanticName: humanMsg?._semanticName || fromHistory.semanticName || '',
+      semanticSchemaId: humanMsg?._semanticSchemaId ?? fromHistory.semanticId ?? props.semanticId ?? null,
+      selectedExcel,
+    })
   }
 
   const handleRemoveExcel = () => {
@@ -1758,6 +1908,8 @@ export const useConversationController = (
     uploadFileEnabled,
     setUploadFileEnabled,
     handleSend,
+    handleEditResend,
+    regenerateRound,
     stopGenerating,
     loading,
     isStorage,
@@ -1777,6 +1929,16 @@ export const useConversationController = (
     sharingRef,
     download,
     onClose,
-    onUpdateList
+    onUpdateList,
+    // 批量删除
+    isDeleting,
+    deleteSelectedRounds,
+    deleteCheckAll,
+    deleteLoading,
+    enterDeleteMode,
+    exitDeleteMode,
+    toggleDeleteRound,
+    toggleDeleteAll,
+    confirmDelete
   }
 }

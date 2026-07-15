@@ -182,6 +182,16 @@ export function deleteMessage(params: { convUid: string }) {
   })
 }
 
+// 按轮次批量删除对话消息
+export function deleteMessageByRound(params: { convUid: string; roundIndex: number[] }) {
+  return request({
+    url: "/abi-chat/v1/app/message/deleteByRound",
+    method: "post",
+    data: { convUid: params.convUid, roundIndex: params.roundIndex },
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
+}
+
 // 保存为app
 export function saveAsApp(data: any) {
   return request({

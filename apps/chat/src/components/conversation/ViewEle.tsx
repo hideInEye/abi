@@ -23,15 +23,18 @@ import ChartConfigModal from "./ChartConfigModal";
 import ModelDebugModal from "./ModelDebugModal";
 import FullscreenModal from "./FullscreenModal";
 import ChartHeader from "./components/ChartHeader";
+import { SUPPORTED_RENDER_TYPES, getChartTypeItem } from './components/chartTypeCatalog';
 import StatisticsAnalysis from './components/StatisticsAnalysis';
 import PredictionAnalysis from './components/PredictionAnalysis';
 import styles from './styles.module.css';
 import s from './index.module.css'
 import CausalAnalysis from "./components/CausalAnalysis";
+import AttributionDashboard from "./components/AttributionDashboard";
+import { ATTRIBUTION_ANALYSIS_SAMPLE } from "../../mock-data/attribution-dashboard-sample";
 import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEmptyObject, getUserName, isSingleMetricData, stripHtmlTags } from '@/utils';
 import { handleDataExport, handleImageExport, handleExcelFileExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
-import { fetchDrillDown, fetchQueryRewrite, setExperteval, searchConv, fetchAssembleSql, fetchSelectDataBySql } from '../../service/api/conv';
+import { fetchDrillDown, fetchQueryRewrite, setExperteval, searchConv } from '../../service/api/conv';
 import { CloseOutlined, RedoOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { marked } from 'marked';
 import { CHAT_MODE_MAP } from '../../constant/chat';
@@ -72,6 +75,10 @@ interface PropsType {
   isDone?: boolean;
   onReferenceClick?: (props: any) => void;
   setConvContent: React.Dispatch<React.SetStateAction<any[]>>;
+  onDelete?: (data: any) => void; // 进入批量删除选择模式
+  onRegenerate?: (data: any) => void; // 重新生成（以相同问题重新发起一轮）
+  isLast?: boolean; // 是否为最后一组对话（仅最后一组显示重新生成）
+  versionInfo?: { activeIndex: number; total: number; onChange: (i: number) => void }; // 多版本分页（重新生成后展示层合并）
   onMessageUpdate?: (updatedMessage: any) => void; // <-- 新增
 }
 
@@ -150,6 +157,10 @@ const ViewEle: React.FC<PropsType> = ({
   isGettingData,
   onReferenceClick,
   setConvContent,
+  onDelete,
+  onRegenerate,
+  isLast,
+  versionInfo,
   onMessageUpdate // <-- 新增
 }, ref) => {
   const [chartData, setChartData] = React.useState<any>(null);
@@ -158,7 +169,11 @@ const ViewEle: React.FC<PropsType> = ({
   const [batchIndex, setBatchIndex] = useState(0);
   // 推荐问题内嵌展示（点击底部灯泡后，直接在当前回答下方展示，不新增消息）
   const [recList, setRecList] = useState<string[]>([]);
-  // 换一批循环模式：0=不填(普通推荐问题) 1=analysis(归因) 2=forecast(预测)，循环切换并每次重新调接口
+  // 推荐问题三类原始数据（后端一次性返回，本地切片展示）
+  const [recData, setRecData] = useState<{ ask: string[]; root: string[]; forecast: string[] }>({ ask: [], root: [], forecast: [] });
+  // 「换一批」批次计数（灯泡模式下循环用）
+  const [recBatch, setRecBatch] = useState(0);
+  // 当前展示来源：0=灯泡(问数/归因/预测循环，显示换一批) 1=归因按钮 2=预测按钮（不显示换一批）
   const [recMode, setRecMode] = useState(0);
   const [loading, setLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<{ data: any[]; columns: any[]; } | null>(null);
@@ -434,6 +449,9 @@ const ViewEle: React.FC<PropsType> = ({
       const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
       const url = `${normalizedBaseUrl}/ws-proxy/abi-debug/ws/stream/consume?convUid=${cUid}&roundIndex=${rIndex}`;
 
+      // [临时调试] 打印实际连接的 WS 地址
+      console.log('[模型调试][WS连接]', url);
+
       wsRef.current = new WebSocket(url);
 
       // 连接超时定时器
@@ -449,6 +467,7 @@ const ViewEle: React.FC<PropsType> = ({
 
       // 连接打开：写入初始 loading 占位
       wsRef.current.onopen = () => {
+        console.log('[模型调试][WS onopen] 连接已建立，等待后端推送数据...');
         if (wsTimeoutRef.current) {
           clearTimeout(wsTimeoutRef.current);
           wsTimeoutRef.current = null;
@@ -464,6 +483,8 @@ const ViewEle: React.FC<PropsType> = ({
       let partialMessage = '';
       wsRef.current.onmessage = (event: MessageEvent) => {
         const msg = event.data;
+        // [临时调试] 打印每一帧原始数据，确认后端是否真的推了东西
+        console.log('[模型调试][WS onmessage] 原始帧:', msg);
         if (!msg) return;
         partialMessage += msg;
         while (partialMessage.startsWith('{') && partialMessage.endsWith('}')) {
@@ -490,6 +511,7 @@ const ViewEle: React.FC<PropsType> = ({
       };
 
       wsRef.current.onclose = () => {
+        console.log('[模型调试][WS onclose] 连接已关闭');
         if (wsTimeoutRef.current) {
           clearTimeout(wsTimeoutRef.current);
           wsTimeoutRef.current = null;
@@ -514,6 +536,13 @@ const ViewEle: React.FC<PropsType> = ({
   }, []);
 
   const handleDebugClick = () => {
+    // [临时调试] 对比"请求的 roundIndex"与"弹窗读取的 key"，定位 暂无调试数据 是否为 key 不一致
+    console.log('[模型调试][打开]', {
+      conv_uid: conv?.conv_uid,
+      'data.roundIndex': data?.roundIndex,
+      '请求roundIndex(?? 0)': data?.roundIndex ?? 0,
+      '弹窗读取key': `${conv?.conv_uid}_${data?.roundIndex}`,
+    });
     setDebugModalVisible(true);
     connectDebugWebSocket(conv?.conv_uid, data?.roundIndex ?? 0);
   };
@@ -593,16 +622,66 @@ const ViewEle: React.FC<PropsType> = ({
     }
   };
 
-  // 处理预测分析点击：复用推荐问题接口（getRecommend），recommend_chat_mode=forecast，结果内嵌展示
-  const handlePredictClick = () => {
-    setRecMode(2);
-    fetchRecommendByMode(2);
+  // 每批展示数量、循环类别顺序（问数 → 归因 → 预测）
+  const REC_PAGE = 3;
+  const REC_CYCLE_KEYS: Array<'ask' | 'root' | 'forecast'> = ['ask', 'root', 'forecast'];
+
+  // 调用推荐问题接口，一次性拿回三类问题（后端一次返回全部）；recommendChatMode：归因=analysis、预测=forecast、推荐问题=不填
+  const fetchRecData = async (recommendChatMode = ''): Promise<{ ask: string[]; root: string[]; forecast: string[] } | null> => {
+    if (!getRecommend) return null;
+    try {
+      // 传入本轮次 order/roundIndex（供 hook 回填用户问题与实时选中语义）、回答内嵌的数据语义（历史对话用）以及推荐模式参数
+      const res = await getRecommend({
+        order: data?.order,
+        roundIndex: data?.roundIndex,
+        semanticId: chartData?.semantic_id,
+        recommendChatMode,
+      });
+      return {
+        ask: Array.isArray(res?.ask) ? res.ask : [],
+        root: Array.isArray(res?.root) ? res.root : [],
+        forecast: Array.isArray(res?.forecast) ? res.forecast : [],
+      };
+    } catch (error) {
+      console.error('获取推荐问题失败:', error);
+      message.error('获取推荐问题失败');
+      return null;
+    }
   };
 
-  // 处理归因分析点击：复用推荐问题接口（getRecommend），recommend_chat_mode=analysis，结果内嵌展示
-  const handleAttributionClick = () => {
+  // 按「换一批」计数从缓存数据切出 3 个：类别按 问数→归因→预测 循环，每绕一圈类别内偏移 +3（循环取）
+  const sliceRecByBatch = (
+    dataObj: { ask: string[]; root: string[]; forecast: string[] },
+    batch: number
+  ): string[] => {
+    const key = REC_CYCLE_KEYS[batch % REC_CYCLE_KEYS.length];
+    const arr = dataObj[key] || [];
+    if (arr.length === 0) return [];
+    const round = Math.floor(batch / REC_CYCLE_KEYS.length);
+    const offset = (round * REC_PAGE) % arr.length;
+    const result: string[] = [];
+    for (let i = 0; i < REC_PAGE && i < arr.length; i++) {
+      result.push(arr[(offset + i) % arr.length]);
+    }
+    return result;
+  };
+
+  // 处理预测分析点击：带 recommend_chat_mode=forecast 请求，展示预测类前 3 个（不显示换一批）
+  const handlePredictClick = async () => {
+    const res = await fetchRecData('forecast');
+    if (!res) return;
+    setRecData(res);
+    setRecMode(2);
+    setRecList((res.forecast || []).slice(0, REC_PAGE));
+  };
+
+  // 处理归因分析点击：带 recommend_chat_mode=analysis 请求（后端实际拼写），展示归因类前 3 个（不显示换一批）
+  const handleAttributionClick = async () => {
+    const res = await fetchRecData('analysis');
+    if (!res) return;
+    setRecData(res);
     setRecMode(1);
-    fetchRecommendByMode(1);
+    setRecList((res.root || []).slice(0, REC_PAGE));
   };
 
   // 处理引用
@@ -610,77 +689,21 @@ const ViewEle: React.FC<PropsType> = ({
     onReferenceClick && onReferenceClick(data.order);
   }
 
-  // 换一批循环的 recommend_chat_mode：不填 → 归因 → 预测 → 回到不填
-  const REC_MODE_CYCLE = ['', 'analysis', 'forecast'];
-
-  // 按指定模式调用推荐问题接口（每次返回一批，直接替换展示内容）
-  const fetchRecommendByMode = async (modeIndex: number) => {
-    if (!getRecommend) return
-    try {
-      // 传入本轮次 order/roundIndex（供 hook 回填用户问题与实时选中语义）、回答内嵌的数据语义（历史对话用）以及当前推荐模式
-      const list = await getRecommend({
-        order: data?.order,
-        roundIndex: data?.roundIndex,
-        semanticId: chartData?.semantic_id,
-        recommendChatMode: REC_MODE_CYCLE[modeIndex] || '',
-      });
-      setRecList(Array.isArray(list) ? list : []);
-    } catch (error) {
-      console.error('获取推荐问题失败:', error);
-      message.error('获取推荐问题失败');
-    }
-  };
-
-  // 推荐问题：点击底部灯泡，从不填模式开始获取并内嵌展示
+  // 推荐问题：点击底部灯泡，拉取全部数据并从第 0 批（问数前 3 个）开始展示
   const handleQaClick = async () => {
+    const res = await fetchRecData();
+    if (!res) return;
+    setRecData(res);
     setRecMode(0);
-    await fetchRecommendByMode(0);
+    setRecBatch(0);
+    setRecList(sliceRecByBatch(res, 0));
   };
 
-  // 换一批：循环切换 recommend_chat_mode（不填→归因→预测→不填）并重新调接口
+  // 换一批：本地循环切换（问数→归因→预测→问数…），每次展示 3 个，不重新调接口
   const handleRecChangeBatch = () => {
-    const nextMode = (recMode + 1) % REC_MODE_CYCLE.length;
-    setRecMode(nextMode);
-    fetchRecommendByMode(nextMode);
-  };
-
-  // 重新生成：清空筛选条件，按原始SQL重新查询数据
-  const handleRegenerate = async () => {
-    if (!chartData?.sql) {
-      message.warning('暂无可重新生成的数据');
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetchAssembleSql({
-        convUid,
-        chatId,
-        spaceId,
-        agentId,
-        chatMode: chartData?.chat_mode,
-        unionSql: chartData?.sql,
-        filteredFields: [],
-      });
-      if (res.data) {
-        const newSql = res.data.unionSql;
-        const dataRes = await fetchSelectDataBySql({
-          convUid,
-          chatId,
-          spaceId,
-          agentId,
-          chatMode: chartData?.chat_mode,
-          unionSql: newSql,
-        });
-        if (dataRes.data) {
-          handleDataFetched({ data: dataRes.data.data.data, sql: newSql });
-        }
-      }
-    } catch (error) {
-      console.error('重新生成失败:', error);
-      message.error('重新生成失败，请重试');
-    } finally {
-      setLoading(false);
-    }
+    const nextBatch = recBatch + 1;
+    setRecBatch(nextBatch);
+    setRecList(sliceRecByBatch(recData, nextBatch));
   };
 
   // 再换一批
@@ -852,6 +875,20 @@ const ViewEle: React.FC<PropsType> = ({
       );
     }
 
+    // 渲染分期：未接入真实渲染的图表类型展示占位提示，可切换其他类型或查看表格
+    if (!SUPPORTED_RENDER_TYPES.has(chartType)) {
+      const item = getChartTypeItem(chartType);
+      return (
+        <div className="flex flex-col items-center justify-center py-14 text-center">
+          {item?.thumbnail && (
+            <img src={item.thumbnail} alt={item.label} className="w-40 opacity-60 mb-3" />
+          )}
+          <div className="text-sm text-[#666]">「{item?.label || '该图表'}」即将支持</div>
+          <div className="text-xs text-[#999] mt-1">当前版本暂未接入该图表渲染，可切换其他图表类型或查看数据表格</div>
+        </div>
+      );
+    }
+
     const getChartOption = (type: string, data: any[]): EChartsOption => {
       const { xField, yFields = [], xData = [], yData = [] }: any = processChartData(data) || {};  // 获取 xData 和 yData，添加默认值
 
@@ -868,6 +905,10 @@ const ViewEle: React.FC<PropsType> = ({
 
       // 计算x轴标签的旋转角度
       const rotation = isDateAxis ? 30 : calculateRotation(finalXData);
+
+      // 仅当数据超过可视数量时才需要横向滚动条，避免未溢出也显示
+      const visibleCount = 10;
+      const needZoom = finalXData.length > visibleCount;
 
       // 使用配置的字体和字号
       const { font, fontSize, chartStyle } = chartConfig;
@@ -898,19 +939,19 @@ const ViewEle: React.FC<PropsType> = ({
         grid: {
           left: '3%',
           right: '4%',
-          bottom: finalXData.length > 15 ? '12%' : (rotation > 0 ? '15%' : '3%'), // 有滚动条或标签倾斜时增加底部间距
+          bottom: needZoom ? 34 : 8, // 有滚动条时预留底部空间，避免与 X 轴标签重叠（标签由 containLabel 自动容纳）
           containLabel: true
         },
-        // 添加横向滚动条配置（只能拖动蓝色区域）
-        dataZoom: [
+        // 横向滚动条：仅在数据超出可视范围时显示，避免未溢出也出现滚动条
+        dataZoom: needZoom ? [
           {
             type: 'slider',
-            show: true, // 始终渲染，通过 CSS 控制显隐
+            show: true,
             xAxisIndex: 0,
             start: 0,
-            end: finalXData.length > 10 ? Math.min(100, (10 / finalXData.length) * 100) : 100, // 默认显示前10个数据点
-            bottom: '2%',
-            height: 15, // 滚动条高度
+            end: Math.min(100, (visibleCount / finalXData.length) * 100), // 默认显示前10个数据点
+            bottom: 4, // 贴近底部，位于 X 轴标签下方
+            height: 14, // 滚动条高度
             handleSize: '100%', // 手柄大小设为100%，覆盖整个蓝色区域
             handleStyle: {
               color: 'rgba(24, 144, 255, 0.8)', // 手柄颜色与填充色相同
@@ -927,7 +968,7 @@ const ViewEle: React.FC<PropsType> = ({
             brushSelect: false, // 禁用框选缩放
             preventDefaultMouseMove: false // 禁用默认鼠标移动行为
           }
-        ],
+        ] : [],
         tooltip: {
           trigger: 'axis',
           formatter: (params: any) => {
@@ -1287,17 +1328,40 @@ const ViewEle: React.FC<PropsType> = ({
       case 'chart':
         return renderVisualization();
       case 'table':
-        const tableColumns = Object.keys(displayData?.[0] || {}).map((key, columnIndex) => {
+        const tableRows = displayData || []
+        const tableKeys = Object.keys(tableRows[0] || {})
+        // 列较少时优化排版：约束列宽 + 追加填充列，避免内容过度分散
+        const isFewCols = tableKeys.length > 0 && tableKeys.length <= 4
+
+        // 判断某列是否为数值列，用于选择对齐方式
+        const isNumericColumn = (key: string) =>
+          tableRows.slice(0, 20).every((row: Record<string, any>) => {
+            const v = row?.[key]
+            if (v === null || v === undefined || v === '') return true
+            return typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v)))
+          })
+
+        // 估算列宽（依据表头与内容长度），仅在列较少时使用
+        const estimateColWidth = (key: string) => {
+          let maxLen = String(key).length
+          tableRows.slice(0, 30).forEach((row: Record<string, any>) => {
+            const len = String(row?.[key] ?? '').length
+            if (len > maxLen) maxLen = len
+          })
+          return Math.min(260, Math.max(96, maxLen * 9 + 24))
+        }
+
+        const tableColumns = tableKeys.map((key, columnIndex) => {
           const isDeltaColumn = /变化量|变化率/.test(key)
-          const isLeftAlign = columnIndex <= 1
+          const numeric = isNumericColumn(key)
 
           return {
             title: key,
             dataIndex: key,
             key: key,
             ellipsis: true,
-            align: isLeftAlign ? 'left' : 'center',
-            width: columnIndex === 0 ? 90 : undefined,
+            align: isFewCols ? (numeric ? 'right' : 'left') : (columnIndex <= 1 ? 'left' : 'center'),
+            width: isFewCols ? estimateColWidth(key) : (columnIndex === 0 ? 90 : undefined),
             render: (text: any) => {
               let displayText = text
               if (typeof displayText === 'string') {
@@ -1320,6 +1384,19 @@ const ViewEle: React.FC<PropsType> = ({
           }
         })
 
+        // 列较少时追加填充列，吸收多余宽度，让真实列紧凑左聚合，避免排版分散
+        if (isFewCols) {
+          tableColumns.push({
+            title: '',
+            dataIndex: '__filler__',
+            key: '__filler__',
+            ellipsis: true,
+            align: 'left',
+            width: undefined,
+            render: () => null,
+          } as any)
+        }
+
         return (
           <div ref={tableRef} className="px-1 pb-2">
             <ConfigProvider locale={zhCN}>
@@ -1327,7 +1404,7 @@ const ViewEle: React.FC<PropsType> = ({
                 dataSource={displayData?.map((item: Record<string, any>, index: number) => ({ ...item, key: index })) || []}
                 columns={tableColumns as any}
                 pagination={paginationConfig}
-                scroll={{ x: 'max-content' }}
+                scroll={isFewCols ? undefined : { x: 'max-content' }}
                 className={`${styles.viewTable}`}
                 locale={{
                   emptyText: (
@@ -1552,7 +1629,7 @@ const ViewEle: React.FC<PropsType> = ({
             : (
               // chat_with_knowledge 和未知场景不渲染数据面板
              chartData?.chat_mode !== 'chat_with_knowledge' && !isUnknownScene && (
-              <div className="w-full text-left px-6 pt-1 pb-4">
+              <div className="w-full text-left px-6 pt-1">
                 <div>
                   {chartData?.chat_mode === 'chat_excel' && chartData.file_id && (
                     <div className="mb-3">
@@ -1631,11 +1708,23 @@ const ViewEle: React.FC<PropsType> = ({
                       )}
                   </Spin>
 
-                  {/* chat_with_analysis 归因分析 - 待补充 */}
+                  {/* chat_with_analysis 归因分析：优先渲染新版看板，缺省用旧版组件，后端未就绪时用静态样例预览 */}
                   {
-                    chartData?.chat_mode === 'chat_with_analysis' && (
-                      <CausalAnalysis data={chartData} />
-                    )
+                    chartData?.chat_mode === 'chat_with_analysis' && (() => {
+                      // 后端返回的归因数据（含维度归因表 / 因子明细 / 瀑布数据）
+                      const hasAnalysis = Array.isArray(chartData?.dimension_table)
+                        && Array.isArray(chartData?.factor_table)
+                        && chartData?.metric_overview;
+                      if (hasAnalysis) {
+                        return <AttributionDashboard data={chartData} />;
+                      }
+                      // 旧格式归因数据：沿用原组件
+                      if (chartData?.total_df || chartData?.analysis_response) {
+                        return <CausalAnalysis data={chartData} />;
+                      }
+                      // 后端数据尚未就绪：使用静态样例预览新版看板
+                      return <AttributionDashboard data={ATTRIBUTION_ANALYSIS_SAMPLE} />;
+                    })()
                   }
                   {/* chat_with_predict 预测分析 */}
                   {chartData?.chat_mode === 'chat_with_predict' && (
@@ -1652,7 +1741,10 @@ const ViewEle: React.FC<PropsType> = ({
                       onPredictClick={handlePredictClick}
                       onReferenceClick={handleReferenceClick}
                       onQaClick={handleQaClick}
-                      onRegenerateClick={handleRegenerate}
+                      onRegenerateClick={onRegenerate ? () => onRegenerate(data) : undefined}
+                      onDeleteClick={onDelete ? () => onDelete(data) : undefined}
+                      isLast={isLast}
+                      versionInfo={versionInfo}
                       onVoteChange={handleLike}
                       feedback={chartData?.feedback || {}}
                       chatMode={chartData?.chat_mode}

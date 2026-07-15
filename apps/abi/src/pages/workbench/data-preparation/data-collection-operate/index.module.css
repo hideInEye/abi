@@ -1,5 +1,10 @@
 /* @type */
 
+/* 配置方式锁定：保持禁用交互，但字体颜色不变灰 */
+.configTypeSelect:global(.ant-select-disabled) :global(.ant-select-selection-item) {
+  color: #3e5068 !important;
+}
+
 .container {
   height: 100%;
   background: linear-gradient(135deg, rgba(240, 244, 255, 0.6) 0%, rgba(239, 243, 255, 0.6) 50%, rgba(239, 242, 255, 0.6) 100%);

@@ -1,4 +1,4 @@
-import { Button, Form, Modal } from 'antd'
+import { Button, Checkbox, Form, Modal } from 'antd'
 import React, { useEffect, useImperativeHandle, useState } from 'react'
 import { flushSync } from 'react-dom'
 import dayjs from 'dayjs'
@@ -47,6 +47,8 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     handleShareOk,
     handleShareEmail,
     handleSend,
+    handleEditResend,
+    regenerateRound,
     stopGenerating,
     loading,
     isStorage,
@@ -62,7 +64,17 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     loadingRoundIndex,
     sharingRef,
     onClose,
-    onUpdateList
+    onUpdateList,
+    // 批量删除
+    isDeleting,
+    deleteSelectedRounds,
+    deleteCheckAll,
+    deleteLoading,
+    enterDeleteMode,
+    exitDeleteMode,
+    toggleDeleteRound,
+    toggleDeleteAll,
+    confirmDelete
   } = controller
 
   // 暴露给父级调用
@@ -131,7 +143,37 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         getQueryRewrite={getQueryRewrite}
         onReferenceClick={getReference}
         chatContainerRef={chatContainerRef}
+        isDeleting={isDeleting}
+        deleteSelectedRounds={deleteSelectedRounds}
+        onEnterDeleteMode={enterDeleteMode}
+        onToggleDeleteRound={toggleDeleteRound}
+        onEditMessage={handleEditResend}
+        onRegenerate={regenerateRound}
       />
+
+      {/* 批量删除底部操作栏（Qwen 风格） */}
+      {isDeleting && (
+        <div className="flex items-center justify-between px-6 py-3 border-t border-[#e9edf4] bg-white">
+          <Checkbox
+            checked={deleteCheckAll}
+            onChange={(e) => toggleDeleteAll(e.target.checked)}
+          >
+            全选
+          </Checkbox>
+          <div className="flex items-center gap-2">
+            <Button onClick={exitDeleteMode}>取消</Button>
+            <Button
+              type="primary"
+              danger
+              loading={deleteLoading}
+              disabled={deleteSelectedRounds.length === 0}
+              onClick={confirmDelete}
+            >
+              删除{deleteSelectedRounds.length > 0 ? `（${deleteSelectedRounds.length}）` : ''}
+            </Button>
+          </div>
+        </div>
+      )}
 
 
       <Modal

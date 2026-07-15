@@ -491,32 +491,26 @@ export function Component() {
             <AForm.Item name="question" className="!mb-0">
               <AInput allowClear className="abi-field-input" placeholder="请输入问题" style={{ width: 200 }} />
             </AForm.Item>
-            <AForm.Item name="create_by" className="!mb-0">
-              <AInput allowClear className="abi-field-input" placeholder="请输入提交人" style={{ width: 160 }} />
-            </AForm.Item>
-            <AForm.Item name="eval_by" className="!mb-0">
-              <AInput allowClear className="abi-field-input" placeholder="请输入评估人" style={{ width: 160 }} />
-            </AForm.Item>
             <AForm.Item name="chat_mode" className="!mb-0">
               <ASelect allowClear className="abi-field-input" options={MEMORY_CHAT_MODE_OPTIONS} placeholder="场景类型" style={{ width: 140 }} />
             </AForm.Item>
             <AForm.Item name="status" className="!mb-0">
               <ASelect allowClear className="abi-field-input" options={MEMORY_STATUS_OPTIONS} placeholder="审核状态" style={{ width: 140 }} />
             </AForm.Item>
+            <div className="abi-toolbar-left" style={{ marginLeft: 'auto' }}>
+              <AButton className="btn-accent-gradient" type="primary" onClick={handleSearch}>
+                <SearchOutlined /> {t('common.search')}
+              </AButton>
+              <AButton className="btn-ghost-v5" onClick={handleReset}>
+                <ReloadOutlined /> {t('common.reset')}
+              </AButton>
+            </div>
           </div>
         </section>
       </AForm>
 
       <section className="abi-data-area">
-        <div className="abi-toolbar">
-          <div className="abi-toolbar-left">
-            <AButton className="btn-accent-gradient" type="primary" onClick={handleSearch}>
-              <SearchOutlined /> {t('common.search')}
-            </AButton>
-            <AButton className="btn-ghost-v5" onClick={handleReset}>
-              <ReloadOutlined /> {t('common.reset')}
-            </AButton>
-          </div>
+        <div className="abi-toolbar" style={{ justifyContent: 'flex-end' }}>
           <ViewControls hideViewToggle columns={columnOptions} onColumnToggle={handleColumnToggle} />
         </div>
 
