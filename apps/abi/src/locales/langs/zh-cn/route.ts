@@ -98,6 +98,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   system_plugin: '插件管理',
   system_user: '用户管理',
   'workbench_app-workshop_my-collect': '我的收藏',
+  'workbench_app-workshop_my-chat': '我的对话',
   'workbench_app-workshop_my-dashboard': '我的大屏',
   'workbench_app-workshop_my-share': '我的分享',
   'workbench_app-workshop_recently-used': '最近使用',

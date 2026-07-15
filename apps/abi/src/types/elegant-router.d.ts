@@ -67,6 +67,7 @@ declare module "@elegant-router/types" {
     "view": "/view";
     "workbench": "/workbench";
     "workbench_app-workshop": "app-workshop";
+    "workbench_app-workshop_my-chat": "my-chat";
     "workbench_app-workshop_my-collect": "my-collect";
     "workbench_app-workshop_my-dashboard": "my-dashboard";
     "workbench_app-workshop_my-share": "my-share";
@@ -200,6 +201,7 @@ declare module "@elegant-router/types" {
     | "space_space-role"
     | "space_space-user"
     | "view"
+    | "workbench_app-workshop_my-chat"
     | "workbench_app-workshop_my-collect"
     | "workbench_app-workshop_my-dashboard"
     | "workbench_app-workshop_my-share"

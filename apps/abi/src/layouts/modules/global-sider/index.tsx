@@ -4,6 +4,8 @@ import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/glo
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
 import { UserOutlined, SettingOutlined, TeamOutlined, LogoutOutlined } from '@ant-design/icons'
+import * as antdIcons from '@ant-design/icons'
+import SvgIcon from '@/components/stateless/custom/SvgIcon'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
 import { getAllRoutes } from '@/store/slice/route'
@@ -59,6 +61,25 @@ const GlobalSider: FC = memo(() => {
 
   const userItems = useCallback(() => {
     const userName = isMicroApp ? window.qiankunStore.state.userInfo?.userName : userInfo?.userName
+
+    // 从后端返回的路由中查找「空间管理」父节点，读取菜单管理里配置的图标
+    const spaceRoute = routes.find((r: any) => r?.name === 'space')
+    const spaceIconName = spaceRoute?.meta?.icon as string | undefined
+    const spaceLocalIcon = spaceRoute?.meta?.localIcon as string | undefined
+    const renderSpaceIcon = () => {
+      if (spaceLocalIcon) {
+        return <SvgIcon localIcon={spaceLocalIcon} className="abi-user-dropdown-icon-new" style={{ fontSize: 18 }} />
+      }
+      if (spaceIconName) {
+        const AntdIcon = (antdIcons as any)[spaceIconName]
+        if (AntdIcon) {
+          return <AntdIcon className="abi-user-dropdown-icon-new" />
+        }
+        // 兼容 iconify 图标名（如 mdi:inbox-outline）
+        return <SvgIcon icon={spaceIconName} className="abi-user-dropdown-icon-new" style={{ fontSize: 18 }} />
+      }
+      return <TeamOutlined className="abi-user-dropdown-icon-new" />
+    }
     
     const items: any[] = [
       {
@@ -90,7 +111,7 @@ const GlobalSider: FC = memo(() => {
         key: 'space_space-user',
         label: (
           <div className="abi-user-dropdown-item-new">
-            <TeamOutlined className="abi-user-dropdown-icon-new" />
+            {renderSpaceIcon()}
             <span className="abi-user-dropdown-label-new">空间管理</span>
           </div>
         ),
@@ -111,7 +132,7 @@ const GlobalSider: FC = memo(() => {
     })
     
     return items
-  }, [showManage])
+  }, [showManage, routes])
 
   const handleMenuClick = (e: any) => {
     if (itemMap.get(e.key)) {

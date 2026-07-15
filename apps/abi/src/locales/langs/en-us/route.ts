@@ -84,6 +84,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   'space-list': 'Space List',
   'system_space-user': 'Space User',
   'workbench_app-workshop_my-collect': 'My Collect',
+  'workbench_app-workshop_my-chat': 'My Chat',
   'workbench_app-workshop_my-dashboard': 'My Screen',
   'workbench_app-workshop_my-share': 'My Share',
   'workbench_app-workshop_recently-used': 'Recently Used',

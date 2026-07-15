@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Popover, Input, Empty, Tag } from 'antd'
 import {
   AppstoreOutlined,
@@ -39,7 +39,60 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   relation: <DotChartOutlined />,
 }
 
+// 注入一次全局样式：面板内滚动条 = 浅灰 + 细，与背景融合
+const SCROLL_STYLE_ID = 'chart-type-modal-scroll-style'
+const SCROLL_STYLE_CSS = `
+.chart-type-modal-scroll { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.12) transparent; }
+.chart-type-modal-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+.chart-type-modal-scroll::-webkit-scrollbar-track { background: transparent; }
+.chart-type-modal-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); border-radius: 4px; transition: background-color .2s; }
+.chart-type-modal-scroll:hover::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); }
+.chart-type-modal-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.32); }
+.chart-type-modal-scroll::-webkit-scrollbar-corner { background: transparent; }
+
+/* 搜索框：透明背景 + 淡边框，hover/focus 与主色呼应 */
+.chart-type-modal-search.ant-input-affix-wrapper {
+  border-radius: 8px;
+  background-color: transparent;
+  border: 1px solid #e6e8ee;
+  box-shadow: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.chart-type-modal-search.ant-input-affix-wrapper:hover {
+  background-color: transparent;
+  border-color: #c3d4fb;
+}
+.chart-type-modal-search.ant-input-affix-wrapper-focused,
+.chart-type-modal-search.ant-input-affix-wrapper:focus-within {
+  background-color: transparent;
+  border-color: #3470f6;
+  box-shadow: 0 0 0 2px rgba(52, 112, 246, 0.10);
+}
+.chart-type-modal-search .ant-input {
+  background: transparent;
+  font-size: 12.5px;
+  color: #1f2733;
+}
+.chart-type-modal-search .ant-input::placeholder {
+  color: #a4abb8;
+}
+.chart-type-modal-search .ant-input-prefix { margin-inline-end: 6px; }
+.chart-type-modal-search .ant-input-clear-icon { color: #b0b6c1; }
+.chart-type-modal-search .ant-input-clear-icon:hover { color: #6b7280; }
+`
+function useInjectScrollStyle() {
+  useLayoutEffect(() => {
+    if (typeof document === 'undefined') return
+    if (document.getElementById(SCROLL_STYLE_ID)) return
+    const el = document.createElement('style')
+    el.id = SCROLL_STYLE_ID
+    el.textContent = SCROLL_STYLE_CSS
+    document.head.appendChild(el)
+  }, [])
+}
+
 const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, children }) => {
+  useInjectScrollStyle()
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [activeFamily, setActiveFamily] = useState<string>('all')
   const [keyword, setKeyword] = useState('')
@@ -84,9 +137,9 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
   const categoryRail = [{ key: 'all', label: '全部' }, ...CHART_CATEGORIES.map((c) => ({ key: c.key, label: c.label }))]
 
   const panel = (
-    <div className="flex overflow-hidden rounded-xl" style={{ width: '25rem', height: '28rem' }}>
+    <div className="flex overflow-hidden rounded-xl" style={{ width: '32rem', height: '28rem' }}>
       {/* 一级：语义分类（图标栏） */}
-      <div className="shrink-0 overflow-y-auto border-r border-[#f0f0f0] py-2" style={{ width: '4.5rem' }}>
+      <div className="chart-type-modal-scroll shrink-0 overflow-y-auto border-r border-[#f0f0f0] py-2" style={{ width: '4.5rem' }}>
         {categoryRail.map((cat) => {
           const active = !keyword && activeCategory === cat.key
           return (
@@ -109,7 +162,7 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
       </div>
 
       {/* 二级：图表大类（文字导航） */}
-      <div className="shrink-0 overflow-y-auto border-r border-[#f0f0f0] py-2" style={{ width: '5.25rem' }}>
+      <div className="chart-type-modal-scroll shrink-0 overflow-y-auto border-r border-[#f0f0f0] py-2" style={{ width: '5.25rem' }}>
         {familyRail.map((f) => {
           const active = !keyword && activeFamily === f.key
           return (
@@ -133,17 +186,18 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
 
       {/* 三级：搜索 + 变体卡片（单列窄卡，可上下滚动） */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#fbfcfe]">
-        <div className="p-2">
+        <div className="px-2 pt-2 pb-1.5">
           <Input
             allowClear
             size="small"
-            prefix={<SearchOutlined className="text-[#bbb]" />}
+            className="chart-type-modal-search"
+            prefix={<SearchOutlined style={{ color: '#9aa2b1', fontSize: 13 }} />}
             placeholder="搜索图表"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
         </div>
-        <div className="flex-1 overflow-y-auto px-2 pb-2">
+        <div className="chart-type-modal-scroll flex-1 overflow-y-auto px-3 pb-3">
           {cards.length === 0 ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无匹配图表" className="mt-10" />
           ) : (

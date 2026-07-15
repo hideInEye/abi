@@ -153,24 +153,26 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
 
       {/* 批量删除底部操作栏（Qwen 风格） */}
       {isDeleting && (
-        <div className="flex items-center justify-between px-6 py-3 border-t border-[#e9edf4] bg-white">
-          <Checkbox
-            checked={deleteCheckAll}
-            onChange={(e) => toggleDeleteAll(e.target.checked)}
-          >
-            全选
-          </Checkbox>
-          <div className="flex items-center gap-2">
-            <Button onClick={exitDeleteMode}>取消</Button>
-            <Button
-              type="primary"
-              danger
-              loading={deleteLoading}
-              disabled={deleteSelectedRounds.length === 0}
-              onClick={confirmDelete}
+        <div className="flex justify-center" style={{ scrollbarGutter: 'stable' }}>
+          <div className="max-w-[53.75rem] w-full flex items-center justify-between px-4 py-3 border-t border-[#e9edf4] bg-white">
+            <Checkbox
+              checked={deleteCheckAll}
+              onChange={(e) => toggleDeleteAll(e.target.checked)}
             >
-              删除{deleteSelectedRounds.length > 0 ? `（${deleteSelectedRounds.length}）` : ''}
-            </Button>
+              全选
+            </Checkbox>
+            <div className="flex items-center gap-2">
+              <Button onClick={exitDeleteMode}>取消</Button>
+              <Button
+                type="primary"
+                danger
+                loading={deleteLoading}
+                disabled={deleteSelectedRounds.length === 0}
+                onClick={confirmDelete}
+              >
+                删除{deleteSelectedRounds.length > 0 ? `（${deleteSelectedRounds.length}）` : ''}
+              </Button>
+            </div>
           </div>
         </div>
       )}

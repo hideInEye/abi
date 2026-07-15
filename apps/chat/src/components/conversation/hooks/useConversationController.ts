@@ -38,6 +38,8 @@ export interface ConversationProps {
   currentModel?: ModelOption | null
   onModelChange?: (model: ModelOption) => void
   deepThinkEnabled?: boolean
+  /** 打开历史会话时，回填最后一轮使用的数据语义到输入框 */
+  onHistorySemanticLoaded?: (data: { name: string; schemaId?: number | string; groupName?: string } | null) => void
 }
 
 /**
@@ -761,6 +763,21 @@ export const useConversationController = (
     // 如果当前正在流式请求中，不覆盖已有的消息（避免竞态条件清空正在进行的对话）
     if (isRequesting.current) return
     setConvContent(conversationList)
+
+    // 打开历史会话时，取最后一轮的数据语义回填到统一输入框的“数据”选择器
+    if (conversationList.length > 0 && props.onHistorySemanticLoaded) {
+      const rounds = conversationList
+        .map((m: any) => (typeof m.roundIndex === 'number' ? m.roundIndex : (typeof m.order === 'number' ? m.order : null)))
+        .filter((r: any) => r != null) as number[]
+      if (rounds.length) {
+        const lastRound = Math.max(...rounds)
+        const lastRoundMsgs = conversationList.filter((m: any) => (m.roundIndex ?? m.order) === lastRound)
+        const meta = extractSemanticMetaFromMessages(lastRoundMsgs)
+        if (meta.semanticName || meta.semanticId != null) {
+          props.onHistorySemanticLoaded({ name: meta.semanticName, schemaId: meta.semanticId, groupName: meta.groupName })
+        }
+      }
+    }
 
     setTimeout(() => {
       if (!isRequestTokenActive(requestToken)) return
