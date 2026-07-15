@@ -51,7 +51,7 @@ export function OntologyCardList<T>({
   }
 
   return (
-    <div className="abi-card-grid">
+    <div className="abi-card-grid ontology-card-grid">
       <div className="abi-card-grid-inner">
         {dataSource.map(record => {
           const titleNode = title(record)

@@ -183,7 +183,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
         footer={editingItem ? editFooter : createFooter}
         open={open}
         title={editingItem ? '编辑维度' : '新建维度'}
-        width={720}
+        width="60%"
         onClose={() => handleDrawerClose()}
       >
         {editingItem ? (
