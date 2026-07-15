@@ -59,7 +59,7 @@ export function Component() {
     },
     apiParams: {
       pageNum: 1,
-      pageSize: 100000,
+      pageSize: 10,
       spaceId
     },
     columns: () =>
@@ -186,7 +186,7 @@ export function Component() {
       message.error(res.response.data.msg || '分配失败');
     } else {
       message.success('分配成功');
-      updateSearchParams({ pageNum: 1, pageSize: 100000 });
+      updateSearchParams({ pageNum: 1 });
       getCurSpaceInfo();
     }
   }
@@ -210,7 +210,7 @@ export function Component() {
     } else {
       message.success('分配成功');
       setNewCreateUserDrawerOpen(false);
-      updateSearchParams({ pageNum: 1, pageSize: 100000 });
+      updateSearchParams({ pageNum: 1 });
       getCurSpaceInfo();
     }
   }
@@ -290,6 +290,13 @@ export function Component() {
   const totalCount = pagination?.total || 0;
   const totalPages = Math.ceil(totalCount / pageSizeVal) || 1;
   const [jumpValue, setJumpValue] = useState('');
+
+  // 前端分页：apiFn 一次性返回全部成员，这里按当前页/每页条数进行切片展示
+  const pagedDataSource = useMemo(() => {
+    const list = (tableProps.dataSource as any[]) || [];
+    const start = (currentPage - 1) * pageSizeVal;
+    return list.slice(start, start + pageSizeVal);
+  }, [tableProps.dataSource, currentPage, pageSizeVal]);
 
   const handlePageSizeChange = (value: number) => {
     pagination?.onChange?.(1, value);
@@ -396,7 +403,7 @@ export function Component() {
             <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
               <ATable
                 columns={tableProps.columns as any}
-                dataSource={tableProps.dataSource}
+                dataSource={pagedDataSource}
                 loading={tableProps.loading}
                 pagination={false}
                 rowKey="userId"

@@ -141,6 +141,15 @@ export function Component() {
     }
   }, [id, isFromDatasource]);
 
+  // 新增时：配置方式由列表页「新增数据集」下拉选择后通过 query 传入，进入页面后锁定不可切换
+  useEffect(() => {
+    const qType = route.query?.viewType;
+    if ((!id || id === '0') && (qType === 'union' || qType === 'sql')) {
+      dispatch({ viewType: qType });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, route.query?.viewType]);
+
   useEffect(() => {
     getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) });
   }, []);
@@ -351,7 +360,8 @@ export function Component() {
                         letterSpacing: '0.02em'
                       }}>配置方式</div>
                       <Select
-                        className="w-full"
+                        className={`w-full ${styles.configTypeSelect}`}
+                        disabled
                         options={filterConfigOptions}
                         placeholder="请选择"
                         value={collectionData.viewType}

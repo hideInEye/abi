@@ -1,7 +1,7 @@
 import { CloseOutlined } from '@ant-design/icons';
 import { message } from 'antd';
 import { cloneDeep } from 'lodash';
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DataCollectionOperateContext } from '../context';
 
@@ -41,6 +41,21 @@ function inferFieldCategory(field: FieldItem): 'dimension' | 'metric' {
 const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], nodeData }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const { setAllFields } = useContext(DataCollectionOperateContext);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  /** 点击面板与导航栏外的空白处，自动收起面板 */
+  useEffect(() => {
+    if (!activeMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setActiveMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [activeMenu]);
 
   const dimensions = fields.filter(f => {
     if (f.tfieldType) return f.tfieldType === 'd';
@@ -159,7 +174,7 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
   };
 
   return (
-    <div style={{ position: 'relative', height: '100%' }}>
+    <div ref={rootRef} style={{ position: 'relative', height: '100%' }}>
       {/* 配置面板 - 绝对定位浮层，不挤占编辑器空间 */}
       {renderPanelContent()}
 

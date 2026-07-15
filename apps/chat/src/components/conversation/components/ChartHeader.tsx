@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Button, Dropdown, Space, Popover, Skeleton, Divider, Select, Tooltip } from 'antd'
+import { Button, Dropdown, Space, Popover, Skeleton, Divider, Tooltip } from 'antd'
 import SvgIcon from '../../../components/SvgIcon'
 import {
   FilterOutlined,
@@ -11,9 +11,12 @@ import {
   SettingOutlined,
   FullscreenOutlined,
   BugOutlined,
+  DownOutlined,
 } from '@ant-design/icons'
 import { fetchConvGuide, fetchAssembleSql, fetchSelectDataBySql } from '../../../service/api/conv'
 import FilterItem, { FilterType, FilterOption } from './FilterItem'
+import ChartTypeModal from './ChartTypeModal'
+import { getChartTypeItem } from './chartTypeCatalog'
 import { filterParams, countActiveFilters } from '@/utils'
 import { exportMenuItems } from '@/constant/chat'
 import type { MenuProps } from 'antd'
@@ -89,15 +92,7 @@ const ChartHeader: React.FC<Props> = ({
   const [filterValuesLen, setFilterValuesLen] = useState(0)
   const [loading, setLoading] = useState(false) // 加载状态
   const [filtersFetched, setFiltersFetched] = useState(false) // 记录是否已获取过筛选数据
-  const chartData = [
-    { label: '柱状图', value: 'response_bar_chart' },
-    { label: '折线图', value: 'response_line_chart' },
-    { label: '区域图', value: 'response_area_chart' },
-    { label: '饼图', value: 'response_pie_chart' },
-    { label: '圆环图', value: 'response_donut_chart' },
-    { label: '多指标柱形图', value: 'response_many_bar_chart' },
-    { label: '多指标折线图', value: 'response_many_line_chart' },
-  ] // 图表类型
+  const [chartModalOpen, setChartModalOpen] = useState(false) // 图表类型选择弹窗
 
   const handleGetFileter = async () => {
     setOpen(true)
@@ -488,7 +483,23 @@ const ChartHeader: React.FC<Props> = ({
         <div className="flex items-center">
           {showTitle ? <span className="chart-header-title font-semibold text-[#2d2d2d] mr-[0.36rem]">图表信息</span> : null}
           {/* 左侧原本的筛选区域已移除 */}
-          {showChartIcon && activeType === 'chart' && <Select value={chartType} onChange={onhandleGetChartType} options={chartData} className="h-6 w-[7.5rem]" />}
+          {showChartIcon && activeType === 'chart' && (
+            <ChartTypeModal
+              open={chartModalOpen}
+              value={chartType}
+              onOpenChange={setChartModalOpen}
+              onSelect={(v) => onhandleGetChartType?.(v)}
+            >
+              <button
+                type="button"
+                className="flex items-center gap-1 h-6 px-2 rounded-md border border-[#d9d9d9] bg-white text-[#333] text-xs hover:text-[#3470f6] hover:border-[#3470f6] transition-colors"
+              >
+                <BarChartOutlined />
+                <span>{getChartTypeItem(chartType)?.label || '选择图表'}</span>
+                <DownOutlined className="text-[0.625rem] text-[#999]" />
+              </button>
+            </ChartTypeModal>
+          )}
         </div>
         <div className="flex items-center gap-1">
           {showChartIcon && (
@@ -509,7 +520,7 @@ const ChartHeader: React.FC<Props> = ({
               <TableOutlined />
             </span>
           </Tooltip>
-          <Tooltip title="SQL语句">
+          <Tooltip title={chatMode === 'chat_excel' ? 'Python代码' : 'SQL语句'}>
             <span
               className={`chart-header-icon ${activeType === 'sql' ? 'active' : ''}`}
               onClick={() => onTypeChange('sql')}
