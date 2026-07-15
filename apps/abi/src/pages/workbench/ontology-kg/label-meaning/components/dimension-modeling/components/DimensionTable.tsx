@@ -56,7 +56,8 @@ export const DimensionTable: React.FC<Props> = ({
         ellipsis: true,
         key: 'zhName',
         title: '中文名',
-        width: 180
+        width: 180,
+        fixed:'left'
       },
       {
         align: 'center',

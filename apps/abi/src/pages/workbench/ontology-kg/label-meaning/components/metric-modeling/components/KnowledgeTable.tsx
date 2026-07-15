@@ -61,6 +61,7 @@ export const KnowledgeTable: React.FC<Props> = ({
         key: 'techName',
         title: '指标名称',
         width: 180,
+        fixed:'left'
       },
       {
         align: 'center',
