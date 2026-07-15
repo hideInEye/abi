@@ -122,6 +122,10 @@ export interface DeleteOntologyEntityParams {
   id: OntologyNetworkId
 }
 
+export interface DeleteOntologyEntityBatchParams {
+  ids: OntologyNetworkId[]
+}
+
 export interface OntologyEntityDetail {
   attributes: OntologyEntityAttribute[]
   entity: OntologyEntity
@@ -174,6 +178,10 @@ export interface UpdateOntologyRelationParams {
 
 export interface DeleteOntologyRelationParams {
   id: OntologyNetworkId
+}
+
+export interface DeleteOntologyRelationBatchParams {
+  ids: OntologyNetworkId[]
 }
 
 export interface QueryOntologyGraphParams {

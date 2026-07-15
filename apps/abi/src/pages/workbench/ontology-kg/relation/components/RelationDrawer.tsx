@@ -72,15 +72,18 @@ export const RelationDrawer: React.FC<RelationDrawerProps> = ({ entities, loadin
   return (
     <CommonDrawer
       destroyOnClose
+      footer={
+        <div className="flex justify-end gap-3">
+          <AButton onClick={onClose}>取消</AButton>
+          <AButton loading={loading} type="primary" onClick={handleSave}>
+            保存
+          </AButton>
+        </div>
+      }
       open={open}
       title={title}
       width={520}
       onClose={onClose}
-      extra={
-        <AButton loading={loading} type="primary" onClick={handleSave}>
-          保存
-        </AButton>
-      }
     >
       <Form className="ds-form-section" form={form} layout="vertical">
         <OntologyFormSectionTitle icon={<BranchesOutlined />}>基本信息</OntologyFormSectionTitle>

@@ -21,7 +21,9 @@ interface EntityTableProps {
   readonly onDelete: (id: OntologyNetworkId) => void
   readonly onEdit: (entity: OntologyEntity) => void
   readonly onPageChange: (page: number, pageSize: number) => void
+  readonly onSelectedRowKeysChange: (keys: string[]) => void
   readonly pagination: EntityPagination
+  readonly selectedRowKeys: string[]
   readonly viewMode: OntologyViewMode
   readonly visibleColumnKeys: ReadonlySet<string>
 }
@@ -35,7 +37,9 @@ export const EntityTable: React.FC<EntityTableProps> = ({
   onDelete,
   onEdit,
   onPageChange,
+  onSelectedRowKeysChange,
   pagination,
+  selectedRowKeys,
   viewMode,
   visibleColumnKeys,
 }) => {
@@ -103,7 +107,7 @@ export const EntityTable: React.FC<EntityTableProps> = ({
 
   const columns = useMemo<ColumnsType<OntologyEntity>>(
     () => [
-      { align: 'center', dataIndex: 'entityName', ellipsis: true, key: 'entityName', render: formatDisplayValue, title: '实体名称', width: 160 },
+      { align: 'center', dataIndex: 'entityName', ellipsis: true, fixed: 'left', key: 'entityName', render: formatDisplayValue, title: '实体名称', width: 160 },
       { align: 'center', dataIndex: 'entityCode', ellipsis: true, key: 'entityCode', render: formatDisplayValue, title: '实体编码', width: 160 },
       {
         align: 'center',
@@ -178,6 +182,11 @@ export const EntityTable: React.FC<EntityTableProps> = ({
               loading={loading}
               pagination={false}
               rowKey="id"
+              rowSelection={{
+                columnWidth: 48,
+                selectedRowKeys,
+                onChange: keys => onSelectedRowKeysChange(keys.map(String)),
+              }}
               scroll={data.length > 0 ? { x: tableWidth } : undefined}
               size="middle"
             />

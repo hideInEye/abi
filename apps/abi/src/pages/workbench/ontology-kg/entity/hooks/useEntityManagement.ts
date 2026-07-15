@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { getOntologyNetworkRecords } from '@/pages/workbench/ontology-kg/shared-network-types'
 import type { OntologyEntity, OntologyLabel, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
-import { createOntologyEntity, deleteOntologyEntity, queryOntologyEntityList, queryOntologyLabels, updateOntologyEntity } from '@/service/api/ontology-network'
+import { createOntologyEntity, deleteOntologyEntity, deleteOntologyEntityBatch, queryOntologyEntityList, queryOntologyLabels, updateOntologyEntity } from '@/service/api/ontology-network'
 
 import type { EntityFormValues, EntityPagination, EntitySearchValues } from '../types'
 
@@ -11,6 +11,7 @@ const INITIAL_SEARCH: EntitySearchValues = { entityCode: '', entityName: '' }
 const INITIAL_PAGINATION: EntityPagination = { pageNum: 1, pageSize: 10, total: 0 }
 
 interface UseEntityManagementResult {
+  batchDeleteEntities: () => Promise<void>
   deleteEntity: (id: OntologyNetworkId) => Promise<void>
   entities: OntologyEntity[]
   labels: OntologyLabel[]
@@ -20,8 +21,10 @@ interface UseEntityManagementResult {
   resetSearch: () => void
   saveEntity: (values: EntityFormValues, editingEntity?: OntologyEntity) => Promise<void>
   searchValues: EntitySearchValues
+  selectedRowKeys: string[]
   setPage: (pageNum: number, pageSize?: number) => void
   setSearchValues: (values: EntitySearchValues) => void
+  setSelectedRowKeys: (keys: string[]) => void
 }
 
 export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManagementResult {
@@ -30,6 +33,7 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
   const [loading, setLoading] = useState(false)
   const [pagination, setPagination] = useState(INITIAL_PAGINATION)
   const [searchValues, setSearchValues] = useState(INITIAL_SEARCH)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   const entityRequestSequence = useRef(0)
   const labelRequestSequence = useRef(0)
 
@@ -61,6 +65,7 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
       })
       if (requestId !== entityRequestSequence.current) return
       setEntities(getOntologyNetworkRecords(data))
+      setSelectedRowKeys([])
       setPagination((current) => ({ ...current, total: data?.total ?? 0 }))
     } catch {
       if (requestId === entityRequestSequence.current) message.error('实体列表加载失败，请稍后重试')
@@ -139,7 +144,25 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
     [entities.length, loadEntities, pagination.pageNum],
   )
 
+  const batchDeleteEntities = useCallback(async (): Promise<void> => {
+    if (!selectedRowKeys.length) {
+      message.warning('请先选择要删除的实体')
+      return
+    }
+
+    const { error } = await deleteOntologyEntityBatch({ ids: selectedRowKeys })
+    if (error) throw error
+
+    entityRequestSequence.current += 1
+    if (entities.length === selectedRowKeys.length && pagination.pageNum > 1) {
+      setPagination((current) => ({ ...current, pageNum: current.pageNum - 1 }))
+      return
+    }
+    await loadEntities()
+  }, [entities.length, loadEntities, pagination.pageNum, selectedRowKeys])
+
   return {
+    batchDeleteEntities,
     deleteEntity,
     entities,
     labels,
@@ -149,7 +172,9 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
     resetSearch,
     saveEntity,
     searchValues,
+    selectedRowKeys,
     setPage,
     setSearchValues: updateSearchValues,
+    setSelectedRowKeys,
   }
 }
