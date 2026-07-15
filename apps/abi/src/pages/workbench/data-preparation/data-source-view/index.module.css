@@ -84,17 +84,33 @@
   flex: 1;
   min-height: 0;
   padding: 4px 0;
+  /* 滚动条：与 .assistant-table-scroll（分配用户）统一 —— 默认透明，hover 显示灰色 */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 
 .table-data-container::-webkit-scrollbar {
-  width: 4px;
+  width: 7px;
+  height: 7px;
 }
 
 .table-data-container::-webkit-scrollbar-thumb {
-  background: rgba(130, 140, 200, 0.2);
-  border-radius: 4px;
+  background-color: transparent;
+  border-radius: 7px;
 }
 
 .table-data-container::-webkit-scrollbar-track {
-  background: transparent;
+  background-color: transparent;
+}
+
+.table-data-container:hover {
+  scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+}
+
+.table-data-container:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(144, 147, 153, 0.3);
+}
+
+.table-data-container:hover::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(144, 147, 153, 0.5);
 }
