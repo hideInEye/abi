@@ -287,7 +287,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
     // 校验是否已选数据语义或 Excel 文件
     if (!selectedData?.schemaId && !selectedExcel?.file_id) {
-      message.warning('发起对话前，请先选择数据或上传 Excel')
+      message.warning('选择已有数据或上传excel，即可开始对话')
       return
     }
 
@@ -534,6 +534,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onModelChange={handleModelChange}
                 embedModelId={embedModelId}
                 deepThinkEnabled={deepThinkEnabled}
+                onHistorySemanticLoaded={(data) => setSelectedData(data)}
               />
             ) : groupId ? (
               <GroupSessionListView
