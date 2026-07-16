@@ -96,6 +96,11 @@ export function Component() {
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    setCheckedRowKeys([]);
+    setSelectedRows([]);
+    setViewMode(mode);
+  };
 
   /** 拉取助手列表 */
   async function fetchList() {
@@ -523,7 +528,7 @@ export function Component() {
             </div>
             <ViewControls
               viewMode={viewMode}
-              onViewModeChange={setViewMode}
+              onViewModeChange={handleViewModeChange}
               columns={columnOptions}
               onColumnToggle={handleColumnToggle}
             />

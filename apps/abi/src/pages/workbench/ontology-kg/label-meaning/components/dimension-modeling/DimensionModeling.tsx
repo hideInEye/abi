@@ -68,6 +68,10 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
       return { groupId, groupName: groupName || '' }
     })
   }, [])
+  const handleViewModeChange = useCallback((mode: 'list' | 'card') => {
+    setSelectedRowKeys([])
+    setViewMode(mode)
+  }, [setSelectedRowKeys, setViewMode])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
@@ -122,7 +126,7 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
                     </AButton>
                   </Popconfirm>
                 </div>
-                <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
+                <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={handleViewModeChange} />
               </div>
               <DimensionTable
                 dataSource={tableData}

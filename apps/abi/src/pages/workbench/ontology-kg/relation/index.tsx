@@ -31,6 +31,10 @@ export const Component: React.FC = () => {
   const [editingRelation, setEditingRelation] = useState<OntologyRelation | null>(null)
   const [saving, setSaving] = useState(false)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(RELATION_COLUMN_OPTIONS)
+  const handleViewModeChange = useCallback((mode: 'list' | 'card'): void => {
+    setSelectedRowKeys([])
+    setViewMode(mode)
+  }, [setSelectedRowKeys, setViewMode])
 
   const updateSearch = useCallback(
     (patch: Partial<RelationSearchValues>): void => {
@@ -162,7 +166,7 @@ export const Component: React.FC = () => {
               </AButton>
             </Popconfirm>
           </div>
-          <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
+          <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={handleViewModeChange} />
         </div>
         <RelationTable
           entityNameMap={entityNameMap}

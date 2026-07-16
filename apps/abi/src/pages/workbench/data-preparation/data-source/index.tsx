@@ -288,6 +288,7 @@ export function Component() {
 
   const {
     checkedRowKeys,
+    clearCheckedRowKeys,
     editingData,
     generalPopupOperation,
     handleAdd,
@@ -338,6 +339,10 @@ export function Component() {
       message.success(t("common.updateSuccess"));
     }
   }, true);
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    clearCheckedRowKeys();
+    setViewMode(mode);
+  };
 
   async function handleBatchDelete() {
     if (checkedRowKeys.length === 0) {
@@ -612,7 +617,7 @@ export function Component() {
           </div>
           <ViewControls
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewModeChange={handleViewModeChange}
             columns={columnOptions}
             onColumnToggle={handleColumnToggle}
           />

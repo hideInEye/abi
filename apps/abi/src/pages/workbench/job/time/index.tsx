@@ -165,7 +165,7 @@ export function Component() {
     rowKey: 'recordId',
   } as any);
 
-  const { checkedRowKeys, editingData, generalPopupOperation, handleAdd, handleEdit, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, async (res: any, type) => {
+  const { checkedRowKeys, clearCheckedRowKeys, editingData, generalPopupOperation, handleAdd, handleEdit, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, async (res: any, type) => {
     if (type === 'add') {
       const addRes: any = await addJob(res);
       if (addRes?.response?.data?.code !== 200) return false;
@@ -174,6 +174,10 @@ export function Component() {
       if (updateRes?.response?.data?.code !== 200) return false;
     }
   }, true);
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    clearCheckedRowKeys();
+    setViewMode(mode);
+  };
 
   const filteredColumns = useMemo(() => {
     const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
@@ -399,7 +403,7 @@ export function Component() {
           </div>
           <ViewControls
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewModeChange={handleViewModeChange}
             columns={columnOptions}
             onColumnToggle={handleColumnToggle}
           />

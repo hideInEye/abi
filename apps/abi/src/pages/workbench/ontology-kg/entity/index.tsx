@@ -37,6 +37,10 @@ export const Component: React.FC = () => {
   const { batchDeleteEntities, deleteEntity, entities, labels, loading, pagination, refresh, resetSearch, saveEntity, searchValues, selectedRowKeys, setPage, setSearchValues, setSelectedRowKeys } =
     useEntityManagement(spaceId)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(ENTITY_COLUMN_OPTIONS)
+  const handleViewModeChange = useCallback((mode: 'list' | 'card'): void => {
+    setSelectedRowKeys([])
+    setViewMode(mode)
+  }, [setSelectedRowKeys, setViewMode])
 
   const openCreate = useCallback((): void => {
     setEditingEntity(undefined)
@@ -110,7 +114,7 @@ export const Component: React.FC = () => {
               </Button>
             </Popconfirm>
           </div>
-          <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
+          <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={handleViewModeChange} />
         </div>
         <EntityTable
           data={entities}

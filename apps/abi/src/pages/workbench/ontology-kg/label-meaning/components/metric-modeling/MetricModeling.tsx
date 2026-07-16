@@ -55,6 +55,10 @@ const MetricModeling: React.FC = () => {
   const handleGroupChange = useCallback((groupId: string, groupName?: string) => {
     setSelectedGroup({ groupId, groupName: groupName || '' })
   }, [])
+  const handleViewModeChange = useCallback((mode: 'list' | 'card') => {
+    setSelectedRowKeys([])
+    setViewMode(mode)
+  }, [setSelectedRowKeys, setViewMode])
 
   const canCreateCustom = tableData.length > 0 || pagination.total > 0
 
@@ -150,7 +154,7 @@ const MetricModeling: React.FC = () => {
                     </AButton>
                   </Popconfirm>
                 </div>
-                <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
+                <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={handleViewModeChange} />
               </div>
               <KnowledgeTable
                 dataSource={tableData}

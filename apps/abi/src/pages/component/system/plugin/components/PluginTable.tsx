@@ -59,6 +59,11 @@ export const PluginTable: React.FC<PluginTableProps> = ({
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    setCheckedRowKeys([]);
+    setSelectedRows([]);
+    setViewMode(mode);
+  };
 
   // Batch delete
   const handleBatchDelete = () => {
@@ -389,7 +394,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
         </div>
         <ViewControls
           viewMode={viewMode}
-          onViewModeChange={setViewMode}
+          onViewModeChange={handleViewModeChange}
           columns={columnOptions}
           onColumnToggle={handleColumnToggle}
         />
