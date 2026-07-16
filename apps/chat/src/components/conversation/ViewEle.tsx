@@ -1340,14 +1340,25 @@ const ViewEle: React.FC<PropsType> = ({
             return typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v)))
           })
 
+        // 估算文本像素宽度：中日韩等全角字符约 14px，其余按 8px 计
+        const measureTextWidth = (s: string) => {
+          let w = 0
+          for (const ch of String(s)) {
+            w += /[\u1100-\u115F\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA000-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6]/.test(ch) ? 14 : 8
+          }
+          return w
+        }
+
         // 估算列宽（依据表头与内容长度），仅在列较少时使用
+        // 表头额外预留空间，确保中文表头能在一行内完整展示，避免逐字换行
         const estimateColWidth = (key: string) => {
-          let maxLen = String(key).length
+          let maxWidth = measureTextWidth(key) + 16
           tableRows.slice(0, 30).forEach((row: Record<string, any>) => {
-            const len = String(row?.[key] ?? '').length
-            if (len > maxLen) maxLen = len
+            const w = measureTextWidth(String(row?.[key] ?? ''))
+            if (w > maxWidth) maxWidth = w
           })
-          return Math.min(260, Math.max(96, maxLen * 9 + 24))
+          // 加上单元格左右内边距（约 28px），并限制在合理区间
+          return Math.min(320, Math.max(96, maxWidth + 28))
         }
 
         const tableColumns = tableKeys.map((key, columnIndex) => {

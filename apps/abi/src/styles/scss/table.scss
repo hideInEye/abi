@@ -103,25 +103,27 @@
 }
 
 .assistant-table-scroll {
-  // 始终保留滚动条空间，默认透明，hover 时显示
+  // 始终预留滚动条空间（scrollbar-gutter: stable）：轨道背景与表格一致（#EFF3FF），idle 时凹槽融入表格不可见，hover 显示灰色 thumb，永不挤压跳动
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+  scrollbar-color: transparent #EFF3FF;
 
   &::-webkit-scrollbar {
     width: 7px;
     height: 7px;
+    background-color: #EFF3FF;
   }
   &::-webkit-scrollbar-thumb {
     background-color: transparent;
     border-radius: 7px;
   }
   &::-webkit-scrollbar-track {
-    background-color: transparent;
+    background-color: #EFF3FF;
   }
 
-  // hover 时显示滚动条 thumb
+  // hover 时显示滚动条 thumb（空间已预留，不会重排）
   &:hover {
-    scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+    scrollbar-color: rgba(144, 147, 153, 0.3) #EFF3FF;
   }
   &:hover::-webkit-scrollbar-thumb {
     background-color: rgba(144, 147, 153, 0.3);
@@ -130,16 +132,17 @@
     background-color: rgba(144, 147, 153, 0.5);
   }
 
-  // 内部 antd 表格元素也同样处理
+  // 内部 antd 表格元素（水平滚动）：同样始终预留 7px，轨道背景 #EFF3FF、idle 融入、hover 灰色
   .ant-table-content,
   .ant-table-body {
     scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
+    scrollbar-color: transparent #EFF3FF;
   }
   .ant-table-content::-webkit-scrollbar,
   .ant-table-body::-webkit-scrollbar {
     width: 7px;
     height: 7px;
+    background-color: #EFF3FF;
   }
   .ant-table-content::-webkit-scrollbar-thumb,
   .ant-table-body::-webkit-scrollbar-thumb {
@@ -148,11 +151,11 @@
   }
   .ant-table-content::-webkit-scrollbar-track,
   .ant-table-body::-webkit-scrollbar-track {
-    background-color: transparent;
+    background-color: #EFF3FF;
   }
   &:hover .ant-table-content,
   &:hover .ant-table-body {
-    scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+    scrollbar-color: rgba(144, 147, 153, 0.3) #EFF3FF;
   }
   &:hover .ant-table-content::-webkit-scrollbar-thumb,
   &:hover .ant-table-body::-webkit-scrollbar-thumb {
@@ -327,21 +330,7 @@
     text-align: left !important;
   }
 
-  // 隐藏底部水平滚动条
-  .ant-table-body {
-    scrollbar-width: none; // Firefox
-    -ms-overflow-style: none; // IE/Edge
-    &::-webkit-scrollbar {
-      display: none; // Chrome/Safari
-    }
-  }
-  .ant-table-content {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
+  // 底部水平滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管（列溢出时 hover 显示，可横向滚动查看全部列）
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
@@ -377,21 +366,7 @@
     text-align: left !important;
   }
 
-  // 隐藏底部水平滚动条
-  .ant-table-body {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
-  .ant-table-content {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
+  // 底部水平滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管（列溢出时 hover 显示，可横向滚动查看全部列）
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
@@ -427,21 +402,7 @@
     text-align: left !important;
   }
 
-  // 隐藏底部水平滚动条
-  .ant-table-body {
-    scrollbar-width: none; // Firefox
-    -ms-overflow-style: none; // IE/Edge
-    &::-webkit-scrollbar {
-      display: none; // Chrome/Safari
-    }
-  }
-  .ant-table-content {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
+  // 底部水平滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管（列溢出时 hover 显示，可横向滚动查看全部列）
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
@@ -475,21 +436,7 @@
     text-align: left !important;
   }
 
-  // 隐藏底部水平滚动条
-  .ant-table-body {
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-    &::-webkit-scrollbar {
-      display: none !important;
-    }
-  }
-  .ant-table-content {
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-    &::-webkit-scrollbar {
-      display: none !important;
-    }
-  }
+  // 底部水平滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管（列溢出时 hover 显示，可横向滚动查看全部列）
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
@@ -515,15 +462,6 @@
   }
 }
 
-// API Key 外层滚动容器也隐藏水平滚动条
-.assistant-table-scroll:has(.api-key-table) {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-  &::-webkit-scrollbar {
-    display: none !important;
-  }
-}
-
 // ── 助手编排表格列样式 ──
 .assistant-table {
   // 助手名称/描述列表头 & 单元格左对齐
@@ -534,21 +472,7 @@
     text-align: left !important;
   }
 
-  // 隐藏底部水平滚动条
-  .ant-table-body {
-    scrollbar-width: none; // Firefox
-    -ms-overflow-style: none; // IE/Edge
-    &::-webkit-scrollbar {
-      display: none; // Chrome/Safari
-    }
-  }
-  .ant-table-content {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
+  // 底部水平滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管（列溢出时 hover 显示，可横向滚动查看全部列）
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
@@ -582,21 +506,7 @@
     text-align: left !important;
   }
 
-  // 隐藏底部水平滚动条
-  .ant-table-body {
-    scrollbar-width: none; // Firefox
-    -ms-overflow-style: none; // IE/Edge
-    &::-webkit-scrollbar {
-      display: none; // Chrome/Safari
-    }
-  }
-  .ant-table-content {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
+  // 底部水平滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管（列溢出时 hover 显示，可横向滚动查看全部列）
 
   // 固定左侧复选框列样式
   .ant-table-cell-fix-left {
@@ -619,71 +529,6 @@
   .ant-table-thead > tr > th.col-menu-name,
   .ant-table-tbody > tr > td.col-menu-name {
     padding-left: 20px !important;
-  }
-}
-
-// 空间菜单外层滚动容器也隐藏水平滚动条
-.assistant-table-scroll:has(.space-menu-table) {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-  &::-webkit-scrollbar {
-    display: none !important;
-  }
-}
-
-// ── 用户管理表格列样式 ──
-.user-table {
-  // 隐藏底部水平滚动条
-  .ant-table-body {
-    scrollbar-width: none; // Firefox
-    -ms-overflow-style: none; // IE/Edge
-    &::-webkit-scrollbar {
-      display: none; // Chrome/Safari
-    }
-  }
-  .ant-table-content {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
-}
-
-// 用户管理外层滚动容器也隐藏水平滚动条
-.assistant-table-scroll:has(.user-table) {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-  &::-webkit-scrollbar {
-    display: none !important;
-  }
-}
-
-// ── 角色管理表格列样式 ──
-.role-table {
-  // 隐藏底部水平滚动条
-  .ant-table-body {
-    scrollbar-width: none; // Firefox
-    -ms-overflow-style: none; // IE/Edge
-    &::-webkit-scrollbar {
-      display: none; // Chrome/Safari
-    }
-  }
-  .ant-table-content {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
-}
-
-// 角色管理外层滚动容器也隐藏水平滚动条
-.assistant-table-scroll:has(.role-table) {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-  &::-webkit-scrollbar {
-    display: none !important;
   }
 }
 
@@ -3694,28 +3539,9 @@
   padding: 16px 28px;
 }
 
-// ── 空间用户管理表格：隐藏水平滚动条 ──
-.space-user-table-wrapper {
-  .assistant-table-scroll {
-    // 完全隐藏水平滚动条
-    scrollbar-width: none; // Firefox
-    -ms-overflow-style: none; // IE/Edge
-    &::-webkit-scrollbar {
-      display: none; // Chrome/Safari
-    }
-  }
-}
-
-// ── 机构管理表格：隐藏水平滚动条 + 美化展开图标 ──
+// ── 机构管理表格：美化展开图标 ──
 .dept-table-wrapper {
-  .assistant-table-scroll {
-    // 完全隐藏水平滚动条
-    scrollbar-width: none; // Firefox
-    -ms-overflow-style: none; // IE/Edge
-    &::-webkit-scrollbar {
-      display: none; // Chrome/Safari
-    }
-  }
+  // 外层水平/垂直滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管
 
   // 美化展开/合并图标
   .ant-table-row-expand-icon {
@@ -3772,14 +3598,7 @@
 
 // ── 菜单管理表格：隐藏水平滚动条 + 美化展开图标 ──
 .menu-table-wrapper {
-  .assistant-table-scroll {
-    // 完全隐藏水平滚动条
-    scrollbar-width: none; // Firefox
-    -ms-overflow-style: none; // IE/Edge
-    &::-webkit-scrollbar {
-      display: none; // Chrome/Safari
-    }
-  }
+  // 外层水平/垂直滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管
 
   // 美化展开/合并图标
   .ant-table-row-expand-icon {
@@ -3834,37 +3653,9 @@
   }
 }
 
-// ── 角色管理表格：隐藏水平滚动条 ──
-.role-table-wrapper {
-  .assistant-table-scroll {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
-}
-
-// ── 空间角色管理表格：隐藏水平滚动条 ──
-.space-role-table-wrapper {
-  .assistant-table-scroll {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
-}
-
-// ── 空间菜单管理表格：隐藏水平滚动条 + 美化展开图标 ──
+// ── 空间菜单管理表格：美化展开图标 ──
 .space-menu-table-wrapper {
-  .assistant-table-scroll {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
+  // 外层水平/垂直滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管
 
   .ant-table-row-expand-icon {
     width: 20px;
@@ -3910,17 +3701,6 @@
     &.ant-table-row-expand-icon-collapsed::after {
       opacity: 1;
       transform: scaleY(1);
-    }
-  }
-}
-
-// ── 用户管理表格：隐藏水平滚动条 ──
-.user-table-wrapper {
-  .assistant-table-scroll {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
     }
   }
 }

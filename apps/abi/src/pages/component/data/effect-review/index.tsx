@@ -1,13 +1,12 @@
 import {
   DeleteOutlined,
-  DeploymentUnitOutlined,
   LeftOutlined,
   ReloadOutlined,
   RightOutlined,
   SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Empty, Popconfirm, message } from 'antd'
+import { Empty, Popconfirm } from 'antd'
 import dayjs from 'dayjs'
 import { Suspense, lazy, useMemo, useState } from 'react'
 
@@ -15,17 +14,10 @@ import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
 import { EVAL_LLM_OPTIONS, MEMORY_CHAT_MODE_OPTIONS, MEMORY_STATUS_OPTIONS } from '@/constants/assistant-config'
 import { useAppSelector } from '@/hooks/business/useStore'
-import { fetchModelList } from '@/service/api'
 import {
   fetchDeleteMemory,
   fetchEditMemory,
   fetchMemoryList,
-  fetchModelEval,
-  fetchVectorStorage,
-  fetchVectorsDelete,
-  getAgentDetailById,
-  syncKnowledgeBase,
-  fetchTerms,
 } from '@/service/api/assistant-manage'
 import { getSpaceId } from '@/store/slice/app'
 
@@ -53,26 +45,29 @@ const EffectReviewOperateDrawer = lazy(() => import('./modules/effect-review-ope
 export function Component() {
   const { t } = useTranslation()
   const spaceId = useAppSelector(getSpaceId)
-  const [modelEvalLoading, setModelEvalLoading] = useState(false)
   const [jumpValue, setJumpValue] = useState('')
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS)
 
-  const isWenShuScene = (chatMode: string) => chatMode === 'chat_with_db_execute'
-
   const fetchEffectReviewList = async (params: any) => {
     try {
-      const result: any = await fetchMemoryList(params)
-      const res = result?.data
-      if (res?.error || !res?.data) {
+      // 将表格内部的 snake_case 分页/查询参数映射为接口要求的 camelCase 参数
+      const body = {
+        chatMode: params.chat_mode || params.chatMode || undefined,
+        page: params.page ?? params.pageNum ?? 1,
+        pageSize: params.page_size ?? params.pageSize ?? 10,
+        question: params.question || undefined,
+        spaceId: params.space_id ?? params.spaceId ?? spaceId,
+        status: params.status ?? undefined,
+      }
+      const res: any = await fetchMemoryList(body)
+      if (res?.error) {
         return { data: { data: [], total: 0 } }
       }
-      const inner = res.data
-      return {
-        data: {
-          data: inner.items || inner.data || [],
-          total: inner.total_count || inner.total || 0,
-        },
-      }
+      const raw = res?.response?.data || {}
+      const inner = res?.data
+      const list = raw.rows || inner?.rows || inner?.items || inner?.records || (Array.isArray(inner) ? inner : []) || []
+      const total = raw.total ?? inner?.total ?? inner?.total_count ?? list.length ?? 0
+      return { data: { data: list, total } }
     } catch {
       return { data: { data: [], total: 0 } }
     }
@@ -243,20 +238,9 @@ export function Component() {
                   icon={<UserOutlined />}
                   size="small"
                   variant="link"
-                  onClick={() => handleEdit(record)}
+                  onClick={() => openEval(record)}
                 />
               </ATooltip>
-              <Popconfirm title="确定进行模型评估吗？" onConfirm={() => handleModelEval(record)}>
-                <ATooltip placement="top" title="模型评估">
-                  <AButton
-                    className="abi-action-link"
-                    disabled={modelEvalLoading || ['0', '1'].includes(`${record.status}`) || !isWenShuScene(record.chat_mode)}
-                    icon={<DeploymentUnitOutlined />}
-                    size="small"
-                    variant="link"
-                  />
-                </ATooltip>
-              </Popconfirm>
               <Popconfirm title="删除后不可恢复，确定删除吗？" onConfirm={() => handleDelete(record)}>
                 <ATooltip title="删除">
                   <AButton className="abi-action-link" color="danger" icon={<DeleteOutlined />} size="small" variant="link" />
@@ -285,124 +269,37 @@ export function Component() {
         return
       }
 
-      const currentUserObj = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}')
-      const recordAgentId = editingData?.agent_id
-
-      const updateRes: any = await fetchEditMemory({
-        ...res,
-        eval_by: currentUserObj.userName,
-        fb_id: editingData?.fb_id,
+      // 编辑反馈（专家评估）：后端在编辑成功后会自动同步向量库
+      const editRes: any = await fetchEditMemory({
+        evalExpert: res.eval_expert ?? undefined,
+        expertOpinion: res.expert_opinion ?? undefined,
+        fbId: editingData?.fb_id,
+        remark: res.remark ?? undefined,
         status: res.status,
       })
-      if (!updateRes?.response?.data?.success) return false
-
-      if (res.eval_user === '0' && recordAgentId) {
-        const evaluateRes = await fetchVectorStorage({
-          fb_id: editingData?.fb_id,
-        })
-        if (!evaluateRes?.response?.data?.success) return false
-
-        try {
-          const detailRes = await getAgentDetailById(recordAgentId)
-          const detailData = detailRes.data
-          const modelConfig = detailData.modelConfig ? JSON.parse(detailData.modelConfig) : {}
-          const cfg = modelConfig?.modelConfigs?.[0] || {}
-          let dslObj = modelConfig?.mdlConfigs || {}
-          try {
-            if (cfg?.termGroupId) {
-              const termRes = await fetchTerms({ groupId: cfg.termGroupId, spaceId, termName: '' })
-              const termMap: Record<string, string> = {}
-              ;(termRes?.data || []).forEach((it: any) => {
-                if (it?.techName) termMap[it.techName] = it.bizName
-                if (it?.engName) termMap[it.engName] = it.bizName
-              })
-              const rewrite = (node: any) => {
-                if (!node || typeof node !== 'object') return
-                if (typeof node.displayName === 'string') {
-                  const v = termMap[node.displayName]
-                  if (v) node.displayName = v
-                }
-                Object.keys(node).forEach((k) => rewrite(node[k]))
-              }
-              rewrite(dslObj)
-            }
-          } catch {}
-          await syncKnowledgeBase({
-            agent_id: `${recordAgentId}`,
-            dsl: JSON.stringify(dslObj || {}),
-            space_id: `${spaceId}`,
-          })
-        } catch (error) {
-          console.log('同步向量知识库失败:', error)
-        }
-      }
+      if (editRes?.error) return false
     },
   )
 
+  /** 打开人工评估抽屉，并将记录中的数值型字段归一化为字符串以匹配单选项 */
+  const openEval = (record: any) => {
+    handleEdit({
+      ...record,
+      eval_expert: record.eval_expert != null ? `${record.eval_expert}` : undefined,
+      eval_llm: record.eval_llm != null ? `${record.eval_llm}` : undefined,
+      status: record.status != null ? `${record.status}` : undefined,
+    })
+  }
+
   async function handleDelete(record: any) {
     try {
-      const res = await fetchDeleteMemory(record.fb_id)
-      if (res?.response?.data?.success) {
-        if (record.pk_id) {
-          try {
-            await fetchVectorsDelete(record.fb_id)
-          } catch (error) {
-            console.log('删除向量数据库失败:', error)
-          }
-        }
+      // 删除反馈记录，后端会同步清理关联的向量数据
+      const res: any = await fetchDeleteMemory(record.fb_id)
+      if (!res?.error) {
         onDeleted()
       }
     } catch (error) {
       console.log('删除失败:', error)
-    }
-  }
-
-  const handleModelEval = async (record: any) => {
-    try {
-      const modelListRes = await fetchModelList({ pageNum: 1, pageSize: 1000 })
-      const modelList = modelListRes?.data?.data || []
-      const recordLlmId = record.llm_id ?? record.llms?.[0]
-      const modelInfo = modelList.find((item: any) => `${item?.llmId}` === `${recordLlmId}`)
-      if (!modelInfo) {
-        message.error('未找到模型相关信息')
-        return
-      }
-      setModelEvalLoading(true)
-      const modelConfig = modelInfo?.modelConfig ? JSON.parse(modelInfo.modelConfig) : {}
-      const contextObj = {
-        agent_id: `${record.agent_id}`,
-        app_code: '',
-        chat_id: `${record.chat_id}`,
-        chat_mode: record.chat_mode,
-        conv_uid: record.conv_uid,
-        extra: {
-          fb_id: record.fb_id,
-        },
-        space_id: `${record.space_id}`,
-        sys_code: '1',
-        user_name: '1',
-      }
-      const params = {
-        context: contextObj,
-        enable_vis: false,
-        incremental: false,
-        max_new_tokens: modelConfig.max_token,
-        messages: '',
-        model: modelInfo?.modelName,
-        stream: false,
-        temperature: modelConfig.temperature,
-      }
-      const res = await fetchModelEval(params)
-      if (res.response?.data?.success) {
-        message.success('模型评估成功')
-        run()
-      } else {
-        message.error(res.response?.data?.err_msg)
-      }
-    } catch (error) {
-      console.log(error)
-    } finally {
-      setModelEvalLoading(false)
     }
   }
 

@@ -409,6 +409,8 @@
 /* 页面内容区统一渐变背景 */
 .page-content-area {
   background: var(--abi-card-bg);
+  /* 始终预留滚动条空间，避免内容出现纵向滚动条时被挤压跳动 */
+  scrollbar-gutter: stable;
 }
 
 /* 页面内容区卡片透明化，透出渐变背景 */

@@ -40,25 +40,7 @@
   color: #1a2744;
 }
 
-/* 隐藏底部水平滚动条 — 覆盖所有层级 */
-.model-table .ant-table-body,
-.model-table .ant-table-content {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.model-table .ant-table-body::-webkit-scrollbar,
-.model-table .ant-table-content::-webkit-scrollbar {
-  display: none;
-}
-
-/* 隐藏外层 assistant-table-scroll 的滚动条 */
-.model-table-wrapper .assistant-table-scroll {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.model-table-wrapper .assistant-table-scroll::-webkit-scrollbar {
-  display: none;
-}
+/* 底部/外层滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管（列溢出时 hover 显示，可横向滚动查看全部列） */
 
 /* 固定左侧复选框列样式 */
 .model-table .ant-table-cell-fix-left {

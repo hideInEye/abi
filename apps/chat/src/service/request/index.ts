@@ -1,4 +1,5 @@
 import axios from "axios";
+import { message } from "antd";
 import { isBackendCodeIn } from "@sa/axios";
 
 import { getAuthorization, handleLoginExpired } from "@/utils/auth";
@@ -14,6 +15,24 @@ const TOKEN_EXPIRED_CODES = ['401'];
 
 async function handleTokenExpired() {
   await handleLoginExpired();
+}
+
+// 业务错误提示去重：短时间内相同文案只提示一次，避免并发请求刷屏
+let lastErrorMsg = '';
+let lastErrorTime = 0;
+function showBackendError(msg?: string) {
+  const text = msg || '请求失败，请稍后重试';
+  const now = Date.now();
+  if (text === lastErrorMsg && now - lastErrorTime < 2000) return;
+  lastErrorMsg = text;
+  lastErrorTime = now;
+  message.error(text);
+}
+
+// 判断是否为后端业务错误码（成功码约定为 200；401 由 token 过期逻辑单独处理）
+function isBackendBizError(data: any): boolean {
+  const code = Number(data?.code);
+  return !Number.isNaN(code) && code >= 400 && code !== 401;
 }
 
 function ensureRequestBaseUrl(config: any) {
@@ -69,11 +88,22 @@ service.interceptors.response.use(
       return Promise.reject(new Error('Token expired'));
     }
 
+    // 后端业务失败（如 {"code":500,"msg":"内部服务器错误"}）：统一弹出提示
+    if (isBackendBizError(response.data)) {
+      showBackendError((response.data as any)?.msg || (response.data as any)?.message);
+    }
+
     return response.data;
   },
   (error) => {
     if (error?.response?.status === 401) {
       void handleTokenExpired();
+    } else if (error.response) {
+      // HTTP 非 2xx（含 500 内部服务器错误）：优先展示后端返回的 msg
+      const data: any = error.response.data;
+      showBackendError(data?.msg || data?.message || `请求失败（${error.response.status}）`);
+    } else if (error.request) {
+      showBackendError('网络异常，请检查网络连接');
     }
 
     if (error.response) {
