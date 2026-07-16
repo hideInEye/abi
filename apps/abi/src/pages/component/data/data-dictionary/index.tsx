@@ -46,6 +46,10 @@ export const Component: React.FC = () => {
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    setSelectedRowKeys([]);
+    setViewMode(mode);
+  };
 
   // Batch delete handler
   const handleBatchDelete = () => {
@@ -123,17 +127,16 @@ export const Component: React.FC = () => {
                   >
                     + 新增字典
                   </AButton>
-                  <AButton
-                    className="btn-ghost-v5"
+                  <AButton danger
                     disabled={selectedRowKeys.length === 0}
                     onClick={handleBatchDelete}
                   >
-                    <DeleteOutlined /> 批量删除
+                    <DeleteOutlined /> 批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
                   </AButton>
                 </div>
                 <ViewControls
                   viewMode={viewMode}
-                  onViewModeChange={setViewMode}
+                  onViewModeChange={handleViewModeChange}
                   columns={columnOptions}
                   onColumnToggle={handleColumnToggle}
                 />

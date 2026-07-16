@@ -16,6 +16,7 @@ export interface DimensionFieldOption {
   sourceId?: string
   sourceTableName?: string
   techId: string
+  timeFormat?: string
 }
 
 export interface DimensionHierarchyNode {

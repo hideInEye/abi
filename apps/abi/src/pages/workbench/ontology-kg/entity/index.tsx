@@ -1,4 +1,4 @@
-import { PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Popconfirm, message } from 'antd'
 import React, { useCallback, useState } from 'react'
 
@@ -37,6 +37,10 @@ export const Component: React.FC = () => {
   const { batchDeleteEntities, deleteEntity, entities, labels, loading, pagination, refresh, resetSearch, saveEntity, searchValues, selectedRowKeys, setPage, setSearchValues, setSelectedRowKeys } =
     useEntityManagement(spaceId)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(ENTITY_COLUMN_OPTIONS)
+  const handleViewModeChange = useCallback((mode: 'list' | 'card'): void => {
+    setSelectedRowKeys([])
+    setViewMode(mode)
+  }, [setSelectedRowKeys, setViewMode])
 
   const openCreate = useCallback((): void => {
     setEditingEntity(undefined)
@@ -105,12 +109,12 @@ export const Component: React.FC = () => {
               title="提示"
               onConfirm={handleBatchDelete}
             >
-              <Button danger disabled={!selectedRowKeys.length}>
+              <Button danger disabled={!selectedRowKeys.length} icon={<DeleteOutlined />}>
                 批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
               </Button>
             </Popconfirm>
           </div>
-          <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
+          <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={handleViewModeChange} />
         </div>
         <EntityTable
           data={entities}

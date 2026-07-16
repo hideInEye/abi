@@ -2,7 +2,7 @@ import { message } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React from 'react'
 
-import { DEFAULT_FORM_VALUES } from '../constants/dimensionModeling.constants'
+import { DEFAULT_DIMENSION_TIME_FORMAT, DEFAULT_FORM_VALUES } from '../constants/dimensionModeling.constants'
 import type { DimensionFieldOption, DimensionFormValues, DimensionModelItem, DimensionSchemaInfo } from '../types/dimensionModeling.types'
 import { buildFormValues, buildSchemaFieldOptions, filterSelectableFields } from '../utils/dimensionModeling.mapper'
 
@@ -30,6 +30,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
   const [fieldModalOpen, setFieldModalOpen] = useState(false)
   const [relatedMetricTotal, setRelatedMetricTotal] = useState(0)
   const [selectedFieldKeys, setSelectedFieldKeys] = useState<string[]>([])
+  const [fieldDetailMap, setFieldDetailMap] = useState<Record<string, Partial<DimensionFieldOption>>>({})
 
   const selectedDimType = (AForm.useWatch('dimType', form) || DEFAULT_FORM_VALUES.dimType) as 'std' | 'time'
   const selectedSchemaId = AForm.useWatch('semanticSchemaId', form)
@@ -45,8 +46,33 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     }
     const fallbackFieldMap = new Map((editingItem?.relatedFields || []).map((item) => [item.key, item]))
     const schemaFieldMap = new Map(filteredFields.map((item) => [item.key, item]))
-    return selectedFieldKeys.map((key) => schemaFieldMap.get(key) || fallbackFieldMap.get(key)).filter((item): item is DimensionFieldOption => Boolean(item))
-  }, [editingItem?.relatedFields, filteredFields, selectedFieldKeys])
+    return selectedFieldKeys
+      .map((key) => {
+        const baseField = schemaFieldMap.get(key) || fallbackFieldMap.get(key)
+        if (!baseField) {
+          return null
+        }
+        const detail = fieldDetailMap[key]
+        return {
+          ...baseField,
+          ...detail,
+          timeFormat: detail?.timeFormat || baseField.timeFormat || DEFAULT_DIMENSION_TIME_FORMAT
+        }
+      })
+      .filter((item): item is DimensionFieldOption => Boolean(item))
+  }, [editingItem?.relatedFields, fieldDetailMap, filteredFields, selectedFieldKeys])
+
+  const handleFieldChange = useCallback((fieldKey: string, patch: Partial<DimensionFieldOption>) => {
+    setFieldDetailMap(prev => ({
+      ...prev,
+      [fieldKey]: {
+        ...(prev[fieldKey] || {}),
+        key: fieldKey,
+        techId: prev[fieldKey]?.techId || fieldKey,
+        ...patch
+      }
+    }))
+  }, [])
 
   useEffect(() => {
     if (!selectedFieldKeys.length || !selectedSchema) {
@@ -57,6 +83,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     if (safeKeys.length !== selectedFieldKeys.length) {
       setSelectedFieldKeys(safeKeys)
       form.setFieldValue('relatedFieldKeys', safeKeys)
+      setFieldDetailMap(prev => Object.fromEntries(Object.entries(prev).filter(([key]) => safeKeys.includes(key))))
     }
   }, [filteredFields, form, selectedFieldKeys, selectedSchema])
 
@@ -77,6 +104,17 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
         groupId: groupId || editingItem.groupId,
       })
       setSelectedFieldKeys(editValues.relatedFieldKeys || [])
+      setFieldDetailMap(
+        Object.fromEntries(
+          (editingItem.relatedFields || []).map(field => [
+            field.key,
+            {
+              ...field,
+              timeFormat: field.timeFormat || DEFAULT_DIMENSION_TIME_FORMAT
+            }
+          ])
+        )
+      )
       return
     }
 
@@ -85,11 +123,13 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
       groupId,
     })
     setSelectedFieldKeys([])
+    setFieldDetailMap({})
   }, [editingItem, form, groupId, open])
 
   const getSchemaId = ({ semanticSchemaId, semanticsGroupId, viewId: nextViewId }: { semanticSchemaId: number; semanticsGroupId: number | null; viewId: number }) => {
     setViewId(nextViewId)
     setSelectedFieldKeys([])
+    setFieldDetailMap({})
     form.setFieldsValue({
       relatedFieldKeys: [],
       semanticSchemaId,
@@ -123,6 +163,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
       path: editingItem?.path || groupName || '-',
       relatedFields: selectedFields,
       status: values.status,
+      timeGranularity: values.timeGranularity,
       updateTime: editingItem?.updateTime || '-',
       viewId,
       zhName: values.zhName,
@@ -163,6 +204,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     setViewId(undefined)
     setFieldModalOpen(false)
     setSelectedFieldKeys([])
+    setFieldDetailMap({})
   }
 
   function handleDrawerClose(refresh?: boolean) {
@@ -219,6 +261,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
               isEdit={Boolean(editingItem)}
               selectedDimType={selectedDimType}
               setSchemaOptions={setSchemaOptions}
+              onFieldChange={handleFieldChange}
               onOpenFieldModal={() => {
                 if (!selectedSchemaId) {
                   message.warning('请先选择表语义')
@@ -243,6 +286,19 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
         onConfirm={(keys) => {
           setSelectedFieldKeys(keys)
           form.setFieldValue('relatedFieldKeys', keys)
+          setFieldDetailMap(prev =>
+            Object.fromEntries(
+              keys.map(key => [
+                key,
+                {
+                  ...(prev[key] || {}),
+                  key,
+                  techId: prev[key]?.techId || key,
+                  timeFormat: prev[key]?.timeFormat || DEFAULT_DIMENSION_TIME_FORMAT
+                }
+              ])
+            )
+          )
           setFieldModalOpen(false)
         }}
       />

@@ -658,10 +658,10 @@ export const ProjectList = memo((props: ProjectListProps) => {
                             disabled={selectedRowKeys.length === 0}
                         >
                             <Button
-                                className="btn-ghost-v5"
+                                danger
                                 disabled={selectedRowKeys.length === 0}
                             >
-                                <DeleteOutlined /> 批量删除
+                                <DeleteOutlined /> 批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
                             </Button>
                         </Popconfirm>
                     </div>

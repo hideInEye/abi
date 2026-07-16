@@ -1,4 +1,4 @@
-import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { Popconfirm, Select, message } from 'antd'
 import React, { useCallback, useState } from 'react'
 
@@ -31,6 +31,10 @@ export const Component: React.FC = () => {
   const [editingRelation, setEditingRelation] = useState<OntologyRelation | null>(null)
   const [saving, setSaving] = useState(false)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(RELATION_COLUMN_OPTIONS)
+  const handleViewModeChange = useCallback((mode: 'list' | 'card'): void => {
+    setSelectedRowKeys([])
+    setViewMode(mode)
+  }, [setSelectedRowKeys, setViewMode])
 
   const updateSearch = useCallback(
     (patch: Partial<RelationSearchValues>): void => {
@@ -157,12 +161,12 @@ export const Component: React.FC = () => {
               title="提示"
               onConfirm={handleBatchDelete}
             >
-              <AButton danger disabled={!selectedRowKeys.length}>
+              <AButton danger disabled={!selectedRowKeys.length} icon={<DeleteOutlined />}>
                 批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
               </AButton>
             </Popconfirm>
           </div>
-          <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
+          <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={handleViewModeChange} />
         </div>
         <RelationTable
           entityNameMap={entityNameMap}

@@ -93,6 +93,10 @@ const ModelCardList: FC<Props> = ({
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c))
   }
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    setSelectedRowKeys([])
+    setViewMode(mode)
+  }
 
   // 搜索条件变化时重置到第一页
   useEffect(() => {
@@ -296,14 +300,14 @@ const ModelCardList: FC<Props> = ({
               onConfirm={() => onBatchDelete(selectedRowKeys.map(k => Number(k)))}
               disabled={selectedRowKeys.length === 0}
             >
-              <AButton className="btn-ghost-v5" disabled={selectedRowKeys.length === 0}>
-                批量删除
+              <AButton danger disabled={selectedRowKeys.length === 0} icon={<DeleteOutlined />}>
+                批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
               </AButton>
             </APopconfirm>
           </div>
           <ViewControls
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewModeChange={handleViewModeChange}
             columns={columnOptions}
             onColumnToggle={handleColumnToggle}
           />

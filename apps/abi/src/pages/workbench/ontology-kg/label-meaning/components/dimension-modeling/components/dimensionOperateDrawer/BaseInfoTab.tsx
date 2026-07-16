@@ -8,6 +8,7 @@ import {
   DIMENSION_CATEGORY_OPTIONS,
   DIMENSION_DRILL_DIRECTION_OPTIONS,
   DIMENSION_STATUS_OPTIONS,
+  DEFAULT_DIMENSION_TIME_FORMAT,
   DIMENSION_TIME_FORMAT_OPTIONS,
   DIMENSION_TIME_GRANULARITY_OPTIONS,
   DIMENSION_TYPE_OPTIONS,
@@ -35,6 +36,7 @@ interface Props {
   }) => void
   readonly groupName?: string
   readonly isEdit: boolean
+  readonly onFieldChange: (fieldKey: string, patch: Partial<DimensionFieldOption>) => void
   readonly onOpenFieldModal: () => void
   readonly selectedDimType: 'std' | 'time'
   readonly setSchemaOptions: (schemaOptions: DimensionSchemaInfo[]) => void
@@ -46,18 +48,46 @@ export const BaseInfoTab: React.FC<Props> = ({
   getSchemaId,
   groupName,
   isEdit,
+  onFieldChange,
   onOpenFieldModal,
   selectedDimType,
   setSchemaOptions
 }) => {
-  const timeFieldOptions = useMemo(
-    () =>
-      fieldTableData.map(item => ({
-        label: formatFieldLabel(item),
-        value: item.techId
-      })),
-    [fieldTableData]
-  )
+  const fieldTableColumns = useMemo(() => {
+    const columns: any[] = [
+      {
+        dataIndex: 'bizName',
+        key: 'bizName',
+        render: (_: string, record: DimensionFieldOption) => formatFieldLabel(record),
+        title: '字段名'
+      },
+      { dataIndex: 'fieldType', key: 'fieldType', title: '字段类型 (field_type)' },
+      {
+        dataIndex: 'sourceTableName',
+        key: 'sourceTableName',
+        render: (value: string) => value || '-',
+        title: '来源表'
+      }
+    ]
+
+    if (selectedDimType === 'time') {
+      columns.push({
+        dataIndex: 'timeFormat',
+        key: 'timeFormat',
+        render: (value: string, record: DimensionFieldOption) => (
+          <ASelect
+            options={DIMENSION_TIME_FORMAT_OPTIONS}
+            size="small"
+            value={value || DEFAULT_DIMENSION_TIME_FORMAT}
+            onChange={nextValue => onFieldChange(record.key, { timeFormat: nextValue })}
+          />
+        ),
+        title: '时间格式'
+      })
+    }
+
+    return columns
+  }, [onFieldChange, selectedDimType])
 
   return (
     <>
@@ -152,26 +182,14 @@ export const BaseInfoTab: React.FC<Props> = ({
 
       <ATable
         className="mb-5"
+        columns={fieldTableColumns}
         dataSource={fieldTableData}
         locale={{ emptyText: '暂无关联字段，请点击「+ 选择字段」添加' }}
         pagination={false}
         rowKey={item => item.key}
+        scroll={{ y: 180 }}
         size="small"
-        columns={[
-          {
-            dataIndex: 'bizName',
-            key: 'bizName',
-            render: (_: string, record: DimensionFieldOption) => formatFieldLabel(record),
-            title: '字段名'
-          },
-          { dataIndex: 'fieldType', key: 'fieldType', title: '字段类型 (field_type)' },
-          {
-            dataIndex: 'sourceTableName',
-            key: 'sourceTableName',
-            render: (value: string) => value || '-',
-            title: '来源表'
-          }
-        ]}
+        style={{ height: 235 }}
       />
 
       {selectedDimType === 'std' ? (
@@ -182,29 +200,8 @@ export const BaseInfoTab: React.FC<Props> = ({
           <AInput placeholder="可录入维度枚举，如：男,女,未知" />
         </AForm.Item>
       ) : (
-        <div className="grid grid-cols-2 gap-x-4">
+        <div>
           <AForm.Item
-            label="时间字段"
-            name="timeField"
-            rules={[{ message: '请选择时间字段', required: true }]}
-          >
-            <ASelect
-              options={timeFieldOptions}
-              placeholder="请选择时间字段"
-            />
-          </AForm.Item>
-          <AForm.Item
-            label="时间格式"
-            name="timeFormat"
-            rules={[{ message: '请选择时间格式', required: true }]}
-          >
-            <ASelect
-              options={DIMENSION_TIME_FORMAT_OPTIONS}
-              placeholder="请选择时间格式"
-            />
-          </AForm.Item>
-          <AForm.Item
-            className="col-span-2"
             label="时间粒度"
             name="timeGranularity"
             rules={[{ message: '请选择时间粒度', required: true }]}
@@ -251,7 +248,7 @@ export const BaseInfoTab: React.FC<Props> = ({
         </AForm.Item>
       </div>
 
-      <OntologyFormSectionTitle icon={<InfoCircleOutlined />}>说明信息</OntologyFormSectionTitle>
+      <OntologyFormSectionTitle className="mt-4" icon={<InfoCircleOutlined />}>说明信息</OntologyFormSectionTitle>
       <AForm.Item
         label="别名"
         name="alias"

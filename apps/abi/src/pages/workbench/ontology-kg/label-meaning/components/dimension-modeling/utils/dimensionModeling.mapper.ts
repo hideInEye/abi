@@ -6,8 +6,10 @@ import type {
   DimensionSchemaInfo,
   DimensionType
 } from '../types/dimensionModeling.types'
+import { DEFAULT_DIMENSION_TIME_FORMAT, DIMENSION_TIME_GRANULARITY_OPTIONS } from '../constants/dimensionModeling.constants'
 
 const MODEL_DETAIL_KEYS = new Set(['dimensions', 'identifiers'])
+const VALID_TIME_GRANULARITY_VALUES = new Set(DIMENSION_TIME_GRANULARITY_OPTIONS.map(item => item.value))
 
 function parseJson(value: any) {
   if (!value) {
@@ -75,7 +77,8 @@ function parseRelatedFields(value: any): DimensionFieldOption[] {
         relViewId: trim(item.relViewId),
         sourceId: trim(item.sourceId),
         sourceTableName: trim(item.sourceTableName || item.tableBizName || item.tableName),
-        techId: trim(item.techId || item.tfieldId || item.key) || ''
+        techId: trim(item.techId || item.tfieldId || item.key) || '',
+        timeFormat: trim(item.timeFormat || item.format || item.dateFormat)
       }))
   }
 
@@ -137,13 +140,28 @@ function pickFirst(source: any, keys: string[], fallback?: any) {
 }
 
 function normalizeTimeGranularity(value: any) {
-  if (Array.isArray(value)) {
-    return value
+  const rawList = Array.isArray(value) ? value : String(value || '').split(',')
+  const list = rawList.map((item: any) => String(item).trim()).filter(Boolean)
+
+  if (!list.length) {
+    return []
   }
-  return String(value || '')
-    .split(',')
-    .map((item: string) => item.trim())
-    .filter(Boolean)
+
+  const valueSet = new Set(list)
+  if (valueSet.has('date') || valueSet.has('day') || valueSet.has('year_month_day')) {
+    return ['day']
+  }
+  if (valueSet.has('quarter') || valueSet.has('year_quarter')) {
+    return ['quarter']
+  }
+  if (valueSet.has('month') || valueSet.has('year_month')) {
+    return ['month']
+  }
+  if (valueSet.has('week') || valueSet.has('year_week')) {
+    return ['week']
+  }
+
+  return list.filter(item => VALID_TIME_GRANULARITY_VALUES.has(item))
 }
 
 function normalizeSampleValues(value: any) {
@@ -199,6 +217,7 @@ export function normalizeDetail(res: any): any | null {
 }
 
 export function mapDimensionFromApi(item: any): DimensionModelItem {
+  const typeParams = parseJson(item.typeParams)
   const relFields = parseRelatedFields(
     pickFirst(item, ['relFields', 'relatedFields', 'relateFields', 'techId', 'techIds'])
   )
@@ -213,13 +232,21 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
   const semanticsGroupId = toNumber(pickFirst(item, ['semanticsGroupId', 'semanticGroupId']))
   const semanticSchemaName = trim(pickFirst(item, ['semanticSchemaName', 'relSchemaName']))
   const status = normalizeStatus(pickFirst(item, ['status', 'versionStatus']))
-  const timeGranularity = normalizeTimeGranularity(item.timeGranularity)
+  const timeGranularity = normalizeTimeGranularity(item.timeGranularity || typeParams?.timeGranularity)
   const updateFreq = trim(pickFirst(item, ['updateFreq', 'updateFrequency']))
   const updateTime = trim(pickFirst(item, ['updateTime', 'createTime'])) || '-'
   const viewId = toNumber(pickFirst(item, ['viewId', 'relViewId']))
   const zhName = trim(pickFirst(item, ['zhName', 'bizName', 'dimName'])) || ''
-  const timeField = trim(item.timeField || relFields[0]?.techId)
+  const timeField = trim(item.timeField || typeParams?.timeField || relFields[0]?.techId)
+  const timeFormat = trim(item.timeFormat || typeParams?.timeFormat)
   const fieldType = trim(pickFirst(item, ['fieldType', 'semanticType']))
+  const relatedFields =
+    dimType === 'time'
+      ? relFields.map(field => ({
+          ...field,
+          timeFormat: trim(field.timeFormat) || timeFormat || DEFAULT_DIMENSION_TIME_FORMAT
+        }))
+      : relFields
 
   return {
     alias: trim(pickFirst(item, ['alias', 'dimAlias'])),
@@ -235,7 +262,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
     owner,
     ownerEmail: trim(item.ownerEmail),
     path,
-    relatedFields: relFields,
+    relatedFields,
     relatedMetrics: parseRelatedMetrics(
       pickFirst(item, ['relatedMetrics', 'relatedIndicators', 'indicatorRefs', 'indicators', 'dimensionIndicators'])
     ),
@@ -246,7 +273,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
     semanticsGroupId,
     status,
     timeField,
-    timeFormat: trim(item.timeFormat),
+    timeFormat,
     timeGranularity,
     updateFreq,
     updateTime,
@@ -276,7 +303,7 @@ export function buildFormValues(item: DimensionModelItem): DimensionFormValues {
     status: item.status ?? 1,
     timeField: item.timeField || '',
     timeFormat: item.timeFormat || '',
-    timeGranularity: item.timeGranularity?.length ? item.timeGranularity : ['year', 'month', 'day'],
+    timeGranularity: item.timeGranularity?.length ? item.timeGranularity : ['day'],
     updateFreq: item.updateFreq || 'daily',
     zhName: item.zhName || ''
   }
@@ -311,8 +338,6 @@ export function buildSubmitPayload(params: {
   const typeParams =
     formValues.dimType === 'time'
       ? JSON.stringify({
-          timeField: trim(formValues.timeField),
-          timeFormat: trim(formValues.timeFormat),
           timeGranularity: formValues.timeGranularity || []
         })
       : undefined
@@ -325,7 +350,8 @@ export function buildSubmitPayload(params: {
     originName: trim(item.originName),
     sourceId: trim(item.sourceId),
     sourceTableName: trim(item.sourceTableName),
-    techId: trim(item.techId)
+    techId: trim(item.techId),
+    timeFormat: formValues.dimType === 'time' ? trim(item.timeFormat) || DEFAULT_DIMENSION_TIME_FORMAT : undefined
   }))
   // const relatedFieldJson = JSON.stringify(relatedFieldObjects)
   const relatedFieldJson = relatedFieldObjects
@@ -410,7 +436,8 @@ export function buildSchemaFieldOptions(schema?: DimensionSchemaInfo): Dimension
             relViewId: schema.relViewId,
             sourceId: item.sourceId,
             sourceTableName: item.tableBizName || item.tableName,
-            techId
+            techId,
+            timeFormat: DEFAULT_DIMENSION_TIME_FORMAT
           })
         })
     })

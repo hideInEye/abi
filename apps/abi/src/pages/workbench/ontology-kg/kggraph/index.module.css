@@ -199,17 +199,93 @@
   margin-bottom: 0;
 }
 
-.filterSectionLabel {
+.filterSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.filterSectionHeader > :global(.ant-checkbox-wrapper) {
+  flex: 0 0 auto;
   font-size: 13px;
   font-weight: 600;
   color: #64748b;
-  margin-bottom: 12px;
+}
+
+.filterSearchInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.filterSearchInput:global(.ant-input-affix-wrapper) {
+  height: 30px;
+  padding: 0 9px;
+  border-color: rgba(91, 124, 247, 0.14);
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.filterSearchInput :global(.ant-input-prefix) {
+  color: #9ca8be;
+}
+
+.filterOptionsViewport {
+  overflow: hidden;
+}
+
+.filterOptionsExpanded {
+  height: 150px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(91, 124, 247, 0.22) transparent;
+}
+
+.filterOptionsExpanded::-webkit-scrollbar {
+  width: 5px;
+}
+
+.filterOptionsExpanded::-webkit-scrollbar-thumb {
+  background: rgba(91, 124, 247, 0.22);
+  border-radius: 3px;
 }
 
 .filterCheckboxGroup {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.filterCheckboxGroup > :global(.ant-checkbox-wrapper) {
+  margin-inline-start: 0;
+}
+
+.filterExpandButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #5b7cf7;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.filterExpandButton:hover {
+  color: #4264df;
+}
+
+.filterEmpty {
+  padding: 8px 0;
+  color: #9ca8be;
+  font-size: 12px;
+  text-align: center;
 }
 
 .filterCheckboxItem {

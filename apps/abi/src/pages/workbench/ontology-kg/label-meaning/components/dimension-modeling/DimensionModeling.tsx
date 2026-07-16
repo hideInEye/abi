@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+import { DeleteOutlined } from '@ant-design/icons'
 import { Popconfirm, Splitter } from 'antd'
 
 import { ViewControls } from '@/components/ViewControls'
@@ -67,6 +68,10 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
       return { groupId, groupName: groupName || '' }
     })
   }, [])
+  const handleViewModeChange = useCallback((mode: 'list' | 'card') => {
+    setSelectedRowKeys([])
+    setViewMode(mode)
+  }, [setSelectedRowKeys, setViewMode])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
@@ -116,12 +121,12 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
                     title="提示"
                     onConfirm={handleBatchDelete}
                   >
-                    <AButton danger disabled={!selectedRowKeys.length}>
+                    <AButton danger disabled={!selectedRowKeys.length} icon={<DeleteOutlined />}>
                       批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
                     </AButton>
                   </Popconfirm>
                 </div>
-                <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
+                <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={handleViewModeChange} />
               </div>
               <DimensionTable
                 dataSource={tableData}
