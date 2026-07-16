@@ -481,12 +481,11 @@ export function Component() {
             <AButton className="btn-accent-gradient" onClick={openCreate}>
               <PlusOutlined />新增APIKey
             </AButton>
-            <AButton
-              className="btn-ghost-v5"
+            <AButton danger
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchDelete}
             >
-              <DeleteOutlined /> 批量删除
+              <DeleteOutlined /> 批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
             </AButton>
           </div>
           <ViewControls

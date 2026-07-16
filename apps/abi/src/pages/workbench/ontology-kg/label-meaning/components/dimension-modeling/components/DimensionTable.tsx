@@ -210,6 +210,7 @@ export const DimensionTable: React.FC<Props> = ({
               rowKey={record => String(record.id)}
               rowSelection={{
                 columnWidth: 48,
+                fixed: true,
                 selectedRowKeys,
                 onChange: keys => onSelectedRowKeysChange(keys.map(String))
               }}

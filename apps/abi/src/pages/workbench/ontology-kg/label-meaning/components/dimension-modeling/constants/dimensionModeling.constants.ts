@@ -51,14 +51,15 @@ export const DIMENSION_TIME_FORMAT_OPTIONS = [
   { label: 'yyyy-MM-dd HH:mm:ss', value: 'yyyy-MM-dd HH:mm:ss' }
 ]
 
+export const DEFAULT_DIMENSION_TIME_FORMAT = DIMENSION_TIME_FORMAT_OPTIONS[0].value
+
 export const DIMENSION_TIME_GRANULARITY_OPTIONS = [
   { label: '年', value: 'year' },
   { label: '半年', value: 'half_year' },
-  { label: '季', value: 'quarter' },
-  { label: '月', value: 'month' },
-  { label: '周', value: 'week' },
-  { label: '日', value: 'day' },
-  { label: '时', value: 'hour' }
+  { label: '年季', value: 'quarter' },
+  { label: '年月', value: 'month' },
+  { label: '年周', value: 'week' },
+  { label: '年月日', value: 'day' }
 ]
 
 export const DEFAULT_FORM_VALUES: DimensionFormValues = {
@@ -70,7 +71,7 @@ export const DEFAULT_FORM_VALUES: DimensionFormValues = {
   relatedFieldKeys: [],
   sampleValues: '',
   status: 1,
-  timeGranularity: ['year', 'month', 'day'],
+  timeGranularity: ['day'],
   updateFreq: 'daily',
   zhName: ''
 }

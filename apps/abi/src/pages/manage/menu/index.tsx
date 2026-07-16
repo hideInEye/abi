@@ -351,8 +351,8 @@ export function Component() {
               <PlusOutlined />
               新增菜单
             </AButton>
-            <AButton className="btn-ghost-v5" disabled={checkedRowKeys.length === 0} onClick={() => handleBatchDelete()}>
-              批量删除
+            <AButton danger disabled={checkedRowKeys.length === 0} icon={<DeleteOutlined />} onClick={() => handleBatchDelete()}>
+              批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
             </AButton>
           </div>
           <ViewControls hideViewToggle columns={columnOptions} onColumnToggle={handleColumnToggle} />

@@ -18,29 +18,41 @@ interface RelationTableProps {
   readonly onDelete: (relation: OntologyRelation) => void
   readonly onEdit: (relation: OntologyRelation) => void
   readonly onPageChange: (page: number, pageSize: number) => void
+  readonly onSelectedRowKeysChange: (keys: string[]) => void
   readonly pagination: RelationPagination
   readonly relations: OntologyRelation[]
+  readonly selectedRowKeys: string[]
   readonly viewMode: OntologyViewMode
   readonly visibleColumnKeys: ReadonlySet<string>
 }
 
-export const RelationTable: React.FC<RelationTableProps> = ({ entityNameMap, loading, pagination, relations, viewMode, visibleColumnKeys, onDelete, onEdit, onPageChange }) => {
+export const RelationTable: React.FC<RelationTableProps> = ({
+  entityNameMap,
+  loading,
+  pagination,
+  relations,
+  selectedRowKeys,
+  viewMode,
+  visibleColumnKeys,
+  onDelete,
+  onEdit,
+  onPageChange,
+  onSelectedRowKeysChange,
+}) => {
   const columns = useMemo<TableColumnsType<OntologyRelation>>(
     () => [
       {
         align: 'center',
         dataIndex: 'startEntityId',
-        fixed: 'left',
         key: 'startEntityId',
         render: (value) => formatDisplayValue(entityNameMap.get(String(value))),
         title: '开始节点',
         width: 180,
       },
-      { align: 'center', dataIndex: 'relation', fixed: 'left', key: 'relation', render: formatDisplayValue, title: '关系名称', width: 180 },
+      { align: 'center', dataIndex: 'relation', key: 'relation', render: formatDisplayValue, title: '关系名称', width: 180 },
       {
         align: 'center',
         dataIndex: 'endEntityId',
-        fixed: 'left',
         key: 'endEntityId',
         render: (value) => formatDisplayValue(entityNameMap.get(String(value))),
         title: '结束节点',
@@ -134,7 +146,13 @@ export const RelationTable: React.FC<RelationTableProps> = ({ entityNameMap, loa
               dataSource={relations}
               loading={loading}
               pagination={false}
-              rowKey="id"
+              rowKey={record => String(record.id)}
+              rowSelection={{
+                columnWidth: 48,
+                fixed: true,
+                selectedRowKeys,
+                onChange: keys => onSelectedRowKeysChange(keys.map(String)),
+              }}
               scroll={relations.length > 0 ? { x: tableWidth } : undefined}
               size="middle"
             />

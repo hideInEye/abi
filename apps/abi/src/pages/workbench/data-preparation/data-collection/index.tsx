@@ -211,13 +211,17 @@ export function Component() {
     return cols.filter((col: any) => col.key === 'operate' || visibleKeys.has(col.key));
   }, [tableProps.columns, visibleKeys]);
 
-  const { checkedRowKeys, generalPopupOperation, onDeleted, rowSelection } = useTableOperate(data as any, run, async (res, type) => {
+  const { checkedRowKeys, clearCheckedRowKeys, generalPopupOperation, onDeleted, rowSelection } = useTableOperate(data as any, run, async (res, type) => {
     if (type === 'add') {
       // add request
     } else {
       console.log(res);
     }
   }, true);
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    clearCheckedRowKeys();
+    setViewMode(mode);
+  };
 
   async function handleDelete(id: number) {
     const res = await deleteCollection({ updateBy: '1', viewId: id });
@@ -463,8 +467,7 @@ export function Component() {
               onConfirm={handleBatchDelete}
               disabled={!checkedRowKeys || checkedRowKeys.length === 0}
             >
-              <AButton
-                className="btn-ghost-v5"
+              <AButton danger
                 disabled={!checkedRowKeys || checkedRowKeys.length === 0}
               >
                 <DeleteOutlined />批量删除{checkedRowKeys && checkedRowKeys.length > 0 ? `(${checkedRowKeys.length})` : ''}
@@ -473,7 +476,7 @@ export function Component() {
           </div>
           <ViewControls
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewModeChange={handleViewModeChange}
             columns={columnOptions}
             onColumnToggle={handleColumnToggle}
           />

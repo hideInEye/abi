@@ -96,6 +96,11 @@ export function Component() {
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    setCheckedRowKeys([]);
+    setSelectedRows([]);
+    setViewMode(mode);
+  };
 
   /** 拉取助手列表 */
   async function fetchList() {
@@ -514,17 +519,16 @@ export function Component() {
               <AButton type="primary" className="btn-accent-gradient" onClick={handleAdd}>
                 <PlusOutlined /> 新增助手
               </AButton>
-              <AButton
-                className="btn-ghost-v5"
+              <AButton danger
                 disabled={checkedRowKeys.length === 0}
                 onClick={handleBatchDelete}
               >
-                <DeleteOutlined /> 批量删除
+                <DeleteOutlined /> 批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
               </AButton>
             </div>
             <ViewControls
               viewMode={viewMode}
-              onViewModeChange={setViewMode}
+              onViewModeChange={handleViewModeChange}
               columns={columnOptions}
               onColumnToggle={handleColumnToggle}
             />

@@ -228,6 +228,7 @@ export function Component() {
         extra={
           <TableHeaderOperation
             columns={columnChecks}
+            deleteCount={checkedRowKeys.length}
             disabledDelete={checkedRowKeys.length === 0}
             loading={tableProps.loading}
             refresh={run}

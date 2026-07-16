@@ -28,6 +28,102 @@ import { filterGraphData, splitGraphByDegree } from './utils/graph'
 
 const INITIAL_QUERY: GraphQueryValues = { degree: 2, relationKeyword: '' }
 const NAME_SEARCH_DEBOUNCE_MS = 400
+const FILTER_PREVIEW_COUNT = 5
+
+interface GraphFilterOption {
+  color: string
+  name: string
+  value: string
+}
+
+interface GraphFilterSectionProps {
+  readonly allSelected: boolean
+  readonly emptyText: string
+  readonly indeterminate: boolean
+  readonly label: string
+  readonly onToggleAll: (checked: boolean) => void
+  readonly onToggleOption: (value: string, checked: boolean) => void
+  readonly options: GraphFilterOption[]
+  readonly selectedValues: string[]
+}
+
+const GraphFilterSection: React.FC<GraphFilterSectionProps> = ({
+  allSelected,
+  emptyText,
+  indeterminate,
+  label,
+  options,
+  selectedValues,
+  onToggleAll,
+  onToggleOption,
+}) => {
+  const [keyword, setKeyword] = useState('')
+  const [expanded, setExpanded] = useState(false)
+  const filteredOptions = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLowerCase()
+    if (!normalizedKeyword) return options
+    return options.filter(option => option.name.toLowerCase().includes(normalizedKeyword))
+  }, [keyword, options])
+  const visibleOptions = useMemo(
+    () => (expanded ? filteredOptions : filteredOptions.slice(0, FILTER_PREVIEW_COUNT)),
+    [expanded, filteredOptions]
+  )
+
+  const handleKeywordChange = useCallback((value: string): void => {
+    setKeyword(value)
+    setExpanded(false)
+  }, [])
+
+  const handleToggleExpanded = useCallback((): void => {
+    setExpanded(current => !current)
+  }, [])
+
+  return (
+    <div className={styles.filterSection}>
+      <div className={styles.filterSectionHeader}>
+        <Checkbox
+          checked={allSelected}
+          disabled={options.length === 0}
+          indeterminate={indeterminate}
+          onChange={event => onToggleAll(event.target.checked)}
+        >
+          {label}
+        </Checkbox>
+        <AInput
+          allowClear
+          className={styles.filterSearchInput}
+          placeholder={`搜索${label.replace('筛选', '')}名称`}
+          prefix={<SearchOutlined />}
+          value={keyword}
+          onChange={event => handleKeywordChange(event.target.value)}
+        />
+      </div>
+      <div className={`${styles.filterOptionsViewport} ${expanded ? styles.filterOptionsExpanded : ''}`}>
+        <div className={styles.filterCheckboxGroup}>
+          {visibleOptions.map(option => (
+            <Checkbox
+              key={option.value}
+              checked={selectedValues.includes(option.value)}
+              onChange={event => onToggleOption(option.value, event.target.checked)}
+            >
+              <span className={styles.filterCheckboxItem}>
+                <span className={styles.entityDot} style={{ backgroundColor: option.color }} />
+                <span>{option.name}</span>
+              </span>
+            </Checkbox>
+          ))}
+          {filteredOptions.length === 0 && <span className={styles.filterEmpty}>{emptyText}</span>}
+        </div>
+      </div>
+      {filteredOptions.length > FILTER_PREVIEW_COUNT && (
+        <button className={styles.filterExpandButton} type="button" onClick={handleToggleExpanded}>
+          {expanded ? '收起更多内容' : '点击查看更多'}
+          {expanded ? <UpOutlined /> : <DownOutlined />}
+        </button>
+      )}
+    </div>
+  )
+}
 
 export const Component: React.FC = () => {
   const spaceId = useAppSelector(getSpaceId)
@@ -77,6 +173,19 @@ export const Component: React.FC = () => {
   const allRelationsSelected = relationNames.length > 0 && selectedRelations.length === relationNames.length
   const entitySelectionIndeterminate = selectedEntityIds.length > 0 && selectedEntityIds.length < entityIds.length
   const relationSelectionIndeterminate = selectedRelations.length > 0 && selectedRelations.length < relationNames.length
+  const entityFilterOptions = useMemo<GraphFilterOption[]>(
+    () =>
+      entities.map(entity => ({
+        color: entity.color || '#5B7CF7',
+        name: entity.entityName,
+        value: String(entity.id),
+      })),
+    [entities]
+  )
+  const relationFilterOptions = useMemo<GraphFilterOption[]>(
+    () => relationNames.map(relation => ({ color: '#F59E0B', name: relation, value: relation })),
+    [relationNames]
+  )
 
   useEffect(() => {
     setSelectedEntityIds(entityIds)
@@ -174,6 +283,20 @@ export const Component: React.FC = () => {
     [relationNames],
   )
 
+  const handleToggleEntity = useCallback((entityId: string, checked: boolean): void => {
+    setSelectedEntityIds((current) => {
+      if (checked) return current.includes(entityId) ? current : [...current, entityId]
+      return current.filter((id) => id !== entityId)
+    })
+  }, [])
+
+  const handleToggleRelation = useCallback((relationName: string, checked: boolean): void => {
+    setSelectedRelations((current) => {
+      if (checked) return current.includes(relationName) ? current : [...current, relationName]
+      return current.filter((name) => name !== relationName)
+    })
+  }, [])
+
   const handleSelect = useCallback((nextSelection: GraphSelection): void => {
     setSelection(nextSelection)
     setDetailOpen(true)
@@ -223,61 +346,29 @@ export const Component: React.FC = () => {
         <AButton className={styles.filterCloseBtn} icon={<CloseOutlined />} type="text" onClick={() => setFilterOpen(false)} />
       </div>
       <div className={styles.filterBody}>
-        <div className={styles.filterSection}>
-          <div className={styles.filterSectionLabel}>
-            <Checkbox
-              checked={allEntitiesSelected}
-              disabled={entityIds.length === 0}
-              indeterminate={entitySelectionIndeterminate}
-              onChange={(event) => handleToggleAllEntities(event.target.checked)}
-            >
-              实体筛选
-            </Checkbox>
-          </div>
-          <Checkbox.Group
-            className={styles.filterCheckboxGroup}
-            options={entities.map((entity) => ({
-              label: (
-                <span className={styles.filterCheckboxItem}>
-                  <span className={styles.entityDot} style={{ backgroundColor: entity.color || '#5B7CF7' }} />
-                  <span>{entity.entityName}</span>
-                </span>
-              ),
-              value: String(entity.id),
-            }))}
-            value={selectedEntityIds}
-            onChange={(values) => setSelectedEntityIds(values.map(String))}
-          />
-        </div>
+        <GraphFilterSection
+          allSelected={allEntitiesSelected}
+          emptyText="暂无匹配实体"
+          indeterminate={entitySelectionIndeterminate}
+          label="实体筛选"
+          options={entityFilterOptions}
+          selectedValues={selectedEntityIds}
+          onToggleAll={handleToggleAllEntities}
+          onToggleOption={handleToggleEntity}
+        />
 
         <div className={styles.filterDivider} />
 
-        <div className={styles.filterSection}>
-          <div className={styles.filterSectionLabel}>
-            <Checkbox
-              checked={allRelationsSelected}
-              disabled={relationNames.length === 0}
-              indeterminate={relationSelectionIndeterminate}
-              onChange={(event) => handleToggleAllRelations(event.target.checked)}
-            >
-              关系筛选
-            </Checkbox>
-          </div>
-          <Checkbox.Group
-            className={styles.filterCheckboxGroup}
-            options={relationNames.map((relation) => ({
-              label: (
-                <span className={styles.filterCheckboxItem}>
-                  <span className={styles.entityDot} style={{ backgroundColor: '#F59E0B' }} />
-                  <span>{relation}</span>
-                </span>
-              ),
-              value: relation,
-            }))}
-            value={selectedRelations}
-            onChange={(values) => setSelectedRelations(values.map(String))}
-          />
-        </div>
+        <GraphFilterSection
+          allSelected={allRelationsSelected}
+          emptyText="暂无匹配关系"
+          indeterminate={relationSelectionIndeterminate}
+          label="关系筛选"
+          options={relationFilterOptions}
+          selectedValues={selectedRelations}
+          onToggleAll={handleToggleAllRelations}
+          onToggleOption={handleToggleRelation}
+        />
       </div>
     </div>
   )

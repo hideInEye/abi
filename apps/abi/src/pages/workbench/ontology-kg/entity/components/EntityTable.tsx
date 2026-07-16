@@ -21,7 +21,9 @@ interface EntityTableProps {
   readonly onDelete: (id: OntologyNetworkId) => void
   readonly onEdit: (entity: OntologyEntity) => void
   readonly onPageChange: (page: number, pageSize: number) => void
+  readonly onSelectedRowKeysChange: (keys: string[]) => void
   readonly pagination: EntityPagination
+  readonly selectedRowKeys: string[]
   readonly viewMode: OntologyViewMode
   readonly visibleColumnKeys: ReadonlySet<string>
 }
@@ -35,7 +37,9 @@ export const EntityTable: React.FC<EntityTableProps> = ({
   onDelete,
   onEdit,
   onPageChange,
+  onSelectedRowKeysChange,
   pagination,
+  selectedRowKeys,
   viewMode,
   visibleColumnKeys,
 }) => {
@@ -177,7 +181,13 @@ export const EntityTable: React.FC<EntityTableProps> = ({
               dataSource={data}
               loading={loading}
               pagination={false}
-              rowKey="id"
+              rowKey={record => String(record.id)}
+              rowSelection={{
+                columnWidth: 48,
+                fixed: true,
+                selectedRowKeys,
+                onChange: keys => onSelectedRowKeysChange(keys.map(String)),
+              }}
               scroll={data.length > 0 ? { x: tableWidth } : undefined}
               size="middle"
             />

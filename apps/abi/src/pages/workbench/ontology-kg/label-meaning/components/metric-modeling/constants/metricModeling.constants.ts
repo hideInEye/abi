@@ -40,6 +40,12 @@ export const QUALITY_LEVEL_OPTIONS = [
   { label: 'P2-一般', value: 'P2' }
 ]
 
+export const QUALITY_LEVEL_DISPLAY_TEXT_MAP: Record<string, string> = {
+  p0: '核心',
+  p1: '重要',
+  p2: '一般'
+}
+
 export const AGG_METHOD_OPTIONS = [
   { label: '合计', value: 'sum' },
   { label: '平均值', value: 'avg' },

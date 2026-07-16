@@ -1642,51 +1642,8 @@
 
 // ── 本体网络卡片视图：复用数据语义卡片语言，并仅在本体网络内收敛尺寸 ──
 .ontology-card-grid {
-  .abi-card-grid-inner {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 386px));
-    align-content: start;
-    justify-content: start;
-    gap: 16px;
-  }
-
   .abi-data-card {
-    min-height: 172px;
-
-    .abi-data-card-head {
-      padding: 16px 18px 10px;
-      gap: 10px;
-    }
-
-    .abi-data-card-title {
-      font-size: 14px;
-      line-height: 20px;
-      gap: 8px;
-    }
-
-    .abi-data-card-body {
-      gap: 6px;
-      padding: 0 18px 10px;
-      font-size: 13px;
-      line-height: 1.5;
-
-      .row {
-        gap: 6px;
-      }
-
-      .lbl {
-        min-width: 70px;
-        font-size: 12px;
-      }
-
-      .val {
-        font-size: 13px;
-      }
-    }
-
     .abi-data-card-footer {
-      gap: 4px;
-      padding: 8px 14px;
-
       .ant-btn.abi-action-link,
       .ant-btn.abi-action-link-danger {
         height: auto;
@@ -1718,15 +1675,6 @@
         }
       }
     }
-  }
-
-  .abi-db-tag,
-  .ant-tag {
-    min-height: 22px;
-    padding: 0 8px;
-    border-radius: 5px;
-    font-size: 12px;
-    line-height: 20px;
   }
 }
 

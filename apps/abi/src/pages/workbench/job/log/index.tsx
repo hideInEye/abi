@@ -118,7 +118,11 @@ export function Component() {
     rowKey: 'jobLogId',
   } as any);
 
-  const { checkedRowKeys, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, async () => {}, true);
+  const { checkedRowKeys, clearCheckedRowKeys, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, async () => {}, true);
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    clearCheckedRowKeys();
+    setViewMode(mode);
+  };
 
   const filteredColumns = useMemo(() => {
     const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
@@ -270,17 +274,17 @@ export function Component() {
               title={t('common.confirmDelete')}
               onConfirm={handleBatchDelete}
             >
-              <AButton
-                className="btn-ghost-v5"
+              <AButton danger
+                icon={<DeleteOutlined />}
                 disabled={checkedRowKeys.length === 0}
               >
-                批量删除
+                批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
               </AButton>
             </APopconfirm>
           </div>
           <ViewControls
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewModeChange={handleViewModeChange}
             columns={columnOptions}
             onColumnToggle={handleColumnToggle}
           />

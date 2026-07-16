@@ -230,6 +230,10 @@ export function useTableOperate<T extends TableData = TableData>(
     setCheckedRowKeys(keys);
   }
 
+  function clearCheckedRowKeys() {
+    setCheckedRowKeys([]);
+  }
+
   const rowSelection: TableProps<T>['rowSelection'] = enableBatchOperation? {
     columnWidth: 48,
     fixed: true,
@@ -280,6 +284,7 @@ export function useTableOperate<T extends TableData = TableData>(
 
   return {
     checkedRowKeys: enableBatchOperation ? checkedRowKeys : [],
+    clearCheckedRowKeys,
     closeDrawer,
     drawerVisible,
     editingData,

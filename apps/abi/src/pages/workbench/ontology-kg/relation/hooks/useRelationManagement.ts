@@ -4,7 +4,7 @@ import type { Dispatch, SetStateAction } from 'react'
 
 import { getOntologyNetworkRecords } from '@/pages/workbench/ontology-kg/shared-network-types'
 import type { OntologyEntity, OntologyNetworkId, OntologyRelation } from '@/pages/workbench/ontology-kg/shared-network-types'
-import { createOntologyRelation, deleteOntologyRelation, queryOntologyEntityList, queryOntologyRelationList, updateOntologyRelation } from '@/service/api/ontology-network'
+import { createOntologyRelation, deleteOntologyRelation, deleteOntologyRelationBatch, queryOntologyEntityList, queryOntologyRelationList, updateOntologyRelation } from '@/service/api/ontology-network'
 
 import type { RelationFormValues, RelationPagination, RelationSearchValues } from '../types'
 
@@ -12,6 +12,7 @@ const INITIAL_SEARCH: RelationSearchValues = { relation: '' }
 const INITIAL_PAGINATION: RelationPagination = { pageNum: 1, pageSize: 10, total: 0 }
 
 interface UseRelationManagementResult {
+  batchDeleteRelations: () => Promise<void>
   deleteRelation: (id: OntologyNetworkId) => Promise<void>
   draftSearchValues: RelationSearchValues
   entityNameMap: Map<string, string>
@@ -23,8 +24,10 @@ interface UseRelationManagementResult {
   resetSearch: () => void
   saveRelation: (values: RelationFormValues, editingRelation?: OntologyRelation) => Promise<void>
   searchValues: RelationSearchValues
+  selectedRowKeys: string[]
   setDraftSearchValues: Dispatch<SetStateAction<RelationSearchValues>>
   setPage: (pageNum: number, pageSize?: number) => void
+  setSelectedRowKeys: (keys: string[]) => void
   submitSearch: () => void
 }
 
@@ -35,6 +38,7 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
   const [pagination, setPagination] = useState<RelationPagination>(INITIAL_PAGINATION)
   const [draftSearchValues, setDraftSearchValues] = useState<RelationSearchValues>(INITIAL_SEARCH)
   const [searchValues, setSearchValues] = useState<RelationSearchValues>(INITIAL_SEARCH)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   const entityRequestRef = useRef(0)
   const relationRequestRef = useRef(0)
 
@@ -68,6 +72,7 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
         })
         if (requestId !== relationRequestRef.current) return
         setRelations(getOntologyNetworkRecords(data))
+        setSelectedRowKeys([])
         setPagination((current) => ({ ...current, total: data?.total ?? 0 }))
       } catch {
         if (requestId === relationRequestRef.current) message.error('关系列表加载失败，请稍后重试')
@@ -158,7 +163,26 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
     [loadRelations, pagination, relations.length, searchValues],
   )
 
+  const batchDeleteRelations = useCallback(async (): Promise<void> => {
+    if (!selectedRowKeys.length) {
+      message.warning('请先选择要删除的关系')
+      return
+    }
+
+    const { error } = await deleteOntologyRelationBatch({ ids: selectedRowKeys })
+    if (error) throw error
+
+    if (relations.length === selectedRowKeys.length && pagination.pageNum > 1) {
+      const nextPagination = { ...pagination, pageNum: pagination.pageNum - 1 }
+      setPagination(nextPagination)
+      await loadRelations(searchValues, nextPagination)
+      return
+    }
+    await loadRelations(searchValues, pagination)
+  }, [loadRelations, pagination, relations.length, searchValues, selectedRowKeys])
+
   return {
+    batchDeleteRelations,
     deleteRelation,
     entityNameMap,
     entities,
@@ -170,8 +194,10 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
     resetSearch,
     saveRelation,
     searchValues,
+    selectedRowKeys,
     setPage,
     setDraftSearchValues,
+    setSelectedRowKeys,
     submitSearch,
   }
 }

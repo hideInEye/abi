@@ -1,7 +1,9 @@
 import type {
   CreateOntologyEntityParams,
   CreateOntologyRelationParams,
+  DeleteOntologyEntityBatchParams,
   DeleteOntologyEntityParams,
+  DeleteOntologyRelationBatchParams,
   DeleteOntologyRelationParams,
   GetOntologyEntityParams,
   OntologyEntity,
@@ -78,6 +80,15 @@ export function deleteOntologyEntity(params: DeleteOntologyEntityParams) {
   })
 }
 
+/** 批量删除实体定义。 */
+export function deleteOntologyEntityBatch(params: DeleteOntologyEntityBatchParams) {
+  return apiRequest<boolean>({
+    data: params,
+    method: 'post',
+    url: `${ONTOLOGY_NETWORK_API_PREFIX}/entity/deleteBatch`,
+  })
+}
+
 /** 覆盖保存实体的完整属性绑定草稿。 */
 export function saveOntologyEntityAttributes(params: SaveOntologyEntityAttributesParams) {
   return apiRequest<boolean>({
@@ -120,6 +131,15 @@ export function deleteOntologyRelation(params: DeleteOntologyRelationParams) {
     data: params,
     method: 'post',
     url: `${ONTOLOGY_NETWORK_API_PREFIX}/relation/delete`,
+  })
+}
+
+/** 批量删除实体关系。 */
+export function deleteOntologyRelationBatch(params: DeleteOntologyRelationBatchParams) {
+  return apiRequest<boolean>({
+    data: params,
+    method: 'post',
+    url: `${ONTOLOGY_NETWORK_API_PREFIX}/relation/deleteBatch`,
   })
 }
 

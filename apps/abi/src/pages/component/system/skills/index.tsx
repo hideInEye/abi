@@ -85,6 +85,10 @@ export function Component() {
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    setSelectedRowKeys([]);
+    setViewMode(mode);
+  };
 
   async function fetchList() {
     setLoading(true);
@@ -143,7 +147,7 @@ export function Component() {
     });
   }
 
-  // 批量删除
+  // 批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
   function handleBatchDelete() {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要删除的技能');
@@ -436,17 +440,17 @@ export function Component() {
             >
               安装技能
             </AButton>
-            <Button
-              className="btn-ghost-v5"
+            <Button danger
+              icon={<DeleteOutlined />}
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchDelete}
             >
-              批量删除数据
+              批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
             </Button>
           </div>
           <ViewControls
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewModeChange={handleViewModeChange}
             columns={columnOptions}
             onColumnToggle={handleColumnToggle}
           />
