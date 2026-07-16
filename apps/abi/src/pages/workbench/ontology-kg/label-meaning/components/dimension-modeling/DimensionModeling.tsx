@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+import { DeleteOutlined } from '@ant-design/icons'
 import { Popconfirm, Splitter } from 'antd'
 
 import { ViewControls } from '@/components/ViewControls'
@@ -116,7 +117,7 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
                     title="提示"
                     onConfirm={handleBatchDelete}
                   >
-                    <AButton danger disabled={!selectedRowKeys.length}>
+                    <AButton danger disabled={!selectedRowKeys.length} icon={<DeleteOutlined />}>
                       批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
                     </AButton>
                   </Popconfirm>

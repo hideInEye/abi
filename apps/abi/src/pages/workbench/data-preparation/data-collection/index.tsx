@@ -463,8 +463,7 @@ export function Component() {
               onConfirm={handleBatchDelete}
               disabled={!checkedRowKeys || checkedRowKeys.length === 0}
             >
-              <AButton
-                className="btn-ghost-v5"
+              <AButton danger
                 disabled={!checkedRowKeys || checkedRowKeys.length === 0}
               >
                 <DeleteOutlined />批量删除{checkedRowKeys && checkedRowKeys.length > 0 ? `(${checkedRowKeys.length})` : ''}

@@ -379,12 +379,12 @@ export const PluginTable: React.FC<PluginTableProps> = ({
           <AButton type="primary" className="btn-accent-gradient" disabled={!groupId} onClick={onAdd}>
             + 新增MCP服务
           </AButton>
-          <AButton
-            className="btn-ghost-v5"
+          <AButton danger
+            icon={<DeleteOutlined />}
             disabled={checkedRowKeys.length === 0}
             onClick={handleBatchDelete}
           >
-            批量删除
+            批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
           </AButton>
         </div>
         <ViewControls

@@ -12,6 +12,7 @@ interface Props {
   readonly addTitle?: string;
   readonly children?: React.ReactNode;
   readonly columns: AntDesign.TableColumnCheck[];
+  readonly deleteCount?: number;
   readonly disabledDelete?: boolean;
   readonly itemAlign?: SpaceProps['align'];
   readonly loading?: boolean;
@@ -29,6 +30,7 @@ const TableHeaderOperation: FC<Props> = ({
   addTitle,
   children,
   columns,
+  deleteCount = 0,
   disabledDelete,
   itemAlign,
   loading,
@@ -81,12 +83,11 @@ const TableHeaderOperation: FC<Props> = ({
             >
               <Button
                 danger
-                ghost
                 disabled={disabledDelete}
                 icon={<IconIcRoundDelete className="text-icon" />}
                 size="small"
               >
-                {t('common.batchDelete')}
+                {t('common.batchDelete')}{deleteCount ? `(${deleteCount})` : ''}
               </Button>
             </Popconfirm>
           ) : null}

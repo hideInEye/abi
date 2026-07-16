@@ -296,8 +296,8 @@ const ModelCardList: FC<Props> = ({
               onConfirm={() => onBatchDelete(selectedRowKeys.map(k => Number(k)))}
               disabled={selectedRowKeys.length === 0}
             >
-              <AButton className="btn-ghost-v5" disabled={selectedRowKeys.length === 0}>
-                批量删除
+              <AButton danger disabled={selectedRowKeys.length === 0} icon={<DeleteOutlined />}>
+                批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
               </AButton>
             </APopconfirm>
           </div>

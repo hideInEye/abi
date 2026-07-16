@@ -376,12 +376,12 @@ export function Component() {
             <AButton className="btn-accent-gradient" onClick={() => add()}>
               <PlusOutlined />新增角色
             </AButton>
-            <AButton
-              className="btn-ghost-v5"
+            <AButton danger
+              icon={<DeleteOutlined />}
               disabled={checkedRowKeys.length === 0}
               onClick={deleteBatch}
             >
-              批量删除
+              批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
             </AButton>
           </div>
           <ViewControls

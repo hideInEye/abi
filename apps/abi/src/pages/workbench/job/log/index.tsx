@@ -270,11 +270,11 @@ export function Component() {
               title={t('common.confirmDelete')}
               onConfirm={handleBatchDelete}
             >
-              <AButton
-                className="btn-ghost-v5"
+              <AButton danger
+                icon={<DeleteOutlined />}
                 disabled={checkedRowKeys.length === 0}
               >
-                批量删除
+                批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
               </AButton>
             </APopconfirm>
           </div>

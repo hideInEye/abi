@@ -148,7 +148,7 @@ export function Component() {
     setColumnOptions((prev) => prev.map((c) => (c.key === key ? { ...c, visible } : c)))
   }
 
-  // 批量删除
+  // 批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
   function handleBatchDelete() {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要删除的工具')
@@ -613,8 +613,8 @@ export function Component() {
               <PlusOutlined />
               新增工具
             </Button>
-            <Button className="btn-ghost-v5" disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete}>
-              批量删除数据
+            <Button danger disabled={selectedRowKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+              批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
             </Button>
           </div>
           <ViewControls viewMode={viewMode} onViewModeChange={setViewMode} columns={columnOptions} onColumnToggle={handleColumnToggle} />

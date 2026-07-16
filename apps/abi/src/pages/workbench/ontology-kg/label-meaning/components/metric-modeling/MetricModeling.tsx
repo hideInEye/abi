@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import { DownOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownOutlined } from '@ant-design/icons'
 import { Dropdown, Popconfirm, Splitter } from 'antd'
 import type { MenuProps } from 'antd'
 
@@ -145,7 +145,7 @@ const MetricModeling: React.FC = () => {
                     title="提示"
                     onConfirm={handleBatchDelete}
                   >
-                    <AButton danger disabled={!selectedRowKeys.length}>
+                    <AButton danger disabled={!selectedRowKeys.length} icon={<DeleteOutlined />}>
                       批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
                     </AButton>
                   </Popconfirm>

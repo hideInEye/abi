@@ -1,4 +1,4 @@
-import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { Popconfirm, Select, message } from 'antd'
 import React, { useCallback, useState } from 'react'
 
@@ -157,7 +157,7 @@ export const Component: React.FC = () => {
               title="提示"
               onConfirm={handleBatchDelete}
             >
-              <AButton danger disabled={!selectedRowKeys.length}>
+              <AButton danger disabled={!selectedRowKeys.length} icon={<DeleteOutlined />}>
                 批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
               </AButton>
             </Popconfirm>
