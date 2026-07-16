@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Popover, Input, Empty, Tag } from 'antd'
 import {
   AppstoreOutlined,
@@ -42,15 +42,9 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 // 注入一次全局样式：面板内滚动条 = 浅灰 + 细，与背景融合
 const SCROLL_STYLE_ID = 'chart-type-modal-scroll-style'
 const SCROLL_STYLE_CSS = `
-.chart-type-modal-scroll { scrollbar-width: thin; scrollbar-color: #c1c1c1 transparent; }
-.chart-type-modal-scroll::-webkit-scrollbar,
-.chart-type-modal-scroll:hover::-webkit-scrollbar { width: 6px; height: 6px; }
-.chart-type-modal-scroll::-webkit-scrollbar-track,
-.chart-type-modal-scroll:hover::-webkit-scrollbar-track { background: transparent; }
-.chart-type-modal-scroll::-webkit-scrollbar-thumb,
-.chart-type-modal-scroll::-webkit-scrollbar-thumb:hover,
-.chart-type-modal-scroll:hover::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; border: none; }
-.chart-type-modal-scroll::-webkit-scrollbar-corner { background: transparent; }
+/* 隐藏原生滚动条：内容占满宽度、不占位；滚动条改用自定义 overlay thumb 呈现 */
+.chart-type-modal-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.chart-type-modal-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 /* 搜索框：透明背景 + 淡边框，hover/focus 与主色呼应 */
 .chart-type-modal-search.ant-input-affix-wrapper {
@@ -91,6 +85,112 @@ function useInjectScrollStyle() {
     el.textContent = SCROLL_STYLE_CSS
     document.head.appendChild(el)
   }, [])
+}
+
+interface OverlayScrollProps {
+  className?: string
+  contentClassName?: string
+  style?: React.CSSProperties
+  children: React.ReactNode
+}
+
+// 自定义 overlay 滚动条：原生滚动条隐藏（内容占满宽度、不占位），
+// thumb 绝对定位悬浮在内容之上，仅在 hover / 拖拽时显示
+const OverlayScroll: React.FC<OverlayScrollProps> = ({ className = '', contentClassName = '', style, children }) => {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const draggingRef = useRef(false)
+  const [thumb, setThumb] = useState({ top: 0, height: 0, visible: false })
+  const [active, setActive] = useState(false)
+
+  const updateThumb = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const { scrollHeight, clientHeight, scrollTop } = el
+    if (scrollHeight <= clientHeight + 1) {
+      setThumb((t) => (t.visible ? { ...t, visible: false } : t))
+      return
+    }
+    const height = Math.max((clientHeight / scrollHeight) * clientHeight, 24)
+    const maxTop = clientHeight - height
+    const top = maxTop <= 0 ? 0 : (scrollTop / (scrollHeight - clientHeight)) * maxTop
+    // 仅在数值确实变化时更新，避免 useLayoutEffect 每次渲染都 setState 造成无限更新
+    setThumb((t) =>
+      t.visible && Math.abs(t.top - top) < 0.5 && Math.abs(t.height - height) < 0.5
+        ? t
+        : { top, height, visible: true },
+    )
+  }, [])
+
+  useLayoutEffect(() => {
+    updateThumb()
+  })
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => updateThumb())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [updateThumb])
+
+  const onThumbMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const el = scrollRef.current
+    if (!el) return
+    const startY = e.clientY
+    const startScrollTop = el.scrollTop
+    const { scrollHeight, clientHeight } = el
+    const track = clientHeight - thumb.height
+    draggingRef.current = true
+    setActive(true)
+    const onMove = (ev: MouseEvent) => {
+      if (track <= 0) return
+      const dy = ev.clientY - startY
+      el.scrollTop = startScrollTop + (dy / track) * (scrollHeight - clientHeight)
+    }
+    const onUp = () => {
+      draggingRef.current = false
+      setActive(false)
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  return (
+    <div
+      className={`relative overflow-hidden ${className}`}
+      style={style}
+      onMouseEnter={() => setActive(true)}
+      onMouseLeave={() => {
+        if (!draggingRef.current) setActive(false)
+      }}
+    >
+      <div
+        ref={scrollRef}
+        onScroll={updateThumb}
+        className={`chart-type-modal-scroll h-full w-full overflow-y-auto ${contentClassName}`}
+      >
+        {children}
+      </div>
+      {thumb.visible && (
+        <div
+          onMouseDown={onThumbMouseDown}
+          className="absolute right-[2px] w-[6px] rounded-[3px] transition-opacity duration-200"
+          style={{
+            top: thumb.top,
+            height: thumb.height,
+            backgroundColor: active ? '#a8a8a8' : '#c1c1c1',
+            opacity: active ? 1 : 0,
+            pointerEvents: active ? 'auto' : 'none',
+            cursor: 'default',
+          }}
+        />
+      )}
+    </div>
+  )
 }
 
 const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, children }) => {
@@ -139,9 +239,9 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
   const categoryRail = [{ key: 'all', label: '全部' }, ...CHART_CATEGORIES.map((c) => ({ key: c.key, label: c.label }))]
 
   const panel = (
-    <div className="flex overflow-hidden rounded-xl" style={{ width: '32rem', height: '28rem' }}>
+    <div className="flex overflow-hidden rounded-xl" style={{ width: '25rem', height: '28rem' }}>
       {/* 一级：语义分类（图标栏） */}
-      <div className="chart-type-modal-scroll shrink-0 overflow-y-auto border-r border-[#f0f0f0] py-2" style={{ width: '4.5rem' }}>
+      <OverlayScroll className="shrink-0 border-r border-[#f0f0f0]" style={{ width: '4.5rem' }} contentClassName="py-2">
         {categoryRail.map((cat) => {
           const active = !keyword && activeCategory === cat.key
           return (
@@ -161,10 +261,10 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
             </div>
           )
         })}
-      </div>
+      </OverlayScroll>
 
       {/* 二级：图表大类（文字导航） */}
-      <div className="chart-type-modal-scroll shrink-0 overflow-y-auto border-r border-[#f0f0f0] py-2" style={{ width: '5.25rem' }}>
+      <OverlayScroll className="shrink-0 border-r border-[#f0f0f0]" style={{ width: '6.25rem' }} contentClassName="py-2">
         {familyRail.map((f) => {
           const active = !keyword && activeFamily === f.key
           return (
@@ -184,7 +284,7 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
             </div>
           )
         })}
-      </div>
+      </OverlayScroll>
 
       {/* 三级：搜索 + 变体卡片（单列窄卡，可上下滚动） */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#fbfcfe]">
@@ -199,7 +299,7 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
             onChange={(e) => setKeyword(e.target.value)}
           />
         </div>
-        <div className="chart-type-modal-scroll flex-1 overflow-y-auto px-3 pb-3">
+        <OverlayScroll className="flex-1 min-h-0" contentClassName="px-3 pb-3">
           {cards.length === 0 ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无匹配图表" className="mt-10" />
           ) : (
@@ -240,7 +340,7 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
               })}
             </div>
           )}
-        </div>
+        </OverlayScroll>
       </div>
     </div>
   )

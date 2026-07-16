@@ -151,10 +151,10 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         onRegenerate={regenerateRound}
       />
 
-      {/* 批量删除底部操作栏（Qwen 风格） */}
+      {/* 批量删除底部操作栏（Qwen 风格，与下方输入框对齐） */}
       {isDeleting && (
-        <div className="flex justify-center" style={{ scrollbarGutter: 'stable' }}>
-          <div className="max-w-[53.75rem] w-full flex items-center justify-between px-4 py-3 border-t border-[#e9edf4] bg-white">
+        <div style={{ paddingRight: 'var(--scrollbar-width, 17px)' }}>
+          <div className="max-w-[53.75rem] w-full m-auto flex items-center justify-between px-4 py-3 border-t border-[#e9edf4] bg-white">
             <Checkbox
               checked={deleteCheckAll}
               onChange={(e) => toggleDeleteAll(e.target.checked)}

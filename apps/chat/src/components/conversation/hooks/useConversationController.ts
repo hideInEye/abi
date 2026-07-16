@@ -412,7 +412,14 @@ export const useConversationController = (
     }
     setDeleteLoading(true)
     try {
-      await deleteMessageByRound({ convUid: conv.conv_uid, roundIndex: rounds })
+      const res: any = await deleteMessageByRound({ convUid: conv.conv_uid, roundIndex: rounds })
+      // 后端业务错误码不会抛异常（拦截器直接返回 body），需显式校验成功状态，
+      // 否则删除失败时仍会误提“删除成功”且本地误删
+      const isSuccess = res?.success === true || Number(res?.code) === 200
+      if (!isSuccess) {
+        message.error(res?.msg || res?.err_msg || '删除失败，请重试')
+        return
+      }
       setConvContent((prev) => prev.filter((item: any) => {
         const round = item?.roundIndex ?? item?.order
         return !(typeof round === 'number' && rounds.includes(round))
@@ -648,6 +655,11 @@ export const useConversationController = (
     handleCollect()
     setSelectedExcel({})
     setReferenceDialog({})
+
+    // 切换会话时重置批量删除状态，避免删除栏残留在新会话上
+    setIsDeleting(false)
+    setDeleteSelectedRounds([])
+    setDeleteLoading(false)
 
     setMinRoundIndex(undefined)
     setHasMoreHistory(true)
@@ -1070,6 +1082,21 @@ export const useConversationController = (
           if (response.ok && contentType.includes('text/event-stream')) {
             retryCount = 0
             return
+          }
+
+          // 非事件流响应（含 HTTP 200 返回的业务错误体，如 {"code":500,"msg":"内部服务器错误"}）：解析并提示后终止
+          if (!contentType.includes('text/event-stream')) {
+            let backendMsg = ''
+            try {
+              const errData: any = await response.clone().json()
+              if (errData && Number(errData.code) >= 400) {
+                backendMsg = errData.msg || errData.message || ''
+              }
+            } catch {}
+            if (backendMsg) {
+              message.error(backendMsg)
+              throw new Error(backendMsg)
+            }
           }
 
           if (response.status >= 400 && response.status < 500 && response.status !== 429) {
