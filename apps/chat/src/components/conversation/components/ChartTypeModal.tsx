@@ -42,12 +42,14 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 // 注入一次全局样式：面板内滚动条 = 浅灰 + 细，与背景融合
 const SCROLL_STYLE_ID = 'chart-type-modal-scroll-style'
 const SCROLL_STYLE_CSS = `
-.chart-type-modal-scroll { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.12) transparent; }
-.chart-type-modal-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-.chart-type-modal-scroll::-webkit-scrollbar-track { background: transparent; }
-.chart-type-modal-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); border-radius: 4px; transition: background-color .2s; }
-.chart-type-modal-scroll:hover::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); }
-.chart-type-modal-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.32); }
+.chart-type-modal-scroll { scrollbar-width: thin; scrollbar-color: #c1c1c1 transparent; }
+.chart-type-modal-scroll::-webkit-scrollbar,
+.chart-type-modal-scroll:hover::-webkit-scrollbar { width: 6px; height: 6px; }
+.chart-type-modal-scroll::-webkit-scrollbar-track,
+.chart-type-modal-scroll:hover::-webkit-scrollbar-track { background: transparent; }
+.chart-type-modal-scroll::-webkit-scrollbar-thumb,
+.chart-type-modal-scroll::-webkit-scrollbar-thumb:hover,
+.chart-type-modal-scroll:hover::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; border: none; }
 .chart-type-modal-scroll::-webkit-scrollbar-corner { background: transparent; }
 
 /* 搜索框：透明背景 + 淡边框，hover/focus 与主色呼应 */

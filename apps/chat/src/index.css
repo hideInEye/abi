@@ -63,6 +63,30 @@
   height: 100%;
 }
 
+/* ── 全站滚动条统一：浅灰、细、透明轨道，跨浏览器一致 ──
+   thumb 用实心半透明墨色，不依赖 background-clip，兼容老内核浏览器 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(26, 39, 68, 0.22) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(26, 39, 68, 0.22);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(26, 39, 68, 0.36);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .chat-startup-loading {
   width: 100%;
   height: 100%;

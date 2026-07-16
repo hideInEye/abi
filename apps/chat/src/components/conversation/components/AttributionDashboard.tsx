@@ -9,17 +9,112 @@
  *
  * @module AttributionDashboard
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { EChartsOption } from 'echarts';
 import { EChart } from '../../../components/react-echarts';
-import type {
-  AttributionAnalysisData,
-  CrossItem,
-  DimensionRow,
-  FactorGroup,
-  FactorItem,
-} from '../../../mock-data/attribution-dashboard-sample';
 import styles from './AttributionDashboard.module.css';
+
+/**
+ * 归因分析（chat_with_analysis）数据类型定义。
+ * 结构与后端 root_analysis 返回一致：扁平结构，包含指标概览、
+ * 维度归因表、因子明细、瀑布数据、交叉归因、异常检测等字段。
+ */
+
+/** 贡献方向 */
+export type ContributionDirection = 'positive' | 'negative' | string;
+
+/** 维度归因表条目 */
+export interface DimensionRow {
+  rank: number;
+  dimension: string;
+  dimension_label: string;
+  gini_score: number;
+  contribution_pct: number;
+  direction: ContributionDirection;
+}
+
+/** 单个因子明细 */
+export interface FactorItem {
+  factor_value: string;
+  contribution_amount: number;
+  contribution_pct: number;
+  direction: ContributionDirection;
+  current_metric?: number | null;
+  baseline_metric?: number | null;
+  rank: number;
+}
+
+/** 按维度分组的因子明细 */
+export interface FactorGroup {
+  dimension: string;
+  dimension_label: string;
+  gini_score: number;
+  factors: FactorItem[];
+}
+
+/** 瀑布图条目 */
+export interface WaterfallItem {
+  label: string;
+  value: number;
+  type: 'start' | 'positive' | 'negative' | 'end' | string;
+}
+
+/** 交叉归因子因子 */
+export interface CrossSubFactor {
+  factor_value: string;
+  contribution_amount: number;
+  contribution_pct: number;
+  direction: ContributionDirection;
+}
+
+/** 交叉归因关系 */
+export interface CrossItem {
+  parent_dimension: string;
+  parent_factor: string;
+  best_sub_dimension: string;
+  sub_dimension_gini: number;
+  sub_factors: CrossSubFactor[];
+}
+
+/** 异常检测结果 */
+export interface AnomalyResult {
+  is_anomaly: boolean;
+  anomaly_level: string;
+  anomaly_score: number;
+  algorithm: string;
+  detected_value: number;
+  expected_value: number;
+  threshold: number;
+  message: string;
+}
+
+/** 指标概览 */
+export interface MetricOverview {
+  metric_label: string;
+  current_value: number;
+  baseline_value: number | null;
+  delta_value: number | null;
+}
+
+/** 归因分析完整数据结构 */
+export interface AttributionAnalysisData {
+  chat_mode: string;
+  strategy_name: string;
+  target_metric: string;
+  analysis_modes: string[];
+  semantic_group_name?: string;
+  semantic_name?: string;
+  semantic_id?: number;
+  result_explain: string;
+  dimension_table: DimensionRow[];
+  factor_table: FactorGroup[];
+  waterfall_data: WaterfallItem[];
+  diff_data?: any[];
+  cross_data: CrossItem[];
+  anomaly_result: AnomalyResult;
+  metric_overview: MetricOverview;
+}
 
 interface AttributionDashboardProps {
   /** 归因分析数据 */
@@ -52,6 +147,28 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data }) => 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [dimSubTab, setDimSubTab] = useState<'single' | 'cross'>('single');
   const [factorTab, setFactorTab] = useState<string>(data?.factor_table?.[0]?.dimension || '');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // 全屏模式：ESC 退出并锁定页面滚动
+  useEffect(() => {
+    if (!isFullscreen) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isFullscreen]);
+
+  // 切换全屏后触发一次 resize，让 ECharts 图表自适应新容器尺寸
+  useEffect(() => {
+    const timer = setTimeout(() => window.dispatchEvent(new Event('resize')), 320);
+    return () => clearTimeout(timer);
+  }, [isFullscreen]);
 
   // 维度 -> 颜色 映射
   const dimColor = useMemo(() => {
@@ -475,7 +592,7 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data }) => 
 
   const curIntDec = fmt(overview?.current_value).split('.');
 
-  return (
+  const dashboard = (
     <div className={styles.root}>
       {/* 顶部导航 */}
       <header className={styles.header}>
@@ -494,6 +611,23 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data }) => 
           <span className={styles.badgeAmber}>目标指标 · {data.target_metric}</span>
           {data.semantic_id != null && <span className={styles.badgeMuted}>语义模型 #{data.semantic_id}</span>}
           <span className={styles.badgeGreen}><span className={styles.pulseDot} />运行完成</span>
+          <button
+            type="button"
+            className={styles.fsBtn}
+            onClick={() => setIsFullscreen((v) => !v)}
+            title={isFullscreen ? '退出全屏' : '全屏展示'}
+            aria-label={isFullscreen ? '退出全屏' : '全屏展示'}
+          >
+            {isFullscreen ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+              </svg>
+            )}
+          </button>
         </div>
       </header>
 
@@ -578,14 +712,6 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data }) => 
                   </div>
                   <p className={styles.conclusionText}>{data.result_explain}</p>
                 </div>
-              </section>
-
-              <section className={`${styles.card} ${styles.cardPad}`}>
-                <div className={styles.blockHead}>
-                  <h3 className={styles.blockTitle}>维度贡献速览</h3>
-                  <span className={styles.monoMuted}>{data.dimension_table.length} DIMENSIONS</span>
-                </div>
-                {renderDimRank(data.dimension_table)}
               </section>
             </div>
           )}
@@ -713,6 +839,22 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data }) => 
       </div>
     </div>
   );
+
+  if (isFullscreen) {
+    return createPortal(
+      <div
+        className={styles.fsOverlay}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setIsFullscreen(false);
+        }}
+      >
+        <div className={styles.fsModal}>{dashboard}</div>
+      </div>,
+      document.body,
+    );
+  }
+
+  return dashboard;
 };
 
 export default AttributionDashboard;

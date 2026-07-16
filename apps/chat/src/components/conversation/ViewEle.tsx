@@ -30,7 +30,6 @@ import styles from './styles.module.css';
 import s from './index.module.css'
 import CausalAnalysis from "./components/CausalAnalysis";
 import AttributionDashboard from "./components/AttributionDashboard";
-import { ATTRIBUTION_ANALYSIS_SAMPLE } from "../../mock-data/attribution-dashboard-sample";
 import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEmptyObject, getUserName, isSingleMetricData, stripHtmlTags } from '@/utils';
 import { handleDataExport, handleImageExport, handleExcelFileExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
@@ -1708,10 +1707,10 @@ const ViewEle: React.FC<PropsType> = ({
                       )}
                   </Spin>
 
-                  {/* chat_with_analysis 归因分析：优先渲染新版看板，缺省用旧版组件，后端未就绪时用静态样例预览 */}
+                  {/* chat_with_analysis 归因分析：优先渲染新版看板，旧格式沿用原组件；字段未就绪时不渲染静态样例，避免展示与真实数据混淆的“死数据” */}
                   {
                     chartData?.chat_mode === 'chat_with_analysis' && (() => {
-                      // 后端返回的归因数据（含维度归因表 / 因子明细 / 瀑布数据）
+                      // 后端返回的归因数据（含维度归因表 / 因子明细 / 指标概览）
                       const hasAnalysis = Array.isArray(chartData?.dimension_table)
                         && Array.isArray(chartData?.factor_table)
                         && chartData?.metric_overview;
@@ -1722,8 +1721,8 @@ const ViewEle: React.FC<PropsType> = ({
                       if (chartData?.total_df || chartData?.analysis_response) {
                         return <CausalAnalysis data={chartData} />;
                       }
-                      // 后端数据尚未就绪：使用静态样例预览新版看板
-                      return <AttributionDashboard data={ATTRIBUTION_ANALYSIS_SAMPLE} />;
+                      // 归因字段尚未就绪（如流式过程中）：不渲染任何静态样例，等待真实数据到达
+                      return null;
                     })()
                   }
                   {/* chat_with_predict 预测分析 */}
