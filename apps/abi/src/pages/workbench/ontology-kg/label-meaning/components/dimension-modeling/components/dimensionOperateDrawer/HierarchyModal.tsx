@@ -1,6 +1,7 @@
 import { Modal, message } from 'antd'
 import React from 'react'
 
+import { DIMENSION_TIME_GRANULARITY_OPTIONS } from '../../constants/dimensionModeling.constants'
 import type { DimensionFieldOption, DimensionHierarchyEditItem, DimensionModelItem } from '../../types/dimensionModeling.types'
 
 interface Props {
@@ -11,9 +12,6 @@ interface Props {
   readonly open: boolean
   readonly record?: DimensionModelItem | null
 }
-
-type TimeTemplateKey = 'half_year' | 'year' | 'year_date' | 'year_month' | 'year_quarter' | 'year_week'
-type TimeUnit = 'date' | 'half_year' | 'hour' | 'month' | 'quarter' | 'week' | 'year'
 
 interface HierarchyFieldItem {
   childDimId?: number
@@ -27,7 +25,6 @@ interface HierarchyFieldItem {
   remark?: string
   status?: '0' | '1'
   techId: string
-  unit?: TimeUnit
 }
 
 interface HierarchyCardItem {
@@ -47,45 +44,10 @@ type DragPayload =
       type: 'level'
     }
 
-const TIME_TEMPLATE_OPTIONS: Array<{ key: TimeTemplateKey; label: string; title: string; units: TimeUnit[] }> = [
-  { key: 'year', label: '年', title: '年分析', units: ['year'] },
-  { key: 'half_year', label: '半年', title: '半年分析', units: ['year', 'half_year'] },
-  { key: 'year_quarter', label: '年季', title: '季度分析', units: ['year', 'quarter'] },
-  { key: 'year_month', label: '年月', title: '月分析', units: ['year', 'month'] },
-  { key: 'year_week', label: '年周', title: '周分析', units: ['year', 'week'] },
-  { key: 'year_date', label: '年月日', title: '自然日分析', units: ['year', 'month', 'date'] }
-]
-
 function formatFieldName(field: DimensionFieldOption) {
   const bizName = field.bizName || field.techId
   const techId = field.techId || field.key
   return `${bizName} (${techId})`
-}
-
-function detectTimeUnit(field: DimensionFieldOption): TimeUnit | undefined {
-  const source = `${field.bizName || ''} ${field.originName || ''} ${field.techId || ''}`.toLowerCase()
-  if (/half|half_year|半年|半年度/.test(source)) {
-    return 'half_year'
-  }
-  if (/quarter|季/.test(source)) {
-    return 'quarter'
-  }
-  if (/week|周/.test(source)) {
-    return 'week'
-  }
-  if (/hour|时|小时/.test(source)) {
-    return 'hour'
-  }
-  if (/month|月/.test(source)) {
-    return 'month'
-  }
-  if (/date|day|日/.test(source)) {
-    return 'date'
-  }
-  if (/year|yyyy|年/.test(source)) {
-    return 'year'
-  }
-  return undefined
 }
 
 function buildFieldItem(field: DimensionFieldOption): HierarchyFieldItem {
@@ -93,9 +55,23 @@ function buildFieldItem(field: DimensionFieldOption): HierarchyFieldItem {
     displayName: formatFieldName(field),
     key: field.key || field.techId,
     levelName: field.bizName || field.techId,
-    techId: field.techId,
-    unit: detectTimeUnit(field)
+    techId: field.techId
   }
+}
+
+function buildTimeGranularityItems(values?: string[]): HierarchyFieldItem[] {
+  const optionMap = new Map(DIMENSION_TIME_GRANULARITY_OPTIONS.map(item => [item.value, item.label]))
+  const selectedValues = values?.length ? values : DIMENSION_TIME_GRANULARITY_OPTIONS.map(item => item.value)
+
+  return selectedValues.map(value => {
+    const label = optionMap.get(value) || value
+    return {
+      displayName: `${label} (${value})`,
+      key: value,
+      levelName: label,
+      techId: value
+    }
+  })
 }
 
 function buildPayload(record: DimensionModelItem | null | undefined, cards: HierarchyCardItem[]) {
@@ -132,49 +108,6 @@ function buildPayload(record: DimensionModelItem | null | undefined, cards: Hier
       } satisfies DimensionHierarchyEditItem
     })
   )
-}
-
-function buildTimeCards(
-  templateKeys: TimeTemplateKey[],
-  availableFields: HierarchyFieldItem[],
-  record: DimensionModelItem | null | undefined
-) {
-  const fieldByUnit = new Map<TimeUnit, HierarchyFieldItem>()
-  availableFields.forEach(field => {
-    if (field.unit && !fieldByUnit.has(field.unit)) {
-      fieldByUnit.set(field.unit, field)
-    }
-  })
-
-  const cards = templateKeys
-    .map(key => TIME_TEMPLATE_OPTIONS.find(option => option.key === key))
-    .filter((item): item is (typeof TIME_TEMPLATE_OPTIONS)[number] => Boolean(item))
-    .map(option => {
-      const levels = option.units
-        .map(unit => fieldByUnit.get(unit))
-        .filter((item): item is HierarchyFieldItem => Boolean(item))
-      if (!levels.length) {
-        return null
-      }
-      return {
-        id: option.key,
-        levels,
-        title: option.title
-      } as HierarchyCardItem
-    })
-    .filter((item): item is HierarchyCardItem => Boolean(item))
-
-  if (cards.length) {
-    return cards
-  }
-
-  return [
-    {
-      id: 'default-time',
-      levels: [],
-      title: record?.zhName ? `${record.zhName}层级` : '时间层级'
-    }
-  ]
 }
 
 function parseConfigJson(value: any) {
@@ -250,13 +183,6 @@ function buildCardsFromHierarchy(
   })
 }
 
-function resolveTemplateKeys(cards: HierarchyCardItem[]) {
-  const keys = cards
-    .map(card => TIME_TEMPLATE_OPTIONS.find(option => option.title === card.title)?.key)
-    .filter((item): item is TimeTemplateKey => Boolean(item))
-  return keys.length ? keys : TIME_TEMPLATE_OPTIONS.map(item => item.key)
-}
-
 function createCardId() {
   return `hierarchy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
@@ -291,17 +217,18 @@ export const HierarchyModal: React.FC<Props> = ({
   const [cards, setCards] = useState<HierarchyCardItem[]>([])
   const [activeCardId, setActiveCardId] = useState('')
   const [saving, setSaving] = useState(false)
-  const [selectedTemplates, setSelectedTemplates] = useState<TimeTemplateKey[]>(
-    TIME_TEMPLATE_OPTIONS.map(item => item.key)
-  )
 
   const isTimeDimension = record?.dimType === 'time'
 
   const availableFields = useMemo(() => (record?.relatedFields || []).map(buildFieldItem), [record?.relatedFields])
+  const availableLevelItems = useMemo(
+    () => (isTimeDimension ? buildTimeGranularityItems(record?.timeGranularity) : availableFields),
+    [availableFields, isTimeDimension, record?.timeGranularity]
+  )
 
   const availableFieldMap = useMemo(() => {
-    return new Map(availableFields.map(item => [item.key, item]))
-  }, [availableFields])
+    return new Map(availableLevelItems.map(item => [item.key, item]))
+  }, [availableLevelItems])
 
   useEffect(() => {
     if (!open) {
@@ -313,28 +240,13 @@ export const HierarchyModal: React.FC<Props> = ({
       if (historyCards.length) {
         setCards(historyCards)
         setActiveCardId(historyCards[0]?.id || '')
-        if (isTimeDimension) {
-          setSelectedTemplates(resolveTemplateKeys(historyCards))
-        }
         return
       }
     }
 
-    if (isTimeDimension) {
-      const initCards = buildTimeCards(
-        TIME_TEMPLATE_OPTIONS.map(item => item.key),
-        availableFields,
-        record
-      )
-      setCards(initCards)
-      setActiveCardId(initCards[0]?.id || '')
-      setSelectedTemplates(TIME_TEMPLATE_OPTIONS.map(item => item.key))
-      return
-    }
-
     setCards([])
     setActiveCardId('')
-  }, [availableFieldMap, availableFields, hierarchyItems, isTimeDimension, open, record])
+  }, [availableFieldMap, hierarchyItems, open])
 
   function updateCardLevels(cardId: string, nextLevels: HierarchyFieldItem[]) {
     setCards(prev =>
@@ -489,12 +401,6 @@ export const HierarchyModal: React.FC<Props> = ({
     )
   }
 
-  function regenerateTimeCards() {
-    const nextCards = buildTimeCards(selectedTemplates, availableFields, record)
-    setCards(nextCards)
-    setActiveCardId(nextCards[0]?.id || '')
-  }
-
   async function handleSave() {
     const hasLevel = cards.some(card => card.levels.length > 0)
     if (!hasLevel) {
@@ -531,32 +437,13 @@ export const HierarchyModal: React.FC<Props> = ({
         tip="加载层级配置中..."
       >
         <div className="h-550px flex flex-col overflow-hidden border border-[#e6ebf5] rounded">
-          {isTimeDimension ? (
-            <div className="flex items-center justify-between border-b border-[#e6ebf5] bg-[#f8faff] px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-4 text-[#3d5afe] font-semibold">快捷生成时间层级</span>
-                <ACheckbox.Group
-                  options={TIME_TEMPLATE_OPTIONS.map(item => ({ label: item.label, value: item.key }))}
-                  value={selectedTemplates}
-                  onChange={values => setSelectedTemplates(values as TimeTemplateKey[])}
-                />
-              </div>
-              <AButton
-                type="primary"
-                onClick={regenerateTimeCards}
-              >
-                生成层级
-              </AButton>
-            </div>
-          ) : null}
-
           <div className="min-h-0 flex flex-1 overflow-hidden">
             <div className="w-180px border-r border-[#e6ebf5] bg-[#fbfcff]">
               <div className="border-b border-[#e6ebf5] px-3 py-2 text-4 font-semibold">
                 {isTimeDimension ? '可选时间层级' : '可选层级'}
               </div>
               <div className="max-h-full overflow-auto p-2 space-y-2">
-                {availableFields.map(item => (
+                {availableLevelItems.map(item => (
                   <div
                     draggable
                     className="cursor-move border border-[#d7def0] rounded bg-white px-2 py-1 text-3 font-medium hover:border-[#3d5afe]"
@@ -669,7 +556,7 @@ export const HierarchyModal: React.FC<Props> = ({
                 ))}
                 {!cards.length ? (
                   <div className="col-span-full flex min-h-180px items-center justify-center rounded border border-dashed border-[#cdd6ea] bg-[#fbfcff] text-4 text-[#97a3bb]">
-                    从左侧拖入字段生成层级结构
+                    从左侧拖入{isTimeDimension ? '时间粒度' : '字段'}生成层级结构
                   </div>
                 ) : null}
               </div>
