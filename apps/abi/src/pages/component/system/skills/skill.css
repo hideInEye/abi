@@ -256,36 +256,7 @@
 .skills-table .ant-table-tbody > tr > td.col-skill-left {
   text-align: left !important;
 }
-/* 隐藏底部水平滚动条 — 保留滚动能力但视觉隐藏 */
-.skills-table .ant-table-body {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-.skills-table .ant-table-body::-webkit-scrollbar {
-  display: none !important;
-}
-.skills-table .ant-table-content {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-.skills-table .ant-table-content::-webkit-scrollbar {
-  display: none !important;
-}
-/* 外层滚动容器也隐藏水平滚动条但保留滚动 */
-.assistant-table-scroll:has(.skills-table) {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-.assistant-table-scroll:has(.skills-table)::-webkit-scrollbar {
-  display: none !important;
-}
-/* 隐藏 Ant Design 表格底部滚动条占位空间 */
-.skills-table .ant-table-body::-webkit-scrollbar:horizontal {
-  display: none !important;
-}
-.skills-table .ant-table-content::-webkit-scrollbar:horizontal {
-  display: none !important;
-}
+/* 底部/外层滚动条：统一由 .assistant-table-scroll 悬浮显示样式接管（列溢出时 hover 显示，可横向滚动查看全部列） */
 .skills-table .ant-table-cell-fix-left {
   background-color: #F6F7FF !important;
   z-index: 2 !important;

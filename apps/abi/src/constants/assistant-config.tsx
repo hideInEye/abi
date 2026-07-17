@@ -30,14 +30,14 @@ export const MEMORY_CHAT_MODE_OPTIONS: any = [
   }
 ];
 
-// 记忆管理 - 状态
+// 效果评审 - 审核状态（status：0=拒绝 1=接受 2=待处理）
 export const MEMORY_STATUS_OPTIONS: any = [
   {
-    label: '已接受',
+    label: '已拒绝',
     value: '0'
   },
   {
-    label: '已拒绝',
+    label: '已接受',
     value: '1'
   },
   {
@@ -46,7 +46,7 @@ export const MEMORY_STATUS_OPTIONS: any = [
   }
 ];
 
-// 记忆管理 - 模型评估结果
+// 效果评审 - 模型评估结果（evalLlm：0=正确 1=错误）
 export const EVAL_LLM_OPTIONS: any = [
   {
     label: '正确',
@@ -58,14 +58,14 @@ export const EVAL_LLM_OPTIONS: any = [
   }
 ];
 
-// 记忆管理 - 人工评估结果
+// 效果评审 - 专家评估结果（evalExpert：0=正确 1=错误）
 export const EVAL_EXPERT_OPTIONS: any = [
   {
-    label: '采纳',
+    label: '正确',
     value: '0'
   },
   {
-    label: '不采纳',
+    label: '错误',
     value: '1'
   }
 ];

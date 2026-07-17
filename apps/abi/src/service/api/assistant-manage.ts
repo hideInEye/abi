@@ -120,49 +120,43 @@ export function fetchQuestions(data?: any) {
   });
 }
 
-/** 获取记忆管理列表 */
-export async function fetchMemoryList(params?: any) {
-  const res = (await apiRequest<any>({
-    method: 'post',
-    params,
-    url: '/api/chat-proxy/api/v1/feedback/inquire'
-  })) as any;
+/** 效果评审接口基础路径（abi-chat 后端） */
+const FEEDBACK_BASE = '/api/abi-chat/v1/app/message/feedback';
 
-  return { data: res };
-}
-
-/** 记忆管理 - 同步数据库 */
-export function fetchVectorStorage(data?: any) {
+/**
+ * 效果评审 - 查询列表（inquire）
+ * @param data 支持 spaceId、page、pageSize、chatMode、status 等 camelCase 参数
+ */
+export function fetchMemoryList(data?: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: '/api/chat-proxy/api/v1/feedback/vectorstorage'
+    url: `${FEEDBACK_BASE}/inquire`
   });
 }
 
-/** 记忆管理 - 模型评估 */
-export function fetchModelEval(data?: any) {
+/**
+ * 效果评审 - 编辑反馈/专家评估（edit）
+ * 后端在编辑成功后会同步向量库，前端无需再单独调用向量存储接口
+ * @param data 支持 fbId、status、evalExpert、expertOpinion、evalLlm、llmOpinion、remark
+ */
+export function fetchEditMemory(data?: any) {
   return apiRequest<any>({
     data,
     method: 'post',
-    url: '/api/chat-proxy/api/v2/workflow/chat/feedback/llmeval'
+    url: `${FEEDBACK_BASE}/edit`
   });
 }
 
-/** 记忆管理 - 删除 */
-export function fetchDeleteMemory(fbId: string) {
+/**
+ * 效果评审 - 删除（delete）
+ * 后端在删除反馈记录的同时会清理向量数据，前端无需再单独调用向量删除接口
+ */
+export function fetchDeleteMemory(fbId: string | number) {
   return apiRequest<any>({
+    data: { fbId },
     method: 'post',
-    url: `/api/chat-proxy/api/v1/feedback/delete?fb_id=${fbId}`
-  });
-}
-
-/** 记忆管理 - 删除同步数据库 */
-export function fetchVectorsDelete(fbId: string) {
-  return apiRequest<any>({
-    data: { fb_id: fbId },
-    method: 'post',
-    url: `/api/chat-proxy/api/v1/feedback/vectorsdelete`
+    url: `${FEEDBACK_BASE}/delete`
   });
 }
 
@@ -172,18 +166,6 @@ export function fetchDeleteAgent(data: any) {
     data,
     method: 'post',
     url: `/api/chat-proxy/api/v1/semantic/delete`
-  });
-}
-
-// 删除前检查
-
-
-/** 记忆管理 - 编辑 */
-export function fetchEditMemory(data?: any) {
-  return apiRequest<any>({
-    data,
-    method: 'post',
-    url: '/api/chat-proxy/api/v1/feedback/edit'
   });
 }
 
