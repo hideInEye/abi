@@ -304,6 +304,8 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
             {ungroupedTopics.length ? (
               ungroupedTopics.map((topic) => {
                 const isActive = topic.chatId === activeTaskId
+                // 仅选中项显示「...」菜单，非选中项（含 hover）不可弹出下拉框
+                const showMenu = isActive
 
                 return (
                   <div
@@ -343,17 +345,13 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
                       <span
                         className="shrink-0 px-1 py-1 transition-opacity"
                         style={{
-                          opacity: isActive ? 1 : 0,
+                          opacity: showMenu ? 1 : 0,
+                          pointerEvents: showMenu ? 'auto' : 'none',
                           color: 'var(--ink-3)',
                         }}
                         onClick={(event) => {
                           event.preventDefault()
                           event.stopPropagation()
-                        }}
-                        onMouseEnter={(e) => {
-                          ;(e.currentTarget as HTMLElement).closest('.group')?.querySelectorAll('[class*="opacity-0"]').forEach((el) => {
-                            ;(el as HTMLElement).style.opacity = '1'
-                          })
                         }}
                       >
                         <MoreOutlined style={{ fontSize: 14 }} />
