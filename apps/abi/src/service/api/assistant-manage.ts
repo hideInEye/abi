@@ -160,6 +160,15 @@ export function fetchDeleteMemory(fbId: string | number) {
   });
 }
 
+/** 效果评审 - 模型评估（沿用原后端接口，不走新 abi-chat 后端） */
+export function fetchModelEval(data?: any) {
+  return apiRequest<any>({
+    data,
+    method: 'post',
+    url: '/api/chat-proxy/api/v2/workflow/chat/feedback/llmeval'
+  });
+}
+
 // 删除助手 额外调用的删除接口
 export function fetchDeleteAgent(data: any) {
   return apiRequest({

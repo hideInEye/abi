@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, FolderOutlined, MoreOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, FolderOutlined, MoreOutlined, PlusOutlined, StarOutlined } from '@ant-design/icons'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { Dropdown, Input, message, Modal, Spin } from 'antd'
 import type { MenuProps } from 'antd'
@@ -10,6 +10,7 @@ import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { useConversationGroups } from '@/hooks/layout/useConversationGroups'
 import { useHistoryTopics } from '@/hooks/layout/useHistoryTopics'
 import { deleteSession, moveSessionToGroup, updateApp } from '@/service/api/app'
+import { fetchOperateNew } from '@/service/api/abi-system'
 import { getSpaceId } from '@/utils'
 
 type SidebarHistoryTopicsProps = {
@@ -212,9 +213,32 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
     }
   }, [newGroupName, pendingMoveChatId, addGroup, handleMoveToGroup])
 
+  // 收藏对话：切换收藏状态（addOrRemove 由后端切换）
+  const handleFavoriteTopic = useCallback(
+    async (chatId: string) => {
+      const app = findAppByChatId(chatId)
+      if (!app) {
+        message.warning('未找到对话')
+        return
+      }
+      try {
+        const res: any = await fetchOperateNew({ chatId: app.chat_id })
+        if (res?.code !== 200) {
+          message.error(res?.message || res?.msg || '收藏失败，请稍后再试')
+          return
+        }
+        message.success(res?.msg || '操作成功')
+      } catch {
+        message.error('收藏失败，请稍后再试')
+      }
+    },
+    [findAppByChatId],
+  )
+
   const buildMenu = (chatId: string): MenuProps => ({
     items: [
       { key: 'edit', icon: <EditOutlined />, label: '重命名' },
+      { key: 'favorite', icon: <StarOutlined />, label: '收藏对话' },
       {
         key: 'move-to-group',
         icon: <FolderOutlined />,
@@ -238,6 +262,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
     onClick: ({ key, domEvent }) => {
       domEvent.stopPropagation()
       if (key === 'edit') return handleEditTopic(chatId)
+      if (key === 'favorite') return handleFavoriteTopic(chatId)
       if (key === 'delete') return handleDeleteTopic(chatId)
       // 移动到已有分组
       if (key.startsWith('move-group-')) {

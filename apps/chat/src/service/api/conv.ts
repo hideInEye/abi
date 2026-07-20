@@ -1,8 +1,40 @@
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
+import { isBackendCodeIn } from "@sa/axios";
 import request from "../request/index";
 import { getChatbiBaseApi } from "../../utils/index";
 import { getAuthorization, handleLoginExpired } from "../../utils/auth";
+
+// 与 axios 响应拦截器保持一致：后端可能以 HTTP 401，或 200 + { code: 401 } 业务码返回鉴权失效
+const TOKEN_EXPIRED_CODES = ['401'];
+
+// 鉴权失效专用错误，用于在 onerror 中识别并终止重试（避免被通用重试逻辑吞掉、延迟跳转登录）
+class UnauthorizedStreamError extends Error {
+  constructor() {
+    super('Token expired')
+    this.name = 'UnauthorizedStreamError'
+  }
+}
+
+// 流式接口的鉴权失效判定：优先 HTTP 401；否则在非事件流响应体中读取业务码 401
+async function isUnauthorizedResponse(response: Response) {
+  if (response.status === 401) {
+    return true
+  }
+
+  const contentType = response.headers.get('content-type') || ''
+  // 正常事件流不读取 body，避免消费流内容
+  if (contentType.includes('text/event-stream')) {
+    return false
+  }
+
+  try {
+    const errData = await response.clone().json()
+    return isBackendCodeIn(errData, TOKEN_EXPIRED_CODES)
+  } catch {
+    return false
+  }
+}
 
 type StreamConvAnswerOptions = {
   data: any
@@ -26,16 +58,24 @@ export function streamConvAnswer({ data, signal, onopen, onmessage, onclose, one
     signal,
     openWhenHidden: true,
     async onopen(response) {
-      if (response.status === 401) {
+      // 兼容 HTTP 401 与业务码 401 两种鉴权失效返回，触发跳转登录
+      if (await isUnauthorizedResponse(response)) {
         await handleLoginExpired()
-        throw new Error('Token expired')
+        throw new UnauthorizedStreamError()
       }
 
       await onopen?.(response)
     },
     onmessage,
     onclose,
-    onerror
+    onerror(err) {
+      // 鉴权失效不重试，直接终止（跳转登录已触发），避免重试掩盖或延迟跳转
+      if (err instanceof UnauthorizedStreamError) {
+        throw err
+      }
+
+      return onerror?.(err)
+    }
   })
 }
 
@@ -339,10 +379,11 @@ export function dataExport(data: any) {
 // excel结果导出接口（chat_excel模式）
 export function excelFileExport(params: { file_id: string; python: string; format: 'excel' | 'csv' }) {
   return request({
-    url: "/chat-proxy/api/v2/excel/fileexport",
+    url: "/abi-chat/v1/file/export",
     method: "post",
     params,  // Query参数
     responseType: 'blob',
+    baseURL: window.APP_CONFIG.VITE_BASE_API
   });
 }
 

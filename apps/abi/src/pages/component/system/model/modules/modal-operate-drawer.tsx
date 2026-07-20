@@ -335,16 +335,30 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
 
                   <SectionTitle icon={<SettingOutlined />} title="状态与描述" color="#f59e0b" />
 
-                  {/* 状态 */}
-                  <AForm.Item
-                    label={<span style={{ fontWeight: 500, color: '#3e5068' }}>状态</span>}
-                    name="status"
-                    valuePropName="checked"
-                    getValueFromEvent={(checked: boolean) => (checked ? '1' : '0')}
-                    getValueProps={(value: string) => ({ checked: value === '1' || value === undefined })}
-                  >
-                    <ASwitch checkedChildren="启用" unCheckedChildren="禁用" />
-                  </AForm.Item>
+                  <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
+                    {/* 状态 */}
+                    <AForm.Item
+                      label={<span style={{ fontWeight: 500, color: '#3e5068' }}>状态</span>}
+                      name="status"
+                      valuePropName="checked"
+                      getValueFromEvent={(checked: boolean) => (checked ? '1' : '0')}
+                      getValueProps={(value: string) => ({ checked: value === '1' || value === undefined })}
+                    >
+                      <ASwitch checkedChildren="启用" unCheckedChildren="禁用" />
+                    </AForm.Item>
+
+                    {/* 是否支持关闭思考 (isSupportThinking：0=不支持，1=支持) */}
+                    <AForm.Item
+                      label={<span style={{ fontWeight: 500, color: '#3e5068' }}>是否支持关闭思考</span>}
+                      name="isSupportThinking"
+                      initialValue={0}
+                      valuePropName="checked"
+                      getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+                      getValueProps={(value: number | string) => ({ checked: value === 1 || value === '1' })}
+                    >
+                      <ASwitch checkedChildren="支持" unCheckedChildren="不支持" />
+                    </AForm.Item>
+                  </div>
 
                   {/* 描述 */}
                   <AForm.Item label={<span style={{ fontWeight: 500, color: '#3e5068' }}>描述</span>} name="remark">

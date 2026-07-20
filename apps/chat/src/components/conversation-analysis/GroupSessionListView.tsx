@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, FolderOutlined, MoreOutlined, PlusOutlined, SearchOutlined, SmileOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, FolderOutlined, MoreOutlined, PlusOutlined, SearchOutlined, SmileOutlined, StarOutlined } from '@ant-design/icons'
 import { Dropdown, Input, message, Modal, Spin, Tooltip } from 'antd'
 import type { MenuProps } from 'antd'
 import dayjs from 'dayjs'
@@ -15,6 +15,7 @@ import {
   updateSessionGroup,
 } from '@/service/api/app'
 import type { SessionGroup } from '@/service/api/app'
+import { fetchOperateNew } from '@/service/api/abi-system'
 import { CHAT_MODE } from '@/constant'
 import { getCurrentUser } from '@/utils/layout'
 import { getSpaceId } from '@/utils'
@@ -228,11 +229,26 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
     }
   }, [addGroupValue, pendingMoveSession, loadData])
 
+  // 收藏对话：切换收藏状态（addOrRemove 由后端切换）
+  const handleFavoriteSession = useCallback(async (session: any) => {
+    try {
+      const res: any = await fetchOperateNew({ chatId: session.chat_id })
+      if (res?.code !== 200) {
+        message.error(res?.message || res?.msg || '收藏失败，请稍后再试')
+        return
+      }
+      message.success(res?.msg || '操作成功')
+    } catch {
+      message.error('收藏失败，请稍后再试')
+    }
+  }, [])
+
   const buildSessionMenu = (session: any): MenuProps => {
     const otherGroups = groups.filter((g) => String(g.groupId) !== String(groupId))
     return {
       items: [
         { key: 'rename', icon: <EditOutlined />, label: '重命名' },
+        { key: 'favorite', icon: <StarOutlined />, label: '收藏对话' },
         {
           key: 'move',
           icon: <FolderOutlined />,
@@ -256,6 +272,8 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
           setRenamingSession(session)
           setRenameValue(session.title || session.biz_name || '')
           setRenameVisible(true)
+        } else if (key === 'favorite') {
+          handleFavoriteSession(session)
         } else if (key === 'move-out') {
           handleMoveSession(session, '0')
         } else if (key === 'add-group') {

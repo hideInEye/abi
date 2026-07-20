@@ -17,6 +17,7 @@ interface ModelItem {
   modelType: string
   modelSource?: string
   status: string
+  isSupportThinking?: number | string
   remark?: string
   isDefault?: number
   [key: string]: any
@@ -89,6 +90,7 @@ const ModelCardList: FC<Props> = ({
     { key: 'modelType', label: '模型类型', visible: true },
     { key: 'modelSource', label: '模型来源', visible: true },
     { key: 'status', label: '状态', visible: true },
+    { key: 'isSupportThinking', label: '是否支持关闭思考', visible: true },
   ])
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c))
@@ -175,6 +177,17 @@ const ModelCardList: FC<Props> = ({
       minWidth: 90,
       render: (v: string) => <span className={`abi-status-tag ${v === '1' ? 'status-normal' : 'status-disabled'}`}>{v === '1' ? '启用' : '禁用'}</span>,
       title: '状态',
+    },
+    {
+      align: 'center' as const,
+      dataIndex: 'isSupportThinking',
+      key: 'isSupportThinking',
+      minWidth: 130,
+      render: (v: number | string) => {
+        const support = v === 1 || v === '1'
+        return <ATag color={support ? 'green' : 'default'} bordered style={{ margin: 0 }}>{support ? '支持' : '不支持'}</ATag>
+      },
+      title: '是否支持关闭思考',
     },
     {
       align: 'center' as const,
@@ -414,6 +427,12 @@ const ModelCardList: FC<Props> = ({
                               <span className={`abi-status-tag ${item.status === '1' ? 'status-normal' : 'status-disabled'}`}>
                                 {item.status === '1' ? '启用' : '禁用'}
                               </span>
+                            </div>
+                          )}
+                          {visibleKeys.has('isSupportThinking') && (
+                            <div className="row">
+                              <span className="lbl">是否支持关闭思考</span>
+                              <span className="val">{item.isSupportThinking === 1 || item.isSupportThinking === '1' ? '支持' : '不支持'}</span>
                             </div>
                           )}
                         </div>
