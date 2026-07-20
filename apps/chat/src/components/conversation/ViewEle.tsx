@@ -623,17 +623,17 @@ const ViewEle: React.FC<PropsType> = ({
     }
   };
 
-  // 处理点赞（在原有 convUid + roundIndex + status 基础上附带 group_id / semantic_id / app_id）
+  // 处理点赞（在原有 convUid + roundIndex + status 基础上附带 groupId / semanticId / appId）
   const handleLike = async (payload: any) => {
     try {
-      const group_id = await resolveSemanticGroupId();
+      const groupId = await resolveSemanticGroupId();
       const res: any = await setExperteval({
         convUid,
         roundIndex: data.order || data.roundIndex,
         status: payload?.status, // 0=无评价, 1=点赞, -1=点踩
-        group_id,
-        semantic_id: chartData?.semantic_id ?? null,
-        app_id: conv?.appId ?? conv?.app_id ?? 0,
+        groupId,
+        semanticId: chartData?.semantic_id ?? null,
+        appId: conv?.appId ?? conv?.app_id ?? 0,
       });
       // 兼容两种响应结构：{ success: true, ... } 与 { code: 200, data: ..., msg: ... }
       const isSuccess = res?.success === true || Number(res?.code) === 200;

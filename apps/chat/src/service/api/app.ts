@@ -172,6 +172,16 @@ export function deleteSession(params: { sessionId: string; convUid?: string }) {
   })
 }
 
+// 批量删除会话（按对话ID convUid 批量删除）
+export function deleteBatchSession(params: { convUids: string[] }) {
+  return request({
+    url: "/abi-chat/v1/app/session/deleteBatch",
+    method: "post",
+    data: { convUids: params.convUids },
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
+}
+
 // 删除对话消息
 export function deleteMessage(params: { convUid: string }) {
   return request({
