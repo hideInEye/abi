@@ -5,6 +5,8 @@ import { Checkbox } from 'antd'
 import AiEle from '../AiEle'
 import CheckboxWrapCom from '../CheckboxWrapCom'
 import HumanEle from '../HumanEle'
+import MessageNavRail from './MessageNavRail'
+import type { NavItem } from './MessageNavRail'
 import OpeningsEle from '../OpeningsEle'
 import ViewEle from '../ViewEle'
 import SchemaFieldsModal from '../../conversation-analysis/SchemaFieldsModal'
@@ -213,6 +215,21 @@ const MessageList = ({
     })
     return entries
   }, [groupedData])
+
+  // 右侧消息导航条数据：每个合并条目取其 human 消息的 order 与问题文本
+  // 注意：order 必须与锚点 id `human-msg-${item.order}` 一致（可为数字或临时字符串 id）
+  const navItems: NavItem[] = useMemo(() => {
+    const list: NavItem[] = []
+    for (const entry of mergedGroups) {
+      const human = entry.versions[0]?.flat().find((it: any) => it?.role === 'human')
+      const order = human?.order ?? human?.roundIndex
+      if (order === undefined || order === null) continue
+      const text = (entry.questionText || '').trim()
+      if (!text) continue
+      list.push({ order, text })
+    }
+    return list
+  }, [mergedGroups])
 
   // 某个条目的版本数变化时（如重新生成完成）自动跳到最新版本
   useEffect(() => {
@@ -573,15 +590,18 @@ const MessageList = ({
 
   if (!virtualized) {
     return (
-      <div
-        ref={containerRef}
-        className={containerClassName ?? 'overflow-y-auto overflow-x-hidden w-full flex-1 scroll-smooth'}
-        style={{ scrollbarGutter: 'stable' }}
-      >
-        <div className="max-w-[53.75rem] w-full m-auto">
-          {mergedGroups.map(renderMergedEntry)}
+      <div className="relative flex-1 min-h-0 w-full">
+        <div
+          ref={containerRef}
+          className={containerClassName ?? 'absolute inset-0 overflow-y-auto overflow-x-hidden w-full scroll-smooth'}
+          style={{ scrollbarGutter: 'stable' }}
+        >
+          <div className="max-w-[53.75rem] w-full m-auto">
+            {mergedGroups.map(renderMergedEntry)}
+          </div>
+          <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
         </div>
-        <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
+        <MessageNavRail items={navItems} containerRef={containerRef} />
       </div>
     )
   }
