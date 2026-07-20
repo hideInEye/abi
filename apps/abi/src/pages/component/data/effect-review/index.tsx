@@ -1,12 +1,13 @@
 import {
   DeleteOutlined,
+  DeploymentUnitOutlined,
   LeftOutlined,
   ReloadOutlined,
   RightOutlined,
   SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Empty, Popconfirm } from 'antd'
+import { Empty, Popconfirm, message } from 'antd'
 import dayjs from 'dayjs'
 import { Suspense, lazy, useMemo, useState } from 'react'
 
@@ -18,6 +19,7 @@ import {
   fetchDeleteMemory,
   fetchEditMemory,
   fetchMemoryList,
+  fetchModelEval,
 } from '@/service/api/assistant-manage'
 import { getSpaceId } from '@/store/slice/app'
 
@@ -45,8 +47,22 @@ const EffectReviewOperateDrawer = lazy(() => import('./modules/effect-review-ope
 export function Component() {
   const { t } = useTranslation()
   const spaceId = useAppSelector(getSpaceId)
+  const [modelEvalLoading, setModelEvalLoading] = useState(false)
   const [jumpValue, setJumpValue] = useState('')
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS)
+
+  const isWenShuScene = (chatMode: string) => chatMode === 'chat_with_db_execute'
+
+  // 将对象的 camelCase 键统一转换为 snake_case，兼容表格列/编辑/删除中使用的下划线字段名
+  const toSnakeCaseKeys = (obj: any) => {
+    if (!obj || typeof obj !== 'object') return obj
+    const result: any = {}
+    Object.keys(obj).forEach(key => {
+      const snakeKey = key.replace(/[A-Z]/g, m => `_${m.toLowerCase()}`)
+      result[snakeKey] = obj[key]
+    })
+    return result
+  }
 
   const fetchEffectReviewList = async (params: any) => {
     try {
@@ -63,10 +79,12 @@ export function Component() {
       if (res?.error) {
         return { data: { data: [], total: 0 } }
       }
-      const raw = res?.response?.data || {}
-      const inner = res?.data
-      const list = raw.rows || inner?.rows || inner?.items || inner?.records || (Array.isArray(inner) ? inner : []) || []
-      const total = raw.total ?? inner?.total ?? inner?.total_count ?? list.length ?? 0
+      // 接口返回结构：{ code, msg, data: { total, data: [...], totalPages, pageSize, pageNum } }
+      // transformBackendResponse 已展平取 data，故 res.data 即内层 { total, data, ... }
+      const inner = res?.data ?? res?.response?.data?.data ?? {}
+      const rawList = inner.data || inner.rows || inner.items || inner.records || (Array.isArray(inner) ? inner : []) || []
+      const list = rawList.map(toSnakeCaseKeys)
+      const total = inner.total ?? inner.total_count ?? list.length ?? 0
       return { data: { data: list, total } }
     } catch {
       return { data: { data: [], total: 0 } }
@@ -105,8 +123,22 @@ export function Component() {
           key: 'question',
           minWidth: 200,
           onHeaderCell: () => ({ className: 'col-left-header' }),
+          render: (text: string) => (
+            <ATooltip placement="topLeft" title={text}>
+              <div
+                style={{
+                  maxWidth: 300,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {text}
+              </div>
+            </ATooltip>
+          ),
           title: '问题',
-          width: 200,
+          width: 300,
         },
         {
           align: 'center',
@@ -241,6 +273,17 @@ export function Component() {
                   onClick={() => openEval(record)}
                 />
               </ATooltip>
+              <Popconfirm title="确定进行模型评估吗？" onConfirm={() => handleModelEval(record)}>
+                <ATooltip placement="top" title="模型评估">
+                  <AButton
+                    className="abi-action-link"
+                    disabled={modelEvalLoading || ['0', '1'].includes(`${record.status}`) || !isWenShuScene(record.chat_mode)}
+                    icon={<DeploymentUnitOutlined />}
+                    size="small"
+                    variant="link"
+                  />
+                </ATooltip>
+              </Popconfirm>
               <Popconfirm title="删除后不可恢复，确定删除吗？" onConfirm={() => handleDelete(record)}>
                 <ATooltip title="删除">
                   <AButton className="abi-action-link" color="danger" icon={<DeleteOutlined />} size="small" variant="link" />
@@ -281,13 +324,21 @@ export function Component() {
     },
   )
 
+  /** 将文本字段归一化为字符串，避免对象值传入 CodeMirror / TextArea 报错 */
+  const toText = (val: any) => {
+    if (val == null) return ''
+    return typeof val === 'string' ? val : JSON.stringify(val, null, 2)
+  }
+
   /** 打开人工评估抽屉，并将记录中的数值型字段归一化为字符串以匹配单选项 */
   const openEval = (record: any) => {
     handleEdit({
       ...record,
+      ai_response: toText(record.ai_response),
       eval_expert: record.eval_expert != null ? `${record.eval_expert}` : undefined,
       eval_llm: record.eval_llm != null ? `${record.eval_llm}` : undefined,
       status: record.status != null ? `${record.status}` : undefined,
+      view_response: toText(record.view_response),
     })
   }
 
@@ -300,6 +351,48 @@ export function Component() {
       }
     } catch (error) {
       console.log('删除失败:', error)
+    }
+  }
+
+  /** 模型评估：沿用原后端 llmeval 接口 */
+  const handleModelEval = async (record: any) => {
+    try {
+      setModelEvalLoading(true)
+      // llmId 固定为 12（与数据语义 AI 帮填一致，无需再查询模型列表）
+      const FIXED_LLM_ID = 12
+      const contextObj = {
+        agent_id: `${record.agent_id}`,
+        app_code: '',
+        chat_id: `${record.chat_id}`,
+        chat_mode: record.chat_mode,
+        conv_uid: record.conv_uid,
+        extra: {
+          fb_id: record.fb_id,
+        },
+        llm_id: FIXED_LLM_ID,
+        space_id: `${record.space_id}`,
+        sys_code: '1',
+        user_name: '1',
+      }
+      const params = {
+        context: contextObj,
+        enable_vis: false,
+        incremental: false,
+        llm_id: FIXED_LLM_ID,
+        messages: '',
+        stream: false,
+      }
+      const res: any = await fetchModelEval(params)
+      if (res.response?.data?.success) {
+        message.success('模型评估成功')
+        run()
+      } else {
+        message.error(res.response?.data?.err_msg)
+      }
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setModelEvalLoading(false)
     }
   }
 

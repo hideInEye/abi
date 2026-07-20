@@ -8,6 +8,7 @@ import type { ModelOption } from './components/chat-header'
 import DebugPanel from './components/DebugPanel'
 import MessageList from './components/MessageList'
 import ShareEmailSetting from './components/share-email-setting'
+import SharingModal from './SharingModal'
 import { useConversationController, type ConversationProps } from './hooks/useConversationController'
 
 export interface ConversationHandle {
@@ -32,12 +33,15 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     convContent3d,
     setConvContent,
     checkAll,
+    setCheckAll,
     isSharing,
     setIsSharing,
     sharingList,
     setSharingList,
     confirmShareType,
+    setConfirmShareType,
     confirmShareVisible,
+    setConfirmShareVisible,
     confirmShareLoading,
     setConfirmShareLoading,
     shareStep,
@@ -104,6 +108,19 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
       setEmbedModelId(props.embedModelId)
     }
   }, [props.embedModelId])
+
+  // 进入分享模式：来自 AI 回答「...」菜单「分享对话」派发的信号
+  useEffect(() => {
+    const chatId = conv?.chat_id
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent)?.detail
+      if (detail?.chatId && String(detail.chatId) === String(chatId)) {
+        setIsSharing(true)
+      }
+    }
+    window.addEventListener('start-share-conversation', handler)
+    return () => window.removeEventListener('start-share-conversation', handler)
+  }, [conv?.chat_id, setIsSharing])
 
   return (
     <div className="flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden" style={{ background: 'transparent' }}>
@@ -177,6 +194,26 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         </div>
       )}
 
+
+      {/* 分享底部操作栏（全选 / 邮件分享 / 生成快照 / 取消），与批量删除风格保持一致 */}
+      {isSharing && (
+        <div style={{ paddingRight: 'var(--scrollbar-width, 17px)' }}>
+          <div className="max-w-[53.75rem] w-full m-auto px-4 py-2 border-t border-[#e9edf4] bg-white">
+            <SharingModal
+              handleConfirmShare={(type) => {
+                setConfirmShareType(type)
+                setConfirmShareVisible(true)
+              }}
+              convContent={convContent}
+              checkAll={checkAll}
+              setCheckAll={setCheckAll}
+              setIsSharing={setIsSharing}
+              sharingList={sharingList}
+              confirmVisible={confirmShareVisible}
+            />
+          </div>
+        </div>
+      )}
 
       <Modal
         width="60%"

@@ -17,6 +17,7 @@ import {
   SnippetsOutlined,
   DeleteOutlined,
   EllipsisOutlined,
+  ShareAltOutlined,
   LeftOutlined,
   RightOutlined,
 } from '@ant-design/icons';
@@ -28,6 +29,7 @@ interface Props {
   onQaClick?: () => void;
   onRegenerateClick?: () => void;
   onDeleteClick?: () => void;
+  onShareClick?: () => void;
   onVoteChange: (payload: any) => void;
   chatMode: string;
   feedback: any;
@@ -45,6 +47,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
   onQaClick,
   onRegenerateClick,
   onDeleteClick,
+  onShareClick,
   feedback,
   content = '',
   isLast,
@@ -254,6 +257,13 @@ const StatisticsAnalysis: React.FC<Props> = ({
           {/* 更多（推荐问题/归因分析/预测分析/删除收进「...」菜单，后续可扩展） */}
           {(() => {
             const moreItems: MenuProps['items'] = [];
+            if (onShareClick) {
+              moreItems.push({
+                key: 'share',
+                label: (<span className="flex items-center gap-2"><ShareAltOutlined />分享对话</span>),
+                onClick: () => onShareClick?.(),
+              });
+            }
             if (showRecommend) {
               moreItems.push({
                 key: 'qa',

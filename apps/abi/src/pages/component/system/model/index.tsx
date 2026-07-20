@@ -140,6 +140,7 @@ export function Component() {
         timeOut: config.timeOut,
         maxRetries: config.maxRetries,
         contextLength: config.contextLength || row.contextLength,
+        isSupportThinking: row.isSupportThinking ?? 0,
       }
       handleEdit(formatRow)
     } catch (error) {

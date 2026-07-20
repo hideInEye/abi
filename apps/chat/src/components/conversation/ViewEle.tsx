@@ -34,6 +34,7 @@ import { parseContext, parseJsonContent, isChartType, calculateRotation, isNotEm
 import { handleDataExport, handleImageExport, handleExcelFileExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
 import { fetchDrillDown, fetchQueryRewrite, setExperteval, searchConv } from '../../service/api/conv';
+import { fetchSemanticGroups } from '../../service/api/semantic';
 import { CloseOutlined, RedoOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { marked } from 'marked';
 import { CHAT_MODE_MAP } from '../../constant/chat';
@@ -595,13 +596,44 @@ const ViewEle: React.FC<PropsType> = ({
     setConfigModalVisible(false);
   };
 
-  // 处理点赞（新接口只传 convUid + roundIndex + status）
+  // 依据数据语义分组名称解析分组 id
+  // 历史/实时回答内容里只带 semantic_group_name（名称），不带 group_id，
+  // 因此按名称调用分组列表接口反查出 groupId。
+  const resolveSemanticGroupId = async (): Promise<number | string | null> => {
+    // 回答内容若已直接带 group_id 则优先使用
+    if (chartData?.group_id != null) return chartData.group_id;
+    const groupName = chartData?.semantic_group_name;
+    if (!groupName) return null;
+    try {
+      const res: any = await fetchSemanticGroups({
+        groupType: 'shema',
+        pageNum: 1,
+        pageSize: 100,
+        spaceId: spaceId ?? conv?.space_id,
+        groupName,
+      });
+      const list: any[] = res?.data || res?.rows || [];
+      const matched = Array.isArray(list)
+        ? (list.find((g: any) => String(g?.groupName) === String(groupName)) ?? list[0])
+        : null;
+      return matched?.groupId ?? null;
+    } catch (error) {
+      console.error('解析数据语义分组 id 失败:', error);
+      return null;
+    }
+  };
+
+  // 处理点赞（在原有 convUid + roundIndex + status 基础上附带 group_id / semantic_id / app_id）
   const handleLike = async (payload: any) => {
     try {
+      const group_id = await resolveSemanticGroupId();
       const res: any = await setExperteval({
         convUid,
         roundIndex: data.order || data.roundIndex,
         status: payload?.status, // 0=无评价, 1=点赞, -1=点踩
+        group_id,
+        semantic_id: chartData?.semantic_id ?? null,
+        app_id: conv?.appId ?? conv?.app_id ?? 0,
       });
       // 兼容两种响应结构：{ success: true, ... } 与 { code: 200, data: ..., msg: ... }
       const isSuccess = res?.success === true || Number(res?.code) === 200;
@@ -1753,6 +1785,7 @@ const ViewEle: React.FC<PropsType> = ({
                       onQaClick={handleQaClick}
                       onRegenerateClick={onRegenerate ? () => onRegenerate(data) : undefined}
                       onDeleteClick={onDelete ? () => onDelete(data) : undefined}
+                      onShareClick={() => window.dispatchEvent(new CustomEvent('start-share-conversation', { detail: { chatId: conv?.chat_id } }))}
                       isLast={isLast}
                       versionInfo={versionInfo}
                       onVoteChange={handleLike}
