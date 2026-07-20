@@ -1,4 +1,4 @@
-import type { FormInstance } from 'antd';
+import { Form, type FormInstance } from 'antd';
 import { useEffect, useState } from 'react';
 
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types';
@@ -39,7 +39,9 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
   const [groupId, setGroupId] = useState<number | null>(null);
   const [schemaOptions, setSchemaOptions] = useState<{ label: string; value: number }[]>([]);
   const [originalSchemaOptions, setOriginalSchemaOptions] = useState<any[]>([]);
-
+  const semanticGroupIdWatch = Form.useWatch('semanticsGroupId',form)
+  console.log(semanticGroupIdWatch,'semanticGroupIdWatch');
+  
   function findViewId(schemaId: number) {
     return originalSchemaOptions.find((item: any) => item.schemaId === schemaId)?.relViewId;
   }
@@ -85,8 +87,8 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
   }, [spaceId]);
 
   useEffect(() => {
-    fetchSchemaOptions(groupId);
-  }, [groupId]);
+    fetchSchemaOptions(groupId||semanticGroupIdWatch);
+  }, [groupId, semanticGroupIdWatch]);
 
   function backGroupIdAndSchemaId(v: number) {
     return getSchemaId({

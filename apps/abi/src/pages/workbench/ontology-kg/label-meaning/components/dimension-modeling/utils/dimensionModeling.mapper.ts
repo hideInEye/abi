@@ -228,8 +228,8 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
   const id = Number(pickFirst(item, ['id', 'dimId', 'dimensionId'], 0))
   const owner = trim(pickFirst(item, ['owner', 'dimOwner', 'indicatorOwner'])) || ''
   const path = trim(pickFirst(item, ['path', 'groupPath', 'indicatorCategory'])) || ''
-  const semanticSchemaId = toNumber(pickFirst(item, ['semanticSchemaId', 'relSchemaId']))
-  const semanticsGroupId = toNumber(pickFirst(item, ['semanticsGroupId', 'semanticGroupId']))
+  const semanticSchemaId = Number(pickFirst(item, ['semanticSchemaId', 'relSchemaId']))
+  const semanticsGroupId = pickFirst(item, ['semanticsGroupId', 'semanticGroupId'])
   const semanticSchemaName = trim(pickFirst(item, ['semanticSchemaName', 'relSchemaName']))
   const status = normalizeStatus(pickFirst(item, ['status', 'versionStatus']))
   const timeGranularity = normalizeTimeGranularity(item.timeGranularity || typeParams?.timeGranularity)
@@ -247,7 +247,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
           timeFormat: trim(field.timeFormat) || timeFormat || DEFAULT_DIMENSION_TIME_FORMAT
         }))
       : relFields
-
+        
   return {
     alias: trim(pickFirst(item, ['alias', 'dimAlias'])),
     bizDesc: trim(pickFirst(item, ['bizDesc', 'businessDefinition', 'remark'])),
@@ -255,7 +255,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
     dimType,
     drillDirection,
     englishName,
-    groupId: toNumber(item.groupId),
+    groupId: item.groupId,
     groupName: trim(item.groupName),
     id,
     modelDetail: trim(item.modelDetail),
@@ -267,7 +267,6 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
       pickFirst(item, ['relatedMetrics', 'relatedIndicators', 'indicatorRefs', 'indicators', 'dimensionIndicators'])
     ),
     sampleValues: normalizeSampleValues(item.sampleValues),
-    semanticGroupId: semanticsGroupId,
     semanticSchemaId,
     semanticSchemaName,
     semanticsGroupId,
@@ -370,7 +369,7 @@ export function buildSubmitPayload(params: {
     },
     expr: trim(formValues.englishName) || techIdList,
     fieldType,
-    groupId: selectedGroupId || toNumber(formValues.groupId),
+    groupId: selectedGroupId || formValues.groupId,
     isLeaf: '1',
     levelPath: '1',
     ownerEmail: trim(formValues.ownerEmail),
@@ -381,7 +380,7 @@ export function buildSubmitPayload(params: {
     relViewId: trim(selectedSchema?.relViewId || relatedFields[0]?.relViewId),
     remark: trim(formValues.bizDesc),
     sampleValues,
-    semanticsGroupId: toNumber(formValues.semanticsGroupId || formValues.semanticGroupId),
+    semanticsGroupId: formValues.semanticsGroupId || formValues.semanticGroupId,
     semanticType,
     spaceId: Number(localStorage.getItem('spaceId')),
     status: String(formValues.status ?? 1),
