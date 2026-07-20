@@ -33,6 +33,11 @@ interface HierarchyCardItem {
   title: string
 }
 
+interface TimeHierarchyTemplate {
+  keys: string[]
+  title: string
+}
+
 type DragPayload =
   | {
       fieldKey: string
@@ -43,6 +48,15 @@ type DragPayload =
       fieldKey: string
       type: 'level'
     }
+
+const TIME_HIERARCHY_TEMPLATES: TimeHierarchyTemplate[] = [
+  { keys: ['year'], title: '年分析' },
+  { keys: ['year', 'half_year'], title: '半年分析' },
+  { keys: ['year', 'quarter'], title: '季度分析' },
+  { keys: ['year', 'month'], title: '月分析' },
+  { keys: ['year', 'week'], title: '周分析' },
+  { keys: ['year', 'month', 'day'], title: '自然日分析' }
+]
 
 function formatFieldName(field: DimensionFieldOption) {
   const bizName = field.bizName || field.techId
@@ -71,6 +85,24 @@ function buildTimeGranularityItems(values?: string[]): HierarchyFieldItem[] {
       levelName: label,
       techId: value
     }
+  })
+}
+
+function getSelectedTimeGranularity(values?: string[]) {
+  return values?.length ? values : DIMENSION_TIME_GRANULARITY_OPTIONS.map(item => item.value)
+}
+
+function buildQuickTimeHierarchyCards(selectedValues: string[], itemMap: Map<string, HierarchyFieldItem>) {
+  const selectedSet = new Set(selectedValues)
+
+  return TIME_HIERARCHY_TEMPLATES.filter(template => template.keys.every(key => selectedSet.has(key))).map(template => {
+    const levels = template.keys.map(key => itemMap.get(key)).filter(Boolean) as HierarchyFieldItem[]
+
+    return {
+      id: createCardId(),
+      levels,
+      title: template.title
+    } satisfies HierarchyCardItem
   })
 }
 
@@ -216,9 +248,11 @@ export const HierarchyModal: React.FC<Props> = ({
 }) => {
   const [cards, setCards] = useState<HierarchyCardItem[]>([])
   const [activeCardId, setActiveCardId] = useState('')
+  const [quickGranularityValues, setQuickGranularityValues] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
 
   const isTimeDimension = record?.dimType === 'time'
+  const selectedTimeGranularity = useMemo(() => getSelectedTimeGranularity(record?.timeGranularity), [record?.timeGranularity])
 
   const availableFields = useMemo(() => (record?.relatedFields || []).map(buildFieldItem), [record?.relatedFields])
   const availableLevelItems = useMemo(
@@ -229,6 +263,21 @@ export const HierarchyModal: React.FC<Props> = ({
   const availableFieldMap = useMemo(() => {
     return new Map(availableLevelItems.map(item => [item.key, item]))
   }, [availableLevelItems])
+
+  const quickGranularityOptions = useMemo(() => {
+    const selectedSet = new Set(selectedTimeGranularity)
+
+    return DIMENSION_TIME_GRANULARITY_OPTIONS.map(item => ({
+      ...item,
+      disabled: !selectedSet.has(item.value)
+    }))
+  }, [selectedTimeGranularity])
+
+  useEffect(() => {
+    if (open && isTimeDimension) {
+      setQuickGranularityValues(selectedTimeGranularity)
+    }
+  }, [isTimeDimension, open, selectedTimeGranularity])
 
   useEffect(() => {
     if (!open) {
@@ -423,6 +472,22 @@ export const HierarchyModal: React.FC<Props> = ({
     }
   }
 
+  function handleGenerateTimeHierarchy() {
+    if (!quickGranularityValues.length) {
+      message.warning('请至少选择一个时间粒度')
+      return
+    }
+
+    const nextCards = buildQuickTimeHierarchyCards(quickGranularityValues, availableFieldMap)
+    if (!nextCards.length) {
+      message.warning('当前时间粒度无法生成层级')
+      return
+    }
+
+    setCards(nextCards)
+    setActiveCardId(nextCards[0]?.id || '')
+  }
+
   return (
     <Modal
       destroyOnClose
@@ -437,6 +502,24 @@ export const HierarchyModal: React.FC<Props> = ({
         tip="加载层级配置中..."
       >
         <div className="h-550px flex flex-col overflow-hidden border border-[#e6ebf5] rounded">
+          {isTimeDimension ? (
+            <div className="flex items-center justify-between border-b border-[#e6ebf5] bg-white px-3 py-3">
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="text-4 text-[#3d5afe] font-semibold">快捷生成时间层级</span>
+                <ACheckbox.Group
+                  options={quickGranularityOptions}
+                  value={quickGranularityValues}
+                  onChange={values => setQuickGranularityValues(values as string[])}
+                />
+              </div>
+              {/* <AButton
+                type="primary"
+                onClick={handleGenerateTimeHierarchy}
+              >
+                生成层级
+              </AButton> */}
+            </div>
+          ) : null}
           <div className="min-h-0 flex flex-1 overflow-hidden">
             <div className="w-180px border-r border-[#e6ebf5] bg-[#fbfcff]">
               <div className="border-b border-[#e6ebf5] px-3 py-2 text-4 font-semibold">

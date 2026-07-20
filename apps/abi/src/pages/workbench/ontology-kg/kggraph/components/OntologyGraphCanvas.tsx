@@ -8,7 +8,6 @@ import type { OntologyGraphEdge, OntologyGraphNode } from '@/pages/workbench/ont
 
 import type { GraphSelection } from '../types'
 import { computeForceLayout } from '../utils/forceLayout'
-import { getLabelColorScheme, getNodeBackground, getNodeBorderColor, getNodeShadowColor } from '../utils/labelColors'
 import styles from './canvas.module.css'
 
 interface OntologyGraphCanvasProps {
@@ -44,6 +43,7 @@ interface NodePosition {
 
 const CARD_WIDTH = 240
 const CARD_HEIGHT = 80
+const DEFAULT_NODE_COLOR = '#5B7CF7'
 const GRAPH_FONT_FAMILY = '"SF Pro Display", "PingFang SC", "Hiragino Sans GB", sans-serif'
 
 Graph.registerNode(
@@ -159,6 +159,34 @@ function createTargetMarker(stroke: string) {
 
 type AnchorSide = 'top' | 'bottom' | 'left' | 'right'
 
+function getEntityColor(entity: OntologyGraphNode | null | undefined): string {
+  const color = entity?.color?.trim()
+  return color || DEFAULT_NODE_COLOR
+}
+
+function getColorAlpha(color: string, alpha: number): string {
+  const hex = color.trim()
+  const shortHexMatch = hex.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i)
+  const longHexMatch = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i)
+
+  if (shortHexMatch) {
+    const [, r, g, b] = shortHexMatch
+    return `rgba(${Number.parseInt(`${r}${r}`, 16)}, ${Number.parseInt(`${g}${g}`, 16)}, ${Number.parseInt(`${b}${b}`, 16)}, ${alpha})`
+  }
+
+  if (longHexMatch) {
+    const [, r, g, b] = longHexMatch
+    return `rgba(${Number.parseInt(r, 16)}, ${Number.parseInt(g, 16)}, ${Number.parseInt(b, 16)}, ${alpha})`
+  }
+
+  const rgbMatch = hex.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i)
+  if (rgbMatch) {
+    return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${alpha})`
+  }
+
+  return `rgba(91, 124, 247, ${alpha})`
+}
+
 /** Pick which port anchor side to connect from/to, based on relative node positions. */
 function pickAnchorSide(fromPos: NodePosition, toPos: NodePosition): AnchorSide {
   const dx = toPos.x - fromPos.x
@@ -188,13 +216,12 @@ function setNodeVisualState(node: Node, selected: boolean, hovered: boolean, dim
   const data = node.getData<EntityNodeData>()
   const degree = data?.degree ?? 0
   const entity = data?.entity
-  const labelId = entity?.labelId
   const prominence = Math.min(1, degree / 6)
 
-  const borderColor = getNodeBorderColor(labelId, selected, hovered)
-  const backgroundColor = getNodeBackground(labelId, selected, hovered)
-  const shadowColor = getNodeShadowColor(labelId, selected, hovered)
-  const scheme = getLabelColorScheme(labelId)
+  const entityColor = getEntityColor(entity)
+  const borderColor = selected || hovered ? entityColor : getColorAlpha(entityColor, 0.5)
+  const backgroundColor = selected ? getColorAlpha(entityColor, 0.16) : hovered ? getColorAlpha(entityColor, 0.10) : '#FFFFFF'
+  const shadowColor = selected || hovered ? entityColor : '#AAB6C8'
 
   const baseOpacity = dimmed ? 0.25 : 1
 
@@ -217,7 +244,7 @@ function setNodeVisualState(node: Node, selected: boolean, hovered: boolean, dim
   })
 
   node.attr('dot', {
-    fill: scheme.accent,
+    fill: entityColor,
     r: 8 + prominence * 3,
     opacity: baseOpacity,
   })
@@ -241,10 +268,10 @@ function setNodeVisualState(node: Node, selected: boolean, hovered: boolean, dim
 
   // Port anchor points: visible on hover/selected, hidden otherwise
   const portOpacity = (hovered || selected) ? baseOpacity : 0
-  node.attr('portTop', { opacity: portOpacity, stroke: scheme.accent })
-  node.attr('portBottom', { opacity: portOpacity, stroke: scheme.accent })
-  node.attr('portLeft', { opacity: portOpacity, stroke: scheme.accent })
-  node.attr('portRight', { opacity: portOpacity, stroke: scheme.accent })
+  node.attr('portTop', { opacity: portOpacity, stroke: entityColor })
+  node.attr('portBottom', { opacity: portOpacity, stroke: entityColor })
+  node.attr('portLeft', { opacity: portOpacity, stroke: entityColor })
+  node.attr('portRight', { opacity: portOpacity, stroke: entityColor })
 }
 
 function setEdgeVisualState(edge: Edge, selected: boolean, hovered: boolean, dimmed = false): void {
@@ -487,11 +514,11 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
         const degree = degreeMap[id] || 0
         const position = nodePositionsRef.current.get(id) ?? forceLayout.positions.get(id) ?? { x: 100, y: 100 }
         nodePositionsRef.current.set(id, position)
-        const scheme = getLabelColorScheme(node.labelId)
+        const entityColor = getEntityColor(node)
         return graph.createNode({
           attrs: {
-            body: { fill: '#FFFFFF', stroke: `${scheme.border}80`, strokeWidth: 2 },
-            dot: { fill: scheme.accent },
+            body: { fill: '#FFFFFF', stroke: getColorAlpha(entityColor, 0.5), strokeWidth: 2 },
+            dot: { fill: entityColor },
             degree: { text: `${degree} 条关系` },
             shadow: { fill: '#AAB6C8', opacity: 0.15 },
             title: { text: node.entityName },
@@ -591,7 +618,7 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
         <div className={styles.nodeTooltip}>
           <div className={styles.nodeTooltipTitle}>{hoveredNode.entityName}</div>
           <div className={styles.nodeTooltipMeta}>
-            <span className={styles.nodeTooltipDot} style={{ backgroundColor: getLabelColorScheme(hoveredNode.labelId).accent }} />
+            <span className={styles.nodeTooltipDot} style={{ backgroundColor: getEntityColor(hoveredNode) }} />
             <span>编码: {hoveredNode.entityCode}</span>
           </div>
           {hoveredNode.remark && <div className={styles.nodeTooltipRemark}>{hoveredNode.remark}</div>}

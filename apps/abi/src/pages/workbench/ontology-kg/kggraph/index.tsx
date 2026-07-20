@@ -12,6 +12,7 @@ import {
   SearchOutlined,
   UpOutlined,
 } from '@ant-design/icons'
+import { useDebounceFn } from 'ahooks'
 import { Checkbox, Popover, Select, Spin, Tooltip, message } from 'antd'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -28,6 +29,7 @@ import { filterGraphData, splitGraphByDegree } from './utils/graph'
 
 const INITIAL_QUERY: GraphQueryValues = { degree: 2, relationKeyword: '' }
 const NAME_SEARCH_DEBOUNCE_MS = 400
+const FILTER_SEARCH_DEBOUNCE_MS = 300
 const FILTER_PREVIEW_COUNT = 5
 
 interface GraphFilterOption {
@@ -57,8 +59,16 @@ const GraphFilterSection: React.FC<GraphFilterSectionProps> = ({
   onToggleAll,
   onToggleOption,
 }) => {
+  const [inputKeyword, setInputKeyword] = useState('')
   const [keyword, setKeyword] = useState('')
   const [expanded, setExpanded] = useState(false)
+  const { cancel: cancelKeywordUpdate, run: updateKeyword } = useDebounceFn(
+    (value: string) => {
+      setKeyword(value)
+      setExpanded(false)
+    },
+    { wait: FILTER_SEARCH_DEBOUNCE_MS }
+  )
   const filteredOptions = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase()
     if (!normalizedKeyword) return options
@@ -70,9 +80,12 @@ const GraphFilterSection: React.FC<GraphFilterSectionProps> = ({
   )
 
   const handleKeywordChange = useCallback((value: string): void => {
-    setKeyword(value)
+    setInputKeyword(value)
     setExpanded(false)
-  }, [])
+    updateKeyword(value)
+  }, [updateKeyword])
+
+  useEffect(() => cancelKeywordUpdate, [cancelKeywordUpdate])
 
   const handleToggleExpanded = useCallback((): void => {
     setExpanded(current => !current)
@@ -94,7 +107,7 @@ const GraphFilterSection: React.FC<GraphFilterSectionProps> = ({
           className={styles.filterSearchInput}
           placeholder={`搜索${label.replace('筛选', '')}名称`}
           prefix={<SearchOutlined />}
-          value={keyword}
+          value={inputKeyword}
           onChange={event => handleKeywordChange(event.target.value)}
         />
       </div>
