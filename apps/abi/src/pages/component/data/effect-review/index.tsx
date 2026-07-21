@@ -286,7 +286,7 @@ export function Component() {
           ),
           title: '操作',
           width: 240,
-        },
+        }, 
       ] as any,
     rowKey: 'fb_id',
   } as any)
