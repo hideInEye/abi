@@ -4,6 +4,8 @@ export type TopicItem = {
   chatId: string
   title: string
   updateTime?: string
+  // 排序值：>0 视为置顶，值越大越靠前（与后端 session 的 sortOrder 一致）
+  sortOrder?: number
 }
 
 export type UserInfo = {

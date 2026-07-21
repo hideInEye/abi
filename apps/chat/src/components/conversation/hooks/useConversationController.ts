@@ -1200,44 +1200,78 @@ export const useConversationController = (
               return
             }
 
-            // 从 OpenAI 兼容格式提取 content
+            // 从 OpenAI 兼容格式提取 content / reasoning_content
             let chunk = event.data
             try {
               const parsed = JSON.parse(event.data)
               const delta = parsed?.choices?.[0]?.delta
               let chunkText = ''
 
-              // 处理 content，过滤后端重复发送的固定前缀/完整内容
-              if (delta?.content !== undefined && delta?.content !== null) {
-                const currentContent = delta.content
-                let contentToAppend = ''
-                if (
-                  lastContentRef.current &&
-                  currentContent.startsWith(lastContentRef.current)
-                ) {
-                  contentToAppend = currentContent.slice(lastContentRef.current.length)
-                } else {
-                  contentToAppend = currentContent
-                }
-                lastContentRef.current = currentContent
+              const reasoning = delta?.reasoning_content
+              const hasReasoning = typeof reasoning === 'string' && reasoning.length > 0
 
-                if (contentToAppend) {
-                  // 后端把思考内容直接放在 content 中并用 Markdown 标题标记边界
-                  const processed = processContentWithInlineThinking(
-                    contentToAppend,
-                    isReasoningRef.current,
-                    currentDeepThinkEnabled
-                  )
-                  chunkText += processed.text
-                  isReasoningRef.current = processed.isReasoning
+              if (hasReasoning) {
+                // 归因分析等模式：真正的流式思考内容单独放在 reasoning_content 字段逐字输出，
+                // 此时 content 为固定占位串（round_index / sub_chat_mode 标记及“正在查询…”状态提示），
+                // 占位串不作为思考正文追加（其 round_index / sub_chat_mode 已由前一条 content 事件提取）。
+                // 将 reasoning_content 包装为 <think>…</think>，复用现有流式思考展示链路。
+                if (currentDeepThinkEnabled) {
+                  if (!isReasoningRef.current) {
+                    chunkText += '<think>'
+                    isReasoningRef.current = true
+                  }
+                  chunkText += reasoning
                 }
-              }
+                // 记录占位串，避免 reasoning 结束后占位串被当作新正文重复处理
+                if (typeof delta?.content === 'string') {
+                  lastContentRef.current = delta.content
+                }
+                if (!chunkText) {
+                  // 未启用深度思考时，reasoning 阶段无输出，跳过
+                  return
+                }
+                chunk = chunkText
+              } else {
+                // reasoning_content 为 null 或不存在
+                // 归因分析等模式：思考流（reasoning_content）在此切换为 null，先闭合 <think>
+                if (reasoning === null && isReasoningRef.current) {
+                  chunkText += '</think>'
+                  isReasoningRef.current = false
+                  lastContentRef.current = ''
+                }
 
-              if (!chunkText) {
-                // 没有有效 content 的事件跳过
-                return
+                // 处理 content，过滤后端重复发送的固定前缀/完整内容
+                if (delta?.content !== undefined && delta?.content !== null) {
+                  const currentContent = delta.content
+                  let contentToAppend = ''
+                  if (
+                    lastContentRef.current &&
+                    currentContent.startsWith(lastContentRef.current)
+                  ) {
+                    contentToAppend = currentContent.slice(lastContentRef.current.length)
+                  } else {
+                    contentToAppend = currentContent
+                  }
+                  lastContentRef.current = currentContent
+
+                  if (contentToAppend) {
+                    // 后端把思考内容直接放在 content 中并用 Markdown 标题标记边界
+                    const processed = processContentWithInlineThinking(
+                      contentToAppend,
+                      isReasoningRef.current,
+                      currentDeepThinkEnabled
+                    )
+                    chunkText += processed.text
+                    isReasoningRef.current = processed.isReasoning
+                  }
+                }
+
+                if (!chunkText) {
+                  // 没有有效 content 的事件跳过
+                  return
+                }
+                chunk = chunkText
               }
-              chunk = chunkText
             } catch {
               // 非 JSON 格式，直接使用原始 event.data（兼容旧格式）
             }
@@ -1870,8 +1904,7 @@ export const useConversationController = (
       .then((values) => {
         let data = {
           convUid: conv.conv_uid,
-          chatId: conv.chat_id,
-          agentId: conv.agent_id,
+          sessionId: conv.chat_id,
           spaceId: conv.space_id,
           extra: {},
           chatName: conv.biz_name,

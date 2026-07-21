@@ -1,0 +1,53 @@
+/* 邮件正文富文本编辑器：整体风格优化 + 正文区域至少 4 行文字高度 */
+.emailEditor {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.emailEditor:hover {
+  border-color: #4096ff;
+}
+
+.emailEditor:focus-within {
+  border-color: #4096ff;
+  box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.12);
+}
+
+/* 工具栏：去除默认边框，改用底部分隔线 */
+.emailEditor :global(.ql-toolbar) {
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  border-radius: 8px 8px 0 0;
+  background: #fafafa;
+  padding: 8px 12px;
+}
+
+/* 内容容器：去除默认边框 */
+.emailEditor :global(.ql-container) {
+  border: none;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* 正文输入区：至少 4 行文字高度，超出滚动 */
+.emailEditor :global(.ql-editor) {
+  min-height: 112px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+
+.emailEditor :global(.ql-editor.ql-blank::before) {
+  left: 14px;
+  right: 14px;
+  color: #bfbfbf;
+  font-style: normal;
+}
+
+/* 预览报告示例链接：与编辑器保持一致的间距 */
+.previewLink {
+  display: inline-block;
+  margin-top: 8px;
+}

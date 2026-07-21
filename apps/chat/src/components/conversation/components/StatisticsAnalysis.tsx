@@ -254,45 +254,46 @@ const StatisticsAnalysis: React.FC<Props> = ({
             </Tooltip>
           )}
 
-          {/* 更多（推荐问题/归因分析/预测分析/删除收进「...」菜单，后续可扩展） */}
+          {/* 更多（推荐问题/归因分析/预测分析/删除等操作）
+              仅一个操作时直接平铺展示对应图标按钮，多个操作时才收进「...」菜单 */}
           {(() => {
-            const moreItems: MenuProps['items'] = [];
+            // 先收集所有可用操作（含图标、文案与点击回调）
+            const actions: { key: string; icon: React.ReactNode; text: string; onClick: () => void }[] = [];
             if (onShareClick) {
-              moreItems.push({
-                key: 'share',
-                label: (<span className="flex items-center gap-2"><ShareAltOutlined />分享对话</span>),
-                onClick: () => onShareClick?.(),
-              });
+              actions.push({ key: 'share', icon: <ShareAltOutlined />, text: '分享对话', onClick: () => onShareClick?.() });
             }
             if (showRecommend) {
-              moreItems.push({
-                key: 'qa',
-                label: (<span className="flex items-center gap-2"><BulbOutlined />推荐问题</span>),
-                onClick: () => onQaClick?.(),
-              });
+              actions.push({ key: 'qa', icon: <BulbOutlined />, text: '推荐问题', onClick: () => onQaClick?.() });
             }
             if (showAttributionButton) {
-              moreItems.push({
-                key: 'attribution',
-                label: (<span className="flex items-center gap-2"><FunnelPlotOutlined />归因分析</span>),
-                onClick: () => onAttributionClick?.(),
-              });
+              actions.push({ key: 'attribution', icon: <FunnelPlotOutlined />, text: '归因分析', onClick: () => onAttributionClick?.() });
             }
             if (showPredictButton) {
-              moreItems.push({
-                key: 'predict',
-                label: (<span className="flex items-center gap-2"><FundOutlined />预测分析</span>),
-                onClick: () => onPredictClick?.(),
-              });
+              actions.push({ key: 'predict', icon: <FundOutlined />, text: '预测分析', onClick: () => onPredictClick?.() });
             }
-            if (onDeleteClick && chatMode !== 'chat_excel') {
-              moreItems.push({
-                key: 'delete',
-                label: (<span className="flex items-center gap-2"><DeleteOutlined />删除</span>),
-                onClick: () => onDeleteClick?.(),
-              });
+            if (onDeleteClick) {
+              actions.push({ key: 'delete', icon: <DeleteOutlined />, text: '删除', onClick: () => onDeleteClick?.() });
             }
-            if (!moreItems.length) return null;
+            if (!actions.length) return null;
+
+            // 只有一个操作：直接平铺展示该操作图标（不再收进「...」）
+            if (actions.length === 1) {
+              const only = actions[0];
+              return (
+                <Tooltip title={only.text}>
+                  <span className="action-icon" onClick={only.onClick}>
+                    {only.icon}
+                  </span>
+                </Tooltip>
+              );
+            }
+
+            // 多个操作：全部收进「...」下拉菜单
+            const moreItems: MenuProps['items'] = actions.map((action) => ({
+              key: action.key,
+              label: (<span className="flex items-center gap-2">{action.icon}{action.text}</span>),
+              onClick: action.onClick,
+            }));
             return (
               <Dropdown menu={{ items: moreItems }} trigger={['click']} placement="topLeft">
                 <Tooltip title="更多">
@@ -303,15 +304,6 @@ const StatisticsAnalysis: React.FC<Props> = ({
               </Dropdown>
             );
           })()}
-
-          {/* 删除（excel 模式单独展示，不收进「...」） */}
-          {chatMode === 'chat_excel' && onDeleteClick && (
-            <Tooltip title="删除">
-              <span className="action-icon" onClick={onDeleteClick}>
-                <DeleteOutlined />
-              </span>
-            </Tooltip>
-          )}
 
           {/* 多版本切换（重新生成后展示层合并） */}
           {versionInfo && versionInfo.total > 1 && (

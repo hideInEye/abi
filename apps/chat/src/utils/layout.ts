@@ -22,6 +22,12 @@ function normalizeText(value: unknown): string {
   return ''
 }
 
+// 会话排序值（后端固定字段 sortOrder，与分组一致；>0 表示置顶）。
+function normalizeSortOrder(item: Record<string, unknown>): number {
+  const raw = item.sortOrder
+  return typeof raw === 'number' ? raw : Number(raw) || 0
+}
+
 function normalizeTopic(item: unknown): TopicItem | null {
   if (!isRecord(item)) return null
 
@@ -35,6 +41,7 @@ function normalizeTopic(item: unknown): TopicItem | null {
     chatId,
     title,
     updateTime,
+    sortOrder: normalizeSortOrder(item),
   }
 }
 
