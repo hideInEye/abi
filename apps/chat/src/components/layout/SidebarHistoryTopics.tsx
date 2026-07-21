@@ -1,6 +1,6 @@
-import { DeleteOutlined, EditOutlined, FolderOutlined, MoreOutlined, PlusOutlined, StarOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, FolderOutlined, MoreOutlined, PlusOutlined, ProfileOutlined, StarOutlined } from '@ant-design/icons'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
-import { Dropdown, Input, message, Modal, Spin } from 'antd'
+import { Button, Checkbox, Dropdown, Input, message, Modal, Spin } from 'antd'
 import type { MenuProps } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -9,7 +9,7 @@ import EditSessionModal from '@/components/conversation-analysis/EditSessionModa
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { useConversationGroups } from '@/hooks/layout/useConversationGroups'
 import { useHistoryTopics } from '@/hooks/layout/useHistoryTopics'
-import { deleteSession, moveSessionToGroup, updateApp } from '@/service/api/app'
+import { deleteBatchSession, deleteSession, moveSessionToGroup, updateApp } from '@/service/api/app'
 import { fetchOperateNew } from '@/service/api/abi-system'
 import { getSpaceId } from '@/utils'
 
@@ -36,6 +36,10 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
   const [newGroupModalVisible, setNewGroupModalVisible] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [pendingMoveChatId, setPendingMoveChatId] = useState<string | null>(null)
+  // 批量管理：列表内联勾选模式
+  const [batchMode, setBatchMode] = useState(false)
+  const [batchSelectedIds, setBatchSelectedIds] = useState<string[]>([])
+  const [batchDeleting, setBatchDeleting] = useState(false)
 
   const { groups, loadGroups, addGroup } = useConversationGroups()
 
@@ -71,6 +75,89 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
     (chatId: string) => historyApps.find((app) => String(app.chat_id) === String(chatId)),
     [historyApps],
   )
+
+  // 批量管理会话列表：与侧边栏一致（未分组会话），并携带 convUid 供批量删除
+  const batchSessions = useMemo(
+    () =>
+      ungroupedTopics.map((topic) => {
+        const app = findAppByChatId(topic.chatId)
+        return {
+          chatId: topic.chatId,
+          convUid: app?.conv_uid as string | undefined,
+          title: topic.title,
+        }
+      }),
+    [ungroupedTopics, findAppByChatId],
+  )
+
+  const batchSelectedSet = useMemo(() => new Set(batchSelectedIds), [batchSelectedIds])
+  const batchAllChecked =
+    ungroupedTopics.length > 0 && batchSelectedIds.length === ungroupedTopics.length
+  const batchIndeterminate =
+    batchSelectedIds.length > 0 && batchSelectedIds.length < ungroupedTopics.length
+
+  const enterBatchMode = useCallback(() => {
+    setBatchMode(true)
+    setBatchSelectedIds([])
+  }, [])
+
+  const exitBatchMode = useCallback(() => {
+    setBatchMode(false)
+    setBatchSelectedIds([])
+  }, [])
+
+  const toggleBatchSelect = useCallback((chatId: string) => {
+    setBatchSelectedIds((prev) =>
+      prev.includes(chatId) ? prev.filter((id) => id !== chatId) : [...prev, chatId],
+    )
+  }, [])
+
+  const toggleBatchSelectAll = useCallback(
+    (checked: boolean) => {
+      setBatchSelectedIds(checked ? ungroupedTopics.map((t) => t.chatId) : [])
+    },
+    [ungroupedTopics],
+  )
+
+  // 批量删除：按对话ID（convUid）删除，成功后本地移除并同步当前会话
+  const handleBatchDelete = useCallback(() => {
+    if (!batchSelectedIds.length) {
+      message.warning('请选择要删除的对话')
+      return
+    }
+    const selected = new Set(batchSelectedIds)
+    const convUids = batchSessions
+      .filter((s) => selected.has(s.chatId) && s.convUid)
+      .map((s) => String(s.convUid))
+    if (!convUids.length) {
+      message.warning('所选对话暂无可删除的会话记录')
+      return
+    }
+    Modal.confirm({
+      title: '确认删除对话',
+      content: `是否确认删除选中的 ${batchSelectedIds.length} 个对话？删除后无法恢复。`,
+      okText: '确认',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setBatchDeleting(true)
+        try {
+          await deleteBatchSession({ convUids })
+          message.success('删除成功')
+          const deletedIds = [...batchSelectedIds]
+          deletedIds.forEach((id) => removeTopicById(id))
+          if (deletedIds.includes(activeTaskId)) {
+            navigate({ to: TASK_DETAIL_ROUTE, params: { taskId: 'new' } })
+          }
+          exitBatchMode()
+        } catch {
+          message.error('删除失败')
+        } finally {
+          setBatchDeleting(false)
+        }
+      },
+    })
+  }, [batchSelectedIds, batchSessions, removeTopicById, activeTaskId, navigate, exitBatchMode])
 
   const handleSelectTopic = useCallback(
     (taskId: string) => {
@@ -257,12 +344,14 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
         ],
       },
       { type: 'divider' as const },
+      { key: 'batch-manage', icon: <ProfileOutlined />, label: '批量管理' },
       { key: 'delete', icon: <DeleteOutlined />, label: '删除', danger: true },
     ],
     onClick: ({ key, domEvent }) => {
       domEvent.stopPropagation()
       if (key === 'edit') return handleEditTopic(chatId)
       if (key === 'favorite') return handleFavoriteTopic(chatId)
+      if (key === 'batch-manage') return enterBatchMode()
       if (key === 'delete') return handleDeleteTopic(chatId)
       // 移动到已有分组
       if (key.startsWith('move-group-')) {
@@ -297,6 +386,22 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
           }}
         >
           <span>最近对话</span>
+          {batchMode && (
+            <span
+              onClick={(e) => e.stopPropagation()}
+              style={{ textTransform: 'none', letterSpacing: 'normal' }}
+            >
+              <Checkbox
+                checked={batchAllChecked}
+                indeterminate={batchIndeterminate}
+                disabled={!ungroupedTopics.length}
+                onChange={(e) => toggleBatchSelectAll(e.target.checked)}
+                style={{ fontSize: 12, fontWeight: 500 }}
+              >
+                全选
+              </Checkbox>
+            </span>
+          )}
         </div>
 
         <Spin spinning={historyLoading}>
@@ -304,6 +409,11 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
             {ungroupedTopics.length ? (
               ungroupedTopics.map((topic) => {
                 const isActive = topic.chatId === activeTaskId
+                // 仅选中项显示「...」菜单，非选中项（含 hover）不可弹出下拉框
+                const showMenu = isActive
+                const isSelected = batchSelectedSet.has(topic.chatId)
+                // 批量模式下：整行点击切换勾选，高亮取决于是否勾选
+                const rowActive = batchMode ? isSelected : isActive
 
                 return (
                   <div
@@ -313,52 +423,63 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
                     className="group flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-3 text-left"
                     style={{
                       padding: '8px 12px',
-                      background: isActive ? 'var(--accent-soft)' : 'transparent',
-                      color: isActive ? 'var(--accent)' : 'var(--ink-2)',
-                      fontWeight: isActive ? 600 : 500,
+                      background: rowActive ? 'var(--accent-soft)' : 'transparent',
+                      color: rowActive ? 'var(--accent)' : 'var(--ink-2)',
+                      fontWeight: rowActive ? 600 : 500,
                       fontSize: 12.5,
                       transition: 'all 0.15s cubic-bezier(0.4,0,0.2,1)',
                     }}
-                    onClick={() => handleSelectTopic(topic.chatId)}
-                    onKeyDown={(event) => event.key === 'Enter' && handleSelectTopic(topic.chatId)}
+                    onClick={() =>
+                      batchMode ? toggleBatchSelect(topic.chatId) : handleSelectTopic(topic.chatId)
+                    }
+                    onKeyDown={(event) =>
+                      event.key === 'Enter' &&
+                      (batchMode ? toggleBatchSelect(topic.chatId) : handleSelectTopic(topic.chatId))
+                    }
                     onMouseEnter={(e) => {
-                      if (!isActive) {
+                      if (!rowActive) {
                         ;(e.currentTarget as HTMLElement).style.background = 'rgba(130,140,200,0.08)'
                         ;(e.currentTarget as HTMLElement).style.color = 'var(--ink)'
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isActive) {
+                      if (!rowActive) {
                         ;(e.currentTarget as HTMLElement).style.background = 'transparent'
                         ;(e.currentTarget as HTMLElement).style.color = 'var(--ink-2)'
                       }
                     }}
                   >
-                    <span className="min-w-0 flex-1 truncate">{topic.title}</span>
-                    <Dropdown
-                      trigger={['click']}
-                      menu={buildMenu(topic.chatId)}
-                      placement="bottomRight"
-                    >
-                      <span
-                        className="shrink-0 px-1 py-1 transition-opacity"
-                        style={{
-                          opacity: isActive ? 1 : 0,
-                          color: 'var(--ink-3)',
-                        }}
-                        onClick={(event) => {
-                          event.preventDefault()
-                          event.stopPropagation()
-                        }}
-                        onMouseEnter={(e) => {
-                          ;(e.currentTarget as HTMLElement).closest('.group')?.querySelectorAll('[class*="opacity-0"]').forEach((el) => {
-                            ;(el as HTMLElement).style.opacity = '1'
-                          })
-                        }}
-                      >
-                        <MoreOutlined style={{ fontSize: 14 }} />
+                    {batchMode && (
+                      <span className="shrink-0" onClick={(event) => event.stopPropagation()}>
+                        <Checkbox
+                          checked={isSelected}
+                          onChange={() => toggleBatchSelect(topic.chatId)}
+                        />
                       </span>
-                    </Dropdown>
+                    )}
+                    <span className="min-w-0 flex-1 truncate">{topic.title}</span>
+                    {!batchMode && (
+                      <Dropdown
+                        trigger={['click']}
+                        menu={buildMenu(topic.chatId)}
+                        placement="bottomRight"
+                      >
+                        <span
+                          className="shrink-0 px-1 py-1 transition-opacity"
+                          style={{
+                            opacity: showMenu ? 1 : 0,
+                            pointerEvents: showMenu ? 'auto' : 'none',
+                            color: 'var(--ink-3)',
+                          }}
+                          onClick={(event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                          }}
+                        >
+                          <MoreOutlined style={{ fontSize: 14 }} />
+                        </span>
+                      </Dropdown>
+                    )}
                   </div>
                 )
               })
@@ -369,6 +490,32 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
             )}
           </div>
         </Spin>
+
+        {batchMode && (
+          <div
+            className="mt-2 flex items-center justify-between gap-2 px-3 pt-2"
+            style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}
+          >
+            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+              已选{batchSelectedIds.length}/{ungroupedTopics.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button size="small" style={{ borderRadius: 5 }} onClick={exitBatchMode}>
+                取消
+              </Button>
+              <Button
+                size="small"
+                danger
+                type="primary"
+                loading={batchDeleting}
+                style={{ borderRadius: 5}}
+                onClick={handleBatchDelete}
+              >
+                删除
+              </Button>
+            </div>
+          </div>
+        )}
       </section>
 
       <EditSessionModal

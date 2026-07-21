@@ -7,7 +7,7 @@ import {
   SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Empty, Popconfirm, message } from 'antd'
+import { Popconfirm, message } from 'antd'
 import dayjs from 'dayjs'
 import { Suspense, lazy, useMemo, useState } from 'react'
 
@@ -261,39 +261,32 @@ export function Component() {
           dataIndex: 'operation',
           fixed: 'right',
           key: 'operate',
-          minWidth: 140,
+          minWidth: 240,
           render: (_: unknown, record: any) => (
             <div className="ds-action-group">
-              <ATooltip placement="top" title="人工评估">
+              <AButton className="abi-action-link" size="small" variant="link" onClick={() => openEval(record)}>
+                <UserOutlined style={{ marginRight: 3, fontSize: 12 }} />人工评估
+              </AButton>
+              <Popconfirm title="确定进行模型评估吗？" onConfirm={() => handleModelEval(record)}>
                 <AButton
                   className="abi-action-link"
-                  icon={<UserOutlined />}
+                  disabled={modelEvalLoading || ['0', '1'].includes(`${record.status}`) || !isWenShuScene(record.chat_mode)}
                   size="small"
                   variant="link"
-                  onClick={() => openEval(record)}
-                />
-              </ATooltip>
-              <Popconfirm title="确定进行模型评估吗？" onConfirm={() => handleModelEval(record)}>
-                <ATooltip placement="top" title="模型评估">
-                  <AButton
-                    className="abi-action-link"
-                    disabled={modelEvalLoading || ['0', '1'].includes(`${record.status}`) || !isWenShuScene(record.chat_mode)}
-                    icon={<DeploymentUnitOutlined />}
-                    size="small"
-                    variant="link"
-                  />
-                </ATooltip>
+                >
+                  <DeploymentUnitOutlined style={{ marginRight: 3, fontSize: 12 }} />模型评估
+                </AButton>
               </Popconfirm>
               <Popconfirm title="删除后不可恢复，确定删除吗？" onConfirm={() => handleDelete(record)}>
-                <ATooltip title="删除">
-                  <AButton className="abi-action-link" color="danger" icon={<DeleteOutlined />} size="small" variant="link" />
-                </ATooltip>
+                <AButton className="abi-action-link-danger" size="small" variant="link">
+                  <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
+                </AButton>
               </Popconfirm>
             </div>
           ),
           title: '操作',
-          width: 140,
-        },
+          width: 240,
+        }, 
       ] as any,
     rowKey: 'fb_id',
   } as any)
@@ -471,8 +464,6 @@ export function Component() {
     })
   }
 
-  const showEmpty = !tableProps.loading && (!tableProps.dataSource || tableProps.dataSource.length === 0)
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <AForm form={searchProps.form as any} layout="inline">
@@ -509,31 +500,23 @@ export function Component() {
             style={{
               border: '1px solid rgba(130,140,200,0.18)',
               borderRadius: '12px',
-              display: 'flex',
-              flexDirection: 'column',
+              overflow: 'hidden',
               flex: 1,
               minHeight: 0,
-              overflow: 'hidden',
             }}
           >
-            {showEmpty ? (
-              <div style={{ alignItems: 'center', display: 'flex', flex: 1, justifyContent: 'center' }}>
-                <Empty description="暂无数据" />
-              </div>
-            ) : (
-              <div className="assistant-table-scroll" style={{ flex: 1, overflow: 'auto' }}>
-                <ATable
-                  columns={filteredColumns as any}
-                  dataSource={tableProps.dataSource}
-                  loading={tableProps.loading}
-                  pagination={false}
-                  rowKey="fb_id"
-                  scroll={{ x: 'max-content' }}
-                  size="middle"
-                  className="effect-review-table abi-std-table"
-                />
-              </div>
-            )}
+            <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+              <ATable
+                columns={filteredColumns as any}
+                dataSource={tableProps.dataSource}
+                loading={tableProps.loading}
+                pagination={false}
+                rowKey="fb_id"
+                scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
+                size="middle"
+                className="effect-review-table abi-std-table"
+              />
+            </div>
           </div>
 
           <div className="data-source-pagination">
