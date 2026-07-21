@@ -232,7 +232,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
   // 收藏对话：切换收藏状态（addOrRemove 由后端切换）
   const handleFavoriteSession = useCallback(async (session: any) => {
     try {
-      const res: any = await fetchOperateNew({ chatId: session.chat_id })
+      const res: any = await fetchOperateNew({ sessionId: session.chat_id })
       if (res?.code !== 200) {
         message.error(res?.message || res?.msg || '收藏失败，请稍后再试')
         return

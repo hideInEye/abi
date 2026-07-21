@@ -12,7 +12,7 @@ import { getSpaceId } from '@/store/slice/app';
 
 interface OperateRecord {
   readonly id: string;
-  readonly chatId: string;
+  readonly sessionId: string;
   spaceId: number;
 }
 
@@ -59,12 +59,12 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   }, [spaceId]);
 
   const handleNavigate = (r: OperateRecord) => {
-    const { spaceId, chatId } = r;
-    switchToSpace(spaceId, undefined, { chatId });
+    const { spaceId, sessionId } = r;
+    switchToSpace(spaceId, undefined, { chatId: sessionId });
   };
 
   const handleCollect = async (id: string) => {
-    const res: any = await fetchOperateNew({ chatId: id, type: 2 });
+    const res: any = await fetchOperateNew({ sessionId: id, type: 2 });
     if (res.response.data.code !== 200) {
       message.error(res.response.data.msg);
     } else {
@@ -82,7 +82,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
       render: (_: any, record: OperateRecord) => (
         <div className="ds-action-group">
           <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleNavigate(record)}>进入对话</AButton>
-          <AButton className="abi-action-link-danger" size="small" variant="link" onClick={() => handleCollect(record.chatId)}>取消收藏</AButton>
+          <AButton className="abi-action-link-danger" size="small" variant="link" onClick={() => handleCollect(record.sessionId)}>取消收藏</AButton>
         </div>
       ),
     },

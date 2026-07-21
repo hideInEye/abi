@@ -331,8 +331,7 @@ export function Component() {
       let data = {
         ...editData,
         convUid: editData.conv_uid,
-        chatId: editData.chat_id,
-        agentId: editData.agent_id,
+        sessionId: editData.chat_id,
         spaceId: editData.space_id,
         extra: {},
         chatName: editData.biz_name,

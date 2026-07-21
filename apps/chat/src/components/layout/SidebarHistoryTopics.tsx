@@ -1,6 +1,6 @@
-import { DeleteOutlined, EditOutlined, FolderOutlined, MoreOutlined, PlusOutlined, ProfileOutlined, StarOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, FolderOutlined, MoreOutlined, PlusOutlined, ProfileOutlined, PushpinFilled, PushpinOutlined, StarOutlined } from '@ant-design/icons'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
-import { Button, Checkbox, Dropdown, Input, message, Modal, Spin } from 'antd'
+import { Button, Checkbox, ConfigProvider, Drawer, Dropdown, Input, message, Modal, Spin } from 'antd'
 import type { MenuProps } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -68,8 +68,24 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
         })
         .map((app) => String(app.chat_id)),
     )
-    return historyTopics.filter((topic) => !groupedChatIds.has(topic.chatId))
+    const filtered = historyTopics.filter((topic) => !groupedChatIds.has(topic.chatId))
+    // 置顶（sortOrder>0）排到最前，值越大越靠前；未置顶保持后端返回顺序（稳定排序）
+    return [...filtered].sort((a, b) => {
+      const sa = a.sortOrder ?? 0
+      const sb = b.sortOrder ?? 0
+      const ta = sa > 0 ? 1 : 0
+      const tb = sb > 0 ? 1 : 0
+      if (ta !== tb) return tb - ta
+      if (ta === 1) return sb - sa
+      return 0
+    })
   }, [historyTopics, historyApps])
+
+  // 当前处于置顶状态（sortOrder>0）的会话集合，用于菜单文案与列表图钉标记
+  const toppedChatIds = useMemo(
+    () => new Set(ungroupedTopics.filter((topic) => (topic.sortOrder ?? 0) > 0).map((topic) => topic.chatId)),
+    [ungroupedTopics],
+  )
 
   const findAppByChatId = useCallback(
     (chatId: string) => historyApps.find((app) => String(app.chat_id) === String(chatId)),
@@ -309,7 +325,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
         return
       }
       try {
-        const res: any = await fetchOperateNew({ chatId: app.chat_id })
+        const res: any = await fetchOperateNew({ sessionId: app.chat_id })
         if (res?.code !== 200) {
           message.error(res?.message || res?.msg || '收藏失败，请稍后再试')
           return
@@ -322,7 +338,34 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
     [findAppByChatId],
   )
 
-  const buildMenu = (chatId: string): MenuProps => ({
+  // 置顶 / 取消置顶：复用 updateApp（session/update）传 sortOrder，置顶取当前最大 sortOrder+1，取消置 0
+  const handleToggleTop = useCallback(
+    async (chatId: string) => {
+      const app = findAppByChatId(chatId)
+      if (!app) {
+        message.warning('未找到对话')
+        return
+      }
+      const currentlyTop = toppedChatIds.has(chatId)
+      const maxSortOrder = ungroupedTopics.reduce((max, topic) => Math.max(max, topic.sortOrder ?? 0), 0)
+      try {
+        await updateApp({
+          sessionId: app.chat_id,
+          title: app.title || app.biz_name || '',
+          sortOrder: currentlyTop ? 0 : maxSortOrder + 1,
+        })
+        message.success(currentlyTop ? '已取消置顶' : '已置顶')
+        await loadHistoryTopics({ silent: true })
+      } catch {
+        message.error('操作失败')
+      }
+    },
+    [findAppByChatId, toppedChatIds, ungroupedTopics, loadHistoryTopics],
+  )
+
+  const buildMenu = (chatId: string): MenuProps => {
+    const topped = toppedChatIds.has(chatId)
+    return {
     items: [
       { key: 'edit', icon: <EditOutlined />, label: '重命名' },
       { key: 'favorite', icon: <StarOutlined />, label: '收藏对话' },
@@ -343,6 +386,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
           },
         ],
       },
+      { key: 'top', icon: <PushpinOutlined />, label: topped ? '取消置顶' : '置顶对话' },
       { type: 'divider' as const },
       { key: 'batch-manage', icon: <ProfileOutlined />, label: '批量管理' },
       { key: 'delete', icon: <DeleteOutlined />, label: '删除', danger: true },
@@ -351,6 +395,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
       domEvent.stopPropagation()
       if (key === 'edit') return handleEditTopic(chatId)
       if (key === 'favorite') return handleFavoriteTopic(chatId)
+      if (key === 'top') return handleToggleTop(chatId)
       if (key === 'batch-manage') return enterBatchMode()
       if (key === 'delete') return handleDeleteTopic(chatId)
       // 移动到已有分组
@@ -366,7 +411,8 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
         setNewGroupModalVisible(true)
       }
     },
-  })
+    }
+  }
 
   if (collapsed) {
     return null
@@ -386,22 +432,6 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
           }}
         >
           <span>最近对话</span>
-          {batchMode && (
-            <span
-              onClick={(e) => e.stopPropagation()}
-              style={{ textTransform: 'none', letterSpacing: 'normal' }}
-            >
-              <Checkbox
-                checked={batchAllChecked}
-                indeterminate={batchIndeterminate}
-                disabled={!ungroupedTopics.length}
-                onChange={(e) => toggleBatchSelectAll(e.target.checked)}
-                style={{ fontSize: 12, fontWeight: 500 }}
-              >
-                全选
-              </Checkbox>
-            </span>
-          )}
         </div>
 
         <Spin spinning={historyLoading}>
@@ -411,9 +441,6 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
                 const isActive = topic.chatId === activeTaskId
                 // 仅选中项显示「...」菜单，非选中项（含 hover）不可弹出下拉框
                 const showMenu = isActive
-                const isSelected = batchSelectedSet.has(topic.chatId)
-                // 批量模式下：整行点击切换勾选，高亮取决于是否勾选
-                const rowActive = batchMode ? isSelected : isActive
 
                 return (
                   <div
@@ -423,63 +450,56 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
                     className="group flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-3 text-left"
                     style={{
                       padding: '8px 12px',
-                      background: rowActive ? 'var(--accent-soft)' : 'transparent',
-                      color: rowActive ? 'var(--accent)' : 'var(--ink-2)',
-                      fontWeight: rowActive ? 600 : 500,
+                      background: isActive ? 'var(--accent-soft)' : 'transparent',
+                      color: isActive ? 'var(--accent)' : 'var(--ink-2)',
+                      fontWeight: isActive ? 600 : 500,
                       fontSize: 12.5,
                       transition: 'all 0.15s cubic-bezier(0.4,0,0.2,1)',
                     }}
-                    onClick={() =>
-                      batchMode ? toggleBatchSelect(topic.chatId) : handleSelectTopic(topic.chatId)
-                    }
+                    onClick={() => handleSelectTopic(topic.chatId)}
                     onKeyDown={(event) =>
-                      event.key === 'Enter' &&
-                      (batchMode ? toggleBatchSelect(topic.chatId) : handleSelectTopic(topic.chatId))
+                      event.key === 'Enter' && handleSelectTopic(topic.chatId)
                     }
                     onMouseEnter={(e) => {
-                      if (!rowActive) {
+                      if (!isActive) {
                         ;(e.currentTarget as HTMLElement).style.background = 'rgba(130,140,200,0.08)'
                         ;(e.currentTarget as HTMLElement).style.color = 'var(--ink)'
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!rowActive) {
+                      if (!isActive) {
                         ;(e.currentTarget as HTMLElement).style.background = 'transparent'
                         ;(e.currentTarget as HTMLElement).style.color = 'var(--ink-2)'
                       }
                     }}
                   >
-                    {batchMode && (
-                      <span className="shrink-0" onClick={(event) => event.stopPropagation()}>
-                        <Checkbox
-                          checked={isSelected}
-                          onChange={() => toggleBatchSelect(topic.chatId)}
-                        />
-                      </span>
+                    {toppedChatIds.has(topic.chatId) && (
+                      <PushpinFilled
+                        className="shrink-0"
+                        style={{ fontSize: 11, color: 'var(--accent)' }}
+                      />
                     )}
                     <span className="min-w-0 flex-1 truncate">{topic.title}</span>
-                    {!batchMode && (
-                      <Dropdown
-                        trigger={['click']}
-                        menu={buildMenu(topic.chatId)}
-                        placement="bottomRight"
+                    <Dropdown
+                      trigger={['click']}
+                      menu={buildMenu(topic.chatId)}
+                      placement="bottomRight"
+                    >
+                      <span
+                        className="shrink-0 px-1 py-1 transition-opacity"
+                        style={{
+                          opacity: showMenu ? 1 : 0,
+                          pointerEvents: showMenu ? 'auto' : 'none',
+                          color: 'var(--ink-3)',
+                        }}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                        }}
                       >
-                        <span
-                          className="shrink-0 px-1 py-1 transition-opacity"
-                          style={{
-                            opacity: showMenu ? 1 : 0,
-                            pointerEvents: showMenu ? 'auto' : 'none',
-                            color: 'var(--ink-3)',
-                          }}
-                          onClick={(event) => {
-                            event.preventDefault()
-                            event.stopPropagation()
-                          }}
-                        >
-                          <MoreOutlined style={{ fontSize: 14 }} />
-                        </span>
-                      </Dropdown>
-                    )}
+                        <MoreOutlined style={{ fontSize: 14 }} />
+                      </span>
+                    </Dropdown>
                   </div>
                 )
               })
@@ -490,33 +510,122 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
             )}
           </div>
         </Spin>
+      </section>
 
-        {batchMode && (
-          <div
-            className="mt-2 flex items-center justify-between gap-2 px-3 pt-2"
-            style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}
-          >
-            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-              已选{batchSelectedIds.length}/{ungroupedTopics.length}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button size="small" style={{ borderRadius: 5 }} onClick={exitBatchMode}>
+      {/* 对话批量管理：左侧弹出抽屉 */}
+      <ConfigProvider
+        theme={{
+          token: {
+            colorPrimary: '#5b7cf7',
+            colorError: '#ef4444',
+            borderRadius: 10,
+          },
+        }}
+      >
+        <Drawer
+          open={batchMode}
+          placement="left"
+          width={380}
+          onClose={exitBatchMode}
+          closable={false}
+          maskClosable={false}
+          styles={{
+            content: { background: '#FBFCFF' },
+            body: { padding: 0, display: 'flex', flexDirection: 'column', background: '#FBFCFF' },
+            header: { display: 'none' },
+            footer: { padding: '16px 24px', borderTop: '1px solid var(--border)', background: '#FBFCFF' },
+          }}
+          footer={
+            <div className="flex items-center justify-between gap-2">
+              <Button style={{ borderRadius: 10 }} onClick={exitBatchMode}>
                 取消
               </Button>
+              <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+                已选{batchSelectedIds.length}/{ungroupedTopics.length}
+              </span>
               <Button
-                size="small"
                 danger
                 type="primary"
                 loading={batchDeleting}
-                style={{ borderRadius: 5}}
+                disabled={!batchSelectedIds.length}
+                style={{ borderRadius: 10 }}
                 onClick={handleBatchDelete}
               >
                 删除
               </Button>
             </div>
+          }
+        >
+          <div
+            className="flex items-center justify-between"
+            style={{ padding: '20px 24px 12px' }}
+          >
+            <span style={{ fontSize: 19, fontWeight: 700, color: 'var(--ink)' }}>对话批量管理</span>
+            <span className="flex items-center gap-2" style={{ fontSize: 14, color: 'var(--ink-2)' }}>
+              全选
+              <Checkbox
+                checked={batchAllChecked}
+                indeterminate={batchIndeterminate}
+                disabled={!ungroupedTopics.length}
+                onChange={(e) => toggleBatchSelectAll(e.target.checked)}
+              />
+            </span>
           </div>
-        )}
-      </section>
+          <div className="flex-1 overflow-y-auto" style={{ padding: '4px 16px' }}>
+            {ungroupedTopics.length ? (
+              ungroupedTopics.map((topic) => {
+                const isSelected = batchSelectedSet.has(topic.chatId)
+                return (
+                  <div
+                    key={topic.chatId}
+                    role="button"
+                    tabIndex={0}
+                    className="flex cursor-pointer items-center justify-between gap-3 rounded-lg"
+                    style={{
+                      padding: '11px 12px',
+                      background: isSelected ? 'var(--accent-soft)' : 'transparent',
+                      transition: 'background 0.15s var(--ease)',
+                    }}
+                    onClick={() => toggleBatchSelect(topic.chatId)}
+                    onKeyDown={(event) =>
+                      event.key === 'Enter' && toggleBatchSelect(topic.chatId)
+                    }
+                    onMouseEnter={(e) => {
+                      if (!isSelected)
+                        (e.currentTarget as HTMLElement).style.background = 'rgba(130,140,200,0.08)'
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected)
+                        (e.currentTarget as HTMLElement).style.background = 'transparent'
+                    }}
+                  >
+                    <span
+                      className="min-w-0 flex-1 truncate"
+                      style={{
+                        fontSize: 14,
+                        color: 'var(--ink)',
+                        fontWeight: isSelected ? 600 : 500,
+                      }}
+                    >
+                      {topic.title}
+                    </span>
+                    <span className="shrink-0" onClick={(event) => event.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onChange={() => toggleBatchSelect(topic.chatId)}
+                      />
+                    </span>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="py-10 text-center" style={{ fontSize: 14, color: 'var(--ink-4)' }}>
+                暂无对话
+              </div>
+            )}
+          </div>
+        </Drawer>
+      </ConfigProvider>
 
       <EditSessionModal
         visible={editVisible}
