@@ -1,9 +1,9 @@
-import { DeleteOutlined, FileMarkdownOutlined, LeftOutlined, QuestionCircleOutlined, RightOutlined, WechatWorkOutlined } from '@ant-design/icons';
+import { DeleteOutlined, FileMarkdownOutlined, LeftOutlined, QuestionCircleOutlined, RightOutlined, SearchOutlined, WechatWorkOutlined } from '@ant-design/icons';
 // import PageTitle from '@/components/stateless/common/PageTitle';
 
 import { deleteJob, deleteShareEmail, deleteShareEmailBatch, fetchEmailList } from '@/service/api/job';
 
-import KeySearch from './modules/key-search';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { useRoute, useRouter } from '~/packages/simple-router/src';
 import { shareMailColor, shareMailStatus, statusType } from '@/types/job';
 import { message } from 'antd';
@@ -14,6 +14,7 @@ export function Component() {
   const { switchToSpace } = useSpaceSwitch();
   const route = useRoute();
   const spaceId = useAppSelector(getSpaceId);
+  const [dateRange, setDateRange] = useState<any>(null);
   const { scrollConfig, tableWrapperRef } = useTableScroll();
   const { data, run, searchProps, tableProps } = useTable({
     apiFn: fetchEmailList as any,
@@ -210,37 +211,73 @@ export function Component() {
     }, 0);
   }, [tableProps.columns]);
 
+  const jobOptions = useMemo(() => {
+    return Object.entries(shareMailStatus).map(([key, value]) => ({
+      label: value,
+      value: key,
+    }));
+  }, [shareMailStatus]);
+
   return (
     <div className="h-full min-h-500px flex-col-stretch gap-8px p-6">
       {/* <PageTitle /> */}
       <div className="flex items-center gap-4">
-        <KeySearch {...searchProps} />
-        <div className="ml-auto flex items-center gap-3">
-          <AButton
-            type="primary"
-            onClick={searchProps.reset}
-          >
-            重置
-          </AButton>
-          <AButton
-            type="primary"
-            onClick={searchProps.search}
-          >
-            查询
-          </AButton>
-
-          <APopconfirm
-            title={t('common.confirmDelete')}
-            onConfirm={handleBatchDelete}
-          >
-            <AButton danger
-              icon={<DeleteOutlined />}
-              disabled={checkedRowKeys.length === 0}
-            >
-              批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
-            </AButton>
-          </APopconfirm>
+        <div className="flex-1 min-w-0">
+          <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }}>
+            <SearchFilterBar
+              searchSlot={
+                <AForm.Item className="m-0 flex-1 min-w-0" name="jobName">
+                  <AInput
+                    allowClear
+                    className="abi-field-input w-full"
+                    placeholder="请输入任务名称"
+                    prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+                    onPressEnter={() => searchProps.search()}
+                  />
+                </AForm.Item>
+              }
+              onQuery={() => searchProps.search()}
+              onReset={() => { searchProps.reset(); setDateRange(null); }}
+              filters={
+                <>
+                  <SearchFilterField label="任务状态">
+                    <AForm.Item className="m-0" name="status">
+                      <ASelect
+                        allowClear
+                        className="abi-field-input w-full"
+                        getPopupContainer={getFilterPopupContainer}
+                        options={jobOptions}
+                        placeholder="请选择任务状态"
+                      />
+                    </AForm.Item>
+                  </SearchFilterField>
+                  <SearchFilterField label="时间范围">
+                    <ADatePicker.RangePicker
+                      allowClear
+                      className="abi-field-input"
+                      format="YYYY-MM-DD"
+                      getPopupContainer={getFilterPopupContainer}
+                      placeholder={['开始时间', '结束时间']}
+                      value={dateRange}
+                      onChange={(dates) => setDateRange(dates)}
+                    />
+                  </SearchFilterField>
+                </>
+              }
+            />
+          </AForm>
         </div>
+        <APopconfirm
+          title={t('common.confirmDelete')}
+          onConfirm={handleBatchDelete}
+        >
+          <AButton danger
+            icon={<DeleteOutlined />}
+            disabled={checkedRowKeys.length === 0}
+          >
+            批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
+          </AButton>
+        </APopconfirm>
       </div>
       <div
         ref={tableWrapperRef}

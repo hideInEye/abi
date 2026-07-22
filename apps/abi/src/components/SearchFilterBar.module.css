@@ -1,0 +1,95 @@
+/* ============================================================
+ * 统一搜索栏 — 高级筛选按钮与面板样式
+ * 按钮风格参考图谱探索工具栏按钮（kggraph/index.module.css .toolbarBtn）
+ * ============================================================ */
+
+.filterBtn {
+  height: 35px !important;
+  padding: 0 14px !important;
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+  border: 1px solid rgba(91, 124, 247, 0.15) !important;
+  box-shadow:
+    0 4px 16px rgba(91, 124, 247, 0.1),
+    0 1px 4px rgba(0, 0, 0, 0.04) !important;
+  color: #64748b !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all 0.25s ease !important;
+  flex-shrink: 0;
+}
+
+.filterBtn:hover {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(91, 124, 247, 0.3) !important;
+  color: #5b7cf7 !important;
+  box-shadow:
+    0 6px 20px rgba(91, 124, 247, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px);
+}
+
+/* 高级筛选按钮尾部箭头：面板开合时上下翻转 */
+.filterArrow {
+  margin-left: 2px;
+  font-size: 11px !important;
+  transition: transform 0.25s ease;
+}
+
+.filterArrowOpen {
+  transform: rotate(180deg);
+}
+
+/* ── 高级筛选面板 ── */
+.filterPanel {
+  width: 520px;
+  padding: 8px 4px;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  min-width: 0;
+}
+
+.resetBtn {
+  border: 1px solid rgba(91, 124, 247, 0.2) !important;
+  color: #64748b !important;
+  background: transparent !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
+}
+
+.resetBtn:hover {
+  border-color: rgba(91, 124, 247, 0.35) !important;
+  color: #5b7cf7 !important;
+}
+
+.queryBtn {
+  border: none !important;
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  padding: 8px 20px !important;
+  box-shadow: 0 4px 14px rgba(91, 124, 247, 0.25) !important;
+  transition: all 0.25s ease !important;
+}
+
+.queryBtn:hover {
+  background: linear-gradient(135deg, #4a6be0 0%, #5b7cf7 100%) !important;
+  box-shadow: 0 6px 20px rgba(91, 124, 247, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+.queryBtn :global(.anticon),
+.queryBtn :global(span) {
+  color: #fff !important;
+}

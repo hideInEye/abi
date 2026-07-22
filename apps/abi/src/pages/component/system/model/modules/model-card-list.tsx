@@ -6,6 +6,7 @@ import { useAppSelector } from '@/hooks/business/useStore'
 import { getSpaceId } from '@/store/slice/app'
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 import './model-card-list.css'
 
 interface ModelItem {
@@ -281,24 +282,26 @@ const ModelCardList: FC<Props> = ({
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* v5 Search Bar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            value={searchValue}
-            placeholder="搜索模型名称或基础模型"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            allowClear
-            className="abi-field-input"
-            style={{ width: '220px' }}
-            onChange={e => onSearchValueChange(e.target.value)}
-            onPressEnter={() => onSearchValueChange(searchValue)}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={() => onSearchValueChange(searchValue)}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={() => { onSearchValueChange(''); setDateRange(null); }}>
-            重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="搜索模型名称或基础模型"
+          searchValue={searchValue}
+          onQuery={() => onSearchValueChange(searchValue)}
+          onReset={() => { onSearchValueChange(''); setDateRange(null); }}
+          onSearchChange={onSearchValueChange}
+          filters={
+            <SearchFilterField label="时间范围">
+              <ADatePicker.RangePicker
+                allowClear
+                className="abi-field-input"
+                format="YYYY-MM-DD"
+                getPopupContainer={getFilterPopupContainer}
+                placeholder={['开始时间', '结束时间']}
+                value={dateRange}
+                onChange={(dates) => setDateRange(dates as [any, any] | null)}
+              />
+            </SearchFilterField>
+          }
+        />
       </section>
 
       {/* v5 Data Area */}

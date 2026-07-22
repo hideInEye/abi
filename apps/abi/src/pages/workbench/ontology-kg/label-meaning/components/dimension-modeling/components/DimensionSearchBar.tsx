@@ -1,5 +1,6 @@
-import { SearchOutlined } from '@ant-design/icons'
-import React from 'react'
+import React, { useState } from 'react'
+
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 
 import type { DimensionSearchParams } from '../types/dimensionModeling.types'
 
@@ -16,25 +17,35 @@ export const DimensionSearchBar: React.FC<Props> = ({
   onSearchChange,
   searchParams
 }) => {
+  const [dateRange, setDateRange] = useState<any>(null)
+
+  const handleReset = () => {
+    setDateRange(null)
+    onReset()
+  }
+
   return (
     <section className="abi-searchbar">
-      <div className="abi-search-row">
-        <AInput
-          allowClear
-          className="abi-field-input w-260px"
-          placeholder="检索维度名称"
-          prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-          value={searchParams.keyword}
-          onChange={e => onSearchChange({ keyword: e.target.value })}
-          onPressEnter={onQuery}
-        />
-        <AButton type="primary" className="btn-accent-gradient" onClick={onQuery}>
-          <SearchOutlined /> 查询
-        </AButton>
-        <AButton className="btn-ghost-v5" onClick={onReset}>
-          重置
-        </AButton>
-      </div>
+      <SearchFilterBar
+        searchPlaceholder="检索维度名称"
+        searchValue={searchParams.keyword}
+        onQuery={onQuery}
+        onReset={handleReset}
+        onSearchChange={(value) => onSearchChange({ keyword: value })}
+        filters={
+          <SearchFilterField label="时间范围">
+            <ADatePicker.RangePicker
+              allowClear
+              className="abi-field-input"
+              format="YYYY-MM-DD"
+              getPopupContainer={getFilterPopupContainer}
+              placeholder={['开始时间', '结束时间']}
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates)}
+            />
+          </SearchFilterField>
+        }
+      />
     </section>
   )
 }

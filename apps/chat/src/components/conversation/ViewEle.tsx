@@ -1805,7 +1805,18 @@ const ViewEle: React.FC<PropsType> = ({
                           <div
                             key={question}
                             className="recommend-question-item"
-                            onClick={() => getAnswer!({ question })}
+                            onClick={() => {
+                              // 点击推荐问题时带上当前回答内嵌的数据语义/分组，
+                              // 否则新一轮的 human 消息与请求都会丢失语义信息
+                              getAnswer!({
+                                question,
+                                _meta: {
+                                  groupName: chartData?.semantic_group_name || '',
+                                  semanticName: chartData?.semantic_name || '',
+                                  semanticSchemaId: chartData?.semantic_id,
+                                },
+                              });
+                            }}
                           >
                             <span className="recommend-question-text">{question}</span>
                             <ArrowRightOutlined className="recommend-question-arrow" />
@@ -1832,7 +1843,16 @@ const ViewEle: React.FC<PropsType> = ({
                                   key={question}
                                   className="recommend-question-item"
                                   onClick={() => {
-                                    getAnswer!({ question });
+                                    // 携带当前回答内嵌的数据语义/分组；改写推荐这条 chartData
+                                    // 仅含 recommendQuestions，无语义时字段为空，行为与原先一致
+                                    getAnswer!({
+                                      question,
+                                      _meta: {
+                                        groupName: chartData?.semantic_group_name || '',
+                                        semanticName: chartData?.semantic_name || '',
+                                        semanticSchemaId: chartData?.semantic_id,
+                                      },
+                                    });
                                   }}
                                 >
                                   <span className="recommend-question-text">{question}</span>

@@ -6,6 +6,7 @@ import type { Dayjs } from 'dayjs'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 
 // import PageTitle from '@/components/stateless/common/PageTitle'
 import {
@@ -437,41 +438,47 @@ export function Component() {
       </div>
       {/* v5 Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder="请输入 Access Key"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            className="abi-field-input"
-            style={{ width: 200 }}
-            onChange={(e) => queryForm.setFieldValue('accessKey', e.target.value)}
-            onPressEnter={handleSearch}
-          />
-          <ASelect
-            allowClear
-            placeholder="状态"
-            className="abi-field-input"
-            style={{ width: 120 }}
-            options={[
-              { label: '正常', value: 'normal' },
-              { label: '停用', value: 'disabled' }
-            ]}
-            onChange={(v) => queryForm.setFieldValue('status', v)}
-          />
-          <ADatePicker.RangePicker
-            allowClear
-            format="YYYY-MM-DD"
-            placeholder={['开始时间', '结束时间']}
-            className="abi-field-input"
-            onChange={(dates) => queryForm.setFieldValue('createTimeRange', dates)}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleResetSearch}>
-            <ReloadOutlined /> 重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchSlot={
+            <AInput
+              allowClear
+              className="abi-field-input flex-1 min-w-0"
+              placeholder="请输入 Access Key"
+              prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+              onChange={(e) => queryForm.setFieldValue('accessKey', e.target.value)}
+              onPressEnter={handleSearch}
+            />
+          }
+          onQuery={handleSearch}
+          onReset={handleResetSearch}
+          filters={
+            <>
+              <SearchFilterField label="状态">
+                <ASelect
+                  allowClear
+                  className="abi-field-input w-full"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder="状态"
+                  options={[
+                    { label: '正常', value: 'normal' },
+                    { label: '停用', value: 'disabled' }
+                  ]}
+                  onChange={(v) => queryForm.setFieldValue('status', v)}
+                />
+              </SearchFilterField>
+              <SearchFilterField label="时间范围">
+                <ADatePicker.RangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  onChange={(dates) => queryForm.setFieldValue('createTimeRange', dates)}
+                />
+              </SearchFilterField>
+            </>
+          }
+        />
       </section>
 
       {/* v5 Data Area */}

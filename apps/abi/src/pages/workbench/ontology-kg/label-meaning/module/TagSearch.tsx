@@ -1,5 +1,6 @@
-import { SearchOutlined } from '@ant-design/icons';
-import React from 'react';
+import React, { useState } from 'react';
+
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 
 interface SearchInputProps {
   readonly onSearch: (value: string) => void;
@@ -7,25 +8,41 @@ interface SearchInputProps {
 
 export const TagSearch: React.FC<SearchInputProps> = ({ onSearch }) => {
   const [searchValue, setSearchValue] = useState('');
+  const [dateRange, setDateRange] = useState<any>(null);
 
   const handleSearch = (value: string) => {
     setSearchValue(value);
     onSearch(value);
   };
 
+  const handleReset = () => {
+    setSearchValue('');
+    setDateRange(null);
+    onSearch('');
+  };
+
   return (
     <section className="abi-searchbar">
-      <div className="abi-search-row">
-        <AInput
-          allowClear
-          className="abi-field-input"
-          placeholder="请输入标签语义检索"
-          prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-          value={searchValue}
-          onChange={e => handleSearch(e.target.value)}
-          style={{ width: '16rem' }}
-        />
-      </div>
+      <SearchFilterBar
+        searchPlaceholder="请输入标签语义检索"
+        searchValue={searchValue}
+        onQuery={() => onSearch(searchValue)}
+        onReset={handleReset}
+        onSearchChange={handleSearch}
+        filters={
+          <SearchFilterField label="时间范围">
+            <ADatePicker.RangePicker
+              allowClear
+              className="abi-field-input"
+              format="YYYY-MM-DD"
+              getPopupContainer={getFilterPopupContainer}
+              placeholder={['开始时间', '结束时间']}
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates)}
+            />
+          </SearchFilterField>
+        }
+      />
     </section>
   );
 };

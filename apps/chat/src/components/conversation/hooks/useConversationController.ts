@@ -322,6 +322,10 @@ export const useConversationController = (
   const isRequesting = useRef(false)
   const messageRef = useRef('')
   const isReasoningRef = useRef(false)
+  // 标记当前 <think> 是否由流式 reasoning_content 开启（归因分析等模式）。
+  // 仅当思考流由 reasoning_content 驱动时，reasoning 变为 null 才意味着思考结束、需闭合 </think>；
+  // 若 <think> 由 content 内联的 ## 1 思考过程标记开启（reasoning_content 恒为 null），则不能因 null 提前闭合。
+  const reasoningFromStreamRef = useRef(false)
   // 记录上一次已追加的完整 content，用于过滤后端重复发送的固定前缀
   const lastContentRef = useRef('')
   const groupCountRef = useRef(0)
@@ -1056,6 +1060,7 @@ export const useConversationController = (
     isRequesting.current = true
     messageRef.current = ''
     isReasoningRef.current = false
+    reasoningFromStreamRef.current = false
     lastContentRef.current = ''
     startTimeRef.current = startTime
     isMessageAdded.current = false
@@ -1115,6 +1120,7 @@ export const useConversationController = (
               if (isReasoningRef.current) {
                 messageRef.current += '</think>'
                 isReasoningRef.current = false
+                reasoningFromStreamRef.current = false
               }
 
               const endTime = performance.now()
@@ -1204,6 +1210,12 @@ export const useConversationController = (
             let chunk = event.data
             try {
               const parsed = JSON.parse(event.data)
+              // 意图澄清等业务事件本身是一段完整 JSON，并非 OpenAI 流式增量格式，
+              // 若走 delta 提取会因 chunkText 为空而提前 return，导致澄清组件无法展示。
+              // 这里保留原始数据并跳过 delta 提取，交由后续 intent_clarify 逻辑处理。
+              if (parsed && typeof parsed === 'object' && parsed.agent_label) {
+                chunk = event.data
+              } else {
               const delta = parsed?.choices?.[0]?.delta
               let chunkText = ''
 
@@ -1219,6 +1231,7 @@ export const useConversationController = (
                   if (!isReasoningRef.current) {
                     chunkText += '<think>'
                     isReasoningRef.current = true
+                    reasoningFromStreamRef.current = true
                   }
                   chunkText += reasoning
                 }
@@ -1234,9 +1247,12 @@ export const useConversationController = (
               } else {
                 // reasoning_content 为 null 或不存在
                 // 归因分析等模式：思考流（reasoning_content）在此切换为 null，先闭合 <think>
-                if (reasoning === null && isReasoningRef.current) {
+                // 仅当 <think> 由 reasoning_content 流开启时，reasoning 变为 null 才代表思考结束需闭合；
+                // 内联 ## 思考过程模式下 reasoning_content 恒为 null，不能据此提前闭合（否则思考正文会被冻结在首个 chunk）。
+                if (reasoning === null && isReasoningRef.current && reasoningFromStreamRef.current) {
                   chunkText += '</think>'
                   isReasoningRef.current = false
+                  reasoningFromStreamRef.current = false
                   lastContentRef.current = ''
                 }
 
@@ -1271,6 +1287,7 @@ export const useConversationController = (
                   return
                 }
                 chunk = chunkText
+              }
               }
             } catch {
               // 非 JSON 格式，直接使用原始 event.data（兼容旧格式）

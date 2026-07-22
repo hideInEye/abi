@@ -528,7 +528,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
           width={380}
           onClose={exitBatchMode}
           closable={false}
-          maskClosable={false}
+          maskClosable={true}
           styles={{
             content: { background: '#FBFCFF' },
             body: { padding: 0, display: 'flex', flexDirection: 'column', background: '#FBFCFF' },

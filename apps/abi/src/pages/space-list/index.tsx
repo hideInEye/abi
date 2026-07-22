@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
 import { $t } from '@/locales';
 import { deleteSpace, spaceList } from '@/service/api/data-space';
@@ -51,6 +52,7 @@ export function Component() {
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
   const [searchValue, setSearchValue] = useState('');
+  const [dateRange, setDateRange] = useState<any>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editSpace, setEditSpace] = useState<ISpaceItem | null>(null);
@@ -117,6 +119,7 @@ export function Component() {
 
   const handleReset = useCallback(() => {
     setSearchValue('');
+    setDateRange(null);
     setPageNum(1);
     fetchSpaceData({
       isAsc: 'desc',
@@ -439,24 +442,26 @@ export function Component() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder="请输入空间名称"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onPressEnter={handleSearch}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleReset}>
-            <ReloadOutlined /> 重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入空间名称"
+          searchValue={searchValue}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={setSearchValue}
+          filters={
+            <SearchFilterField label="时间范围">
+              <ADatePicker.RangePicker
+                allowClear
+                className="abi-field-input"
+                format="YYYY-MM-DD"
+                getPopupContainer={getFilterPopupContainer}
+                placeholder={['开始时间', '结束时间']}
+                value={dateRange}
+                onChange={(dates) => setDateRange(dates)}
+              />
+            </SearchFilterField>
+          }
+        />
       </section>
 
       {/* Data Area */}

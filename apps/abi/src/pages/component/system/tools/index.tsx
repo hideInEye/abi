@@ -28,6 +28,7 @@ import { getSpaceId } from '@/store/slice/app'
 import { useAppSelector } from '@/hooks/business/useStore'
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 import { createToolApi, deleteToolApi, getToolDetailApi, queryToolListApi, updateToolApi } from '@/service/api/tool'
 
 /** Monaco 代码编辑器适配 Form.Item value/onChange */
@@ -560,53 +561,47 @@ export function Component() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* v5 Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <Input
-            allowClear
-            placeholder="请输入工具名称或标签"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onPressEnter={() => setCurrentPage(1)}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <Select
-            style={{ width: 120 }}
-            placeholder="状态"
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v)}
-            className="abi-field-input"
-            options={[
-              { value: 'ALL', label: '全部' },
-              { value: '0', label: '启用' },
-              { value: '1', label: '禁用' },
-            ]}
-          />
-          <ADatePicker.RangePicker
-            showTime={{ format: 'HH:mm:ss' }}
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder={['开始时间', '结束时间']}
-            value={dateRange}
-            onChange={(dates) => setDateRange(dates)}
-            className="abi-field-input"
-            style={{ width: '380px' }}
-          />
-          <Button type="primary" className="btn-accent-gradient" onClick={() => setCurrentPage(1)}>
-            <SearchOutlined /> 查询
-          </Button>
-          <Button
-            className="btn-ghost-v5"
-            onClick={() => {
-              setKeyword('')
-              setStatusFilter('ALL')
-              setCurrentPage(1)
-              setDateRange(null)
-            }}
-          >
-            <ReloadOutlined /> 重置
-          </Button>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入工具名称或标签"
+          searchValue={keyword}
+          onQuery={() => setCurrentPage(1)}
+          onReset={() => {
+            setKeyword('')
+            setStatusFilter('ALL')
+            setCurrentPage(1)
+            setDateRange(null)
+          }}
+          onSearchChange={setKeyword}
+          filters={
+            <>
+              <SearchFilterField label="状态">
+                <Select
+                  className="abi-field-input w-full"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder="状态"
+                  value={statusFilter}
+                  onChange={(v) => setStatusFilter(v)}
+                  options={[
+                    { value: 'ALL', label: '全部' },
+                    { value: '0', label: '启用' },
+                    { value: '1', label: '禁用' },
+                  ]}
+                />
+              </SearchFilterField>
+              <SearchFilterField label="时间范围">
+                <ADatePicker.RangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates)}
+                />
+              </SearchFilterField>
+            </>
+          }
+        />
       </section>
 
       {/* v5 Data Area */}

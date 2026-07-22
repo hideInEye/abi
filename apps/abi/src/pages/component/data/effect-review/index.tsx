@@ -13,6 +13,7 @@ import { Suspense, lazy, useMemo, useState } from 'react'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 import { EVAL_LLM_OPTIONS, MEMORY_CHAT_MODE_OPTIONS, MEMORY_STATUS_OPTIONS } from '@/constants/assistant-config'
 import { useAppSelector } from '@/hooks/business/useStore'
 import {
@@ -49,6 +50,7 @@ export function Component() {
   const spaceId = useAppSelector(getSpaceId)
   const [modelEvalLoading, setModelEvalLoading] = useState(false)
   const [jumpValue, setJumpValue] = useState('')
+  const [dateRange, setDateRange] = useState<[any, any] | null>(null)
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS)
 
   const isWenShuScene = (chatMode: string) => chatMode === 'chat_with_db_execute'
@@ -391,6 +393,7 @@ export function Component() {
 
   const handleReset = () => {
     searchProps.form.resetFields()
+    setDateRange(null)
     run()
   }
 
@@ -466,27 +469,60 @@ export function Component() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <AForm form={searchProps.form as any} layout="inline">
+      <AForm form={searchProps.form as any} layout="inline" style={{ display: 'contents' }}>
         <section className="abi-searchbar">
-          <div className="abi-search-row">
-            <AForm.Item name="question" className="!mb-0">
-              <AInput allowClear className="abi-field-input" placeholder="请输入问题" style={{ width: 200 }} />
-            </AForm.Item>
-            <AForm.Item name="chat_mode" className="!mb-0">
-              <ASelect allowClear className="abi-field-input" options={MEMORY_CHAT_MODE_OPTIONS} placeholder="场景类型" style={{ width: 140 }} />
-            </AForm.Item>
-            <AForm.Item name="status" className="!mb-0">
-              <ASelect allowClear className="abi-field-input" options={MEMORY_STATUS_OPTIONS} placeholder="审核状态" style={{ width: 140 }} />
-            </AForm.Item>
-            <div className="abi-toolbar-left" style={{ marginLeft: 'auto' }}>
-              <AButton className="btn-accent-gradient" type="primary" onClick={handleSearch}>
-                <SearchOutlined /> {t('common.search')}
-              </AButton>
-              <AButton className="btn-ghost-v5" onClick={handleReset}>
-                <ReloadOutlined /> {t('common.reset')}
-              </AButton>
-            </div>
-          </div>
+          <SearchFilterBar
+            searchSlot={
+              <AForm.Item name="question" className="m-0 flex-1 min-w-0">
+                <AInput
+                  allowClear
+                  className="abi-field-input w-full"
+                  placeholder="请输入问题"
+                  prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+                  onPressEnter={handleSearch}
+                />
+              </AForm.Item>
+            }
+            onQuery={handleSearch}
+            onReset={handleReset}
+            filters={
+              <>
+                <SearchFilterField label="场景类型">
+                  <AForm.Item name="chat_mode" className="m-0">
+                    <ASelect
+                      allowClear
+                      className="abi-field-input w-full"
+                      getPopupContainer={getFilterPopupContainer}
+                      options={MEMORY_CHAT_MODE_OPTIONS}
+                      placeholder="场景类型"
+                    />
+                  </AForm.Item>
+                </SearchFilterField>
+                <SearchFilterField label="审核状态">
+                  <AForm.Item name="status" className="m-0">
+                    <ASelect
+                      allowClear
+                      className="abi-field-input w-full"
+                      getPopupContainer={getFilterPopupContainer}
+                      options={MEMORY_STATUS_OPTIONS}
+                      placeholder="审核状态"
+                    />
+                  </AForm.Item>
+                </SearchFilterField>
+                <SearchFilterField label="时间范围">
+                  <ADatePicker.RangePicker
+                    allowClear
+                    className="abi-field-input"
+                    format="YYYY-MM-DD"
+                    getPopupContainer={getFilterPopupContainer}
+                    placeholder={['开始时间', '结束时间']}
+                    value={dateRange}
+                    onChange={(dates) => setDateRange(dates as [any, any] | null)}
+                  />
+                </SearchFilterField>
+              </>
+            }
+          />
         </section>
       </AForm>
 
