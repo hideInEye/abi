@@ -1,16 +1,16 @@
 import { DeleteOutlined, DownOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Dropdown, Empty, Typography, message } from 'antd';
 
-import { JOB_GROUP_OPTIONS } from '@/constants/job';
+import { JOB_GROUP_OPTIONS, RUN_STATUS_OPTIONS } from '@/constants/job';
 import { cleanJobLog, deleteJobLog, exportJobLog, fetchJobDetail, fetchJobLogList } from '@/service/api/job';
 import { useRoute } from '~/packages/simple-router/src';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 
 import JobLogDetailDrawer from './modules/job-log-detail-drawer';
-import KeySearch from './modules/key-search';
 
 export function Component() {
   const { t } = useTranslation();
@@ -248,15 +248,47 @@ export function Component() {
       {/* v5 Searchbar */}
       <section className="abi-searchbar">
         <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }}>
-          <div className="abi-search-row">
-            <KeySearch {...searchProps} />
-            <AButton type="primary" className="btn-accent-gradient" onClick={() => searchProps.search()}>
-              <SearchOutlined /> 查询
-            </AButton>
-            <AButton className="btn-ghost-v5" onClick={() => { searchProps.reset(); }}>
-              重置
-            </AButton>
-          </div>
+          <SearchFilterBar
+            searchSlot={
+              <AForm.Item className="m-0 flex-1 min-w-0" name="jobName">
+                <AInput
+                  allowClear
+                  className="abi-field-input w-full"
+                  placeholder="请输入任务名称"
+                  prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+                  onPressEnter={() => searchProps.search()}
+                />
+              </AForm.Item>
+            }
+            onQuery={() => searchProps.search()}
+            onReset={() => searchProps.reset()}
+            filters={
+              <>
+                <SearchFilterField label="任务执行时间">
+                  <AForm.Item className="m-0" name="lastSendTime">
+                    <ADatePicker.RangePicker
+                      allowClear
+                      className="abi-field-input"
+                      format="YYYY-MM-DD"
+                      getPopupContainer={getFilterPopupContainer}
+                      placeholder={['开始时间', '结束时间']}
+                    />
+                  </AForm.Item>
+                </SearchFilterField>
+                <SearchFilterField label="执行状态">
+                  <AForm.Item className="m-0" name="status">
+                    <ASelect
+                      allowClear
+                      className="abi-field-input w-full"
+                      getPopupContainer={getFilterPopupContainer}
+                      options={RUN_STATUS_OPTIONS}
+                      placeholder="请选择执行状态"
+                    />
+                  </AForm.Item>
+                </SearchFilterField>
+              </>
+            }
+          />
         </AForm>
       </section>
 

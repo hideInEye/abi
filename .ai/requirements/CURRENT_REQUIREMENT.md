@@ -215,3 +215,33 @@
 - 点击横杠或预览项平滑定位到对应用户消息。
 - 上下滚动时当前横杠/预览项高亮实时跟随。
 - 批量删除、重新生成版本切换、发送后自动滚底等既有行为不受影响。
+
+## 2026-07-22 追加：ABI 列表页搜索栏统一为「输入框 + 高级筛选」
+
+### 需求类型
+
+前端 UI 统一重构（纯前端，不改接口协议）。
+
+### 背景
+
+用户要求将 ABI 应用中「主页更多空间、工作台、组件」下所有列表页的搜索栏统一为：搜索输入框占满一行自适应 + 右侧「高级筛选」按钮（风格参考图谱探索工具栏按钮，但增加文字）。除搜索输入框外的其他筛选项（下拉、时间范围）全部收进高级筛选弹出面板，面板内一行两个筛选项，底部为重置/查询按钮（参考图谱探索的高级搜索面板）。开始时间/结束时间独立选择改为单个时间范围 RangePicker（日期精确到天，弹出双日历面板，不再出现时间列）。
+
+### 目标
+
+- 新增共享组件 `SearchFilterBar`（搜索行 + 高级筛选 Popover 面板）。
+- 改造页面：space-list、app-workshop(my-collect/my-share/recently-used)、assistant-config、data-collection、data-source、data-table-meaning、job(time/log/email)、ontology-kg(relation/entity/technical-jargon/recommended-inquiries/label-meaning 两个搜索栏)、component(api-key/data-dictionary/effect-review/model/plugin/skills/tools)。
+- 时间范围统一为 `RangePicker`（format YYYY-MM-DD，无 showTime）；对需要提交时间的接口按 startOf('day')/endOf('day') 映射，保持查询语义。
+
+### 非目标
+
+- 不改造大屏（screen-manage）与本体网络图谱探索（kggraph）。
+- 不修改 manage/、space/ 等门户管理页面。
+- 不修改后端接口、查询参数含义、表格/分页逻辑。
+- 不改造抽屉/弹窗内部的次级搜索。
+
+### 验收标准
+
+- 各页面搜索行为一行：输入框自适应占满剩余宽度 + 高级筛选按钮（漏斗图标+文字）。
+- 高级筛选面板筛选项一行两个，底部重置/查询，交互与原查询/重置一致。
+- 时间范围为单控件双日历，精确到天。
+- 类型检查/构建不引入新错误。

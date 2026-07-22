@@ -21,6 +21,7 @@ import {
   updateDataSource,
 } from "@/service/api";
 import MetadataAnalysisDrawer from "@/components/metadata-analysis/MetadataAnalysisDrawer";
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import type { MetadataAnalysisContext } from "@/components/metadata-analysis/types";
 import { ViewControls } from "@/components/ViewControls";
 import type { ColumnOption } from "@/components/ViewControls";
@@ -377,8 +378,8 @@ export function Component() {
 
   const handleSearch = () => {
     const keyword = searchValue.trim();
-    const startTime = dateRange?.[0]?.format ? dateRange[0].format('YYYY-MM-DD HH:mm:ss') : undefined;
-    const endTime = dateRange?.[1]?.format ? dateRange[1].format('YYYY-MM-DD HH:mm:ss') : undefined;
+    const startTime = dateRange?.[0]?.startOf ? dateRange[0].startOf('day').format('YYYY-MM-DD HH:mm:ss') : undefined;
+    const endTime = dateRange?.[1]?.endOf ? dateRange[1].endOf('day').format('YYYY-MM-DD HH:mm:ss') : undefined;
     updateSearchParams({
       pageNum: 1,
       sourceName: keyword ? keyword : undefined,
@@ -570,33 +571,26 @@ export function Component() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder="请输入数据源名称"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onPressEnter={handleSearch}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <ADatePicker.RangePicker
-            showTime={{ format: 'HH:mm:ss' }}
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder={['开始时间', '结束时间']}
-            value={dateRange}
-            onChange={(dates) => setDateRange(dates)}
-            className="abi-field-input"
-            style={{ width: '380px' }}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleReset}>
-            <ReloadOutlined /> 重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入数据源名称"
+          searchValue={searchValue}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={setSearchValue}
+          filters={
+            <SearchFilterField label="时间范围">
+              <ADatePicker.RangePicker
+                allowClear
+                className="abi-field-input"
+                format="YYYY-MM-DD"
+                getPopupContainer={getFilterPopupContainer}
+                placeholder={['开始时间', '结束时间']}
+                value={dateRange}
+                onChange={(dates) => setDateRange(dates)}
+              />
+            </SearchFilterField>
+          }
+        />
       </section>
 
       {/* Data Area */}

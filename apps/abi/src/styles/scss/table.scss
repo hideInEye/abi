@@ -1030,6 +1030,15 @@
   flex-wrap: nowrap;
 }
 
+// 当搜索输入框由 Form.Item 承载（inline 表单）时，强制其占满一行自适应，
+// 覆盖 antd `.ant-form-inline .ant-form-item` 默认不拉伸的行为。
+.abi-search-row > .ant-form-item {
+  flex: 1 1 0%;
+  min-width: 0;
+  margin-inline-end: 0;
+  margin-bottom: 0;
+}
+
 // ── 数据区域 v5 layout ──
 .abi-data-area {
   flex: 1;

@@ -1,6 +1,7 @@
 import { DeleteOutlined, SearchOutlined } from "@ant-design/icons";
 import React, { useEffect, useState } from "react";
 
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import {
   deleteOperateRecord,
   getOperateRecordList,
@@ -27,6 +28,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   const [pageSize, setPageSize] = useState(10);
   const [jumpValue, setJumpValue] = useState('');
   const [searchValue, setSearchValue] = useState("");
+  const [dateRange, setDateRange] = useState<any>(null);
 
   async function getRecordList(key?: string) {
     const data = await getOperateRecordList('3', {
@@ -43,6 +45,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
 
   const handleReset = () => {
     setSearchValue('');
+    setDateRange(null);
     setCurrentPage(1);
     getRecordList();
   };
@@ -148,24 +151,26 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder="请输入对话名称"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onPressEnter={handleSearch}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleReset}>
-            重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入对话名称"
+          searchValue={searchValue}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={setSearchValue}
+          filters={
+            <SearchFilterField label="时间范围">
+              <ADatePicker.RangePicker
+                allowClear
+                className="abi-field-input"
+                format="YYYY-MM-DD"
+                getPopupContainer={getFilterPopupContainer}
+                placeholder={['开始时间', '结束时间']}
+                value={dateRange}
+                onChange={(dates) => setDateRange(dates)}
+              />
+            </SearchFilterField>
+          }
+        />
       </section>
 
       {/* Data Area */}

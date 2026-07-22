@@ -115,13 +115,17 @@
 /* ── 推荐问题 ── */
 .recommend-questions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: flex-end;
   gap: 12px;
   margin-top: 8px;
+  /* 推荐问题/按钮与页面底边预留间距，避免紧贴底部 */
+  margin-bottom: 24px;
 }
 
 .recommend-questions-list {
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
@@ -160,17 +164,45 @@
 
 .recommend-questions-footer {
   display: flex;
+  flex-shrink: 0;
   justify-content: flex-end;
 }
 
+/* 「换一批」按钮：参考主页「更多空间」按钮的胶囊样式与 hover 效果 */
 .recommend-change-batch {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 7px 16px;
+  border: 1px solid rgba(91, 124, 247, 0.18);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(248, 250, 253, 0.55));
+  backdrop-filter: blur(12px);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   color: #5b7cf7;
+  white-space: nowrap;
   cursor: pointer;
+  user-select: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .recommend-change-batch:hover {
-  opacity: 0.85;
+  border-color: rgba(91, 124, 247, 0.35);
+  box-shadow: 0 4px 18px rgba(91, 124, 247, 0.12), 0 0 0 3px rgba(91, 124, 247, 0.06);
+  transform: translateY(-1px);
+  color: #8b5cf6;
+}
+
+.recommend-change-batch:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.recommend-change-batch .anticon {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recommend-change-batch:hover .anticon {
+  transform: rotate(180deg);
 }
