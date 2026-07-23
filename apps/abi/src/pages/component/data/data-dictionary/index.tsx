@@ -1,10 +1,11 @@
 import { DeleteOutlined, MoreOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dropdown, message, Modal, Splitter } from 'antd';
 
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 
 import { DictionaryGroup } from './components/DictionaryGroup';
 import { DictionaryModal } from './components/DictionaryModal';
@@ -73,6 +74,24 @@ export const Component: React.FC = () => {
     });
   };
 
+  // 前端按创建时间过滤 + 前端分页（hook 已全量加载）
+  const PAGE_SIZE = 10;
+  const filteredRows = useMemo(
+    () => filterByCreateTime((dictionaryDataSource.rows as any[]) || [], dateRange, 'createTime'),
+    [dictionaryDataSource.rows, dateRange],
+  );
+  const pagedDataSource = useMemo(
+    () => ({
+      ...dictionaryDataSource,
+      rows: filteredRows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE),
+      total: filteredRows.length,
+    }),
+    [dictionaryDataSource, filteredRows, current],
+  );
+  useEffect(() => {
+    setCurrent(1);
+  }, [dateRange]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <Splitter style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -139,7 +158,7 @@ export const Component: React.FC = () => {
               {viewMode === 'list' ? (
                 <TableDictionary
                   current={current}
-                  dataSource={dictionaryDataSource}
+                  dataSource={pagedDataSource}
                   onDelete={handleDelete}
                   onDiff={openEnumDrawer}
                   onEdit={handleEdit}
@@ -150,12 +169,12 @@ export const Component: React.FC = () => {
                 />
               ) : (
                 <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-                  {dictionaryDataSource.rows.length === 0 ? (
+                  {filteredRows.length === 0 ? (
                     <div style={{ marginTop: 80, textAlign: 'center' }}><AEmpty description="暂无字典" /></div>
                   ) : (
                     <div className="abi-card-grid">
                       <div className="abi-card-grid-inner">
-                        {dictionaryDataSource.rows.map((record: any) => (
+                        {filteredRows.map((record: any) => (
                           <div key={record.dictId} className="abi-data-card" style={{ position: 'relative' }}>
                             <div className="abi-data-card-head">
                               <div className="abi-data-card-title">
