@@ -401,16 +401,6 @@ export function Component() {
           onSearchChange={setKeyword}
           filters={
             <>
-              <SearchFilterField label="状态">
-                <Select
-                  className="abi-field-input w-full"
-                  getPopupContainer={getFilterPopupContainer}
-                  options={statusOptions}
-                  placeholder="状态"
-                  value={statusFilter}
-                  onChange={v => setStatusFilter(v)}
-                />
-              </SearchFilterField>
               <SearchFilterField label="时间范围">
                 <ADatePicker.RangePicker
                   allowClear
@@ -420,6 +410,16 @@ export function Component() {
                   placeholder={['开始时间', '结束时间']}
                   value={dateRange}
                   onChange={(dates) => setDateRange(dates)}
+                />
+              </SearchFilterField>
+              <SearchFilterField label="状态">
+                <Select
+                  className="abi-field-input w-full"
+                  getPopupContainer={getFilterPopupContainer}
+                  options={statusOptions}
+                  placeholder="状态"
+                  value={statusFilter}
+                  onChange={v => setStatusFilter(v)}
                 />
               </SearchFilterField>
             </>

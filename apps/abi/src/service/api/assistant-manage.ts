@@ -160,6 +160,19 @@ export function fetchDeleteMemory(fbId: string | number) {
   });
 }
 
+/**
+ * 效果评审 - 批量删除（batchDelete）
+ * 后端在批量删除反馈记录的同时会清理关联的向量数据
+ * @param fbIds 反馈记录 id 数组
+ */
+export function fetchBatchDeleteMemory(fbIds: (string | number)[]) {
+  return apiRequest<any>({
+    data: { fbIds },
+    method: 'post',
+    url: `${FEEDBACK_BASE}/batchDelete`
+  });
+}
+
 /** 效果评审 - 模型评估（沿用原后端接口，不走新 abi-chat 后端） */
 export function fetchModelEval(data?: any) {
   return apiRequest<any>({

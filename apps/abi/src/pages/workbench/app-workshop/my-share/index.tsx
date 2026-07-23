@@ -1,7 +1,8 @@
 import { DeleteOutlined, SearchOutlined } from "@ant-design/icons";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 import {
   deleteOperateRecord,
   getOperateRecordList,
@@ -95,21 +96,27 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     },
   ];
 
-  // Pagination
-  const totalCount = dataSource.total || 0;
+  // 前端按分享时间过滤 + 前端分页（apiFn 返回全量数据）
+  const filteredRows = useMemo(
+    () => filterByCreateTime((dataSource.rows as any[]) || [], dateRange, 'sharedTime'),
+    [dataSource.rows, dateRange]
+  );
+  const totalCount = filteredRows.length;
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
+  const pagedRows = useMemo(
+    () => filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filteredRows, currentPage, pageSize]
+  );
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
-      getRecordList();
     }
   };
 
   const handlePageSizeChange = (value: number) => {
     setPageSize(value);
     setCurrentPage(1);
-    getRecordList();
   };
 
   const handleJump = () => {
@@ -166,7 +173,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
                 getPopupContainer={getFilterPopupContainer}
                 placeholder={['开始时间', '结束时间']}
                 value={dateRange}
-                onChange={(dates) => setDateRange(dates)}
+                onChange={(dates) => { setDateRange(dates); setCurrentPage(1); }}
               />
             </SearchFilterField>
           }
@@ -188,11 +195,11 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
             <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
               <ATable
                 columns={columns}
-                dataSource={dataSource.rows}
+                dataSource={pagedRows}
                 loading={false}
                 pagination={false}
                 rowKey="id"
-                scroll={dataSource.rows?.length > 0 ? { x: 'max-content' } : undefined}
+                scroll={pagedRows?.length > 0 ? { x: 'max-content' } : undefined}
                 size="middle"
                 className="abi-std-table"
               />

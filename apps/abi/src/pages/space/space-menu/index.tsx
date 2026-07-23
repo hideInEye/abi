@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, MinusOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons';
 import * as antdIcons from '@ant-design/icons';
 import { message } from 'antd';
 import { Suspense } from 'react';
@@ -12,6 +12,8 @@ import {
   updateSpaceMenuApi
 } from '@/service/api/space-menu';
 import { getLocalIcons } from '@/utils/icon';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterTreeByCreateTime } from '@/utils/date';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 
@@ -37,6 +39,7 @@ export function Component() {
   // Search state
   const [searchValue, setSearchValue] = useState('');
   const [statusValue, setStatusValue] = useState<string | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<any>(null);
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
 
   // Tree expand state
@@ -279,11 +282,17 @@ export function Component() {
   const handleReset = () => {
     setSearchValue('');
     setStatusValue(undefined);
+    setDateRange(null);
     updateSearchParams({
       menuName: '',
       status: ''
     } as any);
   };
+
+  const filteredData = useMemo(
+    () => filterTreeByCreateTime((tableProps.dataSource as any[]) || [], dateRange),
+    [tableProps.dataSource, dateRange]
+  );
 
   // Expand all rows when data loads
   useEffect(() => {
@@ -307,33 +316,38 @@ export function Component() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }} className="lt-sm:overflow-auto">
       {/* Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder={t('page.manage.menu.form.menuName')}
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onPressEnter={handleSearch}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <ASelect
-            allowClear
-            placeholder={t('page.manage.menu.form.menuStatus')}
-            options={statusOptions}
-            value={statusValue}
-            onChange={(val) => setStatusValue(val)}
-            className="abi-field-input"
-            style={{ width: '160px' }}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleReset}>
-            <ReloadOutlined /> 重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder={t('page.manage.menu.form.menuName')}
+          searchValue={searchValue}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={setSearchValue}
+          filters={
+            <>
+              <SearchFilterField label="创建时间">
+                <ADatePicker.RangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates)}
+                />
+              </SearchFilterField>
+              <SearchFilterField label={t('page.manage.menu.status')}>
+                <ASelect
+                  allowClear
+                  getPopupContainer={getFilterPopupContainer}
+                  options={statusOptions}
+                  placeholder={t('page.manage.menu.form.menuStatus')}
+                  value={statusValue}
+                  onChange={(val) => setStatusValue(val)}
+                />
+              </SearchFilterField>
+            </>
+          }
+        />
       </section>
 
       {/* Data Area */}
@@ -406,10 +420,9 @@ export function Component() {
                   },
                 }}
                 columns={filteredColumns as any}
-                dataSource={tableProps.dataSource}
+                dataSource={filteredData}
                 loading={tableProps.loading}
                 pagination={false}
-                rowKey="menuId"
                 rowSelection={rowSelection}
                 scroll={{ x: 'max-content' }}
                 size="middle"

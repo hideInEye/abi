@@ -245,3 +245,44 @@
 - 高级筛选面板筛选项一行两个，底部重置/查询，交互与原查询/重置一致。
 - 时间范围为单控件双日历，精确到天。
 - 类型检查/构建不引入新错误。
+
+## 2026-07-23 追加：搜索输入框停止输入自动查询（防抖，去回车）
+
+### 需求类型
+
+前端交互调整（纯前端，不改接口协议）。
+
+### 背景
+
+用户要求 ABI 项目所有搜索输入框改为：停止输入 2s 后自动发起查询接口，不再需要回车触发。
+
+### 目标
+
+- 共享搜索栏 `SearchFilterBar`（abi 与 dashboard 两份）默认输入框停止输入 2s 后自动查询。
+- 使用自定义 `searchSlot` 输入框的页面（api-key、job/email、job/time、job/log、effect-review、ontology-kg/entity）同样具备停止输入 2s 后自动查询。
+- 保留回车立即查询（并取消未触发的防抖定时器，避免重复请求）。
+- 清空输入框（allowClear 或删空）时立即查询，不等待 2s。
+- 高级筛选面板内的下拉/时间范围仍仅在点击「查询」时生效，不参与自动查询。
+
+### 非目标
+
+- 不修改查询接口、查询参数含义、分页与表格逻辑。
+- 不改造抽屉/弹窗内部次级搜索。
+- 不改造大屏图谱探索（kggraph）等未使用统一搜索栏的输入。
+
+### 影响范围
+
+- `apps/abi/src/components/SearchFilterBar.tsx`
+- `apps/dashboard/src/pages/home/project-list/SearchFilterBar.tsx`
+- `apps/abi/src/pages/component/applications/api-key/index.tsx`
+- `apps/abi/src/pages/workbench/job/{email,time,log}/index.tsx`
+- `apps/abi/src/pages/component/data/effect-review/index.tsx`
+- `apps/abi/src/pages/workbench/ontology-kg/entity/components/EntitySearch.tsx`
+- `.ai/runs/2026-07-23-search-input-debounce/`
+
+### 验收标准
+
+- 各搜索输入框停止输入约 2s 后自动发起查询，无需回车。
+- 回车仍可立即查询；清空输入框立即查询。
+- 高级筛选下拉/时间选择不触发自动查询，仍由「查询」按钮生效。
+- 类型检查不引入新错误（沿用仓库既有 pre-existing 报错）。

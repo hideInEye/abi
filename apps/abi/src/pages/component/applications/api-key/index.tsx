@@ -1,4 +1,5 @@
 import { DeleteOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { useDebounceFn } from 'ahooks'
 import { message, Modal } from 'antd'
 import copy from 'copy-to-clipboard'
 import dayjs from 'dayjs'
@@ -178,7 +179,7 @@ export function Component() {
   const [queryValues, setQueryValues] = useState<ApiKeyQueryValues>({
     spaceId: currentSpaceId || undefined
   })
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card')
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'businessSpace', label: '业务空间', visible: true },
     { key: 'clientId', label: 'Client ID', visible: true },
@@ -391,6 +392,9 @@ export function Component() {
     setCurrent(1)
   }
 
+  // 搜索框停止输入 1s 后自动查询
+  const { cancel: cancelDebouncedSearch, run: runDebouncedSearch } = useDebounceFn(() => { void handleSearch() }, { wait: 1000 })
+
   const handleResetSearch = () => {
     queryForm.resetFields()
     queryForm.setFieldValue('spaceId', currentSpaceId || undefined)
@@ -433,9 +437,6 @@ export function Component() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <div style={{ color: '#475569', padding: '12px 28px 0' }}>
-        用于管理业务空间下的客户端访问授权凭证，支持 AK/SK 生成、IP 访问限制和启停控制。
-      </div>
       {/* v5 Searchbar */}
       <section className="abi-searchbar">
         <SearchFilterBar
@@ -445,14 +446,33 @@ export function Component() {
               className="abi-field-input flex-1 min-w-0"
               placeholder="请输入 Access Key"
               prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-              onChange={(e) => queryForm.setFieldValue('accessKey', e.target.value)}
-              onPressEnter={handleSearch}
+              onChange={(e) => {
+                const value = e.target.value
+                queryForm.setFieldValue('accessKey', value)
+                if (value === '') {
+                  cancelDebouncedSearch()
+                  void handleSearch()
+                } else {
+                  runDebouncedSearch()
+                }
+              }}
+              onPressEnter={() => { cancelDebouncedSearch(); void handleSearch() }}
             />
           }
           onQuery={handleSearch}
           onReset={handleResetSearch}
           filters={
             <>
+              <SearchFilterField label="时间范围">
+                <ADatePicker.RangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  onChange={(dates) => queryForm.setFieldValue('createTimeRange', dates)}
+                />
+              </SearchFilterField>
               <SearchFilterField label="状态">
                 <ASelect
                   allowClear
@@ -464,16 +484,6 @@ export function Component() {
                     { label: '停用', value: 'disabled' }
                   ]}
                   onChange={(v) => queryForm.setFieldValue('status', v)}
-                />
-              </SearchFilterField>
-              <SearchFilterField label="时间范围">
-                <ADatePicker.RangePicker
-                  allowClear
-                  className="abi-field-input"
-                  format="YYYY-MM-DD"
-                  getPopupContainer={getFilterPopupContainer}
-                  placeholder={['开始时间', '结束时间']}
-                  onChange={(dates) => queryForm.setFieldValue('createTimeRange', dates)}
                 />
               </SearchFilterField>
             </>

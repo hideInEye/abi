@@ -6,17 +6,19 @@ import { INDICATOR_TYPE_FILTER_OPTIONS, STATUS_OPTIONS } from '../constants/metr
 import type { KnowledgeSearchParams } from '../types/metricModeling.types'
 
 interface Props {
+  readonly onDateRangeChange?: (range: any) => void
   readonly onQuery: () => void
   readonly onReset: () => void
   readonly onSearchChange: (value: Partial<KnowledgeSearchParams>) => void
   readonly searchParams: KnowledgeSearchParams
 }
 
-export const KnowledgeSearchBar: React.FC<Props> = ({ onQuery, onReset, onSearchChange, searchParams }) => {
+export const KnowledgeSearchBar: React.FC<Props> = ({ onDateRangeChange, onQuery, onReset, onSearchChange, searchParams }) => {
   const [dateRange, setDateRange] = useState<any>(null)
 
   const handleReset = () => {
     setDateRange(null)
+    onDateRangeChange?.(null)
     onReset()
   }
 
@@ -30,6 +32,17 @@ export const KnowledgeSearchBar: React.FC<Props> = ({ onQuery, onReset, onSearch
         onSearchChange={(value) => onSearchChange({ techName: value })}
         filters={
           <>
+            <SearchFilterField label="时间范围">
+              <ADatePicker.RangePicker
+                allowClear
+                className="abi-field-input"
+                format="YYYY-MM-DD"
+                getPopupContainer={getFilterPopupContainer}
+                placeholder={['开始时间', '结束时间']}
+                value={dateRange}
+                onChange={(dates) => { setDateRange(dates); onDateRangeChange?.(dates); }}
+              />
+            </SearchFilterField>
             <SearchFilterField label="指标类型">
               <ASelect
                 allowClear
@@ -50,17 +63,6 @@ export const KnowledgeSearchBar: React.FC<Props> = ({ onQuery, onReset, onSearch
                 placeholder="状态"
                 value={searchParams.status}
                 onChange={(value) => onSearchChange({ status: value })}
-              />
-            </SearchFilterField>
-            <SearchFilterField label="时间范围">
-              <ADatePicker.RangePicker
-                allowClear
-                className="abi-field-input"
-                format="YYYY-MM-DD"
-                getPopupContainer={getFilterPopupContainer}
-                placeholder={['开始时间', '结束时间']}
-                value={dateRange}
-                onChange={(dates) => setDateRange(dates)}
               />
             </SearchFilterField>
           </>

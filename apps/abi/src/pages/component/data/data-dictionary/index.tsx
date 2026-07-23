@@ -34,7 +34,7 @@ export const Component: React.FC = () => {
   } = useDictionaryGroup(groupId);
 
   const { close: closeEnumDrawer, enumerationModalOpen, open: openEnumDrawer } = useEnumDrawer();
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'dictField', label: '字典名称', visible: true },

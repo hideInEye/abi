@@ -71,7 +71,7 @@ export function Component() {
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [jumpValue, setJumpValue] = useState('');
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
 
   const { dataSourceList, getDatasourceList } = useDatasource();

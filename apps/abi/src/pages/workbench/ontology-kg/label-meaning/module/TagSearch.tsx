@@ -4,9 +4,10 @@ import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/c
 
 interface SearchInputProps {
   readonly onSearch: (value: string) => void;
+  readonly onDateRangeChange?: (range: any) => void;
 }
 
-export const TagSearch: React.FC<SearchInputProps> = ({ onSearch }) => {
+export const TagSearch: React.FC<SearchInputProps> = ({ onSearch, onDateRangeChange }) => {
   const [searchValue, setSearchValue] = useState('');
   const [dateRange, setDateRange] = useState<any>(null);
 
@@ -18,6 +19,7 @@ export const TagSearch: React.FC<SearchInputProps> = ({ onSearch }) => {
   const handleReset = () => {
     setSearchValue('');
     setDateRange(null);
+    onDateRangeChange?.(null);
     onSearch('');
   };
 
@@ -38,7 +40,7 @@ export const TagSearch: React.FC<SearchInputProps> = ({ onSearch }) => {
               getPopupContainer={getFilterPopupContainer}
               placeholder={['开始时间', '结束时间']}
               value={dateRange}
-              onChange={(dates) => setDateRange(dates)}
+              onChange={(dates) => { setDateRange(dates); onDateRangeChange?.(dates); }}
             />
           </SearchFilterField>
         }

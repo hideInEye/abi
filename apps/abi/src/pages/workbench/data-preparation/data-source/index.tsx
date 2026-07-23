@@ -22,6 +22,7 @@ import {
 } from "@/service/api";
 import MetadataAnalysisDrawer from "@/components/metadata-analysis/MetadataAnalysisDrawer";
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 import type { MetadataAnalysisContext } from "@/components/metadata-analysis/types";
 import { ViewControls } from "@/components/ViewControls";
 import type { ColumnOption } from "@/components/ViewControls";
@@ -96,7 +97,7 @@ export function Component() {
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [jumpValue, setJumpValue] = useState('');
   const [dateRange, setDateRange] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
   const [previewSourceId, setPreviewSourceId] = useState<string | undefined>(undefined);
 
@@ -378,13 +379,9 @@ export function Component() {
 
   const handleSearch = () => {
     const keyword = searchValue.trim();
-    const startTime = dateRange?.[0]?.startOf ? dateRange[0].startOf('day').format('YYYY-MM-DD HH:mm:ss') : undefined;
-    const endTime = dateRange?.[1]?.endOf ? dateRange[1].endOf('day').format('YYYY-MM-DD HH:mm:ss') : undefined;
     updateSearchParams({
       pageNum: 1,
       sourceName: keyword ? keyword : undefined,
-      startTime,
-      endTime,
     } as any);
   };
 
@@ -394,16 +391,20 @@ export function Component() {
     updateSearchParams({
       pageNum: 1,
       sourceName: undefined,
-      startTime: undefined,
-      endTime: undefined,
     } as any);
   };
 
   const pagination = tableProps.pagination as any;
   const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1;
   const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10;
-  const totalCount = pagination?.total || 0;
+  // 前端按创建时间过滤 + 前端分页（useTable 返回全量数据）
+  const filteredData = useMemo(() => filterByCreateTime((data as any[]) || [], dateRange), [data, dateRange]);
+  const totalCount = filteredData.length;
   const totalPages = Math.ceil(totalCount / pageSizeVal) || 1;
+  const pagedData = useMemo(
+    () => filteredData.slice((currentPage - 1) * pageSizeVal, currentPage * pageSizeVal),
+    [filteredData, currentPage, pageSizeVal]
+  );
 
   const handlePageSizeChange = (value: number) => {
     pagination?.onChange?.(1, value);
@@ -468,7 +469,7 @@ export function Component() {
   };
 
   // Card grid render helper
-  const dataSource = tableProps.dataSource as any[] || [];
+  const dataSource = pagedData;
 
   const renderCardGrid = () => {
     if (dataSource.length === 0 && !tableProps.loading) {
@@ -586,7 +587,7 @@ export function Component() {
                 getPopupContainer={getFilterPopupContainer}
                 placeholder={['开始时间', '结束时间']}
                 value={dateRange}
-                onChange={(dates) => setDateRange(dates)}
+                onChange={(dates) => { setDateRange(dates); updateSearchParams({ pageNum: 1 } as any); }}
               />
             </SearchFilterField>
           }
@@ -632,12 +633,12 @@ export function Component() {
               <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
                 <ATable
                   columns={filteredColumns as any}
-                  dataSource={tableProps.dataSource}
+                  dataSource={pagedData}
                   loading={tableProps.loading}
                   pagination={false}
                   rowKey="sourceId"
                   rowSelection={viewMode === 'list' ? rowSelection : undefined}
-                  scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
+                  scroll={pagedData?.length > 0 ? { x: 'max-content' } : undefined}
                   size="middle"
                   className="data-source-table abi-std-table"
                 />

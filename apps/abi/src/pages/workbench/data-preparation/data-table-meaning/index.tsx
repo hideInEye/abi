@@ -2,6 +2,7 @@ import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { Splitter } from 'antd';
 import { Group } from '@/components/stateful/group/Group';
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 
 import { SemanticsTableList } from './components/semantics-table-list';
 import { useSemanticsTable } from './hook/useSemanticsTable';
@@ -64,10 +65,8 @@ export function Component() {
 
   function handleSearch() {
     const keyword = searchValue.trim();
-    const startTime = dateRange?.[0]?.startOf ? dateRange[0].startOf('day').format('YYYY-MM-DD HH:mm:ss') : undefined;
-    const endTime = dateRange?.[1]?.endOf ? dateRange[1].endOf('day').format('YYYY-MM-DD HH:mm:ss') : undefined;
     setTableSchemaList([]);
-    fetchTableSchemaList(100, groupId, keyword, startTime, endTime);
+    fetchTableSchemaList(100, groupId, keyword);
   }
 
   function handleReset() {
@@ -81,6 +80,12 @@ export function Component() {
     setDrawerTitle('新增数据语义');
     setTableModalOpen(true);
   }
+
+  // 前端按创建时间过滤（数据语义列表含 createTime 字段）
+  const filteredList = useMemo(
+    () => filterByCreateTime((tableSchemaList as any[]) || [], dateRange),
+    [tableSchemaList, dateRange]
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
@@ -124,7 +129,7 @@ export function Component() {
               <SemanticsTableList
                 deleteTable={deleteTable}
                 editTable={editTable}
-                tableSchemaList={tableSchemaList}
+                tableSchemaList={filteredList}
                 toolbarLeft={
                   <AButton
                     type="primary"

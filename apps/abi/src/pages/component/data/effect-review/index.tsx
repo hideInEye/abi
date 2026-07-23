@@ -2,21 +2,25 @@ import {
   DeleteOutlined,
   DeploymentUnitOutlined,
   LeftOutlined,
+  MoreOutlined,
   ReloadOutlined,
   RightOutlined,
   SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Popconfirm, message } from 'antd'
+import { Dropdown, Modal, Popconfirm, Tag, message } from 'antd'
+import { useDebounceFn } from 'ahooks'
 import dayjs from 'dayjs'
-import { Suspense, lazy, useMemo, useState } from 'react'
+import { Suspense, lazy, useMemo, useState, type Key } from 'react'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { filterByCreateTime } from '@/utils/date'
 import { EVAL_LLM_OPTIONS, MEMORY_CHAT_MODE_OPTIONS, MEMORY_STATUS_OPTIONS } from '@/constants/assistant-config'
 import { useAppSelector } from '@/hooks/business/useStore'
 import {
+  fetchBatchDeleteMemory,
   fetchDeleteMemory,
   fetchEditMemory,
   fetchMemoryList,
@@ -52,6 +56,8 @@ export function Component() {
   const [jumpValue, setJumpValue] = useState('')
   const [dateRange, setDateRange] = useState<[any, any] | null>(null)
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([])
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card')
 
   const isWenShuScene = (chatMode: string) => chatMode === 'chat_with_db_execute'
 
@@ -97,6 +103,12 @@ export function Component() {
 
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => (c.key === key ? { ...c, visible } : c)))
+  }
+
+  // 切换视图时清空批量选中态，避免切到卡片视图后批量删除按钮仍可点击
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    setSelectedRowKeys([])
+    setViewMode(mode)
   }
 
   const {
@@ -349,22 +361,48 @@ export function Component() {
     }
   }
 
+  /** 批量删除：调用后端 batchDelete 接口，后端会同步清理关联的向量数据 */
+  const handleBatchDelete = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的数据')
+      return
+    }
+    Modal.confirm({
+      title: '批量删除',
+      content: `删除后不可恢复，确定删除选中的 ${selectedRowKeys.length} 条数据吗？`,
+      okText: '确认',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          const res: any = await fetchBatchDeleteMemory(selectedRowKeys as (string | number)[])
+          if (!res?.error) {
+            message.success('批量删除成功')
+            setSelectedRowKeys([])
+            run()
+          }
+        } catch (error) {
+          console.log('批量删除失败:', error)
+        }
+      },
+    })
+  }
+
   /** 模型评估：沿用原后端 llmeval 接口 */
   const handleModelEval = async (record: any) => {
     try {
       setModelEvalLoading(true)
-      // llmId 固定为 12（与数据语义 AI 帮填一致，无需再查询模型列表）
-      const FIXED_LLM_ID = 12
+      // 模型相关 id 固定：app_id=0、embed_model_id=6、chat_model_id=12（无需查询模型列表）
       const contextObj = {
-        agent_id: `${record.agent_id}`,
         app_code: '',
-        chat_id: `${record.chat_id}`,
+        app_id: 0,
         chat_mode: record.chat_mode,
+        chat_model_id: 12,
         conv_uid: record.conv_uid,
+        embed_model_id: 6,
         extra: {
           fb_id: record.fb_id,
         },
-        llm_id: FIXED_LLM_ID,
         space_id: `${record.space_id}`,
         sys_code: '1',
         user_name: '1',
@@ -373,8 +411,8 @@ export function Component() {
         context: contextObj,
         enable_vis: false,
         incremental: false,
-        llm_id: FIXED_LLM_ID,
         messages: '',
+        model: 'Qwen3.6-plus',
         stream: false,
       }
       const res: any = await fetchModelEval(params)
@@ -408,11 +446,33 @@ export function Component() {
     run()
   }
 
+  // 搜索框停止输入 1s 后自动查询；清空时立即查询
+  const { cancel: cancelDebouncedSearch, run: runDebouncedSearch } = useDebounceFn(handleSearch, { wait: 1000 })
+  const handleSearchValuesChange = (changed: Record<string, unknown>): void => {
+    if (!Object.prototype.hasOwnProperty.call(changed, 'question')) return
+    const value = changed.question
+    if (value === undefined || value === null || value === '') {
+      cancelDebouncedSearch()
+      handleSearch()
+    } else {
+      runDebouncedSearch()
+    }
+  }
+
   const pagination = tableProps.pagination as any
   const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1
   const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10
-  const totalCount = pagination?.total || 0
+  // 前端按提交时间（create_time）过滤 + 前端分页（useTable 返回全量数据）
+  const filteredData = useMemo(
+    () => filterByCreateTime((data as any[]) || [], dateRange, 'create_time'),
+    [data, dateRange]
+  )
+  const totalCount = filteredData.length
   const totalPages = Math.ceil(totalCount / pageSizeVal) || 1
+  const pagedData = useMemo(
+    () => filteredData.slice((currentPage - 1) * pageSizeVal, currentPage * pageSizeVal),
+    [filteredData, currentPage, pageSizeVal]
+  )
 
   const handlePageSizeChange = (value: number) => {
     pagination?.onChange?.(1, value)
@@ -469,7 +529,7 @@ export function Component() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <AForm form={searchProps.form as any} layout="inline" style={{ display: 'contents' }}>
+      <AForm form={searchProps.form as any} layout="inline" style={{ display: 'contents' }} onValuesChange={handleSearchValuesChange}>
         <section className="abi-searchbar">
           <SearchFilterBar
             searchSlot={
@@ -479,7 +539,7 @@ export function Component() {
                   className="abi-field-input w-full"
                   placeholder="请输入问题"
                   prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-                  onPressEnter={handleSearch}
+                  onPressEnter={() => { cancelDebouncedSearch(); handleSearch(); }}
                 />
               </AForm.Item>
             }
@@ -487,6 +547,17 @@ export function Component() {
             onReset={handleReset}
             filters={
               <>
+                <SearchFilterField label="时间范围">
+                  <ADatePicker.RangePicker
+                    allowClear
+                    className="abi-field-input"
+                    format="YYYY-MM-DD"
+                    getPopupContainer={getFilterPopupContainer}
+                    placeholder={['开始时间', '结束时间']}
+                    value={dateRange}
+                    onChange={(dates) => { setDateRange(dates as [any, any] | null); updateSearchParams({ page: 1, pageNum: 1 } as any); }}
+                  />
+                </SearchFilterField>
                 <SearchFilterField label="场景类型">
                   <AForm.Item name="chat_mode" className="m-0">
                     <ASelect
@@ -509,17 +580,6 @@ export function Component() {
                     />
                   </AForm.Item>
                 </SearchFilterField>
-                <SearchFilterField label="时间范围">
-                  <ADatePicker.RangePicker
-                    allowClear
-                    className="abi-field-input"
-                    format="YYYY-MM-DD"
-                    getPopupContainer={getFilterPopupContainer}
-                    placeholder={['开始时间', '结束时间']}
-                    value={dateRange}
-                    onChange={(dates) => setDateRange(dates as [any, any] | null)}
-                  />
-                </SearchFilterField>
               </>
             }
           />
@@ -527,33 +587,124 @@ export function Component() {
       </AForm>
 
       <section className="abi-data-area">
-        <div className="abi-toolbar" style={{ justifyContent: 'flex-end' }}>
-          <ViewControls hideViewToggle columns={columnOptions} onColumnToggle={handleColumnToggle} />
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <AButton danger disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete}>
+              <DeleteOutlined /> 批量删除{selectedRowKeys.length ? `(${selectedRowKeys.length})` : ''}
+            </AButton>
+          </div>
+          <ViewControls
+            columns={columnOptions}
+            viewMode={viewMode}
+            onColumnToggle={handleColumnToggle}
+            onViewModeChange={handleViewModeChange}
+          />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-          <div
-            style={{
-              border: '1px solid rgba(130,140,200,0.18)',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              flex: 1,
-              minHeight: 0,
-            }}
-          >
-            <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-              <ATable
-                columns={filteredColumns as any}
-                dataSource={tableProps.dataSource}
-                loading={tableProps.loading}
-                pagination={false}
-                rowKey="fb_id"
-                scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
-                size="middle"
-                className="effect-review-table abi-std-table"
-              />
+          {viewMode === 'list' ? (
+            <div
+              style={{
+                border: '1px solid rgba(130,140,200,0.18)',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                flex: 1,
+                minHeight: 0,
+              }}
+            >
+              <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
+                <ATable
+                  columns={filteredColumns as any}
+                  dataSource={pagedData}
+                  loading={tableProps.loading}
+                  pagination={false}
+                  rowKey="fb_id"
+                  rowSelection={{
+                    selectedRowKeys,
+                    onChange: (keys: Key[]) => setSelectedRowKeys(keys),
+                  }}
+                  scroll={pagedData?.length > 0 ? { x: 'max-content' } : undefined}
+                  size="middle"
+                  className="effect-review-table abi-std-table"
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+              {(pagedData?.length ?? 0) === 0 ? (
+                <div style={{ marginTop: 80, textAlign: 'center' }}><AEmpty description="暂无数据" /></div>
+              ) : (
+                <div className="abi-card-grid">
+                  <div className="abi-card-grid-inner">
+                    {pagedData.map((record: any) => {
+                      const modelEvalDisabled =
+                        modelEvalLoading || ['0', '1'].includes(`${record.status}`) || !isWenShuScene(record.chat_mode)
+                      return (
+                        <div key={record.fb_id} className="abi-data-card" style={{ position: 'relative' }}>
+                          <div className="abi-data-card-head">
+                            <div className="abi-data-card-title">
+                              <ATooltip placement="topLeft" title={record.question}>
+                                <span className="abi-data-card-name">{record.question || '-'}</span>
+                              </ATooltip>
+                            </div>
+                            <Tag color="blue" style={{ flexShrink: 0, marginInlineEnd: 0 }}>
+                              {MEMORY_CHAT_MODE_OPTIONS.find((item: any) => item.value === record.chat_mode)?.label || '未知'}
+                            </Tag>
+                          </div>
+                          <div className="abi-data-card-body">
+                            <div className="row">
+                              <span className="lbl">审核状态</span>
+                              <span className="val">
+                                {MEMORY_STATUS_OPTIONS.find((item: any) => item.value === `${record.status}`)?.label || '未审核'}
+                              </span>
+                            </div>
+                            <div className="row">
+                              <span className="lbl">提交人</span>
+                              <span className="val">{record.create_by || '-'}</span>
+                            </div>
+                            <div className="row">
+                              <span className="lbl">提交时间</span>
+                              <span className="val">{record.create_time ? dayjs(record.create_time).format('YYYY-MM-DD HH:mm:ss') : '-'}</span>
+                            </div>
+                          </div>
+                          <div className="abi-data-card-footer">
+                            <button className="abi-card-act" onClick={() => openEval(record)}>
+                              <UserOutlined style={{ marginRight: 3, fontSize: 12 }} />人工评估
+                            </button>
+                            <Popconfirm title="确定进行模型评估吗？" onConfirm={() => handleModelEval(record)}>
+                              <button className="abi-card-act" disabled={modelEvalDisabled}>
+                                <DeploymentUnitOutlined style={{ marginRight: 3, fontSize: 12 }} />模型评估
+                              </button>
+                            </Popconfirm>
+                            <Dropdown
+                              menu={{
+                                items: [
+                                  {
+                                    key: 'delete',
+                                    danger: true,
+                                    label: (
+                                      <Popconfirm title="删除后不可恢复，确定删除吗？" onConfirm={() => handleDelete(record)}>
+                                        <span>删除</span>
+                                      </Popconfirm>
+                                    ),
+                                  },
+                                ],
+                              }}
+                              trigger={['click']}
+                            >
+                              <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
+                                <MoreOutlined />
+                              </button>
+                            </Dropdown>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="data-source-pagination">
             <span className="total-text">共 {totalCount} 条</span>

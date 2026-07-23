@@ -15,7 +15,7 @@ interface UseOntologyViewControlsResult {
 }
 
 export function useOntologyViewControls(initialColumns: readonly ColumnOption[]): UseOntologyViewControlsResult {
-  const [viewMode, setViewMode] = useState<OntologyViewMode>('list')
+  const [viewMode, setViewMode] = useState<OntologyViewMode>('card')
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(() => initialColumns.map(column => ({ ...column })))
 
   const visibleColumnKeys = useMemo(() => createVisibleColumnKeySet(columnOptions), [columnOptions])

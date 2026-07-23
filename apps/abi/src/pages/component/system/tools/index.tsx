@@ -134,7 +134,7 @@ export function Component() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingTool, setEditingTool] = useState<ToolItem | null>(null)
   const [saving, setSaving] = useState(false)
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card')
   const [dateRange, setDateRange] = useState<[any, any] | null>(null)
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'toolName', label: '工具名称', visible: true },
@@ -574,6 +574,17 @@ export function Component() {
           onSearchChange={setKeyword}
           filters={
             <>
+              <SearchFilterField label="时间范围">
+                <ADatePicker.RangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates)}
+                />
+              </SearchFilterField>
               <SearchFilterField label="状态">
                 <Select
                   className="abi-field-input w-full"
@@ -586,17 +597,6 @@ export function Component() {
                     { value: '0', label: '启用' },
                     { value: '1', label: '禁用' },
                   ]}
-                />
-              </SearchFilterField>
-              <SearchFilterField label="时间范围">
-                <ADatePicker.RangePicker
-                  allowClear
-                  className="abi-field-input"
-                  format="YYYY-MM-DD"
-                  getPopupContainer={getFilterPopupContainer}
-                  placeholder={['开始时间', '结束时间']}
-                  value={dateRange}
-                  onChange={(dates) => setDateRange(dates)}
                 />
               </SearchFilterField>
             </>

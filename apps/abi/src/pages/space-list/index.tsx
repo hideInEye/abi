@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
 import { $t } from '@/locales';
 import { deleteSpace, spaceList } from '@/service/api/data-space';
@@ -37,6 +38,9 @@ const ALL_COLUMNS: ColumnOption[] = [
 
 const dotColors = ['blue', 'purple', 'green'] as const;
 
+// 一次性拉取全部数据，前端做时间筛选与分页
+const FETCH_ALL_PAGE_SIZE = 100000;
+
 export function Component() {
   const dispatch = useAppDispatch();
   const { push } = useRouter();
@@ -46,7 +50,6 @@ export function Component() {
   const [loading, setLoading] = useState(false);
   const [pageNum, setPageNum] = useState(1);
   const [pageSizeVal, setPageSizeVal] = useState(12);
-  const [total, setTotal] = useState(0);
   const [jumpValue, setJumpValue] = useState('');
 
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
@@ -70,6 +73,20 @@ export function Component() {
     [columnOptions],
   );
 
+  // 前端按创建时间筛选，再前端分页
+  const filteredSpaceData = useMemo(
+    () => filterByCreateTime(spaceData as any[], dateRange, 'createTime') as ISpaceItem[],
+    [spaceData, dateRange],
+  );
+  const displayTotal = filteredSpaceData.length;
+  const pagedSpaceData = useMemo(() => {
+    const start = (pageNum - 1) * pageSizeVal;
+    return filteredSpaceData.slice(start, start + pageSizeVal);
+  }, [filteredSpaceData, pageNum, pageSizeVal]);
+  useEffect(() => {
+    setPageNum(1);
+  }, [dateRange]);
+
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => (c.key === key ? { ...c, visible } : c)));
   };
@@ -89,9 +106,8 @@ export function Component() {
     try {
       const res = await spaceList(params);
       const { data } = res.response as any;
-      const { rows, total: totalCount } = data;
+      const { rows } = data;
       setSpaceData(rows || []);
-      setTotal(totalCount || 0);
     } finally {
       setLoading(false);
     }
@@ -101,8 +117,8 @@ export function Component() {
     fetchSpaceData({
       isAsc: 'desc',
       orderByColumn: 'spaceId',
-      pageNum,
-      pageSize: pageSizeVal,
+      pageNum: 1,
+      pageSize: FETCH_ALL_PAGE_SIZE,
     });
   }, []);
 
@@ -112,10 +128,10 @@ export function Component() {
       isAsc: 'desc',
       orderByColumn: 'spaceId',
       pageNum: 1,
-      pageSize: pageSizeVal,
+      pageSize: FETCH_ALL_PAGE_SIZE,
       spaceName: searchValue.trim() || undefined,
     });
-  }, [searchValue, pageSizeVal]);
+  }, [searchValue]);
 
   const handleReset = useCallback(() => {
     setSearchValue('');
@@ -125,9 +141,9 @@ export function Component() {
       isAsc: 'desc',
       orderByColumn: 'spaceId',
       pageNum: 1,
-      pageSize: pageSizeVal,
+      pageSize: FETCH_ALL_PAGE_SIZE,
     });
-  }, [pageSizeVal]);
+  }, []);
 
   function addNewSpaceHandler() {
     spaceRoleList({ pageNum: 1, pageSize: 100000 }).then(res => {
@@ -155,8 +171,8 @@ export function Component() {
     fetchSpaceData({
       isAsc: 'desc',
       orderByColumn: 'spaceId',
-      pageNum,
-      pageSize: pageSizeVal,
+      pageNum: 1,
+      pageSize: FETCH_ALL_PAGE_SIZE,
       spaceName: searchValue.trim() || undefined,
     });
   }
@@ -173,8 +189,8 @@ export function Component() {
     fetchSpaceData({
       isAsc: 'desc',
       orderByColumn: 'spaceId',
-      pageNum,
-      pageSize: pageSizeVal,
+      pageNum: 1,
+      pageSize: FETCH_ALL_PAGE_SIZE,
       spaceName: searchValue.trim() || undefined,
     });
   }
@@ -183,8 +199,8 @@ export function Component() {
     fetchSpaceData({
       isAsc: 'desc',
       orderByColumn: 'spaceId',
-      pageNum,
-      pageSize: pageSizeVal,
+      pageNum: 1,
+      pageSize: FETCH_ALL_PAGE_SIZE,
       spaceName: searchValue.trim() || undefined,
     });
   }
@@ -207,30 +223,16 @@ export function Component() {
   }
 
   // Pagination logic
-  const totalPages = Math.ceil(total / pageSizeVal) || 1;
+  const totalPages = Math.ceil(displayTotal / pageSizeVal) || 1;
 
   const handlePageSizeChange = (value: number) => {
     setPageSizeVal(value);
     setPageNum(1);
-    fetchSpaceData({
-      isAsc: 'desc',
-      orderByColumn: 'spaceId',
-      pageNum: 1,
-      pageSize: value,
-      spaceName: searchValue.trim() || undefined,
-    });
   };
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setPageNum(page);
-      fetchSpaceData({
-        isAsc: 'desc',
-        orderByColumn: 'spaceId',
-        pageNum: page,
-        pageSize: pageSizeVal,
-        spaceName: searchValue.trim() || undefined,
-      });
     }
   };
 
@@ -357,7 +359,7 @@ export function Component() {
 
   // Card grid render
   const renderCardGrid = () => {
-    if (spaceData.length === 0 && !loading) {
+    if (filteredSpaceData.length === 0 && !loading) {
       return (
         <div className="abi-card-empty">
           <Empty description="暂无空间" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -368,7 +370,7 @@ export function Component() {
     return (
       <div className="abi-card-grid abi-card-grid--space">
         <div className="abi-card-grid-inner">
-          {spaceData.map((record: ISpaceItem, idx: number) => {
+          {pagedSpaceData.map((record: ISpaceItem, idx: number) => {
             const dotColor = dotColors[idx % dotColors.length];
             const canDelete = canDeleteSpace(record);
             return (
@@ -503,12 +505,12 @@ export function Component() {
               <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
                 <ATable
                   columns={filteredColumns}
-                  dataSource={spaceData}
+                  dataSource={pagedSpaceData}
                   loading={loading}
                   pagination={false}
                   rowKey="spaceId"
                   rowSelection={rowSelection}
-                  scroll={spaceData.length > 0 ? { x: 'max-content' } : undefined}
+                  scroll={pagedSpaceData.length > 0 ? { x: 'max-content' } : undefined}
                   size="middle"
                   className="abi-std-table"
                 />
@@ -520,7 +522,7 @@ export function Component() {
 
           {/* Pagination */}
           <div className="data-source-pagination">
-            <span className="total-text">共 {total} 条</span>
+            <span className="total-text">共 {displayTotal} 条</span>
             <div className="pagination-controls">
               <ASelect
                 value={pageSizeVal}
