@@ -3,10 +3,13 @@
  * 支持数据解析、图表展示和交互功能
  */
 
-import React, { useState, useEffect } from 'react';
-import { Table } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Table, Tooltip } from 'antd';
+import { BugOutlined, DownloadOutlined } from '@ant-design/icons';
 import { EChart } from '../../../components/react-echarts';
+import type { EChartHandle } from '../../../components/react-echarts/components/EChart';
 import type { EChartsOption } from 'echarts';
+import './styles.css';
 
 /**
  * 定义图表数据项的接口
@@ -22,6 +25,8 @@ interface ChartDataItem {
  */
 interface PropsType {
   data: any;  // 组件数据对象
+  /** 点击模型调试图标的回调 */
+  onDebugClick?: () => void;
 }
 
 /**
@@ -29,9 +34,24 @@ interface PropsType {
  * @param {PropsType} props - 组件属性
  * @returns {JSX.Element} 预测分析图表组件
  */
-const PredictionAnalysis: React.FC<PropsType> = ({ data }) => {
+const PredictionAnalysis: React.FC<PropsType> = ({ data, onDebugClick }) => {
   // 使用 useState 管理图表数据状态
   const [chartData, setChartData] = useState<ChartDataItem[]>([]);
+  // 图表实例引用，用于导出图片（保持原 echarts saveAsImage 的下载行为）
+  const echartRef = useRef<EChartHandle>(null);
+
+  // 下载：导出当前预测图表为 PNG（等价于原 echarts toolbox.saveAsImage）
+  const handleDownloadImage = () => {
+    const instance = echartRef.current?.getInstance();
+    if (!instance) return;
+    const url = instance.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' });
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '预测分析.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   
   /**
    * 解析原始数据
@@ -290,12 +310,6 @@ const PredictionAnalysis: React.FC<PropsType> = ({ data }) => {
           return tooltip;
         }
       },
-      toolbox: {
-        show: true,
-        feature: {
-          saveAsImage: {}
-        }
-      },
       xAxis: {
         type: 'category' as const,
         boundaryGap: false,
@@ -478,7 +492,36 @@ const PredictionAnalysis: React.FC<PropsType> = ({ data }) => {
 
   return (
     <div className="prediction-analysis">
-      {shouldRenderTable ? renderTable() : <EChart option={option} handleClick={() => {}} />}
+      {/* 标题栏：与问数保持一致，文案为「图表信息」 */}
+      <div className="w-full overflow-hidden">
+        <div className="section-header pt-3 pb-3">
+          <span className="chart-header-title font-semibold text-[#2d2d2d]">图表信息</span>
+        </div>
+        <div className="pt-3">
+          {shouldRenderTable ? (
+            renderTable()
+          ) : (
+            <>
+              {/* 工具栏：模型调试 + 下载，采用与问数一致的 chart-header-icon 样式 */}
+              <div className="flex items-center justify-end gap-1">
+                {onDebugClick && (
+                  <Tooltip title="模型调试">
+                    <span className="chart-header-icon" onClick={onDebugClick}>
+                      <BugOutlined />
+                    </span>
+                  </Tooltip>
+                )}
+                <Tooltip title="下载">
+                  <span className="chart-header-icon" onClick={handleDownloadImage}>
+                    <DownloadOutlined />
+                  </span>
+                </Tooltip>
+              </div>
+              <EChart ref={echartRef} option={option} handleClick={() => {}} />
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

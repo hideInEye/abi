@@ -87,7 +87,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [hierarchyLoading, setHierarchyLoading] = useState(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
 
-  const fetchTableData = async (params: DimensionSearchParams = queryParams, nextPagination: DimensionPagination = pagination) => {
+  const fetchTableData = async (_params: DimensionSearchParams = queryParams, nextPagination: DimensionPagination = pagination) => {
     if (!selectedGroup?.groupId) {
       setTableData([])
       setPagination(initialPagination)
@@ -96,12 +96,12 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     setLoading(true)
     try {
       const res = await queryDimensionList({
-        bizName: params.bizName.trim(),
+        bizName: '',
         groupId: selectedGroup.groupId,
         pageNum: nextPagination.pageNum,
         pageSize: nextPagination.pageSize,
         spaceId: Number(localStorage.getItem('spaceId')),
-        techName: params.techName.trim()
+        techName: ''
       })
       const rows = normalizeRows(res)
       const list = rows.map(item =>
@@ -135,15 +135,14 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     }))
   }
 
-  const handleQuery = async () => {
+  // 数据一次性全量拉取（pageSize=100000），查询/重置仅在前端过滤，不再请求接口
+  const handleQuery = () => {
     setQueryParams(searchParams)
-    await fetchTableData(searchParams, { ...pagination, pageNum: 1 })
   }
 
-  const handleReset = async () => {
+  const handleReset = () => {
     setSearchParams(initialSearchParams)
     setQueryParams(initialSearchParams)
-    await fetchTableData(initialSearchParams, { ...pagination, pageNum: 1 })
   }
 
   const handleAdd = () => {
@@ -315,6 +314,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     loading,
     openHierarchyModal,
     pagination,
+    queryParams,
     saveHierarchyConfig,
     searchParams,
     selectedRowKeys,

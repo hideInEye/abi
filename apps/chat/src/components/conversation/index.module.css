@@ -390,11 +390,9 @@
     display: none !important;
   }
 
-  /* 隐藏只包含空白或 <br> 的段落 */
-  & > p:has(> br:only-child),
-  & p:has(> br:only-child) {
-    display: none !important;
-  }
+  /* 隐藏真正的空段落（无任何内容）；
+     注意：不能用 p:has(> br:only-child)，因为 :only-child 只统计元素不统计文本节点，
+     会把“文本 + 单个硬换行<br> + 文本”的正常段落整段误隐藏（闲聊屏蔽文案空白的根因） */
 
   & > p:last-child,
   & p:last-child {

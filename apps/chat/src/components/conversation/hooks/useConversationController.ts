@@ -51,6 +51,17 @@ const THINK_START_REGEX = /##\s*1\.\s*🧠\s*思考过程/
 const THINK_END_REGEX = /##\s*3\.\s*🔧\s*查询模式/
 
 /**
+ * 闲聊/超范围屏蔽（illegal_query）的兜底提示语。
+ * 后端把该提示语放在 <think>"illegal_query": "..."</think> 中，且提示语含真实换行；
+ * 换行后的第二物理行既无 data: 前缀也无 ASCII 冒号，会被 @microsoft/fetch-event-source
+ * 整行丢弃（见 lib/cjs/parse.js：非 data 字段行不会拼接到 message.data），
+ * 导致 onmessage 只能拿到被截断的首行、拿不到闭合 </think> 与 [DONE]。
+ * 此时用本兜底文案补全展示，避免提示被截成半句、与预期不一致。
+ */
+const ILLEGAL_QUERY_FALLBACK_TIP =
+  '温馨提示：您的问题有点超出我当前的理解范围了。\n～可能是我掌握的“词汇量”还不够，暂时无法与我数据库语义信息匹配😊'
+
+/**
  * 把 content 中内联的深度思考内容包装为 <think>...</think>，复用现有渲染链路。
  * 当未启用深度思考时，直接过滤掉思考段内容，不向下游渲染。
  * @param content 当前 chunk 的 content
@@ -1206,6 +1217,53 @@ export const useConversationController = (
               return
             }
 
+            // illegal_query（闲聊/超范围屏蔽）兜底拦截：
+            // 必须放在 reasoning / 深度思考过滤之前——否则未启用深度思考时，该内容会被
+            // processContentWithInlineThinking 过滤为空并提前 return，导致 messageRef 拿不到
+            // illegal_query：思考态无法结束（秒数不停），或展示为空。
+            // 数据形如：<think>"illegal_query": "…提示语…"</think> [DONE]
+            // 该提示语可能含真实换行，其第二物理行无 ASCII 冒号，会被
+            // @microsoft/fetch-event-source 整行丢弃，导致只拿到被截断的首行、无闭合 </think>。
+            const rawIllegalSource = (() => {
+              try {
+                const parsedRaw = JSON.parse(event.data)
+                const rawContent = parsedRaw?.choices?.[0]?.delta?.content
+                return typeof rawContent === 'string' ? rawContent : event.data
+              } catch {
+                return event.data
+              }
+            })()
+            if (
+              rawIllegalSource.includes('illegal_query') ||
+              messageRef.current.includes('illegal_query')
+            ) {
+              const combined = messageRef.current + rawIllegalSource
+              const closedMatch = combined.match(
+                /<think>"illegal_query":\s*"([\s\S]*?)"\s*<\/think>/
+              )
+              // closedMatch：完整 <think>…</think> 已到达，尊重后端原文；
+              // 否则闭合标签随换行被 SSE 丢弃、尾部不可恢复，用固定兜底文案补全，
+              // 避免展示被截断成半句或为空。
+              const illegalText = closedMatch
+                ? (closedMatch[1] || '').replace(/\\n/g, '\n')
+                : ILLEGAL_QUERY_FALLBACK_TIP
+              updateAiMessage({
+                context: illegalText,
+                isStreaming: false,
+                smLoading: false,
+                isDone: true,
+                isIllegalQuery: true
+              })
+              // 同步 currentMessage，避免 setLoading(false) 触发的 effect 用旧流式文本回写 context。
+              setCurrentMessage(illegalText)
+              setLoading(false)
+              setIsGettingData(false)
+              setSmLoading(false)
+              isRequesting.current = false
+              abortController.current = null
+              return
+            }
+
             // 从 OpenAI 兼容格式提取 content / reasoning_content
             let chunk = event.data
             try {
@@ -1315,38 +1373,6 @@ export const useConversationController = (
             // 累积内容
             messageRef.current += chunk
 
-            // 处理 illegal_query（闲聊/超范围屏蔽）
-            // 注意：闲聊屏蔽提示语可能包含换行符与内嵌英文双引号，且 [DONE] 会与
-            // </think> 拼在同一条 SSE data 中（如 ...</think> [DONE]），无法命中独立的
-            // event.data === '[DONE]' 分支。故正则须用 [\s\S]*? 跨行匹配，并允许内嵌引号。
-            // 更棘手的是：当提示语本身含真实换行时，后端下发的第二物理行既无 data: 前缀
-            // 也无 ASCII 冒号，会被 @microsoft/fetch-event-source 整行丢弃，导致 onmessage
-            // 永远拿不到闭合 </think> 与 [DONE]，思考态无法结束、秒数一直计时。
-            // 因此这里对“缺失闭合标签”做容错：优先按完整标签匹配（正常整段场景取全文），
-            // 匹配不到时退化为开放式匹配，用已到达的文本立即结束流并关闭思考态。
-            if (messageRef.current.includes('illegal_query')) {
-              const closedRegex = /<think>"illegal_query":\s*"([\s\S]*?)"\s*<\/think>/
-              const openRegex = /<think>"illegal_query":\s*"([\s\S]*?)"?\s*(?:\[DONE\])?\s*$/
-              const match: any =
-                messageRef.current.match(closedRegex) || messageRef.current.match(openRegex)
-              if (match) {
-                updateAiMessage({
-                  context: (match[1] || '').replace(/\\n/g, '\n'),
-                  isStreaming: false,
-                  smLoading: false,
-                  isDone: true,
-                  isIllegalQuery: true
-                })
-
-                setLoading(false)
-                setIsGettingData(false)
-                setSmLoading(false)
-                isRequesting.current = false
-                abortController.current = null
-                return
-              }
-            }
-
             // 处理 intent_clarify
             if (chunk.includes('intent_clarify')) {
               try {
@@ -1449,6 +1475,24 @@ export const useConversationController = (
           setConvContent((prevState: any[]) => {
             return prevState.map((item: any) => {
               if (item.role === 'ai' && item.smLoading) {
+                // 兜底：闲聊屏蔽（illegal_query）提示语含真实换行，第二物理行无 ASCII 冒号
+                // 会被 @microsoft/fetch-event-source 整行丢弃；若后端发完后直接关流（末尾无空行），
+                // 解析器甚至不会派发任何事件（实测：onmessage 零触发），只有 onclose 执行。
+                // 此时流已正常结束但消息仍处思考态且无任何内容 —— 用兜底文案补全展示，
+                // 避免气泡整块空白。（正常回答到 onclose 时 context 必非空，不会误伤）
+                const noContext = !item.context || !String(item.context).trim()
+                const refHasIllegal = messageRef.current.includes('illegal_query')
+                const refIsEmpty = !messageRef.current.trim()
+                if (refHasIllegal || (noContext && refIsEmpty)) {
+                  return {
+                    ...item,
+                    context: ILLEGAL_QUERY_FALLBACK_TIP,
+                    smLoading: false,
+                    isStreaming: false,
+                    isDone: true,
+                    isIllegalQuery: true
+                  }
+                }
                 return {
                   ...item,
                   smLoading: false,

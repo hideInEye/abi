@@ -94,6 +94,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
             key: item.modelKey || item.model_name || item.key || '',
             label: item.modelName || item.model_name || item.llmModel || item.label || '',
             desc: item.remark || item.description || item.desc || '',
+            isDefault: item.isDefault,
           }))
           setModelOptions(options)
           if (options.length > 0) {

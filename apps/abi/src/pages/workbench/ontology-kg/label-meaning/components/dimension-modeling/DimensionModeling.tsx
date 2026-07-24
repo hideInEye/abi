@@ -52,6 +52,7 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
     hierarchyTarget,
     loading,
     openHierarchyModal,
+    queryParams,
     saveHierarchyConfig,
     searchParams,
     selectedRowKeys,
@@ -62,14 +63,21 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
   const [dateRange, setDateRange] = useState<any>(null)
   const [fePage, setFePage] = useState(1)
   const [fePageSize, setFePageSize] = useState(10)
-  const filteredData = useMemo(() => filterByCreateTime(tableData as any[], dateRange, 'createTime'), [tableData, dateRange])
+  const filteredData = useMemo(() => {
+    const biz = (queryParams.bizName || '').trim().toLowerCase()
+    const tech = (queryParams.techName || '').trim().toLowerCase()
+    let rows = (tableData as any[]) || []
+    if (biz) rows = rows.filter((r: any) => String(r.zhName || '').toLowerCase().includes(biz))
+    if (tech) rows = rows.filter((r: any) => String(r.englishName || '').toLowerCase().includes(tech))
+    return filterByCreateTime(rows, dateRange, 'updateTime')
+  }, [tableData, queryParams, dateRange])
   const pagedData = useMemo(() => {
     const start = (fePage - 1) * fePageSize
     return filteredData.slice(start, start + fePageSize)
   }, [filteredData, fePage, fePageSize])
   useEffect(() => {
     setFePage(1)
-  }, [dateRange, tableData])
+  }, [dateRange, queryParams, tableData])
   const handleFePageChange = useCallback((pageNum: number, pageSize: number) => {
     setFePage(pageNum)
     setFePageSize(pageSize)

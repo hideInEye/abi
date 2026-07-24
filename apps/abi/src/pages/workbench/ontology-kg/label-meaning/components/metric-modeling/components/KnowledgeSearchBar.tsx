@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 
 import { INDICATOR_TYPE_FILTER_OPTIONS, STATUS_OPTIONS } from '../constants/metricModeling.constants'
 import type { KnowledgeSearchParams } from '../types/metricModeling.types'
@@ -33,7 +33,7 @@ export const KnowledgeSearchBar: React.FC<Props> = ({ onDateRangeChange, onQuery
         filters={
           <>
             <SearchFilterField label="时间范围">
-              <ADatePicker.RangePicker
+              <DeferredRangePicker
                 allowClear
                 className="abi-field-input"
                 format="YYYY-MM-DD"

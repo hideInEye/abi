@@ -23,7 +23,7 @@ import {
 } from '@/service/api/role';
 import { getAuthorization, getUserId } from '@/service/request/shared';
 import { getServiceBaseURL } from '@/utils/service';
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
@@ -435,7 +435,7 @@ export function Component() {
           filters={
             <>
               <SearchFilterField label="创建时间">
-                <ADatePicker.RangePicker
+                <DeferredRangePicker
                   allowClear
                   className="abi-field-input"
                   format="YYYY-MM-DD"
