@@ -1797,6 +1797,24 @@ button {
   background: transparent;
 }
 
+/* 报告预览打开时，输入框留在左侧对话栏；普通对话不命中该类，布局保持原样。 */
+.report-composer-split {
+  width: 52%;
+  max-width: 53.75rem;
+  margin-right: 0;
+  margin-left: 24px;
+  padding-right: 24px;
+}
+
+@media (max-width: 900px) {
+  .report-composer-split {
+    width: 100%;
+    margin-right: auto;
+    margin-left: auto;
+    padding-right: 0;
+  }
+}
+
 /* ── Model Switcher ── */
 .model-switcher-btn {
   display: flex;

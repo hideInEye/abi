@@ -11,12 +11,14 @@ import { CHAT_MODE } from '../../constant'
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import Conversation from '../conversation'
 import type { ConversationHandle } from '../conversation'
+import ReportConversation from '../conversation/report-mode'
+import type { ReportConversationHandle } from '../conversation/report-mode'
 import ChatHeader from '../conversation/components/chat-header'
 import type { ModelOption } from '../conversation/components/chat-header'
 import NewChatWelcome from './NewChatWelcome'
 import GroupSessionListView from './GroupSessionListView'
 import ChatInput from '../conversation/components/chat-input'
-import type { SemanticSelectedData } from '../conversation/components/chat-input'
+import type { ChatInputModeKey, SemanticSelectedData } from '../conversation/components/chat-input'
 import { message } from 'antd'
 import { getSpaceId } from '../../utils'
 import ConverList from './conver_list'
@@ -41,6 +43,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const navigate = useNavigate()
   const [editItem, setEditItem] = useState<any>()
   const conversationRef = useRef<ConversationHandle>(null)
+  const reportConversationRef = useRef<ReportConversationHandle>(null)
   const converListRef = useRef<any>(null)
   const [fold, setFold] = useState(false)
   const justCreatedRef = useRef(false)
@@ -50,6 +53,9 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
   // ── 统一输入框状态 ──
   const [convLoading, setConvLoading] = useState(false)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [selectedMode, setSelectedMode] = useState<ChatInputModeKey>('interact')
+  const [reportPreviewOpen, setReportPreviewOpen] = useState(false)
   const [deepThinkEnabled, setDeepThinkEnabled] = useState(false)
   const [uploadFileEnabled, setUploadFileEnabled] = useState(false)
   const [externalInputValue, setExternalInputValue] = useState('')
@@ -282,11 +288,12 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     }
   }, [curConv, creating, createNewConv])
 
-  const handleUnifiedSend = useCallback(async (value: string) => {
+  const handleUnifiedSend = useCallback(async (value: string, options?: { mode?: ChatInputModeKey }) => {
     if (creating) return
+    const sendMode = options?.mode || selectedMode
 
     // 校验是否已选数据语义或 Excel 文件
-    if (!selectedData?.schemaId && !selectedExcel?.file_id) {
+    if (sendMode !== 'report' && !selectedData?.schemaId && !selectedExcel?.file_id) {
       message.warning('选择已有数据或上传excel，即可开始对话')
       return
     }
@@ -302,9 +309,40 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         : undefined,
     }
 
-    // 已有会话 → 直接通过 ref 发送
-    if (curConv && conversationRef.current) {
+    const sendByMode = () => {
+      if (sendMode === 'report') {
+        // 报告模式发送到独立 ReportConversation；不调用旧 Conversation 的普通对话流接口。
+        if (!reportConversationRef.current?.handleSend) return false
+        reportConversationRef.current.handleSend(value)
+        return true
+      }
+
+      // 交互模式保持原实现，继续走 Conversation/useConversationController。
+      if (!conversationRef.current?.handleSend) return false
       conversationRef.current.handleSend(value, meta)
+      return true
+    }
+
+    const waitAndSend = (retries = 0, onSent?: () => void) => {
+      if (retries > 20) {
+        onSent?.()
+        return
+      }
+
+      requestAnimationFrame(() => {
+        if (sendByMode()) {
+          onSent?.()
+        } else {
+          setTimeout(() => waitAndSend(retries + 1, onSent), 50)
+        }
+      })
+    }
+
+    // 已有会话 → 按当前输入模式分流发送。报告模式不复用旧普通对话流接口。
+    if (curConv) {
+      if (!sendByMode()) {
+        waitAndSend()
+      }
       return
     }
 
@@ -320,26 +358,15 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         return
       }
 
-      // 等待 Conversation mount 后通过 ref 发送
-      const waitAndSend = (retries = 0) => {
-        if (retries > 20) { setCreating(false); return }
-        requestAnimationFrame(() => {
-          if (conversationRef.current?.handleSend) {
-            conversationRef.current.handleSend(value, meta)
-            setCreating(false)
-          } else {
-            setTimeout(() => waitAndSend(retries + 1), 50)
-          }
-        })
-      }
-      waitAndSend()
+      // 等待目标模式组件 mount 后通过 ref 发送。
+      waitAndSend(0, () => setCreating(false))
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
         message.error(err?.message || '创建会话失败')
       }
       setCreating(false)
     }
-  }, [curConv, creating, selectedData, selectedExcel, createNewConv])
+  }, [curConv, creating, selectedData, selectedExcel, selectedMode, createNewConv])
 
   // ── 回调 ──
   const handleSetCurApp = useCallback((item: any) => {
@@ -520,22 +547,41 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
           {/* 内容区域 */}
           <div className="flex-1 min-h-0">
             {curConv ? (
-              <Conversation
-                fold={hideSidebar ? false : fold}
-                conv={curConv}
-                ref={conversationRef}
-                onClose={() => setCurConv(undefined)}
-                onUpdateList={handleUpdateList}
-                onLoadingChange={setConvLoading}
-                semanticId={selectedData?.schemaId}
-                selectedExcel={selectedExcel}
-                modelOptions={modelOptions}
-                currentModel={currentModel}
-                onModelChange={handleModelChange}
-                embedModelId={embedModelId}
-                deepThinkEnabled={deepThinkEnabled}
-                onHistorySemanticLoaded={(data) => setSelectedData(data)}
-              />
+              selectedMode === 'report' ? (
+                <ReportConversation
+                  fold={hideSidebar ? false : fold}
+                  conv={curConv}
+                  ref={reportConversationRef}
+                  spaceId={currentSpaceId}
+                  onClose={() => setCurConv(undefined)}
+                  onUpdateList={handleUpdateList}
+                  onLoadingChange={setReportLoading}
+                  onReportPreviewChange={setReportPreviewOpen}
+                  modelOptions={modelOptions}
+                  currentModel={currentModel}
+                  embedModelId={embedModelId}
+                  // 优先使用当前会话绑定的 groupId；路由 groupId 来自 session/group/list，作为新会话兜底。
+                  sessionGroupId={curConv?.groupId ?? curConv?.group_id ?? groupId}
+                  onModelChange={handleModelChange}
+                />
+              ) : (
+                <Conversation
+                  fold={hideSidebar ? false : fold}
+                  conv={curConv}
+                  ref={conversationRef}
+                  onClose={() => setCurConv(undefined)}
+                  onUpdateList={handleUpdateList}
+                  onLoadingChange={setConvLoading}
+                  semanticId={selectedData?.schemaId}
+                  selectedExcel={selectedExcel}
+                  modelOptions={modelOptions}
+                  currentModel={currentModel}
+                  onModelChange={handleModelChange}
+                  embedModelId={embedModelId}
+                  deepThinkEnabled={deepThinkEnabled}
+                  onHistorySemanticLoaded={(data) => setSelectedData(data)}
+                />
+              )
             ) : groupId ? (
               <GroupSessionListView
                 groupId={groupId}
@@ -550,13 +596,20 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
           {/* 统一输入框（永驻） */}
           <div className="composer-wrap">
-            <div className="max-w-[53.75rem] w-full m-auto">
+            <div className={`max-w-[53.75rem] w-full ${selectedMode === 'report' && reportPreviewOpen ? 'report-composer-split' : 'm-auto'}`}>
               <ChatInput
                 conv={curConv}
                 ensureConv={ensureConv}
-                loading={convLoading || creating}
+                loading={(selectedMode === 'report' ? reportLoading : convLoading) || creating}
                 onSend={handleUnifiedSend}
-                onStop={() => conversationRef.current?.stopGenerating()}
+                onStop={() => {
+                  if (selectedMode === 'report') {
+                    reportConversationRef.current?.stopGenerating()
+                    return
+                  }
+
+                  conversationRef.current?.stopGenerating()
+                }}
                 deepThinkEnabled={deepThinkEnabled}
                 uploadFileEnabled={uploadFileEnabled}
                 onToggleDeepThink={() => setDeepThinkEnabled(!deepThinkEnabled)}
@@ -573,6 +626,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onToggleSemGroup={toggleSemGroup}
                 externalValue={externalInputValue}
                 onExternalValueConsumed={() => setExternalInputValue('')}
+                selectedModeKey={selectedMode}
+                onModeChange={setSelectedMode}
               />
             </div>
             <div className="chat-footer">内容由 AI 生成，请注意甄别</div>
