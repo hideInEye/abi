@@ -83,7 +83,10 @@ export interface DimensionModelItem {
 }
 
 export interface DimensionSearchParams {
-  keyword: string
+  /** 中文名搜索（主搜索框） */
+  bizName: string
+  /** 英文名搜索（高级筛选） */
+  techName: string
 }
 
 export interface DimensionFormValues {

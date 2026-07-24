@@ -4,10 +4,8 @@ import {
   EditOutlined,
   LeftOutlined,
   PlusOutlined,
-  ReloadOutlined,
   RightOutlined,
   SafetyOutlined,
-  SearchOutlined,
   UserOutlined
 } from '@ant-design/icons';
 import { Dropdown, message } from 'antd';
@@ -25,6 +23,8 @@ import {
 } from '@/service/api/role';
 import { getAuthorization, getUserId } from '@/service/request/shared';
 import { getServiceBaseURL } from '@/utils/service';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 
@@ -56,6 +56,7 @@ export function Component() {
   // Search state
   const [searchRoleName, setSearchRoleName] = useState('');
   const [searchStatus, setSearchStatus] = useState<string | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<any>(null);
   const [jumpValue, setJumpValue] = useState('');
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
 
@@ -348,6 +349,7 @@ export function Component() {
   const handleReset = () => {
     setSearchRoleName('');
     setSearchStatus(undefined);
+    setDateRange(null);
     updateSearchParams({
       pageNum: 1,
       roleName: '',
@@ -364,8 +366,13 @@ export function Component() {
   const pagination = tableProps.pagination as any;
   const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1;
   const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10;
-  const totalCount = pagination?.total || 0;
+  const filteredData = useMemo(() => filterByCreateTime((data as any[]) || [], dateRange), [data, dateRange]);
+  const totalCount = filteredData.length;
   const totalPages = Math.ceil(totalCount / pageSizeVal) || 1;
+  const pagedData = useMemo(
+    () => filteredData.slice((currentPage - 1) * pageSizeVal, currentPage * pageSizeVal),
+    [filteredData, currentPage, pageSizeVal]
+  );
 
   const handlePageSizeChange = (value: number) => {
     pagination?.onChange?.(1, value);
@@ -419,33 +426,39 @@ export function Component() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }} className="lt-sm:overflow-auto">
       {/* Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder={t('page.manage.role.form.roleName')}
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={searchRoleName}
-            onChange={(e) => setSearchRoleName(e.target.value)}
-            onPressEnter={handleSearch}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <ASelect
-            allowClear
-            placeholder={t('page.manage.menu.form.menuStatus')}
-            value={searchStatus}
-            onChange={(val) => setSearchStatus(val)}
-            options={statusOptions}
-            className="abi-field-input"
-            style={{ width: '160px' }}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleReset}>
-            <ReloadOutlined /> 重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder={t('page.manage.role.form.roleName')}
+          searchValue={searchRoleName}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={setSearchRoleName}
+          filters={
+            <>
+              <SearchFilterField label="创建时间">
+                <ADatePicker.RangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => { setDateRange(dates); updateSearchParams({ pageNum: 1 } as any); }}
+                />
+              </SearchFilterField>
+              <SearchFilterField label={t('page.manage.role.status')}>
+                <ASelect
+                  allowClear
+                  className="abi-field-input"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={t('page.manage.menu.form.menuStatus')}
+                  value={searchStatus}
+                  onChange={(val) => setSearchStatus(val)}
+                  options={statusOptions}
+                />
+              </SearchFilterField>
+            </>
+          }
+        />
       </section>
 
       {/* Data Area */}
@@ -490,6 +503,7 @@ export function Component() {
                 className="abi-std-table role-table"
                 {...tableProps}
                 columns={filteredColumns as any}
+                dataSource={pagedData}
                 pagination={false}
                 rowSelection={rowSelection}
               />
@@ -542,12 +556,14 @@ export function Component() {
         />
       </Suspense>
 
-      <RolePermissionDrawer
-        roleId={roleId}
-        visible={visible}
-        onClose={() => setVisible(false)}
-        onSubmit={handDataPermissionSubmit}
-      />
+      <Suspense>
+        <RolePermissionDrawer
+          roleId={roleId}
+          visible={visible}
+          onClose={() => setVisible(false)}
+          onSubmit={handDataPermissionSubmit}
+        />
+      </Suspense>
 
       <Suspense>
         <RoleAuthDrawer

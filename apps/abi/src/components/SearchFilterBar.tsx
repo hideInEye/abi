@@ -1,8 +1,11 @@
 import { DownOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { Popover } from 'antd';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import styles from './SearchFilterBar.module.css';
+
+/** 搜索输入框停止输入后自动发起查询的防抖时长（毫秒） */
+const SEARCH_DEBOUNCE_MS = 1000;
 
 interface SearchFilterBarProps {
   /** 高级筛选面板中的筛选项（一行两个），无筛选项时不渲染高级筛选按钮 */
@@ -47,15 +50,42 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
 
-  const handleQuery = useCallback((): void => {
-    setOpen(false);
-    onQuery();
+  // 始终指向最新的 onQuery，避免防抖定时器触发时使用过期闭包
+  const onQueryRef = useRef(onQuery);
+  useEffect(() => {
+    onQueryRef.current = onQuery;
   }, [onQuery]);
 
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const clearTimer = useCallback((): void => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = undefined;
+    }
+  }, []);
+  useEffect(() => clearTimer, [clearTimer]);
+
+  const handleQuery = useCallback((): void => {
+    clearTimer();
+    setOpen(false);
+    onQuery();
+  }, [onQuery, clearTimer]);
+
   const handleReset = useCallback((): void => {
+    clearTimer();
     setOpen(false);
     onReset?.();
-  }, [onReset]);
+  }, [onReset, clearTimer]);
+
+  // 输入框内容变化：停止输入 2s 后自动查询；清空时立即查询
+  const handleSearchChange = useCallback(
+    (value: string): void => {
+      onSearchChange?.(value);
+      clearTimer();
+      timerRef.current = setTimeout(() => onQueryRef.current(), value === '' ? 0 : SEARCH_DEBOUNCE_MS);
+    },
+    [onSearchChange, clearTimer],
+  );
 
   const panelContent = (
     <div className={styles.filterPanel}>
@@ -82,7 +112,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
           placeholder={searchPlaceholder}
           prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
           value={searchValue}
-          onChange={(event) => onSearchChange?.(event.target.value)}
+          onChange={(event) => handleSearchChange(event.target.value)}
           onPressEnter={handleQuery}
         />
       )}

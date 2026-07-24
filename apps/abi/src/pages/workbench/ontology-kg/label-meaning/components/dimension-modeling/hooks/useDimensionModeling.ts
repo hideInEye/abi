@@ -31,12 +31,14 @@ import {
 } from '../utils/dimensionModeling.mapper'
 
 const initialSearchParams: DimensionSearchParams = {
-  keyword: ''
+  bizName: '',
+  techName: ''
 }
 
 const initialPagination: DimensionPagination = {
   pageNum: 1,
-  pageSize: 10,
+  // 一次性拉取全部数据，前端做时间筛选与分页
+  pageSize: 100000,
   total: 0
 }
 
@@ -74,7 +76,7 @@ function normalizeHierarchyItem(item: any): DimensionHierarchyEditItem {
 export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [loading, setLoading] = useState(false)
   const [searchParams, setSearchParams] = useState<DimensionSearchParams>(initialSearchParams)
-  const [queryKeyword, setQueryKeyword] = useState('')
+  const [queryParams, setQueryParams] = useState<DimensionSearchParams>(initialSearchParams)
   const [tableData, setTableData] = useState<DimensionModelItem[]>([])
   const [pagination, setPagination] = useState<DimensionPagination>(initialPagination)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -85,7 +87,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [hierarchyLoading, setHierarchyLoading] = useState(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
 
-  const fetchTableData = async (keyword = queryKeyword, nextPagination: DimensionPagination = pagination) => {
+  const fetchTableData = async (params: DimensionSearchParams = queryParams, nextPagination: DimensionPagination = pagination) => {
     if (!selectedGroup?.groupId) {
       setTableData([])
       setPagination(initialPagination)
@@ -94,12 +96,12 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     setLoading(true)
     try {
       const res = await queryDimensionList({
-        bizName: keyword.trim(),
+        bizName: params.bizName.trim(),
         groupId: selectedGroup.groupId,
         pageNum: nextPagination.pageNum,
         pageSize: nextPagination.pageSize,
         spaceId: Number(localStorage.getItem('spaceId')),
-        techName: keyword.trim()
+        techName: params.techName.trim()
       })
       const rows = normalizeRows(res)
       const list = rows.map(item =>
@@ -134,15 +136,14 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   }
 
   const handleQuery = async () => {
-    const keyword = searchParams.keyword
-    setQueryKeyword(keyword)
-    await fetchTableData(keyword, { ...pagination, pageNum: 1 })
+    setQueryParams(searchParams)
+    await fetchTableData(searchParams, { ...pagination, pageNum: 1 })
   }
 
   const handleReset = async () => {
     setSearchParams(initialSearchParams)
-    setQueryKeyword('')
-    await fetchTableData('', { ...pagination, pageNum: 1 })
+    setQueryParams(initialSearchParams)
+    await fetchTableData(initialSearchParams, { ...pagination, pageNum: 1 })
   }
 
   const handleAdd = () => {
@@ -233,7 +234,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   }
 
   const handlePaginationChange = (page: number, pageSize: number) => {
-    fetchTableData(queryKeyword, {
+    fetchTableData(queryParams, {
       pageNum: page,
       pageSize,
       total: pagination.total

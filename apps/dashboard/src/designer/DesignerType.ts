@@ -278,4 +278,6 @@ export interface IPageParam {
     keywords?: string;
     status?: string;
     spaceId?: number;
+    startTime?: string;
+    endTime?: string;
 }

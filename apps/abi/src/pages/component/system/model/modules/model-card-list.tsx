@@ -7,6 +7,7 @@ import { getSpaceId } from '@/store/slice/app'
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { filterByCreateTime } from '@/utils/date'
 import './model-card-list.css'
 
 interface ModelItem {
@@ -68,21 +69,25 @@ const ModelCardList: FC<Props> = ({
   const { t } = useTranslation()
   const spaceId = useAppSelector(getSpaceId)
 
+  const [dateRange, setDateRange] = useState<[any, any] | null>(null)
+
   const filteredModels = useMemo(() => {
     const kw = searchValue.trim().toLowerCase()
-    if (!kw) return models
-    return models.filter(m =>
-      (m.modelName || '').toLowerCase().includes(kw) ||
-      (m.modelKey || '').toLowerCase().includes(kw)
-    )
-  }, [models, searchValue])
+    const byKeyword = kw
+      ? models.filter(m =>
+          (m.modelName || '').toLowerCase().includes(kw) ||
+          (m.modelKey || '').toLowerCase().includes(kw)
+        )
+      : models
+    // 前端按创建时间过滤（若数据无 createTime 则自动放行）
+    return filterByCreateTime(byKeyword, dateRange)
+  }, [models, searchValue, dateRange])
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
   const [jumpValue, setJumpValue] = useState('')
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card')
-  const [dateRange, setDateRange] = useState<[any, any] | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'modelName', label: '供应商名称', visible: true },
@@ -101,11 +106,11 @@ const ModelCardList: FC<Props> = ({
     setViewMode(mode)
   }
 
-  // 搜索条件变化时重置到第一页
+  // 搜索条件/时间范围变化时重置到第一页
   useEffect(() => {
     setCurrentPage(1)
     setSelectedRowKeys([])
-  }, [searchValue])
+  }, [searchValue, dateRange])
 
   const totalCount = filteredModels.length
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))

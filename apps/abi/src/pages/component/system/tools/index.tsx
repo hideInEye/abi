@@ -29,6 +29,7 @@ import { useAppSelector } from '@/hooks/business/useStore'
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { filterByCreateTime } from '@/utils/date'
 import { createToolApi, deleteToolApi, getToolDetailApi, queryToolListApi, updateToolApi } from '@/service/api/tool'
 
 /** Monaco 代码编辑器适配 Form.Item value/onChange */
@@ -134,7 +135,7 @@ export function Component() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingTool, setEditingTool] = useState<ToolItem | null>(null)
   const [saving, setSaving] = useState(false)
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card')
   const [dateRange, setDateRange] = useState<[any, any] | null>(null)
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'toolName', label: '工具名称', visible: true },
@@ -218,8 +219,11 @@ export function Component() {
       arr = arr.filter((it) => (it.toolName || '').toLowerCase().includes(kw) || (it.toolLabel || '').toLowerCase().includes(kw))
     }
 
+    // 前端按创建时间过滤
+    arr = filterByCreateTime(arr, dateRange, 'createTime')
+
     return arr
-  }, [list, statusFilter, keyword])
+  }, [list, statusFilter, keyword, dateRange])
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -235,7 +239,7 @@ export function Component() {
   // 筛选条件变化时重置到第一页
   useEffect(() => {
     setCurrentPage(1)
-  }, [statusFilter, keyword, pageSize])
+  }, [statusFilter, keyword, pageSize, dateRange])
 
   const defaultPythonScript = `def get_current_date(format: str = "%Y-%m-%d", include_weekday: bool = False) -> str:
     from datetime import date
@@ -574,6 +578,17 @@ export function Component() {
           onSearchChange={setKeyword}
           filters={
             <>
+              <SearchFilterField label="时间范围">
+                <ADatePicker.RangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates)}
+                />
+              </SearchFilterField>
               <SearchFilterField label="状态">
                 <Select
                   className="abi-field-input w-full"
@@ -586,17 +601,6 @@ export function Component() {
                     { value: '0', label: '启用' },
                     { value: '1', label: '禁用' },
                   ]}
-                />
-              </SearchFilterField>
-              <SearchFilterField label="时间范围">
-                <ADatePicker.RangePicker
-                  allowClear
-                  className="abi-field-input"
-                  format="YYYY-MM-DD"
-                  getPopupContainer={getFilterPopupContainer}
-                  placeholder={['开始时间', '结束时间']}
-                  value={dateRange}
-                  onChange={(dates) => setDateRange(dates)}
                 />
               </SearchFilterField>
             </>

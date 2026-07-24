@@ -1,6 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Popconfirm, Select, message } from 'antd'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
@@ -9,6 +9,7 @@ import { useAppSelector } from '@/hooks/business/useStore'
 import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import type { OntologyNetworkId, OntologyRelation } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { getSpaceId } from '@/store/slice/app'
+import { filterByCreateTime } from '@/utils/date'
 
 import RelationDrawer from './components/RelationDrawer'
 import RelationTable from './components/RelationTable'
@@ -26,13 +27,28 @@ const RELATION_COLUMN_OPTIONS: ColumnOption[] = [
 
 export const Component: React.FC = () => {
   const spaceId = useAppSelector(getSpaceId)
-  const { batchDeleteRelations, deleteRelation, entities, entityNameMap, loading, pagination, relations, draftSearchValues, resetSearch, saveRelation, selectedRowKeys, setPage, setDraftSearchValues, setSelectedRowKeys, submitSearch } =
+  const { batchDeleteRelations, deleteRelation, entities, entityNameMap, loading, relations, draftSearchValues, resetSearch, saveRelation, selectedRowKeys, setDraftSearchValues, setSelectedRowKeys, submitSearch } =
     useRelationManagement(spaceId)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingRelation, setEditingRelation] = useState<OntologyRelation | null>(null)
   const [saving, setSaving] = useState(false)
   const [dateRange, setDateRange] = useState<any>(null)
+  const [fePage, setFePage] = useState(1)
+  const [fePageSize, setFePageSize] = useState(10)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(RELATION_COLUMN_OPTIONS)
+
+  const filteredRelations = useMemo(() => filterByCreateTime(relations as any[], dateRange, 'createTime') as OntologyRelation[], [relations, dateRange])
+  const pagedRelations = useMemo(() => {
+    const start = (fePage - 1) * fePageSize
+    return filteredRelations.slice(start, start + fePageSize)
+  }, [filteredRelations, fePage, fePageSize])
+  useEffect(() => {
+    setFePage(1)
+  }, [dateRange, relations])
+  const handleFePageChange = useCallback((page: number, size: number): void => {
+    setFePage(page)
+    setFePageSize(size)
+  }, [])
   const handleViewModeChange = useCallback((mode: 'list' | 'card'): void => {
     setSelectedRowKeys([])
     setViewMode(mode)
@@ -182,14 +198,14 @@ export const Component: React.FC = () => {
         <RelationTable
           entityNameMap={entityNameMap}
           loading={loading}
-          pagination={pagination}
-          relations={relations}
+          pagination={{ pageNum: fePage, pageSize: fePageSize, total: filteredRelations.length }}
+          relations={pagedRelations}
           selectedRowKeys={selectedRowKeys}
           viewMode={viewMode}
           visibleColumnKeys={visibleColumnKeys}
           onDelete={handleDelete}
           onEdit={handleEdit}
-          onPageChange={setPage}
+          onPageChange={handleFePageChange}
           onSelectedRowKeysChange={setSelectedRowKeys}
         />
       </section>

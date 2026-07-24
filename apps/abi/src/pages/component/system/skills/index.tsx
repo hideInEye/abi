@@ -9,6 +9,7 @@ import { useAppSelector } from '@/hooks/business/useStore';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 
 import SkillDetailDrawer from './modules/skill-detail-drawer';
 import SkillEditDrawer from './modules/skill-edit-drawer';
@@ -240,8 +241,11 @@ export function Component() {
       arr = arr.filter(it => (it.bizName || '').toLowerCase().includes(kw));
     }
 
+    // 前端按创建时间过滤
+    arr = filterByCreateTime(arr, dateRange, 'createTime');
+
     return arr;
-  }, [list, tab, statusFilter, keyword]);
+  }, [list, tab, statusFilter, keyword, dateRange]);
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -251,7 +255,7 @@ export function Component() {
   // 筛选条件变化时重置到第一页
   useEffect(() => {
     setCurrentPage(1);
-  }, [tab, statusFilter, keyword, pageSize]);
+  }, [tab, statusFilter, keyword, pageSize, dateRange]);
 
   const totalCount = visibleList.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -401,16 +405,6 @@ export function Component() {
           onSearchChange={setKeyword}
           filters={
             <>
-              <SearchFilterField label="状态">
-                <Select
-                  className="abi-field-input w-full"
-                  getPopupContainer={getFilterPopupContainer}
-                  options={statusOptions}
-                  placeholder="状态"
-                  value={statusFilter}
-                  onChange={v => setStatusFilter(v)}
-                />
-              </SearchFilterField>
               <SearchFilterField label="时间范围">
                 <ADatePicker.RangePicker
                   allowClear
@@ -420,6 +414,16 @@ export function Component() {
                   placeholder={['开始时间', '结束时间']}
                   value={dateRange}
                   onChange={(dates) => setDateRange(dates)}
+                />
+              </SearchFilterField>
+              <SearchFilterField label="状态">
+                <Select
+                  className="abi-field-input w-full"
+                  getPopupContainer={getFilterPopupContainer}
+                  options={statusOptions}
+                  placeholder="状态"
+                  value={statusFilter}
+                  onChange={v => setStatusFilter(v)}
                 />
               </SearchFilterField>
             </>

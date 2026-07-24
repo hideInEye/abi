@@ -13,7 +13,7 @@ import React, {memo, useEffect, useRef, useState} from 'react';
 import './ProjectList.less';
 import {Button, Empty, Input, Select, Table, Dropdown, Popconfirm, Modal, Switch, Segmented, DatePicker, ConfigProvider, message} from "antd";
 import {
-    LeftOutlined, PlusOutlined, RightOutlined, SearchOutlined, ReloadOutlined,
+    LeftOutlined, PlusOutlined, RightOutlined,
     DeleteOutlined, EditOutlined, EyeOutlined, CopyOutlined, ShareAltOutlined,
     DownOutlined, AppstoreOutlined, UnorderedListOutlined, MoreOutlined, SettingOutlined
 } from '@ant-design/icons';
@@ -26,6 +26,7 @@ import DelProjectDialog from "./DelProjectDialog.tsx";
 import CloneProjectDialog from "./CloneProjectDialog.tsx";
 import baseApi from "../../../api/BaseApi.ts";
 import URLUtil from "../../../utils/URLUtil.ts";
+import {SearchFilterBar, SearchFilterField, getFilterPopupContainer} from "./SearchFilterBar.tsx";
 
 export interface ProjectListProps {
     saveType: SaveType;
@@ -56,6 +57,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
     const [searchKeyword, setSearchKeyword] = useState('');
+    const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
     // v5 column picker state
     const [columnOptions, setColumnOptions] = useState([
@@ -362,14 +364,19 @@ export const ProjectList = memo((props: ProjectListProps) => {
         });
     };
 
-    const doSearch = (value: string) => {
-        setSearchKeyword(value);
+    const runQuery = (overrides?: {keyword?: string; range?: [Dayjs | null, Dayjs | null] | null}) => {
+        const kw = overrides?.keyword !== undefined ? overrides.keyword : searchKeyword;
+        const range = overrides?.range !== undefined ? overrides.range : dateRange;
+        const startTime = range?.[0] ? range[0].startOf('day').format('YYYY-MM-DD HH:mm:ss') : undefined;
+        const endTime = range?.[1] ? range[1].endOf('day').format('YYYY-MM-DD HH:mm:ss') : undefined;
         const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({
             current: 1,
             size: pageSize,
-            keywords: value,
+            keywords: kw,
             spaceId,
+            startTime,
+            endTime,
         }).then((data: IPage<IProjectInfo>) => {
             if (statusFilter !== undefined) {
                 data.records = data.records.filter((item: IProjectInfo) => String(item.status) === statusFilter);
@@ -382,7 +389,8 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     const handleReset = () => {
         setSearchKeyword('');
-        doSearch('');
+        setDateRange(null);
+        runQuery({keyword: '', range: null});
     };
 
     // ── Share modal handlers ──
@@ -623,24 +631,29 @@ export const ProjectList = memo((props: ProjectListProps) => {
         <div className={'project-list-container'}>
             {/* v5 Searchbar */}
             <section className="abi-searchbar">
-                <div className="abi-search-row">
-                    <Input
-                        placeholder="搜索项目名称"
-                        prefix={<SearchOutlined style={{color: '#a3b3c8'}} />}
-                        allowClear
-                        className="abi-field-input"
-                        value={searchKeyword}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                        onPressEnter={(e) => doSearch((e.target as any).value)}
-                        style={{width: '220px'}}
-                    />
-                    <Button type="primary" className="btn-accent-gradient" onClick={() => doSearch(searchKeyword)}>
-                        <SearchOutlined /> 查询
-                    </Button>
-                    <Button className="btn-ghost-v5" onClick={handleReset}>
-                        <ReloadOutlined /> 重置
-                    </Button>
-                </div>
+                <SearchFilterBar
+                    searchPlaceholder="搜索项目名称"
+                    searchValue={searchKeyword}
+                    onSearchChange={setSearchKeyword}
+                    onQuery={() => runQuery()}
+                    onReset={handleReset}
+                    filters={
+                        <SearchFilterField label="创建时间">
+                            <ConfigProvider locale={zhCN}>
+                                <DatePicker.RangePicker
+                                    allowClear
+                                    className="abi-field-input"
+                                    style={{width: '100%'}}
+                                    format="YYYY-MM-DD"
+                                    getPopupContainer={getFilterPopupContainer}
+                                    placeholder={['开始时间', '结束时间']}
+                                    value={dateRange}
+                                    onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null] | null)}
+                                />
+                            </ConfigProvider>
+                        </SearchFilterField>
+                    }
+                />
             </section>
 
             {/* v5 Data Area */}

@@ -1315,13 +1315,23 @@ export const useConversationController = (
             // 累积内容
             messageRef.current += chunk
 
-            // 处理 illegal_query
+            // 处理 illegal_query（闲聊/超范围屏蔽）
+            // 注意：闲聊屏蔽提示语可能包含换行符与内嵌英文双引号，且 [DONE] 会与
+            // </think> 拼在同一条 SSE data 中（如 ...</think> [DONE]），无法命中独立的
+            // event.data === '[DONE]' 分支。故正则须用 [\s\S]*? 跨行匹配，并允许内嵌引号。
+            // 更棘手的是：当提示语本身含真实换行时，后端下发的第二物理行既无 data: 前缀
+            // 也无 ASCII 冒号，会被 @microsoft/fetch-event-source 整行丢弃，导致 onmessage
+            // 永远拿不到闭合 </think> 与 [DONE]，思考态无法结束、秒数一直计时。
+            // 因此这里对“缺失闭合标签”做容错：优先按完整标签匹配（正常整段场景取全文），
+            // 匹配不到时退化为开放式匹配，用已到达的文本立即结束流并关闭思考态。
             if (messageRef.current.includes('illegal_query')) {
-              const regex = /<think>"illegal_query":\s?"(.*?)"<\/think>/
-              const match: any = messageRef.current.match(regex)
+              const closedRegex = /<think>"illegal_query":\s*"([\s\S]*?)"\s*<\/think>/
+              const openRegex = /<think>"illegal_query":\s*"([\s\S]*?)"?\s*(?:\[DONE\])?\s*$/
+              const match: any =
+                messageRef.current.match(closedRegex) || messageRef.current.match(openRegex)
               if (match) {
                 updateAiMessage({
-                  context: match[1],
+                  context: (match[1] || '').replace(/\\n/g, '\n'),
                   isStreaming: false,
                   smLoading: false,
                   isDone: true,
@@ -1419,7 +1429,9 @@ export const useConversationController = (
             }
             displayMessage = displayMessage.replace(/round_index:\d+,?\s*/, '')
             displayMessage = displayMessage.replace(/sub_chat_mode:\w+,?\s*/, '')
-            displayMessage = displayMessage.replace(/"illegal_query":\s*"([^"]+)"/, '$1')
+            // 剥离 illegal_query 包裹：提示语可能内嵌英文双引号，需用 [\s\S]* 贪婪匹配到末尾引号，
+            // 避免因内嵌引号提前截断导致展示与实际数据不一致。
+            displayMessage = displayMessage.replace(/"illegal_query":\s*"([\s\S]*?)"?\s*$/, '$1')
             setCurrentMessage(displayMessage.replace(/\\n/g, '\n'))
           }
         },
@@ -1563,17 +1575,22 @@ export const useConversationController = (
       const res: any = await fetchRecommendQuestion(params)
       // 接口一次性返回三类问题，统一返回结构化对象，由 ViewEle 本地切片展示（每类每次 3 个）：
       // ask=问数(ask_data)，root=归因(root_cause_analysis)，forecast=预测(forecast)
+      // 归因/预测模式（recommend_chat_mode=analysis/forecast）下后端额外返回语义画像
+      // metrics/dimensions/entities，供前端像意图澄清一样拼句发送
       const data = res?.data || res || {}
       return {
         ask: Array.isArray(data.ask_data) ? data.ask_data : [],
         root: Array.isArray(data.root_cause_analysis) ? data.root_cause_analysis : [],
         forecast: Array.isArray(data.forecast) ? data.forecast : [],
+        metrics: Array.isArray(data.metrics) ? data.metrics : [],
+        dimensions: Array.isArray(data.dimensions) ? data.dimensions : [],
+        entities: Array.isArray(data.entities) ? data.entities : [],
       }
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
         message.error('获取推荐问题失败')
       }
-      return { ask: [], root: [], forecast: [] }
+      return { ask: [], root: [], forecast: [], metrics: [], dimensions: [], entities: [] }
     }
   }
 

@@ -1,4 +1,5 @@
 import { DeleteOutlined, DownOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { useDebounceFn } from 'ahooks';
 import { Dropdown, Empty, Typography, message } from 'antd';
 
 import { JOB_GROUP_OPTIONS, RUN_STATUS_OPTIONS } from '@/constants/job';
@@ -18,7 +19,7 @@ export function Component() {
   const spaceId = useAppSelector(getSpaceId);
   const [viewJobLogId, setViewJobLogId] = useState('');
   const [jobDetail, setJobDetail] = useState<any>();
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
 
   // 列选项：用于列选择器
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
@@ -243,11 +244,24 @@ export function Component() {
     }
   };
 
+  // 搜索框停止输入 1s 后自动查询；清空时立即查询
+  const { cancel: cancelDebouncedSearch, run: runDebouncedSearch } = useDebounceFn(() => searchProps.search(), { wait: 1000 });
+  const handleSearchValuesChange = (changed: Record<string, unknown>): void => {
+    if (!Object.prototype.hasOwnProperty.call(changed, 'jobName')) return;
+    const value = changed.jobName;
+    if (value === undefined || value === null || value === '') {
+      cancelDebouncedSearch();
+      searchProps.search();
+    } else {
+      runDebouncedSearch();
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* v5 Searchbar */}
       <section className="abi-searchbar">
-        <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }}>
+        <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }} onValuesChange={handleSearchValuesChange}>
           <SearchFilterBar
             searchSlot={
               <AForm.Item className="m-0 flex-1 min-w-0" name="jobName">
@@ -256,7 +270,7 @@ export function Component() {
                   className="abi-field-input w-full"
                   placeholder="请输入任务名称"
                   prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-                  onPressEnter={() => searchProps.search()}
+                  onPressEnter={() => { cancelDebouncedSearch(); searchProps.search(); }}
                 />
               </AForm.Item>
             }
