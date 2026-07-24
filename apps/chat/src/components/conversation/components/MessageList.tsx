@@ -1,8 +1,9 @@
-import type { RefObject } from 'react'
+import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Checkbox } from 'antd'
 
 import AiEle from '../AiEle'
+import AnalysisForecastClarify from './AnalysisForecastClarify'
 import CheckboxWrapCom from '../CheckboxWrapCom'
 import HumanEle from '../HumanEle'
 import MessageNavRail from './MessageNavRail'
@@ -57,9 +58,9 @@ type MessageListProps = {
   isDone?: boolean
   isGettingData?: boolean
   checkAll?: boolean
-  setSharingList?: (value: any[]) => void
+  setSharingList?: Dispatch<SetStateAction<any[]>>
   setIsStorage?: (value: boolean) => void
-  setConvContent?: (value: any) => void
+  setConvContent?: Dispatch<SetStateAction<any[]>>
   getAnswer: (data: any) => void
   getRecommend: (data: any) => void
   getQueryRewrite: (data: any) => void
@@ -345,7 +346,7 @@ const MessageList = ({
           conv={conv}
           isDone={isDone}
           isGettingData={isGettingData}
-          setConvContent={setConvContent}
+          setConvContent={setConvContent!}
           onDelete={onEnterDeleteMode}
           onRegenerate={onRegenerate}
           isLast={isLast}
@@ -357,6 +358,26 @@ const MessageList = ({
 
     if (item.role === 'first') {
       return <OpeningsEle key={key} data={item} getAnswer={getAnswer} />
+    }
+
+    // 归因/预测拼句模板：独立一条消息（像意图澄清），发送或关闭后从会话中移除，不入历史
+    if (item.role === 'analysis_clarify') {
+      if (mode === 'share') return null
+      const removeSelf = () => setConvContent?.((state: any[]) =>
+        state.filter((it: any) => !(it?.role === 'analysis_clarify' && it?.order === item.order)))
+      return (
+        <AnalysisForecastClarify
+          key={key}
+          mode={item.context?.mode}
+          metrics={item.context?.metrics || []}
+          dimensions={item.context?.dimensions || []}
+          onSend={(question: string) => {
+            removeSelf()
+            getAnswer({ question, _meta: item._meta })
+          }}
+          onClose={removeSelf}
+        />
+      )
     }
 
     return null

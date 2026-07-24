@@ -1,6 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Popconfirm, message } from 'antd'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
@@ -8,6 +8,7 @@ import { useAppSelector } from '@/hooks/business/useStore'
 import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import type { OntologyEntity } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { getSpaceId } from '@/store/slice/app'
+import { filterByCreateTime } from '@/utils/date'
 
 import { AttributeDrawer } from './components/AttributeDrawer'
 import { EntityDrawer } from './components/EntityDrawer'
@@ -34,8 +35,23 @@ export const Component: React.FC = () => {
   const [deletingEntityId, setDeletingEntityId] = useState<OntologyEntity['id']>()
   const [editingEntity, setEditingEntity] = useState<OntologyEntity>()
   const [attributeEntity, setAttributeEntity] = useState<OntologyEntity>()
-  const { batchDeleteEntities, deleteEntity, entities, labels, loading, pagination, refresh, resetSearch, saveEntity, searchValues, selectedRowKeys, setPage, setSearchValues, setSelectedRowKeys } =
+  const { batchDeleteEntities, deleteEntity, entities, labels, loading, refresh, resetSearch, saveEntity, searchValues, selectedRowKeys, setPage, setSearchValues, setSelectedRowKeys } =
     useEntityManagement(spaceId)
+  const [dateRange, setDateRange] = useState<any>(null)
+  const [fePage, setFePage] = useState(1)
+  const [fePageSize, setFePageSize] = useState(10)
+  const filteredEntities = useMemo(() => filterByCreateTime(entities as any[], dateRange, 'createTime') as OntologyEntity[], [entities, dateRange])
+  const pagedEntities = useMemo(() => {
+    const start = (fePage - 1) * fePageSize
+    return filteredEntities.slice(start, start + fePageSize)
+  }, [filteredEntities, fePage, fePageSize])
+  useEffect(() => {
+    setFePage(1)
+  }, [dateRange, entities])
+  const handleFePageChange = useCallback((page: number, size: number): void => {
+    setFePage(page)
+    setFePageSize(size)
+  }, [])
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(ENTITY_COLUMN_OPTIONS)
   const handleViewModeChange = useCallback((mode: 'list' | 'card'): void => {
     setSelectedRowKeys([])
@@ -93,7 +109,7 @@ export const Component: React.FC = () => {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <section className="abi-searchbar">
-        <EntitySearch labels={labels} value={searchValues} onChange={handleSearch} onReset={resetSearch} />
+        <EntitySearch labels={labels} value={searchValues} onChange={handleSearch} onDateRangeChange={setDateRange} onReset={resetSearch} />
       </section>
       <main className="abi-data-area flex min-h-0 flex-1 flex-col">
         <div className="abi-toolbar">
@@ -117,18 +133,18 @@ export const Component: React.FC = () => {
           <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={handleViewModeChange} />
         </div>
         <EntityTable
-          data={entities}
+          data={pagedEntities}
           deletingId={deletingEntityId}
           labels={labels}
           loading={loading}
-          pagination={pagination}
+          pagination={{ pageNum: fePage, pageSize: fePageSize, total: filteredEntities.length }}
           selectedRowKeys={selectedRowKeys}
           viewMode={viewMode}
           visibleColumnKeys={visibleColumnKeys}
           onAttributes={openAttributes}
           onDelete={handleDelete}
           onEdit={openEdit}
-          onPageChange={setPage}
+          onPageChange={handleFePageChange}
           onSelectedRowKeysChange={setSelectedRowKeys}
         />
       </main>

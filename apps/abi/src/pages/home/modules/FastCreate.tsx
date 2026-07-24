@@ -22,7 +22,7 @@ const guideSteps = [
   {
     key: '3',
     title: '本体网络',
-    description: '个性化表达数据，\n洞察赋能业务决策',
+    description: '构建业务语义地图，\n洞察赋能业务决策',
     colorClass: 's3',
     href: '/workbench/assistant-manage',
     iconSvg: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',

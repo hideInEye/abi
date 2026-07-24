@@ -173,8 +173,6 @@ const ViewEle: React.FC<PropsType> = ({
   const [recData, setRecData] = useState<{ ask: string[]; root: string[]; forecast: string[] }>({ ask: [], root: [], forecast: [] });
   // 「换一批」批次计数（灯泡模式下循环用）
   const [recBatch, setRecBatch] = useState(0);
-  // 当前展示来源：0=灯泡(问数/归因/预测循环，显示换一批) 1=归因按钮 2=预测按钮（不显示换一批）
-  const [recMode, setRecMode] = useState(0);
   const [loading, setLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<{ data: any[]; columns: any[]; } | null>(null);
   // 添加图表相关的状态
@@ -623,17 +621,17 @@ const ViewEle: React.FC<PropsType> = ({
     }
   };
 
-  // 处理点赞（在原有 convUid + roundIndex + status 基础上附带 group_id / semantic_id / app_id）
+  // 处理点赞（在原有 convUid + roundIndex + status 基础上附带 groupId / semanticId / appId）
   const handleLike = async (payload: any) => {
     try {
-      const group_id = await resolveSemanticGroupId();
+      const groupId = await resolveSemanticGroupId();
       const res: any = await setExperteval({
         convUid,
         roundIndex: data.order || data.roundIndex,
         status: payload?.status, // 0=无评价, 1=点赞, -1=点踩
-        group_id,
-        semantic_id: chartData?.semantic_id ?? null,
-        app_id: conv?.appId ?? conv?.app_id ?? 0,
+        groupId,
+        semanticId: chartData?.semantic_id ?? null,
+        appId: conv?.appId ?? conv?.app_id ?? 0,
       });
       // 兼容两种响应结构：{ success: true, ... } 与 { code: 200, data: ..., msg: ... }
       const isSuccess = res?.success === true || Number(res?.code) === 200;
@@ -657,8 +655,9 @@ const ViewEle: React.FC<PropsType> = ({
   const REC_PAGE = 3;
   const REC_CYCLE_KEYS: Array<'ask' | 'root' | 'forecast'> = ['ask', 'root', 'forecast'];
 
-  // 调用推荐问题接口，一次性拿回三类问题（后端一次返回全部）；recommendChatMode：归因=analysis、预测=forecast、推荐问题=不填
-  const fetchRecData = async (recommendChatMode = ''): Promise<{ ask: string[]; root: string[]; forecast: string[] } | null> => {
+  // 调用推荐问题接口；普通推荐（不传 recommendChatMode）返回三类问题列表；
+  // 归因=analysis、预测=forecast 时后端返回语义画像 metrics/dimensions/entities（供拼句面板用）
+  const fetchRecData = async (recommendChatMode = ''): Promise<{ ask: string[]; root: string[]; forecast: string[]; metrics: any[]; dimensions: any[]; entities: any[] } | null> => {
     if (!getRecommend) return null;
     try {
       // 传入本轮次 order/roundIndex（供 hook 回填用户问题与实时选中语义）、回答内嵌的数据语义（历史对话用）以及推荐模式参数
@@ -672,6 +671,9 @@ const ViewEle: React.FC<PropsType> = ({
         ask: Array.isArray(res?.ask) ? res.ask : [],
         root: Array.isArray(res?.root) ? res.root : [],
         forecast: Array.isArray(res?.forecast) ? res.forecast : [],
+        metrics: Array.isArray(res?.metrics) ? res.metrics : [],
+        dimensions: Array.isArray(res?.dimensions) ? res.dimensions : [],
+        entities: Array.isArray(res?.entities) ? res.entities : [],
       };
     } catch (error) {
       console.error('获取推荐问题失败:', error);
@@ -697,22 +699,47 @@ const ViewEle: React.FC<PropsType> = ({
     return result;
   };
 
-  // 处理预测分析点击：带 recommend_chat_mode=forecast 请求，展示预测类前 3 个（不显示换一批）
+  // 打开归因/预测拼句模板：作为独立消息追加到会话末尾（像意图澄清一样单独一条），
+  // 不在当前回答下方内嵌展示；同一时间只保留一个模板消息
+  const openClarifyTemplate = (mode: 'analysis' | 'forecast', metrics: any[], dimensions: any[]) => {
+    setConvContent((prevState) => [
+      ...prevState.filter((item: any) => item?.role !== 'analysis_clarify'),
+      {
+        role: 'analysis_clarify',
+        order: `clarify-${Date.now()}`,
+        context: { mode, metrics, dimensions },
+        // 发送时带上当前回答内嵌的数据语义/分组，保证新一轮提问不丢语义信息
+        _meta: {
+          groupName: chartData?.semantic_group_name || '',
+          semanticName: chartData?.semantic_name || '',
+          semanticSchemaId: chartData?.semantic_id,
+        },
+      },
+    ]);
+  };
+
+  // 处理预测分析点击：带 recommend_chat_mode=forecast 请求语义画像，追加独立拼句模板消息
   const handlePredictClick = async () => {
     const res = await fetchRecData('forecast');
     if (!res) return;
-    setRecData(res);
-    setRecMode(2);
-    setRecList((res.forecast || []).slice(0, REC_PAGE));
+    if (!res.metrics.length && !res.dimensions.length) {
+      message.warning('未获取到可用的指标/维度信息');
+      return;
+    }
+    setRecList([]);
+    openClarifyTemplate('forecast', res.metrics, res.dimensions);
   };
 
-  // 处理归因分析点击：带 recommend_chat_mode=analysis 请求（后端实际拼写），展示归因类前 3 个（不显示换一批）
+  // 处理归因分析点击：带 recommend_chat_mode=analysis 请求（后端实际拼写）语义画像，追加独立拼句模板消息
   const handleAttributionClick = async () => {
     const res = await fetchRecData('analysis');
     if (!res) return;
-    setRecData(res);
-    setRecMode(1);
-    setRecList((res.root || []).slice(0, REC_PAGE));
+    if (!res.metrics.length && !res.dimensions.length) {
+      message.warning('未获取到可用的指标/维度信息');
+      return;
+    }
+    setRecList([]);
+    openClarifyTemplate('analysis', res.metrics, res.dimensions);
   };
 
   // 处理引用
@@ -725,7 +752,6 @@ const ViewEle: React.FC<PropsType> = ({
     const res = await fetchRecData();
     if (!res) return;
     setRecData(res);
-    setRecMode(0);
     setRecBatch(0);
     setRecList(sliceRecByBatch(res, 0));
   };
@@ -1723,6 +1749,8 @@ const ViewEle: React.FC<PropsType> = ({
                                   chatId={chatId}
                                   spaceId={spaceId}
                                   agentId={agentId}
+                                  sessionId={chatId}
+                                  schemaId={chartData?.semantic_id}
                                   chatMode={chartData?.chat_mode}
                                   ansiSql={chartData?.sql}
                                   onDataFetched={handleDataFetched}
@@ -1803,7 +1831,18 @@ const ViewEle: React.FC<PropsType> = ({
                           <div
                             key={question}
                             className="recommend-question-item"
-                            onClick={() => getAnswer!({ question })}
+                            onClick={() => {
+                              // 点击推荐问题时带上当前回答内嵌的数据语义/分组，
+                              // 否则新一轮的 human 消息与请求都会丢失语义信息
+                              getAnswer!({
+                                question,
+                                _meta: {
+                                  groupName: chartData?.semantic_group_name || '',
+                                  semanticName: chartData?.semantic_name || '',
+                                  semanticSchemaId: chartData?.semantic_id,
+                                },
+                              });
+                            }}
                           >
                             <span className="recommend-question-text">{question}</span>
                             <ArrowRightOutlined className="recommend-question-arrow" />
@@ -1811,13 +1850,11 @@ const ViewEle: React.FC<PropsType> = ({
                         ))}
                       </div>
                       <div className="recommend-questions-footer">
-                        {/* 仅普通推荐问题（recMode===0）显示「换一批」；归因/预测结果区不显示 */}
-                        {recMode === 0 && (
-                          <span className="recommend-change-batch" onClick={handleRecChangeBatch}>换一批</span>
-                        )}
+                        <span className="recommend-change-batch" onClick={handleRecChangeBatch}>换一批</span>
                       </div>
                     </div>
                   )}
+
                   {
                     // 推荐问题
                     chartData?.recommendQuestions !== undefined && (
@@ -1830,7 +1867,16 @@ const ViewEle: React.FC<PropsType> = ({
                                   key={question}
                                   className="recommend-question-item"
                                   onClick={() => {
-                                    getAnswer!({ question });
+                                    // 携带当前回答内嵌的数据语义/分组；改写推荐这条 chartData
+                                    // 仅含 recommendQuestions，无语义时字段为空，行为与原先一致
+                                    getAnswer!({
+                                      question,
+                                      _meta: {
+                                        groupName: chartData?.semantic_group_name || '',
+                                        semanticName: chartData?.semantic_name || '',
+                                        semanticSchemaId: chartData?.semantic_id,
+                                      },
+                                    });
                                   }}
                                 >
                                   <span className="recommend-question-text">{question}</span>
@@ -1913,6 +1959,8 @@ const ViewEle: React.FC<PropsType> = ({
               chatId={chatId}
               spaceId={spaceId}
               agentId={agentId}
+              sessionId={chatId}
+              schemaId={chartData?.semantic_id}
               chatMode={chartData?.chat_mode}
               ansiSql={chartData?.sql}
               chartType={chartType}

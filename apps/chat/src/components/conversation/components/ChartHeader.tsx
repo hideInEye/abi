@@ -58,6 +58,8 @@ interface Props {
   chatId?: string
   spaceId?: number
   agentId?: string
+  sessionId?: string
+  schemaId?: number | string
   chatMode?: string
   ansiSql?: string
   chartType?: string
@@ -80,6 +82,8 @@ const ChartHeader: React.FC<Props> = ({
   chatId,
   spaceId,
   agentId,
+  sessionId,
+  schemaId,
   chatMode,
   ansiSql,
   chartType,
@@ -101,14 +105,14 @@ const ChartHeader: React.FC<Props> = ({
       return
     }
 
-    if (convUid && chatId && spaceId && agentId && chatMode) {
+    if (convUid && sessionId && spaceId && schemaId && chatMode) {
       try {
         setLoading(true)
         const res = await fetchConvGuide({
           convUid,
-          chatId,
+          sessionId,
           spaceId,
-          agentId,
+          schemaId,
           chatMode,
           unionSql: ansiSql,
         })
@@ -180,9 +184,9 @@ const ChartHeader: React.FC<Props> = ({
     try {
       const res = await fetchAssembleSql({
         convUid,
-        chatId,
+        sessionId,
         spaceId,
-        agentId,
+        schemaId,
         chatMode,
         unionSql: ansiSql,
         filteredFields: isRefresh ? [] : generateFilteredFields(allFilters, filterParams(filterValues)),
@@ -202,9 +206,9 @@ const ChartHeader: React.FC<Props> = ({
     try {
       const res = await fetchSelectDataBySql({
         convUid,
-        chatId,
+        sessionId,
         spaceId,
-        agentId,
+        schemaId,
         chatMode,
         unionSql: sql,
       })

@@ -1,9 +1,11 @@
-import { EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { message } from 'antd';
 import React, { Suspense } from 'react';
 
 import { enableStatusRecord } from '@/constants/business';
 import { addDeptApi, deleteDeptApi, getDeptInfoApi, getDeptListApi, updateDeptApi } from '@/service/api/dept';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterTreeByCreateTime } from '@/utils/date';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 
@@ -24,6 +26,7 @@ export function Component() {
   const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
   const [searchDeptName, setSearchDeptName] = useState('');
   const [searchStatus, setSearchStatus] = useState<string | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<any>(null);
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
 
   const handleColumnToggle = (key: string, visible: boolean) => {
@@ -210,43 +213,55 @@ export function Component() {
   const handleReset = () => {
     setSearchDeptName('');
     setSearchStatus(undefined);
+    setDateRange(null);
     run();
   };
+
+  const filteredData = useMemo(
+    () => filterTreeByCreateTime((tableProps.dataSource as any[]) || [], dateRange),
+    [tableProps.dataSource, dateRange]
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder="请输入机构名称"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={searchDeptName}
-            onChange={(e) => setSearchDeptName(e.target.value)}
-            onPressEnter={handleSearch}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <ASelect
-            allowClear
-            placeholder="请选择状态"
-            value={searchStatus}
-            onChange={(val) => setSearchStatus(val)}
-            className="abi-field-input"
-            style={{ width: '140px' }}
-            options={[
-              { label: t('page.manage.common.status.enable'), value: '0' },
-              { label: t('page.manage.common.status.disable'), value: '1' }
-            ]}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleReset}>
-            <ReloadOutlined /> 重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入机构名称"
+          searchValue={searchDeptName}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={setSearchDeptName}
+          filters={
+            <>
+              <SearchFilterField label="创建时间">
+                <ADatePicker.RangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates)}
+                />
+              </SearchFilterField>
+              <SearchFilterField label={t('page.manage.dept.status')}>
+                <ASelect
+                  allowClear
+                  className="abi-field-input"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder="请选择状态"
+                  value={searchStatus}
+                  onChange={(val) => setSearchStatus(val)}
+                  options={[
+                    { label: t('page.manage.common.status.enable'), value: '0' },
+                    { label: t('page.manage.common.status.disable'), value: '1' }
+                  ]}
+                />
+              </SearchFilterField>
+            </>
+          }
+        />
       </section>
 
       {/* Data Area */}
@@ -287,7 +302,7 @@ export function Component() {
             <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
               <ATable
                 columns={filteredColumns as any}
-                dataSource={tableProps.dataSource}
+                dataSource={filteredData}
                 loading={tableProps.loading}
                 pagination={false}
                 rowKey="deptId"

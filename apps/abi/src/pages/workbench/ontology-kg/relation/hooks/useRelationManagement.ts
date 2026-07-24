@@ -9,7 +9,8 @@ import { createOntologyRelation, deleteOntologyRelation, deleteOntologyRelationB
 import type { RelationFormValues, RelationPagination, RelationSearchValues } from '../types'
 
 const INITIAL_SEARCH: RelationSearchValues = { relation: '' }
-const INITIAL_PAGINATION: RelationPagination = { pageNum: 1, pageSize: 10, total: 0 }
+// 一次性拉取全部数据，前端做时间筛选与分页
+const INITIAL_PAGINATION: RelationPagination = { pageNum: 1, pageSize: 100000, total: 0 }
 
 interface UseRelationManagementResult {
   batchDeleteRelations: () => Promise<void>

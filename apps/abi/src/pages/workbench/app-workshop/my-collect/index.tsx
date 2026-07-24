@@ -1,6 +1,8 @@
 import { SearchOutlined } from "@ant-design/icons";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 import {
   fetchOperateNew,
   fetchOperateNewList,
@@ -12,7 +14,7 @@ import { getSpaceId } from '@/store/slice/app';
 
 interface OperateRecord {
   readonly id: string;
-  readonly chatId: string;
+  readonly sessionId: string;
   spaceId: number;
 }
 
@@ -30,6 +32,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   const [pageSize, setPageSize] = useState(10);
   const [jumpValue, setJumpValue] = useState('');
   const [searchValue, setSearchValue] = useState('');
+  const [dateRange, setDateRange] = useState<any>(null);
   const { switchToSpace } = useSpaceSwitch();
   const spaceId = useAppSelector(getSpaceId);
 
@@ -48,6 +51,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
 
   const handleReset = () => {
     setSearchValue('');
+    setDateRange(null);
     setCurrentPage(1);
     getRecordList();
   };
@@ -59,12 +63,12 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   }, [spaceId]);
 
   const handleNavigate = (r: OperateRecord) => {
-    const { spaceId, chatId } = r;
-    switchToSpace(spaceId, undefined, { chatId });
+    const { spaceId, sessionId } = r;
+    switchToSpace(spaceId, undefined, { chatId: sessionId });
   };
 
   const handleCollect = async (id: string) => {
-    const res: any = await fetchOperateNew({ chatId: id, type: 2 });
+    const res: any = await fetchOperateNew({ sessionId: id, type: 2 });
     if (res.response.data.code !== 200) {
       message.error(res.response.data.msg);
     } else {
@@ -82,27 +86,33 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
       render: (_: any, record: OperateRecord) => (
         <div className="ds-action-group">
           <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleNavigate(record)}>进入对话</AButton>
-          <AButton className="abi-action-link-danger" size="small" variant="link" onClick={() => handleCollect(record.chatId)}>取消收藏</AButton>
+          <AButton className="abi-action-link-danger" size="small" variant="link" onClick={() => handleCollect(record.sessionId)}>取消收藏</AButton>
         </div>
       ),
     },
   ];
 
-  // Pagination
-  const totalCount = dataSource.total || 0;
+  // 前端按收藏时间过滤 + 前端分页（apiFn 返回全量数据）
+  const filteredRows = useMemo(
+    () => filterByCreateTime((dataSource.rows as any[]) || [], dateRange, 'recentlyUseTime'),
+    [dataSource.rows, dateRange]
+  );
+  const totalCount = filteredRows.length;
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
+  const pagedRows = useMemo(
+    () => filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filteredRows, currentPage, pageSize]
+  );
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
-      getRecordList();
     }
   };
 
   const handlePageSizeChange = (value: number) => {
     setPageSize(value);
     setCurrentPage(1);
-    getRecordList();
   };
 
   const handleJump = () => {
@@ -144,24 +154,26 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder="请输入对话名称"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onPressEnter={handleSearch}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleReset}>
-            重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入对话名称"
+          searchValue={searchValue}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={setSearchValue}
+          filters={
+            <SearchFilterField label="时间范围">
+              <ADatePicker.RangePicker
+                allowClear
+                className="abi-field-input"
+                format="YYYY-MM-DD"
+                getPopupContainer={getFilterPopupContainer}
+                placeholder={['开始时间', '结束时间']}
+                value={dateRange}
+                onChange={(dates) => { setDateRange(dates); setCurrentPage(1); }}
+              />
+            </SearchFilterField>
+          }
+        />
       </section>
 
       {/* Data Area */}
@@ -179,11 +191,11 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
             <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
               <ATable
                 columns={columns}
-                dataSource={dataSource.rows}
+                dataSource={pagedRows}
                 loading={false}
                 pagination={false}
                 rowKey="id"
-                scroll={dataSource.rows?.length > 0 ? { x: 'max-content' } : undefined}
+                scroll={pagedRows?.length > 0 ? { x: 'max-content' } : undefined}
                 size="middle"
                 className="abi-std-table"
               />

@@ -3,16 +3,16 @@ import {
   CloseOutlined,
   DeleteOutlined,
   EditOutlined,
+  FilterOutlined,
   FolderOutlined,
   PauseOutlined,
   PlayCircleOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { Modal, Select } from 'antd'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   addJob,
@@ -359,10 +359,16 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
   const [tasks, setTasks] = useState<ScheduleTask[]>([])
   const [loading, setLoading] = useState(false)
   const [filters, setFilters] = useState({ name: '', status: '', time: '' })
+  // 高级筛选：草稿值在点击“查询”前不会生效
+  const [advOpen, setAdvOpen] = useState(false)
+  const [advDraft, setAdvDraft] = useState({ status: '', time: '' })
+  const advRef = useRef<HTMLDivElement>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState<TaskForm>(emptyForm)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  const hasAdvFilter = filters.status !== '' || filters.time !== ''
 
   const loadTasks = async () => {
     setLoading(true)
@@ -397,10 +403,34 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
     return { total, running, paused, stopped }
   }, [tasks])
 
-  const handleOpenAdd = () => {
-    setEditingId(null)
-    setForm(emptyForm)
-    setFormOpen(true)
+  // 高级筛选面板外部点击关闭
+  useEffect(() => {
+    if (!advOpen) return
+    const handler = (e: MouseEvent) => {
+      if (advRef.current && !advRef.current.contains(e.target as Node)) {
+        setAdvOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [advOpen])
+
+  const toggleAdv = () => {
+    setAdvOpen((o) => {
+      // 打开时用当前已生效的筛选值初始化草稿
+      if (!o) setAdvDraft({ status: filters.status, time: filters.time })
+      return !o
+    })
+  }
+
+  const handleApplyAdv = () => {
+    setFilters((f) => ({ ...f, status: advDraft.status, time: advDraft.time }))
+    setAdvOpen(false)
+  }
+
+  const handleResetAdv = () => {
+    setAdvDraft({ status: '', time: '' })
+    setFilters((f) => ({ ...f, status: '', time: '' }))
   }
 
   const handleOpenEdit = (task: ScheduleTask) => {
@@ -499,9 +529,9 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
             </div>
           </div>
 
-          {/* 搜索 + 新增 */}
-          <div className="schedule-toolbar">
-            <div className="schedule-search-field">
+          {/* 搜索 + 高级筛选 */}
+          <div className="schedule-toolbar" ref={advRef}>
+            <div className="schedule-search-field" style={{ flex: 1 }}>
               <SearchOutlined />
               <input
                 type="text"
@@ -510,34 +540,51 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
                 onChange={(e) => setFilters((f) => ({ ...f, name: e.target.value }))}
               />
             </div>
-            <Select
-              className="schedule-status-select"
-              popupClassName="schedule-status-select-popup"
-              value={filters.status}
-              options={statusOptions}
-              onChange={(value) => setFilters((f) => ({ ...f, status: value }))}
-              popupMatchSelectWidth={false}
-              suffixIcon={<ClockCircleOutlined />}
-            />
-            <div className="schedule-search-field">
-              <ReloadOutlined />
-              <input
-                type="text"
-                placeholder="时间范围"
-                style={{ width: 100 }}
-                onFocus={(e) => {
-                  e.currentTarget.type = 'date'
-                }}
-                onBlur={(e) => {
-                  if (!e.currentTarget.value) e.currentTarget.type = 'text'
-                }}
-                onChange={(e) => setFilters((f) => ({ ...f, time: e.target.value }))}
-              />
-            </div>
-            <button type="button" className="schedule-add-btn" onClick={handleOpenAdd}>
-              <PlusOutlined />
-              新增
+            <button
+              type="button"
+              className={`schedule-adv-btn ${advOpen ? 'active' : ''} ${hasAdvFilter ? 'has-filter' : ''}`}
+              onClick={toggleAdv}
+              title="高级筛选"
+            >
+              <FilterOutlined />
             </button>
+
+            {advOpen && (
+              <div className="schedule-adv-panel">
+                <div className="schedule-adv-grid">
+                  <div className="schedule-adv-field">
+                    <label>任务状态</label>
+                    <Select
+                      className="schedule-form-select"
+                      popupClassName="schedule-form-select-popup"
+                      value={advDraft.status}
+                      options={statusOptions}
+                      onChange={(value) => setAdvDraft((d) => ({ ...d, status: value }))}
+                      popupMatchSelectWidth={false}
+                    />
+                  </div>
+                  <div className="schedule-adv-field">
+                    <label>时间范围</label>
+                    <input
+                      type="date"
+                      className="schedule-adv-date"
+                      value={advDraft.time}
+                      onChange={(e) => setAdvDraft((d) => ({ ...d, time: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="schedule-adv-actions">
+                  <button type="button" className="schedule-adv-reset" onClick={handleResetAdv}>
+                    <ReloadOutlined />
+                    重置
+                  </button>
+                  <button type="button" className="schedule-adv-query" onClick={handleApplyAdv}>
+                    <SearchOutlined />
+                    查询
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 编辑表单 */}

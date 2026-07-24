@@ -1,9 +1,11 @@
 import { DeleteOutlined, MoreOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dropdown, message, Modal, Splitter } from 'antd';
 
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 
 import { DictionaryGroup } from './components/DictionaryGroup';
 import { DictionaryModal } from './components/DictionaryModal';
@@ -33,7 +35,7 @@ export const Component: React.FC = () => {
   } = useDictionaryGroup(groupId);
 
   const { close: closeEnumDrawer, enumerationModalOpen, open: openEnumDrawer } = useEnumDrawer();
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'dictField', label: '字典名称', visible: true },
@@ -72,6 +74,24 @@ export const Component: React.FC = () => {
     });
   };
 
+  // 前端按创建时间过滤 + 前端分页（hook 已全量加载）
+  const PAGE_SIZE = 10;
+  const filteredRows = useMemo(
+    () => filterByCreateTime((dictionaryDataSource.rows as any[]) || [], dateRange, 'createTime'),
+    [dictionaryDataSource.rows, dateRange],
+  );
+  const pagedDataSource = useMemo(
+    () => ({
+      ...dictionaryDataSource,
+      rows: filteredRows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE),
+      total: filteredRows.length,
+    }),
+    [dictionaryDataSource, filteredRows, current],
+  );
+  useEffect(() => {
+    setCurrent(1);
+  }, [dateRange]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <Splitter style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -87,32 +107,26 @@ export const Component: React.FC = () => {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             {/* v5 Searchbar */}
             <section className="abi-searchbar">
-              <div className="abi-search-row">
-                <AInput
-                  allowClear
-                  placeholder="请输入字典名称"
-                  prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-                  value={searchValue}
-                  onChange={e => handleSearch(e.target.value)}
-                  className="abi-field-input"
-                  style={{ width: '220px' }}
-                />
-                <ADatePicker.RangePicker
-                  showTime={{ format: 'HH:mm:ss' }}
-                  format="YYYY-MM-DD HH:mm:ss"
-                  placeholder={['开始时间', '结束时间']}
-                  value={dateRange}
-                  onChange={(dates) => setDateRange(dates)}
-                  className="abi-field-input"
-                  style={{ width: '380px' }}
-                />
-                <AButton type="primary" className="btn-accent-gradient" onClick={() => handleSearch(searchValue)}>
-                  <SearchOutlined /> 查询
-                </AButton>
-                <AButton className="btn-ghost-v5" onClick={() => { handleSearch(''); setDateRange(null); }}>
-                  <ReloadOutlined /> 重置
-                </AButton>
-              </div>
+              <SearchFilterBar
+                searchPlaceholder="请输入字典名称"
+                searchValue={searchValue}
+                onQuery={() => handleSearch(searchValue)}
+                onReset={() => { handleSearch(''); setDateRange(null); }}
+                onSearchChange={handleSearch}
+                filters={
+                  <SearchFilterField label="时间范围">
+                    <ADatePicker.RangePicker
+                      allowClear
+                      className="abi-field-input"
+                      format="YYYY-MM-DD"
+                      getPopupContainer={getFilterPopupContainer}
+                      placeholder={['开始时间', '结束时间']}
+                      value={dateRange}
+                      onChange={(dates) => setDateRange(dates)}
+                    />
+                  </SearchFilterField>
+                }
+              />
             </section>
 
             {/* v5 Data Area */}
@@ -144,7 +158,7 @@ export const Component: React.FC = () => {
               {viewMode === 'list' ? (
                 <TableDictionary
                   current={current}
-                  dataSource={dictionaryDataSource}
+                  dataSource={pagedDataSource}
                   onDelete={handleDelete}
                   onDiff={openEnumDrawer}
                   onEdit={handleEdit}
@@ -155,12 +169,12 @@ export const Component: React.FC = () => {
                 />
               ) : (
                 <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-                  {dictionaryDataSource.rows.length === 0 ? (
+                  {filteredRows.length === 0 ? (
                     <div style={{ marginTop: 80, textAlign: 'center' }}><AEmpty description="暂无字典" /></div>
                   ) : (
                     <div className="abi-card-grid">
                       <div className="abi-card-grid-inner">
-                        {dictionaryDataSource.rows.map((record: any) => (
+                        {filteredRows.map((record: any) => (
                           <div key={record.dictId} className="abi-data-card" style={{ position: 'relative' }}>
                             <div className="abi-data-card-head">
                               <div className="abi-data-card-title">

@@ -215,3 +215,74 @@
 - 点击横杠或预览项平滑定位到对应用户消息。
 - 上下滚动时当前横杠/预览项高亮实时跟随。
 - 批量删除、重新生成版本切换、发送后自动滚底等既有行为不受影响。
+
+## 2026-07-22 追加：ABI 列表页搜索栏统一为「输入框 + 高级筛选」
+
+### 需求类型
+
+前端 UI 统一重构（纯前端，不改接口协议）。
+
+### 背景
+
+用户要求将 ABI 应用中「主页更多空间、工作台、组件」下所有列表页的搜索栏统一为：搜索输入框占满一行自适应 + 右侧「高级筛选」按钮（风格参考图谱探索工具栏按钮，但增加文字）。除搜索输入框外的其他筛选项（下拉、时间范围）全部收进高级筛选弹出面板，面板内一行两个筛选项，底部为重置/查询按钮（参考图谱探索的高级搜索面板）。开始时间/结束时间独立选择改为单个时间范围 RangePicker（日期精确到天，弹出双日历面板，不再出现时间列）。
+
+### 目标
+
+- 新增共享组件 `SearchFilterBar`（搜索行 + 高级筛选 Popover 面板）。
+- 改造页面：space-list、app-workshop(my-collect/my-share/recently-used)、assistant-config、data-collection、data-source、data-table-meaning、job(time/log/email)、ontology-kg(relation/entity/technical-jargon/recommended-inquiries/label-meaning 两个搜索栏)、component(api-key/data-dictionary/effect-review/model/plugin/skills/tools)。
+- 时间范围统一为 `RangePicker`（format YYYY-MM-DD，无 showTime）；对需要提交时间的接口按 startOf('day')/endOf('day') 映射，保持查询语义。
+
+### 非目标
+
+- 不改造大屏（screen-manage）与本体网络图谱探索（kggraph）。
+- 不修改 manage/、space/ 等门户管理页面。
+- 不修改后端接口、查询参数含义、表格/分页逻辑。
+- 不改造抽屉/弹窗内部的次级搜索。
+
+### 验收标准
+
+- 各页面搜索行为一行：输入框自适应占满剩余宽度 + 高级筛选按钮（漏斗图标+文字）。
+- 高级筛选面板筛选项一行两个，底部重置/查询，交互与原查询/重置一致。
+- 时间范围为单控件双日历，精确到天。
+- 类型检查/构建不引入新错误。
+
+## 2026-07-23 追加：搜索输入框停止输入自动查询（防抖，去回车）
+
+### 需求类型
+
+前端交互调整（纯前端，不改接口协议）。
+
+### 背景
+
+用户要求 ABI 项目所有搜索输入框改为：停止输入 2s 后自动发起查询接口，不再需要回车触发。
+
+### 目标
+
+- 共享搜索栏 `SearchFilterBar`（abi 与 dashboard 两份）默认输入框停止输入 2s 后自动查询。
+- 使用自定义 `searchSlot` 输入框的页面（api-key、job/email、job/time、job/log、effect-review、ontology-kg/entity）同样具备停止输入 2s 后自动查询。
+- 保留回车立即查询（并取消未触发的防抖定时器，避免重复请求）。
+- 清空输入框（allowClear 或删空）时立即查询，不等待 2s。
+- 高级筛选面板内的下拉/时间范围仍仅在点击「查询」时生效，不参与自动查询。
+
+### 非目标
+
+- 不修改查询接口、查询参数含义、分页与表格逻辑。
+- 不改造抽屉/弹窗内部次级搜索。
+- 不改造大屏图谱探索（kggraph）等未使用统一搜索栏的输入。
+
+### 影响范围
+
+- `apps/abi/src/components/SearchFilterBar.tsx`
+- `apps/dashboard/src/pages/home/project-list/SearchFilterBar.tsx`
+- `apps/abi/src/pages/component/applications/api-key/index.tsx`
+- `apps/abi/src/pages/workbench/job/{email,time,log}/index.tsx`
+- `apps/abi/src/pages/component/data/effect-review/index.tsx`
+- `apps/abi/src/pages/workbench/ontology-kg/entity/components/EntitySearch.tsx`
+- `.ai/runs/2026-07-23-search-input-debounce/`
+
+### 验收标准
+
+- 各搜索输入框停止输入约 2s 后自动发起查询，无需回车。
+- 回车仍可立即查询；清空输入框立即查询。
+- 高级筛选下拉/时间选择不触发自动查询，仍由「查询」按钮生效。
+- 类型检查不引入新错误（沿用仓库既有 pre-existing 报错）。

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, DatePicker, Popover, Input } from 'antd';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -16,6 +16,23 @@ import {
 
 // 启用 ISO 周插件（周一作为一周的开始）
 dayjs.extend(isoWeek);
+
+// 后端归因场景（attribution_analysis）使用 target_metric / base_condition 字段，
+// 而组件内部统一使用 target_indicators / base_indicators，这里做一次字段归一化。
+// 同时把非数组（如后端可能下发的空对象 {}）统一转为数组，避免后续 length 判断出错。
+const normalizeAnalysisFields = (obj: any) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  const normalized: any = { ...obj };
+  if (normalized.target_metric !== undefined && normalized.target_indicators === undefined) {
+    normalized.target_indicators = Array.isArray(normalized.target_metric) ? normalized.target_metric : [];
+    delete normalized.target_metric;
+  }
+  if (normalized.base_condition !== undefined && normalized.base_indicators === undefined) {
+    normalized.base_indicators = Array.isArray(normalized.base_condition) ? normalized.base_condition : [];
+    delete normalized.base_condition;
+  }
+  return normalized;
+};
 
 // 归因场景专属：时间范围显示格式化（选择后显示 text + operator + value）
 const formatAnalysisTimeRange = (item: any): string => {
@@ -165,8 +182,8 @@ const IntentClarifyAnalysisMode: React.FC<IntentClarifyAnalysisModeProps> = ({ q
   const agentStep = questionData?.agent_step?.[0];
   const chatMode = agentStep?.chat_mode;
   const queryMode = agentStep?.query_mode;
-  const confirm = agentStep?.confirm;
-  const recommend = agentStep?.recommend;
+  const confirm = useMemo(() => normalizeAnalysisFields(agentStep?.confirm), [agentStep]);
+  const recommend = useMemo(() => normalizeAnalysisFields(agentStep?.recommend), [agentStep]);
 
   // 初始化表单数据
   useEffect(() => {
@@ -603,6 +620,19 @@ const IntentClarifyAnalysisMode: React.FC<IntentClarifyAnalysisModeProps> = ({ q
           { field: 'indicator_status' }
         ],
         end: '的原因。'
+      },
+      // 归因分析（后端统一 query_mode，字段已归一化为 target_indicators/base_indicators）
+      attribution_analysis: {
+        start: '请分析',
+        parts: [
+          { field: 'time_range', after: '，' },
+          { field: 'filters', after: '条件下，' },
+          { field: 'dimensions', before: '从', after: '维度，' },
+          { field: 'base_indicators', after: '对比' },
+          { field: 'target_indicators' },
+          { field: 'indicator_status' }
+        ],
+        end: '变化的原因。'
       }
     };
 

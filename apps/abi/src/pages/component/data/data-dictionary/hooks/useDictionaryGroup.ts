@@ -25,10 +25,11 @@ export const useDictionaryGroup = (groupId: string) => {
 
   const getDictionary = async (search = '', queryGroupId = groupId) => {
     if (queryGroupId) {
+      // 一次性拉取全量数据，前端做时间筛选与分页
       const res = await queryDictionary({
         groupId: queryGroupId,
-        pageNum: current,
-        pageSize: 10,
+        pageNum: 1,
+        pageSize: 100000,
         dictField: search
       });
       // 防止快速切换时旧请求响应覆盖新数据
@@ -46,7 +47,7 @@ export const useDictionaryGroup = (groupId: string) => {
       total: 0
     });
     getDictionary(searchValue);
-  }, [current, groupId]);
+  }, [groupId]);
 
   const handleAdd = () => {
     setEditObj(null);

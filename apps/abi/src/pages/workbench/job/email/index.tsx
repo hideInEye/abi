@@ -1,9 +1,11 @@
-import { DeleteOutlined, FileMarkdownOutlined, LeftOutlined, QuestionCircleOutlined, RightOutlined, WechatWorkOutlined } from '@ant-design/icons';
+import { DeleteOutlined, FileMarkdownOutlined, LeftOutlined, QuestionCircleOutlined, RightOutlined, SearchOutlined, WechatWorkOutlined } from '@ant-design/icons';
+import { useDebounceFn } from 'ahooks';
 // import PageTitle from '@/components/stateless/common/PageTitle';
 
 import { deleteJob, deleteShareEmail, deleteShareEmailBatch, fetchEmailList } from '@/service/api/job';
 
-import KeySearch from './modules/key-search';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 import { useRoute, useRouter } from '~/packages/simple-router/src';
 import { shareMailColor, shareMailStatus, statusType } from '@/types/job';
 import { message } from 'antd';
@@ -14,7 +16,7 @@ export function Component() {
   const { switchToSpace } = useSpaceSwitch();
   const route = useRoute();
   const spaceId = useAppSelector(getSpaceId);
-  const { scrollConfig, tableWrapperRef } = useTableScroll();
+  const [dateRange, setDateRange] = useState<any>(null);
   const { data, run, searchProps, tableProps } = useTable({
     apiFn: fetchEmailList as any,
     apiParams: {
@@ -29,11 +31,11 @@ export function Component() {
       [
         {
           align: 'left',
-          fixed: 'left',
           dataIndex: 'jobName',
           key: 'jobName',
           title: '任务名称',
-          width: 130,
+          minWidth: 160,
+          onHeaderCell: () => ({ className: 'col-left-header' }),
           render: (text: string) => {
             if (!text) {
               return '';
@@ -42,18 +44,18 @@ export function Component() {
           },
         },
         {
-          align: 'right',
+          align: 'center',
           dataIndex: 'jobId',
           key: 'jobId',
           title: '任务id',
-          width: 130,
+          minWidth: 130,
         },
         {
           align: 'center',
           dataIndex: 'recipients',
           key: 'recipients',
           title: '收件人',
-          width: 130,
+          minWidth: 130,
           render: (text: string) => {
             const data = (text && text.split(',')) || [];
             if (data.length === 0) {
@@ -86,21 +88,22 @@ export function Component() {
           dataIndex: 'type',
           key: 'type',
           title: '发送类型',
-          width: 130,
+          minWidth: 130,
+          onHeaderCell: () => ({ className: 'col-left-header' }),
         },
         {
           align: 'center',
           dataIndex: 'sendTime',
           key: 'sendTime',
           title: '发送时间',
-          width: 130,
+          minWidth: 150,
         },
         {
           align: 'center',
           dataIndex: 'status',
           key: 'status',
           title: '状态',
-          width: 120,
+          minWidth: 120,
           render: (r: statusType, row: any) => {
             return (
               <span style={{ color: shareMailColor[r] }}>
@@ -119,36 +122,19 @@ export function Component() {
           fixed: 'right',
           key: 'operate',
           title: '操作',
-          width: 120,
+          minWidth: 200,
           render: (_: unknown, record: any) => (
-            <div className="flex-center gap-8px">
-              <ATooltip title="下载">
-                <AButton
-                  color="primary"
-                  icon={<FileMarkdownOutlined />}
-                  size="small"
-                  variant="link"
-                  onClick={() => {
-                    handleExport(record);
-                  }}
-                />
-              </ATooltip>
-
-              <ATooltip title="进入对话">
-                <AButton
-                  color="primary"
-                  icon={<WechatWorkOutlined />}
-                  size="small"
-                  variant="link"
-                  onClick={() => {
-                    handleNavigate(record);
-                  }}
-                />
-              </ATooltip>
+            <div className="ds-action-group">
+              <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleExport(record)}>
+                <FileMarkdownOutlined style={{ marginRight: 3, fontSize: 12 }} />下载
+              </AButton>
+              <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleNavigate(record)}>
+                <WechatWorkOutlined style={{ marginRight: 3, fontSize: 12 }} />进入对话
+              </AButton>
               <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.logId)}>
-                <ATooltip title="删除">
-                  <AButton color="danger" icon={<DeleteOutlined />} size="small" variant="link" />
-                </ATooltip>
+                <AButton className="abi-action-link-danger" size="small" variant="link">
+                  <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
+                </AButton>
               </APopconfirm>
             </div>
           ),
@@ -204,55 +190,117 @@ export function Component() {
     switchToSpace(spaceId, undefined, { chatId });
   }
 
-  const columnWidth = useMemo(() => {
-    return tableProps.columns.reduce((acc, item) => {
-      return acc + ((item.width as number) || 0);
-    }, 0);
-  }, [tableProps.columns]);
+  const jobOptions = useMemo(() => {
+    return Object.entries(shareMailStatus).map(([key, value]) => ({
+      label: value,
+      value: key,
+    }));
+  }, [shareMailStatus]);
+
+  // 前端按发送时间过滤 + 前端分页（useTable 返回全量数据）
+  const pag = tableProps.pagination as any;
+  const currentPage = pag?.current || 1;
+  const pageSizeVal = pag?.pageSize || 10;
+  const filteredData = useMemo(
+    () => filterByCreateTime((data as any[]) || [], dateRange, 'sendTime'),
+    [data, dateRange]
+  );
+  const totalCount = filteredData.length;
+  const pagedData = useMemo(
+    () => filteredData.slice((currentPage - 1) * pageSizeVal, currentPage * pageSizeVal),
+    [filteredData, currentPage, pageSizeVal]
+  );
+
+  // 搜索框停止输入 1s 后自动查询；清空时立即查询
+  const { cancel: cancelDebouncedSearch, run: runDebouncedSearch } = useDebounceFn(() => searchProps.search(), { wait: 1000 });
+  const handleSearchValuesChange = (changed: Record<string, unknown>): void => {
+    if (!Object.prototype.hasOwnProperty.call(changed, 'jobName')) return;
+    const value = changed.jobName;
+    if (value === undefined || value === null || value === '') {
+      cancelDebouncedSearch();
+      searchProps.search();
+    } else {
+      runDebouncedSearch();
+    }
+  };
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch gap-8px p-6">
-      {/* <PageTitle /> */}
-      <div className="flex items-center gap-4">
-        <KeySearch {...searchProps} />
-        <div className="ml-auto flex items-center gap-3">
-          <AButton
-            type="primary"
-            onClick={searchProps.reset}
-          >
-            重置
-          </AButton>
-          <AButton
-            type="primary"
-            onClick={searchProps.search}
-          >
-            查询
-          </AButton>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* v5 Searchbar */}
+      <section className="abi-searchbar">
+        <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }} onValuesChange={handleSearchValuesChange}>
+            <SearchFilterBar
+              searchSlot={
+                <AForm.Item className="m-0 flex-1 min-w-0" name="jobName">
+                  <AInput
+                    allowClear
+                    className="abi-field-input w-full"
+                    placeholder="请输入任务名称"
+                    prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+                    onPressEnter={() => { cancelDebouncedSearch(); searchProps.search(); }}
+                  />
+                </AForm.Item>
+              }
+              onQuery={() => searchProps.search()}
+              onReset={() => { searchProps.reset(); setDateRange(null); }}
+              filters={
+                <>
+                  <SearchFilterField label="时间范围">
+                    <ADatePicker.RangePicker
+                      allowClear
+                      className="abi-field-input"
+                      format="YYYY-MM-DD"
+                      getPopupContainer={getFilterPopupContainer}
+                      placeholder={['开始时间', '结束时间']}
+                      value={dateRange}
+                      onChange={(dates) => { setDateRange(dates); pag?.onChange?.(1, pageSizeVal); }}
+                    />
+                  </SearchFilterField>
+                  <SearchFilterField label="任务状态">
+                    <AForm.Item className="m-0" name="status">
+                      <ASelect
+                        allowClear
+                        className="abi-field-input w-full"
+                        getPopupContainer={getFilterPopupContainer}
+                        options={jobOptions}
+                        placeholder="请选择任务状态"
+                      />
+                    </AForm.Item>
+                  </SearchFilterField>
+                </>
+              }
+            />
+        </AForm>
+      </section>
 
-          <APopconfirm
-            title={t('common.confirmDelete')}
-            onConfirm={handleBatchDelete}
-          >
-            <AButton danger
-              icon={<DeleteOutlined />}
-              disabled={checkedRowKeys.length === 0}
+      {/* v5 Data Area */}
+      <section className="abi-data-area">
+        <div className="abi-toolbar">
+          <div className="abi-toolbar-left">
+            <APopconfirm
+              title={t('common.confirmDelete')}
+              onConfirm={handleBatchDelete}
             >
-              批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
-            </AButton>
-          </APopconfirm>
+              <AButton danger
+                icon={<DeleteOutlined />}
+                disabled={checkedRowKeys.length === 0}
+              >
+                批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
+              </AButton>
+            </APopconfirm>
+          </div>
         </div>
-      </div>
-      <div
-        ref={tableWrapperRef}
-        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
-      >
+
+        <div
+          style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
+        >
         <div
           style={{
-            border: '0.0625rem solid #d9d9d9',
-            borderRadius: '0.5rem',
+            border: '1px solid rgba(130,140,200,0.18)',
+            borderRadius: '12px',
             overflow: 'hidden',
-            width: '100%',
-            maxHeight: '100%'
+            flex: 1,
+            minHeight: 0,
           }}
         >
           <div
@@ -260,9 +308,11 @@ export function Component() {
             style={{ overflow: 'auto', maxHeight: '100%' }}
           >
             <ATable
-              scroll={tableProps.dataSource?.length > 0 ? { x: columnWidth, ...scrollConfig } : undefined}
-              size="small"
+              scroll={pagedData?.length > 0 ? { x: 'max-content' } : undefined}
+              size="middle"
+              className="abi-std-table"
               {...(tableProps as any)}
+              dataSource={pagedData}
               pagination={false}
               rowSelection={rowSelection}
             />
@@ -270,10 +320,8 @@ export function Component() {
         </div>
         <div className="data-source-pagination">
           {(() => {
-            const pag = tableProps.pagination as any;
-            const current = pag?.current || 1;
-            const pageSizeVal = pag?.pageSize || 10;
-            const totalVal = pag?.total || 0;
+            const current = currentPage;
+            const totalVal = totalCount;
             const totalPages = Math.max(1, Math.ceil(totalVal / pageSizeVal));
             const onChange = pag?.onChange;
             const pages: number[] = [];
@@ -301,6 +349,7 @@ export function Component() {
           })()}
         </div>
       </div>
+      </section>
     </div>
   );
 }
