@@ -286,17 +286,15 @@ button {
 
 /* ── Sidebar Glassmorphism ── */
 .sidebar-glass {
-  background: var(--glass);
-  backdrop-filter: blur(28px) saturate(1.5);
-  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  background: rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
   border-right: 1px solid var(--glass-border);
 }
 
 /* ── Content Glassmorphism ── */
 .content-glass {
-  background: var(--glass);
-  backdrop-filter: blur(28px) saturate(1.5);
-  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  background: rgb(245, 247, 250);
 }
 
 /* ── Background Decorative Blobs ── */
