@@ -15,7 +15,7 @@ import { Suspense, lazy, useMemo, useState, type Key } from 'react'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 import { filterByCreateTime } from '@/utils/date'
 import { EVAL_LLM_OPTIONS, MEMORY_CHAT_MODE_OPTIONS, MEMORY_STATUS_OPTIONS } from '@/constants/assistant-config'
 import { useAppSelector } from '@/hooks/business/useStore'
@@ -548,7 +548,7 @@ export function Component() {
             filters={
               <>
                 <SearchFilterField label="时间范围">
-                  <ADatePicker.RangePicker
+                  <DeferredRangePicker
                     allowClear
                     className="abi-field-input"
                     format="YYYY-MM-DD"

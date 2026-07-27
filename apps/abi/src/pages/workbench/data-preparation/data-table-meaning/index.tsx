@@ -1,7 +1,7 @@
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { Splitter } from 'antd';
 import { Group } from '@/components/stateful/group/Group';
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
 
 import { SemanticsTableList } from './components/semantics-table-list';
@@ -110,7 +110,7 @@ export function Component() {
                 onSearchChange={setSearchValue}
                 filters={
                   <SearchFilterField label="时间范围">
-                    <ADatePicker.RangePicker
+                    <DeferredRangePicker
                       allowClear
                       className="abi-field-input"
                       format="YYYY-MM-DD"

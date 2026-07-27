@@ -4,7 +4,7 @@ import { Dropdown, message, Modal, Splitter } from 'antd';
 
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
 
 import { DictionaryGroup } from './components/DictionaryGroup';
@@ -115,7 +115,7 @@ export const Component: React.FC = () => {
                 onSearchChange={handleSearch}
                 filters={
                   <SearchFilterField label="时间范围">
-                    <ADatePicker.RangePicker
+                    <DeferredRangePicker
                       allowClear
                       className="abi-field-input"
                       format="YYYY-MM-DD"

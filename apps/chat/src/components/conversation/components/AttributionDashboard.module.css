@@ -44,14 +44,14 @@
 .headerSub { font-size: 11px; color: var(--attr-muted-2); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
 .headerBadges { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-/* ============ 全屏展示 ============ */
+/* ============ 工具栏图标（模型调试 / 全屏），与问数 chart-header-icon 保持一致：无边框、灰色、悬停蓝色背景 ============ */
 .fsBtn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; padding: 0; border-radius: 8px;
-  border: 1px solid var(--attr-border); background: var(--attr-surface);
-  color: var(--attr-muted); cursor: pointer; transition: all 0.2s ease;
+  width: 30px; height: 30px; padding: 0; border-radius: 6px;
+  border: none; background: transparent;
+  color: #8c8c8c; cursor: pointer; transition: all 0.2s ease;
 }
-.fsBtn:hover { color: var(--attr-fg); border-color: var(--attr-border-strong); background: rgba(0, 0, 0, 0.03); }
+.fsBtn:hover { color: #5b7cf7; background: rgba(91, 124, 247, 0.08); }
 
 .fsOverlay {
   position: fixed;

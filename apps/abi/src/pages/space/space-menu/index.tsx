@@ -12,7 +12,7 @@ import {
   updateSpaceMenuApi
 } from '@/service/api/space-menu';
 import { getLocalIcons } from '@/utils/icon';
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterTreeByCreateTime } from '@/utils/date';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
@@ -325,7 +325,7 @@ export function Component() {
           filters={
             <>
               <SearchFilterField label="创建时间">
-                <ADatePicker.RangePicker
+                <DeferredRangePicker
                   allowClear
                   className="abi-field-input"
                   format="YYYY-MM-DD"

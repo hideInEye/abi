@@ -4,7 +4,7 @@ import { Dropdown, Empty, Popconfirm, Select, Spin, Splitter, Switch, Typography
 import type { TableProps } from 'antd';
 
 import { Group } from '@/components/stateful/group/Group';
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import type { GroupProps } from '@/components/stateful/group/Group';
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
@@ -13,6 +13,7 @@ import type { ColumnOption } from '@/components/ViewControls';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { fetchAppListApi, deleteAppApi, updateAppApi } from '@/service/api/abi-chat-app';
+import { filterByCreateTime } from '@/utils/date';
 
 import AssistantEditDrawer, { type AgentMock } from './modules/assistant-edit-drawer';
 
@@ -109,7 +110,6 @@ export function Component() {
     try {
       const res: any = await fetchAppListApi({
         spaceId: spaceId || undefined,
-        appName: keyword.trim() || undefined,
         groupId: groupId && groupId !== '0' ? groupId : undefined,
       });
       const list = res?.data?.rows || res?.data || [];
@@ -129,15 +129,12 @@ export function Component() {
 
   const handleSearch = () => {
     setCurrentPage(1);
-    fetchList();
   };
 
   const handleReset = () => {
     setKeyword('');
     setDateRange(null);
     setCurrentPage(1);
-    // 重置后重新拉取（keyword 已清空，但 setState 异步，直接调用则传空）
-    fetchList();
   };
 
   // v5 pagination state
@@ -148,14 +145,20 @@ export function Component() {
   // 筛选条件变化时重置到第一页
   useEffect(() => {
     setCurrentPage(1);
-  }, [agents]);
+  }, [agents, dateRange, keyword]);
 
-  const totalCount = agents.length;
+  const filteredAgents = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    let rows = agents;
+    if (kw) rows = rows.filter(a => String(a.name || '').toLowerCase().includes(kw));
+    return filterByCreateTime(rows, dateRange, 'createTime');
+  }, [agents, keyword, dateRange]);
+  const totalCount = filteredAgents.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const pagedList = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return agents.slice(start, start + pageSize);
-  }, [agents, currentPage, pageSize]);
+    return filteredAgents.slice(start, start + pageSize);
+  }, [filteredAgents, currentPage, pageSize]);
 
   // 表格列定义
   const allTableColumns: TableProps<AgentCard>['columns'] = [
@@ -492,7 +495,7 @@ export function Component() {
             onSearchChange={setKeyword}
             filters={
               <SearchFilterField label="时间范围">
-                <ADatePicker.RangePicker
+                <DeferredRangePicker
                   allowClear
                   className="abi-field-input"
                   format="YYYY-MM-DD"

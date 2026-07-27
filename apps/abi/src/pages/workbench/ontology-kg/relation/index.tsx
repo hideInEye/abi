@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 import { useAppSelector } from '@/hooks/business/useStore'
 import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import type { OntologyNetworkId, OntologyRelation } from '@/pages/workbench/ontology-kg/shared-network-types'
@@ -160,7 +160,7 @@ export const Component: React.FC = () => {
                 />
               </SearchFilterField>
               <SearchFilterField label="时间范围">
-                <ADatePicker.RangePicker
+                <DeferredRangePicker
                   allowClear
                   className="abi-field-input"
                   format="YYYY-MM-DD"

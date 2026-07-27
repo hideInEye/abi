@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 
 import type { DimensionSearchParams } from '../types/dimensionModeling.types'
 
@@ -38,7 +38,7 @@ export const DimensionSearchBar: React.FC<Props> = ({
         filters={
           <>
             <SearchFilterField label="时间范围">
-              <ADatePicker.RangePicker
+              <DeferredRangePicker
                 allowClear
                 className="abi-field-input"
                 format="YYYY-MM-DD"
