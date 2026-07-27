@@ -130,7 +130,7 @@ async function redirectToLogin({
 
 export const authManager = createAuthManager({
   clearAuth: clearAuthStorageOnly,
-  defaultNoticeMessage: '登录状态已过期，请重新登录。',
+  defaultNoticeMessage: '登录已过期，即将前往登录页 …',
   defaultNoticeTitle: '登录提醒',
   getCurrentPath,
   getToken: () => localStg.get('token'),

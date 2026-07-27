@@ -281,16 +281,17 @@ const StatisticsAnalysis: React.FC<Props> = ({
               const only = actions[0];
               return (
                 <Tooltip title={only.text}>
-                  <span className="action-icon" onClick={only.onClick}>
+                  <span className="action-icon" style={only.key === 'delete' ? { color: '#ff4d4f' } : undefined} onClick={only.onClick}>
                     {only.icon}
                   </span>
                 </Tooltip>
               );
             }
 
-            // 多个操作：全部收进「...」下拉菜单
+            // 多个操作：全部收进「...」下拉菜单（删除项红色危险态）
             const moreItems: MenuProps['items'] = actions.map((action) => ({
               key: action.key,
+              danger: action.key === 'delete',
               label: (<span className="flex items-center gap-2">{action.icon}{action.text}</span>),
               onClick: action.onClick,
             }));

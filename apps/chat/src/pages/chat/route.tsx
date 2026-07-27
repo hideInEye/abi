@@ -17,6 +17,7 @@ import { SkillStoreView } from '@/components/layout/SkillStoreView'
 import { SpaceSelector } from '@/components/layout/SpaceSelector'
 import { UserProfileCard } from '@/components/layout/UserProfileCard'
 import { WorkbenchMenuList } from '@/components/layout/WorkbenchMenuList'
+import { WorkshopView } from '@/components/layout/WorkshopView'
 import { getCurrentUserName } from '@/utils/layout'
 
 const { Content, Sider } = Layout
@@ -34,6 +35,7 @@ function ChatWorkbenchLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const [showSkillStore, setShowSkillStore] = useState(false)
+  const [showWorkshop, setShowWorkshop] = useState(false)
   const [routeLoading, setRouteLoading] = useState(true)
   const [newChatNonce, setNewChatNonce] = useState(0)
   const [scheduleOpen, setScheduleOpen] = useState(false)
@@ -42,6 +44,7 @@ function ChatWorkbenchLayout() {
   const userName = useMemo(() => getCurrentUserName(), [])
   const pageTitle = useMemo(() => {
     if (showSkillStore) return 'ABI - 技能商店'
+    if (showWorkshop) return 'ABI - 应用工坊'
     if (pathname.startsWith('/chat/task')) {
       return 'ABI - 对话'
     }
@@ -49,14 +52,14 @@ function ChatWorkbenchLayout() {
       return 'ABI - 历史话题'
     }
     return 'ABI - 对话工作台'
-  }, [pathname, showSkillStore])
+  }, [pathname, showSkillStore, showWorkshop])
 
   useEffect(() => {
     document.title = pageTitle
   }, [pageTitle])
 
   useEffect(() => {
-    if (showSkillStore) {
+    if (showSkillStore || showWorkshop) {
       setRouteLoading(false)
       return
     }
@@ -76,17 +79,18 @@ function ChatWorkbenchLayout() {
         window.cancelAnimationFrame(frameId)
       }
     }
-  }, [pathname, showSkillStore])
+  }, [pathname, showSkillStore, showWorkshop])
 
-  /* 3. Auto-close skill store when user navigates to a conversation */
+  /* 3. Auto-close skill store / workshop when user navigates to a conversation */
   useEffect(() => {
     if (pathname !== prevPathnameRef.current) {
       prevPathnameRef.current = pathname
-      if (showSkillStore && pathname.startsWith('/chat/task')) {
-        setShowSkillStore(false)
+      if (pathname.startsWith('/chat/task')) {
+        if (showSkillStore) setShowSkillStore(false)
+        if (showWorkshop) setShowWorkshop(false)
       }
     }
-  }, [pathname, showSkillStore])
+  }, [pathname, showSkillStore, showWorkshop])
 
   const handleToggleCollapse = useCallback(() => {
     setCollapsed((previousCollapsed) => !previousCollapsed)
@@ -96,9 +100,13 @@ function ChatWorkbenchLayout() {
     (key: string) => {
       if (key === SKILL_STORE_MENU_KEY) {
         setShowSkillStore(true)
+        setShowWorkshop(false)
+      } else if (key === 'workshop') {
+        setShowWorkshop(true)
+        setShowSkillStore(false)
       } else {
         setShowSkillStore(false)
-        /* placeholder for other nav items like 应用工坊 */
+        setShowWorkshop(false)
       }
     },
     [],
@@ -125,6 +133,7 @@ function ChatWorkbenchLayout() {
 
   const handleCreateNewChat = useCallback(() => {
     setShowSkillStore(false)
+    setShowWorkshop(false)
     setNewChatNonce((n) => n + 1)
   }, [])
 
@@ -158,7 +167,7 @@ function ChatWorkbenchLayout() {
           <div className="sidebar-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-2">
             <WorkbenchMenuList
               collapsed={collapsed}
-              activeKey={showSkillStore ? SKILL_STORE_MENU_KEY : undefined}
+              activeKey={showSkillStore ? SKILL_STORE_MENU_KEY : showWorkshop ? 'workshop' : undefined}
               onItemClick={handleNavItemClick}
             />
             <ConversationGroups collapsed={collapsed} refreshKey={historyRefreshKey} />
@@ -194,12 +203,14 @@ function ChatWorkbenchLayout() {
           </div>
           {showSkillStore ? (
             <SkillStoreView onBack={handleBackFromSkillStore} />
+          ) : showWorkshop ? (
+            <WorkshopView />
           ) : (
             <Fragment key={newChatNonce}>
               <Outlet />
             </Fragment>
           )}
-          {routeLoading && !showSkillStore && <ChatRouteLoading />}
+          {routeLoading && !showSkillStore && !showWorkshop && <ChatRouteLoading />}
         </Content>
       </Layout>
     </Layout>

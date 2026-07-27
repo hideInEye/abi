@@ -1818,7 +1818,7 @@ const ViewEle: React.FC<PropsType> = ({
                       onQaClick={handleQaClick}
                       onRegenerateClick={onRegenerate ? () => onRegenerate(data) : undefined}
                       onDeleteClick={onDelete ? () => onDelete(data) : undefined}
-                      onShareClick={() => window.dispatchEvent(new CustomEvent('start-share-conversation', { detail: { chatId: conv?.chat_id } }))}
+                      onShareClick={() => window.dispatchEvent(new CustomEvent('start-share-conversation', { detail: { chatId: conv?.chat_id, order: data?.order } }))}
                       isLast={isLast}
                       versionInfo={versionInfo}
                       onVoteChange={handleLike}

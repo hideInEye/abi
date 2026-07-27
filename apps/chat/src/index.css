@@ -63,25 +63,31 @@
   height: 100%;
 }
 
-/* ── 全站滚动条统一：浅灰、细、透明轨道，跨浏览器一致 ──
-   thumb 用实心半透明墨色，不依赖 background-clip，兼容老内核浏览器 */
+/* ── 全站滚动条统一：默认完全隐藏（thumb 与轨道凹槽均透明），
+   鼠标划入滚动容器时显示 #A8A8A8，悬停不加深。
+   注意：Chrome 121+ 下标准属性 scrollbar-color 优先于 ::-webkit-scrollbar，
+   颜色统一由标准属性控制，webkit 规则仅为老内核兑底，两者颜色必须一致 ── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(26, 39, 68, 0.22) transparent;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: #A8A8A8 transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
+  background: transparent;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(26, 39, 68, 0.22);
+  background: transparent;
   border-radius: 4px;
 }
-*::-webkit-scrollbar-thumb:hover {
-  background: rgba(26, 39, 68, 0.36);
+*:hover::-webkit-scrollbar-thumb {
+  background: #A8A8A8;
 }
 *::-webkit-scrollbar-corner {
   background: transparent;
@@ -372,14 +378,8 @@ button {
   background: rgba(130, 140, 200, 0.06);
 }
 
-/* ── Sidebar Scrollbar ── */
-.sidebar-scroll::-webkit-scrollbar {
-  width: 3px;
-}
-.sidebar-scroll::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
+/* ── Sidebar Scrollbar：颜色由全局标准属性统一控制（Chrome 121+ 下
+   ::-webkit-scrollbar 局部规则不生效，不再单独定制） ── */
 
 /* ── Input Box Glassmorphism - Floating Island ── */
 .chat-input-glass {
@@ -1453,18 +1453,6 @@ button {
   flex-direction: column;
   gap: 4px;
   padding: 8px 12px 8px 8px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(130, 140, 200, 0.30) transparent;
-}
-.space-picker-list::-webkit-scrollbar {
-  width: 6px;
-}
-.space-picker-list::-webkit-scrollbar-thumb {
-  background: rgba(130, 140, 200, 0.30);
-  border-radius: 4px;
-}
-.space-picker-list::-webkit-scrollbar-track {
-  background: transparent;
 }
 .space-picker-item {
   display: flex;
@@ -1969,13 +1957,6 @@ code, pre {
   flex-direction: column;
   gap: 20px;
 }
-.skill-store-view::-webkit-scrollbar {
-  width: 5px;
-}
-.skill-store-view::-webkit-scrollbar-thumb {
-  background: rgba(130, 140, 200, 0.2);
-  border-radius: 5px;
-}
 
 .ss-search-field {
   flex: 1;
@@ -2094,6 +2075,377 @@ code, pre {
   background: var(--accent);
   color: #fff;
   box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3);
+}
+
+/* ── Workshop View（应用工坊，对齐 abi 应用工坊-我的对话页） ── */
+.workshop-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 28px;
+  gap: 16px;
+}
+
+/* tab 样式对齐 abi abi-attr-modeling-tabs 下划线风格 */
+.ws-tabs {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+  flex-shrink: 0;
+}
+
+.ws-tab {
+  position: relative;
+  padding: 12px 0 14px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font);
+  color: #768a9f;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ws-tab:hover {
+  color: #5b7cf7;
+}
+.ws-tab.active {
+  color: #5b7cf7;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(91, 124, 247, 0.15);
+}
+.ws-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #5b7cf7 0%, #7091fa 50%, #5b7cf7 100%);
+  border-radius: 3px 3px 0 0;
+  box-shadow: 0 -2px 8px rgba(91, 124, 247, 0.4);
+}
+
+/* 搜索行：输入框占满 + 高级筛选按钮（对齐 abi abi-search-row） */
+.ws-search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+.ws-field-input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 8px !important;
+  border-color: rgba(130, 140, 200, 0.18) !important;
+  background: rgba(255, 255, 255, 0.55) !important;
+  font-size: 14px !important;
+  height: 35px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.ws-field-input:hover {
+  border-color: #5b7cf7 !important;
+}
+.ws-field-input input::placeholder {
+  color: #8fa0b5 !important;
+}
+.ws-field-input:focus,
+.ws-field-input.ant-input-affix-wrapper-focused {
+  border-color: #5b7cf7 !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.1) !important;
+}
+
+/* 高级筛选按钮（对齐 abi SearchFilterBar filterBtn） */
+.ws-filter-btn {
+  height: 35px !important;
+  padding: 0 14px !important;
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+  border: 1px solid rgba(91, 124, 247, 0.15) !important;
+  box-shadow:
+    0 4px 16px rgba(91, 124, 247, 0.1),
+    0 1px 4px rgba(0, 0, 0, 0.04) !important;
+  color: #64748b !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all 0.25s ease !important;
+  flex-shrink: 0;
+}
+.ws-filter-btn:hover {
+  background: rgba(91, 124, 247, 0.1) !important;
+  border-color: #5b7cf7 !important;
+  color: #5b7cf7 !important;
+}
+.ws-filter-arrow {
+  margin-left: 2px;
+  font-size: 11px !important;
+  transition: transform 0.25s ease;
+}
+.ws-filter-arrow-open {
+  transform: rotate(180deg);
+}
+
+/* 高级筛选面板 */
+.ws-filter-panel {
+  width: 520px;
+  padding: 8px 4px;
+}
+.ws-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+  row-gap: 12px;
+}
+.ws-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  min-width: 0;
+}
+.ws-filter-actions {
+  grid-column: span 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.ws-reset-btn {
+  border: 1px solid rgba(91, 124, 247, 0.2) !important;
+  color: #64748b !important;
+  background: transparent !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+}
+.ws-reset-btn:hover {
+  border-color: rgba(91, 124, 247, 0.35) !important;
+  color: #5b7cf7 !important;
+}
+.ws-query-btn {
+  border: none !important;
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 14px rgba(91, 124, 247, 0.25) !important;
+  transition: all 0.25s ease !important;
+}
+.ws-query-btn:hover {
+  background: linear-gradient(135deg, #4a6be0 0%, #5b7cf7 100%) !important;
+  box-shadow: 0 6px 20px rgba(91, 124, 247, 0.35) !important;
+  transform: translateY(-1px);
+}
+.ws-query-btn .anticon,
+.ws-query-btn span {
+  color: #fff !important;
+}
+
+/* 数据区：占满剩余高度 */
+.ws-data-spin {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ws-data-spin > .ant-spin-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ws-data-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 空态：v5 标准边框容器占满，插画居中 */
+.ws-empty {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  border-radius: 12px;
+}
+.ws-empty .ant-empty-description {
+  color: #768a9f;
+  font-size: 13px;
+}
+
+.ws-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  border-radius: 12px;
+}
+
+.ws-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: var(--ink);
+}
+.ws-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 11px 16px;
+  text-align: left;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #768a9f;
+  background: #f4f6fd;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+  white-space: nowrap;
+}
+.ws-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
+  color: var(--ink-2);
+}
+.ws-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.ws-table tbody tr {
+  transition: background 0.15s var(--ease);
+}
+.ws-table tbody tr:hover {
+  background: rgba(91, 124, 247, 0.04);
+}
+
+.ws-link-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font);
+  color: #5b7cf7;
+  cursor: pointer;
+  transition: opacity 0.15s var(--ease);
+}
+.ws-link-btn:hover {
+  opacity: 0.75;
+}
+
+/* 分页条（对齐 abi data-source-pagination） */
+.ws-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 2px 0;
+  flex-shrink: 0;
+}
+.ws-total-text {
+  color: #768a9f;
+  font-size: 13px;
+  margin-right: 16px;
+}
+.ws-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ws-page-size-select {
+  min-width: 100px;
+}
+.ws-page-size-select .ant-select-selector {
+  border-radius: 8px !important;
+  border-color: rgba(130, 140, 200, 0.18) !important;
+}
+.ws-page-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  background: rgba(255, 255, 255, 0.4);
+  color: #3e5068;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ws-page-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+.ws-page-btn:hover:not(:disabled) {
+  border-color: #5b7cf7;
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.1);
+}
+.ws-page-item {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  background: rgba(255, 255, 255, 0.4);
+  color: #3e5068;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+.ws-page-item:hover:not(.ws-page-active):not(.ws-page-ellipsis) {
+  border-color: #5b7cf7;
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.1);
+}
+.ws-page-item.ws-page-active {
+  background: #5b7cf7;
+  color: #fff;
+  border-color: #5b7cf7;
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3);
+  cursor: default;
+}
+.ws-page-item.ws-page-ellipsis {
+  border: none;
+  background: transparent;
+  cursor: default;
+  color: #a3b3c8;
+  min-width: 20px;
+}
+.ws-quick-jumper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #768a9f;
+  font-size: 13px;
+  margin-left: 4px;
+}
+.ws-jump-input {
+  width: 48px !important;
+  height: 34px;
+  text-align: center;
+  border-radius: 8px !important;
+  border-color: rgba(130, 140, 200, 0.18) !important;
 }
 
 /* ════════════════════════════════════════════════════════════════
