@@ -113,6 +113,33 @@ export function fetchIsFavorite(data: FavoriteParams) {
     params: buildFavoriteParams(data),
   });
 }
+
+/**
+ * 应用工坊操作记录列表
+ *
+ * @param type 1 最近使用 3 我的分享
+ */
+export function fetchOperateRecordList(type: string) {
+  return request({
+    url: "/api/abi-system/record/recentlyUseList",
+    method: "get",
+    params: { type },
+  });
+}
+
+// 收藏列表（应用工坊-我的收藏）
+export function fetchFavoriteList(data: FavoriteParams & { pageNum?: number; pageSize?: number } = {}) {
+  return request({
+    url: "/api/abi-system/favorite/list",
+    method: "get",
+    params: {
+      userId: data.userId ?? getCurrentUserId(),
+      favorType: data.favorType ?? 'chat',
+      pageNum: data.pageNum ?? 1,
+      pageSize: data.pageSize ?? 999,
+    },
+  });
+}
 /**
  * 获取部门列表
  *

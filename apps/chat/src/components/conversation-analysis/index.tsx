@@ -490,7 +490,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
   return (
     <div className="h-full w-full" style={{ background: 'transparent' }}>
-      <div className="h-full w-full flex" style={{ background: 'transparent' }}>
+      <div className="h-full w-full flex" style={{ background: '#F5F5FA' }}>
         {!hideSidebar && (
           <ConverList
             ref={converListRef}

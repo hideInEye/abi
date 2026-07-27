@@ -72,6 +72,24 @@ export function Component() {
     return result
   }
 
+  // 问题字段可能是纯文本，也可能是带文件信息的 JSON 字符串（如 {"question":"分析excel","file_name":...}），统一提取其中的 question
+  const normalizeQuestion = (val: any) => {
+    if (val == null) return val
+    if (typeof val === 'object') return val.question ?? JSON.stringify(val)
+    if (typeof val === 'string') {
+      const trimmed = val.trim()
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(trimmed)
+          if (parsed && typeof parsed === 'object' && typeof parsed.question === 'string') return parsed.question
+        } catch {
+          // 非合法 JSON，按原文本展示
+        }
+      }
+    }
+    return val
+  }
+
   const fetchEffectReviewList = async (params: any) => {
     try {
       // 将表格内部的 snake_case 分页/查询参数映射为接口要求的 camelCase 参数
@@ -91,7 +109,7 @@ export function Component() {
       // transformBackendResponse 已展平取 data，故 res.data 即内层 { total, data, ... }
       const inner = res?.data ?? res?.response?.data?.data ?? {}
       const rawList = inner.data || inner.rows || inner.items || inner.records || (Array.isArray(inner) ? inner : []) || []
-      const list = rawList.map(toSnakeCaseKeys)
+      const list = rawList.map(toSnakeCaseKeys).map((row: any) => ({ ...row, question: normalizeQuestion(row.question) }))
       const total = inner.total ?? inner.total_count ?? list.length ?? 0
       return { data: { data: list, total } }
     } catch {
