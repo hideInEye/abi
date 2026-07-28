@@ -23,12 +23,8 @@ export function queryDimensionList(params: {
   versionStatus?: string
 }) {
   return apiRequest({
-    data: {
-      pageNum: 1,
-      pageSize: 1000,
-      ...params
-    },
     method: 'post',
+    data:params,
     url: `${DIMENSION_API_PREFIX}/list`
   })
 }
