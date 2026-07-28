@@ -1,7 +1,7 @@
 export const KNOWLEDGE_GROUP_TYPE = 'ontology'
 
 export const INDICATOR_TYPE_OPTIONS = [
-  { label: '原子指标', value: 'atomic', disabled: true },
+  { label: '原子指标', value: 'atomic' },
   { label: '派生指标', value: 'derived' },
   { label: '衍生指标', value: 'derivative' }
 ]

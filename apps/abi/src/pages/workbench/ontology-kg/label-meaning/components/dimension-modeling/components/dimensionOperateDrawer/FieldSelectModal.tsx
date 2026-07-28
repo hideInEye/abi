@@ -75,20 +75,23 @@ export const FieldSelectModal: React.FC<Props> = ({ onCancel, onConfirm, open, o
           取消全选
         </a>
       </div>
-      <ACheckbox.Group
-        className="max-h-300px flex-col overflow-auto"
-        value={innerKeys}
-        onChange={values => setInnerKeys(values as string[])}
-      >
-        {filteredOptions.map(item => (
-          <div
-            className="mb-2"
-            key={item.key}
-          >
-            <ACheckbox value={item.key}>{formatFieldLabel(item)}</ACheckbox>
-          </div>
-        ))}
-      </ACheckbox.Group>
+      <div className="max-h-360px overflow-x-hidden overflow-y-auto pr-2">
+        <ACheckbox.Group
+          className="flex w-full flex-col gap-2"
+          value={innerKeys}
+          onChange={values => setInnerKeys(values as string[])}
+        >
+          {filteredOptions.map(item => (
+            <ACheckbox
+              className="w-full whitespace-normal break-all rounded px-1 py-1"
+              key={item.key}
+              value={item.key}
+            >
+              {formatFieldLabel(item)}
+            </ACheckbox>
+          ))}
+        </ACheckbox.Group>
+      </div>
     </Modal>
   )
 }

@@ -10,7 +10,7 @@ export function queryTag(params: {
   alias?: string;
   createBy?: string;
   engName?: string;
-  groupId: number;
+  groupId: number | string;
   spaceId: number;
   tagName?: string;
 }) {
@@ -41,12 +41,12 @@ interface ITag {
   description: string;
   engName: string;
   exp: string;
-  groupId: number;
+  groupId: number | string;
   relItemId: string;
   remark: string;
   spaceId: number;
   tagName: string;
-  viewId: number;
+  viewId: number | string;
 }
 
 /**

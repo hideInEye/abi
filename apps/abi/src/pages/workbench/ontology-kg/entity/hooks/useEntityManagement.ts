@@ -44,7 +44,7 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
     labelRequestSequence.current += 1
     const requestId = labelRequestSequence.current
     try {
-      const { data } = await queryOntologyLabels({ spaceId, type: 'RECOMMENDED' })
+      const { data } = await queryOntologyLabels({ spaceId, type: 'RECOMMENDED',moduleType:"ONLINK" })
       if (requestId === labelRequestSequence.current) setLabels(data ?? [])
     } catch {
       if (requestId === labelRequestSequence.current) message.error('标签类型加载失败，请稍后重试')

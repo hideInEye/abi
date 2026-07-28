@@ -54,8 +54,8 @@ export function createKnowledgeOperateValidators({ form }: CreateValidatorsParam
     if (lowerSet.size !== list.length) {
       return Promise.reject(new Error('别名需唯一且不超过10个'))
     }
-    const techName = String(form.getFieldValue('techName') || '').trim()
-    if (techName && list.includes(techName)) {
+    const bizName = String(form.getFieldValue('bizName') || '').trim()
+    if (bizName && list.includes(bizName)) {
       return Promise.reject(new Error('别名不能与指标名称相同'))
     }
     return Promise.resolve()

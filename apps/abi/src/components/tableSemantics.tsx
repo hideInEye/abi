@@ -7,10 +7,12 @@ import { type TableSemanticsGroupType, tableSemanticsGroupList } from '@/service
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
 
-function mapOptions(list: any[], labelKey: string, valueKey: string) {
+type SelectId = number | string;
+
+function mapOptions(list: any[], labelKey: string, valueKey: string, valueAsString = false) {
   return list.map(item => ({
     label: item[labelKey],
-    value: item[valueKey]
+    value: valueAsString ? String(item[valueKey]) : item[valueKey]
   }));
 }
 
@@ -22,32 +24,32 @@ interface IProps {
     semanticsGroupId,
     viewId
   }: {
-    semanticGroupId: number | null;
-    semanticSchemaId: number;
-    semanticsGroupId: number | null;
-    viewId: number;
-  }) => void;
+    semanticGroupId: SelectId | null;
+    semanticSchemaId: SelectId;
+    semanticsGroupId: SelectId | null;
+    viewId: SelectId;
+  }) => void | Promise<void>;
   readonly getSchemaOptions?: (schemaOptions: TableSemanticParams[]) => void;
   readonly groupFieldName?: 'semanticGroupId' | 'semanticsGroupId';
   readonly isEdit?: boolean;
   readonly type: TableSemanticsGroupType;
+  readonly valueAsString?: boolean;
 }
 
-export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = false, type,groupFieldName = 'semanticGroupId' }: IProps) => {
+export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = false, type, groupFieldName = 'semanticGroupId', valueAsString = false }: IProps) => {
   const spaceId = useAppSelector(getSpaceId);
-  const [groupOptions, setGroupOptions] = useState<{ label: string; value: number }[]>([]);
-  const [groupId, setGroupId] = useState<number | null>(null);
-  const [schemaOptions, setSchemaOptions] = useState<{ label: string; value: number }[]>([]);
+  const [groupOptions, setGroupOptions] = useState<{ label: string; value: SelectId }[]>([]);
+  const [groupId, setGroupId] = useState<SelectId | null>(null);
+  const [schemaOptions, setSchemaOptions] = useState<{ label: string; value: SelectId }[]>([]);
   const [originalSchemaOptions, setOriginalSchemaOptions] = useState<any[]>([]);
-  const semanticGroupIdWatch = Form.useWatch('semanticsGroupId',form)
-  console.log(semanticGroupIdWatch,'semanticGroupIdWatch');
+  const semanticGroupIdWatch = Form.useWatch(groupFieldName, form)
   
-  function findViewId(schemaId: number) {
-    return originalSchemaOptions.find((item: any) => item.schemaId === schemaId)?.relViewId;
+  function findViewId(schemaId: SelectId) {
+    return originalSchemaOptions.find((item: any) => String(item.schemaId) === String(schemaId))?.relViewId;
   }
 
   // 表语义
-  const fetchSchemaOptions = async (gpId: number | null) => {
+  const fetchSchemaOptions = async (gpId: SelectId | null) => {
     if (!gpId) {
       setSchemaOptions([]);
       setOriginalSchemaOptions([]);
@@ -60,7 +62,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
       pageNum: 1,
       pageSize: 100
     });
-    setSchemaOptions(mapOptions(data, 'bizName', 'schemaId'));
+    setSchemaOptions(mapOptions(data, 'bizName', 'schemaId', valueAsString));
     getSchemaOptions?.(data);
     setOriginalSchemaOptions(data);
   };
@@ -74,23 +76,23 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
       pageSize: 100,
       spaceId
     });
-    setGroupOptions(mapOptions(data, 'groupName', 'groupId'));
+    setGroupOptions(mapOptions(data, 'groupName', 'groupId', valueAsString));
   };
 
   useEffect(() => {
     fetchGroupOptions();
 
     if (form) {
-      const { semanticGroupId } = form.getFieldsValue();
-      setGroupId(semanticGroupId);
+      const values = form.getFieldsValue();
+      setGroupId(values[groupFieldName] ?? values.semanticGroupId ?? values.semanticsGroupId ?? null);
     }
-  }, [spaceId]);
+  }, [form, groupFieldName, spaceId]);
 
   useEffect(() => {
-    fetchSchemaOptions(groupId||semanticGroupIdWatch);
+    fetchSchemaOptions(groupId ?? semanticGroupIdWatch ?? null);
   }, [groupId, semanticGroupIdWatch]);
 
-  function backGroupIdAndSchemaId(v: number) {
+  function backGroupIdAndSchemaId(v: SelectId) {
     return getSchemaId({
       semanticGroupId: groupId,
       semanticSchemaId: v,

@@ -1,7 +1,7 @@
 import { TagsOutlined } from '@ant-design/icons'
 import { Form, Input } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 import { TableSemantics } from '@/components/tableSemantics'
 import ExpressionBuilder from '@/pages/workbench/ontology-kg/label-meaning/components/semantic-tag/Expr.tsx'
@@ -18,20 +18,24 @@ interface TagModalProps {
   readonly onSave: (values: Partial<TagGroup>) => void
 }
 
-export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, onCancel, onSave }) => {
-  const [form] = Form.useForm()
-  const { exp, ...resta } = editingGroup || {}
-  const [viewDataId, setViewDataId] = useState<number>(0)
-  const formInitData = {
-    ...resta,
-    exp: exp ? JSON.parse(decodeURIComponent(exp)) : [],
-  }
+function hasFieldValue(value: unknown) {
+  return value !== undefined && value !== null && value !== ''
+}
 
-  useEffect(() => {
-    if (editingGroup) {
-      return
-    }
-    form.setFieldsValue({
+function parseExpressions(exp?: string) {
+  if (!exp) {
+    return []
+  }
+  try {
+    return JSON.parse(decodeURIComponent(exp))
+  } catch {
+    return []
+  }
+}
+
+function buildFormInitData(editingGroup: TagGroup | null) {
+  if (!editingGroup) {
+    return {
       exp: [
         {
           binName: '',
@@ -45,14 +49,42 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
           logic: 'AND',
         },
       ],
-    })
-  }, [])
+    }
+  }
+
+  const source = editingGroup as TagGroup & Record<string, unknown>
+  const semanticsGroupId = source.semanticsGroupId ?? source.semanticGroupId
+  const semanticSchemaId = source.semanticSchemaId ?? source.relSchemaId ?? source.schemaId
+
+  return {
+    ...editingGroup,
+    exp: parseExpressions(editingGroup.exp),
+    semanticGroupId: hasFieldValue(semanticsGroupId) ? String(semanticsGroupId) : undefined,
+    semanticSchemaId: hasFieldValue(semanticSchemaId) ? String(semanticSchemaId) : undefined,
+    semanticsGroupId: hasFieldValue(semanticsGroupId) ? String(semanticsGroupId) : undefined,
+  }
+}
+
+export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, onCancel, onSave }) => {
+  const [form] = Form.useForm()
+  const [viewDataId, setViewDataId] = useState<number | string | undefined>(undefined)
+  const formInitData = buildFormInitData(editingGroup)
 
   useEffect(() => {
-    if (editingGroup) {
-      setViewDataId(editingGroup.viewId)
+    if (!isModalOpen) {
+      return
     }
-  }, [editingGroup])
+
+    const nextValues = buildFormInitData(editingGroup)
+    form.setFieldsValue(nextValues)
+
+    if (editingGroup) {
+      const source = editingGroup as TagGroup & Record<string, unknown>
+      setViewDataId(source.viewId as string | number | undefined)
+    } else {
+      setViewDataId(undefined)
+    }
+  }, [editingGroup, form, isModalOpen])
 
   const handleModalCancel = async () => {
     form.resetFields()
@@ -72,17 +104,21 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
 
   const semanticSchemaIdVal = Form.useWatch('semanticSchemaId', form)
 
-  const getSchemaId = ({ semanticGroupId, semanticSchemaId, viewId }: { semanticGroupId: number | null; semanticSchemaId: number; viewId: number }) => {
-    form.setFieldsValue({ semanticGroupId, semanticSchemaId })
+  const getSchemaId = ({ semanticGroupId, semanticSchemaId, semanticsGroupId, viewId }: { semanticGroupId: number | string | null; semanticSchemaId: number | string; semanticsGroupId: number | string | null; viewId: number | string }) => {
+    const nextGroupId = semanticsGroupId ?? semanticGroupId ?? undefined
+    form.setFieldsValue({ semanticGroupId: nextGroupId, semanticSchemaId, semanticsGroupId: nextGroupId })
     setViewDataId(viewId)
   }
 
-  const [schemaOptions, setSchemaOptions] = useState<any>(null)
+  const [schemaOptions, setSchemaOptions] = useState<TableSemanticParams[]>([])
 
   const allFields = useMemo(() => {
     if (semanticSchemaIdVal) {
       try {
-        const cur: any = schemaOptions.find((item: any) => item.schemaId === semanticSchemaIdVal)
+        const cur: any = schemaOptions.find((item: any) => String(item.schemaId) === String(semanticSchemaIdVal))
+        if (!cur?.modelDetail) {
+          return []
+        }
         const modelDetailObj = JSON.parse(cur.modelDetail)
         let resData: any[] = []
         const includesTypes = ['dimensions', 'measures']
@@ -102,8 +138,8 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
         })
 
         return resData
-      } catch (error) {
-        console.log(error)
+      } catch {
+        return []
       }
     }
     return []
@@ -132,7 +168,15 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
     >
       <AForm className="mt-5 ds-form-section" form={form} initialValues={formInitData || {}} layout="vertical">
         <OntologyFormSectionTitle icon={<TagsOutlined />}>基础信息</OntologyFormSectionTitle>
-        <TableSemantics form={form} getSchemaId={getSchemaId} getSchemaOptions={getSchemaOptions} isEdit={Boolean(editingGroup)} type="shema" />
+        <TableSemantics
+          form={form}
+          getSchemaId={getSchemaId}
+          getSchemaOptions={getSchemaOptions}
+          groupFieldName="semanticsGroupId"
+          isEdit={Boolean(editingGroup)}
+          type="shema"
+          valueAsString
+        />
         <TagInput />
         <AForm.Item
           label="标签定义"

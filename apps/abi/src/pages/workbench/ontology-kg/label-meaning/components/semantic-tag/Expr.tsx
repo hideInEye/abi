@@ -186,6 +186,7 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({ allFields }) => {
                         </div>
 
                         <Form.Item
+                          className='mb-0!'
                           name={[subField.name, 'operator']}
                           rules={[{ message: '请选择操作符', required: true }]}
                         >
@@ -212,6 +213,7 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({ allFields }) => {
 
                         {/* 逻辑操作符（除了最后一个条件） */}
                         <Form.Item
+                          className='mb-0!'
                           hidden={subField.name === subFields.length - 1}
                           name={[field.name, 'logic']}
                         >
@@ -221,7 +223,7 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({ allFields }) => {
                           />
                         </Form.Item>
 
-                        <div className="grid grid-cols-2 mt--6 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <Button
                             icon={<PlusOutlined />}
                             title="在此位置后添加条件"
