@@ -33,14 +33,13 @@ interface ChatInputProps {
   setSelectedExcel?: (file: any) => void;
   selectedExcel?: any;
   spaceId?: number;
-  // 数据语义 props
-  semanticGroups?: any[];
-  semanticGroupSchemas?: Map<string, any[]>;
+  // 数据语义 props（统一节点树：type=group/schema，递归 children）
+  semanticTree?: any[];
   selectedData?: SemanticSelectedData | null;
   onSelectData?: (data: SemanticSelectedData) => void;
   semLoading?: boolean;
   expandedSemGroups?: Set<string>;
-  onToggleSemGroup?: (groupId: string) => void;
+  onToggleSemGroup?: (nodeId: string) => void;
   // 外部控制输入值
   externalValue?: string;
   onExternalValueConsumed?: () => void;
@@ -49,7 +48,7 @@ interface ChatInputProps {
 const ChatInput: React.FC<ChatInputProps> = React.memo(
   ({ loading, onSend, onStop, deepThinkEnabled, uploadFileEnabled, setSelectedExcel, selectedExcel, conv, ensureConv, onToggleDeepThink, onToggleUploadFile,
     spaceId,
-    semanticGroups = [], semanticGroupSchemas, selectedData, onSelectData, semLoading, expandedSemGroups, onToggleSemGroup,
+    semanticTree = [], selectedData, onSelectData, semLoading, expandedSemGroups, onToggleSemGroup,
     externalValue, onExternalValueConsumed
   }) => {
     const [value, setValue] = useState('');
@@ -245,67 +244,58 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       { key: 'report', icon: <FileTextOutlined />, label: '报告', onClick: () => { message.info('功能开发中...'); setSelectedMode({ key: 'interact', label: '交互', icon: <MessageOutlined /> }); } },
     ];
 
+    /** 递归渲染语义节点：文件夹（开/合）/ 空分组（灰、不可展开）/ 叶子（可选中） */
+    const renderSemNode = (node: any, depth: number): React.ReactNode => {
+      const indent = { paddingLeft: 8 + depth * 16 };
+      // 叶子：数据语义，唯一可选中的节点
+      if (node.type === 'schema') {
+        const isSel = selectedData?.schemaId === node.schemaId;
+        return (
+          <div key={node.id} className={`sem-leaf ${isSel ? 'selected' : ''}`} style={indent} title={node.techName || node.name}
+            onClick={() => { onSelectData?.({ name: node.name, schemaId: node.schemaId, groupName: node.groupName }); setSemDropdownOpen(false); }}
+          >
+            <FileTextOutlined className="sem-leaf-icon" />
+            <span className="sem-leaf-name">{node.name}</span>
+          </div>
+        );
+      }
+      // 分组：不可选中，按有无子节点分为可展开文件夹 / 灰色空分组
+      const children = Array.isArray(node.children) ? node.children : [];
+      const hasChildren = children.length > 0;
+      if (!hasChildren) {
+        return (
+          <div key={node.id} className="sem-group-node is-empty" style={indent}>
+            <FolderOutlined className="sem-group-icon sem-group-icon--empty" />
+            <span className="sem-group-name">{node.name}</span>
+          </div>
+        );
+      }
+      const isExpanded = expandedSemGroups?.has(node.id);
+      const childCount = typeof node.count === 'number' ? node.count : children.length;
+      return (
+        <div key={node.id} className="sem-group">
+          <div className="sem-group-node" style={indent} onClick={() => onToggleSemGroup?.(node.id)}>
+            {isExpanded
+              ? <FolderOpenOutlined className="sem-group-icon" />
+              : <FolderOutlined className="sem-group-icon" />}
+            <span className="sem-group-name">{node.name}</span>
+            {childCount > 0 && <span className="sem-group-count">{childCount}</span>}
+            <span className={`sem-group-chevron ${isExpanded ? 'open' : ''}`}><RightOutlined /></span>
+          </div>
+          {isExpanded && children.map((child: any) => renderSemNode(child, depth + 1))}
+        </div>
+      );
+    };
+
     /** 数据语义 Popover 内容（分组文件夹 / 数据语义文件的层级结构） */
     const semanticPopoverContent = (
       <div className="sem-tree" style={{ width: 260, maxHeight: 360, overflowY: 'auto', padding: '6px 8px' }}>
         {semLoading ? (
           <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>加载中...</div>
-        ) : semanticGroups.length === 0 ? (
+        ) : semanticTree.length === 0 ? (
           <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>暂无数据语义</div>
         ) : (
-          semanticGroups.map((g: any) => {
-            const gid = g.groupId;
-            const isExpanded = expandedSemGroups?.has(gid);
-            const loaded = semanticGroupSchemas?.has(gid);
-            const schemas = semanticGroupSchemas?.get(gid) || [];
-            // 子元素数量：优先后端返回的计数字段，否则回退到已加载的表数量
-            const rawCount = [g.schemaCount, g.count, g.schemaNum, g.tableCount, g.childCount, g.num].find((v) => typeof v === 'number');
-            const childCount = typeof rawCount === 'number' ? rawCount : (loaded ? schemas.length : undefined);
-            // childCount 未知（未加载且无计数字段）时默认当作可展开的文件夹
-            const hasChildren = childCount === undefined ? true : childCount > 0;
-            // 无子元素：文件图标、不可展开
-            if (!hasChildren) {
-              return (
-                <div key={gid} className="sem-group">
-                  <div className="sem-group-node is-empty">
-                    <FileTextOutlined className="sem-group-icon sem-group-icon--empty" />
-                    <span className="sem-group-name">{g.groupName}</span>
-                  </div>
-                </div>
-              );
-            }
-            return (
-              <div key={gid} className="sem-group">
-                {/* 有子元素：文件夹节点，可展开 */}
-                <div className="sem-group-node" onClick={() => onToggleSemGroup?.(gid)}>
-                  {isExpanded
-                    ? <FolderOpenOutlined className="sem-group-icon" />
-                    : <FolderOutlined className="sem-group-icon" />}
-                  <span className="sem-group-name">{g.groupName}</span>
-                  {typeof childCount === 'number' && childCount > 0 && <span className="sem-group-count">{childCount}</span>}
-                  <span className={`sem-group-chevron ${isExpanded ? 'open' : ''}`}><RightOutlined /></span>
-                </div>
-                {/* 数据语义：文件叶子节点 */}
-                {isExpanded && (
-                  schemas.length === 0 ? (
-                    <div className="sem-leaf-empty">暂无表数据</div>
-                  ) : (
-                    schemas.map((s: any) => {
-                      const isSel = selectedData?.schemaId === s.schemaId;
-                      return (
-                        <div key={s.schemaId} className={`sem-leaf ${isSel ? 'selected' : ''}`} title={s.techName || s.bizName}
-                          onClick={() => { onSelectData?.({ name: s.bizName, schemaId: s.schemaId, groupName: g.groupName }); setSemDropdownOpen(false); }}
-                        >
-                          <FileTextOutlined className="sem-leaf-icon" />
-                          <span className="sem-leaf-name">{s.bizName}</span>
-                        </div>
-                      );
-                    })
-                  )
-                )}
-              </div>
-            );
-          })
+          semanticTree.map((node: any) => renderSemNode(node, 0))
         )}
       </div>
     );
