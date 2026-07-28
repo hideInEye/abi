@@ -285,11 +285,16 @@ button {
 }
 
 /* ── Sidebar Glassmorphism ── */
+/* 右侧双层线对齐 ABI .abi-menu-panel：内侧白色高光 + 外侧灰蓝细线。
+   用 border(灰) + inset 阴影(白) 画在自身盒内，避免外挡阴影被右侧内容盖住 */
 .sidebar-glass {
-  background: rgba(255, 255, 255, 0.38);
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.38) !important;
   backdrop-filter: blur(20px) saturate(1.3);
   -webkit-backdrop-filter: blur(20px) saturate(1.3);
-  border-right: 1px solid var(--glass-border);
+  border-right: 1px solid rgba(130, 140, 200, 0.18) !important;
+  box-shadow: inset -1px 0 0 0 rgba(255, 255, 255, 0.65) !important;
 }
 
 /* ── Content Glassmorphism ── */
