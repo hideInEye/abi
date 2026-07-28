@@ -10,9 +10,14 @@ export interface TagGroup {
   engName: string;
   exp: string;
   expression?: string;
-  groupId: number;
+  groupId: number | string;
   id: string;
   remark: string;
+  relSchemaId?: number | string;
+  schemaId?: number | string;
+  semanticGroupId?: number | string;
+  semanticSchemaId?: number | string;
+  semanticsGroupId?: number | string;
   spaceId: number;
   tagId: number;
   tagName: string;
@@ -21,7 +26,7 @@ export interface TagGroup {
   updateBy?: string;
   updateTime?: string;
 
-  viewId: number;
+  viewId: number | string;
 }
 
 export interface TagManagementProps {

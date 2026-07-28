@@ -63,7 +63,6 @@ export const DIMENSION_TIME_GRANULARITY_OPTIONS = [
 ]
 
 export const DEFAULT_FORM_VALUES: DimensionFormValues = {
-  dimCategory: 'geography',
   dimType: 'std',
   drillDirection: 'down',
   englishName: '',

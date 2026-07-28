@@ -1,14 +1,14 @@
 import { ApartmentOutlined, InfoCircleOutlined, LinkOutlined, ProfileOutlined, TeamOutlined } from '@ant-design/icons'
-import React from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { TableSemantics } from '@/components/tableSemantics'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
+import { queryOntologyLabels } from '@/service/api/ontology-network'
 
 import {
-  DIMENSION_CATEGORY_OPTIONS,
+  DEFAULT_DIMENSION_TIME_FORMAT,
   DIMENSION_DRILL_DIRECTION_OPTIONS,
   DIMENSION_STATUS_OPTIONS,
-  DEFAULT_DIMENSION_TIME_FORMAT,
   DIMENSION_TIME_FORMAT_OPTIONS,
   DIMENSION_TIME_GRANULARITY_OPTIONS,
   DIMENSION_TYPE_OPTIONS,
@@ -53,6 +53,31 @@ export const BaseInfoTab: React.FC<Props> = ({
   selectedDimType,
   setSchemaOptions
 }) => {
+  const [categoryOptions, setCategoryOptions] = useState<Array<{ label: string; value: string }>>([])
+  const categoryLabelMap = useMemo(() => new Map(categoryOptions.map(item => [item.value, item.label])), [categoryOptions])
+
+  const loadCategoryOptions = useCallback(async () => {
+    try {
+      const res = await queryOntologyLabels({
+        moduleType: 'DIM',
+        spaceId: localStorage.getItem('spaceId') || '',
+        type: 'RECOMMENDED'
+      })
+      const nextOptions = Array.isArray(res?.data)
+        ? res.data
+            .map(item => ({ label: item.bizName, value: item.id === undefined || item.id === null ? '' : String(item.id) }))
+            .filter(item => item.label && item.value)
+        : []
+      setCategoryOptions(nextOptions)
+    } catch {
+      setCategoryOptions([])
+    }
+  }, [])
+
+  useEffect(() => {
+    loadCategoryOptions()
+  }, [loadCategoryOptions])
+
   const fieldTableColumns = useMemo(() => {
     const columns: any[] = [
       {
@@ -130,10 +155,25 @@ export const BaseInfoTab: React.FC<Props> = ({
         <AForm.Item
           label="维度归类 (dim_category)"
           name="dimCategory"
+          getValueFromEvent={(value) => {
+            if (!Array.isArray(value)) {
+              return value === undefined || value === null ? undefined : String(value)
+            }
+            const nextValue = value[value.length - 1]
+            return nextValue === undefined || nextValue === null ? undefined : String(nextValue)
+          }}
+          getValueProps={(value) => ({
+            value: value === undefined || value === null || value === '' ? [] : [String(value)]
+          })}
         >
           <ASelect
-            options={DIMENSION_CATEGORY_OPTIONS}
-            placeholder="请选择维度归类"
+            labelRender={item => categoryLabelMap.get(String(item.value)) || item.label || item.value}
+            maxCount={1}
+            mode="tags"
+            optionFilterProp="label"
+            options={categoryOptions}
+            placeholder="请选择或输入维度归类"
+            showSearch
           />
         </AForm.Item>
         <AForm.Item

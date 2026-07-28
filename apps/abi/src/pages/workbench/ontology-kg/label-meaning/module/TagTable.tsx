@@ -148,7 +148,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
           fields={cardFields}
           rowKey={record => record.id || record.tagId}
           title={record => formatDisplayValue(record.tagName)}
-          titleExtra={record => <span className="abi-db-tag tag-default">{renderTagType(record.tagType)}</span>}
+          titleExtra={record => renderTagType(record.tagType)}
         />
       ) : (
         <div

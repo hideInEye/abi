@@ -167,7 +167,7 @@ export const EntityTable: React.FC<EntityTableProps> = ({
           loading={loading}
           rowKey={record => record.id}
           title={record => formatDisplayValue(record.entityName)}
-          titleExtra={record => (record.labelId === null ? null : <span className="abi-db-tag tag-default">{formatDisplayValue(labelMap.get(String(record.labelId)))}</span>)}
+          titleExtra={record => (record.labelId === null ? null : formatDisplayValue(labelMap.get(String(record.labelId))))}
           titlePrefix={record =>
             record.color ? <span aria-label={`颜色 ${record.color}`} style={{ background: record.color, borderRadius: '50%', display: 'inline-block', height: 14, width: 14 }} /> : null
           }

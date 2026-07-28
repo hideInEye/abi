@@ -44,8 +44,8 @@ export const Component: React.FC = () => {
   const [dateRange, setDateRange] = useState<any>(null)
   const filteredTagList = useMemo(() => filterByCreateTime(tagList as any[], dateRange), [tagList, dateRange])
 
-  const handleGroupChange = useCallback((id: number) => {
-    setGroupId(id)
+  const handleGroupChange = useCallback((id: number | string) => {
+    setGroupId(String(id))
   }, [setGroupId])
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { DeleteOutlined } from '@ant-design/icons'
 import { Popconfirm, Splitter } from 'antd'
 
@@ -6,8 +6,6 @@ import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
 import { Group } from '@/components/stateful/group/Group.tsx'
 import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
-import { filterByCreateTime } from '@/utils/date'
-
 import { DimensionOperateDrawer } from './components/DimensionOperateDrawer'
 import { DimensionSearchBar } from './components/DimensionSearchBar'
 import { DimensionTable } from './components/DimensionTable'
@@ -42,6 +40,7 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
     handleBatchDelete,
     handleDelete,
     handleEdit,
+    handlePaginationChange,
     handleQuery,
     handleReset,
     handleSearchChange,
@@ -52,36 +51,13 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
     hierarchyTarget,
     loading,
     openHierarchyModal,
-    queryParams,
+    pagination,
     saveHierarchyConfig,
     searchParams,
     selectedRowKeys,
     setSelectedRowKeys,
     tableData
   } = useDimensionModeling(selectedGroup)
-
-  const [dateRange, setDateRange] = useState<any>(null)
-  const [fePage, setFePage] = useState(1)
-  const [fePageSize, setFePageSize] = useState(10)
-  const filteredData = useMemo(() => {
-    const biz = (queryParams.bizName || '').trim().toLowerCase()
-    const tech = (queryParams.techName || '').trim().toLowerCase()
-    let rows = (tableData as any[]) || []
-    if (biz) rows = rows.filter((r: any) => String(r.zhName || '').toLowerCase().includes(biz))
-    if (tech) rows = rows.filter((r: any) => String(r.englishName || '').toLowerCase().includes(tech))
-    return filterByCreateTime(rows, dateRange, 'updateTime')
-  }, [tableData, queryParams, dateRange])
-  const pagedData = useMemo(() => {
-    const start = (fePage - 1) * fePageSize
-    return filteredData.slice(start, start + fePageSize)
-  }, [filteredData, fePage, fePageSize])
-  useEffect(() => {
-    setFePage(1)
-  }, [dateRange, queryParams, tableData])
-  const handleFePageChange = useCallback((pageNum: number, pageSize: number) => {
-    setFePage(pageNum)
-    setFePageSize(pageSize)
-  }, [])
 
   const handleGroupChange = useCallback((groupId: number, groupName?: string) => {
     setSelectedGroup(prev => {
@@ -121,7 +97,6 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             <DimensionSearchBar
               searchParams={searchParams}
-              onDateRangeChange={setDateRange}
               onQuery={handleQuery}
               onReset={handleReset}
               onSearchChange={handleSearchChange}
@@ -153,15 +128,15 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
                 <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={handleViewModeChange} />
               </div>
               <DimensionTable
-                dataSource={pagedData}
+                dataSource={tableData}
                 loading={loading}
-                pagination={{ pageNum: fePage, pageSize: fePageSize, total: filteredData.length }}
+                pagination={pagination}
                 viewMode={viewMode}
                 visibleColumnKeys={visibleColumnKeys}
                 onDelete={handleDelete}
                 onEdit={handleEdit}
                 onHierarchy={openHierarchyModal}
-                onPaginationChange={handleFePageChange}
+                onPaginationChange={handlePaginationChange}
                 onSelectedRowKeysChange={setSelectedRowKeys}
                 selectedRowKeys={selectedRowKeys}
               />
