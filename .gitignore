@@ -20,3 +20,4 @@ npm-debug.log*
 
 .claude
 .codebuddy
+routeTree.gen.ts
