@@ -69,6 +69,7 @@ declare global {
   const CodeMirror: typeof import('../components/form/CodeMirror')['default']
   const CommonDrawer: typeof import('../components/stateless/common/CommonDrawer/index')['default']
   const DarkModeContainer: typeof import('../components/stateless/common/DarkModeContainer')['default']
+  const DeferredRangePicker: typeof import('../components/SearchFilterBar')['DeferredRangePicker']
   const DragContent: typeof import('../components/advanced/DragContent')['default']
   const ExceptionBase: typeof import('../components/stateless/common/ExceptionBase')['default']
   const FullScreen: typeof import('../components/stateless/common/FullScreen')['default']

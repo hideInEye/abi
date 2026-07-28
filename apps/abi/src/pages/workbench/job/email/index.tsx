@@ -1,22 +1,37 @@
-import { DeleteOutlined, FileMarkdownOutlined, LeftOutlined, QuestionCircleOutlined, RightOutlined, SearchOutlined, WechatWorkOutlined } from '@ant-design/icons';
+import { DeleteOutlined, FileMarkdownOutlined, LeftOutlined, MoreOutlined, QuestionCircleOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { useDebounceFn } from 'ahooks';
 // import PageTitle from '@/components/stateless/common/PageTitle';
 
 import { deleteJob, deleteShareEmail, deleteShareEmailBatch, fetchEmailList } from '@/service/api/job';
 
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
 import { useRoute, useRouter } from '~/packages/simple-router/src';
 import { shareMailColor, shareMailStatus, statusType } from '@/types/job';
-import { message } from 'antd';
+import { Dropdown, Empty, message } from 'antd';
 import { getSpaceId } from '@/store/slice/app';
+import { ViewControls } from '@/components/ViewControls';
+import type { ColumnOption } from '@/components/ViewControls';
 
 export function Component() {
   const { t } = useTranslation();
-  const { switchToSpace } = useSpaceSwitch();
   const route = useRoute();
   const spaceId = useAppSelector(getSpaceId);
   const [dateRange, setDateRange] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  // 列选项：用于列选择器
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'jobName', label: '任务名称', visible: true },
+    { key: 'jobId', label: '任务id', visible: true },
+    { key: 'recipients', label: '收件人', visible: true },
+    { key: 'type', label: '发送类型', visible: true },
+    { key: 'sendTime', label: '发送时间', visible: true },
+    { key: 'status', label: '状态', visible: true },
+    { key: 'operate', label: '操作', visible: true },
+  ]);
+  const handleColumnToggle = (key: string, visible: boolean) => {
+    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
+  };
   const { data, run, searchProps, tableProps } = useTable({
     apiFn: fetchEmailList as any,
     apiParams: {
@@ -128,9 +143,6 @@ export function Component() {
               <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleExport(record)}>
                 <FileMarkdownOutlined style={{ marginRight: 3, fontSize: 12 }} />下载
               </AButton>
-              <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleNavigate(record)}>
-                <WechatWorkOutlined style={{ marginRight: 3, fontSize: 12 }} />进入对话
-              </AButton>
               <APopconfirm title="提示" description={t('common.confirmDelete')} onConfirm={() => handleDelete(record.logId)}>
                 <AButton className="abi-action-link-danger" size="small" variant="link">
                   <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
@@ -143,7 +155,11 @@ export function Component() {
     rowKey: 'logId',
   } as any);
 
-  const { checkedRowKeys, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, () => {}, true);
+  const { checkedRowKeys, clearCheckedRowKeys, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, () => {}, true);
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    clearCheckedRowKeys?.();
+    setViewMode(mode);
+  };
   useEffect(() => {
     const { query } = route;
     if (query?.jobName) {
@@ -185,11 +201,6 @@ export function Component() {
     window.open(fileUrl);
   }
 
-  function handleNavigate(row: any) {
-    const { chatId } = row;
-    switchToSpace(spaceId, undefined, { chatId });
-  }
-
   const jobOptions = useMemo(() => {
     return Object.entries(shareMailStatus).map(([key, value]) => ({
       label: value,
@@ -224,6 +235,65 @@ export function Component() {
     }
   };
 
+  const filteredColumns = useMemo(() => {
+    const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
+    return ((tableProps as any).columns || []).filter((col: any) => visibleKeys.has(col.key || col.dataIndex));
+  }, [columnOptions, tableProps]);
+
+  // 卡片视图渲染
+  const renderCardGrid = () => {
+    if (!pagedData || pagedData.length === 0) {
+      return (
+        <div className="abi-card-empty">
+          <Empty description="暂无邮件记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        </div>
+      );
+    }
+    return (
+      <div className="abi-card-grid">
+        <div className="abi-card-grid-inner">
+          {pagedData.map((record: any) => (
+            <div key={record.logId} className="abi-data-card">
+              <div className="abi-data-card-head">
+                <div className="abi-data-card-title">
+                  <span className="abi-data-card-name" title={record.jobName}>{record.jobName || '-'}</span>
+                </div>
+                <span className="abi-status-tag" style={{ color: shareMailColor[record.status as statusType] }}>
+                  {shareMailStatus[record.status as statusType] || '-'}
+                </span>
+              </div>
+              <div className="abi-data-card-body">
+                <div className="row"><span className="lbl">任务id</span><span className="val">{record.jobId || '-'}</span></div>
+                <div className="row"><span className="lbl">收件人</span><span className="val">{record.recipients || '-'}</span></div>
+                <div className="row"><span className="lbl">发送类型</span><span className="val">{record.type || '-'}</span></div>
+                <div className="row"><span className="lbl">发送时间</span><span className="val">{record.sendTime || '-'}</span></div>
+              </div>
+              <div className="abi-data-card-footer">
+                <button className="abi-card-act" onClick={() => handleExport(record)}>
+                  <FileMarkdownOutlined style={{ marginRight: 3 }} />下载
+                </button>
+                <Dropdown
+                  menu={{
+                    items: [{ key: 'delete', danger: true, label: '删除' }],
+                    onClick: ({ key, domEvent }) => {
+                      domEvent.stopPropagation();
+                      if (key === 'delete') handleDelete(record.logId);
+                    }
+                  }}
+                  trigger={['click']}
+                >
+                  <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
+                    <MoreOutlined />
+                  </button>
+                </Dropdown>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* v5 Searchbar */}
@@ -246,7 +316,7 @@ export function Component() {
               filters={
                 <>
                   <SearchFilterField label="时间范围">
-                    <ADatePicker.RangePicker
+                    <DeferredRangePicker
                       allowClear
                       className="abi-field-input"
                       format="YYYY-MM-DD"
@@ -289,11 +359,18 @@ export function Component() {
               </AButton>
             </APopconfirm>
           </div>
+          <ViewControls
+            viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
+            columns={columnOptions}
+            onColumnToggle={handleColumnToggle}
+          />
         </div>
 
         <div
           style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
         >
+        {viewMode === 'list' ? (
         <div
           style={{
             border: '1px solid rgba(130,140,200,0.18)',
@@ -312,12 +389,16 @@ export function Component() {
               size="middle"
               className="abi-std-table"
               {...(tableProps as any)}
+              columns={filteredColumns as any}
               dataSource={pagedData}
               pagination={false}
               rowSelection={rowSelection}
             />
           </div>
         </div>
+        ) : (
+          renderCardGrid()
+        )}
         <div className="data-source-pagination">
           {(() => {
             const current = currentPage;

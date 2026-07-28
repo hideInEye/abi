@@ -6,7 +6,7 @@ import { useAppSelector } from '@/hooks/business/useStore'
 import { getSpaceId } from '@/store/slice/app'
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 import { filterByCreateTime } from '@/utils/date'
 import './model-card-list.css'
 
@@ -295,7 +295,7 @@ const ModelCardList: FC<Props> = ({
           onSearchChange={onSearchValueChange}
           filters={
             <SearchFilterField label="时间范围">
-              <ADatePicker.RangePicker
+              <DeferredRangePicker
                 allowClear
                 className="abi-field-input"
                 format="YYYY-MM-DD"

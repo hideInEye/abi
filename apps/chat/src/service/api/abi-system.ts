@@ -62,24 +62,83 @@ export function fetchOperate(_data: any) {
   return Promise.resolve({ code: 200, msg: 'ok', data: {} })
 }
 
-// 新版收藏
-export function fetchOperateNew(data: any) {
+// 从本地登录信息中获取当前用户 ID
+function getCurrentUserId(): number | undefined {
+  try {
+    const userInfoStr = localStorage.getItem('SOY-REACT_userInfo')
+    if (userInfoStr) {
+      const userInfo = JSON.parse(userInfoStr)
+      if (userInfo.userId != null) return Number(userInfo.userId)
+    }
+    const uid = localStorage.getItem('userId')
+    if (uid != null) return Number(uid)
+  } catch {
+    // ignore
+  }
+  return undefined
+}
+
+interface FavoriteParams {
+  favorId?: string | number
+  favorType?: string
+  userId?: string | number
+  // 兼容旧调用（对话 ID）
+  sessionId?: string | number
+  chatId?: string | number
+}
+
+// 统一构造收藏相关接口的 query 参数：userId + favorType + favorId
+function buildFavoriteParams(data: FavoriteParams = {}) {
+  return {
+    userId: data.userId ?? getCurrentUserId(),
+    favorType: data.favorType ?? 'chat',
+    favorId: data.favorId ?? data.sessionId ?? data.chatId,
+  }
+}
+
+// 新版收藏（收藏/取消收藏，状态由后端切换）
+export function fetchOperateNew(data: FavoriteParams) {
   return request({
     url: "/api/abi-system/favorite/addOrRemove",
     method: "post",
-    data,
+    params: buildFavoriteParams(data),
   });
 }
 
-// 查询是否收藏（接口已废弃，保留逻辑不请求）
-export function fetchIsFavorite(data: any) {
-  // TODO: 接口已停用，恢复时取消注释
-  // return request({
-  //   url: "/api/abi-system/favorite/status",
-  //   method: "get",
-  //   params: data,
-  // });
-  return Promise.resolve({ code: 200, data: { favoriteStatus: 0 } })
+// 查询是否收藏
+export function fetchIsFavorite(data: FavoriteParams) {
+  return request({
+    url: "/api/abi-system/favorite/status",
+    method: "get",
+    params: buildFavoriteParams(data),
+  });
+}
+
+/**
+ * 应用工坊操作记录列表
+ *
+ * @param type 1 最近使用 3 我的分享
+ */
+export function fetchOperateRecordList(type: string) {
+  return request({
+    url: "/api/abi-system/record/recentlyUseList",
+    method: "get",
+    params: { type },
+  });
+}
+
+// 收藏列表（应用工坊-我的收藏）
+export function fetchFavoriteList(data: FavoriteParams & { pageNum?: number; pageSize?: number } = {}) {
+  return request({
+    url: "/api/abi-system/favorite/list",
+    method: "get",
+    params: {
+      userId: data.userId ?? getCurrentUserId(),
+      favorType: data.favorType ?? 'chat',
+      pageNum: data.pageNum ?? 1,
+      pageSize: data.pageSize ?? 999,
+    },
+  });
 }
 /**
  * 获取部门列表

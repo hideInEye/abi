@@ -10,7 +10,7 @@ import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { useConversationGroups } from '@/hooks/layout/useConversationGroups'
 import { useHistoryTopics } from '@/hooks/layout/useHistoryTopics'
 import { deleteBatchSession, deleteSession, moveSessionToGroup, updateApp } from '@/service/api/app'
-import { fetchOperateNew } from '@/service/api/abi-system'
+import { fetchIsFavorite, fetchOperateNew } from '@/service/api/abi-system'
 import { getSpaceId } from '@/utils'
 
 type SidebarHistoryTopicsProps = {
@@ -40,6 +40,8 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
   const [batchMode, setBatchMode] = useState(false)
   const [batchSelectedIds, setBatchSelectedIds] = useState<string[]>([])
   const [batchDeleting, setBatchDeleting] = useState(false)
+  // 收藏状态：记录已收藏的对话 chatId，用于菜单文案「收藏对话/取消收藏」
+  const [favoriteChatIds, setFavoriteChatIds] = useState<Set<string>>(new Set())
 
   const { groups, loadGroups, addGroup } = useConversationGroups()
 
@@ -325,14 +327,43 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
         return
       }
       try {
-        const res: any = await fetchOperateNew({ sessionId: app.chat_id })
+        const res: any = await fetchOperateNew({ favorId: app.chat_id })
         if (res?.code !== 200) {
           message.error(res?.message || res?.msg || '收藏失败，请稍后再试')
           return
         }
-        message.success(res?.msg || '操作成功')
+        const favorited = Number(res?.data?.favoriteStatus) === 1
+        setFavoriteChatIds((prev) => {
+          const next = new Set(prev)
+          if (favorited) next.add(String(chatId))
+          else next.delete(String(chatId))
+          return next
+        })
+        message.success(res?.msg || (favorited ? '收藏成功' : '取消收藏成功'))
       } catch {
         message.error('收藏失败，请稍后再试')
+      }
+    },
+    [findAppByChatId],
+  )
+
+  // 打开对话菜单时查询收藏状态，用于动态显示「收藏对话/取消收藏」
+  const handleTopicMenuOpenChange = useCallback(
+    async (open: boolean, chatId: string) => {
+      if (!open) return
+      const app = findAppByChatId(chatId)
+      if (!app) return
+      try {
+        const res: any = await fetchIsFavorite({ favorId: app.chat_id })
+        const favorited = Number(res?.data?.favoriteStatus) === 1
+        setFavoriteChatIds((prev) => {
+          const next = new Set(prev)
+          if (favorited) next.add(String(chatId))
+          else next.delete(String(chatId))
+          return next
+        })
+      } catch {
+        // 查询失败时保持默认文案，不打断菜单打开
       }
     },
     [findAppByChatId],
@@ -365,10 +396,11 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
 
   const buildMenu = (chatId: string): MenuProps => {
     const topped = toppedChatIds.has(chatId)
+    const favorited = favoriteChatIds.has(chatId)
     return {
     items: [
       { key: 'edit', icon: <EditOutlined />, label: '重命名' },
-      { key: 'favorite', icon: <StarOutlined />, label: '收藏对话' },
+      { key: 'favorite', icon: <StarOutlined />, label: favorited ? '取消收藏' : '收藏对话' },
       {
         key: 'move-to-group',
         icon: <FolderOutlined />,
@@ -484,6 +516,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTo
                       trigger={['click']}
                       menu={buildMenu(topic.chatId)}
                       placement="bottomRight"
+                      onOpenChange={(open) => handleTopicMenuOpenChange(open, topic.chatId)}
                     >
                       <span
                         className="shrink-0 px-1 py-1 transition-opacity"

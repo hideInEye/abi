@@ -288,7 +288,7 @@ const MessageList = ({
       const content = <HumanEle data={item} id={anchorId} onDelete={onEnterDeleteMode} onEditSubmit={onEditMessage} />
       if (mode === 'share') return <HumanEle key={key} data={item} id={anchorId} />
       return (
-        <CheckboxWrapCom key={key} convContent={convContent} checkAll={checkAll} setSharingList={setSharingList!} isSharing={isSharing} data={item}>
+        <CheckboxWrapCom key={key} convContent={convContent} checkAll={checkAll} sharingList={sharingList} setSharingList={setSharingList!} isSharing={isSharing} data={item}>
           {content}
         </CheckboxWrapCom>
       )

@@ -64,7 +64,7 @@ async function redirectToLogin({preserveRedirect, redirectPath}: {preserveRedire
 
 export const authManager = createAuthManager({
     clearAuth: clearAuthStorageOnly,
-    defaultNoticeMessage: '登录状态已过期，请重新登录，即将跳转到登录页。',
+    defaultNoticeMessage: '登录已过期，即将前往登录页 …',
     defaultNoticeTitle: '登录提醒',
     getCurrentPath,
     getToken: readAuthToken,
@@ -73,7 +73,7 @@ export const authManager = createAuthManager({
     stateKey: '__DASHBOARD_AUTH_UNAUTHORIZED_STATE__'
 });
 
-export function handleLoginExpired(noticeMessage = '登录状态已过期，请重新登录，即将跳转到登录页。') {
+export function handleLoginExpired(noticeMessage = '登录已过期，即将前往登录页 …') {
     const hasHostTokenExpiredHandler = typeof window.onTokenExpired === 'function';
 
     return authManager.handleUnauthorized({

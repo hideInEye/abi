@@ -11,7 +11,17 @@ import {
   RightOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Empty, message } from "antd";
+import {
+  Button as AButton,
+  DatePicker as ADatePicker,
+  Dropdown,
+  Empty,
+  Input as AInput,
+  Popconfirm as APopconfirm,
+  Select as ASelect,
+  Table as ATable,
+  message,
+} from "antd";
 import { Suspense } from "react";
 
 import {
@@ -21,7 +31,7 @@ import {
   updateDataSource,
 } from "@/service/api";
 import MetadataAnalysisDrawer from "@/components/metadata-analysis/MetadataAnalysisDrawer";
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
 import type { MetadataAnalysisContext } from "@/components/metadata-analysis/types";
 import { ViewControls } from "@/components/ViewControls";
@@ -79,7 +89,7 @@ const DataSourcePreviewDrawer = lazy(
 );
 
 // Column definitions for picker
-const ALL_COLUMNS: ColumnOption[] = [
+const DEFAULT_COLUMNS: ColumnOption[] = [
   { key: 'sourceName', label: '数据源名称', visible: true },
   { key: 'sourceType', label: '类型', visible: true },
   { key: 'createByName', label: '创建人', visible: true },
@@ -98,7 +108,7 @@ export function Component() {
   const [jumpValue, setJumpValue] = useState('');
   const [dateRange, setDateRange] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
-  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(DEFAULT_COLUMNS);
   const [previewSourceId, setPreviewSourceId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -580,7 +590,7 @@ export function Component() {
           onSearchChange={setSearchValue}
           filters={
             <SearchFilterField label="时间范围">
-              <ADatePicker.RangePicker
+              <DeferredRangePicker
                 allowClear
                 className="abi-field-input"
                 format="YYYY-MM-DD"

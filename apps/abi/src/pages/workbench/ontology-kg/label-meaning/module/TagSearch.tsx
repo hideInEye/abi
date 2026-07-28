@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 
 interface SearchInputProps {
   readonly onSearch: (value: string) => void;
@@ -33,7 +33,7 @@ export const TagSearch: React.FC<SearchInputProps> = ({ onSearch, onDateRangeCha
         onSearchChange={handleSearch}
         filters={
           <SearchFilterField label="时间范围">
-            <ADatePicker.RangePicker
+            <DeferredRangePicker
               allowClear
               className="abi-field-input"
               format="YYYY-MM-DD"

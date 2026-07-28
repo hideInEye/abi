@@ -4,7 +4,7 @@ import React, { Suspense } from 'react';
 
 import { enableStatusRecord } from '@/constants/business';
 import { addDeptApi, deleteDeptApi, getDeptInfoApi, getDeptListApi, updateDeptApi } from '@/service/api/dept';
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterTreeByCreateTime } from '@/utils/date';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
@@ -235,7 +235,7 @@ export function Component() {
           filters={
             <>
               <SearchFilterField label="创建时间">
-                <ADatePicker.RangePicker
+                <DeferredRangePicker
                   allowClear
                   className="abi-field-input"
                   format="YYYY-MM-DD"

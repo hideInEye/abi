@@ -119,6 +119,8 @@ export interface AttributionAnalysisData {
 interface AttributionDashboardProps {
   /** 归因分析数据 */
   data: AttributionAnalysisData;
+  /** 点击模型调试图标的回调 */
+  onDebugClick?: () => void;
 }
 
 /** 维度配色板（与参考报告一致） */
@@ -143,7 +145,7 @@ const fmtPct = (n: number | null | undefined): string => (n == null ? '—' : `$
 /** 截断长文本 */
 const truncate = (s: string, max: number): string => (s.length > max ? `${s.slice(0, max - 1)}…` : s);
 
-const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data }) => {
+const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDebugClick }) => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [dimSubTab, setDimSubTab] = useState<'single' | 'cross'>('single');
   const [factorTab, setFactorTab] = useState<string>(data?.factor_table?.[0]?.dimension || '');
@@ -609,8 +611,20 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data }) => 
         </div>
         <div className={styles.headerBadges}>
           <span className={styles.badgeAmber}>目标指标 · {data.target_metric}</span>
-          {data.semantic_id != null && <span className={styles.badgeMuted}>语义模型 #{data.semantic_id}</span>}
           <span className={styles.badgeGreen}><span className={styles.pulseDot} />运行完成</span>
+          {onDebugClick && (
+            <button
+              type="button"
+              className={styles.fsBtn}
+              onClick={onDebugClick}
+              title="模型调试"
+              aria-label="模型调试"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="8" y="6" width="8" height="12" rx="4" /><path d="M12 2v2M4.5 7l2 1M19.5 7l-2 1M3 13h3M18 13h3M4.5 19l2-1M19.5 19l-2-1M12 22v-2" />
+              </svg>
+            </button>
+          )}
           <button
             type="button"
             className={styles.fsBtn}

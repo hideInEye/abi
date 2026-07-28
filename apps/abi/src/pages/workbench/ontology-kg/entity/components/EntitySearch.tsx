@@ -3,7 +3,7 @@ import { useDebounceFn } from 'ahooks'
 import { Form, Input, Select } from 'antd'
 import React, { useCallback, useEffect, useState } from 'react'
 
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 import type { OntologyLabel, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
 
 import type { EntitySearchValues } from '../types'
@@ -75,7 +75,7 @@ export const EntitySearch: React.FC<EntitySearchProps> = ({ labels, onChange, on
         filters={
           <>
             <SearchFilterField label="时间范围">
-              <ADatePicker.RangePicker
+              <DeferredRangePicker
                 allowClear
                 className="abi-field-input"
                 format="YYYY-MM-DD"

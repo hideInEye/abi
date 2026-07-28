@@ -1786,7 +1786,12 @@ const ViewEle: React.FC<PropsType> = ({
                         && Array.isArray(chartData?.factor_table)
                         && chartData?.metric_overview;
                       if (hasAnalysis) {
-                        return <AttributionDashboard data={chartData} />;
+                        // 抵消父容器 px-6，使归因报告与上方「思考」卡片等宽对齐
+                        return (
+                          <div className="-mx-6">
+                            <AttributionDashboard data={chartData} onDebugClick={handleDebugClick} />
+                          </div>
+                        );
                       }
                       // 旧格式归因数据：沿用原组件
                       if (chartData?.total_df || chartData?.analysis_response) {
@@ -1800,7 +1805,7 @@ const ViewEle: React.FC<PropsType> = ({
                   {chartData?.chat_mode === 'chat_with_predict' && (
                     <div className="flex" style={{ width: '100%' }}>
                       <div className="rounded bg-white" style={{ width: '100%' }}>
-                        <PredictionAnalysis data={chartData} />
+                        <PredictionAnalysis data={chartData} onDebugClick={handleDebugClick} />
                       </div>
                     </div>
                   )}
@@ -1813,7 +1818,7 @@ const ViewEle: React.FC<PropsType> = ({
                       onQaClick={handleQaClick}
                       onRegenerateClick={onRegenerate ? () => onRegenerate(data) : undefined}
                       onDeleteClick={onDelete ? () => onDelete(data) : undefined}
-                      onShareClick={() => window.dispatchEvent(new CustomEvent('start-share-conversation', { detail: { chatId: conv?.chat_id } }))}
+                      onShareClick={() => window.dispatchEvent(new CustomEvent('start-share-conversation', { detail: { chatId: conv?.chat_id, order: data?.order } }))}
                       isLast={isLast}
                       versionInfo={versionInfo}
                       onVoteChange={handleLike}

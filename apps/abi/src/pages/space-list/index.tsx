@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
-import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
 import { $t } from '@/locales';
@@ -452,7 +452,7 @@ export function Component() {
           onSearchChange={setSearchValue}
           filters={
             <SearchFilterField label="时间范围">
-              <ADatePicker.RangePicker
+              <DeferredRangePicker
                 allowClear
                 className="abi-field-input"
                 format="YYYY-MM-DD"
