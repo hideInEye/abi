@@ -73,9 +73,9 @@ export function DataAssets({ homeData }: { readonly homeData: DataAssetsProps })
 
   return (
     <div className={s['stats-row']}>
-      {dataAssetsConfig.map((item) => (
+      {dataAssetsConfig.map((item, idx) => (
         <div
-          className={s['stat-card']}
+          className={`${s['stat-card']} ${s['stat-card-v2']}`}
           key={item.title}
           onClick={() => {
             if (!item.href) return
@@ -86,11 +86,23 @@ export function DataAssets({ homeData }: { readonly homeData: DataAssetsProps })
             }
           }}
         >
-          <div className={`${s['stat-icon']} ${s[item.colorClass]}`}>
-            <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: item.iconSvg }} />
+          {/* accent glow */}
+          <span className={`${s['stat-glow']} ${s[item.colorClass]}`} />
+          {/* decorative grid */}
+          <span className={s['stat-grid-bg']} />
+          {/* corner index */}
+          <span className={s['stat-index']}>0{idx + 1}</span>
+          <div className={s['stat-card-inner']}>
+            <div className={`${s['stat-icon']} ${s[item.colorClass]}`}>
+              <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: item.iconSvg }} />
+            </div>
+            <div className={s['stat-info']}>
+              <div className={s['stat-num']}>{item.count}</div>
+              <div className={s['stat-label']}>{item.title}</div>
+            </div>
           </div>
-          <div className={s['stat-num']}>{item.count}</div>
-          <div className={s['stat-label']}>{item.title}</div>
+          {/* bottom accent line */}
+          <span className={`${s['stat-accent-line']} ${s[item.colorClass]}`} />
         </div>
       ))}
     </div>
