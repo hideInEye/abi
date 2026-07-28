@@ -151,9 +151,6 @@ function ChatWorkbenchLayout() {
         collapsedWidth={SIDER_COLLAPSED_WIDTH}
         trigger={null}
         className="sidebar-glass !h-[100dvh]"
-        style={{
-          borderRight: '1px solid var(--glass-border)',
-        }}
       >
         <div className="h-full min-h-0 flex flex-col" style={{ position: 'relative', zIndex: 1 }}>
           <BrandHeader collapsed={collapsed} logoSrc={appLogoUrl} onToggleCollapse={handleToggleCollapse} />

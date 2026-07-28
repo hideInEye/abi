@@ -18,6 +18,15 @@ export function fetchSemanticSchemas(params: { bizName?: string; groupId?: numbe
   })
 }
 
+// 获取数据语义分组树（分组 + 数据语义统一节点树，一次性返回）
+export function fetchSemanticTree(params: { spaceId?: number }) {
+  return request({
+    url: '/api/copilot/v1/schema/tree',
+    method: 'get',
+    params,
+  })
+}
+
 // 查询数据语义详情（含字段列表）
 export function fetchSemanticDetail(schemaId: number | string) {
   return request({
