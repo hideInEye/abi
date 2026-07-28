@@ -26,6 +26,8 @@ html {
 /* Global line-height: 1.5 for comfortable reading */
 body {
   line-height: 1.5;
+  /* 外层大背景渐变 —— 与 chat 应用一致，透过毛玻璃侧边栏显色 */
+  background: linear-gradient(135deg, #d5daf5 0%, #dfe6f8 45%, #e2d9f3 100%);
 }
 
 * {

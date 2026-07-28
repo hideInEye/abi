@@ -294,7 +294,9 @@ button {
 
 /* ── Content Glassmorphism ── */
 .content-glass {
-  background: rgb(245, 247, 250);
+  background: var(--glass);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
 }
 
 /* ── Background Decorative Blobs ── */
@@ -1786,7 +1788,8 @@ button {
 .sem-group-node.is-empty:hover { background: transparent; }
 .sem-group-node.is-empty .sem-group-name { color: #8a97ad; font-weight: 500; }
 .sem-group-icon { flex-shrink: 0; font-size: 15px; color: #358cf3; }
-.sem-group-icon--empty { font-size: 14px; color: #b7c0d0; }
+/* 空分组：灰色文件夹，不可展开不可选中 */
+.sem-group-icon--empty { font-size: 15px; color: #b7c0d0; }
 .sem-group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sem-group-count { font-size: 11px; color: var(--ink-3); font-weight: 400; }
 .sem-group-chevron {
@@ -1796,10 +1799,10 @@ button {
 }
 .sem-group-chevron.open { transform: rotate(90deg); opacity: 0.6; }
 
-/* 叶子（数据语义文件）—— 缩进体现层级 */
+/* 叶子（数据语义文件）—— 缩进由递归层级内联 paddingLeft 控制 */
 .sem-leaf {
   display: flex; align-items: center; gap: 6px;
-  padding: 4px 8px 4px 24px; border-radius: 7px; cursor: pointer;
+  padding: 4px 8px; border-radius: 7px; cursor: pointer;
   font-size: 12.5px; font-weight: 500; color: #5f7490;
   transition: all 0.15s var(--ease);
 }
@@ -1808,7 +1811,6 @@ button {
 .sem-leaf-icon { flex-shrink: 0; font-size: 14px; color: rgb(175, 209, 250); }
 .sem-leaf.selected .sem-leaf-icon { color: var(--accent); }
 .sem-leaf-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sem-leaf-empty { padding: 5px 8px 5px 24px; font-size: 12px; color: var(--ink-3); }
 
 /* ── Composer Wrapper ── */
 .composer-wrap {
