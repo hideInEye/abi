@@ -83,4 +83,14 @@ describe('buildGroupTree', () => {
 
     expect(tree.map(n => n.groupId)).toEqual(['folder-a', 'folder-b', 'leaf-a', 'leaf-b']);
   });
+
+  it('does not duplicate normal children as roots when parent exists', () => {
+    const tree = buildGroupTree([
+      { groupId: '1', groupName: '根组', parentId: '0', sortOrder: 1 },
+      { groupId: '2', groupName: '子组', parentId: '1', sortOrder: 1 }
+    ]);
+
+    expect(tree.map(n => n.groupId)).toEqual(['1']);
+    expect(tree[0].children?.map((n: any) => n.groupId)).toEqual(['2']);
+  });
 });

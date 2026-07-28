@@ -152,7 +152,14 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
 
   const handleDeleteGroup = async (groupId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    // 存在子分组时拦截删除：后端只删父组，子组会变成脏数据
+    const hasChildren = groups.some(group => String(group.parentId) === String(groupId));
+    if (hasChildren) {
+      message.warning('该分组下存在子分组，请先删除或移动子分组');
+      return false;
+    }
     await handleGroupDelete(groupId);
+    return true;
   };
 
   const handleTreeSelect = (keys: React.Key[], info: { node: any }) => {
@@ -267,7 +274,10 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
               <Popconfirm
                 title="提示"
                 description="确定删除该组吗？"
-                onConfirm={() => { handleDeleteGroup(editingGroup.groupId); handleModalCancel(); }}
+                onConfirm={async () => {
+                  const deleted = await handleDeleteGroup(editingGroup.groupId);
+                  if (deleted) handleModalCancel();
+                }}
               >
                 <Button danger icon={<DeleteOutlined />}>删除</Button>
               </Popconfirm>
