@@ -13,7 +13,7 @@ export function useTagManagement() {
   const [editingGroup, setEditingGroup] = useState<TagGroup | null>(null);
   const [tagGroups, setTagGroups] = useState<TagGroup[]>([]);
   const [tagList, setTagList] = useState<TagGroup[]>([]);
-  const [groupId, setGroupId] = useState<number>(0);
+  const [groupId, setGroupId] = useState<string>('');
 
   const handleDelete = async (id: number) => {
     await delTag({ tagId: id });
@@ -32,8 +32,7 @@ export function useTagManagement() {
       return;
     }
     setTagList([]);
-    console.log('===');
-    
+
     const queryParams:any = {
       groupId,
       spaceId

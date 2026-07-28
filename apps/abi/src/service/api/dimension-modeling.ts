@@ -3,6 +3,14 @@ import { apiRequest } from '../request'
 const DIMENSION_API_PREFIX = '/api/abi-ontology/api/v1/ontology/dimension'
 const HIERARCHY_API_PREFIX = '/api/abi-ontology/api/v1/ontology/hierarchy'
 
+const MOCK_DIMENSION_CATEGORY_OPTIONS = [
+  { label: '地理', value: 'geography' },
+  { label: '时间', value: 'time' },
+  { label: '组织', value: 'organization' },
+  { label: '客户', value: 'customer' },
+  { label: '产品', value: 'product' }
+]
+
 export function queryDimensionList(params: {
   bizName?: string
   dimCategory?: string
@@ -15,12 +23,8 @@ export function queryDimensionList(params: {
   versionStatus?: string
 }) {
   return apiRequest({
-    data: {
-      pageNum: 1,
-      pageSize: 1000,
-      ...params
-    },
     method: 'post',
+    data:params,
     url: `${DIMENSION_API_PREFIX}/list`
   })
 }
@@ -85,4 +89,13 @@ export function queryDimensionHierarchyByDimId(params: { dimId: number }) {
     method: 'get',
     url: `${HIERARCHY_API_PREFIX}/listByDimId/${params.dimId}`
   })
+}
+
+export function queryDimensionCategoryOptions(params?: { keyword?: string; spaceId?: number }) {
+  const keyword = String(params?.keyword || '').trim().toLowerCase()
+  const data = keyword
+    ? MOCK_DIMENSION_CATEGORY_OPTIONS.filter(item => item.label.toLowerCase().includes(keyword) || item.value.toLowerCase().includes(keyword))
+    : MOCK_DIMENSION_CATEGORY_OPTIONS
+
+  return Promise.resolve({ data })
 }

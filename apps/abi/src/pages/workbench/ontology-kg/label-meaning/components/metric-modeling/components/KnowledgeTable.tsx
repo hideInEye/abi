@@ -164,7 +164,7 @@ export const KnowledgeTable: React.FC<Props> = ({
           loading={loading}
           rowKey={(record) => String(record.indId || record.termId || record.techName || record.bizName)}
           title={(record) => formatDisplayValue(record.techName)}
-          titleExtra={(record) => renderIndicatorClass(record.indicatorClass || '')}
+          titleExtra={(record) => INDICATOR_TYPE_TEXT_MAP[record.indicatorClass || ''] || formatDisplayValue(record.indicatorClass)}
         />
       ) : (
         <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0, width: '100%' }}>

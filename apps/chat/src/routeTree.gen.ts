@@ -9,23 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './pages/__root'
-import { Route as ChatRouteRouteImport } from './pages/chat/route'
 import { Route as IndexRouteImport } from './pages/index'
+import { Route as ChatRouteRouteImport } from './pages/chat/route'
 import { Route as ChatIndexRouteImport } from './pages/chat/index'
 import { Route as ChatHistoryRouteImport } from './pages/chat/history'
 import { Route as ChatConversationIndexRouteImport } from './pages/chat/conversation/index'
-import { Route as ChatTaskTaskIdRouteImport } from './pages/chat/task/$taskId'
-import { Route as ChatGroupGroupIdRouteImport } from './pages/chat/group/$groupId'
 import { Route as ChatConversationConversationIdRouteImport } from './pages/chat/conversation/$conversationId'
+import { Route as ChatGroupGroupIdRouteImport } from './pages/chat/group/$groupId'
+import { Route as ChatTaskTaskIdRouteImport } from './pages/chat/task/$taskId'
 
-const ChatRouteRoute = ChatRouteRouteImport.update({
-  id: '/chat',
-  path: '/chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRouteRoute = ChatRouteRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatIndexRoute = ChatIndexRouteImport.update({
@@ -43,22 +43,22 @@ const ChatConversationIndexRoute = ChatConversationIndexRouteImport.update({
   path: '/conversation/',
   getParentRoute: () => ChatRouteRoute,
 } as any)
-const ChatTaskTaskIdRoute = ChatTaskTaskIdRouteImport.update({
-  id: '/task/$taskId',
-  path: '/task/$taskId',
-  getParentRoute: () => ChatRouteRoute,
-} as any)
-const ChatGroupGroupIdRoute = ChatGroupGroupIdRouteImport.update({
-  id: '/group/$groupId',
-  path: '/group/$groupId',
-  getParentRoute: () => ChatRouteRoute,
-} as any)
 const ChatConversationConversationIdRoute =
   ChatConversationConversationIdRouteImport.update({
     id: '/conversation/$conversationId',
     path: '/conversation/$conversationId',
     getParentRoute: () => ChatRouteRoute,
   } as any)
+const ChatGroupGroupIdRoute = ChatGroupGroupIdRouteImport.update({
+  id: '/group/$groupId',
+  path: '/group/$groupId',
+  getParentRoute: () => ChatRouteRoute,
+} as any)
+const ChatTaskTaskIdRoute = ChatTaskTaskIdRouteImport.update({
+  id: '/task/$taskId',
+  path: '/task/$taskId',
+  getParentRoute: () => ChatRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -129,18 +129,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/chat': {
-      id: '/chat'
-      path: '/chat'
-      fullPath: '/chat'
-      preLoaderRoute: typeof ChatRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat/': {
@@ -164,11 +164,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatConversationIndexRouteImport
       parentRoute: typeof ChatRouteRoute
     }
-    '/chat/task/$taskId': {
-      id: '/chat/task/$taskId'
-      path: '/task/$taskId'
-      fullPath: '/chat/task/$taskId'
-      preLoaderRoute: typeof ChatTaskTaskIdRouteImport
+    '/chat/conversation/$conversationId': {
+      id: '/chat/conversation/$conversationId'
+      path: '/conversation/$conversationId'
+      fullPath: '/chat/conversation/$conversationId'
+      preLoaderRoute: typeof ChatConversationConversationIdRouteImport
       parentRoute: typeof ChatRouteRoute
     }
     '/chat/group/$groupId': {
@@ -178,11 +178,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatGroupGroupIdRouteImport
       parentRoute: typeof ChatRouteRoute
     }
-    '/chat/conversation/$conversationId': {
-      id: '/chat/conversation/$conversationId'
-      path: '/conversation/$conversationId'
-      fullPath: '/chat/conversation/$conversationId'
-      preLoaderRoute: typeof ChatConversationConversationIdRouteImport
+    '/chat/task/$taskId': {
+      id: '/chat/task/$taskId'
+      path: '/task/$taskId'
+      fullPath: '/chat/task/$taskId'
+      preLoaderRoute: typeof ChatTaskTaskIdRouteImport
       parentRoute: typeof ChatRouteRoute
     }
   }

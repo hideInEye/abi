@@ -10,6 +10,24 @@ import { DEFAULT_DIMENSION_TIME_FORMAT, DIMENSION_TIME_GRANULARITY_OPTIONS } fro
 
 const MODEL_DETAIL_KEYS = new Set(['dimensions', 'identifiers'])
 const VALID_TIME_GRANULARITY_VALUES = new Set(DIMENSION_TIME_GRANULARITY_OPTIONS.map(item => item.value))
+const TIME_GRANULARITY_ALIAS_MAP: Record<string, string> = {
+  date: 'day',
+  daily: 'day',
+  day: 'day',
+  halfYear: 'half_year',
+  half_year: 'half_year',
+  halfyear: 'half_year',
+  hourly: 'hour',
+  hour: 'hour',
+  month: 'month',
+  quarter: 'quarter',
+  week: 'week',
+  year: 'year',
+  year_month: 'month',
+  year_month_day: 'day',
+  year_quarter: 'quarter',
+  year_week: 'week'
+}
 
 function parseJson(value: any) {
   if (!value) {
@@ -141,27 +159,18 @@ function pickFirst(source: any, keys: string[], fallback?: any) {
 
 function normalizeTimeGranularity(value: any) {
   const rawList = Array.isArray(value) ? value : String(value || '').split(',')
-  const list = rawList.map((item: any) => String(item).trim()).filter(Boolean)
+  const valueSet = new Set(
+    rawList
+      .map((item: any) => String(item).trim())
+      .filter(Boolean)
+      .map(item => TIME_GRANULARITY_ALIAS_MAP[item] || item)
+      .filter(item => VALID_TIME_GRANULARITY_VALUES.has(item))
+  )
 
-  if (!list.length) {
+  if (!valueSet.size) {
     return []
   }
-
-  const valueSet = new Set(list)
-  if (valueSet.has('date') || valueSet.has('day') || valueSet.has('year_month_day')) {
-    return ['day']
-  }
-  if (valueSet.has('quarter') || valueSet.has('year_quarter')) {
-    return ['quarter']
-  }
-  if (valueSet.has('month') || valueSet.has('year_month')) {
-    return ['month']
-  }
-  if (valueSet.has('week') || valueSet.has('year_week')) {
-    return ['week']
-  }
-
-  return list.filter(item => VALID_TIME_GRANULARITY_VALUES.has(item))
+  return DIMENSION_TIME_GRANULARITY_OPTIONS.map(item => item.value).filter(item => valueSet.has(item))
 }
 
 function normalizeSampleValues(value: any) {
@@ -288,7 +297,7 @@ export function buildFormValues(item: DimensionModelItem): DimensionFormValues {
   return {
     alias: item.alias || '',
     bizDesc: item.bizDesc || '',
-    dimCategory: item.dimCategory || 'geography',
+    dimCategory: item.dimCategory,
     dimType: item.dimType || 'std',
     drillDirection: item.drillDirection || 'down',
     englishName: item.englishName || '',

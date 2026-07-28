@@ -2,6 +2,13 @@ import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } 
 
 import type { OntologyGraphEdge, OntologyGraphNode } from '@/pages/workbench/ontology-kg/shared-network-types'
 
+const INITIAL_SPREAD = 360
+const CHARGE_STRENGTH = -1400
+const LINK_DISTANCE = 300
+const LINK_STRENGTH = 0.24
+const COLLIDE_RADIUS = 190
+const COLLIDE_STRENGTH = 0.95
+
 interface SimNode {
   id: string
   index?: number
@@ -32,8 +39,8 @@ export function computeForceLayout(
 
   const simNodes: SimNode[] = nodes.map((node) => ({
     id: String(node.id),
-    x: width / 2 + (Math.random() - 0.5) * 100,
-    y: height / 2 + (Math.random() - 0.5) * 100,
+    x: width / 2 + (Math.random() - 0.5) * INITIAL_SPREAD,
+    y: height / 2 + (Math.random() - 0.5) * INITIAL_SPREAD,
   }))
 
   const nodeIds = new Set(simNodes.map((n) => n.id))
@@ -45,10 +52,10 @@ export function computeForceLayout(
     }))
 
   const simulation = forceSimulation<SimNode>(simNodes)
-    .force('charge', forceManyBody().strength(-800))
-    .force('link', forceLink<SimNode, SimLink>(simLinks).id((d) => d.id).distance(180).strength(0.3))
+    .force('charge', forceManyBody().strength(CHARGE_STRENGTH))
+    .force('link', forceLink<SimNode, SimLink>(simLinks).id((d) => d.id).distance(LINK_DISTANCE).strength(LINK_STRENGTH))
     .force('center', forceCenter(width / 2, height / 2))
-    .force('collide', forceCollide<SimNode>().radius(120).strength(0.8))
+    .force('collide', forceCollide<SimNode>().radius(COLLIDE_RADIUS).strength(COLLIDE_STRENGTH))
     .alpha(1)
     .alphaDecay(0.02)
     .stop()

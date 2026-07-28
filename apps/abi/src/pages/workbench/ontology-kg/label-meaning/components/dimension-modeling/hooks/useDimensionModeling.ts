@@ -1,4 +1,5 @@
 import { message } from 'antd'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   addDimensionModel,
@@ -37,8 +38,7 @@ const initialSearchParams: DimensionSearchParams = {
 
 const initialPagination: DimensionPagination = {
   pageNum: 1,
-  // 一次性拉取全部数据，前端做时间筛选与分页
-  pageSize: 100000,
+  pageSize: 10,
   total: 0
 }
 
@@ -86,22 +86,28 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [hierarchyItems, setHierarchyItems] = useState<DimensionHierarchyEditItem[]>([])
   const [hierarchyLoading, setHierarchyLoading] = useState(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
+  const latestSearchParamsRef = useRef(searchParams)
+  const latestPaginationRef = useRef(initialPagination)
 
-  const fetchTableData = async (_params: DimensionSearchParams = queryParams, nextPagination: DimensionPagination = pagination) => {
+  const fetchTableData = useCallback(async (
+    _params: DimensionSearchParams = latestSearchParamsRef.current,
+    nextPagination: DimensionPagination = latestPaginationRef.current
+  ) => {
     if (!selectedGroup?.groupId) {
       setTableData([])
       setPagination(initialPagination)
+      latestPaginationRef.current = initialPagination
       return
     }
     setLoading(true)
     try {
       const res = await queryDimensionList({
-        bizName: '',
+        bizName: _params.bizName?.trim() || undefined,
         groupId: selectedGroup.groupId,
         pageNum: nextPagination.pageNum,
         pageSize: nextPagination.pageSize,
         spaceId: Number(localStorage.getItem('spaceId')),
-        techName: ''
+        techName: _params.techName?.trim() || undefined
       })
       const rows = normalizeRows(res)
       const list = rows.map(item =>
@@ -113,36 +119,57 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
       )
       setTableData(list)
       setSelectedRowKeys([])
-      setPagination(current => ({
-        ...current,
+      const nextPaginationState = {
         pageNum: nextPagination.pageNum,
         pageSize: nextPagination.pageSize,
         total: getResponseTotal(res)
-      }))
+      }
+      latestPaginationRef.current = nextPaginationState
+      setPagination(nextPaginationState)
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedGroup?.groupId, selectedGroup?.groupName])
 
   useEffect(() => {
-    fetchTableData()
-  }, [selectedGroup?.groupId])
+    const nextPagination = {
+      ...latestPaginationRef.current,
+      pageNum: 1
+    }
+    fetchTableData(latestSearchParamsRef.current, nextPagination)
+  }, [fetchTableData])
 
   const handleSearchChange = (value: Partial<DimensionSearchParams>) => {
+    const nextSearchParams = {
+      ...latestSearchParamsRef.current,
+      ...value
+    }
+    latestSearchParamsRef.current = nextSearchParams
     setSearchParams(prev => ({
       ...prev,
       ...value
     }))
   }
 
-  // 数据一次性全量拉取（pageSize=100000），查询/重置仅在前端过滤，不再请求接口
   const handleQuery = () => {
-    setQueryParams(searchParams)
+    const nextParams = latestSearchParamsRef.current
+    const nextPagination = {
+      ...latestPaginationRef.current,
+      pageNum: 1
+    }
+    setQueryParams(nextParams)
+    fetchTableData(nextParams, nextPagination)
   }
 
   const handleReset = () => {
+    latestSearchParamsRef.current = initialSearchParams
+    const nextPagination = {
+      ...latestPaginationRef.current,
+      pageNum: 1
+    }
     setSearchParams(initialSearchParams)
     setQueryParams(initialSearchParams)
+    fetchTableData(initialSearchParams, nextPagination)
   }
 
   const handleAdd = () => {
@@ -233,11 +260,12 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   }
 
   const handlePaginationChange = (page: number, pageSize: number) => {
-    fetchTableData(queryParams, {
+    const nextPagination = {
       pageNum: page,
       pageSize,
-      total: pagination.total
-    })
+      total: latestPaginationRef.current.total
+    }
+    fetchTableData(queryParams, nextPagination)
   }
 
   const openHierarchyModal = async (record: DimensionModelItem) => {

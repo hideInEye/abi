@@ -93,7 +93,8 @@ export interface KnowledgeSubmitPayload extends KnowledgeFormValues {
 
 export interface AtomicMappingPayload {
   groupId?: string
-  relSchemaId: number
+  relSchemaId: number | string
+  semanticsGroupId?: number | string
   spaceId: number
   techId: KnowledgeTechField[]
 }
@@ -151,16 +152,17 @@ export interface KnowledgeIndicatorItem {
   ratioNumeratorId?: number | string
   ratioPrecision?: string
   relItemId?: string
-  relSchemaId?: number
+  relSchemaId?: number | string
   relSchemaName?: string
   relViewId?: number | string
   relViewid?: number | string
   relateDims?: string
   businessDefinition?: string
   rollingWindowSize?: number
-  semanticGroupId?: number
+  semanticGroupId?: number | string
+  semanticsGroupId?: number | string
   semanticType?: string
-  semanticSchemaId?: number
+  semanticSchemaId?: number | string
   semanticSchemaName?: string
   status?: number | string
   techName?: string
@@ -219,9 +221,10 @@ export interface KnowledgeFormValues {
   relViewid?: number | string
   businessDefinition?: string
   rollingWindowSize?: number
-  semanticGroupId?: number
+  semanticGroupId?: number | string
+  semanticsGroupId?: number | string
   semanticGroupName?: string
-  semanticSchemaId?: number
+  semanticSchemaId?: number | string
   semanticSchemaName?: string
   status?: number | string
   techName?: string

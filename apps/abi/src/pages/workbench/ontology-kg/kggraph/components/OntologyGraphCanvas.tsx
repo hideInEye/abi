@@ -45,6 +45,12 @@ const CARD_WIDTH = 240
 const CARD_HEIGHT = 80
 const DEFAULT_NODE_COLOR = '#5B7CF7'
 const GRAPH_FONT_FAMILY = '"SF Pro Display", "PingFang SC", "Hiragino Sans GB", sans-serif'
+const DEFAULT_GRAPH_SCALE = 0.74
+const FIT_VIEW_MAX_SCALE = 0.9
+const FIT_VIEW_MIN_SCALE = 0.4
+const FIT_VIEW_PADDING = 120
+const LAYOUT_WIDTH_FACTOR = 1.35
+const LAYOUT_HEIGHT_FACTOR = 1.25
 
 Graph.registerNode(
   'ontology-entity-card',
@@ -389,7 +395,7 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
       panning: { enabled: true, eventTypes: ['leftMouseDown'] },
       width: initialWidth,
     })
-    graph.zoom(0.88, { absolute: true })
+    graph.zoom(DEFAULT_GRAPH_SCALE, { absolute: true })
 
     graph.on('node:mouseenter', ({ node }) => {
       const data = node.getData<EntityNodeData>()
@@ -463,7 +469,7 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
       resizeFrame = requestAnimationFrame(() => {
         resizeFrame = undefined
         graph.resize(Math.max(host.clientWidth, 1), Math.max(host.clientHeight, 1))
-        if (graph.getCells().length > 0) graph.zoomToFit({ maxScale: 1.2, minScale: 0.5, padding: 80 })
+        if (graph.getCells().length > 0) graph.zoomToFit({ maxScale: FIT_VIEW_MAX_SCALE, minScale: FIT_VIEW_MIN_SCALE, padding: FIT_VIEW_PADDING })
       })
     })
     resizeObserver.observe(host)
@@ -491,8 +497,8 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
   const forceLayout = useMemo(() => {
     const host = hostRef.current
     if (!host) return null
-    const width = Math.max(host.clientWidth, CARD_WIDTH * 2 + 100)
-    const height = Math.max(host.clientHeight, CARD_HEIGHT * 2 + 100)
+    const width = Math.max(host.clientWidth * LAYOUT_WIDTH_FACTOR, CARD_WIDTH * 3 + 360)
+    const height = Math.max(host.clientHeight * LAYOUT_HEIGHT_FACTOR, CARD_HEIGHT * 3 + 320)
     return computeForceLayout(nodes, edges, width, height)
   }, [nodes, edges, layoutVersion])
 
@@ -573,7 +579,7 @@ export const OntologyGraphCanvas: React.FC<OntologyGraphCanvasProps> = ({ backgr
         setEdgeVisualState(edge, selected, false)
       })
 
-      if (nodes.length > 0) graph.zoomToFit({ maxScale: 1.2, minScale: 0.5, padding: 80 })
+      if (nodes.length > 0) graph.zoomToFit({ maxScale: FIT_VIEW_MAX_SCALE, minScale: FIT_VIEW_MIN_SCALE, padding: FIT_VIEW_PADDING })
     } catch (error) {
       console.error('[OntologyGraphCanvas] X6 operation failed', error)
       setGraphError('图谱渲染失败，可重新查询后再试')

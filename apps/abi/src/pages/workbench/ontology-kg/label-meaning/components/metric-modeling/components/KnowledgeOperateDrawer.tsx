@@ -184,7 +184,7 @@ function buildAtomicMetricMetaMap(options: AtomicIndicatorOption[]) {
 
     acc[key] = {
       field: String(option.item.indicatorCode || key).trim(),
-      fieldName: String(option.item.techName || option.label || key).trim(),
+      fieldName: String(option.item.bizName || option.item.techName || option.label || key).trim(),
       id: option.item.indId ?? option.item.termId ?? key,
       label: option.label,
       value: key,
@@ -338,6 +338,7 @@ function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormV
     ...item,
     ...templateValues,
     ...calcLogicValues,
+    bizName: (item.bizName ?? (item as Record<string, unknown>).biz_name) as string | undefined,
     dimensionFieldIds: item.dimensionFieldIds ?? item.relateDims,
     indAlias: splitAliasTags(item.indAlias),
   }
@@ -360,7 +361,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
   const isEditing = Boolean(editingItem)
   const isAtomicEditing = normalizeIndicatorClass(editingItem?.indicatorClass) === 'atomic'
   const indicatorClass = normalizeIndicatorClass(String(form.getFieldValue('indicatorClass') || selectedIndicatorClass || 'derived'))
-  const stepItems = useMemo(() => getStepItems(true, isAtomicEditing), [isAtomicEditing])
+  const isAtomicMode = isAtomicEditing || indicatorClass === 'atomic'
+  const stepItems = useMemo(() => getStepItems(true, isAtomicMode), [isAtomicMode])
   const currentStepKey = stepItems[current]?.key
   const atomicIndicatorOptions = useMemo(() => {
     const allowedClasses = indicatorClass === 'derivative' ? new Set(['atomic', 'derived']) : new Set(['atomic'])
@@ -369,7 +371,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       .filter((item) => allowedClasses.has(normalizeIndicatorClass(item.indicatorClass)))
       .map((item) => ({
         item,
-        label: String(item.techName || item.bizName || item.indicatorCode || '-'),
+        label: String(item.bizName || item.techName || item.indicatorCode || '-'),
         value: normalizeAtomicSelectValue(item),
       }))
       .filter((item) => item.value)
@@ -380,7 +382,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
         .filter((item) => item.indicatorClass === 'atomic' || item.indicatorClass === 'derived')
         .map((item) => ({
           item,
-          label: String(item.techName || item.bizName || item.indicatorCode || '-'),
+          label: String(item.bizName || item.techName || item.indicatorCode || '-'),
           value: normalizeAtomicSelectValue(item),
         }))
         .filter((item) => item.value),
@@ -483,7 +485,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
   }, [editingItem, form, isAtomicEditing, open])
 
   useEffect(() => {
-    if (!open || !editingItem || isAtomicEditing || editMatchedRef.current || !atomicIndicatorOptions.length) {
+    if (!open || !editingItem || isAtomicMode || editMatchedRef.current || !atomicIndicatorOptions.length) {
       return
     }
 
@@ -510,7 +512,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
     setAllFields(nextAllFields)
     editMatchedRef.current = true
-  }, [atomicIndicatorOptions, editingItem, form, isAtomicEditing, open])
+  }, [atomicIndicatorOptions, editingItem, form, isAtomicMode, open])
 
   useEffect(() => {
     if (current > stepItems.length - 1) {
@@ -580,13 +582,18 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
         clearFields(DERIVED_ONLY_FIELDS)
         setAllFields([])
       }
+      if (nextClass === 'atomic') {
+        clearFields([...DERIVED_ONLY_FIELDS, ...DERIVATIVE_TEMPLATE_FIELDS])
+        setAllFields([])
+        setCurrent(0)
+      }
     }
 
     if (Object.hasOwn(changeValues, 'templateType')) {
       clearFields(DERIVATIVE_TEMPLATE_FIELDS.filter((field) => field !== 'templateType'))
     }
 
-    if (Object.hasOwn(changeValues, 'techId') && !isAtomicEditing) {
+    if (Object.hasOwn(changeValues, 'techId') && !isAtomicMode) {
       const selected = atomicIndicatorOptions.find((item) => item.value === String(changeValues.techId || ''))
       setAllFields(extractAtomicFields(selected?.item))
     }
@@ -594,7 +601,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
 
   const next = async () => {
     if (currentStepKey === 'business') {
-      await form.validateFields(['techName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition'])
+      await form.validateFields(['bizName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition'])
       setSelectedIndicatorClass(normalizeIndicatorClass(String(form.getFieldValue('indicatorClass') || 'derived')))
       setCurrent((prev) => prev + 1)
       return
@@ -616,8 +623,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       return
     }
 
-    const baseFields = ['techName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition']
-    await form.validateFields(isAtomicEditing ? baseFields : [...baseFields, ...(getTechnicalRequiredFields() as string[])])
+    const baseFields = ['bizName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition']
+    await form.validateFields(isAtomicMode ? baseFields : [...baseFields, ...(getTechnicalRequiredFields() as string[])])
 
     const values = {
       ...formValuesRef.current,
@@ -625,7 +632,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     } as KnowledgeFormValues
 
     const selectedAtomic = atomicIndicatorOptions.find((item) => item.value === String(values.techId || ''))
-    const selectedTechObject = isAtomicEditing ? values.techId : (selectedAtomic?.item?.techId ?? values.techId)
+    const selectedTechObject = isAtomicMode ? values.techId : (selectedAtomic?.item?.techId ?? values.techId)
     const aliasText = (Array.isArray(values.indAlias) ? values.indAlias : splitAliasTags(values.indAlias))
       .map((item) => String(item || '').trim())
       .filter(Boolean)
@@ -646,6 +653,9 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
 
     payload.techId = selectedTechObject as KnowledgeSubmitPayload['techId']
+    if (!isAtomicEditing) {
+      delete payload.techName
+    }
 
     const success = await onSubmit(payload, isEditing)
     if (!success) {

@@ -42,6 +42,7 @@ export interface OntologyLabel {
 }
 
 export interface QueryOntologyLabelParams {
+  moduleType?: string
   spaceId: OntologyNetworkId
   type: 'RECOMMENDED'
 }
