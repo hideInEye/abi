@@ -37,9 +37,11 @@ async function render(props: any) {
     }
 
     root.render(
-        <Suspense fallback={null}>
-            <MainRouter/>
-        </Suspense>
+        <div className="abi-dashboard-root">
+            <Suspense fallback={null}>
+                <MainRouter/>
+            </Suspense>
+        </div>
     );
 }
 
@@ -72,4 +74,3 @@ if ((qiankunWindow as any).__POWERED_BY_QIANKUN__) {
 } else {
     render({});
 }
-

@@ -311,3 +311,60 @@ chat 应用外层 Layout 有一层大背景渐变（#d5daf5 → #dfe6f8 → #e2d
 
 - ABI 侧边栏透出蓝紫渐变，视觉与 chat 侧边栏一致。
 - 内容区、卡片、弹窗等其他区域视觉不变。
+
+## 2026-07-29 追加：dashboard 微应用样式隔离
+
+### 需求类型
+
+前端缺陷修复与微前端样式治理。
+
+### 背景
+
+dashboard 作为 qiankun 微应用挂载到 ABI 时，dashboard 全局 `html/body` 背景样式会覆盖宿主 ABI 的 `body` 背景，导致 ABI 半透明 global-sider 在进入「工作台 > 应用工坊 > 我的大屏」后视觉发生变化。
+
+### 目标
+
+- ABI 加载 dashboard 微应用时启用 qiankun 样式隔离。
+- dashboard 背景从全局 `html/body` 挪到 dashboard 自身应用根节点，避免污染宿主页面。
+- 将“以后生成或接入微应用必须隔离样式，禁止子应用全局 body/html 背景污染宿主”的规则写入 `.ai` 长期文档。
+
+### 非目标
+
+- 不修改 dashboard 业务页面、设计器逻辑和接口逻辑。
+- 不修改 ABI global-sider 当前视觉参数。
+- 不引入新的微前端框架或大范围样式重构。
+
+### 验收标准
+
+- 进入 dashboard 微应用页面后，dashboard 样式不会覆盖 ABI 宿主 `body` 背景。
+- dashboard standalone 运行时仍保留自身页面背景。
+- 后续 AI/开发者在新增微应用时能从 `.ai` 文档看到样式隔离要求。
+
+## 2026-07-29 追加：ABI global-sider 背景固定为不透明色
+
+### 需求类型
+
+前端样式微调（纯 CSS，不改逻辑）。
+
+### 背景
+
+ABI 72px global-sider 使用 `rgba(255, 255, 255, 0.38)` 半透明背景时，视觉颜色会受宿主 body 背景、微应用样式污染或页面背景变化影响。用户要求撤回布局层透明化方案，改为将 global-sider 背景固定成不透明十六进制颜色，确保颜色不再随底层背景变化。
+
+### 目标
+
+- 撤回上一轮 ABI 布局外壳、二级菜单、内容区透明化改动。
+- 将 `apps/abi/src/layouts/modules/global-sider/index.scss` 中 `.abi-nav-sider` 背景从透明 rgba 改为不透明 hex。
+- 保留原有内容区、二级菜单、卡片、抽屉、弹窗背景逻辑。
+
+### 非目标
+
+- 不修改动态 router 目录。
+- 不修改 dashboard 子应用业务逻辑。
+- 不重构菜单数据、权限、路由跳转逻辑。
+- 不继续调整二级菜单和页面内容区背景。
+
+### 验收标准
+
+- `.abi-nav-sider` 使用不透明十六进制背景色，不再依赖底层背景混色。
+- 上一轮 `global-content`、`global-menu`、`manage-menu`、`global.css` 的布局透明化改动已撤回。
+- 修改不引入格式错误。
