@@ -400,7 +400,7 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                     </>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
-                      <AEmpty description="该模型类型暂无高级设置" />
+                      <AEmpty description="该模型类型暂无高级设置" image={AEmpty.PRESENTED_IMAGE_SIMPLE} />
                     </div>
                   )}
                 </div>

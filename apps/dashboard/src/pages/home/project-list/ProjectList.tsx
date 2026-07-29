@@ -744,6 +744,13 @@ export const ProjectList = memo((props: ProjectListProps) => {
                                     }}
                                     scroll={pageData.records.length > 0 ? { x: 'max-content' } : undefined}
                                     size="middle"
+                                    locale={{
+                                        emptyText: (
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>
+                                                <Empty description="暂无大屏" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                                            </div>
+                                        ),
+                                    }}
                                     className="project-table abi-std-table"
                                 />
                             </div>

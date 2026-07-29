@@ -15,8 +15,7 @@
   box-shadow: 0 4px 24px rgba(91, 124, 247, 0.08);
 
   & > div {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
+    padding: 0 !important;
     height: 100%;
     background: transparent !important;
   }

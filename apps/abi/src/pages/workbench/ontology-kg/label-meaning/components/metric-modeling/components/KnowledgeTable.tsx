@@ -171,6 +171,7 @@ export const KnowledgeTable: React.FC<Props> = ({
           <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
             <Table
               className="abi-std-table"
+              locale={{ emptyText: <TableEmpty description="暂无指标" /> }}
               columns={tableColumns}
               dataSource={dataSource}
               loading={loading}

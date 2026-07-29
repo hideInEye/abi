@@ -173,8 +173,8 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
                             </div>
                         </div>
                     ) : (
-                        <div className="project-list-empty">
-                            <Empty description="暂无已发布的大屏"/>
+                        <div className="abi-card-empty">
+                            <Empty description="暂无已发布的大屏" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                         </div>
                     )}
                 </div>

@@ -471,6 +471,7 @@ export function Component() {
                   {...(tableProps as any)}
                   columns={filteredColumns as any}
                   pagination={false}
+                  locale={{ emptyText: <TableEmpty description="暂无定时任务" /> }}
                   rowSelection={rowSelection}
                 />
               </div>

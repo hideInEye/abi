@@ -169,6 +169,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
               scroll={pagedDataSource?.length > 0 ? { x: columnWidth } : undefined}
               size="middle"
               className="tag-table abi-std-table"
+              locale={{ emptyText: <TableEmpty description="暂无标签语义" /> }}
               pagination={false}
             />
           </div>

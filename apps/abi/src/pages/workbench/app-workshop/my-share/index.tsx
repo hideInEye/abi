@@ -201,6 +201,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
                 rowKey="id"
                 scroll={pagedRows?.length > 0 ? { x: 'max-content' } : undefined}
                 size="middle"
+                locale={{ emptyText: <TableEmpty description="暂无分享的对话" /> }}
                 className="abi-std-table"
               />
             </div>

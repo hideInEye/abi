@@ -344,6 +344,7 @@ const ModelCardList: FC<Props> = ({
                   columns={tableColumns as any}
                   dataSource={pagedModels}
                   pagination={false}
+                  locale={{ emptyText: <TableEmpty description="暂无模型数据" /> }}
                   size="middle"
                   className="model-table abi-std-table"
                   scroll={pagedModels.length > 0 ? { x: 'max-content' } : undefined}

@@ -120,7 +120,7 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({ edge, entity
               </div>
             </div>
           )}
-          {!node && !edge && <Empty description="请选择实体或关系" />}
+          {!node && !edge && <Empty description="请选择实体或关系" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
         </div>
       </div>
     </AModal>

@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 
+import type { GroupHandle } from '@/components/stateful/group/Group.tsx';
 import { Group } from '@/components/stateful/group/Group.tsx';
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate.tsx';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
 
 import { TagTable } from './components/TagTable.tsx';
@@ -22,6 +24,9 @@ export const Component: React.FC = () => {
     setIsModalOpen,
     terms
   } = useTagManagement();
+
+  const groupRef = useRef<GroupHandle>(null);
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null);
 
   const handleClose = (refresh?: boolean) => {
     if (refresh) {
@@ -56,11 +61,14 @@ export const Component: React.FC = () => {
             type: 'term'
           }}
           onGroupId={id => { setGroupId(id); }}
+          onGroupsChange={setHasGroups}
+          ref={groupRef}
         />
       </div>
 
       {/* Right content area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        <GroupContentGate hasGroups={hasGroups} onCreateGroup={() => groupRef.current?.openAddModal()}>
         {/* v5 Searchbar */}
         <section className="abi-searchbar">
           <SearchFilterBar
@@ -91,6 +99,7 @@ export const Component: React.FC = () => {
             onEdit={handleEdit}
           />
         </section>
+        </GroupContentGate>
       </div>
 
       {isModalOpen ? (

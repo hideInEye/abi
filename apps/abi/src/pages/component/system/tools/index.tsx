@@ -642,6 +642,7 @@ export function Component() {
                   dataSource={pagedList}
                   loading={loading}
                   pagination={false}
+                  locale={{ emptyText: <TableEmpty description="暂无工具" /> }}
                   size="middle"
                   className="tools-table abi-std-table"
                   scroll={pagedList.length > 0 ? TABLE_SCROLL : undefined}
@@ -657,8 +658,8 @@ export function Component() {
           ) : (
             <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
               {pagedList.length === 0 ? (
-                <div style={{ marginTop: 80, textAlign: 'center' }}>
-                  <AEmpty description="暂无工具" />
+                <div className="abi-card-empty">
+                  <AEmpty description="暂无工具" image={AEmpty.PRESENTED_IMAGE_SIMPLE} />
                 </div>
               ) : (
                 <div className="abi-card-grid">

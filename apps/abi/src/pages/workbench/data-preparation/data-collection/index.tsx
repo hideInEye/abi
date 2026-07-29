@@ -522,6 +522,7 @@ export function Component() {
                 rowSelection={viewMode === 'list' ? rowSelection : undefined}
                 scroll={pagedData.length > 0 ? { x: 'max-content' } : undefined}
                 size="middle"
+                locale={{ emptyText: <TableEmpty description="暂无数据集" /> }}
                 className="data-collection-table abi-std-table"
               />
             </div>
