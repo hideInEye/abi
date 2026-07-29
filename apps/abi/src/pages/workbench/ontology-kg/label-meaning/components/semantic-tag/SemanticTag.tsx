@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Splitter } from 'antd'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
+import type { GroupHandle } from '@/components/stateful/group/Group.tsx'
 import { Group } from '@/components/stateful/group/Group.tsx'
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate.tsx'
 import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import { filterByCreateTime } from '@/utils/date'
 
@@ -42,6 +44,8 @@ export const Component: React.FC = () => {
   } = useTagManagement()
 
   const [dateRange, setDateRange] = useState<any>(null)
+  const groupRef = useRef<GroupHandle>(null)
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null)
   const filteredTagList = useMemo(() => filterByCreateTime(tagList as any[], dateRange), [tagList, dateRange])
 
   const handleGroupChange = useCallback((id: number | string) => {
@@ -74,11 +78,14 @@ export const Component: React.FC = () => {
                 type: 'tag'
               }}
               onGroupId={handleGroupChange}
+              onGroupsChange={setHasGroups}
+              ref={groupRef}
             />
           </div>
         </Splitter.Panel>
 
         <Splitter.Panel style={{ minWidth: 0, overflow: 'hidden' }}>
+          <GroupContentGate hasGroups={hasGroups} onCreateGroup={() => groupRef.current?.openAddModal()}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             <TagSearch onSearch={handleSearch} onDateRangeChange={setDateRange} />
             <section className="abi-data-area">
@@ -113,6 +120,7 @@ export const Component: React.FC = () => {
               />
             )}
           </div>
+          </GroupContentGate>
         </Splitter.Panel>
       </Splitter>
     </div>

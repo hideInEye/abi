@@ -177,6 +177,7 @@ export const EntityTable: React.FC<EntityTableProps> = ({
           <div className="assistant-table-scroll" style={{ maxHeight: '100%', overflow: 'auto' }}>
             <Table<OntologyEntity>
               className="entity-table abi-std-table"
+              locale={{ emptyText: <TableEmpty description="暂无实体" /> }}
               columns={tableColumns}
               dataSource={data}
               loading={loading}

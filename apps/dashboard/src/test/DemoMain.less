@@ -9,7 +9,8 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-body {
+/* 仅作用于子应用自身根节点，避免 qiankun 下泄漏到主应用 body */
+.abi-dashboard-root {
   background-color: #000000;
   color: white;
 

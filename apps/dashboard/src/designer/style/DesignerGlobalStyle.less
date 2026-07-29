@@ -12,6 +12,10 @@
 html, body {
   margin: 0;
   padding: 0;
+}
+
+/* 字体、颜色、背景只作用于子应用自身根节点，避免 qiankun 下泄漏到主应用 html/body */
+.abi-dashboard-root {
   font-size: 14px;
   color: #1a2744;
   background: linear-gradient(135deg, rgba(240, 244, 255, 0.6) 0%, rgba(239, 243, 255, 0.6) 50%, rgba(239, 242, 255, 0.6) 100%);

@@ -10,7 +10,7 @@ export default function TableEmpty({ bordered = false, description = '暂无数�
 
   return (
     <div className={`flex items-center justify-center flex-col h-full w-full ${mergedClassName}`}>
-      <AEmpty description={description} />
+      <AEmpty description={description} image={AEmpty.PRESENTED_IMAGE_SIMPLE} />
     </div>
   );
 }

@@ -175,6 +175,12 @@
   height: 100% !important;
 }
 
+// 列表视图无数据时：隐藏外层边框容器，空状态直接悬浮在页面背景上（与卡片视图空状态一致）
+div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
 .ant-table-wrapper:has(.ant-table-tbody > tr.ant-table-placeholder) {
   height: 100%;
 
@@ -189,6 +195,7 @@
   .ant-table-content,
   .ant-table-body {
     height: 100%;
+    background: transparent !important;
   }
 
   table {
@@ -197,18 +204,36 @@
 
   .ant-table-tbody {
     height: 100%;
-    background-color: #f6f7ff;
+    background-color: transparent;
   }
 
+  // antd 默认给 placeholder 行本身设置白色背景（colorBgContainer），必须一并清掉
   .ant-table-tbody > tr.ant-table-placeholder {
     height: 100%;
+    background: transparent !important;
+
+    &:hover > td {
+      background: transparent !important;
+    }
   }
 
   .ant-table-tbody > tr.ant-table-placeholder > td {
     height: 100%;
-    background-color: #f6f7ff !important;
+    background-color: transparent !important;
+    border-bottom: none !important;
     padding: 0 !important;
     vertical-align: middle;
+  }
+}
+
+// Spin 包裹下的卡片空状态（如助手编排、技能列表）：撑满父容器高度，保证垂直居中
+.ant-spin-nested-loading:has(> .ant-spin-container > .abi-card-empty) {
+  height: 100%;
+
+  > .ant-spin-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -1473,12 +1498,14 @@
 }
 
 // 卡片空状态
+// height:100% 兼容非 flex 父容器（如 overflow:auto 的滚动容器）；flex 容器中 flex:1（basis 0）优先，不受影响
 .abi-card-empty {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 200px;
+  height: 100%;
 }
 
 .abi-data-card {

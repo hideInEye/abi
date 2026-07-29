@@ -34,6 +34,10 @@ html,
 body {
   width: 100%;
   height: 100%;
+}
+
+/* 背景渐变只作用于子应用自身根节点，避免 qiankun 下泄漏到主应用 body（导致主应用毛玻璃导航栏变色） */
+.abi-dashboard-root {
   background: linear-gradient(135deg, #F0F4FF 0%, #EFF3FF 45%, #EFF2FF 100%);
 }
 

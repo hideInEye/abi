@@ -512,6 +512,7 @@ export function Component() {
                   rowSelection={rowSelection}
                   scroll={pagedSpaceData.length > 0 ? { x: 'max-content' } : undefined}
                   size="middle"
+                  locale={{ emptyText: <TableEmpty description="暂无空间" /> }}
                   className="abi-std-table"
                 />
               </div>

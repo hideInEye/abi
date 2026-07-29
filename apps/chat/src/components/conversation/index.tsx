@@ -116,7 +116,8 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
       const detail = (event as CustomEvent)?.detail
       if (detail?.chatId && String(detail.chatId) === String(chatId)) {
         if (detail.order !== undefined && detail.order !== null) {
-          setSharingList(convContent.filter((item: any) => item.role !== 'ai' && String(item.order) === String(detail.order)))
+          // 只预填 human 项，与手动勾选行为一致（避免同轮 view 项导致邮件分享 roundIndexs 重复）
+          setSharingList(convContent.filter((item: any) => item.role === 'human' && String(item.order) === String(detail.order)))
         }
         setIsSharing(true)
       }

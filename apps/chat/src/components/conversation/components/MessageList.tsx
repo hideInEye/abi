@@ -282,6 +282,7 @@ const MessageList = ({
     key: string | number,
     isLast = false,
     versionInfo?: { activeIndex: number; total: number; onChange: (i: number) => void },
+    shareOrder?: number,
   ) => {
     if (item.role === 'human') {
       const anchorId = `human-msg-${item.order}`
@@ -351,6 +352,7 @@ const MessageList = ({
           onRegenerate={onRegenerate}
           isLast={isLast}
           versionInfo={versionInfo}
+          shareOrder={shareOrder}
           onMessageUpdate={() => {}}
         />
       )
@@ -390,10 +392,13 @@ const MessageList = ({
       isLast?: boolean
       groupRounds?: number[]
       versionInfo?: { activeIndex: number; total: number; onChange: (i: number) => void }
+      /* 分享预选用的轮次：多版本合并块中复选框挂在 v0 的 human 上，需用其 order */
+      shareOrder?: number
     },
   ) => {
     const isLast = opts?.isLast ?? false
     const versionInfo = opts?.versionInfo
+    const shareOrder = opts?.shareOrder
     const flatGroup = group.flat()
     const groupKey = flatGroup[0]?.order ?? flatGroup[0]?.id ?? index
     // 当前轮次（仅取数字 roundIndex/order，用于批量删除选择）
@@ -547,7 +552,7 @@ const MessageList = ({
                     </span>
                   </div>
                 )}
-                {section.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`, isLast, versionInfo))}
+                {section.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`, isLast, versionInfo, shareOrder))}
               </div>
             )
             return (
@@ -594,9 +599,12 @@ const MessageList = ({
     const humanSections = entry.versions[0].filter(isHumanSection)
     const bodySections = entry.versions[activeIndex].filter((s: any[]) => !isHumanSection(s))
     const displayGroup = [...humanSections, ...bodySections]
+    // 分享预选需对齐复选框所在的 v0 human 轮次（当前版本的 order 与其不同）
+    const shareOrder = humanSections.flat().find((it: any) => it?.role === 'human')?.order
     return renderGroup(displayGroup, index, {
       isLast,
       groupRounds,
+      shareOrder,
       versionInfo: {
         activeIndex,
         total,

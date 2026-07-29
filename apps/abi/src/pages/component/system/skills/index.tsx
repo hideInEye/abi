@@ -462,8 +462,8 @@ export function Component() {
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <Spin spinning={loading}>
             {visibleList.length === 0 && !loading ? (
-              <div className="py-80px">
-                <Empty description={t('page.manage.skill.empty')} />
+              <div className="abi-card-empty">
+                <Empty description={t('page.manage.skill.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
               </div>
             ) : viewMode === 'list' ? (
               <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: 12, overflow: 'hidden', flex: 1, minHeight: 0 }}>

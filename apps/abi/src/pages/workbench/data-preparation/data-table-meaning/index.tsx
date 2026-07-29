@@ -1,6 +1,8 @@
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { Splitter } from 'antd';
+import type { GroupHandle } from '@/components/stateful/group/Group';
 import { Group } from '@/components/stateful/group/Group';
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate';
 import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
 
@@ -38,6 +40,8 @@ export function Component() {
 
   const [searchValue, setSearchValue] = useState('');
   const [dateRange, setDateRange] = useState<any>(null);
+  const groupRef = useRef<GroupHandle>(null);
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null);
 
   function handleGroupId(gId: string) {
     setGroupId(gId);
@@ -93,12 +97,13 @@ export function Component() {
         {/* v5 Tree Panel — left sidebar */}
         <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
           <div className="abi-group-sidebar" style={{ height: '100%' }}>
-            <Group config={SCHEMA_GROUP_CONFIG} onGroupId={handleGroupId} />
+            <Group ref={groupRef} config={SCHEMA_GROUP_CONFIG} onGroupId={handleGroupId} onGroupsChange={setHasGroups} />
           </div>
         </Splitter.Panel>
 
         {/* Right content area */}
         <Splitter.Panel>
+          <GroupContentGate hasGroups={hasGroups} onCreateGroup={() => groupRef.current?.openAddModal()}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             {/* Searchbar */}
             <section className="abi-searchbar">
@@ -143,6 +148,7 @@ export function Component() {
               />
             </section>
           </div>
+          </GroupContentGate>
         </Splitter.Panel>
       </Splitter>
 

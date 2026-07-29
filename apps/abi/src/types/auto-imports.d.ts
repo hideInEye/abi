@@ -76,6 +76,7 @@ declare global {
   const GlobalLoading: typeof import('../components/stateful/GlobalLoading')['default']
   const GlobalLoadingContainer: typeof import('../components/stateless/common/GlobalLoadingContainer')['default']
   const Group: typeof import('../components/stateful/group/Group')['Group']
+  const GroupContentGate: typeof import('../components/stateful/group/GroupContentGate')['GroupContentGate']
   const GroupFrom: typeof import('../components/stateful/group/GroupFrom')['GroupFrom']
   const GroupList: typeof import('../components/stateful/group/GroupList')['default']
   const IconAntDesignDeleteOutlined: typeof import('~icons/ant-design/delete-outlined.tsx')['default']

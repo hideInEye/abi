@@ -1,9 +1,11 @@
 import { DeleteOutlined, MoreOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dropdown, message, Modal, Splitter } from 'antd';
 
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
+import type { GroupHandle } from '@/components/stateful/group/Group.tsx';
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate.tsx';
 import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
 
@@ -17,6 +19,8 @@ import { useEnumDrawer } from './hooks/useEnumDrawer';
 export const Component: React.FC = () => {
   const [groupId, setGroupId] = useState<any>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const groupRef = useRef<GroupHandle>(null);
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null);
 
   const {
     current,
@@ -98,12 +102,13 @@ export const Component: React.FC = () => {
         {/* v5 Tree Panel — left sidebar with resizable width */}
         <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
           <div className="abi-group-sidebar" style={{ height: '100%' }}>
-            <DictionaryGroup onGroupId={setGroupId} />
+            <DictionaryGroup ref={groupRef} onGroupId={setGroupId} onGroupsChange={setHasGroups} />
           </div>
         </Splitter.Panel>
 
         {/* Right content area */}
         <Splitter.Panel>
+          <GroupContentGate hasGroups={hasGroups} onCreateGroup={() => groupRef.current?.openAddModal()}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             {/* v5 Searchbar */}
             <section className="abi-searchbar">
@@ -170,7 +175,7 @@ export const Component: React.FC = () => {
               ) : (
                 <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
                   {filteredRows.length === 0 ? (
-                    <div style={{ marginTop: 80, textAlign: 'center' }}><AEmpty description="暂无字典" /></div>
+                    <div className="abi-card-empty"><AEmpty description="暂无字典" image={AEmpty.PRESENTED_IMAGE_SIMPLE} /></div>
                   ) : (
                     <div className="abi-card-grid">
                       <div className="abi-card-grid-inner">
@@ -220,6 +225,7 @@ export const Component: React.FC = () => {
               )}
             </section>
           </div>
+          </GroupContentGate>
         </Splitter.Panel>
       </Splitter>
 

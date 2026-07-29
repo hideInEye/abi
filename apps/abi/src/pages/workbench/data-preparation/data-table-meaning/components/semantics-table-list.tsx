@@ -334,6 +334,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
               pagination={false}
               rowKey="schemaId"
               rowSelection={viewMode === 'list' ? rowSelection : undefined}
+              locale={{ emptyText: <TableEmpty description="暂无数据语义" /> }}
             />
           </div>
         </div>

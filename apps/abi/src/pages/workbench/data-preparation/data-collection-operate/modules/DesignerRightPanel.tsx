@@ -174,7 +174,7 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
   };
 
   return (
-    <div ref={rootRef} style={{ position: 'relative', height: '100%' }}>
+    <div ref={rootRef} style={{ position: 'relative', height: '100%', width: 40, flexShrink: 0 }}>
       {/* 配置面板 - 绝对定位浮层，不挤占编辑器空间 */}
       {renderPanelContent()}
 

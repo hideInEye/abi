@@ -7,6 +7,8 @@ import type { PluginAddParams, PluginItem, PluginList, McpForm } from '@/types/p
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import type { GroupHandle } from '@/components/stateful/group/Group.tsx';
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate.tsx';
 
 import { PlugUpdate } from './components/PlugUpdate.tsx';
 import { PluginDetail } from './components/PluginDetail.tsx';
@@ -22,6 +24,8 @@ export const Component: React.FC = () => {
   const groupIdRef = useRef(groupId);
   groupIdRef.current = groupId;
   const [groupName, setGroupName] = useState('');
+  const groupPanelRef = useRef<GroupHandle>(null);
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null);
   const [fetchKey, setFetchKey] = useState(0);
   const [dataSource, setDataSource] = useState<{
     code: number;
@@ -264,12 +268,13 @@ export const Component: React.FC = () => {
         {/* v5 Tree Panel — left sidebar */}
         <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
           <div className="abi-group-sidebar" style={{ height: '100%' }}>
-            <PluginGroup onGroupId={(id, name) => { setGroupId(id); if (name) setGroupName(name); }} />
+            <PluginGroup ref={groupPanelRef} onGroupId={(id, name) => { setGroupId(id); if (name) setGroupName(name); }} onGroupsChange={setHasGroups} />
           </div>
         </Splitter.Panel>
 
         {/* Right content area */}
         <Splitter.Panel>
+          <GroupContentGate hasGroups={hasGroups} onCreateGroup={() => groupPanelRef.current?.openAddModal()}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             {/* Searchbar */}
             <section className="abi-searchbar">
@@ -335,6 +340,7 @@ export const Component: React.FC = () => {
               />
             </section>
           </div>
+          </GroupContentGate>
         </Splitter.Panel>
       </Splitter>
 

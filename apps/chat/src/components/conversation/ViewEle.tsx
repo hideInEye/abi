@@ -79,6 +79,7 @@ interface PropsType {
   onRegenerate?: (data: any) => void; // 重新生成（以相同问题重新发起一轮）
   isLast?: boolean; // 是否为最后一组对话（仅最后一组显示重新生成）
   versionInfo?: { activeIndex: number; total: number; onChange: (i: number) => void }; // 多版本分页（重新生成后展示层合并）
+  shareOrder?: number; // 分享预选用的轮次（多版本合并块中复选框挂在 v0 human 上，与当前版本 order 不同）
   onMessageUpdate?: (updatedMessage: any) => void; // <-- 新增
 }
 
@@ -161,6 +162,7 @@ const ViewEle: React.FC<PropsType> = ({
   onRegenerate,
   isLast,
   versionInfo,
+  shareOrder,
   onMessageUpdate // <-- 新增
 }, ref) => {
   const [chartData, setChartData] = React.useState<any>(null);
@@ -1818,7 +1820,7 @@ const ViewEle: React.FC<PropsType> = ({
                       onQaClick={handleQaClick}
                       onRegenerateClick={onRegenerate ? () => onRegenerate(data) : undefined}
                       onDeleteClick={onDelete ? () => onDelete(data) : undefined}
-                      onShareClick={() => window.dispatchEvent(new CustomEvent('start-share-conversation', { detail: { chatId: conv?.chat_id, order: data?.order } }))}
+                      onShareClick={() => window.dispatchEvent(new CustomEvent('start-share-conversation', { detail: { chatId: conv?.chat_id, order: shareOrder ?? data?.order } }))}
                       isLast={isLast}
                       versionInfo={versionInfo}
                       onVoteChange={handleLike}
