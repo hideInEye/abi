@@ -24,6 +24,12 @@
 - `packages/axios` 只提供请求工厂、重试、取消和通用错误分层，不应写具体业务 API。
 - `packages/simple-router` 是 `apps/abi` 的路由适配层，修改时需兼容 React Router 行为。
 
+## 微前端集成约束
+
+- ABI 使用 qiankun 加载微应用时必须启用样式隔离，优先使用 `sandbox.experimentalStyleIsolation`，避免子应用样式污染宿主。
+- 新增或改造微应用时，子应用不得把业务背景、主题色、页面底色直接写到全局 `html` / `body` 选择器；应写到自身 root 容器或业务作用域 class。必要的 reset 也应尽量收敛到子应用容器。
+- 若确需修改全局 `html` / `body`，必须在需求和 run log 中说明原因、影响范围、样式隔离策略和回归验证方式。
+
 ## 核心依赖方向
 
 允许：

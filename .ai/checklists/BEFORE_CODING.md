@@ -8,6 +8,7 @@
 - [ ] ABI 改动已读取 `apps/abi/src/service/request/index.ts`、`apps/abi/src/router/guard/index.ts` 或相关 domain
 - [ ] Chat 改动已读取 `apps/chat/src/service/request/index.ts`、`apps/chat/src/router/index.tsx`
 - [ ] Dashboard 改动已读取 `apps/dashboard/src/utils/FetchUtil.ts` 或 `apps/dashboard/src/designer`
+- [ ] 涉及 qiankun 微应用新增/接入时，已确认启用样式隔离，且子应用没有用全局 `html` / `body` 写业务背景污染宿主
 - [ ] 已确认测试命令：`pnpm test`
 - [ ] 已确认根 `pnpm lint` 和 `pnpm type-check` 当前不可作为通过门禁
 - [ ] UI 改动已确认所属 app 样式系统

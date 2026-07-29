@@ -21,7 +21,7 @@ import type { OntologyGraphEdge, OntologyGraphNode, OntologyNetworkId } from '@/
 import { getSpaceId } from '@/store/slice/app'
 
 import GraphDetailPanel from './components/GraphDetailPanel'
-import OntologyGraphCanvas from './components/OntologyGraphCanvas'
+import OntologyGraphCanvas, { type GraphViewportInsets } from './components/OntologyGraphCanvas'
 import { useOntologyGraph } from './hooks/useOntologyGraph'
 import styles from './index.module.css'
 import type { GraphQueryValues, GraphSelection } from './types'
@@ -214,6 +214,15 @@ export const Component: React.FC = () => {
 
   const filteredGraph = useMemo(() => filterGraphData(graphData, selectedEntityIds, selectedRelations), [graphData, selectedEntityIds, selectedRelations])
   const splitGraph = useMemo(() => splitGraphByDegree(filteredGraph), [filteredGraph])
+  const graphViewportInsets = useMemo<GraphViewportInsets>(
+    () => ({
+      bottom: splitGraph.isolatedNodes.length === 0 ? 24 : isolatedExpanded ? 350 : 100,
+      left: 28,
+      right: 220,
+      top: 84,
+    }),
+    [isolatedExpanded, splitGraph.isolatedNodes.length],
+  )
 
   useEffect(() => {
     setIsolatedExpanded(false)
@@ -484,6 +493,7 @@ export const Component: React.FC = () => {
           isFullscreen={isFullscreen}
           nodes={splitGraph.connectedNodes}
           selection={selection}
+          viewportInsets={graphViewportInsets}
           onSelect={handleSelect}
           onToggleFullscreen={toggleFullscreen}
         />
