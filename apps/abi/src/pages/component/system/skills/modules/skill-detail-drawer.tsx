@@ -806,7 +806,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                     <Spin spinning={loadingLeftFiles}>
                       {leftFiles.length === 0 && !loadingLeftFiles ? (
                         <div className="sd-v5-empty">
-                          <Empty description="暂无文件" />
+                          <Empty description="暂无文件" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                         </div>
                       ) : (
                         <div className="sd-v5-panel sd-v5-file-tree">
@@ -823,7 +823,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                     <Spin spinning={loadingVersions}>
                       {versions.length === 0 && !loadingVersions ? (
                         <div className="sd-v5-empty">
-                          <Empty description="暂无版本" />
+                          <Empty description="暂无版本" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                         </div>
                       ) : (
                         <div className="sd-v5-version-list">

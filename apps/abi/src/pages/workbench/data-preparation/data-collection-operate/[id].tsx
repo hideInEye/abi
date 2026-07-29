@@ -347,8 +347,8 @@ export function Component() {
                 <Splitter.Panel
                   defaultSize="220"
                 >
-                  <div className="relative h-full pr-16px overflow-hidden" style={{
-                    background: 'rgba(255, 255, 255, 0.4)',
+                  <div className="relative h-full px-24px overflow-hidden" style={{
+                    background: 'rgba(255, 255, 255, 0.5)',
                     backdropFilter: 'blur(8px)',
                     borderRight: '1px solid rgba(130, 140, 200, 0.1)'
                   }}>
@@ -429,7 +429,36 @@ export function Component() {
                 {/* 中间主编辑区 */}
                 <Splitter.Panel>
                   <div className="h-full flex flex-col">
-                    <div className="flex-1">
+                    {/* 顶部操作栏：仅图形化模式展示；SQL 模式的操作按钮在编辑器底部操作栏 */}
+                    {collectionData.viewType !== 'sql' && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        gap: 12,
+                        padding: '10px 16px',
+                        background: 'linear-gradient(180deg, rgba(246, 247, 255, 0.8), rgba(246, 247, 255, 0.6))',
+                        backdropFilter: 'blur(8px)',
+                        borderBottom: '1px solid rgba(130, 140, 200, 0.1)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <AButton
+                        className="btn-accent-gradient"
+                        onClick={() => push('/workbench/data-preparation/data-collection')}
+                      >
+                        退出编辑
+                      </AButton>
+                      <AButton
+                        className="btn-accent-gradient"
+                        onClick={() => handleClickSave()}
+                      >
+                        保存
+                      </AButton>
+                    </div>
+                    )}
+                    <div className="flex-1" style={{ minHeight: 0 }}>
                       <Splitter
                         layout="vertical"
                         style={{ width: '100%', height: '100%' }}
@@ -447,41 +476,11 @@ export function Component() {
                               runLoading={runLoading}
                               onRun={() => bottomSqlRef.current?.run()}
                               onSave={() => handleClickSave()}
+                              onExit={() => push('/workbench/data-preparation/data-collection')}
                             />
                           ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'flex-end',
-                                  gap: 12,
-                                  padding: '10px 16px',
-                                  background: 'linear-gradient(180deg, rgba(246, 247, 255, 0.8), rgba(246, 247, 255, 0.6))',
-                                  backdropFilter: 'blur(8px)',
-                                  borderBottom: '1px solid rgba(130, 140, 200, 0.1)',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <AButton
-                                  size="small"
-                                  type="primary"
-                                  style={{ 
-                                    background: 'linear-gradient(135deg, #5b7cf7, #7091fa)',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    boxShadow: '0 4px 12px rgba(91, 124, 247, 0.3)',
-                                    fontWeight: 600,
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                  }}
-                                  onClick={() => handleClickSave()}
-                                >
-                                  保存
-                                </AButton>
-                              </div>
-                              <div style={{ flex: 1, minHeight: 0 }}>
-                                <TreeNodeContainer />
-                              </div>
+                            <div style={{ height: '100%', width: '100%' }}>
+                              <TreeNodeContainer />
                             </div>
                           )}
                         </Splitter.Panel>

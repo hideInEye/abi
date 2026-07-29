@@ -1,7 +1,7 @@
 import { DeleteOutlined, EllipsisOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics';
 import { buildGroupTree, getAllDescendantIds } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
@@ -51,9 +51,17 @@ export interface GroupProps {
     type: TableSemanticsGroupType;
   };
   readonly onGroupId: (groupId: string, groupName?: string) => void;
+  /** 上报“是否存在分组”（null=加载中），供右侧业务区域门控使用 */
+  readonly onGroupsChange?: (hasAnyGroup: boolean | null) => void;
 }
 
-export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
+/** Group 对外暴露的命令式句柄 */
+export interface GroupHandle {
+  /** 打开新增分组弹窗（供右侧空状态“新建分组”按钮调用） */
+  openAddModal: () => void;
+}
+
+export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, onGroupsChange }, ref) => {
   const spaceId = useAppSelector(getSpaceId);
   const [form] = Form.useForm();
   const {
@@ -64,6 +72,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     handleGroupDelete,
     handleGroupEdit,
     handleGroupSearch,
+    hasAnyGroup,
     isModalOpen,
     setEditingGroup,
     setGroups,
@@ -71,6 +80,10 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
   } = useGroupManagement(config);
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
+
+  useEffect(() => {
+    onGroupsChange?.(hasAnyGroup);
+  }, [hasAnyGroup]);
 
   useEffect(() => {
     getGroups();
@@ -134,6 +147,8 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     setEditingGroup(null);
     setIsModalOpen(true);
   };
+
+  useImperativeHandle(ref, () => ({ openAddModal: showAddModal }));
 
   const showEditModal = (group: QuestionGroupItem, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -298,4 +313,6 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       </Modal>
     </>
   );
-};
+});
+
+Group.displayName = 'Group';

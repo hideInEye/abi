@@ -1,11 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DeleteOutlined, DownOutlined } from '@ant-design/icons'
 import { Dropdown, Popconfirm, Splitter } from 'antd'
 import type { MenuProps } from 'antd'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
+import type { GroupHandle } from '@/components/stateful/group/Group.tsx'
 import { Group } from '@/components/stateful/group/Group.tsx'
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate.tsx'
 import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import { filterByCreateTime } from '@/utils/date'
 
@@ -27,6 +29,8 @@ const KNOWLEDGE_COLUMN_OPTIONS: ColumnOption[] = [
 
 const MetricModeling: React.FC = () => {
   const [selectedGroup, setSelectedGroup] = useState<KnowledgeGroupItem | null>(null)
+  const groupRef = useRef<GroupHandle>(null)
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(KNOWLEDGE_COLUMN_OPTIONS)
   const {
     atomicDrawerOpen,
@@ -131,11 +135,14 @@ const MetricModeling: React.FC = () => {
                 type: KNOWLEDGE_GROUP_TYPE,
               }}
               onGroupId={handleGroupChange}
+              onGroupsChange={setHasGroups}
+              ref={groupRef}
             />
           </div>
         </Splitter.Panel>
 
         <Splitter.Panel style={{ minWidth: 0, overflow: 'hidden' }}>
+          <GroupContentGate hasGroups={hasGroups} onCreateGroup={() => groupRef.current?.openAddModal()}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             <KnowledgeSearchBar
               searchParams={searchParams}
@@ -187,6 +194,7 @@ const MetricModeling: React.FC = () => {
               />
             </section>
           </div>
+          </GroupContentGate>
         </Splitter.Panel>
       </Splitter>
 

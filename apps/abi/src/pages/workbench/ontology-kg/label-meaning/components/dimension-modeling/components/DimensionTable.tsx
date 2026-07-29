@@ -204,6 +204,7 @@ export const DimensionTable: React.FC<Props> = ({
           <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
             <Table
               className="abi-std-table"
+              locale={{ emptyText: <TableEmpty description="暂无维度" /> }}
               columns={tableColumns as any}
               dataSource={dataSource}
               loading={loading}

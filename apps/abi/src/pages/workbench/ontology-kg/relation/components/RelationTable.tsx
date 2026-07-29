@@ -142,6 +142,7 @@ export const RelationTable: React.FC<RelationTableProps> = ({
           <div className="assistant-table-scroll" style={{ maxHeight: '100%', overflow: 'auto' }}>
             <Table<OntologyRelation>
               className="abi-std-table relation-table"
+              locale={{ emptyText: <TableEmpty description="暂无关系" /> }}
               columns={tableColumns}
               dataSource={relations}
               loading={loading}

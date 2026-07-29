@@ -392,6 +392,7 @@ export function Component() {
               columns={filteredColumns as any}
               dataSource={pagedData}
               pagination={false}
+              locale={{ emptyText: <TableEmpty description="暂无邮件记录" /> }}
               rowSelection={rowSelection}
             />
           </div>

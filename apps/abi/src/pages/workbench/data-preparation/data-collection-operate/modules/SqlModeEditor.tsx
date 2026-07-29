@@ -30,6 +30,8 @@ interface Props {
   runLoading?: boolean;
   /** 保存回调（点击「保存」按钮） */
   onSave?: () => void;
+  /** 退出编辑回调（点击「退出编辑」按钮） */
+  onExit?: () => void;
 }
 
 /**
@@ -76,6 +78,7 @@ const SqlModeEditor: React.FC<Props> = ({
   onRun,
   runLoading,
   onSave,
+  onExit,
 }) => {
   const monaco = useMonaco();
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -332,21 +335,25 @@ const SqlModeEditor: React.FC<Props> = ({
         }}
       >
         <AButton
+          className="btn-accent-gradient"
           icon={<PlayCircleOutlined />}
           loading={runLoading}
-          type="primary"
-          size="small"
-          style={{ backgroundColor: '#3467FF', borderColor: '#3467FF' }}
           onClick={onRun}
         >
           执行
         </AButton>
-        <Button size="small" onClick={onSave}>
+        <AButton className="btn-ghost-v5" onClick={onSave}>
           保存
-        </Button>
-        <Button size="small" onClick={handleFormat}>
+        </AButton>
+        <AButton className="btn-ghost-v5" onClick={handleFormat}>
           格式化
-        </Button>
+        </AButton>
+        <AButton
+          className="btn-accent-gradient"
+          onClick={onExit}
+        >
+          退出编辑
+        </AButton>
         {/* 右侧数据源信息展示 */}
         {sourceId && dataSourceList.length > 0 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>

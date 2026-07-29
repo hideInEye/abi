@@ -57,16 +57,34 @@ export default function DashboardMicroApp(props: DashboardMicroAppProps) {
     )
     microAppRef.current = microApp
 
+    // 路由快速切换时容器会先于微应用加载完成被移除，qiankun 各生命周期 promise 会同时 reject，
+    // 统一兜底避免 Uncaught (in promise)；仅在组件仍存活时输出真实加载错误
+    let cancelled = false
+    const handleLifecycleError = (error: unknown) => {
+      if (!cancelled) {
+        console.error('[abi-dashboard] 微应用加载失败:', error)
+      }
+    }
+    microApp.loadPromise.catch(handleLifecycleError)
+    microApp.bootstrapPromise.catch(handleLifecycleError)
+    microApp.mountPromise.catch(handleLifecycleError)
+
     return () => {
-      microApp.mountPromise.then(() => microApp.unmount())
+      cancelled = true
       microAppRef.current = null
+      microApp.mountPromise
+        .then(() => microApp.unmount())
+        .catch(() => {
+          // 加载被路由切换打断（容器已移除），无需卸载
+        })
     }
   }, [containerId, initialPath])
 
   // routeTitle 变化时更新微应用 props
   useEffect(() => {
-    if (microAppRef.current) {
-      microAppRef.current.update?.({
+    const microApp = microAppRef.current
+    if (microApp && microApp.getStatus() === 'MOUNTED') {
+      microApp.update?.({
         pageTitle: routeTitle || undefined
       })
     }
@@ -74,8 +92,9 @@ export default function DashboardMicroApp(props: DashboardMicroAppProps) {
 
   // spaceId 变化时通知微应用刷新
   useEffect(() => {
-    if (microAppRef.current) {
-      microAppRef.current.update?.({
+    const microApp = microAppRef.current
+    if (microApp && microApp.getStatus() === 'MOUNTED') {
+      microApp.update?.({
         spaceId
       })
     }

@@ -32,6 +32,9 @@ async function render(props: any) {
         : document.getElementById('root');
     if (!containerEl) return;
 
+    // 背景样式挂在子应用自身根节点上（见 index.less .abi-dashboard-root），不污染主应用 html/body
+    containerEl.classList.add('abi-dashboard-root');
+
     if (!root) {
         root = createRoot(containerEl);
     }

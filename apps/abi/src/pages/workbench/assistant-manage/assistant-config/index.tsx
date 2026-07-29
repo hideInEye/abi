@@ -4,8 +4,9 @@ import { Dropdown, Empty, Popconfirm, Select, Spin, Splitter, Switch, Typography
 import type { TableProps } from 'antd';
 
 import { Group } from '@/components/stateful/group/Group';
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate';
 import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
-import type { GroupProps } from '@/components/stateful/group/Group';
+import type { GroupHandle, GroupProps } from '@/components/stateful/group/Group';
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 import { ViewControls } from '@/components/ViewControls';
@@ -80,6 +81,8 @@ export function Component() {
   const [editingAgent, setEditingAgent] = useState<AgentCard | null>(null);
   const [selectedId, setSelectedId] = useState<string | number>(1);
   const [groupId, setGroupId] = useState<string>('');
+  const groupRef = useRef<GroupHandle>(null);
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null);
   const [agents, setAgents] = useState<AgentCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
@@ -478,12 +481,13 @@ export function Component() {
         {/* v5 Tree Panel — left sidebar */}
         <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
           <div className="abi-group-sidebar" style={{ height: '100%' }}>
-            <Group config={ASSISTANT_GROUP_CONFIG} onGroupId={setGroupId} />
+            <Group ref={groupRef} config={ASSISTANT_GROUP_CONFIG} onGroupId={setGroupId} onGroupsChange={setHasGroups} />
           </div>
         </Splitter.Panel>
 
         {/* Right content area */}
         <Splitter.Panel>
+          <GroupContentGate hasGroups={hasGroups} onCreateGroup={() => groupRef.current?.openAddModal()}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
         {/* v5 Searchbar */}
         <section className="abi-searchbar">
@@ -533,8 +537,8 @@ export function Component() {
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
             <Spin spinning={loading}>
             {agents.length === 0 && !loading ? (
-              <div style={{ marginTop: 80 }}>
-                <Empty description="暂无助手" />
+              <div className="abi-card-empty">
+                <Empty description="暂无助手" image={Empty.PRESENTED_IMAGE_SIMPLE} />
               </div>
             ) : viewMode === 'list' ? (
               <div style={{
@@ -552,6 +556,7 @@ export function Component() {
                     columns={tableColumns as any}
                     dataSource={pagedList}
                     pagination={false}
+                    locale={{ emptyText: <TableEmpty description="暂无助手" /> }}
                     size="middle"
                     className="assistant-table abi-std-table"
                     scroll={pagedList.length > 0 ? { x: 'max-content' } : undefined}
@@ -601,6 +606,7 @@ export function Component() {
           </div>
         </section>
           </div>
+          </GroupContentGate>
         </Splitter.Panel>
       </Splitter>
 

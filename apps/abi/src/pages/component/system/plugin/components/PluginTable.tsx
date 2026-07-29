@@ -422,6 +422,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
               pagination={false}
               rowKey="pluginId"
               rowSelection={viewMode === 'list' ? rowSelection : undefined}
+              locale={{ emptyText: <TableEmpty description="暂无MCP服务" /> }}
             />
           </div>
         </div>

@@ -208,6 +208,7 @@ export const TableDictionary: React.FC<TableDictionaryProps> = ({ current, dataS
             scroll={{ x: getColumnWidth }}
             size="middle"
             className="dictionary-table abi-std-table"
+            locale={{ emptyText: <TableEmpty description="暂无字典" /> }}
           />
         </div>
       </div>
