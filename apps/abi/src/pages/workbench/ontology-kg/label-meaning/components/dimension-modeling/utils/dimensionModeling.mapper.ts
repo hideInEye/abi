@@ -237,6 +237,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
   const id = Number(pickFirst(item, ['id', 'dimId', 'dimensionId'], 0))
   const owner = trim(pickFirst(item, ['owner', 'dimOwner', 'indicatorOwner'])) || ''
   const path = trim(pickFirst(item, ['path', 'groupPath', 'indicatorCategory'])) || ''
+  const levelPath = trim(item.levelPath) || ''
   const semanticSchemaId = Number(pickFirst(item, ['semanticSchemaId', 'relSchemaId']))
   const semanticsGroupId = pickFirst(item, ['semanticsGroupId', 'semanticGroupId'])
   const semanticSchemaName = trim(pickFirst(item, ['semanticSchemaName', 'relSchemaName']))
@@ -269,6 +270,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
     groupId: item.groupId,
     groupName: trim(item.groupName),
     id,
+    levelPath,
     modelDetail: trim(item.modelDetail),
     owner,
     ownerEmail: trim(item.ownerEmail),

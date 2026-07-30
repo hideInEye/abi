@@ -61,6 +61,7 @@ export interface DimensionModelItem {
   groupId?: number
   groupName?: string
   id: number
+  levelPath?: string
   modelDetail?: string
   owner: string
   ownerEmail?: string

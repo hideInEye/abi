@@ -20,7 +20,7 @@ const DIMENSION_COLUMN_OPTIONS: ColumnOption[] = [
   { key: 'zhName', label: '中文名', visible: true },
   { key: 'englishName', label: '英文名', visible: true },
   { key: 'dimType', label: '维度类型', visible: true },
-  { key: 'path', label: '维度路径(目录)', visible: true },
+  { key: 'levelPath', label: '维度路径(目录)', visible: true },
   { key: 'owner', label: '负责人', visible: true },
   { key: 'status', label: '状态', visible: true },
   { key: 'updateTime', label: '更新时间', visible: true },

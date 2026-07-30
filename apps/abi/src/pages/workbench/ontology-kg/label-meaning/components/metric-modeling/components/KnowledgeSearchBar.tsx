@@ -26,10 +26,10 @@ export const KnowledgeSearchBar: React.FC<Props> = ({ onDateRangeChange, onQuery
     <section className="abi-searchbar">
       <SearchFilterBar
         searchPlaceholder="请输入搜索关键字"
-        searchValue={searchParams.techName}
+        searchValue={searchParams.bizName}
         onQuery={onQuery}
         onReset={handleReset}
-        onSearchChange={(value) => onSearchChange({ techName: value })}
+        onSearchChange={(value) => onSearchChange({ bizName: value })}
         filters={
           <>
             <SearchFilterField label="时间范围">
