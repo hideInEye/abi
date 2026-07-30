@@ -1,4 +1,4 @@
-import { LockOutlined } from '@ant-design/icons';
+import { FolderOutlined, LockOutlined, TagOutlined } from '@ant-design/icons';
 import { Switch, TreeSelect } from 'antd';
 
 import type { GroupProps } from './Group';
@@ -12,10 +12,33 @@ interface GroupFromProps {
 
 const maxRule = [{ max: 20, message: '组名称最多20个字符' }];
 
+/** v5 分区小标题 */
+const FormSectionTitle: FC<{ icon: React.ReactNode; title: string; color?: string }> = ({
+  icon,
+  title,
+  color = '#5b7cf7',
+}) => (
+  <div className="group-form-section-title">
+    <div
+      className="group-form-section-icon"
+      style={{
+        background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
+        boxShadow: `0 2px 8px ${color}28`,
+      }}
+    >
+      {icon}
+    </div>
+    <span>{title}</span>
+  </div>
+);
+
 export const GroupFrom: React.FC<GroupFromProps> = ({ config, parentOptions }: GroupFromProps) => {
   const { editingGroup } = useGroupManagement(config);
   return (
     <div>
+      {/* ── 基本信息分区 ── */}
+      <FormSectionTitle icon={<TagOutlined />} title="基本信息" color="#5b7cf7" />
+
       {/* 名称 */}
       <AForm.Item
         label={config.inputLabel}
@@ -28,6 +51,7 @@ export const GroupFrom: React.FC<GroupFromProps> = ({ config, parentOptions }: G
           placeholder={config.inputPlaceholder}
         />
       </AForm.Item>
+
       {/* 在字典分组中，remark字段是英文名称 */}
       {config.remark && (
         <AForm.Item
@@ -41,44 +65,49 @@ export const GroupFrom: React.FC<GroupFromProps> = ({ config, parentOptions }: G
           />
         </AForm.Item>
       )}
-      {/* 父级文件夹（树形选择，支持多级） */}
+
+      {/* ── 层级关系分区 ── */}
       {parentOptions !== undefined && (
-        <AForm.Item label="父级文件夹" name="parentId" style={{ marginBottom: 12 }}>
-          <TreeSelect
-            allowClear
-            placeholder="无（根目录）"
-            treeData={parentOptions}
-            treeDefaultExpandAll
-            style={{ width: '100%' }}
-          />
-        </AForm.Item>
+        <>
+          <FormSectionTitle icon={<FolderOutlined />} title="层级关系" color="#10b981" />
+
+          <AForm.Item label="父级文件夹" name="parentId" style={{ marginBottom: 12 }}>
+            <TreeSelect
+              allowClear
+              placeholder="无（根目录）"
+              treeData={parentOptions}
+              treeDefaultExpandAll
+              style={{ width: '100%' }}
+            />
+          </AForm.Item>
+        </>
       )}
 
-      {/* 私密开关 - 卡片风格 */}
+      {/* ── 隐私设置 ── */}
       <AForm.Item name="isPrivate" valuePropName="checked" noStyle>
         <Switch style={{ position: 'absolute', visibility: 'hidden', pointerEvents: 'none' }} />
       </AForm.Item>
       <AForm.Item shouldUpdate noStyle style={{ marginBottom: 0 }}>
-        {({ getFieldValue, setFieldsValue }) => (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 12px',
-              borderRadius: 8,
-              background: '#f5f5f5',
-              cursor: 'pointer',
-            }}
-            onClick={() => setFieldsValue({ isPrivate: !getFieldValue('isPrivate') })}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#333', fontSize: '0.875rem' }}>
-              <LockOutlined style={{ color: '#8c8c8c' }} />
-              设为私密文件夹
-            </span>
-            <Switch size="small" checked={getFieldValue('isPrivate')} onClick={(_checked, e) => e.stopPropagation()} onChange={val => setFieldsValue({ isPrivate: val })} />
-          </div>
-        )}
+        {({ getFieldValue, setFieldsValue }) => {
+          const isPrivate = getFieldValue('isPrivate');
+          return (
+            <div
+              className={`group-private-card ${isPrivate ? 'is-active' : ''}`}
+              onClick={() => setFieldsValue({ isPrivate: !isPrivate })}
+            >
+              <span className="group-private-card-label">
+                <LockOutlined className="group-private-card-icon" />
+                设为私密文件夹
+              </span>
+              <Switch
+                size="small"
+                checked={isPrivate}
+                onClick={(_checked, e) => e.stopPropagation()}
+                onChange={val => setFieldsValue({ isPrivate: val })}
+              />
+            </div>
+          );
+        }}
       </AForm.Item>
     </div>
   );
