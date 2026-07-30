@@ -14,6 +14,7 @@ export function formatField(field: string) {
 /**
  * 将平铺的分组数组按 parentId 递归构建成多级树
  * parentId === 0 表示根节点
+ * 脏数据（parentId 指向不存在分组的游离节点）提升到根级展示，不再静默丢弃
  *
  * @param list 平铺分组数组
  * @param parentId 当前父节点 ID，默认 0
@@ -22,8 +23,14 @@ export function formatField(field: string) {
  */
 export function buildGroupTree(list: any[], parentId: string = '0', folderFirst: boolean = false): any[] {
   if (!Array.isArray(list)) return [];
+  const isRoot = String(parentId) === '0';
+  const existingIds = isRoot ? new Set(list.map(item => String(item.groupId))) : null;
   const nodes = list
-    .filter(item => String(item.parentId) === String(parentId))
+    .filter(item =>
+      String(item.parentId) === String(parentId) ||
+      // 根级额外收容游离节点：parentId 在列表中找不到对应分组的脏数据
+      (existingIds !== null && !existingIds.has(String(item.parentId)))
+    )
     .map(item => {
       const children = buildGroupTree(list, item.groupId, folderFirst);
       return children.length > 0 ? { ...item, children } : { ...item };

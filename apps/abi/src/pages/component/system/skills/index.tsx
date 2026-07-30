@@ -3,7 +3,7 @@ import { App, Button, Dropdown, Empty, Input, Select, Spin, Switch, Tabs, Toolti
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 // import PageTitle from '@/components/stateless/common/PageTitle';
-import { deleteSkillApi, querySkillListApi, updateSkillStatusApi } from '@/service/api/skill';
+import { deleteSkillApi, querySkillListApi, updateSkillInfoApi, updateSkillStatusApi } from '@/service/api/skill';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { ViewControls } from '@/components/ViewControls';
@@ -54,6 +54,9 @@ function NameCell({ text }: { text?: string }) {
   );
 }
 
+// 已添加技能 id 本地存储 key（后端参数就绪后改为接口字段过滤）
+const MY_SKILLS_KEY = 'mySkills';
+
 export function Component() {
   const { t } = useTranslation();
   const { message, modal } = App.useApp();
@@ -63,6 +66,15 @@ export function Component() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | '1' | '0'>('ALL');
   const [keyword, setKeyword] = useState('');
   const [list, setList] = useState<SkillItem[]>([]);
+  // 已添加到「我的技能」的技能 id（前端本地记录）
+  const [myIds, setMyIds] = useState<string[]>(() => {
+    try {
+      const arr = JSON.parse(localStorage.getItem(MY_SKILLS_KEY) || '[]');
+      return Array.isArray(arr) ? arr.map(String) : [];
+    } catch {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -95,7 +107,8 @@ export function Component() {
   async function fetchList() {
     setLoading(true);
     try {
-      const res: any = await querySkillListApi({});
+      // 与 chat 一致：传 spaceId，不全部查出
+      const res: any = await querySkillListApi({ spaceId });
       const rows = res?.response?.data?.data?.rows || res?.response?.data?.rows || res?.data?.rows || res?.data?.data || res?.data || [];
       setList(Array.isArray(rows) ? rows : []);
     } catch {
@@ -128,6 +141,32 @@ export function Component() {
   function openEdit(item: SkillItem) {
     setEditingSkill(item);
     setEditOpen(true);
+  }
+
+  // 广场卡片右上角「添加」：先走前端本地逻辑，接口参数就绪后再补充
+  function handleAddSkill(item: SkillItem) {
+    const id = String(item.id);
+    if (myIds.includes(id)) {
+      message.info('已在我的技能中');
+      return;
+    }
+    // TODO: 后端提供添加参数后在此补充（接口仍为修改技能接口）
+    updateSkillInfoApi({ skillId: item.id }).catch(() => {});
+    const next = [...myIds, id];
+    setMyIds(next);
+    localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next));
+    message.success('已添加到我的技能');
+  }
+
+  // 我的技能卡片右上角「移除」：前端本地移除，立即从列表消失
+  function handleRemoveSkill(item: SkillItem) {
+    const id = String(item.id);
+    // TODO: 后端提供移除参数后在此补充（接口仍为修改技能接口）
+    updateSkillInfoApi({ skillId: item.id }).catch(() => {});
+    const next = myIds.filter(v => v !== id);
+    setMyIds(next);
+    localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next));
+    message.success('已从我的技能移除');
   }
 
   function confirmDelete(item: SkillItem) {
@@ -216,18 +255,9 @@ export function Component() {
   const visibleList = useMemo(() => {
     let arr = list;
 
-    // 「我的技能」：spaceId + createdBy 双重匹配
+    // 「我的技能」：展示已添加的技能（前端本地记录，接口就绪后换成后端字段过滤）
     if (tab === 'mine') {
-      const sid = localStorage.getItem('spaceId');
-      let userName = '';
-      try {
-        const u = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}');
-        userName = u?.userName || '';
-      } catch { /* ignore */ }
-      arr = arr.filter(it =>
-        (!sid || String(it.spaceId ?? '') === String(sid)) &&
-        (!userName || String(it.createdBy ?? '') === String(userName))
-      );
+      arr = arr.filter(it => myIds.includes(String(it.id)));
     }
 
     // 启用/隐藏状态
@@ -245,7 +275,7 @@ export function Component() {
     arr = filterByCreateTime(arr, dateRange, 'createTime');
 
     return arr;
-  }, [list, tab, statusFilter, keyword, dateRange]);
+  }, [list, tab, myIds, statusFilter, keyword, dateRange]);
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -508,9 +538,22 @@ export function Component() {
                             <div className="abi-data-card-title">
                               <span className="abi-data-card-name" title={title}>{title}</span>
                             </div>
-                            <span className={`status-pill status-pill--${statusKey}`}>
-                              {t(`page.manage.skill.status.${statusKey}` as any)}
-                            </span>
+                            {/* 右上角：广场展示添加/已添加（点已添加可取消），我的技能展示移除 */}
+                            {tab === 'plaza' ? (
+                              myIds.includes(String(item.id)) ? (
+                                <button className="btn-accent-gradient btn-accent-gradient--sm btn-accent-gradient--added" onClick={(e) => { e.stopPropagation(); handleRemoveSkill(item); }}>
+                                  已添加
+                                </button>
+                              ) : (
+                                <button className="btn-accent-gradient btn-accent-gradient--sm" onClick={(e) => { e.stopPropagation(); handleAddSkill(item); }}>
+                                  + 添加
+                                </button>
+                              )
+                            ) : (
+                              <button className="btn-accent-gradient btn-accent-gradient--sm btn-accent-gradient--danger" onClick={(e) => { e.stopPropagation(); handleRemoveSkill(item); }}>
+                                移除
+                              </button>
+                            )}
                           </div>
                           <div className="abi-data-card-body">
                             <div className="row"><span className="lbl">技能描述</span><span className="val">{summary || '-'}</span></div>
@@ -518,6 +561,13 @@ export function Component() {
                             {item.createTime && (
                               <div className="row"><span className="lbl">创建时间</span><span className="val">{item.createTime.replace('T', ' ')}</span></div>
                             )}
+                            {/* 状态：创建时间下面，样式参考工具管理卡片 */}
+                            <div className="row">
+                              <span className="lbl">状态</span>
+                              <span className={`abi-status-tag ${statusKey === 'published' ? 'status-normal' : 'status-disabled'}`}>
+                                {t(`page.manage.skill.status.${statusKey}` as any)}
+                              </span>
+                            </div>
                           </div>
                           <div className="abi-data-card-footer">
                             <button className="abi-card-act" onClick={(e) => { e.stopPropagation(); openEdit(item); }}>

@@ -1,4 +1,4 @@
-# 2026-07-09 ABI 系统待完成事项
+﻿# 2026-07-09 ABI 系统待完成事项
 
 ## 需求类型
 
@@ -311,3 +311,243 @@ chat 应用外层 Layout 有一层大背景渐变（#d5daf5 → #dfe6f8 → #e2d
 
 - ABI 侧边栏透出蓝紫渐变，视觉与 chat 侧边栏一致。
 - 内容区、卡片、弹窗等其他区域视觉不变。
+
+## 2026-07-30 追加：数据集编辑页右侧维度/指标栏跨浏览器消失修复
+
+### 需求类型
+
+前端缺陷修复（纯前端布局/样式，不改业务逻辑）。
+
+### 背景
+
+数据集编辑页（`data-collection-operate/[id].tsx`）在三个浏览器上表现不一致，最严重时右侧 40px「维度/指标」导航条整体消失。根因有二：
+
+1. Splitter 外层只写了 `flex: 1; minHeight: 0`，缺少 `minWidth: 0`。flex 子项默认 `min-width: auto`，antd Splitter 面板在测量后 flex-basis 被写死为像素值，导致窄窗口/缩放下 Splitter 拒绝收缩，把右侧导航条顶出 `.container { overflow: hidden }` 的可视区。各浏览器对 min-content contribution 的实现差异造成三种表现。
+2. `defaultSize="220"` / `defaultSize="300"` 传字符串，antd 首帧生成非法 CSS `flex-basis: 220`（无单位），首帧布局各浏览器不一致。
+3. 右侧导航条竖排文字依赖 `writing-mode: vertical-lr + text-orientation: upright + SimHei`，老内核浏览器渲染不稳定。
+
+### 目标
+
+- Splitter 增加 `minWidth: 0`，保证任何窗口宽度下右侧导航条保住 40px。
+- `defaultSize` 改为数字，消除首帧非法 flex-basis。
+- 左面板增加 `min` 约束，避免拖拽压烂表单。
+- 竖排文字改为逐字块排列，不再依赖 `writing-mode`。
+
+### 非目标
+
+- 不修改数据集保存/预览/拖拽等业务逻辑。
+- 不修改 antd Splitter 组件本身。
+- 不重构页面布局结构。
+
+### 影响范围预期
+
+- `apps/abi/src/pages/workbench/data-preparation/data-collection-operate/[id].tsx`
+- `apps/abi/src/pages/workbench/data-preparation/data-collection-operate/modules/DesignerRightPanel.tsx`
+- `.ai/runs/2026-07-30-dataset-designer-right-rail-fix/`
+
+### 验收标准
+
+- 任意浏览器、任意窗口宽度/缩放下，右侧「维度/指标」导航条始终可见且文字正常显示。
+- 窄窗口时中间画布/左面板内部滚动，不把导航条顶出可视区。
+- 维度/指标面板展开、字段互转、保存等既有功能不受影响。
+- 类型检查不引入新错误。
+
+## 2026-07-30 追加：页面内容区右间距跨浏览器不一致修复
+
+### 需求类型
+
+前端缺陷修复（纯 CSS，不改逻辑）。
+
+### 背景
+
+ABI 页面内容区 `.page-content-area` 右侧间距在 Chrome/Edge 上正常、在联想浏览器上贴死右边缘。
+
+（订正，以真机数据为准）初步归因为“联想老内核不支持 scrollbar-gutter”错误：联想 SLBrowser 实为 Chromium 141，`CSS.supports('scrollbar-gutter: stable')` 返回 `true`，完全支持该属性。真正根因：`.page-content-area` 无设计 padding，右间距完全来自 `scrollbar-gutter: stable` 预留的滚动条槽；该槽仅在“经典滚动条”（占布局宽度）时才有宽度，联想用 overlay 覆盖式滚动条（槽宽 0）故无间距，Chrome/Edge 经典滚动条槽宽 ~15px 故有间距。与内核新旧无关，取决于滚动条类型。
+
+### 目标
+
+- 删除 `scrollbar-gutter` 与错误的 `@supports not` 块，`.page-content-area` 直接用 `padding-right: 12px`，保证 Chrome/Edge/联想右间距恒为 12px、三浏览器一致。
+- 已知代价（用户确认接受）：去掉 scrollbar-gutter 后 Chrome/Edge 内容滚动页面会有一次 ~15px 横向跳动。
+
+### 非目标
+
+- 不修改页面内容布局与业务逻辑。
+- 不去掉 scrollbar-gutter（保留新内核防滚动条跳动）。
+
+### 影响范围预期
+
+- `apps/abi/src/layouts/modules/global-content/style.css`（全局内容区，仅影响不支持 scrollbar-gutter 的老内核浏览器）
+- `.ai/runs/2026-07-30-dataset-designer-right-rail-fix/`
+
+### 验收标准
+
+- 联想浏览器下页面内容区右侧出现间距，不再贴死右边缘。
+- Chrome/Edge 下视觉无变化。
+
+## 2026-07-30 追加：助手编辑页扩展能力工具选择改为抽屉 + 按需加载 + MCP 参数修复
+
+### 需求类型
+
+前端交互重构 + 接口参数缺陷修复。
+
+### 背景
+
+助手编辑页（assistant-edit-drawer）「扩展能力 > MCP」当前在组件挂载时一次性调用 `queryMcpList` 与 `queryToolListApi`，列表平铺在折叠行内。后续还要接入更多能力接口，挂载时全量调用请求过多；且 `queryMcpList` 调用相比 MCP 服务页少传了 `search: 'blur'` 与 `namespaceId`（MCP 按分组存储，namespaceId = `s_分组ID`）。
+
+### 目标
+
+- 移除挂载时的工具列表全量请求，改为点击「MCP」折叠行的 + 号打开工具选择抽屉时按需加载。
+- 新增工具选择抽屉：内含「MCP工具」「内置工具」两个 tab，均按需（首次进入时）加载并缓存。
+- MCP tab 内先加载 MCP 分组列表（`tableSemanticsGroupList`，groupType=mcp），左侧切换分组，选中分组后才调用 `queryMcpList`，并补齐参数 `search: 'blur'`、`namespaceId: s_分组ID`，按分组缓存结果。
+- 折叠行内不再平铺全量列表，改为展示已选工具（可移除）。
+- 勾选状态与保存 payload（tools/toolType/toolConfig）逻辑保持不变。
+
+### 非目标
+
+- 不修改 MCP 服务页（plugin）现有逻辑。
+- 不修改保存/上线接口协议。
+- 不改动技能、示例、数据语义等其他折叠分组。
+
+### 影响范围预期
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- 新增：`apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/tool-picker-drawer.tsx`
+- `.ai/runs/2026-07-30-assistant-tool-picker-drawer/`
+
+### 验收标准
+
+- 打开助手编辑页时不再请求 `register/list` 与 `tool/list`。
+- 点击 MCP 行 + 号打开抽屉后才按 tab/分组懒加载，重复打开命中缓存不再重复请求。
+- `queryMcpList` 请求带 `search: 'blur'` 与 `namespaceId: s_分组ID`。
+- 已选工具在折叠行内可见、可移除，编辑回显正常，保存 payload 结构不变。
+- 类型检查不引入新错误。
+
+## 2026-07-30 追加：助手编辑页数据语义/本体网络/技能同样改为抽屉选择 + 按需加载
+
+### 需求类型
+
+前端交互重构 + 新接口对接（只读列表）。
+
+### 背景
+
+延续 MCP 抽屉化方案，助手编辑页「数据语义」「本体网络」「技能」三行同样改为整行点击弹各自选择抽屉，抽屉内按需加载。
+
+### 目标
+
+- 通用能力选择抽屉（配置驱动 tabs + 可选分组目录），与 MCP 抽屉同样式同缓存策略。
+- 数据语义：分组（groupType='shema'）+ `schemalist` 列表。
+- 本体网络：语义标签（'tag'+`queryTag`）、维度（'ontology-dimension'+`queryDimensionList`）、指标（'ontology'+`queryKnowledgeIndicators`）、实体语义（`queryOntologyEntityList`）、关系配置（`queryOntologyRelationList`）五个 tab。
+- 技能：`querySkillListApi({})` 列表。
+
+### 非目标
+
+- 勾选结果暂不随保存提交、不做编辑回显（后端字段结构未确认）。
+- 不改各能力管理页。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/capability-picker-drawer.tsx`（新增）
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/capability-picker-configs.ts`（新增）
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/tool-picker-drawer.tsx`（导出子组件供复用）
+- `.ai/runs/2026-07-30-assistant-tool-picker-drawer/`（同一 run log 追加）
+
+### 验收标准
+
+- 三行均不在挂载时请求，整行点击才弹抽屉并按 tab/分组懒加载，重复打开命中缓存。
+- 接口参数与各自管理页一致。
+- 行右侧展示「已选 N 项」；保存 payload 结构不变。
+- 类型检查不引入新错误。
+
+## 2026-07-30 追加：分组树脏数据（游离分组）改为可见
+
+### 需求类型
+
+前端缺陷修复（分组树构建逻辑）。
+
+### 背景
+
+分组数据中存在脏数据：父分组已被删除、子分组 `parentId` 指向不存在的分组（游离分组）。`buildGroupTree` 从 `parentId='0'` 递归建树，游离分组挂不到任何节点被静默丢弃，页面上完全不可见，用户无法管理或删除它们。用户决定改为直接显示脏数据。
+
+### 目标
+
+- `buildGroupTree` 在根级构建时，把 `parentId` 指向不存在分组的游离节点提升到根级展示。
+- 覆盖所有调用点：分组树、初始选中、编辑弹窗父级下拉、推荐问/行业术语分组下拉。
+- 补充单元测试覆盖游离节点提升场景。
+
+### 非目标
+
+- 不修改后端接口，不做数据清洗。
+- 不移除「存在子分组时拦截删除」的前端拦截。
+- 不改动分组增删改查其他逻辑。
+
+### 影响范围预期
+
+- `apps/abi/src/pages/workbench/data-preparation/data-table-meaning/utils/helper.ts`
+- `apps/abi/src/pages/workbench/data-preparation/data-table-meaning/utils/helper.test.ts`
+- `.ai/runs/2026-07-30-group-orphan-visible/`
+
+### 验收标准
+
+- 父分组不存在的游离分组显示在分组树根级，可选中、编辑、删除。
+- 正常层级结构、folderFirst 排序行为不变，既有测试全部通过。
+- 类型检查不引入新错误。
+
+## 2026-07-30 追加：分组空状态插图多 tab 下样式不一致修复
+
+### 需求类型
+
+前端缺陷修复（SVG 渐变 ID 冲突）。
+
+### 背景
+
+属性建模页的指标建模/标签语义 tab 下，分组空状态插图与其他页面样式不一致（文件夹发深、加号徽标发灰）。根因：`GroupContentGate` 插图 SVG 渐变用写死 ID，多 tab 页面中隐藏面板（display:none）里的同 ID 渐变被优先解析且不参与绘制，可见实例渐变填充失效。
+
+### 目标
+
+- 插图渐变 ID 改为 `useId` 每实例唯一，消除多实例 ID 冲突。
+
+### 非目标
+
+- 不改插图构图与配色，不改门控逻辑。
+
+### 验收标准
+
+- 属性建模三个 tab 与其他分组页的空状态插图样式完全一致。
+- 类型检查不引入新错误。
+
+## 2026-07-30 追加：数据集 SQL 模式「选择表」抽屉（表/字段勾选，前端先行）
+
+### 需求类型
+
+前端功能新增（先纯前端实现，勾选记录保存/回显接口就绪后再对接）。
+
+### 背景
+
+数据集 SQL 创建页编辑器顶栏右侧已有「选择表」图标但无点击行为。用户要求点击后打开抽屉，展示当前数据源下可勾选的表，支持复选；每张表为折叠面板，默认收起只显示表级勾选与表名，展开后显示「字段选择 (已选/总数)」、字段名搜索、物理字段名/字段备注两列的可勾选表格。历史勾选记录需保存并在下次打开时回显（需要后端接口，本轮不做）。
+
+### 目标
+
+- 新增选择表抽屉：表级复选 + 折叠展开字段级复选，表/字段勾选联动（全选/半选/取消）。
+- 字段按需加载（首次展开或勾选表头时请求），复用 SqlModeEditor 已有的 `getFieldByDataSource` 字段缓存。
+- 勾选结果暂存于前端状态（SqlModeEditor 内），切换数据源时清空；「选择表」图标在有勾选时高亮。
+- 抽屉取消不影响已确认的勾选（打开时快照草稿）。
+
+### 非目标
+
+- 不对接勾选记录的保存/回显接口（接口就绪后追加）。
+- 不改动 SQL 执行、保存、格式化、自动补全逻辑。
+- 不做字段禁用（锁定不可取消）逻辑，等接口定义禁用标记后再加。
+
+### 影响范围预期
+
+- 新增：`apps/abi/src/pages/workbench/data-preparation/data-collection-operate/modules/TableFieldPickerDrawer.tsx`
+- 修改：`apps/abi/src/pages/workbench/data-preparation/data-collection-operate/modules/SqlModeEditor.tsx`
+- `.ai/runs/2026-07-30-sql-table-field-picker/`
+
+### 验收标准
+
+- 点击「选择表」图标弹出抽屉，表列表可复选；展开表后字段可勾选、可搜索，计数正确。
+- 勾选表头等于全选该表字段，部分勾选表头半选，字段全部取消后表头取消勾选。
+- 确定后关闭抽屉并保留勾选（图标高亮）；取消不改变已确认勾选；切换数据源后勾选清空。
+- 类型检查不引入新错误。

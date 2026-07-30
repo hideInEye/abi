@@ -1,4 +1,4 @@
-import { DeleteOutlined, EllipsisOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EllipsisOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
@@ -202,12 +202,10 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
       const nodeKey = `group-${item.groupId}`;
       const isExpanded = currentExpandedKeys.includes(nodeKey);
 
-      // 图标保持原蓝色文件夹 / 浅蓝文档图标
-      const nodeIcon = hasChildren
-        ? (isExpanded
-          ? <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
-          : <FolderOutlined className="group-node-icon group-node-icon--folder" />)
-        : <FileTextOutlined className="group-node-icon group-node-icon--leaf" />;
+      // 图标统一为文件夹语义：有子级且展开为打开文件夹，其余为关闭文件夹（右侧列表才是文件）
+      const nodeIcon = hasChildren && isExpanded
+        ? <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
+        : <FolderOutlined className="group-node-icon group-node-icon--folder" />;
 
       // 右侧折叠箭头（仅文件夹节点）
       const chevron = hasChildren ? (

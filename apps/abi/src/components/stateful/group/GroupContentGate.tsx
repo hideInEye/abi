@@ -19,14 +19,19 @@ export interface GroupContentGateProps {
 
 /** 文件夹插图（居中构图，配色对齐系统主色 #5b7cf7 → #7091fa 渐变） */
 function FolderIllustration({ width = 200 }: { readonly width?: number }) {
+  // 渐变 ID 必须每实例唯一：多 tab 页面中隐藏面板里的同 ID 渐变会被优先解析，
+  // 而 display:none 子树内的渐变不参与绘制，导致可见实例渲染成另一种样式
+  const uid = React.useId().replace(/:/g, '');
+  const folderGradId = `gcg-folder-grad-${uid}`;
+  const badgeGradId = `gcg-badge-grad-${uid}`;
   return (
     <svg fill="none" height={width * 0.75} viewBox="0 0 160 120" width={width} xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="gcg-folder-grad" x1="0" x2="1" y1="0" y2="1">
+        <linearGradient id={folderGradId} x1="0" x2="1" y1="0" y2="1">
           <stop offset="0%" stopColor="#E8EEFE" />
           <stop offset="100%" stopColor="#D6E0FD" />
         </linearGradient>
-        <linearGradient id="gcg-badge-grad" x1="0" x2="1" y1="0" y2="1">
+        <linearGradient id={badgeGradId} x1="0" x2="1" y1="0" y2="1">
           <stop offset="0%" stopColor="#5B7CF7" />
           <stop offset="100%" stopColor="#7091FA" />
         </linearGradient>
@@ -42,12 +47,12 @@ function FolderIllustration({ width = 200 }: { readonly width?: number }) {
       <rect fill="#B9CBFB" height="18" rx="6" width="36" x="42" y="26" />
       <rect fill="#B9CBFB" height="62" rx="10" width="76" x="42" y="34" />
       {/* 文件夹前片 */}
-      <rect fill="url(#gcg-folder-grad)" height="52" rx="10" width="76" x="42" y="44" />
+      <rect fill={`url(#${folderGradId})`} height="52" rx="10" width="76" x="42" y="44" />
       {/* 文件夹内的两条内容线 */}
       <rect fill="#FFFFFF" height="6" rx="3" width="36" x="56" y="60" />
       <rect fill="#FFFFFF" height="6" rx="3" width="26" x="56" y="72" />
       {/* 右下角新建徽标 */}
-      <circle cx="114" cy="90" fill="url(#gcg-badge-grad)" r="14" stroke="#FFFFFF" strokeWidth="3" />
+      <circle cx="114" cy="90" fill={`url(#${badgeGradId})`} r="14" stroke="#FFFFFF" strokeWidth="3" />
       <path d="M114 84 v12 M108 90 h12" stroke="#FFFFFF" strokeLinecap="round" strokeWidth="2.5" />
     </svg>
   );

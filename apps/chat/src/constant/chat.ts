@@ -417,6 +417,6 @@ export const chatModeWithModels = {
   chat_with_db_execute: Object.values(ModulesMap), // 正常对话(统计)
   chat_with_analysis: [ModulesMap[1], ModulesMap[2], ModulesMap[5], ModulesMap[6], ModulesMap[7], ModulesMap[8]], // 归因分析
   chat_with_predict: [ModulesMap[1], ModulesMap[2], ModulesMap[5], ModulesMap[7], ModulesMap[8]], // 预测分析
-  chat_excel: [ModulesMap[1], ModulesMap[2], ModulesMap[3], ModulesMap[5], ModulesMap[7], ModulesMap[8]], // excel分析
+  chat_excel: [ModulesMap[1], ModulesMap[2], ModulesMap[3], ModulesMap[5], ModulesMap[8]], // excel分析（不展示点赞点踩）
   chat_with_knowledge: [ModulesMap[1], ModulesMap[2]] // 数据知识（只显示思考过程和描述分析）
 }

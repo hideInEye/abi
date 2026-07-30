@@ -199,110 +199,133 @@ const StatisticsAnalysis: React.FC<Props> = ({
     },
   ];
 
-  const renderLikeButtons = () => {
-    if (!showLikeButton) return null;
-    
-    return (
-      <>
-        <Tooltip title="点赞">
-          <span 
-            className={`action-icon ${hasLiked() ? 'active' : ''} ${
-              loading || !canOperate() ? 'disabled' : ''
-            }`} 
-            onClick={handleLike}
-          >
-            {hasLiked() ? <LikeFilled /> : <LikeOutlined />}
-          </span>
-        </Tooltip>
-        <Tooltip title="点踩">
-          <span 
-            className={`action-icon ${hasDisliked() ? 'active' : ''} ${
-              loading || !canOperate() ? 'disabled' : ''
-            }`} 
-            onClick={handleDislike}
-          >
-            {hasDisliked() ? <DislikeFilled /> : <DislikeOutlined />}
-          </span>
-        </Tooltip>
-      </>
-    );
-  };
-
   return (
     <div className='my-1'>
       {/* 操作栏 - 左对齐 */}
       <div className="action-bar">
         <div className="action-bar-left">
-          {/* 复制 */}
-          <Dropdown menu={{ items: copyMenuItems }} trigger={['click']} placement="topLeft">
-            <Tooltip title="复制">
-              <span className="action-icon">
-                <CopyOutlined />
-              </span>
-            </Tooltip>
-          </Dropdown>
-
-          {/* 点赞、点踩 */}
-          {renderLikeButtons()}
-
-          {/* 重新生成（仅最后一组对话） */}
-          {showRegenerate && isLast && onRegenerateClick && (
-            <Tooltip title="重新生成">
-              <span className="action-icon" onClick={onRegenerateClick}>
-                <ReloadOutlined />
-              </span>
-            </Tooltip>
-          )}
-
-          {/* 更多（推荐问题/归因分析/预测分析/删除等操作）
-              仅一个操作时直接平铺展示对应图标按钮，多个操作时才收进「...」菜单 */}
+          {/* 整条工具栏统一收集后再切分：
+              不足 5 个时全部平铺，达到 5 个及以上时只平铺前 4 个，第 5 个起全部收进「...」菜单 */}
           {(() => {
-            // 先收集所有可用操作（含图标、文案与点击回调）
-            const actions: { key: string; icon: React.ReactNode; text: string; onClick: () => void }[] = [];
+            // 按展示顺序收集所有操作（inline 为平铺图标，menu 为收进「...」时的菜单项）
+            type ToolbarItem = { key: string; inline: React.ReactNode; menu: NonNullable<MenuProps['items']>[number] };
+            const items: ToolbarItem[] = [];
+
+            // 复制（下拉选择格式）
+            items.push({
+              key: 'copy',
+              inline: (
+                <Dropdown key="copy" menu={{ items: copyMenuItems }} trigger={['click']} placement="topLeft">
+                  <Tooltip title="复制">
+                    <span className="action-icon">
+                      <CopyOutlined />
+                    </span>
+                  </Tooltip>
+                </Dropdown>
+              ),
+              menu: { key: 'copy', label: (<span className="flex items-center gap-2"><CopyOutlined />复制</span>), children: copyMenuItems },
+            });
+
+            // 点赞、点踩
+            if (showLikeButton) {
+              items.push({
+                key: 'like',
+                inline: (
+                  <Tooltip key="like" title="点赞">
+                    <span
+                      className={`action-icon ${hasLiked() ? 'active' : ''} ${loading || !canOperate() ? 'disabled' : ''}`}
+                      onClick={handleLike}
+                    >
+                      {hasLiked() ? <LikeFilled /> : <LikeOutlined />}
+                    </span>
+                  </Tooltip>
+                ),
+                menu: { key: 'like', label: (<span className="flex items-center gap-2">{hasLiked() ? <LikeFilled /> : <LikeOutlined />}点赞</span>), onClick: handleLike },
+              });
+              items.push({
+                key: 'dislike',
+                inline: (
+                  <Tooltip key="dislike" title="点踩">
+                    <span
+                      className={`action-icon ${hasDisliked() ? 'active' : ''} ${loading || !canOperate() ? 'disabled' : ''}`}
+                      onClick={handleDislike}
+                    >
+                      {hasDisliked() ? <DislikeFilled /> : <DislikeOutlined />}
+                    </span>
+                  </Tooltip>
+                ),
+                menu: { key: 'dislike', label: (<span className="flex items-center gap-2">{hasDisliked() ? <DislikeFilled /> : <DislikeOutlined />}点踩</span>), onClick: handleDislike },
+              });
+            }
+
+            // 重新生成（仅最后一组对话）
+            if (showRegenerate && isLast && onRegenerateClick) {
+              items.push({
+                key: 'regenerate',
+                inline: (
+                  <Tooltip key="regenerate" title="重新生成">
+                    <span className="action-icon" onClick={onRegenerateClick}>
+                      <ReloadOutlined />
+                    </span>
+                  </Tooltip>
+                ),
+                menu: { key: 'regenerate', label: (<span className="flex items-center gap-2"><ReloadOutlined />重新生成</span>), onClick: () => onRegenerateClick?.() },
+              });
+            }
+
+            // 分享、推荐问题、归因、预测、删除
+            const plainActions: { key: string; icon: React.ReactNode; text: string; onClick: () => void }[] = [];
             if (onShareClick) {
-              actions.push({ key: 'share', icon: <ShareAltOutlined />, text: '分享对话', onClick: () => onShareClick?.() });
+              plainActions.push({ key: 'share', icon: <ShareAltOutlined />, text: '分享对话', onClick: () => onShareClick?.() });
             }
             if (showRecommend) {
-              actions.push({ key: 'qa', icon: <BulbOutlined />, text: '推荐问题', onClick: () => onQaClick?.() });
+              plainActions.push({ key: 'qa', icon: <BulbOutlined />, text: '推荐问题', onClick: () => onQaClick?.() });
             }
             if (showAttributionButton) {
-              actions.push({ key: 'attribution', icon: <FunnelPlotOutlined />, text: '归因分析', onClick: () => onAttributionClick?.() });
+              plainActions.push({ key: 'attribution', icon: <FunnelPlotOutlined />, text: '归因分析', onClick: () => onAttributionClick?.() });
             }
             if (showPredictButton) {
-              actions.push({ key: 'predict', icon: <FundOutlined />, text: '预测分析', onClick: () => onPredictClick?.() });
+              plainActions.push({ key: 'predict', icon: <FundOutlined />, text: '预测分析', onClick: () => onPredictClick?.() });
             }
             if (onDeleteClick) {
-              actions.push({ key: 'delete', icon: <DeleteOutlined />, text: '删除', onClick: () => onDeleteClick?.() });
+              plainActions.push({ key: 'delete', icon: <DeleteOutlined />, text: '删除', onClick: () => onDeleteClick?.() });
             }
-            if (!actions.length) return null;
+            plainActions.forEach((action) => {
+              items.push({
+                key: action.key,
+                inline: (
+                  <Tooltip key={action.key} title={action.text}>
+                    <span className="action-icon" style={action.key === 'delete' ? { color: '#ff4d4f' } : undefined} onClick={action.onClick}>
+                      {action.icon}
+                    </span>
+                  </Tooltip>
+                ),
+                menu: {
+                  key: action.key,
+                  danger: action.key === 'delete',
+                  label: (<span className="flex items-center gap-2">{action.icon}{action.text}</span>),
+                  onClick: action.onClick,
+                },
+              });
+            });
 
-            // 只有一个操作：直接平铺展示该操作图标（不再收进「...」）
-            if (actions.length === 1) {
-              const only = actions[0];
-              return (
-                <Tooltip title={only.text}>
-                  <span className="action-icon" style={only.key === 'delete' ? { color: '#ff4d4f' } : undefined} onClick={only.onClick}>
-                    {only.icon}
-                  </span>
-                </Tooltip>
-              );
-            }
+            // 不足 5 个：全部平铺；达到 5 个：前 4 个平铺，第 5 个及以后收进「...」
+            const inlineItems = items.length >= 5 ? items.slice(0, 4) : items;
+            const overflowItems = items.length >= 5 ? items.slice(4) : [];
 
-            // 多个操作：全部收进「...」下拉菜单（删除项红色危险态）
-            const moreItems: MenuProps['items'] = actions.map((action) => ({
-              key: action.key,
-              danger: action.key === 'delete',
-              label: (<span className="flex items-center gap-2">{action.icon}{action.text}</span>),
-              onClick: action.onClick,
-            }));
             return (
-              <Dropdown menu={{ items: moreItems }} trigger={['click']} placement="topLeft">
-                <Tooltip title="更多">
-                  <span className="action-icon">
-                    <EllipsisOutlined />
-                  </span>
-                </Tooltip>
-              </Dropdown>
+              <>
+                {inlineItems.map((item) => item.inline)}
+                {overflowItems.length > 0 && (
+                  <Dropdown menu={{ items: overflowItems.map((item) => item.menu) }} trigger={['click']} placement="topLeft">
+                    <Tooltip title="更多">
+                      <span className="action-icon">
+                        <EllipsisOutlined />
+                      </span>
+                    </Tooltip>
+                  </Dropdown>
+                )}
+              </>
             );
           })()}
 

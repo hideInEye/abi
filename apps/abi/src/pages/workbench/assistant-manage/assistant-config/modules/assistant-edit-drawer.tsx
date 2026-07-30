@@ -14,16 +14,16 @@ import {
   SettingOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
-import { Button, Checkbox, Input, Modal, Radio, Spin, Switch, Tag, Tooltip, message } from 'antd'
+import { Button, Input, Modal, Radio, Spin, Switch, Tag, message } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { useEffect, useMemo, useState } from 'react'
 
-import { queryToolListApi } from '@/service/api/tool'
-import type { ToolItem } from '@/service/api/tool'
-import { queryMcpList } from '@/service/api/pulg'
 import { addAppApi, updateAppApi, fetchAppDetailApi } from '@/service/api/abi-chat-app'
 import { getSpaceId } from '@/store/slice/app'
 import { useAppSelector } from '@/hooks/business/useStore'
+import ToolPickerDrawer from './tool-picker-drawer'
+import CapabilityPickerDrawer from './capability-picker-drawer'
+import { ontologyPickerTabs, semanticPickerTabs, skillPickerTabs } from './capability-picker-configs'
 import React from 'react'
 
 /**
@@ -50,12 +50,8 @@ export interface AgentMock {
   status?: '0' | '1' | '2'
 }
 
-// ── 工具选择 ──
-type ToolGroupKey = 'mcp' | 'builtin'
-type ToolOption = { id: string; name: string; group: ToolGroupKey; description?: string }
-
 /// 折叠面板分组
-type SectionKey = 'model' | 'opening' | 'semanticKnowledge' | 'ontologyNetwork' | 'mcpTools' | 'builtinTools' | 'skills' | 'questions'
+type SectionKey = 'model' | 'opening' | 'questions'
 
 const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId: propsGroupId, onClose }) => {
   const spaceId = useAppSelector(getSpaceId)
@@ -98,10 +94,16 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
 
   // ── 工具选择 ──
 
-  const [mcpTools, setMcpTools] = useState<ToolOption[]>([])
-  const [builtinTools, setBuiltinTools] = useState<ToolOption[]>([])
   const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set())
-  const [loadingTools, setLoadingTools] = useState(false)
+  const [toolPickerOpen, setToolPickerOpen] = useState(false)
+
+  // ── 数据语义 / 本体网络 / 技能 选中集合（暂不随保存提交，待后端字段确认）──
+  const [selectedSemanticIds, setSelectedSemanticIds] = useState<Set<string>>(new Set())
+  const [selectedOntologyIds, setSelectedOntologyIds] = useState<Set<string>>(new Set())
+  const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(new Set())
+  const [semanticPickerOpen, setSemanticPickerOpen] = useState(false)
+  const [ontologyPickerOpen, setOntologyPickerOpen] = useState(false)
+  const [skillPickerOpen, setSkillPickerOpen] = useState(false)
 
   /** 加载助手详情 */
   async function loadDetail() {
@@ -228,52 +230,6 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     }
   }
 
-  async function fetchToolGroups() {
-    setLoadingTools(true)
-    try {
-      const [mcpRes, builtinRes]: any[] = await Promise.all([queryMcpList({ pageNo: 1, pageSize: 200 }), queryToolListApi({})])
-      const mcpPayload = mcpRes?.response?.data?.data?.data ?? {}
-      const mcpItems: any[] = mcpPayload.pageItems ?? []
-      setMcpTools(
-        mcpItems.map((m: any) => ({
-          id: `mcp_${m.id}`,
-          name: m.name || m.pluginName || '-',
-          group: 'mcp' as ToolGroupKey,
-          description: m.description || '',
-        })),
-      )
-      const bRows = builtinRes?.response?.data?.data || builtinRes?.data?.data || builtinRes?.data || []
-      const bList: ToolItem[] = Array.isArray(bRows) ? bRows : []
-      setBuiltinTools(
-        bList.map((t) => ({
-          id: `builtin_${t.toolId}`,
-          name: t.toolName || '-',
-          group: 'builtin' as ToolGroupKey,
-          description: t.description || '',
-        })),
-      )
-    } catch {
-      setMcpTools([])
-      setBuiltinTools([])
-    } finally {
-      setLoadingTools(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchToolGroups()
-  }, [])
-
-  const allToolOptions = useMemo(() => [...mcpTools, ...builtinTools], [mcpTools, builtinTools])
-
-  function handleGroupCheck(group: ToolGroupKey, checked: boolean) {
-    const ids = allToolOptions.filter((t) => t.group === group).map((t) => t.id)
-    setSelectedToolIds((prev) => {
-      const next = new Set(prev)
-      ids.forEach((id) => (checked ? next.add(id) : next.delete(id)))
-      return next
-    })
-  }
   function handleToolCheck(id: string, checked: boolean) {
     setSelectedToolIds((prev) => {
       const next = new Set(prev)
@@ -281,25 +237,39 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       return next
     })
   }
-  function isGroupAllChecked(group: ToolGroupKey) {
-    const items = allToolOptions.filter((t) => t.group === group)
-    return items.length > 0 && items.every((t) => selectedToolIds.has(t.id))
+  function handleBatchToolCheck(ids: string[], checked: boolean) {
+    setSelectedToolIds((prev) => {
+      const next = new Set(prev)
+      ids.forEach((id) => (checked ? next.add(id) : next.delete(id)))
+      return next
+    })
   }
-  function isGroupIndeterminate(group: ToolGroupKey) {
-    const items = allToolOptions.filter((t) => t.group === group)
-    const c = items.filter((t) => selectedToolIds.has(t.id)).length
-    return c > 0 && c < items.length
+
+  /** 生成选中集合的单选/批量回调（数据语义/本体网络/技能共用） */
+  const makeToggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => (id: string, checked: boolean) =>
+    setter((prev) => {
+      const next = new Set(prev)
+      checked ? next.add(id) : next.delete(id)
+      return next
+    })
+  const makeBatchToggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => (ids: string[], checked: boolean) =>
+    setter((prev) => {
+      const next = new Set(prev)
+      ids.forEach((id) => (checked ? next.add(id) : next.delete(id)))
+      return next
+    })
+
+  const selectedToolCount = selectedToolIds.size
+
+  /** 打开工具选择抽屉 */
+  const openToolPicker = () => {
+    setToolPickerOpen(true)
   }
 
   const [openMap, setOpenMap] = useState<Record<SectionKey, boolean>>({
-    semanticKnowledge: false,
     model: false,
-    mcpTools: false,
-    ontologyNetwork: false,
     opening: false,
     questions: false,
-    skills: false,
-    builtinTools: false,
   })
 
   const toggle = (key: SectionKey) => setOpenMap((p) => ({ ...p, [key]: !p[key] }))
@@ -487,71 +457,56 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             <CollapseRow open={openMap.opening} title="开场引导" onToggle={() => toggle('opening')} />
 
             <GroupTitle title="知识语义" color="#10b981" icon={<BookOutlined />} />
-            <CollapseRow extra={<PlusOutlined style={{ color: '#5b7cf7' }} />} open={openMap.semanticKnowledge} title="数据语义" onToggle={() => toggle('semanticKnowledge')} />
-            <CollapseRow extra={<PlusOutlined style={{ color: '#5b7cf7' }} />} open={openMap.ontologyNetwork} title="本体网络" onToggle={() => toggle('ontologyNetwork')} />
+            {/* 数据语义 / 本体网络：整行点击直接弹选择抽屉，不在行内展示列表 */}
+            <CollapseRow
+              extra={
+                <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+                  {selectedSemanticIds.size > 0 && <span style={{ color: '#8fa0b5', fontSize: 12 }}>已选 {selectedSemanticIds.size} 项</span>}
+                  <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setSemanticPickerOpen(true)} />
+                </span>
+              }
+              open={false}
+              title="数据语义"
+              onToggle={() => setSemanticPickerOpen(true)}
+            />
+            <CollapseRow
+              extra={
+                <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+                  {selectedOntologyIds.size > 0 && <span style={{ color: '#8fa0b5', fontSize: 12 }}>已选 {selectedOntologyIds.size} 项</span>}
+                  <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setOntologyPickerOpen(true)} />
+                </span>
+              }
+              open={false}
+              title="本体网络"
+              onToggle={() => setOntologyPickerOpen(true)}
+            />
 
             <GroupTitle title="扩展能力" color="#f59e0b" icon={<ThunderboltOutlined />} />
-            <CollapseRow extra={<PlusOutlined style={{ color: '#5b7cf7' }} />} open={openMap.mcpTools} title="MCP" onToggle={() => toggle('mcpTools')}>
-              {/* MCP工具分组 */}
-              <div style={{ padding: '4px 24px 8px' }}>
-                <ToolGroupHeader
-                  checked={isGroupAllChecked('mcp')}
-                  count={mcpTools.length}
-                  indeterminate={isGroupIndeterminate('mcp')}
-                  title="MCP工具"
-                  onChange={(checked) => handleGroupCheck('mcp', checked)}
-                />
-                {mcpTools.length === 0 ? (
-                  <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无MCP工具</div>
-                ) : (
-                  mcpTools.map((item) => (
-                    <ToolItemRow
-                      key={item.id}
-                      description={item.description}
-                      name={item.name}
-                      selected={selectedToolIds.has(item.id)}
-                      onToggle={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
-                    />
-                  ))
-                )}
-              </div>
-
-              {/* 内置工具分组 */}
-              <div style={{ padding: '4px 24px 8px' }}>
-                <ToolGroupHeader
-                  checked={isGroupAllChecked('builtin')}
-                  count={builtinTools.length}
-                  indeterminate={isGroupIndeterminate('builtin')}
-                  title="内置工具"
-                  onChange={(checked) => handleGroupCheck('builtin', checked)}
-                />
-                {builtinTools.length === 0 ? (
-                  <div style={{ color: '#bfbfbf', fontSize: 12, padding: '4px 0 4px 28px' }}>暂无内置工具</div>
-                ) : (
-                  builtinTools.map((item) => (
-                    <ToolItemRow
-                      key={item.id}
-                      description={item.description}
-                      name={item.name}
-                      selected={selectedToolIds.has(item.id)}
-                      onToggle={() => handleToolCheck(item.id, !selectedToolIds.has(item.id))}
-                    />
-                  ))
-                )}
-              </div>
-            </CollapseRow>
+            {/* MCP：整行点击直接弹工具选择抽屉，不在行内展示列表 */}
+            <CollapseRow
+              extra={
+                <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+                  {selectedToolCount > 0 && <span style={{ color: '#8fa0b5', fontSize: 12 }}>已选 {selectedToolCount} 项</span>}
+                  <PlusOutlined style={{ color: '#5b7cf7' }} onClick={openToolPicker} />
+                </span>
+              }
+              open={false}
+              title="MCP"
+              onToggle={openToolPicker}
+            />
 
             <CollapseRow
               extra={
                 <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+                  {selectedSkillIds.size > 0 && <span style={{ color: '#8fa0b5', fontSize: 12 }}>已选 {selectedSkillIds.size} 项</span>}
                   <QuestionCircleOutlined style={{ color: '#8fa0b5' }} />
-                  <PlusOutlined style={{ color: '#5b7cf7' }} />
+                  <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setSkillPickerOpen(true)} />
                 </span>
               }
-              open={openMap.skills}
+              open={false}
               title="技能"
               titleExtra={<QuestionCircleOutlined style={{ color: '#8fa0b5', marginLeft: 4 }} />}
-              onToggle={() => toggle('skills')}
+              onToggle={() => setSkillPickerOpen(true)}
             />
 
             {/* 推荐问题 */}
@@ -704,6 +659,55 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               ))
             )}
           </CommonDrawer>
+
+          {/* 扩展能力工具选择抽屉 */}
+          <ToolPickerDrawer
+            open={toolPickerOpen}
+            selectedToolIds={selectedToolIds}
+            spaceId={spaceId}
+            onBatchToggle={handleBatchToolCheck}
+            onClose={() => setToolPickerOpen(false)}
+            onToggle={handleToolCheck}
+          />
+
+          {/* 数据语义选择抽屉 */}
+          <CapabilityPickerDrawer
+            icon={<BookOutlined />}
+            open={semanticPickerOpen}
+            selectedIds={selectedSemanticIds}
+            spaceId={spaceId}
+            tabs={semanticPickerTabs}
+            title="添加数据语义"
+            onBatchToggle={makeBatchToggle(setSelectedSemanticIds)}
+            onClose={() => setSemanticPickerOpen(false)}
+            onToggle={makeToggle(setSelectedSemanticIds)}
+          />
+
+          {/* 本体网络选择抽屉 */}
+          <CapabilityPickerDrawer
+            icon={<GlobalOutlined />}
+            open={ontologyPickerOpen}
+            selectedIds={selectedOntologyIds}
+            spaceId={spaceId}
+            tabs={ontologyPickerTabs}
+            title="添加本体网络"
+            onBatchToggle={makeBatchToggle(setSelectedOntologyIds)}
+            onClose={() => setOntologyPickerOpen(false)}
+            onToggle={makeToggle(setSelectedOntologyIds)}
+          />
+
+          {/* 技能选择抽屉 */}
+          <CapabilityPickerDrawer
+            icon={<ThunderboltOutlined />}
+            open={skillPickerOpen}
+            selectedIds={selectedSkillIds}
+            spaceId={spaceId}
+            tabs={skillPickerTabs}
+            title="添加技能"
+            onBatchToggle={makeBatchToggle(setSelectedSkillIds)}
+            onClose={() => setSkillPickerOpen(false)}
+            onToggle={makeToggle(setSelectedSkillIds)}
+          />
 
           {/* 批量添加问题 Modal */}
           <Modal
@@ -965,102 +969,6 @@ const CollapseRow: React.FC<CollapseRowProps> = ({ children, extra, onToggle, op
           {children}
         </div>
       ) : null}
-    </div>
-  )
-}
-
-// 工具分组全选标题行
-interface ToolGroupHeaderProps {
-  title: string
-  count: number
-  checked: boolean
-  indeterminate: boolean
-  onChange: (checked: boolean) => void
-}
-const ToolGroupHeader: React.FC<ToolGroupHeaderProps> = ({ title, count, checked, indeterminate, onChange }) => {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        alignItems: 'center',
-        background: hovered ? 'rgba(91, 124, 247, 0.04)' : 'transparent',
-        borderRadius: 6,
-        cursor: 'pointer',
-        display: 'flex',
-        gap: 8,
-        padding: '6px 8px',
-        userSelect: 'none',
-        transition: 'all 0.2s ease',
-        marginBottom: 4,
-      }}
-      onClick={() => onChange(!checked)}
-    >
-      <Checkbox checked={checked} indeterminate={indeterminate} onChange={(e) => onChange(e.target.checked)} onClick={(e) => e.stopPropagation()} />
-      <span style={{ fontSize: 12, fontWeight: 600, color: '#595959' }}>{title}</span>
-      <span style={{ color: '#bfbfbf', fontSize: 11 }}>({count})</span>
-    </div>
-  )
-}
-
-// 单个工具项行
-interface ToolItemRowProps {
-  name: string
-  description?: string
-  selected: boolean
-  onToggle: () => void
-}
-const ToolItemRow: React.FC<ToolItemRowProps> = ({ name, description, selected, onToggle }) => {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        alignItems: 'center',
-        background: selected ? 'rgba(91, 124, 247, 0.06)' : hovered ? 'rgba(91, 124, 247, 0.04)' : 'transparent',
-        borderRadius: 6,
-        cursor: 'pointer',
-        display: 'flex',
-        gap: 10,
-        padding: '6px 8px 6px 28px',
-        userSelect: 'none',
-        transition: 'all 0.2s ease',
-      }}
-      onClick={onToggle}
-    >
-      <Checkbox checked={selected} onChange={() => onToggle()} onClick={(e) => e.stopPropagation()} />
-      <div
-        style={{
-          alignItems: 'center',
-          background: '#fff7e6',
-          borderRadius: 6,
-          color: '#fa8c16',
-          display: 'flex',
-          height: 24,
-          justifyContent: 'center',
-          width: 24,
-          flexShrink: 0,
-        }}
-      >
-        <ThunderboltOutlined style={{ fontSize: 14 }} />
-      </div>
-      <Tooltip title={description || name}>
-        <span
-          style={{
-            color: selected ? '#5b7cf7' : '#1a2744',
-            fontSize: 13,
-            fontWeight: selected ? 500 : 400,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          {name}
-        </span>
-      </Tooltip>
     </div>
   )
 }

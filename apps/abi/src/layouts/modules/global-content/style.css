@@ -409,8 +409,12 @@
 /* 页面内容区统一渐变背景 */
 .page-content-area {
   background: var(--abi-card-bg);
-  /* 始终预留滚动条空间，避免内容出现纵向滚动条时被挤压跳动 */
-  scrollbar-gutter: stable;
+  /* 右侧统一间距：不依赖 scrollbar-gutter 的槽宽。
+     scrollbar-gutter 预留的槽仅在“经典滚动条”（占布局宽度）时才有宽度，
+     overlay 覆盖式滚动条下槽宽为 0，会导致联想浏览器（SLBrowser，Chromium 141）右侧无间距，
+     而 Chrome/Edge 经典滚动条下又会多出一条槽，三浏览器不一致。
+     改用显式 padding 保证各浏览器右间距恒为 12px。 */
+  padding-right: 12px;
 }
 
 /* 页面内容区卡片透明化，透出渐变背景 */

@@ -27,6 +27,15 @@ export function updateSkillStatus(data: { skillId: number | string; status: numb
   })
 }
 
+// 修改技能（与 abi 同一接口；添加技能复用此接口，后续参数由后端提供）
+export function updateSkillInfo(data: { skillId: number | string; [key: string]: any }) {
+  return request({
+    url: '/api/abi-copilot/v1/skill/update',
+    method: 'post',
+    data,
+  })
+}
+
 const SKILL_BASE = '/api/abi-copilot/v1/skill'
 
 // 获取版本列表
