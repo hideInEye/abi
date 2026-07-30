@@ -38,5 +38,6 @@ export interface AttributeAsset {
 export interface AttributeBindingValues {
   assetCode?: string
   attributeType?: Exclude<OntologyEntityAttribute['attributeType'], 'field'>
+  groupId?: string
   remark?: string
 }

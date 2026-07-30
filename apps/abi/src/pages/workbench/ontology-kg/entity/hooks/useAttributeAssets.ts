@@ -24,7 +24,7 @@ interface AttributeAssetResponse {
 interface UseAttributeAssetsResult {
   assets: AttributeAsset[]
   clearAssets: () => void
-  loadAssets: (attributeType: SupportedAttributeType, groupId: number) => Promise<void>
+  loadAssets: (attributeType: SupportedAttributeType, groupId: OntologyNetworkId) => Promise<void>
   loading: boolean
 }
 
@@ -127,10 +127,10 @@ export function useAttributeAssets(spaceId: OntologyNetworkId): UseAttributeAsse
   )
 
   const loadAssets = useCallback(
-    async (attributeType: SupportedAttributeType, groupId: number): Promise<void> => {
+    async (attributeType: SupportedAttributeType, groupId: OntologyNetworkId): Promise<void> => {
       requestSequence.current += 1
       const requestId = requestSequence.current
-      if (!groupId) {
+      if (groupId === undefined || groupId === null || String(groupId) === '') {
         setAssets([])
         setLoading(false)
         return

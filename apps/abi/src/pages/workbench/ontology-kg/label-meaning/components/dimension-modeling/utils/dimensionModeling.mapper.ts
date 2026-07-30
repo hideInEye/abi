@@ -245,6 +245,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
   const timeGranularity = normalizeTimeGranularity(item.timeGranularity || typeParams?.timeGranularity)
   const updateFreq = trim(pickFirst(item, ['updateFreq', 'updateFrequency']))
   const updateTime = trim(pickFirst(item, ['updateTime', 'createTime'])) || '-'
+  const createBy = trim(item.createBy)
   const createTime = trim(pickFirst(item, ['createTime', 'updateTime'])) || '-'
   const viewId = toNumber(pickFirst(item, ['viewId', 'relViewId']))
   const zhName = trim(pickFirst(item, ['zhName', 'bizName', 'dimName'])) || ''
@@ -262,6 +263,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
   return {
     alias: trim(pickFirst(item, ['alias', 'dimAlias'])),
     bizDesc: trim(pickFirst(item, ['bizDesc', 'businessDefinition', 'remark'])),
+    createBy,
     createTime,
     dimCategory,
     dimType,
