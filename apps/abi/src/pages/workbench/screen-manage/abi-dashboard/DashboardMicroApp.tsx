@@ -34,20 +34,27 @@ export default function DashboardMicroApp(props: DashboardMicroAppProps) {
       return undefined
     }
 
-    const microApp = loadMicroApp({
-      container: `#${containerId}`,
-      entry: import.meta.env.VITE_MICRO_ABI_DASHBOARD_ENTRY,
-      name: 'abi-dashboard',
-      props: {
-        hostBasePath: getDashboardHostBasePath(),
-        initialPath,
-        pageTitle: routeTitle || undefined,
-        spaceId,
-        onTokenExpired: () => {
-          handleLoginExpired()
+    const microApp = loadMicroApp(
+      {
+        container: `#${containerId}`,
+        entry: import.meta.env.VITE_MICRO_ABI_DASHBOARD_ENTRY,
+        name: 'abi-dashboard',
+        props: {
+          hostBasePath: getDashboardHostBasePath(),
+          initialPath,
+          pageTitle: routeTitle || undefined,
+          spaceId,
+          onTokenExpired: () => {
+            handleLoginExpired()
+          }
+        }
+      },
+      {
+        sandbox: {
+          experimentalStyleIsolation: true
         }
       }
-    })
+    )
     microAppRef.current = microApp
 
     // 路由快速切换时容器会先于微应用加载完成被移除，qiankun 各生命周期 promise 会同时 reject，
