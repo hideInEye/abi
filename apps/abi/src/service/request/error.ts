@@ -24,10 +24,7 @@ export async function backEndFail(
   //   return null;
   // }
   if (isUnauthorizedResponse(response)) {
-    const noticeMessage = `${response.data?.msg || '登录状态已过期'}，请重新登录，即将跳转到登录页。`;
-    await handleLoginExpired(undefined, {
-      noticeMessage
-    });
+    await handleLoginExpired();
 
     throw new AxiosError<App.Service.Response<unknown>>(
       'the backend request unauthorized',
@@ -77,10 +74,7 @@ export function handleError(
   }
 
   if (error.response?.status === 401 || backendErrorCode === '401') {
-    const noticeMessage = `${error.response?.data?.msg || message || '登录状态已过期'}，请重新登录，即将跳转到登录页。`;
-    handleLoginExpired(undefined, {
-      noticeMessage
-    });
+    handleLoginExpired();
     return;
   }
 

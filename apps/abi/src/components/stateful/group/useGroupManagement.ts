@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   addTableSemanticsGroup,
@@ -26,6 +26,13 @@ export const useGroupManagement = (config: GroupProps['config']) => {
   const [groups, setGroups] = useState<QuestionGroupItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<QuestionGroupItem | null>(null);
+  // 是否存在分组（null 表示尚未加载完成），供右侧业务区域门控使用
+  const [hasAnyGroup, setHasAnyGroup] = useState<boolean | null>(null);
+
+  // 空间切换时重置为未知，避免沿用上个空间的判断结果
+  useEffect(() => {
+    setHasAnyGroup(null);
+  }, [spaceId]);
 
   const getGroups = async (searchText?: string) => {
     if (!spaceId) return;
@@ -37,7 +44,12 @@ export const useGroupManagement = (config: GroupProps['config']) => {
       spaceId
     });
     const list: QuestionGroupItem[] = (res as any)?.data ?? [];
-    setGroups(Array.isArray(list) ? list : []);
+    const safeList = Array.isArray(list) ? list : [];
+    setGroups(safeList);
+    // 仅在非搜索请求时更新“是否存在分组”，避免搜索无结果被误判为无分组
+    if (!searchText) {
+      setHasAnyGroup(safeList.length > 0);
+    }
   };
 
   const handleGroupAdd = async (newGroup: QuestionGroupItem & { parentId?: number }) => {
@@ -80,6 +92,7 @@ export const useGroupManagement = (config: GroupProps['config']) => {
     handleGroupDelete,
     handleGroupEdit,
     handleGroupSearch,
+    hasAnyGroup,
     isModalOpen,
     setEditingGroup,
     setGroups,

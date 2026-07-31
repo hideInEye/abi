@@ -69,7 +69,8 @@ function buildDerivedResult({
   calcPeriod,
   expressions,
   updateFrequency,
-  techId
+  techId,
+  projectionFunc
 }: {
   allFields: KnowledgeTechField[]
   atomicMetricOptions: AtomicMetricOption[]
@@ -77,6 +78,7 @@ function buildDerivedResult({
   expressions?: KnowledgeDerivedExpression[]
   updateFrequency?: string
   techId?: string | number
+  projectionFunc?: string
 }) {
   const atomicLabel = atomicMetricOptions.find(item => String(item.value) === String(techId || ''))?.label || '原子指标'
   const freqLabel = DATA_FREQUENCY_OPTIONS.find(item => String(item.value) === String(updateFrequency || ''))?.label || '周期'
@@ -121,7 +123,7 @@ function buildDerivedResult({
       return `${group.name}\n${lines.join('\n')}`
     })
     .join('\n\n')
-  const sqlPreview = `SUM(${atomicLabel})${whereClause ? `\n${whereClause}` : ''}`
+  const sqlPreview = `${projectionFunc}(${atomicLabel})${whereClause ? `\n${whereClause}` : ''}`
 
   const filterLabels = expressionGroups.flatMap(group =>
     group.conditions.map(item => {
@@ -153,6 +155,7 @@ function buildDerivedResult({
 export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields, atomicMetricOptions, form }) => {
   const techId = AForm.useWatch('techId', form)
   const calcPeriod = AForm.useWatch('calcPeriod', form)
+  const projectionFunc = AForm.useWatch('projectionFunc', form)
   const updateFrequency = AForm.useWatch('updateFrequency', form)
   const derivedExpressions = AForm.useWatch('derivedExpressions', form) as KnowledgeDerivedExpression[] | undefined
 
@@ -182,9 +185,10 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
         calcPeriod,
         expressions: derivedExpressions,
         updateFrequency,
-        techId
+        techId,
+        projectionFunc
       }),
-    [allFields, atomicMetricOptions, calcPeriod, updateFrequency, derivedExpressions, techId]
+    [allFields, atomicMetricOptions, calcPeriod, updateFrequency, derivedExpressions, techId,projectionFunc]
   )
 
   useEffect(() => {

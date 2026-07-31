@@ -1,7 +1,7 @@
-import { DeleteOutlined, EllipsisOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, EllipsisOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics';
 import { buildGroupTree, getAllDescendantIds } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
@@ -51,9 +51,17 @@ export interface GroupProps {
     type: TableSemanticsGroupType;
   };
   readonly onGroupId: (groupId: string, groupName?: string) => void;
+  /** 上报“是否存在分组”（null=加载中），供右侧业务区域门控使用 */
+  readonly onGroupsChange?: (hasAnyGroup: boolean | null) => void;
 }
 
-export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
+/** Group 对外暴露的命令式句柄 */
+export interface GroupHandle {
+  /** 打开新增分组弹窗（供右侧空状态“新建分组”按钮调用） */
+  openAddModal: () => void;
+}
+
+export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, onGroupsChange }, ref) => {
   const spaceId = useAppSelector(getSpaceId);
   const [form] = Form.useForm();
   const {
@@ -64,6 +72,7 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     handleGroupDelete,
     handleGroupEdit,
     handleGroupSearch,
+    hasAnyGroup,
     isModalOpen,
     setEditingGroup,
     setGroups,
@@ -71,6 +80,10 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
   } = useGroupManagement(config);
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
+
+  useEffect(() => {
+    onGroupsChange?.(hasAnyGroup);
+  }, [hasAnyGroup]);
 
   useEffect(() => {
     getGroups();
@@ -135,6 +148,8 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
     setIsModalOpen(true);
   };
 
+  useImperativeHandle(ref, () => ({ openAddModal: showAddModal }));
+
   const showEditModal = (group: QuestionGroupItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingGroup(group);
@@ -152,7 +167,14 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
 
   const handleDeleteGroup = async (groupId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    // 存在子分组时拦截删除：后端只删父组，子组会变成脏数据
+    const hasChildren = groups.some(group => String(group.parentId) === String(groupId));
+    if (hasChildren) {
+      message.warning('该分组下存在子分组，请先删除或移动子分组');
+      return false;
+    }
     await handleGroupDelete(groupId);
+    return true;
   };
 
   const handleTreeSelect = (keys: React.Key[], info: { node: any }) => {
@@ -180,12 +202,10 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       const nodeKey = `group-${item.groupId}`;
       const isExpanded = currentExpandedKeys.includes(nodeKey);
 
-      // 图标保持原蓝色文件夹 / 浅蓝文档图标
-      const nodeIcon = hasChildren
-        ? (isExpanded
-          ? <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
-          : <FolderOutlined className="group-node-icon group-node-icon--folder" />)
-        : <FileTextOutlined className="group-node-icon group-node-icon--leaf" />;
+      // 图标统一为文件夹语义：有子级且展开为打开文件夹，其余为关闭文件夹（右侧列表才是文件）
+      const nodeIcon = hasChildren && isExpanded
+        ? <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
+        : <FolderOutlined className="group-node-icon group-node-icon--folder" />;
 
       // 右侧折叠箭头（仅文件夹节点）
       const chevron = hasChildren ? (
@@ -217,6 +237,23 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       };
     });
   };
+
+  /** 弹窗标题 — v5 渐变图标 + 主/副标题 */
+  const modalTitle = (
+    <div className="group-modal-title">
+      <div className="group-modal-title-icon">
+        <ApartmentOutlined />
+      </div>
+      <div className="group-modal-title-text">
+        <span className="group-modal-title-main">
+          {editingGroup ? config.modalEditTitle : config.modalAddTitle}
+        </span>
+        <span className="group-modal-title-sub">
+          {editingGroup ? '修改分组信息及层级关系' : '创建新的分组节点'}
+        </span>
+      </div>
+    </div>
+  );
 
   const treeData = useMemo(() => buildTreeNodes(buildGroupTree(groups, '0', true), expandedKeys), [groups, expandedKeys]);
 
@@ -258,34 +295,41 @@ export const Group: React.FC<GroupProps> = ({ config, onGroupId }) => {
       <Modal
         open={isModalOpen}
         centered
-        title={editingGroup ? config.modalEditTitle : config.modalAddTitle}
+        className="group-modal-v5"
+        title={modalTitle}
         onCancel={handleModalCancel}
         footer={
-          <div className="flex items-center justify-between">
-            {/* 编辑时左下角显示删除按钮 */}
+          <div className="group-modal-footer">
             {editingGroup ? (
               <Popconfirm
                 title="提示"
                 description="确定删除该组吗？"
-                onConfirm={() => { handleDeleteGroup(editingGroup.groupId); handleModalCancel(); }}
+                onConfirm={async () => {
+                  const deleted = await handleDeleteGroup(editingGroup.groupId);
+                  if (deleted) handleModalCancel();
+                }}
               >
-                <Button danger icon={<DeleteOutlined />}>删除</Button>
+                <Button className="group-modal-btn-danger" icon={<DeleteOutlined />}>删除</Button>
               </Popconfirm>
             ) : <span />}
-            <div className="flex gap-2">
-              <Button onClick={handleModalCancel}>取消</Button>
-              <Button type="primary" onClick={handleModalOk}>确认</Button>
+            <div className="group-modal-footer-actions">
+              <Button className="btn-ghost-v5" onClick={handleModalCancel}>取消</Button>
+              <Button className="btn-accent-gradient" onClick={handleModalOk}>确认</Button>
             </div>
           </div>
         }
       >
-        <AForm form={form} layout="vertical">
-          <GroupFrom
-            config={config}
-            parentOptions={buildParentTreeOptions(groups, editingGroup?.groupId)}
-          />
-        </AForm>
+        <div className="group-modal-form-panel">
+          <AForm form={form} layout="vertical">
+            <GroupFrom
+              config={config}
+              parentOptions={buildParentTreeOptions(groups, editingGroup?.groupId)}
+            />
+          </AForm>
+        </div>
       </Modal>
     </>
   );
-};
+});
+
+Group.displayName = 'Group';

@@ -148,7 +148,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
           fields={cardFields}
           rowKey={record => record.id || record.tagId}
           title={record => formatDisplayValue(record.tagName)}
-          titleExtra={record => <span className="abi-db-tag tag-default">{renderTagType(record.tagType)}</span>}
+          titleExtra={record => renderTagType(record.tagType)}
         />
       ) : (
         <div
@@ -169,6 +169,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
               scroll={pagedDataSource?.length > 0 ? { x: columnWidth } : undefined}
               size="middle"
               className="tag-table abi-std-table"
+              locale={{ emptyText: <TableEmpty description="暂无标签语义" /> }}
               pagination={false}
             />
           </div>

@@ -1,13 +1,15 @@
-import { DeleteOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Popconfirm, Select, message } from 'antd'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 import { useAppSelector } from '@/hooks/business/useStore'
 import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import type { OntologyNetworkId, OntologyRelation } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { getSpaceId } from '@/store/slice/app'
+import { filterByCreateTime } from '@/utils/date'
 
 import RelationDrawer from './components/RelationDrawer'
 import RelationTable from './components/RelationTable'
@@ -25,12 +27,28 @@ const RELATION_COLUMN_OPTIONS: ColumnOption[] = [
 
 export const Component: React.FC = () => {
   const spaceId = useAppSelector(getSpaceId)
-  const { batchDeleteRelations, deleteRelation, entities, entityNameMap, loading, pagination, relations, draftSearchValues, resetSearch, saveRelation, selectedRowKeys, setPage, setDraftSearchValues, setSelectedRowKeys, submitSearch } =
+  const { batchDeleteRelations, deleteRelation, entities, entityNameMap, loading, relations, draftSearchValues, resetSearch, saveRelation, selectedRowKeys, setDraftSearchValues, setSelectedRowKeys, submitSearch } =
     useRelationManagement(spaceId)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingRelation, setEditingRelation] = useState<OntologyRelation | null>(null)
   const [saving, setSaving] = useState(false)
+  const [dateRange, setDateRange] = useState<any>(null)
+  const [fePage, setFePage] = useState(1)
+  const [fePageSize, setFePageSize] = useState(10)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(RELATION_COLUMN_OPTIONS)
+
+  const filteredRelations = useMemo(() => filterByCreateTime(relations as any[], dateRange, 'createTime') as OntologyRelation[], [relations, dateRange])
+  const pagedRelations = useMemo(() => {
+    const start = (fePage - 1) * fePageSize
+    return filteredRelations.slice(start, start + fePageSize)
+  }, [filteredRelations, fePage, fePageSize])
+  useEffect(() => {
+    setFePage(1)
+  }, [dateRange, relations])
+  const handleFePageChange = useCallback((page: number, size: number): void => {
+    setFePage(page)
+    setFePageSize(size)
+  }, [])
   const handleViewModeChange = useCallback((mode: 'list' | 'card'): void => {
     setSelectedRowKeys([])
     setViewMode(mode)
@@ -48,6 +66,7 @@ export const Component: React.FC = () => {
   }, [submitSearch])
 
   const handleReset = useCallback((): void => {
+    setDateRange(null)
     resetSearch()
   }, [resetSearch])
 
@@ -104,48 +123,56 @@ export const Component: React.FC = () => {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <section className="abi-searchbar">
-        <div className="abi-search-row flex-wrap">
-          <Select
-            allowClear
-            className="abi-field-input"
-            fieldNames={{ label: 'entityName', value: 'id' }}
-            options={entities}
-            placeholder="开始节点"
-            showSearch
-            style={{ width: 190 }}
-            value={draftSearchValues.startEntityId}
-            optionFilterProp="entityName"
-            onChange={(value: OntologyNetworkId | undefined) => updateSearch({ startEntityId: value })}
-          />
-          <AInput
-            allowClear
-            className="abi-field-input"
-            placeholder="关系名称"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            style={{ width: 190 }}
-            value={draftSearchValues.relation}
-            onChange={(event) => updateSearch({ relation: event.target.value })}
-            onPressEnter={handleSearch}
-          />
-          <Select
-            allowClear
-            className="abi-field-input"
-            fieldNames={{ label: 'entityName', value: 'id' }}
-            options={entities}
-            placeholder="结束节点"
-            showSearch
-            style={{ width: 190 }}
-            value={draftSearchValues.endEntityId}
-            optionFilterProp="entityName"
-            onChange={(value: OntologyNetworkId | undefined) => updateSearch({ endEntityId: value })}
-          />
-          <AButton className="btn-accent-gradient" type="primary" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton onClick={handleReset}>
-            <ReloadOutlined /> 重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入关系名称"
+          searchValue={draftSearchValues.relation}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={(value) => updateSearch({ relation: value })}
+          filters={
+            <>
+              <SearchFilterField label="开始节点">
+                <Select
+                  allowClear
+                  className="abi-field-input w-full"
+                  fieldNames={{ label: 'entityName', value: 'id' }}
+                  getPopupContainer={getFilterPopupContainer}
+                  options={entities}
+                  placeholder="开始节点"
+                  showSearch
+                  value={draftSearchValues.startEntityId}
+                  optionFilterProp="entityName"
+                  onChange={(value: OntologyNetworkId | undefined) => updateSearch({ startEntityId: value })}
+                />
+              </SearchFilterField>
+              <SearchFilterField label="结束节点">
+                <Select
+                  allowClear
+                  className="abi-field-input w-full"
+                  fieldNames={{ label: 'entityName', value: 'id' }}
+                  getPopupContainer={getFilterPopupContainer}
+                  options={entities}
+                  placeholder="结束节点"
+                  showSearch
+                  value={draftSearchValues.endEntityId}
+                  optionFilterProp="entityName"
+                  onChange={(value: OntologyNetworkId | undefined) => updateSearch({ endEntityId: value })}
+                />
+              </SearchFilterField>
+              <SearchFilterField label="时间范围">
+                <DeferredRangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates)}
+                />
+              </SearchFilterField>
+            </>
+          }
+        />
       </section>
       <section className="abi-data-area flex min-h-0 flex-1 flex-col">
         <div className="abi-toolbar">
@@ -171,14 +198,14 @@ export const Component: React.FC = () => {
         <RelationTable
           entityNameMap={entityNameMap}
           loading={loading}
-          pagination={pagination}
-          relations={relations}
+          pagination={{ pageNum: fePage, pageSize: fePageSize, total: filteredRelations.length }}
+          relations={pagedRelations}
           selectedRowKeys={selectedRowKeys}
           viewMode={viewMode}
           visibleColumnKeys={visibleColumnKeys}
           onDelete={handleDelete}
           onEdit={handleEdit}
-          onPageChange={setPage}
+          onPageChange={handleFePageChange}
           onSelectedRowKeysChange={setSelectedRowKeys}
         />
       </section>

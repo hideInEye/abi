@@ -1,4 +1,5 @@
 import { message } from 'antd'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   addDimensionModel,
@@ -31,7 +32,8 @@ import {
 } from '../utils/dimensionModeling.mapper'
 
 const initialSearchParams: DimensionSearchParams = {
-  keyword: ''
+  bizName: '',
+  techName: ''
 }
 
 const initialPagination: DimensionPagination = {
@@ -74,7 +76,7 @@ function normalizeHierarchyItem(item: any): DimensionHierarchyEditItem {
 export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [loading, setLoading] = useState(false)
   const [searchParams, setSearchParams] = useState<DimensionSearchParams>(initialSearchParams)
-  const [queryKeyword, setQueryKeyword] = useState('')
+  const [queryParams, setQueryParams] = useState<DimensionSearchParams>(initialSearchParams)
   const [tableData, setTableData] = useState<DimensionModelItem[]>([])
   const [pagination, setPagination] = useState<DimensionPagination>(initialPagination)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -84,22 +86,28 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [hierarchyItems, setHierarchyItems] = useState<DimensionHierarchyEditItem[]>([])
   const [hierarchyLoading, setHierarchyLoading] = useState(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
+  const latestSearchParamsRef = useRef(searchParams)
+  const latestPaginationRef = useRef(initialPagination)
 
-  const fetchTableData = async (keyword = queryKeyword, nextPagination: DimensionPagination = pagination) => {
+  const fetchTableData = useCallback(async (
+    _params: DimensionSearchParams = latestSearchParamsRef.current,
+    nextPagination: DimensionPagination = latestPaginationRef.current
+  ) => {
     if (!selectedGroup?.groupId) {
       setTableData([])
       setPagination(initialPagination)
+      latestPaginationRef.current = initialPagination
       return
     }
     setLoading(true)
     try {
       const res = await queryDimensionList({
-        bizName: keyword.trim(),
+        bizName: _params.bizName?.trim() || undefined,
         groupId: selectedGroup.groupId,
         pageNum: nextPagination.pageNum,
         pageSize: nextPagination.pageSize,
         spaceId: Number(localStorage.getItem('spaceId')),
-        techName: keyword.trim()
+        techName: _params.techName?.trim() || undefined
       })
       const rows = normalizeRows(res)
       const list = rows.map(item =>
@@ -111,38 +119,57 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
       )
       setTableData(list)
       setSelectedRowKeys([])
-      setPagination(current => ({
-        ...current,
+      const nextPaginationState = {
         pageNum: nextPagination.pageNum,
         pageSize: nextPagination.pageSize,
         total: getResponseTotal(res)
-      }))
+      }
+      latestPaginationRef.current = nextPaginationState
+      setPagination(nextPaginationState)
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedGroup?.groupId, selectedGroup?.groupName])
 
   useEffect(() => {
-    fetchTableData()
-  }, [selectedGroup?.groupId])
+    const nextPagination = {
+      ...latestPaginationRef.current,
+      pageNum: 1
+    }
+    fetchTableData(latestSearchParamsRef.current, nextPagination)
+  }, [fetchTableData])
 
   const handleSearchChange = (value: Partial<DimensionSearchParams>) => {
+    const nextSearchParams = {
+      ...latestSearchParamsRef.current,
+      ...value
+    }
+    latestSearchParamsRef.current = nextSearchParams
     setSearchParams(prev => ({
       ...prev,
       ...value
     }))
   }
 
-  const handleQuery = async () => {
-    const keyword = searchParams.keyword
-    setQueryKeyword(keyword)
-    await fetchTableData(keyword, { ...pagination, pageNum: 1 })
+  const handleQuery = () => {
+    const nextParams = latestSearchParamsRef.current
+    const nextPagination = {
+      ...latestPaginationRef.current,
+      pageNum: 1
+    }
+    setQueryParams(nextParams)
+    fetchTableData(nextParams, nextPagination)
   }
 
-  const handleReset = async () => {
+  const handleReset = () => {
+    latestSearchParamsRef.current = initialSearchParams
+    const nextPagination = {
+      ...latestPaginationRef.current,
+      pageNum: 1
+    }
     setSearchParams(initialSearchParams)
-    setQueryKeyword('')
-    await fetchTableData('', { ...pagination, pageNum: 1 })
+    setQueryParams(initialSearchParams)
+    fetchTableData(initialSearchParams, nextPagination)
   }
 
   const handleAdd = () => {
@@ -233,11 +260,12 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   }
 
   const handlePaginationChange = (page: number, pageSize: number) => {
-    fetchTableData(queryKeyword, {
+    const nextPagination = {
       pageNum: page,
       pageSize,
-      total: pagination.total
-    })
+      total: latestPaginationRef.current.total
+    }
+    fetchTableData(queryParams, nextPagination)
   }
 
   const openHierarchyModal = async (record: DimensionModelItem) => {
@@ -314,6 +342,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     loading,
     openHierarchyModal,
     pagination,
+    queryParams,
     saveHierarchyConfig,
     searchParams,
     selectedRowKeys,

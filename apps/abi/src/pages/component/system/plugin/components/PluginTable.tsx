@@ -49,7 +49,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
 }: PluginTableProps) => {
   const spaceId = useAppSelector(getSpaceId);
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
   const [checkedRowKeys, setCheckedRowKeys] = useState<React.Key[]>([]);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
@@ -422,6 +422,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
               pagination={false}
               rowKey="pluginId"
               rowSelection={viewMode === 'list' ? rowSelection : undefined}
+              locale={{ emptyText: <TableEmpty description="暂无MCP服务" /> }}
             />
           </div>
         </div>

@@ -32,14 +32,19 @@ async function render(props: any) {
         : document.getElementById('root');
     if (!containerEl) return;
 
+    // 背景样式挂在子应用自身根节点上（见 index.less .abi-dashboard-root），不污染主应用 html/body
+    containerEl.classList.add('abi-dashboard-root');
+
     if (!root) {
         root = createRoot(containerEl);
     }
 
     root.render(
-        <Suspense fallback={null}>
-            <MainRouter/>
-        </Suspense>
+        <div className="abi-dashboard-root">
+            <Suspense fallback={null}>
+                <MainRouter/>
+            </Suspense>
+        </div>
     );
 }
 
@@ -72,4 +77,3 @@ if ((qiankunWindow as any).__POWERED_BY_QIANKUN__) {
 } else {
     render({});
 }
-

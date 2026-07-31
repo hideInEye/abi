@@ -487,9 +487,6 @@
     align-items: center;
     justify-content: center;
     min-height: 200px;
-    border: 1px solid rgba(130, 140, 200, 0.14);
-    border-radius: 12px;
-    background: rgba(245, 247, 255, 0.5);
   }
 
   .abi-data-card {
@@ -736,5 +733,62 @@
         }
       }
     }
+  }
+}
+
+// ============================================================
+// 列表视图无数据：隐藏外层边框容器，空状态直接悬浮在页面背景上（与 abi 主应用统一）
+// ============================================================
+div:has(> .abi-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
+  border-color: transparent !important;
+  background: transparent !important;
+
+  > .abi-table-scroll {
+    height: 100% !important;
+  }
+}
+
+.ant-table-wrapper:has(.ant-table-tbody > tr.ant-table-placeholder) {
+  height: 100%;
+
+  .ant-table-thead {
+    display: none;
+  }
+
+  .ant-spin-nested-loading,
+  .ant-spin-container,
+  .ant-table,
+  .ant-table-container,
+  .ant-table-content,
+  .ant-table-body {
+    height: 100%;
+    background: transparent !important;
+  }
+
+  table {
+    height: 100%;
+  }
+
+  .ant-table-tbody {
+    height: 100%;
+    background-color: transparent;
+  }
+
+  // antd 默认给 placeholder 行本身设置白色背景，必须一并清掉
+  .ant-table-tbody > tr.ant-table-placeholder {
+    height: 100%;
+    background: transparent !important;
+
+    &:hover > td {
+      background: transparent !important;
+    }
+  }
+
+  .ant-table-tbody > tr.ant-table-placeholder > td {
+    height: 100%;
+    background-color: transparent !important;
+    border-bottom: none !important;
+    padding: 0 !important;
+    vertical-align: middle;
   }
 }

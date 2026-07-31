@@ -15,7 +15,7 @@ import {
   updateSessionGroup,
 } from '@/service/api/app'
 import type { SessionGroup } from '@/service/api/app'
-import { fetchOperateNew } from '@/service/api/abi-system'
+import { fetchIsFavorite, fetchOperateNew } from '@/service/api/abi-system'
 import { CHAT_MODE } from '@/constant'
 import { getCurrentUser } from '@/utils/layout'
 import { getSpaceId } from '@/utils'
@@ -49,6 +49,8 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
   const [addGroupValue, setAddGroupValue] = useState('')
   const [pendingMoveSession, setPendingMoveSession] = useState<any>(null)
   const [searchOpen, setSearchOpen] = useState(false)
+  // 收藏状态：记录已收藏的对话 chatId，用于菜单文案「收藏对话/取消收藏」
+  const [favoriteChatIds, setFavoriteChatIds] = useState<Set<string>>(new Set())
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -232,23 +234,48 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
   // 收藏对话：切换收藏状态（addOrRemove 由后端切换）
   const handleFavoriteSession = useCallback(async (session: any) => {
     try {
-      const res: any = await fetchOperateNew({ chatId: session.chat_id })
+      const res: any = await fetchOperateNew({ favorId: session.chat_id })
       if (res?.code !== 200) {
         message.error(res?.message || res?.msg || '收藏失败，请稍后再试')
         return
       }
-      message.success(res?.msg || '操作成功')
+      const favorited = Number(res?.data?.favoriteStatus) === 1
+      setFavoriteChatIds((prev) => {
+        const next = new Set(prev)
+        if (favorited) next.add(String(session.chat_id))
+        else next.delete(String(session.chat_id))
+        return next
+      })
+      message.success(res?.msg || (favorited ? '收藏成功' : '取消收藏成功'))
     } catch {
       message.error('收藏失败，请稍后再试')
     }
   }, [])
 
+  // 打开对话菜单时查询收藏状态，用于动态显示「收藏对话/取消收藏」
+  const handleSessionMenuOpenChange = useCallback(async (open: boolean, session: any) => {
+    if (!open) return
+    try {
+      const res: any = await fetchIsFavorite({ favorId: session.chat_id })
+      const favorited = Number(res?.data?.favoriteStatus) === 1
+      setFavoriteChatIds((prev) => {
+        const next = new Set(prev)
+        if (favorited) next.add(String(session.chat_id))
+        else next.delete(String(session.chat_id))
+        return next
+      })
+    } catch {
+      // 查询失败时保持默认文案，不打断菜单打开
+    }
+  }, [])
+
   const buildSessionMenu = (session: any): MenuProps => {
     const otherGroups = groups.filter((g) => String(g.groupId) !== String(groupId))
+    const favorited = favoriteChatIds.has(String(session.chat_id))
     return {
       items: [
         { key: 'rename', icon: <EditOutlined />, label: '重命名' },
-        { key: 'favorite', icon: <StarOutlined />, label: '收藏对话' },
+        { key: 'favorite', icon: <StarOutlined />, label: favorited ? '取消收藏' : '收藏对话' },
         {
           key: 'move',
           icon: <FolderOutlined />,
@@ -491,6 +518,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
                         trigger={['click']}
                         menu={buildSessionMenu(session)}
                         placement="bottomRight"
+                        onOpenChange={(open) => handleSessionMenuOpenChange(open, session)}
                       >
                         <span
                           className="flex items-center justify-center transition-opacity"

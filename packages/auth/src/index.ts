@@ -42,7 +42,7 @@ interface AuthState {
   timer?: ReturnType<typeof setTimeout>;
 }
 
-const DEFAULT_NOTICE_MESSAGE = '登录状态已过期，请重新登录，即将跳转到登录页。';
+const DEFAULT_NOTICE_MESSAGE = '登录已过期，即将前往登录页 …';
 const DEFAULT_NOTICE_TITLE = '登录提醒';
 const DEFAULT_REDIRECT_DELAY = 1800;
 const DEFAULT_STATE_KEY = '__SA_AUTH_UNAUTHORIZED_STATE__';

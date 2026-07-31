@@ -5,9 +5,7 @@ import {
   KeyOutlined,
   LeftOutlined,
   PlusOutlined,
-  ReloadOutlined,
   RightOutlined,
-  SearchOutlined,
   VerticalAlignBottomOutlined,
   VerticalAlignTopOutlined
 } from '@ant-design/icons';
@@ -22,6 +20,8 @@ import { getUserInfoApi, importUserApi, updateUserStatusAPi } from '@/service/ap
 import { getAuthorization, getUserId } from '@/service/request/shared';
 import { encrypt } from '@/utils/jsencrypt';
 import { getServiceBaseURL } from '@/utils/service';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 
@@ -61,6 +61,7 @@ export function Component() {
   const [searchUserName, setSearchUserName] = useState('');
   const [searchPhone, setSearchPhone] = useState('');
   const [searchStatus, setSearchStatus] = useState<string | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<any>(null);
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
 
   const handleColumnToggle = (key: string, visible: boolean) => {
@@ -367,6 +368,7 @@ export function Component() {
     setSearchUserName('');
     setSearchPhone('');
     setSearchStatus(undefined);
+    setDateRange(null);
     updateSearchParams({
       pageNum: 1,
       userName: undefined,
@@ -378,8 +380,13 @@ export function Component() {
   const pagination = tableProps.pagination as any;
   const currentPage = searchParams.current?.pageNum || 1;
   const pageSizeVal = searchParams.current?.pageSize || 10;
-  const totalCount = pagination?.total || 0;
+  const filteredData = useMemo(() => filterByCreateTime((data as any[]) || [], dateRange), [data, dateRange]);
+  const totalCount = filteredData.length;
   const totalPages = Math.ceil(totalCount / pageSizeVal) || 1;
+  const pagedData = useMemo(
+    () => filteredData.slice((currentPage - 1) * pageSizeVal, currentPage * pageSizeVal),
+    [filteredData, currentPage, pageSizeVal]
+  );
   const [jumpValue, setJumpValue] = useState('');
 
   const handlePageSizeChange = (value: number) => {
@@ -442,45 +449,53 @@ export function Component() {
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {/* Searchbar */}
         <section className="abi-searchbar">
-          <div className="abi-search-row">
-            <AInput
-              allowClear
-              placeholder="请输入用户名"
-              prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-              value={searchUserName}
-              onChange={(e) => setSearchUserName(e.target.value)}
-              onPressEnter={handleSearch}
-              className="abi-field-input"
-              style={{ width: '180px' }}
-            />
-            <AInput
-              allowClear
-              placeholder="请输入手机号"
-              value={searchPhone}
-              onChange={(e) => setSearchPhone(e.target.value)}
-              onPressEnter={handleSearch}
-              className="abi-field-input"
-              style={{ width: '180px' }}
-            />
-            <ASelect
-              allowClear
-              placeholder="请选择状态"
-              value={searchStatus}
-              onChange={(val) => setSearchStatus(val)}
-              className="abi-field-input"
-              style={{ width: '140px' }}
-              options={[
-                { label: t('page.manage.common.status.enable'), value: '0' },
-                { label: t('page.manage.common.status.disable'), value: '1' }
-              ]}
-            />
-            <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-              <SearchOutlined /> 查询
-            </AButton>
-            <AButton className="btn-ghost-v5" onClick={handleReset}>
-              <ReloadOutlined /> 重置
-            </AButton>
-          </div>
+          <SearchFilterBar
+            searchPlaceholder="请输入用户名"
+            searchValue={searchUserName}
+            onQuery={handleSearch}
+            onReset={handleReset}
+            onSearchChange={setSearchUserName}
+            filters={
+              <>
+                <SearchFilterField label="创建时间">
+                  <DeferredRangePicker
+                    allowClear
+                    className="abi-field-input"
+                    format="YYYY-MM-DD"
+                    getPopupContainer={getFilterPopupContainer}
+                    placeholder={['开始时间', '结束时间']}
+                    value={dateRange}
+                    onChange={(dates) => { setDateRange(dates); updateSearchParams({ pageNum: 1 } as any); }}
+                  />
+                </SearchFilterField>
+                <SearchFilterField label="手机号">
+                  <AInput
+                    allowClear
+                    className="abi-field-input"
+                    maxLength={11}
+                    placeholder="请输入手机号"
+                    value={searchPhone}
+                    onChange={(e) => setSearchPhone(e.target.value)}
+                    onPressEnter={handleSearch}
+                  />
+                </SearchFilterField>
+                <SearchFilterField label="用户状态">
+                  <ASelect
+                    allowClear
+                    className="abi-field-input"
+                    getPopupContainer={getFilterPopupContainer}
+                    placeholder="请选择状态"
+                    value={searchStatus}
+                    onChange={(val) => setSearchStatus(val)}
+                    options={[
+                      { label: t('page.manage.common.status.enable'), value: '0' },
+                      { label: t('page.manage.common.status.disable'), value: '1' }
+                    ]}
+                  />
+                </SearchFilterField>
+              </>
+            }
+          />
         </section>
 
         {/* Data Area */}
@@ -533,7 +548,7 @@ export function Component() {
               <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
                 <ATable
                   columns={filteredColumns as any}
-                  dataSource={tableProps.dataSource}
+                  dataSource={pagedData}
                   loading={tableProps.loading}
                   pagination={false}
                   rowKey="userId"

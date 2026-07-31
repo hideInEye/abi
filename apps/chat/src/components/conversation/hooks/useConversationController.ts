@@ -51,6 +51,17 @@ const THINK_START_REGEX = /##\s*1\.\s*🧠\s*思考过程/
 const THINK_END_REGEX = /##\s*3\.\s*🔧\s*查询模式/
 
 /**
+ * 闲聊/超范围屏蔽（illegal_query）的兜底提示语。
+ * 后端把该提示语放在 <think>"illegal_query": "..."</think> 中，且提示语含真实换行；
+ * 换行后的第二物理行既无 data: 前缀也无 ASCII 冒号，会被 @microsoft/fetch-event-source
+ * 整行丢弃（见 lib/cjs/parse.js：非 data 字段行不会拼接到 message.data），
+ * 导致 onmessage 只能拿到被截断的首行、拿不到闭合 </think> 与 [DONE]。
+ * 此时用本兜底文案补全展示，避免提示被截成半句、与预期不一致。
+ */
+const ILLEGAL_QUERY_FALLBACK_TIP =
+  '温馨提示：您的问题有点超出我当前的理解范围了。\n～可能是我掌握的“词汇量”还不够，暂时无法与我数据库语义信息匹配😊'
+
+/**
  * 把 content 中内联的深度思考内容包装为 <think>...</think>，复用现有渲染链路。
  * 当未启用深度思考时，直接过滤掉思考段内容，不向下游渲染。
  * @param content 当前 chunk 的 content
@@ -322,6 +333,10 @@ export const useConversationController = (
   const isRequesting = useRef(false)
   const messageRef = useRef('')
   const isReasoningRef = useRef(false)
+  // 标记当前 <think> 是否由流式 reasoning_content 开启（归因分析等模式）。
+  // 仅当思考流由 reasoning_content 驱动时，reasoning 变为 null 才意味着思考结束、需闭合 </think>；
+  // 若 <think> 由 content 内联的 ## 1 思考过程标记开启（reasoning_content 恒为 null），则不能因 null 提前闭合。
+  const reasoningFromStreamRef = useRef(false)
   // 记录上一次已追加的完整 content，用于过滤后端重复发送的固定前缀
   const lastContentRef = useRef('')
   const groupCountRef = useRef(0)
@@ -1056,6 +1071,7 @@ export const useConversationController = (
     isRequesting.current = true
     messageRef.current = ''
     isReasoningRef.current = false
+    reasoningFromStreamRef.current = false
     lastContentRef.current = ''
     startTimeRef.current = startTime
     isMessageAdded.current = false
@@ -1115,6 +1131,7 @@ export const useConversationController = (
               if (isReasoningRef.current) {
                 messageRef.current += '</think>'
                 isReasoningRef.current = false
+                reasoningFromStreamRef.current = false
               }
 
               const endTime = performance.now()
@@ -1200,44 +1217,136 @@ export const useConversationController = (
               return
             }
 
-            // 从 OpenAI 兼容格式提取 content
+            // illegal_query（闲聊/超范围屏蔽）兜底拦截：
+            // 必须放在 reasoning / 深度思考过滤之前——否则未启用深度思考时，该内容会被
+            // processContentWithInlineThinking 过滤为空并提前 return，导致 messageRef 拿不到
+            // illegal_query：思考态无法结束（秒数不停），或展示为空。
+            // 数据形如：<think>"illegal_query": "…提示语…"</think> [DONE]
+            // 该提示语可能含真实换行，其第二物理行无 ASCII 冒号，会被
+            // @microsoft/fetch-event-source 整行丢弃，导致只拿到被截断的首行、无闭合 </think>。
+            const rawIllegalSource = (() => {
+              try {
+                const parsedRaw = JSON.parse(event.data)
+                const rawContent = parsedRaw?.choices?.[0]?.delta?.content
+                return typeof rawContent === 'string' ? rawContent : event.data
+              } catch {
+                return event.data
+              }
+            })()
+            if (
+              rawIllegalSource.includes('illegal_query') ||
+              messageRef.current.includes('illegal_query')
+            ) {
+              const combined = messageRef.current + rawIllegalSource
+              const closedMatch = combined.match(
+                /<think>"illegal_query":\s*"([\s\S]*?)"\s*<\/think>/
+              )
+              // closedMatch：完整 <think>…</think> 已到达，尊重后端原文；
+              // 否则闭合标签随换行被 SSE 丢弃、尾部不可恢复，用固定兜底文案补全，
+              // 避免展示被截断成半句或为空。
+              const illegalText = closedMatch
+                ? (closedMatch[1] || '').replace(/\\n/g, '\n')
+                : ILLEGAL_QUERY_FALLBACK_TIP
+              updateAiMessage({
+                context: illegalText,
+                isStreaming: false,
+                smLoading: false,
+                isDone: true,
+                isIllegalQuery: true
+              })
+              // 同步 currentMessage，避免 setLoading(false) 触发的 effect 用旧流式文本回写 context。
+              setCurrentMessage(illegalText)
+              setLoading(false)
+              setIsGettingData(false)
+              setSmLoading(false)
+              isRequesting.current = false
+              abortController.current = null
+              return
+            }
+
+            // 从 OpenAI 兼容格式提取 content / reasoning_content
             let chunk = event.data
             try {
               const parsed = JSON.parse(event.data)
+              // 意图澄清等业务事件本身是一段完整 JSON，并非 OpenAI 流式增量格式，
+              // 若走 delta 提取会因 chunkText 为空而提前 return，导致澄清组件无法展示。
+              // 这里保留原始数据并跳过 delta 提取，交由后续 intent_clarify 逻辑处理。
+              if (parsed && typeof parsed === 'object' && parsed.agent_label) {
+                chunk = event.data
+              } else {
               const delta = parsed?.choices?.[0]?.delta
               let chunkText = ''
 
-              // 处理 content，过滤后端重复发送的固定前缀/完整内容
-              if (delta?.content !== undefined && delta?.content !== null) {
-                const currentContent = delta.content
-                let contentToAppend = ''
-                if (
-                  lastContentRef.current &&
-                  currentContent.startsWith(lastContentRef.current)
-                ) {
-                  contentToAppend = currentContent.slice(lastContentRef.current.length)
-                } else {
-                  contentToAppend = currentContent
-                }
-                lastContentRef.current = currentContent
+              const reasoning = delta?.reasoning_content
+              const hasReasoning = typeof reasoning === 'string' && reasoning.length > 0
 
-                if (contentToAppend) {
-                  // 后端把思考内容直接放在 content 中并用 Markdown 标题标记边界
-                  const processed = processContentWithInlineThinking(
-                    contentToAppend,
-                    isReasoningRef.current,
-                    currentDeepThinkEnabled
-                  )
-                  chunkText += processed.text
-                  isReasoningRef.current = processed.isReasoning
+              if (hasReasoning) {
+                // 归因分析等模式：真正的流式思考内容单独放在 reasoning_content 字段逐字输出，
+                // 此时 content 为固定占位串（round_index / sub_chat_mode 标记及“正在查询…”状态提示），
+                // 占位串不作为思考正文追加（其 round_index / sub_chat_mode 已由前一条 content 事件提取）。
+                // 将 reasoning_content 包装为 <think>…</think>，复用现有流式思考展示链路。
+                if (currentDeepThinkEnabled) {
+                  if (!isReasoningRef.current) {
+                    chunkText += '<think>'
+                    isReasoningRef.current = true
+                    reasoningFromStreamRef.current = true
+                  }
+                  chunkText += reasoning
                 }
-              }
+                // 记录占位串，避免 reasoning 结束后占位串被当作新正文重复处理
+                if (typeof delta?.content === 'string') {
+                  lastContentRef.current = delta.content
+                }
+                if (!chunkText) {
+                  // 未启用深度思考时，reasoning 阶段无输出，跳过
+                  return
+                }
+                chunk = chunkText
+              } else {
+                // reasoning_content 为 null 或不存在
+                // 归因分析等模式：思考流（reasoning_content）在此切换为 null，先闭合 <think>
+                // 仅当 <think> 由 reasoning_content 流开启时，reasoning 变为 null 才代表思考结束需闭合；
+                // 内联 ## 思考过程模式下 reasoning_content 恒为 null，不能据此提前闭合（否则思考正文会被冻结在首个 chunk）。
+                if (reasoning === null && isReasoningRef.current && reasoningFromStreamRef.current) {
+                  chunkText += '</think>'
+                  isReasoningRef.current = false
+                  reasoningFromStreamRef.current = false
+                  lastContentRef.current = ''
+                }
 
-              if (!chunkText) {
-                // 没有有效 content 的事件跳过
-                return
+                // 处理 content，过滤后端重复发送的固定前缀/完整内容
+                if (delta?.content !== undefined && delta?.content !== null) {
+                  const currentContent = delta.content
+                  let contentToAppend = ''
+                  if (
+                    lastContentRef.current &&
+                    currentContent.startsWith(lastContentRef.current)
+                  ) {
+                    contentToAppend = currentContent.slice(lastContentRef.current.length)
+                  } else {
+                    contentToAppend = currentContent
+                  }
+                  lastContentRef.current = currentContent
+
+                  if (contentToAppend) {
+                    // 后端把思考内容直接放在 content 中并用 Markdown 标题标记边界
+                    const processed = processContentWithInlineThinking(
+                      contentToAppend,
+                      isReasoningRef.current,
+                      currentDeepThinkEnabled
+                    )
+                    chunkText += processed.text
+                    isReasoningRef.current = processed.isReasoning
+                  }
+                }
+
+                if (!chunkText) {
+                  // 没有有效 content 的事件跳过
+                  return
+                }
+                chunk = chunkText
               }
-              chunk = chunkText
+              }
             } catch {
               // 非 JSON 格式，直接使用原始 event.data（兼容旧格式）
             }
@@ -1263,28 +1372,6 @@ export const useConversationController = (
 
             // 累积内容
             messageRef.current += chunk
-
-            // 处理 illegal_query
-            if (messageRef.current.includes('illegal_query')) {
-              const regex = /<think>"illegal_query":\s?"(.*?)"<\/think>/
-              const match: any = messageRef.current.match(regex)
-              if (match) {
-                updateAiMessage({
-                  context: match[1],
-                  isStreaming: false,
-                  smLoading: false,
-                  isDone: true,
-                  isIllegalQuery: true
-                })
-
-                setLoading(false)
-                setIsGettingData(false)
-                setSmLoading(false)
-                isRequesting.current = false
-                abortController.current = null
-                return
-              }
-            }
 
             // 处理 intent_clarify
             if (chunk.includes('intent_clarify')) {
@@ -1368,7 +1455,9 @@ export const useConversationController = (
             }
             displayMessage = displayMessage.replace(/round_index:\d+,?\s*/, '')
             displayMessage = displayMessage.replace(/sub_chat_mode:\w+,?\s*/, '')
-            displayMessage = displayMessage.replace(/"illegal_query":\s*"([^"]+)"/, '$1')
+            // 剥离 illegal_query 包裹：提示语可能内嵌英文双引号，需用 [\s\S]* 贪婪匹配到末尾引号，
+            // 避免因内嵌引号提前截断导致展示与实际数据不一致。
+            displayMessage = displayMessage.replace(/"illegal_query":\s*"([\s\S]*?)"?\s*$/, '$1')
             setCurrentMessage(displayMessage.replace(/\\n/g, '\n'))
           }
         },
@@ -1386,6 +1475,24 @@ export const useConversationController = (
           setConvContent((prevState: any[]) => {
             return prevState.map((item: any) => {
               if (item.role === 'ai' && item.smLoading) {
+                // 兜底：闲聊屏蔽（illegal_query）提示语含真实换行，第二物理行无 ASCII 冒号
+                // 会被 @microsoft/fetch-event-source 整行丢弃；若后端发完后直接关流（末尾无空行），
+                // 解析器甚至不会派发任何事件（实测：onmessage 零触发），只有 onclose 执行。
+                // 此时流已正常结束但消息仍处思考态且无任何内容 —— 用兜底文案补全展示，
+                // 避免气泡整块空白。（正常回答到 onclose 时 context 必非空，不会误伤）
+                const noContext = !item.context || !String(item.context).trim()
+                const refHasIllegal = messageRef.current.includes('illegal_query')
+                const refIsEmpty = !messageRef.current.trim()
+                if (refHasIllegal || (noContext && refIsEmpty)) {
+                  return {
+                    ...item,
+                    context: ILLEGAL_QUERY_FALLBACK_TIP,
+                    smLoading: false,
+                    isStreaming: false,
+                    isDone: true,
+                    isIllegalQuery: true
+                  }
+                }
                 return {
                   ...item,
                   smLoading: false,
@@ -1512,17 +1619,22 @@ export const useConversationController = (
       const res: any = await fetchRecommendQuestion(params)
       // 接口一次性返回三类问题，统一返回结构化对象，由 ViewEle 本地切片展示（每类每次 3 个）：
       // ask=问数(ask_data)，root=归因(root_cause_analysis)，forecast=预测(forecast)
+      // 归因/预测模式（recommend_chat_mode=analysis/forecast）下后端额外返回语义画像
+      // metrics/dimensions/entities，供前端像意图澄清一样拼句发送
       const data = res?.data || res || {}
       return {
         ask: Array.isArray(data.ask_data) ? data.ask_data : [],
         root: Array.isArray(data.root_cause_analysis) ? data.root_cause_analysis : [],
         forecast: Array.isArray(data.forecast) ? data.forecast : [],
+        metrics: Array.isArray(data.metrics) ? data.metrics : [],
+        dimensions: Array.isArray(data.dimensions) ? data.dimensions : [],
+        entities: Array.isArray(data.entities) ? data.entities : [],
       }
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
         message.error('获取推荐问题失败')
       }
-      return { ask: [], root: [], forecast: [] }
+      return { ask: [], root: [], forecast: [], metrics: [], dimensions: [], entities: [] }
     }
   }
 
@@ -1870,8 +1982,7 @@ export const useConversationController = (
       .then((values) => {
         let data = {
           convUid: conv.conv_uid,
-          chatId: conv.chat_id,
-          agentId: conv.agent_id,
+          sessionId: conv.chat_id,
           spaceId: conv.space_id,
           extra: {},
           chatName: conv.biz_name,

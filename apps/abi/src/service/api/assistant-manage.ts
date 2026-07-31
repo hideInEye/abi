@@ -136,6 +136,18 @@ export function fetchMemoryList(data?: any) {
 }
 
 /**
+ * 效果评审 - 详情（detail）
+ * @param fbId 反馈记录 id
+ */
+export function fetchMemoryDetail(fbId: string | number) {
+  return apiRequest<any>({
+    data: { fbId },
+    method: 'post',
+    url: `${FEEDBACK_BASE}/detail`
+  });
+}
+
+/**
  * 效果评审 - 编辑反馈/专家评估（edit）
  * 后端在编辑成功后会同步向量库，前端无需再单独调用向量存储接口
  * @param data 支持 fbId、status、evalExpert、expertOpinion、evalLlm、llmOpinion、remark
@@ -157,6 +169,19 @@ export function fetchDeleteMemory(fbId: string | number) {
     data: { fbId },
     method: 'post',
     url: `${FEEDBACK_BASE}/delete`
+  });
+}
+
+/**
+ * 效果评审 - 批量删除（batchDelete）
+ * 后端在批量删除反馈记录的同时会清理关联的向量数据
+ * @param fbIds 反馈记录 id 数组
+ */
+export function fetchBatchDeleteMemory(fbIds: (string | number)[]) {
+  return apiRequest<any>({
+    data: { fbIds },
+    method: 'post',
+    url: `${FEEDBACK_BASE}/batchDelete`
   });
 }
 

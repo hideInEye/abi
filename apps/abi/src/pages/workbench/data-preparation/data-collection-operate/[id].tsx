@@ -62,12 +62,18 @@ export function Component() {
 
   const route = useRoute();
 
+  // 数据源ID统一转字符串：详情接口返回的 sourceId 是字符串，列表接口是数字，类型不一致会导致 Select 匹配不到选项而直接回显ID
+  const normalizedDataSourceList = useMemo(
+    () => dataSourceList.map((item: any) => ({ ...item, sourceId: String(item.sourceId) })),
+    [dataSourceList]
+  );
+
   const filterDataSourceList = useMemo(() => {
     if (collectionData.viewType === 'sql') {
-      return dataSourceList.filter((item: any) => item.sourceType !== 'Excel');
+      return normalizedDataSourceList.filter((item: any) => item.sourceType !== 'Excel');
     }
-    return dataSourceList;
-  }, [collectionData.viewType, dataSourceList]);
+    return normalizedDataSourceList;
+  }, [collectionData.viewType, normalizedDataSourceList]);
 
   const curDatasourceType = useMemo(() => {
     const curDatasource = filterDataSourceList.find((item: any) => item.sourceId === datasource);
@@ -76,14 +82,14 @@ export function Component() {
 
   const filterConfigOptions = useMemo(() => {
     if (datasource !== undefined) {
-      const cur = dataSourceList.find((item: any) => item.sourceId === datasource);
+      const cur = normalizedDataSourceList.find((item: any) => item.sourceId === datasource);
       if (cur?.sourceType === 'Excel') {
         return DATA_COLLECTION_CONFIG_TYPE_OPTIONS.filter(item => item.value !== 'sql');
       }
       return DATA_COLLECTION_CONFIG_TYPE_OPTIONS;
     }
     return DATA_COLLECTION_CONFIG_TYPE_OPTIONS;
-  }, [datasource, dataSourceList]);
+  }, [datasource, normalizedDataSourceList]);
 
   const isFromDatasource = route.query?.from === 'data-source';
   const isFromGuide = route.query?.from === 'guide'
@@ -120,7 +126,7 @@ export function Component() {
     setNodeData(formatData);
     setAllFields(res.data?.allFields || []);
     const sourceId = formatData.currentDs?.sourceId;
-    setDatasource(sourceId);
+    setDatasource(sourceId == null ? undefined : String(sourceId));
     if (res.data?.viewType === 'sql') {
       try {
         const sqlObj = JSON.parse(formatData.currentDs?.tableInfo);
@@ -156,7 +162,7 @@ export function Component() {
 
   useEffect(() => {
     if (!datasource) return;
-    const curDatasource = dataSourceList.find((item: any) => item.sourceId === datasource);
+    const curDatasource = normalizedDataSourceList.find((item: any) => item.sourceId === datasource);
     setCurDatasource(curDatasource);
     if (curDatasource) {
       getTableListBySource({
@@ -165,7 +171,7 @@ export function Component() {
         spaceId: Number(localStorage.getItem('spaceId'))
       });
     }
-  }, [datasource, dataSourceList]);
+  }, [datasource, normalizedDataSourceList]);
 
   // 切换空间时退出编辑页，返回数据集列表页
   const prevSpaceIdRef = useRef(spaceId);
@@ -336,19 +342,20 @@ export function Component() {
         <ACard className={styles.container}>
           <div className="relative h-full flex">
             <Splitter
-              style={{ flex: 1, minHeight: 0, height: '100%' }}
+              style={{ flex: 1, minWidth: 0, minHeight: 0, height: '100%' }}
               onResize={(sizes) => {
                 if (sizes && sizes[0]) {
                   setLeftPanelSize(sizes[0]);
                 }
               }}
             >
-                {/* 左边 - 使用 Splitter.Panel */}
+                {/* 左边 - 使用 Splitter.Panel；defaultSize 必须传数字，字符串会在首帧生成无单位的非法 flex-basis */}
                 <Splitter.Panel
-                  defaultSize="220"
+                  defaultSize={220}
+                  min={160}
                 >
-                  <div className="relative h-full pr-16px overflow-hidden" style={{
-                    background: 'rgba(255, 255, 255, 0.4)',
+                  <div className="relative h-full px-24px overflow-hidden" style={{
+                    background: 'rgba(255, 255, 255, 0.5)',
                     backdropFilter: 'blur(8px)',
                     borderRight: '1px solid rgba(130, 140, 200, 0.1)'
                   }}>
@@ -429,7 +436,36 @@ export function Component() {
                 {/* 中间主编辑区 */}
                 <Splitter.Panel>
                   <div className="h-full flex flex-col">
-                    <div className="flex-1">
+                    {/* 顶部操作栏：仅图形化模式展示；SQL 模式的操作按钮在编辑器底部操作栏 */}
+                    {collectionData.viewType !== 'sql' && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        gap: 12,
+                        padding: '10px 16px',
+                        background: 'linear-gradient(180deg, rgba(246, 247, 255, 0.8), rgba(246, 247, 255, 0.6))',
+                        backdropFilter: 'blur(8px)',
+                        borderBottom: '1px solid rgba(130, 140, 200, 0.1)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <AButton
+                        className="btn-accent-gradient"
+                        onClick={() => push('/workbench/data-preparation/data-collection')}
+                      >
+                        退出编辑
+                      </AButton>
+                      <AButton
+                        className="btn-accent-gradient"
+                        onClick={() => handleClickSave()}
+                      >
+                        保存
+                      </AButton>
+                    </div>
+                    )}
+                    <div className="flex-1" style={{ minHeight: 0 }}>
                       <Splitter
                         layout="vertical"
                         style={{ width: '100%', height: '100%' }}
@@ -447,46 +483,16 @@ export function Component() {
                               runLoading={runLoading}
                               onRun={() => bottomSqlRef.current?.run()}
                               onSave={() => handleClickSave()}
+                              onExit={() => push('/workbench/data-preparation/data-collection')}
                             />
                           ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'flex-end',
-                                  gap: 12,
-                                  padding: '10px 16px',
-                                  background: 'linear-gradient(180deg, rgba(246, 247, 255, 0.8), rgba(246, 247, 255, 0.6))',
-                                  backdropFilter: 'blur(8px)',
-                                  borderBottom: '1px solid rgba(130, 140, 200, 0.1)',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <AButton
-                                  size="small"
-                                  type="primary"
-                                  style={{ 
-                                    background: 'linear-gradient(135deg, #5b7cf7, #7091fa)',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    boxShadow: '0 4px 12px rgba(91, 124, 247, 0.3)',
-                                    fontWeight: 600,
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                  }}
-                                  onClick={() => handleClickSave()}
-                                >
-                                  保存
-                                </AButton>
-                              </div>
-                              <div style={{ flex: 1, minHeight: 0 }}>
-                                <TreeNodeContainer />
-                              </div>
+                            <div style={{ height: '100%', width: '100%' }}>
+                              <TreeNodeContainer />
                             </div>
                           )}
                         </Splitter.Panel>
                         <Splitter.Panel
-                          defaultSize="300"
+                          defaultSize={300}
                           max="90%"
                           min="10%"
                         >

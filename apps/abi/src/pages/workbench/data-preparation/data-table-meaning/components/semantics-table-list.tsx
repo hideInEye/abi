@@ -38,7 +38,7 @@ interface SemanticsTableListProps {
 
 export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [], toolbarLeft }: SemanticsTableListProps) {
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
   const [checkedRowKeys, setCheckedRowKeys] = useState<React.Key[]>([]);
   const [selectedRows, setSelectedRows] = useState<DataType[]>([]);
@@ -334,6 +334,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
               pagination={false}
               rowKey="schemaId"
               rowSelection={viewMode === 'list' ? rowSelection : undefined}
+              locale={{ emptyText: <TableEmpty description="暂无数据语义" /> }}
             />
           </div>
         </div>

@@ -28,6 +28,8 @@ import { getSpaceId } from '@/store/slice/app'
 import { useAppSelector } from '@/hooks/business/useStore'
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { filterByCreateTime } from '@/utils/date'
 import { createToolApi, deleteToolApi, getToolDetailApi, queryToolListApi, updateToolApi } from '@/service/api/tool'
 
 /** Monaco 代码编辑器适配 Form.Item value/onChange */
@@ -133,7 +135,7 @@ export function Component() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingTool, setEditingTool] = useState<ToolItem | null>(null)
   const [saving, setSaving] = useState(false)
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card')
   const [dateRange, setDateRange] = useState<[any, any] | null>(null)
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'toolName', label: '工具名称', visible: true },
@@ -217,8 +219,11 @@ export function Component() {
       arr = arr.filter((it) => (it.toolName || '').toLowerCase().includes(kw) || (it.toolLabel || '').toLowerCase().includes(kw))
     }
 
+    // 前端按创建时间过滤
+    arr = filterByCreateTime(arr, dateRange, 'createTime')
+
     return arr
-  }, [list, statusFilter, keyword])
+  }, [list, statusFilter, keyword, dateRange])
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -234,7 +239,7 @@ export function Component() {
   // 筛选条件变化时重置到第一页
   useEffect(() => {
     setCurrentPage(1)
-  }, [statusFilter, keyword, pageSize])
+  }, [statusFilter, keyword, pageSize, dateRange])
 
   const defaultPythonScript = `def get_current_date(format: str = "%Y-%m-%d", include_weekday: bool = False) -> str:
     from datetime import date
@@ -560,53 +565,47 @@ export function Component() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* v5 Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <Input
-            allowClear
-            placeholder="请输入工具名称或标签"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onPressEnter={() => setCurrentPage(1)}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <Select
-            style={{ width: 120 }}
-            placeholder="状态"
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v)}
-            className="abi-field-input"
-            options={[
-              { value: 'ALL', label: '全部' },
-              { value: '0', label: '启用' },
-              { value: '1', label: '禁用' },
-            ]}
-          />
-          <ADatePicker.RangePicker
-            showTime={{ format: 'HH:mm:ss' }}
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder={['开始时间', '结束时间']}
-            value={dateRange}
-            onChange={(dates) => setDateRange(dates)}
-            className="abi-field-input"
-            style={{ width: '380px' }}
-          />
-          <Button type="primary" className="btn-accent-gradient" onClick={() => setCurrentPage(1)}>
-            <SearchOutlined /> 查询
-          </Button>
-          <Button
-            className="btn-ghost-v5"
-            onClick={() => {
-              setKeyword('')
-              setStatusFilter('ALL')
-              setCurrentPage(1)
-              setDateRange(null)
-            }}
-          >
-            <ReloadOutlined /> 重置
-          </Button>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入工具名称或标签"
+          searchValue={keyword}
+          onQuery={() => setCurrentPage(1)}
+          onReset={() => {
+            setKeyword('')
+            setStatusFilter('ALL')
+            setCurrentPage(1)
+            setDateRange(null)
+          }}
+          onSearchChange={setKeyword}
+          filters={
+            <>
+              <SearchFilterField label="时间范围">
+                <DeferredRangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates)}
+                />
+              </SearchFilterField>
+              <SearchFilterField label="状态">
+                <Select
+                  className="abi-field-input w-full"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder="状态"
+                  value={statusFilter}
+                  onChange={(v) => setStatusFilter(v)}
+                  options={[
+                    { value: 'ALL', label: '全部' },
+                    { value: '0', label: '启用' },
+                    { value: '1', label: '禁用' },
+                  ]}
+                />
+              </SearchFilterField>
+            </>
+          }
+        />
       </section>
 
       {/* v5 Data Area */}
@@ -643,6 +642,7 @@ export function Component() {
                   dataSource={pagedList}
                   loading={loading}
                   pagination={false}
+                  locale={{ emptyText: <TableEmpty description="暂无工具" /> }}
                   size="middle"
                   className="tools-table abi-std-table"
                   scroll={pagedList.length > 0 ? TABLE_SCROLL : undefined}
@@ -658,8 +658,8 @@ export function Component() {
           ) : (
             <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
               {pagedList.length === 0 ? (
-                <div style={{ marginTop: 80, textAlign: 'center' }}>
-                  <AEmpty description="暂无工具" />
+                <div className="abi-card-empty">
+                  <AEmpty description="暂无工具" image={AEmpty.PRESENTED_IMAGE_SIMPLE} />
                 </div>
               ) : (
                 <div className="abi-card-grid">

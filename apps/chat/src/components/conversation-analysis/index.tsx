@@ -5,7 +5,7 @@ import { newConv } from '../../service/api/conv'
 import CreateModal from './CreateModal'
 import EditSessionModal from './EditSessionModal'
 import { createApp, deleteSession, fetchAppList, updateApp } from '../../service/api/app'
-import { fetchSemanticGroups, fetchSemanticSchemas } from '../../service/api/semantic'
+import { fetchSemanticTree } from '../../service/api/semantic'
 import { fetchModelList } from '../../service/api/abi-system'
 import { CHAT_MODE } from '../../constant'
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
@@ -69,9 +69,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const [embedModelId, setEmbedModelId] = useState<string | number>('')
   const modelLoadedRef = useRef(false)
 
-  // ── 数据语义状态（从 NewChatWelcome 迁移）──
-  const [semanticGroups, setSemanticGroups] = useState<any[]>([])
-  const [semanticGroupSchemas, setSemanticGroupSchemas] = useState<Map<string, any[]>>(new Map())
+  // ── 数据语义状态（统一节点树，一次性拉取）──
+  const [semanticTree, setSemanticTree] = useState<any[]>([])
   const [expandedSemGroups, setExpandedSemGroups] = useState<Set<string>>(new Set())
   const [selectedData, setSelectedData] = useState<SemanticSelectedData | null>(null)
   const [selectedExcel, setSelectedExcel] = useState<any>(null)
@@ -100,6 +99,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
             key: item.modelKey || item.model_name || item.key || '',
             label: item.modelName || item.model_name || item.llmModel || item.label || '',
             desc: item.remark || item.description || item.desc || '',
+            isDefault: item.isDefault,
           }))
           setModelOptions(options)
           if (options.length > 0) {
@@ -114,39 +114,32 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     setCurrentModel(model)
   }, [])
 
-  // ── 数据语义加载 ──
+  // ── 数据语义加载（分组树一次性返回，含各级子分组与数据语义叶子）──
   useEffect(() => {
     if (semGroupsLoadedRef.current) return
     semGroupsLoadedRef.current = true
     setSemLoading(true)
-    fetchSemanticGroups({ groupType: 'shema', pageNum: 1, pageSize: 100, spaceId: currentSpaceId })
+    fetchSemanticTree({ spaceId: currentSpaceId })
       .then((res: any) => {
         const list = res?.data || res?.rows || []
-        setSemanticGroups(Array.isArray(list) ? list : [])
+        setSemanticTree(Array.isArray(list) ? list : [])
       })
       .catch(() => {})
       .finally(() => setSemLoading(false))
   }, [currentSpaceId])
 
-  const toggleSemGroup = useCallback((groupId: string) => {
+  // 展开/收起分组节点（数据已全量返回，无需懒加载）
+  const toggleSemGroup = useCallback((nodeId: string) => {
     setExpandedSemGroups(prev => {
       const next = new Set(prev)
-      if (next.has(groupId)) {
-        next.delete(groupId)
+      if (next.has(nodeId)) {
+        next.delete(nodeId)
       } else {
-        next.add(groupId)
-        if (!semanticGroupSchemas.has(groupId)) {
-          fetchSemanticSchemas({ groupId: groupId, pageNum: 1, pageSize: 100 })
-            .then((res: any) => {
-              const list = res?.data || res?.rows || []
-              setSemanticGroupSchemas(prev => new Map(prev).set(groupId, Array.isArray(list) ? list : []))
-            })
-            .catch(() => {})
-        }
+        next.add(nodeId)
       }
       return next
     })
-  }, [semanticGroupSchemas])
+  }, [])
 
   // ── SpaceId 同步 ──
   useEffect(() => {
@@ -516,7 +509,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
   return (
     <div className="h-full w-full" style={{ background: 'transparent' }}>
-      <div className="h-full w-full flex" style={{ background: 'transparent' }}>
+      <div className="h-full w-full flex">
         {!hideSidebar && (
           <ConverList
             ref={converListRef}
@@ -615,8 +608,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onToggleDeepThink={() => setDeepThinkEnabled(!deepThinkEnabled)}
                 onToggleUploadFile={() => setUploadFileEnabled(!uploadFileEnabled)}
                 spaceId={currentSpaceId}
-                semanticGroups={semanticGroups}
-                semanticGroupSchemas={semanticGroupSchemas}
+                semanticTree={semanticTree}
                 selectedData={selectedData}
                 onSelectData={setSelectedData}
                 selectedExcel={selectedExcel}

@@ -4,7 +4,9 @@ import { Dropdown, Empty, Popconfirm, Select, Spin, Splitter, Switch, Typography
 import type { TableProps } from 'antd';
 
 import { Group } from '@/components/stateful/group/Group';
-import type { GroupProps } from '@/components/stateful/group/Group';
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import type { GroupHandle, GroupProps } from '@/components/stateful/group/Group';
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 import { ViewControls } from '@/components/ViewControls';
@@ -12,6 +14,7 @@ import type { ColumnOption } from '@/components/ViewControls';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { fetchAppListApi, deleteAppApi, updateAppApi } from '@/service/api/abi-chat-app';
+import { filterByCreateTime } from '@/utils/date';
 
 import AssistantEditDrawer, { type AgentMock } from './modules/assistant-edit-drawer';
 
@@ -78,6 +81,8 @@ export function Component() {
   const [editingAgent, setEditingAgent] = useState<AgentCard | null>(null);
   const [selectedId, setSelectedId] = useState<string | number>(1);
   const [groupId, setGroupId] = useState<string>('');
+  const groupRef = useRef<GroupHandle>(null);
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null);
   const [agents, setAgents] = useState<AgentCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
@@ -102,13 +107,14 @@ export function Component() {
     setViewMode(mode);
   };
 
-  /** 拉取助手列表 */
-  async function fetchList() {
+  /** 拉取助手列表（searchName 未传时使用当前搜索关键字） */
+  async function fetchList(searchName?: string) {
     setLoading(true);
     try {
+      const name = (searchName ?? keyword).trim();
       const res: any = await fetchAppListApi({
+        appName: name || undefined,
         spaceId: spaceId || undefined,
-        appName: keyword.trim() || undefined,
         groupId: groupId && groupId !== '0' ? groupId : undefined,
       });
       const list = res?.data?.rows || res?.data || [];
@@ -126,6 +132,7 @@ export function Component() {
     fetchList();
   }, [spaceId, groupId]);
 
+  /** 查询：由 SearchFilterBar 停止输入 1s 防抖 / 回车 / 面板查询按钮触发，走后端接口 */
   const handleSearch = () => {
     setCurrentPage(1);
     fetchList();
@@ -135,8 +142,7 @@ export function Component() {
     setKeyword('');
     setDateRange(null);
     setCurrentPage(1);
-    // 重置后重新拉取（keyword 已清空，但 setState 异步，直接调用则传空）
-    fetchList();
+    fetchList('');
   };
 
   // v5 pagination state
@@ -144,17 +150,18 @@ export function Component() {
   const [pageSize, setPageSize] = useState(10);
   const [jumpValue, setJumpValue] = useState('');
 
-  // 筛选条件变化时重置到第一页
+  // 筛选条件变化时重置到第一页（关键字改为后端查询，随 agents 变化联动）
   useEffect(() => {
     setCurrentPage(1);
-  }, [agents]);
+  }, [agents, dateRange]);
 
-  const totalCount = agents.length;
+  const filteredAgents = useMemo(() => filterByCreateTime(agents, dateRange, 'createTime'), [agents, dateRange]);
+  const totalCount = filteredAgents.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const pagedList = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return agents.slice(start, start + pageSize);
-  }, [agents, currentPage, pageSize]);
+    return filteredAgents.slice(start, start + pageSize);
+  }, [filteredAgents, currentPage, pageSize]);
 
   // 表格列定义
   const allTableColumns: TableProps<AgentCard>['columns'] = [
@@ -474,42 +481,36 @@ export function Component() {
         {/* v5 Tree Panel — left sidebar */}
         <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
           <div className="abi-group-sidebar" style={{ height: '100%' }}>
-            <Group config={ASSISTANT_GROUP_CONFIG} onGroupId={setGroupId} />
+            <Group ref={groupRef} config={ASSISTANT_GROUP_CONFIG} onGroupId={setGroupId} onGroupsChange={setHasGroups} />
           </div>
         </Splitter.Panel>
 
         {/* Right content area */}
         <Splitter.Panel>
+          <GroupContentGate hasGroups={hasGroups} onCreateGroup={() => groupRef.current?.openAddModal()}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
         {/* v5 Searchbar */}
         <section className="abi-searchbar">
-          <div className="abi-search-row">
-            <AInput
-              allowClear
-              placeholder="请输入助手名称"
-              prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-              value={keyword}
-              onChange={e => setKeyword(e.target.value)}
-              onPressEnter={handleSearch}
-              className="abi-field-input"
-              style={{ width: '220px' }}
-            />
-            <ADatePicker.RangePicker
-              showTime={{ format: 'HH:mm:ss' }}
-              format="YYYY-MM-DD HH:mm:ss"
-              placeholder={['开始时间', '结束时间']}
-              value={dateRange}
-              onChange={(dates) => setDateRange(dates)}
-              className="abi-field-input"
-              style={{ width: '380px' }}
-            />
-            <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-              <SearchOutlined /> 查询
-            </AButton>
-            <AButton className="btn-ghost-v5" onClick={handleReset}>
-              <ReloadOutlined /> 重置
-            </AButton>
-          </div>
+          <SearchFilterBar
+            searchPlaceholder="请输入助手名称"
+            searchValue={keyword}
+            onQuery={handleSearch}
+            onReset={handleReset}
+            onSearchChange={setKeyword}
+            filters={
+              <SearchFilterField label="时间范围">
+                <DeferredRangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates)}
+                />
+              </SearchFilterField>
+            }
+          />
         </section>
 
         {/* v5 Data Area */}
@@ -536,8 +537,8 @@ export function Component() {
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
             <Spin spinning={loading}>
             {agents.length === 0 && !loading ? (
-              <div style={{ marginTop: 80 }}>
-                <Empty description="暂无助手" />
+              <div className="abi-card-empty">
+                <Empty description="暂无助手" image={Empty.PRESENTED_IMAGE_SIMPLE} />
               </div>
             ) : viewMode === 'list' ? (
               <div style={{
@@ -555,6 +556,7 @@ export function Component() {
                     columns={tableColumns as any}
                     dataSource={pagedList}
                     pagination={false}
+                    locale={{ emptyText: <TableEmpty description="暂无助手" /> }}
                     size="middle"
                     className="assistant-table abi-std-table"
                     scroll={pagedList.length > 0 ? { x: 'max-content' } : undefined}
@@ -604,6 +606,7 @@ export function Component() {
           </div>
         </section>
           </div>
+          </GroupContentGate>
         </Splitter.Panel>
       </Splitter>
 

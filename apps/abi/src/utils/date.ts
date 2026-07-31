@@ -1,3 +1,73 @@
+import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
+
+type DateRange = [Dayjs | null, Dayjs | null] | null | undefined;
+
+/**
+ * 按创建时间前端过滤列表数据。
+ * - dateRange 为空或行缺少时间字段时放行
+ * - 命中区间 [start.startOf('day'), end.endOf('day')] 保留
+ */
+export function filterByCreateTime<T = any>(
+  rows: T[],
+  dateRange: DateRange,
+  field = 'createTime'
+): T[] {
+  if (!Array.isArray(rows)) return rows;
+  const start = dateRange?.[0];
+  const end = dateRange?.[1];
+  if (!start || !end) return rows;
+  const startMs = start.startOf('day').valueOf();
+  const endMs = end.endOf('day').valueOf();
+  return rows.filter((row: any) => {
+    const raw = row?.[field];
+    if (!raw) return true;
+    const ts = dayjs(raw).valueOf();
+    if (Number.isNaN(ts)) return true;
+    return ts >= startMs && ts <= endMs;
+  });
+}
+
+/**
+ * 树表按创建时间递归过滤：节点自身或任一子孙命中即保留，保持父子层级。
+ */
+export function filterTreeByCreateTime<T = any>(
+  rows: T[],
+  dateRange: DateRange,
+  field = 'createTime',
+  childrenKey = 'children'
+): T[] {
+  if (!Array.isArray(rows)) return rows;
+  const start = dateRange?.[0];
+  const end = dateRange?.[1];
+  if (!start || !end) return rows;
+  const startMs = start.startOf('day').valueOf();
+  const endMs = end.endOf('day').valueOf();
+
+  const hit = (raw: any) => {
+    if (!raw) return false;
+    const ts = dayjs(raw).valueOf();
+    if (Number.isNaN(ts)) return false;
+    return ts >= startMs && ts <= endMs;
+  };
+
+  const walk = (list: any[]): any[] => {
+    const result: any[] = [];
+    for (const node of list) {
+      const children = Array.isArray(node?.[childrenKey]) ? node[childrenKey] : [];
+      const filteredChildren = children.length ? walk(children) : [];
+      if (hit(node?.[field]) || filteredChildren.length > 0) {
+        result.push(
+          children.length ? { ...node, [childrenKey]: filteredChildren } : node
+        );
+      }
+    }
+    return result;
+  };
+
+  return walk(rows) as T[];
+}
+
 export function formattedDate() {
   const currentTime = new Date();
   const year = currentTime.getFullYear();

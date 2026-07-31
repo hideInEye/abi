@@ -1,4 +1,4 @@
-import { ApiOutlined, AudioOutlined, BulbOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, SearchOutlined, SendOutlined, StopOutlined, ThunderboltOutlined, DatabaseOutlined, EditOutlined, ToolOutlined } from '@ant-design/icons';
+import { ApiOutlined, AudioOutlined, BulbOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, RightOutlined, SearchOutlined, SendOutlined, StopOutlined, ThunderboltOutlined, DatabaseOutlined, EditOutlined, ToolOutlined } from '@ant-design/icons';
 import { Dropdown, Input, message, Popover } from 'antd';
 import type { MenuProps } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -41,14 +41,13 @@ interface ChatInputProps {
   setSelectedExcel?: (file: any) => void;
   selectedExcel?: any;
   spaceId?: number;
-  // 数据语义 props
-  semanticGroups?: any[];
-  semanticGroupSchemas?: Map<string, any[]>;
+  // 数据语义 props（统一节点树：type=group/schema，递归 children）
+  semanticTree?: any[];
   selectedData?: SemanticSelectedData | null;
   onSelectData?: (data: SemanticSelectedData) => void;
   semLoading?: boolean;
   expandedSemGroups?: Set<string>;
-  onToggleSemGroup?: (groupId: string) => void;
+  onToggleSemGroup?: (nodeId: string) => void;
   // 外部控制输入值
   externalValue?: string;
   onExternalValueConsumed?: () => void;
@@ -59,8 +58,9 @@ interface ChatInputProps {
 const ChatInput: React.FC<ChatInputProps> = React.memo(
   ({ loading, onSend, onStop, deepThinkEnabled, uploadFileEnabled, setSelectedExcel, selectedExcel, conv, ensureConv, onToggleDeepThink, onToggleUploadFile,
     spaceId,
-    semanticGroups = [], semanticGroupSchemas, selectedData, onSelectData, semLoading, expandedSemGroups, onToggleSemGroup,
-    externalValue, onExternalValueConsumed, selectedModeKey, onModeChange
+      selectedModeKey, onModeChange,
+    semanticTree = [], selectedData, onSelectData, semLoading, expandedSemGroups, onToggleSemGroup,
+    externalValue, onExternalValueConsumed
   }) => {
     const [value, setValue] = useState('');
     const isComposingRef = useRef(false);
@@ -284,45 +284,58 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       { key: 'report', icon: <FileTextOutlined />, label: '报告', onClick: () => selectMode('report') },
     ];
 
-    /** 数据语义 Popover 内容 */
+    /** 递归渲染语义节点：文件夹（开/合）/ 空分组（灰、不可展开）/ 叶子（可选中） */
+    const renderSemNode = (node: any, depth: number): React.ReactNode => {
+      const indent = { paddingLeft: 8 + depth * 16 };
+      // 叶子：数据语义，唯一可选中的节点
+      if (node.type === 'schema') {
+        const isSel = selectedData?.schemaId === node.schemaId;
+        return (
+          <div key={node.id} className={`sem-leaf ${isSel ? 'selected' : ''}`} style={indent} title={node.techName || node.name}
+            onClick={() => { onSelectData?.({ name: node.name, schemaId: node.schemaId, groupName: node.groupName }); setSemDropdownOpen(false); }}
+          >
+            <FileTextOutlined className="sem-leaf-icon" />
+            <span className="sem-leaf-name">{node.name}</span>
+          </div>
+        );
+      }
+      // 分组：不可选中，按有无子节点分为可展开文件夹 / 灰色空分组
+      const children = Array.isArray(node.children) ? node.children : [];
+      const hasChildren = children.length > 0;
+      if (!hasChildren) {
+        return (
+          <div key={node.id} className="sem-group-node is-empty" style={indent}>
+            <FolderOutlined className="sem-group-icon sem-group-icon--empty" />
+            <span className="sem-group-name">{node.name}</span>
+          </div>
+        );
+      }
+      const isExpanded = expandedSemGroups?.has(node.id);
+      const childCount = typeof node.count === 'number' ? node.count : children.length;
+      return (
+        <div key={node.id} className="sem-group">
+          <div className="sem-group-node" style={indent} onClick={() => onToggleSemGroup?.(node.id)}>
+            {isExpanded
+              ? <FolderOpenOutlined className="sem-group-icon" />
+              : <FolderOutlined className="sem-group-icon" />}
+            <span className="sem-group-name">{node.name}</span>
+            {childCount > 0 && <span className="sem-group-count">{childCount}</span>}
+            <span className={`sem-group-chevron ${isExpanded ? 'open' : ''}`}><RightOutlined /></span>
+          </div>
+          {isExpanded && children.map((child: any) => renderSemNode(child, depth + 1))}
+        </div>
+      );
+    };
+
+    /** 数据语义 Popover 内容（分组文件夹 / 数据语义文件的层级结构） */
     const semanticPopoverContent = (
-      <div style={{ width: 260, maxHeight: 360, overflowY: 'auto' }}>
+      <div className="sem-tree" style={{ width: 260, maxHeight: 360, overflowY: 'auto', padding: '6px 8px' }}>
         {semLoading ? (
           <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>加载中...</div>
-        ) : semanticGroups.length === 0 ? (
+        ) : semanticTree.length === 0 ? (
           <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>暂无数据语义</div>
         ) : (
-          semanticGroups.map((g: any) => {
-            const gid = g.groupId;
-            const isExpanded = expandedSemGroups?.has(gid);
-            const schemas = semanticGroupSchemas?.get(gid) || [];
-            return (
-              <div key={gid}>
-                <div
-                  style={{ padding: '9px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6 }}
-                  onClick={() => onToggleSemGroup?.(gid)}
-                >
-                  <DownOutlined style={{ fontSize: 9, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', color: 'var(--ink-3)' }} />
-                  <span style={{ fontWeight: 600, flex: 1 }}>{g.groupName}</span>
-                  <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{schemas.length > 0 ? schemas.length : ''}</span>
-                </div>
-                {isExpanded && (
-                  schemas.length === 0 ? (
-                    <div style={{ padding: '8px 12px 8px 28px', fontSize: 12, color: 'var(--ink-3)' }}>暂无表数据</div>
-                  ) : (
-                    schemas.map((s: any) => (
-                      <div key={s.schemaId} className="sem-option" style={{ padding: '7px 12px 7px 28px', fontSize: 12.5, cursor: 'pointer' }}
-                        onClick={() => { onSelectData?.({ name: s.bizName, schemaId: s.schemaId, groupName: g.groupName }); setSemDropdownOpen(false); }}
-                      >
-                        <div style={{ fontWeight: 500 }}>{s.bizName}</div>
-                        {s.techName && <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{s.techName}</div>}
-                      </div>
-                    ))
-                  )
-                )}
-              </div>
-            );
-          })
+          semanticTree.map((node: any) => renderSemNode(node, 0))
         )}
       </div>
     );
@@ -510,7 +523,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           </Dropdown>
 
           {/* 数据选择 Popover */}
-          <Popover content={semanticPopoverContent} trigger="click" placement="topLeft" open={semDropdownOpen} onOpenChange={setSemDropdownOpen}>
+          <Popover content={semanticPopoverContent} trigger="click" placement="topLeft" arrow={false} open={semDropdownOpen} onOpenChange={setSemDropdownOpen}>
             <button type="button" className={`input-label-btn ${semDropdownOpen ? 'active' : ''}`} title="选择数据">
               <DatabaseOutlined style={{ fontSize: 14 }} />
               <span style={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

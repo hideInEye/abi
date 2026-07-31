@@ -1,8 +1,9 @@
-import type { RefObject } from 'react'
+import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Checkbox } from 'antd'
 
 import AiEle from '../AiEle'
+import AnalysisForecastClarify from './AnalysisForecastClarify'
 import CheckboxWrapCom from '../CheckboxWrapCom'
 import HumanEle from '../HumanEle'
 import MessageNavRail from './MessageNavRail'
@@ -57,9 +58,9 @@ type MessageListProps = {
   isDone?: boolean
   isGettingData?: boolean
   checkAll?: boolean
-  setSharingList?: (value: any[]) => void
+  setSharingList?: Dispatch<SetStateAction<any[]>>
   setIsStorage?: (value: boolean) => void
-  setConvContent?: (value: any) => void
+  setConvContent?: Dispatch<SetStateAction<any[]>>
   getAnswer: (data: any) => void
   getRecommend: (data: any) => void
   getQueryRewrite: (data: any) => void
@@ -281,13 +282,14 @@ const MessageList = ({
     key: string | number,
     isLast = false,
     versionInfo?: { activeIndex: number; total: number; onChange: (i: number) => void },
+    shareOrder?: number,
   ) => {
     if (item.role === 'human') {
       const anchorId = `human-msg-${item.order}`
       const content = <HumanEle data={item} id={anchorId} onDelete={onEnterDeleteMode} onEditSubmit={onEditMessage} />
       if (mode === 'share') return <HumanEle key={key} data={item} id={anchorId} />
       return (
-        <CheckboxWrapCom key={key} convContent={convContent} checkAll={checkAll} setSharingList={setSharingList!} isSharing={isSharing} data={item}>
+        <CheckboxWrapCom key={key} convContent={convContent} checkAll={checkAll} sharingList={sharingList} setSharingList={setSharingList!} isSharing={isSharing} data={item}>
           {content}
         </CheckboxWrapCom>
       )
@@ -345,11 +347,12 @@ const MessageList = ({
           conv={conv}
           isDone={isDone}
           isGettingData={isGettingData}
-          setConvContent={setConvContent}
+          setConvContent={setConvContent!}
           onDelete={onEnterDeleteMode}
           onRegenerate={onRegenerate}
           isLast={isLast}
           versionInfo={versionInfo}
+          shareOrder={shareOrder}
           onMessageUpdate={() => {}}
         />
       )
@@ -357,6 +360,26 @@ const MessageList = ({
 
     if (item.role === 'first') {
       return <OpeningsEle key={key} data={item} getAnswer={getAnswer} />
+    }
+
+    // 归因/预测拼句模板：独立一条消息（像意图澄清），发送或关闭后从会话中移除，不入历史
+    if (item.role === 'analysis_clarify') {
+      if (mode === 'share') return null
+      const removeSelf = () => setConvContent?.((state: any[]) =>
+        state.filter((it: any) => !(it?.role === 'analysis_clarify' && it?.order === item.order)))
+      return (
+        <AnalysisForecastClarify
+          key={key}
+          mode={item.context?.mode}
+          metrics={item.context?.metrics || []}
+          dimensions={item.context?.dimensions || []}
+          onSend={(question: string) => {
+            removeSelf()
+            getAnswer({ question, _meta: item._meta })
+          }}
+          onClose={removeSelf}
+        />
+      )
     }
 
     return null
@@ -369,10 +392,13 @@ const MessageList = ({
       isLast?: boolean
       groupRounds?: number[]
       versionInfo?: { activeIndex: number; total: number; onChange: (i: number) => void }
+      /* 分享预选用的轮次：多版本合并块中复选框挂在 v0 的 human 上，需用其 order */
+      shareOrder?: number
     },
   ) => {
     const isLast = opts?.isLast ?? false
     const versionInfo = opts?.versionInfo
+    const shareOrder = opts?.shareOrder
     const flatGroup = group.flat()
     const groupKey = flatGroup[0]?.order ?? flatGroup[0]?.id ?? index
     // 当前轮次（仅取数字 roundIndex/order，用于批量删除选择）
@@ -526,7 +552,7 @@ const MessageList = ({
                     </span>
                   </div>
                 )}
-                {section.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`, isLast, versionInfo))}
+                {section.map((item: any, itemIndex: number) => renderItem(item, `body-${groupKey}-${itemIndex}`, isLast, versionInfo, shareOrder))}
               </div>
             )
             return (
@@ -573,9 +599,12 @@ const MessageList = ({
     const humanSections = entry.versions[0].filter(isHumanSection)
     const bodySections = entry.versions[activeIndex].filter((s: any[]) => !isHumanSection(s))
     const displayGroup = [...humanSections, ...bodySections]
+    // 分享预选需对齐复选框所在的 v0 human 轮次（当前版本的 order 与其不同）
+    const shareOrder = humanSections.flat().find((it: any) => it?.role === 'human')?.order
     return renderGroup(displayGroup, index, {
       isLast,
       groupRounds,
+      shareOrder,
       versionInfo: {
         activeIndex,
         total,

@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import EmailTitle from './email-title';
 import { validateMultiEmails } from '../../../../utils';
 import DailyTime from './daily-time';
+import styles from './index.module.css';
 
 const ShareEmailSetting = ({ form }: { form: FormInstance }) => {
   const separator = Form.useWatch('type', form);
@@ -105,8 +106,8 @@ export default ShareEmailSetting;
 export function EmailContent(props: any) {
   return (
     <>
-      <EditorQuill {...props} />
-      <a className="text-xs text-blue-500 cursor-pointer" href="https://192.168.1.195/chat-proxy/api/v2/serve/file/files/pdffile/e2f1d322-8548-42f4-921c-03e60434a7e4">
+      <EditorQuill {...props} className={styles.emailEditor} />
+      <a className={`${styles.previewLink} text-xs text-blue-500 cursor-pointer`} href="https://192.168.1.195/chat-proxy/api/v2/serve/file/files/pdffile/e2f1d322-8548-42f4-921c-03e60434a7e4">
         预览报告示例
       </a>
     </>

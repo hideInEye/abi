@@ -232,18 +232,21 @@ export function fetchSessionDetail(params: { sessionId: string | number }) {
   })
 }
 
-// 更新会话
+// 更新会话（支持 title / sortOrder 置顶排序等字段）
 export function updateApp(data: any): Promise<any> {
   const sessionId = data.sessionId ?? data.chat_id ?? data.session_id
+  const payload: Record<string, any> = {
+    sessionId,
+    title: data.title ?? data.biz_name,
+    spaceId: data.spaceId ?? data.space_id ?? getSpaceId(),
+    userId: data.userId ?? getCurrentUserId(),
+  }
+  // sortOrder 用于置顶排序（与分组一致），仅在传入时携带，避免覆盖成默认值
+  if (data.sortOrder !== undefined) payload.sortOrder = data.sortOrder
   return request({
     url: "/abi-chat/v1/app/session/update",
     method: "post",
-    data: {
-      sessionId,
-      title: data.title ?? data.biz_name,
-      spaceId: data.spaceId ?? data.space_id ?? getSpaceId(),
-      userId: data.userId ?? getCurrentUserId(),
-    },
+    data: payload,
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
   })
 }

@@ -43,7 +43,7 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
     labelRequestSequence.current += 1
     const requestId = labelRequestSequence.current
     try {
-      const { data } = await queryOntologyLabels({ spaceId, type: 'RECOMMENDED' })
+      const { data } = await queryOntologyLabels({ spaceId, type: 'RECOMMENDED',moduleType:"INDICATOR" })
       if (requestId === labelRequestSequence.current) setLabels(data ?? [])
     } catch {
       if (requestId === labelRequestSequence.current) message.error('标签类型加载失败，请稍后重试')
@@ -93,8 +93,12 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
   }, [loadEntities, loadLabels])
 
   const setPage = useCallback((pageNum: number, pageSize?: number): void => {
-    entityRequestSequence.current += 1
-    setPagination((current) => ({ ...current, pageNum, pageSize: pageSize ?? current.pageSize }))
+    setPagination((current) => {
+      const nextPageSize = pageSize ?? current.pageSize
+      if (current.pageNum === pageNum && current.pageSize === nextPageSize) return current
+      entityRequestSequence.current += 1
+      return { ...current, pageNum, pageSize: nextPageSize }
+    })
   }, [])
 
   const resetSearch = useCallback((): void => {
@@ -106,6 +110,7 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
   const updateSearchValues = useCallback((values: EntitySearchValues): void => {
     entityRequestSequence.current += 1
     setSearchValues(values)
+    setPagination((current) => (current.pageNum === 1 ? current : { ...current, pageNum: 1 }))
   }, [])
 
   const saveEntity = useCallback(

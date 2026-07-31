@@ -1,9 +1,10 @@
-import { DeleteOutlined, LeftOutlined, PlusOutlined, ReloadOutlined, RightOutlined, SafetyOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, LeftOutlined, PlusOutlined, RightOutlined, SafetyOutlined } from '@ant-design/icons';
 import { message } from 'antd';
 
 import { getSpaceInfo, updateSpaceInfo } from '@/service/api';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 
 import { PermissionManagement } from './modules/PermissionManagement';
 import { DeptSelector } from './modules/dept';
@@ -26,6 +27,7 @@ export function Component() {
   const [defaultUserRoles, setDefaultUserRoles] = useState<any[]>([]);
   const [spaceInfo, setSpaceInfo] = useState<any>({});
   const [searchValue, setSearchValue] = useState('');
+  const [otypeValue, setOtypeValue] = useState<string | undefined>(undefined);
 
   const {
     columnChecks,
@@ -278,6 +280,7 @@ export function Component() {
 
   const handleReset = () => {
     setSearchValue('');
+    setOtypeValue(undefined);
     updateSearchParams({
       pageNum: 1,
       oname: undefined,
@@ -287,16 +290,25 @@ export function Component() {
   const pagination = tableProps.pagination as any;
   const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1;
   const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10;
-  const totalCount = pagination?.total || 0;
-  const totalPages = Math.ceil(totalCount / pageSizeVal) || 1;
   const [jumpValue, setJumpValue] = useState('');
+
+  // 成员类型前端过滤（otype==1 为用户，其余为部门）
+  const filteredDataSource = useMemo(() => {
+    const list = (tableProps.dataSource as any[]) || [];
+    if (!otypeValue) return list;
+    return list.filter((u: any) =>
+      otypeValue === '1' ? String(u.otype) === '1' : String(u.otype) !== '1'
+    );
+  }, [tableProps.dataSource, otypeValue]);
+
+  const totalCount = filteredDataSource.length;
+  const totalPages = Math.ceil(totalCount / pageSizeVal) || 1;
 
   // 前端分页：apiFn 一次性返回全部成员，这里按当前页/每页条数进行切片展示
   const pagedDataSource = useMemo(() => {
-    const list = (tableProps.dataSource as any[]) || [];
     const start = (currentPage - 1) * pageSizeVal;
-    return list.slice(start, start + pageSizeVal);
-  }, [tableProps.dataSource, currentPage, pageSizeVal]);
+    return filteredDataSource.slice(start, start + pageSizeVal);
+  }, [filteredDataSource, currentPage, pageSizeVal]);
 
   const handlePageSizeChange = (value: number) => {
     pagination?.onChange?.(1, value);
@@ -350,24 +362,29 @@ export function Component() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder="请输入成员名称"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onPressEnter={handleSearch}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleReset}>
-            <ReloadOutlined /> 重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入成员名称"
+          searchValue={searchValue}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={setSearchValue}
+          filters={
+            <SearchFilterField label="成员类型">
+              <ASelect
+                allowClear
+                className="abi-field-input"
+                getPopupContainer={getFilterPopupContainer}
+                placeholder="请选择成员类型"
+                value={otypeValue}
+                onChange={(val) => { setOtypeValue(val); updateSearchParams({ pageNum: 1 } as any); }}
+                options={[
+                  { label: '用户', value: '1' },
+                  { label: '部门', value: '2' }
+                ]}
+              />
+            </SearchFilterField>
+          }
+        />
       </section>
 
       {/* Data Area */}

@@ -83,4 +83,48 @@ describe('buildGroupTree', () => {
 
     expect(tree.map(n => n.groupId)).toEqual(['folder-a', 'folder-b', 'leaf-a', 'leaf-b']);
   });
+
+  it('does not duplicate normal children as roots when parent exists', () => {
+    const tree = buildGroupTree([
+      { groupId: '1', groupName: '根组', parentId: '0', sortOrder: 1 },
+      { groupId: '2', groupName: '子组', parentId: '1', sortOrder: 1 }
+    ]);
+
+    expect(tree.map(n => n.groupId)).toEqual(['1']);
+    expect(tree[0].children?.map((n: any) => n.groupId)).toEqual(['2']);
+  });
+
+  it('promotes detached nodes (dirty data) to root level instead of dropping them', () => {
+    const tree = buildGroupTree([
+      { groupId: '1', groupName: '根组', parentId: '0', sortOrder: 1 },
+      { groupId: '2', groupName: '游离组', parentId: 'deleted-parent', sortOrder: 2 }
+    ]);
+
+    expect(tree.map(n => n.groupId)).toEqual(['1', '2']);
+  });
+
+  it('keeps detached subtree structure when promoting to root', () => {
+    const tree = buildGroupTree([
+      { groupId: '1', groupName: '根组', parentId: '0', sortOrder: 1 },
+      { groupId: 'detached', groupName: '游离父', parentId: 'deleted-parent', sortOrder: 2 },
+      { groupId: 'detached-child', groupName: '游离子', parentId: 'detached', sortOrder: 1 }
+    ]);
+
+    expect(tree.map(n => n.groupId)).toEqual(['1', 'detached']);
+    expect(tree[1].children?.map((n: any) => n.groupId)).toEqual(['detached-child']);
+  });
+
+  it('sorts promoted detached nodes together with normal roots by folderFirst rule', () => {
+    const tree = buildGroupTree(
+      [
+        { groupId: 'leaf-root', groupName: '根叶子', parentId: '0', sortOrder: 1 },
+        { groupId: 'detached-folder', groupName: '游离文件夹', parentId: 'deleted-parent', sortOrder: 9 },
+        { groupId: 'detached-child', groupName: '游离子', parentId: 'detached-folder', sortOrder: 1 }
+      ],
+      '0',
+      true
+    );
+
+    expect(tree.map(n => n.groupId)).toEqual(['detached-folder', 'leaf-root']);
+  });
 });

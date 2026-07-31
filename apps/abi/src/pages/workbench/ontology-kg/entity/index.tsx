@@ -59,9 +59,8 @@ export const Component: React.FC = () => {
   const handleSearch = useCallback(
     (values: EntitySearchValues): void => {
       setSearchValues(values)
-      setPage(1)
     },
-    [setPage, setSearchValues],
+    [setSearchValues],
   )
   const handleDelete = useCallback(
     (id: OntologyEntity['id']): void => {

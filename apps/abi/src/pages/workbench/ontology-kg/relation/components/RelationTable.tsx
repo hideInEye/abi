@@ -135,13 +135,14 @@ export const RelationTable: React.FC<RelationTableProps> = ({
           loading={loading}
           rowKey={record => record.id}
           title={record => formatDisplayValue(record.relation)}
-          titleExtra={record => <span className="abi-db-tag tag-default">{formatBoolean(record.inverseFlag)}</span>}
+          titleExtra={record => formatBoolean(record.inverseFlag)}
         />
       ) : (
         <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', flex: 1, minHeight: 0, overflow: 'hidden', width: '100%' }}>
           <div className="assistant-table-scroll" style={{ maxHeight: '100%', overflow: 'auto' }}>
             <Table<OntologyRelation>
               className="abi-std-table relation-table"
+              locale={{ emptyText: <TableEmpty description="暂无关系" /> }}
               columns={tableColumns}
               dataSource={relations}
               loading={loading}

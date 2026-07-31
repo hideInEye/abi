@@ -69,7 +69,7 @@ export function OntologyCardList<T>({
                     {normalizeCardValue(titleNode)}
                   </span>
                 </div>
-                {extraNode ? <div>{extraNode}</div> : null}
+                {extraNode ? <span className="abi-db-tag tag-default">{extraNode}</span> : null}
               </div>
               <div className="abi-data-card-body">
                 {fields.map(field => {

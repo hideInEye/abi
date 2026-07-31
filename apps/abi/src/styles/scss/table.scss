@@ -175,6 +175,12 @@
   height: 100% !important;
 }
 
+// 列表视图无数据时：隐藏外层边框容器，空状态直接悬浮在页面背景上（与卡片视图空状态一致）
+div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
 .ant-table-wrapper:has(.ant-table-tbody > tr.ant-table-placeholder) {
   height: 100%;
 
@@ -189,6 +195,7 @@
   .ant-table-content,
   .ant-table-body {
     height: 100%;
+    background: transparent !important;
   }
 
   table {
@@ -197,18 +204,36 @@
 
   .ant-table-tbody {
     height: 100%;
-    background-color: #f6f7ff;
+    background-color: transparent;
   }
 
+  // antd 默认给 placeholder 行本身设置白色背景（colorBgContainer），必须一并清掉
   .ant-table-tbody > tr.ant-table-placeholder {
     height: 100%;
+    background: transparent !important;
+
+    &:hover > td {
+      background: transparent !important;
+    }
   }
 
   .ant-table-tbody > tr.ant-table-placeholder > td {
     height: 100%;
-    background-color: #f6f7ff !important;
+    background-color: transparent !important;
+    border-bottom: none !important;
     padding: 0 !important;
     vertical-align: middle;
+  }
+}
+
+// Spin 包裹下的卡片空状态（如助手编排、技能列表）：撑满父容器高度，保证垂直居中
+.ant-spin-nested-loading:has(> .ant-spin-container > .abi-card-empty) {
+  height: 100%;
+
+  > .ant-spin-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -676,6 +701,36 @@
   }
 }
 
+// 小号变体：用于卡片内紧凑场景
+.btn-accent-gradient--sm {
+  height: 26px !important;
+  padding: 3px 12px !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+}
+
+// 危险色变体：用于移除/取消操作
+.btn-accent-gradient--danger {
+  background: linear-gradient(135deg, #ef4444, #f87171) !important;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3) !important;
+
+  &:hover {
+    background: linear-gradient(135deg, #ef4444, #f87171) !important;
+    box-shadow: 0 4px 18px rgba(239, 68, 68, 0.4) !important;
+  }
+}
+
+// 灰色变体：用于已添加等已完成状态
+.btn-accent-gradient--added {
+  background: linear-gradient(135deg, #9ca3af, #b3bac4) !important;
+  box-shadow: 0 2px 8px rgba(156, 163, 175, 0.25) !important;
+
+  &:hover {
+    background: linear-gradient(135deg, #9ca3af, #b3bac4) !important;
+    box-shadow: 0 4px 14px rgba(156, 163, 175, 0.35) !important;
+  }
+}
+
 // ── Dropdown.Button v5 主色风格 ──
 .btn-accent-dropdown {
   &.ant-dropdown-button {
@@ -1028,6 +1083,15 @@
   align-items: center;
   gap: 12px;
   flex-wrap: nowrap;
+}
+
+// 当搜索输入框由 Form.Item 承载（inline 表单）时，强制其占满一行自适应，
+// 覆盖 antd `.ant-form-inline .ant-form-item` 默认不拉伸的行为。
+.abi-search-row > .ant-form-item {
+  flex: 1 1 0%;
+  min-width: 0;
+  margin-inline-end: 0;
+  margin-bottom: 0;
 }
 
 // ── 数据区域 v5 layout ──
@@ -1464,12 +1528,14 @@
 }
 
 // 卡片空状态
+// height:100% 兼容非 flex 父容器（如 overflow:auto 的滚动容器）；flex 容器中 flex:1（basis 0）优先，不受影响
 .abi-card-empty {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 200px;
+  height: 100%;
 }
 
 .abi-data-card {

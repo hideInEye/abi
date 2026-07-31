@@ -10,6 +10,8 @@ export interface ModelOption {
   key: string
   label: string
   desc: string
+  /** 是否为默认模型（1 为默认） */
+  isDefault?: number
 }
 
 interface ChatHeaderProps {
@@ -49,7 +51,12 @@ const ChatHeader = React.forwardRef<any, ChatHeaderProps>((props, ref) => {
       label: (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0', minWidth: 260 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontWeight: 600, fontSize: 13 }}>{model.label}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontWeight: 600, fontSize: 13 }}>{model.label}</span>
+              {model.isDefault === 1 && (
+                <span style={{ fontSize: 11, fontWeight: 500, color: '#5b7cf7', background: 'rgba(91, 124, 247, 0.10)', borderRadius: 999, padding: '1px 8px', lineHeight: '16px', whiteSpace: 'nowrap' }}>默认模型</span>
+              )}
+            </span>
             {model.desc && <span style={{ fontSize: 11, color: '#999', fontWeight: 400 }}>{model.desc}</span>}
           </div>
           {isSelected && (

@@ -109,18 +109,22 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     }
   }, [props.embedModelId])
 
-  // 进入分享模式：来自 AI 回答「...」菜单「分享对话」派发的信号
+  // 进入分享模式：来自 AI 回答「...」菜单「分享对话」派发的信号，默认勾选发起分享的当前轮次
   useEffect(() => {
     const chatId = conv?.chat_id
     const handler = (event: Event) => {
       const detail = (event as CustomEvent)?.detail
       if (detail?.chatId && String(detail.chatId) === String(chatId)) {
+        if (detail.order !== undefined && detail.order !== null) {
+          // 只预填 human 项，与手动勾选行为一致（避免同轮 view 项导致邮件分享 roundIndexs 重复）
+          setSharingList(convContent.filter((item: any) => item.role === 'human' && String(item.order) === String(detail.order)))
+        }
         setIsSharing(true)
       }
     }
     window.addEventListener('start-share-conversation', handler)
     return () => window.removeEventListener('start-share-conversation', handler)
-  }, [conv?.chat_id, setIsSharing])
+  }, [conv?.chat_id, convContent, setIsSharing, setSharingList])
 
   return (
     <div className="flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden" style={{ background: 'transparent' }}>
@@ -152,6 +156,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         isDone={doneStatus}
         isGettingData={isGettingData}
         checkAll={checkAll}
+        sharingList={sharingList}
         setSharingList={setSharingList}
         setIsStorage={controller.setIsStorage}
         setConvContent={setConvContent}

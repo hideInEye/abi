@@ -3,10 +3,12 @@ import { Dropdown, Empty, message } from 'antd';
 import { Suspense } from 'react';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { deleteCollection, fetchDataCollectionList } from '@/service/api';
+import { filterByCreateTime } from '@/utils/date';
 import { useRouter } from '~/packages/simple-router/src';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
@@ -70,7 +72,7 @@ export function Component() {
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [jumpValue, setJumpValue] = useState('');
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
 
   const { dataSourceList, getDatasourceList } = useDatasource();
@@ -193,16 +195,21 @@ export function Component() {
     [dataSourceList]
   );
 
-  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps, updateSearchParams, searchParams } = useTable({
+  const { columnChecks, data, run, searchProps, setColumnChecks, tableProps } = useTable({
     apiFn: fetchDataCollectionList,
     apiParams: {
       pageNum: 1,
-      pageSize: 10,
+      // 一次性拉取全部数据，前端做名称/时间筛选与分页
+      pageSize: 100000,
       spaceId,
-      viewName: searchValue
+      viewName: ''
     },
     columns
   } as any);
+
+  // 前端分页状态
+  const [fePage, setFePage] = useState(1);
+  const [fePageSize, setFePageSize] = useState(10);
 
   // Filter columns by visibility (always keep operate column)
   const filteredColumns = useMemo(() => {
@@ -243,28 +250,36 @@ export function Component() {
     }
   }
 
+  // 名称/时间筛选均在前端进行，点击查询/重置不再请求接口
   const handleSearch = () => {
-    const keyword = searchValue.trim();
-    updateSearchParams({
-      pageNum: 1,
-      viewName: keyword ? keyword : undefined
-    } as any);
+    setFePage(1);
   };
 
   const handleReset = () => {
     setSearchValue('');
     setDateRange(null);
-    updateSearchParams({ pageNum: 1, viewName: undefined } as any);
+    setFePage(1);
   };
 
-  const pagination = tableProps.pagination as any;
-  const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1;
-  const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10;
-  const totalCount = pagination?.total || 0;
+  const currentPage = fePage;
+  const pageSizeVal = fePageSize;
+  const filteredData = useMemo(() => {
+    const kw = searchValue.trim().toLowerCase();
+    let rows = (tableProps.dataSource as any[]) || [];
+    if (kw) rows = rows.filter((r: any) => String(r.viewName || '').toLowerCase().includes(kw));
+    return filterByCreateTime(rows, dateRange, 'createTime');
+  }, [tableProps.dataSource, searchValue, dateRange]);
+  const totalCount = filteredData.length;
   const totalPages = Math.ceil(totalCount / pageSizeVal) || 1;
+  const pagedData = useMemo(() => filteredData.slice((currentPage - 1) * pageSizeVal, currentPage * pageSizeVal), [filteredData, currentPage, pageSizeVal]);
+
+  // 筛选变化时回到第一页
+  useEffect(() => {
+    setFePage(1);
+  }, [searchValue, dateRange, tableProps.dataSource]);
 
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) pagination?.onChange?.(page, pageSizeVal);
+    if (page >= 1 && page <= totalPages) setFePage(page);
   };
   const handlePrev = () => { if (currentPage > 1) handlePageChange(currentPage - 1); };
   const handleNext = () => { if (currentPage < totalPages) handlePageChange(currentPage + 1); };
@@ -305,7 +320,7 @@ export function Component() {
   };
 
   // Card grid
-  const dataSource = tableProps.dataSource as any[] || [];
+  const dataSource = pagedData;
 
   const getDatasourceInfo = (record: any) => {
     try {
@@ -396,33 +411,26 @@ export function Component() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder="请输入数据集名称"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onPressEnter={handleSearch}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <ADatePicker.RangePicker
-            showTime={{ format: 'HH:mm:ss' }}
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder={['开始时间', '结束时间']}
-            value={dateRange}
-            onChange={(dates) => setDateRange(dates)}
-            className="abi-field-input"
-            style={{ width: '380px' }}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleReset}>
-            <ReloadOutlined /> 重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入数据集名称"
+          searchValue={searchValue}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={setSearchValue}
+          filters={
+            <SearchFilterField label="时间范围">
+              <DeferredRangePicker
+                allowClear
+                className="abi-field-input"
+                format="YYYY-MM-DD"
+                getPopupContainer={getFilterPopupContainer}
+                placeholder={['开始时间', '结束时间']}
+                value={dateRange}
+                onChange={(dates) => { setDateRange(dates); setFePage(1); }}
+              />
+            </SearchFilterField>
+          }
+        />
       </section>
 
       {/* Data Area */}
@@ -507,13 +515,14 @@ export function Component() {
             <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
               <ATable
                 columns={filteredColumns as any}
-                dataSource={tableProps.dataSource}
+                dataSource={pagedData}
                 loading={tableProps.loading}
                 pagination={false}
                 rowKey="viewId"
                 rowSelection={viewMode === 'list' ? rowSelection : undefined}
-                scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
+                scroll={pagedData.length > 0 ? { x: 'max-content' } : undefined}
                 size="middle"
+                locale={{ emptyText: <TableEmpty description="暂无数据集" /> }}
                 className="data-collection-table abi-std-table"
               />
             </div>
@@ -527,7 +536,7 @@ export function Component() {
           <div className="pagination-controls">
             <ASelect
               value={pageSizeVal}
-              onChange={(value: number) => pagination?.onChange?.(1, value)}
+              onChange={(value: number) => { setFePageSize(value); setFePage(1); }}
               options={[
                 { label: '10条/页', value: 10 },
                 { label: '15条/页', value: 15 },

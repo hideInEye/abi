@@ -6,6 +6,9 @@ import { deleteMcp, getMcpDetail, queryMcpList, registerMcp, updateMcp } from '@
 import type { PluginAddParams, PluginItem, PluginList, McpForm } from '@/types/plug';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import type { GroupHandle } from '@/components/stateful/group/Group.tsx';
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate.tsx';
 
 import { PlugUpdate } from './components/PlugUpdate.tsx';
 import { PluginDetail } from './components/PluginDetail.tsx';
@@ -21,6 +24,8 @@ export const Component: React.FC = () => {
   const groupIdRef = useRef(groupId);
   groupIdRef.current = groupId;
   const [groupName, setGroupName] = useState('');
+  const groupPanelRef = useRef<GroupHandle>(null);
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null);
   const [fetchKey, setFetchKey] = useState(0);
   const [dataSource, setDataSource] = useState<{
     code: number;
@@ -263,41 +268,36 @@ export const Component: React.FC = () => {
         {/* v5 Tree Panel — left sidebar */}
         <Splitter.Panel defaultSize={280} min={200} max={400} resizable>
           <div className="abi-group-sidebar" style={{ height: '100%' }}>
-            <PluginGroup onGroupId={(id, name) => { setGroupId(id); if (name) setGroupName(name); }} />
+            <PluginGroup ref={groupPanelRef} onGroupId={(id, name) => { setGroupId(id); if (name) setGroupName(name); }} onGroupsChange={setHasGroups} />
           </div>
         </Splitter.Panel>
 
         {/* Right content area */}
         <Splitter.Panel>
+          <GroupContentGate hasGroups={hasGroups} onCreateGroup={() => groupPanelRef.current?.openAddModal()}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             {/* Searchbar */}
             <section className="abi-searchbar">
-              <div className="abi-search-row">
-                <AInput
-                  allowClear
-                  placeholder="请输入MCP名称"
-                  prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-                  value={searchValue}
-                  onChange={e => handleSearch(e.target.value)}
-                  className="abi-field-input"
-                  style={{ width: '220px' }}
-                />
-                <ADatePicker.RangePicker
-                  showTime={{ format: 'HH:mm:ss' }}
-                  format="YYYY-MM-DD HH:mm:ss"
-                  placeholder={['开始时间', '结束时间']}
-                  value={dateRange}
-                  onChange={(dates) => setDateRange(dates)}
-                  className="abi-field-input"
-                  style={{ width: '380px' }}
-                />
-                <AButton type="primary" className="btn-accent-gradient" onClick={() => handleSearch(searchValue)}>
-                  <SearchOutlined /> 查询
-                </AButton>
-                <AButton className="btn-ghost-v5" onClick={() => { handleSearch(''); setDateRange(null); }}>
-                  <ReloadOutlined /> 重置
-                </AButton>
-              </div>
+              <SearchFilterBar
+                searchPlaceholder="请输入MCP名称"
+                searchValue={searchValue}
+                onQuery={() => handleSearch(searchValue)}
+                onReset={() => { handleSearch(''); setDateRange(null); }}
+                onSearchChange={handleSearch}
+                filters={
+                  <SearchFilterField label="时间范围">
+                    <ADatePicker.RangePicker
+                      allowClear
+                      className="abi-field-input"
+                      format="YYYY-MM-DD"
+                      getPopupContainer={getFilterPopupContainer}
+                      placeholder={['开始时间', '结束时间']}
+                      value={dateRange}
+                      onChange={(dates) => setDateRange(dates)}
+                    />
+                  </SearchFilterField>
+                }
+              />
             </section>
 
             {/* v5 Data Area */}
@@ -340,6 +340,7 @@ export const Component: React.FC = () => {
               />
             </section>
           </div>
+          </GroupContentGate>
         </Splitter.Panel>
       </Splitter>
 

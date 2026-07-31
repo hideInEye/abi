@@ -42,7 +42,8 @@ const initialSearchParams: KnowledgeSearchParams = {
 
 const initialPagination: KnowledgePagination = {
   pageNum: 1,
-  pageSize: 10,
+  // 一次性拉取全部数据，前端做时间筛选与分页
+  pageSize: 100000,
   total: 0
 }
 

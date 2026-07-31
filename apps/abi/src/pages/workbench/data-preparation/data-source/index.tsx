@@ -11,7 +11,17 @@ import {
   RightOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Empty, message } from "antd";
+import {
+  Button as AButton,
+  DatePicker as ADatePicker,
+  Dropdown,
+  Empty,
+  Input as AInput,
+  Popconfirm as APopconfirm,
+  Select as ASelect,
+  Table as ATable,
+  message,
+} from "antd";
 import { Suspense } from "react";
 
 import {
@@ -21,6 +31,8 @@ import {
   updateDataSource,
 } from "@/service/api";
 import MetadataAnalysisDrawer from "@/components/metadata-analysis/MetadataAnalysisDrawer";
+import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { filterByCreateTime } from '@/utils/date';
 import type { MetadataAnalysisContext } from "@/components/metadata-analysis/types";
 import { ViewControls } from "@/components/ViewControls";
 import type { ColumnOption } from "@/components/ViewControls";
@@ -77,7 +89,7 @@ const DataSourcePreviewDrawer = lazy(
 );
 
 // Column definitions for picker
-const ALL_COLUMNS: ColumnOption[] = [
+const DEFAULT_COLUMNS: ColumnOption[] = [
   { key: 'sourceName', label: '数据源名称', visible: true },
   { key: 'sourceType', label: '类型', visible: true },
   { key: 'createByName', label: '创建人', visible: true },
@@ -95,8 +107,8 @@ export function Component() {
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [jumpValue, setJumpValue] = useState('');
   const [dateRange, setDateRange] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
-  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(DEFAULT_COLUMNS);
   const [previewSourceId, setPreviewSourceId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -377,13 +389,9 @@ export function Component() {
 
   const handleSearch = () => {
     const keyword = searchValue.trim();
-    const startTime = dateRange?.[0]?.format ? dateRange[0].format('YYYY-MM-DD HH:mm:ss') : undefined;
-    const endTime = dateRange?.[1]?.format ? dateRange[1].format('YYYY-MM-DD HH:mm:ss') : undefined;
     updateSearchParams({
       pageNum: 1,
       sourceName: keyword ? keyword : undefined,
-      startTime,
-      endTime,
     } as any);
   };
 
@@ -393,16 +401,20 @@ export function Component() {
     updateSearchParams({
       pageNum: 1,
       sourceName: undefined,
-      startTime: undefined,
-      endTime: undefined,
     } as any);
   };
 
   const pagination = tableProps.pagination as any;
   const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1;
   const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10;
-  const totalCount = pagination?.total || 0;
+  // 前端按创建时间过滤 + 前端分页（useTable 返回全量数据）
+  const filteredData = useMemo(() => filterByCreateTime((data as any[]) || [], dateRange), [data, dateRange]);
+  const totalCount = filteredData.length;
   const totalPages = Math.ceil(totalCount / pageSizeVal) || 1;
+  const pagedData = useMemo(
+    () => filteredData.slice((currentPage - 1) * pageSizeVal, currentPage * pageSizeVal),
+    [filteredData, currentPage, pageSizeVal]
+  );
 
   const handlePageSizeChange = (value: number) => {
     pagination?.onChange?.(1, value);
@@ -467,7 +479,7 @@ export function Component() {
   };
 
   // Card grid render helper
-  const dataSource = tableProps.dataSource as any[] || [];
+  const dataSource = pagedData;
 
   const renderCardGrid = () => {
     if (dataSource.length === 0 && !tableProps.loading) {
@@ -570,33 +582,26 @@ export function Component() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Searchbar */}
       <section className="abi-searchbar">
-        <div className="abi-search-row">
-          <AInput
-            allowClear
-            placeholder="请输入数据源名称"
-            prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onPressEnter={handleSearch}
-            className="abi-field-input"
-            style={{ width: '220px' }}
-          />
-          <ADatePicker.RangePicker
-            showTime={{ format: 'HH:mm:ss' }}
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder={['开始时间', '结束时间']}
-            value={dateRange}
-            onChange={(dates) => setDateRange(dates)}
-            className="abi-field-input"
-            style={{ width: '380px' }}
-          />
-          <AButton type="primary" className="btn-accent-gradient" onClick={handleSearch}>
-            <SearchOutlined /> 查询
-          </AButton>
-          <AButton className="btn-ghost-v5" onClick={handleReset}>
-            <ReloadOutlined /> 重置
-          </AButton>
-        </div>
+        <SearchFilterBar
+          searchPlaceholder="请输入数据源名称"
+          searchValue={searchValue}
+          onQuery={handleSearch}
+          onReset={handleReset}
+          onSearchChange={setSearchValue}
+          filters={
+            <SearchFilterField label="时间范围">
+              <DeferredRangePicker
+                allowClear
+                className="abi-field-input"
+                format="YYYY-MM-DD"
+                getPopupContainer={getFilterPopupContainer}
+                placeholder={['开始时间', '结束时间']}
+                value={dateRange}
+                onChange={(dates) => { setDateRange(dates); updateSearchParams({ pageNum: 1 } as any); }}
+              />
+            </SearchFilterField>
+          }
+        />
       </section>
 
       {/* Data Area */}
@@ -638,13 +643,14 @@ export function Component() {
               <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
                 <ATable
                   columns={filteredColumns as any}
-                  dataSource={tableProps.dataSource}
+                  dataSource={pagedData}
                   loading={tableProps.loading}
                   pagination={false}
                   rowKey="sourceId"
                   rowSelection={viewMode === 'list' ? rowSelection : undefined}
-                  scroll={tableProps.dataSource?.length > 0 ? { x: 'max-content' } : undefined}
+                  scroll={pagedData?.length > 0 ? { x: 'max-content' } : undefined}
                   size="middle"
+                  locale={{ emptyText: <TableEmpty description="暂无数据源" /> }}
                   className="data-source-table abi-std-table"
                 />
               </div>

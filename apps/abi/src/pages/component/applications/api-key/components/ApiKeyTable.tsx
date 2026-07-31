@@ -242,23 +242,15 @@ export function ApiKeyTable({
           </div>
         </div>
       ) : (
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: '1px solid rgba(130,140,200,0.18)',
-          borderRadius: '12px',
-          background: '#F5F7FF',
-        }}>
-          <Empty description="暂无数据" />
+        <div className="abi-card-empty">
+          <Empty description="暂无APIKey" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         </div>
       )}
       </>
       ) : (
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
           {dataSource.length === 0 ? (
-            <div style={{ marginTop: 80, textAlign: 'center' }}><Empty description="暂无数据" /></div>
+            <div className="abi-card-empty"><Empty description="暂无APIKey" image={Empty.PRESENTED_IMAGE_SIMPLE} /></div>
           ) : (
             <div className="abi-card-grid">
               <div className="abi-card-grid-inner">

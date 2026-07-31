@@ -1,12 +1,13 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import { DeleteOutlined } from '@ant-design/icons'
 import { Popconfirm, Splitter } from 'antd'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
+import type { GroupHandle } from '@/components/stateful/group/Group.tsx'
 import { Group } from '@/components/stateful/group/Group.tsx'
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate.tsx'
 import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
-
 import { DimensionOperateDrawer } from './components/DimensionOperateDrawer'
 import { DimensionSearchBar } from './components/DimensionSearchBar'
 import { DimensionTable } from './components/DimensionTable'
@@ -31,6 +32,8 @@ interface Props {
 
 const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
   const [selectedGroup, setSelectedGroup] = useState<DimensionGroup | null>(null)
+  const groupRef = useRef<GroupHandle>(null)
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(DIMENSION_COLUMN_OPTIONS)
   const {
     closeDrawer,
@@ -90,11 +93,14 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
                 type: DIMENSION_GROUP_TYPE
               }}
               onGroupId={handleGroupChange}
+              onGroupsChange={setHasGroups}
+              ref={groupRef}
             />
           </div>
         </Splitter.Panel>
 
         <Splitter.Panel style={{ minWidth: 0, overflow: 'hidden' }}>
+          <GroupContentGate hasGroups={hasGroups} onCreateGroup={() => groupRef.current?.openAddModal()}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
             <DimensionSearchBar
               searchParams={searchParams}
@@ -143,6 +149,7 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
               />
             </section>
           </div>
+          </GroupContentGate>
         </Splitter.Panel>
       </Splitter>
 

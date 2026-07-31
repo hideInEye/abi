@@ -5,6 +5,8 @@ import type { ColumnsType } from 'antd/es/table'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Group } from '@/components/stateful/group/Group'
+import type { GroupHandle } from '@/components/stateful/group/Group'
+import { GroupContentGate } from '@/components/stateful/group/GroupContentGate'
 import { useAppSelector } from '@/hooks/business/useStore'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { OntologyEntity, OntologyEntityAttribute, OntologyLabel } from '@/pages/workbench/ontology-kg/shared-network-types'
@@ -100,6 +102,8 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
   const [selectedGroupId, setSelectedGroupId] = useState<string>()
   const [adding, setAdding] = useState(false)
   const addLock = useRef(false)
+  const groupPanelRef = useRef<GroupHandle>(null)
+  const [hasGroups, setHasGroups] = useState<boolean | null>(null)
   const { assets, clearAssets, loading: loadingAssets, loadAssets } = useAttributeAssets(spaceId)
   const { addAttributes, attributes, detailEntity, loadedDetail, loadingDetail, removeAttribute, saveAttributes, saving } = useEntityAttributeManagement(entity, open, spaceId)
 
@@ -116,6 +120,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
     (type: SupportedAttributeType): void => {
       setSelectedType(type)
       setSelectedGroupId(undefined)
+      setHasGroups(null)
       form.setFieldsValue({ assetCode: undefined })
       clearAssets()
     },
@@ -279,18 +284,20 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
           {currentConfig ? (
             <div style={{ display: 'flex', gap: 16, minHeight: 230 }}>
               <div className="abi-group-sidebar" style={{ flex: '0 0 250px', height: 230, overflow: 'auto' }}>
-                <Group key={GROUP_TYPE_BY_ATTRIBUTE[selectedType!]} config={currentConfig} onGroupId={handleGroupChange} />
+                <Group key={GROUP_TYPE_BY_ATTRIBUTE[selectedType!]} ref={groupPanelRef} config={currentConfig} onGroupId={handleGroupChange} onGroupsChange={setHasGroups} />
               </div>
               <div style={{ flex: 1 }}>
-                <Form.Item label="绑定资产" name="assetCode" rules={[{ message: '请选择绑定资产', required: true }]}>
-                  <Select disabled={!selectedGroupId} loading={loadingAssets} options={assetOptions} placeholder="请选择绑定整个分组或具体资产" />
-                </Form.Item>
-                <Form.Item label="备注" name="remark" rules={[{ max: 500, message: '备注最多500个字符' }]}>
-                  <Input.TextArea maxLength={500} placeholder="请输入备注" rows={3} showCount />
-                </Form.Item>
-                <Button disabled={!selectedGroupId || adding} icon={<PlusOutlined />} loading={adding} type="primary" onClick={handleAdd}>
-                  添加属性
-                </Button>
+                <GroupContentGate compact hasGroups={hasGroups} onCreateGroup={() => groupPanelRef.current?.openAddModal()}>
+                  <Form.Item label="绑定资产" name="assetCode" rules={[{ message: '请选择绑定资产', required: true }]}>
+                    <Select disabled={!selectedGroupId} loading={loadingAssets} options={assetOptions} placeholder="请选择绑定整个分组或具体资产" />
+                  </Form.Item>
+                  <Form.Item label="备注" name="remark" rules={[{ max: 500, message: '备注最多500个字符' }]}>
+                    <Input.TextArea maxLength={500} placeholder="请输入备注" rows={3} showCount />
+                  </Form.Item>
+                  <Button disabled={!selectedGroupId || adding} icon={<PlusOutlined />} loading={adding} type="primary" onClick={handleAdd}>
+                    添加属性
+                  </Button>
+                </GroupContentGate>
               </div>
             </div>
           ) : null}
@@ -298,7 +305,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
       </section>
       <Tabs activeKey={activeTab} items={tabItems} onChange={(key) => setActiveTab(key as AttributeTab)} />
       {visibleAttributes.length === 0 && !loadingDetail ? (
-        <Empty description="暂无已绑定属性" />
+        <Empty description="暂无已绑定属性" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
         <Table<OntologyEntityAttribute>
           className="abi-std-table"

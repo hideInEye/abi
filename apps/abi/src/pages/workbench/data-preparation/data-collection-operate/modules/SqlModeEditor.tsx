@@ -1,19 +1,21 @@
 import Editor, { useMonaco } from '@monaco-editor/react';
-import { Button, Input, Tooltip } from 'antd';
+import { Button, Input, Tooltip, message } from 'antd';
 import { ApiOutlined, DatabaseOutlined, PlayCircleOutlined, TableOutlined } from '@ant-design/icons';
 import { format } from 'sql-formatter';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type * as Monaco from 'monaco-editor';
 
-import { getFieldByDataSource } from '@/service/api';
+import { getFieldByDataSource, streamSqlTemplate } from '@/service/api';
+
+import TableFieldPickerDrawer, { type TableFieldSelection } from './TableFieldPickerDrawer';
 
 interface Props {
   /** 数据源 ID */
   sourceId?: string;
   /** 数据源类型 */
   sourceType?: string;
-  /** 数据源列表 */
-  dataSourceList?: Array<{ sourceId: string; sourceName: string; sourceType: string }>;
+  /** 数据源列表（configuration 为后端返回的连接配置 JSON 字符串，内含 dbName） */
+  dataSourceList?: Array<{ sourceId: string; sourceName: string; sourceType: string; configuration?: string }>;
   /** 数据源切换回调 */
   onDatasourceChange?: (sourceId: string) => void;
   /** 当前已加载的表列表 */
@@ -30,6 +32,8 @@ interface Props {
   runLoading?: boolean;
   /** 保存回调（点击「保存」按钮） */
   onSave?: () => void;
+  /** 退出编辑回调（点击「退出编辑」按钮） */
+  onExit?: () => void;
 }
 
 /**
@@ -58,6 +62,23 @@ function parseTableAliasMap(sql: string, tableList: Array<{ tableName: string }>
 }
 
 /**
+ * 从 AI 流式回复中提取 SQL：优先 ```sql 围栏代码块，其次 "sql" JSON 字段，否则返回全文
+ */
+function extractSqlFromAiText(text: string): string {
+  const fenced = text.match(/```sql\s*([\s\S]*?)```/i) || text.match(/```\s*([\s\S]*?)```/);
+  if (fenced?.[1]?.trim()) return fenced[1].trim();
+  const jsonField = text.match(/"sql"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  if (jsonField?.[1]) {
+    try {
+      return JSON.parse(`"${jsonField[1]}"`);
+    } catch {
+      return jsonField[1];
+    }
+  }
+  return text.trim();
+}
+
+/**
  * SQL 模式编辑器（Monaco Editor）
  * - SQL 语法高亮
  * - 字段名自动提示（支持别名识别：`select t.` 可提示 rgjslb 的字段）
@@ -76,10 +97,19 @@ const SqlModeEditor: React.FC<Props> = ({
   onRun,
   runLoading,
   onSave,
+  onExit,
 }) => {
   const monaco = useMonaco();
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const [nlInput, setNlInput] = useState('');
+  // AI 生成 SQL：发送 loading、流式内容缓冲与请求中止控制
+  const [sendLoading, setSendLoading] = useState(false);
+  const aiBufferRef = useRef('');
+  const aiDoneRef = useRef(false);
+  const sendAbortRef = useRef<AbortController | null>(null);
+  // 选择表抽屉：开关与勾选结果（表 -> 字段）；TODO(接口对接)：接口就绪后改为后端保存/回显
+  const [tablePickerOpen, setTablePickerOpen] = useState(false);
+  const [tableSelection, setTableSelection] = useState<TableFieldSelection>({});
   // 缓存每张表的字段列表：{ tableName -> [{ originName, comment }] }
   const fieldsCache = useRef<Record<string, Array<{ originName: string; comment: string }>>>({});
   // 保存 completionProvider dispose 函数，切换数据源时清理
@@ -114,9 +144,10 @@ const SqlModeEditor: React.FC<Props> = ({
     }
   }, []);
 
-  /** 数据源切换时清空字段缓存 */
+  /** 数据源切换时清空字段缓存与表勾选记录 */
   useEffect(() => {
     fieldsCache.current = {};
+    setTableSelection({});
   }, [sourceId]);
 
   /** 注册 Monaco SQL 自动补全 Provider */
@@ -232,6 +263,107 @@ const SqlModeEditor: React.FC<Props> = ({
     }
   }, [onChange]);
 
+  /** 卸载时中止未完成的 AI 生成请求 */
+  useEffect(() => {
+    return () => {
+      sendAbortRef.current?.abort();
+    };
+  }, []);
+
+  /** 流结束后统一收尾：提取 SQL 写入编辑器（onmessage 可能零触发，收尾逻辑放 onclose 兼顾 [DONE]） */
+  const finishAiGenerate = useCallback(() => {
+    if (aiDoneRef.current) return;
+    // 请求已中止（组件卸载）时不再收尾
+    if (sendAbortRef.current?.signal.aborted) return;
+    aiDoneRef.current = true;
+    setSendLoading(false);
+    const fullText = aiBufferRef.current;
+    if (!fullText.trim()) {
+      message.warning('AI 未返回内容，请重试');
+      return;
+    }
+    const sql = extractSqlFromAiText(fullText);
+    editorRef.current?.setValue(sql);
+    onChange?.(sql);
+  }, [onChange]);
+
+  /** 点击发送：调用 sql-template 流式接口，用自然语言生成 SQL */
+  const handleSend = useCallback(async () => {
+    const question = nlInput.trim();
+    if (!question) {
+      message.warning('请输入描述内容');
+      return;
+    }
+    if (!sourceId || !sourceType) {
+      message.warning('请先选择数据源');
+      return;
+    }
+    // db_name 取自数据源列表接口返回的 configuration JSON
+    let dbName = '';
+    try {
+      const cur = dataSourceList.find((d) => String(d.sourceId) === String(sourceId));
+      dbName = JSON.parse(cur?.configuration || '{}')?.dbName || '';
+    } catch {
+      // configuration 解析失败按缺失处理
+    }
+    if (!dbName) {
+      message.warning('当前数据源缺少数据库名配置，无法使用 AI 生成');
+      return;
+    }
+
+    sendAbortRef.current?.abort();
+    const controller = new AbortController();
+    sendAbortRef.current = controller;
+    aiBufferRef.current = '';
+    aiDoneRef.current = false;
+    setSendLoading(true);
+
+    try {
+      await streamSqlTemplate({
+        messages: question,
+        sourceId,
+        sourceType,
+        dbName,
+        signal: controller.signal,
+        onmessage: (event) => {
+          if (!event.data) return;
+          if (event.data === '[DONE]') {
+            finishAiGenerate();
+            return;
+          }
+          // OpenAI 兼容格式：增量内容在 choices[0].delta.content；非 JSON 则直接当文本累加
+          let chunk = event.data;
+          try {
+            const parsed = JSON.parse(event.data);
+            const delta = parsed?.choices?.[0]?.delta?.content;
+            chunk = typeof delta === 'string' ? delta : '';
+          } catch {
+            // 保留原始文本
+          }
+          aiBufferRef.current += chunk;
+        },
+        onclose: () => {
+          finishAiGenerate();
+        },
+        onerror: () => {
+          if (!aiDoneRef.current) {
+            aiDoneRef.current = true;
+            setSendLoading(false);
+            message.error('AI 生成 SQL 失败，请重试');
+          }
+        },
+      });
+      // 部分环境下流正常结束不触发 onclose，这里再收尾一次（有 aiDoneRef 去重）
+      finishAiGenerate();
+    } catch {
+      if (!aiDoneRef.current) {
+        aiDoneRef.current = true;
+        setSendLoading(false);
+        message.error('AI 生成 SQL 失败，请重试');
+      }
+    }
+  }, [nlInput, sourceId, sourceType, dataSourceList, finishAiGenerate]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
       {/* 顶部自然语言输入栏 */}
@@ -269,17 +401,23 @@ const SqlModeEditor: React.FC<Props> = ({
           placeholder="在这里输入纯文本语句"
           style={{ flex: 1, fontSize: 13 }}
           value={nlInput}
+          disabled={sendLoading}
           onChange={(e) => setNlInput(e.target.value)}
+          onPressEnter={handleSend}
         />
         <Tooltip title="发送">
           <Button
             type="primary"
             size="small"
+            loading={sendLoading}
+            onClick={handleSend}
             style={{ width: 32, height: 26, padding: 0, flexShrink: 0, background: '#3467FF', borderColor: '#3467FF' }}
           >
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-            </svg>
+            {!sendLoading && (
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+              </svg>
+            )}
           </Button>
         </Tooltip>
         <Tooltip title="选择表">
@@ -288,10 +426,11 @@ const SqlModeEditor: React.FC<Props> = ({
               cursor: 'pointer',
               padding: '4px 6px',
               borderRadius: 6,
-              color: '#666',
+              color: Object.keys(tableSelection).length ? '#3467FF' : '#666',
               flexShrink: 0,
               lineHeight: 1,
             }}
+            onClick={() => setTablePickerOpen(true)}
           >
             <TableOutlined style={{ fontSize: 16 }} />
           </div>
@@ -332,21 +471,25 @@ const SqlModeEditor: React.FC<Props> = ({
         }}
       >
         <AButton
+          className="btn-accent-gradient"
           icon={<PlayCircleOutlined />}
           loading={runLoading}
-          type="primary"
-          size="small"
-          style={{ backgroundColor: '#3467FF', borderColor: '#3467FF' }}
           onClick={onRun}
         >
           执行
         </AButton>
-        <Button size="small" onClick={onSave}>
+        <AButton className="btn-ghost-v5" onClick={onSave}>
           保存
-        </Button>
-        <Button size="small" onClick={handleFormat}>
+        </AButton>
+        <AButton className="btn-ghost-v5" onClick={handleFormat}>
           格式化
-        </Button>
+        </AButton>
+        <AButton
+          className="btn-accent-gradient"
+          onClick={onExit}
+        >
+          退出编辑
+        </AButton>
         {/* 右侧数据源信息展示 */}
         {sourceId && dataSourceList.length > 0 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -361,6 +504,19 @@ const SqlModeEditor: React.FC<Props> = ({
           </div>
         )}
       </div>
+      {/* 选择表抽屉：表/字段勾选；key 绑定数据源，切换数据源时重置抽屉内部字段缓存 */}
+      <TableFieldPickerDrawer
+        key={sourceId || 'none'}
+        open={tablePickerOpen}
+        tableList={tableList}
+        value={tableSelection}
+        fetchFields={fetchFields}
+        onCancel={() => setTablePickerOpen(false)}
+        onConfirm={(selection) => {
+          setTableSelection(selection);
+          setTablePickerOpen(false);
+        }}
+      />
     </div>
   );
 };

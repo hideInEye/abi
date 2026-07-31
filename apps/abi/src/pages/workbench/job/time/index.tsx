@@ -1,17 +1,18 @@
 import { ClockCircleOutlined, DeleteOutlined, DownOutlined, EditOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { useDebounceFn } from 'ahooks';
 import { Dropdown, Empty, Form, message } from 'antd';
 import { Suspense } from 'react';
 
-import { JOB_GROUP_OPTIONS } from '@/constants/job';
+import { JOB_GROUP_OPTIONS, JOB_STATUS_OPTIONS } from '@/constants/job';
 import { addJob, batchDeleteJob, deleteJob, exportJob, fetchChangeStatus, fetchJobList, fetchShareEmail, fetchShareEmailDetail, runJob, updateJob, updateShareEmail } from '@/service/api/job';
 import { useRouter } from '~/packages/simple-router/src/hooks/useRouter';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
+import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 
 import JobDetailDrawer from './modules/job-detail-drawer';
-import KeySearch from './modules/key-search';
 import ShareEmailSetting from './modules/share-email-setting';
 
 const JobDrawer = lazy(() => import('./modules/job-drawer'));
@@ -23,7 +24,7 @@ export function Component() {
   const [form] = Form.useForm();
   const [visible, setVisible] = useState(false);
   const [editData, setEditData] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
 
   // 列选项：用于列选择器
@@ -331,8 +332,7 @@ export function Component() {
       let data = {
         ...editData,
         convUid: editData.conv_uid,
-        chatId: editData.chat_id,
-        agentId: editData.agent_id,
+        sessionId: editData.chat_id,
         spaceId: editData.space_id,
         extra: {},
         chatName: editData.biz_name,
@@ -359,26 +359,65 @@ export function Component() {
     });
   };
 
+  // 搜索框停止输入 1s 后自动查询；清空时立即查询
+  const { cancel: cancelDebouncedSearch, run: runDebouncedSearch } = useDebounceFn(() => searchProps.search(), { wait: 1000 });
+  const handleSearchValuesChange = (changed: Record<string, unknown>): void => {
+    if (!Object.prototype.hasOwnProperty.call(changed, 'jobName')) return;
+    const value = changed.jobName;
+    if (value === undefined || value === null || value === '') {
+      cancelDebouncedSearch();
+      searchProps.search();
+    } else {
+      runDebouncedSearch();
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* v5 Searchbar */}
       <section className="abi-searchbar">
-        <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }}>
-          <div className="abi-search-row">
-            <KeySearch {...searchProps} />
-            <ADatePicker.RangePicker
-              placeholder={['开始时间', '结束时间']}
-              value={dateRange}
-              onChange={(dates) => setDateRange(dates)}
-              className="abi-field-input"
-            />
-            <AButton type="primary" className="btn-accent-gradient" onClick={() => searchProps.search()}>
-              <SearchOutlined /> 查询
-            </AButton>
-            <AButton className="btn-ghost-v5" onClick={() => { searchProps.reset(); setDateRange(null); }}>
-              重置
-            </AButton>
-          </div>
+        <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }} onValuesChange={handleSearchValuesChange}>
+          <SearchFilterBar
+            searchSlot={
+              <AForm.Item className="m-0 flex-1 min-w-0" name="jobName">
+                <AInput
+                  allowClear
+                  className="abi-field-input w-full"
+                  placeholder="请输入任务名称"
+                  prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
+                  onPressEnter={() => { cancelDebouncedSearch(); searchProps.search(); }}
+                />
+              </AForm.Item>
+            }
+            onQuery={() => searchProps.search()}
+            onReset={() => { searchProps.reset(); setDateRange(null); }}
+            filters={
+              <>
+                <SearchFilterField label="时间范围">
+                  <ADatePicker.RangePicker
+                    allowClear
+                    className="abi-field-input"
+                    format="YYYY-MM-DD"
+                    getPopupContainer={getFilterPopupContainer}
+                    placeholder={['开始时间', '结束时间']}
+                    value={dateRange}
+                    onChange={(dates) => setDateRange(dates)}
+                  />
+                </SearchFilterField>
+                <SearchFilterField label="任务状态">
+                  <AForm.Item className="m-0" name="status">
+                    <ASelect
+                      allowClear
+                      className="abi-field-input w-full"
+                      getPopupContainer={getFilterPopupContainer}
+                      options={JOB_STATUS_OPTIONS}
+                      placeholder="请选择任务状态"
+                    />
+                  </AForm.Item>
+                </SearchFilterField>
+              </>
+            }
+          />
         </AForm>
       </section>
 
@@ -432,6 +471,7 @@ export function Component() {
                   {...(tableProps as any)}
                   columns={filteredColumns as any}
                   pagination={false}
+                  locale={{ emptyText: <TableEmpty description="暂无定时任务" /> }}
                   rowSelection={rowSelection}
                 />
               </div>

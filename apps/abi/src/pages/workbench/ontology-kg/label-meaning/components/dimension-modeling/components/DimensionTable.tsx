@@ -197,13 +197,14 @@ export const DimensionTable: React.FC<Props> = ({
           loading={loading}
           rowKey={record => String(record.id)}
           title={record => formatDisplayValue(record.zhName)}
-          titleExtra={record => renderStatus(record.status)}
+          titleExtra={record => DIMENSION_STATUS_TEXT_MAP[String(record.status ?? '0')] || '禁用'}
         />
       ) : (
         <div style={{ border: '1px solid rgba(130,140,200,0.18)', borderRadius: '12px', overflow: 'hidden', flex: 1, minHeight: 0, width: '100%' }}>
           <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
             <Table
               className="abi-std-table"
+              locale={{ emptyText: <TableEmpty description="暂无维度" /> }}
               columns={tableColumns as any}
               dataSource={dataSource}
               loading={loading}

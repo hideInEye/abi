@@ -1,10 +1,13 @@
 import React, {memo, useEffect, useRef, useState} from 'react';
-import {Empty, Input, Modal, Select, Button} from 'antd';
-import { LeftOutlined, RightOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import {Empty, Input, Modal, Select, DatePicker, ConfigProvider} from 'antd';
+import { LeftOutlined, RightOutlined } from '@ant-design/icons';
+import zhCN from 'antd/locale/zh_CN';
+import type {Dayjs} from 'dayjs';
 import {IPage, IProjectInfo} from '../../designer/DesignerType.ts';
 import baseApi from '../../api/BaseApi.ts';
 import {globalMessage} from '../../framework/message/GlobalMessage.tsx';
 import MyScreenItem from './MyScreenItem.tsx';
+import {SearchFilterBar, SearchFilterField, getFilterPopupContainer} from '../home/project-list/SearchFilterBar.tsx';
 import '../home/project-list/ProjectList.less';
 
 interface MyScreenProps {
@@ -26,6 +29,7 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
     const [pageSize, setPageSize] = useState(12);
     const [jumpValue, setJumpValue] = useState('');
     const [searchKeyword, setSearchKeyword] = useState('');
+    const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
     const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
 
@@ -35,14 +39,19 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
         });
     };
 
-    const doSearch = (value: string) => {
-        setSearchKeyword(value);
+    const runQuery = (overrides?: {keyword?: string; range?: [Dayjs | null, Dayjs | null] | null}) => {
+        const kw = overrides?.keyword !== undefined ? overrides.keyword : searchKeyword;
+        const range = overrides?.range !== undefined ? overrides.range : dateRange;
+        const startTime = range?.[0] ? range[0].startOf('day').format('YYYY-MM-DD HH:mm:ss') : undefined;
+        const endTime = range?.[1] ? range[1].endOf('day').format('YYYY-MM-DD HH:mm:ss') : undefined;
         baseApi.getProjectInfoPageList({
             current: 1,
             size: pageSize,
-            keywords: value,
+            keywords: kw,
             status: '0',
             spaceId,
+            startTime,
+            endTime,
         }).then((data: IPage<IProjectInfo>) => {
             setPageData({...data, current: 1});
             setCurrentPage(1);
@@ -51,7 +60,8 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
 
     const handleReset = () => {
         setSearchKeyword('');
-        doSearch('');
+        setDateRange(null);
+        runQuery({keyword: '', range: null});
     };
 
     const pageChange = (page: number, size: number) => {
@@ -126,24 +136,29 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
         <div className="project-list-container">
             {/* v5 Searchbar */}
             <section className="abi-searchbar">
-                <div className="abi-search-row">
-                    <Input 
-                        placeholder="搜索项目名称"
-                        prefix={<SearchOutlined style={{color: '#a3b3c8'}} />}
-                        allowClear
-                        className="abi-field-input"
-                        value={searchKeyword}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                        onPressEnter={(e) => doSearch((e.target as any).value)}
-                        style={{width: '220px'}}
-                    />
-                    <Button type="primary" className="btn-accent-gradient" onClick={() => doSearch(searchKeyword)}>
-                        <SearchOutlined /> 查询
-                    </Button>
-                    <Button className="btn-ghost-v5" onClick={handleReset}>
-                        <ReloadOutlined /> 重置
-                    </Button>
-                </div>
+                <SearchFilterBar
+                    searchPlaceholder="搜索项目名称"
+                    searchValue={searchKeyword}
+                    onSearchChange={setSearchKeyword}
+                    onQuery={() => runQuery()}
+                    onReset={handleReset}
+                    filters={
+                        <SearchFilterField label="创建时间">
+                            <ConfigProvider locale={zhCN}>
+                                <DatePicker.RangePicker
+                                    allowClear
+                                    className="abi-field-input"
+                                    style={{width: '100%'}}
+                                    format="YYYY-MM-DD"
+                                    getPopupContainer={getFilterPopupContainer}
+                                    placeholder={['开始时间', '结束时间']}
+                                    value={dateRange}
+                                    onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null] | null)}
+                                />
+                            </ConfigProvider>
+                        </SearchFilterField>
+                    }
+                />
             </section>
 
             {/* v5 Data Area */}
@@ -158,8 +173,8 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
                             </div>
                         </div>
                     ) : (
-                        <div className="project-list-empty">
-                            <Empty description="暂无已发布的大屏"/>
+                        <div className="abi-card-empty">
+                            <Empty description="暂无已发布的大屏" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                         </div>
                     )}
                 </div>

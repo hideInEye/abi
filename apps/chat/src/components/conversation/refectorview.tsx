@@ -92,6 +92,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
         isDone={doneStatus}
         isGettingData={isGettingData}
         checkAll={checkAll}
+        sharingList={sharingList}
         setSharingList={setSharingList}
         setIsStorage={controller.setIsStorage}
         setConvContent={setConvContent}

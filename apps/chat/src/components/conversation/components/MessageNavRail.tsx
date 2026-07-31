@@ -188,7 +188,7 @@ const MessageNavRail = ({ items, containerRef }: MessageNavRailProps) => {
           flexDirection: 'column',
           alignItems: 'flex-end',
           gap: 6,
-          maxHeight: '70vh',
+          maxHeight: '40vh',
           overflowY: 'auto',
           padding: '4px 2px',
         }}

@@ -64,7 +64,7 @@ const ProviderList: FC<Props> = ({ providers, loading, activeProviderId, activeT
       <div style={{ flex: 1, overflow: 'auto', padding: '4px 8px 8px' }}>
         <ASpin spinning={loading}>
           {filteredProviders.length === 0 ? (
-            <AEmpty description="暂无供应商" style={{ marginTop: 60 }} />
+            <AEmpty description="暂无供应商" image={AEmpty.PRESENTED_IMAGE_SIMPLE} style={{ marginTop: 60 }} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* 全部供应商选项 */}

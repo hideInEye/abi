@@ -1,0 +1,198 @@
+/* ============================================================
+ * 组织编辑抽屉 v5 玻璃态科技风格
+ * ============================================================ */
+
+/* ── 抽屉整体 ── */
+.group-drawer-v5 {
+  .ant-drawer-body {
+    padding: 24px;
+    background: linear-gradient(180deg, rgba(248, 250, 255, 0.5) 0%, rgba(255, 255, 255, 0.8) 100%);
+  }
+
+  .ant-drawer-footer {
+    border-top: 1px solid rgba(130, 140, 200, 0.12);
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(8px);
+  }
+
+  /* ── 表单面板 ── */
+  .group-form-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(130, 140, 200, 0.15);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(91, 124, 247, 0.04);
+
+    /* 表单项样式 */
+    .ant-form-item {
+      margin-bottom: 20px;
+
+      .ant-form-item-label {
+        > label {
+          font-size: 13px;
+          font-weight: 500;
+          color: #4a5d78;
+
+          &.ant-form-item-required::before {
+            color: #5b7cf7;
+          }
+        }
+      }
+
+      /* 输入框 */
+      .ant-input,
+      .ant-input-number,
+      .ant-select-selector,
+      .ant-tree-select-selector {
+        border-radius: 8px !important;
+        border-color: rgba(130, 140, 200, 0.18) !important;
+        background: rgba(255, 255, 255, 0.55) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+        &:hover {
+          border-color: #5b7cf7 !important;
+        }
+
+        &:focus,
+        &.ant-input-focused,
+        &.ant-select-focused .ant-select-selector {
+          border-color: #5b7cf7 !important;
+          background: rgba(255, 255, 255, 0.88) !important;
+          box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.1) !important;
+        }
+      }
+
+      .ant-input-number {
+        width: 100%;
+      }
+    }
+  }
+
+  /* ── 分区标题 ── */
+  .group-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+  }
+
+  .group-section-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+
+    &::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      content: '';
+      border-radius: inherit;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+    }
+  }
+
+  .group-section-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a2744;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Transfer 穿梭框优化 ── */
+  .group-transfer-wrapper {
+    .ant-transfer {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+
+      .ant-transfer-list {
+        border-radius: 10px;
+        border: 1px solid rgba(130, 140, 200, 0.15);
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(8px);
+        min-height: 200px;
+        transition: border-color 0.2s;
+
+        &:hover {
+          border-color: rgba(91, 124, 247, 0.25);
+        }
+
+        .ant-transfer-list-header {
+          border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+          padding: 10px 14px;
+          background: rgba(248, 250, 255, 0.6);
+          border-radius: 10px 10px 0 0;
+
+          .ant-transfer-list-header-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #3e5068;
+          }
+        }
+
+        .ant-transfer-list-body {
+          padding: 4px 0;
+
+          .ant-transfer-list-body-search-wrapper {
+            padding: 6px 10px;
+          }
+
+          .ant-transfer-list-content-item {
+            padding: 6px 14px;
+            border-radius: 6px;
+            margin: 2px 6px;
+            transition: all 0.15s;
+
+            &:hover {
+              background: rgba(91, 124, 247, 0.06);
+            }
+
+            .ant-transfer-list-content-item-text {
+              font-size: 13px;
+              color: #4a5d78;
+            }
+          }
+        }
+      }
+
+      .ant-transfer-operation {
+        .ant-btn {
+          border-radius: 8px;
+          border-color: rgba(130, 140, 200, 0.18);
+          background: rgba(255, 255, 255, 0.7);
+          box-shadow: 0 1px 4px rgba(91, 124, 247, 0.06);
+          transition: all 0.2s;
+
+          &:hover:not(:disabled) {
+            border-color: #5b7cf7;
+            color: #5b7cf7;
+            background: rgba(91, 124, 247, 0.04);
+          }
+        }
+      }
+    }
+  }
+
+  /* ── 双列布局 ── */
+  .group-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 20px;
+  }
+
+  /* ── 底部按钮区 ── */
+  .group-drawer-footer-v5 {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+}
