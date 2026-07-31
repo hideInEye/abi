@@ -1,6 +1,7 @@
-import React, { useCallback, useRef, useState } from 'react'
-import { DeleteOutlined } from '@ant-design/icons'
-import { Popconfirm, Splitter } from 'antd'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
+import { DeleteOutlined, DownOutlined } from '@ant-design/icons'
+import { Dropdown, Popconfirm, Splitter } from 'antd'
+import type { MenuProps } from 'antd'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
@@ -8,6 +9,7 @@ import type { GroupHandle } from '@/components/stateful/group/Group.tsx'
 import { Group } from '@/components/stateful/group/Group.tsx'
 import { GroupContentGate } from '@/components/stateful/group/GroupContentGate.tsx'
 import { useOntologyViewControls } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
+import { DimensionBatchMappingDrawer } from './components/DimensionBatchMappingDrawer'
 import { DimensionOperateDrawer } from './components/DimensionOperateDrawer'
 import { DimensionSearchBar } from './components/DimensionSearchBar'
 import { DimensionTable } from './components/DimensionTable'
@@ -36,11 +38,15 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
   const [hasGroups, setHasGroups] = useState<boolean | null>(null)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(DIMENSION_COLUMN_OPTIONS)
   const {
+    batchDrawerOpen,
+    closeBatchDrawer,
     closeDrawer,
     closeHierarchyModal,
     drawerOpen,
     editingItem,
     handleAdd,
+    handleAddBatch,
+    handleBatchMappingSubmit,
     handleBatchDelete,
     handleDelete,
     handleEdit,
@@ -75,6 +81,38 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
     setSelectedRowKeys([])
     setViewMode(mode)
   }, [setSelectedRowKeys, setViewMode])
+
+  const addMenus = useMemo<MenuProps['items']>(
+    () => [
+      {
+        key: 'batch',
+        label: (
+          <div className="py-1">
+            <div className="text-sm font-semibold">一键维度映射</div>
+            <div className="mt-1 text-xs text-gray-400">选择数据语义组并批量生成维度</div>
+          </div>
+        ),
+      },
+      {
+        key: 'custom',
+        label: (
+          <div className="py-1">
+            <div className="text-sm font-semibold">维度自定义</div>
+            <div className="mt-1 text-xs text-gray-400">沿用原新增维度表单流程</div>
+          </div>
+        ),
+      },
+    ],
+    [],
+  )
+
+  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === 'custom') {
+      handleAdd()
+      return
+    }
+    handleAddBatch()
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
@@ -111,14 +149,17 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
             <section className="abi-data-area">
               <div className="abi-toolbar">
                 <div className="abi-toolbar-left">
-                  <AButton
+                  <Dropdown.Button
+                    className="ml-auto btn-accent-dropdown"
                     type="primary"
-                    className="btn-accent-gradient"
                     disabled={!selectedGroup?.groupId}
-                    onClick={handleAdd}
+                    icon={<DownOutlined />}
+                    menu={{ items: addMenus, onClick: handleMenuClick }}
+                    placement="bottom"
+                    onClick={handleAddBatch}
                   >
                     + 新增维度
-                  </AButton>
+                  </Dropdown.Button>
                   <Popconfirm
                     cancelText="取消"
                     description={`确定删除选中的 ${selectedRowKeys.length} 条维度吗？`}
@@ -162,6 +203,14 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
         onGoMetricModeling={onGoMetricModeling}
         onOpenHierarchy={openHierarchyModal}
         onSubmit={handleSubmit}
+      />
+
+      <DimensionBatchMappingDrawer
+        groupId={selectedGroup?.groupId}
+        groupName={selectedGroup?.groupName}
+        open={batchDrawerOpen}
+        onClose={closeBatchDrawer}
+        onSubmit={handleBatchMappingSubmit}
       />
 
       <HierarchyModal

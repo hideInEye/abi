@@ -264,7 +264,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
               onFieldChange={handleFieldChange}
               onOpenFieldModal={() => {
                 if (!selectedSchemaId) {
-                  message.warning('请先选择表语义')
+                  message.warning('请先选择数据语义')
                   return
                 }
                 setFieldModalOpen(true)

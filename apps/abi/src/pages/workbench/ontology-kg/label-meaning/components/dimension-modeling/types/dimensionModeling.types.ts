@@ -9,6 +9,7 @@ export interface DimensionGroup {
 
 export interface DimensionFieldOption {
   bizName: string
+  fieldName?: string
   fieldType?: string
   key: string
   originName?: string
@@ -17,6 +18,18 @@ export interface DimensionFieldOption {
   sourceTableName?: string
   techId: string
   timeFormat?: string
+}
+
+export interface DimensionBatchMappingRow {
+  disabled?: boolean
+  dimType: DimensionType
+  field: DimensionFieldOption
+  fieldType?: string
+  key: string
+  relSchemaId: number | string
+  relViewId?: number | string
+  semanticSchemaName: string
+  semanticsGroupId?: number | string
 }
 
 export interface DimensionHierarchyNode {
