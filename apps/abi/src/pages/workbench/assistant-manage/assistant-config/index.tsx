@@ -107,11 +107,13 @@ export function Component() {
     setViewMode(mode);
   };
 
-  /** 拉取助手列表 */
-  async function fetchList() {
+  /** 拉取助手列表（searchName 未传时使用当前搜索关键字） */
+  async function fetchList(searchName?: string) {
     setLoading(true);
     try {
+      const name = (searchName ?? keyword).trim();
       const res: any = await fetchAppListApi({
+        appName: name || undefined,
         spaceId: spaceId || undefined,
         groupId: groupId && groupId !== '0' ? groupId : undefined,
       });
@@ -130,14 +132,17 @@ export function Component() {
     fetchList();
   }, [spaceId, groupId]);
 
+  /** 查询：由 SearchFilterBar 停止输入 1s 防抖 / 回车 / 面板查询按钮触发，走后端接口 */
   const handleSearch = () => {
     setCurrentPage(1);
+    fetchList();
   };
 
   const handleReset = () => {
     setKeyword('');
     setDateRange(null);
     setCurrentPage(1);
+    fetchList('');
   };
 
   // v5 pagination state
@@ -145,17 +150,12 @@ export function Component() {
   const [pageSize, setPageSize] = useState(10);
   const [jumpValue, setJumpValue] = useState('');
 
-  // 筛选条件变化时重置到第一页
+  // 筛选条件变化时重置到第一页（关键字改为后端查询，随 agents 变化联动）
   useEffect(() => {
     setCurrentPage(1);
-  }, [agents, dateRange, keyword]);
+  }, [agents, dateRange]);
 
-  const filteredAgents = useMemo(() => {
-    const kw = keyword.trim().toLowerCase();
-    let rows = agents;
-    if (kw) rows = rows.filter(a => String(a.name || '').toLowerCase().includes(kw));
-    return filterByCreateTime(rows, dateRange, 'createTime');
-  }, [agents, keyword, dateRange]);
+  const filteredAgents = useMemo(() => filterByCreateTime(agents, dateRange, 'createTime'), [agents, dateRange]);
   const totalCount = filteredAgents.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const pagedList = useMemo(() => {

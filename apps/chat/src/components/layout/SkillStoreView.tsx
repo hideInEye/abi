@@ -1,9 +1,9 @@
 import { DatabaseOutlined, FileTextOutlined, LineChartOutlined, SearchOutlined, ToolOutlined, WarningOutlined } from '@ant-design/icons'
-import { message, Spin } from 'antd'
+import { message, Spin, Tabs } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 
 import type { SkillCard } from '@/constant/layout'
-import { querySkillList, updateSkillStatus } from '@/service/api/skill'
+import { querySkillList, updateSkillInfo, updateSkillStatus } from '@/service/api/skill'
 import { getSpaceId } from '@/utils'
 import SkillDetailDrawer from './SkillDetailDrawer'
 
@@ -73,6 +73,18 @@ const tagStyles: Record<string, { bg: string; color: string }> = {
   plugin: { bg: 'rgba(139,92,246,0.08)', color: 'var(--accent-2)' },
 }
 
+/** 已添加技能 id 本地存储 key（后端参数就绪后改为接口字段过滤） */
+const MY_SKILLS_KEY = 'mySkills'
+
+function readMySkillIds(): string[] {
+  try {
+    const arr = JSON.parse(localStorage.getItem(MY_SKILLS_KEY) || '[]')
+    return Array.isArray(arr) ? arr.map(String) : []
+  } catch {
+    return []
+  }
+}
+
 export function SkillStoreView({ onBack }: SkillStoreViewProps) {
   const [searchText, setSearchText] = useState('')
   const [cards, setCards] = useState<SkillCard[]>([])
@@ -81,6 +93,9 @@ export function SkillStoreView({ onBack }: SkillStoreViewProps) {
   const [rawMap, setRawMap] = useState<Record<string, SkillItem>>({})
   const [detailOpen, setDetailOpen] = useState(false)
   const [activeSkill, setActiveSkill] = useState<SkillItem | null>(null)
+  const [tab, setTab] = useState<'plaza' | 'mine'>('plaza')
+  // 已添加到「我的技能」的技能 id
+  const [myIds, setMyIds] = useState<string[]>(readMySkillIds)
 
   // 拉取技能列表（与 abi 同一接口）
   const fetchList = useCallback(() => {
@@ -126,14 +141,16 @@ export function SkillStoreView({ onBack }: SkillStoreViewProps) {
     [rawMap],
   )
 
+  const tabCards = tab === 'mine' ? cards.filter((c) => myIds.includes(c.key)) : cards
+
   const filteredCards = searchText
-    ? cards.filter(
+    ? tabCards.filter(
         (c) =>
           c.title.includes(searchText) ||
           c.description.includes(searchText) ||
           c.tagLabel.includes(searchText),
       )
-    : cards
+    : tabCards
 
   const handleToggleEnable = useCallback((card: SkillCard) => {
     const nextEnabled = !card.enabled
@@ -156,6 +173,34 @@ export function SkillStoreView({ onBack }: SkillStoreViewProps) {
       })
   }, [])
 
+  // 广场卡片右上角「添加」：调修改技能接口，添加后在「我的技能」Tab 展示
+  const handleAddSkill = useCallback(
+    (card: SkillCard) => {
+      if (myIds.includes(card.key)) return
+      // TODO: 后端提供添加参数后在此补充（接口仍为修改技能接口）
+      updateSkillInfo({ skillId: card.key }).catch(() => {})
+      const next = [...myIds, card.key]
+      setMyIds(next)
+      localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next))
+      message.success('已添加到我的技能')
+    },
+    [myIds],
+  )
+
+  // 取消添加：同样走修改技能接口（后续参数由后端提供）
+  const handleRemoveSkill = useCallback(
+    (card: SkillCard) => {
+      if (!myIds.includes(card.key)) return
+      // TODO: 后端提供移除参数后在此补充（接口仍为修改技能接口）
+      updateSkillInfo({ skillId: card.key }).catch(() => {})
+      const next = myIds.filter((id) => id !== card.key)
+      setMyIds(next)
+      localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next))
+      message.success('已从我的技能移除')
+    },
+    [myIds],
+  )
+
   return (
     <div className="skill-store-view" style={{ display: 'flex' }}>
       <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>
@@ -174,6 +219,16 @@ export function SkillStoreView({ onBack }: SkillStoreViewProps) {
           />
         </div>
       </div>
+
+      {/* Tabs：广场 / 我的技能 */}
+      <Tabs
+        activeKey={tab}
+        items={[
+          { key: 'plaza', label: '广场' },
+          { key: 'mine', label: '我的技能' },
+        ]}
+        onChange={(k) => setTab(k as 'plaza' | 'mine')}
+      />
 
       {/* Card Grid */}
       <Spin spinning={loading}>
@@ -201,6 +256,52 @@ export function SkillStoreView({ onBack }: SkillStoreViewProps) {
                       <div className="ss-card-title">{card.title}</div>
                       <div className="ss-card-desc">{card.description}</div>
                     </div>
+                    {/* 广场 Tab：添加/已添加（点已添加可取消）；我的技能 Tab：移除 */}
+                    {tab === 'plaza' ? (
+                      <button
+                        type="button"
+                        className="ss-card-use"
+                        style={
+                          myIds.includes(card.key)
+                            ? { marginLeft: 'auto', flexShrink: 0 }
+                            : {
+                                marginLeft: 'auto',
+                                flexShrink: 0,
+                                background: 'var(--accent)',
+                                color: '#fff',
+                                boxShadow: '0 2px 8px rgba(91,124,247,0.3)',
+                              }
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (myIds.includes(card.key)) {
+                            handleRemoveSkill(card)
+                          } else {
+                            handleAddSkill(card)
+                          }
+                        }}
+                      >
+                        {myIds.includes(card.key) ? '已添加' : '添加'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="ss-card-use"
+                        style={{
+                          marginLeft: 'auto',
+                          flexShrink: 0,
+                          background: '#ef4444',
+                          color: '#fff',
+                          boxShadow: '0 2px 8px rgba(239,68,68,0.3)',
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRemoveSkill(card)
+                        }}
+                      >
+                        移除
+                      </button>
+                    )}
                   </div>
                   <div className="ss-card-footer">
                     <span

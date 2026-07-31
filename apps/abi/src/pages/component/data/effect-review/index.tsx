@@ -23,6 +23,7 @@ import {
   fetchBatchDeleteMemory,
   fetchDeleteMemory,
   fetchEditMemory,
+  fetchMemoryDetail,
   fetchMemoryList,
   fetchModelEval,
 } from '@/service/api/assistant-manage'
@@ -355,8 +356,24 @@ export function Component() {
     return typeof val === 'string' ? val : JSON.stringify(val, null, 2)
   }
 
-  /** 打开人工评估抽屉，并将记录中的数值型字段归一化为字符串以匹配单选项 */
-  const openEval = (record: any) => {
+  /** 打开人工评估抽屉：先调 detail 详情接口（传 fbId）拿最新数据，再将数值型字段归一化为字符串以匹配单选项 */
+  const openEval = async (rawRecord: any) => {
+    let record = rawRecord
+    try {
+      const res: any = await fetchMemoryDetail(rawRecord.fb_id)
+      if (!res?.error) {
+        // 详情接口返回单条记录：{ code, msg, data: {...} }；若后端返数组结构则取第一条兼容
+        const inner = res?.data ?? res?.response?.data?.data ?? {}
+        const raw = Array.isArray(inner?.data) ? inner.data[0] : Array.isArray(inner) ? inner[0] : inner
+        if (raw && typeof raw === 'object' && Object.keys(raw).length > 0) {
+          const detail = toSnakeCaseKeys(raw)
+          record = { ...rawRecord, ...detail, question: normalizeQuestion(detail.question ?? rawRecord.question) }
+        }
+      }
+    } catch (error) {
+      // 详情查询失败时降级使用列表行数据，保证抽屉仍可打开
+      console.log('查询评审详情失败:', error)
+    }
     handleEdit({
       ...record,
       ai_response: toText(record.ai_response),

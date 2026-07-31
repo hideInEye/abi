@@ -136,6 +136,18 @@ export function fetchMemoryList(data?: any) {
 }
 
 /**
+ * 效果评审 - 详情（detail）
+ * @param fbId 反馈记录 id
+ */
+export function fetchMemoryDetail(fbId: string | number) {
+  return apiRequest<any>({
+    data: { fbId },
+    method: 'post',
+    url: `${FEEDBACK_BASE}/detail`
+  });
+}
+
+/**
  * 效果评审 - 编辑反馈/专家评估（edit）
  * 后端在编辑成功后会同步向量库，前端无需再单独调用向量存储接口
  * @param data 支持 fbId、status、evalExpert、expertOpinion、evalLlm、llmOpinion、remark
