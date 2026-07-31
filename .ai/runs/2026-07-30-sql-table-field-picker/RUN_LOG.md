@@ -45,3 +45,45 @@
 
 - `.ai/context/`：无需，属局部功能新增，抽屉遵循既有 CommonDrawer 规则。
 - 接口对接完成后建议在 `API_CONTRACTS.md` 补充勾选记录接口约定。
+
+---
+
+# 同日追加：SQL 模式保存参数对接（后端口径）
+
+## 需求
+
+后端确认口径（经与用户两轮确认，用户糾正过一次理解）：
+
+- SQL 原文仍存 `union[0].currentDs.tableInfo.sql`（union 假节点不动）；`unionSql` 保持原样（union 序列化）；
+- 新增参数 `viewHistory`：存「选择表」勾选的表结构（平铺，格式对齐快速创建的 union）；字段名经两次调整：存 unionSql → 新增 viewInfo → 最终定为 viewHistory（unionSql 始终恢复原样）；
+- SQL 模式不传 `allFields`；新增走 `addDataSet`，编辑走 `saveDataSet`。
+
+勾选记录保存/回显由此顺带解决（前一阶段的 TODO 闭环），无需单独接口。
+
+## 修改内容
+
+### TableFieldPickerDrawer.tsx
+
+- `TableFieldSelection` 从 `Record<tableName, originName[]>` 升级为 `Record<tableName, PickerFieldItem[]>`（字段对象含 comment），保存时直接组装 `currentDsFields`；内部勾选逻辑同步调整（rowSelection keys ↔ 对象数组换算）。
+- 移除已完成的 TODO(接口对接) 注释。
+
+### SqlModeEditor.tsx
+
+- 勾选状态提升为受控 props：`tableSelection` / `onTableSelectionChange`，组件内只保留抽屉开关；未触碰用户新加的 AI 生成 SQL 逻辑。
+
+### [id].tsx
+
+- 新增页面级 `sqlTableSelection` 状态，传给 SqlModeEditor；切换数据源（含 Modal.confirm 分支）时清空。
+- `saveSql`：新增 `viewHistory` 参数存勾选表结构 `[{ currentDs: {sourceId, tableName}, currentDsFields: [{...field, checked: true}] }]`；`unionSql`/`union` 保持原样；删除 `allFields` 传参；按 `id && id !== '0'` 分流 saveDataSet/addDataSet（此前一律 saveDataSet，新增场景不对）。
+- `getDetail`：sql 模式下解析 `viewHistory` 回显勾选（无效/假节点跳过；解析失败静默不回显）。
+
+## 验证
+
+- `npx tsc --noEmit`：三个改动文件 0 报错（仓库既有报错不变）。
+- 接口联调待用户与后端验证（保存报文 + 编辑回显）。
+
+## 风险 / 未解决事项
+
+- 未勾选任何表时 `viewHistory` 为 `"[]"`，是否允许由后端校验（前端未拦截）。
+- 旧 SQL 数据集（无 viewHistory 字段）编辑时不回显勾选，重新保存后自动补齐。
+- 字段禁用（截图 account_number 灰色锁定）仍未实现，等后端给禁用标记。

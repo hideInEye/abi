@@ -9,7 +9,7 @@ import React from 'react'
 import { GroupNavItem, PickerToolRow } from './tool-picker-drawer'
 
 /**
- * 通用能力选择抽屉（数据语义 / 本体网络 / 技能）
+ * 通用能力选择抽屉（数据语义 / 技能）
  * 按需加载：打开抽屉后才请求；有分组的 tab 先拉分组再按分组懒加载列表；全部结果按 tab+分组 缓存
  */
 
@@ -38,10 +38,12 @@ interface Props {
   selectedIds: Set<string>
   onToggle: (id: string, checked: boolean) => void
   onBatchToggle: (ids: string[], checked: boolean) => void
+  /** 列表加载完成后回传选项元数据（可选，用于父组件展示已选项名称） */
+  onOptionsLoaded?: (options: PickerOption[]) => void
   onClose: () => void
 }
 
-const CapabilityPickerDrawer: React.FC<Props> = ({ open, title, icon, tabs, spaceId, selectedIds, onToggle, onBatchToggle, onClose }) => {
+const CapabilityPickerDrawer: React.FC<Props> = ({ open, title, icon, tabs, spaceId, selectedIds, onToggle, onBatchToggle, onOptionsLoaded, onClose }) => {
   const [activeTabKey, setActiveTabKey] = useState<string>(tabs[0]?.key ?? '')
   const [keyword, setKeyword] = useState('')
 
@@ -104,6 +106,7 @@ const CapabilityPickerDrawer: React.FC<Props> = ({ open, title, icon, tabs, spac
       const options = await tab.fetchList({ groupId, spaceId: Number(spaceId) })
       listCacheRef.current[key] = options
       setListByKey((prev) => ({ ...prev, [key]: options }))
+      onOptionsLoaded?.(options)
     } catch {
       listCacheRef.current[key] = []
       setListByKey((prev) => ({ ...prev, [key]: [] }))
