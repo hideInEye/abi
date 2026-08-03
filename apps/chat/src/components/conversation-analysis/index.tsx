@@ -94,6 +94,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
             label: item.modelName || item.model_name || item.llmModel || item.label || '',
             desc: item.remark || item.description || item.desc || '',
             isDefault: item.isDefault,
+            isSupportThinking: item.isSupportThinking,
           }))
           setModelOptions(options)
           if (options.length > 0) {
@@ -104,9 +105,25 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       .catch(() => {})
   }, [currentSpaceId])
 
+  // 模型是否支持关闭思考（1 为支持，0 或其他为不支持）
+  const isSupportCloseThinking = useCallback((model: ModelOption | null | undefined) => {
+    return model?.isSupportThinking === 1 || model?.isSupportThinking === '1'
+  }, [])
+
   const handleModelChange = useCallback((model: ModelOption) => {
     setCurrentModel(model)
-  }, [])
+    // 不支持关闭思考的模型，强制开启思考且不允许用户关闭
+    if (!isSupportCloseThinking(model)) {
+      setDeepThinkEnabled(true)
+    }
+  }, [isSupportCloseThinking])
+
+  // 当前模型切换或初始默认模型设置后，若不支持关闭思考则强制点亮思考按钮
+  useEffect(() => {
+    if (currentModel && !isSupportCloseThinking(currentModel)) {
+      setDeepThinkEnabled(true)
+    }
+  }, [currentModel, isSupportCloseThinking])
 
   // ── 数据语义加载（分组树一次性返回，含各级子分组与数据语义叶子）──
   useEffect(() => {
@@ -552,6 +569,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onStop={() => conversationRef.current?.stopGenerating()}
                 deepThinkEnabled={deepThinkEnabled}
                 uploadFileEnabled={uploadFileEnabled}
+                currentModel={currentModel}
                 onToggleDeepThink={() => setDeepThinkEnabled(!deepThinkEnabled)}
                 onToggleUploadFile={() => setUploadFileEnabled(!uploadFileEnabled)}
                 spaceId={currentSpaceId}

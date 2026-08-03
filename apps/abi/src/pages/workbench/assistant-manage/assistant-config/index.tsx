@@ -129,8 +129,11 @@ export function Component() {
   }
 
   useEffect(() => {
+    // 等待 Group 回传真实分组 id 再拉列表：避免初次挂载时 groupId='' 触发一次多余的无分组请求
+    // （切换空间时 Group 会重新回调新分组 id，从而带上最新 spaceId 刷新列表）
+    if (!groupId) return;
     fetchList();
-  }, [spaceId, groupId]);
+  }, [groupId]);
 
   /** 查询：由 SearchFilterBar 停止输入 1s 防抖 / 回车 / 面板查询按钮触发，走后端接口 */
   const handleSearch = () => {

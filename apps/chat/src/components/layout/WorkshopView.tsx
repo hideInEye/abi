@@ -293,10 +293,13 @@ export function WorkshopView() {
       {/* Data area：占满剩余高度 */}
       <Spin spinning={loading} wrapperClassName="ws-data-spin">
         <div className="ws-data-area">
-          {!loading && pagedRows.length === 0 ? (
-            <div className="ws-empty">
-              <Empty description="暂无数据" />
-            </div>
+          {pagedRows.length === 0 ? (
+            // 加载中不渲染空态（由 Spin 遮罩负责）；避免加载态落入表格分支导致表头闪现
+            !loading && (
+              <div className="ws-empty">
+                <Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              </div>
+            )
           ) : (
             <div className="ws-table-wrap">
               <table className="ws-table">
