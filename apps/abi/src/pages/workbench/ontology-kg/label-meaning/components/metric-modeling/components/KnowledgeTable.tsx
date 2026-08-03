@@ -60,9 +60,10 @@ export const KnowledgeTable: React.FC<Props> = ({
     () => [
       {
         align: 'center',
-        dataIndex: 'techName',
+        dataIndex: 'bizName',
         ellipsis: true,
-        key: 'techName',
+        key: 'bizName',
+        render: formatDisplayValue,
         title: '指标名称',
         width: 180
       },
@@ -162,8 +163,8 @@ export const KnowledgeTable: React.FC<Props> = ({
           emptyText="暂无指标"
           fields={cardFields}
           loading={loading}
-          rowKey={(record) => String(record.indId || record.termId || record.techName || record.bizName)}
-          title={(record) => formatDisplayValue(record.techName)}
+          rowKey={(record) => String(record.indId || record.termId || record.bizName || record.techName)}
+          title={(record) => formatDisplayValue(record.bizName)}
           titleExtra={(record) => INDICATOR_TYPE_TEXT_MAP[record.indicatorClass || ''] || formatDisplayValue(record.indicatorClass)}
         />
       ) : (
@@ -176,7 +177,7 @@ export const KnowledgeTable: React.FC<Props> = ({
               dataSource={dataSource}
               loading={loading}
               pagination={false}
-              rowKey={(record) => String(record.indId || record.termId || record.techName || record.bizName)}
+              rowKey={(record) => String(record.indId || record.termId || record.bizName || record.techName)}
               rowSelection={{
                 columnWidth: 48,
                 fixed: true,

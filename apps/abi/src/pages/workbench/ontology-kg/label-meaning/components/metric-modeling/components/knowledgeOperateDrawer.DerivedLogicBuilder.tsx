@@ -24,10 +24,11 @@ const defaultCondition: KnowledgeDerivedCondition = {
   value: ''
 }
 
-function createDefaultExpression(): KnowledgeDerivedExpression {
+function createDefaultExpression(name = '表达式1'): KnowledgeDerivedExpression {
   return {
     conditions: [{ ...defaultCondition }],
-    innerLogic: 'AND'
+    innerLogic: 'AND',
+    name
   }
 }
 
@@ -44,10 +45,11 @@ function quoteValue(value?: string) {
 
 function normalizeExpressions(expressions?: KnowledgeDerivedExpression[], fallbackConditions?: KnowledgeDerivedCondition[]) {
   if (expressions?.length) {
-    return expressions.map(item => ({
+    return expressions.map((item, index) => ({
       ...item,
       conditions: item.conditions?.length ? item.conditions : [{ ...defaultCondition }],
-      innerLogic: item.innerLogic === 'OR' ? 'OR' : 'AND'
+      innerLogic: item.innerLogic === 'OR' ? 'OR' : 'AND',
+      name: item.name || `表达式${index + 1}`
     }))
   }
 
@@ -55,7 +57,8 @@ function normalizeExpressions(expressions?: KnowledgeDerivedExpression[], fallba
     return [
       {
         conditions: fallbackConditions,
-        innerLogic: fallbackConditions.some(item => item.logic === 'OR') ? 'OR' : 'AND'
+        innerLogic: fallbackConditions.some(item => item.logic === 'OR') ? 'OR' : 'AND',
+        name: '表达式1'
       }
     ]
   }
@@ -214,8 +217,10 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
 
                 return (
                   <div className="rounded-xl border border-gray-100 bg-white px-6 py-5" key={expressionField.key}>
-                    <div className="mb-5 flex items-center justify-between">
-                      <div className="min-w-36 rounded-md bg-gray-50 px-5 py-3 text-lg font-semibold text-gray-900">表达式{expressionIndex + 1}</div>
+                    <div className="mb-5 flex items-center justify-between gap-3">
+                      <AForm.Item label={`表达式${expressionIndex + 1}`} className="mb-0!" name={[expressionField.name, 'name']} rules={[{ max: 50, message: '表达式名称不能超过50个字符' }]} style={{ flex: '0 1 320px', maxWidth: '100%' }}>
+                        <AInput  placeholder="请输入表达式名称" />
+                      </AForm.Item>
                       <AButton danger type="text" onClick={() => removeExpression(expressionField.name)}>
                         删除表达式
                       </AButton>
@@ -281,7 +286,7 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
                 )
               })}
 
-              <AButton icon={<PlusOutlined />} onClick={() => addExpression(createDefaultExpression())}>
+              <AButton icon={<PlusOutlined />} onClick={() => addExpression(createDefaultExpression(`表达式${expressionFields.length + 1}`))}>
                 新增表达式
               </AButton>
             </div>

@@ -76,9 +76,10 @@ export const DimensionTable: React.FC<Props> = ({
       },
       {
         align: 'center',
-        dataIndex: 'path',
+        dataIndex: 'levelPath',
         ellipsis: true,
-        key: 'path',
+        key: 'levelPath',
+        render: formatDisplayValue,
         title: '维度路径(目录)',
         width: 300
       },
