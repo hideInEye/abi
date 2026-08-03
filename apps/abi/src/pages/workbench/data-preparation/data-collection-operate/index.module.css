@@ -1,8 +1,8 @@
 /* @type */
 
-/* 配置方式锁定：保持禁用交互，但字体颜色不变灰 */
+/* 配置方式锁定：禁用态字体灰色展示，与平台禁用文字色统一 */
 .configTypeSelect:global(.ant-select-disabled) :global(.ant-select-selection-item) {
-  color: #3e5068 !important;
+  color: #768a9f !important;
 }
 
 .container {

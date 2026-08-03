@@ -23,7 +23,7 @@ export function WorkbenchMenuList({ collapsed, activeKey, onItemClick }: Workben
       <div className="flex flex-col gap-1 mb-2 px-1">
         <button
           type="button"
-          className="nav-link-item"
+          className={`nav-link-item ${activeKey === 'workshop' ? 'active' : ''}`}
           style={{ justifyContent: 'center', padding: '9px 0' }}
           onClick={() => handleClick('workshop')}
           title="应用工坊"
@@ -32,7 +32,7 @@ export function WorkbenchMenuList({ collapsed, activeKey, onItemClick }: Workben
         </button>
         <button
           type="button"
-          className="nav-link-item"
+          className={`nav-link-item ${activeKey === SKILL_STORE_MENU_KEY ? 'active' : ''}`}
           style={{ justifyContent: 'center', padding: '9px 0' }}
           onClick={() => handleClick(SKILL_STORE_MENU_KEY)}
           title="技能商店"

@@ -70,6 +70,7 @@ declare global {
   const CommonDrawer: typeof import('../components/stateless/common/CommonDrawer/index')['default']
   const DarkModeContainer: typeof import('../components/stateless/common/DarkModeContainer')['default']
   const DeferredRangePicker: typeof import('../components/SearchFilterBar')['DeferredRangePicker']
+  const DeferredSelect: typeof import('../components/SearchFilterBar')['DeferredSelect']
   const DragContent: typeof import('../components/advanced/DragContent')['default']
   const ExceptionBase: typeof import('../components/stateless/common/ExceptionBase')['default']
   const FullScreen: typeof import('../components/stateless/common/FullScreen')['default']

@@ -217,6 +217,7 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
       destroyOnClose
       open={open}
       size="large"
+      icon={null}
       title={drawerTitle}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, padding: '4px 0' }}>

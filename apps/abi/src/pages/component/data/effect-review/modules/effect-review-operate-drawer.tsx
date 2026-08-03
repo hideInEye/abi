@@ -1,40 +1,45 @@
-import { AuditOutlined, DislikeFilled, FileTextOutlined, LikeFilled, RobotOutlined, SolutionOutlined } from '@ant-design/icons'
+import { AuditOutlined, DislikeFilled, FileTextOutlined, LikeFilled, RobotOutlined, SolutionOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { message } from 'antd'
 import dayjs from 'dayjs'
 
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { EVAL_EXPERT_OPTIONS, EVAL_LLM_OPTIONS, MEMORY_CHAT_MODE_OPTIONS, MEMORY_STATUS_OPTIONS } from '@/constants/assistant-config'
+import { fetchMemoryDetail, fetchModelEval } from '@/service/api/assistant-manage'
 
 type Props = Page.OperateDrawerProps
 
 /** 分区标题 — 对齐平台抽屉风格（渐变图标 + 标题 + 底部分隔线） */
-const SectionTitle: FC<{ icon: React.ReactNode; title: string; color?: string }> = ({ color = '#5b7cf7', icon, title }) => (
+const SectionTitle: FC<{ icon: React.ReactNode; title: string; color?: string; extra?: React.ReactNode }> = ({ color = '#5b7cf7', extra, icon, title }) => (
   <div
     style={{
       alignItems: 'center',
       borderBottom: '1px solid rgba(130, 140, 200, 0.10)',
       display: 'flex',
-      gap: 10,
+      justifyContent: 'space-between',
       marginBottom: 16,
       padding: '10px 0',
     }}
   >
-    <div
-      style={{
-        alignItems: 'center',
-        background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
-        borderRadius: 7,
-        boxShadow: `0 2px 8px ${color}30`,
-        color: '#fff',
-        display: 'flex',
-        fontSize: 13,
-        height: 26,
-        justifyContent: 'center',
-        width: 26,
-      }}
-    >
-      {icon}
+    <div style={{ alignItems: 'center', display: 'flex', gap: 10 }}>
+      <div
+        style={{
+          alignItems: 'center',
+          background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+          borderRadius: 7,
+          boxShadow: `0 2px 8px ${color}30`,
+          color: '#fff',
+          display: 'flex',
+          fontSize: 13,
+          height: 26,
+          justifyContent: 'center',
+          width: 26,
+        }}
+      >
+        {icon}
+      </div>
+      <span style={{ color: '#1a2744', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em' }}>{title}</span>
     </div>
-    <span style={{ color: '#1a2744', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em' }}>{title}</span>
+    {extra}
   </div>
 )
 
@@ -59,6 +64,16 @@ const ReadonlyText: FC<{ value?: React.ReactNode }> = ({ value }) => (
     {value != null && value !== '' ? value : <span style={{ color: '#a3b3c8' }}>-</span>}
   </div>
 )
+
+/** 尝试将字符串格式化为缩进 2 空格的 JSON，解析失败则原样返回 */
+const formatMaybeJson = (value?: string): string | undefined => {
+  if (!value) return value
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2)
+  } catch {
+    return value
+  }
+}
 
 /** 只读长文本块（ai信息 / view信息），限定高度、内部滚动 */
 const ReadonlyBlock: FC<{ value?: string }> = ({ value }) => (
@@ -94,7 +109,23 @@ const EffectReviewOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose
   const evalUser = form.getFieldValue('eval_user')
   const createBy = form.getFieldValue('create_by')
   const createTime = form.getFieldValue('create_time')
-  const evalLlm = form.getFieldValue('eval_llm')
+
+  // 模型评估（AI 评估）结果与请求态，抽屉每次打开时从表单值同步初始结果
+  const [evalLoading, setEvalLoading] = useState(false)
+  const [modelEval, setModelEval] = useState<{ evalLlm?: string; llmOpinion?: string }>({})
+
+  useEffect(() => {
+    if (open) {
+      setModelEval({
+        evalLlm: form.getFieldValue('eval_llm'),
+        llmOpinion: form.getFieldValue('llm_opinion'),
+      })
+      setEvalLoading(false)
+    }
+  }, [open])
+
+  // 模型评估仅问数场景（chat_with_db_execute）支持
+  const isWenShuScene = (mode?: string) => mode === 'chat_with_db_execute'
 
   const handleClose = () => {
     onClose()
@@ -109,8 +140,54 @@ const EffectReviewOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose
     }
   }
 
+  /** AI 评估：调用 llmeval 接口，成功后重新拉取详情取回模型评估结果并展示到下方结果栏 */
+  const handleAiEval = async () => {
+    const fbId = form.getFieldValue('fb_id')
+    try {
+      setEvalLoading(true)
+      // 模型相关 id 固定：app_id=0、embed_model_id=6、chat_model_id=12（无需查询模型列表）
+      const params = {
+        context: {
+          app_code: '',
+          app_id: 0,
+          chat_mode: chatMode,
+          chat_model_id: 12,
+          conv_uid: form.getFieldValue('conv_uid'),
+          embed_model_id: 6,
+          extra: { fb_id: fbId },
+          space_id: `${form.getFieldValue('space_id')}`,
+          sys_code: '1',
+          user_name: '1',
+        },
+        enable_vis: false,
+        incremental: false,
+        messages: '',
+        model: 'Qwen3.6-plus',
+        stream: false,
+      }
+      const res: any = await fetchModelEval(params)
+      if (res.response?.data?.success) {
+        message.success('模型评估成功')
+        // llmeval 接口不直接返回评估结果，需再查详情拿最新 evalLlm / llmOpinion
+        const detailRes: any = await fetchMemoryDetail(fbId)
+        const inner = detailRes?.data ?? detailRes?.response?.data?.data ?? {}
+        const raw = Array.isArray(inner?.data) ? inner.data[0] : Array.isArray(inner) ? inner[0] : inner
+        const nextEvalLlm = raw?.evalLlm ?? raw?.eval_llm
+        const nextLlmOpinion = raw?.llmOpinion ?? raw?.llm_opinion
+        const evalLlmStr = nextEvalLlm != null ? `${nextEvalLlm}` : ''
+        setModelEval({ evalLlm: evalLlmStr, llmOpinion: nextLlmOpinion ?? '' })
+        form.setFieldsValue({ eval_llm: evalLlmStr, llm_opinion: nextLlmOpinion ?? '' })
+      } else {
+        message.error(res.response?.data?.err_msg || '模型评估失败')
+      }
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setEvalLoading(false)
+    }
+  }
+
   const chatModeLabel = MEMORY_CHAT_MODE_OPTIONS.find((item: any) => item.value === chatMode)?.label || '无'
-  const evalLlmLabel = EVAL_LLM_OPTIONS.find((item: any) => item.value === evalLlm)?.label || ''
 
   const renderEvalUser = () => {
     if (evalUser === '0') return <LikeFilled style={{ color: '#22c55e', fontSize: 16 }} />
@@ -148,7 +225,7 @@ const EffectReviewOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose
           <ReadonlyText value={chatModeLabel} />
         </AForm.Item>
         <AForm.Item label={fieldLabel('ai信息')}>
-          <ReadonlyBlock value={aiResponse} />
+          <ReadonlyBlock value={formatMaybeJson(aiResponse)} />
         </AForm.Item>
         <AForm.Item label={fieldLabel('view信息')}>
           <ReadonlyBlock value={viewResponse} />
@@ -163,14 +240,40 @@ const EffectReviewOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose
           <ReadonlyText value={createTime ? dayjs(createTime).format('YYYY-MM-DD HH:mm:ss') : '-'} />
         </AForm.Item>
 
-        <SectionTitle icon={<RobotOutlined />} title="模型评估" color="#10b981" />
-        {evalLlm ? (
+        <SectionTitle
+          icon={<RobotOutlined />}
+          title="模型评估"
+          color="#10b981"
+          extra={
+            operateType === 'add' ? undefined : (
+              <ATooltip title={isWenShuScene(chatMode) ? '' : '仅问数场景支持模型评估'}>
+                <AButton
+                  ghost
+                  disabled={evalLoading || !isWenShuScene(chatMode)}
+                  icon={<ThunderboltOutlined />}
+                  loading={evalLoading}
+                  size="small"
+                  type="primary"
+                  onClick={handleAiEval}
+                >
+                  AI评估
+                </AButton>
+              </ATooltip>
+            )
+          }
+        />
+        {evalLoading ? (
+          <div style={{ margin: '8px 0 20px', padding: '24px 0', textAlign: 'center' }}>
+            <ASpin />
+            <div style={{ color: '#a3b3c8', fontSize: 13, marginTop: 8 }}>模型评估中...</div>
+          </div>
+        ) : modelEval.evalLlm ? (
           <>
             <AForm.Item label={fieldLabel('结果')}>
-              <ReadonlyText value={evalLlmLabel} />
+              <ReadonlyText value={EVAL_LLM_OPTIONS.find((item: any) => item.value === modelEval.evalLlm)?.label || ''} />
             </AForm.Item>
-            <AForm.Item label={fieldLabel('意见')} name="llm_opinion">
-              <AInput.TextArea readOnly autoSize={{ maxRows: 6, minRows: 2 }} variant="filled" />
+            <AForm.Item label={fieldLabel('意见')}>
+              <ReadonlyBlock value={modelEval.llmOpinion} />
             </AForm.Item>
           </>
         ) : (

@@ -51,6 +51,15 @@ class BaseApi extends AbstractApi {
     }
 
     /**
+     * 获取数据语义分组树（分组 + 数据语义统一节点树，一次性返回，含各级子分组与数据语义叶子）
+     * @param spaceId 空间id
+     */
+    async fetchSemanticTree(spaceId: number): Promise<any[]> {
+        const res = await FetchUtil.get(`/copilot/v1/schema/tree?spaceId=${spaceId}`);
+        return res.code === 200 ? (res.data || []) : [];
+    }
+
+    /**
      * 创建会话（chat-proxy）
      * @param data 会话配置数据，需包含 chat_id 等
      */

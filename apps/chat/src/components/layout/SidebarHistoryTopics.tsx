@@ -16,6 +16,8 @@ import { getSpaceId } from '@/utils'
 type SidebarHistoryTopicsProps = {
   collapsed: boolean
   refreshKey: number
+  /** 当应用工坊/技能商店视图激活时，抑制会话列表的选中高亮 */
+  suppressActive?: boolean
 }
 
 function getActiveTaskId(pathname: string) {
@@ -23,10 +25,13 @@ function getActiveTaskId(pathname: string) {
   return match?.[1] ?? ''
 }
 
-export function SidebarHistoryTopics({ collapsed, refreshKey }: SidebarHistoryTopicsProps) {
+export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = false }: SidebarHistoryTopicsProps) {
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const activeTaskId = useMemo(() => getActiveTaskId(pathname), [pathname])
+  const activeTaskId = useMemo(
+    () => (suppressActive ? '' : getActiveTaskId(pathname)),
+    [pathname, suppressActive],
+  )
   const { historyLoading, historyTopics, historyApps, loadHistoryTopics, removeTopicById } = useHistoryTopics()
   const [createModalVisible, setCreateModalVisible] = useState(false)
   const [createModalIsEdit, setCreateModalIsEdit] = useState(false)

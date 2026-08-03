@@ -24,6 +24,8 @@ interface Props {
   open: boolean
   spaceId?: number | string
   selectedIds: Set<string>
+  /** 单选模式：仅允许选中一个模型，隐藏「全选」 */
+  singleSelect?: boolean
   onToggle: (id: string, checked: boolean) => void
   onBatchToggle: (ids: string[], checked: boolean) => void
   /** 列表加载完成后回传模型元数据（可选，用于父组件展示已选项名称） */
@@ -31,7 +33,7 @@ interface Props {
   onClose: () => void
 }
 
-const ModelPickerDrawer: React.FC<Props> = ({ open, spaceId, selectedIds, onToggle, onBatchToggle, onOptionsLoaded, onClose }) => {
+const ModelPickerDrawer: React.FC<Props> = ({ open, spaceId, selectedIds, singleSelect = false, onToggle, onBatchToggle, onOptionsLoaded, onClose }) => {
   const [keyword, setKeyword] = useState('')
   // activeProviderId 为 null 表示「全部」
   const [activeProviderId, setActiveProviderId] = useState<number | null>(null)
@@ -60,7 +62,8 @@ const ModelPickerDrawer: React.FC<Props> = ({ open, spaceId, selectedIds, onTogg
       ])
       const providerList: any[] = Array.isArray(providerData) ? providerData : []
       setProviders(providerList.map((p) => ({ providerId: p.providerId, providerName: p.providerName || '-' })))
-      const rows: any[] = modelRes?.data?.data ?? []
+      // 仅展示语言模型（modelType==='1'，大模型），过滤掉向量/嵌入模型
+      const rows: any[] = (modelRes?.data?.data ?? []).filter((m: any) => String(m.modelType) === '1')
       const options: ModelOption[] = rows.map((m) => ({
         id: `model_${m.modelId ?? m.llmId}`,
         name: m.modelName || '-',
@@ -133,30 +136,46 @@ const ModelPickerDrawer: React.FC<Props> = ({ open, spaceId, selectedIds, onTogg
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
-          <div
-            style={{
-              alignItems: 'center',
-              display: 'flex',
-              gap: 8,
-              padding: '4px 8px',
-              userSelect: 'none',
-            }}
-          >
-            <Checkbox
-              checked={allChecked}
-              disabled={filteredList.length === 0}
-              indeterminate={indeterminate}
-              onChange={(e) =>
-                onBatchToggle(
-                  filteredList.map((m) => m.id),
-                  e.target.checked,
-                )
-              }
-            />
-            <span style={{ color: '#595959', fontSize: 12, fontWeight: 600 }}>全选</span>
-            <span style={{ color: '#bfbfbf', fontSize: 11 }}>({filteredList.length})</span>
-            <span style={{ color: '#8fa0b5', fontSize: 11, marginLeft: 'auto' }}>已选 {checkedCount} 项</span>
-          </div>
+          {singleSelect ? (
+            <div
+              style={{
+                alignItems: 'center',
+                display: 'flex',
+                gap: 8,
+                padding: '4px 8px',
+                userSelect: 'none',
+              }}
+            >
+              <span style={{ color: '#595959', fontSize: 12, fontWeight: 600 }}>模型列表</span>
+              <span style={{ color: '#bfbfbf', fontSize: 11 }}>({filteredList.length})</span>
+              <span style={{ color: '#8fa0b5', fontSize: 11, marginLeft: 'auto' }}>{checkedCount > 0 ? '已选 1 项' : '未选择'}</span>
+            </div>
+          ) : (
+            <div
+              style={{
+                alignItems: 'center',
+                display: 'flex',
+                gap: 8,
+                padding: '4px 8px',
+                userSelect: 'none',
+              }}
+            >
+              <Checkbox
+                checked={allChecked}
+                disabled={filteredList.length === 0}
+                indeterminate={indeterminate}
+                onChange={(e) =>
+                  onBatchToggle(
+                    filteredList.map((m) => m.id),
+                    e.target.checked,
+                  )
+                }
+              />
+              <span style={{ color: '#595959', fontSize: 12, fontWeight: 600 }}>全选</span>
+              <span style={{ color: '#bfbfbf', fontSize: 11 }}>({filteredList.length})</span>
+              <span style={{ color: '#8fa0b5', fontSize: 11, marginLeft: 'auto' }}>已选 {checkedCount} 项</span>
+            </div>
+          )}
           <div style={{ flex: 1, overflow: 'auto' }}>
             <Spin spinning={loading}>
               {filteredList.length === 0 && !loading ? (

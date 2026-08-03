@@ -11,6 +11,7 @@ import { fetchSemanticGroups, fetchSemanticDetail } from '../../../../service/ap
 import SchemaFieldsModal from '../../../conversation-analysis/SchemaFieldsModal';
 import type { SchemaTable, SchemaField } from '../../../conversation-analysis/SchemaFieldsModal';
 import { getSpaceId } from '../../../../utils';
+import type { ModelOption } from '../chat-header';
 
 export interface SemanticSelectedData {
   name: string
@@ -30,6 +31,8 @@ interface ChatInputProps {
   uploadFileEnabled: boolean;
   onToggleDeepThink: () => void;
   onToggleUploadFile: () => void;
+  /** 当前选中的模型，用于判断思考按钮是否可关闭 */
+  currentModel?: ModelOption | null;
   setSelectedExcel?: (file: any) => void;
   selectedExcel?: any;
   spaceId?: number;
@@ -47,10 +50,16 @@ interface ChatInputProps {
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
   ({ loading, onSend, onStop, deepThinkEnabled, uploadFileEnabled, setSelectedExcel, selectedExcel, conv, ensureConv, onToggleDeepThink, onToggleUploadFile,
+    currentModel,
     spaceId,
     semanticTree = [], selectedData, onSelectData, semLoading, expandedSemGroups, onToggleSemGroup,
     externalValue, onExternalValueConsumed
   }) => {
+    // 当前模型是否支持关闭思考：1 为支持，0 或其他为不支持
+    const isSupportCloseThinking = currentModel?.isSupportThinking === 1 || currentModel?.isSupportThinking === '1';
+    // 模型存在且不支持关闭思考时，思考按钮为只读并强制点亮
+    const thinkingReadOnly = !!currentModel && !isSupportCloseThinking;
+    const thinkingActive = thinkingReadOnly || deepThinkEnabled;
     const [value, setValue] = useState('');
     const isComposingRef = useRef(false);
     const [uploadFileVisible, setUploadFileVisible] = useState(false);
@@ -502,7 +511,13 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           </Dropdown>
 
           {/* 思考 (deep think toggle) */}
-          <button type="button" className={`input-label-btn ${deepThinkEnabled ? 'active' : ''}`} onClick={onToggleDeepThink}>
+          <button
+            type="button"
+            className={`input-label-btn ${thinkingActive ? 'active' : ''} ${thinkingReadOnly ? 'readonly' : ''}`}
+            onClick={thinkingReadOnly ? undefined : onToggleDeepThink}
+            disabled={thinkingReadOnly}
+            title={thinkingReadOnly ? '当前模型不支持关闭思考' : (thinkingActive ? '关闭思考' : '开启思考')}
+          >
             <BulbOutlined style={{ fontSize: 14 }} />
             <span>思考</span>
           </button>

@@ -18,9 +18,10 @@ type CommonDrawerTitleProps = {
 }
 
 function CommonDrawerTitle({ description, icon, title }: CommonDrawerTitleProps) {
+  const resolvedIcon = icon === undefined ? <AppstoreOutlined /> : icon
   return (
     <div className="abi-common-drawer-title">
-      <span className="abi-common-drawer-title-icon">{icon || <AppstoreOutlined />}</span>
+      {resolvedIcon ? <span className="abi-common-drawer-title-icon">{resolvedIcon}</span> : null}
       <span className="abi-common-drawer-title-content">
         <span className="abi-common-drawer-title-text">{title}</span>
         {description ? <span className="abi-common-drawer-title-desc">{description}</span> : null}
