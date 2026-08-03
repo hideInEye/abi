@@ -34,6 +34,10 @@ interface Props {
   onSave?: () => void;
   /** 退出编辑回调（点击「退出编辑」按钮） */
   onExit?: () => void;
+  /** 选择表勾选结果（表 -> 字段），由页面持有，保存时组装进 viewHistory */
+  tableSelection?: TableFieldSelection;
+  /** 勾选结果变化回调 */
+  onTableSelectionChange?: (selection: TableFieldSelection) => void;
 }
 
 /**
@@ -98,6 +102,8 @@ const SqlModeEditor: React.FC<Props> = ({
   runLoading,
   onSave,
   onExit,
+  tableSelection = {},
+  onTableSelectionChange,
 }) => {
   const monaco = useMonaco();
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -107,9 +113,8 @@ const SqlModeEditor: React.FC<Props> = ({
   const aiBufferRef = useRef('');
   const aiDoneRef = useRef(false);
   const sendAbortRef = useRef<AbortController | null>(null);
-  // 选择表抽屉：开关与勾选结果（表 -> 字段）；TODO(接口对接)：接口就绪后改为后端保存/回显
+  // 选择表抽屉开关；勾选结果由父组件持有（随数据集保存/回显）
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
-  const [tableSelection, setTableSelection] = useState<TableFieldSelection>({});
   // 缓存每张表的字段列表：{ tableName -> [{ originName, comment }] }
   const fieldsCache = useRef<Record<string, Array<{ originName: string; comment: string }>>>({});
   // 保存 completionProvider dispose 函数，切换数据源时清理
@@ -144,10 +149,9 @@ const SqlModeEditor: React.FC<Props> = ({
     }
   }, []);
 
-  /** 数据源切换时清空字段缓存与表勾选记录 */
+  /** 数据源切换时清空字段缓存（勾选记录由父组件在切换数据源时清空） */
   useEffect(() => {
     fieldsCache.current = {};
-    setTableSelection({});
   }, [sourceId]);
 
   /** 注册 Monaco SQL 自动补全 Provider */
@@ -513,7 +517,7 @@ const SqlModeEditor: React.FC<Props> = ({
         fetchFields={fetchFields}
         onCancel={() => setTablePickerOpen(false)}
         onConfirm={(selection) => {
-          setTableSelection(selection);
+          onTableSelectionChange?.(selection);
           setTablePickerOpen(false);
         }}
       />

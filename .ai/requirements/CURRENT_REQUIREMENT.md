@@ -368,3 +368,35 @@ ABI 72px global-sider 使用 `rgba(255, 255, 255, 0.38)` 半透明背景时，�
 - `.abi-nav-sider` 使用不透明十六进制背景色，不再依赖底层背景混色。
 - 上一轮 `global-content`、`global-menu`、`manage-menu`、`global.css` 的布局透明化改动已撤回。
 - 修改不引入格式错误。
+
+## 2026-07-30 追加：数据集 SQL 模式保存参数对接（后端口径）
+
+### 需求类型
+
+前端接口对接（保存参数改造），无 UI 变化。
+
+### 背景（后端确认的存储口径）
+
+- 快速模式 `viewType='union'`，SQL 模式 `viewType='sql'`；新增调 `addDataSet`，编辑调 `saveDataSet`。
+- SQL 模式不传 `allFields`。
+- SQL 原文仍由后端从 `union[0].currentDs.tableInfo.sql` 提取（union 假节点结构不变）；`unionSql` 保持原样（union 的序列化）。
+- 新增参数 `viewHistory`（字段名经两次调整：unionSql → viewInfo → viewHistory）：存「选择表」抽屉勾选的表结构（平铺数组，每表一个 `currentDs` + `currentDsFields`，格式对齐快速创建的 union）。
+- 勾选记录的保存/回显由此顺带解决，无需单独接口。
+
+### 目标
+
+- `saveSql`：新增 `viewHistory` 参数存勾选表结构 JSON；`unionSql`/`union` 保持原样；去掉 `allFields`；新增/编辑按 id 分流 `addDataSet`/`saveDataSet`。
+- 勾选状态从 SqlModeEditor 提升到 `[id].tsx` 页面级（受控 props），保存时可取。
+- 抽屉勾选模型升级为字段对象数组（`Record<tableName, {originName, comment}[]>`），保存时直接组装 `currentDsFields`。
+- 编辑回显：详情接口 `viewHistory` 解析→抽屉勾选状态；无效/假节点跳过不回显。
+- 切换数据源时清空勾选。
+
+### 非目标
+
+- 不改抽屉 UI 交互、不改快速模式保存逻辑、不动 AI 生成 SQL 功能。
+
+### 验收标准
+
+- SQL 模式保存报文：无 `allFields`；新增 `viewHistory` 为勾选表结构 JSON；`unionSql`/`union` 与改前一致；新增走 addDataSet。
+- 编辑已保存的 SQL 数据集，抽屉勾选正确回显。
+- tsc 不新增报错。

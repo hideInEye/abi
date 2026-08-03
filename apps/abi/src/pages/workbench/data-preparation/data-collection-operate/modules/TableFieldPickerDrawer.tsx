@@ -10,8 +10,8 @@ export interface PickerFieldItem {
   comment: string;
 }
 
-/** 勾选结果：{ 表名 -> 已勾选字段 originName 列表 }，key 存在即代表该表被勾选 */
-export type TableFieldSelection = Record<string, string[]>;
+/** 勾选结果：{ 表名 -> 已勾选字段对象列表 }，key 存在即代表该表被勾选；保存时直接组装 currentDsFields */
+export type TableFieldSelection = Record<string, PickerFieldItem[]>;
 
 interface Props {
   open: boolean;
@@ -78,7 +78,7 @@ const FieldPanel: React.FC<FieldPanelProps> = memo(({ fields, selectedKeys, onCh
  * 选择表抽屉（SQL 模式）
  * - 表级复选 + 折叠展开字段级复选，表/字段勾选状态联动（全选/半选）
  * - 字段按需加载（首次展开或勾选表头时请求，复用调用方缓存）
- * - TODO(接口对接)：历史勾选记录的保存与回显接口就绪后，在打开时拉取、确定时提交
+ * - 勾选结果随数据集保存存入 viewHistory（表结构），编辑时从详情 viewHistory 回显
  */
 const TableFieldPickerDrawer: React.FC<Props> = memo(({ open, tableList, value, fetchFields, onCancel, onConfirm }) => {
   const [selection, setSelection] = useState<TableFieldSelection>({});
@@ -127,15 +127,16 @@ const TableFieldPickerDrawer: React.FC<Props> = memo(({ open, tableList, value, 
       return;
     }
     const fields = await loadFields(tableName);
-    setSelection((prev) => ({ ...prev, [tableName]: fields.map((f) => f.originName) }));
+    setSelection((prev) => ({ ...prev, [tableName]: [...fields] }));
   };
 
-  /** 字段级勾选变化：全部取消时同时取消表勾选 */
+  /** 字段级勾选变化：按 key 从已加载字段中取对象；全部取消时同时取消表勾选 */
   const handleFieldsChange = (tableName: string, keys: string[]) => {
     setSelection((prev) => {
       const next = { ...prev };
       if (keys.length) {
-        next[tableName] = keys;
+        const keySet = new Set(keys);
+        next[tableName] = (fieldsMap[tableName] || []).filter((f) => keySet.has(f.originName));
       } else {
         delete next[tableName];
       }
@@ -155,7 +156,7 @@ const TableFieldPickerDrawer: React.FC<Props> = memo(({ open, tableList, value, 
   const collapseItems = tableList.map((table) => {
     const { tableName } = table;
     const fields = fieldsMap[tableName];
-    const selectedKeys = selection[tableName] || [];
+    const selectedKeys = (selection[tableName] || []).map((f) => f.originName);
     // 字段已加载时按数量精确判断全选/半选；未加载时以是否存在勾选记录展示
     const checked = fields ? fields.length > 0 && selectedKeys.length === fields.length : selectedKeys.length > 0;
     const indeterminate = Boolean(fields && selectedKeys.length > 0 && selectedKeys.length < fields.length);

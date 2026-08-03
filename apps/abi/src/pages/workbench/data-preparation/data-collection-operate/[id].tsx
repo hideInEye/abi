@@ -14,6 +14,7 @@ import styles from './index.module.css';
 import BottomSql, { type BottomSqlHandle } from './modules/BottomSql';
 import DesignerRightPanel from './modules/DesignerRightPanel';
 import SqlModeEditor from './modules/SqlModeEditor';
+import type { TableFieldSelection } from './modules/TableFieldPickerDrawer';
 import BottomTabs from './modules/BottomTabs';
 import { DragBox } from './modules/DragBox';
 import { TreeNodeContainer } from './modules/TreeNodeContainer';
@@ -46,6 +47,7 @@ export function Component() {
   const [nodeData, setNodeData] = useState<any>({}); // 单独拎出来的节点图数据
   const [allFields, setAllFields] = useState<any[]>([]); // 单独拎出来的字段列表数据
   const [sqlVal, setSqlVal] = useState(''); // 单独拎出来的sql
+  const [sqlTableSelection, setSqlTableSelection] = useState<TableFieldSelection>({}); // SQL模式「选择表」勾选结果（表->字段），保存时存进 viewHistory
   const [leftPanelSize, setLeftPanelSize] = useState<number | string>(220);
   const [saveForm] = Form.useForm();
   const { dataSourceList, getDatasourceList, getTableListBySource, tableList } = useDatasource();
@@ -133,6 +135,26 @@ export function Component() {
         setSqlVal(sqlObj?.sql || '');
       } catch (error) {
         console.log(error);
+      }
+      // 回显「选择表」勾选：viewHistory 存平铺表结构 [{ currentDs, currentDsFields }]
+      try {
+        const structure = JSON.parse(res.data?.viewHistory || '[]');
+        if (Array.isArray(structure)) {
+          const selection: TableFieldSelection = {};
+          structure.forEach((node: any) => {
+            const tName = node?.currentDs?.tableName;
+            // 无效/假节点（自定义sql）跳过
+            if (tName && tName !== '自定义sql') {
+              selection[tName] = (node.currentDsFields || []).map((f: any) => ({
+                originName: f.originName,
+                comment: f.comment ?? f.name ?? ''
+              }));
+            }
+          });
+          setSqlTableSelection(selection);
+        }
+      } catch {
+        // 旧数据或格式异常，不回显勾选
       }
     }
   };
@@ -249,16 +271,25 @@ export function Component() {
           }
         }
     ];
+    // viewHistory 存「选择表」勾选的表结构（平铺，格式对齐快速创建的 union）；unionSql 保持原样
+    const tableStructure = Object.entries(sqlTableSelection).map(([tableName, selFields]) => ({
+      currentDs: {
+        sourceId: datasource,
+        tableName
+      },
+      currentDsFields: (selFields || []).map((f: any) => ({ ...f, checked: true }))
+    }));
     const paramsData = {
       ...collectionData,
       viewName: saveForm.getFieldValue('viewName'),
-      allFields: fields,
       spaceId,
       unionSql: JSON.stringify(unionData),
-      union: unionData
+      union: unionData,
+      viewHistory: JSON.stringify(tableStructure)
     };
 
-    const saveRes = await saveDataSet(paramsData);
+    // 新增走 addDataSet，编辑走 saveDataSet（同快速创建）；sql 模式不传 allFields
+    const saveRes = id && id !== '0' ? await saveDataSet(paramsData) : await addDataSet(paramsData);
     return saveRes?.response?.data?.code;
   };
 
@@ -324,11 +355,13 @@ export function Component() {
           setDatasource(val);
           setAllFields([]);
           setNodeData({});
+          setSqlTableSelection({});
         },
         title: '再次确认'
       });
     } else {
       setDatasource(val);
+      setSqlTableSelection({});
       const curDataSource = filterDataSourceList.find((item: any) => item.sourceId === val);
       setCurDatasource(curDataSource);
     }
@@ -484,6 +517,8 @@ export function Component() {
                               onRun={() => bottomSqlRef.current?.run()}
                               onSave={() => handleClickSave()}
                               onExit={() => push('/workbench/data-preparation/data-collection')}
+                              tableSelection={sqlTableSelection}
+                              onTableSelectionChange={setSqlTableSelection}
                             />
                           ) : (
                             <div style={{ height: '100%', width: '100%' }}>

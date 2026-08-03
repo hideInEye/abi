@@ -3,7 +3,8 @@ import { App, Button, Dropdown, Empty, Input, Select, Spin, Switch, Tabs, Toolti
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 // import PageTitle from '@/components/stateless/common/PageTitle';
-import { deleteSkillApi, querySkillListApi, updateSkillInfoApi, updateSkillStatusApi } from '@/service/api/skill';
+import { deleteSkillApi, querySkillListApi, updateSkillStatusApi } from '@/service/api/skill';
+import { fetchOperateNew } from '@/service/api/operateRecord';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { ViewControls } from '@/components/ViewControls';
@@ -143,26 +144,24 @@ export function Component() {
     setEditOpen(true);
   }
 
-  // 广场卡片右上角「添加」：先走前端本地逻辑，接口参数就绪后再补充
+  // 广场卡片右上角「添加」：走对话收藏接口（addOrRemove 由后端切换状态），类型为 skill
   function handleAddSkill(item: SkillItem) {
     const id = String(item.id);
     if (myIds.includes(id)) {
       message.info('已在我的技能中');
       return;
     }
-    // TODO: 后端提供添加参数后在此补充（接口仍为修改技能接口）
-    updateSkillInfoApi({ skillId: item.id }).catch(() => {});
+    fetchOperateNew({ favorType: 'skill', favorId: item.id }).catch(() => {});
     const next = [...myIds, id];
     setMyIds(next);
     localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next));
     message.success('已添加到我的技能');
   }
 
-  // 我的技能卡片右上角「移除」：前端本地移除，立即从列表消失
+  // 我的技能卡片右上角「移除」：同一收藏接口，addOrRemove 自动取消收藏
   function handleRemoveSkill(item: SkillItem) {
     const id = String(item.id);
-    // TODO: 后端提供移除参数后在此补充（接口仍为修改技能接口）
-    updateSkillInfoApi({ skillId: item.id }).catch(() => {});
+    fetchOperateNew({ favorType: 'skill', favorId: item.id }).catch(() => {});
     const next = myIds.filter(v => v !== id);
     setMyIds(next);
     localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next));
@@ -203,7 +202,7 @@ export function Component() {
       onOk: async () => {
         try {
           await Promise.all(
-            selectedRowKeys.map(id => deleteSkillApi({ skillId: id }))
+            selectedRowKeys.map(id => deleteSkillApi({ skillId: String(id) }))
           );
           message.success(`成功删除 ${selectedRowKeys.length} 个技能`);
           setSelectedRowKeys([]);

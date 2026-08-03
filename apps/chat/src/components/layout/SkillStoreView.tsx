@@ -3,7 +3,8 @@ import { message, Spin, Tabs } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 
 import type { SkillCard } from '@/constant/layout'
-import { querySkillList, updateSkillInfo, updateSkillStatus } from '@/service/api/skill'
+import { fetchOperateNew } from '@/service/api/abi-system'
+import { querySkillList, updateSkillStatus } from '@/service/api/skill'
 import { getSpaceId } from '@/utils'
 import SkillDetailDrawer from './SkillDetailDrawer'
 
@@ -173,12 +174,11 @@ export function SkillStoreView({ onBack }: SkillStoreViewProps) {
       })
   }, [])
 
-  // 广场卡片右上角「添加」：调修改技能接口，添加后在「我的技能」Tab 展示
+  // 广场卡片右上角「添加」：走对话收藏接口（addOrRemove 由后端切换状态），类型为 skill
   const handleAddSkill = useCallback(
     (card: SkillCard) => {
       if (myIds.includes(card.key)) return
-      // TODO: 后端提供添加参数后在此补充（接口仍为修改技能接口）
-      updateSkillInfo({ skillId: card.key }).catch(() => {})
+      fetchOperateNew({ favorType: 'skill', favorId: card.key }).catch(() => {})
       const next = [...myIds, card.key]
       setMyIds(next)
       localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next))
@@ -187,12 +187,11 @@ export function SkillStoreView({ onBack }: SkillStoreViewProps) {
     [myIds],
   )
 
-  // 取消添加：同样走修改技能接口（后续参数由后端提供）
+  // 取消添加：同一收藏接口，addOrRemove 自动取消收藏
   const handleRemoveSkill = useCallback(
     (card: SkillCard) => {
       if (!myIds.includes(card.key)) return
-      // TODO: 后端提供移除参数后在此补充（接口仍为修改技能接口）
-      updateSkillInfo({ skillId: card.key }).catch(() => {})
+      fetchOperateNew({ favorType: 'skill', favorId: card.key }).catch(() => {})
       const next = myIds.filter((id) => id !== card.key)
       setMyIds(next)
       localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next))
