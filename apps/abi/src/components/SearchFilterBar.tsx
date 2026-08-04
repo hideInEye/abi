@@ -64,6 +64,53 @@ export const DeferredRangePicker: React.FC<{ readonly value?: any; readonly onCh
   return <ADatePicker.RangePicker {...rest} value={pending} onChange={(dates: any) => setPending(dates)} />;
 };
 
+/**
+ * 延迟生效的下拉选择器：内部维护草稿值，选择时不会立即触发外部 onChange，
+ * 只有当用户点击「查询」按钮时才把草稿提交给外部（applied）值；点击「重置」时清空草稿。
+ * 用法与 ASelect 一致：value 传入已生效值，onChange 为已生效值的 setter。
+ * 必须渲染在 <SearchFilterBar> 的 filters 面板内才能接收查询/重置信号。
+ */
+export const DeferredSelect: React.FC<{ readonly value?: any; readonly onChange?: (value: any) => void; readonly [key: string]: any }> = ({
+  value,
+  onChange,
+  ...rest
+}) => {
+  const { queryNonce, resetNonce } = useContext(SearchFilterContext);
+  const [pending, setPending] = useState<any>(value ?? undefined);
+
+  // 外部已生效值变化时（提交或重置后）同步回草稿，保证再次打开面板显示的是已生效值
+  useEffect(() => {
+    setPending(value ?? undefined);
+  }, [value]);
+
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // 点击「查询」时才把草稿提交为已生效值（跳过挂载时的首次触发）
+  const queryMounted = useRef(false);
+  useEffect(() => {
+    if (!queryMounted.current) {
+      queryMounted.current = true;
+      return;
+    }
+    onChangeRef.current?.(pendingRef.current);
+  }, [queryNonce]);
+
+  // 点击「重置」时清空草稿（跳过挂载时的首次触发）
+  const resetMounted = useRef(false);
+  useEffect(() => {
+    if (!resetMounted.current) {
+      resetMounted.current = true;
+      return;
+    }
+    setPending(undefined);
+  }, [resetNonce]);
+
+  return <ASelect {...rest} value={pending} onChange={(val: any) => setPending(val)} />;
+};
+
 interface SearchFilterBarProps {
   /** 高级筛选面板中的筛选项（一行两个），无筛选项时不渲染高级筛选按钮 */
   readonly filters?: React.ReactNode;

@@ -20,7 +20,7 @@ import { useKnowledgeExtraction } from './hooks/useKnowledgeExtraction'
 import type { KnowledgeGroupItem } from './types/metricModeling.types'
 
 const KNOWLEDGE_COLUMN_OPTIONS: ColumnOption[] = [
-  { key: 'techName', label: '指标名称', visible: true },
+  { key: 'bizName', label: '指标名称', visible: true },
   { key: 'indicatorCode', label: '指标编码', visible: true },
   { key: 'indicatorClass', label: '指标类型', visible: true },
   { key: 'qualityLevel', label: '质量等级', visible: true },

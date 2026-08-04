@@ -182,7 +182,11 @@ function ChatWorkbenchLayout() {
               onItemClick={handleNavItemClick}
             />
             <ConversationGroups collapsed={collapsed} refreshKey={historyRefreshKey} />
-            <SidebarHistoryTopics collapsed={collapsed} refreshKey={historyRefreshKey} />
+            <SidebarHistoryTopics
+              collapsed={collapsed}
+              refreshKey={historyRefreshKey}
+              suppressActive={showSkillStore || showWorkshop}
+            />
           </div>
 
           <div

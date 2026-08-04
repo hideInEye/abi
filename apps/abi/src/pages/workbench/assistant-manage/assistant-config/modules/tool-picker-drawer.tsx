@@ -337,12 +337,14 @@ export const PickerToolRow: React.FC<{ name: string; description?: string; selec
       >
         <ThunderboltOutlined style={{ fontSize: 14 }} />
       </div>
-      <Tooltip title={description || name}>
+      <Tooltip title={name}>
         <span
           style={{
             color: selected ? '#5b7cf7' : '#1a2744',
+            flexShrink: 0,
             fontSize: 13,
             fontWeight: selected ? 500 : 400,
+            maxWidth: '45%',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             transition: 'all 0.2s ease',
@@ -352,6 +354,24 @@ export const PickerToolRow: React.FC<{ name: string; description?: string; selec
           {name}
         </span>
       </Tooltip>
+      {/* 描述：占右侧剩余宽度，单行超出省略号 */}
+      {description ? (
+        <Tooltip title={description}>
+          <span
+            style={{
+              color: '#8fa0b5',
+              flex: 1,
+              fontSize: 12,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {description}
+          </span>
+        </Tooltip>
+      ) : null}
     </div>
   )
 }

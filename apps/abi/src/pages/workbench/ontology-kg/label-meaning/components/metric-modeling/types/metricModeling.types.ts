@@ -242,7 +242,7 @@ export interface KnowledgeFormValues {
 }
 
 export interface KnowledgeSearchParams {
-  techName: string
+  bizName: string
   status?: number
   type: string
 }

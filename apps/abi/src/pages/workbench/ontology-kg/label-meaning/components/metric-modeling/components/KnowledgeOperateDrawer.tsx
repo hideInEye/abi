@@ -473,6 +473,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
             },
           ],
           innerLogic: 'AND',
+          name: '表达式1',
         },
       ],
       indAlias: [],

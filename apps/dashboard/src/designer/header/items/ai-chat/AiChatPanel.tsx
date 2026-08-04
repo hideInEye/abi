@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { message, Tooltip } from 'antd';
+import { message, Popover, Tooltip } from 'antd';
+import { DatabaseOutlined, DownOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, RightOutlined } from '@ant-design/icons';
 import { observer } from 'mobx-react';
 import { getApiTarget, notifyTokenExpired } from '../../../../utils/FetchUtil';
 import { getAuthorization } from '../../../../utils/auth';
@@ -12,6 +13,14 @@ import AiTableResult from './AiTableResult';
 import eventOperateStore from '../../../operate-provider/EventOperateStore';
 
 interface TableRow { [key: string]: any; }
+
+/** 选中的数据语义 */
+interface SemanticSelectedData {
+  name: string;
+  schemaId?: number | string;
+  /** 数据语义所属分组名 */
+  groupName?: string;
+}
 
 interface ChatMessage {
   role: 'human' | 'ai';
@@ -39,7 +48,8 @@ let cachedMessages: ChatMessage[] = [];
 let cachedConvUid = '';
 let cachedChatId = '';
 let historyLoaded = false; // 是否已成功拉取过历史
-let cachedSelectedAgentId = ''; // 持久化助手选择
+let cachedSemanticTree: any[] = []; // 持久化数据语义分组树
+let cachedSelectedData: SemanticSelectedData | null = null; // 持久化数据语义选择
 
 // 获取当前时间字符串
 function getNow() {
@@ -85,15 +95,33 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
 
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
-  const [agentList, setAgentList] = useState<any[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState<string>(cachedSelectedAgentId);
-  const [agentDropOpen, setAgentDropOpen] = useState(false);
+  // 数据语义（分组树：type=group/schema，递归 children）
+  const [semanticTree, setSemanticTree] = useState<any[]>(cachedSemanticTree);
+  const [selectedData, _setSelectedData] = useState<SemanticSelectedData | null>(cachedSelectedData);
+  const [expandedSemGroups, setExpandedSemGroups] = useState<Set<string>>(new Set());
+  const [semLoading, setSemLoading] = useState(false);
+  const [semDropdownOpen, setSemDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const convUidRef = useRef<string>('');
   const chatIdRef = useRef<string>('');
   const streamBufferRef = useRef('');
+
+  // 包装 setSelectedData：同时写入模块级缓存
+  const setSelectedData = useCallback((data: SemanticSelectedData | null) => {
+    cachedSelectedData = data;
+    _setSelectedData(data);
+  }, []);
+
+  // 展开/收起分组节点（数据已全量返回，无需懒加载）
+  const toggleSemGroup = useCallback((nodeId: string) => {
+    setExpandedSemGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
+      return next;
+    });
+  }, []);
 
   // 监听选中图表变化 → 更新图表名称 + 过滤消息
   useEffect(() => {
@@ -116,10 +144,19 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
     }
   }, [allMessages, eventOperateStore.targetIds]);
 
-  // 挂载时拉取助手列表 + 初始化 chatId / conv_uid + 历史消息
+  // 挂载时拉取数据语义分组树 + 初始化 chatId / conv_uid + 历史消息
   useEffect(() => {
     const spaceId = Number(localStorage.getItem('spaceId'));
-    baseApi.fetchAgentList(spaceId).then(setAgentList).catch(() => {});
+    // 数据语义分组树：命中缓存直接恢复，否则拉取
+    if (cachedSemanticTree.length > 0) {
+      setSemanticTree(cachedSemanticTree);
+    } else {
+      setSemLoading(true);
+      baseApi.fetchSemanticTree(spaceId)
+        .then((list) => { cachedSemanticTree = list; setSemanticTree(list); })
+        .catch(() => {})
+        .finally(() => setSemLoading(false));
+    }
 
     const dataJson = projectHdStore.projectConfig.dataJson;
     const parsed = dataJson ? JSON.parse(dataJson) : null;
@@ -260,8 +297,8 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
   const handleSend = useCallback(async () => {
     const text = inputValue.trim();
     if (!text || loading) return;
-    if (!selectedAgentId) {
-      message.warning('请先选择助手');
+    if (!selectedData?.schemaId) {
+      message.warning('请先选择数据语义');
       return;
     }
 
@@ -317,7 +354,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
       context: {
         conv_uid: convUidRef.current,
         chat_id: chatIdRef.current,
-        agent_id: selectedAgentId,
+        agent_id: '',
         space_id: String(localStorage.getItem('spaceId') ?? ''),
         app_code: 'chat_with_dashboard',
         chat_mode: 'chat_with_dashboard',
@@ -330,6 +367,10 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
           dashboard_id: dynamicDashboardId,
           chart_id: currentChartId,
           elements: {},
+          // 数据语义（与 chat 对话一致）
+          semantic_id: selectedData?.schemaId ?? null,
+          semantic_group_name: selectedData?.groupName || '',
+          semantic_name: selectedData?.name || '',
         },
       },
     };
@@ -407,7 +448,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
         );
       }
     }
-  }, [inputValue, loading, selectedAgentId, dashboardId, chartNameList, taskType]);
+  }, [inputValue, loading, selectedData, dashboardId, chartNameList, taskType]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -481,6 +522,62 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
     ta.style.height = 'auto';
     ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
   };
+
+  /** 递归渲染语义节点：文件夹（开/合）/ 空分组（灰、不可展开）/ 叶子（可选中） */
+  const renderSemNode = (node: any, depth: number): React.ReactNode => {
+    const indent = { paddingLeft: 8 + depth * 16 };
+    // 叶子：数据语义，唯一可选中的节点
+    if (node.type === 'schema') {
+      const isSel = selectedData?.schemaId === node.schemaId;
+      return (
+        <div key={node.id} className={`ai-sem-leaf ${isSel ? 'selected' : ''}`} style={indent} title={node.techName || node.name}
+          onClick={() => { setSelectedData({ name: node.name, schemaId: node.schemaId, groupName: node.groupName }); setSemDropdownOpen(false); }}
+        >
+          <FileTextOutlined className="ai-sem-leaf-icon" />
+          <span className="ai-sem-leaf-name">{node.name}</span>
+        </div>
+      );
+    }
+    // 分组：不可选中，按有无子节点分为可展开文件夹 / 灰色空分组
+    const children = Array.isArray(node.children) ? node.children : [];
+    const hasChildren = children.length > 0;
+    if (!hasChildren) {
+      return (
+        <div key={node.id} className="ai-sem-group-node is-empty" style={indent}>
+          <FolderOutlined className="ai-sem-group-icon ai-sem-group-icon--empty" />
+          <span className="ai-sem-group-name">{node.name}</span>
+        </div>
+      );
+    }
+    const isExpanded = expandedSemGroups.has(node.id);
+    const childCount = typeof node.count === 'number' ? node.count : children.length;
+    return (
+      <div key={node.id} className="ai-sem-group">
+        <div className="ai-sem-group-node" style={indent} onClick={() => toggleSemGroup(node.id)}>
+          {isExpanded
+            ? <FolderOpenOutlined className="ai-sem-group-icon" />
+            : <FolderOutlined className="ai-sem-group-icon" />}
+          <span className="ai-sem-group-name">{node.name}</span>
+          {childCount > 0 && <span className="ai-sem-group-count">{childCount}</span>}
+          <span className={`ai-sem-group-chevron ${isExpanded ? 'open' : ''}`}><RightOutlined /></span>
+        </div>
+        {isExpanded && children.map((child: any) => renderSemNode(child, depth + 1))}
+      </div>
+    );
+  };
+
+  /** 数据语义 Popover 内容（分组文件夹 / 数据语义文件的层级结构） */
+  const semanticPopoverContent = (
+    <div className="ai-sem-tree">
+      {semLoading ? (
+        <div className="ai-sem-empty">加载中...</div>
+      ) : semanticTree.length === 0 ? (
+        <div className="ai-sem-empty">暂无数据语义</div>
+      ) : (
+        semanticTree.map((node: any) => renderSemNode(node, 0))
+      )}
+    </div>
+  );
 
   return (
     <div className={`ai-chat-panel${float ? ' ai-chat-panel--float' : ''}`}>
@@ -624,39 +721,25 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
             disabled={loading}
           />
           <div className="input-toolbar">
-            {/* 助手选择 */}
-            {agentList.length > 0 && (
-              <div className="agent-selector">
-                <div className="agent-select-trigger" onClick={() => setAgentDropOpen(v => !v)}>
-                  <span>{selectedAgentId ? agentList.find(a => String(a.agentId) === selectedAgentId)?.bizName || '未知助手' : '请选择助手'}</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12" style={{marginLeft: 4, transition: 'transform 0.2s', transform: agentDropOpen ? 'rotate(180deg)' : 'none'}}>
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </div>
-                {agentDropOpen && (
-                  <div className="agent-dropdown">
-                    {agentList.map((agent: any) => (
-                      <div
-                        key={agent.agentId}
-                        className={`agent-option${selectedAgentId === String(agent.agentId) ? ' agent-option-active' : ''}`}
-                        onClick={() => { 
-                          setSelectedAgentId(String(agent.agentId)); 
-                          cachedSelectedAgentId = String(agent.agentId);
-                          setAgentDropOpen(false); 
-                        }}
-                      >
-                        <div className="agent-option-name">{agent.bizName || `助手${agent.agentId}`}</div>
-                        {selectedAgentId === String(agent.agentId) && (
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14">
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* 数据语义选择 */}
+            <div className="sem-selector">
+              <Popover
+                content={semanticPopoverContent}
+                trigger="click"
+                placement="topLeft"
+                arrow={false}
+                open={semDropdownOpen}
+                onOpenChange={setSemDropdownOpen}
+                rootClassName="ai-sem-popover"
+                overlayInnerStyle={{ padding: '6px 8px' }}
+              >
+                <button type="button" className={`sem-trigger-btn${semDropdownOpen ? ' active' : ''}`} title="选择数据语义">
+                  <DatabaseOutlined style={{ fontSize: 14 }} />
+                  <span className="sem-trigger-name">{selectedData?.name || '数据语义'}</span>
+                  <DownOutlined style={{ fontSize: 9, transition: 'transform 0.2s', transform: semDropdownOpen ? 'rotate(180deg)' : 'none' }} />
+                </button>
+              </Popover>
+            </div>
             {loading ? (
               <button className="stop-btn" onClick={stopGenerating} title="停止生成">
                 <svg viewBox="0 0 24 24" fill="currentColor">

@@ -1,6 +1,7 @@
 import FileTag from '../../../components/FileTag'
 import ChatInput from './chat-input'
 import SharingModal from '../SharingModal'
+import type { ModelOption } from './chat-header'
 import React from 'react'
 
 type ComposerProps = {
@@ -21,6 +22,7 @@ type ComposerProps = {
   uploadFileEnabled: boolean
   onToggleDeepThink: () => void
   onToggleUploadFile: () => void
+  currentModel?: ModelOption | null
   selectedExcel: any
   referenceDialog: any
   onRemoveExcel: () => void
@@ -45,6 +47,7 @@ const Composer = ({
   uploadFileEnabled,
   onToggleDeepThink,
   onToggleUploadFile,
+  currentModel,
   selectedExcel,
   referenceDialog,
   onRemoveExcel,
@@ -88,6 +91,7 @@ const Composer = ({
             setSelectedExcel={setSelectedExcel}
             deepThinkEnabled={deepThinkEnabled}
             uploadFileEnabled={uploadFileEnabled}
+            currentModel={currentModel}
             onToggleDeepThink={onToggleDeepThink}
             onToggleUploadFile={onToggleUploadFile}
           />

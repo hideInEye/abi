@@ -5,7 +5,6 @@ import {
   CaretRightOutlined,
   EditOutlined,
   ExperimentOutlined,
-  GlobalOutlined,
   LockOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
@@ -19,11 +18,13 @@ import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { useEffect, useMemo, useState } from 'react'
 
 import { addAppApi, updateAppApi, fetchAppDetailApi } from '@/service/api/abi-chat-app'
+import { fetchModelList } from '@/service/api'
 import { getSpaceId } from '@/store/slice/app'
 import { useAppSelector } from '@/hooks/business/useStore'
 import ToolPickerDrawer from './tool-picker-drawer'
 import CapabilityPickerDrawer from './capability-picker-drawer'
-import { ontologyPickerTabs, semanticPickerTabs, skillPickerTabs } from './capability-picker-configs'
+import ModelPickerDrawer from './model-picker-drawer'
+import { semanticPickerTabs, skillPickerTabs } from './capability-picker-configs'
 import React from 'react'
 
 /**
@@ -51,7 +52,7 @@ export interface AgentMock {
 }
 
 /// 折叠面板分组
-type SectionKey = 'model' | 'opening' | 'questions'
+type SectionKey = 'model' | 'opening' | 'questions' | 'semantic' | 'mcp' | 'skill'
 
 const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId: propsGroupId, onClose }) => {
   const spaceId = useAppSelector(getSpaceId)
@@ -72,24 +73,37 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   // rec_query 推荐问题列表
   const [recQuestions, setRecQuestions] = useState<string[]>([])
   const [recDrawerOpen, setRecDrawerOpen] = useState(false)
-  const [batchModalOpen, setBatchModalOpen] = useState(false)
-  const [batchText, setBatchText] = useState('')
+  // 抽屉内文本域草稿（每行一条，确认后生效）
+  const [recDraft, setRecDraft] = useState('')
 
-  const handleBatchAdd = () => {
-    const lines = batchText
+  // ── AI模型配置 单选（存 chatModelId）；嵌入模型固定默认 6（embedModelId）──
+  const [selectedModelIds, setSelectedModelIds] = useState<Set<string>>(new Set())
+  const [modelPickerOpen, setModelPickerOpen] = useState(false)
+
+  /** AI模型单选：选中即替换，再次点击同项则取消 */
+  const handleModelSingleSelect = (id: string, checked: boolean) => {
+    setSelectedModelIds(checked ? new Set([id]) : new Set())
+  }
+
+  // ── 开场引导 prologue ──
+  const [prologue, setPrologue] = useState('')
+  const [prologueModalOpen, setPrologueModalOpen] = useState(false)
+  const [prologueDraft, setPrologueDraft] = useState('')
+
+  /** 打开推荐问题抽屉：用当前列表预填草稿 */
+  const openRecDrawer = () => {
+    setRecDraft(recQuestions.join('\n'))
+    setRecDrawerOpen(true)
+  }
+
+  /** 确认：按行解析为推荐问题列表 */
+  const handleRecConfirm = () => {
+    const lines = recDraft
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean)
-    if (lines.length > 0) {
-      setRecQuestions((prev) => [...prev, ...lines])
-      message.success(`已添加 ${lines.length} 个推荐问题`)
-    }
-    setBatchText('')
-    setBatchModalOpen(false)
-  }
-
-  const handleDeleteQuestion = (index: number) => {
-    setRecQuestions((prev) => prev.filter((_, i) => i !== index))
+    setRecQuestions(lines)
+    setRecDrawerOpen(false)
   }
 
   // ── 工具选择 ──
@@ -97,13 +111,22 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set())
   const [toolPickerOpen, setToolPickerOpen] = useState(false)
 
-  // ── 数据语义 / 本体网络 / 技能 选中集合（暂不随保存提交，待后端字段确认）──
+  // ── 数据语义 / 技能 选中集合（暂不随保存提交，待后端字段确认）──
   const [selectedSemanticIds, setSelectedSemanticIds] = useState<Set<string>>(new Set())
-  const [selectedOntologyIds, setSelectedOntologyIds] = useState<Set<string>>(new Set())
   const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(new Set())
   const [semanticPickerOpen, setSemanticPickerOpen] = useState(false)
-  const [ontologyPickerOpen, setOntologyPickerOpen] = useState(false)
   const [skillPickerOpen, setSkillPickerOpen] = useState(false)
+
+  // id -> 名称映射（各选择抽屉加载列表后回填；id 均带业务前缀不会冲突），用于折叠行下方展示已选项名称
+  const [optionNameMap, setOptionNameMap] = useState<Record<string, string>>({})
+  const mergeOptionNames = (options: { id: string; name: string }[]) =>
+    setOptionNameMap((prev) => {
+      const next = { ...prev }
+      options.forEach((o) => {
+        next[o.id] = o.name
+      })
+      return next
+    })
 
   /** 加载助手详情 */
   async function loadDetail() {
@@ -112,28 +135,85 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     try {
       const res: any = await fetchAppDetailApi({ appId: agent.id })
       const detail = res?.data || {}
+      // 配置字段嵌在 versions 里：取与 latestVersionId 匹配的版本，降级取第一个，再降级取顶层
+      const versions: any[] = Array.isArray(detail.versions) ? detail.versions : []
+      const version: any = versions.find((v: any) => String(v.versionId) === String(detail.latestVersionId)) || versions[0] || detail
       setName(detail.appName || agent.name || '')
-      setPrompt(detail.appPrompt || '')
+      setPrompt(version.appPrompt || detail.appPrompt || '')
       setDescription(detail.description || '')
       setStatus(detail.status || '0')
       setEnableDebug(detail.enableDebug === '1')
       setPublicAccess(detail.publicAccess === '1' ? '1' : '0')
+      setPrologue(version.prologue || '')
       // 推荐问题
-      if (Array.isArray(detail.recQuery)) {
-        setRecQuestions(detail.recQuery)
+      if (Array.isArray(version.recQuery)) {
+        setRecQuestions(version.recQuery)
       }
-      // 工具选中回显
-      if (Array.isArray(detail.tools) && detail.tools.length > 0) {
+      // 工具选中回显（同时从 config 里取 name 合入名称映射）
+      if (Array.isArray(version.tools) && version.tools.length > 0) {
         const ids = new Set<string>()
-        detail.tools.forEach((t: any) => {
+        const names: { id: string; name: string }[] = []
+        version.tools.forEach((t: any) => {
           const prefix = t.toolType === '2' ? 'mcp' : 'builtin'
           if (Array.isArray(t.toolConfig)) {
             t.toolConfig.forEach((c: any) => {
-              if (c.id != null) ids.add(`${prefix}_${c.id}`)
+              if (c.id != null) {
+                const fid = `${prefix}_${c.id}`
+                ids.add(fid)
+                if (c.name) names.push({ id: fid, name: c.name })
+              }
             })
           }
         })
         setSelectedToolIds(ids)
+        if (names.length) mergeOptionNames(names)
+      }
+      // 数据语义选中回显：schemaSemantics -> schema_<id>（合入 name）
+      if (Array.isArray(version.schemaSemantics) && version.schemaSemantics.length > 0) {
+        const ids = new Set<string>()
+        const names: { id: string; name: string }[] = []
+        version.schemaSemantics.forEach((s: any) => {
+          const cfg = Array.isArray(s.schemaConfig) ? s.schemaConfig : []
+          cfg.forEach((c: any) => {
+            if (c.id != null) {
+              const fid = `schema_${c.id}`
+              ids.add(fid)
+              if (c.name) names.push({ id: fid, name: c.name })
+            }
+          })
+        })
+        setSelectedSemanticIds(ids)
+        if (names.length) mergeOptionNames(names)
+      }
+      // 技能选中回显：skills -> skill_<id>（合入 name）
+      if (Array.isArray(version.skills) && version.skills.length > 0) {
+        const ids = new Set<string>()
+        const names: { id: string; name: string }[] = []
+        version.skills.forEach((s: any) => {
+          const cfg = Array.isArray(s.skillConfig) ? s.skillConfig : []
+          cfg.forEach((c: any) => {
+            if (c.id != null) {
+              const fid = `skill_${c.id}`
+              ids.add(fid)
+              if (c.name) names.push({ id: fid, name: c.name })
+            }
+          })
+        })
+        setSelectedSkillIds(ids)
+        if (names.length) mergeOptionNames(names)
+      }
+      // AI模型（单选）回显：chatModelId -> model_<id>，并解析模型名用于展示
+      if (version.chatModelId != null && String(version.chatModelId) !== '') {
+        const mid = `model_${version.chatModelId}`
+        setSelectedModelIds(new Set([mid]))
+        try {
+          const modelRes: any = await fetchModelList({ pageNum: 1, pageSize: 999, spaceId: Number(spaceId) })
+          const rows: any[] = modelRes?.data?.data ?? []
+          const hit = rows.find((m: any) => String(m.modelId ?? m.llmId) === String(version.chatModelId))
+          if (hit) mergeOptionNames([{ id: mid, name: hit.modelName || '-' }])
+        } catch {
+          // 忽略名称解析失败，仍展示 id
+        }
       }
     } catch {
       // 降级：从列表 prop 读取基本信息
@@ -158,6 +238,10 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       setPublicAccess('1')
       setRecQuestions([])
       setSelectedToolIds(new Set())
+      setSelectedSemanticIds(new Set())
+      setSelectedSkillIds(new Set())
+      setSelectedModelIds(new Set())
+      setPrologue('')
     }
   }, [visible, agent])
 
@@ -168,21 +252,41 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       const toolId = rest.join('_')
       return {
         toolType: group === 'mcp' ? '2' : '1',
-        toolConfig: [{ type: 'tool', id: Number(toolId) || toolId }],
+        // 带上 name（JSON 原样存取），回显无需再拉列表
+        toolConfig: [{ type: 'tool', id: Number(toolId) || toolId, name: optionNameMap[id] }],
       }
     })
+    // 数据语义：schema_<id> → { schemaConfig: [{type:'schema', id, name}] }
+    const schemaSemantics = Array.from(selectedSemanticIds).map((id) => {
+      const schemaId = id.replace('schema_', '')
+      return { schemaConfig: [{ type: 'schema', id: Number(schemaId) || schemaId, name: optionNameMap[id] }] }
+    })
+    // 技能：skill_<id> → { skillConfig: [{type:'skill', id, name}] }
+    const skills = Array.from(selectedSkillIds).map((id) => {
+      const skillId = id.replace('skill_', '')
+      return { skillConfig: [{ type: 'skill', id: Number(skillId) || skillId, name: optionNameMap[id] }] }
+    })
+    // AI模型单选：取唯一选中项，model_<id> 反解为 chatModelId
+    const modelIdRaw = Array.from(selectedModelIds)[0]
+    const chatModelId = modelIdRaw ? Number(String(modelIdRaw).replace('model_', '')) : undefined
     const payload: any = {
-      appName: name,
+      // 名称非必填：未填写时给默认名称（与新建对话一致）
+      appName: name.trim() || '新建助手',
       spaceId,
       groupId: String(isEdit ? (agent?.groupId ?? '0') : (propsGroupId ?? '0')),
       description,
       appPrompt: prompt,
-      prologue: '',
+      prologue,
       recQuery: recQuestions,
       status: overrideStatus ?? status,
       enableDebug: enableDebug ? '1' : '0',
       publicAccess,
       tools: toolConfigs,
+      schemaSemantics,
+      skills,
+      // 模型：对话模型单选（未选则不传）；嵌入模型固定默认 6
+      chatModelId,
+      embedModelId: 6,
     }
     if (isEdit && agent?.id) {
       payload.appId = agent.id
@@ -192,19 +296,17 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
 
   /** 保存：状态设为草稿 */
   const handleSave = async () => {
+    if (saving) return
     setSaving(true)
     try {
       const payload = buildPayload('0')
-      if (isEdit) {
-        await updateAppApi(payload)
-      } else {
-        await addAppApi(payload)
-      }
+      // apiRequest 为扁平请求，失败时不会抛错而是返回 { error }，需显式判断
+      const { error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
+      // 失败时全局错误处理已提示后端具体信息（如“应用名称不能为空”），保留抽屉不关闭
+      if (error) return
       setStatus('0')
       message.success('已保存为草稿')
       onClose(true)
-    } catch {
-      message.error('保存失败')
     } finally {
       setSaving(false)
     }
@@ -212,19 +314,15 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
 
   /** 上线：状态设为发布 */
   const handlePublish = async () => {
+    if (saving) return
     setSaving(true)
     try {
       const payload = buildPayload('1')
-      if (isEdit) {
-        await updateAppApi(payload)
-      } else {
-        await addAppApi(payload)
-      }
+      const { error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
+      if (error) return
       setStatus('1')
       message.success('已上线，状态设为发布')
       onClose(true)
-    } catch {
-      message.error('发布失败')
     } finally {
       setSaving(false)
     }
@@ -245,7 +343,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     })
   }
 
-  /** 生成选中集合的单选/批量回调（数据语义/本体网络/技能共用） */
+  /** 生成选中集合的单选/批量回调（数据语义/技能共用） */
   const makeToggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => (id: string, checked: boolean) =>
     setter((prev) => {
       const next = new Set(prev)
@@ -270,6 +368,9 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     model: false,
     opening: false,
     questions: false,
+    semantic: false,
+    mcp: false,
+    skill: false,
   })
 
   const toggle = (key: SectionKey) => setOpenMap((p) => ({ ...p, [key]: !p[key] }))
@@ -340,6 +441,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               <Input
                 autoFocus
                 size="small"
+                placeholder="请输入助手名称"
                 style={{
                   width: 200,
                   borderRadius: 8,
@@ -352,13 +454,15 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               />
             ) : (
               <>
-                <span style={{ fontSize: 17, fontWeight: 600, color: '#1a2744' }}>{name}</span>
-                <EditOutlined style={{ color: '#5b7cf7', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setEditingName(true)} />
+                {/* 名称为空时展示占位文案，后跟编辑按钮 */}
+                <span style={{ fontSize: 16, fontWeight: 600, color: name ? '#1a2744' : '#8fa0b5' }}>{name || '编辑助手名称'}</span>
+                <EditOutlined style={{ color: '#5b7cf7', cursor: 'pointer', fontSize: 17, transition: 'all 0.2s ease' }} onClick={() => setEditingName(true)} />
               </>
             )}
           </div>
           <div style={{ alignItems: 'center', display: 'flex', gap: 12, marginLeft: 'auto' }}>
             <Button
+              loading={saving}
               onClick={handleSave}
               style={{
                 borderRadius: 8,
@@ -453,11 +557,44 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             }}
           >
             <GroupTitle title="基础配置" color="#5b7cf7" icon={<SettingOutlined />} />
-            <CollapseRow open={openMap.model} title="AI模型配置" onToggle={() => toggle('model')} />
-            <CollapseRow open={openMap.opening} title="开场引导" onToggle={() => toggle('opening')} />
+            {/* AI模型配置：+ 号弹模型选择抽屉，点行/箭头展开下方已选列表 */}
+            <CollapseRow
+              extra={
+                <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+                  {selectedModelIds.size > 0 && <span style={{ color: '#8fa0b5', fontSize: 12 }}>已选 {selectedModelIds.size} 项</span>}
+                  <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setModelPickerOpen(true)} />
+                </span>
+              }
+              open={openMap.model}
+              title="AI模型配置"
+              onToggle={() => toggle('model')}
+            >
+              <SelectedItemList emptyText="暂未添加模型" ids={selectedModelIds} nameMap={optionNameMap} />
+            </CollapseRow>
+            {/* 开场引导：+ 号弹编辑弹窗，点行/箭头展开下方引导语 */}
+            <CollapseRow
+              extra={
+                <PlusOutlined
+                  style={{ color: '#5b7cf7' }}
+                  onClick={() => {
+                    setPrologueDraft(prologue)
+                    setPrologueModalOpen(true)
+                  }}
+                />
+              }
+              open={openMap.opening}
+              title="开场引导"
+              onToggle={() => toggle('opening')}
+            >
+              {prologue ? (
+                <div style={{ color: '#3e5068', fontSize: 13, lineHeight: 1.6, padding: '6px 24px', whiteSpace: 'pre-wrap' }}>{prologue}</div>
+              ) : (
+                <div style={{ color: '#8fa0b5', fontSize: 13, padding: '8px 24px' }}>暂未设置开场引导</div>
+              )}
+            </CollapseRow>
 
             <GroupTitle title="知识语义" color="#10b981" icon={<BookOutlined />} />
-            {/* 数据语义 / 本体网络：整行点击直接弹选择抽屉，不在行内展示列表 */}
+            {/* 数据语义：+ 号弹选择抽屉，点行/箭头展开下方已选列表 */}
             <CollapseRow
               extra={
                 <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
@@ -465,24 +602,15 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                   <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setSemanticPickerOpen(true)} />
                 </span>
               }
-              open={false}
+              open={openMap.semantic}
               title="数据语义"
-              onToggle={() => setSemanticPickerOpen(true)}
-            />
-            <CollapseRow
-              extra={
-                <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
-                  {selectedOntologyIds.size > 0 && <span style={{ color: '#8fa0b5', fontSize: 12 }}>已选 {selectedOntologyIds.size} 项</span>}
-                  <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setOntologyPickerOpen(true)} />
-                </span>
-              }
-              open={false}
-              title="本体网络"
-              onToggle={() => setOntologyPickerOpen(true)}
-            />
+              onToggle={() => toggle('semantic')}
+            >
+              <SelectedItemList emptyText="暂未添加数据语义" ids={selectedSemanticIds} nameMap={optionNameMap} />
+            </CollapseRow>
 
             <GroupTitle title="扩展能力" color="#f59e0b" icon={<ThunderboltOutlined />} />
-            {/* MCP：整行点击直接弹工具选择抽屉，不在行内展示列表 */}
+            {/* 工具：+ 号弹工具选择抽屉，点行/箭头展开下方已选列表（按 MCP工具 / 内置工具 分组区分） */}
             <CollapseRow
               extra={
                 <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
@@ -490,10 +618,12 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                   <PlusOutlined style={{ color: '#5b7cf7' }} onClick={openToolPicker} />
                 </span>
               }
-              open={false}
-              title="MCP"
-              onToggle={openToolPicker}
-            />
+              open={openMap.mcp}
+              title="工具"
+              onToggle={() => toggle('mcp')}
+            >
+              <SelectedToolList emptyText="暂未添加工具" ids={selectedToolIds} nameMap={optionNameMap} />
+            </CollapseRow>
 
             <CollapseRow
               extra={
@@ -503,11 +633,13 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                   <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setSkillPickerOpen(true)} />
                 </span>
               }
-              open={false}
+              open={openMap.skill}
               title="技能"
               titleExtra={<QuestionCircleOutlined style={{ color: '#8fa0b5', marginLeft: 4 }} />}
-              onToggle={() => setSkillPickerOpen(true)}
-            />
+              onToggle={() => toggle('skill')}
+            >
+              <SelectedItemList emptyText="暂未添加技能" ids={selectedSkillIds} nameMap={optionNameMap} />
+            </CollapseRow>
 
             {/* 推荐问题 */}
             <CollapseRow
@@ -516,7 +648,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                   style={{ color: '#5b7cf7' }}
                   onClick={(e) => {
                     e.stopPropagation()
-                    setRecDrawerOpen(true)
+                    openRecDrawer()
                   }}
                 />
               }
@@ -534,7 +666,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 ))
               )}
               {recQuestions.length > 3 && (
-                <div style={{ color: '#5b7cf7', cursor: 'pointer', fontSize: 12, padding: '6px 24px', fontWeight: 500 }} onClick={() => setRecDrawerOpen(true)}>
+                <div style={{ color: '#5b7cf7', cursor: 'pointer', fontSize: 12, padding: '6px 24px', fontWeight: 500 }} onClick={openRecDrawer}>
                   查看全部 {recQuestions.length} 条
                 </div>
               )}
@@ -613,51 +745,40 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             </div>
           </div>
 
-          {/* 推荐问题管理抖幕 */}
+          {/* 推荐问题管理抽屉：文本域每行一条，确认后生效 */}
           <CommonDrawer
             destroyOnClose
             open={recDrawerOpen}
             placement="right"
             title="推荐问题"
             width={400}
-            extra={
-              <Button
-                size="small"
-                type="primary"
-                onClick={() => setBatchModalOpen(true)}
-                style={{
-                  background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
-                  border: 'none',
-                  borderRadius: 6,
-                }}
-              >
-                批量添加
-              </Button>
+            footer={
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <Button onClick={() => setRecDrawerOpen(false)}>取消</Button>
+                <Button
+                  type="primary"
+                  onClick={handleRecConfirm}
+                  style={{
+                    background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+                    border: 'none',
+                  }}
+                >
+                  确认
+                </Button>
+              </div>
             }
             onClose={() => setRecDrawerOpen(false)}
           >
-            {recQuestions.length === 0 ? (
-              <div style={{ color: '#8fa0b5', padding: '32px 0', textAlign: 'center' }}>暂无推荐问题</div>
-            ) : (
-              recQuestions.map((q, i) => (
-                <div
-                  key={i}
-                  style={{
-                    alignItems: 'center',
-                    borderBottom: '1px solid rgba(130, 140, 200, 0.08)',
-                    display: 'flex',
-                    gap: 8,
-                    padding: '12px 0',
-                  }}
-                >
-                  <span style={{ color: '#8fa0b5', flexShrink: 0, fontSize: 13, width: 24 }}>{i + 1}.</span>
-                  <span style={{ flex: 1, fontSize: 13, color: '#3e5068' }}>{q}</span>
-                  <AButton danger size="small" type="link" onClick={() => handleDeleteQuestion(i)}>
-                    删除
-                  </AButton>
-                </div>
-              ))
-            )}
+            <Input.TextArea
+              autoSize={{ minRows: 14, maxRows: 24 }}
+              placeholder="请配置助手推荐问题，每行输入一条。"
+              value={recDraft}
+              onChange={(e) => setRecDraft(e.target.value)}
+              style={{
+                borderRadius: 8,
+                border: '1px solid rgba(130, 140, 200, 0.2)',
+              }}
+            />
           </CommonDrawer>
 
           {/* 扩展能力工具选择抽屉 */}
@@ -668,6 +789,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             onBatchToggle={handleBatchToolCheck}
             onClose={() => setToolPickerOpen(false)}
             onToggle={handleToolCheck}
+            onToolsLoaded={mergeOptionNames}
           />
 
           {/* 数据语义选择抽屉 */}
@@ -680,20 +802,8 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             title="添加数据语义"
             onBatchToggle={makeBatchToggle(setSelectedSemanticIds)}
             onClose={() => setSemanticPickerOpen(false)}
+            onOptionsLoaded={mergeOptionNames}
             onToggle={makeToggle(setSelectedSemanticIds)}
-          />
-
-          {/* 本体网络选择抽屉 */}
-          <CapabilityPickerDrawer
-            icon={<GlobalOutlined />}
-            open={ontologyPickerOpen}
-            selectedIds={selectedOntologyIds}
-            spaceId={spaceId}
-            tabs={ontologyPickerTabs}
-            title="添加本体网络"
-            onBatchToggle={makeBatchToggle(setSelectedOntologyIds)}
-            onClose={() => setOntologyPickerOpen(false)}
-            onToggle={makeToggle(setSelectedOntologyIds)}
           />
 
           {/* 技能选择抽屉 */}
@@ -706,30 +816,43 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             title="添加技能"
             onBatchToggle={makeBatchToggle(setSelectedSkillIds)}
             onClose={() => setSkillPickerOpen(false)}
+            onOptionsLoaded={mergeOptionNames}
             onToggle={makeToggle(setSelectedSkillIds)}
           />
 
-          {/* 批量添加问题 Modal */}
+          {/* AI模型选择抽屉（单选，仅语言模型） */}
+          <ModelPickerDrawer
+            open={modelPickerOpen}
+            selectedIds={selectedModelIds}
+            singleSelect
+            spaceId={spaceId}
+            onBatchToggle={() => {}}
+            onClose={() => setModelPickerOpen(false)}
+            onOptionsLoaded={mergeOptionNames}
+            onToggle={handleModelSingleSelect}
+          />
+
+          {/* 开场引导编辑 Modal */}
           <Modal
             centered
             destroyOnClose
             okText="确认"
             cancelText="取消"
-            open={batchModalOpen}
-            title="批量添加问题"
+            open={prologueModalOpen}
+            title="开场引导"
             width={560}
-            onOk={handleBatchAdd}
-            onCancel={() => {
-              setBatchModalOpen(false)
-              setBatchText('')
+            onOk={() => {
+              setPrologue(prologueDraft.trim())
+              setPrologueModalOpen(false)
             }}
+            onCancel={() => setPrologueModalOpen(false)}
           >
-            <div style={{ color: '#3e5068', fontSize: 13, marginBottom: 12 }}>每行一个问题，提交后将批量创建。</div>
+            <div style={{ color: '#3e5068', fontSize: 13, marginBottom: 12 }}>设置助手对话开始时的开场引导语。</div>
             <Input.TextArea
-              autoSize={{ minRows: 10, maxRows: 16 }}
-              placeholder={`请输入问题，每行一个问题\n例如：\n如何使用这个系统？\n系统支持哪些功能？\n如何导出数据？`}
-              value={batchText}
-              onChange={(e) => setBatchText(e.target.value)}
+              autoSize={{ minRows: 6, maxRows: 12 }}
+              placeholder="请输入开场引导语，例如：你好，我是你的智能助手，有什么可以帮助你的？"
+              value={prologueDraft}
+              onChange={(e) => setPrologueDraft(e.target.value)}
               style={{
                 borderRadius: 8,
                 border: '1px solid rgba(130, 140, 200, 0.2)',
@@ -902,6 +1025,103 @@ const GroupTitle: React.FC<{ title: string; color?: string; icon?: React.ReactNo
     <span style={{ letterSpacing: '0.03em', fontSize: 15 }}>{title}</span>
   </div>
 )
+
+// 折叠行下方的已选项列表：每行固定高度，最多展示 5 行，超出内部滚动
+const SELECTED_ITEM_ROW_HEIGHT = 32
+const SelectedItemList: React.FC<{ ids: Set<string>; nameMap: Record<string, string>; emptyText: string }> = ({ emptyText, ids, nameMap }) => {
+  const items = Array.from(ids)
+  if (items.length === 0) {
+    return <div style={{ color: '#8fa0b5', fontSize: 13, padding: '8px 24px' }}>{emptyText}</div>
+  }
+  return (
+    <div style={{ maxHeight: SELECTED_ITEM_ROW_HEIGHT * 5, overflowY: 'auto' }}>
+      {items.map((id, i) => (
+        <div
+          key={id}
+          style={{
+            alignItems: 'center',
+            color: '#3e5068',
+            display: 'flex',
+            fontSize: 13,
+            gap: 8,
+            height: SELECTED_ITEM_ROW_HEIGHT,
+            lineHeight: 1.6,
+            overflow: 'hidden',
+            padding: '0 24px',
+          }}
+        >
+          <span style={{ color: '#8fa0b5', flexShrink: 0 }}>{i + 1}.</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameMap[id] ?? id}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// 工具已选列表：按 MCP工具 / 内置工具 两组区分展示（id 前缀 mcp_ / builtin_）
+const SelectedToolList: React.FC<{ ids: Set<string>; nameMap: Record<string, string>; emptyText: string }> = ({ emptyText, ids, nameMap }) => {
+  const all = Array.from(ids)
+  if (all.length === 0) {
+    return <div style={{ color: '#8fa0b5', fontSize: 13, padding: '8px 24px' }}>{emptyText}</div>
+  }
+  const mcpItems = all.filter((id) => id.startsWith('mcp_'))
+  const builtinItems = all.filter((id) => id.startsWith('builtin_'))
+  const others = all.filter((id) => !id.startsWith('mcp_') && !id.startsWith('builtin_'))
+
+  const renderGroup = (label: string, items: string[]) => {
+    if (items.length === 0) return null
+    // 分组辨识色：MCP工具=蓝、内置工具=橙（与“扩展能力”分组色一致）、其他=灰
+    const dot = label === 'MCP工具' ? '#5b7cf7' : label === '内置工具' ? '#f59e0b' : '#8fa0b5'
+    return (
+      <div key={label} style={{ marginTop: 4 }}>
+        <div style={{ alignItems: 'center', display: 'flex', gap: 6, padding: '6px 24px 4px' }}>
+          <span style={{ background: dot, borderRadius: '50%', flexShrink: 0, height: 6, width: 6 }} />
+          <span style={{ color: '#5a6b85', fontSize: 12, fontWeight: 600 }}>{label}</span>
+          <span
+            style={{
+              background: 'rgba(130, 140, 200, 0.1)',
+              borderRadius: 8,
+              color: '#8fa0b5',
+              fontSize: 11,
+              fontWeight: 500,
+              lineHeight: '16px',
+              padding: '0 6px',
+            }}
+          >
+            {items.length}
+          </span>
+        </div>
+        {items.map((id, i) => (
+          <div
+            key={id}
+            style={{
+              alignItems: 'center',
+              color: '#3e5068',
+              display: 'flex',
+              fontSize: 13,
+              gap: 8,
+              height: SELECTED_ITEM_ROW_HEIGHT,
+              lineHeight: 1.6,
+              overflow: 'hidden',
+              padding: '0 24px 0 36px',
+            }}
+          >
+            <span style={{ color: '#8fa0b5', flexShrink: 0, fontSize: 12 }}>{i + 1}.</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameMap[id] ?? id}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ maxHeight: SELECTED_ITEM_ROW_HEIGHT * 6, overflowY: 'auto' }}>
+      {renderGroup('MCP工具', mcpItems)}
+      {renderGroup('内置工具', builtinItems)}
+      {renderGroup('其他', others)}
+    </div>
+  )
+}
 
 // 折叠行
 interface CollapseRowProps {

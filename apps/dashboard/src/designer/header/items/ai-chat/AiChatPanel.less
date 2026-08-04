@@ -351,85 +351,47 @@
         padding: 4px 10px 8px;
         gap: 8px;
 
-        /* ---- agent selector (inside toolbar) ---- */
-        .agent-selector {
-          position: relative;
+        /* ---- 数据语义 selector (inside toolbar) ---- */
+        .sem-selector {
           flex: 1;
+          min-width: 0;
 
-          .agent-select-trigger {
+          .sem-trigger-btn {
             display: inline-flex;
             align-items: center;
-            padding: 3px 8px;
-            border-radius: 6px;
-            border: 1px solid #d9d9d9;
-            background: #fff;
-            color: #595959;
+            gap: 5px;
+            height: 32px;
+            max-width: 160px;
+            padding: 0 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(130, 140, 200, 0.16);
+            background: rgba(255, 255, 255, 0.5);
+            color: #8494ad;
             font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
             user-select: none;
-            transition: all 0.2s;
-            max-width: 160px;
+            white-space: nowrap;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 
-            span {
+            .sem-trigger-name {
               flex: 1;
+              min-width: 0;
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
             }
 
             &:hover {
-              border-color: #1677ff;
-              color: #1677ff;
-            }
-          }
-
-          .agent-dropdown {
-            position: absolute;
-            bottom: calc(100% + 4px);
-            left: 0;
-            min-width: 160px;
-            max-height: 200px;
-            overflow-y: auto;
-            background: #fff;
-            border-radius: 8px;
-            border: 1px solid #e8e8e8;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-            z-index: 100;
-
-            &::-webkit-scrollbar {
-              width: 4px;
-            }
-            &::-webkit-scrollbar-thumb {
-              background: #d9d9d9;
-              border-radius: 2px;
+              border-color: #5b7cf7;
+              color: #5b7cf7;
+              background: rgba(91, 124, 247, 0.1);
             }
 
-            .agent-option {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              padding: 6px 14px;
-              cursor: pointer;
-              transition: background 0.15s;
-
-              &:hover {
-                background: #f5f7fa;
-              }
-
-              &.agent-option-active {
-                .agent-option-name {
-                  color: #1677ff;
-                  font-weight: 500;
-                }
-                svg {
-                  color: #1677ff;
-                }
-              }
-
-              .agent-option-name {
-                font-size: 13px;
-                color: #333;
-              }
+            &.active {
+              color: #5b7cf7;
+              background: rgba(91, 124, 247, 0.1);
+              border-color: rgba(91, 124, 247, 0.3);
             }
           }
         }
@@ -662,6 +624,140 @@
   }
   50% {
     opacity: 0.4;
+  }
+}
+
+/* ---- 数据语义分组树 Popover（与 chat 对话同款，因 antd Popover 使用 portal 渲染到 body，故需全局作用域） ---- */
+.ai-sem-popover {
+  .ai-sem-tree {
+    width: 260px;
+    max-height: 360px;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(130, 140, 200, 0.3);
+      border-radius: 2px;
+    }
+  }
+
+  .ai-sem-empty {
+    padding: 16px;
+    text-align: center;
+    color: #8494ad;
+    font-size: 12px;
+  }
+
+  /* 分组节点 */
+  .ai-sem-group-node {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #3a4d65;
+    user-select: none;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      background: rgba(130, 140, 200, 0.08);
+    }
+    &.is-empty {
+      cursor: default;
+    }
+    &.is-empty:hover {
+      background: transparent;
+    }
+    &.is-empty .ai-sem-group-name {
+      color: #8a97ad;
+      font-weight: 500;
+    }
+  }
+
+  .ai-sem-group-icon {
+    flex-shrink: 0;
+    font-size: 15px;
+    color: #358cf3;
+
+    &.ai-sem-group-icon--empty {
+      color: #b7c0d0;
+    }
+  }
+
+  .ai-sem-group-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ai-sem-group-count {
+    font-size: 11px;
+    color: #8494ad;
+    font-weight: 400;
+  }
+
+  .ai-sem-group-chevron {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    opacity: 0.35;
+    transition: transform 0.25s ease;
+
+    &.open {
+      transform: rotate(90deg);
+      opacity: 0.6;
+    }
+  }
+
+  /* 叶子（数据语义文件）—— 缩进由递归层级内联 paddingLeft 控制 */
+  .ai-sem-leaf {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #5f7490;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      background: rgba(130, 140, 200, 0.08);
+    }
+    &.selected {
+      color: #5b7cf7;
+      background: rgba(91, 124, 247, 0.1);
+      font-weight: 600;
+    }
+    &.selected .ai-sem-leaf-icon {
+      color: #5b7cf7;
+    }
+  }
+
+  .ai-sem-leaf-icon {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: rgb(175, 209, 250);
+  }
+
+  .ai-sem-leaf-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

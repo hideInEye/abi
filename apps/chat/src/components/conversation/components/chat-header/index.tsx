@@ -14,6 +14,8 @@ export interface ModelOption {
   desc: string
   /** 是否为默认模型（1 为默认） */
   isDefault?: number
+  /** 是否支持关闭思考（1 为支持，0 为不支持） */
+  isSupportThinking?: number | string
 }
 
 interface ChatHeaderProps {
