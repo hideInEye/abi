@@ -20,6 +20,7 @@ import type { ChatInputModeKey, SemanticSelectedData } from '../conversation/com
 import { message } from 'antd'
 import { getSpaceId } from '../../utils'
 import ConverList from './conver_list'
+import { hasSelectedConversationData } from '../conversation/components/chat-input/sendValidation'
 import { useSidebarCollapse } from '../layout/SidebarCollapseContext'
 
 interface ConversationAnalysisProps {
@@ -308,8 +309,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     if (creating) return
     const sendMode = options?.mode || selectedMode
 
-    // 校验是否已选数据语义或 Excel 文件
-    if (sendMode !== 'report' && !selectedData?.schemaId && !selectedExcel?.file_id) {
+    // 所有对话模式共享同一数据前置条件，报告模式不得绕过交互模式的校验。
+    if (!hasSelectedConversationData(selectedData, selectedExcel)) {
       message.warning('选择已有数据或上传excel，即可开始对话')
       return
     }
