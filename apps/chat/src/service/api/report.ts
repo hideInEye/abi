@@ -37,6 +37,33 @@ export interface SubmittedReportTask {
   status: string
 }
 
+export type ReportTaskStatusValue = 'pending' | 'started' | 'retry' | 'success' | 'failure' | 'revoked' | string
+
+/** Celery 报告任务状态。页面恢复时先用它判断是否还需要连接 Redis Stream。 */
+export interface ReportTaskStatus {
+  taskId: string
+  status: ReportTaskStatusValue
+  completed: boolean
+  successful: boolean
+  message?: string
+  result?: unknown
+  error?: unknown
+}
+
+interface ReportTaskStatusResponse {
+  code?: number
+  message?: string
+  data?: {
+    task_id?: string
+    status?: ReportTaskStatusValue
+    completed?: boolean
+    successful?: boolean
+    message?: string
+    result?: unknown
+    error?: unknown
+  }
+}
+
 export interface ReportStreamQuery {
   stream_key: string
   last_id?: string
@@ -57,6 +84,8 @@ interface ConnectReportEventsOptions {
 
 /** 报告任务在业务 baseApi 下通过 chat-proxy 网关转发。 */
 const REPORT_SUBMIT_PATH = '/chat-proxy/api/v1/chat/report'
+const REPORT_TASK_PATH = '/chat-proxy/api/v1/chat/report/task'
+const REPORT_EVENTS_PATH = '/abi-debug/v1/report-stream/events'
 
 function getRuntimeConfigValue(key: string) {
   return String(window.APP_CONFIG?.[key] ?? '').trim()
@@ -76,26 +105,23 @@ function getReportSubmitApi() {
   return `${baseApi}${REPORT_SUBMIT_PATH}`
 }
 
-/** Node server 地址为空时使用同源路径，由 Vite/Nginx 代理。 */
-function getReportStreamOrigin() {
-  return trimTrailingSlash(getRuntimeConfigValue('VITE_REPORT_STREAM_API'))
-}
-
 function getAuthorizationHeaders(): Record<string, string> {
   const authorization = getAuthorization()
   return authorization ? { Authorization: authorization } : {}
 }
 
-function buildReportEventsUrl(query: ReportStreamQuery) {
+function getBusinessApi(path: string) {
+  return `${trimTrailingSlash(getRuntimeConfigValue('VITE_BASE_API'))}${path}`
+}
+
+/** Java 接口只透传 Redis entry；前端始终显式传 last_id，首次从 0-0 回放。 */
+export function buildReportEventsUrl(query: ReportStreamQuery) {
   const searchParams = new URLSearchParams({
     stream_key: query.stream_key,
+    last_id: query.last_id || '0-0',
   })
 
-  if (query.last_id) {
-    searchParams.set('last_id', query.last_id)
-  }
-
-  return `${getReportStreamOrigin()}/api/report-stream/events?${searchParams.toString()}`
+  return `${getBusinessApi(REPORT_EVENTS_PATH)}?${searchParams.toString()}`
 }
 
 async function readResponseBody(response: Response): Promise<SubmitReportResponse | undefined> {
@@ -153,7 +179,54 @@ export async function submitReportTask(data: SubmitReportRequest, signal?: Abort
 }
 
 /**
- * 连接 Node 的原始 Redis Stream SSE。
+ * 查询已持久化 taskId 的真实状态。
+ * 成功状态由 query 历史恢复；未完成状态才继续建立 Java Redis Stream SSE。
+ */
+export async function fetchReportTaskStatus(taskId: string, signal?: AbortSignal): Promise<ReportTaskStatus> {
+  const normalizedTaskId = taskId.trim()
+  if (!normalizedTaskId) throw new Error('报告 task_id 不能为空')
+
+  const searchParams = new URLSearchParams({ task_id: normalizedTaskId })
+  const response = await fetch(`${getBusinessApi(REPORT_TASK_PATH)}?${searchParams.toString()}`, {
+    method: 'GET',
+    headers: getAuthorizationHeaders(),
+    signal,
+  })
+
+  if (response.status === 401) {
+    await handleLoginExpired()
+    throw new Error('登录已过期')
+  }
+
+  let body: ReportTaskStatusResponse | undefined
+  try {
+    body = await response.json() as ReportTaskStatusResponse
+  } catch {
+    body = undefined
+  }
+
+  if (!response.ok || (body?.code !== undefined && ![0, 200].includes(Number(body.code)))) {
+    throw new Error(body?.data?.message || body?.message || `报告任务状态查询失败（${response.status}）`)
+  }
+
+  const data = body?.data
+  if (!data?.task_id || !data.status) {
+    throw new Error('报告任务状态响应缺少 task_id 或 status')
+  }
+
+  return {
+    taskId: String(data.task_id),
+    status: String(data.status),
+    completed: data.completed === true,
+    successful: data.successful === true,
+    message: data.message,
+    result: data.result,
+    error: data.error,
+  }
+}
+
+/**
+ * 连接 Java 后端的原始 Redis Stream SSE。
  * service 层不解析 data JSON，业务事件的校验、排序和聚合全部交给报告模式 reducer。
  */
 export function connectReportEvents(options: ConnectReportEventsOptions) {
@@ -169,7 +242,7 @@ export function connectReportEvents(options: ConnectReportEventsOptions) {
       }
 
       if (!response.ok) {
-        throw new Error(`Redis Stream 连接失败（${response.status}）`)
+        throw new Error(`Java Redis Stream 连接失败（${response.status}）`)
       }
     },
     onmessage(event) {

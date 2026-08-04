@@ -1,4 +1,4 @@
-export type ReportConversationStatus = 'idle' | 'submitting' | 'thinking' | 'waiting_stream' | 'running' | 'completed' | 'failed'
+export type ReportConversationStatus = 'idle' | 'submitting' | 'thinking' | 'waiting_stream' | 'syncing_history' | 'running' | 'completed' | 'failed'
 
 export type ReportPlanTaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 
@@ -48,7 +48,7 @@ export interface ReportStepStartEvent {
 
 /**
  * Redis 中的 meta 会带上完整工具输入及模型过程字段。
- * 它们只属于传输层类型，聚合后的公开步骤类型不会保留这些字段。
+ * 传输层保留完整协议字段，但公开模型只挑选允许展示的摘要。
  */
 export interface ReportStepMetaEvent {
   type: 'step.meta'
@@ -102,7 +102,7 @@ export type ReportStreamEvent =
   | ReportFinalEvent
   | ReportDoneEvent
 
-/** Node SSE 交给前端的最小原始 entry；data 必须保持 Redis 中的 JSON 字符串。 */
+/** Java SSE 交给前端的最小原始 entry；data 必须保持 Redis 中的 JSON 字符串。 */
 export interface RawReportStreamEntry {
   id: string
   data: string
@@ -116,7 +116,7 @@ export interface ReportPublicChunk {
 
 /**
  * UI 可公开展示的步骤。
- * 注意：这里刻意没有 thought、action_reason、action_input，避免组件误展示模型内部过程或完整工具参数。
+ * 注意：这里刻意没有 thought、action_input；actionReason 是后端明确允许展示的公开执行说明。
  */
 export interface ReportPublicStep {
   id: string
@@ -125,6 +125,7 @@ export interface ReportPublicStep {
   detail?: string
   action?: string
   actionIntention?: string
+  actionReason?: string
   todoMeta?: ReportTodoMeta
   status: ReportStepStatus
   chunks: ReportPublicChunk[]
@@ -164,7 +165,7 @@ export interface ReportRuntimeError {
 }
 
 export interface ReportStreamRuntimeState {
-  status: 'submitting' | 'thinking' | 'waiting_stream' | 'running' | 'completed' | 'failed'
+  status: Exclude<ReportConversationStatus, 'idle'>
   streamQuestion?: string
   thinkingOpen: boolean
   todoOpen: boolean
@@ -200,5 +201,59 @@ export interface ReportItem extends ReportStreamRuntimeState {
   conversationId?: string
   sessionId?: string
   streamKey?: string
+  /** 与 query.roundIndex、Stream key 尾部序号共用的会话内稳定顺序。 */
+  sortOrder: number
   createdAt: number
+  source: 'history' | 'task'
+  generatedImages?: string[]
+}
+
+export interface ReportHistoryMessage {
+  messageId?: string | number
+  roundIndex?: number
+  index?: number
+  chatMode?: string | null
+  roleType?: string
+  createTime?: string
+  messageDetail?: {
+    type?: string
+    chat_mode?: string | null
+    data?: {
+      content?: unknown
+    }
+  }
+}
+
+export interface ReportHistoryRoundGroup {
+  roundIndex?: number
+  messages?: ReportHistoryMessage[]
+}
+
+export interface ReportHistoryOutput {
+  output_type?: ReportChunkOutputType
+  content?: unknown
+}
+
+export interface ReportHistoryStep {
+  id?: string
+  step?: number
+  title?: string
+  detail?: string
+  thought?: unknown
+  action_intention?: string | null
+  action_reason?: unknown
+  action?: string | null
+  action_input?: unknown
+  outputs?: ReportHistoryOutput[]
+  status?: string
+  todo_meta?: ReportTodoMeta | null
+}
+
+export interface ReportHistoryPayload {
+  version?: number
+  type?: string
+  final_content?: unknown
+  task_plan?: ReportPlanTask[]
+  steps?: ReportHistoryStep[]
+  generated_images?: string[]
 }

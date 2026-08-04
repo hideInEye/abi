@@ -3,18 +3,26 @@ import { Button, Empty, Tag } from 'antd'
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
 
-import { getReportTitle } from './helpers'
+import { canRevealReport, getReportTitle } from './helpers'
+import { createTypewriterHtmlDocument } from './htmlTypewriter'
 import type { ReportItem } from './types'
 import styles from './styles.module.css'
 
 interface ReportPreviewPaneProps {
   report: ReportItem
+  /** 仅实时任务首次自动打开时为 true；手动重开和历史报告直接显示完整正文。 */
+  animate?: boolean
   onClose: () => void
 }
 
-const ReportPreviewPane: React.FC<ReportPreviewPaneProps> = ({ report, onClose }) => {
-  const candidate = report.reportCandidate
+const ReportPreviewPane: React.FC<ReportPreviewPaneProps> = ({ report, animate = false, onClose }) => {
+  // 即使调用方状态短暂不同步，也不允许在最终阶段前渲染报告正文。
+  const candidate = canRevealReport(report) ? report.reportCandidate : undefined
   const title = getReportTitle(candidate)
+  const htmlDocument = React.useMemo(() => {
+    if (candidate?.format !== 'html') return undefined
+    return animate ? createTypewriterHtmlDocument(candidate.content) : candidate.content
+  }, [animate, candidate?.content, candidate?.format])
 
   return (
     <aside className={styles.reportPane}>
@@ -26,29 +34,29 @@ const ReportPreviewPane: React.FC<ReportPreviewPaneProps> = ({ report, onClose }
           </div>
           <div className={styles.previewMeta}>
             {candidate && <Tag color={candidate.format === 'html' ? 'blue' : 'purple'}>{candidate.format.toUpperCase()}</Tag>}
-            <Tag color={report.status === 'completed' ? 'green' : 'processing'}>{report.status === 'completed' ? '已完成' : '实时生成中'}</Tag>
+            {candidate && <Tag color="green">已完成</Tag>}
           </div>
         </div>
-        <Button icon={<CloseOutlined />} onClick={onClose}>关闭</Button>
+        <Button icon={<CloseOutlined />} onClick={onClose}>
+          关闭
+        </Button>
       </div>
 
       <div className={styles.previewBody}>
         {!candidate ? (
           <Empty className={styles.previewEmpty} image={Empty.PRESENTED_IMAGE_SIMPLE} description="报告内容尚未可用" />
         ) : candidate.format === 'html' ? (
-          // 只开放脚本执行，不开放同源、顶层跳转、弹窗或表单，隔离报告与宿主登录状态。
-          <iframe
-            key={candidate.entryId}
-            title={title}
-            className={styles.htmlFrame}
-            srcDoc={candidate.content}
-            sandbox="allow-scripts"
-          />
+          // 完整 HTML 只加载一次；打字机在沙箱内部修改可见文本节点，不按动画帧刷新 srcDoc。
+          <iframe key={`${candidate.entryId}:${animate ? 'typing' : 'static'}`} title={title} className={styles.htmlFrame} srcDoc={htmlDocument} sandbox="allow-scripts" />
         ) : (
           <div className={styles.markdownDoc}>
             <ReactMarkdown
               components={{
-                a: ({ children, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer">{children}</a>,
+                a: ({ children, ...props }) => (
+                  <a {...props} target="_blank" rel="noopener noreferrer">
+                    {children}
+                  </a>
+                ),
               }}
             >
               {candidate.content}

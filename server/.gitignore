@@ -1,6 +1,0 @@
-# 本地 Redis 地址、密码和 DB 配置，不允许提交到仓库。
-.env
-
-# 独立 server 的依赖和 TypeScript 构建产物。
-node_modules/
-dist/

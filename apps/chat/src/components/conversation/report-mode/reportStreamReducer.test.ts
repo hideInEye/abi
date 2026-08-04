@@ -54,7 +54,7 @@ describe('report stream reducer', () => {
         id: 'step-1',
         title: 'load_skill',
         thought: 'internal thought',
-        action_reason: 'internal reason',
+        action_reason: '公开执行原因',
         action_input: '{"secret":true}',
         action: 'load_skill',
         action_intention: '加载销售分析 Skill',
@@ -72,11 +72,11 @@ describe('report stream reducer', () => {
       title: 'load_skill',
       action: 'load_skill',
       actionIntention: '加载销售分析 Skill',
+      actionReason: '公开执行原因',
       status: 'done',
       scope: 'thinking',
     })
     expect(JSON.stringify(step)).not.toContain('internal thought')
-    expect(JSON.stringify(step)).not.toContain('internal reason')
     expect(JSON.stringify(step)).not.toContain('secret')
   })
 
@@ -218,6 +218,38 @@ describe('report stream reducer', () => {
       doneEntryId: '1-0',
       error: { code: 'report_content_missing', message: '未收到报告文件' },
     })
+  })
+
+  it('兼容真实数据中分段 text 包装的报告，并在 done 时收敛未闭合步骤', () => {
+    const html = '<!DOCTYPE html>\n<html><head><title>测试报告</title></head><body>完成</body></html>'
+    const toolResult = `${JSON.stringify({ chunks: [{ output_type: 'html', content: html }], report: { version: '1.0' } })}\n\n任务提示文字`
+    const splitAt = Math.floor(toolResult.length / 2)
+    const state = reduceReportStreamEntries([
+      entry('1-0', { type: 'plan.update', tasks: [{ content: '生成报告', status: 'in_progress' }] }),
+      entry('2-0', { type: 'step.start', id: 'report-step', title: 'html_interpreter' }),
+      entry('3-0', { type: 'step.meta', id: 'report-step', title: 'html_interpreter', action: 'html_interpreter' }),
+      entry('4-0', { type: 'step.chunk', id: 'report-step', output_type: 'text', content: toolResult.slice(0, splitAt) }),
+      entry('5-0', { type: 'step.chunk', id: 'report-step', output_type: 'text', content: toolResult.slice(splitAt) }),
+      entry('6-0', { type: 'step.done', id: 'report-step', status: 'done' }),
+      entry('7-0', { type: 'step.start', id: 'dangling-step', title: '思考中', detail: 'Thought/Action/Observation' }),
+      entry('8-0', { type: 'plan.update', tasks: [{ content: '生成报告', status: 'completed' }], source: 'terminate' }),
+      entry('9-0', { type: 'final', content: '报告已生成' }),
+      entry('10-0', { type: 'done' }),
+    ])
+
+    expect(state).toMatchObject({
+      status: 'completed',
+      doneEntryId: '10-0',
+      reportCandidate: {
+        entryId: '5-0',
+        stepId: 'report-step',
+        format: 'html',
+        content: html,
+      },
+    })
+    expect(state.stepsById['report-step'].chunks.every((chunk) => chunk.outputType === 'report_payload')).toBe(true)
+    expect(state.stepsById['dangling-step'].status).toBe('done')
+    expect(Object.values(state.stepsById).some((step) => step.status === 'in_progress')).toBe(false)
   })
 
   it('实时 reducer 拒绝重复和比 lastEntryId 更旧的事件并保留最后 ID', () => {

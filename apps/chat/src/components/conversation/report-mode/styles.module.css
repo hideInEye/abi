@@ -1,13 +1,3 @@
-.shell {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  flex-direction: column;
-  overflow: hidden;
-  background: transparent;
-}
-
 .body {
   position: relative;
   display: flex;
@@ -17,62 +7,22 @@
 }
 
 .conversationPane {
+  display: flex;
   min-width: 0;
-  flex: 1;
+  width: 100%;
+  flex: 0 0 100%;
+  flex-direction: column;
   overflow: hidden;
-  transition: width 0.22s var(--ease), flex-basis 0.22s var(--ease);
+  transition:
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    flex-basis 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s ease;
 }
 
 .bodySplit .conversationPane {
+  width: 52%;
   flex: 0 0 52%;
   border-right: 1px solid rgba(130, 140, 200, 0.16);
-}
-
-.messageScroll {
-  height: 100%;
-  overflow-y: auto;
-  padding: 24px 24px 28px;
-}
-
-.messageInner {
-  width: 100%;
-  max-width: 53.75rem;
-  margin: 0 auto;
-}
-
-.emptyState {
-  display: flex;
-  min-height: 280px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--ink-3);
-  text-align: center;
-}
-
-.emptyIcon {
-  display: inline-flex;
-  width: 44px;
-  height: 44px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-  background: rgba(91, 124, 247, 0.1);
-  color: var(--accent);
-  font-size: 22px;
-}
-
-.emptyTitle {
-  color: var(--ink);
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.emptyDesc {
-  max-width: 360px;
-  font-size: 13px;
-  line-height: 1.8;
 }
 
 .messageRow {
@@ -388,9 +338,7 @@
   font-size: 12px;
 }
 
-.stepMarkdown,
-.stepText,
-.stepCode {
+.stepMarkdown {
   overflow-wrap: anywhere;
   color: var(--ink-2);
   font-size: 12px;
@@ -409,14 +357,22 @@
   margin-bottom: 0;
 }
 
-.stepCode {
+.stepMarkdown p,
+.stepMarkdown li {
+  white-space: pre-wrap;
+}
+
+.stepMarkdown pre {
   max-height: 260px;
   overflow: auto;
   border-radius: 10px;
   background: rgba(26, 39, 68, 0.07);
   margin: 0;
   padding: 10px;
-  white-space: pre-wrap;
+}
+
+.stepMarkdown pre code {
+  white-space: pre;
 }
 
 .stepImageWrap {
@@ -463,10 +419,6 @@
   margin: 0 16px 16px;
 }
 
-.loadAlert {
-  margin-top: 18px;
-}
-
 .fileCard {
   margin: 0 16px 16px;
   border: 1px solid rgba(91, 124, 247, 0.18);
@@ -499,6 +451,7 @@
 }
 
 .reportPane {
+  width: 100%;
   min-width: 420px;
   flex: 1;
   background: rgba(255, 255, 255, 0.74);
@@ -509,8 +462,27 @@
 
 .reportPaneWrap {
   display: flex;
+  width: 0;
   min-width: 0;
-  flex: 1;
+  flex: 0 0 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(18px);
+  transition:
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    flex-basis 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width, flex-basis, opacity, transform;
+}
+
+.reportPaneWrapOpen {
+  width: 48%;
+  flex-basis: 48%;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 
 .previewHeader {
@@ -615,6 +587,15 @@
     width: 100%;
   }
 
+  .reportPaneWrap,
+  .reportPaneWrapOpen {
+    width: 100%;
+    flex: 1 1 auto;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
   .mobileSwitch {
     display: block;
   }
@@ -623,13 +604,16 @@
     display: none;
   }
 
-  .messageScroll {
-    padding: 18px 14px 24px;
-  }
-
   .answerCard,
   .questionBubble {
     width: 100%;
     max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conversationPane,
+  .reportPaneWrap {
+    transition: none;
   }
 }

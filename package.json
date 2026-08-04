@@ -9,18 +9,13 @@
   },
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "server"
+    "packages/*"
   ],
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build --filter=./apps/*",
     "dev:portal": "pnpm --filter portal dev",
     "dev:admin": "pnpm --filter admin dev",
-    "server:dev": "pnpm --filter report-stream-server server:dev",
-    "server:build": "pnpm --filter report-stream-server build",
-    "server:start": "pnpm --filter report-stream-server start",
-    "server:mock-report": "pnpm --filter report-stream-server mock:report",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "format": "prettier --write .",
     "test": "vitest run --coverage",

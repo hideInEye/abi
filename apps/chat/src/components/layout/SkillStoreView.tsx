@@ -3,6 +3,7 @@ import { message, Spin, Tabs } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 
 import type { SkillCard } from '@/constant/layout'
+import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { querySkillList, updateSkillInfo, updateSkillStatus } from '@/service/api/skill'
 import { getSpaceId } from '@/utils'
 import SkillDetailDrawer from './SkillDetailDrawer'
@@ -203,8 +204,9 @@ export function SkillStoreView({ onBack }: SkillStoreViewProps) {
 
   return (
     <div className="skill-store-view" style={{ display: 'flex' }}>
-      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>
-        技能商店
+      <div className="content-page-title-row">
+        <SidebarCollapseButton />
+        <div className="content-page-title">技能商店</div>
       </div>
 
       {/* Search */}

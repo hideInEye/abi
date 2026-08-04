@@ -11,8 +11,6 @@ import { CHAT_MODE } from '../../constant'
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import Conversation from '../conversation'
 import type { ConversationHandle } from '../conversation'
-import ReportConversation from '../conversation/report-mode'
-import type { ReportConversationHandle } from '../conversation/report-mode'
 import ChatHeader from '../conversation/components/chat-header'
 import type { ModelOption } from '../conversation/components/chat-header'
 import NewChatWelcome from './NewChatWelcome'
@@ -22,6 +20,7 @@ import type { ChatInputModeKey, SemanticSelectedData } from '../conversation/com
 import { message } from 'antd'
 import { getSpaceId } from '../../utils'
 import ConverList from './conver_list'
+import { useSidebarCollapse } from '../layout/SidebarCollapseContext'
 
 interface ConversationAnalysisProps {
   spaceId?: number
@@ -31,6 +30,7 @@ interface ConversationAnalysisProps {
 }
 
 const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false, groupId }) => {
+  const { collapseSidebar } = useSidebarCollapse()
   const [visible, setVisible] = useState(false)
   const [curApp, setCurApp] = useState<any>({})
   const [appList, setAppList] = useState<any[]>([])
@@ -43,7 +43,6 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const navigate = useNavigate()
   const [editItem, setEditItem] = useState<any>()
   const conversationRef = useRef<ConversationHandle>(null)
-  const reportConversationRef = useRef<ReportConversationHandle>(null)
   const converListRef = useRef<any>(null)
   const [fold, setFold] = useState(false)
   const justCreatedRef = useRef(false)
@@ -62,6 +61,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const [creating, setCreating] = useState(false)
   const [groupRefreshKey, setGroupRefreshKey] = useState(0)
   const chatHeaderRef = useRef<any>(null)
+
+  // 报告预览占用右侧空间时，幂等收起系统菜单，为双栏正文留出可读宽度。
+  // 关闭报告不自动展开，避免覆盖用户在预览期间主动选择的侧栏状态。
+  const handleReportPreviewChange = useCallback((open: boolean) => {
+    setReportPreviewOpen(open)
+    if (open) collapseSidebar()
+  }, [collapseSidebar])
 
   // ── 模型列表状态（全局加载一次）──
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
@@ -304,9 +310,9 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
     const sendByMode = () => {
       if (sendMode === 'report') {
-        // 报告模式发送到独立 ReportConversation；不调用旧 Conversation 的普通对话流接口。
-        if (!reportConversationRef.current?.handleSend) return false
-        reportConversationRef.current.handleSend(value)
+        // 同一 Conversation 只统一展示；报告发送仍走独立异步任务接口。
+        if (!conversationRef.current?.handleReportSend) return false
+        conversationRef.current.handleReportSend(value)
         return true
       }
 
@@ -331,7 +337,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       })
     }
 
-    // 已有会话 → 按当前输入模式分流发送。报告模式不复用旧普通对话流接口。
+    // 已有会话 → 按当前输入模式分流发送，两种消息保留在同一时间线。
     if (curConv) {
       if (!sendByMode()) {
         waitAndSend()
@@ -540,41 +546,27 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
           {/* 内容区域 */}
           <div className="flex-1 min-h-0">
             {curConv ? (
-              selectedMode === 'report' ? (
-                <ReportConversation
-                  fold={hideSidebar ? false : fold}
-                  conv={curConv}
-                  ref={reportConversationRef}
-                  spaceId={currentSpaceId}
-                  onClose={() => setCurConv(undefined)}
-                  onUpdateList={handleUpdateList}
-                  onLoadingChange={setReportLoading}
-                  onReportPreviewChange={setReportPreviewOpen}
-                  modelOptions={modelOptions}
-                  currentModel={currentModel}
-                  embedModelId={embedModelId}
-                  // 优先使用当前会话绑定的 groupId；路由 groupId 来自 session/group/list，作为新会话兜底。
-                  sessionGroupId={curConv?.groupId ?? curConv?.group_id ?? groupId}
-                  onModelChange={handleModelChange}
-                />
-              ) : (
-                <Conversation
-                  fold={hideSidebar ? false : fold}
-                  conv={curConv}
-                  ref={conversationRef}
-                  onClose={() => setCurConv(undefined)}
-                  onUpdateList={handleUpdateList}
-                  onLoadingChange={setConvLoading}
-                  semanticId={selectedData?.schemaId}
-                  selectedExcel={selectedExcel}
-                  modelOptions={modelOptions}
-                  currentModel={currentModel}
-                  onModelChange={handleModelChange}
-                  embedModelId={embedModelId}
-                  deepThinkEnabled={deepThinkEnabled}
-                  onHistorySemanticLoaded={(data) => setSelectedData(data)}
-                />
-              )
+              <Conversation
+                fold={hideSidebar ? false : fold}
+                conv={curConv}
+                ref={conversationRef}
+                onClose={() => setCurConv(undefined)}
+                onUpdateList={handleUpdateList}
+                onLoadingChange={setConvLoading}
+                onReportLoadingChange={setReportLoading}
+                onReportPreviewChange={handleReportPreviewChange}
+                semanticId={selectedData?.schemaId}
+                selectedExcel={selectedExcel}
+                modelOptions={modelOptions}
+                currentModel={currentModel}
+                onModelChange={handleModelChange}
+                embedModelId={embedModelId}
+                deepThinkEnabled={deepThinkEnabled}
+                spaceId={currentSpaceId}
+                // 当前会话 groupId 优先；路由 groupId 仅作为新会话兜底。
+                sessionGroupId={curConv?.groupId ?? curConv?.group_id ?? groupId}
+                onHistorySemanticLoaded={(data) => setSelectedData(data)}
+              />
             ) : groupId ? (
               <GroupSessionListView
                 groupId={groupId}
@@ -589,7 +581,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
           {/* 统一输入框（永驻） */}
           <div className="composer-wrap">
-            <div className={`max-w-[53.75rem] w-full ${selectedMode === 'report' && reportPreviewOpen ? 'report-composer-split' : 'm-auto'}`}>
+            <div className={`report-composer-shell max-w-[53.75rem] w-full ${reportPreviewOpen ? 'report-composer-split' : 'm-auto'}`}>
               <ChatInput
                 conv={curConv}
                 ensureConv={ensureConv}
@@ -597,7 +589,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onSend={handleUnifiedSend}
                 onStop={() => {
                   if (selectedMode === 'report') {
-                    reportConversationRef.current?.stopGenerating()
+                    conversationRef.current?.stopReportGenerating()
                     return
                   }
 

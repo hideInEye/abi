@@ -43,12 +43,7 @@ export default defineConfig({
       strict: true,
     },
     proxy: {
-      // 报告模式中 Node.js server 只负责读取 Redis Stream；外部报告提交服务通过 VITE_REPORT_SUBMIT_API 独立配置。
-      '/api/report-stream': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        secure: false,
-      },
+      // 普通对话、报告任务和 Java Redis Stream 接口统一由业务网关转发。
       '/api': {
         target: 'https://192.168.1.195/',
         // target: 'http://123.181.192.131:81/',

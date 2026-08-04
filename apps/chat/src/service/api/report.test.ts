@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { handleLoginExpired } from '../../utils/auth'
-import { submitReportTask } from './report'
+import { buildReportEventsUrl, fetchReportTaskStatus, submitReportTask } from './report'
 
 vi.mock('../../utils/auth', () => ({
   getAuthorization: () => 'Bearer test-token',
@@ -106,5 +106,42 @@ describe('report task submit api', () => {
 
     await expect(submitReportTask(request)).rejects.toThrow('登录已过期')
     expect(handleLoginExpired).toHaveBeenCalledOnce()
+  })
+
+  it('使用 chat-proxy task 接口查询并标准化任务状态', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      code: 0,
+      message: '任务状态查询成功',
+      data: {
+        task_id: 'task-1',
+        status: 'started',
+        completed: false,
+        successful: false,
+        message: '报告正在生成',
+      },
+    }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchReportTaskStatus('task-1')).resolves.toEqual({
+      taskId: 'task-1',
+      status: 'started',
+      completed: false,
+      successful: false,
+      message: '报告正在生成',
+      result: undefined,
+      error: undefined,
+    })
+    expect(fetchMock).toHaveBeenCalledWith('/api/chat-proxy/api/v1/chat/report/task?task_id=task-1', {
+      method: 'GET',
+      headers: { Authorization: 'Bearer test-token' },
+      signal: undefined,
+    })
+  })
+
+  it('Java SSE 地址固定使用 abi-debug，并显式从 0-0 回放或按 last_id 续读', () => {
+    expect(buildReportEventsUrl({ stream_key: 'report:conversation-1:1' }))
+      .toBe('/api/abi-debug/v1/report-stream/events?stream_key=report%3Aconversation-1%3A1&last_id=0-0')
+    expect(buildReportEventsUrl({ stream_key: 'report:conversation-1:1', last_id: '1784873130441-2' }))
+      .toBe('/api/abi-debug/v1/report-stream/events?stream_key=report%3Aconversation-1%3A1&last_id=1784873130441-2')
   })
 })

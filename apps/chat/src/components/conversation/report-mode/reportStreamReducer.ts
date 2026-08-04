@@ -3,7 +3,9 @@ import type {
   RawReportStreamEntry,
   ReportCandidate,
   ReportPlanTask,
+  ReportPublicChunk,
   ReportPublicStep,
+  ReportStepChunkEvent,
   ReportStepDoneEvent,
   ReportStepMetaEvent,
   ReportStepStartEvent,
@@ -16,6 +18,7 @@ import type {
 const REPORT_EVENT_TYPES = new Set<ReportStreamEvent['type']>(['question', 'step.start', 'step.meta', 'step.chunk', 'step.done', 'plan.update', 'final', 'done'])
 
 const PLACEHOLDER_STEP_TITLES = new Set(['思考中', 'thinking'])
+const EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE = 'report_payload'
 
 export function createInitialReportStreamState(): ReportStreamRuntimeState {
   return {
@@ -221,6 +224,7 @@ function mergeStepMeta(state: ReportStreamRuntimeState, event: ReportStepMetaEve
     detail: event.detail || step.detail,
     action: event.action || step.action,
     actionIntention: event.action_intention || step.actionIntention,
+    actionReason: event.action_reason || step.actionReason,
     todoMeta: normalizeTodoMeta(event.todo_meta) || step.todoMeta,
   }))
 }
@@ -243,6 +247,93 @@ function toReportCandidate(entryId: string, stepId: string, outputType: string |
     stepId,
     format,
     content,
+  }
+}
+
+/**
+ * 部分工具会把完整 `{ chunks: [...] }` 结果按字符切成多条 text 事件。
+ * 这些片段属于报告传输载荷，不应作为普通文本逐段展示。
+ */
+function getStoredChunkOutputType(step: ReportPublicStep, event: ReportStepChunkEvent): string {
+  const outputType = event.output_type || 'text'
+  if (outputType.toLowerCase() !== 'text') return outputType
+
+  const continuesReportPayload = step.chunks.some((chunk) => chunk.outputType === EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE)
+  const startsReportPayload = /^\s*\{\s*"chunks"\s*:/.test(event.content)
+  return continuesReportPayload || startsReportPayload ? EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE : outputType
+}
+
+/** 从可能带前后说明文字的字符串中提取第一个语法完整的 JSON 对象。 */
+function parseFirstJsonObject(source: string): unknown {
+  for (let start = source.indexOf('{'); start >= 0; start = source.indexOf('{', start + 1)) {
+    let depth = 0
+    let inString = false
+    let escaped = false
+
+    for (let index = start; index < source.length; index += 1) {
+      const character = source[index]
+
+      if (inString) {
+        if (escaped) escaped = false
+        else if (character === '\\') escaped = true
+        else if (character === '"') inString = false
+        continue
+      }
+
+      if (character === '"') {
+        inString = true
+        continue
+      }
+
+      if (character === '{') depth += 1
+      else if (character === '}') depth -= 1
+
+      if (depth !== 0) continue
+
+      try {
+        return JSON.parse(source.slice(start, index + 1)) as unknown
+      } catch {
+        break
+      }
+    }
+  }
+
+  return undefined
+}
+
+/** 识别工具 text payload 内嵌的最后一个 HTML/Markdown 产物。 */
+function toEmbeddedReportCandidate(entryId: string, stepId: string, chunks: ReportPublicChunk[]): ReportCandidate | undefined {
+  const payloadSource = chunks
+    .filter((chunk) => chunk.outputType === EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE)
+    .map((chunk) => chunk.content)
+    .join('')
+  if (!payloadSource) return undefined
+
+  const parsed = parseFirstJsonObject(payloadSource)
+  if (!parsed || typeof parsed !== 'object') return undefined
+
+  const embeddedChunks = (parsed as { chunks?: unknown }).chunks
+  if (!Array.isArray(embeddedChunks)) return undefined
+
+  return embeddedChunks.reduce<ReportCandidate | undefined>((candidate, chunk) => {
+    if (!chunk || typeof chunk !== 'object') return candidate
+
+    const outputType = (chunk as { output_type?: unknown }).output_type
+    const content = (chunk as { content?: unknown }).content
+    if (typeof outputType !== 'string' || typeof content !== 'string') return candidate
+
+    return toReportCandidate(entryId, stepId, outputType, content) || candidate
+  }, undefined)
+}
+
+/** 整体 done 是权威终态；即使最后一个占位 step 没有 step.done，也不能继续显示加载中。 */
+function settleInProgressSteps(state: ReportStreamRuntimeState): ReportStreamRuntimeState {
+  const entries = Object.entries(state.stepsById)
+  if (!entries.some(([, step]) => step.status === 'in_progress')) return state
+
+  return {
+    ...state,
+    stepsById: Object.fromEntries(entries.map(([stepId, step]) => [stepId, step.status === 'in_progress' ? { ...step, status: 'done' as const } : step])),
   }
 }
 
@@ -277,19 +368,26 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
         break
       }
 
-      const candidate = toReportCandidate(entryId, event.id, event.output_type, event.content)
-      nextState = upsertPublicStep(state, event.id, entryId, (step) => ({
-        ...step,
-        chunks: [
+      const directCandidate = toReportCandidate(entryId, event.id, event.output_type, event.content)
+      let embeddedCandidate: ReportCandidate | undefined
+      nextState = upsertPublicStep(state, event.id, entryId, (step) => {
+        const chunks: ReportPublicChunk[] = [
           ...step.chunks,
           {
             entryId,
-            outputType: event.output_type || 'text',
+            outputType: getStoredChunkOutputType(step, event),
             content: event.content,
           },
-        ],
-      }))
+        ]
+        embeddedCandidate = toEmbeddedReportCandidate(entryId, event.id, chunks)
 
+        return {
+          ...step,
+          chunks,
+        }
+      })
+
+      const candidate = directCandidate || embeddedCandidate
       if (candidate) {
         nextState = {
           ...nextState,
@@ -328,22 +426,25 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
       nextState = typeof event.content === 'string' ? { ...state, final: { content: event.content, entryId } } : appendWarning(state, `entry ${entryId} 的 final 内容无效`)
       break
     case 'done':
-      nextState = state.reportCandidate
-        ? {
-            ...state,
-            status: 'completed',
-            doneEntryId: entryId,
-            error: undefined,
-          }
-        : {
-            ...state,
-            status: 'failed',
-            doneEntryId: entryId,
-            error: {
-              code: 'report_content_missing',
-              message: '未收到报告文件',
-            },
-          }
+      {
+        const settledState = settleInProgressSteps(state)
+        nextState = settledState.reportCandidate
+          ? {
+              ...settledState,
+              status: 'completed',
+              doneEntryId: entryId,
+              error: undefined,
+            }
+          : {
+              ...settledState,
+              status: 'failed',
+              doneEntryId: entryId,
+              error: {
+                code: 'report_content_missing',
+                message: '未收到报告文件',
+              },
+            }
+      }
       break
   }
 

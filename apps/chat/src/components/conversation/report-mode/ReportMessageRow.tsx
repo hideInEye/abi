@@ -6,6 +6,7 @@ import React from 'react'
 import ReportFileCard from './ReportFileCard'
 import ReportThinkingPanel from './ReportThinkingPanel'
 import ReportTodoList from './ReportTodoList'
+import { getReportPresentationStage } from './helpers'
 import type { ReportItem } from './types'
 import styles from './styles.module.css'
 
@@ -20,9 +21,11 @@ interface ReportMessageRowProps {
 function getStatusMeta(status: ReportItem['status']) {
   switch (status) {
     case 'submitting':
-      return { color: 'processing', text: '正在提交' }
+      return { color: 'processing', text: '正在准备' }
     case 'waiting_stream':
-      return { color: 'processing', text: '等待执行' }
+      return { color: 'processing', text: '准备中' }
+    case 'syncing_history':
+      return { color: 'processing', text: '正在整理' }
     case 'thinking':
       return { color: 'processing', text: '思考中' }
     case 'running':
@@ -39,6 +42,8 @@ function getStatusMeta(status: ReportItem['status']) {
 const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThinking, onToggleTodo, onToggleTask, onOpenReport }) => {
   const statusMeta = getStatusMeta(report.status)
   const latestWarning = report.warnings[report.warnings.length - 1]
+  const presentationStage = getReportPresentationStage(report)
+  const warningDescription = report.status === 'syncing_history' ? '报告已经生成，正在整理到当前会话中。' : report.status === 'completed' ? undefined : '生成过程出现短暂波动，系统正在自动恢复。'
 
   return (
     <article className={styles.messageRow}>
@@ -58,29 +63,29 @@ const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThi
           </div>
 
           <ReportThinkingPanel report={report} onToggle={onToggleThinking} />
-          <ReportTodoList report={report} onToggleTodo={onToggleTodo} onToggleTask={onToggleTask} />
+          {presentationStage !== 'thinking' && <ReportTodoList report={report} onToggleTodo={onToggleTodo} onToggleTask={onToggleTask} />}
 
-          {report.final && <div className={styles.finalSummary}>{report.final.content}</div>}
+          {presentationStage === 'report' && report.final && <div className={styles.finalSummary}>{report.final.content}</div>}
 
           {report.storageWarning && (
             <div className={styles.inlineAlert}>
-              <Alert type="warning" showIcon message="本地恢复记录保存失败" description={report.storageWarning} />
+              <Alert type="warning" showIcon message="暂时无法保存恢复进度" description="当前报告仍会继续生成，但刷新页面后可能需要重新进入会话查看。" />
             </div>
           )}
 
-          {latestWarning && !report.error && (
+          {latestWarning && warningDescription && !report.error && (
             <div className={styles.inlineAlert}>
-              <Alert type="warning" showIcon message="报告事件提示" description={latestWarning} />
+              <Alert type="warning" showIcon message="生成提示" description={warningDescription} />
             </div>
           )}
 
           {report.error && (
             <div className={styles.inlineAlert}>
-              <Alert type="error" showIcon message={report.error.message} description={report.error.code} />
+              <Alert type="error" showIcon message={report.error.message} />
             </div>
           )}
 
-          <ReportFileCard report={report} onOpen={onOpenReport} />
+          {presentationStage === 'report' && <ReportFileCard report={report} onOpen={onOpenReport} />}
         </div>
       </div>
     </article>

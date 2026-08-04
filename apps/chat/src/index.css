@@ -1350,6 +1350,23 @@ button {
   color: var(--accent);
   background: var(--accent-soft);
 }
+.collapse-sidebar-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 应用工坊和技能商店共享的页面标题行。 */
+.content-page-title-row {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+}
+.content-page-title {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+}
 
 /* ── Space Switcher ── */
 .space-switcher-glass {
@@ -1827,6 +1844,12 @@ button {
 }
 
 /* 报告预览打开时，输入框留在左侧对话栏；普通对话不命中该类，布局保持原样。 */
+.report-composer-shell {
+  transition:
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    padding-right 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .report-composer-split {
   width: 52%;
   max-width: 53.75rem;
@@ -1841,6 +1864,12 @@ button {
     margin-right: auto;
     margin-left: auto;
     padding-right: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report-composer-shell {
+    transition: none;
   }
 }
 

@@ -1,7 +1,7 @@
 import { BulbOutlined, DownOutlined, LoadingOutlined } from '@ant-design/icons'
 import React from 'react'
 
-import { getPublicStepLines } from './helpers'
+import { getPublicStepLines, isVisibleReportStep } from './helpers'
 import type { ReportItem } from './types'
 import styles from './styles.module.css'
 
@@ -11,18 +11,23 @@ interface ReportThinkingPanelProps {
 }
 
 function getThinkingSummary(report: ReportItem) {
-  if (report.status === 'submitting') return '正在提交报告任务'
-  if (report.status === 'waiting_stream') return '任务已提交，等待 Redis Stream 返回执行信息'
+  if (report.status === 'submitting') return '正在理解你的问题'
+  if (report.status === 'waiting_stream') return '正在分析问题'
+  if (report.status === 'syncing_history') return '正在整理报告结果'
+  if (report.currentPlan) return '分析完成'
 
   const latestStepId = report.thinkingStepIds[report.thinkingStepIds.length - 1]
   const latestStep = latestStepId ? report.stepsById[latestStepId] : undefined
   if (latestStep) return latestStep.title || latestStep.actionIntention || '正在分析问题'
 
-  return report.currentPlan ? '前置分析已完成' : '正在分析问题'
+  return '正在分析问题'
 }
 
 const ReportThinkingPanel: React.FC<ReportThinkingPanelProps> = ({ report, onToggle }) => {
-  const thinkingSteps = report.thinkingStepIds.map((stepId) => report.stepsById[stepId]).filter(Boolean)
+  const thinkingSteps = report.thinkingStepIds
+    .map((stepId) => report.stepsById[stepId])
+    .filter(Boolean)
+    .filter(isVisibleReportStep)
 
   return (
     <section className={styles.panel}>
@@ -48,7 +53,9 @@ const ReportThinkingPanel: React.FC<ReportThinkingPanelProps> = ({ report, onTog
                 <div key={step.id} className={styles.thinkingItem}>
                   <div className={styles.thinkingItemTitle}>{step.title || step.action || `执行步骤 ${step.ordinal || ''}`}</div>
                   {getPublicStepLines(step).map((line, index) => (
-                    <div key={`${step.id}-${index}`} className={styles.thinkingItemContent}>{line}</div>
+                    <div key={`${step.id}-${index}`} className={styles.thinkingItemContent}>
+                      {line}
+                    </div>
                   ))}
                 </div>
               ))}

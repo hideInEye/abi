@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
+import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { fetchFavoriteList, fetchOperateRecordList } from '@/service/api/abi-system'
 
 /** 应用工坊 tab 顺序：最近使用、我的收藏、我的分享、我的分析、我的报告 */
@@ -245,8 +246,9 @@ export function WorkshopView() {
 
   return (
     <div className="workshop-view">
-      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', flexShrink: 0 }}>
-        应用工坊
+      <div className="content-page-title-row">
+        <SidebarCollapseButton />
+        <div className="content-page-title">应用工坊</div>
       </div>
 
       {/* Tabs */}
