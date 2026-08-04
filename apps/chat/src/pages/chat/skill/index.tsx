@@ -11,10 +11,6 @@ import { querySkillList, updateSkillStatus } from '@/service/api/skill'
 import { getSpaceId } from '@/utils'
 import SkillDetailDrawer from './SkillDetailDrawer'
 
-export const Route = createFileRoute('/chat/skill/')({
-  component: SkillStoreView,
-})
-
 /** 后端技能列表项 */
 type SkillItem = {
   id: number | string
@@ -354,3 +350,7 @@ function SkillStoreView() {
     </div>
   )
 }
+
+export const Route = createFileRoute('/chat/skill/')({
+  component: SkillStoreView,
+})
