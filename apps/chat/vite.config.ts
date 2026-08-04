@@ -33,6 +33,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@sa/axios': fileURLToPath(new URL('../../packages/axios/src/index.ts', import.meta.url)),
       '@sa/auth': fileURLToPath(new URL('../../packages/auth/src/index.ts', import.meta.url)),
+      // @sa/axios 源码内会继续引用 @sa/utils；显式别名能避免生产构建时 Rollup 无法解析 workspace 包。
+      '@sa/utils': fileURLToPath(new URL('../../packages/utils/src/index.ts', import.meta.url)),
     },
   },
   server: {
@@ -41,6 +43,7 @@ export default defineConfig({
       strict: true,
     },
     proxy: {
+      // 普通对话、报告任务和 Java Redis Stream 接口统一由业务网关转发。
       '/api': {
         target: 'https://192.168.1.195/',
         // target: 'http://123.181.192.131:81/',

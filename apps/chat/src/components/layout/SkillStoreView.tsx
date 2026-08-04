@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { SkillCard } from '@/constant/layout'
+import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { fetchOperateNew } from '@/service/api/abi-system'
 import { querySkillList, updateSkillStatus } from '@/service/api/skill'
 import { getSpaceId } from '@/utils'
@@ -235,8 +236,9 @@ export function SkillStoreView({ onBack }: SkillStoreViewProps) {
 
   return (
     <div className="skill-store-view" style={{ display: 'flex' }}>
-      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>
-        技能商店
+      <div className="content-page-title-row">
+        <SidebarCollapseButton />
+        <div className="content-page-title">技能商店</div>
       </div>
 
       {/* Tabs：广场 / 我的技能（格式对齐 abi 技能管理 skill-filter-tabs） */}

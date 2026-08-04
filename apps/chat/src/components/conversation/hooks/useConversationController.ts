@@ -19,9 +19,11 @@ import {
 import { useDebugStore } from '../../../store'
 import { getHumanInHistoryByOrderIndex, parseMessageContent } from '../../../utils'
 import { useScreenshot } from '../useScreenShot'
+import { areReportHistoryRoundsEqual, splitConversationHistoryRounds } from '../report-mode/reportHistoryAdapter'
 
 import type { chatHeaderRefMethod } from '../../../types'
 import type { ModelOption } from '../components/chat-header'
+import type { ReportHistoryRoundGroup } from '../report-mode/types'
 
 export interface ConversationProps {
   conv: any
@@ -38,6 +40,11 @@ export interface ConversationProps {
   currentModel?: ModelOption | null
   onModelChange?: (model: ModelOption) => void
   deepThinkEnabled?: boolean
+  /** 报告提交所需的当前空间和会话分组；普通对话 controller 不消费这些字段。 */
+  spaceId?: number
+  sessionGroupId?: string
+  onReportLoadingChange?: (loading: boolean) => void
+  onReportPreviewChange?: (open: boolean) => void
   /** 打开历史会话时，回填最后一轮使用的数据语义到输入框 */
   onHistorySemanticLoaded?: (data: { name: string; schemaId?: number | string; groupName?: string } | null) => void
 }
@@ -320,6 +327,8 @@ export const useConversationController = (
   const [isStorage, setIsStorage] = useState(false)
   const [loading, setLoading] = useState(false)
   const [convContent, setConvContent] = useState<any[]>([])
+  const [reportHistoryRounds, setReportHistoryRounds] = useState<ReportHistoryRoundGroup[]>([])
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const convContent2d = useMemo(() => groupConversationByOrder(convContent), [convContent])
   const convContent3d = useMemo(() => groupConversationByOrder3d(convContent2d), [convContent2d])
   const [currentMessage, setCurrentMessage] = useState('')
@@ -679,6 +688,8 @@ export const useConversationController = (
     setMinRoundIndex(undefined)
     setHasMoreHistory(true)
     setHistoryLoading(false)
+    setHistoryLoaded(false)
+    setReportHistoryRounds([])
     canLoadMore.current = false
     isLoadingHistory.current = false
 
@@ -751,69 +762,88 @@ export const useConversationController = (
     let conversationList: any = []
     const { chat_id: sessionId = '', agent_id: agentId = '' } = conv
 
-    if (sessionId) {
-      const result: any = await fetchSessionMessages({
-        convUid: conv.conv_uid
-      })
-      if (!isRequestTokenActive(requestToken)) return
-
-      // 新版历史接口返回结构：{ data: { total, data: [{ roundIndex, messages: [...] }, ...] } }
-      // 需按 roundIndex 分组，取出每组内的 messages 后再统一映射为渲染格式。
-      const roundGroups = Array.isArray(result?.data?.data) ? result.data.data : []
-      const flatHistory: any[] = roundGroups.flatMap((group: any) =>
-        Array.isArray(group?.messages) ? group.messages : []
-      )
-
-      if (flatHistory.length > 0) {
-        const orders = flatHistory.map((item: any) => item.roundIndex ?? item.index ?? 0)
-        const minOrder = Math.min(...orders)
-        if (!isRequestTokenActive(requestToken)) return
-        setMinRoundIndex(minOrder)
-
-        // 当前接口一次返回全部轮次，无需分页加载
-        setHasMoreHistory(false)
-
-        flatHistory.forEach((item: any) => {
-          const order = item.roundIndex ?? item.index ?? 0
-          setUserDebugInfoMap({
-            order,
-            roundIndex: order
-          })
+    try {
+      if (sessionId) {
+        const result: any = await fetchSessionMessages({
+          convUid: conv.conv_uid
         })
-      } else {
-        setHasMoreHistory(false)
+        if (!isRequestTokenActive(requestToken)) return
+
+        // query 只请求一次；报告 round 交给报告历史适配器，避免进入普通 ViewEle。
+        const roundGroups: ReportHistoryRoundGroup[] = Array.isArray(result?.data?.data) ? result.data.data : []
+        const { interactionRounds, reportRounds } = splitConversationHistoryRounds(roundGroups)
+        // 同内容刷新保持原数组引用，避免报告恢复 Hook 重查全部 IndexedDB task。
+        setReportHistoryRounds((currentRounds) => (
+          areReportHistoryRoundsEqual(currentRounds, reportRounds) ? currentRounds : reportRounds
+        ))
+        const flatHistory: any[] = interactionRounds.flatMap((group) => (
+          Array.isArray(group?.messages) ? group.messages : []
+        ))
+
+        if (flatHistory.length > 0) {
+          const orders = flatHistory.map((item: any) => item.roundIndex ?? item.index ?? 0)
+          const minOrder = Math.min(...orders)
+          if (!isRequestTokenActive(requestToken)) return
+          setMinRoundIndex(minOrder)
+
+          // 当前接口一次返回全部轮次，无需分页加载
+          setHasMoreHistory(false)
+
+          flatHistory.forEach((item: any) => {
+            const order = item.roundIndex ?? item.index ?? 0
+            setUserDebugInfoMap({
+              order,
+              roundIndex: order
+            })
+          })
+        } else {
+          setHasMoreHistory(false)
+        }
+        conversationList = flatHistory.map((item: any) => mapHistoryMessage(item))
       }
-      conversationList = flatHistory.map((item: any) => mapHistoryMessage(item))
-    }
 
-    if (!isRequestTokenActive(requestToken)) return
-    // 如果当前正在流式请求中，不覆盖已有的消息（避免竞态条件清空正在进行的对话）
-    if (isRequesting.current) return
-    setConvContent(conversationList)
+      if (!isRequestTokenActive(requestToken)) return
+      // 如果当前正在流式请求中，不覆盖已有的消息（避免竞态条件清空正在进行的对话）
+      if (isRequesting.current) return
+      setConvContent(conversationList)
 
-    // 打开历史会话时，取最后一轮的数据语义回填到统一输入框的“数据”选择器
-    if (conversationList.length > 0 && props.onHistorySemanticLoaded) {
-      const rounds = conversationList
-        .map((m: any) => (typeof m.roundIndex === 'number' ? m.roundIndex : (typeof m.order === 'number' ? m.order : null)))
-        .filter((r: any) => r != null) as number[]
-      if (rounds.length) {
-        const lastRound = Math.max(...rounds)
-        const lastRoundMsgs = conversationList.filter((m: any) => (m.roundIndex ?? m.order) === lastRound)
-        const meta = extractSemanticMetaFromMessages(lastRoundMsgs)
-        if (meta.semanticName || meta.semanticId != null) {
-          props.onHistorySemanticLoaded({ name: meta.semanticName, schemaId: meta.semanticId, groupName: meta.groupName })
+      // 打开历史会话时，取最后一轮普通对话的数据语义回填到输入框。
+      if (conversationList.length > 0 && props.onHistorySemanticLoaded) {
+        const rounds = conversationList
+          .map((m: any) => (typeof m.roundIndex === 'number' ? m.roundIndex : (typeof m.order === 'number' ? m.order : null)))
+          .filter((r: any) => r != null) as number[]
+        if (rounds.length) {
+          const lastRound = Math.max(...rounds)
+          const lastRoundMsgs = conversationList.filter((m: any) => (m.roundIndex ?? m.order) === lastRound)
+          const meta = extractSemanticMetaFromMessages(lastRoundMsgs)
+          if (meta.semanticName || meta.semanticId != null) {
+            props.onHistorySemanticLoaded({ name: meta.semanticName, schemaId: meta.semanticId, groupName: meta.groupName })
+          }
         }
       }
-    }
 
-    setTimeout(() => {
-      if (!isRequestTokenActive(requestToken)) return
-      scrollToBottom()
       setTimeout(() => {
         if (!isRequestTokenActive(requestToken)) return
-        canLoadMore.current = true
-      }, 500)
-    }, 300)
+        scrollToBottom()
+        setTimeout(() => {
+          if (!isRequestTokenActive(requestToken)) return
+          canLoadMore.current = true
+        }, 500)
+      }, 300)
+    } catch (error) {
+      if (isRequestTokenActive(requestToken)) {
+        setReportHistoryRounds([])
+        console.error('会话历史加载失败:', error)
+      }
+    } finally {
+      if (isRequestTokenActive(requestToken)) setHistoryLoaded(true)
+    }
+  }
+
+  /** task 已完成但 query 尚未落库时，由报告 Hook 触发一次完整历史刷新。 */
+  const refreshHistory = async () => {
+    const requestToken = nextRequestToken()
+    await getHistory(false, 0, requestToken)
   }
 
   const stopGenerating = () => {
@@ -2037,6 +2067,9 @@ export const useConversationController = (
     convContent,
     convContent2d,
     convContent3d,
+    reportHistoryRounds,
+    historyLoaded,
+    refreshHistory,
     setConvContent,
     checkAll,
     setCheckAll,

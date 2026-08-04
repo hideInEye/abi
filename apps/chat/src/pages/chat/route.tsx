@@ -12,6 +12,7 @@ import { BrandHeader } from '@/components/layout/BrandHeader'
 import { ConversationGroups } from '@/components/layout/ConversationGroups'
 import { CreateConversationButton } from '@/components/layout/CreateConversationButton'
 import { ScheduleTaskDrawer } from '@/components/layout/ScheduleTaskDrawer'
+import { SidebarCollapseProvider } from '@/components/layout/SidebarCollapseContext'
 import { SidebarHistoryTopics } from '@/components/layout/SidebarHistoryTopics'
 import { SkillStoreView } from '@/components/layout/SkillStoreView'
 import { SpaceSelector } from '@/components/layout/SpaceSelector'
@@ -96,6 +97,19 @@ function ChatWorkbenchLayout() {
     setCollapsed((previousCollapsed) => !previousCollapsed)
   }, [])
 
+  const handleCollapseSidebar = useCallback(() => {
+    setCollapsed(true)
+  }, [])
+
+  const sidebarCollapseContext = useMemo(
+    () => ({
+      collapsed,
+      toggleSidebar: handleToggleCollapse,
+      collapseSidebar: handleCollapseSidebar,
+    }),
+    [collapsed, handleCollapseSidebar, handleToggleCollapse],
+  )
+
   const handleNavItemClick = useCallback(
     (key: string) => {
       if (key === SKILL_STORE_MENU_KEY) {
@@ -145,6 +159,7 @@ function ChatWorkbenchLayout() {
       }}
     >
       <Sider
+        id="chat-workbench-sidebar"
         collapsible
         collapsed={collapsed}
         width={SIDER_WIDTH}
@@ -153,12 +168,11 @@ function ChatWorkbenchLayout() {
         className="sidebar-glass !h-[100dvh]"
       >
         <div className="h-full min-h-0 flex flex-col" style={{ position: 'relative', zIndex: 1 }}>
-          <BrandHeader collapsed={collapsed} logoSrc={appLogoUrl} onToggleCollapse={handleToggleCollapse} />
+          <BrandHeader collapsed={collapsed} logoSrc={appLogoUrl} />
 
           <CreateConversationButton
             collapsed={collapsed}
             onCreated={handleCreateNewChat}
-            onToggleCollapse={handleToggleCollapse}
           />
 
           <div className="sidebar-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-2">
@@ -202,16 +216,18 @@ function ChatWorkbenchLayout() {
             <SpaceSelector collapsed={false} onSpaceChanged={handleSpaceChanged} />
             <ScheduleTaskDrawer open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
           </div>
-          {showSkillStore ? (
-            <SkillStoreView onBack={handleBackFromSkillStore} />
-          ) : showWorkshop ? (
-            <WorkshopView />
-          ) : (
-            <Fragment key={newChatNonce}>
-              <Outlet />
-            </Fragment>
-          )}
-          {routeLoading && !showSkillStore && !showWorkshop && <ChatRouteLoading />}
+          <SidebarCollapseProvider value={sidebarCollapseContext}>
+            {showSkillStore ? (
+              <SkillStoreView onBack={handleBackFromSkillStore} />
+            ) : showWorkshop ? (
+              <WorkshopView />
+            ) : (
+              <Fragment key={newChatNonce}>
+                <Outlet />
+              </Fragment>
+            )}
+            {routeLoading && !showSkillStore && !showWorkshop && <ChatRouteLoading />}
+          </SidebarCollapseProvider>
         </Content>
       </Layout>
     </Layout>
