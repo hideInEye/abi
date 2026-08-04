@@ -1,5 +1,5 @@
 import { DownOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
-import { useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Button, DatePicker, Empty, Input, Popover, Select, Spin } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -7,6 +7,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { fetchFavoriteList, fetchOperateRecordList } from '@/service/api/abi-system'
+
+export const Route = createFileRoute('/chat/workshop/')({
+  component: WorkshopView,
+})
 
 /** 应用工坊 tab 顺序：最近使用、我的收藏、我的分享、我的分析、我的报告 */
 const WORKSHOP_TABS = [
@@ -71,7 +75,7 @@ const PAGE_SIZE_OPTIONS = [
   { label: '30条/页', value: 30 },
 ]
 
-export function WorkshopView() {
+function WorkshopView() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<WorkshopTabKey>('recently-used')
   const [searchText, setSearchText] = useState('')

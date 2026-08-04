@@ -1,5 +1,5 @@
-import { AuditOutlined, DislikeFilled, FileTextOutlined, LikeFilled, RobotOutlined, SolutionOutlined, ThunderboltOutlined } from '@ant-design/icons'
-import { message } from 'antd'
+import { AuditOutlined, CaretRightOutlined, DislikeFilled, FileTextOutlined, LikeFilled, RobotOutlined, SolutionOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { Tag, message } from 'antd'
 import dayjs from 'dayjs'
 
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
@@ -98,6 +98,257 @@ const ReadonlyBlock: FC<{ value?: string }> = ({ value }) => (
   </div>
 )
 
+/** ai信息 步骤元信息：chat_step → 中文名 + 主题色 */
+const AI_STEP_META: Record<string, { color: string; label: string }> = {
+  analysis_abstract: { color: '#f59e0b', label: '归因摘要' },
+  chart_generation: { color: '#14b8a6', label: '图表生成' },
+  excel_abstract: { color: '#22c55e', label: 'excel摘要' },
+  intent_clarify: { color: '#8b5cf6', label: '意图澄清' },
+  intent_detection: { color: '#6366f1', label: '意图识别' },
+  mcp_abstract: { color: '#d946ef', label: 'MCP结果摘要' },
+  mcp_call: { color: '#ec4899', label: 'MCP调用' },
+  predict_abstract: { color: '#f97316', label: '预测摘要' },
+  query_abstract: { color: '#10b981', label: '问数摘要' },
+  result_generation: { color: '#5b7cf7', label: '结果生成' },
+  semantic_extract: { color: '#0ea5e9', label: '语义提取' },
+  sql_query: { color: '#06b6d4', label: 'SQL查数' },
+  user_input: { color: '#5b7cf7', label: '用户输入' },
+}
+
+/** 部分后端仅用统一的 abstract_extract 表示“摘要”步骤，按场景映射到对应中文名 */
+const ABSTRACT_STEP_BY_MODE: Record<string, string> = {
+  chat_excel: 'excel_abstract',
+  chat_with_analysis: 'analysis_abstract',
+  chat_with_db_execute: 'query_abstract',
+  chat_with_predict: 'predict_abstract',
+}
+
+const getStepMeta = (chatStep?: string, chatMode?: string) => {
+  const key = (chatStep || '').trim()
+  if (AI_STEP_META[key]) return AI_STEP_META[key]
+  if ((key === 'abstract_extract' || key === 'abstract') && chatMode && ABSTRACT_STEP_BY_MODE[chatMode]) {
+    return AI_STEP_META[ABSTRACT_STEP_BY_MODE[chatMode]]
+  }
+  return { color: '#8695ab', label: key || '未知步骤' }
+}
+
+/** ai信息 content 内部字段的中文标签 */
+const CONTENT_FIELD_LABELS: Record<string, string> = {
+  chat_mode: '场景模式',
+  dimensions: '维度',
+  dimensions_zh: '维度名称',
+  direct_response: '直接回复',
+  display_type: '展示类型',
+  filters: '过滤条件',
+  group_by: '分组',
+  having: 'Having 条件',
+  limit: '数据条数',
+  llm_opinion: '模型意见',
+  metrics: '指标',
+  metrics_zh: '指标名称',
+  order_by: '排序',
+  predict_type: '预测类型',
+  relations: '表关联',
+  result_explain: '结果说明',
+  sql: 'SQL 语句',
+  thoughts: '思考过程',
+  time_range: '时间范围',
+}
+
+const LONG_TEXT_KEYS = new Set(['result_explain', 'thoughts', 'direct_response', 'llm_opinion', 'llmOpinion'])
+
+const isPlainObject = (v: any) => !!v && typeof v === 'object' && !Array.isArray(v)
+
+/** 富文本渲染：支持 **加粗** 与换行，用于 result_explain / thoughts 等长文本 */
+const renderRichText = (text: string) =>
+  String(text)
+    .split('\n')
+    .map((line, li) => (
+      <div key={li} style={{ minHeight: line ? undefined : '0.6em' }}>
+        {line.split('**').map((seg, si) => (si % 2 === 1 ? <strong key={si} style={{ color: '#1a2744' }}>{seg}</strong> : <span key={si}>{seg}</span>))}
+      </div>
+    ))
+
+/** 长文本 / 富文本展示块 */
+const RichBlock: FC<{ value: string }> = ({ value }) => (
+  <div
+    style={{
+      background: 'rgba(130, 140, 200, 0.06)',
+      border: '1px solid rgba(130, 140, 200, 0.14)',
+      borderRadius: 8,
+      color: '#3e5068',
+      fontSize: 13,
+      lineHeight: '21px',
+      maxHeight: 260,
+      overflow: 'auto',
+      padding: '10px 12px',
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+    }}
+  >
+    {renderRichText(value)}
+  </div>
+)
+
+/** 等宽代码块（SQL / JSON） */
+const CodeBlock: FC<{ value: string }> = ({ value }) => (
+  <pre
+    style={{
+      background: 'rgba(26, 39, 68, 0.04)',
+      border: '1px solid rgba(130, 140, 200, 0.14)',
+      borderRadius: 8,
+      color: '#3e5068',
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+      fontSize: 12.5,
+      lineHeight: '19px',
+      margin: 0,
+      maxHeight: 260,
+      overflow: 'auto',
+      padding: '10px 12px',
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+    }}
+  >
+    {value}
+  </pre>
+)
+
+/** 渲染单个 content 字段（对象场景下按字段拆分展示） */
+const ContentField: FC<{ name: string; value: any }> = ({ name, value }) => {
+  const label = CONTENT_FIELD_LABELS[name] || name
+  let body: React.ReactNode
+  if (value == null || value === '') {
+    body = <ReadonlyText value="" />
+  } else if (isPlainObject(value) || Array.isArray(value)) {
+    body = <CodeBlock value={JSON.stringify(value, null, 2)} />
+  } else if (name === 'sql') {
+    body = <CodeBlock value={String(value)} />
+  } else if (LONG_TEXT_KEYS.has(name) || String(value).includes('\n') || String(value).length > 60) {
+    body = <RichBlock value={String(value)} />
+  } else {
+    body = <ReadonlyText value={String(value)} />
+  }
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ color: '#6b7a95', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>{label}</div>
+      {body}
+    </div>
+  )
+}
+
+/** 步骤 content 主体：对象→按字段拆分；纯文本→富文本；数组/其它→代码块 */
+const StepContent: FC<{ content: any }> = ({ content }) => {
+  if (content == null || content === '') return <ReadonlyText value="" />
+  let value: any = content
+  if (typeof content === 'string') {
+    const trimmed = content.trim()
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        value = JSON.parse(trimmed)
+      } catch {
+        return <RichBlock value={content} />
+      }
+    } else {
+      return <RichBlock value={content} />
+    }
+  }
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value as Record<string, any>).filter(([k]) => k !== 'chat_step' && k !== 'index')
+    if (!entries.length) return <ReadonlyText value="" />
+    return (
+      <>
+        {entries.map(([k, v]) => (
+          <ContentField key={k} name={k} value={v} />
+        ))}
+      </>
+    )
+  }
+  return <CodeBlock value={JSON.stringify(value, null, 2)} />
+}
+
+type AiStep = { chatMode?: string; chatStep?: string; content: any; index: number }
+
+/** 解析 ai_response 为步骤数组；非数组结构返回 null，交由外层降级展示 */
+const parseAiSteps = (raw?: string): AiStep[] | null => {
+  if (!raw) return null
+  const trimmed = raw.trim()
+  if (!trimmed.startsWith('[')) return null
+  let data: any
+  try {
+    data = JSON.parse(trimmed)
+  } catch {
+    return null
+  }
+  if (!Array.isArray(data) || !data.length) return null
+  return data
+    .map((item: any, i: number) => ({
+      chatMode: item?.chat_mode,
+      chatStep: item?.chat_step,
+      content: item?.content,
+      index: typeof item?.index === 'number' ? item.index : i,
+    }))
+    .sort((a, b) => a.index - b.index)
+}
+
+/** ai信息分步时间线：每步一张可展开卡片，默认展开最后一步 */
+const AiStepTimeline: FC<{ steps: AiStep[] }> = ({ steps }) => {
+  const [expanded, setExpanded] = useState<Record<number, boolean>>(() => ({ [steps.length - 1]: true }))
+  const toggle = (i: number) => setExpanded(prev => ({ ...prev, [i]: !prev[i] }))
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {steps.map((step, i) => {
+        const meta = getStepMeta(step.chatStep, step.chatMode)
+        const isOpen = !!expanded[i]
+        return (
+          <div key={i} style={{ border: '1px solid rgba(130, 140, 200, 0.16)', borderRadius: 10, overflow: 'hidden' }}>
+            <div
+              onClick={() => toggle(i)}
+              style={{ alignItems: 'center', background: 'rgba(130, 140, 200, 0.05)', cursor: 'pointer', display: 'flex', gap: 10, padding: '10px 12px', userSelect: 'none' }}
+            >
+              <span
+                style={{
+                  alignItems: 'center',
+                  background: `linear-gradient(135deg, ${meta.color} 0%, ${meta.color}cc 100%)`,
+                  borderRadius: '50%',
+                  color: '#fff',
+                  display: 'flex',
+                  flexShrink: 0,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  height: 22,
+                  justifyContent: 'center',
+                  width: 22,
+                }}
+              >
+                {i + 1}
+              </span>
+              <span style={{ color: '#1a2744', fontSize: 14, fontWeight: 600 }}>{meta.label}</span>
+              {step.chatStep ? (
+                <Tag style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace', fontSize: 11, marginInlineEnd: 0 }}>{step.chatStep.trim()}</Tag>
+              ) : null}
+              <span style={{ flex: 1 }} />
+              <CaretRightOutlined style={{ color: '#8695ab', fontSize: 12, transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+            </div>
+            {isOpen ? (
+              <div style={{ borderTop: '1px solid rgba(130, 140, 200, 0.12)', padding: 12 }}>
+                <StepContent content={step.content} />
+              </div>
+            ) : null}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/** ai信息展示：数组步骤→分步时间线；其它结构→降级为格式化 JSON 块 */
+const AiInfoView: FC<{ aiResponse?: string }> = ({ aiResponse }) => {
+  const steps = parseAiSteps(aiResponse)
+  if (steps && steps.length) return <AiStepTimeline steps={steps} />
+  return <ReadonlyBlock value={formatMaybeJson(aiResponse)} />
+}
+
 const EffectReviewOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType }) => {
   const { t } = useTranslation()
 
@@ -168,18 +419,25 @@ const EffectReviewOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose
       const res: any = await fetchModelEval(params)
       if (res.response?.data?.success) {
         message.success('模型评估成功')
-        // llmeval 接口不直接返回评估结果，需再查详情拿最新 evalLlm / llmOpinion
-        const detailRes: any = await fetchMemoryDetail(fbId)
-        const inner = detailRes?.data ?? detailRes?.response?.data?.data ?? {}
-        const raw = Array.isArray(inner?.data) ? inner.data[0] : Array.isArray(inner) ? inner[0] : inner
-        const nextEvalLlm = raw?.evalLlm ?? raw?.eval_llm
-        const nextLlmOpinion = raw?.llmOpinion ?? raw?.llm_opinion
+        // 优先使用 llmeval 接口直接返回的评估结果，避免二次查询详情时出现数据不一致或延迟
+        const directData = res.response?.data?.data ?? res.data
+        let nextEvalLlm = directData?.evalLlm ?? directData?.eval_llm
+        let nextLlmOpinion = directData?.llmOpinion ?? directData?.llm_opinion
+
+        // 若直接返回中无评估结果，再回调查看详情兜底
+        if (nextEvalLlm == null) {
+          const detailRes: any = await fetchMemoryDetail(fbId)
+          const inner = detailRes?.data ?? detailRes?.response?.data?.data ?? {}
+          const raw = Array.isArray(inner?.data) ? inner.data[0] : Array.isArray(inner) ? inner[0] : inner
+          nextEvalLlm = raw?.evalLlm ?? raw?.eval_llm
+          nextLlmOpinion = raw?.llmOpinion ?? raw?.llm_opinion
+        }
+
         const evalLlmStr = nextEvalLlm != null ? `${nextEvalLlm}` : ''
         setModelEval({ evalLlm: evalLlmStr, llmOpinion: nextLlmOpinion ?? '' })
         form.setFieldsValue({ eval_llm: evalLlmStr, llm_opinion: nextLlmOpinion ?? '' })
-      } else {
-        message.error(res.response?.data?.err_msg || '模型评估失败')
       }
+      // 失败提示（超时/后端错误）已由请求层统一弹出，此处不再重复提示，避免两条报错叠加
     } catch (error) {
       console.log(error)
     } finally {
@@ -225,7 +483,7 @@ const EffectReviewOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose
           <ReadonlyText value={chatModeLabel} />
         </AForm.Item>
         <AForm.Item label={fieldLabel('ai信息')}>
-          <ReadonlyBlock value={formatMaybeJson(aiResponse)} />
+          <AiInfoView aiResponse={aiResponse} />
         </AForm.Item>
         <AForm.Item label={fieldLabel('view信息')}>
           <ReadonlyBlock value={viewResponse} />

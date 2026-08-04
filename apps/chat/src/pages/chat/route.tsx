@@ -1,7 +1,7 @@
 import { ClockCircleOutlined } from '@ant-design/icons'
 import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Layout } from 'antd'
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   SKILL_STORE_MENU_KEY,
@@ -14,12 +14,14 @@ import { CreateConversationButton } from '@/components/layout/CreateConversation
 import { ScheduleTaskDrawer } from '@/components/layout/ScheduleTaskDrawer'
 import { SidebarCollapseProvider } from '@/components/layout/SidebarCollapseContext'
 import { SidebarHistoryTopics } from '@/components/layout/SidebarHistoryTopics'
-import { SkillStoreView } from '@/components/layout/SkillStoreView'
 import { SpaceSelector } from '@/components/layout/SpaceSelector'
 import { UserProfileCard } from '@/components/layout/UserProfileCard'
 import { WorkbenchMenuList } from '@/components/layout/WorkbenchMenuList'
-import { WorkshopView } from '@/components/layout/WorkshopView'
 import { getCurrentUserName } from '@/utils/layout'
+
+/** 技能商店 / 应用工坊 独立路由地址 */
+const SKILL_STORE_ROUTE = '/chat/skill'
+const WORKSHOP_ROUTE = '/chat/workshop'
 
 const { Content, Sider } = Layout
 const appLogoUrl = new URL('../../assets/imgs/home_logo.png', import.meta.url).href
@@ -35,12 +37,13 @@ function ChatWorkbenchLayout() {
 
   const [collapsed, setCollapsed] = useState(false)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
-  const [showSkillStore, setShowSkillStore] = useState(false)
-  const [showWorkshop, setShowWorkshop] = useState(false)
   const [routeLoading, setRouteLoading] = useState(true)
   const [newChatNonce, setNewChatNonce] = useState(0)
   const [scheduleOpen, setScheduleOpen] = useState(false)
-  const prevPathnameRef = useRef(pathname)
+
+  // 技能商店 / 应用工坊已改为独立路由，激活态直接由 pathname 派生
+  const showSkillStore = pathname.startsWith(SKILL_STORE_ROUTE)
+  const showWorkshop = pathname.startsWith(WORKSHOP_ROUTE)
 
   const userName = useMemo(() => getCurrentUserName(), [])
   const pageTitle = useMemo(() => {
@@ -82,17 +85,6 @@ function ChatWorkbenchLayout() {
     }
   }, [pathname, showSkillStore, showWorkshop])
 
-  /* 3. Auto-close skill store / workshop when user navigates to a conversation */
-  useEffect(() => {
-    if (pathname !== prevPathnameRef.current) {
-      prevPathnameRef.current = pathname
-      if (pathname.startsWith('/chat/task')) {
-        if (showSkillStore) setShowSkillStore(false)
-        if (showWorkshop) setShowWorkshop(false)
-      }
-    }
-  }, [pathname, showSkillStore, showWorkshop])
-
   const handleToggleCollapse = useCallback(() => {
     setCollapsed((previousCollapsed) => !previousCollapsed)
   }, [])
@@ -113,17 +105,12 @@ function ChatWorkbenchLayout() {
   const handleNavItemClick = useCallback(
     (key: string) => {
       if (key === SKILL_STORE_MENU_KEY) {
-        setShowSkillStore(true)
-        setShowWorkshop(false)
+        navigate({ to: SKILL_STORE_ROUTE })
       } else if (key === 'workshop') {
-        setShowWorkshop(true)
-        setShowSkillStore(false)
-      } else {
-        setShowSkillStore(false)
-        setShowWorkshop(false)
+        navigate({ to: WORKSHOP_ROUTE })
       }
     },
-    [],
+    [navigate],
   )
 
   const handleSpaceChanged = useCallback(() => {
@@ -141,13 +128,7 @@ function ChatWorkbenchLayout() {
     }
   }, [])
 
-  const handleBackFromSkillStore = useCallback(() => {
-    setShowSkillStore(false)
-  }, [])
-
   const handleCreateNewChat = useCallback(() => {
-    setShowSkillStore(false)
-    setShowWorkshop(false)
     setNewChatNonce((n) => n + 1)
   }, [])
 
@@ -217,17 +198,11 @@ function ChatWorkbenchLayout() {
             <ScheduleTaskDrawer open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
           </div>
           <SidebarCollapseProvider value={sidebarCollapseContext}>
-            {showSkillStore ? (
-              <SkillStoreView onBack={handleBackFromSkillStore} />
-            ) : showWorkshop ? (
-              <WorkshopView />
-            ) : (
-              <Fragment key={newChatNonce}>
-                <Outlet />
-              </Fragment>
-            )}
-            {routeLoading && !showSkillStore && !showWorkshop && <ChatRouteLoading />}
+            <Fragment key={newChatNonce}>
+              <Outlet />
+            </Fragment>
           </SidebarCollapseProvider>
+          {routeLoading && <ChatRouteLoading />}
         </Content>
       </Layout>
     </Layout>

@@ -1,4 +1,5 @@
 import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { createFileRoute } from '@tanstack/react-router'
 import { Button, DatePicker, Empty, Input, message, Popover, Spin, Tabs } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -10,9 +11,9 @@ import { querySkillList, updateSkillStatus } from '@/service/api/skill'
 import { getSpaceId } from '@/utils'
 import SkillDetailDrawer from './SkillDetailDrawer'
 
-type SkillStoreViewProps = {
-  onBack?: () => void
-}
+export const Route = createFileRoute('/chat/skill/')({
+  component: SkillStoreView,
+})
 
 /** 后端技能列表项 */
 type SkillItem = {
@@ -56,7 +57,7 @@ function readMySkillIds(): string[] {
   }
 }
 
-export function SkillStoreView({ onBack }: SkillStoreViewProps) {
+function SkillStoreView() {
   const [searchText, setSearchText] = useState('')
   const [cards, setCards] = useState<SkillCard[]>([])
   const [loading, setLoading] = useState(false)
