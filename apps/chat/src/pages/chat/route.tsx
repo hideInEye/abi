@@ -197,9 +197,11 @@ function ChatWorkbenchLayout() {
             <SpaceSelector collapsed={false} onSpaceChanged={handleSpaceChanged} />
             <ScheduleTaskDrawer open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
           </div>
-          <Fragment key={newChatNonce}>
-            <Outlet />
-          </Fragment>
+          <SidebarCollapseProvider value={sidebarCollapseContext}>
+            <Fragment key={newChatNonce}>
+              <Outlet />
+            </Fragment>
+          </SidebarCollapseProvider>
           {routeLoading && !showSkillStore && !showWorkshop && <ChatRouteLoading />}
         </Content>
       </Layout>
