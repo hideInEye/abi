@@ -3,6 +3,15 @@ import { apiRequest } from '../request'
 const DIMENSION_API_PREFIX = '/api/abi-ontology/api/v1/ontology/dimension'
 const HIERARCHY_API_PREFIX = '/api/abi-ontology/api/v1/ontology/hierarchy'
 
+interface BatchCreateDimensionModelParams {
+  spaceId: number
+  techId: string
+  semanticsGroupId?: number | string
+  groupId?: number
+  relSchemaId: number | string
+  relViewId?: number | string
+}
+
 const MOCK_DIMENSION_CATEGORY_OPTIONS = [
   { label: '地理', value: 'geography' },
   { label: '时间', value: 'time' },
@@ -34,6 +43,14 @@ export function addDimensionModel(params: Record<string, any>) {
     data: params,
     method: 'post',
     url: `${DIMENSION_API_PREFIX}/create`
+  })
+}
+
+export function batchCreateDimensionModels(params: BatchCreateDimensionModelParams[]) {
+  return apiRequest({
+    data: params,
+    method: 'post',
+    url: `${DIMENSION_API_PREFIX}/batchCreate`
   })
 }
 

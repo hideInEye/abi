@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   addDimensionModel,
+  batchCreateDimensionModels,
   deleteDimensionModelBatch,
   deleteDimensionModel,
   editDimensionHierarchy,
@@ -277,31 +278,23 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
       return false
     }
 
-    let successCount = 0
-    let failureCount = 0
-    for (const row of selectedRows) {
-      const payload = buildDimensionBatchCreatePayload({
-        row,
-        selectedGroupId: selectedGroup?.groupId,
-        semanticsGroupId,
-      })
-      const res = await addDimensionModel(payload)
-      if (isApiSuccess(res)) {
-        successCount += 1
-      } else {
-        failureCount += 1
-      }
-    }
-
-    if (failureCount > 0) {
-      if (successCount > 0) {
-        await fetchTableData()
-      }
-      message.error(`维度生成失败 ${failureCount} 条，已成功 ${successCount} 条`)
+    const payload = buildDimensionBatchCreatePayload({
+      rows: selectedRows,
+      selectedGroupId: selectedGroup?.groupId,
+      semanticsGroupId
+    })
+    if (!payload.length) {
+      message.warning('请选择未生成的维度字段')
       return false
     }
 
-    message.success(`已生成 ${successCount} 个维度`)
+    const res = await batchCreateDimensionModels(payload)
+    if (!isApiSuccess(res)) {
+      message.error(getApiErrorMessage(res, '维度批量映射保存失败'))
+      return false
+    }
+
+    message.success(`已生成 ${payload.length} 个维度`)
     await fetchTableData()
     return true
   }

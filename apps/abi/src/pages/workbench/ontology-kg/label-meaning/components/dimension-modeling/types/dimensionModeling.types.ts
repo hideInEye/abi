@@ -13,10 +13,16 @@ export interface DimensionFieldOption {
   fieldType?: string
   key: string
   originName?: string
+  rtableName?: string
   relViewId?: number | string
   sourceId?: string
   sourceTableName?: string
+  tableName?: string
+  tableRemarks?: string
+  tdesc?: string
   techId: string
+  techName?: string
+  tfieldName?: string
   timeFormat?: string
 }
 
@@ -30,6 +36,15 @@ export interface DimensionBatchMappingRow {
   relViewId?: number | string
   semanticSchemaName: string
   semanticsGroupId?: number | string
+}
+
+export interface DimensionBatchCreatePayloadItem {
+  spaceId: number
+  techId: string
+  semanticsGroupId?: number | string
+  groupId?: number
+  relSchemaId: number | string
+  relViewId?: number | string
 }
 
 export interface DimensionHierarchyNode {

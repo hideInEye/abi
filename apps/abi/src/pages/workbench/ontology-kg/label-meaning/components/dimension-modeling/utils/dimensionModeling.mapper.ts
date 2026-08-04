@@ -1,4 +1,5 @@
 import type {
+  DimensionBatchCreatePayloadItem,
   DimensionBatchMappingRow,
   DimensionFieldOption,
   DimensionFormValues,
@@ -95,9 +96,15 @@ function parseRelatedFields(value: any): DimensionFieldOption[] {
         key: trim(item.key || item.techId || item.tfieldId) || '',
         originName: trim(item.originName || item.name || item.fieldName || item.techName),
         relViewId: trim(item.relViewId),
+        rtableName: trim(item.rtableName),
         sourceId: trim(item.sourceId),
-        sourceTableName: trim(item.sourceTableName || item.tableBizName || item.tableName),
+        sourceTableName: trim(item.sourceTableName || item.tableBizName || item.tableName || item.rtableName || item.tableRemarks),
+        tableName: trim(item.tableName),
+        tableRemarks: trim(item.tableRemarks),
+        tdesc: trim(item.tdesc),
         techId: trim(item.techId || item.tfieldId || item.key) || '',
+        techName: trim(item.techName),
+        tfieldName: trim(item.tfieldName),
         timeFormat: trim(item.timeFormat || item.format || item.dateFormat)
       }))
   }
@@ -216,6 +223,88 @@ function getSchemaId(schema: DimensionSchemaInfo) {
 
 function getFieldKey(item: any) {
   return String(pickFirst(item, ['techId', 'tfieldId', 'fieldName', 'originName'], '') || '').trim()
+}
+
+export function getDimensionFieldLookupKeys(field: Partial<DimensionFieldOption>) {
+  const valueKeys = [
+    field.key,
+    field.fieldName,
+    field.techId,
+    field.originName,
+    field.tfieldName,
+    field.techName,
+    field.bizName
+  ]
+    .map(item => String(item || '').trim())
+    .filter(Boolean)
+  const sourceKeys = [
+    field.sourceTableName,
+    field.tableName,
+    field.tableRemarks,
+    field.rtableName,
+    field.tdesc,
+    field.sourceId
+  ]
+    .map(item => String(item || '').trim())
+    .filter(Boolean)
+
+  return Array.from(
+    new Set(
+      [
+        ...valueKeys,
+        ...sourceKeys.flatMap(source => valueKeys.map(value => `${source}::${value}`))
+      ]
+    )
+  )
+}
+
+function buildDimensionFieldOptionKeyMap(fields: DimensionFieldOption[]) {
+  const keyMap = new Map<string, string>()
+  fields.forEach(field => {
+    const canonicalKey = String(field.key || '').trim()
+    if (!canonicalKey) {
+      return
+    }
+    getDimensionFieldLookupKeys(field).forEach(key => {
+      if (!keyMap.has(key)) {
+        keyMap.set(key, canonicalKey)
+      }
+    })
+  })
+  return keyMap
+}
+
+export function normalizeDimensionFieldSelectionKeys(selectedKeys: string[], fields: DimensionFieldOption[]) {
+  const keyMap = buildDimensionFieldOptionKeyMap(fields)
+
+  return Array.from(
+    new Set(
+      selectedKeys
+        .map(key => String(key || '').trim())
+        .filter(Boolean)
+        .map(key => keyMap.get(key) || key)
+    )
+  )
+}
+
+export function normalizeDimensionSelectedFieldsToOptionKeys(selectedFields: DimensionFieldOption[], optionFields: DimensionFieldOption[], fallbackKeys: string[] = []) {
+  if (!selectedFields.length) {
+    return normalizeDimensionFieldSelectionKeys(fallbackKeys, optionFields)
+  }
+
+  const keyMap = buildDimensionFieldOptionKeyMap(optionFields)
+  return Array.from(
+    new Set(
+      selectedFields
+        .map((field, index) => {
+          const matchedKey = getDimensionFieldLookupKeys(field)
+            .map(key => keyMap.get(key))
+            .find(Boolean)
+          return matchedKey || String(fallbackKeys[index] || field.key || '').trim()
+        })
+        .filter(Boolean)
+    )
+  )
 }
 
 export function normalizeRows(res: any): any[] {
@@ -472,9 +561,15 @@ export function buildSchemaFieldOptions(schema?: DimensionSchemaInfo): Dimension
             key: techId,
             originName: item.originName || item.name || item.fieldName || item.techName || techId,
             relViewId: schema.relViewId,
+            rtableName: item.rtableName,
             sourceId: item.sourceId,
-            sourceTableName: item.tableBizName || item.tableName,
+            sourceTableName: item.sourceTableName || item.tableBizName || item.tableName || item.rtableName || item.tableRemarks,
+            tableName: item.tableName,
+            tableRemarks: item.tableRemarks,
+            tdesc: item.tdesc,
             techId,
+            techName: item.techName,
+            tfieldName: item.tfieldName,
             timeFormat: DEFAULT_DIMENSION_TIME_FORMAT
           })
         })
@@ -564,48 +659,22 @@ export function buildDimensionBatchRows(schemas: DimensionSchemaInfo[], existing
 }
 
 export function buildDimensionBatchCreatePayload(params: {
-  row: DimensionBatchMappingRow
+  rows: DimensionBatchMappingRow[]
   selectedGroupId?: number
   semanticsGroupId?: number | string
-}) {
-  const { row, selectedGroupId, semanticsGroupId } = params
-  const formValues: DimensionFormValues = {
-    alias: row.field.bizName,
-    bizDesc: '',
-    dimType: row.dimType,
-    drillDirection: 'down',
-    englishName: row.field.fieldName || row.field.techId,
-    groupId: selectedGroupId,
-    owner: '',
-    relatedFieldKeys: [row.field.key],
-    sampleValues: '',
-    semanticSchemaId: Number(row.relSchemaId),
-    semanticsGroupId: semanticsGroupId ?? row.semanticsGroupId,
-    status: 1,
-    timeGranularity: row.dimType === 'time' ? ['day'] : [],
-    updateFreq: 'daily',
-    zhName: row.field.bizName
-  }
+}): DimensionBatchCreatePayloadItem[] {
+  const { rows, selectedGroupId, semanticsGroupId } = params
+  const spaceId = Number(localStorage.getItem('spaceId')) || 0
 
-  return buildSubmitPayload({
-    formValues,
-    relatedFields: [row.field],
-    selectedGroupId,
-    selectedSchema: {
-      bizName: row.semanticSchemaName,
-      dbName: '',
-      dbType: '',
-      drillDim: null,
-      filters: null,
-      groupId: row.semanticsGroupId ?? semanticsGroupId ?? null,
-      modelDetail: '',
-      relViewId: row.relViewId === undefined || row.relViewId === null ? '' : String(row.relViewId),
-      remark: '',
-      schemaId: String(row.relSchemaId),
-      sourceId: row.field.sourceId || '',
-      spaceId: String(Number(localStorage.getItem('spaceId')) || 0),
-      status: '1',
-      techName: row.semanticSchemaName
-    }
-  })
+  return rows
+    .filter(row => !row.disabled)
+    .map(row => ({
+      spaceId,
+      techId: row.field.fieldName || row.field.techId,
+      semanticsGroupId: semanticsGroupId ?? row.semanticsGroupId,
+      groupId: selectedGroupId,
+      relSchemaId: row.relSchemaId,
+      relViewId: row.relViewId
+    }))
+    .filter(item => item.techId)
 }

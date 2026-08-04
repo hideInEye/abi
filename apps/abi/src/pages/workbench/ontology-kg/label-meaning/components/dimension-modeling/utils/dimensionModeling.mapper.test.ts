@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildFormValues, mapDimensionFromApi } from './dimensionModeling.mapper'
+import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildFormValues, getDimensionFieldLookupKeys, mapDimensionFromApi, normalizeDimensionFieldSelectionKeys, normalizeDimensionSelectedFieldsToOptionKeys } from './dimensionModeling.mapper'
 
 describe('dimensionModeling mapper', () => {
   it('keeps all time granularities from typeParams when editing time dimensions', () => {
@@ -177,6 +177,57 @@ describe('dimensionModeling mapper', () => {
     expect(rows[0].disabled).toBe(true)
   })
 
+  it('keeps lookup keys for related field key, fieldName and techId aliases', () => {
+    expect(
+      getDimensionFieldLookupKeys({
+        fieldName: 'trade_date',
+        key: 'field_2',
+        techId: 'field_2'
+      })
+    ).toEqual(['field_2', 'trade_date'])
+  })
+
+  it('normalizes selected related field aliases to option keys for the field modal', () => {
+    expect(
+      normalizeDimensionFieldSelectionKeys(
+        ['trade_date'],
+        [
+          {
+            bizName: '交易日期',
+            fieldName: 'trade_date',
+            key: 'field_2',
+            techId: 'field_2'
+          }
+        ]
+      )
+    ).toEqual(['field_2'])
+  })
+
+  it('normalizes selected related fields to option keys by source table and business name', () => {
+    expect(
+      normalizeDimensionSelectedFieldsToOptionKeys(
+        [
+          {
+            bizName: '活动名称',
+            key: 'old_key',
+            sourceTableName: 't_campaign',
+            techId: 'old_key'
+          }
+        ],
+        [
+          {
+            bizName: '活动名称',
+            fieldName: 'campaign_name',
+            key: 'field_campaign_name',
+            sourceTableName: 't_campaign',
+            techId: 'field_campaign_name'
+          }
+        ],
+        ['old_key']
+      )
+    ).toEqual(['field_campaign_name'])
+  })
+
   it('uses only the field type property to infer batch dimension type', () => {
     const rows = buildDimensionBatchRows([
       {
@@ -204,7 +255,7 @@ describe('dimensionModeling mapper', () => {
     expect(rows[0].dimType).toBe('std')
   })
 
-  it('builds create payload for a batch datetime dimension', () => {
+  it('builds batchCreate payload with selected fieldName as techId', () => {
     vi.stubGlobal('localStorage', {
       getItem: () => '82'
     })
@@ -232,34 +283,19 @@ describe('dimensionModeling mapper', () => {
     ])
 
     const payload = buildDimensionBatchCreatePayload({
-      row,
+      rows: [row],
       selectedGroupId: 7,
       semanticsGroupId: 9
     })
 
-    expect(payload).toMatchObject({
-      bizName: '交易日期',
-      fieldType: 'datetime',
-      groupId: 7,
-      relSchemaId: 101,
-      relViewId: 'view-1',
-      semanticType: 'datetime',
-      semanticsGroupId: 9,
-      spaceId: 82,
-      techName: 'trade_date',
-      typeParams: '{"timeGranularity":["day"]}'
-    })
-    expect(payload.relFields).toEqual([
+    expect(payload).toEqual([
       {
-        bizName: '交易日期',
-        fieldType: 'datetime',
-        fieldName: 'trade_date',
-        key: 'trade_date',
-        originName: 'trade_date',
-        sourceId: '',
-        sourceTableName: '交易明细表',
-        techId: 'field_2',
-        timeFormat: 'yyyy-MM-dd'
+        spaceId: 82,
+        techId: 'trade_date',
+        semanticsGroupId: 9,
+        groupId: 7,
+        relSchemaId: '101',
+        relViewId: 'view-1'
       }
     ])
   })
