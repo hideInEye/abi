@@ -202,7 +202,7 @@ function ChatWorkbenchLayout() {
               <Outlet />
             </Fragment>
           </SidebarCollapseProvider>
-          {routeLoading && !showSkillStore && !showWorkshop && <ChatRouteLoading />}
+          {routeLoading && <ChatRouteLoading />}
         </Content>
       </Layout>
     </Layout>
