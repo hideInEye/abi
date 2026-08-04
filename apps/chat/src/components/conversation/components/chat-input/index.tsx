@@ -12,6 +12,7 @@ import SchemaFieldsModal from '../../../conversation-analysis/SchemaFieldsModal'
 import type { SchemaTable, SchemaField } from '../../../conversation-analysis/SchemaFieldsModal';
 import { getSpaceId } from '../../../../utils';
 import type { ModelOption } from '../chat-header';
+import { hasSelectedConversationData } from './sendValidation';
 
 export interface SemanticSelectedData {
   name: string
@@ -220,9 +221,16 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
 
     const handleSend = useCallback(() => {
       if (!value.trim() || loading) return;
+
+      // 先校验再发送和清空，避免父级拦截后用户已经输入的问题丢失。
+      if (!hasSelectedConversationData(selectedData, selectedExcel)) {
+        message.warning('选择已有数据或上传excel，即可开始对话');
+        return;
+      }
+
       onSend(value, { mode: selectedMode.key });
       setValue('');
-    }, [loading, onSend, selectedMode.key, value]);
+    }, [loading, onSend, selectedData, selectedExcel, selectedMode.key, value]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
