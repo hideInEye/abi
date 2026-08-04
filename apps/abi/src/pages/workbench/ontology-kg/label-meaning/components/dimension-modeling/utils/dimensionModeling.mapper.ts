@@ -237,6 +237,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
   const id = Number(pickFirst(item, ['id', 'dimId', 'dimensionId'], 0))
   const owner = trim(pickFirst(item, ['owner', 'dimOwner', 'indicatorOwner'])) || ''
   const path = trim(pickFirst(item, ['path', 'groupPath', 'indicatorCategory'])) || ''
+  const levelPath = trim(item.levelPath) || ''
   const semanticSchemaId = Number(pickFirst(item, ['semanticSchemaId', 'relSchemaId']))
   const semanticsGroupId = pickFirst(item, ['semanticsGroupId', 'semanticGroupId'])
   const semanticSchemaName = trim(pickFirst(item, ['semanticSchemaName', 'relSchemaName']))
@@ -244,6 +245,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
   const timeGranularity = normalizeTimeGranularity(item.timeGranularity || typeParams?.timeGranularity)
   const updateFreq = trim(pickFirst(item, ['updateFreq', 'updateFrequency']))
   const updateTime = trim(pickFirst(item, ['updateTime', 'createTime'])) || '-'
+  const createBy = trim(item.createBy)
   const createTime = trim(pickFirst(item, ['createTime', 'updateTime'])) || '-'
   const viewId = toNumber(pickFirst(item, ['viewId', 'relViewId']))
   const zhName = trim(pickFirst(item, ['zhName', 'bizName', 'dimName'])) || ''
@@ -261,6 +263,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
   return {
     alias: trim(pickFirst(item, ['alias', 'dimAlias'])),
     bizDesc: trim(pickFirst(item, ['bizDesc', 'businessDefinition', 'remark'])),
+    createBy,
     createTime,
     dimCategory,
     dimType,
@@ -269,6 +272,7 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
     groupId: item.groupId,
     groupName: trim(item.groupName),
     id,
+    levelPath,
     modelDetail: trim(item.modelDetail),
     owner,
     ownerEmail: trim(item.ownerEmail),

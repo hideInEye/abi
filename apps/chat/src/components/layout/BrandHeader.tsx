@@ -1,10 +1,9 @@
 type BrandHeaderProps = {
   collapsed: boolean
   logoSrc: string
-  onToggleCollapse: () => void
 }
 
-export function BrandHeader({ collapsed, logoSrc, onToggleCollapse: _onToggleCollapse }: BrandHeaderProps) {
+export function BrandHeader({ collapsed, logoSrc }: BrandHeaderProps) {
   return (
     <div className="px-4 pt-5 pb-4 flex items-center shrink-0" style={{ gap: 18 }}>
       {/* Logo - larger and more prominent */}

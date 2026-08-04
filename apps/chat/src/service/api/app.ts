@@ -212,14 +212,43 @@ export function saveAsApp(data: any) {
   });
 }
 
+export interface FetchSessionMessagesParams {
+  convUid: string | number
+  pageNum?: number
+  pageSize?: number
+}
+
+// React StrictMode 会在开发环境重挂载组件；相同会话的并发历史请求复用同一个 Promise，避免重复访问 query。
+const sessionMessagesInflight = new Map<string, Promise<any>>()
+
+function getSessionMessagesRequestKey(params: FetchSessionMessagesParams) {
+  return JSON.stringify([
+    String(params.convUid),
+    params.pageNum ?? null,
+    params.pageSize ?? null,
+  ])
+}
+
 // 获取会话消息列表
-export function fetchSessionMessages(params: { convUid: string | number; pageNum?: number; pageSize?: number }) {
-  return request({
+export function fetchSessionMessages(params: FetchSessionMessagesParams) {
+  const requestKey = getSessionMessagesRequestKey(params)
+  const inflightRequest = sessionMessagesInflight.get(requestKey)
+  if (inflightRequest) return inflightRequest
+
+  const requestPromise = request({
     url: "/abi-chat/v1/app/message/query",
     method: "post",
     data: params,
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  }).finally(() => {
+    // 只清理当前 Promise，防止极端竞态误删同 key 的下一次请求。
+    if (sessionMessagesInflight.get(requestKey) === requestPromise) {
+      sessionMessagesInflight.delete(requestKey)
+    }
   })
+
+  sessionMessagesInflight.set(requestKey, requestPromise)
+  return requestPromise
 }
 
 // 获取会话详情

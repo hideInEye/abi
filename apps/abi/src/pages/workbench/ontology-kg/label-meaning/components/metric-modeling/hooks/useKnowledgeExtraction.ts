@@ -13,6 +13,7 @@ import {
 import type { AtomicMappingPayload, KnowledgeGroupItem, KnowledgeIndicatorItem, KnowledgePagination, KnowledgeSearchParams, KnowledgeSubmitPayload } from '../types/metricModeling.types'
 import { getKnowledgeSpaceId } from '../utils/space'
 import { buildKnowledgeCalcLogic } from '../utils/knowledgeSubmitPayload'
+import { buildKnowledgeIndicatorListQuery, normalizeKnowledgeIndicatorListItem } from '../utils/knowledgeIndicator.mapper'
 
 const UI_TO_API_QUALITY_LEVEL: Record<string, string> = {
   p0: 'P0-核心',
@@ -35,7 +36,7 @@ interface ApiResponseLike {
 }
 
 const initialSearchParams: KnowledgeSearchParams = {
-  techName: '',
+  bizName: '',
   status: undefined,
   type: ''
 }
@@ -197,17 +198,14 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     }
     setLoading(true)
     try {
-      const res = await queryKnowledgeIndicators({
+      const res = await queryKnowledgeIndicators(buildKnowledgeIndicatorListQuery({
         groupId: selectedGroup.groupId,
-        indicatorClass: queryParams.type || undefined,
-        techName: queryParams.techName || undefined,
-        pageNum: nextPagination.pageNum,
-        pageSize: nextPagination.pageSize,
-        spaceId: getKnowledgeSpaceId(),
-        status: queryParams.status
-      })
+        pagination: nextPagination,
+        searchParams: queryParams,
+        spaceId: getKnowledgeSpaceId()
+      }))
       const pageData = getIndicatorPageData(res)
-      const list = (pageData?.list || []) as KnowledgeIndicatorItem[]
+      const list = ((pageData?.list || []) as KnowledgeIndicatorItem[]).map(normalizeKnowledgeIndicatorListItem)
       setTableData(list)
       setSelectedRowKeys([])
       setPagination(current => ({

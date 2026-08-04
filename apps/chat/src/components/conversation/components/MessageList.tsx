@@ -1,6 +1,6 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Checkbox } from 'antd'
+import { Alert, Checkbox } from 'antd'
 
 import AiEle from '../AiEle'
 import AnalysisForecastClarify from './AnalysisForecastClarify'
@@ -14,6 +14,9 @@ import SchemaFieldsModal from '../../conversation-analysis/SchemaFieldsModal'
 import type { SchemaTable, SchemaField } from '../../conversation-analysis/SchemaFieldsModal'
 import { fetchSemanticDetail } from '../../../service/api/semantic'
 import { parseMessageContent } from '../../../utils'
+import ReportMessageRow from '../report-mode/ReportMessageRow'
+import { mergeConversationAndReportGroups } from '../report-mode/reportTimeline'
+import type { ReportItem } from '../report-mode/types'
 
 // 从消息内容（view 的 chart-view 或内嵌 JSON）中解析数据分组/语义元信息，
 // 用于历史会话回填信息条（历史 human 消息不携带 _groupName/_semanticName）
@@ -79,6 +82,12 @@ type MessageListProps = {
   onEditMessage?: (text: string, item: any) => void
   // 重新生成（以相同问题重新发起一轮）
   onRegenerate?: (item: any) => void
+  reportItems?: ReportItem[]
+  reportLoadError?: string
+  onToggleReportThinking?: (reportId: string) => void
+  onToggleReportTodo?: (reportId: string) => void
+  onToggleReportTask?: (reportId: string, taskKey: string) => void
+  onOpenReport?: (reportId: string) => void
 }
 
 const MessageList = ({
@@ -112,6 +121,12 @@ const MessageList = ({
   onToggleDeleteRound,
   onEditMessage,
   onRegenerate,
+  reportItems = [],
+  reportLoadError,
+  onToggleReportThinking,
+  onToggleReportTodo,
+  onToggleReportTask,
+  onOpenReport,
 }: MessageListProps) => {
   const containerRef = chatContainerRef ?? useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
@@ -189,8 +204,10 @@ const MessageList = ({
           .filter((section: any[]) => section.length > 0))
         .filter((group: any[][]) => group.length > 0)
     }
-    return baseGroups3d
-  }, [mode, convContent, convContent2d, convContent3d, sharingList])
+
+    // 普通和报告消息只在展示层合并，原普通会话状态保持原样。
+    return mergeConversationAndReportGroups(baseGroups3d, reportItems)
+  }, [mode, convContent, convContent2d, convContent3d, reportItems, sharingList])
 
   const flatData = useMemo(() => groupedData.flat(2), [groupedData])
 
@@ -198,20 +215,23 @@ const MessageList = ({
   // （分享模式不合并，仍逐轮展示）
   const mergedGroups = useMemo(() => {
     const getQuestion = (group: any[][]) => {
+      const report = group.flat().find((it: any) => it?.role === 'report')?.report as ReportItem | undefined
+      if (report) return report.question
       const human = group.flat().find((it: any) => it?.role === 'human')
       if (!human) return ''
       const parsed = parseMessageContent(human.context)
       if (parsed && typeof parsed === 'object' && parsed.question) return String(parsed.question)
       return typeof human.context === 'string' ? human.context : ''
     }
-    const entries: { key: string; questionText: string; versions: any[][][] }[] = []
+    const entries: { key: string; questionText: string; kind: 'conversation' | 'report'; versions: any[][][] }[] = []
     groupedData.forEach((group: any[][], i: number) => {
       const q = getQuestion(group).trim()
+      const kind = group.flat().some((item: any) => item?.role === 'report') ? 'report' : 'conversation'
       const prev = entries[entries.length - 1]
-      if (q && prev && prev.questionText === q) {
+      if (kind === 'conversation' && q && prev?.kind === 'conversation' && prev.questionText === q) {
         prev.versions.push(group)
       } else {
-        entries.push({ key: `${i}:${q}`, questionText: q, versions: [group] })
+        entries.push({ key: `${kind}:${i}:${q}`, questionText: q, kind, versions: [group] })
       }
     })
     return entries
@@ -222,8 +242,8 @@ const MessageList = ({
   const navItems: NavItem[] = useMemo(() => {
     const list: NavItem[] = []
     for (const entry of mergedGroups) {
-      const human = entry.versions[0]?.flat().find((it: any) => it?.role === 'human')
-      const order = human?.order ?? human?.roundIndex
+      const anchor = entry.versions[0]?.flat().find((it: any) => it?.role === 'human' || it?.role === 'report')
+      const order = anchor?.order ?? anchor?.roundIndex
       if (order === undefined || order === null) continue
       const text = (entry.questionText || '').trim()
       if (!text) continue
@@ -284,6 +304,20 @@ const MessageList = ({
     versionInfo?: { activeIndex: number; total: number; onChange: (i: number) => void },
     shareOrder?: number,
   ) => {
+    if (item.role === 'report') {
+      const report = item.report as ReportItem
+      return (
+        <ReportMessageRow
+          key={key}
+          report={report}
+          onToggleThinking={() => onToggleReportThinking?.(report.id)}
+          onToggleTodo={() => onToggleReportTodo?.(report.id)}
+          onToggleTask={(taskKey) => onToggleReportTask?.(report.id, taskKey)}
+          onOpenReport={() => onOpenReport?.(report.id)}
+        />
+      )
+    }
+
     if (item.role === 'human') {
       const anchorId = `human-msg-${item.order}`
       const content = <HumanEle data={item} id={anchorId} onDelete={onEnterDeleteMode} onEditSubmit={onEditMessage} />
@@ -422,6 +456,14 @@ const MessageList = ({
     )
     if (group.length === 1 && group[0]?.length === 1 && group[0][0]?.role === 'first') {
       return renderItem(group[0][0], `opening-${groupKey}`)
+    }
+
+    if (flatGroup.length === 1 && flatGroup[0]?.role === 'report') {
+      return (
+        <div key={`group-${groupKey}-${index}`} id={`human-msg-${groupKey}`} className="mb-5">
+          {renderItem(flatGroup[0], `report-${groupKey}`)}
+        </div>
+      )
     }
 
     // 从 human 消息中提取元数据(分组/数据语义)
@@ -578,7 +620,7 @@ const MessageList = ({
   }
 
   // 渲染一个合并条目：单版本直接渲染；多版本时取 v0 的问题 + 当前版本的答案，并在底部显示分页
-  const renderMergedEntry = (entry: { key: string; questionText: string; versions: any[][][] }, index: number) => {
+  const renderMergedEntry = (entry: { key: string; questionText: string; kind: 'conversation' | 'report'; versions: any[][][] }, index: number) => {
     const isLast = index === mergedGroups.length - 1
     // 收集该条目全部版本的轮次（用于批量删除整块）
     const groupRounds: number[] = []
@@ -627,6 +669,7 @@ const MessageList = ({
         >
           <div className="max-w-[53.75rem] w-full m-auto">
             {mergedGroups.map(renderMergedEntry)}
+            {reportLoadError && <Alert className="mb-4" type="error" showIcon message={reportLoadError} />}
           </div>
           <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
         </div>

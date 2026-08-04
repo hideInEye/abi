@@ -47,6 +47,11 @@ export default defineConfig(configEnv => {
       open: true,
       port: 9527,
       proxy: {
+        '/api/report-stream': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+        },
         '/chat-ui': {
           target: 'http://localhost:5173',
           changeOrigin: true,
