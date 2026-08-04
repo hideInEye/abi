@@ -21,6 +21,41 @@ import { message } from 'antd'
 import { getSpaceId } from '../../utils'
 import ConverList from './conver_list'
 
+// ── 模块级工作台缓存（跨组件卸载/重挂载保留，按 spaceId 区分）──
+// 技能商店 / 应用工坊为独立路由，进入后 ConversationAnalysis 会被卸载；
+// 切回对话时组件冷挂载，若无缓存会重新拉取 appList/模型/语义，产生 1-2s 加载遮罩。
+// 用模块级缓存保存这些数据，冷挂载时直接命中缓存即时渲染、仅静默刷新，体验与对话↔对话一致。
+interface WorkbenchCache {
+  appList: any[]
+  modelOptions: ModelOption[]
+  currentModel: ModelOption | null
+  embedModelId: string | number
+  modelLoaded: boolean
+  semanticTree: any[]
+  semanticLoaded: boolean
+}
+
+const workbenchCacheBySpace = new Map<number, WorkbenchCache>()
+
+function getWorkbenchCache(spaceId: number): WorkbenchCache | undefined {
+  if (Number.isNaN(spaceId)) return undefined
+  return workbenchCacheBySpace.get(spaceId)
+}
+
+function patchWorkbenchCache(spaceId: number, patch: Partial<WorkbenchCache>) {
+  if (Number.isNaN(spaceId)) return
+  const prev = workbenchCacheBySpace.get(spaceId) || {
+    appList: [],
+    modelOptions: [],
+    currentModel: null,
+    embedModelId: '',
+    modelLoaded: false,
+    semanticTree: [],
+    semanticLoaded: false,
+  }
+  workbenchCacheBySpace.set(spaceId, { ...prev, ...patch })
+}
+
 interface ConversationAnalysisProps {
   spaceId?: number
   chatId?: string
@@ -29,10 +64,24 @@ interface ConversationAnalysisProps {
 }
 
 const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false, groupId }) => {
+  // 冷挂载时优先用模块级缓存预解析初始值，避免重新拉取导致的加载闪烁
+  const initialSpaceId = propSpaceId !== undefined ? Number(propSpaceId) : getSpaceId()
+  const initialCache = getWorkbenchCache(initialSpaceId)
+  const initialApp = (() => {
+    if (routeChatId === 'new') return undefined
+    if (!initialCache?.appList?.length) return undefined
+    if (routeChatId) {
+      // 指定了会话：仅在缓存命中时预设，未命中不预设（避免闪现错误会话），等静默刷新后由切换 effect 归位
+      return initialCache.appList.find((item: any) => String(item.chat_id) === String(routeChatId))
+    }
+    const cachedChatId = localStorage.getItem('chatId') || ''
+    return (cachedChatId && initialCache.appList.find((item: any) => String(item.chat_id) === String(cachedChatId))) || initialCache.appList[0]
+  })()
+
   const [visible, setVisible] = useState(false)
-  const [curApp, setCurApp] = useState<any>({})
-  const [appList, setAppList] = useState<any[]>([])
-  const [curConv, setCurConv] = useState<any>()
+  const [curApp, setCurApp] = useState<any>(initialApp ? { ...initialApp } : {})
+  const [appList, setAppList] = useState<any[]>(initialCache?.appList || [])
+  const [curConv, setCurConv] = useState<any>(initialApp?.conv_uid ? { ...initialApp } : undefined)
   const [loading, setLoading] = useState(false)
   const lastSpaceIdRef = useRef<number | null>(null)
   const [isEdit, setIsEdit] = useState(false)
@@ -44,9 +93,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const converListRef = useRef<any>(null)
   const [fold, setFold] = useState(false)
   const justCreatedRef = useRef(false)
-  const [currentSpaceId, setCurrentSpaceId] = useState<number>(() => {
-    return propSpaceId !== undefined ? Number(propSpaceId) : getSpaceId()
-  })
+  const [currentSpaceId, setCurrentSpaceId] = useState<number>(() => initialSpaceId)
 
   // ── 统一输入框状态 ──
   const [convLoading, setConvLoading] = useState(false)
@@ -58,18 +105,18 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const chatHeaderRef = useRef<any>(null)
 
   // ── 模型列表状态（全局加载一次）──
-  const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
-  const [currentModel, setCurrentModel] = useState<ModelOption | null>(null)
-  const [embedModelId, setEmbedModelId] = useState<string | number>('')
-  const modelLoadedRef = useRef(false)
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>(initialCache?.modelOptions || [])
+  const [currentModel, setCurrentModel] = useState<ModelOption | null>(initialCache?.currentModel || null)
+  const [embedModelId, setEmbedModelId] = useState<string | number>(initialCache?.embedModelId ?? '')
+  const modelLoadedRef = useRef(initialCache?.modelLoaded ?? false)
 
   // ── 数据语义状态（统一节点树，一次性拉取）──
-  const [semanticTree, setSemanticTree] = useState<any[]>([])
+  const [semanticTree, setSemanticTree] = useState<any[]>(initialCache?.semanticTree || [])
   const [expandedSemGroups, setExpandedSemGroups] = useState<Set<string>>(new Set())
   const [selectedData, setSelectedData] = useState<SemanticSelectedData | null>(null)
   const [selectedExcel, setSelectedExcel] = useState<any>(null)
   const [semLoading, setSemLoading] = useState(false)
-  const semGroupsLoadedRef = useRef(false)
+  const semGroupsLoadedRef = useRef(initialCache?.semanticLoaded ?? false)
 
   // ── 模型列表加载（只调一次）──
   useEffect(() => {
@@ -80,9 +127,11 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         const list = res?.data?.data || res?.data || []
         if (Array.isArray(list) && list.length > 0) {
           // 找到嵌入模型（从完整列表中查找）
+          let resolvedEmbedId: string | number = ''
           const embedModel = list.find((item: any) => item.modelKey === 'bge-large')
           if (embedModel) {
-            setEmbedModelId(embedModel.modelId ?? embedModel.id ?? embedModel.llmId)
+            resolvedEmbedId = embedModel.modelId ?? embedModel.id ?? embedModel.llmId
+            setEmbedModelId(resolvedEmbedId)
           }
           // 只筛选 status 为 1 的大模型（modelType='1' 为语言模型，排除 modelType='2' 向量/嵌入模型）
           const filteredList = list.filter(
@@ -100,6 +149,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
           if (options.length > 0) {
             setCurrentModel(options[0])
           }
+          // 写入模块级缓存，供切回对话时冷挂载直接命中
+          patchWorkbenchCache(currentSpaceId, {
+            modelOptions: options,
+            currentModel: options.length > 0 ? options[0] : null,
+            embedModelId: resolvedEmbedId,
+            modelLoaded: true,
+          })
         }
       })
       .catch(() => {})
@@ -133,7 +189,9 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     fetchSemanticTree({ spaceId: currentSpaceId })
       .then((res: any) => {
         const list = res?.data || res?.rows || []
-        setSemanticTree(Array.isArray(list) ? list : [])
+        const tree = Array.isArray(list) ? list : []
+        setSemanticTree(tree)
+        patchWorkbenchCache(currentSpaceId, { semanticTree: tree, semanticLoaded: true })
       })
       .catch(() => {})
       .finally(() => setSemLoading(false))
@@ -194,6 +252,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       })
       const data = sortAppList(res.data) || []
       setAppList(data)
+      patchWorkbenchCache(currentSpaceId, { appList: data })
       if (options?.silent) return res.data
       const chatId = localStorage.getItem('chatId') || ''
       const targetApp = (chatId && data.find((item: any) => String(item.chat_id) === String(chatId))) || data[0]
@@ -216,7 +275,9 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     if (currentSpaceId === null || Number.isNaN(currentSpaceId)) return
     if (lastSpaceIdRef.current === currentSpaceId) return
     lastSpaceIdRef.current = currentSpaceId
-    getAppList(routeChatId === 'new' ? { silent: true } : undefined)
+    // 命中缓存（冷挂载但曾进入过工作台）时静默刷新，避免加载遮罩；新对话也静默
+    const cached = getWorkbenchCache(currentSpaceId)
+    getAppList(routeChatId === 'new' || cached ? { silent: true } : undefined)
   }, [currentSpaceId, getAppList, routeChatId])
 
   useEffect(() => {

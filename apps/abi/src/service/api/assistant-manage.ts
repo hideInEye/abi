@@ -190,6 +190,8 @@ export function fetchModelEval(data?: any) {
   return apiRequest<any>({
     data,
     method: 'post',
+    // 模型评估后端耗时较长，单独放宽超时（默认 30s 必超时）
+    timeout: 3 * 60 * 1000,
     url: '/api/chat-proxy/api/v2/workflow/chat/feedback/llmeval'
   });
 }
