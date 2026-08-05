@@ -2,12 +2,12 @@ import { ApiOutlined, CloudServerOutlined, SafetyCertificateOutlined, ToolOutlin
 import { Form } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { useEffect, useState } from 'react'
+import { getToken } from '@/store/slice/auth/shared'
 import type { McpForm, McpSecurityScheme, McpSecurityExtensions, McpToolItem, PluginItem } from '@/types/plug'
 
 import { CreateToolModal } from './CreateToolModal'
 import { ImportOpenApiModal } from './ImportOpenApiModal'
 import { SecuritySchemeSection } from './SecuritySchemeSection'
-import { getPlatformBearerToken } from '../utils'
 
 interface PlugUpdateProps {
   readonly currentEdit: PluginItem | null
@@ -106,9 +106,13 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
       })
 
       setSecuritySchemes(
-        (currentEdit.toolSpec?.securitySchemes || []).map((s) =>
-          s.type === 'http' && s.scheme === 'bearer' ? { ...s, defaultCredential: getPlatformBearerToken() } : s
-        )
+        (currentEdit.toolSpec?.securitySchemes || []).map((s) => {
+          if (s.type === 'http' && s.scheme === 'bearer') {
+            const token = getToken()
+            return { ...s, defaultCredential: token ? `Bearer ${token}` : '' }
+          }
+          return s
+        })
       )
       setSecurityExtensions((currentEdit.toolSpec?.extensions as any) || {})
       const toolsMeta = currentEdit.toolSpec?.toolsMeta || {}

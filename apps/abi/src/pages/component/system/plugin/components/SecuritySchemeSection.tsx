@@ -1,6 +1,5 @@
+import { getToken } from '@/store/slice/auth/shared';
 import type { McpSecurityExtensions, McpSecurityScheme } from '@/types/plug';
-
-import { getPlatformBearerToken } from '../utils';
 
 interface SecuritySchemeSectionProps {
   readonly schemes: McpSecurityScheme[];
@@ -28,11 +27,12 @@ export const SecuritySchemeSection = ({
   };
 
   const addScheme = () => {
+    const token = getToken();
     const next: McpSecurityScheme = {
       id: `securityScheme_${schemes.length + 1}`,
       type: 'http',
       scheme: 'bearer',
-      defaultCredential: getPlatformBearerToken()
+      defaultCredential: token ? `Bearer ${token}` : ''
     };
     onSchemesChange([...schemes, next]);
   };
@@ -44,7 +44,8 @@ export const SecuritySchemeSection = ({
   const updateScheme = (idx: number, patch: Partial<McpSecurityScheme>) => {
     const merged = { ...schemes[idx], ...patch };
     if (merged.type === 'http' && merged.scheme === 'bearer') {
-      merged.defaultCredential = getPlatformBearerToken();
+      const token = getToken();
+      merged.defaultCredential = token ? `Bearer ${token}` : '';
     }
     onSchemesChange(schemes.map((s, i) => (i === idx ? merged : s)));
   };
