@@ -14,7 +14,6 @@ import type { ConversationHandle } from '../conversation'
 import ChatHeader from '../conversation/components/chat-header'
 import type { ModelOption } from '../conversation/components/chat-header'
 import NewChatWelcome from './NewChatWelcome'
-import GroupSessionListView from './GroupSessionListView'
 import ChatInput from '../conversation/components/chat-input'
 import type { ChatInputModeKey, SemanticSelectedData } from '../conversation/components/chat-input'
 import { message } from 'antd'
@@ -62,10 +61,9 @@ interface ConversationAnalysisProps {
   spaceId?: number
   chatId?: string
   hideSidebar?: boolean
-  groupId?: string
 }
 
-const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false, groupId }) => {
+const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false }) => {
   // 冷挂载时优先用模块级缓存预解析初始值，避免重新拉取导致的加载闪烁
   const initialSpaceId = propSpaceId !== undefined ? Number(propSpaceId) : getSpaceId()
   const initialCache = getWorkbenchCache(initialSpaceId)
@@ -107,7 +105,6 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const [uploadFileEnabled, setUploadFileEnabled] = useState(false)
   const [externalInputValue, setExternalInputValue] = useState('')
   const [creating, setCreating] = useState(false)
-  const [groupRefreshKey, setGroupRefreshKey] = useState(0)
   const chatHeaderRef = useRef<any>(null)
 
   // 报告预览占用右侧空间时，幂等收起系统菜单，为双栏正文留出可读宽度。
@@ -307,20 +304,18 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     localStorage.setItem('chatId', String(nextApp.chat_id))
   }, [routeChatId, appList.length])
 
-  // 路由变为 'new' 时清除当前会话，确保展示欢迎页或分组列表
-  // 同时加入 groupId 依赖：从对话切回分组视图时，即使 routeChatId 未变也会强制清除 curConv
+  // 路由变为 'new' 时清除当前会话，确保展示欢迎页
   useEffect(() => {
-    if (routeChatId === 'new' || groupId) {
+    if (routeChatId === 'new') {
       setCurConv(undefined)
     }
-  }, [routeChatId, groupId])
+  }, [routeChatId])
 
   // ── 统一发送逻辑 ──
   // 创建新会话（仅创建，不发送消息），返回创建后的会话对象
   const createNewConv = useCallback(async (): Promise<any> => {
     const appRes: any = await createApp({
       space_id: currentSpaceId,
-      ...(groupId ? { groupId: String(groupId) } : {}),
     })
     const rawApp = appRes?.data ?? appRes
     const app = {
@@ -347,7 +342,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     })
     window.dispatchEvent(new CustomEvent('conversation-created'))
     return newApp
-  }, [currentSpaceId, groupId, navigate])
+  }, [currentSpaceId, navigate])
 
   // 确保存在可用会话：已有则直接返回，没有则先创建（用于上传文件等需要 conv_uid 的场景）
   const ensureConv = useCallback(async (): Promise<any> => {
@@ -572,26 +567,6 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     setSelectedExcel(null)
   }, [curConv?.conv_uid, currentSpaceId])
 
-  // 分组视图：打开已有会话（复用同一路由，只切中间内容）
-  const openSession = useCallback(
-    (chatId: string) => {
-      navigate({ to: TASK_DETAIL_ROUTE, params: { taskId: String(chatId) } })
-    },
-    [navigate],
-  )
-
-  // 分组视图：当前分组被删除后回到欢迎页
-  const handleGroupDeleted = useCallback(() => {
-    navigate({ to: TASK_DETAIL_ROUTE, params: { taskId: 'new' } })
-  }, [navigate])
-
-  // 分组列表刷新信号（会话创建/删除/移动时）
-  useEffect(() => {
-    const handler = () => setGroupRefreshKey((k) => k + 1)
-    window.addEventListener('conversation-created', handler)
-    return () => window.removeEventListener('conversation-created', handler)
-  }, [])
-
   return (
     <div className="h-full w-full" style={{ background: 'transparent' }}>
       <div className="h-full w-full flex">
@@ -643,13 +618,6 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 deepThinkEnabled={deepThinkEnabled}
                 spaceId={currentSpaceId}
                 onHistorySemanticLoaded={(data) => setSelectedData(data)}
-              />
-            ) : groupId ? (
-              <GroupSessionListView
-                groupId={groupId}
-                onOpenSession={openSession}
-                onGroupDeleted={handleGroupDeleted}
-                refreshKey={groupRefreshKey}
               />
             ) : (!routeChatId || routeChatId === 'new') ? (
               <NewChatWelcome onExampleClick={handleExampleClick} />
