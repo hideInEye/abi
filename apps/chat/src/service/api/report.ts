@@ -8,7 +8,7 @@ export interface SubmitReportRequest {
   messages: string
   app_id: number
   space_id: number
-  group_id: string
+  schema_id: number | string
   conv_id: string
   session_id: string
   user_id: number

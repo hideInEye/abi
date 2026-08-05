@@ -42,7 +42,7 @@ const ReportPreviewPane: React.FC<ReportPreviewPaneProps> = ({ report, animate =
         </Button>
       </div>
 
-      <div className={styles.previewBody}>
+      <div className={`${styles.previewBody} ${candidate?.format === 'html' ? styles.previewBodyHtml : styles.previewBodyScrollable}`}>
         {!candidate ? (
           <Empty className={styles.previewEmpty} image={Empty.PRESENTED_IMAGE_SIMPLE} description="报告内容尚未可用" />
         ) : candidate.format === 'html' ? (

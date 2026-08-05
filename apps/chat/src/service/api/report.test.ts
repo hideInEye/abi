@@ -12,7 +12,7 @@ const request = {
   messages: '生成销售分析报告',
   app_id: 1,
   space_id: 52,
-  group_id: 'group-3003',
+  schema_id: 3003,
   conv_id: 'conversation-1',
   session_id: 'session-1',
   user_id: 9,

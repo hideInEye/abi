@@ -34,9 +34,9 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   const reportController = useReportConversation({
     conv,
     spaceId: props.spaceId,
+    schemaId: props.semanticId,
     currentModelId: selectedModelId,
     embedModelId,
-    sessionGroupId: props.sessionGroupId,
     historyRounds: controller.reportHistoryRounds,
     historyLoaded: controller.historyLoaded,
     onRefreshHistory: controller.refreshHistory,
@@ -124,8 +124,9 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   }, [props.onReportLoadingChange, reportController.loading])
 
   useEffect(() => {
-    props.onReportPreviewChange?.(Boolean(reportController.activeReport))
-  }, [props.onReportPreviewChange, reportController.activeReport])
+    // 以预览容器的实际挂载状态通知父级，确保关闭动画播放期间输入区不会提前恢复。
+    props.onReportPreviewChange?.(reportPreview.mounted)
+  }, [props.onReportPreviewChange, reportPreview.mounted])
 
   // 同步父级传入的 currentModel
   useEffect(() => {

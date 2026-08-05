@@ -581,8 +581,6 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 embedModelId={embedModelId}
                 deepThinkEnabled={deepThinkEnabled}
                 spaceId={currentSpaceId}
-                // 当前会话 groupId 优先；路由 groupId 仅作为新会话兜底。
-                sessionGroupId={curConv?.groupId ?? curConv?.group_id ?? groupId}
                 onHistorySemanticLoaded={(data) => setSelectedData(data)}
               />
             ) : groupId ? (
@@ -597,43 +595,47 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
             ) : null}
           </div>
 
-          {/* 统一输入框（永驻） */}
-          <div className="composer-wrap">
-            <div className={`report-composer-shell max-w-[53.75rem] w-full ${reportPreviewOpen ? 'report-composer-split' : 'm-auto'}`}>
-              <ChatInput
-                conv={curConv}
-                ensureConv={ensureConv}
-                loading={(selectedMode === 'report' ? reportLoading : convLoading) || creating}
-                onSend={handleUnifiedSend}
-                onStop={() => {
-                  if (selectedMode === 'report') {
-                    conversationRef.current?.stopReportGenerating()
-                    return
-                  }
+          {/* 动画层只改变可见性和占位高度，ChatInput 始终挂载以保留未发送草稿。 */}
+          <div className={`report-composer-presence ${reportPreviewOpen ? 'report-composer-hidden' : ''}`} aria-hidden={reportPreviewOpen}>
+            <div className="report-composer-presence-inner">
+              <div className="composer-wrap">
+                <div className="max-w-[53.75rem] w-full m-auto">
+                  <ChatInput
+                    conv={curConv}
+                    ensureConv={ensureConv}
+                    loading={(selectedMode === 'report' ? reportLoading : convLoading) || creating}
+                    onSend={handleUnifiedSend}
+                    onStop={() => {
+                      if (selectedMode === 'report') {
+                        conversationRef.current?.stopReportGenerating()
+                        return
+                      }
 
-                  conversationRef.current?.stopGenerating()
-                }}
-                deepThinkEnabled={deepThinkEnabled}
-                uploadFileEnabled={uploadFileEnabled}
-                currentModel={currentModel}
-                onToggleDeepThink={() => setDeepThinkEnabled(!deepThinkEnabled)}
-                onToggleUploadFile={() => setUploadFileEnabled(!uploadFileEnabled)}
-                spaceId={currentSpaceId}
-                semanticTree={semanticTree}
-                selectedData={selectedData}
-                onSelectData={setSelectedData}
-                selectedExcel={selectedExcel}
-                setSelectedExcel={setSelectedExcel}
-                semLoading={semLoading}
-                expandedSemGroups={expandedSemGroups}
-                onToggleSemGroup={toggleSemGroup}
-                externalValue={externalInputValue}
-                onExternalValueConsumed={() => setExternalInputValue('')}
-                selectedModeKey={selectedMode}
-                onModeChange={setSelectedMode}
-              />
+                      conversationRef.current?.stopGenerating()
+                    }}
+                    deepThinkEnabled={deepThinkEnabled}
+                    uploadFileEnabled={uploadFileEnabled}
+                    currentModel={currentModel}
+                    onToggleDeepThink={() => setDeepThinkEnabled(!deepThinkEnabled)}
+                    onToggleUploadFile={() => setUploadFileEnabled(!uploadFileEnabled)}
+                    spaceId={currentSpaceId}
+                    semanticTree={semanticTree}
+                    selectedData={selectedData}
+                    onSelectData={setSelectedData}
+                    selectedExcel={selectedExcel}
+                    setSelectedExcel={setSelectedExcel}
+                    semLoading={semLoading}
+                    expandedSemGroups={expandedSemGroups}
+                    onToggleSemGroup={toggleSemGroup}
+                    externalValue={externalInputValue}
+                    onExternalValueConsumed={() => setExternalInputValue('')}
+                    selectedModeKey={selectedMode}
+                    onModeChange={setSelectedMode}
+                  />
+                </div>
+                <div className="chat-footer">内容由 AI 生成，请注意甄别</div>
+              </div>
             </div>
-            <div className="chat-footer">内容由 AI 生成，请注意甄别</div>
           </div>
         </div>
       </div>
