@@ -447,7 +447,7 @@ export function buildSubmitPayload(params: {
   formValues: DimensionFormValues
   id?: number
   relatedFields: DimensionFieldOption[]
-  selectedGroupId?: number
+  selectedGroupId?: number | string
   selectedSchema?: DimensionSchemaInfo
 }) {
   const { formValues, id, relatedFields, selectedGroupId, selectedSchema } = params
@@ -533,6 +533,20 @@ export function buildSubmitPayload(params: {
   }
 
   return compactPayload
+}
+
+export function buildDimensionFieldPayload(field: DimensionFieldOption): DimensionFieldOption {
+  return Object.fromEntries(
+    Object.entries({
+      bizName: trim(field.bizName),
+      fieldType: trim(field.fieldType),
+      key: trim(field.key),
+      originName: trim(field.originName),
+      sourceId: trim(field.sourceId),
+      sourceTableName: trim(field.sourceTableName),
+      techId: trim(field.techId)
+    }).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  ) as DimensionFieldOption
 }
 
 export function buildSchemaFieldOptions(schema?: DimensionSchemaInfo): DimensionFieldOption[] {
@@ -634,12 +648,18 @@ export function buildDimensionBatchRows(schemas: DimensionSchemaInfo[], existing
           bizName: trim(pickFirst(item, ['bizName', 'alias', 'fieldName'], techId)) || techId,
           fieldName,
           fieldType,
-          key: fieldName,
+          key: techId,
           originName: trim(pickFirst(item, ['originName', 'name', 'fieldName', 'techName'], techId)) || techId,
           relViewId: schema.relViewId,
+          rtableName: trim(item.rtableName),
           sourceId: trim(item.sourceId || schema.sourceId),
-          sourceTableName: trim(pickFirst(item, ['tableBizName', 'tableName', 'sourceTableName'], schemaName)),
+          sourceTableName: trim(pickFirst(item, ['sourceTableName', 'tableBizName', 'tableName', 'rtableName', 'tableRemarks'], schemaName)),
+          tableName: trim(item.tableName),
+          tableRemarks: trim(item.tableRemarks),
+          tdesc: trim(item.tdesc),
           techId,
+          techName: trim(item.techName),
+          tfieldName: trim(item.tfieldName),
           timeFormat: dimType === 'time' ? DEFAULT_DIMENSION_TIME_FORMAT : undefined
         }
         return [{
@@ -660,7 +680,7 @@ export function buildDimensionBatchRows(schemas: DimensionSchemaInfo[], existing
 
 export function buildDimensionBatchCreatePayload(params: {
   rows: DimensionBatchMappingRow[]
-  selectedGroupId?: number
+  selectedGroupId?: number | string
   semanticsGroupId?: number | string
 }): DimensionBatchCreatePayloadItem[] {
   const { rows, selectedGroupId, semanticsGroupId } = params
@@ -670,11 +690,11 @@ export function buildDimensionBatchCreatePayload(params: {
     .filter(row => !row.disabled)
     .map(row => ({
       spaceId,
-      techId: row.field.fieldName || row.field.techId,
+      techId: [buildDimensionFieldPayload(row.field)],
       semanticsGroupId: semanticsGroupId ?? row.semanticsGroupId,
       groupId: selectedGroupId,
       relSchemaId: row.relSchemaId,
       relViewId: row.relViewId
     }))
-    .filter(item => item.techId)
+    .filter(item => item.techId.length)
 }

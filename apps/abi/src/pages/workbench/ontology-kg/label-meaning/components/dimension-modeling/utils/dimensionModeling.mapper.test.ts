@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildFormValues, getDimensionFieldLookupKeys, mapDimensionFromApi, normalizeDimensionFieldSelectionKeys, normalizeDimensionSelectedFieldsToOptionKeys } from './dimensionModeling.mapper'
+import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildDimensionFieldPayload, buildFormValues, getDimensionFieldLookupKeys, mapDimensionFromApi, normalizeDimensionFieldSelectionKeys, normalizeDimensionSelectedFieldsToOptionKeys } from './dimensionModeling.mapper'
 
 describe('dimensionModeling mapper', () => {
   it('keeps all time granularities from typeParams when editing time dimensions', () => {
@@ -255,7 +255,7 @@ describe('dimensionModeling mapper', () => {
     expect(rows[0].dimType).toBe('std')
   })
 
-  it('builds batchCreate payload with selected fieldName as techId', () => {
+  it('builds batchCreate payload with selected field params as techId', () => {
     vi.stubGlobal('localStorage', {
       getItem: () => '82'
     })
@@ -269,34 +269,73 @@ describe('dimensionModeling mapper', () => {
         groupId: 9,
         modelDetail: JSON.stringify({
           dimensions: [
-            { bizName: '交易日期', fieldName: 'trade_date', techId: 'field_2', type: 'datetime' }
+            {
+              bizName: '城市',
+              fieldName: 'city',
+              sourceId: '1272272164820750336',
+              tableName: 't_user',
+              techId: '10202611211000',
+              type: 'categorical'
+            }
           ]
         }),
-        relViewId: 'view-1',
+        relViewId: '1277996668473708544',
         remark: '',
-        schemaId: '101',
-      sourceId: '',
-      spaceId: '82',
-      status: '1',
-      techName: 'trade_detail'
+        schemaId: 390,
+        sourceId: '',
+        spaceId: '82',
+        status: '1',
+        techName: 'trade_detail'
       }
     ])
 
     const payload = buildDimensionBatchCreatePayload({
       rows: [row],
-      selectedGroupId: 7,
-      semanticsGroupId: 9
+      selectedGroupId: '2080501906844684314',
+      semanticsGroupId: '2080501906844684306'
     })
 
     expect(payload).toEqual([
       {
         spaceId: 82,
-        techId: 'trade_date',
-        semanticsGroupId: 9,
-        groupId: 7,
-        relSchemaId: '101',
-        relViewId: 'view-1'
+        techId: [
+          {
+            bizName: '城市',
+            fieldType: 'categorical',
+            key: '10202611211000',
+            originName: 'city',
+            sourceId: '1272272164820750336',
+            sourceTableName: 't_user',
+            techId: '10202611211000'
+          }
+        ],
+        semanticsGroupId: '2080501906844684306',
+        groupId: '2080501906844684314',
+        relSchemaId: 390,
+        relViewId: '1277996668473708544'
       }
     ])
+  })
+
+  it('compacts empty optional field params for batchCreate techId field object', () => {
+    expect(
+      buildDimensionFieldPayload({
+        bizName: '城市',
+        fieldType: 'categorical',
+        key: '10202611211000',
+        originName: 'city',
+        sourceId: '1272272164820750336',
+        sourceTableName: 't_user',
+        techId: '10202611211000'
+      })
+    ).toEqual({
+      bizName: '城市',
+      fieldType: 'categorical',
+      key: '10202611211000',
+      originName: 'city',
+      sourceId: '1272272164820750336',
+      sourceTableName: 't_user',
+      techId: '10202611211000'
+    })
   })
 })

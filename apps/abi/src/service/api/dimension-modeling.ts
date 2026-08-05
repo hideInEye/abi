@@ -5,9 +5,9 @@ const HIERARCHY_API_PREFIX = '/api/abi-ontology/api/v1/ontology/hierarchy'
 
 interface BatchCreateDimensionModelParams {
   spaceId: number
-  techId: string
+  techId: Record<string, any>[]
   semanticsGroupId?: number | string
-  groupId?: number
+  groupId?: number | string
   relSchemaId: number | string
   relViewId?: number | string
 }
