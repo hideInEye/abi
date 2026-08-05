@@ -1,14 +1,42 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useCallback, useEffect, useState } from 'react'
 
-// 分组详情已并入对话路由 /chat/task/$taskId（通过 search 参数携带 groupId），
-// 使分组视图复用同一个 ConversationAnalysis 组件实例，进入分组时顶部大模型与底部输入框不重建。
-// 此处保留旧路由并重定向，保证旧深链、书签仍可用。
+import { TASK_DETAIL_ROUTE } from '@/constant/layout'
+
+import GroupSessionListView from './-GroupSessionListView'
+
 export const Route = createFileRoute('/chat/group/$groupId')({
-  beforeLoad: ({ params }) => {
-    throw redirect({
-      to: '/chat/task/$taskId',
-      params: { taskId: 'new' },
-      search: { groupId: String(params.groupId || '') },
-    })
-  },
+  component: ConversationGroupPage,
 })
+
+function ConversationGroupPage() {
+  const { groupId } = Route.useParams()
+  const navigate = useNavigate()
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const handleOpenSession = useCallback(
+    (chatId: string) => {
+      navigate({ to: TASK_DETAIL_ROUTE, params: { taskId: chatId } })
+    },
+    [navigate],
+  )
+
+  const handleGroupDeleted = useCallback(() => {
+    navigate({ to: TASK_DETAIL_ROUTE, params: { taskId: 'new' } })
+  }, [navigate])
+
+  useEffect(() => {
+    const handleConversationChanged = () => setRefreshKey((key) => key + 1)
+    window.addEventListener('conversation-created', handleConversationChanged)
+    return () => window.removeEventListener('conversation-created', handleConversationChanged)
+  }, [])
+
+  return (
+    <GroupSessionListView
+      groupId={groupId}
+      onOpenSession={handleOpenSession}
+      onGroupDeleted={handleGroupDeleted}
+      refreshKey={refreshKey}
+    />
+  )
+}
