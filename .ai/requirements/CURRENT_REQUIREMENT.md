@@ -2,8 +2,8 @@
 
 ## 文档状态
 
-- 状态：数据校验已前移到 ChatInput，校验失败时保留问题；定向测试、类型检查和构建已通过。
-- 日期：2026-08-04。
+- 状态：报告提交已移除 `group_id` 并改传所选数据语义叶子节点的 `schema_id`；定向测试、类型检查和生产构建已通过。
+- 日期：2026-08-05。
 - 当前分支：`dev/zanghb-20260720-chatreport`。
 - 影响范围：`apps/chat` 报告模式、根 workspace 中旧 Node server。
 
@@ -20,6 +20,9 @@
 7. 系统侧栏的展开/收起入口移动到各页面内容区左上角；报告完成自动打开右侧预览时同步收起系统侧栏。
 8. 报告预览打开和关闭时使用连续的渐入渐出与双栏宽度过渡，不出现瞬间跳变。
 9. 报告模式与交互模式使用同一数据选择前置校验：选择数据语义或上传 Excel 后才能发送消息。
+10. 报告预览打开及退出动画期间隐藏底部聊天输入区；报告预览完全关闭后恢复输入区。
+11. 右侧 HTML 报告只由 iframe 内部负责正文滚动，外层不产生竞争滚动条，固定的报告标题栏不得覆盖 iframe 顶部正文。
+12. 输入区随报告预览打开和关闭执行约 600ms 的淡出/淡入及高度收展动画，组件实例和未发送草稿始终保留。
 
 ## 非目标
 
@@ -56,7 +59,7 @@ interface SubmitReportRequest {
   messages: string
   app_id: number
   space_id: number
-  group_id: string
+  schema_id: number | string
   conv_id: string
   session_id: string
   user_id: number
@@ -65,6 +68,13 @@ interface SubmitReportRequest {
   app_type?: string
 }
 ```
+
+- 报告提交不再发送会话分组 `group_id`。
+- `schema_id` 直接来自 `ChatInput.onSelectData` 选中的 `node.schemaId`；数据语义分组节点不可选，只有 `type='schema'` 的叶子节点能够更新该值。
+- 前端不得用对话分组 ID、数据语义分组 ID 或节点 `id` 代替 `node.schemaId`，也不得擅自转换 `schemaId` 的现有 `number | string` 类型。
+- 报告链路中仅为 `group_id` 存在的 `sessionGroupId` 透传参数应删除；路由和会话列表自身的分组逻辑保持不变。
+- 本次不修改普通交互请求；普通交互继续使用现有 `context.extra.semantic_id`。
+- 仅上传 Excel 而没有选择数据语义时，保持当前发送前置校验不变，报告提交中的 `schema_id` 使用空字符串，不在本次扩大为新的产品限制。
 
 成功响应中的 `task_id / stream_key / conv_id` 标准化为 `taskId / streamKey / conversationId`。只有三个定位字段完整时才写 IndexedDB 并进入读流阶段。
 
@@ -224,6 +234,21 @@ done
 - 动画采用短时长的 ease-out/ease-in 过渡，不对 iframe `srcDoc` 做逐帧替换，不重启 HTML 打字机，也不改变报告数据状态。
 - `prefers-reduced-motion: reduce` 下取消位移、淡入淡出和宽度动画，直接切换最终布局。
 - 窄屏继续使用“对话/报告”切换，不强制执行桌面双栏宽度动画。
+
+## 报告预览输入区与滚动边界
+
+- 右侧报告处于打开状态或正在播放关闭动画时，底部聊天输入框和免责声明整体隐藏且不占据页面高度；预览动画结束并完全关闭后再恢复显示。
+- 本次显隐只跟随报告预览的挂载状态，不清空输入内容，也不修改普通对话和报告发送逻辑。
+- 输入区不能再通过 `display: none` 瞬间切换；需要使用约 600ms 的透明度、轻微位移和高度收展过渡完成淡出/淡入。
+- 动画过程中 ChatInput 必须持续挂载；隐藏态禁止鼠标交互，动画结束后的折叠态不得继续占据对话区域高度。
+- 动画承载层不得裁切或覆盖 ChatInput 原有的边框、圆角、阴影和 `focus-within` 上移效果；普通态与选中态必须保持动画开发前的视觉样式。
+- `prefers-reduced-motion: reduce` 下取消输入区动画并直接切换最终状态。
+- 右侧报告标题栏与正文区使用纵向 Flex 布局：标题栏固定占据自身高度并禁止压缩，正文区占用剩余高度。
+- HTML 报告正文由 iframe 自身滚动，承载 iframe 的外层正文区必须禁用纵向滚动，避免外层与 iframe 出现嵌套滚动冲突。
+- Markdown 报告继续由外层正文区滚动，不改变现有只读渲染行为。
+- 报告容器、过渡包装层和正文区必须正确设置 `min-height: 0` 与 overflow 边界；不得通过取消最外层 overflow 让内容越过标题栏。
+- 验收时需确认：打开 HTML 报告后输入区不可见；滚动到报告最顶部时首行正文完整可见且不被标题栏覆盖；关闭动画完成后输入区恢复。
+- 本次不得修改报告数据聚合、接口、历史恢复、发送校验、侧栏入口或其他无关页面逻辑。
 
 ## 渐进展示与产品文案
 

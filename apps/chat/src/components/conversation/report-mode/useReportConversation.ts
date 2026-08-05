@@ -13,9 +13,9 @@ import type { ReportHistoryRoundGroup, ReportItem, ReportTaskRecord } from './ty
 interface UseReportConversationOptions {
   conv?: Record<string, unknown>
   spaceId?: number
+  schemaId?: number | string
   currentModelId?: string | number
   embedModelId?: string | number
-  sessionGroupId?: string
   historyRounds?: ReportHistoryRoundGroup[]
   historyLoaded?: boolean
   onRefreshHistory?: () => Promise<void>
@@ -105,7 +105,7 @@ function wait(ms: number) {
  * - Java 只透传 Redis entry id/data。
  * - 本 Hook 负责 query 历史、IndexedDB、task 状态、连接生命周期和 UI 聚合。
  */
-export function useReportConversation({ conv, spaceId, currentModelId, embedModelId, sessionGroupId, historyRounds = [], historyLoaded = false, onRefreshHistory }: UseReportConversationOptions) {
+export function useReportConversation({ conv, spaceId, schemaId, currentModelId, embedModelId, historyRounds = [], historyLoaded = false, onRefreshHistory }: UseReportConversationOptions) {
   const [reports, setReports] = useState<ReportItem[]>([])
   const [activeReportId, setActiveReportId] = useState<string>()
   const [animateReportPreview, setAnimateReportPreview] = useState(false)
@@ -324,8 +324,8 @@ export function useReportConversation({ conv, spaceId, currentModelId, embedMode
         messages: question,
         app_id: toFiniteNumber(conv?.appId ?? conv?.app_id),
         space_id: toFiniteNumber(conv?.space_id ?? conv?.spaceId ?? spaceId),
-        // 会话分组接口返回的 groupId 是字符串，报告接口按原类型接收；无分组时也显式传空字符串。
-        group_id: sessionGroupId ?? '',
+        // ChatInput 只允许选中数据语义叶子节点，这里直接透传该节点的 schemaId。
+        schema_id: schemaId ?? '',
         conv_id: conversationId,
         session_id: sessionId,
         user_id: getCurrentUserId(),
@@ -379,7 +379,7 @@ export function useReportConversation({ conv, spaceId, currentModelId, embedMode
           submitControllersRef.current.delete(pendingReport.id)
         })
     },
-    [commitReports, conv, conversationId, currentModelId, embedModelId, sessionGroupId, sessionId, spaceId, updateReport, connectStream],
+    [commitReports, conv, conversationId, currentModelId, embedModelId, schemaId, sessionId, spaceId, updateReport, connectStream],
   )
 
   const stopReport = useCallback(
