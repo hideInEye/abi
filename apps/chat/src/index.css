@@ -1835,32 +1835,40 @@ button {
   background: transparent;
 }
 
-/* 报告预览打开时，输入框留在左侧对话栏；普通对话不命中该类，布局保持原样。 */
-.report-composer-shell {
+/* 用 Grid 轨道收展占位，同时用较慢的透明度和位移动画完成输入区淡入淡出。 */
+.report-composer-presence {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
   transition:
-    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    padding-right 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    grid-template-rows 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.6s ease,
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear;
 }
 
-.report-composer-split {
-  width: 52%;
-  max-width: 53.75rem;
-  margin-right: 0;
-  margin-left: 24px;
-  padding-right: 24px;
+.report-composer-presence-inner {
+  min-height: 0;
 }
 
-@media (max-width: 900px) {
-  .report-composer-split {
-    width: 100%;
-    margin-right: auto;
-    margin-left: auto;
-    padding-right: 0;
-  }
+.report-composer-hidden {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(16px);
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.6s ease,
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.6s;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .report-composer-shell {
+  .report-composer-presence,
+  .report-composer-hidden {
     transition: none;
   }
 }

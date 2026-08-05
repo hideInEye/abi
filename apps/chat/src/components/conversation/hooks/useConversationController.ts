@@ -40,9 +40,8 @@ export interface ConversationProps {
   currentModel?: ModelOption | null
   onModelChange?: (model: ModelOption) => void
   deepThinkEnabled?: boolean
-  /** 报告提交所需的当前空间和会话分组；普通对话 controller 不消费这些字段。 */
+  /** 报告提交所需的当前空间；普通对话 controller 同时使用 semanticId。 */
   spaceId?: number
-  sessionGroupId?: string
   onReportLoadingChange?: (loading: boolean) => void
   onReportPreviewChange?: (open: boolean) => void
   /** 打开历史会话时，回填最后一轮使用的数据语义到输入框 */
