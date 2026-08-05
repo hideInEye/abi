@@ -634,4 +634,3 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
 }
 
 export default GroupSessionListView
-

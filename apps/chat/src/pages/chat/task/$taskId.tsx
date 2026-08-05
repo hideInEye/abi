@@ -4,9 +4,6 @@ import type { ChatRouterContext } from '@/router/context'
 
 export const Route = createFileRoute('/chat/task/$taskId')({
   component: TaskPage,
-  validateSearch: (search: Record<string, unknown>): { groupId?: string } => ({
-    groupId: search.groupId ? String(search.groupId) : undefined,
-  }),
 })
 
 function getSafeRouteContext(context: unknown): ChatRouterContext {
@@ -16,11 +13,10 @@ function getSafeRouteContext(context: unknown): ChatRouterContext {
 
 function TaskPage() {
   const { taskId, conversationId } = useParams({ strict: false })
-  const { groupId } = Route.useSearch()
   const { spaceId } = useRouterState({
     select: (state) => getSafeRouteContext(state.context),
   })
   const chatId = taskId || conversationId
 
-  return <ConversationAnalysis spaceId={spaceId} chatId={chatId} groupId={groupId} hideSidebar />
+  return <ConversationAnalysis spaceId={spaceId} chatId={chatId} hideSidebar />
 }
