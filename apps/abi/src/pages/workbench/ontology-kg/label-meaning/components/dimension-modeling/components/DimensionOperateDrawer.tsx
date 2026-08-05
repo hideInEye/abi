@@ -4,7 +4,7 @@ import React from 'react'
 
 import { DEFAULT_DIMENSION_TIME_FORMAT, DEFAULT_FORM_VALUES } from '../constants/dimensionModeling.constants'
 import type { DimensionFieldOption, DimensionFormValues, DimensionModelItem, DimensionSchemaInfo } from '../types/dimensionModeling.types'
-import { buildFormValues, buildSchemaFieldOptions, filterSelectableFields } from '../utils/dimensionModeling.mapper'
+import { buildFormValues, buildSchemaFieldOptions, filterSelectableFields, getDimensionFieldLookupKeys, normalizeDimensionSelectedFieldsToOptionKeys } from '../utils/dimensionModeling.mapper'
 
 import { BaseInfoTab } from './dimensionOperateDrawer/BaseInfoTab'
 import { FieldSelectModal } from './dimensionOperateDrawer/FieldSelectModal'
@@ -22,6 +22,36 @@ interface Props {
   readonly open: boolean
 }
 
+function buildFieldLookupMap(fields: DimensionFieldOption[]) {
+  const map = new Map<string, DimensionFieldOption>()
+  fields.forEach(field => {
+    getDimensionFieldLookupKeys(field).forEach(key => {
+      if (!map.has(key)) {
+        map.set(key, field)
+      }
+    })
+  })
+  return map
+}
+
+function buildFieldDetailLookupMap(detailMap: Record<string, Partial<DimensionFieldOption>>) {
+  const map = new Map<string, Partial<DimensionFieldOption>>()
+  Object.entries(detailMap).forEach(([key, field]) => {
+    const detail = {
+      ...field,
+      key: field.key || key
+    }
+    const lookupKeys = [key, ...getDimensionFieldLookupKeys(detail)]
+    lookupKeys.forEach(item => {
+      const lookupKey = String(item || '').trim()
+      if (lookupKey && !map.has(lookupKey)) {
+        map.set(lookupKey, detail)
+      }
+    })
+  })
+  return map
+}
+
 export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, groupName, onClose, onGoMetricModeling, onOpenHierarchy, onSubmit, open }) => {
   const [form] = AForm.useForm<DimensionFormValues>()
   const [activeTab, setActiveTab] = useState('base')
@@ -35,7 +65,12 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
   const selectedDimType = (AForm.useWatch('dimType', form) || DEFAULT_FORM_VALUES.dimType) as 'std' | 'time'
   const selectedSchemaId = AForm.useWatch('semanticSchemaId', form)
 
-  const selectedSchema = useMemo(() => schemaOptions.find((item) => Number(item.schemaId) === Number(selectedSchemaId)), [schemaOptions, selectedSchemaId])
+  const selectedSchema = useMemo(() => {
+    if (selectedSchemaId === undefined || selectedSchemaId === null || selectedSchemaId === '') {
+      return undefined
+    }
+    return schemaOptions.find((item) => String(item.schemaId) === String(selectedSchemaId))
+  }, [schemaOptions, selectedSchemaId])
 
   const allSchemaFields = useMemo(() => buildSchemaFieldOptions(selectedSchema), [selectedSchema])
   const filteredFields = useMemo(() => filterSelectableFields(allSchemaFields, selectedDimType), [allSchemaFields, selectedDimType])
@@ -44,15 +79,16 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     if (!selectedFieldKeys.length) {
       return []
     }
-    const fallbackFieldMap = new Map((editingItem?.relatedFields || []).map((item) => [item.key, item]))
-    const schemaFieldMap = new Map(filteredFields.map((item) => [item.key, item]))
+    const fallbackFieldMap = buildFieldLookupMap(editingItem?.relatedFields || [])
+    const schemaFieldMap = buildFieldLookupMap(filteredFields)
+    const detailFieldMap = buildFieldDetailLookupMap(fieldDetailMap)
     return selectedFieldKeys
       .map((key) => {
         const baseField = schemaFieldMap.get(key) || fallbackFieldMap.get(key)
         if (!baseField) {
           return null
         }
-        const detail = fieldDetailMap[key]
+        const detail = detailFieldMap.get(key)
         return {
           ...baseField,
           ...detail,
@@ -61,6 +97,10 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
       })
       .filter((item): item is DimensionFieldOption => Boolean(item))
   }, [editingItem?.relatedFields, fieldDetailMap, filteredFields, selectedFieldKeys])
+  const fieldModalSelectedKeys = useMemo(
+    () => normalizeDimensionSelectedFieldsToOptionKeys(selectedFields, filteredFields, selectedFieldKeys),
+    [filteredFields, selectedFieldKeys, selectedFields]
+  )
 
   const handleFieldChange = useCallback((fieldKey: string, patch: Partial<DimensionFieldOption>) => {
     setFieldDetailMap(prev => ({
@@ -78,14 +118,17 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     if (!selectedFieldKeys.length || !selectedSchema) {
       return
     }
-    const keySet = new Set(selectedFieldKeys)
-    const safeKeys = filteredFields.filter((field) => keySet.has(field.key)).map((item) => item.key)
+    const validKeySet = new Set(
+      [...filteredFields, ...(editingItem?.relatedFields || [])]
+        .flatMap(field => getDimensionFieldLookupKeys(field))
+    )
+    const safeKeys = selectedFieldKeys.filter(key => validKeySet.has(String(key || '').trim()))
     if (safeKeys.length !== selectedFieldKeys.length) {
       setSelectedFieldKeys(safeKeys)
       form.setFieldValue('relatedFieldKeys', safeKeys)
       setFieldDetailMap(prev => Object.fromEntries(Object.entries(prev).filter(([key]) => safeKeys.includes(key))))
     }
-  }, [filteredFields, form, selectedFieldKeys, selectedSchema])
+  }, [editingItem?.relatedFields, filteredFields, form, selectedFieldKeys, selectedSchema])
 
   useEffect(() => {
     if (!open) {
@@ -264,7 +307,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
               onFieldChange={handleFieldChange}
               onOpenFieldModal={() => {
                 if (!selectedSchemaId) {
-                  message.warning('请先选择表语义')
+                  message.warning('请先选择数据语义')
                   return
                 }
                 setFieldModalOpen(true)
@@ -281,24 +324,38 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
       <FieldSelectModal
         open={fieldModalOpen}
         options={filteredFields}
-        selectedKeys={selectedFieldKeys}
+        selectedKeys={fieldModalSelectedKeys}
         onCancel={() => setFieldModalOpen(false)}
         onConfirm={(keys) => {
           setSelectedFieldKeys(keys)
           form.setFieldValue('relatedFieldKeys', keys)
-          setFieldDetailMap(prev =>
-            Object.fromEntries(
-              keys.map(key => [
-                key,
-                {
-                  ...(prev[key] || {}),
+          setFieldDetailMap(prev => {
+            const schemaFieldMap = buildFieldLookupMap(filteredFields)
+            const detailFieldMap = buildFieldDetailLookupMap(prev)
+            return Object.fromEntries(
+              keys.map(key => {
+                const option = schemaFieldMap.get(key)
+                const detail = detailFieldMap.get(key)
+                return [
                   key,
-                  techId: prev[key]?.techId || key,
-                  timeFormat: prev[key]?.timeFormat || DEFAULT_DIMENSION_TIME_FORMAT
-                }
-              ])
+                  {
+                    ...(detail || {}),
+                    key,
+                    fieldName: detail?.fieldName || option?.fieldName,
+                    rtableName: detail?.rtableName || option?.rtableName,
+                    sourceTableName: detail?.sourceTableName || option?.sourceTableName,
+                    tableName: detail?.tableName || option?.tableName,
+                    tableRemarks: detail?.tableRemarks || option?.tableRemarks,
+                    tdesc: detail?.tdesc || option?.tdesc,
+                    techId: detail?.techId || option?.techId || key,
+                    techName: detail?.techName || option?.techName,
+                    tfieldName: detail?.tfieldName || option?.tfieldName,
+                    timeFormat: detail?.timeFormat || option?.timeFormat || DEFAULT_DIMENSION_TIME_FORMAT
+                  }
+                ]
+              })
             )
-          )
+          })
           setFieldModalOpen(false)
         }}
       />

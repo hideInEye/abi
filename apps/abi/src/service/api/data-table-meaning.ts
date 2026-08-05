@@ -45,7 +45,7 @@ export function tablegroup(params: any, groupId: any) {
   })
 }
 /** 获取标语义组右侧列表接口 */
-export function schemalist(params: { bizName?: string; groupId?: number; pageNum?: number; pageSize?: number; startTime?: string; endTime?: string }) {
+export function schemalist(params: { bizName?: string; groupId?: string; pageNum?: number; pageSize?: number; startTime?: string; endTime?: string }) {
   return apiRequest({
     method: 'get',
     params: {
