@@ -3,7 +3,7 @@ import { Dropdown, Empty, message } from 'antd';
 import { Suspense } from 'react';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
-import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, DeferredSelect, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
@@ -70,6 +70,8 @@ export function Component() {
   const spaceId = useAppSelector(getSpaceId);
   const [searchValue, setSearchValue] = useState('');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+  // 创建方式筛选：'sql'=SQL创建，'union'=快速创建（与数据集记录的 viewType 对应）
+  const [createType, setCreateType] = useState<string | undefined>(undefined);
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
   const [jumpValue, setJumpValue] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
@@ -258,6 +260,7 @@ export function Component() {
   const handleReset = () => {
     setSearchValue('');
     setDateRange(null);
+    setCreateType(undefined);
     setFePage(1);
   };
 
@@ -267,8 +270,9 @@ export function Component() {
     const kw = searchValue.trim().toLowerCase();
     let rows = (tableProps.dataSource as any[]) || [];
     if (kw) rows = rows.filter((r: any) => String(r.viewName || '').toLowerCase().includes(kw));
+    if (createType) rows = rows.filter((r: any) => r.viewType === createType);
     return filterByCreateTime(rows, dateRange, 'createTime');
-  }, [tableProps.dataSource, searchValue, dateRange]);
+  }, [tableProps.dataSource, searchValue, dateRange, createType]);
   const totalCount = filteredData.length;
   const totalPages = Math.ceil(totalCount / pageSizeVal) || 1;
   const pagedData = useMemo(() => filteredData.slice((currentPage - 1) * pageSizeVal, currentPage * pageSizeVal), [filteredData, currentPage, pageSizeVal]);
@@ -276,7 +280,7 @@ export function Component() {
   // 筛选变化时回到第一页
   useEffect(() => {
     setFePage(1);
-  }, [searchValue, dateRange, tableProps.dataSource]);
+  }, [searchValue, dateRange, createType, tableProps.dataSource]);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) setFePage(page);
@@ -418,17 +422,33 @@ export function Component() {
           onReset={handleReset}
           onSearchChange={setSearchValue}
           filters={
-            <SearchFilterField label="时间范围">
-              <DeferredRangePicker
-                allowClear
-                className="abi-field-input"
-                format="YYYY-MM-DD"
-                getPopupContainer={getFilterPopupContainer}
-                placeholder={['开始时间', '结束时间']}
-                value={dateRange}
-                onChange={(dates) => { setDateRange(dates); setFePage(1); }}
-              />
-            </SearchFilterField>
+            <>
+              <SearchFilterField label="时间范围">
+                <DeferredRangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => { setDateRange(dates); setFePage(1); }}
+                />
+              </SearchFilterField>
+              <SearchFilterField label="创建方式">
+                <DeferredSelect
+                  allowClear
+                  className="abi-field-input"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder="请选择创建方式"
+                  options={[
+                    { label: 'SQL创建', value: 'sql' },
+                    { label: '快速创建', value: 'union' },
+                  ]}
+                  value={createType}
+                  onChange={(val) => { setCreateType(val); setFePage(1); }}
+                />
+              </SearchFilterField>
+            </>
           }
         />
       </section>

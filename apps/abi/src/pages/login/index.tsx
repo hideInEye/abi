@@ -76,14 +76,14 @@ export function Component() {
               <span>欢迎体验</span>
               <strong>「芯智ABI」</strong>
             </h1>
-            <p className={styles.heroSubtitle}>企业级数据智能平台!</p>
-            <p className={styles.heroDesc}>自然语言交互 · 智能数据分析 · 可视化洞察 · 高效决策支持</p>
+            <p className={styles.heroSubtitle}>企业级数智化决策开放平台</p>
+            <p className={styles.heroDesc}>自然语言交互 · 智能数据分析 · 可视化洞察 · 可信决策支持</p>
           </div>
 
           <img src={loginHero} alt="" className={styles.heroImage} />
 
           <p className={styles.sloganText}>
-            智领数据，赋能行业。一站式智能编排与对话，助客户洞察先机，驱动业务高效增长。
+            智领数据，赋能行业。全链路智能分析与可信决策平台，以本体语义导航洞察先机，驱动业务确定性增长。
           </p>
         </section>
 

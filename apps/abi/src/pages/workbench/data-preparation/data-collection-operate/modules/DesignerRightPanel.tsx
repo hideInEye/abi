@@ -229,14 +229,18 @@ const DesignerRightPanel: React.FC<DesignerRightPanelProps> = ({ fields = [], no
                 }
               }}
             >
+              {/* 逐字块竖排，不依赖 writing-mode/text-orientation，避免老内核浏览器竖排文字渲染异常 */}
               <div style={{
                 fontWeight: 700,
                 fontFamily: 'SimHei, "Microsoft YaHei", "黑体", sans-serif',
-                letterSpacing: '2px',
-                writingMode: 'vertical-lr',
-                textOrientation: 'upright',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 2,
               }}>
-                {item.name}
+                {item.name.split('').map((char, index) => (
+                  <span key={index}>{char}</span>
+                ))}
               </div>
             </div>
           );

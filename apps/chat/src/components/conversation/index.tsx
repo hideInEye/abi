@@ -1,4 +1,4 @@
-import { Button, Checkbox, Form, Modal } from 'antd'
+import { Button, Checkbox, Form, Modal, Segmented } from 'antd'
 import React, { useEffect, useImperativeHandle, useState } from 'react'
 import { flushSync } from 'react-dom'
 import dayjs from 'dayjs'
@@ -10,12 +10,19 @@ import MessageList from './components/MessageList'
 import ShareEmailSetting from './components/share-email-setting'
 import SharingModal from './SharingModal'
 import { useConversationController, type ConversationProps } from './hooks/useConversationController'
+import ReportPreviewPane from './report-mode/ReportPreviewPane'
+import { useReportConversation } from './report-mode/useReportConversation'
+import { useReportPreviewPresence } from './report-mode/useReportPreviewPresence'
+import reportStyles from './report-mode/styles.module.css'
 
 export interface ConversationHandle {
   setConvContent: (content: any[]) => void
   handleSend: (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; selectedExcel?: { file_id: string | number; file_name: string } }) => void
+  handleReportSend: (value: string) => void
   stopGenerating: () => void
+  stopReportGenerating: () => void
   loading: boolean
+  reportLoading: boolean
 }
 
 const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((props, ref) => {
@@ -24,6 +31,17 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   const [selectedModelId, setSelectedModelId] = useState<string | number>(currentModel?.id || '')
   const [embedModelId, setEmbedModelId] = useState<string | number>(props.embedModelId || '')
   const controller = useConversationController({ ...props, selectedModel, selectedModelId, embedModelId, deepThinkEnabled })
+  const reportController = useReportConversation({
+    conv,
+    spaceId: props.spaceId,
+    currentModelId: selectedModelId,
+    embedModelId,
+    sessionGroupId: props.sessionGroupId,
+    historyRounds: controller.reportHistoryRounds,
+    historyLoaded: controller.historyLoaded,
+    onRefreshHistory: controller.refreshHistory,
+  })
+  const reportPreview = useReportPreviewPresence(reportController.activeReport)
 
   const {
     chatContainerRef,
@@ -78,21 +96,36 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     exitDeleteMode,
     toggleDeleteRound,
     toggleDeleteAll,
-    confirmDelete
+    confirmDelete,
   } = controller
 
   // 暴露给父级调用
-  useImperativeHandle(ref, () => ({
-    setConvContent,
-    handleSend,
-    stopGenerating,
-    loading
-  }), [setConvContent, handleSend, stopGenerating, loading])
+  useImperativeHandle(
+    ref,
+    () => ({
+      setConvContent,
+      handleSend,
+      handleReportSend: reportController.handleSend,
+      stopGenerating,
+      stopReportGenerating: reportController.stopGenerating,
+      loading,
+      reportLoading: reportController.loading,
+    }),
+    [setConvContent, handleSend, reportController.handleSend, reportController.loading, reportController.stopGenerating, stopGenerating, loading],
+  )
 
   // 通知父级 loading 变化
   useEffect(() => {
     onLoadingChange?.(loading)
   }, [loading, onLoadingChange])
+
+  useEffect(() => {
+    props.onReportLoadingChange?.(reportController.loading)
+  }, [props.onReportLoadingChange, reportController.loading])
+
+  useEffect(() => {
+    props.onReportPreviewChange?.(Boolean(reportController.activeReport))
+  }, [props.onReportPreviewChange, reportController.activeReport])
 
   // 同步父级传入的 currentModel
   useEffect(() => {
@@ -145,60 +178,83 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         onEmbedModelFound={(id) => setEmbedModelId(id)}
       />
 
-      <MessageList
-        conv={conv}
-        convContent={convContent}
-        convContent2d={convContent2d}
-        convContent3d={convContent3d}
-        loading={loading}
-        isSharing={isSharing}
-        isStorage={isStorage}
-        isDone={doneStatus}
-        isGettingData={isGettingData}
-        checkAll={checkAll}
-        sharingList={sharingList}
-        setSharingList={setSharingList}
-        setIsStorage={controller.setIsStorage}
-        setConvContent={setConvContent}
-        getAnswer={getAnswer}
-        getRecommend={getRecommend}
-        getQueryRewrite={getQueryRewrite}
-        onReferenceClick={getReference}
-        chatContainerRef={chatContainerRef}
-        isDeleting={isDeleting}
-        deleteSelectedRounds={deleteSelectedRounds}
-        onEnterDeleteMode={enterDeleteMode}
-        onToggleDeleteRound={toggleDeleteRound}
-        onEditMessage={handleEditResend}
-        onRegenerate={regenerateRound}
-      />
+      {reportPreview.mounted && (
+        <div className={reportStyles.mobileSwitch}>
+          <Segmented
+            block
+            value={reportController.mobileView}
+            options={[
+              { label: '对话', value: 'conversation' },
+              { label: '报告', value: 'report' },
+            ]}
+            onChange={(value) => reportController.setMobileView(value as 'conversation' | 'report')}
+          />
+        </div>
+      )}
+
+      <div className={`${reportStyles.body} ${reportPreview.visible ? reportStyles.bodySplit : ''}`}>
+        <div className={`${reportStyles.conversationPane} ${reportPreview.mounted && reportController.mobileView === 'report' ? reportStyles.mobileHidden : ''}`}>
+          <MessageList
+            conv={conv}
+            convContent={convContent}
+            convContent2d={convContent2d}
+            convContent3d={convContent3d}
+            loading={loading}
+            isSharing={isSharing}
+            isStorage={isStorage}
+            isDone={doneStatus}
+            isGettingData={isGettingData}
+            checkAll={checkAll}
+            sharingList={sharingList}
+            setSharingList={setSharingList}
+            setIsStorage={controller.setIsStorage}
+            setConvContent={setConvContent}
+            getAnswer={getAnswer}
+            getRecommend={getRecommend}
+            getQueryRewrite={getQueryRewrite}
+            onReferenceClick={getReference}
+            chatContainerRef={chatContainerRef}
+            isDeleting={isDeleting}
+            deleteSelectedRounds={deleteSelectedRounds}
+            onEnterDeleteMode={enterDeleteMode}
+            onToggleDeleteRound={toggleDeleteRound}
+            onEditMessage={handleEditResend}
+            onRegenerate={regenerateRound}
+            reportItems={reportController.reports}
+            reportLoadError={reportController.loadError}
+            onToggleReportThinking={reportController.toggleThinking}
+            onToggleReportTodo={reportController.toggleTodo}
+            onToggleReportTask={reportController.toggleTaskExecution}
+            onOpenReport={reportController.openReport}
+          />
+        </div>
+
+        {reportPreview.renderedReport && (
+          <div
+            className={`${reportStyles.reportPaneWrap} ${reportPreview.visible ? reportStyles.reportPaneWrapOpen : ''} ${reportController.mobileView === 'conversation' ? reportStyles.mobileHidden : ''}`}
+            data-transition-phase={reportPreview.phase}
+          >
+            <ReportPreviewPane report={reportPreview.renderedReport} animate={reportController.animateReportPreview} onClose={reportController.closeReport} />
+          </div>
+        )}
+      </div>
 
       {/* 批量删除底部操作栏（Qwen 风格，与下方输入框对齐） */}
       {isDeleting && (
         <div style={{ paddingRight: 'var(--scrollbar-width, 17px)' }}>
           <div className="max-w-[53.75rem] w-full m-auto flex items-center justify-between px-4 py-3 border-t border-[#e9edf4] bg-white">
-            <Checkbox
-              checked={deleteCheckAll}
-              onChange={(e) => toggleDeleteAll(e.target.checked)}
-            >
+            <Checkbox checked={deleteCheckAll} onChange={(e) => toggleDeleteAll(e.target.checked)}>
               全选
             </Checkbox>
             <div className="flex items-center gap-2">
               <Button onClick={exitDeleteMode}>取消</Button>
-              <Button
-                type="primary"
-                danger
-                loading={deleteLoading}
-                disabled={deleteSelectedRounds.length === 0}
-                onClick={confirmDelete}
-              >
+              <Button type="primary" danger loading={deleteLoading} disabled={deleteSelectedRounds.length === 0} onClick={confirmDelete}>
                 删除{deleteSelectedRounds.length > 0 ? `（${deleteSelectedRounds.length}）` : ''}
               </Button>
             </div>
           </div>
         </div>
       )}
-
 
       {/* 分享底部操作栏（全选 / 邮件分享 / 生成快照 / 取消），与批量删除风格保持一致 */}
       {isSharing && (
@@ -234,7 +290,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
                   <Button
                     type="primary"
                     style={{
-                      outline: 'none'
+                      outline: 'none',
                     }}
                     onClick={() => {
                       setShareStep(2)
@@ -249,7 +305,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
                     loading={confirmShareLoading}
                     disabled={confirmShareLoading}
                     style={{
-                      outline: 'none'
+                      outline: 'none',
                     }}
                     onClick={() => {
                       handleShareEmail()
@@ -264,7 +320,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
               <Button
                 type="primary"
                 style={{
-                  outline: 'none'
+                  outline: 'none',
                 }}
                 loading={confirmShareLoading}
                 disabled={confirmShareLoading}
@@ -307,13 +363,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         )}
       </Modal>
 
-      <DebugPanel
-        open={debugModalVisible}
-        thinkTime={cur?.thinkTime}
-        convUid={conv?.conv_uid}
-        roundIndex={cur?.roundIndex || loadingRoundIndex}
-        onClose={closeDebugPanel}
-      />
+      <DebugPanel open={debugModalVisible} thinkTime={cur?.thinkTime} convUid={conv?.conv_uid} roundIndex={cur?.roundIndex || loadingRoundIndex} onClose={closeDebugPanel} />
     </div>
   )
 })

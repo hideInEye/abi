@@ -1,4 +1,4 @@
-import { DeleteOutlined, EllipsisOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, EllipsisOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Form, message, Modal, Popconfirm, Tooltip, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
@@ -202,12 +202,10 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
       const nodeKey = `group-${item.groupId}`;
       const isExpanded = currentExpandedKeys.includes(nodeKey);
 
-      // 图标保持原蓝色文件夹 / 浅蓝文档图标
-      const nodeIcon = hasChildren
-        ? (isExpanded
-          ? <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
-          : <FolderOutlined className="group-node-icon group-node-icon--folder" />)
-        : <FileTextOutlined className="group-node-icon group-node-icon--leaf" />;
+      // 图标统一为文件夹语义：有子级且展开为打开文件夹，其余为关闭文件夹（右侧列表才是文件）
+      const nodeIcon = hasChildren && isExpanded
+        ? <FolderOpenOutlined className="group-node-icon group-node-icon--folder-open" />
+        : <FolderOutlined className="group-node-icon group-node-icon--folder" />;
 
       // 右侧折叠箭头（仅文件夹节点）
       const chevron = hasChildren ? (
@@ -239,6 +237,23 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
       };
     });
   };
+
+  /** 弹窗标题 — v5 渐变图标 + 主/副标题 */
+  const modalTitle = (
+    <div className="group-modal-title">
+      <div className="group-modal-title-icon">
+        <ApartmentOutlined />
+      </div>
+      <div className="group-modal-title-text">
+        <span className="group-modal-title-main">
+          {editingGroup ? config.modalEditTitle : config.modalAddTitle}
+        </span>
+        <span className="group-modal-title-sub">
+          {editingGroup ? '修改分组信息及层级关系' : '创建新的分组节点'}
+        </span>
+      </div>
+    </div>
+  );
 
   const treeData = useMemo(() => buildTreeNodes(buildGroupTree(groups, '0', true), expandedKeys), [groups, expandedKeys]);
 
@@ -280,11 +295,11 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
       <Modal
         open={isModalOpen}
         centered
-        title={editingGroup ? config.modalEditTitle : config.modalAddTitle}
+        className="group-modal-v5"
+        title={modalTitle}
         onCancel={handleModalCancel}
         footer={
-          <div className="flex items-center justify-between">
-            {/* 编辑时左下角显示删除按钮 */}
+          <div className="group-modal-footer">
             {editingGroup ? (
               <Popconfirm
                 title="提示"
@@ -294,22 +309,24 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
                   if (deleted) handleModalCancel();
                 }}
               >
-                <Button danger icon={<DeleteOutlined />}>删除</Button>
+                <Button className="group-modal-btn-danger" icon={<DeleteOutlined />}>删除</Button>
               </Popconfirm>
             ) : <span />}
-            <div className="flex gap-2">
-              <Button onClick={handleModalCancel}>取消</Button>
-              <Button type="primary" onClick={handleModalOk}>确认</Button>
+            <div className="group-modal-footer-actions">
+              <Button className="btn-ghost-v5" onClick={handleModalCancel}>取消</Button>
+              <Button className="btn-accent-gradient" onClick={handleModalOk}>确认</Button>
             </div>
           </div>
         }
       >
-        <AForm form={form} layout="vertical">
-          <GroupFrom
-            config={config}
-            parentOptions={buildParentTreeOptions(groups, editingGroup?.groupId)}
-          />
-        </AForm>
+        <div className="group-modal-form-panel">
+          <AForm form={form} layout="vertical">
+            <GroupFrom
+              config={config}
+              parentOptions={buildParentTreeOptions(groups, editingGroup?.groupId)}
+            />
+          </AForm>
+        </div>
       </Modal>
     </>
   );

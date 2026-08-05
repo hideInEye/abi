@@ -1,12 +1,11 @@
 import {
+  AuditOutlined,
   DeleteOutlined,
-  DeploymentUnitOutlined,
   LeftOutlined,
   MoreOutlined,
   ReloadOutlined,
   RightOutlined,
   SearchOutlined,
-  UserOutlined,
 } from '@ant-design/icons'
 import { Dropdown, Modal, Popconfirm, Tag, message } from 'antd'
 import { useDebounceFn } from 'ahooks'
@@ -23,8 +22,8 @@ import {
   fetchBatchDeleteMemory,
   fetchDeleteMemory,
   fetchEditMemory,
+  fetchMemoryDetail,
   fetchMemoryList,
-  fetchModelEval,
 } from '@/service/api/assistant-manage'
 import { getSpaceId } from '@/store/slice/app'
 
@@ -52,14 +51,11 @@ const EffectReviewOperateDrawer = lazy(() => import('./modules/effect-review-ope
 export function Component() {
   const { t } = useTranslation()
   const spaceId = useAppSelector(getSpaceId)
-  const [modelEvalLoading, setModelEvalLoading] = useState(false)
   const [jumpValue, setJumpValue] = useState('')
   const [dateRange, setDateRange] = useState<[any, any] | null>(null)
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS)
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([])
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card')
-
-  const isWenShuScene = (chatMode: string) => chatMode === 'chat_with_db_execute'
 
   // 将对象的 camelCase 键统一转换为 snake_case，兼容表格列/编辑/删除中使用的下划线字段名
   const toSnakeCaseKeys = (obj: any) => {
@@ -297,18 +293,8 @@ export function Component() {
           render: (_: unknown, record: any) => (
             <div className="ds-action-group">
               <AButton className="abi-action-link" size="small" variant="link" onClick={() => openEval(record)}>
-                <UserOutlined style={{ marginRight: 3, fontSize: 12 }} />人工评估
+                <AuditOutlined style={{ marginRight: 3, fontSize: 12 }} />评估
               </AButton>
-              <Popconfirm title="确定进行模型评估吗？" onConfirm={() => handleModelEval(record)}>
-                <AButton
-                  className="abi-action-link"
-                  disabled={modelEvalLoading || ['0', '1'].includes(`${record.status}`) || !isWenShuScene(record.chat_mode)}
-                  size="small"
-                  variant="link"
-                >
-                  <DeploymentUnitOutlined style={{ marginRight: 3, fontSize: 12 }} />模型评估
-                </AButton>
-              </Popconfirm>
               <Popconfirm title="删除后不可恢复，确定删除吗？" onConfirm={() => handleDelete(record)}>
                 <AButton className="abi-action-link-danger" size="small" variant="link">
                   <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
@@ -355,8 +341,24 @@ export function Component() {
     return typeof val === 'string' ? val : JSON.stringify(val, null, 2)
   }
 
-  /** 打开人工评估抽屉，并将记录中的数值型字段归一化为字符串以匹配单选项 */
-  const openEval = (record: any) => {
+  /** 打开人工评估抽屉：先调 detail 详情接口（传 fbId）拿最新数据，再将数值型字段归一化为字符串以匹配单选项 */
+  const openEval = async (rawRecord: any) => {
+    let record = rawRecord
+    try {
+      const res: any = await fetchMemoryDetail(rawRecord.fb_id)
+      if (!res?.error) {
+        // 详情接口返回单条记录：{ code, msg, data: {...} }；若后端返数组结构则取第一条兼容
+        const inner = res?.data ?? res?.response?.data?.data ?? {}
+        const raw = Array.isArray(inner?.data) ? inner.data[0] : Array.isArray(inner) ? inner[0] : inner
+        if (raw && typeof raw === 'object' && Object.keys(raw).length > 0) {
+          const detail = toSnakeCaseKeys(raw)
+          record = { ...rawRecord, ...detail, question: normalizeQuestion(detail.question ?? rawRecord.question) }
+        }
+      }
+    } catch (error) {
+      // 详情查询失败时降级使用列表行数据，保证抽屉仍可打开
+      console.log('查询评审详情失败:', error)
+    }
     handleEdit({
       ...record,
       ai_response: toText(record.ai_response),
@@ -404,47 +406,6 @@ export function Component() {
         }
       },
     })
-  }
-
-  /** 模型评估：沿用原后端 llmeval 接口 */
-  const handleModelEval = async (record: any) => {
-    try {
-      setModelEvalLoading(true)
-      // 模型相关 id 固定：app_id=0、embed_model_id=6、chat_model_id=12（无需查询模型列表）
-      const contextObj = {
-        app_code: '',
-        app_id: 0,
-        chat_mode: record.chat_mode,
-        chat_model_id: 12,
-        conv_uid: record.conv_uid,
-        embed_model_id: 6,
-        extra: {
-          fb_id: record.fb_id,
-        },
-        space_id: `${record.space_id}`,
-        sys_code: '1',
-        user_name: '1',
-      }
-      const params = {
-        context: contextObj,
-        enable_vis: false,
-        incremental: false,
-        messages: '',
-        model: 'Qwen3.6-plus',
-        stream: false,
-      }
-      const res: any = await fetchModelEval(params)
-      if (res.response?.data?.success) {
-        message.success('模型评估成功')
-        run()
-      } else {
-        message.error(res.response?.data?.err_msg)
-      }
-    } catch (error) {
-      console.log(error)
-    } finally {
-      setModelEvalLoading(false)
-    }
   }
 
   const handleReset = () => {
@@ -656,8 +617,6 @@ export function Component() {
                 <div className="abi-card-grid">
                   <div className="abi-card-grid-inner">
                     {pagedData.map((record: any) => {
-                      const modelEvalDisabled =
-                        modelEvalLoading || ['0', '1'].includes(`${record.status}`) || !isWenShuScene(record.chat_mode)
                       return (
                         <div key={record.fb_id} className="abi-data-card" style={{ position: 'relative' }}>
                           <div className="abi-data-card-head">
@@ -688,13 +647,8 @@ export function Component() {
                           </div>
                           <div className="abi-data-card-footer">
                             <button className="abi-card-act" onClick={() => openEval(record)}>
-                              <UserOutlined style={{ marginRight: 3, fontSize: 12 }} />人工评估
+                              <AuditOutlined style={{ marginRight: 3, fontSize: 12 }} />评估
                             </button>
-                            <Popconfirm title="确定进行模型评估吗？" onConfirm={() => handleModelEval(record)}>
-                              <button className="abi-card-act" disabled={modelEvalDisabled}>
-                                <DeploymentUnitOutlined style={{ marginRight: 3, fontSize: 12 }} />模型评估
-                              </button>
-                            </Popconfirm>
                             <Dropdown
                               menu={{
                                 items: [

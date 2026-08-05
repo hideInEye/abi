@@ -1,13 +1,13 @@
-import { DeleteOutlined, FileMarkdownOutlined, LeftOutlined, MoreOutlined, QuestionCircleOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, FileMarkdownOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { useDebounceFn } from 'ahooks';
 // import PageTitle from '@/components/stateless/common/PageTitle';
 
 import { deleteJob, deleteShareEmail, deleteShareEmailBatch, fetchEmailList } from '@/service/api/job';
 
-import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { DeferredRangePicker, DeferredSelect, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
 import { useRoute, useRouter } from '~/packages/simple-router/src';
-import { shareMailColor, shareMailStatus, statusType } from '@/types/job';
+import { shareMailColor, shareMailDisplayGroups, shareMailStatus, statusType, displayGroupColor, resolveDisplayGroup } from '@/types/job';
 import { Dropdown, Empty, message } from 'antd';
 import { getSpaceId } from '@/store/slice/app';
 import { ViewControls } from '@/components/ViewControls';
@@ -18,6 +18,7 @@ export function Component() {
   const route = useRoute();
   const spaceId = useAppSelector(getSpaceId);
   const [dateRange, setDateRange] = useState<any>(null);
+  const [displayGroupFilter, setDisplayGroupFilter] = useState<string | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   // 列选项：用于列选择器
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
@@ -119,16 +120,47 @@ export function Component() {
           key: 'status',
           title: '状态',
           minWidth: 120,
-          render: (r: statusType, row: any) => {
+          render: (_: statusType, row: any) => {
+            const group = resolveDisplayGroup(row);
+            const detail = shareMailStatus[row.status as statusType];
+            const detailColor = shareMailColor[row.status as statusType] || '#8C8C8C';
             return (
-              <span style={{ color: shareMailColor[r] }}>
-                {shareMailStatus[r]}
-                {r === 4 && (
-                  <APopover content={row?.reject || ''}>
-                    <QuestionCircleOutlined style={{ color: '#FF4D4F' }} className="ml-2" />
-                  </APopover>
-                )}
-              </span>
+              <APopover
+                trigger="click"
+                overlayInnerStyle={{ padding: 0, minWidth: 220 }}
+                content={
+                  <div style={{ fontSize: 13 }}>
+                    <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)', fontWeight: 500, color: 'rgba(0,0,0,0.88)' }}>
+                      状态详情
+                    </div>
+                    <div style={{ padding: '8px 12px 10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span style={{ width: 44, flexShrink: 0, color: '#8C8C8C' }}>状态</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: detailColor }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: detailColor, flexShrink: 0 }} />
+                          {detail || '-'}
+                        </span>
+                      </div>
+                      {row?.sendTime && (
+                        <div style={{ display: 'flex', alignItems: 'center', marginTop: 8 }}>
+                          <span style={{ width: 44, flexShrink: 0, color: '#8C8C8C' }}>时间</span>
+                          <span>{row.sendTime}</span>
+                        </div>
+                      )}
+                      {row?.status === 4 && row?.reject && (
+                        <div style={{ display: 'flex', marginTop: 8 }}>
+                          <span style={{ width: 44, flexShrink: 0, color: '#8C8C8C' }}>原因</span>
+                          <span style={{ color: '#FF4D4F', maxWidth: 220 }}>{row.reject}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                }
+              >
+                <span style={{ color: group ? displayGroupColor[group] : detailColor, cursor: 'pointer' }}>
+                  {group || detail || '-'}
+                </span>
+              </APopover>
             );
           },
         },
@@ -202,20 +234,21 @@ export function Component() {
   }
 
   const jobOptions = useMemo(() => {
-    return Object.entries(shareMailStatus).map(([key, value]) => ({
-      label: value,
-      value: key,
+    return shareMailDisplayGroups.map(label => ({
+      label,
+      value: label,
     }));
-  }, [shareMailStatus]);
+  }, []);
 
   // 前端按发送时间过滤 + 前端分页（useTable 返回全量数据）
   const pag = tableProps.pagination as any;
   const currentPage = pag?.current || 1;
   const pageSizeVal = pag?.pageSize || 10;
-  const filteredData = useMemo(
-    () => filterByCreateTime((data as any[]) || [], dateRange, 'sendTime'),
-    [data, dateRange]
-  );
+  const filteredData = useMemo(() => {
+    const byTime = filterByCreateTime((data as any[]) || [], dateRange, 'sendTime');
+    if (!displayGroupFilter) return byTime;
+    return byTime.filter((row: any) => resolveDisplayGroup(row) === displayGroupFilter);
+  }, [data, dateRange, displayGroupFilter]);
   const totalCount = filteredData.length;
   const pagedData = useMemo(
     () => filteredData.slice((currentPage - 1) * pageSizeVal, currentPage * pageSizeVal),
@@ -258,8 +291,14 @@ export function Component() {
                 <div className="abi-data-card-title">
                   <span className="abi-data-card-name" title={record.jobName}>{record.jobName || '-'}</span>
                 </div>
-                <span className="abi-status-tag" style={{ color: shareMailColor[record.status as statusType] }}>
-                  {shareMailStatus[record.status as statusType] || '-'}
+                <span
+                  className="abi-status-tag"
+                  style={{ color: (() => {
+                    const group = resolveDisplayGroup(record);
+                    return group ? displayGroupColor[group] : shareMailColor[record.status as statusType];
+                  })() }}
+                >
+                  {resolveDisplayGroup(record) || shareMailStatus[record.status as statusType] || '-'}
                 </span>
               </div>
               <div className="abi-data-card-body">
@@ -312,7 +351,7 @@ export function Component() {
                 </AForm.Item>
               }
               onQuery={() => searchProps.search()}
-              onReset={() => { searchProps.reset(); setDateRange(null); }}
+              onReset={() => { searchProps.reset(); setDateRange(null); setDisplayGroupFilter(undefined); }}
               filters={
                 <>
                   <SearchFilterField label="时间范围">
@@ -327,15 +366,15 @@ export function Component() {
                     />
                   </SearchFilterField>
                   <SearchFilterField label="任务状态">
-                    <AForm.Item className="m-0" name="status">
-                      <ASelect
-                        allowClear
-                        className="abi-field-input w-full"
-                        getPopupContainer={getFilterPopupContainer}
-                        options={jobOptions}
-                        placeholder="请选择任务状态"
-                      />
-                    </AForm.Item>
+                    <DeferredSelect
+                      allowClear
+                      className="abi-field-input w-full"
+                      getPopupContainer={getFilterPopupContainer}
+                      options={jobOptions}
+                      placeholder="请选择任务状态"
+                      value={displayGroupFilter}
+                      onChange={(v: string | undefined) => { setDisplayGroupFilter(v); pag?.onChange?.(1, pageSizeVal); }}
+                    />
                   </SearchFilterField>
                 </>
               }

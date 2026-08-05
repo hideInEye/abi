@@ -1,10 +1,11 @@
 import { DownOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
-import { useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Button, DatePicker, Empty, Input, Popover, Select, Spin } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
+import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { fetchFavoriteList, fetchOperateRecordList } from '@/service/api/abi-system'
 
 /** 应用工坊 tab 顺序：最近使用、我的收藏、我的分享、我的分析、我的报告 */
@@ -70,7 +71,7 @@ const PAGE_SIZE_OPTIONS = [
   { label: '30条/页', value: 30 },
 ]
 
-export function WorkshopView() {
+function WorkshopView() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<WorkshopTabKey>('recently-used')
   const [searchText, setSearchText] = useState('')
@@ -245,8 +246,9 @@ export function WorkshopView() {
 
   return (
     <div className="workshop-view">
-      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', flexShrink: 0 }}>
-        应用工坊
+      <div className="content-page-title-row">
+        <SidebarCollapseButton />
+        <div className="content-page-title">应用工坊</div>
       </div>
 
       {/* Tabs */}
@@ -293,10 +295,13 @@ export function WorkshopView() {
       {/* Data area：占满剩余高度 */}
       <Spin spinning={loading} wrapperClassName="ws-data-spin">
         <div className="ws-data-area">
-          {!loading && pagedRows.length === 0 ? (
-            <div className="ws-empty">
-              <Empty description="暂无数据" />
-            </div>
+          {pagedRows.length === 0 ? (
+            // 加载中不渲染空态（由 Spin 遮罩负责）；避免加载态落入表格分支导致表头闪现
+            !loading && (
+              <div className="ws-empty">
+                <Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              </div>
+            )
           ) : (
             <div className="ws-table-wrap">
               <table className="ws-table">
@@ -374,3 +379,7 @@ export function WorkshopView() {
     </div>
   )
 }
+
+export const Route = createFileRoute('/chat/workshop/')({
+  component: WorkshopView,
+})

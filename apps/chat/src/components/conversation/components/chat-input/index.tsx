@@ -11,6 +11,8 @@ import { fetchSemanticGroups, fetchSemanticDetail } from '../../../../service/ap
 import SchemaFieldsModal from '../../../conversation-analysis/SchemaFieldsModal';
 import type { SchemaTable, SchemaField } from '../../../conversation-analysis/SchemaFieldsModal';
 import { getSpaceId } from '../../../../utils';
+import type { ModelOption } from '../chat-header';
+import { hasSelectedConversationData } from './sendValidation';
 
 export interface SemanticSelectedData {
   name: string
@@ -19,17 +21,27 @@ export interface SemanticSelectedData {
   groupName?: string
 }
 
+export type ChatInputModeKey = 'interact' | 'explore' | 'report'
+
+type ChatInputMode = {
+  key: ChatInputModeKey
+  label: string
+  icon: React.ReactNode
+}
+
 interface ChatInputProps {
   conv?: any;
   /** 确保存在可用会话（无会话时先创建），返回会话对象 */
   ensureConv?: () => Promise<any>;
   loading: boolean;
-  onSend: (value: string) => void;
+  onSend: (value: string, options?: { mode: ChatInputModeKey }) => void;
   onStop: () => void;
   deepThinkEnabled: boolean;
   uploadFileEnabled: boolean;
   onToggleDeepThink: () => void;
   onToggleUploadFile: () => void;
+  /** 当前选中的模型，用于判断思考按钮是否可关闭 */
+  currentModel?: ModelOption | null;
   setSelectedExcel?: (file: any) => void;
   selectedExcel?: any;
   spaceId?: number;
@@ -43,14 +55,23 @@ interface ChatInputProps {
   // 外部控制输入值
   externalValue?: string;
   onExternalValueConsumed?: () => void;
+  selectedModeKey?: ChatInputModeKey;
+  onModeChange?: (mode: ChatInputModeKey) => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
   ({ loading, onSend, onStop, deepThinkEnabled, uploadFileEnabled, setSelectedExcel, selectedExcel, conv, ensureConv, onToggleDeepThink, onToggleUploadFile,
+    currentModel,
     spaceId,
+      selectedModeKey, onModeChange,
     semanticTree = [], selectedData, onSelectData, semLoading, expandedSemGroups, onToggleSemGroup,
     externalValue, onExternalValueConsumed
   }) => {
+    // 当前模型是否支持关闭思考：1 为支持，0 或其他为不支持
+    const isSupportCloseThinking = currentModel?.isSupportThinking === 1 || currentModel?.isSupportThinking === '1';
+    // 模型存在且不支持关闭思考时，思考按钮为只读并强制点亮
+    const thinkingReadOnly = !!currentModel && !isSupportCloseThinking;
+    const thinkingActive = thinkingReadOnly || deepThinkEnabled;
     const [value, setValue] = useState('');
     const isComposingRef = useRef(false);
     const [uploadFileVisible, setUploadFileVisible] = useState(false);
@@ -58,7 +79,17 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     const [morePopupOpen, setMorePopupOpen] = useState(false);
     const [skillPopOpen, setSkillPopOpen] = useState(false);
     const [mcpPopOpen, setMcpPopOpen] = useState(false);
-    const [selectedMode, setSelectedMode] = useState<any>({ key: 'interact', label: '交互', icon: <MessageOutlined /> });
+    const getModeConfig = useCallback((mode: ChatInputModeKey): ChatInputMode => {
+      switch (mode) {
+        case 'report':
+          return { key: 'report', label: '报告', icon: <FileTextOutlined /> };
+        case 'explore':
+          return { key: 'explore', label: '探索', icon: <CompassOutlined /> };
+        default:
+          return { key: 'interact', label: '交互', icon: <MessageOutlined /> };
+      }
+    }, []);
+    const [selectedMode, setSelectedMode] = useState<ChatInputMode>(() => getModeConfig(selectedModeKey || 'interact'));
 
     // ── 技能状态 ──
     const [skillList, setSkillList] = useState<any[]>([]);
@@ -83,6 +114,12 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         onExternalValueConsumed?.();
       }
     }, [externalValue, onExternalValueConsumed]);
+
+    useEffect(() => {
+      // 父容器控制当前模式，输入框只负责展示和把发送 mode 上抛。
+      if (!selectedModeKey || selectedModeKey === selectedMode.key) return;
+      setSelectedMode(getModeConfig(selectedModeKey));
+    }, [getModeConfig, selectedMode.key, selectedModeKey]);
 
     // 懒加载技能列表
     useEffect(() => {
@@ -184,9 +221,16 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
 
     const handleSend = useCallback(() => {
       if (!value.trim() || loading) return;
-      onSend(value);
+
+      // 先校验再发送和清空，避免父级拦截后用户已经输入的问题丢失。
+      if (!hasSelectedConversationData(selectedData, selectedExcel)) {
+        message.warning('选择已有数据或上传excel，即可开始对话');
+        return;
+      }
+
+      onSend(value, { mode: selectedMode.key });
       setValue('');
-    }, [loading, onSend, value]);
+    }, [loading, onSend, selectedData, selectedExcel, selectedMode.key, value]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -238,10 +282,23 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       { key: 'upload-image', icon: <PictureOutlined />, label: '上传图片', onClick: () => message.info('图片上传功能即将上线') },
     ];
 
+    const selectMode = (mode: ChatInputModeKey) => {
+      if (mode === 'explore') {
+        message.info('探索模式开发中，已保持交互模式');
+        setSelectedMode(getModeConfig('interact'));
+        onModeChange?.('interact');
+        return;
+      }
+
+      setSelectedMode(getModeConfig(mode));
+      onModeChange?.(mode);
+      message.info(mode === 'report' ? '已切换到报告模式' : '已切换到交互模式');
+    };
+
     const modeMenuItems: MenuProps['items'] = [
-      { key: 'interact', icon: <MessageOutlined />, label: '交互', onClick: () => { setSelectedMode({ key: 'interact', label: '交互', icon: <MessageOutlined /> }); message.info('已切换到交互模式'); } },
-      { key: 'explore', icon: <CompassOutlined />, label: '探索', onClick: () => { message.info('功能开发中...'); setSelectedMode({ key: 'interact', label: '交互', icon: <MessageOutlined /> }); } },
-      { key: 'report', icon: <FileTextOutlined />, label: '报告', onClick: () => { message.info('功能开发中...'); setSelectedMode({ key: 'interact', label: '交互', icon: <MessageOutlined /> }); } },
+      { key: 'interact', icon: <MessageOutlined />, label: '交互', onClick: () => selectMode('interact') },
+      { key: 'explore', icon: <CompassOutlined />, label: '探索', onClick: () => selectMode('explore') },
+      { key: 'report', icon: <FileTextOutlined />, label: '报告', onClick: () => selectMode('report') },
     ];
 
     /** 递归渲染语义节点：文件夹（开/合）/ 空分组（灰、不可展开）/ 叶子（可选中） */
@@ -439,6 +496,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             disabled={loading}
             placeholder={
               loading ? '正在思考中,请稍后输入'
+                : selectedMode.key === 'report' ? '请输入报告主题或分析诉求，系统将生成结构化报告'
                 : deepThinkEnabled ? '深度思考模式已开启，请输入您的问题'
                   : '请输入问题，快速获取结果'
             }
@@ -502,7 +560,13 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           </Dropdown>
 
           {/* 思考 (deep think toggle) */}
-          <button type="button" className={`input-label-btn ${deepThinkEnabled ? 'active' : ''}`} onClick={onToggleDeepThink}>
+          <button
+            type="button"
+            className={`input-label-btn ${thinkingActive ? 'active' : ''} ${thinkingReadOnly ? 'readonly' : ''}`}
+            onClick={thinkingReadOnly ? undefined : onToggleDeepThink}
+            disabled={thinkingReadOnly}
+            title={thinkingReadOnly ? '当前模型不支持关闭思考' : (thinkingActive ? '关闭思考' : '开启思考')}
+          >
             <BulbOutlined style={{ fontSize: 14 }} />
             <span>思考</span>
           </button>

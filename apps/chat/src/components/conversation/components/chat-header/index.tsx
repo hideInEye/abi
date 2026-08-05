@@ -2,6 +2,8 @@ import { CheckOutlined, DownOutlined } from '@ant-design/icons'
 import { Dropdown, message } from 'antd'
 import type { MenuProps } from 'antd'
 import React, { useState } from 'react'
+
+import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { updateApp } from '../../../../service/api/app'
 import CreateModal from '../../../conversation-analysis/CreateModal'
 
@@ -12,6 +14,8 @@ export interface ModelOption {
   desc: string
   /** 是否为默认模型（1 为默认） */
   isDefault?: number
+  /** 是否支持关闭思考（1 为支持，0 为不支持） */
+  isSupportThinking?: number | string
 }
 
 interface ChatHeaderProps {
@@ -76,6 +80,7 @@ const ChatHeader = React.forwardRef<any, ChatHeaderProps>((props, ref) => {
     <>
       <header className="chat-header">
         <div className="chat-header-left" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <SidebarCollapseButton />
           {/* Model Switcher */}
           {currentModel && (
             <Dropdown menu={{ items: modelMenuItems }} trigger={['click']} placement="bottomLeft">

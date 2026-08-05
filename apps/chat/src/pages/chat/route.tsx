@@ -1,7 +1,7 @@
 import { ClockCircleOutlined } from '@ant-design/icons'
 import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Layout } from 'antd'
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   SKILL_STORE_MENU_KEY,
@@ -12,17 +12,19 @@ import { BrandHeader } from '@/components/layout/BrandHeader'
 import { ConversationGroups } from '@/components/layout/ConversationGroups'
 import { CreateConversationButton } from '@/components/layout/CreateConversationButton'
 import { ScheduleTaskDrawer } from '@/components/layout/ScheduleTaskDrawer'
+import { SidebarCollapseProvider } from '@/components/layout/SidebarCollapseContext'
 import { SidebarHistoryTopics } from '@/components/layout/SidebarHistoryTopics'
-import { SkillStoreView } from '@/components/layout/SkillStoreView'
 import { SpaceSelector } from '@/components/layout/SpaceSelector'
 import { UserProfileCard } from '@/components/layout/UserProfileCard'
 import { WorkbenchMenuList } from '@/components/layout/WorkbenchMenuList'
-import { WorkshopView } from '@/components/layout/WorkshopView'
 import { getCurrentUserName } from '@/utils/layout'
+
+/** 技能商店 / 应用工坊 独立路由地址 */
+const SKILL_STORE_ROUTE = '/chat/skill'
+const WORKSHOP_ROUTE = '/chat/workshop'
 
 const { Content, Sider } = Layout
 const appLogoUrl = new URL('../../assets/imgs/home_logo.png', import.meta.url).href
-const ROUTE_LOADING_MIN_DURATION = 420
 
 export const Route = createFileRoute('/chat')({
   component: ChatWorkbenchLayout,
@@ -34,12 +36,12 @@ function ChatWorkbenchLayout() {
 
   const [collapsed, setCollapsed] = useState(false)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
-  const [showSkillStore, setShowSkillStore] = useState(false)
-  const [showWorkshop, setShowWorkshop] = useState(false)
-  const [routeLoading, setRouteLoading] = useState(true)
   const [newChatNonce, setNewChatNonce] = useState(0)
   const [scheduleOpen, setScheduleOpen] = useState(false)
-  const prevPathnameRef = useRef(pathname)
+
+  // 技能商店 / 应用工坊已改为独立路由，激活态直接由 pathname 派生
+  const showSkillStore = pathname.startsWith(SKILL_STORE_ROUTE)
+  const showWorkshop = pathname.startsWith(WORKSHOP_ROUTE)
 
   const userName = useMemo(() => getCurrentUserName(), [])
   const pageTitle = useMemo(() => {
@@ -58,58 +60,32 @@ function ChatWorkbenchLayout() {
     document.title = pageTitle
   }, [pageTitle])
 
-  useEffect(() => {
-    if (showSkillStore || showWorkshop) {
-      setRouteLoading(false)
-      return
-    }
-
-    setRouteLoading(true)
-
-    let frameId = 0
-    const timerId = window.setTimeout(() => {
-      frameId = window.requestAnimationFrame(() => {
-        setRouteLoading(false)
-      })
-    }, ROUTE_LOADING_MIN_DURATION)
-
-    return () => {
-      window.clearTimeout(timerId)
-      if (frameId) {
-        window.cancelAnimationFrame(frameId)
-      }
-    }
-  }, [pathname, showSkillStore, showWorkshop])
-
-  /* 3. Auto-close skill store / workshop when user navigates to a conversation */
-  useEffect(() => {
-    if (pathname !== prevPathnameRef.current) {
-      prevPathnameRef.current = pathname
-      if (pathname.startsWith('/chat/task')) {
-        if (showSkillStore) setShowSkillStore(false)
-        if (showWorkshop) setShowWorkshop(false)
-      }
-    }
-  }, [pathname, showSkillStore, showWorkshop])
-
   const handleToggleCollapse = useCallback(() => {
     setCollapsed((previousCollapsed) => !previousCollapsed)
   }, [])
 
+  const handleCollapseSidebar = useCallback(() => {
+    setCollapsed(true)
+  }, [])
+
+  const sidebarCollapseContext = useMemo(
+    () => ({
+      collapsed,
+      toggleSidebar: handleToggleCollapse,
+      collapseSidebar: handleCollapseSidebar,
+    }),
+    [collapsed, handleCollapseSidebar, handleToggleCollapse],
+  )
+
   const handleNavItemClick = useCallback(
     (key: string) => {
       if (key === SKILL_STORE_MENU_KEY) {
-        setShowSkillStore(true)
-        setShowWorkshop(false)
+        navigate({ to: SKILL_STORE_ROUTE })
       } else if (key === 'workshop') {
-        setShowWorkshop(true)
-        setShowSkillStore(false)
-      } else {
-        setShowSkillStore(false)
-        setShowWorkshop(false)
+        navigate({ to: WORKSHOP_ROUTE })
       }
     },
-    [],
+    [navigate],
   )
 
   const handleSpaceChanged = useCallback(() => {
@@ -127,13 +103,7 @@ function ChatWorkbenchLayout() {
     }
   }, [])
 
-  const handleBackFromSkillStore = useCallback(() => {
-    setShowSkillStore(false)
-  }, [])
-
   const handleCreateNewChat = useCallback(() => {
-    setShowSkillStore(false)
-    setShowWorkshop(false)
     setNewChatNonce((n) => n + 1)
   }, [])
 
@@ -145,6 +115,7 @@ function ChatWorkbenchLayout() {
       }}
     >
       <Sider
+        id="chat-workbench-sidebar"
         collapsible
         collapsed={collapsed}
         width={SIDER_WIDTH}
@@ -153,12 +124,11 @@ function ChatWorkbenchLayout() {
         className="sidebar-glass !h-[100dvh]"
       >
         <div className="h-full min-h-0 flex flex-col" style={{ position: 'relative', zIndex: 1 }}>
-          <BrandHeader collapsed={collapsed} logoSrc={appLogoUrl} onToggleCollapse={handleToggleCollapse} />
+          <BrandHeader collapsed={collapsed} logoSrc={appLogoUrl} />
 
           <CreateConversationButton
             collapsed={collapsed}
             onCreated={handleCreateNewChat}
-            onToggleCollapse={handleToggleCollapse}
           />
 
           <div className="sidebar-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-2">
@@ -168,7 +138,11 @@ function ChatWorkbenchLayout() {
               onItemClick={handleNavItemClick}
             />
             <ConversationGroups collapsed={collapsed} refreshKey={historyRefreshKey} />
-            <SidebarHistoryTopics collapsed={collapsed} refreshKey={historyRefreshKey} />
+            <SidebarHistoryTopics
+              collapsed={collapsed}
+              refreshKey={historyRefreshKey}
+              suppressActive={showSkillStore || showWorkshop}
+            />
           </div>
 
           <div
@@ -198,29 +172,13 @@ function ChatWorkbenchLayout() {
             <SpaceSelector collapsed={false} onSpaceChanged={handleSpaceChanged} />
             <ScheduleTaskDrawer open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
           </div>
-          {showSkillStore ? (
-            <SkillStoreView onBack={handleBackFromSkillStore} />
-          ) : showWorkshop ? (
-            <WorkshopView />
-          ) : (
+          <SidebarCollapseProvider value={sidebarCollapseContext}>
             <Fragment key={newChatNonce}>
               <Outlet />
             </Fragment>
-          )}
-          {routeLoading && !showSkillStore && !showWorkshop && <ChatRouteLoading />}
+          </SidebarCollapseProvider>
         </Content>
       </Layout>
     </Layout>
-  )
-}
-
-function ChatRouteLoading() {
-  return (
-    <div className="chat-route-loading" role="status" aria-label="加载中">
-      <div className="chat-route-loading__inner">
-        <div className="chat-route-loading__spinner" />
-        <span className="chat-route-loading__text">加载中...</span>
-      </div>
-    </div>
   )
 }

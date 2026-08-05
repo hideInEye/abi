@@ -14,6 +14,7 @@ import styles from './index.module.css';
 import BottomSql, { type BottomSqlHandle } from './modules/BottomSql';
 import DesignerRightPanel from './modules/DesignerRightPanel';
 import SqlModeEditor from './modules/SqlModeEditor';
+import type { TableFieldSelection } from './modules/TableFieldPickerDrawer';
 import BottomTabs from './modules/BottomTabs';
 import { DragBox } from './modules/DragBox';
 import { TreeNodeContainer } from './modules/TreeNodeContainer';
@@ -46,6 +47,7 @@ export function Component() {
   const [nodeData, setNodeData] = useState<any>({}); // 单独拎出来的节点图数据
   const [allFields, setAllFields] = useState<any[]>([]); // 单独拎出来的字段列表数据
   const [sqlVal, setSqlVal] = useState(''); // 单独拎出来的sql
+  const [sqlTableSelection, setSqlTableSelection] = useState<TableFieldSelection>({}); // SQL模式「选择表」勾选结果（表->字段），保存时存进 viewHistory
   const [leftPanelSize, setLeftPanelSize] = useState<number | string>(220);
   const [saveForm] = Form.useForm();
   const { dataSourceList, getDatasourceList, getTableListBySource, tableList } = useDatasource();
@@ -62,12 +64,18 @@ export function Component() {
 
   const route = useRoute();
 
+  // 数据源ID统一转字符串：详情接口返回的 sourceId 是字符串，列表接口是数字，类型不一致会导致 Select 匹配不到选项而直接回显ID
+  const normalizedDataSourceList = useMemo(
+    () => dataSourceList.map((item: any) => ({ ...item, sourceId: String(item.sourceId) })),
+    [dataSourceList]
+  );
+
   const filterDataSourceList = useMemo(() => {
     if (collectionData.viewType === 'sql') {
-      return dataSourceList.filter((item: any) => item.sourceType !== 'Excel');
+      return normalizedDataSourceList.filter((item: any) => item.sourceType !== 'Excel');
     }
-    return dataSourceList;
-  }, [collectionData.viewType, dataSourceList]);
+    return normalizedDataSourceList;
+  }, [collectionData.viewType, normalizedDataSourceList]);
 
   const curDatasourceType = useMemo(() => {
     const curDatasource = filterDataSourceList.find((item: any) => item.sourceId === datasource);
@@ -76,14 +84,14 @@ export function Component() {
 
   const filterConfigOptions = useMemo(() => {
     if (datasource !== undefined) {
-      const cur = dataSourceList.find((item: any) => item.sourceId === datasource);
+      const cur = normalizedDataSourceList.find((item: any) => item.sourceId === datasource);
       if (cur?.sourceType === 'Excel') {
         return DATA_COLLECTION_CONFIG_TYPE_OPTIONS.filter(item => item.value !== 'sql');
       }
       return DATA_COLLECTION_CONFIG_TYPE_OPTIONS;
     }
     return DATA_COLLECTION_CONFIG_TYPE_OPTIONS;
-  }, [datasource, dataSourceList]);
+  }, [datasource, normalizedDataSourceList]);
 
   const isFromDatasource = route.query?.from === 'data-source';
   const isFromGuide = route.query?.from === 'guide'
@@ -120,13 +128,33 @@ export function Component() {
     setNodeData(formatData);
     setAllFields(res.data?.allFields || []);
     const sourceId = formatData.currentDs?.sourceId;
-    setDatasource(sourceId);
+    setDatasource(sourceId == null ? undefined : String(sourceId));
     if (res.data?.viewType === 'sql') {
       try {
         const sqlObj = JSON.parse(formatData.currentDs?.tableInfo);
         setSqlVal(sqlObj?.sql || '');
       } catch (error) {
         console.log(error);
+      }
+      // 回显「选择表」勾选：viewHistory 存平铺表结构 [{ currentDs, currentDsFields }]
+      try {
+        const structure = JSON.parse(res.data?.viewHistory || '[]');
+        if (Array.isArray(structure)) {
+          const selection: TableFieldSelection = {};
+          structure.forEach((node: any) => {
+            const tName = node?.currentDs?.tableName;
+            // 无效/假节点（自定义sql）跳过
+            if (tName && tName !== '自定义sql') {
+              selection[tName] = (node.currentDsFields || []).map((f: any) => ({
+                originName: f.originName,
+                comment: f.comment ?? f.name ?? ''
+              }));
+            }
+          });
+          setSqlTableSelection(selection);
+        }
+      } catch {
+        // 旧数据或格式异常，不回显勾选
       }
     }
   };
@@ -156,7 +184,7 @@ export function Component() {
 
   useEffect(() => {
     if (!datasource) return;
-    const curDatasource = dataSourceList.find((item: any) => item.sourceId === datasource);
+    const curDatasource = normalizedDataSourceList.find((item: any) => item.sourceId === datasource);
     setCurDatasource(curDatasource);
     if (curDatasource) {
       getTableListBySource({
@@ -165,7 +193,7 @@ export function Component() {
         spaceId: Number(localStorage.getItem('spaceId'))
       });
     }
-  }, [datasource, dataSourceList]);
+  }, [datasource, normalizedDataSourceList]);
 
   // 切换空间时退出编辑页，返回数据集列表页
   const prevSpaceIdRef = useRef(spaceId);
@@ -243,16 +271,25 @@ export function Component() {
           }
         }
     ];
+    // viewHistory 存「选择表」勾选的表结构（平铺，格式对齐快速创建的 union）；unionSql 保持原样
+    const tableStructure = Object.entries(sqlTableSelection).map(([tableName, selFields]) => ({
+      currentDs: {
+        sourceId: datasource,
+        tableName
+      },
+      currentDsFields: (selFields || []).map((f: any) => ({ ...f, checked: true }))
+    }));
     const paramsData = {
       ...collectionData,
       viewName: saveForm.getFieldValue('viewName'),
-      allFields: fields,
       spaceId,
       unionSql: JSON.stringify(unionData),
-      union: unionData
+      union: unionData,
+      viewHistory: JSON.stringify(tableStructure)
     };
 
-    const saveRes = await saveDataSet(paramsData);
+    // 新增走 addDataSet，编辑走 saveDataSet（同快速创建）；sql 模式不传 allFields
+    const saveRes = id && id !== '0' ? await saveDataSet(paramsData) : await addDataSet(paramsData);
     return saveRes?.response?.data?.code;
   };
 
@@ -318,11 +355,13 @@ export function Component() {
           setDatasource(val);
           setAllFields([]);
           setNodeData({});
+          setSqlTableSelection({});
         },
         title: '再次确认'
       });
     } else {
       setDatasource(val);
+      setSqlTableSelection({});
       const curDataSource = filterDataSourceList.find((item: any) => item.sourceId === val);
       setCurDatasource(curDataSource);
     }
@@ -336,16 +375,17 @@ export function Component() {
         <ACard className={styles.container}>
           <div className="relative h-full flex">
             <Splitter
-              style={{ flex: 1, minHeight: 0, height: '100%' }}
+              style={{ flex: 1, minWidth: 0, minHeight: 0, height: '100%' }}
               onResize={(sizes) => {
                 if (sizes && sizes[0]) {
                   setLeftPanelSize(sizes[0]);
                 }
               }}
             >
-                {/* 左边 - 使用 Splitter.Panel */}
+                {/* 左边 - 使用 Splitter.Panel；defaultSize 必须传数字，字符串会在首帧生成无单位的非法 flex-basis */}
                 <Splitter.Panel
-                  defaultSize="220"
+                  defaultSize={220}
+                  min={160}
                 >
                   <div className="relative h-full px-24px overflow-hidden" style={{
                     background: 'rgba(255, 255, 255, 0.5)',
@@ -477,6 +517,8 @@ export function Component() {
                               onRun={() => bottomSqlRef.current?.run()}
                               onSave={() => handleClickSave()}
                               onExit={() => push('/workbench/data-preparation/data-collection')}
+                              tableSelection={sqlTableSelection}
+                              onTableSelectionChange={setSqlTableSelection}
                             />
                           ) : (
                             <div style={{ height: '100%', width: '100%' }}>
@@ -485,7 +527,7 @@ export function Component() {
                           )}
                         </Splitter.Panel>
                         <Splitter.Panel
-                          defaultSize="300"
+                          defaultSize={300}
                           max="90%"
                           min="10%"
                         >

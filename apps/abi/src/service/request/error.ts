@@ -69,7 +69,8 @@ export function handleError(
 
   // get backend error message and code
   if (error.code === BACKEND_ERROR_CODE) {
-    message = error.response?.data?.msg || message;
+    // 部分旧接口（如 chat-proxy 的 llmeval）用 err_msg 字段返回错误信息，作为 msg 的兜底，保证只弹出一条真实报错
+    message = error.response?.data?.msg || (error.response?.data as any)?.err_msg || message;
     backendErrorCode = String(error.response?.data?.code || '');
   }
 

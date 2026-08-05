@@ -16,10 +16,47 @@ import type { ModelOption } from '../conversation/components/chat-header'
 import NewChatWelcome from './NewChatWelcome'
 import GroupSessionListView from './GroupSessionListView'
 import ChatInput from '../conversation/components/chat-input'
-import type { SemanticSelectedData } from '../conversation/components/chat-input'
+import type { ChatInputModeKey, SemanticSelectedData } from '../conversation/components/chat-input'
 import { message } from 'antd'
 import { getSpaceId } from '../../utils'
 import ConverList from './conver_list'
+import { hasSelectedConversationData } from '../conversation/components/chat-input/sendValidation'
+import { useSidebarCollapse } from '../layout/SidebarCollapseContext'
+
+// ── 模块级工作台缓存（跨组件卸载/重挂载保留，按 spaceId 区分）──
+// 技能商店 / 应用工坊为独立路由，进入后 ConversationAnalysis 会被卸载；
+// 切回对话时组件冷挂载，若无缓存会重新拉取 appList/模型/语义，产生 1-2s 加载遮罩。
+// 用模块级缓存保存这些数据，冷挂载时直接命中缓存即时渲染、仅静默刷新，体验与对话↔对话一致。
+interface WorkbenchCache {
+  appList: any[]
+  modelOptions: ModelOption[]
+  currentModel: ModelOption | null
+  embedModelId: string | number
+  modelLoaded: boolean
+  semanticTree: any[]
+  semanticLoaded: boolean
+}
+
+const workbenchCacheBySpace = new Map<number, WorkbenchCache>()
+
+function getWorkbenchCache(spaceId: number): WorkbenchCache | undefined {
+  if (Number.isNaN(spaceId)) return undefined
+  return workbenchCacheBySpace.get(spaceId)
+}
+
+function patchWorkbenchCache(spaceId: number, patch: Partial<WorkbenchCache>) {
+  if (Number.isNaN(spaceId)) return
+  const prev = workbenchCacheBySpace.get(spaceId) || {
+    appList: [],
+    modelOptions: [],
+    currentModel: null,
+    embedModelId: '',
+    modelLoaded: false,
+    semanticTree: [],
+    semanticLoaded: false,
+  }
+  workbenchCacheBySpace.set(spaceId, { ...prev, ...patch })
+}
 
 interface ConversationAnalysisProps {
   spaceId?: number
@@ -29,10 +66,25 @@ interface ConversationAnalysisProps {
 }
 
 const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false, groupId }) => {
+  // 冷挂载时优先用模块级缓存预解析初始值，避免重新拉取导致的加载闪烁
+  const initialSpaceId = propSpaceId !== undefined ? Number(propSpaceId) : getSpaceId()
+  const initialCache = getWorkbenchCache(initialSpaceId)
+  const initialApp = (() => {
+    if (routeChatId === 'new') return undefined
+    if (!initialCache?.appList?.length) return undefined
+    if (routeChatId) {
+      // 指定了会话：仅在缓存命中时预设，未命中不预设（避免闪现错误会话），等静默刷新后由切换 effect 归位
+      return initialCache.appList.find((item: any) => String(item.chat_id) === String(routeChatId))
+    }
+    const cachedChatId = localStorage.getItem('chatId') || ''
+    return (cachedChatId && initialCache.appList.find((item: any) => String(item.chat_id) === String(cachedChatId))) || initialCache.appList[0]
+  })()
+
+  const { collapseSidebar } = useSidebarCollapse()
   const [visible, setVisible] = useState(false)
-  const [curApp, setCurApp] = useState<any>({})
-  const [appList, setAppList] = useState<any[]>([])
-  const [curConv, setCurConv] = useState<any>()
+  const [curApp, setCurApp] = useState<any>(initialApp ? { ...initialApp } : {})
+  const [appList, setAppList] = useState<any[]>(initialCache?.appList || [])
+  const [curConv, setCurConv] = useState<any>(initialApp?.conv_uid ? { ...initialApp } : undefined)
   const [loading, setLoading] = useState(false)
   const lastSpaceIdRef = useRef<number | null>(null)
   const [isEdit, setIsEdit] = useState(false)
@@ -44,12 +96,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const converListRef = useRef<any>(null)
   const [fold, setFold] = useState(false)
   const justCreatedRef = useRef(false)
-  const [currentSpaceId, setCurrentSpaceId] = useState<number>(() => {
-    return propSpaceId !== undefined ? Number(propSpaceId) : getSpaceId()
-  })
+  const [currentSpaceId, setCurrentSpaceId] = useState<number>(() => initialSpaceId)
 
   // ── 统一输入框状态 ──
   const [convLoading, setConvLoading] = useState(false)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [selectedMode, setSelectedMode] = useState<ChatInputModeKey>('interact')
+  const [reportPreviewOpen, setReportPreviewOpen] = useState(false)
   const [deepThinkEnabled, setDeepThinkEnabled] = useState(false)
   const [uploadFileEnabled, setUploadFileEnabled] = useState(false)
   const [externalInputValue, setExternalInputValue] = useState('')
@@ -57,19 +110,26 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const [groupRefreshKey, setGroupRefreshKey] = useState(0)
   const chatHeaderRef = useRef<any>(null)
 
+  // 报告预览占用右侧空间时，幂等收起系统菜单，为双栏正文留出可读宽度。
+  // 关闭报告不自动展开，避免覆盖用户在预览期间主动选择的侧栏状态。
+  const handleReportPreviewChange = useCallback((open: boolean) => {
+    setReportPreviewOpen(open)
+    if (open) collapseSidebar()
+  }, [collapseSidebar])
+
   // ── 模型列表状态（全局加载一次）──
-  const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
-  const [currentModel, setCurrentModel] = useState<ModelOption | null>(null)
-  const [embedModelId, setEmbedModelId] = useState<string | number>('')
-  const modelLoadedRef = useRef(false)
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>(initialCache?.modelOptions || [])
+  const [currentModel, setCurrentModel] = useState<ModelOption | null>(initialCache?.currentModel || null)
+  const [embedModelId, setEmbedModelId] = useState<string | number>(initialCache?.embedModelId ?? '')
+  const modelLoadedRef = useRef(initialCache?.modelLoaded ?? false)
 
   // ── 数据语义状态（统一节点树，一次性拉取）──
-  const [semanticTree, setSemanticTree] = useState<any[]>([])
+  const [semanticTree, setSemanticTree] = useState<any[]>(initialCache?.semanticTree || [])
   const [expandedSemGroups, setExpandedSemGroups] = useState<Set<string>>(new Set())
   const [selectedData, setSelectedData] = useState<SemanticSelectedData | null>(null)
   const [selectedExcel, setSelectedExcel] = useState<any>(null)
   const [semLoading, setSemLoading] = useState(false)
-  const semGroupsLoadedRef = useRef(false)
+  const semGroupsLoadedRef = useRef(initialCache?.semanticLoaded ?? false)
 
   // ── 模型列表加载（只调一次）──
   useEffect(() => {
@@ -80,9 +140,11 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         const list = res?.data?.data || res?.data || []
         if (Array.isArray(list) && list.length > 0) {
           // 找到嵌入模型（从完整列表中查找）
+          let resolvedEmbedId: string | number = ''
           const embedModel = list.find((item: any) => item.modelKey === 'bge-large')
           if (embedModel) {
-            setEmbedModelId(embedModel.modelId ?? embedModel.id ?? embedModel.llmId)
+            resolvedEmbedId = embedModel.modelId ?? embedModel.id ?? embedModel.llmId
+            setEmbedModelId(resolvedEmbedId)
           }
           // 只筛选 status 为 1 的大模型（modelType='1' 为语言模型，排除 modelType='2' 向量/嵌入模型）
           const filteredList = list.filter(
@@ -94,19 +156,43 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
             label: item.modelName || item.model_name || item.llmModel || item.label || '',
             desc: item.remark || item.description || item.desc || '',
             isDefault: item.isDefault,
+            isSupportThinking: item.isSupportThinking,
           }))
           setModelOptions(options)
           if (options.length > 0) {
             setCurrentModel(options[0])
           }
+          // 写入模块级缓存，供切回对话时冷挂载直接命中
+          patchWorkbenchCache(currentSpaceId, {
+            modelOptions: options,
+            currentModel: options.length > 0 ? options[0] : null,
+            embedModelId: resolvedEmbedId,
+            modelLoaded: true,
+          })
         }
       })
       .catch(() => {})
   }, [currentSpaceId])
 
+  // 模型是否支持关闭思考（1 为支持，0 或其他为不支持）
+  const isSupportCloseThinking = useCallback((model: ModelOption | null | undefined) => {
+    return model?.isSupportThinking === 1 || model?.isSupportThinking === '1'
+  }, [])
+
   const handleModelChange = useCallback((model: ModelOption) => {
     setCurrentModel(model)
-  }, [])
+    // 不支持关闭思考的模型，强制开启思考且不允许用户关闭
+    if (!isSupportCloseThinking(model)) {
+      setDeepThinkEnabled(true)
+    }
+  }, [isSupportCloseThinking])
+
+  // 当前模型切换或初始默认模型设置后，若不支持关闭思考则强制点亮思考按钮
+  useEffect(() => {
+    if (currentModel && !isSupportCloseThinking(currentModel)) {
+      setDeepThinkEnabled(true)
+    }
+  }, [currentModel, isSupportCloseThinking])
 
   // ── 数据语义加载（分组树一次性返回，含各级子分组与数据语义叶子）──
   useEffect(() => {
@@ -116,7 +202,9 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     fetchSemanticTree({ spaceId: currentSpaceId })
       .then((res: any) => {
         const list = res?.data || res?.rows || []
-        setSemanticTree(Array.isArray(list) ? list : [])
+        const tree = Array.isArray(list) ? list : []
+        setSemanticTree(tree)
+        patchWorkbenchCache(currentSpaceId, { semanticTree: tree, semanticLoaded: true })
       })
       .catch(() => {})
       .finally(() => setSemLoading(false))
@@ -177,6 +265,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       })
       const data = sortAppList(res.data) || []
       setAppList(data)
+      patchWorkbenchCache(currentSpaceId, { appList: data })
       if (options?.silent) return res.data
       const chatId = localStorage.getItem('chatId') || ''
       const targetApp = (chatId && data.find((item: any) => String(item.chat_id) === String(chatId))) || data[0]
@@ -199,7 +288,9 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     if (currentSpaceId === null || Number.isNaN(currentSpaceId)) return
     if (lastSpaceIdRef.current === currentSpaceId) return
     lastSpaceIdRef.current = currentSpaceId
-    getAppList(routeChatId === 'new' ? { silent: true } : undefined)
+    // 命中缓存（冷挂载但曾进入过工作台）时静默刷新，避免加载遮罩；新对话也静默
+    const cached = getWorkbenchCache(currentSpaceId)
+    getAppList(routeChatId === 'new' || cached ? { silent: true } : undefined)
   }, [currentSpaceId, getAppList, routeChatId])
 
   useEffect(() => {
@@ -275,11 +366,12 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     }
   }, [curConv, creating, createNewConv])
 
-  const handleUnifiedSend = useCallback(async (value: string) => {
+  const handleUnifiedSend = useCallback(async (value: string, options?: { mode?: ChatInputModeKey }) => {
     if (creating) return
+    const sendMode = options?.mode || selectedMode
 
-    // 校验是否已选数据语义或 Excel 文件
-    if (!selectedData?.schemaId && !selectedExcel?.file_id) {
+    // 所有对话模式共享同一数据前置条件，报告模式不得绕过交互模式的校验。
+    if (!hasSelectedConversationData(selectedData, selectedExcel)) {
       message.warning('选择已有数据或上传excel，即可开始对话')
       return
     }
@@ -295,9 +387,40 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         : undefined,
     }
 
-    // 已有会话 → 直接通过 ref 发送
-    if (curConv && conversationRef.current) {
+    const sendByMode = () => {
+      if (sendMode === 'report') {
+        // 同一 Conversation 只统一展示；报告发送仍走独立异步任务接口。
+        if (!conversationRef.current?.handleReportSend) return false
+        conversationRef.current.handleReportSend(value)
+        return true
+      }
+
+      // 交互模式保持原实现，继续走 Conversation/useConversationController。
+      if (!conversationRef.current?.handleSend) return false
       conversationRef.current.handleSend(value, meta)
+      return true
+    }
+
+    const waitAndSend = (retries = 0, onSent?: () => void) => {
+      if (retries > 20) {
+        onSent?.()
+        return
+      }
+
+      requestAnimationFrame(() => {
+        if (sendByMode()) {
+          onSent?.()
+        } else {
+          setTimeout(() => waitAndSend(retries + 1, onSent), 50)
+        }
+      })
+    }
+
+    // 已有会话 → 按当前输入模式分流发送，两种消息保留在同一时间线。
+    if (curConv) {
+      if (!sendByMode()) {
+        waitAndSend()
+      }
       return
     }
 
@@ -313,26 +436,15 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         return
       }
 
-      // 等待 Conversation mount 后通过 ref 发送
-      const waitAndSend = (retries = 0) => {
-        if (retries > 20) { setCreating(false); return }
-        requestAnimationFrame(() => {
-          if (conversationRef.current?.handleSend) {
-            conversationRef.current.handleSend(value, meta)
-            setCreating(false)
-          } else {
-            setTimeout(() => waitAndSend(retries + 1), 50)
-          }
-        })
-      }
-      waitAndSend()
+      // 等待目标模式组件 mount 后通过 ref 发送。
+      waitAndSend(0, () => setCreating(false))
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
         message.error(err?.message || '创建会话失败')
       }
       setCreating(false)
     }
-  }, [curConv, creating, selectedData, selectedExcel, createNewConv])
+  }, [curConv, creating, selectedData, selectedExcel, selectedMode, createNewConv])
 
   // ── 回调 ──
   const handleSetCurApp = useCallback((item: any) => {
@@ -520,6 +632,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onClose={() => setCurConv(undefined)}
                 onUpdateList={handleUpdateList}
                 onLoadingChange={setConvLoading}
+                onReportLoadingChange={setReportLoading}
+                onReportPreviewChange={handleReportPreviewChange}
                 semanticId={selectedData?.schemaId}
                 selectedExcel={selectedExcel}
                 modelOptions={modelOptions}
@@ -527,6 +641,9 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onModelChange={handleModelChange}
                 embedModelId={embedModelId}
                 deepThinkEnabled={deepThinkEnabled}
+                spaceId={currentSpaceId}
+                // 当前会话 groupId 优先；路由 groupId 仅作为新会话兜底。
+                sessionGroupId={curConv?.groupId ?? curConv?.group_id ?? groupId}
                 onHistorySemanticLoaded={(data) => setSelectedData(data)}
               />
             ) : groupId ? (
@@ -543,15 +660,23 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
           {/* 统一输入框（永驻） */}
           <div className="composer-wrap">
-            <div className="max-w-[53.75rem] w-full m-auto">
+            <div className={`report-composer-shell max-w-[53.75rem] w-full ${reportPreviewOpen ? 'report-composer-split' : 'm-auto'}`}>
               <ChatInput
                 conv={curConv}
                 ensureConv={ensureConv}
-                loading={convLoading || creating}
+                loading={(selectedMode === 'report' ? reportLoading : convLoading) || creating}
                 onSend={handleUnifiedSend}
-                onStop={() => conversationRef.current?.stopGenerating()}
+                onStop={() => {
+                  if (selectedMode === 'report') {
+                    conversationRef.current?.stopReportGenerating()
+                    return
+                  }
+
+                  conversationRef.current?.stopGenerating()
+                }}
                 deepThinkEnabled={deepThinkEnabled}
                 uploadFileEnabled={uploadFileEnabled}
+                currentModel={currentModel}
                 onToggleDeepThink={() => setDeepThinkEnabled(!deepThinkEnabled)}
                 onToggleUploadFile={() => setUploadFileEnabled(!uploadFileEnabled)}
                 spaceId={currentSpaceId}
@@ -565,6 +690,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onToggleSemGroup={toggleSemGroup}
                 externalValue={externalInputValue}
                 onExternalValueConsumed={() => setExternalInputValue('')}
+                selectedModeKey={selectedMode}
+                onModeChange={setSelectedMode}
               />
             </div>
             <div className="chat-footer">内容由 AI 生成，请注意甄别</div>

@@ -270,11 +270,6 @@
   &--folder-open {
     color: #358cf3;
   }
-
-  &--leaf {
-    color: rgb(175, 209, 250);
-    font-size: 14px;
-  }
 }
 
 /* Tree title text */
@@ -323,5 +318,280 @@
       margin-bottom: 10px;
       font-size: 12px;
     }
+  }
+}
+
+/* ============================================================
+ * 添加/编辑分组 Modal — v5 玻璃态科技风格
+ * ============================================================ */
+
+/* ── Modal 标题 ── */
+.group-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.group-modal-title-icon {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 19px;
+  box-shadow: 0 4px 14px rgba(91, 124, 247, 0.35);
+  position: relative;
+
+  &::before {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    content: '';
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, transparent 100%);
+  }
+}
+
+.group-modal-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.group-modal-title-main {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a2744;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-modal-title-sub {
+  font-size: 12px;
+  color: #768a9f;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Modal 整体样式 ── */
+.group-modal-v5 {
+  .ant-modal {
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .ant-modal-content {
+    padding: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow:
+      0 8px 32px rgba(91, 124, 247, 0.12),
+      0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .ant-modal-header {
+    padding: 22px 28px 18px;
+    margin: 0;
+    background: linear-gradient(135deg, rgba(248, 250, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%);
+    border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+    backdrop-filter: blur(10px);
+  }
+
+  .ant-modal-body {
+    padding: 20px 28px;
+    background: linear-gradient(180deg, rgba(248, 250, 255, 0.3) 0%, rgba(255, 255, 255, 0.6) 100%);
+  }
+
+  .ant-modal-footer {
+    padding: 14px 28px 18px;
+    margin: 0;
+    border-top: 1px solid rgba(130, 140, 200, 0.10);
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(8px);
+  }
+
+  .ant-modal-close {
+    top: 18px;
+    right: 20px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba(91, 124, 247, 0.08);
+    }
+  }
+}
+
+/* ── 表单面板（玻璃态容器） ── */
+.group-modal-form-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(130, 140, 200, 0.15);
+  border-radius: 12px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.04);
+
+  /* 表单项 */
+  .ant-form-item {
+    margin-bottom: 18px;
+
+    .ant-form-item-label {
+      > label {
+        font-size: 13px;
+        font-weight: 500;
+        color: #4a5d78;
+
+        &.ant-form-item-required::before {
+          color: #5b7cf7;
+        }
+      }
+    }
+
+    /* 输入框 */
+    .ant-input,
+    .ant-input-number,
+    .ant-select-selector,
+    .ant-tree-select-selector {
+      border-radius: 8px !important;
+      border-color: rgba(130, 140, 200, 0.18) !important;
+      background: rgba(255, 255, 255, 0.55) !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+      &:hover {
+        border-color: #5b7cf7 !important;
+      }
+
+      &:focus,
+      &.ant-input-focused,
+      &.ant-select-focused .ant-select-selector {
+        border-color: #5b7cf7 !important;
+        background: rgba(255, 255, 255, 0.88) !important;
+        box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.1) !important;
+      }
+    }
+  }
+}
+
+/* ── 分区小标题 ── */
+.group-form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 0;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a2744;
+  letter-spacing: 0.02em;
+}
+
+.group-form-section-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  position: relative;
+  flex-shrink: 0;
+
+  &::before {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    content: '';
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+  }
+}
+
+/* ── 私密开关卡片 ── */
+.group-private-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: rgba(245, 247, 252, 0.8);
+  border: 1px solid rgba(130, 140, 200, 0.12);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 4px;
+
+  &:hover {
+    border-color: rgba(91, 124, 247, 0.2);
+    background: rgba(248, 250, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(91, 124, 247, 0.06);
+  }
+
+  &.is-active {
+    border-color: rgba(91, 124, 247, 0.3);
+    background: linear-gradient(135deg, rgba(91, 124, 247, 0.06) 0%, rgba(139, 92, 246, 0.04) 100%);
+    box-shadow: 0 2px 8px rgba(91, 124, 247, 0.08);
+  }
+}
+
+.group-private-card-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #3e5068;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.group-private-card-icon {
+  color: #8c8c8c;
+  font-size: 14px;
+  transition: color 0.2s;
+
+  .is-active & {
+    color: #5b7cf7;
+  }
+}
+
+/* ── Footer 按钮布局 ── */
+.group-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.group-modal-footer-actions {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* ── 删除按钮（编辑模式左下角） ── */
+.group-modal-btn-danger {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 13px;
+  border: 1px solid rgba(255, 77, 79, 0.25) !important;
+  color: #ff4d4f !important;
+  background: rgba(255, 77, 79, 0.04) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+  &:hover {
+    border-color: #ff4d4f !important;
+    background: rgba(255, 77, 79, 0.08) !important;
+    box-shadow: 0 2px 8px rgba(255, 77, 79, 0.15) !important;
   }
 }
