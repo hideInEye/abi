@@ -175,6 +175,8 @@ const ViewEle: React.FC<PropsType> = ({
   const [recData, setRecData] = useState<{ ask: string[]; root: string[]; forecast: string[] }>({ ask: [], root: [], forecast: [] });
   // 「换一批」批次计数（灯泡模式下循环用）
   const [recBatch, setRecBatch] = useState(0);
+  // 推荐问题后端业务错误信息（success: false 时的 err_msg）
+  const [recError, setRecError] = useState('');
   const [loading, setLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<{ data: any[]; columns: any[]; } | null>(null);
   // 添加图表相关的状态
@@ -659,8 +661,9 @@ const ViewEle: React.FC<PropsType> = ({
 
   // 调用推荐问题接口；普通推荐（不传 recommendChatMode）返回三类问题列表；
   // 归因=analysis、预测=forecast 时后端返回语义画像 metrics/dimensions/entities（供拼句面板用）
-  const fetchRecData = async (recommendChatMode = ''): Promise<{ ask: string[]; root: string[]; forecast: string[]; metrics: any[]; dimensions: any[]; entities: any[] } | null> => {
+  const fetchRecData = async (recommendChatMode = ''): Promise<{ ask: string[]; root: string[]; forecast: string[]; metrics: any[]; dimensions: any[]; entities: any[]; errMsg?: string } | null> => {
     if (!getRecommend) return null;
+    setRecError('');
     try {
       // 传入本轮次 order/roundIndex（供 hook 回填用户问题与实时选中语义）、回答内嵌的数据语义（历史对话用）以及推荐模式参数
       const res = await getRecommend({
@@ -669,6 +672,11 @@ const ViewEle: React.FC<PropsType> = ({
         semanticId: chartData?.semantic_id,
         recommendChatMode,
       });
+      // 后端业务错误（如未找到匹配的数据语义）：设置内联错误文本，风格与 rewrite/contextError 分支一致
+      if (res?.errMsg) {
+        setRecError(res.errMsg);
+        return null;
+      }
       return {
         ask: Array.isArray(res?.ask) ? res.ask : [],
         root: Array.isArray(res?.root) ? res.root : [],
@@ -1828,6 +1836,11 @@ const ViewEle: React.FC<PropsType> = ({
                       chatMode={chartData?.chat_mode}
                       content={chartData?.desc || chartData?.data_knowledge || ''}
                     />
+                  )}
+
+                  {/* 推荐问题 - 后端业务错误提示（沿用 contextError/rewrite 分支的内联文本风格） */}
+                  {recError && (
+                    <div className="w-full text-left px-6 py-4">{recError}</div>
                   )}
 
                   {/* 推荐问题 - 点击底部灯泡后，直接在当前回答下方内嵌展示 */}

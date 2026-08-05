@@ -147,24 +147,178 @@
 /* ============ 标题区 ============ */
 .titleSection { margin-bottom: 24px; }
 .strategyLabel { color: var(--attr-muted); font-size: 13px; margin-bottom: 6px; font-weight: 500; }
-.h1 { font-weight: 800; font-size: 24px; margin: 0 0 10px; letter-spacing: -0.02em; }
+.h1 { font-weight: 800; font-size: 20px; margin: 0 0 10px; letter-spacing: -0.02em; }
 .accent { color: var(--attr-accent); }
 .desc { color: var(--attr-muted); max-width: 640px; line-height: 1.6; margin: 0; font-size: 13px; }
-.modeList { margin-top: 10px; font-size: 11px; color: var(--attr-muted-2); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
 
 .h2 { font-weight: 700; font-size: 20px; margin: 0 0 4px; }
 .panelHead { margin-bottom: 20px; }
 .panelDesc { font-size: 13px; color: var(--attr-muted); margin: 4px 0 0; }
 
-/* ============ 指标卡片 ============ */
+/* ============ 指标卡片（参考 ABI 主页 stat-card-v2 风格） ============ */
 .metricStrip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; align-items: stretch; }
-.metricCard { padding: 16px; min-width: 0; overflow: hidden; }
-.metricLabel { font-size: 11px; color: var(--attr-muted-2); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.metricValue { font-weight: 700; font-size: 22px; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.metricDec { font-size: 13px; color: var(--attr-muted); font-weight: 600; }
-.metricMuted { color: var(--attr-muted); white-space: normal; }
-.metricSub { font-size: 12px; color: var(--attr-muted); line-height: 1.4; }
-.metricAnomaly { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+
+.metricCard {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 16px 16px;
+  min-width: 0;
+  min-height: 128px;
+  background: linear-gradient(165deg, #FCFDFF 0%, #F5F7FD 52%, #ECEFFB 100%);
+  border: 1px solid rgba(125, 138, 185, 0.16);
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgba(70, 85, 140, 0.05),
+    0 4px 16px rgba(70, 85, 140, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.metricCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(110, 128, 200, 0.36);
+  box-shadow:
+    0 14px 36px rgba(72, 88, 156, 0.16),
+    0 4px 12px rgba(72, 88, 156, 0.08),
+    inset 0 0 0 1px rgba(120, 140, 210, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.metricGlow {
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  filter: blur(36px);
+  opacity: 0.12;
+  transition: opacity 0.35s;
+  pointer-events: none;
+}
+.metricCard:hover .metricGlow { opacity: 0.22; }
+
+.metricGridBg {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(160, 150, 130, 0.08) 1px, transparent 1px);
+  background-size: 16px 16px;
+  pointer-events: none;
+}
+
+.metricIndex {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(140, 130, 115, 0.20);
+  pointer-events: none;
+  transition: color 0.3s;
+}
+.metricCard:hover .metricIndex { color: rgba(140, 130, 115, 0.35); }
+
+.metricTitle {
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.metricCardInner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 6px;
+}
+
+.metricIcon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.metricIcon svg {
+  width: 18px;
+  height: 18px;
+  stroke: #fff;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.metricInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.metricNum {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.metricNumDec { font-size: 12px; font-weight: 600; color: currentColor; opacity: 0.7; }
+
+.metricSub {
+  font-size: 11px;
+  color: var(--attr-muted-2);
+  line-height: 1.4;
+  position: relative;
+  z-index: 1;
+}
+
+.metricAccentLine {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  margin-top: auto;
+  opacity: 0.45;
+  transition: opacity 0.35s, width 0.35s;
+  width: 40%;
+}
+.metricCard:hover .metricAccentLine { opacity: 0.85; width: 60%; }
+
+/* 语义配色：标题/图标/光晕/底线固定 4 色，数值颜色由 TSX 按文案语义控制 */
+.metricCard.metricBlue .metricTitle { color: #5b7cf7; }
+.metricCard.metricBlue .metricIcon { background: linear-gradient(135deg, #5b7cf7, #6d8dfa); box-shadow: 0 3px 10px rgba(91, 124, 247, 0.25); }
+.metricCard.metricBlue .metricGlow { background: #5b7cf7; }
+.metricCard.metricBlue .metricAccentLine { background: linear-gradient(90deg, #5b7cf7, transparent); }
+
+.metricCard.metricPurple .metricTitle { color: #8b5cf6; }
+.metricCard.metricPurple .metricIcon { background: linear-gradient(135deg, #8b5cf6, #a78bfa); box-shadow: 0 3px 10px rgba(139, 92, 246, 0.25); }
+.metricCard.metricPurple .metricGlow { background: #8b5cf6; }
+.metricCard.metricPurple .metricAccentLine { background: linear-gradient(90deg, #8b5cf6, transparent); }
+
+.metricCard.metricGreen .metricTitle { color: #10b981; }
+.metricCard.metricGreen .metricIcon { background: linear-gradient(135deg, #10b981, #34d399); box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25); }
+.metricCard.metricGreen .metricGlow { background: #10b981; }
+.metricCard.metricGreen .metricAccentLine { background: linear-gradient(90deg, #10b981, transparent); }
+
+.metricCard.metricOrange .metricTitle { color: #f59e0b; }
+.metricCard.metricOrange .metricIcon { background: linear-gradient(135deg, #f59e0b, #fbbf24); box-shadow: 0 3px 10px rgba(245, 158, 11, 0.25); }
+.metricCard.metricOrange .metricGlow { background: #f59e0b; }
+.metricCard.metricOrange .metricAccentLine { background: linear-gradient(90deg, #f59e0b, transparent); }
 
 @media (max-width: 720px) { .metricStrip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 

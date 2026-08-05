@@ -1651,6 +1651,12 @@ export const useConversationController = (
       // ask=问数(ask_data)，root=归因(root_cause_analysis)，forecast=预测(forecast)
       // 归因/预测模式（recommend_chat_mode=analysis/forecast）下后端额外返回语义画像
       // metrics/dimensions/entities，供前端像意图澄清一样拼句发送
+
+      // 检测后端业务错误（success: false + err_msg），将错误信息透传给调用方
+      if (res && res.success === false && res.err_msg) {
+        return { ask: [], root: [], forecast: [], metrics: [], dimensions: [], entities: [], errMsg: res.err_msg }
+      }
+
       const data = res?.data || res || {}
       return {
         ask: Array.isArray(data.ask_data) ? data.ask_data : [],
