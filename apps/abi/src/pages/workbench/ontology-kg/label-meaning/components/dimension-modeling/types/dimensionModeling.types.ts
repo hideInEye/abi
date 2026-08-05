@@ -3,20 +3,48 @@ import type { TableSemanticParams } from '@/pages/workbench/data-preparation/dat
 export type DimensionType = 'std' | 'time'
 
 export interface DimensionGroup {
-  groupId: number
+  groupId: number | string
   groupName?: string
 }
 
 export interface DimensionFieldOption {
   bizName: string
+  fieldName?: string
   fieldType?: string
   key: string
   originName?: string
+  rtableName?: string
   relViewId?: number | string
   sourceId?: string
   sourceTableName?: string
+  tableName?: string
+  tableRemarks?: string
+  tdesc?: string
   techId: string
+  techName?: string
+  tfieldName?: string
   timeFormat?: string
+}
+
+export interface DimensionBatchMappingRow {
+  disabled?: boolean
+  dimType: DimensionType
+  field: DimensionFieldOption
+  fieldType?: string
+  key: string
+  relSchemaId: number | string
+  relViewId?: number | string
+  semanticSchemaName: string
+  semanticsGroupId?: number | string
+}
+
+export interface DimensionBatchCreatePayloadItem {
+  spaceId: number
+  techId: DimensionFieldOption[]
+  semanticsGroupId?: number | string
+  groupId?: number | string
+  relSchemaId: number | string
+  relViewId?: number | string
 }
 
 export interface DimensionHierarchyNode {
@@ -58,7 +86,7 @@ export interface DimensionModelItem {
   englishName: string
   createBy?: string
   createTime?: string
-  groupId?: number
+  groupId?: number | string
   groupName?: string
   id: number
   levelPath?: string
@@ -97,7 +125,7 @@ export interface DimensionFormValues {
   dimType: DimensionType
   drillDirection?: string
   englishName: string
-  groupId?: number
+  groupId?: number | string
   id?: number
   owner: string
   ownerEmail?: string

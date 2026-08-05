@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   addDimensionModel,
+  batchCreateDimensionModels,
   deleteDimensionModelBatch,
   deleteDimensionModel,
   editDimensionHierarchy,
@@ -14,6 +15,7 @@ import {
 
 import type {
   DimensionFieldOption,
+  DimensionBatchMappingRow,
   DimensionFormValues,
   DimensionGroup,
   DimensionHierarchyEditItem,
@@ -24,6 +26,7 @@ import type {
 } from '../types/dimensionModeling.types'
 import {
   buildSubmitPayload,
+  buildDimensionBatchCreatePayload,
   getApiErrorMessage,
   isApiSuccess,
   mapDimensionFromApi,
@@ -80,6 +83,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   const [tableData, setTableData] = useState<DimensionModelItem[]>([])
   const [pagination, setPagination] = useState<DimensionPagination>(initialPagination)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [batchDrawerOpen, setBatchDrawerOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<DimensionModelItem | null>(null)
   const [hierarchyOpen, setHierarchyOpen] = useState(false)
   const [hierarchyTarget, setHierarchyTarget] = useState<DimensionModelItem | null>(null)
@@ -181,6 +185,14 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     setDrawerOpen(true)
   }
 
+  const handleAddBatch = () => {
+    if (!selectedGroup?.groupId) {
+      message.error('请先选择维度分组')
+      return
+    }
+    setBatchDrawerOpen(true)
+  }
+
   const handleEdit = async (record: DimensionModelItem) => {
     const id = Number(record.id)
     if (!id) {
@@ -259,6 +271,34 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     return true
   }
 
+  const handleBatchMappingSubmit = async (rows: DimensionBatchMappingRow[], semanticsGroupId?: number | string) => {
+    const selectedRows = rows.filter(item => !item.disabled)
+    if (!selectedRows.length) {
+      message.warning('请选择未生成的维度字段')
+      return false
+    }
+
+    const payload = buildDimensionBatchCreatePayload({
+      rows: selectedRows,
+      selectedGroupId: selectedGroup?.groupId,
+      semanticsGroupId
+    })
+    if (!payload.length) {
+      message.warning('请选择未生成的维度字段')
+      return false
+    }
+
+    const res = await batchCreateDimensionModels(payload)
+    if (!isApiSuccess(res)) {
+      message.error(getApiErrorMessage(res, '维度批量映射保存失败'))
+      return false
+    }
+
+    message.success(`已生成 ${payload.length} 个维度`)
+    await fetchTableData()
+    return true
+  }
+
   const handlePaginationChange = (page: number, pageSize: number) => {
     const nextPagination = {
       pageNum: page,
@@ -321,13 +361,24 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     }
   }
 
+  const closeBatchDrawer = (refresh?: boolean) => {
+    setBatchDrawerOpen(false)
+    if (refresh) {
+      fetchTableData()
+    }
+  }
+
   return {
+    batchDrawerOpen,
+    closeBatchDrawer,
     closeDrawer,
     closeHierarchyModal,
     drawerOpen,
     editingItem,
     handleAdd,
+    handleAddBatch,
     handleBatchDelete,
+    handleBatchMappingSubmit,
     handleDelete,
     handleEdit,
     handlePaginationChange,

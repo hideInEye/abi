@@ -178,13 +178,13 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       setDisabledRowKeys(disabledKeys)
       setSelectedRowKeys(options?.keepExistingSelection ? disabledKeys : [])
       if (!nextRows.length) {
-        message.warning('当前表语义下没有可映射的度量字段')
+        message.warning('当前数据语义下没有可映射的度量字段')
       }
     } catch {
       setFieldRows([])
       setSelectedRowKeys([])
       setDisabledRowKeys([])
-      message.error('查询表语义字段失败')
+      message.error('查询数据语义字段失败')
     } finally {
       setLoadingFields(false)
     }
