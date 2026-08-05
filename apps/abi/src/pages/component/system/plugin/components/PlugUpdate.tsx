@@ -7,6 +7,7 @@ import type { McpForm, McpSecurityScheme, McpSecurityExtensions, McpToolItem, Pl
 import { CreateToolModal } from './CreateToolModal'
 import { ImportOpenApiModal } from './ImportOpenApiModal'
 import { SecuritySchemeSection } from './SecuritySchemeSection'
+import { getPlatformBearerToken } from '../utils'
 
 interface PlugUpdateProps {
   readonly currentEdit: PluginItem | null
@@ -104,7 +105,11 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
         protocol: protocolValue,
       })
 
-      setSecuritySchemes(currentEdit.toolSpec?.securitySchemes || [])
+      setSecuritySchemes(
+        (currentEdit.toolSpec?.securitySchemes || []).map((s) =>
+          s.type === 'http' && s.scheme === 'bearer' ? { ...s, defaultCredential: getPlatformBearerToken() } : s
+        )
+      )
       setSecurityExtensions((currentEdit.toolSpec?.extensions as any) || {})
       const toolsMeta = currentEdit.toolSpec?.toolsMeta || {}
       setTools(
