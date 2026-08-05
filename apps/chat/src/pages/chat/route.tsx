@@ -25,7 +25,6 @@ const WORKSHOP_ROUTE = '/chat/workshop'
 
 const { Content, Sider } = Layout
 const appLogoUrl = new URL('../../assets/imgs/home_logo.png', import.meta.url).href
-const ROUTE_LOADING_MIN_DURATION = 420
 
 export const Route = createFileRoute('/chat')({
   component: ChatWorkbenchLayout,
@@ -37,7 +36,6 @@ function ChatWorkbenchLayout() {
 
   const [collapsed, setCollapsed] = useState(false)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
-  const [routeLoading, setRouteLoading] = useState(true)
   const [newChatNonce, setNewChatNonce] = useState(0)
   const [scheduleOpen, setScheduleOpen] = useState(false)
 
@@ -61,29 +59,6 @@ function ChatWorkbenchLayout() {
   useEffect(() => {
     document.title = pageTitle
   }, [pageTitle])
-
-  useEffect(() => {
-    if (showSkillStore || showWorkshop) {
-      setRouteLoading(false)
-      return
-    }
-
-    setRouteLoading(true)
-
-    let frameId = 0
-    const timerId = window.setTimeout(() => {
-      frameId = window.requestAnimationFrame(() => {
-        setRouteLoading(false)
-      })
-    }, ROUTE_LOADING_MIN_DURATION)
-
-    return () => {
-      window.clearTimeout(timerId)
-      if (frameId) {
-        window.cancelAnimationFrame(frameId)
-      }
-    }
-  }, [pathname, showSkillStore, showWorkshop])
 
   const handleToggleCollapse = useCallback(() => {
     setCollapsed((previousCollapsed) => !previousCollapsed)
@@ -202,20 +177,8 @@ function ChatWorkbenchLayout() {
               <Outlet />
             </Fragment>
           </SidebarCollapseProvider>
-          {routeLoading && <ChatRouteLoading />}
         </Content>
       </Layout>
     </Layout>
-  )
-}
-
-function ChatRouteLoading() {
-  return (
-    <div className="chat-route-loading" role="status" aria-label="加载中">
-      <div className="chat-route-loading__inner">
-        <div className="chat-route-loading__spinner" />
-        <span className="chat-route-loading__text">加载中...</span>
-      </div>
-    </div>
   )
 }

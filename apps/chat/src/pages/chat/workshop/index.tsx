@@ -8,10 +8,6 @@ import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { fetchFavoriteList, fetchOperateRecordList } from '@/service/api/abi-system'
 
-export const Route = createFileRoute('/chat/workshop/')({
-  component: WorkshopView,
-})
-
 /** 应用工坊 tab 顺序：最近使用、我的收藏、我的分享、我的分析、我的报告 */
 const WORKSHOP_TABS = [
   { key: 'recently-used', label: '最近使用' },
@@ -383,3 +379,7 @@ function WorkshopView() {
     </div>
   )
 }
+
+export const Route = createFileRoute('/chat/workshop/')({
+  component: WorkshopView,
+})
