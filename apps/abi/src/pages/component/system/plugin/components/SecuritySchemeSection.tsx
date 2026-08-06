@@ -1,4 +1,5 @@
-import type { McpSecurityScheme, McpSecurityExtensions } from '@/types/plug';
+import { getToken } from '@/store/slice/auth/shared';
+import type { McpSecurityExtensions, McpSecurityScheme } from '@/types/plug';
 
 interface SecuritySchemeSectionProps {
   readonly schemes: McpSecurityScheme[];
@@ -26,10 +27,12 @@ export const SecuritySchemeSection = ({
   };
 
   const addScheme = () => {
+    const token = getToken();
     const next: McpSecurityScheme = {
       id: `securityScheme_${schemes.length + 1}`,
       type: 'http',
-      scheme: 'bearer'
+      scheme: 'bearer',
+      defaultCredential: token ? `Bearer ${token}` : ''
     };
     onSchemesChange([...schemes, next]);
   };
@@ -39,7 +42,12 @@ export const SecuritySchemeSection = ({
   };
 
   const updateScheme = (idx: number, patch: Partial<McpSecurityScheme>) => {
-    onSchemesChange(schemes.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+    const merged = { ...schemes[idx], ...patch };
+    if (merged.type === 'http' && merged.scheme === 'bearer') {
+      const token = getToken();
+      merged.defaultCredential = token ? `Bearer ${token}` : '';
+    }
+    onSchemesChange(schemes.map((s, i) => (i === idx ? merged : s)));
   };
 
   const cardStyle: React.CSSProperties = {
@@ -189,7 +197,7 @@ export const SecuritySchemeSection = ({
           <div style={{ marginTop: 12 }}>
             <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>默认凭证</div>
             <AInput
-              placeholder="默认凭证值"
+              placeholder={scheme.scheme === 'bearer' ? '已自动填充平台当前登录凭证，可手动修改' : '默认凭证值'}
               value={scheme.defaultCredential}
               onChange={e => updateScheme(idx, { defaultCredential: e.target.value })}
             />

@@ -778,3 +778,40 @@ ABI 72px global-sider 使用 `rgba(255, 255, 255, 0.38)` 半透明背景时，�
 - 邮件记录高级筛选选择任务状态后列表不立即变化，点击「查询」后才按状态过滤。
 - 点击「重置」后状态筛选与时间范围均清空并恢复全量列表。
 - tsc 不新增报错。
+
+## 2026-08-05 追加：MCP 编辑页 bearer 模式自动使用平台 token
+
+### 需求类型
+
+前端交互调整（纯前端，不改接口协议）。
+
+### 背景
+
+MCP 服务编辑页「安全认证方案」中，当认证类型为 HTTP 且 Scheme 选择 bearer 时，需要手动在「默认凭证」输入框填写 token。用户要求改为自动使用当前平台登录 token，无需手动填写。
+
+### 目标
+
+- MCP 编辑页中，安全认证方案的类型为 `http` 且 scheme 为 `bearer` 时，「默认凭证」自动填充为当前平台的 Authorization header（格式 `Bearer ${token}`）。
+- bearer 模式下「默认凭证」仍允许手动修改；未手动修改时默认使用平台当前 token。
+- 提交保存时，bearer 方案将当前 `defaultCredential` 值传给接口。
+
+### 非目标
+
+- 不修改 basic、apiKey 等其他认证模式的凭证填写方式。
+- 不修改安全认证方案的其他字段（ID、认证类型、scheme 选项）。
+- 不修改 MCP 列表、详情、删除、状态切换逻辑。
+- 不修改后端接口协议。
+
+### 影响范围预期
+
+- `apps/abi/src/pages/component/system/plugin/components/SecuritySchemeSection.tsx`
+- `apps/abi/src/pages/component/system/plugin/components/PlugUpdate.tsx`
+- `.ai/runs/2026-08-05-mcp-bearer-token-auto-fill/`
+
+### 验收标准
+
+- 新增/编辑 MCP 服务时，只要安全认证 scheme 为 bearer，「默认凭证」自动显示为当前平台 `Bearer xxx`，且允许手动修改。
+- 从 basic 切换到 bearer 时，「默认凭证」自动填充当前平台 token。
+- 编辑回显已有 bearer 方案时，defaultCredential 自动同步为当前平台 token。
+- 提交报文中 bearer 方案的 `defaultCredential` 为当前平台 Authorization header。
+- tsc 不新增报错。
