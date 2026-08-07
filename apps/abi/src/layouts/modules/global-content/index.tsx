@@ -7,7 +7,7 @@ import { useRequest } from '@sa/hooks';
 import { spaceList } from '@/service/api/data-space';
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
 
-import { getReloadFlag, getSpaceId } from '@/store/slice/app'
+import { changeSpaceId, getReloadFlag, getSpaceId } from '@/store/slice/app'
 import { getRemoveCacheKey, selectCacheRoutes } from '@/store/slice/route'
 import { getThemeSettings } from '@/store/slice/theme'
 import { GLOBAL_SIDER_MENU_ID, hideMenuRoute } from '@/constants/app'
@@ -140,6 +140,41 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
       setCurrentSpace(currentSpaceId);
     }
   }, [currentSpaceId]);
+
+  // 窗口重新获得焦点或用户交互时，从 localStorage 同步最新 spaceId
+  // 处理 Chat 等其他应用切换空间后回到管理端的场景（跨 tab / 同 tab 微应用均覆盖）
+  const dispatch = useAppDispatch();
+  useEffect(() => {
+    const syncSpaceId = () => {
+      try {
+        const saved = localStorage.getItem('spaceId');
+        if (saved) {
+          const sid = Number(saved);
+          if (sid > 0 && sid !== currentSpaceId) {
+            dispatch(changeSpaceId(sid));
+            setCurrentSpace(sid);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+    // 跨 tab 切换回来时触发
+    const handleVisibilityChange = () => {
+      if (!document.hidden) syncSpaceId();
+    };
+    // 同 tab 内微应用场景：用户点击管理区域时检测 localStorage 变化
+    const handleClick = () => syncSpaceId();
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', syncSpaceId);
+    document.addEventListener('click', handleClick, true);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', syncSpaceId);
+      document.removeEventListener('click', handleClick, true);
+    };
+  }, [dispatch, currentSpaceId]);
 
   const handleSpaceClick = async (spaceId: number, spaceName: string) => {
     // 点击当前已选中的空间，仅关闭下拉
