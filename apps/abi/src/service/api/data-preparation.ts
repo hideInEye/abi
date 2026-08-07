@@ -1,10 +1,7 @@
-import { fetchEventSource } from '@microsoft/fetch-event-source';
-import type { EventSourceMessage } from '@microsoft/fetch-event-source';
-
 import { localStg } from '@/utils/storage';
 
 import { apiRequest } from '../request';
-import { getAuthorization, getUserId } from '../request/shared';
+import { getUserId } from '../request/shared';
 
 // 从本地登录信息取当前用户 ID：优先 userInfo.userId（登录接口可能不返回 userId，单独存的 userId 会是空串）
 function getCurrentUserId(): number {
@@ -224,7 +221,7 @@ export async function queryLineageRelationList(data: any) {
   });
 }
 
-interface StreamSqlTemplateOptions {
+interface GenerateSqlParams {
   /** 自然语言描述 */
   messages: string;
   /** 数据源 ID（必传） */
@@ -233,21 +230,18 @@ interface StreamSqlTemplateOptions {
   sourceType: string;
   /** 数据库名（必传，取自数据源 configuration.dbName） */
   dbName: string;
-  signal?: AbortSignal;
-  onmessage?: (event: EventSourceMessage) => void;
-  onclose?: () => void;
-  onerror?: (err: any) => void;
+  /** 选择表勾选的表名列表 */
+  tables?: string[];
 }
 
 /**
- * 数据集 SQL 模式：自然语言生成 SQL（SSE 流式）
- * 除 messages 与 source_id/source_type/db_name 外，其余参数均为固定默认值
+ * 数据集 SQL 模式：自然语言生成 SQL（非流式）
+ * 返回 data.items 即为生成的 SQL 语句
  */
-export function streamSqlTemplate({ messages, sourceId, sourceType, dbName, signal, onmessage, onclose, onerror }: StreamSqlTemplateOptions) {
-  const authorization = getAuthorization();
+export async function generateSql({ messages, sourceId, sourceType, dbName, tables }: GenerateSqlParams) {
   const body = {
     model: 'Qwen3.7-max',
-    stream: true,
+    stream: false,
     temperature: 0,
     max_new_tokens: 4096,
     incremental: true,
@@ -259,33 +253,23 @@ export function streamSqlTemplate({ messages, sourceId, sourceType, dbName, sign
       user_id: getCurrentUserId(),
       chat_mode: 'chat_with_db_execute',
       embed_model_id: 6,
+      conv_uid: `sql-${Date.now()}`,
       extra: {
         extra_body: {
           enable_thinking: false
         },
         source_id: sourceId,
         source_type: sourceType,
-        db_name: dbName
+        db_name: dbName,
+        tables: tables || []
       }
     },
     messages
   };
 
-  return fetchEventSource('/api/abi-ontology/api/v2/workflow/chat/completions/sql-template', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(authorization ? { Authorization: authorization } : {})
-    },
-    body: JSON.stringify(body),
-    signal,
-    openWhenHidden: true,
-    onmessage,
-    onclose,
-    onerror(err) {
-      onerror?.(err);
-      // 抛出错误终止 fetchEventSource 默认的自动重试
-      throw err;
-    }
+  return await apiRequest<any>({
+    method: 'post',
+    data: body,
+    url: '/api/chat-proxy/api/v2/workflow/chat/completions/sql-template'
   });
 }

@@ -199,6 +199,35 @@ const extractTrailingJson = (content: string): any => {
 }
 
 /**
+ * chat_with_knowledge（数据知识）场景：流式 content 是一个以 "thoughts" 为首字段的 JSON 对象
+ * （{ "thoughts": "…", "chat_mode": "chat_with_knowledge", "data_knowledge": "…" }），
+ * 没有 ## 思考过程 / ## 查询模式 标记，不会被 processContentWithInlineThinking 包成 <think>。
+ * 此处从流式累积的原始内容中增量提取 thoughts 字段值，作为深度思考内容逐字展示。
+ * 仅识别「以 { "thoughts": " 开头」的内容，天然排除 chat_with_db_execute（以 ## 思考过程 开头）。
+ * @param raw 流式累积的原始内容（messageRef.current）
+ * @returns thoughts 文本（值未闭合时为已到达部分）；非该结构时返回 null
+ */
+const extractKnowledgeThoughts = (raw: string): string | null => {
+  if (!raw) return null
+  const startMatch = raw.match(/^\s*\{\s*"thoughts"\s*:\s*"/)
+  if (!startMatch) return null
+
+  let result = ''
+  for (let i = startMatch[0].length; i < raw.length; i++) {
+    const ch = raw[i]
+    if (ch === '\\') {
+      // 保留转义序列原文，交由下游统一反转义（\n、\"）
+      result += ch + (raw[i + 1] ?? '')
+      i++
+      continue
+    }
+    if (ch === '"') break // thoughts 值结束
+    result += ch
+  }
+  return result
+}
+
+/**
  * 将历史消息接口（/abi-chat/v1/app/message/query）返回的消息
  * 映射为内部渲染所需的统一格式（role / context / order / roundIndex）
  */
@@ -1167,8 +1196,12 @@ export const useConversationController = (
               const thinkTimeMs = endTime - startTimeRef.current
               const calculatedThinkTime = Math.round(thinkTimeMs / 1000)
 
+              // chat_with_knowledge（数据知识）：thoughts 作为思考内容展示，但 messageRef 中无
+              // </think> 标记，需显式结束思考态并记录思考用时，保持与其他模式一致的“思考了 Xs”。
               const parts = messageRef.current.split('</think>')
-              if (parts.length > 1) {
+              // thoughts 为后端结构化字段，不受深度思考开关影响始终下发，故不依赖 currentDeepThinkEnabled
+              const isKnowledgeThoughts = extractKnowledgeThoughts(messageRef.current) !== null
+              if (parts.length > 1 || isKnowledgeThoughts) {
                 updateAiMessage({
                   smLoading: false,
                   isDone: true,
@@ -1472,21 +1505,30 @@ export const useConversationController = (
               }
             }
 
-            // 提取当前显示内容（<think>...</think> 内部）
+            // 提取当前显示内容
+            // chat_with_knowledge（数据知识）：content 为以 thoughts 为首字段的 JSON，
+            // 无 ## 思考过程标记不会生成 <think>，此处把 thoughts 作为思考内容流式展示。
+            // thoughts 是后端结构化字段（非 reasoning_content 门控），无论是否开启深度思考都会下发，
+            // 因此不依赖 currentDeepThinkEnabled 始终提取；正则只匹配「{ "thoughts": "」开头，不影响其他模式。
             let displayMessage = ''
-            const lastOpen = messageRef.current.lastIndexOf('<think>')
-            if (lastOpen >= 0) {
-              displayMessage = messageRef.current.substring(lastOpen + 7)
-              const closeIdx = displayMessage.indexOf('</think>')
-              if (closeIdx >= 0) {
-                displayMessage = displayMessage.substring(0, closeIdx)
+            const knowledgeThoughts = extractKnowledgeThoughts(messageRef.current)
+            if (knowledgeThoughts !== null) {
+              displayMessage = knowledgeThoughts.replace(/\\"/g, '"')
+            } else {
+              const lastOpen = messageRef.current.lastIndexOf('<think>')
+              if (lastOpen >= 0) {
+                displayMessage = messageRef.current.substring(lastOpen + 7)
+                const closeIdx = displayMessage.indexOf('</think>')
+                if (closeIdx >= 0) {
+                  displayMessage = displayMessage.substring(0, closeIdx)
+                }
               }
+              displayMessage = displayMessage.replace(/round_index:\d+,?\s*/, '')
+              displayMessage = displayMessage.replace(/sub_chat_mode:\w+,?\s*/, '')
+              // 剥离 illegal_query 包裹：提示语可能内嵌英文双引号，需用 [\s\S]* 贪婪匹配到末尾引号，
+              // 避免因内嵌引号提前截断导致展示与实际数据不一致。
+              displayMessage = displayMessage.replace(/"illegal_query":\s*"([\s\S]*?)"?\s*$/, '$1')
             }
-            displayMessage = displayMessage.replace(/round_index:\d+,?\s*/, '')
-            displayMessage = displayMessage.replace(/sub_chat_mode:\w+,?\s*/, '')
-            // 剥离 illegal_query 包裹：提示语可能内嵌英文双引号，需用 [\s\S]* 贪婪匹配到末尾引号，
-            // 避免因内嵌引号提前截断导致展示与实际数据不一致。
-            displayMessage = displayMessage.replace(/"illegal_query":\s*"([\s\S]*?)"?\s*$/, '$1')
             setCurrentMessage(displayMessage.replace(/\\n/g, '\n'))
           }
         },

@@ -5,7 +5,7 @@ import { format } from 'sql-formatter';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type * as Monaco from 'monaco-editor';
 
-import { getFieldByDataSource, streamSqlTemplate } from '@/service/api';
+import { getFieldByDataSource, generateSql } from '@/service/api';
 
 import TableFieldPickerDrawer, { type TableFieldSelection } from './TableFieldPickerDrawer';
 
@@ -66,23 +66,6 @@ function parseTableAliasMap(sql: string, tableList: Array<{ tableName: string }>
 }
 
 /**
- * 从 AI 流式回复中提取 SQL：优先 ```sql 围栏代码块，其次 "sql" JSON 字段，否则返回全文
- */
-function extractSqlFromAiText(text: string): string {
-  const fenced = text.match(/```sql\s*([\s\S]*?)```/i) || text.match(/```\s*([\s\S]*?)```/);
-  if (fenced?.[1]?.trim()) return fenced[1].trim();
-  const jsonField = text.match(/"sql"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-  if (jsonField?.[1]) {
-    try {
-      return JSON.parse(`"${jsonField[1]}"`);
-    } catch {
-      return jsonField[1];
-    }
-  }
-  return text.trim();
-}
-
-/**
  * SQL 模式编辑器（Monaco Editor）
  * - SQL 语法高亮
  * - 字段名自动提示（支持别名识别：`select t.` 可提示 rgjslb 的字段）
@@ -108,11 +91,8 @@ const SqlModeEditor: React.FC<Props> = ({
   const monaco = useMonaco();
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const [nlInput, setNlInput] = useState('');
-  // AI 生成 SQL：发送 loading、流式内容缓冲与请求中止控制
+  // AI 生成 SQL：发送 loading 状态
   const [sendLoading, setSendLoading] = useState(false);
-  const aiBufferRef = useRef('');
-  const aiDoneRef = useRef(false);
-  const sendAbortRef = useRef<AbortController | null>(null);
   // 选择表抽屉开关；勾选结果由父组件持有（随数据集保存/回显）
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
   // 缓存每张表的字段列表：{ tableName -> [{ originName, comment }] }
@@ -267,31 +247,7 @@ const SqlModeEditor: React.FC<Props> = ({
     }
   }, [onChange]);
 
-  /** 卸载时中止未完成的 AI 生成请求 */
-  useEffect(() => {
-    return () => {
-      sendAbortRef.current?.abort();
-    };
-  }, []);
-
-  /** 流结束后统一收尾：提取 SQL 写入编辑器（onmessage 可能零触发，收尾逻辑放 onclose 兼顾 [DONE]） */
-  const finishAiGenerate = useCallback(() => {
-    if (aiDoneRef.current) return;
-    // 请求已中止（组件卸载）时不再收尾
-    if (sendAbortRef.current?.signal.aborted) return;
-    aiDoneRef.current = true;
-    setSendLoading(false);
-    const fullText = aiBufferRef.current;
-    if (!fullText.trim()) {
-      message.warning('AI 未返回内容，请重试');
-      return;
-    }
-    const sql = extractSqlFromAiText(fullText);
-    editorRef.current?.setValue(sql);
-    onChange?.(sql);
-  }, [onChange]);
-
-  /** 点击发送：调用 sql-template 流式接口，用自然语言生成 SQL */
+  /** 点击发送：调用 sql-template 接口，用自然语言生成 SQL */
   const handleSend = useCallback(async () => {
     const question = nlInput.trim();
     if (!question) {
@@ -315,58 +271,29 @@ const SqlModeEditor: React.FC<Props> = ({
       return;
     }
 
-    sendAbortRef.current?.abort();
-    const controller = new AbortController();
-    sendAbortRef.current = controller;
-    aiBufferRef.current = '';
-    aiDoneRef.current = false;
     setSendLoading(true);
 
     try {
-      await streamSqlTemplate({
+      const res = await generateSql({
         messages: question,
         sourceId,
         sourceType,
         dbName,
-        signal: controller.signal,
-        onmessage: (event) => {
-          if (!event.data) return;
-          if (event.data === '[DONE]') {
-            finishAiGenerate();
-            return;
-          }
-          // OpenAI 兼容格式：增量内容在 choices[0].delta.content；非 JSON 则直接当文本累加
-          let chunk = event.data;
-          try {
-            const parsed = JSON.parse(event.data);
-            const delta = parsed?.choices?.[0]?.delta?.content;
-            chunk = typeof delta === 'string' ? delta : '';
-          } catch {
-            // 保留原始文本
-          }
-          aiBufferRef.current += chunk;
-        },
-        onclose: () => {
-          finishAiGenerate();
-        },
-        onerror: () => {
-          if (!aiDoneRef.current) {
-            aiDoneRef.current = true;
-            setSendLoading(false);
-            message.error('AI 生成 SQL 失败，请重试');
-          }
-        },
+        tables: Object.keys(tableSelection),
       });
-      // 部分环境下流正常结束不触发 onclose，这里再收尾一次（有 aiDoneRef 去重）
-      finishAiGenerate();
-    } catch {
-      if (!aiDoneRef.current) {
-        aiDoneRef.current = true;
-        setSendLoading(false);
-        message.error('AI 生成 SQL 失败，请重试');
+      const sql = res?.data?.items;
+      if (!sql) {
+        message.warning('AI 未返回 SQL，请重试');
+        return;
       }
+      editorRef.current?.setValue(sql);
+      onChange?.(sql);
+    } catch {
+      message.error('AI 生成 SQL 失败，请重试');
+    } finally {
+      setSendLoading(false);
     }
-  }, [nlInput, sourceId, sourceType, dataSourceList, finishAiGenerate]);
+  }, [nlInput, sourceId, sourceType, dataSourceList, tableSelection, onChange]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>

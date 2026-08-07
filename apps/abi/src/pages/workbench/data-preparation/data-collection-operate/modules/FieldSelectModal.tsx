@@ -4,6 +4,8 @@ import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import type { TableRowSelection } from 'antd/es/table/interface'
 import type { Dispatch, SetStateAction } from 'react'
 
+import { useAppSelector } from '@/hooks/business/useStore'
+import { getSpaceId } from '@/store/slice/app'
 import { DataCollectionOperateContext } from '../context'
 
 interface TableSelectionProps {
@@ -111,13 +113,14 @@ interface DataType {
 
 const FieldSelectModal: React.FC<PropsType> = memo(({ data, onClose }) => {
   const { curDatasourceType } = useContext(DataCollectionOperateContext)
+  const spaceId = useAppSelector(getSpaceId)
 
   const { currentDs } = data
   const [selectedRows, setSelectedRows] = useState<any[]>([])
   const { dataSourceList, fieldsList, getDatasourceList, getFieldsList } = useDatasource()
 
   useEffect(() => {
-    getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) })
+    getDatasourceList({ spaceId: spaceId || 0 })
   }, [])
 
   useEffect(() => {

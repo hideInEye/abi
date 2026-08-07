@@ -406,6 +406,10 @@ const EffectReviewOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose
           conv_uid: form.getFieldValue('conv_uid'),
           embed_model_id: 6,
           extra: { fb_id: fbId },
+          // session_id：详情接口已返回 sessionId（openEval 已转 snake_case 存入表单），转成字符串下发
+          // ⚠后端当前把 sessionId 当数字返回，值超过 JS 安全整数范围，JSON.parse 阶段已丢精度（末位归零）；
+          // 待后端按约定改为字符串返回后，此处即可拿到完整值，无需改动代码
+          session_id: `${form.getFieldValue('session_id') ?? ''}`,
           space_id: `${form.getFieldValue('space_id')}`,
           sys_code: '1',
           user_name: '1',
