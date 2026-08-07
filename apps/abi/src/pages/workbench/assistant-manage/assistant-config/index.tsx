@@ -292,9 +292,11 @@ export function Component() {
   /** 开关切换: ON=发布(status='1') OFF=下线(status='2') */
   const handleToggle = async (id: AgentCard['id'], checked: boolean) => {
     const nextStatus = checked ? '1' : '2';
+    // 后端 update 接口校验应用名称非空，切换状态时需回传当前助手名称
+    const appName = agents.find(it => it.id === id)?.name;
     setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: nextStatus } : it)));
     try {
-      await updateAppApi({ appId: id, status: nextStatus });
+      await updateAppApi({ appId: id, appName, status: nextStatus });
       message.success(checked ? '已发布' : '已下线');
     } catch {
       // 回滚
