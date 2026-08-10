@@ -4,7 +4,7 @@ import { connectReportEvents, fetchReportTaskStatus, submitReportTask } from '@/
 import type { RawReportStreamEntry, SubmitReportRequest } from '@/service/api/report'
 
 import { createReportItemFromHistory, mergeReportTimelineItems } from './reportHistoryAdapter'
-import { canRevealReport, shouldAnimateReportPreview } from './helpers'
+import { canRevealReport, shouldAnimateReportPreview, toggleReportTaskKey } from './helpers'
 import { getNewlyCompletedReportTaskKey, getReportRecoveryAction, splitReportTaskRecordsByHistory } from './reportRecovery'
 import { createInitialReportStreamState, parseReportStreamEvent, reduceReportStreamEntry } from './reportStreamReducer'
 import { getReportTaskSortOrder, reportTaskStorage } from './reportTaskStorage'
@@ -430,7 +430,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
     (reportId: string, taskKey: string) => {
       updateReport(reportId, (report) => ({
         ...report,
-        expandedTaskKeys: report.expandedTaskKeys.includes(taskKey) ? report.expandedTaskKeys.filter((key) => key !== taskKey) : [...report.expandedTaskKeys, taskKey],
+        expandedTaskKeys: toggleReportTaskKey(report.expandedTaskKeys, taskKey),
       }))
     },
     [updateReport],

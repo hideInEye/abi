@@ -107,8 +107,10 @@ describe('report stream reducer', () => {
 
     expect(initial).toMatchObject({ thinkingOpen: true, todoOpen: false })
     expect(firstPlan).toMatchObject({ status: 'running', thinkingOpen: false, todoOpen: true })
+    expect(firstPlan.expandedTaskKeys).toEqual(['10-0:0'])
     expect(secondPlan.currentPlan?.version).toBe(2)
     expect(secondPlan.tasks.map((task) => task.status)).toEqual(['completed', 'in_progress'])
+    expect(secondPlan.expandedTaskKeys).toEqual(['20-0:1'])
   })
 
   it('按 plan 时间片把步骤归入唯一 in_progress 项，并保留旧执行记录', () => {
