@@ -89,7 +89,7 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
         label: (
           <div className="py-1">
             <div className="text-sm font-semibold">一键维度映射</div>
-            <div className="mt-1 text-xs text-gray-400">选择数据语义组并批量生成维度</div>
+            <div className="mt-1 text-xs text-gray-400">选择数据并批量生成维度</div>
           </div>
         ),
       },

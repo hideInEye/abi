@@ -1,8 +1,8 @@
-import { InfoCircleOutlined, LinkOutlined, TableOutlined } from '@ant-design/icons'
+import { FileTextOutlined, FolderOutlined, InfoCircleOutlined, LinkOutlined, TableOutlined } from '@ant-design/icons'
 import { message } from 'antd'
 import type { TableColumnsType } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
@@ -23,6 +23,11 @@ interface Props {
 }
 
 interface SemanticGroupOption {
+  label: string
+  value: number | string
+}
+
+interface SemanticSchemaTreeOption {
   label: string
   value: number | string
 }
@@ -68,10 +73,29 @@ function formatSchemaName(item: Partial<TableSemanticParams>) {
   return String(item.bizName || item.techName || item.schemaId || '-')
 }
 
+function buildGroupTreeValue(groupId: number | string) {
+  return `semantic-group-${String(groupId)}`
+}
+
+function buildSchemaTreeValue(groupId: number | string, schemaId: number | string) {
+  return `semantic-schema-${String(groupId)}-${String(schemaId)}`
+}
+
+function renderSemanticTreeTitle(label: ReactNode, type: 'group' | 'schema') {
+  const Icon = type === 'group' ? FolderOutlined : FileTextOutlined
+
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <Icon className={type === 'group' ? 'text-#358cf3 text-15px' : 'text-#afd1fa text-14px'} />
+      <span className="truncate">{label}</span>
+    </span>
+  )
+}
+
 export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupName, onClose, onSubmit, open }) => {
   const [groupOptions, setGroupOptions] = useState<SemanticGroupOption[]>([])
   const [selectedSemanticGroupId, setSelectedSemanticGroupId] = useState<number | string>()
-  const [schemaNames, setSchemaNames] = useState<string[]>([])
+  const [schemaOptionsByGroup, setSchemaOptionsByGroup] = useState<Record<string, SemanticSchemaTreeOption[]>>({})
   const [fieldRows, setFieldRows] = useState<DimensionBatchMappingRow[]>([])
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
@@ -91,6 +115,20 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
     return normalizeRows(res).map(item => mapDimensionFromApi({ ...item, groupId, groupName }))
   }, [groupId, groupName])
 
+  const dataTree = useMemo(() => groupOptions.map(group => ({
+    children: schemaOptionsByGroup[String(group.value)]?.map(schema => ({
+      isLeaf: true,
+      searchLabel: schema.label,
+      selectable: false,
+      title: renderSemanticTreeTitle(schema.label, 'schema'),
+      value: buildSchemaTreeValue(group.value, schema.value)
+    })),
+    isLeaf: false,
+    searchLabel: group.label,
+    title: renderSemanticTreeTitle(group.label, 'group'),
+    value: buildGroupTreeValue(group.value)
+  })), [groupOptions, schemaOptionsByGroup])
+
   const fetchSchemaDetail = useCallback(async (schema: DimensionSchemaInfo): Promise<DimensionSchemaInfo> => {
     if (schema.modelDetail) {
       return schema
@@ -108,10 +146,29 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
     }
   }, [])
 
+  const loadGroupSchemas = useCallback(async (nextGroupId: number | string): Promise<DimensionSchemaInfo[]> => {
+    const res = await schemalist({
+      bizName: '',
+      groupId: nextGroupId,
+      pageNum: 1,
+      pageSize: 1000
+    })
+    const schemaRows = normalizeList(getResponseData(res)) as DimensionSchemaInfo[]
+    setSchemaOptionsByGroup(prev => ({
+      ...prev,
+      [String(nextGroupId)]: schemaRows
+        .map(item => ({
+          label: formatSchemaName(item),
+          value: item.schemaId
+        }))
+        .filter(item => hasValue(item.value))
+    }))
+    return schemaRows
+  }, [])
+
   const loadGroupFields = useCallback(
-    async (nextGroupId: number | string) => {
+    async (nextGroupId?: number | string) => {
       setSelectedSemanticGroupId(nextGroupId)
-      setSchemaNames([])
       setFieldRows([])
       setSelectedRowKeys([])
       if (!hasValue(nextGroupId)) {
@@ -119,14 +176,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
       }
       setLoadingFields(true)
       try {
-        const res = await schemalist({
-          bizName: '',
-          groupId: nextGroupId,
-          pageNum: 1,
-          pageSize: 1000
-        })
-        const schemaRows = normalizeList(getResponseData(res)) as DimensionSchemaInfo[]
-        setSchemaNames(schemaRows.map(formatSchemaName))
+        const schemaRows = await loadGroupSchemas(nextGroupId)
         if (!schemaRows.length) {
           message.warning('当前数据语义组下没有数据语义')
           return
@@ -142,7 +192,6 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
           message.warning('当前数据语义组下没有可生成的维度字段')
         }
       } catch {
-        setSchemaNames([])
         setFieldRows([])
         setSelectedRowKeys([])
         message.error('查询数据语义字段失败')
@@ -150,13 +199,34 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
         setLoadingFields(false)
       }
     },
-    [fetchSchemaDetail, loadExistingDimensions]
+    [fetchSchemaDetail, loadExistingDimensions, loadGroupSchemas]
   )
+
+  const handleDataChange = useCallback((nextValue?: string) => {
+    if (!nextValue) {
+      loadGroupFields(undefined)
+      return
+    }
+    const selectedGroup = groupOptions.find(item => buildGroupTreeValue(item.value) === String(nextValue))
+    if (!selectedGroup) {
+      return
+    }
+    loadGroupFields(selectedGroup.value)
+  }, [groupOptions, loadGroupFields])
+
+  const handleLoadTreeData = useCallback((node: { value?: number | string }) => {
+    const rawValue = String(node.value || '')
+    const selectedGroup = groupOptions.find(item => buildGroupTreeValue(item.value) === rawValue)
+    if (!selectedGroup || schemaOptionsByGroup[String(selectedGroup.value)]) {
+      return Promise.resolve()
+    }
+    return loadGroupSchemas(selectedGroup.value).then(() => undefined)
+  }, [groupOptions, loadGroupSchemas, schemaOptionsByGroup])
 
   useEffect(() => {
     if (!open) {
       setSelectedSemanticGroupId(undefined)
-      setSchemaNames([])
+      setSchemaOptionsByGroup({})
       setFieldRows([])
       setSelectedRowKeys([])
       setLoadingFields(false)
@@ -183,8 +253,10 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
             }))
             .filter(item => item.label && hasValue(item.value))
         )
+        setSchemaOptionsByGroup({})
       } catch {
         setGroupOptions([])
+        setSchemaOptionsByGroup({})
         message.error('查询数据语义组失败')
       } finally {
         setLoadingGroups(false)
@@ -264,28 +336,26 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
       <AAlert
         className="mb-6"
         icon={<InfoCircleOutlined />}
-        message="选择数据语义组后，原型将该组下全部数据语义中的字段统一映射为维度；维度自定义仍沿用原新增维度流程。"
+        message="选择数据后，原型将该数据语义组下全部数据语义中的字段统一映射为维度；维度自定义仍沿用原新增维度流程。"
         showIcon
         type="info"
       />
 
       <AForm className="ds-form-section" layout="vertical">
         <OntologyFormSectionTitle icon={<LinkOutlined />}>语义来源</OntologyFormSectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <AForm.Item label="数据语义组" required>
-            <ASelect
+        <div className="grid grid-cols-1 gap-4">
+          <AForm.Item label="数据" required>
+            <ATreeSelect
               allowClear
-              loading={loadingGroups}
-              optionFilterProp="label"
-              options={groupOptions}
-              placeholder="请选择数据语义组"
+              loadData={handleLoadTreeData}
+              loading={loadingGroups || loadingFields}
+              placeholder="请选择数据"
               showSearch
-              value={selectedSemanticGroupId}
-              onChange={loadGroupFields}
+              treeData={dataTree}
+              filterTreeNode={(inputValue, treeNode) => String((treeNode as { searchLabel?: number | string })?.searchLabel || '').toLowerCase().includes(inputValue.toLowerCase())}
+              value={hasValue(selectedSemanticGroupId) ? buildGroupTreeValue(selectedSemanticGroupId) : undefined}
+              onChange={handleDataChange}
             />
-          </AForm.Item>
-          <AForm.Item label="映射范围">
-            <AInput disabled value={schemaNames.length ? schemaNames.join('、') : '-'} />
           </AForm.Item>
         </div>
       </AForm>

@@ -97,7 +97,7 @@ export const Component: React.FC = () => {
                     onClick={handleAdd}
                     disabled={!groupId}
                   >
-                    + 新增标签语义
+                    + 新增标签
                   </AButton>
                 </div>
                 <ViewControls columns={columnOptions} viewMode={viewMode} onColumnToggle={handleColumnToggle} onViewModeChange={setViewMode} />
