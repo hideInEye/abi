@@ -11,6 +11,6 @@ interface OntologyFormSectionTitleProps {
 export const OntologyFormSectionTitle = ({ children, className, icon }: OntologyFormSectionTitleProps) => (
   <div className={classNames('ds-form-section-title', className)}>
     {icon || <ProfileOutlined />}
-    {children}
+    <span className="ds-form-section-title-text">{children}</span>
   </div>
 )
