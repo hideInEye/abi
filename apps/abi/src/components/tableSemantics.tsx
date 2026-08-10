@@ -1,5 +1,6 @@
+import { FileTextOutlined, FolderOutlined } from '@ant-design/icons';
 import { Form, type FormInstance } from 'antd';
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types';
 import { schemalist } from '@/service/api/data-table-meaning';
@@ -14,6 +15,25 @@ function mapOptions(list: any[], labelKey: string, valueKey: string, valueAsStri
     label: item[labelKey],
     value: valueAsString ? String(item[valueKey]) : item[valueKey]
   }));
+}
+
+function buildGroupTreeValue(groupId: SelectId) {
+  return `semantic-group-${String(groupId)}`;
+}
+
+function isSameId(left: SelectId | null | undefined, right: SelectId | null | undefined) {
+  return String(left ?? '') === String(right ?? '');
+}
+
+function renderSemanticTreeTitle(label: ReactNode, type: 'group' | 'schema') {
+  const Icon = type === 'group' ? FolderOutlined : FileTextOutlined;
+
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <Icon className={type === 'group' ? 'text-#358cf3 text-15px' : 'text-#afd1fa text-14px'} />
+      <span className="truncate">{label}</span>
+    </span>
+  );
 }
 
 interface IProps {
@@ -40,20 +60,54 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
   const spaceId = useAppSelector(getSpaceId);
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: SelectId }[]>([]);
   const [groupId, setGroupId] = useState<SelectId | null>(null);
-  const [schemaOptions, setSchemaOptions] = useState<{ label: string; value: SelectId }[]>([]);
   const [originalSchemaOptions, setOriginalSchemaOptions] = useState<any[]>([]);
+  const [schemaOptionsByGroup, setSchemaOptionsByGroup] = useState<Record<string, { originalOptions: any[]; schemaOptions: { label: string; value: SelectId }[] }>>({});
   const semanticGroupIdWatch = Form.useWatch(groupFieldName, form)
   
-  function findViewId(schemaId: SelectId) {
-    return originalSchemaOptions.find((item: any) => String(item.schemaId) === String(schemaId))?.relViewId;
+  const treeData = useMemo(() => groupOptions.map(group => {
+    const groupKey = String(group.value);
+    const cachedOptions = schemaOptionsByGroup[groupKey]?.schemaOptions;
+
+    return {
+      searchLabel: group.label,
+      title: renderSemanticTreeTitle(group.label, 'group'),
+      value: buildGroupTreeValue(group.value),
+      isLeaf: false,
+      selectable: false,
+      children: cachedOptions?.map(schema => ({
+        isLeaf: true,
+        searchLabel: schema.label,
+        title: renderSemanticTreeTitle(schema.label, 'schema'),
+        value: schema.value
+      }))
+    };
+  }), [groupOptions, schemaOptionsByGroup]);
+
+  function findSchemaGroup(schemaId: SelectId) {
+    return Object.entries(schemaOptionsByGroup).find(([, groupSchemas]) =>
+      groupSchemas.schemaOptions.some(schema => isSameId(schema.value, schemaId))
+    );
+  }
+
+  function findViewId(schemaId: SelectId, nextGroupId?: SelectId | null) {
+    const cachedOriginalOptions = nextGroupId ? schemaOptionsByGroup[String(nextGroupId)]?.originalOptions : undefined;
+    const sourceOptions = cachedOriginalOptions || originalSchemaOptions;
+
+    return sourceOptions.find((item: any) => String(item.schemaId) === String(schemaId))?.relViewId;
+  }
+
+  function syncSelectedSchemaOptions(gpId: SelectId | null, originalOptions: any[]) {
+    setGroupId(gpId);
+    setOriginalSchemaOptions(originalOptions);
+    getSchemaOptions?.(originalOptions);
   }
 
   // 表语义
-  const fetchSchemaOptions = async (gpId: SelectId | null) => {
+  const fetchSchemaOptions = async (gpId: SelectId | null, syncSelected = true) => {
     if (!gpId) {
-      setSchemaOptions([]);
-      setOriginalSchemaOptions([]);
-      getSchemaOptions?.([]);
+      if (syncSelected) {
+        syncSelectedSchemaOptions(null, []);
+      }
       return;
     }
     const { data } = await schemalist({
@@ -62,9 +116,17 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
       pageNum: 1,
       pageSize: 100
     });
-    setSchemaOptions(mapOptions(data, 'bizName', 'schemaId', valueAsString));
-    getSchemaOptions?.(data);
-    setOriginalSchemaOptions(data);
+    const nextSchemaOptions = mapOptions(data, 'bizName', 'schemaId', valueAsString);
+    setSchemaOptionsByGroup(prev => ({
+      ...prev,
+      [String(gpId)]: {
+        originalOptions: data,
+        schemaOptions: nextSchemaOptions
+      }
+    }));
+    if (syncSelected) {
+      syncSelectedSchemaOptions(gpId, data);
+    }
   };
 
   // 分组
@@ -93,43 +155,63 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
   }, [groupId, semanticGroupIdWatch]);
 
   function backGroupIdAndSchemaId(v: SelectId) {
-    return getSchemaId({
-      semanticGroupId: groupId,
+    if (!v) {
+      form?.setFieldsValue({
+        [groupFieldName]: undefined,
+        semanticGroupId: undefined,
+        semanticSchemaId: undefined,
+        semanticsGroupId: undefined
+      });
+      syncSelectedSchemaOptions(null, []);
+      return;
+    }
+
+    const matchedGroupEntry = findSchemaGroup(v);
+    const matchedGroupId = matchedGroupEntry ? groupOptions.find(item => String(item.value) === matchedGroupEntry[0])?.value ?? matchedGroupEntry[0] : undefined;
+    const nextGroupId = matchedGroupId ?? groupId;
+    const nextGroupSchemas = nextGroupId ? schemaOptionsByGroup[String(nextGroupId)] : undefined;
+    if (nextGroupSchemas) {
+      syncSelectedSchemaOptions(nextGroupId, nextGroupSchemas.originalOptions);
+    }
+    form?.setFieldsValue({
+      [groupFieldName]: nextGroupId,
+      semanticGroupId: nextGroupId,
       semanticSchemaId: v,
-      semanticsGroupId: groupId,
-      viewId: findViewId(v)
+      semanticsGroupId: nextGroupId
+    });
+    return getSchemaId({
+      semanticGroupId: nextGroupId,
+      semanticSchemaId: v,
+      semanticsGroupId: nextGroupId,
+      viewId: findViewId(v, nextGroupId)
     });
   }
 
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      <AForm.Item
-        label="数据语义组"
-        name={groupFieldName}
-        rules={[{ message: '请选择数据语义组', required: true }]}
-      >
-        <ASelect
-          disabled={isEdit}
-          allowClear
-          options={groupOptions}
-          placeholder="选择数据语义组"
-          onChange={(v)=>{
-            setGroupId(v)
-            form?.setFieldsValue({ semanticSchemaId: null })
-          }}
-        />
-      </AForm.Item>
+  function handleLoadTreeData(node: { value?: SelectId }) {
+    const rawValue = String(node.value || '');
+    const group = groupOptions.find(item => buildGroupTreeValue(item.value) === rawValue);
+    if (!group || schemaOptionsByGroup[String(group.value)]) {
+      return Promise.resolve();
+    }
+    return fetchSchemaOptions(group.value, false);
+  }
 
+  return (
+    <div className="grid grid-cols-1 gap-2">
       <AForm.Item
-        label="数据语义"
+        label="数据"
         name="semanticSchemaId"
-        rules={[{ message: '请选择数据语义', required: true }]}
+        rules={[{ message: '请选择数据', required: true }]}
       >
-        <ASelect
+        <ATreeSelect
           disabled={isEdit}
           allowClear
-          options={schemaOptions}
-          placeholder="选择数据语义"
+          loadData={handleLoadTreeData}
+          placeholder="请选择数据"
+          showSearch
+          treeData={treeData}
+          treeDefaultExpandAll={false}
+          filterTreeNode={(inputValue, treeNode) => String((treeNode as { searchLabel?: SelectId })?.searchLabel || '').toLowerCase().includes(inputValue.toLowerCase())}
           onChange={backGroupIdAndSchemaId}
         />
       </AForm.Item>

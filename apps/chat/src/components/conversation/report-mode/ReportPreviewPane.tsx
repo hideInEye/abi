@@ -1,4 +1,4 @@
-import { CloseOutlined, FileTextOutlined } from '@ant-design/icons'
+import { FileTextOutlined } from '@ant-design/icons'
 import { Button, Empty, Tag } from 'antd'
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -14,6 +14,13 @@ interface ReportPreviewPaneProps {
   animate?: boolean
   onClose: () => void
 }
+
+/** 参考产品图绘制的双栏收起图标；路径使用 currentColor 以复用按钮交互色。 */
+const ReportCollapseIcon: React.FC = () => (
+  <svg className={styles.previewCloseIcon} viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+    <path d="M11.5 3.5v5h5M8.5 16.5v-5h-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
 
 const ReportPreviewPane: React.FC<ReportPreviewPaneProps> = ({ report, animate = false, onClose }) => {
   // 即使调用方状态短暂不同步，也不允许在最终阶段前渲染报告正文。
@@ -37,9 +44,14 @@ const ReportPreviewPane: React.FC<ReportPreviewPaneProps> = ({ report, animate =
             {candidate && <Tag color="green">已完成</Tag>}
           </div>
         </div>
-        <Button icon={<CloseOutlined />} onClick={onClose}>
-          关闭
-        </Button>
+        <Button
+          type="text"
+          className={styles.previewCloseButton}
+          icon={<ReportCollapseIcon />}
+          title="收起报告"
+          aria-label="收起报告"
+          onClick={onClose}
+        />
       </div>
 
       <div className={`${styles.previewBody} ${candidate?.format === 'html' ? styles.previewBodyHtml : styles.previewBodyScrollable}`}>

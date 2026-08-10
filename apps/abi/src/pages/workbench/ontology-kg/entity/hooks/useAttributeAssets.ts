@@ -78,6 +78,7 @@ function normalizeAsset(item: unknown, attributeType: SupportedAttributeType): A
   if (!item || typeof item !== 'object') return null
   const source = item as UnknownRecord
   const id = pickText(source, attributeType === 'dimension' ? ['dimId', 'dimensionId', 'id'] : attributeType === 'indicator' ? ['indId', 'indicatorId', 'id'] : ['tagId', 'id'])
+  const sourceIdField = attributeType === 'dimension' ? 'dimId' : attributeType === 'indicator' ? 'indId' : 'tagId'
   const attributeCode = pickText(
     source,
     attributeType === 'dimension'
@@ -103,6 +104,7 @@ function normalizeAsset(item: unknown, attributeType: SupportedAttributeType): A
     attributeName: attributeName || attributeCode,
     ...(dataType === undefined ? {} : { dataType }),
     id,
+    [sourceIdField]: id,
     ...(typeof relateDictId === 'number' || typeof relateDictId === 'string' ? { relateDictId } : {}),
     ...(remark ? { remark } : {}),
   }

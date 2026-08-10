@@ -2127,6 +2127,48 @@ div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
   }
 }
 
+.ontology-attribute-drawer-content {
+  .ant-table-title {
+    padding: 0 0 14px;
+  }
+
+  .ontology-attribute-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px;
+    padding-left: 0;
+    color: #1a2744;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 22px;
+    letter-spacing: 0.02em;
+
+    &::before {
+      content: '';
+      width: 3px;
+      height: 16px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, #5b7cf7, #7091fa);
+      flex-shrink: 0;
+    }
+
+    > .anticon,
+    > svg {
+      color: #5b7cf7;
+      font-size: 15px;
+    }
+
+    .ds-form-section-title-text {
+      line-height: 22px;
+    }
+  }
+
+  .ontology-attribute-section-title--binding {
+    margin-bottom: 16px;
+  }
+}
+
 // ── 数据语义配置表格区域 ──
 .ds-table-config-wrapper {
   padding: 20px 32px 24px;
@@ -2399,6 +2441,15 @@ div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
         height: 100%;
         overflow: hidden;
       }
+    }
+  }
+
+  &.abi-attr-modeling-tabs--nav-only {
+    flex: 0 0 auto;
+
+    > .ant-tabs-content-holder {
+      display: none;
+      flex: 0 0 auto;
     }
   }
 }

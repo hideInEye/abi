@@ -1,4 +1,5 @@
 import { compareRedisEntryIds, parseRedisEntryId, sortAndDedupeRedisEntries } from './redisEntryId'
+import { getTaskKey } from './helpers'
 import type {
   RawReportStreamEntry,
   ReportCandidate,
@@ -407,6 +408,7 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
 
       // plan.update 是完整快照：只覆盖当前任务，不删除此前时间片已经产生的 executionGroups。
       const tasks = event.tasks.map((task) => ({ ...task }))
+      const runningTaskIndex = tasks.findIndex((task) => task.status === 'in_progress')
       nextState = {
         ...state,
         status: 'running',
@@ -419,6 +421,8 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
           version: event.version,
         },
         tasks,
+        // 当前执行任务首次默认展开；后续 step 事件只继承该数组，用户收起后不会被强制打开。
+        expandedTaskKeys: runningTaskIndex >= 0 ? [getTaskKey(entryId, runningTaskIndex)] : [],
       }
       break
     }

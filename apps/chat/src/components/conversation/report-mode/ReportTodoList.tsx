@@ -175,14 +175,14 @@ const ReportTodoList: React.FC<ReportTodoListProps> = ({ report, onToggleTodo, o
               const groups = getTaskGroups(report, task.content, index)
               groups.forEach((group) => matchedGroupKeys.add(group.key))
               const steps = getGroupSteps(report, groups)
-              const expanded = task.status === 'in_progress' || report.expandedTaskKeys.includes(taskKey)
+              const expanded = report.expandedTaskKeys.includes(taskKey)
 
               return (
                 <div key={taskKey} className={styles.todoRow}>
                   <button type="button" className={`${styles.todoMain} ${styles.todoMainClickable}`} onClick={() => onToggleTask(taskKey)}>
                     <span className={`${styles.todoStatus} ${getStatusClass(task.status)}`}>{getStatusIcon(task.status)}</span>
                     <div className={styles.todoContent}>
-                      <div className={styles.todoTitle}>{task.content}</div>
+                      <div className={`${styles.todoTitle} ${task.status === 'in_progress' ? styles.todoTitleRunning : ''}`}>{task.content}</div>
                       <div className={styles.todoDetail}>
                         <Tag color={task.status === 'in_progress' ? 'blue' : task.status === 'completed' ? 'green' : 'default'}>{getStatusText(task.status)}</Tag>
                         {getExecutionDetail(task.status, steps.length)}

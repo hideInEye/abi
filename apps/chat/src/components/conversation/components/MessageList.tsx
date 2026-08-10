@@ -88,6 +88,8 @@ type MessageListProps = {
   onToggleReportTodo?: (reportId: string) => void
   onToggleReportTask?: (reportId: string, taskKey: string) => void
   onOpenReport?: (reportId: string) => void
+  /** 报告预览占用右侧空间时隐藏问题导航，避免导航面板覆盖双栏内容。 */
+  hideMessageNavRail?: boolean
 }
 
 const MessageList = ({
@@ -127,6 +129,7 @@ const MessageList = ({
   onToggleReportTodo,
   onToggleReportTask,
   onOpenReport,
+  hideMessageNavRail = false,
 }: MessageListProps) => {
   const containerRef = chatContainerRef ?? useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
@@ -673,7 +676,7 @@ const MessageList = ({
           </div>
           <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
         </div>
-        <MessageNavRail items={navItems} containerRef={containerRef} />
+        {!hideMessageNavRail && <MessageNavRail items={navItems} containerRef={containerRef} />}
       </div>
     )
   }

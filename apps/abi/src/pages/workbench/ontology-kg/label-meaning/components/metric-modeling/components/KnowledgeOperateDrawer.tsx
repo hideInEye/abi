@@ -527,7 +527,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
 
     const templateType = String(form.getFieldValue('templateType') || '')
-    const templateFields: Array<keyof KnowledgeFormValues> = ['templateType']
+    const templateFields: Array<keyof KnowledgeFormValues> = ['techName', 'templateType']
     if (templateType === 'ratio') {
       templateFields.push('ratioNumeratorId', 'ratioDenominatorId', 'ratioPrecision')
     }
@@ -577,14 +577,14 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       const nextClass = normalizeIndicatorClass(String(changeValues.indicatorClass || 'derived'))
       setSelectedIndicatorClass(nextClass)
       if (nextClass === 'derived') {
-        clearFields(DERIVATIVE_TEMPLATE_FIELDS)
+        clearFields([...DERIVATIVE_TEMPLATE_FIELDS, 'techName'])
       }
       if (nextClass === 'derivative') {
-        clearFields(DERIVED_ONLY_FIELDS)
+        clearFields([...DERIVED_ONLY_FIELDS, 'techName'])
         setAllFields([])
       }
       if (nextClass === 'atomic') {
-        clearFields([...DERIVED_ONLY_FIELDS, ...DERIVATIVE_TEMPLATE_FIELDS])
+        clearFields([...DERIVED_ONLY_FIELDS, ...DERIVATIVE_TEMPLATE_FIELDS, 'techName'])
         setAllFields([])
         setCurrent(0)
       }
@@ -654,7 +654,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
 
     payload.techId = selectedTechObject as KnowledgeSubmitPayload['techId']
-    if (!isAtomicEditing) {
+    if (!isAtomicEditing && nextIndicatorClass !== 'derivative') {
       delete payload.techName
     }
 

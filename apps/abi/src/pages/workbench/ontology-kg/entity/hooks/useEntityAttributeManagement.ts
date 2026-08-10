@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { OntologyEntity, OntologyEntityAttribute, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { getOntologyEntity, saveOntologyEntityAttributes } from '@/service/api/ontology-network'
 
-import { makeEntityAttributeSaveItems } from '../utils/entity'
+import { getEntityAttributeIdentity, isSameEntityAttribute, makeEntityAttributeSaveItems } from '../utils/entity'
 
 interface UseEntityAttributeManagementResult {
   addAttributes: (attributes: OntologyEntityAttribute[]) => boolean
@@ -64,10 +64,10 @@ export function useEntityAttributeManagement(entity: OntologyEntity | undefined,
   const addAttributes = useCallback((attributes: OntologyEntityAttribute[]): boolean => {
     const addedKeys = new Set<string>()
     const hasDuplicate = attributes.some((next) => {
-      const key = `${next.attributeType}-${next.attributeCode}`
+      const key = getEntityAttributeIdentity(next)
       if (addedKeys.has(key)) return true
       addedKeys.add(key)
-      return draftAttributesRef.current.some((attribute) => attribute.attributeType === next.attributeType && attribute.attributeCode === next.attributeCode)
+      return draftAttributesRef.current.some((attribute) => isSameEntityAttribute(attribute, next))
     })
     if (hasDuplicate) return false
     const nextAttributes = [...draftAttributesRef.current, ...attributes]
@@ -77,7 +77,7 @@ export function useEntityAttributeManagement(entity: OntologyEntity | undefined,
   }, [])
 
   const removeAttribute = useCallback((attribute: OntologyEntityAttribute): void => {
-    const nextAttributes = draftAttributesRef.current.filter((item) => item.attributeType !== attribute.attributeType || item.attributeCode !== attribute.attributeCode)
+    const nextAttributes = draftAttributesRef.current.filter((item) => !isSameEntityAttribute(item, attribute))
     draftAttributesRef.current = nextAttributes
     setDraftAttributes(nextAttributes)
   }, [])
@@ -91,7 +91,11 @@ export function useEntityAttributeManagement(entity: OntologyEntity | undefined,
     setSaving(true)
     try {
       const attributes = makeEntityAttributeSaveItems(draftAttributesRef.current)
-      await saveOntologyEntityAttributes({ attributes, entityId: entity.id, spaceId })
+      const { data, error } = await saveOntologyEntityAttributes({ attributes, entityId: entity.id, spaceId })
+      if (error || data !== true) {
+        message.error('属性配置保存失败，请稍后重试')
+        return false
+      }
       return true
     } catch {
       message.error('属性配置保存失败，请稍后重试')

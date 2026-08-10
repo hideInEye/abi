@@ -58,6 +58,7 @@ declare global {
   const ATextarea: typeof import('antd')['Textarea']
   const ATooltip: typeof import('antd')['Tooltip']
   const ATree: typeof import('antd')['Tree']
+  const ATreeSelect: typeof import('antd')['TreeSelect']
   const ATypography: typeof import('antd')['Typography']
   const AUpload: typeof import('antd')['Upload']
   const AWatermark: typeof import('antd')['Watermark']
