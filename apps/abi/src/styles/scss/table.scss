@@ -2401,6 +2401,15 @@ div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
       }
     }
   }
+
+  &.abi-attr-modeling-tabs--nav-only {
+    flex: 0 0 auto;
+
+    > .ant-tabs-content-holder {
+      display: none;
+      flex: 0 0 auto;
+    }
+  }
 }
 
 // ── 数据源预览页面 v5 ──
