@@ -49,6 +49,32 @@ export function buildGroupTree(list: any[], parentId: string = '0', folderFirst:
 }
 
 /**
+ * 构建分组的层级路径（自顶级到当前分组），用分隔符连接各级名称
+ * 用于在已选项处标注「属于哪个分组」并展示层级，例如「父组 / 子组」
+ * 遇到脏数据（parentId 指向不存在的分组）或成环时安全终止
+ *
+ * @param list 平铺分组数组（需含 parentId）
+ * @param groupId 目标分组 ID
+ * @param separator 层级分隔符，默认 ' / '
+ * @returns 形如「父组 / 子组」的路径；找不到时返回空串
+ */
+export function buildGroupPath(list: any[], groupId: string, separator: string = ' / '): string {
+  if (!Array.isArray(list) || groupId == null) return '';
+  const byId = new Map(list.map(item => [String(item.groupId), item]));
+  const names: string[] = [];
+  const seen = new Set<string>();
+  let cur = byId.get(String(groupId));
+  while (cur && !seen.has(String(cur.groupId))) {
+    seen.add(String(cur.groupId));
+    names.unshift(cur.groupName || '-');
+    const pid = String(cur.parentId ?? '0');
+    if (pid === '0') break;
+    cur = byId.get(pid);
+  }
+  return names.join(separator);
+}
+
+/**
  * 获取指定分组的所有后代 ID（用于防止循环引用）
  *
  * @param list 平铺分组数组

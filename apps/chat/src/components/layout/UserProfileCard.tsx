@@ -32,7 +32,8 @@ export function UserProfileCard({ collapsed, userName }: UserProfileCardProps) {
   const popContent = (
     <div className="chat-user-logout-item" onClick={handleLogout}>
       <LogoutOutlined />
-      <span>退出登录</span>
+      {/* 侧边栏收起时仅展示退出图标，不展示“退出登录”文案 */}
+      {!collapsed && <span>退出登录</span>}
     </div>
   )
 

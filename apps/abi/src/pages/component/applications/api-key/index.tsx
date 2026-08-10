@@ -193,6 +193,12 @@ export function Component() {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c))
   }
 
+  // 切换视图时清空批量选中态，避免切到卡片视图后批量删除按钮仍可点击
+  const handleViewModeChange = (mode: 'list' | 'card') => {
+    setSelectedRowKeys([])
+    setViewMode(mode)
+  }
+
   const loadList = useCallback(
     async (pageNum: number, query: ApiKeyQueryValues) => {
       const effectiveSpaceId = query.spaceId || currentSpaceId
@@ -507,8 +513,9 @@ export function Component() {
           </div>
           <ViewControls
             columns={columnOptions}
-            hideViewToggle
+            viewMode={viewMode}
             onColumnToggle={handleColumnToggle}
+            onViewModeChange={handleViewModeChange}
           />
         </div>
 

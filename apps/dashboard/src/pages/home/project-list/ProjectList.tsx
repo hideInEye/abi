@@ -118,36 +118,40 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     const onOk = async (data: INewProjectInfo) => {
         const {name, des, width, height} = data;
-        const project: IProjectInfo = {
-            name: name,
-            des: des,
-            dataJson: JSON.stringify({canvasManager: {width, height}}),
-            spaceId: Number(localStorage.getItem('spaceId')),
-        }
+        const spaceId = Number(localStorage.getItem('spaceId'));
         try {
-            // 1. 创建大屏项目
+            // 1. 先校验对话应用名称唯一性（务必在创建大屏之前，避免名称冲突或接口异常时残留游离大屏）
+            const nameCheck = await baseApi.validateChatAppName(name, spaceId);
+            if (!nameCheck.ok) {
+                globalMessage.messageApi?.error(nameCheck.msg || '名称校验失败，请稍后重试');
+                return;
+            }
+            if (!nameCheck.available) {
+                globalMessage.messageApi?.error('对话应用名称已存在，请更换后重试');
+                return;
+            }
+
+            // 2. 创建大屏项目
+            const project: IProjectInfo = {
+                name: name,
+                des: des,
+                dataJson: JSON.stringify({canvasManager: {width, height}}),
+                spaceId: spaceId,
+            };
             const id = await baseApi.createProject(project);
             if (id === "") {
                 globalMessage.messageApi?.error('创建失败');
                 return;
             }
 
-            // 2. 获取助手列表，取第一条的 agentId
-            const spaceId = Number(localStorage.getItem('spaceId'));
+            // 3. 获取助手列表，取第一条的 agentId
             const agentList = await baseApi.fetchAgentList(spaceId);
             const agentId = agentList?.[0]?.agentId;
 
-            // 3. 获取提示词列表，status 全部设为 '1'（开启），组装 chat_config
+            // 4. 获取提示词列表，status 全部设为 '1'（开启），组装 chat_config
             const promptList = await baseApi.fetchRecommendQuestions();
             const promptsWithStatus = promptList.map((p: any) => ({...p, status: '1'}));
             const chatConfig = JSON.stringify({prompts: promptsWithStatus});
-
-            // 4. 验证对话应用名称唯一性
-            const nameValid = await baseApi.validateChatAppName(name, spaceId);
-            if (!nameValid) {
-                globalMessage.messageApi?.error('对话应用名称已存在，请更换后重试');
-                return;
-            }
 
             // 5. 创建会话应用
             const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
@@ -434,6 +438,18 @@ export const ProjectList = memo((props: ProjectListProps) => {
     useEffect(() => {
         getProjectPageList(pageData.current, pageData.size);
     }, []);
+
+    // 主应用顶部切换空间时，大屏微应用会广播该事件；重置筛选并回到第 1 页按新空间重新拉取
+    useEffect(() => {
+        const handleSpaceChange = () => {
+            setSearchKeyword('');
+            setDateRange(null);
+            setCurrentPage(1);
+            getProjectPageList(1, pageSize);
+        };
+        window.addEventListener('abi-dashboard:space-change', handleSpaceChange);
+        return () => window.removeEventListener('abi-dashboard:space-change', handleSpaceChange);
+    }, [pageSize, statusFilter]);
 
     // Table columns for list view — v5 style with minWidth, col-first-data
     const tableColumns = [

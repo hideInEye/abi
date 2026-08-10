@@ -123,7 +123,18 @@ export default class FetchUtil {
             if (!response.ok) {
                 FetchUtil.handleUnauthorized(response.status);
                 console.error('请求错误:', response?.status, response?.statusText);
-                return {code: response?.status ?? 500, msg: response?.statusText ?? '', data: null};
+                // 尝试解析错误响应体，保留后端业务错误信息（如 err_msg / msg），
+                // 避免上层把真实错误（如数据库异常）误判为其他语义（如"名称已存在"）
+                let errData: any = null;
+                let errMsg = response?.statusText ?? '';
+                try {
+                    const errCt = response.headers.get('content-type');
+                    if (errCt && errCt.includes('application/json')) {
+                        errData = await response.json();
+                        errMsg = errData?.msg || errData?.err_msg || errData?.message || errMsg;
+                    }
+                } catch { /* 保底使用 statusText */ }
+                return {code: response?.status ?? 500, msg: errMsg, data: errData};
             }
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {

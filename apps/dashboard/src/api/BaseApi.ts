@@ -34,11 +34,25 @@ class BaseApi extends AbstractApi {
 
     /**
      * 验证对话应用名称是否可用（chat-proxy）
-     * 接口返回 true 表示名称可用，false 表示已存在
+     * @returns ok       校验请求是否成功（false 表示接口/网络异常，msg 为后端错误信息）
+     *          available 名称是否可用（true 可用，false 已存在），仅当 ok 为 true 时有效
      */
-    async validateChatAppName(bizName: string, spaceId: number): Promise<boolean> {
+    async validateChatAppName(bizName: string, spaceId: number): Promise<{ok: boolean; available: boolean; msg?: string}> {
         const res = await FetchUtil.post('/chat-proxy/api/v1/chat/app/validate_name', {biz_name: bizName, space_id: spaceId});
-        return res.code === 200 ? !!res.data : false;
+        // HTTP 层错误（如 400/500）：回传后端错误信息，交由上层展示，避免误判为"名称已存在"
+        if (res.code !== 200) {
+            return {ok: false, available: false, msg: res.msg};
+        }
+        // chat-proxy 返回信封 {success, data, err_code, err_msg}，内层 data 才是名称是否可用的布尔值
+        const body: any = res.data;
+        if (body && typeof body === 'object' && ('success' in body || 'err_code' in body || 'err_msg' in body)) {
+            if (body.success === false) {
+                return {ok: false, available: false, msg: body.err_msg || body.err_code};
+            }
+            return {ok: true, available: !!body.data};
+        }
+        // 兼容后端直接返回布尔值的情况
+        return {ok: true, available: !!body};
     }
 
     /**
@@ -67,6 +81,27 @@ class BaseApi extends AbstractApi {
     async createChatConv(data: Record<string, any>): Promise<{success: boolean; data?: any}> {
         const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/new', data);
         return {success: res.code === 200, data: res.data};
+    }
+
+    /**
+     * 新建对话会话（abi-chat）
+     * 调用 /abi-chat/v1/app/session/add，返回后端生成的 sessionId 与 convUid，
+     * 供大屏对话（chat/completions）作为 session_id / conv_uid 使用（与 chat 对话新建会话同源）。
+     * @param params spaceId 必传；title/userId 可选
+     */
+    async addChatSession(params: {spaceId: number; title?: string; userId?: number}): Promise<{sessionId: string; convUid: string} | null> {
+        const res = await FetchUtil.post('/abi-chat/v1/app/session/add', {
+            appId: 1,
+            spaceId: params.spaceId,
+            title: params.title ?? '新建对话',
+            userId: params.userId,
+            groupId: '0',
+        });
+        if (res.code !== 200 || !res.data) return null;
+        const d = res.data;
+        const sessionId = d.sessionId ?? d.session_id ?? d.chat_id ?? d.chatId;
+        const convUid = d.conv_uid ?? d.convUid;
+        return sessionId && convUid ? {sessionId: String(sessionId), convUid: String(convUid)} : null;
     }
 
     /**
