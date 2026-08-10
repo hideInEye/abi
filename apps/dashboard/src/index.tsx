@@ -67,7 +67,31 @@ const initQianKun = () => {
             }
         },
         update(props: any) {
-            render(props);
+            const nextProps = props ?? {};
+            // 主应用顶部切换空间时会通过 update 单独下发新的 spaceId（single-spa 会整体替换 customProps，
+            // 因此这里能可靠地区分“空间更新”与“标题更新”）。
+            if ('spaceId' in nextProps) {
+                const {spaceId} = nextProps;
+                // 仅同步 localStorage 并广播事件，驱动大屏列表页按新空间重新拉取；
+                // 不整树重渲染：memo 路由不会重跑列表页挂载副作用，且 render 会重复加载配置、
+                // 并因 single-spa 替换 props 而清空其它全局变量。
+                if (spaceId !== undefined && spaceId !== null && Number(spaceId) > 0) {
+                    const nextSpaceId = String(spaceId);
+                    try {
+                        if (localStorage.getItem('spaceId') !== nextSpaceId) {
+                            localStorage.setItem('spaceId', nextSpaceId);
+                        }
+                    } catch {
+                        // localStorage 不可写时忽略，列表仍会按事件刷新
+                    }
+                    window.dispatchEvent(new CustomEvent('abi-dashboard:space-change', {
+                        detail: {spaceId: Number(spaceId)}
+                    }));
+                }
+                return;
+            }
+            // 其它 props（如 pageTitle）变更时保持原有重渲染逻辑
+            render(nextProps);
         },
     } as any);
 };

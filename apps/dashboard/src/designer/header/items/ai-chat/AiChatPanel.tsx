@@ -58,6 +58,20 @@ function getNow() {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// 读取当前用户ID（与 chat 对话一致：取 SOY-REACT_userInfo.userId，缺失时为 0）
+function getUserId(): number {
+  try {
+    const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
+    if (userInfoStr) {
+      const rawUserId = JSON.parse(userInfoStr)?.userId;
+      return rawUserId != null ? Number(rawUserId) : 0;
+    }
+  } catch {
+    // ignore
+  }
+  return 0;
+}
+
 interface AiChatPanelProps {
   onClose?: () => void;
   /** 大屏id（开发态传图表名称，发布态传空） */
@@ -294,6 +308,20 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
     }
   }, []);
 
+  // 确保存在大屏对话会话：已有 session_id/conv_uid 直接复用；否则调用对话 add 接口
+  // (/abi-chat/v1/app/session/add) 新建，拿到后端返回的 session_id 与 conv_uid 两个值。
+  const ensureSession = useCallback(async (): Promise<boolean> => {
+    if (chatIdRef.current && convUidRef.current) return true;
+    const spaceId = Number(localStorage.getItem('spaceId') ?? 0);
+    const res = await baseApi.addChatSession({ spaceId, userId: getUserId(), title: '大屏对话' }).catch(() => null);
+    if (!res) return false;
+    chatIdRef.current = res.sessionId;
+    convUidRef.current = res.convUid;
+    cachedChatId = res.sessionId;
+    cachedConvUid = res.convUid;
+    return true;
+  }, []);
+
   const handleSend = useCallback(async () => {
     const text = inputValue.trim();
     if (!text || loading) return;
@@ -307,6 +335,13 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
     // dashboardId：从当前选中图表的 type 动态计算（去掉 Antd 前缀）
     const rawType = rightStore.activeElem?.type ?? '';
     const dynamicDashboardId = rawType.startsWith('Antd') ? rawType.slice(4) : rawType;
+
+    // 先确保存在会话：调用对话 add 接口拿到 conv_uid 与 session_id 两个值
+    const sessionReady = await ensureSession();
+    if (!sessionReady) {
+      message.error('创建会话失败，请稍后重试');
+      return;
+    }
 
     setInputValue('');
     shouldScrollRef.current = true;
@@ -333,44 +368,45 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
 
     const authorization = getAuthorization();
 
-    let userName = '1';
-    try {
-      const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
-      if (userInfoStr) {
-        userName = JSON.parse(userInfoStr)?.userName || '1';
-      }
-    } catch {
-      // ignore
-    }
+    // user_id 与 chat 对话保持一致：从 SOY-REACT_userInfo.userId 取，缺失时为 0
+    const userId = getUserId();
 
     const params = {
       messages: text,
       model: 'qwen3:30b-a3b-fp16',
       stream: false,
-      temperature: 0.0,
+      temperature: 0,
       max_new_tokens: 4096,
       incremental: false,
       enable_vis: true,
       context: {
+        // —— 通用参数：仿照 chat 对话（与对话调用同一 chat/completions 接口）——
+        session_id: chatIdRef.current,
         conv_uid: convUidRef.current,
-        chat_id: chatIdRef.current,
-        agent_id: '',
-        space_id: String(localStorage.getItem('spaceId') ?? ''),
-        app_code: 'chat_with_dashboard',
+        chat_model_id: 12, // 大模型默认
+        space_id: Number(localStorage.getItem('spaceId') ?? 0),
+        app_id: 1,
+        user_id: userId,
+        embed_model_id: 6, // 嵌入模型默认
+        last_question: null,
+        // —— 大屏专属：对话场景标识 ——
         chat_mode: 'chat_with_dashboard',
-        sys_code: '1',
-        user_name: userName,
         extra: {
+          if_debug: true,
+          // 数据语义（与 chat 对话一致）
+          semantic_id: selectedData?.schemaId ?? null,
+          semantic_group_name: selectedData?.groupName || '',
+          semantic_name: selectedData?.name || '',
+          extra_body: {
+            enable_thinking: false,
+          },
+          // —— 大屏专属参数 ——
           task_type: taskType,
           chart_name_list: taskType === 'release' ? chartNameList : [],
           db_name: '',
           dashboard_id: dynamicDashboardId,
           chart_id: currentChartId,
           elements: {},
-          // 数据语义（与 chat 对话一致）
-          semantic_id: selectedData?.schemaId ?? null,
-          semantic_group_name: selectedData?.groupName || '',
-          semantic_name: selectedData?.name || '',
         },
       },
     };
@@ -448,7 +484,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
         );
       }
     }
-  }, [inputValue, loading, selectedData, dashboardId, chartNameList, taskType]);
+  }, [inputValue, loading, selectedData, dashboardId, chartNameList, taskType, ensureSession]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

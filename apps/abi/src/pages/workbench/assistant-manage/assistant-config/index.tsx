@@ -40,8 +40,8 @@ function mapAppToCard(item: any): AgentCard {
     iconLetter: getIconLetter(item.appName),
     status: item.status ?? '0',
     createBy: item.createBy || '-',
-    createTime: item.createTime || '-',
-    updateTime: item.updateTime || '-',
+    createTime: item.createTime ? String(item.createTime).replace('T', ' ') : '-',
+    updateTime: item.updateTime ? String(item.updateTime).replace('T', ' ') : '-',
     groupId: (item.groupId && String(item.groupId) !== '0') ? String(item.groupId) : undefined,
     type: '助手',
   };

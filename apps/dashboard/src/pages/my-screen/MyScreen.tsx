@@ -132,6 +132,26 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
         fetchList(pageData.current, pageData.size);
     }, []);
 
+    // 主应用顶部切换空间时，大屏微应用会广播该事件；重置筛选并回到第 1 页按新空间重新拉取
+    useEffect(() => {
+        const handleSpaceChange = () => {
+            const nextSpaceId = Number(localStorage.getItem('spaceId')) || undefined;
+            setSearchKeyword('');
+            setDateRange(null);
+            setCurrentPage(1);
+            baseApi.getProjectInfoPageList({
+                current: 1,
+                size: pageSize,
+                status: '0',
+                spaceId: nextSpaceId,
+            }).then((data: IPage<IProjectInfo>) => {
+                setPageData({...data, current: 1, size: pageSize});
+            });
+        };
+        window.addEventListener('abi-dashboard:space-change', handleSpaceChange);
+        return () => window.removeEventListener('abi-dashboard:space-change', handleSpaceChange);
+    }, [pageSize]);
+
     return (
         <div className="project-list-container">
             {/* v5 Searchbar */}

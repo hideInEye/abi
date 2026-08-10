@@ -199,17 +199,15 @@ const extractTrailingJson = (content: string): any => {
 }
 
 /**
- * chat_with_knowledge（数据知识）场景：流式 content 是一个以 "thoughts" 为首字段的 JSON 对象
- * （{ "thoughts": "…", "chat_mode": "chat_with_knowledge", "data_knowledge": "…" }），
- * 没有 ## 思考过程 / ## 查询模式 标记，不会被 processContentWithInlineThinking 包成 <think>。
- * 此处从流式累积的原始内容中增量提取 thoughts 字段值，作为深度思考内容逐字展示。
- * 仅识别「以 { "thoughts": " 开头」的内容，天然排除 chat_with_db_execute（以 ## 思考过程 开头）。
+ * chat_with_knowledge（数据知识）：流式 content 是 ```json 围栏包裹、以 "thoughts" 为首字段的 JSON。
+ * 此处增量提取 thoughts 值作为思考内容逐字展示（以 ## 思考过程 开头的 chat_with_db_execute 天然不匹配）。
  * @param raw 流式累积的原始内容（messageRef.current）
- * @returns thoughts 文本（值未闭合时为已到达部分）；非该结构时返回 null
+ * @returns thoughts 文本（未闭合时为已到达部分）；非该结构返回 null
  */
 const extractKnowledgeThoughts = (raw: string): string | null => {
   if (!raw) return null
-  const startMatch = raw.match(/^\s*\{\s*"thoughts"\s*:\s*"/)
+  // 跳过起始 ```json 围栏后匹配 { "thoughts": "
+  const startMatch = raw.match(/^\s*```(?:json)?\s*\{\s*"thoughts"\s*:\s*"/i)
   if (!startMatch) return null
 
   let result = ''
