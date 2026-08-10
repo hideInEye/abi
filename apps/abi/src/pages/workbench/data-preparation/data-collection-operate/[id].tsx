@@ -119,7 +119,7 @@ export function Component() {
 
   const getDetail = async () => {
     const res = await getCollectionDetail({
-      spaceId: Number(localStorage.getItem('spaceId')),
+      spaceId: spaceId || 0,
       viewId: id
     });
     dispatch(res.data);
@@ -179,7 +179,7 @@ export function Component() {
   }, [id, route.query?.viewType]);
 
   useEffect(() => {
-    getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) });
+    getDatasourceList({ spaceId: spaceId || 0 });
   }, []);
 
   useEffect(() => {
@@ -190,7 +190,7 @@ export function Component() {
       getTableListBySource({
         sourceId: datasource,
         sourceType: curDatasource?.sourceType,
-        spaceId: Number(localStorage.getItem('spaceId'))
+        spaceId: spaceId || 0
       });
     }
   }, [datasource, normalizedDataSourceList]);

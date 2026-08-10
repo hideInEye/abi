@@ -1,11 +1,11 @@
-# 报告模式历史合并与 Java Redis Stream 接入需求
+# 会话分组独立页面与报告模式需求
 
 ## 文档状态
 
-- 状态：数据校验已前移到 ChatInput，校验失败时保留问题；定向测试、类型检查和构建已通过。
-- 日期：2026-08-04。
+- 状态：会话分组独立页面已完成；既有报告模式和普通对话需求保持不变。
+- 日期：2026-08-05。
 - 当前分支：`dev/zanghb-20260720-chatreport`。
-- 影响范围：`apps/chat` 报告模式、根 workspace 中旧 Node server。
+- 影响范围：`apps/chat` 会话分组路由、分组页面归属和对话页面分组分支。
 
 本文件是本轮开发的唯一当前需求依据。旧实现中的独立 `ReportConversation` 页面分支、根 `server/`、Node `/api/report-stream/events` 以及“不调用 task 状态接口”的约定全部废止。
 
@@ -20,6 +20,10 @@
 7. 系统侧栏的展开/收起入口移动到各页面内容区左上角；报告完成自动打开右侧预览时同步收起系统侧栏。
 8. 报告预览打开和关闭时使用连续的渐入渐出与双栏宽度过渡，不出现瞬间跳变。
 9. 报告模式与交互模式使用同一数据选择前置校验：选择数据语义或上传 Excel 后才能发送消息。
+10. 报告预览打开及退出动画期间隐藏底部聊天输入区；报告预览完全关闭后恢复输入区。
+11. 右侧 HTML 报告只由 iframe 内部负责正文滚动，外层不产生竞争滚动条，固定的报告标题栏不得覆盖 iframe 顶部正文。
+12. 输入区随报告预览打开和关闭执行约 600ms 的淡出/淡入及高度收展动画，组件实例和未发送草稿始终保留。
+13. 会话分组使用独立页面和独立路由，分组内容不再挂载在对话页面中，也不得携带对话输入框。
 
 ## 非目标
 
@@ -29,6 +33,49 @@
 - 不展示模型内部 `thought`、完整 `action_input`、系统提示词或原始思维链；只展示标题、工具名、`action_intention`、`action_reason` 和公开输出摘要。
 - 不实现报告编辑、导出、分享、列表或独立详情路由。
 - 不把半截 JSON、残缺 HTML 或仍在拼接的 text chunk 直接交给 iframe，也不通过反复替换 `srcDoc` 模拟流式渲染。
+- 不修改会话分组现有视觉样式、接口协议、搜索、重命名、删除、移动和收藏行为。
+- 不重构普通对话、报告模式、输入框、侧栏或其他无关功能。
+
+## 2026-08-05 追加：会话分组独立页面
+
+### 背景
+
+当前点击左侧会话分组会跳转到 `/chat/task/new?groupId=...`，再由 `ConversationAnalysis` 内部分支展示分组内容。由于该路由仍然挂载完整对话页面，分组视图会同时出现模型选择器和底部对话输入框，不符合分组页面职责。
+
+### 目标
+
+- `/chat/group/$groupId` 从兼容重定向改为真实分组页面路由。
+- 点击左侧会话分组直接跳转 `/chat/group/$groupId`，不得再通过 `/chat/task/$taskId` 的 search 参数承载分组页面。
+- 将 `GroupSessionListView` 及其分组页面专属编排从 `conversation-analysis` 迁移到分组路由页面范围。
+- 分组页面只展示迁移前已有的分组标题、操作区、搜索和会话卡片列表；继续复用原 JSX、className 和现有内联样式，不新增或调整视觉样式。
+- 点击分组中的会话卡片仍跳转到 `/chat/task/$taskId`，进入原对话页面。
+- 删除当前分组后返回原有新对话入口，并刷新侧栏数据。
+- `ConversationAnalysis` 恢复为只负责新对话和已有对话，不再接收 `groupId`、不再渲染分组列表。
+- `/chat/task/$taskId` 不再解析仅供分组页面使用的 `groupId` search 参数。
+
+### 非目标
+
+- 不在分组页面挂载 `ConversationAnalysis`、`Conversation`、`ChatHeader`、`ChatInput`、报告预览或聊天免责声明。
+- 不改变分组增删改、会话搜索、收藏、移动、重命名和删除的接口与业务行为。
+- 不修改任何 CSS、Tailwind class、颜色、间距、尺寸或动画。
+- 不修改普通对话、报告模式、数据选择、发送校验和历史恢复逻辑。
+
+### 验收标准
+
+- 点击任意会话分组后，浏览器地址为 `/chat/group/{groupId}`。
+- 分组页面只显示原有分组页面内容，不出现模型选择器、对话输入框或聊天免责声明。
+- 点击分组中的会话可正常进入对应 `/chat/task/{taskId}` 对话。
+- 普通新建对话和已有对话仍通过 `/chat/task/$taskId` 正常工作。
+- 分组页面现有样式无视觉变化，相关 API 行为无变化。
+- 不产生对报告模式和其他页面的无关修改。
+
+### 测试要求
+
+- 对分组路由跳转和 task 路由职责进行定向代码回归检查。
+- 运行 chat 相关定向测试。
+- 运行 `pnpm --filter ai-bot exec tsc --noEmit -p tsconfig.json`。
+- 运行 `pnpm --filter ai-bot build`。
+- 运行 `git diff --check`，并生成本任务 run log。
 
 ## 接口边界
 
@@ -56,7 +103,7 @@ interface SubmitReportRequest {
   messages: string
   app_id: number
   space_id: number
-  group_id: string
+  schema_id: number | string
   conv_id: string
   session_id: string
   user_id: number
@@ -65,6 +112,13 @@ interface SubmitReportRequest {
   app_type?: string
 }
 ```
+
+- 报告提交不再发送会话分组 `group_id`。
+- `schema_id` 直接来自 `ChatInput.onSelectData` 选中的 `node.schemaId`；数据语义分组节点不可选，只有 `type='schema'` 的叶子节点能够更新该值。
+- 前端不得用对话分组 ID、数据语义分组 ID 或节点 `id` 代替 `node.schemaId`，也不得擅自转换 `schemaId` 的现有 `number | string` 类型。
+- 报告链路中仅为 `group_id` 存在的 `sessionGroupId` 透传参数应删除；路由和会话列表自身的分组逻辑保持不变。
+- 本次不修改普通交互请求；普通交互继续使用现有 `context.extra.semantic_id`。
+- 仅上传 Excel 而没有选择数据语义时，保持当前发送前置校验不变，报告提交中的 `schema_id` 使用空字符串，不在本次扩大为新的产品限制。
 
 成功响应中的 `task_id / stream_key / conv_id` 标准化为 `taskId / streamKey / conversationId`。只有三个定位字段完整时才写 IndexedDB 并进入读流阶段。
 
@@ -224,6 +278,21 @@ done
 - 动画采用短时长的 ease-out/ease-in 过渡，不对 iframe `srcDoc` 做逐帧替换，不重启 HTML 打字机，也不改变报告数据状态。
 - `prefers-reduced-motion: reduce` 下取消位移、淡入淡出和宽度动画，直接切换最终布局。
 - 窄屏继续使用“对话/报告”切换，不强制执行桌面双栏宽度动画。
+
+## 报告预览输入区与滚动边界
+
+- 右侧报告处于打开状态或正在播放关闭动画时，底部聊天输入框和免责声明整体隐藏且不占据页面高度；预览动画结束并完全关闭后再恢复显示。
+- 本次显隐只跟随报告预览的挂载状态，不清空输入内容，也不修改普通对话和报告发送逻辑。
+- 输入区不能再通过 `display: none` 瞬间切换；需要使用约 600ms 的透明度、轻微位移和高度收展过渡完成淡出/淡入。
+- 动画过程中 ChatInput 必须持续挂载；隐藏态禁止鼠标交互，动画结束后的折叠态不得继续占据对话区域高度。
+- 动画承载层不得裁切或覆盖 ChatInput 原有的边框、圆角、阴影和 `focus-within` 上移效果；普通态与选中态必须保持动画开发前的视觉样式。
+- `prefers-reduced-motion: reduce` 下取消输入区动画并直接切换最终状态。
+- 右侧报告标题栏与正文区使用纵向 Flex 布局：标题栏固定占据自身高度并禁止压缩，正文区占用剩余高度。
+- HTML 报告正文由 iframe 自身滚动，承载 iframe 的外层正文区必须禁用纵向滚动，避免外层与 iframe 出现嵌套滚动冲突。
+- Markdown 报告继续由外层正文区滚动，不改变现有只读渲染行为。
+- 报告容器、过渡包装层和正文区必须正确设置 `min-height: 0` 与 overflow 边界；不得通过取消最外层 overflow 让内容越过标题栏。
+- 验收时需确认：打开 HTML 报告后输入区不可见；滚动到报告最顶部时首行正文完整可见且不被标题栏覆盖；关闭动画完成后输入区恢复。
+- 本次不得修改报告数据聚合、接口、历史恢复、发送校验、侧栏入口或其他无关页面逻辑。
 
 ## 渐进展示与产品文案
 
@@ -708,4 +777,41 @@ ABI 72px global-sider 使用 `rgba(255, 255, 255, 0.38)` 半透明背景时，�
 
 - 邮件记录高级筛选选择任务状态后列表不立即变化，点击「查询」后才按状态过滤。
 - 点击「重置」后状态筛选与时间范围均清空并恢复全量列表。
+- tsc 不新增报错。
+
+## 2026-08-05 追加：MCP 编辑页 bearer 模式自动使用平台 token
+
+### 需求类型
+
+前端交互调整（纯前端，不改接口协议）。
+
+### 背景
+
+MCP 服务编辑页「安全认证方案」中，当认证类型为 HTTP 且 Scheme 选择 bearer 时，需要手动在「默认凭证」输入框填写 token。用户要求改为自动使用当前平台登录 token，无需手动填写。
+
+### 目标
+
+- MCP 编辑页中，安全认证方案的类型为 `http` 且 scheme 为 `bearer` 时，「默认凭证」自动填充为当前平台的 Authorization header（格式 `Bearer ${token}`）。
+- bearer 模式下「默认凭证」仍允许手动修改；未手动修改时默认使用平台当前 token。
+- 提交保存时，bearer 方案将当前 `defaultCredential` 值传给接口。
+
+### 非目标
+
+- 不修改 basic、apiKey 等其他认证模式的凭证填写方式。
+- 不修改安全认证方案的其他字段（ID、认证类型、scheme 选项）。
+- 不修改 MCP 列表、详情、删除、状态切换逻辑。
+- 不修改后端接口协议。
+
+### 影响范围预期
+
+- `apps/abi/src/pages/component/system/plugin/components/SecuritySchemeSection.tsx`
+- `apps/abi/src/pages/component/system/plugin/components/PlugUpdate.tsx`
+- `.ai/runs/2026-08-05-mcp-bearer-token-auto-fill/`
+
+### 验收标准
+
+- 新增/编辑 MCP 服务时，只要安全认证 scheme 为 bearer，「默认凭证」自动显示为当前平台 `Bearer xxx`，且允许手动修改。
+- 从 basic 切换到 bearer 时，「默认凭证」自动填充当前平台 token。
+- 编辑回显已有 bearer 方案时，defaultCredential 自动同步为当前平台 token。
+- 提交报文中 bearer 方案的 `defaultCredential` 为当前平台 Authorization header。
 - tsc 不新增报错。

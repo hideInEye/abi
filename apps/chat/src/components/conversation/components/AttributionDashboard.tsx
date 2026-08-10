@@ -592,7 +592,71 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
     { key: 'combo', title: '组合归因', desc: '瀑布图与累积贡献' },
   ];
 
-  const curIntDec = fmt(overview?.current_value).split('.');
+  const metrics = useMemo(
+    () => {
+      const currentIntDec = fmt(overview?.current_value).split('.');
+      const hasBaseline = overview?.baseline_value != null;
+      const isPositive = (deltaValue ?? 0) >= 0;
+      return [
+        {
+          key: 'current',
+          title: '当前值',
+          subtitle: `${overview?.metric_label || data.target_metric} · 当前周期`,
+          iconSvg: '<path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/>',
+          colorClass: styles.metricBlue,
+          value: (
+            <div className={styles.metricNum} style={{ color: '#5b7cf7' }}>
+              ¥{currentIntDec[0]}<span className={styles.metricNumDec}>.{currentIntDec[1] || '00'}</span>
+            </div>
+          ),
+        },
+        {
+          key: 'baseline',
+          title: '对比基准',
+          subtitle: hasBaseline ? '对比周期基准' : '首次分析 / 基准缺失',
+          iconSvg: '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>',
+          colorClass: styles.metricPurple,
+          value: hasBaseline ? (
+            <div className={styles.metricNum} style={{ color: '#8b5cf6' }}>¥{fmt(overview.baseline_value)}</div>
+          ) : (
+            <div className={styles.metricNum} style={{ color: 'var(--attr-muted)' }}>
+              —<span className={styles.metricNumDec}> 无基准</span>
+            </div>
+          ),
+        },
+        {
+          key: 'delta',
+          title: '较基准变化',
+          subtitle: positiveShare === 100 ? '全部为正向贡献 · 100%' : `正向贡献 · ${positiveShare}%`,
+          iconSvg: '<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>',
+          colorClass: styles.metricGreen,
+          value: (
+            <div className={styles.metricNum} style={{ color: isPositive ? 'var(--attr-success)' : 'var(--attr-danger)' }}>
+              {isPositive ? '+' : '-'}{fmtK(Math.abs(deltaValue ?? 0))}
+            </div>
+          ),
+        },
+        {
+          key: 'anomaly',
+          title: '异常检测',
+          subtitle: `阈值 ${anomaly?.threshold ?? '—'} · 算法 ${anomaly?.algorithm ?? '—'}`,
+          iconSvg: '<circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>',
+          colorClass: styles.metricOrange,
+          value: (
+            <div className={styles.metricNum} style={{ color: anomaly?.is_anomaly ? 'var(--attr-danger)' : 'var(--attr-success)' }}>
+              {anomaly?.is_anomaly ? '异常' : '正常'}
+              {anomaly && (
+                <span className={styles.badgeAmber} style={{ marginLeft: 8, fontSize: 10, verticalAlign: 'middle' }}>
+                  Z-Score {anomaly.anomaly_score.toFixed(2)}
+                </span>
+              )}
+            </div>
+          ),
+        },
+      ];
+    },
+    [overview, data.target_metric, deltaValue, positiveShare, anomaly],
+  );
 
   const dashboard = (
     <div className={styles.root}>
@@ -676,43 +740,27 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
                 <div className={styles.strategyLabel}>分析策略 / {data.strategy_name}</div>
                 <h1 className={styles.h1}>{data.target_metric} <span className={styles.accent}>归因拆解</span></h1>
                 <p className={styles.desc}>对当前分析周期内的指标变化进行多维度归因，识别主要影响维度与关键驱动因子，并通过交叉归因揭示维度间的联动效应。</p>
-                <div className={styles.modeList}>{(data.analysis_modes || []).join(' · ')}</div>
               </section>
 
               <section className={styles.metricStrip}>
-                <div className={`${styles.card} ${styles.metricCard}`}>
-                  <div className={styles.metricLabel}>当前值</div>
-                  <div className={styles.metricValue} style={{ color: 'var(--attr-accent)' }}>
-                    ¥{curIntDec[0]}<span className={styles.metricDec}>.{curIntDec[1] || '00'}</span>
+                {metrics.map((m, i) => (
+                  <div key={m.key} className={`${styles.card} ${styles.metricCard} ${m.colorClass}`}>
+                    <span className={styles.metricGlow} />
+                    <span className={styles.metricGridBg} />
+                    <span className={styles.metricIndex}>0{i + 1}</span>
+                    <div className={styles.metricTitle}>{m.title}</div>
+                    <div className={styles.metricCardInner}>
+                      <div className={styles.metricIcon}>
+                        <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: m.iconSvg }} />
+                      </div>
+                      <div className={styles.metricInfo}>
+                        {m.value}
+                        <div className={styles.metricSub}>{m.subtitle}</div>
+                      </div>
+                    </div>
+                    <span className={styles.metricAccentLine} />
                   </div>
-                  <div className={styles.metricSub}>{overview?.metric_label} · 当前周期</div>
-                </div>
-                <div className={`${styles.card} ${styles.metricCard}`}>
-                  <div className={styles.metricLabel}>对比基准</div>
-                  {overview?.baseline_value != null ? (
-                    <div className={styles.metricValue}>¥{fmt(overview.baseline_value)}</div>
-                  ) : (
-                    <div className={`${styles.metricValue} ${styles.metricMuted}`}>— <span className={styles.metricDec}>无基准</span></div>
-                  )}
-                  <div className={styles.metricSub}>{overview?.baseline_value != null ? '对比周期基准' : '首次分析 / 基准缺失'}</div>
-                </div>
-                <div className={`${styles.card} ${styles.metricCard}`}>
-                  <div className={styles.metricLabel}>较基准变化</div>
-                  <div className={styles.metricValue} style={{ color: (deltaValue ?? 0) >= 0 ? 'var(--attr-success)' : 'var(--attr-danger)' }}>
-                    {(deltaValue ?? 0) >= 0 ? '+' : '-'}{fmtK(Math.abs(deltaValue ?? 0))}
-                  </div>
-                  <div className={styles.metricSub}>{positiveShare === 100 ? '全部为正向贡献 · 100%' : `正向贡献 · ${positiveShare}%`}</div>
-                </div>
-                <div className={`${styles.card} ${styles.metricCard}`}>
-                  <div className={styles.metricLabel}>异常检测</div>
-                  <div className={styles.metricAnomaly}>
-                    <span className={styles.metricValue} style={{ color: anomaly?.is_anomaly ? 'var(--attr-danger)' : 'var(--attr-success)' }}>
-                      {anomaly?.is_anomaly ? '异常' : '正常'}
-                    </span>
-                    {anomaly && <span className={styles.badgeGreen}>Z-Score {anomaly.anomaly_score.toFixed(2)}</span>}
-                  </div>
-                  <div className={styles.metricSub}>阈值 {anomaly?.threshold} · 算法 {anomaly?.algorithm}</div>
-                </div>
+                ))}
               </section>
 
               <section className={`${styles.card} ${styles.conclusionCard}`}>

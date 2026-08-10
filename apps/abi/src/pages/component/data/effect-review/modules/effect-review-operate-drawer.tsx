@@ -406,6 +406,7 @@ const EffectReviewOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose
           conv_uid: form.getFieldValue('conv_uid'),
           embed_model_id: 6,
           extra: { fb_id: fbId },
+          session_id: `${form.getFieldValue('session_id') ?? ''}`,
           space_id: `${form.getFieldValue('space_id')}`,
           sys_code: '1',
           user_name: '1',
