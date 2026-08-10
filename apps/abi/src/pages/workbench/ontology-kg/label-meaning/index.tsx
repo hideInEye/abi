@@ -36,41 +36,29 @@ export const Component: React.FC = () => {
   const tabItems = useMemo<TabsProps['items']>(
     () => [
       {
-        children: (
-          <div className="h-full min-h-0">
-            <DimensionModeling onGoMetricModeling={switchToMetricTab} />
-          </div>
-        ),
         key: 'dimension',
         label: '维度建模',
       },
       {
-        children: (
-          <div className="h-full min-h-0 ">
-            <MetricModeling />
-          </div>
-        ),
         key: 'metric',
         label: '指标建模',
       },
       {
-        children: (
-          <div className="h-full min-h-0">
-            <SemanticTag />
-          </div>
-        ),
         key: 'semanticTag',
         label: '标签语义',
       },
     ],
-    [switchToMetricTab],
+    [],
   )
 
   return (
-    <div className="h-full min-h-500px flex-col-stretch overflow-hidden lt-sm:overflow-auto">
-      <ACard className="flex-col-stretch sm:flex-1-hidden border-0 card-wrapper" styles={{ body: { display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden', padding: 0 } }}>
-        <ATabs activeKey={activeTab} className="abi-attr-modeling-tabs h-full min-h-0" items={tabItems} style={{ flex: 1, minHeight: 0 }} onChange={handleTabChange} />
-      </ACard>
+    <div className="h-full min-h-500px flex flex-col overflow-hidden lt-sm:overflow-auto">
+      <ATabs activeKey={activeTab} animated={false} className="abi-attr-modeling-tabs abi-attr-modeling-tabs--nav-only" items={tabItems} onChange={handleTabChange} />
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {activeTab === 'dimension' && <DimensionModeling onGoMetricModeling={switchToMetricTab} />}
+        {activeTab === 'metric' && <MetricModeling />}
+        {activeTab === 'semanticTag' && <SemanticTag />}
+      </div>
     </div>
   )
 }

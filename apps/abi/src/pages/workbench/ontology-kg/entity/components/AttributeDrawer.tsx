@@ -14,7 +14,7 @@ import { useAttributeAssets } from '../hooks/useAttributeAssets'
 import { useAttributeGroups } from '../hooks/useAttributeGroups'
 import { useEntityAttributeManagement } from '../hooks/useEntityAttributeManagement'
 import type { AttributeBindingValues } from '../types'
-import { makeAttributes } from '../utils/entity'
+import { getEntityAttributeIdentity, makeAttributes } from '../utils/entity'
 
 type SupportedAttributeType = Exclude<OntologyEntityAttribute['attributeType'], 'field'>
 type AttributeTab = 'all' | SupportedAttributeType
@@ -156,7 +156,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
         return
       }
       if (!values.assetCode) return
-      const selectedAssets = values.assetCode === '__group__' ? assets : assets.filter((asset) => asset.attributeCode === values.assetCode)
+      const selectedAssets = values.assetCode === '__group__' ? assets : assets.filter((asset) => String(asset.id) === String(values.assetCode))
       const nextAttributes = makeAttributes(selectedAssets, selectedType, values.remark?.trim())
       if (nextAttributes.length === 0) return
       if (!addAttributes(nextAttributes)) {
@@ -182,9 +182,9 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
   const handleSave = useCallback(async (): Promise<void> => {
     const saved = await saveAttributes()
     if (!saved) return
-    message.success('属性配置已保存')
     try {
       await onSaved()
+      message.success('属性配置已保存')
       onClose()
     } catch {
       message.error('实体列表刷新失败，请稍后重试')
@@ -195,7 +195,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
   const assetOptions = useMemo(
     () => [
       { disabled: assets.length === 0, label: `绑定当前分组（${assets.length} 个资产）`, value: '__group__' },
-      ...assets.map((asset) => ({ label: `${asset.attributeName}（${asset.attributeCode}）`, value: asset.attributeCode })),
+      ...assets.map((asset) => ({ label: `${asset.attributeName}（${asset.attributeCode}）`, value: String(asset.id) })),
     ],
     [assets],
   )
@@ -256,70 +256,72 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
       width={1120}
       onClose={onClose}
     >
-      <section style={DRAWER_STYLES.entityInfoGrid}>
-        {entityInfoItems.map((item) => (
-          <div key={item.label} style={DRAWER_STYLES.infoCard}>
-            <div style={DRAWER_STYLES.infoLabel}>{item.label}</div>
-            <div style={DRAWER_STYLES.infoValue}>{item.value}</div>
-          </div>
-        ))}
-      </section>
-
-      <Tabs activeKey={activeTab} items={tabItems} onChange={(key) => setActiveTab(key as AttributeTab)} />
-
-      <section style={DRAWER_STYLES.listSection}>
-        <Table<OntologyEntityAttribute>
-          className="abi-std-table"
-          columns={columns}
-          dataSource={visibleAttributes}
-          loading={loadingDetail}
-          locale={{ emptyText: <Empty description="暂无已绑定属性" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-          pagination={false}
-          rowKey={(attribute) => `${attribute.attributeType}-${attribute.attributeCode}`}
-          title={() => <OntologyFormSectionTitle icon={<ApartmentOutlined />}>已绑定属性列表</OntologyFormSectionTitle>}
-        />
-      </section>
-
-      <section style={DRAWER_STYLES.bindingSection}>
-        <OntologyFormSectionTitle icon={<PlusOutlined />}>新增属性绑定</OntologyFormSectionTitle>
-        <Form<AttributeBindingValues> className="ds-form-section" form={form} layout="vertical">
-          <div style={DRAWER_STYLES.bindingFormRow}>
-            <Form.Item label="属性类型" name="attributeType" rules={[{ message: '请选择属性类型', required: true }]} style={{ flex: '0 0 180px', marginBottom: 0 }}>
-              <Select<SupportedAttributeType>
-                options={(Object.keys(TYPE_LABELS) as SupportedAttributeType[]).map((type) => ({ label: TYPE_LABELS[type], value: type }))}
-                placeholder="请选择属性类型"
-                onChange={handleTypeChange}
-              />
-            </Form.Item>
-            <Form.Item label="绑定分组" name="groupId" rules={[{ message: '请选择绑定分组', required: true }]} style={{ flex: '0 0 240px', marginBottom: 0 }}>
-              <TreeSelect
-                allowClear
-                disabled={!selectedType || loadingGroups || !hasGroups}
-                loading={loadingGroups}
-                notFoundContent={loadingGroups ? '加载中' : '暂无分组'}
-                placeholder={!selectedType ? '请先选择属性类型' : hasGroups ? '请选择绑定分组' : '暂无可选分组'}
-                showSearch
-                treeData={groupTreeOptions}
-                treeDefaultExpandAll
-                treeNodeFilterProp="label"
-                treeNodeLabelProp="label"
-                onChange={handleGroupChange}
-              />
-            </Form.Item>
-            <Form.Item label="绑定资产" name="assetCode" rules={[{ message: '请选择绑定资产', required: true }]} style={{ flex: '1 1 260px', marginBottom: 0, minWidth: 220 }}>
-              <Select disabled={!selectedGroupId} loading={loadingAssets} optionFilterProp="label" options={assetOptions} placeholder="请选择绑定当前分组或具体资产" showSearch />
-            </Form.Item>
-            <Form.Item label="备注" name="remark" rules={[{ max: 500, message: '备注最多500个字符' }]} style={{ flex: '0 0 220px', marginBottom: 0 }}>
-              <Input maxLength={500} placeholder="请输入备注" />
-            </Form.Item>
-            <div style={{ flex: '0 0 96px', paddingTop: 30 }}>
-              <Button block disabled={!selectedGroupId || adding} icon={<PlusOutlined />} loading={adding} type="primary" onClick={handleAdd}>
-                添加
-              </Button>
+      <div className="ontology-attribute-drawer-content">
+        <section style={DRAWER_STYLES.entityInfoGrid}>
+          {entityInfoItems.map((item) => (
+            <div key={item.label} style={DRAWER_STYLES.infoCard}>
+              <div style={DRAWER_STYLES.infoLabel}>{item.label}</div>
+              <div style={DRAWER_STYLES.infoValue}>{item.value}</div>
             </div>
-          </div>
-        </Form>
-      </section>
+          ))}
+        </section>
+
+        <Tabs activeKey={activeTab} items={tabItems} onChange={(key) => setActiveTab(key as AttributeTab)} />
+
+        <section style={DRAWER_STYLES.listSection}>
+          <Table<OntologyEntityAttribute>
+            className="abi-std-table"
+            columns={columns}
+            dataSource={visibleAttributes}
+            loading={loadingDetail}
+            locale={{ emptyText: <Empty description="暂无已绑定属性" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+            pagination={false}
+            rowKey={getEntityAttributeIdentity}
+            title={() => <OntologyFormSectionTitle className="ontology-attribute-section-title" icon={<ApartmentOutlined />}>已绑定属性列表</OntologyFormSectionTitle>}
+          />
+        </section>
+
+        <section style={DRAWER_STYLES.bindingSection}>
+          <OntologyFormSectionTitle className="ontology-attribute-section-title ontology-attribute-section-title--binding" icon={<PlusOutlined />}>新增属性绑定</OntologyFormSectionTitle>
+          <Form<AttributeBindingValues> className="ds-form-section" form={form} layout="vertical">
+            <div style={DRAWER_STYLES.bindingFormRow}>
+              <Form.Item label="属性类型" name="attributeType" rules={[{ message: '请选择属性类型', required: true }]} style={{ flex: '0 0 180px', marginBottom: 0 }}>
+                <Select<SupportedAttributeType>
+                  options={(Object.keys(TYPE_LABELS) as SupportedAttributeType[]).map((type) => ({ label: TYPE_LABELS[type], value: type }))}
+                  placeholder="请选择属性类型"
+                  onChange={handleTypeChange}
+                />
+              </Form.Item>
+              <Form.Item label="绑定分组" name="groupId" rules={[{ message: '请选择绑定分组', required: true }]} style={{ flex: '0 0 240px', marginBottom: 0 }}>
+                <TreeSelect
+                  allowClear
+                  disabled={!selectedType || loadingGroups || !hasGroups}
+                  loading={loadingGroups}
+                  notFoundContent={loadingGroups ? '加载中' : '暂无分组'}
+                  placeholder={!selectedType ? '请先选择属性类型' : hasGroups ? '请选择绑定分组' : '暂无可选分组'}
+                  showSearch
+                  treeData={groupTreeOptions}
+                  treeDefaultExpandAll
+                  treeNodeFilterProp="label"
+                  treeNodeLabelProp="label"
+                  onChange={handleGroupChange}
+                />
+              </Form.Item>
+              <Form.Item label="绑定资产" name="assetCode" rules={[{ message: '请选择绑定资产', required: true }]} style={{ flex: '1 1 260px', marginBottom: 0, minWidth: 220 }}>
+                <Select disabled={!selectedGroupId} loading={loadingAssets} optionFilterProp="label" options={assetOptions} placeholder="请选择绑定当前分组或具体资产" showSearch />
+              </Form.Item>
+              <Form.Item label="备注" name="remark" rules={[{ max: 500, message: '备注最多500个字符' }]} style={{ flex: '0 0 220px', marginBottom: 0 }}>
+                <Input maxLength={500} placeholder="请输入备注" />
+              </Form.Item>
+              <div style={{ flex: '0 0 96px', paddingTop: 30 }}>
+                <Button block disabled={!selectedGroupId || adding} icon={<PlusOutlined />} loading={adding} type="primary" onClick={handleAdd}>
+                  添加
+                </Button>
+              </div>
+            </div>
+          </Form>
+        </section>
+      </div>
     </CommonDrawer>
   )
 }

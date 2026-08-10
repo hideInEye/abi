@@ -1,4 +1,4 @@
-import type { OntologyEntityAttribute, OntologyEntityAttributeDataType, SaveOntologyEntityAttribute } from '@/pages/workbench/ontology-kg/shared-network-types'
+import type { OntologyEntityAttribute, OntologyEntityAttributeDataType, OntologyNetworkId, SaveOntologyEntityAttribute } from '@/pages/workbench/ontology-kg/shared-network-types'
 
 import type { AttributeAsset } from '../types'
 
@@ -10,6 +10,37 @@ const DECIMAL_DATA_TYPES = new Set(['amount', 'decimal', 'double', 'float', 'mon
 const TIME_DATA_TYPES = new Set(['date', 'datetime', 'month', 'quarter', 'time', 'timestamp', 'year'])
 const BYTE_DATA_TYPES = new Set(['binary', 'blob', 'bytea', 'bytes', 'varbinary'])
 const BOOLEAN_DATA_TYPES = new Set(['bool', 'boolean'])
+
+function normalizeIdentityPart(value: unknown): string {
+  if (value === undefined || value === null) return ''
+  return String(value).trim()
+}
+
+function normalizeAttributeId(value: unknown): OntologyNetworkId | undefined {
+  if (value === undefined || value === null) return undefined
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed || undefined
+  }
+  if (typeof value === 'number') return value
+  return undefined
+}
+
+function getEntityAttributeSourceId(attribute: OntologyEntityAttribute): OntologyNetworkId | undefined {
+  const source = attribute as Record<string, unknown>
+  if (attribute.attributeType === 'dimension') return normalizeAttributeId(attribute.attributeId ?? attribute.dimId ?? source.dimensionId)
+  if (attribute.attributeType === 'indicator') return normalizeAttributeId(attribute.attributeId ?? attribute.indId ?? source.indicatorId)
+  if (attribute.attributeType === 'label') return normalizeAttributeId(attribute.attributeId ?? attribute.tagId)
+  return normalizeAttributeId(attribute.attributeId)
+}
+
+export function getEntityAttributeIdentity(attribute: OntologyEntityAttribute): string {
+  return `${attribute.attributeType}:${normalizeIdentityPart(getEntityAttributeSourceId(attribute)) || normalizeIdentityPart(attribute.attributeCode)}`
+}
+
+export function isSameEntityAttribute(left: OntologyEntityAttribute, right: OntologyEntityAttribute): boolean {
+  return getEntityAttributeIdentity(left) === getEntityAttributeIdentity(right)
+}
 
 /**
  * Converts source module data types to the integer enum accepted by entity/attribute/save.
@@ -31,14 +62,21 @@ export function toEntityAttributeDataType(value: unknown): OntologyEntityAttribu
 }
 
 export function makeAttributes(assets: AttributeAsset[], attributeType: Exclude<OntologyEntityAttribute['attributeType'], 'field'>, remark?: string): OntologyEntityAttribute[] {
-  return assets.map((asset) => ({
-    attributeCode: asset.attributeCode,
-    attributeName: asset.attributeName,
-    attributeType,
-    ...(asset.dataType === undefined || asset.dataType === null ? {} : { dataType: String(asset.dataType) }),
-    relateDictId: asset.relateDictId,
-    remark: remark || asset.remark || undefined,
-  }))
+  return assets.map((asset) => {
+    const attributeId = attributeType === 'dimension' ? asset.dimId ?? asset.id : attributeType === 'indicator' ? asset.indId ?? asset.id : asset.tagId ?? asset.id
+    return {
+      attributeCode: asset.attributeCode,
+      attributeId,
+      attributeName: asset.attributeName,
+      attributeType,
+      ...(asset.dataType === undefined || asset.dataType === null ? {} : { dataType: String(asset.dataType) }),
+      ...(attributeType === 'dimension' ? { dimId: attributeId } : {}),
+      ...(attributeType === 'indicator' ? { indId: attributeId } : {}),
+      ...(attributeType === 'label' ? { tagId: attributeId } : {}),
+      relateDictId: asset.relateDictId,
+      remark: remark || asset.remark || undefined,
+    }
+  })
 }
 
 /**
@@ -47,6 +85,7 @@ export function makeAttributes(assets: AttributeAsset[], attributeType: Exclude<
  */
 export function makeEntityAttributeSaveItems(attributes: OntologyEntityAttribute[]): SaveOntologyEntityAttribute[] {
   return attributes.map((attribute) => {
+    const attributeId = getEntityAttributeSourceId(attribute)
     const dataType = toEntityAttributeDataType(attribute.dataType)
     const remark = attribute.remark?.trim()
     const item: SaveOntologyEntityAttribute = {
@@ -55,6 +94,7 @@ export function makeEntityAttributeSaveItems(attributes: OntologyEntityAttribute
       attributeType: attribute.attributeType,
       dataType,
     }
+    if (attributeId !== undefined) item.attributeId = attributeId
     if (attribute.relateDictId !== undefined && attribute.relateDictId !== null) item.relateDictId = attribute.relateDictId
     if (remark) item.remark = remark
     return item

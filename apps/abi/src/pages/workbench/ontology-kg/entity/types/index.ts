@@ -30,9 +30,12 @@ export interface AttributeAsset {
   attributeName: string
   /** The source module data type. It is normalized to the entity API enum before saving. */
   dataType?: unknown
+  dimId?: OntologyNetworkId
   id: OntologyNetworkId
+  indId?: OntologyNetworkId
   relateDictId?: OntologyNetworkId | null
   remark?: string | null
+  tagId?: OntologyNetworkId
 }
 
 export interface AttributeBindingValues {

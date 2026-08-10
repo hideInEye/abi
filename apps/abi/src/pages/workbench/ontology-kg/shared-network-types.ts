@@ -54,19 +54,24 @@ export interface OntologyLabelOption {
 }
 
 export interface OntologyEntityAttribute {
+  attributeId?: OntologyNetworkId
   attributeCode: string
   attributeName: string
   attributeType: OntologyAttributeType
   /** Detail responses may contain legacy source-type strings. */
   dataType?: number | string | null
+  dimId?: OntologyNetworkId
+  indId?: OntologyNetworkId
   relateDictId?: OntologyNetworkId | null
   remark?: string | null
+  tagId?: OntologyNetworkId
 }
 
 /** entity/attribute/save accepts only these numeric data-type values. */
 export type OntologyEntityAttributeDataType = 0 | 1 | 2 | 3 | 4 | 5
 
 export interface SaveOntologyEntityAttribute {
+  attributeId?: OntologyNetworkId
   attributeCode: string
   attributeName: string
   attributeType: OntologyAttributeType

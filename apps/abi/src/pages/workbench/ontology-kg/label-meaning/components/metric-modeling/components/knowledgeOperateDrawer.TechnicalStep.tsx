@@ -74,6 +74,10 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
 
       {indicatorClass === 'derivative' ? (
         <>
+            <AForm.Item required label="指标编码" name="techName" rules={[{ validator: validateTechName }]}>
+              <AInput placeholder="请输入指标编码" />
+            </AForm.Item>
+
           <AForm.Item required label="衍生模板" name="templateType" rules={[{ message: '请选择衍生模板', required: true }]}>
             <ASelect options={EXTENDED_TEMPLATE_OPTIONS} placeholder="请选择衍生模板" />
           </AForm.Item>
