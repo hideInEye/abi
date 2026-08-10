@@ -227,6 +227,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             onToggleReportTodo={reportController.toggleTodo}
             onToggleReportTask={reportController.toggleTaskExecution}
             onOpenReport={reportController.openReport}
+            hideMessageNavRail={reportPreview.mounted}
           />
         </div>
 
