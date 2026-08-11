@@ -2,7 +2,7 @@ import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlin
 import { createFileRoute } from '@tanstack/react-router'
 import { Button, DatePicker, Empty, Input, message, Popover, Spin, Tabs } from 'antd'
 import dayjs from 'dayjs'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SkillCard } from '@/constant/layout'
 import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
@@ -41,7 +41,7 @@ function mapSkillToCard(item: SkillItem, index: number): SkillCard {
   }
 }
 
-/** 已添加技能 id 本地存储 key（后端参数就绪后改为接口字段过滤） */
+/** 已添加技能 id 本地存储 key */
 const MY_SKILLS_KEY = 'mySkills'
 
 function readMySkillIds(): string[] {
@@ -69,10 +69,10 @@ function SkillStoreView() {
   const [pendingRange, setPendingRange] = useState<any>(null)
   const [dateRange, setDateRange] = useState<any>(null)
 
-  // 拉取技能列表（与 abi 同一接口）
+  // 拉取技能列表（与 abi 同一接口）：不传 spaceId 查全部，前端按 visibility 过滤
   const fetchList = useCallback(() => {
     setLoading(true)
-    return querySkillList({ spaceId: getSpaceId() })
+    return querySkillList({})
       .then((res: any) => {
         const rows =
           res?.data?.data?.pageItems ||
@@ -100,7 +100,11 @@ function SkillStoreView() {
       })
   }, [])
 
+  // StrictMode 开发环境会重挂载组件，用 ref 保证列表仅首次请求一次，避免重复调用接口
+  const didInitRef = useRef(false)
   useEffect(() => {
+    if (didInitRef.current) return
+    didInitRef.current = true
     fetchList()
   }, [fetchList])
 
@@ -113,26 +117,28 @@ function SkillStoreView() {
     [rawMap],
   )
 
-  const tabCards = tab === 'mine' ? cards.filter((c) => myIds.includes(c.key)) : cards
-
-  // 仅搜索/筛选当前 tab 下的内容：名称/描述/标签关键字 + 高级筛选时间范围
+  // 当前 tab 可见性 + 关键字 + 时间范围，一次过滤即可（避免多层中间数组，useMemo 才真正生效）：
+  // 广场——公开(PUBLIC)全平台可见，私有(PRIVATE)仅本空间可见；我的技能——仅收藏的（收藏即可见）
   const filteredCards = useMemo(() => {
+    const curSpaceId = String(getSpaceId() ?? '')
     const kw = searchText.trim()
-    let arr = kw
-      ? tabCards.filter(
-          (c) => c.title.includes(kw) || c.description.includes(kw) || c.tagLabel.includes(kw),
-        )
-      : tabCards
-    if (dateRange && dateRange[0] && dateRange[1]) {
-      const start = dayjs(dateRange[0]).startOf('day')
-      const end = dayjs(dateRange[1]).endOf('day')
-      arr = arr.filter((c) => {
-        const t = dayjs(rawMap[c.key]?.createTime)
-        return t.isValid() && !t.isBefore(start) && !t.isAfter(end)
-      })
-    }
-    return arr
-  }, [tabCards, searchText, dateRange, rawMap])
+    const start = dateRange?.[0] ? dayjs(dateRange[0]).startOf('day') : null
+    const end = dateRange?.[1] ? dayjs(dateRange[1]).endOf('day') : null
+    return cards.filter((c) => {
+      const raw = rawMap[c.key]
+      if (tab === 'mine') {
+        if (!myIds.includes(c.key)) return false
+      } else if (String(raw?.visibility || '').toUpperCase() === 'PRIVATE') {
+        if (String(raw?.spaceId ?? '') !== curSpaceId) return false
+      }
+      if (kw && !(c.title.includes(kw) || c.description.includes(kw) || c.tagLabel.includes(kw))) return false
+      if (start && end) {
+        const t = dayjs(raw?.createTime)
+        if (!t.isValid() || t.isBefore(start) || t.isAfter(end)) return false
+      }
+      return true
+    })
+  }, [cards, rawMap, tab, myIds, searchText, dateRange])
 
   const handleToggleEnable = useCallback((card: SkillCard) => {
     const nextEnabled = !card.enabled

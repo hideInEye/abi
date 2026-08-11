@@ -376,6 +376,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       groupName: selectedData?.groupName || '',
       semanticName: selectedData?.name || '',
       semanticSchemaId: selectedData?.schemaId,
+      // 选中数据语义分组时的真实分组 id（与 semanticSchemaId 互斥）
+      semanticGroupId: selectedData?.groupId,
       // 新建会话时通过 meta 把已选 Excel 透传到 Conversation，避免切换路由后状态丢失
       selectedExcel: selectedExcel?.file_id
         ? { file_id: selectedExcel.file_id, file_name: selectedExcel.file_name }
@@ -610,6 +612,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onReportLoadingChange={setReportLoading}
                 onReportPreviewChange={handleReportPreviewChange}
                 semanticId={selectedData?.schemaId}
+                semanticGroupId={selectedData?.groupId}
                 selectedExcel={selectedExcel}
                 modelOptions={modelOptions}
                 currentModel={currentModel}

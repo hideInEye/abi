@@ -122,7 +122,10 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   const [optionNameMap, setOptionNameMap] = useState<Record<string, string>>({})
   // id -> 分组层级路径（形如「父组 / 子组」），用于已选项行标注所属分组并展示层级
   const [optionGroupMap, setOptionGroupMap] = useState<Record<string, string>>({})
-  const mergeOptionNames = (options: { id: string; name: string; groupPath?: string }[]) => {
+  // MCP 工具协议分组元数据：id -> { mcpSse, mcpStreamable }，值为真实 groupId 列表
+  // sse 入 mcpSse，streamableHttp 入 mcpStreamable；保存时写入 toolConfig 的 mcp_sse/mcp_streamable
+  const [toolMcpMetaMap, setToolMcpMetaMap] = useState<Record<string, { mcpSse: string[]; mcpStreamable: string[] }>>({})
+  const mergeOptionNames = (options: { id: string; name: string; groupPath?: string; groupId?: string; frontProtocol?: string }[]) => {
     setOptionNameMap((prev) => {
       const next = { ...prev }
       options.forEach((o) => {
@@ -134,6 +137,17 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       const next = { ...prev }
       options.forEach((o) => {
         if (o.groupPath) next[o.id] = o.groupPath
+      })
+      return next
+    })
+    // MCP 工具：按协议把真实 groupId 归入 sse / streamable（选择器加载时已带出 groupId 与 frontProtocol）
+    setToolMcpMetaMap((prev) => {
+      const next = { ...prev }
+      options.forEach((o) => {
+        if (o.id.startsWith('mcp_') && o.groupId) {
+          const isSse = String(o.frontProtocol || '').toLowerCase() === 'sse'
+          next[o.id] = isSse ? { mcpSse: [o.groupId], mcpStreamable: [] } : { mcpSse: [], mcpStreamable: [o.groupId] }
+        }
       })
       return next
     })
@@ -164,6 +178,8 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       if (Array.isArray(version.tools) && version.tools.length > 0) {
         const ids = new Set<string>()
         const names: { id: string; name: string; groupPath?: string }[] = []
+        // MCP 工具协议分组回显：详情接口原样返回 mcp_sse/mcp_streamable，直接保留
+        const mcpMeta: Record<string, { mcpSse: string[]; mcpStreamable: string[] }> = {}
         version.tools.forEach((t: any) => {
           const prefix = t.toolType === '2' ? 'mcp' : 'builtin'
           if (Array.isArray(t.toolConfig)) {
@@ -172,12 +188,19 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 const fid = `${prefix}_${c.id}`
                 ids.add(fid)
                 if (c.name) names.push({ id: fid, name: c.name, groupPath: c.groupPath })
+                if (prefix === 'mcp') {
+                  mcpMeta[fid] = {
+                    mcpSse: Array.isArray(c.mcp_sse) ? c.mcp_sse.map(String) : [],
+                    mcpStreamable: Array.isArray(c.mcp_streamable) ? c.mcp_streamable.map(String) : [],
+                  }
+                }
               }
             })
           }
         })
         setSelectedToolIds(ids)
         if (names.length) mergeOptionNames(names)
+        if (Object.keys(mcpMeta).length) setToolMcpMetaMap((prev) => ({ ...prev, ...mcpMeta }))
       }
       // 数据语义选中回显：schemaSemantics -> schema_<id>（合入 name）
       if (Array.isArray(version.schemaSemantics) && version.schemaSemantics.length > 0) {
@@ -249,6 +272,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       setPublicAccess('1')
       setRecQuestions([])
       setSelectedToolIds(new Set())
+      setToolMcpMetaMap({})
       setSelectedSemanticIds(new Set())
       setSelectedSkillIds(new Set())
       setSelectedModelIds(new Set())
@@ -258,24 +282,33 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
 
   /** 构建提交数据 */
   function buildPayload(overrideStatus?: string) {
-    const toolConfigs = Array.from(selectedToolIds).map((id) => {
+    const toolConfigs = Array.from(selectedToolIds).map((id, index) => {
       const [group, ...rest] = id.split('_')
       const toolId = rest.join('_')
+      const isMcp = group === 'mcp'
+      // 带上 name 与 groupPath（JSON 原样存取），回显无需再拉列表即可展示名称与所属分组
+      const config: Record<string, any> = { type: 'tool', id: Number(toolId) || toolId, name: optionNameMap[id], groupPath: optionGroupMap[id] }
+      // MCP 工具额外存协议分组：mcp_sse / mcp_streamable，值为真实 groupId 列表
+      if (isMcp) {
+        const meta = toolMcpMetaMap[id]
+        config.mcp_sse = meta?.mcpSse ?? []
+        config.mcp_streamable = meta?.mcpStreamable ?? []
+      }
       return {
-        toolType: group === 'mcp' ? '2' : '1',
-        // 带上 name 与 groupPath（JSON 原样存取），回显无需再拉列表即可展示名称与所属分组
-        toolConfig: [{ type: 'tool', id: Number(toolId) || toolId, name: optionNameMap[id], groupPath: optionGroupMap[id] }],
+        toolType: isMcp ? '2' : '1',
+        toolConfig: [config],
+        sort: index,
       }
     })
-    // 数据语义：schema_<id> → { schemaConfig: [{type:'schema', id, name}] }
-    const schemaSemantics = Array.from(selectedSemanticIds).map((id) => {
+    // 数据语义：schema_<id> → { schemaConfig: [{type:'schema', id, name}], sort }
+    const schemaSemantics = Array.from(selectedSemanticIds).map((id, index) => {
       const schemaId = id.replace('schema_', '')
-      return { schemaConfig: [{ type: 'schema', id: Number(schemaId) || schemaId, name: optionNameMap[id], groupPath: optionGroupMap[id] }] }
+      return { schemaConfig: [{ type: 'schema', id: Number(schemaId) || schemaId, name: optionNameMap[id], groupPath: optionGroupMap[id] }], sort: index }
     })
-    // 技能：skill_<id> → { skillConfig: [{type:'skill', id, name}] }
-    const skills = Array.from(selectedSkillIds).map((id) => {
+    // 技能：skill_<id> → { skillConfig: [{type:'skill', id, name}], sort }
+    const skills = Array.from(selectedSkillIds).map((id, index) => {
       const skillId = id.replace('skill_', '')
-      return { skillConfig: [{ type: 'skill', id: Number(skillId) || skillId, name: optionNameMap[id], groupPath: optionGroupMap[id] }] }
+      return { skillConfig: [{ type: 'skill', id: Number(skillId) || skillId, name: optionNameMap[id], groupPath: optionGroupMap[id] }], sort: index }
     })
     // AI模型单选：取唯一选中项，model_<id> 反解为 chatModelId
     const modelIdRaw = Array.from(selectedModelIds)[0]

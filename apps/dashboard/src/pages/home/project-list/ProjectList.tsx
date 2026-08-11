@@ -97,6 +97,12 @@ export const ProjectList = memo((props: ProjectListProps) => {
     const [expirationMode, setExpirationMode] = useState<string>('forever');
     const [expirationDate, setExpirationDate] = useState<Dayjs | null>(null);
 
+    // Rename modal state
+    const [renameModalVisible, setRenameModalVisible] = useState(false);
+    const [renameId, setRenameId] = useState('');
+    const [renameValue, setRenameValue] = useState('');
+    const [renameLoading, setRenameLoading] = useState(false);
+
     const getProjectPageList = (current: number, size: number, keywords?: string) => {
         const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({
@@ -120,18 +126,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
         const {name, des, width, height} = data;
         const spaceId = Number(localStorage.getItem('spaceId'));
         try {
-            // 1. 先校验对话应用名称唯一性（务必在创建大屏之前，避免名称冲突或接口异常时残留游离大屏）
-            const nameCheck = await baseApi.validateChatAppName(name, spaceId);
-            if (!nameCheck.ok) {
-                globalMessage.messageApi?.error(nameCheck.msg || '名称校验失败，请稍后重试');
-                return;
-            }
-            if (!nameCheck.available) {
-                globalMessage.messageApi?.error('对话应用名称已存在，请更换后重试');
-                return;
-            }
-
-            // 2. 创建大屏项目
+            // 1. 创建大屏项目（名称唯一性校验由后端在创建接口内完成，前端不再预校验）
             const project: IProjectInfo = {
                 name: name,
                 des: des,
@@ -144,16 +139,16 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 return;
             }
 
-            // 3. 获取助手列表，取第一条的 agentId
+            // 2. 获取助手列表，取第一条的 agentId
             const agentList = await baseApi.fetchAgentList(spaceId);
             const agentId = agentList?.[0]?.agentId;
 
-            // 4. 获取提示词列表，status 全部设为 '1'（开启），组装 chat_config
+            // 3. 获取提示词列表，status 全部设为 '1'（开启），组装 chat_config
             const promptList = await baseApi.fetchRecommendQuestions();
             const promptsWithStatus = promptList.map((p: any) => ({...p, status: '1'}));
             const chatConfig = JSON.stringify({prompts: promptsWithStatus});
 
-            // 5. 创建会话应用
+            // 4. 创建会话应用
             const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
             let createBy = '';
             try {
@@ -173,7 +168,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
             };
             const appRes = await baseApi.createChatApp(chatAppData);
 
-            // 6. 创建会话，并把 chat_id 存入大屏 dataJson
+            // 5. 创建会话，并把 chat_id 存入大屏 dataJson
             if (appRes.success && appRes.data) {
                 const chatId = appRes.data.data.chat_id;
                 await baseApi.createChatConv({
@@ -435,6 +430,33 @@ export const ProjectList = memo((props: ProjectListProps) => {
         setExpirationDate(null);
     };
 
+    // ── Rename handlers ──
+    const openRename = (id: string, currentName: string) => {
+        setRenameId(id);
+        setRenameValue(currentName);
+        setRenameModalVisible(true);
+    };
+
+    const handleRenameConfirm = async () => {
+        const nextName = renameValue.trim();
+        if (!nextName) {
+            globalMessage.messageApi?.warning('请输入项目名称');
+            return;
+        }
+        setRenameLoading(true);
+        try {
+            // 名称唯一性校验由后端在更新接口内完成；失败时错误信息由 updateProject 内部提示，保留弹窗供用户修改
+            const ok = await baseApi.updateProject({id: renameId, name: nextName});
+            if (ok) {
+                setRenameModalVisible(false);
+                getProjectPageList(currentPage, pageSize, searchKeyword);
+                globalMessage.messageApi?.success('重命名成功');
+            }
+        } finally {
+            setRenameLoading(false);
+        }
+    };
+
     useEffect(() => {
         getProjectPageList(pageData.current, pageData.size);
     }, []);
@@ -518,6 +540,11 @@ export const ProjectList = memo((props: ProjectListProps) => {
                     <Dropdown
                         menu={{
                             items: [
+                                {
+                                    key: 'rename',
+                                    label: <span><EditOutlined style={{ marginRight: 4 }} />重命名</span>,
+                                    onClick: () => openRename(record.id!, record.name!),
+                                },
                                 {
                                     key: 'clone',
                                     label: <span><CopyOutlined style={{ marginRight: 4 }} />复制</span>,
@@ -610,6 +637,11 @@ export const ProjectList = memo((props: ProjectListProps) => {
                                 <Dropdown
                                     menu={{
                                         items: [
+                                            {
+                                                key: 'rename',
+                                                label: '重命名',
+                                                onClick: () => openRename(item.id!, item.name!),
+                                            },
                                             {
                                                 key: 'clone',
                                                 label: '复制',
@@ -816,6 +848,28 @@ export const ProjectList = memo((props: ProjectListProps) => {
             <DelProjectDialog visible={delDialog} onOk={confirmDel} onCancel={cancelDel}/>
             <CloneProjectDialog onOk={() => confirmClone()} onCancel={cancelClone}
                                 visible={cloneDialog}/>
+
+            {/* Rename Modal */}
+            <Modal
+                title="重命名大屏"
+                open={renameModalVisible}
+                onCancel={() => setRenameModalVisible(false)}
+                onOk={handleRenameConfirm}
+                okText="确定"
+                cancelText="取消"
+                confirmLoading={renameLoading}
+                width={420}
+                centered
+            >
+                <Input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onPressEnter={handleRenameConfirm}
+                    placeholder="请输入项目名称"
+                    maxLength={50}
+                />
+            </Modal>
 
             {/* Share Modal */}
             <Modal

@@ -33,29 +33,6 @@ class BaseApi extends AbstractApi {
     }
 
     /**
-     * 验证对话应用名称是否可用（chat-proxy）
-     * @returns ok       校验请求是否成功（false 表示接口/网络异常，msg 为后端错误信息）
-     *          available 名称是否可用（true 可用，false 已存在），仅当 ok 为 true 时有效
-     */
-    async validateChatAppName(bizName: string, spaceId: number): Promise<{ok: boolean; available: boolean; msg?: string}> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/app/validate_name', {biz_name: bizName, space_id: spaceId});
-        // HTTP 层错误（如 400/500）：回传后端错误信息，交由上层展示，避免误判为"名称已存在"
-        if (res.code !== 200) {
-            return {ok: false, available: false, msg: res.msg};
-        }
-        // chat-proxy 返回信封 {success, data, err_code, err_msg}，内层 data 才是名称是否可用的布尔值
-        const body: any = res.data;
-        if (body && typeof body === 'object' && ('success' in body || 'err_code' in body || 'err_msg' in body)) {
-            if (body.success === false) {
-                return {ok: false, available: false, msg: body.err_msg || body.err_code};
-            }
-            return {ok: true, available: !!body.data};
-        }
-        // 兼容后端直接返回布尔值的情况
-        return {ok: true, available: !!body};
-    }
-
-    /**
      * 获取助手列表
      * @param spaceId 空间id
      */
@@ -195,10 +172,13 @@ class BaseApi extends AbstractApi {
         }
     }
 
-    public async updateProject(data: IProjectInfo): Promise<void> {
+    public async updateProject(data: IProjectInfo): Promise<boolean> {
         const res = await FetchUtil.post('/dashboard/api/v1/project/update', data);
-        if (res.code !== 200)
+        if (res.code !== 200) {
             globalMessage.messageApi?.error(res.msg);
+            return false;
+        }
+        return true;
     }
 
     public async uploadImage(file: File): Promise<IImageData | boolean> {

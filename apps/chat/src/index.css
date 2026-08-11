@@ -454,6 +454,61 @@ button {
   opacity: 0.5;
 }
 
+/* ── Mode Switch Menu (icon + name + desc) ── */
+.mode-menu-overlay .ant-dropdown-menu {
+  padding: 6px;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-l);
+}
+.mode-menu-overlay .ant-dropdown-menu-item {
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+}
+.mode-menu-overlay .ant-dropdown-menu-item.mode-menu-item--selected {
+  background: var(--accent-soft);
+}
+.mode-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 176px;
+}
+.mode-menu-item-icon {
+  display: inline-flex;
+  align-items: center;
+  width: 14px;
+  font-size: 14px;
+  color: var(--ink-2);
+  flex-shrink: 0;
+}
+.mode-menu-item-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mode-menu-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mode-menu-item-name {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.mode-menu-item-desc {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.4;
+  padding-left: 24px;
+}
+.mode-menu-item-check {
+  font-size: 14px;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
 /* ── Input Icon-only Button (voice) ── */
 .input-tool-icon-btn {
   width: 34px;
@@ -1798,11 +1853,15 @@ button {
   user-select: none; transition: all 0.15s var(--ease);
 }
 .sem-group-node:hover { background: rgba(130, 140, 200, 0.08); }
-.sem-group-node.is-empty { cursor: default; }
-.sem-group-node.is-empty:hover { background: transparent; }
+/* 空分组（无子节点）：默认灰色文字，但同样可点击选中并发送 group_id（沿用 .sem-group-node 的 pointer 与 hover） */
 .sem-group-node.is-empty .sem-group-name { color: #8a97ad; font-weight: 500; }
+/* 选中态（分组，含空分组）：强调色高亮，靠源码顺序覆盖空分组的灰色文字/图标 */
+.sem-group-node.selected { background: var(--accent-soft); }
+.sem-group-node.selected .sem-group-name { color: var(--accent); font-weight: 600; }
+.sem-group-node.selected .sem-group-icon,
+.sem-group-node.selected .sem-group-icon--empty { color: var(--accent); }
 .sem-group-icon { flex-shrink: 0; font-size: 15px; color: #358cf3; }
-/* 空分组：灰色文件夹，不可展开不可选中 */
+/* 空分组：灰色文件夹（未选中态） */
 .sem-group-icon--empty { font-size: 15px; color: #b7c0d0; }
 .sem-group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sem-group-count { font-size: 11px; color: var(--ink-3); font-weight: 400; }
