@@ -16,7 +16,8 @@ import React from 'react'
 
 export type ToolGroupKey = 'mcp' | 'builtin'
 // groupPath：所属分组的层级路径（形如「父组 / 子组」），用于已选项处标注归属分组
-export type ToolOption = { id: string; name: string; group: ToolGroupKey; description?: string; groupPath?: string }
+// groupId：真实 groupId（长号）；frontProtocol：协议（sse / streamableHttp），供保存时归入 mcp_sse/mcp_streamable
+export type ToolOption = { id: string; name: string; group: ToolGroupKey; description?: string; groupPath?: string; groupId?: string; frontProtocol?: string }
 
 interface McpGroup {
   groupId: string
@@ -114,6 +115,9 @@ const ToolPickerDrawer: React.FC<Props> = ({ open, spaceId, selectedToolIds, onT
         group: 'mcp' as ToolGroupKey,
         description: m.description || '',
         groupPath,
+        // 带出真实 groupId（长号）与协议，供保存时归入 mcp_sse/mcp_streamable
+        groupId,
+        frontProtocol: m.frontProtocol,
       }))
       mcpToolsCacheRef.current[groupId] = tools
       setMcpToolsByGroup((prev) => ({ ...prev, [groupId]: tools }))

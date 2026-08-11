@@ -1,4 +1,4 @@
-import { ApiOutlined, AudioOutlined, BulbOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, RightOutlined, SearchOutlined, SendOutlined, StopOutlined, ThunderboltOutlined, DatabaseOutlined, EditOutlined, ToolOutlined } from '@ant-design/icons';
+import { ApiOutlined, AudioOutlined, BulbOutlined, CheckOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, RightOutlined, SearchOutlined, SendOutlined, StopOutlined, ThunderboltOutlined, DatabaseOutlined, EditOutlined, ToolOutlined } from '@ant-design/icons';
 import { Dropdown, Input, message, Popover } from 'antd';
 import type { MenuProps } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -17,6 +17,8 @@ import { hasSelectedConversationData } from './sendValidation';
 export interface SemanticSelectedData {
   name: string
   schemaId?: number | string
+  /** 选中数据语义分组时的真实分组 id（长号）；与 schemaId 互斥，二选一 */
+  groupId?: number | string
   /** 数据语义所属分组名（不是对话分组） */
   groupName?: string
 }
@@ -26,6 +28,7 @@ export type ChatInputModeKey = 'interact' | 'explore' | 'report'
 type ChatInputMode = {
   key: ChatInputModeKey
   label: string
+  desc: string
   icon: React.ReactNode
 }
 
@@ -82,11 +85,11 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     const getModeConfig = useCallback((mode: ChatInputModeKey): ChatInputMode => {
       switch (mode) {
         case 'report':
-          return { key: 'report', label: '报告', icon: <FileTextOutlined /> };
+          return { key: 'report', label: '报告', desc: '深度挖掘，智能洞察', icon: <FileTextOutlined /> };
         case 'explore':
-          return { key: 'explore', label: '探索', icon: <CompassOutlined /> };
+          return { key: 'explore', label: '探索', desc: '自主规划，复杂分析', icon: <CompassOutlined /> };
         default:
-          return { key: 'interact', label: '交互', icon: <MessageOutlined /> };
+          return { key: 'interact', label: '交互', desc: '敏捷问数，基础分析', icon: <MessageOutlined /> };
       }
     }, []);
     const [selectedMode, setSelectedMode] = useState<ChatInputMode>(() => getModeConfig(selectedModeKey || 'interact'));
@@ -295,18 +298,34 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       message.info(mode === 'report' ? '已切换到报告模式' : '已切换到交互模式');
     };
 
-    const modeMenuItems: MenuProps['items'] = [
-      { key: 'interact', icon: <MessageOutlined />, label: '交互', onClick: () => selectMode('interact') },
-      { key: 'explore', icon: <CompassOutlined />, label: '探索', onClick: () => selectMode('explore') },
-      { key: 'report', icon: <FileTextOutlined />, label: '报告', onClick: () => selectMode('report') },
-    ];
+    const modeMenuItems: MenuProps['items'] = (['interact', 'explore', 'report'] as ChatInputModeKey[]).map((key) => {
+      const mode = getModeConfig(key);
+      const isSelected = selectedMode.key === key;
+      return {
+        key,
+        className: `mode-menu-item-wrap ${isSelected ? 'mode-menu-item--selected' : ''}`,
+        label: (
+          <div className="mode-menu-item">
+            <span className="mode-menu-item-main">
+              <span className="mode-menu-item-head">
+                <span className="mode-menu-item-icon">{mode.icon}</span>
+                <span className="mode-menu-item-name">{mode.label}</span>
+              </span>
+              <span className="mode-menu-item-desc">{mode.desc}</span>
+            </span>
+            {isSelected && <CheckOutlined className="mode-menu-item-check" />}
+          </div>
+        ),
+        onClick: () => selectMode(key),
+      };
+    });
 
-    /** 递归渲染语义节点：文件夹（开/合）/ 空分组（灰、不可展开）/ 叶子（可选中） */
+    /** 递归渲染语义节点：分组（可选中并发送 group_id，有子节点时同一次点击顺带展开/收起）/ 叶子数据语义（可选中并发送 semantic_id） */
     const renderSemNode = (node: any, depth: number): React.ReactNode => {
       const indent = { paddingLeft: 8 + depth * 16 };
-      // 叶子：数据语义，唯一可选中的节点
+      // 叶子：数据语义，点击选中并关闭下拉
       if (node.type === 'schema') {
-        const isSel = selectedData?.schemaId === node.schemaId;
+        const isSel = selectedData?.schemaId != null && selectedData.schemaId === node.schemaId;
         return (
           <div key={node.id} className={`sem-leaf ${isSel ? 'selected' : ''}`} style={indent} title={node.techName || node.name}
             onClick={() => { onSelectData?.({ name: node.name, schemaId: node.schemaId, groupName: node.groupName }); setSemDropdownOpen(false); }}
@@ -316,12 +335,17 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           </div>
         );
       }
-      // 分组：不可选中，按有无子节点分为可展开文件夹 / 灰色空分组
+      // 分组：可选中（发送真实 group_id，与 semantic_id 互斥）；含子节点时同一次点击顺带展开/收起，选中后保持下拉展开以便继续下钻
       const children = Array.isArray(node.children) ? node.children : [];
       const hasChildren = children.length > 0;
+      // 分组节点 id 形如 g_<真实分组id>，去掉 g_ 前缀即为真实分组 id（超长数字，保持字符串避免精度丢失）
+      const groupId = String(node.id).replace(/^g_/, '');
+      const isSelGroup = selectedData?.groupId != null && String(selectedData.groupId) === groupId;
+      const selectGroup = () => onSelectData?.({ name: node.name, groupId, groupName: node.name });
+      // 空分组（无子节点）同样可选中，点击直接选中该分组
       if (!hasChildren) {
         return (
-          <div key={node.id} className="sem-group-node is-empty" style={indent}>
+          <div key={node.id} className={`sem-group-node is-empty ${isSelGroup ? 'selected' : ''}`} style={indent} onClick={selectGroup}>
             <FolderOutlined className="sem-group-icon sem-group-icon--empty" />
             <span className="sem-group-name">{node.name}</span>
           </div>
@@ -331,7 +355,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       const childCount = typeof node.count === 'number' ? node.count : children.length;
       return (
         <div key={node.id} className="sem-group">
-          <div className="sem-group-node" style={indent} onClick={() => onToggleSemGroup?.(node.id)}>
+          <div className={`sem-group-node ${isSelGroup ? 'selected' : ''}`} style={indent} onClick={() => { selectGroup(); onToggleSemGroup?.(node.id); }}>
             {isExpanded
               ? <FolderOpenOutlined className="sem-group-icon" />
               : <FolderOutlined className="sem-group-icon" />}
@@ -551,7 +575,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           </Popover>
 
           {/* 交互 (mode switcher dropdown) */}
-          <Dropdown menu={{ items: modeMenuItems }} trigger={['click']} placement="topLeft">
+          <Dropdown menu={{ items: modeMenuItems }} trigger={['click']} placement="topLeft" overlayClassName="mode-menu-overlay">
             <button type="button" className="input-label-btn">
               {selectedMode.icon}
               <span>{selectedMode.label}</span>

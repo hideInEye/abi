@@ -9,6 +9,8 @@ export interface SubmitReportRequest {
   app_id: number
   space_id: number
   schema_id: number | string
+  /** 选中数据语义分组时的真实分组 id（长号）；与 schema_id 互斥，二选一 */
+  group_id?: number | string
   conv_id: string
   session_id: string
   user_id: number

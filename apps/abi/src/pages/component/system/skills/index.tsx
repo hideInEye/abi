@@ -55,7 +55,7 @@ function NameCell({ text }: { text?: string }) {
   );
 }
 
-// 已添加技能 id 本地存储 key（后端参数就绪后改为接口字段过滤）
+// 已添加技能 id 本地存储 key
 const MY_SKILLS_KEY = 'mySkills';
 
 export function Component() {
@@ -108,8 +108,8 @@ export function Component() {
   async function fetchList() {
     setLoading(true);
     try {
-      // 与 chat 一致：传 spaceId，不全部查出
-      const res: any = await querySkillListApi({ spaceId });
+      // 不传 spaceId 查全部，前端按 visibility 过滤：公开全平台可见 / 私有所属空间可见
+      const res: any = await querySkillListApi({});
       const rows = res?.response?.data?.data?.rows || res?.response?.data?.rows || res?.data?.rows || res?.data?.data || res?.data || [];
       setList(Array.isArray(rows) ? rows : []);
     } catch {
@@ -119,11 +119,11 @@ export function Component() {
     }
   }
 
-  // 空间切换时重新拉取列表
+  // 仅首次挂载拉取全部技能；空间切换由前端 visibleList 重新过滤，无需重新请求
   useEffect(() => {
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spaceId]);
+  }, []);
 
   function goPublish() {
     setPublishOpen(true);
@@ -252,9 +252,17 @@ export function Component() {
   );
 
   const visibleList = useMemo(() => {
-    let arr = list;
+    // 广场可见性规则：公开（PUBLIC）全平台可见；私有（PRIVATE）仅所属空间内或已收藏（我的技能）可见
+    let arr = list.filter(it => {
+      const v = String(it.visibility || '').toUpperCase();
+      if (v !== 'PRIVATE') return true;
+      const inMySpace = String(it.spaceId ?? '') === String(spaceId ?? '');
+      return tab === 'mine'
+        ? inMySpace || myIds.includes(String(it.id))
+        : inMySpace;
+    });
 
-    // 「我的技能」：展示已添加的技能（前端本地记录，接口就绪后换成后端字段过滤）
+    // 「我的技能」：展示已添加的技能（前端本地记录）
     if (tab === 'mine') {
       arr = arr.filter(it => myIds.includes(String(it.id)));
     }
@@ -274,7 +282,7 @@ export function Component() {
     arr = filterByCreateTime(arr, dateRange, 'createTime');
 
     return arr;
-  }, [list, tab, myIds, statusFilter, keyword, dateRange]);
+  }, [list, tab, myIds, statusFilter, keyword, dateRange, spaceId]);
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1);
