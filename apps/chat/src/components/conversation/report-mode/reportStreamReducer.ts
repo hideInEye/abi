@@ -2,6 +2,7 @@ import { compareRedisEntryIds, parseRedisEntryId, sortAndDedupeRedisEntries } fr
 import { getTaskKey } from './helpers'
 import type {
   RawReportStreamEntry,
+  ReportAttachment,
   ReportCandidate,
   ReportPlanTask,
   ReportPublicChunk,
@@ -34,6 +35,7 @@ export function createInitialReportStreamState(): ReportStreamRuntimeState {
     thinkingStepIds: [],
     executionGroups: [],
     unassignedStepIds: [],
+    reportAttachments: [],
     processedEntryIds: {},
   }
 }
@@ -251,6 +253,32 @@ function toReportCandidate(entryId: string, stepId: string, outputType: string |
   }
 }
 
+function toReportAttachment(entryId: string, stepId: string, outputType: string | undefined, content: string): ReportAttachment | undefined {
+  const format = outputType?.toLowerCase()
+  const url = content.trim()
+  if ((format !== 'pdf' && format !== 'word') || !url) return undefined
+
+  return {
+    entryId,
+    stepId,
+    format,
+    url,
+  }
+}
+
+/** 同一 Redis entry 只保留一份附件；不同格式或后续 entry 可以并存。 */
+export function mergeReportAttachments(current: ReportAttachment[], incoming: ReportAttachment[]): ReportAttachment[] {
+  if (incoming.length === 0) return current
+
+  const next = [...current]
+  incoming.forEach((attachment) => {
+    const existingIndex = next.findIndex((item) => item.entryId === attachment.entryId && item.format === attachment.format)
+    if (existingIndex >= 0) next[existingIndex] = attachment
+    else next.push(attachment)
+  })
+  return next
+}
+
 /**
  * 部分工具会把完整 `{ chunks: [...] }` 结果按字符切成多条 text 事件。
  * 这些片段属于报告传输载荷，不应作为普通文本逐段展示。
@@ -302,29 +330,41 @@ function parseFirstJsonObject(source: string): unknown {
   return undefined
 }
 
-/** 识别工具 text payload 内嵌的最后一个 HTML/Markdown 产物。 */
-function toEmbeddedReportCandidate(entryId: string, stepId: string, chunks: ReportPublicChunk[]): ReportCandidate | undefined {
+interface EmbeddedReportArtifacts {
+  candidate?: ReportCandidate
+  attachments: ReportAttachment[]
+}
+
+/** 识别工具 text payload 内嵌的最后一个 HTML/Markdown 预览和所有 PDF/Word 附件。 */
+function toEmbeddedReportArtifacts(entryId: string, stepId: string, chunks: ReportPublicChunk[]): EmbeddedReportArtifacts {
   const payloadSource = chunks
     .filter((chunk) => chunk.outputType === EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE)
     .map((chunk) => chunk.content)
     .join('')
-  if (!payloadSource) return undefined
+  if (!payloadSource) return { attachments: [] }
 
   const parsed = parseFirstJsonObject(payloadSource)
-  if (!parsed || typeof parsed !== 'object') return undefined
+  if (!parsed || typeof parsed !== 'object') return { attachments: [] }
 
   const embeddedChunks = (parsed as { chunks?: unknown }).chunks
-  if (!Array.isArray(embeddedChunks)) return undefined
+  if (!Array.isArray(embeddedChunks)) return { attachments: [] }
 
-  return embeddedChunks.reduce<ReportCandidate | undefined>((candidate, chunk) => {
-    if (!chunk || typeof chunk !== 'object') return candidate
+  return embeddedChunks.reduce<EmbeddedReportArtifacts>((artifacts, chunk, index) => {
+    if (!chunk || typeof chunk !== 'object') return artifacts
 
     const outputType = (chunk as { output_type?: unknown }).output_type
     const content = (chunk as { content?: unknown }).content
-    if (typeof outputType !== 'string' || typeof content !== 'string') return candidate
+    if (typeof outputType !== 'string' || typeof content !== 'string') return artifacts
 
-    return toReportCandidate(entryId, stepId, outputType, content) || candidate
-  }, undefined)
+    const artifactEntryId = `${entryId}:embedded:${index}`
+    const candidate = toReportCandidate(entryId, stepId, outputType, content)
+    const attachment = toReportAttachment(artifactEntryId, stepId, outputType, content)
+
+    return {
+      candidate: candidate || artifacts.candidate,
+      attachments: attachment ? [...artifacts.attachments, attachment] : artifacts.attachments,
+    }
+  }, { attachments: [] })
 }
 
 /** 整体 done 是权威终态；即使最后一个占位 step 没有 step.done，也不能继续显示加载中。 */
@@ -370,7 +410,8 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
       }
 
       const directCandidate = toReportCandidate(entryId, event.id, event.output_type, event.content)
-      let embeddedCandidate: ReportCandidate | undefined
+      const directAttachment = toReportAttachment(entryId, event.id, event.output_type, event.content)
+      let embeddedArtifacts: EmbeddedReportArtifacts = { attachments: [] }
       nextState = upsertPublicStep(state, event.id, entryId, (step) => {
         const chunks: ReportPublicChunk[] = [
           ...step.chunks,
@@ -380,7 +421,7 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
             content: event.content,
           },
         ]
-        embeddedCandidate = toEmbeddedReportCandidate(entryId, event.id, chunks)
+        embeddedArtifacts = toEmbeddedReportArtifacts(entryId, event.id, chunks)
 
         return {
           ...step,
@@ -388,11 +429,16 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
         }
       })
 
-      const candidate = directCandidate || embeddedCandidate
-      if (candidate) {
+      const candidate = directCandidate || embeddedArtifacts.candidate
+      const reportAttachments = mergeReportAttachments(nextState.reportAttachments, [
+        ...(directAttachment ? [directAttachment] : []),
+        ...embeddedArtifacts.attachments,
+      ])
+      if (candidate || reportAttachments !== nextState.reportAttachments) {
         nextState = {
           ...nextState,
-          reportCandidate: candidate,
+          reportCandidate: candidate || nextState.reportCandidate,
+          reportAttachments,
         }
       }
       break
@@ -407,13 +453,14 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
       }
 
       // plan.update 是完整快照：只覆盖当前任务，不删除此前时间片已经产生的 executionGroups。
+      // 进入任务执行阶段时收起思考区，但 ToDo 总面板保持默认收起，由用户按需展开。
       const tasks = event.tasks.map((task) => ({ ...task }))
       const runningTaskIndex = tasks.findIndex((task) => task.status === 'in_progress')
       nextState = {
         ...state,
         status: 'running',
         thinkingOpen: false,
-        todoOpen: true,
+        todoOpen: false,
         currentPlan: {
           entryId,
           tasks,
@@ -432,17 +479,20 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
     case 'done':
       {
         const settledState = settleInProgressSteps(state)
-        nextState = settledState.reportCandidate
+        const durationSeconds = typeof event.time === 'number' && Number.isFinite(event.time) && event.time >= 0 ? event.time : settledState.durationSeconds
+        nextState = settledState.reportCandidate || settledState.reportAttachments.length > 0
           ? {
               ...settledState,
               status: 'completed',
               doneEntryId: entryId,
+              durationSeconds,
               error: undefined,
             }
           : {
               ...settledState,
               status: 'failed',
               doneEntryId: entryId,
+              durationSeconds,
               error: {
                 code: 'report_content_missing',
                 message: '未收到报告文件',

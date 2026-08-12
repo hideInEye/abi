@@ -5,7 +5,7 @@ import type { RawReportStreamEntry, SubmitReportRequest } from '@/service/api/re
 
 import { createReportItemFromHistory, mergeReportTimelineItems } from './reportHistoryAdapter'
 import { canRevealReport, shouldAnimateReportPreview, toggleReportTaskKey } from './helpers'
-import { getNewlyCompletedReportTaskKey, getReportRecoveryAction, splitReportTaskRecordsByHistory } from './reportRecovery'
+import { getNewlyCompletedReportTaskKey, getReportRecoveryAction, shouldNotifyReportCompleted, splitReportTaskRecordsByHistory } from './reportRecovery'
 import { createInitialReportStreamState, parseReportStreamEvent, reduceReportStreamEntry } from './reportStreamReducer'
 import { getReportTaskSortOrder, reportTaskStorage } from './reportTaskStorage'
 import type { ReportHistoryRoundGroup, ReportItem, ReportTaskRecord } from './types'
@@ -19,6 +19,7 @@ interface UseReportConversationOptions {
   historyRounds?: ReportHistoryRoundGroup[]
   historyLoaded?: boolean
   onRefreshHistory?: () => Promise<void>
+  onReportCompleted?: (report: ReportItem) => void
 }
 
 const MAX_STREAM_RETRY_COUNT = 3
@@ -105,7 +106,7 @@ function wait(ms: number) {
  * - Java 只透传 Redis entry id/data。
  * - 本 Hook 负责 query 历史、IndexedDB、task 状态、连接生命周期和 UI 聚合。
  */
-export function useReportConversation({ conv, spaceId, schemaId, currentModelId, embedModelId, historyRounds = [], historyLoaded = false, onRefreshHistory }: UseReportConversationOptions) {
+export function useReportConversation({ conv, spaceId, schemaId, currentModelId, embedModelId, historyRounds = [], historyLoaded = false, onRefreshHistory, onReportCompleted }: UseReportConversationOptions) {
   const [reports, setReports] = useState<ReportItem[]>([])
   const [activeReportId, setActiveReportId] = useState<string>()
   const [animateReportPreview, setAnimateReportPreview] = useState(false)
@@ -120,6 +121,8 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
   const recoveryConversationIdRef = useRef('')
   const refreshHistoryRef = useRef(onRefreshHistory)
   refreshHistoryRef.current = onRefreshHistory
+  const reportCompletedRef = useRef(onReportCompleted)
+  reportCompletedRef.current = onReportCompleted
 
   const conversationId = String(conv?.conv_uid || conv?.convUid || '').trim()
   const sessionId = String(conv?.chat_id || conv?.sessionId || '').trim()
@@ -192,7 +195,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
       commitReports((currentReports) => currentReports.map((report) => (report.id === reportId ? nextReport : report)))
 
       // 候选正文可以提前到达，但必须等整体完成且所有任务结束后才首次自动开栏。
-      if (canRevealReport(nextReport) && !autoOpenedReportIdsRef.current.has(reportId)) {
+      if (nextReport.reportCandidate && canRevealReport(nextReport) && !autoOpenedReportIdsRef.current.has(reportId)) {
         autoOpenedReportIdsRef.current.add(reportId)
         setAnimateReportPreview(shouldAnimateReportPreview(nextReport, 'auto'))
         setActiveReportId(reportId)
@@ -200,6 +203,10 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
       }
 
       if (nextReport.doneEntryId && nextReport.doneEntryId !== current.doneEntryId) {
+        if (shouldNotifyReportCompleted(current.doneEntryId, nextReport)) {
+          reportCompletedRef.current?.(nextReport)
+        }
+
         streamControllersRef.current.get(reportId)?.abort()
         streamControllersRef.current.delete(reportId)
 
@@ -438,7 +445,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
 
   const openReport = useCallback((reportId: string) => {
     const report = reportsRef.current.find((item) => item.id === reportId)
-    if (!report || !canRevealReport(report)) return
+    if (!report?.reportCandidate || !canRevealReport(report)) return
 
     // 文件卡属于用户主动查看：关闭后重开直接呈现完整正文，不重复播放生成动画。
     setAnimateReportPreview(false)

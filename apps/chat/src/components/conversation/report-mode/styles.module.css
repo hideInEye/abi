@@ -97,6 +97,22 @@
   font-size: 12px;
 }
 
+.estimateNotice {
+  margin: 16px 16px;
+  border: 1px solid rgba(91, 124, 247, 0.14);
+  border-radius: 12px;
+  background: rgba(91, 124, 247, 0.055);
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.75;
+  padding: 10px 12px;
+}
+
+.estimateNotice strong {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+
 .panel {
   border-bottom: 1px solid rgba(130, 140, 200, 0.1);
 }
@@ -268,14 +284,14 @@
 }
 
 .todoTitle {
-  color: var(--ink);
+  color: var(--ink-3);
   font-size: 13px;
   font-weight: 650;
   line-height: 1.5;
 }
 
 .todoTitleRunning {
-  color: var(--ink-3);
+  color: var(--ink);
 }
 
 .todoDetail {
@@ -428,15 +444,31 @@
 }
 
 .fileCard {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin: 0 16px 16px;
-  border: 1px solid rgba(91, 124, 247, 0.18);
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(91, 124, 247, 0.1), rgba(255, 255, 255, 0.72));
-  padding: 12px;
+  gap: 18px;
+  margin: 16px 16px;
+  overflow: hidden;
+  border: 1px solid rgba(91, 124, 247, 0.2);
+  border-radius: 16px;
+  background:
+    linear-gradient(90deg, rgba(91, 124, 247, 0.08), rgba(255, 255, 255, 0.74) 42%),
+    rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 24px rgba(54, 73, 135, 0.07);
+  padding: 14px 14px 14px 16px;
+}
+
+.fileCard::before {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, #5b7cf7, #8ba5ff);
+  content: '';
 }
 
 .fileCardContent {
@@ -444,12 +476,30 @@
   min-width: 0;
   flex: 1;
   align-items: center;
-  gap: 12px;
+  gap: 13px;
 }
 
-.fileTypeTag {
+.fileAssetIcon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
   flex-shrink: 0;
-  margin-inline-end: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(91, 124, 247, 0.16);
+  border-radius: 12px;
+  background: rgba(91, 124, 247, 0.09);
+  color: var(--accent);
+}
+
+.fileAssetIcon svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
 }
 
 .fileInfo {
@@ -460,19 +510,99 @@
   color: var(--ink);
   font-size: 14px;
   font-weight: 750;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .fileDesc {
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--ink-3);
   font-size: 12px;
+  line-height: 1.5;
+}
+
+.fileFormatList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.fileTypeTag {
+  display: inline-flex;
+  height: 18px;
+  align-items: center;
+  border: 1px solid rgba(91, 124, 247, 0.2);
+  border-radius: 5px;
+  background: rgba(91, 124, 247, 0.07);
+  color: #5270d9;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 0 6px;
 }
 
 .fileActions {
   display: flex;
   flex-shrink: 0;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 7px;
+}
+
+.fileActionButton {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(130, 140, 200, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 2px 7px rgba(54, 73, 135, 0.06);
+  color: var(--ink-2);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.fileActionButton svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.fileActionButton:hover {
+  border-color: rgba(91, 124, 247, 0.36);
+  background: rgba(91, 124, 247, 0.08);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.fileActionButton:focus-visible {
+  outline: 2px solid rgba(91, 124, 247, 0.42);
+  outline-offset: 2px;
+}
+
+.fileActionPrimary {
+  border-color: transparent;
+  background: var(--accent);
+  box-shadow: 0 5px 12px rgba(91, 124, 247, 0.22);
+  color: #fff;
+}
+
+.fileActionPrimary:hover {
+  border-color: transparent;
+  background: #4e70ed;
+  color: #fff;
 }
 
 .reportPane {
@@ -680,6 +810,16 @@
   .answerCard {
     width: 100%;
     max-width: 100%;
+  }
+
+  .fileCard {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .fileAssetIcon {
+    width: 38px;
+    height: 38px;
   }
 }
 
