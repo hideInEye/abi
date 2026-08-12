@@ -673,9 +673,9 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
           <div className="ai-welcome">
             <div className="welcome-title">欢迎使用大屏智能问答</div>
             <div className="welcome-desc">
-              通过对话形式轻松获取图表数据分析，
+              选定左侧图表，通过对话即可生成对应图表，
               <br />
-              请输入图表名称相关问题进行提问
+              请输入图表数据相关问题开始对话
             </div>
           </div>
         )}
