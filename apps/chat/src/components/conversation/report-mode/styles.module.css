@@ -28,7 +28,7 @@
 .messageRow {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0;
 }
 
 .messageRow + .messageRow {
@@ -37,18 +37,22 @@
 
 .questionWrap {
   display: flex;
+  width: 100%;
   justify-content: flex-end;
+  margin: 16px 0;
 }
 
 .questionBubble {
-  max-width: min(78%, 620px);
-  border: 1px solid rgba(91, 124, 247, 0.14);
-  border-radius: 18px 18px 6px 18px;
-  background: linear-gradient(135deg, rgba(91, 124, 247, 0.14), rgba(139, 92, 246, 0.1));
-  box-shadow: var(--shadow-s);
+  max-width: 80%;
+  margin-right: 8px;
+  overflow-wrap: break-word;
+  border: 1px solid rgba(91, 124, 247, 0.18);
+  border-radius: 16px 16px 4px 16px;
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.06), rgba(112, 145, 250, 0.08));
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.08);
   color: var(--ink);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.6;
   padding: 12px 16px;
   white-space: pre-wrap;
 }
@@ -59,7 +63,7 @@
 }
 
 .answerCard {
-  width: min(82%, 720px);
+  width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
@@ -270,6 +274,10 @@
   line-height: 1.5;
 }
 
+.todoTitleRunning {
+  color: var(--ink-3);
+}
+
 .todoDetail {
   margin-top: 3px;
   color: var(--ink-3);
@@ -420,6 +428,10 @@
 }
 
 .fileCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin: 0 16px 16px;
   border: 1px solid rgba(91, 124, 247, 0.18);
   border-radius: 14px;
@@ -427,11 +439,17 @@
   padding: 12px;
 }
 
-.fileCardTop {
+.fileCardContent {
   display: flex;
+  min-width: 0;
+  flex: 1;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+}
+
+.fileTypeTag {
+  flex-shrink: 0;
+  margin-inline-end: 0;
 }
 
 .fileInfo {
@@ -448,6 +466,13 @@
   margin-top: 3px;
   color: var(--ink-3);
   font-size: 12px;
+}
+
+.fileActions {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .reportPane {
@@ -514,6 +539,33 @@
   margin-top: 2px;
   color: var(--ink-3);
   font-size: 12px;
+}
+
+.previewCloseButton {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border: none;
+  border-radius: 8px;
+  box-shadow: none;
+  color: var(--ink-2);
+  padding: 0;
+}
+
+.previewCloseIcon {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.previewCloseButton:hover {
+  background: rgba(91, 124, 247, 0.08) !important;
+  color: var(--ink) !important;
+}
+
+.previewCloseButton:focus-visible {
+  outline: 2px solid rgba(91, 124, 247, 0.45);
+  outline-offset: 2px;
 }
 
 .previewBody {
@@ -625,8 +677,7 @@
     display: none;
   }
 
-  .answerCard,
-  .questionBubble {
+  .answerCard {
     width: 100%;
     max-width: 100%;
   }

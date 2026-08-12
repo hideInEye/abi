@@ -19,6 +19,8 @@ function getCurrentUserId(): number | undefined {
 
 function mapAppListParams(params: any) {
   return {
+    // 对话页会话列表固定查询 appId=0；大屏（dashboard）使用 appId=1，以此隔离两端会话
+    appId: 0,
     spaceId: params.space_id ?? params.spaceId,
     userId: params.userId ?? getCurrentUserId(),
   }

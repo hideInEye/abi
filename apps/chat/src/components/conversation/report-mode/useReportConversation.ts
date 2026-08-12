@@ -4,7 +4,7 @@ import { connectReportEvents, fetchReportTaskStatus, submitReportTask } from '@/
 import type { RawReportStreamEntry, SubmitReportRequest } from '@/service/api/report'
 
 import { createReportItemFromHistory, mergeReportTimelineItems } from './reportHistoryAdapter'
-import { canRevealReport, shouldAnimateReportPreview } from './helpers'
+import { canRevealReport, shouldAnimateReportPreview, toggleReportTaskKey } from './helpers'
 import { getNewlyCompletedReportTaskKey, getReportRecoveryAction, splitReportTaskRecordsByHistory } from './reportRecovery'
 import { createInitialReportStreamState, parseReportStreamEvent, reduceReportStreamEntry } from './reportStreamReducer'
 import { getReportTaskSortOrder, reportTaskStorage } from './reportTaskStorage'
@@ -14,6 +14,8 @@ interface UseReportConversationOptions {
   conv?: Record<string, unknown>
   spaceId?: number
   schemaId?: number | string
+  /** 选中数据语义分组时的真实分组 id（长号）；与 schemaId 互斥，二选一 */
+  groupId?: number | string
   currentModelId?: string | number
   embedModelId?: string | number
   historyRounds?: ReportHistoryRoundGroup[]
@@ -105,7 +107,7 @@ function wait(ms: number) {
  * - Java 只透传 Redis entry id/data。
  * - 本 Hook 负责 query 历史、IndexedDB、task 状态、连接生命周期和 UI 聚合。
  */
-export function useReportConversation({ conv, spaceId, schemaId, currentModelId, embedModelId, historyRounds = [], historyLoaded = false, onRefreshHistory }: UseReportConversationOptions) {
+export function useReportConversation({ conv, spaceId, schemaId, groupId, currentModelId, embedModelId, historyRounds = [], historyLoaded = false, onRefreshHistory }: UseReportConversationOptions) {
   const [reports, setReports] = useState<ReportItem[]>([])
   const [activeReportId, setActiveReportId] = useState<string>()
   const [animateReportPreview, setAnimateReportPreview] = useState(false)
@@ -320,12 +322,15 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
 
       const embedId = toOptionalNumber(embedModelId)
       const appType = conv?.app_type ?? conv?.appType
+      // 数据语义分组（group_id）与数据语义叶子（schema_id）互斥：选中分组时只发 group_id 并清空 schema_id。
+      const hasGroupSelected = groupId != null && groupId !== ''
       const requestData: SubmitReportRequest = {
         messages: question,
         app_id: toFiniteNumber(conv?.appId ?? conv?.app_id),
         space_id: toFiniteNumber(conv?.space_id ?? conv?.spaceId ?? spaceId),
-        // ChatInput 只允许选中数据语义叶子节点，这里直接透传该节点的 schemaId。
-        schema_id: schemaId ?? '',
+        // ChatInput 允许选中数据语义叶子节点或分组；选中分组时 schema_id 置空、改用 group_id。
+        schema_id: hasGroupSelected ? '' : (schemaId ?? ''),
+        ...(hasGroupSelected ? { group_id: groupId } : {}),
         conv_id: conversationId,
         session_id: sessionId,
         user_id: getCurrentUserId(),
@@ -379,7 +384,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
           submitControllersRef.current.delete(pendingReport.id)
         })
     },
-    [commitReports, conv, conversationId, currentModelId, embedModelId, schemaId, sessionId, spaceId, updateReport, connectStream],
+    [commitReports, conv, conversationId, currentModelId, embedModelId, schemaId, groupId, sessionId, spaceId, updateReport, connectStream],
   )
 
   const stopReport = useCallback(
@@ -430,7 +435,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
     (reportId: string, taskKey: string) => {
       updateReport(reportId, (report) => ({
         ...report,
-        expandedTaskKeys: report.expandedTaskKeys.includes(taskKey) ? report.expandedTaskKeys.filter((key) => key !== taskKey) : [...report.expandedTaskKeys, taskKey],
+        expandedTaskKeys: toggleReportTaskKey(report.expandedTaskKeys, taskKey),
       }))
     },
     [updateReport],

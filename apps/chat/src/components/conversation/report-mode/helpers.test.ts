@@ -5,6 +5,7 @@ import {
   getCompletedTaskCount,
   getCurrentTaskTitle,
   getPublicStepLines,
+  getReportDownloadDescriptor,
   getReportPresentationStage,
   getReportTaskProgressText,
   getReportTitle,
@@ -12,6 +13,7 @@ import {
   getTaskKey,
   isVisibleReportStep,
   shouldAnimateReportPreview,
+  toggleReportTaskKey,
   toReportChunkMarkdown,
 } from './helpers'
 import type { ReportItem, ReportPublicStep } from './types'
@@ -32,9 +34,27 @@ describe('report-mode UI helpers', () => {
     expect(getTaskKey('1730000000000-0', 2)).toBe('1730000000000-0:2')
   })
 
+  it('允许当前执行任务在默认展开后手动收起并再次展开', () => {
+    const taskKey = getTaskKey('1730000000000-0', 0)
+
+    expect(toggleReportTaskKey([taskKey], taskKey)).toEqual([])
+    expect(toggleReportTaskKey([], taskKey)).toEqual([taskKey])
+  })
+
   it('从 HTML 或 Markdown 中提取报告标题', () => {
     expect(getReportTitle({ format: 'html', content: '<html><head><title>销售报告</title></head></html>' })).toBe('销售报告')
     expect(getReportTitle({ format: 'markdown', content: '# 趋势分析\n内容' })).toBe('趋势分析')
+  })
+
+  it('按报告格式生成安全的下载文件信息', () => {
+    expect(getReportDownloadDescriptor({ format: 'html', content: '<title>销售/趋势:报告?.html</title>' })).toEqual({
+      fileName: '销售_趋势_报告_.html',
+      mimeType: 'text/html',
+    })
+    expect(getReportDownloadDescriptor({ format: 'markdown', content: '# 月度分析.md\n内容' })).toEqual({
+      fileName: '月度分析.md',
+      mimeType: 'text/markdown',
+    })
   })
 
   it('严格按照思考、ToDo、报告三个阶段渐进展示', () => {

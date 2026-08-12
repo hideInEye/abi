@@ -33,15 +33,6 @@ class BaseApi extends AbstractApi {
     }
 
     /**
-     * 验证对话应用名称是否可用（chat-proxy）
-     * 接口返回 true 表示名称可用，false 表示已存在
-     */
-    async validateChatAppName(bizName: string, spaceId: number): Promise<boolean> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/app/validate_name', {biz_name: bizName, space_id: spaceId});
-        return res.code === 200 ? !!res.data : false;
-    }
-
-    /**
      * 获取助手列表
      * @param spaceId 空间id
      */
@@ -67,6 +58,27 @@ class BaseApi extends AbstractApi {
     async createChatConv(data: Record<string, any>): Promise<{success: boolean; data?: any}> {
         const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/new', data);
         return {success: res.code === 200, data: res.data};
+    }
+
+    /**
+     * 新建对话会话（abi-chat）
+     * 调用 /abi-chat/v1/app/session/add，返回后端生成的 sessionId 与 convUid，
+     * 供大屏对话（chat/completions）作为 session_id / conv_uid 使用（与 chat 对话新建会话同源）。
+     * @param params spaceId 必传；title/userId 可选
+     */
+    async addChatSession(params: {spaceId: number; title?: string; userId?: number}): Promise<{sessionId: string; convUid: string} | null> {
+        const res = await FetchUtil.post('/abi-chat/v1/app/session/add', {
+            appId: 1,
+            spaceId: params.spaceId,
+            title: params.title ?? '新建对话',
+            userId: params.userId,
+            groupId: '0',
+        });
+        if (res.code !== 200 || !res.data) return null;
+        const d = res.data;
+        const sessionId = d.sessionId ?? d.session_id ?? d.chat_id ?? d.chatId;
+        const convUid = d.conv_uid ?? d.convUid;
+        return sessionId && convUid ? {sessionId: String(sessionId), convUid: String(convUid)} : null;
     }
 
     /**
@@ -160,10 +172,13 @@ class BaseApi extends AbstractApi {
         }
     }
 
-    public async updateProject(data: IProjectInfo): Promise<void> {
+    public async updateProject(data: IProjectInfo): Promise<boolean> {
         const res = await FetchUtil.post('/dashboard/api/v1/project/update', data);
-        if (res.code !== 200)
+        if (res.code !== 200) {
             globalMessage.messageApi?.error(res.msg);
+            return false;
+        }
+        return true;
     }
 
     public async uploadImage(file: File): Promise<IImageData | boolean> {

@@ -1,8 +1,8 @@
-import { FileMarkdownOutlined, FileTextOutlined } from '@ant-design/icons'
+import { DownloadOutlined, FileMarkdownOutlined, FileTextOutlined } from '@ant-design/icons'
 import { Button, Tag } from 'antd'
 import React from 'react'
 
-import { canRevealReport, getReportTitle } from './helpers'
+import { canRevealReport, getReportDownloadDescriptor, getReportTitle } from './helpers'
 import type { ReportItem } from './types'
 import styles from './styles.module.css'
 
@@ -18,9 +18,25 @@ const ReportFileCard: React.FC<ReportFileCardProps> = ({ report, onOpen }) => {
   const { format } = report.reportCandidate
   const title = getReportTitle(report.reportCandidate)
 
+  const handleDownload = () => {
+    if (!report.reportCandidate) return
+
+    const { fileName, mimeType } = getReportDownloadDescriptor(report.reportCandidate)
+    const url = URL.createObjectURL(new Blob([report.reportCandidate.content], { type: mimeType }))
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = fileName
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className={styles.fileCard}>
-      <div className={styles.fileCardTop}>
+      <div className={styles.fileCardContent}>
+        <Tag className={styles.fileTypeTag} color={format === 'html' ? 'blue' : 'purple'}>{format.toUpperCase()}</Tag>
         <div className={styles.fileInfo}>
           <div className={styles.fileTitle}>
             {format === 'markdown' ? <FileMarkdownOutlined style={{ marginRight: 8 }} /> : <FileTextOutlined style={{ marginRight: 8 }} />}
@@ -28,11 +44,15 @@ const ReportFileCard: React.FC<ReportFileCardProps> = ({ report, onOpen }) => {
           </div>
           <div className={styles.fileDesc}>报告已生成，可在右侧只读窗口查看。</div>
         </div>
-        <Tag color={format === 'html' ? 'blue' : 'purple'}>{format.toUpperCase()}</Tag>
       </div>
-      <Button type="primary" style={{ marginTop: 12 }} onClick={onOpen}>
-        查看报告
-      </Button>
+      <div className={styles.fileActions}>
+        <Button type="primary" onClick={onOpen}>
+          查看报告
+        </Button>
+        <Button icon={<DownloadOutlined />} onClick={handleDownload}>
+          下载文件
+        </Button>
+      </div>
     </div>
   )
 }

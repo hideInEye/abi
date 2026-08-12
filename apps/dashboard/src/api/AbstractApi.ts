@@ -22,8 +22,9 @@ export abstract class AbstractApi {
     /**
      * 更新项目数据
      * @param projectData 项目数据
+     * @returns 是否更新成功（false 表示接口/网络异常，错误信息已提示）
      */
-    public abstract updateProject(projectData: IProjectInfo): Promise<void> ;
+    public abstract updateProject(projectData: IProjectInfo): Promise<boolean>;
 
     /**
      * 删除项目（在线项目为逻辑删除，本地项目为物理删除）

@@ -5,6 +5,7 @@ import {
   CaretRightOutlined,
   EditOutlined,
   ExperimentOutlined,
+  FolderOutlined,
   LockOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
@@ -119,7 +120,12 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
 
   // id -> 名称映射（各选择抽屉加载列表后回填；id 均带业务前缀不会冲突），用于折叠行下方展示已选项名称
   const [optionNameMap, setOptionNameMap] = useState<Record<string, string>>({})
-  const mergeOptionNames = (options: { id: string; name: string }[]) =>
+  // id -> 分组层级路径（形如「父组 / 子组」），用于已选项行标注所属分组并展示层级
+  const [optionGroupMap, setOptionGroupMap] = useState<Record<string, string>>({})
+  // MCP 工具协议分组元数据：id -> { mcpSse, mcpStreamable }，值为真实 groupId 列表
+  // sse 入 mcpSse，streamableHttp 入 mcpStreamable；保存时写入 toolConfig 的 mcp_sse/mcp_streamable
+  const [toolMcpMetaMap, setToolMcpMetaMap] = useState<Record<string, { mcpSse: string[]; mcpStreamable: string[] }>>({})
+  const mergeOptionNames = (options: { id: string; name: string; groupPath?: string; groupId?: string; frontProtocol?: string }[]) => {
     setOptionNameMap((prev) => {
       const next = { ...prev }
       options.forEach((o) => {
@@ -127,6 +133,25 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       })
       return next
     })
+    setOptionGroupMap((prev) => {
+      const next = { ...prev }
+      options.forEach((o) => {
+        if (o.groupPath) next[o.id] = o.groupPath
+      })
+      return next
+    })
+    // MCP 工具：按协议把真实 groupId 归入 sse / streamable（选择器加载时已带出 groupId 与 frontProtocol）
+    setToolMcpMetaMap((prev) => {
+      const next = { ...prev }
+      options.forEach((o) => {
+        if (o.id.startsWith('mcp_') && o.groupId) {
+          const isSse = String(o.frontProtocol || '').toLowerCase() === 'sse'
+          next[o.id] = isSse ? { mcpSse: [o.groupId], mcpStreamable: [] } : { mcpSse: [], mcpStreamable: [o.groupId] }
+        }
+      })
+      return next
+    })
+  }
 
   /** 加载助手详情 */
   async function loadDetail() {
@@ -152,7 +177,9 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       // 工具选中回显（同时从 config 里取 name 合入名称映射）
       if (Array.isArray(version.tools) && version.tools.length > 0) {
         const ids = new Set<string>()
-        const names: { id: string; name: string }[] = []
+        const names: { id: string; name: string; groupPath?: string }[] = []
+        // MCP 工具协议分组回显：详情接口原样返回 mcp_sse/mcp_streamable，直接保留
+        const mcpMeta: Record<string, { mcpSse: string[]; mcpStreamable: string[] }> = {}
         version.tools.forEach((t: any) => {
           const prefix = t.toolType === '2' ? 'mcp' : 'builtin'
           if (Array.isArray(t.toolConfig)) {
@@ -160,25 +187,32 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               if (c.id != null) {
                 const fid = `${prefix}_${c.id}`
                 ids.add(fid)
-                if (c.name) names.push({ id: fid, name: c.name })
+                if (c.name) names.push({ id: fid, name: c.name, groupPath: c.groupPath })
+                if (prefix === 'mcp') {
+                  mcpMeta[fid] = {
+                    mcpSse: Array.isArray(c.mcp_sse) ? c.mcp_sse.map(String) : [],
+                    mcpStreamable: Array.isArray(c.mcp_streamable) ? c.mcp_streamable.map(String) : [],
+                  }
+                }
               }
             })
           }
         })
         setSelectedToolIds(ids)
         if (names.length) mergeOptionNames(names)
+        if (Object.keys(mcpMeta).length) setToolMcpMetaMap((prev) => ({ ...prev, ...mcpMeta }))
       }
       // 数据语义选中回显：schemaSemantics -> schema_<id>（合入 name）
       if (Array.isArray(version.schemaSemantics) && version.schemaSemantics.length > 0) {
         const ids = new Set<string>()
-        const names: { id: string; name: string }[] = []
+        const names: { id: string; name: string; groupPath?: string }[] = []
         version.schemaSemantics.forEach((s: any) => {
           const cfg = Array.isArray(s.schemaConfig) ? s.schemaConfig : []
           cfg.forEach((c: any) => {
             if (c.id != null) {
               const fid = `schema_${c.id}`
               ids.add(fid)
-              if (c.name) names.push({ id: fid, name: c.name })
+              if (c.name) names.push({ id: fid, name: c.name, groupPath: c.groupPath })
             }
           })
         })
@@ -188,14 +222,14 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       // 技能选中回显：skills -> skill_<id>（合入 name）
       if (Array.isArray(version.skills) && version.skills.length > 0) {
         const ids = new Set<string>()
-        const names: { id: string; name: string }[] = []
+        const names: { id: string; name: string; groupPath?: string }[] = []
         version.skills.forEach((s: any) => {
           const cfg = Array.isArray(s.skillConfig) ? s.skillConfig : []
           cfg.forEach((c: any) => {
             if (c.id != null) {
               const fid = `skill_${c.id}`
               ids.add(fid)
-              if (c.name) names.push({ id: fid, name: c.name })
+              if (c.name) names.push({ id: fid, name: c.name, groupPath: c.groupPath })
             }
           })
         })
@@ -238,6 +272,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       setPublicAccess('1')
       setRecQuestions([])
       setSelectedToolIds(new Set())
+      setToolMcpMetaMap({})
       setSelectedSemanticIds(new Set())
       setSelectedSkillIds(new Set())
       setSelectedModelIds(new Set())
@@ -247,31 +282,40 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
 
   /** 构建提交数据 */
   function buildPayload(overrideStatus?: string) {
-    const toolConfigs = Array.from(selectedToolIds).map((id) => {
+    const toolConfigs = Array.from(selectedToolIds).map((id, index) => {
       const [group, ...rest] = id.split('_')
       const toolId = rest.join('_')
+      const isMcp = group === 'mcp'
+      // 带上 name 与 groupPath（JSON 原样存取），回显无需再拉列表即可展示名称与所属分组
+      const config: Record<string, any> = { type: 'tool', id: Number(toolId) || toolId, name: optionNameMap[id], groupPath: optionGroupMap[id] }
+      // MCP 工具额外存协议分组：mcp_sse / mcp_streamable，值为真实 groupId 列表
+      if (isMcp) {
+        const meta = toolMcpMetaMap[id]
+        config.mcp_sse = meta?.mcpSse ?? []
+        config.mcp_streamable = meta?.mcpStreamable ?? []
+      }
       return {
-        toolType: group === 'mcp' ? '2' : '1',
-        // 带上 name（JSON 原样存取），回显无需再拉列表
-        toolConfig: [{ type: 'tool', id: Number(toolId) || toolId, name: optionNameMap[id] }],
+        toolType: isMcp ? '2' : '1',
+        toolConfig: [config],
+        sort: index,
       }
     })
-    // 数据语义：schema_<id> → { schemaConfig: [{type:'schema', id, name}] }
-    const schemaSemantics = Array.from(selectedSemanticIds).map((id) => {
+    // 数据语义：schema_<id> → { schemaConfig: [{type:'schema', id, name}], sort }
+    const schemaSemantics = Array.from(selectedSemanticIds).map((id, index) => {
       const schemaId = id.replace('schema_', '')
-      return { schemaConfig: [{ type: 'schema', id: Number(schemaId) || schemaId, name: optionNameMap[id] }] }
+      return { schemaConfig: [{ type: 'schema', id: Number(schemaId) || schemaId, name: optionNameMap[id], groupPath: optionGroupMap[id] }], sort: index }
     })
-    // 技能：skill_<id> → { skillConfig: [{type:'skill', id, name}] }
-    const skills = Array.from(selectedSkillIds).map((id) => {
+    // 技能：skill_<id> → { skillConfig: [{type:'skill', id, name}], sort }
+    const skills = Array.from(selectedSkillIds).map((id, index) => {
       const skillId = id.replace('skill_', '')
-      return { skillConfig: [{ type: 'skill', id: Number(skillId) || skillId, name: optionNameMap[id] }] }
+      return { skillConfig: [{ type: 'skill', id: Number(skillId) || skillId, name: optionNameMap[id], groupPath: optionGroupMap[id] }], sort: index }
     })
     // AI模型单选：取唯一选中项，model_<id> 反解为 chatModelId
     const modelIdRaw = Array.from(selectedModelIds)[0]
     const chatModelId = modelIdRaw ? Number(String(modelIdRaw).replace('model_', '')) : undefined
     const payload: any = {
-      // 名称非必填：未填写时给默认名称（与新建对话一致）
-      appName: name.trim() || '新建助手',
+      // 名称必填：保存/上线前已通过 validateRequired 校验非空
+      appName: name.trim(),
       spaceId,
       groupId: String(isEdit ? (agent?.groupId ?? '0') : (propsGroupId ?? '0')),
       description,
@@ -294,9 +338,30 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     return payload
   }
 
+  /** 保存/上线前校验必填项：助手名称、AI模型、数据语义 */
+  const validateRequired = (): boolean => {
+    if (!name.trim()) {
+      message.warning('请输入助手名称')
+      setEditingName(true)
+      return false
+    }
+    if (selectedModelIds.size === 0) {
+      message.warning('请配置AI模型')
+      setOpenMap((p) => ({ ...p, model: true }))
+      return false
+    }
+    if (selectedSemanticIds.size === 0) {
+      message.warning('请添加数据语义')
+      setOpenMap((p) => ({ ...p, semantic: true }))
+      return false
+    }
+    return true
+  }
+
   /** 保存：状态设为草稿 */
   const handleSave = async () => {
     if (saving) return
+    if (!validateRequired()) return
     setSaving(true)
     try {
       const payload = buildPayload('0')
@@ -315,6 +380,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   /** 上线：状态设为发布 */
   const handlePublish = async () => {
     if (saving) return
+    if (!validateRequired()) return
     setSaving(true)
     try {
       const payload = buildPayload('1')
@@ -569,7 +635,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               title="AI模型配置"
               onToggle={() => toggle('model')}
             >
-              <SelectedItemList emptyText="暂未添加模型" ids={selectedModelIds} nameMap={optionNameMap} />
+              <SelectedItemList emptyText="暂未添加模型" groupMap={optionGroupMap} ids={selectedModelIds} nameMap={optionNameMap} />
             </CollapseRow>
             {/* 开场引导：+ 号弹编辑弹窗，点行/箭头展开下方引导语 */}
             <CollapseRow
@@ -606,7 +672,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               title="数据语义"
               onToggle={() => toggle('semantic')}
             >
-              <SelectedItemList emptyText="暂未添加数据语义" ids={selectedSemanticIds} nameMap={optionNameMap} />
+              <SelectedItemList emptyText="暂未添加数据语义" groupMap={optionGroupMap} ids={selectedSemanticIds} nameMap={optionNameMap} />
             </CollapseRow>
 
             <GroupTitle title="扩展能力" color="#f59e0b" icon={<ThunderboltOutlined />} />
@@ -622,7 +688,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               title="工具"
               onToggle={() => toggle('mcp')}
             >
-              <SelectedToolList emptyText="暂未添加工具" ids={selectedToolIds} nameMap={optionNameMap} />
+              <SelectedToolList emptyText="暂未添加工具" groupMap={optionGroupMap} ids={selectedToolIds} nameMap={optionNameMap} />
             </CollapseRow>
 
             <CollapseRow
@@ -638,7 +704,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               titleExtra={<QuestionCircleOutlined style={{ color: '#8fa0b5', marginLeft: 4 }} />}
               onToggle={() => toggle('skill')}
             >
-              <SelectedItemList emptyText="暂未添加技能" ids={selectedSkillIds} nameMap={optionNameMap} />
+              <SelectedItemList emptyText="暂未添加技能" groupMap={optionGroupMap} ids={selectedSkillIds} nameMap={optionNameMap} />
             </CollapseRow>
 
             {/* 推荐问题 */}
@@ -1028,7 +1094,36 @@ const GroupTitle: React.FC<{ title: string; color?: string; icon?: React.ReactNo
 
 // 折叠行下方的已选项列表：每行固定高度，最多展示 5 行，超出内部滚动
 const SELECTED_ITEM_ROW_HEIGHT = 32
-const SelectedItemList: React.FC<{ ids: Set<string>; nameMap: Record<string, string>; emptyText: string }> = ({ emptyText, ids, nameMap }) => {
+// 单个已选项行：序号 + 名称，右侧用文件夹图标标注所属分组的层级路径（形如「父组 / 子组」）
+const SelectedRow: React.FC<{ index: number; name: string; groupPath?: string; paddingLeft?: number }> = ({ groupPath, index, name, paddingLeft = 24 }) => (
+  <div
+    style={{
+      alignItems: 'center',
+      color: '#3e5068',
+      display: 'flex',
+      fontSize: 13,
+      gap: 8,
+      height: SELECTED_ITEM_ROW_HEIGHT,
+      lineHeight: 1.6,
+      overflow: 'hidden',
+      padding: `0 24px 0 ${paddingLeft}px`,
+    }}
+  >
+    <span style={{ color: '#8fa0b5', flexShrink: 0, fontSize: 12 }}>{index}.</span>
+    <span style={{ flexShrink: groupPath ? 0 : 1, maxWidth: groupPath ? '52%' : '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+    {groupPath ? (
+      <span
+        style={{ alignItems: 'center', color: '#8fa0b5', display: 'flex', flex: 1, fontSize: 12, gap: 4, justifyContent: 'flex-end', minWidth: 0, overflow: 'hidden' }}
+        title={groupPath}
+      >
+        <FolderOutlined style={{ color: '#358cf3', flexShrink: 0, fontSize: 12 }} />
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{groupPath}</span>
+      </span>
+    ) : null}
+  </div>
+)
+
+const SelectedItemList: React.FC<{ ids: Set<string>; nameMap: Record<string, string>; groupMap: Record<string, string>; emptyText: string }> = ({ emptyText, groupMap, ids, nameMap }) => {
   const items = Array.from(ids)
   if (items.length === 0) {
     return <div style={{ color: '#8fa0b5', fontSize: 13, padding: '8px 24px' }}>{emptyText}</div>
@@ -1036,30 +1131,14 @@ const SelectedItemList: React.FC<{ ids: Set<string>; nameMap: Record<string, str
   return (
     <div style={{ maxHeight: SELECTED_ITEM_ROW_HEIGHT * 5, overflowY: 'auto' }}>
       {items.map((id, i) => (
-        <div
-          key={id}
-          style={{
-            alignItems: 'center',
-            color: '#3e5068',
-            display: 'flex',
-            fontSize: 13,
-            gap: 8,
-            height: SELECTED_ITEM_ROW_HEIGHT,
-            lineHeight: 1.6,
-            overflow: 'hidden',
-            padding: '0 24px',
-          }}
-        >
-          <span style={{ color: '#8fa0b5', flexShrink: 0 }}>{i + 1}.</span>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameMap[id] ?? id}</span>
-        </div>
+        <SelectedRow key={id} groupPath={groupMap[id]} index={i + 1} name={nameMap[id] ?? id} />
       ))}
     </div>
   )
 }
 
 // 工具已选列表：按 MCP工具 / 内置工具 两组区分展示（id 前缀 mcp_ / builtin_）
-const SelectedToolList: React.FC<{ ids: Set<string>; nameMap: Record<string, string>; emptyText: string }> = ({ emptyText, ids, nameMap }) => {
+const SelectedToolList: React.FC<{ ids: Set<string>; nameMap: Record<string, string>; groupMap: Record<string, string>; emptyText: string }> = ({ emptyText, groupMap, ids, nameMap }) => {
   const all = Array.from(ids)
   if (all.length === 0) {
     return <div style={{ color: '#8fa0b5', fontSize: 13, padding: '8px 24px' }}>{emptyText}</div>
@@ -1092,23 +1171,7 @@ const SelectedToolList: React.FC<{ ids: Set<string>; nameMap: Record<string, str
           </span>
         </div>
         {items.map((id, i) => (
-          <div
-            key={id}
-            style={{
-              alignItems: 'center',
-              color: '#3e5068',
-              display: 'flex',
-              fontSize: 13,
-              gap: 8,
-              height: SELECTED_ITEM_ROW_HEIGHT,
-              lineHeight: 1.6,
-              overflow: 'hidden',
-              padding: '0 24px 0 36px',
-            }}
-          >
-            <span style={{ color: '#8fa0b5', flexShrink: 0, fontSize: 12 }}>{i + 1}.</span>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameMap[id] ?? id}</span>
-          </div>
+          <SelectedRow key={id} groupPath={groupMap[id]} index={i + 1} name={nameMap[id] ?? id} paddingLeft={36} />
         ))}
       </div>
     )

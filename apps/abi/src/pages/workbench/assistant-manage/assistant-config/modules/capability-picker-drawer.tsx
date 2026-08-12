@@ -1,19 +1,21 @@
 import { SearchOutlined } from '@ant-design/icons'
 import { Checkbox, Empty, Input, Spin, Tabs } from 'antd'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { tableSemanticsGroupList } from '@/service/api/table-semantics'
 import type { TableSemanticsGroupType } from '@/service/api/table-semantics'
+import { buildGroupPath, buildGroupTree } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper'
 import React from 'react'
 
-import { GroupNavItem, PickerToolRow } from './tool-picker-drawer'
+import { GroupTreeNav, PickerToolRow } from './tool-picker-drawer'
 
 /**
  * 通用能力选择抽屉（数据语义 / 技能）
  * 按需加载：打开抽屉后才请求；有分组的 tab 先拉分组再按分组懒加载列表；全部结果按 tab+分组 缓存
  */
 
-export type PickerOption = { id: string; name: string; description?: string }
+// groupPath：所属分组的层级路径（形如「父组 / 子组」），用于已选项处标注归属分组
+export type PickerOption = { id: string; name: string; description?: string; groupPath?: string }
 
 export interface PickerTabConfig {
   key: string
@@ -27,6 +29,7 @@ export interface PickerTabConfig {
 interface PickerGroup {
   groupId: string
   groupName: string
+  parentId?: string
 }
 
 interface Props {
@@ -81,12 +84,14 @@ const CapabilityPickerDrawer: React.FC<Props> = ({ open, title, icon, tabs, spac
         spaceId: Number(spaceId),
       })
       const list: any[] = Array.isArray(res?.data) ? res.data : []
-      const groups = list.map((g) => ({ groupId: String(g.groupId), groupName: g.groupName || '-' }))
+      const groups = list.map((g) => ({ groupId: String(g.groupId), groupName: g.groupName || '-', parentId: String(g.parentId ?? '0') }))
       setGroupsByTab((prev) => ({ ...prev, [tab.key]: groups }))
       groupsLoadedRef.current[tab.key] = true
-      if (groups.length > 0) {
-        setActiveGroupByTab((prev) => ({ ...prev, [tab.key]: groups[0].groupId }))
-        loadList(tab, groups[0].groupId)
+      // 默认选中树结构的第一个顶级分组（与「正常分组」一致，不直接取平铺数组首项）
+      const firstRoot = buildGroupTree(groups, '0', true)[0]
+      if (firstRoot) {
+        setActiveGroupByTab((prev) => ({ ...prev, [tab.key]: String(firstRoot.groupId) }))
+        loadList(tab, String(firstRoot.groupId), groups)
       }
     } catch {
       setGroupsByTab((prev) => ({ ...prev, [tab.key]: [] }))
@@ -95,15 +100,18 @@ const CapabilityPickerDrawer: React.FC<Props> = ({ open, title, icon, tabs, spac
     }
   }
 
-  /** 加载列表，命中缓存则跳过请求 */
-  async function loadList(tab: PickerTabConfig, groupId?: string) {
+  /** 加载列表，命中缓存则跳过请求；groupsForPath 用于在异步中拿到最新分组以计算层级路径 */
+  async function loadList(tab: PickerTabConfig, groupId?: string, groupsForPath?: PickerGroup[]) {
     if (!spaceId) return
     if (tab.groupType && !groupId) return
     const key = cacheKey(tab.key, groupId)
     if (listCacheRef.current[key]) return
     setLoadingList(true)
     try {
-      const options = await tab.fetchList({ groupId, spaceId: Number(spaceId) })
+      const raw = await tab.fetchList({ groupId, spaceId: Number(spaceId) })
+      // 有分组的 tab 给每个选项打上层级路径，供已选项标注归属分组
+      const groupPath = tab.groupType && groupId ? buildGroupPath(groupsForPath ?? groupsByTab[tab.key] ?? [], groupId) : ''
+      const options = groupPath ? raw.map((o) => ({ ...o, groupPath })) : raw
       listCacheRef.current[key] = options
       setListByKey((prev) => ({ ...prev, [key]: options }))
       onOptionsLoaded?.(options)
@@ -134,7 +142,8 @@ const CapabilityPickerDrawer: React.FC<Props> = ({ open, title, icon, tabs, spac
   const activeTab = tabs.find((t) => t.key === activeTabKey)
   const hasGroups = !!activeTab?.groupType
   const activeGroupId = activeGroupByTab[activeTabKey] ?? ''
-  const groups = groupsByTab[activeTabKey] ?? []
+  // useMemo 稳定引用，避免每次渲染生成新数组导致 GroupTreeNav 展开态 effect 抖动
+  const groups = useMemo(() => groupsByTab[activeTabKey] ?? [], [groupsByTab, activeTabKey])
 
   const handleGroupClick = (groupId: string) => {
     setActiveGroupByTab((prev) => ({ ...prev, [activeTabKey]: groupId }))
@@ -191,9 +200,7 @@ const CapabilityPickerDrawer: React.FC<Props> = ({ open, title, icon, tabs, spac
               {groups.length === 0 && !loadingGroups ? (
                 <div style={{ color: '#bfbfbf', fontSize: 12, padding: '8px' }}>暂无分组</div>
               ) : (
-                groups.map((g) => (
-                  <GroupNavItem key={g.groupId} active={g.groupId === activeGroupId} name={g.groupName} onClick={() => handleGroupClick(g.groupId)} />
-                ))
+                <GroupTreeNav activeGroupId={activeGroupId} groups={groups} onSelect={handleGroupClick} />
               )}
             </Spin>
           </div>

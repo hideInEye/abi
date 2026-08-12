@@ -64,6 +64,11 @@ export function getTaskKey(planEntryId: string | undefined, taskIndex: number) {
   return `${planEntryId || 'plan-pending'}:${taskIndex}`
 }
 
+/** 展开 key 是纯 UI 状态；当前执行项由 plan.update 首次写入，之后允许用户自由收起和展开。 */
+export function toggleReportTaskKey(expandedTaskKeys: string[], taskKey: string) {
+  return expandedTaskKeys.includes(taskKey) ? expandedTaskKeys.filter((key) => key !== taskKey) : [...expandedTaskKeys, taskKey]
+}
+
 /** 将后端文本中的不同换行表示统一为 Markdown 可消费的真实换行。 */
 export function normalizeReportChunkContent(content: string) {
   return content.replace(/\r\n?/g, '\n').replace(/\\r\\n|\\n|\\r/g, '\n')
@@ -105,6 +110,22 @@ export function getReportTitle(candidate?: Pick<ReportCandidate, 'format' | 'con
 
   const heading = candidate.content.match(/^#\s+(.+)$/m)?.[1]?.trim()
   return heading || 'Markdown 报告'
+}
+
+/** 生成前端本地下载所需的文件名与 MIME，不依赖额外后端下载接口。 */
+export function getReportDownloadDescriptor(candidate: Pick<ReportCandidate, 'format' | 'content'>) {
+  const extension = candidate.format === 'html' ? 'html' : 'md'
+  const mimeType = candidate.format === 'html' ? 'text/html' : 'text/markdown'
+  const rawTitle = getReportTitle(candidate).replace(/\.(?:html?|md|markdown)$/i, '')
+  const safeTitle = rawTitle
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+    .replace(/[. ]+$/g, '')
+    .trim() || '报告文件'
+
+  return {
+    fileName: `${safeTitle}.${extension}`,
+    mimeType,
+  }
 }
 
 export function getStepSummary(step: ReportPublicStep) {
