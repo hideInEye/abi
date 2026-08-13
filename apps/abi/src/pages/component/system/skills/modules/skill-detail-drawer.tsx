@@ -5,6 +5,7 @@ import {
   DeleteOutlined,
   DownOutlined,
   DownloadOutlined,
+  EyeOutlined,
   FileOutlined,
   FolderOpenOutlined,
   FolderOutlined,
@@ -17,7 +18,7 @@ import {
   TagOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { App, Button, Empty, Input, Spin, Tabs, Tag, Tooltip } from 'antd'
+import { App, Button, Empty, Input, Segmented, Spin, Tabs, Tag, Tooltip } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import type { FC, ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
@@ -38,6 +39,7 @@ import {
   getSkillVersionListApi,
   publishSkillVersionApi,
   selectSkillVersionApi,
+  updateSkillInfoApi,
 } from '@/service/api/skill'
 
 import '../skill.css'
@@ -311,6 +313,9 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
   const [introduction, setIntroduction] = useState('')
   const [loadingIntro, setLoadingIntro] = useState(false)
+  // 可见范围（公开/私有），从技能详情同步，可即时修改并持久化
+  const [visibility, setVisibility] = useState<'PUBLIC' | 'PRIVATE'>('PRIVATE')
+  const [savingVisibility, setSavingVisibility] = useState(false)
 
   // 左侧（固定默认版本）的独立状态
   const [leftFiles, setLeftFiles] = useState<FileItem[]>([])
@@ -504,6 +509,12 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, skillId])
 
+  // 从技能详情/列表数据同步可见范围（后端未返回时默认私有）
+  useEffect(() => {
+    const v = String(detail?.visibility ?? skill?.visibility ?? '').toUpperCase()
+    setVisibility(v === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE')
+  }, [detail, skill])
+
   // activeVersionId 变化时不再自动加载，数据加载改为显式调用
 
   async function handleDownloadPackage() {
@@ -664,6 +675,30 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
       }
     } catch (err: any) {
       message.error(err?.message || '删除失败')
+    }
+  }
+
+  // 修改可见范围（乐观更新 + 失败回滚），仅提交 visibility 走后端部分更新
+  async function handleVisibilityChange(next: 'PUBLIC' | 'PRIVATE') {
+    if (!skillId || next === visibility || savingVisibility) return
+    const prev = visibility
+    setVisibility(next)
+    setSavingVisibility(true)
+    try {
+      const res: any = await updateSkillInfoApi({ skillId, visibility: next })
+      const code = res?.response?.data?.code ?? res?.data?.code
+      if (code === 200 || res?.response?.data?.success || res?.data?.success) {
+        message.success(next === 'PUBLIC' ? '已设为公开' : '已设为私有')
+        loadDetail()
+      } else {
+        setVisibility(prev)
+        message.error(res?.response?.data?.msg || res?.data?.msg || '设置失败')
+      }
+    } catch (err: any) {
+      setVisibility(prev)
+      message.error(err?.message || '设置失败')
+    } finally {
+      setSavingVisibility(false)
     }
   }
 
@@ -972,6 +1007,28 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* 可见范围 */}
+            <div className="sd-v5-card">
+              <div className="sd-v5-card__title">
+                <EyeOutlined /> 可见范围
+              </div>
+              <Segmented
+                block
+                disabled={savingVisibility}
+                onChange={(val) => handleVisibilityChange(val as 'PUBLIC' | 'PRIVATE')}
+                options={[
+                  { icon: <GlobalOutlined />, label: '公开', value: 'PUBLIC' },
+                  { icon: <LockOutlined />, label: '私有', value: 'PRIVATE' },
+                ]}
+                value={visibility}
+              />
+              <div className="sd-v5-muted" style={{ marginTop: 8 }}>
+                {visibility === 'PUBLIC'
+                  ? '所有空间成员均可检索并使用该技能。'
+                  : '仅所属空间可见，其他空间无法检索和使用。'}
+              </div>
             </div>
 
             {/* 生命周期管理 */}

@@ -214,6 +214,8 @@ const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, o
       fd.append('file', file)
       // 更新模式直接从技能信息取 spaceId，不依赖表单字段
       fd.append('spaceId', String(spaceIdToSubmit ?? ''))
+      // 技能类型：0 内置技能 / 1 外部技能，前端安装/更新统一提交外部技能
+      fd.append('skillType', '1')
       // 追加 spacename 参数：优先从选项列表取 label，其次从本地存储取
       const matchedSpace = spaces.find((s) => String(s.value) === String(spaceIdToSubmit))
       const spacename = matchedSpace?.label || readPersistedSpaceName() || ''
