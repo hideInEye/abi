@@ -80,7 +80,7 @@ describe('report stream reducer', () => {
     expect(JSON.stringify(step)).not.toContain('secret')
   })
 
-  it('首个 plan 覆盖任务快照、收起思考区并保持 ToDo 默认收起', () => {
+  it('首个 plan 保持 ToDo 默认收起，后续计划更新保留用户的展开状态', () => {
     const initial = createInitialReportStreamState()
     const firstPlan = reduceReportStreamEntry(
       initial,
@@ -93,8 +93,10 @@ describe('report stream reducer', () => {
         version: 1,
       }),
     )
+    // 页面加载后的手动展开属于 UI 状态，后续接口快照不能覆盖用户选择。
+    const userOpenedTodo = { ...firstPlan, todoOpen: true }
     const secondPlan = reduceReportStreamEntry(
-      firstPlan,
+      userOpenedTodo,
       entry('20-0', {
         type: 'plan.update',
         tasks: [
@@ -108,6 +110,7 @@ describe('report stream reducer', () => {
     expect(initial).toMatchObject({ thinkingOpen: true, todoOpen: false })
     expect(firstPlan).toMatchObject({ status: 'running', thinkingOpen: false, todoOpen: false })
     expect(firstPlan.expandedTaskKeys).toEqual(['10-0:0'])
+    expect(secondPlan.todoOpen).toBe(true)
     expect(secondPlan.currentPlan?.version).toBe(2)
     expect(secondPlan.tasks.map((task) => task.status)).toEqual(['completed', 'in_progress'])
     expect(secondPlan.expandedTaskKeys).toEqual(['20-0:1'])

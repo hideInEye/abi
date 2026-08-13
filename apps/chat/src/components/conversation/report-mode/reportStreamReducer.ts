@@ -453,14 +453,13 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
       }
 
       // plan.update 是完整快照：只覆盖当前任务，不删除此前时间片已经产生的 executionGroups。
-      // 进入任务执行阶段时收起思考区，但 ToDo 总面板保持默认收起，由用户按需展开。
+      // ToDo 是否展开是页面 UI 状态，仅在初次创建/恢复时默认为 false；接口更新不得覆盖用户选择。
       const tasks = event.tasks.map((task) => ({ ...task }))
       const runningTaskIndex = tasks.findIndex((task) => task.status === 'in_progress')
       nextState = {
         ...state,
         status: 'running',
         thinkingOpen: false,
-        todoOpen: false,
         currentPlan: {
           entryId,
           tasks,
