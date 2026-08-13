@@ -173,8 +173,8 @@ const CapabilityPickerDrawer: React.FC<Props> = ({ open, title, icon, tabs, spac
       {showTabs && (
         <Tabs
           activeKey={activeTabKey}
+          className="capability-picker-tabs"
           items={tabs.map((t) => ({ key: t.key, label: t.label }))}
-          size="small"
           onChange={(key) => {
             setActiveTabKey(key)
             setKeyword('')

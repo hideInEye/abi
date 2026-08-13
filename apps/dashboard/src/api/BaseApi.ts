@@ -20,25 +20,11 @@ class BaseApi extends AbstractApi {
 
     async createProject(project: IProjectInfo): Promise<string> {
         const res = await FetchUtil.post('/dashboard/api/v1/project/create', project);
-        return res.code === 200 ? res.data : '';
-    }
-
-    /**
-     * 创建会话应用（chat-proxy）
-     * @param data 应用配置数据
-     */
-    async createChatApp(data: Record<string, any>): Promise<{success: boolean; data?: any}> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/app/add', data);
-        return {success: res.code === 200, data: res.data};
-    }
-
-    /**
-     * 获取助手列表
-     * @param spaceId 空间id
-     */
-    async fetchAgentList(spaceId: number): Promise<any[]> {
-        const res = await FetchUtil.get(`/copilot/v1/agentConfig/list?pageNum=1&pageSize=20&spaceId=${spaceId}`);
-        return res.code === 200 ? ((res as any).rows || []) : [];
+        if (res.code !== 200) {
+            globalMessage.messageApi?.error(res.msg);
+            return '';
+        }
+        return res.data;
     }
 
     /**
@@ -48,16 +34,6 @@ class BaseApi extends AbstractApi {
     async fetchSemanticTree(spaceId: number): Promise<any[]> {
         const res = await FetchUtil.get(`/copilot/v1/schema/tree?spaceId=${spaceId}`);
         return res.code === 200 ? (res.data || []) : [];
-    }
-
-    /**
-     * 创建会话（chat-proxy）
-     * @param data 会话配置数据，需包含 chat_id 等
-     */
-
-    async createChatConv(data: Record<string, any>): Promise<{success: boolean; data?: any}> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/new', data);
-        return {success: res.code === 200, data: res.data};
     }
 
     /**
@@ -79,34 +55,6 @@ class BaseApi extends AbstractApi {
         const sessionId = d.sessionId ?? d.session_id ?? d.chat_id ?? d.chatId;
         const convUid = d.conv_uid ?? d.convUid;
         return sessionId && convUid ? {sessionId: String(sessionId), convUid: String(convUid)} : null;
-    }
-
-    /**
-     * 查询会话列表（chat-proxy）
-     * @param data 查询条件，需包含 chat_id、chat_mode、space_id
-     */
-    async fetchChatConvList(data: Record<string, any>): Promise<any[]> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/list', data);
-        return res.data?.data || [];
-    }
-
-    /**
-     * 获取提示词列表（chat-proxy）
-     * 用于创建对话时传入 chat_config
-     */
-    async fetchRecommendQuestions(): Promise<any[]> {
-        const res = await FetchUtil.post('/chat-proxy/prompt/list?map_required=true', {});
-        const list = res.data?.data ?? res.data;
-        return Array.isArray(list) ? list : [];
-    }
-
-    /**
-     * 删除会话（chat-proxy）
-     * @param convUid 会话uid
-     */
-    async deleteChatConv(convUid: string): Promise<boolean> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/delete', {conv_uid: convUid});
-        return res.code === 200;
     }
 
     /**

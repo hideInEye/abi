@@ -30,21 +30,47 @@ export const semanticPickerTabs: PickerTabConfig[] = [
   },
 ]
 
-/** 技能：技能列表（与技能管理页一致，不传 spaceId 查全部可见技能） */
+/** 已添加到「我的技能」的技能 id（与技能管理页共用同一本地存储 key） */
+const MY_SKILLS_KEY = 'mySkills'
+function getMySkillIdSet(): Set<string> {
+  try {
+    const arr = JSON.parse(localStorage.getItem(MY_SKILLS_KEY) || '[]')
+    return new Set(Array.isArray(arr) ? arr.map(String) : [])
+  } catch {
+    return new Set()
+  }
+}
+
+/** 拉取技能列表并归一化（rawId 为后端原始 id，用于「我的技能」本地筛选） */
+async function fetchSkillEntries(): Promise<Array<{ option: PickerOption; rawId: string }>> {
+  const res: any = await querySkillListApi({})
+  const rows = res?.response?.data?.data?.rows || res?.response?.data?.rows || res?.data?.rows || res?.data?.data || res?.data || []
+  return (Array.isArray(rows) ? rows : []).map((r: any) => {
+    const rawId = String(r.id ?? r.skillId)
+    return {
+      rawId,
+      option: {
+        id: `skill_${rawId}`,
+        name: r.bizName || r.skillName || '-',
+        description: r.summary || '',
+      },
+    }
+  })
+}
+
+/** 技能：广场（全部可见）/ 我的技能（本地已添加），对齐技能管理页图三双 tab */
 export const skillPickerTabs: PickerTabConfig[] = [
   {
-    key: 'skill',
-    label: '技能列表',
+    key: 'plaza',
+    label: '广场',
+    fetchList: async () => (await fetchSkillEntries()).map((e) => e.option),
+  },
+  {
+    key: 'mine',
+    label: '我的技能',
     fetchList: async () => {
-      const res: any = await querySkillListApi({})
-      const rows = res?.response?.data?.data?.rows || res?.response?.data?.rows || res?.data?.rows || res?.data?.data || res?.data || []
-      return (Array.isArray(rows) ? rows : []).map(
-        (r: any): PickerOption => ({
-          id: `skill_${r.id ?? r.skillId}`,
-          name: r.bizName || r.skillName || '-',
-          description: r.summary || '',
-        }),
-      )
+      const mine = getMySkillIdSet()
+      return (await fetchSkillEntries()).filter((e) => mine.has(e.rawId)).map((e) => e.option)
     },
   },
 ]
