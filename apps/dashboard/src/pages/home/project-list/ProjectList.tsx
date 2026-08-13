@@ -135,52 +135,8 @@ export const ProjectList = memo((props: ProjectListProps) => {
             };
             const id = await baseApi.createProject(project);
             if (id === "") {
-                globalMessage.messageApi?.error('创建失败');
+                // 创建失败的错误信息（如名称已存在）已由 createProject 内部按后端 msg 提示
                 return;
-            }
-
-            // 2. 获取助手列表，取第一条的 agentId
-            const agentList = await baseApi.fetchAgentList(spaceId);
-            const agentId = agentList?.[0]?.agentId;
-
-            // 3. 获取提示词列表，status 全部设为 '1'（开启），组装 chat_config
-            const promptList = await baseApi.fetchRecommendQuestions();
-            const promptsWithStatus = promptList.map((p: any) => ({...p, status: '1'}));
-            const chatConfig = JSON.stringify({prompts: promptsWithStatus});
-
-            // 4. 创建会话应用
-            const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
-            let createBy = '';
-            try {
-                if (userInfoStr) {
-                    createBy = JSON.parse(userInfoStr)?.userName || '';
-                }
-            } catch { /* ignore */ }
-
-            const chatAppData = {
-                biz_name: name,
-                status: '1',
-                chat_mode: 'chat_with_dashboard',
-                space_id: spaceId,
-                create_by: createBy,
-                chat_config: chatConfig,
-                ...(agentId ? {agent_id: String(agentId)} : {}),
-            };
-            const appRes = await baseApi.createChatApp(chatAppData);
-
-            // 5. 创建会话，并把 chat_id 存入大屏 dataJson
-            if (appRes.success && appRes.data) {
-                const chatId = appRes.data.data.chat_id;
-                await baseApi.createChatConv({
-                    chat_id: chatId,
-                    chat_mode: 'chat_with_dashboard',
-                    space_id: spaceId,
-                });
-                // 把 chat_id 保存到大屏 dataJson，供 AI 对话面板使用
-                await baseApi.updateProject({
-                    id,
-                    dataJson: JSON.stringify({canvasManager: {width, height}, chatId}),
-                });
             }
 
             setAddDialog(false);
@@ -234,26 +190,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     const confirmDel = async () => {
         const id = delIdRef.current;
-        try {
-            // 1. 查询大屏详情，从 dataJson 取出 chatId，删除关联会话
-            const spaceId = Number(localStorage.getItem('spaceId'));
-            const projectInfo = await baseApi.getProjectInfo(id);
-            const chatId = projectInfo?.dataJson ? JSON.parse(projectInfo.dataJson)?.chatId : null;
-            if (chatId) {
-                const convList = await baseApi.fetchChatConvList({
-                    chat_id: chatId,
-                    chat_mode: 'chat_with_dashboard',
-                    space_id: spaceId,
-                });
-                if (convList.length) {
-                    await Promise.all(convList.map((conv: any) => baseApi.deleteChatConv(conv.conv_uid)));
-                }
-            }
-        } catch (e) {
-            console.error('删除关联会话失败:', e);
-        }
-
-        // 2. 删除大屏项目
         baseApi.deleteProject(id).then((res) => {
             if (res) {
                 setDelDialog(false);
@@ -272,27 +208,9 @@ export const ProjectList = memo((props: ProjectListProps) => {
             return;
         }
         try {
-            const spaceId = Number(localStorage.getItem('spaceId'));
             // Delete each selected project
             for (const id of selectedRowKeys) {
-                const projectId = String(id);
-                try {
-                    const projectInfo = await baseApi.getProjectInfo(projectId);
-                    const chatId = projectInfo?.dataJson ? JSON.parse(projectInfo.dataJson)?.chatId : null;
-                    if (chatId) {
-                        const convList = await baseApi.fetchChatConvList({
-                            chat_id: chatId,
-                            chat_mode: 'chat_with_dashboard',
-                            space_id: spaceId,
-                        });
-                        if (convList.length) {
-                            await Promise.all(convList.map((conv: any) => baseApi.deleteChatConv(conv.conv_uid)));
-                        }
-                    }
-                } catch (e) {
-                    console.error('删除关联会话失败:', e);
-                }
-                await baseApi.deleteProject(projectId);
+                await baseApi.deleteProject(String(id));
             }
             globalMessage.messageApi?.success(`成功删除 ${selectedRowKeys.length} 个项目`);
             setSelectedRowKeys([]);

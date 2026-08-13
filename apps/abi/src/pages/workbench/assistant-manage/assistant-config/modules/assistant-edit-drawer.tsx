@@ -293,24 +293,33 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
 
   /** 构建提交数据 */
   function buildPayload(overrideStatus?: string) {
-    const toolConfigs = Array.from(selectedToolIds).map((id, index) => {
+    // 按 toolType 分组：普通工具 toolType='1'，MCP 工具 toolType='2'；同类型工具合入同一条记录的 toolConfig 数组
+    const builtinItems: Record<string, any>[] = []
+    const mcpItems: Record<string, any>[] = []
+    Array.from(selectedToolIds).forEach((id) => {
       const [group, ...rest] = id.split('_')
       const toolId = rest.join('_')
       const isMcp = group === 'mcp'
-      // 带上 name 与 groupPath（JSON 原样存取），回显无需再拉列表即可展示名称与所属分组
-      const config: Record<string, any> = { type: 'tool', id: Number(toolId) || toolId, name: optionNameMap[id], groupPath: optionGroupMap[id] }
-      // MCP 工具额外存协议分组：mcp_sse / mcp_streamable，值为真实 groupId 列表
+      const config: Record<string, any> = { type: 'tool', id: Number(toolId) || toolId, name: optionNameMap[id] }
       if (isMcp) {
+        config.groupPath = optionGroupMap[id]
         const meta = toolMcpMetaMap[id]
         config.mcp_sse = meta?.mcpSse ?? []
         config.mcp_streamable = meta?.mcpStreamable ?? []
-      }
-      return {
-        toolType: isMcp ? '2' : '1',
-        toolConfig: [config],
-        sort: index,
+        config.sort = mcpItems.length
+        mcpItems.push(config)
+      } else {
+        config.sort = builtinItems.length
+        builtinItems.push(config)
       }
     })
+    const toolConfigs: Record<string, any>[] = []
+    if (builtinItems.length > 0) {
+      toolConfigs.push({ toolType: '1', toolConfig: builtinItems })
+    }
+    if (mcpItems.length > 0) {
+      toolConfigs.push({ toolType: '2', toolConfig: mcpItems })
+    }
     // 数据语义：schema_<id> → { schemaConfig: [{type:'schema', id, name}], sort }
     const schemaSemantics = Array.from(selectedSemanticIds).map((id, index) => {
       const schemaId = id.replace('schema_', '')

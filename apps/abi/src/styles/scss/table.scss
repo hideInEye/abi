@@ -3860,6 +3860,40 @@ div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
   min-height: 300px;
 }
 
+// ═══ 能力选择抽屉 Tabs — 对齐技能管理页 skill-filter-tabs 视觉样式 ═══
+.capability-picker-tabs {
+  .ant-tabs-nav {
+    margin-bottom: 16px;
+  }
+
+  .ant-tabs-nav::before {
+    border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+  }
+
+  .ant-tabs-tab {
+    padding: 8px 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: #768a9f;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #5b7cf7;
+    }
+  }
+
+  .ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: #5b7cf7 !important;
+    font-weight: 600;
+  }
+
+  .ant-tabs-ink-bar {
+    background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%) !important;
+    height: 3px;
+    border-radius: 2px;
+  }
+}
+
 // ── Footer ──
 .sd-v5-footer {
   display: flex;
@@ -3885,7 +3919,7 @@ div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
   overflow: hidden;
   padding: 32px 40px;
   background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 50%, #8ba5fc 100%);
-  box-shadow: 0 8px 32px rgba(91, 124, 247, 0.18);
+  box-shadow: 0 4px 16px rgba(91, 124, 247, 0.12);
 }
 
 .sd-v5-hero-bg {
