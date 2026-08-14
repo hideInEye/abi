@@ -8,6 +8,7 @@ import { useAppSelector } from '@/hooks/business/useStore'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { OntologyEntity, OntologyEntityAttribute, OntologyLabel } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display'
+import { validateFieldsAndScroll } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 import { getSpaceId } from '@/store/slice/app'
 
 import { useAttributeAssets } from '../hooks/useAttributeAssets'
@@ -141,11 +142,11 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
     setAdding(true)
     try {
       let values: AttributeBindingValues
-      try {
-        values = await form.validateFields()
-      } catch {
+      const formValues = await validateFieldsAndScroll<AttributeBindingValues>(form)
+      if (!formValues) {
         return
       }
+      values = formValues
       if (!selectedType) {
         message.warning('请选择属性类型')
         return

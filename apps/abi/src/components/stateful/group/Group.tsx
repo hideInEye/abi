@@ -50,7 +50,7 @@ export interface GroupProps {
     rule: any[];
     type: TableSemanticsGroupType;
   };
-  readonly onGroupId: (groupId: string, groupName?: string) => void;
+  readonly onGroupId: (groupId: string | number, groupName?: string) => void;
   /** 上报“是否存在分组”（null=加载中），供右侧业务区域门控使用 */
   readonly onGroupsChange?: (hasAnyGroup: boolean | null) => void;
 }

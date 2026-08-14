@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { OntologyEntity, OntologyLabel, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
+import { validateFieldsAndScroll } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 
 import type { EntityFormValues } from '../types'
 import { ENTITY_CODE_PATTERN } from '../utils/entity'
@@ -43,11 +44,11 @@ export const EntityDrawer: React.FC<EntityDrawerProps> = ({ entity, labels, onCl
     setSaving(true)
     try {
       let values: EntityFormValues
-      try {
-        values = await form.validateFields()
-      } catch {
+      const formValues = await validateFieldsAndScroll<EntityFormValues>(form)
+      if (!formValues) {
         return
       }
+      values = formValues
       await onSave(values, entity)
       message.success(entity ? '实体已更新' : '实体已新增')
       onClose()

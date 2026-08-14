@@ -35,6 +35,7 @@ export interface DimensionBatchMappingRow {
   relSchemaId: number | string
   relViewId?: number | string
   semanticSchemaName: string
+  semanticSchemaTechName?: string
   semanticsGroupId?: number | string
 }
 
@@ -96,9 +97,11 @@ export interface DimensionModelItem {
   path: string
   relatedFields: DimensionFieldOption[]
   relatedMetrics?: DimensionRelatedMetric[]
+  rawEnglishName?: string
+  rawZhName?: string
   sampleValues?: string
   semanticGroupId?: number
-  semanticSchemaId?: number
+  semanticSchemaId?: number | string
   semanticSchemaName?: string
   semanticsGroupId?: number
   status: number
@@ -127,12 +130,14 @@ export interface DimensionFormValues {
   englishName: string
   groupId?: number | string
   id?: number
+  mappedBizNameFieldName?: string
+  mappedTechNameTableName?: string
   owner: string
   ownerEmail?: string
   relatedFieldKeys: string[]
   sampleValues?: string
   semanticGroupId?: number
-  semanticSchemaId?: number
+  semanticSchemaId?: number | string
   semanticsGroupId?: number
   status: number
   timeField?: string
@@ -148,6 +153,6 @@ export interface DimensionPagination {
   total: number
 }
 
-export interface DimensionSchemaInfo extends TableSemanticParams {
-  modelDetail?: string
+export interface DimensionSchemaInfo extends Omit<TableSemanticParams, 'modelDetail'> {
+  modelDetail?: Record<string, unknown> | string
 }

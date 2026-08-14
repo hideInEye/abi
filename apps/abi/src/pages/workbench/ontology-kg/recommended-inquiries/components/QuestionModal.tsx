@@ -5,6 +5,7 @@ import React from 'react'
 import { useAssistant } from '../hooks/useAssistant.ts'
 import type { QuestionTableData } from '../types/index.ts'
 import { CloseOutlined } from '@ant-design/icons'
+import { scrollToFirstFormError } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 
 interface TagModalProps {
   readonly editingGroup: QuestionTableData | null
@@ -43,6 +44,7 @@ export const QuestionModal: React.FC<TagModalProps> = ({ editingGroup, isModalOp
       const values = await form.validateFields()
       onSave(values)
     } catch (error) {
+      scrollToFirstFormError(form, error)
       console.error('Validation failed:', error)
     }
   }
