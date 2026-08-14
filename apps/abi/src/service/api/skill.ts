@@ -248,16 +248,18 @@ export function updateSkillStatusApi(data: { skillId: number | string; status: n
 }
 
 /**
- * 更新技能基本信息（名称、描述、状态等）
+ * 更新技能基本信息（名称、描述、状态、可见范围等）
  *
- * @param data skillId + bizName + summary + status
+ * @param data skillId + bizName + summary + status + skillType（0 内置技能 / 1 外部技能）+ visibility（PUBLIC 公开 / PRIVATE 私有 / NAMESPACE_ONLY 空间内）
  * @returns boolean
  */
 export function updateSkillInfoApi(data: {
   bizName?: string;
   skillId: number | string;
+  skillType?: number | string;
   status?: number | string;
   summary?: string;
+  visibility?: string;
 }) {
   return apiRequest({
     data,

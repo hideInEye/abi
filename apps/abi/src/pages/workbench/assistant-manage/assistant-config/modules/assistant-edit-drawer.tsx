@@ -18,7 +18,7 @@ import { Button, Input, Modal, Radio, Spin, Switch, Tag, message } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { useEffect, useMemo, useState } from 'react'
 
-import { addAppApi, updateAppApi, fetchAppDetailApi } from '@/service/api/abi-chat-app'
+import { addAppApi, updateAppApi, fetchAppDetailApi, publishVersionApi } from '@/service/api/abi-chat-app'
 import { fetchModelList } from '@/service/api'
 import { getSpaceId } from '@/store/slice/app'
 import { useAppSelector } from '@/hooks/business/useStore'
@@ -71,6 +71,10 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [saving, setSaving] = useState(false)
+  // 是否已保存草稿：新建助手在首次保存草稿前锁定右侧测试输入框，编辑已有助手默认解锁
+  const [draftSaved, setDraftSaved] = useState(false)
+  // 当前助手最新版本 ID：编辑态由 loadDetail 回填，上线时用于调用 version/publish
+  const [versionId, setVersionId] = useState<number | string | undefined>(undefined)
   // rec_query 推荐问题列表
   const [recQuestions, setRecQuestions] = useState<string[]>([])
   const [recDrawerOpen, setRecDrawerOpen] = useState(false)
@@ -157,12 +161,15 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   async function loadDetail() {
     if (!agent?.id) return
     setLoadingDetail(true)
+    setVersionId(undefined)
     try {
       const res: any = await fetchAppDetailApi({ appId: agent.id })
       const detail = res?.data || {}
       // 配置字段嵌在 versions 里：取与 latestVersionId 匹配的版本，降级取第一个，再降级取顶层
       const versions: any[] = Array.isArray(detail.versions) ? detail.versions : []
       const version: any = versions.find((v: any) => String(v.versionId) === String(detail.latestVersionId)) || versions[0] || detail
+      // 记录最新版本 ID，供上线时调用 version/publish
+      setVersionId(version?.versionId ?? detail.latestVersionId)
       setName(detail.appName || agent.name || '')
       setPrompt(version.appPrompt || detail.appPrompt || '')
       setDescription(detail.description || '')
@@ -261,9 +268,12 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
 
   useEffect(() => {
     if (visible && agent?.id) {
+      // 编辑已有助手：视为已保存，右侧测试输入框默认解锁
+      setDraftSaved(true)
       loadDetail()
     } else if (visible && !agent?.id) {
-      // 新增模式：重置表单
+      // 新增模式：重置表单，未保存草稿前锁定右侧测试输入框
+      setDraftSaved(false)
       setName('')
       setPrompt('')
       setDescription('')
@@ -277,29 +287,39 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       setSelectedSkillIds(new Set())
       setSelectedModelIds(new Set())
       setPrologue('')
+      setVersionId(undefined)
     }
   }, [visible, agent])
 
   /** 构建提交数据 */
   function buildPayload(overrideStatus?: string) {
-    const toolConfigs = Array.from(selectedToolIds).map((id, index) => {
+    // 按 toolType 分组：普通工具 toolType='1'，MCP 工具 toolType='2'；同类型工具合入同一条记录的 toolConfig 数组
+    const builtinItems: Record<string, any>[] = []
+    const mcpItems: Record<string, any>[] = []
+    Array.from(selectedToolIds).forEach((id) => {
       const [group, ...rest] = id.split('_')
       const toolId = rest.join('_')
       const isMcp = group === 'mcp'
-      // 带上 name 与 groupPath（JSON 原样存取），回显无需再拉列表即可展示名称与所属分组
-      const config: Record<string, any> = { type: 'tool', id: Number(toolId) || toolId, name: optionNameMap[id], groupPath: optionGroupMap[id] }
-      // MCP 工具额外存协议分组：mcp_sse / mcp_streamable，值为真实 groupId 列表
+      const config: Record<string, any> = { type: 'tool', id: Number(toolId) || toolId, name: optionNameMap[id] }
       if (isMcp) {
+        config.groupPath = optionGroupMap[id]
         const meta = toolMcpMetaMap[id]
         config.mcp_sse = meta?.mcpSse ?? []
         config.mcp_streamable = meta?.mcpStreamable ?? []
-      }
-      return {
-        toolType: isMcp ? '2' : '1',
-        toolConfig: [config],
-        sort: index,
+        config.sort = mcpItems.length
+        mcpItems.push(config)
+      } else {
+        config.sort = builtinItems.length
+        builtinItems.push(config)
       }
     })
+    const toolConfigs: Record<string, any>[] = []
+    if (builtinItems.length > 0) {
+      toolConfigs.push({ toolType: '1', toolConfig: builtinItems })
+    }
+    if (mcpItems.length > 0) {
+      toolConfigs.push({ toolType: '2', toolConfig: mcpItems })
+    }
     // 数据语义：schema_<id> → { schemaConfig: [{type:'schema', id, name}], sort }
     const schemaSemantics = Array.from(selectedSemanticIds).map((id, index) => {
       const schemaId = id.replace('schema_', '')
@@ -370,6 +390,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       // 失败时全局错误处理已提示后端具体信息（如“应用名称不能为空”），保留抽屉不关闭
       if (error) return
       setStatus('0')
+      setDraftSaved(true)
       message.success('已保存为草稿')
       onClose(true)
     } finally {
@@ -377,15 +398,21 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     }
   }
 
-  /** 上线：状态设为发布 */
+  /** 上线：先保存当前编辑，再对最新版本调用 version/publish 完成上线 */
   const handlePublish = async () => {
     if (saving) return
     if (!validateRequired()) return
     setSaving(true)
     try {
       const payload = buildPayload('1')
+      // apiRequest 为扁平请求，失败时返回 { error } 而不抛错，需显式判断
       const { error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
       if (error) return
+      // 保存成功后，对已加载的最新版本调用 version/publish 上线（versionId 由 loadDetail 回填）
+      if (versionId != null && String(versionId) !== '') {
+        const { error: publishError } = await publishVersionApi({ versionId })
+        if (publishError) return
+      }
       setStatus('1')
       message.success('已上线，状态设为发布')
       onClose(true)
@@ -537,7 +564,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 transition: 'all 0.3s ease',
               }}
             >
-              保存
+              保存草稿
             </Button>
             <Button
               loading={saving}
@@ -1015,13 +1042,15 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 )}
               </div>
               <Input
-                placeholder="请输入问题"
+                disabled={!draftSaved}
+                placeholder={draftSaved ? '请输入问题' : '保存草稿后即可开始测试'}
+                prefix={draftSaved ? undefined : <LockOutlined style={{ color: '#b6c0d4' }} />}
                 size="large"
-                suffix={<SendOutlined style={{ color: '#5b7cf7' }} />}
+                suffix={<SendOutlined style={{ color: draftSaved ? '#5b7cf7' : '#c2ccdd' }} />}
                 style={{
                   borderRadius: 10,
                   border: '1px solid rgba(130, 140, 200, 0.2)',
-                  background: 'rgba(255, 255, 255, 0.6)',
+                  background: draftSaved ? 'rgba(255, 255, 255, 0.6)' : 'rgba(240, 242, 248, 0.6)',
                 }}
               />
             </div>

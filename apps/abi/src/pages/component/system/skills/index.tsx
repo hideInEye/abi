@@ -25,6 +25,7 @@ type SkillItem = {
   spaceName?: string;
   summary?: string;
   status?: string;
+  skillType?: number | string;
   visibility?: string;
   latestVersionId?: number | string;
   createdBy?: string;
@@ -43,6 +44,11 @@ function resolveStatusKey(status?: string): StatusKey {
   if (status === 'REJECTED') return 'rejected';
   if (status === 'SCANNING' || status === 'UPLOADED') return 'scanning';
   return 'published';
+}
+
+/** 技能类型：0 内置技能，其余（含默认 1、缺省）视为外部技能 */
+function resolveSkillTypeLabel(skillType?: number | string): string {
+  return String(skillType) === '0' ? '内置技能' : '外部技能';
 }
 
 /** 技能名称列：2行截断 + Tooltip 悬浮显示全文，最大宽度 150px */
@@ -532,6 +538,7 @@ export function Component() {
                       const title = item.bizName || '-';
                       const spaceName = item.spaceName || (item.spaceId ? `空间${item.spaceId}` : '');
                       const summary = item.summary;
+                      const skillTypeLabel = resolveSkillTypeLabel(item.skillType);
                       return (
                         <div
                           key={item.id}
@@ -564,6 +571,7 @@ export function Component() {
                           </div>
                           <div className="abi-data-card-body">
                             <div className="row"><span className="lbl">技能描述</span><span className="val">{summary || '-'}</span></div>
+                            <div className="row"><span className="lbl">类型</span><span className="val">{skillTypeLabel}</span></div>
                             <div className="row"><span className="lbl">空间</span><span className="val">{spaceName || '-'}</span></div>
                             {item.createTime && (
                               <div className="row"><span className="lbl">创建时间</span><span className="val">{item.createTime.replace('T', ' ')}</span></div>
