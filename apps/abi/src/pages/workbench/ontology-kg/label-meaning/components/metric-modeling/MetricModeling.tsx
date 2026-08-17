@@ -163,7 +163,7 @@ const MetricModeling: React.FC = () => {
                     onClick={handleAddAtomic}
                     placement="bottom"
                   >
-                    + 新增
+                    + 新增指标
                   </Dropdown.Button>
                   <Popconfirm
                     cancelText="取消"

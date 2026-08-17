@@ -25,6 +25,7 @@ type SkillItem = {
   spaceName?: string;
   summary?: string;
   status?: string;
+  skillType?: number | string;
   visibility?: string;
   latestVersionId?: number | string;
   createdBy?: string;
@@ -45,6 +46,11 @@ function resolveStatusKey(status?: string): StatusKey {
   return 'published';
 }
 
+/** 技能类型：0 内置技能，其余（含默认 1、缺省）视为外部技能 */
+function resolveSkillTypeLabel(skillType?: number | string): string {
+  return String(skillType) === '0' ? '内置技能' : '外部技能';
+}
+
 /** 技能名称列：2行截断 + Tooltip 悬浮显示全文，最大宽度 150px */
 function NameCell({ text }: { text?: string }) {
   if (!text) return <span style={{ color: '#9ca3af' }}>-</span>;
@@ -55,7 +61,7 @@ function NameCell({ text }: { text?: string }) {
   );
 }
 
-// 已添加技能 id 本地存储 key（后端参数就绪后改为接口字段过滤）
+// 已添加技能 id 本地存储 key
 const MY_SKILLS_KEY = 'mySkills';
 
 export function Component() {
@@ -108,8 +114,8 @@ export function Component() {
   async function fetchList() {
     setLoading(true);
     try {
-      // 与 chat 一致：传 spaceId，不全部查出
-      const res: any = await querySkillListApi({ spaceId });
+      // 不传 spaceId 查全部，前端按 visibility 过滤：公开全平台可见 / 私有所属空间可见
+      const res: any = await querySkillListApi({});
       const rows = res?.response?.data?.data?.rows || res?.response?.data?.rows || res?.data?.rows || res?.data?.data || res?.data || [];
       setList(Array.isArray(rows) ? rows : []);
     } catch {
@@ -119,11 +125,11 @@ export function Component() {
     }
   }
 
-  // 空间切换时重新拉取列表
+  // 仅首次挂载拉取全部技能；空间切换由前端 visibleList 重新过滤，无需重新请求
   useEffect(() => {
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spaceId]);
+  }, []);
 
   function goPublish() {
     setPublishOpen(true);
@@ -252,9 +258,17 @@ export function Component() {
   );
 
   const visibleList = useMemo(() => {
-    let arr = list;
+    // 广场可见性规则：公开（PUBLIC）全平台可见；私有（PRIVATE）仅所属空间内或已收藏（我的技能）可见
+    let arr = list.filter(it => {
+      const v = String(it.visibility || '').toUpperCase();
+      if (v !== 'PRIVATE') return true;
+      const inMySpace = String(it.spaceId ?? '') === String(spaceId ?? '');
+      return tab === 'mine'
+        ? inMySpace || myIds.includes(String(it.id))
+        : inMySpace;
+    });
 
-    // 「我的技能」：展示已添加的技能（前端本地记录，接口就绪后换成后端字段过滤）
+    // 「我的技能」：展示已添加的技能（前端本地记录）
     if (tab === 'mine') {
       arr = arr.filter(it => myIds.includes(String(it.id)));
     }
@@ -274,7 +288,7 @@ export function Component() {
     arr = filterByCreateTime(arr, dateRange, 'createTime');
 
     return arr;
-  }, [list, tab, myIds, statusFilter, keyword, dateRange]);
+  }, [list, tab, myIds, statusFilter, keyword, dateRange, spaceId]);
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -524,6 +538,7 @@ export function Component() {
                       const title = item.bizName || '-';
                       const spaceName = item.spaceName || (item.spaceId ? `空间${item.spaceId}` : '');
                       const summary = item.summary;
+                      const skillTypeLabel = resolveSkillTypeLabel(item.skillType);
                       return (
                         <div
                           key={item.id}
@@ -556,6 +571,7 @@ export function Component() {
                           </div>
                           <div className="abi-data-card-body">
                             <div className="row"><span className="lbl">技能描述</span><span className="val">{summary || '-'}</span></div>
+                            <div className="row"><span className="lbl">类型</span><span className="val">{skillTypeLabel}</span></div>
                             <div className="row"><span className="lbl">空间</span><span className="val">{spaceName || '-'}</span></div>
                             {item.createTime && (
                               <div className="row"><span className="lbl">创建时间</span><span className="val">{item.createTime.replace('T', ' ')}</span></div>

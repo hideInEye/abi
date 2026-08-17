@@ -34,6 +34,8 @@ export interface ConversationProps {
   selectedModelId?: string | number
   embedModelId?: string | number
   semanticId?: number | string
+  /** 选中数据语义分组时的真实分组 id（长号）；与 semanticId 互斥，二选一 */
+  semanticGroupId?: number | string
   selectedExcel?: any
   onLoadingChange?: (loading: boolean) => void
   modelOptions?: ModelOption[]
@@ -45,7 +47,7 @@ export interface ConversationProps {
   onReportLoadingChange?: (loading: boolean) => void
   onReportPreviewChange?: (open: boolean) => void
   /** 打开历史会话时，回填最后一轮使用的数据语义到输入框 */
-  onHistorySemanticLoaded?: (data: { name: string; schemaId?: number | string; groupName?: string } | null) => void
+  onHistorySemanticLoaded?: (data: { name: string; schemaId?: number | string; groupId?: number | string; groupName?: string } | null) => void
 }
 
 /**
@@ -199,17 +201,15 @@ const extractTrailingJson = (content: string): any => {
 }
 
 /**
- * chat_with_knowledge（数据知识）场景：流式 content 是一个以 "thoughts" 为首字段的 JSON 对象
- * （{ "thoughts": "…", "chat_mode": "chat_with_knowledge", "data_knowledge": "…" }），
- * 没有 ## 思考过程 / ## 查询模式 标记，不会被 processContentWithInlineThinking 包成 <think>。
- * 此处从流式累积的原始内容中增量提取 thoughts 字段值，作为深度思考内容逐字展示。
- * 仅识别「以 { "thoughts": " 开头」的内容，天然排除 chat_with_db_execute（以 ## 思考过程 开头）。
+ * chat_with_knowledge（数据知识）：流式 content 是 ```json 围栏包裹、以 "thoughts" 为首字段的 JSON。
+ * 此处增量提取 thoughts 值作为思考内容逐字展示（以 ## 思考过程 开头的 chat_with_db_execute 天然不匹配）。
  * @param raw 流式累积的原始内容（messageRef.current）
- * @returns thoughts 文本（值未闭合时为已到达部分）；非该结构时返回 null
+ * @returns thoughts 文本（未闭合时为已到达部分）；非该结构返回 null
  */
 const extractKnowledgeThoughts = (raw: string): string | null => {
   if (!raw) return null
-  const startMatch = raw.match(/^\s*\{\s*"thoughts"\s*:\s*"/)
+  // 跳过起始 ```json 围栏后匹配 { "thoughts": "
+  const startMatch = raw.match(/^\s*```(?:json)?\s*\{\s*"thoughts"\s*:\s*"/i)
   if (!startMatch) return null
 
   let result = ''
@@ -272,15 +272,16 @@ const extractSemanticMetaFromMessages = (messages: any[]) => {
     } else if (ctx.includes('semantic_group_name') || ctx.includes('semantic_name')) {
       try { json = JSON.parse(ctx) } catch { /* ignore */ }
     }
-    if (json && (json.semantic_group_name || json.semantic_name || json.semantic_id != null)) {
+    if (json && (json.semantic_group_name || json.semantic_name || json.semantic_id != null || json.group_id != null)) {
       return {
         groupName: json.semantic_group_name || '',
         semanticName: json.semantic_name || '',
         semanticId: json.semantic_id,
+        groupId: json.group_id,
       }
     }
   }
-  return { groupName: '', semanticName: '', semanticId: undefined as any }
+  return { groupName: '', semanticName: '', semanticId: undefined as any, groupId: undefined as any }
 }
 
 const groupConversationByOrder = (messages: any[]) => {
@@ -844,8 +845,8 @@ export const useConversationController = (
           const lastRound = Math.max(...rounds)
           const lastRoundMsgs = conversationList.filter((m: any) => (m.roundIndex ?? m.order) === lastRound)
           const meta = extractSemanticMetaFromMessages(lastRoundMsgs)
-          if (meta.semanticName || meta.semanticId != null) {
-            props.onHistorySemanticLoaded({ name: meta.semanticName, schemaId: meta.semanticId, groupName: meta.groupName })
+          if (meta.semanticName || meta.semanticId != null || meta.groupId != null) {
+            props.onHistorySemanticLoaded({ name: meta.semanticName || meta.groupName, schemaId: meta.semanticId, groupId: meta.groupId, groupName: meta.groupName })
           }
         }
       }
@@ -1091,7 +1092,18 @@ export const useConversationController = (
     }
     if (params.context?.extra) {
       params.context.extra.extra_body = { enable_thinking: currentDeepThinkEnabled }
-      params.context.extra.semantic_id = _meta?.semanticSchemaId ?? props.semanticId ?? null
+      // 数据语义分组（group_id）与数据语义叶子（semantic_id）互斥：选中分组时只发 group_id 并清空 semantic_id。
+      // 有本轮 meta 时按 meta 决定（避免重新生成时被输入框当前选择污染），无 meta 时回退组件当前选择。
+      const metaHasSemanticData = !!_meta && (_meta.semanticGroupId != null || _meta.semanticSchemaId != null)
+      const activeGroupId = metaHasSemanticData ? (_meta?.semanticGroupId ?? null) : (props.semanticGroupId ?? null)
+      const activeSchemaId = metaHasSemanticData ? (_meta?.semanticSchemaId ?? null) : (props.semanticId ?? null)
+      if (activeGroupId != null && activeGroupId !== '') {
+        params.context.extra.group_id = activeGroupId
+        params.context.extra.semantic_id = null
+      } else {
+        params.context.extra.semantic_id = activeSchemaId
+        delete params.context.extra.group_id
+      }
       params.context.extra.semantic_group_name = _meta?.groupName || ''
       params.context.extra.semantic_name = _meta?.semanticName || ''
       if (hasExcel) {
@@ -1121,6 +1133,7 @@ export const useConversationController = (
       _groupName: _meta?.groupName,
       _semanticName: _meta?.semanticName,
       _semanticSchemaId: _meta?.semanticSchemaId,
+      _semanticGroupId: _meta?.semanticGroupId,
     }
     setConvContent((state) => [...state, userMessage])
 
@@ -1850,7 +1863,7 @@ export const useConversationController = (
     }
   }
 
-  const handleSend = (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; selectedExcel?: any }) => {
+  const handleSend = (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; semanticGroupId?: number | string; selectedExcel?: any }) => {
     if (!value.trim() || loading) return
     handleCollect()
     // 新建会话时，Excel 信息通过 meta 透传（此时组件状态可能已被清空）
@@ -1888,6 +1901,7 @@ export const useConversationController = (
       groupName: item?._groupName || fromHistory.groupName || '',
       semanticName: item?._semanticName || fromHistory.semanticName || '',
       semanticSchemaId: item?._semanticSchemaId ?? fromHistory.semanticId ?? props.semanticId ?? null,
+      semanticGroupId: item?._semanticGroupId ?? fromHistory.groupId ?? null,
       selectedExcel,
     })
   }
@@ -1919,6 +1933,7 @@ export const useConversationController = (
       groupName: humanMsg?._groupName || fromHistory.groupName || '',
       semanticName: humanMsg?._semanticName || fromHistory.semanticName || '',
       semanticSchemaId: humanMsg?._semanticSchemaId ?? fromHistory.semanticId ?? props.semanticId ?? null,
+      semanticGroupId: humanMsg?._semanticGroupId ?? fromHistory.groupId ?? null,
       selectedExcel,
     })
   }

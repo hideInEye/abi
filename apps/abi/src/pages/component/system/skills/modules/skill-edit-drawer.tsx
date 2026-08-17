@@ -67,6 +67,7 @@ const SkillEditDrawer: FC<Props> = ({ onClose, onSuccess, open, skill }) => {
       setSaving(true)
       const res: any = await updateSkillInfoApi({
         skillId: skill?.id!,
+        skillType: 1,
         status: values.status,
         summary: values.summary,
       })

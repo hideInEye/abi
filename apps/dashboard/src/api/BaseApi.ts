@@ -20,34 +20,11 @@ class BaseApi extends AbstractApi {
 
     async createProject(project: IProjectInfo): Promise<string> {
         const res = await FetchUtil.post('/dashboard/api/v1/project/create', project);
-        return res.code === 200 ? res.data : '';
-    }
-
-    /**
-     * 创建会话应用（chat-proxy）
-     * @param data 应用配置数据
-     */
-    async createChatApp(data: Record<string, any>): Promise<{success: boolean; data?: any}> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/app/add', data);
-        return {success: res.code === 200, data: res.data};
-    }
-
-    /**
-     * 验证对话应用名称是否可用（chat-proxy）
-     * 接口返回 true 表示名称可用，false 表示已存在
-     */
-    async validateChatAppName(bizName: string, spaceId: number): Promise<boolean> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/app/validate_name', {biz_name: bizName, space_id: spaceId});
-        return res.code === 200 ? !!res.data : false;
-    }
-
-    /**
-     * 获取助手列表
-     * @param spaceId 空间id
-     */
-    async fetchAgentList(spaceId: number): Promise<any[]> {
-        const res = await FetchUtil.get(`/copilot/v1/agentConfig/list?pageNum=1&pageSize=20&spaceId=${spaceId}`);
-        return res.code === 200 ? ((res as any).rows || []) : [];
+        if (res.code !== 200) {
+            globalMessage.messageApi?.error(res.msg);
+            return '';
+        }
+        return res.data;
     }
 
     /**
@@ -60,41 +37,24 @@ class BaseApi extends AbstractApi {
     }
 
     /**
-     * 创建会话（chat-proxy）
-     * @param data 会话配置数据，需包含 chat_id 等
+     * 新建对话会话（abi-chat）
+     * 调用 /abi-chat/v1/app/session/add，返回后端生成的 sessionId 与 convUid，
+     * 供大屏对话（chat/completions）作为 session_id / conv_uid 使用（与 chat 对话新建会话同源）。
+     * @param params spaceId 必传；title/userId 可选
      */
-
-    async createChatConv(data: Record<string, any>): Promise<{success: boolean; data?: any}> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/new', data);
-        return {success: res.code === 200, data: res.data};
-    }
-
-    /**
-     * 查询会话列表（chat-proxy）
-     * @param data 查询条件，需包含 chat_id、chat_mode、space_id
-     */
-    async fetchChatConvList(data: Record<string, any>): Promise<any[]> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/list', data);
-        return res.data?.data || [];
-    }
-
-    /**
-     * 获取提示词列表（chat-proxy）
-     * 用于创建对话时传入 chat_config
-     */
-    async fetchRecommendQuestions(): Promise<any[]> {
-        const res = await FetchUtil.post('/chat-proxy/prompt/list?map_required=true', {});
-        const list = res.data?.data ?? res.data;
-        return Array.isArray(list) ? list : [];
-    }
-
-    /**
-     * 删除会话（chat-proxy）
-     * @param convUid 会话uid
-     */
-    async deleteChatConv(convUid: string): Promise<boolean> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/delete', {conv_uid: convUid});
-        return res.code === 200;
+    async addChatSession(params: {spaceId: number; title?: string; userId?: number}): Promise<{sessionId: string; convUid: string} | null> {
+        const res = await FetchUtil.post('/abi-chat/v1/app/session/add', {
+            appId: 1,
+            spaceId: params.spaceId,
+            title: params.title ?? '新建对话',
+            userId: params.userId,
+            groupId: '0',
+        });
+        if (res.code !== 200 || !res.data) return null;
+        const d = res.data;
+        const sessionId = d.sessionId ?? d.session_id ?? d.chat_id ?? d.chatId;
+        const convUid = d.conv_uid ?? d.convUid;
+        return sessionId && convUid ? {sessionId: String(sessionId), convUid: String(convUid)} : null;
     }
 
     /**
@@ -160,10 +120,13 @@ class BaseApi extends AbstractApi {
         }
     }
 
-    public async updateProject(data: IProjectInfo): Promise<void> {
+    public async updateProject(data: IProjectInfo): Promise<boolean> {
         const res = await FetchUtil.post('/dashboard/api/v1/project/update', data);
-        if (res.code !== 200)
+        if (res.code !== 200) {
             globalMessage.messageApi?.error(res.msg);
+            return false;
+        }
+        return true;
     }
 
     public async uploadImage(file: File): Promise<IImageData | boolean> {

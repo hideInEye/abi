@@ -14,6 +14,8 @@ interface UseReportConversationOptions {
   conv?: Record<string, unknown>
   spaceId?: number
   schemaId?: number | string
+  /** 选中数据语义分组时的真实分组 id（长号）；与 schemaId 互斥，二选一 */
+  groupId?: number | string
   currentModelId?: string | number
   embedModelId?: string | number
   historyRounds?: ReportHistoryRoundGroup[]
@@ -327,12 +329,15 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
 
       const embedId = toOptionalNumber(embedModelId)
       const appType = conv?.app_type ?? conv?.appType
+      // 数据语义分组（group_id）与数据语义叶子（schema_id）互斥：选中分组时只发 group_id 并清空 schema_id。
+      const hasGroupSelected = groupId != null && groupId !== ''
       const requestData: SubmitReportRequest = {
         messages: question,
         app_id: toFiniteNumber(conv?.appId ?? conv?.app_id),
         space_id: toFiniteNumber(conv?.space_id ?? conv?.spaceId ?? spaceId),
-        // ChatInput 只允许选中数据语义叶子节点，这里直接透传该节点的 schemaId。
-        schema_id: schemaId ?? '',
+        // ChatInput 允许选中数据语义叶子节点或分组；选中分组时 schema_id 置空、改用 group_id。
+        schema_id: hasGroupSelected ? '' : (schemaId ?? ''),
+        ...(hasGroupSelected ? { group_id: groupId } : {}),
         conv_id: conversationId,
         session_id: sessionId,
         user_id: getCurrentUserId(),
@@ -386,7 +391,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
           submitControllersRef.current.delete(pendingReport.id)
         })
     },
-    [commitReports, conv, conversationId, currentModelId, embedModelId, schemaId, sessionId, spaceId, updateReport, connectStream],
+    [commitReports, conv, conversationId, currentModelId, embedModelId, schemaId, groupId, sessionId, spaceId, updateReport, connectStream],
   )
 
   const stopReport = useCallback(

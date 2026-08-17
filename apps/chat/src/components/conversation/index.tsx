@@ -17,7 +17,7 @@ import reportStyles from './report-mode/styles.module.css'
 
 export interface ConversationHandle {
   setConvContent: (content: any[]) => void
-  handleSend: (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; selectedExcel?: { file_id: string | number; file_name: string } }) => void
+  handleSend: (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; semanticGroupId?: number | string; selectedExcel?: { file_id: string | number; file_name: string } }) => void
   handleReportSend: (value: string) => void
   stopGenerating: () => void
   stopReportGenerating: () => void
@@ -44,6 +44,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     conv,
     spaceId: props.spaceId,
     schemaId: props.semanticId,
+    groupId: props.semanticGroupId,
     currentModelId: selectedModelId,
     embedModelId,
     historyRounds: controller.reportHistoryRounds,

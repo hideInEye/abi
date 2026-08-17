@@ -97,6 +97,12 @@ export const ProjectList = memo((props: ProjectListProps) => {
     const [expirationMode, setExpirationMode] = useState<string>('forever');
     const [expirationDate, setExpirationDate] = useState<Dayjs | null>(null);
 
+    // Rename modal state
+    const [renameModalVisible, setRenameModalVisible] = useState(false);
+    const [renameId, setRenameId] = useState('');
+    const [renameValue, setRenameValue] = useState('');
+    const [renameLoading, setRenameLoading] = useState(false);
+
     const getProjectPageList = (current: number, size: number, keywords?: string) => {
         const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
         baseApi.getProjectInfoPageList({
@@ -118,70 +124,19 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     const onOk = async (data: INewProjectInfo) => {
         const {name, des, width, height} = data;
-        const project: IProjectInfo = {
-            name: name,
-            des: des,
-            dataJson: JSON.stringify({canvasManager: {width, height}}),
-            spaceId: Number(localStorage.getItem('spaceId')),
-        }
+        const spaceId = Number(localStorage.getItem('spaceId'));
         try {
-            // 1. 创建大屏项目
+            // 1. 创建大屏项目（名称唯一性校验由后端在创建接口内完成，前端不再预校验）
+            const project: IProjectInfo = {
+                name: name,
+                des: des,
+                dataJson: JSON.stringify({canvasManager: {width, height}}),
+                spaceId: spaceId,
+            };
             const id = await baseApi.createProject(project);
             if (id === "") {
-                globalMessage.messageApi?.error('创建失败');
+                // 创建失败的错误信息（如名称已存在）已由 createProject 内部按后端 msg 提示
                 return;
-            }
-
-            // 2. 获取助手列表，取第一条的 agentId
-            const spaceId = Number(localStorage.getItem('spaceId'));
-            const agentList = await baseApi.fetchAgentList(spaceId);
-            const agentId = agentList?.[0]?.agentId;
-
-            // 3. 获取提示词列表，status 全部设为 '1'（开启），组装 chat_config
-            const promptList = await baseApi.fetchRecommendQuestions();
-            const promptsWithStatus = promptList.map((p: any) => ({...p, status: '1'}));
-            const chatConfig = JSON.stringify({prompts: promptsWithStatus});
-
-            // 4. 验证对话应用名称唯一性
-            const nameValid = await baseApi.validateChatAppName(name, spaceId);
-            if (!nameValid) {
-                globalMessage.messageApi?.error('对话应用名称已存在，请更换后重试');
-                return;
-            }
-
-            // 5. 创建会话应用
-            const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
-            let createBy = '';
-            try {
-                if (userInfoStr) {
-                    createBy = JSON.parse(userInfoStr)?.userName || '';
-                }
-            } catch { /* ignore */ }
-
-            const chatAppData = {
-                biz_name: name,
-                status: '1',
-                chat_mode: 'chat_with_dashboard',
-                space_id: spaceId,
-                create_by: createBy,
-                chat_config: chatConfig,
-                ...(agentId ? {agent_id: String(agentId)} : {}),
-            };
-            const appRes = await baseApi.createChatApp(chatAppData);
-
-            // 6. 创建会话，并把 chat_id 存入大屏 dataJson
-            if (appRes.success && appRes.data) {
-                const chatId = appRes.data.data.chat_id;
-                await baseApi.createChatConv({
-                    chat_id: chatId,
-                    chat_mode: 'chat_with_dashboard',
-                    space_id: spaceId,
-                });
-                // 把 chat_id 保存到大屏 dataJson，供 AI 对话面板使用
-                await baseApi.updateProject({
-                    id,
-                    dataJson: JSON.stringify({canvasManager: {width, height}, chatId}),
-                });
             }
 
             setAddDialog(false);
@@ -235,26 +190,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
 
     const confirmDel = async () => {
         const id = delIdRef.current;
-        try {
-            // 1. 查询大屏详情，从 dataJson 取出 chatId，删除关联会话
-            const spaceId = Number(localStorage.getItem('spaceId'));
-            const projectInfo = await baseApi.getProjectInfo(id);
-            const chatId = projectInfo?.dataJson ? JSON.parse(projectInfo.dataJson)?.chatId : null;
-            if (chatId) {
-                const convList = await baseApi.fetchChatConvList({
-                    chat_id: chatId,
-                    chat_mode: 'chat_with_dashboard',
-                    space_id: spaceId,
-                });
-                if (convList.length) {
-                    await Promise.all(convList.map((conv: any) => baseApi.deleteChatConv(conv.conv_uid)));
-                }
-            }
-        } catch (e) {
-            console.error('删除关联会话失败:', e);
-        }
-
-        // 2. 删除大屏项目
         baseApi.deleteProject(id).then((res) => {
             if (res) {
                 setDelDialog(false);
@@ -273,27 +208,9 @@ export const ProjectList = memo((props: ProjectListProps) => {
             return;
         }
         try {
-            const spaceId = Number(localStorage.getItem('spaceId'));
             // Delete each selected project
             for (const id of selectedRowKeys) {
-                const projectId = String(id);
-                try {
-                    const projectInfo = await baseApi.getProjectInfo(projectId);
-                    const chatId = projectInfo?.dataJson ? JSON.parse(projectInfo.dataJson)?.chatId : null;
-                    if (chatId) {
-                        const convList = await baseApi.fetchChatConvList({
-                            chat_id: chatId,
-                            chat_mode: 'chat_with_dashboard',
-                            space_id: spaceId,
-                        });
-                        if (convList.length) {
-                            await Promise.all(convList.map((conv: any) => baseApi.deleteChatConv(conv.conv_uid)));
-                        }
-                    }
-                } catch (e) {
-                    console.error('删除关联会话失败:', e);
-                }
-                await baseApi.deleteProject(projectId);
+                await baseApi.deleteProject(String(id));
             }
             globalMessage.messageApi?.success(`成功删除 ${selectedRowKeys.length} 个项目`);
             setSelectedRowKeys([]);
@@ -431,9 +348,48 @@ export const ProjectList = memo((props: ProjectListProps) => {
         setExpirationDate(null);
     };
 
+    // ── Rename handlers ──
+    const openRename = (id: string, currentName: string) => {
+        setRenameId(id);
+        setRenameValue(currentName);
+        setRenameModalVisible(true);
+    };
+
+    const handleRenameConfirm = async () => {
+        const nextName = renameValue.trim();
+        if (!nextName) {
+            globalMessage.messageApi?.warning('请输入项目名称');
+            return;
+        }
+        setRenameLoading(true);
+        try {
+            // 名称唯一性校验由后端在更新接口内完成；失败时错误信息由 updateProject 内部提示，保留弹窗供用户修改
+            const ok = await baseApi.updateProject({id: renameId, name: nextName});
+            if (ok) {
+                setRenameModalVisible(false);
+                getProjectPageList(currentPage, pageSize, searchKeyword);
+                globalMessage.messageApi?.success('重命名成功');
+            }
+        } finally {
+            setRenameLoading(false);
+        }
+    };
+
     useEffect(() => {
         getProjectPageList(pageData.current, pageData.size);
     }, []);
+
+    // 主应用顶部切换空间时，大屏微应用会广播该事件；重置筛选并回到第 1 页按新空间重新拉取
+    useEffect(() => {
+        const handleSpaceChange = () => {
+            setSearchKeyword('');
+            setDateRange(null);
+            setCurrentPage(1);
+            getProjectPageList(1, pageSize);
+        };
+        window.addEventListener('abi-dashboard:space-change', handleSpaceChange);
+        return () => window.removeEventListener('abi-dashboard:space-change', handleSpaceChange);
+    }, [pageSize, statusFilter]);
 
     // Table columns for list view — v5 style with minWidth, col-first-data
     const tableColumns = [
@@ -502,6 +458,11 @@ export const ProjectList = memo((props: ProjectListProps) => {
                     <Dropdown
                         menu={{
                             items: [
+                                {
+                                    key: 'rename',
+                                    label: <span><EditOutlined style={{ marginRight: 4 }} />重命名</span>,
+                                    onClick: () => openRename(record.id!, record.name!),
+                                },
                                 {
                                     key: 'clone',
                                     label: <span><CopyOutlined style={{ marginRight: 4 }} />复制</span>,
@@ -594,6 +555,11 @@ export const ProjectList = memo((props: ProjectListProps) => {
                                 <Dropdown
                                     menu={{
                                         items: [
+                                            {
+                                                key: 'rename',
+                                                label: '重命名',
+                                                onClick: () => openRename(item.id!, item.name!),
+                                            },
                                             {
                                                 key: 'clone',
                                                 label: '复制',
@@ -800,6 +766,28 @@ export const ProjectList = memo((props: ProjectListProps) => {
             <DelProjectDialog visible={delDialog} onOk={confirmDel} onCancel={cancelDel}/>
             <CloneProjectDialog onOk={() => confirmClone()} onCancel={cancelClone}
                                 visible={cloneDialog}/>
+
+            {/* Rename Modal */}
+            <Modal
+                title="重命名大屏"
+                open={renameModalVisible}
+                onCancel={() => setRenameModalVisible(false)}
+                onOk={handleRenameConfirm}
+                okText="确定"
+                cancelText="取消"
+                confirmLoading={renameLoading}
+                width={420}
+                centered
+            >
+                <Input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onPressEnter={handleRenameConfirm}
+                    placeholder="请输入项目名称"
+                    maxLength={50}
+                />
+            </Modal>
 
             {/* Share Modal */}
             <Modal

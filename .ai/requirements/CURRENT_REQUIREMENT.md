@@ -1044,3 +1044,121 @@ MCP 服务编辑页「安全认证方案」中，当认证类型为 HTTP 且 Sch
 - 编辑回显已有 bearer 方案时，defaultCredential 自动同步为当前平台 token。
 - 提交报文中 bearer 方案的 `defaultCredential` 为当前平台 Authorization header。
 - tsc 不新增报错。
+
+## 2026-08-11 追加：聊天输入框模式切换菜单升级为 icon+名称+文案
+
+### 需求类型
+
+前端 UI 调整（纯前端，不改接口协议）。
+
+### 背景
+
+当前输入框工具栏的模式切换下拉（交互/探索/报告）仅展示「icon+名称」单行菜单项，信息量不足。参考业界模式选择器样式，升级为「icon+名称+描述文案」两行菜单项，并在当前选中项右侧展示勾选标记。
+
+### 目标
+
+- 模式下拉菜单项改为两行结构：左侧 icon，中间名称（上）+描述文案（下，与名称左对齐），右侧选中勾选标记。
+- 三个模式的名称与文案：交互→敏捷问数，基础分析；探索→自主规划，复杂分析；报告→深度挖掘，智能洞察。
+- 当前选中模式在菜单中以勾选标记和浅色高亮背景标识。
+- 触发按钮保持现有「icon+名称+箭头」样式不变。
+
+### 非目标
+
+- 不修改模式切换的业务逻辑：探索模式仍保持「开发中」提示并回退交互模式，报告/交互切换与发送 mode 上抛逻辑不变。
+- 不修改输入框工具栏其他按钮、数据选择、思考开关、更多面板和发送校验。
+- 不修改接口协议、消息渲染和报告模式逻辑。
+
+### 验收标准
+
+- 打开模式下拉后，三个菜单项均展示 icon、名称和对应描述文案，文案与名称左对齐。
+- 当前选中模式右侧显示勾选标记并有高亮背景；点击其他模式沿用原有切换行为。
+- 样式使用 chat 现有 CSS 变量（--ink/--ink-3/--accent-soft 等），不引入孤立色值。
+- tsc 不新增报错。
+
+### 测试要求
+
+- 运行 `pnpm --filter ai-bot exec tsc --noEmit -p tsconfig.json`。
+- 运行 `pnpm --filter ai-bot build`。
+- 运行 `git diff --check` 并生成本任务 run log。
+
+## 2026-08-11 追加：助手 MCP 工具保存协议分组字段（mcp_sse/mcp_streamable）与 sort
+
+### 需求类型
+
+前端接口字段对接（保存报文扩展，无 UI 变化）。
+
+### 背景
+
+助手保存接口 `POST /api/abi-chat/v1/app/add`（编辑走 `/update`）的 `tools` 子项，后端要求 MCP 工具（`toolType='2'`）在 `toolConfig` 内额外存两个字段：`mcp_sse`、`mcp_streamable`，值均为「真实 groupId（group/list 返回的长号）」列表。分类依据是该工具的协议 `frontProtocol`：`sse` 入 `mcp_sse`，`streamableHttp` 入 `mcp_streamable`。同时后端文档要求 `tools`/`skills`/`schemaSemantics` 每个子项都带 `sort`（Integer，排序）。
+
+选择器 `tool-picker-drawer` 加载 MCP 工具时已调用 `group/list`（真实 groupId）与 `register/list`（frontProtocol），本次复用其数据，不新增接口。
+
+### 目标
+
+- MCP 工具的 `toolConfig[0]` 增加 `mcp_sse: string[]`、`mcp_streamable: string[]`：按该工具 `frontProtocol` 把其真实 groupId 放入对应列表，另一个为 `[]`。
+- 内置工具（`toolType='1'`）不加这两个字段。
+- `tools`/`skills`/`schemaSemantics` 每项补 `sort`（取选择顺序索引）。
+- 编辑回显：详情接口 `app/get` 原样返回的 `mcp_sse`/`mcp_streamable` 直接保留；用户未重新选择时按原值提交。
+
+### 非目标
+
+- 不新增任何接口调用（复用选择器已有的 group/list、register/list）。
+- 不改动工具/技能/数据语义的选择交互与 UI 样式。
+- 不改 builtin 工具、模型、开场引导等其它字段结构。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/tool-picker-drawer.tsx`
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- `.ai/runs/2026-08-11-assistant-mcp-protocol-group/`
+
+### 验收标准
+
+- 新建/编辑助手保存报文中，MCP 工具 `toolConfig` 含 `mcp_sse`/`mcp_streamable`，值为真实 groupId；sse 与 streamableHttp 分别进入对应列表。
+- 内置工具不含这两个字段。
+- `tools`/`skills`/`schemaSemantics` 每项含 `sort`。
+- 编辑已有助手不重新选工具时，mcp_sse/mcp_streamable 与原详情一致。
+- tsc 不新增报错。
+
+### 测试要求
+
+- 运行 abi 应用的 TypeScript 类型检查（`tsc --noEmit`）。
+- 生成本任务 run log。
+
+## 2026-08-12 追加：大屏智能问答欢迎区文案改为对话式生成图表引导
+
+### 需求类型
+
+前端 UI 文案调整（纯前端，仅改欢迎说明文案，不改样式、结构、接口与业务逻辑）。
+
+### 背景
+
+大屏设计器 AI 智能问答面板（`apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx`）无消息时的欢迎说明文案未体现「如何对话式生成图表」。参考图要求直接修改原说明文案，示意「选定左侧图表，开始对话生成」，样式与结构保持不变。
+
+### 目标
+
+- 仅修改欢迎区 `.welcome-desc` 的文案，引导用户「选定左侧图表→通过对话生成对应图表」。
+- 保持 `.ai-welcome` 原有结构（标题 + 说明两行）与全部样式不变，不新增任何元素或 CSS。
+
+### 非目标
+
+- 不新增分步说明块、卡片或编号列表。
+- 不修改样式、消息气泡、输入区、状态栏、发送与采纳等业务逻辑与接口。
+- 不引入 i18n；沿用组件现有硬编码中文文案方式。
+
+### 影响范围
+
+- `apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx`（仅 `.welcome-desc` 文案）
+- `.ai/runs/2026-08-12-dashboard-ai-welcome-guide/`
+
+### 验收标准
+
+- 面板无消息时，欢迎说明文案改为「选定左侧图表，通过对话即可生成对应图表 / 请输入图表数据相关问题开始对话」。
+- `.ai-welcome` 结构与样式与改动前一致，未新增元素。
+- 发送消息后欢迎区正常消失。
+- 不改变任何发送、采纳与数据请求行为。
+
+### 测试要求
+
+- 对受影响文件进行 IDE 诊断/语法检查，确认不新增错误（纯文案改动，无需整包重建）。
+- 生成本任务 run log。

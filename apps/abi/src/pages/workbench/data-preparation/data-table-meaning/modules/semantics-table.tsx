@@ -183,40 +183,6 @@ export function assembleData(input: InputField[]): OutputData {
   return result
 }
 
-function getTablePrikey(
-  allFields: InputField[],
-  tablePrikey: {
-    originName: string
-    tableName: string
-  }[],
-) {
-  const prikeyMap = new Map(tablePrikey.map((p) => [p.tableName, p.originName]))
-  allFields.forEach((field) => {
-    field.primaryKey = (field.tableName && prikeyMap.get(field.tableName)) || '*'
-  })
-}
-
-function getTabNameByRtableId(union: any[], targetRtableId: string): string | undefined {
-  if (!union || union.length === 0) {
-    return undefined
-  }
-
-  for (const item of union) {
-    if (item.currentDs?.rtableId === targetRtableId) {
-      return item.currentDs.tableName
-    }
-
-    if (item.childrenDs?.length > 0) {
-      const result = getTabNameByRtableId(item.childrenDs, targetRtableId)
-      if (result !== undefined) {
-        return result
-      }
-    }
-  }
-
-  return undefined
-}
-
 function setTableName(fields: any[], union: any[], tablePrikey: any[] = []) {
   if (!fields?.length) {
     return
@@ -225,6 +191,8 @@ function setTableName(fields: any[], union: any[], tablePrikey: any[] = []) {
   // 一次性构建映射表，避免重复递归
   // 优先从 currentDsFields 里取真实 tableName（SQL 视图场景 currentDs.tableName 为"自定义sql"）
   const rtableIdMap = new Map<string, string>()
+  // 表中文名映射：union.currentDs.rtableName 是表中文名来源，与配置页展示(tableChineseName)一致
+  const rtableRemarksMap = new Map<string, string>()
   const traverse = (items: any[]) => {
     items?.forEach((item) => {
       if (item.currentDs?.rtableId) {
@@ -232,6 +200,7 @@ function setTableName(fields: any[], union: any[], tablePrikey: any[] = []) {
         const fieldsTableName = item.currentDsFields?.[0]?.tableName
         const tableName = fieldsTableName || item.currentDs.tableName
         rtableIdMap.set(item.currentDs.rtableId, tableName)
+        rtableRemarksMap.set(item.currentDs.rtableId, item.currentDs.rtableName || '')
       }
       traverse(item.childrenDs)
     })
@@ -252,6 +221,12 @@ function setTableName(fields: any[], union: any[], tablePrikey: any[] = []) {
 
     if (tableName) {
       field.tableName = tableName
+    }
+
+    // 表中文名兜底：用户未手动编辑「表中文名」时 tableRemarks 为空，
+    // 从 union 的 rtableName 兜底，避免保存报文里 rtableName/tdesc 传空
+    if (!field.tableRemarks) {
+      field.tableRemarks = rtableRemarksMap.get(field.rtableId) || ''
     }
 
     const primaryKey = tableName && primaryKeyMap.has(tableName) && primaryKeyMap.has(field.originName) ? primaryKeyMap.get(field.originName) : undefined
@@ -313,7 +288,6 @@ export function SemanticsTable({ updateTableList }: { readonly updateTableList: 
     setStepIndex(0)
   }
 
-  // getTablePrikey(fields, tablePrikey,);
   setTableName(fields, union, tablePrikey)
 
   const buildTableSemanticParams = (): TableSemanticParams => ({
