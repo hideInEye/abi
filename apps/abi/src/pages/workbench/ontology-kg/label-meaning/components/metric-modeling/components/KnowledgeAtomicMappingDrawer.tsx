@@ -8,10 +8,12 @@ import React from 'react'
 import { TableSemantics } from '@/components/tableSemantics'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
+import { validateFieldsAndScroll } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
 
 import type { AtomicMappingPayload, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
+import { buildMappedBizName, buildMappedTechName } from '../../../utils/ontologyName'
 import { getKnowledgeSpaceId } from '../utils/space'
 
 interface MeasureFieldItem {
@@ -22,6 +24,8 @@ interface MeasureFieldItem {
   fieldType: string
   key: string
   raw: KnowledgeTechField
+  tableBizName: string
+  tableTechName: string
 }
 
 interface MappingFormValues {
@@ -39,12 +43,14 @@ interface Props {
 }
 
 // eslint-disable-next-line complexity
-function parseMeasureFields(modelDetail: unknown): MeasureFieldItem[] {
+function parseMeasureFields(modelDetail: unknown, schemaDetail?: Record<string, unknown>): MeasureFieldItem[] {
   if (!modelDetail) {
     return []
   }
   try {
     const detail = typeof modelDetail === 'string' ? JSON.parse(modelDetail) : modelDetail
+    const schemaBizName = String(schemaDetail?.rtableName || schemaDetail?.bizName || schemaDetail?.schemaName || schemaDetail?.name || schemaDetail?.techName || '').trim()
+    const schemaTechName = String(schemaDetail?.tableName || schemaDetail?.techName || schemaDetail?.originName || schemaDetail?.schemaName || schemaDetail?.name || '').trim()
     const measures = Array.isArray((detail as { measures?: unknown[] })?.measures) ? (detail as { measures: KnowledgeTechField[] }).measures : []
     return measures
       .map((item) => {
@@ -52,7 +58,7 @@ function parseMeasureFields(modelDetail: unknown): MeasureFieldItem[] {
         if (!key) {
           return null
         }
-        const englishName = String(item?.originName || item?.fieldName || item?.techName || item?.tfieldName || key).trim() || key
+        const englishName = String(item?.techName || item?.originName || item?.fieldName || item?.tfieldName || key).trim() || key
         const bizName = String(item?.bizName || item?.tfieldAlias || item?.fieldShortName || item?.fieldName || englishName).trim() || englishName
         return {
           alias: String(item?.alias || bizName).trim() || bizName,
@@ -65,6 +71,8 @@ function parseMeasureFields(modelDetail: unknown): MeasureFieldItem[] {
             ...item,
             techId: key,
           },
+          tableBizName: String(item?.rtableName || item?.tableBizName || schemaBizName).trim(),
+          tableTechName: String(item?.tableName || schemaTechName).trim(),
         }
       })
       .filter(Boolean) as MeasureFieldItem[]
@@ -164,7 +172,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
     try {
       const res = await queryTableSemanticsDetail(semanticSchemaId)
       const detail = getResponseData(res)
-      const nextRows = parseMeasureFields(detail?.modelDetail)
+      const nextRows = parseMeasureFields(detail?.modelDetail, detail)
       let existingKeys = getExistingAtomicKeys(options?.existingAtomicItems || [])
       try {
         if (!options?.existingAtomicItems) {
@@ -260,7 +268,10 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
   }, [form, groupId, loadSchemaFields, open, queryCurrentGroupAtomicIndicators])
 
   const handleSave = async () => {
-    const values = await form.validateFields()
+    const values = await validateFieldsAndScroll<MappingFormValues>(form)
+    if (!values) {
+      return
+    }
     if (!values.semanticSchemaId) {
       return
     }
@@ -286,11 +297,12 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
         {
           ...item.raw,
           alias: item.alias,
-          bizName: item.bizName,
+          bizName: buildMappedBizName(item.tableBizName, item.bizName),
           description: item.description,
           englishName: item.englishName,
           fieldType: item.fieldType,
           techId: String(item.raw?.techId ?? item.key),
+          techName: buildMappedTechName(item.tableTechName, item.englishName),
         },
       ],
     }))

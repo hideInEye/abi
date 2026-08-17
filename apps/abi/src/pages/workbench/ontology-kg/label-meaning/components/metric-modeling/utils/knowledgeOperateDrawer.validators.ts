@@ -1,20 +1,51 @@
 import type { FormInstance } from 'antd'
 
+import { checkOntologyName } from '@/service/api/ontology-name'
+
 import type { KnowledgeFormValues } from '../types/metricModeling.types'
 
 import { hasSqlSyntaxError } from './knowledgeOperateDrawer.sql'
 import { compactArray, extractUniqueIds, isBalancedParentheses, isFieldNameLike, isValidNumberInput } from './knowledgeOperateDrawer.utils'
+import { getKnowledgeSpaceId } from './space'
+import { isOntologyNameCheckPassed, restoreMappedBizName, restoreMappedTechName, validateCustomBizNameText, validateCustomTechNameText } from '../../../utils/ontologyName'
 
 interface CreateValidatorsParams {
   form: FormInstance<KnowledgeFormValues>
+  groupId?: number | string
+  initialBizName?: string
+  initialTechName?: string
 }
 
-export function createKnowledgeOperateValidators({ form }: CreateValidatorsParams) {
-  const validateIndicatorName = (_: unknown, value?: string) => {
-    const text = String(value || '').trim()
-    if (!text) {
-      return Promise.reject(new Error('请输入指标名称'))
+async function checkRemoteName(params: {
+  groupId?: number | string
+  initialName?: string
+  label: string
+  name: string
+  nameType: 'bizName' | 'techName'
+}) {
+  const { groupId, initialName, label, name, nameType } = params
+  if (!groupId || name === initialName) {
+    return
+  }
+  const res = await checkOntologyName({
+    groupId,
+    name,
+    nameType,
+    objectType: 'indicator',
+    spaceId: getKnowledgeSpaceId()
+  })
+  if (!isOntologyNameCheckPassed(res)) {
+    throw new Error(`${label}已存在`)
+  }
+}
+
+export function createKnowledgeOperateValidators({ form, groupId, initialBizName, initialTechName }: CreateValidatorsParams) {
+  const validateIndicatorName = async (_: unknown, value?: string) => {
+    const localError = validateCustomBizNameText(value, '指标名称')
+    if (localError) {
+      return Promise.reject(new Error(localError))
     }
+    const text = String(value || '').trim()
     if (text.length < 1 || text.length > 50) {
       return Promise.reject(new Error('请输入合法的指标名称（1-50字符）'))
     }
@@ -23,6 +54,18 @@ export function createKnowledgeOperateValidators({ form }: CreateValidatorsParam
     }
     if (!/^[\u4E00-\u9FA5A-Za-z0-9_]+$/.test(text)) {
       return Promise.reject(new Error('指标名称仅支持中文、英文、数字、下划线'))
+    }
+    const nextName = restoreMappedBizName(text, form.getFieldValue('mappedBizNameFieldName'))
+    try {
+      await checkRemoteName({
+        groupId,
+        initialName: initialBizName,
+        label: '指标名称',
+        name: nextName,
+        nameType: 'bizName'
+      })
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error('指标名称校验失败，请稍后重试'))
     }
 
     return Promise.resolve()
@@ -75,13 +118,23 @@ export function createKnowledgeOperateValidators({ form }: CreateValidatorsParam
     return Promise.resolve()
   }
 
-  const validateTechName = (_: unknown, value?: string) => {
+  const validateTechName = async (_: unknown, value?: string) => {
     const text = String(value || '').trim()
-    if (!text) {
-      return Promise.reject(new Error('请输入指标编码'))
+    const localError = validateCustomTechNameText(text, '指标编码')
+    if (localError) {
+      return Promise.reject(new Error(localError))
     }
-    if (!/^(?=.*[A-Za-z])[A-Za-z_]+$/.test(text)) {
-      return Promise.reject(new Error('指标编码仅支持字母和下划线'))
+    const nextName = restoreMappedTechName(text, form.getFieldValue('mappedTechNameTableName'))
+    try {
+      await checkRemoteName({
+        groupId,
+        initialName: initialTechName,
+        label: '指标编码',
+        name: nextName,
+        nameType: 'techName'
+      })
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error('指标编码校验失败，请稍后重试'))
     }
 
     return Promise.resolve()

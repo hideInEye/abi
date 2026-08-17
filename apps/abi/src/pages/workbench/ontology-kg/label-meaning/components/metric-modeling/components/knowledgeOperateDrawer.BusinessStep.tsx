@@ -29,7 +29,7 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
       <div className="mb-4 border border-gray-200 rounded bg-white p-4">
         <OntologyFormSectionTitle icon={<ProfileOutlined />}>基础信息</OntologyFormSectionTitle>
         <div className="grid grid-cols-2 gap-x-4">
-          <AForm.Item required label="指标名称" name="bizName" rules={[{ validator: validateIndicatorName }]}>
+          <AForm.Item required label="指标名称" name="bizName" rules={[{ validator: validateIndicatorName }]} validateDebounce={600} validateTrigger="onChange">
             <AInput disabled={indicatorNameDisabled} placeholder="请输入指标名称" />
           </AForm.Item>
           <AForm.Item label="指标类型" name="indicatorClass" rules={[{ message: '请选择指标类型', required: true }]}>

@@ -4,7 +4,11 @@ import React from 'react'
 
 import { DEFAULT_DIMENSION_TIME_FORMAT, DEFAULT_FORM_VALUES } from '../constants/dimensionModeling.constants'
 import type { DimensionFieldOption, DimensionFormValues, DimensionModelItem, DimensionSchemaInfo } from '../types/dimensionModeling.types'
-import { buildFormValues, buildSchemaFieldOptions, filterSelectableFields, getDimensionFieldLookupKeys, normalizeDimensionSelectedFieldsToOptionKeys } from '../utils/dimensionModeling.mapper'
+import { buildFormValues, buildSchemaFieldOptions, filterSelectableFields, getDimensionFieldLookupKeys, normalizeDetail, normalizeDimensionSelectedFieldsToOptionKeys } from '../utils/dimensionModeling.mapper'
+import { checkOntologyName } from '@/service/api/ontology-name'
+import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
+import { isOntologyNameCheckPassed, restoreMappedBizName, restoreMappedTechName, validateCustomBizNameText, validateCustomTechNameText } from '../../../utils/ontologyName'
+import { validateFieldsAndScroll } from '../../../../utils/form-scroll'
 
 import { BaseInfoTab } from './dimensionOperateDrawer/BaseInfoTab'
 import { FieldSelectModal } from './dimensionOperateDrawer/FieldSelectModal'
@@ -13,7 +17,7 @@ import { RelatedMetricsTab } from './dimensionOperateDrawer/RelatedMetricsTab'
 
 interface Props {
   readonly editingItem: DimensionModelItem | null
-  readonly groupId?: number
+  readonly groupId?: number | string
   readonly groupName?: string
   readonly onClose: (refresh?: boolean) => void
   readonly onGoMetricModeling?: () => void
@@ -61,9 +65,13 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
   const [relatedMetricTotal, setRelatedMetricTotal] = useState(0)
   const [selectedFieldKeys, setSelectedFieldKeys] = useState<string[]>([])
   const [fieldDetailMap, setFieldDetailMap] = useState<Record<string, Partial<DimensionFieldOption>>>({})
+  const schemaDetailRequestedRef = useRef(new Set<string>())
 
   const selectedDimType = (AForm.useWatch('dimType', form) || DEFAULT_FORM_VALUES.dimType) as 'std' | 'time'
   const selectedSchemaId = AForm.useWatch('semanticSchemaId', form)
+  const semanticsGroupIdVal = AForm.useWatch('semanticsGroupId', form)
+  const semanticGroupIdVal = AForm.useWatch('semanticGroupId', form)
+  const selectedSemanticGroupId = semanticsGroupIdVal || semanticGroupIdVal || editingItem?.semanticsGroupId || editingItem?.semanticGroupId
 
   const selectedSchema = useMemo(() => {
     if (selectedSchemaId === undefined || selectedSchemaId === null || selectedSchemaId === '') {
@@ -114,6 +122,110 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     }))
   }, [])
 
+  const validateZhName = useCallback(async (_: unknown, value?: string) => {
+    const error = validateCustomBizNameText(value, '中文名')
+    if (error) {
+      return Promise.reject(new Error(error))
+    }
+    const nextName = restoreMappedBizName(value, form.getFieldValue('mappedBizNameFieldName'))
+    const currentName = editingItem?.rawZhName || editingItem?.zhName || ''
+    if (!groupId || nextName === currentName) {
+      return Promise.resolve()
+    }
+    try {
+      const res = await checkOntologyName({
+        groupId,
+        name: nextName,
+        nameType: 'bizName',
+        objectType: 'dimension',
+        spaceId: Number(localStorage.getItem('spaceId')) || 0
+      })
+      if (!isOntologyNameCheckPassed(res)) {
+        return Promise.reject(new Error('中文名已存在'))
+      }
+    } catch {
+      return Promise.reject(new Error('中文名校验失败，请稍后重试'))
+    }
+    return Promise.resolve()
+  }, [editingItem?.rawZhName, editingItem?.zhName, form, groupId])
+
+  const validateEnglishName = useCallback(async (_: unknown, value?: string) => {
+    const text = String(value || '').trim()
+    if (text.length > 64) {
+      return Promise.reject(new Error('长度不能超过64'))
+    }
+    const error = validateCustomTechNameText(text, '英文名')
+    if (error) {
+      return Promise.reject(new Error(error))
+    }
+    const nextName = restoreMappedTechName(text, form.getFieldValue('mappedTechNameTableName'))
+    const currentName = editingItem?.rawEnglishName || editingItem?.englishName || ''
+    if (!groupId || nextName === currentName) {
+      return Promise.resolve()
+    }
+    try {
+      const res = await checkOntologyName({
+        groupId,
+        name: nextName,
+        nameType: 'techName',
+        objectType: 'dimension',
+        spaceId: Number(localStorage.getItem('spaceId')) || 0
+      })
+      if (!isOntologyNameCheckPassed(res)) {
+        return Promise.reject(new Error('英文名已存在'))
+      }
+    } catch {
+      return Promise.reject(new Error('英文名校验失败，请稍后重试'))
+    }
+    return Promise.resolve()
+  }, [editingItem?.englishName, editingItem?.rawEnglishName, form, groupId])
+
+  useEffect(() => {
+    if (!open || !selectedSchemaId || selectedSchema?.modelDetail) {
+      return
+    }
+
+    const schemaKey = String(selectedSchemaId)
+    if (schemaDetailRequestedRef.current.has(schemaKey)) {
+      return
+    }
+    schemaDetailRequestedRef.current.add(schemaKey)
+
+    let ignore = false
+    const loadSchemaDetail = async () => {
+      try {
+        const res = await queryTableSemanticsDetail(selectedSchemaId)
+        const detail = normalizeDetail(res)
+        if (ignore || !detail) {
+          return
+        }
+        const nextSchema = {
+          ...(selectedSchema || {}),
+          ...detail,
+          groupId: detail.groupId ?? selectedSchema?.groupId ?? form.getFieldValue('semanticsGroupId') ?? form.getFieldValue('semanticGroupId'),
+          relViewId: detail.relViewId ?? selectedSchema?.relViewId,
+          schemaId: detail.schemaId ?? selectedSchema?.schemaId ?? selectedSchemaId
+        } as DimensionSchemaInfo
+
+        setSchemaOptions(prev => {
+          const hasSchema = prev.some(item => String(item.schemaId) === schemaKey)
+          if (!hasSchema) {
+            return [...prev, nextSchema]
+          }
+          return prev.map(item => (String(item.schemaId) === schemaKey ? { ...item, ...nextSchema } : item))
+        })
+      } catch {
+        schemaDetailRequestedRef.current.delete(schemaKey)
+      }
+    }
+
+    loadSchemaDetail()
+
+    return () => {
+      ignore = true
+    }
+  }, [form, open, selectedSchema, selectedSchemaId])
+
   useEffect(() => {
     if (!selectedFieldKeys.length || !selectedSchema) {
       return
@@ -138,6 +250,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     setRelatedMetricTotal(editingItem?.relatedMetrics?.length || 0)
     setSchemaOptions([])
     setViewId(editingItem?.viewId)
+    schemaDetailRequestedRef.current.clear()
 
     if (editingItem) {
       const editValues = buildFormValues(editingItem)
@@ -169,7 +282,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     setFieldDetailMap({})
   }, [editingItem, form, groupId, open])
 
-  const getSchemaId = ({ semanticSchemaId, semanticsGroupId, viewId: nextViewId }: { semanticSchemaId: number; semanticsGroupId: number | null; viewId: number }) => {
+  const getSchemaId = ({ semanticSchemaId, semanticsGroupId, viewId: nextViewId }: { semanticSchemaId: number | string; semanticsGroupId: number | string | null; viewId: number | string }) => {
     setViewId(nextViewId)
     setSelectedFieldKeys([])
     setFieldDetailMap({})
@@ -181,7 +294,15 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
   }
 
   const handleSave = async (openHierarchyAfterSave = false) => {
-    const values = await form.validateFields()
+    const formValues = await validateFieldsAndScroll<DimensionFormValues>(form)
+    if (!formValues) {
+      return
+    }
+    const values = {
+      ...formValues,
+      mappedBizNameFieldName: form.getFieldValue('mappedBizNameFieldName'),
+      mappedTechNameTableName: form.getFieldValue('mappedTechNameTableName'),
+    }
     if (!groupId) {
       message.error('请先选择维度分组')
       return
@@ -248,6 +369,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     setFieldModalOpen(false)
     setSelectedFieldKeys([])
     setFieldDetailMap({})
+    schemaDetailRequestedRef.current.clear()
   }
 
   function handleDrawerClose(refresh?: boolean) {
@@ -303,7 +425,10 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
               groupName={groupName || editingItem?.groupName}
               isEdit={Boolean(editingItem)}
               selectedDimType={selectedDimType}
+              selectedSemanticGroupId={selectedSemanticGroupId}
               setSchemaOptions={setSchemaOptions}
+              validateEnglishName={validateEnglishName}
+              validateZhName={validateZhName}
               onFieldChange={handleFieldChange}
               onOpenFieldModal={() => {
                 if (!selectedSchemaId) {

@@ -1,6 +1,8 @@
 import type { KnowledgeIndicatorItem, KnowledgePagination, KnowledgeSearchParams } from '../types/metricModeling.types'
+import { getMappedBizNameDisplay, getMappedTechNameDisplay } from '../../../utils/ontologyName'
 
 const INDICATOR_BIZ_NAME_KEYS = ['bizName', 'biz_name', 'indicatorName', 'indicator_name', 'indName', 'ind_name', 'name']
+const INDICATOR_TECH_NAME_KEYS = ['techName', 'tech_name', 'indicatorCode', 'indicator_code', 'indCode', 'ind_code']
 
 interface KnowledgeIndicatorListQueryInput {
   readonly groupId: string
@@ -25,10 +27,18 @@ function pickFirstText(record: Record<string, unknown>, keys: readonly string[])
 
 export function normalizeKnowledgeIndicatorListItem(item: KnowledgeIndicatorItem): KnowledgeIndicatorItem {
   const record = item as KnowledgeIndicatorItem & Record<string, unknown>
+  const rawBizName = pickFirstText(record, INDICATOR_BIZ_NAME_KEYS)
+  const rawTechName = pickFirstText(record, INDICATOR_TECH_NAME_KEYS)
+  const rawIndicatorCode = pickFirstText(record, ['indicatorCode', 'indicator_code']) || rawTechName
 
   return {
     ...item,
-    bizName: pickFirstText(record, INDICATOR_BIZ_NAME_KEYS)
+    bizName: getMappedBizNameDisplay(rawBizName),
+    indicatorCode: getMappedTechNameDisplay(rawIndicatorCode),
+    rawBizName,
+    rawIndicatorCode,
+    rawTechName,
+    techName: rawTechName
   }
 }
 

@@ -170,7 +170,13 @@ export function createAuthManager(options: AuthManagerOptions) {
       }
     }
 
-    await options.redirectToLogin(context);
+    try {
+      await options.redirectToLogin(context);
+    } catch (error) {
+      state.handling = false;
+      state.redirecting = false;
+      throw error;
+    }
   };
 
   const handleUnauthorized = async (unauthorizedOptions: AuthUnauthorizedOptions = {}) => {
@@ -207,7 +213,9 @@ export function createAuthManager(options: AuthManagerOptions) {
       await runRedirect(state, redirectContext, true);
     } else {
       state.timer = setTimeout(() => {
-        void runRedirect(state, redirectContext, true);
+        void runRedirect(state, redirectContext, true).catch(() => {
+          // A later unauthorized response may retry after the state is released.
+        });
       }, redirectDelay);
     }
 
