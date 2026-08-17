@@ -93,7 +93,7 @@ export function queryDimensionPreview(params: { dimId: number }) {
   })
 }
 
-export function editDimensionHierarchy(params: Record<string, any>[]) {
+export function editDimensionHierarchy(params: Record<string, any>) {
   return apiRequest({
     data: params,
     method: 'post',

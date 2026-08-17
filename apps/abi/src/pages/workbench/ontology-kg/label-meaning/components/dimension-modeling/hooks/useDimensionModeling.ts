@@ -19,6 +19,7 @@ import type {
   DimensionFormValues,
   DimensionGroup,
   DimensionHierarchyEditItem,
+  DimensionHierarchyEditPayload,
   DimensionModelItem,
   DimensionPagination,
   DimensionSchemaInfo,
@@ -74,6 +75,45 @@ function normalizeHierarchyItem(item: any): DimensionHierarchyEditItem {
     parentDimId: toNumber(item?.parentDimId),
     spaceId: toNumber(item?.spaceId) || Number(localStorage.getItem('spaceId')) || 0
   }
+}
+
+function normalizeHierarchyGroup(group: any, owner: any = {}): DimensionHierarchyEditItem[] {
+  const levels = Array.isArray(group?.levels) ? group.levels : []
+  const groupHierarchyId = toNumber(group?.hierarchyId ?? group?.hierarchyID)
+
+  return levels.map((level: any) => {
+    const levelRest = { ...(level || {}) }
+    const levelHierarchyId = toNumber(levelRest.hierarchyId ?? levelRest.hierarchyID)
+    delete levelRest.hierarchyId
+    delete levelRest.hierarchyID
+    delete levelRest.id
+    return normalizeHierarchyItem({
+      ...levelRest,
+      dimId: level?.dimId ?? owner?.dimId ?? owner?.dimensionId,
+      drillDirection: group?.drillDirection ?? level?.drillDirection,
+      hierarchyId: groupHierarchyId ?? levelHierarchyId,
+      hierarchyName: group?.hierarchyName ?? level?.hierarchyName,
+      isDefault: group?.isDefault ?? level?.isDefault,
+      parentDimId: level?.parentDimId,
+      remark: group?.remark ?? level?.remark,
+      spaceId: level?.spaceId ?? group?.spaceId ?? owner?.spaceId,
+      status: group?.status ?? level?.status
+    })
+  })
+}
+
+function normalizeHierarchyRows(rows: any[]): DimensionHierarchyEditItem[] {
+  return rows.flatMap((item) => {
+    const groups = Array.isArray(item?.groups) ? item.groups : []
+    if (Array.isArray(item?.levels)) {
+      return normalizeHierarchyGroup(item)
+    }
+    if (!groups.length) {
+      return [normalizeHierarchyItem(item)]
+    }
+
+    return groups.flatMap((group: any) => normalizeHierarchyGroup(group, item))
+  })
 }
 
 export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
@@ -323,7 +363,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
         return
       }
       const rows = normalizeRows(res)
-      const list = rows.filter(Boolean).map(normalizeHierarchyItem)
+      const list = normalizeHierarchyRows(rows.filter(Boolean))
       setHierarchyItems(list)
     } finally {
       setHierarchyLoading(false)
@@ -337,8 +377,8 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     setHierarchyLoading(false)
   }
 
-  const saveHierarchyConfig = async (items: DimensionHierarchyEditItem[]) => {
-    if (!items.length) {
+  const saveHierarchyConfig = async (items: DimensionHierarchyEditPayload) => {
+    if (!items?.groups?.length) {
       message.warning('请先配置层级结构')
       return false
     }

@@ -9,6 +9,16 @@ import type {
   DimensionType
 } from '../types/dimensionModeling.types'
 import { DEFAULT_DIMENSION_TIME_FORMAT, DIMENSION_TIME_GRANULARITY_OPTIONS } from '../constants/dimensionModeling.constants'
+import {
+  buildMappedBizName,
+  buildMappedTechName,
+  getMappedBizNameDisplay,
+  getMappedBizNameParts,
+  getMappedTechNameDisplay,
+  getMappedTechNameParts,
+  restoreMappedBizName,
+  restoreMappedTechName
+} from '../../../utils/ontologyName'
 
 const MODEL_DETAIL_KEYS = new Set(['dimensions', 'identifiers'])
 const VALID_TIME_GRANULARITY_VALUES = new Set(DIMENSION_TIME_GRANULARITY_OPTIONS.map(item => item.value))
@@ -214,7 +224,11 @@ function isDatetimeDimensionType(value: any) {
 }
 
 function getSchemaName(schema: DimensionSchemaInfo) {
-  return trim(pickFirst(schema, ['bizName', 'techName', 'schemaName', 'name'])) || '-'
+  return trim(pickFirst(schema, ['rtableName', 'bizName', 'techName', 'schemaName', 'name'])) || '-'
+}
+
+function getSchemaTechName(schema: DimensionSchemaInfo, fallback?: string) {
+  return trim(pickFirst(schema, ['tableName', 'techName', 'originName', 'schemaName', 'name'], fallback)) || fallback || '-'
 }
 
 function getSchemaId(schema: DimensionSchemaInfo) {
@@ -337,15 +351,17 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
   const relFields = parseRelatedFields(
     pickFirst(item, ['relFields', 'relatedFields', 'relateFields', 'techId', 'techIds'])
   )
-  const dimCategory = trim(pickFirst(item, ['dimCategory', 'dimensionCategory']))
+  const rawDimCategory = pickFirst(item, ['dimCategory', 'dimensionCategory'])
+  const dimCategory = rawDimCategory === undefined || rawDimCategory === null ? undefined : String(rawDimCategory).trim()
   const dimType = normalizeType(pickFirst(item, ['dimType', 'dimensionType']))
   const drillDirection = trim(pickFirst(item, ['drillDirection', 'drillConfig.direction']))
-  const englishName = trim(pickFirst(item, ['englishName', 'techName', 'dimCode'])) || ''
+  const rawEnglishName = trim(pickFirst(item, ['rawEnglishName', 'englishName', 'techName', 'dimCode', 'dimensionCode', 'dimTechName'])) || ''
+  const englishName = getMappedTechNameDisplay(rawEnglishName)
   const id = Number(pickFirst(item, ['id', 'dimId', 'dimensionId'], 0))
   const owner = trim(pickFirst(item, ['owner', 'dimOwner', 'indicatorOwner'])) || ''
   const path = trim(pickFirst(item, ['path', 'groupPath', 'indicatorCategory'])) || ''
   const levelPath = trim(item.levelPath) || ''
-  const semanticSchemaId = Number(pickFirst(item, ['semanticSchemaId', 'relSchemaId']))
+  const semanticSchemaId = pickFirst(item, ['semanticSchemaId', 'relSchemaId'])
   const semanticsGroupId = pickFirst(item, ['semanticsGroupId', 'semanticGroupId'])
   const semanticSchemaName = trim(pickFirst(item, ['semanticSchemaName', 'relSchemaName']))
   const status = normalizeStatus(pickFirst(item, ['status', 'versionStatus']))
@@ -355,7 +371,8 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
   const createBy = trim(item.createBy)
   const createTime = trim(pickFirst(item, ['createTime', 'updateTime'])) || '-'
   const viewId = toNumber(pickFirst(item, ['viewId', 'relViewId']))
-  const zhName = trim(pickFirst(item, ['zhName', 'bizName', 'dimName'])) || ''
+  const rawZhName = trim(pickFirst(item, ['rawZhName', 'zhName', 'bizName', 'dimName', 'dimensionName', 'name'])) || ''
+  const zhName = getMappedBizNameDisplay(rawZhName)
   const timeField = trim(item.timeField || typeParams?.timeField || relFields[0]?.techId)
   const timeFormat = trim(item.timeFormat || typeParams?.timeFormat)
   const fieldType = trim(pickFirst(item, ['fieldType', 'semanticType']))
@@ -384,6 +401,8 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
     owner,
     ownerEmail: trim(item.ownerEmail),
     path,
+    rawEnglishName,
+    rawZhName,
     relatedFields,
     relatedMetrics: parseRelatedMetrics(
       pickFirst(item, ['relatedMetrics', 'relatedIndicators', 'indicatorRefs', 'indicators', 'dimensionIndicators'])
@@ -405,15 +424,20 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
 }
 
 export function buildFormValues(item: DimensionModelItem): DimensionFormValues {
+  const mappedBizNameParts = getMappedBizNameParts(item.rawZhName || item.zhName)
+  const mappedTechNameParts = getMappedTechNameParts(item.rawEnglishName || item.englishName)
+
   return {
     alias: item.alias || '',
     bizDesc: item.bizDesc || '',
-    dimCategory: item.dimCategory,
+    dimCategory: item.dimCategory === undefined || item.dimCategory === null ? undefined : String(item.dimCategory),
     dimType: item.dimType || 'std',
     drillDirection: item.drillDirection || 'down',
     englishName: item.englishName || '',
     groupId: item.groupId,
     id: item.id,
+    mappedBizNameFieldName: mappedBizNameParts.isMapped ? mappedBizNameParts.fieldName : undefined,
+    mappedTechNameTableName: mappedTechNameParts.isMapped ? mappedTechNameParts.tableName : undefined,
     owner: item.owner || '',
     ownerEmail: item.ownerEmail || '',
     relatedFieldKeys: item.relatedFields.map(field => field.key),
@@ -456,6 +480,8 @@ export function buildSubmitPayload(params: {
     .map(item => item.trim())
     .filter(Boolean)
   const semanticType = formValues.dimType === 'time' ? 'datetime' : 'categorical'
+  const bizName = restoreMappedBizName(formValues.zhName, formValues.mappedBizNameFieldName)
+  const techName = restoreMappedTechName(formValues.englishName, formValues.mappedTechNameTableName)
   const typeParams =
     formValues.dimType === 'time'
       ? JSON.stringify({
@@ -470,7 +496,7 @@ export function buildSubmitPayload(params: {
         bizName: trim(item.bizName),
         fieldName: trim(item.fieldName),
         fieldType: trim(item.fieldType),
-        key: trim(item.key),
+        key: trim(item.techId || item.key),
         originName: trim(item.originName),
         sourceId: trim(item.sourceId),
         sourceTableName: trim(item.sourceTableName),
@@ -483,7 +509,7 @@ export function buildSubmitPayload(params: {
   const relatedFieldJson = relatedFieldObjects
 
   const payload = {
-    bizName: trim(formValues.zhName),
+    bizName,
     cardinality: undefined,
     dimAlias: trim(formValues.alias),
     dimCategory: trim(formValues.dimCategory),
@@ -494,7 +520,7 @@ export function buildSubmitPayload(params: {
       drill_direction: trim(formValues.drillDirection) || 'down',
       granularity: formValues.dimType === 'time' ? (formValues.timeGranularity || []).slice(-1)[0] || 'day' : undefined
     },
-    expr: trim(formValues.englishName) || techIdList,
+    expr: techName || techIdList,
     fieldType,
     groupId: selectedGroupId || formValues.groupId,
     isLeaf: '1',
@@ -513,7 +539,7 @@ export function buildSubmitPayload(params: {
     status: String(formValues.status ?? 1),
     techId: relatedFieldJson,
     techIds: techIdList,
-    techName: trim(formValues.englishName),
+    techName,
     typeParams,
     updateFreq: trim(formValues.updateFreq),
     versionNo: 'v1.0',
@@ -535,16 +561,20 @@ export function buildSubmitPayload(params: {
   return compactPayload
 }
 
-export function buildDimensionFieldPayload(field: DimensionFieldOption): DimensionFieldOption {
+export function buildDimensionFieldPayload(
+  field: DimensionFieldOption,
+  options: { bizName?: string; techName?: string } = {}
+): DimensionFieldOption {
   return Object.fromEntries(
     Object.entries({
-      bizName: trim(field.bizName),
+      bizName: trim(options.bizName || field.bizName),
       fieldType: trim(field.fieldType),
-      key: trim(field.key),
+      key: trim(field.techId || field.key),
       originName: trim(field.originName),
       sourceId: trim(field.sourceId),
       sourceTableName: trim(field.sourceTableName),
-      techId: trim(field.techId)
+      techId: trim(field.techId),
+      techName: trim(options.techName || field.techName)
     }).filter(([, value]) => value !== undefined && value !== null && value !== '')
   ) as DimensionFieldOption
 }
@@ -554,7 +584,10 @@ export function buildSchemaFieldOptions(schema?: DimensionSchemaInfo): Dimension
     return []
   }
   try {
-    const modelDetailObj = JSON.parse(schema.modelDetail)
+    const modelDetailObj = parseJson(schema.modelDetail)
+    if (!modelDetailObj || typeof modelDetailObj !== 'object') {
+      return []
+    }
     const list: DimensionFieldOption[] = []
     Object.keys(modelDetailObj).forEach(rawKey => {
       const key = String(rawKey || '')
@@ -624,6 +657,7 @@ export function buildDimensionBatchRows(schemas: DimensionSchemaInfo[], existing
       return []
     }
     const schemaName = getSchemaName(schema)
+    const schemaTechName = getSchemaTechName(schema, schemaName)
     return Object.keys(parsed).flatMap((rawKey) => {
       const modelKey = String(rawKey || '').trim().toLowerCase()
       if (!MODEL_DETAIL_KEYS.has(modelKey)) {
@@ -635,7 +669,7 @@ export function buildDimensionBatchRows(schemas: DimensionSchemaInfo[], existing
         if (!techId) {
           return []
         }
-        const fieldName = trim(item.fieldName) || techId
+        const fieldName = trim(pickFirst(item, ['fieldName', 'originName', 'techName'], techId)) || techId
         const rowKey = `${schemaId}-${fieldName}`
         if (rowKeySet.has(rowKey)) {
           return []
@@ -671,6 +705,7 @@ export function buildDimensionBatchRows(schemas: DimensionSchemaInfo[], existing
           relSchemaId: schemaId,
           relViewId: schema.relViewId,
           semanticSchemaName: schemaName,
+          semanticSchemaTechName: schemaTechName,
           semanticsGroupId: schema.groupId
         }]
       })
@@ -688,13 +723,24 @@ export function buildDimensionBatchCreatePayload(params: {
 
   return rows
     .filter(row => !row.disabled)
-    .map(row => ({
-      spaceId,
-      techId: [buildDimensionFieldPayload(row.field)],
-      semanticsGroupId: semanticsGroupId ?? row.semanticsGroupId,
-      groupId: selectedGroupId,
-      relSchemaId: row.relSchemaId,
-      relViewId: row.relViewId
-    }))
+    .map(row => {
+      const tableBizName = row.field.rtableName || row.semanticSchemaName
+      const tableTechName = row.field.tableName || row.semanticSchemaTechName || row.semanticSchemaName
+      const fieldBizName = row.field.bizName || row.field.fieldName || row.field.techId
+      const fieldTechName = row.field.techName || row.field.originName || row.field.fieldName || row.field.techId
+      return {
+        spaceId,
+        techId: [
+          buildDimensionFieldPayload(row.field, {
+            bizName: buildMappedBizName(tableBizName, fieldBizName),
+            techName: buildMappedTechName(tableTechName, fieldTechName)
+          })
+        ],
+        semanticsGroupId: semanticsGroupId ?? row.semanticsGroupId,
+        groupId: selectedGroupId,
+        relSchemaId: row.relSchemaId,
+        relViewId: row.relViewId
+      }
+    })
     .filter(item => item.techId.length)
 }

@@ -286,7 +286,7 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
       message.error('获取指标详情失败')
       return
     }
-    setEditingItem(detail)
+    setEditingItem(normalizeKnowledgeIndicatorListItem(detail))
     setCustomDrawerOpen(true)
   }
 
@@ -299,7 +299,7 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     const res = await deleteKnowledgeIndicator({
       id: indicatorId,
       spaceId: getKnowledgeSpaceId(),
-      techName: record.techName
+      techName: record.rawTechName || record.techName
     })
     if (!isApiSuccess(res)) {
       message.error(getApiErrorMessage(res, '删除失败'))

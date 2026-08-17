@@ -2,18 +2,24 @@ import { Modal, message } from 'antd'
 import React from 'react'
 
 import { DIMENSION_TIME_GRANULARITY_OPTIONS } from '../../constants/dimensionModeling.constants'
-import type { DimensionFieldOption, DimensionHierarchyEditItem, DimensionModelItem } from '../../types/dimensionModeling.types'
+import type {
+  DimensionFieldOption,
+  DimensionHierarchyEditItem,
+  DimensionHierarchyEditPayload,
+  DimensionModelItem
+} from '../../types/dimensionModeling.types'
+import { getMappedBizNameParts } from '../../../../utils/ontologyName'
 
 interface Props {
   readonly hierarchyItems?: DimensionHierarchyEditItem[]
   readonly loading?: boolean
   readonly onCancel: () => void
-  readonly onSave: (items: DimensionHierarchyEditItem[]) => Promise<boolean> | boolean
+  readonly onSave: (items: DimensionHierarchyEditPayload) => Promise<boolean> | boolean
   readonly open: boolean
   readonly record?: DimensionModelItem | null
 }
 
-interface HierarchyFieldItem {
+export interface HierarchyFieldItem {
   childDimId?: number
   displayName: string
   drillDirection?: 'DOWN' | 'UP'
@@ -27,9 +33,14 @@ interface HierarchyFieldItem {
   techId: string
 }
 
-interface HierarchyCardItem {
+export interface HierarchyCardItem {
+  drillDirection?: 'DOWN' | 'UP'
+  hierarchyId?: number
   id: string
+  isDefault?: '0' | '1'
   levels: HierarchyFieldItem[]
+  remark?: string
+  status?: '0' | '1'
   title: string
 }
 
@@ -58,17 +69,34 @@ const TIME_HIERARCHY_TEMPLATES: TimeHierarchyTemplate[] = [
   { keys: ['year', 'month', 'day'], title: '自然日分析' }
 ]
 
+export function getHierarchyBizNameDisplay(value: unknown) {
+  const text = String(value ?? '').trim()
+  const mappedParts = getMappedBizNameParts(text)
+  if (mappedParts.isMapped) {
+    return mappedParts.fieldName || mappedParts.displayName
+  }
+
+  const relaxedParts = text.split(/_\s*#\s*_?/)
+  if (relaxedParts.length > 1) {
+    return relaxedParts[relaxedParts.length - 1]?.trim() || text
+  }
+
+  return text
+}
+
 function formatFieldName(field: DimensionFieldOption) {
-  const bizName = field.bizName || field.techId
+  const bizName = getHierarchyBizNameDisplay(field.bizName || field.techId)
   const techId = field.techId || field.key
   return `${bizName} (${techId})`
 }
 
 function buildFieldItem(field: DimensionFieldOption): HierarchyFieldItem {
+  const levelName = getHierarchyBizNameDisplay(field.bizName || field.techId)
+
   return {
     displayName: formatFieldName(field),
     key: field.key || field.techId,
-    levelName: field.bizName || field.techId,
+    levelName,
     techId: field.techId
   }
 }
@@ -106,40 +134,68 @@ function buildQuickTimeHierarchyCards(selectedValues: string[], itemMap: Map<str
   })
 }
 
-function buildPayload(record: DimensionModelItem | null | undefined, cards: HierarchyCardItem[]) {
+function compactObject<T extends Record<string, any>>(value: T): T {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item !== undefined && item !== null && item !== '')
+  ) as T
+}
+
+export function buildDimensionHierarchyPayload(
+  record: DimensionModelItem | null | undefined,
+  cards: HierarchyCardItem[],
+  spaceIdValue?: number
+): DimensionHierarchyEditPayload | null {
   if (!record?.id) {
-    return []
+    return null
   }
   const dimId = Number(record.id)
-  const spaceId = Number(localStorage.getItem('spaceId'))
+  const spaceId = spaceIdValue ?? Number(localStorage.getItem('spaceId'))
   if (!spaceId) {
-    return []
+    return null
   }
 
-  return cards.flatMap((card, cardIndex) =>
-    card.levels.map((level, levelIndex) => {
-      const configJson = {
-        fieldKey: level.key,
-        fieldName: level.levelName,
-        techId: level.techId
-      }
-      return {
-        childDimId: level.childDimId,
-        configJson,
-        dimId,
-        drillDirection: level.drillDirection || 'DOWN',
-        hierarchyId: level.hierarchyId ? Number(level.hierarchyId) : null,
+  const groups = cards
+    .filter(card => card.levels.length > 0)
+    .map((card, cardIndex) => {
+      const firstLevel = card.levels[0]
+      const hierarchyId = Number(card.hierarchyId || firstLevel?.hierarchyId)
+      const group = compactObject({
+        drillDirection: card.drillDirection || firstLevel?.drillDirection || 'DOWN',
+        hierarchyId: Number.isNaN(hierarchyId) || !hierarchyId ? undefined : hierarchyId,
         hierarchyName: card.title.trim() || '层级结构',
-        isDefault: level.isDefault || (cardIndex === 0 ? '0' : '1'),
-        levelName: level.levelName,
-        levelOrder: levelIndex + 1,
-        parentDimId: level.parentDimId,
-        remark: level.remark,
-        spaceId,
-        status: level.status || '1'
-      } satisfies DimensionHierarchyEditItem
+        isDefault: card.isDefault || firstLevel?.isDefault || (cardIndex === 0 ? '0' : '1'),
+        levels: card.levels.map((level, levelIndex) => {
+          const configJson = {
+            fieldKey: level.key,
+            fieldName: level.levelName,
+            techId: level.techId
+          }
+          return {
+            configJson,
+            levelName: level.levelName,
+            levelOrder: levelIndex + 1
+          }
+        }),
+        remark: card.remark || firstLevel?.remark,
+        status: card.status || firstLevel?.status || '1'
+      })
+
+      return group
     })
-  )
+
+  if (!groups.length) {
+    return null
+  }
+
+  return {
+    dimId,
+    groups,
+    spaceId
+  }
+}
+
+function buildPayload(record: DimensionModelItem | null | undefined, cards: HierarchyCardItem[]) {
+  return buildDimensionHierarchyPayload(record, cards)
 }
 
 function parseConfigJson(value: any) {
@@ -159,13 +215,13 @@ function parseConfigJson(value: any) {
   }
 }
 
-function buildCardsFromHierarchy(
+export function buildCardsFromHierarchy(
   items: DimensionHierarchyEditItem[],
   fieldMap: Map<string, HierarchyFieldItem>
 ): HierarchyCardItem[] {
   const grouped = new Map<string, DimensionHierarchyEditItem[]>()
   items.forEach(item => {
-    const key = String(item.hierarchyName || '层级结构')
+    const key = getHierarchyBizNameDisplay(item.hierarchyName || '层级结构')
     const list = grouped.get(key) || []
     list.push(item)
     grouped.set(key, list)
@@ -191,7 +247,7 @@ function buildCardsFromHierarchy(
             status: item.status
           }
         }
-        const levelName = String(config?.fieldName || item.levelName || fieldKey)
+        const levelName = getHierarchyBizNameDisplay(config?.fieldName || item.levelName || fieldKey)
         return {
           childDimId: item.childDimId,
           displayName: `${levelName} (${fieldKey})`,
@@ -208,8 +264,13 @@ function buildCardsFromHierarchy(
       })
 
     return {
+      drillDirection: list[0]?.drillDirection,
+      hierarchyId: Number(list[0]?.hierarchyId || (list[0] as any)?.id || (list[0] as any)?.hierarchyID) || undefined,
       id: `history-${index + 1}`,
+      isDefault: list[0]?.isDefault,
       levels,
+      remark: list[0]?.remark,
+      status: list[0]?.status,
       title: name
     } as HierarchyCardItem
   })
@@ -460,7 +521,7 @@ export const HierarchyModal: React.FC<Props> = ({
       record,
       cards.filter(card => card.levels.length > 0)
     )
-    if (!payload.length) {
+    if (!payload) {
       message.warning('层级参数构建失败，请检查空间或维度信息')
       return
     }

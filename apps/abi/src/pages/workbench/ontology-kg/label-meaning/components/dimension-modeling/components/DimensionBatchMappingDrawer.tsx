@@ -6,6 +6,7 @@ import React, { type ReactNode, useCallback, useEffect, useMemo, useState } from
 
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
+import { buildGroupTree } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper'
 import { queryTableSemanticsDetail, schemalist } from '@/service/api/data-table-meaning'
 import { queryDimensionList } from '@/service/api/dimension-modeling'
 import { tableSemanticsGroupList } from '@/service/api/table-semantics'
@@ -15,7 +16,7 @@ import type { DimensionBatchMappingRow, DimensionModelItem, DimensionSchemaInfo 
 import { buildDimensionBatchRows, mapDimensionFromApi, normalizeRows } from '../utils/dimensionModeling.mapper'
 
 interface Props {
-  readonly groupId?: number
+  readonly groupId?: number | string
   readonly groupName?: string
   readonly onClose: (refresh?: boolean) => void
   readonly onSubmit: (rows: DimensionBatchMappingRow[], semanticsGroupId?: number | string) => Promise<boolean>
@@ -23,13 +24,20 @@ interface Props {
 }
 
 interface SemanticGroupOption {
-  label: string
-  value: number | string
+  groupId: number | string
+  groupName: string
+  parentId?: number | string
+  sortOrder?: number
 }
 
 interface SemanticSchemaTreeOption {
   label: string
   value: number | string
+}
+
+interface CachedSchemaOptions {
+  originalOptions: DimensionSchemaInfo[]
+  schemaOptions: SemanticSchemaTreeOption[]
 }
 
 function getSpaceId() {
@@ -77,10 +85,6 @@ function buildGroupTreeValue(groupId: number | string) {
   return `semantic-group-${String(groupId)}`
 }
 
-function buildSchemaTreeValue(groupId: number | string, schemaId: number | string) {
-  return `semantic-schema-${String(groupId)}-${String(schemaId)}`
-}
-
 function renderSemanticTreeTitle(label: ReactNode, type: 'group' | 'schema') {
   const Icon = type === 'group' ? FolderOutlined : FileTextOutlined
 
@@ -95,7 +99,8 @@ function renderSemanticTreeTitle(label: ReactNode, type: 'group' | 'schema') {
 export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupName, onClose, onSubmit, open }) => {
   const [groupOptions, setGroupOptions] = useState<SemanticGroupOption[]>([])
   const [selectedSemanticGroupId, setSelectedSemanticGroupId] = useState<number | string>()
-  const [schemaOptionsByGroup, setSchemaOptionsByGroup] = useState<Record<string, SemanticSchemaTreeOption[]>>({})
+  const [selectedSemanticSchemaId, setSelectedSemanticSchemaId] = useState<number | string>()
+  const [schemaOptionsByGroup, setSchemaOptionsByGroup] = useState<Record<string, CachedSchemaOptions>>({})
   const [fieldRows, setFieldRows] = useState<DimensionBatchMappingRow[]>([])
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
@@ -115,19 +120,37 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
     return normalizeRows(res).map(item => mapDimensionFromApi({ ...item, groupId, groupName }))
   }, [groupId, groupName])
 
-  const dataTree = useMemo(() => groupOptions.map(group => ({
-    children: schemaOptionsByGroup[String(group.value)]?.map(schema => ({
-      isLeaf: true,
-      searchLabel: schema.label,
-      selectable: false,
-      title: renderSemanticTreeTitle(schema.label, 'schema'),
-      value: buildSchemaTreeValue(group.value, schema.value)
-    })),
-    isLeaf: false,
-    searchLabel: group.label,
-    title: renderSemanticTreeTitle(group.label, 'group'),
-    value: buildGroupTreeValue(group.value)
-  })), [groupOptions, schemaOptionsByGroup])
+  const dataTree = useMemo(() => {
+    const buildNodes = (groups: SemanticGroupOption[]): any[] =>
+      groups.map((group) => {
+        const cachedOptions = schemaOptionsByGroup[String(group.groupId)]?.schemaOptions
+        const childGroupNodes = Array.isArray((group as any).children) ? buildNodes((group as any).children) : []
+        const schemaNodes = cachedOptions?.map(schema => ({
+          isLeaf: true,
+          searchLabel: schema.label,
+          title: renderSemanticTreeTitle(schema.label, 'schema'),
+          value: schema.value
+        })) || []
+        const children = [...childGroupNodes, ...schemaNodes]
+
+        return {
+          ...(children.length || schemaOptionsByGroup[String(group.groupId)] ? { children } : {}),
+          isLeaf: false,
+          searchLabel: group.groupName,
+          selectable: false,
+          title: renderSemanticTreeTitle(group.groupName, 'group'),
+          value: buildGroupTreeValue(group.groupId)
+        }
+      })
+
+    return buildNodes(buildGroupTree(groupOptions, '0', true))
+  }, [groupOptions, schemaOptionsByGroup])
+
+  function findSchemaGroup(schemaId: number | string) {
+    return Object.entries(schemaOptionsByGroup).find(([, groupSchemas]) =>
+      groupSchemas.schemaOptions.some(schema => String(schema.value) === String(schemaId))
+    )
+  }
 
   const fetchSchemaDetail = useCallback(async (schema: DimensionSchemaInfo): Promise<DimensionSchemaInfo> => {
     if (schema.modelDetail) {
@@ -149,47 +172,52 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
   const loadGroupSchemas = useCallback(async (nextGroupId: number | string): Promise<DimensionSchemaInfo[]> => {
     const res = await schemalist({
       bizName: '',
-      groupId: nextGroupId,
+      groupId: String(nextGroupId),
       pageNum: 1,
       pageSize: 1000
     })
     const schemaRows = normalizeList(getResponseData(res)) as DimensionSchemaInfo[]
     setSchemaOptionsByGroup(prev => ({
       ...prev,
-      [String(nextGroupId)]: schemaRows
-        .map(item => ({
-          label: formatSchemaName(item),
-          value: item.schemaId
-        }))
-        .filter(item => hasValue(item.value))
+      [String(nextGroupId)]: {
+        originalOptions: schemaRows,
+        schemaOptions: schemaRows
+          .map(item => ({
+            label: formatSchemaName(item),
+            value: item.schemaId
+          }))
+          .filter(item => hasValue(item.value))
+      }
     }))
     return schemaRows
   }, [])
 
-  const loadGroupFields = useCallback(
-    async (nextGroupId?: number | string) => {
+  const loadSchemaFields = useCallback(
+    async (nextGroupId?: number | string, nextSchemaId?: number | string) => {
       setSelectedSemanticGroupId(nextGroupId)
+      setSelectedSemanticSchemaId(nextSchemaId)
       setFieldRows([])
       setSelectedRowKeys([])
-      if (!hasValue(nextGroupId)) {
+      if (!hasValue(nextGroupId) || !hasValue(nextSchemaId)) {
         return
       }
       setLoadingFields(true)
       try {
         const schemaRows = await loadGroupSchemas(nextGroupId)
-        if (!schemaRows.length) {
-          message.warning('当前数据语义组下没有数据语义')
+        const selectedSchema = schemaRows.find(item => String(item.schemaId) === String(nextSchemaId))
+        if (!selectedSchema) {
+          message.warning('未找到选中的数据语义')
           return
         }
-        const [schemas, existingDimensions] = await Promise.all([
-          Promise.all(schemaRows.map(fetchSchemaDetail)),
+        const [schema, existingDimensions] = await Promise.all([
+          fetchSchemaDetail(selectedSchema),
           loadExistingDimensions()
         ])
-        const nextRows = buildDimensionBatchRows(schemas, existingDimensions)
+        const nextRows = buildDimensionBatchRows([schema], existingDimensions)
         setFieldRows(nextRows)
         setSelectedRowKeys(nextRows.filter(item => !item.disabled).map(item => item.key))
         if (!nextRows.length) {
-          message.warning('当前数据语义组下没有可生成的维度字段')
+          message.warning('当前数据语义下没有可生成的维度字段')
         }
       } catch {
         setFieldRows([])
@@ -202,30 +230,42 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
     [fetchSchemaDetail, loadExistingDimensions, loadGroupSchemas]
   )
 
-  const handleDataChange = useCallback((nextValue?: string) => {
+  const handleDataChange = useCallback((nextValue?: number | string) => {
     if (!nextValue) {
-      loadGroupFields(undefined)
+      loadSchemaFields(undefined, undefined)
       return
     }
-    const selectedGroup = groupOptions.find(item => buildGroupTreeValue(item.value) === String(nextValue))
-    if (!selectedGroup) {
+    const matchedGroupEntry = findSchemaGroup(nextValue)
+    const matchedGroupId = matchedGroupEntry?.[0]
+    if (!matchedGroupId) {
       return
     }
-    loadGroupFields(selectedGroup.value)
-  }, [groupOptions, loadGroupFields])
+    loadSchemaFields(matchedGroupId, nextValue)
+  }, [schemaOptionsByGroup, loadSchemaFields])
+
+  const handleTreeExpand = useCallback((expandedValues: React.Key[]) => {
+    expandedValues.forEach((value) => {
+      const rawValue = String(value || '')
+      const selectedGroup = groupOptions.find(item => buildGroupTreeValue(item.groupId) === rawValue)
+      if (selectedGroup && !schemaOptionsByGroup[String(selectedGroup.groupId)]) {
+        void loadGroupSchemas(selectedGroup.groupId)
+      }
+    })
+  }, [groupOptions, loadGroupSchemas, schemaOptionsByGroup])
 
   const handleLoadTreeData = useCallback((node: { value?: number | string }) => {
     const rawValue = String(node.value || '')
-    const selectedGroup = groupOptions.find(item => buildGroupTreeValue(item.value) === rawValue)
-    if (!selectedGroup || schemaOptionsByGroup[String(selectedGroup.value)]) {
+    const selectedGroup = groupOptions.find(item => buildGroupTreeValue(item.groupId) === rawValue)
+    if (!selectedGroup || schemaOptionsByGroup[String(selectedGroup.groupId)]) {
       return Promise.resolve()
     }
-    return loadGroupSchemas(selectedGroup.value).then(() => undefined)
+    return loadGroupSchemas(selectedGroup.groupId).then(() => undefined)
   }, [groupOptions, loadGroupSchemas, schemaOptionsByGroup])
 
   useEffect(() => {
     if (!open) {
       setSelectedSemanticGroupId(undefined)
+      setSelectedSemanticSchemaId(undefined)
       setSchemaOptionsByGroup({})
       setFieldRows([])
       setSelectedRowKeys([])
@@ -248,10 +288,12 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
         setGroupOptions(
           rows
             .map(item => ({
-              label: String(item.groupName || ''),
-              value: item.groupId
+              groupId: item.groupId,
+              groupName: String(item.groupName || ''),
+              parentId: item.parentId ?? 0,
+              sortOrder: Number(item.sortOrder ?? 0)
             }))
-            .filter(item => item.label && hasValue(item.value))
+            .filter(item => item.groupName && hasValue(item.groupId))
         )
         setSchemaOptionsByGroup({})
       } catch {
@@ -336,7 +378,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
       <AAlert
         className="mb-6"
         icon={<InfoCircleOutlined />}
-        message="选择数据后，原型将该数据语义组下全部数据语义中的字段统一映射为维度；维度自定义仍沿用原新增维度流程。"
+        message="选择数据后，将该数据语义中的维度字段统一映射为维度；维度自定义仍沿用原新增维度流程。"
         showIcon
         type="info"
       />
@@ -353,7 +395,8 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
               showSearch
               treeData={dataTree}
               filterTreeNode={(inputValue, treeNode) => String((treeNode as { searchLabel?: number | string })?.searchLabel || '').toLowerCase().includes(inputValue.toLowerCase())}
-              value={hasValue(selectedSemanticGroupId) ? buildGroupTreeValue(selectedSemanticGroupId) : undefined}
+              value={hasValue(selectedSemanticSchemaId) ? selectedSemanticSchemaId : undefined}
+              onTreeExpand={handleTreeExpand}
               onChange={handleDataChange}
             />
           </AForm.Item>

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildDimensionFieldPayload, buildFormValues, getDimensionFieldLookupKeys, mapDimensionFromApi, normalizeDimensionFieldSelectionKeys, normalizeDimensionSelectedFieldsToOptionKeys } from './dimensionModeling.mapper'
+import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildDimensionFieldPayload, buildFormValues, buildSchemaFieldOptions, buildSubmitPayload, getDimensionFieldLookupKeys, mapDimensionFromApi, normalizeDimensionFieldSelectionKeys, normalizeDimensionSelectedFieldsToOptionKeys } from './dimensionModeling.mapper'
 
 describe('dimensionModeling mapper', () => {
   it('keeps all time granularities from typeParams when editing time dimensions', () => {
@@ -36,6 +36,48 @@ describe('dimensionModeling mapper', () => {
     })
 
     expect(item.createBy).toBe('admin')
+  })
+
+  it('normalizes numeric dimCategory to string for edit display', () => {
+    const item = mapDimensionFromApi({
+      bizName: '地区',
+      dimCategory: 1001,
+      dimId: 6
+    })
+    const values = buildFormValues(item)
+
+    expect(item.dimCategory).toBe('1001')
+    expect(values.dimCategory).toBe('1001')
+  })
+
+  it('splits mapped dimension names for list and edit display', () => {
+    const item = mapDimensionFromApi({
+      bizName: '交易明细表_#_收货城市',
+      dimId: 4,
+      techName: 'trade_detail.receive_city'
+    })
+    const values = buildFormValues(item)
+
+    expect(item.zhName).toBe('交易明细表')
+    expect(item.englishName).toBe('receive_city')
+    expect(values.zhName).toBe('交易明细表')
+    expect(values.englishName).toBe('receive_city')
+    expect(values.mappedBizNameFieldName).toBe('收货城市')
+    expect(values.mappedTechNameTableName).toBe('trade_detail')
+  })
+
+  it('uses raw dimension names for edit form fallback', () => {
+    const item = mapDimensionFromApi({
+      dimId: 5,
+      rawEnglishName: 'trade_detail.receive_city',
+      rawZhName: '交易明细表_#_收货城市'
+    })
+    const values = buildFormValues(item)
+
+    expect(values.zhName).toBe('交易明细表')
+    expect(values.englishName).toBe('receive_city')
+    expect(values.mappedBizNameFieldName).toBe('收货城市')
+    expect(values.mappedTechNameTableName).toBe('trade_detail')
   })
 
   it('builds batch rows from dimension and identifier fields only', () => {
@@ -228,6 +270,48 @@ describe('dimensionModeling mapper', () => {
     ).toEqual(['field_campaign_name'])
   })
 
+  it('builds selectable field options when schema detail modelDetail is already an object', () => {
+    const fields = buildSchemaFieldOptions({
+      bizName: '交易明细表',
+      dbName: '',
+      dbType: '',
+      drillDim: null,
+      filters: null,
+      groupId: 9,
+      modelDetail: {
+        dimensions: [
+          {
+            bizName: '收货城市',
+            fieldName: 'receive_city',
+            tableName: 't_order',
+            techId: 'field_receive_city',
+            techName: 'receive_city_code',
+            type: 'varchar'
+          }
+        ]
+      },
+      relViewId: 'view-1',
+      remark: '',
+      schemaId: 'schema-1',
+      sourceId: '',
+      spaceId: '82',
+      status: '1',
+      techName: 'trade_detail'
+    })
+
+    expect(fields).toMatchObject([
+      {
+        bizName: '收货城市',
+        fieldName: 'receive_city',
+        key: 'field_receive_city',
+        relViewId: 'view-1',
+        tableName: 't_order',
+        techId: 'field_receive_city',
+        techName: 'receive_city_code'
+      }
+    ])
+  })
+
   it('uses only the field type property to infer batch dimension type', () => {
     const rows = buildDimensionBatchRows([
       {
@@ -261,7 +345,7 @@ describe('dimensionModeling mapper', () => {
     })
     const [row] = buildDimensionBatchRows([
       {
-        bizName: '交易明细表',
+        bizName: '语义模型名',
         dbName: '',
         dbType: '',
         drillDim: null,
@@ -272,9 +356,12 @@ describe('dimensionModeling mapper', () => {
             {
               bizName: '城市',
               fieldName: 'city',
+              rtableName: '用户表',
               sourceId: '1272272164820750336',
+              sourceTableName: 't_user',
               tableName: 't_user',
               techId: '10202611211000',
+              techName: 'city_code',
               type: 'categorical'
             }
           ]
@@ -300,12 +387,13 @@ describe('dimensionModeling mapper', () => {
         spaceId: 82,
         techId: [
           {
-            bizName: '城市',
+            bizName: '用户表_#_城市',
             fieldType: 'categorical',
             key: '10202611211000',
             originName: 'city',
             sourceId: '1272272164820750336',
             sourceTableName: 't_user',
+            techName: 't_user.city_code',
             techId: '10202611211000'
           }
         ],
@@ -338,4 +426,31 @@ describe('dimensionModeling mapper', () => {
       techId: '10202611211000'
     })
   })
+
+  it('restores mapped names when editing a mapped dimension', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => '82'
+    })
+    const payload = buildSubmitPayload({
+      formValues: {
+        dimType: 'std',
+        drillDirection: 'down',
+        englishName: 'receive_city_new',
+        mappedBizNameFieldName: '收货城市',
+        mappedTechNameTableName: 'trade_detail',
+        owner: '',
+        relatedFieldKeys: [],
+        status: 1,
+        timeGranularity: [],
+        zhName: '交易明细表新'
+      },
+      id: 10,
+      relatedFields: [],
+      selectedGroupId: 9
+    })
+
+    expect(payload.bizName).toBe('交易明细表新_#_收货城市')
+    expect(payload.techName).toBe('trade_detail.receive_city_new')
+  })
+
 })

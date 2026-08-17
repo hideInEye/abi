@@ -3,6 +3,7 @@ import { Steps, message } from 'antd' // 新增配置列表
 import { useForm } from 'antd/es/form/Form'
 
 import { useAppSelector } from '@/hooks/business/useStore'
+import { validateFieldsAndScroll } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 import { addTerms, editTerms } from '@/service/api/Industry.ts'
 import { getSpaceId } from '@/store/slice/app'
 
@@ -66,7 +67,10 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
       return
     }
 
-    await form.validateFields()
+    const valid = await validateFieldsAndScroll(form)
+    if (!valid) {
+      return
+    }
     const params = {
       ...state,
       // 英文名称同时写入 techName 与 engName，确保唯一性校验字段一致
@@ -114,7 +118,10 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
   const [current, setCurrent] = useState(0)
 
   const next = async () => {
-    await form.validateFields()
+    const valid = await validateFieldsAndScroll(form)
+    if (!valid) {
+      return
+    }
     setCurrent(current + 1)
   }
 

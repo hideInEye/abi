@@ -1,5 +1,4 @@
 import { createAuthManager } from '@sa/auth';
-import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
 
 import { localStg } from './storage';
 
@@ -12,25 +11,6 @@ interface LoginExpiredOptions {
 }
 
 const LOGIN_EXPIRED_MESSAGE_KEY = 'login-expired';
-const LOGIN_EXPIRED_FLOW_KEY = '__ABI_LOGIN_EXPIRED_FLOW_STATE__';
-
-interface LoginExpiredFlowState {
-  handling: boolean;
-}
-
-function getLoginExpiredFlowState(): LoginExpiredFlowState {
-  const globalScope = globalThis as typeof globalThis & Record<string, LoginExpiredFlowState | undefined>;
-  const existingState = globalScope[LOGIN_EXPIRED_FLOW_KEY];
-
-  if (existingState) {
-    return existingState;
-  }
-
-  const initialState = { handling: false };
-  globalScope[LOGIN_EXPIRED_FLOW_KEY] = initialState;
-
-  return initialState;
-}
 
 function clearAuthStorageOnly() {
   localStg.remove('token');
@@ -97,7 +77,7 @@ function notifyAuthExpired({
   });
 }
 
-async function redirectToLogin({
+function redirectToLogin({
   preserveRedirect,
   redirectPath
 }: {
@@ -105,27 +85,9 @@ async function redirectToLogin({
   redirectPath?: string;
 }) {
   const safeRedirectPath = preserveRedirect ? getSafeLoginRedirectPath(redirectPath) : '';
+  const loginUrl = safeRedirectPath ? `/login?redirect=${encodeURIComponent(safeRedirectPath)}` : '/login';
 
-  if (qiankunWindow.__POWERED_BY_QIANKUN__) {
-    const loginUrl = safeRedirectPath ? `/login?redirect=${encodeURIComponent(safeRedirectPath)}` : '/login';
-    window.location.href = loginUrl;
-    return;
-  }
-
-  try {
-    const { router } = await import('@/router');
-    await router.push(
-      safeRedirectPath
-        ? {
-            name: 'login',
-            query: { redirect: safeRedirectPath }
-          }
-        : { name: 'login' }
-    );
-  } catch {
-    const loginUrl = safeRedirectPath ? `/login?redirect=${encodeURIComponent(safeRedirectPath)}` : '/login';
-    window.location.assign(loginUrl);
-  }
+  window.location.assign(loginUrl);
 }
 
 export const authManager = createAuthManager({
@@ -144,12 +106,6 @@ export const authManager = createAuthManager({
  * @param redirectPath 可选的重定向路径，如果不提供则使用当前页面路径
  */
 export async function handleLoginExpired(redirectPath?: string, options: LoginExpiredOptions = {}) {
-  const flowState = getLoginExpiredFlowState();
-
-  if (flowState.handling) return false;
-
-  flowState.handling = true;
-
   return authManager.handleUnauthorized({
     message: options.noticeMessage,
     preserveRedirect: options.preserveRedirect,
@@ -161,7 +117,6 @@ export async function handleLoginExpired(redirectPath?: string, options: LoginEx
 }
 
 export function resetLoginExpiredState() {
-  getLoginExpiredFlowState().handling = false;
   authManager.resetUnauthorizedState();
 }
 

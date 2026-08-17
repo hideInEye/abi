@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { OntologyEntity, OntologyNetworkId, OntologyRelation } from '@/pages/workbench/ontology-kg/shared-network-types'
+import { scrollToFirstFormError } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 
 import type { RelationFormValues } from '../types'
 
@@ -54,7 +55,8 @@ export const RelationDrawer: React.FC<RelationDrawerProps> = ({ entities, loadin
       const values = await form.validateFields()
       await onSave(values, relation ?? undefined)
       onClose()
-    } catch {
+    } catch (error) {
+      scrollToFirstFormError(form, error)
       // Form rules and the caller's notification already explain the failure.
     } finally {
       saveInFlightRef.current = false

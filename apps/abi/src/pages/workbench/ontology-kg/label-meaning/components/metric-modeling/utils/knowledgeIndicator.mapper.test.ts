@@ -10,6 +10,7 @@ describe('knowledgeIndicator mapper', () => {
     })
 
     expect(item.bizName).toBe('成交金额')
+    expect(item.rawBizName).toBe('成交金额')
   })
 
   it('maps API biz_name alias to bizName for list display', () => {
@@ -19,6 +20,20 @@ describe('knowledgeIndicator mapper', () => {
     } as any)
 
     expect(item.bizName).toBe('支付金额')
+  })
+
+  it('splits one-click mapped indicator names for list display and keeps raw technical name', () => {
+    const item = normalizeKnowledgeIndicatorListItem({
+      bizName: '交易明细表_#_支付金额',
+      indicatorCode: 'trade_detail.pay_amount',
+      techName: 'trade_detail.pay_amount'
+    })
+
+    expect(item.bizName).toBe('交易明细表')
+    expect(item.indicatorCode).toBe('pay_amount')
+    expect(item.techName).toBe('trade_detail.pay_amount')
+    expect(item.rawBizName).toBe('交易明细表_#_支付金额')
+    expect(item.rawTechName).toBe('trade_detail.pay_amount')
   })
 
   it('uses bizName as the indicator list search request parameter', () => {
