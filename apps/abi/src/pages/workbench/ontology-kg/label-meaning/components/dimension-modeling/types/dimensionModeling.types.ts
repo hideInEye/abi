@@ -70,6 +70,28 @@ export interface DimensionHierarchyEditItem {
   status?: '0' | '1'
 }
 
+export interface DimensionHierarchyLevelPayload {
+  configJson: Record<string, unknown>
+  levelName: string
+  levelOrder: number
+}
+
+export interface DimensionHierarchyGroupPayload {
+  drillDirection?: 'DOWN' | 'UP'
+  hierarchyId?: number
+  hierarchyName: string
+  isDefault?: '0' | '1'
+  levels: DimensionHierarchyLevelPayload[]
+  remark?: string
+  status?: '0' | '1'
+}
+
+export interface DimensionHierarchyEditPayload {
+  dimId: number
+  groups: DimensionHierarchyGroupPayload[]
+  spaceId: number
+}
+
 export interface DimensionRelatedMetric {
   groupName?: string
   id?: number | string

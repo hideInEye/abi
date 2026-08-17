@@ -6,6 +6,7 @@ import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/componen
 
 import { DATA_FREQUENCY_OPTIONS, DERIVED_OPERATOR_OPTIONS } from '../constants/metricModeling.constants'
 import type { KnowledgeDerivedCondition, KnowledgeDerivedExpression, KnowledgeFormValues, KnowledgeTechField } from '../types/metricModeling.types'
+import { getMetricFieldOptionLabel } from '../utils/knowledgeOperateDrawer.utils'
 
 interface AtomicMetricOption {
   label: string
@@ -91,7 +92,7 @@ function buildDerivedResult({
   const sqlFieldMap = new Map<string, string>()
   allFields.forEach(item => {
     const key = String(item.techId || item.fieldName || item.name || '')
-    const label = String(item.bizName || item.fieldName || item.name || key)
+    const label = getMetricFieldOptionLabel(item)
     if (key) {
       fieldMap.set(key, label)
       sqlFieldMap.set(key, String(item.fieldName || item.originName || item.name || key))
@@ -173,10 +174,14 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields
 
   const fieldOptions = useMemo(
     () =>
-      allFields.map(item => ({
-        label: `${item.bizName || item.fieldName || item.name || item.techId}（${item.fieldName || item.originName || item.name || item.techId}）`,
-        value: String(item.techId || item.fieldName || item.name || '')
-      })),
+      allFields.map(item => {
+        const sourceFieldName = item.fieldName || item.originName || item.name || item.techId
+
+        return {
+          label: `${getMetricFieldOptionLabel(item)}（${sourceFieldName}）`,
+          value: item.techId+''
+        }
+      }),
     [allFields]
   )
 

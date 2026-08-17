@@ -17,7 +17,13 @@ import type {
   KnowledgeTechField,
   KnowledgeTemplateParams,
 } from '../types/metricModeling.types'
-import { extractUniqueIds, getStepItems, parseTemplateParams } from '../utils/knowledgeOperateDrawer.utils'
+import {
+  extractUniqueIds,
+  getMetricFieldOptionLabel,
+  getMetricIndicatorOptionLabel,
+  getStepItems,
+  parseTemplateParams,
+} from '../utils/knowledgeOperateDrawer.utils'
 import { createKnowledgeOperateValidators } from '../utils/knowledgeOperateDrawer.validators'
 import { parseKnowledgeCalcLogicFormValues } from '../utils/knowledgeSubmitPayload'
 import { getKnowledgeSpaceId } from '../utils/space'
@@ -187,7 +193,7 @@ function buildAtomicMetricMetaMap(options: AtomicIndicatorOption[]) {
 
     acc[key] = {
       field: String(option.item.indicatorCode || key).trim(),
-      fieldName: String(option.item.bizName || option.item.techName || option.label || key).trim(),
+      fieldName: getMetricIndicatorOptionLabel(option.item),
       id: option.item.indId ?? option.item.termId ?? key,
       label: option.label,
       value: key,
@@ -206,7 +212,7 @@ function buildDerivedExpressionFieldMetaMap(fields: KnowledgeTechField[]) {
 
     acc[key] = {
       field: String(item.fieldName || item.originName || item.name || key).trim(),
-      fieldName: String(item.bizName || item.tfieldAlias || item.fieldName || item.name || key).trim(),
+      fieldName: getMetricFieldOptionLabel(item),
       value: key,
     }
 
@@ -382,7 +388,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       .filter((item) => allowedClasses.has(normalizeIndicatorClass(item.indicatorClass)))
       .map((item) => ({
         item,
-        label: String(item.bizName || item.techName || item.indicatorCode || '-'),
+        label: getMetricIndicatorOptionLabel(item),
         value: normalizeAtomicSelectValue(item),
       }))
       .filter((item) => item.value)
@@ -393,7 +399,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
         .filter((item) => item.indicatorClass === 'atomic' || item.indicatorClass === 'derived')
         .map((item) => ({
           item,
-          label: String(item.bizName || item.techName || item.indicatorCode || '-'),
+          label: getMetricIndicatorOptionLabel(item),
           value: normalizeAtomicSelectValue(item),
         }))
         .filter((item) => item.value),

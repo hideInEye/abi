@@ -74,15 +74,15 @@ export const DimensionTable: React.FC<Props> = ({
         title: '维度类型',
         width: 120
       },
-      {
-        align: 'center',
-        dataIndex: 'levelPath',
-        ellipsis: true,
-        key: 'levelPath',
-        render: formatDisplayValue,
-        title: '维度路径(目录)',
-        width: 300
-      },
+      // {
+      //   align: 'center',
+      //   dataIndex: 'levelPath',
+      //   ellipsis: true,
+      //   key: 'levelPath',
+      //   render: formatDisplayValue,
+      //   title: '维度路径(目录)',
+      //   width: 300
+      // },
       {
         align: 'center',
         dataIndex: 'owner',
