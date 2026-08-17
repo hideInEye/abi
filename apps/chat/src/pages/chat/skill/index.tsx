@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SkillCard } from '@/constant/layout'
 import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
+import { AssistantIconBlock } from '@/components/AssistantIcon'
 import { fetchOperateNew } from '@/service/api/abi-system'
 import { querySkillList, updateSkillStatus } from '@/service/api/skill'
 import { getSpaceId } from '@/utils'
@@ -21,6 +22,7 @@ type SkillItem = {
   spaceId?: number | string
   spaceName?: string
   createTime?: string
+  icon?: string
 }
 
 /** 卡片图标颜色轮询顺序（保持静态数据多色风格） */
@@ -38,6 +40,7 @@ function mapSkillToCard(item: SkillItem, index: number): SkillCard {
     tagLabel: isPublic ? '公开' : '私有',
     color: COLOR_KEYS[index % COLOR_KEYS.length],
     enabled: String(item.status) === '1',
+    icon: item.icon || undefined,
   }
 }
 
@@ -51,6 +54,17 @@ function readMySkillIds(): string[] {
   } catch {
     return []
   }
+}
+
+/** 技能卡片图标：优先用接口返回的 icon（跨设备同步），兜底按 key 稳定散列 */
+const SKILL_ICON_KEYS = ['data', 'table', 'orchestration', 'flow', 'automation', 'text', 'chat', 'doc', 'finance', 'account', 'ops', 'security', 'analysis', 'chart', 'other']
+function skillIconKey(key: string, apiIcon?: string): string {
+  // 优先使用接口返回的 icon
+  if (apiIcon && SKILL_ICON_KEYS.includes(apiIcon)) return apiIcon
+  // 兜底散列
+  let h = 0
+  for (let i = 0; i < key.length; i += 1) h = (h * 31 + key.charCodeAt(i)) >>> 0
+  return SKILL_ICON_KEYS[h % SKILL_ICON_KEYS.length]
 }
 
 function SkillStoreView() {
@@ -279,62 +293,52 @@ function SkillStoreView() {
         </Popover>
       </div>
 
-      {/* Card Grid：格式完全对齐 abi 技能管理 abi-data-card */}
+      {/* Card Grid：样式对齐应用工坊「我的助手」ws-assistant-card（技能功能保留） */}
       <Spin spinning={loading}>
         {!loading && filteredCards.length === 0 ? (
-          <div className="abi-card-empty">
+          <div className="ws-empty">
             <Empty description="暂无技能" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           </div>
         ) : (
-          <div className="abi-card-grid">
-            <div className="abi-card-grid-inner">
+          <div className="ws-card-scroll">
+            <div className="ws-card-grid">
               {filteredCards.map((card) => {
-                const raw = rawMap[card.key] || ({} as SkillItem)
-                const spaceName = raw.spaceName || (raw.spaceId ? `空间${raw.spaceId}` : '')
                 const added = myIds.includes(card.key)
                 return (
-                  <div key={card.key} className="abi-data-card" onClick={() => handleOpenDetail(card)}>
-                    <div className="abi-data-card-head">
-                      <div className="abi-data-card-title">
-                        <span className="abi-data-card-name" title={card.title}>{card.title}</span>
+                  <div key={card.key} className="ws-assistant-card" onClick={() => handleOpenDetail(card)}>
+                    <div className="wac-head">
+                      <AssistantIconBlock iconKey={skillIconKey(card.key, card.icon)} radius={12} size={42} />
+                      <div className="wac-main">
+                        <div className="wac-title" title={card.title}>{card.title}</div>
+                        <div className="wac-desc">{card.description || '暂无描述'}</div>
                       </div>
                       {/* 广场 Tab：添加/已添加（点已添加可取消）；我的技能 Tab：移除 */}
                       {tab === 'plaza' ? (
                         added ? (
-                          <button className="btn-accent-gradient btn-accent-gradient--sm btn-accent-gradient--added" onClick={(e) => { e.stopPropagation(); handleRemoveSkill(card) }}>
+                          <button className="wac-add-btn wac-add-btn--added" onClick={(e) => { e.stopPropagation(); handleRemoveSkill(card) }}>
                             已添加
                           </button>
                         ) : (
-                          <button className="btn-accent-gradient btn-accent-gradient--sm" onClick={(e) => { e.stopPropagation(); handleAddSkill(card) }}>
+                          <button className="wac-add-btn" onClick={(e) => { e.stopPropagation(); handleAddSkill(card) }}>
                             + 添加
                           </button>
                         )
                       ) : (
-                        <button className="btn-accent-gradient btn-accent-gradient--sm btn-accent-gradient--danger" onClick={(e) => { e.stopPropagation(); handleRemoveSkill(card) }}>
+                        <button className="wac-add-btn wac-add-btn--danger" onClick={(e) => { e.stopPropagation(); handleRemoveSkill(card) }}>
                           移除
                         </button>
                       )}
                     </div>
-                    <div className="abi-data-card-body">
-                      <div className="row"><span className="lbl">技能描述</span><span className="val">{card.description || '-'}</span></div>
-                      <div className="row"><span className="lbl">空间</span><span className="val">{spaceName || '-'}</span></div>
-                      {raw.createTime && (
-                        <div className="row"><span className="lbl">创建时间</span><span className="val">{String(raw.createTime).replace('T', ' ')}</span></div>
-                      )}
-                      <div className="row">
-                        <span className="lbl">状态</span>
-                        <span className={`abi-status-tag ${card.enabled ? 'status-normal' : 'status-disabled'}`}>
-                          {card.enabled ? '启用' : '停用'}
-                        </span>
+                    <div className="wac-footer">
+                      <span className={`wac-tag ${card.enabled ? '' : 'off'}`}>{card.enabled ? '启用' : '停用'}</span>
+                      <div className="wac-actions">
+                        <button type="button" className="wac-act" onClick={(e) => { e.stopPropagation(); handleOpenDetail(card) }}>
+                          <EyeOutlined /> 查看
+                        </button>
+                        <button type="button" className="wac-act" onClick={(e) => { e.stopPropagation(); handleToggleEnable(card) }}>
+                          {card.enabled ? '停用' : '启用'}
+                        </button>
                       </div>
-                    </div>
-                    <div className="abi-data-card-footer">
-                      <button className="abi-card-act" onClick={(e) => { e.stopPropagation(); handleOpenDetail(card) }}>
-                        <EyeOutlined style={{ marginRight: 3 }} />查看
-                      </button>
-                      <button className="abi-card-act" onClick={(e) => { e.stopPropagation(); handleToggleEnable(card) }}>
-                        {card.enabled ? '停用' : '启用'}
-                      </button>
                     </div>
                   </div>
                 )

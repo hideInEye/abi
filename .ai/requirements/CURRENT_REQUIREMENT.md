@@ -1045,3 +1045,54 @@ MCP 服务编辑页「安全认证方案」中，当认证类型为 HTTP 且 Sch
 
 - 对受影响文件进行 IDE 诊断/语法检查，确认不新增错误（纯文案改动，无需整包重建）。
 - 生成本任务 run log。
+
+## 2026-08-17 追加：管理端「我的对话」三个 tab 支持卡片视图并默认卡片
+
+### 需求类型
+
+前端 UI 功能新增（纯前端，不改接口协议与查询参数）。
+
+### 背景
+
+管理端（`apps/abi`）「我的对话」二级菜单下的「最近使用」「我的收藏」「我的分享」当前只有表格列表视图。chat 端（`apps/chat`）应用工坊的同名三个 tab 已使用 `.ws-assistant-card` 卡片视图。用户要求管理端这三个页面同样支持卡片视图，并默认展示卡片，卡片样式参考 chat 端应用工坊。
+
+### 目标
+
+- 三个页面各新增 `viewMode: 'list' | 'card'` 视图状态，默认 `'card'`（默认展示卡片）。
+- 视图切换入口复用共享组件 `ViewControls`，放在 `.abi-data-area` 内顶部 `.abi-toolbar`，与「我的助手」等已有卡片视图页面一致。
+- 卡片复用 abi 已有的 `.abi-card-grid` / `.abi-card-grid-inner` / `.abi-assistant-card` 体系（该体系视觉参数已与 chat `.ws-assistant-card` 对齐）：左上渐变圆角对话图标 + 标题（对话名称）+ 描述（所属空间），底部分割线内只放右对齐的扁平操作按钮。
+- 卡片操作与表格操作保持完全一致：最近使用只有「进入对话」；我的收藏为「进入对话 + 取消收藏」；我的分享为「进入对话 + 删除」（保留删除二次确认）。
+- 卡片底部左下角不放任何信息（与 chat 端记录类卡片一致）：时间（最近使用时间 / 收藏时间 / 分享时间）与分享类型只在列表视图的表格中展示，卡片上不重复呈现。
+- 列表视图保持原表格实现与视觉不变。
+
+### 非目标
+
+- 不修改 `getOperateRecordList`、`fetchOperateNewList`、`fetchOperateNew`、`deleteOperateRecord` 的调用方式、参数与返回处理。
+- 不修改搜索栏、时间范围筛选、前端过滤与分页逻辑。
+- 不修改 chat 端应用工坊任何代码。
+- 不修改 `ViewControls` 共享组件本身。
+- 不新增批量选择、批量删除能力。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/app-workshop/recently-used/index.tsx`
+- `apps/abi/src/pages/workbench/app-workshop/my-collect/index.tsx`
+- `apps/abi/src/pages/workbench/app-workshop/my-share/index.tsx`
+- `apps/abi/src/styles/scss/table.scss`（`.abi-assistant-card` 内补 `.ac-meta`、`.ac-btn--danger`）
+- `.ai/runs/2026-08-17-abi-my-chat-card-view/`
+
+### 验收标准
+
+- 进入「我的对话」任一 tab，默认展示卡片网格，卡片视图按钮为选中态。
+- 点击列表按钮可切回原表格，表格列、宽度、操作按钮与改动前一致。
+- 卡片视觉（背景、模糊、边框、圆角、内边距、hover 上浮与阴影、标题/描述字号颜色、底部分割线、扁平按钮 hover 浅蓝底）与 chat 端应用工坊卡片一致。
+- 卡片上「进入对话」跳转与表格一致（收藏走 `sessionId`，最近使用/分享走 `chatId`）。
+- 卡片上「取消收藏」「删除」行为与表格一致，删除仍有二次确认，成功后刷新列表。
+- 搜索、时间范围筛选、分页在两种视图下均生效。
+- tsc 不新增报错。
+
+### 测试要求
+
+- 运行 abi 应用的 TypeScript 类型检查（`tsc --noEmit`）。
+- 对受影响文件做 IDE 诊断检查。
+- 生成本任务 run log。

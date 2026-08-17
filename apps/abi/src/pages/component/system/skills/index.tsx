@@ -1,5 +1,5 @@
 import { DeleteOutlined, DownOutlined, EditOutlined, EyeOutlined, LeftOutlined, MoreOutlined, ReloadOutlined, RightOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
-import { App, Button, Dropdown, Empty, Input, Select, Spin, Switch, Tabs, Tooltip, Typography } from 'antd';
+import { App, Button, Dropdown, Empty, Input, Select, Spin, Tabs, Tooltip, Typography } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 // import PageTitle from '@/components/stateless/common/PageTitle';
@@ -11,6 +11,8 @@ import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
+import { AssistantIconBlock } from '@/components/AssistantIcon';
+import type { AssistantIconKey } from '@/components/AssistantIcon';
 
 import SkillDetailDrawer from './modules/skill-detail-drawer';
 import SkillEditDrawer from './modules/skill-edit-drawer';
@@ -31,7 +33,15 @@ type SkillItem = {
   createdBy?: string;
   createTime?: string;
   updateTime?: string;
+  icon?: string;
 };
+
+/** 根据技能 id 稳定散列到预设图标 key（兜底逻辑，仅在接口无 icon 字段时使用） */
+const ICON_KEYS: AssistantIconKey[] = ['data', 'table', 'orchestration', 'flow', 'automation', 'text', 'chat', 'doc', 'finance', 'account', 'ops', 'security', 'analysis', 'chart', 'other'];
+function skillIconKey(id: number | string): AssistantIconKey {
+  const hash = String(id).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return ICON_KEYS[hash % ICON_KEYS.length];
+}
 
 type StatusKey = 'published' | 'hidden' | 'archived' | 'review' | 'rejected' | 'scanning';
 
@@ -329,7 +339,7 @@ export function Component() {
     {
       title: '状态', dataIndex: 'status', key: 'status',
       align: 'center' as const, minWidth: 80,
-      render: (_: any, record: SkillItem) => <Switch checked={String(record.status) === '1'} size="default" onChange={checked => toggleSkillStatus(record, checked)} />
+      render: (_: any, record: SkillItem) => <ASwitch checked={String(record.status) === '1'} size="default" onChange={(checked: boolean) => toggleSkillStatus(record, checked)} />
     },
     {
       title: '空间', dataIndex: 'spaceName', key: 'spaceName',
@@ -536,84 +546,75 @@ export function Component() {
                     {pagedList.map(item => {
                       const statusKey = resolveStatusKey(item.status);
                       const title = item.bizName || '-';
-                      const spaceName = item.spaceName || (item.spaceId ? `空间${item.spaceId}` : '');
-                      const summary = item.summary;
-                      const skillTypeLabel = resolveSkillTypeLabel(item.skillType);
+                      const online = String(item.status) === '1';
+                      const statusLabel = online ? '启用' : '停用';
+                      const tagCls = online ? '' : 'off';
+                      const iconKey = item.icon || skillIconKey(item.id);
+                      const added = myIds.includes(String(item.id));
                       return (
                         <div
                           key={item.id}
-                          className="abi-data-card"
+                          className="abi-assistant-card"
                           onClick={() => {
                             if (menuActionRef.current) { menuActionRef.current = false; return; }
                             goDetail(item);
                           }}
                         >
-                          <div className="abi-data-card-head">
-                            <div className="abi-data-card-title">
-                              <span className="abi-data-card-name" title={title}>{title}</span>
+                          {/* 头部：图标 + 标题/描述 + 添加按钮（对齐 chat） */}
+                          <div className="ac-head">
+                            <AssistantIconBlock iconKey={iconKey} radius={12} size={42} />
+                            <div className="ac-main">
+                              <div className="ac-title" title={title}>{title}</div>
+                              <div className="ac-desc">{item.summary || '暂无描述'}</div>
                             </div>
-                            {/* 右上角：广场展示添加/已添加（点已添加可取消），我的技能展示移除 */}
                             {tab === 'plaza' ? (
-                              myIds.includes(String(item.id)) ? (
-                                <button className="btn-accent-gradient btn-accent-gradient--sm btn-accent-gradient--added" onClick={(e) => { e.stopPropagation(); handleRemoveSkill(item); }}>
+                              added ? (
+                                <button className="ac-add-btn ac-add-btn--added" onClick={e => { e.stopPropagation(); handleRemoveSkill(item); }}>
                                   已添加
                                 </button>
                               ) : (
-                                <button className="btn-accent-gradient btn-accent-gradient--sm" onClick={(e) => { e.stopPropagation(); handleAddSkill(item); }}>
+                                <button className="ac-add-btn" onClick={e => { e.stopPropagation(); handleAddSkill(item); }}>
                                   + 添加
                                 </button>
                               )
                             ) : (
-                              <button className="btn-accent-gradient btn-accent-gradient--sm btn-accent-gradient--danger" onClick={(e) => { e.stopPropagation(); handleRemoveSkill(item); }}>
+                              <button className="ac-add-btn ac-add-btn--danger" onClick={e => { e.stopPropagation(); handleRemoveSkill(item); }}>
                                 移除
                               </button>
                             )}
                           </div>
-                          <div className="abi-data-card-body">
-                            <div className="row"><span className="lbl">技能描述</span><span className="val">{summary || '-'}</span></div>
-                            <div className="row"><span className="lbl">类型</span><span className="val">{skillTypeLabel}</span></div>
-                            <div className="row"><span className="lbl">空间</span><span className="val">{spaceName || '-'}</span></div>
-                            {item.createTime && (
-                              <div className="row"><span className="lbl">创建时间</span><span className="val">{item.createTime.replace('T', ' ')}</span></div>
-                            )}
-                            {/* 状态：创建时间下面，样式参考工具管理卡片 */}
-                            <div className="row">
-                              <span className="lbl">状态</span>
-                              <span className={`abi-status-tag ${statusKey === 'published' ? 'status-normal' : 'status-disabled'}`}>
-                                {t(`page.manage.skill.status.${statusKey}` as any)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="abi-data-card-footer">
-                            <button className="abi-card-act" onClick={(e) => { e.stopPropagation(); openEdit(item); }}>
-                              <EditOutlined style={{ marginRight: 3 }} />编辑
-                            </button>
-                            <button className="abi-card-act" onClick={(e) => { e.stopPropagation(); goDetail(item); }}>
-                              <EyeOutlined style={{ marginRight: 3 }} />查看
-                            </button>
-                            <Dropdown
-                              menu={{
-                                items: [
-                                  {
-                                    key: 'update',
-                                    label: '更新技能',
-                                    onClick: () => { menuActionRef.current = true; openUpdate(item); },
-                                  },
-                                  { type: 'divider' },
-                                  {
-                                    key: 'delete',
-                                    danger: true,
-                                    label: '删除',
-                                    onClick: () => { menuActionRef.current = true; confirmDelete(item); },
-                                  },
-                                ],
-                              }}
-                              trigger={['click']}
-                            >
-                              <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
-                                <MoreOutlined />
+                          {/* 底部：状态标签 + 操作（对齐 chat：启用/停用按钮在右下） */}
+                          <div className="ac-footer" onClick={e => e.stopPropagation()}>
+                            <span className={`ac-tag ${tagCls}`}>{statusLabel}</span>
+                            <div className="ac-actions">
+                              <button className="ac-btn" onClick={() => toggleSkillStatus(item, !online)}>
+                                {online ? '停用' : '启用'}
                               </button>
-                            </Dropdown>
+                              <button className="ac-btn" onClick={() => openEdit(item)}>
+                                <EditOutlined />编辑
+                              </button>
+                              <Dropdown
+                                menu={{
+                                  items: [
+                                    {
+                                      key: 'update',
+                                      label: '更新技能',
+                                      onClick: () => { menuActionRef.current = true; openUpdate(item); },
+                                    },
+                                    { type: 'divider' },
+                                    {
+                                      key: 'delete',
+                                      danger: true,
+                                      label: '删除',
+                                      onClick: () => { menuActionRef.current = true; confirmDelete(item); },
+                                    },
+                                  ],
+                                }}
+                                trigger={['click']}
+                              >
+                                <button className="ac-icon-btn"><MoreOutlined /></button>
+                              </Dropdown>
+                            </div>
                           </div>
                         </div>
                       );

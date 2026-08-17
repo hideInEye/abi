@@ -112,6 +112,8 @@ export const DeferredSelect: React.FC<{ readonly value?: any; readonly onChange?
 };
 
 interface SearchFilterBarProps {
+  /** 搜索框与「高级筛选」按钮之间的额外内容（如数据目录下拉） */
+  readonly extra?: React.ReactNode;
   /** 高级筛选面板中的筛选项（一行两个），无筛选项时不渲染高级筛选按钮 */
   readonly filters?: React.ReactNode;
   /** 查询回调（点击面板查询按钮 / 输入框回车） */
@@ -144,6 +146,7 @@ export const getFilterPopupContainer = (trigger: HTMLElement): HTMLElement =>
  * 高级筛选面板：筛选项一行两个 + 底部重置/查询（参考图谱探索高级搜索面板）
  */
 export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
+  extra,
   filters,
   onQuery,
   onReset,
@@ -227,6 +230,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
             onPressEnter={handleQuery}
           />
         )}
+        {extra}
         {filters ? (
           <Popover content={panelContent} open={open} placement="bottomRight" trigger="click" onOpenChange={setOpen}>
             <AButton className={styles.filterBtn} icon={<FilterOutlined />}>

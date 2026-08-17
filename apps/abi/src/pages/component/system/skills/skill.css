@@ -1014,3 +1014,38 @@
   background: #dc2626 !important; border: none !important;
   border-radius: 8px !important;
 }
+
+/* ── 技能卡片右上角 添加/已添加/移除 按钮（对齐 chat 端 wac-add-btn） ── */
+.abi-assistant-card .ac-add-btn {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 3px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, #5b7cf7, #7091fa);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.28);
+}
+.abi-assistant-card .ac-add-btn:hover {
+  box-shadow: 0 4px 14px rgba(91, 124, 247, 0.38);
+  transform: translateY(-1px);
+}
+.abi-assistant-card .ac-add-btn--added {
+  background: linear-gradient(135deg, #9ca3af, #b3bac4);
+  box-shadow: 0 2px 8px rgba(156, 163, 175, 0.25);
+}
+.abi-assistant-card .ac-add-btn--added:hover {
+  box-shadow: 0 4px 14px rgba(156, 163, 175, 0.35);
+}
+.abi-assistant-card .ac-add-btn--danger {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.28);
+}
+.abi-assistant-card .ac-add-btn--danger:hover {
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.38);
+}
