@@ -1,10 +1,16 @@
-import type { ReportCandidate, ReportItem, ReportPlanTask, ReportPublicChunk, ReportPublicStep } from './types'
+import type { ReportAttachment, ReportCandidate, ReportItem, ReportPlanTask, ReportPublicChunk, ReportPublicStep } from './types'
 
 export type ReportPresentationStage = 'thinking' | 'todo' | 'report'
 export type ReportPreviewOpenReason = 'auto' | 'manual'
 
 const HIDDEN_STEP_TITLES = new Set(['思考中', 'thinking'])
 const HIDDEN_STEP_DETAILS = new Set(['thought/action/observation'])
+const REPORT_GENERATING_STATUSES = new Set<ReportItem['status']>(['submitting', 'waiting_stream', 'thinking', 'running'])
+
+/** 预计耗时只服务仍在真实生成中的任务，成功、失败和历史同步阶段均不再展示。 */
+export function shouldShowReportEstimate(status: ReportItem['status']) {
+  return REPORT_GENERATING_STATUSES.has(status)
+}
 
 /** completed 与 cancelled 都表示该任务已经结束，但完成数量仍只统计 completed。 */
 export function areReportTasksSettled(tasks: Array<Pick<ReportPlanTask, 'status'>>) {
@@ -15,17 +21,17 @@ export function areReportTasksSettled(tasks: Array<Pick<ReportPlanTask, 'status'
  * 报告消息只允许按“思考 → ToDo → 报告”依次显露。
  * reportCandidate 可以提前到达，但在整体完成且任务全部结束前只保存在内存中。
  */
-export function getReportPresentationStage(report: Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate'>): ReportPresentationStage {
+export function getReportPresentationStage(report: Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate'> & Partial<Pick<ReportItem, 'reportAttachments'>>): ReportPresentationStage {
   if (!report.currentPlan) return 'thinking'
 
-  if (report.status === 'completed' && report.reportCandidate && areReportTasksSettled(report.tasks)) {
+  if (report.status === 'completed' && (report.reportCandidate || report.reportAttachments?.length) && areReportTasksSettled(report.tasks)) {
     return 'report'
   }
 
   return 'todo'
 }
 
-export function canRevealReport(report: Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate'>) {
+export function canRevealReport(report: Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate'> & Partial<Pick<ReportItem, 'reportAttachments'>>) {
   return getReportPresentationStage(report) === 'report'
 }
 
@@ -36,7 +42,7 @@ export function shouldAnimateReportPreview(report: Pick<ReportItem, 'currentPlan
 
 export function isReportContentChunk(chunk: Pick<ReportPublicChunk, 'outputType'>) {
   const outputType = String(chunk.outputType).toLowerCase()
-  return outputType === 'html' || outputType === 'markdown' || outputType === 'report_payload'
+  return outputType === 'html' || outputType === 'markdown' || outputType === 'pdf' || outputType === 'word' || outputType === 'report_payload'
 }
 
 export function getCompletedTaskCount(tasks: Array<Pick<ReportPlanTask, 'status'>>) {
@@ -126,6 +132,80 @@ export function getReportDownloadDescriptor(candidate: Pick<ReportCandidate, 'fo
     fileName: `${safeTitle}.${extension}`,
     mimeType,
   }
+}
+
+export type ReportDownloadOption = {
+  key: string
+  format: ReportCandidate['format'] | ReportAttachment['format']
+  label: string
+  fileName: string
+  kind: 'content' | 'url'
+  content?: string
+  mimeType?: string
+  url?: string
+}
+
+const DOWNLOAD_FORMAT_LABELS: Record<ReportDownloadOption['format'], string> = {
+  html: 'HTML',
+  markdown: 'Markdown',
+  pdf: 'PDF',
+  word: 'Word',
+}
+
+function getAttachmentFileName(attachment: ReportAttachment) {
+  const extension = attachment.format === 'pdf' ? 'pdf' : 'docx'
+
+  try {
+    const pathname = new URL(attachment.url, 'https://report.local').pathname
+    const fileName = decodeURIComponent(pathname.split('/').filter(Boolean).pop() || '')
+    if (fileName) return fileName
+  } catch {
+    // 非标准相对地址仍可以作为下载链接，文件名回退到稳定产品文案。
+  }
+
+  return `报告文件.${extension}`
+}
+
+/** 只列出真实收到的格式；同一附件格式多次返回时使用最后一个地址。 */
+export function getReportDownloadOptions(candidate: ReportCandidate | undefined, attachments: ReportAttachment[] = []): ReportDownloadOption[] {
+  const options: ReportDownloadOption[] = []
+  if (candidate) {
+    const descriptor = getReportDownloadDescriptor(candidate)
+    options.push({
+      key: candidate.entryId,
+      format: candidate.format,
+      label: DOWNLOAD_FORMAT_LABELS[candidate.format],
+      fileName: descriptor.fileName,
+      kind: 'content',
+      content: candidate.content,
+      mimeType: descriptor.mimeType,
+    })
+  }
+
+  const latestByFormat = new Map<ReportAttachment['format'], ReportAttachment>()
+  attachments.forEach((attachment) => latestByFormat.set(attachment.format, attachment))
+  latestByFormat.forEach((attachment) => {
+    options.push({
+      key: attachment.entryId,
+      format: attachment.format,
+      label: DOWNLOAD_FORMAT_LABELS[attachment.format],
+      fileName: getAttachmentFileName(attachment),
+      kind: 'url',
+      url: attachment.url,
+    })
+  })
+
+  return options
+}
+
+/** done.time 单位为秒；非法或缺失值不生成虚假耗时。 */
+export function formatReportDuration(durationSeconds: number | undefined) {
+  if (typeof durationSeconds !== 'number' || !Number.isFinite(durationSeconds) || durationSeconds < 0) return undefined
+
+  const totalSeconds = Math.round(durationSeconds)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `耗时${minutes}分${seconds}秒`
 }
 
 export function getStepSummary(step: ReportPublicStep) {

@@ -6,6 +6,8 @@ export type ReportStepStatus = 'in_progress' | 'done' | 'failed' | 'skipped' | '
 
 export type ReportChunkOutputType = 'text' | 'markdown' | 'code' | 'image' | 'html' | string
 
+export type ReportAttachmentFormat = 'pdf' | 'word'
+
 export interface ReportTaskRecord {
   conversationId: string
   sessionId: string
@@ -90,6 +92,8 @@ export interface ReportFinalEvent {
 
 export interface ReportDoneEvent {
   type: 'done'
+  /** 后端返回的报告总耗时，单位为秒。 */
+  time?: number
 }
 
 export type ReportStreamEvent =
@@ -159,6 +163,14 @@ export interface ReportCandidate {
   content: string
 }
 
+/** PDF/Word 不参与右侧预览，只保留后端实际返回的下载地址。 */
+export interface ReportAttachment {
+  entryId: string
+  stepId: string
+  format: ReportAttachmentFormat
+  url: string
+}
+
 export interface ReportRuntimeError {
   code: string
   message: string
@@ -181,6 +193,9 @@ export interface ReportStreamRuntimeState {
   executionGroups: ReportTaskExecutionGroup[]
   unassignedStepIds: string[]
   reportCandidate?: ReportCandidate
+  reportAttachments: ReportAttachment[]
+  /** 整体 done 返回的总耗时，单位为秒。 */
+  durationSeconds?: number
   final?: {
     content: string
     entryId: string
@@ -256,4 +271,5 @@ export interface ReportHistoryPayload {
   task_plan?: ReportPlanTask[]
   steps?: ReportHistoryStep[]
   generated_images?: string[]
+  time?: number
 }

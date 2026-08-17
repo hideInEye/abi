@@ -26,6 +26,7 @@ function reportRound(): ReportHistoryRoundGroup {
             content: JSON.stringify({
               version: 1,
               type: 'react-agent',
+              time: 125,
               final_content: '不应展示的内部思维文本',
               task_plan: [
                 { content: '分析数据', status: 'completed', priority: 'high' },
@@ -57,7 +58,11 @@ function reportRound(): ReportHistoryRoundGroup {
                   id: 'step-report',
                   title: 'html_interpreter',
                   action_intention: '生成可视化报告',
-                  outputs: [{ output_type: 'html', content: '<html><head><title>销售报告</title></head><body>完成</body></html>' }],
+                  outputs: [
+                    { output_type: 'html', content: '<html><head><title>销售报告</title></head><body>完成</body></html>' },
+                    { output_type: 'pdf', content: '/reports/sales.pdf' },
+                    { output_type: 'word', content: '/reports/sales.docx' },
+                  ],
                   status: 'done',
                 },
               ],
@@ -113,10 +118,16 @@ describe('report history adapter', () => {
     expect(item.question).toBe('生成销售报告')
     expect(item.sortOrder).toBe(2)
     expect(item.status).toBe('completed')
+    expect(item.todoOpen).toBe(false)
     expect(item.tasks.map((task) => task.status)).toEqual(['completed', 'completed'])
     expect(item.thinkingStepIds).toEqual(['step-thinking'])
     expect(item.executionGroups.map((group) => group.stepIds)).toEqual([['step-analysis'], ['step-report']])
     expect(item.reportCandidate).toMatchObject({ format: 'html', stepId: 'step-report' })
+    expect(item.reportAttachments.map(({ format, url }) => ({ format, url }))).toEqual([
+      { format: 'pdf', url: '/reports/sales.pdf' },
+      { format: 'word', url: '/reports/sales.docx' },
+    ])
+    expect(item.durationSeconds).toBe(125)
     expect(item.generatedImages).toEqual(['/images/chart.png'])
     expect(item.stepsById['step-analysis']?.actionReason).toBe('用于解释本次公开执行动作')
     expect(JSON.stringify(item)).not.toContain('内部推理')

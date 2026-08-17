@@ -1,5 +1,6 @@
 import { createInitialReportStreamState } from './reportStreamReducer'
 import type {
+  ReportAttachment,
   ReportCandidate,
   ReportHistoryMessage,
   ReportHistoryPayload,
@@ -169,6 +170,16 @@ function getLastCandidate(stepId: string, chunks: ReportPublicChunk[], current?:
   }, current)
 }
 
+function getHistoryAttachments(stepId: string, chunks: ReportPublicChunk[]): ReportAttachment[] {
+  return chunks.flatMap((chunk) => {
+    const format = String(chunk.outputType).toLowerCase()
+    const url = chunk.content.trim()
+    if ((format !== 'pdf' && format !== 'word') || !url) return []
+
+    return [{ entryId: chunk.entryId, stepId, format, url }]
+  })
+}
+
 /**
  * 将完成报告的 react-agent 摘要转换为报告视图模型。
  * thought/action_input/final_content 不会复制到公开模型；action_reason 作为公开执行说明保留。
@@ -210,6 +221,7 @@ export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conv
   let planStarted = false
   let currentTaskIndex = 0
   let reportCandidate: ReportCandidate | undefined
+  const reportAttachments: ReportAttachment[] = []
 
   ;(payload.steps || []).forEach((step, index) => {
     const marker = isTodoMarker(step)
@@ -267,9 +279,10 @@ export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conv
     }
 
     reportCandidate = getLastCandidate(stepId, chunks, reportCandidate)
+    reportAttachments.push(...getHistoryAttachments(stepId, chunks))
   })
 
-  const completed = Boolean(reportCandidate)
+  const completed = Boolean(reportCandidate || reportAttachments.length > 0)
   return {
     ...baseState,
     id: `history-report-${conversationId}-${sortOrder}`,
@@ -282,7 +295,8 @@ export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conv
     generatedImages: Array.isArray(payload.generated_images) ? [...payload.generated_images] : [],
     status: completed ? 'completed' : 'failed',
     thinkingOpen: false,
-    todoOpen: true,
+    // 历史报告恢复时与实时报告保持一致，待办事项默认收起。
+    todoOpen: false,
     tasks,
     currentPlan: {
       entryId: planEntryId,
@@ -296,6 +310,8 @@ export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conv
     executionGroups,
     unassignedStepIds,
     reportCandidate,
+    reportAttachments,
+    durationSeconds: typeof payload.time === 'number' && Number.isFinite(payload.time) && payload.time >= 0 ? payload.time : undefined,
     doneEntryId: `history:${sortOrder}:done`,
     error: completed
       ? undefined
