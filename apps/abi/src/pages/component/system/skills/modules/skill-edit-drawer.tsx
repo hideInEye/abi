@@ -4,6 +4,8 @@ import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { useEffect, useState } from 'react'
 
 import { getSkillDetailApi, updateSkillInfoApi } from '@/service/api/skill'
+import { AssistantIconPicker, AssistantIconBlock } from '@/components/AssistantIcon'
+import type { AssistantIconKey } from '@/components/AssistantIcon'
 
 import '../skill.css'
 
@@ -26,17 +28,30 @@ type Props = {
   skill?: SkillItem | null
 }
 
+/** 图标 key 全集（与 abi/chat 保持一致） */
+const ICON_KEYS: AssistantIconKey[] = ['data', 'table', 'orchestration', 'flow', 'automation', 'text', 'chat', 'doc', 'finance', 'account', 'ops', 'security', 'analysis', 'chart', 'other']
+function getStoredIconKey(id?: number | string): AssistantIconKey {
+  if (!id) return 'other'
+  const stored = localStorage.getItem(`skill_icon_${id}`)
+  if (stored && ICON_KEYS.includes(stored as AssistantIconKey)) return stored as AssistantIconKey
+  // 兆底散列
+  const hash = String(id).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return ICON_KEYS[hash % ICON_KEYS.length]
+}
+
 const SkillEditDrawer: FC<Props> = ({ onClose, onSuccess, open, skill }) => {
   const { message } = App.useApp()
   const [form] = Form.useForm()
   const [saving, setSaving] = useState(false)
   const [detail, setDetail] = useState<SkillItem | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
+  const [iconKey, setIconKey] = useState<AssistantIconKey>('other')
 
   useEffect(() => {
     if (open && skill?.id) {
       form.resetFields()
       setLoadingDetail(true)
+      setIconKey('other') // 先设默认，等详情接口返回后覆盖
       // 先用列表数据预填充（仅可编辑字段）
       form.setFieldsValue({
         status: skill.status ?? '1',
@@ -47,6 +62,12 @@ const SkillEditDrawer: FC<Props> = ({ onClose, onSuccess, open, skill }) => {
           const d = res?.response?.data?.data || res?.data?.data || res?.data || {}
           if (d && Object.keys(d).length) {
             setDetail(d)
+            // 优先使用接口返回的 icon（跨设备同步），兜底散列
+            if (d.icon && ICON_KEYS.includes(d.icon as AssistantIconKey)) {
+              setIconKey(d.icon as AssistantIconKey)
+            } else {
+              setIconKey(getStoredIconKey(skill.id))
+            }
             form.setFieldsValue({
               status: d.status ?? skill.status ?? '1',
               summary: d.summary || skill.summary,
@@ -66,6 +87,7 @@ const SkillEditDrawer: FC<Props> = ({ onClose, onSuccess, open, skill }) => {
       const values = await form.validateFields()
       setSaving(true)
       const res: any = await updateSkillInfoApi({
+        icon: iconKey,
         skillId: skill?.id!,
         skillType: 1,
         status: values.status,
@@ -157,6 +179,28 @@ const SkillEditDrawer: FC<Props> = ({ onClose, onSuccess, open, skill }) => {
               <SettingOutlined />
             </div>
             <span style={{ color: '#1a2744', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em' }}>基本信息</span>
+          </div>
+
+          {/* 技能图标 + 名称 */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ color: '#3e5068', fontWeight: 500, marginBottom: 6, fontSize: 14 }}>技能图标</div>
+            <AssistantIconPicker value={iconKey} onChange={(key) => setIconKey(key)}>
+              <div
+                style={{
+                  alignItems: 'center',
+                  border: '1px solid rgba(130,140,200,0.18)',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  gap: 10,
+                  padding: '10px 16px',
+                  transition: 'border-color 0.2s',
+                }}
+              >
+                <AssistantIconBlock iconKey={iconKey} radius={10} size={36} />
+                <span style={{ color: '#5f7490', fontSize: 13, fontWeight: 500 }}>点击更换图标</span>
+              </div>
+            </AssistantIconPicker>
           </div>
 
           {/* 技能名称（只读，不可编辑） */}

@@ -1,25 +1,33 @@
-import { DownOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Button, DatePicker, Empty, Input, Popover, Select, Spin } from 'antd'
+import { Button, DatePicker, Empty, Input, message, Popover, Select, Spin } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
+import { AssistantIconBlock } from '@/components/AssistantIcon'
 import { fetchFavoriteList, fetchOperateRecordList } from '@/service/api/abi-system'
+import { fetchAssistantList } from '@/service/api/app'
+import { updateAssistant } from '@/service/api/assistant'
+import { fetchSemanticGroups } from '@/service/api/semantic'
+import { getSpaceId } from '@/utils/index'
+import AssistantDetailDrawer from './AssistantDetailDrawer'
+import DataDirectoryDropdown, { getGroupFilterIds } from './DataDirectoryDropdown'
 
-/** 应用工坊 tab 顺序：最近使用、我的收藏、我的分享、我的分析、我的报告 */
+/** 应用工坊 tab 顺序：我的助手、我的分析、我的报告、最近使用、我的收藏、我的分享 */
 const WORKSHOP_TABS = [
+  { key: 'my-assistant', label: '我的助手' },
+  { key: 'my-analysis', label: '我的分析' },
+  { key: 'my-report', label: '我的报告' },
   { key: 'recently-used', label: '最近使用' },
   { key: 'my-collect', label: '我的收藏' },
   { key: 'my-share', label: '我的分享' },
-  { key: 'my-analysis', label: '我的分析' },
-  { key: 'my-report', label: '我的报告' },
 ] as const
 
 type WorkshopTabKey = (typeof WORKSHOP_TABS)[number]['key']
 
-/** 操作记录/收藏列表统一行数据 */
+/** 操作记录/收藏列表统一行数据（time 仅用于高级筛选的时间过滤，卡片不展示） */
 type WorkshopRecord = {
   id: string
   chatId: string
@@ -28,16 +36,11 @@ type WorkshopRecord = {
   time: string
 }
 
-/** 各 tab 时间列标题 */
-const TIME_COLUMN_TITLE: Partial<Record<WorkshopTabKey, string>> = {
-  'recently-used': '最近使用时间',
-  'my-collect': '收藏时间',
-  'my-share': '分享时间',
-}
-
-/** 从接口响应中提取 rows（兼容 {data:{rows}} / {data:[]} 结构） */
+/** 从接口响应中提取 rows（兼容顶层 {rows} / {data:{rows|list}} / {data:[]} / 直接数组 结构） */
 function pickRows(res: any): any[] {
-  const rows = res?.data?.rows || res?.data?.list || (Array.isArray(res?.data) ? res.data : [])
+  if (Array.isArray(res)) return res
+  // record/recentlyUseList、favorite/list 后端把 rows 放在响应体顶层；助手列表放在 data 下
+  const rows = res?.rows ?? res?.data?.rows ?? res?.data?.list ?? res?.data
   return Array.isArray(rows) ? rows : []
 }
 
@@ -49,6 +52,30 @@ function mapRecord(item: any): WorkshopRecord {
     chatName: item.chatName || item.name || '-',
     spaceName: item.spaceName || '-',
     time: item.recentlyUseTime || item.sharedTime || item.createTime || '-',
+  }
+}
+
+/** 助手卡片数据（我的助手 tab） */
+type AssistantCard = {
+  id: string
+  name: string
+  description: string
+  icon?: string
+  status: string
+  createTime: string
+  groupId?: string
+}
+
+/** 将后端 AppItem 映射为助手卡片数据 */
+function mapAssistant(item: any): AssistantCard {
+  return {
+    id: String(item.appId ?? item.id ?? ''),
+    name: item.appName || item.name || '-',
+    description: item.description || '',
+    icon: item.icon,
+    status: item.status ?? '1',
+    createTime: item.createTime ? String(item.createTime).replace('T', ' ') : '-',
+    groupId: item.groupId != null && String(item.groupId) !== '0' ? String(item.groupId) : undefined,
   }
 }
 
@@ -73,10 +100,18 @@ const PAGE_SIZE_OPTIONS = [
 
 function WorkshopView() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<WorkshopTabKey>('recently-used')
+  // 默认选中 WORKSHOP_TABS 第一个 tab，跟随 tab 顺序不另写死 key
+  const [activeTab, setActiveTab] = useState<WorkshopTabKey>(WORKSHOP_TABS[0].key)
   const [searchText, setSearchText] = useState('')
   const [rows, setRows] = useState<WorkshopRecord[]>([])
+  const [assistants, setAssistants] = useState<AssistantCard[]>([])
+  const [groupId, setGroupId] = useState('')
+  const [groups, setGroups] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  // 我的助手：只读详情抽屉 + 取消发布 loading（按 id 独立，避免整列禁用）
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailAgent, setDetailAgent] = useState<AssistantCard | null>(null)
+  const [unpublishingId, setUnpublishingId] = useState<string | null>(null)
   // 高级筛选：面板草稿值 / 已生效值（点「查询」才生效，对齐 abi DeferredRangePicker）
   const [filterOpen, setFilterOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<any>(null)
@@ -88,6 +123,20 @@ function WorkshopView() {
 
   // 按当前 tab 拉取列表：最近使用/我的分享走操作记录接口，我的收藏走收藏接口
   const fetchList = useCallback((tab: WorkshopTabKey) => {
+    if (tab === 'my-assistant') {
+      setLoading(true)
+      fetchAssistantList({ status: '1' })
+        .then((res: any) => {
+          setAssistants(pickRows(res).map(mapAssistant))
+        })
+        .catch(() => {
+          setAssistants([])
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+      return
+    }
     if (tab === 'my-analysis' || tab === 'my-report') {
       setRows([])
       return
@@ -113,13 +162,25 @@ function WorkshopView() {
     fetchList(activeTab)
   }, [activeTab, fetchList])
 
+  // 拉取助手分组目录（groupType=assistant），供「数据目录」下拉筛选
+  useEffect(() => {
+    fetchSemanticGroups({ groupType: 'assistant', pageNum: 1, pageSize: 60, spaceId: getSpaceId() || undefined })
+      .then((res: any) => {
+        const list = res?.data?.rows || res?.rows || res?.data || []
+        setGroups(Array.isArray(list) ? list : [])
+      })
+      .catch(() => setGroups([]))
+  }, [])
+
   const handleTabChange = useCallback((key: WorkshopTabKey) => {
     setActiveTab(key)
     setSearchText('')
+    setGroupId('')
     setPendingRange(null)
     setDateRange(null)
     setCurrentPage(1)
     setRows([])
+    setAssistants([])
   }, [])
 
   const handleQuery = useCallback(() => {
@@ -131,6 +192,7 @@ function WorkshopView() {
   const handleReset = useCallback(() => {
     setFilterOpen(false)
     setSearchText('')
+    setGroupId('')
     setPendingRange(null)
     setDateRange(null)
     setCurrentPage(1)
@@ -145,7 +207,35 @@ function WorkshopView() {
     [navigate],
   )
 
+  // 查看助手详情（只读抽屉）
+  const handleViewAssistant = useCallback((agent: AssistantCard) => {
+    setDetailAgent(agent)
+    setDetailOpen(true)
+  }, [])
+
+  // 取消发布（下线）：status 置 2，成功后刷新列表（列表仅查 status='1'，卡片随即消失）
+  const handleUnpublish = useCallback(
+    (agent: AssistantCard) => {
+      if (unpublishingId) return
+      setUnpublishingId(agent.id)
+      updateAssistant({ appId: agent.id, appName: agent.name, status: '2' })
+        .then(() => {
+          message.success('已取消发布')
+          fetchList('my-assistant')
+        })
+        .catch(() => {
+          message.error('取消发布失败')
+        })
+        .finally(() => {
+          setUnpublishingId(null)
+        })
+    },
+    [unpublishingId, fetchList],
+  )
+
   // 名称搜索 + 时间范围过滤 + 前端分页
+  const isAssistantTab = activeTab === 'my-assistant'
+
   const filteredRows = useMemo(() => {
     const keyword = searchText.trim()
     const byName = keyword
@@ -154,11 +244,35 @@ function WorkshopView() {
     return filterByTimeRange(byName, dateRange)
   }, [rows, searchText, dateRange])
 
-  const totalCount = filteredRows.length
+  // 我的助手：数据目录（分组） + 名称/描述搜索 + 创建时间范围过滤（对齐 abi filterByCreateTime）
+  const filteredAssistants = useMemo(() => {
+    const keyword = searchText.trim()
+    let byGroup = assistants
+    if (groupId) {
+      const ids = getGroupFilterIds(groups, groupId)
+      byGroup = assistants.filter((a) => a.groupId != null && ids.has(String(a.groupId)))
+    }
+    const byName = keyword
+      ? byGroup.filter((a) => a.name.includes(keyword) || a.description.includes(keyword))
+      : byGroup
+    if (!dateRange || !dateRange[0] || !dateRange[1]) return byName
+    const start = dayjs(dateRange[0]).startOf('day')
+    const end = dayjs(dateRange[1]).endOf('day')
+    return byName.filter((a) => {
+      const t = dayjs(a.createTime)
+      return t.isValid() && !t.isBefore(start) && !t.isAfter(end)
+    })
+  }, [assistants, searchText, dateRange, groupId, groups])
+
+  const totalCount = isAssistantTab ? filteredAssistants.length : filteredRows.length
   const totalPages = Math.ceil(totalCount / pageSize) || 1
   const pagedRows = useMemo(
     () => filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
     [filteredRows, currentPage, pageSize],
+  )
+  const pagedAssistants = useMemo(
+    () => filteredAssistants.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filteredAssistants, currentPage, pageSize],
   )
 
   const handlePageChange = useCallback(
@@ -270,7 +384,7 @@ function WorkshopView() {
         <Input
           allowClear
           className="ws-field-input"
-          placeholder="请输入对话名称"
+          placeholder={isAssistantTab ? '请输入助手名称' : '请输入对话名称'}
           prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
           value={searchText}
           onChange={(e) => {
@@ -278,6 +392,17 @@ function WorkshopView() {
             setCurrentPage(1)
           }}
         />
+        {isAssistantTab && (
+          <DataDirectoryDropdown
+            groups={groups}
+            assistants={assistants}
+            value={groupId}
+            onChange={(id) => {
+              setGroupId(id)
+              setCurrentPage(1)
+            }}
+          />
+        )}
         <Popover
           content={filterPanel}
           open={filterOpen}
@@ -295,43 +420,95 @@ function WorkshopView() {
       {/* Data area：占满剩余高度 */}
       <Spin spinning={loading} wrapperClassName="ws-data-spin">
         <div className="ws-data-area">
-          {pagedRows.length === 0 ? (
-            // 加载中不渲染空态（由 Spin 遮罩负责）；避免加载态落入表格分支导致表头闪现
+          {isAssistantTab ? (
+            pagedAssistants.length === 0 ? (
+              !loading && (
+                <div className="ws-empty">
+                  <Empty description="暂无助手" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </div>
+              )
+            ) : (
+              <div className="ws-card-scroll">
+                <div className="ws-card-grid">
+                  {pagedAssistants.map((agent) => {
+                    const statusLabel =
+                      agent.status === '1' ? '已上线' : agent.status === '0' ? '草稿' : '已下线'
+                    const tagCls = agent.status === '1' ? '' : agent.status === '0' ? 'draft' : 'off'
+                    return (
+                      <div key={agent.id} className="ws-assistant-card">
+                        <div className="wac-head">
+                          <AssistantIconBlock iconKey={agent.icon} radius={12} size={42} />
+                          <div className="wac-main">
+                            <div className="wac-title" title={agent.name}>
+                              {agent.name}
+                            </div>
+                            <div className="wac-desc">{agent.description || '暂无描述'}</div>
+                          </div>
+                        </div>
+                        <div className="wac-footer">
+                          <span className={`wac-tag ${tagCls}`}>{statusLabel}</span>
+                          <div className="wac-actions">
+                            <button
+                              type="button"
+                              className="wac-act"
+                              onClick={() => handleViewAssistant(agent)}
+                            >
+                              <EyeOutlined /> 查看
+                            </button>
+                            {agent.status === '1' && (
+                              <button
+                                type="button"
+                                className="wac-act wac-act--danger"
+                                disabled={unpublishingId === agent.id}
+                                onClick={() => handleUnpublish(agent)}
+                              >
+                                {unpublishingId === agent.id ? '处理中…' : '取消发布'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          ) : pagedRows.length === 0 ? (
+            // 加载中不渲染空态（由 Spin 遮罩负责）
             !loading && (
               <div className="ws-empty">
                 <Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
               </div>
             )
           ) : (
-            <div className="ws-table-wrap">
-              <table className="ws-table">
-                <thead>
-                  <tr>
-                    <th>对话名称</th>
-                    <th>所属空间</th>
-                    <th>{TIME_COLUMN_TITLE[activeTab] || '时间'}</th>
-                    <th style={{ width: 100, textAlign: 'center' }}>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedRows.map((record) => (
-                    <tr key={record.id}>
-                      <td>{record.chatName}</td>
-                      <td>{record.spaceName}</td>
-                      <td>{record.time}</td>
-                      <td style={{ textAlign: 'center' }}>
+            <div className="ws-card-scroll">
+              <div className="ws-card-grid">
+                {pagedRows.map((record) => (
+                  <div key={record.id} className="ws-assistant-card">
+                    <div className="wac-head">
+                      <AssistantIconBlock iconKey="chat" radius={12} size={42} />
+                      <div className="wac-main">
+                        <div className="wac-title" title={record.chatName}>
+                          {record.chatName}
+                        </div>
+                        <div className="wac-desc">所属空间：{record.spaceName}</div>
+                      </div>
+                    </div>
+                    {/* 无状态标签，操作按钮保持与助手卡片同一位置（右下角） */}
+                    <div className="wac-footer wac-footer--end">
+                      <div className="wac-actions">
                         <button
                           type="button"
-                          className="ws-link-btn"
+                          className="wac-act"
                           onClick={() => handleOpenConversation(record)}
                         >
                           进入对话
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -376,6 +553,12 @@ function WorkshopView() {
           </span>
         </div>
       </div>
+      <AssistantDetailDrawer
+        open={detailOpen}
+        appId={detailAgent?.id}
+        fallback={detailAgent}
+        onClose={() => setDetailOpen(false)}
+      />
     </div>
   )
 }

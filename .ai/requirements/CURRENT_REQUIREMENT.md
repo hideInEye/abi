@@ -1074,3 +1074,146 @@ ABI 页面在账号被其他环境顶掉后，自动请求会返回 401 并显�
 - 同一批并发 401 不会重复提示或重复跳转。
 - 一次跳转执行失败不会永久锁住鉴权流程，后续 401 可再次处理。
 - 定向 Vitest、ABI typecheck/build 与格式检查不引入当前改动相关错误。
+- 打开模式下拉后，三个菜单项均展示 icon、名称和对应描述文案，文案与名称左对齐。
+- 当前选中模式右侧显示勾选标记并有高亮背景；点击其他模式沿用原有切换行为。
+- 样式使用 chat 现有 CSS 变量（--ink/--ink-3/--accent-soft 等），不引入孤立色值。
+- tsc 不新增报错。
+
+### 测试要求
+
+- 运行 `pnpm --filter ai-bot exec tsc --noEmit -p tsconfig.json`。
+- 运行 `pnpm --filter ai-bot build`。
+- 运行 `git diff --check` 并生成本任务 run log。
+
+## 2026-08-11 追加：助手 MCP 工具保存协议分组字段（mcp_sse/mcp_streamable）与 sort
+
+### 需求类型
+
+前端接口字段对接（保存报文扩展，无 UI 变化）。
+
+### 背景
+
+助手保存接口 `POST /api/abi-chat/v1/app/add`（编辑走 `/update`）的 `tools` 子项，后端要求 MCP 工具（`toolType='2'`）在 `toolConfig` 内额外存两个字段：`mcp_sse`、`mcp_streamable`，值均为「真实 groupId（group/list 返回的长号）」列表。分类依据是该工具的协议 `frontProtocol`：`sse` 入 `mcp_sse`，`streamableHttp` 入 `mcp_streamable`。同时后端文档要求 `tools`/`skills`/`schemaSemantics` 每个子项都带 `sort`（Integer，排序）。
+
+选择器 `tool-picker-drawer` 加载 MCP 工具时已调用 `group/list`（真实 groupId）与 `register/list`（frontProtocol），本次复用其数据，不新增接口。
+
+### 目标
+
+- MCP 工具的 `toolConfig[0]` 增加 `mcp_sse: string[]`、`mcp_streamable: string[]`：按该工具 `frontProtocol` 把其真实 groupId 放入对应列表，另一个为 `[]`。
+- 内置工具（`toolType='1'`）不加这两个字段。
+- `tools`/`skills`/`schemaSemantics` 每项补 `sort`（取选择顺序索引）。
+- 编辑回显：详情接口 `app/get` 原样返回的 `mcp_sse`/`mcp_streamable` 直接保留；用户未重新选择时按原值提交。
+
+### 非目标
+
+- 不新增任何接口调用（复用选择器已有的 group/list、register/list）。
+- 不改动工具/技能/数据语义的选择交互与 UI 样式。
+- 不改 builtin 工具、模型、开场引导等其它字段结构。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/tool-picker-drawer.tsx`
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- `.ai/runs/2026-08-11-assistant-mcp-protocol-group/`
+
+### 验收标准
+
+- 新建/编辑助手保存报文中，MCP 工具 `toolConfig` 含 `mcp_sse`/`mcp_streamable`，值为真实 groupId；sse 与 streamableHttp 分别进入对应列表。
+- 内置工具不含这两个字段。
+- `tools`/`skills`/`schemaSemantics` 每项含 `sort`。
+- 编辑已有助手不重新选工具时，mcp_sse/mcp_streamable 与原详情一致。
+- tsc 不新增报错。
+
+### 测试要求
+
+- 运行 abi 应用的 TypeScript 类型检查（`tsc --noEmit`）。
+- 生成本任务 run log。
+
+## 2026-08-12 追加：大屏智能问答欢迎区文案改为对话式生成图表引导
+
+### 需求类型
+
+前端 UI 文案调整（纯前端，仅改欢迎说明文案，不改样式、结构、接口与业务逻辑）。
+
+### 背景
+
+大屏设计器 AI 智能问答面板（`apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx`）无消息时的欢迎说明文案未体现「如何对话式生成图表」。参考图要求直接修改原说明文案，示意「选定左侧图表，开始对话生成」，样式与结构保持不变。
+
+### 目标
+
+- 仅修改欢迎区 `.welcome-desc` 的文案，引导用户「选定左侧图表→通过对话生成对应图表」。
+- 保持 `.ai-welcome` 原有结构（标题 + 说明两行）与全部样式不变，不新增任何元素或 CSS。
+
+### 非目标
+
+- 不新增分步说明块、卡片或编号列表。
+- 不修改样式、消息气泡、输入区、状态栏、发送与采纳等业务逻辑与接口。
+- 不引入 i18n；沿用组件现有硬编码中文文案方式。
+
+### 影响范围
+
+- `apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx`（仅 `.welcome-desc` 文案）
+- `.ai/runs/2026-08-12-dashboard-ai-welcome-guide/`
+
+### 验收标准
+
+- 面板无消息时，欢迎说明文案改为「选定左侧图表，通过对话即可生成对应图表 / 请输入图表数据相关问题开始对话」。
+- `.ai-welcome` 结构与样式与改动前一致，未新增元素。
+- 发送消息后欢迎区正常消失。
+- 不改变任何发送、采纳与数据请求行为。
+
+### 测试要求
+
+- 对受影响文件进行 IDE 诊断/语法检查，确认不新增错误（纯文案改动，无需整包重建）。
+- 生成本任务 run log。
+
+## 2026-08-17 追加：管理端「我的对话」三个 tab 支持卡片视图并默认卡片
+
+### 需求类型
+
+前端 UI 功能新增（纯前端，不改接口协议与查询参数）。
+
+### 背景
+
+管理端（`apps/abi`）「我的对话」二级菜单下的「最近使用」「我的收藏」「我的分享」当前只有表格列表视图。chat 端（`apps/chat`）应用工坊的同名三个 tab 已使用 `.ws-assistant-card` 卡片视图。用户要求管理端这三个页面同样支持卡片视图，并默认展示卡片，卡片样式参考 chat 端应用工坊。
+
+### 目标
+
+- 三个页面各新增 `viewMode: 'list' | 'card'` 视图状态，默认 `'card'`（默认展示卡片）。
+- 视图切换入口复用共享组件 `ViewControls`，放在 `.abi-data-area` 内顶部 `.abi-toolbar`，与「我的助手」等已有卡片视图页面一致。
+- 卡片复用 abi 已有的 `.abi-card-grid` / `.abi-card-grid-inner` / `.abi-assistant-card` 体系（该体系视觉参数已与 chat `.ws-assistant-card` 对齐）：左上渐变圆角对话图标 + 标题（对话名称）+ 描述（所属空间），底部分割线内只放右对齐的扁平操作按钮。
+- 卡片操作与表格操作保持完全一致：最近使用只有「进入对话」；我的收藏为「进入对话 + 取消收藏」；我的分享为「进入对话 + 删除」（保留删除二次确认）。
+- 卡片底部左下角不放任何信息（与 chat 端记录类卡片一致）：时间（最近使用时间 / 收藏时间 / 分享时间）与分享类型只在列表视图的表格中展示，卡片上不重复呈现。
+- 列表视图保持原表格实现与视觉不变。
+
+### 非目标
+
+- 不修改 `getOperateRecordList`、`fetchOperateNewList`、`fetchOperateNew`、`deleteOperateRecord` 的调用方式、参数与返回处理。
+- 不修改搜索栏、时间范围筛选、前端过滤与分页逻辑。
+- 不修改 chat 端应用工坊任何代码。
+- 不修改 `ViewControls` 共享组件本身。
+- 不新增批量选择、批量删除能力。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/app-workshop/recently-used/index.tsx`
+- `apps/abi/src/pages/workbench/app-workshop/my-collect/index.tsx`
+- `apps/abi/src/pages/workbench/app-workshop/my-share/index.tsx`
+- `apps/abi/src/styles/scss/table.scss`（`.abi-assistant-card` 内补 `.ac-meta`、`.ac-btn--danger`）
+- `.ai/runs/2026-08-17-abi-my-chat-card-view/`
+
+### 验收标准
+
+- 进入「我的对话」任一 tab，默认展示卡片网格，卡片视图按钮为选中态。
+- 点击列表按钮可切回原表格，表格列、宽度、操作按钮与改动前一致。
+- 卡片视觉（背景、模糊、边框、圆角、内边距、hover 上浮与阴影、标题/描述字号颜色、底部分割线、扁平按钮 hover 浅蓝底）与 chat 端应用工坊卡片一致。
+- 卡片上「进入对话」跳转与表格一致（收藏走 `sessionId`，最近使用/分享走 `chatId`）。
+- 卡片上「取消收藏」「删除」行为与表格一致，删除仍有二次确认，成功后刷新列表。
+- 搜索、时间范围筛选、分页在两种视图下均生效。
+- tsc 不新增报错。
+
+### 测试要求
+
+- 运行 abi 应用的 TypeScript 类型检查（`tsc --noEmit`）。
+- 对受影响文件做 IDE 诊断检查。
+- 生成本任务 run log。
