@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { TableSemantics } from '@/components/tableSemantics'
 import ExpressionBuilder from '@/pages/workbench/ontology-kg/label-meaning/components/semantic-tag/Expr.tsx'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
+import { validateFieldsAndScroll } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types/index.js'
 
 import { TagInput } from '../components/semantic-tag/Model/TagInput.tsx'
@@ -92,7 +93,10 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
   }
 
   const handleModalOk = async () => {
-    const formData = await form.validateFields()
+    const formData = await validateFieldsAndScroll(form)
+    if (!formData) {
+      return
+    }
     const { exp: expData, ...rest } = formData
     onSave({
       ...rest,

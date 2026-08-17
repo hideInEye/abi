@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { TableSemantics } from '@/components/tableSemantics'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
+import { getMappedBizNameParts } from '@/pages/workbench/ontology-kg/label-meaning/utils/ontologyName'
 import { queryOntologyLabels } from '@/service/api/ontology-network'
 
 import {
@@ -17,7 +18,8 @@ import {
 import type { DimensionFieldOption, DimensionSchemaInfo } from '../../types/dimensionModeling.types'
 
 function formatFieldLabel(item: DimensionFieldOption) {
-  const bizName = item.bizName || item.techId
+  const bizNameParts = getMappedBizNameParts(item.bizName || item.techId)
+  const bizName = bizNameParts.isMapped ? bizNameParts.fieldName || bizNameParts.displayName : bizNameParts.displayName
   const originName = item.originName || item.techId
   return `${bizName}(${originName})`
 }
@@ -30,16 +32,19 @@ interface Props {
     semanticsGroupId,
     viewId
   }: {
-    semanticSchemaId: number
-    semanticsGroupId: number | null
-    viewId: number
+    semanticSchemaId: number | string
+    semanticsGroupId: number | string | null
+    viewId: number | string
   }) => void
   readonly groupName?: string
   readonly isEdit: boolean
   readonly onFieldChange: (fieldKey: string, patch: Partial<DimensionFieldOption>) => void
   readonly onOpenFieldModal: () => void
   readonly selectedDimType: 'std' | 'time'
+  readonly selectedSemanticGroupId?: number | string | null
   readonly setSchemaOptions: (schemaOptions: DimensionSchemaInfo[]) => void
+  readonly validateEnglishName: (_: unknown, value?: string) => Promise<void>
+  readonly validateZhName: (_: unknown, value?: string) => Promise<void>
 }
 
 export const BaseInfoTab: React.FC<Props> = ({
@@ -51,7 +56,10 @@ export const BaseInfoTab: React.FC<Props> = ({
   onFieldChange,
   onOpenFieldModal,
   selectedDimType,
-  setSchemaOptions
+  selectedSemanticGroupId,
+  setSchemaOptions,
+  validateEnglishName,
+  validateZhName
 }) => {
   const [categoryOptions, setCategoryOptions] = useState<Array<{ label: string; value: string }>>([])
   const categoryLabelMap = useMemo(() => new Map(categoryOptions.map(item => [item.value, item.label])), [categoryOptions])
@@ -119,20 +127,22 @@ export const BaseInfoTab: React.FC<Props> = ({
       <OntologyFormSectionTitle icon={<ProfileOutlined />}>基础信息</OntologyFormSectionTitle>
       <div className="grid grid-cols-2 gap-x-4">
         <AForm.Item
+          required
           label="中文名"
           name="zhName"
-          rules={[{ message: '请输入中文名', required: true }]}
+          rules={[{ validator: validateZhName }]}
+          validateDebounce={600}
+          validateTrigger="onChange"
         >
           <AInput placeholder="如：行政区域" />
         </AForm.Item>
         <AForm.Item
+          required
           label="英文名 (技术标识)"
           name="englishName"
-          rules={[
-            { message: '请输入英文名', required: true },
-            { max: 64, message: '长度不能超过64' },
-            { message: '仅支持字母、数字和下划线，且需字母或下划线开头', pattern: /^[A-Za-z_][A-Za-z0-9_]*$/ }
-          ]}
+          rules={[{ validator: validateEnglishName }]}
+          validateDebounce={600}
+          validateTrigger="onChange"
         >
           <AInput placeholder="如：dim_region" />
         </AForm.Item>
@@ -206,6 +216,7 @@ export const BaseInfoTab: React.FC<Props> = ({
         getSchemaOptions={setSchemaOptions as any}
         groupFieldName="semanticsGroupId"
         isEdit={isEdit}
+        selectedGroupId={selectedSemanticGroupId}
         type="shema"
       />
 

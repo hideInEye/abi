@@ -1,3 +1,6 @@
+import type { KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
+import { getMappedBizNameParts } from '../../../utils/ontologyName'
+
 export interface TransferItem {
   key: string
   title: string
@@ -9,6 +12,55 @@ export interface StepItem {
 }
 
 type UnknownRecord = Record<string, unknown>
+
+function trimText(value: unknown) {
+  return String(value ?? '').trim()
+}
+
+function splitRelaxedMappedBizName(value: unknown) {
+  const text = trimText(value)
+  const match = /_\s*#\s*_?/.exec(text)
+  if (!match || match.index === undefined) {
+    return {
+      displayName: text,
+      fieldName: '',
+      isMapped: false,
+    }
+  }
+
+  return {
+    displayName: text.slice(0, match.index).trim(),
+    fieldName: text.slice(match.index + match[0].length).trim(),
+    isMapped: true,
+  }
+}
+
+export function getMappedMetricFieldDisplayName(value: unknown) {
+  const parts = getMappedBizNameParts(value)
+  if (parts.isMapped) {
+    return parts.fieldName || parts.displayName || parts.rawName
+  }
+
+  const relaxedParts = splitRelaxedMappedBizName(value)
+  if (relaxedParts.isMapped) {
+    return relaxedParts.fieldName || relaxedParts.displayName
+  }
+
+  return parts.displayName
+}
+
+export function getMetricIndicatorOptionLabel(item: Partial<KnowledgeIndicatorItem>) {
+  return getMappedMetricFieldDisplayName(
+    item.rawBizName || item.bizName || item.techName || item.indicatorCode || '-'
+  ) || '-'
+}
+
+export function getMetricFieldOptionLabel(item: Partial<KnowledgeTechField>) {
+  const fallback = trimText(item.fieldName || item.originName || item.name || item.techId || '-')
+  return getMappedMetricFieldDisplayName(
+    item.bizName || item.tfieldAlias || item.fieldName || item.originName || item.name || item.techId || '-'
+  ) || fallback
+}
 
 export function getStepItems(showDimensionStep = true, businessOnly = false): StepItem[] {
   if (businessOnly) {

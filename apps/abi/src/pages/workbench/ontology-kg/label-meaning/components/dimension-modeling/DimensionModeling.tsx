@@ -69,7 +69,7 @@ const DimensionModeling: React.FC<Props> = ({ onGoMetricModeling }) => {
     tableData
   } = useDimensionModeling(selectedGroup)
 
-  const handleGroupChange = useCallback((groupId: number, groupName?: string) => {
+  const handleGroupChange = useCallback((groupId: number | string, groupName?: string) => {
     setSelectedGroup(prev => {
       if (prev?.groupId === groupId && prev?.groupName === (groupName || '')) {
         return prev

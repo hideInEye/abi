@@ -37,3 +37,11 @@ export function getNewlyCompletedReportTaskKey(previousDoneEntryId: string | und
     taskId: report.taskId,
   }
 }
+
+/** 只通知实时任务首次成功完成，避免历史 query 和重复 done 产生重复弹窗。 */
+export function shouldNotifyReportCompleted(previousDoneEntryId: string | undefined, report: Pick<ReportItem, 'doneEntryId' | 'source' | 'status'>) {
+  return report.source === 'task'
+    && report.status === 'completed'
+    && Boolean(report.doneEntryId)
+    && report.doneEntryId !== previousDoneEntryId
+}

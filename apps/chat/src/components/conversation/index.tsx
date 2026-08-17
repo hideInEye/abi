@@ -1,4 +1,4 @@
-import { Button, Checkbox, Form, Modal, Segmented } from 'antd'
+import { Button, Checkbox, Form, Modal, notification, Segmented } from 'antd'
 import React, { useEffect, useImperativeHandle, useState } from 'react'
 import { flushSync } from 'react-dom'
 import dayjs from 'dayjs'
@@ -31,6 +31,15 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   const [selectedModelId, setSelectedModelId] = useState<string | number>(currentModel?.id || '')
   const [embedModelId, setEmbedModelId] = useState<string | number>(props.embedModelId || '')
   const controller = useConversationController({ ...props, selectedModel, selectedModelId, embedModelId, deepThinkEnabled })
+  const [notificationApi, notificationContextHolder] = notification.useNotification()
+  const handleReportCompleted = React.useCallback(() => {
+    notificationApi.success({
+      message: '报告生成完成',
+      description: '报告已经生成完成，可以点击报告文件查看。',
+      duration: 3,
+      placement: 'topRight',
+    })
+  }, [notificationApi])
   const reportController = useReportConversation({
     conv,
     spaceId: props.spaceId,
@@ -41,6 +50,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     historyRounds: controller.reportHistoryRounds,
     historyLoaded: controller.historyLoaded,
     onRefreshHistory: controller.refreshHistory,
+    onReportCompleted: handleReportCompleted,
   })
   const reportPreview = useReportPreviewPresence(reportController.activeReport)
 
@@ -100,19 +110,35 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     confirmDelete,
   } = controller
 
+  const handleReportSend = React.useCallback(
+    (value: string) => {
+      reportController.handleSend(value)
+
+      // 只在用户提交本轮报告问题时定位一次；后续流式事件不会再次驱动滚动。
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const container = chatContainerRef.current
+          if (!container) return
+          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+        })
+      })
+    },
+    [chatContainerRef, reportController.handleSend],
+  )
+
   // 暴露给父级调用
   useImperativeHandle(
     ref,
     () => ({
       setConvContent,
       handleSend,
-      handleReportSend: reportController.handleSend,
+      handleReportSend,
       stopGenerating,
       stopReportGenerating: reportController.stopGenerating,
       loading,
       reportLoading: reportController.loading,
     }),
-    [setConvContent, handleSend, reportController.handleSend, reportController.loading, reportController.stopGenerating, stopGenerating, loading],
+    [setConvContent, handleSend, handleReportSend, reportController.loading, reportController.stopGenerating, stopGenerating, loading],
   )
 
   // 通知父级 loading 变化
@@ -163,6 +189,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
 
   return (
     <div className="flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden" style={{ background: 'transparent' }}>
+      {notificationContextHolder}
       <ChatHeader
         conv={conv}
         ref={chatHeaderRef}

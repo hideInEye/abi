@@ -41,7 +41,7 @@ describe('report stream reducer', () => {
   it('解析已知事件并拒绝坏 JSON 或未知类型', () => {
     expect(parseReportStreamEvent('{bad json')).toBeUndefined()
     expect(parseReportStreamEvent('{"type":"unknown"}')).toBeUndefined()
-    expect(parseReportStreamEvent('{"type":"done"}')).toEqual({ type: 'done' })
+    expect(parseReportStreamEvent('{"type":"done","time":125}')).toEqual({ type: 'done', time: 125 })
   })
 
   it('将首个 plan 前的同 id 步骤合并为思考，且不暴露内部推理字段', () => {
@@ -80,7 +80,7 @@ describe('report stream reducer', () => {
     expect(JSON.stringify(step)).not.toContain('secret')
   })
 
-  it('首个 plan 覆盖任务快照并自动切换思考和 ToDo 展开态', () => {
+  it('首个 plan 保持 ToDo 默认收起，后续计划更新保留用户的展开状态', () => {
     const initial = createInitialReportStreamState()
     const firstPlan = reduceReportStreamEntry(
       initial,
@@ -93,8 +93,10 @@ describe('report stream reducer', () => {
         version: 1,
       }),
     )
+    // 页面加载后的手动展开属于 UI 状态，后续接口快照不能覆盖用户选择。
+    const userOpenedTodo = { ...firstPlan, todoOpen: true }
     const secondPlan = reduceReportStreamEntry(
-      firstPlan,
+      userOpenedTodo,
       entry('20-0', {
         type: 'plan.update',
         tasks: [
@@ -106,8 +108,9 @@ describe('report stream reducer', () => {
     )
 
     expect(initial).toMatchObject({ thinkingOpen: true, todoOpen: false })
-    expect(firstPlan).toMatchObject({ status: 'running', thinkingOpen: false, todoOpen: true })
+    expect(firstPlan).toMatchObject({ status: 'running', thinkingOpen: false, todoOpen: false })
     expect(firstPlan.expandedTaskKeys).toEqual(['10-0:0'])
+    expect(secondPlan.todoOpen).toBe(true)
     expect(secondPlan.currentPlan?.version).toBe(2)
     expect(secondPlan.tasks.map((task) => task.status)).toEqual(['completed', 'in_progress'])
     expect(secondPlan.expandedTaskKeys).toEqual(['20-0:1'])
@@ -210,6 +213,36 @@ describe('report stream reducer', () => {
     expect(state.stepsById['skill-step'].scope).toBe('thinking')
   })
 
+  it('保留 PDF/Word 下载附件且不覆盖 HTML 预览候选', () => {
+    const state = reduceReportStreamEntries([
+      entry('1-0', { type: 'step.chunk', id: 'report', output_type: 'html', content: '<html><title>经营报告</title></html>' }),
+      entry('2-0', { type: 'step.chunk', id: 'report', output_type: 'pdf', content: 'https://files.example.com/report.pdf' }),
+      entry('3-0', { type: 'step.chunk', id: 'report', output_type: 'word', content: '/downloads/report.docx' }),
+      entry('4-0', { type: 'done', time: 125 }),
+    ])
+
+    expect(state.reportCandidate).toMatchObject({ entryId: '1-0', format: 'html' })
+    expect(state.reportAttachments).toEqual([
+      { entryId: '2-0', stepId: 'report', format: 'pdf', url: 'https://files.example.com/report.pdf' },
+      { entryId: '3-0', stepId: 'report', format: 'word', url: '/downloads/report.docx' },
+    ])
+    expect(state.durationSeconds).toBe(125)
+    expect(state.status).toBe('completed')
+  })
+
+  it('只有实际 PDF 附件时仍识别为已生成文件', () => {
+    const state = reduceReportStreamEntries([
+      entry('1-0', { type: 'plan.update', tasks: [{ content: '导出 PDF', status: 'completed' }] }),
+      entry('2-0', { type: 'step.chunk', id: 'report', output_type: 'pdf', content: '/downloads/report.pdf' }),
+      entry('3-0', { type: 'done' }),
+    ])
+
+    expect(state.status).toBe('completed')
+    expect(state.reportCandidate).toBeUndefined()
+    expect(state.reportAttachments).toHaveLength(1)
+    expect(state.currentPlan).toBeDefined()
+  })
+
   it('done 有候选时完成，无候选时给出明确失败', () => {
     const completed = reduceReportStreamEntries([entry('1-0', { type: 'step.chunk', id: 'report', output_type: 'markdown', content: '# 报告' }), entry('2-0', { type: 'done' })])
     const failed = reduceReportStreamEntries([entry('1-0', { type: 'done' })])
@@ -224,7 +257,7 @@ describe('report stream reducer', () => {
 
   it('兼容真实数据中分段 text 包装的报告，并在 done 时收敛未闭合步骤', () => {
     const html = '<!DOCTYPE html>\n<html><head><title>测试报告</title></head><body>完成</body></html>'
-    const toolResult = `${JSON.stringify({ chunks: [{ output_type: 'html', content: html }], report: { version: '1.0' } })}\n\n任务提示文字`
+    const toolResult = `${JSON.stringify({ chunks: [{ output_type: 'html', content: html }, { output_type: 'pdf', content: '/reports/test.pdf' }, { output_type: 'word', content: '/reports/test.docx' }], report: { version: '1.0' } })}\n\n任务提示文字`
     const splitAt = Math.floor(toolResult.length / 2)
     const state = reduceReportStreamEntries([
       entry('1-0', { type: 'plan.update', tasks: [{ content: '生成报告', status: 'in_progress' }] }),
@@ -250,6 +283,10 @@ describe('report stream reducer', () => {
       },
     })
     expect(state.stepsById['report-step'].chunks.every((chunk) => chunk.outputType === 'report_payload')).toBe(true)
+    expect(state.reportAttachments.map(({ format, url }) => ({ format, url }))).toEqual([
+      { format: 'pdf', url: '/reports/test.pdf' },
+      { format: 'word', url: '/reports/test.docx' },
+    ])
     expect(state.stepsById['dangling-step'].status).toBe('done')
     expect(Object.values(state.stepsById).some((step) => step.status === 'in_progress')).toBe(false)
   })

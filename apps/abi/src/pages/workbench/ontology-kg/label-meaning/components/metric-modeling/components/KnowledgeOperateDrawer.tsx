@@ -5,6 +5,7 @@ import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React from 'react'
 
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
+import { getFirstErrorFieldName, scrollToFirstFormError } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 
 import { INDICATOR_TYPE_OPTIONS } from '../constants/metricModeling.constants'
 import type {
@@ -16,10 +17,17 @@ import type {
   KnowledgeTechField,
   KnowledgeTemplateParams,
 } from '../types/metricModeling.types'
-import { extractUniqueIds, getStepItems, parseTemplateParams } from '../utils/knowledgeOperateDrawer.utils'
+import {
+  extractUniqueIds,
+  getMetricFieldOptionLabel,
+  getMetricIndicatorOptionLabel,
+  getStepItems,
+  parseTemplateParams,
+} from '../utils/knowledgeOperateDrawer.utils'
 import { createKnowledgeOperateValidators } from '../utils/knowledgeOperateDrawer.validators'
 import { parseKnowledgeCalcLogicFormValues } from '../utils/knowledgeSubmitPayload'
 import { getKnowledgeSpaceId } from '../utils/space'
+import { getMappedBizNameParts, getMappedTechNameParts, restoreMappedBizName, restoreMappedTechName } from '../../../utils/ontologyName'
 
 import { KnowledgeOperateBusinessStep } from './knowledgeOperateDrawer.BusinessStep'
 import { KnowledgeOperateDimensionStep } from './knowledgeOperateDrawer.DimensionStep'
@@ -68,6 +76,7 @@ const DERIVATIVE_TEMPLATE_FIELDS: Array<keyof KnowledgeFormValues> = [
 ]
 
 const DERIVED_ONLY_FIELDS: Array<keyof KnowledgeFormValues> = ['derivedConditionExpr', 'derivedConditions', 'derivedExpressions', 'projectionFunc', 'techId']
+const BUSINESS_FORM_FIELDS = new Set(['bizName', 'businessDefinition', 'calcPeriod', 'dataType', 'indicatorClass', 'indAlias', 'indicatorOwner', 'isPublic', 'measurementUnit', 'ownerEmail', 'ownerPhone', 'qualityLevel', 'updateFrequency', 'versionStatus'])
 
 function normalizeIndicatorClass(value?: string): IndicatorType {
   const text = String(value || '').trim()
@@ -184,7 +193,7 @@ function buildAtomicMetricMetaMap(options: AtomicIndicatorOption[]) {
 
     acc[key] = {
       field: String(option.item.indicatorCode || key).trim(),
-      fieldName: String(option.item.bizName || option.item.techName || option.label || key).trim(),
+      fieldName: getMetricIndicatorOptionLabel(option.item),
       id: option.item.indId ?? option.item.termId ?? key,
       label: option.label,
       value: key,
@@ -203,7 +212,7 @@ function buildDerivedExpressionFieldMetaMap(fields: KnowledgeTechField[]) {
 
     acc[key] = {
       field: String(item.fieldName || item.originName || item.name || key).trim(),
-      fieldName: String(item.bizName || item.tfieldAlias || item.fieldName || item.name || key).trim(),
+      fieldName: getMetricFieldOptionLabel(item),
       value: key,
     }
 
@@ -334,13 +343,21 @@ function buildTemplateParams(values: KnowledgeFormValues, indicatorClass: Indica
 function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormValues {
   const templateValues = parseTemplateParams(item.templateParams) as Partial<KnowledgeFormValues>
   const calcLogicValues = parseKnowledgeCalcLogicFormValues(item.calcLogic) as Partial<KnowledgeFormValues>
+  const rawBizName = (item.rawBizName ?? item.bizName ?? (item as Record<string, unknown>).biz_name) as string | undefined
+  const rawTechName = (item.rawIndicatorCode ?? item.rawTechName ?? item.indicatorCode ?? item.techName) as string | undefined
+  const mappedBizNameParts = getMappedBizNameParts(rawBizName)
+  const mappedTechNameParts = getMappedTechNameParts(rawTechName)
   const values: KnowledgeFormValues = {
     ...item,
     ...templateValues,
     ...calcLogicValues,
-    bizName: (item.bizName ?? (item as Record<string, unknown>).biz_name) as string | undefined,
+    bizName: mappedBizNameParts.displayName,
     dimensionFieldIds: item.dimensionFieldIds ?? item.relateDims,
+    indicatorCode: mappedTechNameParts.displayName,
     indAlias: splitAliasTags(item.indAlias),
+    mappedBizNameFieldName: mappedBizNameParts.isMapped ? mappedBizNameParts.fieldName : undefined,
+    mappedTechNameTableName: mappedTechNameParts.isMapped ? mappedTechNameParts.tableName : undefined,
+    techName: mappedTechNameParts.displayName,
   }
   if (item.isPublic !== undefined && item.isPublic !== null) {
     values.isPublic = Boolean(item.isPublic) === true || String(item.isPublic) === '1'
@@ -371,7 +388,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       .filter((item) => allowedClasses.has(normalizeIndicatorClass(item.indicatorClass)))
       .map((item) => ({
         item,
-        label: String(item.bizName || item.techName || item.indicatorCode || '-'),
+        label: getMetricIndicatorOptionLabel(item),
         value: normalizeAtomicSelectValue(item),
       }))
       .filter((item) => item.value)
@@ -382,7 +399,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
         .filter((item) => item.indicatorClass === 'atomic' || item.indicatorClass === 'derived')
         .map((item) => ({
           item,
-          label: String(item.bizName || item.techName || item.indicatorCode || '-'),
+          label: getMetricIndicatorOptionLabel(item),
           value: normalizeAtomicSelectValue(item),
         }))
         .filter((item) => item.value),
@@ -407,8 +424,11 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     () =>
       createKnowledgeOperateValidators({
         form,
+        groupId,
+        initialBizName: editingItem?.rawBizName || editingItem?.bizName,
+        initialTechName: editingItem?.rawIndicatorCode || editingItem?.rawTechName || editingItem?.indicatorCode || editingItem?.techName,
       }),
-    [editingItem, existingItems, form],
+    [editingItem, existingItems, form, groupId],
   )
 
   const fetchAtomicIndicatorOptions = useCallback(async () => {
@@ -600,16 +620,47 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
   }
 
+  const scrollKnowledgeFormError = (error: unknown) => {
+    const firstName = getFirstErrorFieldName(error)
+    const firstKey = Array.isArray(firstName) ? String(firstName[0] || '') : String(firstName || '')
+    const targetStepKey = BUSINESS_FORM_FIELDS.has(firstKey) ? 'business' : firstKey === 'dimensionFieldIds' ? 'dimension' : 'technical'
+    const targetStepIndex = stepItems.findIndex(item => item.key === targetStepKey)
+
+    if (targetStepIndex >= 0 && targetStepIndex !== current) {
+      setCurrent(targetStepIndex)
+      setTimeout(() => scrollToFirstFormError(form, error), 0)
+      return
+    }
+
+    scrollToFirstFormError(form, error)
+  }
+
+  const validateKnowledgeFields = async (fields: string[]) => {
+    try {
+      await form.validateFields(fields)
+      return true
+    } catch (error) {
+      scrollKnowledgeFormError(error)
+      return false
+    }
+  }
+
   const next = async () => {
     if (currentStepKey === 'business') {
-      await form.validateFields(['bizName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition'])
+      const valid = await validateKnowledgeFields(['bizName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition'])
+      if (!valid) {
+        return
+      }
       setSelectedIndicatorClass(normalizeIndicatorClass(String(form.getFieldValue('indicatorClass') || 'derived')))
       setCurrent((prev) => prev + 1)
       return
     }
 
     if (currentStepKey === 'technical') {
-      await form.validateFields(getTechnicalRequiredFields() as string[])
+      const valid = await validateKnowledgeFields(getTechnicalRequiredFields() as string[])
+      if (!valid) {
+        return
+      }
       setCurrent((prev) => prev + 1)
     }
   }
@@ -625,12 +676,21 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
 
     const baseFields = ['bizName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition']
-    await form.validateFields(isAtomicMode ? baseFields : [...baseFields, ...(getTechnicalRequiredFields() as string[])])
+    const valid = await validateKnowledgeFields(isAtomicMode ? baseFields : [...baseFields, ...(getTechnicalRequiredFields() as string[])])
+    if (!valid) {
+      return
+    }
 
     const values = {
       ...formValuesRef.current,
       ...form.getFieldsValue(true),
     } as KnowledgeFormValues
+    const nextIndicatorClass = normalizeIndicatorClass(values.indicatorClass)
+    const submitBizName = restoreMappedBizName(values.bizName, values.mappedBizNameFieldName)
+    const submitTechName = restoreMappedTechName(
+      nextIndicatorClass === 'derived' ? values.indicatorCode : values.techName,
+      values.mappedTechNameTableName
+    )
 
     const selectedAtomic = atomicIndicatorOptions.find((item) => item.value === String(values.techId || ''))
     const selectedTechObject = isAtomicMode ? values.techId : (selectedAtomic?.item?.techId ?? values.techId)
@@ -638,12 +698,12 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       .map((item) => String(item || '').trim())
       .filter(Boolean)
       .join(',')
-    const nextIndicatorClass = normalizeIndicatorClass(values.indicatorClass)
 
     const payload: KnowledgeSubmitPayload = {
       ...editingItem,
       ...values,
       atomicMetricMetaMap: buildAtomicMetricMetaMap(atomicIndicatorOptions),
+      bizName: submitBizName,
       derivedExpressionFieldMetaMap: buildDerivedExpressionFieldMetaMap(allFields),
       dimensionFieldIds: values.dimensionFieldIds ?? editingItem?.dimensionFieldIds ?? '',
       groupId,
@@ -653,10 +713,14 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       templateParams: buildTemplateParams(values, nextIndicatorClass),
     }
 
-    payload.techId = selectedTechObject as KnowledgeSubmitPayload['techId']
-    if (!isAtomicEditing && nextIndicatorClass !== 'derivative') {
+    if (nextIndicatorClass === 'derived') {
+      payload.indicatorCode = submitTechName
       delete payload.techName
+    } else {
+      payload.techName = submitTechName
+      delete payload.indicatorCode
     }
+    payload.techId = selectedTechObject as KnowledgeSubmitPayload['techId']
 
     const success = await onSubmit(payload, isEditing)
     if (!success) {

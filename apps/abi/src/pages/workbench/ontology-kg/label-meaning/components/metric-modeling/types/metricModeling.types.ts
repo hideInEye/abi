@@ -12,6 +12,7 @@ export interface KnowledgeTechField {
   fieldType?: string
   name?: string
   originName?: string
+  rtableName?: string
   tableBizName?: string
   tableName?: string
   techId?: string
@@ -137,8 +138,8 @@ export interface KnowledgeIndicatorItem {
   groupName?: string
   indAlias?: string
   indId?: number
-  indicatorClass?: string
   indicatorCode?: string
+  indicatorClass?: string
   indicatorOwner?: string
   isPublic?: string
   measurementUnit?: string
@@ -159,6 +160,9 @@ export interface KnowledgeIndicatorItem {
   relateDims?: string
   businessDefinition?: string
   rollingWindowSize?: number
+  rawBizName?: string
+  rawIndicatorCode?: string
+  rawTechName?: string
   semanticGroupId?: number | string
   semanticsGroupId?: number | string
   semanticType?: string
@@ -208,6 +212,8 @@ export interface KnowledgeFormValues {
   indAlias?: string[] | string
   isPublic?: boolean | string
   measurementUnit?: string
+  mappedBizNameFieldName?: string
+  mappedTechNameTableName?: string
   nullStrategy?: string
   ownerEmail?: string
   ownerPhone?: string

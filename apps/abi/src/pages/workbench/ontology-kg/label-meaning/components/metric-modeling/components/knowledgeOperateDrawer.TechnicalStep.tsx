@@ -59,7 +59,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
         <div className="mb-4 border border-gray-200 rounded bg-white p-4">
           <OntologyFormSectionTitle icon={<BranchesOutlined />}>继承与来源</OntologyFormSectionTitle>
           <div className="grid grid-cols-2 gap-x-4">
-            <AForm.Item required label="指标编码" name="indicatorCode" rules={[{ validator: validateTechName }]}>
+            <AForm.Item required label="指标编码" name="indicatorCode" rules={[{ validator: validateTechName }]} validateDebounce={600} validateTrigger="onChange">
               <AInput placeholder="请输入指标编码" />
             </AForm.Item>
             <AForm.Item label="原子指标" name="techId" rules={[{ message: '请选择原子指标', required: true }]}>
@@ -74,7 +74,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
 
       {indicatorClass === 'derivative' ? (
         <>
-            <AForm.Item required label="指标编码" name="techName" rules={[{ validator: validateTechName }]}>
+            <AForm.Item required label="指标编码" name="techName" rules={[{ validator: validateTechName }]} validateDebounce={600} validateTrigger="onChange">
               <AInput placeholder="请输入指标编码" />
             </AForm.Item>
 

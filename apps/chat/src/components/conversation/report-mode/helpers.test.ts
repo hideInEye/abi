@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import {
   canRevealReport,
+  formatReportDuration,
   getCompletedTaskCount,
   getCurrentTaskTitle,
   getPublicStepLines,
   getReportDownloadDescriptor,
+  getReportDownloadOptions,
   getReportPresentationStage,
   getReportTaskProgressText,
   getReportTitle,
@@ -13,12 +15,18 @@ import {
   getTaskKey,
   isVisibleReportStep,
   shouldAnimateReportPreview,
+  shouldShowReportEstimate,
   toggleReportTaskKey,
   toReportChunkMarkdown,
 } from './helpers'
 import type { ReportItem, ReportPublicStep } from './types'
 
 describe('report-mode UI helpers', () => {
+  it('只在报告仍处于生成阶段时展示固定预计耗时', () => {
+    expect(['submitting', 'waiting_stream', 'thinking', 'running'].every((status) => shouldShowReportEstimate(status as ReportItem['status']))).toBe(true)
+    expect(['syncing_history', 'completed', 'failed'].some((status) => shouldShowReportEstimate(status as ReportItem['status']))).toBe(false)
+  })
+
   it('只把 completed 计入完成数量', () => {
     const tasks = [
       { content: '读取数据', status: 'completed' as const },
@@ -57,6 +65,31 @@ describe('report-mode UI helpers', () => {
     })
   })
 
+  it('只聚合真实返回的报告下载格式，并使用同格式最后一个附件', () => {
+    const candidate = { entryId: '1-0', stepId: 'report', format: 'html' as const, content: '<title>经营分析</title>' }
+    const options = getReportDownloadOptions(candidate, [
+      { entryId: '2-0', stepId: 'report', format: 'pdf', url: '/old/report.pdf' },
+      { entryId: '3-0', stepId: 'report', format: 'pdf', url: '/latest/report.pdf' },
+      { entryId: '4-0', stepId: 'report', format: 'word', url: 'https://files.example.com/report.docx' },
+    ])
+
+    expect(options.map(({ format, kind }) => ({ format, kind }))).toEqual([
+      { format: 'html', kind: 'content' },
+      { format: 'pdf', kind: 'url' },
+      { format: 'word', kind: 'url' },
+    ])
+    expect(options.find((option) => option.format === 'pdf')?.url).toBe('/latest/report.pdf')
+    expect(options.find((option) => option.format === 'word')?.fileName).toBe('report.docx')
+  })
+
+  it('将 done 秒数转换为完成耗时，缺失或非法值不展示', () => {
+    expect(formatReportDuration(125)).toBe('耗时2分5秒')
+    expect(formatReportDuration(0)).toBe('耗时0分0秒')
+    expect(formatReportDuration(undefined)).toBeUndefined()
+    expect(formatReportDuration(Number.NaN)).toBeUndefined()
+    expect(formatReportDuration(-1)).toBeUndefined()
+  })
+
   it('严格按照思考、ToDo、报告三个阶段渐进展示', () => {
     const createView = (overrides: Partial<Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate'>> = {}) => ({
       currentPlan: undefined,
@@ -73,6 +106,7 @@ describe('report-mode UI helpers', () => {
     expect(getReportPresentationStage(createView({ currentPlan: plan, tasks: [{ content: '分析', status: 'pending' }], status: 'completed', reportCandidate: candidate }))).toBe('todo')
     expect(canRevealReport(createView({ currentPlan: plan, tasks: [{ content: '分析', status: 'completed' }], status: 'completed', reportCandidate: candidate }))).toBe(true)
     expect(canRevealReport(createView({ currentPlan: plan, tasks: [{ content: '旧步骤', status: 'cancelled' }], status: 'completed', reportCandidate: candidate }))).toBe(true)
+    expect(canRevealReport({ ...createView({ currentPlan: plan, tasks: [{ content: '导出 PDF', status: 'completed' }], status: 'completed' }), reportAttachments: [{ entryId: '3-0', stepId: 'report', format: 'pdf', url: '/report.pdf' }] })).toBe(true)
   })
 
   it('公开执行摘要不会提前暴露 HTML 或 Markdown 报告正文', () => {
