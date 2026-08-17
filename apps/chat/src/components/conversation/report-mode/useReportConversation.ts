@@ -108,7 +108,7 @@ function wait(ms: number) {
  * - Java 只透传 Redis entry id/data。
  * - 本 Hook 负责 query 历史、IndexedDB、task 状态、连接生命周期和 UI 聚合。
  */
-export function useReportConversation({ conv, spaceId, schemaId, currentModelId, embedModelId, historyRounds = [], historyLoaded = false, onRefreshHistory, onReportCompleted }: UseReportConversationOptions) {
+export function useReportConversation({ conv, spaceId, schemaId, currentModelId, embedModelId, historyRounds = [], historyLoaded = false, onRefreshHistory, onReportCompleted , groupId}: UseReportConversationOptions) {
   const [reports, setReports] = useState<ReportItem[]>([])
   const [activeReportId, setActiveReportId] = useState<string>()
   const [animateReportPreview, setAnimateReportPreview] = useState(false)
