@@ -1,22 +1,17 @@
-import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, MoreOutlined, RightOutlined } from '@ant-design/icons';
-import { Dropdown, Empty, Select, Spin, Switch, Typography, message } from 'antd';
-import type { TableProps } from 'antd';
+import { EyeOutlined, LeftOutlined, PoweroffOutlined, RightOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { Empty, Modal, Select, Spin, message } from 'antd';
 
 import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
-import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
-import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
-import { ViewControls } from '@/components/ViewControls';
-import type { ColumnOption } from '@/components/ViewControls';
 import { AssistantIconBlock } from '@/components/AssistantIcon';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
-import { fetchAppListApi, deleteAppApi, updateAppApi } from '@/service/api/abi-chat-app';
+import { fetchAppListApi, updateAppApi } from '@/service/api/abi-chat-app';
 import { tableSemanticsGroupList } from '@/service/api/table-semantics';
-import { getAllDescendantIds } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
 import { filterByCreateTime } from '@/utils/date';
 
 import AssistantEditDrawer, { type AgentMock } from '@/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer';
 import DataDirectoryDropdown from './DataDirectoryDropdown';
+import AssistantShareModal from './AssistantShareModal';
 
 /** 将接口返回的 AppItem 映射为页面卡片数据结构 */
 function mapAppToCard(item: any): AgentCard {
@@ -59,23 +54,9 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   const [selectedId, setSelectedId] = useState<string | number>(1);
   const [agents, setAgents] = useState<AgentCard[]>([]);
   const [loading, setLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
-  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
-  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
-    { key: 'name', label: '助手名称', visible: true },
-    { key: 'description', label: '助手描述', visible: true },
-    { key: 'createBy', label: '创建用户', visible: true },
-    { key: 'createTime', label: '创建时间', visible: true },
-    { key: 'updateBy', label: '操作人', visible: false },
-    { key: 'updateTime', label: '操作时间', visible: true },
-  ]);
-  const handleColumnToggle = (key: string, visible: boolean) => {
-    setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
-  };
-  const handleViewModeChange = (mode: 'list' | 'card') => {
-    setViewMode(mode);
-  };
+  // 分享弹窗：当前分享的助手（为空时关闭）
+  const [shareAgent, setShareAgent] = useState<AgentCard | null>(null);
 
   /** 拉取助手列表（仅已上线，searchName 未传时使用当前搜索关键字） */
   async function fetchList(searchName?: string) {
@@ -137,12 +118,11 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     setCurrentPage(1);
   }, [agents, dateRange, groupId]);
 
-  // 先按数据目录（分组）客户端过滤，再按创建时间过滤
+  // 先按数据目录（分组）客户端过滤（仅当前分组自身，不含子分组），再按创建时间过滤
   const groupFilteredAgents = useMemo(() => {
     if (!groupId) return agents;
-    const ids = new Set<string>([groupId, ...getAllDescendantIds(groups, groupId)]);
-    return agents.filter(a => a.groupId != null && ids.has(String(a.groupId)));
-  }, [agents, groupId, groups]);
+    return agents.filter(a => a.groupId != null && String(a.groupId) === groupId);
+  }, [agents, groupId]);
   const filteredAgents = useMemo(() => filterByCreateTime(groupFilteredAgents, dateRange, 'createTime'), [groupFilteredAgents, dateRange]);
   const totalCount = filteredAgents.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -151,148 +131,30 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     return filteredAgents.slice(start, start + pageSize);
   }, [filteredAgents, currentPage, pageSize]);
 
-  // 表格列定义
-  const allTableColumns: TableProps<AgentCard>['columns'] = [
-    {
-      align: 'left',
-      className: 'col-assistant-name',
-      dataIndex: 'name',
-      key: 'name',
-      minWidth: 200,
-      onHeaderCell: () => ({ className: 'col-assistant-name' }),
-      render: (text: string) => (
-        <span style={{ fontWeight: 600 }} title={text}>{text}</span>
-      ),
-      title: '助手名称'
-    },
-    {
-      align: 'left' as const,
-      className: 'col-assistant-desc',
-      dataIndex: 'description',
-      key: 'description',
-      width: 300,
-      onHeaderCell: () => ({ className: 'col-assistant-desc' }),
-      onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const } }),
-      render: (text: string) => text
-        ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: text }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit' }}>{text}</Typography.Paragraph>
-        : <span style={{ color: '#9ca3af' }}>-</span>,
-      title: '助手描述'
-    },
-    {
-      align: 'center',
-      dataIndex: 'createBy',
-      key: 'createBy',
-      minWidth: 100,
-      title: '创建用户'
-    },
-    {
-      align: 'center',
-      dataIndex: 'createTime',
-      key: 'createTime',
-      minWidth: 150,
-      title: '创建时间'
-    },
-    {
-      align: 'center',
-      dataIndex: 'updateBy',
-      key: 'updateBy',
-      minWidth: 100,
-      title: '操作人'
-    },
-    {
-      align: 'center',
-      dataIndex: 'updateTime',
-      key: 'updateTime',
-      minWidth: 150,
-      title: '操作时间'
-    },
-    {
-      align: 'center',
-      fixed: 'right',
-      key: 'operate',
-      minWidth: 150,
-      title: '操作',
-      render: (_: any, record: AgentCard) => (
-        <div className="ds-action-group">
-          <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleEdit(record)}>
-            <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
-          </AButton>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: 'metadata',
-                  label: (
-                    <span><ApartmentOutlined style={{ marginRight: 4 }} />元数据分析</span>
-                  ),
-                  onClick: () => setAnalysisContext({
-                    nodeId: record.id,
-                    nodeName: record.name,
-                    nodeType: 'ASSISTANT',
-                    spaceId: Number(localStorage.getItem('spaceId')) || undefined
-                  })
-                },
-                { type: 'divider' },
-                {
-                  key: 'delete',
-                  danger: true,
-                  label: (
-                    <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => handleDelete(record.id)}>
-                      <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
-                    </APopconfirm>
-                  ),
-                },
-              ],
-            }}
-          >
-            <AButton className="abi-action-link" size="small" variant="link">
-              更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
-            </AButton>
-          </Dropdown>
-        </div>
-      )
-    },
-  ];
-
-  const tableColumns = useMemo(() => {
-    const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
-    return allTableColumns!.filter(col => {
-      if (col.key === 'operate') return true;
-      if (col.key == null) return false;
-      return visibleKeys.has(String(col.key));
-    });
-  }, [columnOptions, allTableColumns]);
-
-  const handleEdit = (agent: AgentCard) => {
+  /** 查看：以只读模式打开助手配置抽屉 */
+  const handleView = (agent: AgentCard) => {
     setSelectedId(agent.id);
     setEditingAgent(agent);
     setEditVisible(true);
   };
 
-  /** 开关切换: ON=发布(status='1') OFF=下线(status='2') */
-  const handleToggle = async (id: AgentCard['id'], checked: boolean) => {
-    const nextStatus = checked ? '1' : '2';
-    // 后端 update 接口校验应用名称非空，切换状态时需回传当前助手名称
-    const appName = agents.find(it => it.id === id)?.name;
-    setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: nextStatus } : it)));
-    try {
-      await updateAppApi({ appId: id, appName, status: nextStatus });
-      message.success(checked ? '已发布' : '已下线');
-    } catch {
-      // 回滚
-      setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: checked ? '2' : '1' } : it)));
-      message.error('状态更新失败');
-    }
-  };
-
-  const handleDelete = async (id: AgentCard['id']) => {
-    try {
-      await deleteAppApi({ appId: id });
-      setAgents(prev => prev.filter(it => it.id !== id));
-      message.success('已删除');
-    } catch {
-      message.error('删除失败');
-    }
+  /** 下线：将助手状态置为已下线（status='2'），成功后刷新列表 */
+  const handleOffline = (agent: AgentCard) => {
+    Modal.confirm({
+      title: '确认下线',
+      content: `确认要下线「${agent.name}」吗？`,
+      okText: '确认',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await updateAppApi({ appId: agent.id, appName: agent.name, status: '2' });
+          message.success('已下线');
+          fetchList();
+        } catch {
+          message.error('下线失败');
+        }
+      },
+    });
   };
 
   const handlePageChange = (page: number) => {
@@ -351,54 +213,35 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
         <div className="abi-card-grid-inner">
           {pagedList.map(agent => {
             const active = agent.id === selectedId;
-            const online = agent.status === '1';
             const statusLabel = agent.status === '1' ? '已上线' : agent.status === '0' ? '草稿' : '已下线';
             const tagCls = agent.status === '1' ? '' : agent.status === '0' ? 'draft' : 'off';
             return (
               <div
                 key={agent.id}
                 className={`abi-assistant-card${active ? ' selected' : ''}`}
-                onClick={() => handleEdit(agent)}
+                onClick={() => handleView(agent)}
               >
-                {/* 头部：图标 + 标题/描述 + 状态开关 */}
+                {/* 头部：图标 + 标题/描述 */}
                 <div className="ac-head">
                   <AssistantIconBlock iconKey={agent.icon} radius={12} size={42} />
                   <div className="ac-main">
                     <div className="ac-title" title={agent.name}>{agent.name}</div>
                     <div className="ac-desc">{agent.description || '暂无描述'}</div>
                   </div>
-                  <span onClick={e => e.stopPropagation()}>
-                    <Switch checked={online} size="small" onChange={checked => handleToggle(agent.id, checked)} />
-                  </span>
                 </div>
-                {/* 底部：状态标签 + 操作 */}
+                {/* 底部：状态标签 + 操作（查看 / 下线 / 分享） */}
                 <div className="ac-footer" onClick={e => e.stopPropagation()}>
                   <span className={`ac-tag ${tagCls}`}>{statusLabel}</span>
                   <div className="ac-actions">
-                    <button className="ac-btn" onClick={() => handleEdit(agent)}>
-                      <EditOutlined />编辑
+                    <button className="ac-btn" onClick={() => handleView(agent)}>
+                      <EyeOutlined />查看
                     </button>
-                    <Dropdown
-                      menu={{
-                        items: [
-                          {
-                            key: 'metadata',
-                            label: (<span><ApartmentOutlined style={{ marginRight: 4 }} />元数据分析</span>),
-                            onClick: () => setAnalysisContext({
-                              nodeId: agent.id,
-                              nodeName: agent.name,
-                              nodeType: 'ASSISTANT',
-                              spaceId: Number(localStorage.getItem('spaceId')) || undefined
-                            })
-                          },
-                          { type: 'divider' },
-                          { key: 'delete', danger: true, label: '删除', onClick: () => handleDelete(agent.id) },
-                        ]
-                      }}
-                      trigger={['click']}
-                    >
-                      <button className="ac-icon-btn"><MoreOutlined /></button>
-                    </Dropdown>
+                    <button className="ac-btn" onClick={() => handleOffline(agent)}>
+                      <PoweroffOutlined />下线
+                    </button>
+                    <button className="ac-btn" onClick={() => setShareAgent(agent)}>
+                      <ShareAltOutlined />分享
+                    </button>
                   </div>
                 </div>
               </div>
@@ -446,47 +289,9 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
 
         {/* v5 Data Area */}
         <section className="abi-data-area">
-          <div className="abi-toolbar">
-            <div className="abi-toolbar-left" />
-            <ViewControls
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-              columns={columnOptions}
-              onColumnToggle={handleColumnToggle}
-            />
-          </div>
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
             <Spin spinning={loading}>
-            {agents.length === 0 && !loading ? (
-              <div className="abi-card-empty">
-                <Empty description="暂无助手" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-              </div>
-            ) : viewMode === 'list' ? (
-              <div style={{
-                border: '1px solid rgba(130,140,200,0.18)',
-                borderRadius: 12,
-                overflow: 'hidden',
-                flex: 1,
-                minHeight: 0,
-                width: '100%',
-                maxHeight: '100%'
-              }}>
-                <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-                  <ATable
-                    rowKey="id"
-                    columns={tableColumns as any}
-                    dataSource={pagedList}
-                    pagination={false}
-                    locale={{ emptyText: <TableEmpty description="暂无助手" /> }}
-                    size="middle"
-                    className="assistant-table abi-std-table"
-                    scroll={pagedList.length > 0 ? { x: 'max-content' } : undefined}
-                  />
-                </div>
-              </div>
-            ) : (
-              renderCardGrid()
-            )}
+              {renderCardGrid()}
             </Spin>
           </div>
           <div className="data-source-pagination">
@@ -529,6 +334,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
 
       <AssistantEditDrawer
         visible={editVisible}
+        readOnly
         onClose={(refresh) => {
           setEditVisible(false);
           if (refresh) fetchList();
@@ -537,10 +343,10 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
         groupId={editingAgent?.groupId}
       />
 
-      <MetadataAnalysisDrawer
-        context={analysisContext}
-        open={Boolean(analysisContext)}
-        onClose={() => setAnalysisContext(null)}
+      <AssistantShareModal
+        agent={shareAgent}
+        open={Boolean(shareAgent)}
+        onClose={() => setShareAgent(null)}
       />
     </div>
   );

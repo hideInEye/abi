@@ -3,7 +3,7 @@ import { Popover, Tree } from 'antd';
 import type { TreeDataNode } from 'antd';
 import React, { useCallback, useMemo, useState } from 'react';
 
-import { buildGroupTree, getAllDescendantIds } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
+import { buildGroupTree } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
 
 import styles from './DataDirectoryDropdown.module.css';
 
@@ -20,7 +20,7 @@ interface DataDirectoryDropdownProps {
 
 /**
  * 数据目录下拉：把助手分组目录放到筛选栏，支持按分组筛选助手
- * 默认选中「全部」（展示全部助手）；每个分组显示其下助手数量（含子分组）
+ * 默认选中「全部」（展示全部助手）；每个分组显示其下助手数量（仅自身，不含子分组）
  * 显示完整分组树结构（即使某分组下无助手也要显示），查询不到助手时显示空状态提示
  * 面板样式对齐 ABI Group 组件（玻璃态 + 搜索 + 文件夹展开/折叠 + 选中高亮）
  */
@@ -29,13 +29,12 @@ const DataDirectoryDropdown: React.FC<DataDirectoryDropdownProps> = ({ groups, a
   const [searchText, setSearchText] = useState('');
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
 
-  // 各分组 id -> 助手数量（含所有后代分组，便于父分组聚合展示）
+  // 各分组 id -> 助手数量（仅当前分组自身，不含子分组）
   const counts = useMemo(() => {
     const map: Record<string, number> = {};
     for (const g of groups) {
       const gid = String(g.groupId);
-      const ids = new Set<string>([gid, ...getAllDescendantIds(groups, gid)]);
-      map[gid] = assistants.filter(a => a.groupId != null && ids.has(String(a.groupId))).length;
+      map[gid] = assistants.filter(a => a.groupId != null && String(a.groupId) === gid).length;
     }
     return map;
   }, [groups, assistants]);

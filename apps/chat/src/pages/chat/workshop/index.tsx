@@ -1,6 +1,6 @@
 import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Button, DatePicker, Empty, Input, message, Popover, Select, Spin } from 'antd'
+import { Button, DatePicker, Empty, Input, Popover, Select, Spin } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -9,11 +9,10 @@ import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton
 import { AssistantIconBlock } from '@/components/AssistantIcon'
 import { fetchFavoriteList, fetchOperateRecordList } from '@/service/api/abi-system'
 import { fetchAssistantList } from '@/service/api/app'
-import { updateAssistant } from '@/service/api/assistant'
 import { fetchSemanticGroups } from '@/service/api/semantic'
 import { getSpaceId } from '@/utils/index'
 import AssistantDetailDrawer from './AssistantDetailDrawer'
-import DataDirectoryDropdown, { getGroupFilterIds } from './DataDirectoryDropdown'
+import DataDirectoryDropdown from './DataDirectoryDropdown'
 
 /** 应用工坊 tab 顺序：我的助手、我的分析、我的报告、最近使用、我的收藏、我的分享 */
 const WORKSHOP_TABS = [
@@ -108,10 +107,9 @@ function WorkshopView() {
   const [groupId, setGroupId] = useState('')
   const [groups, setGroups] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  // 我的助手：只读详情抽屉 + 取消发布 loading（按 id 独立，避免整列禁用）
+  // 我的助手：只读详情抽屉
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailAgent, setDetailAgent] = useState<AssistantCard | null>(null)
-  const [unpublishingId, setUnpublishingId] = useState<string | null>(null)
   // 高级筛选：面板草稿值 / 已生效值（点「查询」才生效，对齐 abi DeferredRangePicker）
   const [filterOpen, setFilterOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<any>(null)
@@ -213,26 +211,6 @@ function WorkshopView() {
     setDetailOpen(true)
   }, [])
 
-  // 取消发布（下线）：status 置 2，成功后刷新列表（列表仅查 status='1'，卡片随即消失）
-  const handleUnpublish = useCallback(
-    (agent: AssistantCard) => {
-      if (unpublishingId) return
-      setUnpublishingId(agent.id)
-      updateAssistant({ appId: agent.id, appName: agent.name, status: '2' })
-        .then(() => {
-          message.success('已取消发布')
-          fetchList('my-assistant')
-        })
-        .catch(() => {
-          message.error('取消发布失败')
-        })
-        .finally(() => {
-          setUnpublishingId(null)
-        })
-    },
-    [unpublishingId, fetchList],
-  )
-
   // 名称搜索 + 时间范围过滤 + 前端分页
   const isAssistantTab = activeTab === 'my-assistant'
 
@@ -244,13 +222,12 @@ function WorkshopView() {
     return filterByTimeRange(byName, dateRange)
   }, [rows, searchText, dateRange])
 
-  // 我的助手：数据目录（分组） + 名称/描述搜索 + 创建时间范围过滤（对齐 abi filterByCreateTime）
+  // 我的助手：数据目录（分组，仅当前分组自身，不含子分组） + 名称/描述搜索 + 创建时间范围过滤（对齐 abi filterByCreateTime）
   const filteredAssistants = useMemo(() => {
     const keyword = searchText.trim()
     let byGroup = assistants
     if (groupId) {
-      const ids = getGroupFilterIds(groups, groupId)
-      byGroup = assistants.filter((a) => a.groupId != null && ids.has(String(a.groupId)))
+      byGroup = assistants.filter((a) => a.groupId != null && String(a.groupId) === groupId)
     }
     const byName = keyword
       ? byGroup.filter((a) => a.name.includes(keyword) || a.description.includes(keyword))
@@ -262,7 +239,7 @@ function WorkshopView() {
       const t = dayjs(a.createTime)
       return t.isValid() && !t.isBefore(start) && !t.isAfter(end)
     })
-  }, [assistants, searchText, dateRange, groupId, groups])
+  }, [assistants, searchText, dateRange, groupId])
 
   const totalCount = isAssistantTab ? filteredAssistants.length : filteredRows.length
   const totalPages = Math.ceil(totalCount / pageSize) || 1
@@ -455,16 +432,6 @@ function WorkshopView() {
                             >
                               <EyeOutlined /> 查看
                             </button>
-                            {agent.status === '1' && (
-                              <button
-                                type="button"
-                                className="wac-act wac-act--danger"
-                                disabled={unpublishingId === agent.id}
-                                onClick={() => handleUnpublish(agent)}
-                              >
-                                {unpublishingId === agent.id ? '处理中…' : '取消发布'}
-                              </button>
-                            )}
                           </div>
                         </div>
                       </div>

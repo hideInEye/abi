@@ -38,6 +38,8 @@ interface Props {
   visible?: boolean
   agent?: AgentMock | null
   groupId?: string
+  /** 只读模式：隐藏保存/上线、各选择抽屉触发与名称编辑，仅展示配置（应用工坊「查看」入口使用） */
+  readOnly?: boolean
   onClose: (refresh?: boolean) => void
 }
 
@@ -56,7 +58,7 @@ export interface AgentMock {
 /// 折叠面板分组
 type SectionKey = 'model' | 'opening' | 'questions' | 'semantic' | 'mcp' | 'skill'
 
-const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId: propsGroupId, onClose }) => {
+const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId: propsGroupId, readOnly = false, onClose }) => {
   const spaceId = useAppSelector(getSpaceId)
   const isEdit = !!agent?.id
   const [name, setName] = useState<string>('')
@@ -537,11 +539,14 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               <>
                 {/* 名称为空时展示占位文案，后跟编辑按钮 */}
                 <span style={{ fontSize: 16, fontWeight: 600, color: name ? '#1a2744' : '#8fa0b5' }}>{name || '编辑助手名称'}</span>
-                <EditOutlined style={{ color: '#5b7cf7', cursor: 'pointer', fontSize: 17, transition: 'all 0.2s ease' }} onClick={() => setEditingName(true)} />
+                {!readOnly && (
+                  <EditOutlined style={{ color: '#5b7cf7', cursor: 'pointer', fontSize: 17, transition: 'all 0.2s ease' }} onClick={() => setEditingName(true)} />
+                )}
               </>
             )}
           </div>
           <div style={{ alignItems: 'center', display: 'flex', gap: 12, marginLeft: 'auto' }}>
+            {!readOnly && (<>
             <Button
               disabled={saving === 'publish'}
               loading={saving === 'draft'}
@@ -571,6 +576,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             >
               上线
             </Button>
+            </>)}
           </div>
         </div>
 
@@ -597,6 +603,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             <div style={{ padding: '14px 18px 0' }}>
               <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 600, color: '#3e5068' }}>助手画像</span>
+                {!readOnly && (
                 <Button
                   icon={<ThunderboltOutlined />}
                   size="small"
@@ -608,11 +615,13 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 >
                   自动优化
                 </Button>
+                )}
               </div>
             </div>
             <div style={{ flex: 1, overflow: 'hidden', padding: '10px 18px 18px' }}>
               <Input.TextArea
                 bordered={false}
+                readOnly={readOnly}
                 style={{
                   height: '100%',
                   resize: 'none',
@@ -645,7 +654,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               extra={
                 <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
                   {selectedModelIds.size > 0 && <span style={{ color: '#8fa0b5', fontSize: 12 }}>已选 {selectedModelIds.size} 项</span>}
-                  <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setModelPickerOpen(true)} />
+                  {!readOnly && <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setModelPickerOpen(true)} />}
                 </span>
               }
               open={openMap.model}
@@ -657,13 +666,15 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             {/* 开场引导：+ 号弹编辑弹窗，点行/箭头展开下方引导语 */}
             <CollapseRow
               extra={
-                <PlusOutlined
-                  style={{ color: '#5b7cf7' }}
-                  onClick={() => {
-                    setPrologueDraft(prologue)
-                    setPrologueModalOpen(true)
-                  }}
-                />
+                !readOnly && (
+                  <PlusOutlined
+                    style={{ color: '#5b7cf7' }}
+                    onClick={() => {
+                      setPrologueDraft(prologue)
+                      setPrologueModalOpen(true)
+                    }}
+                  />
+                )
               }
               open={openMap.opening}
               title="开场引导"
@@ -676,9 +687,13 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               )}
             </CollapseRow>
             {/* 应用icon：整行点击弹出分组图标选择弹窗 */}
-            <AssistantIconPicker onChange={setIconKey} value={iconKey}>
+            {readOnly ? (
               <IconPickerRow title="应用icon" />
-            </AssistantIconPicker>
+            ) : (
+              <AssistantIconPicker onChange={setIconKey} value={iconKey}>
+                <IconPickerRow title="应用icon" />
+              </AssistantIconPicker>
+            )}
 
             <GroupTitle title="知识语义" color="#10b981" icon={<BookOutlined />} />
             {/* 数据语义：+ 号弹选择抽屉，点行/箭头展开下方已选列表 */}
@@ -686,7 +701,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               extra={
                 <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
                   {selectedSemanticIds.size > 0 && <span style={{ color: '#8fa0b5', fontSize: 12 }}>已选 {selectedSemanticIds.size} 项</span>}
-                  <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setSemanticPickerOpen(true)} />
+                  {!readOnly && <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setSemanticPickerOpen(true)} />}
                 </span>
               }
               open={openMap.semantic}
@@ -702,7 +717,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               extra={
                 <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
                   {selectedToolCount > 0 && <span style={{ color: '#8fa0b5', fontSize: 12 }}>已选 {selectedToolCount} 项</span>}
-                  <PlusOutlined style={{ color: '#5b7cf7' }} onClick={openToolPicker} />
+                  {!readOnly && <PlusOutlined style={{ color: '#5b7cf7' }} onClick={openToolPicker} />}
                 </span>
               }
               open={openMap.mcp}
@@ -717,7 +732,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 <span style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
                   {selectedSkillIds.size > 0 && <span style={{ color: '#8fa0b5', fontSize: 12 }}>已选 {selectedSkillIds.size} 项</span>}
                   <QuestionCircleOutlined style={{ color: '#8fa0b5' }} />
-                  <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setSkillPickerOpen(true)} />
+                  {!readOnly && <PlusOutlined style={{ color: '#5b7cf7' }} onClick={() => setSkillPickerOpen(true)} />}
                 </span>
               }
               open={openMap.skill}
@@ -731,13 +746,15 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             {/* 推荐问题 */}
             <CollapseRow
               extra={
-                <PlusOutlined
-                  style={{ color: '#5b7cf7' }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openRecDrawer()
-                  }}
-                />
+                !readOnly && (
+                  <PlusOutlined
+                    style={{ color: '#5b7cf7' }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openRecDrawer()
+                    }}
+                  />
+                )
               }
               open={openMap.questions}
               title="示例"
@@ -792,7 +809,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 </div>
                 <span style={{ color: '#1a2744', fontSize: 15, fontWeight: 500, letterSpacing: '0.03em' }}>开启调试模式</span>
               </div>
-              <Switch checked={enableDebug} onChange={setEnableDebug} />
+              <Switch checked={enableDebug} onChange={setEnableDebug} disabled={readOnly} />
             </div>
 
             {/* 访问权限 */}
@@ -828,7 +845,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 </div>
                 <span style={{ color: '#1a2744', fontSize: 15, fontWeight: 500, letterSpacing: '0.03em' }}>访问权限</span>
               </div>
-              <Switch checked={publicAccess === '1'} onChange={(checked) => setPublicAccess(checked ? '1' : '0')} checkedChildren="空间可见" unCheckedChildren="仅自己可见" />
+              <Switch checked={publicAccess === '1'} onChange={(checked) => setPublicAccess(checked ? '1' : '0')} checkedChildren="空间可见" unCheckedChildren="仅自己可见" disabled={readOnly} />
             </div>
           </div>
 

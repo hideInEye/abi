@@ -32,29 +32,9 @@ function buildTree(list: any[], parentId = '0'): any[] {
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 }
 
-/** 收集某分组的所有后代 id */
-function descendantIds(list: any[], groupId: string): Set<string> {
-  const set = new Set<string>()
-  const walk = (pid: string) => {
-    list.forEach((i) => {
-      if (String(i.parentId) === String(pid) && !set.has(String(i.groupId))) {
-        set.add(String(i.groupId))
-        walk(String(i.groupId))
-      }
-    })
-  }
-  walk(groupId)
-  return set
-}
-
-/** 某分组筛选时需要匹配的分组 id 集合（自身 + 所有后代），供页面客户端过滤复用 */
-export function getGroupFilterIds(groups: any[], groupId: string): Set<string> {
-  return new Set<string>([groupId, ...descendantIds(groups, groupId)])
-}
-
 /**
  * 数据目录下拉：把助手分组目录放到筛选栏，支持按分组筛选助手
- * 默认选中「全部」（展示全部助手）；每个分组显示其下助手数量（含子分组）
+ * 默认选中「全部」（展示全部助手）；每个分组显示其下助手数量（仅自身，不含子分组）
  * 面板样式对齐 ABI Group 组件（玻璃态 + 搜索 + 文件夹展开/折叠 + 选中高亮）
  */
 export default function DataDirectoryDropdown({ groups, assistants, value, onChange }: DataDirectoryDropdownProps) {
@@ -62,13 +42,12 @@ export default function DataDirectoryDropdown({ groups, assistants, value, onCha
   const [searchText, setSearchText] = useState('')
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([])
 
-  // 各分组 id -> 助手数量（含所有后代分组，便于父分组聚合展示）
+  // 各分组 id -> 助手数量（仅当前分组自身，不含子分组）
   const counts = useMemo(() => {
     const map: Record<string, number> = {}
     for (const g of groups) {
       const gid = String(g.groupId)
-      const ids = new Set<string>([gid, ...descendantIds(groups, gid)])
-      map[gid] = assistants.filter((a) => a.groupId != null && ids.has(String(a.groupId))).length
+      map[gid] = assistants.filter((a) => a.groupId != null && String(a.groupId) === gid).length
     }
     return map
   }, [groups, assistants])
