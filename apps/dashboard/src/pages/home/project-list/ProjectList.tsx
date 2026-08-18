@@ -129,6 +129,29 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 return;
             }
 
+            // 2. 为新建大屏创建对话会话（每个大屏 = 一个独立会话），并把会话标识写入项目 dataJson，
+            //    供大屏 AI 面板发送对话（chat/completions）与拉取历史（/abi-chat/v1/app/message/query）复用。
+            //    会话创建失败不阻塞大屏创建，后续可在对话面板按需补建。
+            try {
+                let userId = 0;
+                try {
+                    const info = localStorage.getItem('SOY-REACT_userInfo');
+                    if (info) {
+                        const uid = JSON.parse(info)?.userId;
+                        userId = uid != null ? Number(uid) : 0;
+                    }
+                } catch { /* ignore */ }
+                const session = await baseApi.addChatSession({spaceId, userId, title: name});
+                if (session) {
+                    await baseApi.updateProject({
+                        id,
+                        dataJson: JSON.stringify({canvasManager: {width, height}, chatId: session.sessionId, convUid: session.convUid}),
+                    });
+                }
+            } catch (sessionErr) {
+                console.warn('大屏会话创建失败，将在对话面板按需补建:', sessionErr);
+            }
+
             setAddDialog(false);
             URLUtil.navigateToAppPath('/designer', {id, saveType, mode: DesignerMode.EDIT});
         } catch (e) {
@@ -358,8 +381,8 @@ export const ProjectList = memo((props: ProjectListProps) => {
             minWidth: 100,
             render: (status: string) => {
                 const statusMap: Record<string, { text: string; cls: string }> = {
-                    '0': { text: '草稿', cls: 'status-draft' },
-                    '1': { text: '已发布', cls: 'status-published' },
+                    '0': { text: '已发布', cls: 'status-published' },
+                    '1': { text: '草稿', cls: 'status-draft' },
                 };
                 const st = statusMap[status] || { text: '-', cls: '' };
                 return <span className={`abi-status-tag ${st.cls}`}>{st.text}</span>;
@@ -467,16 +490,16 @@ export const ProjectList = memo((props: ProjectListProps) => {
                                 <div className="abi-data-card-title">
                                     <span className="abi-data-card-name" title={item.name!}>{item.name}</span>
                                 </div>
-                                <span className={`abi-status-tag ${String(item.status) === '1' ? 'status-published' : 'status-draft'}`}>
-                                    {String(item.status) === '1' ? '已发布' : '草稿'}
+                                <span className={`abi-status-tag ${String(item.status) === '0' ? 'status-published' : 'status-draft'}`}>
+                                    {String(item.status) === '0' ? '已发布' : '草稿'}
                                 </span>
                             </div>
 
                             <div className="abi-data-card-body">
                                 {visibleKeys.has('status') && (
                                     <div className="row"><span className="lbl">状态</span><span className="val">
-                                        <span className={`abi-status-tag ${String(item.status) === '1' ? 'status-published' : 'status-draft'}`}>
-                                            {String(item.status) === '1' ? '已发布' : '草稿'}
+                                        <span className={`abi-status-tag ${String(item.status) === '0' ? 'status-published' : 'status-draft'}`}>
+                                            {String(item.status) === '0' ? '已发布' : '草稿'}
                                         </span>
                                     </span></div>
                                 )}

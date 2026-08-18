@@ -513,7 +513,7 @@ export function Component() {
 
         {/* Content: table or cards */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-          <Spin spinning={loading}>
+          <Spin spinning={loading} wrapperClassName="abi-data-spin">
             {visibleList.length === 0 && !loading ? (
               <div className="abi-card-empty">
                 <Empty description={t('page.manage.skill.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />

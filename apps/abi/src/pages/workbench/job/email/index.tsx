@@ -19,7 +19,7 @@ export function Component() {
   const spaceId = useAppSelector(getSpaceId);
   const [dateRange, setDateRange] = useState<any>(null);
   const [displayGroupFilter, setDisplayGroupFilter] = useState<string | undefined>(undefined);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   // 列选项：用于列选择器
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'jobName', label: '任务名称', visible: true },

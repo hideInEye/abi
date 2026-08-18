@@ -1,6 +1,6 @@
 import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { createFileRoute } from '@tanstack/react-router'
-import { Button, DatePicker, Empty, Input, message, Popover, Spin, Tabs } from 'antd'
+import { Button, DatePicker, Empty, Input, message, Popover, Select, Spin, Tabs } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -67,6 +67,14 @@ function skillIconKey(key: string, apiIcon?: string): string {
   return SKILL_ICON_KEYS[h % SKILL_ICON_KEYS.length]
 }
 
+const PAGE_SIZE_OPTIONS = [
+  { label: '10条/页', value: 10 },
+  { label: '15条/页', value: 15 },
+  { label: '20条/页', value: 20 },
+  { label: '25条/页', value: 25 },
+  { label: '30条/页', value: 30 },
+]
+
 function SkillStoreView() {
   const [searchText, setSearchText] = useState('')
   const [cards, setCards] = useState<SkillCard[]>([])
@@ -82,6 +90,10 @@ function SkillStoreView() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<any>(null)
   const [dateRange, setDateRange] = useState<any>(null)
+  // 前端分页（对齐应用工坑：接口返回全量数据）
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [jumpValue, setJumpValue] = useState('')
 
   // 拉取技能列表（与 abi 同一接口）：不传 spaceId 查全部，前端按 visibility 过滤
   const fetchList = useCallback(() => {
@@ -154,6 +166,67 @@ function SkillStoreView() {
     })
   }, [cards, rawMap, tab, myIds, searchText, dateRange])
 
+  const totalCount = filteredCards.length
+  const totalPages = Math.ceil(totalCount / pageSize) || 1
+  const pagedCards = useMemo(
+    () => filteredCards.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filteredCards, currentPage, pageSize],
+  )
+
+  const handlePageChange = useCallback(
+    (page: number) => {
+      if (page >= 1 && page <= totalPages) {
+        setCurrentPage(page)
+      }
+    },
+    [totalPages],
+  )
+
+  const handlePageSizeChange = useCallback((value: number) => {
+    setPageSize(value)
+    setCurrentPage(1)
+  }, [])
+
+  const handleJump = useCallback(() => {
+    const page = parseInt(jumpValue, 10)
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      handlePageChange(page)
+      setJumpValue('')
+    }
+  }, [jumpValue, totalPages, handlePageChange])
+
+  // 页码渲染（对齐应用工坑：最多 5 个可见页码 + 省略号）
+  const renderPageNumbers = () => {
+    const pages: (number | string)[] = []
+    const maxVisible = 5
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else if (currentPage <= 3) {
+      for (let i = 1; i <= 4; i++) pages.push(i)
+      pages.push('...', totalPages)
+    } else if (currentPage >= totalPages - 2) {
+      pages.push(1, '...')
+      for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1, '...')
+      pages.push(currentPage - 1, currentPage, currentPage + 1)
+      pages.push('...', totalPages)
+    }
+    return pages.map((page, idx) => {
+      if (page === '...') return <span key={`ellipsis-${idx}`} className="ws-page-item ws-page-ellipsis">...</span>
+      const isActive = page === currentPage
+      return (
+        <span
+          key={page}
+          className={`ws-page-item ${isActive ? 'ws-page-active' : ''}`}
+          onClick={() => handlePageChange(page as number)}
+        >
+          {page}
+        </span>
+      )
+    })
+  }
+
   const handleToggleEnable = useCallback((card: SkillCard) => {
     const nextEnabled = !card.enabled
     const nextStatus = nextEnabled ? '1' : '0'
@@ -207,12 +280,14 @@ function SkillStoreView() {
     setSearchText('')
     setPendingRange(null)
     setDateRange(null)
+    setCurrentPage(1)
   }, [])
 
   // 点「查询」才应用时间范围（草稿值 → 生效值），对齐应用工坊
   const handleQuery = useCallback(() => {
     setFilterOpen(false)
     setDateRange(pendingRange)
+    setCurrentPage(1)
   }, [pendingRange])
 
   const handleResetFilter = useCallback(() => {
@@ -220,6 +295,7 @@ function SkillStoreView() {
     setSearchText('')
     setPendingRange(null)
     setDateRange(null)
+    setCurrentPage(1)
   }, [])
 
   // 高级筛选面板（时间范围 + 重置/查询），对齐应用工坊
@@ -252,7 +328,7 @@ function SkillStoreView() {
   )
 
   return (
-    <div className="skill-store-view" style={{ display: 'flex' }}>
+    <div className="skill-store-view">
       <div className="content-page-title-row">
         <SidebarCollapseButton />
         <div className="content-page-title">技能商店</div>
@@ -277,7 +353,10 @@ function SkillStoreView() {
           placeholder="搜索技能名称、类型..."
           prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
           value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
+          onChange={(e) => {
+            setSearchText(e.target.value)
+            setCurrentPage(1)
+          }}
         />
         <Popover
           content={filterPanel}
@@ -294,7 +373,7 @@ function SkillStoreView() {
       </div>
 
       {/* Card Grid：样式对齐应用工坊「我的助手」ws-assistant-card（技能功能保留） */}
-      <Spin spinning={loading}>
+      <Spin spinning={loading} wrapperClassName="ws-data-spin">
         {!loading && filteredCards.length === 0 ? (
           <div className="ws-empty">
             <Empty description="暂无技能" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -302,7 +381,7 @@ function SkillStoreView() {
         ) : (
           <div className="ws-card-scroll">
             <div className="ws-card-grid">
-              {filteredCards.map((card) => {
+              {pagedCards.map((card) => {
                 const added = myIds.includes(card.key)
                 return (
                   <div key={card.key} className="ws-assistant-card" onClick={() => handleOpenDetail(card)}>
@@ -347,6 +426,46 @@ function SkillStoreView() {
           </div>
         )}
       </Spin>
+
+      {/* Pagination（对齐应用工坑 ws-pagination） */}
+      <div className="ws-pagination">
+        <span className="ws-total-text">共 {totalCount} 条</span>
+        <div className="ws-pagination-controls">
+          <Select
+            className="ws-page-size-select"
+            value={pageSize}
+            options={PAGE_SIZE_OPTIONS}
+            onChange={handlePageSizeChange}
+          />
+          <button
+            type="button"
+            className="ws-page-btn"
+            disabled={currentPage === 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+          >
+            ‹
+          </button>
+          {renderPageNumbers()}
+          <button
+            type="button"
+            className="ws-page-btn"
+            disabled={currentPage === totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            ›
+          </button>
+          <span className="ws-quick-jumper">
+            前往
+            <Input
+              className="ws-jump-input"
+              value={jumpValue}
+              onChange={(e) => setJumpValue(e.target.value)}
+              onPressEnter={handleJump}
+            />
+            页
+          </span>
+        </div>
+      </div>
 
       <SkillDetailDrawer
         open={detailOpen}

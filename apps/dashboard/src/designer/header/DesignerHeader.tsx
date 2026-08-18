@@ -101,15 +101,19 @@ const Header: React.FC = observer(() => {
             if (publishStatus === '0') return;
             const {id} = URLUtil.parseUrlParams();
             const proData = designerManager.getData();
-            // 保留 dataJson 中已有的 chatId，防止发布时覆盖丢失
-            let chatId: string | undefined;
+            // 保留 dataJson 中已有的会话标识（chatId / convUid），防止发布时覆盖丢失
+            const sessionPatch: {chatId?: string; convUid?: string} = {};
             try {
                 const existing = projectHdStore.projectConfig.dataJson;
-                if (existing) chatId = JSON.parse(existing)?.chatId;
+                if (existing) {
+                    const parsed = JSON.parse(existing);
+                    if (parsed?.chatId) sessionPatch.chatId = parsed.chatId;
+                    if (parsed?.convUid) sessionPatch.convUid = parsed.convUid;
+                }
             } catch { /* ignore */ }
             await baseApi.updateProject({
                 id,
-                dataJson: JSON.stringify(chatId ? {...proData, chatId} : proData),
+                dataJson: JSON.stringify({...proData, ...sessionPatch}),
                 status: '0',
             });
             projectHdStore.updateProjectConfig({status: '0'});

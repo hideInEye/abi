@@ -1,6 +1,5 @@
 import {
   CaretRightOutlined,
-  CloseOutlined,
   CloudDownloadOutlined,
   DeleteOutlined,
   DownOutlined,
@@ -282,6 +281,42 @@ function resolveVisibilityBadge(visibility?: string) {
   return null
 }
 
+// 解析 SKILL.md 顶部的 YAML frontmatter，拆出 name / description 与正文，
+// 避免整段 frontmatter 被 react-markdown 当成加粗大标题渲染
+function parseSkillIntro(md: string): { name: string; description: string; body: string } {
+  if (typeof md !== 'string' || !md) return { name: '', description: '', body: '' }
+  const text = md.replace(/^\uFEFF/, '')
+  const match = text.match(/^\s*---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/)
+  if (!match) return { name: '', description: '', body: md }
+  const body = text.slice(match[0].length).replace(/^\s*\n/, '')
+  const lines = match[1].split(/\r?\n/)
+  let name = ''
+  let description = ''
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^([A-Za-z0-9_-]+)[ \t]*:[ \t]*(.*)$/)
+    if (!m) continue
+    const key = m[1].toLowerCase()
+    let val = m[2].trim()
+    if (/^[|>][-+]?$/.test(val)) {
+      const collected: string[] = []
+      let j = i + 1
+      for (; j < lines.length; j++) {
+        if (/^[ \t]+\S/.test(lines[j])) collected.push(lines[j].replace(/^[ \t]+/, ''))
+        else if (lines[j].trim() === '') collected.push('')
+        else break
+      }
+      i = j - 1
+      val = collected.join(val[0] === '>' ? ' ' : '\n').trim()
+    } else {
+      val = val.replace(/^["']|["']$/g, '')
+    }
+    if (key === 'name') name = val
+    else if (key === 'description') description = val
+  }
+  if (!name && !description) return { name: '', description: '', body: md }
+  return { name, description, body }
+}
+
 const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const [detail, setDetail] = useState<SkillItem | null>(null)
   const [versions, setVersions] = useState<VersionItem[]>([])
@@ -321,6 +356,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
 
   const { tree: fileTree, map: fileMap } = useMemo(() => buildFileTree(files), [files])
   const { tree: leftFileTree, map: leftFileMap } = useMemo(() => buildFileTree(leftFiles), [leftFiles])
+  const introFm = useMemo(() => parseSkillIntro(introduction), [introduction])
 
   async function loadDetail() {
     if (!skillId) return null
@@ -667,9 +703,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
       <Spin spinning={loadingDetail && !detail}>
         {/* 顶部 Hero 区 — 渐变背景 + 毛玻璃 */}
         <div className="sd-v5-hero">
-          <button className="sd-v5-hero__close" type="button" onClick={onClose} aria-label="关闭">
-            <CloseOutlined />
-          </button>
+
           <div className="sd-v5-hero__inner">
             <div className="sd-v5-hero__head">
               <div className="sd-v5-hero__icon">
@@ -742,7 +776,13 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                       <div className="sd-v5-panel">
                         {introduction ? (
                           <div className="skill-intro-md sd-v5-md">
-                            <ReactMarkdown>{introduction}</ReactMarkdown>
+                            {(introFm.name || introFm.description) && (
+                              <div className="skill-intro-head">
+                                {introFm.name && <div className="skill-intro-head__name">name: {introFm.name}</div>}
+                                {introFm.description && <div className="skill-intro-head__desc">description: {introFm.description}</div>}
+                              </div>
+                            )}
+                            <ReactMarkdown>{introFm.body}</ReactMarkdown>
                           </div>
                         ) : (
                           <>
