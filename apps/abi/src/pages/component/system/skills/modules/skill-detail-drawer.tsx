@@ -274,9 +274,9 @@ const FileBrowser: FC<{
 function resolveVersionStatus(status?: string): { cls: string; label: string } {
   if (!status) return { cls: 'offline', label: '离线版本' }
   const s = status.toUpperCase()
-  if (s === 'ACTIVE' || s === 'PUBLISHED' || s === '1') return { cls: 'active', label: '当前启用' }
-  if (s === 'ARCHIVED' || s === '3') return { cls: 'archived', label: '历史版本' }
-  // DRAFT / UPLOADED / HIDDEN / 0 / 2 等全部归为离线版本
+  if (s === 'PUBLISHED') return { cls: 'active', label: '当前启用' }
+  if (s === 'HISTORY') return { cls: 'archived', label: '历史版本' }
+  if (s === 'DRAFT') return { cls: 'offline', label: '离线版本' }
   return { cls: 'offline', label: '离线版本' }
 }
 
@@ -284,9 +284,9 @@ function resolveVersionStatus(status?: string): { cls: string; label: string } {
 function resolveStatusBadge(status?: string) {
   if (!status) return null
   const s = status.toUpperCase()
-  if (s === 'ACTIVE' || s === 'PUBLISHED' || s === '1') return { cls: 'sd-badge--active', label: '已发布' }
-  if (s === 'ARCHIVED' || s === '3') return { cls: 'sd-badge--archived', label: '已归档' }
-  if (s === 'HIDDEN' || s === 'OFFLINE' || s === '0' || s === '2' || s === 'DRAFT') return { cls: 'sd-badge--offline', label: '离线版本' }
+  if (s === 'PUBLISHED') return { cls: 'sd-badge--active', label: '已发布' }
+  if (s === 'HISTORY') return { cls: 'sd-badge--archived', label: '历史版本' }
+  if (s === 'DRAFT') return { cls: 'sd-badge--offline', label: '离线版本' }
   if (s === 'PENDING_REVIEW') return { cls: 'sd-badge--review', label: '审核中' }
   if (s === 'REJECTED') return { cls: 'sd-badge--rejected', label: '已驳回' }
   if (s === 'SCANNING' || s === 'UPLOADED') return { cls: 'sd-badge--scanning', label: '扫描中' }

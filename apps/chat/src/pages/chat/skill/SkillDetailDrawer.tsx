@@ -259,17 +259,27 @@ const FileBrowser: FC<{
   return <div className={`file-browser ${size === 'sm' ? 'file-browser--sm' : ''}`}>{render(data, 0)}</div>
 }
 
+/** 版本状态三态：离线版本 / 当前启用 / 历史版本 */
+function resolveVersionStatus(status?: string): { cls: string; label: string } {
+  if (!status) return { cls: 'offline', label: '离线版本' }
+  const s = status.toUpperCase()
+  if (s === 'PUBLISHED') return { cls: 'active', label: '当前启用' }
+  if (s === 'HISTORY') return { cls: 'archived', label: '历史版本' }
+  if (s === 'DRAFT') return { cls: 'offline', label: '离线版本' }
+  return { cls: 'offline', label: '离线版本' }
+}
+
+/** 技能整体状态徽章（详情页顶部） */
 function resolveStatusBadge(status?: string) {
   if (!status) return null
   const s = status.toUpperCase()
-  if (s === 'ACTIVE' || s === 'PUBLISHED' || s === '1') return { cls: 'sd-badge--active', label: '已发布' }
-  if (s === 'ARCHIVED') return { cls: 'sd-badge--archived', label: '已归档' }
-  if (s === 'HIDDEN' || s === '0') return { cls: 'sd-badge--hidden', label: '已隐藏' }
+  if (s === 'PUBLISHED') return { cls: 'sd-badge--active', label: '已发布' }
+  if (s === 'HISTORY') return { cls: 'sd-badge--archived', label: '历史版本' }
+  if (s === 'DRAFT') return { cls: 'sd-badge--offline', label: '离线版本' }
   if (s === 'PENDING_REVIEW') return { cls: 'sd-badge--review', label: '审核中' }
   if (s === 'REJECTED') return { cls: 'sd-badge--rejected', label: '已驳回' }
   if (s === 'SCANNING' || s === 'UPLOADED') return { cls: 'sd-badge--scanning', label: '扫描中' }
-  if (s === 'DRAFT') return { cls: 'sd-badge--hidden', label: '草稿' }
-  return { cls: 'sd-badge--archived', label: status }
+  return { cls: 'sd-badge--offline', label: '离线版本' }
 }
 
 function resolveVisibilityBadge(visibility?: string) {
@@ -859,30 +869,25 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                             const vid = v.versionId ?? v.id
                             const isActive = String(vid) === String(activeVersionId)
                             const isHeadline = headlineVersion && String(headlineVersion.versionId ?? headlineVersion.id) === String(vid)
-                            const isDraft = v.status === 'DRAFT' || v.status === 'UPLOADED' || v.status === 'draft'
-                            const vStatus = resolveStatusBadge(v.status)
+                            const vStatus = resolveVersionStatus(v.status)
                             return (
                               <div className={`sd-v5-ver ${isActive ? 'sd-v5-ver--active' : ''}`} key={vid} onClick={() => vid != null && handleVersionClick(vid)}>
                                 <div className="sd-v5-ver__head">
                                   <div className="sd-v5-ver__left">
                                     <span className="sd-v5-chip">v{v.version || v.versionNo || vid}</span>
-                                    {vStatus && (
-                                      <span
-                                        className={`sd-v5-pill ${vStatus.cls.includes('active') ? 'sd-v5-pill--active' : vStatus.cls.includes('hidden') ? 'sd-v5-pill--hidden' : vStatus.cls.includes('review') ? 'sd-v5-pill--review' : vStatus.cls.includes('rejected') ? 'sd-v5-pill--rejected' : 'sd-v5-pill--default'}`}
-                                      >
-                                        {vStatus.label}
-                                      </span>
-                                    )}
+                                    <span className={`sd-v5-pill sd-v5-pill--${vStatus.cls}`}>
+                                      {vStatus.label}
+                                    </span>
                                     {isHeadline && <span className="sd-v5-pill sd-v5-pill--current">当前版本</span>}
                                   </div>
                                   <div className="sd-v5-ver__actions" onClick={(e) => e.stopPropagation()}>
                                     <span className="sd-v5-ver__time">{formatDateTime(v.publishedAt || v.createTime)}</span>
-                                    {isDraft && (
+                                    {vStatus.cls === 'offline' && (
                                       <Button className="sd-v5-btn sd-v5-btn--primary" icon={<RocketOutlined />} loading={publishingVid === vid} size="small" onClick={() => handlePublishVersion(v)}>
                                         发布
                                       </Button>
                                     )}
-                                    {!isDraft && !isHeadline && (
+                                    {vStatus.cls === 'archived' && !isActive && (
                                       <Button className="sd-v5-btn sd-v5-btn--primary" icon={<SwapOutlined />} size="small" onClick={() => handleSetCurrentVersion(v)}>
                                         设为当前
                                       </Button>

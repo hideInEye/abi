@@ -46,12 +46,14 @@ function skillIconKey(id: number | string): AssistantIconKey {
 type StatusKey = 'published' | 'hidden' | 'archived' | 'review' | 'rejected' | 'scanning' | 'draft' | 'offline';
 
 function resolveStatusKey(status?: string): StatusKey {
-  if (status === '1' || status === 'PUBLISHED' || status === 'ACTIVE') return 'published';
-  if (status === '0' || status === 'HIDDEN' || status === 'OFFLINE' || status === 'DRAFT') return 'offline';
-  if (status === 'ARCHIVED' || status === '3') return 'archived';
-  if (status === 'PENDING_REVIEW') return 'review';
-  if (status === 'REJECTED') return 'rejected';
-  if (status === 'SCANNING' || status === 'UPLOADED') return 'scanning';
+  if (!status) return 'offline';
+  const s = status.toUpperCase();
+  if (s === 'PUBLISHED') return 'published';
+  if (s === 'HISTORY') return 'archived';
+  if (s === 'DRAFT') return 'offline';
+  if (s === 'PENDING_REVIEW') return 'review';
+  if (s === 'REJECTED') return 'rejected';
+  if (s === 'SCANNING' || s === 'UPLOADED') return 'scanning';
   return 'offline';
 }
 
@@ -79,7 +81,7 @@ export function Component() {
   const spaceId = useAppSelector(getSpaceId);
 
   const [tab, setTab] = useState<'plaza' | 'mine'>('plaza');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | '1' | '0'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PUBLISHED' | 'DRAFT'>('ALL');
   const [keyword, setKeyword] = useState('');
   const [list, setList] = useState<SkillItem[]>([]);
   // 已添加到「我的技能」的技能 id（前端本地记录）
@@ -231,7 +233,7 @@ export function Component() {
 
   // 切换发布/取消发布
   async function toggleSkillStatus(item: SkillItem, publish: boolean) {
-    const nextStatus = publish ? '1' : '0';
+    const nextStatus = publish ? 'PUBLISHED' : 'DRAFT';
     setList(prev => prev.map(it => (it.id === item.id ? { ...it, status: nextStatus } : it)));
     try {
       const res: any = await updateSkillStatusApi({ skillId: item.id, status: nextStatus });
@@ -258,8 +260,8 @@ export function Component() {
   const statusOptions = useMemo(
     () => [
       { value: 'ALL', label: '全部' },
-      { value: '1', label: '当前启用' },
-      { value: '0', label: '离线版本' },
+      { value: 'PUBLISHED', label: '当前启用' },
+      { value: 'DRAFT', label: '离线版本' },
     ],
     []
   );
@@ -543,7 +545,7 @@ export function Component() {
                     {pagedList.map(item => {
                       const statusKey = resolveStatusKey(item.status);
                       const title = item.bizName || '-';
-                      const online = String(item.status) === '1';
+                      const online = String(item.status).toUpperCase() === 'PUBLISHED';
                       const statusLabel = online ? '当前启用' : '离线版本';
                       const tagCls = online ? '' : 'offline';
                       const iconKey = item.icon || skillIconKey(item.id);

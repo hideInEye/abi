@@ -409,8 +409,8 @@ function WorkshopView() {
                 <div className="ws-card-grid">
                   {pagedAssistants.map((agent) => {
                     const statusLabel =
-                      agent.status === '1' ? '已上线' : agent.status === '0' ? '草稿' : '已下线'
-                    const tagCls = agent.status === '1' ? '' : agent.status === '0' ? 'draft' : 'off'
+                      agent.status === '1' ? '当前启用' : agent.status === '0' ? '编辑中' : '历史版本'
+                    const tagCls = agent.status === '1' ? '' : agent.status === '0' ? 'draft' : 'archived'
                     return (
                       <div key={agent.id} className="ws-assistant-card">
                         <div className="wac-head">

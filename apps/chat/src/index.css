@@ -2719,6 +2719,14 @@ code, pre {
   background: rgba(148, 163, 184, 0.14);
   color: #8494ad;
 }
+.ws-assistant-card .wac-tag.offline {
+  background: rgba(22, 119, 255, 0.1);
+  color: #1677FF;
+}
+.ws-assistant-card .wac-tag.archived {
+  background: rgba(140, 140, 140, 0.14);
+  color: #8C8C8C;
+}
 .ws-assistant-card .wac-tag.draft {
   background: rgba(245, 158, 11, 0.12);
   color: #f59e0b;
@@ -3291,7 +3299,9 @@ code, pre {
   font-size: 12px; font-weight: 600;
   white-space: nowrap;
 }
-.sd-v5-pill--active  { color: #166534; background: #dcfce7; }
+.sd-v5-pill--active  { color: #52C41A; background: rgba(82, 196, 26, 0.1); }
+.sd-v5-pill--offline { color: #1677FF; background: rgba(22, 119, 255, 0.1); }
+.sd-v5-pill--archived{ color: #8C8C8C; background: rgba(140, 140, 140, 0.14); }
 .sd-v5-pill--hidden  { color: #92400e; background: #fef3c7; }
 .sd-v5-pill--review  { color: #9a3412; background: #ffedd5; }
 .sd-v5-pill--rejected{ color: #991b1b; background: #fee2e2; }
