@@ -122,7 +122,7 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
 
     const confirmUnpublish = async () => {
         const id = unpublishIdRef.current;
-        await baseApi.updateProject({id, status: '1'} as IProjectInfo);
+        await baseApi.updateProject({id, status: '2'} as IProjectInfo);
         globalMessage.messageApi?.success('已取消发布');
         setUnpublishDialog(false);
         fetchList(currentPage, pageSize, searchKeyword);
@@ -194,7 +194,7 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
                         </div>
                     ) : (
                         <div className="abi-card-empty">
-                            <Empty description="暂无已发布的大屏" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                            <Empty description="暂无当前启用的大屏" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                         </div>
                     )}
                 </div>

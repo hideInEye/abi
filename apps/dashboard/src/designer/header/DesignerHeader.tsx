@@ -163,7 +163,7 @@ const Header: React.FC = observer(() => {
                              style={publishStatus === '0' ? {cursor: 'default', opacity: 0.6} : {}}>
                             <Send theme="outline" style={{marginTop: 2}} strokeWidth={4} strokeLinecap="square"/>
                             <span className={'item-span'}>
-                                {publishStatus === '0' ? '已发布' : '发布'}
+                                {publishStatus === '0' ? '当前启用' : '发布'}
                             </span>
                         </div>
                         {buildHeaderItemUI(leftItems)}

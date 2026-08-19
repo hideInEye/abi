@@ -43,17 +43,16 @@ function skillIconKey(id: number | string): AssistantIconKey {
   return ICON_KEYS[hash % ICON_KEYS.length];
 }
 
-type StatusKey = 'published' | 'hidden' | 'archived' | 'review' | 'rejected' | 'scanning';
+type StatusKey = 'published' | 'hidden' | 'archived' | 'review' | 'rejected' | 'scanning' | 'draft' | 'offline';
 
 function resolveStatusKey(status?: string): StatusKey {
-  // 后端：0 禁用 / 1 启用
-  if (status === '1' || status === 'PUBLISHED') return 'published';
-  if (status === '0' || status === 'HIDDEN') return 'hidden';
-  if (status === 'ARCHIVED') return 'archived';
+  if (status === '1' || status === 'PUBLISHED' || status === 'ACTIVE') return 'published';
+  if (status === '0' || status === 'HIDDEN' || status === 'OFFLINE' || status === 'DRAFT') return 'offline';
+  if (status === 'ARCHIVED' || status === '3') return 'archived';
   if (status === 'PENDING_REVIEW') return 'review';
   if (status === 'REJECTED') return 'rejected';
   if (status === 'SCANNING' || status === 'UPLOADED') return 'scanning';
-  return 'published';
+  return 'offline';
 }
 
 /** 技能类型：0 内置技能，其余（含默认 1、缺省）视为外部技能 */
@@ -230,21 +229,19 @@ export function Component() {
     });
   }
 
-  // 切换启用/隐藏
-  async function toggleSkillStatus(item: SkillItem, checked: boolean) {
-    const nextStatus = checked ? '1' : '0';
+  // 切换发布/取消发布
+  async function toggleSkillStatus(item: SkillItem, publish: boolean) {
+    const nextStatus = publish ? '1' : '0';
     setList(prev => prev.map(it => (it.id === item.id ? { ...it, status: nextStatus } : it)));
     try {
       const res: any = await updateSkillStatusApi({ skillId: item.id, status: nextStatus });
       if (res?.response?.data?.code === 200 || res?.data?.code === 200) {
-        message.success(checked ? '已启用' : '已隐藏');
+        message.success(publish ? '已发布' : '已取消发布');
       } else {
-        // 接口失败
         setList(prev => prev.map(it => (it.id === item.id ? { ...it, status: item.status } : it)));
         message.error(res?.response?.data?.msg || '操作失败');
       }
     } catch (err: any) {
-      // 网络错误
       setList(prev => prev.map(it => (it.id === item.id ? { ...it, status: item.status } : it)));
       message.error(err?.message || '操作失败');
     }
@@ -260,11 +257,11 @@ export function Component() {
 
   const statusOptions = useMemo(
     () => [
-      { value: 'ALL', label: t('page.manage.skill.filter.all') },
-      { value: '1', label: t('page.manage.skill.filter.published') },
-      { value: '0', label: t('page.manage.skill.filter.hidden') }
+      { value: 'ALL', label: '全部' },
+      { value: '1', label: '当前启用' },
+      { value: '0', label: '离线版本' },
     ],
-    [t]
+    []
   );
 
   const visibleList = useMemo(() => {
@@ -547,8 +544,8 @@ export function Component() {
                       const statusKey = resolveStatusKey(item.status);
                       const title = item.bizName || '-';
                       const online = String(item.status) === '1';
-                      const statusLabel = online ? '启用' : '停用';
-                      const tagCls = online ? '' : 'off';
+                      const statusLabel = online ? '当前启用' : '离线版本';
+                      const tagCls = online ? '' : 'offline';
                       const iconKey = item.icon || skillIconKey(item.id);
                       const added = myIds.includes(String(item.id));
                       return (
@@ -588,7 +585,7 @@ export function Component() {
                             <span className={`ac-tag ${tagCls}`}>{statusLabel}</span>
                             <div className="ac-actions">
                               <button className="ac-btn" onClick={() => toggleSkillStatus(item, !online)}>
-                                {online ? '停用' : '启用'}
+                                {online ? '取消发布' : '发布'}
                               </button>
                               <button className="ac-btn" onClick={() => openEdit(item)}>
                                 <EditOutlined />编辑

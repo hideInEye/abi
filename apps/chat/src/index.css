@@ -3029,21 +3029,23 @@ code, pre {
 .skill-intro-md h5,
 .skill-intro-md h6 { font-size: 13px; }
 .skill-intro-md p { margin: 0 0 8px; }
-/* frontmatter 提取出的 name / description：name 作为普通小标题，description 与正文一致（小字灰色） */
+/* frontmatter 提取出的 name / description 标签样式（颜色统一为深色） */
 .skill-intro-head { margin-bottom: 12px; }
 .skill-intro-head__name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
   line-height: 1.4;
   color: #1a2744;
   word-break: break-word;
 }
 .skill-intro-head__desc {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
-  color: #3e5068;
+  color: #1a2744;
   word-break: break-word;
+}
+.skill-intro-head__label {
+  font-weight: 600;
 }
 .skill-intro-md ul,
 .skill-intro-md ol {

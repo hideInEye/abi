@@ -50,9 +50,9 @@ const ProjectHdItemImpl = () => {
                                containerStyle={{gridColumn: '1/3'}}
                                defaultValue={state}
                                options={[
-                                   {label: '草稿', value: ProjectState.DRAFT},
-                                   {label: '发布', value: ProjectState.PUBLISH},
-                                   {label: '封存', value: ProjectState.SEALED}
+                                   {label: '编辑中', value: ProjectState.DRAFT},
+                                   {label: '当前启用', value: ProjectState.PUBLISH},
+                                   {label: '历史版本', value: ProjectState.SEALED}
                                ]}/>
                         <Select label={'存储类型'} options={[{value: '1', label: '本地存储'}]}
                                 defaultValue={saveType}/>

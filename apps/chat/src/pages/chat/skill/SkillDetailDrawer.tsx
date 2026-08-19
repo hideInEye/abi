@@ -778,8 +778,16 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                           <div className="skill-intro-md sd-v5-md">
                             {(introFm.name || introFm.description) && (
                               <div className="skill-intro-head">
-                                {introFm.name && <div className="skill-intro-head__name">name: {introFm.name}</div>}
-                                {introFm.description && <div className="skill-intro-head__desc">description: {introFm.description}</div>}
+                                {introFm.name && (
+                                  <div className="skill-intro-head__name">
+                                    <span className="skill-intro-head__label">name:</span> {introFm.name}
+                                  </div>
+                                )}
+                                {introFm.description && (
+                                  <div className="skill-intro-head__desc">
+                                    <span className="skill-intro-head__label">description:</span> {introFm.description}
+                                  </div>
+                                )}
                               </div>
                             )}
                             <ReactMarkdown>{introFm.body}</ReactMarkdown>

@@ -1636,17 +1636,25 @@ div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
     font-weight: 600;
     padding: 3px 10px;
     border-radius: 10px;
-    background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
+    background: rgba(82, 196, 26, 0.1);
+    color: #52C41A;
     white-space: nowrap;
 
     &.off {
-      background: rgba(148, 163, 184, 0.14);
-      color: #8494ad;
+      background: rgba(140, 140, 140, 0.14);
+      color: #8C8C8C;
+    }
+    &.archived {
+      background: rgba(140, 140, 140, 0.14);
+      color: #8C8C8C;
+    }
+    &.offline {
+      background: rgba(22, 119, 255, 0.12);
+      color: #1677FF;
     }
     &.draft {
-      background: rgba(245, 158, 11, 0.12);
-      color: #f59e0b;
+      background: rgba(250, 140, 22, 0.12);
+      color: #FA8C16;
     }
   }
 

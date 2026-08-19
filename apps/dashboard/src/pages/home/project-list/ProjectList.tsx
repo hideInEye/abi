@@ -381,8 +381,9 @@ export const ProjectList = memo((props: ProjectListProps) => {
             minWidth: 100,
             render: (status: string) => {
                 const statusMap: Record<string, { text: string; cls: string }> = {
-                    '0': { text: '已发布', cls: 'status-published' },
-                    '1': { text: '草稿', cls: 'status-draft' },
+                    '0': { text: '当前启用', cls: 'status-published' },
+                    '1': { text: '编辑中', cls: 'status-draft' },
+                    '2': { text: '历史版本', cls: 'status-sealed' },
                 };
                 const st = statusMap[status] || { text: '-', cls: '' };
                 return <span className={`abi-status-tag ${st.cls}`}>{st.text}</span>;
@@ -490,16 +491,16 @@ export const ProjectList = memo((props: ProjectListProps) => {
                                 <div className="abi-data-card-title">
                                     <span className="abi-data-card-name" title={item.name!}>{item.name}</span>
                                 </div>
-                                <span className={`abi-status-tag ${String(item.status) === '0' ? 'status-published' : 'status-draft'}`}>
-                                    {String(item.status) === '0' ? '已发布' : '草稿'}
+                                <span className={`abi-status-tag ${String(item.status) === '0' ? 'status-published' : String(item.status) === '2' ? 'status-sealed' : 'status-draft'}`}>
+                                    {String(item.status) === '0' ? '当前启用' : String(item.status) === '2' ? '历史版本' : '编辑中'}
                                 </span>
                             </div>
 
                             <div className="abi-data-card-body">
                                 {visibleKeys.has('status') && (
                                     <div className="row"><span className="lbl">状态</span><span className="val">
-                                        <span className={`abi-status-tag ${String(item.status) === '0' ? 'status-published' : 'status-draft'}`}>
-                                            {String(item.status) === '0' ? '已发布' : '草稿'}
+                                        <span className={`abi-status-tag ${String(item.status) === '0' ? 'status-published' : String(item.status) === '2' ? 'status-sealed' : 'status-draft'}`}>
+                                            {String(item.status) === '0' ? '当前启用' : String(item.status) === '2' ? '历史版本' : '编辑中'}
                                         </span>
                                     </span></div>
                                 )}
