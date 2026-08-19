@@ -39,7 +39,7 @@ function mapSkillToCard(item: SkillItem, index: number): SkillCard {
     tag: isPublic ? 'builtin' : 'custom',
     tagLabel: isPublic ? '公开' : '私有',
     color: COLOR_KEYS[index % COLOR_KEYS.length],
-    enabled: String(item.status).toUpperCase() === 'PUBLISHED',
+    enabled: String(item.status) === '1',
     icon: item.icon || undefined,
   }
 }
@@ -229,7 +229,7 @@ function SkillStoreView() {
 
   const handleToggleEnable = useCallback((card: SkillCard) => {
     const nextEnabled = !card.enabled
-    const nextStatus = nextEnabled ? 'PUBLISHED' : 'DRAFT'
+    const nextStatus = nextEnabled ? '1' : '0'
     // 乐观更新
     setCards((prev) => prev.map((c) => (c.key === card.key ? { ...c, enabled: nextEnabled } : c)))
     // 副作用放在 setState 更新函数外，避免 StrictMode 下重复调用接口
