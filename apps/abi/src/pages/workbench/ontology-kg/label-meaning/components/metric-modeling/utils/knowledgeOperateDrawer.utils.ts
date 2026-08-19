@@ -62,6 +62,19 @@ export function getMetricFieldOptionLabel(item: Partial<KnowledgeTechField>) {
   ) || fallback
 }
 
+export function formatMappedDimensionOptionTitle(params: {
+  bizName?: unknown
+  fallback?: unknown
+  techName?: unknown
+}) {
+  const displayName = getMappedMetricFieldDisplayName(params.bizName)
+  const techName = trimText(params.techName)
+  const fallback = trimText(params.fallback)
+  const name = displayName || techName || fallback
+
+  return name && techName ? `${name}（${techName}）` : name || fallback || '-'
+}
+
 export function getStepItems(showDimensionStep = true, businessOnly = false): StepItem[] {
   if (businessOnly) {
     return [{ key: 'business', title: '业务配置' }]
