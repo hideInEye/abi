@@ -153,6 +153,20 @@ export function fetchAppList(params: any) {
   return _appListInflight
 }
 
+// 应用工坊-我的助手：查询当前空间下的助手列表（默认仅查已上线 status='1'）
+export function fetchAssistantList(params: { appName?: string; status?: string; spaceId?: number | string } = {}) {
+  return request({
+    url: "/abi-chat/v1/app/list",
+    method: "post",
+    data: {
+      appName: params.appName?.trim() || undefined,
+      spaceId: params.spaceId ?? getSpaceId(),
+      status: params.status,
+    },
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  })
+}
+
 
 // 删除app
 export function deleteApp(data: any) {

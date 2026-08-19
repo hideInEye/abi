@@ -2062,10 +2062,12 @@ code, pre {
 
 /* ── Skill Store View ── */
 .skill-store-view {
-  flex: 1;
-  overflow-y: auto;
-  padding: 28px;
+  display: flex;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 28px;
   gap: 20px;
 }
 
@@ -2124,200 +2126,6 @@ code, pre {
   background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%) !important;
   height: 3px;
   border-radius: 2px;
-}
-
-/* ── 技能商店卡片：格式完全对齐 abi 技能管理 abi-data-card ── */
-.skill-store-view .abi-card-grid {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 0;
-}
-.skill-store-view .abi-card-grid-inner {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-  padding-bottom: 8px;
-}
-.skill-store-view .abi-card-empty {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-}
-.skill-store-view .abi-data-card {
-  background: rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(130, 140, 200, 0.12);
-  border-radius: 14px;
-  padding: 0;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.skill-store-view .abi-data-card:hover {
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 8px 28px rgba(26, 39, 68, 0.08), 0 2px 8px rgba(91, 124, 247, 0.06);
-  transform: translateY(-2px);
-  border-color: rgba(91, 124, 247, 0.25);
-}
-.skill-store-view .abi-data-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 18px 10px;
-  gap: 10px;
-}
-.skill-store-view .abi-data-card-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1a2744;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow: hidden;
-  min-width: 0;
-  flex: 1;
-}
-.skill-store-view .abi-data-card-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
-}
-.skill-store-view .abi-data-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  color: #768a9f;
-  line-height: 1.5;
-  padding: 0 18px 10px;
-  flex: 1;
-}
-.skill-store-view .abi-data-card-body .row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.skill-store-view .abi-data-card-body .lbl {
-  color: #a3b3c8;
-  min-width: 70px;
-  flex-shrink: 0;
-  font-size: 12px;
-}
-.skill-store-view .abi-data-card-body .lbl::after {
-  content: '：';
-}
-.skill-store-view .abi-data-card-body .val {
-  color: #3e5068;
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.skill-store-view .abi-data-card-footer {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 14px;
-  border-top: 1px solid rgba(130, 140, 200, 0.08);
-  margin-top: auto;
-}
-.skill-store-view .abi-card-act {
-  padding: 5px 12px;
-  border: none;
-  background: transparent;
-  color: #768a9f;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: inherit;
-  display: inline-flex;
-  align-items: center;
-}
-.skill-store-view .abi-card-act:hover {
-  background: rgba(91, 124, 247, 0.1);
-  color: #5b7cf7;
-}
-.skill-store-view .btn-accent-gradient {
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 18px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: linear-gradient(135deg, #5b7cf7, #7091fa);
-  color: #fff;
-  box-shadow: 0 2px 10px rgba(91, 124, 247, 0.3);
-  font-family: inherit;
-}
-.skill-store-view .btn-accent-gradient:hover {
-  box-shadow: 0 4px 18px rgba(91, 124, 247, 0.4);
-  transform: translateY(-1px);
-  color: #fff;
-}
-.skill-store-view .btn-accent-gradient--sm {
-  height: 26px;
-  padding: 3px 12px;
-  font-size: 12px;
-  border-radius: 6px;
-}
-.skill-store-view .btn-accent-gradient--danger {
-  background: linear-gradient(135deg, #ef4444, #f87171);
-  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
-}
-.skill-store-view .btn-accent-gradient--danger:hover {
-  box-shadow: 0 4px 18px rgba(239, 68, 68, 0.4);
-}
-.skill-store-view .btn-accent-gradient--added {
-  background: linear-gradient(135deg, #9ca3af, #b3bac4);
-  box-shadow: 0 2px 8px rgba(156, 163, 175, 0.25);
-}
-.skill-store-view .btn-accent-gradient--added:hover {
-  box-shadow: 0 4px 14px rgba(156, 163, 175, 0.35);
-}
-.skill-store-view .abi-status-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-.skill-store-view .abi-status-tag::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.skill-store-view .abi-status-tag.status-normal {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-}
-.skill-store-view .abi-status-tag.status-normal::before {
-  background: #059669;
-}
-.skill-store-view .abi-status-tag.status-disabled {
-  background: rgba(139, 139, 139, 0.1);
-  color: #8c8c8c;
-}
-.skill-store-view .abi-status-tag.status-disabled::before {
-  background: #8c8c8c;
 }
 
 .ss-grid {
@@ -2583,6 +2391,212 @@ code, pre {
   color: #fff !important;
 }
 
+/* 数据目录下拉面板 — 对齐 ABI Group 组件风格 */
+.ws-datadir-panel {
+  width: 260px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, rgba(240, 244, 255, 0.75) 0%, rgba(239, 243, 255, 0.75) 45%, rgba(239, 242, 255, 0.75) 100%);
+  backdrop-filter: blur(12px);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ws-datadir-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+  flex-shrink: 0;
+}
+.ws-datadir-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2744;
+  letter-spacing: 0.02em;
+}
+.ws-datadir-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 12px 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+.ws-datadir-search:focus-within {
+  border-color: #5b7cf7;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.10);
+}
+.ws-datadir-search-icon {
+  font-size: 13px;
+  color: #8fa0b5;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+.ws-datadir-search:focus-within .ws-datadir-search-icon {
+  color: #5b7cf7;
+}
+.ws-datadir-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: #1a2744;
+  width: 100%;
+  padding: 0;
+}
+.ws-datadir-search-input::placeholder {
+  color: #8fa0b5;
+}
+.ws-datadir-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px 8px;
+}
+.ws-datadir-body::-webkit-scrollbar {
+  width: 4px;
+}
+.ws-datadir-body::-webkit-scrollbar-thumb {
+  background: rgba(91, 124, 247, 0.10);
+  border-radius: 4px;
+}
+.ws-datadir-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ws-datadir-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3a4d65;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 2px;
+}
+.ws-datadir-all:hover {
+  background: rgba(130, 140, 200, 0.08);
+}
+.ws-datadir-all-active {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.10);
+  font-weight: 600;
+}
+.ws-datadir-tree {
+  background: transparent;
+  overflow: visible;
+}
+.ws-datadir-tree .ant-tree-treenode {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+}
+.ws-datadir-tree .ant-tree-treenode.ant-tree-treenode-selected .ws-datadir-node-label {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.10);
+  font-weight: 600;
+}
+.ws-datadir-tree .ant-tree-treenode:hover .ws-datadir-node-label {
+  background: rgba(130, 140, 200, 0.08);
+}
+.ws-datadir-tree .ant-tree-node-content-wrapper {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  background: transparent !important;
+}
+.ws-datadir-tree .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  background: transparent !important;
+}
+.ws-datadir-tree .ant-tree-node-content-wrapper:hover {
+  background: transparent !important;
+}
+.ws-datadir-tree .ant-tree-title {
+  display: block;
+  overflow: hidden;
+  width: 100%;
+}
+.ws-datadir-tree .ant-tree-indent-unit {
+  width: 14px !important;
+}
+.ws-datadir-tree .ant-tree-switcher {
+  display: none !important;
+}
+/* 节点标签 */
+.ws-datadir-node-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #3a4d65;
+  user-select: none;
+  width: 100%;
+  line-height: 1.5;
+}
+.ws-datadir-node-leaf {
+  font-weight: 500;
+  color: #5f7490;
+  padding-left: 14px;
+}
+.ws-datadir-node-icon {
+  flex-shrink: 0;
+  font-size: 15px;
+  color: #358cf3;
+}
+.ws-datadir-node-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ws-datadir-node-count {
+  color: #8494ad;
+  font-size: 11px;
+  font-weight: 400;
+  flex-shrink: 0;
+}
+.ws-datadir-node-chevron {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.25s ease;
+  opacity: 0.35;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+.ws-datadir-node-chevron-open {
+  transform: rotate(90deg);
+  opacity: 0.6;
+}
+.ws-datadir-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: #8fa0b5;
+  font-size: 13px;
+}
+
 /* 数据区：占满剩余高度 */
 .ws-data-spin {
   flex: 1;
@@ -2617,62 +2631,188 @@ code, pre {
   font-size: 13px;
 }
 
-.ws-table-wrap {
+/* 我的助手卡片网格（对齐 abi .abi-card-grid / .abi-assistant-card 玻璃拟态风格） */
+.ws-card-scroll {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  background: rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(130, 140, 200, 0.18);
-  border-radius: 12px;
+  padding: 4px 2px 8px;
 }
-
-.ws-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  color: var(--ink);
+.ws-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
 }
-.ws-table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 11px 16px;
-  text-align: left;
+.ws-assistant-card {
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(130, 140, 200, 0.12);
+  border-radius: 14px;
+  padding: 18px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.ws-assistant-card:hover {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 8px 28px rgba(26, 39, 68, 0.08),
+    0 2px 8px rgba(91, 124, 247, 0.06);
+  transform: translateY(-2px);
+  border-color: rgba(91, 124, 247, 0.25);
+}
+.ws-assistant-card .wac-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ws-assistant-card .wac-main {
+  flex: 1;
+  min-width: 0;
+}
+.ws-assistant-card .wac-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2744;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ws-assistant-card .wac-desc {
   font-size: 12.5px;
+  color: #8494ad;
+  line-height: 1.5;
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+  min-height: 37px;
+}
+.ws-assistant-card .wac-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(130, 140, 200, 0.12);
+}
+/* 对话卡片无状态标签，操作按钮右对齐（与助手卡片同一视觉位置）；
+   必须写在 .wac-footer 之后，否则同权重下会被 space-between 覆盖 */
+.ws-assistant-card .wac-footer--end {
+  justify-content: flex-end;
+}
+.ws-assistant-card .wac-tag {
+  font-size: 11px;
   font-weight: 600;
-  color: #768a9f;
-  background: #f4f6fd;
-  border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+  padding: 3px 10px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
   white-space: nowrap;
 }
-.ws-table td {
-  padding: 11px 16px;
-  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
-  color: var(--ink-2);
+.ws-assistant-card .wac-tag.off {
+  background: rgba(148, 163, 184, 0.14);
+  color: #8494ad;
 }
-.ws-table tbody tr:last-child td {
-  border-bottom: none;
-}
-.ws-table tbody tr {
-  transition: background 0.15s var(--ease);
-}
-.ws-table tbody tr:hover {
-  background: rgba(91, 124, 247, 0.04);
+.ws-assistant-card .wac-tag.draft {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
 }
 
-.ws-link-btn {
+/* 卡片底部操作按钮（查看），助手 + 技能共用 */
+.ws-assistant-card .wac-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.ws-assistant-card .wac-act {
+  padding: 4px 10px;
   border: none;
   background: transparent;
-  padding: 0;
-  font-size: 12.5px;
+  color: #768a9f;
+  font-size: 12px;
   font-weight: 600;
   font-family: var(--font);
-  color: #5b7cf7;
   cursor: pointer;
-  transition: opacity 0.15s var(--ease);
+  border-radius: 6px;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
 }
-.ws-link-btn:hover {
-  opacity: 0.75;
+.ws-assistant-card .wac-act:hover {
+  background: rgba(91, 124, 247, 0.1);
+  color: #5b7cf7;
+}
+.ws-assistant-card .wac-act:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ws-assistant-card .wac-act--danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* 卡片右上角 添加/已添加/移除 按钮（技能商店复用助手卡片头部） */
+.ws-assistant-card .wac-add-btn {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 3px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, #5b7cf7, #7091fa);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.28);
+}
+.ws-assistant-card .wac-add-btn:hover {
+  box-shadow: 0 4px 14px rgba(91, 124, 247, 0.38);
+  transform: translateY(-1px);
+}
+.ws-assistant-card .wac-add-btn--added {
+  background: linear-gradient(135deg, #9ca3af, #b3bac4);
+  box-shadow: 0 2px 8px rgba(156, 163, 175, 0.25);
+}
+.ws-assistant-card .wac-add-btn--added:hover {
+  box-shadow: 0 4px 14px rgba(156, 163, 175, 0.35);
+}
+.ws-assistant-card .wac-add-btn--danger {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.28);
+}
+.ws-assistant-card .wac-add-btn--danger:hover {
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.38);
+}
+
+/* ── 助手只读详情抽屉 ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.assistant-detail-drawer .ant-drawer-body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.assistant-detail-drawer .add-section-text {
+  font-size: 13.5px;
+  color: #3e5068;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.assistant-detail-drawer .add-section-text.pre {
+  white-space: pre-wrap;
 }
 
 /* 分页条（对齐 abi data-source-pagination） */
@@ -2889,6 +3029,22 @@ code, pre {
 .skill-intro-md h5,
 .skill-intro-md h6 { font-size: 13px; }
 .skill-intro-md p { margin: 0 0 8px; }
+/* frontmatter 提取出的 name / description：name 作为普通小标题，description 与正文一致（小字灰色） */
+.skill-intro-head { margin-bottom: 12px; }
+.skill-intro-head__name {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #1a2744;
+  word-break: break-word;
+}
+.skill-intro-head__desc {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #3e5068;
+  word-break: break-word;
+}
 .skill-intro-md ul,
 .skill-intro-md ol {
   margin: 0 0 8px;
@@ -2978,19 +3134,6 @@ code, pre {
   border-radius: 50%;
   pointer-events: none;
 }
-.sd-v5-hero__close {
-  position: absolute;
-  top: 16px; right: 16px;
-  z-index: 2;
-  width: 30px; height: 30px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border: none; border-radius: 8px;
-  background: rgba(255,255,255,0.18);
-  color: #fff; font-size: 14px; cursor: pointer;
-  backdrop-filter: blur(4px);
-  transition: background 0.2s;
-}
-.sd-v5-hero__close:hover { background: rgba(255,255,255,0.32); }
 .sd-v5-hero__inner { position: relative; z-index: 1; }
 .sd-v5-hero__head {
   display: flex;

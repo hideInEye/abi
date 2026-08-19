@@ -5,6 +5,8 @@ import { observer } from 'mobx-react';
 import { getApiTarget, notifyTokenExpired } from '../../../../utils/FetchUtil';
 import { getAuthorization } from '../../../../utils/auth';
 import baseApi from '../../../../api/BaseApi';
+import projectHdStore from '../project/ProjectManager';
+import URLUtil from '../../../../utils/URLUtil';
 import layerManager from '../../../manager/LayerManager.ts';
 import rightStore from '../../../right/RightStore';
 import './AiChatPanel.less';
@@ -44,6 +46,9 @@ interface ChatMessage {
 
 // 模块级单例缓存（组件销毁重建时不丢失）
 let cachedMessages: ChatMessage[] = [];
+let cachedConvUid = ''; // 已拉取历史的会话 conv_uid
+let cachedChatId = '';  // 已拉取历史的会话 session_id
+let historyLoaded = false; // 是否已成功拉取过历史（避免组件重挂载重复请求）
 let cachedSemanticTree: any[] = []; // 持久化数据语义分组树
 let cachedSelectedData: SemanticSelectedData | null = null; // 持久化数据语义选择
 
@@ -66,6 +71,80 @@ function getUserId(): number {
     // ignore
   }
   return 0;
+}
+
+/**
+ * 将历史消息接口（/abi-chat/v1/app/message/query）返回的原始消息映射为大屏 ChatMessage。
+ * 与 chat 对话同源：roleType 取 roleType || messageDetail.type，内容取 messageDetail.data.content。
+ * 大屏只展示 human 与 view（view 为结构化图表数据，映射为 ai 气泡）；ai（思考过程）不展示。
+ */
+function mapDashboardHistory(rawList: any[]): ChatMessage[] {
+  const getRole = (item: any): string => item?.roleType || item?.messageDetail?.type || '';
+  const getContent = (item: any): any => item?.messageDetail?.data?.content ?? '';
+  const getTime = (item: any): string => {
+    const t = item?.createTime;
+    if (!t) return '';
+    const d = new Date(t);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  // view 内容解析：大屏为结构化 JSON 字符串；兼容 <chart-view content="..."/> 包裹形式
+  const parseViewContent = (content: any): any => {
+    if (content == null) return {};
+    if (typeof content !== 'string') return content;
+    let str = content;
+    const m = str.match(/<chart-view content="([\s\S]*?)"\s*\/>/);
+    if (m) str = m[1].replace(/&quot;/g, '"').replace(/NaN/g, 'null');
+    try { return JSON.parse(str); } catch { return {}; }
+  };
+  const getViewChartId = (item: any): string => {
+    const ctx = parseViewContent(getContent(item));
+    const taskType = ctx.task_type ?? 'development';
+    return ctx[taskType]?.chart_id ?? '';
+  };
+
+  // human 与 view 成对出现，view 紧跟 human 之后
+  const filtered = rawList.filter((item) => {
+    const role = getRole(item);
+    return role === 'human' || role === 'view';
+  });
+
+  return filtered.map((item, i) => {
+    const role = getRole(item);
+    const time = getTime(item);
+    if (role === 'human') {
+      // human 的 chartId 从紧跟的 view（下一条）里取
+      const nextItem = filtered[i + 1];
+      const chartId = nextItem && getRole(nextItem) === 'view' ? getViewChartId(nextItem) : '';
+      const content = getContent(item);
+      return {
+        role: 'human' as const,
+        content: typeof content === 'string' ? content : String(content ?? ''),
+        time,
+        isNew: false,
+        chartId,
+      };
+    }
+    // view：解析结构化数据（与实时响应同结构：ctx[task_type].{data,sql,mapping,name,chart_id}）
+    const viewCtx = parseViewContent(getContent(item));
+    const respTaskType = viewCtx.task_type ?? 'development';
+    const devData = viewCtx[respTaskType] ?? {};
+    const tableData: TableRow[] | undefined =
+      Array.isArray(devData.data) && devData.data.length > 0 ? devData.data : undefined;
+    return {
+      role: 'ai' as const,
+      content: tableData ? '' : (devData.text || devData.content || ''),
+      time,
+      tableData,
+      sql: devData.sql || undefined,
+      mapping: devData.mapping,
+      chartName: devData.name,
+      isNew: true,
+      accepted: false,
+      chartId: devData.chart_id ?? '',
+    };
+  });
 }
 
 interface AiChatPanelProps {
@@ -169,6 +248,39 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
     }
   }, []);
 
+  // 打开大屏时：读取项目绑定的会话（创建大屏时写入 dataJson），并拉取该会话历史消息
+  useEffect(() => {
+    const dataJson = projectHdStore.projectConfig.dataJson;
+    if (!dataJson) return;
+    let chatId = '';
+    let convUid = '';
+    try {
+      const parsed = JSON.parse(dataJson);
+      chatId = parsed?.chatId ? String(parsed.chatId) : '';
+      convUid = parsed?.convUid ? String(parsed.convUid) : '';
+    } catch { /* ignore */ }
+    // 项目未绑定会话（旧大屏）：跳过历史加载，待用户发送时由 ensureSession 按需补建
+    if (!chatId || !convUid) return;
+    chatIdRef.current = chatId;
+    convUidRef.current = convUid;
+
+    // 命中模块级缓存：同一会话已拉过历史，直接复用（避免组件重挂载/StrictMode 重复请求）
+    if (historyLoaded && cachedChatId === chatId) {
+      convUidRef.current = cachedConvUid || convUid;
+      return;
+    }
+
+    baseApi.fetchSessionMessages(convUid)
+      .then((rawList) => {
+        // 新会话：以历史覆盖全量消息（同时清理跨项目残留的模块级缓存）
+        setAllMessages(mapDashboardHistory(rawList));
+        cachedChatId = chatId;
+        cachedConvUid = convUid;
+        historyLoaded = true;
+      })
+      .catch(() => {});
+  }, [projectHdStore.projectConfig.dataJson]);
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
@@ -202,6 +314,21 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
     if (!res) return false;
     chatIdRef.current = res.sessionId;
     convUidRef.current = res.convUid;
+    cachedChatId = res.sessionId;
+    cachedConvUid = res.convUid;
+    historyLoaded = true;
+    // 旧大屏项目按需补建会话：把会话标识回写到项目 dataJson，保证下次打开可拉取历史
+    try {
+      const { id } = URLUtil.parseUrlParams();
+      if (id) {
+        const existing = projectHdStore.projectConfig.dataJson;
+        const parsed = existing ? JSON.parse(existing) : {};
+        const merged = { ...parsed, chatId: res.sessionId, convUid: res.convUid };
+        const mergedJson = JSON.stringify(merged);
+        projectHdStore.updateProjectConfig({ dataJson: mergedJson });
+        await baseApi.updateProject({ id, dataJson: mergedJson });
+      }
+    } catch { /* ignore */ }
     return true;
   }, []);
 
@@ -383,10 +510,12 @@ const AiChatPanel: React.FC<AiChatPanelProps> = observer(({
       await baseApi.clearChatConv(convUidRef.current, currentChartId, 'chat_with_dashboard').catch(() => {});
     }
     setAllMessages([]);
-    convUidRef.current = '';
     streamBufferRef.current = '';
-    // 重置消息缓存
+    // 后端已清空该会话历史：保留当前会话标识与项目绑定不变，仅重置消息与历史加载标记
     cachedMessages = [];
+    historyLoaded = false;
+    cachedChatId = '';
+    cachedConvUid = '';
   };
 
   /** 切换采纳状态（找到 allMessages 中的对应项） */

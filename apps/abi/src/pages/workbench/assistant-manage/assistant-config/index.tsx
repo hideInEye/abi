@@ -11,6 +11,7 @@ import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnaly
 import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
+import { AssistantIconBlock } from '@/components/AssistantIcon';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { fetchAppListApi, deleteAppApi, updateAppApi } from '@/service/api/abi-chat-app';
@@ -18,26 +19,13 @@ import { filterByCreateTime } from '@/utils/date';
 
 import AssistantEditDrawer, { type AgentMock } from './modules/assistant-edit-drawer';
 
-/** 从应用名称中取首字作为图标文字 */
-function getIconLetter(name?: string) {
-  return name ? name.charAt(0) : '助';
-}
-
-/** 根据 appId 生成确定性图标背景色 */
-const ICON_COLORS = ['#fa8c16', '#1677ff', '#52c41a', '#722ed1', '#eb2f96', '#13c2c2', '#f5222d', '#2f54eb'];
-function getIconBg(id: number | string) {
-  const n = typeof id === 'number' ? id : parseInt(String(id), 10) || 0;
-  return ICON_COLORS[n % ICON_COLORS.length];
-}
-
 /** 将接口返回的 AppItem 映射为页面卡片数据结构 */
 function mapAppToCard(item: any): AgentCard {
   return {
     id: item.appId,
     name: item.appName || '',
     description: item.description || '',
-    iconBg: getIconBg(item.appId),
-    iconLetter: getIconLetter(item.appName),
+    icon: item.icon,
     status: item.status ?? '0',
     createBy: item.createBy || '-',
     createTime: item.createTime ? String(item.createTime).replace('T', ' ') : '-',
@@ -65,8 +53,7 @@ const ASSISTANT_GROUP_CONFIG: GroupProps['config'] = {
 
 interface AgentCard extends AgentMock {
   type: '助手' | '技能';
-  iconBg: string;
-  iconLetter: string;
+  icon?: string;
   selected?: boolean;
   createBy?: string;
   groupId?: string;
@@ -399,78 +386,55 @@ export function Component() {
         <div className="abi-card-grid-inner">
           {pagedList.map(agent => {
             const active = agent.id === selectedId;
+            const online = agent.status === '1';
+            const statusLabel = agent.status === '1' ? '已上线' : agent.status === '0' ? '草稿' : '已下线';
+            const tagCls = agent.status === '1' ? '' : agent.status === '0' ? 'draft' : 'off';
             return (
               <div
                 key={agent.id}
-                className="abi-data-card"
-                style={active ? { borderColor: '#5b7cf7' } : undefined}
+                className={`abi-assistant-card${active ? ' selected' : ''}`}
                 onClick={() => handleEdit(agent)}
               >
-                <div className="abi-data-card-head">
-                  <div className="abi-data-card-title">
-                    <div
-                      style={{
-                        alignItems: 'center',
-                        background: agent.iconBg,
-                        borderRadius: 6,
-                        color: '#fff',
-                        display: 'flex',
-                        flexShrink: 0,
-                        fontSize: 14,
-                        fontWeight: 700,
-                        height: 28,
-                        justifyContent: 'center',
-                        width: 28
-                      }}
-                    >
-                      {agent.iconLetter}
-                    </div>
-                    <span className="abi-data-card-name">{agent.name}</span>
+                {/* 头部：图标 + 标题/描述 + 状态开关 */}
+                <div className="ac-head">
+                  <AssistantIconBlock iconKey={agent.icon} radius={12} size={42} />
+                  <div className="ac-main">
+                    <div className="ac-title" title={agent.name}>{agent.name}</div>
+                    <div className="ac-desc">{agent.description || '暂无描述'}</div>
                   </div>
                   <span onClick={e => e.stopPropagation()}>
-                    <Switch
-                      checked={agent.status === '1'}
-                      size="small"
-                      onChange={checked => handleToggle(agent.id, checked)}
-                    />
+                    <Switch checked={online} size="small" onChange={checked => handleToggle(agent.id, checked)} />
                   </span>
                 </div>
-                <div className="abi-data-card-body">
-                  <div className="row">
-                    <span className="lbl">描述</span>
-                    <span className="val" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{agent.description}</span>
-                  </div>
-                  <div className="row"><span className="lbl">创建用户</span><span className="val">{agent.createBy || '-'}</span></div>
-                  <div className="row"><span className="lbl">创建时间</span><span className="val">{agent.createTime || '-'}</span></div>
-                </div>
-                <div className="abi-data-card-footer" onClick={e => e.stopPropagation()}>
-                  <button className="abi-card-act" onClick={() => handleEdit(agent)}>
-                    <EditOutlined style={{ marginRight: 3 }} />编辑
-                  </button>
-                  <button className="abi-card-act" onClick={() => setAnalysisContext({
-                    nodeId: agent.id,
-                    nodeName: agent.name,
-                    nodeType: 'ASSISTANT',
-                    spaceId: Number(localStorage.getItem('spaceId')) || undefined
-                  })}>
-                    <ApartmentOutlined style={{ marginRight: 3 }} />元数据
-                  </button>
-                  <Dropdown
-                    menu={{
-                      items: [
-                        { key: 'delete', danger: true, label: '删除' },
-                      ],
-                      onClick: ({ key, domEvent }) => {
-                        domEvent.stopPropagation();
-                        if (key === 'delete') handleDelete(agent.id);
-                      }
-                    }}
-                    trigger={['click']}
-                  >
-                    <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
-                      <MoreOutlined />
+                {/* 底部：状态标签 + 操作 */}
+                <div className="ac-footer" onClick={e => e.stopPropagation()}>
+                  <span className={`ac-tag ${tagCls}`}>{statusLabel}</span>
+                  <div className="ac-actions">
+                    <button className="ac-btn" onClick={() => handleEdit(agent)}>
+                      <EditOutlined />编辑
                     </button>
-                  </Dropdown>
+                    <Dropdown
+                      menu={{
+                        items: [
+                          {
+                            key: 'metadata',
+                            label: (<span><ApartmentOutlined style={{ marginRight: 4 }} />元数据分析</span>),
+                            onClick: () => setAnalysisContext({
+                              nodeId: agent.id,
+                              nodeName: agent.name,
+                              nodeType: 'ASSISTANT',
+                              spaceId: Number(localStorage.getItem('spaceId')) || undefined
+                            })
+                          },
+                          { type: 'divider' },
+                          { key: 'delete', danger: true, label: '删除', onClick: () => handleDelete(agent.id) },
+                        ]
+                      }}
+                      trigger={['click']}
+                    >
+                      <button className="ac-icon-btn"><MoreOutlined /></button>
+                    </Dropdown>
+                  </div>
                 </div>
               </div>
             );

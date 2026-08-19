@@ -58,6 +58,21 @@ class BaseApi extends AbstractApi {
     }
 
     /**
+     * 拉取会话历史消息（abi-chat）
+     * 调用 /abi-chat/v1/app/message/query（与 chat 对话历史同源），按 conv_uid 返回全部轮次消息。
+     * 返回按轮次分组后展平的原始消息列表（含 roleType / messageDetail.data.content / roundIndex / createTime），
+     * 由调用方（大屏对话面板）自行映射为展示所需结构。
+     * @param convUid 会话 conv_uid
+     */
+    async fetchSessionMessages(convUid: string): Promise<any[]> {
+        if (!convUid) return [];
+        const res = await FetchUtil.post('/abi-chat/v1/app/message/query', {convUid});
+        if (res.code !== 200) return [];
+        const roundGroups: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
+        return roundGroups.flatMap((g: any) => (Array.isArray(g?.messages) ? g.messages : []));
+    }
+
+    /**
      * 清空会话消息（chat-proxy）
      * @param convUid 会话uid
      * @param chartId 当前图表id

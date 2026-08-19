@@ -255,6 +255,7 @@ export function updateSkillStatusApi(data: { skillId: number | string; status: n
  */
 export function updateSkillInfoApi(data: {
   bizName?: string;
+  icon?: string;
   skillId: number | string;
   skillType?: number | string;
   status?: number | string;

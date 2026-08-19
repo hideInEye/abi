@@ -11,10 +11,10 @@
 
 import React, {memo, useEffect, useRef, useState} from 'react';
 import './ProjectList.less';
-import {Button, Empty, Input, Select, Table, Dropdown, Popconfirm, Modal, Switch, Segmented, DatePicker, ConfigProvider, message} from "antd";
+import {Button, Empty, Input, Select, Table, Dropdown, Popconfirm, Modal, DatePicker, ConfigProvider} from "antd";
 import {
     LeftOutlined, PlusOutlined, RightOutlined,
-    DeleteOutlined, EditOutlined, EyeOutlined, CopyOutlined, ShareAltOutlined,
+    DeleteOutlined, EditOutlined, EyeOutlined, CopyOutlined,
     DownOutlined, AppstoreOutlined, UnorderedListOutlined, MoreOutlined, SettingOutlined
 } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
@@ -87,16 +87,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
         setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
     };
 
-    // Share modal state
-    const [shareModalVisible, setShareModalVisible] = useState(false);
-    const [shareProjectId, setShareProjectId] = useState<string>('');
-    const [sharePasswordFlag, setSharePasswordFlag] = useState(false);
-    const [shareLink, setShareLink] = useState('');
-    const [sharePassword, setSharePassword] = useState<string | null>('');
-    const [shareLoading, setShareLoading] = useState(false);
-    const [expirationMode, setExpirationMode] = useState<string>('forever');
-    const [expirationDate, setExpirationDate] = useState<Dayjs | null>(null);
-
     // Rename modal state
     const [renameModalVisible, setRenameModalVisible] = useState(false);
     const [renameId, setRenameId] = useState('');
@@ -139,6 +129,29 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 return;
             }
 
+            // 2. 为新建大屏创建对话会话（每个大屏 = 一个独立会话），并把会话标识写入项目 dataJson，
+            //    供大屏 AI 面板发送对话（chat/completions）与拉取历史（/abi-chat/v1/app/message/query）复用。
+            //    会话创建失败不阻塞大屏创建，后续可在对话面板按需补建。
+            try {
+                let userId = 0;
+                try {
+                    const info = localStorage.getItem('SOY-REACT_userInfo');
+                    if (info) {
+                        const uid = JSON.parse(info)?.userId;
+                        userId = uid != null ? Number(uid) : 0;
+                    }
+                } catch { /* ignore */ }
+                const session = await baseApi.addChatSession({spaceId, userId, title: name});
+                if (session) {
+                    await baseApi.updateProject({
+                        id,
+                        dataJson: JSON.stringify({canvasManager: {width, height}, chatId: session.sessionId, convUid: session.convUid}),
+                    });
+                }
+            } catch (sessionErr) {
+                console.warn('大屏会话创建失败，将在对话面板按需补建:', sessionErr);
+            }
+
             setAddDialog(false);
             URLUtil.navigateToAppPath('/designer', {id, saveType, mode: DesignerMode.EDIT});
         } catch (e) {
@@ -164,10 +177,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
             case 'clone':
                 cloneIdRef.current = id;
                 setCloneDialog(true);
-                break;
-            case 'share':
-                setShareProjectId(id);
-                setShareModalVisible(true);
                 break;
         }
     }
@@ -310,44 +319,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
         runQuery({keyword: '', range: null});
     };
 
-    // ── Share modal handlers ──
-    const handleShare = async () => {
-        setShareLoading(true);
-        try {
-            const currentSpaceId = localStorage.getItem('spaceId') || '';
-            const expirationDays = ['1', '7', '30'].includes(expirationMode) ? Number(expirationMode) : undefined;
-            const expirationDateStr = expirationMode === 'custom' && expirationDate
-                ? expirationDate.format('YYYY-MM-DD HH:mm:ss')
-                : undefined;
-            const res = await baseApi.shareProject(Number(shareProjectId), Number(currentSpaceId), sharePasswordFlag, expirationDays, expirationDateStr);
-            if (res?.shareUrl) {
-                const shareUrl = res.shareUrl.replace('/#/', '/').replace('/dr/', '/dashboard-share-page/');
-                setShareLink(shareUrl);
-                setSharePassword(res.sharePassword ?? null);
-            }
-        } finally {
-            setShareLoading(false);
-        }
-    };
-
-    const handleCopyLink = () => {
-        const text = sharePassword
-            ? `分享链接：${shareLink}\n访问密码：${sharePassword}`
-            : shareLink;
-        navigator.clipboard.writeText(text).then(() => {
-            message.success(sharePassword ? '分享链接和密码已复制到剪贴板' : '分享链接已复制到剪贴板');
-        });
-    };
-
-    const handleCloseShareModal = () => {
-        setShareModalVisible(false);
-        setShareLink('');
-        setSharePassword(null);
-        setSharePasswordFlag(false);
-        setExpirationMode('forever');
-        setExpirationDate(null);
-    };
-
     // ── Rename handlers ──
     const openRename = (id: string, currentName: string) => {
         setRenameId(id);
@@ -410,8 +381,8 @@ export const ProjectList = memo((props: ProjectListProps) => {
             minWidth: 100,
             render: (status: string) => {
                 const statusMap: Record<string, { text: string; cls: string }> = {
-                    '0': { text: '草稿', cls: 'status-draft' },
-                    '1': { text: '已发布', cls: 'status-published' },
+                    '0': { text: '已发布', cls: 'status-published' },
+                    '1': { text: '草稿', cls: 'status-draft' },
                 };
                 const st = statusMap[status] || { text: '-', cls: '' };
                 return <span className={`abi-status-tag ${st.cls}`}>{st.text}</span>;
@@ -468,11 +439,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
                                     label: <span><CopyOutlined style={{ marginRight: 4 }} />复制</span>,
                                     onClick: () => operateHandler(record.id!, 'clone'),
                                 },
-                                {
-                                    key: 'share',
-                                    label: <span><ShareAltOutlined style={{ marginRight: 4 }} />分享</span>,
-                                    onClick: () => operateHandler(record.id!, 'share'),
-                                },
                                 { type: 'divider' },
                                 {
                                     key: 'delete',
@@ -524,16 +490,16 @@ export const ProjectList = memo((props: ProjectListProps) => {
                                 <div className="abi-data-card-title">
                                     <span className="abi-data-card-name" title={item.name!}>{item.name}</span>
                                 </div>
-                                <span className={`abi-status-tag ${String(item.status) === '1' ? 'status-published' : 'status-draft'}`}>
-                                    {String(item.status) === '1' ? '已发布' : '草稿'}
+                                <span className={`abi-status-tag ${String(item.status) === '0' ? 'status-published' : 'status-draft'}`}>
+                                    {String(item.status) === '0' ? '已发布' : '草稿'}
                                 </span>
                             </div>
 
                             <div className="abi-data-card-body">
                                 {visibleKeys.has('status') && (
                                     <div className="row"><span className="lbl">状态</span><span className="val">
-                                        <span className={`abi-status-tag ${String(item.status) === '1' ? 'status-published' : 'status-draft'}`}>
-                                            {String(item.status) === '1' ? '已发布' : '草稿'}
+                                        <span className={`abi-status-tag ${String(item.status) === '0' ? 'status-published' : 'status-draft'}`}>
+                                            {String(item.status) === '0' ? '已发布' : '草稿'}
                                         </span>
                                     </span></div>
                                 )}
@@ -564,11 +530,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
                                                 key: 'clone',
                                                 label: '复制',
                                                 onClick: () => operateHandler(item.id!, 'clone'),
-                                            },
-                                            {
-                                                key: 'share',
-                                                label: '分享',
-                                                onClick: () => operateHandler(item.id!, 'share'),
                                             },
                                             { type: 'divider' },
                                             {
@@ -789,121 +750,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 />
             </Modal>
 
-            {/* Share Modal */}
-            <Modal
-                title="分享大屏项目"
-                open={shareModalVisible}
-                onCancel={handleCloseShareModal}
-                footer={null}
-                width={520}
-                centered
-            >
-                <div style={{ padding: '8px 0 4px' }}>
-                    {/* 访问密码 */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '14px 16px',
-                        background: '#f7f8fa',
-                        borderRadius: '10px',
-                        marginBottom: '12px',
-                    }}>
-                        <div>
-                            <div style={{ fontWeight: 500, color: '#262626', marginBottom: '2px' }}>访问密码保护</div>
-                            <div style={{ fontSize: '12px', color: '#8c8c8c' }}>开启后将生成随机访问密码</div>
-                        </div>
-                        <Switch checked={sharePasswordFlag} onChange={setSharePasswordFlag} disabled={!!shareLink} />
-                    </div>
-
-                    {/* 链接有效期 */}
-                    <div style={{
-                        padding: '14px 16px',
-                        background: '#f7f8fa',
-                        borderRadius: '10px',
-                        marginBottom: '20px',
-                    }}>
-                        <div style={{ fontWeight: 500, color: '#262626', marginBottom: '10px' }}>链接有效期</div>
-                        <Segmented
-                            value={expirationMode}
-                            onChange={(val) => setExpirationMode(String(val))}
-                            options={[
-                                { label: '永久', value: 'forever' },
-                                { label: '1 天', value: '1' },
-                                { label: '7 天', value: '7' },
-                                { label: '30 天', value: '30' },
-                                { label: '自定义', value: 'custom' },
-                            ]}
-                            block
-                        />
-                        {expirationMode === 'custom' && (
-                            <div style={{ marginTop: '12px' }}>
-                                <ConfigProvider locale={{...zhCN, DatePicker: {...zhCN.DatePicker, lang: {...zhCN.DatePicker?.lang, ok: '确认'}} as any}}>
-                                <DatePicker
-                                    value={expirationDate}
-                                    onChange={(date) => setExpirationDate(date)}
-                                    showTime={{format: 'HH:mm:ss'}}
-                                    format="YYYY-MM-DD HH:mm:ss"
-                                    placeholder="选择过期日期和时间"
-                                    style={{width: '100%'}}
-                                    disabledDate={(current) => current && current.isBefore(new Date(), 'day')}
-                                />
-                                </ConfigProvider>
-                        </div>
-                        )}
-                    </div>
-
-                    {/* 生成按钮 / 结果区 */}
-                    {!shareLink ? (
-                        <Button
-                            type="primary"
-                            block
-                            size="large"
-                            loading={shareLoading}
-                            onClick={handleShare}
-                            disabled={expirationMode === 'custom' && !expirationDate}
-                            style={{ borderRadius: '8px', height: '44px' }}
-                        >
-                            生成分享链接
-                        </Button>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{
-                                background: '#f7f8fa',
-                                borderRadius: '10px',
-                                padding: '14px 16px',
-                            }}>
-                                <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: '8px' }}>分享链接</div>
-                                <Input.TextArea
-                                    value={shareLink}
-                                    readOnly
-                                    rows={2}
-                                    style={{ background: 'transparent', border: 'none', padding: 0, resize: 'none', boxShadow: 'none' }}
-                                />
-                            </div>
-                            {sharePassword && (
-                                <div style={{
-                                    background: '#F7F8FA',
-                                    borderRadius: '10px',
-                                    padding: '14px 16px',
-                                }}>
-                                    <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: '6px' }}>访问密码</div>
-                                    <div style={{ fontWeight: 700, fontSize: '22px', letterSpacing: '6px', color: '#666' }}>{sharePassword}</div>
-                                </div>
-                            )}
-                            <Button
-                                type="primary"
-                                block
-                                size="large"
-                                onClick={handleCopyLink}
-                                style={{borderRadius: '8px', height: '44px' }}
-                            >
-                                {sharePassword ? '复制链接和密码' : '复制链接'}
-                            </Button>
-                        </div>
-                    )}
-                </div>
-            </Modal>
         </div>
     );
 })

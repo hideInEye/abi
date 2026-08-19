@@ -2,6 +2,7 @@ import { SearchOutlined } from "@ant-design/icons";
 import React, { useEffect, useMemo, useState } from "react";
 
 import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { AssistantIconBlock } from '@/components/AssistantIcon';
 import { filterByCreateTime } from '@/utils/date';
 import { getOperateRecordList } from "@/service/api/operateRecord";
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
@@ -56,18 +57,6 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     const { spaceId, chatId } = r;
     switchToSpace(spaceId, undefined, { chatId });
   };
-
-  const columns: any[] = [
-    { align: "center", dataIndex: "chatName", key: "chatName", minWidth: 140, title: "对话名称" },
-    { align: "center", dataIndex: "spaceName", key: "spaceName", minWidth: 120, title: "所属空间" },
-    { align: "center", dataIndex: "recentlyUseTime", key: "recentlyUseTime", minWidth: 140, title: "最近使用时间" },
-    {
-      align: "center", dataIndex: "opreation", key: "opreation", width: 100, fixed: "right", title: "操作",
-      render: (_: any, r: any) => (
-        <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleNavigate(r)}>进入对话</AButton>
-      ),
-    },
-  ];
 
   // 前端按最近使用时间过滤 + 前端分页（apiFn 返回全量数据）
   const filteredRows = useMemo(
@@ -127,6 +116,40 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     });
   };
 
+  // 卡片视图：复用 .abi-assistant-card（视觉已对齐 chat .ws-assistant-card）
+  const renderCardGrid = () => {
+    if (pagedRows.length === 0) {
+      return (
+        <div className="abi-card-empty">
+          <AEmpty description="暂无最近使用的对话" image={AEmpty.PRESENTED_IMAGE_SIMPLE} />
+        </div>
+      );
+    }
+
+    return (
+      <div className="abi-card-grid">
+        <div className="abi-card-grid-inner">
+          {pagedRows.map((record: any) => (
+            <div key={record.id} className="abi-assistant-card">
+              <div className="ac-head">
+                <AssistantIconBlock iconKey="chat" radius={12} size={42} />
+                <div className="ac-main">
+                  <div className="ac-title" title={record.chatName}>{record.chatName || '-'}</div>
+                  <div className="ac-desc">所属空间：{record.spaceName || '-'}</div>
+                </div>
+              </div>
+              <div className="ac-footer ac-footer--end">
+                <div className="ac-actions">
+                  <button className="ac-btn" onClick={() => handleNavigate(record)}>进入对话</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* Searchbar */}
@@ -156,29 +179,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
       {/* Data Area */}
       <section className="abi-data-area">
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-          <div
-            style={{
-              border: '1px solid rgba(130,140,200,0.18)',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              flex: 1,
-              minHeight: 0,
-            }}
-          >
-            <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
-              <ATable
-                columns={columns}
-                dataSource={pagedRows}
-                loading={false}
-                pagination={false}
-                rowKey="id"
-                scroll={pagedRows?.length > 0 ? { x: 'max-content' } : undefined}
-                size="middle"
-                locale={{ emptyText: <TableEmpty description="暂无最近使用的对话" /> }}
-                className="abi-std-table"
-              />
-            </div>
-          </div>
+          {renderCardGrid()}
 
           <div className="data-source-pagination">
             <span className="total-text">共 {totalCount} 条</span>

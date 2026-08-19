@@ -471,6 +471,18 @@ export const generatedRoutes: GeneratedRoute[] = [
         },
         children: [
           {
+            name: 'workbench_app-workshop_my-assistant',
+            path: 'my-assistant',
+            component: 'view.workbench_app-workshop_my-assistant',
+            meta: {
+              hideInMenu: false,
+              i18nKey: 'route.workbench_app-workshop_my-assistant',
+              icon: 'mdi:robot-outline',
+              order: 0,
+              title: 'workbench_app-workshop_my-assistant'
+            }
+          },
+          {
             name: 'workbench_app-workshop_my-chat',
             path: 'my-chat',
             component: 'view.workbench_app-workshop_my-chat',
