@@ -13,6 +13,7 @@ import {
   getReportTitle,
   getStepSummary,
   getTaskKey,
+  isReportGenerationTask,
   isVisibleReportStep,
   shouldAnimateReportPreview,
   shouldShowReportEstimate,
@@ -36,6 +37,12 @@ describe('report-mode UI helpers', () => {
 
     expect(getCompletedTaskCount(tasks)).toBe(1)
     expect(getCurrentTaskTitle(tasks)).toBe('生成报告')
+  })
+
+  it('只把明确的中英文报告任务识别为报告产物阶段', () => {
+    expect(isReportGenerationTask({ content: '生成最终 Markdown 报告' })).toBe(true)
+    expect(isReportGenerationTask({ content: 'Generate final report' })).toBe(true)
+    expect(isReportGenerationTask({ content: '加载 SQL 技能' })).toBe(false)
   })
 
   it('用 plan entry 和任务下标生成稳定展开 key', () => {
@@ -91,25 +98,28 @@ describe('report-mode UI helpers', () => {
   })
 
   it('严格按照思考、ToDo、报告三个阶段渐进展示', () => {
-    const createView = (overrides: Partial<Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate'>> = {}) => ({
+    const createView = (overrides: Partial<Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate' | 'thinkingCompleted'>> = {}) => ({
       currentPlan: undefined,
       tasks: [],
       status: 'thinking' as const,
       reportCandidate: undefined,
+      thinkingCompleted: false,
       ...overrides,
     })
     const plan = { entryId: '1730000000000-0', tasks: [] }
     const candidate = { entryId: '1730000001000-0', stepId: 'report', format: 'html' as const, content: '<h1>报告</h1>' }
 
     expect(getReportPresentationStage(createView({ reportCandidate: candidate }))).toBe('thinking')
-    expect(getReportPresentationStage(createView({ currentPlan: plan, tasks: [{ content: '分析', status: 'in_progress' }], reportCandidate: candidate }))).toBe('todo')
-    expect(getReportPresentationStage(createView({ currentPlan: plan, tasks: [{ content: '分析', status: 'pending' }], status: 'completed', reportCandidate: candidate }))).toBe('todo')
-    expect(canRevealReport(createView({ currentPlan: plan, tasks: [{ content: '分析', status: 'completed' }], status: 'completed', reportCandidate: candidate }))).toBe(true)
-    expect(canRevealReport(createView({ currentPlan: plan, tasks: [{ content: '旧步骤', status: 'cancelled' }], status: 'completed', reportCandidate: candidate }))).toBe(true)
-    expect(canRevealReport({ ...createView({ currentPlan: plan, tasks: [{ content: '导出 PDF', status: 'completed' }], status: 'completed' }), reportAttachments: [{ entryId: '3-0', stepId: 'report', format: 'pdf', url: '/report.pdf' }] })).toBe(true)
+    expect(getReportPresentationStage(createView({ currentPlan: plan, tasks: [{ content: '分析', status: 'in_progress' }], reportCandidate: candidate }))).toBe('thinking')
+    expect(getReportPresentationStage(createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '分析', status: 'in_progress' }], reportCandidate: candidate }))).toBe('todo')
+    expect(getReportPresentationStage(createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '分析', status: 'pending' }], status: 'completed', reportCandidate: candidate }))).toBe('todo')
+    expect(canRevealReport(createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '分析', status: 'completed' }], status: 'completed', reportCandidate: candidate }))).toBe(true)
+    expect(canRevealReport(createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '旧步骤', status: 'cancelled' }], status: 'completed', reportCandidate: candidate }))).toBe(true)
+    expect(canRevealReport(createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '生成 Markdown 报告', status: 'completed' }], status: 'completed', reportCandidate: { ...candidate, format: 'markdown', content: '# 最终报告' } }))).toBe(true)
+    expect(canRevealReport({ ...createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '导出 PDF', status: 'completed' }], status: 'completed' }), reportAttachments: [{ entryId: '3-0', stepId: 'report', format: 'pdf', url: '/report.pdf' }] })).toBe(true)
   })
 
-  it('公开执行摘要不会提前暴露 HTML 或 Markdown 报告正文', () => {
+  it('只有报告产物上下文才过滤 HTML 或 Markdown 正文', () => {
     const step: ReportPublicStep = {
       id: 'step-report',
       status: 'done',
@@ -123,8 +133,9 @@ describe('report-mode UI helpers', () => {
       scope: 'todo',
     }
 
-    expect(getStepSummary(step)).toBe('正在整理关键结论')
-    expect(getPublicStepLines(step)).toEqual(['正在整理关键结论'])
+    expect(getPublicStepLines(step)).toEqual(['正在整理关键结论', '<html>完整报告</html>'])
+    expect(getStepSummary(step, true)).toBe('正在整理关键结论')
+    expect(getPublicStepLines(step, true)).toEqual(['正在整理关键结论'])
   })
 
   it('终态计划分别显示完成和取消数量', () => {
@@ -156,6 +167,7 @@ describe('report-mode UI helpers', () => {
   it('只在实时 HTML 报告首次自动打开时播放打字机', () => {
     const report = {
       currentPlan: { entryId: '1-0', tasks: [] },
+      thinkingCompleted: true,
       tasks: [{ content: '生成报告', status: 'completed' as const }],
       status: 'completed' as const,
       reportCandidate: { entryId: '2-0', stepId: 'report', format: 'html' as const, content: '<html><body>报告</body></html>' },

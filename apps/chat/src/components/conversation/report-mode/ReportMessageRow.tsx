@@ -44,6 +44,7 @@ const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThi
   const presentationStage = getReportPresentationStage(report)
   const durationText = formatReportDuration(report.durationSeconds)
   const showEstimate = shouldShowReportEstimate(report.status)
+  const showFinalSummary = Boolean(report.final) && (presentationStage === 'report' || report.status === 'failed')
   const warningDescription = report.status === 'syncing_history' ? '报告已经生成，正在整理到当前会话中。' : report.status === 'completed' ? undefined : '生成过程出现短暂波动，系统正在自动恢复。'
 
   return (
@@ -66,7 +67,7 @@ const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThi
           <ReportThinkingPanel report={report} onToggle={onToggleThinking} />
           {presentationStage !== 'thinking' && <ReportTodoList report={report} onToggleTodo={onToggleTodo} onToggleTask={onToggleTask} />}
 
-          {presentationStage === 'report' && report.final && <div className={styles.finalSummary}>{report.final.content}</div>}
+          {showFinalSummary && report.final && <div className={styles.finalSummary}>{report.final.content}</div>}
 
           {report.storageWarning && (
             <div className={styles.inlineAlert}>

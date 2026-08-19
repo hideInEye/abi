@@ -42,6 +42,108 @@ describe('report stream reducer', () => {
     expect(parseReportStreamEvent('{bad json')).toBeUndefined()
     expect(parseReportStreamEvent('{"type":"unknown"}')).toBeUndefined()
     expect(parseReportStreamEvent('{"type":"done","time":125}')).toEqual({ type: 'done', time: 125 })
+    expect(parseReportStreamEvent(JSON.stringify({ data: { type: 'step.plan', id: 'step-plan', content: '制定执行计划' } }))).toEqual({
+      type: 'step.plan',
+      id: 'step-plan',
+      content: '制定执行计划',
+    })
+  })
+
+  it('首个 step.plan 固定为思考总结，并在同一步骤 done 后进入 ToDo 阶段', () => {
+    const beforeThinkingDone = reduceReportStreamEntries([
+      entry('1-0', { type: 'step.start', id: 'step-1', title: '思考中' }),
+      entry('2-0', { type: 'step.start', id: 'step-1', title: 'TODO::init:0/2', todo_meta: { state: 'init', done: 0, total: 2 } }),
+      entry('3-0', { type: 'plan.update', tasks: [{ content: '确认数据完整性', status: 'in_progress' }, { content: '生成报告', status: 'pending' }], version: 1 }),
+      {
+        id: '4-0',
+        data: JSON.stringify({
+          data: {
+            type: 'step.plan',
+            id: 'step-1',
+            content: '先确认历史数据完整性，再加载预测技能。',
+          },
+        }),
+      },
+      entry('5-0', { type: 'step.meta', id: 'step-1', action: 'todowrite', todo_meta: { state: 'init', done: 0, total: 2 } }),
+    ])
+    const state = reduceReportStreamEntry(beforeThinkingDone, entry('6-0', { type: 'step.done', id: 'step-1', status: 'done' }))
+
+    expect(beforeThinkingDone.thinkingPlan).toEqual({
+      entryId: '4-0',
+      id: 'step-1',
+      content: '先确认历史数据完整性，再加载预测技能。',
+    })
+    expect(beforeThinkingDone).toMatchObject({ status: 'thinking', thinkingOpen: true, thinkingCompleted: false })
+    expect(beforeThinkingDone.currentPlan?.version).toBe(1)
+    expect(state).toMatchObject({ status: 'running', thinkingOpen: false, thinkingCompleted: true })
+    expect(state.todoSummaries).toEqual([])
+  })
+
+  it('plan.update 后的 step.plan 总结前一个已完成 Todo，且不会增加计划中的任务数量', () => {
+    const state = reduceReportStreamEntries([
+      entry('1-0', { type: 'step.start', id: 'step-1', title: '思考中' }),
+      entry('2-0', { type: 'step.start', id: 'step-1', title: 'TODO::init:0/5', todo_meta: { state: 'init', done: 0, started: 1, total: 5 } }),
+      entry('3-0', {
+        type: 'plan.update',
+        tasks: [
+          { content: '加载 sql-generator 技能，了解SQL生成流程', status: 'in_progress' },
+          { content: '生成订单总金额查询SQL', status: 'pending' },
+          { content: '执行SQL查询获取数据', status: 'pending' },
+          { content: '分析数据并生成可视化图表', status: 'pending' },
+          { content: '生成最终HTML报告', status: 'pending' },
+        ],
+        version: 1,
+      }),
+      entry('4-0', { type: 'step.plan', id: 'step-1', content: '先明确分析目标和执行计划。' }),
+      entry('5-0', { type: 'step.done', id: 'step-1', status: 'done' }),
+      entry('6-0', { type: 'step.start', id: 'step-3', step: 3, title: '思考中', detail: 'Thought/Action/Observation' }),
+      entry('7-0', { type: 'step.start', id: 'step-3', step: 3, title: 'TODO::progress:2/5', detail: 'todowrite', todo_meta: { state: 'progress', done: 1, started: 2, total: 5 } }),
+      entry('8-0', {
+        type: 'plan.update',
+        source: 'llm',
+        tasks: [
+          { content: '加载 sql-generator 技能，了解SQL生成流程', status: 'completed' },
+          { content: '生成订单总金额查询SQL', status: 'in_progress' },
+          { content: '执行SQL查询获取数据', status: 'pending' },
+          { content: '分析数据并生成可视化图表', status: 'pending' },
+          { content: '生成最终HTML报告', status: 'pending' },
+        ],
+        version: 2,
+      }),
+      entry('9-0', { type: 'step.plan', id: 'step-3', content: 'sql-generator技能已加载，现在需要生成查询订单总金额的SQL。' }),
+      entry('10-0', { type: 'step.meta', id: 'step-3', title: 'TODO::progress:2/5', action: 'todowrite', todo_meta: { state: 'progress', done: 1, started: 2, total: 5 } }),
+      entry('11-0', { type: 'step.done', id: 'step-3', status: 'done' }),
+    ])
+
+    expect(state.thinkingPlan?.content).toBe('先明确分析目标和执行计划。')
+    expect(state.tasks).toHaveLength(5)
+    expect(state.tasks.map((task) => task.content)).toEqual([
+      '加载 sql-generator 技能，了解SQL生成流程',
+      '生成订单总金额查询SQL',
+      '执行SQL查询获取数据',
+      '分析数据并生成可视化图表',
+      '生成最终HTML报告',
+    ])
+    expect(state.todoSummaries.map(({ taskIndex, taskContent, content }) => ({ taskIndex, taskContent, content }))).toEqual([
+      { taskIndex: 0, taskContent: '加载 sql-generator 技能，了解SQL生成流程', content: 'sql-generator技能已加载，现在需要生成查询订单总金额的SQL。' },
+    ])
+    expect(state.stepsById['step-3'].todoMeta).toMatchObject({ state: 'progress', done: 1, started: 2, total: 5 })
+  })
+
+  it('空内容或无法可靠映射的 Todo 总结只记录 warning，不猜测归属', () => {
+    const state = reduceReportStreamEntries([
+      entry('1-0', { type: 'step.start', id: 'step-1', title: '思考中' }),
+      entry('2-0', { type: 'step.plan', id: 'step-1', content: '初始思考总结' }),
+      entry('3-0', { type: 'step.done', id: 'step-1', status: 'done' }),
+      entry('4-0', { type: 'plan.update', tasks: [{ content: '任务 A', status: 'in_progress' }, { content: '任务 B', status: 'pending' }] }),
+      entry('5-0', { type: 'step.start', id: 'step-2', title: 'TODO::init:0/2', todo_meta: { state: 'init', done: 0, total: 2 } }),
+      entry('6-0', { type: 'step.plan', id: 'step-2', content: '没有前一个已完成任务，不能归到当前执行项' }),
+      entry('7-0', { type: 'step.plan', id: 'step-empty', content: '   ' }),
+    ])
+
+    expect(state.todoSummaries).toEqual([])
+    expect(state.warnings.some((warning) => warning.includes('无法可靠归属'))).toBe(true)
+    expect(state.warnings).toContain('entry 7-0 的 step.plan.content 无效，已跳过')
   })
 
   it('将首个 plan 前的同 id 步骤合并为思考，且不暴露内部推理字段', () => {
@@ -108,7 +210,7 @@ describe('report stream reducer', () => {
     )
 
     expect(initial).toMatchObject({ thinkingOpen: true, todoOpen: false })
-    expect(firstPlan).toMatchObject({ status: 'running', thinkingOpen: false, todoOpen: false })
+    expect(firstPlan).toMatchObject({ status: 'thinking', thinkingOpen: true, thinkingCompleted: false, todoOpen: false })
     expect(firstPlan.expandedTaskKeys).toEqual(['10-0:0'])
     expect(secondPlan.todoOpen).toBe(true)
     expect(secondPlan.currentPlan?.version).toBe(2)
@@ -184,7 +286,74 @@ describe('report stream reducer', () => {
     expect(state.unassignedStepIds).toEqual(['ambiguous'])
   })
 
-  it('任意阶段的 markdown/html chunk 都立即覆盖为最新报告候选', () => {
+  it('把无执行中计划之后的步骤回填到下一份计划中新进入执行中的唯一任务', () => {
+    const state = reduceReportStreamEntries([
+      entry('1787017831447-0', {
+        type: 'plan.update',
+        source: 'llm',
+        version: 3,
+        tasks: [
+          { content: '加载 sql-generator 技能', status: 'completed' },
+          { content: '生成订单总额查询 SQL', status: 'pending' },
+          { content: '执行 SQL 获取订单数据', status: 'pending' },
+        ],
+      }),
+      entry('1787017874528-0', { type: 'step.start', id: 'step-6', step: 6, title: '思考中' }),
+      entry('1787017902145-0', { type: 'step.start', id: 'step-6', step: 6, title: 'execute_skill_script_file' }),
+      entry('1787017902149-0', { type: 'step.meta', id: 'step-6', action: 'execute_skill_script_file', action_intention: '生成订单总额查询SQL' }),
+      entry('1787017902149-1', { type: 'step.chunk', id: 'step-6', output_type: 'text', content: 'SQL 查询完成' }),
+      entry('1787017902150-0', { type: 'step.done', id: 'step-6', status: 'done' }),
+      entry('1787017902152-0', {
+        type: 'plan.update',
+        source: 'framework',
+        version: 4,
+        tasks: [
+          { content: '加载 sql-generator 技能', status: 'completed' },
+          { content: '生成订单总额查询 SQL', status: 'in_progress' },
+          { content: '执行 SQL 获取订单数据', status: 'pending' },
+        ],
+      }),
+    ])
+
+    expect(state.unassignedStepIds).toEqual([])
+    expect(state.stepsById['step-6']).toMatchObject({
+      scope: 'todo',
+      executionGroupKey: '1787017902152-0:1',
+    })
+    expect(state.executionGroups).toContainEqual({
+      key: '1787017902152-0:1',
+      planEntryId: '1787017902152-0',
+      taskIndex: 1,
+      taskContent: '生成订单总额查询 SQL',
+      stepIds: ['step-6'],
+    })
+  })
+
+  it('后置计划存在多个执行中任务时仍保留未归属步骤', () => {
+    const state = reduceReportStreamEntries([
+      entry('1-0', {
+        type: 'plan.update',
+        tasks: [
+          { content: '任务 A', status: 'pending' },
+          { content: '任务 B', status: 'pending' },
+        ],
+      }),
+      entry('2-0', { type: 'step.start', id: 'ambiguous-late-step', title: 'tool' }),
+      entry('3-0', {
+        type: 'plan.update',
+        tasks: [
+          { content: '任务 A', status: 'in_progress' },
+          { content: '任务 B', status: 'in_progress' },
+        ],
+      }),
+    ])
+
+    expect(state.executionGroups).toHaveLength(0)
+    expect(state.unassignedStepIds).toEqual(['ambiguous-late-step'])
+    expect(state.stepsById['ambiguous-late-step'].scope).toBe('unassigned')
+  })
+
+  it('忽略思考阶段技能 Markdown，只保留报告 Todo 的 HTML 候选', () => {
     const prePlanMarkdown = entry('2-0', {
       type: 'step.chunk',
       id: 'skill-step',
@@ -215,16 +384,19 @@ describe('report stream reducer', () => {
 
   it('保留 PDF/Word 下载附件且不覆盖 HTML 预览候选', () => {
     const state = reduceReportStreamEntries([
-      entry('1-0', { type: 'step.chunk', id: 'report', output_type: 'html', content: '<html><title>经营报告</title></html>' }),
-      entry('2-0', { type: 'step.chunk', id: 'report', output_type: 'pdf', content: 'https://files.example.com/report.pdf' }),
-      entry('3-0', { type: 'step.chunk', id: 'report', output_type: 'word', content: '/downloads/report.docx' }),
-      entry('4-0', { type: 'done', time: 125 }),
+      entry('1-0', { type: 'plan.update', tasks: [{ content: '生成经营分析报告', status: 'in_progress' }] }),
+      entry('2-0', { type: 'step.start', id: 'report', title: 'generate_report_html' }),
+      entry('3-0', { type: 'step.chunk', id: 'report', output_type: 'html', content: '<html><title>经营报告</title></html>' }),
+      entry('4-0', { type: 'step.chunk', id: 'report', output_type: 'pdf', content: 'https://files.example.com/report.pdf' }),
+      entry('5-0', { type: 'step.chunk', id: 'report', output_type: 'word', content: '/downloads/report.docx' }),
+      entry('6-0', { type: 'plan.update', tasks: [{ content: '生成经营分析报告', status: 'completed' }] }),
+      entry('7-0', { type: 'done', time: 125 }),
     ])
 
-    expect(state.reportCandidate).toMatchObject({ entryId: '1-0', format: 'html' })
+    expect(state.reportCandidate).toMatchObject({ entryId: '3-0', format: 'html' })
     expect(state.reportAttachments).toEqual([
-      { entryId: '2-0', stepId: 'report', format: 'pdf', url: 'https://files.example.com/report.pdf' },
-      { entryId: '3-0', stepId: 'report', format: 'word', url: '/downloads/report.docx' },
+      { entryId: '4-0', stepId: 'report', format: 'pdf', url: 'https://files.example.com/report.pdf' },
+      { entryId: '5-0', stepId: 'report', format: 'word', url: '/downloads/report.docx' },
     ])
     expect(state.durationSeconds).toBe(125)
     expect(state.status).toBe('completed')
@@ -232,9 +404,11 @@ describe('report stream reducer', () => {
 
   it('只有实际 PDF 附件时仍识别为已生成文件', () => {
     const state = reduceReportStreamEntries([
-      entry('1-0', { type: 'plan.update', tasks: [{ content: '导出 PDF', status: 'completed' }] }),
-      entry('2-0', { type: 'step.chunk', id: 'report', output_type: 'pdf', content: '/downloads/report.pdf' }),
-      entry('3-0', { type: 'done' }),
+      entry('1-0', { type: 'plan.update', tasks: [{ content: '生成并导出 PDF 报告', status: 'in_progress' }] }),
+      entry('2-0', { type: 'step.start', id: 'report', title: 'generate_report_pdf' }),
+      entry('3-0', { type: 'step.chunk', id: 'report', output_type: 'pdf', content: '/downloads/report.pdf' }),
+      entry('4-0', { type: 'plan.update', tasks: [{ content: '生成并导出 PDF 报告', status: 'completed' }] }),
+      entry('5-0', { type: 'done' }),
     ])
 
     expect(state.status).toBe('completed')
@@ -243,16 +417,86 @@ describe('report stream reducer', () => {
     expect(state.currentPlan).toBeDefined()
   })
 
-  it('done 有候选时完成，无候选时给出明确失败', () => {
-    const completed = reduceReportStreamEntries([entry('1-0', { type: 'step.chunk', id: 'report', output_type: 'markdown', content: '# 报告' }), entry('2-0', { type: 'done' })])
+  it('done 后只接纳已完成报告 Todo 的 HTML/Markdown，不用技能 Markdown 兜底', () => {
+    const completed = reduceReportStreamEntries([
+      entry('1-0', { type: 'plan.update', tasks: [{ content: '生成 HTML 报告', status: 'in_progress' }] }),
+      entry('2-0', { type: 'step.start', id: 'html-report', title: 'generate_report_html' }),
+      entry('3-0', { type: 'step.chunk', id: 'html-report', output_type: 'html', content: '<html><body>报告</body></html>' }),
+      entry('4-0', { type: 'plan.update', tasks: [{ content: '生成 HTML 报告', status: 'completed' }] }),
+      entry('5-0', { type: 'done' }),
+    ])
+    const completedMarkdown = reduceReportStreamEntries([
+      entry('1-0', { type: 'plan.update', tasks: [{ content: '生成 Markdown 报告', status: 'in_progress' }] }),
+      entry('2-0', { type: 'step.start', id: 'markdown-report', title: 'generate_report_markdown' }),
+      entry('3-0', { type: 'step.chunk', id: 'markdown-report', output_type: 'markdown', content: '# 最终报告' }),
+      entry('4-0', { type: 'plan.update', tasks: [{ content: '生成 Markdown 报告', status: 'completed' }] }),
+      entry('5-0', { type: 'done' }),
+    ])
+    const markdownOnly = reduceReportStreamEntries([
+      entry('1-0', { type: 'plan.update', tasks: [{ content: '加载 SQL 技能', status: 'in_progress' }, { content: '生成最终报告', status: 'pending' }] }),
+      entry('2-0', { type: 'step.start', id: 'skill-doc', title: 'load_skill' }),
+      entry('3-0', { type: 'step.chunk', id: 'skill-doc', output_type: 'markdown', content: '# SQL 生成技能' }),
+      entry('4-0', { type: 'plan.update', tasks: [{ content: '加载 SQL 技能', status: 'completed' }, { content: '生成最终报告', status: 'cancelled' }] }),
+      entry('5-0', { type: 'done' }),
+    ])
     const failed = reduceReportStreamEntries([entry('1-0', { type: 'done' })])
 
-    expect(completed).toMatchObject({ status: 'completed', doneEntryId: '2-0', lastEntryId: '2-0' })
+    expect(completed).toMatchObject({ status: 'completed', doneEntryId: '5-0', lastEntryId: '5-0' })
+    expect(completedMarkdown).toMatchObject({ status: 'completed', reportCandidate: { format: 'markdown', content: '# 最终报告' } })
+    expect(markdownOnly).toMatchObject({
+      status: 'failed',
+      doneEntryId: '5-0',
+      error: { code: 'report_content_missing', message: '未收到报告文件' },
+    })
+    expect(markdownOnly.reportCandidate).toBeUndefined()
     expect(failed).toMatchObject({
       status: 'failed',
       doneEntryId: '1-0',
       error: { code: 'report_content_missing', message: '未收到报告文件' },
     })
+  })
+
+  it('错误 final 立即收敛为失败，后续 done 不得覆盖失败终态', () => {
+    const finalError = "大模型对话生成错误!(Error code: 429 - {'error': {'message': 'rpm exhausted'}})"
+    const failedAtFinal = reduceReportStreamEntries([
+      entry('1-0', {
+        type: 'plan.update',
+        tasks: [
+          { content: '获取订单数据', status: 'completed' },
+          { content: '生成最终 HTML 分析报告', status: 'in_progress' },
+          { content: '更新任务状态并结束', status: 'pending' },
+        ],
+      }),
+      entry('2-0', { type: 'step.start', id: 'html-step', title: '思考中' }),
+      // 即使此前误把技能说明识别成候选，也不能在错误终态展示成成功报告。
+      entry('3-0', { type: 'step.chunk', id: 'skill-step', output_type: 'markdown', content: '# Skill 文档' }),
+      entry('4-0', { type: 'final', content: finalError }),
+    ])
+    const state = reduceReportStreamEntry(failedAtFinal, entry('5-0', { type: 'done', time: 326 }))
+
+    expect(failedAtFinal).toMatchObject({
+      status: 'failed',
+      lastEntryId: '4-0',
+      final: { entryId: '4-0', content: finalError },
+      error: {
+        code: 'report_generation_failed',
+        message: '报告生成失败，请稍后重试。',
+      },
+    })
+    expect(failedAtFinal.tasks.map((task) => task.status)).toEqual(['completed', 'cancelled', 'cancelled'])
+    expect(failedAtFinal.stepsById['html-step'].status).toBe('failed')
+
+    expect(state).toMatchObject({
+      status: 'failed',
+      doneEntryId: '5-0',
+      durationSeconds: 326,
+      final: { entryId: '4-0', content: finalError },
+      error: {
+        code: 'report_generation_failed',
+        message: '报告生成失败，请稍后重试。',
+      },
+    })
+    expect(state.currentPlan?.tasks.map((task) => task.status)).toEqual(['completed', 'cancelled', 'cancelled'])
   })
 
   it('兼容真实数据中分段 text 包装的报告，并在 done 时收敛未闭合步骤', () => {
