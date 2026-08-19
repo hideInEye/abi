@@ -80,13 +80,12 @@
   cursor: default;
 }
 
-/* 技能卡片网格：与「工具管理」一致的宽卡片（每行约 3 张）。
-   全局 .abi-card-grid .abi-card-grid-inner 是 minmax(320px)（每行更多更窄），
-   这里用更大的 minmax 覆盖，仅作用于技能页 .skill-hub-scope，不影响其他复用页面。
-   特异性 0,3,0 > 全局 0,2,0，稳定覆盖。
+/* 技能卡片网格：固定每行 3 列。
+   全局 .abi-card-grid-inner 是 auto-fill minmax(320px)（大屏会自动变 4 列、窄屏变 2 列），
+   这里覆盖为固定 3 列，保证大屏小屏都是三列；仅作用于技能页 .skill-hub-scope。
    注：原 .skill-card-grid / .skill-card 系列样式已删除（JSX 改用 .abi-card-grid / .abi-assistant-card 后成为无引用死代码）。 */
 .skill-hub-scope .abi-card-grid .abi-card-grid-inner {
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
 }
 
 /* 顶部 hero 横幅（发布页） */
@@ -304,9 +303,11 @@
   border-radius: 9999px;
   border: 1px solid transparent;
 }
-.skill-hub-scope .sd-badge--active   { color: #166534; background: #dcfce7; border-color: #86efac; }
-.skill-hub-scope .sd-badge--archived { color: #374151; background: #f3f4f6; border-color: #d1d5db; }
+.skill-hub-scope .sd-badge--active   { color: #52C41A; background: rgba(82,196,26,0.1); border-color: #95de64; }
+.skill-hub-scope .sd-badge--archived { color: #8C8C8C; background: rgba(140,140,140,0.1); border-color: #d9d9d9; }
 .skill-hub-scope .sd-badge--hidden   { color: #92400e; background: #fef3c7; border-color: #fcd34d; }
+.skill-hub-scope .sd-badge--offline  { color: #1677FF; background: rgba(22,119,255,0.08); border-color: #69b1ff; }
+.skill-hub-scope .sd-badge--draft    { color: #FA8C16; background: rgba(250,140,22,0.08); border-color: #ffc069; }
 .skill-hub-scope .sd-badge--review   { color: #9a3412; background: #ffedd5; border-color: #fdba74; }
 .skill-hub-scope .sd-badge--rejected { color: #991b1b; background: #fee2e2; border-color: #fca5a5; }
 .skill-hub-scope .sd-badge--scanning { color: #1e3a8a; background: #dbeafe; border-color: #93c5fd; }
@@ -523,23 +524,25 @@
 .skill-intro-md p {
   margin: 0 0 8px;
 }
-/* frontmatter 提取出的 name / description：name 作为普通小标题，description 与正文一致（小字灰色） */
+/* frontmatter 提取出的 name / description 标签样式（颜色统一为深色） */
 .skill-intro-head {
   margin-bottom: 12px;
 }
 .skill-intro-head__name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
   line-height: 1.4;
   color: #1a2744;
   word-break: break-word;
 }
 .skill-intro-head__desc {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
-  color: #3e5068;
+  color: #1a2744;
   word-break: break-word;
+}
+.skill-intro-head__label {
+  font-weight: 600;
 }
 .skill-intro-md ul,
 .skill-intro-md ol {
@@ -807,7 +810,9 @@
   font-size: 12px; font-weight: 600;
   white-space: nowrap;
 }
-.sd-v5-pill--active  { color: #166534; background: #dcfce7; }
+.sd-v5-pill--active  { color: #52C41A; background: rgba(82, 196, 26, 0.1); }
+.sd-v5-pill--offline { color: #1677FF; background: rgba(22, 119, 255, 0.1); }
+.sd-v5-pill--archived{ color: #8C8C8C; background: rgba(140, 140, 140, 0.14); }
 .sd-v5-pill--hidden  { color: #92400e; background: #fef3c7; }
 .sd-v5-pill--review  { color: #9a3412; background: #ffedd5; }
 .sd-v5-pill--rejected{ color: #991b1b; background: #fee2e2; }

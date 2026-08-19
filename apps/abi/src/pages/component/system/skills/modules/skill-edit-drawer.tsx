@@ -227,8 +227,9 @@ const SkillEditDrawer: FC<Props> = ({ onClose, onSuccess, open, skill }) => {
 
           <Form.Item label={<span style={{ color: '#3e5068', fontWeight: 500 }}>状态</span>} name="status" style={{ marginBottom: 0 }}>
             <Select style={{ width: 160 }}>
-              <Select.Option value="1">启用</Select.Option>
-              <Select.Option value="0">隐藏</Select.Option>
+              <Select.Option value="PUBLISHED">当前启用</Select.Option>
+              <Select.Option value="DRAFT">离线版本</Select.Option>
+              <Select.Option value="HISTORY">历史版本</Select.Option>
             </Select>
           </Form.Item>
         </div>

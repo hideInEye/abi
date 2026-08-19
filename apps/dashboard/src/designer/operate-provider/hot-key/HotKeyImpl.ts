@@ -149,8 +149,10 @@ export const doSave = throttle(async () => {
     const projectInfo: IProjectInfo = {
         id,
         dataJson: JSON.stringify({...proData, ...sessionPatch}),
+        status: '1',
     }
     await baseApi.updateProject(projectInfo);
+    projectHdStore.updateProjectConfig({status: '1'});
     NProgress.done()
 }, 5000, {trailing: false});
 

@@ -399,7 +399,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       if (error) return
       setStatus('0')
       setDraftSaved(true)
-      message.success('已保存为草稿')
+      message.success('已保存')
       onClose(true)
     } finally {
       setSaving(null)
@@ -422,7 +422,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
         if (publishError) return
       }
       setStatus('1')
-      message.success('已上线，状态设为发布')
+      message.success('已发布')
       onClose(true)
     } finally {
       setSaving(null)
@@ -558,7 +558,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 transition: 'all 0.3s ease',
               }}
             >
-              保存草稿
+              保存
             </Button>
             <Button
               disabled={saving === 'draft'}
@@ -574,7 +574,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 transition: 'all 0.3s ease',
               }}
             >
-              上线
+              发布
             </Button>
             </>)}
           </div>
@@ -688,10 +688,10 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             </CollapseRow>
             {/* 应用icon：整行点击弹出分组图标选择弹窗 */}
             {readOnly ? (
-              <IconPickerRow title="应用icon" />
+              <IconPickerRow title="应用图标" />
             ) : (
               <AssistantIconPicker onChange={setIconKey} value={iconKey}>
-                <IconPickerRow title="应用icon" />
+                <IconPickerRow title="应用图标" />
               </AssistantIconPicker>
             )}
 
@@ -1037,7 +1037,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               </div>
               <Input
                 disabled={!draftSaved}
-                placeholder={draftSaved ? '请输入问题' : '保存草稿后即可开始测试'}
+                placeholder={draftSaved ? '请输入问题' : '保存后即可开始测试'}
                 prefix={draftSaved ? undefined : <LockOutlined style={{ color: '#b6c0d4' }} />}
                 size="large"
                 suffix={<SendOutlined style={{ color: draftSaved ? '#5b7cf7' : '#c2ccdd' }} />}

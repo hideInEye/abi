@@ -112,11 +112,11 @@ export enum DesignerMode {
  * 项目状态
  */
 export enum ProjectState {
-    //草稿
+    //编辑中
     DRAFT = '0',
-    //发布
+    //当前启用
     PUBLISH = '1',
-    //封存
+    //历史版本
     SEALED = '2'
 }
 

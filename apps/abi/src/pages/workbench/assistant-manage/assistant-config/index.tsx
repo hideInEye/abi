@@ -284,7 +284,7 @@ export function Component() {
     setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: nextStatus } : it)));
     try {
       await updateAppApi({ appId: id, appName, status: nextStatus });
-      message.success(checked ? '已发布' : '已下线');
+      message.success(checked ? '已发布' : '已取消发布');
     } catch {
       // 回滚
       setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: checked ? '2' : '1' } : it)));
@@ -387,7 +387,7 @@ export function Component() {
           {pagedList.map(agent => {
             const active = agent.id === selectedId;
             const online = agent.status === '1';
-            const statusLabel = agent.status === '1' ? '已上线' : agent.status === '0' ? '草稿' : '已下线';
+            const statusLabel = agent.status === '1' ? '当前启用' : agent.status === '0' ? '编辑中' : '历史版本';
             const tagCls = agent.status === '1' ? '' : agent.status === '0' ? 'draft' : 'off';
             return (
               <div

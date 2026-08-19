@@ -39,7 +39,7 @@ function mapSkillToCard(item: SkillItem, index: number): SkillCard {
     tag: isPublic ? 'builtin' : 'custom',
     tagLabel: isPublic ? '公开' : '私有',
     color: COLOR_KEYS[index % COLOR_KEYS.length],
-    enabled: String(item.status) === '1',
+    enabled: String(item.status).toUpperCase() === 'PUBLISHED',
     icon: item.icon || undefined,
   }
 }
@@ -229,7 +229,7 @@ function SkillStoreView() {
 
   const handleToggleEnable = useCallback((card: SkillCard) => {
     const nextEnabled = !card.enabled
-    const nextStatus = nextEnabled ? '1' : '0'
+    const nextStatus = nextEnabled ? 'PUBLISHED' : 'DRAFT'
     // 乐观更新
     setCards((prev) => prev.map((c) => (c.key === card.key ? { ...c, enabled: nextEnabled } : c)))
     // 副作用放在 setState 更新函数外，避免 StrictMode 下重复调用接口
@@ -240,7 +240,7 @@ function SkillStoreView() {
           // 接口失败，回滚
           setCards((cur) => cur.map((c) => (c.key === card.key ? { ...c, enabled: card.enabled } : c)))
         } else {
-          message.success(nextEnabled ? '已启用' : '已停用')
+          message.success(nextEnabled ? '已发布' : '已取消发布')
         }
       })
       .catch(() => {
@@ -409,13 +409,13 @@ function SkillStoreView() {
                       )}
                     </div>
                     <div className="wac-footer">
-                      <span className={`wac-tag ${card.enabled ? '' : 'off'}`}>{card.enabled ? '启用' : '停用'}</span>
+                      <span className={`wac-tag ${card.enabled ? '' : 'offline'}`}>{card.enabled ? '当前启用' : '离线版本'}</span>
                       <div className="wac-actions">
                         <button type="button" className="wac-act" onClick={(e) => { e.stopPropagation(); handleOpenDetail(card) }}>
                           <EyeOutlined /> 查看
                         </button>
                         <button type="button" className="wac-act" onClick={(e) => { e.stopPropagation(); handleToggleEnable(card) }}>
-                          {card.enabled ? '停用' : '启用'}
+                          {card.enabled ? '取消发布' : '发布'}
                         </button>
                       </div>
                     </div>

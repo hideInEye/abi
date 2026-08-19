@@ -141,17 +141,17 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   /** 下线：将助手状态置为已下线（status='2'），成功后刷新列表 */
   const handleOffline = (agent: AgentCard) => {
     Modal.confirm({
-      title: '确认下线',
-      content: `确认要下线「${agent.name}」吗？`,
+      title: '确认取消发布',
+      content: `确认要取消发布「${agent.name}」吗？`,
       okText: '确认',
       cancelText: '取消',
       onOk: async () => {
         try {
           await updateAppApi({ appId: agent.id, appName: agent.name, status: '2' });
-          message.success('已下线');
+          message.success('已取消发布');
           fetchList();
         } catch {
-          message.error('下线失败');
+          message.error('取消发布失败');
         }
       },
     });
@@ -213,7 +213,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
         <div className="abi-card-grid-inner">
           {pagedList.map(agent => {
             const active = agent.id === selectedId;
-            const statusLabel = agent.status === '1' ? '已上线' : agent.status === '0' ? '草稿' : '已下线';
+            const statusLabel = agent.status === '1' ? '当前启用' : agent.status === '0' ? '编辑中' : '历史版本';
             const tagCls = agent.status === '1' ? '' : agent.status === '0' ? 'draft' : 'off';
             return (
               <div
@@ -237,7 +237,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
                       <EyeOutlined />查看
                     </button>
                     <button className="ac-btn" onClick={() => handleOffline(agent)}>
-                      <PoweroffOutlined />下线
+                      <PoweroffOutlined />取消发布
                     </button>
                     <button className="ac-btn" onClick={() => setShareAgent(agent)}>
                       <ShareAltOutlined />分享
