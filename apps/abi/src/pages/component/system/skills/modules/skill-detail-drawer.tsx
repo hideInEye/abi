@@ -271,25 +271,22 @@ const FileBrowser: FC<{
 }
 
 /** 版本状态三态：离线版本 / 当前启用 / 历史版本 */
-function resolveVersionStatus(status?: string): { cls: string; label: string } {
-  if (!status) return { cls: 'offline', label: '离线版本' }
-  const s = status.toUpperCase()
-  if (s === 'PUBLISHED') return { cls: 'active', label: '当前启用' }
-  if (s === 'HISTORY') return { cls: 'archived', label: '历史版本' }
+function resolveVersionStatus(status?: string, isCurrent?: boolean): { cls: string; label: string } {
+  const s = (status || '').toUpperCase()
   if (s === 'DRAFT') return { cls: 'offline', label: '离线版本' }
-  return { cls: 'offline', label: '离线版本' }
+  if (isCurrent) return { cls: 'active', label: '当前启用' }
+  return { cls: 'archived', label: '历史版本' }
 }
 
 /** 技能整体状态徽章（详情页顶部） */
 function resolveStatusBadge(status?: string) {
   if (!status) return null
-  const s = status.toUpperCase()
-  if (s === 'PUBLISHED') return { cls: 'sd-badge--active', label: '已发布' }
-  if (s === 'HISTORY') return { cls: 'sd-badge--archived', label: '历史版本' }
-  if (s === 'DRAFT') return { cls: 'sd-badge--offline', label: '离线版本' }
-  if (s === 'PENDING_REVIEW') return { cls: 'sd-badge--review', label: '审核中' }
-  if (s === 'REJECTED') return { cls: 'sd-badge--rejected', label: '已驳回' }
-  if (s === 'SCANNING' || s === 'UPLOADED') return { cls: 'sd-badge--scanning', label: '扫描中' }
+  if (status === '1') return { cls: 'sd-badge--active', label: '已发布' }
+  if (status === 'HISTORY' || status === 'ARCHIVED') return { cls: 'sd-badge--archived', label: '历史版本' }
+  if (status === '0' || status === 'DRAFT') return { cls: 'sd-badge--offline', label: '离线版本' }
+  if (status === 'PENDING_REVIEW') return { cls: 'sd-badge--review', label: '审核中' }
+  if (status === 'REJECTED') return { cls: 'sd-badge--rejected', label: '已驳回' }
+  if (status === 'SCANNING' || status === 'UPLOADED') return { cls: 'sd-badge--scanning', label: '扫描中' }
   return { cls: 'sd-badge--offline', label: '离线版本' }
 }
 
@@ -380,7 +377,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const visibilityBadge = resolveVisibilityBadge(src.visibility)
   const activeVersion = versions.find((v) => String(v.versionId ?? v.id) === String(activeVersionId))
   const headlineVersionId = src.sourceSkillId
-  const headlineVersion = versions.find((v) => String(v.versionId ?? v.id) === String(headlineVersionId)) || versions[0]
+  const headlineVersion = headlineVersionId ? versions.find((v) => String(v.versionId ?? v.id) === String(headlineVersionId)) : undefined
 
   const { tree: fileTree, map: fileMap } = useMemo(() => buildFileTree(files), [files])
   const { tree: leftFileTree, map: leftFileMap } = useMemo(() => buildFileTree(leftFiles), [leftFiles])
@@ -927,7 +924,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                             const vid = v.versionId ?? v.id
                             const isActive = String(vid) === String(activeVersionId)
                             const isHeadline = headlineVersion && String(headlineVersion.versionId ?? headlineVersion.id) === String(vid)
-                            const vStatus = resolveVersionStatus(v.status)
+                            const vStatus = resolveVersionStatus(v.status, !!isHeadline)
                             return (
                               <div className={`sd-v5-ver ${isActive ? 'sd-v5-ver--active' : ''}`} key={vid} onClick={() => vid != null && handleVersionClick(vid)}>
                                 <div className="sd-v5-ver__head">
@@ -945,7 +942,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                                         发布
                                       </Button>
                                     )}
-                                    {vStatus.cls === 'archived' && !isActive && (
+                                    {vStatus.cls !== 'offline' && !isActive && (
                                       <Button className="sd-v5-btn sd-v5-btn--primary" icon={<SwapOutlined />} size="small" onClick={() => handleSetCurrentVersion(v)}>
                                         设为当前
                                       </Button>
