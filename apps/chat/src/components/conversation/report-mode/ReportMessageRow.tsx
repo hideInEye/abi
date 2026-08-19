@@ -1,12 +1,11 @@
 import { FileSearchOutlined } from '@ant-design/icons'
 import { Alert, Tag } from 'antd'
-import dayjs from 'dayjs'
 import React from 'react'
 
 import ReportFileCard from './ReportFileCard'
 import ReportThinkingPanel from './ReportThinkingPanel'
 import ReportTodoList from './ReportTodoList'
-import { getReportPresentationStage } from './helpers'
+import { formatReportDuration, getReportPresentationStage, shouldShowReportEstimate } from './helpers'
 import type { ReportItem } from './types'
 import styles from './styles.module.css'
 
@@ -43,6 +42,8 @@ const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThi
   const statusMeta = getStatusMeta(report.status)
   const latestWarning = report.warnings[report.warnings.length - 1]
   const presentationStage = getReportPresentationStage(report)
+  const durationText = formatReportDuration(report.durationSeconds)
+  const showEstimate = shouldShowReportEstimate(report.status)
   const warningDescription = report.status === 'syncing_history' ? '报告已经生成，正在整理到当前会话中。' : report.status === 'completed' ? undefined : '生成过程出现短暂波动，系统正在自动恢复。'
 
   return (
@@ -59,7 +60,7 @@ const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThi
               报告生成
               <Tag color={statusMeta.color}>{statusMeta.text}</Tag>
             </div>
-            <div className={styles.answerMeta}>{dayjs(report.createdAt).format('HH:mm:ss')}</div>
+            {durationText && <div className={styles.answerMeta}>{durationText}</div>}
           </div>
 
           <ReportThinkingPanel report={report} onToggle={onToggleThinking} />
@@ -82,6 +83,12 @@ const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThi
           {report.error && (
             <div className={styles.inlineAlert}>
               <Alert type="error" showIcon message={report.error.message} />
+            </div>
+          )}
+
+          {showEstimate && (
+            <div className={styles.estimateNotice}>
+              报告预计将在 <strong>5-10 分钟左右</strong> 完成。生成期间，你无需停留在当前页面，可以继续提问或处理其他事情，<strong>研究任务会持续进行</strong>。报告完成后，我会第一时间通知你。
             </div>
           )}
 

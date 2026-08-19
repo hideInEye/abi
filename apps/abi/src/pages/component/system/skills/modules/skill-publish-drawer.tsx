@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { spaceList } from '@/service/api/data-space'
 import { publishSkillApi } from '@/service/api/skill'
 import { readPersistedSpaceName } from '@/utils/spaceStorage'
+import { AssistantIconPicker, AssistantIconBlock } from '@/components/AssistantIcon'
+import type { AssistantIconKey } from '@/components/AssistantIcon'
 
 import '../skill.css'
 
@@ -58,6 +60,7 @@ const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, o
   const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [iconKey, setIconKey] = useState<AssistantIconKey>('other')
 
   // 当前用户信息与管理员判断（roles[].roleName 为“管理员”或“超级管理员”）
   const { currentSpaceId, initialFormValues, isAdmin } = useMemo(() => {
@@ -134,6 +137,7 @@ const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, o
         form.setFieldValue('spaceId', currentSpaceId)
       }
       setFile(null)
+      setIconKey('other')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -222,6 +226,8 @@ const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, o
       if (spacename) fd.append('spacename', spacename)
       if (values.version) fd.append('version', values.version)
       if (values.changelog) fd.append('changelog', values.changelog)
+      // 图标
+      if (iconKey) fd.append('icon', iconKey)
 
       const res: any = await publishSkillApi(fd)
       const code = res?.response?.data?.code
@@ -283,6 +289,31 @@ const SkillPublishDrawer: FC<Props> = ({ mode = 'install', onClose, onSuccess, o
         </div>
 
         <Form form={form} layout="vertical" requiredMark initialValues={initialFormValues}>
+          {/* 图标选择 */}
+          {!isUpdate && (
+            <Form.Item label="技能图标">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <AssistantIconPicker value={iconKey} onChange={(key) => setIconKey(key)}>
+                  <div
+                    style={{
+                      alignItems: 'center',
+                      border: '1px solid rgba(130,140,200,0.18)',
+                      borderRadius: 12,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      gap: 10,
+                      padding: '10px 16px',
+                      transition: 'border-color 0.2s',
+                    }}
+                  >
+                    <AssistantIconBlock iconKey={iconKey} radius={10} size={36} />
+                    <span style={{ color: '#5f7490', fontSize: 13, fontWeight: 500 }}>点击选择图标</span>
+                  </div>
+                </AssistantIconPicker>
+              </div>
+            </Form.Item>
+          )}
+
           {!isUpdate && (
             <Form.Item label={t('page.manage.skill.publishPage.namespace')} name="spaceId" rules={[{ message: t('page.manage.skill.publishPage.namespaceRequired'), required: true }]}>
               <Select

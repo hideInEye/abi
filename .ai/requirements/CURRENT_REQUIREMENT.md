@@ -2,12 +2,129 @@
 
 ## 文档状态
 
-- 状态：报告预览关闭入口改为收起图标按钮已完成；既有报告协议、普通对话和会话分组需求保持不变。
-- 日期：2026-08-10。
+- 状态：报告模式 ToDo 展开状态保持修复已完成；既有报告协议、普通对话和会话分组需求保持不变。
+- 日期：2026-08-13。
 - 当前分支：`dev/zanghb-20260720-chatreport`。
-- 影响范围：`apps/chat` 会话分组路由、分组页面归属和对话页面分组分支。
+- 影响范围：`apps/chat` 报告 Stream reducer 的 ToDo 总面板 UI 状态保持逻辑。
 
 本文件是本轮开发的唯一当前需求依据。旧实现中的独立 `ReportConversation` 页面分支、根 `server/`、Node `/api/report-stream/events` 以及“不调用 task 状态接口”的约定全部废止。
+
+## 2026-08-13 追加：报告模式 ToDo 展开状态仅在页面加载时初始化
+
+### 目标
+
+- 新建报告消息、刷新页面或重新进入会话时，ToDo 总面板仍默认收起。
+- 页面已经加载后，用户手动展开或收起 ToDo 的选择属于纯 UI 状态；后续 `plan.update`、步骤事件和任务状态更新必须原样保留该选择。
+- 首条 `plan.update` 继续收起思考区，但不得再次强制设置 ToDo 展开状态。
+
+### 非目标
+
+- 不修改任务状态计算、计划快照、执行步骤归属和单个任务详情展开规则。
+- 不修改历史报告初次加载、新报告初始状态、报告预览、普通对话、接口或样式。
+
+### 验收标准
+
+- 页面首次加载或报告首次创建时 `todoOpen=false`。
+- 用户展开 ToDo 后，接口继续返回新的计划或步骤数据，ToDo 保持展开。
+- 用户主动收起 ToDo 后，接口继续返回数据，ToDo 保持收起。
+
+### 测试要求
+
+- 为连续 `plan.update` 增加回归测试，覆盖用户手动展开后的状态保持。
+- 运行 report-mode reducer 测试、TypeScript 检查、`ai-bot` 构建和 `git diff --check`。
+- 生成 `.ai/runs/2026-08-13-report-todo-open-state/RUN_LOG.md`。
+
+## 2026-08-11 追加：报告模式 ToDo 默认收起
+
+### 目标
+
+- 新提交的报告在收到首条任务计划后，思考区按既有规则收起，但 ToDo 总面板保持默认收起。
+- 从历史 query 恢复的报告同样默认收起 ToDo 总面板。
+- 用户仍可点击 ToDo 标题手动展开或再次收起，展开后的任务和执行详情沿用现有交互。
+
+### 非目标
+
+- 不修改任务状态计算、执行步骤归属、单个任务展开状态和实时事件处理。
+- 不修改报告文件、右侧预览、普通对话、输入框或现有视觉样式。
+
+### 验收标准
+
+- 报告生成进入 ToDo 阶段时不会自动展开待办事项。
+- 刷新或重新进入会话后，历史报告的待办事项默认收起。
+- 用户手动展开和收起 ToDo 的能力不受影响。
+
+### 测试要求
+
+- 更新实时 `plan.update` 和历史报告恢复测试，断言 `todoOpen=false`。
+- 运行 report-mode 相关 Vitest、TypeScript 检查、`ai-bot` 构建和 `git diff --check`。
+- 生成 `.ai/runs/2026-08-11-report-todo-default-collapsed/RUN_LOG.md`。
+
+## 2026-08-11 追加：报告生成预计耗时提示与完成通知
+
+### 目标
+
+- 报告问题发送后，只要任务仍处于提交、等待、思考或执行阶段，在报告回答内容底部展示固定预计耗时提示。
+- 提示文案固定为：“报告预计将在 **5-10 分钟左右** 完成。生成期间，你无需停留在当前页面，可以继续提问或处理其他事情，**研究任务会持续进行**。报告完成后，我会第一时间通知你。”
+- 报告成功完成时使用 Ant Design `notification` 展示完成通知，持续 3 秒。
+- 完成通知只在实时任务首次从未完成进入成功终态时触发；普通历史报告加载不得重复通知。
+
+### 非目标
+
+- 不从后端读取或动态计算预计耗时，不根据任务复杂度改变 5-10 分钟区间。
+- 不为失败、停止或取消任务发送成功通知。
+- 不修改普通交互模式、报告事件协议、报告预览、下载、ToDo 或 IndexedDB 行为。
+
+### 验收标准
+
+- 报告仍在生成时，提示显示在当前报告回答内容下方，两个强调片段使用加粗样式。
+- 报告成功完成或失败后，预计耗时提示消失。
+- 首次收到成功 `done` 后显示“报告生成完成”通知，3 秒后自动关闭。
+- 历史 query 中已有的完成报告不触发完成通知。
+
+### 测试要求
+
+- 补充预计耗时提示显示条件和完成通知触发条件的纯函数测试。
+- 运行 report-mode 相关 Vitest、TypeScript 检查、`ai-bot` 构建和 `git diff --check`。
+- 生成 `.ai/runs/2026-08-11-report-estimate-notification/RUN_LOG.md`。
+
+## 2026-08-11 追加：报告文件、进度视觉与完成耗时
+
+### 目标
+
+- ToDo 任务标题仅在 `in_progress` 时使用黑色强调；`pending/completed/cancelled` 等非执行中状态统一使用灰色。状态计算、图标和展开交互保持不变。
+- 最终报告文件区改为紧凑的“报告资产卡”，沿用当前蓝灰视觉：左侧展示真实文件类型、报告标题和说明，右侧仅使用自绘 SVG 的预览与下载图标按钮，并提供 `title/aria-label`。
+- 下载只提供后端实际返回的格式，不在前端伪造 PDF 或 Word 转换。HTML/Markdown 候选作为本地内容下载；`output_type=pdf/word` 时 `content` 是下载 URL，需要作为报告附件保留。
+- 同一报告同时保留最后一个 HTML/Markdown 预览候选和实际返回的 PDF/Word 附件；附件不得覆盖右侧可预览内容。存在多种格式时，下载图标打开轻量格式菜单，仅列出实际可用格式。
+- 报告模式发送成功写入本轮问题后，仅执行一次平滑定位，使新问题/回答进入可见区域；不监听后续流事件反复自动滚动，不影响普通交互模式。
+- 整体 `done` 事件的数字 `time` 按秒存入报告状态。报告回答标题右侧不再显示创建时间；只有收到有效耗时后才显示“耗时X分X秒”，缺失或非法时不显示虚假值。
+
+### 设计约束
+
+- 设计对象是面向数据分析用户的报告产物入口，单一任务是快速识别、预览和取得已生成文件。
+- 视觉继续使用项目现有蓝、灰、白 token，不引入新的页面级字体或高饱和装饰；以“文件类型脊标 + 安静的图标操作区”作为资产卡识别特征。
+- 图标按钮具备可见的 hover、focus-visible 状态，并尊重现有响应式布局；按钮自身不显示操作文字。
+
+### 非目标
+
+- 不改变 ToDo 任务状态计算、步骤归属、展开规则和执行详情。
+- 不新增后端导出接口，不在浏览器把 HTML 转换成 PDF/Word，也不展示未实际返回的下载格式。
+- 不让 PDF/Word 进入右侧 HTML/Markdown 预览，不修改 iframe 沙箱和 Markdown 渲染。
+- 不增加跟随流式事件的持续滚动，不修改普通交互消息发送和滚动行为。
+- 不修改报告提交、任务恢复、IndexedDB、系统侧栏、会话分组和其他无关功能。
+
+### 验收标准
+
+- `in_progress` ToDo 标题为黑色，其余任务标题均为灰色。
+- 文件卡在桌面和窄屏均保持信息清晰；预览和下载入口为自绘 SVG 图标，鼠标与键盘均可识别。
+- HTML/Markdown、PDF、Word 只在真实返回时出现在下载项中；PDF/Word URL 可直接下载，且不会覆盖 HTML/Markdown 预览候选。
+- 报告模式每次发送仅触发一次定位；后续步骤、计划或报告事件不再推动会话滚动。
+- `done.time=125` 显示“耗时2分5秒”；缺少 `time` 时标题右侧留空。
+
+### 测试要求
+
+- 补充耗时格式、附件聚合、下载项筛选及预览候选不被附件覆盖的纯函数/Reducer 测试。
+- 运行 report-mode 相关 Vitest、TypeScript 检查、`ai-bot` 构建和 `git diff --check`。
+- 生成 `.ai/runs/2026-08-11-report-file-progress-ui/RUN_LOG.md`。
 
 ## 目标
 
@@ -957,3 +1074,172 @@ ABI 页面在账号被其他环境顶掉后，自动请求会返回 401 并显�
 - 同一批并发 401 不会重复提示或重复跳转。
 - 一次跳转执行失败不会永久锁住鉴权流程，后续 401 可再次处理。
 - 定向 Vitest、ABI typecheck/build 与格式检查不引入当前改动相关错误。
+
+## 2026-08-11 追加：聊天输入框模式切换菜单升级为 icon+名称+文案
+
+### 需求类型
+
+前端 UI 调整（纯前端，不改接口协议）。
+
+### 背景
+
+当前输入框工具栏的模式切换下拉（交互/探索/报告）仅展示「icon+名称」单行菜单项，信息量不足。参考业界模式选择器样式，升级为「icon+名称+描述文案」两行菜单项，并在当前选中项右侧展示勾选标记。
+
+### 目标
+
+- 模式下拉菜单项改为两行结构：左侧 icon，中间名称（上）+描述文案（下，与名称左对齐），右侧选中勾选标记。
+- 三个模式的名称与文案：交互→敏捷问数，基础分析；探索→自主规划，复杂分析；报告→深度挖掘，智能洞察。
+- 当前选中模式在菜单中以勾选标记和浅色高亮背景标识。
+- 触发按钮保持现有「icon+名称+箭头」样式不变。
+
+### 非目标
+
+- 不修改模式切换的业务逻辑：探索模式仍保持「开发中」提示并回退交互模式，报告/交互切换与发送 mode 上抛逻辑不变。
+- 不修改输入框工具栏其他按钮、数据选择、思考开关、更多面板和发送校验。
+- 不修改接口协议、消息渲染和报告模式逻辑。
+
+### 验收标准
+
+- 打开模式下拉后，三个菜单项均展示 icon、名称和对应描述文案，文案与名称左对齐。
+- 当前选中模式右侧显示勾选标记并有高亮背景；点击其他模式沿用原有切换行为。
+- 样式使用 chat 现有 CSS 变量（--ink/--ink-3/--accent-soft 等），不引入孤立色值。
+- tsc 不新增报错。
+
+### 测试要求
+
+- 运行 `pnpm --filter ai-bot exec tsc --noEmit -p tsconfig.json`。
+- 运行 `pnpm --filter ai-bot build`。
+- 运行 `git diff --check` 并生成本任务 run log。
+
+## 2026-08-11 追加：助手 MCP 工具保存协议分组字段（mcp_sse/mcp_streamable）与 sort
+
+### 需求类型
+
+前端接口字段对接（保存报文扩展，无 UI 变化）。
+
+### 背景
+
+助手保存接口 `POST /api/abi-chat/v1/app/add`（编辑走 `/update`）的 `tools` 子项，后端要求 MCP 工具（`toolType='2'`）在 `toolConfig` 内额外存两个字段：`mcp_sse`、`mcp_streamable`，值均为「真实 groupId（group/list 返回的长号）」列表。分类依据是该工具的协议 `frontProtocol`：`sse` 入 `mcp_sse`，`streamableHttp` 入 `mcp_streamable`。同时后端文档要求 `tools`/`skills`/`schemaSemantics` 每个子项都带 `sort`（Integer，排序）。
+
+选择器 `tool-picker-drawer` 加载 MCP 工具时已调用 `group/list`（真实 groupId）与 `register/list`（frontProtocol），本次复用其数据，不新增接口。
+
+### 目标
+
+- MCP 工具的 `toolConfig[0]` 增加 `mcp_sse: string[]`、`mcp_streamable: string[]`：按该工具 `frontProtocol` 把其真实 groupId 放入对应列表，另一个为 `[]`。
+- 内置工具（`toolType='1'`）不加这两个字段。
+- `tools`/`skills`/`schemaSemantics` 每项补 `sort`（取选择顺序索引）。
+- 编辑回显：详情接口 `app/get` 原样返回的 `mcp_sse`/`mcp_streamable` 直接保留；用户未重新选择时按原值提交。
+
+### 非目标
+
+- 不新增任何接口调用（复用选择器已有的 group/list、register/list）。
+- 不改动工具/技能/数据语义的选择交互与 UI 样式。
+- 不改 builtin 工具、模型、开场引导等其它字段结构。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/tool-picker-drawer.tsx`
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- `.ai/runs/2026-08-11-assistant-mcp-protocol-group/`
+
+### 验收标准
+
+- 新建/编辑助手保存报文中，MCP 工具 `toolConfig` 含 `mcp_sse`/`mcp_streamable`，值为真实 groupId；sse 与 streamableHttp 分别进入对应列表。
+- 内置工具不含这两个字段。
+- `tools`/`skills`/`schemaSemantics` 每项含 `sort`。
+- 编辑已有助手不重新选工具时，mcp_sse/mcp_streamable 与原详情一致。
+- tsc 不新增报错。
+
+### 测试要求
+
+- 运行 abi 应用的 TypeScript 类型检查（`tsc --noEmit`）。
+- 生成本任务 run log。
+
+## 2026-08-12 追加：大屏智能问答欢迎区文案改为对话式生成图表引导
+
+### 需求类型
+
+前端 UI 文案调整（纯前端，仅改欢迎说明文案，不改样式、结构、接口与业务逻辑）。
+
+### 背景
+
+大屏设计器 AI 智能问答面板（`apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx`）无消息时的欢迎说明文案未体现「如何对话式生成图表」。参考图要求直接修改原说明文案，示意「选定左侧图表，开始对话生成」，样式与结构保持不变。
+
+### 目标
+
+- 仅修改欢迎区 `.welcome-desc` 的文案，引导用户「选定左侧图表→通过对话生成对应图表」。
+- 保持 `.ai-welcome` 原有结构（标题 + 说明两行）与全部样式不变，不新增任何元素或 CSS。
+
+### 非目标
+
+- 不新增分步说明块、卡片或编号列表。
+- 不修改样式、消息气泡、输入区、状态栏、发送与采纳等业务逻辑与接口。
+- 不引入 i18n；沿用组件现有硬编码中文文案方式。
+
+### 影响范围
+
+- `apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx`（仅 `.welcome-desc` 文案）
+- `.ai/runs/2026-08-12-dashboard-ai-welcome-guide/`
+
+### 验收标准
+
+- 面板无消息时，欢迎说明文案改为「选定左侧图表，通过对话即可生成对应图表 / 请输入图表数据相关问题开始对话」。
+- `.ai-welcome` 结构与样式与改动前一致，未新增元素。
+- 发送消息后欢迎区正常消失。
+- 不改变任何发送、采纳与数据请求行为。
+
+### 测试要求
+
+- 对受影响文件进行 IDE 诊断/语法检查，确认不新增错误（纯文案改动，无需整包重建）。
+- 生成本任务 run log。
+
+## 2026-08-17 追加：管理端「我的对话」三个 tab 支持卡片视图并默认卡片
+
+### 需求类型
+
+前端 UI 功能新增（纯前端，不改接口协议与查询参数）。
+
+### 背景
+
+管理端（`apps/abi`）「我的对话」二级菜单下的「最近使用」「我的收藏」「我的分享」当前只有表格列表视图。chat 端（`apps/chat`）应用工坊的同名三个 tab 已使用 `.ws-assistant-card` 卡片视图。用户要求管理端这三个页面同样支持卡片视图，并默认展示卡片，卡片样式参考 chat 端应用工坊。
+
+### 目标
+
+- 三个页面各新增 `viewMode: 'list' | 'card'` 视图状态，默认 `'card'`（默认展示卡片）。
+- 视图切换入口复用共享组件 `ViewControls`，放在 `.abi-data-area` 内顶部 `.abi-toolbar`，与「我的助手」等已有卡片视图页面一致。
+- 卡片复用 abi 已有的 `.abi-card-grid` / `.abi-card-grid-inner` / `.abi-assistant-card` 体系（该体系视觉参数已与 chat `.ws-assistant-card` 对齐）：左上渐变圆角对话图标 + 标题（对话名称）+ 描述（所属空间），底部分割线内只放右对齐的扁平操作按钮。
+- 卡片操作与表格操作保持完全一致：最近使用只有「进入对话」；我的收藏为「进入对话 + 取消收藏」；我的分享为「进入对话 + 删除」（保留删除二次确认）。
+- 卡片底部左下角不放任何信息（与 chat 端记录类卡片一致）：时间（最近使用时间 / 收藏时间 / 分享时间）与分享类型只在列表视图的表格中展示，卡片上不重复呈现。
+- 列表视图保持原表格实现与视觉不变。
+
+### 非目标
+
+- 不修改 `getOperateRecordList`、`fetchOperateNewList`、`fetchOperateNew`、`deleteOperateRecord` 的调用方式、参数与返回处理。
+- 不修改搜索栏、时间范围筛选、前端过滤与分页逻辑。
+- 不修改 chat 端应用工坊任何代码。
+- 不修改 `ViewControls` 共享组件本身。
+- 不新增批量选择、批量删除能力。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/app-workshop/recently-used/index.tsx`
+- `apps/abi/src/pages/workbench/app-workshop/my-collect/index.tsx`
+- `apps/abi/src/pages/workbench/app-workshop/my-share/index.tsx`
+- `apps/abi/src/styles/scss/table.scss`（`.abi-assistant-card` 内补 `.ac-meta`、`.ac-btn--danger`）
+- `.ai/runs/2026-08-17-abi-my-chat-card-view/`
+
+### 验收标准
+
+- 进入「我的对话」任一 tab，默认展示卡片网格，卡片视图按钮为选中态。
+- 点击列表按钮可切回原表格，表格列、宽度、操作按钮与改动前一致。
+- 卡片视觉（背景、模糊、边框、圆角、内边距、hover 上浮与阴影、标题/描述字号颜色、底部分割线、扁平按钮 hover 浅蓝底）与 chat 端应用工坊卡片一致。
+- 卡片上「进入对话」跳转与表格一致（收藏走 `sessionId`，最近使用/分享走 `chatId`）。
+- 卡片上「取消收藏」「删除」行为与表格一致，删除仍有二次确认，成功后刷新列表。
+- 搜索、时间范围筛选、分页在两种视图下均生效。
+- tsc 不新增报错。
+
+### 测试要求
+
+- 运行 abi 应用的 TypeScript 类型检查（`tsc --noEmit`）。
+- 对受影响文件做 IDE 诊断检查。
+- 生成本任务 run log。

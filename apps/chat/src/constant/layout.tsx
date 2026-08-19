@@ -89,6 +89,8 @@ export type SkillCard = {
   /** Color class: c1-c6 */
   color: string
   enabled: boolean
+  /** 技能图标 key（后端存储，跨设备同步） */
+  icon?: string
 }
 
 export const skillStoreCards: SkillCard[] = [

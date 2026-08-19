@@ -49,6 +49,7 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   "space_space-role": () => import("@/pages/space/space-role/index.tsx"),
   "space_space-user": () => import("@/pages/space/space-user/index.tsx"),
   view: () => import("@/pages/view/index.tsx"),
+  "workbench_app-workshop_my-assistant": () => import("@/pages/workbench/app-workshop/my-assistant/index.tsx"),
   "workbench_app-workshop_my-chat": () => import("@/pages/workbench/app-workshop/my-chat/index.tsx"),
   "workbench_app-workshop_my-collect": () => import("@/pages/workbench/app-workshop/my-collect/index.tsx"),
   "workbench_app-workshop_my-dashboard": () => import("@/pages/workbench/app-workshop/my-dashboard/index.tsx"),

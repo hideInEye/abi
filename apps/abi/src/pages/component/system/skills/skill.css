@@ -80,109 +80,13 @@
   cursor: default;
 }
 
-/* 技能卡片 */
-.skill-hub-scope .skill-card-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  padding-top: 4px; /* 给第一行卡片 hover 上移留空间，防止被 overflow:auto 裁剪 */
-}
-@media (max-width: 1400px) {
-  .skill-hub-scope .skill-card-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-@media (max-width: 1100px) {
-  .skill-hub-scope .skill-card-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 768px) {
-  .skill-hub-scope .skill-card-grid {
-    grid-template-columns: 1fr;
-  }
-}
-.skill-hub-scope .skill-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px;
-  background: #FCFDFF;
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 12px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  position: relative;
-}
-.skill-hub-scope .skill-card__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.skill-hub-scope .skill-card__toggle-btn {
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.skill-hub-scope .skill-card__toggle-btn:not(.skill-card__toggle-btn--active):hover {
-  background: #5b7cf7 !important;
-  color: #fff !important;
-  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.3);
-  border-color: #5b7cf7 !important;
-}
-.skill-hub-scope .skill-card__more {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: #6b7280;
-  font-size: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  padding: 0;
-}
-.skill-hub-scope .skill-card__more:hover {
-  background: #f3f4f6;
-  color: #1677ff;
-}
-.skill-hub-scope .skill-card:hover {
-  box-shadow: 0 4px 16px rgba(26, 39, 68, 0.06);
-  transform: translateY(-2px);
-  background: #FEFEFF;
-  z-index: 1;
-}
-.skill-hub-scope .skill-card__title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1a1a2e;
-  line-height: 24px;
-}
-.skill-hub-scope .skill-card__summary {
-  font-size: 12.5px;
-  color: #888888;
-  line-height: 1.5;
-  white-space: pre-line;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.skill-hub-scope .skill-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: #6b7280;
-}
-.skill-hub-scope .skill-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: auto;
+/* 技能卡片网格：与「工具管理」一致的宽卡片（每行约 3 张）。
+   全局 .abi-card-grid .abi-card-grid-inner 是 minmax(320px)（每行更多更窄），
+   这里用更大的 minmax 覆盖，仅作用于技能页 .skill-hub-scope，不影响其他复用页面。
+   特异性 0,3,0 > 全局 0,2,0，稳定覆盖。
+   注：原 .skill-card-grid / .skill-card 系列样式已删除（JSX 改用 .abi-card-grid / .abi-assistant-card 后成为无引用死代码）。 */
+.skill-hub-scope .abi-card-grid .abi-card-grid-inner {
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
 }
 
 /* 顶部 hero 横幅（发布页） */
@@ -619,6 +523,24 @@
 .skill-intro-md p {
   margin: 0 0 8px;
 }
+/* frontmatter 提取出的 name / description：name 作为普通小标题，description 与正文一致（小字灰色） */
+.skill-intro-head {
+  margin-bottom: 12px;
+}
+.skill-intro-head__name {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #1a2744;
+  word-break: break-word;
+}
+.skill-intro-head__desc {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #3e5068;
+  word-break: break-word;
+}
 .skill-intro-md ul,
 .skill-intro-md ol {
   margin: 0 0 8px;
@@ -1013,4 +935,39 @@
 .sd-v5-btn--danger-fill {
   background: #dc2626 !important; border: none !important;
   border-radius: 8px !important;
+}
+
+/* ── 技能卡片右上角 添加/已添加/移除 按钮（对齐 chat 端 wac-add-btn） ── */
+.abi-assistant-card .ac-add-btn {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 3px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, #5b7cf7, #7091fa);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.28);
+}
+.abi-assistant-card .ac-add-btn:hover {
+  box-shadow: 0 4px 14px rgba(91, 124, 247, 0.38);
+  transform: translateY(-1px);
+}
+.abi-assistant-card .ac-add-btn--added {
+  background: linear-gradient(135deg, #9ca3af, #b3bac4);
+  box-shadow: 0 2px 8px rgba(156, 163, 175, 0.25);
+}
+.abi-assistant-card .ac-add-btn--added:hover {
+  box-shadow: 0 4px 14px rgba(156, 163, 175, 0.35);
+}
+.abi-assistant-card .ac-add-btn--danger {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.28);
+}
+.abi-assistant-card .ac-add-btn--danger:hover {
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.38);
 }

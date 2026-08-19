@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getNewlyCompletedReportTaskKey, getReportRecoveryAction, splitReportTaskRecordsByHistory } from './reportRecovery'
+import { getNewlyCompletedReportTaskKey, getReportRecoveryAction, shouldNotifyReportCompleted, splitReportTaskRecordsByHistory } from './reportRecovery'
 import type { ReportTaskRecord } from './types'
 
 function task(taskId: string, sortOrder: number): ReportTaskRecord {
@@ -51,5 +51,14 @@ describe('report task recovery', () => {
     })
     expect(getNewlyCompletedReportTaskKey('100-0', completedReport)).toBeUndefined()
     expect(getNewlyCompletedReportTaskKey(undefined, { ...completedReport, taskId: undefined })).toBeUndefined()
+  })
+
+  it('只在实时报告首次成功完成时触发完成通知', () => {
+    const completedReport = { doneEntryId: '100-0', source: 'task' as const, status: 'completed' as const }
+
+    expect(shouldNotifyReportCompleted(undefined, completedReport)).toBe(true)
+    expect(shouldNotifyReportCompleted('100-0', completedReport)).toBe(false)
+    expect(shouldNotifyReportCompleted(undefined, { ...completedReport, source: 'history' })).toBe(false)
+    expect(shouldNotifyReportCompleted(undefined, { ...completedReport, status: 'failed' })).toBe(false)
   })
 })

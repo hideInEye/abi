@@ -1,0 +1,294 @@
+/* ============================================================
+ * 数据目录下拉 — 对齐 ABI Group 组件面板风格
+ * ============================================================ */
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 35px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(91, 124, 247, 0.15);
+  box-shadow:
+    0 4px 16px rgba(91, 124, 247, 0.1),
+    0 1px 4px rgba(0, 0, 0, 0.04);
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.trigger:hover {
+  background: rgba(91, 124, 247, 0.1);
+  border-color: #5b7cf7;
+  color: #5b7cf7;
+}
+
+.triggerText {
+  line-height: 1;
+}
+
+.arrow {
+  margin-left: 2px;
+  font-size: 11px;
+  transition: transform 0.25s ease;
+}
+
+.arrowOpen {
+  transform: rotate(180deg);
+}
+
+/* ── 面板整体（对齐 group-panel） ── */
+.panel {
+  width: 260px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, rgba(240, 244, 255, 0.75) 0%, rgba(239, 243, 255, 0.75) 45%, rgba(239, 242, 255, 0.75) 100%);
+  backdrop-filter: blur(12px);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* ── 头部标题 ── */
+.panelHeader {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.10);
+  flex-shrink: 0;
+}
+
+.panelTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2744;
+  letter-spacing: 0.02em;
+}
+
+/* ── 搜索框（对齐 group-search） ── */
+.panelSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 12px 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.panelSearch:focus-within {
+  border-color: #5b7cf7;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.10);
+}
+
+.searchIcon {
+  font-size: 13px;
+  color: #8fa0b5;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.panelSearch:focus-within .searchIcon {
+  color: #5b7cf7;
+}
+
+.searchInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: #1a2744;
+  width: 100%;
+  padding: 0;
+}
+
+.searchInput::placeholder {
+  color: #8fa0b5;
+}
+
+/* ── 树内容区 ── */
+.panelBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px 8px;
+}
+
+.panelBody::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panelBody::-webkit-scrollbar-thumb {
+  background: rgba(91, 124, 247, 0.10);
+  border-radius: 4px;
+}
+
+.panelBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── 「全部」行 ── */
+.allRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3a4d65;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 2px;
+}
+
+.allRow:hover {
+  background: rgba(130, 140, 200, 0.08);
+}
+
+.allRowActive {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.10);
+  font-weight: 600;
+}
+
+/* ── Tree 覆写（对齐 group.scss） ── */
+.panelBody :global(.ant-tree) {
+  overflow: visible;
+  background: transparent;
+}
+
+.panelBody :global(.ant-tree .ant-tree-treenode) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+}
+
+.panelBody :global(.ant-tree .ant-tree-treenode.ant-tree-treenode-selected) .nodeLabel {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.10);
+  font-weight: 600;
+}
+
+.panelBody :global(.ant-tree .ant-tree-treenode:hover) .nodeLabel {
+  background: rgba(130, 140, 200, 0.08);
+}
+
+.panelBody :global(.ant-tree .ant-tree-node-content-wrapper) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  background: transparent !important;
+}
+
+.panelBody :global(.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected) {
+  background: transparent !important;
+}
+
+.panelBody :global(.ant-tree .ant-tree-node-content-wrapper:hover) {
+  background: transparent !important;
+}
+
+.panelBody :global(.ant-tree .ant-tree-title) {
+  display: block;
+  overflow: hidden;
+  width: 100%;
+}
+
+.panelBody :global(.ant-tree .ant-tree-indent-unit) {
+  width: 14px !important;
+}
+
+.panelBody :global(.ant-tree .ant-tree-switcher) {
+  display: none !important;
+}
+
+/* ── 节点标签（对齐 group-node-label） ── */
+.nodeLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #3a4d65;
+  user-select: none;
+  width: 100%;
+  line-height: 1.5;
+}
+
+.nodeLabelLeaf {
+  font-weight: 500;
+  color: #5f7490;
+  padding-left: 14px;
+}
+
+/* ── 文件夹图标 ── */
+.nodeIcon {
+  flex-shrink: 0;
+  font-size: 15px;
+  color: #358cf3;
+}
+
+/* ── 分组名 ── */
+.nodeName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 数量 ── */
+.nodeCount {
+  color: #8494ad;
+  font-size: 11px;
+  font-weight: 400;
+  flex-shrink: 0;
+}
+
+/* ── 右侧折叠箭头 ── */
+.nodeChevron {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.25s ease;
+  opacity: 0.35;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.nodeChevronOpen {
+  transform: rotate(90deg);
+  opacity: 0.6;
+}
+
+/* ── 空状态 ── */
+.emptyTip {
+  padding: 16px 12px;
+  text-align: center;
+  color: #8fa0b5;
+  font-size: 13px;
+}

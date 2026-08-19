@@ -1,10 +1,10 @@
 import {
   CaretRightOutlined,
-  CloseOutlined,
   CloudDownloadOutlined,
   DeleteOutlined,
   DownOutlined,
   DownloadOutlined,
+  EyeOutlined,
   FileOutlined,
   FolderOpenOutlined,
   FolderOutlined,
@@ -17,7 +17,7 @@ import {
   TagOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Button, Drawer, Empty, Input, Modal, Spin, Tabs, Tag, Tooltip, message } from 'antd'
+import { Button, Drawer, Empty, Input, Modal, Segmented, Spin, Tabs, Tag, Tooltip, message } from 'antd'
 import type { FC, ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -37,6 +37,7 @@ import {
   getSkillVersionList,
   publishSkillVersion,
   selectSkillVersion,
+  updateSkillInfo,
 } from '@/service/api/skill'
 
 type SkillItem = {
@@ -280,6 +281,42 @@ function resolveVisibilityBadge(visibility?: string) {
   return null
 }
 
+// 解析 SKILL.md 顶部的 YAML frontmatter，拆出 name / description 与正文，
+// 避免整段 frontmatter 被 react-markdown 当成加粗大标题渲染
+function parseSkillIntro(md: string): { name: string; description: string; body: string } {
+  if (typeof md !== 'string' || !md) return { name: '', description: '', body: '' }
+  const text = md.replace(/^\uFEFF/, '')
+  const match = text.match(/^\s*---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/)
+  if (!match) return { name: '', description: '', body: md }
+  const body = text.slice(match[0].length).replace(/^\s*\n/, '')
+  const lines = match[1].split(/\r?\n/)
+  let name = ''
+  let description = ''
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^([A-Za-z0-9_-]+)[ \t]*:[ \t]*(.*)$/)
+    if (!m) continue
+    const key = m[1].toLowerCase()
+    let val = m[2].trim()
+    if (/^[|>][-+]?$/.test(val)) {
+      const collected: string[] = []
+      let j = i + 1
+      for (; j < lines.length; j++) {
+        if (/^[ \t]+\S/.test(lines[j])) collected.push(lines[j].replace(/^[ \t]+/, ''))
+        else if (lines[j].trim() === '') collected.push('')
+        else break
+      }
+      i = j - 1
+      val = collected.join(val[0] === '>' ? ' ' : '\n').trim()
+    } else {
+      val = val.replace(/^["']|["']$/g, '')
+    }
+    if (key === 'name') name = val
+    else if (key === 'description') description = val
+  }
+  if (!name && !description) return { name: '', description: '', body: md }
+  return { name, description, body }
+}
+
 const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const [detail, setDetail] = useState<SkillItem | null>(null)
   const [versions, setVersions] = useState<VersionItem[]>([])
@@ -295,6 +332,9 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const [fileBrowserOpen, setFileBrowserOpen] = useState(true)
   const [introduction, setIntroduction] = useState('')
   const [loadingIntro, setLoadingIntro] = useState(false)
+  // 可见范围（公开/私有），从技能详情同步，可即时修改并持久化
+  const [visibility, setVisibility] = useState<'PUBLIC' | 'PRIVATE'>('PRIVATE')
+  const [savingVisibility, setSavingVisibility] = useState(false)
 
   // 左侧（固定默认版本）的独立状态
   const [leftFiles, setLeftFiles] = useState<FileItem[]>([])
@@ -316,6 +356,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
 
   const { tree: fileTree, map: fileMap } = useMemo(() => buildFileTree(files), [files])
   const { tree: leftFileTree, map: leftFileMap } = useMemo(() => buildFileTree(leftFiles), [leftFiles])
+  const introFm = useMemo(() => parseSkillIntro(introduction), [introduction])
 
   async function loadDetail() {
     if (!skillId) return null
@@ -447,6 +488,12 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, skillId])
+
+  // 从技能详情/列表数据同步可见范围（后端未返回时默认私有）
+  useEffect(() => {
+    const v = String(detail?.visibility ?? skill?.visibility ?? '').toUpperCase()
+    setVisibility(v === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE')
+  }, [detail, skill])
 
   async function handleDownloadPackage() {
     if (!skillId) return
@@ -602,6 +649,28 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     }
   }
 
+  // 修改可见范围（乐观更新 + 失败回滚），仅提交 visibility 走后端部分更新
+  async function handleVisibilityChange(next: 'PUBLIC' | 'PRIVATE') {
+    if (!skillId || next === visibility || savingVisibility) return
+    const prev = visibility
+    setVisibility(next)
+    setSavingVisibility(true)
+    try {
+      const res: any = await updateSkillInfo({ skillId, visibility: next })
+      if (isOk(res)) {
+        message.success(next === 'PUBLIC' ? '已设为公开' : '已设为私有')
+        loadDetail()
+      } else {
+        // 失败文案由请求层统一透传后端 msg，这里只回滚状态
+        setVisibility(prev)
+      }
+    } catch {
+      setVisibility(prev)
+    } finally {
+      setSavingVisibility(false)
+    }
+  }
+
   function handleDeleteSkill() {
     if (!skillId) return
     Modal.confirm({
@@ -634,9 +703,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
       <Spin spinning={loadingDetail && !detail}>
         {/* 顶部 Hero 区 — 渐变背景 + 毛玻璃 */}
         <div className="sd-v5-hero">
-          <button className="sd-v5-hero__close" type="button" onClick={onClose} aria-label="关闭">
-            <CloseOutlined />
-          </button>
+
           <div className="sd-v5-hero__inner">
             <div className="sd-v5-hero__head">
               <div className="sd-v5-hero__icon">
@@ -709,7 +776,13 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                       <div className="sd-v5-panel">
                         {introduction ? (
                           <div className="skill-intro-md sd-v5-md">
-                            <ReactMarkdown>{introduction}</ReactMarkdown>
+                            {(introFm.name || introFm.description) && (
+                              <div className="skill-intro-head">
+                                {introFm.name && <div className="skill-intro-head__name">name: {introFm.name}</div>}
+                                {introFm.description && <div className="skill-intro-head__desc">description: {introFm.description}</div>}
+                              </div>
+                            )}
+                            <ReactMarkdown>{introFm.body}</ReactMarkdown>
                           </div>
                         ) : (
                           <>
@@ -919,6 +992,28 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* 可见范围 */}
+            <div className="sd-v5-card">
+              <div className="sd-v5-card__title">
+                <EyeOutlined /> 可见范围
+              </div>
+              <Segmented
+                block
+                disabled={savingVisibility}
+                onChange={(val) => handleVisibilityChange(val as 'PUBLIC' | 'PRIVATE')}
+                options={[
+                  { icon: <GlobalOutlined />, label: '公开', value: 'PUBLIC' },
+                  { icon: <LockOutlined />, label: '私有', value: 'PRIVATE' },
+                ]}
+                value={visibility}
+              />
+              <div className="sd-v5-muted" style={{ marginTop: 8 }}>
+                {visibility === 'PUBLIC'
+                  ? '所有空间成员均可检索并使用该技能。'
+                  : '仅所属空间可见，其他空间无法检索和使用。'}
+              </div>
             </div>
 
             {/* 生命周期管理 */}
