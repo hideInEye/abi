@@ -147,6 +147,7 @@ export interface DimensionFormValues {
   alias?: string
   bizDesc?: string
   dimCategory?: string
+  dimCategoryName?: string
   dimType: DimensionType
   drillDirection?: string
   englishName: string

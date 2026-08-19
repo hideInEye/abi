@@ -24,6 +24,21 @@ function formatFieldLabel(item: DimensionFieldOption) {
   return `${bizName}(${originName})`
 }
 
+function getLastSelectValue(value: unknown) {
+  if (!Array.isArray(value)) {
+    return value === undefined || value === null ? '' : String(value).trim()
+  }
+  const nextValue = value[value.length - 1]
+  return nextValue === undefined || nextValue === null ? '' : String(nextValue).trim()
+}
+
+function getSelectOptionLabel(option: unknown) {
+  const optionItem = Array.isArray(option) ? option[option.length - 1] : option
+  const label = optionItem && typeof optionItem === 'object' ? (optionItem as { label?: unknown }).label : undefined
+
+  return typeof label === 'string' || typeof label === 'number' ? String(label).trim() : ''
+}
+
 interface Props {
   readonly fieldTableData: DimensionFieldOption[]
   readonly form: any
@@ -63,6 +78,12 @@ export const BaseInfoTab: React.FC<Props> = ({
 }) => {
   const [categoryOptions, setCategoryOptions] = useState<Array<{ label: string; value: string }>>([])
   const categoryLabelMap = useMemo(() => new Map(categoryOptions.map(item => [item.value, item.label])), [categoryOptions])
+  const syncDimCategoryName = useCallback((value: unknown, option?: unknown) => {
+    const nextValue = getLastSelectValue(value)
+    const nextName = getSelectOptionLabel(option) || categoryLabelMap.get(nextValue) || nextValue
+
+    form.setFieldValue('dimCategoryName', nextName || undefined)
+  }, [categoryLabelMap, form])
 
   const loadCategoryOptions = useCallback(async () => {
     try {
@@ -85,6 +106,17 @@ export const BaseInfoTab: React.FC<Props> = ({
   useEffect(() => {
     loadCategoryOptions()
   }, [loadCategoryOptions])
+
+  useEffect(() => {
+    const currentValue = getLastSelectValue(form.getFieldValue('dimCategory'))
+    if (!currentValue) {
+      form.setFieldValue('dimCategoryName', undefined)
+      return
+    }
+
+    const nextName = categoryLabelMap.get(currentValue) || form.getFieldValue('dimCategoryName') || currentValue
+    form.setFieldValue('dimCategoryName', nextName)
+  }, [categoryLabelMap, form])
 
   const fieldTableColumns = useMemo(() => {
     const columns: any[] = [
@@ -184,7 +216,11 @@ export const BaseInfoTab: React.FC<Props> = ({
             options={categoryOptions}
             placeholder="请选择或输入维度归类"
             showSearch
+            onChange={syncDimCategoryName}
           />
+        </AForm.Item>
+        <AForm.Item hidden name="dimCategoryName">
+          <AInput />
         </AForm.Item>
         <AForm.Item
           label="维度类型"
