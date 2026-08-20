@@ -17,6 +17,10 @@ const request = {
   session_id: 'session-1',
   user_id: 9,
   chat_model_id: 18,
+  sse_mcp_source_version_ids: ['mcp-sse-version'],
+  mcp_streamable_source_version_ids: ['mcp-streamable-version'],
+  skills_source_version_ids: ['external-skill-version'],
+  builtin_tools_source_version_ids: ['builtin-skill-version'],
 }
 
 describe('report task submit api', () => {

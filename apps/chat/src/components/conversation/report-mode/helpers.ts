@@ -6,6 +6,7 @@ export type ReportPreviewOpenReason = 'auto' | 'manual'
 const HIDDEN_STEP_TITLES = new Set(['思考中', 'thinking'])
 const HIDDEN_STEP_DETAILS = new Set(['thought/action/observation'])
 const REPORT_GENERATING_STATUSES = new Set<ReportItem['status']>(['submitting', 'waiting_stream', 'thinking', 'running'])
+const REPORT_TASK_NAME_PATTERN = /(?:报告|report)/i
 
 /** 预计耗时只服务仍在真实生成中的任务，成功、失败和历史同步阶段均不再展示。 */
 export function shouldShowReportEstimate(status: ReportItem['status']) {
@@ -18,11 +19,19 @@ export function areReportTasksSettled(tasks: Array<Pick<ReportPlanTask, 'status'
 }
 
 /**
+ * 后端没有单独返回报告任务标识，目前以计划中的业务名称识别负责产出报告的 Todo。
+ * 该判断只用于报告产物归属，不参与步骤归属或任务状态计算。
+ */
+export function isReportGenerationTask(task: Pick<ReportPlanTask, 'content'>) {
+  return REPORT_TASK_NAME_PATTERN.test(task.content.trim())
+}
+
+/**
  * 报告消息只允许按“思考 → ToDo → 报告”依次显露。
  * reportCandidate 可以提前到达，但在整体完成且任务全部结束前只保存在内存中。
  */
-export function getReportPresentationStage(report: Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate'> & Partial<Pick<ReportItem, 'reportAttachments'>>): ReportPresentationStage {
-  if (!report.currentPlan) return 'thinking'
+export function getReportPresentationStage(report: Pick<ReportItem, 'currentPlan' | 'thinkingCompleted' | 'tasks' | 'status' | 'reportCandidate'> & Partial<Pick<ReportItem, 'reportAttachments'>>): ReportPresentationStage {
+  if (!report.currentPlan || !report.thinkingCompleted) return 'thinking'
 
   if (report.status === 'completed' && (report.reportCandidate || report.reportAttachments?.length) && areReportTasksSettled(report.tasks)) {
     return 'report'
@@ -31,12 +40,12 @@ export function getReportPresentationStage(report: Pick<ReportItem, 'currentPlan
   return 'todo'
 }
 
-export function canRevealReport(report: Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate'> & Partial<Pick<ReportItem, 'reportAttachments'>>) {
+export function canRevealReport(report: Pick<ReportItem, 'currentPlan' | 'thinkingCompleted' | 'tasks' | 'status' | 'reportCandidate'> & Partial<Pick<ReportItem, 'reportAttachments'>>) {
   return getReportPresentationStage(report) === 'report'
 }
 
 /** 历史报告和用户手动重开都直接显示完整内容，避免每次查看都重复播放。 */
-export function shouldAnimateReportPreview(report: Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate' | 'source'>, reason: ReportPreviewOpenReason) {
+export function shouldAnimateReportPreview(report: Pick<ReportItem, 'currentPlan' | 'thinkingCompleted' | 'tasks' | 'status' | 'reportCandidate' | 'source'>, reason: ReportPreviewOpenReason) {
   return reason === 'auto' && report.source === 'task' && report.reportCandidate?.format === 'html' && canRevealReport(report)
 }
 
@@ -92,10 +101,10 @@ export function toReportChunkMarkdown(chunk: Pick<ReportPublicChunk, 'outputType
 }
 
 /** 过滤只有内部占位语义、没有任何公开摘要或输出的空步骤。 */
-export function isVisibleReportStep(step: ReportPublicStep) {
+export function isVisibleReportStep(step: ReportPublicStep, hideReportContent = false) {
   if (step.actionIntention || step.actionReason) return true
   if (step.action && step.action.toLowerCase() !== 'todowrite') return true
-  if (step.chunks.some((chunk) => !isReportContentChunk(chunk) && chunk.content.trim())) return true
+  if (step.chunks.some((chunk) => (!hideReportContent || !isReportContentChunk(chunk)) && chunk.content.trim())) return true
 
   const title = step.title?.trim().toLowerCase()
   if (title && !HIDDEN_STEP_TITLES.has(title) && !title.startsWith('todo::')) return true
@@ -208,8 +217,8 @@ export function formatReportDuration(durationSeconds: number | undefined) {
   return `耗时${minutes}分${seconds}秒`
 }
 
-export function getStepSummary(step: ReportPublicStep) {
-  const latestPublicChunk = [...step.chunks].reverse().find((chunk) => !isReportContentChunk(chunk))
+export function getStepSummary(step: ReportPublicStep, hideReportContent = false) {
+  const latestPublicChunk = [...step.chunks].reverse().find((chunk) => !hideReportContent || !isReportContentChunk(chunk))
   const rawSummary = step.actionIntention || step.actionReason || step.detail || step.action || latestPublicChunk?.content || '正在执行'
   const summary = rawSummary.trim()
 
@@ -217,7 +226,7 @@ export function getStepSummary(step: ReportPublicStep) {
 }
 
 /** 思考区仅展示公开字段，避免组件误用原始 thought/action_input。 */
-export function getPublicStepLines(step: ReportPublicStep) {
+export function getPublicStepLines(step: ReportPublicStep, hideReportContent = false) {
   const lines: string[] = []
 
   if (step.actionIntention) lines.push(step.actionIntention)
@@ -227,8 +236,8 @@ export function getPublicStepLines(step: ReportPublicStep) {
   if (step.actionReason && step.actionReason !== step.actionIntention) lines.push(step.actionReason)
 
   for (const chunk of step.chunks) {
-    // 报告正文可能先于整体完成到达，只更新内部候选，不在思考或 ToDo 中提前泄露。
-    if (isReportContentChunk(chunk)) continue
+    // 只有已处于报告产物上下文的格式内容才隐藏；普通 Todo 返回的 Skill Markdown 仍是公开执行结果。
+    if (hideReportContent && isReportContentChunk(chunk)) continue
 
     const content = chunk.content.trim()
     if (content) lines.push(content.length > 500 ? `${content.slice(0, 500)}…` : content)

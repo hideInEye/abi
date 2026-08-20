@@ -25,6 +25,8 @@ export interface ReportTaskRecord {
 export interface ReportTodoMeta {
   state?: string
   done?: number
+  /** 当前开始执行的 Todo 序号（后端使用 1-based 计数），仅用于阶段诊断。 */
+  started?: number
   total?: number
 }
 
@@ -36,6 +38,13 @@ export interface ReportPlanTask {
 
 export interface ReportQuestionEvent {
   type: 'question'
+  content: string
+}
+
+/** 首个 Todo 阶段完成前由后端输出的公开思考总结。 */
+export interface ReportStepPlanEvent {
+  type: 'step.plan'
+  id?: string
   content: string
 }
 
@@ -98,6 +107,7 @@ export interface ReportDoneEvent {
 
 export type ReportStreamEvent =
   | ReportQuestionEvent
+  | ReportStepPlanEvent
   | ReportStepStartEvent
   | ReportStepMetaEvent
   | ReportStepChunkEvent
@@ -147,6 +157,21 @@ export interface ReportPlanSnapshot {
   version?: number
 }
 
+export interface ReportThinkingPlan {
+  entryId: string
+  id?: string
+  content: string
+}
+
+/** 某个 Todo 的公开阶段总结；展示在该任务全部执行子步骤之后。 */
+export interface ReportTodoSummary {
+  entryId: string
+  stepId: string
+  taskIndex: number
+  taskContent: string
+  content: string
+}
+
 /** 某个 plan 时间片内唯一执行中任务所产生的步骤集合。 */
 export interface ReportTaskExecutionGroup {
   key: string
@@ -180,11 +205,17 @@ export interface ReportStreamRuntimeState {
   status: Exclude<ReportConversationStatus, 'idle'>
   streamQuestion?: string
   thinkingOpen: boolean
+  /** 首个 step.plan 对应步骤完成后为 true；首份 plan.update 本身不能结束思考阶段。 */
+  thinkingCompleted: boolean
   todoOpen: boolean
   expandedTaskKeys: string[]
   storageWarning?: string
   error?: ReportRuntimeError
   warnings: string[]
+  /** 第一条有效 step.plan 的公开正文，也是思考区唯一的正文来源。 */
+  thinkingPlan?: ReportThinkingPlan
+  /** 后续 step.plan 归属到具体 Todo 后形成的阶段总结。 */
+  todoSummaries: ReportTodoSummary[]
   currentPlan?: ReportPlanSnapshot
   tasks: ReportPlanTask[]
   stepsById: Record<string, ReportPublicStep>
@@ -271,5 +302,6 @@ export interface ReportHistoryPayload {
   task_plan?: ReportPlanTask[]
   steps?: ReportHistoryStep[]
   generated_images?: string[]
-  time?: number
+  /** 历史查询返回的报告总耗时，单位为秒。 */
+  total_time?: number
 }

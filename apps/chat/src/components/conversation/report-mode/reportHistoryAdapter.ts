@@ -1,4 +1,5 @@
-import { createInitialReportStreamState } from './reportStreamReducer'
+import { isReportGenerationTask } from './helpers'
+import { createInitialReportStreamState, isReportFinalError } from './reportStreamReducer'
 import type {
   ReportAttachment,
   ReportCandidate,
@@ -11,6 +12,8 @@ import type {
   ReportPublicStep,
   ReportStepStatus,
   ReportTaskExecutionGroup,
+  ReportThinkingPlan,
+  ReportTodoSummary,
 } from './types'
 
 const REPORT_CHAT_MODE = 'chat_report'
@@ -147,6 +150,8 @@ function toPublicChunks(outputs: NonNullable<ReportHistoryPayload['steps']>[numb
 
   return outputs.flatMap((output, index) => {
     if (typeof output?.content !== 'string' || !output.content.trim()) return []
+    // 历史 plan 是思考或 Todo 的阶段总结，由专门状态展示，不能作为普通执行输出重复出现。
+    if (String(output.output_type).toLowerCase() === 'plan') return []
 
     return [{
       entryId: `${stepKey}:output:${index}`,
@@ -154,6 +159,36 @@ function toPublicChunks(outputs: NonNullable<ReportHistoryPayload['steps']>[numb
       content: output.content,
     }]
   })
+}
+
+interface HistoryPlanOutput {
+  entryId: string
+  content: string
+}
+
+interface PreviousHistoryStepAssignment {
+  stepId: string
+  taskIndex: number
+  taskContent: string
+}
+
+/** 保留 steps/outputs 原始顺序，提取历史中独立存储的公开阶段总结。 */
+function getHistoryPlanOutputs(outputs: NonNullable<ReportHistoryPayload['steps']>[number]['outputs'], stepKey: string): HistoryPlanOutput[] {
+  if (!Array.isArray(outputs)) return []
+
+  return outputs.flatMap((output, index) => {
+    if (String(output?.output_type).toLowerCase() !== 'plan' || typeof output.content !== 'string') return []
+
+    const content = output.content.trim()
+    return content ? [{ entryId: `${stepKey}:output:${index}`, content }] : []
+  })
+}
+
+/** 同一 Todo 出现多次历史总结时保留数组顺序中的最后一条。 */
+function upsertHistoryTodoSummary(summaries: ReportTodoSummary[], incoming: ReportTodoSummary): void {
+  const existingIndex = summaries.findIndex((summary) => summary.taskIndex === incoming.taskIndex && summary.taskContent === incoming.taskContent)
+  if (existingIndex < 0) summaries.push(incoming)
+  else summaries[existingIndex] = incoming
 }
 
 function getLastCandidate(stepId: string, chunks: ReportPublicChunk[], current?: ReportCandidate): ReportCandidate | undefined {
@@ -182,7 +217,7 @@ function getHistoryAttachments(stepId: string, chunks: ReportPublicChunk[]): Rep
 
 /**
  * 将完成报告的 react-agent 摘要转换为报告视图模型。
- * thought/action_input/final_content 不会复制到公开模型；action_reason 作为公开执行说明保留。
+ * thought/action_input 不会复制到公开模型；final_content 是完成后的公开总结，action_reason 是公开执行说明。
  */
 export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conversationId: string, sessionId: string): ReportItem {
   const sortOrder = getRoundIndex(round)
@@ -213,31 +248,64 @@ export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conv
 
   const tasks = normalizeTasks(payload.task_plan)
   const planEntryId = `history:${sortOrder}:plan`
+  const finalContent = typeof payload.final_content === 'string' ? payload.final_content.trim() : ''
   const stepsById: Record<string, ReportPublicStep> = {}
   const stepOrder: string[] = []
   const thinkingStepIds: string[] = []
   const executionGroups: ReportTaskExecutionGroup[] = []
   const unassignedStepIds: string[] = []
+  const todoSummaries: ReportTodoSummary[] = []
   let planStarted = false
   let currentTaskIndex = 0
+  let thinkingPlan: ReportThinkingPlan | undefined
+  let previousStepAssignment: PreviousHistoryStepAssignment | undefined
   let reportCandidate: ReportCandidate | undefined
   const reportAttachments: ReportAttachment[] = []
 
   ;(payload.steps || []).forEach((step, index) => {
+    const stepId = String(step.id || `history-step-${sortOrder}-${index}`)
+    const stepKey = `history:${sortOrder}:step:${index}`
+    const planOutputs = getHistoryPlanOutputs(step.outputs, stepKey)
+
+    planOutputs.forEach((planOutput) => {
+      if (!thinkingPlan) {
+        // steps 中第一条有效 plan 固定为顶部思考总结，不能再归入 Todo。
+        thinkingPlan = {
+          entryId: planOutput.entryId,
+          id: stepId,
+          content: planOutput.content,
+        }
+        return
+      }
+
+      // 历史 Plan 在 steps 数组中跟随它所总结的执行步骤，必须继承前一步已经确定的 Todo 归属。
+      // 当前 marker 的 done/started 描述下一阶段进度，不能反过来用于推算总结归属。
+      if (!previousStepAssignment) return
+
+      upsertHistoryTodoSummary(todoSummaries, {
+        entryId: planOutput.entryId,
+        stepId: previousStepAssignment.stepId,
+        taskIndex: previousStepAssignment.taskIndex,
+        taskContent: previousStepAssignment.taskContent,
+        content: planOutput.content,
+      })
+    })
+
     const marker = isTodoMarker(step)
     if (marker) {
       planStarted = true
       if (Number.isSafeInteger(step.todo_meta?.done) && Number(step.todo_meta?.done) >= 0) {
         currentTaskIndex = Number(step.todo_meta?.done)
       }
+      // marker 本身不是公开执行步骤，阻断相邻关系，避免连续 marker 重复使用更早的步骤。
+      previousStepAssignment = undefined
       // todowrite 只负责恢复阶段边界，不作为可公开工具步骤重复展示。
       return
     }
 
-    const stepId = String(step.id || `history-step-${sortOrder}-${index}`)
-    const stepKey = `history:${sortOrder}:step:${index}`
     const chunks = toPublicChunks(step.outputs, stepKey)
     const hasTask = planStarted && currentTaskIndex >= 0 && currentTaskIndex < tasks.length
+    const assignedTask = hasTask ? tasks[currentTaskIndex] : undefined
     const scope: ReportPublicStep['scope'] = !planStarted ? 'thinking' : hasTask ? 'todo' : 'unassigned'
     const groupKey = hasTask ? `${planEntryId}:${currentTaskIndex}` : undefined
 
@@ -278,11 +346,23 @@ export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conv
       }
     }
 
-    reportCandidate = getLastCandidate(stepId, chunks, reportCandidate)
-    reportAttachments.push(...getHistoryAttachments(stepId, chunks))
+    previousStepAssignment = scope === 'todo' && groupKey
+      ? {
+          stepId,
+          taskIndex: currentTaskIndex,
+          taskContent: tasks[currentTaskIndex].content,
+        }
+      : undefined
+
+    // 技能说明也可能是 Markdown；只有已完成的报告 Todo 输出才允许恢复为最终报告产物。
+    if (assignedTask?.status === 'completed' && isReportGenerationTask(assignedTask)) {
+      reportCandidate = getLastCandidate(stepId, chunks, reportCandidate)
+      reportAttachments.push(...getHistoryAttachments(stepId, chunks))
+    }
   })
 
-  const completed = Boolean(reportCandidate || reportAttachments.length > 0)
+  const failedByFinal = isReportFinalError(finalContent)
+  const completed = !failedByFinal && Boolean(reportCandidate || reportAttachments.length > 0)
   return {
     ...baseState,
     id: `history-report-${conversationId}-${sortOrder}`,
@@ -295,6 +375,10 @@ export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conv
     generatedImages: Array.isArray(payload.generated_images) ? [...payload.generated_images] : [],
     status: completed ? 'completed' : 'failed',
     thinkingOpen: false,
+    // 完成历史没有实时首段 step.done，但必须直接进入最终 ToDo/报告展示。
+    thinkingCompleted: true,
+    thinkingPlan,
+    todoSummaries,
     // 历史报告恢复时与实时报告保持一致，待办事项默认收起。
     todoOpen: false,
     tasks,
@@ -309,16 +393,28 @@ export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conv
     thinkingStepIds,
     executionGroups,
     unassignedStepIds,
-    reportCandidate,
-    reportAttachments,
-    durationSeconds: typeof payload.time === 'number' && Number.isFinite(payload.time) && payload.time >= 0 ? payload.time : undefined,
+    reportCandidate: completed ? reportCandidate : undefined,
+    reportAttachments: completed ? reportAttachments : [],
+    final: finalContent
+      ? {
+          entryId: `history:${sortOrder}:final`,
+          content: finalContent,
+        }
+      : undefined,
+    // 实时流使用 done.time，历史 react-agent 协议使用 total_time；统一归一化到 durationSeconds 供标题展示。
+    durationSeconds: typeof payload.total_time === 'number' && Number.isFinite(payload.total_time) && payload.total_time >= 0 ? payload.total_time : undefined,
     doneEntryId: `history:${sortOrder}:done`,
     error: completed
       ? undefined
-      : {
-          code: 'report_content_missing',
-          message: '未收到报告文件',
-        },
+      : failedByFinal
+        ? {
+            code: 'report_generation_failed',
+            message: '报告生成失败，请稍后重试。',
+          }
+        : {
+            code: 'report_content_missing',
+            message: '未收到报告文件',
+          },
   }
 }
 

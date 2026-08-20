@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { connectReportEvents, fetchReportTaskStatus, submitReportTask } from '@/service/api/report'
-import type { RawReportStreamEntry, SubmitReportRequest } from '@/service/api/report'
+import { connectReportEvents, EMPTY_REPORT_SOURCE_VERSION_FIELDS, fetchReportTaskStatus, submitReportTask } from '@/service/api/report'
+import type { RawReportStreamEntry, ReportSourceVersionFields, SubmitReportRequest } from '@/service/api/report'
 
 import { createReportItemFromHistory, mergeReportTimelineItems } from './reportHistoryAdapter'
 import { canRevealReport, shouldAnimateReportPreview, toggleReportTaskKey } from './helpers'
@@ -196,6 +196,12 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
 
       commitReports((currentReports) => currentReports.map((report) => (report.id === reportId ? nextReport : report)))
 
+      // 后端用错误 final 明确结束任务时无需等待 done；立即停止当前连接，避免页面继续显示生成中。
+      if (event?.type === 'final' && nextReport.status === 'failed' && nextReport.error?.code === 'report_generation_failed') {
+        streamControllersRef.current.get(reportId)?.abort()
+        streamControllersRef.current.delete(reportId)
+      }
+
       // 候选正文可以提前到达，但必须等整体完成且所有任务结束后才首次自动开栏。
       if (nextReport.reportCandidate && canRevealReport(nextReport) && !autoOpenedReportIdsRef.current.has(reportId)) {
         autoOpenedReportIdsRef.current.add(reportId)
@@ -227,7 +233,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
 
       while (retryCount <= MAX_STREAM_RETRY_COUNT) {
         const current = reportsRef.current.find((report) => report.id === reportId)
-        if (!current || current.doneEntryId || current.status === 'completed') return
+        if (!current || current.doneEntryId || current.status === 'completed' || current.status === 'failed') return
 
         updateReport(reportId, (report) => ({
           ...report,
@@ -257,7 +263,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
           })
 
           const latest = reportsRef.current.find((report) => report.id === reportId)
-          if (!latest || latest.doneEntryId || latest.status === 'completed' || controller.signal.aborted) return
+          if (!latest || latest.doneEntryId || latest.status === 'completed' || latest.status === 'failed' || controller.signal.aborted) return
 
           throw new Error('报告生成进度连接意外结束')
         } catch (error) {
@@ -292,7 +298,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
   )
 
   const handleSend = useCallback(
-    (rawQuestion: string) => {
+    (rawQuestion: string, reportSources?: ReportSourceVersionFields) => {
       const question = rawQuestion.trim()
       if (!question) return
 
@@ -342,6 +348,8 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
         session_id: sessionId,
         user_id: getCurrentUserId(),
         chat_model_id: chatModelId,
+        // 四类能力源始终显式提交；没有选择时按后端约定发送空数组。
+        ...(reportSources ?? EMPTY_REPORT_SOURCE_VERSION_FIELDS),
         ...(embedId !== undefined ? { embed_model_id: embedId } : {}),
         ...(appType !== undefined && appType !== null && appType !== '' ? { app_type: String(appType) } : {}),
       }

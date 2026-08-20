@@ -3,6 +3,8 @@ import React, { useEffect, useImperativeHandle, useState } from 'react'
 import { flushSync } from 'react-dom'
 import dayjs from 'dayjs'
 
+import type { ReportSourceVersionFields } from '@/service/api/report'
+
 import ChatHeader from './components/chat-header'
 import type { ModelOption } from './components/chat-header'
 import DebugPanel from './components/DebugPanel'
@@ -18,7 +20,7 @@ import reportStyles from './report-mode/styles.module.css'
 export interface ConversationHandle {
   setConvContent: (content: any[]) => void
   handleSend: (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; semanticGroupId?: number | string; selectedExcel?: { file_id: string | number; file_name: string } }) => void
-  handleReportSend: (value: string) => void
+  handleReportSend: (value: string, reportSources?: ReportSourceVersionFields) => void
   stopGenerating: () => void
   stopReportGenerating: () => void
   loading: boolean
@@ -111,8 +113,8 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   } = controller
 
   const handleReportSend = React.useCallback(
-    (value: string) => {
-      reportController.handleSend(value)
+    (value: string, reportSources?: ReportSourceVersionFields) => {
+      reportController.handleSend(value, reportSources)
 
       // 只在用户提交本轮报告问题时定位一次；后续流式事件不会再次驱动滚动。
       window.requestAnimationFrame(() => {

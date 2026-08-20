@@ -7,11 +7,13 @@ import UploadDrawer from '../../UploadDrawer';
 import FileTag from '../../../../components/FileTag';
 import { querySkillList } from '../../../../service/api/skill';
 import { queryMcpList } from '../../../../service/api/mcp';
+import type { ReportSourceVersionFields } from '../../../../service/api/report';
 import { fetchSemanticGroups, fetchSemanticDetail } from '../../../../service/api/semantic';
 import SchemaFieldsModal from '../../../conversation-analysis/SchemaFieldsModal';
 import type { SchemaTable, SchemaField } from '../../../conversation-analysis/SchemaFieldsModal';
 import { getSpaceId } from '../../../../utils';
 import type { ModelOption } from '../chat-header';
+import { buildReportSourceVersionFields } from './reportSourceSelection';
 import { hasSelectedConversationData } from './sendValidation';
 
 export interface SemanticSelectedData {
@@ -25,6 +27,12 @@ export interface SemanticSelectedData {
 
 export type ChatInputModeKey = 'interact' | 'explore' | 'report'
 
+export interface ChatInputSendOptions {
+  mode: ChatInputModeKey
+  /** 仅报告模式提交使用；普通交互请求不得透传这些字段。 */
+  reportSources?: ReportSourceVersionFields
+}
+
 type ChatInputMode = {
   key: ChatInputModeKey
   label: string
@@ -37,7 +45,7 @@ interface ChatInputProps {
   /** 确保存在可用会话（无会话时先创建），返回会话对象 */
   ensureConv?: () => Promise<any>;
   loading: boolean;
-  onSend: (value: string, options?: { mode: ChatInputModeKey }) => void;
+  onSend: (value: string, options?: ChatInputSendOptions) => void;
   onStop: () => void;
   deepThinkEnabled: boolean;
   uploadFileEnabled: boolean;
@@ -231,9 +239,21 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         return;
       }
 
-      onSend(value, { mode: selectedMode.key });
+      const options: ChatInputSendOptions = selectedMode.key === 'report'
+        ? {
+            mode: selectedMode.key,
+            reportSources: buildReportSourceVersionFields({
+              skills: skillList,
+              selectedSkillIds: selectedSkills,
+              mcps: Array.from(mcpGroupItems.values()).flat(),
+              selectedMcpIds: selectedMCPs,
+            }),
+          }
+        : { mode: selectedMode.key };
+
+      onSend(value, options);
       setValue('');
-    }, [loading, onSend, selectedData, selectedExcel, selectedMode.key, value]);
+    }, [loading, mcpGroupItems, onSend, selectedData, selectedExcel, selectedMCPs, selectedMode.key, selectedSkills, skillList, value]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

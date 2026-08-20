@@ -1,5 +1,5 @@
 import { compareRedisEntryIds, parseRedisEntryId, sortAndDedupeRedisEntries } from './redisEntryId'
-import { getTaskKey } from './helpers'
+import { getTaskKey, isReportGenerationTask } from './helpers'
 import type {
   RawReportStreamEntry,
   ReportAttachment,
@@ -14,18 +14,22 @@ import type {
   ReportStreamEvent,
   ReportStreamRuntimeState,
   ReportTaskExecutionGroup,
+  ReportTodoSummary,
   ReportTodoMeta,
 } from './types'
 
-const REPORT_EVENT_TYPES = new Set<ReportStreamEvent['type']>(['question', 'step.start', 'step.meta', 'step.chunk', 'step.done', 'plan.update', 'final', 'done'])
+const REPORT_EVENT_TYPES = new Set<ReportStreamEvent['type']>(['question', 'step.plan', 'step.start', 'step.meta', 'step.chunk', 'step.done', 'plan.update', 'final', 'done'])
 
 const PLACEHOLDER_STEP_TITLES = new Set(['思考中', 'thinking'])
 const EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE = 'report_payload'
+const REPORT_GENERATION_FAILED_CODE = 'report_generation_failed'
+const REPORT_FINAL_ERROR_PATTERN = /^大模型对话生成错误(?:[!！]|$)/i
 
 export function createInitialReportStreamState(): ReportStreamRuntimeState {
   return {
     status: 'thinking',
     thinkingOpen: true,
+    thinkingCompleted: false,
     todoOpen: false,
     expandedTaskKeys: [],
     warnings: [],
@@ -33,6 +37,7 @@ export function createInitialReportStreamState(): ReportStreamRuntimeState {
     stepsById: {},
     stepOrder: [],
     thinkingStepIds: [],
+    todoSummaries: [],
     executionGroups: [],
     unassignedStepIds: [],
     reportAttachments: [],
@@ -46,10 +51,17 @@ export function parseReportStreamEvent(data: string): ReportStreamEvent | undefi
 
     if (!parsed || typeof parsed !== 'object') return undefined
 
-    const type = (parsed as { type?: unknown }).type
+    // Java 接口通常直接透传事件；同时兼容调试接口返回的 { data: event } 包裹格式。
+    const wrappedData = (parsed as { data?: unknown }).data
+    const payload = typeof (parsed as { type?: unknown }).type === 'string'
+      ? parsed
+      : wrappedData && typeof wrappedData === 'object'
+        ? wrappedData
+        : parsed
+    const type = (payload as { type?: unknown }).type
     if (typeof type !== 'string' || !REPORT_EVENT_TYPES.has(type as ReportStreamEvent['type'])) return undefined
 
-    return parsed as ReportStreamEvent
+    return payload as ReportStreamEvent
   } catch {
     return undefined
   }
@@ -82,6 +94,7 @@ function normalizeTodoMeta(todoMeta?: ReportTodoMeta | null): ReportTodoMeta | u
   return {
     state: todoMeta.state,
     done: todoMeta.done,
+    started: todoMeta.started,
     total: todoMeta.total,
   }
 }
@@ -102,8 +115,115 @@ function getUniqueRunningTask(tasks: ReportPlanTask[]): { index: number; task: R
   return running.length === 1 ? running[0] : undefined
 }
 
+/**
+ * plan.update 已经把下一个 Todo 标为执行中，因此后续 step.plan 只能总结前一个已完成项。
+ * done 使用完成数量，转换为 0-based 下标后是 done - 1；done=0 没有前置任务，不能归到当前项。
+ */
+function createTodoSummary(state: ReportStreamRuntimeState, eventId: string | undefined, content: string, entryId: string): ReportTodoSummary | undefined {
+  const stepId = eventId?.trim()
+  const todoMeta = stepId ? state.stepsById[stepId]?.todoMeta : undefined
+  const done = todoMeta?.done
+  if (!stepId || !Number.isSafeInteger(done) || Number(done) <= 0) return undefined
+
+  const taskIndex = Number(done) - 1
+  const task = state.tasks[taskIndex]
+  if (!task || (task.status !== 'completed' && task.status !== 'cancelled')) return undefined
+
+  return {
+    entryId,
+    stepId,
+    taskIndex,
+    taskContent: task.content,
+    content,
+  }
+}
+
+/** 同一 Todo 重复返回总结时保留 Redis 顺序中最后一条，不影响其他任务。 */
+function upsertTodoSummary(summaries: ReportTodoSummary[], incoming: ReportTodoSummary): ReportTodoSummary[] {
+  const existingIndex = summaries.findIndex((summary) => summary.taskIndex === incoming.taskIndex && summary.taskContent === incoming.taskContent)
+  if (existingIndex < 0) return [...summaries, incoming]
+
+  const next = [...summaries]
+  next[existingIndex] = incoming
+  return next
+}
+
 function createExecutionGroupKey(planEntryId: string, taskIndex: number): string {
   return `${planEntryId}:${taskIndex}`
+}
+
+interface ReconciledStepAssignment {
+  stepsById: ReportStreamRuntimeState['stepsById']
+  executionGroups: ReportTaskExecutionGroup[]
+  unassignedStepIds: string[]
+}
+
+/**
+ * 某些真实任务先执行工具，随后才由 framework 计划把对应任务标记为 in_progress。
+ * 这里只回填“上一计划无执行中任务、同位置同标题从 pending 变为唯一 in_progress”的时间片，
+ * 其余情况继续保留未归属，避免用标题相似度或步骤序号进行猜测。
+ */
+function reconcileUnassignedStepsForNextPlan(state: ReportStreamRuntimeState, nextPlanEntryId: string, nextTasks: ReportPlanTask[]): ReconciledStepAssignment {
+  const previousPlan = state.currentPlan
+  const nextRunningTask = getUniqueRunningTask(nextTasks)
+  if (!previousPlan || !nextRunningTask || state.unassignedStepIds.length === 0) {
+    return {
+      stepsById: state.stepsById,
+      executionGroups: state.executionGroups,
+      unassignedStepIds: state.unassignedStepIds,
+    }
+  }
+
+  const previousRunningTaskCount = previousPlan.tasks.filter((task) => task.status === 'in_progress').length
+  const previousTargetTask = previousPlan.tasks[nextRunningTask.index]
+  if (previousRunningTaskCount !== 0 || previousTargetTask?.status !== 'pending' || previousTargetTask.content !== nextRunningTask.task.content) {
+    return {
+      stepsById: state.stepsById,
+      executionGroups: state.executionGroups,
+      unassignedStepIds: state.unassignedStepIds,
+    }
+  }
+
+  const reassignedStepIds = state.unassignedStepIds.filter((stepId) => {
+    const step = state.stepsById[stepId]
+    return Boolean(
+      step
+      && compareRedisEntryIds(step.firstEntryId, previousPlan.entryId) > 0
+      && compareRedisEntryIds(step.firstEntryId, nextPlanEntryId) < 0,
+    )
+  })
+  if (reassignedStepIds.length === 0) {
+    return {
+      stepsById: state.stepsById,
+      executionGroups: state.executionGroups,
+      unassignedStepIds: state.unassignedStepIds,
+    }
+  }
+
+  const groupKey = createExecutionGroupKey(nextPlanEntryId, nextRunningTask.index)
+  const stepsById = { ...state.stepsById }
+  reassignedStepIds.forEach((stepId) => {
+    stepsById[stepId] = {
+      ...stepsById[stepId],
+      scope: 'todo',
+      executionGroupKey: groupKey,
+    }
+  })
+
+  return {
+    stepsById,
+    executionGroups: [
+      ...state.executionGroups,
+      {
+        key: groupKey,
+        planEntryId: nextPlanEntryId,
+        taskIndex: nextRunningTask.index,
+        taskContent: nextRunningTask.task.content,
+        stepIds: reassignedStepIds,
+      },
+    ],
+    unassignedStepIds: state.unassignedStepIds.filter((stepId) => !reassignedStepIds.includes(stepId)),
+  }
 }
 
 interface StepAssignment {
@@ -253,6 +373,15 @@ function toReportCandidate(entryId: string, stepId: string, outputType: string |
   }
 }
 
+/** 报告产物必须属于计划中负责生成报告的 Todo，不能使用技能说明等其他 Markdown 兜底。 */
+function isStepAssignedToReportTask(state: ReportStreamRuntimeState, stepId: string): boolean {
+  const executionGroupKey = state.stepsById[stepId]?.executionGroupKey
+  if (!executionGroupKey) return false
+
+  const executionGroup = state.executionGroups.find((group) => group.key === executionGroupKey)
+  return Boolean(executionGroup && isReportGenerationTask({ content: executionGroup.taskContent }))
+}
+
 function toReportAttachment(entryId: string, stepId: string, outputType: string | undefined, content: string): ReportAttachment | undefined {
   const format = outputType?.toLowerCase()
   const url = content.trim()
@@ -335,7 +464,7 @@ interface EmbeddedReportArtifacts {
   attachments: ReportAttachment[]
 }
 
-/** 识别工具 text payload 内嵌的最后一个 HTML/Markdown 预览和所有 PDF/Word 附件。 */
+/** 识别报告工具 text payload 内嵌的最后一个 HTML/Markdown 预览和所有 PDF/Word 附件。 */
 function toEmbeddedReportArtifacts(entryId: string, stepId: string, chunks: ReportPublicChunk[]): EmbeddedReportArtifacts {
   const payloadSource = chunks
     .filter((chunk) => chunk.outputType === EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE)
@@ -378,6 +507,30 @@ function settleInProgressSteps(state: ReportStreamRuntimeState): ReportStreamRun
   }
 }
 
+export function isReportFinalError(content: string): boolean {
+  return REPORT_FINAL_ERROR_PATTERN.test(content.trim())
+}
+
+/** 错误 final 是失败终态：执行中步骤标记失败，未结束 ToDo 统一收敛为取消。 */
+function settleReportFailure(state: ReportStreamRuntimeState): ReportStreamRuntimeState {
+  const tasks = state.tasks.map((task) => (task.status === 'completed' || task.status === 'cancelled' ? task : { ...task, status: 'cancelled' as const }))
+  const stepsById = Object.fromEntries(
+    Object.entries(state.stepsById).map(([stepId, step]) => [stepId, step.status === 'in_progress' ? { ...step, status: 'failed' as const } : step]),
+  )
+
+  return {
+    ...state,
+    tasks,
+    stepsById,
+    currentPlan: state.currentPlan
+      ? {
+          ...state.currentPlan,
+          tasks,
+        }
+      : undefined,
+  }
+}
+
 function markEntryProcessed(state: ReportStreamRuntimeState, entryId: string): ReportStreamRuntimeState {
   return {
     ...state,
@@ -390,6 +543,11 @@ function markEntryProcessed(state: ReportStreamRuntimeState, entryId: string): R
 }
 
 export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: ReportStreamEvent, entryId: string): ReportStreamRuntimeState {
+  // 错误 final 之后只允许整体 done 补充结束位置/耗时，其他晚到业务事件全部忽略。
+  if (state.status === 'failed' && state.error?.code === REPORT_GENERATION_FAILED_CODE && event.type !== 'done') {
+    return markEntryProcessed(state, entryId)
+  }
+
   let nextState = state
 
   switch (event.type) {
@@ -397,6 +555,37 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
       // Redis question 只用于回放校验；UI 主问题始终来自 IndexedDB ReportTaskRecord.question。
       nextState = typeof event.content === 'string' ? { ...state, streamQuestion: event.content } : appendWarning(state, `entry ${entryId} 的 question 内容无效`)
       break
+    case 'step.plan': {
+      const content = typeof event.content === 'string' ? event.content.trim() : ''
+      if (!content) {
+        nextState = appendWarning(state, `entry ${entryId} 的 step.plan.content 无效，已跳过`)
+        break
+      }
+
+      const eventId = typeof event.id === 'string' && event.id.trim() ? event.id.trim() : undefined
+      if (!state.thinkingPlan) {
+        // 第一条有效 step.plan 固定为顶部思考总结，后续 Todo 总结不得覆盖它。
+        nextState = {
+          ...state,
+          thinkingPlan: {
+            entryId,
+            id: eventId,
+            content,
+          },
+        }
+        if (!eventId) nextState = appendWarning(nextState, `entry ${entryId} 的首条 step.plan 缺少 id，无法判断思考完成时机`)
+        break
+      }
+
+      const todoSummary = createTodoSummary(state, eventId, content, entryId)
+      nextState = todoSummary
+        ? {
+            ...state,
+            todoSummaries: upsertTodoSummary(state.todoSummaries, todoSummary),
+          }
+        : appendWarning(state, `entry ${entryId} 的 Todo 阶段总结无法可靠归属，已跳过`)
+      break
+    }
     case 'step.start':
       nextState = mergeStepStart(state, event, entryId)
       break
@@ -409,9 +598,6 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
         break
       }
 
-      const directCandidate = toReportCandidate(entryId, event.id, event.output_type, event.content)
-      const directAttachment = toReportAttachment(entryId, event.id, event.output_type, event.content)
-      let embeddedArtifacts: EmbeddedReportArtifacts = { attachments: [] }
       nextState = upsertPublicStep(state, event.id, entryId, (step) => {
         const chunks: ReportPublicChunk[] = [
           ...step.chunks,
@@ -421,7 +607,6 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
             content: event.content,
           },
         ]
-        embeddedArtifacts = toEmbeddedReportArtifacts(entryId, event.id, chunks)
 
         return {
           ...step,
@@ -429,6 +614,12 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
         }
       })
 
+      // 所有 chunk 都保留在所属公开步骤中；只有报告 Todo 的步骤可以进入最终报告候选/附件集合。
+      if (!isStepAssignedToReportTask(nextState, event.id)) break
+
+      const directCandidate = toReportCandidate(entryId, event.id, event.output_type, event.content)
+      const directAttachment = toReportAttachment(entryId, event.id, event.output_type, event.content)
+      const embeddedArtifacts = toEmbeddedReportArtifacts(entryId, event.id, nextState.stepsById[event.id]?.chunks || [])
       const candidate = directCandidate || embeddedArtifacts.candidate
       const reportAttachments = mergeReportAttachments(nextState.reportAttachments, [
         ...(directAttachment ? [directAttachment] : []),
@@ -443,9 +634,19 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
       }
       break
     }
-    case 'step.done':
-      nextState = mergeStepDone(state, event, entryId)
+    case 'step.done': {
+      const mergedState = mergeStepDone(state, event, entryId)
+      const completesThinking = !state.thinkingCompleted && Boolean(state.thinkingPlan?.id) && event.id === state.thinkingPlan?.id
+      nextState = completesThinking
+        ? {
+            ...mergedState,
+            status: mergedState.currentPlan ? 'running' : mergedState.status,
+            thinkingOpen: false,
+            thinkingCompleted: true,
+          }
+        : mergedState
       break
+    }
     case 'plan.update': {
       if (!Array.isArray(event.tasks)) {
         nextState = appendWarning(state, `entry ${entryId} 的 plan.update.tasks 无效，已跳过`)
@@ -455,11 +656,13 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
       // plan.update 是完整快照：只覆盖当前任务，不删除此前时间片已经产生的 executionGroups。
       // ToDo 是否展开是页面 UI 状态，仅在初次创建/恢复时默认为 false；接口更新不得覆盖用户选择。
       const tasks = event.tasks.map((task) => ({ ...task }))
+      const reconciledAssignment = reconcileUnassignedStepsForNextPlan(state, entryId, tasks)
       const runningTaskIndex = tasks.findIndex((task) => task.status === 'in_progress')
       nextState = {
         ...state,
-        status: 'running',
-        thinkingOpen: false,
+        ...reconciledAssignment,
+        // 首份计划先用于准备 Todo；只有首条 step.plan 对应的 step.done 才结束思考阶段。
+        status: state.thinkingCompleted ? 'running' : state.status,
         currentPlan: {
           entryId,
           tasks,
@@ -472,14 +675,45 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
       }
       break
     }
-    case 'final':
-      nextState = typeof event.content === 'string' ? { ...state, final: { content: event.content, entryId } } : appendWarning(state, `entry ${entryId} 的 final 内容无效`)
+    case 'final': {
+      if (typeof event.content !== 'string') {
+        nextState = appendWarning(state, `entry ${entryId} 的 final 内容无效`)
+        break
+      }
+
+      const final = { content: event.content, entryId }
+      nextState = isReportFinalError(event.content)
+        ? {
+            ...settleReportFailure(state),
+            status: 'failed',
+            final,
+            error: {
+              code: REPORT_GENERATION_FAILED_CODE,
+              message: '报告生成失败，请稍后重试。',
+            },
+          }
+        : {
+            ...state,
+            final,
+          }
       break
+    }
     case 'done':
       {
+        if (state.status === 'failed' && state.error?.code === REPORT_GENERATION_FAILED_CODE) {
+          nextState = {
+            ...state,
+            doneEntryId: entryId,
+            durationSeconds: typeof event.time === 'number' && Number.isFinite(event.time) && event.time >= 0 ? event.time : state.durationSeconds,
+          }
+          break
+        }
+
         const settledState = settleInProgressSteps(state)
         const durationSeconds = typeof event.time === 'number' && Number.isFinite(event.time) && event.time >= 0 ? event.time : settledState.durationSeconds
-        nextState = settledState.reportCandidate || settledState.reportAttachments.length > 0
+        const reportTaskCompleted = settledState.tasks.some((task) => task.status === 'completed' && isReportGenerationTask(task))
+        const hasReportArtifact = Boolean(settledState.reportCandidate || settledState.reportAttachments.length > 0)
+        nextState = reportTaskCompleted && hasReportArtifact
           ? {
               ...settledState,
               status: 'completed',
@@ -492,6 +726,9 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
               status: 'failed',
               doneEntryId: entryId,
               durationSeconds,
+              // 过程阶段的 Markdown/HTML 不能在失败终态继续作为报告卡片或预览候选。
+              reportCandidate: undefined,
+              reportAttachments: [],
               error: {
                 code: 'report_content_missing',
                 message: '未收到报告文件',

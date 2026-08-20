@@ -3,8 +3,26 @@ import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 
 import { getAuthorization, handleLoginExpired } from '../../utils/auth'
 
+export type SourceVersionId = string | number
+
+/** 报告任务可选的技能/MCP 源版本；无选择时接口约定发送空数组。 */
+export interface ReportSourceVersionFields {
+  sse_mcp_source_version_ids: SourceVersionId[]
+  mcp_streamable_source_version_ids: SourceVersionId[]
+  skills_source_version_ids: SourceVersionId[]
+  builtin_tools_source_version_ids: SourceVersionId[]
+}
+
+/** 未选择任何能力源时也要显式提交四个空数组字段。 */
+export const EMPTY_REPORT_SOURCE_VERSION_FIELDS: ReportSourceVersionFields = {
+  sse_mcp_source_version_ids: [],
+  mcp_streamable_source_version_ids: [],
+  skills_source_version_ids: [],
+  builtin_tools_source_version_ids: [],
+}
+
 /** 报告任务提交参数。该接口是普通 HTTP 请求，不是对话 SSE。 */
-export interface SubmitReportRequest {
+export interface SubmitReportRequest extends ReportSourceVersionFields {
   messages: string
   app_id: number
   space_id: number
