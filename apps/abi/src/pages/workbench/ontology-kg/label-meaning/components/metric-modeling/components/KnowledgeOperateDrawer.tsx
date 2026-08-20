@@ -645,9 +645,14 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
   }
 
+  const getBusinessRequiredFields = () => {
+    const baseFields = ['bizName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition']
+    return isAtomicMode ? [...baseFields, 'techName'] : baseFields
+  }
+
   const next = async () => {
     if (currentStepKey === 'business') {
-      const valid = await validateKnowledgeFields(['bizName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition'])
+      const valid = await validateKnowledgeFields(getBusinessRequiredFields())
       if (!valid) {
         return
       }
@@ -675,7 +680,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       return
     }
 
-    const baseFields = ['bizName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition']
+    const baseFields = getBusinessRequiredFields()
     const valid = await validateKnowledgeFields(isAtomicMode ? baseFields : [...baseFields, ...(getTechnicalRequiredFields() as string[])])
     if (!valid) {
       return
@@ -767,6 +772,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
             validateBusinessRemark={validateBusinessRemark}
             validateIndicatorName={validateIndicatorName}
             validateMeasurementUnit={validateMeasurementUnit}
+            validateTechName={validateTechName}
           />
         ) : null}
 

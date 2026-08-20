@@ -8,6 +8,7 @@ import { queryDimensionList } from '@/service/api/dimension-modeling'
 import { tableSemanticsGroupList } from '@/service/api/table-semantics'
 
 import type { KnowledgeFormValues } from '../types/metricModeling.types'
+import { formatMappedDimensionOptionTitle, getMappedMetricFieldDisplayName } from '../utils/knowledgeOperateDrawer.utils'
 import { getKnowledgeSpaceId } from '../utils/space'
 
 import styles from './knowledgeOperateDrawer.DimensionStep.module.scss'
@@ -104,7 +105,11 @@ function normalizeDimensionOption(item: unknown): DimensionTransferItem | null {
 
   const bizName = pickText(item, ['bizName', 'zhName', 'dimName'])
   const techName = pickText(item, ['techName', 'englishName', 'dimCode'])
-  const title = bizName && techName ? `${bizName}（${techName}）` : bizName || techName || dimId
+  const title = formatMappedDimensionOptionTitle({
+    bizName,
+    fallback: dimId,
+    techName
+  })
   return { key: dimId, techName, title }
 }
 
@@ -125,7 +130,14 @@ function parseSelectedDimensions(dimensionFieldIds?: unknown): SelectedDimension
             return null
           }
           const techName = String(source.techName ?? '').trim()
-          const title = String(source.title ?? '').trim()
+          const rawTitle = source.title ?? source.bizName ?? source.zhName ?? source.dimName
+          const title = source.title
+            ? getMappedMetricFieldDisplayName(rawTitle)
+            : formatMappedDimensionOptionTitle({
+                bizName: rawTitle,
+                fallback: key,
+                techName
+              })
           return { key, techName: techName || undefined, title: title || undefined }
         }
         const key = String(item).trim()

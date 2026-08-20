@@ -11,6 +11,7 @@ interface Props {
   readonly validateBusinessRemark: (_: unknown, value?: string) => Promise<void>
   readonly validateIndicatorName: (_: unknown, value?: string) => Promise<void>
   readonly validateMeasurementUnit: (_: unknown, value?: string) => Promise<void>
+  readonly validateTechName: (_: unknown, value?: string) => Promise<void>
 }
 
 export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
@@ -19,6 +20,7 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
   validateBusinessRemark,
   validateIndicatorName,
   validateMeasurementUnit,
+  validateTechName,
 }) => {
   const { patternRules } = useFormRules()
 
@@ -34,6 +36,15 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
           </AForm.Item>
           <AForm.Item label="指标类型" name="indicatorClass" rules={[{ message: '请选择指标类型', required: true }]}>
             <ASelect options={INDICATOR_TYPE_OPTIONS} placeholder="请选择指标类型" />
+          </AForm.Item>
+          <AForm.Item noStyle shouldUpdate={(prevValues, nextValues) => prevValues.indicatorClass !== nextValues.indicatorClass}>
+            {({ getFieldValue }) =>
+              getFieldValue('indicatorClass') === 'atomic' ? (
+                <AForm.Item required label="英文名称" name="techName" rules={[{ validator: validateTechName }]} validateDebounce={600} validateTrigger="onChange">
+                  <AInput placeholder="请输入英文名称" />
+                </AForm.Item>
+              ) : null
+            }
           </AForm.Item>
           <AForm.Item label="指标状态" name="versionStatus" rules={[{ message: '请选择指标状态', required: true }]}>
             <ASelect options={STATUS_OPTIONS} placeholder="请选择指标状态" />
