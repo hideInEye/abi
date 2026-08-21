@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   extractUniqueIds,
+  formatMappedDimensionOptionTitle,
   getMappedMetricFieldDisplayName,
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
@@ -41,5 +42,14 @@ describe('metric create/edit display names', () => {
         techId: 'coupon_name'
       })
     ).toBe('优惠券名称')
+  })
+
+  it('formats dimension select titles with the mapped dimension name part', () => {
+    expect(
+      formatMappedDimensionOptionTitle({
+        bizName: '交易明细表_ # _收货城市',
+        techName: 'receive_city',
+      })
+    ).toBe('收货城市（receive_city）')
   })
 })

@@ -2,12 +2,255 @@
 
 ## 文档状态
 
-- 状态：报告模式 ToDo 展开状态保持修复已完成；既有报告协议、普通对话和会话分组需求保持不变。
-- 日期：2026-08-13。
+- 状态：已完成“流程结束时误把非报告 Todo 的 Markdown 过程输出当成最终报告”的历史与实时展示修正。
+- 日期：2026-08-19。
 - 当前分支：`dev/zanghb-20260720-chatreport`。
-- 影响范围：`apps/chat` 报告 Stream reducer 的 ToDo 总面板 UI 状态保持逻辑。
+- 影响范围：`apps/chat` 报告 Stream reducer 的阶段门控、Todo 总结映射与报告任务展示。
 
 本文件是本轮开发的唯一当前需求依据。旧实现中的独立 `ReportConversation` 页面分支、根 `server/`、Node `/api/report-stream/events` 以及“不调用 task 状态接口”的约定全部废止。
+
+## 2026-08-19 追加：报告内容必须来自已完成的报告 Todo
+
+### 背景
+
+- 历史 query 和实时 Stream 都可能包含 Markdown 过程输出，例如技能说明或 SQL 文档。
+- 技能加载等普通 Todo 返回的 Markdown 不代表后端已经产出最终报告。当前实现会把任意阶段最后一条 Markdown 兜底识别成报告，导致生成失败的数据仍显示“已完成”和报告文件卡。
+- 后端最终报告可以是完整 HTML 或 Markdown 内容，也可以同时返回 `output_type = "pdf"` 或 `output_type = "word"` 对应的非空下载地址。
+
+### 目标
+
+- 实时链路只有收到整体 `done` 后才进行最终判定；`done` 前即使收到 HTML/Markdown/PDF/Word，也仍处于生成过程。
+- HTML/Markdown 报告候选以及 PDF/Word 附件必须来自计划中负责生成报告的 Todo 执行步骤；该 Todo 的最终状态必须为 `completed`。
+- 报告 Todo 使用计划中的业务名称识别（包含“报告”或 `report`），并通过已有 execution group 与输出步骤关联；不得把思考阶段、未归属步骤或“加载技能”等其他 Todo 的 Markdown 当成报告。
+- 历史 query 与实时 Stream 使用同一报告判定：整体流程结束、报告 Todo 已完成，并且存在非空 HTML/Markdown 内容或至少一条带非空 URL 的 PDF/Word 输出。
+- 实时收到 `done` 但只有非报告 Todo 的 Markdown 时，报告状态置为失败并提示“未收到报告文件”，同时清除误识别的候选。
+- 历史数据只有技能说明 Markdown、报告 Todo 未完成时同样置为失败，不恢复该 Markdown 候选，也不显示报告文件卡。
+- 思考、ToDo、公开执行步骤和非空 `final_content` 都是实际已有数据；即使没有报告附件也继续展示。其中生成失败文案应作为最终结果说明展示，不能被通用错误提示替代或隐藏。
+- 完整 HTML/Markdown 内容可直接用于右侧只读预览；PDF/Word 地址继续用于实际下载。
+
+### 非目标
+
+- 不仅根据 Markdown 文案、标题、长度或最后出现顺序猜测它是否为最终报告；必须结合输出步骤的 Todo 归属和最终任务状态。
+- 不伪造 PDF/Word 下载地址，不修改后端协议。
+- 不修改普通对话、报告提交参数、IndexedDB、Todo 归属、Plan 总结和报告视觉样式。
+
+### 验收与测试
+
+- 用户提供的失败历史数据（`pdf_urls/word_urls` 为空且只有 Markdown 技能文档）不得显示报告文件卡或右侧报告预览，状态不得显示已完成。
+- 实时数据中技能加载 Todo 返回 Markdown、随后收到 `done` 时必须失败并清除报告候选。
+- 已完成的报告 Todo 返回 HTML 或 Markdown、随后收到 `done` 时，即使没有 PDF/Word 也正常完成并可预览。
+- 同时包含 HTML 预览和 PDF/Word 地址的数据仍正常完成、预览和下载。
+- 无附件失败时仍显示真实 `final_content`，例如“大模型对话生成错误!(Connection error.)”。
+- 补充历史适配器、实时 reducer、展示阶段 helper 和消息渲染回归测试；运行 report-mode Vitest、TypeScript 检查、构建和 `git diff --check`。
+- 生成 `.ai/runs/2026-08-19-report-todo-artifact-gating/RUN_LOG.md`。
+
+## 2026-08-18 追加：报告历史 final_content 最终总结
+
+### 目标
+
+- 历史 `react-agent.final_content` 是报告完成后可公开展示的最终总结，不再作为内部思维字段丢弃。
+- `final_content` 为非空字符串时映射到报告视图模型的 `final.content`，复用现有报告阶段最终总结区域展示。
+- 历史最终总结位于 ToDo 之后、报告文件卡之前，与实时 `final` 的展示位置保持一致。
+- `final_content` 缺失、非字符串或仅空白时不展示空总结，不影响 HTML/PDF/Word 报告恢复。
+
+### 非目标
+
+- 不展示 `thought`、`action_input` 等内部过程字段。
+- 不修改实时 Stream `final` 的错误终止和成功展示规则。
+- 不修改普通对话、报告提交、Todo、报告预览与下载样式。
+
+### 验收与测试
+
+- 用户提供历史数据中的“订单总金额分析报告已生成完成……”能够显示在历史报告回答中。
+- 历史适配器测试断言 `final_content` 正确进入 `final`，内部 `thought/action_input` 仍不进入公开模型。
+- 运行 report-mode Vitest、`ai-bot` TypeScript 检查、构建和 `git diff --check`。
+- 更新 `.ai/runs/2026-08-18-report-history-plan-summary/RUN_LOG.md`。
+
+## 2026-08-18 追加：报告历史中的 Plan 总结映射
+
+### 背景
+
+- 历史 query 返回的 `react-agent` 数据不会保存为实时 `step.plan` 事件，而是保存到 `steps[].outputs[]`，其中 `output_type = "plan"` 的输出即阶段总结。
+- `steps` 中按数组顺序出现的第一条 `plan` 是顶部“思考”区域的公开思考总结。
+- 第一条之后的每条 `plan` 都是它在 `steps` 数组中前一个公开执行步骤的思考总结；例如 `step-5` 中的 Plan 总结 `step-4`。它们不能作为新的 Todo，也不能作为普通执行输出重复展示。
+
+### 目标
+
+- 历史适配器按 `steps` 和 `outputs` 的原始顺序读取全部 `plan` 输出。
+- 第一条有效 `plan` 写入 `thinkingPlan`，用于历史报告顶部思考正文。
+- 后续有效 `plan` 跟随 `steps` 数组中紧邻其前的公开执行步骤，继承该步骤已经确定的 Todo 归属；Plan 展示在该执行步骤之后。
+- Plan 所在 Todo marker 的 `todo_meta.done/started` 只表示下一阶段的计划进度，不能用于重新计算 Plan 总结归属。
+- Plan 前面不存在公开执行步骤，或前一执行步骤未可靠归属到 Todo 时，不猜测归属，也不展示为普通步骤内容。
+- 历史 Todo 的数量、名称和状态仍只来自 `task_plan`；`steps[].outputs.plan` 只生成 `thinkingPlan/todoSummaries`。
+- `plan` 输出不进入公开 step 的 `chunks`，不参与 HTML/Markdown 报告候选和附件识别。
+- 普通执行步骤继续按 Todo marker 的 `done` 分段归属，HTML/PDF/Word 以及公开工具输出恢复规则保持不变。
+
+### 非目标
+
+- 不修改实时 Stream 的 `step.plan` 处理规则。
+- 不展示 `thought`、`action_input` 中的内部推理内容；`final_content` 按本轮新协议作为公开最终总结展示。
+- 不修改普通对话、报告提交、IndexedDB、任务状态查询、右侧报告预览和下载逻辑。
+- 不根据标题相似度、`todo_meta.done`、步骤数字或总结文案猜测历史 Plan 的 Todo 归属。
+
+### 验收标准
+
+- 用户提供的历史数据第一条 `plan` 显示在顶部思考区，后续 `plan` 跟随其前一个公开执行步骤，并显示在该步骤所属 Todo 的执行内容之后。
+- `step-5` 的 Plan 必须作为 `step-4` 的思考总结，继承 `step-4` 的 Todo 归属，不得根据 `step-5.todo_meta.done` 归到其他 Todo。
+- `task_plan` 有 7 项时页面只显示 7 个 Todo；Plan 总结不会把数量增加为更多项。
+- 第一条 Plan 不会同时出现在 Todo 总结中，后续 Plan 不会覆盖顶部思考总结。
+- Plan 输出不作为普通执行 chunk 重复出现，历史报告的 HTML/PDF/Word 恢复不受影响。
+
+### 测试要求
+
+- 历史适配器测试覆盖第一条 Plan、`step-5 → step-4` 相邻总结、多个后续 Plan、Todo 数量不变、Plan chunk 不公开以及缺少可靠前置步骤的情况。
+- 运行历史适配器定向 Vitest、report-mode 完整 Vitest、`ai-bot` TypeScript 检查、构建和 `git diff --check`。
+- 生成 `.ai/runs/2026-08-18-report-history-plan-summary/RUN_LOG.md`。
+
+## 2026-08-18 追加：`step.plan` 分阶段展示与 Todo 总结
+
+### 背景
+
+- DB0 的真实 Stream `report:0cd9968b-9667-4968-8d46-0e7948582d56:11` 中，首份 `plan.update` 会在初始思考总结和思考步骤 `step.done` 之前到达。
+- 首个 `step.plan` 是顶部“思考”的公开总结；之后每个 `step.plan` 是对应 Todo 阶段全部子步骤执行完成后的公开总结。
+- 当前前端在首份 `plan.update` 到达时立即收起思考，并用后续 `step.plan` 持续覆盖顶部正文，导致阶段切换过早且 Todo 总结丢失。
+
+### 目标
+
+- 首份 `plan.update` 只保存完整任务计划，不立即结束顶部思考阶段。
+- 第一条有效 `step.plan` 固定为顶部思考正文，记录其 `id`；同 `id` 的 `step.done` 到达后才收起思考并进入 Todo 展示阶段。
+- 同一个 `id` 的“思考 start → Todo 状态 start → `plan.update` → `step.plan` → todowrite meta → done”是一段完整的阶段切换过程；其中 `plan.update` 已经把下一个 Todo 标记为执行中，随后到达的 `step.plan` 总结的是前一个刚完成的 Todo。
+- 后续 `step.plan` 根据同 `id` 步骤上的 `todo_meta.done` 映射到前一个 Todo：
+  - `todo_meta.done > 0` 时映射到任务下标 `done - 1`。
+  - `todo_meta.done = 0` 表示还没有完成的前置 Todo，不得映射到当前 `in_progress` 任务；首条 `step.plan` 仍只作为顶部思考总结，其他无法归属的内容跳过并保留可诊断 warning。
+  - `todo_meta.started` 保留在前端状态中用于诊断阶段序号，但不得用它把总结归到当前执行项。
+- Todo 数量和名称只能来自当前 `plan.update.tasks` 完整快照；`step.plan` 只是 Todo 内的总结内容，不能新增、拆分或追加 Todo。
+- 每个 Todo 展开后按“公开执行子步骤 → 阶段总结”的顺序展示；总结必须位于该 Todo 的全部子步骤之后。
+- `step.meta.action = todowrite` 继续只作为阶段元数据，不单独展示为公开执行步骤；普通工具/Skill 的公开摘要保持不变。
+- ToDo 总面板只在页面初始加载时默认收起，实时事件更新不得改变用户手动展开或收起的选择。
+
+### 非目标
+
+- 不兼容旧版“所有 `step.plan` 都属于顶部思考”的映射。
+- 不修改执行记录安全回填、错误 `final` 终态、报告候选、附件下载和 HTML/Markdown 预览规则。
+- 不修改普通对话、报告提交、IndexedDB、历史 query、系统侧栏、输入框或其他页面。
+- 不根据任务标题相似度、`step` 数字或事件文案猜测 Todo 归属。
+
+### 验收标准
+
+- 真实顺序“question → 思考 start → Todo init start → plan.update → 首个 step.plan → todowrite meta → step.done”期间，首个 `step.done` 到达前页面始终只展示思考阶段。
+- 顶部思考正文始终使用第一条有效 `step.plan`，不会被后续 Todo 总结覆盖。
+- `todo_meta.done=1/2/3...` 的后续 `step.plan` 分别映射到第 1/2/3... 个已完成 Todo，并显示在各自执行子步骤末尾。
+- 用户示例中的 `plan.update.tasks` 有 5 项时页面必须只显示 5 个 Todo；`step.plan` 不得导致数量变成 6 项或更多。
+- 阶段总结没有可靠 Todo 目标时不错误归类，页面不崩溃并留下开发诊断信息。
+- 页面从 `0-0` 完整回放与实时逐条接收得到相同聚合结果。
+
+### 测试要求
+
+- reducer 回归测试覆盖真实前七条事件的思考门控，以及用户示例 `done=1、started=2、5 个 tasks` 的前一 Todo 总结映射、任务数量保持、空内容和不明确归属。
+- 展示测试覆盖 Todo 总结位于执行子步骤之后，并确认 `todowrite` 元数据不作为独立公开步骤。
+- 历史完成报告保持直接进入完成展示，不被实时思考门控阻塞。
+- 运行 report-mode 定向 Vitest、`ai-bot` TypeScript 检查和 `git diff --check`；构建按本轮实际验证情况记录。
+- 生成 `.ai/runs/2026-08-18-report-step-plan-todo-summary/RUN_LOG.md`。
+
+## 2026-08-18 追加：执行记录安全回填与 `final` 错误终止
+
+### 背景
+
+- DB0 的真实 Stream `report:0cd9968b-9667-4968-8d46-0e7948582d56:7` 中，计划 version 3 没有任何 `in_progress` 项，SQL 工具步骤随后开始并完成，计划 version 4 才把“生成订单总额查询 SQL”更新为唯一执行中任务。
+- 当前前端在步骤第一次出现时永久锁定归属，因此上述步骤被留在“未归属执行记录”，即使下一份计划已经给出唯一归属也不会修正。
+- 同一 Stream 的 `final` 返回“大模型对话生成错误”后仍有 `done`；当前 reducer 只保存 `final.content`，导致任务计划继续保留执行中/等待状态。
+
+### 目标
+
+- 当上一份计划没有执行中任务、其后的步骤暂时进入未归属区，而下一份计划把同一任务从 `pending` 更新为唯一的 `in_progress` 时，将该计划时间片内的未归属步骤安全回填到该任务。
+- 回填只处理上一份计划之后、当前 `plan.update` 之前首次出现的步骤；多个候选任务、任务内容/下标无法稳定匹配或上一计划已有执行中任务时继续保留未归属，不做猜测。
+- `final.content` 以已确认的“大模型对话生成错误”文案开头时，立即把报告置为失败终态，停止继续读取当前连接。
+- 错误终态将仍在执行的公开步骤置为失败，将 `pending/in_progress` ToDo 收敛为 `cancelled`，保留已经完成的任务，页面不得继续显示“生成 HTML 中”。
+- 错误 `final` 后即使历史回放仍读到 `done`，也只能补充结束位置/耗时，不得覆盖失败状态或错误信息。
+
+### 非目标
+
+- 不修改正常 `final`、成功 `done`、报告候选和附件聚合规则。
+- 不改变后端事件协议，不根据任务标题关键词猜测步骤归属。
+- 不修改普通对话、报告提交、IndexedDB、历史 query、报告样式和下载能力。
+
+### 验收标准
+
+- 真实 Stream 中 `step-6` 不再显示为“未归属执行记录”，而是归入“生成订单总额查询 SQL”。
+- 没有唯一可靠目标的步骤仍保留未归属，避免错误归类。
+- 收到错误 `final` 后报告立即显示失败，预计耗时提示消失，ToDo 不再存在执行中或等待状态，SSE 连接停止。
+- 错误 `final` 后的 `done` 不会把报告改为完成，也不会因为之前误识别的 Markdown 候选展示报告文件。
+
+### 测试要求
+
+- reducer 回归测试覆盖真实的“无执行中计划 → 工具步骤 → 后置唯一执行中计划”顺序，以及多候选不回填。
+- reducer 回归测试覆盖错误 `final` 立即失败、任务/步骤收敛和后续 `done` 保持失败。
+- Hook 连接生命周期通过代码级检查确认错误 `final` 后主动中止连接。
+- 运行 report-mode 定向 Vitest、`ai-bot` TypeScript 检查和 `git diff --check`；构建按本轮实际验证情况记录。
+- 生成 `.ai/runs/2026-08-18-report-final-error-and-step-reassignment/RUN_LOG.md`。
+
+## 2026-08-17 追加：使用 `step.plan` 作为思考区正文（阶段规则已由 2026-08-18 修订）
+
+### 目标
+
+- 报告提交后识别后端返回的 `step.plan` 事件。
+- `step.plan` 协议字段为 `type: 'step.plan'`、`id` 和 `content`；`content` 作为思考区新的公开正文。
+- 思考区仅展示第一条有效 `step.plan.content`，不再展示由 `step.start/meta/chunk` 拼装的旧思考步骤内容；后续 `step.plan` 按 2026-08-18 规则归入 Todo 总结。
+- 第一条 `plan.update` 只准备任务快照；首条 `step.plan` 对应的 `step.done` 到达后才进入 ToDo 阶段并自动收起思考区。
+- `step.plan` 到达前只展示分析中的占位状态；旧回放数据无需兼容。
+
+### 非目标
+
+- 不修改 ToDo 计划快照、步骤归属、报告文件、普通对话和报告提交参数。
+- 不把 `step.meta.thought` 或 `action_input` 恢复到公开 UI。
+- 不修改报告模式样式结构。
+
+### 验收标准
+
+- `step.plan` 不再被识别为未知事件，正文可实时显示并参与从 `0-0` 的历史回放。
+- 多条 `step.plan` 按 Redis entry 顺序区分顶部思考总结与 Todo 阶段总结，不互相覆盖。
+- 无效或空 `content` 不覆盖已有有效思考正文，并产生可诊断 warning。
+- 首段 `step.done` 到达后思考区收起、ToDo 阶段正常展示。
+
+### 测试要求
+
+- 新增 reducer 与思考组件测试，覆盖直接事件、Java `data` 对象包裹、最新内容覆盖、空内容、旧步骤不再展示和 `plan.update` 阶段切换。
+- 运行报告 reducer 定向 Vitest、`ai-bot` TypeScript 检查、构建和 `git diff --check`。
+- 生成 `.ai/runs/2026-08-17-report-step-plan-thinking/RUN_LOG.md`。
+
+## 2026-08-17 追加：报告提交携带技能与 MCP 源版本
+
+### 目标
+
+- 报告提交接口新增并始终发送以下四个可选源版本字段：
+  - `sse_mcp_source_version_ids`
+  - `mcp_streamable_source_version_ids`
+  - `skills_source_version_ids`
+  - `builtin_tools_source_version_ids`
+- 技能选择项使用列表真实字段 `latestVersionId` 作为源版本 ID，并按 `skillType` 分流：`0` 进入 `builtin_tools_source_version_ids`，`1` 进入 `skills_source_version_ids`。
+- MCP 选择项使用当前 `register/list` 契约中的 `id` 作为源版本 ID；协议优先读取 `protocol`，兼容列表现有别名 `frontProtocol`。`sse` 进入 `sse_mcp_source_version_ids`，`streamableHttp` 进入 `mcp_streamable_source_version_ids`。
+- 任一类别没有有效选择时，对应字段发送空数组 `[]`；存在选择时发送去重后的 ID 数组。
+- 只在报告模式提交中透传这些字段，普通交互请求协议保持不变。
+
+### 非目标
+
+- 不修改技能或 MCP 列表接口、选择器视觉和交互。
+- 不用技能 ID 替代 `latestVersionId`，不调用额外详情接口推测版本。
+- 不修改普通对话、报告恢复、实时事件、IndexedDB、预览和 ToDo 逻辑。
+
+### 验收标准
+
+- 四类来源可分别正确映射到对应报告字段，混合选择时互不串类且 ID 去重。
+- MCP 协议兼容大小写、`streamableHttp` 及 `frontProtocol` 别名。
+- 未选择某类来源时该字段为 `[]`，未选择任何来源时四个字段均为空数组。
+- 普通交互发送不接收也不提交这些报告专用字段。
+
+### 测试要求
+
+- 新增纯函数测试，覆盖四类来源、混合选择、协议大小写/实际枚举值、字段别名、重复 ID 和空选择。
+- 更新报告提交 API 测试，断言四个字段进入 POST body。
+- 本次空数组修订按用户要求不运行测试和构建，仅同步已有测试断言并执行 `git diff --check` 静态差异检查。
+- 生成 `.ai/runs/2026-08-17-report-source-version-fields/RUN_LOG.md`。
 
 ## 2026-08-13 追加：报告模式 ToDo 展开状态仅在页面加载时初始化
 
@@ -426,7 +669,7 @@ interface ReportHistoryPayload {
 - 最后一个 HTML/Markdown output 是最终报告文件。
 - `todo_meta` 用于划分计划初始化、进度和完成阶段。
 - `generated_images` 作为报告资源信息保留。
-- 不直接渲染原始 `final_content`、`thought` 或完整 `action_input`。
+- `final_content` 恢复为公开最终总结；不直接渲染 `thought` 或完整 `action_input`。
 
 后端只在报告完成后把 `chat_report` 轮次写入 query；未完成报告不会出现在 query 的报告轮次中。
 
@@ -477,7 +720,7 @@ done
 ```
 
 - 以 Redis entry ID 排序和去重，不使用事件 `step` 判断全局顺序。
-- 第一条 `plan.update` 前的步骤进入顶部思考区；首个 plan 到达后思考自动收起、ToDo 自动展开。
+- 初始思考步骤进入顶部思考区；首份计划只保存任务快照，首个 `step.plan` 对应的 `step.done` 到达后思考自动收起并展示默认收起的 ToDo。
 - `plan.update.tasks` 是完整计划快照，支持 `pending/in_progress/completed/cancelled`。
 - 执行中的 ToDo 可以展开查看中间步骤。
 - HTML/Markdown chunk 只在前端状态中更新报告候选，不在 ToDo 执行记录中直接展示，也不提前打开右栏。
@@ -527,8 +770,8 @@ done
 
 报告消息必须按生成阶段逐步显露，不能在任务刚提交时同时展示思考、空 ToDo 和报告区域：
 
-1. 第一条计划到达前只展示“思考”区，默认展开并实时追加可公开的执行摘要。
-2. 第一条计划到达后，思考区自动收起，再展示并默认展开 ToDo；执行中的任务继续实时显示公开步骤。
+1. 初始思考完成前只展示“思考”区，默认展开，并使用第一条有效 `step.plan` 展示公开总结；首份任务计划可提前保存在内存中但不抢先展示。
+2. 第一条思考总结对应的 `step.done` 到达后，思考区自动收起，再展示默认收起的 ToDo；用户展开后，执行中的任务继续实时显示公开步骤和阶段总结。
 3. 后端生成的 HTML/Markdown 候选仅在内存中更新，在整体 `done` 且 ToDo 全部进入终态前不展示报告文件、不渲染到 ToDo 内、不打开右栏。
 4. 整体完成后，在 ToDo 下方展示报告文件卡，并自动打开右侧只读报告；用户关闭后可以通过文件卡再次打开。
 5. 历史完成报告进入页面时直接展示思考、最终 ToDo 和报告文件，但不播放实时生成过程。
@@ -1075,171 +1318,91 @@ ABI 页面在账号被其他环境顶掉后，自动请求会返回 401 并显�
 - 一次跳转执行失败不会永久锁住鉴权流程，后续 401 可再次处理。
 - 定向 Vitest、ABI typecheck/build 与格式检查不引入当前改动相关错误。
 
-## 2026-08-11 追加：聊天输入框模式切换菜单升级为 icon+名称+文案
+## 2026-08-19 追加：报告执行步骤中的 Markdown 内容可见性修复
 
 ### 需求类型
 
-前端 UI 调整（纯前端，不改接口协议）。
+报告模式历史展示缺陷修复（纯前端，不改接口协议与页面样式）。
 
 ### 背景
 
-当前输入框工具栏的模式切换下拉（交互/探索/报告）仅展示「icon+名称」单行菜单项，信息量不足。参考业界模式选择器样式，升级为「icon+名称+描述文案」两行菜单项，并在当前选中项右侧展示勾选标记。
+报告历史步骤可能同时返回普通 `text` 与用于说明 Skill/工具能力的 `markdown` 输出。当前展示层仅依据 `output_type` 将所有 Markdown/HTML 过滤为“最终报告正文”，导致同一步骤后半段的 Skill Markdown 说明没有显示。分隔符 `---` 已被 Markdown 正常渲染为水平线，但真正的 Markdown 说明被错误隐藏。
 
 ### 目标
 
-- 模式下拉菜单项改为两行结构：左侧 icon，中间名称（上）+描述文案（下，与名称左对齐），右侧选中勾选标记。
-- 三个模式的名称与文案：交互→敏捷问数，基础分析；探索→自主规划，复杂分析；报告→深度挖掘，智能洞察。
-- 当前选中模式在菜单中以勾选标记和浅色高亮背景标识。
-- 触发按钮保持现有「icon+名称+箭头」样式不变。
+- 执行步骤中的 Markdown/HTML 是否隐藏必须结合其所属 Todo/已识别报告产物判断，不能只看输出格式。
+- 非报告生成 Todo 中的 Markdown/HTML 属于公开执行输出，按原有 Markdown 渲染方式完整展示。
+- 报告生成 Todo 中的 HTML/Markdown/PDF/Word/report payload 继续作为报告产物处理，不在执行步骤内重复展示。
+- 保留文本、代码、图片、分隔线以及报告文件卡和右侧预览的现有行为。
 
 ### 非目标
 
-- 不修改模式切换的业务逻辑：探索模式仍保持「开发中」提示并回退交互模式，报告/交互切换与发送 mode 上抛逻辑不变。
-- 不修改输入框工具栏其他按钮、数据选择、思考开关、更多面板和发送校验。
-- 不修改接口协议、消息渲染和报告模式逻辑。
+- 不修改历史步骤与 Todo 的归属、排序和数量。
+- 不修改报告候选识别、完成/失败状态、下载与预览协议。
+- 不修改普通对话、报告提交接口、样式或其他模块。
 
 ### 验收标准
 
-- 打开模式下拉后，三个菜单项均展示 icon、名称和对应描述文案，文案与名称左对齐。
-- 当前选中模式右侧显示勾选标记并有高亮背景；点击其他模式沿用原有切换行为。
-- 样式使用 chat 现有 CSS 变量（--ink/--ink-3/--accent-soft 等），不引入孤立色值。
-- tsc 不新增报错。
+- 包含两段 text、`---` 和 Skill Markdown 的普通执行步骤能够显示全部可公开内容。
+- 最终报告生成步骤中的 HTML/Markdown 不会在 Todo 执行记录中重复出现。
+- 既有报告文件卡和右侧报告预览仍只展示已识别的最终报告产物。
+- 报告模式定向测试、类型检查和构建不新增错误。
 
-### 测试要求
-
-- 运行 `pnpm --filter ai-bot exec tsc --noEmit -p tsconfig.json`。
-- 运行 `pnpm --filter ai-bot build`。
-- 运行 `git diff --check` 并生成本任务 run log。
-
-## 2026-08-11 追加：助手 MCP 工具保存协议分组字段（mcp_sse/mcp_streamable）与 sort
+## 2026-08-19 追加：报告执行输出支持 GFM Markdown 表格
 
 ### 需求类型
 
-前端接口字段对接（保存报文扩展，无 UI 变化）。
+报告模式 Markdown 渲染缺陷修复（纯前端，不改数据协议）。
 
 ### 背景
 
-助手保存接口 `POST /api/abi-chat/v1/app/add`（编辑走 `/update`）的 `tools` 子项，后端要求 MCP 工具（`toolType='2'`）在 `toolConfig` 内额外存两个字段：`mcp_sse`、`mcp_streamable`，值均为「真实 groupId（group/list 返回的长号）」列表。分类依据是该工具的协议 `frontProtocol`：`sse` 入 `mcp_sse`，`streamableHttp` 入 `mcp_streamable`。同时后端文档要求 `tools`/`skills`/`schemaSemantics` 每个子项都带 `sort`（Integer，排序）。
-
-选择器 `tool-picker-drawer` 加载 MCP 工具时已调用 `group/list`（真实 groupId）与 `register/list`（frontProtocol），本次复用其数据，不新增接口。
+步骤 `outputs` 返回 `output_type=markdown` 时可能包含 GitHub Flavored Markdown 表格，例如 `| 订单总金额 |`。当前报告步骤仅使用 ReactMarkdown 默认 CommonMark 能力，没有启用 GFM 插件，因此表格被解析为保留竖线的普通段落。
 
 ### 目标
 
-- MCP 工具的 `toolConfig[0]` 增加 `mcp_sse: string[]`、`mcp_streamable: string[]`：按该工具 `frontProtocol` 把其真实 groupId 放入对应列表，另一个为 `[]`。
-- 内置工具（`toolType='1'`）不加这两个字段。
-- `tools`/`skills`/`schemaSemantics` 每项补 `sort`（取选择顺序索引）。
-- 编辑回显：详情接口 `app/get` 原样返回的 `mcp_sse`/`mcp_streamable` 直接保留；用户未重新选择时按原值提交。
+- 报告 Todo 执行步骤的 Markdown 输出支持 GFM 表格语法。
+- 表格包含表头、表体、边框、单元格留白，并在内容过宽时沿用步骤输出区域的横向滚动。
+- 保持链接安全属性、代码、列表、分隔线和普通文本的现有渲染行为。
 
 ### 非目标
 
-- 不新增任何接口调用（复用选择器已有的 group/list、register/list）。
-- 不改动工具/技能/数据语义的选择交互与 UI 样式。
-- 不改 builtin 工具、模型、开场引导等其它字段结构。
-
-### 影响范围
-
-- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/tool-picker-drawer.tsx`
-- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
-- `.ai/runs/2026-08-11-assistant-mcp-protocol-group/`
+- 不修改历史适配、Redis 事件聚合、Todo 归属或报告产物识别。
+- 不修改普通对话和其他 Markdown 组件。
+- 不修改后端返回内容。
 
 ### 验收标准
 
-- 新建/编辑助手保存报文中，MCP 工具 `toolConfig` 含 `mcp_sse`/`mcp_streamable`，值为真实 groupId；sse 与 streamableHttp 分别进入对应列表。
-- 内置工具不含这两个字段。
-- `tools`/`skills`/`schemaSemantics` 每项含 `sort`。
-- 编辑已有助手不重新选工具时，mcp_sse/mcp_streamable 与原详情一致。
-- tsc 不新增报错。
+- `| 订单总金额 |\n| --- |\n| 18418447.91 |` 渲染为 `table/thead/tbody`，不再显示为带竖线的普通段落。
+- 表格在报告步骤卡片中具有清晰边框和表头背景。
+- 报告模式定向测试、类型检查和构建通过。
 
-### 测试要求
-
-- 运行 abi 应用的 TypeScript 类型检查（`tsc --noEmit`）。
-- 生成本任务 run log。
-
-## 2026-08-12 追加：大屏智能问答欢迎区文案改为对话式生成图表引导
+## 2026-08-19 追加：报告完成耗时实时与历史统一展示
 
 ### 需求类型
 
-前端 UI 文案调整（纯前端，仅改欢迎说明文案，不改样式、结构、接口与业务逻辑）。
+报告模式字段映射缺陷修复（纯前端，不改后端协议与页面结构）。
 
 ### 背景
 
-大屏设计器 AI 智能问答面板（`apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx`）无消息时的欢迎说明文案未体现「如何对话式生成图表」。参考图要求直接修改原说明文案，示意「选定左侧图表，开始对话生成」，样式与结构保持不变。
+报告回答标题右侧已有“耗时 X 分 X 秒”的展示能力。实时事件在最后一条 `done` 中返回秒数 `time`，历史 `react-agent` 内容则返回秒数 `total_time`。当前历史适配仍错误读取 `time`，导致历史报告标题缺少耗时。
 
 ### 目标
 
-- 仅修改欢迎区 `.welcome-desc` 的文案，引导用户「选定左侧图表→通过对话生成对应图表」。
-- 保持 `.ai-welcome` 原有结构（标题 + 说明两行）与全部样式不变，不新增任何元素或 CSS。
+- 实时报告从最后一条整体 `done.time` 读取总耗时。
+- 历史报告从 `react-agent.total_time` 读取总耗时。
+- 两条链路统一写入前端 `durationSeconds`，并在报告回答标题右侧显示为“耗时 X 分 X 秒”。
+- 秒数按现有规则四舍五入后转换为分钟和余秒；缺失、负数或非有限数字不展示耗时。
 
 ### 非目标
 
-- 不新增分步说明块、卡片或编号列表。
-- 不修改样式、消息气泡、输入区、状态栏、发送与采纳等业务逻辑与接口。
-- 不引入 i18n；沿用组件现有硬编码中文文案方式。
-
-### 影响范围
-
-- `apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx`（仅 `.welcome-desc` 文案）
-- `.ai/runs/2026-08-12-dashboard-ai-welcome-guide/`
+- 不使用步骤级 `step.done` 计算耗时。
+- 不根据前端时间戳推算耗时。
+- 不修改普通对话、报告状态、Todo、报告文件与预览逻辑。
+- 不兼容历史 payload 中错误的 `time` 字段，历史协议以 `total_time` 为准。
 
 ### 验收标准
 
-- 面板无消息时，欢迎说明文案改为「选定左侧图表，通过对话即可生成对应图表 / 请输入图表数据相关问题开始对话」。
-- `.ai-welcome` 结构与样式与改动前一致，未新增元素。
-- 发送消息后欢迎区正常消失。
-- 不改变任何发送、采纳与数据请求行为。
-
-### 测试要求
-
-- 对受影响文件进行 IDE 诊断/语法检查，确认不新增错误（纯文案改动，无需整包重建）。
-- 生成本任务 run log。
-
-## 2026-08-17 追加：管理端「我的对话」三个 tab 支持卡片视图并默认卡片
-
-### 需求类型
-
-前端 UI 功能新增（纯前端，不改接口协议与查询参数）。
-
-### 背景
-
-管理端（`apps/abi`）「我的对话」二级菜单下的「最近使用」「我的收藏」「我的分享」当前只有表格列表视图。chat 端（`apps/chat`）应用工坊的同名三个 tab 已使用 `.ws-assistant-card` 卡片视图。用户要求管理端这三个页面同样支持卡片视图，并默认展示卡片，卡片样式参考 chat 端应用工坊。
-
-### 目标
-
-- 三个页面各新增 `viewMode: 'list' | 'card'` 视图状态，默认 `'card'`（默认展示卡片）。
-- 视图切换入口复用共享组件 `ViewControls`，放在 `.abi-data-area` 内顶部 `.abi-toolbar`，与「我的助手」等已有卡片视图页面一致。
-- 卡片复用 abi 已有的 `.abi-card-grid` / `.abi-card-grid-inner` / `.abi-assistant-card` 体系（该体系视觉参数已与 chat `.ws-assistant-card` 对齐）：左上渐变圆角对话图标 + 标题（对话名称）+ 描述（所属空间），底部分割线内只放右对齐的扁平操作按钮。
-- 卡片操作与表格操作保持完全一致：最近使用只有「进入对话」；我的收藏为「进入对话 + 取消收藏」；我的分享为「进入对话 + 删除」（保留删除二次确认）。
-- 卡片底部左下角不放任何信息（与 chat 端记录类卡片一致）：时间（最近使用时间 / 收藏时间 / 分享时间）与分享类型只在列表视图的表格中展示，卡片上不重复呈现。
-- 列表视图保持原表格实现与视觉不变。
-
-### 非目标
-
-- 不修改 `getOperateRecordList`、`fetchOperateNewList`、`fetchOperateNew`、`deleteOperateRecord` 的调用方式、参数与返回处理。
-- 不修改搜索栏、时间范围筛选、前端过滤与分页逻辑。
-- 不修改 chat 端应用工坊任何代码。
-- 不修改 `ViewControls` 共享组件本身。
-- 不新增批量选择、批量删除能力。
-
-### 影响范围
-
-- `apps/abi/src/pages/workbench/app-workshop/recently-used/index.tsx`
-- `apps/abi/src/pages/workbench/app-workshop/my-collect/index.tsx`
-- `apps/abi/src/pages/workbench/app-workshop/my-share/index.tsx`
-- `apps/abi/src/styles/scss/table.scss`（`.abi-assistant-card` 内补 `.ac-meta`、`.ac-btn--danger`）
-- `.ai/runs/2026-08-17-abi-my-chat-card-view/`
-
-### 验收标准
-
-- 进入「我的对话」任一 tab，默认展示卡片网格，卡片视图按钮为选中态。
-- 点击列表按钮可切回原表格，表格列、宽度、操作按钮与改动前一致。
-- 卡片视觉（背景、模糊、边框、圆角、内边距、hover 上浮与阴影、标题/描述字号颜色、底部分割线、扁平按钮 hover 浅蓝底）与 chat 端应用工坊卡片一致。
-- 卡片上「进入对话」跳转与表格一致（收藏走 `sessionId`，最近使用/分享走 `chatId`）。
-- 卡片上「取消收藏」「删除」行为与表格一致，删除仍有二次确认，成功后刷新列表。
-- 搜索、时间范围筛选、分页在两种视图下均生效。
-- tsc 不新增报错。
-
-### 测试要求
-
-- 运行 abi 应用的 TypeScript 类型检查（`tsc --noEmit`）。
-- 对受影响文件做 IDE 诊断检查。
-- 生成本任务 run log。
+- 收到整体 `{ type: 'done', time: 125 }` 后，报告标题显示“耗时2分5秒”。
+- 历史 payload 返回 `{ total_time: 125 }` 时，报告标题显示“耗时2分5秒”。
+- 没有合法耗时字段时标题右侧不显示虚假耗时。
+- 报告模式定向测试、类型检查和构建通过。

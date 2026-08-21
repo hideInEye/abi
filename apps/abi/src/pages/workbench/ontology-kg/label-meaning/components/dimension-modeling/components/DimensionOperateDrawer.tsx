@@ -300,6 +300,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     }
     const values = {
       ...formValues,
+      dimCategoryName: form.getFieldValue('dimCategoryName'),
       mappedBizNameFieldName: form.getFieldValue('mappedBizNameFieldName'),
       mappedTechNameTableName: form.getFieldValue('mappedTechNameTableName'),
     }

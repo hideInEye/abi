@@ -15,7 +15,7 @@ import ChatHeader from '../conversation/components/chat-header'
 import type { ModelOption } from '../conversation/components/chat-header'
 import NewChatWelcome from './NewChatWelcome'
 import ChatInput from '../conversation/components/chat-input'
-import type { ChatInputModeKey, SemanticSelectedData } from '../conversation/components/chat-input'
+import type { ChatInputModeKey, ChatInputSendOptions, SemanticSelectedData } from '../conversation/components/chat-input'
 import { message } from 'antd'
 import { getSpaceId } from '../../utils'
 import ConverList from './conver_list'
@@ -368,7 +368,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     }
   }, [curConv, creating, createNewConv])
 
-  const handleUnifiedSend = useCallback(async (value: string, options?: { mode?: ChatInputModeKey; skillSourceVersionIds?: string[]; mcpSourceVersionIds?: string[] }) => {
+  const handleUnifiedSend = useCallback(async (value: string, options?: ChatInputSendOptions) => {
     if (creating) return
     const sendMode = options?.mode || selectedMode
 
@@ -395,7 +395,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       if (sendMode === 'report') {
         // 同一 Conversation 只统一展示；报告发送仍走独立异步任务接口。
         if (!conversationRef.current?.handleReportSend) return false
-        conversationRef.current.handleReportSend(value)
+        conversationRef.current.handleReportSend(value, options?.reportSources)
         return true
       }
 

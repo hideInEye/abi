@@ -26,8 +26,8 @@ function reportRound(): ReportHistoryRoundGroup {
             content: JSON.stringify({
               version: 1,
               type: 'react-agent',
-              time: 125,
-              final_content: '不应展示的内部思维文本',
+              total_time: 125,
+              final_content: '销售分析报告已生成完成，核心指标与趋势已经整理。',
               task_plan: [
                 { content: '分析数据', status: 'completed', priority: 'high' },
                 { content: '生成报告', status: 'completed', priority: 'high' },
@@ -118,6 +118,7 @@ describe('report history adapter', () => {
     expect(item.question).toBe('生成销售报告')
     expect(item.sortOrder).toBe(2)
     expect(item.status).toBe('completed')
+    expect(item.thinkingCompleted).toBe(true)
     expect(item.todoOpen).toBe(false)
     expect(item.tasks.map((task) => task.status)).toEqual(['completed', 'completed'])
     expect(item.thinkingStepIds).toEqual(['step-thinking'])
@@ -129,10 +130,173 @@ describe('report history adapter', () => {
     ])
     expect(item.durationSeconds).toBe(125)
     expect(item.generatedImages).toEqual(['/images/chart.png'])
+    expect(item.final).toEqual({
+      entryId: 'history:2:final',
+      content: '销售分析报告已生成完成，核心指标与趋势已经整理。',
+    })
     expect(item.stepsById['step-analysis']?.actionReason).toBe('用于解释本次公开执行动作')
     expect(JSON.stringify(item)).not.toContain('内部推理')
     expect(JSON.stringify(item)).not.toContain('/private/path')
-    expect(JSON.stringify(item)).not.toContain('不应展示的内部思维文本')
+  })
+
+  it('历史只有 Markdown 技能文档且无 HTML/PDF/Word 时不兜底生成报告', () => {
+    const round = reportRound()
+    round.messages![1].messageDetail!.data!.content = JSON.stringify({
+      version: 1,
+      type: 'react-agent',
+      final_content: '大模型对话生成错误!(Connection error.)',
+      task_plan: [
+        { content: '加载 SQL 技能', status: 'cancelled' },
+        { content: '生成查询 SQL', status: 'cancelled' },
+      ],
+      steps: [
+        {
+          id: 'skill-doc',
+          title: 'load_skill',
+          outputs: [{ output_type: 'markdown', content: '# SQL 生成技能\n这是过程中的技能说明。' }],
+          status: 'done',
+        },
+      ],
+      pdf_urls: [],
+      word_urls: [],
+    })
+
+    const item = createReportItemFromHistory(round, 'conv-1', 'session-1')
+
+    expect(item.status).toBe('failed')
+    expect(item.reportCandidate).toBeUndefined()
+    expect(item.reportAttachments).toEqual([])
+    expect(item.final?.content).toBe('大模型对话生成错误!(Connection error.)')
+    expect(item.error).toEqual({ code: 'report_generation_failed', message: '报告生成失败，请稍后重试。' })
+  })
+
+  it('历史中已完成报告 Todo 的 Markdown 可作为最终报告', () => {
+    const round = reportRound()
+    round.messages![1].messageDetail!.data!.content = JSON.stringify({
+      version: 1,
+      type: 'react-agent',
+      task_plan: [
+        { content: '加载分析技能', status: 'completed' },
+        { content: '生成 Markdown 报告', status: 'completed' },
+      ],
+      steps: [
+        { id: 'todo-init', title: 'TODO::init:0/2', action: 'todowrite', todo_meta: { state: 'init', done: 0, total: 2 }, status: 'done' },
+        { id: 'skill-doc', title: 'load_skill', outputs: [{ output_type: 'markdown', content: '# 分析技能说明' }], status: 'done' },
+        { id: 'todo-report', title: 'TODO::progress:1/2', action: 'todowrite', todo_meta: { state: 'progress', done: 1, total: 2 }, status: 'done' },
+        { id: 'report-step', title: 'generate_report_markdown', outputs: [{ output_type: 'markdown', content: '# 最终经营分析报告' }], status: 'done' },
+      ],
+    })
+
+    const item = createReportItemFromHistory(round, 'conv-1', 'session-1')
+
+    expect(item.status).toBe('completed')
+    expect(item.reportCandidate).toMatchObject({ stepId: 'report-step', format: 'markdown', content: '# 最终经营分析报告' })
+  })
+
+  it('历史 steps 的第一条 plan 恢复为思考总结，后续 plan 归到前一个已完成 Todo', () => {
+    const round = reportRound()
+    round.messages![1].messageDetail!.data!.content = JSON.stringify({
+      version: 1,
+      type: 'react-agent',
+      task_plan: [
+        { content: '加载 SQL 技能', status: 'completed' },
+        { content: '生成查询 SQL', status: 'completed' },
+        { content: '执行 SQL 获取数据', status: 'completed' },
+        { content: '分析数据', status: 'completed' },
+        { content: '生成最终报告', status: 'completed' },
+      ],
+      steps: [
+        {
+          id: 'step-1',
+          title: 'TODO::init:1/5',
+          action: 'todowrite',
+          todo_meta: { state: 'init', done: 0, started: 1, total: 5 },
+          outputs: [{ output_type: 'plan', content: '先理解用户目标并制定完整执行计划。' }],
+          status: 'done',
+        },
+        {
+          id: 'step-2',
+          title: 'load_skill',
+          outputs: [{ output_type: 'text', content: 'SQL 技能已加载' }],
+          status: 'done',
+        },
+        {
+          id: 'step-3',
+          title: 'TODO::progress:2/5',
+          action: 'todowrite',
+          todo_meta: { state: 'progress', done: 1, started: 2, total: 5 },
+          outputs: [{ output_type: 'plan', content: '技能加载完成，接下来生成查询 SQL。' }],
+          status: 'done',
+        },
+        {
+          id: 'step-4',
+          title: 'execute_sql',
+          outputs: [{ output_type: 'code', content: 'SELECT SUM(total_amount) FROM orders' }],
+          status: 'done',
+        },
+        {
+          id: 'step-5',
+          title: 'TODO::progress:4/5',
+          action: 'todowrite',
+          todo_meta: { state: 'progress', done: 3, started: 4, total: 5 },
+          outputs: [{ output_type: 'plan', content: '查询已经执行完成，接下来分析数据。' }],
+          status: 'done',
+        },
+        {
+          id: 'step-6',
+          title: 'generate_report_html',
+          outputs: [{ output_type: 'html', content: '<html><body>报告完成</body></html>' }],
+          status: 'done',
+        },
+      ],
+    })
+
+    const item = createReportItemFromHistory(round, 'conv-1', 'session-1')
+
+    expect(item.tasks).toHaveLength(5)
+    expect(item.thinkingPlan?.content).toBe('先理解用户目标并制定完整执行计划。')
+    expect(item.todoSummaries.map(({ stepId, taskIndex, taskContent, content }) => ({ stepId, taskIndex, taskContent, content }))).toEqual([
+      { stepId: 'step-2', taskIndex: 0, taskContent: '加载 SQL 技能', content: '技能加载完成，接下来生成查询 SQL。' },
+      { stepId: 'step-4', taskIndex: 1, taskContent: '生成查询 SQL', content: '查询已经执行完成，接下来分析数据。' },
+    ])
+    expect(Object.values(item.stepsById).flatMap((step) => step.chunks).some((chunk) => chunk.outputType === 'plan')).toBe(false)
+  })
+
+  it('历史后续 plan 缺少可靠的已完成 Todo 时跳过归属', () => {
+    const round = reportRound()
+    round.messages![1].messageDetail!.data!.content = JSON.stringify({
+      version: 1,
+      type: 'react-agent',
+      task_plan: [{ content: '生成报告', status: 'completed' }],
+      steps: [
+        {
+          id: 'thinking-plan',
+          title: 'TODO::init:1/1',
+          action: 'todowrite',
+          todo_meta: { state: 'init', done: 0, started: 1, total: 1 },
+          outputs: [{ output_type: 'plan', content: '先制定报告计划。' }],
+          status: 'done',
+        },
+        {
+          id: 'no-previous-step',
+          title: 'TODO::done:1/1',
+          action: 'todowrite',
+          todo_meta: { state: 'done', done: 1, started: 1, total: 1 },
+          outputs: [{ output_type: 'plan', content: '没有前置执行步骤，不能猜测归属。' }],
+          status: 'done',
+        },
+        {
+          id: 'report-step',
+          outputs: [{ output_type: 'html', content: '<html><body>完成</body></html>' }],
+          status: 'done',
+        },
+      ],
+    })
+
+    const item = createReportItemFromHistory(round, 'conv-1', 'session-1')
+
+    expect(item.thinkingPlan?.content).toBe('先制定报告计划。')
+    expect(item.todoSummaries).toEqual([])
   })
 
   it('query 完成历史覆盖同序号缓存任务，并保留 taskId 作为稳定 key', () => {

@@ -453,4 +453,51 @@ describe('dimensionModeling mapper', () => {
     expect(payload.techName).toBe('trade_detail.receive_city_new')
   })
 
+  it('submits dimCategory as category display name instead of selected option id', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => '82'
+    })
+    const payload = buildSubmitPayload({
+      formValues: {
+        dimCategory: '1001',
+        dimCategoryName: '地域分类',
+        dimType: 'std',
+        drillDirection: 'down',
+        englishName: 'region',
+        owner: '',
+        relatedFieldKeys: [],
+        status: 1,
+        timeGranularity: [],
+        zhName: '地区'
+      },
+      relatedFields: [],
+      selectedGroupId: 9
+    })
+
+    expect(payload.dimCategory).toBe('地域分类')
+  })
+
+  it('submits manually typed dimCategory text when no option label exists', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => '82'
+    })
+    const payload = buildSubmitPayload({
+      formValues: {
+        dimCategory: '手动归类',
+        dimType: 'std',
+        drillDirection: 'down',
+        englishName: 'custom_category',
+        owner: '',
+        relatedFieldKeys: [],
+        status: 1,
+        timeGranularity: [],
+        zhName: '自定义归类维度'
+      },
+      relatedFields: [],
+      selectedGroupId: 9
+    })
+
+    expect(payload.dimCategory).toBe('手动归类')
+  })
+
 })
