@@ -37,7 +37,7 @@ interface ChatInputProps {
   /** 确保存在可用会话（无会话时先创建），返回会话对象 */
   ensureConv?: () => Promise<any>;
   loading: boolean;
-  onSend: (value: string, options?: { mode: ChatInputModeKey }) => void;
+  onSend: (value: string, options?: { mode: ChatInputModeKey; skillSourceVersionIds?: string[]; mcpSourceVersionIds?: string[] }) => void;
   onStop: () => void;
   deepThinkEnabled: boolean;
   uploadFileEnabled: boolean;
@@ -231,9 +231,18 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         return;
       }
 
-      onSend(value, { mode: selectedMode.key });
+      if (selectedMode.key === 'explore' && !selectedData?.schemaId) {
+        message.warning('探索模式请选择具体数据语义');
+        return;
+      }
+
+      onSend(value, {
+        mode: selectedMode.key,
+        skillSourceVersionIds: Array.from(selectedSkills),
+        mcpSourceVersionIds: Array.from(selectedMCPs),
+      });
       setValue('');
-    }, [loading, onSend, selectedData, selectedExcel, selectedMode.key, value]);
+    }, [loading, onSend, selectedData, selectedExcel, selectedMCPs, selectedMode.key, selectedSkills, value]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -286,16 +295,9 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     ];
 
     const selectMode = (mode: ChatInputModeKey) => {
-      if (mode === 'explore') {
-        message.info('探索模式开发中，已保持交互模式');
-        setSelectedMode(getModeConfig('interact'));
-        onModeChange?.('interact');
-        return;
-      }
-
       setSelectedMode(getModeConfig(mode));
       onModeChange?.(mode);
-      message.info(mode === 'report' ? '已切换到报告模式' : '已切换到交互模式');
+      message.info(mode === 'report' ? '已切换到报告模式' : mode === 'explore' ? '已切换到探索模式' : '已切换到交互模式');
     };
 
     const modeMenuItems: MenuProps['items'] = (['interact', 'explore', 'report'] as ChatInputModeKey[]).map((key) => {

@@ -10,6 +10,10 @@ import MessageList from './components/MessageList'
 import ShareEmailSetting from './components/share-email-setting'
 import SharingModal from './SharingModal'
 import { useConversationController, type ConversationProps } from './hooks/useConversationController'
+import { useExploreConversation } from './exploration-mode/useExploreConversation'
+import type { ExploreSendOptions } from './exploration-mode/types'
+import ExplorePreviewPane from './exploration-mode/ExplorePreviewPane'
+import { useExplorePreviewPresence } from './exploration-mode/useExplorePreviewPresence'
 import ReportPreviewPane from './report-mode/ReportPreviewPane'
 import { useReportConversation } from './report-mode/useReportConversation'
 import { useReportPreviewPresence } from './report-mode/useReportPreviewPresence'
@@ -18,10 +22,13 @@ import reportStyles from './report-mode/styles.module.css'
 export interface ConversationHandle {
   setConvContent: (content: any[]) => void
   handleSend: (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; semanticGroupId?: number | string; selectedExcel?: { file_id: string | number; file_name: string } }) => void
+  handleExploreSend: (value: string, schemaId: string | number, options?: ExploreSendOptions) => void
   handleReportSend: (value: string) => void
   stopGenerating: () => void
+  stopExploreGenerating: () => void
   stopReportGenerating: () => void
   loading: boolean
+  exploreLoading: boolean
   reportLoading: boolean
 }
 
@@ -52,6 +59,12 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     onRefreshHistory: controller.refreshHistory,
     onReportCompleted: handleReportCompleted,
   })
+  const exploreController = useExploreConversation({
+    conv,
+    spaceId: props.spaceId,
+    currentModelId: selectedModelId,
+    embedModelId,
+  })
   const reportPreview = useReportPreviewPresence(reportController.activeReport)
 
   const {
@@ -60,6 +73,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     convContent,
     convContent2d,
     convContent3d,
+    exploreHistoryItems,
     setConvContent,
     checkAll,
     setCheckAll,
@@ -110,6 +124,42 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     confirmDelete,
   } = controller
 
+  // 探索结果全高工作室侧栏：与报告侧栏互斥，共用同一套分屏动画壳。
+  const exploreItemsAll = React.useMemo(
+    () => [...exploreHistoryItems, ...exploreController.items],
+    [exploreHistoryItems, exploreController.items],
+  )
+  const [activeExploreId, setActiveExploreId] = useState<string>()
+  const activeExplore = React.useMemo(
+    () => exploreItemsAll.find((item) => item.id === activeExploreId),
+    [exploreItemsAll, activeExploreId],
+  )
+  const explorePreview = useExplorePreviewPresence(activeExplore)
+  const exploreStatusRef = React.useRef<Map<string, string>>(new Map())
+  const openExplore = React.useCallback((exploreId: string) => {
+    reportController.closeReport()
+    setActiveExploreId(exploreId)
+  }, [reportController])
+  const closeExplore = React.useCallback(() => setActiveExploreId(undefined), [])
+  const openReport = React.useCallback((reportId: string) => {
+    setActiveExploreId(undefined)
+    reportController.openReport(reportId)
+  }, [reportController])
+
+  // 探索运行中只在卡片内展示当前步骤结果；从 running 结束为 completed 后再自动打开右侧全部结果。
+  useEffect(() => {
+    const nextStatuses = new Map<string, string>()
+    exploreController.items.forEach((item) => {
+      const previous = exploreStatusRef.current.get(item.id)
+      const hasResult = Boolean(item.finalContent) || Boolean(item.summary) || item.steps.some((step) => step.outputs.length > 0)
+      if (previous === 'running' && item.status === 'completed' && hasResult) {
+        openExplore(item.id)
+      }
+      nextStatuses.set(item.id, item.status)
+    })
+    exploreStatusRef.current = nextStatuses
+  }, [exploreController.items, openExplore])
+
   const handleReportSend = React.useCallback(
     (value: string) => {
       reportController.handleSend(value)
@@ -132,13 +182,16 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     () => ({
       setConvContent,
       handleSend,
+      handleExploreSend: exploreController.handleSend,
       handleReportSend,
       stopGenerating,
+      stopExploreGenerating: exploreController.stopGenerating,
       stopReportGenerating: reportController.stopGenerating,
       loading,
+      exploreLoading: exploreController.loading,
       reportLoading: reportController.loading,
     }),
-    [setConvContent, handleSend, handleReportSend, reportController.loading, reportController.stopGenerating, stopGenerating, loading],
+    [setConvContent, handleSend, exploreController.handleSend, exploreController.loading, exploreController.stopGenerating, handleReportSend, reportController.loading, reportController.stopGenerating, stopGenerating, loading],
   )
 
   // 通知父级 loading 变化
@@ -151,9 +204,18 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   }, [props.onReportLoadingChange, reportController.loading])
 
   useEffect(() => {
+    props.onExploreLoadingChange?.(exploreController.loading)
+  }, [props.onExploreLoadingChange, exploreController.loading])
+
+  useEffect(() => {
     // 以预览容器的实际挂载状态通知父级，确保关闭动画播放期间输入区不会提前恢复。
     props.onReportPreviewChange?.(reportPreview.mounted)
   }, [props.onReportPreviewChange, reportPreview.mounted])
+
+  useEffect(() => {
+    // 探索右侧工作室打开时，父级输入框需要收进左侧对话区域，而不是继续横跨全宽。
+    props.onExplorePreviewChange?.(explorePreview.mounted)
+  }, [props.onExplorePreviewChange, explorePreview.mounted])
 
   // 同步父级传入的 currentModel
   useEffect(() => {
@@ -161,7 +223,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
       setSelectedModel(currentModel.label)
       setSelectedModelId(currentModel.id)
     }
-  }, [currentModel])
+  }, [currentModel])  
 
   // 同步父级传入的 embedModelId
   useEffect(() => {
@@ -221,7 +283,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         </div>
       )}
 
-      <div className={`${reportStyles.body} ${reportPreview.visible ? reportStyles.bodySplit : ''}`}>
+      <div className={`${reportStyles.body} ${reportPreview.visible || explorePreview.visible ? reportStyles.bodySplit : ''}`}>
         <div className={`${reportStyles.conversationPane} ${reportPreview.mounted && reportController.mobileView === 'report' ? reportStyles.mobileHidden : ''}`}>
           <MessageList
             conv={conv}
@@ -250,12 +312,15 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             onEditMessage={handleEditResend}
             onRegenerate={regenerateRound}
             reportItems={reportController.reports}
+            explorationItems={exploreItemsAll}
             reportLoadError={reportController.loadError}
             onToggleReportThinking={reportController.toggleThinking}
             onToggleReportTodo={reportController.toggleTodo}
             onToggleReportTask={reportController.toggleTaskExecution}
-            onOpenReport={reportController.openReport}
-            hideMessageNavRail={reportPreview.mounted}
+            onOpenReport={openReport}
+            onOpenExplore={openExplore}
+            activeExploreId={activeExploreId}
+            hideMessageNavRail={reportPreview.mounted || explorePreview.mounted}
           />
         </div>
 
@@ -265,6 +330,15 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             data-transition-phase={reportPreview.phase}
           >
             <ReportPreviewPane report={reportPreview.renderedReport} animate={reportController.animateReportPreview} onClose={reportController.closeReport} />
+          </div>
+        )}
+
+        {explorePreview.renderedItem && !reportPreview.mounted && (
+          <div
+            className={`${reportStyles.reportPaneWrap} ${explorePreview.visible ? reportStyles.reportPaneWrapOpen : ''}`}
+            data-transition-phase={explorePreview.phase}
+          >
+            <ExplorePreviewPane item={explorePreview.renderedItem} onClose={closeExplore} />
           </div>
         )}
       </div>

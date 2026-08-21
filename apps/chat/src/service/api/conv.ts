@@ -79,6 +79,47 @@ export function streamConvAnswer({ data, signal, onopen, onmessage, onclose, one
   })
 }
 
+type StreamExplorePlanOptions = {
+  data: any
+  signal: AbortSignal
+  onopen?: (response: Response) => Promise<void>
+  onmessage?: (event: EventSourceMessage) => void | Promise<void>
+  onclose?: () => void
+  onerror?: (err: any) => number | null | undefined | void
+}
+
+export function streamExplorePlan({ data, signal, onopen, onmessage, onclose, onerror }: StreamExplorePlanOptions) {
+  const authorization = getAuthorization()
+
+  return fetchEventSource(`${window.APP_CONFIG.VITE_BASE_API}/chat-proxy/api/v2/chat/plan`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authorization ? { Authorization: authorization } : {})
+    },
+    body: JSON.stringify(data),
+    signal,
+    openWhenHidden: true,
+    async onopen(response) {
+      if (await isUnauthorizedResponse(response)) {
+        await handleLoginExpired()
+        throw new UnauthorizedStreamError()
+      }
+
+      await onopen?.(response)
+    },
+    onmessage,
+    onclose,
+    onerror(err) {
+      if (err instanceof UnauthorizedStreamError) {
+        throw err
+      }
+
+      return onerror?.(err)
+    }
+  })
+}
+
 //列出全部对话
 export function fetchConvList(data: any) {
   return request({

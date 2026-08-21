@@ -99,8 +99,10 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   // ── 统一输入框状态 ──
   const [convLoading, setConvLoading] = useState(false)
   const [reportLoading, setReportLoading] = useState(false)
+  const [exploreLoading, setExploreLoading] = useState(false)
   const [selectedMode, setSelectedMode] = useState<ChatInputModeKey>('interact')
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false)
+  const [explorePreviewOpen, setExplorePreviewOpen] = useState(false)
   const [deepThinkEnabled, setDeepThinkEnabled] = useState(false)
   const [uploadFileEnabled, setUploadFileEnabled] = useState(false)
   const [externalInputValue, setExternalInputValue] = useState('')
@@ -111,6 +113,11 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   // 关闭报告不自动展开，避免覆盖用户在预览期间主动选择的侧栏状态。
   const handleReportPreviewChange = useCallback((open: boolean) => {
     setReportPreviewOpen(open)
+    if (open) collapseSidebar()
+  }, [collapseSidebar])
+
+  const handleExplorePreviewChange = useCallback((open: boolean) => {
+    setExplorePreviewOpen(open)
     if (open) collapseSidebar()
   }, [collapseSidebar])
 
@@ -361,7 +368,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     }
   }, [curConv, creating, createNewConv])
 
-  const handleUnifiedSend = useCallback(async (value: string, options?: { mode?: ChatInputModeKey }) => {
+  const handleUnifiedSend = useCallback(async (value: string, options?: { mode?: ChatInputModeKey; skillSourceVersionIds?: string[]; mcpSourceVersionIds?: string[] }) => {
     if (creating) return
     const sendMode = options?.mode || selectedMode
 
@@ -389,6 +396,20 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         // 同一 Conversation 只统一展示；报告发送仍走独立异步任务接口。
         if (!conversationRef.current?.handleReportSend) return false
         conversationRef.current.handleReportSend(value)
+        return true
+      }
+
+      if (sendMode === 'explore') {
+        if (!selectedData?.schemaId) {
+          message.warning('探索模式请选择具体数据语义')
+          return true
+        }
+        if (!conversationRef.current?.handleExploreSend) return false
+        conversationRef.current.handleExploreSend(value, selectedData.schemaId, {
+          groupId: selectedData.groupId,
+          skillSourceVersionIds: options?.skillSourceVersionIds,
+          mcpSourceVersionIds: options?.mcpSourceVersionIds,
+        })
         return true
       }
 
@@ -610,7 +631,9 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 onUpdateList={handleUpdateList}
                 onLoadingChange={setConvLoading}
                 onReportLoadingChange={setReportLoading}
+                onExploreLoadingChange={setExploreLoading}
                 onReportPreviewChange={handleReportPreviewChange}
+                onExplorePreviewChange={handleExplorePreviewChange}
                 semanticId={selectedData?.schemaId}
                 semanticGroupId={selectedData?.groupId}
                 selectedExcel={selectedExcel}
@@ -628,18 +651,23 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
           </div>
 
           {/* 动画层只改变可见性和占位高度，ChatInput 始终挂载以保留未发送草稿。 */}
-          <div className={`report-composer-presence ${reportPreviewOpen ? 'report-composer-hidden' : ''}`} aria-hidden={reportPreviewOpen}>
+          <div className={`report-composer-presence ${reportPreviewOpen || explorePreviewOpen ? 'report-composer-hidden' : ''}`} aria-hidden={reportPreviewOpen || explorePreviewOpen}>
             <div className="report-composer-presence-inner">
               <div className="composer-wrap">
                 <div className="max-w-[53.75rem] w-full m-auto">
                   <ChatInput
                     conv={curConv}
                     ensureConv={ensureConv}
-                    loading={(selectedMode === 'report' ? reportLoading : convLoading) || creating}
+                    loading={(selectedMode === 'report' ? reportLoading : selectedMode === 'explore' ? exploreLoading : convLoading) || creating}
                     onSend={handleUnifiedSend}
                     onStop={() => {
                       if (selectedMode === 'report') {
                         conversationRef.current?.stopReportGenerating()
+                        return
+                      }
+
+                      if (selectedMode === 'explore') {
+                        conversationRef.current?.stopExploreGenerating()
                         return
                       }
 
