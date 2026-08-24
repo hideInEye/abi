@@ -17,6 +17,8 @@ import { parseMessageContent } from '../../../utils'
 import ReportMessageRow from '../report-mode/ReportMessageRow'
 import { mergeConversationAndReportGroups } from '../report-mode/reportTimeline'
 import type { ReportItem } from '../report-mode/types'
+import ExploreMessageRow from '../exploration-mode/ExploreMessageRow'
+import type { ExploreItem } from '../exploration-mode/types'
 
 // 从消息内容（view 的 chart-view 或内嵌 JSON）中解析数据分组/语义元信息，
 // 用于历史会话回填信息条（历史 human 消息不携带 _groupName/_semanticName）
@@ -83,11 +85,16 @@ type MessageListProps = {
   // 重新生成（以相同问题重新发起一轮）
   onRegenerate?: (item: any) => void
   reportItems?: ReportItem[]
+  explorationItems?: ExploreItem[]
   reportLoadError?: string
   onToggleReportThinking?: (reportId: string) => void
   onToggleReportTodo?: (reportId: string) => void
   onToggleReportTask?: (reportId: string, taskKey: string) => void
   onOpenReport?: (reportId: string) => void
+  /** 打开探索结果工作室侧栏。 */
+  onOpenExplore?: (exploreId: string) => void
+  /** 当前在右侧工作室打开的探索项 id。 */
+  activeExploreId?: string
   /** 报告预览占用右侧空间时隐藏问题导航，避免导航面板覆盖双栏内容。 */
   hideMessageNavRail?: boolean
 }
@@ -124,11 +131,14 @@ const MessageList = ({
   onEditMessage,
   onRegenerate,
   reportItems = [],
+  explorationItems = [],
   reportLoadError,
   onToggleReportThinking,
   onToggleReportTodo,
   onToggleReportTask,
   onOpenReport,
+  onOpenExplore,
+  activeExploreId,
   hideMessageNavRail = false,
 }: MessageListProps) => {
   const containerRef = chatContainerRef ?? useRef<HTMLDivElement>(null)
@@ -208,9 +218,15 @@ const MessageList = ({
         .filter((group: any[][]) => group.length > 0)
     }
 
-    // 普通和报告消息只在展示层合并，原普通会话状态保持原样。
-    return mergeConversationAndReportGroups(baseGroups3d, reportItems)
-  }, [mode, convContent, convContent2d, convContent3d, reportItems, sharingList])
+    // 普通、探索和报告消息只在展示层合并，原普通会话状态保持原样。
+    const explorationGroups = explorationItems.map((item) => [[{
+      role: 'exploration',
+      exploration: item,
+      order: item.sortOrder,
+      roundIndex: item.sortOrder,
+    }]])
+    return mergeConversationAndReportGroups([...baseGroups3d, ...explorationGroups], reportItems)
+  }, [mode, convContent, convContent2d, convContent3d, reportItems, explorationItems, sharingList])
 
   const flatData = useMemo(() => groupedData.flat(2), [groupedData])
 
@@ -220,16 +236,19 @@ const MessageList = ({
     const getQuestion = (group: any[][]) => {
       const report = group.flat().find((it: any) => it?.role === 'report')?.report as ReportItem | undefined
       if (report) return report.question
+      const exploration = group.flat().find((it: any) => it?.role === 'exploration')?.exploration as ExploreItem | undefined
+      if (exploration) return exploration.question
       const human = group.flat().find((it: any) => it?.role === 'human')
       if (!human) return ''
       const parsed = parseMessageContent(human.context)
       if (parsed && typeof parsed === 'object' && parsed.question) return String(parsed.question)
       return typeof human.context === 'string' ? human.context : ''
     }
-    const entries: { key: string; questionText: string; kind: 'conversation' | 'report'; versions: any[][][] }[] = []
+    const entries: { key: string; questionText: string; kind: 'conversation' | 'report' | 'exploration'; versions: any[][][] }[] = []
     groupedData.forEach((group: any[][], i: number) => {
       const q = getQuestion(group).trim()
-      const kind = group.flat().some((item: any) => item?.role === 'report') ? 'report' : 'conversation'
+      const flat = group.flat()
+      const kind = flat.some((item: any) => item?.role === 'report') ? 'report' : flat.some((item: any) => item?.role === 'exploration') ? 'exploration' : 'conversation'
       const prev = entries[entries.length - 1]
       if (kind === 'conversation' && q && prev?.kind === 'conversation' && prev.questionText === q) {
         prev.versions.push(group)
@@ -317,6 +336,18 @@ const MessageList = ({
           onToggleTodo={() => onToggleReportTodo?.(report.id)}
           onToggleTask={(taskKey) => onToggleReportTask?.(report.id, taskKey)}
           onOpenReport={() => onOpenReport?.(report.id)}
+        />
+      )
+    }
+
+    if (item.role === 'exploration') {
+      const exploration = item.exploration as ExploreItem
+      return (
+        <ExploreMessageRow
+          key={key}
+          item={exploration}
+          active={activeExploreId === exploration.id}
+          onOpen={() => onOpenExplore?.(exploration.id)}
         />
       )
     }
@@ -465,6 +496,14 @@ const MessageList = ({
       return (
         <div key={`group-${groupKey}-${index}`} id={`human-msg-${groupKey}`} className="mb-5">
           {renderItem(flatGroup[0], `report-${groupKey}`)}
+        </div>
+      )
+    }
+
+    if (flatGroup.length === 1 && flatGroup[0]?.role === 'exploration') {
+      return (
+        <div key={`group-${groupKey}-${index}`} id={`human-msg-${groupKey}`} className="mb-5">
+          {renderItem(flatGroup[0], `exploration-${groupKey}`)}
         </div>
       )
     }
@@ -623,7 +662,7 @@ const MessageList = ({
   }
 
   // 渲染一个合并条目：单版本直接渲染；多版本时取 v0 的问题 + 当前版本的答案，并在底部显示分页
-  const renderMergedEntry = (entry: { key: string; questionText: string; kind: 'conversation' | 'report'; versions: any[][][] }, index: number) => {
+  const renderMergedEntry = (entry: { key: string; questionText: string; kind: 'conversation' | 'report' | 'exploration'; versions: any[][][] }, index: number) => {
     const isLast = index === mergedGroups.length - 1
     // 收集该条目全部版本的轮次（用于批量删除整块）
     const groupRounds: number[] = []

@@ -31,6 +31,9 @@ export interface ChatInputSendOptions {
   mode: ChatInputModeKey
   /** 仅报告模式提交使用；普通交互请求不得透传这些字段。 */
   reportSources?: ReportSourceVersionFields
+  /** 仅探索模式提交使用，透传所选技能/MCP 版本 id。 */
+  skillSourceVersionIds?: string[]
+  mcpSourceVersionIds?: string[]
 }
 
 type ChatInputMode = {
@@ -239,6 +242,11 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         return;
       }
 
+      if (selectedMode.key === 'explore' && !selectedData?.schemaId) {
+        message.warning('探索模式请选择具体数据语义');
+        return;
+      }
+
       const options: ChatInputSendOptions = selectedMode.key === 'report'
         ? {
             mode: selectedMode.key,
@@ -249,7 +257,13 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
               selectedMcpIds: selectedMCPs,
             }),
           }
-        : { mode: selectedMode.key };
+        : selectedMode.key === 'explore'
+          ? {
+              mode: selectedMode.key,
+              skillSourceVersionIds: Array.from(selectedSkills),
+              mcpSourceVersionIds: Array.from(selectedMCPs),
+            }
+          : { mode: selectedMode.key };
 
       onSend(value, options);
       setValue('');
@@ -306,16 +320,9 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     ];
 
     const selectMode = (mode: ChatInputModeKey) => {
-      if (mode === 'explore') {
-        message.info('探索模式开发中，已保持交互模式');
-        setSelectedMode(getModeConfig('interact'));
-        onModeChange?.('interact');
-        return;
-      }
-
       setSelectedMode(getModeConfig(mode));
       onModeChange?.(mode);
-      message.info(mode === 'report' ? '已切换到报告模式' : '已切换到交互模式');
+      message.info(mode === 'report' ? '已切换到报告模式' : mode === 'explore' ? '已切换到探索模式' : '已切换到交互模式');
     };
 
     const modeMenuItems: MenuProps['items'] = (['interact', 'explore', 'report'] as ChatInputModeKey[]).map((key) => {

@@ -19,6 +19,8 @@ import {
 import { useDebugStore } from '../../../store'
 import { getHumanInHistoryByOrderIndex, parseMessageContent } from '../../../utils'
 import { useScreenshot } from '../useScreenShot'
+import { extractExploreHistoryItems, isExploreHistoryRound } from '../exploration-mode/historyAdapter'
+import type { ExploreItem } from '../exploration-mode/types'
 import { areReportHistoryRoundsEqual, splitConversationHistoryRounds } from '../report-mode/reportHistoryAdapter'
 
 import type { chatHeaderRefMethod } from '../../../types'
@@ -45,7 +47,9 @@ export interface ConversationProps {
   /** 报告提交所需的当前空间；普通对话 controller 同时使用 semanticId。 */
   spaceId?: number
   onReportLoadingChange?: (loading: boolean) => void
+  onExploreLoadingChange?: (loading: boolean) => void
   onReportPreviewChange?: (open: boolean) => void
+  onExplorePreviewChange?: (open: boolean) => void
   /** 打开历史会话时，回填最后一轮使用的数据语义到输入框 */
   onHistorySemanticLoaded?: (data: { name: string; schemaId?: number | string; groupId?: number | string; groupName?: string } | null) => void
 }
@@ -357,6 +361,7 @@ export const useConversationController = (
   const [loading, setLoading] = useState(false)
   const [convContent, setConvContent] = useState<any[]>([])
   const [reportHistoryRounds, setReportHistoryRounds] = useState<ReportHistoryRoundGroup[]>([])
+  const [exploreHistoryItems, setExploreHistoryItems] = useState<ExploreItem[]>([])
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const convContent2d = useMemo(() => groupConversationByOrder(convContent), [convContent])
   const convContent3d = useMemo(() => groupConversationByOrder3d(convContent2d), [convContent2d])
@@ -719,6 +724,7 @@ export const useConversationController = (
     setHistoryLoading(false)
     setHistoryLoaded(false)
     setReportHistoryRounds([])
+    setExploreHistoryItems([])
     canLoadMore.current = false
     isLoadingHistory.current = false
 
@@ -800,14 +806,16 @@ export const useConversationController = (
 
         // query 只请求一次；报告 round 交给报告历史适配器，避免进入普通 ViewEle。
         const roundGroups: ReportHistoryRoundGroup[] = Array.isArray(result?.data?.data) ? result.data.data : []
+        setExploreHistoryItems(extractExploreHistoryItems(roundGroups))
         const { interactionRounds, reportRounds } = splitConversationHistoryRounds(roundGroups)
         // 同内容刷新保持原数组引用，避免报告恢复 Hook 重查全部 IndexedDB task。
         setReportHistoryRounds((currentRounds) => (
           areReportHistoryRoundsEqual(currentRounds, reportRounds) ? currentRounds : reportRounds
         ))
-        const flatHistory: any[] = interactionRounds.flatMap((group) => (
-          Array.isArray(group?.messages) ? group.messages : []
-        ))
+        // 探索轮次整轮交给探索卡片渲染，从普通历史中整轮剔除，避免 human 问题被重复渲染成气泡。
+        const flatHistory: any[] = interactionRounds
+          .filter((group) => !isExploreHistoryRound(group))
+          .flatMap((group) => (Array.isArray(group?.messages) ? group.messages : []))
 
         if (flatHistory.length > 0) {
           const orders = flatHistory.map((item: any) => item.roundIndex ?? item.index ?? 0)
@@ -862,6 +870,7 @@ export const useConversationController = (
     } catch (error) {
       if (isRequestTokenActive(requestToken)) {
         setReportHistoryRounds([])
+        setExploreHistoryItems([])
         console.error('会话历史加载失败:', error)
       }
     } finally {
@@ -2129,6 +2138,7 @@ export const useConversationController = (
     convContent,
     convContent2d,
     convContent3d,
+    exploreHistoryItems,
     reportHistoryRounds,
     historyLoaded,
     refreshHistory,
