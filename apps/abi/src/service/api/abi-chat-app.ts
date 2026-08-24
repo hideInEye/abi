@@ -83,6 +83,25 @@ export function deleteAppApi(data: { appId: number | string }) {
   });
 }
 
+/**
+ * 新建对话会话（与大屏对话、chat 对话新建会话同源）
+ * 调用 /app/session/add，后端返回 sessionId 与 convUid，
+ * 供助手调试预览走探索模式接口（chat/plan）时作为 session_id / conv_uid 使用。
+ */
+export function addAppSessionApi(data: {
+  appId: number | string;
+  spaceId: number | string;
+  title?: string;
+  userId?: number | string;
+  groupId?: string;
+}) {
+  return apiRequest({
+    data,  // 直接传递参数，不要覆盖
+    method: 'post',
+    url: `${BASE}/session/add`
+  });
+}
+
 // ── 版本管理 ──
 const VERSION_BASE = '/api/abi-chat/v1/app/version';
 

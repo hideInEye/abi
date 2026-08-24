@@ -262,7 +262,7 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
       <div className="group-panel">
         <div className="group-header">
           <div className="group-header-title">
-            分组目录
+            数据目录
             <Tooltip title="添加组">
               <div className="group-add-btn" onClick={(e) => handleAddGroup(e as any)}>
                 <PlusOutlined />

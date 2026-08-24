@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { message } from 'antd'
 
 import { streamExplorePlan } from '../../../service/api/conv'
@@ -29,6 +29,16 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
   const [items, setItems] = useState<ExploreItem[]>([])
   const [loading, setLoading] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
+
+  // 切换会话时清空上一会话遗留的实时探索项并中止进行中的流；
+  // 历史探索项由会话控制器按会话单独加载，实时项不得跨会话泄漏。
+  const convUid = conv?.conv_uid
+  useEffect(() => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setItems([])
+    setLoading(false)
+  }, [convUid])
 
   const updateItem = useCallback((id: string, updater: (item: ExploreItem) => ExploreItem) => {
     setItems((prev) => prev.map((item) => (item.id === id ? updater(item) : item)))
