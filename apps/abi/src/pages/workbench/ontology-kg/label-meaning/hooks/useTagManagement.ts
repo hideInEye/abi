@@ -3,7 +3,9 @@ import { debounce } from 'lodash';
 import { useState } from 'react';
 
 import { useAppSelector } from '@/hooks/business/useStore';
-import type { Exp, ExpCondition, TagGroup } from '@/pages/workbench/ontology-kg/label-meaning/types';
+import { collectRuleFieldIds } from '@/pages/workbench/ontology-kg/label-meaning/components/rule-expression';
+import { parseTagExpression } from '@/pages/workbench/ontology-kg/label-meaning/components/semantic-tag/tagExpression';
+import type { TagGroup } from '@/pages/workbench/ontology-kg/label-meaning/types';
 import { addTag, delTag, editTag, queryTag } from '@/service/api/tag-meaning.ts';
 import { getSpaceId } from '@/store/slice/app';
 
@@ -48,23 +50,15 @@ export function useTagManagement() {
 
   // 标签项更新
   const tagSave = async (values: Partial<TagGroup>) => {
-    const metricIds = new Set();
     const { exp } = values;
-    const expObj = JSON.parse(decodeURIComponent(exp || '[]'));
-    expObj.forEach((item: Exp) => {
-      if (item.conditions?.length > 0) {
-        item.conditions.forEach((condition: ExpCondition) => {
-          metricIds.add(condition.metric);
-        });
-      }
-    });
+    const metricIds = collectRuleFieldIds(parseTagExpression(exp));
 
     if (editingGroup) {
       setTagGroups(prev => prev.map(group => (group.tagId === editingGroup.tagId ? { ...group, ...values } : group)));
       const newTag = {
         ...editingGroup,
         ...values,
-        relItemId: metricIds.size > 0 ? Array.from(metricIds).join() : ''
+        relItemId: metricIds.join()
       };
 
       delete newTag?.updateBy;
@@ -85,7 +79,7 @@ export function useTagManagement() {
       await addTag({
         ...newTag,
         groupId,
-        relItemId: metricIds.size > 0 ? Array.from(metricIds).join() : '',
+        relItemId: metricIds.join(),
         spaceId
       });
       getTagList({});

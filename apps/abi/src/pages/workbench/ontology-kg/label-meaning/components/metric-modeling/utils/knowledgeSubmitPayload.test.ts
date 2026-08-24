@@ -9,104 +9,116 @@ const atomicMetricMetaMap = {
     field: 'ORDER_COUNT',
     fieldName: '下单用户数',
     id: 101,
-    value: 'order_count',
+    value: 'order_count'
   },
   pay_amount: {
     field: 'PAY_AMOUNT',
     fieldName: '支付金额',
     id: 103,
-    value: 'pay_amount',
+    value: 'pay_amount'
   },
   visit_count: {
     field: 'VISIT_COUNT',
     fieldName: '访问用户数',
     id: 102,
-    value: 'visit_count',
-  },
+    value: 'visit_count'
+  }
 }
 
 describe('buildKnowledgeCalcLogic', () => {
-  it('builds api expressions for derived indicator expression conditions', () => {
+  it('migrates legacy derived conditions into nested api expression groups', () => {
     const result = buildKnowledgeCalcLogic({
+      derivedExpressionFieldMetaMap: {
+        order_status: {
+          field: 'order_status',
+          fieldName: '订单状态',
+          value: 'order_status'
+        },
+        pay_channel: {
+          field: 'pay_channel',
+          fieldName: '支付渠道',
+          value: 'pay_channel'
+        }
+      },
       derivedExpressions: [
         {
           conditions: [
             { metric: 'order_status', operator: '=', value: '已支付' },
             { metric: 'pay_channel', operator: '=', value: '线上' },
-            { metric: 'pay_channel', operator: '=', value: '' },
+            { metric: 'pay_channel', operator: '=', value: '线下' }
           ],
-          innerLogic: 'AND',
+          innerLogic: 'AND'
         },
         {
-          conditions: [{ metric: 'order_status', operator: '=', value: '' }],
-          innerLogic: 'AND',
-        },
+          conditions: [{ metric: 'order_status', operator: '=', value: '退款' }],
+          innerLogic: 'AND'
+        }
       ],
-      derivedExpressionFieldMetaMap: {
-        order_status: {
-          field: 'order_status',
-          fieldName: '订单状态',
-          value: 'order_status',
-        },
-        pay_channel: {
-          field: 'pay_channel',
-          fieldName: '支付渠道',
-          value: 'pay_channel',
-        },
-      },
       groupId: 1,
       indicatorClass: 'derived',
-      spaceId: 82,
+      spaceId: 82
     } as KnowledgeSubmitPayload)
 
     expect(result).not.toHaveProperty('derivedExpressions')
     expect(result.expressions).toEqual([
       {
-        conditions: [
-          {
-            conditionId: 'cond_1_1',
-            field: 'order_status',
-            fieldName: '订单状态',
-            operator: 'EQ',
-            operatorName: '等于',
-            value: '已支付',
-          },
-          {
-            conditionId: 'cond_1_2',
-            field: 'pay_channel',
-            fieldName: '支付渠道',
-            operator: 'EQ',
-            operatorName: '等于',
-            value: '线上',
-          },
-          {
-            conditionId: 'cond_1_3',
-            field: 'pay_channel',
-            fieldName: '支付渠道',
-            operator: 'EQ',
-            operatorName: '等于',
-            value: '',
-          },
-        ],
         expressionId: 'exp_1',
-        innerLogic: 'AND',
-        name: '表达式1',
+        groups: [
+          {
+            conditions: [
+              {
+                conditionId: 'cond_1_1_1',
+                field: 'order_status',
+                fieldName: '订单状态',
+                operator: 'EQ',
+                operatorName: '等于',
+                value: '已支付'
+              },
+              {
+                conditionId: 'cond_1_1_2',
+                field: 'pay_channel',
+                fieldName: '支付渠道',
+                logicWithPrevious: 'AND',
+                operator: 'EQ',
+                operatorName: '等于',
+                value: '线上'
+              },
+              {
+                conditionId: 'cond_1_1_3',
+                field: 'pay_channel',
+                fieldName: '支付渠道',
+                logicWithPrevious: 'AND',
+                operator: 'EQ',
+                operatorName: '等于',
+                value: '线下'
+              }
+            ],
+            groupId: 'group_1_1',
+            name: '条件分组 1'
+          }
+        ],
+        name: '表达式1'
       },
       {
-        conditions: [
-          {
-            conditionId: 'cond_2_1',
-            field: 'order_status',
-            fieldName: '订单状态',
-            operator: 'EQ',
-            operatorName: '等于',
-            value: '',
-          },
-        ],
         expressionId: 'exp_2',
-        innerLogic: 'AND',
-        name: '表达式2',
-      },
+        groups: [
+          {
+            conditions: [
+              {
+                conditionId: 'cond_2_1_1',
+                field: 'order_status',
+                fieldName: '订单状态',
+                operator: 'EQ',
+                operatorName: '等于',
+                value: '退款'
+              }
+            ],
+            groupId: 'group_2_1',
+            name: '条件分组 1'
+          }
+        ],
+        name: '表达式2'
+      }
     ])
   })
 
@@ -121,7 +133,7 @@ describe('buildKnowledgeCalcLogic', () => {
       spaceId: 82,
       templateType: 'ratio',
       thresholdMax: '1',
-      thresholdMin: '0',
+      thresholdMin: '0'
     } as KnowledgeSubmitPayload)
 
     expect(result).not.toHaveProperty('templateType')
@@ -136,30 +148,30 @@ describe('buildKnowledgeCalcLogic', () => {
             field: 'ORDER_COUNT',
             id: '101',
             key: 'numerator_id',
-            type: 'string',
+            type: 'string'
           },
           {
             description: '分母指标ID',
             field: 'VISIT_COUNT',
             id: '102',
             key: 'denominator_id',
-            type: 'string',
+            type: 'string'
           },
           {
             description: '计算精度，代表保留小数位数',
             key: 'calc_precision',
             options: [0, 1, 2, 3, 4],
             type: 'enum',
-            value: 2,
+            value: 2
           },
           {
             description: '阈值范围 [min, max]',
             key: 'threshold_range',
             type: 'array',
-            value: ['0', '1'],
-          },
-        ],
-      },
+            value: ['0', '1']
+          }
+        ]
+      }
     })
   })
 
@@ -173,7 +185,7 @@ describe('buildKnowledgeCalcLogic', () => {
       groupId: 1,
       indicatorClass: 'derivative',
       spaceId: 82,
-      templateType: 'cumulative',
+      templateType: 'cumulative'
     } as KnowledgeSubmitPayload)
 
     expect(result).toEqual({
@@ -187,30 +199,30 @@ describe('buildKnowledgeCalcLogic', () => {
               field: 'PAY_AMOUNT',
               id: '103',
               key: 'base_indicator_id',
-              type: 'string',
+              type: 'string'
             },
             {
               description: '时间范围',
               key: 'time_range',
               options: ['YEAR', 'QUARTER', 'MONTH', 'WEEK'],
               type: 'enum',
-              value: 'QUARTER',
+              value: 'QUARTER'
             },
             {
               description: '累加起点日期',
               key: 'accumulation_start',
               type: 'date',
-              value: '2024-01-12',
+              value: '2024-01-12'
             },
             {
               description: '累加方式',
               key: 'accumulation_type',
               type: 'string',
-              value: 'DOWN',
-            },
-          ],
-        },
-      },
+              value: 'DOWN'
+            }
+          ]
+        }
+      }
     })
   })
 
@@ -224,7 +236,7 @@ describe('buildKnowledgeCalcLogic', () => {
       groupId: 1,
       indicatorClass: 'derivative',
       spaceId: 82,
-      templateType: 'comparison',
+      templateType: 'comparison'
     } as KnowledgeSubmitPayload)
     const volatility = buildKnowledgeCalcLogic({
       atomicMetricMetaMap,
@@ -234,7 +246,7 @@ describe('buildKnowledgeCalcLogic', () => {
       spaceId: 82,
       templateType: 'volatility',
       volatilityMethod: 'RANGE',
-      volatilityMetricId: 'pay_amount',
+      volatilityMetricId: 'pay_amount'
     } as KnowledgeSubmitPayload)
     const quantile = buildKnowledgeCalcLogic({
       atomicMetricMetaMap,
@@ -243,7 +255,7 @@ describe('buildKnowledgeCalcLogic', () => {
       percentileValue: '0.9',
       spaceId: 82,
       techId: 'pay_amount',
-      templateType: 'percentile',
+      templateType: 'percentile'
     } as KnowledgeSubmitPayload)
 
     expect(comparison.indicator_templates).toMatchObject({
@@ -252,26 +264,26 @@ describe('buildKnowledgeCalcLogic', () => {
           { field: 'PAY_AMOUNT', id: '103', key: 'base_indicator_id' },
           { key: 'comparison_type', value: 'MoM' },
           { key: 'compare_cycle_num', value: 2 },
-          { key: 'output_format', value: 'absolute_diff' },
-        ],
-      },
+          { key: 'output_format', value: 'absolute_diff' }
+        ]
+      }
     })
     expect(volatility.indicator_templates).toMatchObject({
       volatility_indicator: {
         parameters: [
           { field: 'PAY_AMOUNT', id: '103', key: 'base_indicator_id' },
           { key: 'method', value: 'Range' },
-          { key: 'window_size', value: 7 },
-        ],
-      },
+          { key: 'window_size', value: 7 }
+        ]
+      }
     })
     expect(quantile.indicator_templates).toMatchObject({
       quantile_indicator: {
         parameters: [
           { field: 'PAY_AMOUNT', id: '103', key: 'base_indicator_id' },
-          { key: 'quantile_val', value: 0.9 },
-        ],
-      },
+          { key: 'quantile_val', value: 0.9 }
+        ]
+      }
     })
     expect(quantile).not.toHaveProperty('techId')
   })
@@ -286,8 +298,8 @@ describe('buildKnowledgeCalcLogic', () => {
       templateType: 'custom',
       variableMappings: [
         { indicatorId: 'order_count', variableName: 'A' },
-        { indicatorId: 'visit_count', variableName: 'B' },
-      ],
+        { indicatorId: 'visit_count', variableName: 'B' }
+      ]
     } as KnowledgeSubmitPayload)
 
     expect(result.indicator_templates).toMatchObject({
@@ -295,13 +307,13 @@ describe('buildKnowledgeCalcLogic', () => {
         parameters: [
           { key: 'formula_expression', value: '(A+B)/C' },
           { key: 'input_id_map', value: { A: '101', B: '102' } },
-          { key: 'input_indicators_map', value: { A: 'ORDER_COUNT', B: 'VISIT_COUNT' } },
-        ],
-      },
+          { key: 'input_indicators_map', value: { A: 'ORDER_COUNT', B: 'VISIT_COUNT' } }
+        ]
+      }
     })
   })
 
-  it('parses api expressions back to derived form conditions', () => {
+  it('migrates legacy api expressions back to nested form groups', () => {
     const result = parseKnowledgeCalcLogicFormValues({
       expressions: [
         {
@@ -312,7 +324,7 @@ describe('buildKnowledgeCalcLogic', () => {
               fieldName: '渠道维',
               operator: 'EQ',
               operatorName: '等于',
-              value: 'online',
+              value: 'online'
             },
             {
               conditionId: 'cond_1_2',
@@ -320,37 +332,42 @@ describe('buildKnowledgeCalcLogic', () => {
               fieldName: '客户维',
               operator: 'IN',
               operatorName: '包含',
-              value: 'retail',
-            },
+              value: 'retail'
+            }
           ],
           expressionId: 'exp_1',
           innerLogic: 'OR',
-          name: '线上渠道过滤',
-        },
+          name: '线上渠道过滤'
+        }
       ],
-      projectionFunc: 'sum',
+      projectionFunc: 'sum'
     })
 
     expect(result).toMatchObject({
       derivedExpressions: [
         {
-          conditions: [
+          groups: [
             {
-              metric: 'channel_type',
-              operator: '=',
-              value: 'online',
-            },
-            {
-              metric: 'customer_type',
-              operator: 'LIKE',
-              value: 'retail',
-            },
+              conditions: [
+                {
+                  fieldId: 'channel_type',
+                  operator: '=',
+                  value: 'online'
+                },
+                {
+                  fieldId: 'customer_type',
+                  logicWithPrevious: 'OR',
+                  operator: 'LIKE',
+                  value: 'retail'
+                }
+              ],
+              name: '条件分组 1'
+            }
           ],
-          innerLogic: 'OR',
-          name: '线上渠道过滤',
-        },
+          name: '线上渠道过滤'
+        }
       ],
-      projectionFunc: 'sum',
+      projectionFunc: 'sum'
     })
   })
 
@@ -366,31 +383,31 @@ describe('buildKnowledgeCalcLogic', () => {
               field: 'ORDER_COUNT',
               id: '101',
               key: 'numerator_id',
-              type: 'string',
+              type: 'string'
             },
             {
               description: '分母指标ID',
               field: 'VISIT_COUNT',
               id: '102',
               key: 'denominator_id',
-              type: 'string',
+              type: 'string'
             },
             {
               description: '计算精度，代表保留小数位数',
               key: 'calc_precision',
               options: [0, 1, 2, 3, 4],
               type: 'enum',
-              value: 2,
+              value: 2
             },
             {
               description: '阈值范围 [min, max]',
               key: 'threshold_range',
               type: 'array',
-              value: ['0', '1'],
-            },
-          ],
-        },
-      },
+              value: ['0', '1']
+            }
+          ]
+        }
+      }
     })
 
     expect(result).toMatchObject({
@@ -399,7 +416,87 @@ describe('buildKnowledgeCalcLogic', () => {
       ratioPrecision: '2',
       templateType: 'ratio',
       thresholdMax: '1',
-      thresholdMin: '0',
+      thresholdMin: '0'
+    })
+  })
+  it('round-trips nested groups, precompute config and statistical caliber', () => {
+    const calcLogic = buildKnowledgeCalcLogic({
+      derivedExpressionFieldMetaMap: {
+        status: { field: 'order_status', fieldName: '订单状态', value: 'status' }
+      },
+      derivedExpressions: [
+        {
+          groups: [
+            {
+              conditions: [
+                { fieldId: 'status', id: 'condition-1', operator: '=', value: 'paid' },
+                { fieldId: 'status', id: 'condition-2', logicWithPrevious: 'OR', operator: 'IS NULL' }
+              ],
+              id: 'group-1',
+              name: '订单条件'
+            }
+          ],
+          id: 'layer-1',
+          name: '支付分层'
+        }
+      ],
+      groupId: 1,
+      indicatorClass: 'derived',
+      precomputeConfig: { frequency: 'weekly', time: '09:00', weekday: 1 },
+      spaceId: 82,
+      statisticalCaliber: {
+        dateRangeUnit: 'day',
+        dateRangeValue: 30,
+        endTime: '18:00',
+        startTime: '09:00',
+        subjectDimensionId: 'shop-dimension',
+        timeRangeType: 'specified'
+      }
+    } as KnowledgeSubmitPayload)
+
+    expect(calcLogic).toMatchObject({
+      expressions: [
+        {
+          expressionId: 'layer-1',
+          groups: [
+            {
+              conditions: [
+                { conditionId: 'condition-1', field: 'order_status', operator: 'EQ', value: 'paid' },
+                { conditionId: 'condition-2', field: 'order_status', logicWithPrevious: 'OR', operator: 'IS_NULL' }
+              ],
+              groupId: 'group-1',
+              name: '订单条件'
+            }
+          ],
+          name: '支付分层'
+        }
+      ],
+      precomputeConfig: { frequency: 'weekly', time: '09:00', weekday: 1 },
+      statisticalCaliber: {
+        dateRangeUnit: 'day',
+        dateRangeValue: 30,
+        subjectDimensionId: 'shop-dimension',
+        timeRangeType: 'specified'
+      }
+    })
+
+    expect(parseKnowledgeCalcLogicFormValues(calcLogic)).toMatchObject({
+      derivedExpressions: [
+        {
+          groups: [
+            {
+              conditions: [
+                { fieldId: 'order_status', operator: '=', value: 'paid' },
+                { fieldId: 'order_status', logicWithPrevious: 'OR', operator: 'IS NULL' }
+              ],
+              name: '订单条件'
+            }
+          ],
+          name: '支付分层'
+        }
+      ],
+      precomputeConfig: { frequency: 'weekly', time: '09:00', weekday: 1 },
+      updateFrequency: 'weekly'
     })
   })
 })

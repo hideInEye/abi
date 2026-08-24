@@ -59,6 +59,7 @@ declare global {
   const ATag: typeof import('antd')['Tag']
   const ATextArea: typeof import('antd')['TextArea']
   const ATextarea: typeof import('antd')['Textarea']
+  const ATimePicker: typeof import('antd')['TimePicker']
   const ATooltip: typeof import('antd')['Tooltip']
   const ATree: typeof import('antd')['Tree']
   const ATreeSelect: typeof import('antd')['TreeSelect']

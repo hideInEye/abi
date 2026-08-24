@@ -1,13 +1,23 @@
 /* eslint-disable complexity */
-import { CloseOutlined } from '@ant-design/icons'
-import { message } from 'antd'
-import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+import { Modal, message } from 'antd'
 import React from 'react'
 
-import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+import {
+  collectRuleFieldIds,
+  createDefaultRuleLayers,
+  hasConfiguredRuleConditions
+} from '@/pages/workbench/ontology-kg/label-meaning/components/rule-expression'
 import { getFirstErrorFieldName, scrollToFirstFormError } from '@/pages/workbench/ontology-kg/utils/form-scroll'
+import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
+import { queryKnowledgeIndicatorDetail, queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
 
-import { INDICATOR_TYPE_OPTIONS } from '../constants/metricModeling.constants'
+import {
+  getMappedBizNameParts,
+  getMappedTechNameParts,
+  restoreMappedBizName,
+  restoreMappedTechName
+} from '../../../utils/ontologyName'
 import type {
   KnowledgeAtomicMetricMeta,
   KnowledgeExpressionFieldMeta,
@@ -15,25 +25,38 @@ import type {
   KnowledgeIndicatorItem,
   KnowledgeSubmitPayload,
   KnowledgeTechField,
-  KnowledgeTemplateParams,
+  KnowledgeTemplateParams
 } from '../types/metricModeling.types'
+import {
+  getApiResponseData,
+  getAtomicProjection,
+  getAtomicSemanticSchemaId,
+  parseAtomicSourceFields,
+  parseSemanticModelFields
+} from '../utils/atomicMetricSource'
 import {
   extractUniqueIds,
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
   getStepItems,
-  parseTemplateParams,
+  parseTemplateParams
 } from '../utils/knowledgeOperateDrawer.utils'
 import { createKnowledgeOperateValidators } from '../utils/knowledgeOperateDrawer.validators'
 import { parseKnowledgeCalcLogicFormValues } from '../utils/knowledgeSubmitPayload'
+import {
+  DEFAULT_PRECOMPUTE_CONFIG,
+  DEFAULT_STATISTICAL_CALIBER,
+  normalizePrecomputeConfig,
+  normalizeStatisticalCaliber
+} from '../utils/precomputeConfig'
 import { getKnowledgeSpaceId } from '../utils/space'
-import { getMappedBizNameParts, getMappedTechNameParts, restoreMappedBizName, restoreMappedTechName } from '../../../utils/ontologyName'
 
 import { KnowledgeOperateBusinessStep } from './knowledgeOperateDrawer.BusinessStep'
 import { KnowledgeOperateDimensionStep } from './knowledgeOperateDrawer.DimensionStep'
 import { KnowledgeOperateTechnicalStep } from './knowledgeOperateDrawer.TechnicalStep'
 
 type IndicatorType = 'atomic' | 'derivative' | 'derived'
+type ValidationField = (number | string)[] | string
 
 interface AtomicIndicatorOption {
   item: KnowledgeIndicatorItem
@@ -72,11 +95,33 @@ const DERIVATIVE_TEMPLATE_FIELDS: Array<keyof KnowledgeFormValues> = [
   'thresholdMin',
   'volatilityDataRange',
   'volatilityMethod',
-  'volatilityMetricId',
+  'volatilityMetricId'
 ]
 
-const DERIVED_ONLY_FIELDS: Array<keyof KnowledgeFormValues> = ['derivedConditionExpr', 'derivedConditions', 'derivedExpressions', 'projectionFunc', 'techId']
-const BUSINESS_FORM_FIELDS = new Set(['bizName', 'businessDefinition', 'calcPeriod', 'dataType', 'indicatorClass', 'indAlias', 'indicatorOwner', 'isPublic', 'measurementUnit', 'ownerEmail', 'ownerPhone', 'qualityLevel', 'updateFrequency', 'versionStatus'])
+const DERIVED_ONLY_FIELDS: Array<keyof KnowledgeFormValues> = [
+  'derivedConditionExpr',
+  'derivedConditions',
+  'derivedExpressions',
+  'projectionFunc',
+  'statisticalCaliber',
+  'techId'
+]
+const BUSINESS_FORM_FIELDS = new Set([
+  'bizName',
+  'businessDefinition',
+  'dataType',
+  'indicatorClass',
+  'indAlias',
+  'indicatorOwner',
+  'isPublic',
+  'measurementUnit',
+  'ownerEmail',
+  'ownerPhone',
+  'precomputeConfig',
+  'qualityLevel',
+  'updateFrequency',
+  'versionStatus'
+])
 
 function normalizeIndicatorClass(value?: string): IndicatorType {
   const text = String(value || '').trim()
@@ -145,18 +190,20 @@ function toFieldObject(source: unknown): KnowledgeTechField | null {
       fieldName: key,
       name: key,
       originName: key,
-      techId: key,
+      techId: key
     }
   }
   const techField = source as KnowledgeTechField
-  const key = String(techField.techId || techField.tfieldId || techField.fieldName || techField.originName || techField.name || '').trim()
+  const key = String(
+    techField.techId || techField.tfieldId || techField.fieldName || techField.originName || techField.name || ''
+  ).trim()
   if (!key) {
     return null
   }
   return {
     ...techField,
     fieldName: techField.fieldName || techField.originName || techField.name || key,
-    techId: key,
+    techId: key
   }
 }
 
@@ -169,7 +216,7 @@ function extractAtomicFields(item?: KnowledgeIndicatorItem) {
   const fieldSources = Array.isArray(parsedTechId) ? parsedTechId : [parsedTechId]
 
   const fieldMap = new Map<string, KnowledgeTechField>()
-  fieldSources.forEach((source) => {
+  fieldSources.forEach(source => {
     const field = toFieldObject(source)
     if (!field) {
       return
@@ -196,7 +243,10 @@ function buildAtomicMetricMetaMap(options: AtomicIndicatorOption[]) {
       fieldName: getMetricIndicatorOptionLabel(option.item),
       id: option.item.indId ?? option.item.termId ?? key,
       label: option.label,
-      value: key,
+      projectionFunc: getAtomicProjection(option.item),
+      semanticSchemaId: getAtomicSemanticSchemaId(option.item),
+      semanticSchemaName: option.item.semanticSchemaName || option.item.relSchemaName,
+      value: key
     }
 
     return acc
@@ -213,7 +263,7 @@ function buildDerivedExpressionFieldMetaMap(fields: KnowledgeTechField[]) {
     acc[key] = {
       field: String(item.fieldName || item.originName || item.name || key).trim(),
       fieldName: getMetricFieldOptionLabel(item),
-      value: key,
+      value: key
     }
 
     return acc
@@ -226,23 +276,26 @@ function splitAliasTags(value: unknown) {
   }
   return String(value || '')
     .split(',')
-    .map((item) => item.trim())
+    .map(item => item.trim())
     .filter(Boolean)
 }
 
-function resolveDerivedConditionMetrics(conditions: KnowledgeFormValues['derivedConditions'], fields: KnowledgeTechField[]) {
+function resolveDerivedConditionMetrics(
+  conditions: KnowledgeFormValues['derivedConditions'],
+  fields: KnowledgeTechField[]
+) {
   if (!conditions?.length || !fields.length) {
     return conditions
   }
 
   const fieldKeyMap = new Map<string, string>()
-  fields.forEach((item) => {
+  fields.forEach(item => {
     const key = String(item.techId || item.fieldName || item.name || '').trim()
     if (!key) {
       return
     }
 
-    ;[key, item.fieldName, item.originName, item.name, item.bizName, item.tfieldAlias].forEach((value) => {
+    ;[key, item.fieldName, item.originName, item.name, item.bizName, item.tfieldAlias].forEach(value => {
       const text = String(value || '').trim()
       if (text) {
         fieldKeyMap.set(text, key)
@@ -250,23 +303,30 @@ function resolveDerivedConditionMetrics(conditions: KnowledgeFormValues['derived
     })
   })
 
-  return conditions.map((item) => {
-    const metric = String(item?.metric || '').trim()
+  return conditions.map(item => {
+    const metric = String(item?.fieldId || item?.metric || '').trim()
     return {
       ...item,
-      metric: fieldKeyMap.get(metric) || metric,
+      ...(item.fieldId ? { fieldId: fieldKeyMap.get(metric) || metric } : { metric: fieldKeyMap.get(metric) || metric })
     }
   })
 }
 
-function resolveDerivedExpressionMetrics(expressions: KnowledgeFormValues['derivedExpressions'], fields: KnowledgeTechField[]) {
+function resolveDerivedExpressionMetrics(
+  expressions: KnowledgeFormValues['derivedExpressions'],
+  fields: KnowledgeTechField[]
+) {
   if (!expressions?.length) {
     return expressions
   }
 
-  return expressions.map((expression) => ({
+  return expressions.map(expression => ({
     ...expression,
     conditions: resolveDerivedConditionMetrics(expression.conditions, fields),
+    groups: expression.groups?.map(group => ({
+      ...group,
+      conditions: resolveDerivedConditionMetrics(group.conditions, fields)
+    }))
   }))
 }
 
@@ -278,7 +338,10 @@ function compactTemplateParams(params: KnowledgeTemplateParams): KnowledgeTempla
   return Object.fromEntries(entries) as KnowledgeTemplateParams
 }
 
-function buildTemplateParams(values: KnowledgeFormValues, indicatorClass: IndicatorType): KnowledgeTemplateParams | undefined {
+function buildTemplateParams(
+  values: KnowledgeFormValues,
+  indicatorClass: IndicatorType
+): KnowledgeTemplateParams | undefined {
   if (indicatorClass !== 'derivative') {
     return undefined
   }
@@ -287,7 +350,7 @@ function buildTemplateParams(values: KnowledgeFormValues, indicatorClass: Indica
   const common = {
     expr: values.expr,
     relItemId: values.relItemId,
-    templateType: values.templateType,
+    templateType: values.templateType
   }
 
   if (templateType === 'ratio') {
@@ -297,7 +360,7 @@ function buildTemplateParams(values: KnowledgeFormValues, indicatorClass: Indica
       ratioNumeratorId: values.ratioNumeratorId,
       ratioPrecision: values.ratioPrecision,
       thresholdMax: values.thresholdMax,
-      thresholdMin: values.thresholdMin,
+      thresholdMin: values.thresholdMin
     })
   }
   if (templateType === 'cumulative') {
@@ -306,7 +369,7 @@ function buildTemplateParams(values: KnowledgeFormValues, indicatorClass: Indica
       accumulateStartDate: values.accumulateStartDate,
       cumulativeMetricId: values.cumulativeMetricId,
       cumulativeMode: values.cumulativeMode,
-      cumulativeTimeRange: values.cumulativeTimeRange,
+      cumulativeTimeRange: values.cumulativeTimeRange
     })
   }
   if (templateType === 'comparison') {
@@ -314,8 +377,8 @@ function buildTemplateParams(values: KnowledgeFormValues, indicatorClass: Indica
       ...common,
       compareMetricId: values.compareMetricId,
       comparePeriod: values.comparePeriod,
-      comparisonOutputType: values.comparisonOutputType,
       compareType: values.compareType,
+      comparisonOutputType: values.comparisonOutputType
     })
   }
   if (templateType === 'volatility') {
@@ -324,13 +387,13 @@ function buildTemplateParams(values: KnowledgeFormValues, indicatorClass: Indica
       rollingWindowSize: values.rollingWindowSize,
       volatilityDataRange: values.volatilityDataRange,
       volatilityMethod: values.volatilityMethod,
-      volatilityMetricId: values.volatilityMetricId,
+      volatilityMetricId: values.volatilityMetricId
     })
   }
   if (templateType === 'percentile') {
     return compactTemplateParams({
       ...common,
-      percentileValue: values.percentileValue,
+      percentileValue: values.percentileValue
     })
   }
   if (templateType === 'custom') {
@@ -343,21 +406,32 @@ function buildTemplateParams(values: KnowledgeFormValues, indicatorClass: Indica
 function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormValues {
   const templateValues = parseTemplateParams(item.templateParams) as Partial<KnowledgeFormValues>
   const calcLogicValues = parseKnowledgeCalcLogicFormValues(item.calcLogic) as Partial<KnowledgeFormValues>
-  const rawBizName = (item.rawBizName ?? item.bizName ?? (item as Record<string, unknown>).biz_name) as string | undefined
-  const rawTechName = (item.rawIndicatorCode ?? item.rawTechName ?? item.indicatorCode ?? item.techName) as string | undefined
+  const rawBizName = (item.rawBizName ?? item.bizName ?? (item as Record<string, unknown>).biz_name) as
+    | string
+    | undefined
+  const rawTechName = (item.rawIndicatorCode ?? item.rawTechName ?? item.indicatorCode ?? item.techName) as
+    | string
+    | undefined
   const mappedBizNameParts = getMappedBizNameParts(rawBizName)
   const mappedTechNameParts = getMappedTechNameParts(rawTechName)
+  const rawCalcLogic = parseJsonIfPossible(item.calcLogic) as Record<string, unknown>
+  const precomputeConfig = normalizePrecomputeConfig(rawCalcLogic?.precomputeConfig, item.updateFrequency)
+  const statisticalCaliber = normalizeStatisticalCaliber(rawCalcLogic?.statisticalCaliber)
   const values: KnowledgeFormValues = {
     ...item,
     ...templateValues,
     ...calcLogicValues,
     bizName: mappedBizNameParts.displayName,
     dimensionFieldIds: item.dimensionFieldIds ?? item.relateDims,
-    indicatorCode: mappedTechNameParts.displayName,
     indAlias: splitAliasTags(item.indAlias),
+    indicatorCode: mappedTechNameParts.displayName,
     mappedBizNameFieldName: mappedBizNameParts.isMapped ? mappedBizNameParts.fieldName : undefined,
     mappedTechNameTableName: mappedTechNameParts.isMapped ? mappedTechNameParts.tableName : undefined,
+    precomputeConfig,
+    projectionFunc: item.projectionFunc || calcLogicValues.projectionFunc || 'sum',
+    statisticalCaliber,
     techName: mappedTechNameParts.displayName,
+    updateFrequency: precomputeConfig.frequency
   }
   if (item.isPublic !== undefined && item.isPublic !== null) {
     values.isPublic = Boolean(item.isPublic) === true || String(item.isPublic) === '1'
@@ -365,19 +439,33 @@ function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormV
   return values
 }
 
-export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingItems = [], groupId, groupName, onClose, onSubmit, open }) => {
+export const KnowledgeOperateDrawer: React.FC<Props> = ({
+  editingItem,
+  groupId,
+  groupName,
+  onClose,
+  onSubmit,
+  open
+}) => {
   const [form] = AForm.useForm<KnowledgeFormValues>()
   const [current, setCurrent] = useState(0)
   const [selectedIndicatorClass, setSelectedIndicatorClass] = useState<IndicatorType>('derived')
   const [allFields, setAllFields] = useState<KnowledgeTechField[]>([])
+  const [fieldError, setFieldError] = useState(false)
+  const [fieldLoading, setFieldLoading] = useState(false)
   const [indicatorOptionSource, setIndicatorOptionSource] = useState<KnowledgeIndicatorItem[]>([])
+  const currentSemanticSchemaRef = useRef<string>('')
   const editMatchedRef = useRef(false)
   const formValuesRef = useRef<Partial<KnowledgeFormValues>>({})
+  const lastAtomicOptionRef = useRef<AtomicIndicatorOption>()
+  const semanticRequestRef = useRef(0)
   const templateTypeVal = AForm.useWatch('templateType', form)!
 
   const isEditing = Boolean(editingItem)
   const isAtomicEditing = normalizeIndicatorClass(editingItem?.indicatorClass) === 'atomic'
-  const indicatorClass = normalizeIndicatorClass(String(form.getFieldValue('indicatorClass') || selectedIndicatorClass || 'derived'))
+  const indicatorClass = normalizeIndicatorClass(
+    String(form.getFieldValue('indicatorClass') || selectedIndicatorClass || 'derived')
+  )
   const isAtomicMode = isAtomicEditing || indicatorClass === 'atomic'
   const stepItems = useMemo(() => getStepItems(true, isAtomicMode), [isAtomicMode])
   const currentStepKey = stepItems[current]?.key
@@ -385,25 +473,25 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     const allowedClasses = indicatorClass === 'derivative' ? new Set(['atomic', 'derived']) : new Set(['atomic'])
 
     return indicatorOptionSource
-      .filter((item) => allowedClasses.has(normalizeIndicatorClass(item.indicatorClass)))
-      .map((item) => ({
+      .filter(item => allowedClasses.has(normalizeIndicatorClass(item.indicatorClass)))
+      .map(item => ({
         item,
         label: getMetricIndicatorOptionLabel(item),
-        value: normalizeAtomicSelectValue(item),
+        value: normalizeAtomicSelectValue(item)
       }))
-      .filter((item) => item.value)
+      .filter(item => item.value)
   }, [indicatorClass, indicatorOptionSource])
   const referenceMetricOptions = useMemo(
     () =>
       indicatorOptionSource
-        .filter((item) => item.indicatorClass === 'atomic' || item.indicatorClass === 'derived')
-        .map((item) => ({
+        .filter(item => item.indicatorClass === 'atomic' || item.indicatorClass === 'derived')
+        .map(item => ({
           item,
           label: getMetricIndicatorOptionLabel(item),
-          value: normalizeAtomicSelectValue(item),
+          value: normalizeAtomicSelectValue(item)
         }))
-        .filter((item) => item.value),
-    [indicatorOptionSource],
+        .filter(item => item.value),
+    [indicatorOptionSource]
   )
 
   const {
@@ -419,16 +507,20 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     validateTechName,
     validateTechnicalRemark,
     validateThresholdMax,
-    validateThresholdValue,
+    validateThresholdValue
   } = useMemo(
     () =>
       createKnowledgeOperateValidators({
         form,
         groupId,
         initialBizName: editingItem?.rawBizName || editingItem?.bizName,
-        initialTechName: editingItem?.rawIndicatorCode || editingItem?.rawTechName || editingItem?.indicatorCode || editingItem?.techName,
+        initialTechName:
+          editingItem?.rawIndicatorCode ||
+          editingItem?.rawTechName ||
+          editingItem?.indicatorCode ||
+          editingItem?.techName
       }),
-    [editingItem, existingItems, form, groupId],
+    [editingItem, form, groupId]
   )
 
   const fetchAtomicIndicatorOptions = useCallback(async () => {
@@ -436,7 +528,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       const res = await queryKnowledgeIndicators({
         pageNum: 1,
         pageSize: 1000,
-        spaceId: getKnowledgeSpaceId(),
+        spaceId: getKnowledgeSpaceId()
       })
       const allList = (res?.data?.list || []) as KnowledgeIndicatorItem[]
       setIndicatorOptionSource(allList)
@@ -444,6 +536,122 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       setIndicatorOptionSource([])
     }
   }, [])
+
+  const loadAtomicSemanticFields = useCallback(
+    async (option?: AtomicIndicatorOption, settings?: { confirmChange?: boolean; previousTechId?: unknown }) => {
+      semanticRequestRef.current += 1
+      const requestId = semanticRequestRef.current
+      lastAtomicOptionRef.current = option
+      if (!option) {
+        setAllFields([])
+        setFieldError(false)
+        setFieldLoading(false)
+        currentSemanticSchemaRef.current = ''
+        form.setFieldValue('projectionFunc', 'sum')
+        return
+      }
+
+      setFieldLoading(true)
+      setFieldError(false)
+      try {
+        let resolvedItem = option.item
+        let schemaId = getAtomicSemanticSchemaId(resolvedItem)
+        const detailId = resolvedItem.indId ?? resolvedItem.termId
+        if (!schemaId && detailId !== undefined) {
+          const detail = getApiResponseData(await queryKnowledgeIndicatorDetail({ id: detailId }))
+          if (requestId !== semanticRequestRef.current) return
+          resolvedItem = { ...resolvedItem, ...detail }
+          schemaId = getAtomicSemanticSchemaId(resolvedItem)
+        }
+        lastAtomicOptionRef.current = { ...option, item: resolvedItem }
+        setIndicatorOptionSource(items =>
+          items.map(item => (normalizeAtomicSelectValue(item) === option.value ? { ...item, ...resolvedItem } : item))
+        )
+
+        const nextSchemaId = String(schemaId ?? '')
+        const schemaChanged = Boolean(
+          currentSemanticSchemaRef.current && nextSchemaId && currentSemanticSchemaRef.current !== nextSchemaId
+        )
+        if (
+          settings?.confirmChange !== false &&
+          schemaChanged &&
+          hasConfiguredRuleConditions(form.getFieldValue('derivedExpressions'))
+        ) {
+          const confirmed = await new Promise<boolean>(resolve => {
+            Modal.confirm({
+              cancelText: '取消',
+              content: '切换数据语义将清空已配置的业务限定条件，是否继续？',
+              okText: '继续切换',
+              onCancel: () => resolve(false),
+              onOk: () => resolve(true),
+              title: '切换原子指标'
+            })
+          })
+          if (requestId !== semanticRequestRef.current) return
+          if (!confirmed) {
+            form.setFieldValue('techId', settings?.previousTechId)
+            formValuesRef.current = {
+              ...formValuesRef.current,
+              techId: settings?.previousTechId as KnowledgeFormValues['techId']
+            }
+            lastAtomicOptionRef.current = undefined
+            return
+          }
+          form.setFieldValue('derivedExpressions', createDefaultRuleLayers())
+          form.setFieldValue('derivedConditionExpr', '')
+        }
+        if (schemaChanged) setAllFields([])
+
+        const projectionFunc = getAtomicProjection(resolvedItem)
+        form.setFieldValue('projectionFunc', projectionFunc)
+        formValuesRef.current = { ...formValuesRef.current, projectionFunc, techId: option.value }
+        currentSemanticSchemaRef.current = nextSchemaId
+
+        if (!schemaId) {
+          setAllFields(parseAtomicSourceFields(resolvedItem.techId))
+          setFieldError(true)
+          return
+        }
+
+        const schemaDetail = getApiResponseData(await queryTableSemanticsDetail(schemaId))
+        if (requestId !== semanticRequestRef.current) return
+        const fields = parseSemanticModelFields(schemaDetail)
+        setAllFields(fields)
+        const semanticSchemaName = String(
+          schemaDetail.rtableName ||
+            schemaDetail.bizName ||
+            schemaDetail.schemaName ||
+            schemaDetail.name ||
+            resolvedItem.semanticSchemaName ||
+            resolvedItem.relSchemaName ||
+            '-'
+        ).trim()
+        setIndicatorOptionSource(items =>
+          items.map(item =>
+            normalizeAtomicSelectValue(item) === option.value ? { ...item, ...resolvedItem, semanticSchemaName } : item
+          )
+        )
+        form.setFieldValue(
+          'derivedExpressions',
+          resolveDerivedExpressionMetrics(form.getFieldValue('derivedExpressions'), fields)
+        )
+      } catch {
+        if (requestId !== semanticRequestRef.current) return
+        setAllFields(parseAtomicSourceFields(option.item.techId))
+        setFieldError(true)
+      } finally {
+        if (requestId === semanticRequestRef.current) setFieldLoading(false)
+      }
+    },
+    [form]
+  )
+
+  const retryAtomicSemanticFields = useCallback(() => {
+    loadAtomicSemanticFields(lastAtomicOptionRef.current, {
+      confirmChange: false,
+      previousTechId: form.getFieldValue('techId')
+    })
+  }, [form, loadAtomicSemanticFields])
 
   useEffect(() => {
     if (!open) {
@@ -455,12 +663,16 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
   useEffect(() => {
     if (!open) {
       editMatchedRef.current = false
+      semanticRequestRef.current += 1
       return
     }
     form.resetFields()
     editMatchedRef.current = false
     formValuesRef.current = {}
     setCurrent(0)
+    setFieldError(false)
+    setFieldLoading(false)
+    currentSemanticSchemaRef.current = ''
 
     if (editingItem) {
       const editValues = buildFormValuesFromDetail(editingItem)
@@ -483,21 +695,13 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       return
     }
     const nextValues = {
-      derivedExpressions: [
-        {
-          conditions: [
-            {
-              metric: '',
-              operator: '=',
-              value: '',
-            },
-          ],
-          innerLogic: 'AND',
-          name: '表达式1',
-        },
-      ],
+      derivedExpressions: createDefaultRuleLayers(),
       indAlias: [],
-      variableMappings: [],
+      precomputeConfig: DEFAULT_PRECOMPUTE_CONFIG,
+      projectionFunc: 'sum',
+      statisticalCaliber: DEFAULT_STATISTICAL_CALIBER,
+      updateFrequency: DEFAULT_PRECOMPUTE_CONFIG.frequency,
+      variableMappings: []
     }
     form.setFieldsValue(nextValues)
     formValuesRef.current = nextValues
@@ -511,7 +715,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
 
     const currentTechIdentity = resolveTechFieldIdentity(editingItem.techId)
-    const matchedOption = atomicIndicatorOptions.find((item) => {
+    const matchedOption = atomicIndicatorOptions.find(item => {
       const optionTechIdentity = resolveTechFieldIdentity(item.item.techId)
       return optionTechIdentity && optionTechIdentity === currentTechIdentity
     })
@@ -524,16 +728,17 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     const nextValues: Partial<KnowledgeFormValues> = {
       derivedConditions: resolveDerivedConditionMetrics(form.getFieldValue('derivedConditions'), nextAllFields),
       derivedExpressions: resolveDerivedExpressionMetrics(form.getFieldValue('derivedExpressions'), nextAllFields),
-      techId: matchedOption.value,
+      techId: matchedOption.value
     }
     form.setFieldsValue(nextValues)
     formValuesRef.current = {
       ...formValuesRef.current,
-      ...nextValues,
+      ...nextValues
     }
     setAllFields(nextAllFields)
     editMatchedRef.current = true
-  }, [atomicIndicatorOptions, editingItem, form, isAtomicMode, open])
+    loadAtomicSemanticFields(matchedOption, { confirmChange: false, previousTechId: matchedOption.value })
+  }, [atomicIndicatorOptions, editingItem, form, isAtomicMode, loadAtomicSemanticFields, open])
 
   useEffect(() => {
     if (current > stepItems.length - 1) {
@@ -543,7 +748,21 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
 
   const getTechnicalRequiredFields = () => {
     if (indicatorClass === 'derived') {
-      return ['indicatorCode', 'techId', 'projectionFunc', 'derivedExpressions']
+      const statisticalCaliber = normalizeStatisticalCaliber(form.getFieldValue('statisticalCaliber'))
+      const fields: ValidationField[] = [
+        'indicatorCode',
+        'techId',
+        'projectionFunc',
+        ['statisticalCaliber', 'dateRangeValue'],
+        ['statisticalCaliber', 'dateRangeUnit'],
+        ['statisticalCaliber', 'timeRangeType'],
+        ['statisticalCaliber', 'subjectDimensionId'],
+        'derivedExpressions'
+      ]
+      if (statisticalCaliber.timeRangeType === 'specified') {
+        fields.push(['statisticalCaliber', 'startTime'], ['statisticalCaliber', 'endTime'])
+      }
+      return fields
     }
 
     const templateType = String(form.getFieldValue('templateType') || '')
@@ -570,10 +789,11 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
   }
 
   const handleValuesChange = (changeValues: Partial<KnowledgeFormValues>, allValues: KnowledgeFormValues) => {
+    const previousTechId = formValuesRef.current.techId
     formValuesRef.current = {
       ...formValuesRef.current,
       ...allValues,
-      ...changeValues,
+      ...changeValues
     }
 
     if (Object.hasOwn(changeValues, 'expr')) {
@@ -589,7 +809,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       form.setFieldsValue(clearedValues)
       formValuesRef.current = {
         ...formValuesRef.current,
-        ...clearedValues,
+        ...clearedValues
       }
     }
 
@@ -598,6 +818,13 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       setSelectedIndicatorClass(nextClass)
       if (nextClass === 'derived') {
         clearFields([...DERIVATIVE_TEMPLATE_FIELDS, 'techName'])
+        const derivedDefaults: Partial<KnowledgeFormValues> = {
+          derivedExpressions: createDefaultRuleLayers(),
+          projectionFunc: 'sum',
+          statisticalCaliber: { ...DEFAULT_STATISTICAL_CALIBER }
+        }
+        form.setFieldsValue(derivedDefaults)
+        formValuesRef.current = { ...formValuesRef.current, ...derivedDefaults }
       }
       if (nextClass === 'derivative') {
         clearFields([...DERIVED_ONLY_FIELDS, 'techName'])
@@ -611,19 +838,24 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
 
     if (Object.hasOwn(changeValues, 'templateType')) {
-      clearFields(DERIVATIVE_TEMPLATE_FIELDS.filter((field) => field !== 'templateType'))
+      clearFields(DERIVATIVE_TEMPLATE_FIELDS.filter(field => field !== 'templateType'))
     }
 
     if (Object.hasOwn(changeValues, 'techId') && !isAtomicMode) {
-      const selected = atomicIndicatorOptions.find((item) => item.value === String(changeValues.techId || ''))
-      setAllFields(extractAtomicFields(selected?.item))
+      const selected = atomicIndicatorOptions.find(item => item.value === String(changeValues.techId || ''))
+      loadAtomicSemanticFields(selected, { previousTechId })
     }
   }
 
   const scrollKnowledgeFormError = (error: unknown) => {
     const firstName = getFirstErrorFieldName(error)
     const firstKey = Array.isArray(firstName) ? String(firstName[0] || '') : String(firstName || '')
-    const targetStepKey = BUSINESS_FORM_FIELDS.has(firstKey) ? 'business' : firstKey === 'dimensionFieldIds' ? 'dimension' : 'technical'
+    let targetStepKey = 'technical'
+    if (BUSINESS_FORM_FIELDS.has(firstKey)) {
+      targetStepKey = 'business'
+    } else if (firstKey === 'dimensionFieldIds') {
+      targetStepKey = 'dimension'
+    }
     const targetStepIndex = stepItems.findIndex(item => item.key === targetStepKey)
 
     if (targetStepIndex >= 0 && targetStepIndex !== current) {
@@ -635,7 +867,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     scrollToFirstFormError(form, error)
   }
 
-  const validateKnowledgeFields = async (fields: string[]) => {
+  const validateKnowledgeFields = async (fields: ValidationField[]) => {
     try {
       await form.validateFields(fields)
       return true
@@ -646,7 +878,23 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
   }
 
   const getBusinessRequiredFields = () => {
-    const baseFields = ['bizName', 'indicatorClass', 'versionStatus', 'updateFrequency', 'calcPeriod', 'dataType', 'qualityLevel', 'businessDefinition']
+    const precomputeConfig = normalizePrecomputeConfig(form.getFieldValue('precomputeConfig'))
+    const precomputeFields: ValidationField[] = [['precomputeConfig', 'frequency']]
+    if (precomputeConfig.frequency === 'hourly') precomputeFields.push(['precomputeConfig', 'minute'])
+    if (precomputeConfig.frequency === 'daily') precomputeFields.push(['precomputeConfig', 'time'])
+    if (precomputeConfig.frequency === 'weekly')
+      precomputeFields.push(['precomputeConfig', 'weekday'], ['precomputeConfig', 'time'])
+    if (precomputeConfig.frequency === 'monthly')
+      precomputeFields.push(['precomputeConfig', 'monthDay'], ['precomputeConfig', 'time'])
+    const baseFields: ValidationField[] = [
+      'bizName',
+      'indicatorClass',
+      'versionStatus',
+      'dataType',
+      'qualityLevel',
+      'businessDefinition',
+      ...precomputeFields
+    ]
     return isAtomicMode ? [...baseFields, 'techName'] : baseFields
   }
 
@@ -657,21 +905,21 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
         return
       }
       setSelectedIndicatorClass(normalizeIndicatorClass(String(form.getFieldValue('indicatorClass') || 'derived')))
-      setCurrent((prev) => prev + 1)
+      setCurrent(prev => prev + 1)
       return
     }
 
     if (currentStepKey === 'technical') {
-      const valid = await validateKnowledgeFields(getTechnicalRequiredFields() as string[])
+      const valid = await validateKnowledgeFields(getTechnicalRequiredFields())
       if (!valid) {
         return
       }
-      setCurrent((prev) => prev + 1)
+      setCurrent(prev => prev + 1)
     }
   }
 
   const prev = () => {
-    setCurrent((pre) => Math.max(pre - 1, 0))
+    setCurrent(pre => Math.max(pre - 1, 0))
   }
 
   const handleOk = async () => {
@@ -681,14 +929,16 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
     }
 
     const baseFields = getBusinessRequiredFields()
-    const valid = await validateKnowledgeFields(isAtomicMode ? baseFields : [...baseFields, ...(getTechnicalRequiredFields() as string[])])
+    const valid = await validateKnowledgeFields(
+      isAtomicMode ? baseFields : [...baseFields, ...getTechnicalRequiredFields()]
+    )
     if (!valid) {
       return
     }
 
     const values = {
       ...formValuesRef.current,
-      ...form.getFieldsValue(true),
+      ...form.getFieldsValue(true)
     } as KnowledgeFormValues
     const nextIndicatorClass = normalizeIndicatorClass(values.indicatorClass)
     const submitBizName = restoreMappedBizName(values.bizName, values.mappedBizNameFieldName)
@@ -697,10 +947,10 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       values.mappedTechNameTableName
     )
 
-    const selectedAtomic = atomicIndicatorOptions.find((item) => item.value === String(values.techId || ''))
+    const selectedAtomic = atomicIndicatorOptions.find(item => item.value === String(values.techId || ''))
     const selectedTechObject = isAtomicMode ? values.techId : (selectedAtomic?.item?.techId ?? values.techId)
     const aliasText = (Array.isArray(values.indAlias) ? values.indAlias : splitAliasTags(values.indAlias))
-      .map((item) => String(item || '').trim())
+      .map(item => String(item || '').trim())
       .filter(Boolean)
       .join(',')
 
@@ -713,9 +963,12 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
       dimensionFieldIds: values.dimensionFieldIds ?? editingItem?.dimensionFieldIds ?? '',
       groupId,
       indAlias: aliasText,
-      relItemId: extractUniqueIds(values.expr || '').join(','),
+      relItemId:
+        nextIndicatorClass === 'derived'
+          ? collectRuleFieldIds(values.derivedExpressions).join(',')
+          : extractUniqueIds(values.expr || '').join(','),
       spaceId: getKnowledgeSpaceId(),
-      templateParams: buildTemplateParams(values, nextIndicatorClass),
+      templateParams: buildTemplateParams(values, nextIndicatorClass)
     }
 
     if (nextIndicatorClass === 'derived') {
@@ -744,11 +997,17 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
           <AButton onClick={() => onClose()}>取消</AButton>
           {current > 0 ? <AButton onClick={prev}>上一步</AButton> : null}
           {current < stepItems.length - 1 ? (
-            <AButton type="primary" onClick={next}>
+            <AButton
+              type="primary"
+              onClick={next}
+            >
               下一步
             </AButton>
           ) : (
-            <AButton type="primary" onClick={handleOk}>
+            <AButton
+              type="primary"
+              onClick={handleOk}
+            >
               确认
             </AButton>
           )}
@@ -760,13 +1019,24 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
 
       {stepItems.length > 1 ? (
         <div className="mx-auto mb-6 max-w-820px">
-          <ASteps current={current} items={stepItems} />
+          <ASteps
+            current={current}
+            items={stepItems}
+          />
         </div>
       ) : null}
 
-      <AForm className="ds-form-section" preserve requiredMark form={form} layout="vertical" onValuesChange={handleValuesChange}>
+      <AForm
+        preserve
+        requiredMark
+        className="ds-form-section"
+        form={form}
+        layout="vertical"
+        onValuesChange={handleValuesChange}
+      >
         {currentStepKey === 'business' ? (
           <KnowledgeOperateBusinessStep
+            form={form}
             indicatorNameDisabled={false}
             validateAliasTags={validateAliasTags}
             validateBusinessRemark={validateBusinessRemark}
@@ -780,6 +1050,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
           <KnowledgeOperateTechnicalStep
             allFields={allFields}
             atomicMetricOptions={atomicIndicatorOptions}
+            fieldError={fieldError}
+            fieldLoading={fieldLoading}
             form={form}
             indicatorClass={indicatorClass}
             referenceMetricOptions={referenceMetricOptions}
@@ -793,6 +1065,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({ editingItem, existingI
             validateTechnicalRemark={validateTechnicalRemark}
             validateThresholdMax={validateThresholdMax}
             validateThresholdValue={validateThresholdValue}
+            onRetryFields={retryAtomicSemanticFields}
           />
         ) : null}
 

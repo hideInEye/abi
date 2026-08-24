@@ -93,7 +93,7 @@ function buildExtendedExpressionPreview(
   }
 
   if (templateType === 'percentile') {
-    const metric = getLabel(options, values.techId)
+    const metric = getLabel(options, typeof values.techId === 'string' ? values.techId : undefined)
     const percentileValue = values.percentileValue || '0.9'
     return {
       expression: `PERCENTILE_CONT( ${percentileValue} ) WITHIN GROUP (ORDER BY ${metric})`

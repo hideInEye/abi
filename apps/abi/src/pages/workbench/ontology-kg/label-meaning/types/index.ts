@@ -111,7 +111,8 @@ export type TreeNode = {
 };
 
 export interface ExpCondition {
-  logic: (typeof logicalOperators)[number]['value'];
+  logic?: (typeof logicalOperators)[number]['value'];
+  logicWithPrevious?: (typeof logicalOperators)[number]['value'];
   metric: string;
   operator: (typeof inequalityOptions)[number]['value'];
   value: string;
@@ -119,6 +120,11 @@ export interface ExpCondition {
 
 export interface Exp {
   binName: string;
-  conditions: ExpCondition[];
-  logic: string;
+  conditions?: ExpCondition[];
+  groups?: Array<{
+    conditions: ExpCondition[];
+    logicWithPrevious?: (typeof logicalOperators)[number]['value'];
+    name: string;
+  }>;
+  logic?: string;
 }

@@ -19,12 +19,27 @@ export const STATUS_OPTIONS = [
 ]
 
 export const DATA_FREQUENCY_OPTIONS = [
-  { label: '每年', value: 'year' },
-  { label: '季度', value: 'quarter' },
+  { label: '每小时', value: 'hourly' },
   { label: '每日', value: 'daily' },
   { label: '每周', value: 'weekly' },
-  { label: '每月', value: 'monthly' },
-  { label: '每小时', value: 'hourly' }
+  { label: '每月', value: 'monthly' }
+]
+
+export const WEEKDAY_OPTIONS = [
+  { label: '周一', value: 1 },
+  { label: '周二', value: 2 },
+  { label: '周三', value: 3 },
+  { label: '周四', value: 4 },
+  { label: '周五', value: 5 },
+  { label: '周六', value: 6 },
+  { label: '周日', value: 7 }
+]
+
+export const STATISTICAL_DATE_UNIT_OPTIONS = [
+  { label: '小时', value: 'hour' },
+  { label: '日', value: 'day' },
+  { label: '周', value: 'week' },
+  { label: '月', value: 'month' }
 ]
 
 export const KNOWLEDGE_DATA_TYPE_OPTIONS = [
