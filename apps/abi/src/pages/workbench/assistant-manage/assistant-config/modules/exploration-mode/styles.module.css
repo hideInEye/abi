@@ -1,0 +1,706 @@
+/* 探索模式：时间线卡片内部提供左侧工作区（思考 + todolist / 当前步骤结果），
+   右侧全高工作室侧栏只展示全部执行结果。整体复用系统 CSS 变量对齐报告模式视觉。 */
+.messageRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.messageRow + .messageRow {
+  margin-top: 28px;
+}
+
+.questionWrap {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  margin: 16px 0;
+}
+
+.questionBubble {
+  max-width: 80%;
+  margin-right: 8px;
+  overflow-wrap: break-word;
+  border: 1px solid rgba(91, 124, 247, 0.18);
+  border-radius: 16px 16px 4px 16px;
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.06), rgba(112, 145, 250, 0.08));
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.08);
+  color: var(--ink, #25304d);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px 16px;
+  white-space: pre-wrap;
+}
+
+/* ── 单列卡片 ── */
+.card {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-m, 0 8px 24px rgba(15, 23, 42, 0.06));
+  backdrop-filter: blur(18px) saturate(1.25);
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+  padding: 13px 16px;
+}
+
+.cardTitle {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink, #202a44);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cardMeta {
+  flex-shrink: 0;
+  color: var(--ink-3, #9aa3b5);
+  font-size: 12px;
+}
+
+/* ── 卡片内工作区：左侧 todolist，右侧当前步骤结果 ── */
+.cardWorkspace {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.92fr) minmax(300px, 1.08fr);
+  min-height: 360px;
+}
+
+.todoColumn {
+  min-width: 0;
+  border-right: 1px solid rgba(130, 140, 200, 0.12);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.todoColumn .panel:last-child {
+  border-bottom: none;
+}
+
+.currentColumn {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(91, 124, 247, 0.07), transparent 34%),
+    rgba(255, 255, 255, 0.38);
+}
+
+.currentResultHeader {
+  display: flex;
+  min-height: 48px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
+  padding: 12px 16px;
+}
+
+.currentResultTitle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink, #25304d);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.currentResultMeta {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-3, #8a97ad);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.currentResultBody {
+  min-height: 0;
+  max-height: 440px;
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px 16px;
+}
+
+.currentOutputList {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.currentOutputItem {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(130, 140, 200, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 6px 16px rgba(54, 73, 135, 0.04);
+  padding: 12px;
+}
+
+.currentResultEmpty {
+  display: flex;
+  min-height: 220px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed rgba(130, 140, 200, 0.26);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--ink-3, #9aa3b5);
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 18px;
+  text-align: center;
+}
+
+/* ── 面板（思考区 / 待办事项），用分隔线纵向堆叠 ── */
+.panel {
+  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
+  padding: 12px 16px 14px;
+}
+
+.panel:last-child {
+  border-bottom: none;
+}
+
+.panelTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.panelTitleThink {
+  color: var(--accent, #5b5cf6);
+}
+
+.panelTitleTodo {
+  color: var(--ink, #25304d);
+}
+
+.panelStats {
+  margin-left: auto;
+  color: var(--ink-3, #9aa3b5);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 思考区正文：走到每一步只展示当前步骤思考 */
+.thinkingBox {
+  border-left: 2px solid rgba(91, 124, 247, 0.28);
+  padding-left: 12px;
+}
+
+.thinkingText {
+  color: var(--ink-3, #4f5c76);
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.thinkingSub {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(130, 140, 200, 0.24);
+  color: var(--ink-3, #6b7690);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.thinkingSub b {
+  color: var(--ink-2, #4f5c76);
+  font-weight: 700;
+}
+
+.thinkingPending {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-3, #9aa3b5);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* 待办事项 */
+.todoList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.todoRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid rgba(130, 140, 200, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 10px 12px;
+}
+
+.todoStatus {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  margin-top: 1px;
+  font-size: 11px;
+}
+
+.todoStatusPending {
+  background: rgba(132, 148, 173, 0.16);
+  color: var(--ink-3, #8a97ad);
+}
+
+.todoStatusRunning {
+  background: rgba(91, 124, 247, 0.14);
+  color: var(--accent, #5b5cf6);
+  animation: explorePulse 1.4s infinite;
+}
+
+.todoStatusDone {
+  background: rgba(16, 185, 129, 0.14);
+  color: var(--success, #10b981);
+}
+
+.todoStatusFailed {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger, #ef4444);
+}
+
+.todoStatusCancelled {
+  background: rgba(132, 148, 173, 0.14);
+  color: var(--ink-3, #9ca3af);
+}
+
+.todoText {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink-3, #4a5468);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.todoTextActive {
+  color: var(--ink, #1f2937);
+}
+
+.todoPriority {
+  flex-shrink: 0;
+}
+
+/* ── 打开结果入口（参照报告文件卡） ── */
+.openCard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 14px 16px;
+  overflow: hidden;
+  border: 1px solid rgba(91, 124, 247, 0.2);
+  border-radius: 16px;
+  background:
+    linear-gradient(90deg, rgba(91, 124, 247, 0.08), rgba(255, 255, 255, 0.74) 42%),
+    rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 24px rgba(54, 73, 135, 0.07);
+  cursor: pointer;
+  padding: 14px 16px;
+  text-align: left;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.openCard::before {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, #5b7cf7, #8ba5ff);
+  content: '';
+}
+
+.openCard:hover {
+  border-color: rgba(91, 124, 247, 0.36);
+  box-shadow: 0 10px 28px rgba(54, 73, 135, 0.12);
+  transform: translateY(-1px);
+}
+
+.openCardMain {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 13px;
+}
+
+.openCardIcon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(91, 124, 247, 0.16);
+  border-radius: 12px;
+  background: rgba(91, 124, 247, 0.09);
+  color: var(--accent, #5b7cf7);
+  font-size: 20px;
+}
+
+.openCardInfo {
+  min-width: 0;
+}
+
+.openCardTitle {
+  color: var(--ink, #25304d);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.openCardDesc {
+  margin-top: 2px;
+  color: var(--ink-3, #8a97ad);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.openCardAction {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  background: var(--accent, #5b7cf7);
+  box-shadow: 0 5px 12px rgba(91, 124, 247, 0.22);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+  padding: 8px 14px;
+}
+
+.openCardActionActive {
+  background: #4e70ed;
+}
+
+/* 卡片内运行/失败等轻提示 */
+.cardHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 14px;
+  color: var(--ink-3, #9aa3b5);
+  font-size: 13px;
+}
+
+.inlineAlert {
+  margin: 0 16px 14px;
+}
+
+/* ── 右侧全高工作室侧栏 ── */
+.pane {
+  width: 100%;
+  min-width: 420px;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(18px);
+}
+
+.paneHeader {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.14);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 12px 16px;
+}
+
+.paneTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink, #25304d);
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.paneTitleText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paneMeta {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.paneCloseButton {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border: none;
+  border-radius: 8px;
+  box-shadow: none;
+  color: var(--ink-2, #4f5c76);
+  padding: 0;
+}
+
+.paneCloseButton:hover {
+  background: rgba(91, 124, 247, 0.08) !important;
+  color: var(--ink, #25304d) !important;
+}
+
+.paneBody {
+  min-height: 0;
+  max-height: calc(100vh - 280px); /* 限制右侧消息区域高度，避免撑破页面 */
+  flex: 1;
+  overflow: auto;
+  padding: 18px;
+}
+
+.paneSection {
+  margin-bottom: 18px;
+}
+
+.paneSection:last-child {
+  margin-bottom: 0;
+}
+
+.paneSectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  color: var(--ink, #25304d);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stepResult {
+  border: 1px solid rgba(130, 140, 200, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+}
+
+.stepResult + .stepResult {
+  margin-top: 10px;
+}
+
+.stepResultHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
+  padding: 9px 14px;
+  color: var(--ink-2, #26324d);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stepResultBody {
+  padding: 4px 14px 12px;
+}
+
+.finalBlock {
+  border: 1px solid rgba(91, 124, 247, 0.16);
+  border-radius: 12px;
+  background: rgba(91, 124, 247, 0.045);
+  padding: 14px 16px;
+}
+
+.summaryBlock {
+  border-radius: 12px;
+  background: rgba(245, 247, 255, 0.7);
+  color: var(--ink-2, #4a5468);
+  font-size: 13px;
+  line-height: 1.75;
+  padding: 12px 14px;
+}
+
+.summaryBlock b {
+  color: var(--ink, #25304d);
+}
+
+.paneEmpty {
+  display: flex;
+  min-height: 320px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--ink-3, #9aa3b5);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ── 富文本 + 表格渲染（适配系统主题） ── */
+.richText {
+  color: var(--ink-2, #333c4f);
+  font-size: 13px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.richText > :first-child {
+  margin-top: 0;
+}
+
+.richText > :last-child {
+  margin-bottom: 0;
+}
+
+.richText p {
+  margin: 6px 0;
+}
+
+.richText pre {
+  overflow: auto;
+  border-radius: 10px;
+  background: rgba(26, 39, 68, 0.06);
+  margin: 8px 0;
+  padding: 10px 12px;
+}
+
+.tableWrap {
+  overflow: auto;
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  border-radius: 10px;
+  margin: 8px 0;
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.dataTable th,
+.dataTable td {
+  border-bottom: 1px solid rgba(130, 140, 200, 0.14);
+  border-right: 1px solid rgba(130, 140, 200, 0.1);
+  padding: 8px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dataTable th:last-child,
+.dataTable td:last-child {
+  border-right: none;
+}
+
+.dataTable thead th {
+  position: sticky;
+  top: 0;
+  background: rgba(91, 124, 247, 0.09);
+  color: var(--ink, #25304d);
+  font-weight: 700;
+}
+
+.dataTable tbody tr:nth-child(even) {
+  background: rgba(245, 247, 255, 0.55);
+}
+
+.dataTable tbody tr:hover {
+  background: rgba(91, 124, 247, 0.06);
+}
+
+.tableCaption {
+  padding: 6px 12px;
+  border-top: 1px solid rgba(130, 140, 200, 0.14);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--ink-3, #8a97ad);
+  font-size: 11px;
+}
+
+.mediaImage {
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(130, 140, 200, 0.16);
+}
+
+.fileLink {
+  color: var(--accent, #4f46e5);
+  font-size: 13px;
+}
+
+@keyframes explorePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(91, 124, 247, 0.28);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(91, 124, 247, 0);
+  }
+}
+
+@media (max-width: 900px) {
+  .cardWorkspace {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .todoColumn {
+    border-right: none;
+    border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+  }
+
+  .currentResultBody {
+    max-height: 52vh;
+  }
+
+  .currentResultHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .currentResultMeta {
+    max-width: 100%;
+  }
+
+  .pane {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .dataTable th,
+  .dataTable td {
+    white-space: normal;
+  }
+}

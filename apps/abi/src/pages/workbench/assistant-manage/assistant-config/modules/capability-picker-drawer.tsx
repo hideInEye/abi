@@ -20,7 +20,7 @@ export type PickerOption = { id: string; name: string; description?: string; gro
 export interface PickerTabConfig {
   key: string
   label: string
-  /** 配置后展示左侧分组目录（tableSemanticsGroupList 按该类型拉取），fetchList 会带上 groupId */
+  /** 配置后展示左侧数据目录（tableSemanticsGroupList 按该类型拉取），fetchList 会带上 groupId */
   groupType?: TableSemanticsGroupType
   /** 拉取列表并归一化为 PickerOption（id 需带业务前缀避免跨类冲突） */
   fetchList: (ctx: { spaceId: number; groupId?: string }) => Promise<PickerOption[]>
@@ -182,7 +182,7 @@ const CapabilityPickerDrawer: React.FC<Props> = ({ open, title, icon, tabs, spac
         />
       )}
       <div style={{ display: 'flex', gap: 12, height: showTabs ? 'calc(100% - 62px)' : '100%' }}>
-        {/* 左：分组目录 */}
+        {/* 左：数据目录 */}
         {hasGroups && (
           <div
             style={{
@@ -195,7 +195,7 @@ const CapabilityPickerDrawer: React.FC<Props> = ({ open, title, icon, tabs, spac
               width: 150,
             }}
           >
-            <div style={{ color: '#8fa0b5', fontSize: 12, fontWeight: 600, padding: '4px 8px 8px' }}>分组目录</div>
+            <div style={{ color: '#8fa0b5', fontSize: 12, fontWeight: 600, padding: '4px 8px 8px' }}>数据目录</div>
             <Spin spinning={loadingGroups}>
               {groups.length === 0 && !loadingGroups ? (
                 <div style={{ color: '#bfbfbf', fontSize: 12, padding: '8px' }}>暂无分组</div>

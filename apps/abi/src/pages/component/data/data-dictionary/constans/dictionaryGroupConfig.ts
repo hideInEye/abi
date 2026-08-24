@@ -5,7 +5,7 @@ export const dictionaryGroupConfig = {
   inputPlaceholderEn: '请输入字典分组英文名称',
   modalAddTitle: '新增字典分组',
   modalEditTitle: '编辑字典分组',
-  panelTitle: '分组目录',
+  panelTitle: '数据目录',
   // remark: '字典分组英文名称',
   rule: [
     [{ message: '请输入字典分组名称', required: true }],

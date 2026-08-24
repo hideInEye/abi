@@ -201,7 +201,7 @@ const ToolPickerDrawer: React.FC<Props> = ({ open, spaceId, selectedToolIds, onT
         }}
       />
       <div style={{ display: 'flex', gap: 12, height: 'calc(100% - 62px)' }}>
-        {/* 左：MCP 分组目录 */}
+        {/* 左：MCP 数据目录 */}
         {activeTab === 'mcp' && (
           <div
             style={{
@@ -214,7 +214,7 @@ const ToolPickerDrawer: React.FC<Props> = ({ open, spaceId, selectedToolIds, onT
               width: 150,
             }}
           >
-            <div style={{ color: '#8fa0b5', fontSize: 12, fontWeight: 600, padding: '4px 8px 8px' }}>分组目录</div>
+            <div style={{ color: '#8fa0b5', fontSize: 12, fontWeight: 600, padding: '4px 8px 8px' }}>数据目录</div>
             <Spin spinning={loadingGroups}>
               {mcpGroups.length === 0 && !loadingGroups ? (
                 <div style={{ color: '#bfbfbf', fontSize: 12, padding: '8px' }}>暂无MCP分组</div>
@@ -311,14 +311,14 @@ export const GroupNavItem: React.FC<{ name: string; active: boolean; onClick: ()
   )
 }
 
-// 分组目录节点数据（平铺，含 parentId 用于构建层级）
+// 数据目录节点数据（平铺，含 parentId 用于构建层级）
 export interface GroupNavData {
   groupId: string
   groupName: string
   parentId?: string
 }
 
-// 分组目录单行：与「正常分组」树一致的文件夹图标 + 层级缩进 + 右侧折叠箭头
+// 数据目录单行：与「正常分组」树一致的文件夹图标 + 层级缩进 + 右侧折叠箭头
 const GroupTreeNavRow: React.FC<{
   name: string
   depth: number
@@ -388,7 +388,7 @@ const GroupTreeNavRow: React.FC<{
   )
 }
 
-// 左侧分组目录：按 parentId 构建层级（与「正常分组」一致），单选导航，点击加载该组列表
+// 左侧数据目录：按 parentId 构建层级（与「正常分组」一致），单选导航，点击加载该组列表
 export const GroupTreeNav: React.FC<{ groups: GroupNavData[]; activeGroupId: string; onSelect: (groupId: string) => void }> = ({ groups, activeGroupId, onSelect }) => {
   const tree = useMemo(() => buildGroupTree(groups, '0', true), [groups])
   // 默认展开所有含子级的分组，层级一目了然；groups 变化（切分组类型/空间）时重新展开
