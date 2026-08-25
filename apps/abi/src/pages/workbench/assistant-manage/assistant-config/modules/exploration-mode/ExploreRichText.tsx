@@ -5,6 +5,10 @@ import styles from './styles.module.css'
 
 interface ExploreRichTextProps {
   text: string
+  /** 仅渲染表格等结构化块，过滤技能执行过程文本（右侧工作室使用）。 */
+  tablesOnly?: boolean
+  /** 仅渲染文本块，过滤表格（左侧执行过程信息使用，数据表格去右侧工作室看）。 */
+  hideTables?: boolean
 }
 
 interface ParsedTable {
@@ -105,9 +109,24 @@ const DataTable: React.FC<{ table: ParsedTable }> = ({ table }) => (
   </div>
 )
 
+/** 判断文本中是否包含可识别的表格，供右侧工作室筛选结构化数据。 */
+export function containsTable(text: string): boolean {
+  return splitBlocks(text || '').some((block) => block.type === 'table')
+}
+
+/** 判断文本中是否包含非表格的文本段落，供左侧执行过程信息过滤纯数据输出。 */
+export function containsText(text: string): boolean {
+  return splitBlocks(text || '').some((block) => block.type === 'text' && block.content.trim().length > 0)
+}
+
 /** 探索模式统一的富文本渲染：自动识别（含被压成一行的）表格并以系统风格展示。 */
-const ExploreRichText: React.FC<ExploreRichTextProps> = ({ text }) => {
-  const blocks = React.useMemo(() => splitBlocks(text || ''), [text])
+const ExploreRichText: React.FC<ExploreRichTextProps> = ({ text, tablesOnly = false, hideTables = false }) => {
+  const blocks = React.useMemo(() => {
+    const all = splitBlocks(text || '')
+    if (tablesOnly) return all.filter((block) => block.type === 'table')
+    if (hideTables) return all.filter((block) => block.type !== 'table')
+    return all
+  }, [text, tablesOnly, hideTables])
 
   return (
     <div className={styles.richText}>

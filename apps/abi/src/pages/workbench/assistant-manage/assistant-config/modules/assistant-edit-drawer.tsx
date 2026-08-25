@@ -18,7 +18,7 @@ import {
 import { Button, Input, Modal, Radio, Spin, Switch, Tag, message } from 'antd'
 import { AssistantIconBlock, AssistantIconPicker } from '@/components/AssistantIcon'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { addAppApi, updateAppApi, fetchAppDetailApi, publishVersionApi } from '@/service/api/abi-chat-app'
 import { fetchModelList } from '@/service/api'
@@ -162,6 +162,9 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   // 右侧展开的探索项：从实时列表按 id 取，保证流式更新时预览同步刷新
   const previewItem = useMemo(() => debugItems.find((it) => it.id === previewId) || null, [debugItems, previewId])
 
+  // 调试预览区滚动容器：提交问题后定位到当前执行项
+  const debugScrollRef = useRef<HTMLDivElement>(null)
+
   /** 提交调试问题：清空输入并走探索模式流式接口 */
   const submitDebug = () => {
     if (debugLoading) return
@@ -169,6 +172,15 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     if (!q) return
     setChatInput('')
     handleSend(q, { skillSourceVersionIds })
+
+    // 发送后定位到当前执行问题，与 chat 端探索发送行为一致
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const container = debugScrollRef.current
+        if (!container) return
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+      })
+    })
   }
 
   // id -> 名称映射（各选择抽屉加载列表后回填；id 均带业务前缀不会冲突），用于折叠行下方展示已选项名称
@@ -1039,7 +1051,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             }}
           >
             <SectionHeader icon={headerIcon} title="调试预览" />
-            <div style={{ flex: 1, overflow: 'auto', padding: '18px 24px' }}>
+            <div ref={debugScrollRef} style={{ flex: 1, overflow: 'auto', padding: '18px 24px' }}>
               <div
                 style={{
                   color: '#8fa0b5',

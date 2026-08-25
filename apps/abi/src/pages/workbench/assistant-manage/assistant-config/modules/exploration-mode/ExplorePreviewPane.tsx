@@ -1,7 +1,10 @@
-import { CheckCircleOutlined, CloseCircleOutlined, CompassOutlined, InboxOutlined, ToolOutlined } from '@ant-design/icons'
-import { Button, Empty, Tag } from 'antd'
+import { CheckCircleOutlined, CloseCircleOutlined, CompassOutlined, DownloadOutlined, InboxOutlined } from '@ant-design/icons'
+import { Button, Dropdown, Empty, Tag } from 'antd'
+import type { MenuProps } from 'antd'
 import React from 'react'
 
+import { downloadExploreExport, isStructuredOutput } from './exploreExport'
+import type { ExploreExportFormat } from './exploreExport'
 import ExploreRichText from './ExploreRichText'
 import type { ExploreItem, ExploreStep, ExploreStepOutput } from './types'
 import styles from './styles.module.css'
@@ -18,6 +21,12 @@ const CollapseIcon: React.FC = () => (
   </svg>
 )
 
+const EXPORT_MENU_ITEMS: MenuProps['items'] = [
+  { key: 'word', label: 'Word 文件' },
+  { key: 'pdf', label: 'PDF 文件（打印另存）' },
+  { key: 'html', label: 'HTML 文件' },
+]
+
 function getStatusTag(status: ExploreItem['status']) {
   switch (status) {
     case 'running':
@@ -33,7 +42,7 @@ function getStatusTag(status: ExploreItem['status']) {
   }
 }
 
-function renderOutput(output: ExploreStepOutput, index: number) {
+function renderStructuredOutput(output: ExploreStepOutput, index: number) {
   const content = output.content
   if (output.outputType === 'image' && typeof content === 'string') {
     return <img key={index} src={content} alt="步骤输出" className={styles.mediaImage} />
@@ -48,20 +57,19 @@ function renderOutput(output: ExploreStepOutput, index: number) {
   if (output.outputType === 'json' || (typeof content === 'object' && content !== null)) {
     return <ExploreRichText key={index} text={`\n\`\`\`json\n${JSON.stringify(content, null, 2)}\n\`\`\`\n`} />
   }
-  return <ExploreRichText key={index} text={String(content ?? '')} />
+  if (typeof content === 'string') {
+    return <ExploreRichText key={index} text={content} tablesOnly />
+  }
+  return null
 }
 
+/** 分栏只展示结构化数据，不展示技能名称与执行过程信息。 */
 const StepResult: React.FC<{ step: ExploreStep }> = ({ step }) => {
-  if (step.outputs.length === 0) return null
+  const structuredOutputs = step.outputs.filter(isStructuredOutput)
+  if (structuredOutputs.length === 0) return null
   return (
     <div className={styles.stepResult}>
-      <div className={styles.stepResultHead}>
-        <ToolOutlined />
-        <span>{step.title || step.action || `步骤 ${step.step ?? ''}`}</span>
-        {step.status === 'failed' && <Tag color="red">失败</Tag>}
-        {step.status === 'cancelled' && <Tag>已取消</Tag>}
-      </div>
-      <div className={styles.stepResultBody}>{step.outputs.map(renderOutput)}</div>
+      <div className={styles.stepResultBody}>{structuredOutputs.map(renderStructuredOutput)}</div>
     </div>
   )
 }
@@ -69,7 +77,7 @@ const StepResult: React.FC<{ step: ExploreStep }> = ({ step }) => {
 /** 探索结果全高工作室：展示分步骤执行数据、最终结论与执行摘要。 */
 const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose }) => {
   const statusTag = getStatusTag(item.status)
-  const resultSteps = item.steps.filter((step) => step.outputs.length > 0)
+  const resultSteps = item.steps.filter((step) => step.outputs.some(isStructuredOutput))
   const hasResult = Boolean(item.finalContent) || resultSteps.length > 0 || Boolean(item.summary)
 
   return (
@@ -78,21 +86,43 @@ const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose }
         <div style={{ minWidth: 0 }}>
           <div className={styles.paneTitle}>
             <CompassOutlined />
-            <span className={styles.paneTitleText}>{item.question || '探索结果'}</span>
+            <span className={styles.paneTitleText}>工作室</span>
           </div>
           <div className={styles.paneMeta}>
             <Tag color={statusTag.color}>{statusTag.text}</Tag>
             {item.finishReason === 'success' && <Tag icon={<CheckCircleOutlined />} color="green">成功</Tag>}
+            <span className={styles.paneQuestion} title={item.question}>{item.question}</span>
           </div>
         </div>
-        <Button
-          type="text"
-          className={styles.paneCloseButton}
-          icon={<CollapseIcon />}
-          title="收起结果"
-          aria-label="收起结果"
-          onClick={onClose}
-        />
+        <div className={styles.paneHeaderActions}>
+          <Dropdown
+            trigger={['click']}
+            placement="bottomRight"
+            disabled={!hasResult}
+            menu={{
+              items: EXPORT_MENU_ITEMS,
+              onClick: ({ key }) => downloadExploreExport(item, key as ExploreExportFormat),
+            }}
+          >
+            <Button
+              type="text"
+              className={styles.paneCloseButton}
+              icon={<DownloadOutlined />}
+              title="下载结果"
+              aria-label="下载结果"
+              aria-haspopup="menu"
+              disabled={!hasResult}
+            />
+          </Dropdown>
+          <Button
+            type="text"
+            className={styles.paneCloseButton}
+            icon={<CollapseIcon />}
+            title="收起结果"
+            aria-label="收起结果"
+            onClick={onClose}
+          />
+        </div>
       </div>
 
       <div className={styles.paneBody}>

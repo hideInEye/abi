@@ -68,6 +68,57 @@
   font-size: 12px;
 }
 
+.cardHeaderActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 工作室入口：卡片顶部蓝色芯片 + 方形图标按钮 */
+.studioChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(91, 124, 247, 0.3);
+  border-radius: 8px;
+  background: rgba(91, 124, 247, 0.1);
+  color: var(--accent, #5b7cf7);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 6px 10px;
+}
+
+.studioChip:hover {
+  background: rgba(91, 124, 247, 0.16);
+}
+
+.studioChipActive {
+  border-color: rgba(91, 124, 247, 0.5);
+  background: rgba(91, 124, 247, 0.2);
+}
+
+.studioIcon {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(130, 140, 200, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--ink-2, #333c4f);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.studioIcon:hover {
+  border-color: rgba(91, 124, 247, 0.4);
+  color: var(--accent, #5b7cf7);
+}
+
 /* ── 卡片内工作区：左侧 todolist，右侧当前步骤结果 ── */
 .cardWorkspace {
   display: grid;
@@ -76,7 +127,9 @@
 }
 
 .todoColumn {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
   border-right: 1px solid rgba(130, 140, 200, 0.12);
   background: rgba(255, 255, 255, 0.34);
 }
@@ -130,24 +183,47 @@
   max-height: 440px;
   flex: 1;
   overflow: auto;
-  padding: 14px 16px 16px;
+  padding: 16px;
 }
 
-.currentOutputList {
+/* 上块：当前技能执行过程信息（过程文本 + SQL），不展示数据表格 */
+.processInfo {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.currentOutputItem {
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid rgba(130, 140, 200, 0.12);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.74);
-  box-shadow: 0 6px 16px rgba(54, 73, 135, 0.04);
-  padding: 12px;
+.processCode {
+  overflow: auto;
+  border: 1px solid rgba(130, 140, 200, 0.14);
+  border-radius: 10px;
+  background: rgba(26, 39, 68, 0.05);
+  color: var(--ink-2, #333c4f);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 无过程文本/入参时的回退展示：当前动作 + 执行原因 */
+.processMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-left: 2px solid rgba(91, 124, 247, 0.28);
+  padding-left: 12px;
+  color: var(--ink-3, #6b7690);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.processMeta b {
+  color: var(--ink-2, #4f5c76);
+  font-weight: 700;
 }
 
 .currentResultEmpty {
@@ -169,7 +245,7 @@
 /* ── 面板（思考区 / 待办事项），用分隔线纵向堆叠 ── */
 .panel {
   border-bottom: 1px solid rgba(130, 140, 200, 0.1);
-  padding: 12px 16px 14px;
+  padding: 14px 16px 16px;
 }
 
 .panel:last-child {
@@ -198,6 +274,20 @@
   color: var(--ink-3, #9aa3b5);
   font-size: 12px;
   font-weight: 600;
+}
+
+/* 思考区标题可点击折叠/展开 */
+.panelTitleToggle {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  user-select: none;
+}
+
+.panelToggleIcon {
+  margin-left: auto;
+  color: var(--ink-3, #9aa3b5);
+  font-size: 11px;
 }
 
 /* 思考区正文：走到每一步只展示当前步骤思考 */
@@ -237,21 +327,18 @@
   line-height: 1.7;
 }
 
-/* 待办事项 */
+/* 待办事项：无边框无背景，宽松行距 */
 .todoList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
 }
 
 .todoRow {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  border: 1px solid rgba(130, 140, 200, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.58);
-  padding: 10px 12px;
+  padding: 6px 0;
 }
 
 .todoStatus {
@@ -295,129 +382,95 @@
 .todoText {
   flex: 1;
   min-width: 0;
-  color: var(--ink-3, #4a5468);
+  color: var(--ink-3, #8a97ad);
   font-size: 13px;
-  font-weight: 650;
-  line-height: 1.55;
+  font-style: italic;
+  /* 防止全局 font-synthesis: none 导致中文不合成斜体，局部放开 */
+  font-synthesis: style;
+  font-weight: 500;
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 
 .todoTextActive {
-  color: var(--ink, #1f2937);
+  color: var(--ink-2, #333c4f);
+  font-weight: 600;
 }
 
 .todoPriority {
   flex-shrink: 0;
-}
-
-/* ── 打开结果入口（参照报告文件卡） ── */
-.openCard {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin: 14px 16px;
-  overflow: hidden;
-  border: 1px solid rgba(91, 124, 247, 0.2);
-  border-radius: 16px;
-  background:
-    linear-gradient(90deg, rgba(91, 124, 247, 0.08), rgba(255, 255, 255, 0.74) 42%),
-    rgba(255, 255, 255, 0.78);
-  box-shadow: 0 8px 24px rgba(54, 73, 135, 0.07);
-  cursor: pointer;
-  padding: 14px 16px;
-  text-align: left;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
-}
-
-.openCard::before {
-  position: absolute;
-  top: 12px;
-  bottom: 12px;
-  left: 0;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: linear-gradient(180deg, #5b7cf7, #8ba5ff);
-  content: '';
-}
-
-.openCard:hover {
-  border-color: rgba(91, 124, 247, 0.36);
-  box-shadow: 0 10px 28px rgba(54, 73, 135, 0.12);
-  transform: translateY(-1px);
-}
-
-.openCardMain {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  align-items: center;
-  gap: 13px;
-}
-
-.openCardIcon {
-  display: inline-flex;
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(91, 124, 247, 0.16);
-  border-radius: 12px;
-  background: rgba(91, 124, 247, 0.09);
-  color: var(--accent, #5b7cf7);
-  font-size: 20px;
-}
-
-.openCardInfo {
-  min-width: 0;
-}
-
-.openCardTitle {
-  color: var(--ink, #25304d);
-  font-size: 14px;
-  font-weight: 750;
-  line-height: 1.45;
-}
-
-.openCardDesc {
-  margin-top: 2px;
+  border-radius: 999px;
+  background: rgba(132, 148, 173, 0.1);
   color: var(--ink-3, #8a97ad);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  padding: 1px 9px;
 }
 
-.openCardAction {
+.todoPriorityHigh {
+  background: rgba(235, 87, 87, 0.08);
+  color: #cf5b60;
+}
+
+.todoPriorityMedium {
+  background: rgba(242, 153, 46, 0.1);
+  color: #c78b2e;
+}
+
+.todoPriorityLow {
+  background: rgba(39, 174, 96, 0.08);
+  color: #2f9e63;
+}
+
+/* 当前步骤结果下块：技能名称展示区（完成执行灰色 / 当前执行黑色） */
+.skillList {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  border-top: 1px solid rgba(130, 140, 200, 0.1);
+  background: rgba(255, 255, 255, 0.3);
+  padding: 12px 16px 14px;
+}
+
+.skillRow {
   display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 6px;
-  border-radius: 10px;
-  background: var(--accent, #5b7cf7);
-  box-shadow: 0 5px 12px rgba(91, 124, 247, 0.22);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 650;
-  padding: 8px 14px;
-}
-
-.openCardActionActive {
-  background: #4e70ed;
-}
-
-/* 卡片内运行/失败等轻提示 */
-.cardHint {
-  display: inline-flex;
+  max-width: 100%;
   align-items: center;
   gap: 8px;
-  margin: 0 16px 14px;
+  border-radius: 10px;
+  background: rgba(132, 148, 173, 0.1);
   color: var(--ink-3, #9aa3b5);
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+
+.skillRowRunning {
+  background: rgba(91, 124, 247, 0.1);
+  color: var(--ink, #1f2937);
+}
+
+.skillName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .inlineAlert {
   margin: 0 16px 14px;
+}
+
+/* 左栏底部提示语：任务运行中提醒用户留在当前页面 */
+.runningHint {
+  margin-top: auto;
+  color: var(--ink-3, #8a97ad);
+  font-size: 12.5px;
+  line-height: 1.7;
+  padding: 12px 16px 14px;
 }
 
 /* ── 右侧全高工作室侧栏 ── */
@@ -467,6 +520,22 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.paneQuestion {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-3, #8a97ad);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paneHeaderActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
 }
 
 .paneCloseButton {
@@ -522,19 +591,8 @@
   margin-top: 10px;
 }
 
-.stepResultHead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
-  padding: 9px 14px;
-  color: var(--ink-2, #26324d);
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .stepResultBody {
-  padding: 4px 14px 12px;
+  padding: 12px 14px;
 }
 
 .finalBlock {
