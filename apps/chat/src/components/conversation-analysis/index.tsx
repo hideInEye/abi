@@ -83,7 +83,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const [curApp, setCurApp] = useState<any>(initialApp ? { ...initialApp } : {})
   const [appList, setAppList] = useState<any[]>(initialCache?.appList || [])
   const [curConv, setCurConv] = useState<any>(initialApp?.conv_uid ? { ...initialApp } : undefined)
-  const [loading, setLoading] = useState(false)
+  const [, setLoading] = useState(false)
   const lastSpaceIdRef = useRef<number | null>(null)
   const [isEdit, setIsEdit] = useState(false)
   const [EditData, setEditData] = useState<any>({})
@@ -129,7 +129,6 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
   // ── 数据语义状态（统一节点树，一次性拉取）──
   const [semanticTree, setSemanticTree] = useState<any[]>(initialCache?.semanticTree || [])
-  const [expandedSemGroups, setExpandedSemGroups] = useState<Set<string>>(new Set())
   const [selectedData, setSelectedData] = useState<SemanticSelectedData | null>(null)
   const [selectedExcel, setSelectedExcel] = useState<any>(null)
   const [semLoading, setSemLoading] = useState(false)
@@ -213,19 +212,6 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       .catch(() => {})
       .finally(() => setSemLoading(false))
   }, [currentSpaceId])
-
-  // 展开/收起分组节点（数据已全量返回，无需懒加载）
-  const toggleSemGroup = useCallback((nodeId: string) => {
-    setExpandedSemGroups(prev => {
-      const next = new Set(prev)
-      if (next.has(nodeId)) {
-        next.delete(nodeId)
-      } else {
-        next.add(nodeId)
-      }
-      return next
-    })
-  }, [])
 
   // ── SpaceId 同步 ──
   useEffect(() => {
@@ -685,8 +671,6 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                     selectedExcel={selectedExcel}
                     setSelectedExcel={setSelectedExcel}
                     semLoading={semLoading}
-                    expandedSemGroups={expandedSemGroups}
-                    onToggleSemGroup={toggleSemGroup}
                     externalValue={externalInputValue}
                     onExternalValueConsumed={() => setExternalInputValue('')}
                     selectedModeKey={selectedMode}

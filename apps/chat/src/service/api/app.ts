@@ -28,7 +28,8 @@ function mapAppListParams(params: any) {
 
 function mapAppCreateParams(data: any) {
   return {
-    appId: 0,
+    // appId=0 为普通对话（大屏用 appId=1 隔离）；传入具体 appId 时绑定对应助手，形成助手对话
+    appId: data.appId ?? data.app_id ?? 0,
     spaceId: data.space_id ?? data.spaceId,
     title: data.title ?? '新建对话',
     userId: data.userId ?? getCurrentUserId(),

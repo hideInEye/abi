@@ -6,6 +6,7 @@ import {
   EditOutlined,
   ExperimentOutlined,
   FolderOutlined,
+  LoadingOutlined,
   QuestionCircleOutlined,
   SecurityScanOutlined,
   SendOutlined,
@@ -14,12 +15,15 @@ import {
 } from '@ant-design/icons'
 import { Button, Drawer, Input, Spin, Switch, Tag } from 'antd'
 import type { FC } from 'react'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 import { AssistantIconBlock } from '@/components/AssistantIcon'
+import ExploreMessageRow from '@/components/conversation/exploration-mode/ExploreMessageRow'
+import ExplorePreviewPane from '@/components/conversation/exploration-mode/ExplorePreviewPane'
 import { fetchModelList } from '@/service/api/abi-system'
 import { fetchAssistantDetail } from '@/service/api/assistant'
 import { getSpaceId } from '@/utils/index'
+import { useAssistantDebugChat } from './useAssistantDebugChat'
 
 /** 助手卡片兜底数据：抽屉打开瞬间先展示，详情接口返回后覆盖 */
 export type AssistantDetailFallback = {
@@ -86,6 +90,58 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
     skill: false,
   })
   const toggle = (key: SectionKey) => setOpenMap((p) => ({ ...p, [key]: !p[key] }))
+
+  // ── 右侧调试预览：接入探索模式流式对话（对齐管理端 useAssistantDebugChat）──
+  const [chatInput, setChatInput] = useState('')
+  // 当前展开的探索项 id（内容随流式更新，故只存 id 再从实时列表取）
+  const [previewId, setPreviewId] = useState<string | null>(null)
+  // 数据语义可多选，但探索接口只收单个 schema_id：取第一个已选语义
+  const firstSchemaId = useMemo(() => {
+    const first = Array.from(selectedSemanticIds)[0]
+    return first ? Number(String(first).replace('schema_', '')) || undefined : undefined
+  }, [selectedSemanticIds])
+  // 对话模型单选：model_<id> 反解为 chatModelId
+  const debugChatModelId = useMemo(() => {
+    const first = Array.from(selectedModelIds)[0]
+    return first ? Number(String(first).replace('model_', '')) || undefined : undefined
+  }, [selectedModelIds])
+  // 技能 -> skills_source_version_ids
+  const skillSourceVersionIds = useMemo(
+    () => Array.from(selectedSkillIds).map((id) => String(id).replace('skill_', '')),
+    [selectedSkillIds],
+  )
+
+  const { items: debugItems, loading: debugLoading, handleSend, stopGenerating } = useAssistantDebugChat({
+    appId,
+    spaceId: getSpaceId(),
+    schemaId: firstSchemaId,
+    chatModelId: debugChatModelId,
+    isDebug: enableDebug,
+  })
+
+  // 展开的探索项：从实时列表按 id 取，保证流式更新时预览同步刷新
+  const previewItem = useMemo(() => debugItems.find((it) => it.id === previewId) || null, [debugItems, previewId])
+
+  // 调试预览区滚动容器：提交问题后定位到当前执行项
+  const debugScrollRef = useRef<HTMLDivElement>(null)
+
+  /** 提交调试问题：清空输入并走探索模式流式接口 */
+  const submitDebug = () => {
+    if (debugLoading) return
+    const q = chatInput.trim()
+    if (!q) return
+    setChatInput('')
+    handleSend(q, { skillSourceVersionIds })
+
+    // 发送后定位到当前执行问题，与 chat 端探索发送行为一致
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const container = debugScrollRef.current
+        if (!container) return
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+      })
+    })
+  }
 
   const mergeOptionNames = (options: { id: string; name: string; groupPath?: string }[]) => {
     setOptionNameMap((prev) => {
@@ -519,7 +575,7 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
             }}
           >
             <SectionHeader icon={headerIcon} title="调试预览" />
-            <div style={{ flex: 1, overflow: 'auto', padding: '18px 24px' }}>
+            <div ref={debugScrollRef} style={{ flex: 1, overflow: 'auto', padding: '18px 24px' }}>
               <div
                 style={{
                   color: '#8fa0b5',
@@ -548,6 +604,19 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
                   {description || `你好，我是你的${name || '智能助手'}，有什么可以帮助你的？`}
                 </div>
               </div>
+              {/* 探索模式对话时间线：接入真实流式结果 */}
+              {debugItems.length > 0 && (
+                <div style={{ marginTop: 18 }}>
+                  {debugItems.map((it) => (
+                    <ExploreMessageRow
+                      key={it.id}
+                      item={it}
+                      active={previewId === it.id}
+                      onOpen={() => setPreviewId(it.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 推荐问题 + 输入栏 */}
@@ -559,6 +628,10 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
                     <Tag
                       key={q}
                       color="processing"
+                      onClick={() => {
+                        if (debugLoading) return
+                        handleSend(q, { skillSourceVersionIds })
+                      }}
                       style={{
                         background: 'linear-gradient(135deg, rgba(91, 124, 247, 0.08) 0%, rgba(112, 145, 250, 0.08) 100%)',
                         border: '1px solid rgba(91, 124, 247, 0.2)',
@@ -581,9 +654,18 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
                 )}
               </div>
               <Input
-                placeholder="请输入问题"
+                placeholder={debugLoading ? 'AI 正在思考，可点击右侧停止…' : '请输入问题'}
                 size="large"
-                suffix={<SendOutlined style={{ color: '#5b7cf7' }} />}
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onPressEnter={submitDebug}
+                suffix={
+                  debugLoading ? (
+                    <LoadingOutlined style={{ color: '#5b7cf7', cursor: 'pointer' }} title="停止生成" onClick={stopGenerating} />
+                  ) : (
+                    <SendOutlined style={{ color: '#5b7cf7', cursor: 'pointer' }} onClick={submitDebug} />
+                  )
+                }
                 style={{
                   borderRadius: 10,
                   border: '1px solid rgba(130, 140, 200, 0.2)',
@@ -594,6 +676,20 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
           </div>
         </div>
       </Spin>
+
+      {/* 调试结果工作室：展开某条探索项的全部执行数据、最终结论与摘要 */}
+      <Drawer
+        destroyOnClose
+        open={!!previewItem}
+        placement="right"
+        width={680}
+        closable={false}
+        title={null}
+        bodyStyle={{ padding: 0, height: '100%' }}
+        onClose={() => setPreviewId(null)}
+      >
+        {previewItem && <ExplorePreviewPane item={previewItem} onClose={() => setPreviewId(null)} />}
+      </Drawer>
     </Drawer>
   )
 }
