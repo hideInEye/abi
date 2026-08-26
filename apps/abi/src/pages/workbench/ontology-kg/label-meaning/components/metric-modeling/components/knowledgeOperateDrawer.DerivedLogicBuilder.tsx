@@ -7,14 +7,14 @@ import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/componen
 import {
   RuleExpressionBuilder,
   type RuleExpressionBuilderHandle,
+  RuleExpressionFormItem,
   collectRuleFieldIds,
-  compileRulePredicate,
   createRuleFieldOptions,
   normalizeRuleLayers,
-  validateRuleLayers
+  validateRuleLayers,
+  validateRuleLogicUniformity
 } from '@/pages/workbench/ontology-kg/label-meaning/components/rule-expression'
 
-import { AGG_METHOD_OPTIONS, STATISTICAL_DATE_UNIT_OPTIONS } from '../constants/metricModeling.constants'
 import { useKnowledgeDimensions } from '../hooks/useKnowledgeDimensions'
 import type {
   KnowledgeDerivedCondition,
@@ -23,8 +23,15 @@ import type {
   KnowledgeTechField,
   StatisticalCaliber
 } from '../types/metricModeling.types'
-import { normalizeStatisticalCaliber } from '../utils/precomputeConfig'
+import { buildDerivedMetricPreview } from '../utils/derivedMetricPreview'
+import {
+  getStatisticalDateRangeHint,
+  isDynamicStatisticalDateRangeMode,
+  isValidStatisticalDateRangeValue,
+  normalizeStatisticalCaliber
+} from '../utils/precomputeConfig'
 
+import styles from './knowledgeOperateDrawer.DerivedLogicBuilder.module.scss'
 import { TimeStringPicker } from './knowledgeOperateDrawer.PrecomputeConfig'
 import { StatisticalDateRangeFields } from './knowledgeOperateDrawer.StatisticalDateRangeFields'
 
@@ -56,6 +63,9 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
   const techId = AForm.useWatch('techId', form)
   const projectionFunc = AForm.useWatch('projectionFunc', form)
   const derivedExpressions = AForm.useWatch('derivedExpressions', form)
+  const bizName = AForm.useWatch('bizName', { form, preserve: true })
+  const dimensionFieldIds = AForm.useWatch('dimensionFieldIds', { form, preserve: true })
+  const indicatorCode = AForm.useWatch('indicatorCode', form)
   const statisticalCaliberValue = AForm.useWatch('statisticalCaliber', form) as StatisticalCaliber | undefined
   const statisticalCaliber = useMemo(
     () => normalizeStatisticalCaliber(statisticalCaliberValue),
@@ -64,11 +74,20 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
   const {
     error: dimensionError,
     loading: dimensionLoading,
+    options: dimensionOptions,
     retry: retryDimensions,
     treeData: dimensionTree
   } = useKnowledgeDimensions()
   const ruleFields = useMemo(() => createRuleFieldOptions(allFields), [allFields])
   const normalizedLayers = useMemo(() => normalizeRuleLayers(derivedExpressions), [derivedExpressions])
+
+  useEffect(() => {
+    const subjectDimensionId = statisticalCaliber.subjectDimensionId
+    if (!subjectDimensionId) return
+    const option = dimensionOptions.find(item => String(item.key) === String(subjectDimensionId))
+    if (!option || option.name === statisticalCaliber.subjectDimensionName) return
+    form.setFieldValue(['statisticalCaliber', 'subjectDimensionName'], option.name)
+  }, [dimensionOptions, form, statisticalCaliber.subjectDimensionId, statisticalCaliber.subjectDimensionName])
 
   useEffect(() => {
     const current = form.getFieldValue('derivedExpressions')
@@ -80,36 +99,44 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
     )
   }, [form])
 
-  const result = useMemo(() => {
-    const atomicLabel =
-      atomicMetricOptions.find(item => String(item.value) === String(techId || ''))?.label || '原子指标'
-    const aggregation = AGG_METHOD_OPTIONS.find(item => item.value === (projectionFunc || 'sum'))?.label || '合计'
-    const predicate = compileRulePredicate(normalizedLayers, ruleFields)
-      .split('\n')
-      .filter(Boolean)
-      .map(item => `(${item})`)
-      .join(' AND ')
-    const periodLabel = `最近 ${statisticalCaliber.dateRangeValue} ${STATISTICAL_DATE_UNIT_OPTIONS.find(item => item.value === statisticalCaliber.dateRangeUnit)?.label || '小时'}`
-    const timeLabel =
-      statisticalCaliber.timeRangeType === 'specified'
-        ? `${statisticalCaliber.startTime || '--:--'}～${statisticalCaliber.endTime || '--:--'}`
-        : '全天'
-    return {
-      aggregation,
-      atomicLabel,
-      expressionPreview: `${aggregation}(${atomicLabel}) + ${periodLabel} + ${timeLabel}${predicate ? ` + Filters(${predicate})` : ''}`,
-      periodLabel,
-      predicate,
-      sqlPreview: `${String(projectionFunc || 'sum').toUpperCase()}(${atomicLabel})${predicate ? `\nWHERE ${predicate}` : ''}`,
-      timeLabel
-    }
-  }, [atomicMetricOptions, normalizedLayers, projectionFunc, ruleFields, statisticalCaliber, techId])
+  const selectedAtomicOption = useMemo(
+    () => atomicMetricOptions.find(item => String(item.value) === String(techId || '')),
+    [atomicMetricOptions, techId]
+  )
+  const result = useMemo(
+    () =>
+      buildDerivedMetricPreview({
+        allFields,
+        atomicLabel: selectedAtomicOption?.label,
+        atomicMetric: selectedAtomicOption?.item,
+        bizName,
+        dimensionFieldIds,
+        dimensionOptions,
+        indicatorCode,
+        projectionFunc,
+        ruleFields,
+        ruleLayers: normalizedLayers,
+        statisticalCaliber
+      }),
+    [
+      allFields,
+      bizName,
+      dimensionFieldIds,
+      dimensionOptions,
+      indicatorCode,
+      normalizedLayers,
+      projectionFunc,
+      ruleFields,
+      selectedAtomicOption,
+      statisticalCaliber
+    ]
+  )
 
   useEffect(() => {
     form.setFieldValue('derivedConditionExpr', result.predicate ? `WHERE ${result.predicate}` : '')
-    form.setFieldValue('expr', result.sqlPreview)
+    form.setFieldValue('expr', result.submissionExpression)
     form.setFieldValue('relItemId', collectRuleFieldIds(normalizedLayers).join(','))
-  }, [form, normalizedLayers, result.predicate, result.sqlPreview])
+  }, [form, normalizedLayers, result.predicate, result.submissionExpression])
 
   return (
     <>
@@ -123,11 +150,23 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
             <AForm.Item
               className="mb-0!"
               name={['statisticalCaliber', 'dateRangeValue']}
-              rules={[{ message: '请输入大于 0 的整数', min: 1, required: true, type: 'integer' }]}
+              rules={[
+                {
+                  validator: (_, fieldValue) => {
+                    const mode = form.getFieldValue(['statisticalCaliber', 'dateRangeMode'])
+                    if (!isDynamicStatisticalDateRangeMode(mode)) return Promise.resolve()
+                    return isValidStatisticalDateRangeValue(fieldValue)
+                      ? Promise.resolve()
+                      : Promise.reject(new Error('请输入 1 至 999 的正整数'))
+                  }
+                }
+              ]}
             >
-              <StatisticalDateRangeFields />
+              <StatisticalDateRangeFields mode={statisticalCaliber.dateRangeMode} />
             </AForm.Item>
-            <div className="mt-2 text-sm text-[#8995a8]">每次预计算时，动态统计所选最近周期的数据。</div>
+            <div className="mt-2 text-sm text-[#8995a8]">
+              {getStatisticalDateRangeHint(statisticalCaliberValue || statisticalCaliber)}
+            </div>
           </div>
           <div>
             <div className="mb-2 text-sm text-[#3e5068] font-medium">时段范围</div>
@@ -197,6 +236,10 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
               placeholder="请选择主体维度"
               treeData={dimensionTree}
               treeNodeFilterProp="title"
+              onChange={value => {
+                const option = dimensionOptions.find(item => String(item.key) === String(value || ''))
+                form.setFieldValue(['statisticalCaliber', 'subjectDimensionName'], option?.name || '')
+              }}
             />
           </AForm.Item>
           {dimensionError ? (
@@ -233,16 +276,18 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
             }
           />
         ) : null}
-        <AForm.Item
+        <RuleExpressionFormItem
           name="derivedExpressions"
           rules={[
             {
               validator: (_, value) => {
-                const validation = validateRuleLayers(value, ruleFields)
-                if (validation.valid) return Promise.resolve()
+                const baseValidation = validateRuleLayers(value, ruleFields)
+                const logicValidation = validateRuleLogicUniformity(value)
+                const issues = [...baseValidation.issues, ...logicValidation.issues]
+                if (!issues.length) return Promise.resolve()
                 setShowRuleErrors(true)
                 window.setTimeout(() => ruleBuilderRef.current?.focusFirstError())
-                return Promise.reject(new Error(validation.issues[0]?.message || '请完善业务限定表达式'))
+                return Promise.reject(new Error(issues[0]?.message || '请完善业务限定表达式'))
               }
             }
           ]}
@@ -251,32 +296,23 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
             fieldLoading={fieldLoading}
             fields={ruleFields}
             ref={ruleBuilderRef}
+            uniformLogic
             validationRequested={showRuleErrors}
           />
-        </AForm.Item>
+        </RuleExpressionFormItem>
       </div>
 
-      <div className="mb-4 border border-gray-200 rounded bg-gray-50 p-4">
-        <OntologyFormSectionTitle icon={<CheckCircleOutlined />}>派生逻辑生成结果</OntologyFormSectionTitle>
-        <div className="mb-3 flex flex-wrap gap-2">
-          <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">
-            原子指标：{result.atomicLabel}
-          </span>
-          <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">
-            聚合方式：{result.aggregation}
-          </span>
-          <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">
-            日期范围：{result.periodLabel}
-          </span>
-          <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">
-            时段范围：{result.timeLabel}
-          </span>
-        </div>
-        <div className="border border-blue-200 rounded border-dashed bg-white p-3">
-          <div className="mb-1 text-gray-400">公式预览</div>
-          <pre className="m-0 whitespace-pre-wrap text-blue-600">{result.expressionPreview}</pre>
-          <div className="mb-1 mt-6 text-gray-400">SQL Preview</div>
-          <pre className="m-0 whitespace-pre-wrap text-blue-600">{result.sqlPreview}</pre>
+      <div className="mb-4 border border-gray-200 rounded bg-white p-4">
+        <OntologyFormSectionTitle icon={<CheckCircleOutlined />}>指标预览</OntologyFormSectionTitle>
+        <div className={styles.previewGrid}>
+          <div className={styles.previewCard}>
+            <div className={styles.previewCardTitle}>公式预览</div>
+            <pre className={styles.businessPreview}>{result.businessPreview}</pre>
+          </div>
+          <div className={styles.previewCard}>
+            <div className={styles.previewCardTitle}>SQL Preview</div>
+            <pre className={styles.sqlPreview}>{result.displaySql}</pre>
+          </div>
         </div>
       </div>
     </>

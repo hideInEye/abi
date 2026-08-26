@@ -1,11 +1,11 @@
-# 标签语义表达式与指标建模改造需求
+# 标签语义表达式与指标建模改造需求（含派生指标预览）
 
 ## 文档状态
 
-- 状态：前端实现完成，待后端接口联调。
-- 日期：2026-08-24。
+- 状态：指标预计算、派生指标统计周期和业务限定表达式正在按后端正式协议联调；其他已实现内容待登录后界面回归。
+- 日期：2026-08-26。
 - 当前分支：`dev/zanghb-ontology-iteration`。
-- 需求来源：用户确认的实施计划、五张交互截图，以及《芯智ABI\_标签语义表达式功能需求文档》V1.0。
+- 需求来源：用户确认的实施计划、交互截图、《芯智ABI\_标签语义表达式功能需求文档》V1.0，以及《指标建模\_时间范围扩展.html》交互稿。
 - 影响范围：`apps/abi/src/pages/workbench/ontology-kg/label-meaning`。
 
 本文件是本轮开发的唯一当前需求依据。原“会话分组独立页面与报告模式需求”已完成且不属于本轮范围。
@@ -64,6 +64,7 @@ ABI 属性建模功能新增与前端协议适配，包含共享规则组件、�
 - “为空/不为空”隐藏并清空值；其余运算符要求值去空格后非空。
 - 条件标识按分组内顺序显示 A、B、C……，删除后重排。
 - 分层、分组删除二次确认；条件直接删除。
+- 新增条件只更新表达式数据，不触发表达式完整性校验，也不自动展示或聚焦错误；完整性校验仍由“下一步”“确认”和“一键生成定义”等显式动作触发。
 - 生成和保存时不静默忽略任何空层、空组或不完整条件，需定位并聚焦首个错误项。
 
 ### 视觉与交互
@@ -107,7 +108,7 @@ END
 - 每条映射字段将 `projectionFunc` 一并提交。
 - 普通派生指标第二步删除可编辑“汇总依据/聚合方式”。
 - 选择原子指标后，从原子指标顶层或来源字段中继承 `projectionFunc` 并写入隐藏表单值；缺失时前端回退为 `sum`。
-- 原子指标选择框下方展示只读卡片：全部来源字段、聚合方式、所属语义数据；来源字段优先显示对应字段 `bizName`：不包含指标创建使用的精确 `_#_` 映射分隔符时原样显示完整 `bizName`，包含时仅显示分隔符后的内容，带空格的 `_ # _` 不视为映射格式；历史单来源原子指标的 `techId` 只有字段 ID 且语义字段未匹配时，使用原子指标列表/详情返回的 `bizName` 回显，最后才回退技术字段名或 ID；不增加重复可编辑来源字段。
+- 原子指标选择框下方展示只读卡片：来源字段、聚合方式、所属语义数据；来源字段只使用所选原子指标的英文技术名称 `techName`，不再使用中文 `bizName`。`techName` 符合 `表名.字段名` 规则时显示最后一个 `.` 后的字段名，无 `.` 时原样显示完整值；不增加重复可编辑来源字段。
 - 优先从指标列表项读取语义数据 ID，缺失时查询指标详情；随后查询对应数据语义详情并加载全部维度、度量和日期字段。
 - 处理加载、空数据、失败重试和快速切换竞态。
 - 切换到不同语义数据且已有业务限定条件时确认清空；切换到相同语义数据时保留。
@@ -133,10 +134,16 @@ END
 ## 五、派生指标统计口径和业务限定
 
 - 在普通派生指标第二步的业务限定表达式上方增加“统计口径”。
-- 日期范围为“最近 N + 小时/日/周/月”，默认最近 7 小时，N 为大于 0 的整数；“最近”作为数值输入框的前缀显示，数值输入框仍由对应 `Form.Item` 直接受控，确保表单取值、校验、保存和回显不受组合布局影响；前缀、数值输入框和日期单位必须等高且上下边缘平齐。
+- 日期范围左侧为受 Form 管理的方式下拉框，支持 `recent/previous_full/today/yesterday/this_week/last_week/this_month/last_month/this_quarter/last_quarter/this_year/last_year` 共 12 种方式。
+- 新建默认“最近 7 日”；旧数据缺少 `dateRangeMode` 时迁移为 `recent`，并保留旧数量和单位。
+- 只有“最近”和“前”显示“方式 + 数量 + 单位”三段 Compact 控件；其他自然周期只显示铺满宽度的方式下拉框。隐藏的数量和单位保留在表单及协议中，但不参与业务含义和校验。
+- “最近”支持小时、日、周、月、季度、年；“前”支持日、周、月、季度、年。从“最近 + 小时”切换到“前”时，单位自动调整为“日”，其他合法数量和单位保留。
+- 数量必须为 1～999 的整数；空值提示“请输入统计窗口数量。”，校验提示“请输入 1 至 999 的正整数”。数量输入框仍由外层 `Form.Item` 直接受控，确保组合布局下取值、校验、保存和回显正确。
+- 日期范围提示和预览摘要必须随方式、数量和单位实时变化；“前 N 日”摘要显示“前 N 天”，其他单位显示“前 N 个完整周/月/季度/年”。
+- Compact 控件使用局部 CSS Module 恢复三段圆角、等高和响应式，不修改全局表单样式。
 - 时段范围默认全天；指定时段显示开始和结束 `HH:mm`，要求开始时间早于结束时间。
 - 主体维度必选，复用第三步维度树数据源，使用单选 `TreeSelect`；与第三步多选互不自动同步。
-- `StatisticalCaliber` 保存 `dateRangeValue/dateRangeUnit/timeRangeType/startTime/endTime/subjectDimensionId`。
+- `StatisticalCaliber` 保存 `dateRangeMode/dateRangeValue/dateRangeUnit/timeRangeType/startTime/endTime/subjectDimensionId`，其中 `dateRangeUnit` 增加 `quarter/year`。
 - 写入 `calcLogic.statisticalCaliber`，旧数据缺失时使用默认日期和时段值，主体维度仍由用户选择。
 - 业务限定使用共享三级表达式组件；字段来自选中原子指标所属数据语义。
 - 新结构写入 `calcLogic.expressions[].groups[]`，解析器兼容旧 `conditions`。
@@ -149,6 +156,51 @@ END
 - 原子指标聚合方式优先使用后端 `projectionFunc`；前端默认 `sum` 仅作为后端字段缺失时的兼容值。
 - `calcLogic` 新字段为前端先行协议；后端正式字段确认后只调整 mapper，不改 UI 组件结构。
 
+## 六、普通派生指标预览
+
+- 仅将普通派生指标 `indicatorClass === 'derived'` 第二步的“派生逻辑生成结果”改为“指标预览”，不修改派生模板 `derivative`。
+- 删除原摘要标签和单块虚线预览，使用两张纵向卡片展示“公式预览”和“SQL Preview”。
+- 公式预览实时展示指标名称、计算基础、统计范围、主体维度、统计维度和配置表达式；字段未配置或条件不完整时显示明确占位。
+- 配置表达式保留全部分层、条件分组、条件及其“且/或”关系，多个分层沿用现有跨分层 AND 语义。
+- SQL Preview 使用原子指标继承的聚合方式，并优先按所选原子指标 `techName` 的最后一个 `.` 拆分来源表和英文来源字段：如 `trade_fact.payment_amount` 生成 `SELECT SUM(payment_amount) FROM trade_fact`；无 `.` 时字段和 `FROM` 来源均原样展示完整 `techName`。主体维度和第三步统计维度去重后生成 `GROUP BY`。
+- 来源元数据缺失时显示带“待接口返回”说明的来源字段或来源表占位，不以原子指标中文名称伪装技术字段。
+- `WHERE` 只展示可生成的业务限定条件；本轮不生成日期范围或时段范围 SQL，不完整条件不生成无效 SQL。
+- 完整展示 SQL 仅供界面预览。表单 `expr`、`derivedConditionExpr` 及 `calcLogic` 提交协议必须保持改造前行为。
+- 样式使用局部 CSS Module，遵循交互稿的白色外层模块、纵向卡片、深色业务文案及可横向滚动的等宽蓝色 SQL 区域，不修改全局样式。
+
+## 七、指标建模接口联调协议
+
+### 顶层计算频率
+
+- 表单内部继续使用 `PrecomputeConfig`，提交顶层 `updateFrequency` 改为对象：`frequency/minute/day_of_week/day_of_month`。
+- 每小时的 `minute` 为 0～59 的字符串；每日、每周、每月的 `minute` 为 `HH:mm`。
+- 每周仅 `day_of_week` 为 1～7，其余日期字段显式传 `null`；每月仅 `day_of_month` 为 1～31，其余日期字段显式传 `null`。
+- 编辑优先读取新对象，兼容旧顶层频率字符串和 `calcLogic.precomputeConfig`；保存继续双写旧 `calcLogic.precomputeConfig`。
+
+### 普通派生指标统计周期
+
+- `calcLogic.calcPeriod` 写入 `date_range` 和 `time_range`。
+- 表单的 `previous_full` 映射 API `previous`，`this_week/month/quarter/year` 映射 `current_week/month/quarter/year`，其他日期方式保持英文值。
+- 仅 `recent/previous` 传 `value/unit`，固定周期显式传 `null`。
+- 全天映射 `all_day` 并显式传空起止时间；指定时段映射 `custom` 并传 `start_time/end_time`。
+- 新 `calcPeriod` 优先回显，缺失时回退旧 `statisticalCaliber`。
+- 主体维度写入 `calcLogic.subjectDimension = { dim_id, dim_name }` 并优先回显；`dim_id` 为维度 ID，`dim_name` 为维度名称，同时保留旧 `statisticalCaliber.subjectDimensionId`。
+
+### 普通派生指标模板表达式
+
+- `calcLogic.indicator_templates.layers` 保存分层，`layerName` 为分层名，`sortOrder` 从 1 连续递增。
+- 每个条件分组映射为 `expressions`，包含 `expressionId/name/innerLogic/conditions`；层内统一逻辑写入 `groupLogic`。
+- 条件继续选择语义字段：`conditionId` 为字段 ID，`field` 为英文技术字段名，`fieldName` 为中文展示名。
+- 运算符映射为 `EQ/NE/GT/GE/LT/LE/IN/NOT_IN/NULL/NOT_NULL`；空值运算符不提交比较值，包含类值继续传单个字符串。
+- 新模板结构优先回显，旧 `calcLogic.expressions` 继续读写；衍生模板 `derivative` 的既有 `indicator_templates` 协议不变。
+
+### 统一逻辑和历史兼容
+
+- 公共表达式组件增加可选统一逻辑模式，仅普通派生指标启用；标签语义继续允许混合连接符。
+- 切换任一组间连接符时同步当前层全部组间连接符，切换条件连接符时同步当前分组全部条件连接符；新增项继承当前层级逻辑。
+- 历史混合逻辑原样回显，不自动改变语义；下一步或保存时阻止提交并定位首个不一致项，用户切换任一对应连接符后完成统一。
+- 保存双写新 `calcPeriod/indicator_templates/subjectDimension` 与旧 `statisticalCaliber/expressions/precomputeConfig`；冲突时新协议优先回显。
+
 ## 验收标准
 
 1. 标签语义和普通派生指标展示同一套三级嵌套交互，名称、数量、逻辑和完整性规则一致。
@@ -159,21 +211,32 @@ END
 6. 指标创建模块顺序、标题、计量单位和数据类型位置符合要求。
 7. 四种预计算频率动态控件、校验和说明文案正确，并能保存和回显。
 8. 统计口径能够保存和回显，主体维度单选与第三步维度树同源。
-9. `derivative`、自定义指标、第三步维度多选和标签基础信息无回归。
-10. 桌面和窄抽屉下无页面级横向溢出，连接线、逻辑节点和键盘焦点清晰。
+9. 12 种日期范围方式的动态控件、提示和预览摘要正确；“前”不允许小时，数量仅在动态方式下校验为 1～999。
+10. `derivative`、自定义指标、第三步维度多选和标签基础信息无回归。
+11. 桌面和窄抽屉下无页面级横向溢出，连接线、逻辑节点和键盘焦点清晰。
+12. 普通派生指标预览完整展示六项业务信息和实际元数据 SQL；切换原子指标、统计口径、条件和维度后能够实时更新，且提交协议不变。
+13. 四种顶层 `updateFrequency` 对象字段、字符串与显式空值符合接口协议，并可兼容旧频率数据回显。
+14. 普通派生指标新 `calcPeriod`、`subjectDimension` 与 `indicator_templates.layers` 能够保存、编辑回显，并与旧字段双写且以新协议优先。
+15. 派生指标层内和组内连接符保持统一，历史混合逻辑不会被静默修改；标签语义混合逻辑无回归。
 
 ## 测试要求
 
 - 为表达式规范化、完整性、名称与上限校验、连接关系、SQL 生成和字段 ID 收集补 Vitest。
 - 为 `calcLogic` 新结构、旧结构迁移、预计算配置和统计口径往返补 Vitest。
 - 为原子指标元数据和聚合方式回退补 mapper 测试。
+- 为派生指标预览补充纯函数测试，覆盖公式六项内容、混合逻辑、来源元数据、维度去重、空值回退、无效条件和展示/提交表达式隔离。
+- 为原子指标 `techName` 的 `表名.字段名` 拆分、无 `.` 原样回退、来源卡片英文显示和 SQL 首行生成补充单元测试。
+- 为四种 `updateFrequency`、12 种日期方式、两种时段方式、新旧优先级和显式 `null` 补适配器单元测试。
+- 为 `indicator_templates.layers` 多层、多组、10 种运算符、字段元数据、数组回显兼容及新旧往返补单元测试。
+- 为统一逻辑联动、继承、混合逻辑校验和标签语义非统一模式补组件测试。
+- 为 12 种日期范围方式的提示、摘要、单位白名单、旧协议迁移和新协议往返补 Vitest；组件测试覆盖动态/自然周期渲染、非法小时单位回退和数量校验。
 - 手工回归标签新增/编辑、原子映射、普通派生指标新增/编辑、第三步维度和其他指标类型。
 - 执行：
   - `pnpm test`
   - `pnpm --filter chatbi typecheck`
   - `pnpm --filter chatbi build`
   - `git diff --check`
-- 完成后创建 `.ai/runs/2026-08-24-label-expression-metric-modeling/RUN_LOG.md`，记录修改、验证、风险、接口待办和 AI 系统更新判断。
+- 本轮接口联调完成后创建 `.ai/runs/2026-08-26-indicator-api-integration/RUN_LOG.md`，记录修改、验证、风险、接口待办和 AI 系统更新判断；界面回归截图不保存到项目。
 
 ## 回滚策略
 

@@ -34,6 +34,7 @@ import {
   parseAtomicSourceFields,
   parseSemanticModelFields
 } from '../utils/atomicMetricSource'
+import { parseApiUpdateFrequency } from '../utils/indicatorApiAdapter'
 import {
   extractUniqueIds,
   getMetricFieldOptionLabel,
@@ -46,6 +47,7 @@ import { parseKnowledgeCalcLogicFormValues } from '../utils/knowledgeSubmitPaylo
 import {
   DEFAULT_PRECOMPUTE_CONFIG,
   DEFAULT_STATISTICAL_CALIBER,
+  isDynamicStatisticalDateRangeMode,
   normalizePrecomputeConfig,
   normalizeStatisticalCaliber
 } from '../utils/precomputeConfig'
@@ -119,7 +121,6 @@ const BUSINESS_FORM_FIELDS = new Set([
   'ownerPhone',
   'precomputeConfig',
   'qualityLevel',
-  'updateFrequency',
   'versionStatus'
 ])
 
@@ -415,8 +416,8 @@ function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormV
   const mappedBizNameParts = getMappedBizNameParts(rawBizName)
   const mappedTechNameParts = getMappedTechNameParts(rawTechName)
   const rawCalcLogic = parseJsonIfPossible(item.calcLogic) as Record<string, unknown>
-  const precomputeConfig = normalizePrecomputeConfig(rawCalcLogic?.precomputeConfig, item.updateFrequency)
-  const statisticalCaliber = normalizeStatisticalCaliber(rawCalcLogic?.statisticalCaliber)
+  const precomputeConfig = parseApiUpdateFrequency(item.updateFrequency, rawCalcLogic?.precomputeConfig)
+  const statisticalCaliber = normalizeStatisticalCaliber(calcLogicValues.statisticalCaliber)
   const values: KnowledgeFormValues = {
     ...item,
     ...templateValues,
@@ -430,8 +431,7 @@ function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormV
     precomputeConfig,
     projectionFunc: item.projectionFunc || calcLogicValues.projectionFunc || 'sum',
     statisticalCaliber,
-    techName: mappedTechNameParts.displayName,
-    updateFrequency: precomputeConfig.frequency
+    techName: mappedTechNameParts.displayName
   }
   if (item.isPublic !== undefined && item.isPublic !== null) {
     values.isPublic = Boolean(item.isPublic) === true || String(item.isPublic) === '1'
@@ -700,7 +700,6 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       precomputeConfig: DEFAULT_PRECOMPUTE_CONFIG,
       projectionFunc: 'sum',
       statisticalCaliber: DEFAULT_STATISTICAL_CALIBER,
-      updateFrequency: DEFAULT_PRECOMPUTE_CONFIG.frequency,
       variableMappings: []
     }
     form.setFieldsValue(nextValues)
@@ -753,12 +752,14 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         'indicatorCode',
         'techId',
         'projectionFunc',
-        ['statisticalCaliber', 'dateRangeValue'],
-        ['statisticalCaliber', 'dateRangeUnit'],
+        ['statisticalCaliber', 'dateRangeMode'],
         ['statisticalCaliber', 'timeRangeType'],
         ['statisticalCaliber', 'subjectDimensionId'],
         'derivedExpressions'
       ]
+      if (isDynamicStatisticalDateRangeMode(statisticalCaliber.dateRangeMode)) {
+        fields.push(['statisticalCaliber', 'dateRangeValue'], ['statisticalCaliber', 'dateRangeUnit'])
+      }
       if (statisticalCaliber.timeRangeType === 'specified') {
         fields.push(['statisticalCaliber', 'startTime'], ['statisticalCaliber', 'endTime'])
       }
@@ -990,7 +991,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   return (
     <CommonDrawer
       open={open}
-      title={isEditing ? '编辑指标建模原型' : '新建指标建模原型'}
+      title={isEditing ? '编辑指标建模' : '新建指标建模'}
       width="60%"
       footer={
         <ASpace className="w-full justify-end">

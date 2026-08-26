@@ -6,6 +6,16 @@ import type {
 } from '../types/metricModeling.types'
 
 import {
+  buildApiDerivedIndicatorTemplates,
+  parseApiDerivedIndicatorTemplates
+} from './derivedIndicatorTemplateAdapter'
+import {
+  buildApiCalcPeriod,
+  buildApiSubjectDimension,
+  parseApiCalcPeriod,
+  parseApiSubjectDimension
+} from './indicatorApiAdapter'
+import {
   DEFAULT_PRECOMPUTE_CONFIG,
   DEFAULT_STATISTICAL_CALIBER,
   normalizePrecomputeConfig,
@@ -70,7 +80,9 @@ const API_OPERATOR_FORM_MAP: Record<string, string> = {
   LE: '<=',
   LT: '<',
   NE: '!=',
-  NOT_IN: 'NOT LIKE'
+  NOT_IN: 'NOT LIKE',
+  NOT_NULL: 'IS NOT NULL',
+  NULL: 'IS NULL'
 }
 
 function compactRecord<T extends UnknownRecord>(payload: T): Partial<T> {
@@ -306,7 +318,9 @@ function buildDerivedFormExpressions(calcLogic: UnknownRecord) {
                   }
                 : {}),
               operator: API_OPERATOR_FORM_MAP[operator] || operator,
-              value: condition.value ?? ''
+              value: Array.isArray(condition.value)
+                ? condition.value.map(item => String(item)).join(',')
+                : (condition.value ?? '')
             }
           })
           .filter(item => item.fieldId && item.operator)
@@ -666,10 +680,7 @@ function buildBaseCalcLogic(values: KnowledgeSubmitPayload) {
     expr: values.expr,
     nullStrategy: values.nullStrategy,
     percentileValue: values.percentileValue,
-    precomputeConfig:
-      values.precomputeConfig || values.updateFrequency
-        ? normalizePrecomputeConfig(values.precomputeConfig, values.updateFrequency)
-        : undefined,
+    precomputeConfig: values.precomputeConfig ? normalizePrecomputeConfig(values.precomputeConfig) : undefined,
     projectionFunc: values.projectionFunc,
     ratioDenominatorId: values.ratioDenominatorId,
     ratioNumeratorId: values.ratioNumeratorId,
@@ -695,6 +706,12 @@ export function buildKnowledgeCalcLogic(values: KnowledgeSubmitPayload): JsonRec
   if (indicatorClass === 'derived') {
     return compactRecord({
       ...buildBaseCalcLogic(values),
+      calcPeriod: buildApiCalcPeriod(values.statisticalCaliber),
+      indicator_templates: buildApiDerivedIndicatorTemplates(
+        values.derivedExpressions,
+        values.derivedExpressionFieldMetaMap
+      ),
+      subjectDimension: buildApiSubjectDimension(values.statisticalCaliber),
       expressions: buildDerivedExpressions(values)
     }) as JsonRecord
   }
@@ -703,10 +720,7 @@ export function buildKnowledgeCalcLogic(values: KnowledgeSubmitPayload): JsonRec
     return compactRecord({
       calcPeriod: values.calcPeriod,
       indicator_templates: buildDerivativeIndicatorTemplates(values),
-      precomputeConfig:
-        values.precomputeConfig || values.updateFrequency
-          ? normalizePrecomputeConfig(values.precomputeConfig, values.updateFrequency)
-          : undefined
+      precomputeConfig: values.precomputeConfig ? normalizePrecomputeConfig(values.precomputeConfig) : undefined
     }) as JsonRecord
   }
 
@@ -718,10 +732,15 @@ export function parseKnowledgeCalcLogicFormValues(calcLogicValue: unknown): Part
   if (!Object.keys(calcLogic).length) {
     return {
       precomputeConfig: DEFAULT_PRECOMPUTE_CONFIG,
-      statisticalCaliber: DEFAULT_STATISTICAL_CALIBER,
-      updateFrequency: DEFAULT_PRECOMPUTE_CONFIG.frequency
+      statisticalCaliber: DEFAULT_STATISTICAL_CALIBER
     }
   }
+
+  const legacyStatisticalCaliber = normalizeStatisticalCaliber(calcLogic.statisticalCaliber)
+  const statisticalCaliber = normalizeStatisticalCaliber({
+    ...parseApiCalcPeriod(calcLogic.calcPeriod, legacyStatisticalCaliber),
+    ...parseApiSubjectDimension(calcLogic.subjectDimension)
+  })
 
   const baseValues = compactRecord({
     accumulateStartDate: calcLogic.accumulateStartDate,
@@ -746,12 +765,11 @@ export function parseKnowledgeCalcLogicFormValues(calcLogicValue: unknown): Part
     ratioPrecision: calcLogic.ratioPrecision,
     relItemId: calcLogic.relItemId,
     rollingWindowSize: calcLogic.rollingWindowSize,
-    statisticalCaliber: normalizeStatisticalCaliber(calcLogic.statisticalCaliber),
+    statisticalCaliber,
     techId: calcLogic.techId,
     templateType: calcLogic.templateType,
     thresholdMax: calcLogic.thresholdMax,
     thresholdMin: calcLogic.thresholdMin,
-    updateFrequency: normalizePrecomputeConfig(calcLogic.precomputeConfig, calcLogic.updateFrequency).frequency,
     variableMappings: calcLogic.variableMappings,
     variableName: calcLogic.variableName,
     volatilityDataRange: calcLogic.volatilityDataRange,
@@ -761,7 +779,8 @@ export function parseKnowledgeCalcLogicFormValues(calcLogicValue: unknown): Part
 
   return compactRecord({
     ...baseValues,
-    derivedExpressions: buildDerivedFormExpressions(calcLogic),
+    derivedExpressions:
+      parseApiDerivedIndicatorTemplates(calcLogic.indicator_templates) || buildDerivedFormExpressions(calcLogic),
     ...buildDerivativeTemplateFormValues(calcLogic)
   }) as Partial<KnowledgeSubmitPayload>
 }

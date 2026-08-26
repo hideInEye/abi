@@ -67,19 +67,103 @@ export interface KnowledgeDerivedExpression {
 
 export type PrecomputeFrequency = 'daily' | 'hourly' | 'monthly' | 'weekly'
 
+export interface ApiUpdateFrequency {
+  day_of_month: number | null
+  day_of_week: number | null
+  frequency: PrecomputeFrequency
+  minute: string
+}
+
 export type PrecomputeConfig =
   | { frequency: 'hourly'; minute: number }
   | { frequency: 'daily'; time: string }
   | { frequency: 'weekly'; time: string; weekday: number }
   | { frequency: 'monthly'; monthDay: number; time: string }
 
+export type StatisticalDateRangeMode =
+  | 'last_month'
+  | 'last_quarter'
+  | 'last_week'
+  | 'last_year'
+  | 'previous_full'
+  | 'recent'
+  | 'this_month'
+  | 'this_quarter'
+  | 'this_week'
+  | 'this_year'
+  | 'today'
+  | 'yesterday'
+
+export type StatisticalDateRangeUnit = 'day' | 'hour' | 'month' | 'quarter' | 'week' | 'year'
+
 export interface StatisticalCaliber {
-  dateRangeUnit: 'day' | 'hour' | 'month' | 'week'
+  dateRangeMode: StatisticalDateRangeMode
+  dateRangeUnit: StatisticalDateRangeUnit
   dateRangeValue: number
   endTime?: string
   startTime?: string
   subjectDimensionId?: string
+  subjectDimensionName?: string
   timeRangeType: 'allDay' | 'specified'
+}
+
+export type ApiStatisticalDateRangeType =
+  | 'current_month'
+  | 'current_quarter'
+  | 'current_week'
+  | 'current_year'
+  | 'last_month'
+  | 'last_quarter'
+  | 'last_week'
+  | 'last_year'
+  | 'previous'
+  | 'recent'
+  | 'today'
+  | 'yesterday'
+
+export interface ApiCalcPeriod {
+  date_range: {
+    type: ApiStatisticalDateRangeType
+    unit: StatisticalDateRangeUnit | null
+    value: number | null
+  }
+  time_range: {
+    end_time: string | null
+    start_time: string | null
+    type: 'all_day' | 'custom'
+  }
+}
+
+export interface ApiSubjectDimension {
+  dim_id: string
+  dim_name: string
+}
+
+export interface ApiDerivedTemplateCondition {
+  conditionId: string
+  field: string
+  fieldName: string
+  operator: 'EQ' | 'GE' | 'GT' | 'IN' | 'LE' | 'LT' | 'NE' | 'NOT_IN' | 'NOT_NULL' | 'NULL'
+  operatorName: string
+  value?: number | string
+}
+
+export interface ApiDerivedTemplateExpression {
+  conditions: ApiDerivedTemplateCondition[]
+  expressionId: string
+  innerLogic: 'AND' | 'OR'
+  name: string
+}
+
+export interface ApiDerivedTemplateLayer {
+  expressions: ApiDerivedTemplateExpression[]
+  groupLogic: 'AND' | 'OR'
+  layerName: string
+  sortOrder: number
+}
+
+export interface ApiDerivedIndicatorTemplates {
+  layers: ApiDerivedTemplateLayer[]
 }
 
 export type KnowledgeTemplateParams = Partial<
@@ -212,7 +296,7 @@ export interface KnowledgeIndicatorItem {
   termId?: number
   thresholdMax?: string
   thresholdMin?: string
-  updateFrequency?: string
+  updateFrequency?: ApiUpdateFrequency | string
   updateTime?: string
   variableMappings?: Array<{ indicatorId?: number | string; variableName?: string }>
   volatilityDataRange?: string
@@ -233,7 +317,6 @@ export interface KnowledgeFormValues {
   cumulativeMetricId?: number | string
   cumulativeMode?: string
   cumulativeTimeRange?: string
-  updateFrequency?: string
   dataType?: string
   derivedConditions?: KnowledgeDerivedCondition[]
   derivedConditionExpr?: string

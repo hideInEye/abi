@@ -1,0 +1,48 @@
+.previewGrid {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+}
+
+.previewCard {
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid #e6ebf2;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.previewCardTitle {
+  margin: 0 0 12px;
+  color: #1f2a37;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.businessPreview {
+  min-height: 96px;
+  margin: 0;
+  color: #344054;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sqlPreview {
+  max-width: 100%;
+  min-height: 116px;
+  margin: 0;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid #e6ebf2;
+  border-radius: 8px;
+  background: #fbfcff;
+  color: #1746b3;
+  font:
+    13px/1.65 Consolas,
+    'Courier New',
+    monospace;
+  white-space: pre;
+}

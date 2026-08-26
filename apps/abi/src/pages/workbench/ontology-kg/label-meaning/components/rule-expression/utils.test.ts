@@ -7,7 +7,8 @@ import {
   compileRulePredicate,
   normalizeRuleConnections,
   normalizeRuleLayers,
-  validateRuleLayers
+  validateRuleLayers,
+  validateRuleLogicUniformity
 } from './utils'
 
 const fields: RuleFieldOption[] = [
@@ -163,6 +164,26 @@ describe('rule expression compatibility and validation', () => {
     const result = normalizeRuleConnections(source)
     expect(result[0].groups[0].logicWithPrevious).toBeUndefined()
     expect(result[0].groups[0].conditions[0].logicWithPrevious).toBeUndefined()
+  })
+
+  it('reports mixed group and condition connectors only in uniform logic validation', () => {
+    const source = completeLayers()
+    source[0].groups.push({
+      conditions: [
+        { fieldId: 'status-id', id: 'c5', operator: '=', value: '完成' },
+        { fieldId: 'status-id', id: 'c6', logicWithPrevious: 'AND', operator: '=', value: '取消' },
+        { fieldId: 'status-id', id: 'c7', logicWithPrevious: 'OR', operator: '=', value: '退款' }
+      ],
+      id: 'g4',
+      logicWithPrevious: 'OR',
+      name: '混合条件'
+    })
+
+    expect(validateRuleLayers(source, fields).valid).toBe(true)
+    expect(validateRuleLogicUniformity(source).issues.map(item => item.path)).toEqual([
+      'layers.0.groups.2.logicWithPrevious',
+      'layers.0.groups.2.conditions.2.logicWithPrevious'
+    ])
   })
 })
 

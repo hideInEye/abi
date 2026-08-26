@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getAtomicProjection,
   getAtomicSemanticSchemaId,
-  getAtomicSourceFieldLabels,
+  getAtomicTechnicalSource,
   parseAtomicSourceFields,
   parseSemanticModelFields
 } from './atomicMetricSource'
@@ -18,12 +18,21 @@ describe('atomic metric source adapter', () => {
     expect(getAtomicProjection(item)).toBe('avg')
     expect(parseAtomicSourceFields(item.techId)).toMatchObject([{ fieldName: 'payment_amount', techId: 'field-1' }])
     expect(getAtomicProjection({ techId: [] })).toBe('sum')
-    expect(
-      getAtomicSourceFieldLabels(
-        [{ techId: 'field-1' }, { fieldName: 'fallback_name', techId: 'field-2' }],
-        [{ fieldName: 'payment_amount', techId: 'field-1' }]
-      )
-    ).toEqual(['payment_amount', 'fallback_name'])
+  })
+
+  it('derives the English source field and table from atomic techName', () => {
+    expect(getAtomicTechnicalSource('trade_fact.payment_amount')).toEqual({
+      fieldName: 'payment_amount',
+      tableName: 'trade_fact'
+    })
+    expect(getAtomicTechnicalSource('warehouse.trade_fact.payment_amount')).toEqual({
+      fieldName: 'payment_amount',
+      tableName: 'warehouse.trade_fact'
+    })
+    expect(getAtomicTechnicalSource('payment_amount')).toEqual({
+      fieldName: 'payment_amount',
+      tableName: 'payment_amount'
+    })
   })
 
   it('parses dimension, measure and date fields from semantic model detail', () => {

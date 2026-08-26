@@ -12,7 +12,8 @@ import {
   createRuleId,
   normalizeRuleConnections,
   normalizeRuleLayers,
-  validateRuleLayers
+  validateRuleLayers,
+  validateRuleLogicUniformity
 } from './utils'
 
 const OPERATOR_OPTIONS = [
@@ -40,6 +41,7 @@ interface RuleExpressionBuilderProps {
   readonly fieldLoading?: boolean
   readonly fields: RuleFieldOption[]
   readonly onChange?: (value: RuleLayer[]) => void
+  readonly uniformLogic?: boolean
   readonly validationRequested?: boolean
   readonly value?: RuleLayer[]
 }
@@ -67,6 +69,7 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
       fieldLoading = false,
       fields,
       onChange,
+      uniformLogic = false,
       validationRequested = false,
       value
     },
@@ -74,9 +77,15 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
   ) => {
     const layers = useMemo(() => normalizeRuleLayers(value), [value])
     const fieldTree = useMemo(() => buildRuleFieldTree(fields), [fields])
-    const validation = useMemo(() => validateRuleLayers(layers, fields), [fields, layers])
+    const validation = useMemo(() => {
+      const baseValidation = validateRuleLayers(layers, fields)
+      if (!uniformLogic) return baseValidation
+      const logicValidation = validateRuleLogicUniformity(layers)
+      const issues = [...baseValidation.issues, ...logicValidation.issues]
+      return { issues, valid: issues.length === 0 }
+    }, [fields, layers, uniformLogic])
     const [activeLayerId, setActiveLayerId] = useState(layers[0]?.id)
-    const [showErrors, setShowErrors] = useState(false)
+    const [showErrors, setShowErrors] = useState(validationRequested)
     const rootRef = useRef<HTMLDivElement>(null)
     const layerCounter = useRef(1)
     const groupCounters = useRef(new Map<string, number>())
@@ -128,7 +137,10 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
         window.setTimeout(() => {
           const target = rootRef.current?.querySelector<HTMLElement>(`[data-rule-path="${path}"]`)
           target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          target?.querySelector<HTMLElement>('input, .ant-select-selector, button')?.focus()
+          const focusTarget = target?.matches('input, button, .ant-select-selector')
+            ? target
+            : target?.querySelector<HTMLElement>('input, .ant-select-selector, button')
+          focusTarget?.focus()
         })
       },
       [layers]
@@ -183,7 +195,9 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
           {
             conditions: [],
             id: createRuleId('group'),
-            ...(layer.groups.length ? { logicWithPrevious: 'AND' as RuleLogic } : {}),
+            ...(layer.groups.length
+              ? { logicWithPrevious: (layer.groups[1]?.logicWithPrevious || 'AND') as RuleLogic }
+              : {}),
             name: `条件分组 ${nextIndex}`
           }
         ]
@@ -297,18 +311,21 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
                   {groupIndex > 0 && (
                     <button
                       aria-label={`切换为${group.logicWithPrevious === 'OR' ? '且' : '或'}`}
-                      className={styles.logicNode}
+                      aria-invalid={Boolean(issueFor(`${groupPath}.logicWithPrevious`))}
+                      className={`${styles.logicNode} ${issueFor(`${groupPath}.logicWithPrevious`) ? styles.logicNodeError : ''}`}
+                      data-rule-path={`${groupPath}.logicWithPrevious`}
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        const nextLogic = group.logicWithPrevious === 'OR' ? 'AND' : 'OR'
                         updateLayer(activeLayerIndex, layer => ({
                           ...layer,
                           groups: layer.groups.map((item, index) =>
-                            index === groupIndex
-                              ? { ...item, logicWithPrevious: item.logicWithPrevious === 'OR' ? 'AND' : 'OR' }
+                            index > 0 && (uniformLogic || index === groupIndex)
+                              ? { ...item, logicWithPrevious: nextLogic }
                               : item
                           )
                         }))
-                      }
+                      }}
                     >
                       {group.logicWithPrevious === 'OR' ? '或' : '且'}
                     </button>
@@ -358,7 +375,11 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
                                           ...item,
                                           conditions: [
                                             ...item.conditions,
-                                            createDefaultRuleCondition(item.conditions.length ? 'AND' : undefined)
+                                            createDefaultRuleCondition(
+                                              item.conditions.length
+                                                ? item.conditions[1]?.logicWithPrevious || 'AND'
+                                                : undefined
+                                            )
                                           ]
                                         }
                                       : item
@@ -400,9 +421,12 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
                               {conditionIndex > 0 && (
                                 <button
                                   aria-label={`切换为${condition.logicWithPrevious === 'OR' ? '且' : '或'}`}
-                                  className={`${styles.logicNode} ${styles.conditionLogicNode}`}
+                                  aria-invalid={Boolean(issueFor(`${conditionPath}.logicWithPrevious`))}
+                                  className={`${styles.logicNode} ${styles.conditionLogicNode} ${issueFor(`${conditionPath}.logicWithPrevious`) ? styles.logicNodeError : ''}`}
+                                  data-rule-path={`${conditionPath}.logicWithPrevious`}
                                   type="button"
-                                  onClick={() =>
+                                  onClick={() => {
+                                    const nextLogic = condition.logicWithPrevious === 'OR' ? 'AND' : 'OR'
                                     updateLayer(activeLayerIndex, layer => ({
                                       ...layer,
                                       groups: layer.groups.map((item, index) =>
@@ -410,18 +434,15 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
                                           ? {
                                               ...item,
                                               conditions: item.conditions.map((row, rowIndex) =>
-                                                rowIndex === conditionIndex
-                                                  ? {
-                                                      ...row,
-                                                      logicWithPrevious: row.logicWithPrevious === 'OR' ? 'AND' : 'OR'
-                                                    }
+                                                rowIndex > 0 && (uniformLogic || rowIndex === conditionIndex)
+                                                  ? { ...row, logicWithPrevious: nextLogic }
                                                   : row
                                               )
                                             }
                                           : item
                                       )
                                     }))
-                                  }
+                                  }}
                                 >
                                   {condition.logicWithPrevious === 'OR' ? '或' : '且'}
                                 </button>

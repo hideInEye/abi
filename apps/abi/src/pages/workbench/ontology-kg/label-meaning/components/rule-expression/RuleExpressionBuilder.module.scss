@@ -65,7 +65,7 @@
 .groupActions,
 .conditionRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .layerHeader {
@@ -209,6 +209,12 @@
   border: 1px solid var(--rule-line);
   border-radius: 6px;
   cursor: pointer;
+}
+
+.logicNodeError {
+  color: #ff4d4f;
+  border-color: #ff4d4f;
+  box-shadow: 0 0 0 2px rgb(255 77 79 / 10%);
 }
 
 .conditionLogicNode {

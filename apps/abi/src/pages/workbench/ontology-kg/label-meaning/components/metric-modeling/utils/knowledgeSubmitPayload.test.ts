@@ -445,11 +445,13 @@ describe('buildKnowledgeCalcLogic', () => {
       precomputeConfig: { frequency: 'weekly', time: '09:00', weekday: 1 },
       spaceId: 82,
       statisticalCaliber: {
+        dateRangeMode: 'previous_full',
         dateRangeUnit: 'day',
         dateRangeValue: 30,
         endTime: '18:00',
         startTime: '09:00',
         subjectDimensionId: 'shop-dimension',
+        subjectDimensionName: '门店维度',
         timeRangeType: 'specified'
       }
     } as KnowledgeSubmitPayload)
@@ -471,8 +473,34 @@ describe('buildKnowledgeCalcLogic', () => {
           name: '支付分层'
         }
       ],
+      calcPeriod: {
+        date_range: { type: 'previous', unit: 'day', value: 30 },
+        time_range: { end_time: '18:00', start_time: '09:00', type: 'custom' }
+      },
+      indicator_templates: {
+        layers: [
+          {
+            expressions: [
+              {
+                conditions: [
+                  { conditionId: 'status', field: 'order_status', operator: 'EQ', value: 'paid' },
+                  { conditionId: 'status', field: 'order_status', operator: 'NULL' }
+                ],
+                expressionId: 'group-1',
+                innerLogic: 'OR',
+                name: '订单条件'
+              }
+            ],
+            groupLogic: 'AND',
+            layerName: '支付分层',
+            sortOrder: 1
+          }
+        ]
+      },
       precomputeConfig: { frequency: 'weekly', time: '09:00', weekday: 1 },
+      subjectDimension: { dim_id: 'shop-dimension', dim_name: '门店维度' },
       statisticalCaliber: {
+        dateRangeMode: 'previous_full',
         dateRangeUnit: 'day',
         dateRangeValue: 30,
         subjectDimensionId: 'shop-dimension',
@@ -486,8 +514,8 @@ describe('buildKnowledgeCalcLogic', () => {
           groups: [
             {
               conditions: [
-                { fieldId: 'order_status', operator: '=', value: 'paid' },
-                { fieldId: 'order_status', logicWithPrevious: 'OR', operator: 'IS NULL' }
+                { fieldId: 'status', operator: '=', value: 'paid' },
+                { fieldId: 'status', logicWithPrevious: 'OR', operator: 'IS NULL' }
               ],
               name: '订单条件'
             }
@@ -496,7 +524,73 @@ describe('buildKnowledgeCalcLogic', () => {
         }
       ],
       precomputeConfig: { frequency: 'weekly', time: '09:00', weekday: 1 },
-      updateFrequency: 'weekly'
+      statisticalCaliber: {
+        dateRangeMode: 'previous_full',
+        dateRangeUnit: 'day',
+        dateRangeValue: 30,
+        subjectDimensionId: 'shop-dimension',
+        subjectDimensionName: '门店维度'
+      }
+    })
+  })
+
+  it('prioritizes the new calc period, subject dimension and template layers when legacy fields conflict', () => {
+    const result = parseKnowledgeCalcLogicFormValues({
+      calcPeriod: {
+        date_range: { type: 'current_month', unit: null, value: null },
+        time_range: { end_time: null, start_time: null, type: 'all_day' }
+      },
+      expressions: [
+        {
+          conditions: [{ conditionId: 'legacy-row', field: 'legacy_field', operator: 'EQ', value: 'legacy' }],
+          name: '旧表达式'
+        }
+      ],
+      indicator_templates: {
+        layers: [
+          {
+            expressions: [
+              {
+                conditions: [{ conditionId: 'new-field-id', field: 'new_field', operator: 'EQ', value: 'new' }],
+                expressionId: 'new-group',
+                innerLogic: 'AND',
+                name: '新分组'
+              }
+            ],
+            groupLogic: 'AND',
+            layerName: '新分层',
+            sortOrder: 1
+          }
+        ]
+      },
+      statisticalCaliber: {
+        dateRangeMode: 'recent',
+        dateRangeUnit: 'day',
+        dateRangeValue: 99,
+        subjectDimensionId: 'legacy-dim',
+        timeRangeType: 'specified'
+      },
+      subjectDimension: { dim_id: 'new-dim', dim_name: '新主体维度' }
+    })
+
+    expect(result).toMatchObject({
+      derivedExpressions: [
+        {
+          groups: [
+            {
+              conditions: [{ fieldId: 'new-field-id', operator: '=', value: 'new' }],
+              name: '新分组'
+            }
+          ],
+          name: '新分层'
+        }
+      ],
+      statisticalCaliber: {
+        dateRangeMode: 'this_month',
+        subjectDimensionId: 'new-dim',
+        subjectDimensionName: '新主体维度',
+        timeRangeType: 'allDay'
+      }
     })
   })
 })

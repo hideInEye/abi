@@ -3,7 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { queryDimensionList } from '@/service/api/dimension-modeling'
 import { tableSemanticsGroupList } from '@/service/api/table-semantics'
 
-import { formatMappedDimensionOptionTitle } from '../utils/knowledgeOperateDrawer.utils'
+import {
+  formatMappedDimensionOptionTitle,
+  getMappedMetricFieldDisplayName
+} from '../utils/knowledgeOperateDrawer.utils'
 import { getKnowledgeSpaceId } from '../utils/space'
 
 type UnknownRecord = Record<string, unknown>
@@ -12,6 +15,7 @@ export interface KnowledgeDimensionOption {
   groupId: string
   groupName: string
   key: string
+  name: string
   techName: string
   title: string
 }
@@ -95,9 +99,11 @@ export function useKnowledgeDimensions(enabled = true) {
                 if (!key) return null
                 const bizName = pickText(item, ['bizName', 'zhName', 'dimName'])
                 const techName = pickText(item, ['techName', 'englishName', 'dimCode'])
+                const name = getMappedMetricFieldDisplayName(bizName) || techName || key
                 return {
                   ...group,
                   key,
+                  name,
                   techName,
                   title: formatMappedDimensionOptionTitle({ bizName, fallback: key, techName })
                 }

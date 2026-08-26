@@ -1,5 +1,4 @@
 import { ProfileOutlined } from '@ant-design/icons'
-import { Form } from 'antd'
 import React, { forwardRef, useMemo } from 'react'
 
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
@@ -7,6 +6,7 @@ import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/componen
 import {
   RuleExpressionBuilder,
   type RuleExpressionBuilderHandle,
+  RuleExpressionFormItem,
   type RuleFieldOption,
   validateRuleLayers
 } from '../rule-expression'
@@ -35,7 +35,7 @@ const ExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, ExpressionBuil
     return (
       <div className="my10">
         <OntologyFormSectionTitle icon={<ProfileOutlined />}>表达式定义</OntologyFormSectionTitle>
-        <Form.Item
+        <RuleExpressionFormItem
           name="exp"
           rules={rules}
         >
@@ -44,7 +44,7 @@ const ExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, ExpressionBuil
             fields={fields}
             ref={ref}
           />
-        </Form.Item>
+        </RuleExpressionFormItem>
       </div>
     )
   }

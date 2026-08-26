@@ -38,18 +38,11 @@ export const KnowledgePrecomputeConfig: React.FC<Props> = ({ form }) => {
 
   const handleFrequencyChange = (frequency: PrecomputeFrequency) => {
     form.setFieldValue('precomputeConfig', createDefaultPrecomputeConfig(frequency))
-    form.setFieldValue('updateFrequency', frequency)
   }
 
   return (
     <div className="mb-4 border border-gray-200 rounded bg-white p-4">
       <OntologyFormSectionTitle icon={<ClockCircleOutlined />}>预计算配置</OntologyFormSectionTitle>
-      <AForm.Item
-        hidden
-        name="updateFrequency"
-      >
-        <AInput />
-      </AForm.Item>
       <div className="grid grid-cols-2 gap-x-8">
         <AForm.Item
           label="计算频率"

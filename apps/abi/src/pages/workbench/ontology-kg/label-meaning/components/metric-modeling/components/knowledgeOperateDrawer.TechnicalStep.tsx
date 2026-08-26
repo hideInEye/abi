@@ -6,12 +6,7 @@ import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/componen
 
 import { AGG_METHOD_OPTIONS, EXTENDED_TEMPLATE_OPTIONS } from '../constants/metricModeling.constants'
 import type { KnowledgeFormValues, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
-import {
-  getAtomicProjection,
-  getAtomicSemanticSchemaName,
-  getAtomicSourceFieldLabels,
-  parseAtomicSourceFields
-} from '../utils/atomicMetricSource'
+import { getAtomicProjection, getAtomicSemanticSchemaName, getAtomicTechnicalSource } from '../utils/atomicMetricSource'
 
 import { KnowledgeOperateDerivedLogicBuilder } from './knowledgeOperateDrawer.DerivedLogicBuilder'
 import { KnowledgeOperateExtendedTemplateParams } from './knowledgeOperateDrawer.ExtendedTemplateParams'
@@ -65,12 +60,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
 }) => {
   const selectedAtomicId = AForm.useWatch('techId', form)
   const selectedAtomic = atomicMetricOptions.find(item => String(item.value) === String(selectedAtomicId || ''))?.item
-  const sourceFields = parseAtomicSourceFields(selectedAtomic?.techId)
-  const sourceFieldLabels = getAtomicSourceFieldLabels(
-    sourceFields,
-    allFields,
-    selectedAtomic?.rawBizName || selectedAtomic?.bizName
-  )
+  const sourceFieldName = getAtomicTechnicalSource(selectedAtomic?.techName || selectedAtomic?.rawTechName).fieldName
   const projectionFunc = getAtomicProjection(selectedAtomic)
   const projectionLabel =
     AGG_METHOD_OPTIONS.find(item => item.value === projectionFunc)?.label || projectionFunc || '合计'
@@ -113,7 +103,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
             <div className="grid grid-cols-3 mt-4 gap-4 border border-[#e2e8f3] rounded bg-[#fafbfe] px-5 py-4">
               <div>
                 <div className="mb-2 text-sm text-[#7d899d]">来源字段</div>
-                <div className="text-[#26354d] font-semibold">{sourceFieldLabels.join('、') || '-'}</div>
+                <div className="text-[#26354d] font-semibold">{sourceFieldName || '-'}</div>
               </div>
               <div>
                 <div className="mb-2 text-sm text-[#7d899d]">聚合方式</div>

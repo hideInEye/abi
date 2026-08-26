@@ -1,5 +1,5 @@
+import { getMappedTechNameParts } from '../../../utils/ontologyName'
 import type { KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
-import { MAPPED_BIZ_NAME_SEPARATOR } from '../../../utils/ontologyName'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -16,38 +16,18 @@ function asRecord(value: unknown): UnknownRecord {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as UnknownRecord) : {}
 }
 
-function getFieldIdentity(field: KnowledgeTechField): string {
-  return String(field.techId || field.tfieldId || field.fieldName || field.originName || '').trim()
+export interface AtomicTechnicalSource {
+  fieldName: string
+  tableName: string
 }
 
-function getAtomicSourceBizNameLabel(value: unknown): string {
-  const bizName = String(value ?? '').trim()
-  const separatorIndex = bizName.indexOf(MAPPED_BIZ_NAME_SEPARATOR)
-  if (separatorIndex < 0) return bizName
-  return bizName.slice(separatorIndex + MAPPED_BIZ_NAME_SEPARATOR.length).trim() || bizName
-}
-
-export function getAtomicSourceFieldLabels(
-  sourceFields: KnowledgeTechField[],
-  semanticFields: KnowledgeTechField[],
-  atomicBizName?: unknown
-): string[] {
-  const atomicBizNameLabel = getAtomicSourceBizNameLabel(atomicBizName)
-  return sourceFields.map(sourceField => {
-    const sourceId = getFieldIdentity(sourceField)
-    const semanticField = semanticFields.find(field => getFieldIdentity(field) === sourceId)
-    const bizName = getAtomicSourceBizNameLabel(semanticField?.bizName || sourceField.bizName)
-    if (bizName) return bizName
-    if (sourceFields.length === 1 && atomicBizNameLabel) return atomicBizNameLabel
-    return String(
-      semanticField?.fieldName ||
-        semanticField?.originName ||
-        semanticField?.tfieldName ||
-        sourceField.fieldName ||
-        sourceField.originName ||
-        sourceId
-    )
-  })
+export function getAtomicTechnicalSource(value: unknown): AtomicTechnicalSource {
+  const parts = getMappedTechNameParts(value)
+  if (!parts.rawName) return { fieldName: '', tableName: '' }
+  if (parts.isMapped && parts.displayName && parts.tableName) {
+    return { fieldName: parts.displayName, tableName: parts.tableName }
+  }
+  return { fieldName: parts.rawName, tableName: parts.rawName }
 }
 
 export function getApiResponseData(response: unknown): UnknownRecord {

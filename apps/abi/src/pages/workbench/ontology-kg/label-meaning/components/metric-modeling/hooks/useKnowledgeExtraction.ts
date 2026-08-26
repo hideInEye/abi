@@ -2,8 +2,8 @@ import { message } from 'antd'
 
 import {
   addKnowledgeIndicator,
-  deleteKnowledgeIndicatorBatch,
   deleteKnowledgeIndicator,
+  deleteKnowledgeIndicatorBatch,
   editKnowledgeIndicator,
   queryKnowledgeIndicatorDetail,
   queryKnowledgeIndicators,
@@ -11,9 +11,10 @@ import {
 } from '@/service/api/knowledge-extraction'
 
 import type { AtomicMappingPayload, KnowledgeGroupItem, KnowledgeIndicatorItem, KnowledgePagination, KnowledgeSearchParams, KnowledgeSubmitPayload } from '../types/metricModeling.types'
-import { getKnowledgeSpaceId } from '../utils/space'
-import { buildKnowledgeCalcLogic } from '../utils/knowledgeSubmitPayload'
+import { buildApiUpdateFrequency } from '../utils/indicatorApiAdapter'
 import { buildKnowledgeIndicatorListQuery, normalizeKnowledgeIndicatorListItem } from '../utils/knowledgeIndicator.mapper'
+import { buildKnowledgeCalcLogic } from '../utils/knowledgeSubmitPayload'
+import { getKnowledgeSpaceId } from '../utils/space'
 
 const UI_TO_API_QUALITY_LEVEL: Record<string, string> = {
   p0: 'P0-核心',
@@ -171,7 +172,7 @@ function buildSubmitPayload(payload: KnowledgeSubmitPayload, selectedGroup: Know
     techId: payload.techId,
     techName: trimOrUndefined(payload.techName),
     technicalDefinition: trimOrUndefined(payload.technicalDefinition),
-    updateFrequency: trimOrUndefined(payload.updateFrequency),
+    updateFrequency: buildApiUpdateFrequency(payload.precomputeConfig),
     versionStatus: trimOrUndefined(payload.versionStatus)
   })
 }

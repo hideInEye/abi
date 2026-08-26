@@ -154,6 +154,40 @@ export function normalizeRuleConnections(layers: RuleLayer[]): RuleLayer[] {
   }))
 }
 
+export function validateRuleLogicUniformity(layersValue: unknown): RuleValidationResult {
+  const layers = normalizeRuleLayers(layersValue, false)
+  const issues: RuleValidationIssue[] = []
+
+  layers.forEach((layer, layerIndex) => {
+    const expectedGroupLogic = layer.groups[1]?.logicWithPrevious || 'AND'
+    const mixedGroupIndex = layer.groups.findIndex(
+      (group, groupIndex) => groupIndex > 1 && (group.logicWithPrevious || 'AND') !== expectedGroupLogic
+    )
+    if (mixedGroupIndex >= 0) {
+      issues.push({
+        message: '同一分层内的条件分组必须使用统一的且/或关系',
+        path: `layers.${layerIndex}.groups.${mixedGroupIndex}.logicWithPrevious`
+      })
+    }
+
+    layer.groups.forEach((group, groupIndex) => {
+      const expectedConditionLogic = group.conditions[1]?.logicWithPrevious || 'AND'
+      const mixedConditionIndex = group.conditions.findIndex(
+        (condition, conditionIndex) =>
+          conditionIndex > 1 && (condition.logicWithPrevious || 'AND') !== expectedConditionLogic
+      )
+      if (mixedConditionIndex >= 0) {
+        issues.push({
+          message: '同一条件分组内的条件必须使用统一的且/或关系',
+          path: `layers.${layerIndex}.groups.${groupIndex}.conditions.${mixedConditionIndex}.logicWithPrevious`
+        })
+      }
+    })
+  })
+
+  return { issues, valid: issues.length === 0 }
+}
+
 function normalizeCategory(value: unknown, fieldType: unknown): RuleFieldCategory | null {
   const category = text(value).toLowerCase()
   const type = text(fieldType).toLowerCase()
