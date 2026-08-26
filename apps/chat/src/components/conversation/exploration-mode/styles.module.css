@@ -1,5 +1,6 @@
 /* 探索模式：时间线卡片内部提供左侧工作区（思考 + todolist / 当前步骤结果），
-   右侧全高工作室侧栏只展示全部执行结果。整体复用系统 CSS 变量对齐报告模式视觉。 */
+   右侧全高工作室侧栏只展示全部执行结果。整体复用系统 CSS 变量对齐报告模式视觉。
+   科技感增强：渐变边框光晕、微点阵底纹、扫描线动画、角标装饰。 */
 .messageRow {
   display: flex;
   flex-direction: column;
@@ -21,51 +22,178 @@
   max-width: 80%;
   margin-right: 8px;
   overflow-wrap: break-word;
-  border: 1px solid rgba(91, 124, 247, 0.18);
+  border: 1px solid rgba(91, 124, 247, 0.22);
   border-radius: 16px 16px 4px 16px;
-  background: linear-gradient(135deg, rgba(91, 124, 247, 0.06), rgba(112, 145, 250, 0.08));
-  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.08);
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.08), rgba(139, 92, 246, 0.06));
+  box-shadow:
+    0 2px 12px rgba(91, 124, 247, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   color: var(--ink, #25304d);
   font-size: 13px;
   line-height: 1.6;
   padding: 12px 16px;
   white-space: pre-wrap;
+  position: relative;
 }
 
-/* ── 单列卡片 ── */
+/* ── 单列卡片（科技感增强） ── */
 .card {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
-  box-shadow: var(--shadow-m, 0 8px 24px rgba(15, 23, 42, 0.06));
+  box-shadow:
+    0 0 0 1px rgba(91, 124, 247, 0.06),
+    0 8px 32px rgba(15, 23, 42, 0.06),
+    0 2px 8px rgba(91, 124, 247, 0.04);
   backdrop-filter: blur(18px) saturate(1.25);
   overflow: hidden;
+  position: relative;
+}
+
+/* 卡片顶部渐变光条 */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(91, 124, 247, 0.4) 20%,
+    rgba(139, 92, 246, 0.3) 50%,
+    rgba(91, 124, 247, 0.4) 80%,
+    transparent 100%
+  );
+  z-index: 1;
+}
+
+/* 微点阵底纹 */
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(91, 124, 247, 0.06) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  opacity: 0.5;
+  z-index: 0;
+}
+
+.card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid rgba(130, 140, 200, 0.12);
-  padding: 13px 16px;
+  gap: 16px;
+  border-bottom: 1px solid rgba(91, 124, 247, 0.1);
+  padding: 18px 24px;
+  background:
+    linear-gradient(180deg, rgba(91, 124, 247, 0.03) 0%, transparent 100%);
+  position: relative;
+}
+
+/* 头部底部渐变光线 */
+.cardHeader::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(91, 124, 247, 0.25) 30%,
+    rgba(139, 92, 246, 0.2) 70%,
+    transparent 100%
+  );
 }
 
 .cardTitle {
   display: inline-flex;
   min-width: 0;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   color: var(--ink, #202a44);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.cardTitle svg,
+.cardTitle .anticon {
+  color: var(--accent, #5b7cf7);
+  filter: drop-shadow(0 0 4px rgba(91, 124, 247, 0.3));
+  font-size: 15px;
+}
+
+/* 自定义状态标签（替代 Ant Design Tag，更高级的视觉效果） */
+.statusTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  border: 1px solid;
+}
+
+.statusTagRunning {
+  background: rgba(91, 124, 247, 0.08);
+  border-color: rgba(91, 124, 247, 0.25);
+  color: var(--accent, #5b7cf7);
+}
+
+.statusTagCompleted {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #0d9468;
+}
+
+.statusTagFailed {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #dc2626;
+}
+
+.statusTagCancelled {
+  background: rgba(132, 148, 173, 0.08);
+  border-color: rgba(132, 148, 173, 0.2);
+  color: var(--ink-3, #8a97ad);
+}
+
+.statusTagSuccess {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #0d9468;
 }
 
 .cardMeta {
   flex-shrink: 0;
   color: var(--ink-3, #9aa3b5);
   font-size: 12px;
+  font-family: var(--mono, ui-monospace, monospace);
+  letter-spacing: 0.5px;
+}
+
+/* 运行状态指示灯：小圆点 + 呼吸光晕 */
+.statusDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent, #5b7cf7);
+  box-shadow: 0 0 8px rgba(91, 124, 247, 0.5);
+  animation: exploreGlowPulse 1.5s infinite;
+  flex-shrink: 0;
 }
 
 .cardHeaderActions {
@@ -75,48 +203,53 @@
   gap: 8px;
 }
 
-/* 工作室入口：卡片顶部蓝色芯片 + 方形图标按钮 */
+/* 工作室入口：卡片顶部蓝色芯片 + 方形图标按钮（科技感增强） */
 .studioChip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid rgba(91, 124, 247, 0.3);
+  border: 1px solid rgba(91, 124, 247, 0.28);
   border-radius: 8px;
-  background: rgba(91, 124, 247, 0.1);
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.1) 0%, rgba(139, 92, 246, 0.08) 100%);
   color: var(--accent, #5b7cf7);
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
   padding: 6px 10px;
+  transition: all 0.25s var(--ease, ease);
+  box-shadow: 0 0 8px rgba(91, 124, 247, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.studioChip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
 }
 
 .studioChip:hover {
-  background: rgba(91, 124, 247, 0.16);
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.18) 0%, rgba(139, 92, 246, 0.12) 100%);
+  box-shadow: 0 0 16px rgba(91, 124, 247, 0.15);
+  border-color: rgba(91, 124, 247, 0.4);
+}
+
+.studioChip:hover::before {
+  left: 100%;
 }
 
 .studioChipActive {
   border-color: rgba(91, 124, 247, 0.5);
-  background: rgba(91, 124, 247, 0.2);
-}
-
-.studioIcon {
-  display: inline-flex;
-  width: 26px;
-  height: 26px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(130, 140, 200, 0.24);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.65);
-  color: var(--ink-2, #333c4f);
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.studioIcon:hover {
-  border-color: rgba(91, 124, 247, 0.4);
-  color: var(--accent, #5b7cf7);
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.22) 0%, rgba(139, 92, 246, 0.16) 100%);
+  box-shadow:
+    0 0 12px rgba(91, 124, 247, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 /* ── 卡片内工作区：左侧 todolist，右侧当前步骤结果 ── */
@@ -124,14 +257,36 @@
   display: grid;
   grid-template-columns: minmax(240px, 0.92fr) minmax(300px, 1.08fr);
   min-height: 360px;
+  position: relative;
+  padding: 4px 0;
 }
 
 .todoColumn {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  border-right: 1px solid rgba(130, 140, 200, 0.12);
-  background: rgba(255, 255, 255, 0.34);
+  border-right: 1px solid rgba(91, 124, 247, 0.08);
+  background:
+    linear-gradient(180deg, rgba(91, 124, 247, 0.02) 0%, transparent 30%),
+    rgba(255, 255, 255, 0.34);
+  position: relative;
+}
+
+/* 左栏右侧分隔光线 */
+.todoColumn::after {
+  content: '';
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  right: -1px;
+  width: 1px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(91, 124, 247, 0.2) 20%,
+    rgba(139, 92, 246, 0.15) 80%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
 .todoColumn .panel:last-child {
@@ -143,8 +298,10 @@
   min-width: 0;
   flex-direction: column;
   background:
-    radial-gradient(circle at 100% 0%, rgba(91, 124, 247, 0.07), transparent 34%),
+    radial-gradient(circle at 100% 0%, rgba(91, 124, 247, 0.06), transparent 40%),
+    radial-gradient(circle at 0% 100%, rgba(139, 92, 246, 0.04), transparent 40%),
     rgba(255, 255, 255, 0.38);
+  position: relative;
 }
 
 .currentResultHeader {
@@ -154,8 +311,22 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
+  border-bottom: 1px solid rgba(91, 124, 247, 0.08);
   padding: 12px 16px;
+  position: relative;
+}
+
+.currentResultHeader::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    rgba(91, 124, 247, 0.15) 0%,
+    transparent 100%
+  );
 }
 
 .currentResultTitle {
@@ -165,7 +336,13 @@
   gap: 8px;
   color: var(--ink, #25304d);
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.currentResultTitle .anticon {
+  color: var(--accent, #5b7cf7);
+  font-size: 13px;
 }
 
 .currentResultMeta {
@@ -176,6 +353,8 @@
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--mono, ui-monospace, monospace);
+  letter-spacing: 0.3px;
 }
 
 .currentResultBody {
@@ -196,17 +375,32 @@
 
 .processCode {
   overflow: auto;
-  border: 1px solid rgba(130, 140, 200, 0.14);
+  border: 1px solid rgba(91, 124, 247, 0.12);
   border-radius: 10px;
-  background: rgba(26, 39, 68, 0.05);
+  background:
+    linear-gradient(135deg, rgba(26, 39, 68, 0.06) 0%, rgba(91, 124, 247, 0.03) 100%);
   color: var(--ink-2, #333c4f);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
   font-size: 12px;
   line-height: 1.7;
   margin: 0;
   padding: 10px 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  position: relative;
+}
+
+/* 代码块左上角小标记 */
+.processCode::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(91, 124, 247, 0.35);
+  box-shadow: 0 0 6px rgba(91, 124, 247, 0.3);
 }
 
 /* 无过程文本/入参时的回退展示：当前动作 + 执行原因 */
@@ -214,7 +408,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border-left: 2px solid rgba(91, 124, 247, 0.28);
+  border-left: 2px solid transparent;
+  border-image: linear-gradient(180deg, rgba(91, 124, 247, 0.4) 0%, rgba(139, 92, 246, 0.2) 100%) 1;
   padding-left: 12px;
   color: var(--ink-3, #6b7690);
   font-size: 13px;
@@ -232,37 +427,72 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px dashed rgba(130, 140, 200, 0.26);
+  border: 1px dashed rgba(91, 124, 247, 0.2);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.45);
+  background:
+    radial-gradient(circle at center, rgba(91, 124, 247, 0.03) 0%, transparent 70%),
+    rgba(255, 255, 255, 0.45);
   color: var(--ink-3, #9aa3b5);
   font-size: 13px;
   line-height: 1.7;
   padding: 18px;
   text-align: center;
+  position: relative;
+}
+
+.currentResultEmpty .anticon {
+  color: rgba(91, 124, 247, 0.4);
+  font-size: 16px;
 }
 
 /* ── 面板（思考区 / 待办事项），用分隔线纵向堆叠 ── */
 .panel {
-  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
-  padding: 14px 16px 16px;
+  border-bottom: 1px solid rgba(91, 124, 247, 0.06);
+  padding: 20px 20px 22px;
+  position: relative;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    rgba(91, 124, 247, 0.08) 0%,
+    transparent 80%
+  );
 }
 
 .panel:last-child {
   border-bottom: none;
 }
 
+.panel:last-child::before {
+  display: none;
+}
+
 .panelTitle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.panelTitle .anticon {
+  font-size: 13px;
 }
 
 .panelTitleThink {
   color: var(--accent, #5b5cf6);
+}
+
+.panelTitleThink .anticon {
+  filter: drop-shadow(0 0 4px rgba(91, 124, 247, 0.4));
 }
 
 .panelTitleTodo {
@@ -273,7 +503,9 @@
   margin-left: auto;
   color: var(--ink-3, #9aa3b5);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
+  font-family: var(--mono, ui-monospace, monospace);
+  letter-spacing: 1px;
 }
 
 /* 思考区标题可点击折叠/展开 */
@@ -287,13 +519,49 @@
 .panelToggleIcon {
   margin-left: auto;
   color: var(--ink-3, #9aa3b5);
-  font-size: 11px;
+  font-size: 10px;
+}
+
+/* 思考区折叠容器：始终渲染内容，用 maxHeight + transition 实现平滑折叠（对齐交互模式） */
+.thinkingCollapsible {
+  position: relative;
+}
+
+.thinkingCollapsibleInner {
+  transition: max-height 0.3s ease;
+}
+
+/* 折叠时底部渐变遮罩：淡出隐藏的内容 */
+.thinkingFade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.5em;
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.88));
+  pointer-events: none;
 }
 
 /* 思考区正文：走到每一步只展示当前步骤思考 */
 .thinkingBox {
-  border-left: 2px solid rgba(91, 124, 247, 0.28);
+  border-left: 2px solid transparent;
+  border-image: linear-gradient(180deg, rgba(91, 124, 247, 0.4) 0%, rgba(139, 92, 246, 0.15) 100%) 1;
   padding-left: 12px;
+  position: relative;
+}
+
+/* 思考区顶部小光点 */
+.thinkingBox::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #5b7cf7);
+  box-shadow: 0 0 8px rgba(91, 124, 247, 0.5);
+  animation: exploreGlowPulse 2s infinite;
 }
 
 .thinkingText {
@@ -307,7 +575,7 @@
 .thinkingSub {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed rgba(130, 140, 200, 0.24);
+  border-top: 1px dashed rgba(91, 124, 247, 0.18);
   color: var(--ink-3, #6b7690);
   font-size: 12px;
   line-height: 1.7;
@@ -327,7 +595,12 @@
   line-height: 1.7;
 }
 
-/* 待办事项：无边框无背景，宽松行距 */
+.thinkingPending .anticon {
+  color: var(--accent, #5b7cf7);
+  animation: exploreGlowPulse 1.5s infinite;
+}
+
+/* 待办事项：科技感增强 — 发光状态指示器 + 行高亮 */
 .todoList {
   display: flex;
   flex-direction: column;
@@ -338,45 +611,58 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 6px 0;
+  padding: 6px 4px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.todoRow:hover {
+  background: rgba(91, 124, 247, 0.03);
 }
 
 .todoStatus {
   display: inline-flex;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  margin-top: 1px;
-  font-size: 11px;
+  margin-top: 0;
+  font-size: 10px;
+  transition: all 0.3s ease;
 }
 
 .todoStatusPending {
-  background: rgba(132, 148, 173, 0.16);
+  background: rgba(132, 148, 173, 0.14);
   color: var(--ink-3, #8a97ad);
+  border: 1px solid rgba(132, 148, 173, 0.2);
 }
 
 .todoStatusRunning {
   background: rgba(91, 124, 247, 0.14);
   color: var(--accent, #5b5cf6);
+  border: 1px solid rgba(91, 124, 247, 0.3);
+  box-shadow: 0 0 8px rgba(91, 124, 247, 0.25);
   animation: explorePulse 1.4s infinite;
 }
 
 .todoStatusDone {
-  background: rgba(16, 185, 129, 0.14);
+  background: rgba(16, 185, 129, 0.12);
   color: var(--success, #10b981);
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 .todoStatusFailed {
-  background: rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.1);
   color: var(--danger, #ef4444);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .todoStatusCancelled {
-  background: rgba(132, 148, 173, 0.14);
+  background: rgba(132, 148, 173, 0.1);
   color: var(--ink-3, #9ca3af);
+  border: 1px solid rgba(132, 148, 173, 0.15);
 }
 
 .todoText {
@@ -390,49 +676,51 @@
   font-weight: 500;
   line-height: 1.6;
   overflow-wrap: anywhere;
+  transition: color 0.2s ease;
 }
 
 .todoTextActive {
   color: var(--ink-2, #333c4f);
   font-weight: 600;
+  text-shadow: 0 0 12px rgba(91, 124, 247, 0.08);
 }
 
-.todoPriority {
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: rgba(132, 148, 173, 0.1);
-  color: var(--ink-3, #8a97ad);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 18px;
-  padding: 1px 9px;
-}
-
-.todoPriorityHigh {
-  background: rgba(235, 87, 87, 0.08);
-  color: #cf5b60;
-}
-
-.todoPriorityMedium {
-  background: rgba(242, 153, 46, 0.1);
-  color: #c78b2e;
-}
-
-.todoPriorityLow {
-  background: rgba(39, 174, 96, 0.08);
-  color: #2f9e63;
-}
-
-/* 当前步骤结果下块：技能名称展示区（完成执行灰色 / 当前执行黑色） */
+/* 当前步骤结果下块：技能名称展示区（科技感增强） */
 .skillList {
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  border-top: 1px solid rgba(130, 140, 200, 0.1);
-  background: rgba(255, 255, 255, 0.3);
+  border-top: 1px solid rgba(91, 124, 247, 0.08);
+  background:
+    linear-gradient(0deg, rgba(91, 124, 247, 0.02) 0%, transparent 100%),
+    rgba(255, 255, 255, 0.3);
   padding: 12px 16px 14px;
+  position: relative;
+  /* 仅展示2条技能行高度，超出隐藏滚动条 */
+  max-height: 92px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.skillList::-webkit-scrollbar {
+  display: none;
+}
+
+.skillList::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    rgba(91, 124, 247, 0.15) 0%,
+    rgba(139, 92, 246, 0.1) 50%,
+    transparent 100%
+  );
 }
 
 .skillRow {
@@ -440,17 +728,33 @@
   max-width: 100%;
   align-items: center;
   gap: 8px;
-  border-radius: 10px;
-  background: rgba(132, 148, 173, 0.1);
+  border-radius: 8px;
+  background: rgba(132, 148, 173, 0.08);
   color: var(--ink-3, #9aa3b5);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 6px 12px;
+  font-family: var(--mono, ui-monospace, monospace);
+  letter-spacing: 0.2px;
+  padding: 5px 10px;
+  border: 1px solid rgba(132, 148, 173, 0.1);
+  transition: all 0.25s ease;
+}
+
+.skillRow .anticon {
+  font-size: 11px;
+  color: var(--ink-4, #b0bdd0);
 }
 
 .skillRowRunning {
-  background: rgba(91, 124, 247, 0.1);
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.1) 0%, rgba(139, 92, 246, 0.06) 100%);
   color: var(--ink, #1f2937);
+  border-color: rgba(91, 124, 247, 0.2);
+  box-shadow: 0 0 12px rgba(91, 124, 247, 0.1);
+}
+
+.skillRowRunning .anticon {
+  color: var(--accent, #5b7cf7);
+  animation: exploreGlowPulse 1.5s infinite;
 }
 
 .skillName {
@@ -466,14 +770,38 @@
 
 /* 左栏底部提示语：任务运行中提醒用户留在当前页面 */
 .runningHint {
-  margin-top: auto;
-  color: var(--ink-3, #8a97ad);
-  font-size: 12.5px;
-  line-height: 1.7;
-  padding: 12px 16px 14px;
+  color: var(--ink-2, #4a5468);
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 20px 16px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.06);
+  position: relative;
 }
 
-/* ── 右侧全高工作室侧栏 ── */
+.runningHintLabel {
+  color: var(--warn, #f59e0b);
+  font-weight: 600;
+}
+
+/* 运行中提示左侧动态扫描线 */
+.runningHint::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(91, 124, 247, 0.3) 50%,
+    transparent 100%
+  );
+  animation: exploreScanLine 3s linear infinite;
+}
+
+/* ── 右侧全高工作室侧栏（科技感增强） ── */
 .pane {
   width: 100%;
   min-width: 420px;
@@ -484,6 +812,23 @@
   overflow: hidden;
   background: rgba(255, 255, 255, 0.74);
   backdrop-filter: blur(18px);
+  position: relative;
+}
+
+/* 侧栏左侧渐变光线 */
+.pane::before {
+  content: '';
+  position: absolute;
+  top: 48px;
+  bottom: 16px;
+  left: 0;
+  width: 1px;
+  background: linear-gradient(180deg,
+    rgba(91, 124, 247, 0.2) 0%,
+    rgba(139, 92, 246, 0.15) 50%,
+    transparent 100%
+  );
+  z-index: 2;
 }
 
 .paneHeader {
@@ -494,19 +839,42 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid rgba(130, 140, 200, 0.14);
-  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(91, 124, 247, 0.1);
+  background:
+    linear-gradient(180deg, rgba(91, 124, 247, 0.03) 0%, transparent 100%),
+    rgba(255, 255, 255, 0.9);
   padding: 12px 16px;
+}
+
+.paneHeader::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    rgba(91, 124, 247, 0.25) 0%,
+    rgba(139, 92, 246, 0.15) 50%,
+    transparent 100%
+  );
 }
 
 .paneTitle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
   color: var(--ink, #25304d);
   font-size: 15px;
-  font-weight: 750;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.paneTitle .anticon {
+  color: var(--accent, #5b7cf7);
+  filter: drop-shadow(0 0 4px rgba(91, 124, 247, 0.3));
+  font-size: 16px;
 }
 
 .paneTitleText {
@@ -516,10 +884,10 @@
 }
 
 .paneMeta {
-  margin-top: 4px;
+  margin-top: 6px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .paneQuestion {
@@ -547,11 +915,12 @@
   box-shadow: none;
   color: var(--ink-2, #4f5c76);
   padding: 0;
+  transition: all 0.2s ease;
 }
 
 .paneCloseButton:hover {
   background: rgba(91, 124, 247, 0.08) !important;
-  color: var(--ink, #25304d) !important;
+  color: var(--accent, #5b7cf7) !important;
 }
 
 .paneBody {
@@ -559,6 +928,7 @@
   flex: 1;
   overflow: auto;
   padding: 18px;
+  position: relative;
 }
 
 .paneSection {
@@ -572,18 +942,33 @@
 .paneSectionTitle {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   margin-bottom: 10px;
   color: var(--ink, #25304d);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(91, 124, 247, 0.08);
+  width: 100%;
+}
+
+.paneSectionTitle .anticon {
+  color: var(--accent, #5b7cf7);
+  font-size: 13px;
 }
 
 .stepResult {
-  border: 1px solid rgba(130, 140, 200, 0.14);
+  border: 1px solid rgba(91, 124, 247, 0.12);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.6);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(91, 124, 247, 0.02) 100%);
   overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.stepResult:hover {
+  border-color: rgba(91, 124, 247, 0.2);
 }
 
 .stepResult + .stepResult {
@@ -595,19 +980,40 @@
 }
 
 .finalBlock {
-  border: 1px solid rgba(91, 124, 247, 0.16);
+  border: 1px solid rgba(91, 124, 247, 0.18);
   border-radius: 12px;
-  background: rgba(91, 124, 247, 0.045);
+  background:
+    linear-gradient(135deg, rgba(91, 124, 247, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%);
   padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 最终结论左上角高亮标记 */
+.finalBlock::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    var(--accent, #5b7cf7) 0%,
+    var(--accent-2, #8b5cf6) 50%,
+    transparent 100%
+  );
+  border-radius: 12px 12px 0 0;
 }
 
 .summaryBlock {
   border-radius: 12px;
-  background: rgba(245, 247, 255, 0.7);
+  background:
+    linear-gradient(135deg, rgba(245, 247, 255, 0.7) 0%, rgba(91, 124, 247, 0.03) 100%);
   color: var(--ink-2, #4a5468);
   font-size: 13px;
   line-height: 1.75;
   padding: 12px 14px;
+  border: 1px solid rgba(91, 124, 247, 0.06);
 }
 
 .summaryBlock b {
@@ -626,7 +1032,7 @@
   text-align: center;
 }
 
-/* ── 富文本 + 表格渲染（适配系统主题） ── */
+/* ── 富文本 + 表格渲染（科技感增强） ── */
 .richText {
   color: var(--ink-2, #333c4f);
   font-size: 13px;
@@ -649,16 +1055,19 @@
 .richText pre {
   overflow: auto;
   border-radius: 10px;
-  background: rgba(26, 39, 68, 0.06);
+  background: linear-gradient(135deg, rgba(26, 39, 68, 0.06) 0%, rgba(91, 124, 247, 0.03) 100%);
+  border: 1px solid rgba(91, 124, 247, 0.08);
   margin: 8px 0;
   padding: 10px 12px;
+  font-family: var(--mono, ui-monospace, monospace);
 }
 
 .tableWrap {
   overflow: auto;
-  border: 1px solid rgba(130, 140, 200, 0.18);
+  border: 1px solid rgba(91, 124, 247, 0.14);
   border-radius: 10px;
   margin: 8px 0;
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .dataTable {
@@ -669,8 +1078,8 @@
 
 .dataTable th,
 .dataTable td {
-  border-bottom: 1px solid rgba(130, 140, 200, 0.14);
-  border-right: 1px solid rgba(130, 140, 200, 0.1);
+  border-bottom: 1px solid rgba(91, 124, 247, 0.1);
+  border-right: 1px solid rgba(91, 124, 247, 0.06);
   padding: 8px 12px;
   text-align: left;
   white-space: nowrap;
@@ -684,13 +1093,19 @@
 .dataTable thead th {
   position: sticky;
   top: 0;
-  background: rgba(91, 124, 247, 0.09);
+  background: linear-gradient(180deg, rgba(91, 124, 247, 0.1) 0%, rgba(91, 124, 247, 0.06) 100%);
   color: var(--ink, #25304d);
   font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+.dataTable tbody tr {
+  transition: background 0.15s ease;
 }
 
 .dataTable tbody tr:nth-child(even) {
-  background: rgba(245, 247, 255, 0.55);
+  background: rgba(91, 124, 247, 0.02);
 }
 
 .dataTable tbody tr:hover {
@@ -699,30 +1114,62 @@
 
 .tableCaption {
   padding: 6px 12px;
-  border-top: 1px solid rgba(130, 140, 200, 0.14);
-  background: rgba(255, 255, 255, 0.6);
+  border-top: 1px solid rgba(91, 124, 247, 0.1);
+  background: rgba(91, 124, 247, 0.02);
   color: var(--ink-3, #8a97ad);
   font-size: 11px;
+  font-family: var(--mono, ui-monospace, monospace);
 }
 
 .mediaImage {
   max-width: 100%;
   border-radius: 10px;
-  border: 1px solid rgba(130, 140, 200, 0.16);
+  border: 1px solid rgba(91, 124, 247, 0.12);
 }
 
 .fileLink {
   color: var(--accent, #4f46e5);
   font-size: 13px;
+  transition: color 0.2s ease;
+}
+
+.fileLink:hover {
+  color: var(--accent-2, #8b5cf6);
 }
 
 @keyframes explorePulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(91, 124, 247, 0.28);
+    box-shadow: 0 0 0 0 rgba(91, 124, 247, 0.28), 0 0 8px rgba(91, 124, 247, 0.2);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(91, 124, 247, 0);
+    box-shadow: 0 0 0 5px rgba(91, 124, 247, 0), 0 0 12px rgba(91, 124, 247, 0.15);
+  }
+}
+
+@keyframes exploreGlowPulse {
+  0%,
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(91, 124, 247, 0.4));
+  }
+  50% {
+    opacity: 0.7;
+    filter: drop-shadow(0 0 6px rgba(91, 124, 247, 0.6));
+  }
+}
+
+@keyframes exploreScanLine {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
   }
 }
 
@@ -734,7 +1181,11 @@
 
   .todoColumn {
     border-right: none;
-    border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+    border-bottom: 1px solid rgba(91, 124, 247, 0.08);
+  }
+
+  .todoColumn::after {
+    display: none;
   }
 
   .currentResultBody {
@@ -754,6 +1205,12 @@
   .pane {
     min-width: 0;
     width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(91, 124, 247, 0.1);
+  }
+
+  .pane::before {
+    display: none;
   }
 
   .dataTable th,

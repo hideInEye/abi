@@ -1,6 +1,6 @@
-import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DesktopOutlined, DownOutlined, InboxOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, RightOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
-import { Alert, Tag } from 'antd'
-import React, { useEffect, useState } from 'react'
+import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DownOutlined, ExpandOutlined, InboxOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
+import { Alert } from 'antd'
+import React, { useEffect, useRef, useState } from 'react'
 
 import ExploreRichText, { containsText } from './ExploreRichText'
 import type { ExploreItem, ExploreStep, ExploreStepOutput } from './types'
@@ -12,6 +12,8 @@ interface ExploreMessageRowProps {
   active?: boolean
   /** 打开右侧工作室查看执行结果。 */
   onOpen?: () => void
+  /** 关闭右侧工作室。 */
+  onClose?: () => void
 }
 
 function getTodoStatusMeta(status: string) {
@@ -30,32 +32,18 @@ function getTodoStatusMeta(status: string) {
   }
 }
 
-/** 优先级标签色块：high 红 / medium 橙 / low 绿，其余回退默认灰。 */
-function getTodoPriorityCls(priority: string): string {
-  switch (priority) {
-    case 'high':
-      return styles.todoPriorityHigh
-    case 'medium':
-      return styles.todoPriorityMedium
-    case 'low':
-      return styles.todoPriorityLow
-    default:
-      return ''
-  }
-}
-
 function getCardStatusTag(status: ExploreItem['status']) {
   switch (status) {
     case 'running':
-      return { color: 'processing', text: '执行中' }
+      return { cls: styles.statusTagRunning, text: '执行中' }
     case 'completed':
-      return { color: 'green', text: '已完成' }
+      return { cls: styles.statusTagCompleted, text: '已完成' }
     case 'failed':
-      return { color: 'red', text: '失败' }
+      return { cls: styles.statusTagFailed, text: '失败' }
     case 'cancelled':
-      return { color: 'default', text: '已取消' }
+      return { cls: styles.statusTagCancelled, text: '已取消' }
     default:
-      return { color: 'default', text: status }
+      return { cls: styles.statusTagCancelled, text: status }
   }
 }
 
@@ -124,7 +112,7 @@ function renderProcessOutput(output: ExploreStepOutput, index: number) {
   return null
 }
 
-const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = false, onOpen }) => {
+const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = false, onOpen, onClose }) => {
   const completedCount = item.tasks.filter((task) => task.status === 'completed' || task.status === 'done').length
   const statusTag = getCardStatusTag(item.status)
   const running = item.status === 'running'
@@ -133,6 +121,18 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
   useEffect(() => {
     setThinkingExpanded(running)
   }, [running])
+  
+  // 技能列表自动滚动到当前执行中的技能
+  const skillListRef = useRef<HTMLDivElement>(null)
+  const runningStepId = item.steps.find((step) => step.status === 'running')?.id
+  useEffect(() => {
+    if (!skillListRef.current || !runningStepId) return
+    const runningElement = skillListRef.current.querySelector(`[data-step-id="${runningStepId}"]`)
+    if (runningElement) {
+      runningElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [runningStepId])
+  
   const thinking = getCurrentThinking(item)
   const focusedStep = getFocusedStep(item)
   const focusedStepTitle = focusedStep?.title || focusedStep?.action || (focusedStep?.step != null ? `步骤 ${focusedStep.step}` : '当前步骤')
@@ -153,19 +153,19 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
         <div className={styles.cardHeader}>
           <div className={styles.cardTitle}>
             <CompassOutlined /> 探索模式
-            <Tag color={statusTag.color}>{statusTag.text}</Tag>
+            {running && <span className={styles.statusDot} />}
+            <span className={`${styles.statusTag} ${statusTag.cls}`}>{statusTag.text}</span>
           </div>
           <div className={styles.cardHeaderActions}>
             {item.planVersion != null && <span className={styles.cardMeta}>v{item.planVersion}</span>}
             <button
               type="button"
               className={`${styles.studioChip} ${active ? styles.studioChipActive : ''}`}
-              onClick={onOpen}
+              onClick={active ? onClose : onOpen}
+              aria-label={active ? '收起工作室' : '打开工作室'}
             >
-              <DesktopOutlined /> 工作室
-            </button>
-            <button type="button" className={styles.studioIcon} onClick={onOpen} aria-label="打开工作室">
-              <ShrinkOutlined />
+              {active ? <ShrinkOutlined /> : <ExpandOutlined />}
+              <span>工作室</span>
             </button>
           </div>
         </div>
@@ -187,26 +187,41 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
                 }}
               >
                 <ThunderboltOutlined /> {running ? '正在深度思考' : '思考过程'}
-                <span className={styles.panelToggleIcon}>{thinkingExpanded ? <DownOutlined /> : <RightOutlined />}</span>
+                <DownOutlined
+                  className={styles.panelToggleIcon}
+                  style={{
+                    transform: thinkingExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.3s ease',
+                  }}
+                />
               </div>
-              {thinkingExpanded && (
-                thinking.thought ? (
-                  <div className={styles.thinkingBox}>
-                    <div className={styles.thinkingText}>{thinking.thought}</div>
-                    {thinking.intention && (
-                      <div className={styles.thinkingSub}>
-                        <b>当前动作：</b>
-                        {thinking.intention}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className={styles.thinkingPending}>
-                    {running ? <LoadingOutlined /> : <ClockCircleOutlined />}
-                    {running ? '规划智能体正在生成执行计划…' : '暂无思考内容'}
-                  </div>
-                )
-              )}
+              <div className={styles.thinkingCollapsible}>
+                <div
+                  className={styles.thinkingCollapsibleInner}
+                  style={{
+                    maxHeight: thinkingExpanded ? 'none' : '4.5em',
+                    overflow: thinkingExpanded ? 'visible' : 'hidden',
+                  }}
+                >
+                  {thinking.thought ? (
+                    <div className={styles.thinkingBox}>
+                      <div className={styles.thinkingText}>{thinking.thought}</div>
+                      {thinking.intention && (
+                        <div className={styles.thinkingSub}>
+                          <b>当前动作：</b>
+                          {thinking.intention}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className={styles.thinkingPending}>
+                      {running ? <LoadingOutlined /> : <ClockCircleOutlined />}
+                      {running ? '规划智能体正在生成执行计划…' : '暂无思考内容'}
+                    </div>
+                  )}
+                </div>
+                {!thinkingExpanded && <div className={styles.thinkingFade} />}
+              </div>
             </section>
 
             {/* 待办事项 */}
@@ -226,19 +241,11 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
                       <div className={styles.todoRow} key={task.todo_id || index}>
                         <span className={`${styles.todoStatus} ${meta.cls}`}>{meta.icon}</span>
                         <span className={`${styles.todoText} ${isActive ? styles.todoTextActive : ''}`}>{task.content || `任务 ${index + 1}`}</span>
-                        {task.priority && <span className={`${styles.todoPriority} ${getTodoPriorityCls(task.priority)}`}>{task.priority}</span>}
                       </div>
                     )
                   })}
                 </div>
               </section>
-            )}
-
-            {/* 左栏底部提示语：任务运行中提醒用户留在当前页面 */}
-            {running && (
-              <div className={styles.runningHint}>
-                💡 温馨提示：任务正在处理中，请留在当前对话页面哦~ 当前暂不支持后台运行，离开会导致任务中断。
-              </div>
             )}
           </div>
 
@@ -279,9 +286,9 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
 
             {/* 下块：技能名称展示区，和 todolist 一样按状态区分颜色（完成灰色 / 执行黑色） */}
             {item.steps.length > 0 && (
-              <div className={styles.skillList}>
+              <div ref={skillListRef} className={styles.skillList}>
                 {item.steps.map((step, index) => (
-                  <div key={step.id} className={`${styles.skillRow} ${step.status === 'running' ? styles.skillRowRunning : ''}`}>
+                  <div key={step.id} data-step-id={step.id} className={`${styles.skillRow} ${step.status === 'running' ? styles.skillRowRunning : ''}`}>
                     <ToolOutlined />
                     <span className={styles.skillName}>{step.title || step.action || `步骤 ${step.step ?? index + 1}`}</span>
                   </div>
@@ -290,6 +297,13 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
             )}
           </section>
         </div>
+
+        {/* 底部提示语：任务运行中提醒用户留在当前页面 */}
+        {running && (
+          <div className={styles.runningHint}>
+            💡 <span className={styles.runningHintLabel}>温馨提示：</span>任务正在处理中，请留在当前对话页面哦~ 当前暂不支持后台运行，离开会导致任务中断。
+          </div>
+        )}
 
         {item.error && <Alert className={styles.inlineAlert} type="error" showIcon message={item.error.message} />}
       </div>
