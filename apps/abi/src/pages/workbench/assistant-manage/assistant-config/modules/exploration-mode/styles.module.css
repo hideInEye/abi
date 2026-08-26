@@ -296,6 +296,12 @@
   padding-left: 12px;
 }
 
+/* 思考区展开时限高约 4 行（13px × 1.8 行高），内部滚动，避免长思考撑开卡片 */
+.thinkingScroll {
+  max-height: 96px;
+  overflow-y: auto;
+}
+
 .thinkingText {
   color: var(--ink-3, #4f5c76);
   font-size: 13px;
@@ -699,6 +705,11 @@
 }
 
 .tableCaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
   padding: 6px 12px;
   border-top: 1px solid rgba(130, 140, 200, 0.14);
   background: rgba(255, 255, 255, 0.6);

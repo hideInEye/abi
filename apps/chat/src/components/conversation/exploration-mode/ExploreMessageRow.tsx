@@ -1,5 +1,5 @@
-import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DownOutlined, ExpandOutlined, InboxOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
-import { Alert } from 'antd'
+import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DislikeOutlined, DownOutlined, ExpandOutlined, InboxOutlined, LikeOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
+import { Alert, message } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 
 import ExploreRichText, { containsText } from './ExploreRichText'
@@ -47,8 +47,12 @@ function getCardStatusTag(status: ExploreItem['status']) {
   }
 }
 
-/** 取当前应展示的思考：优先运行中的步骤，其次最后一个有思考的步骤，最后回退计划思考。 */
+/** 取当前应展示的思考：运行中优先打字机流（简洁思考流 > 深度思考流），其次运行中的步骤，其次最后一个有思考的步骤，最后回退计划思考。 */
 function getCurrentThinking(item: ExploreItem): { thought?: string; intention?: string } {
+  if (item.status === 'running') {
+    if (item.thoughtStream) return { thought: item.thoughtStream }
+    if (item.reasoningStream) return { thought: item.reasoningStream }
+  }
   const running = [...item.steps].reverse().find((step) => step.status === 'running')
   const lastWithThought = [...item.steps].reverse().find((step) => step.thought || step.actionReason)
   const step = running || lastWithThought
@@ -132,8 +136,16 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
       runningElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
   }, [runningStepId])
+
+  // 打字机流式输出时思考区自动滚到底部，保证最新内容可见
+  const thinkingScrollRef = useRef<HTMLDivElement>(null)
   
   const thinking = getCurrentThinking(item)
+  useEffect(() => {
+    if (!running) return
+    const el = thinkingScrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [thinking.thought, running])
   const focusedStep = getFocusedStep(item)
   const focusedStepTitle = focusedStep?.title || focusedStep?.action || (focusedStep?.step != null ? `步骤 ${focusedStep.step}` : '当前步骤')
   const focusedOutputs = focusedStep?.outputs || []
@@ -197,10 +209,12 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
               </div>
               <div className={styles.thinkingCollapsible}>
                 <div
+                  ref={thinkingScrollRef}
                   className={styles.thinkingCollapsibleInner}
                   style={{
-                    maxHeight: thinkingExpanded ? 'none' : '4.5em',
-                    overflow: thinkingExpanded ? 'visible' : 'hidden',
+                    // 展开时不内联限高，交由 CSS 的 440px/52vh + 内部滚动生效
+                    maxHeight: thinkingExpanded ? undefined : '4.5em',
+                    overflow: thinkingExpanded ? undefined : 'hidden',
                   }}
                 >
                   {thinking.thought ? (
@@ -305,7 +319,17 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
           </div>
         )}
 
-        {item.error && <Alert className={styles.inlineAlert} type="error" showIcon message={item.error.message} />}
+        {item.error && <Alert className={styles.inlineAlert} type="error" message={item.error.message} />}
+
+        {/* 底部工具栏：反馈按钮（占位功能，后续接入实际评价逻辑） */}
+        <div className={styles.footerBar}>
+          <button type="button" className={styles.footerAction} onClick={() => message.info('功能开发中...')}>
+            <DislikeOutlined /> 点踩
+          </button>
+          <button type="button" className={styles.footerAction} onClick={() => message.info('功能开发中...')}>
+            <LikeOutlined /> 点赞
+          </button>
+        </div>
       </div>
     </article>
   )

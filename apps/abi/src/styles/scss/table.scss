@@ -4091,7 +4091,10 @@ div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
 }
 
 // ── Hero banner ──
-.sd-v5-hero {
+// 注意：类名必须保持 sd-v5-space-hero，禁止改回 sd-v5-hero ——
+// 技能详情抽屉 skill.css 中存在同名 .sd-v5-hero（带 margin: 24px 40px 0），
+// 同名会导致其 margin/::before/::after 泄漏到空间页 hero，出现两侧不占满的问题。
+.sd-v5-space-hero {
   position: relative;
   border-radius: 16px;
   overflow: hidden;

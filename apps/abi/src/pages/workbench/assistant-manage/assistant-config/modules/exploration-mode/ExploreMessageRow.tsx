@@ -1,6 +1,6 @@
 import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DesktopOutlined, DownOutlined, InboxOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, RightOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
 import { Alert, Tag } from 'antd'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 import ExploreRichText, { containsText } from './ExploreRichText'
 import type { ExploreItem, ExploreStep, ExploreStepOutput } from './types'
@@ -59,8 +59,12 @@ function getCardStatusTag(status: ExploreItem['status']) {
   }
 }
 
-/** 取当前应展示的思考：优先运行中的步骤，其次最后一个有思考的步骤，最后回退计划思考。 */
+/** 取当前应展示的思考：运行中优先打字机流（简洁思考流 > 深度思考流），其次运行中的步骤，其次最后一个有思考的步骤，最后回退计划思考。 */
 function getCurrentThinking(item: ExploreItem): { thought?: string; intention?: string } {
+  if (item.status === 'running') {
+    if (item.thoughtStream) return { thought: item.thoughtStream }
+    if (item.reasoningStream) return { thought: item.reasoningStream }
+  }
   const running = [...item.steps].reverse().find((step) => step.status === 'running')
   const lastWithThought = [...item.steps].reverse().find((step) => step.thought || step.actionReason)
   const step = running || lastWithThought
@@ -134,6 +138,14 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
     setThinkingExpanded(running)
   }, [running])
   const thinking = getCurrentThinking(item)
+
+  // 打字机流式输出时思考区自动滚到底部，保证最新内容可见
+  const thinkingScrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!running) return
+    const el = thinkingScrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [thinking.thought, running])
   const focusedStep = getFocusedStep(item)
   const focusedStepTitle = focusedStep?.title || focusedStep?.action || (focusedStep?.step != null ? `步骤 ${focusedStep.step}` : '当前步骤')
   const focusedOutputs = focusedStep?.outputs || []
@@ -190,22 +202,24 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
                 <span className={styles.panelToggleIcon}>{thinkingExpanded ? <DownOutlined /> : <RightOutlined />}</span>
               </div>
               {thinkingExpanded && (
-                thinking.thought ? (
-                  <div className={styles.thinkingBox}>
-                    <div className={styles.thinkingText}>{thinking.thought}</div>
-                    {thinking.intention && (
-                      <div className={styles.thinkingSub}>
-                        <b>当前动作：</b>
-                        {thinking.intention}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className={styles.thinkingPending}>
-                    {running ? <LoadingOutlined /> : <ClockCircleOutlined />}
-                    {running ? '规划智能体正在生成执行计划…' : '暂无思考内容'}
-                  </div>
-                )
+                <div ref={thinkingScrollRef} className={styles.thinkingScroll}>
+                  {thinking.thought ? (
+                    <div className={styles.thinkingBox}>
+                      <div className={styles.thinkingText}>{thinking.thought}</div>
+                      {thinking.intention && (
+                        <div className={styles.thinkingSub}>
+                          <b>当前动作：</b>
+                          {thinking.intention}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className={styles.thinkingPending}>
+                      {running ? <LoadingOutlined /> : <ClockCircleOutlined />}
+                      {running ? '规划智能体正在生成执行计划…' : '暂无思考内容'}
+                    </div>
+                  )}
+                </div>
               )}
             </section>
 

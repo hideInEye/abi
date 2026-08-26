@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AudioRecorder from '../../../../components/AudioRecorder';
 import UploadDrawer from '../../UploadDrawer';
 import FileTag from '../../../../components/FileTag';
-import { querySkillList } from '../../../../service/api/skill';
+import { fetchFavoriteList } from '../../../../service/api/abi-system';
 import { queryMcpList } from '../../../../service/api/mcp';
 import type { ReportSourceVersionFields } from '../../../../service/api/report';
 import { fetchSemanticGroups, fetchSemanticDetail } from '../../../../service/api/semantic';
@@ -141,14 +141,21 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       if (skillLoadStartedRef.current) return;
       skillLoadStartedRef.current = true;
       setSkillLoading(true);
-      querySkillList({ spaceId: spaceId || getSpaceId(), status: '1' })
+      // 弹窗只认收藏列表：与技能商店「我的技能」同一套逻辑，仅调 favorite/list（favorType=skill）
+      fetchFavoriteList({ favorType: 'skill' })
         .then((res: any) => {
-          const list = res?.data?.data?.pageItems || res?.data?.list || (Array.isArray(res?.data) ? res.data : []) || res?.rows || [];
-          setSkillList(Array.isArray(list) ? list : []);
+          const rows = res?.rows ?? res?.data?.rows ?? res?.data?.list ?? (Array.isArray(res?.data) ? res.data : []);
+          const list = Array.isArray(rows) ? rows : [];
+          // 保留行原始字段（latestVersionId/skillType 等提交要用），id/名称做兼容映射
+          setSkillList(list.map((r: any) => ({
+            ...r,
+            id: r.favorId ?? r.favor_id ?? r.skillId ?? r.id,
+            bizName: r.bizName ?? r.skillName ?? r.name ?? '',
+          })));
         })
         .catch(() => {})
         .finally(() => setSkillLoading(false));
-    }, [spaceId]);
+    }, []);
 
     // 懒加载 MCP 分组（首次 hover 进入 MCP 面板时触发一次）
     const mcpLoadStartedRef = useRef(false);

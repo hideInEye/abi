@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
+import { Pagination } from 'antd'
 
 import styles from './styles.module.css'
 
@@ -85,29 +86,59 @@ function splitBlocks(text: string): Block[] {
   return blocks
 }
 
-const DataTable: React.FC<{ table: ParsedTable }> = ({ table }) => (
-  <div className={styles.tableWrap}>
-    <table className={styles.dataTable}>
-      <thead>
-        <tr>
-          {table.headers.map((header, index) => (
-            <th key={index}>{header}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {table.rows.map((row, rowIndex) => (
-          <tr key={rowIndex}>
-            {row.map((cell, cellIndex) => (
-              <td key={cellIndex}>{cell}</td>
+const DEFAULT_PAGE_SIZE = 10
+const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100']
+
+/** 数据表：保持单个表格，长数据通过前端分页翻页浏览，不一次性铺满、不拆成多个表格。 */
+const DataTable: React.FC<{ table: ParsedTable }> = ({ table }) => {
+  const [page, setPage] = React.useState(1)
+  const [pageSize, setPageSize] = React.useState(DEFAULT_PAGE_SIZE)
+
+  const total = table.rows.length
+  const maxPage = Math.max(1, Math.ceil(total / pageSize))
+  const safePage = Math.min(page, maxPage)
+  const pagedRows = table.rows.slice((safePage - 1) * pageSize, safePage * pageSize)
+
+  return (
+    <div className={styles.tableWrap}>
+      <table className={styles.dataTable}>
+        <thead>
+          <tr>
+            {table.headers.map((header, index) => (
+              <th key={index}>{header}</th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
-    <div className={styles.tableCaption}>共 {table.rows.length} 条记录</div>
-  </div>
-)
+        </thead>
+        <tbody>
+          {pagedRows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => (
+                <td key={cellIndex}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className={styles.tableCaption}>
+        <span>共 {total} 条记录</span>
+        {total > pageSize && (
+          <Pagination
+            size="small"
+            current={safePage}
+            pageSize={pageSize}
+            total={total}
+            showSizeChanger
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onChange={(nextPage, nextPageSize) => {
+              setPage(nextPageSize !== pageSize ? 1 : nextPage)
+              setPageSize(nextPageSize)
+            }}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
 
 /** 判断文本中是否包含可识别的表格，供右侧工作室筛选结构化数据。 */
 export function containsTable(text: string): boolean {
