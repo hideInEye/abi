@@ -1,5 +1,5 @@
 import { CheckCircleOutlined, CloseCircleOutlined, CompassOutlined, DownloadOutlined, InboxOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Empty, Tag } from 'antd'
+import { Button, Dropdown, Empty } from 'antd'
 import type { MenuProps } from 'antd'
 import React from 'react'
 
@@ -30,15 +30,15 @@ const EXPORT_MENU_ITEMS: MenuProps['items'] = [
 function getStatusTag(status: ExploreItem['status']) {
   switch (status) {
     case 'running':
-      return { color: 'processing', text: '执行中' }
+      return { cls: styles.statusTagRunning, text: '执行中' }
     case 'completed':
-      return { color: 'green', text: '已完成' }
+      return { cls: styles.statusTagCompleted, text: '已完成' }
     case 'failed':
-      return { color: 'red', text: '失败' }
+      return { cls: styles.statusTagFailed, text: '失败' }
     case 'cancelled':
-      return { color: 'default', text: '已取消' }
+      return { cls: styles.statusTagCancelled, text: '已取消' }
     default:
-      return { color: 'default', text: status }
+      return { cls: styles.statusTagCancelled, text: status }
   }
 }
 
@@ -79,6 +79,7 @@ const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose }
   const statusTag = getStatusTag(item.status)
   const resultSteps = item.steps.filter((step) => step.outputs.some(isStructuredOutput))
   const hasResult = Boolean(item.finalContent) || resultSteps.length > 0 || Boolean(item.summary)
+  const running = item.status === 'running'
 
   return (
     <aside className={styles.pane}>
@@ -87,10 +88,11 @@ const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose }
           <div className={styles.paneTitle}>
             <CompassOutlined />
             <span className={styles.paneTitleText}>工作室</span>
+            {running && <span className={styles.statusDot} />}
           </div>
           <div className={styles.paneMeta}>
-            <Tag color={statusTag.color}>{statusTag.text}</Tag>
-            {item.finishReason === 'success' && <Tag icon={<CheckCircleOutlined />} color="green">成功</Tag>}
+            <span className={`${styles.statusTag} ${statusTag.cls}`}>{statusTag.text}</span>
+            {item.finishReason === 'success' && <span className={`${styles.statusTag} ${styles.statusTagSuccess}`}><CheckCircleOutlined /> 成功</span>}
             <span className={styles.paneQuestion} title={item.question}>{item.question}</span>
           </div>
         </div>
