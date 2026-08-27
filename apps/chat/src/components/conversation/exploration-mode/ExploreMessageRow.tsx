@@ -1,5 +1,5 @@
 import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DislikeOutlined, DownOutlined, ExpandOutlined, InboxOutlined, LikeOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
-import { Alert, message } from 'antd'
+import { Alert, message, Tooltip } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 
 import ExploreRichText, { containsText } from './ExploreRichText'
@@ -321,14 +321,18 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
 
         {item.error && <Alert className={styles.inlineAlert} type="error" message={item.error.message} />}
 
-        {/* 底部工具栏：反馈按钮（占位功能，后续接入实际评价逻辑） */}
+        {/* 底部工具栏：反馈按钮（占位功能，后续接入实际评价逻辑），样式对齐交互模式操作栏图标按钮 */}
         <div className={styles.footerBar}>
-          <button type="button" className={styles.footerAction} onClick={() => message.info('功能开发中...')}>
-            <DislikeOutlined /> 点踩
-          </button>
-          <button type="button" className={styles.footerAction} onClick={() => message.info('功能开发中...')}>
-            <LikeOutlined /> 点赞
-          </button>
+          <Tooltip title="点赞">
+            <button type="button" className={styles.footerAction} onClick={() => message.info('功能开发中...')}>
+              <LikeOutlined />
+            </button>
+          </Tooltip>
+          <Tooltip title="点踩">
+            <button type="button" className={styles.footerAction} onClick={() => message.info('功能开发中...')}>
+              <DislikeOutlined />
+            </button>
+          </Tooltip>
         </div>
       </div>
     </article>

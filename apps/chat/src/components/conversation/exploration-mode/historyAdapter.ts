@@ -1,4 +1,4 @@
-import type { ExploreItem, ExploreStep } from './types'
+import type { ExploreItem, ExploreStep, ExploreTask } from './types'
 
 // 报告模式的 payload 同样是 react-agent，仅靠 chat_mode='chat_report' 区分。
 // 探索历史提取必须排除报告轮次，否则报告会被重复渲染成探索卡片。
@@ -42,6 +42,24 @@ function getQuestion(messages: any[]): string {
   return typeof content === 'string' ? content : ''
 }
 
+/** todo_id 为随机哈希、无数值顺序；历史恢复按 todo_id 在 steps 中首次出现的执行顺序定序，
+ *  未在 steps 中出现的任务保持 task_plan 原有相对顺序并置后。 */
+function orderTasksByStepAppearance(tasks: ExploreTask[], steps: ExploreStep[]): ExploreTask[] {
+  const firstIndex = new Map<string, number>()
+  steps.forEach((step, index) => {
+    if (step.todoId && !firstIndex.has(step.todoId)) firstIndex.set(step.todoId, index)
+  })
+  if (firstIndex.size === 0) return tasks
+  return [...tasks].sort((a, b) => {
+    const indexA = a.todo_id ? firstIndex.get(a.todo_id) : undefined
+    const indexB = b.todo_id ? firstIndex.get(b.todo_id) : undefined
+    if (indexA == null && indexB == null) return 0
+    if (indexA == null) return 1
+    if (indexB == null) return -1
+    return indexA - indexB
+  })
+}
+
 function mapStep(raw: any, index: number): ExploreStep {
   return {
     id: String(raw?.id || `history-step-${index + 1}`),
@@ -75,14 +93,15 @@ export function extractExploreHistoryItems(roundGroups: any[]): ExploreItem[] {
     const payload = readContent(payloadMessage) as any
     const roundIndex = Number(group?.roundIndex ?? payloadMessage?.roundIndex ?? payloadMessage?.index ?? index + 1)
     const success = payload?.success !== false && payload?.finish_reason !== 'agent_error' && payload?.finish_reason !== 'tool_error'
+    const steps = Array.isArray(payload?.steps) ? payload.steps.map(mapStep) : []
 
     return [{
       id: `history-explore-${roundIndex}-${index}`,
       question: getQuestion(messages),
       sortOrder: Number.isFinite(roundIndex) ? roundIndex : Date.now() + index,
       status: success ? 'completed' : 'failed',
-      tasks: Array.isArray(payload?.task_plan) ? payload.task_plan : [],
-      steps: Array.isArray(payload?.steps) ? payload.steps.map(mapStep) : [],
+      tasks: orderTasksByStepAppearance(Array.isArray(payload?.task_plan) ? payload.task_plan : [], steps),
+      steps,
       finalContent: typeof payload?.final_content === 'string' ? payload.final_content : '',
       summary: typeof payload?.overall_summary === 'string' ? payload.overall_summary : undefined,
       finishReason: payload?.finish_reason,

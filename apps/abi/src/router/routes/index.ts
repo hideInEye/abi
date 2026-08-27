@@ -29,6 +29,19 @@ const customRoutes: CustomRoute[] = [
       title: 'dashboard-share-page',
       i18nKey: 'route.dashboard-share-page'
     }
+  },
+  {
+    // 后端分享接口统一返回下划线路径（dashboard_share_page/{code}），别名路由复用同一视图。
+    // 注意：elegant-router 用下划线作路由名层级分隔符，name 不能含下划线
+    name: 'dashboard-share-page-alias',
+    path: '/dashboard_share_page/:shareCode',
+    component: 'layout.blank$view.dashboard-share-page',
+    meta: {
+      constant: true,
+      hideInMenu: true,
+      title: 'dashboard-share-page',
+      i18nKey: 'route.dashboard-share-page'
+    }
   }
   // {
   //   children: [

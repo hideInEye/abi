@@ -1,0 +1,404 @@
+/* 助手分享对话悬浮框样式：全量 abi-cw- 前缀，避免污染宿主页面；不依赖 Tailwind */
+
+.abi-cw-root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  color: #1f2733;
+  line-height: 1.6;
+  box-sizing: border-box;
+}
+
+.abi-cw-root *,
+.abi-cw-root *::before,
+.abi-cw-root *::after {
+  box-sizing: border-box;
+}
+
+/* 形态 A：分享路由页（悬浮可拖拽小面板） */
+.abi-cw-page {
+  width: 100%;
+  min-height: 100vh;
+  background: #f2f5fa;
+}
+
+.abi-cw-page .abi-cw-panel {
+  position: fixed;
+  top: 48px;
+  right: 24px;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  height: 640px;
+  max-height: calc(100vh - 72px);
+  box-shadow: 0 8px 32px rgba(31, 39, 51, 0.16);
+}
+
+/* 形态 B：第三方嵌入（右侧悬浮面板） */
+.abi-cw-float {
+  position: fixed;
+  top: 72px;
+  right: 24px;
+  bottom: 24px;
+  width: 396px;
+  max-width: calc(100vw - 32px);
+  z-index: 2147483000;
+}
+
+.abi-cw-float .abi-cw-panel {
+  height: 100%;
+  box-shadow: 0 8px 32px rgba(31, 39, 51, 0.16);
+}
+
+.abi-cw-panel {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5eaf2;
+}
+
+/* ── 头部（拖拽把手） ── */
+.abi-cw-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef1f6;
+  background: #fff;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+
+.abi-cw-header-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #1f2733;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.abi-cw-header-name {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 10px;
+  background: #f2f5fa;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #45536b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.abi-cw-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #8a94a6;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.abi-cw-close:hover {
+  color: #1f2733;
+}
+
+/* ── 消息区 ── */
+.abi-cw-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  background: #fff;
+}
+
+.abi-cw-status {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #8a94a6;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.abi-cw-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e5eaf2;
+  border-top-color: #3370ff;
+  border-radius: 50%;
+  animation: abi-cw-spin 0.8s linear infinite;
+}
+
+@keyframes abi-cw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 密码表单（嵌入形态下的分享密码校验） */
+.abi-cw-password {
+  width: 100%;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.abi-cw-password-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2733;
+}
+
+.abi-cw-password input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d5dce8;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.abi-cw-password input:focus {
+  border-color: #3370ff;
+}
+
+.abi-cw-password-error {
+  color: #f04a4a;
+  font-size: 12px;
+  min-height: 18px;
+}
+
+.abi-cw-btn-primary {
+  border: none;
+  border-radius: 8px;
+  background: #3370ff;
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.abi-cw-btn-primary:hover {
+  background: #245cd6;
+}
+
+.abi-cw-btn-primary:disabled {
+  background: #a9c1f5;
+  cursor: not-allowed;
+}
+
+/* 欢迎态 */
+.abi-cw-welcome {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.abi-cw-welcome-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2733;
+}
+
+.abi-cw-welcome-desc {
+  color: #8a94a6;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.abi-cw-rec-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.abi-cw-rec-item {
+  border: 1px solid #e5eaf2;
+  background: #f7f9fc;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #45536b;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.abi-cw-rec-item:hover {
+  border-color: #3370ff;
+  color: #3370ff;
+}
+
+/* 消息流 */
+.abi-cw-msg {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.abi-cw-msg-time {
+  font-size: 11px;
+  color: #b3bccb;
+  margin-bottom: 4px;
+}
+
+.abi-cw-msg-bubble {
+  max-width: 86%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 14px;
+}
+
+.abi-cw-msg-human {
+  align-items: flex-end;
+}
+
+.abi-cw-msg-human .abi-cw-msg-bubble {
+  background: #3370ff;
+  color: #fff;
+  border-top-right-radius: 2px;
+}
+
+.abi-cw-msg-ai {
+  align-items: flex-start;
+}
+
+.abi-cw-msg-ai .abi-cw-msg-time {
+  text-align: left;
+}
+
+.abi-cw-msg-ai .abi-cw-msg-bubble {
+  background: #f2f5fa;
+  color: #1f2733;
+  border-top-left-radius: 2px;
+}
+
+/* ── 输入区 ── */
+.abi-cw-footer {
+  flex-shrink: 0;
+  padding: 12px 16px 8px;
+  background: #fff;
+  border-top: 1px solid #eef1f6;
+}
+
+.abi-cw-input-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f7f9fc;
+  border: 1px solid #e5eaf2;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.abi-cw-input-box:focus-within {
+  border-color: #3370ff;
+}
+
+.abi-cw-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1f2733;
+  min-height: 22px;
+  max-height: 96px;
+}
+
+.abi-cw-input::placeholder {
+  color: #a3b3c8;
+}
+
+.abi-cw-input-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.abi-cw-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: #3370ff;
+  color: #fff;
+  cursor: pointer;
+}
+
+.abi-cw-send:hover {
+  background: #245cd6;
+}
+
+.abi-cw-send:disabled {
+  background: #a9c1f5;
+  cursor: not-allowed;
+}
+
+.abi-cw-send svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 停止生成按钮：复用发送按钮尺寸，中性色区分 */
+.abi-cw-stop {
+  background: #8a94a6;
+}
+
+.abi-cw-stop:hover {
+  background: #6f7a8c;
+}
+
+/* 流式生成光标 */
+.abi-cw-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: #3370ff;
+  animation: abi-cw-blink 1s steps(2) infinite;
+}
+
+@keyframes abi-cw-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.abi-cw-disclaimer {
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 12px;
+  color: #b3bccb;
+  padding: 0 16px 12px;
+  background: #fff;
+}
