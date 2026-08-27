@@ -779,24 +779,27 @@
   padding: 8px 16px 12px;
 }
 
+/* 与交互模式操作栏 action-icon 保持一致：32×32 图标按钮、悬停主题色浅底 */
 .footerAction {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
-  color: var(--ink-2, #4a5468);
-  font-size: 13px;
-  line-height: 1.4;
+  color: #8c8c8c;
+  font-size: 14px;
   cursor: pointer;
-  transition: all 0.25s var(--ease, ease);
+  user-select: none;
+  transition: all 0.2s ease;
 }
 
 .footerAction:hover {
+  color: #5b7cf7;
   background: rgba(91, 124, 247, 0.08);
-  color: var(--accent, #5b7cf7);
 }
 
 /* 左栏底部提示语：任务运行中提醒用户留在当前页面 */

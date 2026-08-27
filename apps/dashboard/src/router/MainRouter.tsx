@@ -436,6 +436,11 @@ const routes = [
         element: <ShareViewPage/>
     },
     {
+        // 后端分享接口统一返回下划线路径，别名路由兼容
+        path: '/dashboard_share_page/:shareCode',
+        element: <ShareViewPage/>
+    },
+    {
         path: '/test',
         element: <Demo/>
     },

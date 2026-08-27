@@ -25,7 +25,7 @@
 - 依赖：TanStack Router、Zustand、Ant Design、Tailwind、axios、`@sa/auth`、`@sa/axios`。
 - 输入：`public/config.json`、URL boot params、localStorage token、后端聊天/分析接口。
 - 输出：会话消息、图表、下载/截图、调试状态。
-- 注意事项：`src/main.tsx` 会 fetch config 后挂载；`src/service/request/index.ts` 在开发环境会把绝对 baseURL 降为同源路径以走 Vite proxy。
+- 注意事项：`src/main.tsx` 会 fetch config 后挂载；`src/service/request/index.ts` 在开发环境会把绝对 baseURL 降为同源路径以走 Vite proxy。`src/components/chat-widget/` 为无 store 依赖的纯组件对话悬浮框，服务两种形态：分享路由页 `/assistant-share-page/:shareCode` 与第三方嵌入；`vite.config.widget.ts`（`build:widget` 脚本）独立构建 iife 单文件 `dist/widget/abi-chat-widget.js/css`（Web Component `<abi-chat-widget>`）；widget 不引入 Tailwind/antd，样式全量 `abi-cw-` 前缀，请求走 shareCode 免登录封装（`chat-widget/service.ts`，接口路径假设集中该文件）。
 - 测试建议：优先覆盖 `syncBootParams`、conversation helpers、图表数据转换和 token 过期处理。
 
 ## apps/dashboard

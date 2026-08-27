@@ -9,6 +9,48 @@
 
 本文件是本轮开发的唯一当前需求依据。旧实现中的独立 `ReportConversation` 页面分支、根 `server/`、Node `/api/report-stream/events` 以及“不调用 task 状态接口”的约定全部废止。
 
+## 2026-08-27 追加：助手分享页与第三方嵌入对话悬浮框（Web Component，方案3）
+
+### 背景
+
+- 大屏分享已闭环：后端返回下划线分享路径，前端转连字符路由 `/dashboard-share-page/:shareCode`，[ShareViewPage](apps/dashboard/src/pages/share/ShareViewPage.tsx) 先 `checkSharePassword` 再加载。
+- 助手（应用工坊）尚无对外分享入口；对话悬浮框 UI 仅存在于大屏设计器 [AiChatPanel](apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx)，强耦合设计器 MobX store，无法直接复用。
+- 需求：助手可外链分享（后端传路径、前端跳转），页面为右侧悬浮对话面板形态（欢迎语 + 消息流 + 输入区）；并支持第三方系统通过引入外部 JS/CSS 嵌入同一悬浮框（方案3 Web Component）。
+
+### 目标
+
+- chat 应用（hash 路由）新增分享路由页，路径沿用大屏“后端下划线、前端连字符”转换约定，渲染悬浮对话面板。
+- 悬浮框抽为无 store 依赖的纯组件 `apps/chat/src/components/chat-widget/`（props 驱动：shareCode/apiBase/mode），分享页与第三方嵌入共用同一组件。
+- 新增独立 Vite lib 构建（iife 单文件）产出 `abi-chat-widget.js` + `abi-chat-widget.css`，注册 `<abi-chat-widget>` 自定义元素并暴露 `window.AbiChatWidget.mount/unmount`；静态产物随 chat 构建产物部署，不改任何部署配置（不涉及 nginx）。
+- 样式隔离：不用 Shadow DOM；widget 自身 CSS 全量 `abi-cw-` 前缀、antd `prefixCls` 独立、`getPopupContainer` 挂回 widget 根；widget 构建不引入 Tailwind。
+- 免登录：widget 请求层支持 shareCode 模式，不依赖 token/localStorage。
+- 工坊助手增加分享入口，调后端新分享接口取 shareUrl。
+
+### 非目标
+
+- 不修改现有对话主流程、报告/探索模式、大屏 AiChatPanel 与大屏分享逻辑。
+- 不修改 nginx/部署配置。
+- 不实现 iframe/npm 包等其他集成方案。
+
+### 影响范围
+
+- apps/chat 新增：`components/chat-widget/`、`pages/assistant-share-page/$shareCode.tsx`、`vite.config.widget.ts`、`widget-entry.tsx`、工坊分享入口、`service/api` 分享接口封装。
+- 依赖后端新增：助手分享生成、分享校验、带 shareCode 免登录会话接口（session/add、chat/completions、message/query）及 CORS。
+
+### 验收与测试
+
+- 分享链接打开先校验（有密码弹密码框）后正确渲染悬浮对话面板，可正常对话。
+- 空白第三方页面引入 js/css + 标签即可挂载悬浮框并对话；widget CSS 不污染宿主页面。
+- url 转换、历史消息映射纯函数补 Vitest；运行 ai-bot typecheck、build、build:widget 与 `git diff --check`。
+- 生成 `.ai/runs/2026-08-27-assistant-share-widget/RUN_LOG.md`。
+
+### 2026-08-27 后端协议确认（分享接口已就绪）
+
+- 分享接口与大屏共用：后端服务路径 `POST /api/v1/project/share`，网关完整路径为 `VITE_BASE_API('/api') + '/dashboard/api/v1/project/share'`（与大屏 FetchUtil 拼接方式一致），新增 `type` 字段区分：chat 端助手分享=`react`、abi 助手=`workflow`、数据大屏=`dashboard`。
+- 请求体：`{ projectId, spaceId, type, sharePasswordFlag, expirationDays }`；助手分享时 `projectId` = 助手 appId，`spaceId` 取当前空间。
+- 分享校验与大屏同接口：网关路径 `'/api' + '/dashboard/api/v1/project/checkSharePassword'`，请求体字段 `{ shareCode, sharePassword }`，响应返回 `projectId`（=助手 appId）。
+- 会话三件套免登录与对话 completions 的 shareCode 支持仍待后端确认。
+
 ## 2026-08-26 追加：「我的技能」在对话框技能选择可见 + 工坊/商店 tab 字号统一
 
 ### 背景

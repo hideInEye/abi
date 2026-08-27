@@ -209,7 +209,7 @@ class BaseApi extends AbstractApi {
         expirationDays?: number,
         expirationDate?: string
     ): Promise<{shareUrl: string; sharePassword?: string | null} | null> {
-        const body: Record<string, unknown> = {projectId, spaceId, sharePasswordFlag};
+        const body: Record<string, unknown> = {projectId, spaceId, type: 'dashboard', sharePasswordFlag};
         if (expirationDays !== undefined) body.expirationDays = expirationDays;
         if (expirationDate !== undefined) body.expirationDate = expirationDate;
         const res = await FetchUtil.post('/dashboard/api/v1/project/share', body);

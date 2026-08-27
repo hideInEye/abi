@@ -3,7 +3,10 @@ import zhCN from 'antd/locale/zh_CN'
 import type { Dayjs } from 'dayjs'
 import { useEffect, useState } from 'react'
 
+import { useAppSelector } from '@/hooks/business/useStore'
 import type { AgentMock } from '@/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer'
+import { shareProjectApi } from '@/service/api/share'
+import { getSpaceId } from '@/store/slice/app'
 
 interface Props {
   /** 当前分享的助手（为空时不渲染内容） */
@@ -15,9 +18,10 @@ interface Props {
 /**
  * 助手分享弹窗
  * UI 参考「我的大屏」分享弹窗（访问密码保护 / 链接有效期 / 生成链接 / 复制链接）。
- * 注意：助手分享后端接口尚未就绪，handleShare 暂留 TODO 占位，不真正调用接口。
+ * 对接统一分享接口 /api/dashboard/api/v1/project/share（abi 助手 type=workflow）。
  */
 const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose }) => {
+  const spaceId = useAppSelector(getSpaceId)
   const [sharePasswordFlag, setSharePasswordFlag] = useState(false)
   const [shareLink, setShareLink] = useState('')
   const [sharePassword, setSharePassword] = useState<string | null>(null)
@@ -41,10 +45,25 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose }) => {
     if (!agent?.id) return
     setShareLoading(true)
     try {
-      // TODO: 助手分享后端接口就绪后接入（参考大屏 baseApi.shareProject）。
-      // 入参预期：appId、spaceId、sharePasswordFlag、expirationDays / expirationDate；
-      // 返回预期：{ shareUrl, sharePassword }，成功后 setShareLink / setSharePassword。
-      message.info('助手分享功能待后端接口就绪')
+      const expirationDays = ['1', '7', '30'].includes(expirationMode) ? Number(expirationMode) : undefined
+      const expirationDateStr =
+        expirationMode === 'custom' && expirationDate ? expirationDate.format('YYYY-MM-DD HH:mm:ss') : undefined
+      const { data, error } = await shareProjectApi({
+        projectId: agent.id,
+        spaceId: spaceId || 0,
+        type: 'workflow',
+        sharePasswordFlag,
+        ...(expirationDays !== undefined ? { expirationDays } : {}),
+        ...(expirationDateStr ? { expirationDate: expirationDateStr } : {}),
+      })
+      const shareUrl = (data as any)?.shareUrl ?? ''
+      if (error || !shareUrl) {
+        message.error('获取分享链接失败')
+        return
+      }
+      // 直接展示后端返回的分享链接（host 由使用方自行替换）
+      setShareLink(shareUrl)
+      setSharePassword((data as any)?.sharePassword ?? null)
     } finally {
       setShareLoading(false)
     }

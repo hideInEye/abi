@@ -1,6 +1,6 @@
-import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Button, DatePicker, Empty, Input, Popover, Select, Spin } from 'antd'
+import { Button, DatePicker, Empty, Input, message, Popover, Select, Spin } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -12,6 +12,7 @@ import { fetchAssistantList } from '@/service/api/app'
 import { fetchSemanticGroups } from '@/service/api/semantic'
 import { getSpaceId } from '@/utils/index'
 import AssistantDetailDrawer from './AssistantDetailDrawer'
+import AssistantShareModal from '@/components/AssistantShareModal'
 import DataDirectoryDropdown from './DataDirectoryDropdown'
 
 /** 应用工坊 tab 顺序：我的助手、我的分析、我的报告、最近使用、我的收藏、我的分享 */
@@ -110,6 +111,8 @@ function WorkshopView() {
   // 我的助手：只读详情抽屉
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailAgent, setDetailAgent] = useState<AssistantCard | null>(null)
+  // 我的助手：分享弹窗（同 abi 应用弹窗样式）
+  const [shareAgent, setShareAgent] = useState<AssistantCard | null>(null)
   // 高级筛选：面板草稿值 / 已生效值（点「查询」才生效，对齐 abi DeferredRangePicker）
   const [filterOpen, setFilterOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<any>(null)
@@ -209,6 +212,11 @@ function WorkshopView() {
   const handleViewAssistant = useCallback((agent: AssistantCard) => {
     setDetailAgent(agent)
     setDetailOpen(true)
+  }, [])
+
+  // 分享助手：打开分享弹窗（同 abi 应用：密码保护 / 有效期 / 生成链接）
+  const handleShareAssistant = useCallback((agent: AssistantCard) => {
+    setShareAgent(agent)
   }, [])
 
   // 名称搜索 + 时间范围过滤 + 前端分页
@@ -432,6 +440,13 @@ function WorkshopView() {
                             >
                               <EyeOutlined /> 查看
                             </button>
+                            <button
+                              type="button"
+                              className="wac-act"
+                              onClick={() => handleShareAssistant(agent)}
+                            >
+                              <ShareAltOutlined /> 分享
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -526,6 +541,7 @@ function WorkshopView() {
         fallback={detailAgent}
         onClose={() => setDetailOpen(false)}
       />
+      <AssistantShareModal agent={shareAgent} open={Boolean(shareAgent)} onClose={() => setShareAgent(null)} />
     </div>
   )
 }
