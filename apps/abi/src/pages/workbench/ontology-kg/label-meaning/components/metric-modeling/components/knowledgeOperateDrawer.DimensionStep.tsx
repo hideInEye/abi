@@ -1,7 +1,7 @@
 import { FileTextOutlined, FolderOutlined } from '@ant-design/icons'
 import { Alert, Spin, Transfer, Tree } from 'antd'
 import type { FormInstance, TransferProps } from 'antd'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 import { useKnowledgeDimensions } from '../hooks/useKnowledgeDimensions'
 import type { KnowledgeFormValues } from '../types/metricModeling.types'
@@ -10,9 +10,25 @@ import { getMappedMetricFieldDisplayName } from '../utils/knowledgeOperateDrawer
 import styles from './knowledgeOperateDrawer.DimensionStep.module.scss'
 
 interface SelectedDimensionSnapshot {
+  groupId?: string
+  groupName?: string
   key: string
   techName?: string
   title?: string
+}
+
+interface DimensionTransferItem {
+  groupId?: string
+  groupName?: string
+  key: string
+  techName: string
+  title: string
+}
+
+interface SelectedDimensionGroup {
+  groupId: string
+  groupName: string
+  items: DimensionTransferItem[]
 }
 
 interface Props {
@@ -20,6 +36,21 @@ interface Props {
 }
 
 type UnknownRecord = Record<string, unknown>
+
+function groupSelectedDimensionItems(items: DimensionTransferItem[]): SelectedDimensionGroup[] {
+  const groups = new Map<string, SelectedDimensionGroup>()
+  items.forEach(item => {
+    const groupId = item.groupId || 'ungrouped'
+    const group = groups.get(groupId) || {
+      groupId,
+      groupName: item.groupName || '未分组',
+      items: []
+    }
+    group.items.push(item)
+    groups.set(groupId, group)
+  })
+  return Array.from(groups.values())
+}
 
 function parseSelectedDimensions(value: unknown): SelectedDimensionSnapshot[] {
   if (!value) return []
@@ -31,6 +62,8 @@ function parseSelectedDimensions(value: unknown): SelectedDimensionSnapshot[] {
           const key = String(source.dimId ?? source.id ?? '').trim()
           if (!key) return null
           return {
+            groupId: String(source.groupId ?? source.group_id ?? '').trim() || undefined,
+            groupName: String(source.groupName ?? source.group_name ?? '').trim() || undefined,
             key,
             techName: String(source.techName || '').trim() || undefined,
             title: getMappedMetricFieldDisplayName(source.title ?? source.bizName ?? source.dimName ?? '') || undefined
@@ -56,17 +89,42 @@ function parseSelectedDimensions(value: unknown): SelectedDimensionSnapshot[] {
 }
 
 export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
-  const initialSelected = useMemo(() => parseSelectedDimensions(form.getFieldValue('dimensionFieldIds')), [form])
-  const [targetKeys, setTargetKeys] = useState<string[]>(initialSelected.map(item => item.key))
+  const watchedDimensionFieldIds = AForm.useWatch('dimensionFieldIds', { form, preserve: true })
+  const selectedDimensions = useMemo(
+    () => parseSelectedDimensions(watchedDimensionFieldIds ?? form.getFieldValue('dimensionFieldIds')),
+    [form, watchedDimensionFieldIds]
+  )
+  const [targetKeys, setTargetKeys] = useState<string[]>(selectedDimensions.map(item => item.key))
   const { error, loading, options, retry, treeData } = useKnowledgeDimensions()
-  const snapshots = useMemo(() => new Map(initialSelected.map(item => [item.key, item])), [initialSelected])
+  const snapshots = useMemo(() => new Map(selectedDimensions.map(item => [item.key, item])), [selectedDimensions])
+
+  useEffect(() => {
+    setTargetKeys(selectedDimensions.map(item => item.key))
+  }, [selectedDimensions])
 
   const dataSource = useMemo(() => {
-    const map = new Map(options.map(item => [item.key, { key: item.key, techName: item.techName, title: item.title }]))
+    const map = new Map<string, DimensionTransferItem>(
+      options.map(item => [
+        item.key,
+        {
+          groupId: item.groupId,
+          groupName: item.groupName,
+          key: item.key,
+          techName: item.techName,
+          title: item.title
+        }
+      ])
+    )
     targetKeys.forEach(key => {
       if (!map.has(key)) {
         const snapshot = snapshots.get(key)
-        map.set(key, { key, techName: snapshot?.techName || key, title: snapshot?.title || snapshot?.techName || key })
+        map.set(key, {
+          groupId: snapshot?.groupId,
+          groupName: snapshot?.groupName,
+          key,
+          techName: snapshot?.techName || key,
+          title: snapshot?.title || snapshot?.techName || key
+        })
       }
     })
     return Array.from(map.values())
@@ -100,7 +158,7 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
     [targetKeys, treeData]
   )
 
-  const handleChange: TransferProps['onChange'] = keys => {
+  const handleChange: TransferProps<DimensionTransferItem>['onChange'] = keys => {
     const nextKeys = keys.map(String)
     const optionMap = new Map(dataSource.map(item => [item.key, item]))
     form.setFieldValue(
@@ -139,7 +197,8 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
         />
       ) : null}
       <Spin spinning={loading}>
-        <Transfer
+        <Transfer<DimensionTransferItem>
+          className={styles.dimensionTransfer}
           dataSource={dataSource}
           listStyle={{ height: 420, width: '46%' }}
           render={item => item.title}
@@ -161,23 +220,42 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
                 }}
               />
             ) : (
-              <div className="h-full overflow-auto p-2">
-                {filteredItems.map(item => {
-                  const checked = selectedKeys.includes(item.key)
-                  return (
-                    <div
-                      className="mb-1 flex cursor-pointer items-center rounded px-2 py-1 hover:bg-gray-50"
-                      key={item.key}
-                      onClick={() => onItemSelect(item.key, !checked)}
-                    >
-                      <ACheckbox
-                        checked={checked}
-                        className="mr-2"
-                      />
-                      <span className="truncate">{item.title}</span>
+              <div className={styles.selectedList}>
+                {groupSelectedDimensionItems(filteredItems).map(group => (
+                  <section
+                    className={styles.selectedGroup}
+                    key={group.groupId}
+                  >
+                    <div className={styles.selectedGroupTitle}>
+                      <FolderOutlined className={styles.folderIcon} />
+                      <span className={styles.nodeText}>{group.groupName}</span>
                     </div>
-                  )
-                })}
+                    <div className={styles.selectedGroupItems}>
+                      {group.items.map(item => {
+                        const checked = selectedKeys.includes(item.key)
+                        return (
+                          <div
+                            className={styles.selectedItem}
+                            key={item.key}
+                            onClick={() => onItemSelect(item.key, !checked)}
+                          >
+                            <ACheckbox
+                              checked={checked}
+                              className={styles.selectedItemCheckbox}
+                            />
+                            <FileTextOutlined className={styles.fileIcon} />
+                            <span
+                              className={styles.selectedItemTitle}
+                              title={item.title}
+                            >
+                              {item.title}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
               </div>
             )
           }
