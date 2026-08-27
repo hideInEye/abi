@@ -9,6 +9,36 @@
 
 本文件是本轮开发的唯一当前需求依据。旧实现中的独立 `ReportConversation` 页面分支、根 `server/`、Node `/api/report-stream/events` 以及“不调用 task 状态接口”的约定全部废止。
 
+## 2026-08-26 追加：「我的技能」在对话框技能选择可见 + 工坊/商店 tab 字号统一
+
+### 背景
+
+- 技能商店「我的技能」（收藏接口 `addOrRemove`，favorType=skill，与对话收藏同一套逻辑）中已添加的技能（如其他空间的公开技能），在对话框输入框「更多 → 技能」弹窗中看不到：弹窗原用 `querySkillList({ spaceId, status: '1' })` 由后端按空间过滤。
+- 应用工坊 tab（`.ws-tab`，14px）与技能商店 tab（`skill-filter-tabs`，15px，对齐 abi 基准）字体大小不一致。
+
+### 目标
+
+- 与收藏对话完全同一套逻辑，仅区分 favorType=skill 参数，调用时机逐一对齐对话/工坊现有代码：
+  - 收藏状态集合初始为空（对齐对话侧 `favoriteChatIds` 初始空 Set）；
+  - `favorite/list`：仅两处调用——商店切到「我的技能」tab 时（对齐工坊「我的收藏」按 tab 拉取）、对话框技能弹窗首次打开时（弹窗候选即该列表）；
+  - `favorite/status`：技能侧暂不接入（单条查询会随卡片数量放大请求量），等后端提供批量接口后再补；列表加载时更不调用；
+  - `addOrRemove`：添加/移除切换，按响应 `favoriteStatus` 回写集合（不乐观更新）。
+- 对话框技能弹窗只认收藏列表：仅调 `favorite/list?favorType=skill`（与商店「我的技能」同源），弹窗候选即「我的技能」；行原始字段保留（提交用 latestVersionId/skillType），id/名称兼容映射。
+- 技能商店移除 localStorage `mySkills` 读写。
+- 侧边栏「应用工坊/技能商店」菜单项、技能商店 tab、应用工坊 tab 三处字号统一为 14px。
+
+### 非目标
+
+- 不修改技能选中后的提交透传逻辑（探索/报告模式）。
+- 不修改收藏添加/移除接口（`addOrRemove`）调用方式。
+- 不调整 tab 其余样式（padding、下划线、颜色）。
+
+### 验收
+
+- 技能商店添加技能后，对话框「更多 → 技能」弹窗可见并可勾选；移除后不再出现；跨设备/清除本地缓存后仍以收藏接口为准。
+- 应用工坊与技能商店 tab 文字大小一致。
+- TypeScript 检查无新增错误。
+
 ## 2026-08-19 追加：报告内容必须来自已完成的报告 Todo
 
 ### 背景
@@ -1406,3 +1436,76 @@ ABI 页面在账号被其他环境顶掉后，自动请求会返回 401 并显�
 - 历史 payload 返回 `{ total_time: 125 }` 时，报告标题显示“耗时2分5秒”。
 - 没有合法耗时字段时标题右侧不显示虚假耗时。
 - 报告模式定向测试、类型检查和构建通过。
+
+## 2026-08-26 追加：探索模式工作室分栏数据表支持分页
+
+### 需求类型
+
+前端 UI 交互优化（纯前端，不改数据协议与后端接口）。
+
+### 背景
+
+探索模式右侧工作室分栏（ExplorePreviewPane）中的数据表当前一次性渲染全部行，数据量大时表格极长、需要大量滚动，浏览体验差。用户要求数据表像其他列表视图一样支持分页，且保持单个表格，不拆成多个表格。
+
+### 目标
+
+- 探索模式 `DataTable` 增加前端分页：默认每页 10 条，页大小可选 10/20/50/100，与 chat 其他列表分页规格一致。
+- 分页为纯客户端行切片；表格始终保持单个 `<table>`，不拆成多个表格。
+- 表底保留「共 N 条记录」，分页控件置于同一行右侧；数据不超过一页时不显示分页控件。
+- chat 应用（`apps/chat/.../exploration-mode`）与 abi 应用助手调试（`apps/abi/.../exploration-mode`）保持一致行为。
+
+### 非目标
+
+- 不修改表格解析（单行表格还原）、左侧执行过程过滤、导出等逻辑。
+- 不新增后端接口调用，不修改流式事件聚合与历史适配。
+- 不修改报告模式与普通对话的表格渲染。
+
+### 影响范围预期
+
+- 修改：`apps/chat/src/components/conversation/exploration-mode/ExploreRichText.tsx`、`styles.module.css`
+- 修改：`apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/exploration-mode/ExploreRichText.tsx`、`styles.module.css`
+- 新增 run log：`.ai/runs/2026-08-26-explore-studio-table-pagination/`
+
+### 验收标准
+
+- 工作室分栏打开长数据表时仅显示当前页行（默认 10 条），表底为「共 N 条记录」+ 分页控件。
+- 翻页、切换页大小正常；切换页大小回到第 1 页；数据行数变化时页码自动收敛，不出现空页。
+- 短表（不超过一页）表现与原来一致，仅显示「共 N 条记录」。
+- 两个应用类型检查不新增错误。
+
+## 2026-08-26 追加：探索模式思考内容打字机流式展示
+
+### 需求类型
+
+前端流式协议适配 + UI 体验优化（纯前端，适配后端新增 SSE 事件）。
+
+### 背景
+
+探索模式后端调整返回，思考过程改为按轮次流式下发：新增 `plan.thought.chunk` 事件，含 `round`、`thinking_delta`（深度思考增量）与 `delta`（简洁思考增量，最终固化为 `plan.thought`/`step.meta` 的 `thought`）。前端此前只消费固化事件，左上角「正在深度思考」区域要等整轮结束才一次性出现全部思考内容。用户要求该思考内容改为打字机模式逐步展示。
+
+### 目标
+
+- 解析并聚合 `plan.thought.chunk`：同轮增量拼接，`round` 切换时重置流。
+- 运行中左上角思考区优先展示打字机流（简洁思考流 `delta` 优先，其次深度思考流 `thinking_delta`），固化事件（`plan.thought`/`step.meta`）到达后清空流并回退固化思考展示。
+- 历史/结束态展示逻辑保持不变。
+- chat 应用与 abi 应用助手调试探索模式保持一致行为。
+
+### 非目标
+
+- 不修改步骤输出、待办事项、工作室分栏、导出与历史适配逻辑。
+- 不新增后端接口调用。
+- 不为打字机增加额外动画/光标装饰，保持最小改动。
+
+### 影响范围预期
+
+- 修改：`apps/chat/src/components/conversation/exploration-mode/` 下 `types.ts`、`exploreStreamReducer.ts`、`ExploreMessageRow.tsx`
+- 修改：`apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/exploration-mode/` 下同三文件
+- 新增测试：`apps/abi/.../exploration-mode/exploreStreamReducer.test.ts`
+- 新增 run log：`.ai/runs/2026-08-26-explore-thinking-typewriter/`
+
+### 验收标准
+
+- 实时探索执行中，左上角思考区随 `plan.thought.chunk` 增量逐字展示，轮次切换时替换为新一轮思考。
+- `plan.thought`/`step.meta` 到达后展示固化思考与「当前动作」，行为与原来一致。
+- 历史探索卡片思考展示不变。
+- reducer 特征测试通过；两个应用类型检查不新增错误。

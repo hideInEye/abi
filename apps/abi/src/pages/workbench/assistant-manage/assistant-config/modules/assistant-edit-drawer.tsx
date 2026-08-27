@@ -675,8 +675,9 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                     fontWeight: 500,
                   }}
                   type="link"
+                  onClick={() => message.info('功能开发中...')}
                 >
-                  自动优化
+                  AI 润色
                 </Button>
                 )}
               </div>

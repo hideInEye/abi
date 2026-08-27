@@ -42,6 +42,12 @@ export interface ExploreItem {
     actionIntention?: string
     actionReason?: string
   }
+  /** 当前思考轮次（plan.thought.chunk 的 round），轮次切换时重置打字机流。 */
+  thoughtRound?: number
+  /** 打字机流：当前轮 delta 增量累积的简洁思考（最终固化为 plan.thought/step.meta 的 thought）。 */
+  thoughtStream?: string
+  /** 打字机流：当前轮 thinking_delta 增量累积的深度思考内容。 */
+  reasoningStream?: string
   tasks: ExploreTask[]
   planVersion?: number
   planSource?: string
@@ -58,6 +64,7 @@ export interface ExploreItem {
 
 export type ExploreStreamEvent =
   | { type: 'plan.thought'; thought?: string; reasoning?: string; action_intention?: string; action_reason?: string }
+  | { type: 'plan.thought.chunk'; round?: number; delta?: string; thinking_delta?: string }
   | { type: 'plan.update'; tasks?: ExploreTask[]; source?: string; version?: number }
   | { type: 'step.start'; id: string; step?: number; todo_id?: string; title?: string; detail?: string }
   | { type: 'step.meta'; id: string; todo_id?: string; thought?: string | null; action_intention?: string | null; action_reason?: string | null; action?: string | null; action_input?: string | null; title?: string }

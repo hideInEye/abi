@@ -2,6 +2,7 @@ import type { ExploreItem, ExploreStep, ExploreStreamEvent } from './types'
 
 const EXPLORE_EVENT_TYPES = new Set([
   'plan.thought',
+  'plan.thought.chunk',
   'plan.update',
   'step.start',
   'step.meta',
@@ -64,7 +65,25 @@ export function reduceExploreEvent(item: ExploreItem, event: ExploreStreamEvent)
           actionIntention: event.action_intention,
           actionReason: event.action_reason,
         },
+        // 思考已固化，清空打字机流，展示区回退到固化思考
+        thoughtRound: undefined,
+        thoughtStream: '',
+        reasoningStream: '',
       }
+    case 'plan.thought.chunk': {
+      const delta = event.delta || ''
+      const thinkingDelta = event.thinking_delta || ''
+      if (!delta && !thinkingDelta) return item
+      // 轮次切换时重置流，避免上一轮思考残留拼接
+      const reset = event.round != null && event.round !== item.thoughtRound
+      return {
+        ...item,
+        status: 'running',
+        thoughtRound: event.round ?? item.thoughtRound,
+        thoughtStream: delta ? (reset ? '' : item.thoughtStream || '') + delta : reset ? '' : item.thoughtStream,
+        reasoningStream: thinkingDelta ? (reset ? '' : item.reasoningStream || '') + thinkingDelta : reset ? '' : item.reasoningStream,
+      }
+    }
     case 'plan.update': {
       if (event.version != null && item.planVersion != null && event.version < item.planVersion) return item
       return {
@@ -85,16 +104,22 @@ export function reduceExploreEvent(item: ExploreItem, event: ExploreStreamEvent)
         status: 'running',
       }))
     case 'step.meta':
-      return upsertStep(item, event.id, (step) => ({
-        ...step,
-        todoId: event.todo_id || step.todoId,
-        title: event.title || step.title,
-        thought: event.thought ?? step.thought,
-        actionIntention: event.action_intention ?? step.actionIntention,
-        actionReason: event.action_reason ?? step.actionReason,
-        action: event.action ?? step.action,
-        actionInput: event.action_input ?? step.actionInput,
-      }))
+      return {
+        ...upsertStep(item, event.id, (step) => ({
+          ...step,
+          todoId: event.todo_id || step.todoId,
+          title: event.title || step.title,
+          thought: event.thought ?? step.thought,
+          actionIntention: event.action_intention ?? step.actionIntention,
+          actionReason: event.action_reason ?? step.actionReason,
+          action: event.action ?? step.action,
+          actionInput: event.action_input ?? step.actionInput,
+        })),
+        // 步骤思考已固化，清空打字机流，展示区回退到固化思考
+        thoughtRound: undefined,
+        thoughtStream: '',
+        reasoningStream: '',
+      }
     case 'step.chunk':
       return upsertStep(item, event.id, (step) => ({
         ...step,

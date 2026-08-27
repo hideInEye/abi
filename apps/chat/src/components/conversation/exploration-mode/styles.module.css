@@ -529,6 +529,9 @@
 
 .thinkingCollapsibleInner {
   transition: max-height 0.3s ease;
+  /* 展开时限制思考内容高度约 4 行（13px × 1.8 行高），内部滚动，避免长思考撑开卡片 */
+  max-height: 96px;
+  overflow-y: auto;
 }
 
 /* 折叠时底部渐变遮罩：淡出隐藏的内容 */
@@ -765,7 +768,35 @@
 }
 
 .inlineAlert {
-  margin: 0 16px 14px;
+  margin: 14px 16px;
+}
+
+/* ── 底部工具栏：反馈操作按钮（点踩/点赞，占位功能） ── */
+.footerBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px 12px;
+}
+
+.footerAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2, #4a5468);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all 0.25s var(--ease, ease);
+}
+
+.footerAction:hover {
+  background: rgba(91, 124, 247, 0.08);
+  color: var(--accent, #5b7cf7);
 }
 
 /* 左栏底部提示语：任务运行中提醒用户留在当前页面 */
@@ -1113,6 +1144,11 @@
 }
 
 .tableCaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
   padding: 6px 12px;
   border-top: 1px solid rgba(91, 124, 247, 0.1);
   background: rgba(91, 124, 247, 0.02);

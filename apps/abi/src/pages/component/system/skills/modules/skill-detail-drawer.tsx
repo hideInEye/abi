@@ -633,20 +633,20 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     loadFiles(vid)
   }
 
-  // 设为当前版本（左右两侧都刷新）
+  // 回滚版本（左右两侧都刷新）
   function handleSetCurrentVersion(v: VersionItem) {
     const vid = v.versionId ?? v.id
     if (!vid || !skillId) return
     modal.confirm({
-      title: '设为当前版本？',
-      content: `将把 v${v.version || v.versionNo || vid} 设为当前对外展示的版本。`,
-      okText: '确认',
+      title: '确定回滚？',
+      content: `将回滚至 v${v.version || v.versionNo || vid} 版本。`,
+      okText: '确定',
       cancelText: '取消',
       onOk: async () => {
         try {
           const res: any = await selectSkillVersionApi({ skillId, versionId: vid })
           if (res?.response?.data?.code === 200 || res?.data?.code === 200) {
-            message.success('已设为当前版本')
+            message.success('回滚成功')
             setActiveVersionId(vid)
             loadVersionDetail(vid)
             loadFiles(vid)
@@ -944,7 +944,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                                     )}
                                     {vStatus.cls !== 'offline' && !isActive && (
                                       <Button className="sd-v5-btn sd-v5-btn--primary" icon={<SwapOutlined />} size="small" onClick={() => handleSetCurrentVersion(v)}>
-                                        设为当前
+                                        回滚
                                       </Button>
                                     )}
                                     <Button className="sd-v5-btn sd-v5-btn--danger" icon={<DeleteOutlined />} size="small" onClick={() => handleDeleteVersion(v)} />

@@ -304,6 +304,14 @@ function getSpaceId() {
   } catch { return undefined }
 }
 
+// 获取当前用户账号（userName），用于分组列表按创建人过滤
+function getCurrentUserName(): string | undefined {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}')
+    return userInfo?.userName || undefined
+  } catch { return undefined }
+}
+
 // ============ 会话分组管理接口 ============
 
 export interface SessionGroup {
@@ -343,6 +351,7 @@ export interface ListGroupParams {
   groupName?: string
   status?: string
   parentId?: number
+  createBy?: string
 }
 
 // 新增分组
@@ -374,7 +383,7 @@ export function fetchSessionGroupList(data: ListGroupParams) {
   _groupListInflight = request({
     url: "/abi-chat/v1/app/session/group/list",
     method: "post",
-    data,
+    data: { ...data, createBy: data.createBy ?? getCurrentUserName() },
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
   }).finally(() => { _groupListInflight = null })
   return _groupListInflight
