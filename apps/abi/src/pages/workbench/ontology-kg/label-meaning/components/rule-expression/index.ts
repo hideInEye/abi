@@ -1,5 +1,6 @@
 export { default as RuleExpressionBuilder } from './RuleExpressionBuilder'
 export type { RuleExpressionBuilderHandle } from './RuleExpressionBuilder'
 export { default as RuleExpressionFormItem } from './RuleExpressionFormItem'
+export * from './apiTemplateAdapter'
 export * from './types'
 export * from './utils'

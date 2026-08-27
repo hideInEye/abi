@@ -9,7 +9,8 @@ import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/componen
 import {
   type RuleExpressionBuilderHandle,
   compileRuleLayersToSql,
-  createRuleFieldOptions
+  createRuleFieldOptions,
+  validateRuleLogicUniformity
 } from '@/pages/workbench/ontology-kg/label-meaning/components/rule-expression'
 import ExpressionBuilder from '@/pages/workbench/ontology-kg/label-meaning/components/semantic-tag/Expr'
 import {
@@ -130,6 +131,11 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
     () => compileRuleLayersToSql(expressionValue, ruleFields),
     [expressionValue, ruleFields]
   )
+  const expressionValidation = useMemo(() => {
+    const logicValidation = validateRuleLogicUniformity(expressionValue)
+    const issues = [...generatedDefinition.validation.issues, ...logicValidation.issues]
+    return { issues, valid: issues.length === 0 }
+  }, [expressionValue, generatedDefinition.validation.issues])
 
   const handleModalCancel = () => {
     form.resetFields()
@@ -147,7 +153,7 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
     const { exp: expData, ...rest } = formData
     onSave({
       ...rest,
-      exp: serializeTagExpression(expData),
+      exp: serializeTagExpression(expData, ruleFields),
       viewId: viewDataId
     })
     form.resetFields()
@@ -164,7 +170,7 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
   }
 
   const handleGenerateDefinition = () => {
-    if (!generatedDefinition.validation.valid) {
+    if (!expressionValidation.valid) {
       expressionRef.current?.focusFirstError()
       return
     }
@@ -263,15 +269,15 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
               标签定义
               <Tooltip
                 title={
-                  generatedDefinition.validation.valid
+                  expressionValidation.valid
                     ? '一键生成定义'
-                    : generatedDefinition.validation.issues[0]?.message || '请先完善表达式'
+                    : expressionValidation.issues[0]?.message || '请先完善表达式'
                 }
               >
                 <span>
                   <Button
                     aria-label="一键生成定义"
-                    disabled={!generatedDefinition.validation.valid}
+                    disabled={!expressionValidation.valid}
                     icon={<ThunderboltOutlined />}
                     shape="circle"
                     size="small"

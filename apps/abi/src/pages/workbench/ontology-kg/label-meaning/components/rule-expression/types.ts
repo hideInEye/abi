@@ -34,6 +34,41 @@ export interface RuleFieldOption {
   tableName: string
 }
 
+export interface RuleTemplateFieldMeta {
+  field: string
+  fieldName: string
+  value?: string
+}
+
+export type ApiRuleOperator = 'EQ' | 'GE' | 'GT' | 'IN' | 'LE' | 'LT' | 'NE' | 'NOT_IN' | 'NOT_NULL' | 'NULL'
+
+export interface ApiRuleTemplateCondition {
+  conditionId: string
+  field: string
+  fieldName: string
+  operator: ApiRuleOperator
+  operatorName: string
+  value?: number | string
+}
+
+export interface ApiRuleTemplateExpression {
+  conditions: ApiRuleTemplateCondition[]
+  expressionId: string
+  innerLogic: RuleLogic
+  name: string
+}
+
+export interface ApiRuleTemplateLayer {
+  expressions: ApiRuleTemplateExpression[]
+  groupLogic: RuleLogic
+  layerName: string
+  sortOrder: number
+}
+
+export interface ApiRuleTemplates {
+  layers: ApiRuleTemplateLayer[]
+}
+
 export interface RuleFieldTreeNode {
   children?: RuleFieldTreeNode[]
   isLeaf?: boolean

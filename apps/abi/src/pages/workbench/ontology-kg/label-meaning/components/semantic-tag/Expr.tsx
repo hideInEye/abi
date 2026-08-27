@@ -8,7 +8,8 @@ import {
   type RuleExpressionBuilderHandle,
   RuleExpressionFormItem,
   type RuleFieldOption,
-  validateRuleLayers
+  validateRuleLayers,
+  validateRuleLogicUniformity
 } from '../rule-expression'
 
 interface ExpressionBuilderProps {
@@ -22,10 +23,12 @@ const ExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, ExpressionBuil
       () => [
         {
           validator: (_: unknown, value: unknown) => {
-            const validation = validateRuleLayers(value, fields)
-            return validation.valid
+            const baseValidation = validateRuleLayers(value, fields)
+            const logicValidation = validateRuleLogicUniformity(value)
+            const issues = [...baseValidation.issues, ...logicValidation.issues]
+            return issues.length === 0
               ? Promise.resolve()
-              : Promise.reject(new Error(validation.issues[0]?.message || '请完善表达式定义'))
+              : Promise.reject(new Error(issues[0]?.message || '请完善表达式定义'))
           }
         }
       ],
@@ -43,6 +46,7 @@ const ExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, ExpressionBuil
             fieldLoading={fieldLoading}
             fields={fields}
             ref={ref}
+            uniformLogic
           />
         </RuleExpressionFormItem>
       </div>

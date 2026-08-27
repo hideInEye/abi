@@ -2,8 +2,8 @@
 
 ## 文档状态
 
-- 状态：指标建模接口联调及第三步维度穿梭框滚动、已选分组展示已实现，待登录后界面回归。
-- 日期：2026-08-26。
+- 状态：指标建模改造及标签语义表达式新接口协议已实现，待登录后真实接口回归。
+- 日期：2026-08-27。
 - 当前分支：`dev/zanghb-ontology-iteration`。
 - 需求来源：用户确认的实施计划、交互截图、《芯智ABI\_标签语义表达式功能需求文档》V1.0，以及《指标建模\_时间范围扩展.html》交互稿。
 - 影响范围：`apps/abi/src/pages/workbench/ontology-kg/label-meaning`。
@@ -196,7 +196,7 @@ END
 
 ### 统一逻辑和历史兼容
 
-- 公共表达式组件增加可选统一逻辑模式，仅普通派生指标启用；标签语义继续允许混合连接符。
+- 公共表达式组件通过可选模式支持统一逻辑；普通派生指标和采用同协议后的标签语义均启用该模式。
 - 切换任一组间连接符时同步当前层全部组间连接符，切换条件连接符时同步当前分组全部条件连接符；新增项继承当前层级逻辑。
 - 历史混合逻辑原样回显，不自动改变语义；下一步或保存时阻止提交并定位首个不一致项，用户切换任一对应连接符后完成统一。
 - 保存双写新 `calcPeriod/indicator_templates/subjectDimension` 与旧 `statisticalCaliber/expressions/precomputeConfig`；冲突时新协议优先回显。
@@ -209,6 +209,17 @@ END
 - 新增和编辑回显使用同一套分组逻辑；组件监听表单中的维度值，异步回填编辑详情后也要同步所选项并重新归组。
 - 使用 `DimensionStep` 的局部 CSS Module 修复 Ant Design 自定义 Transfer body 的 flex/overflow，不修改全局 Transfer、抽屉或其他表单样式。
 - 保留现有穿梭选择、禁用、计数、标题省略和提交逻辑。
+
+## 九、标签语义表达式接口协议
+
+- 标签语义接口继续使用现有顶层 `exp` 字段，不新增 `calcLogic` 或 `indicator_templates` 顶层参数。
+- `exp` 从旧版 URI 编码数组字符串改为对象，并与普通派生指标 `calcLogic.indicator_templates` 使用相同的 `{ layers }` 结构。
+- 分层提交 `layerName/sortOrder/groupLogic/expressions`；条件分组提交 `expressionId/name/innerLogic/conditions`。
+- 条件提交 `conditionId/field/fieldName/operator/operatorName/value`：`conditionId` 为语义字段 ID，`field` 为英文来源字段名，`fieldName` 为页面展示名称；空值运算符不提交 `value`。
+- 运算符统一映射为 `EQ/NE/GT/GE/LT/LE/IN/NOT_IN/NULL/NOT_NULL`。
+- 标签编辑优先解析新的 `{ layers }` 对象，同时兼容新结构 JSON 字符串、旧 URI 编码 `binName/groups/metric` 结构和旧分层直含条件结构。
+- 因新协议仅提供统一的 `groupLogic/innerLogic`，标签语义同步启用层内和组内统一逻辑；历史混合逻辑原样回显但保存前必须统一，避免静默改变表达式含义。
+- 标签关联字段 ID 继续从回显后的规则树递归收集并去重；标签定义 SQL、语义字段选择和其他基础信息协议不变。
 
 ## 验收标准
 
@@ -226,8 +237,9 @@ END
 12. 普通派生指标预览完整展示六项业务信息和实际元数据 SQL；切换原子指标、统计口径、条件和维度后能够实时更新，且提交协议不变。
 13. 四种顶层 `updateFrequency` 对象字段、字符串与显式空值符合接口协议，并可兼容旧频率数据回显。
 14. 普通派生指标新 `calcPeriod`、`subjectDimension` 与 `indicator_templates.layers` 能够保存、编辑回显，并与旧字段双写且以新协议优先。
-15. 派生指标层内和组内连接符保持统一，历史混合逻辑不会被静默修改；标签语义混合逻辑无回归。
+15. 派生指标和标签语义的层内、组内连接符保持统一，历史混合逻辑不会被静默修改，需由用户统一后保存。
 16. 指标创建第三步左右列表内容超出固定高度后分别出现纵向滚动，内容不越过列表底部边框；右侧按维度分组展示已选字段。
+17. 标签语义新增和编辑提交的 `exp` 为与派生指标一致的 `{ layers }` 对象，字段元数据、运算符和逻辑正确；旧标签表达式仍可编辑回显并在保存后迁移为新协议。
 
 ## 测试要求
 

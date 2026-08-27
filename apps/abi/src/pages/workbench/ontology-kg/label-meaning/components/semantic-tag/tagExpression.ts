@@ -1,31 +1,46 @@
-import type { RuleLayer } from '../rule-expression'
-import { normalizeRuleLayers } from '../rule-expression'
+import type { ApiRuleTemplates, RuleFieldOption, RuleLayer, RuleTemplateFieldMeta } from '../rule-expression'
+import { buildApiRuleTemplates, normalizeRuleLayers, parseApiRuleTemplates } from '../rule-expression'
 
-export function parseTagExpression(exp?: string): RuleLayer[] {
+function parseStoredExpression(exp: unknown): unknown {
   if (!exp) {
-    return normalizeRuleLayers([])
+    return undefined
   }
+  if (typeof exp !== 'string') {
+    return exp
+  }
+
+  const candidates = [exp]
   try {
-    return normalizeRuleLayers(JSON.parse(decodeURIComponent(exp)))
+    const decoded = decodeURIComponent(exp)
+    if (decoded !== exp) candidates.unshift(decoded)
   } catch {
-    return normalizeRuleLayers([])
+    // Historical values may contain a literal percent sign and still be valid JSON.
   }
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate)
+    } catch {
+      // Try the next compatible storage form.
+    }
+  }
+  return undefined
 }
 
-export function serializeTagExpression(value: RuleLayer[]): string {
-  const payload = normalizeRuleLayers(value, false).map(layer => ({
-    binName: layer.name.trim(),
-    groups: layer.groups.map((group, groupIndex) => ({
-      conditions: group.conditions.map((condition, conditionIndex) => ({
-        ...(conditionIndex > 0 ? { logicWithPrevious: condition.logicWithPrevious || 'AND' } : {}),
-        metric: condition.fieldId,
-        operator: condition.operator,
-        ...(!['IS NULL', 'IS NOT NULL'].includes(condition.operator) ? { value: condition.value } : {})
-      })),
-      ...(groupIndex > 0 ? { logicWithPrevious: group.logicWithPrevious || 'AND' } : {}),
-      name: group.name.trim()
-    }))
-  }))
+export function parseTagExpression(exp?: unknown): RuleLayer[] {
+  const storedExpression = parseStoredExpression(exp)
+  return parseApiRuleTemplates(storedExpression) || normalizeRuleLayers(storedExpression)
+}
 
-  return encodeURIComponent(JSON.stringify(payload))
+export function serializeTagExpression(value: RuleLayer[], fields: readonly RuleFieldOption[]): ApiRuleTemplates {
+  const fieldMetaMap = fields.reduce<Record<string, RuleTemplateFieldMeta>>((acc, field) => {
+    acc[field.id] = {
+      field: field.sourceName,
+      fieldName: field.label,
+      value: field.id
+    }
+    return acc
+  }, {})
+
+  return buildApiRuleTemplates(value, fieldMetaMap) || { layers: [] }
 }

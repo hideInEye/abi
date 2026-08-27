@@ -40,7 +40,7 @@ interface ITag {
   bizName: string;
   description: string;
   engName: string;
-  exp: string;
+  exp: object | string;
   groupId: number | string;
   relItemId: string;
   remark: string;
