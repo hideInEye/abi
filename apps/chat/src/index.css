@@ -2598,6 +2598,10 @@ code, pre {
   transform: translateY(-2px);
   border-color: rgba(91, 124, 247, 0.25);
 }
+/* 我的助手卡片整体可点击：点击创建绑定该助手的新会话并进入对话 */
+.ws-assistant-card--clickable {
+  cursor: pointer;
+}
 .ws-assistant-card .wac-head {
   display: flex;
   align-items: flex-start;

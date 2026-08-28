@@ -37,3 +37,20 @@ export function shareProjectApi(data: {
     data
   });
 }
+
+/**
+ * 分享记录分页查询（助手与大屏共用，type 区分：react=chat端助手 / workflow=abi助手 / dashboard=数据大屏）。
+ * 网关路径与分享接口一致：/api + /dashboard/api/v1/project/share/list。
+ */
+export function fetchProjectShareListApi(data: {
+  type: 'react' | 'workflow' | 'dashboard';
+  spaceId?: number | string;
+  current: number;
+  size: number;
+}) {
+  return apiRequest({
+    method: 'post',
+    url: '/api/dashboard/api/v1/project/share/list',
+    data
+  });
+}

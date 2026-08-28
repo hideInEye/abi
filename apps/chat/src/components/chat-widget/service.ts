@@ -13,6 +13,17 @@ export interface ShareCheckResult {
   passwordFlag: boolean
   result: boolean
   appId: string
+  /** 项目类型（后端分享校验已区分：自主助手=react，工作流助手=workflow，大屏=dashboard） */
+  type: ProjectType
+}
+
+/** 统一 project 接口的类型段：大屏=dashboard，自主助手=react，工作流助手=workflow */
+export type ProjectType = 'dashboard' | 'react' | 'workflow'
+
+/** 后端分享校验返回的 type 归一化：后端已确认响应携带 type（自主助手=react / 工作流助手=workflow / 大屏=dashboard）；异常值抛错便于联调时暴露字段问题 */
+function normalizeProjectType(raw: unknown): ProjectType {
+  if (raw === 'react' || raw === 'workflow' || raw === 'dashboard') return raw
+  throw new Error(`checkSharePassword 响应缺少有效 type：${String(raw)}`)
 }
 
 export interface WidgetSession {
@@ -26,6 +37,28 @@ export interface WidgetAssistantInfo {
   description: string
   prologue: string
   recQuestions: string[]
+  /** 助手所属空间（拉取数据语义分组树用） */
+  spaceId: number
+}
+
+/** 数据语义分组树节点（与大屏/对话同款：type=group/schema，递归 children） */
+export interface WidgetSemanticNode {
+  id: string | number
+  type?: 'group' | 'schema'
+  name: string
+  techName?: string
+  schemaId?: number | string
+  groupName?: string
+  count?: number
+  children?: WidgetSemanticNode[]
+}
+
+/** 选中的数据语义（与大屏 AiChatPanel 对齐：仅叶子可选） */
+export interface WidgetSemanticSelection {
+  name: string
+  schemaId?: number | string
+  /** 数据语义所属分组名 */
+  groupName?: string
 }
 
 /**
@@ -35,10 +68,12 @@ export interface WidgetAssistantInfo {
  */
 const API = {
   checkShare: '/dashboard/api/v1/project/checkSharePassword',
-  appGet: '/abi-chat/v1/app/get',
+  getProjectInfo: '/dashboard/api/v1/project/getProjectInfo',
   sessionAdd: '/abi-chat/v1/app/session/add',
   messageQuery: '/abi-chat/v1/app/message/query',
   completions: '/chat-proxy/api/v2/workflow/chat/completions',
+  /** 数据语义分组树（与大屏/对话同一统一接口，随 shareCode 免登录下发） */
+  semanticTree: '/copilot/v1/schema/tree',
 }
 
 /** 裸 fetch + 附 shareCode；不读 token/localStorage，供分享/嵌入免登录场景 */
@@ -67,13 +102,28 @@ export async function checkSharePassword(cfg: WidgetConfig, password: string): P
     result: d.result !== false,
     // 统一分享接口返回 projectId（=助手 appId），兼容后端直接返回 appId 的情况
     appId: String(d.appId ?? d.projectId ?? ''),
+    type: normalizeProjectType(d.type),
   }
 }
 
-/** 拉取助手信息（名称/开场白/推荐问题），失败返回 null 由调用方兜底 */
-export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string): Promise<WidgetAssistantInfo | null> {
+/** 裸 fetch GET + shareCode 随 query 下发（免登录），供分享/嵌入场景 */
+async function getJson(cfg: WidgetConfig, path: string, params: Record<string, string | number> = {}) {
+  const base = String(cfg.apiBase || '').replace(/\/+$/, '')
+  const query = new URLSearchParams({ shareCode: cfg.shareCode })
+  Object.entries(params).forEach(([k, v]) => query.set(k, String(v)))
+  const res = await fetch(`${base}${path}?${query.toString()}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+/**
+ * 拉取助手信息（名称/开场白/推荐问题），失败返回 null 由调用方兜底。
+ * 进入分享页改走统一接口 GET /api/v1/project/getProjectInfo/{type}/{id}，
+ * type 由分享校验响应携带（后端已确认：自主助手=react / 工作流助手=workflow）；响应字段与 app/get 一致。
+ */
+export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string, type: ProjectType = 'react'): Promise<WidgetAssistantInfo | null> {
   try {
-    const json = await postJson(cfg, API.appGet, { appId })
+    const json = await getJson(cfg, `${API.getProjectInfo}/${type}/${appId}`)
     if (!isOk(json)) return null
     const d = json?.data?.data ?? json?.data ?? {}
     return {
@@ -82,6 +132,7 @@ export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string): Prom
       description: d.description || '',
       prologue: d.prologue || '',
       recQuestions: parseRecQuery(d.recQuery),
+      spaceId: Number(d.spaceId ?? 0) || 0,
     }
   } catch {
     return null
@@ -95,6 +146,22 @@ export function parseRecQuery(raw: unknown): string[] {
   try {
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? parsed.map((q) => String(q)).filter(Boolean) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 拉取数据语义分组树（与大屏/对话同一接口）；免登录场景随 shareCode 下发。
+ * 后端未支持或失败时返回空数组，由调用方降级展示，不阻断对话。
+ */
+export async function fetchSemanticTree(cfg: WidgetConfig, spaceId: number): Promise<WidgetSemanticNode[]> {
+  if (!spaceId) return []
+  try {
+    const json = await getJson(cfg, API.semanticTree, { spaceId })
+    if (!isOk(json)) return []
+    const list = json?.data?.data ?? json?.data ?? json?.rows
+    return Array.isArray(list) ? list : []
   } catch {
     return []
   }
@@ -163,6 +230,7 @@ export function sendChatStream(
   appId: string,
   signal: AbortSignal,
   { onDelta, onDone, onError }: StreamChatCallbacks,
+  semantic?: WidgetSemanticSelection | null,
 ): void {
   const base = String(cfg.apiBase || '').replace(/\/+$/, '')
   let buf = ''
@@ -192,6 +260,14 @@ export function sendChatStream(
         chat_mode: 'chat_with_assistant_share',
         extra: {
           if_debug: false,
+          // 数据语义（与大屏/对话一致）：未选中时不下发语义字段，避免污染后端默认行为。
+          ...(semantic?.schemaId != null
+            ? {
+                semantic_id: semantic.schemaId,
+                semantic_group_name: semantic.groupName || '',
+                semantic_name: semantic.name || '',
+              }
+            : {}),
           extra_body: { enable_thinking: false },
           share_code: cfg.shareCode,
         },

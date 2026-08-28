@@ -178,3 +178,18 @@ export function checkAssistantShare(data: { shareCode: string; sharePassword: st
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
   });
 }
+
+/** 8. 分享记录分页查询（统一分享接口，type 区分：react=chat端助手 / workflow=abi助手 / dashboard=数据大屏） */
+export function fetchShareRecordList(data: {
+  type: 'react' | 'workflow' | 'dashboard';
+  spaceId?: number | string;
+  current: number;
+  size: number;
+}) {
+  return request({
+    url: `${SHARE_BASE_URL}/share/list`,
+    method: 'post',
+    data,
+    baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  });
+}

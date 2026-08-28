@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 // import PageTitle from '@/components/stateless/common/PageTitle';
 import { deleteSkillApi, querySkillListApi, updateSkillStatusApi } from '@/service/api/skill';
-import { fetchOperateNew } from '@/service/api/operateRecord';
+import { fetchOperateNew, fetchOperateNewList } from '@/service/api/operateRecord';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { ViewControls } from '@/components/ViewControls';
@@ -70,9 +70,6 @@ function NameCell({ text }: { text?: string }) {
   );
 }
 
-// 已添加技能 id 本地存储 key
-const MY_SKILLS_KEY = 'mySkills';
-
 export function Component() {
   const { t } = useTranslation();
   const { message, modal } = App.useApp();
@@ -82,16 +79,11 @@ export function Component() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | '1' | '0'>('ALL');
   const [keyword, setKeyword] = useState('');
   const [list, setList] = useState<SkillItem[]>([]);
-  // 已添加到「我的技能」的技能 id（前端本地记录）
-  const [myIds, setMyIds] = useState<string[]>(() => {
-    try {
-      const arr = JSON.parse(localStorage.getItem(MY_SKILLS_KEY) || '[]');
-      return Array.isArray(arr) ? arr.map(String) : [];
-    } catch {
-      return [];
-    }
-  });
+  // 已添加到「我的技能」的技能 id（以后端为准：不读本地存储，切到「我的技能」tab 才拉 favorite/list，addOrRemove 按响应回写）
+  const [myIds, setMyIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  // 收藏列表加载中：未返回前不渲染列表，避免广场「添加」先闪一下再变「已添加」
+  const [favLoading, setFavLoading] = useState(true);
   const [publishOpen, setPublishOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [activeSkill, setActiveSkill] = useState<SkillItem | null>(null);
@@ -134,9 +126,36 @@ export function Component() {
     }
   }
 
-  // 仅首次挂载拉取全部技能；空间切换由前端 visibleList 重新过滤，无需重新请求
+  // 「我的技能」集合只在进入该 tab 时拉取（对齐 chat 技能商店），广场 tab 不请求收藏接口；
+  // 先清空前端残留的旧集合，只以当次接口返回渲染，避免重复进 tab 时先闪旧数据再刷新
+  async function fetchMyIds() {
+    setFavLoading(true);
+    setMyIds([]);
+    try {
+      const res: any = await fetchOperateNewList({ favorType: 'skill' });
+      const body = res?.response?.data;
+      const rows = body?.rows ?? body?.data?.rows ?? body?.data?.list ?? (Array.isArray(body?.data) ? body.data : []);
+      setMyIds((Array.isArray(rows) ? rows : []).map((r: any) => String(r.favorId ?? r.favor_id ?? r.skillId ?? '')).filter(Boolean));
+    } catch {
+      // 拉取失败保持空集合，不打断页面
+    } finally {
+      setFavLoading(false);
+    }
+  }
+
+  // 「我的技能」集合：切到该 tab 再拉一次收藏列表校准（以最新后端数据渲染）
+  useEffect(() => {
+    if (tab === 'mine') {
+      fetchMyIds();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  // 首次挂载直接调两个列表：技能列表 + 收藏列表（我的技能），广场「已添加」状态对比两者得出，不调单条状态接口；
+  // 空间切换由前端 visibleList 重新过滤，无需重新请求
   useEffect(() => {
     fetchList();
+    fetchMyIds();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -159,28 +178,36 @@ export function Component() {
     setEditOpen(true);
   }
 
-  // 广场卡片右上角「添加」：走对话收藏接口（addOrRemove 由后端切换状态），类型为 skill
-  function handleAddSkill(item: SkillItem) {
+  // 广场卡片右上角「添加」：走收藏接口（addOrRemove 由后端切换状态），类型为 skill，按响应 favoriteStatus 回写，不做乐观更新、不落本地存储
+  async function handleAddSkill(item: SkillItem) {
     const id = String(item.id);
     if (myIds.includes(id)) {
       message.info('已在我的技能中');
       return;
     }
-    fetchOperateNew({ favorType: 'skill', favorId: item.id }).catch(() => {});
-    const next = [...myIds, id];
-    setMyIds(next);
-    localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next));
-    message.success('已添加到我的技能');
+    try {
+      const res: any = await fetchOperateNew({ favorType: 'skill', favorId: item.id });
+      const body = res?.response?.data;
+      const favorited = Number(body?.data?.favoriteStatus ?? body?.favoriteStatus) === 1;
+      setMyIds(prev => (favorited ? [...prev.filter(v => v !== id), id] : prev.filter(v => v !== id)));
+      message.success(favorited ? '添加成功' : '取消添加成功');
+    } catch {
+      message.error('操作失败，请稍后再试');
+    }
   }
 
-  // 我的技能卡片右上角「移除」：同一收藏接口，addOrRemove 自动取消收藏
-  function handleRemoveSkill(item: SkillItem) {
+  // 我的技能卡片右上角「移除」：同一收藏接口，addOrRemove 自动取消收藏，按响应 favoriteStatus 回写
+  async function handleRemoveSkill(item: SkillItem) {
     const id = String(item.id);
-    fetchOperateNew({ favorType: 'skill', favorId: item.id }).catch(() => {});
-    const next = myIds.filter(v => v !== id);
-    setMyIds(next);
-    localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next));
-    message.success('已从我的技能移除');
+    try {
+      const res: any = await fetchOperateNew({ favorType: 'skill', favorId: item.id });
+      const body = res?.response?.data;
+      const favorited = Number(body?.data?.favoriteStatus ?? body?.favoriteStatus) === 1;
+      setMyIds(prev => (favorited ? [...prev.filter(v => v !== id), id] : prev.filter(v => v !== id)));
+      message.success(favorited ? '添加成功' : '取消添加成功');
+    } catch {
+      message.error('操作失败，请稍后再试');
+    }
   }
 
   function confirmDelete(item: SkillItem) {
@@ -275,7 +302,7 @@ export function Component() {
         : inMySpace;
     });
 
-    // 「我的技能」：展示已添加的技能（前端本地记录）
+    // 「我的技能」：展示已添加的技能（以收藏接口返回为准）
     if (tab === 'mine') {
       arr = arr.filter(it => myIds.includes(String(it.id)));
     }
@@ -510,8 +537,8 @@ export function Component() {
 
         {/* Content: table or cards */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-          <Spin spinning={loading} wrapperClassName="abi-data-spin">
-            {visibleList.length === 0 && !loading ? (
+          <Spin spinning={loading || favLoading} wrapperClassName="abi-data-spin">
+            {favLoading ? null : visibleList.length === 0 && !loading ? (
               <div className="abi-card-empty">
                 <Empty description={t('page.manage.skill.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
               </div>

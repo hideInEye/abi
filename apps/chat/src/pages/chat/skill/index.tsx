@@ -75,6 +75,8 @@ function SkillStoreView() {
   // 已添加到「我的技能」的技能 id；与对话收藏同一套逻辑：
   // 初始为空集合，addOrRemove 切换时按响应回写，切到「我的技能」tab 才拉 favorite/list 校准
   const [myIds, setMyIds] = useState<Set<string>>(new Set())
+  // 收藏列表加载中：未返回前不渲染列表，避免广场「添加」先闪一下再变「已添加」
+  const [favLoading, setFavLoading] = useState(true)
   // 高级筛选：面板草稿值 / 已生效值（点「查询」才生效，对齐应用工坊）
   const [filterOpen, setFilterOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<any>(null)
@@ -84,9 +86,11 @@ function SkillStoreView() {
   const [pageSize, setPageSize] = useState(10)
   const [jumpValue, setJumpValue] = useState('')
 
-  // 拉取「我的技能」集合（对齐应用工坊「我的收藏」：切到该 tab 才调 favorite/list，仅区分 favorType=skill）
+  // 拉取「我的技能」集合（仅区分 favorType=skill）
   const fetchMyIds = useCallback(() => {
-    setLoading(true)
+    setFavLoading(true)
+    // 以后端为准：先清空前端残留的旧集合，避免重复进 tab 时先闪旧数据再刷新；只以接口返回渲染
+    setMyIds(new Set())
     fetchFavoriteList({ favorType: 'skill' })
       .then((res: any) => {
         const rows = res?.rows ?? res?.data?.rows ?? res?.data?.list ?? (Array.isArray(res?.data) ? res.data : [])
@@ -95,7 +99,7 @@ function SkillStoreView() {
       })
       .catch(() => {})
       .finally(() => {
-        setLoading(false)
+        setFavLoading(false)
       })
   }, [])
 
@@ -130,15 +134,17 @@ function SkillStoreView() {
       })
   }, [])
 
-  // StrictMode 开发环境会重挂载组件，用 ref 保证列表仅首次请求一次，避免重复调用接口
+  // StrictMode 开发环境会重挂载组件，用 ref 保证仅首次请求一次，避免重复调用接口；
+  // 进入技能页直接调两个列表：技能列表 + 收藏列表（我的技能），广场「已添加」状态对比两者得出，不调单条状态接口
   const didInitRef = useRef(false)
   useEffect(() => {
     if (didInitRef.current) return
     didInitRef.current = true
     fetchList()
-  }, [fetchList])
+    fetchMyIds()
+  }, [fetchList, fetchMyIds])
 
-  // 「我的技能」集合只在进入该 tab 时拉取（对齐应用工坊「我的收藏」按 tab 拉取），广场 tab 不请求收藏接口
+  // 切到「我的技能」tab 再拉一次收藏列表校准（以最新后端数据渲染）
   useEffect(() => {
     if (tab === 'mine') {
       fetchMyIds()
@@ -275,7 +281,7 @@ function SkillStoreView() {
         else next.delete(card.key)
         return next
       })
-      message.success(res?.msg || (favorited ? '已添加到我的技能' : '已从我的技能移除'))
+      message.success(favorited ? '添加成功' : '取消添加成功')
     } catch {
       message.error('操作失败，请稍后再试')
     }
@@ -380,8 +386,8 @@ function SkillStoreView() {
       </div>
 
       {/* Card Grid：样式对齐应用工坊「我的助手」ws-assistant-card（技能功能保留） */}
-      <Spin spinning={loading} wrapperClassName="ws-data-spin">
-        {!loading && filteredCards.length === 0 ? (
+      <Spin spinning={loading || favLoading} wrapperClassName="ws-data-spin">
+        {favLoading ? null : !loading && filteredCards.length === 0 ? (
           <div className="ws-empty">
             <Empty description="暂无技能" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           </div>

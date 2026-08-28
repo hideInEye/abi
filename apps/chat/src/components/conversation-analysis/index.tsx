@@ -1,10 +1,10 @@
 import { Modal } from 'antd'
-import React, { useEffect, useCallback, useRef, useState } from 'react'
+import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { newConv } from '../../service/api/conv'
 import CreateModal from './CreateModal'
 import EditSessionModal from './EditSessionModal'
-import { createApp, deleteSession, fetchAppList, updateApp } from '../../service/api/app'
+import { createApp, deleteSession, fetchAppList, fetchAssistantSessionList, fetchSessionDetail, updateApp } from '../../service/api/app'
 import { fetchSemanticTree } from '../../service/api/semantic'
 import { fetchModelList } from '../../service/api/abi-system'
 import { CHAT_MODE } from '../../constant'
@@ -21,6 +21,12 @@ import { getSpaceId } from '../../utils'
 import ConverList from './conver_list'
 import { hasSelectedConversationData } from '../conversation/components/chat-input/sendValidation'
 import { useSidebarCollapse } from '../layout/SidebarCollapseContext'
+// 助手会话（appId≠0）：输入框的数据语义/技能/MCP 只能从助手绑定资源里拿。
+import {
+  buildBoundSemanticTree,
+  fetchAssistantBoundResources,
+  type AssistantBoundResources,
+} from '../../pages/chat/workshop/assistantResources'
 
 // ── 模块级工作台缓存（跨组件卸载/重挂载保留，按 spaceId 区分）──
 // 技能商店 / 应用工坊为独立路由，进入后 ConversationAnalysis 会被卸载；
@@ -134,6 +140,10 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const [semLoading, setSemLoading] = useState(false)
   const semGroupsLoadedRef = useRef(initialCache?.semanticLoaded ?? false)
 
+  // ── 助手会话绑定资源（按 curConv.appId）：非空时输入框候选仅从其中取 ──
+  const [boundResources, setBoundResources] = useState<AssistantBoundResources | null>(null)
+  const [boundResourcesLoading, setBoundResourcesLoading] = useState(false)
+
   // ── 模型列表加载（只调一次）──
   useEffect(() => {
     if (modelLoadedRef.current) return
@@ -162,13 +172,15 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
             isSupportThinking: item.isSupportThinking,
           }))
           setModelOptions(options)
-          if (options.length > 0) {
-            setCurrentModel(options[0])
+          // 进入对话页面默认展示默认模型（isDefault === 1），无默认模型时回退列表首个
+          const initialModel = options.find((option) => option.isDefault === 1) || options[0] || null
+          if (initialModel) {
+            setCurrentModel(initialModel)
           }
           // 写入模块级缓存，供切回对话时冷挂载直接命中
           patchWorkbenchCache(currentSpaceId, {
             modelOptions: options,
-            currentModel: options.length > 0 ? options[0] : null,
+            currentModel: initialModel,
             embedModelId: resolvedEmbedId,
             modelLoaded: true,
           })
@@ -213,6 +225,47 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       .finally(() => setSemLoading(false))
   }, [currentSpaceId])
 
+  // ── 助手会话绑定资源加载（普通会话 appId=0 不请求、不限制）──
+  const assistantId = curConv ? String(curConv.appId ?? 0) : '0'
+  useEffect(() => {
+    if (assistantId === '0') {
+      setBoundResources(null)
+      return
+    }
+    let cancelled = false
+    setBoundResourcesLoading(true)
+    fetchAssistantBoundResources(assistantId)
+      .then((resources) => {
+        if (!cancelled) setBoundResources(resources)
+      })
+      .finally(() => {
+        if (!cancelled) setBoundResourcesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [assistantId])
+
+  // 切换绑定助手（或回到普通会话）时清空已选数据语义，避免携带旧助手语义发送。
+  useEffect(() => {
+    setSelectedData(null)
+  }, [assistantId])
+
+  // 助手会话时输入框数据语义弹窗只用绑定候选（扁平叶子树）；加载中展示空列表 + 加载态。
+  const boundSemanticTree = useMemo(
+    () => (assistantId !== '0' ? buildBoundSemanticTree(boundResources?.semantics ?? []) : null),
+    [assistantId, boundResources],
+  )
+  // 绑定技能 / MCP 候选（memo 保证引用稳定，避免 ChatInput 内部误清已选）
+  const assistantSkills = useMemo(
+    () => (assistantId !== '0' ? boundResources?.skills ?? [] : null),
+    [assistantId, boundResources],
+  )
+  const assistantMcps = useMemo(
+    () => (assistantId !== '0' ? boundResources?.mcps ?? [] : null),
+    [assistantId, boundResources],
+  )
+
   // ── SpaceId 同步 ──
   useEffect(() => {
     if (propSpaceId === undefined) return
@@ -253,10 +306,19 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         space_id: currentSpaceId,
         create_by: userInfoString?.userName,
       })
-      const data = sortAppList(res.data) || []
+      const normalList = Array.isArray(res.data) ? res.data : []
+      // 历史会话要记录并展示绑定助手 ID：session/list 按 appId 精确过滤，
+      // 助手会话不在 appId=0 查询里，按助手逐个查询后去重合并进会话列表。
+      const assistantSessions = await fetchAssistantSessionList({ spaceId: currentSpaceId })
+      const byId = new Map<string, any>()
+      ;[...normalList, ...assistantSessions].forEach((item: any) => {
+        const key = String(item?.chat_id ?? '')
+        if (key && !byId.has(key)) byId.set(key, item)
+      })
+      const data = sortAppList([...byId.values()])
       setAppList(data)
       patchWorkbenchCache(currentSpaceId, { appList: data })
-      if (options?.silent) return res.data
+      if (options?.silent) return data
       const chatId = localStorage.getItem('chatId') || ''
       const targetApp = (chatId && data.find((item: any) => String(item.chat_id) === String(chatId))) || data[0]
       if (targetApp) {
@@ -268,7 +330,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         setCurConv(undefined)
         localStorage.removeItem('chatId')
       }
-      return res.data
+      return data
     } finally {
       if (!options?.silent) setLoading(false)
     }
@@ -296,6 +358,35 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     setCurConv(nextApp.conv_uid ? { ...nextApp } : undefined)
     localStorage.setItem('chatId', String(nextApp.chat_id))
   }, [routeChatId, appList.length])
+
+  // 助手会话（appId≠0）被 session/list 的 appId=0 隔离在侧栏列表外：
+  // 路由会话不在列表时，用 session/get 兜底恢复会话对象（含 appId），
+  // 使对话正文正常渲染并触发绑定资源限制。
+  useEffect(() => {
+    if (!routeChatId || routeChatId === 'new') return
+    if (curConv && String(curConv.chat_id) === String(routeChatId)) return
+    if (appList.some((item) => String(item.chat_id) === String(routeChatId))) return
+    let cancelled = false
+    fetchSessionDetail({ sessionId: routeChatId })
+      .then((res: any) => {
+        const convData = res?.data?.data || res?.data
+        if (cancelled || !convData || typeof convData !== 'object') return
+        const merged = {
+          ...convData,
+          chat_id: convData.chat_id ?? convData.sessionId ?? convData.session_id ?? convData.chatId ?? routeChatId,
+          title: convData.title || convData.biz_name || '',
+          biz_name: convData.title || convData.biz_name || '',
+          appId: convData.appId ?? convData.app_id ?? 0,
+        }
+        setCurApp(merged)
+        setCurConv(merged)
+        localStorage.setItem('chatId', String(merged.chat_id))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [routeChatId, appList, curConv])
 
   // 路由变为 'new' 时清除当前会话，确保展示欢迎页
   useEffect(() => {
@@ -666,11 +757,15 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                     onToggleUploadFile={() => setUploadFileEnabled(!uploadFileEnabled)}
                     spaceId={currentSpaceId}
                     semanticTree={semanticTree}
+                    // 助手会话：数据语义/技能/MCP 弹窗仅展示绑定候选，并跳过全局候选请求。
+                    assistantSemanticTree={boundSemanticTree}
+                    assistantSkills={assistantSkills}
+                    assistantMcps={assistantMcps}
                     selectedData={selectedData}
                     onSelectData={setSelectedData}
                     selectedExcel={selectedExcel}
                     setSelectedExcel={setSelectedExcel}
-                    semLoading={semLoading}
+                    semLoading={semLoading || (assistantId !== '0' && boundResourcesLoading)}
                     externalValue={externalInputValue}
                     onExternalValueConsumed={() => setExternalInputValue('')}
                     selectedModeKey={selectedMode}
