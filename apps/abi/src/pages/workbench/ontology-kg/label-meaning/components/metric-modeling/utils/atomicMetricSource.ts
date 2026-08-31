@@ -1,4 +1,4 @@
-import { getMappedTechNameParts } from '../../../utils/ontologyName'
+import { getMappedBizNameParts, getMappedTechNameParts } from '../../../utils/ontologyName'
 import type { KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
 
 type UnknownRecord = Record<string, unknown>
@@ -89,11 +89,23 @@ export function getAtomicSemanticSchemaId(item?: KnowledgeIndicatorItem): number
 export function getAtomicSemanticSchemaName(item?: KnowledgeIndicatorItem): string {
   if (!item) return '-'
   const source = item as KnowledgeIndicatorItem & UnknownRecord
-  return (
-    String(
-      source.relSchemaName || source.semanticSchemaName || source.schemaName || source.semanticName || '-'
-    ).trim() || '-'
-  )
+  const explicitName = String(
+    source.relSchemaName || source.semanticSchemaName || source.schemaName || source.semanticName || ''
+  ).trim()
+  if (explicitName) return explicitName
+
+  const sourceField = parseAtomicSourceFields(source.techId)[0] as (KnowledgeTechField & UnknownRecord) | undefined
+  const sourceFieldSchemaName = String(
+    sourceField?.semanticSchemaName ||
+      sourceField?.relSchemaName ||
+      sourceField?.rtableName ||
+      sourceField?.tableBizName ||
+      ''
+  ).trim()
+  if (sourceFieldSchemaName) return sourceFieldSchemaName
+
+  const mappedBizName = getMappedBizNameParts(source.rawBizName || source.bizName)
+  return mappedBizName.isMapped ? mappedBizName.displayName || '-' : '-'
 }
 
 export function parseSemanticModelFields(detailValue: unknown): KnowledgeTechField[] {

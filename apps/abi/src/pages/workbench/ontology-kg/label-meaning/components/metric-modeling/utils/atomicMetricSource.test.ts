@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getAtomicProjection,
   getAtomicSemanticSchemaId,
+  getAtomicSemanticSchemaName,
   getAtomicTechnicalSource,
   parseAtomicSourceFields,
   parseSemanticModelFields
@@ -33,6 +34,21 @@ describe('atomic metric source adapter', () => {
       fieldName: 'payment_amount',
       tableName: 'payment_amount'
     })
+  })
+
+  it('resolves the semantic schema name from the selected atomic metric metadata', () => {
+    expect(getAtomicSemanticSchemaName({ relSchemaName: '订单分析语义' })).toBe('订单分析语义')
+    expect(
+      getAtomicSemanticSchemaName({
+        techId: [{ rtableName: '支付明细语义', techId: 'payment-amount' }]
+      })
+    ).toBe('支付明细语义')
+    expect(
+      getAtomicSemanticSchemaName({
+        bizName: '交易流水信息_#_交易金额'
+      })
+    ).toBe('交易流水信息')
+    expect(getAtomicSemanticSchemaName({ bizName: '普通原子指标' })).toBe('-')
   })
 
   it('parses dimension, measure and date fields from semantic model detail', () => {

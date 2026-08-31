@@ -31,6 +31,7 @@ import {
   getApiResponseData,
   getAtomicProjection,
   getAtomicSemanticSchemaId,
+  getAtomicSemanticSchemaName,
   parseAtomicSourceFields,
   parseSemanticModelFields
 } from '../utils/atomicMetricSource'
@@ -557,7 +558,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         let resolvedItem = option.item
         let schemaId = getAtomicSemanticSchemaId(resolvedItem)
         const detailId = resolvedItem.indId ?? resolvedItem.termId
-        if (!schemaId && detailId !== undefined) {
+        if (detailId !== undefined && (!schemaId || getAtomicSemanticSchemaName(resolvedItem) === '-')) {
           const detail = getApiResponseData(await queryKnowledgeIndicatorDetail({ id: detailId }))
           if (requestId !== semanticRequestRef.current) return
           resolvedItem = { ...resolvedItem, ...detail }
@@ -617,13 +618,13 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         if (requestId !== semanticRequestRef.current) return
         const fields = parseSemanticModelFields(schemaDetail)
         setAllFields(fields)
+        const atomicSemanticSchemaName = getAtomicSemanticSchemaName(resolvedItem)
         const semanticSchemaName = String(
-          schemaDetail.rtableName ||
+          (atomicSemanticSchemaName !== '-' && atomicSemanticSchemaName) ||
+            schemaDetail.rtableName ||
             schemaDetail.bizName ||
             schemaDetail.schemaName ||
             schemaDetail.name ||
-            resolvedItem.semanticSchemaName ||
-            resolvedItem.relSchemaName ||
             '-'
         ).trim()
         setIndicatorOptionSource(items =>
