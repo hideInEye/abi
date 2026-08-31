@@ -1,3 +1,4 @@
+import type { ApiRuleTemplates } from '../components/rule-expression';
 import type { inequalityOptions, logicalOperators } from '../constants';
 
 export interface TagGroup {
@@ -5,15 +6,17 @@ export interface TagGroup {
   bizName: string;
   businessDefinition?: string;
   chineseName: string;
+  createBy?: string;
+  createTime?: string;
   description: string;
   englishName: string;
   engName: string;
-  exp: string;
+  exp: ApiRuleTemplates | string;
   expression?: string;
   groupId: number | string;
   id: string;
-  remark: string;
   relSchemaId?: number | string;
+  remark: string;
   schemaId?: number | string;
   semanticGroupId?: number | string;
   semanticSchemaId?: number | string;
@@ -21,11 +24,8 @@ export interface TagGroup {
   spaceId: number;
   tagId: number;
   tagName: string;
-  createBy?: string;
-  createTime?: string;
   updateBy?: string;
   updateTime?: string;
-
   viewId: number | string;
 }
 
@@ -111,7 +111,8 @@ export type TreeNode = {
 };
 
 export interface ExpCondition {
-  logic: (typeof logicalOperators)[number]['value'];
+  logic?: (typeof logicalOperators)[number]['value'];
+  logicWithPrevious?: (typeof logicalOperators)[number]['value'];
   metric: string;
   operator: (typeof inequalityOptions)[number]['value'];
   value: string;
@@ -119,6 +120,11 @@ export interface ExpCondition {
 
 export interface Exp {
   binName: string;
-  conditions: ExpCondition[];
-  logic: string;
+  conditions?: ExpCondition[];
+  groups?: Array<{
+    conditions: ExpCondition[];
+    logicWithPrevious?: (typeof logicalOperators)[number]['value'];
+    name: string;
+  }>;
+  logic?: string;
 }

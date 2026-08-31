@@ -2,9 +2,9 @@
 import { LinkOutlined, TableOutlined } from '@ant-design/icons'
 import { message } from 'antd'
 import type { TableColumnsType } from 'antd'
-import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React from 'react'
 
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { TableSemantics } from '@/components/tableSemantics'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
@@ -12,8 +12,9 @@ import { validateFieldsAndScroll } from '@/pages/workbench/ontology-kg/utils/for
 import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
 
-import type { AtomicMappingPayload, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
 import { buildMappedBizName, buildMappedTechName } from '../../../utils/ontologyName'
+import { AGG_METHOD_OPTIONS } from '../constants/metricModeling.constants'
+import type { AtomicMappingPayload, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
 import { getKnowledgeSpaceId } from '../utils/space'
 
 interface MeasureFieldItem {
@@ -23,6 +24,7 @@ interface MeasureFieldItem {
   englishName: string
   fieldType: string
   key: string
+  projectionFunc: string
   raw: KnowledgeTechField
   tableBizName: string
   tableTechName: string
@@ -35,11 +37,11 @@ interface MappingFormValues {
 }
 
 interface Props {
+  readonly groupId?: string
   readonly groupName?: string
   readonly onClose: (refresh?: boolean) => void
   readonly onSubmit: (payload: AtomicMappingPayload[]) => Promise<boolean>
   readonly open: boolean
-  readonly groupId?: string
 }
 
 // eslint-disable-next-line complexity
@@ -49,17 +51,36 @@ function parseMeasureFields(modelDetail: unknown, schemaDetail?: Record<string, 
   }
   try {
     const detail = typeof modelDetail === 'string' ? JSON.parse(modelDetail) : modelDetail
-    const schemaBizName = String(schemaDetail?.rtableName || schemaDetail?.bizName || schemaDetail?.schemaName || schemaDetail?.name || schemaDetail?.techName || '').trim()
-    const schemaTechName = String(schemaDetail?.tableName || schemaDetail?.techName || schemaDetail?.originName || schemaDetail?.schemaName || schemaDetail?.name || '').trim()
-    const measures = Array.isArray((detail as { measures?: unknown[] })?.measures) ? (detail as { measures: KnowledgeTechField[] }).measures : []
+    const schemaBizName = String(
+      schemaDetail?.rtableName ||
+        schemaDetail?.bizName ||
+        schemaDetail?.schemaName ||
+        schemaDetail?.name ||
+        schemaDetail?.techName ||
+        ''
+    ).trim()
+    const schemaTechName = String(
+      schemaDetail?.tableName ||
+        schemaDetail?.techName ||
+        schemaDetail?.originName ||
+        schemaDetail?.schemaName ||
+        schemaDetail?.name ||
+        ''
+    ).trim()
+    const measures = Array.isArray((detail as { measures?: unknown[] })?.measures)
+      ? (detail as { measures: KnowledgeTechField[] }).measures
+      : []
     return measures
-      .map((item) => {
+      .map(item => {
         const key = String(item?.techId || item?.tfieldId || item?.fieldName || item?.originName || '').trim()
         if (!key) {
           return null
         }
-        const englishName = String(item?.techName || item?.originName || item?.fieldName || item?.tfieldName || key).trim() || key
-        const bizName = String(item?.bizName || item?.tfieldAlias || item?.fieldShortName || item?.fieldName || englishName).trim() || englishName
+        const englishName =
+          String(item?.techName || item?.originName || item?.fieldName || item?.tfieldName || key).trim() || key
+        const bizName =
+          String(item?.bizName || item?.tfieldAlias || item?.fieldShortName || item?.fieldName || englishName).trim() ||
+          englishName
         return {
           alias: String(item?.alias || bizName).trim() || bizName,
           bizName,
@@ -67,12 +88,13 @@ function parseMeasureFields(modelDetail: unknown, schemaDetail?: Record<string, 
           englishName,
           fieldType: String(item?.fieldType || item?.tfieldType || '-').trim() || '-',
           key,
+          projectionFunc: String(item?.projectionFunc || item?.agg || 'sum'),
           raw: {
             ...item,
-            techId: key,
+            techId: key
           },
           tableBizName: String(item?.rtableName || item?.tableBizName || schemaBizName).trim(),
-          tableTechName: String(item?.tableName || schemaTechName).trim(),
+          tableTechName: String(item?.tableName || schemaTechName).trim()
         }
       })
       .filter(Boolean) as MeasureFieldItem[]
@@ -125,7 +147,9 @@ function extractTechKeys(value: unknown): string[] {
   }
   if (parsed && typeof parsed === 'object') {
     const item = parsed as KnowledgeTechField
-    return [String(item.techId || item.tfieldId || item.fieldName || item.originName || item.name || '').trim()].filter(Boolean)
+    return [String(item.techId || item.tfieldId || item.fieldName || item.originName || item.name || '').trim()].filter(
+      Boolean
+    )
   }
   if (typeof parsed === 'string') {
     return parsed
@@ -144,7 +168,7 @@ function hasFieldValue(value: unknown) {
   return value !== undefined && value !== null && value !== ''
 }
 
-export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClose, onSubmit, open, groupId }) => {
+export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupName, onClose, onSubmit, open }) => {
   const [form] = AForm.useForm<MappingFormValues>()
   const [fieldRows, setFieldRows] = useState<MeasureFieldItem[]>([])
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -162,41 +186,47 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       indicatorClass: 'atomic',
       pageNum: 1,
       pageSize: 1000,
-      spaceId: getKnowledgeSpaceId(),
+      spaceId: getKnowledgeSpaceId()
     })
     return normalizeList(getResponseData(res)) as KnowledgeIndicatorItem[]
   }, [groupId])
 
-  const loadSchemaFields = useCallback(async (semanticSchemaId: number | string, options?: { existingAtomicItems?: KnowledgeIndicatorItem[]; keepExistingSelection?: boolean }) => {
-    setLoadingFields(true)
-    try {
-      const res = await queryTableSemanticsDetail(semanticSchemaId)
-      const detail = getResponseData(res)
-      const nextRows = parseMeasureFields(detail?.modelDetail, detail)
-      let existingKeys = getExistingAtomicKeys(options?.existingAtomicItems || [])
+  const loadSchemaFields = useCallback(
+    async (
+      semanticSchemaId: number | string,
+      options?: { existingAtomicItems?: KnowledgeIndicatorItem[]; keepExistingSelection?: boolean }
+    ) => {
+      setLoadingFields(true)
       try {
-        if (!options?.existingAtomicItems) {
-          existingKeys = getExistingAtomicKeys(await queryCurrentGroupAtomicIndicators())
+        const res = await queryTableSemanticsDetail(semanticSchemaId)
+        const detail = getResponseData(res)
+        const nextRows = parseMeasureFields(detail?.modelDetail, detail)
+        let existingKeys = getExistingAtomicKeys(options?.existingAtomicItems || [])
+        try {
+          if (!options?.existingAtomicItems) {
+            existingKeys = getExistingAtomicKeys(await queryCurrentGroupAtomicIndicators())
+          }
+        } catch {
+          existingKeys = new Set<string>()
+        }
+        const disabledKeys = nextRows.filter(item => existingKeys.has(item.key)).map(item => item.key)
+        setFieldRows(nextRows)
+        setDisabledRowKeys(disabledKeys)
+        setSelectedRowKeys(options?.keepExistingSelection ? disabledKeys : [])
+        if (!nextRows.length) {
+          message.warning('当前数据语义下没有可映射的度量字段')
         }
       } catch {
-        existingKeys = new Set<string>()
+        setFieldRows([])
+        setSelectedRowKeys([])
+        setDisabledRowKeys([])
+        message.error('查询数据语义字段失败')
+      } finally {
+        setLoadingFields(false)
       }
-      const disabledKeys = nextRows.filter(item => existingKeys.has(item.key)).map(item => item.key)
-      setFieldRows(nextRows)
-      setDisabledRowKeys(disabledKeys)
-      setSelectedRowKeys(options?.keepExistingSelection ? disabledKeys : [])
-      if (!nextRows.length) {
-        message.warning('当前数据语义下没有可映射的度量字段')
-      }
-    } catch {
-      setFieldRows([])
-      setSelectedRowKeys([])
-      setDisabledRowKeys([])
-      message.error('查询数据语义字段失败')
-    } finally {
-      setLoadingFields(false)
-    }
-  }, [queryCurrentGroupAtomicIndicators])
+    },
+    [queryCurrentGroupAtomicIndicators]
+  )
 
   const handleSchemaChange = async ({
     semanticGroupId,
@@ -206,12 +236,12 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
     semanticGroupId: number | string | null
     semanticSchemaId: number | string
     semanticsGroupId: number | string | null
-    viewId: number
+    viewId: number | string
   }) => {
     form.setFieldsValue({
       semanticGroupId: semanticGroupId ?? semanticsGroupId ?? undefined,
-      semanticsGroupId: semanticsGroupId ?? semanticGroupId ?? undefined,
       semanticSchemaId,
+      semanticsGroupId: semanticsGroupId ?? semanticGroupId ?? undefined
     })
     await loadSchemaFields(semanticSchemaId)
   }
@@ -242,8 +272,14 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
         }
 
         const firstAtomic = atomicItems[0] as Record<string, unknown>
-        const semanticsGroupId = (firstAtomic.semanticsGroupId ?? firstAtomic.semanticGroupId) as number | string | undefined
-        const semanticSchemaId = (firstAtomic.relSchemaId ?? firstAtomic.semanticSchemaId ?? firstAtomic.schemaId) as number | string | undefined
+        const semanticsGroupId = (firstAtomic.semanticsGroupId ?? firstAtomic.semanticGroupId) as
+          | number
+          | string
+          | undefined
+        const semanticSchemaId = (firstAtomic.relSchemaId ?? firstAtomic.semanticSchemaId ?? firstAtomic.schemaId) as
+          | number
+          | string
+          | undefined
         if (!hasFieldValue(semanticsGroupId) || !hasFieldValue(semanticSchemaId)) {
           setSemanticLocked(false)
           return
@@ -252,12 +288,12 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
         form.setFieldsValue({
           semanticGroupId: semanticsGroupId,
           semanticSchemaId,
-          semanticsGroupId,
+          semanticsGroupId
         })
         setSemanticLocked(true)
         await loadSchemaFields(semanticSchemaId as string | number, {
           existingAtomicItems: atomicItems,
-          keepExistingSelection: true,
+          keepExistingSelection: true
         })
       } catch {
         setSemanticLocked(false)
@@ -276,7 +312,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       return
     }
     const disabledKeySet = new Set(disabledRowKeys.map(item => String(item)))
-    const selectedRows = fieldRows.filter((item) => selectedRowKeys.includes(item.key) && !disabledKeySet.has(item.key))
+    const selectedRows = fieldRows.filter(item => selectedRowKeys.includes(item.key) && !disabledKeySet.has(item.key))
 
     if (!selectedRows.length) {
       message.warning('请选择未映射的度量字段')
@@ -288,11 +324,12 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
     if (!hasFieldValue(semanticSchemaId)) {
       return
     }
-    const payload: AtomicMappingPayload[] = selectedRows.map((item) => ({
+    const payload: AtomicMappingPayload[] = selectedRows.map(item => ({
+      groupId,
+      projectionFunc: item.projectionFunc || 'sum',
       relSchemaId: semanticSchemaId as number | string,
       semanticsGroupId,
       spaceId: getKnowledgeSpaceId(),
-      groupId: groupId,
       techId: [
         {
           ...item.raw,
@@ -301,10 +338,11 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
           description: item.description,
           englishName: item.englishName,
           fieldType: item.fieldType,
+          projectionFunc: item.projectionFunc || 'sum',
           techId: String(item.raw?.techId ?? item.key),
-          techName: buildMappedTechName(item.tableTechName, item.englishName),
-        },
-      ],
+          techName: buildMappedTechName(item.tableTechName, item.englishName)
+        }
+      ]
     }))
 
     setSaving(true)
@@ -323,17 +361,38 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
     {
       dataIndex: 'englishName',
       key: 'englishName',
-      title: '英文名称',
+      title: '英文名称'
     },
     {
       dataIndex: 'fieldType',
       key: 'fieldType',
-      title: '字段类型',
+      title: '字段类型'
     },
     {
       key: 'semanticType',
-      render: () => <ASelect disabled options={[{ label: '度量', value: 'measure' }]} value="measure" />,
-      title: '语义类型',
+      render: () => (
+        <ASelect
+          disabled
+          options={[{ label: '度量', value: 'measure' }]}
+          value="measure"
+        />
+      ),
+      title: '语义类型'
+    },
+    {
+      dataIndex: 'projectionFunc',
+      key: 'projectionFunc',
+      render: (value: string, record: MeasureFieldItem) => (
+        <ASelect
+          options={AGG_METHOD_OPTIONS}
+          placeholder="请选择聚合方式"
+          value={value || 'sum'}
+          onChange={projectionFunc =>
+            setFieldRows(prev => prev.map(item => (item.key === record.key ? { ...item, projectionFunc } : item)))
+          }
+        />
+      ),
+      title: '聚合方式'
     },
     {
       dataIndex: 'bizName',
@@ -341,13 +400,13 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       render: (value: string, record: MeasureFieldItem) => (
         <AInput
           value={value}
-          onChange={(e) => {
+          onChange={e => {
             const nextValue = e.target.value
-            setFieldRows((prev) => prev.map((item) => (item.key === record.key ? { ...item, bizName: nextValue } : item)))
+            setFieldRows(prev => prev.map(item => (item.key === record.key ? { ...item, bizName: nextValue } : item)))
           }}
         />
       ),
-      title: '中文名称',
+      title: '中文名称'
     },
     {
       dataIndex: 'alias',
@@ -355,13 +414,13 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       render: (value: string, record: MeasureFieldItem) => (
         <AInput
           value={value}
-          onChange={(e) => {
+          onChange={e => {
             const nextValue = e.target.value
-            setFieldRows((prev) => prev.map((item) => (item.key === record.key ? { ...item, alias: nextValue } : item)))
+            setFieldRows(prev => prev.map(item => (item.key === record.key ? { ...item, alias: nextValue } : item)))
           }}
         />
       ),
-      title: '别名',
+      title: '别名'
     },
     {
       dataIndex: 'description',
@@ -369,14 +428,16 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       render: (value: string, record: MeasureFieldItem) => (
         <AInput
           value={value}
-          onChange={(e) => {
+          onChange={e => {
             const nextValue = e.target.value
-            setFieldRows((prev) => prev.map((item) => (item.key === record.key ? { ...item, description: nextValue } : item)))
+            setFieldRows(prev =>
+              prev.map(item => (item.key === record.key ? { ...item, description: nextValue } : item))
+            )
           }}
         />
       ),
-      title: '字段描述',
-    },
+      title: '字段描述'
+    }
   ]
 
   return (
@@ -387,7 +448,11 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       footer={
         <ASpace className="w-full justify-end">
           <AButton onClick={() => onClose()}>取消</AButton>
-          <AButton loading={saving} type="primary" onClick={handleSave}>
+          <AButton
+            loading={saving}
+            type="primary"
+            onClick={handleSave}
+          >
             保存绑定并映射
           </AButton>
         </ASpace>
@@ -395,7 +460,11 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
       onClose={() => onClose()}
     >
       <div className="mb-4 rounded bg-gray-50 px-3 py-2 text-sm">当前分组：{groupName || '-'}</div>
-      <AForm<MappingFormValues> className="ds-form-section" form={form} layout="vertical">
+      <AForm<MappingFormValues>
+        className="ds-form-section"
+        form={form}
+        layout="vertical"
+      >
         <OntologyFormSectionTitle icon={<LinkOutlined />}>语义来源</OntologyFormSectionTitle>
         <TableSemantics
           form={form}
@@ -415,14 +484,14 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupName, onClo
           loading={loadingFields}
           pagination={false}
           rowKey="key"
+          scroll={{ x: 1200, y: 520 }}
           rowSelection={{
             getCheckboxProps: record => ({
-              disabled: disabledRowKeys.includes(record.key),
+              disabled: disabledRowKeys.includes(record.key)
             }),
-            selectedRowKeys,
-            onChange: (keys) => setSelectedRowKeys(keys),
+            onChange: keys => setSelectedRowKeys(keys),
+            selectedRowKeys
           }}
-          scroll={{ x: 1200, y: 520 }}
         />
       </div>
     </CommonDrawer>

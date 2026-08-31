@@ -34,6 +34,23 @@ describe('ReportMessageRow', () => {
     )
 
     expect(markup).toContain('耗时2分5秒')
+    expect(markup).toMatch(/class="[^"]*reportStatusBadge[^"]*reportStatusSuccess[^"]*" data-status="completed"/)
+    expect(markup).not.toContain('ant-tag')
+  })
+
+  it('运行中和失败状态使用对应的轻量状态徽记', () => {
+    const renderStatus = (status: ReportItem['status']) => renderToStaticMarkup(
+      <ReportMessageRow
+        report={createReport({ status })}
+        onToggleThinking={() => undefined}
+        onToggleTodo={() => undefined}
+        onToggleTask={() => undefined}
+        onOpenReport={() => undefined}
+      />,
+    )
+
+    expect(renderStatus('running')).toMatch(/class="[^"]*reportStatusBadge[^"]*reportStatusActive[^"]*" data-status="running"[^>]*>.*执行中/)
+    expect(renderStatus('failed')).toMatch(/class="[^"]*reportStatusBadge[^"]*reportStatusDanger[^"]*" data-status="failed"[^>]*>.*失败/)
   })
 
   it('无最终报告时保留真实 final_content，但不展示报告文件卡', () => {

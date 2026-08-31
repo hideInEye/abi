@@ -1,4 +1,5 @@
 import { isReportGenerationTask } from './helpers'
+import { normalizeEmbeddedChunkOutputs } from './embeddedChunkPayload'
 import { createInitialReportStreamState, isReportFinalError } from './reportStreamReducer'
 import type {
   ReportAttachment,
@@ -148,7 +149,7 @@ function isTodoMarker(step: NonNullable<ReportHistoryPayload['steps']>[number]):
 function toPublicChunks(outputs: NonNullable<ReportHistoryPayload['steps']>[number]['outputs'], stepKey: string): ReportPublicChunk[] {
   if (!Array.isArray(outputs)) return []
 
-  return outputs.flatMap((output, index) => {
+  const chunks = outputs.flatMap((output, index) => {
     if (typeof output?.content !== 'string' || !output.content.trim()) return []
     // 历史 plan 是思考或 Todo 的阶段总结，由专门状态展示，不能作为普通执行输出重复出现。
     if (String(output.output_type).toLowerCase() === 'plan') return []
@@ -159,6 +160,10 @@ function toPublicChunks(outputs: NonNullable<ReportHistoryPayload['steps']>[numb
       content: output.content,
     }]
   })
+
+  // 历史接口可能把完整 `{ chunks: [...] }` 工具结果包在一条 text 中；
+  // 与实时流共用解析器，避免把外层 JSON、内部隐藏提示和框架提醒直接展示给用户。
+  return normalizeEmbeddedChunkOutputs(chunks)
 }
 
 interface HistoryPlanOutput {

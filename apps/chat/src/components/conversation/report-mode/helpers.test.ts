@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import {
   canRevealReport,
+  completeReportThinkingTypewriter,
   formatReportDuration,
+  getCollapsedTodoExecutionSummary,
   getCompletedTaskCount,
   getCurrentTaskTitle,
   getPublicStepLines,
+  getReportStatusTone,
   getReportDownloadDescriptor,
   getReportDownloadOptions,
   getReportPresentationStage,
@@ -37,6 +40,97 @@ describe('report-mode UI helpers', () => {
 
     expect(getCompletedTaskCount(tasks)).toBe(1)
     expect(getCurrentTaskTitle(tasks)).toBe('生成报告')
+  })
+
+  it('为 Todo 的四类主要状态返回稳定的视觉语义', () => {
+    expect(getReportStatusTone('pending')).toBe('pending')
+    expect(getReportStatusTone('in_progress')).toBe('running')
+    expect(getReportStatusTone('completed')).toBe('done')
+    expect(getReportStatusTone('failed')).toBe('failed')
+  })
+
+  it('只用当前执行任务的公开步骤生成折叠摘要', () => {
+    const currentStep: ReportPublicStep = {
+      id: 'step-2',
+      title: 'execute_skill_script_file',
+      action: 'execute_skill_script_file',
+      actionIntention: '生成订单查询 SQL',
+      status: 'in_progress',
+      chunks: [{ entryId: '3-0', outputType: 'text', content: 'Skill: sql-generator' }],
+      firstEntryId: '2-0',
+      lastEntryId: '3-0',
+      entryIds: ['2-0', '3-0'],
+      scope: 'todo',
+      executionGroupKey: 'plan-1:0',
+    }
+    const report = {
+      tasks: [{ content: '生成订单查询 SQL', status: 'in_progress' as const }],
+      currentPlan: { entryId: 'plan-1', tasks: [{ content: '生成订单查询 SQL', status: 'in_progress' as const }] },
+      executionGroups: [{ key: 'plan-1:0', planEntryId: 'plan-1', taskIndex: 0, taskContent: '生成订单查询 SQL', stepIds: ['step-2'] }],
+      stepsById: { 'step-2': currentStep },
+      stepOrder: ['step-2'],
+    }
+
+    expect(getCollapsedTodoExecutionSummary(report)).toBe('当前正在执行 生成订单查询 SQL 步骤，调用 sql-generator 技能')
+    expect(getCollapsedTodoExecutionSummary({ ...report, stepsById: { 'step-2': { ...currentStep, chunks: [] } } })).toBe('当前正在执行 生成订单查询 SQL 步骤')
+    expect(getCollapsedTodoExecutionSummary({ ...report, tasks: [{ content: '生成订单查询 SQL', status: 'pending' }] })).toBeUndefined()
+  })
+
+  it('重规划后仍按相同任务内容读取旧计划中的公开 Skill', () => {
+    const step: ReportPublicStep = {
+      id: 'step-old-plan',
+      title: 'load_skill',
+      actionIntention: '加载 sql-generator 技能',
+      status: 'done',
+      chunks: [],
+      firstEntryId: '2-0',
+      lastEntryId: '3-0',
+      entryIds: ['2-0', '3-0'],
+      scope: 'todo',
+      executionGroupKey: 'old-plan:0',
+    }
+
+    expect(getCollapsedTodoExecutionSummary({
+      tasks: [{ content: '生成订单查询 SQL', status: 'in_progress' }],
+      currentPlan: { entryId: 'new-plan', tasks: [{ content: '生成订单查询 SQL', status: 'in_progress' }] },
+      executionGroups: [{ key: 'old-plan:0', planEntryId: 'old-plan', taskIndex: 0, taskContent: '生成订单查询 SQL', stepIds: ['step-old-plan'] }],
+      stepsById: { 'step-old-plan': step },
+      stepOrder: ['step-old-plan'],
+    })).toBe('当前正在执行 加载 sql-generator 技能 步骤，调用 sql-generator 技能')
+  })
+
+  it('同时存在已完成与执行中步骤时优先展示执行中步骤', () => {
+    const doneStep: ReportPublicStep = {
+      id: 'step-done',
+      actionIntention: '整理历史数据',
+      status: 'done',
+      chunks: [{ entryId: '4-0', outputType: 'text', content: 'Skill: sql-generator' }],
+      firstEntryId: '4-0',
+      lastEntryId: '4-0',
+      entryIds: ['4-0'],
+      scope: 'todo',
+      executionGroupKey: 'plan-1:0',
+    }
+    const runningStep: ReportPublicStep = {
+      id: 'step-running',
+      actionIntention: '生成趋势预测',
+      status: 'in_progress',
+      chunks: [{ entryId: '3-0', outputType: 'text', content: 'Skill: time-series-predictor' }],
+      firstEntryId: '3-0',
+      lastEntryId: '3-0',
+      entryIds: ['3-0'],
+      scope: 'todo',
+      executionGroupKey: 'plan-1:0',
+    }
+
+    expect(getCollapsedTodoExecutionSummary({
+      tasks: [{ content: '预测未来趋势', status: 'in_progress' }],
+      currentPlan: { entryId: 'plan-1', tasks: [{ content: '预测未来趋势', status: 'in_progress' }] },
+      executionGroups: [{ key: 'plan-1:0', planEntryId: 'plan-1', taskIndex: 0, taskContent: '预测未来趋势', stepIds: ['step-running', 'step-done'] }],
+      stepsById: { 'step-running': runningStep, 'step-done': doneStep },
+      // 已完成步骤在 Redis 顺序中更新得更晚，也应优先展示真实的 in_progress 步骤。
+      stepOrder: ['step-running', 'step-done'],
+    })).toBe('当前正在执行 生成趋势预测 步骤，调用 time-series-predictor 技能')
   })
 
   it('只把明确的中英文报告任务识别为报告产物阶段', () => {
@@ -98,7 +192,7 @@ describe('report-mode UI helpers', () => {
   })
 
   it('严格按照思考、ToDo、报告三个阶段渐进展示', () => {
-    const createView = (overrides: Partial<Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate' | 'thinkingCompleted'>> = {}) => ({
+    const createView = (overrides: Partial<Pick<ReportItem, 'currentPlan' | 'tasks' | 'status' | 'reportCandidate' | 'thinkingCompleted' | 'thinkingAnimationCompleted'>> = {}) => ({
       currentPlan: undefined,
       tasks: [],
       status: 'thinking' as const,
@@ -111,12 +205,37 @@ describe('report-mode UI helpers', () => {
 
     expect(getReportPresentationStage(createView({ reportCandidate: candidate }))).toBe('thinking')
     expect(getReportPresentationStage(createView({ currentPlan: plan, tasks: [{ content: '分析', status: 'in_progress' }], reportCandidate: candidate }))).toBe('thinking')
+    expect(getReportPresentationStage(createView({ currentPlan: plan, thinkingCompleted: true, thinkingAnimationCompleted: false, tasks: [{ content: '分析', status: 'in_progress' }], reportCandidate: candidate }))).toBe('thinking')
     expect(getReportPresentationStage(createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '分析', status: 'in_progress' }], reportCandidate: candidate }))).toBe('todo')
     expect(getReportPresentationStage(createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '分析', status: 'pending' }], status: 'completed', reportCandidate: candidate }))).toBe('todo')
     expect(canRevealReport(createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '分析', status: 'completed' }], status: 'completed', reportCandidate: candidate }))).toBe(true)
     expect(canRevealReport(createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '旧步骤', status: 'cancelled' }], status: 'completed', reportCandidate: candidate }))).toBe(true)
     expect(canRevealReport(createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '生成 Markdown 报告', status: 'completed' }], status: 'completed', reportCandidate: { ...candidate, format: 'markdown', content: '# 最终报告' } }))).toBe(true)
     expect(canRevealReport({ ...createView({ currentPlan: plan, thinkingCompleted: true, tasks: [{ content: '导出 PDF', status: 'completed' }], status: 'completed' }), reportAttachments: [{ entryId: '3-0', stepId: 'report', format: 'pdf', url: '/report.pdf' }] })).toBe(true)
+  })
+
+  it('打字机结束后仅在后端思考步骤已完成时收起思考并展开 Todo', () => {
+    const baseReport = {
+      animateThinkingPlan: true,
+      thinkingAnimationCompleted: false,
+      thinkingOpen: true,
+      thinkingCompleted: false,
+      todoOpen: false,
+      currentPlan: { entryId: 'plan-1', tasks: [] },
+    } as ReportItem
+
+    expect(completeReportThinkingTypewriter(baseReport)).toMatchObject({
+      animateThinkingPlan: false,
+      thinkingAnimationCompleted: true,
+      thinkingOpen: true,
+      todoOpen: false,
+    })
+    expect(completeReportThinkingTypewriter({ ...baseReport, thinkingCompleted: true })).toMatchObject({
+      animateThinkingPlan: false,
+      thinkingAnimationCompleted: true,
+      thinkingOpen: false,
+      todoOpen: true,
+    })
   })
 
   it('只有报告产物上下文才过滤 HTML 或 Markdown 正文', () => {

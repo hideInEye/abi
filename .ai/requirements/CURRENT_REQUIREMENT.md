@@ -1,1030 +1,281 @@
-# 会话分组独立页面与报告模式需求
+# 标签语义表达式与指标建模改造需求（含派生指标预览）
 
 ## 文档状态
 
-- 状态：已完成“流程结束时误把非报告 Todo 的 Markdown 过程输出当成最终报告”的历史与实时展示修正。
-- 日期：2026-08-19。
-- 当前分支：`dev/zanghb-20260720-chatreport`。
-- 影响范围：`apps/chat` 报告 Stream reducer 的阶段门控、Todo 总结映射与报告任务展示。
+- 状态：指标建模改造、标签语义表达式新接口协议及派生指标编辑态语义数据回显已实现，待登录后真实接口回归。
+- 日期：2026-08-31。
+- 当前分支：`dev/zanghb-ontology-iteration`。
+- 需求来源：用户确认的实施计划、交互截图、《芯智ABI\_标签语义表达式功能需求文档》V1.0，以及《指标建模\_时间范围扩展.html》交互稿。
+- 影响范围：`apps/abi/src/pages/workbench/ontology-kg/label-meaning`。
 
-本文件是本轮开发的唯一当前需求依据。旧实现中的独立 `ReportConversation` 页面分支、根 `server/`、Node `/api/report-stream/events` 以及“不调用 task 状态接口”的约定全部废止。
+本文件是本轮开发的唯一当前需求依据。原“会话分组独立页面与报告模式需求”已完成且不属于本轮范围。
 
-## 2026-08-28 追加：三端增加「分享记录」页签
+## 需求类型
 
-### 背景
-
-- 助手与大屏已支持统一分享接口（`/api/v1/project/share`，type 区分：react=自主助手 / workflow=工作流助手 / dashboard=数据大屏），但缺少分享记录的查询入口。
-- 需求口径（用户 2026-08-28 确认）：在「我的大屏」（dashboard 微应用 MyScreen）、「abi 我的助手」、「chat 应用工坊我的助手」三处增加页签，新增「分享记录」tab；大屏首个 tab 命名为「已发布大屏」，abi 助手首个 tab 命名为「已发布助手」，chat 在现有工坊 tab 栏追加「分享记录」。
-- 查询接口：POST `/api/v1/project/share/list`，body `{type, spaceId, current, size}`；各应用网关前缀与分享接口一致（dashboard 微应用 `/dashboard/...`，abi `/api/dashboard/...`，chat `VITE_BASE_API + /dashboard/...`）。
-
-### 目标
-
-- 三端「分享记录」tab 均调用统一分享记录查询接口（大屏 type=dashboard、abi 助手 type=workflow、chat 助手 type=react），服务端分页（current/size），卡片展示名称、分享时间、过期时间、密码保护标签，支持「复制链接」（含密码时一并复制）。
-- 响应结构做兼容映射（records/rows/list/数组、total 兜底），字段缺失时兜底展示，避免白屏。
-- 大屏分享记录复制链接时沿用大屏分享弹窗的链接格式转换（`/#/`→`/`、`/dr/`→`/dashboard-share-page/`）。
-
-### 非目标
-
-- 不实现分享记录的搜索/时间筛选（接口未提供查询参数），分享记录 tab 隐藏搜索栏。
-- 不修改分享弹窗、取消发布、进入对话等既有行为；不新增删除分享等接口调用。
-
-### 影响范围
-
-- apps/dashboard：`api/BaseApi.ts`（getShareProjectList）、`pages/my-screen/MyScreen.tsx`（页签）、新增 `pages/my-screen/ShareRecordList.tsx`、`pages/home/project-list/ProjectList.less`（页签样式）。
-- apps/abi：`service/api/share.ts`（fetchProjectShareListApi）、`pages/workbench/app-workshop/my-assistant/index.tsx`（ATabs 页签）、新增同目录 `ShareRecordList.tsx`。
-- apps/chat：`service/api/assistant.ts`（fetchShareRecordList）、`pages/chat/workshop/index.tsx`（新增 share-record tab）。
-
-### 验收与测试
-
-- 三端切换页签正常；分享记录 tab 拉取 `/api/v1/project/share/list` 并分页；空数据展示空态；复制链接行为与分享弹窗一致。
-- 三个应用 `tsc --noEmit` 对修改文件无新增错误（存量错误除外）。
-- 生成 `.ai/runs/2026-08-28-share-record-tabs/RUN_LOG.md`。
-
-## 2026-08-28 追加：应用工坊助手卡片点击创建助手会话（绑定资源限定）
-
-### 背景
-
-- 应用工坊「我的助手」卡片目前只有「查看」「分享」两个入口，没有与助手对话的入口。
-- 会话接口已支持 appId 绑定：`session/add` 的 `mapAppCreateParams` 透传 `appId`（分享 widget、抽屉调试对话已在用）；交互/探索/报告三种模式提交 payload 均已从 `conv.appId` 透传 `app_id`。
-- 需求口径（用户 2026-08-28 确认）：点击助手卡片创建一个绑定该助手的新会话，进入后可正常对话（交互/探索/报告三种模式）；该会话输入框的数据语义、技能、MCP 只能从助手绑定资源里拿。明确不采用「跳转 /chat/task/new?assistantId 的 search 方案」。
-
-### 目标
-
-- 工坊助手卡片整体可点击：立即调 `session/add` 创建新会话（`appId=<助手ID>`、标题用助手名），成功后进入 `/chat/task/<chat_id>` 对话；「查看/分享」按钮保持原行为（阻止冒泡）；每次点击均创建新会话。
-- 打开 `appId` 非 0 的会话时，调 `app/get` 加载助手详情并映射为绑定资源（语义 `versions[].schemaSemantics[].schemaConfig`；技能 `skills[].skillConfig`，id 即源版本 id；MCP `tools[]` 中 `toolType='2'`，按 `mcp_sse` 推导协议）；输入框数据语义/技能/MCP 弹窗仅展示绑定候选，不请求全局收藏技能列表/MCP 分组；交互、探索、报告三模式保持可用。
-- 助手会话要进入历史会话列表（侧栏「最近对话」可见），会话记录携带绑定助手 ID（`session/add` 的 `appId`）；`session/list` 按 appId 精确过滤，前端按助手逐个查询去重合并进列表；直链打开且列表未命中时由 `session/get` 兜底恢复会话对象（含 `appId`），触发同样的绑定资源限制。
-- 切换绑定助手时清空已选数据语义。
-
-### 非目标
-
-- 不新增带 `assistantId` 的 search 路由参数，不改动 `$taskId` 路由定义与既有导航调用。
-- 不修改查看抽屉、分享弹窗、分享页 widget、大屏；保持大屏 `appId=1` 隔离不被混入。
-- 不用 `chatModelId` 强制覆盖对话页模型；不实现开场白/推荐问题展示。
-
-### 影响范围
-
-- apps/chat：`pages/chat/workshop/index.tsx`（卡片点击建会话）、`components/conversation-analysis/index.tsx`（绑定资源/历史兜底/列表合并）、`service/api/app.ts`（列表按 appId 查询与助手会话合并查询）、`components/conversation/components/chat-input/index.tsx`（绑定候选弹窗）、新增 `pages/chat/workshop/assistantResources.ts` 映射模块与 Vitest、`index.css` 卡片可点击样式。
-
-### 验收与测试
-
-- 点击助手卡片创建新助手会话并进入对话；再次点击创建另一个新会话。
-- 数据语义/技能/MCP 弹窗仅展示绑定候选；交互/探索/报告三模式均可提交且 payload 带 `app_id`。
-- 打开历史助手会话自动恢复绑定资源限制；会话不在列表时 `session/get` 兜底可用。
-- `assistantResources` 映射纯函数补 Vitest（空 versions、缺字段、toolType 过滤、协议推导）；运行 ai-bot typecheck、build 与 `git diff --check`。
-- 生成 `.ai/runs/2026-08-28-assistant-card-session/RUN_LOG.md`。
-
-## 2026-08-28 追加：进入对话页面模型选择器默认显示默认模型
-
-### 背景
-
-- 对话页顶部模型选择器加载模型列表后固定取列表首项（`options[0]`）作为当前选中模型，与后端配置的「默认模型」（`isDefault === 1`，下拉中带「默认模型」徽标）不一致，进入对话页面时显示的模型不是默认模型。
-
-### 目标
-
-- `ConversationAnalysis` 模型列表加载完成后，优先选中 `isDefault === 1` 的模型作为当前模型；无默认模型时回退列表首项，列表为空时保持空（选择器不渲染）。
-- 模块级工作台缓存写入同一初始选中模型，冷挂载命中缓存时同样显示默认模型。
-- 下拉中「默认模型」徽标展示、用户手动切换模型及强制深度思考联动逻辑保持不变。
-
-### 非目标
-
-- 不修改模型列表接口、后端默认模型配置与 ChatHeader 下拉 UI。
-- 不修改会话创建、发送、报告/探索模式等对话主流程。
-
-### 验收标准
-
-- 进入对话页面，模型选择器顶部显示的模型为下拉中带「默认模型」徽标的模型（无默认模型时回退列表首项）。
-- `pnpm --filter ai-bot exec tsc --noEmit -p tsconfig.json` 与 `git diff --check` 通过，无新增错误。
-- 生成 `.ai/runs/2026-08-28-chat-default-model/RUN_LOG.md`。
-
-## 2026-08-28 追加：助手分享悬浮框对齐大屏对话风格 + 数据语义下拉筛选框
-
-### 背景
-
-- 2026-08-27 落地的助手分享悬浮框（`apps/chat/src/components/chat-widget/ChatWidget.tsx`）为自定义中性灰蓝风格，与大屏对话面板 [AiChatPanel](apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx) 的视觉风格（蓝色渐变主题、状态栏、气泡样式、输入区工具栏）不一致。
-- 大屏对话输入区带「数据语义」下拉筛选框（分组树：分组文件夹 + 数据语义叶子，选中后随对话下发 `semantic_id/semantic_group_name/semantic_name`），分享悬浮框缺失该能力。
-
-### 目标
-
-- ChatWidget 视觉整体对齐 AiChatPanel：头部（#f5f7fa 底 + 蓝色渐变 AI 图标 + 关闭按钮悬浮态）、思考状态栏（#f0f5ff 底 + #1778FF 状态点/“正在思考中...”）、消息气泡（human 蓝色渐变、ai #f5f7fa 描边，时间置于气泡下方）、输入区（#f5f7fa 输入框、聚焦蓝色描边、渐变发送钮、红色停止钮、底部免责提示），主题色由 #3370ff 切换为 #1677ff/#4096ff 渐变体系。
-- 输入区工具栏新增与大屏同款「数据语义」下拉筛选框：分组树（分组仅展开/收起，叶子可选中），选中项随发送透传 `semantic_id/semantic_group_name/semantic_name` 到 completions 的 `context.extra`（与大屏一致）。
-- 语义树来源：复用已有统一接口 `GET /copilot/v1/schema/tree?spaceId=`，随 widget 请求层附带 shareCode 免登录下发；spaceId 取自已有 `getProjectInfo` 响应（为助手信息新增 spaceId 字段，不新增额外接口调用链路）。拉取失败时降级为空树（提示“暂无数据语义”），不阻断对话。
-- 与大屏差异保留：悬浮框不强制必选语义（分享助手可能未绑定语义，未选中时不下发语义字段、仍可发送）；欢迎页推荐问题列表保留。
-- 样式继续全量 `abi-cw-` 前缀、不依赖 antd（下拉面板为组件内绝对定位浮层，非 portal）。
-
-### 非目标
-
-- 不修改大屏 AiChatPanel、大屏分享、chat 主对话流程与报告/探索模式。
-- 不修改分享生成/校验、会话创建、历史消息映射协议。
-- 不修改 nginx/部署配置。
-
-### 验收与测试
-
-- 分享页与嵌入形态下悬浮框呈现大屏同款配色与布局；输入区可见「数据语义」下拉，展开为分组树，选中后按钮显示语义名。
-- 选中语义发送时请求体 `context.extra` 携带 `semantic_id/semantic_group_name/semantic_name`；未选中不带。
-- 语义树接口失败或无 spaceId 时，下拉显示“暂无数据语义”，对话仍可正常发送。
-- 运行根目录 type-check 与 chat-widget Vitest，无新增错误；既有纯函数测试不回退。
-- 生成 `.ai/runs/2026-08-28-share-widget-dashboard-style/RUN_LOG.md`。
-
-## 2026-08-27 追加：助手分享页与第三方嵌入对话悬浮框（Web Component，方案3）
-
-### 背景
-
-- 大屏分享已闭环：后端返回下划线分享路径，前端转连字符路由 `/dashboard-share-page/:shareCode`，[ShareViewPage](apps/dashboard/src/pages/share/ShareViewPage.tsx) 先 `checkSharePassword` 再加载。
-- 助手（应用工坊）尚无对外分享入口；对话悬浮框 UI 仅存在于大屏设计器 [AiChatPanel](apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx)，强耦合设计器 MobX store，无法直接复用。
-- 需求：助手可外链分享（后端传路径、前端跳转），页面为右侧悬浮对话面板形态（欢迎语 + 消息流 + 输入区）；并支持第三方系统通过引入外部 JS/CSS 嵌入同一悬浮框（方案3 Web Component）。
-
-### 目标
-
-- chat 应用（hash 路由）新增分享路由页，路径沿用大屏“后端下划线、前端连字符”转换约定，渲染悬浮对话面板。
-- 悬浮框抽为无 store 依赖的纯组件 `apps/chat/src/components/chat-widget/`（props 驱动：shareCode/apiBase/mode），分享页与第三方嵌入共用同一组件。
-- 新增独立 Vite lib 构建（iife 单文件）产出 `abi-chat-widget.js` + `abi-chat-widget.css`，注册 `<abi-chat-widget>` 自定义元素并暴露 `window.AbiChatWidget.mount/unmount`；静态产物随 chat 构建产物部署，不改任何部署配置（不涉及 nginx）。
-- 样式隔离：不用 Shadow DOM；widget 自身 CSS 全量 `abi-cw-` 前缀、antd `prefixCls` 独立、`getPopupContainer` 挂回 widget 根；widget 构建不引入 Tailwind。
-- 免登录：widget 请求层支持 shareCode 模式，不依赖 token/localStorage。
-- 工坊助手增加分享入口，调后端新分享接口取 shareUrl。
-
-### 非目标
-
-- 不修改现有对话主流程、报告/探索模式、大屏 AiChatPanel 与大屏分享逻辑。
-- 不修改 nginx/部署配置。
-- 不实现 iframe/npm 包等其他集成方案。
-
-### 影响范围
-
-- apps/chat 新增：`components/chat-widget/`、`pages/assistant-share-page/$shareCode.tsx`、`vite.config.widget.ts`、`widget-entry.tsx`、工坊分享入口、`service/api` 分享接口封装。
-- 依赖后端新增：助手分享生成、分享校验、带 shareCode 免登录会话接口（session/add、chat/completions、message/query）及 CORS。
-
-### 验收与测试
-
-- 分享链接打开先校验（有密码弹密码框）后正确渲染悬浮对话面板，可正常对话。
-- 空白第三方页面引入 js/css + 标签即可挂载悬浮框并对话；widget CSS 不污染宿主页面。
-- url 转换、历史消息映射纯函数补 Vitest；运行 ai-bot typecheck、build、build:widget 与 `git diff --check`。
-- 生成 `.ai/runs/2026-08-27-assistant-share-widget/RUN_LOG.md`。
-
-### 2026-08-27 后端协议确认（分享接口已就绪）
-
-- 分享接口与大屏共用：后端服务路径 `POST /api/v1/project/share`，网关完整路径为 `VITE_BASE_API('/api') + '/dashboard/api/v1/project/share'`（与大屏 FetchUtil 拼接方式一致），新增 `type` 字段区分：chat 端助手分享=`react`、abi 助手=`workflow`、数据大屏=`dashboard`。
-- 请求体：`{ projectId, spaceId, type, sharePasswordFlag, expirationDays }`；助手分享时 `projectId` = 助手 appId，`spaceId` 取当前空间。
-- 分享校验与大屏同接口：网关路径 `'/api' + '/dashboard/api/v1/project/checkSharePassword'`，请求体字段 `{ shareCode, sharePassword }`，响应返回 `projectId`（=助手 appId）。
-- 会话三件套免登录与对话 completions 的 shareCode 支持仍待后端确认。
-
-## 2026-08-26 追加：「我的技能」在对话框技能选择可见 + 工坊/商店 tab 字号统一
-
-### 背景
-
-- 技能商店「我的技能」（收藏接口 `addOrRemove`，favorType=skill，与对话收藏同一套逻辑）中已添加的技能（如其他空间的公开技能），在对话框输入框「更多 → 技能」弹窗中看不到：弹窗原用 `querySkillList({ spaceId, status: '1' })` 由后端按空间过滤。
-- 应用工坊 tab（`.ws-tab`，14px）与技能商店 tab（`skill-filter-tabs`，15px，对齐 abi 基准）字体大小不一致。
-
-### 目标
-
-- 与收藏对话完全同一套逻辑，仅区分 favorType=skill 参数，调用时机逐一对齐对话/工坊现有代码：
-  - 收藏状态集合初始为空（对齐对话侧 `favoriteChatIds` 初始空 Set）；
-  - `favorite/list`：进入技能页（chat 技能商店 / abi 技能管理）直接调两个列表——技能列表 + 收藏列表，广场「添加/已添加」状态对比两者得出；切到「我的技能」tab 再拉一次校准；对话框技能弹窗首次打开时也调（弹窗候选即该列表）；
-  - `favorite/status`：技能侧暂不接入（单条查询会随卡片数量放大请求量），等后端提供批量接口后再补；列表加载时更不调用；
-  - `addOrRemove`：添加/移除切换，按响应 `favoriteStatus` 回写集合（不乐观更新）。
-- 对话框技能弹窗只认收藏列表：仅调 `favorite/list?favorType=skill`（与商店「我的技能」同源），弹窗候选即「我的技能」；行原始字段保留（提交用 latestVersionId/skillType），id/名称兼容映射。
-- 技能商店与 abi 技能管理页、能力选择抽屉均移除 localStorage `mySkills` 读写，以后端为准；「我的技能」集合初始为空，不读本地存储。
-- 侧边栏「应用工坊/技能商店」菜单项、技能商店 tab、应用工坊 tab 三处字号统一为 14px。
-
-### 非目标
-
-- 不修改技能选中后的提交透传逻辑（探索/报告模式）。
-- 不修改收藏添加/移除接口（`addOrRemove`）调用方式。
-- 不调整 tab 其余样式（padding、下划线、颜色）。
-
-### 验收
-
-- 技能商店添加技能后，对话框「更多 → 技能」弹窗可见并可勾选；移除后不再出现；跨设备/清除本地缓存后仍以收藏接口为准。
-- 应用工坊与技能商店 tab 文字大小一致。
-- TypeScript 检查无新增错误。
-
-## 2026-08-19 追加：报告内容必须来自已完成的报告 Todo
-
-### 背景
-
-- 历史 query 和实时 Stream 都可能包含 Markdown 过程输出，例如技能说明或 SQL 文档。
-- 技能加载等普通 Todo 返回的 Markdown 不代表后端已经产出最终报告。当前实现会把任意阶段最后一条 Markdown 兜底识别成报告，导致生成失败的数据仍显示“已完成”和报告文件卡。
-- 后端最终报告可以是完整 HTML 或 Markdown 内容，也可以同时返回 `output_type = "pdf"` 或 `output_type = "word"` 对应的非空下载地址。
-
-### 目标
-
-- 实时链路只有收到整体 `done` 后才进行最终判定；`done` 前即使收到 HTML/Markdown/PDF/Word，也仍处于生成过程。
-- HTML/Markdown 报告候选以及 PDF/Word 附件必须来自计划中负责生成报告的 Todo 执行步骤；该 Todo 的最终状态必须为 `completed`。
-- 报告 Todo 使用计划中的业务名称识别（包含“报告”或 `report`），并通过已有 execution group 与输出步骤关联；不得把思考阶段、未归属步骤或“加载技能”等其他 Todo 的 Markdown 当成报告。
-- 历史 query 与实时 Stream 使用同一报告判定：整体流程结束、报告 Todo 已完成，并且存在非空 HTML/Markdown 内容或至少一条带非空 URL 的 PDF/Word 输出。
-- 实时收到 `done` 但只有非报告 Todo 的 Markdown 时，报告状态置为失败并提示“未收到报告文件”，同时清除误识别的候选。
-- 历史数据只有技能说明 Markdown、报告 Todo 未完成时同样置为失败，不恢复该 Markdown 候选，也不显示报告文件卡。
-- 思考、ToDo、公开执行步骤和非空 `final_content` 都是实际已有数据；即使没有报告附件也继续展示。其中生成失败文案应作为最终结果说明展示，不能被通用错误提示替代或隐藏。
-- 完整 HTML/Markdown 内容可直接用于右侧只读预览；PDF/Word 地址继续用于实际下载。
-
-### 非目标
-
-- 不仅根据 Markdown 文案、标题、长度或最后出现顺序猜测它是否为最终报告；必须结合输出步骤的 Todo 归属和最终任务状态。
-- 不伪造 PDF/Word 下载地址，不修改后端协议。
-- 不修改普通对话、报告提交参数、IndexedDB、Todo 归属、Plan 总结和报告视觉样式。
-
-### 验收与测试
-
-- 用户提供的失败历史数据（`pdf_urls/word_urls` 为空且只有 Markdown 技能文档）不得显示报告文件卡或右侧报告预览，状态不得显示已完成。
-- 实时数据中技能加载 Todo 返回 Markdown、随后收到 `done` 时必须失败并清除报告候选。
-- 已完成的报告 Todo 返回 HTML 或 Markdown、随后收到 `done` 时，即使没有 PDF/Word 也正常完成并可预览。
-- 同时包含 HTML 预览和 PDF/Word 地址的数据仍正常完成、预览和下载。
-- 无附件失败时仍显示真实 `final_content`，例如“大模型对话生成错误!(Connection error.)”。
-- 补充历史适配器、实时 reducer、展示阶段 helper 和消息渲染回归测试；运行 report-mode Vitest、TypeScript 检查、构建和 `git diff --check`。
-- 生成 `.ai/runs/2026-08-19-report-todo-artifact-gating/RUN_LOG.md`。
-
-## 2026-08-18 追加：报告历史 final_content 最终总结
-
-### 目标
-
-- 历史 `react-agent.final_content` 是报告完成后可公开展示的最终总结，不再作为内部思维字段丢弃。
-- `final_content` 为非空字符串时映射到报告视图模型的 `final.content`，复用现有报告阶段最终总结区域展示。
-- 历史最终总结位于 ToDo 之后、报告文件卡之前，与实时 `final` 的展示位置保持一致。
-- `final_content` 缺失、非字符串或仅空白时不展示空总结，不影响 HTML/PDF/Word 报告恢复。
-
-### 非目标
-
-- 不展示 `thought`、`action_input` 等内部过程字段。
-- 不修改实时 Stream `final` 的错误终止和成功展示规则。
-- 不修改普通对话、报告提交、Todo、报告预览与下载样式。
-
-### 验收与测试
-
-- 用户提供历史数据中的“订单总金额分析报告已生成完成……”能够显示在历史报告回答中。
-- 历史适配器测试断言 `final_content` 正确进入 `final`，内部 `thought/action_input` 仍不进入公开模型。
-- 运行 report-mode Vitest、`ai-bot` TypeScript 检查、构建和 `git diff --check`。
-- 更新 `.ai/runs/2026-08-18-report-history-plan-summary/RUN_LOG.md`。
-
-## 2026-08-18 追加：报告历史中的 Plan 总结映射
-
-### 背景
-
-- 历史 query 返回的 `react-agent` 数据不会保存为实时 `step.plan` 事件，而是保存到 `steps[].outputs[]`，其中 `output_type = "plan"` 的输出即阶段总结。
-- `steps` 中按数组顺序出现的第一条 `plan` 是顶部“思考”区域的公开思考总结。
-- 第一条之后的每条 `plan` 都是它在 `steps` 数组中前一个公开执行步骤的思考总结；例如 `step-5` 中的 Plan 总结 `step-4`。它们不能作为新的 Todo，也不能作为普通执行输出重复展示。
-
-### 目标
-
-- 历史适配器按 `steps` 和 `outputs` 的原始顺序读取全部 `plan` 输出。
-- 第一条有效 `plan` 写入 `thinkingPlan`，用于历史报告顶部思考正文。
-- 后续有效 `plan` 跟随 `steps` 数组中紧邻其前的公开执行步骤，继承该步骤已经确定的 Todo 归属；Plan 展示在该执行步骤之后。
-- Plan 所在 Todo marker 的 `todo_meta.done/started` 只表示下一阶段的计划进度，不能用于重新计算 Plan 总结归属。
-- Plan 前面不存在公开执行步骤，或前一执行步骤未可靠归属到 Todo 时，不猜测归属，也不展示为普通步骤内容。
-- 历史 Todo 的数量、名称和状态仍只来自 `task_plan`；`steps[].outputs.plan` 只生成 `thinkingPlan/todoSummaries`。
-- `plan` 输出不进入公开 step 的 `chunks`，不参与 HTML/Markdown 报告候选和附件识别。
-- 普通执行步骤继续按 Todo marker 的 `done` 分段归属，HTML/PDF/Word 以及公开工具输出恢复规则保持不变。
-
-### 非目标
-
-- 不修改实时 Stream 的 `step.plan` 处理规则。
-- 不展示 `thought`、`action_input` 中的内部推理内容；`final_content` 按本轮新协议作为公开最终总结展示。
-- 不修改普通对话、报告提交、IndexedDB、任务状态查询、右侧报告预览和下载逻辑。
-- 不根据标题相似度、`todo_meta.done`、步骤数字或总结文案猜测历史 Plan 的 Todo 归属。
-
-### 验收标准
-
-- 用户提供的历史数据第一条 `plan` 显示在顶部思考区，后续 `plan` 跟随其前一个公开执行步骤，并显示在该步骤所属 Todo 的执行内容之后。
-- `step-5` 的 Plan 必须作为 `step-4` 的思考总结，继承 `step-4` 的 Todo 归属，不得根据 `step-5.todo_meta.done` 归到其他 Todo。
-- `task_plan` 有 7 项时页面只显示 7 个 Todo；Plan 总结不会把数量增加为更多项。
-- 第一条 Plan 不会同时出现在 Todo 总结中，后续 Plan 不会覆盖顶部思考总结。
-- Plan 输出不作为普通执行 chunk 重复出现，历史报告的 HTML/PDF/Word 恢复不受影响。
-
-### 测试要求
-
-- 历史适配器测试覆盖第一条 Plan、`step-5 → step-4` 相邻总结、多个后续 Plan、Todo 数量不变、Plan chunk 不公开以及缺少可靠前置步骤的情况。
-- 运行历史适配器定向 Vitest、report-mode 完整 Vitest、`ai-bot` TypeScript 检查、构建和 `git diff --check`。
-- 生成 `.ai/runs/2026-08-18-report-history-plan-summary/RUN_LOG.md`。
-
-## 2026-08-18 追加：`step.plan` 分阶段展示与 Todo 总结
-
-### 背景
-
-- DB0 的真实 Stream `report:0cd9968b-9667-4968-8d46-0e7948582d56:11` 中，首份 `plan.update` 会在初始思考总结和思考步骤 `step.done` 之前到达。
-- 首个 `step.plan` 是顶部“思考”的公开总结；之后每个 `step.plan` 是对应 Todo 阶段全部子步骤执行完成后的公开总结。
-- 当前前端在首份 `plan.update` 到达时立即收起思考，并用后续 `step.plan` 持续覆盖顶部正文，导致阶段切换过早且 Todo 总结丢失。
-
-### 目标
-
-- 首份 `plan.update` 只保存完整任务计划，不立即结束顶部思考阶段。
-- 第一条有效 `step.plan` 固定为顶部思考正文，记录其 `id`；同 `id` 的 `step.done` 到达后才收起思考并进入 Todo 展示阶段。
-- 同一个 `id` 的“思考 start → Todo 状态 start → `plan.update` → `step.plan` → todowrite meta → done”是一段完整的阶段切换过程；其中 `plan.update` 已经把下一个 Todo 标记为执行中，随后到达的 `step.plan` 总结的是前一个刚完成的 Todo。
-- 后续 `step.plan` 根据同 `id` 步骤上的 `todo_meta.done` 映射到前一个 Todo：
-  - `todo_meta.done > 0` 时映射到任务下标 `done - 1`。
-  - `todo_meta.done = 0` 表示还没有完成的前置 Todo，不得映射到当前 `in_progress` 任务；首条 `step.plan` 仍只作为顶部思考总结，其他无法归属的内容跳过并保留可诊断 warning。
-  - `todo_meta.started` 保留在前端状态中用于诊断阶段序号，但不得用它把总结归到当前执行项。
-- Todo 数量和名称只能来自当前 `plan.update.tasks` 完整快照；`step.plan` 只是 Todo 内的总结内容，不能新增、拆分或追加 Todo。
-- 每个 Todo 展开后按“公开执行子步骤 → 阶段总结”的顺序展示；总结必须位于该 Todo 的全部子步骤之后。
-- `step.meta.action = todowrite` 继续只作为阶段元数据，不单独展示为公开执行步骤；普通工具/Skill 的公开摘要保持不变。
-- ToDo 总面板只在页面初始加载时默认收起，实时事件更新不得改变用户手动展开或收起的选择。
-
-### 非目标
-
-- 不兼容旧版“所有 `step.plan` 都属于顶部思考”的映射。
-- 不修改执行记录安全回填、错误 `final` 终态、报告候选、附件下载和 HTML/Markdown 预览规则。
-- 不修改普通对话、报告提交、IndexedDB、历史 query、系统侧栏、输入框或其他页面。
-- 不根据任务标题相似度、`step` 数字或事件文案猜测 Todo 归属。
-
-### 验收标准
-
-- 真实顺序“question → 思考 start → Todo init start → plan.update → 首个 step.plan → todowrite meta → step.done”期间，首个 `step.done` 到达前页面始终只展示思考阶段。
-- 顶部思考正文始终使用第一条有效 `step.plan`，不会被后续 Todo 总结覆盖。
-- `todo_meta.done=1/2/3...` 的后续 `step.plan` 分别映射到第 1/2/3... 个已完成 Todo，并显示在各自执行子步骤末尾。
-- 用户示例中的 `plan.update.tasks` 有 5 项时页面必须只显示 5 个 Todo；`step.plan` 不得导致数量变成 6 项或更多。
-- 阶段总结没有可靠 Todo 目标时不错误归类，页面不崩溃并留下开发诊断信息。
-- 页面从 `0-0` 完整回放与实时逐条接收得到相同聚合结果。
-
-### 测试要求
-
-- reducer 回归测试覆盖真实前七条事件的思考门控，以及用户示例 `done=1、started=2、5 个 tasks` 的前一 Todo 总结映射、任务数量保持、空内容和不明确归属。
-- 展示测试覆盖 Todo 总结位于执行子步骤之后，并确认 `todowrite` 元数据不作为独立公开步骤。
-- 历史完成报告保持直接进入完成展示，不被实时思考门控阻塞。
-- 运行 report-mode 定向 Vitest、`ai-bot` TypeScript 检查和 `git diff --check`；构建按本轮实际验证情况记录。
-- 生成 `.ai/runs/2026-08-18-report-step-plan-todo-summary/RUN_LOG.md`。
-
-## 2026-08-18 追加：执行记录安全回填与 `final` 错误终止
-
-### 背景
-
-- DB0 的真实 Stream `report:0cd9968b-9667-4968-8d46-0e7948582d56:7` 中，计划 version 3 没有任何 `in_progress` 项，SQL 工具步骤随后开始并完成，计划 version 4 才把“生成订单总额查询 SQL”更新为唯一执行中任务。
-- 当前前端在步骤第一次出现时永久锁定归属，因此上述步骤被留在“未归属执行记录”，即使下一份计划已经给出唯一归属也不会修正。
-- 同一 Stream 的 `final` 返回“大模型对话生成错误”后仍有 `done`；当前 reducer 只保存 `final.content`，导致任务计划继续保留执行中/等待状态。
-
-### 目标
-
-- 当上一份计划没有执行中任务、其后的步骤暂时进入未归属区，而下一份计划把同一任务从 `pending` 更新为唯一的 `in_progress` 时，将该计划时间片内的未归属步骤安全回填到该任务。
-- 回填只处理上一份计划之后、当前 `plan.update` 之前首次出现的步骤；多个候选任务、任务内容/下标无法稳定匹配或上一计划已有执行中任务时继续保留未归属，不做猜测。
-- `final.content` 以已确认的“大模型对话生成错误”文案开头时，立即把报告置为失败终态，停止继续读取当前连接。
-- 错误终态将仍在执行的公开步骤置为失败，将 `pending/in_progress` ToDo 收敛为 `cancelled`，保留已经完成的任务，页面不得继续显示“生成 HTML 中”。
-- 错误 `final` 后即使历史回放仍读到 `done`，也只能补充结束位置/耗时，不得覆盖失败状态或错误信息。
-
-### 非目标
-
-- 不修改正常 `final`、成功 `done`、报告候选和附件聚合规则。
-- 不改变后端事件协议，不根据任务标题关键词猜测步骤归属。
-- 不修改普通对话、报告提交、IndexedDB、历史 query、报告样式和下载能力。
-
-### 验收标准
-
-- 真实 Stream 中 `step-6` 不再显示为“未归属执行记录”，而是归入“生成订单总额查询 SQL”。
-- 没有唯一可靠目标的步骤仍保留未归属，避免错误归类。
-- 收到错误 `final` 后报告立即显示失败，预计耗时提示消失，ToDo 不再存在执行中或等待状态，SSE 连接停止。
-- 错误 `final` 后的 `done` 不会把报告改为完成，也不会因为之前误识别的 Markdown 候选展示报告文件。
-
-### 测试要求
-
-- reducer 回归测试覆盖真实的“无执行中计划 → 工具步骤 → 后置唯一执行中计划”顺序，以及多候选不回填。
-- reducer 回归测试覆盖错误 `final` 立即失败、任务/步骤收敛和后续 `done` 保持失败。
-- Hook 连接生命周期通过代码级检查确认错误 `final` 后主动中止连接。
-- 运行 report-mode 定向 Vitest、`ai-bot` TypeScript 检查和 `git diff --check`；构建按本轮实际验证情况记录。
-- 生成 `.ai/runs/2026-08-18-report-final-error-and-step-reassignment/RUN_LOG.md`。
-
-## 2026-08-17 追加：使用 `step.plan` 作为思考区正文（阶段规则已由 2026-08-18 修订）
-
-### 目标
-
-- 报告提交后识别后端返回的 `step.plan` 事件。
-- `step.plan` 协议字段为 `type: 'step.plan'`、`id` 和 `content`；`content` 作为思考区新的公开正文。
-- 思考区仅展示第一条有效 `step.plan.content`，不再展示由 `step.start/meta/chunk` 拼装的旧思考步骤内容；后续 `step.plan` 按 2026-08-18 规则归入 Todo 总结。
-- 第一条 `plan.update` 只准备任务快照；首条 `step.plan` 对应的 `step.done` 到达后才进入 ToDo 阶段并自动收起思考区。
-- `step.plan` 到达前只展示分析中的占位状态；旧回放数据无需兼容。
-
-### 非目标
-
-- 不修改 ToDo 计划快照、步骤归属、报告文件、普通对话和报告提交参数。
-- 不把 `step.meta.thought` 或 `action_input` 恢复到公开 UI。
-- 不修改报告模式样式结构。
-
-### 验收标准
-
-- `step.plan` 不再被识别为未知事件，正文可实时显示并参与从 `0-0` 的历史回放。
-- 多条 `step.plan` 按 Redis entry 顺序区分顶部思考总结与 Todo 阶段总结，不互相覆盖。
-- 无效或空 `content` 不覆盖已有有效思考正文，并产生可诊断 warning。
-- 首段 `step.done` 到达后思考区收起、ToDo 阶段正常展示。
-
-### 测试要求
-
-- 新增 reducer 与思考组件测试，覆盖直接事件、Java `data` 对象包裹、最新内容覆盖、空内容、旧步骤不再展示和 `plan.update` 阶段切换。
-- 运行报告 reducer 定向 Vitest、`ai-bot` TypeScript 检查、构建和 `git diff --check`。
-- 生成 `.ai/runs/2026-08-17-report-step-plan-thinking/RUN_LOG.md`。
-
-## 2026-08-17 追加：报告提交携带技能与 MCP 源版本
-
-### 目标
-
-- 报告提交接口新增并始终发送以下四个可选源版本字段：
-  - `sse_mcp_source_version_ids`
-  - `mcp_streamable_source_version_ids`
-  - `skills_source_version_ids`
-  - `builtin_tools_source_version_ids`
-- 技能选择项使用列表真实字段 `latestVersionId` 作为源版本 ID，并按 `skillType` 分流：`0` 进入 `builtin_tools_source_version_ids`，`1` 进入 `skills_source_version_ids`。
-- MCP 选择项使用当前 `register/list` 契约中的 `id` 作为源版本 ID；协议优先读取 `protocol`，兼容列表现有别名 `frontProtocol`。`sse` 进入 `sse_mcp_source_version_ids`，`streamableHttp` 进入 `mcp_streamable_source_version_ids`。
-- 任一类别没有有效选择时，对应字段发送空数组 `[]`；存在选择时发送去重后的 ID 数组。
-- 只在报告模式提交中透传这些字段，普通交互请求协议保持不变。
-
-### 非目标
-
-- 不修改技能或 MCP 列表接口、选择器视觉和交互。
-- 不用技能 ID 替代 `latestVersionId`，不调用额外详情接口推测版本。
-- 不修改普通对话、报告恢复、实时事件、IndexedDB、预览和 ToDo 逻辑。
-
-### 验收标准
-
-- 四类来源可分别正确映射到对应报告字段，混合选择时互不串类且 ID 去重。
-- MCP 协议兼容大小写、`streamableHttp` 及 `frontProtocol` 别名。
-- 未选择某类来源时该字段为 `[]`，未选择任何来源时四个字段均为空数组。
-- 普通交互发送不接收也不提交这些报告专用字段。
-
-### 测试要求
-
-- 新增纯函数测试，覆盖四类来源、混合选择、协议大小写/实际枚举值、字段别名、重复 ID 和空选择。
-- 更新报告提交 API 测试，断言四个字段进入 POST body。
-- 本次空数组修订按用户要求不运行测试和构建，仅同步已有测试断言并执行 `git diff --check` 静态差异检查。
-- 生成 `.ai/runs/2026-08-17-report-source-version-fields/RUN_LOG.md`。
-
-## 2026-08-13 追加：报告模式 ToDo 展开状态仅在页面加载时初始化
-
-### 目标
-
-- 新建报告消息、刷新页面或重新进入会话时，ToDo 总面板仍默认收起。
-- 页面已经加载后，用户手动展开或收起 ToDo 的选择属于纯 UI 状态；后续 `plan.update`、步骤事件和任务状态更新必须原样保留该选择。
-- 首条 `plan.update` 继续收起思考区，但不得再次强制设置 ToDo 展开状态。
-
-### 非目标
-
-- 不修改任务状态计算、计划快照、执行步骤归属和单个任务详情展开规则。
-- 不修改历史报告初次加载、新报告初始状态、报告预览、普通对话、接口或样式。
-
-### 验收标准
-
-- 页面首次加载或报告首次创建时 `todoOpen=false`。
-- 用户展开 ToDo 后，接口继续返回新的计划或步骤数据，ToDo 保持展开。
-- 用户主动收起 ToDo 后，接口继续返回数据，ToDo 保持收起。
-
-### 测试要求
-
-- 为连续 `plan.update` 增加回归测试，覆盖用户手动展开后的状态保持。
-- 运行 report-mode reducer 测试、TypeScript 检查、`ai-bot` 构建和 `git diff --check`。
-- 生成 `.ai/runs/2026-08-13-report-todo-open-state/RUN_LOG.md`。
-
-## 2026-08-11 追加：报告模式 ToDo 默认收起
-
-### 目标
-
-- 新提交的报告在收到首条任务计划后，思考区按既有规则收起，但 ToDo 总面板保持默认收起。
-- 从历史 query 恢复的报告同样默认收起 ToDo 总面板。
-- 用户仍可点击 ToDo 标题手动展开或再次收起，展开后的任务和执行详情沿用现有交互。
-
-### 非目标
-
-- 不修改任务状态计算、执行步骤归属、单个任务展开状态和实时事件处理。
-- 不修改报告文件、右侧预览、普通对话、输入框或现有视觉样式。
-
-### 验收标准
-
-- 报告生成进入 ToDo 阶段时不会自动展开待办事项。
-- 刷新或重新进入会话后，历史报告的待办事项默认收起。
-- 用户手动展开和收起 ToDo 的能力不受影响。
-
-### 测试要求
-
-- 更新实时 `plan.update` 和历史报告恢复测试，断言 `todoOpen=false`。
-- 运行 report-mode 相关 Vitest、TypeScript 检查、`ai-bot` 构建和 `git diff --check`。
-- 生成 `.ai/runs/2026-08-11-report-todo-default-collapsed/RUN_LOG.md`。
-
-## 2026-08-11 追加：报告生成预计耗时提示与完成通知
-
-### 目标
-
-- 报告问题发送后，只要任务仍处于提交、等待、思考或执行阶段，在报告回答内容底部展示固定预计耗时提示。
-- 提示文案固定为：“报告预计将在 **5-10 分钟左右** 完成。生成期间，你无需停留在当前页面，可以继续提问或处理其他事情，**研究任务会持续进行**。报告完成后，我会第一时间通知你。”
-- 报告成功完成时使用 Ant Design `notification` 展示完成通知，持续 3 秒。
-- 完成通知只在实时任务首次从未完成进入成功终态时触发；普通历史报告加载不得重复通知。
-
-### 非目标
-
-- 不从后端读取或动态计算预计耗时，不根据任务复杂度改变 5-10 分钟区间。
-- 不为失败、停止或取消任务发送成功通知。
-- 不修改普通交互模式、报告事件协议、报告预览、下载、ToDo 或 IndexedDB 行为。
-
-### 验收标准
-
-- 报告仍在生成时，提示显示在当前报告回答内容下方，两个强调片段使用加粗样式。
-- 报告成功完成或失败后，预计耗时提示消失。
-- 首次收到成功 `done` 后显示“报告生成完成”通知，3 秒后自动关闭。
-- 历史 query 中已有的完成报告不触发完成通知。
-
-### 测试要求
-
-- 补充预计耗时提示显示条件和完成通知触发条件的纯函数测试。
-- 运行 report-mode 相关 Vitest、TypeScript 检查、`ai-bot` 构建和 `git diff --check`。
-- 生成 `.ai/runs/2026-08-11-report-estimate-notification/RUN_LOG.md`。
-
-## 2026-08-11 追加：报告文件、进度视觉与完成耗时
-
-### 目标
-
-- ToDo 任务标题仅在 `in_progress` 时使用黑色强调；`pending/completed/cancelled` 等非执行中状态统一使用灰色。状态计算、图标和展开交互保持不变。
-- 最终报告文件区改为紧凑的“报告资产卡”，沿用当前蓝灰视觉：左侧展示真实文件类型、报告标题和说明，右侧仅使用自绘 SVG 的预览与下载图标按钮，并提供 `title/aria-label`。
-- 下载只提供后端实际返回的格式，不在前端伪造 PDF 或 Word 转换。HTML/Markdown 候选作为本地内容下载；`output_type=pdf/word` 时 `content` 是下载 URL，需要作为报告附件保留。
-- 同一报告同时保留最后一个 HTML/Markdown 预览候选和实际返回的 PDF/Word 附件；附件不得覆盖右侧可预览内容。存在多种格式时，下载图标打开轻量格式菜单，仅列出实际可用格式。
-- 报告模式发送成功写入本轮问题后，仅执行一次平滑定位，使新问题/回答进入可见区域；不监听后续流事件反复自动滚动，不影响普通交互模式。
-- 整体 `done` 事件的数字 `time` 按秒存入报告状态。报告回答标题右侧不再显示创建时间；只有收到有效耗时后才显示“耗时X分X秒”，缺失或非法时不显示虚假值。
-
-### 设计约束
-
-- 设计对象是面向数据分析用户的报告产物入口，单一任务是快速识别、预览和取得已生成文件。
-- 视觉继续使用项目现有蓝、灰、白 token，不引入新的页面级字体或高饱和装饰；以“文件类型脊标 + 安静的图标操作区”作为资产卡识别特征。
-- 图标按钮具备可见的 hover、focus-visible 状态，并尊重现有响应式布局；按钮自身不显示操作文字。
-
-### 非目标
-
-- 不改变 ToDo 任务状态计算、步骤归属、展开规则和执行详情。
-- 不新增后端导出接口，不在浏览器把 HTML 转换成 PDF/Word，也不展示未实际返回的下载格式。
-- 不让 PDF/Word 进入右侧 HTML/Markdown 预览，不修改 iframe 沙箱和 Markdown 渲染。
-- 不增加跟随流式事件的持续滚动，不修改普通交互消息发送和滚动行为。
-- 不修改报告提交、任务恢复、IndexedDB、系统侧栏、会话分组和其他无关功能。
-
-### 验收标准
-
-- `in_progress` ToDo 标题为黑色，其余任务标题均为灰色。
-- 文件卡在桌面和窄屏均保持信息清晰；预览和下载入口为自绘 SVG 图标，鼠标与键盘均可识别。
-- HTML/Markdown、PDF、Word 只在真实返回时出现在下载项中；PDF/Word URL 可直接下载，且不会覆盖 HTML/Markdown 预览候选。
-- 报告模式每次发送仅触发一次定位；后续步骤、计划或报告事件不再推动会话滚动。
-- `done.time=125` 显示“耗时2分5秒”；缺少 `time` 时标题右侧留空。
-
-### 测试要求
-
-- 补充耗时格式、附件聚合、下载项筛选及预览候选不被附件覆盖的纯函数/Reducer 测试。
-- 运行 report-mode 相关 Vitest、TypeScript 检查、`ai-bot` 构建和 `git diff --check`。
-- 生成 `.ai/runs/2026-08-11-report-file-progress-ui/RUN_LOG.md`。
+ABI 属性建模功能新增与前端协议适配，包含共享规则组件、标签定义 SQL 生成、指标建模表单调整和兼容迁移。
 
 ## 目标
 
-1. 普通交互消息和报告消息在同一个原有对话页面中按轮次展示。
-2. 输入框模式只决定新问题调用普通对话接口或报告提交接口，不再切换页面组件。
-3. 完成的报告从会话历史 query 返回的 `chat_report` 轮次恢复。
-4. 未完成报告从 IndexedDB 读取 taskId/streamKey，经 task 状态接口判断后连接 Java Redis Stream SSE。
-5. 删除项目内 Node Redis Stream server 及其配置、测试和代理。
-6. 分段 text 中的完整 HTML 成功提取后，实时任务首次自动打开右侧报告时以打字机效果逐步显现正文。
-7. 系统侧栏的展开/收起入口移动到各页面内容区左上角；报告完成自动打开右侧预览时同步收起系统侧栏。
-8. 报告预览打开和关闭时使用连续的渐入渐出与双栏宽度过渡，不出现瞬间跳变。
-9. 报告模式与交互模式使用同一数据选择前置校验：选择数据语义或上传 Excel 后才能发送消息。
-10. 报告预览打开及退出动画期间隐藏底部聊天输入区；报告预览完全关闭后恢复输入区。
-11. 右侧 HTML 报告只由 iframe 内部负责正文滚动，外层不产生竞争滚动条，固定的报告标题栏不得覆盖 iframe 顶部正文。
-12. 输入区随报告预览打开和关闭执行约 600ms 的淡出/淡入及高度收展动画，组件实例和未发送草稿始终保留。
-13. 会话分组使用独立页面和独立路由，分组内容不再挂载在对话页面中，也不得携带对话输入框。
+1. 标签语义和普通派生指标 `indicatorClass === 'derived'` 共用三级表达式组件：分层 > 条件分组 > 条件。
+2. 标签定义支持根据完整表达式一键生成 `CASE WHEN` SQL，并保留手工编辑与覆盖确认。
+3. 原子指标映射补充聚合方式；派生指标继承原子指标来源、聚合和语义数据。
+4. 指标创建调整信息顺序，新增预计算配置和派生指标统计口径。
+5. 新字段在前端适配层定义并写入现有 JSON 协议；后端接口落地后只替换适配逻辑。
 
 ## 非目标
 
-- 不重构普通对话接口、普通消息渲染和分享业务。
-- 不让前端或浏览器直接连接 Redis。
-- 不保留 Node server、Snapshot 或 Structure 接口。
-- 不展示模型内部 `thought`、完整 `action_input`、系统提示词或原始思维链；只展示标题、工具名、`action_intention`、`action_reason` 和公开输出摘要。
-- 不实现报告编辑、导出、分享、列表或独立详情路由。
-- 不把半截 JSON、残缺 HTML 或仍在拼接的 text chunk 直接交给 iframe，也不通过反复替换 `srcDoc` 模拟流式渲染。
-- 不修改会话分组现有视觉样式、接口协议、搜索、重命名、删除、移动和收藏行为。
-- 不重构普通对话、报告模式、输入框、侧栏或其他无关功能。
+- 不修改 `derivative` 派生模板和自定义 CodeMirror 表达式。
+- 不增加分层拖拽排序。
+- 不新增后端数据库迁移或新依赖。
+- 不改变标签语义基础信息、标签类型和现有字段选择数据源。
+- 不重构第三步维度多选业务，只抽取其维度树数据供主体维度单选复用。
+- 不修改 `apps/chat`、`apps/dashboard`、路由、鉴权或全局主题。
 
-## 2026-08-10 追加：报告预览关闭入口改为收起图标
+## 一、共享表达式组件
 
-### 目标
+### 数据结构
 
-- 将报告右栏标题区现有的“关闭”文字按钮替换为参考图中的紧凑收起图标按钮。
-- 使用组件内自绘 SVG 表达退出双栏、收起报告区域，不使用 Ant Design 图标。
-- 保留原有关闭事件、退出动画、报告状态和输入区恢复逻辑。
-- 图标按钮提供“收起报告”的 `title` 与 `aria-label`，并保留 hover、键盘 focus 可见反馈。
+- `RuleLayer`：`id`、`name`、`groups`。
+- `RuleGroup`：`id`、`name`、`logicWithPrevious`、`conditions`。
+- `RuleCondition`：`id`、`fieldId`、`operator`、`value`、`logicWithPrevious`。
+- 首个分组和首个条件不使用 `logicWithPrevious`；后续项默认 `AND`，可切换 `AND/OR`。
+- 删除中间项后，保留后一项与新前项的连接关系；删除首项后清除新首项连接符。
 
-### 非目标
+### 默认与命名
 
-- 不修改报告标题、格式标签、正文布局、iframe、Markdown 渲染和报告打开按钮。
-- 不修改报告双栏宽度、动画时长、系统侧栏或其他页面按钮。
+- 新建时默认一个“新分层”，不自动创建分组；至少保留一个分层。
+- 新增分层使用“新分层 2、新分层 3……”；新增分组使用“条件分组 1、条件分组 2……”。
+- 删除编号不回收；重新打开时按已有默认名称最大序号继续。
+- 分层名称在整个表达式内唯一，分组名称在所属分层内唯一。
+- 名称去除首尾空格后为 1～30 字，支持中文、英文字母、数字、空格、下划线、短横线和中英文圆括号；禁止引号、分号、反斜杠、换行及控制字符。
 
-### 验收标准
+### 数量限制
 
-- 报告右栏标题区只显示参考图式收起图标，不再显示“关闭”文字。
-- 收起图标由本地 SVG 路径绘制，不依赖 `@ant-design/icons`。
-- 点击图标仍执行原有报告关闭动画并恢复单栏。
-- 按钮无突兀的默认边框，尺寸和标题栏对齐；鼠标与键盘操作均可识别。
+- 单个表达式最多 20 个分层。
+- 单个分层最多 10 个分组。
+- 单个分组最多 20 条条件。
+- 全部层级合计最多 100 条条件。
+- 达到上限后禁用新增入口并展示明确上限提示；删除后立即恢复。
 
-### 测试要求
+### 条件与校验
 
-- 运行 report-mode 相关 Vitest、TypeScript 检查、ai-bot 构建和 `git diff --check`。
-- 生成本任务 run log。
+- 条件字段必选，保留“维度/度量/日期 > 表 > 字段”的现有树形选择逻辑，只允许选择叶子字段。
+- 运算符支持：等于、不等于、大于、大于等于、小于、小于等于、包含、不包含、为空、不为空。
+- “为空/不为空”隐藏并清空值；其余运算符要求值去空格后非空。
+- 条件标识按分组内顺序显示 A、B、C……，删除后重排。
+- 分层、分组删除二次确认；条件直接删除。
+- 新增条件只更新表达式数据，不触发表达式完整性校验，也不自动展示或聚焦错误；完整性校验仍由“下一步”“确认”和“一键生成定义”等显式动作触发。
+- 生成和保存时不静默忽略任何空层、空组或不完整条件，需定位并聚焦首个错误项。
 
-## 2026-08-10 追加：执行中 ToDo 支持手动收起
+### 视觉与交互
 
-### 目标
+- 使用 ABI 的 Ant Design、UnoCSS/SCSS 和现有主题变量；字体沿用 Microsoft YaHei、PingFang SC、系统 sans-serif。
+- 顶部使用分层标签和添加入口；分层内容使用安静卡片，分组使用次级边框卡片。
+- 条件与分组之间使用系统主色连接线及可点击“且/或”节点形成逻辑脊柱。
+- 窄抽屉允许条件行合理换行，不产生页面级横向溢出；保留可见键盘焦点。
 
-- 当前 `in_progress` 任务首次进入执行状态时继续默认展开执行详情。
-- 用户点击当前执行任务后可以正常收起；后续步骤事件实时更新时不得强制重新展开。
-- 用户再次点击可以重新展开，等待执行和已完成任务继续沿用原有手动展开规则。
+### 兼容性
 
-### 非目标
+- 标签旧数据 `exp[].conditions` 读取时迁移为一个默认分组。
+- 派生指标旧数据 `calcLogic.expressions[].conditions` 读取时迁移为一个默认分组。
+- 保存使用新三级结构；关联字段 ID 递归收集并去重。
 
-- 不修改 ToDo 总面板的展开状态、任务状态计算、步骤归属、实时事件协议或视觉样式。
-- 不修改思考区、报告文件、报告预览、普通对话和其他无关功能。
+## 二、标签语义一键生成定义
 
-### 验收标准
+- “标签定义”标题后增加仅图标按钮，使用 `ThunderboltOutlined`，Tooltip 和 `aria-label` 均为“一键生成定义”。
+- 表达式完整前按钮禁用；完整后按页面分层顺序生成：
 
-- 首次收到包含执行中任务的计划时，该任务执行详情默认展开。
-- 点击执行中任务后执行详情收起，继续收到该任务的步骤更新时仍保持收起。
-- 再次点击后可恢复展开；其他任务的展开行为无回归。
-
-### 测试要求
-
-- 补充任务展开 key 的回归测试，覆盖默认展开和点击切换所需的状态行为。
-- 运行 report-mode 相关 Vitest、TypeScript 检查、ai-bot 构建和 `git diff --check`。
-- 生成本任务 run log。
-
-## 2026-08-10 追加：报告侧栏打开时隐藏问题导航条
-
-### 目标
-
-- 右侧报告预览处于打开状态时，隐藏会话区右侧的问题导航条及其问题预览列表。
-- 报告预览关闭动画完成后，问题导航条按原有显示条件自动恢复。
-- 显隐状态复用报告预览顶层已有的挂载状态，不在问题导航组件内重复维护报告状态。
-
-### 非目标
-
-- 不修改问题导航条原有样式、滚动定位、高亮、悬停预览和单轮会话隐藏规则。
-- 不修改报告预览、输入框、消息渲染、接口或状态聚合逻辑。
-
-### 验收标准
-
-- 打开报告右栏后，问题导航横杠和悬停问题列表均不可见。
-- 报告关闭动画期间问题导航保持隐藏，动画结束且报告右栏卸载后恢复。
-- 未打开报告时，问题导航继续遵循原有“至少两轮问题才显示”等规则。
-
-### 测试要求
-
-- 运行 chat 报告模式相关 Vitest。
-- 运行 `pnpm --filter ai-bot exec tsc --noEmit -p tsconfig.json`。
-- 运行 `pnpm --filter ai-bot build`。
-- 运行 `git diff --check` 并生成本任务 run log。
-
-## 2026-08-10 追加：报告消息视觉对齐与文件操作区
-
-### 目标
-
-- 报告轮次的用户问题气泡在背景、边框、圆角、阴影、字号、行高、内边距、最大宽度和右侧间距上与普通交互消息的用户问题气泡一致。
-- 报告回答卡使用统一时间线已有的完整内容宽度，与普通交互回答卡的可用宽度一致，不再额外限制为 `720px/82%`。
-- ToDo 中当前 `in_progress` 任务标题使用浅色文字；`pending` 与 `completed` 任务标题继续使用现有黑色文字。只调整标题颜色，不修改状态图标、标签、展开和执行记录行为。
-- 最终报告文件卡改为左侧展示文件类型标签及文件信息，右侧纵向展示操作按钮：上方“查看报告”，下方“下载文件”。
-- “下载文件”按当前报告候选格式下载完整内容：HTML 使用 `.html` 与 `text/html`，Markdown 使用 `.md` 与 `text/markdown`；文件名优先使用报告标题并清理文件系统非法字符。
-
-### 非目标
-
-- 不修改普通交互消息组件及其样式，只以其现有视觉参数作为报告问题气泡的对齐依据。
-- 不修改报告提交、历史恢复、实时事件聚合、阶段显隐、自动打开预览、iframe 安全策略或 IndexedDB 行为。
-- 不修改 ToDo 状态计算、步骤归属、点击展开逻辑和执行详情内容。
-- 不新增后端下载接口，不把报告正文上传到其他服务。
-- 不修改输入框、系统侧栏、会话分组、应用工坊、技能商店及其他无关页面。
-
-### 验收标准
-
-- 同一时间线内，报告问题和普通交互问题的气泡视觉参数一致，均保持右对齐。
-- 报告回答卡与普通交互回答卡使用相同的时间线内容宽度；桌面和窄屏均不发生横向溢出。
-- 仅当前执行的 ToDo 标题显示浅色，等待执行和已完成标题仍为黑色。
-- 文件类型标签位于文件卡左侧；“查看报告”和“下载文件”位于右侧且上下排列。
-- 点击“查看报告”保持原有右侧预览行为；点击“下载文件”能够得到与候选格式、内容匹配的本地文件。
-- 不改变报告文件卡原有的展示时机：整体完成且 ToDo 全部结束后才显示。
-
-### 测试要求
-
-- 为报告下载文件名、扩展名和 MIME 类型映射补充纯函数单元测试。
-- 运行 report-mode 相关 Vitest。
-- 运行 `pnpm --filter ai-bot exec tsc --noEmit -p tsconfig.json`。
-- 运行 `pnpm --filter ai-bot build`。
-- 运行 `git diff --check` 并生成本任务 run log。
-
-## 2026-08-05 追加：会话分组独立页面
-
-### 背景
-
-当前点击左侧会话分组会跳转到 `/chat/task/new?groupId=...`，再由 `ConversationAnalysis` 内部分支展示分组内容。由于该路由仍然挂载完整对话页面，分组视图会同时出现模型选择器和底部对话输入框，不符合分组页面职责。
-
-### 目标
-
-- `/chat/group/$groupId` 从兼容重定向改为真实分组页面路由。
-- 点击左侧会话分组直接跳转 `/chat/group/$groupId`，不得再通过 `/chat/task/$taskId` 的 search 参数承载分组页面。
-- 将 `GroupSessionListView` 及其分组页面专属编排从 `conversation-analysis` 迁移到分组路由页面范围。
-- 分组页面只展示迁移前已有的分组标题、操作区、搜索和会话卡片列表；继续复用原 JSX、className 和现有内联样式，不新增或调整视觉样式。
-- 点击分组中的会话卡片仍跳转到 `/chat/task/$taskId`，进入原对话页面。
-- 删除当前分组后返回原有新对话入口，并刷新侧栏数据。
-- `ConversationAnalysis` 恢复为只负责新对话和已有对话，不再接收 `groupId`、不再渲染分组列表。
-- `/chat/task/$taskId` 不再解析仅供分组页面使用的 `groupId` search 参数。
-
-### 非目标
-
-- 不在分组页面挂载 `ConversationAnalysis`、`Conversation`、`ChatHeader`、`ChatInput`、报告预览或聊天免责声明。
-- 不改变分组增删改、会话搜索、收藏、移动、重命名和删除的接口与业务行为。
-- 不修改任何 CSS、Tailwind class、颜色、间距、尺寸或动画。
-- 不修改普通对话、报告模式、数据选择、发送校验和历史恢复逻辑。
-
-### 验收标准
-
-- 点击任意会话分组后，浏览器地址为 `/chat/group/{groupId}`。
-- 分组页面只显示原有分组页面内容，不出现模型选择器、对话输入框或聊天免责声明。
-- 点击分组中的会话可正常进入对应 `/chat/task/{taskId}` 对话。
-- 普通新建对话和已有对话仍通过 `/chat/task/$taskId` 正常工作。
-- 分组页面现有样式无视觉变化，相关 API 行为无变化。
-- 不产生对报告模式和其他页面的无关修改。
-
-### 测试要求
-
-- 对分组路由跳转和 task 路由职责进行定向代码回归检查。
-- 运行 chat 相关定向测试。
-- 运行 `pnpm --filter ai-bot exec tsc --noEmit -p tsconfig.json`。
-- 运行 `pnpm --filter ai-bot build`。
-- 运行 `git diff --check`，并生成本任务 run log。
-
-## 接口边界
-
-### 发送前置校验
-
-- 交互模式和报告模式发送前都必须存在有效的数据选择。
-- 有效数据包括：已选择的数据语义 `schemaId`，或已上传的 Excel `file_id`。
-- 两者都不存在时，沿用交互模式现有提示“选择已有数据或上传excel，即可开始对话”，并立即结束发送流程。
-- 校验失败时不得创建新会话、不得写入报告占位消息、不得调用普通对话接口或报告提交接口。
-- `ChatInput.handleSend` 必须先完成数据校验；只有校验通过后才能依次调用 `onSend` 和清空输入框。
-- 校验失败时保留用户已经输入的问题，便于选择数据后直接继续发送。
-- 父级统一发送入口继续保留同一校验作为防御性兜底，但不得依赖父级返回结果决定输入框是否清空。
-- 本次只统一发送限制，不修改数据选择组件、Excel 上传流程或报告提交协议。
-
-### 报告提交
-
-```http
-POST {baseApi}/chat-proxy/api/v1/chat/report
+```sql
+CASE
+  WHEN (<分层1表达式>) THEN '<分层1名称>'
+  WHEN (<分层2表达式>) THEN '<分层2名称>'
+  ELSE NULL
+END
 ```
 
-请求继续使用当前已确认字段：
+- 同组条件和分组间连接分别生成 `AND/OR`，每个分组使用括号包裹。
+- 包含/不包含生成 `LIKE/NOT LIKE '%值%'`；为空/不为空生成 `IS NULL/IS NOT NULL`。
+- 数字字段按数值输出；其他值使用单引号并将内部单引号转义为两个单引号。
+- SQL 字段使用叶子字段的来源字段名，不直接使用技术 ID；无法解析来源字段时阻止生成。
+- 生成结果写入现有 `remark`，文本框始终可编辑。
+- 抽屉内维护 `idle/generated/manual/stale` 状态，分别提示已生成、已手工调整和表达式已更新。
+- 表达式变化不得自动覆盖标签定义。
+- 已有非空定义且与本次生成结果不同，或用户手工修改后重新生成时，确认文案固定为：“重新生成将覆盖当前标签定义中的手工调整内容，是否继续？”
 
-```ts
-interface SubmitReportRequest {
-  messages: string
-  app_id: number
-  space_id: number
-  schema_id: number | string
-  conv_id: string
-  session_id: string
-  user_id: number
-  embed_model_id?: number
-  chat_model_id: number
-  app_type?: string
-}
-```
+## 三、原子指标映射和来源信息
 
-- 报告提交不再发送会话分组 `group_id`。
-- `schema_id` 直接来自 `ChatInput.onSelectData` 选中的 `node.schemaId`；数据语义分组节点不可选，只有 `type='schema'` 的叶子节点能够更新该值。
-- 前端不得用对话分组 ID、数据语义分组 ID 或节点 `id` 代替 `node.schemaId`，也不得擅自转换 `schemaId` 的现有 `number | string` 类型。
-- 报告链路中仅为 `group_id` 存在的 `sessionGroupId` 透传参数应删除；路由和会话列表自身的分组逻辑保持不变。
-- 本次不修改普通交互请求；普通交互继续使用现有 `context.extra.semantic_id`。
-- 仅上传 Excel 而没有选择数据语义时，保持当前发送前置校验不变，报告提交中的 `schema_id` 使用空字符串，不在本次扩大为新的产品限制。
+- 原子指标一键映射表在“语义类型”后新增“聚合方式”，复用 `AGG_METHOD_OPTIONS`，字段键为 `projectionFunc`，新行默认 `sum` 并必填。
+- 每条映射字段将 `projectionFunc` 一并提交。
+- 普通派生指标第二步删除可编辑“汇总依据/聚合方式”。
+- 选择原子指标后，从原子指标顶层或来源字段中继承 `projectionFunc` 并写入隐藏表单值；缺失时前端回退为 `sum`。
+- 原子指标选择框下方展示只读卡片：来源字段、聚合方式、所属语义数据；来源字段只使用所选原子指标的英文技术名称 `techName`，不再使用中文 `bizName`。`techName` 符合 `表名.字段名` 规则时显示最后一个 `.` 后的字段名，无 `.` 时原样显示完整值；不增加重复可编辑来源字段。
+- 优先从指标列表项读取语义数据 ID，缺失时查询指标详情；随后查询对应数据语义详情并加载全部维度、度量和日期字段。
+- 处理加载、空数据、失败重试和快速切换竞态。
+- 切换到不同语义数据且已有业务限定条件时确认清空；切换到相同语义数据时保留。
 
-成功响应中的 `task_id / stream_key / conv_id` 标准化为 `taskId / streamKey / conversationId`。只有三个定位字段完整时才写 IndexedDB 并进入读流阶段。
+## 四、指标创建表单
 
-### 报告任务状态
+- 删除步骤内容中的“一、业务属性”“二、技术属性”“三、维度配置”顶层标题，保留步骤导航和模块标题。
+- “计量单位”“数据类型”移动到基础信息最后。
+- 模块顺序为：基础信息 > 管理信息 > 预计算配置 > 语义信息。
+- “统计属性”更名为“预计算配置”，只保留计算频率和执行时间。
 
-```http
-GET {baseApi}/chat-proxy/api/v1/chat/report/task?task_id={taskId}
-```
+### 预计算配置
 
-```ts
-interface ReportTaskStatus {
-  taskId: string
-  status: 'pending' | 'started' | 'retry' | 'success' | 'failure' | 'revoked' | string
-  completed: boolean
-  successful: boolean
-  message?: string
-  result?: unknown
-  error?: unknown
-}
-```
+- 默认每小时第 0 分执行。
+- 每小时：分钟整数 0～59。
+- 每日：时间 `HH:mm`。
+- 每周：周一～周日 + `HH:mm`。
+- 每月：1～31 日 + `HH:mm`。
+- 实时显示“预计每小时第 00 分钟执行一次指标预计算”等摘要，并提示“按当前空间时区执行”。
+- `PrecomputeConfig` 为按频率区分的联合类型，保存 `minute/time/weekday/monthDay`。
+- 写入 `calcLogic.precomputeConfig`，同时继续映射现有顶层 `updateFrequency`；旧数据缺失时使用默认值。
 
-- `completed=false` 或 `pending/started/retry`：连接 Java SSE。
-- `completed=true && successful=true` 或 `success`：使用 query 历史，不再连接 SSE。
-- `completed=true && successful=false` 或 `failure/revoked`：展示失败，不连接 SSE。
-- task 请求失败：保留已有内容，显示警告并尝试连接 SSE。
+## 五、派生指标统计口径和业务限定
 
-### Java Redis Stream SSE
+- 在普通派生指标第二步的业务限定表达式上方增加“统计口径”。
+- 日期范围左侧为受 Form 管理的方式下拉框，支持 `recent/previous_full/today/yesterday/this_week/last_week/this_month/last_month/this_quarter/last_quarter/this_year/last_year` 共 12 种方式。
+- 新建默认“最近 7 日”；旧数据缺少 `dateRangeMode` 时迁移为 `recent`，并保留旧数量和单位。
+- 只有“最近”和“前”显示“方式 + 数量 + 单位”三段 Compact 控件；其他自然周期只显示铺满宽度的方式下拉框。隐藏的数量和单位保留在表单及协议中，但不参与业务含义和校验。
+- “最近”支持小时、日、周、月、季度、年；“前”支持日、周、月、季度、年。从“最近 + 小时”切换到“前”时，单位自动调整为“日”，其他合法数量和单位保留。
+- 数量必须为 1～999 的整数；空值提示“请输入统计窗口数量。”，校验提示“请输入 1 至 999 的正整数”。数量输入框仍由外层 `Form.Item` 直接受控，确保组合布局下取值、校验、保存和回显正确。
+- 日期范围提示和预览摘要必须随方式、数量和单位实时变化；“前 N 日”摘要显示“前 N 天”，其他单位显示“前 N 个完整周/月/季度/年”。
+- Compact 控件使用局部 CSS Module 恢复三段圆角、等高和响应式，不修改全局表单样式。
+- 时段范围默认全天；指定时段显示开始和结束 `HH:mm`，要求开始时间早于结束时间。
+- 主体维度必选，复用第三步维度树数据源，使用单选 `TreeSelect`；与第三步多选互不自动同步。
+- `StatisticalCaliber` 保存 `dateRangeMode/dateRangeValue/dateRangeUnit/timeRangeType/startTime/endTime/subjectDimensionId`，其中 `dateRangeUnit` 增加 `quarter/year`。
+- 写入 `calcLogic.statisticalCaliber`，旧数据缺失时使用默认日期和时段值，主体维度仍由用户选择。
+- 业务限定使用共享三级表达式组件；字段来自选中原子指标所属数据语义。
+- 新结构写入 `calcLogic.expressions[].groups[]`，解析器兼容旧 `conditions`。
+- 现有预览继续保留，使用继承的聚合方式和新嵌套条件生成。
 
-```http
-GET {baseApi}/abi-debug/v1/report-stream/events?stream_key={streamKey}&last_id={lastId}
-```
+## 接口与适配边界
 
-- 当前 `baseApi=/api` 时完整路径为 `/api/abi-debug/v1/report-stream/events`。
-- 首次或整页恢复使用 `last_id=0-0`。
-- 同页断线使用内存中的最后 Redis entry ID 续读。
-- SSE `id` 使用 Redis entry ID，`data` 是 Redis 原始事件内容。
-- Java 只传输 Redis 内容，不聚合报告业务状态。
-- 前端收到 `done` 后主动关闭连接。
+- 不新增裸 `fetch/axios`，继续使用 ABI 现有 service request 和 API 函数。
+- ID 保持 `string | number`，不得强制转换为 number。
+- 原子指标聚合方式优先使用后端 `projectionFunc`；前端默认 `sum` 仅作为后端字段缺失时的兼容值。
+- `calcLogic` 新字段为前端先行协议；后端正式字段确认后只调整 mapper，不改 UI 组件结构。
 
-## 历史 query 协议
+## 六、普通派生指标预览
 
-会话进入时继续调用：
+- 仅将普通派生指标 `indicatorClass === 'derived'` 第二步的“派生逻辑生成结果”改为“指标预览”，不修改派生模板 `derivative`。
+- 删除原摘要标签和单块虚线预览，使用两张纵向卡片展示“公式预览”和“SQL Preview”。
+- 公式预览实时展示指标名称、计算基础、统计范围、主体维度、统计维度和配置表达式；字段未配置或条件不完整时显示明确占位。
+- 配置表达式保留全部分层、条件分组、条件及其“且/或”关系，多个分层沿用现有跨分层 AND 语义。
+- SQL Preview 使用原子指标继承的聚合方式，并优先按所选原子指标 `techName` 的最后一个 `.` 拆分来源表和英文来源字段：如 `trade_fact.payment_amount` 生成 `SELECT SUM(payment_amount) FROM trade_fact`；无 `.` 时字段和 `FROM` 来源均原样展示完整 `techName`。主体维度和第三步统计维度去重后生成 `GROUP BY`。
+- 来源元数据缺失时显示带“待接口返回”说明的来源字段或来源表占位，不以原子指标中文名称伪装技术字段。
+- `WHERE` 只展示可生成的业务限定条件；本轮不生成日期范围或时段范围 SQL，不完整条件不生成无效 SQL。
+- 完整展示 SQL 仅供界面预览。表单 `expr`、`derivedConditionExpr` 及 `calcLogic` 提交协议必须保持改造前行为。
+- 样式使用局部 CSS Module，遵循交互稿的白色外层模块、纵向卡片、深色业务文案及可横向滚动的等宽蓝色 SQL 区域，不修改全局样式。
 
-```http
-POST /api/abi-chat/v1/app/message/query
-```
+## 七、指标建模接口联调协议
 
-响应按 `roundIndex` 分轮。判断规则：
+### 顶层计算频率
 
-- `message.chatMode === 'chat_report'`，或
-- `message.messageDetail.chat_mode === 'chat_report'`
+- 表单内部继续使用 `PrecomputeConfig`，提交顶层 `updateFrequency` 改为对象：`frequency/minute/day_of_week/day_of_month`。
+- 每小时的 `minute` 为 0～59 的字符串；每日、每周、每月的 `minute` 为 `HH:mm`。
+- 每周仅 `day_of_week` 为 1～7，其余日期字段显式传 `null`；每月仅 `day_of_month` 为 1～31，其余日期字段显式传 `null`。
+- 编辑优先读取新对象，兼容旧顶层频率字符串和 `calcLogic.precomputeConfig`；保存继续双写旧 `calcLogic.precomputeConfig`。
 
-满足任一条件的轮次为报告轮次；`chatMode=null` 继续作为普通交互轮次。
+### 普通派生指标统计周期
 
-完成报告的轮次由两类消息组成：
+- `calcLogic.calcPeriod` 写入 `date_range` 和 `time_range`。
+- 表单的 `previous_full` 映射 API `previous`，`this_week/month/quarter/year` 映射 `current_week/month/quarter/year`，其他日期方式保持英文值。
+- 仅 `recent/previous` 传 `value/unit`，固定周期显式传 `null`。
+- 全天映射 `all_day` 并显式传空起止时间；指定时段映射 `custom` 并传 `start_time/end_time`。
+- 新 `calcPeriod` 优先回显，缺失时回退旧 `statisticalCaliber`。
+- 主体维度写入 `calcLogic.subjectDimension = { dim_id, dim_name }` 并优先回显；`dim_id` 为维度 ID，`dim_name` 为维度名称，同时保留旧 `statisticalCaliber.subjectDimensionId`。
 
-1. `human`：`messageDetail.data.content` 是用户问题。
-2. `view`：`messageDetail.data.content` 是 JSON 字符串，协议为：
+### 普通派生指标模板表达式
 
-```ts
-interface ReportHistoryPayload {
-  version: number
-  type: 'react-agent'
-  final_content?: string
-  task_plan?: ReportTask[]
-  steps?: ReportHistoryStep[]
-  generated_images?: string[]
-}
-```
+- `calcLogic.indicator_templates.layers` 保存分层，`layerName` 为分层名，`sortOrder` 从 1 连续递增。
+- 每个条件分组映射为 `expressions`，包含 `expressionId/name/innerLogic/conditions`；层内统一逻辑写入 `groupLogic`。
+- 条件继续选择语义字段：`conditionId` 为字段 ID，`field` 为英文技术字段名，`fieldName` 为中文展示名。
+- 运算符映射为 `EQ/NE/GT/GE/LT/LE/IN/NOT_IN/NULL/NOT_NULL`；空值运算符不提交比较值，包含类值继续传单个字符串。
+- 新模板结构优先回显，旧 `calcLogic.expressions` 继续读写；衍生模板 `derivative` 的既有 `indicator_templates` 协议不变。
 
-历史恢复规则：
+### 统一逻辑和历史兼容
 
-- `task_plan` 恢复最终 ToDo 快照。
-- `steps` 恢复公开执行记录，包括标题、工具名、`action_intention`、`action_reason` 和公开输出摘要。
-- `steps[].outputs` 恢复 text/code/image 以及 HTML/Markdown 报告候选。
-- 最后一个 HTML/Markdown output 是最终报告文件。
-- `todo_meta` 用于划分计划初始化、进度和完成阶段。
-- `generated_images` 作为报告资源信息保留。
-- `final_content` 恢复为公开最终总结；不直接渲染 `thought` 或完整 `action_input`。
+- 公共表达式组件通过可选模式支持统一逻辑；普通派生指标和采用同协议后的标签语义均启用该模式。
+- 切换任一组间连接符时同步当前层全部组间连接符，切换条件连接符时同步当前分组全部条件连接符；新增项继承当前层级逻辑。
+- 历史混合逻辑原样回显，不自动改变语义；下一步或保存时阻止提交并定位首个不一致项，用户切换任一对应连接符后完成统一。
+- 保存双写新 `calcPeriod/indicator_templates/subjectDimension` 与旧 `statisticalCaliber/expressions/precomputeConfig`；冲突时新协议优先回显。
 
-后端只在报告完成后把 `chat_report` 轮次写入 query；未完成报告不会出现在 query 的报告轮次中。
+## 八、指标创建第三步滚动
 
-## IndexedDB 与多问题顺序
+- 第三步维度配置的左右穿梭列表保持现有固定高度，列表头固定在容器内。
+- 左侧维度树和右侧已选维度列表内容超过可视高度时，各自在内容区纵向滚动，不再穿透列表边框或撑高抽屉。
+- 右侧已选维度按接口返回的维度分组展示，避免不同分组下的同名维度无法区分；已失效且无法匹配分组的历史维度归入“未分组”。
+- 新增和编辑回显使用同一套分组逻辑；组件监听表单中的维度值，异步回填编辑详情后也要同步所选项并重新归组。
+- 使用 `DimensionStep` 的局部 CSS Module 修复 Ant Design 自定义 Transfer body 的 flex/overflow，不修改全局 Transfer、抽屉或其他表单样式。
+- 保留现有穿梭选择、禁用、计数、标题省略和提交逻辑。
 
-```ts
-interface ReportTaskRecord {
-  conversationId: string
-  sessionId: string
-  taskId: string
-  question: string
-  streamKey: string
-  sortOrder: number
-  createdAt: number
-}
-```
+## 九、标签语义表达式接口协议
 
-- 复合主键为 `[conversationId, taskId]`。
-- `sortOrder` 从 Stream key 最后一个数字段取得，例如 `report:{convId}:1/2/3`。
-- 会话内按 `sortOrder -> createdAt -> taskId` 稳定排序。
-- IndexedDB 只保存任务定位信息，不保存事件、ToDo、报告正文或 lastId。
-- query 报告轮次与 IndexedDB 记录按 `conversationId + sortOrder/roundIndex` 合并，query 是已完成历史的权威来源。
-- query 未出现的缓存任务先用缓存问题创建占位消息，再查询 task 状态。
-- 已完成 task 暂未出现在 query 时重新请求一次历史；仍缺失则显示“报告历史同步中”，不伪造报告。
-- query 已包含同一 `sortOrder` 的完成报告时，直接删除对应 IndexedDB 记录，不再请求该 taskId 的状态。
-- 实时流收到整体 `done` 后，删除当前 `conversationId + taskId` 缓存；删除失败只显示非阻断警告，不覆盖已完成报告。
+- 标签语义接口继续使用现有顶层 `exp` 字段，不新增 `calcLogic` 或 `indicator_templates` 顶层参数。
+- `exp` 从旧版 URI 编码数组字符串改为对象，并与普通派生指标 `calcLogic.indicator_templates` 使用相同的 `{ layers }` 结构。
+- 分层提交 `layerName/sortOrder/groupLogic/expressions`；条件分组提交 `expressionId/name/innerLogic/conditions`。
+- 条件提交 `conditionId/field/fieldName/operator/operatorName/value`：`conditionId` 为语义字段 ID，`field` 为英文来源字段名，`fieldName` 为页面展示名称；空值运算符不提交 `value`。
+- 运算符统一映射为 `EQ/NE/GT/GE/LT/LE/IN/NOT_IN/NULL/NOT_NULL`。
+- 标签编辑优先解析新的 `{ layers }` 对象，同时兼容新结构 JSON 字符串、旧 URI 编码 `binName/groups/metric` 结构和旧分层直含条件结构。
+- 因新协议仅提供统一的 `groupLogic/innerLogic`，标签语义同步启用层内和组内统一逻辑；历史混合逻辑原样回显但保存前必须统一，避免静默改变表达式含义。
+- 标签关联字段 ID 继续从回显后的规则树递归收集并去重；标签定义 SQL、语义字段选择和其他基础信息协议不变。
 
-## 请求去重修订
+## 十、派生指标编辑态所属语义数据回显
 
-- 开发环境保留 React StrictMode。
-- 相同 `convUid/pageNum/pageSize` 的 message query 在前一个请求结束前复用同一 Promise，避免 StrictMode 重挂载产生两次并发网络请求。
-- task 状态只查询 query 未覆盖的 IndexedDB 记录；同一份历史刷新结果不得重复触发整批 task 恢复。
-- task 成功但 query 暂缺时触发的历史同步请求属于业务刷新，不与 StrictMode 并发重复请求混为一类。
-
-## 前端状态聚合
-
-实时 Redis 事件继续识别：
-
-```text
-question
-step.start
-step.meta
-step.chunk
-step.done
-plan.update
-final
-done
-```
-
-- 以 Redis entry ID 排序和去重，不使用事件 `step` 判断全局顺序。
-- 初始思考步骤进入顶部思考区；首份计划只保存任务快照，首个 `step.plan` 对应的 `step.done` 到达后思考自动收起并展示默认收起的 ToDo。
-- `plan.update.tasks` 是完整计划快照，支持 `pending/in_progress/completed/cancelled`。
-- 执行中的 ToDo 可以展开查看中间步骤。
-- HTML/Markdown chunk 只在前端状态中更新报告候选，不在 ToDo 执行记录中直接展示，也不提前打开右栏。
-- `done` 且存在候选时完成；`done` 无候选时失败并提示“未收到报告文件”。
-
-历史 `react-agent` payload 转换为同一套报告 UI 状态，但不得制造虚假的 Redis ID 或重新打开 SSE。历史步骤按原数组顺序展示；`todo_meta` 仅用于确定任务阶段，缺少明确归属时进入未归属执行记录。
-
-## 页面结构
-
-- 永远渲染原 `Conversation` 页面、Header、滚动区域和输入框。
-- 普通轮次和报告轮次按 `roundIndex/sortOrder` 合并为一条时间线。
-- 报告消息仍为右侧用户问题、左侧思考/ToDo/报告文件。
-- 报告发送通过 `Conversation` 暴露的独立 `handleReportSend`，普通发送继续使用原 `handleSend`。
-- 报告整体完成且 ToDo 全部进入 `completed/cancelled` 终态后，才显示报告文件并自动进入左对话、右报告双栏；关闭恢复单栏，窄屏使用“对话/报告”切换。
-- 打字机只在当前页面实时生成任务首次自动打开右栏时播放一次；历史报告、用户关闭后手动重开以及同一报告后续查看直接展示完整正文。
-
-## 系统侧栏入口与报告过渡
-
-- 系统侧栏的展开/收起状态继续由聊天工作台顶层统一管理，各页面只复用同一个控制入口，不复制侧栏状态。
-- 删除“新建对话”按钮右侧原有的收起入口，避免同一页面出现两个侧栏控制按钮。
-- 对话页的侧栏控制按钮放在顶部模型选择器之前；没有可选模型时仍需保留该按钮。
-- “应用工坊”和“技能商店”的侧栏控制按钮放在页面标题之前，并与标题垂直居中。
-- 按钮在侧栏展开时表达“收起侧边栏”，在侧栏收起时表达“展开侧边栏”，提供 `title/aria-label`，并保持统一图标、尺寸、hover 和 focus 样式。
-- 实时报告生成完成并自动打开右侧预览时，如果系统侧栏仍展开，则自动收起；用户手动打开任意已完成报告时也执行相同规则。
-- 关闭报告预览不自动展开系统侧栏，避免覆盖用户在预览期间做出的侧栏选择；侧栏之后仍由用户手动控制。
-- 报告预览打开时，右栏从轻微右移、透明状态渐入，同时左侧对话平滑收窄；关闭时反向渐出并在动画结束后卸载右栏。
-- 动画采用短时长的 ease-out/ease-in 过渡，不对 iframe `srcDoc` 做逐帧替换，不重启 HTML 打字机，也不改变报告数据状态。
-- `prefers-reduced-motion: reduce` 下取消位移、淡入淡出和宽度动画，直接切换最终布局。
-- 窄屏继续使用“对话/报告”切换，不强制执行桌面双栏宽度动画。
-
-## 报告预览输入区与滚动边界
-
-- 右侧报告处于打开状态或正在播放关闭动画时，底部聊天输入框和免责声明整体隐藏且不占据页面高度；预览动画结束并完全关闭后再恢复显示。
-- 本次显隐只跟随报告预览的挂载状态，不清空输入内容，也不修改普通对话和报告发送逻辑。
-- 输入区不能再通过 `display: none` 瞬间切换；需要使用约 600ms 的透明度、轻微位移和高度收展过渡完成淡出/淡入。
-- 动画过程中 ChatInput 必须持续挂载；隐藏态禁止鼠标交互，动画结束后的折叠态不得继续占据对话区域高度。
-- 动画承载层不得裁切或覆盖 ChatInput 原有的边框、圆角、阴影和 `focus-within` 上移效果；普通态与选中态必须保持动画开发前的视觉样式。
-- `prefers-reduced-motion: reduce` 下取消输入区动画并直接切换最终状态。
-- 右侧报告标题栏与正文区使用纵向 Flex 布局：标题栏固定占据自身高度并禁止压缩，正文区占用剩余高度。
-- HTML 报告正文由 iframe 自身滚动，承载 iframe 的外层正文区必须禁用纵向滚动，避免外层与 iframe 出现嵌套滚动冲突。
-- Markdown 报告继续由外层正文区滚动，不改变现有只读渲染行为。
-- 报告容器、过渡包装层和正文区必须正确设置 `min-height: 0` 与 overflow 边界；不得通过取消最外层 overflow 让内容越过标题栏。
-- 验收时需确认：打开 HTML 报告后输入区不可见；滚动到报告最顶部时首行正文完整可见且不被标题栏覆盖；关闭动画完成后输入区恢复。
-- 本次不得修改报告数据聚合、接口、历史恢复、发送校验、侧栏入口或其他无关页面逻辑。
-
-## 渐进展示与产品文案
-
-报告消息必须按生成阶段逐步显露，不能在任务刚提交时同时展示思考、空 ToDo 和报告区域：
-
-1. 初始思考完成前只展示“思考”区，默认展开，并使用第一条有效 `step.plan` 展示公开总结；首份任务计划可提前保存在内存中但不抢先展示。
-2. 第一条思考总结对应的 `step.done` 到达后，思考区自动收起，再展示默认收起的 ToDo；用户展开后，执行中的任务继续实时显示公开步骤和阶段总结。
-3. 后端生成的 HTML/Markdown 候选仅在内存中更新，在整体 `done` 且 ToDo 全部进入终态前不展示报告文件、不渲染到 ToDo 内、不打开右栏。
-4. 整体完成后，在 ToDo 下方展示报告文件卡，并自动打开右侧只读报告；用户关闭后可以通过文件卡再次打开。
-5. 历史完成报告进入页面时直接展示思考、最终 ToDo 和报告文件，但不播放实时生成过程。
-
-所有面向用户的标题、提示、警告和错误必须使用产品语言，不得出现 Redis、Redis Stream、SSE、`plan.update`、entry ID、lastId、stream key、事件名称或内部错误码。上述术语只允许存在于代码、日志和开发文档中。连接中断、状态查询失败和本地恢复失败统一表达为“生成进度暂时中断”“正在自动恢复”“刷新后可能需要重新进入会话查看”等可理解提示。
-
-## 真实事件兼容修订
-
-2026-07-31 使用本机 `redis-cli` 对 DB0 中一条完整报告 Stream 进行了只读核对。真实数据确认：
-
-1. 最后一条事件是整体 `done`，此前最后一份计划快照中的任务均为 `completed/cancelled`，因此页面不得继续显示执行中状态。
-2. 最后仍可能存在只有“思考中 / Thought/Action/Observation”的 `step.start`，且没有对应 `step.done`。整体 `done` 到达时，前端必须把所有仍为 `in_progress` 的公开步骤收敛为终态，并且不展示没有公开内容的占位步骤。
-3. 报告工具可能把 `{ chunks: [{ output_type: 'html' | 'markdown', content }] }` 结果拆成多条 `output_type: 'text'` 的 chunk；尾部还可能追加普通提醒文字。前端需要按同一 step 的 Redis ID 顺序拼接，提取第一个完整 JSON 对象并识别其中最后一个 HTML/Markdown 报告，不能仅依赖外层 `output_type`。
-4. 被识别为报告工具 payload 的分段 text 只用于内部组装报告，不在 ToDo 执行记录中展示原始 JSON、HTML 或半截正文。
-5. ToDo 顶部在所有任务进入终态时需明确显示已结束；存在取消任务时分别显示完成数和取消数，不能继续显示类似“2/5 已完成”而造成仍在执行的误解。
-
-执行输出渲染规则：
-
-- `output_type=code` 使用 Markdown fenced code block 的视觉结构展示。
-- `output_type=text` 使用 Markdown 渲染，支持标题、列表、链接、行内代码和代码块。
-- 渲染前将 Windows 换行及文本中的字面量 `\\n/\\r\\n` 标准化为真实换行；Markdown 文本区域保留单换行显示。
-- HTML/Markdown 报告候选继续遵守渐进展示规则，只在整体完成且 ToDo 全部结束后显示报告文件与右侧预览。
-
-右侧 HTML 打字机规则：
-
-- 必须先取得并解析完整 HTML，再创建一次 iframe；不得把逐条 text payload 或半截 JSON 作为 `srcDoc`。
-- iframe 只加载一次完整文档，动画在 sandbox iframe 内按可见文本节点逐步显现，避免刷新 iframe、重复执行报告脚本或破坏宿主状态。
-- 跳过 `script/style/noscript/template/textarea/svg` 等非正文节点，不修改标签、属性、图片、图表和脚本内容。
-- 保持现有 `sandbox="allow-scripts"`，不得增加 `allow-same-origin`、弹窗、表单或顶层跳转权限。
-- 尊重 `prefers-reduced-motion: reduce`；用户要求减少动态效果或注入脚本被报告 CSP 阻止时，直接显示完整报告作为无损降级。
-- 动画总时长设置上限，长报告不得按单字符固定速度持续数分钟；完成后移除光标，不改变最终 HTML 内容。
+- 编辑普通派生指标时，来源卡片中的“所属语义数据”必须从当前回填并选中的原子指标元数据解析，不能依赖派生指标自身的语义数据字段。
+- 名称优先使用原子指标明确返回的 `relSchemaName/semanticSchemaName/schemaName/semanticName`；缺失时从原子指标来源字段的 `rtableName/tableBizName` 或一键映射业务名称中 `_#_` 前的语义数据名称回退。
+- 打开历史派生指标后仍按现有逻辑加载原子指标详情和语义数据详情；异步补全结果需更新同一个原子指标选项，使来源字段、聚合方式和所属语义数据三项保持同源。
+- 新增派生指标、手工切换原子指标、语义字段树加载及提交协议保持不变。
 
 ## 验收标准
 
-- 普通对话功能、接口和历史渲染无回归。
-- 同一会话可以交错显示 `chatMode=null` 和 `chat_report` 轮次。
-- 完成报告可仅凭 query 的 `react-agent` content 恢复 ToDo、步骤和最终报告。
-- 未完成报告可凭 IndexedDB taskId 调用 task 接口并继续 Java SSE。
-- 多个报告问题按 Stream 尾部序号稳定展示且不重复。
-- Java SSE 使用 `/api/abi-debug/v1/report-stream/events`，项目不再包含 Node server。
-- 页面刷新、切换会话和断线续读不会把不同报告事件混合。
-- 内部思维与完整工具输入不会出现在 UI。
-- 报告发送后依次呈现思考、ToDo、报告文件，不会同时展示空阶段。
-- ToDo 未全部结束前，HTML/Markdown 候选不会出现在执行记录、文件卡或右侧预览中。
-- 真实数据中报告被包装为分段 text payload 时仍能恢复最终 HTML/Markdown 报告。
-- 整体 `done` 后没有步骤继续显示加载状态，空的末尾“思考中”占位步骤不进入 UI。
-- code/text chunk 均按 Markdown 语义展示，字面量换行符可正确换行。
-- 用户界面不出现 Redis、SSE、事件名称、游标或内部错误码等实现术语。
-- HTML sandbox 和 Markdown 只读渲染保持安全限制。
-- 实时 HTML 报告首次自动打开时正文逐步显现，iframe 不因动画帧反复重载；关闭后从文件卡重开直接显示完整报告。
-- 历史完成报告直接显示完整正文，不重放生成动画；减少动态效果时不播放动画。
-- 新建对话区域不再显示旧侧栏收起按钮；对话页、应用工坊和技能商店顶部均能控制同一个系统侧栏。
-- 报告预览打开时系统侧栏自动收起；关闭预览后不会擅自重新展开。
-- 桌面端报告打开与关闭均有平滑的透明度、轻位移和双栏宽度过渡，关闭动画结束前报告内容不会被提前卸载。
-- 动画期间 iframe 不重复加载，报告数据、对话滚动位置和输入框状态保持不变。
-- 未选择数据语义且未上传 Excel 时，交互模式和报告模式都不能发送；选择任意一种数据后可继续原有发送流程。
-- 未选择数据时点击发送或按 Enter 均不会调用 `onSend`，输入框中的问题不会被清空。
+1. 标签语义和普通派生指标展示同一套三级嵌套交互，名称、数量、逻辑和完整性规则一致。
+2. 标签完整表达式可生成正确 CASE WHEN SQL；生成后可编辑，表达式变化不覆盖，重新生成按规则确认。
+3. 旧标签和旧派生指标表达式能够读取、编辑并按新结构保存。
+4. 原子指标映射可配置聚合方式；派生指标选择后正确展示来源卡片并继承聚合方式。
+5. 派生指标字段树来自原子指标所属数据语义，层级和标签语义一致。
+6. 指标创建模块顺序、标题、计量单位和数据类型位置符合要求。
+7. 四种预计算频率动态控件、校验和说明文案正确，并能保存和回显。
+8. 统计口径能够保存和回显，主体维度单选与第三步维度树同源。
+9. 12 种日期范围方式的动态控件、提示和预览摘要正确；“前”不允许小时，数量仅在动态方式下校验为 1～999。
+10. `derivative`、自定义指标、第三步维度多选和标签基础信息无回归。
+11. 桌面和窄抽屉下无页面级横向溢出，连接线、逻辑节点和键盘焦点清晰。
+12. 普通派生指标预览完整展示六项业务信息和实际元数据 SQL；切换原子指标、统计口径、条件和维度后能够实时更新，且提交协议不变。
+13. 四种顶层 `updateFrequency` 对象字段、字符串与显式空值符合接口协议，并可兼容旧频率数据回显。
+14. 普通派生指标新 `calcPeriod`、`subjectDimension` 与 `indicator_templates.layers` 能够保存、编辑回显，并与旧字段双写且以新协议优先。
+15. 派生指标和标签语义的层内、组内连接符保持统一，历史混合逻辑不会被静默修改，需由用户统一后保存。
+16. 指标创建第三步左右列表内容超出固定高度后分别出现纵向滚动，内容不越过列表底部边框；右侧按维度分组展示已选字段。
+17. 标签语义新增和编辑提交的 `exp` 为与派生指标一致的 `{ layers }` 对象，字段元数据、运算符和逻辑正确；旧标签表达式仍可编辑回显并在保存后迁移为新协议。
+18. 编辑普通派生指标时，选中原子指标后来源卡片能够显示该原子指标所属语义数据；接口名称缺失时可从原子指标来源元数据稳定回退，不显示错误的派生指标自身名称。
 
 ## 测试要求
 
 - 优先运行与 chat 和 ABI 相关的类型检查、测试或构建命令；如项目门禁本身不可用，需说明原因。
 - 对受影响文件进行代码级回归检查。
-- 数据选择校验测试覆盖无数据、仅数据语义、仅 Excel，确认报告模式不能绕过统一校验。
-- `ChatInput.handleSend` 回归检查需确认校验顺序为“校验 → `onSend` → 清空”，失败分支不清空问题。
+- 为表达式规范化、完整性、名称与上限校验、连接关系、SQL 生成和字段 ID 收集补 Vitest。
+- 为 `calcLogic` 新结构、旧结构迁移、预计算配置和统计口径往返补 Vitest。
+- 为原子指标元数据和聚合方式回退补 mapper 测试。
+- 为派生指标预览补充纯函数测试，覆盖公式六项内容、混合逻辑、来源元数据、维度去重、空值回退、无效条件和展示/提交表达式隔离。
+- 为原子指标 `techName` 的 `表名.字段名` 拆分、无 `.` 原样回退、来源卡片英文显示和 SQL 首行生成补充单元测试。
+- 为四种 `updateFrequency`、12 种日期方式、两种时段方式、新旧优先级和显式 `null` 补适配器单元测试。
+- 为 `indicator_templates.layers` 多层、多组、10 种运算符、字段元数据、数组回显兼容及新旧往返补单元测试。
+- 为统一逻辑联动、继承、混合逻辑校验和标签语义非统一模式补组件测试。
+- 为原子指标所属语义数据名称的显式字段、来源字段元数据、一键映射名称和空值回退补适配器单元测试。
+- 为 12 种日期范围方式的提示、摘要、单位白名单、旧协议迁移和新协议往返补 Vitest；组件测试覆盖动态/自然周期渲染、非法小时单位回退和数量校验。
+- 手工回归标签新增/编辑、原子映射、普通派生指标新增/编辑、第三步维度和其他指标类型。
+- 执行：
+  - `pnpm test`
+  - `pnpm --filter chatbi typecheck`
+  - `pnpm --filter chatbi build`
+  - `git diff --check`
+- 本轮接口联调完成后创建 `.ai/runs/2026-08-26-indicator-api-integration/RUN_LOG.md`，记录修改、验证、风险、接口待办和 AI 系统更新判断；界面回归截图不保存到项目。
 - 完成后生成 run log，记录修改、验证、风险和是否需要更新 `.ai/` 长期文档。
+
+## 回滚策略
+
+- 共享组件通过标签和派生指标两个适配器接入；出现问题可分别恢复旧渲染而不影响 API 服务层。
+- 新 `calcLogic` 字段均为附加 JSON，旧字段解析继续保留；回滚 UI 不需要数据库迁移。
 
 ## 2026-07-16 追加：图谱筛选列表搜索与折叠
 

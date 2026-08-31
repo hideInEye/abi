@@ -139,6 +139,70 @@ describe('report history adapter', () => {
     expect(JSON.stringify(item)).not.toContain('/private/path')
   })
 
+  it('历史 text 包装的 chunks 展开为公开输出并过滤内部提示', () => {
+    const round = reportRound()
+    const chartUrl = 'http://example.test/monthly-order-count.png?signature=complete'
+    round.messages![1].messageDetail!.data!.content = JSON.stringify({
+      version: 1,
+      type: 'react-agent',
+      final_content: '订单趋势分析报告已生成。',
+      task_plan: [
+        { content: '生成趋势图', status: 'completed' },
+        { content: '生成最终 HTML 报告', status: 'completed' },
+      ],
+      steps: [
+        {
+          id: 'todo-init',
+          title: 'TODO::init:0/2',
+          action: 'todowrite',
+          todo_meta: { state: 'init', done: 0, total: 2 },
+          status: 'done',
+        },
+        {
+          id: 'chart-step',
+          title: 'generate_chart_image',
+          outputs: [{
+            output_type: 'text',
+            content: `${JSON.stringify({
+              chunks: [
+                { output_type: 'image', content: chartUrl, title: '月度订单数量趋势' },
+                { output_type: 'text', content: '图表已生成：柱状图。' },
+                { output_type: 'text', content: '生成报告时使用的内部地址', emit_to_client: false },
+              ],
+              chart: { image_url: chartUrl, storage_type: 'minio' },
+            })}\n\n⚠️ Reminder: update the todo list`,
+          }],
+          status: 'done',
+        },
+        {
+          id: 'todo-progress',
+          title: 'TODO::progress:1/2',
+          action: 'todowrite',
+          todo_meta: { state: 'progress', done: 1, total: 2 },
+          status: 'done',
+        },
+        {
+          id: 'report-step',
+          title: 'generate_report_html',
+          outputs: [{ output_type: 'html', content: '<html><body>最终报告</body></html>' }],
+          status: 'done',
+        },
+      ],
+    })
+
+    const item = createReportItemFromHistory(round, 'conv-1', 'session-1')
+    const chartChunks = item.stepsById['chart-step']?.chunks
+
+    expect(chartChunks).toMatchObject([
+      { outputType: 'image', content: chartUrl, title: '月度订单数量趋势' },
+      { outputType: 'text', content: '图表已生成：柱状图。' },
+    ])
+    expect(JSON.stringify(chartChunks)).not.toContain('emit_to_client')
+    expect(JSON.stringify(chartChunks)).not.toContain('内部地址')
+    expect(JSON.stringify(chartChunks)).not.toContain('Reminder')
+    expect(item.reportCandidate).toMatchObject({ stepId: 'report-step', format: 'html' })
+  })
+
   it('历史只有 Markdown 技能文档且无 HTML/PDF/Word 时不兜底生成报告', () => {
     const round = reportRound()
     round.messages![1].messageDetail!.data!.content = JSON.stringify({

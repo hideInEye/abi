@@ -89,6 +89,7 @@ type MessageListProps = {
   explorationItems?: ExploreItem[]
   reportLoadError?: string
   onToggleReportThinking?: (reportId: string) => void
+  onCompleteReportThinkingTypewriter?: (reportId: string) => void
   onToggleReportTodo?: (reportId: string) => void
   onToggleReportTask?: (reportId: string, taskKey: string) => void
   onOpenReport?: (reportId: string) => void
@@ -139,6 +140,7 @@ const MessageList = ({
   explorationItems = [],
   reportLoadError,
   onToggleReportThinking,
+  onCompleteReportThinkingTypewriter,
   onToggleReportTodo,
   onToggleReportTask,
   onOpenReport,
@@ -340,6 +342,7 @@ const MessageList = ({
           key={key}
           report={report}
           onToggleThinking={() => onToggleReportThinking?.(report.id)}
+          onThinkingTypewriterComplete={() => onCompleteReportThinkingTypewriter?.(report.id)}
           onToggleTodo={() => onToggleReportTodo?.(report.id)}
           onToggleTask={(taskKey) => onToggleReportTask?.(report.id, taskKey)}
           onOpenReport={() => onOpenReport?.(report.id)}

@@ -333,6 +333,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             explorationItems={exploreItemsAll}
             reportLoadError={reportController.loadError}
             onToggleReportThinking={reportController.toggleThinking}
+            onCompleteReportThinkingTypewriter={reportController.completeThinkingTypewriter}
             onToggleReportTodo={reportController.toggleTodo}
             onToggleReportTask={reportController.toggleTaskExecution}
             onOpenReport={openReport}
