@@ -1,14 +1,42 @@
-import { CheckCircleOutlined, MinusOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, FieldTimeOutlined, ProfileOutlined } from '@ant-design/icons'
+import { Alert } from 'antd'
 import type { FormInstance } from 'antd'
-import React from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
+import {
+  RuleExpressionBuilder,
+  type RuleExpressionBuilderHandle,
+  RuleExpressionFormItem,
+  collectRuleFieldIds,
+  createRuleFieldOptions,
+  normalizeRuleLayers,
+  validateRuleLayers,
+  validateRuleLogicUniformity
+} from '@/pages/workbench/ontology-kg/label-meaning/components/rule-expression'
 
-import { DATA_FREQUENCY_OPTIONS, DERIVED_OPERATOR_OPTIONS } from '../constants/metricModeling.constants'
-import type { KnowledgeDerivedCondition, KnowledgeDerivedExpression, KnowledgeFormValues, KnowledgeTechField } from '../types/metricModeling.types'
-import { getMetricFieldOptionLabel } from '../utils/knowledgeOperateDrawer.utils'
+import { useKnowledgeDimensions } from '../hooks/useKnowledgeDimensions'
+import type {
+  KnowledgeDerivedCondition,
+  KnowledgeFormValues,
+  KnowledgeIndicatorItem,
+  KnowledgeTechField,
+  StatisticalCaliber
+} from '../types/metricModeling.types'
+import { buildDerivedMetricPreview } from '../utils/derivedMetricPreview'
+import {
+  getStatisticalDateRangeHint,
+  isDynamicStatisticalDateRangeMode,
+  isValidStatisticalDateRangeValue,
+  normalizeStatisticalCaliber
+} from '../utils/precomputeConfig'
+
+import styles from './knowledgeOperateDrawer.DerivedLogicBuilder.module.scss'
+import { TimeStringPicker } from './knowledgeOperateDrawer.PrecomputeConfig'
+import { StatisticalDateRangeFields } from './knowledgeOperateDrawer.StatisticalDateRangeFields'
 
 interface AtomicMetricOption {
+  item?: KnowledgeIndicatorItem
   label: string
   value: string
 }
@@ -16,306 +44,275 @@ interface AtomicMetricOption {
 interface Props {
   readonly allFields: KnowledgeTechField[]
   readonly atomicMetricOptions: AtomicMetricOption[]
+  readonly fieldError?: boolean
+  readonly fieldLoading?: boolean
   readonly form: FormInstance<KnowledgeFormValues>
+  readonly onRetryFields?: () => void
 }
 
-const defaultCondition: KnowledgeDerivedCondition = {
-  metric: '',
-  operator: '=',
-  value: ''
-}
-
-function createDefaultExpression(name = '表达式1'): KnowledgeDerivedExpression {
-  return {
-    conditions: [{ ...defaultCondition }],
-    innerLogic: 'AND',
-    name
-  }
-}
-
-function quoteValue(value?: string) {
-  const text = String(value ?? '').trim()
-  if (!text) {
-    return "''"
-  }
-  if (/^-?\d+(\.\d+)?$/.test(text)) {
-    return text
-  }
-  return `'${text}'`
-}
-
-function normalizeExpressions(expressions?: KnowledgeDerivedExpression[], fallbackConditions?: KnowledgeDerivedCondition[]) {
-  if (expressions?.length) {
-    return expressions.map((item, index) => ({
-      ...item,
-      conditions: item.conditions?.length ? item.conditions : [{ ...defaultCondition }],
-      innerLogic: item.innerLogic === 'OR' ? 'OR' : 'AND',
-      name: item.name || `表达式${index + 1}`
-    }))
-  }
-
-  if (fallbackConditions?.length) {
-    return [
-      {
-        conditions: fallbackConditions,
-        innerLogic: fallbackConditions.some(item => item.logic === 'OR') ? 'OR' : 'AND',
-        name: '表达式1'
-      }
-    ]
-  }
-
-  return [createDefaultExpression()]
-}
-
-function buildDerivedResult({
+export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
   allFields,
   atomicMetricOptions,
-  calcPeriod,
-  expressions,
-  updateFrequency,
-  techId,
-  projectionFunc
-}: {
-  allFields: KnowledgeTechField[]
-  atomicMetricOptions: AtomicMetricOption[]
-  calcPeriod?: string | number
-  expressions?: KnowledgeDerivedExpression[]
-  updateFrequency?: string
-  techId?: string | number
-  projectionFunc?: string
-}) {
-  const atomicLabel = atomicMetricOptions.find(item => String(item.value) === String(techId || ''))?.label || '原子指标'
-  const freqLabel = DATA_FREQUENCY_OPTIONS.find(item => String(item.value) === String(updateFrequency || ''))?.label || '周期'
-  const timeWindow = String(calcPeriod || '1').trim() || '1'
-
-  const fieldMap = new Map<string, string>()
-  const sqlFieldMap = new Map<string, string>()
-  allFields.forEach(item => {
-    const key = String(item.techId || item.fieldName || item.name || '')
-    const label = getMetricFieldOptionLabel(item)
-    if (key) {
-      fieldMap.set(key, label)
-      sqlFieldMap.set(key, String(item.fieldName || item.originName || item.name || key))
-    }
-  })
-
-  const expressionGroups = normalizeExpressions(expressions)
-    .map((expression, expressionIndex) => {
-      const validConditions = (expression.conditions || [])
-        .map(item => ({
-          metric: String(item?.metric || '').trim(),
-          operator: String(item?.operator || '=').trim(),
-          value: String(item?.value ?? '').trim()
-        }))
-        .filter(item => item.metric && item.operator)
-
-      return {
-        conditions: validConditions,
-        innerLogic: expression.innerLogic === 'OR' ? 'OR' : 'AND',
-        name: expression.name || `表达式${expressionIndex + 1}`
-      }
-    })
-    .filter(item => item.conditions.length)
-
-  const whereClause = expressionGroups
-    .map(group => {
-      const lines = group.conditions.map((item, index) => {
-        const metricField = sqlFieldMap.get(item.metric) || item.metric
-        const prefix = index === 0 ? 'WHERE' : group.innerLogic
-        return `${prefix} ${metricField} ${item.operator} ${quoteValue(item.value)}`
-      })
-      return `${group.name}\n${lines.join('\n')}`
-    })
-    .join('\n\n')
-  const sqlPreview = `${projectionFunc}(${atomicLabel})${whereClause ? `\n${whereClause}` : ''}`
-
-  const filterLabels = expressionGroups.flatMap(group =>
-    group.conditions.map(item => {
-      const metricLabel = fieldMap.get(item.metric) || item.metric
-      return `${group.name}：${metricLabel} ${item.operator} ${item.value}`
-    })
-  )
-
-  const summaryText = [
-    `AtomicMetric(${atomicLabel})`,
-    `Frequency(${freqLabel})`,
-    `TimeWindow(${timeWindow})`,
-    filterLabels.length ? `Filters(${filterLabels.join(' , ')})` : undefined
-  ]
-    .filter(Boolean)
-    .join(' + ')
-
-  return {
-    expressionPreview: summaryText,
-    filterLabels,
-    frequencyLabel: freqLabel,
-    metricLabel: atomicLabel,
-    sqlPreview,
-    timeWindow,
-    whereClause
-  }
-}
-
-export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({ allFields, atomicMetricOptions, form }) => {
+  fieldError = false,
+  fieldLoading = false,
+  form,
+  onRetryFields
+}) => {
+  const [showRuleErrors, setShowRuleErrors] = useState(false)
+  const ruleBuilderRef = useRef<RuleExpressionBuilderHandle>(null)
   const techId = AForm.useWatch('techId', form)
-  const calcPeriod = AForm.useWatch('calcPeriod', form)
   const projectionFunc = AForm.useWatch('projectionFunc', form)
-  const updateFrequency = AForm.useWatch('updateFrequency', form)
-  const derivedExpressions = AForm.useWatch('derivedExpressions', form) as KnowledgeDerivedExpression[] | undefined
+  const derivedExpressions = AForm.useWatch('derivedExpressions', form)
+  const bizName = AForm.useWatch('bizName', { form, preserve: true })
+  const dimensionFieldIds = AForm.useWatch('dimensionFieldIds', { form, preserve: true })
+  const indicatorCode = AForm.useWatch('indicatorCode', form)
+  const statisticalCaliberValue = AForm.useWatch('statisticalCaliber', form) as StatisticalCaliber | undefined
+  const statisticalCaliber = useMemo(
+    () => normalizeStatisticalCaliber(statisticalCaliberValue),
+    [statisticalCaliberValue]
+  )
+  const {
+    error: dimensionError,
+    loading: dimensionLoading,
+    options: dimensionOptions,
+    retry: retryDimensions,
+    treeData: dimensionTree
+  } = useKnowledgeDimensions()
+  const ruleFields = useMemo(() => createRuleFieldOptions(allFields), [allFields])
+  const normalizedLayers = useMemo(() => normalizeRuleLayers(derivedExpressions), [derivedExpressions])
 
   useEffect(() => {
-    const current = form.getFieldValue('derivedExpressions') as KnowledgeDerivedExpression[] | undefined
-    if (current?.length) {
-      return
-    }
+    const subjectDimensionId = statisticalCaliber.subjectDimensionId
+    if (!subjectDimensionId) return
+    const option = dimensionOptions.find(item => String(item.key) === String(subjectDimensionId))
+    if (!option || option.name === statisticalCaliber.subjectDimensionName) return
+    form.setFieldValue(['statisticalCaliber', 'subjectDimensionName'], option.name)
+  }, [dimensionOptions, form, statisticalCaliber.subjectDimensionId, statisticalCaliber.subjectDimensionName])
+
+  useEffect(() => {
+    const current = form.getFieldValue('derivedExpressions')
+    if (Array.isArray(current) && current.length) return
     const legacyConditions = form.getFieldValue('derivedConditions') as KnowledgeDerivedCondition[] | undefined
-    form.setFieldValue('derivedExpressions', normalizeExpressions(current, legacyConditions))
+    form.setFieldValue(
+      'derivedExpressions',
+      normalizeRuleLayers(legacyConditions?.length ? [{ conditions: legacyConditions, name: '新分层' }] : [])
+    )
   }, [form])
 
-  const fieldOptions = useMemo(
-    () =>
-      allFields.map(item => {
-        const sourceFieldName = item.fieldName || item.originName || item.name || item.techId
-
-        return {
-          label: `${getMetricFieldOptionLabel(item)}（${sourceFieldName}）`,
-          value: item.techId+''
-        }
-      }),
-    [allFields]
+  const selectedAtomicOption = useMemo(
+    () => atomicMetricOptions.find(item => String(item.value) === String(techId || '')),
+    [atomicMetricOptions, techId]
   )
-
   const result = useMemo(
     () =>
-      buildDerivedResult({
+      buildDerivedMetricPreview({
         allFields,
-        atomicMetricOptions,
-        calcPeriod,
-        expressions: derivedExpressions,
-        updateFrequency,
-        techId,
-        projectionFunc
+        atomicLabel: selectedAtomicOption?.label,
+        atomicMetric: selectedAtomicOption?.item,
+        bizName,
+        dimensionFieldIds,
+        dimensionOptions,
+        indicatorCode,
+        projectionFunc,
+        ruleFields,
+        ruleLayers: normalizedLayers,
+        statisticalCaliber
       }),
-    [allFields, atomicMetricOptions, calcPeriod, updateFrequency, derivedExpressions, techId,projectionFunc]
+    [
+      allFields,
+      bizName,
+      dimensionFieldIds,
+      dimensionOptions,
+      indicatorCode,
+      normalizedLayers,
+      projectionFunc,
+      ruleFields,
+      selectedAtomicOption,
+      statisticalCaliber
+    ]
   )
 
   useEffect(() => {
-    form.setFieldValue('derivedConditionExpr', result.whereClause)
-    form.setFieldValue('expr', result.sqlPreview)
-  }, [form, result.sqlPreview, result.whereClause])
-
-  function toggleExpressionLogic(expressionName: number) {
-    const currentLogic = form.getFieldValue(['derivedExpressions', expressionName, 'innerLogic']) === 'OR' ? 'OR' : 'AND'
-    form.setFieldValue(['derivedExpressions', expressionName, 'innerLogic'], currentLogic === 'OR' ? 'AND' : 'OR')
-  }
+    form.setFieldValue('derivedConditionExpr', result.predicate ? `WHERE ${result.predicate}` : '')
+    form.setFieldValue('expr', result.submissionExpression)
+    form.setFieldValue('relItemId', collectRuleFieldIds(normalizedLayers).join(','))
+  }, [form, normalizedLayers, result.predicate, result.submissionExpression])
 
   return (
     <>
-      <div className="mb-4 border border-gray-200 rounded p-4">
-        <OntologyFormSectionTitle icon={<ProfileOutlined />}>表达式定义</OntologyFormSectionTitle>
-        <AForm.List name="derivedExpressions">
-          {(expressionFields, { add: addExpression, remove: removeExpression }) => (
-            <div className="flex flex-col gap-4">
-              {expressionFields.map((expressionField, expressionIndex) => {
-                const expressionLogic = derivedExpressions?.[expressionField.name]?.innerLogic === 'OR' ? 'OR' : 'AND'
-                const logicLabel = expressionLogic === 'OR' ? '或' : '且'
-
-                return (
-                  <div className="rounded-xl border border-gray-100 bg-white px-6 py-5" key={expressionField.key}>
-                    <div className="mb-5 flex items-center justify-between gap-3">
-                      <AForm.Item label={`表达式${expressionIndex + 1}`} className="mb-0!" name={[expressionField.name, 'name']} rules={[{ max: 50, message: '表达式名称不能超过50个字符' }]} style={{ flex: '0 1 320px', maxWidth: '100%' }}>
-                        <AInput  placeholder="请输入表达式名称" />
-                      </AForm.Item>
-                      <AButton danger type="text" onClick={() => removeExpression(expressionField.name)}>
-                        删除表达式
-                      </AButton>
-                    </div>
-
-                    <AForm.Item hidden initialValue="AND" name={[expressionField.name, 'innerLogic']}>
-                      <AInput />
-                    </AForm.Item>
-
-                    <AForm.List name={[expressionField.name, 'conditions']}>
-                      {(conditionFields, { add: addCondition, remove: removeCondition }) => (
-                        <div className="relative">
-                          <div className="relative pl-[72px]">
-                            {conditionFields.length > 1 ? (
-                              <>
-                                <div className="pointer-events-none absolute bottom-[31px] left-6 top-[31px] w-px bg-[#dbe7ff]" />
-                                <button
-                                  className="absolute left-6 top-1/2 z-10 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#b6c9ff] bg-white text-lg font-semibold text-[#3f6df6] shadow-[0_6px_18px_rgba(63,109,246,0.12)] transition hover:border-[#7da0ff] hover:text-[#2f61f0]"
-                                  type="button"
-                                  onClick={() => toggleExpressionLogic(expressionField.name)}
-                                >
-                                  {logicLabel}
-                                </button>
-                              </>
-                            ) : null}
-
-                            <div className="flex flex-col gap-4">
-                              {conditionFields.map(conditionField => (
-                                <div className="relative" key={conditionField.key}>
-                                  {conditionFields.length > 1 ? (
-                                    <div className="pointer-events-none absolute left-[-48px] top-1/2 h-px w-[48px] -translate-y-1/2 bg-[#dbe7ff]" />
-                                  ) : null}
-                                  <div className="grid min-h-[64px] min-w-0 grid-cols-[minmax(0,1fr)_minmax(120px,140px)_minmax(0,1.1fr)_88px] items-center gap-x-3">
-                                    <AForm.Item className="m-0 mb-0! min-w-0" {...conditionField} name={[conditionField.name, 'metric']} rules={[{ message: '请选择字段', required: true }]}>
-                                      <ASelect showSearch options={fieldOptions} placeholder="请选择字段" />
-                                    </AForm.Item>
-
-                                    <AForm.Item className="m-0 mb-0! min-w-0" {...conditionField} name={[conditionField.name, 'operator']} rules={[{ message: '请选择操作符', required: true }]}>
-                                      <ASelect options={DERIVED_OPERATOR_OPTIONS} placeholder="请选择操作符" />
-                                    </AForm.Item>
-
-                                    <AForm.Item className="m-0 mb-0! min-w-0" {...conditionField} name={[conditionField.name, 'value']}>
-                                      <AInput placeholder="请输入值" />
-                                    </AForm.Item>
-
-                                    <div className="flex gap-2">
-                                      <AButton  icon={<MinusOutlined />} onClick={() => removeCondition(conditionField.name)} />
-                                      <AButton  icon={<PlusOutlined />} onClick={() => addCondition({ ...defaultCondition }, conditionField.name + 1)} />
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <AButton className="ml-[72px] mt-4 pl-0" icon={<PlusOutlined />} type="link" onClick={() => addCondition({ ...defaultCondition })}>
-                            添加一个分支
-                          </AButton>
-                        </div>
-                      )}
-                    </AForm.List>
-                  </div>
-                )
-              })}
-
-              <AButton icon={<PlusOutlined />} onClick={() => addExpression(createDefaultExpression(`表达式${expressionFields.length + 1}`))}>
-                新增表达式
-              </AButton>
+      <div className="mb-4 border border-gray-200 rounded bg-white p-4">
+        <OntologyFormSectionTitle icon={<FieldTimeOutlined />}>统计口径</OntologyFormSectionTitle>
+        <div className="grid grid-cols-2 gap-x-8">
+          <div>
+            <div className="mb-2 text-sm text-[#3e5068] font-medium">
+              日期范围 <span className="text-red-500">*</span>
             </div>
-          )}
-        </AForm.List>
+            <AForm.Item
+              className="mb-0!"
+              name={['statisticalCaliber', 'dateRangeValue']}
+              rules={[
+                {
+                  validator: (_, fieldValue) => {
+                    const mode = form.getFieldValue(['statisticalCaliber', 'dateRangeMode'])
+                    if (!isDynamicStatisticalDateRangeMode(mode)) return Promise.resolve()
+                    return isValidStatisticalDateRangeValue(fieldValue)
+                      ? Promise.resolve()
+                      : Promise.reject(new Error('请输入 1 至 999 的正整数'))
+                  }
+                }
+              ]}
+            >
+              <StatisticalDateRangeFields mode={statisticalCaliber.dateRangeMode} />
+            </AForm.Item>
+            <div className="mt-2 text-sm text-[#8995a8]">
+              {getStatisticalDateRangeHint(statisticalCaliberValue || statisticalCaliber)}
+            </div>
+          </div>
+          <div>
+            <div className="mb-2 text-sm text-[#3e5068] font-medium">时段范围</div>
+            <div className="flex gap-3">
+              <AForm.Item
+                className="mb-0!"
+                name={['statisticalCaliber', 'timeRangeType']}
+                rules={[{ message: '请选择时段范围', required: true }]}
+              >
+                <ASelect
+                  style={{ width: 130 }}
+                  options={[
+                    { label: '全天', value: 'allDay' },
+                    { label: '指定时段', value: 'specified' }
+                  ]}
+                />
+              </AForm.Item>
+              {statisticalCaliber.timeRangeType === 'specified' ? (
+                <>
+                  <AForm.Item
+                    className="mb-0!"
+                    name={['statisticalCaliber', 'startTime']}
+                    rules={[{ message: '请选择开始时间', required: true }]}
+                  >
+                    <TimeStringPicker />
+                  </AForm.Item>
+                  <span className="self-center text-[#8995a8]">至</span>
+                  <AForm.Item
+                    className="mb-0!"
+                    dependencies={[['statisticalCaliber', 'startTime']]}
+                    name={['statisticalCaliber', 'endTime']}
+                    rules={[
+                      { message: '请选择结束时间', required: true },
+                      {
+                        validator: (_, value) => {
+                          const startTime = form.getFieldValue(['statisticalCaliber', 'startTime'])
+                          return !startTime || !value || value > startTime
+                            ? Promise.resolve()
+                            : Promise.reject(new Error('结束时间必须晚于开始时间'))
+                        }
+                      }
+                    ]}
+                  >
+                    <TimeStringPicker />
+                  </AForm.Item>
+                </>
+              ) : null}
+            </div>
+            <div className="mt-2 text-sm text-[#8995a8]">
+              {statisticalCaliber.timeRangeType === 'specified'
+                ? `仅统计每天 ${statisticalCaliber.startTime || '--:--'}～${statisticalCaliber.endTime || '--:--'} 的数据。`
+                : '默认统计全天数据。'}
+            </div>
+          </div>
+        </div>
+        <div className="mt-6 max-w-[50%] pr-4">
+          <AForm.Item
+            extra="单选主体维度，选项与第三步维度设置使用同一数据源。"
+            label="主体维度"
+            name={['statisticalCaliber', 'subjectDimensionId']}
+            rules={[{ message: '请选择主体维度', required: true }]}
+          >
+            <ATreeSelect
+              showSearch
+              treeDefaultExpandAll
+              loading={dimensionLoading}
+              placeholder="请选择主体维度"
+              treeData={dimensionTree}
+              treeNodeFilterProp="title"
+              onChange={value => {
+                const option = dimensionOptions.find(item => String(item.key) === String(value || ''))
+                form.setFieldValue(['statisticalCaliber', 'subjectDimensionName'], option?.name || '')
+              }}
+            />
+          </AForm.Item>
+          {dimensionError ? (
+            <Alert
+              message="主体维度加载失败"
+              type="error"
+              action={
+                <AButton
+                  size="small"
+                  onClick={retryDimensions}
+                >
+                  重试
+                </AButton>
+              }
+            />
+          ) : null}
+        </div>
       </div>
 
-      <div className="mb-4 border border-gray-200 rounded bg-gray-50 p-4">
-        <OntologyFormSectionTitle icon={<CheckCircleOutlined />}>派生逻辑生成结果</OntologyFormSectionTitle>
-        <div className="mb-3 flex flex-wrap gap-2">
-          <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">原子指标：{result.metricLabel}</span>
-          <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">数据频度：{result.frequencyLabel}</span>
-          <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold">时间周期：{result.timeWindow}</span>
-          {result.filterLabels.map(item => (
-            <span className="border border-gray-200 rounded bg-white px-3 py-2 text-sm font-semibold" key={item}>
-              业务限定：{item}
-            </span>
-          ))}
-        </div>
-        <div className="border border-blue-200 rounded border-dashed bg-white p-3">
-          <div className="mb-1 text-gray-400">公式预览</div>
-          <pre className="m-0 whitespace-pre-wrap text-blue-600">{result.expressionPreview}</pre>
-          <div className="mb-1 mt-6 text-gray-400">SQL Preview</div>
-          <pre className="m-0 whitespace-pre-wrap text-blue-600">{result.sqlPreview}</pre>
+      <div className="mb-4 border border-gray-200 rounded bg-white p-4">
+        <OntologyFormSectionTitle icon={<ProfileOutlined />}>业务限定表达式</OntologyFormSectionTitle>
+        {fieldError ? (
+          <Alert
+            className="mb-3"
+            message="数据语义字段加载失败"
+            type="error"
+            action={
+              <AButton
+                size="small"
+                onClick={onRetryFields}
+              >
+                重试
+              </AButton>
+            }
+          />
+        ) : null}
+        <RuleExpressionFormItem
+          name="derivedExpressions"
+          rules={[
+            {
+              validator: (_, value) => {
+                const baseValidation = validateRuleLayers(value, ruleFields)
+                const logicValidation = validateRuleLogicUniformity(value)
+                const issues = [...baseValidation.issues, ...logicValidation.issues]
+                if (!issues.length) return Promise.resolve()
+                setShowRuleErrors(true)
+                window.setTimeout(() => ruleBuilderRef.current?.focusFirstError())
+                return Promise.reject(new Error(issues[0]?.message || '请完善业务限定表达式'))
+              }
+            }
+          ]}
+        >
+          <RuleExpressionBuilder
+            fieldLoading={fieldLoading}
+            fields={ruleFields}
+            ref={ruleBuilderRef}
+            uniformLogic
+            validationRequested={showRuleErrors}
+          />
+        </RuleExpressionFormItem>
+      </div>
+
+      <div className="mb-4 border border-gray-200 rounded bg-white p-4">
+        <OntologyFormSectionTitle icon={<CheckCircleOutlined />}>指标预览</OntologyFormSectionTitle>
+        <div className={styles.previewGrid}>
+          <div className={styles.previewCard}>
+            <div className={styles.previewCardTitle}>公式预览</div>
+            <pre className={styles.businessPreview}>{result.businessPreview}</pre>
+          </div>
+          <div className={styles.previewCard}>
+            <div className={styles.previewCardTitle}>SQL Preview</div>
+            <pre className={styles.sqlPreview}>{result.displaySql}</pre>
+          </div>
         </div>
       </div>
     </>

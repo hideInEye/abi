@@ -1,0 +1,284 @@
+.builder {
+  --rule-primary: #5b7cf7;
+  --rule-primary-soft: #eef2ff;
+  --rule-line: #cbd7ff;
+  color: #1a2744;
+}
+
+.layerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.layerTabs {
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 3px;
+}
+
+.layerTab {
+  min-width: 132px;
+  max-width: 220px;
+  padding: 8px 20px;
+  overflow: hidden;
+  color: #53627a;
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--abi-panel-bg, #fff);
+  border: 1px solid var(--abi-panel-border, #e6eaf2);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+.layerTab:hover,
+.layerTabActive {
+  color: var(--rule-primary);
+  border-color: var(--rule-primary);
+}
+
+.layerTabActive {
+  background: var(--rule-primary-soft);
+  box-shadow: 0 4px 14px rgb(91 124 247 / 14%);
+}
+
+.layerPanel {
+  padding: 18px;
+  background: var(--abi-panel-bg, #fff);
+  border: 1px solid var(--abi-panel-border, #e4e9f2);
+  border-radius: 8px;
+}
+
+.layerHeader,
+.groupHeader,
+.groupTitle,
+.groupActions,
+.conditionRow {
+  display: flex;
+  align-items: flex-start;
+}
+
+.layerHeader {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.nameField {
+  flex: 1;
+  min-width: 0;
+}
+
+.layerHeader > .nameField {
+  max-width: 520px;
+}
+
+.logicSpine {
+  position: relative;
+  padding-left: 34px;
+}
+
+.logicSpine::before {
+  position: absolute;
+  top: 0;
+  bottom: 24px;
+  left: 11px;
+  width: 2px;
+  content: '';
+  background: linear-gradient(var(--rule-primary), var(--rule-line));
+  border-radius: 2px;
+}
+
+.groupCard {
+  position: relative;
+  padding: 16px;
+  background: var(--abi-card-box-draw-pop-bg, #fcfdff);
+  border: 1px solid #dbe3f1;
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgb(26 39 68 / 4%);
+}
+
+.groupCard + .groupCard {
+  margin-top: 14px;
+}
+
+.groupHeader {
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 32px;
+}
+
+.groupTitle {
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.collapseMark {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  color: var(--rule-primary);
+  line-height: 14px;
+  place-items: center;
+  background: var(--rule-primary-soft);
+  border: 1px solid var(--rule-line);
+  border-radius: 3px;
+}
+
+.groupActions {
+  flex: none;
+}
+
+.conditionList {
+  position: relative;
+  margin-top: 14px;
+  padding: 4px 0 2px 38px;
+}
+
+.conditionList::before {
+  position: absolute;
+  top: 4px;
+  bottom: 8px;
+  left: 13px;
+  width: 2px;
+  content: '';
+  background: #d7def2;
+  border-radius: 2px;
+}
+
+.conditionRow {
+  position: relative;
+  gap: 10px;
+  min-width: 0;
+}
+
+.conditionBadge {
+  display: inline-grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  color: #fff;
+  font-weight: 600;
+  place-items: center;
+  background: var(--rule-primary);
+  border-radius: 6px;
+}
+
+.conditionControl {
+  flex: 1 1 260px;
+  min-width: 180px;
+}
+
+.operatorControl {
+  flex: 0 0 140px;
+}
+
+.operatorControl :global(.ant-select) {
+  width: 100%;
+}
+
+.valueControl {
+  flex: 1 1 180px;
+  min-width: 140px;
+}
+
+.logicNode {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  margin: 8px 0 8px -36px;
+  padding: 0;
+  color: var(--rule-primary);
+  font-size: 12px;
+  place-items: center;
+  background: #fff;
+  border: 1px solid var(--rule-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.logicNodeError {
+  color: #ff4d4f;
+  border-color: #ff4d4f;
+  box-shadow: 0 0 0 2px rgb(255 77 79 / 10%);
+}
+
+.conditionLogicNode {
+  margin: 8px 0 8px -38px;
+}
+
+.emptyLayer,
+.emptyGroup {
+  color: #8a97aa;
+  text-align: center;
+  background: #f8faff;
+  border: 1px dashed #d6deed;
+  border-radius: 6px;
+}
+
+.emptyLayer {
+  padding: 24px;
+}
+
+.emptyGroup {
+  margin-top: 14px;
+  padding: 16px;
+}
+
+.addGroupWrap {
+  display: block;
+  margin-top: 14px;
+}
+
+.errorText {
+  margin-top: 4px;
+  color: #ff4d4f;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.fieldState {
+  display: grid;
+  min-height: 96px;
+  place-items: center;
+}
+
+@media (max-width: 760px) {
+  .layerBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .logicSpine {
+    padding-left: 28px;
+  }
+
+  .conditionRow {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .conditionControl {
+    flex-basis: calc(100% - 48px);
+  }
+
+  .operatorControl,
+  .valueControl {
+    flex: 1 1 160px;
+    margin-left: 38px;
+  }
+}

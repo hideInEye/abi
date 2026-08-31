@@ -1,0 +1,71 @@
+.dateRangeCompact {
+  align-items: stretch;
+  display: grid !important;
+  grid-template-columns: 140px minmax(0, 1fr) 116px;
+  width: 100%;
+
+  .rangeMode {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .rangeValue {
+    align-self: stretch;
+    height: auto !important;
+    min-width: 0;
+    width: 100% !important;
+  }
+
+  .rangeUnit {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .rangeValue :global(.ant-input-number-input-wrap),
+  .rangeValue :global(.ant-input-number-input) {
+    height: 100%;
+  }
+
+  .rangeMode :global(.ant-select-selector),
+  .rangeUnit :global(.ant-select-selector) {
+    align-items: center;
+    height: 100% !important;
+  }
+
+  .rangeMode :global(.ant-select-selector) {
+    background: #f7f9fc !important;
+    color: #5f6f85;
+    border-radius: 8px 0 0 8px !important;
+  }
+
+  .rangeValue {
+    border-radius: 0 !important;
+  }
+
+  .rangeUnit :global(.ant-select-selector) {
+    border-radius: 0 8px 8px 0 !important;
+  }
+}
+
+.singleMode {
+  grid-template-columns: minmax(0, 1fr);
+
+  .rangeMode {
+    width: 100%;
+  }
+
+  .rangeMode :global(.ant-select-selector) {
+    background: #fff !important;
+    border-radius: 8px !important;
+  }
+}
+
+@media (max-width: 1280px) {
+  .dateRangeCompact {
+    grid-template-columns: 120px minmax(0, 1fr) 104px;
+  }
+
+  .singleMode {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

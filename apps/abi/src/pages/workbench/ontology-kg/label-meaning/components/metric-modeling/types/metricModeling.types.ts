@@ -3,6 +3,7 @@
 export type JsonRecord = Record<string, unknown>
 
 export interface KnowledgeTechField {
+  agg?: string
   alias?: string
   bizName?: string
   description?: string
@@ -12,6 +13,7 @@ export interface KnowledgeTechField {
   fieldType?: string
   name?: string
   originName?: string
+  projectionFunc?: string
   rtableName?: string
   tableBizName?: string
   tableName?: string
@@ -28,6 +30,9 @@ export interface KnowledgeAtomicMetricMeta {
   fieldName?: string
   id?: number | string
   label?: string
+  projectionFunc?: string
+  semanticSchemaId?: number | string
+  semanticSchemaName?: string
   value: string
 }
 
@@ -38,16 +43,127 @@ export interface KnowledgeExpressionFieldMeta {
 }
 
 export interface KnowledgeDerivedCondition {
+  fieldId?: string
+  id?: string
   logic?: 'AND' | 'OR'
+  logicWithPrevious?: 'AND' | 'OR'
   metric?: string
   operator?: string
-  value?: string
+  value?: number | string
 }
 
 export interface KnowledgeDerivedExpression {
   conditions?: KnowledgeDerivedCondition[]
+  groups?: Array<{
+    conditions?: KnowledgeDerivedCondition[]
+    id?: string
+    logicWithPrevious?: 'AND' | 'OR'
+    name?: string
+  }>
+  id?: string
   innerLogic?: 'AND' | 'OR'
   name?: string
+}
+
+export type PrecomputeFrequency = 'daily' | 'hourly' | 'monthly' | 'weekly'
+
+export interface ApiUpdateFrequency {
+  day_of_month: number | null
+  day_of_week: number | null
+  frequency: PrecomputeFrequency
+  minute: string
+}
+
+export type PrecomputeConfig =
+  | { frequency: 'hourly'; minute: number }
+  | { frequency: 'daily'; time: string }
+  | { frequency: 'weekly'; time: string; weekday: number }
+  | { frequency: 'monthly'; monthDay: number; time: string }
+
+export type StatisticalDateRangeMode =
+  | 'last_month'
+  | 'last_quarter'
+  | 'last_week'
+  | 'last_year'
+  | 'previous_full'
+  | 'recent'
+  | 'this_month'
+  | 'this_quarter'
+  | 'this_week'
+  | 'this_year'
+  | 'today'
+  | 'yesterday'
+
+export type StatisticalDateRangeUnit = 'day' | 'hour' | 'month' | 'quarter' | 'week' | 'year'
+
+export interface StatisticalCaliber {
+  dateRangeMode: StatisticalDateRangeMode
+  dateRangeUnit: StatisticalDateRangeUnit
+  dateRangeValue: number
+  endTime?: string
+  startTime?: string
+  subjectDimensionId?: string
+  subjectDimensionName?: string
+  timeRangeType: 'allDay' | 'specified'
+}
+
+export type ApiStatisticalDateRangeType =
+  | 'current_month'
+  | 'current_quarter'
+  | 'current_week'
+  | 'current_year'
+  | 'last_month'
+  | 'last_quarter'
+  | 'last_week'
+  | 'last_year'
+  | 'previous'
+  | 'recent'
+  | 'today'
+  | 'yesterday'
+
+export interface ApiCalcPeriod {
+  date_range: {
+    type: ApiStatisticalDateRangeType
+    unit: StatisticalDateRangeUnit | null
+    value: number | null
+  }
+  time_range: {
+    end_time: string | null
+    start_time: string | null
+    type: 'all_day' | 'custom'
+  }
+}
+
+export interface ApiSubjectDimension {
+  dim_id: string
+  dim_name: string
+}
+
+export interface ApiDerivedTemplateCondition {
+  conditionId: string
+  field: string
+  fieldName: string
+  operator: 'EQ' | 'GE' | 'GT' | 'IN' | 'LE' | 'LT' | 'NE' | 'NOT_IN' | 'NOT_NULL' | 'NULL'
+  operatorName: string
+  value?: number | string
+}
+
+export interface ApiDerivedTemplateExpression {
+  conditions: ApiDerivedTemplateCondition[]
+  expressionId: string
+  innerLogic: 'AND' | 'OR'
+  name: string
+}
+
+export interface ApiDerivedTemplateLayer {
+  expressions: ApiDerivedTemplateExpression[]
+  groupLogic: 'AND' | 'OR'
+  layerName: string
+  sortOrder: number
+}
+
+export interface ApiDerivedIndicatorTemplates {
+  layers: ApiDerivedTemplateLayer[]
 }
 
 export type KnowledgeTemplateParams = Partial<
@@ -56,8 +172,8 @@ export type KnowledgeTemplateParams = Partial<
     | 'accumulateStartDate'
     | 'compareMetricId'
     | 'comparePeriod'
-    | 'comparisonOutputType'
     | 'compareType'
+    | 'comparisonOutputType'
     | 'cumulativeMetricId'
     | 'cumulativeMode'
     | 'cumulativeTimeRange'
@@ -82,7 +198,7 @@ export interface KnowledgeSubmitPayload extends KnowledgeFormValues {
   atomicMetricMetaMap?: Record<string, KnowledgeAtomicMetricMeta>
   derivedExpressionFieldMetaMap?: Record<string, KnowledgeExpressionFieldMeta>
   dimensionFieldIds?: string
-  groupId: string
+  groupId: number | string
   indAlias?: string
   indId?: number
   relItemId?: string
@@ -97,6 +213,7 @@ export interface AtomicMappingPayload {
   relSchemaId: number | string
   semanticsGroupId?: number | string
   spaceId: number
+  projectionFunc: string
   techId: KnowledgeTechField[]
 }
 
@@ -148,6 +265,7 @@ export interface KnowledgeIndicatorItem {
   ownerPhone?: string
   percentileValue?: number | string
   projectionFunc?: string
+  precomputeConfig?: PrecomputeConfig
   qualityLevel?: string
   ratioDenominatorId?: number | string
   ratioNumeratorId?: number | string
@@ -169,6 +287,7 @@ export interface KnowledgeIndicatorItem {
   semanticSchemaId?: number | string
   semanticSchemaName?: string
   status?: number | string
+  statisticalCaliber?: StatisticalCaliber
   techName?: string
   techId?: KnowledgeTechField[] | JsonRecord | string
   technicalDefinition?: string
@@ -177,7 +296,7 @@ export interface KnowledgeIndicatorItem {
   termId?: number
   thresholdMax?: string
   thresholdMin?: string
-  updateFrequency?: string
+  updateFrequency?: ApiUpdateFrequency | string
   updateTime?: string
   variableMappings?: Array<{ indicatorId?: number | string; variableName?: string }>
   volatilityDataRange?: string
@@ -198,7 +317,6 @@ export interface KnowledgeFormValues {
   cumulativeMetricId?: number | string
   cumulativeMode?: string
   cumulativeTimeRange?: string
-  updateFrequency?: string
   dataType?: string
   derivedConditions?: KnowledgeDerivedCondition[]
   derivedConditionExpr?: string
@@ -218,6 +336,7 @@ export interface KnowledgeFormValues {
   ownerEmail?: string
   ownerPhone?: string
   percentileValue?: number | string
+  precomputeConfig?: PrecomputeConfig
   projectionFunc?: string
   qualityLevel?: string
   ratioDenominatorId?: number | string
@@ -233,6 +352,7 @@ export interface KnowledgeFormValues {
   semanticSchemaId?: number | string
   semanticSchemaName?: string
   status?: number | string
+  statisticalCaliber?: StatisticalCaliber
   techName?: string
   techId?: KnowledgeTechField[] | JsonRecord | string
   technicalDefinition?: string
