@@ -61,6 +61,8 @@ type SectionKey = 'model' | 'opening' | 'questions' | 'semantic' | 'mcp' | 'skil
 const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) => {
   const [name, setName] = useState<string>('')
   const [prompt, setPrompt] = useState<string>('')
+  // 开场引导（与管理端一致读 version.prologue）
+  const [prologue, setPrologue] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [iconKey, setIconKey] = useState<string | undefined>(undefined)
   const [enableDebug, setEnableDebug] = useState(false)
@@ -175,6 +177,7 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
 
       setName(detail.appName || fallback?.name || '')
       setPrompt(version.appPrompt || detail.appPrompt || '')
+      setPrologue(version.prologue || detail.prologue || '')
       setDescription(detail.description || fallback?.description || '')
       setIconKey(detail.icon || undefined)
       setEnableDebug(detail.enableDebug === '1')
@@ -401,9 +404,9 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
               title="开场引导"
               onToggle={() => toggle('opening')}
             >
-              {prompt ? (
+              {prologue ? (
                 <div style={{ color: '#3e5068', fontSize: 13, lineHeight: 1.6, padding: '6px 24px', whiteSpace: 'pre-wrap' }}>
-                  {prompt}
+                  {prologue}
                 </div>
               ) : (
                 <div style={{ color: '#8fa0b5', fontSize: 13, padding: '8px 24px' }}>暂未设置开场引导</div>

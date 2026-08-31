@@ -1667,3 +1667,180 @@ ABI 页面在账号被其他环境顶掉后，自动请求会返回 401 并显�
 - `plan.thought`/`step.meta` 到达后展示固化思考与「当前动作」，行为与原来一致。
 - 历史探索卡片思考展示不变。
 - reducer 特征测试通过；两个应用类型检查不新增错误。
+
+## 2026-08-31 追加：助手开场引导回显 + 助手会话欢迎页 + 数据语义默认选中第一个
+
+### 需求类型
+
+Bug 修复 + 体验优化（纯前端，chat 应用）。
+
+### 背景
+
+1. 管理端助手配置可设置「开场引导」（prologue，存于 version.prologue），但 chat 端「应用工坊-我的助手」查看抽屉从未读取该字段，且开场引导折叠块误用助手画像 `prompt` 渲染，导致设置了开场引导仍显示「暂未设置开场引导」。
+2. chat 端点击助手卡片会立即 `createApp` 创建绑定会话并跳转对话页；新会话无消息时消息区空白。要求进入后展示与欢迎页同款的页面：文案为对应助手开场引导、不展示推荐示例。
+3. 输入框「数据」数据语义弹窗默认不选中任何项，要求默认选中第一个。
+
+### 目标
+
+- 助手查看抽屉开场引导正确回显 `version.prologue`（回退 `detail.prologue`）。
+- 助手会话（appId≠0）消息列表为空时，消息区展示类欢迎页：标题=助手名、副标题=开场引导（回退描述），不渲染推荐示例卡片；有消息后自动消失。
+- 数据语义候选就绪且未选中时自动选中第一个 schema 叶子（助手会话用绑定候选，普通会话用全局树）；历史会话回填的语义不被覆盖。
+
+### 非目标
+
+- 不改变「点击助手卡片立即创建会话」的现有流程。
+- 不新增后端接口调用（复用现有 app/get 详情响应补充字段映射）。
+- 不调整管理端开场引导编辑逻辑与普通会话欢迎页（TrustABI · 芯智 + 推荐示例）。
+
+### 影响范围预期
+
+- 修改：`apps/chat/src/pages/chat/workshop/AssistantDetailDrawer.tsx`（prologue 回显）
+- 修改：`apps/chat/src/pages/chat/workshop/assistantResources.ts`（映射补充 prologue/description）
+- 修改：`apps/chat/src/components/conversation-analysis/NewChatWelcome.tsx`（可选 title/subtitle/hideExamples）
+- 修改：`apps/chat/src/components/conversation-analysis/index.tsx`（助手欢迎页接入 + 默认选中第一个）
+- 修改：`apps/chat/src/components/conversation/index.tsx`、`hooks/useConversationController.ts`、`components/MessageList.tsx`（emptyContent 透传）
+- 新增 run log：`.ai/runs/2026-08-31-assistant-prologue-welcome/`
+
+### 验收标准
+
+- 管理端设置开场引导后，chat 端助手查看抽屉「开场引导」展示设置内容。
+- 点击助手卡片进入对话页，空白消息区展示助手名 + 开场引导文案，无推荐示例；发送首条消息后欢迎页消失。
+- 进入对话页后数据语义按钮默认展示第一个候选名称；打开历史会话时仍回填该会话最后使用的语义。
+- chat 应用类型检查不新增错误。
+
+## 2026-08-31 追加二：助手会话延后创建 + 欢迎页接口调用治理
+
+### 需求类型
+
+体验优化 + 性能治理（纯前端，chat 应用）。覆盖上一节「不改变点击卡片立即创建会话流程」的非目标（用户本轮明确要求延后）。
+
+### 背景
+
+1. 点击助手卡片进入对话页时一次性触发大量接口：`session/add`（立即建会话）+ `session/get` 兜底 + `message/query` 空历史 + `fetchAssistantSessionList` 的逐助手 N 次 `session/list`。
+2. 普通欢迎页同样一次涌入 1 次 `session/list`(appId=0) + 1 次 `app/list` + N 次逐助手 `session/list`（图二 8 个 list）。
+3. 用户要求：点卡片先不建会话，发起对话后再创建，载荷与之前一致、仅时机延后。
+
+### 目标
+
+- 点助手卡片仅跳转 `/chat/task/new?appId=xx`，展示助手欢迎页（开场引导、无推荐示例）；首次发送/上传需要 conv_uid 时才 `createApp`，payload 同之前（space_id + appId + title=助手名）。
+- 对话路由（hideSidebar）跳过逐助手会话合并（无消费方，路由恢复由 `session/get` 兜底）；保留侧栏场景给 `fetchAssistantSessionList` 加 60s TTL 缓存，重挂载/静默刷新不重复打 N 次 list。
+- 创建后路由 search 清空，助手上下文由 curConv.appId 无缝接管（assistantId 不变 → 绑定资源不重拉、已选语义不清空）。
+
+### 非目标
+
+- 不改后端 session/list 按 appId 精确过滤的行为；不改侧栏历史列表数据源。
+- 不删全局 StrictMode；不动模型/语义树的既有缓存守卫。
+
+### 影响范围预期
+
+- 修改：`apps/chat/src/pages/chat/workshop/index.tsx`（点卡片仅跳转携 appId）
+- 修改：`apps/chat/src/pages/chat/task/$taskId.tsx`（validateSearch 接收 appId 透传 pendingAssistantId）
+- 修改：`apps/chat/src/components/conversation-analysis/index.tsx`（待命助手上下文、createNewConv(options)、hideSidebar 跳过合并、欢迎页渲染分支）
+- 修改：`apps/chat/src/service/api/app.ts`（fetchAssistantSessionList TTL 缓存）
+- 新增 run log：`.ai/runs/2026-08-31-defer-assistant-session/`
+
+### 验收标准
+
+- 点助手卡片：无 `session/add`、无 `message/query`、无逐助手 `session/list`；仅助手详情 `app/get` + 常规 `session/list`(appId=0)/分组 list。
+- 助手欢迎页发送首条消息后才出现 `session/add`，且 payload 含 appId 与助手名标题；会话进入后绑定资源限制与之前一致。
+- 普通欢迎页 60s 内重复进入不再重复打逐助手 list。
+- chat 应用类型检查不新增错误。
+
+## 2026-08-31 追加三：大屏分享记录卡片对齐助手端
+
+### 需求类型
+
+前端 UI 一致性调整（纯前端，不改接口协议）。
+
+### 背景
+
+dashboard 微应用「我的大屏 → 分享记录」卡片仍为旧版行式字段（分享时间/过期时间/访问密码：无），助手端（abi 我的助手）已使用「渐变图标 + 名称 + 时间描述 + 底部状态标签 + 复制链接」卡片。用户截图要求大屏与助手保持一致：底部展示密码状态信息（当前启用：无密码/密码保护），复制链接时含密码一并复制。
+
+### 目标
+
+- `apps/dashboard/src/pages/my-screen/ShareRecordList.tsx` 卡片改为与助手端相同的 `abi-assistant-card` 结构：头部渐变圆角图标（大屏 Monitor 图标）+ 名称 + 「分享时间/过期时间」描述；底部密码状态标签（无密码/密码保护）+ 复制链接按钮。
+- 复制链接行为不变，沿用既有「含密码一并复制」与大屏链接格式转换（`/#/`→`/`、`/dr/`→`/dashboard-share-page/`）。
+- `ProjectList.less` 新增 `.abi-assistant-card` 系列样式（取值对齐 abi `table.scss`，保证两端视觉一致）。
+
+### 非目标
+
+- 不修改分享记录查询接口、分页、空态与切空间重拉逻辑。
+- 不修改「已发布大屏」tab 卡片与样式（`abi-data-card` 仍被 home 项目列表使用）。
+- 不修改助手端、chat 端分享记录既有实现。
+
+### 影响范围预期
+
+- 修改：`apps/dashboard/src/pages/my-screen/ShareRecordList.tsx`
+- 修改：`apps/dashboard/src/pages/home/project-list/ProjectList.less`
+- 新增 run log：`.ai/runs/2026-08-31-share-record-card-consistency/`
+
+### 验收标准
+
+- 大屏分享记录卡片结构与助手端一致：图标 + 名称 + 分享/过期时间，底部无密码/密码保护标签 + 复制链接。
+- 复制链接含密码时一并复制，提示文案与助手端一致。
+- dashboard 类型检查不新增错误。
+
+## 2026-08-31 追加四：分享记录状态标签改为启用状态、按钮文案统一
+
+### 需求类型
+
+前端 UI 一致性修正（纯前端，不改接口协议）。覆盖追加三的标签口径。
+
+### 背景
+
+用户截图标注确认：分享记录卡片底部标签展示分享的启用状态信息（当前启用/已过期/已停用），不是密码状态（无密码/密码保护）；按钮文案为「复制链接和密码」。助手端（abi）与大屏端（dashboard）同步修改、保持一致。
+
+### 目标
+
+- 两端分享记录卡片底部 `ac-tag` 展示分享状态：`expirationDate` 已过期 → 已过期；后端 `status`/`shareStatus` 非启用 → 已停用；其余兜底「当前启用」（与助手卡片 `status==='1'` → 当前启用 口径一致）。启用绿色标签，非启用灰色（`.off` 变体）。
+- 两端按钮文案统一「复制链接和密码」；复制逻辑沿用「含密码一并复制」。
+- dashboard `ProjectList.less` 的 `.ac-tag` 补 `.off` 灰色变体（abi `table.scss` 已有）。
+
+### 非目标
+
+- 不修改复制逻辑、链接格式转换、分页、空态与切空间重拉。
+- 不修改分享弹窗、已发布列表。
+
+### 验收标准
+
+- 两端分享记录卡片底部标签展示当前启用（或已过期/已停用），按钮展示「复制链接和密码」。
+- abi、dashboard 类型检查不新增错误。
+
+## 2026-08-31 追加：助手分享悬浮框数据语义改随 getProjectInfo 下发（废弃 schema/tree 独立调用）
+
+### 背景与口径（用户 2026-08-31 确认）
+
+- 助手分享悬浮框（`apps/chat/src/components/chat-widget`）的数据语义不再单独调 `GET /copilot/v1/schema/tree?spaceId=`，改由助手详情接口 `GET /dashboard/api/v1/project/getProjectInfo/{type}/{appId}?shareCode=` 一并下发，结构与 app/get 一致（`versions[].schemaSemantics[].schemaConfig[]`）；后端字段尚未加上，前端先行对接并降级为空列表。
+- 2026-08-28 需求中「语义树来源：复用 /copilot/v1/schema/tree」一段废止；`WidgetAssistantInfo.spaceId` 及 `fetchSemanticTree` 删除。
+- chat 主对话（`conversation-analysis`）、大屏的 `fetchSemanticTree` 不受影响，仍走 `/copilot/v1/schema/tree`。
+
+### 影响范围与验收
+
+- `apps/chat/src/components/chat-widget/service.ts`（`mapProjectSemantics` 纯函数 + `fetchAssistantInfo` 携带 `semantics`）、`ChatWidget.tsx`（树直接取助手信息）、`service.test.ts` 补纯函数测试。
+- 后端未加字段时下拉显示「暂无数据语义」，对话不受影响；`pnpm --filter ai-bot exec tsc --noEmit` 与 chat-widget Vitest 通过。
+
+## 2026-08-31 追加五：应用工坊三个菜单页签宽度统一按属性建模设置
+
+### 需求类型
+
+前端 UI 一致性调整（纯前端，不改接口协议）。
+
+### 背景
+
+用户截图标注（管理侧）：tab 宽度统一按照「本体网络 -> 属性建模」宽度设置。应用工坊三个菜单（我的助手 / 我的大屏 / 我的对话）顶部页签栏需与属性建模页签（`abi-attr-modeling-tabs`，见 `apps/abi/src/styles/scss/table.scss`）的宽度设置一致。
+
+### 现状与目标
+
+- 我的助手（`apps/abi/src/pages/workbench/app-workshop/my-assistant/index.tsx`）、我的对话（`app-workshop/my-chat/index.tsx`）已使用与属性建模同源的 `abi-attr-modeling-tabs`，保持不动。
+- 我的大屏（dashboard 微应用 `pages/my-screen/MyScreen.tsx` 自定义 `.my-screen-tabs`）度量不一致：容器左右内边距 28px、页签间距 24px、页签内边距 12px 0 14px。统一为属性建模取值：左右内边距 24px、相邻页签间距 48px（=24 margin-right + 24 margin-left）、页签内边距 16px 0；背景对齐 `var(--abi-card-bg)`（带原值 fallback，保证独立运行兜底）。
+
+### 非目标
+
+- 不改三个页面的页签切换、搜索、分页、取消发布、分享等业务逻辑。
+- 不改属性建模自身样式取值；不改我的助手 / 我的对话既有实现。
+
+### 验收标准
+
+- 我的大屏页签栏左右内边距、页签间距、上下内边距、背景与属性建模 / 我的助手 / 我的对话页签栏一致。
+- dashboard `ProjectList.less` less 编译通过，类型检查不新增错误。
+- 新增 run log：`.ai/runs/2026-08-31-app-workshop-tabs-width-unify/`。

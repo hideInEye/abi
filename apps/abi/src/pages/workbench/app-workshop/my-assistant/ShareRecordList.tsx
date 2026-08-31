@@ -15,6 +15,8 @@ interface ShareRecordItem {
   sharePassword: string;
   shareTime: string;
   expiration: string;
+  statusLabel: string;
+  statusOff: boolean;
   icon?: string;
 }
 
@@ -23,8 +25,21 @@ function fmtTime(t?: string | null): string {
   return t ? String(t).replace('T', ' ') : '-';
 }
 
+/** 分享状态标签：过期时间优先，其次后端 status 字段，兜底「当前启用」（与助手卡片状态口径一致） */
+function getShareStatus(item: any): { label: string; off: boolean } {
+  if (item.expirationDate) {
+    const t = new Date(String(item.expirationDate).replace('T', ' ')).getTime();
+    if (!Number.isNaN(t) && t < Date.now()) return { label: '已过期', off: true };
+  }
+  // 大屏域 status '0'=已发布启用、'2'=取消发布；助手域 '1'=启用。仅显式停用才置灰，'0'/'1' 均视为当前启用
+  const s = item.status ?? item.shareStatus;
+  if (s === '2' || s === 2 || s === false || s === 'off' || s === 'disabled') return { label: '已停用', off: true };
+  return { label: '当前启用', off: false };
+}
+
 /** 将后端分享记录映射为展示结构 */
 function mapShareRecord(item: any): ShareRecordItem {
+  const status = getShareStatus(item);
   return {
     id: String(item.id ?? item.shareCode ?? item.projectId ?? ''),
     name: item.projectName || item.appName || item.name || '-',
@@ -32,6 +47,8 @@ function mapShareRecord(item: any): ShareRecordItem {
     sharePassword: item.sharePassword ?? '',
     shareTime: fmtTime(item.createTime || item.shareTime),
     expiration: item.expirationDate ? fmtTime(item.expirationDate) : '永久',
+    statusLabel: status.label,
+    statusOff: status.off,
     icon: item.icon,
   };
 }
@@ -43,11 +60,16 @@ function extractPage(data: any): { rows: any[]; total: number } {
   return { rows: Array.isArray(rows) ? rows : [], total: Number(page.total ?? (Array.isArray(rows) ? rows.length : 0)) || 0 };
 }
 
+interface ShareRecordListProps {
+  /** 外部刷新信号（数值变化时回到第一页重拉，如分享成功后） */
+  refreshToken?: number;
+}
+
 /**
  * 分享记录 tab（对接统一分享查询接口 /api/dashboard/api/v1/project/share/list，服务端分页）
  * type 由使用方指定：abi 我的助手=workflow
  */
-const ShareRecordList: React.FC = () => {
+const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) => {
   const spaceId = useAppSelector(getSpaceId);
   const [records, setRecords] = useState<ShareRecordItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -87,7 +109,7 @@ const ShareRecordList: React.FC = () => {
     setCurrentPage(1);
     fetchList(1, pageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spaceId, fetchList]);
+  }, [spaceId, fetchList, refreshToken]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -167,11 +189,11 @@ const ShareRecordList: React.FC = () => {
                   <div className="ac-desc">分享时间：{r.shareTime}　过期时间：{r.expiration}</div>
                 </div>
               </div>
-              {/* 底部：密码标签 + 复制链接 */}
+              {/* 底部：分享状态标签 + 复制链接和密码 */}
               <div className="ac-footer">
-                <span className="ac-tag">{r.sharePassword ? '密码保护' : '无密码'}</span>
+                <span className={`ac-tag${r.statusOff ? ' off' : ''}`}>{r.statusLabel}</span>
                 <div className="ac-actions">
-                  <button className="ac-btn" onClick={() => handleCopy(r)}>复制链接</button>
+                  <button className="ac-btn" onClick={() => handleCopy(r)}>复制链接和密码</button>
                 </div>
               </div>
             </div>

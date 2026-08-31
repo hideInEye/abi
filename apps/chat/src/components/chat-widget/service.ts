@@ -37,11 +37,11 @@ export interface WidgetAssistantInfo {
   description: string
   prologue: string
   recQuestions: string[]
-  /** 助手所属空间（拉取数据语义分组树用） */
-  spaceId: number
+  /** 助手绑定的数据语义（随助手详情一并下发，扁平叶子列表） */
+  semantics: WidgetSemanticNode[]
 }
 
-/** 数据语义分组树节点（与大屏/对话同款：type=group/schema，递归 children） */
+/** 数据语义节点（助手详情下发绑定语义：仅 schema 叶子，无分组节点） */
 export interface WidgetSemanticNode {
   id: string | number
   type?: 'group' | 'schema'
@@ -72,8 +72,6 @@ const API = {
   sessionAdd: '/abi-chat/v1/app/session/add',
   messageQuery: '/abi-chat/v1/app/message/query',
   completions: '/chat-proxy/api/v2/workflow/chat/completions',
-  /** 数据语义分组树（与大屏/对话同一统一接口，随 shareCode 免登录下发） */
-  semanticTree: '/copilot/v1/schema/tree',
 }
 
 /** 裸 fetch + 附 shareCode；不读 token/localStorage，供分享/嵌入免登录场景 */
@@ -117,9 +115,10 @@ async function getJson(cfg: WidgetConfig, path: string, params: Record<string, s
 }
 
 /**
- * 拉取助手信息（名称/开场白/推荐问题），失败返回 null 由调用方兜底。
+ * 拉取助手信息（名称/开场白/推荐问题/绑定数据语义），失败返回 null 由调用方兜底。
  * 进入分享页改走统一接口 GET /api/v1/project/getProjectInfo/{type}/{id}，
  * type 由分享校验响应携带（后端已确认：自主助手=react / 工作流助手=workflow）；响应字段与 app/get 一致。
+ * 数据语义随助手详情一并下发（不再单独调 /copilot/v1/schema/tree），后端未加字段时降级为空列表。
  */
 export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string, type: ProjectType = 'react'): Promise<WidgetAssistantInfo | null> {
   try {
@@ -132,11 +131,41 @@ export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string, type:
       description: d.description || '',
       prologue: d.prologue || '',
       recQuestions: parseRecQuery(d.recQuery),
-      spaceId: Number(d.spaceId ?? 0) || 0,
+      semantics: mapProjectSemantics(d),
     }
   } catch {
     return null
   }
+}
+
+/**
+ * 从助手详情（getProjectInfo 响应，与 app/get 同结构）提取绑定数据语义。
+ * 结构同详情抽屉：版本选取优先 latestVersionId，回退首个版本再回退详情自身；
+ * 语义位于 version.schemaSemantics[].schemaConfig[]（id/name/groupPath），映射为扁平 schema 叶子。
+ */
+export function mapProjectSemantics(detail: any): WidgetSemanticNode[] {
+  const safe: any = detail && typeof detail === 'object' ? detail : {}
+  const versions: any[] = Array.isArray(safe.versions) ? safe.versions : []
+  const version: any =
+    versions.find((v: any) => v?.versionId != null && String(v.versionId) === String(safe.latestVersionId)) ||
+    versions[0] ||
+    safe
+  const nodes: WidgetSemanticNode[] = []
+  const schemaSemantics: any[] = Array.isArray(version?.schemaSemantics) ? version.schemaSemantics : []
+  schemaSemantics.forEach((s: any) => {
+    const cfg: any[] = Array.isArray(s?.schemaConfig) ? s.schemaConfig : []
+    cfg.forEach((c: any) => {
+      if (c?.id == null) return
+      nodes.push({
+        id: `schema_${c.id}`,
+        type: 'schema',
+        schemaId: c.id,
+        name: c.name || '',
+        groupName: c.groupPath || '',
+      })
+    })
+  })
+  return nodes
 }
 
 /** recQuery 为 JSON 数组字符串，兼容直接数组；解析失败返回空数组 */
@@ -146,22 +175,6 @@ export function parseRecQuery(raw: unknown): string[] {
   try {
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? parsed.map((q) => String(q)).filter(Boolean) : []
-  } catch {
-    return []
-  }
-}
-
-/**
- * 拉取数据语义分组树（与大屏/对话同一接口）；免登录场景随 shareCode 下发。
- * 后端未支持或失败时返回空数组，由调用方降级展示，不阻断对话。
- */
-export async function fetchSemanticTree(cfg: WidgetConfig, spaceId: number): Promise<WidgetSemanticNode[]> {
-  if (!spaceId) return []
-  try {
-    const json = await getJson(cfg, API.semanticTree, { spaceId })
-    if (!isOk(json)) return []
-    const list = json?.data?.data ?? json?.data ?? json?.rows
-    return Array.isArray(list) ? list : []
   } catch {
     return []
   }

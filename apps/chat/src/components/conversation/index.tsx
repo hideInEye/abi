@@ -340,6 +340,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             onCloseExplore={closeExplore}
             activeExploreId={activeExploreId}
             hideMessageNavRail={reportPreview.mounted || explorePreview.mounted}
+            emptyContent={props.emptyContent}
           />
         </div>
 

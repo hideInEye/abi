@@ -1,4 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
+import type { ReactNode } from 'react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Checkbox } from 'antd'
 
@@ -99,6 +100,8 @@ type MessageListProps = {
   activeExploreId?: string
   /** 报告预览占用右侧空间时隐藏问题导航，避免导航面板覆盖双栏内容。 */
   hideMessageNavRail?: boolean
+  /** 消息列表为空时展示的占位内容（如助手会话开场引导欢迎页） */
+  emptyContent?: ReactNode
 }
 
 const MessageList = ({
@@ -143,6 +146,7 @@ const MessageList = ({
   onCloseExplore,
   activeExploreId,
   hideMessageNavRail = false,
+  emptyContent,
 }: MessageListProps) => {
   const containerRef = chatContainerRef ?? useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
@@ -713,7 +717,8 @@ const MessageList = ({
           className={containerClassName ?? 'absolute inset-0 overflow-y-auto overflow-x-hidden w-full scroll-smooth'}
           style={{ scrollbarGutter: 'stable' }}
         >
-          <div className="max-w-[53.75rem] w-full m-auto">
+          <div className={`max-w-[53.75rem] w-full m-auto ${mergedGroups.length === 0 && emptyContent ? 'h-full' : ''}`}>
+            {mergedGroups.length === 0 && emptyContent}
             {mergedGroups.map(renderMergedEntry)}
             {reportLoadError && <Alert className="mb-4" type="error" showIcon message={reportLoadError} />}
           </div>

@@ -6,7 +6,6 @@ import {
   ensureSession,
   fetchAssistantInfo,
   fetchHistory,
-  fetchSemanticTree,
   sendChatStream,
   type ProjectType,
   type WidgetAssistantInfo,
@@ -101,9 +100,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const [passwordError, setPasswordError] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
-  // 数据语义（分组树：type=group/schema，递归 children；与大屏同款）
+  // 数据语义（助手绑定的语义叶子，随 getProjectInfo 一并下发）
   const [semanticTree, setSemanticTree] = useState<WidgetSemanticNode[]>([])
-  const [semLoading, setSemLoading] = useState(false)
   const [selectedSemantic, setSelectedSemantic] = useState<WidgetSemanticSelection | null>(null)
   const [expandedSemGroups, setExpandedSemGroups] = useState<Set<string>>(new Set())
   const [semDropdownOpen, setSemDropdownOpen] = useState(false)
@@ -122,13 +120,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       setPhase('loading')
       const assistantInfo = await fetchAssistantInfo(cfg, id, type)
       setInfo(assistantInfo)
-      // 数据语义分组树：与大屏同一接口，随 shareCode 免登录下发；失败降级为空树，不阻断对话
-      if (assistantInfo?.spaceId) {
-        setSemLoading(true)
-        void fetchSemanticTree(cfg, assistantInfo.spaceId)
-          .then(setSemanticTree)
-          .finally(() => setSemLoading(false))
-      }
+      // 数据语义随助手详情（getProjectInfo）一并下发；后端未加字段时为空列表，下拉显示“暂无数据语义”
+      setSemanticTree(assistantInfo?.semantics ?? [])
       const session = await ensureSession(cfg, id)
       sessionRef.current = session
       if (session) {
@@ -458,9 +451,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                 {semDropdownOpen && (
                   <div className="abi-cw-sem-popover">
                     <div className="abi-cw-sem-tree">
-                      {semLoading ? (
-                        <div className="abi-cw-sem-empty">加载中...</div>
-                      ) : semanticTree.length === 0 ? (
+                      {semanticTree.length === 0 ? (
                         <div className="abi-cw-sem-empty">暂无数据语义</div>
                       ) : (
                         semanticTree.map((node) => renderSemNode(node, 0))
