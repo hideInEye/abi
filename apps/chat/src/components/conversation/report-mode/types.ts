@@ -126,6 +126,8 @@ export interface ReportPublicChunk {
   entryId: string
   outputType: ReportChunkOutputType
   content: string
+  /** 内嵌工具输出可返回公开标题，例如图表名称。 */
+  title?: string
 }
 
 /**
@@ -207,6 +209,8 @@ export interface ReportStreamRuntimeState {
   thinkingOpen: boolean
   /** 首个 step.plan 对应步骤完成后为 true；首份 plan.update 本身不能结束思考阶段。 */
   thinkingCompleted: boolean
+  /** 仅新提交任务使用：false 时即使思考步骤已完成，页面仍等待打字机结束后再进入 Todo。 */
+  thinkingAnimationCompleted?: boolean
   todoOpen: boolean
   expandedTaskKeys: string[]
   storageWarning?: string
@@ -251,6 +255,8 @@ export interface ReportItem extends ReportStreamRuntimeState {
   sortOrder: number
   createdAt: number
   source: 'history' | 'task'
+  /** 仅当前页面新提交的任务启用；历史与恢复任务必须直接展示完整思考正文。 */
+  animateThinkingPlan?: boolean
   generatedImages?: string[]
 }
 

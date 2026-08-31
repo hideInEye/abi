@@ -114,6 +114,67 @@ describe('ReportTodoList', () => {
     expect(html).toContain('支持快速模式与完整模式。')
   })
 
+  it('同一步骤分片工具结果只展示拼接完成后的公开图片和文本', () => {
+    const imageUrl = 'http://192.168.1.195:9000/messageimg/monthly_order_count_trend.png?X-Amz-Credential=test&X-Amz-Signature=complete'
+    const payload = `${JSON.stringify({
+      chunks: [
+        { output_type: 'image', content: imageUrl, title: '月度订单数量趋势' },
+        { output_type: 'text', content: '图表已生成：柱状图；选择原因：用户指定图表类型。' },
+        { output_type: 'text', content: `已生成的图片URL：${imageUrl}`, emit_to_client: false },
+      ],
+      chart: { image_url: imageUrl },
+    })}\n\n⚠️ Reminder: update todo list`
+    const firstBreak = Math.floor(payload.length / 3)
+    const secondBreak = Math.floor((payload.length * 2) / 3)
+    const report: ReportItem = {
+      ...createInitialReportStreamState(),
+      id: 'report-split-tool-result',
+      question: '生成月度订单图表',
+      sortOrder: 1,
+      createdAt: 1,
+      source: 'task',
+      status: 'running',
+      thinkingCompleted: true,
+      todoOpen: true,
+      expandedTaskKeys: ['plan-1:0'],
+      tasks: [{ content: '生成月度订单数量图表', status: 'in_progress' }],
+      currentPlan: {
+        entryId: 'plan-1',
+        tasks: [{ content: '生成月度订单数量图表', status: 'in_progress' }],
+      },
+      stepsById: {
+        'step-8': {
+          id: 'step-8',
+          title: 'generate_chart_image',
+          actionIntention: '生成订单数量月度趋势图',
+          status: 'done',
+          chunks: [
+            { entryId: '3-0', outputType: 'report_payload', content: payload.slice(0, firstBreak) },
+            { entryId: '4-0', outputType: 'report_payload', content: payload.slice(firstBreak, secondBreak) },
+            { entryId: '5-0', outputType: 'report_payload', content: payload.slice(secondBreak) },
+          ],
+          firstEntryId: '2-0',
+          lastEntryId: '5-0',
+          entryIds: ['2-0', '3-0', '4-0', '5-0'],
+          scope: 'todo',
+          executionGroupKey: 'plan-1:0',
+        },
+      },
+      stepOrder: ['step-8'],
+      executionGroups: [{ key: 'plan-1:0', planEntryId: 'plan-1', taskIndex: 0, taskContent: '生成月度订单数量图表', stepIds: ['step-8'] }],
+    }
+
+    const html = renderToStaticMarkup(<ReportTodoList report={report} onToggleTodo={() => undefined} onToggleTask={() => undefined} />)
+
+    expect(html).toContain('<img')
+    expect(html).toContain('alt="月度订单数量趋势"')
+    expect(html).toContain('monthly_order_count_trend.png')
+    expect(html).toContain('图表已生成：柱状图；选择原因：用户指定图表类型。')
+    expect(html).not.toContain('{&quot;chunks&quot;')
+    expect(html).not.toContain('已生成的图片URL')
+    expect(html).not.toContain('Reminder')
+  })
+
   it('报告生成 Todo 不在执行步骤中重复展示最终报告正文', () => {
     const report: ReportItem = {
       ...createInitialReportStreamState(),
@@ -209,5 +270,89 @@ describe('ReportTodoList', () => {
     expect(html).toContain('<th>订单总金额</th>')
     expect(html).toContain('<td>18418447.91</td>')
     expect(html).not.toContain('<p>| 订单总金额 |')
+  })
+
+  it('用无边框语义色块展示状态，并将等待执行图标和文案置灰', () => {
+    const report: ReportItem = {
+      ...createInitialReportStreamState(),
+      id: 'report-status-tags',
+      question: '生成报告',
+      sortOrder: 1,
+      createdAt: 1,
+      source: 'task',
+      status: 'running',
+      thinkingCompleted: true,
+      todoOpen: true,
+      tasks: [
+        { content: '等待执行的任务', status: 'pending' },
+        { content: '正在执行的任务', status: 'in_progress' },
+        { content: '已经完成的任务', status: 'completed' },
+        { content: '执行失败的任务', status: 'failed' as ReportItem['tasks'][number]['status'] },
+        { content: '已经取消的任务', status: 'cancelled' },
+      ],
+      currentPlan: {
+        entryId: 'plan-status',
+        tasks: [
+          { content: '等待执行的任务', status: 'pending' },
+          { content: '正在执行的任务', status: 'in_progress' },
+          { content: '已经完成的任务', status: 'completed' },
+          { content: '执行失败的任务', status: 'failed' as ReportItem['tasks'][number]['status'] },
+          { content: '已经取消的任务', status: 'cancelled' },
+        ],
+      },
+    }
+
+    const html = renderToStaticMarkup(<ReportTodoList report={report} onToggleTodo={() => undefined} onToggleTask={() => undefined} />)
+
+    expect(html).toMatch(/class="[^"]*todoStatusPending[^"]*" data-status="pending"/)
+    expect(html).toMatch(/class="[^"]*todoStateTag[^"]*todoStatusPending[^"]*" data-status="pending">等待执行/)
+    expect(html).toMatch(/class="[^"]*todoStateTag[^"]*todoStatusRunning[^"]*" data-status="in_progress">执行中/)
+    expect(html).toMatch(/class="[^"]*todoStateTag[^"]*todoStatusDone[^"]*" data-status="completed">已完成/)
+    expect(html).toMatch(/class="[^"]*todoStateTag[^"]*todoStatusFailed[^"]*" data-status="failed">失败/)
+    expect(html).toMatch(/class="[^"]*todoStateTag[^"]*todoStatusSkipped[^"]*" data-status="cancelled">已取消/)
+    expect(html).not.toContain('ant-tag')
+  })
+
+  it('仅在 Todo 总面板收起时显示当前步骤与调用技能', () => {
+    const report: ReportItem = {
+      ...createInitialReportStreamState(),
+      id: 'report-collapsed-activity',
+      question: '生成报告',
+      sortOrder: 1,
+      createdAt: 1,
+      source: 'task',
+      status: 'running',
+      thinkingCompleted: true,
+      todoOpen: false,
+      tasks: [{ content: '生成订单查询 SQL', status: 'in_progress' }],
+      currentPlan: {
+        entryId: 'plan-activity',
+        tasks: [{ content: '生成订单查询 SQL', status: 'in_progress' }],
+      },
+      stepsById: {
+        'step-activity': {
+          id: 'step-activity',
+          title: 'execute_skill_script_file',
+          action: 'execute_skill_script_file',
+          actionIntention: '生成订单查询 SQL',
+          status: 'in_progress',
+          chunks: [{ entryId: '3-0', outputType: 'text', content: 'Skill: sql-generator' }],
+          firstEntryId: '2-0',
+          lastEntryId: '3-0',
+          entryIds: ['2-0', '3-0'],
+          scope: 'todo',
+          executionGroupKey: 'plan-activity:0',
+        },
+      },
+      stepOrder: ['step-activity'],
+      executionGroups: [{ key: 'plan-activity:0', planEntryId: 'plan-activity', taskIndex: 0, taskContent: '生成订单查询 SQL', stepIds: ['step-activity'] }],
+    }
+
+    const collapsed = renderToStaticMarkup(<ReportTodoList report={report} onToggleTodo={() => undefined} onToggleTask={() => undefined} />)
+    const expanded = renderToStaticMarkup(<ReportTodoList report={{ ...report, todoOpen: true }} onToggleTodo={() => undefined} onToggleTask={() => undefined} />)
+
+    expect(collapsed).toContain('当前正在执行 生成订单查询 SQL 步骤，调用 sql-generator 技能')
+    expect(collapsed).toContain('aria-live="polite"')
+    expect(expanded).not.toContain('当前正在执行 生成订单查询 SQL 步骤，调用 sql-generator 技能')
   })
 })

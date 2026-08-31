@@ -1,10 +1,11 @@
 import { CheckOutlined, ClockCircleOutlined, CloseOutlined, DownOutlined, LoadingOutlined, MinusOutlined } from '@ant-design/icons'
-import { Alert, Tag } from 'antd'
+import { Alert } from 'antd'
 import React, { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-import { getCurrentTaskTitle, getReportTaskProgressText, getStepSummary, getTaskKey, isReportContentChunk, isReportGenerationTask, isVisibleReportStep, toReportChunkMarkdown } from './helpers'
+import { getRenderableStepChunks } from './embeddedChunkPayload'
+import { getCollapsedTodoExecutionSummary, getCurrentTaskTitle, getReportStatusTone, getReportTaskProgressText, getStepSummary, getTaskKey, isReportContentChunk, isReportGenerationTask, isVisibleReportStep, toReportChunkMarkdown } from './helpers'
 import type { ReportItem, ReportPublicChunk, ReportPublicStep, ReportTaskExecutionGroup } from './types'
 import styles from './styles.module.css'
 
@@ -52,15 +53,13 @@ function getStatusIcon(status: string) {
 }
 
 function getStatusClass(status: string) {
-  switch (status) {
-    case 'in_progress':
+  switch (getReportStatusTone(status)) {
+    case 'running':
       return styles.todoStatusRunning
-    case 'completed':
     case 'done':
       return styles.todoStatusDone
     case 'failed':
       return styles.todoStatusFailed
-    case 'cancelled':
     case 'skipped':
       return styles.todoStatusSkipped
     default:
@@ -81,7 +80,7 @@ const ChunkContent: React.FC<{ chunk: ReportPublicChunk }> = ({ chunk }) => {
     case 'image':
       return (
         <div className={styles.stepImageWrap}>
-          {!imageFailed && <img src={chunk.content} alt="步骤输出" className={styles.stepImage} onError={() => setImageFailed(true)} />}
+          {!imageFailed && <img src={chunk.content} alt={chunk.title || '步骤输出'} className={styles.stepImage} onError={() => setImageFailed(true)} />}
           {imageFailed && <Alert type="warning" showIcon message="图片加载失败" description={chunk.content} />}
           <a href={chunk.content} target="_blank" rel="noreferrer">
             查看原图
@@ -110,12 +109,12 @@ const ChunkContent: React.FC<{ chunk: ReportPublicChunk }> = ({ chunk }) => {
 
 const ExecutionStep: React.FC<{ step: ReportPublicStep; hideReportContent: boolean }> = ({ step, hideReportContent }) => {
   // 格式本身不能证明内容是最终报告；仅在报告产物步骤中隐藏 HTML/Markdown 等文件内容。
-  const visibleChunks = step.chunks.filter((chunk) => !hideReportContent || !isReportContentChunk(chunk))
+  const visibleChunks = getRenderableStepChunks(step.chunks).filter((chunk) => !hideReportContent || !isReportContentChunk(chunk))
 
   return (
     <div className={styles.executionStep}>
       <div className={styles.executionStepHeader}>
-        <span className={`${styles.todoStatus} ${getStatusClass(step.status)}`}>{getStatusIcon(step.status)}</span>
+        <span className={`${styles.todoStatus} ${getStatusClass(step.status)}`} data-status={step.status}>{getStatusIcon(step.status)}</span>
         <div>
           <div className={styles.executionStepTitle}>{step.title || step.action || `步骤 ${step.ordinal || ''}`}</div>
           <div className={styles.executionStepSummary}>{getStepSummary(step, hideReportContent)}</div>
@@ -166,6 +165,7 @@ const ReportTodoList: React.FC<ReportTodoListProps> = ({ report, onToggleTodo, o
   if (!report.currentPlan) return null
 
   const currentTask = getCurrentTaskTitle(report.tasks)
+  const collapsedExecutionSummary = getCollapsedTodoExecutionSummary(report)
   const matchedGroupKeys = new Set<string>()
   const unassignedSteps = report.unassignedStepIds
     .map((stepId) => report.stepsById[stepId])
@@ -186,6 +186,13 @@ const ReportTodoList: React.FC<ReportTodoListProps> = ({ report, onToggleTodo, o
         </span>
       </button>
 
+      {!report.todoOpen && collapsedExecutionSummary && (
+        <div className={styles.todoCollapsedActivity} aria-live="polite">
+          <span className={styles.todoCollapsedActivityDot} aria-hidden="true" />
+          <span>{collapsedExecutionSummary}</span>
+        </div>
+      )}
+
       {report.todoOpen && (
         <div className={styles.panelBody}>
           <div className={styles.todoList}>
@@ -201,11 +208,11 @@ const ReportTodoList: React.FC<ReportTodoListProps> = ({ report, onToggleTodo, o
               return (
                 <div key={taskKey} className={styles.todoRow}>
                   <button type="button" className={`${styles.todoMain} ${styles.todoMainClickable}`} onClick={() => onToggleTask(taskKey)}>
-                    <span className={`${styles.todoStatus} ${getStatusClass(task.status)}`}>{getStatusIcon(task.status)}</span>
+                    <span className={`${styles.todoStatus} ${getStatusClass(task.status)}`} data-status={task.status}>{getStatusIcon(task.status)}</span>
                     <div className={styles.todoContent}>
                       <div className={`${styles.todoTitle} ${task.status === 'in_progress' ? styles.todoTitleRunning : ''}`}>{task.content}</div>
                       <div className={styles.todoDetail}>
-                        <Tag color={task.status === 'in_progress' ? 'blue' : task.status === 'completed' ? 'green' : 'default'}>{getStatusText(task.status)}</Tag>
+                        <span className={`${styles.todoStateTag} ${getStatusClass(task.status)}`} data-status={task.status}>{getStatusText(task.status)}</span>
                         {getExecutionDetail(task.status, steps.length)}
                       </div>
                     </div>

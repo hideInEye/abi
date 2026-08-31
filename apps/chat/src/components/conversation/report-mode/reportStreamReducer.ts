@@ -1,4 +1,5 @@
 import { compareRedisEntryIds, parseRedisEntryId, sortAndDedupeRedisEntries } from './redisEntryId'
+import { getEmbeddedPayloadChunks, getStoredChunkOutputType } from './embeddedChunkPayload'
 import { getTaskKey, isReportGenerationTask } from './helpers'
 import type {
   RawReportStreamEntry,
@@ -7,7 +8,6 @@ import type {
   ReportPlanTask,
   ReportPublicChunk,
   ReportPublicStep,
-  ReportStepChunkEvent,
   ReportStepDoneEvent,
   ReportStepMetaEvent,
   ReportStepStartEvent,
@@ -21,7 +21,6 @@ import type {
 const REPORT_EVENT_TYPES = new Set<ReportStreamEvent['type']>(['question', 'step.plan', 'step.start', 'step.meta', 'step.chunk', 'step.done', 'plan.update', 'final', 'done'])
 
 const PLACEHOLDER_STEP_TITLES = new Set(['思考中', 'thinking'])
-const EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE = 'report_payload'
 const REPORT_GENERATION_FAILED_CODE = 'report_generation_failed'
 const REPORT_FINAL_ERROR_PATTERN = /^大模型对话生成错误(?:[!！]|$)/i
 
@@ -408,57 +407,6 @@ export function mergeReportAttachments(current: ReportAttachment[], incoming: Re
   return next
 }
 
-/**
- * 部分工具会把完整 `{ chunks: [...] }` 结果按字符切成多条 text 事件。
- * 这些片段属于报告传输载荷，不应作为普通文本逐段展示。
- */
-function getStoredChunkOutputType(step: ReportPublicStep, event: ReportStepChunkEvent): string {
-  const outputType = event.output_type || 'text'
-  if (outputType.toLowerCase() !== 'text') return outputType
-
-  const continuesReportPayload = step.chunks.some((chunk) => chunk.outputType === EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE)
-  const startsReportPayload = /^\s*\{\s*"chunks"\s*:/.test(event.content)
-  return continuesReportPayload || startsReportPayload ? EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE : outputType
-}
-
-/** 从可能带前后说明文字的字符串中提取第一个语法完整的 JSON 对象。 */
-function parseFirstJsonObject(source: string): unknown {
-  for (let start = source.indexOf('{'); start >= 0; start = source.indexOf('{', start + 1)) {
-    let depth = 0
-    let inString = false
-    let escaped = false
-
-    for (let index = start; index < source.length; index += 1) {
-      const character = source[index]
-
-      if (inString) {
-        if (escaped) escaped = false
-        else if (character === '\\') escaped = true
-        else if (character === '"') inString = false
-        continue
-      }
-
-      if (character === '"') {
-        inString = true
-        continue
-      }
-
-      if (character === '{') depth += 1
-      else if (character === '}') depth -= 1
-
-      if (depth !== 0) continue
-
-      try {
-        return JSON.parse(source.slice(start, index + 1)) as unknown
-      } catch {
-        break
-      }
-    }
-  }
-
-  return undefined
-}
-
 interface EmbeddedReportArtifacts {
   candidate?: ReportCandidate
   attachments: ReportAttachment[]
@@ -466,28 +414,9 @@ interface EmbeddedReportArtifacts {
 
 /** 识别报告工具 text payload 内嵌的最后一个 HTML/Markdown 预览和所有 PDF/Word 附件。 */
 function toEmbeddedReportArtifacts(entryId: string, stepId: string, chunks: ReportPublicChunk[]): EmbeddedReportArtifacts {
-  const payloadSource = chunks
-    .filter((chunk) => chunk.outputType === EMBEDDED_REPORT_PAYLOAD_OUTPUT_TYPE)
-    .map((chunk) => chunk.content)
-    .join('')
-  if (!payloadSource) return { attachments: [] }
-
-  const parsed = parseFirstJsonObject(payloadSource)
-  if (!parsed || typeof parsed !== 'object') return { attachments: [] }
-
-  const embeddedChunks = (parsed as { chunks?: unknown }).chunks
-  if (!Array.isArray(embeddedChunks)) return { attachments: [] }
-
-  return embeddedChunks.reduce<EmbeddedReportArtifacts>((artifacts, chunk, index) => {
-    if (!chunk || typeof chunk !== 'object') return artifacts
-
-    const outputType = (chunk as { output_type?: unknown }).output_type
-    const content = (chunk as { content?: unknown }).content
-    if (typeof outputType !== 'string' || typeof content !== 'string') return artifacts
-
-    const artifactEntryId = `${entryId}:embedded:${index}`
-    const candidate = toReportCandidate(entryId, stepId, outputType, content)
-    const attachment = toReportAttachment(artifactEntryId, stepId, outputType, content)
+  return getEmbeddedPayloadChunks(chunks).reduce<EmbeddedReportArtifacts>((artifacts, chunk) => {
+    const candidate = toReportCandidate(entryId, stepId, chunk.outputType, chunk.content)
+    const attachment = toReportAttachment(chunk.entryId, stepId, chunk.outputType, chunk.content)
 
     return {
       candidate: candidate || artifacts.candidate,
@@ -603,7 +532,7 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
           ...step.chunks,
           {
             entryId,
-            outputType: getStoredChunkOutputType(step, event),
+            outputType: getStoredChunkOutputType(step.chunks, event),
             content: event.content,
           },
         ]
@@ -637,12 +566,16 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
     case 'step.done': {
       const mergedState = mergeStepDone(state, event, entryId)
       const completesThinking = !state.thinkingCompleted && Boolean(state.thinkingPlan?.id) && event.id === state.thinkingPlan?.id
+      const waitsForThinkingAnimation = state.thinkingAnimationCompleted === false
+      const usesThinkingAnimationGate = state.thinkingAnimationCompleted !== undefined
       nextState = completesThinking
         ? {
             ...mergedState,
             status: mergedState.currentPlan ? 'running' : mergedState.status,
-            thinkingOpen: false,
+            // 新提交任务必须让首次思考正文播放完，再收起思考并展开 Todo。
+            thinkingOpen: waitsForThinkingAnimation,
             thinkingCompleted: true,
+            todoOpen: usesThinkingAnimationGate && !waitsForThinkingAnimation ? true : mergedState.todoOpen,
           }
         : mergedState
       break
