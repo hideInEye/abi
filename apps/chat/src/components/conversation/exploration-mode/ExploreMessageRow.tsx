@@ -1,5 +1,5 @@
-import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DownOutlined, ExpandOutlined, InboxOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
-import { Alert } from 'antd'
+import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DislikeOutlined, DownOutlined, ExpandOutlined, InboxOutlined, LikeOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
+import { Alert, message, Tooltip } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 
 import ExploreRichText, { containsText } from './ExploreRichText'
@@ -47,8 +47,12 @@ function getCardStatusTag(status: ExploreItem['status']) {
   }
 }
 
-/** 取当前应展示的思考：优先运行中的步骤，其次最后一个有思考的步骤，最后回退计划思考。 */
+/** 取当前应展示的思考：运行中优先打字机流（简洁思考流 > 深度思考流），其次运行中的步骤，其次最后一个有思考的步骤，最后回退计划思考。 */
 function getCurrentThinking(item: ExploreItem): { thought?: string; intention?: string } {
+  if (item.status === 'running') {
+    if (item.thoughtStream) return { thought: item.thoughtStream }
+    if (item.reasoningStream) return { thought: item.reasoningStream }
+  }
   const running = [...item.steps].reverse().find((step) => step.status === 'running')
   const lastWithThought = [...item.steps].reverse().find((step) => step.thought || step.actionReason)
   const step = running || lastWithThought
@@ -65,6 +69,18 @@ function getFocusedStep(item: ExploreItem): ExploreStep | undefined {
   const lastWithOutput = [...item.steps].reverse().find((step) => step.outputs.length > 0)
   if (lastWithOutput) return lastWithOutput
   return [...item.steps].reverse().find((step) => step.status === 'done' || step.status === 'failed' || step.status === 'cancelled') || item.steps[item.steps.length - 1]
+}
+
+/** 历史探索点击待办后，取该待办下的思考：优先最后一个有思考的步骤。 */
+function getStepsThinking(steps: ExploreStep[]): { thought?: string; intention?: string } {
+  const step = [...steps].reverse().find((s) => s.thought || s.actionReason || s.actionIntention)
+  if (!step) return {}
+  return { thought: step.thought || step.actionReason || undefined, intention: step.actionIntention || undefined }
+}
+
+/** 历史探索点击待办后，取该待办下应展示详情的步骤：优先最后一个有输出的步骤。 */
+function getStepsFocused(steps: ExploreStep[]): ExploreStep | undefined {
+  return [...steps].reverse().find((step) => step.outputs.length > 0) || steps[steps.length - 1]
 }
 
 /** 上块只展示技能执行过程信息（过程文本/文件），表格等数据去右侧工作室查看。 */
@@ -132,9 +148,48 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
       runningElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
   }, [runningStepId])
-  
-  const thinking = getCurrentThinking(item)
-  const focusedStep = getFocusedStep(item)
+
+  // 打字机流式输出时思考区自动滚到底部，保证最新内容可见
+  const thinkingScrollRef = useRef<HTMLDivElement>(null)
+
+  // 历史探索支持点击待办查看该步骤的历史信息（思考过程 / 步骤详情 / 技能高亮），再次点击取消选中
+  const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null)
+  useEffect(() => {
+    setSelectedTodoId(null)
+  }, [running])
+  const selectedSteps = selectedTodoId ? item.steps.filter((step) => step.todoId === selectedTodoId) : []
+  const selectionActive = !running && selectedSteps.length > 0
+  useEffect(() => {
+    if (!skillListRef.current || !selectionActive) return
+    const firstSelected = skillListRef.current.querySelector(`[data-step-id="${selectedSteps[0].id}"]`)
+    if (firstSelected) firstSelected.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTodoId, selectionActive])
+  const handleTodoClick = (todoId?: string) => {
+    if (running || !todoId || !item.steps.some((step) => step.todoId === todoId)) return
+    setSelectedTodoId((prev) => (prev === todoId ? null : todoId))
+    setThinkingExpanded(true)
+  }
+
+  const thinking = selectionActive ? getStepsThinking(selectedSteps) : getCurrentThinking(item)
+  useEffect(() => {
+    if (!running) return
+    const el = thinkingScrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [thinking.thought, running])
+
+  // 思考内容未超出区域时不展示展开/收起控件
+  const [thinkingOverflow, setThinkingOverflow] = useState(false)
+  useEffect(() => {
+    const el = thinkingScrollRef.current
+    if (!el) return
+    const check = () => setThinkingOverflow(el.scrollHeight > el.clientHeight + 1)
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [thinking.thought, running])
+  const focusedStep = selectionActive ? getStepsFocused(selectedSteps) : getFocusedStep(item)
   const focusedStepTitle = focusedStep?.title || focusedStep?.action || (focusedStep?.step != null ? `步骤 ${focusedStep.step}` : '当前步骤')
   const focusedOutputs = focusedStep?.outputs || []
   const focusedProcessOutputs = focusedOutputs.filter(isProcessOutput)
@@ -172,35 +227,38 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
 
         <div className={styles.cardWorkspace}>
           <div className={styles.todoColumn}>
-            {/* 思考区：走到每一步只展示当前步骤思考，标题可点击折叠 */}
+            {/* 思考区：走到每一步只展示当前步骤思考；内容超出区域时标题才可点击折叠 */}
             <section className={styles.panel}>
               <div
-                className={`${styles.panelTitle} ${styles.panelTitleThink} ${styles.panelTitleToggle}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setThinkingExpanded((prev) => !prev)}
-                onKeyDown={(event) => {
+                className={`${styles.panelTitle} ${styles.panelTitleThink} ${thinkingOverflow ? styles.panelTitleToggle : ''}`}
+                role={thinkingOverflow ? 'button' : undefined}
+                tabIndex={thinkingOverflow ? 0 : undefined}
+                onClick={thinkingOverflow ? () => setThinkingExpanded((prev) => !prev) : undefined}
+                onKeyDown={thinkingOverflow ? (event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault()
                     setThinkingExpanded((prev) => !prev)
                   }
-                }}
+                } : undefined}
               >
                 <ThunderboltOutlined /> {running ? '正在深度思考' : '思考过程'}
-                <DownOutlined
-                  className={styles.panelToggleIcon}
-                  style={{
-                    transform: thinkingExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.3s ease',
-                  }}
-                />
+                {thinkingOverflow && (
+                  <DownOutlined
+                    className={styles.panelToggleIcon}
+                    style={{
+                      transform: thinkingExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.3s ease',
+                    }}
+                  />
+                )}
               </div>
               <div className={styles.thinkingCollapsible}>
                 <div
+                  ref={thinkingScrollRef}
                   className={styles.thinkingCollapsibleInner}
                   style={{
-                    maxHeight: thinkingExpanded ? 'none' : '4.5em',
-                    overflow: thinkingExpanded ? 'visible' : 'hidden',
+                    // 展开时内部滚动；收起时填满思考区并裁切，配合底部渐变遮罩逐渐隐藏
+                    overflow: thinkingExpanded ? undefined : 'hidden',
                   }}
                 >
                   {thinking.thought ? (
@@ -219,8 +277,9 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
                       {running ? '规划智能体正在生成执行计划…' : '暂无思考内容'}
                     </div>
                   )}
+                  {/* 遮罩置于内容容器内，折叠且内容超出时紧贴区域底部淡出 */}
+                  {!thinkingExpanded && thinkingOverflow && <div className={styles.thinkingFade} />}
                 </div>
-                {!thinkingExpanded && <div className={styles.thinkingFade} />}
               </div>
             </section>
 
@@ -237,10 +296,25 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
                     const isDone = task.status === 'completed' || task.status === 'done'
                     // 完成态统一灰显：避免残留 activeTodoId 使已完成项继续加黑
                     const isActive = !isDone && (task.status === 'in_progress' || Boolean(activeTodoId && task.todo_id === activeTodoId))
+                    // 历史探索：有对应执行步骤的待办可点击查看该步骤历史信息
+                    const clickable = !running && Boolean(task.todo_id) && item.steps.some((step) => step.todoId === task.todo_id)
+                    const isSelected = selectionActive && task.todo_id === selectedTodoId
                     return (
-                      <div className={styles.todoRow} key={task.todo_id || index}>
+                      <div
+                        className={`${styles.todoRow} ${clickable ? styles.todoRowClickable : ''} ${isSelected ? styles.todoRowSelected : ''}`}
+                        key={task.todo_id || index}
+                        role={clickable ? 'button' : undefined}
+                        tabIndex={clickable ? 0 : undefined}
+                        onClick={clickable ? () => handleTodoClick(task.todo_id) : undefined}
+                        onKeyDown={clickable ? (event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            handleTodoClick(task.todo_id)
+                          }
+                        } : undefined}
+                      >
                         <span className={`${styles.todoStatus} ${meta.cls}`}>{meta.icon}</span>
-                        <span className={`${styles.todoText} ${isActive ? styles.todoTextActive : ''}`}>{task.content || `任务 ${index + 1}`}</span>
+                        <span className={`${styles.todoText} ${isActive || isSelected ? styles.todoTextActive : ''}`}>{task.content || `任务 ${index + 1}`}</span>
                       </div>
                     )
                   })}
@@ -252,7 +326,7 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
           <section className={styles.currentColumn}>
             <div className={styles.currentResultHeader}>
               <div className={styles.currentResultTitle}>
-                <ToolOutlined /> 当前步骤结果
+                <ToolOutlined /> {running ? '当前步骤结果' : '当前步骤详情'}
               </div>
               {focusedStep && <span className={styles.currentResultMeta}>{focusedStepTitle}</span>}
             </div>
@@ -287,12 +361,15 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
             {/* 下块：技能名称展示区，和 todolist 一样按状态区分颜色（完成灰色 / 执行黑色） */}
             {item.steps.length > 0 && (
               <div ref={skillListRef} className={styles.skillList}>
-                {item.steps.map((step, index) => (
-                  <div key={step.id} data-step-id={step.id} className={`${styles.skillRow} ${step.status === 'running' ? styles.skillRowRunning : ''}`}>
-                    <ToolOutlined />
-                    <span className={styles.skillName}>{step.title || step.action || `步骤 ${step.step ?? index + 1}`}</span>
-                  </div>
-                ))}
+                {item.steps.map((step, index) => {
+                  const isSelectedSkill = selectionActive && step.todoId === selectedTodoId
+                  return (
+                    <div key={step.id} data-step-id={step.id} className={`${styles.skillRow} ${step.status === 'running' ? styles.skillRowRunning : ''} ${isSelectedSkill ? styles.skillRowSelected : ''}`}>
+                      <ToolOutlined />
+                      <span className={styles.skillName}>{step.title || step.action || `步骤 ${step.step ?? index + 1}`}</span>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </section>
@@ -305,7 +382,21 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
           </div>
         )}
 
-        {item.error && <Alert className={styles.inlineAlert} type="error" showIcon message={item.error.message} />}
+        {item.error && <Alert className={styles.inlineAlert} type="error" message={item.error.message} />}
+
+        {/* 底部工具栏：反馈按钮（占位功能，后续接入实际评价逻辑），样式对齐交互模式操作栏图标按钮 */}
+        <div className={styles.footerBar}>
+          <Tooltip title="点赞">
+            <button type="button" className={styles.footerAction} onClick={() => message.info('功能开发中...')}>
+              <LikeOutlined />
+            </button>
+          </Tooltip>
+          <Tooltip title="点踩">
+            <button type="button" className={styles.footerAction} onClick={() => message.info('功能开发中...')}>
+              <DislikeOutlined />
+            </button>
+          </Tooltip>
+        </div>
       </div>
     </article>
   )

@@ -109,10 +109,11 @@ class BaseApi extends AbstractApi {
 
     /**
      * 获取项目信息（包含项目数据）
-     * @param id
+     * @param id 项目id
+     * @param type 项目类型：大屏=dashboard，自主助手=react，工作流助手=workflow（默认大屏）
      */
-    async getProjectInfo(id: string): Promise<IProject | null> {
-        const res = await FetchUtil.get(`/dashboard/api/v1/project/getProjectInfo/${id}`);
+    async getProjectInfo(id: string, type: 'dashboard' | 'react' | 'workflow' = 'dashboard'): Promise<IProject | null> {
+        const res = await FetchUtil.get(`/dashboard/api/v1/project/getProjectInfo/${type}/${id}`);
         const {code, data} = res;
         if (code === 200)
             return data;
@@ -209,7 +210,7 @@ class BaseApi extends AbstractApi {
         expirationDays?: number,
         expirationDate?: string
     ): Promise<{shareUrl: string; sharePassword?: string | null} | null> {
-        const body: Record<string, unknown> = {projectId, spaceId, sharePasswordFlag};
+        const body: Record<string, unknown> = {projectId, spaceId, type: 'dashboard', sharePasswordFlag};
         if (expirationDays !== undefined) body.expirationDays = expirationDays;
         if (expirationDate !== undefined) body.expirationDate = expirationDate;
         const res = await FetchUtil.post('/dashboard/api/v1/project/share', body);
@@ -222,6 +223,21 @@ class BaseApi extends AbstractApi {
             globalMessage.messageApi?.error(res.msg);
             return null;
         }
+    }
+
+    /**
+     * 分享记录分页查询（统一分享接口，type 区分：react=自主助手 / workflow=工作流助手 / dashboard=数据大屏）
+     * @returns {records, total} 分页数据（兼容 records/rows/list 结构）
+     */
+    public async getShareProjectList(params: {type: 'react' | 'workflow' | 'dashboard'; spaceId?: number; current: number; size: number}): Promise<{records: any[]; total: number}> {
+        const res = await FetchUtil.post('/dashboard/api/v1/project/share/list', params);
+        if (res.code === 200) {
+            const page = res.data ?? {};
+            const rows = Array.isArray(page) ? page : (page.records ?? page.rows ?? page.list ?? []);
+            return {records: Array.isArray(rows) ? rows : [], total: Number(page.total ?? (Array.isArray(rows) ? rows.length : 0)) || 0};
+        }
+        globalMessage.messageApi?.error(res.msg);
+        return {records: [], total: 0};
     }
 
     /**

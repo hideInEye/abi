@@ -9,6 +9,194 @@
 
 本文件是本轮开发的唯一当前需求依据。旧实现中的独立 `ReportConversation` 页面分支、根 `server/`、Node `/api/report-stream/events` 以及“不调用 task 状态接口”的约定全部废止。
 
+## 2026-08-28 追加：三端增加「分享记录」页签
+
+### 背景
+
+- 助手与大屏已支持统一分享接口（`/api/v1/project/share`，type 区分：react=自主助手 / workflow=工作流助手 / dashboard=数据大屏），但缺少分享记录的查询入口。
+- 需求口径（用户 2026-08-28 确认）：在「我的大屏」（dashboard 微应用 MyScreen）、「abi 我的助手」、「chat 应用工坊我的助手」三处增加页签，新增「分享记录」tab；大屏首个 tab 命名为「已发布大屏」，abi 助手首个 tab 命名为「已发布助手」，chat 在现有工坊 tab 栏追加「分享记录」。
+- 查询接口：POST `/api/v1/project/share/list`，body `{type, spaceId, current, size}`；各应用网关前缀与分享接口一致（dashboard 微应用 `/dashboard/...`，abi `/api/dashboard/...`，chat `VITE_BASE_API + /dashboard/...`）。
+
+### 目标
+
+- 三端「分享记录」tab 均调用统一分享记录查询接口（大屏 type=dashboard、abi 助手 type=workflow、chat 助手 type=react），服务端分页（current/size），卡片展示名称、分享时间、过期时间、密码保护标签，支持「复制链接」（含密码时一并复制）。
+- 响应结构做兼容映射（records/rows/list/数组、total 兜底），字段缺失时兜底展示，避免白屏。
+- 大屏分享记录复制链接时沿用大屏分享弹窗的链接格式转换（`/#/`→`/`、`/dr/`→`/dashboard-share-page/`）。
+
+### 非目标
+
+- 不实现分享记录的搜索/时间筛选（接口未提供查询参数），分享记录 tab 隐藏搜索栏。
+- 不修改分享弹窗、取消发布、进入对话等既有行为；不新增删除分享等接口调用。
+
+### 影响范围
+
+- apps/dashboard：`api/BaseApi.ts`（getShareProjectList）、`pages/my-screen/MyScreen.tsx`（页签）、新增 `pages/my-screen/ShareRecordList.tsx`、`pages/home/project-list/ProjectList.less`（页签样式）。
+- apps/abi：`service/api/share.ts`（fetchProjectShareListApi）、`pages/workbench/app-workshop/my-assistant/index.tsx`（ATabs 页签）、新增同目录 `ShareRecordList.tsx`。
+- apps/chat：`service/api/assistant.ts`（fetchShareRecordList）、`pages/chat/workshop/index.tsx`（新增 share-record tab）。
+
+### 验收与测试
+
+- 三端切换页签正常；分享记录 tab 拉取 `/api/v1/project/share/list` 并分页；空数据展示空态；复制链接行为与分享弹窗一致。
+- 三个应用 `tsc --noEmit` 对修改文件无新增错误（存量错误除外）。
+- 生成 `.ai/runs/2026-08-28-share-record-tabs/RUN_LOG.md`。
+
+## 2026-08-28 追加：应用工坊助手卡片点击创建助手会话（绑定资源限定）
+
+### 背景
+
+- 应用工坊「我的助手」卡片目前只有「查看」「分享」两个入口，没有与助手对话的入口。
+- 会话接口已支持 appId 绑定：`session/add` 的 `mapAppCreateParams` 透传 `appId`（分享 widget、抽屉调试对话已在用）；交互/探索/报告三种模式提交 payload 均已从 `conv.appId` 透传 `app_id`。
+- 需求口径（用户 2026-08-28 确认）：点击助手卡片创建一个绑定该助手的新会话，进入后可正常对话（交互/探索/报告三种模式）；该会话输入框的数据语义、技能、MCP 只能从助手绑定资源里拿。明确不采用「跳转 /chat/task/new?assistantId 的 search 方案」。
+
+### 目标
+
+- 工坊助手卡片整体可点击：立即调 `session/add` 创建新会话（`appId=<助手ID>`、标题用助手名），成功后进入 `/chat/task/<chat_id>` 对话；「查看/分享」按钮保持原行为（阻止冒泡）；每次点击均创建新会话。
+- 打开 `appId` 非 0 的会话时，调 `app/get` 加载助手详情并映射为绑定资源（语义 `versions[].schemaSemantics[].schemaConfig`；技能 `skills[].skillConfig`，id 即源版本 id；MCP `tools[]` 中 `toolType='2'`，按 `mcp_sse` 推导协议）；输入框数据语义/技能/MCP 弹窗仅展示绑定候选，不请求全局收藏技能列表/MCP 分组；交互、探索、报告三模式保持可用。
+- 助手会话要进入历史会话列表（侧栏「最近对话」可见），会话记录携带绑定助手 ID（`session/add` 的 `appId`）；`session/list` 按 appId 精确过滤，前端按助手逐个查询去重合并进列表；直链打开且列表未命中时由 `session/get` 兜底恢复会话对象（含 `appId`），触发同样的绑定资源限制。
+- 切换绑定助手时清空已选数据语义。
+
+### 非目标
+
+- 不新增带 `assistantId` 的 search 路由参数，不改动 `$taskId` 路由定义与既有导航调用。
+- 不修改查看抽屉、分享弹窗、分享页 widget、大屏；保持大屏 `appId=1` 隔离不被混入。
+- 不用 `chatModelId` 强制覆盖对话页模型；不实现开场白/推荐问题展示。
+
+### 影响范围
+
+- apps/chat：`pages/chat/workshop/index.tsx`（卡片点击建会话）、`components/conversation-analysis/index.tsx`（绑定资源/历史兜底/列表合并）、`service/api/app.ts`（列表按 appId 查询与助手会话合并查询）、`components/conversation/components/chat-input/index.tsx`（绑定候选弹窗）、新增 `pages/chat/workshop/assistantResources.ts` 映射模块与 Vitest、`index.css` 卡片可点击样式。
+
+### 验收与测试
+
+- 点击助手卡片创建新助手会话并进入对话；再次点击创建另一个新会话。
+- 数据语义/技能/MCP 弹窗仅展示绑定候选；交互/探索/报告三模式均可提交且 payload 带 `app_id`。
+- 打开历史助手会话自动恢复绑定资源限制；会话不在列表时 `session/get` 兜底可用。
+- `assistantResources` 映射纯函数补 Vitest（空 versions、缺字段、toolType 过滤、协议推导）；运行 ai-bot typecheck、build 与 `git diff --check`。
+- 生成 `.ai/runs/2026-08-28-assistant-card-session/RUN_LOG.md`。
+
+## 2026-08-28 追加：进入对话页面模型选择器默认显示默认模型
+
+### 背景
+
+- 对话页顶部模型选择器加载模型列表后固定取列表首项（`options[0]`）作为当前选中模型，与后端配置的「默认模型」（`isDefault === 1`，下拉中带「默认模型」徽标）不一致，进入对话页面时显示的模型不是默认模型。
+
+### 目标
+
+- `ConversationAnalysis` 模型列表加载完成后，优先选中 `isDefault === 1` 的模型作为当前模型；无默认模型时回退列表首项，列表为空时保持空（选择器不渲染）。
+- 模块级工作台缓存写入同一初始选中模型，冷挂载命中缓存时同样显示默认模型。
+- 下拉中「默认模型」徽标展示、用户手动切换模型及强制深度思考联动逻辑保持不变。
+
+### 非目标
+
+- 不修改模型列表接口、后端默认模型配置与 ChatHeader 下拉 UI。
+- 不修改会话创建、发送、报告/探索模式等对话主流程。
+
+### 验收标准
+
+- 进入对话页面，模型选择器顶部显示的模型为下拉中带「默认模型」徽标的模型（无默认模型时回退列表首项）。
+- `pnpm --filter ai-bot exec tsc --noEmit -p tsconfig.json` 与 `git diff --check` 通过，无新增错误。
+- 生成 `.ai/runs/2026-08-28-chat-default-model/RUN_LOG.md`。
+
+## 2026-08-28 追加：助手分享悬浮框对齐大屏对话风格 + 数据语义下拉筛选框
+
+### 背景
+
+- 2026-08-27 落地的助手分享悬浮框（`apps/chat/src/components/chat-widget/ChatWidget.tsx`）为自定义中性灰蓝风格，与大屏对话面板 [AiChatPanel](apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx) 的视觉风格（蓝色渐变主题、状态栏、气泡样式、输入区工具栏）不一致。
+- 大屏对话输入区带「数据语义」下拉筛选框（分组树：分组文件夹 + 数据语义叶子，选中后随对话下发 `semantic_id/semantic_group_name/semantic_name`），分享悬浮框缺失该能力。
+
+### 目标
+
+- ChatWidget 视觉整体对齐 AiChatPanel：头部（#f5f7fa 底 + 蓝色渐变 AI 图标 + 关闭按钮悬浮态）、思考状态栏（#f0f5ff 底 + #1778FF 状态点/“正在思考中...”）、消息气泡（human 蓝色渐变、ai #f5f7fa 描边，时间置于气泡下方）、输入区（#f5f7fa 输入框、聚焦蓝色描边、渐变发送钮、红色停止钮、底部免责提示），主题色由 #3370ff 切换为 #1677ff/#4096ff 渐变体系。
+- 输入区工具栏新增与大屏同款「数据语义」下拉筛选框：分组树（分组仅展开/收起，叶子可选中），选中项随发送透传 `semantic_id/semantic_group_name/semantic_name` 到 completions 的 `context.extra`（与大屏一致）。
+- 语义树来源：复用已有统一接口 `GET /copilot/v1/schema/tree?spaceId=`，随 widget 请求层附带 shareCode 免登录下发；spaceId 取自已有 `getProjectInfo` 响应（为助手信息新增 spaceId 字段，不新增额外接口调用链路）。拉取失败时降级为空树（提示“暂无数据语义”），不阻断对话。
+- 与大屏差异保留：悬浮框不强制必选语义（分享助手可能未绑定语义，未选中时不下发语义字段、仍可发送）；欢迎页推荐问题列表保留。
+- 样式继续全量 `abi-cw-` 前缀、不依赖 antd（下拉面板为组件内绝对定位浮层，非 portal）。
+
+### 非目标
+
+- 不修改大屏 AiChatPanel、大屏分享、chat 主对话流程与报告/探索模式。
+- 不修改分享生成/校验、会话创建、历史消息映射协议。
+- 不修改 nginx/部署配置。
+
+### 验收与测试
+
+- 分享页与嵌入形态下悬浮框呈现大屏同款配色与布局；输入区可见「数据语义」下拉，展开为分组树，选中后按钮显示语义名。
+- 选中语义发送时请求体 `context.extra` 携带 `semantic_id/semantic_group_name/semantic_name`；未选中不带。
+- 语义树接口失败或无 spaceId 时，下拉显示“暂无数据语义”，对话仍可正常发送。
+- 运行根目录 type-check 与 chat-widget Vitest，无新增错误；既有纯函数测试不回退。
+- 生成 `.ai/runs/2026-08-28-share-widget-dashboard-style/RUN_LOG.md`。
+
+## 2026-08-27 追加：助手分享页与第三方嵌入对话悬浮框（Web Component，方案3）
+
+### 背景
+
+- 大屏分享已闭环：后端返回下划线分享路径，前端转连字符路由 `/dashboard-share-page/:shareCode`，[ShareViewPage](apps/dashboard/src/pages/share/ShareViewPage.tsx) 先 `checkSharePassword` 再加载。
+- 助手（应用工坊）尚无对外分享入口；对话悬浮框 UI 仅存在于大屏设计器 [AiChatPanel](apps/dashboard/src/designer/header/items/ai-chat/AiChatPanel.tsx)，强耦合设计器 MobX store，无法直接复用。
+- 需求：助手可外链分享（后端传路径、前端跳转），页面为右侧悬浮对话面板形态（欢迎语 + 消息流 + 输入区）；并支持第三方系统通过引入外部 JS/CSS 嵌入同一悬浮框（方案3 Web Component）。
+
+### 目标
+
+- chat 应用（hash 路由）新增分享路由页，路径沿用大屏“后端下划线、前端连字符”转换约定，渲染悬浮对话面板。
+- 悬浮框抽为无 store 依赖的纯组件 `apps/chat/src/components/chat-widget/`（props 驱动：shareCode/apiBase/mode），分享页与第三方嵌入共用同一组件。
+- 新增独立 Vite lib 构建（iife 单文件）产出 `abi-chat-widget.js` + `abi-chat-widget.css`，注册 `<abi-chat-widget>` 自定义元素并暴露 `window.AbiChatWidget.mount/unmount`；静态产物随 chat 构建产物部署，不改任何部署配置（不涉及 nginx）。
+- 样式隔离：不用 Shadow DOM；widget 自身 CSS 全量 `abi-cw-` 前缀、antd `prefixCls` 独立、`getPopupContainer` 挂回 widget 根；widget 构建不引入 Tailwind。
+- 免登录：widget 请求层支持 shareCode 模式，不依赖 token/localStorage。
+- 工坊助手增加分享入口，调后端新分享接口取 shareUrl。
+
+### 非目标
+
+- 不修改现有对话主流程、报告/探索模式、大屏 AiChatPanel 与大屏分享逻辑。
+- 不修改 nginx/部署配置。
+- 不实现 iframe/npm 包等其他集成方案。
+
+### 影响范围
+
+- apps/chat 新增：`components/chat-widget/`、`pages/assistant-share-page/$shareCode.tsx`、`vite.config.widget.ts`、`widget-entry.tsx`、工坊分享入口、`service/api` 分享接口封装。
+- 依赖后端新增：助手分享生成、分享校验、带 shareCode 免登录会话接口（session/add、chat/completions、message/query）及 CORS。
+
+### 验收与测试
+
+- 分享链接打开先校验（有密码弹密码框）后正确渲染悬浮对话面板，可正常对话。
+- 空白第三方页面引入 js/css + 标签即可挂载悬浮框并对话；widget CSS 不污染宿主页面。
+- url 转换、历史消息映射纯函数补 Vitest；运行 ai-bot typecheck、build、build:widget 与 `git diff --check`。
+- 生成 `.ai/runs/2026-08-27-assistant-share-widget/RUN_LOG.md`。
+
+### 2026-08-27 后端协议确认（分享接口已就绪）
+
+- 分享接口与大屏共用：后端服务路径 `POST /api/v1/project/share`，网关完整路径为 `VITE_BASE_API('/api') + '/dashboard/api/v1/project/share'`（与大屏 FetchUtil 拼接方式一致），新增 `type` 字段区分：chat 端助手分享=`react`、abi 助手=`workflow`、数据大屏=`dashboard`。
+- 请求体：`{ projectId, spaceId, type, sharePasswordFlag, expirationDays }`；助手分享时 `projectId` = 助手 appId，`spaceId` 取当前空间。
+- 分享校验与大屏同接口：网关路径 `'/api' + '/dashboard/api/v1/project/checkSharePassword'`，请求体字段 `{ shareCode, sharePassword }`，响应返回 `projectId`（=助手 appId）。
+- 会话三件套免登录与对话 completions 的 shareCode 支持仍待后端确认。
+
+## 2026-08-26 追加：「我的技能」在对话框技能选择可见 + 工坊/商店 tab 字号统一
+
+### 背景
+
+- 技能商店「我的技能」（收藏接口 `addOrRemove`，favorType=skill，与对话收藏同一套逻辑）中已添加的技能（如其他空间的公开技能），在对话框输入框「更多 → 技能」弹窗中看不到：弹窗原用 `querySkillList({ spaceId, status: '1' })` 由后端按空间过滤。
+- 应用工坊 tab（`.ws-tab`，14px）与技能商店 tab（`skill-filter-tabs`，15px，对齐 abi 基准）字体大小不一致。
+
+### 目标
+
+- 与收藏对话完全同一套逻辑，仅区分 favorType=skill 参数，调用时机逐一对齐对话/工坊现有代码：
+  - 收藏状态集合初始为空（对齐对话侧 `favoriteChatIds` 初始空 Set）；
+  - `favorite/list`：进入技能页（chat 技能商店 / abi 技能管理）直接调两个列表——技能列表 + 收藏列表，广场「添加/已添加」状态对比两者得出；切到「我的技能」tab 再拉一次校准；对话框技能弹窗首次打开时也调（弹窗候选即该列表）；
+  - `favorite/status`：技能侧暂不接入（单条查询会随卡片数量放大请求量），等后端提供批量接口后再补；列表加载时更不调用；
+  - `addOrRemove`：添加/移除切换，按响应 `favoriteStatus` 回写集合（不乐观更新）。
+- 对话框技能弹窗只认收藏列表：仅调 `favorite/list?favorType=skill`（与商店「我的技能」同源），弹窗候选即「我的技能」；行原始字段保留（提交用 latestVersionId/skillType），id/名称兼容映射。
+- 技能商店与 abi 技能管理页、能力选择抽屉均移除 localStorage `mySkills` 读写，以后端为准；「我的技能」集合初始为空，不读本地存储。
+- 侧边栏「应用工坊/技能商店」菜单项、技能商店 tab、应用工坊 tab 三处字号统一为 14px。
+
+### 非目标
+
+- 不修改技能选中后的提交透传逻辑（探索/报告模式）。
+- 不修改收藏添加/移除接口（`addOrRemove`）调用方式。
+- 不调整 tab 其余样式（padding、下划线、颜色）。
+
+### 验收
+
+- 技能商店添加技能后，对话框「更多 → 技能」弹窗可见并可勾选；移除后不再出现；跨设备/清除本地缓存后仍以收藏接口为准。
+- 应用工坊与技能商店 tab 文字大小一致。
+- TypeScript 检查无新增错误。
+
 ## 2026-08-19 追加：报告内容必须来自已完成的报告 Todo
 
 ### 背景

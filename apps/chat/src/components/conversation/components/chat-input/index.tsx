@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AudioRecorder from '../../../../components/AudioRecorder';
 import UploadDrawer from '../../UploadDrawer';
 import FileTag from '../../../../components/FileTag';
-import { querySkillList } from '../../../../service/api/skill';
+import { fetchFavoriteList } from '../../../../service/api/abi-system';
 import { queryMcpList } from '../../../../service/api/mcp';
 import type { ReportSourceVersionFields } from '../../../../service/api/report';
 import { fetchSemanticGroups, fetchSemanticDetail } from '../../../../service/api/semantic';
@@ -70,6 +70,13 @@ interface ChatInputProps {
   onExternalValueConsumed?: () => void;
   selectedModeKey?: ChatInputModeKey;
   onModeChange?: (mode: ChatInputModeKey) => void;
+  // ── 助手会话限定（appId≠0）：候选仅从助手绑定资源里拿 ──
+  /** 数据语义弹窗只用该树（扁平 schema 叶子）；null 表示不限制，用全局 semanticTree */
+  assistantSemanticTree?: any[] | null;
+  /** 技能候选仅用绑定列表；非 null 时跳过全局收藏技能请求 */
+  assistantSkills?: ReadonlyArray<{ id: string; bizName: string; latestVersionId: string; skillType: string }> | null;
+  /** MCP 候选仅用绑定列表（扁平，无分组）；非 null 时跳过全局 MCP 分组请求 */
+  assistantMcps?: ReadonlyArray<{ id: string; name: string; protocol: 'sse' | 'streamable' }> | null;
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
@@ -78,7 +85,8 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     spaceId,
       selectedModeKey, onModeChange,
     semanticTree = [], selectedData, onSelectData, semLoading,
-    externalValue, onExternalValueConsumed
+    externalValue, onExternalValueConsumed,
+    assistantSemanticTree, assistantSkills, assistantMcps
   }) => {
     // 当前模型是否支持关闭思考：1 为支持，0 或其他为不支持
     const isSupportCloseThinking = currentModel?.isSupportThinking === 1 || currentModel?.isSupportThinking === '1';
@@ -129,31 +137,44 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       }
     }, [externalValue, onExternalValueConsumed]);
 
+    // 切换助手会话（绑定候选引用变化）时清空已选技能 / MCP，避免携带旧助手资源发送。
+    useEffect(() => {
+      setSelectedSkills(new Set());
+      setSelectedMCPs(new Set());
+    }, [assistantSkills, assistantMcps]);
+
     useEffect(() => {
       // 父容器控制当前模式，输入框只负责展示和把发送 mode 上抛。
       if (!selectedModeKey || selectedModeKey === selectedMode.key) return;
       setSelectedMode(getModeConfig(selectedModeKey));
     }, [getModeConfig, selectedMode.key, selectedModeKey]);
 
-    // 懒加载技能列表（首次 hover 进入技能面板时触发一次）
+    // 懒加载技能列表（首次 hover 进入技能面板时触发一次）；助手会话直接用绑定候选，不请求全局收藏。
     const skillLoadStartedRef = useRef(false);
     const startSkillLoad = useCallback(() => {
-      if (skillLoadStartedRef.current) return;
+      if (assistantSkills || skillLoadStartedRef.current) return;
       skillLoadStartedRef.current = true;
       setSkillLoading(true);
-      querySkillList({ spaceId: spaceId || getSpaceId(), status: '1' })
+      // 弹窗只认收藏列表：与技能商店「我的技能」同一套逻辑，仅调 favorite/list（favorType=skill）
+      fetchFavoriteList({ favorType: 'skill' })
         .then((res: any) => {
-          const list = res?.data?.data?.pageItems || res?.data?.list || (Array.isArray(res?.data) ? res.data : []) || res?.rows || [];
-          setSkillList(Array.isArray(list) ? list : []);
+          const rows = res?.rows ?? res?.data?.rows ?? res?.data?.list ?? (Array.isArray(res?.data) ? res.data : []);
+          const list = Array.isArray(rows) ? rows : [];
+          // 保留行原始字段（latestVersionId/skillType 等提交要用），id/名称做兼容映射
+          setSkillList(list.map((r: any) => ({
+            ...r,
+            id: r.favorId ?? r.favor_id ?? r.skillId ?? r.id,
+            bizName: r.bizName ?? r.skillName ?? r.name ?? '',
+          })));
         })
         .catch(() => {})
         .finally(() => setSkillLoading(false));
-    }, [spaceId]);
+    }, [assistantSkills]);
 
-    // 懒加载 MCP 分组（首次 hover 进入 MCP 面板时触发一次）
+    // 懒加载 MCP 分组（首次 hover 进入 MCP 面板时触发一次）；助手会话直接用绑定候选，不请求全局分组。
     const mcpLoadStartedRef = useRef(false);
     const startMcpLoad = useCallback(() => {
-      if (mcpLoadStartedRef.current) return;
+      if (assistantMcps || mcpLoadStartedRef.current) return;
       mcpLoadStartedRef.current = true;
       setMcpLoading(true);
       fetchSemanticGroups({ groupType: 'mcp', pageNum: 1, pageSize: 100, spaceId: spaceId || getSpaceId() })
@@ -163,7 +184,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         })
         .catch(() => {})
         .finally(() => setMcpLoading(false));
-    }, [spaceId]);
+    }, [spaceId, assistantMcps]);
 
     // hover MCP 分组时懒加载服务列表（防重入）
     const mcpLoadingGroupsRef = useRef<Set<number>>(new Set());
@@ -248,9 +269,10 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         ? {
             mode: selectedMode.key,
             reportSources: buildReportSourceVersionFields({
-              skills: skillList,
+              // 助手会话：候选即绑定列表（id 即源版本 id），报告源字段映射规则不变。
+              skills: (assistantSkills ?? skillList) as any[],
               selectedSkillIds: selectedSkills,
-              mcps: Array.from(mcpGroupItems.values()).flat(),
+              mcps: (assistantMcps ?? Array.from(mcpGroupItems.values()).flat()) as any[],
               selectedMcpIds: selectedMCPs,
             }),
           }
@@ -264,7 +286,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
 
       onSend(value, options);
       setValue('');
-    }, [loading, mcpGroupItems, onSend, selectedData, selectedExcel, selectedMCPs, selectedMode.key, selectedSkills, skillList, value]);
+    }, [assistantMcps, assistantSkills, loading, mcpGroupItems, onSend, selectedData, selectedExcel, selectedMCPs, selectedMode.key, selectedSkills, skillList, value]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -395,8 +417,9 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       );
     };
 
-    /** 数据语义 Popover 内容（统一黑色样式：顶部搜索 + 分组 hover 右飞层） */
-    const filteredSemTree = useMemo(() => filterSemanticTree(semanticTree, semSearch), [semanticTree, semSearch]);
+    /** 数据语义 Popover 内容（统一黑色样式：顶部搜索 + 分组 hover 右飞层）；助手会话仅展示绑定叶子 */
+    const semTreeSource = assistantSemanticTree ?? semanticTree;
+    const filteredSemTree = useMemo(() => filterSemanticTree(semTreeSource, semSearch), [semTreeSource, semSearch]);
     const semanticPopoverContent = (
       <div className="uni-popup">
         <div className="uni-popup-search">
@@ -415,8 +438,9 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       </div>
     );
 
-    /** 技能飞层内容（统一黑色样式：顶部搜索 + 多选列表） */
-    const filteredSkillList = skillList.filter((s: any) => matchKeyword(s.bizName ?? s.name, skillSearch));
+    /** 技能飞层内容（统一黑色样式：顶部搜索 + 多选列表）；助手会话候选即绑定列表 */
+    const skillSource = assistantSkills ?? skillList;
+    const filteredSkillList = skillSource.filter((s: any) => matchKeyword(s.bizName ?? s.name, skillSearch));
     const skillPopoverContent = (
       <div className="uni-popup">
         <div className="uni-popup-search">
@@ -483,7 +507,10 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       );
     };
 
-    /** MCP 飞层内容（统一黑色样式：顶部搜索 + 分组 hover 右飞层） */
+    /** MCP 飞层内容（统一黑色样式：顶部搜索 + 分组 hover 右飞层）；助手会话为绑定服务的扁平列表 */
+    const filteredBoundMcps = assistantMcps
+      ? assistantMcps.filter((m) => matchKeyword(m.name, mcpSearch))
+      : null;
     const filteredMcpGroups = mcpGroups.filter((g: any) =>
       matchKeyword(g.groupName, mcpSearch) || (mcpGroupItems.get(g.groupId) || []).some((m: any) => matchKeyword(m.name, mcpSearch)));
     const mcpPopoverContent = (
@@ -495,6 +522,24 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         <div className="uni-popup-list">
           {mcpLoading ? (
             <div className="uni-popup-empty">加载中...</div>
+          ) : filteredBoundMcps ? (
+            filteredBoundMcps.length === 0 ? (
+              <div className="uni-popup-empty">{mcpSearch.trim() ? '无匹配结果' : '该助手未绑定 MCP'}</div>
+            ) : (
+              filteredBoundMcps.map((m) => {
+                const mid = String(m.id);
+                const isSel = selectedMCPs.has(mid);
+                return (
+                  <div key={mid} className={`uni-popup-item ${isSel ? 'selected' : ''}`}
+                    onClick={() => setSelectedMCPs((prev) => { const n = new Set(prev); n.has(mid) ? n.delete(mid) : n.add(mid); return n; })}
+                  >
+                    <ApiOutlined className="uni-icon" />
+                    <span className="uni-name">{m.name ?? mid}</span>
+                    {isSel && <CheckOutlined className="uni-check" />}
+                  </div>
+                );
+              })
+            )
           ) : filteredMcpGroups.length === 0 ? (
             <div className="uni-popup-empty">{mcpSearch.trim() ? '无匹配结果' : '暂无 MCP 分组'}</div>
           ) : (

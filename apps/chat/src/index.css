@@ -314,7 +314,8 @@ button {
   border-radius: var(--r-sm);
   cursor: pointer;
   transition: all 0.18s var(--ease);
-  font-size: 13px;
+  /* 与应用工坊/技能商店 tab 字号统一为 14px */
+  font-size: 14px;
   font-weight: 500;
   color: var(--ink-2);
   user-select: none;
@@ -1784,9 +1785,9 @@ button {
 .uni-popover .ant-popover-inner { padding: 0; border-radius: 12px; box-shadow: 0 8px 24px rgba(26, 39, 68, 0.12); }
 /* 嵌套飞层（挂在父级 .ant-popover 内）：左侧透明内边距既形成层级间距，又是 hover 过渡桥，不产生死区 */
 .ant-popover .ant-popover.uni-popover { padding-left: 8px; }
+/* 级联卡片宽度保持一致：一级菜单 / 二级面板（数据语义、技能、MCP）/ 三级飞层统一 260px */
 .uni-popup { display: flex; flex-direction: column; width: 260px; }
-.uni-popup--flyout { width: 240px; }
-.uni-popup--menu { width: 168px; }
+.uni-popup--flyout, .uni-popup--menu { width: 260px; }
 .uni-popup-search {
   display: flex; align-items: center; gap: 8px; padding: 9px 12px; flex-shrink: 0;
   border-bottom: 1px solid var(--border-2); color: var(--ink-3); font-size: 13px;
@@ -2042,7 +2043,8 @@ code, pre {
 }
 .skill-store-view .skill-filter-tabs .ant-tabs-tab {
   padding: 8px 0;
-  font-size: 15px;
+  /* 与侧边栏菜单、应用工坊 ws-tab 统一为 14px */
+  font-size: 14px;
   font-weight: 500;
   color: #768a9f;
   transition: color 0.2s;
@@ -2175,6 +2177,7 @@ code, pre {
   padding: 12px 0 14px;
   border: none;
   background: transparent;
+  /* 与侧边栏菜单、技能商店 skill-filter-tabs 统一为 14px */
   font-size: 14px;
   font-weight: 500;
   font-family: var(--font);
@@ -2594,6 +2597,10 @@ code, pre {
     0 2px 8px rgba(91, 124, 247, 0.06);
   transform: translateY(-2px);
   border-color: rgba(91, 124, 247, 0.25);
+}
+/* 我的助手卡片整体可点击：点击创建绑定该助手的新会话并进入对话 */
+.ws-assistant-card--clickable {
+  cursor: pointer;
 }
 .ws-assistant-card .wac-head {
   display: flex;

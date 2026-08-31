@@ -25,6 +25,13 @@ import { resetLoginExpiredState } from './utils/auth.ts';
 // createApp({
 //   models,
 // })
+
+// 兼容后端助手分享返回的哈希路径（#/dashboard_share_page/{code}）：
+// 本应用为 history 路由无法消费哈希路径，独立运行时以全屏 iframe 内嵌 chat 分享页，
+// 地址栏保持后端原路径不变，也不经过本应用路由（避免 404 / 登录跳转闪烁）
+const shareHashMatch = !qiankunWindow.__POWERED_BY_QIANKUN__
+  ? window.location.hash.match(/^#\/?dashboard_share_page\/([^/?#]+)/)
+  : null;
 let root: any;
 
 async function setupApp(props: any) {
@@ -89,7 +96,14 @@ const initQianKun = () => {
   } as any);
 };
 
-if (qiankunWindow.__POWERED_BY_QIANKUN__) {
+if (shareHashMatch) {
+  const iframe = document.createElement('iframe');
+  iframe.src = `${window.location.origin}/chat-ui/#/dashboard_share_page/${decodeURIComponent(shareHashMatch[1])}`;
+  iframe.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;border:0;';
+  const rootEl = document.getElementById('root');
+  if (rootEl) rootEl.replaceChildren(iframe);
+  else document.body.appendChild(iframe);
+} else if (qiankunWindow.__POWERED_BY_QIANKUN__) {
   initQianKun();
 } else {
   setupApp({});

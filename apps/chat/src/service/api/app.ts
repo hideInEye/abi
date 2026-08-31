@@ -19,8 +19,8 @@ function getCurrentUserId(): number | undefined {
 
 function mapAppListParams(params: any) {
   return {
-    // 对话页会话列表固定查询 appId=0；大屏（dashboard）使用 appId=1，以此隔离两端会话
-    appId: 0,
+    // 对话页会话列表默认查 appId=0；大屏（dashboard）用 appId=1 隔离；显式传 appId 时查对应助手的会话
+    appId: params.appId ?? 0,
     spaceId: params.space_id ?? params.spaceId,
     userId: params.userId ?? getCurrentUserId(),
   }
@@ -139,19 +139,44 @@ export function checkAppNameExists(data:{ biz_name: string,space_id: number}) {
   });
 }
 
-// 请求去重：同一时刻只允许一个 fetchAppList 在飞行中，后续调用复用同一 promise
-let _appListInflight: Promise<any> | null = null
+// 请求去重：同一时刻同一 appId 只允许一个 fetchAppList 在飞行中，后续调用复用同一 promise
+const _appListInflightByAppId = new Map<number, Promise<any>>()
 
 // 获取app列表
 export function fetchAppList(params: any) {
-  if (_appListInflight) return _appListInflight
-  _appListInflight = request({
+  const appId = Number(params?.appId ?? 0) || 0
+  const inflight = _appListInflightByAppId.get(appId)
+  if (inflight) return inflight
+  const promise = request({
     url: "/abi-chat/v1/app/session/list",
     method: "post",
     data: mapAppListParams(params),
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
-  }).then(mapAppListResponse).finally(() => { _appListInflight = null })
-  return _appListInflight
+  }).then(mapAppListResponse).finally(() => { _appListInflightByAppId.delete(appId) })
+  _appListInflightByAppId.set(appId, promise)
+  return promise
+}
+
+// 查询当前空间下全部助手的历史会话：session/list 按 appId 精确过滤，
+// 助手会话（appId=助手ID）不在 appId=0 查询里，需按助手逐个查询后合并（会话列表展示历史助手会话用）。
+export async function fetchAssistantSessionList(params: { spaceId?: number | string } = {}): Promise<any[]> {
+  try {
+    const assistantRes: any = await fetchAssistantList({ spaceId: params.spaceId })
+    const rows = assistantRes?.data?.list ?? assistantRes?.data?.rows ?? assistantRes?.rows ?? (Array.isArray(assistantRes?.data) ? assistantRes.data : [])
+    const ids = (Array.isArray(rows) ? rows : [])
+      .map((item: any) => item?.appId ?? item?.id)
+      .filter((id: any) => id != null && String(id) !== '')
+    const lists = await Promise.all(
+      ids.map((id: any) =>
+        fetchAppList({ space_id: params.spaceId, appId: id })
+          .then((r: any) => (Array.isArray(r?.data) ? r.data : []))
+          .catch(() => []),
+      ),
+    )
+    return lists.flat()
+  } catch {
+    return []
+  }
 }
 
 // 应用工坊-我的助手：查询当前空间下的助手列表（默认仅查已上线 status='1'）
@@ -304,6 +329,14 @@ function getSpaceId() {
   } catch { return undefined }
 }
 
+// 获取当前用户账号（userName），用于分组列表按创建人过滤
+function getCurrentUserName(): string | undefined {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}')
+    return userInfo?.userName || undefined
+  } catch { return undefined }
+}
+
 // ============ 会话分组管理接口 ============
 
 export interface SessionGroup {
@@ -343,6 +376,7 @@ export interface ListGroupParams {
   groupName?: string
   status?: string
   parentId?: number
+  createBy?: string
 }
 
 // 新增分组
@@ -374,7 +408,7 @@ export function fetchSessionGroupList(data: ListGroupParams) {
   _groupListInflight = request({
     url: "/abi-chat/v1/app/session/group/list",
     method: "post",
-    data,
+    data: { ...data, createBy: data.createBy ?? getCurrentUserName() },
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
   }).finally(() => { _groupListInflight = null })
   return _groupListInflight

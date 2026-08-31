@@ -293,6 +293,23 @@
   border-bottom: none;
 }
 
+/* 左栏比例布局：思考区 / 待办区按交互稿红框 1:1 等高填满工作区高度，各自内部滚动；两区之间间距收紧 */
+.todoColumn .panel:first-child {
+  display: flex;
+  flex: 0 0 50%;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: 12px;
+}
+
+.todoColumn .panel:last-child {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: 12px;
+}
+
 .currentColumn {
   display: flex;
   min-width: 0;
@@ -522,13 +539,21 @@
   font-size: 10px;
 }
 
-/* 思考区折叠容器：始终渲染内容，用 maxHeight + transition 实现平滑折叠（对齐交互模式） */
+/* 思考区折叠容器：作为 flex 容器约束内容高度（思考区面板 45% 比例），展开内部滚动、收起裁切渐隐 */
 .thinkingCollapsible {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .thinkingCollapsibleInner {
-  transition: max-height 0.3s ease;
+  /* 填满思考区面板（45% 比例）：展开内部滚动；收起裁切并配合底部渐变遮罩逐渐隐藏 */
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* 折叠时底部渐变遮罩：淡出隐藏的内容 */
@@ -600,11 +625,14 @@
   animation: exploreGlowPulse 1.5s infinite;
 }
 
-/* 待办事项：科技感增强 — 发光状态指示器 + 行高亮 */
+/* 待办事项：科技感增强 — 发光状态指示器 + 行高亮；填满待办面板剩余高度，超出内部滚动 */
 .todoList {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .todoRow {
@@ -618,6 +646,20 @@
 
 .todoRow:hover {
   background: rgba(91, 124, 247, 0.03);
+}
+
+/* 历史探索：待办可点击查看该步骤历史信息 */
+.todoRowClickable {
+  cursor: pointer;
+}
+
+.todoRowClickable:hover {
+  background: rgba(91, 124, 247, 0.07);
+}
+
+.todoRowSelected,
+.todoRowSelected:hover {
+  background: rgba(91, 124, 247, 0.1);
 }
 
 .todoStatus {
@@ -757,6 +799,17 @@
   animation: exploreGlowPulse 1.5s infinite;
 }
 
+/* 历史探索：选中待办对应的技能高亮 */
+.skillRowSelected {
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.1) 0%, rgba(139, 92, 246, 0.06) 100%);
+  color: var(--ink, #1f2937);
+  border-color: rgba(91, 124, 247, 0.3);
+}
+
+.skillRowSelected .anticon {
+  color: var(--accent, #5b7cf7);
+}
+
 .skillName {
   min-width: 0;
   overflow: hidden;
@@ -765,7 +818,38 @@
 }
 
 .inlineAlert {
-  margin: 0 16px 14px;
+  margin: 14px 16px;
+}
+
+/* ── 底部工具栏：反馈操作按钮（点踩/点赞，占位功能） ── */
+.footerBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px 12px;
+}
+
+/* 与交互模式操作栏 action-icon 保持一致：32×32 图标按钮、悬停主题色浅底 */
+.footerAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #8c8c8c;
+  font-size: 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.footerAction:hover {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.08);
 }
 
 /* 左栏底部提示语：任务运行中提醒用户留在当前页面 */
@@ -1113,6 +1197,11 @@
 }
 
 .tableCaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
   padding: 6px 12px;
   border-top: 1px solid rgba(91, 124, 247, 0.1);
   background: rgba(91, 124, 247, 0.02);

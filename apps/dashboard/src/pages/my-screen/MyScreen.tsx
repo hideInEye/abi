@@ -7,8 +7,11 @@ import {IPage, IProjectInfo} from '../../designer/DesignerType.ts';
 import baseApi from '../../api/BaseApi.ts';
 import {globalMessage} from '../../framework/message/GlobalMessage.tsx';
 import MyScreenItem from './MyScreenItem.tsx';
+import ShareRecordList from './ShareRecordList.tsx';
 import {SearchFilterBar, SearchFilterField, getFilterPopupContainer} from '../home/project-list/SearchFilterBar.tsx';
 import '../home/project-list/ProjectList.less';
+
+type MyScreenTab = 'published' | 'share';
 
 interface MyScreenProps {
     title?: string;
@@ -23,6 +26,8 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
     });
     const unpublishIdRef = useRef<string>('');
     const [unpublishDialog, setUnpublishDialog] = React.useState(false);
+    // 页签：已发布大屏 / 分享记录
+    const [activeTab, setActiveTab] = useState<MyScreenTab>('published');
 
     // v5 pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -154,6 +159,28 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
 
     return (
         <div className="project-list-container">
+            {/* 页签：已发布大屏 / 分享记录 */}
+            <div className="my-screen-tabs">
+                <button
+                    type="button"
+                    className={`my-screen-tab${activeTab === 'published' ? ' active' : ''}`}
+                    onClick={() => setActiveTab('published')}
+                >
+                    已发布大屏
+                </button>
+                <button
+                    type="button"
+                    className={`my-screen-tab${activeTab === 'share' ? ' active' : ''}`}
+                    onClick={() => setActiveTab('share')}
+                >
+                    分享记录
+                </button>
+            </div>
+
+            {activeTab === 'share' ? (
+                <ShareRecordList />
+            ) : (
+            <>
             {/* v5 Searchbar */}
             <section className="abi-searchbar">
                 <SearchFilterBar
@@ -245,6 +272,8 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
             >
                 <div style={{color: '#aeaeae', padding: 10}}>确认要取消发布吗？</div>
             </Modal>
+            </>
+            )}
         </div>
     );
 });

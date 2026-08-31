@@ -358,7 +358,8 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const statusBadge = resolveStatusBadge(src.status)
   const visibilityBadge = resolveVisibilityBadge(src.visibility)
   const activeVersion = versions.find((v) => String(v.versionId ?? v.id) === String(activeVersionId))
-  const headlineVersionId = src.sourceSkillId
+  // 当前启用版本：优先回滚显式选中的 sourceSkillId；发布只更新 latestVersionId，需兜底，否则发布后全部显示历史版本
+  const headlineVersionId = src.sourceSkillId || src.latestVersionId || skill?.latestVersionId
   const headlineVersion = headlineVersionId ? versions.find((v) => String(v.versionId ?? v.id) === String(headlineVersionId)) : undefined
 
   const { tree: fileTree, map: fileMap } = useMemo(() => buildFileTree(files), [files])
@@ -572,20 +573,20 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
     loadFiles(vid)
   }
 
-  // 设为当前版本（左右两侧都刷新）
+  // 回滚版本（左右两侧都刷新）
   function handleSetCurrentVersion(v: VersionItem) {
     const vid = v.versionId ?? v.id
     if (!vid || !skillId) return
     Modal.confirm({
-      title: '设为当前版本？',
-      content: `将把 v${v.version || v.versionNo || vid} 设为当前对外展示的版本。`,
-      okText: '确认',
+      title: '确定回滚？',
+      content: `将回滚至 v${v.version || v.versionNo || vid} 版本。`,
+      okText: '确定',
       cancelText: '取消',
       onOk: async () => {
         try {
           const res: any = await selectSkillVersion({ skillId, versionId: vid })
           if (isOk(res)) {
-            message.success('已设为当前版本')
+            message.success('回滚成功')
             setActiveVersionId(vid)
             loadFiles(vid)
             loadLeftVersionDetail(vid)
@@ -886,7 +887,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                                     )}
                                     {vStatus.cls !== 'offline' && !isActive && (
                                       <Button className="sd-v5-btn sd-v5-btn--primary" icon={<SwapOutlined />} size="small" onClick={() => handleSetCurrentVersion(v)}>
-                                        设为当前
+                                        回滚
                                       </Button>
                                     )}
                                     <Button className="sd-v5-btn sd-v5-btn--danger" icon={<DeleteOutlined />} size="small" onClick={() => handleDeleteVersion(v)} />
