@@ -1,10 +1,8 @@
-import { CheckCircleOutlined, CloseCircleOutlined, CompassOutlined, DownloadOutlined, InboxOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Empty } from 'antd'
-import type { MenuProps } from 'antd'
+import { CheckCircleOutlined, CloseCircleOutlined, CompassOutlined, InboxOutlined } from '@ant-design/icons'
+import { Button, Empty } from 'antd'
 import React from 'react'
 
-import { downloadExploreExport, isStructuredOutput } from './exploreExport'
-import type { ExploreExportFormat } from './exploreExport'
+import { isStructuredOutput } from './exploreExport'
 import ExploreRichText from './ExploreRichText'
 import type { ExploreItem, ExploreStep, ExploreStepOutput } from './types'
 import styles from './styles.module.css'
@@ -21,11 +19,12 @@ const CollapseIcon: React.FC = () => (
   </svg>
 )
 
-const EXPORT_MENU_ITEMS: MenuProps['items'] = [
-  { key: 'word', label: 'Word 文件' },
-  { key: 'pdf', label: 'PDF 文件（打印另存）' },
-  { key: 'html', label: 'HTML 文件' },
-]
+// 暂不支持下载，屏蔽导出菜单（恢复时需同步恢复顶部 DownloadOutlined/Dropdown/MenuProps 与 exploreExport 相关导入）
+// const EXPORT_MENU_ITEMS: MenuProps['items'] = [
+//   { key: 'word', label: 'Word 文件' },
+//   { key: 'pdf', label: 'PDF 文件（打印另存）' },
+//   { key: 'html', label: 'HTML 文件' },
+// ]
 
 function getStatusTag(status: ExploreItem['status']) {
   switch (status) {
@@ -97,6 +96,7 @@ const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose }
           </div>
         </div>
         <div className={styles.paneHeaderActions}>
+          {/* 暂不支持下载，屏蔽下载按钮
           <Dropdown
             trigger={['click']}
             placement="bottomRight"
@@ -116,6 +116,7 @@ const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose }
               disabled={!hasResult}
             />
           </Dropdown>
+          */}
           <Button
             type="text"
             className={styles.paneCloseButton}

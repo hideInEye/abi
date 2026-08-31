@@ -358,7 +358,8 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const statusBadge = resolveStatusBadge(src.status)
   const visibilityBadge = resolveVisibilityBadge(src.visibility)
   const activeVersion = versions.find((v) => String(v.versionId ?? v.id) === String(activeVersionId))
-  const headlineVersionId = src.sourceSkillId
+  // 当前启用版本：优先回滚显式选中的 sourceSkillId；发布只更新 latestVersionId，需兜底，否则发布后全部显示历史版本
+  const headlineVersionId = src.sourceSkillId || src.latestVersionId || skill?.latestVersionId
   const headlineVersion = headlineVersionId ? versions.find((v) => String(v.versionId ?? v.id) === String(headlineVersionId)) : undefined
 
   const { tree: fileTree, map: fileMap } = useMemo(() => buildFileTree(files), [files])

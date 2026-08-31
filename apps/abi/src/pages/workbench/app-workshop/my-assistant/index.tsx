@@ -12,6 +12,7 @@ import { filterByCreateTime } from '@/utils/date';
 import AssistantEditDrawer, { type AgentMock } from '@/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer';
 import DataDirectoryDropdown from './DataDirectoryDropdown';
 import AssistantShareModal from './AssistantShareModal';
+import ShareRecordList from './ShareRecordList';
 
 /** 将接口返回的 AppItem 映射为页面卡片数据结构 */
 function mapAppToCard(item: any): AgentCard {
@@ -57,6 +58,8 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   // 分享弹窗：当前分享的助手（为空时关闭）
   const [shareAgent, setShareAgent] = useState<AgentCard | null>(null);
+  // 页签：已发布助手 / 分享记录
+  const [activeTab, setActiveTab] = useState<string>('published');
 
   /** 拉取助手列表（仅已上线，searchName 未传时使用当前搜索关键字） */
   async function fetchList(searchName?: string) {
@@ -252,9 +255,12 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
     );
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%' }}>
+  const tabItems = [
+    {
+      key: 'published',
+      label: '已发布助手',
+      children: (
+        <div className="h-full min-h-0" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* v5 Searchbar */}
         <section className="abi-searchbar">
           <SearchFilterBar
@@ -330,7 +336,29 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
             </div>
           </div>
         </section>
-      </div>
+        </div>
+      )
+    },
+    {
+      key: 'share-record',
+      label: '分享记录',
+      children: (
+        <div className="h-full min-h-0">
+          <ShareRecordList />
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <ATabs
+        activeKey={activeTab}
+        animated={false}
+        className="abi-attr-modeling-tabs h-full min-h-0"
+        items={tabItems}
+        onChange={setActiveTab}
+      />
 
       <AssistantEditDrawer
         visible={editVisible}

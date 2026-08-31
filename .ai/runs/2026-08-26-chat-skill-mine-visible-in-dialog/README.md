@@ -91,6 +91,10 @@
 - 2026-08-26（v7，最终）：用户要求去掉技能侧 `favorite/status` 单条查询（请求量随卡片数放大，后端后续提供批量接口）；删除 `checkSkillFavorite`、卡片 hover 与详情打开处的 status 调用及 `fetchIsFavorite` 导入；收藏态改由「我的技能」tab 的 `favorite/list` 与 `addOrRemove` 响应回写维护。
 - 2026-08-26（v8）：字号纠偏——用户实测左侧（侧边栏菜单项 13px）与右侧（工坊 tab 15px）不一致，要求统一 14px；将 `.nav-link-item`、技能商店 `.ant-tabs-tab`、`.ws-tab` 三处全部设为 14px（此前只改了 `.ws-tab` 且方向反了，导致左侧“没反应”）。
 - 2026-08-26（v9）：用户明确对话框技能弹窗「只认 favorite/list」：`startSkillLoad` 去掉 `querySkillList` 与合并过滤，仅调 `fetchFavoriteList({ favorType: 'skill' })`，弹窗候选即「我的技能」；保留行原始字段供提交使用。
+- 2026-08-28（v10）：修复「我的技能」tab 重复进入时先闪旧数据再刷新的问题——原因非 localStorage（已确认删净），而是 React state `myIds` 残留上次接口/回写结果；`fetchMyIds` 进入时先 `setMyIds(new Set())` 清空，只以当次 `favorite/list` 返回渲染，以后端为准。
+- 2026-08-28（v11）：用户发现 abi 应用技能逻辑未同步——`apps/abi/src/pages/component/system/skills/index.tsx` 与 `assistant-config/modules/capability-picker-configs.ts` 仍读写 localStorage `mySkills`（添加/移除乐观更新 + 落盘、能力选择抽屉「我的技能」tab 读本地）。全部改为与 chat 同源：删 `MY_SKILLS_KEY` 及全部 localStorage 读写；`myIds` 初始空、切到「我的技能」tab 才拉 `favorite/list?favorType=skill`（先清空再渲染）；添加/移除 `await addOrRemove` 按响应 `favoriteStatus` 回写（不乐观更新、不落盘）；能力选择抽屉「我的技能」tab 改为并行拉技能列表 + 收藏列表后过滤。abi 应用全局再无 `mySkills` 残留。
+- 2026-08-28（v12）：用户明确广场「添加/已添加」状态不调单条状态接口，由技能列表与收藏列表对比得出：chat 技能商店与 abi 技能管理页均在进入页面（首次挂载）时直接并行调两个列表（技能列表 + `favorite/list?favorType=skill`）；切到「我的技能」tab 仍再拉一次校准。广场「已添加」首次进入即可正确显示。
+- 2026-08-28（v13）：修复广场卡片先闪「添加」再变「已添加」——新增 `favLoading`（初始 true），收藏列表未返回前不渲染卡片/表格内容（只转加载圈）；`fetchMyIds` 的加载态从共用 `loading` 改为独立 `favLoading`，避免两个列表完成时间差导致状态翻转；chat 技能商店与 abi 技能管理页同步改。
 
 ## 未解决问题
 

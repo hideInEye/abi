@@ -4,7 +4,14 @@ import { Button, Input, Modal, Spin } from 'antd'
 import { useEffect, useState } from 'react'
 
 import ChatWidget from '@/components/chat-widget/ChatWidget'
+import type { ProjectType } from '@/components/chat-widget/service'
 import { checkAssistantShare } from '@/service/api/assistant'
+
+/** 后端分享校验响应携带项目类型（已确认）：自主助手=react / 工作流助手=workflow；异常值抛错便于联调时暴露字段问题 */
+function normalizeType(raw: unknown): ProjectType {
+  if (raw === 'react' || raw === 'workflow' || raw === 'dashboard') return raw
+  throw new Error(`checkSharePassword 响应缺少有效 type：${String(raw)}`)
+}
 
 /** chat 请求拦截器返回 { code, msg, data }，详情对象兼容 data.data / data */
 function unwrap(res: any): any {
@@ -20,6 +27,7 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
   const [password, setPassword] = useState('')
   const [passwordLoading, setPasswordLoading] = useState(false)
   const [verifiedAppId, setVerifiedAppId] = useState('')
+  const [verifiedType, setVerifiedType] = useState<ProjectType>('react')
 
   const apiBase = window.APP_CONFIG?.VITE_BASE_API || ''
 
@@ -38,7 +46,9 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
         }
         if (d.passwordFlag) {
           setPasswordModalVisible(true)
+          setVerifiedType(normalizeType(d.type))
         } else {
+          setVerifiedType(normalizeType(d.type))
           setVerifiedAppId(appId)
         }
       } catch {
@@ -59,6 +69,7 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
       const appId = String(d.appId ?? d.projectId ?? '')
       if (d.result && appId) {
         setPasswordModalVisible(false)
+        setVerifiedType(normalizeType(d.type))
         setVerifiedAppId(appId)
       }
     } finally {
@@ -113,7 +124,7 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
       </Modal>
 
       {verifiedAppId && (
-        <ChatWidget shareCode={shareCode} apiBase={apiBase} mode="page" verifiedAppId={verifiedAppId} />
+        <ChatWidget shareCode={shareCode} apiBase={apiBase} mode="page" verifiedAppId={verifiedAppId} verifiedType={verifiedType} />
       )}
     </>
   )

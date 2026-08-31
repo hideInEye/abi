@@ -20,6 +20,53 @@
   overflow: hidden;
   gap: 14px;
 
+  // ── 我的大屏页签（已发布大屏 / 分享记录，下划线风格对齐 abi abi-attr-modeling-tabs） ──
+  .my-screen-tabs {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding: 0 28px;
+    border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+    background: rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+
+    .my-screen-tab {
+      position: relative;
+      padding: 12px 0 14px;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      color: #768a9f;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover {
+        color: #5b7cf7;
+      }
+
+      &.active {
+        color: #5b7cf7;
+        font-weight: 600;
+        text-shadow: 0 0 8px rgba(91, 124, 247, 0.15);
+
+        &::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #5b7cf7 0%, #7091fa 50%, #5b7cf7 100%);
+          border-radius: 3px 3px 0 0;
+          box-shadow: 0 -2px 8px rgba(91, 124, 247, 0.4);
+        }
+      }
+    }
+  }
+
   // ── v5 Searchbar (matching data-source global style) ──
   .abi-searchbar {
     padding: 16px 28px;
