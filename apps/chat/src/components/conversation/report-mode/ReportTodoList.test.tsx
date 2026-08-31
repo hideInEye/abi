@@ -324,18 +324,18 @@ describe('ReportTodoList', () => {
       status: 'running',
       thinkingCompleted: true,
       todoOpen: false,
-      tasks: [{ content: '生成订单查询 SQL', status: 'in_progress' }],
+      tasks: [{ content: '核实预测流程并基于全年数据预测2026年1-3月', status: 'in_progress' }],
       currentPlan: {
         entryId: 'plan-activity',
-        tasks: [{ content: '生成订单查询 SQL', status: 'in_progress' }],
+        tasks: [{ content: '核实预测流程并基于全年数据预测2026年1-3月', status: 'in_progress' }],
       },
       stepsById: {
         'step-activity': {
           id: 'step-activity',
-          title: 'execute_skill_script_file',
+          title: 'sql_query',
           action: 'execute_skill_script_file',
-          actionIntention: '生成订单查询 SQL',
-          status: 'in_progress',
+          actionIntention: '执行订单总金额查询SQL',
+          status: 'done',
           chunks: [{ entryId: '3-0', outputType: 'text', content: 'Skill: sql-generator' }],
           firstEntryId: '2-0',
           lastEntryId: '3-0',
@@ -345,14 +345,14 @@ describe('ReportTodoList', () => {
         },
       },
       stepOrder: ['step-activity'],
-      executionGroups: [{ key: 'plan-activity:0', planEntryId: 'plan-activity', taskIndex: 0, taskContent: '生成订单查询 SQL', stepIds: ['step-activity'] }],
+      executionGroups: [{ key: 'plan-activity:0', planEntryId: 'plan-activity', taskIndex: 0, taskContent: '核实预测流程并基于全年数据预测2026年1-3月', stepIds: ['step-activity'] }],
     }
 
     const collapsed = renderToStaticMarkup(<ReportTodoList report={report} onToggleTodo={() => undefined} onToggleTask={() => undefined} />)
     const expanded = renderToStaticMarkup(<ReportTodoList report={{ ...report, todoOpen: true }} onToggleTodo={() => undefined} onToggleTask={() => undefined} />)
 
-    expect(collapsed).toContain('当前正在执行 生成订单查询 SQL 步骤，调用 sql-generator 技能')
+    expect(collapsed).toContain('当前正在执行 核实预测流程并基于全年数据预测2026年1-3月 步骤，调用 sql_query 技能')
     expect(collapsed).toContain('aria-live="polite"')
-    expect(expanded).not.toContain('当前正在执行 生成订单查询 SQL 步骤，调用 sql-generator 技能')
+    expect(expanded).not.toContain('当前正在执行 核实预测流程并基于全年数据预测2026年1-3月 步骤，调用 sql_query 技能')
   })
 })
