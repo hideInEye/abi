@@ -1,4 +1,5 @@
 import type { ReportAttachment, ReportCandidate, ReportItem, ReportPlanTask, ReportPublicChunk, ReportPublicStep } from './types'
+import { getRenderableStepChunks } from './embeddedChunkPayload'
 
 export type ReportPresentationStage = 'thinking' | 'todo' | 'report'
 export type ReportPreviewOpenReason = 'auto' | 'manual'
@@ -30,8 +31,8 @@ export function isReportGenerationTask(task: Pick<ReportPlanTask, 'content'>) {
  * 报告消息只允许按“思考 → ToDo → 报告”依次显露。
  * reportCandidate 可以提前到达，但在整体完成且任务全部结束前只保存在内存中。
  */
-export function getReportPresentationStage(report: Pick<ReportItem, 'currentPlan' | 'thinkingCompleted' | 'tasks' | 'status' | 'reportCandidate'> & Partial<Pick<ReportItem, 'reportAttachments'>>): ReportPresentationStage {
-  if (!report.currentPlan || !report.thinkingCompleted) return 'thinking'
+export function getReportPresentationStage(report: Pick<ReportItem, 'currentPlan' | 'thinkingCompleted' | 'tasks' | 'status' | 'reportCandidate'> & Partial<Pick<ReportItem, 'reportAttachments' | 'thinkingAnimationCompleted'>>): ReportPresentationStage {
+  if (!report.currentPlan || !report.thinkingCompleted || report.thinkingAnimationCompleted === false) return 'thinking'
 
   if (report.status === 'completed' && (report.reportCandidate || report.reportAttachments?.length) && areReportTasksSettled(report.tasks)) {
     return 'report'
@@ -40,8 +41,21 @@ export function getReportPresentationStage(report: Pick<ReportItem, 'currentPlan
   return 'todo'
 }
 
-export function canRevealReport(report: Pick<ReportItem, 'currentPlan' | 'thinkingCompleted' | 'tasks' | 'status' | 'reportCandidate'> & Partial<Pick<ReportItem, 'reportAttachments'>>) {
+export function canRevealReport(report: Pick<ReportItem, 'currentPlan' | 'thinkingCompleted' | 'tasks' | 'status' | 'reportCandidate'> & Partial<Pick<ReportItem, 'reportAttachments' | 'thinkingAnimationCompleted'>>) {
   return getReportPresentationStage(report) === 'report'
+}
+
+/** 打字机与后端思考步骤均结束后，原子切换为“思考收起、Todo 展开”。 */
+export function completeReportThinkingTypewriter(report: ReportItem): ReportItem {
+  const canEnterTodo = report.thinkingCompleted && Boolean(report.currentPlan)
+
+  return {
+    ...report,
+    animateThinkingPlan: false,
+    thinkingAnimationCompleted: true,
+    thinkingOpen: canEnterTodo ? false : report.thinkingOpen,
+    todoOpen: canEnterTodo ? true : report.todoOpen,
+  }
 }
 
 /** 历史报告和用户手动重开都直接显示完整内容，避免每次查看都重复播放。 */
@@ -75,6 +89,83 @@ export function getCurrentTaskTitle(tasks: Array<Pick<ReportPlanTask, 'content' 
   return tasks.find((task) => task.status === 'in_progress')?.content || tasks.find((task) => task.status === 'pending')?.content || tasks[tasks.length - 1]?.content || '准备执行'
 }
 
+export type ReportStatusTone = 'pending' | 'running' | 'done' | 'failed' | 'skipped'
+
+/** 将后端状态统一为报告卡片使用的有限视觉语义。 */
+export function getReportStatusTone(status: string): ReportStatusTone {
+  switch (status) {
+    case 'in_progress':
+      return 'running'
+    case 'completed':
+    case 'done':
+      return 'done'
+    case 'failed':
+      return 'failed'
+    case 'cancelled':
+    case 'skipped':
+      return 'skipped'
+    default:
+      return 'pending'
+  }
+}
+
+const SKILL_NAME_PATTERNS = [
+  /(?:skill(?:_name)?|技能名称)\s*[：:=]\s*["']?([a-z0-9][a-z0-9_.-]*)/i,
+  /(?:加载|调用|使用)\s*([a-z0-9][a-z0-9_.-]*)\s*(?:技能|skill)/i,
+  /\b([a-z0-9][a-z0-9_.-]*)\s+(?:skill|技能)\b/i,
+]
+
+function extractSkillName(value: string | undefined) {
+  const text = value?.trim()
+  if (!text) return undefined
+
+  for (const pattern of SKILL_NAME_PATTERNS) {
+    const name = pattern.exec(text)?.[1]?.trim()
+    if (name) return name
+  }
+
+  return undefined
+}
+
+function getCollapsedTodoStepName(step: ReportPublicStep | undefined, taskContent: string) {
+  return (step?.actionIntention || step?.title || step?.action || taskContent).trim().replace(/[，。；;：:]+$/g, '')
+}
+
+function getCollapsedTodoSkillName(step: ReportPublicStep | undefined, taskContent: string) {
+  const publicFields = [step?.actionIntention, step?.title, step?.action, ...(getRenderableStepChunks(step?.chunks || []).map((chunk) => chunk.content)), taskContent]
+  return publicFields.map(extractSkillName).find(Boolean)
+}
+
+type CollapsedTodoReport = Pick<ReportItem, 'tasks' | 'currentPlan' | 'executionGroups' | 'stepsById' | 'stepOrder'>
+
+/**
+ * Todo 总面板收起时使用的公开执行摘要。
+ * 只读取当前任务与公开步骤模型；该模型没有 thought/action_input，因此不会泄露内部推理。
+ */
+export function getCollapsedTodoExecutionSummary(report: CollapsedTodoReport) {
+  const taskIndex = report.tasks.findIndex((task) => task.status === 'in_progress')
+  if (taskIndex < 0) return undefined
+
+  const task = report.tasks[taskIndex]
+  const relevantGroups = report.executionGroups.filter((group) => group.taskContent === task.content || (group.planEntryId === report.currentPlan?.entryId && group.taskIndex === taskIndex))
+  const stepIds = new Set(
+    relevantGroups.flatMap((group) => group.stepIds),
+  )
+  const visibleSteps = [...report.stepOrder]
+    .reverse()
+    .filter((stepId) => stepIds.has(stepId))
+    .map((stepId) => report.stepsById[stepId])
+    .filter((step): step is ReportPublicStep => Boolean(step && isVisibleReportStep(step)))
+  const currentStep = visibleSteps.find((step) => step.status === 'in_progress') || visibleSteps[0]
+
+  const stepName = getCollapsedTodoStepName(currentStep, task.content)
+  if (!stepName) return undefined
+
+  const skillName = getCollapsedTodoSkillName(currentStep, task.content)
+  const stepLabel = stepName.endsWith('步骤') ? stepName : `${stepName} 步骤`
+  return skillName ? `当前正在执行 ${stepLabel}，调用 ${skillName} 技能` : `当前正在执行 ${stepLabel}`
+}
+
 export function getTaskKey(planEntryId: string | undefined, taskIndex: number) {
   return `${planEntryId || 'plan-pending'}:${taskIndex}`
 }
@@ -104,7 +195,7 @@ export function toReportChunkMarkdown(chunk: Pick<ReportPublicChunk, 'outputType
 export function isVisibleReportStep(step: ReportPublicStep, hideReportContent = false) {
   if (step.actionIntention || step.actionReason) return true
   if (step.action && step.action.toLowerCase() !== 'todowrite') return true
-  if (step.chunks.some((chunk) => (!hideReportContent || !isReportContentChunk(chunk)) && chunk.content.trim())) return true
+  if (getRenderableStepChunks(step.chunks).some((chunk) => (!hideReportContent || !isReportContentChunk(chunk)) && chunk.content.trim())) return true
 
   const title = step.title?.trim().toLowerCase()
   if (title && !HIDDEN_STEP_TITLES.has(title) && !title.startsWith('todo::')) return true
@@ -218,7 +309,7 @@ export function formatReportDuration(durationSeconds: number | undefined) {
 }
 
 export function getStepSummary(step: ReportPublicStep, hideReportContent = false) {
-  const latestPublicChunk = [...step.chunks].reverse().find((chunk) => !hideReportContent || !isReportContentChunk(chunk))
+  const latestPublicChunk = getRenderableStepChunks(step.chunks).reverse().find((chunk) => !hideReportContent || !isReportContentChunk(chunk))
   const rawSummary = step.actionIntention || step.actionReason || step.detail || step.action || latestPublicChunk?.content || '正在执行'
   const summary = rawSummary.trim()
 
@@ -235,7 +326,7 @@ export function getPublicStepLines(step: ReportPublicStep, hideReportContent = f
 
   if (step.actionReason && step.actionReason !== step.actionIntention) lines.push(step.actionReason)
 
-  for (const chunk of step.chunks) {
+  for (const chunk of getRenderableStepChunks(step.chunks)) {
     // 只有已处于报告产物上下文的格式内容才隐藏；普通 Todo 返回的 Skill Markdown 仍是公开执行结果。
     if (hideReportContent && isReportContentChunk(chunk)) continue
 

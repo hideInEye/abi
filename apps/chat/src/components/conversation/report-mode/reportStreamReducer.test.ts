@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { getRenderableStepChunks } from './embeddedChunkPayload'
 import { compareRedisEntryIds, parseRedisEntryId, sortAndDedupeRedisEntries } from './redisEntryId'
 import { createInitialReportStreamState, getOrderedReportSteps, parseReportStreamEvent, reduceReportStreamEntries, reduceReportStreamEntry } from './reportStreamReducer'
 import type { RawReportStreamEntry, ReportStreamEvent } from './types'
@@ -67,6 +68,14 @@ describe('report stream reducer', () => {
       entry('5-0', { type: 'step.meta', id: 'step-1', action: 'todowrite', todo_meta: { state: 'init', done: 0, total: 2 } }),
     ])
     const state = reduceReportStreamEntry(beforeThinkingDone, entry('6-0', { type: 'step.done', id: 'step-1', status: 'done' }))
+    const waitingForTypewriter = reduceReportStreamEntry(
+      { ...beforeThinkingDone, thinkingAnimationCompleted: false },
+      entry('6-0', { type: 'step.done', id: 'step-1', status: 'done' }),
+    )
+    const typewriterAlreadyCompleted = reduceReportStreamEntry(
+      { ...beforeThinkingDone, thinkingAnimationCompleted: true },
+      entry('6-0', { type: 'step.done', id: 'step-1', status: 'done' }),
+    )
 
     expect(beforeThinkingDone.thinkingPlan).toEqual({
       entryId: '4-0',
@@ -76,6 +85,8 @@ describe('report stream reducer', () => {
     expect(beforeThinkingDone).toMatchObject({ status: 'thinking', thinkingOpen: true, thinkingCompleted: false })
     expect(beforeThinkingDone.currentPlan?.version).toBe(1)
     expect(state).toMatchObject({ status: 'running', thinkingOpen: false, thinkingCompleted: true })
+    expect(waitingForTypewriter).toMatchObject({ status: 'running', thinkingOpen: true, thinkingCompleted: true, thinkingAnimationCompleted: false, todoOpen: false })
+    expect(typewriterAlreadyCompleted).toMatchObject({ status: 'running', thinkingOpen: false, thinkingCompleted: true, thinkingAnimationCompleted: true, todoOpen: true })
     expect(state.todoSummaries).toEqual([])
   })
 
@@ -533,6 +544,46 @@ describe('report stream reducer', () => {
     ])
     expect(state.stepsById['dangling-step'].status).toBe('done')
     expect(Object.values(state.stepsById).some((step) => step.status === 'in_progress')).toBe(false)
+  })
+
+  it('同一步骤的三段工具 JSON 完整后才展开公开 chunks', () => {
+    const imageUrl = 'http://192.168.1.195:9000/messageimg/monthly_order_count_trend.png?X-Amz-Credential=test&X-Amz-Signature=complete'
+    const payload = `${JSON.stringify({
+      chunks: [
+        { output_type: 'image', content: imageUrl, title: '月度订单数量趋势' },
+        { output_type: 'text', content: '图表已生成：柱状图；选择原因：用户指定图表类型。' },
+        { output_type: 'text', content: `已生成的图片URL：${imageUrl}`, emit_to_client: false },
+      ],
+      chart: { image_url: imageUrl },
+    })}\n\n⚠️ Reminder: update todo list`
+    const firstBreak = Math.floor(payload.length / 3)
+    const secondBreak = Math.floor((payload.length * 2) / 3)
+    const base = reduceReportStreamEntries([
+      entry('1-0', { type: 'plan.update', tasks: [{ content: '生成月度订单数量图表', status: 'in_progress' }] }),
+      entry('2-0', { type: 'step.start', id: 'step-8', title: 'generate_chart_image' }),
+    ])
+    const afterFirst = reduceReportStreamEntry(base, entry('3-0', { type: 'step.chunk', id: 'step-8', output_type: 'text', content: payload.slice(0, firstBreak) }))
+    const afterSecond = reduceReportStreamEntry(afterFirst, entry('4-0', { type: 'step.chunk', id: 'step-8', output_type: 'text', content: payload.slice(firstBreak, secondBreak) }))
+    const completed = reduceReportStreamEntry(afterSecond, entry('5-0', { type: 'step.chunk', id: 'step-8', output_type: 'text', content: payload.slice(secondBreak) }))
+
+    expect(getRenderableStepChunks(afterFirst.stepsById['step-8'].chunks)).toEqual([])
+    expect(getRenderableStepChunks(afterSecond.stepsById['step-8'].chunks)).toEqual([])
+    expect(completed.stepsById['step-8'].chunks.every((chunk) => chunk.outputType === 'report_payload')).toBe(true)
+    expect(getRenderableStepChunks(completed.stepsById['step-8'].chunks)).toEqual([
+      {
+        entryId: '3-0:embedded:0:0',
+        outputType: 'image',
+        content: imageUrl,
+        title: '月度订单数量趋势',
+      },
+      {
+        entryId: '3-0:embedded:0:1',
+        outputType: 'text',
+        content: '图表已生成：柱状图；选择原因：用户指定图表类型。',
+        title: undefined,
+      },
+    ])
+    expect(completed.reportCandidate).toBeUndefined()
   })
 
   it('实时 reducer 拒绝重复和比 lastEntryId 更旧的事件并保留最后 ID', () => {

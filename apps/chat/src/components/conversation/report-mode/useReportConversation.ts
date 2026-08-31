@@ -4,7 +4,7 @@ import { connectReportEvents, EMPTY_REPORT_SOURCE_VERSION_FIELDS, fetchReportTas
 import type { RawReportStreamEntry, ReportSourceVersionFields, SubmitReportRequest } from '@/service/api/report'
 
 import { createReportItemFromHistory, mergeReportTimelineItems } from './reportHistoryAdapter'
-import { canRevealReport, shouldAnimateReportPreview, toggleReportTaskKey } from './helpers'
+import { canRevealReport, completeReportThinkingTypewriter, shouldAnimateReportPreview, toggleReportTaskKey } from './helpers'
 import { getNewlyCompletedReportTaskKey, getReportRecoveryAction, shouldNotifyReportCompleted, splitReportTaskRecordsByHistory } from './reportRecovery'
 import { createInitialReportStreamState, parseReportStreamEvent, reduceReportStreamEntry } from './reportStreamReducer'
 import { getReportTaskSortOrder, reportTaskStorage } from './reportTaskStorage'
@@ -377,6 +377,10 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
           const submittedReport: ReportItem = {
             ...createReportItem(record),
             storageWarning,
+            // 后端一次性返回首条思考总结时，仅新提交任务在当前页面播放一次打字机。
+            // IndexedDB 恢复和历史 query 通过 createReportItem/createReportItemFromHistory 创建，不设置该标记。
+            animateThinkingPlan: true,
+            thinkingAnimationCompleted: false,
           }
 
           commitReports((currentReports) => currentReports.map((report) => (report.id === pendingReport.id ? submittedReport : report)))
@@ -432,6 +436,13 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
         ...report,
         thinkingOpen: !report.thinkingOpen,
       }))
+    },
+    [updateReport],
+  )
+
+  const completeThinkingTypewriter = useCallback(
+    (reportId: string) => {
+      updateReport(reportId, completeReportThinkingTypewriter)
     },
     [updateReport],
   )
@@ -601,6 +612,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
     handleSend,
     stopGenerating,
     toggleThinking,
+    completeThinkingTypewriter,
     toggleTodo,
     toggleTaskExecution,
     openReport,

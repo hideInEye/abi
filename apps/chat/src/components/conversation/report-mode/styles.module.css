@@ -91,6 +91,72 @@
   font-weight: 700;
 }
 
+.reportStatusBadge {
+  display: inline-flex;
+  min-height: 22px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  padding: 4px 9px 4px 8px;
+}
+
+.reportStatusDot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.reportStatusActive {
+  background: rgba(91, 111, 239, 0.1);
+  color: #5064d8;
+}
+
+.reportStatusActive .reportStatusDot {
+  box-shadow: 0 0 0 3px rgba(91, 111, 239, 0.12);
+  animation: report-status-pulse 1.8s ease-in-out infinite;
+}
+
+.reportStatusSuccess {
+  background: rgba(47, 158, 107, 0.11);
+  color: #277f59;
+}
+
+.reportStatusDanger {
+  background: rgba(216, 76, 91, 0.1);
+  color: #b63f4d;
+}
+
+.reportStatusNeutral {
+  background: rgba(123, 132, 153, 0.1);
+  color: #687185;
+}
+
+@keyframes report-status-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(91, 111, 239, 0.1);
+    opacity: 0.72;
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(91, 111, 239, 0.04);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reportStatusActive .reportStatusDot {
+    animation: none;
+  }
+}
+
 .answerMeta {
   flex-shrink: 0;
   color: var(--ink-3);
@@ -162,11 +228,52 @@
   padding: 0 16px 14px;
 }
 
+.thinkingPanelBody {
+  padding-top: 1px;
+}
+
+.thinkingContentViewport {
+  position: relative;
+  font-size: 13px;
+}
+
+.thinkingContentCollapsed {
+  height: 3.6em;
+  overflow: hidden;
+}
+
+.thinkingContentFade {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2em;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(250, 251, 255, 0.96));
+  pointer-events: none;
+}
+
 .thinkingPlanContent {
   color: var(--ink-3);
   font-size: 13px;
   line-height: 1.8;
   white-space: pre-wrap;
+}
+
+.thinkingTypewriterCursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  border-radius: 999px;
+  margin-left: 2px;
+  animation: thinkingCursorBlink 0.8s steps(1, end) infinite;
+  background: var(--accent);
+  vertical-align: -0.12em;
+}
+
+@keyframes thinkingCursorBlink {
+  50% {
+    opacity: 0;
+  }
 }
 
 .thinkingPlaceholder {
@@ -184,6 +291,27 @@
   gap: 8px;
   color: var(--ink-3);
   font-size: 12px;
+}
+
+.todoCollapsedActivity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 16px 12px 40px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.todoCollapsedActivityDot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(91, 124, 247, 0.1);
+  animation: pulse 1.4s infinite;
 }
 
 .todoList {
@@ -236,12 +364,15 @@
 
 .todoStatusPending {
   background: rgba(132, 148, 173, 0.16);
-  color: var(--ink-3);
+  color: #8c98aa;
 }
 
 .todoStatusRunning {
   background: rgba(91, 124, 247, 0.14);
   color: var(--accent);
+}
+
+.todoStatus.todoStatusRunning {
   animation: pulse 1.4s infinite;
 }
 
@@ -277,10 +408,26 @@
 }
 
 .todoDetail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
   margin-top: 3px;
   color: var(--ink-3);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.todoStateTag {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  border: 0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 4px 8px;
 }
 
 .taskExpandIcon {
@@ -873,5 +1020,11 @@
   .conversationPane,
   .reportPaneWrap {
     transition: none;
+  }
+
+  .todoStatusRunning,
+  .todoCollapsedActivityDot,
+  .thinkingTypewriterCursor {
+    animation: none;
   }
 }
