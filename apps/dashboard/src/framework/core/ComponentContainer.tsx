@@ -26,8 +26,8 @@ export interface ComponentContainerProps {
 const ComponentContainer = memo((props: ComponentContainerProps) => {
     const {layer} = props;
     const ref = useRef(null);
-    // 分享页路由 /dashboard-share-page/:shareCode 没有 ?mode 参数，需通过路径识别（兼容 history 和 hash 两种格式）
-    const isSharePage = window.location.pathname.includes('/dashboard-share-page/') || window.location.hash.includes('/dashboard-share-page/');
+    // 分享页路由 /dashboard-share-page/:shareCode 没有 ?mode 参数，需通过路径识别（兼容 history 和 hash 两种格式，及后端下划线路径）
+    const isSharePage = window.location.pathname.includes('/dashboard-share-page/') || window.location.hash.includes('/dashboard-share-page/') || window.location.pathname.includes('/dashboard_share_page/') || window.location.hash.includes('/dashboard_share_page/');
     const mode: DesignerMode = isSharePage
         ? DesignerMode.VIEW
         : (URLUtil.parseUrlParams()?.mode as DesignerMode || DesignerMode.EDIT);

@@ -21,9 +21,12 @@ import { checkAuthStatus } from './authGuard';
 export const init: Init = async currentFullPath => {
   await store.dispatch(initConstantRoute());
 
+  // 分享页（大屏/助手分享）支持匿名访问，不跳登录
+  const isSharePage = currentFullPath.includes('/dashboard_share_page/') || currentFullPath.includes('/dashboard-share-page/');
+
   const isLogin = checkAuthStatus();
 
-  if (!isLogin && !currentFullPath.includes('login')) {
+  if (!isLogin && !currentFullPath.includes('login') && !isSharePage) {
     const loginRoute: RouteKey = 'login';
     const routeHome = getRouteHome(store.getState());
     const query = getRouteQueryOfLoginRoute(currentFullPath, routeHome as RouteKey);

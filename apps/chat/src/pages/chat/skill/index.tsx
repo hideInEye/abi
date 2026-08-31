@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SkillCard } from '@/constant/layout'
 import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { AssistantIconBlock } from '@/components/AssistantIcon'
-import { fetchOperateNew } from '@/service/api/abi-system'
+import { fetchFavoriteList, fetchOperateNew } from '@/service/api/abi-system'
 import { querySkillList, updateSkillStatus } from '@/service/api/skill'
 import { getSpaceId } from '@/utils'
 import SkillDetailDrawer from './SkillDetailDrawer'
@@ -44,18 +44,6 @@ function mapSkillToCard(item: SkillItem, index: number): SkillCard {
   }
 }
 
-/** 已添加技能 id 本地存储 key */
-const MY_SKILLS_KEY = 'mySkills'
-
-function readMySkillIds(): string[] {
-  try {
-    const arr = JSON.parse(localStorage.getItem(MY_SKILLS_KEY) || '[]')
-    return Array.isArray(arr) ? arr.map(String) : []
-  } catch {
-    return []
-  }
-}
-
 /** 技能卡片图标：优先用接口返回的 icon（跨设备同步），兜底按 key 稳定散列 */
 const SKILL_ICON_KEYS = ['data', 'table', 'orchestration', 'flow', 'automation', 'text', 'chat', 'doc', 'finance', 'account', 'ops', 'security', 'analysis', 'chart', 'other']
 function skillIconKey(key: string, apiIcon?: string): string {
@@ -84,8 +72,11 @@ function SkillStoreView() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [activeSkill, setActiveSkill] = useState<SkillItem | null>(null)
   const [tab, setTab] = useState<'plaza' | 'mine'>('plaza')
-  // 已添加到「我的技能」的技能 id
-  const [myIds, setMyIds] = useState<string[]>(readMySkillIds)
+  // 已添加到「我的技能」的技能 id；与对话收藏同一套逻辑：
+  // 初始为空集合，addOrRemove 切换时按响应回写，切到「我的技能」tab 才拉 favorite/list 校准
+  const [myIds, setMyIds] = useState<Set<string>>(new Set())
+  // 收藏列表加载中：未返回前不渲染列表，避免广场「添加」先闪一下再变「已添加」
+  const [favLoading, setFavLoading] = useState(true)
   // 高级筛选：面板草稿值 / 已生效值（点「查询」才生效，对齐应用工坊）
   const [filterOpen, setFilterOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<any>(null)
@@ -94,6 +85,23 @@ function SkillStoreView() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [jumpValue, setJumpValue] = useState('')
+
+  // 拉取「我的技能」集合（仅区分 favorType=skill）
+  const fetchMyIds = useCallback(() => {
+    setFavLoading(true)
+    // 以后端为准：先清空前端残留的旧集合，避免重复进 tab 时先闪旧数据再刷新；只以接口返回渲染
+    setMyIds(new Set())
+    fetchFavoriteList({ favorType: 'skill' })
+      .then((res: any) => {
+        const rows = res?.rows ?? res?.data?.rows ?? res?.data?.list ?? (Array.isArray(res?.data) ? res.data : [])
+        const list = Array.isArray(rows) ? rows : []
+        setMyIds(new Set(list.map((r: any) => String(r.favorId ?? r.favor_id ?? r.skillId ?? '')).filter(Boolean)))
+      })
+      .catch(() => {})
+      .finally(() => {
+        setFavLoading(false)
+      })
+  }, [])
 
   // 拉取技能列表（与 abi 同一接口）：不传 spaceId 查全部，前端按 visibility 过滤
   const fetchList = useCallback(() => {
@@ -126,15 +134,25 @@ function SkillStoreView() {
       })
   }, [])
 
-  // StrictMode 开发环境会重挂载组件，用 ref 保证列表仅首次请求一次，避免重复调用接口
+  // StrictMode 开发环境会重挂载组件，用 ref 保证仅首次请求一次，避免重复调用接口；
+  // 进入技能页直接调两个列表：技能列表 + 收藏列表（我的技能），广场「已添加」状态对比两者得出，不调单条状态接口
   const didInitRef = useRef(false)
   useEffect(() => {
     if (didInitRef.current) return
     didInitRef.current = true
     fetchList()
-  }, [fetchList])
+    fetchMyIds()
+  }, [fetchList, fetchMyIds])
 
-  // 打开详情抽屉
+  // 切到「我的技能」tab 再拉一次收藏列表校准（以最新后端数据渲染）
+  useEffect(() => {
+    if (tab === 'mine') {
+      fetchMyIds()
+    }
+  }, [tab, fetchMyIds])
+
+  // 打开详情抽屉（收藏态由「我的技能」tab 的 favorite/list 与 addOrRemove 响应回写维护；
+  // 单条 favorite/status 查询暂不接入，等后端提供批量接口后再补）
   const handleOpenDetail = useCallback(
     (card: SkillCard) => {
       setActiveSkill(rawMap[card.key] || null)
@@ -153,7 +171,7 @@ function SkillStoreView() {
     return cards.filter((c) => {
       const raw = rawMap[c.key]
       if (tab === 'mine') {
-        if (!myIds.includes(c.key)) return false
+        if (!myIds.has(c.key)) return false
       } else if (String(raw?.visibility || '').toUpperCase() === 'PRIVATE') {
         if (String(raw?.spaceId ?? '') !== curSpaceId) return false
       }
@@ -248,31 +266,26 @@ function SkillStoreView() {
       })
   }, [])
 
-  // 广场卡片右上角「添加」：走对话收藏接口（addOrRemove 由后端切换状态），类型为 skill
-  const handleAddSkill = useCallback(
-    (card: SkillCard) => {
-      if (myIds.includes(card.key)) return
-      fetchOperateNew({ favorType: 'skill', favorId: card.key }).catch(() => {})
-      const next = [...myIds, card.key]
-      setMyIds(next)
-      localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next))
-      message.success('已添加到我的技能')
-    },
-    [myIds],
-  )
-
-  // 取消添加：同一收藏接口，addOrRemove 自动取消收藏
-  const handleRemoveSkill = useCallback(
-    (card: SkillCard) => {
-      if (!myIds.includes(card.key)) return
-      fetchOperateNew({ favorType: 'skill', favorId: card.key }).catch(() => {})
-      const next = myIds.filter((id) => id !== card.key)
-      setMyIds(next)
-      localStorage.setItem(MY_SKILLS_KEY, JSON.stringify(next))
-      message.success('已从我的技能移除')
-    },
-    [myIds],
-  )
+  // 添加/移除：与收藏对话同一套逻辑（addOrRemove 由后端切换，按响应 favoriteStatus 回写，不乐观更新）
+  const handleToggleSkill = useCallback(async (card: SkillCard) => {
+    try {
+      const res: any = await fetchOperateNew({ favorType: 'skill', favorId: card.key })
+      if (res?.code !== 200) {
+        message.error(res?.message || res?.msg || '操作失败，请稍后再试')
+        return
+      }
+      const favorited = Number(res?.data?.favoriteStatus) === 1
+      setMyIds((prev) => {
+        const next = new Set(prev)
+        if (favorited) next.add(card.key)
+        else next.delete(card.key)
+        return next
+      })
+      message.success(favorited ? '添加成功' : '取消添加成功')
+    } catch {
+      message.error('操作失败，请稍后再试')
+    }
+  }, [])
 
   // 切换 tab 时清空搜索与时间范围（搜索仅作用于当前 tab）
   const handleTabChange = useCallback((k: 'plaza' | 'mine') => {
@@ -373,8 +386,8 @@ function SkillStoreView() {
       </div>
 
       {/* Card Grid：样式对齐应用工坊「我的助手」ws-assistant-card（技能功能保留） */}
-      <Spin spinning={loading} wrapperClassName="ws-data-spin">
-        {!loading && filteredCards.length === 0 ? (
+      <Spin spinning={loading || favLoading} wrapperClassName="ws-data-spin">
+        {favLoading ? null : !loading && filteredCards.length === 0 ? (
           <div className="ws-empty">
             <Empty description="暂无技能" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           </div>
@@ -382,7 +395,7 @@ function SkillStoreView() {
           <div className="ws-card-scroll">
             <div className="ws-card-grid">
               {pagedCards.map((card) => {
-                const added = myIds.includes(card.key)
+                const added = myIds.has(card.key)
                 return (
                   <div key={card.key} className="ws-assistant-card" onClick={() => handleOpenDetail(card)}>
                     <div className="wac-head">
@@ -394,16 +407,16 @@ function SkillStoreView() {
                       {/* 广场 Tab：添加/已添加（点已添加可取消）；我的技能 Tab：移除 */}
                       {tab === 'plaza' ? (
                         added ? (
-                          <button className="wac-add-btn wac-add-btn--added" onClick={(e) => { e.stopPropagation(); handleRemoveSkill(card) }}>
+                          <button className="wac-add-btn wac-add-btn--added" onClick={(e) => { e.stopPropagation(); handleToggleSkill(card) }}>
                             已添加
                           </button>
                         ) : (
-                          <button className="wac-add-btn" onClick={(e) => { e.stopPropagation(); handleAddSkill(card) }}>
+                          <button className="wac-add-btn" onClick={(e) => { e.stopPropagation(); handleToggleSkill(card) }}>
                             + 添加
                           </button>
                         )
                       ) : (
-                        <button className="wac-add-btn wac-add-btn--danger" onClick={(e) => { e.stopPropagation(); handleRemoveSkill(card) }}>
+                        <button className="wac-add-btn wac-add-btn--danger" onClick={(e) => { e.stopPropagation(); handleToggleSkill(card) }}>
                           移除
                         </button>
                       )}

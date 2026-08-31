@@ -178,13 +178,29 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     [chatContainerRef, reportController.handleSend],
   )
 
+  // 探索发送后同样定位一次到当前执行问题，与报告模式发送行为保持一致。
+  const handleExploreSend = React.useCallback(
+    (value: string, schemaId: string | number, options?: ExploreSendOptions) => {
+      exploreController.handleSend(value, schemaId, options)
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const container = chatContainerRef.current
+          if (!container) return
+          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+        })
+      })
+    },
+    [chatContainerRef, exploreController.handleSend],
+  )
+
   // 暴露给父级调用
   useImperativeHandle(
     ref,
     () => ({
       setConvContent,
       handleSend,
-      handleExploreSend: exploreController.handleSend,
+      handleExploreSend,
       handleReportSend,
       stopGenerating,
       stopExploreGenerating: exploreController.stopGenerating,
@@ -193,7 +209,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
       exploreLoading: exploreController.loading,
       reportLoading: reportController.loading,
     }),
-    [setConvContent, handleSend, exploreController.handleSend, exploreController.loading, exploreController.stopGenerating, handleReportSend, reportController.loading, reportController.stopGenerating, stopGenerating, loading],
+    [setConvContent, handleSend, handleExploreSend, exploreController.loading, exploreController.stopGenerating, handleReportSend, reportController.loading, reportController.stopGenerating, stopGenerating, loading],
   )
 
   // 通知父级 loading 变化
@@ -321,6 +337,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             onToggleReportTask={reportController.toggleTaskExecution}
             onOpenReport={openReport}
             onOpenExplore={openExplore}
+            onCloseExplore={closeExplore}
             activeExploreId={activeExploreId}
             hideMessageNavRail={reportPreview.mounted || explorePreview.mounted}
           />

@@ -28,8 +28,8 @@ export const SpaceBasicInfo = ({ editSpace }: SpaceBasicInfoProps) => {
 
   return (
     <div className="sd-v5-basic-info">
-      {/* Hero banner */}
-      <div className="sd-v5-hero">
+      {/* Hero banner（类名与技能抽屉的 .sd-v5-hero 隔离，避免全局样式泄漏） */}
+      <div className="sd-v5-space-hero">
         <div className="sd-v5-hero-bg">
           <span className="sd-v5-hero-orb sd-v5-hero-orb--1" />
           <span className="sd-v5-hero-orb sd-v5-hero-orb--2" />

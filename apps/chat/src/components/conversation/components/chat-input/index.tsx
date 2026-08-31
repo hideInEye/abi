@@ -1,11 +1,11 @@
-import { ApiOutlined, AudioOutlined, BulbOutlined, CheckOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, FolderOpenOutlined, FolderOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, RightOutlined, SearchOutlined, SendOutlined, StopOutlined, ThunderboltOutlined, DatabaseOutlined, EditOutlined, ToolOutlined } from '@ant-design/icons';
+import { ApiOutlined, BulbOutlined, CheckOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, FolderOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, RightOutlined, SearchOutlined, SendOutlined, StopOutlined, DatabaseOutlined, ToolOutlined } from '@ant-design/icons';
 import { Dropdown, Input, message, Popover } from 'antd';
 import type { MenuProps } from 'antd';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AudioRecorder from '../../../../components/AudioRecorder';
 import UploadDrawer from '../../UploadDrawer';
 import FileTag from '../../../../components/FileTag';
-import { querySkillList } from '../../../../service/api/skill';
+import { fetchFavoriteList } from '../../../../service/api/abi-system';
 import { queryMcpList } from '../../../../service/api/mcp';
 import type { ReportSourceVersionFields } from '../../../../service/api/report';
 import { fetchSemanticGroups, fetchSemanticDetail } from '../../../../service/api/semantic';
@@ -15,6 +15,7 @@ import { getSpaceId } from '../../../../utils';
 import type { ModelOption } from '../chat-header';
 import { buildReportSourceVersionFields } from './reportSourceSelection';
 import { hasSelectedConversationData } from './sendValidation';
+import { filterSemanticTree, matchKeyword } from './popupFilter';
 
 export interface SemanticSelectedData {
   name: string
@@ -64,22 +65,28 @@ interface ChatInputProps {
   selectedData?: SemanticSelectedData | null;
   onSelectData?: (data: SemanticSelectedData) => void;
   semLoading?: boolean;
-  expandedSemGroups?: Set<string>;
-  onToggleSemGroup?: (nodeId: string) => void;
   // 外部控制输入值
   externalValue?: string;
   onExternalValueConsumed?: () => void;
   selectedModeKey?: ChatInputModeKey;
   onModeChange?: (mode: ChatInputModeKey) => void;
+  // ── 助手会话限定（appId≠0）：候选仅从助手绑定资源里拿 ──
+  /** 数据语义弹窗只用该树（扁平 schema 叶子）；null 表示不限制，用全局 semanticTree */
+  assistantSemanticTree?: any[] | null;
+  /** 技能候选仅用绑定列表；非 null 时跳过全局收藏技能请求 */
+  assistantSkills?: ReadonlyArray<{ id: string; bizName: string; latestVersionId: string; skillType: string }> | null;
+  /** MCP 候选仅用绑定列表（扁平，无分组）；非 null 时跳过全局 MCP 分组请求 */
+  assistantMcps?: ReadonlyArray<{ id: string; name: string; protocol: 'sse' | 'streamable' }> | null;
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
-  ({ loading, onSend, onStop, deepThinkEnabled, uploadFileEnabled, setSelectedExcel, selectedExcel, conv, ensureConv, onToggleDeepThink, onToggleUploadFile,
+  ({ loading, onSend, onStop, deepThinkEnabled, setSelectedExcel, selectedExcel, conv, ensureConv, onToggleDeepThink, onToggleUploadFile,
     currentModel,
     spaceId,
       selectedModeKey, onModeChange,
-    semanticTree = [], selectedData, onSelectData, semLoading, expandedSemGroups, onToggleSemGroup,
-    externalValue, onExternalValueConsumed
+    semanticTree = [], selectedData, onSelectData, semLoading,
+    externalValue, onExternalValueConsumed,
+    assistantSemanticTree, assistantSkills, assistantMcps
   }) => {
     // 当前模型是否支持关闭思考：1 为支持，0 或其他为不支持
     const isSupportCloseThinking = currentModel?.isSupportThinking === 1 || currentModel?.isSupportThinking === '1';
@@ -91,8 +98,10 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     const [uploadFileVisible, setUploadFileVisible] = useState(false);
     const [semDropdownOpen, setSemDropdownOpen] = useState(false);
     const [morePopupOpen, setMorePopupOpen] = useState(false);
-    const [skillPopOpen, setSkillPopOpen] = useState(false);
-    const [mcpPopOpen, setMcpPopOpen] = useState(false);
+    // ── 统一弹窗搜索关键词（数据语义 / 技能 / MCP）──
+    const [semSearch, setSemSearch] = useState('');
+    const [skillSearch, setSkillSearch] = useState('');
+    const [mcpSearch, setMcpSearch] = useState('');
     const getModeConfig = useCallback((mode: ChatInputModeKey): ChatInputMode => {
       switch (mode) {
         case 'report':
@@ -113,7 +122,6 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     // ── MCP 状态 ──
     const [mcpGroups, setMcpGroups] = useState<any[]>([]);
     const [mcpGroupItems, setMcpGroupItems] = useState<Map<number, any[]>>(new Map());
-    const [expandedMcpGroups, setExpandedMcpGroups] = useState<Set<number>>(new Set());
     const [selectedMCPs, setSelectedMCPs] = useState<Set<string>>(new Set());
     const [mcpLoading, setMcpLoading] = useState(false);
 
@@ -129,28 +137,45 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       }
     }, [externalValue, onExternalValueConsumed]);
 
+    // 切换助手会话（绑定候选引用变化）时清空已选技能 / MCP，避免携带旧助手资源发送。
+    useEffect(() => {
+      setSelectedSkills(new Set());
+      setSelectedMCPs(new Set());
+    }, [assistantSkills, assistantMcps]);
+
     useEffect(() => {
       // 父容器控制当前模式，输入框只负责展示和把发送 mode 上抛。
       if (!selectedModeKey || selectedModeKey === selectedMode.key) return;
       setSelectedMode(getModeConfig(selectedModeKey));
     }, [getModeConfig, selectedMode.key, selectedModeKey]);
 
-    // 懒加载技能列表
-    useEffect(() => {
-      if (!skillPopOpen || skillList.length > 0) return;
+    // 懒加载技能列表（首次 hover 进入技能面板时触发一次）；助手会话直接用绑定候选，不请求全局收藏。
+    const skillLoadStartedRef = useRef(false);
+    const startSkillLoad = useCallback(() => {
+      if (assistantSkills || skillLoadStartedRef.current) return;
+      skillLoadStartedRef.current = true;
       setSkillLoading(true);
-      querySkillList({ spaceId: spaceId || getSpaceId(), status: '1' })
+      // 弹窗只认收藏列表：与技能商店「我的技能」同一套逻辑，仅调 favorite/list（favorType=skill）
+      fetchFavoriteList({ favorType: 'skill' })
         .then((res: any) => {
-          const list = res?.data?.data?.pageItems || res?.data?.list || (Array.isArray(res?.data) ? res.data : []) || res?.rows || [];
-          setSkillList(Array.isArray(list) ? list : []);
+          const rows = res?.rows ?? res?.data?.rows ?? res?.data?.list ?? (Array.isArray(res?.data) ? res.data : []);
+          const list = Array.isArray(rows) ? rows : [];
+          // 保留行原始字段（latestVersionId/skillType 等提交要用），id/名称做兼容映射
+          setSkillList(list.map((r: any) => ({
+            ...r,
+            id: r.favorId ?? r.favor_id ?? r.skillId ?? r.id,
+            bizName: r.bizName ?? r.skillName ?? r.name ?? '',
+          })));
         })
         .catch(() => {})
         .finally(() => setSkillLoading(false));
-    }, [skillPopOpen]);
+    }, [assistantSkills]);
 
-    // 懒加载 MCP 分组
-    useEffect(() => {
-      if (!mcpPopOpen || mcpGroups.length > 0) return;
+    // 懒加载 MCP 分组（首次 hover 进入 MCP 面板时触发一次）；助手会话直接用绑定候选，不请求全局分组。
+    const mcpLoadStartedRef = useRef(false);
+    const startMcpLoad = useCallback(() => {
+      if (assistantMcps || mcpLoadStartedRef.current) return;
+      mcpLoadStartedRef.current = true;
       setMcpLoading(true);
       fetchSemanticGroups({ groupType: 'mcp', pageNum: 1, pageSize: 100, spaceId: spaceId || getSpaceId() })
         .then((res: any) => {
@@ -159,28 +184,21 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         })
         .catch(() => {})
         .finally(() => setMcpLoading(false));
-    }, [mcpPopOpen]);
+    }, [spaceId, assistantMcps]);
 
-    // 展开 MCP 分组时懒加载服务列表
-    const toggleMcpGroup = (groupId: number) => {
-      setExpandedMcpGroups(prev => {
-        const next = new Set(prev);
-        if (next.has(groupId)) {
-          next.delete(groupId);
-        } else {
-          next.add(groupId);
-          if (!mcpGroupItems.has(groupId)) {
-            queryMcpList({ pageNo: 1, pageSize: 100, namespaceId: `s_${groupId}` })
-              .then((res: any) => {
-                const list = res?.data?.data?.pageItems || res?.data?.records || res?.data?.list || (Array.isArray(res?.data) ? res.data : []);
-                setMcpGroupItems(prev => new Map(prev).set(groupId, Array.isArray(list) ? list : []));
-              })
-              .catch(() => {});
-          }
-        }
-        return next;
-      });
-    };
+    // hover MCP 分组时懒加载服务列表（防重入）
+    const mcpLoadingGroupsRef = useRef<Set<number>>(new Set());
+    const loadMcpGroup = useCallback((groupId: number) => {
+      if (mcpGroupItems.has(groupId) || mcpLoadingGroupsRef.current.has(groupId)) return;
+      mcpLoadingGroupsRef.current.add(groupId);
+      queryMcpList({ pageNo: 1, pageSize: 100, namespaceId: `s_${groupId}` })
+        .then((res: any) => {
+          const list = res?.data?.data?.pageItems || res?.data?.records || res?.data?.list || (Array.isArray(res?.data) ? res.data : []);
+          setMcpGroupItems(prev => new Map(prev).set(groupId, Array.isArray(list) ? list : []));
+        })
+        .catch(() => {})
+        .finally(() => mcpLoadingGroupsRef.current.delete(groupId));
+    }, [mcpGroupItems]);
 
     // 查看语义
     const openSchemaModal = () => {
@@ -251,9 +269,10 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         ? {
             mode: selectedMode.key,
             reportSources: buildReportSourceVersionFields({
-              skills: skillList,
+              // 助手会话：候选即绑定列表（id 即源版本 id），报告源字段映射规则不变。
+              skills: (assistantSkills ?? skillList) as any[],
               selectedSkillIds: selectedSkills,
-              mcps: Array.from(mcpGroupItems.values()).flat(),
+              mcps: (assistantMcps ?? Array.from(mcpGroupItems.values()).flat()) as any[],
               selectedMcpIds: selectedMCPs,
             }),
           }
@@ -267,7 +286,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
 
       onSend(value, options);
       setValue('');
-    }, [loading, mcpGroupItems, onSend, selectedData, selectedExcel, selectedMCPs, selectedMode.key, selectedSkills, skillList, value]);
+    }, [assistantMcps, assistantSkills, loading, mcpGroupItems, onSend, selectedData, selectedExcel, selectedMCPs, selectedMode.key, selectedSkills, skillList, value]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -347,193 +366,256 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       };
     });
 
-    /** 递归渲染语义节点：分组（可选中并发送 group_id，有子节点时同一次点击顺带展开/收起）/ 叶子数据语义（可选中并发送 semantic_id） */
-    const renderSemNode = (node: any, depth: number): React.ReactNode => {
-      const indent = { paddingLeft: 8 + depth * 16 };
+    /** 递归渲染语义节点：叶子点击选中；分组点击选中、hover 右侧弹出子层 */
+    const renderSemNode = (node: any): React.ReactNode => {
       // 叶子：数据语义，点击选中并关闭下拉
       if (node.type === 'schema') {
         const isSel = selectedData?.schemaId != null && selectedData.schemaId === node.schemaId;
         return (
-          <div key={node.id} className={`sem-leaf ${isSel ? 'selected' : ''}`} style={indent} title={node.techName || node.name}
+          <div key={node.id} className={`uni-popup-item ${isSel ? 'selected' : ''}`} title={node.techName || node.name}
             onClick={() => { onSelectData?.({ name: node.name, schemaId: node.schemaId, groupName: node.groupName }); setSemDropdownOpen(false); }}
           >
-            <FileTextOutlined className="sem-leaf-icon" />
-            <span className="sem-leaf-name">{node.name}</span>
+            <FileTextOutlined className="uni-icon" />
+            <span className="uni-name">{node.name}</span>
+            {isSel && <CheckOutlined className="uni-check" />}
           </div>
         );
       }
-      // 分组：可选中（发送真实 group_id，与 semantic_id 互斥）；含子节点时同一次点击顺带展开/收起，选中后保持下拉展开以便继续下钻
+      // 分组：可选中（发送真实 group_id，与 semantic_id 互斥）；节点 id 形如 g_<真实分组id>，去掉 g_ 前缀即为真实分组 id（超长数字，保持字符串避免精度丢失）
       const children = Array.isArray(node.children) ? node.children : [];
-      const hasChildren = children.length > 0;
-      // 分组节点 id 形如 g_<真实分组id>，去掉 g_ 前缀即为真实分组 id（超长数字，保持字符串避免精度丢失）
       const groupId = String(node.id).replace(/^g_/, '');
       const isSelGroup = selectedData?.groupId != null && String(selectedData.groupId) === groupId;
       const selectGroup = () => onSelectData?.({ name: node.name, groupId, groupName: node.name });
       // 空分组（无子节点）同样可选中，点击直接选中该分组
-      if (!hasChildren) {
+      if (children.length === 0) {
         return (
-          <div key={node.id} className={`sem-group-node is-empty ${isSelGroup ? 'selected' : ''}`} style={indent} onClick={selectGroup}>
-            <FolderOutlined className="sem-group-icon sem-group-icon--empty" />
-            <span className="sem-group-name">{node.name}</span>
+          <div key={node.id} className={`uni-popup-item ${isSelGroup ? 'selected' : ''}`} onClick={selectGroup}>
+            <FolderOutlined className="uni-icon uni-icon--empty" />
+            <span className="uni-name">{node.name}</span>
+            {isSelGroup && <CheckOutlined className="uni-check" />}
           </div>
         );
       }
-      const isExpanded = expandedSemGroups?.has(node.id);
       const childCount = typeof node.count === 'number' ? node.count : children.length;
       return (
-        <div key={node.id} className="sem-group">
-          <div className={`sem-group-node ${isSelGroup ? 'selected' : ''}`} style={indent} onClick={() => { selectGroup(); onToggleSemGroup?.(node.id); }}>
-            {isExpanded
-              ? <FolderOpenOutlined className="sem-group-icon" />
-              : <FolderOutlined className="sem-group-icon" />}
-            <span className="sem-group-name">{node.name}</span>
-            {childCount > 0 && <span className="sem-group-count">{childCount}</span>}
-            <span className={`sem-group-chevron ${isExpanded ? 'open' : ''}`}><RightOutlined /></span>
+        <Popover
+          key={node.id}
+          content={<div className="uni-popup uni-popup--flyout"><div className="uni-popup-list">{children.map((child: any) => renderSemNode(child))}</div></div>}
+          trigger="hover"
+          placement="rightTop"
+          arrow={false}
+          overlayClassName="uni-popover"
+          getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+        >
+          <div className={`uni-popup-item ${isSelGroup ? 'selected' : ''}`} onClick={selectGroup}>
+            <FolderOutlined className="uni-icon" />
+            <span className="uni-name">{node.name}</span>
+            {childCount > 0 && <span className="uni-count">{childCount}</span>}
+            <RightOutlined className="uni-arrow" />
           </div>
-          {isExpanded && children.map((child: any) => renderSemNode(child, depth + 1))}
+        </Popover>
+      );
+    };
+
+    /** 数据语义 Popover 内容（统一黑色样式：顶部搜索 + 分组 hover 右飞层）；助手会话仅展示绑定叶子 */
+    const semTreeSource = assistantSemanticTree ?? semanticTree;
+    const filteredSemTree = useMemo(() => filterSemanticTree(semTreeSource, semSearch), [semTreeSource, semSearch]);
+    const semanticPopoverContent = (
+      <div className="uni-popup">
+        <div className="uni-popup-search">
+          <SearchOutlined />
+          <input value={semSearch} onChange={(e) => setSemSearch(e.target.value)} placeholder="搜索数据语义" />
+        </div>
+        <div className="uni-popup-list">
+          {semLoading ? (
+            <div className="uni-popup-empty">加载中...</div>
+          ) : filteredSemTree.length === 0 ? (
+            <div className="uni-popup-empty">{semSearch.trim() ? '无匹配结果' : '暂无数据语义'}</div>
+          ) : (
+            filteredSemTree.map((node: any) => renderSemNode(node))
+          )}
+        </div>
+      </div>
+    );
+
+    /** 技能飞层内容（统一黑色样式：顶部搜索 + 多选列表）；助手会话候选即绑定列表 */
+    const skillSource = assistantSkills ?? skillList;
+    const filteredSkillList = skillSource.filter((s: any) => matchKeyword(s.bizName ?? s.name, skillSearch));
+    const skillPopoverContent = (
+      <div className="uni-popup">
+        <div className="uni-popup-search">
+          <SearchOutlined />
+          <input value={skillSearch} onChange={(e) => setSkillSearch(e.target.value)} placeholder="搜索技能" />
+        </div>
+        <div className="uni-popup-list">
+          {skillLoading ? (
+            <div className="uni-popup-empty">加载中...</div>
+          ) : filteredSkillList.length === 0 ? (
+            <div className="uni-popup-empty">{skillSearch.trim() ? '无匹配结果' : '暂无可用技能'}</div>
+          ) : (
+            filteredSkillList.map((s: any) => {
+              const sid = String(s.id);
+              const isSel = selectedSkills.has(sid);
+              return (
+                <div key={sid} className={`uni-popup-item ${isSel ? 'selected' : ''}`}
+                  onClick={() => setSelectedSkills((prev) => { const n = new Set(prev); n.has(sid) ? n.delete(sid) : n.add(sid); return n; })}
+                >
+                  <ToolOutlined className="uni-icon" />
+                  <span className="uni-name">{s.bizName}</span>
+                  {s.status === 1 && <span className="skill-tag builtin">启用</span>}
+                  {isSel && <CheckOutlined className="uni-check" />}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+
+    /** MCP 分组 hover 飞层：该分组服务多选列表 */
+    const renderMcpFlyout = (g: any) => {
+      const gid = g.groupId;
+      // 不在 Map 中即尚未加载完成（加载完成后即使空数组也会写入）
+      if (!mcpGroupItems.has(gid)) {
+        return <div className="uni-popup uni-popup--flyout"><div className="uni-popup-empty">加载中...</div></div>;
+      }
+      const all = mcpGroupItems.get(gid) || [];
+      const items = matchKeyword(g.groupName, mcpSearch) ? all : all.filter((m: any) => matchKeyword(m.name, mcpSearch));
+      return (
+        <div className="uni-popup uni-popup--flyout">
+          <div className="uni-popup-list">
+            {items.length === 0 ? (
+              <div className="uni-popup-empty">该分组下暂无 MCP 服务</div>
+            ) : (
+              items.map((m: any) => {
+                const mid = String(m.id);
+                const isSel = selectedMCPs.has(mid);
+                return (
+                  <div key={mid} className={`uni-popup-item ${isSel ? 'selected' : ''}`}
+                    onClick={() => setSelectedMCPs((prev) => { const n = new Set(prev); n.has(mid) ? n.delete(mid) : n.add(mid); return n; })}
+                  >
+                    <ApiOutlined className="uni-icon" />
+                    <span className="uni-name">{m.name ?? mid}</span>
+                    {m.description && <span className="uni-desc">{m.description}</span>}
+                    {isSel && <CheckOutlined className="uni-check" />}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       );
     };
 
-    /** 数据语义 Popover 内容（分组文件夹 / 数据语义文件的层级结构） */
-    const semanticPopoverContent = (
-      <div className="sem-tree" style={{ width: 260, maxHeight: 360, overflowY: 'auto', padding: '6px 8px' }}>
-        {semLoading ? (
-          <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>加载中...</div>
-        ) : semanticTree.length === 0 ? (
-          <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>暂无数据语义</div>
-        ) : (
-          semanticTree.map((node: any) => renderSemNode(node, 0))
-        )}
+    /** MCP 飞层内容（统一黑色样式：顶部搜索 + 分组 hover 右飞层）；助手会话为绑定服务的扁平列表 */
+    const filteredBoundMcps = assistantMcps
+      ? assistantMcps.filter((m) => matchKeyword(m.name, mcpSearch))
+      : null;
+    const filteredMcpGroups = mcpGroups.filter((g: any) =>
+      matchKeyword(g.groupName, mcpSearch) || (mcpGroupItems.get(g.groupId) || []).some((m: any) => matchKeyword(m.name, mcpSearch)));
+    const mcpPopoverContent = (
+      <div className="uni-popup">
+        <div className="uni-popup-search">
+          <SearchOutlined />
+          <input value={mcpSearch} onChange={(e) => setMcpSearch(e.target.value)} placeholder="搜索 MCP" />
+        </div>
+        <div className="uni-popup-list">
+          {mcpLoading ? (
+            <div className="uni-popup-empty">加载中...</div>
+          ) : filteredBoundMcps ? (
+            filteredBoundMcps.length === 0 ? (
+              <div className="uni-popup-empty">{mcpSearch.trim() ? '无匹配结果' : '该助手未绑定 MCP'}</div>
+            ) : (
+              filteredBoundMcps.map((m) => {
+                const mid = String(m.id);
+                const isSel = selectedMCPs.has(mid);
+                return (
+                  <div key={mid} className={`uni-popup-item ${isSel ? 'selected' : ''}`}
+                    onClick={() => setSelectedMCPs((prev) => { const n = new Set(prev); n.has(mid) ? n.delete(mid) : n.add(mid); return n; })}
+                  >
+                    <ApiOutlined className="uni-icon" />
+                    <span className="uni-name">{m.name ?? mid}</span>
+                    {isSel && <CheckOutlined className="uni-check" />}
+                  </div>
+                );
+              })
+            )
+          ) : filteredMcpGroups.length === 0 ? (
+            <div className="uni-popup-empty">{mcpSearch.trim() ? '无匹配结果' : '暂无 MCP 分组'}</div>
+          ) : (
+            filteredMcpGroups.map((g: any) => {
+              const gid = g.groupId;
+              const items = mcpGroupItems.get(gid) || [];
+              return (
+                <Popover
+                  key={gid}
+                  content={renderMcpFlyout(g)}
+                  trigger="hover"
+                  placement="rightTop"
+                  arrow={false}
+                  overlayClassName="uni-popover"
+                  getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+                  onOpenChange={(open) => { if (open) loadMcpGroup(gid); }}
+                >
+                  <div className="uni-popup-item">
+                    <FolderOutlined className="uni-icon" />
+                    <span className="uni-name">{g.groupName}</span>
+                    {items.length > 0 && <span className="uni-count">{items.length}</span>}
+                    <RightOutlined className="uni-arrow" />
+                  </div>
+                </Popover>
+              );
+            })
+          )}
+        </div>
       </div>
     );
 
-    /** 更多 Popover 完整内容 */
+    /** 更多 Popover 完整内容（统一黑色样式；技能 / MCP hover 显示右侧子层） */
     const morePopoverContent = (
-      <div style={{ width: 180, maxHeight: 380, overflow: 'visible' }}>
-        {/* 查看语义 */}
-        <div className="more-popup-item" onClick={openSchemaModal}>
-          <EyeOutlined style={{ fontSize: 14 }} /> 查看语义
+      <div className="uni-popup uni-popup--menu">
+        <div className="uni-popup-list">
+          {/* 查看语义 */}
+          <div className="uni-popup-item" onClick={openSchemaModal}>
+            <EyeOutlined className="uni-icon" />
+            <span className="uni-name">查看语义</span>
+          </div>
+          {/* 交互模式下隐藏 技能 / MCP 入口 */}
+          {selectedMode.key !== 'interact' && (
+            <>
+              <Popover
+                content={skillPopoverContent}
+                trigger="hover"
+                placement="rightTop"
+                arrow={false}
+                overlayClassName="uni-popover"
+                getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+                onOpenChange={(open) => { if (open) startSkillLoad(); }}
+              >
+                <div className="uni-popup-item">
+                  <ToolOutlined className="uni-icon" />
+                  <span className="uni-name">技能</span>
+                  <RightOutlined className="uni-arrow" />
+                </div>
+              </Popover>
+              <Popover
+                content={mcpPopoverContent}
+                trigger="hover"
+                placement="rightTop"
+                arrow={false}
+                overlayClassName="uni-popover"
+                getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+                onOpenChange={(open) => { if (open) startMcpLoad(); }}
+              >
+                <div className="uni-popup-item">
+                  <ApiOutlined className="uni-icon" />
+                  <span className="uni-name">MCP</span>
+                  <RightOutlined className="uni-arrow" />
+                </div>
+              </Popover>
+            </>
+          )}
         </div>
-        {/* 交互模式下隐藏 技能 / MCP 入口 */}
-        {selectedMode.key !== 'interact' && (
-        <>
-        {/* 技能（嵌套 Popover） */}
-        <Popover
-          content={
-            <div style={{ width: 280, maxHeight: 400, overflowY: 'auto' }}>
-              <div className="popover-back-btn" onClick={() => setSkillPopOpen(false)}>
-                <DownOutlined style={{ fontSize: 10, transform: 'rotate(90deg)' }} /> 返回
-              </div>
-              <div className="skill-popup-header">技能列表</div>
-              {skillLoading ? (
-                <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>加载中...</div>
-              ) : skillList.length === 0 ? (
-                <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>暂无可用技能</div>
-              ) : (
-                skillList.map((s: any) => {
-                  const sid = String(s.id);
-                  return (
-                    <div key={sid} className={`skill-popup-item ${selectedSkills.has(sid) ? 'active' : ''}`}
-                      onClick={() => setSelectedSkills((prev) => { const n = new Set(prev); n.has(sid) ? n.delete(sid) : n.add(sid); return n; })}
-                    >
-                      <ToolOutlined style={{ fontSize: 13 }} />
-                      {s.bizName}
-                      {s.status === 1 && <span className="skill-tag builtin">启用</span>}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          }
-          trigger="click"
-          placement="rightTop"
-          open={skillPopOpen}
-          onOpenChange={setSkillPopOpen}
-          getPopupContainer={(triggerNode) => triggerNode as HTMLElement}
-          overlayInnerStyle={{ padding: '4px 0' }}
-        >
-          <div className="more-popup-item" onClick={() => setSkillPopOpen(true)}>
-            <ToolOutlined style={{ fontSize: 14 }} /> 技能
-            <DownOutlined style={{ marginLeft: 'auto', fontSize: 10, transform: 'rotate(-90deg)' }} />
-          </div>
-        </Popover>
-        {/* MCP（嵌套 Popover） */}
-        <Popover
-          content={
-            <div style={{ width: 300, maxHeight: 400, overflowY: 'auto' }}>
-              <div className="popover-back-btn" onClick={() => setMcpPopOpen(false)}>
-                <DownOutlined style={{ fontSize: 10, transform: 'rotate(90deg)' }} /> 返回
-              </div>
-              {mcpLoading ? (
-                <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>加载中...</div>
-              ) : mcpGroups.length === 0 ? (
-                <div style={{ padding: 16, textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>暂无 MCP 分组</div>
-              ) : (
-                mcpGroups.map((g: any) => {
-                  const gid = g.groupId;
-                  const isExpanded = expandedMcpGroups.has(gid);
-                  const items = mcpGroupItems.get(gid) || [];
-                  return (
-                    <div key={gid}>
-                      <div style={{ padding: '9px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6 }}
-                        onClick={() => toggleMcpGroup(gid)}
-                      >
-                        <DownOutlined style={{ fontSize: 9, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', color: 'var(--ink-3)' }} />
-                        <span style={{ fontWeight: 600, flex: 1 }}>{g.groupName}</span>
-                        <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{items.length > 0 ? items.length : ''}</span>
-                      </div>
-                      {isExpanded && (
-                        items.length === 0 ? (
-                          <div style={{ padding: '8px 12px 8px 28px', fontSize: 12, color: 'var(--ink-3)' }}>该分组下暂无 MCP 服务</div>
-                        ) : (
-                          items.map((m: any) => {
-                            const mid = String(m.id);
-                            const mName = m.name ?? mid;
-                            return (
-                              <div key={mid} className={`mcp-option ${selectedMCPs.has(mid) ? 'selected' : ''}`} style={{ paddingLeft: 28 }}
-                                onClick={() => setSelectedMCPs((prev) => { const n = new Set(prev); n.has(mid) ? n.delete(mid) : n.add(mid); return n; })}
-                              >
-                                <span className={`mcp-opt-dot ${selectedMCPs.has(mid) ? 'on' : 'off'}`} />
-                                {mName}
-                                {m.description && <span className="mcp-opt-desc">{m.description}</span>}
-                              </div>
-                            );
-                          })
-                        )
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          }
-          trigger="click"
-          placement="rightTop"
-          open={mcpPopOpen}
-          onOpenChange={setMcpPopOpen}
-          getPopupContainer={(triggerNode) => triggerNode as HTMLElement}
-          overlayInnerStyle={{ padding: '4px 0' }}
-        >
-          <div className="more-popup-item" onClick={() => setMcpPopOpen(true)}>
-            <ApiOutlined style={{ fontSize: 14 }} /> MCP
-            <DownOutlined style={{ marginLeft: 'auto', fontSize: 10, transform: 'rotate(-90deg)' }} />
-          </div>
-        </Popover>
-        </>
-        )}
-        {/* 联网搜索 */}
-        {/* <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('联网搜索功能即将上线'); }}>
-          <SearchOutlined style={{ fontSize: 14 }} /> 联网搜索
-        </div> */}
-        {/* 代码执行 */}
-        {/* <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('代码执行功能即将上线'); }}>
-          <ToolOutlined style={{ fontSize: 14 }} /> 代码执行
-        </div> */}
-        {/* Markdown */}
-        {/* <div className="more-popup-item" onClick={() => { setMorePopupOpen(false); message.info('Markdown功能即将上线'); }}>
-          <EditOutlined style={{ fontSize: 14 }} /> Markdown
-        </div> */}
       </div>
     );
 
@@ -591,7 +673,8 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           </Dropdown>
 
           {/* 数据选择 Popover */}
-          <Popover content={semanticPopoverContent} trigger="click" placement="topLeft" arrow={false} open={semDropdownOpen} onOpenChange={setSemDropdownOpen}>
+          <Popover content={semanticPopoverContent} trigger="click" placement="topLeft" arrow={false} overlayClassName="uni-popover" open={semDropdownOpen}
+            onOpenChange={(open) => { setSemDropdownOpen(open); if (!open) setSemSearch(''); }}>
             <button type="button" className={`input-label-btn ${semDropdownOpen ? 'active' : ''}`} title="选择数据">
               <DatabaseOutlined style={{ fontSize: 14 }} />
               <span style={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -628,9 +711,9 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             trigger="click"
             placement="topRight"
             open={morePopupOpen}
-            onOpenChange={(open) => { setMorePopupOpen(open); if (!open) { setSkillPopOpen(false); setMcpPopOpen(false); } }}
+            onOpenChange={(open) => { setMorePopupOpen(open); if (!open) { setSkillSearch(''); setMcpSearch(''); } }}
             destroyTooltipOnHide
-            overlayInnerStyle={{ padding: '4px 0', overflow: 'visible' }}
+            overlayClassName="uni-popover"
           >
             <button type="button" className="input-label-btn" title="更多">
               <EllipsisOutlined style={{ fontSize: 16 }} />

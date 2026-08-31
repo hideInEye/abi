@@ -6,6 +6,7 @@ import {
   EditOutlined,
   ExperimentOutlined,
   FolderOutlined,
+  LoadingOutlined,
   LockOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
@@ -17,7 +18,7 @@ import {
 import { Button, Input, Modal, Radio, Spin, Switch, Tag, message } from 'antd'
 import { AssistantIconBlock, AssistantIconPicker } from '@/components/AssistantIcon'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { addAppApi, updateAppApi, fetchAppDetailApi, publishVersionApi } from '@/service/api/abi-chat-app'
 import { fetchModelList } from '@/service/api'
@@ -27,6 +28,9 @@ import ToolPickerDrawer from './tool-picker-drawer'
 import CapabilityPickerDrawer from './capability-picker-drawer'
 import ModelPickerDrawer from './model-picker-drawer'
 import { semanticPickerTabs, skillPickerTabs } from './capability-picker-configs'
+import ExploreMessageRow from './exploration-mode/ExploreMessageRow'
+import ExplorePreviewPane from './exploration-mode/ExplorePreviewPane'
+import { useAssistantDebugChat } from './exploration-mode/useAssistantDebugChat'
 import React from 'react'
 
 /**
@@ -126,6 +130,58 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(new Set())
   const [semanticPickerOpen, setSemanticPickerOpen] = useState(false)
   const [skillPickerOpen, setSkillPickerOpen] = useState(false)
+
+  // ── 右侧调试预览：接入 chat 探索模式流式对话（/chat-proxy/api/v2/chat/plan）──
+  const [chatInput, setChatInput] = useState('')
+  // 右侧结果工作室当前展开的探索项 id（内容随流式更新，故只存 id 再从实时列表取）
+  const [previewId, setPreviewId] = useState<string | null>(null)
+  // 数据语义可多选，但探索接口只收单个 schema_id：取第一个已选语义
+  const firstSchemaId = useMemo(() => {
+    const first = Array.from(selectedSemanticIds)[0]
+    return first ? Number(String(first).replace('schema_', '')) || undefined : undefined
+  }, [selectedSemanticIds])
+  // 对话模型单选：model_<id> 反解为 chatModelId
+  const debugChatModelId = useMemo(() => {
+    const first = Array.from(selectedModelIds)[0]
+    return first ? Number(String(first).replace('model_', '')) || undefined : undefined
+  }, [selectedModelIds])
+  // 技能 -> skills_source_version_ids
+  const skillSourceVersionIds = useMemo(
+    () => Array.from(selectedSkillIds).map((id) => String(id).replace('skill_', '')),
+    [selectedSkillIds],
+  )
+
+  const { items: debugItems, loading: debugLoading, handleSend, stopGenerating, resetSession } = useAssistantDebugChat({
+    appId: agent?.id,
+    spaceId,
+    schemaId: firstSchemaId,
+    chatModelId: debugChatModelId,
+    isDebug: enableDebug,
+  })
+
+  // 右侧展开的探索项：从实时列表按 id 取，保证流式更新时预览同步刷新
+  const previewItem = useMemo(() => debugItems.find((it) => it.id === previewId) || null, [debugItems, previewId])
+
+  // 调试预览区滚动容器：提交问题后定位到当前执行项
+  const debugScrollRef = useRef<HTMLDivElement>(null)
+
+  /** 提交调试问题：清空输入并走探索模式流式接口 */
+  const submitDebug = () => {
+    if (debugLoading) return
+    const q = chatInput.trim()
+    if (!q) return
+    setChatInput('')
+    handleSend(q, { skillSourceVersionIds })
+
+    // 发送后定位到当前执行问题，与 chat 端探索发送行为一致
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const container = debugScrollRef.current
+        if (!container) return
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+      })
+    })
+  }
 
   // id -> 名称映射（各选择抽屉加载列表后回填；id 均带业务前缀不会冲突），用于折叠行下方展示已选项名称
   const [optionNameMap, setOptionNameMap] = useState<Record<string, string>>({})
@@ -276,10 +332,17 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     if (visible && agent?.id) {
       // 编辑已有助手：视为已保存，右侧测试输入框默认解锁
       setDraftSaved(true)
+      // 切换/打开助手时清空上一助手遗留的调试对话与会话标识
+      resetSession()
+      setChatInput('')
+      setPreviewId(null)
       loadDetail()
     } else if (visible && !agent?.id) {
       // 新增模式：重置表单，未保存草稿前锁定右侧测试输入框
       setDraftSaved(false)
+      resetSession()
+      setChatInput('')
+      setPreviewId(null)
       setName('')
       setPrompt('')
       setDescription('')
@@ -612,8 +675,9 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                     fontWeight: 500,
                   }}
                   type="link"
+                  onClick={() => message.info('功能开发中...')}
                 >
-                  自动优化
+                  AI 润色
                 </Button>
                 )}
               </div>
@@ -964,6 +1028,20 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             />
           </Modal>
 
+          {/* 调试结果工作室：展开某条探索项的全部执行数据、最终结论与摘要 */}
+          <CommonDrawer
+            destroyOnClose
+            open={!!previewItem}
+            placement="right"
+            width={680}
+            closable={false}
+            headerStyle={{ display: 'none' }}
+            bodyStyle={{ padding: 0, height: '100%' }}
+            onClose={() => setPreviewId(null)}
+          >
+            {previewItem && <ExplorePreviewPane item={previewItem} onClose={() => setPreviewId(null)} />}
+          </CommonDrawer>
+
           {/* 右：调试预览 */}
           <div
             style={{
@@ -974,7 +1052,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             }}
           >
             <SectionHeader icon={headerIcon} title="调试预览" />
-            <div style={{ flex: 1, overflow: 'auto', padding: '18px 24px' }}>
+            <div ref={debugScrollRef} style={{ flex: 1, overflow: 'auto', padding: '18px 24px' }}>
               <div
                 style={{
                   color: '#8fa0b5',
@@ -1003,6 +1081,19 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                   {description || `你好，我是你的${name || '智能助手'}，有什么可以帮助你的？`}
                 </div>
               </div>
+              {/* 探索模式对话时间线：接入真实流式结果 */}
+              {debugItems.length > 0 && (
+                <div style={{ marginTop: 18 }}>
+                  {debugItems.map((it) => (
+                    <ExploreMessageRow
+                      key={it.id}
+                      item={it}
+                      active={previewId === it.id}
+                      onOpen={() => setPreviewId(it.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 推荐问题 + 输入栏 */}
@@ -1014,6 +1105,10 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                     <Tag
                       key={q}
                       color="processing"
+                      onClick={() => {
+                        if (!draftSaved || debugLoading) return
+                        handleSend(q, { skillSourceVersionIds })
+                      }}
                       style={{
                         background: 'linear-gradient(135deg, rgba(91, 124, 247, 0.08) 0%, rgba(112, 145, 250, 0.08) 100%)',
                         border: '1px solid rgba(91, 124, 247, 0.2)',
@@ -1037,10 +1132,22 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               </div>
               <Input
                 disabled={!draftSaved}
-                placeholder={draftSaved ? '请输入问题' : '保存后即可开始测试'}
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onPressEnter={submitDebug}
+                placeholder={draftSaved ? (debugLoading ? 'AI 正在思考，可点击右侧停止…' : '请输入问题') : '保存后即可开始测试'}
                 prefix={draftSaved ? undefined : <LockOutlined style={{ color: '#b6c0d4' }} />}
                 size="large"
-                suffix={<SendOutlined style={{ color: draftSaved ? '#5b7cf7' : '#c2ccdd' }} />}
+                suffix={
+                  debugLoading ? (
+                    <LoadingOutlined style={{ color: '#5b7cf7', cursor: 'pointer' }} title="停止生成" onClick={stopGenerating} />
+                  ) : (
+                    <SendOutlined
+                      style={{ color: draftSaved ? '#5b7cf7' : '#c2ccdd', cursor: draftSaved ? 'pointer' : 'default' }}
+                      onClick={draftSaved ? submitDebug : undefined}
+                    />
+                  )
+                }
                 style={{
                   borderRadius: 10,
                   border: '1px solid rgba(130, 140, 200, 0.2)',

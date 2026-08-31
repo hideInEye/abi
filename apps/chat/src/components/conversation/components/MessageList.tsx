@@ -93,6 +93,8 @@ type MessageListProps = {
   onOpenReport?: (reportId: string) => void
   /** 打开探索结果工作室侧栏。 */
   onOpenExplore?: (exploreId: string) => void
+  /** 关闭探索结果工作室侧栏。 */
+  onCloseExplore?: () => void
   /** 当前在右侧工作室打开的探索项 id。 */
   activeExploreId?: string
   /** 报告预览占用右侧空间时隐藏问题导航，避免导航面板覆盖双栏内容。 */
@@ -138,6 +140,7 @@ const MessageList = ({
   onToggleReportTask,
   onOpenReport,
   onOpenExplore,
+  onCloseExplore,
   activeExploreId,
   hideMessageNavRail = false,
 }: MessageListProps) => {
@@ -348,6 +351,7 @@ const MessageList = ({
           item={exploration}
           active={activeExploreId === exploration.id}
           onOpen={() => onOpenExplore?.(exploration.id)}
+          onClose={onCloseExplore}
         />
       )
     }
