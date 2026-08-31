@@ -1,5 +1,5 @@
 import { FileSearchOutlined } from '@ant-design/icons'
-import { Alert, Tag } from 'antd'
+import { Alert } from 'antd'
 import React from 'react'
 
 import ReportFileCard from './ReportFileCard'
@@ -15,30 +15,40 @@ interface ReportMessageRowProps {
   onToggleTodo: () => void
   onToggleTask: (taskKey: string) => void
   onOpenReport: () => void
+  onThinkingTypewriterComplete?: () => void
 }
+
+type ReportStatusTone = 'active' | 'success' | 'danger' | 'neutral'
 
 function getStatusMeta(status: ReportItem['status']) {
   switch (status) {
     case 'submitting':
-      return { color: 'processing', text: '正在准备' }
+      return { tone: 'active' as const, text: '正在准备' }
     case 'waiting_stream':
-      return { color: 'processing', text: '准备中' }
+      return { tone: 'active' as const, text: '准备中' }
     case 'syncing_history':
-      return { color: 'processing', text: '正在整理' }
+      return { tone: 'active' as const, text: '正在整理' }
     case 'thinking':
-      return { color: 'processing', text: '思考中' }
+      return { tone: 'active' as const, text: '思考中' }
     case 'running':
-      return { color: 'blue', text: '执行中' }
+      return { tone: 'active' as const, text: '执行中' }
     case 'completed':
-      return { color: 'green', text: '已完成' }
+      return { tone: 'success' as const, text: '已完成' }
     case 'failed':
-      return { color: 'red', text: '失败' }
+      return { tone: 'danger' as const, text: '失败' }
     default:
-      return { color: 'default', text: status }
+      return { tone: 'neutral' as const, text: status }
   }
 }
 
-const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThinking, onToggleTodo, onToggleTask, onOpenReport }) => {
+const STATUS_TONE_CLASS_NAMES: Record<ReportStatusTone, string> = {
+  active: styles.reportStatusActive,
+  success: styles.reportStatusSuccess,
+  danger: styles.reportStatusDanger,
+  neutral: styles.reportStatusNeutral,
+}
+
+const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThinking, onToggleTodo, onToggleTask, onOpenReport, onThinkingTypewriterComplete }) => {
   const statusMeta = getStatusMeta(report.status)
   const latestWarning = report.warnings[report.warnings.length - 1]
   const presentationStage = getReportPresentationStage(report)
@@ -59,12 +69,18 @@ const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThi
             <div className={styles.answerTitle}>
               <FileSearchOutlined />
               报告生成
-              <Tag color={statusMeta.color}>{statusMeta.text}</Tag>
+              <span
+                className={`${styles.reportStatusBadge} ${STATUS_TONE_CLASS_NAMES[statusMeta.tone]}`}
+                data-status={report.status}
+              >
+                <span className={styles.reportStatusDot} aria-hidden="true" />
+                {statusMeta.text}
+              </span>
             </div>
             {durationText && <div className={styles.answerMeta}>{durationText}</div>}
           </div>
 
-          <ReportThinkingPanel report={report} onToggle={onToggleThinking} />
+          <ReportThinkingPanel report={report} onToggle={onToggleThinking} onTypewriterComplete={onThinkingTypewriterComplete} />
           {presentationStage !== 'thinking' && <ReportTodoList report={report} onToggleTodo={onToggleTodo} onToggleTask={onToggleTask} />}
 
           {showFinalSummary && report.final && <div className={styles.finalSummary}>{report.final.content}</div>}
