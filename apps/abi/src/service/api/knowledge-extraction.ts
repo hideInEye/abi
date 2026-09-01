@@ -51,7 +51,7 @@ export function deleteKnowledgeIndicatorBatch(params: { ids: number[] }) {
   })
 }
 
-export function queryKnowledgeIndicatorDetail(params: { id: number; }) {
+export function queryKnowledgeIndicatorDetail(params: { id: number | string; }) {
   return apiRequest({
     method: 'get',
     url: `${INDICATOR_API_PREFIX}/detail/${params.id}`

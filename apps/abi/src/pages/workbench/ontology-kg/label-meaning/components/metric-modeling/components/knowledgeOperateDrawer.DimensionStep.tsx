@@ -1,34 +1,34 @@
-import { FileTextOutlined, FolderOpenOutlined, FolderOutlined } from '@ant-design/icons'
-import { Spin, Transfer, Tree, message } from 'antd'
+import { FileTextOutlined, FolderOutlined } from '@ant-design/icons'
+import { Alert, Spin, Transfer, Tree } from 'antd'
 import type { FormInstance, TransferProps } from 'antd'
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
-import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
-import { queryDimensionList } from '@/service/api/dimension-modeling'
-import { tableSemanticsGroupList } from '@/service/api/table-semantics'
-
+import { useKnowledgeDimensions } from '../hooks/useKnowledgeDimensions'
 import type { KnowledgeFormValues } from '../types/metricModeling.types'
-import { formatMappedDimensionOptionTitle, getMappedMetricFieldDisplayName } from '../utils/knowledgeOperateDrawer.utils'
-import { getKnowledgeSpaceId } from '../utils/space'
+import { getMappedMetricFieldDisplayName } from '../utils/knowledgeOperateDrawer.utils'
 
 import styles from './knowledgeOperateDrawer.DimensionStep.module.scss'
 
-interface DimensionGroupItem {
-  groupId: string
-  groupName: string
+interface SelectedDimensionSnapshot {
+  groupId?: string
+  groupName?: string
+  key: string
+  techName?: string
+  title?: string
 }
 
 interface DimensionTransferItem {
-  disabled?: boolean
+  groupId?: string
+  groupName?: string
   key: string
   techName: string
   title: string
 }
 
-interface SelectedDimensionSnapshot {
-  key: string
-  techName?: string
-  title?: string
+interface SelectedDimensionGroup {
+  groupId: string
+  groupName: string
+  items: DimensionTransferItem[]
 }
 
 interface Props {
@@ -37,122 +37,50 @@ interface Props {
 
 type UnknownRecord = Record<string, unknown>
 
-function getPathValue(source: unknown, path: string) {
-  return path.split('.').reduce<unknown>((acc, key) => {
-    if (!acc || typeof acc !== 'object') {
-      return undefined
+function groupSelectedDimensionItems(items: DimensionTransferItem[]): SelectedDimensionGroup[] {
+  const groups = new Map<string, SelectedDimensionGroup>()
+  items.forEach(item => {
+    const groupId = item.groupId || 'ungrouped'
+    const group = groups.get(groupId) || {
+      groupId,
+      groupName: item.groupName || '未分组',
+      items: []
     }
-    return (acc as UnknownRecord)[key]
-  }, source)
-}
-
-function getFirstArray(res: unknown, paths: string[]) {
-  for (const path of paths) {
-    if (!path) {
-      if (Array.isArray(res)) {
-        return res
-      }
-    } else {
-      const value = getPathValue(res, path)
-      if (Array.isArray(value)) {
-        return value
-      }
-    }
-  }
-  return []
-}
-
-function normalizeRows(res: unknown): unknown[] {
-  return getFirstArray(res, [
-    '',
-    'rows',
-    'list',
-    'data.rows',
-    'data.list',
-    'data',
-    'response.data.data.rows',
-    'response.data.rows',
-    'response.data.data'
-  ])
-}
-
-function normalizeDimensionGroup(item: unknown): DimensionGroupItem | null {
-  const source = item as UnknownRecord
-  const groupId = String(source?.groupId ?? source?.id ?? '').trim()
-  const groupName = String(source?.groupName ?? source?.name ?? '').trim()
-  if (!groupId || !groupName) {
-    return null
-  }
-  return { groupId, groupName }
-}
-
-function pickText(item: unknown, keys: string[]) {
-  const source = item as UnknownRecord
-  for (const key of keys) {
-    const value = String(source?.[key] ?? '').trim()
-    if (value) {
-      return value
-    }
-  }
-  return ''
-}
-
-function normalizeDimensionOption(item: unknown): DimensionTransferItem | null {
-  const dimId = pickText(item, ['dimId', 'id', 'dimensionId'])
-  if (!dimId) {
-    return null
-  }
-
-  const bizName = pickText(item, ['bizName', 'zhName', 'dimName'])
-  const techName = pickText(item, ['techName', 'englishName', 'dimCode'])
-  const title = formatMappedDimensionOptionTitle({
-    bizName,
-    fallback: dimId,
-    techName
+    group.items.push(item)
+    groups.set(groupId, group)
   })
-  return { key: dimId, techName, title }
+  return Array.from(groups.values())
 }
 
-function parseSelectedDimensions(dimensionFieldIds?: unknown): SelectedDimensionSnapshot[] {
-  if (!dimensionFieldIds) {
-    return []
-  }
-  if (Array.isArray(dimensionFieldIds)) {
-    return dimensionFieldIds
+function parseSelectedDimensions(value: unknown): SelectedDimensionSnapshot[] {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
       .map(item => {
-        if (item === null || item === undefined) {
-          return null
-        }
-        if (typeof item === 'object') {
+        if (item && typeof item === 'object') {
           const source = item as UnknownRecord
           const key = String(source.dimId ?? source.id ?? '').trim()
-          if (!key) {
-            return null
+          if (!key) return null
+          return {
+            groupId: String(source.groupId ?? source.group_id ?? '').trim() || undefined,
+            groupName: String(source.groupName ?? source.group_name ?? '').trim() || undefined,
+            key,
+            techName: String(source.techName || '').trim() || undefined,
+            title: getMappedMetricFieldDisplayName(source.title ?? source.bizName ?? source.dimName ?? '') || undefined
           }
-          const techName = String(source.techName ?? '').trim()
-          const rawTitle = source.title ?? source.bizName ?? source.zhName ?? source.dimName
-          const title = source.title
-            ? getMappedMetricFieldDisplayName(rawTitle)
-            : formatMappedDimensionOptionTitle({
-                bizName: rawTitle,
-                fallback: key,
-                techName
-              })
-          return { key, techName: techName || undefined, title: title || undefined }
         }
-        const key = String(item).trim()
+        const key = String(item ?? '').trim()
         return key ? { key } : null
       })
       .filter(Boolean) as SelectedDimensionSnapshot[]
   }
-  if (typeof dimensionFieldIds === 'string') {
+  if (typeof value === 'string') {
     try {
-      const parsed = JSON.parse(dimensionFieldIds)
-      return parseSelectedDimensions(parsed)
+      return parseSelectedDimensions(JSON.parse(value))
     } catch {
-      return dimensionFieldIds
+      return value
         .split(',')
-        .map(item => item.trim())
+        .map(key => key.trim())
         .filter(Boolean)
         .map(key => ({ key }))
     }
@@ -161,272 +89,176 @@ function parseSelectedDimensions(dimensionFieldIds?: unknown): SelectedDimension
 }
 
 export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
-  const [dimensionGroups, setDimensionGroups] = useState<DimensionGroupItem[]>([])
-  const [dimensionMap, setDimensionMap] = useState<Record<string, DimensionTransferItem[]>>({})
-  const [expandedKeys, setExpandedKeys] = useState<string[]>([])
-  const [loadingGroups, setLoadingGroups] = useState(false)
-  const [loadingDimensionGroupIds, setLoadingDimensionGroupIds] = useState<string[]>([])
-  const loadingDimensionGroupIdsRef = React.useRef<Set<string>>(new Set())
-  const [targetKeys, setTargetKeys] = useState<string[]>([])
-  const [selectedSnapshotMap, setSelectedSnapshotMap] = useState<Record<string, SelectedDimensionSnapshot>>({})
-
-  useEffect(() => {
-    const selected = parseSelectedDimensions(form.getFieldValue('dimensionFieldIds'))
-    setTargetKeys(selected.map(item => item.key))
-    setSelectedSnapshotMap(
-      selected.reduce<Record<string, SelectedDimensionSnapshot>>((acc, item) => {
-        acc[item.key] = item
-        return acc
-      }, {})
-    )
-  }, [form])
-
-  useEffect(() => {
-    const fetchDimensionGroups = async () => {
-      setLoadingGroups(true)
-      try {
-        const rows = normalizeRows(
-          await tableSemanticsGroupList({
-            groupType: 'ontology-dimension',
-            pageNum: 1,
-            pageSize: 1000,
-            spaceId: getKnowledgeSpaceId()
-          })
-        )
-        const groups = rows.map(normalizeDimensionGroup).filter(Boolean) as DimensionGroupItem[]
-        setDimensionGroups(groups)
-        setExpandedKeys([])
-      } catch {
-        message.error('维度分组查询失败')
-      } finally {
-        setLoadingGroups(false)
-      }
-    }
-
-    fetchDimensionGroups()
-  }, [])
-
-  const fetchDimensionsByGroup = useCallback(
-    async (groupId: string) => {
-      const groupKey = String(groupId)
-      if (loadingDimensionGroupIdsRef.current.has(groupKey)) {
-        return
-      }
-
-      loadingDimensionGroupIdsRef.current.add(groupKey)
-      setLoadingDimensionGroupIds(prev => [...prev, groupKey])
-      try {
-        const rows = normalizeRows(
-          await queryDimensionList({
-            groupId,
-            pageNum: 1,
-            pageSize: 1000,
-            spaceId: getKnowledgeSpaceId()
-          })
-        )
-        setDimensionMap(prev => ({
-          ...prev,
-          [groupKey]: rows.map(normalizeDimensionOption).filter(Boolean) as DimensionTransferItem[]
-        }))
-      } catch {
-        message.error('维度列表查询失败')
-      } finally {
-        loadingDimensionGroupIdsRef.current.delete(groupKey)
-        setLoadingDimensionGroupIds(prev => prev.filter(item => item !== groupKey))
-      }
-    },
-    []
+  const watchedDimensionFieldIds = AForm.useWatch('dimensionFieldIds', { form, preserve: true })
+  const selectedDimensions = useMemo(
+    () => parseSelectedDimensions(watchedDimensionFieldIds ?? form.getFieldValue('dimensionFieldIds')),
+    [form, watchedDimensionFieldIds]
   )
+  const [targetKeys, setTargetKeys] = useState<string[]>(selectedDimensions.map(item => item.key))
+  const { error, loading, options, retry, treeData } = useKnowledgeDimensions()
+  const snapshots = useMemo(() => new Map(selectedDimensions.map(item => [item.key, item])), [selectedDimensions])
 
-  const loadedDimensionOptions = useMemo(() => {
-    const map = new Map<string, DimensionTransferItem>()
-    Object.values(dimensionMap)
-      .flat()
-      .forEach(item => {
-        map.set(item.key, item)
-      })
+  useEffect(() => {
+    setTargetKeys(selectedDimensions.map(item => item.key))
+  }, [selectedDimensions])
+
+  const dataSource = useMemo(() => {
+    const map = new Map<string, DimensionTransferItem>(
+      options.map(item => [
+        item.key,
+        {
+          groupId: item.groupId,
+          groupName: item.groupName,
+          key: item.key,
+          techName: item.techName,
+          title: item.title
+        }
+      ])
+    )
     targetKeys.forEach(key => {
       if (!map.has(key)) {
-        const snapshot = selectedSnapshotMap[key]
-        const techName = snapshot?.techName || key
-        const title = snapshot?.title || snapshot?.techName || key
-        map.set(key, { key, techName, title })
+        const snapshot = snapshots.get(key)
+        map.set(key, {
+          groupId: snapshot?.groupId,
+          groupName: snapshot?.groupName,
+          key,
+          techName: snapshot?.techName || key,
+          title: snapshot?.title || snapshot?.techName || key
+        })
       }
     })
     return Array.from(map.values())
-  }, [dimensionMap, selectedSnapshotMap, targetKeys])
+  }, [options, snapshots, targetKeys])
 
-  const treeData = useMemo(() => {
-    return dimensionGroups.map(group => {
-      const groupKey = String(group.groupId)
-      const children = dimensionMap[groupKey]?.map(item => ({
-        disabled: targetKeys.includes(item.key),
-        isLeaf: true,
-        key: item.key,
-        title: (
-          <span className={styles.treeNodeTitle}>
-            <FileTextOutlined className={styles.fileIcon} />
-            <span className={styles.nodeText}>{item.title}</span>
-          </span>
-        )
-      }))
-      const treeKey = `group-${group.groupId}`
-      const isExpanded = expandedKeys.includes(treeKey)
-
-      return {
+  const transferTree = useMemo(
+    () =>
+      treeData.map(group => ({
+        ...group,
         checkable: false,
-        children,
-        className: styles.groupNode,
+        children: group.children.map(item => ({
+          ...item,
+          disabled: targetKeys.includes(item.value),
+          key: item.value,
+          title: (
+            <span className={styles.treeNodeTitle}>
+              <FileTextOutlined className={styles.fileIcon} />
+              <span className={styles.nodeText}>{item.title}</span>
+            </span>
+          )
+        })),
         disableCheckbox: true,
-        isLeaf: false,
-        key: treeKey,
+        key: group.value,
         title: (
           <span className={styles.treeNodeTitle}>
-            {isExpanded ? (
-              <FolderOpenOutlined className={styles.folderIcon} />
-            ) : (
-              <FolderOutlined className={styles.folderIcon} />
-            )}
-            <span className={styles.nodeText}>{group.groupName}</span>
+            <FolderOutlined className={styles.folderIcon} />
+            <span className={styles.nodeText}>{group.title}</span>
           </span>
         )
-      }
-    })
-  }, [dimensionGroups, dimensionMap, expandedKeys, targetKeys])
+      })),
+    [targetKeys, treeData]
+  )
 
-  const handleTransferChange: TransferProps['onChange'] = nextTargetKeys => {
-    const nextKeys = nextTargetKeys.map(item => String(item))
-    const dimensionOptionMap = new Map(loadedDimensionOptions.map(item => [item.key, item]))
-    const relateDims = nextKeys.map(key => {
-      const current = dimensionOptionMap.get(key)
-      return {
-        dimId: Number(key),
-        techName: current?.techName || current?.title || key
-      }
-    })
-    setTargetKeys(nextKeys)
-    form.setFieldValue('dimensionFieldIds', JSON.stringify(relateDims))
-  }
-
-  const handleLoadTreeData = async (node: { key?: React.Key }) => {
-    const key = String(node.key || '')
-    if (!key.startsWith('group-')) {
-      return
-    }
-    await fetchDimensionsByGroup(key.replace('group-', ''))
-  }
-
-  const handleGroupSelect = (key: string) => {
-    const groupId = key.replace('group-', '')
-    const isExpanded = expandedKeys.includes(key)
-    setExpandedKeys(isExpanded ? expandedKeys.filter(item => item !== key) : [...expandedKeys, key])
-    if (!isExpanded) {
-      fetchDimensionsByGroup(groupId)
-    }
-  }
-
-  const renderRightList = ({
-    filteredItems,
-    onItemSelect,
-    selectedKeys
-  }: {
-    filteredItems: DimensionTransferItem[]
-    onItemSelect: (key: string, selected: boolean) => void
-    selectedKeys: React.Key[]
-  }) => {
-    if (!filteredItems.length) {
-      return (
-        <div className="h-full flex items-center justify-center">
-          <AEmpty image={AEmpty.PRESENTED_IMAGE_SIMPLE} />
-        </div>
+  const handleChange: TransferProps<DimensionTransferItem>['onChange'] = keys => {
+    const nextKeys = keys.map(String)
+    const optionMap = new Map(dataSource.map(item => [item.key, item]))
+    form.setFieldValue(
+      'dimensionFieldIds',
+      JSON.stringify(
+        nextKeys.map(key => ({
+          dimId: key,
+          techName: optionMap.get(key)?.techName || optionMap.get(key)?.title || key
+        }))
       )
-    }
-
-    return (
-      <div className="h-full overflow-auto p-2">
-        {filteredItems.map(item => {
-          const checked = selectedKeys.includes(item.key)
-          return (
-            <div
-              className="mb-1 flex cursor-pointer items-center rounded px-2 py-1 hover:bg-gray-50"
-              key={item.key}
-              onClick={() => onItemSelect(item.key, !checked)}
-            >
-              <ACheckbox
-                checked={checked}
-                className="mr-2"
-              />
-              <span className="truncate">{item.title}</span>
-            </div>
-          )
-        })}
-      </div>
     )
+    setTargetKeys(nextKeys)
   }
 
   return (
     <>
-      <OntologyFormSectionTitle icon={<FolderOpenOutlined />}>三、维度配置</OntologyFormSectionTitle>
       <AForm.Item
         hidden
         name="dimensionFieldIds"
       >
         <AInput />
       </AForm.Item>
-      <Spin spinning={loadingGroups}>
-        <Transfer
-          dataSource={loadedDimensionOptions}
+      {error ? (
+        <Alert
+          className="mb-3"
+          message="维度数据加载失败"
+          type="error"
+          action={
+            <AButton
+              size="small"
+              onClick={retry}
+            >
+              重试
+            </AButton>
+          }
+        />
+      ) : null}
+      <Spin spinning={loading}>
+        <Transfer<DimensionTransferItem>
+          className={styles.dimensionTransfer}
+          dataSource={dataSource}
           listStyle={{ height: 420, width: '46%' }}
           render={item => item.title}
           showSelectAll={false}
           targetKeys={targetKeys}
-          onChange={handleTransferChange}
+          onChange={handleChange}
         >
-          {({ direction, filteredItems, onItemSelect, selectedKeys }) => {
-            if (direction === 'right') {
-              return renderRightList({
-                filteredItems: filteredItems as DimensionTransferItem[],
-                onItemSelect: onItemSelect as (key: string, selected: boolean) => void,
-                selectedKeys
-              })
-            }
-
-            return (
+          {({ direction, filteredItems, onItemSelect, selectedKeys }) =>
+            direction === 'left' ? (
               <Tree
                 blockNode
                 checkable
                 checkedKeys={[...selectedKeys, ...targetKeys]}
                 className={styles.dimensionTree}
-                expandedKeys={expandedKeys}
-                loadData={handleLoadTreeData}
-                selectedKeys={[]}
-                treeData={treeData}
+                treeData={transferTree}
                 onCheck={(_, info) => {
                   const key = String(info.node.key)
-                  if (key.startsWith('group-')) {
-                    return
-                  }
-                  onItemSelect(key, !selectedKeys.includes(key))
-                }}
-                onExpand={(keys, info) => {
-                  const nextKeys = keys.map(item => String(item))
-                  setExpandedKeys(nextKeys)
-                  const key = String(info.node.key)
-                  if (info.expanded && key.startsWith('group-')) {
-                    fetchDimensionsByGroup(key.replace('group-', ''))
-                  }
-                }}
-                onSelect={(_, info) => {
-                  const key = String(info.node.key)
-                  if (!key.startsWith('group-')) {
-                    onItemSelect(key, !selectedKeys.includes(key))
-                    return
-                  }
-                  handleGroupSelect(key)
+                  if (!key.startsWith('group-')) onItemSelect(key, !selectedKeys.includes(key))
                 }}
               />
+            ) : (
+              <div className={styles.selectedList}>
+                {groupSelectedDimensionItems(filteredItems).map(group => (
+                  <section
+                    className={styles.selectedGroup}
+                    key={group.groupId}
+                  >
+                    <div className={styles.selectedGroupTitle}>
+                      <FolderOutlined className={styles.folderIcon} />
+                      <span className={styles.nodeText}>{group.groupName}</span>
+                    </div>
+                    <div className={styles.selectedGroupItems}>
+                      {group.items.map(item => {
+                        const checked = selectedKeys.includes(item.key)
+                        return (
+                          <div
+                            className={styles.selectedItem}
+                            key={item.key}
+                            onClick={() => onItemSelect(item.key, !checked)}
+                          >
+                            <ACheckbox
+                              checked={checked}
+                              className={styles.selectedItemCheckbox}
+                            />
+                            <FileTextOutlined className={styles.fileIcon} />
+                            <span
+                              className={styles.selectedItemTitle}
+                              title={item.title}
+                            >
+                              {item.title}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
             )
-          }}
+          }
         </Transfer>
       </Spin>
     </>

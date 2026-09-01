@@ -19,12 +19,44 @@ export const STATUS_OPTIONS = [
 ]
 
 export const DATA_FREQUENCY_OPTIONS = [
-  { label: '每年', value: 'year' },
-  { label: '季度', value: 'quarter' },
+  { label: '每小时', value: 'hourly' },
   { label: '每日', value: 'daily' },
   { label: '每周', value: 'weekly' },
-  { label: '每月', value: 'monthly' },
-  { label: '每小时', value: 'hourly' }
+  { label: '每月', value: 'monthly' }
+]
+
+export const WEEKDAY_OPTIONS = [
+  { label: '周一', value: 1 },
+  { label: '周二', value: 2 },
+  { label: '周三', value: 3 },
+  { label: '周四', value: 4 },
+  { label: '周五', value: 5 },
+  { label: '周六', value: 6 },
+  { label: '周日', value: 7 }
+]
+
+export const STATISTICAL_DATE_UNIT_OPTIONS = [
+  { label: '小时', value: 'hour' },
+  { label: '日', value: 'day' },
+  { label: '周', value: 'week' },
+  { label: '月', value: 'month' },
+  { label: '季度', value: 'quarter' },
+  { label: '年', value: 'year' }
+]
+
+export const STATISTICAL_DATE_RANGE_MODE_OPTIONS = [
+  { label: '最近', value: 'recent' },
+  { label: '前', value: 'previous_full' },
+  { label: '今日', value: 'today' },
+  { label: '昨日', value: 'yesterday' },
+  { label: '本周', value: 'this_week' },
+  { label: '上周', value: 'last_week' },
+  { label: '本月', value: 'this_month' },
+  { label: '上月', value: 'last_month' },
+  { label: '本季度', value: 'this_quarter' },
+  { label: '上季度', value: 'last_quarter' },
+  { label: '本年', value: 'this_year' },
+  { label: '上年', value: 'last_year' }
 ]
 
 export const KNOWLEDGE_DATA_TYPE_OPTIONS = [

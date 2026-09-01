@@ -134,7 +134,7 @@ const MetricModeling: React.FC = () => {
                 rule: [[{ message: '请输入指标组名称', required: true }]],
                 type: KNOWLEDGE_GROUP_TYPE,
               }}
-              onGroupId={handleGroupChange}
+              onGroupId={(nextGroupId, nextGroupName) => handleGroupChange(String(nextGroupId), nextGroupName)}
               onGroupsChange={setHasGroups}
               ref={groupRef}
             />
