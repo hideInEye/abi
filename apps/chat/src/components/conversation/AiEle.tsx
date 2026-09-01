@@ -10,7 +10,7 @@ import SvgIcon from "../../components/SvgIcon"
 import styles from './index.module.css';
 import ClarifyComponent from "./components/ClarifyComponent";
 import IntentClarifyV2 from "./components/IntentClarifyV2"; // 澄清处理组件
-import { CheckCircleFilled, DownOutlined, UpOutlined } from '@ant-design/icons';
+import { BulbOutlined, CheckCircleFilled, DownOutlined, LoadingOutlined, UpOutlined } from '@ant-design/icons';
 import { Typography } from "antd";
 import ReactMarkdown from 'react-markdown';
 import { SUB_CHAT_MODE_MAP } from '../../constant/chat';
@@ -254,20 +254,28 @@ const AiEle: React.FC<PropsType> = ({
     el.scrollTop = el.scrollHeight;
   }, [data?.context, data?.smLoading]);
 
-  useEffect(() => {
-    // 控制折叠状态
-    if (data?.questionData?.agent_label === 'intent_clarify' || data.smLoading || data.isIllegalQuery) {
-      setIsCollapsed(false); // 澄清、加载或闲聊场景时展开
-    } else {
-      setIsCollapsed(true); // 否则折叠
-    }
-  }, [data]);
+  // 流式输出时展开，流式结束后自动折叠（只折叠一次，之后可手动展开）
+  const hasEverExpandedRef = useRef(false);
   
   useEffect(() => {
-    if (isDone && !isSharing && !data?.questionData?.agent_label && !data.isIllegalQuery) {
-      setIsCollapsed(true);
+    if (data?.smLoading) {
+      setIsCollapsed(false);
+      hasEverExpandedRef.current = true;
+      return;
     }
-  }, [isDone, isSharing, data]);
+    // 流式结束且曾经展开过：自动折叠（只执行一次）
+    if (hasEverExpandedRef.current && !data?.smLoading) {
+      setIsCollapsed(true);
+      hasEverExpandedRef.current = false;
+    }
+  }, [data?.smLoading]);
+
+  // 澄清、闲聊场景保持展开
+  useEffect(() => {
+    if (data?.questionData?.agent_label === 'intent_clarify' || data?.isIllegalQuery) {
+      setIsCollapsed(false);
+    }
+  }, [data?.questionData?.agent_label, data?.isIllegalQuery]);
   
   useEffect(() => {
     if (!loading && data.context && isDone) {
@@ -323,13 +331,19 @@ const AiEle: React.FC<PropsType> = ({
       /> */}
       <div className="w-full text-left">
         <div className={styles.thinkingCard}>
-          <div className={styles.thinkingCardHeader}>
+          <div 
+            className={styles.thinkingCardHeader}
+            onClick={() => setIsCollapsed((prev) => !prev)}
+            style={{ cursor: 'pointer' }}
+          >
             <div className={styles.thinkingStatusWrap}>
               <span className={styles.thinkingStatusIcon}>
                 {statusLabel === '已完成思考' ? (
                   <CheckCircleFilled style={{ fontSize: '1rem', color: '#52c41a' }} />
+                ) : data?.smLoading ? (
+                  <LoadingOutlined style={{ fontSize: '1rem' }} />
                 ) : (
-                  <SvgIcon className="text-[1rem]" localIcon={data?.smLoading ? 'thinkingblue' : 'thinking'} />
+                  <BulbOutlined style={{ fontSize: '1rem' }} />
                 )}
               </span>
               <span className={styles.thinkingStatusText}>
