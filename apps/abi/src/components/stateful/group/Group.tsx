@@ -75,11 +75,11 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
     hasAnyGroup,
     isModalOpen,
     setEditingGroup,
-    setGroups,
     setIsModalOpen
   } = useGroupManagement(config);
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     onGroupsChange?.(hasAnyGroup);
@@ -106,9 +106,7 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
   }, [groups]);
 
   const handleSearch = (value: string) => {
-    setGroups([]);
-    handleGroupSearch(value);
-    getGroups(value);
+    void handleGroupSearch(value);
   };
 
   const handleModalCancel = () => {
@@ -118,8 +116,10 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
   };
 
   const handleModalOk = async () => {
+    if (submitting) return;
     try {
       const values = await form.validateFields();
+      setSubmitting(true);
       let flag:any = true
       if (editingGroup) {
         // 编辑模式
@@ -140,6 +140,8 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
       }
     } catch (error) {
       console.error('Validate Failed:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -297,7 +299,9 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
         centered
         className="group-modal-v5"
         title={modalTitle}
-        onCancel={handleModalCancel}
+        onCancel={() => {
+          if (!submitting) handleModalCancel();
+        }}
         footer={
           <div className="group-modal-footer">
             {editingGroup ? (
@@ -313,8 +317,8 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
               </Popconfirm>
             ) : <span />}
             <div className="group-modal-footer-actions">
-              <Button className="btn-ghost-v5" onClick={handleModalCancel}>取消</Button>
-              <Button className="btn-accent-gradient" onClick={handleModalOk}>确认</Button>
+              <Button className="btn-ghost-v5" disabled={submitting} onClick={handleModalCancel}>取消</Button>
+              <Button className="btn-accent-gradient" loading={submitting} onClick={handleModalOk}>确认</Button>
             </div>
           </div>
         }

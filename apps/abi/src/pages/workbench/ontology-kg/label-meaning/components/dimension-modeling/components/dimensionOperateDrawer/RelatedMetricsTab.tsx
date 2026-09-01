@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { queryKnowledgeIndicatorDetailList } from '@/service/api/knowledge-extraction'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import type { DimensionModelItem } from '../../types/dimensionModeling.types'
 
@@ -42,6 +43,7 @@ export const RelatedMetricsTab: React.FC<Props> = ({ onGoMetricModeling, onTotal
           pageSize,
           techName: techName.trim() || undefined
         })
+        assertFlatRequestSuccess(res)
         const data = getMetricListPayload(res)
         setTableData(data.list)
         setPagination({
@@ -50,6 +52,8 @@ export const RelatedMetricsTab: React.FC<Props> = ({ onGoMetricModeling, onTotal
           total: data.total
         })
         onTotalChange?.(data.total)
+      } catch {
+        // The shared request layer already reports the request error.
       } finally {
         setLoading(false)
       }

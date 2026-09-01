@@ -10,6 +10,7 @@ import { buildGroupTree } from '@/pages/workbench/data-preparation/data-table-me
 import { queryTableSemanticsDetail, schemalist } from '@/service/api/data-table-meaning'
 import { queryDimensionList } from '@/service/api/dimension-modeling'
 import { tableSemanticsGroupList } from '@/service/api/table-semantics'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import { DIMENSION_TYPE_TEXT_MAP } from '../constants/dimensionModeling.constants'
 import type { DimensionBatchMappingRow, DimensionModelItem, DimensionSchemaInfo } from '../types/dimensionModeling.types'
@@ -117,6 +118,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
       pageSize: 1000,
       spaceId: getSpaceId()
     })
+    assertFlatRequestSuccess(res)
     return normalizeRows(res).map(item => mapDimensionFromApi({ ...item, groupId, groupName }))
   }, [groupId, groupName])
 
@@ -160,6 +162,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
       return schema
     }
     const res = await queryTableSemanticsDetail(schema.schemaId)
+    assertFlatRequestSuccess(res)
     const detail = getResponseData(res)
     return {
       ...schema,
@@ -176,6 +179,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
       pageNum: 1,
       pageSize: 1000
     })
+    assertFlatRequestSuccess(res)
     const schemaRows = normalizeList(getResponseData(res)) as DimensionSchemaInfo[]
     setSchemaOptionsByGroup(prev => ({
       ...prev,
@@ -248,7 +252,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
       const rawValue = String(value || '')
       const selectedGroup = groupOptions.find(item => buildGroupTreeValue(item.groupId) === rawValue)
       if (selectedGroup && !schemaOptionsByGroup[String(selectedGroup.groupId)]) {
-        void loadGroupSchemas(selectedGroup.groupId)
+        void loadGroupSchemas(selectedGroup.groupId).catch(() => undefined)
       }
     })
   }, [groupOptions, loadGroupSchemas, schemaOptionsByGroup])
@@ -259,7 +263,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
     if (!selectedGroup || schemaOptionsByGroup[String(selectedGroup.groupId)]) {
       return Promise.resolve()
     }
-    return loadGroupSchemas(selectedGroup.groupId).then(() => undefined)
+    return loadGroupSchemas(selectedGroup.groupId).then(() => undefined).catch(() => undefined)
   }, [groupOptions, loadGroupSchemas, schemaOptionsByGroup])
 
   useEffect(() => {
@@ -284,6 +288,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
           pageSize: 100,
           spaceId: getSpaceId()
         })
+        assertFlatRequestSuccess(res)
         const rows = normalizeList(getResponseData(res))
         setGroupOptions(
           rows
@@ -322,7 +327,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
     try {
       const success = await onSubmit(selectedRows, selectedSemanticGroupId)
       if (success) {
-        onClose(true)
+        onClose()
       }
     } finally {
       setSaving(false)
@@ -364,7 +369,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
       destroyOnClose
       footer={
         <ASpace className="w-full justify-end">
-          <AButton onClick={() => onClose()}>取消</AButton>
+          <AButton disabled={saving} onClick={() => onClose()}>取消</AButton>
           <AButton disabled={!selectedRows.length} loading={saving} type="primary" onClick={handleSave}>
             一键生成维度
           </AButton>
@@ -373,7 +378,9 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
       open={open}
       title="一键维度映射"
       width="72%"
-      onClose={() => onClose()}
+      onClose={() => {
+        if (!saving) onClose()
+      }}
     >
       <AAlert
         className="mb-6"

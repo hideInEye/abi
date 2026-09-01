@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { useAppSelector } from '@/hooks/business/useStore';
 import { addQuestion, deleteQuestion, editQuestion, queryQuestion } from '@/service/api/question.ts';
+import { assertFlatRequestSuccess, isFlatRequestSuccess } from '@/service/request/flat-result';
 import { getSpaceId } from '@/store/slice/app';
 
 import type { QuestionTableData } from '../types';
@@ -28,50 +29,43 @@ export function useQuestionManagement() {
   }
 
   const getTableData = async (question = '', p:any = {}) => {
-    if (!groupId) return;
+    if (!groupId) return false;
     const { pageNum:num = 1, pageSize:size = 5} = p
-    setTableData([]);
-    const { data } = await queryQuestion({
+    const result = await queryQuestion({
       groupId,
       question,
       spaceId,
       pageNum:num,
       pageSize: size
     });
+    if (!isFlatRequestSuccess(result)) return false;
+    const data = result.data || {};
     const { list = [], pageNum,total} = data;
     setPagination(p=>({
       ...p,
       total
     }))
     setTableData(list);
+    return true;
   };
 
 
   const add = async (question: string, agentId: number) => {
-    if (!groupId) return;
+    if (!groupId) return false;
     const res =  await addQuestion({
       agentId,
       groupId,
       question,
       spaceId
     });
-    const { response: {data: { code } } } = res
-    if(code as number >200){
-      return false
-    }
-    getTableData(searchValue,{...pagination});
-    return true
+    return isFlatRequestSuccess(res);
   };
 
   const del = async (id: number) => {
     const res = await deleteQuestion(id);
-    
-    if (res.response?.data?.code === 200) {
-      message.success(res.response.data.msg || '删除成功');
-      getTableData(searchValue,{...pagination});
-    } else {
-      message.error(res.response?.data?.msg || '删除失败');
-    }
+    assertFlatRequestSuccess(res, res.response?.data?.msg || '删除失败');
+    message.success(res.response?.data?.msg || '删除成功');
+    await getTableData(searchValue,{...pagination});
   };
 
   const edit = async (question: {
@@ -84,13 +78,7 @@ export function useQuestionManagement() {
     const res =  await editQuestion({
       ...question
     });
-    const { response:{data:{code}}} = res
-    
-    if(code as number > 200) {
-      return false;
-    }
-    getTableData(searchValue,{...pagination});
-    return true
+    return isFlatRequestSuccess(res);
   };
 
   const handleAdd = () => {
@@ -110,22 +98,17 @@ export function useQuestionManagement() {
   };
 
   const handleDelete = async (id: number) => {
-    // setTableData(prev => prev.filter(group => group.groupId !== id));
-    await del(id);
+    return del(id);
   };
 
   const handleSearch = (value: string) => {
     setSearchValue(value);
-    getTableData(value);
+    void getTableData(value);
   };
 
   const handleSave = async (values: QuestionTableData) => {
-    let flag = true;
+    let saved = false;
     if (editingGroup) {
-      // 更新现有标签
-      // setTableData(prev =>
-      //   prev.map(group => (group.groupId === editingGroup.groupId ? { ...group, ...values } : group))
-      // );
       const edObj = {
         agentId: 1,
         groupId: editingGroup.groupId,
@@ -134,13 +117,11 @@ export function useQuestionManagement() {
         spaceId: editingGroup.spaceId
       };
 
-      flag = !!(await edit(edObj))
-      
-      if(flag)message.success('编辑成功')
+      saved = await edit(edObj);
     } else {
       if (!groupId) {
         message.error('请选择标签组');
-        return;
+        return false;
       }
 
       const newTag: QuestionTableData = {
@@ -149,15 +130,15 @@ export function useQuestionManagement() {
         groupId
       };
 
-      flag =!!(await add(newTag.question, newTag.agentId));
-      
-      if(flag)message.success('创建成功');
+      saved = await add(newTag.question, newTag.agentId);
     }
-    if(flag) {
-      setIsReset(true);
-      setIsModalOpen(false);
-      getTableData(searchValue,{...pagination})
-    }
+    if (!saved) return false;
+
+    const refreshed = await getTableData(searchValue, { ...pagination });
+    if (!refreshed) return false;
+    message.success(editingGroup ? '编辑成功' : '创建成功');
+    setIsReset(true);
+    return true;
   };
 
   return {

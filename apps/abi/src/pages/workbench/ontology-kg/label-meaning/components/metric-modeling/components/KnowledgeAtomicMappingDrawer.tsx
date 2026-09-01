@@ -11,6 +11,7 @@ import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/componen
 import { validateFieldsAndScroll } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import { buildMappedBizName, buildMappedTechName } from '../../../utils/ontologyName'
 import { AGG_METHOD_OPTIONS } from '../constants/metricModeling.constants'
@@ -188,6 +189,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       pageSize: 1000,
       spaceId: getKnowledgeSpaceId()
     })
+    assertFlatRequestSuccess(res)
     return normalizeList(getResponseData(res)) as KnowledgeIndicatorItem[]
   }, [groupId])
 
@@ -199,15 +201,12 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       setLoadingFields(true)
       try {
         const res = await queryTableSemanticsDetail(semanticSchemaId)
+        assertFlatRequestSuccess(res)
         const detail = getResponseData(res)
         const nextRows = parseMeasureFields(detail?.modelDetail, detail)
         let existingKeys = getExistingAtomicKeys(options?.existingAtomicItems || [])
-        try {
-          if (!options?.existingAtomicItems) {
-            existingKeys = getExistingAtomicKeys(await queryCurrentGroupAtomicIndicators())
-          }
-        } catch {
-          existingKeys = new Set<string>()
+        if (!options?.existingAtomicItems) {
+          existingKeys = getExistingAtomicKeys(await queryCurrentGroupAtomicIndicators())
         }
         const disabledKeys = nextRows.filter(item => existingKeys.has(item.key)).map(item => item.key)
         setFieldRows(nextRows)
@@ -264,6 +263,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
     }
 
     const loadExistingAtomicMapping = async () => {
+      setSemanticLocked(true)
       try {
         const atomicItems = await queryCurrentGroupAtomicIndicators()
         if (!atomicItems.length) {
@@ -296,7 +296,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
           keepExistingSelection: true
         })
       } catch {
-        setSemanticLocked(false)
+        message.error('查询已有原子指标映射失败')
       }
     }
 
@@ -351,7 +351,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       if (!success) {
         return
       }
-      onClose(true)
+      onClose()
     } finally {
       setSaving(false)
     }
@@ -447,7 +447,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       width="60%"
       footer={
         <ASpace className="w-full justify-end">
-          <AButton onClick={() => onClose()}>取消</AButton>
+          <AButton disabled={saving} onClick={() => onClose()}>取消</AButton>
           <AButton
             loading={saving}
             type="primary"
@@ -457,7 +457,9 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
           </AButton>
         </ASpace>
       }
-      onClose={() => onClose()}
+      onClose={() => {
+        if (!saving) onClose()
+      }}
     >
       <div className="mb-4 rounded bg-gray-50 px-3 py-2 text-sm">当前分组：{groupName || '-'}</div>
       <AForm<MappingFormValues>

@@ -15,7 +15,7 @@ import type { RelationPagination } from '../types'
 interface RelationTableProps {
   readonly entityNameMap: Map<string, string>
   readonly loading: boolean
-  readonly onDelete: (relation: OntologyRelation) => void
+  readonly onDelete: (relation: OntologyRelation) => Promise<void>
   readonly onEdit: (relation: OntologyRelation) => void
   readonly onPageChange: (page: number, pageSize: number) => void
   readonly onSelectedRowKeysChange: (keys: string[]) => void

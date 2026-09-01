@@ -28,16 +28,18 @@ export const Component: React.FC = () => {
   const groupRef = useRef<GroupHandle>(null);
   const [hasGroups, setHasGroups] = useState<boolean | null>(null);
 
-  const handleClose = (refresh?: boolean) => {
+  const handleClose = async (refresh?: boolean) => {
     if (refresh) {
-      getTerms();
+      const refreshed = await getTerms();
+      if (!refreshed) return false;
     }
     setIsModalOpen(false);
+    return true;
   };
 
   useEffect(() => {
     setGroupId(groupId!);
-    getTerms();
+    void getTerms();
   }, [groupId]);
 
   return (

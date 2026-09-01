@@ -192,6 +192,10 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
     }
   }, [onClose, onSaved, saveAttributes])
 
+  const handleClose = useCallback((): void => {
+    if (!saving) onClose()
+  }, [onClose, saving])
+
   const visibleAttributes = useMemo(() => (activeTab === 'all' ? attributes : attributes.filter((attribute) => attribute.attributeType === activeTab)), [activeTab, attributes])
   const assetOptions = useMemo(
     () => [
@@ -246,7 +250,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
     <CommonDrawer
       footer={
         <Space className="flex justify-end">
-          <Button onClick={onClose}>取消</Button>
+          <Button disabled={saving} onClick={handleClose}>取消</Button>
           <Button disabled={!loadedDetail || loadingDetail || saving} loading={saving} type="primary" onClick={handleSave}>
             保存
           </Button>
@@ -255,7 +259,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
       open={open}
       title="属性配置"
       width={1120}
-      onClose={onClose}
+      onClose={handleClose}
     >
       <div className="ontology-attribute-drawer-content">
         <section style={DRAWER_STYLES.entityInfoGrid}>

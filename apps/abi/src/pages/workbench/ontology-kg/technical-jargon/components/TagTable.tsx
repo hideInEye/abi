@@ -6,7 +6,7 @@ import type { TagGroup } from '../types';
 
 interface TagTableProps {
   readonly dataSource: TagGroup[];
-  readonly onDelete: (termId: number) => void;
+  readonly onDelete: (termId: number) => Promise<void>;
   readonly onEdit: (group: TagGroup) => void;
 }
 

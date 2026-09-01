@@ -71,12 +71,16 @@ export const RelationDrawer: React.FC<RelationDrawerProps> = ({ entities, loadin
     }
   }, [form])
 
+  const handleClose = useCallback((): void => {
+    if (!loading) onClose()
+  }, [loading, onClose])
+
   return (
     <CommonDrawer
       destroyOnClose
       footer={
         <div className="flex justify-end gap-3">
-          <AButton onClick={onClose}>取消</AButton>
+          <AButton disabled={loading} onClick={handleClose}>取消</AButton>
           <AButton loading={loading} type="primary" onClick={handleSave}>
             保存
           </AButton>
@@ -85,7 +89,7 @@ export const RelationDrawer: React.FC<RelationDrawerProps> = ({ entities, loadin
       open={open}
       title={title}
       width={520}
-      onClose={onClose}
+      onClose={handleClose}
     >
       <Form className="ds-form-section" form={form} layout="vertical">
         <OntologyFormSectionTitle icon={<BranchesOutlined />}>基本信息</OntologyFormSectionTitle>

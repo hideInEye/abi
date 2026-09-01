@@ -11,6 +11,7 @@ import {
 import { getFirstErrorFieldName, scrollToFirstFormError } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
 import { queryKnowledgeIndicatorDetail, queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import {
   getMappedBizNameParts,
@@ -455,11 +456,13 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   const [fieldError, setFieldError] = useState(false)
   const [fieldLoading, setFieldLoading] = useState(false)
   const [indicatorOptionSource, setIndicatorOptionSource] = useState<KnowledgeIndicatorItem[]>([])
+  const [submitting, setSubmitting] = useState(false)
   const currentSemanticSchemaRef = useRef<string>('')
   const editMatchedRef = useRef(false)
   const formValuesRef = useRef<Partial<KnowledgeFormValues>>({})
   const lastAtomicOptionRef = useRef<AtomicIndicatorOption>()
   const semanticRequestRef = useRef(0)
+  const submitLockRef = useRef(false)
   const templateTypeVal = AForm.useWatch('templateType', form)!
 
   const isEditing = Boolean(editingItem)
@@ -531,10 +534,11 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         pageSize: 1000,
         spaceId: getKnowledgeSpaceId()
       })
+      assertFlatRequestSuccess(res)
       const allList = (res?.data?.list || []) as KnowledgeIndicatorItem[]
       setIndicatorOptionSource(allList)
     } catch {
-      setIndicatorOptionSource([])
+      // The shared request layer reports the error; keep the last successful options.
     }
   }, [])
 
@@ -559,7 +563,9 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         let schemaId = getAtomicSemanticSchemaId(resolvedItem)
         const detailId = resolvedItem.indId ?? resolvedItem.termId
         if (detailId !== undefined && (!schemaId || getAtomicSemanticSchemaName(resolvedItem) === '-')) {
-          const detail = getApiResponseData(await queryKnowledgeIndicatorDetail({ id: detailId }))
+          const detailResult = await queryKnowledgeIndicatorDetail({ id: detailId })
+          assertFlatRequestSuccess(detailResult)
+          const detail = getApiResponseData(detailResult)
           if (requestId !== semanticRequestRef.current) return
           resolvedItem = { ...resolvedItem, ...detail }
           schemaId = getAtomicSemanticSchemaId(resolvedItem)
@@ -614,7 +620,9 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
           return
         }
 
-        const schemaDetail = getApiResponseData(await queryTableSemanticsDetail(schemaId))
+        const schemaResult = await queryTableSemanticsDetail(schemaId)
+        assertFlatRequestSuccess(schemaResult)
+        const schemaDetail = getApiResponseData(schemaResult)
         if (requestId !== semanticRequestRef.current) return
         const fields = parseSemanticModelFields(schemaDetail)
         setAllFields(fields)
@@ -982,11 +990,21 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     }
     payload.techId = selectedTechObject as KnowledgeSubmitPayload['techId']
 
-    const success = await onSubmit(payload, isEditing)
-    if (!success) {
+    if (submitLockRef.current) {
       return
     }
-    onClose(true)
+    submitLockRef.current = true
+    setSubmitting(true)
+    try {
+      const success = await onSubmit(payload, isEditing)
+      if (!success) {
+        return
+      }
+      onClose()
+    } finally {
+      submitLockRef.current = false
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -996,8 +1014,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       width="60%"
       footer={
         <ASpace className="w-full justify-end">
-          <AButton onClick={() => onClose()}>取消</AButton>
-          {current > 0 ? <AButton onClick={prev}>上一步</AButton> : null}
+          <AButton disabled={submitting} onClick={() => onClose()}>取消</AButton>
+          {current > 0 ? <AButton disabled={submitting} onClick={prev}>上一步</AButton> : null}
           {current < stepItems.length - 1 ? (
             <AButton
               type="primary"
@@ -1007,6 +1025,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
             </AButton>
           ) : (
             <AButton
+              loading={submitting}
               type="primary"
               onClick={handleOk}
             >
@@ -1015,7 +1034,9 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
           )}
         </ASpace>
       }
-      onClose={() => onClose()}
+      onClose={() => {
+        if (!submitting) onClose()
+      }}
     >
       <div className="mb-4 rounded bg-gray-50 px-3 py-2 text-sm">当前分组：{groupName || '-'}</div>
 

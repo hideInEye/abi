@@ -5,6 +5,7 @@ import type { OntologyEntityAttribute, OntologyNetworkId } from '@/pages/workben
 import { queryDimensionList } from '@/service/api/dimension-modeling'
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
 import { queryTag } from '@/service/api/tag-meaning'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import type { AttributeAsset } from '../types'
 
@@ -146,12 +147,15 @@ export function useAttributeAssets(spaceId: OntologyNetworkId): UseAttributeAsse
         let response: AttributeAssetResponse
         if (attributeType === 'label') {
           const result = await queryTag({ groupId, spaceId: requestSpaceId })
+          assertFlatRequestSuccess(result)
           response = result as AttributeAssetResponse
         } else if (attributeType === 'dimension') {
           const result = await queryDimensionList({ groupId, pageNum: 1, pageSize: 1000, spaceId: requestSpaceId })
+          assertFlatRequestSuccess(result)
           response = result as AttributeAssetResponse
         } else {
           const result = await queryKnowledgeIndicators({ groupId, pageNum: 1, pageSize: 1000, spaceId: requestSpaceId })
+          assertFlatRequestSuccess(result)
           response = result as AttributeAssetResponse
         }
         if (requestId === requestSequence.current) setAssets(getAssetRows(response).map((item) => normalizeAsset(item, attributeType)).filter((asset): asset is AttributeAsset => asset !== null))

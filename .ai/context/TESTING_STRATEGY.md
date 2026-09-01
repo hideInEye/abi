@@ -12,12 +12,12 @@
 - `vitest`
 - `@vitest/coverage-v8`
 
-当前扫描到的测试文件：
+本体网络当前除 mapper、validator、表达式和图谱纯函数测试外，还包括：
 
-- `apps/abi/src/pages/workbench/ontology-kg/shared-network-types.test.ts`
-- `apps/abi/src/pages/workbench/ontology-kg/kggraph/utils/graph.test.ts`
-
-这些测试覆盖本体网络共享类型 helper 和图谱请求/边去重逻辑。
+- 实体、关系、图谱、推荐问题、行业术语、标签语义、维度建模、指标建模和共享调用共 9 个模块级 `api-response-contract.test.ts`。
+- `apps/abi/src/pages/workbench/ontology-kg/interface-call-test-coverage.test.ts`，自动确认 28 个实际调用文件均归属模块测试。
+- `apps/abi/src/service/request/flat-result.test.ts`，验证 flat request 的真实成功/失败语义。
+- `apps/abi/src/service/api/ontology-response-adapters.test.ts`，验证本体网络使用的响应适配器不会把失败包装成成功。
 
 ## 测试框架
 
@@ -35,6 +35,8 @@ Vitest。证据：根 `package.json` 和测试文件中的 `import { describe, e
 - `shouldRequestGraph`
 - `requestGraphWhenAllowed`
 - `deduplicateEdges`
+- 本体网络 28 个直接接口调用文件的逐接口 `await`、成功/失败 guard 和模块测试归属。
+- assistant/data collection 响应适配器的成功映射与失败保真。
 
 缺失覆盖：
 
@@ -70,6 +72,9 @@ Vitest。证据：根 `package.json` 和测试文件中的 `import { describe, e
 - 优先测试 pure functions。
 - 避免为了测试而重构大组件。
 - 如需测试 hook/component，后续建议引入 React Testing Library；当前仓库未发现该依赖，新增前需确认。
+- 每个接口调用小模块必须建立对应测试文件，可按实体、关系、图谱、维度建模、指标建模等模块合并多个调用源文件，但必须维护明确的“源文件 -> 接口函数”清单；测试需逐调用验证 `await` 和成功/失败判定处于同一异步工作流，且成功型后续流程只能位于判定之后。
+- 对 ABI flat request 调用点，调用文件契约测试与 `flat-result` 行为测试必须同时存在：前者防止漏调用点、漏 `await` 或漏 guard，后者验证 `error: null` 放行以及 fulfilled failure 阻断/抛错。
+- 应增加覆盖矩阵测试，自动扫描业务目录中的直接接口调用文件并校验对应模块测试存在，避免后续新增接口调用时漏补测试。
 
 ## Integration Tests 方法
 

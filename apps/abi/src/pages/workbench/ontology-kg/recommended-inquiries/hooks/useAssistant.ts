@@ -1,4 +1,5 @@
 import { fetchAssistantConfigList } from '@/service/api/assistant-manage.ts';
+import { isFlatRequestSuccess } from '@/service/request/flat-result';
 
 interface AssistantConfig {
   agentAlias: string | null;
@@ -35,7 +36,10 @@ export function useAssistant() {
 
   async function getAssistantConfigList() {
     const res = await fetchAssistantConfigList();
-    setAssistantConfigList(transformAssistantConfigList(res.data.data));
+    if (!isFlatRequestSuccess(res)) return false;
+    const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+    setAssistantConfigList(transformAssistantConfigList(rows));
+    return true;
   }
 
   return { assistantConfigList, getAssistantConfigList };

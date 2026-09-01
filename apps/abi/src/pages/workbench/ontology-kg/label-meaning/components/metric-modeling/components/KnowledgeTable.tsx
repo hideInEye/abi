@@ -15,7 +15,7 @@ import type { KnowledgeIndicatorItem, KnowledgePagination } from '../types/metri
 interface Props {
   readonly dataSource: KnowledgeIndicatorItem[]
   readonly loading?: boolean
-  readonly onDelete: (record: KnowledgeIndicatorItem) => void
+  readonly onDelete: (record: KnowledgeIndicatorItem) => Promise<void>
   readonly onEdit: (record: KnowledgeIndicatorItem) => void
   readonly onPaginationChange: (page: number, pageSize: number) => void
   readonly onSelectedRowKeysChange: (keys: string[]) => void
