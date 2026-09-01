@@ -6,6 +6,7 @@ import {
   editTableSemanticsGroup,
   tableSemanticsGroupList
 } from '@/service/api/table-semantics';
+import { assertFlatRequestSuccess, isFlatRequestSuccess } from '@/service/request/flat-result';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
 
@@ -35,7 +36,7 @@ export const useGroupManagement = (config: GroupProps['config']) => {
   }, [spaceId]);
 
   const getGroups = async (searchText?: string) => {
-    if (!spaceId) return;
+    if (!spaceId) return false;
     const res = await tableSemanticsGroupList({
       groupName: searchText,
       groupType: config.type,
@@ -43,6 +44,7 @@ export const useGroupManagement = (config: GroupProps['config']) => {
       pageSize: 60,
       spaceId
     });
+    if (!isFlatRequestSuccess(res)) return false;
     const list: QuestionGroupItem[] = (res as any)?.data ?? [];
     const safeList = Array.isArray(list) ? list : [];
     setGroups(safeList);
@@ -50,6 +52,7 @@ export const useGroupManagement = (config: GroupProps['config']) => {
     if (!searchText) {
       setHasAnyGroup(safeList.length > 0);
     }
+    return true;
   };
 
   const handleGroupAdd = async (newGroup: QuestionGroupItem & { parentId?: number }) => {
@@ -60,28 +63,24 @@ export const useGroupManagement = (config: GroupProps['config']) => {
       remark: newGroup.remark,
       spaceId
     });
-    const { response:{data:{code}}} = res
-    if(code as number >200) return
-    getGroups();
-    return true
+    if (!isFlatRequestSuccess(res)) return false;
+    return getGroups();
   };
 
   const handleGroupEdit = async (updatedItem: QuestionGroupItem) => {
     const res =  await editTableSemanticsGroup(updatedItem as any);
-    const { response:{data:{code}}} = res
-    if(code as number >200) return
-    getGroups();
-    return true
+    if (!isFlatRequestSuccess(res)) return false;
+    return getGroups();
   };
 
   const handleGroupDelete = async (groupId: string) => {
-    // setGroups(prevGroups => prevGroups.filter(group => group.groupId !== groupId));
-    await deleteTableSemanticsGroup(groupId as any);
-    getGroups();
+    const result = await deleteTableSemanticsGroup(groupId as any);
+    assertFlatRequestSuccess(result);
+    return getGroups();
   };
 
   const handleGroupSearch = (searchText: string) => {
-    getGroups(searchText);
+    return getGroups(searchText);
   };
 
   return {

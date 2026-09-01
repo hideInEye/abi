@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { queryTerms } from '@/service/api/Industry';
 import { deleteTerms } from '@/service/api/Industry.ts';
+import { assertFlatRequestSuccess, isFlatRequestSuccess } from '@/service/request/flat-result';
 import { getSpaceId } from '@/store/slice/app';
 
 import type { TagGroup } from '../types';
@@ -18,18 +19,19 @@ export function useTagManagement() {
 
   const getTerms = async (key?: string) => {
     if (!groupId) {
-      return;
+      return false;
     }
 
-    setTerms([]);
     const res = await queryTerms({
       groupId,
       spaceId,
       techName: key || ''
     });
 
+    if (!isFlatRequestSuccess(res)) return false;
     const { data } = res;
-    setTerms(data);
+    setTerms(Array.isArray(data) ? data : []);
+    return true;
   };
 
   const handleAdd = () => {
@@ -46,18 +48,14 @@ export function useTagManagement() {
     const res = await deleteTerms({
       termId
     });
-    
-    if (res.response?.data?.code === 200) {
-      message.success(res.response.data.msg || '删除成功');
-      setTerms(prev => prev.filter(group => group.termId !== termId));
-    } else {
-      message.error(res.response?.data?.msg || '删除失败');
-    }
+    assertFlatRequestSuccess(res, res.response?.data?.msg || '删除失败');
+    message.success(res.response?.data?.msg || '删除成功');
+    setTerms(prev => prev.filter(group => group.termId !== termId));
   };
 
   const handleSearch = (value: string) => {
     setSearchValue(value);
-    getTerms(value);
+    void getTerms(value);
   };
 
   const handleSave = async (values: Partial<TagGroup>) => {

@@ -5,6 +5,7 @@ import { TableSemantics } from '@/components/tableSemantics'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import { getMappedBizNameParts } from '@/pages/workbench/ontology-kg/label-meaning/utils/ontologyName'
 import { queryOntologyLabels } from '@/service/api/ontology-network'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import {
   DEFAULT_DIMENSION_TIME_FORMAT,
@@ -92,6 +93,7 @@ export const BaseInfoTab: React.FC<Props> = ({
         spaceId: localStorage.getItem('spaceId') || '',
         type: 'RECOMMENDED'
       })
+      assertFlatRequestSuccess(res)
       const nextOptions = Array.isArray(res?.data)
         ? res.data
             .map(item => ({ label: item.bizName, value: item.id === undefined || item.id === null ? '' : String(item.id) }))

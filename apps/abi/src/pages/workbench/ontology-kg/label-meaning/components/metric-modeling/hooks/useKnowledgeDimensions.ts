@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { queryDimensionList } from '@/service/api/dimension-modeling'
 import { tableSemanticsGroupList } from '@/service/api/table-semantics'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import {
   formatMappedDimensionOptionTitle,
@@ -65,29 +66,28 @@ export function useKnowledgeDimensions(enabled = true) {
     setLoading(true)
     setError(false)
     try {
-      const groups = normalizeRows(
-        await tableSemanticsGroupList({
+      const groupResult = await tableSemanticsGroupList({
           groupType: 'ontology-dimension',
           pageNum: 1,
           pageSize: 1000,
           spaceId: getKnowledgeSpaceId()
         })
-      )
+      assertFlatRequestSuccess(groupResult)
+      const groups = normalizeRows(groupResult)
         .map(item => ({ groupId: pickText(item, ['groupId', 'id']), groupName: pickText(item, ['groupName', 'name']) }))
         .filter(item => item.groupId && item.groupName)
 
       const rowsByGroup = await Promise.all(
-        groups.map(async group => ({
-          group,
-          rows: normalizeRows(
-            await queryDimensionList({
+        groups.map(async group => {
+          const result = await queryDimensionList({
               groupId: group.groupId,
               pageNum: 1,
               pageSize: 1000,
               spaceId: getKnowledgeSpaceId()
             })
-          )
-        }))
+          assertFlatRequestSuccess(result)
+          return { group, rows: normalizeRows(result) }
+        })
       )
       if (currentRequestId !== requestId.current) return
       setOptions(

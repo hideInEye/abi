@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { OntologyEntityAttribute, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { tableSemanticsGroupList } from '@/service/api/table-semantics'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import { ATTRIBUTE_GROUP_TYPE_BY_ATTRIBUTE, buildAttributeGroupTreeOptions, normalizeAttributeGroupRows } from '../utils/attributeGroups'
 import type { AttributeGroup, AttributeGroupTreeOption } from '../utils/attributeGroups'
@@ -56,6 +57,7 @@ export function useAttributeGroups(spaceId: OntologyNetworkId): UseAttributeGrou
           pageSize: 1000,
           spaceId: requestSpaceId,
         })
+        assertFlatRequestSuccess(response)
         if (requestId === requestSequence.current) setGroups(normalizeAttributeGroupRows(response))
       } catch {
         if (requestId === requestSequence.current) message.error('分组加载失败，请稍后重试')
@@ -77,4 +79,3 @@ export function useAttributeGroups(spaceId: OntologyNetworkId): UseAttributeGrou
     treeOptions,
   }
 }
-

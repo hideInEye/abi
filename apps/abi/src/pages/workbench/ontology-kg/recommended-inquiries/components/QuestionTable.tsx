@@ -6,7 +6,7 @@ import type { QuestionTableData } from '../types';
 
 interface IQuestionTable {
   readonly dataSource: QuestionTableData[];
-  readonly onDelete: (id: number) => void;
+  readonly onDelete: (id: number) => Promise<void>;
   readonly onEdit: (group: QuestionTableData) => void;
   pagination: any;
   setPagination: any;

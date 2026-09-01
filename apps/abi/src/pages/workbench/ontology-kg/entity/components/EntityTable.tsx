@@ -18,7 +18,7 @@ interface EntityTableProps {
   readonly labels: OntologyLabel[]
   readonly loading: boolean
   readonly onAttributes: (entity: OntologyEntity) => void
-  readonly onDelete: (id: OntologyNetworkId) => void
+  readonly onDelete: (id: OntologyNetworkId) => Promise<void>
   readonly onEdit: (entity: OntologyEntity) => void
   readonly onPageChange: (page: number, pageSize: number) => void
   readonly onSelectedRowKeysChange: (keys: string[]) => void

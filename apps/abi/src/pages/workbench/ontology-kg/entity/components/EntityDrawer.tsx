@@ -61,15 +61,16 @@ export const EntityDrawer: React.FC<EntityDrawerProps> = ({ entity, labels, onCl
   }, [entity, form, onClose, onSave])
 
   const handleClose = useCallback((): void => {
+    if (saving) return
     form.resetFields()
     onClose()
-  }, [form, onClose])
+  }, [form, onClose, saving])
 
   return (
     <CommonDrawer
       footer={
         <Space className="flex justify-end">
-          <Button onClick={handleClose}>取消</Button>
+          <Button disabled={saving} onClick={handleClose}>取消</Button>
           <Button loading={saving} type="primary" onClick={handleSave}>
             保存
           </Button>

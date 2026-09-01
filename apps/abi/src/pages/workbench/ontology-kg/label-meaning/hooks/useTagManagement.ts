@@ -7,6 +7,7 @@ import { collectRuleFieldIds } from '@/pages/workbench/ontology-kg/label-meaning
 import { parseTagExpression } from '@/pages/workbench/ontology-kg/label-meaning/components/semantic-tag/tagExpression';
 import type { TagGroup } from '@/pages/workbench/ontology-kg/label-meaning/types';
 import { addTag, delTag, editTag, queryTag } from '@/service/api/tag-meaning.ts';
+import { assertFlatRequestSuccess, isFlatRequestSuccess } from '@/service/request/flat-result';
 import { getSpaceId } from '@/store/slice/app';
 
 export function useTagManagement() {
@@ -18,7 +19,8 @@ export function useTagManagement() {
   const [groupId, setGroupId] = useState<string>('');
 
   const handleDelete = async (id: number) => {
-    await delTag({ tagId: id });
+    const result = await delTag({ tagId: id });
+    assertFlatRequestSuccess(result);
     setTagList(prev => prev.filter((item: TagGroup) => item.tagId !== id));
   };
 
@@ -31,10 +33,8 @@ export function useTagManagement() {
 
   const getTagList = async(params: IQueryTag) => {
     if (!groupId) {
-      return;
+      return false;
     }
-    setTagList([]);
-
     const queryParams:any = {
       groupId,
       spaceId
@@ -43,9 +43,11 @@ export function useTagManagement() {
     if (params.tagName) {
       queryParams.tagName = params.tagName;
     }
-    const { response } = await queryTag(queryParams);
-    const { data } = response.data;
-    setTagList(data as TagGroup[]);
+    const result = await queryTag(queryParams);
+    if (!isFlatRequestSuccess(result)) return false;
+    const data = result.data ?? result.response?.data?.data;
+    setTagList(Array.isArray(data) ? data as TagGroup[] : []);
+    return true;
   };
 
   // 标签项更新
@@ -54,7 +56,6 @@ export function useTagManagement() {
     const metricIds = collectRuleFieldIds(parseTagExpression(exp));
 
     if (editingGroup) {
-      setTagGroups(prev => prev.map(group => (group.tagId === editingGroup.tagId ? { ...group, ...values } : group)));
       const newTag = {
         ...editingGroup,
         ...values,
@@ -64,27 +65,28 @@ export function useTagManagement() {
       delete newTag?.updateBy;
       delete newTag?.updateTime;
 
-      await editTag(newTag);
-      getTagList({});
+      const result = await editTag(newTag);
+      if (!isFlatRequestSuccess(result)) return false;
+      setTagGroups(prev => prev.map(group => (group.tagId === editingGroup.tagId ? { ...group, ...values } : group)));
     } else {
       if (!groupId) {
         message.error('请选择标签语义组');
-        return;
+        return false;
       }
 
       const newTag: TagGroup = {
         ...(values as TagGroup)
       };
-      setTagGroups(prev => [...prev, newTag]);
-      await addTag({
+      const result = await addTag({
         ...newTag,
         groupId,
         relItemId: metricIds.join(),
         spaceId
       });
-      getTagList({});
+      if (!isFlatRequestSuccess(result)) return false;
+      setTagGroups(prev => [...prev, newTag]);
     }
-    setIsModalOpen(false);
+    return getTagList({});
   };
 
   const handleAdd = () => {
@@ -102,7 +104,7 @@ export function useTagManagement() {
   };
 
   const handleSearch =debounce ((value: string) => {
-    getTagList({ tagName: value });
+    void getTagList({ tagName: value });
   },500);
 
   return {

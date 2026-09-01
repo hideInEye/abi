@@ -1,4 +1,5 @@
 import { apiRequest } from '../request';
+import { isFlatRequestSuccess } from '../request/flat-result';
 
 /** get data-source list */
 export async function fetchAssistantConfigList(params?: Api.DataPreparation.DataSourceSearchParamsType) {
@@ -8,7 +9,11 @@ export async function fetchAssistantConfigList(params?: Api.DataPreparation.Data
     url: '/api/copilot/v1/agentConfig/list'
   })) as any;
 
-  return { data: { ...res?.response?.data, data: res?.response?.data?.rows || [] } };
+  if (!isFlatRequestSuccess(res)) {
+    return res;
+  }
+
+  return { ...res, data: { ...res?.response?.data, data: res?.response?.data?.rows || [] } };
 }
 
 // 修改智能助手配置

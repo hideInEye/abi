@@ -9,6 +9,7 @@ import {
   queryKnowledgeIndicators,
   syncAtomicIndicators
 } from '@/service/api/knowledge-extraction'
+import { assertFlatRequestSuccess, isFlatRequestSuccess } from '@/service/request/flat-result'
 
 import type { AtomicMappingPayload, KnowledgeGroupItem, KnowledgeIndicatorItem, KnowledgePagination, KnowledgeSearchParams, KnowledgeSubmitPayload } from '../types/metricModeling.types'
 import { buildApiUpdateFrequency } from '../utils/indicatorApiAdapter'
@@ -25,6 +26,7 @@ const UI_TO_API_QUALITY_LEVEL: Record<string, string> = {
 interface ApiResponseLike {
   code?: number | string
   data?: unknown
+  error?: unknown
   response?: {
     data?: {
       code?: number | string
@@ -128,12 +130,7 @@ function getApiErrorMessage(res: ApiResponseLike, fallback: string) {
 }
 
 function isApiSuccess(res: ApiResponseLike) {
-  const success = res?.response?.data?.success
-  if (typeof success === 'boolean') {
-    return success
-  }
-  const code = Number(res?.response?.data?.code ?? 200)
-  return Number.isNaN(code) || code <= 200
+  return isFlatRequestSuccess(res)
 }
 
 function normalizeDetail(res: ApiResponseLike): KnowledgeIndicatorItem | null {
@@ -191,7 +188,7 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     if (!selectedGroup?.groupId) {
       setTableData([])
       setPagination(initialPagination)
-      return
+      return true
     }
     const queryParams = {
       ...searchParams,
@@ -205,6 +202,7 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
         searchParams: queryParams,
         spaceId: getKnowledgeSpaceId()
       }))
+      assertFlatRequestSuccess(res)
       const pageData = getIndicatorPageData(res)
       const list = ((pageData?.list || []) as KnowledgeIndicatorItem[]).map(normalizeKnowledgeIndicatorListItem)
       setTableData(list)
@@ -215,6 +213,9 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
         pageSize: nextPagination.pageSize,
         total: getIndicatorTotal(res)
       }))
+      return true
+    } catch {
+      return false
     } finally {
       setLoading(false)
     }
@@ -303,11 +304,12 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
       techName: record.rawTechName || record.techName
     })
     if (!isApiSuccess(res)) {
-      message.error(getApiErrorMessage(res, '删除失败'))
-      return
+      const errorMessage = getApiErrorMessage(res, '删除失败')
+      message.error(errorMessage)
+      assertFlatRequestSuccess(res, errorMessage)
     }
     message.success('删除成功')
-    fetchTableData()
+    await fetchTableData()
   }
 
   const handleBatchDelete = async () => {
@@ -318,8 +320,9 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     }
     const res = await deleteKnowledgeIndicatorBatch({ ids })
     if (!isApiSuccess(res)) {
-      message.error(getApiErrorMessage(res, '批量删除失败'))
-      return
+      const errorMessage = getApiErrorMessage(res, '批量删除失败')
+      message.error(errorMessage)
+      assertFlatRequestSuccess(res, errorMessage)
     }
     message.success('批量删除成功')
     await fetchTableData()
@@ -339,8 +342,7 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
 
   const handleAtomicMappingSubmit = async (payload: AtomicMappingPayload[]) => {
     const res = await syncAtomicIndicators(payload)
-    const code = Number(res?.response?.data?.code ?? res?.code ?? 200)
-    if (code !== 200) {
+    if (!isApiSuccess(res)) {
       message.error(getApiErrorMessage(res, '原子指标映射保存失败'))
       return false
     }
@@ -353,14 +355,14 @@ export function useKnowledgeExtraction(selectedGroup: KnowledgeGroupItem | null)
     setCustomDrawerOpen(false)
     setEditingItem(null)
     if (refresh) {
-      fetchTableData()
+      void fetchTableData()
     }
   }
 
   const closeAtomicDrawer = (refresh?: boolean) => {
     setAtomicDrawerOpen(false)
     if (refresh) {
-      fetchTableData()
+      void fetchTableData()
     }
   }
 

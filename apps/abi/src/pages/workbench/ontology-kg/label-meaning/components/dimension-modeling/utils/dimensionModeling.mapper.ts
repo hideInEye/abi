@@ -1,3 +1,6 @@
+import { isFlatRequestSuccess } from '../../../../../../../service/request/flat-result'
+
+import { DEFAULT_DIMENSION_TIME_FORMAT, DIMENSION_TIME_GRANULARITY_OPTIONS } from '../constants/dimensionModeling.constants'
 import type {
   DimensionBatchCreatePayloadItem,
   DimensionBatchMappingRow,
@@ -8,7 +11,6 @@ import type {
   DimensionSchemaInfo,
   DimensionType
 } from '../types/dimensionModeling.types'
-import { DEFAULT_DIMENSION_TIME_FORMAT, DIMENSION_TIME_GRANULARITY_OPTIONS } from '../constants/dimensionModeling.constants'
 import {
   buildMappedBizName,
   buildMappedTechName,
@@ -460,12 +462,7 @@ export function getApiErrorMessage(res: any, fallback: string) {
 }
 
 export function isApiSuccess(res: any) {
-  const success = res?.response?.data?.success
-  if (typeof success === 'boolean') {
-    return success
-  }
-  const code = Number(res?.response?.data?.code ?? 200)
-  return Number.isNaN(code) || code <= 200
+  return isFlatRequestSuccess(res)
 }
 
 export function buildSubmitPayload(params: {

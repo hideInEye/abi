@@ -63,30 +63,20 @@ export const Component: React.FC = () => {
     [setSearchValues],
   )
   const handleDelete = useCallback(
-    (id: OntologyEntity['id']): void => {
-      ;(async () => {
-        setDeletingEntityId(id)
-        try {
-          await deleteEntity(id)
-          message.success('实体已删除')
-        } catch {
-          // The request layer has already displayed the backend error message.
-        } finally {
-          setDeletingEntityId(undefined)
-        }
-      })()
+    async (id: OntologyEntity['id']): Promise<void> => {
+      setDeletingEntityId(id)
+      try {
+        await deleteEntity(id)
+        message.success('实体已删除')
+      } finally {
+        setDeletingEntityId(undefined)
+      }
     },
     [deleteEntity],
   )
-  const handleBatchDelete = useCallback((): void => {
-    ;(async () => {
-      try {
-        await batchDeleteEntities()
-        message.success('批量删除成功')
-      } catch {
-        // The request layer has already displayed the backend error message.
-      }
-    })()
+  const handleBatchDelete = useCallback(async (): Promise<void> => {
+    const deleted = await batchDeleteEntities()
+    if (deleted) message.success('批量删除成功')
   }, [batchDeleteEntities])
 
   return (

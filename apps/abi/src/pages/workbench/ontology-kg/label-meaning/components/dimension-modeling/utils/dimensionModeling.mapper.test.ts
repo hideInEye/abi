@@ -1,8 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildDimensionFieldPayload, buildFormValues, buildSchemaFieldOptions, buildSubmitPayload, getDimensionFieldLookupKeys, mapDimensionFromApi, normalizeDimensionFieldSelectionKeys, normalizeDimensionSelectedFieldsToOptionKeys } from './dimensionModeling.mapper'
+import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildDimensionFieldPayload, buildFormValues, buildSchemaFieldOptions, buildSubmitPayload, getDimensionFieldLookupKeys, isApiSuccess, mapDimensionFromApi, normalizeDimensionFieldSelectionKeys, normalizeDimensionSelectedFieldsToOptionKeys } from './dimensionModeling.mapper'
 
 describe('dimensionModeling mapper', () => {
+  it('treats only an explicit flat-request success as API success', () => {
+    expect(isApiSuccess({ data: true, error: null, response: { data: { code: 200 } } })).toBe(true)
+    expect(isApiSuccess({ error: new Error('failed'), response: { data: { code: 100 } } })).toBe(false)
+    expect(isApiSuccess({ response: { data: { code: 200 } } })).toBe(false)
+  })
+
   it('keeps all time granularities from typeParams when editing time dimensions', () => {
     const item = mapDimensionFromApi({
       bizName: '测试时间维',

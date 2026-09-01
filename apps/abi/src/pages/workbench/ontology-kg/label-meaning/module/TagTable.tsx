@@ -13,7 +13,7 @@ import type { TagGroup } from '../types';
 
 interface TagTableProps {
   readonly dataSource: TagGroup[];
-  readonly onDelete: (tagId: number) => void;
+  readonly onDelete: (tagId: number) => Promise<void>;
   readonly onEdit: (group: TagGroup) => void;
   readonly viewMode: OntologyViewMode;
   readonly visibleColumnKeys: ReadonlySet<string>;

@@ -14,7 +14,7 @@ import type { DimensionModelItem, DimensionPagination } from '../types/dimension
 interface Props {
   readonly dataSource: DimensionModelItem[]
   readonly loading?: boolean
-  readonly onDelete: (record: DimensionModelItem) => void
+  readonly onDelete: (record: DimensionModelItem) => Promise<void>
   readonly onEdit: (record: DimensionModelItem) => void
   readonly onHierarchy: (record: DimensionModelItem) => void
   readonly onPaginationChange: (page: number, pageSize: number) => void

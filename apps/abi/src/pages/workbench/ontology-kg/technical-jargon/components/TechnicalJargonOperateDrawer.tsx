@@ -5,6 +5,7 @@ import { useForm } from 'antd/es/form/Form'
 import { useAppSelector } from '@/hooks/business/useStore'
 import { validateFieldsAndScroll } from '@/pages/workbench/ontology-kg/utils/form-scroll'
 import { addTerms, editTerms } from '@/service/api/Industry.ts'
+import { isFlatRequestSuccess } from '@/service/request/flat-result'
 import { getSpaceId } from '@/store/slice/app'
 
 import type { TagGroup } from '../types/index.ts'
@@ -37,13 +38,15 @@ const reducer = (state: typeof initState, field: any) => {
 interface Props {
   readonly editingGroup: TagGroup | null
   readonly groupId?: number
-  readonly onClose: (refresh?: boolean) => void
+  readonly onClose: (refresh?: boolean) => boolean | Promise<boolean>
   isEdit?: boolean // 新增
 }
 const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, onClose, isEdit }) => {
   const spaceId = useAppSelector(getSpaceId) || 0
   const [state, dispatch] = useReducer(reducer, initState)
   const [form] = useForm()
+  const [submitting, setSubmitting] = useState(false)
+  const submitLockRef = useRef(false)
 
   useEffect(() => {
     if (editingGroup) {
@@ -51,17 +54,8 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
     }
   }, [editingGroup])
 
-  const handleCb = async (res: any) => {
-    if (res.response.data.code > 200) {
-      message.error(res.response.data.msg)
-      return
-    }
-
-    message.success('操作成功')
-    onClose(true)
-  }
-
   async function handleSubmit() {
+    if (submitLockRef.current) return
     if (!groupId) {
       message.error('请先创建行业术语组')
       return
@@ -81,12 +75,23 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
       status: 1, // 写死
     }
 
-    if (editingGroup) {
-      delete params.updateTime
-      delete params.createTime
-      editTerms(params).then(handleCb)
-    } else {
-      addTerms(params).then(handleCb)
+    submitLockRef.current = true
+    setSubmitting(true)
+    try {
+      let result
+      if (editingGroup) {
+        delete params.updateTime
+        delete params.createTime
+        result = await editTerms(params)
+      } else {
+        result = await addTerms(params)
+      }
+      if (!isFlatRequestSuccess(result)) return
+      const closed = await onClose(true)
+      if (closed) message.success('操作成功')
+    } finally {
+      submitLockRef.current = false
+      setSubmitting(false)
     }
   }
   const steps = [
@@ -139,7 +144,7 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
       footer={
         <ASpace className="flex justify-end">
           {current > 0 && (
-            <AButton style={{ margin: '0 8px' }} onClick={() => prev()}>
+            <AButton disabled={submitting} style={{ margin: '0 8px' }} onClick={() => prev()}>
               上一步
             </AButton>
           )}
@@ -149,13 +154,15 @@ const TechnicalJargonOperateDrawer: FC<Props> = memo(({ editingGroup, groupId, o
             </AButton>
           )}
           {current === steps.length - 1 && (
-            <AButton type="primary" onClick={handleSubmit}>
+            <AButton loading={submitting} type="primary" onClick={handleSubmit}>
               确认
             </AButton>
           )}
         </ASpace>
       }
-      onClose={() => onClose()}
+      onClose={() => {
+        if (!submitting) onClose()
+      }}
     >
       <div className="mb-4 px-[150px]">
         <Steps current={current} items={items} />

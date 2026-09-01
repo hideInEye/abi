@@ -12,12 +12,13 @@ interface TagModalProps {
   readonly isModalOpen: boolean
   readonly isReset?: boolean
   readonly mode: 'add' | 'edit'
-  readonly onSave: (values: QuestionTableData) => void
+  readonly onSave: (values: QuestionTableData) => Promise<boolean>
   readonly setIsModalOpen: (isOpen: boolean) => void
 }
 
 export const QuestionModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, isReset, mode, onSave, setIsModalOpen }) => {
   const [form] = Form.useForm()
+  const [saving, setSaving] = useState(false)
   const { getAssistantConfigList } = useAssistant()
 
   useEffect(() => {
@@ -40,12 +41,20 @@ export const QuestionModal: React.FC<TagModalProps> = ({ editingGroup, isModalOp
   }
 
   const handleModalOk = async () => {
+    if (saving) return
     try {
       const values = await form.validateFields()
-      onSave(values)
+      setSaving(true)
+      const saved = await onSave(values)
+      if (saved) {
+        form.resetFields()
+        setIsModalOpen(false)
+      }
     } catch (error) {
       scrollToFirstFormError(form, error)
       console.error('Validation failed:', error)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -65,13 +74,15 @@ export const QuestionModal: React.FC<TagModalProps> = ({ editingGroup, isModalOp
       width={600}
       footer={
         <ASpace className="w-full justify-end">
-          <AButton onClick={handleModalCancel}>取消</AButton>
-          <AButton type="primary" onClick={handleModalOk}>
+          <AButton disabled={saving} onClick={handleModalCancel}>取消</AButton>
+          <AButton loading={saving} type="primary" onClick={handleModalOk}>
             确认
           </AButton>
         </ASpace>
       }
-      onClose={handleModalCancel}
+      onClose={() => {
+        if (!saving) handleModalCancel()
+      }}
     >
       <Form className="mt-5" form={form} initialValues={editingGroup || { tagName: '' }} layout="vertical">
         {/* <Form.Item

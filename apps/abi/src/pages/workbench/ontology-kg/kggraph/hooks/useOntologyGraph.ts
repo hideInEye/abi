@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getOntologyNetworkRecords } from '@/pages/workbench/ontology-kg/shared-network-types'
 import type { OntologyEntity, OntologyGraphData, OntologyNetworkId, OntologyRelation } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { queryOntologyEntityList, queryOntologyGraph, queryOntologyRelationList } from '@/service/api/ontology-network'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import type { GraphQueryValues } from '../types'
 import { deduplicateEdges, requestGraphWhenAllowed } from '../utils/graph'
@@ -13,7 +14,7 @@ interface UseOntologyGraphResult {
   filtersLoaded: boolean
   graphData: OntologyGraphData
   loading: boolean
-  queryGraph: (values: GraphQueryValues) => Promise<void>
+  queryGraph: (values: GraphQueryValues) => Promise<boolean>
   relations: OntologyRelation[]
 }
 
@@ -34,36 +35,43 @@ export function useOntologyGraph(spaceId: OntologyNetworkId): UseOntologyGraphRe
     setRelations([])
     setGraphData({ edges: [], nodes: [] })
     try {
-      const [{ data: entityData }, { data: relationData }] = await Promise.all([
+      const [entityResult, relationResult] = await Promise.all([
         queryOntologyEntityList({ pageNum: 1, pageSize: 1000, spaceId }),
         queryOntologyRelationList({ pageNum: 1, pageSize: 1000, spaceId }),
       ])
+      assertFlatRequestSuccess(entityResult)
+      assertFlatRequestSuccess(relationResult)
       if (requestId !== filterRequestRef.current) return
+      const { data: entityData } = entityResult
+      const { data: relationData } = relationResult
       setEntities(getOntologyNetworkRecords(entityData))
       setRelations(getOntologyNetworkRecords(relationData))
+      setFiltersLoaded(true)
     } catch {
       if (requestId === filterRequestRef.current) message.error('图谱筛选项加载失败，请稍后重试')
-    } finally {
-      if (requestId === filterRequestRef.current) setFiltersLoaded(true)
     }
   }, [spaceId])
 
   const queryGraph = useCallback(
-    async (values: GraphQueryValues): Promise<void> => {
+    async (values: GraphQueryValues): Promise<boolean> => {
       const requestId = graphRequestRef.current + 1
       graphRequestRef.current = requestId
+      let succeeded = false
       const requested = await requestGraphWhenAllowed(filtersLoaded, entities, relations, async () => {
         setLoading(true)
         try {
-          const { data } = await queryOntologyGraph({
+          const result = await queryOntologyGraph({
             degree: values.degree ?? 2,
             endEntityId: values.endEntityId,
             relationKeyword: values.relationKeyword.trim() || undefined,
             spaceId,
             startEntityId: values.startEntityId,
           })
+          assertFlatRequestSuccess(result)
           if (requestId !== graphRequestRef.current) return
+          const { data } = result
           setGraphData(data ? { edges: deduplicateEdges(data.edges), nodes: data.nodes } : { edges: [], nodes: [] })
+          succeeded = true
         } catch {
           if (requestId === graphRequestRef.current) message.error('图谱数据加载失败，请稍后重试')
         } finally {
@@ -74,6 +82,7 @@ export function useOntologyGraph(spaceId: OntologyNetworkId): UseOntologyGraphRe
         setGraphData({ edges: [], nodes: [] })
         setLoading(false)
       }
+      return requested && succeeded
     },
     [entities, filtersLoaded, relations, spaceId],
   )
