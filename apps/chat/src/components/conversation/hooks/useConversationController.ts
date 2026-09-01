@@ -1,6 +1,7 @@
 import { Form, message } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import cloneDeep from 'lodash/cloneDeep'
 
@@ -52,6 +53,8 @@ export interface ConversationProps {
   onExplorePreviewChange?: (open: boolean) => void
   /** 打开历史会话时，回填最后一轮使用的数据语义到输入框 */
   onHistorySemanticLoaded?: (data: { name: string; schemaId?: number | string; groupId?: number | string; groupName?: string } | null) => void
+  /** 消息列表为空时展示的占位内容（如助手会话开场引导欢迎页） */
+  emptyContent?: ReactNode
 }
 
 /**

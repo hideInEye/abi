@@ -157,28 +157,6 @@ export function fetchAppList(params: any) {
   return promise
 }
 
-// 查询当前空间下全部助手的历史会话：session/list 按 appId 精确过滤，
-// 助手会话（appId=助手ID）不在 appId=0 查询里，需按助手逐个查询后合并（会话列表展示历史助手会话用）。
-export async function fetchAssistantSessionList(params: { spaceId?: number | string } = {}): Promise<any[]> {
-  try {
-    const assistantRes: any = await fetchAssistantList({ spaceId: params.spaceId })
-    const rows = assistantRes?.data?.list ?? assistantRes?.data?.rows ?? assistantRes?.rows ?? (Array.isArray(assistantRes?.data) ? assistantRes.data : [])
-    const ids = (Array.isArray(rows) ? rows : [])
-      .map((item: any) => item?.appId ?? item?.id)
-      .filter((id: any) => id != null && String(id) !== '')
-    const lists = await Promise.all(
-      ids.map((id: any) =>
-        fetchAppList({ space_id: params.spaceId, appId: id })
-          .then((r: any) => (Array.isArray(r?.data) ? r.data : []))
-          .catch(() => []),
-      ),
-    )
-    return lists.flat()
-  } catch {
-    return []
-  }
-}
-
 // 应用工坊-我的助手：查询当前空间下的助手列表（默认仅查已上线 status='1'）
 export function fetchAssistantList(params: { appName?: string; status?: string; spaceId?: number | string } = {}) {
   return request({

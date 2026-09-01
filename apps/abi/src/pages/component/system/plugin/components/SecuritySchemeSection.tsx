@@ -43,7 +43,10 @@ export const SecuritySchemeSection = ({
 
   const updateScheme = (idx: number, patch: Partial<McpSecurityScheme>) => {
     const merged = { ...schemes[idx], ...patch };
-    if (merged.type === 'http' && merged.scheme === 'bearer') {
+    // 仅在切换到 bearer 时自动填充凭证；用户手动编辑凭证/ID 时不覆盖，保证可编辑
+    const isSchemeSwitch =
+      ('type' in patch || 'scheme' in patch) && !('defaultCredential' in patch);
+    if (isSchemeSwitch && merged.type === 'http' && merged.scheme === 'bearer') {
       const token = getToken();
       merged.defaultCredential = token ? `Bearer ${token}` : '';
     }

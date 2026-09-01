@@ -20,20 +20,23 @@
   overflow: hidden;
   gap: 14px;
 
-  // ── 我的大屏页签（已发布大屏 / 分享记录，下划线风格对齐 abi abi-attr-modeling-tabs） ──
+  // ── 我的大屏页签（已发布大屏 / 分享记录，宽度/间距/内边距统一对齐 abi 属性建模 abi-attr-modeling-tabs） ──
   .my-screen-tabs {
     display: flex;
     align-items: center;
-    gap: 24px;
+    // 属性建模相邻页签间距 = 24(margin-right) + 24(margin-left) = 48
+    gap: 48px;
     flex-wrap: wrap;
-    padding: 0 28px;
+    // 与属性建模 nav-wrap 左右 24px 内边距一致
+    padding: 0 24px;
     border-bottom: 1px solid rgba(130, 140, 200, 0.08);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--abi-card-bg, rgba(255, 255, 255, 0.08));
     flex-shrink: 0;
 
     .my-screen-tab {
       position: relative;
-      padding: 12px 0 14px;
+      // 与属性建模页签 16px 0 内边距一致
+      padding: 16px 0;
       border: none;
       background: transparent;
       font-size: 14px;
@@ -675,6 +678,114 @@
           background: rgba(91, 124, 247, 0.08);
           color: #5b7cf7;
         }
+      }
+    }
+  }
+
+  // ── 分享记录卡片（对齐助手端 abi-assistant-card，大屏与助手保持一致） ──
+  .abi-assistant-card {
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(130, 140, 200, 0.12);
+    border-radius: 14px;
+    padding: 18px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: default;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 8px 28px rgba(26, 39, 68, 0.08), 0 2px 8px rgba(91, 124, 247, 0.06);
+      transform: translateY(-2px);
+      border-color: rgba(91, 124, 247, 0.25);
+    }
+
+    .ac-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .ac-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ac-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a2744;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ac-desc {
+      font-size: 12.5px;
+      color: #8494ad;
+      line-height: 1.5;
+      margin-top: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-clamp: 2;
+      overflow: hidden;
+      min-height: 37px;
+    }
+
+    .ac-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(130, 140, 200, 0.12);
+    }
+
+    .ac-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 10px;
+      background: rgba(82, 196, 26, 0.1);
+      color: #52C41A;
+      white-space: nowrap;
+
+      &.off {
+        background: rgba(140, 140, 140, 0.14);
+        color: #8C8C8C;
+      }
+    }
+
+    .ac-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .ac-btn {
+      padding: 4px 10px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 600;
+      color: #768a9f;
+      cursor: pointer;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      white-space: nowrap;
+      font-family: inherit;
+
+      &:hover {
+        background: rgba(91, 124, 247, 0.1);
+        color: #5b7cf7;
       }
     }
   }

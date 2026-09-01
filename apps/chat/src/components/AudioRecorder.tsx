@@ -3,7 +3,6 @@ import RecordRTC from 'recordrtc'
 import { message } from 'antd'
 import { AudioOutlined, LoadingOutlined } from '@ant-design/icons'
 import { getAuthorization, handleLoginExpired } from '@/utils/auth'
-import styles from './AudioRecorder.module.css'
 const YuyinIcon = new URL('../assets/svg-icon/video.gif', import.meta.url).href
 interface AudioRecorderProps {
   onTranscribed: (text: string) => void // 识别完成后的回调
@@ -185,7 +184,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onTranscribed, disabled =
       {isTranscribing ? (
         <LoadingOutlined className="voice-icon" />
       ) : recording ? (
-        <img src={YuyinIcon} className={`voice-icon ${styles.active}`} alt="语音识别中" />
+        <img src={YuyinIcon} className="voice-icon voice-icon-recording" alt="语音识别中" />
       ) : (
         <AudioOutlined className="voice-icon" />
       )}

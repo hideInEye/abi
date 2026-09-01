@@ -4,7 +4,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { newConv } from '../../service/api/conv'
 import CreateModal from './CreateModal'
 import EditSessionModal from './EditSessionModal'
-import { createApp, deleteSession, fetchAppList, fetchAssistantSessionList, fetchSessionDetail, updateApp } from '../../service/api/app'
+import { createApp, deleteSession, fetchAppList, fetchSessionDetail, updateApp } from '../../service/api/app'
 import { fetchSemanticTree } from '../../service/api/semantic'
 import { fetchModelList } from '../../service/api/abi-system'
 import { CHAT_MODE } from '../../constant'
@@ -27,6 +27,17 @@ import {
   fetchAssistantBoundResources,
   type AssistantBoundResources,
 } from '../../pages/chat/workshop/assistantResources'
+
+/** 深度优先取第一个数据语义叶子（type=schema），用于“默认选中第一个” */
+const findFirstSchemaLeaf = (nodes: any[]): any | null => {
+  for (const node of nodes) {
+    if (!node || typeof node !== 'object') continue
+    if (node.type === 'schema') return node
+    const hit = Array.isArray(node.children) ? findFirstSchemaLeaf(node.children) : null
+    if (hit) return hit
+  }
+  return null
+}
 
 // ── 模块级工作台缓存（跨组件卸载/重挂载保留，按 spaceId 区分）──
 // 技能商店 / 应用工坊为独立路由，进入后 ConversationAnalysis 会被卸载；
@@ -67,9 +78,11 @@ interface ConversationAnalysisProps {
   spaceId?: number
   chatId?: string
   hideSidebar?: boolean
+  /** 路由携带的待命助手 ID（点助手卡片只跳转不建会话：欢迎页展示该助手开场引导，首次发送才创建绑定会话） */
+  pendingAssistantId?: string
 }
 
-const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false }) => {
+const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false, pendingAssistantId }) => {
   // 冷挂载时优先用模块级缓存预解析初始值，避免重新拉取导致的加载闪烁
   const initialSpaceId = propSpaceId !== undefined ? Number(propSpaceId) : getSpaceId()
   const initialCache = getWorkbenchCache(initialSpaceId)
@@ -225,8 +238,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       .finally(() => setSemLoading(false))
   }, [currentSpaceId])
 
-  // ── 助手会话绑定资源加载（普通会话 appId=0 不请求、不限制）──
-  const assistantId = curConv ? String(curConv.appId ?? 0) : '0'
+  // ── 助手会话绑定资源加载（普通会话 appId=0 不请求、不限制；待命助手按路由 appId）──
+  const assistantId = curConv ? String(curConv.appId ?? 0) : (pendingAssistantId ? String(pendingAssistantId) : '0')
   useEffect(() => {
     if (assistantId === '0') {
       setBoundResources(null)
@@ -266,6 +279,36 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     [assistantId, boundResources],
   )
 
+  // 数据语义默认选中第一个：候选就绪且当前未选中时自动选中首个叶子
+  // （助手会话用绑定候选，普通会话用全局树；历史会话回填后不覆盖）。
+  useEffect(() => {
+    if (selectedData) return
+    const isAssistant = assistantId !== '0'
+    if (isAssistant && boundResourcesLoading) return
+    const leaf = findFirstSchemaLeaf(isAssistant ? (boundSemanticTree ?? []) : semanticTree)
+    if (!leaf) return
+    setSelectedData({ name: leaf.name, schemaId: leaf.schemaId, groupName: leaf.groupName })
+  }, [selectedData, assistantId, boundResourcesLoading, boundSemanticTree, semanticTree])
+
+  // 助手会话且消息为空时：展示类欢迎页（标题=助手名、文案=开场引导，不展示推荐示例）
+  const assistantWelcome = useMemo(() => {
+    if (assistantId === '0' || !boundResources) return undefined
+    return (
+      <NewChatWelcome
+        hideExamples
+        title={boundResources.appName || undefined}
+        subtitle={boundResources.prologue || boundResources.description || undefined}
+      />
+    )
+  }, [assistantId, boundResources])
+
+  // 待命助手（已跳转但尚未建会话）：首次发送创建会话时绑定对应助手，
+  // 载荷与之前“点卡片立即创建”一致（appId + 助手名标题），仅时机延后。
+  const pendingAssistantCreate = useMemo(() => {
+    if (curConv || assistantId === '0') return undefined
+    return { appId: assistantId, title: boundResources?.appName || undefined }
+  }, [curConv, assistantId, boundResources])
+
   // ── SpaceId 同步 ──
   useEffect(() => {
     if (propSpaceId === undefined) return
@@ -284,6 +327,10 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         setCurApp({})
         setCurConv(null)
         converListRef.current?.setSelectedChatId(null)
+        // 切换空间时重置已选数据语义与候选树，避免残留旧空间的语义名称；
+        // 候选树一并清空，防止默认选中 effect 在新树返回前用旧树重新选中。
+        setSelectedData(null)
+        setSemanticTree([])
         // 重新加载语义
         semGroupsLoadedRef.current = false
       }
@@ -307,15 +354,10 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         create_by: userInfoString?.userName,
       })
       const normalList = Array.isArray(res.data) ? res.data : []
-      // 历史会话要记录并展示绑定助手 ID：session/list 按 appId 精确过滤，
-      // 助手会话不在 appId=0 查询里，按助手逐个查询后去重合并进会话列表。
-      const assistantSessions = await fetchAssistantSessionList({ spaceId: currentSpaceId })
-      const byId = new Map<string, any>()
-      ;[...normalList, ...assistantSessions].forEach((item: any) => {
-        const key = String(item?.chat_id ?? '')
-        if (key && !byId.has(key)) byId.set(key, item)
-      })
-      const data = sortAppList([...byId.values()])
+      // 助手会话（appId≠0）不在 appId=0 查询里，也不进该列表：
+      // 列表 UI（ConverList）当前唯一使用方恒 hideSidebar 不渲染，路由恢复由 session/get 兑底，
+      // 故不再逐助手合并查询（原 fetchAssistantSessionList 死代码已删）。
+      const data = sortAppList(normalList)
       setAppList(data)
       patchWorkbenchCache(currentSpaceId, { appList: data })
       if (options?.silent) return data
@@ -396,10 +438,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   }, [routeChatId])
 
   // ── 统一发送逻辑 ──
-  // 创建新会话（仅创建，不发送消息），返回创建后的会话对象
-  const createNewConv = useCallback(async (): Promise<any> => {
+  // 创建新会话（仅创建，不发送消息），返回创建后的会话对象；
+  // options 用于待命助手延后创建：绑定助手 appId + 助手名标题。
+  const createNewConv = useCallback(async (options?: { appId?: string | number; title?: string }): Promise<any> => {
     const appRes: any = await createApp({
       space_id: currentSpaceId,
+      appId: options?.appId,
+      title: options?.title,
     })
     const rawApp = appRes?.data ?? appRes
     const app = {
@@ -415,7 +460,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       return null
     }
     justCreatedRef.current = true
-    const newApp = { ...app, title: app.title || '新建对话', biz_name: app.title || '新建对话' }
+    const fallbackTitle = app.title || options?.title || '新建对话'
+    const newApp = {
+      ...app,
+      appId: options?.appId ?? app.appId ?? 0,
+      title: fallbackTitle,
+      biz_name: fallbackTitle,
+    }
     setCurApp(newApp)
     setCurConv(newApp)
     localStorage.setItem('chatId', String(app.chat_id))
@@ -434,7 +485,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     if (creating) return null
     setCreating(true)
     try {
-      return await createNewConv()
+      return await createNewConv(pendingAssistantCreate)
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
         message.error(err?.message || '创建会话失败')
@@ -443,7 +494,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     } finally {
       setCreating(false)
     }
-  }, [curConv, creating, createNewConv])
+  }, [curConv, creating, createNewConv, pendingAssistantCreate])
 
   const handleUnifiedSend = useCallback(async (value: string, options?: ChatInputSendOptions) => {
     if (creating) return
@@ -522,10 +573,10 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     // 新建会话时不保留上一份 Excel（文件与 conv_uid 绑定）
     setSelectedExcel(null)
 
-    // 无会话 → 先创建，再发送
+    // 无会话 → 先创建（待命助手则绑定对应助手），再发送
     setCreating(true)
     try {
-      const newApp = await createNewConv()
+      const newApp = await createNewConv(pendingAssistantCreate)
       if (!newApp) {
         setCreating(false)
         return
@@ -539,7 +590,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       }
       setCreating(false)
     }
-  }, [curConv, creating, selectedData, selectedExcel, selectedMode, createNewConv])
+  }, [curConv, creating, selectedData, selectedExcel, selectedMode, createNewConv, pendingAssistantCreate])
 
   // ── 回调 ──
   const handleSetCurApp = useCallback((item: any) => {
@@ -721,9 +772,11 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                 deepThinkEnabled={deepThinkEnabled}
                 spaceId={currentSpaceId}
                 onHistorySemanticLoaded={(data) => setSelectedData(data)}
+                emptyContent={assistantWelcome}
               />
             ) : (!routeChatId || routeChatId === 'new') ? (
-              <NewChatWelcome onExampleClick={handleExampleClick} />
+              // 待命助手：展示类欢迎页（开场引导、无推荐示例）；绑定资源加载中空置，避免默认欢迎页闪烁。
+              (assistantWelcome ?? (assistantId !== '0' ? null : <NewChatWelcome onExampleClick={handleExampleClick} />))
             ) : null}
           </div>
 

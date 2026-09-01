@@ -845,6 +845,12 @@
 }
 .sd-v5-ver__left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sd-v5-ver__actions { display: flex; align-items: center; gap: 8px; }
+/* 版本卡片操作按钮：介于 small 与默认之间的尺寸 */
+.sd-v5-ver__actions .sd-v5-btn {
+  height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 13px !important;
+}
 .sd-v5-ver__time { font-size: 12px; color: #a3b3c8; }
 .sd-v5-ver__desc { margin-top: 8px; font-size: 13px; line-height: 1.5; color: #5f7490; }
 .sd-v5-ver__footer {
@@ -932,7 +938,7 @@
 }
 .sd-v5-btn--gradient:hover { filter: brightness(1.08); }
 .sd-v5-btn--danger {
-  background: transparent !important;
+  background: #fff !important;
   border: 1px solid rgba(220,38,38,0.3) !important;
   color: #dc2626 !important;
 }

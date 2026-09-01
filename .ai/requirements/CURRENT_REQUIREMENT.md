@@ -315,6 +315,8 @@ END
 
 ## 测试要求
 
+- 优先运行与 chat 和 ABI 相关的类型检查、测试或构建命令；如项目门禁本身不可用，需说明原因。
+- 对受影响文件进行代码级回归检查。
 - 为表达式规范化、完整性、名称与上限校验、连接关系、SQL 生成和字段 ID 收集补 Vitest。
 - 为 `calcLogic` 新结构、旧结构迁移、预计算配置和统计口径往返补 Vitest。
 - 为原子指标元数据和聚合方式回退补 mapper 测试。
@@ -332,8 +334,828 @@ END
   - `pnpm --filter chatbi build`
   - `git diff --check`
 - 本轮接口联调完成后创建 `.ai/runs/2026-08-26-indicator-api-integration/RUN_LOG.md`，记录修改、验证、风险、接口待办和 AI 系统更新判断；界面回归截图不保存到项目。
+- 完成后生成 run log，记录修改、验证、风险和是否需要更新 `.ai/` 长期文档。
 
 ## 回滚策略
 
 - 共享组件通过标签和派生指标两个适配器接入；出现问题可分别恢复旧渲染而不影响 API 服务层。
 - 新 `calcLogic` 字段均为附加 JSON，旧字段解析继续保留；回滚 UI 不需要数据库迁移。
+
+## 2026-07-16 追加：图谱筛选列表搜索与折叠
+
+### 目标
+
+- 实体筛选和关系筛选标题后分别增加名称搜索框，仅过滤对应筛选项。
+- 实体筛选和关系筛选的名称搜索框均使用 300ms 防抖后再执行本地过滤。
+- 两类筛选项默认展示前 5 条，超过 5 条时展示“点击查看更多”。
+- 展开后保持筛选区域高度稳定，通过局部滚动展示全部匹配项，并将操作文案改为“收起更多内容”。
+- 保持现有全选、半选和图谱本地过滤行为不变。
+
+### 非目标
+
+- 不修改图谱查询接口、查询参数和 X6 画布逻辑。
+- 不修改实体、关系配置及属性建模模块。
+- 不引入全局样式。
+
+### 验收标准
+
+- 实体名称搜索与关系名称搜索互不影响，空关键词恢复完整列表。
+- 实体名称搜索与关系名称搜索输入后 300ms 再更新筛选结果。
+- 选项不超过 5 条时不展示展开文案；超过 5 条默认仅显示 5 条。
+- 展开后列表容器高度不增长，可滚动查看全部匹配项；收起后恢复前 5 条。
+- 构建和相关测试通过，不覆盖既有改动。
+
+## 2026-07-16 追加：全系统批量删除按钮危险态统一
+
+### 目标
+
+- 全系统所有列表的批量删除按钮在未选择数据时继续保持禁用灰色。
+- 选择数据、按钮可用后，统一展示为与本体网络一致的红色危险按钮。
+- 所有批量删除按钮统一在文案前展示删除图标。
+- 选中数据后，按钮文案统一追加当前选中数量，如“批量删除(2)”。
+- 所有批量删除按钮文案统一为“批量删除”，不再使用“批量删除数据”“批量取消授权”等变体。
+
+### 非目标
+
+- 不修改列表选择、删除确认、接口调用及删除结果处理逻辑。
+- 不修改单条删除按钮和其他普通操作按钮样式。
+
+### 验收标准
+
+- 所有包含批量删除操作的列表按钮均具备 `danger` 外观。
+- 所有批量删除按钮均具备删除图标，且文案统一为“批量删除”。
+- 所有批量删除按钮均在选中数据后展示选中数量。
+- 原有 `disabled` 条件和点击事件保持不变。
+- 批量删除按钮不再被普通幽灵按钮或主按钮样式覆盖危险色。
+
+## 2026-07-16 追加：ABI 列表切卡片清空批量选中态
+
+### 目标
+
+- ABI 应用中所有支持列表/卡片视图切换的列表页，在从列表切换到卡片视图或切换视图时清空表格选中数据。
+- 避免切到卡片视图后批量删除按钮仍因旧的 `selectedRowKeys` / `checkedRowKeys` 可点击。
+- 保持原有批量删除接口、确认弹窗和列表数据逻辑不变。
+
+### 非目标
+
+- 不修改单条删除、分页、搜索、接口请求逻辑。
+- 不修改非 ABI 应用。
+- 不重构表格/卡片组件布局样式。
+
+### 验收标准
+
+- ABI 中所有包含批量删除和列表/卡片切换的页面，切换到卡片视图后批量删除按钮不可点击。
+- 切回列表后需要重新选择数据才能执行批量删除。
+- 没有批量选择能力的视图切换页面不受影响。
+
+## 2026-07-16 追加：属性建模维度时间维配置调整
+
+### 目标
+
+- 时间维的时间粒度枚举调整为：年/year、半年/half_year、年季/quarter、年月/month、年周/week、年月日/day。
+- 维度新增/编辑基础信息中删除独立的时间字段、时间格式表单项。
+- 时间格式改为关联字段表格列，默认值为 `yyyy-MM-dd`，并随对应关联字段一起提交给后端。
+- 关联字段表格固定高度，内容超出后内部滚动。
+- 时间维层级配置删除快捷生成时间层级入口和相关自动生成逻辑，左侧改为展示已选时间粒度并支持拖拽生成层级结构。
+
+### 非目标
+
+- 不调整维度列表、分组、预览数据、相关指标逻辑。
+- 不修改层级编辑接口协议。
+- 不运行构建或完整测试，只做静态路径和关键逻辑检查。
+
+### 验收标准
+
+- 时间维基础信息只保留时间粒度，不再出现时间字段、时间格式两个独立字段。
+- 关联字段表格在时间维下展示时间格式列，且保存时每个关联字段对象包含 `timeFormat`。
+- 层级配置弹窗不再出现“快捷生成时间层级”及生成按钮。
+- 时间维层级配置左侧显示时间粒度选项，而不是关联字段。
+
+## 2026-07-17 追加：会话消息导航条（千问式定位）
+
+### 需求类型
+
+前端交互功能新增（纯前端）。
+
+### 背景
+
+参考千问对话界面：在会话区右侧提供一条消息导航条（minimap），支持快速定位到历史提问。
+
+### 目标
+
+- 在 chat 会话区右侧新增贴边导航条，每根横杠对应一轮用户提问（不含 AI 回答）。
+- 默认低透明度；鼠标进入导航区域时整体提亮，并在其左侧弹出问题预览列表（截断问题文本）。
+- 预览项与横杠一一对应，hover 某项高亮对应横杠，点击平滑滚动定位到该条用户消息。
+- 跟随滚动实时高亮当前所在轮次。
+
+### 非目标
+
+- 不改动消息渲染、批量删除、重新生成、分享等既有逻辑。
+- 不涉及后端接口。
+- 不接入虚拟列表（`virtualized`）分支。
+
+### 影响范围预期
+
+- 新增：`apps/chat/src/components/conversation/components/MessageNavRail.tsx`
+- 修改：`apps/chat/src/components/conversation/components/MessageList.tsx`
+- 新增 run log：`.ai/runs/2026-07-17-message-nav-rail/`
+
+### 验收标准
+
+- 多轮对话右侧出现横杠，数量等于用户提问轮数；单轮对话与分享模式不显示。
+- 悬停弹出预览列表，问题文本正确截断。
+- 点击横杠或预览项平滑定位到对应用户消息。
+- 上下滚动时当前横杠/预览项高亮实时跟随。
+- 批量删除、重新生成版本切换、发送后自动滚底等既有行为不受影响。
+
+## 2026-07-22 追加：ABI 列表页搜索栏统一为「输入框 + 高级筛选」
+
+### 需求类型
+
+前端 UI 统一重构（纯前端，不改接口协议）。
+
+### 背景
+
+用户要求将 ABI 应用中「主页更多空间、工作台、组件」下所有列表页的搜索栏统一为：搜索输入框占满一行自适应 + 右侧「高级筛选」按钮（风格参考图谱探索工具栏按钮，但增加文字）。除搜索输入框外的其他筛选项（下拉、时间范围）全部收进高级筛选弹出面板，面板内一行两个筛选项，底部为重置/查询按钮（参考图谱探索的高级搜索面板）。开始时间/结束时间独立选择改为单个时间范围 RangePicker（日期精确到天，弹出双日历面板，不再出现时间列）。
+
+### 目标
+
+- 新增共享组件 `SearchFilterBar`（搜索行 + 高级筛选 Popover 面板）。
+- 改造页面：space-list、app-workshop(my-collect/my-share/recently-used)、assistant-config、data-collection、data-source、data-table-meaning、job(time/log/email)、ontology-kg(relation/entity/technical-jargon/recommended-inquiries/label-meaning 两个搜索栏)、component(api-key/data-dictionary/effect-review/model/plugin/skills/tools)。
+- 时间范围统一为 `RangePicker`（format YYYY-MM-DD，无 showTime）；对需要提交时间的接口按 startOf('day')/endOf('day') 映射，保持查询语义。
+
+### 非目标
+
+- 不改造大屏（screen-manage）与本体网络图谱探索（kggraph）。
+- 不修改 manage/、space/ 等门户管理页面。
+- 不修改后端接口、查询参数含义、表格/分页逻辑。
+- 不改造抽屉/弹窗内部的次级搜索。
+
+### 验收标准
+
+- 各页面搜索行为一行：输入框自适应占满剩余宽度 + 高级筛选按钮（漏斗图标+文字）。
+- 高级筛选面板筛选项一行两个，底部重置/查询，交互与原查询/重置一致。
+- 时间范围为单控件双日历，精确到天。
+- 类型检查/构建不引入新错误。
+
+## 2026-07-23 追加：搜索输入框停止输入自动查询（防抖，去回车）
+
+### 需求类型
+
+前端交互调整（纯前端，不改接口协议）。
+
+### 背景
+
+用户要求 ABI 项目所有搜索输入框改为：停止输入 2s 后自动发起查询接口，不再需要回车触发。
+
+### 目标
+
+- 共享搜索栏 `SearchFilterBar`（abi 与 dashboard 两份）默认输入框停止输入 2s 后自动查询。
+- 使用自定义 `searchSlot` 输入框的页面（api-key、job/email、job/time、job/log、effect-review、ontology-kg/entity）同样具备停止输入 2s 后自动查询。
+- 保留回车立即查询（并取消未触发的防抖定时器，避免重复请求）。
+- 清空输入框（allowClear 或删空）时立即查询，不等待 2s。
+- 高级筛选面板内的下拉/时间范围仍仅在点击「查询」时生效，不参与自动查询。
+
+### 非目标
+
+- 不修改查询接口、查询参数含义、分页与表格逻辑。
+- 不改造抽屉/弹窗内部次级搜索。
+- 不改造大屏图谱探索（kggraph）等未使用统一搜索栏的输入。
+
+### 影响范围
+
+- `apps/abi/src/components/SearchFilterBar.tsx`
+- `apps/dashboard/src/pages/home/project-list/SearchFilterBar.tsx`
+- `apps/abi/src/pages/component/applications/api-key/index.tsx`
+- `apps/abi/src/pages/workbench/job/{email,time,log}/index.tsx`
+- `apps/abi/src/pages/component/data/effect-review/index.tsx`
+- `apps/abi/src/pages/workbench/ontology-kg/entity/components/EntitySearch.tsx`
+- `.ai/runs/2026-07-23-search-input-debounce/`
+
+### 验收标准
+
+- 各搜索输入框停止输入约 2s 后自动发起查询，无需回车。
+- 回车仍可立即查询；清空输入框立即查询。
+- 高级筛选下拉/时间选择不触发自动查询，仍由「查询」按钮生效。
+- 类型检查不引入新错误（沿用仓库既有 pre-existing 报错）。
+
+## 2026-07-28 追加：ABI 外层大背景与毛玻璃侧边栏对齐 chat
+
+### 需求类型
+
+前端样式微调（纯 CSS，不改逻辑）。
+
+### 背景
+
+chat 应用外层 Layout 有一层大背景渐变（#d5daf5 → #dfe6f8 → #e2d9f3），侧边栏为半透明毛玻璃透出该背景；ABI 没有这层外层背景，侧边栏为不透明 `--abi-card-bg`。用户要求给 ABI 也加上这层外层大背景，使两应用侧边栏视觉一致。
+
+### 目标
+
+- ABI `body` 增加与 chat 一致的外层大背景渐变。
+- ABI 左侧 72px 导航栏保持半透明毛玻璃（透出 body 渐变），背景声明需 `!important` 压住 antd Sider 默认背景。
+
+### 非目标
+
+- 不修改各页面内容区的 `--abi-card-bg` 不透明底色。
+- 不修改卡片/抽屉/弹窗背景。
+
+### 验收标准
+
+- ABI 侧边栏透出蓝紫渐变，视觉与 chat 侧边栏一致。
+- 内容区、卡片、弹窗等其他区域视觉不变。
+
+## 2026-07-29 追加：dashboard 微应用样式隔离
+
+### 需求类型
+
+前端缺陷修复与微前端样式治理。
+
+### 背景
+
+dashboard 作为 qiankun 微应用挂载到 ABI 时，dashboard 全局 `html/body` 背景样式会覆盖宿主 ABI 的 `body` 背景，导致 ABI 半透明 global-sider 在进入「工作台 > 应用工坊 > 我的大屏」后视觉发生变化。
+
+### 目标
+
+- ABI 加载 dashboard 微应用时启用 qiankun 样式隔离。
+- dashboard 背景从全局 `html/body` 挪到 dashboard 自身应用根节点，避免污染宿主页面。
+- 将“以后生成或接入微应用必须隔离样式，禁止子应用全局 body/html 背景污染宿主”的规则写入 `.ai` 长期文档。
+
+### 非目标
+
+- 不修改 dashboard 业务页面、设计器逻辑和接口逻辑。
+- 不修改 ABI global-sider 当前视觉参数。
+- 不引入新的微前端框架或大范围样式重构。
+
+### 验收标准
+
+- 进入 dashboard 微应用页面后，dashboard 样式不会覆盖 ABI 宿主 `body` 背景。
+- dashboard standalone 运行时仍保留自身页面背景。
+- 后续 AI/开发者在新增微应用时能从 `.ai` 文档看到样式隔离要求。
+
+## 2026-07-29 追加：ABI global-sider 背景固定为不透明色
+
+### 需求类型
+
+前端样式微调（纯 CSS，不改逻辑）。
+
+### 背景
+
+ABI 72px global-sider 使用 `rgba(255, 255, 255, 0.38)` 半透明背景时，视觉颜色会受宿主 body 背景、微应用样式污染或页面背景变化影响。用户要求撤回布局层透明化方案，改为将 global-sider 背景固定成不透明十六进制颜色，确保颜色不再随底层背景变化。
+
+### 目标
+
+- 撤回上一轮 ABI 布局外壳、二级菜单、内容区透明化改动。
+- 将 `apps/abi/src/layouts/modules/global-sider/index.scss` 中 `.abi-nav-sider` 背景从透明 rgba 改为不透明 hex。
+- 保留原有内容区、二级菜单、卡片、抽屉、弹窗背景逻辑。
+
+### 非目标
+
+- 不修改动态 router 目录。
+- 不修改 dashboard 子应用业务逻辑。
+- 不重构菜单数据、权限、路由跳转逻辑。
+- 不继续调整二级菜单和页面内容区背景。
+
+### 验收标准
+
+- `.abi-nav-sider` 使用不透明十六进制背景色，不再依赖底层背景混色。
+- 上一轮 `global-content`、`global-menu`、`manage-menu`、`global.css` 的布局透明化改动已撤回。
+- 修改不引入格式错误。
+
+## 2026-07-30 追加：数据集 SQL 模式保存参数对接（后端口径）
+
+### 需求类型
+
+前端接口对接（保存参数改造），无 UI 变化。
+
+### 背景（后端确认的存储口径）
+
+- 快速模式 `viewType='union'`，SQL 模式 `viewType='sql'`；新增调 `addDataSet`，编辑调 `saveDataSet`。
+- SQL 模式不传 `allFields`。
+- SQL 原文仍由后端从 `union[0].currentDs.tableInfo.sql` 提取（union 假节点结构不变）；`unionSql` 保持原样（union 的序列化）。
+- 新增参数 `viewHistory`（字段名经两次调整：unionSql → viewInfo → viewHistory）：存「选择表」抽屉勾选的表结构（平铺数组，每表一个 `currentDs` + `currentDsFields`，格式对齐快速创建的 union）。
+- 勾选记录的保存/回显由此顺带解决，无需单独接口。
+
+### 目标
+
+- `saveSql`：新增 `viewHistory` 参数存勾选表结构 JSON；`unionSql`/`union` 保持原样；去掉 `allFields`；新增/编辑按 id 分流 `addDataSet`/`saveDataSet`。
+- 勾选状态从 SqlModeEditor 提升到 `[id].tsx` 页面级（受控 props），保存时可取。
+- 抽屉勾选模型升级为字段对象数组（`Record<tableName, {originName, comment}[]>`），保存时直接组装 `currentDsFields`。
+- 编辑回显：详情接口 `viewHistory` 解析→抽屉勾选状态；无效/假节点跳过不回显。
+- 切换数据源时清空勾选。
+
+### 非目标
+
+- 不改抽屉 UI 交互、不改快速模式保存逻辑、不动 AI 生成 SQL 功能。
+
+### 验收标准
+
+- SQL 模式保存报文：无 `allFields`；新增 `viewHistory` 为勾选表结构 JSON；`unionSql`/`union` 与改前一致；新增走 addDataSet。
+- 编辑已保存的 SQL 数据集，抽屉勾选正确回显。
+- tsc 不新增报错。
+
+## 2026-08-04 追加：效果评审模型评估双报错与超时修复
+
+### 需求类型
+
+前端缺陷修复（报错提示去重 + 请求超时调整）。
+
+### 背景
+
+效果评审「人工评估」抽屉中的「AI评估」调用 llmeval 接口：
+1. 接口报错时前端同时弹两条提示（请求层统一报错 + 抽屉里额外补的 `message.error`），且超时报错与“模型评估失败”叠加；
+2. llmeval 后端耗时较长，超过默认 30s axios 超时，每次都触发超时报错。
+
+### 目标
+
+- 模型评估失败时只弹出一条提示：移除抽屉内重复的 `message.error`，报错统一由请求层弹出。
+- 请求层后端业务报错兼容旧接口的 `err_msg` 字段作为 `msg` 兜底，保证弹出的唯一提示是真实错误内容。
+- `fetchModelEval` 单独放宽超时至 3 分钟。
+- AI 评估成功后优先使用 llmeval 接口直接返回的 `eval_llm` / `llm_opinion` 展示结果，避免二次查询详情导致数据不一致或延迟。
+
+### 非目标
+
+- 不修改其他接口的超时与报错逻辑（仅新增 `err_msg` 兜底，`msg` 优先级不变）。
+- 不修改模型评估成功后的详情回查与结果展示逻辑。
+
+### 影响范围预期
+
+- `apps/abi/src/pages/component/data/effect-review/modules/effect-review-operate-drawer.tsx`
+- `apps/abi/src/service/request/error.ts`
+- `apps/abi/src/service/api/assistant-manage.ts`
+- `.ai/runs/2026-08-04-model-eval-error-and-timeout/`
+
+### 验收标准
+
+- AI 评估接口失败（业务错误/超时）时仅弹出一条提示，不再出现两条叠加。
+- 模型评估正常耗时（>30s）不再触发前端超时；3 分钟内返回可正常展示评估结果。
+- tsc 不新增报错。
+
+## 2026-08-04 追加：邮件记录简化状态 displayGroup 展示与筛选
+
+### 需求类型
+
+前端接口字段对接 + UI 调整。
+
+### 背景
+
+邮件列表接口 `/shared/list` 返回数据新增 `displayGroup` 字段，记录简化状态（4 类：处理中 / 已生成 / 成功 / 失败）。原始状态 7 类：-1 已删除、0 待处理、1 生成日报中、2 日报已生成、3 已发送、4 发送失败、5 文件生成失败。映射关系：0、1→处理中；2→已生成；3→成功；4、5→失败。
+
+### 目标
+
+- 邮件记录列表/卡片状态列展示 `displayGroup` 简化状态（处理中/已生成/成功/失败）。
+- 点击状态可看全部状态详情（Popover：原始状态文案 + 发送时间，发送失败附 reject 原因）。
+- 高级筛选「任务状态」下拉改为 4 类简化状态，基于 displayGroup 前端过滤（与时间范围同为前端筛选）。
+- `displayGroup` 兼容中文文案或 1~4 数字；缺失时按原始 status 推导兜底。
+
+### 非目标
+
+- 不修改后端接口与查询参数协议。
+- 不改动下载、删除等其他操作逻辑。
+
+### 影响范围预期
+
+- `apps/abi/src/types/job.ts`
+- `apps/abi/src/pages/workbench/job/email/index.tsx`
+- `.ai/runs/2026-08-04-email-display-group-status/`
+
+### 验收标准
+
+- 状态列展示 4 类简化状态，点击弹出「状态详情」显示原始状态与时间。
+- 任务状态筛选下拉为 4 类，筛选/重置生效。
+- tsc 不新增报错。
+
+## 2026-08-04 追加：邮件记录任务状态筛选改为点击查询才生效
+
+### 需求类型
+
+前端交互缺陷修复（纯前端，不改接口协议）。
+
+### 背景
+
+邮件记录页高级筛选的「任务状态」下拉使用普通 `ASelect`，选中选项后立即触发前端过滤；与「高级筛选下拉控件延迟生效规范」不符（应仅在点击「查询」时生效，与时间范围 `DeferredRangePicker` 行为一致）。
+
+### 目标
+
+- 「任务状态」下拉改用 `DeferredSelect`：选中时仅更新草稿值，点击「查询」按钮才提交并过滤列表；点击「重置」清空草稿与已生效值。
+
+### 非目标
+
+- 不修改时间范围筛选、任务名称搜索、分页与列表渲染逻辑。
+- 不修改 `SearchFilterBar` 共享组件本身。
+
+### 影响范围预期
+
+- `apps/abi/src/pages/workbench/job/email/index.tsx`
+- `.ai/runs/2026-08-04-email-status-filter-deferred/`
+
+### 验收标准
+
+- 邮件记录高级筛选选择任务状态后列表不立即变化，点击「查询」后才按状态过滤。
+- 点击「重置」后状态筛选与时间范围均清空并恢复全量列表。
+- tsc 不新增报错。
+
+## 2026-08-05 追加：MCP 编辑页 bearer 模式自动使用平台 token
+
+### 需求类型
+
+前端交互调整（纯前端，不改接口协议）。
+
+### 背景
+
+MCP 服务编辑页「安全认证方案」中，当认证类型为 HTTP 且 Scheme 选择 bearer 时，需要手动在「默认凭证」输入框填写 token。用户要求改为自动使用当前平台登录 token，无需手动填写。
+
+### 目标
+
+- MCP 编辑页中，安全认证方案的类型为 `http` 且 scheme 为 `bearer` 时，「默认凭证」自动填充为当前平台的 Authorization header（格式 `Bearer ${token}`）。
+- bearer 模式下「默认凭证」仍允许手动修改；未手动修改时默认使用平台当前 token。
+- 提交保存时，bearer 方案将当前 `defaultCredential` 值传给接口。
+
+### 非目标
+
+- 不修改 basic、apiKey 等其他认证模式的凭证填写方式。
+- 不修改安全认证方案的其他字段（ID、认证类型、scheme 选项）。
+- 不修改 MCP 列表、详情、删除、状态切换逻辑。
+- 不修改后端接口协议。
+
+### 影响范围预期
+
+- `apps/abi/src/pages/component/system/plugin/components/SecuritySchemeSection.tsx`
+- `apps/abi/src/pages/component/system/plugin/components/PlugUpdate.tsx`
+- `.ai/runs/2026-08-05-mcp-bearer-token-auto-fill/`
+
+### 验收标准
+
+- 新增/编辑 MCP 服务时，只要安全认证 scheme 为 bearer，「默认凭证」自动显示为当前平台 `Bearer xxx`，且允许手动修改。
+- 从 basic 切换到 bearer 时，「默认凭证」自动填充当前平台 token。
+- 编辑回显已有 bearer 方案时，defaultCredential 自动同步为当前平台 token。
+- 提交报文中 bearer 方案的 `defaultCredential` 为当前平台 Authorization header。
+- tsc 不新增报错。
+
+## 2026-08-10 追加：ABI 登录失效后可靠跳转登录页
+
+### 需求类型
+
+前端鉴权缺陷修复（401 去重状态与登录跳转兜底）。
+
+### 背景
+
+ABI 页面在账号被其他环境顶掉后，自动请求会返回 401 并显示“登录已过期，即将前往登录页”提示，但延迟结束后偶发没有实际进入登录页。首次处理已经把全局鉴权状态置为处理中，后续接口继续返回 401 时也不会再次触发跳转。
+
+### 目标
+
+- 保持并发多个 401 只提示和处理一次。
+- 登录失效延迟结束后使用可靠的浏览器级导航进入 `/login`，并保留安全的当前页面 redirect 参数。
+- 登录跳转回调失败时释放共享鉴权的处理中状态，允许后续 401 重新发起跳转。
+- 为共享鉴权补充并发去重和跳转失败重试测试。
+
+### 非目标
+
+- 不修改 `apps/abi/src/router` 动态路由及路由生成文件。
+- 不修改登录接口、权限路由初始化、401 提示文案和延迟时长。
+- 不调整 chat、dashboard 的应用级登录跳转实现。
+
+### 验收标准
+
+- 首次 401 只显示一次失效提示，并在既有延迟后进入 `/login`。
+- 同一批并发 401 不会重复提示或重复跳转。
+- 一次跳转执行失败不会永久锁住鉴权流程，后续 401 可再次处理。
+- 定向 Vitest、ABI typecheck/build 与格式检查不引入当前改动相关错误。
+
+## 2026-08-19 追加：报告执行步骤中的 Markdown 内容可见性修复
+
+### 需求类型
+
+报告模式历史展示缺陷修复（纯前端，不改接口协议与页面样式）。
+
+### 背景
+
+报告历史步骤可能同时返回普通 `text` 与用于说明 Skill/工具能力的 `markdown` 输出。当前展示层仅依据 `output_type` 将所有 Markdown/HTML 过滤为“最终报告正文”，导致同一步骤后半段的 Skill Markdown 说明没有显示。分隔符 `---` 已被 Markdown 正常渲染为水平线，但真正的 Markdown 说明被错误隐藏。
+
+### 目标
+
+- 执行步骤中的 Markdown/HTML 是否隐藏必须结合其所属 Todo/已识别报告产物判断，不能只看输出格式。
+- 非报告生成 Todo 中的 Markdown/HTML 属于公开执行输出，按原有 Markdown 渲染方式完整展示。
+- 报告生成 Todo 中的 HTML/Markdown/PDF/Word/report payload 继续作为报告产物处理，不在执行步骤内重复展示。
+- 保留文本、代码、图片、分隔线以及报告文件卡和右侧预览的现有行为。
+
+### 非目标
+
+- 不修改历史步骤与 Todo 的归属、排序和数量。
+- 不修改报告候选识别、完成/失败状态、下载与预览协议。
+- 不修改普通对话、报告提交接口、样式或其他模块。
+
+### 验收标准
+
+- 包含两段 text、`---` 和 Skill Markdown 的普通执行步骤能够显示全部可公开内容。
+- 最终报告生成步骤中的 HTML/Markdown 不会在 Todo 执行记录中重复出现。
+- 既有报告文件卡和右侧报告预览仍只展示已识别的最终报告产物。
+- 报告模式定向测试、类型检查和构建不新增错误。
+
+## 2026-08-19 追加：报告执行输出支持 GFM Markdown 表格
+
+### 需求类型
+
+报告模式 Markdown 渲染缺陷修复（纯前端，不改数据协议）。
+
+### 背景
+
+步骤 `outputs` 返回 `output_type=markdown` 时可能包含 GitHub Flavored Markdown 表格，例如 `| 订单总金额 |`。当前报告步骤仅使用 ReactMarkdown 默认 CommonMark 能力，没有启用 GFM 插件，因此表格被解析为保留竖线的普通段落。
+
+### 目标
+
+- 报告 Todo 执行步骤的 Markdown 输出支持 GFM 表格语法。
+- 表格包含表头、表体、边框、单元格留白，并在内容过宽时沿用步骤输出区域的横向滚动。
+- 保持链接安全属性、代码、列表、分隔线和普通文本的现有渲染行为。
+
+### 非目标
+
+- 不修改历史适配、Redis 事件聚合、Todo 归属或报告产物识别。
+- 不修改普通对话和其他 Markdown 组件。
+- 不修改后端返回内容。
+
+### 验收标准
+
+- `| 订单总金额 |\n| --- |\n| 18418447.91 |` 渲染为 `table/thead/tbody`，不再显示为带竖线的普通段落。
+- 表格在报告步骤卡片中具有清晰边框和表头背景。
+- 报告模式定向测试、类型检查和构建通过。
+
+## 2026-08-19 追加：报告完成耗时实时与历史统一展示
+
+### 需求类型
+
+报告模式字段映射缺陷修复（纯前端，不改后端协议与页面结构）。
+
+### 背景
+
+报告回答标题右侧已有“耗时 X 分 X 秒”的展示能力。实时事件在最后一条 `done` 中返回秒数 `time`，历史 `react-agent` 内容则返回秒数 `total_time`。当前历史适配仍错误读取 `time`，导致历史报告标题缺少耗时。
+
+### 目标
+
+- 实时报告从最后一条整体 `done.time` 读取总耗时。
+- 历史报告从 `react-agent.total_time` 读取总耗时。
+- 两条链路统一写入前端 `durationSeconds`，并在报告回答标题右侧显示为“耗时 X 分 X 秒”。
+- 秒数按现有规则四舍五入后转换为分钟和余秒；缺失、负数或非有限数字不展示耗时。
+
+### 非目标
+
+- 不使用步骤级 `step.done` 计算耗时。
+- 不根据前端时间戳推算耗时。
+- 不修改普通对话、报告状态、Todo、报告文件与预览逻辑。
+- 不兼容历史 payload 中错误的 `time` 字段，历史协议以 `total_time` 为准。
+
+### 验收标准
+
+- 收到整体 `{ type: 'done', time: 125 }` 后，报告标题显示“耗时2分5秒”。
+- 历史 payload 返回 `{ total_time: 125 }` 时，报告标题显示“耗时2分5秒”。
+- 没有合法耗时字段时标题右侧不显示虚假耗时。
+- 报告模式定向测试、类型检查和构建通过。
+
+## 2026-08-26 追加：探索模式工作室分栏数据表支持分页
+
+### 需求类型
+
+前端 UI 交互优化（纯前端，不改数据协议与后端接口）。
+
+### 背景
+
+探索模式右侧工作室分栏（ExplorePreviewPane）中的数据表当前一次性渲染全部行，数据量大时表格极长、需要大量滚动，浏览体验差。用户要求数据表像其他列表视图一样支持分页，且保持单个表格，不拆成多个表格。
+
+### 目标
+
+- 探索模式 `DataTable` 增加前端分页：默认每页 10 条，页大小可选 10/20/50/100，与 chat 其他列表分页规格一致。
+- 分页为纯客户端行切片；表格始终保持单个 `<table>`，不拆成多个表格。
+- 表底保留「共 N 条记录」，分页控件置于同一行右侧；数据不超过一页时不显示分页控件。
+- chat 应用（`apps/chat/.../exploration-mode`）与 abi 应用助手调试（`apps/abi/.../exploration-mode`）保持一致行为。
+
+### 非目标
+
+- 不修改表格解析（单行表格还原）、左侧执行过程过滤、导出等逻辑。
+- 不新增后端接口调用，不修改流式事件聚合与历史适配。
+- 不修改报告模式与普通对话的表格渲染。
+
+### 影响范围预期
+
+- 修改：`apps/chat/src/components/conversation/exploration-mode/ExploreRichText.tsx`、`styles.module.css`
+- 修改：`apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/exploration-mode/ExploreRichText.tsx`、`styles.module.css`
+- 新增 run log：`.ai/runs/2026-08-26-explore-studio-table-pagination/`
+
+### 验收标准
+
+- 工作室分栏打开长数据表时仅显示当前页行（默认 10 条），表底为「共 N 条记录」+ 分页控件。
+- 翻页、切换页大小正常；切换页大小回到第 1 页；数据行数变化时页码自动收敛，不出现空页。
+- 短表（不超过一页）表现与原来一致，仅显示「共 N 条记录」。
+- 两个应用类型检查不新增错误。
+
+## 2026-08-26 追加：探索模式思考内容打字机流式展示
+
+### 需求类型
+
+前端流式协议适配 + UI 体验优化（纯前端，适配后端新增 SSE 事件）。
+
+### 背景
+
+探索模式后端调整返回，思考过程改为按轮次流式下发：新增 `plan.thought.chunk` 事件，含 `round`、`thinking_delta`（深度思考增量）与 `delta`（简洁思考增量，最终固化为 `plan.thought`/`step.meta` 的 `thought`）。前端此前只消费固化事件，左上角「正在深度思考」区域要等整轮结束才一次性出现全部思考内容。用户要求该思考内容改为打字机模式逐步展示。
+
+### 目标
+
+- 解析并聚合 `plan.thought.chunk`：同轮增量拼接，`round` 切换时重置流。
+- 运行中左上角思考区优先展示打字机流（简洁思考流 `delta` 优先，其次深度思考流 `thinking_delta`），固化事件（`plan.thought`/`step.meta`）到达后清空流并回退固化思考展示。
+- 历史/结束态展示逻辑保持不变。
+- chat 应用与 abi 应用助手调试探索模式保持一致行为。
+
+### 非目标
+
+- 不修改步骤输出、待办事项、工作室分栏、导出与历史适配逻辑。
+- 不新增后端接口调用。
+- 不为打字机增加额外动画/光标装饰，保持最小改动。
+
+### 影响范围预期
+
+- 修改：`apps/chat/src/components/conversation/exploration-mode/` 下 `types.ts`、`exploreStreamReducer.ts`、`ExploreMessageRow.tsx`
+- 修改：`apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/exploration-mode/` 下同三文件
+- 新增测试：`apps/abi/.../exploration-mode/exploreStreamReducer.test.ts`
+- 新增 run log：`.ai/runs/2026-08-26-explore-thinking-typewriter/`
+
+### 验收标准
+
+- 实时探索执行中，左上角思考区随 `plan.thought.chunk` 增量逐字展示，轮次切换时替换为新一轮思考。
+- `plan.thought`/`step.meta` 到达后展示固化思考与「当前动作」，行为与原来一致。
+- 历史探索卡片思考展示不变。
+- reducer 特征测试通过；两个应用类型检查不新增错误。
+
+## 2026-08-31 追加：助手开场引导回显 + 助手会话欢迎页 + 数据语义默认选中第一个
+
+### 需求类型
+
+Bug 修复 + 体验优化（纯前端，chat 应用）。
+
+### 背景
+
+1. 管理端助手配置可设置「开场引导」（prologue，存于 version.prologue），但 chat 端「应用工坊-我的助手」查看抽屉从未读取该字段，且开场引导折叠块误用助手画像 `prompt` 渲染，导致设置了开场引导仍显示「暂未设置开场引导」。
+2. chat 端点击助手卡片会立即 `createApp` 创建绑定会话并跳转对话页；新会话无消息时消息区空白。要求进入后展示与欢迎页同款的页面：文案为对应助手开场引导、不展示推荐示例。
+3. 输入框「数据」数据语义弹窗默认不选中任何项，要求默认选中第一个。
+
+### 目标
+
+- 助手查看抽屉开场引导正确回显 `version.prologue`（回退 `detail.prologue`）。
+- 助手会话（appId≠0）消息列表为空时，消息区展示类欢迎页：标题=助手名、副标题=开场引导（回退描述），不渲染推荐示例卡片；有消息后自动消失。
+- 数据语义候选就绪且未选中时自动选中第一个 schema 叶子（助手会话用绑定候选，普通会话用全局树）；历史会话回填的语义不被覆盖。
+
+### 非目标
+
+- 不改变「点击助手卡片立即创建会话」的现有流程。
+- 不新增后端接口调用（复用现有 app/get 详情响应补充字段映射）。
+- 不调整管理端开场引导编辑逻辑与普通会话欢迎页（TrustABI · 芯智 + 推荐示例）。
+
+### 影响范围预期
+
+- 修改：`apps/chat/src/pages/chat/workshop/AssistantDetailDrawer.tsx`（prologue 回显）
+- 修改：`apps/chat/src/pages/chat/workshop/assistantResources.ts`（映射补充 prologue/description）
+- 修改：`apps/chat/src/components/conversation-analysis/NewChatWelcome.tsx`（可选 title/subtitle/hideExamples）
+- 修改：`apps/chat/src/components/conversation-analysis/index.tsx`（助手欢迎页接入 + 默认选中第一个）
+- 修改：`apps/chat/src/components/conversation/index.tsx`、`hooks/useConversationController.ts`、`components/MessageList.tsx`（emptyContent 透传）
+- 新增 run log：`.ai/runs/2026-08-31-assistant-prologue-welcome/`
+
+### 验收标准
+
+- 管理端设置开场引导后，chat 端助手查看抽屉「开场引导」展示设置内容。
+- 点击助手卡片进入对话页，空白消息区展示助手名 + 开场引导文案，无推荐示例；发送首条消息后欢迎页消失。
+- 进入对话页后数据语义按钮默认展示第一个候选名称；打开历史会话时仍回填该会话最后使用的语义。
+- chat 应用类型检查不新增错误。
+
+## 2026-08-31 追加二：助手会话延后创建 + 欢迎页接口调用治理
+
+### 需求类型
+
+体验优化 + 性能治理（纯前端，chat 应用）。覆盖上一节「不改变点击卡片立即创建会话流程」的非目标（用户本轮明确要求延后）。
+
+### 背景
+
+1. 点击助手卡片进入对话页时一次性触发大量接口：`session/add`（立即建会话）+ `session/get` 兜底 + `message/query` 空历史 + `fetchAssistantSessionList` 的逐助手 N 次 `session/list`。
+2. 普通欢迎页同样一次涌入 1 次 `session/list`(appId=0) + 1 次 `app/list` + N 次逐助手 `session/list`（图二 8 个 list）。
+3. 用户要求：点卡片先不建会话，发起对话后再创建，载荷与之前一致、仅时机延后。
+
+### 目标
+
+- 点助手卡片仅跳转 `/chat/task/new?appId=xx`，展示助手欢迎页（开场引导、无推荐示例）；首次发送/上传需要 conv_uid 时才 `createApp`，payload 同之前（space_id + appId + title=助手名）。
+- 对话路由（hideSidebar）跳过逐助手会话合并（无消费方，路由恢复由 `session/get` 兜底）；保留侧栏场景给 `fetchAssistantSessionList` 加 60s TTL 缓存，重挂载/静默刷新不重复打 N 次 list。
+- 创建后路由 search 清空，助手上下文由 curConv.appId 无缝接管（assistantId 不变 → 绑定资源不重拉、已选语义不清空）。
+
+### 非目标
+
+- 不改后端 session/list 按 appId 精确过滤的行为；不改侧栏历史列表数据源。
+- 不删全局 StrictMode；不动模型/语义树的既有缓存守卫。
+
+### 影响范围预期
+
+- 修改：`apps/chat/src/pages/chat/workshop/index.tsx`（点卡片仅跳转携 appId）
+- 修改：`apps/chat/src/pages/chat/task/$taskId.tsx`（validateSearch 接收 appId 透传 pendingAssistantId）
+- 修改：`apps/chat/src/components/conversation-analysis/index.tsx`（待命助手上下文、createNewConv(options)、hideSidebar 跳过合并、欢迎页渲染分支）
+- 修改：`apps/chat/src/service/api/app.ts`（fetchAssistantSessionList TTL 缓存）
+- 新增 run log：`.ai/runs/2026-08-31-defer-assistant-session/`
+
+### 验收标准
+
+- 点助手卡片：无 `session/add`、无 `message/query`、无逐助手 `session/list`；仅助手详情 `app/get` + 常规 `session/list`(appId=0)/分组 list。
+- 助手欢迎页发送首条消息后才出现 `session/add`，且 payload 含 appId 与助手名标题；会话进入后绑定资源限制与之前一致。
+- 普通欢迎页 60s 内重复进入不再重复打逐助手 list。
+- chat 应用类型检查不新增错误。
+
+## 2026-08-31 追加三：大屏分享记录卡片对齐助手端
+
+### 需求类型
+
+前端 UI 一致性调整（纯前端，不改接口协议）。
+
+### 背景
+
+dashboard 微应用「我的大屏 → 分享记录」卡片仍为旧版行式字段（分享时间/过期时间/访问密码：无），助手端（abi 我的助手）已使用「渐变图标 + 名称 + 时间描述 + 底部状态标签 + 复制链接」卡片。用户截图要求大屏与助手保持一致：底部展示密码状态信息（当前启用：无密码/密码保护），复制链接时含密码一并复制。
+
+### 目标
+
+- `apps/dashboard/src/pages/my-screen/ShareRecordList.tsx` 卡片改为与助手端相同的 `abi-assistant-card` 结构：头部渐变圆角图标（大屏 Monitor 图标）+ 名称 + 「分享时间/过期时间」描述；底部密码状态标签（无密码/密码保护）+ 复制链接按钮。
+- 复制链接行为不变，沿用既有「含密码一并复制」与大屏链接格式转换（`/#/`→`/`、`/dr/`→`/dashboard-share-page/`）。
+- `ProjectList.less` 新增 `.abi-assistant-card` 系列样式（取值对齐 abi `table.scss`，保证两端视觉一致）。
+
+### 非目标
+
+- 不修改分享记录查询接口、分页、空态与切空间重拉逻辑。
+- 不修改「已发布大屏」tab 卡片与样式（`abi-data-card` 仍被 home 项目列表使用）。
+- 不修改助手端、chat 端分享记录既有实现。
+
+### 影响范围预期
+
+- 修改：`apps/dashboard/src/pages/my-screen/ShareRecordList.tsx`
+- 修改：`apps/dashboard/src/pages/home/project-list/ProjectList.less`
+- 新增 run log：`.ai/runs/2026-08-31-share-record-card-consistency/`
+
+### 验收标准
+
+- 大屏分享记录卡片结构与助手端一致：图标 + 名称 + 分享/过期时间，底部无密码/密码保护标签 + 复制链接。
+- 复制链接含密码时一并复制，提示文案与助手端一致。
+- dashboard 类型检查不新增错误。
+
+## 2026-08-31 追加四：分享记录状态标签改为启用状态、按钮文案统一
+
+### 需求类型
+
+前端 UI 一致性修正（纯前端，不改接口协议）。覆盖追加三的标签口径。
+
+### 背景
+
+用户截图标注确认：分享记录卡片底部标签展示分享的启用状态信息（当前启用/已过期/已停用），不是密码状态（无密码/密码保护）；按钮文案为「复制链接和密码」。助手端（abi）与大屏端（dashboard）同步修改、保持一致。
+
+### 目标
+
+- 两端分享记录卡片底部 `ac-tag` 展示分享状态：`expirationDate` 已过期 → 已过期；后端 `status`/`shareStatus` 非启用 → 已停用；其余兜底「当前启用」（与助手卡片 `status==='1'` → 当前启用 口径一致）。启用绿色标签，非启用灰色（`.off` 变体）。
+- 两端按钮文案统一「复制链接和密码」；复制逻辑沿用「含密码一并复制」。
+- dashboard `ProjectList.less` 的 `.ac-tag` 补 `.off` 灰色变体（abi `table.scss` 已有）。
+
+### 非目标
+
+- 不修改复制逻辑、链接格式转换、分页、空态与切空间重拉。
+- 不修改分享弹窗、已发布列表。
+
+### 验收标准
+
+- 两端分享记录卡片底部标签展示当前启用（或已过期/已停用），按钮展示「复制链接和密码」。
+- abi、dashboard 类型检查不新增错误。
+
+## 2026-08-31 追加：助手分享悬浮框数据语义改随 getProjectInfo 下发（废弃 schema/tree 独立调用）
+
+### 背景与口径（用户 2026-08-31 确认）
+
+- 助手分享悬浮框（`apps/chat/src/components/chat-widget`）的数据语义不再单独调 `GET /copilot/v1/schema/tree?spaceId=`，改由助手详情接口 `GET /dashboard/api/v1/project/getProjectInfo/{type}/{appId}?shareCode=` 一并下发，结构与 app/get 一致（`versions[].schemaSemantics[].schemaConfig[]`）；后端字段尚未加上，前端先行对接并降级为空列表。
+- 2026-08-28 需求中「语义树来源：复用 /copilot/v1/schema/tree」一段废止；`WidgetAssistantInfo.spaceId` 及 `fetchSemanticTree` 删除。
+- chat 主对话（`conversation-analysis`）、大屏的 `fetchSemanticTree` 不受影响，仍走 `/copilot/v1/schema/tree`。
+
+### 影响范围与验收
+
+- `apps/chat/src/components/chat-widget/service.ts`（`mapProjectSemantics` 纯函数 + `fetchAssistantInfo` 携带 `semantics`）、`ChatWidget.tsx`（树直接取助手信息）、`service.test.ts` 补纯函数测试。
+- 后端未加字段时下拉显示「暂无数据语义」，对话不受影响；`pnpm --filter ai-bot exec tsc --noEmit` 与 chat-widget Vitest 通过。
+
+## 2026-08-31 追加五：应用工坊三个菜单页签宽度统一按属性建模设置
+
+### 需求类型
+
+前端 UI 一致性调整（纯前端，不改接口协议）。
+
+### 背景
+
+用户截图标注（管理侧）：tab 宽度统一按照「本体网络 -> 属性建模」宽度设置。应用工坊三个菜单（我的助手 / 我的大屏 / 我的对话）顶部页签栏需与属性建模页签（`abi-attr-modeling-tabs`，见 `apps/abi/src/styles/scss/table.scss`）的宽度设置一致。
+
+### 现状与目标
+
+- 我的助手（`apps/abi/src/pages/workbench/app-workshop/my-assistant/index.tsx`）、我的对话（`app-workshop/my-chat/index.tsx`）已使用与属性建模同源的 `abi-attr-modeling-tabs`，保持不动。
+- 我的大屏（dashboard 微应用 `pages/my-screen/MyScreen.tsx` 自定义 `.my-screen-tabs`）度量不一致：容器左右内边距 28px、页签间距 24px、页签内边距 12px 0 14px。统一为属性建模取值：左右内边距 24px、相邻页签间距 48px（=24 margin-right + 24 margin-left）、页签内边距 16px 0；背景对齐 `var(--abi-card-bg)`（带原值 fallback，保证独立运行兜底）。
+
+### 非目标
+
+- 不改三个页面的页签切换、搜索、分页、取消发布、分享等业务逻辑。
+- 不改属性建模自身样式取值；不改我的助手 / 我的对话既有实现。
+
+### 验收标准
+
+- 我的大屏页签栏左右内边距、页签间距、上下内边距、背景与属性建模 / 我的助手 / 我的对话页签栏一致。
+- dashboard `ProjectList.less` less 编译通过，类型检查不新增错误。
+- 新增 run log：`.ai/runs/2026-08-31-app-workshop-tabs-width-unify/`。

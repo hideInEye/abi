@@ -13,7 +13,6 @@ import {
   PlusOutlined,
   ReloadOutlined,
   RocketOutlined,
-  SwapOutlined,
   TagOutlined,
   UserOutlined,
 } from '@ant-design/icons'
@@ -881,16 +880,22 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                                   <div className="sd-v5-ver__actions" onClick={(e) => e.stopPropagation()}>
                                     <span className="sd-v5-ver__time">{formatDateTime(v.publishedAt || v.createTime)}</span>
                                     {vStatus.cls === 'offline' && (
-                                      <Button className="sd-v5-btn sd-v5-btn--primary" icon={<RocketOutlined />} loading={publishingVid === vid} size="small" onClick={() => handlePublishVersion(v)}>
+                                      <Button className="sd-v5-btn sd-v5-btn--primary" loading={publishingVid === vid} onClick={() => handlePublishVersion(v)}>
                                         发布
                                       </Button>
                                     )}
-                                    {vStatus.cls !== 'offline' && !isActive && (
-                                      <Button className="sd-v5-btn sd-v5-btn--primary" icon={<SwapOutlined />} size="small" onClick={() => handleSetCurrentVersion(v)}>
+                                    {/* 回滚按钮只对“非当前启用版本”显示，与查看选中态（点击卡片）无关 */}
+                                    {vStatus.cls !== 'offline' && !isHeadline && (
+                                      <Button className="sd-v5-btn sd-v5-btn--primary" onClick={() => handleSetCurrentVersion(v)}>
                                         回滚
                                       </Button>
                                     )}
-                                    <Button className="sd-v5-btn sd-v5-btn--danger" icon={<DeleteOutlined />} size="small" onClick={() => handleDeleteVersion(v)} />
+                                    {/* 当前启用版本不提供删除；删除按钮为纯文字白底红字 */}
+                                    {!isHeadline && (
+                                      <Button className="sd-v5-btn sd-v5-btn--danger" onClick={() => handleDeleteVersion(v)}>
+                                        删除
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
                                 {v.changelog && <div className="sd-v5-ver__desc">{v.changelog}</div>}

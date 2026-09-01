@@ -1,6 +1,6 @@
-import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons'
+import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Button, DatePicker, Empty, Input, message, Popover, Select, Spin } from 'antd'
+import { Button, DatePicker, Empty, Input, Popover, Select, Spin } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -8,18 +8,15 @@ import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { AssistantIconBlock } from '@/components/AssistantIcon'
 import { fetchFavoriteList, fetchOperateRecordList } from '@/service/api/abi-system'
-import { createApp, fetchAssistantList } from '@/service/api/app'
-import { fetchShareRecordList } from '@/service/api/assistant'
+import { fetchAssistantList } from '@/service/api/app'
 import { fetchSemanticGroups } from '@/service/api/semantic'
 import { getSpaceId } from '@/utils/index'
 import AssistantDetailDrawer from './AssistantDetailDrawer'
-import AssistantShareModal from '@/components/AssistantShareModal'
 import DataDirectoryDropdown from './DataDirectoryDropdown'
 
-/** 应用工坊 tab 顺序：我的助手、分享记录、我的分析、我的报告、最近使用、我的收藏、我的分享 */
+/** 应用工坊 tab 顺序：我的助手、我的分析、我的报告、最近使用、我的收藏、我的分享 */
 const WORKSHOP_TABS = [
   { key: 'my-assistant', label: '我的助手' },
-  { key: 'share-record', label: '分享记录' },
   { key: 'my-analysis', label: '我的分析' },
   { key: 'my-report', label: '我的报告' },
   { key: 'recently-used', label: '最近使用' },
@@ -68,38 +65,6 @@ type AssistantCard = {
   groupId?: string
 }
 
-/** 分享记录卡片数据（分享记录 tab，字段做兼容映射） */
-type ShareRecordItem = {
-  id: string
-  name: string
-  shareUrl: string
-  sharePassword: string
-  shareTime: string
-  expiration: string
-  icon?: string
-}
-
-/** 将后端分享记录映射为展示结构 */
-function mapShareRecord(item: any): ShareRecordItem {
-  const fmt = (t?: string | null) => (t ? String(t).replace('T', ' ') : '-')
-  return {
-    id: String(item.id ?? item.shareCode ?? item.projectId ?? ''),
-    name: item.projectName || item.appName || item.name || '-',
-    shareUrl: item.shareUrl || '',
-    sharePassword: item.sharePassword ?? '',
-    shareTime: fmt(item.createTime || item.shareTime),
-    expiration: item.expirationDate ? fmt(item.expirationDate) : '永久',
-    icon: item.icon,
-  }
-}
-
-/** 从分享记录接口响应中提取分页结构（兼容 {records}/{rows}/{list}/直接数组） */
-function extractSharePage(res: any): { rows: any[]; total: number } {
-  const page = res?.data ?? res ?? {}
-  const rows = Array.isArray(page) ? page : (page.records ?? page.rows ?? page.list ?? [])
-  return { rows: Array.isArray(rows) ? rows : [], total: Number(page.total ?? (Array.isArray(rows) ? rows.length : 0)) || 0 }
-}
-
 /** 将后端 AppItem 映射为助手卡片数据 */
 function mapAssistant(item: any): AssistantCard {
   return {
@@ -139,17 +104,12 @@ function WorkshopView() {
   const [searchText, setSearchText] = useState('')
   const [rows, setRows] = useState<WorkshopRecord[]>([])
   const [assistants, setAssistants] = useState<AssistantCard[]>([])
-  // 分享记录 tab：服务端分页数据
-  const [shareRows, setShareRows] = useState<ShareRecordItem[]>([])
-  const [shareTotal, setShareTotal] = useState(0)
   const [groupId, setGroupId] = useState('')
   const [groups, setGroups] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   // 我的助手：只读详情抽屉
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailAgent, setDetailAgent] = useState<AssistantCard | null>(null)
-  // 我的助手：分享弹窗（同 abi 应用弹窗样式）
-  const [shareAgent, setShareAgent] = useState<AssistantCard | null>(null)
   // 高级筛选：面板草稿值 / 已生效值（点「查询」才生效，对齐 abi DeferredRangePicker）
   const [filterOpen, setFilterOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<any>(null)
@@ -161,7 +121,6 @@ function WorkshopView() {
 
   // 按当前 tab 拉取列表：最近使用/我的分享走操作记录接口，我的收藏走收藏接口
   const fetchList = useCallback((tab: WorkshopTabKey) => {
-    if (tab === 'share-record') return // 分享记录由独立 effect 拉取（服务端分页）
     if (tab === 'my-assistant') {
       setLoading(true)
       fetchAssistantList({ status: '1' })
@@ -201,28 +160,6 @@ function WorkshopView() {
     fetchList(activeTab)
   }, [activeTab, fetchList])
 
-  // 分享记录 tab：服务端分页，tab/页码/页大小变化时重新拉取（chat 端助手分享 type=react）
-  const fetchSharePage = useCallback((page: number, size: number) => {
-    setLoading(true)
-    fetchShareRecordList({ type: 'react', spaceId: getSpaceId() || undefined, current: page, size })
-      .then((res: any) => {
-        const { rows: list, total } = extractSharePage(res)
-        setShareRows(list.map(mapShareRecord))
-        setShareTotal(total)
-      })
-      .catch(() => {
-        setShareRows([])
-        setShareTotal(0)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [])
-
-  useEffect(() => {
-    if (activeTab === 'share-record') fetchSharePage(currentPage, pageSize)
-  }, [activeTab, currentPage, pageSize, fetchSharePage])
-
   // 拉取助手分组目录（groupType=assistant），供「数据目录」下拉筛选
   useEffect(() => {
     fetchSemanticGroups({ groupType: 'assistant', pageNum: 1, pageSize: 60, spaceId: getSpaceId() || undefined })
@@ -242,8 +179,6 @@ function WorkshopView() {
     setCurrentPage(1)
     setRows([])
     setAssistants([])
-    setShareRows([])
-    setShareTotal(0)
   }, [])
 
   const handleQuery = useCallback(() => {
@@ -270,33 +205,17 @@ function WorkshopView() {
     [navigate],
   )
 
-  // 点击助手卡片：立即创建绑定该助手的新会话（会话页据此限定输入框资源只能从助手绑定资源里拿），
-  // 成功后进入该会话对话；每次点击均创建新会话。
-  const [creatingAssistantId, setCreatingAssistantId] = useState('')
+  // 点击助手卡片不立即创建会话：仅跳转携带 appId 进入助手欢迎页（展示开场引导），
+  // 首次发送时由会话页创建绑定该助手的新会话（载荷与之前立即创建一致，仅时机延后）。
   const handleEnterAssistantChat = useCallback(
-    async (agent: AssistantCard) => {
-      if (creatingAssistantId) return
-      setCreatingAssistantId(agent.id)
-      try {
-        const res: any = await createApp({
-          space_id: getSpaceId(),
-          appId: Number(agent.id) || agent.id,
-          title: agent.name,
-        })
-        const rawApp = res?.data ?? res
-        const chatId = rawApp?.chat_id ?? rawApp?.sessionId ?? rawApp?.session_id ?? rawApp?.chatId
-        if (!chatId) {
-          message.error('创建会话失败')
-          return
-        }
-        navigate({ to: TASK_DETAIL_ROUTE, params: { taskId: String(chatId) } })
-      } catch {
-        message.error('创建会话失败')
-      } finally {
-        setCreatingAssistantId('')
-      }
+    (agent: AssistantCard) => {
+      navigate({
+        to: TASK_DETAIL_ROUTE,
+        params: { taskId: 'new' },
+        search: { appId: agent.id },
+      })
     },
-    [creatingAssistantId, navigate],
+    [navigate],
   )
 
   // 查看助手详情（只读抽屉）
@@ -305,26 +224,8 @@ function WorkshopView() {
     setDetailOpen(true)
   }, [])
 
-  // 分享助手：打开分享弹窗（同 abi 应用：密码保护 / 有效期 / 生成链接）
-  const handleShareAssistant = useCallback((agent: AssistantCard) => {
-    setShareAgent(agent)
-  }, [])
-
-  // 分享记录：复制链接（含密码时一并复制）
-  const handleCopyShare = useCallback((r: ShareRecordItem) => {
-    if (!r.shareUrl) {
-      message.error('该记录暂无分享链接')
-      return
-    }
-    const text = r.sharePassword ? `分享链接：${r.shareUrl}\n访问密码：${r.sharePassword}` : r.shareUrl
-    navigator.clipboard.writeText(text).then(() => {
-      message.success(r.sharePassword ? '分享链接和密码已复制到剪贴板' : '分享链接已复制到剪贴板')
-    })
-  }, [])
-
   // 名称搜索 + 时间范围过滤 + 前端分页
   const isAssistantTab = activeTab === 'my-assistant'
-  const isShareTab = activeTab === 'share-record'
 
   const filteredRows = useMemo(() => {
     const keyword = searchText.trim()
@@ -353,7 +254,7 @@ function WorkshopView() {
     })
   }, [assistants, searchText, dateRange, groupId])
 
-  const totalCount = isShareTab ? shareTotal : isAssistantTab ? filteredAssistants.length : filteredRows.length
+  const totalCount = isAssistantTab ? filteredAssistants.length : filteredRows.length
   const totalPages = Math.ceil(totalCount / pageSize) || 1
   const pagedRows = useMemo(
     () => filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
@@ -468,8 +369,7 @@ function WorkshopView() {
         ))}
       </div>
 
-      {/* Search + 高级筛选（对齐 abi SearchFilterBar；分享记录 tab 无搜索条件，隐藏） */}
-      {!isShareTab && (
+      {/* Search + 高级筛选（对齐 abi SearchFilterBar） */}
       <div className="ws-search-row">
         <Input
           allowClear
@@ -506,46 +406,11 @@ function WorkshopView() {
           </Button>
         </Popover>
       </div>
-      )}
 
       {/* Data area：占满剩余高度 */}
       <Spin spinning={loading} wrapperClassName="ws-data-spin">
         <div className="ws-data-area">
-          {isShareTab ? (
-            shareRows.length === 0 ? (
-              !loading && (
-                <div className="ws-empty">
-                  <Empty description="暂无分享记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                </div>
-              )
-            ) : (
-              <div className="ws-card-scroll">
-                <div className="ws-card-grid">
-                  {shareRows.map((r) => (
-                    <div key={r.id || r.shareUrl} className="ws-assistant-card">
-                      <div className="wac-head">
-                        <AssistantIconBlock iconKey={r.icon} radius={12} size={42} />
-                        <div className="wac-main">
-                          <div className="wac-title" title={r.name}>
-                            {r.name}
-                          </div>
-                          <div className="wac-desc">分享时间：{r.shareTime}　过期时间：{r.expiration}</div>
-                        </div>
-                      </div>
-                      <div className="wac-footer">
-                        <span className="wac-tag">{r.sharePassword ? '密码保护' : '无密码'}</span>
-                        <div className="wac-actions">
-                          <button type="button" className="wac-act" onClick={() => handleCopyShare(r)}>
-                            复制链接
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          ) : isAssistantTab ? (
+          {isAssistantTab ? (
             pagedAssistants.length === 0 ? (
               !loading && (
                 <div className="ws-empty">
@@ -586,16 +451,6 @@ function WorkshopView() {
                               }}
                             >
                               <EyeOutlined /> 查看
-                            </button>
-                            <button
-                              type="button"
-                              className="wac-act"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleShareAssistant(agent)
-                              }}
-                            >
-                              <ShareAltOutlined /> 分享
                             </button>
                           </div>
                         </div>
@@ -691,7 +546,6 @@ function WorkshopView() {
         fallback={detailAgent}
         onClose={() => setDetailOpen(false)}
       />
-      <AssistantShareModal agent={shareAgent} open={Boolean(shareAgent)} onClose={() => setShareAgent(null)} />
     </div>
   )
 }

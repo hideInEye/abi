@@ -252,11 +252,15 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-/* ── 卡片内工作区：左侧 todolist，右侧当前步骤结果 ── */
+/* ── 卡片内工作区：左侧 todolist，右侧当前步骤结果 ──
+   固定高度（视口自适应：矮屏收窄保证单条消息不超页面，高屏上限 560px）：
+   思考区/待办/右栏结果各自内部滚动，内容增长不再撑开卡片 */
 .cardWorkspace {
   display: grid;
   grid-template-columns: minmax(240px, 0.92fr) minmax(300px, 1.08fr);
-  min-height: 360px;
+  /* 行轨道钉死为容器高度：auto 行会被内容（如待办全量行高）撑过容器高溢出 */
+  grid-template-rows: minmax(0, 1fr);
+  height: clamp(360px, calc(100vh - 480px), 560px);
   position: relative;
   padding: 4px 0;
 }
@@ -308,6 +312,11 @@
   flex-direction: column;
   min-height: 0;
   padding-top: 12px;
+}
+
+/* 无待办时思考区是唯一面板，同时命中 first/last-child，保持与历史视图一致的半高，不独占整栏 */
+.todoColumn .panel:first-child:last-child {
+  flex: 0 0 50%;
 }
 
 .currentColumn {
@@ -550,9 +559,11 @@
 
 .thinkingCollapsibleInner {
   /* 填满思考区面板（45% 比例）：展开内部滚动；收起裁切并配合底部渐变遮罩逐渐隐藏 */
+  /* 限高兜底：外层工作区为 auto 高度 grid，flex 等分无法约束行高，需 max-height 防止长思考撑开卡片 */
   position: relative;
   flex: 1;
   min-height: 0;
+  max-height: 440px;
   overflow-y: auto;
 }
 
@@ -1265,6 +1276,8 @@
 @media (max-width: 900px) {
   .cardWorkspace {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
     min-height: 0;
   }
 
@@ -1278,6 +1291,10 @@
   }
 
   .currentResultBody {
+    max-height: 52vh;
+  }
+
+  .thinkingCollapsibleInner {
     max-height: 52vh;
   }
 
