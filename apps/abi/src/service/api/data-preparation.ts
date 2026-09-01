@@ -1,6 +1,7 @@
 import { localStg } from '@/utils/storage';
 
 import { apiRequest } from '../request';
+import { isFlatRequestSuccess } from '../request/flat-result';
 import { getUserId } from '../request/shared';
 
 // 从本地登录信息取当前用户 ID：优先 userInfo.userId（登录接口可能不返回 userId，单独存的 userId 会是空串）
@@ -120,7 +121,13 @@ export async function fetchDataCollectionList(data?: any) {
     method: 'post',
     url: '/api/abi-data/api/v1/dataset/qyeryDataSetList'
   });
-  res.data.data = res.data?.list || [];
+  if (!isFlatRequestSuccess(res)) {
+    return res;
+  }
+  res.data = {
+    ...(res.data || {}),
+    data: res.data?.list || []
+  };
   return res;
 }
 

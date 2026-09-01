@@ -6,6 +6,7 @@ import type { TableSemanticParams } from '@/pages/workbench/data-preparation/dat
 import { buildGroupTree } from '@/pages/workbench/data-preparation/data-table-meaning/utils/helper';
 import { schemalist } from '@/service/api/data-table-meaning';
 import { type TableSemanticsGroupType, tableSemanticsGroupList } from '@/service/api/table-semantics';
+import { isFlatRequestSuccess } from '@/service/request/flat-result';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
 
@@ -159,6 +160,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
       pageNum: 1,
       pageSize: 1000
     });
+    if (!isFlatRequestSuccess(res)) return false;
     const rows = normalizeList(getResponseData(res));
     const currentSchemaId = form?.getFieldValue('semanticSchemaId');
     const nextSchemaOptions = mapOptions(rows, 'bizName', 'schemaId', valueAsString)
@@ -177,6 +179,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
     if (syncSelected) {
       syncSelectedSchemaOptions(gpId, rows);
     }
+    return true;
   };
 
   function handleTreeExpand(expandedValues: Key[]) {
@@ -198,6 +201,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
       pageSize: 100,
       spaceId
     });
+    if (!isFlatRequestSuccess(res)) return false;
     const rows = normalizeList(getResponseData(res));
     setGroupOptions(
       rows
@@ -209,6 +213,7 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
         }))
         .filter(item => item.groupName && item.groupId !== undefined && item.groupId !== null && item.groupId !== '')
     );
+    return true;
   };
 
   useEffect(() => {

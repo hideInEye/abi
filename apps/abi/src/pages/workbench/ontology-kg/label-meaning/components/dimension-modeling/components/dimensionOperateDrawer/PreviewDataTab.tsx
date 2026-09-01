@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { queryDimensionPreview } from '@/service/api/dimension-modeling'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import type { DimensionFieldOption, DimensionType } from '../../types/dimensionModeling.types'
 
@@ -108,9 +109,12 @@ export const PreviewDataTab: React.FC<Props> = ({ dimId, fieldTableData, sampleV
       setLoading(true)
       try {
         const res = await queryDimensionPreview({ dimId })
+        assertFlatRequestSuccess(res)
         if (!canceled) {
           setPreviewData(getPreviewPayload(res))
         }
+      } catch {
+        // The shared request layer already reports the request error.
       } finally {
         if (!canceled) {
           setLoading(false)

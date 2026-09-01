@@ -7,6 +7,7 @@ import type { DimensionFieldOption, DimensionFormValues, DimensionModelItem, Dim
 import { buildFormValues, buildSchemaFieldOptions, filterSelectableFields, getDimensionFieldLookupKeys, normalizeDetail, normalizeDimensionSelectedFieldsToOptionKeys } from '../utils/dimensionModeling.mapper'
 import { checkOntologyName } from '@/service/api/ontology-name'
 import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 import { isOntologyNameCheckPassed, restoreMappedBizName, restoreMappedTechName, validateCustomBizNameText, validateCustomTechNameText } from '../../../utils/ontologyName'
 import { validateFieldsAndScroll } from '../../../../utils/form-scroll'
 
@@ -65,6 +66,8 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
   const [relatedMetricTotal, setRelatedMetricTotal] = useState(0)
   const [selectedFieldKeys, setSelectedFieldKeys] = useState<string[]>([])
   const [fieldDetailMap, setFieldDetailMap] = useState<Record<string, Partial<DimensionFieldOption>>>({})
+  const [submitting, setSubmitting] = useState(false)
+  const submitLockRef = useRef(false)
   const schemaDetailRequestedRef = useRef(new Set<string>())
 
   const selectedDimType = (AForm.useWatch('dimType', form) || DEFAULT_FORM_VALUES.dimType) as 'std' | 'time'
@@ -140,6 +143,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
         objectType: 'dimension',
         spaceId: Number(localStorage.getItem('spaceId')) || 0
       })
+      assertFlatRequestSuccess(res, '中文名校验失败，请稍后重试')
       if (!isOntologyNameCheckPassed(res)) {
         return Promise.reject(new Error('中文名已存在'))
       }
@@ -171,6 +175,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
         objectType: 'dimension',
         spaceId: Number(localStorage.getItem('spaceId')) || 0
       })
+      assertFlatRequestSuccess(res, '英文名校验失败，请稍后重试')
       if (!isOntologyNameCheckPassed(res)) {
         return Promise.reject(new Error('英文名已存在'))
       }
@@ -195,6 +200,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     const loadSchemaDetail = async () => {
       try {
         const res = await queryTableSemanticsDetail(selectedSchemaId)
+        assertFlatRequestSuccess(res)
         const detail = normalizeDetail(res)
         if (ignore || !detail) {
           return
@@ -294,6 +300,9 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
   }
 
   const handleSave = async (openHierarchyAfterSave = false) => {
+    if (submitLockRef.current) {
+      return
+    }
     const formValues = await validateFieldsAndScroll<DimensionFormValues>(form)
     if (!formValues) {
       return
@@ -308,15 +317,21 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
       message.error('请先选择维度分组')
       return
     }
-    const success = await onSubmit({
-      formValues: values,
-      id: editingItem?.id,
-      relatedFields: selectedFields,
-      selectedSchema,
-    })
-    if (!success) {
-      return
+    submitLockRef.current = true
+    setSubmitting(true)
+    let success = false
+    try {
+      success = await onSubmit({
+        formValues: values,
+        id: editingItem?.id,
+        relatedFields: selectedFields,
+        selectedSchema,
+      })
+    } finally {
+      submitLockRef.current = false
+      setSubmitting(false)
     }
+    if (!success) return
     const nextRecord: DimensionModelItem = {
       ...(editingItem || {}),
       dimType: values.dimType,
@@ -335,27 +350,27 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     }
 
     if (openHierarchyAfterSave) {
-      handleDrawerClose(true)
+      handleDrawerClose()
       onOpenHierarchy(nextRecord)
       return
     }
-    handleDrawerClose(true)
+    handleDrawerClose()
   }
 
   const createFooter = (
     <div className="flex justify-end gap-3">
-      <AButton onClick={() => handleDrawerClose()}>取消</AButton>
-      <AButton type="primary" onClick={() => handleSave(false)}>
+      <AButton disabled={submitting} onClick={() => handleDrawerClose()}>取消</AButton>
+      <AButton loading={submitting} type="primary" onClick={() => handleSave(false)}>
         保存
       </AButton>
-      <AButton onClick={() => handleSave(true)}>保存并配置层级</AButton>
+      <AButton disabled={submitting} onClick={() => handleSave(true)}>保存并配置层级</AButton>
     </div>
   )
 
   const editFooter = (
     <div className="flex justify-end gap-3">
-      <AButton onClick={() => handleDrawerClose()}>取消</AButton>
-      <AButton type="primary" onClick={() => handleSave(false)}>
+      <AButton disabled={submitting} onClick={() => handleDrawerClose()}>取消</AButton>
+      <AButton loading={submitting} type="primary" onClick={() => handleSave(false)}>
         保存修改
       </AButton>
     </div>
@@ -392,7 +407,9 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
         open={open}
         title={editingItem ? '编辑维度' : '新建维度'}
         width="60%"
-        onClose={() => handleDrawerClose()}
+        onClose={() => {
+          if (!submitting) handleDrawerClose()
+        }}
       >
         {editingItem ? (
           <ATabs

@@ -556,7 +556,9 @@ export const HierarchyModal: React.FC<Props> = ({
       open={open}
       title={isTimeDimension ? '时间层级关系配置' : '层级关系配置'}
       width="60%"
-      onCancel={onCancel}
+      onCancel={() => {
+        if (!saving) onCancel()
+      }}
     >
       <ASpin
         spinning={loading}
@@ -708,7 +710,7 @@ export const HierarchyModal: React.FC<Props> = ({
           </div>
 
           <div className="flex justify-end gap-2 border-t border-[#e6ebf5] bg-white px-3 py-2">
-            <AButton onClick={onCancel}>取消</AButton>
+            <AButton disabled={saving} onClick={onCancel}>取消</AButton>
             <AButton
               loading={saving}
               type="primary"

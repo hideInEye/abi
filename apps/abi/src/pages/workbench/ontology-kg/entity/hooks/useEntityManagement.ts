@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getOntologyNetworkRecords } from '@/pages/workbench/ontology-kg/shared-network-types'
 import type { OntologyEntity, OntologyLabel, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { createOntologyEntity, deleteOntologyEntity, deleteOntologyEntityBatch, queryOntologyEntityList, queryOntologyLabels, updateOntologyEntity } from '@/service/api/ontology-network'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import type { EntityFormValues, EntityPagination, EntitySearchValues } from '../types'
 
@@ -11,7 +12,7 @@ const INITIAL_SEARCH: EntitySearchValues = { entityCode: '', entityName: '' }
 const INITIAL_PAGINATION: EntityPagination = { pageNum: 1, pageSize: 10, total: 0 }
 
 interface UseEntityManagementResult {
-  batchDeleteEntities: () => Promise<void>
+  batchDeleteEntities: () => Promise<boolean>
   deleteEntity: (id: OntologyNetworkId) => Promise<void>
   entities: OntologyEntity[]
   labels: OntologyLabel[]
@@ -43,7 +44,9 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
     labelRequestSequence.current += 1
     const requestId = labelRequestSequence.current
     try {
-      const { data } = await queryOntologyLabels({ spaceId, type: 'RECOMMENDED',moduleType:"INDICATOR" })
+      const result = await queryOntologyLabels({ spaceId, type: 'RECOMMENDED',moduleType:"INDICATOR" })
+      assertFlatRequestSuccess(result)
+      const { data } = result
       if (requestId === labelRequestSequence.current) setLabels(data ?? [])
     } catch {
       if (requestId === labelRequestSequence.current) message.error('标签类型加载失败，请稍后重试')
@@ -55,7 +58,7 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
     const requestId = entityRequestSequence.current
     setLoading(true)
     try {
-      const { data } = await queryOntologyEntityList({
+      const result = await queryOntologyEntityList({
         entityCode: searchValues.entityCode.trim() || undefined,
         entityName: searchValues.entityName.trim() || undefined,
         labelId: searchValues.labelId,
@@ -63,7 +66,9 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
         pageSize: pagination.pageSize,
         spaceId,
       })
+      assertFlatRequestSuccess(result)
       if (requestId !== entityRequestSequence.current) return
+      const { data } = result
       setEntities(getOntologyNetworkRecords(data))
       setSelectedRowKeys([])
       setPagination((current) => ({ ...current, total: data?.total ?? 0 }))
@@ -116,11 +121,12 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
   const saveEntity = useCallback(
     async (values: EntityFormValues, editingEntity?: OntologyEntity): Promise<void> => {
       if (editingEntity) {
-        await updateOntologyEntity({ color: values.color, id: editingEntity.id, remark: values.remark?.trim(), spaceId })
+        const result = await updateOntologyEntity({ color: values.color, id: editingEntity.id, remark: values.remark?.trim(), spaceId })
+        assertFlatRequestSuccess(result)
       } else {
         const selection = Array.isArray(values.labelSelection) ? values.labelSelection[0] : values.labelSelection
         const labelBizName = labelMap.get(String(selection)) ?? String(selection).trim()
-        await createOntologyEntity({
+        const result = await createOntologyEntity({
           color: values.color,
           entityCode: values.entityCode.trim(),
           entityName: values.entityName.trim(),
@@ -128,6 +134,7 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
           remark: values.remark?.trim(),
           spaceId,
         })
+        assertFlatRequestSuccess(result)
       }
       await refresh()
     },
@@ -136,8 +143,8 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
 
   const deleteEntity = useCallback(
     async (id: OntologyNetworkId): Promise<void> => {
-      const { error } = await deleteOntologyEntity({ id })
-      if (error) throw error
+      const result = await deleteOntologyEntity({ id })
+      assertFlatRequestSuccess(result)
 
       entityRequestSequence.current += 1
       if (entities.length === 1 && pagination.pageNum > 1) {
@@ -149,21 +156,22 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
     [entities.length, loadEntities, pagination.pageNum],
   )
 
-  const batchDeleteEntities = useCallback(async (): Promise<void> => {
+  const batchDeleteEntities = useCallback(async (): Promise<boolean> => {
     if (!selectedRowKeys.length) {
       message.warning('请先选择要删除的实体')
-      return
+      return false
     }
 
-    const { error } = await deleteOntologyEntityBatch({ ids: selectedRowKeys })
-    if (error) throw error
+    const result = await deleteOntologyEntityBatch({ ids: selectedRowKeys })
+    assertFlatRequestSuccess(result)
 
     entityRequestSequence.current += 1
     if (entities.length === selectedRowKeys.length && pagination.pageNum > 1) {
       setPagination((current) => ({ ...current, pageNum: current.pageNum - 1 }))
-      return
+      return true
     }
     await loadEntities()
+    return true
   }, [entities.length, loadEntities, pagination.pageNum, selectedRowKeys])
 
   return {

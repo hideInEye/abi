@@ -5,6 +5,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import { getOntologyNetworkRecords } from '@/pages/workbench/ontology-kg/shared-network-types'
 import type { OntologyEntity, OntologyNetworkId, OntologyRelation } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { createOntologyRelation, deleteOntologyRelation, deleteOntologyRelationBatch, queryOntologyEntityList, queryOntologyRelationList, updateOntologyRelation } from '@/service/api/ontology-network'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import type { RelationFormValues, RelationPagination, RelationSearchValues } from '../types'
 
@@ -13,7 +14,7 @@ const INITIAL_SEARCH: RelationSearchValues = { relation: '' }
 const INITIAL_PAGINATION: RelationPagination = { pageNum: 1, pageSize: 100000, total: 0 }
 
 interface UseRelationManagementResult {
-  batchDeleteRelations: () => Promise<void>
+  batchDeleteRelations: () => Promise<boolean>
   deleteRelation: (id: OntologyNetworkId) => Promise<void>
   draftSearchValues: RelationSearchValues
   entityNameMap: Map<string, string>
@@ -49,8 +50,10 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
     const requestId = entityRequestRef.current + 1
     entityRequestRef.current = requestId
     try {
-      const { data } = await queryOntologyEntityList({ pageNum: 1, pageSize: 1000, spaceId })
+      const result = await queryOntologyEntityList({ pageNum: 1, pageSize: 1000, spaceId })
+      assertFlatRequestSuccess(result)
       if (requestId !== entityRequestRef.current) return
+      const { data } = result
       setEntities(data?.records ?? [])
     } catch {
       if (requestId === entityRequestRef.current) message.error('实体列表加载失败，请稍后重试')
@@ -63,7 +66,7 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
       relationRequestRef.current = requestId
       setLoading(true)
       try {
-        const { data } = await queryOntologyRelationList({
+        const result = await queryOntologyRelationList({
           endEntityId: nextSearchValues.endEntityId,
           pageNum: nextPagination.pageNum,
           pageSize: nextPagination.pageSize,
@@ -71,7 +74,9 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
           spaceId,
           startEntityId: nextSearchValues.startEntityId,
         })
+        assertFlatRequestSuccess(result)
         if (requestId !== relationRequestRef.current) return
+        const { data } = result
         setRelations(getOntologyNetworkRecords(data))
         setSelectedRowKeys([])
         setPagination((current) => ({ ...current, total: data?.total ?? 0 }))
@@ -139,9 +144,11 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
         startEntityId: values.startEntityId,
       }
       if (editingRelation) {
-        await updateOntologyRelation({ ...payload, id: editingRelation.id })
+        const result = await updateOntologyRelation({ ...payload, id: editingRelation.id })
+        assertFlatRequestSuccess(result)
       } else {
-        await createOntologyRelation({ ...payload, spaceId })
+        const result = await createOntologyRelation({ ...payload, spaceId })
+        assertFlatRequestSuccess(result)
       }
       await refresh()
     },
@@ -150,8 +157,8 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
 
   const deleteRelation = useCallback(
     async (id: OntologyNetworkId): Promise<void> => {
-      const { error } = await deleteOntologyRelation({ id })
-      if (error) throw error
+      const result = await deleteOntologyRelation({ id })
+      assertFlatRequestSuccess(result)
 
       if (relations.length === 1 && pagination.pageNum > 1) {
         const nextPagination = { ...pagination, pageNum: pagination.pageNum - 1 }
@@ -164,22 +171,23 @@ export function useRelationManagement(spaceId: OntologyNetworkId): UseRelationMa
     [loadRelations, pagination, relations.length, searchValues],
   )
 
-  const batchDeleteRelations = useCallback(async (): Promise<void> => {
+  const batchDeleteRelations = useCallback(async (): Promise<boolean> => {
     if (!selectedRowKeys.length) {
       message.warning('请先选择要删除的关系')
-      return
+      return false
     }
 
-    const { error } = await deleteOntologyRelationBatch({ ids: selectedRowKeys })
-    if (error) throw error
+    const result = await deleteOntologyRelationBatch({ ids: selectedRowKeys })
+    assertFlatRequestSuccess(result)
 
     if (relations.length === selectedRowKeys.length && pagination.pageNum > 1) {
       const nextPagination = { ...pagination, pageNum: pagination.pageNum - 1 }
       setPagination(nextPagination)
       await loadRelations(searchValues, nextPagination)
-      return
+      return true
     }
     await loadRelations(searchValues, pagination)
+    return true
   }, [loadRelations, pagination, relations.length, searchValues, selectedRowKeys])
 
   return {

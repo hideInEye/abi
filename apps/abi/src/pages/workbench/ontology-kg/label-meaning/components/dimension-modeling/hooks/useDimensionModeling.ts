@@ -12,6 +12,7 @@ import {
   queryDimensionHierarchyByDimId,
   queryDimensionList
 } from '@/service/api/dimension-modeling'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import type {
   DimensionFieldOption,
@@ -141,7 +142,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
       setTableData([])
       setPagination(initialPagination)
       latestPaginationRef.current = initialPagination
-      return
+      return true
     }
     setLoading(true)
     try {
@@ -153,6 +154,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
         spaceId: Number(localStorage.getItem('spaceId')),
         techName: _params.techName?.trim() || undefined
       })
+      assertFlatRequestSuccess(res)
       const rows = normalizeRows(res)
       const list = rows.map(item =>
         mapDimensionFromApi({
@@ -170,6 +172,9 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
       }
       latestPaginationRef.current = nextPaginationState
       setPagination(nextPaginationState)
+      return true
+    } catch {
+      return false
     } finally {
       setLoading(false)
     }
@@ -244,9 +249,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
       id
     })
     if (!isApiSuccess(res)) {
-      message.warning(getApiErrorMessage(res, '获取详情失败，已使用列表数据编辑'))
-      setEditingItem(record)
-      setDrawerOpen(true)
+      message.warning(getApiErrorMessage(res, '获取详情失败'))
       return
     }
     const detailData = normalizeDetail(res)
@@ -264,8 +267,9 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
       id: Number(record.id)
     })
     if (!isApiSuccess(res)) {
-      message.error(getApiErrorMessage(res, '删除失败'))
-      return
+      const errorMessage = getApiErrorMessage(res, '删除失败')
+      message.error(errorMessage)
+      assertFlatRequestSuccess(res, errorMessage)
     }
     message.success('删除成功')
     await fetchTableData()
@@ -279,8 +283,9 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     }
     const res = await deleteDimensionModelBatch({ ids })
     if (!isApiSuccess(res)) {
-      message.error(getApiErrorMessage(res, '批量删除失败'))
-      return
+      const errorMessage = getApiErrorMessage(res, '批量删除失败')
+      message.error(errorMessage)
+      assertFlatRequestSuccess(res, errorMessage)
     }
     message.success('批量删除成功')
     await fetchTableData()
@@ -397,14 +402,14 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     setDrawerOpen(false)
     setEditingItem(null)
     if (refresh) {
-      fetchTableData()
+      void fetchTableData()
     }
   }
 
   const closeBatchDrawer = (refresh?: boolean) => {
     setBatchDrawerOpen(false)
     if (refresh) {
-      fetchTableData()
+      void fetchTableData()
     }
   }
 

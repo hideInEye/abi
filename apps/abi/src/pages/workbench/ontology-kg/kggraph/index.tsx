@@ -248,33 +248,36 @@ export const Component: React.FC = () => {
   }, [])
 
   const runGraphQuery = useCallback(
-    (values: GraphQueryValues): void => {
+    (values: GraphQueryValues): Promise<boolean> => {
       clearNameSearchTimer()
-      void queryGraph({ ...values, degree: values.degree ?? INITIAL_QUERY.degree })
+      return queryGraph({ ...values, degree: values.degree ?? INITIAL_QUERY.degree })
     },
     [clearNameSearchTimer, queryGraph],
   )
 
-  const handleQuery = useCallback((): void => {
-    runGraphQuery(queryValues)
+  const handleQuery = useCallback(async (): Promise<boolean> => {
+    return runGraphQuery(queryValues)
   }, [queryValues, runGraphQuery])
 
-  const handleResetQuery = useCallback((): void => {
+  const handleResetQuery = useCallback(async (): Promise<boolean> => {
     clearNameSearchTimer()
-    setQueryValues(INITIAL_QUERY)
-    setSelection(null)
-    setDetailOpen(false)
-    void queryGraph(INITIAL_QUERY)
+    const succeeded = await queryGraph(INITIAL_QUERY)
+    if (succeeded) {
+      setQueryValues(INITIAL_QUERY)
+      setSelection(null)
+      setDetailOpen(false)
+    }
+    return succeeded
   }, [clearNameSearchTimer, queryGraph])
 
-  const handleAdvancedQuery = useCallback((): void => {
-    setAdvancedSearchOpen(false)
-    handleQuery()
+  const handleAdvancedQuery = useCallback(async (): Promise<void> => {
+    const succeeded = await handleQuery()
+    if (succeeded) setAdvancedSearchOpen(false)
   }, [handleQuery])
 
-  const handleAdvancedReset = useCallback((): void => {
-    setAdvancedSearchOpen(false)
-    handleResetQuery()
+  const handleAdvancedReset = useCallback(async (): Promise<void> => {
+    const succeeded = await handleResetQuery()
+    if (succeeded) setAdvancedSearchOpen(false)
   }, [handleResetQuery])
 
   const handleNameSearchChange = useCallback(
@@ -338,13 +341,15 @@ export const Component: React.FC = () => {
   }, [])
 
   const handleRequeryIsolatedNode = useCallback(
-    (node: OntologyGraphNode): void => {
+    async (node: OntologyGraphNode): Promise<void> => {
       const nextQuery = { ...queryValues, degree: queryValues.degree ?? INITIAL_QUERY.degree, startEntityId: node.id }
       clearNameSearchTimer()
-      setQueryValues(nextQuery)
-      setSelection(null)
-      setDetailOpen(false)
-      void queryGraph(nextQuery)
+      const succeeded = await queryGraph(nextQuery)
+      if (succeeded) {
+        setQueryValues(nextQuery)
+        setSelection(null)
+        setDetailOpen(false)
+      }
     },
     [clearNameSearchTimer, queryGraph, queryValues],
   )

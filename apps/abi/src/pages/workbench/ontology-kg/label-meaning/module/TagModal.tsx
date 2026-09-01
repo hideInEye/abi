@@ -32,7 +32,7 @@ interface TagModalProps {
   readonly editingGroup: TagGroup | null
   readonly isModalOpen: boolean
   readonly onCancel: (isOpen: boolean) => void
-  readonly onSave: (values: Partial<TagGroup>) => void
+  readonly onSave: (values: Partial<TagGroup>) => Promise<boolean>
 }
 
 const DEFINITION_STATUS: Partial<Record<DefinitionState, string>> = {
@@ -69,6 +69,7 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
   const suppressDefinitionChange = useRef(false)
   const lastGeneratedSql = useRef('')
   const [definitionState, setDefinitionState] = useState<DefinitionState>('idle')
+  const [saving, setSaving] = useState(false)
   const [schemaOptions, setSchemaOptions] = useState<TableSemanticParams[]>([])
   const [viewDataId, setViewDataId] = useState<number | string | undefined>(undefined)
   const formInitData = useMemo(() => buildFormInitData(editingGroup), [editingGroup])
@@ -143,6 +144,7 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
   }
 
   const handleModalOk = async () => {
+    if (saving) return
     if (expressionRef.current?.focusFirstError()) {
       return
     }
@@ -151,12 +153,20 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
       return
     }
     const { exp: expData, ...rest } = formData
-    onSave({
-      ...rest,
-      exp: serializeTagExpression(expData, ruleFields),
-      viewId: viewDataId
-    })
-    form.resetFields()
+    setSaving(true)
+    try {
+      const success = await onSave({
+        ...rest,
+        exp: serializeTagExpression(expData, ruleFields),
+        viewId: viewDataId
+      })
+      if (success) {
+        form.resetFields()
+        onCancel(false)
+      }
+    } finally {
+      setSaving(false)
+    }
   }
 
   const applyGeneratedDefinition = () => {
@@ -214,8 +224,9 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
       width={900}
       footer={
         <ASpace className="w-full justify-end">
-          <AButton onClick={handleModalCancel}>取消</AButton>
+          <AButton disabled={saving} onClick={handleModalCancel}>取消</AButton>
           <AButton
+            loading={saving}
             type="primary"
             onClick={handleModalOk}
           >
@@ -223,7 +234,9 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
           </AButton>
         </ASpace>
       }
-      onClose={handleModalCancel}
+      onClose={() => {
+        if (!saving) handleModalCancel()
+      }}
     >
       <AForm
         className="ds-form-section mt-5"

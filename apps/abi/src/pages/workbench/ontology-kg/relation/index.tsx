@@ -97,27 +97,15 @@ export const Component: React.FC = () => {
   )
 
   const handleDelete = useCallback(
-    (relation: OntologyRelation): void => {
-      ;(async () => {
-        try {
-          await deleteRelation(relation.id)
-          message.success('关系已删除')
-        } catch {
-          // The request layer has already displayed the backend error message.
-        }
-      })()
+    async (relation: OntologyRelation): Promise<void> => {
+      await deleteRelation(relation.id)
+      message.success('关系已删除')
     },
     [deleteRelation],
   )
-  const handleBatchDelete = useCallback((): void => {
-    ;(async () => {
-      try {
-        await batchDeleteRelations()
-        message.success('批量删除成功')
-      } catch {
-        // The request layer has already displayed the backend error message.
-      }
-    })()
+  const handleBatchDelete = useCallback(async (): Promise<void> => {
+    const deleted = await batchDeleteRelations()
+    if (deleted) message.success('批量删除成功')
   }, [batchDeleteRelations])
 
   return (

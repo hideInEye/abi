@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { OntologyEntity, OntologyEntityAttribute, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { getOntologyEntity, saveOntologyEntityAttributes } from '@/service/api/ontology-network'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import { getEntityAttributeIdentity, isSameEntityAttribute, makeEntityAttributeSaveItems } from '../utils/entity'
 
@@ -41,8 +42,10 @@ export function useEntityAttributeManagement(entity: OntologyEntity | undefined,
 
     const loadDetail = async (): Promise<void> => {
       try {
-        const { data } = await getOntologyEntity({ id: entity.id })
+        const result = await getOntologyEntity({ id: entity.id })
+        assertFlatRequestSuccess(result)
         if (requestId !== detailRequestSequence.current) return
+        const { data } = result
         const attributes = data?.attributes ?? []
         draftAttributesRef.current = attributes
         setDraftAttributes(attributes)
@@ -91,7 +94,8 @@ export function useEntityAttributeManagement(entity: OntologyEntity | undefined,
     setSaving(true)
     try {
       const attributes = makeEntityAttributeSaveItems(draftAttributesRef.current)
-      const { data, error } = await saveOntologyEntityAttributes({ attributes, entityId: entity.id, spaceId })
+      const result = await saveOntologyEntityAttributes({ attributes, entityId: entity.id, spaceId })
+      const { data, error } = result
       if (error || data !== true) {
         message.error('属性配置保存失败，请稍后重试')
         return false

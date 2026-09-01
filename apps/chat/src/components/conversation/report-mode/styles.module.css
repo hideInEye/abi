@@ -608,17 +608,10 @@
   object-fit: contain;
 }
 
-.executionEmpty,
-.historyGroupTitle {
+.executionEmpty {
   color: var(--ink-3);
   font-size: 12px;
   line-height: 1.7;
-}
-
-.historyGroupTitle {
-  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
-  padding: 10px 12px;
-  font-weight: 700;
 }
 
 .finalSummary {

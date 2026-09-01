@@ -1,6 +1,7 @@
 import type { FormInstance } from 'antd'
 
 import { checkOntologyName } from '@/service/api/ontology-name'
+import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 import type { KnowledgeFormValues } from '../types/metricModeling.types'
 
@@ -34,6 +35,7 @@ async function checkRemoteName(params: {
     objectType: 'indicator',
     spaceId: getKnowledgeSpaceId()
   })
+  assertFlatRequestSuccess(res, `${label}校验失败，请稍后重试`)
   if (!isOntologyNameCheckPassed(res)) {
     throw new Error(`${label}已存在`)
   }

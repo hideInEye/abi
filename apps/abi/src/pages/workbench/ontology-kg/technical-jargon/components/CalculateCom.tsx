@@ -6,6 +6,7 @@ import { useAppSelector } from '@/hooks/business/useStore';
 import QuoteFun from '@/pages/workbench/data-preparation/data-collection-operate/modules/QuoteFun.tsx';
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types/index.js';
 import { fetchDataCollectionList } from '@/service/api';
+import { isFlatRequestSuccess } from '@/service/request/flat-result';
 import { getSpaceId } from '@/store/slice/app';
 import { getAllFieldsByNodeData } from '@/utils/data-collection-operate.ts';
 
@@ -78,13 +79,15 @@ const CalculateCom: FC<PropsType> = memo(({ dispatch, form, isEdit, state }) => 
   }, [semanticSchemaIdVal, schemaOptions]);
 
   const fetchDataCollections = async () => {
-    const { data } = await fetchDataCollectionList({
+    const result = await fetchDataCollectionList({
       pageNum: 1,
       pageSize: 10000,
       spaceId,
       viewName: ''
     });
-    setDataCollectionList(data?.data);
+    if (!isFlatRequestSuccess(result)) return;
+    const { data } = result;
+    setDataCollectionList(Array.isArray(data?.data) ? data.data : []);
   };
   useEffect(() => {
     fetchDataCollections();
