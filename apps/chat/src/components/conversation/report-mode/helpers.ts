@@ -109,31 +109,8 @@ export function getReportStatusTone(status: string): ReportStatusTone {
   }
 }
 
-const SKILL_NAME_PATTERNS = [
-  /(?:skill(?:_name)?|技能名称)\s*[：:=]\s*["']?([a-z0-9][a-z0-9_.-]*)/i,
-  /(?:加载|调用|使用)\s*([a-z0-9][a-z0-9_.-]*)\s*(?:技能|skill)/i,
-  /\b([a-z0-9][a-z0-9_.-]*)\s+(?:skill|技能)\b/i,
-]
-
-function extractSkillName(value: string | undefined) {
-  const text = value?.trim()
-  if (!text) return undefined
-
-  for (const pattern of SKILL_NAME_PATTERNS) {
-    const name = pattern.exec(text)?.[1]?.trim()
-    if (name) return name
-  }
-
-  return undefined
-}
-
-function getCollapsedTodoStepName(step: ReportPublicStep | undefined, taskContent: string) {
-  return (step?.actionIntention || step?.title || step?.action || taskContent).trim().replace(/[，。；;：:]+$/g, '')
-}
-
-function getCollapsedTodoSkillName(step: ReportPublicStep | undefined, taskContent: string) {
-  const publicFields = [step?.actionIntention, step?.title, step?.action, ...(getRenderableStepChunks(step?.chunks || []).map((chunk) => chunk.content)), taskContent]
-  return publicFields.map(extractSkillName).find(Boolean)
+function getCollapsedTodoInvocationName(step: ReportPublicStep | undefined) {
+  return (step?.title || step?.actionIntention || step?.action)?.trim().replace(/[，。；;：:]+$/g, '')
 }
 
 type CollapsedTodoReport = Pick<ReportItem, 'tasks' | 'currentPlan' | 'executionGroups' | 'stepsById' | 'stepOrder'>
@@ -156,14 +133,17 @@ export function getCollapsedTodoExecutionSummary(report: CollapsedTodoReport) {
     .filter((stepId) => stepIds.has(stepId))
     .map((stepId) => report.stepsById[stepId])
     .filter((step): step is ReportPublicStep => Boolean(step && isVisibleReportStep(step)))
+  // step.done 会早于下一条 plan.update 到达，这个窗口内仍需保留最近的子步骤标题。
   const currentStep = visibleSteps.find((step) => step.status === 'in_progress') || visibleSteps[0]
+  const taskName = task.content.trim().replace(/[，。；;：:]+$/g, '')
+  if (!taskName) return undefined
 
-  const stepName = getCollapsedTodoStepName(currentStep, task.content)
-  if (!stepName) return undefined
+  const taskLabel = taskName.endsWith('步骤') ? taskName : `${taskName} 步骤`
+  const invocationName = getCollapsedTodoInvocationName(currentStep)
+  if (!invocationName) return `当前正在执行 ${taskLabel}`
 
-  const skillName = getCollapsedTodoSkillName(currentStep, task.content)
-  const stepLabel = stepName.endsWith('步骤') ? stepName : `${stepName} 步骤`
-  return skillName ? `当前正在执行 ${stepLabel}，调用 ${skillName} 技能` : `当前正在执行 ${stepLabel}`
+  const invocationLabel = /(?:技能|skill)/i.test(invocationName) ? invocationName : `${invocationName} 技能`
+  return `当前正在执行 ${taskLabel}，调用 ${invocationLabel}`
 }
 
 export function getTaskKey(planEntryId: string | undefined, taskIndex: number) {
@@ -249,7 +229,7 @@ const DOWNLOAD_FORMAT_LABELS: Record<ReportDownloadOption['format'], string> = {
   html: 'HTML',
   markdown: 'Markdown',
   pdf: 'PDF',
-  word: 'Word',
+  word: 'WORD',
 }
 
 function getAttachmentFileName(attachment: ReportAttachment) {

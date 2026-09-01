@@ -313,6 +313,58 @@ describe('ReportTodoList', () => {
     expect(html).not.toContain('ant-tag')
   })
 
+  it('不展示重规划前和未归属的额外执行区块', () => {
+    const report: ReportItem = {
+      ...createInitialReportStreamState(),
+      id: 'report-hidden-extra-steps',
+      question: '生成报告',
+      sortOrder: 1,
+      createdAt: 1,
+      source: 'task',
+      status: 'running',
+      thinkingCompleted: true,
+      todoOpen: true,
+      tasks: [{ content: '当前任务', status: 'in_progress' }],
+      currentPlan: {
+        entryId: 'plan-current',
+        tasks: [{ content: '当前任务', status: 'in_progress' }],
+      },
+      stepsById: {
+        'step-old': {
+          id: 'step-old',
+          title: '旧计划子步骤',
+          status: 'done',
+          chunks: [],
+          firstEntryId: '1-0',
+          lastEntryId: '1-0',
+          entryIds: ['1-0'],
+          scope: 'todo',
+          executionGroupKey: 'plan-old:0',
+        },
+        'step-unassigned': {
+          id: 'step-unassigned',
+          title: '未归属子步骤',
+          status: 'done',
+          chunks: [],
+          firstEntryId: '2-0',
+          lastEntryId: '2-0',
+          entryIds: ['2-0'],
+          scope: 'unassigned',
+        },
+      },
+      stepOrder: ['step-old', 'step-unassigned'],
+      executionGroups: [{ key: 'plan-old:0', planEntryId: 'plan-old', taskIndex: 0, taskContent: '旧任务', stepIds: ['step-old'] }],
+      unassignedStepIds: ['step-unassigned'],
+    }
+
+    const html = renderToStaticMarkup(<ReportTodoList report={report} onToggleTodo={() => undefined} onToggleTask={() => undefined} />)
+
+    expect(html).not.toContain('重规划前的执行记录')
+    expect(html).not.toContain('未归属执行记录')
+    expect(html).not.toContain('旧计划子步骤')
+    expect(html).not.toContain('未归属子步骤')
+  })
+
   it('仅在 Todo 总面板收起时显示当前步骤与调用技能', () => {
     const report: ReportItem = {
       ...createInitialReportStreamState(),
@@ -324,18 +376,18 @@ describe('ReportTodoList', () => {
       status: 'running',
       thinkingCompleted: true,
       todoOpen: false,
-      tasks: [{ content: '生成订单查询 SQL', status: 'in_progress' }],
+      tasks: [{ content: '核实预测流程并基于全年数据预测2026年1-3月', status: 'in_progress' }],
       currentPlan: {
         entryId: 'plan-activity',
-        tasks: [{ content: '生成订单查询 SQL', status: 'in_progress' }],
+        tasks: [{ content: '核实预测流程并基于全年数据预测2026年1-3月', status: 'in_progress' }],
       },
       stepsById: {
         'step-activity': {
           id: 'step-activity',
-          title: 'execute_skill_script_file',
+          title: 'sql_query',
           action: 'execute_skill_script_file',
-          actionIntention: '生成订单查询 SQL',
-          status: 'in_progress',
+          actionIntention: '执行订单总金额查询SQL',
+          status: 'done',
           chunks: [{ entryId: '3-0', outputType: 'text', content: 'Skill: sql-generator' }],
           firstEntryId: '2-0',
           lastEntryId: '3-0',
@@ -345,14 +397,14 @@ describe('ReportTodoList', () => {
         },
       },
       stepOrder: ['step-activity'],
-      executionGroups: [{ key: 'plan-activity:0', planEntryId: 'plan-activity', taskIndex: 0, taskContent: '生成订单查询 SQL', stepIds: ['step-activity'] }],
+      executionGroups: [{ key: 'plan-activity:0', planEntryId: 'plan-activity', taskIndex: 0, taskContent: '核实预测流程并基于全年数据预测2026年1-3月', stepIds: ['step-activity'] }],
     }
 
     const collapsed = renderToStaticMarkup(<ReportTodoList report={report} onToggleTodo={() => undefined} onToggleTask={() => undefined} />)
     const expanded = renderToStaticMarkup(<ReportTodoList report={{ ...report, todoOpen: true }} onToggleTodo={() => undefined} onToggleTask={() => undefined} />)
 
-    expect(collapsed).toContain('当前正在执行 生成订单查询 SQL 步骤，调用 sql-generator 技能')
+    expect(collapsed).toContain('当前正在执行 核实预测流程并基于全年数据预测2026年1-3月 步骤，调用 sql_query 技能')
     expect(collapsed).toContain('aria-live="polite"')
-    expect(expanded).not.toContain('当前正在执行 生成订单查询 SQL 步骤，调用 sql-generator 技能')
+    expect(expanded).not.toContain('当前正在执行 核实预测流程并基于全年数据预测2026年1-3月 步骤，调用 sql_query 技能')
   })
 })

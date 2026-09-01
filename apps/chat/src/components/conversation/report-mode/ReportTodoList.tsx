@@ -166,11 +166,6 @@ const ReportTodoList: React.FC<ReportTodoListProps> = ({ report, onToggleTodo, o
 
   const currentTask = getCurrentTaskTitle(report.tasks)
   const collapsedExecutionSummary = getCollapsedTodoExecutionSummary(report)
-  const matchedGroupKeys = new Set<string>()
-  const unassignedSteps = report.unassignedStepIds
-    .map((stepId) => report.stepsById[stepId])
-    .filter((step): step is ReportPublicStep => Boolean(step))
-    .filter((step) => isVisibleReportStep(step, isKnownReportArtifactStep(report, step.id)))
 
   return (
     <section className={styles.panel}>
@@ -199,7 +194,6 @@ const ReportTodoList: React.FC<ReportTodoListProps> = ({ report, onToggleTodo, o
             {report.tasks.map((task, index) => {
               const taskKey = getTaskKey(report.currentPlan?.entryId, index)
               const groups = getTaskGroups(report, task.content, index)
-              groups.forEach((group) => matchedGroupKeys.add(group.key))
               const hideReportContent = isReportGenerationTask(task)
               const steps = getGroupSteps(report, groups, hideReportContent)
               const summary = getTaskSummary(report, task.content, index)
@@ -231,33 +225,6 @@ const ReportTodoList: React.FC<ReportTodoListProps> = ({ report, onToggleTodo, o
                 </div>
               )
             })}
-
-            {report.executionGroups
-              .filter((group) => !matchedGroupKeys.has(group.key))
-              .map((group) => {
-                const hideReportContent = isReportGenerationTask({ content: group.taskContent })
-                return (
-                  <div key={group.key} className={styles.todoRow}>
-                    <div className={styles.historyGroupTitle}>重规划前的执行记录：{group.taskContent}</div>
-                    <div className={styles.executionList}>
-                      {getGroupSteps(report, [group], hideReportContent).map((step) => (
-                        <ExecutionStep key={step.id} step={step} hideReportContent={hideReportContent || isKnownReportArtifactStep(report, step.id)} />
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-
-            {unassignedSteps.length > 0 && (
-              <div className={styles.todoRow}>
-                <div className={styles.historyGroupTitle}>未归属执行记录</div>
-                <div className={styles.executionList}>
-                  {unassignedSteps.map((step) => (
-                    <ExecutionStep key={step.id} step={step} hideReportContent={isKnownReportArtifactStep(report, step.id)} />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
