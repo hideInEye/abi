@@ -34,35 +34,45 @@ const examples = [
 
 interface NewChatWelcomeProps {
   onExampleClick?: (text: string) => void
+  /** 自定义标题（默认 TrustABI · 芯智） */
+  title?: string
+  /** 自定义副标题文案（默认平台介绍；助手会话传开场引导） */
+  subtitle?: string
+  /** 隐藏推荐示例卡片（助手会话欢迎页只展示开场引导文案） */
+  hideExamples?: boolean
 }
 
-const NewChatWelcome: React.FC<NewChatWelcomeProps> = ({ onExampleClick }) => {
+const NewChatWelcome: React.FC<NewChatWelcomeProps> = ({ onExampleClick, title, subtitle, hideExamples }) => {
   return (
     <div className="h-full w-full flex flex-col overflow-hidden" style={{ background: 'transparent' }}>
       {/* Main content */}
       <div className="welcome-view flex-1 min-h-0 overflow-y-auto">
-        <div className="welcome-title">TrustABI · 芯智</div>
+        <div className="welcome-title">{title ?? 'TrustABI · 芯智'}</div>
         <p className="welcome-subtitle">
-          您的全能数据智能专家。从智能问数到归因预测，再到一键生成报告，芯智助您高效挖掘数据价值，精准获取商业洞察。
+          {subtitle ?? '您的全能数据智能专家。从智能问数到归因预测，再到一键生成报告，芯智助您高效挖掘数据价值，精准获取商业洞察。'}
         </p>
 
-        <div className="welcome-section-title">推荐示例</div>
-        <div className="welcome-cases-grid">
-          {examples.map((item) => (
-            <div
-              key={item.key}
-              className={`welcome-case-card ${item.color}`}
-              style={{ cursor: 'pointer' }}
-              onClick={() => onExampleClick?.(item.title)}
-            >
-              <div className="case-icon">{item.icon}</div>
-              <div className="case-content">
-                <div className="case-title">{item.title}</div>
-                <div className="case-desc">{item.desc}</div>
-              </div>
+        {!hideExamples && (
+          <>
+            <div className="welcome-section-title">推荐示例</div>
+            <div className="welcome-cases-grid">
+              {examples.map((item) => (
+                <div
+                  key={item.key}
+                  className={`welcome-case-card ${item.color}`}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => onExampleClick?.(item.title)}
+                >
+                  <div className="case-icon">{item.icon}</div>
+                  <div className="case-content">
+                    <div className="case-title">{item.title}</div>
+                    <div className="case-desc">{item.desc}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
     </div>
   )

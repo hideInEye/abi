@@ -13,6 +13,8 @@ interface Props {
   agent?: (AgentMock & { icon?: string }) | null
   open: boolean
   onClose: () => void
+  /** 分享成功（拿到分享链接）后回调，用于刷新分享记录 */
+  onShared?: () => void
 }
 
 /**
@@ -20,7 +22,7 @@ interface Props {
  * UI 参考「我的大屏」分享弹窗（访问密码保护 / 链接有效期 / 生成链接 / 复制链接）。
  * 对接统一分享接口 /api/dashboard/api/v1/project/share（abi 助手 type=workflow）。
  */
-const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose }) => {
+const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }) => {
   const spaceId = useAppSelector(getSpaceId)
   const [sharePasswordFlag, setSharePasswordFlag] = useState(false)
   const [shareLink, setShareLink] = useState('')
@@ -64,6 +66,8 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose }) => {
       // 直接展示后端返回的分享链接（host 由使用方自行替换）
       setShareLink(shareUrl)
       setSharePassword((data as any)?.sharePassword ?? null)
+      // 新增分享记录后通知外部刷新（分享记录 tab 保持挂载，不会自动重拉）
+      onShared?.()
     } finally {
       setShareLoading(false)
     }

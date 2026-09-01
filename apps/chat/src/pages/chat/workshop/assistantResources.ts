@@ -30,6 +30,10 @@ export interface AssistantBoundMcp {
 export interface AssistantBoundResources {
   appId: string
   appName: string
+  /** 开场引导（version.prologue，欢迎页文案用） */
+  prologue: string
+  /** 助手描述（prologue 缺失时的欢迎页兜底文案） */
+  description: string
   semantics: AssistantBoundSemantic[]
   skills: AssistantBoundSkill[]
   mcps: AssistantBoundMcp[]
@@ -98,6 +102,8 @@ export function mapAssistantBoundResources(detail: any, fallbackAppId?: number |
   return {
     appId: String(safe.appId ?? fallbackAppId ?? ''),
     appName: safe.appName || '',
+    prologue: version?.prologue || safe.prologue || '',
+    description: safe.description || '',
     semantics,
     skills,
     mcps,

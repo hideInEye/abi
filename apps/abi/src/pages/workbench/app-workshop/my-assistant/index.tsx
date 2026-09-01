@@ -58,6 +58,8 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
   // 分享弹窗：当前分享的助手（为空时关闭）
   const [shareAgent, setShareAgent] = useState<AgentCard | null>(null);
+  // 分享记录刷新信号：分享成功后自增，驱动保持挂载的分享记录 tab 重拉（antd Tabs 不卸载非激活页签）
+  const [shareRefreshToken, setShareRefreshToken] = useState(0);
   // 页签：已发布助手 / 分享记录
   const [activeTab, setActiveTab] = useState<string>('published');
 
@@ -344,7 +346,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
       label: '分享记录',
       children: (
         <div className="h-full min-h-0">
-          <ShareRecordList />
+          <ShareRecordList refreshToken={shareRefreshToken} />
         </div>
       )
     }
@@ -375,6 +377,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
         agent={shareAgent}
         open={Boolean(shareAgent)}
         onClose={() => setShareAgent(null)}
+        onShared={() => setShareRefreshToken(t => t + 1)}
       />
     </div>
   );

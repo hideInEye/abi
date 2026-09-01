@@ -1,6 +1,7 @@
 import {memo, useCallback, useEffect, useState} from 'react';
 import {Empty, Input, Select} from 'antd';
 import {LeftOutlined, RightOutlined} from '@ant-design/icons';
+import {Monitor} from '@icon-park/react';
 import baseApi from '../../api/BaseApi.ts';
 import {globalMessage} from '../../framework/message/GlobalMessage.tsx';
 import '../home/project-list/ProjectList.less';
@@ -13,6 +14,8 @@ interface ShareRecordItem {
     sharePassword: string;
     shareTime: string;
     expiration: string;
+    statusLabel: string;
+    statusOff: boolean;
 }
 
 /** 时间格式化：去掉 T 分隔符 */
@@ -20,8 +23,21 @@ function fmtTime(t?: string | null): string {
     return t ? String(t).replace('T', ' ') : '-';
 }
 
+/** 分享状态标签：过期时间优先，其次后端 status 字段，兜底「当前启用」（与助手卡片状态口径一致） */
+function getShareStatus(item: any): { label: string; off: boolean } {
+    if (item.expirationDate) {
+        const t = new Date(String(item.expirationDate).replace('T', ' ')).getTime();
+        if (!Number.isNaN(t) && t < Date.now()) return {label: '已过期', off: true};
+    }
+    // 大屏域 status '0'=已发布启用、'2'=取消发布；助手域 '1'=启用。仅显式停用才置灰，'0'/'1' 均视为当前启用
+    const s = item.status ?? item.shareStatus;
+    if (s === '2' || s === 2 || s === false || s === 'off' || s === 'disabled') return {label: '已停用', off: true};
+    return {label: '当前启用', off: false};
+}
+
 /** 将后端分享记录映射为展示结构 */
 function mapShareRecord(item: any): ShareRecordItem {
+    const status = getShareStatus(item);
     return {
         id: String(item.id ?? item.shareCode ?? item.projectId ?? ''),
         name: item.projectName || item.appName || item.name || '-',
@@ -29,6 +45,8 @@ function mapShareRecord(item: any): ShareRecordItem {
         sharePassword: item.sharePassword ?? '',
         shareTime: fmtTime(item.createTime || item.shareTime),
         expiration: item.expirationDate ? fmtTime(item.expirationDate) : '永久',
+        statusLabel: status.label,
+        statusOff: status.off,
     };
 }
 
@@ -137,19 +155,35 @@ const ShareRecordList = memo(() => {
                     <div className="abi-card-grid">
                         <div className="abi-card-grid-inner">
                             {records.map(r => (
-                                <div key={r.id || r.shareUrl} className="abi-data-card">
-                                    <div className="abi-data-card-head">
-                                        <div className="abi-data-card-title">
-                                            <span className="abi-data-card-name" title={r.name}>{r.name}</span>
+                                <div key={r.id || r.shareUrl} className="abi-assistant-card">
+                                    {/* 头部：渐变图标 + 名称/分享时间/过期时间（卡片结构与助手端分享记录保持一致） */}
+                                    <div className="ac-head">
+                                        <div
+                                            style={{
+                                                alignItems: 'center',
+                                                background: 'linear-gradient(135deg,#6366f1,#818cf8)',
+                                                borderRadius: 12,
+                                                boxShadow: '0 3px 10px rgba(99,102,241,0.35)',
+                                                display: 'flex',
+                                                flexShrink: 0,
+                                                height: 42,
+                                                justifyContent: 'center',
+                                                width: 42,
+                                            }}
+                                        >
+                                            <Monitor theme="outline" size={20} fill="#fff"/>
+                                        </div>
+                                        <div className="ac-main">
+                                            <div className="ac-title" title={r.name}>{r.name}</div>
+                                            <div className="ac-desc">分享时间：{r.shareTime}　过期时间：{r.expiration}</div>
                                         </div>
                                     </div>
-                                    <div className="abi-data-card-body">
-                                        <div className="row"><span className="lbl">分享时间</span><span className="val">{r.shareTime}</span></div>
-                                        <div className="row"><span className="lbl">过期时间</span><span className="val">{r.expiration}</span></div>
-                                        <div className="row"><span className="lbl">访问密码</span><span className="val">{r.sharePassword || '无'}</span></div>
-                                    </div>
-                                    <div className="abi-data-card-footer">
-                                        <button className="abi-card-act" onClick={() => handleCopy(r)}>复制链接</button>
+                                    {/* 底部：分享状态标签 + 复制链接和密码（含密码时一并复制） */}
+                                    <div className="ac-footer">
+                                        <span className={`ac-tag${r.statusOff ? ' off' : ''}`}>{r.statusLabel}</span>
+                                        <div className="ac-actions">
+                                            <button className="ac-btn" onClick={() => handleCopy(r)}>复制链接和密码</button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
