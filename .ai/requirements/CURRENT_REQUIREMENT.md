@@ -1095,3 +1095,106 @@ dashboard 微应用「我的大屏 → 分享记录」卡片仍为旧版行式�
 - 我的大屏页签栏左右内边距、页签间距、上下内边距、背景与属性建模 / 我的助手 / 我的对话页签栏一致。
 - dashboard `ProjectList.less` less 编译通过，类型检查不新增错误。
 - 新增 run log：`.ai/runs/2026-08-31-app-workshop-tabs-width-unify/`。
+
+## 2026-08-31 追加六：助手分享悬浮框交互对话 AI 消息 Markdown 渲染（窄屏适配）
+
+### 需求类型
+
+前端渲染/样式增强（纯前端，不改接口协议、不改对话流程）。
+
+### 背景
+
+助手分享页交互模式对话（选语义 → 正常对话）流程已就绪；后端语义虽未就绪，但问数/归因/预测类回复为 Markdown 富文本（表格、列表、标题、加粗），而分享悬浮框（约 420px 宽）此前 AI 消息按纯文本渲染，富文本无法展示。用户口径：「和主对话一样，选择语义，然后正常对话，就是具体 ai 消息样式要适配现在的宽度」。
+
+### 目标
+
+- `ChatWidget.tsx`：AI 消息改 Markdown 渲染，管线对齐主对话 ViewEle（`finalizeStreamText` 剥离 think/尾部 task_type JSON → 压缩连续换行 → 去 HTML 标签 → `marked.parse`），`marked.use({ breaks: true, gfm: true })`；历史消息与实时流消息渲染期统一清理（幂等）。human 消息保持纯文本气泡。
+- `index.css`：AI 消息改占满面板宽度的卡片（`.abi-cw-msg-ai-body`），新增 `.abi-cw-md` 窄屏紧凑 Markdown 样式（表格 `display:block + overflow-x:auto` 横向滚动、标题/列表/代码块紧凑化）；流式光标改 `.abi-cw-msg-ai-body.streaming::after` 闪烁。
+
+### 非目标
+
+- 不新增问数/归因/预测模式入口、拼句模板、推荐问题接口；对话流程（选语义 + 正常对话）不动。
+- 不改 service.ts / history.ts 数据流。
+- 不渲染图表（view 消息），富文本仍以 Markdown 文本形式展示。
+
+### 影响范围预期
+
+- 修改：`apps/chat/src/components/chat-widget/ChatWidget.tsx`
+- 修改：`apps/chat/src/components/chat-widget/index.css`
+- 新增 run log：`.ai/runs/2026-08-31-chat-widget-ai-markdown/`
+
+### 验收标准
+
+- 分享页对话中，AI 回复的表格/列表/标题/加粗按 Markdown 渲染，表格超宽时横向滚动不撑破面板。
+- 流式生成中显示闪烁光标；历史消息回放渲染结果一致（think 段与尾部 JSON 不出现）。
+- chat-widget 单测、`tsc --noEmit`、`pnpm build` 通过。
+
+## 2026-08-31 追加七：分享悬浮框对齐主对话交互模式（深度思考/图表/切换/点赞点踩，接口同主对话）
+
+### 需求类型
+
+前端功能增强（复用主对话既有接口，不新增后端协议）
+
+### 背景
+
+用户口径：「要和正常的是一样的，深度思考，描述分析，图表，然后支持切换图表，底部点赞点踩」「就是和 chat 一样的，接口也是一样的」。即分享悬浮框的 AI 消息形态与数据链路完整对齐主对话。
+
+### 目标
+
+- 深度思考：流中实时展示「深度思考中...」（可折叠），完成后「已深度思考」；think 段由 `parseAiRaw` 结构化剥离。
+- 图表：`[DONE]` 后尾部 JSON 含 `sql` 时，走与主对话同接口 `/chat-proxy/api/v1/chat/db/query` 查数，ECharts 渲染（option 与 ViewEle 共用 `helpers/chartOption.ts`）；类型白名单与 ViewEle 一致，支持 7 类切换。
+- 轮次与点赞点踩：同主对话接口 `round_index/max` 与 `feedback/add`；再点同状态 = 取消评价回 0，成功后本地高亮。
+- 历史消息：加载后同一套解析补 thinking/图表（有 dbName 时）。
+- 抽取共享：`conversation/helpers/chartOption.ts`（processChartData/getChartOption/parseISO8601Duration/parseISODate/DEFAULT_CHART_STYLE），ViewEle 改 import，行为等价。
+- 降级：session/add 未下发 `db_name` 时图表不展示（对齐主对话 dbName 守卫）。
+
+### 非目标
+
+- 不实现表格视图/SQL 面板/图表配置弹窗/导出等 ViewEle 附属能力。
+- 不改主对话既有交互；不新增后端接口。
+
+### 影响范围预期
+
+- 新增：`apps/chat/src/components/conversation/helpers/chartOption.ts`
+- 修改：`ViewEle.tsx`（改 import）、`chat-widget/{service,history,ChatWidget,index.css}`、`service.test.ts`
+- 更新 run log：`.ai/runs/2026-08-31-chat-widget-ai-markdown/`
+
+### 验收标准
+
+- 分享对话中 AI 消息依次呈现：深度思考折叠面板 → Markdown 描述分析 → 图表（可切换类型）→ 底部点赞点踩。
+- SQL 查数/轮次/评价走主对话同路径接口；shareCode 随 body 下发免登录。
+- chat-widget 单测（23/23）、`tsc --noEmit`、`pnpm build` 通过；ViewEle 图表渲染行为等价。
+
+## 2026-09-01 追加：MCP 安全认证方案可编辑性与下行/上行选择持久化修复
+
+### 需求类型
+
+前端缺陷修复（表单交互 + 提交/回显格式，不改后端接口协议）。
+
+### 背景
+
+1. bearer 模式下 `updateScheme` 在任意字段变更时都强制用平台 token 覆盖 `defaultCredential`，手动编辑「默认凭证」会被立即覆盖，实际不可编辑。
+2. 下行/上行认证选择存于 `toolSpecification.extensions`。前端原先提交嵌套对象，后端 extensions 为扁平 Map<String,String>，嵌套对象被丢弃（详情返回 `toolSpec.extensions` 为 `{}`），导致退出编辑再回来选择为空。
+
+### 目标
+
+- 仅在切换到 bearer 时自动填充平台 token；手动编辑默认凭证/ID 不再被覆盖。
+- extensions 保持嵌套对象直传（与提供给后端的传参版本一致）；后端补字段支持，前端回显按对象直读，不做编码猜测。
+
+### 非目标
+
+- 不修改 basic/apiKey 模式、安全方案其他字段、MCP 列表/详情/删除/状态切换逻辑。
+- 不修改 tools/toolsMeta/securitySchemes 的提交字段名与结构。
+
+### 影响范围预期
+
+- `apps/abi/src/pages/component/system/plugin/components/SecuritySchemeSection.tsx`
+- `apps/abi/src/pages/component/system/plugin/components/PlugUpdate.tsx`
+- `apps/abi/src/pages/component/system/plugin/index.tsx`
+- `.ai/runs/2026-09-01-mcp-security-scheme-fixes/`
+
+### 验收标准
+
+- bearer 默认凭证可手动修改且不被自动填充覆盖；新增方案/切换到 bearer 时仍自动填充。
+- 后端补齐 extensions 字段支持后，重新编辑能正确回显下行/上行选择及透明认证/凭证覆盖（前端提交/回显逻辑已就绪）。
+- tsc 不新增报错。

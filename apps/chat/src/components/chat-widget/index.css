@@ -1,5 +1,5 @@
 /* 助手分享对话悬浮框样式：全量 abi-cw- 前缀，避免污染宿主页面；不依赖 Tailwind。
-   视觉对齐大屏对话面板 AiChatPanel（#1677ff/#4096ff 蓝色渐变主题）。 */
+   视觉对齐主对话（glassmorphism 主题：#5b7cf7 蓝 / #8b5cf6 紫 / 浅薰衣草画布 + 白色内容卡）。 */
 
 .abi-cw-root {
   font-family: 'Helvetica Neue', Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -19,7 +19,7 @@
 .abi-cw-page {
   width: 100%;
   min-height: 100vh;
-  background: #f2f5fa;
+  background: linear-gradient(160deg, #d5daf5 0%, #dfe6f8 60%, #e2d9f3 100%);
 }
 
 .abi-cw-page .abi-cw-panel {
@@ -53,9 +53,10 @@
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #e9edf4;
+  box-shadow: 0 8px 32px rgba(26, 39, 68, 0.08);
 }
 
 /* ── 头部（拖拽把手，对齐大屏 ai-chat-header） ── */
@@ -67,8 +68,8 @@
   gap: 8px;
   padding: 0 16px;
   height: 52px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #e8e8e8;
+  background: rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid rgba(130, 140, 200, 0.16);
   cursor: move;
   touch-action: none;
   user-select: none;
@@ -78,8 +79,8 @@
   flex-shrink: 0;
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
-  border-radius: 6px;
+  background: linear-gradient(135deg, #5b7cf7 0%, #8b5cf6 100%);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -116,8 +117,8 @@
 }
 
 .abi-cw-action-btn:hover {
-  background: #e6f4ff;
-  color: #1677ff;
+  background: rgba(91, 124, 247, 0.1);
+  color: #5b7cf7;
 }
 
 .abi-cw-action-btn svg {
@@ -125,51 +126,13 @@
   height: 16px;
 }
 
-/* ── 思考状态栏（对齐大屏 ai-status-bar） ── */
-.abi-cw-status-bar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 16px;
-  background: #f0f5ff;
-  border-bottom: 1px solid #e8e8e8;
-}
-
-.abi-cw-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #1778ff;
-  flex-shrink: 0;
-}
-
-.abi-cw-status-dot.loading {
-  animation: abi-cw-pulse 1s infinite;
-}
-
-.abi-cw-status-text {
-  font-size: 12px;
-  color: #1778ff;
-}
-
-@keyframes abi-cw-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
-
-/* ── 消息区 ── */
+/* ── 消息区（浅薰衣草画布，同主对话背景，白色内容卡浮于其上） ── */
 .abi-cw-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding: 16px 12px;
-  background: #fff;
+  background: linear-gradient(180deg, #e4e9f9 0%, #eaeefb 100%);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -208,7 +171,7 @@
   width: 28px;
   height: 28px;
   border: 3px solid #e8e8e8;
-  border-top-color: #1677ff;
+  border-top-color: #5b7cf7;
   border-radius: 50%;
   animation: abi-cw-spin 0.8s linear infinite;
 }
@@ -244,7 +207,7 @@
 }
 
 .abi-cw-password input:focus {
-  border-color: #1677ff;
+  border-color: #5b7cf7;
 }
 
 .abi-cw-password-error {
@@ -256,7 +219,7 @@
 .abi-cw-btn-primary {
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%);
   color: #fff;
   padding: 8px 16px;
   font-size: 14px;
@@ -272,58 +235,6 @@
   cursor: not-allowed;
 }
 
-/* 欢迎态 */
-.abi-cw-welcome {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-align: center;
-  padding: 24px 16px;
-}
-
-.abi-cw-welcome-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-}
-
-.abi-cw-welcome-desc {
-  font-size: 13px;
-  color: #8c8c8c;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-
-.abi-cw-rec-list {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  max-width: 320px;
-}
-
-.abi-cw-rec-item {
-  border: 1px solid #e8e8e8;
-  background: #f5f7fa;
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: #595959;
-  font-size: 13px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s;
-}
-
-.abi-cw-rec-item:hover {
-  border-color: #1677ff;
-  color: #1677ff;
-  background: #e6f4ff;
-}
-
 /* 消息流（对齐大屏 ai-message：时间置于气泡下方） */
 .abi-cw-msg {
   display: flex;
@@ -331,48 +242,16 @@
   max-width: 88%;
 }
 
-.abi-cw-msg-bubble {
-  padding: 10px 14px;
-  font-size: 13px;
-  line-height: 1.6;
-  word-break: break-word;
-  white-space: pre-wrap;
-  user-select: text;
-  cursor: text;
-}
-
-.abi-cw-msg-time {
-  font-size: 11px;
-  color: #8c8c8c;
-  margin-top: 4px;
-  padding: 0 4px;
-}
-
 .abi-cw-msg-human {
   align-self: flex-end;
   align-items: flex-end;
 }
 
-.abi-cw-msg-human .abi-cw-msg-bubble {
-  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
-  color: #fff;
-  border-radius: 12px 12px 2px 12px;
-}
-
-.abi-cw-msg-human .abi-cw-msg-time {
-  text-align: right;
-}
-
 .abi-cw-msg-ai {
-  align-self: flex-start;
+  align-self: stretch;
   align-items: flex-start;
-}
-
-.abi-cw-msg-ai .abi-cw-msg-bubble {
-  background: #f5f7fa;
-  color: #333;
-  border-radius: 12px 12px 12px 2px;
-  border: 1px solid #e8e8e8;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* ── 输入区（对齐大屏 ai-chat-input-area） ── */
@@ -391,8 +270,8 @@
 }
 
 .abi-cw-input-box:focus-within {
-  border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  border-color: #5b7cf7;
+  box-shadow: 0 0 0 2px rgba(91, 124, 247, 0.1);
 }
 
 .abi-cw-input {
@@ -666,9 +545,9 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s;
   color: #fff;
@@ -714,23 +593,6 @@
 .abi-cw-stop svg {
   width: 14px;
   height: 14px;
-}
-
-/* 流式生成光标 */
-.abi-cw-cursor {
-  display: inline-block;
-  width: 2px;
-  height: 14px;
-  margin-left: 2px;
-  vertical-align: -2px;
-  background: #1677ff;
-  animation: abi-cw-blink 1s steps(2) infinite;
-}
-
-@keyframes abi-cw-blink {
-  50% {
-    opacity: 0;
-  }
 }
 
 .abi-cw-disclaimer {
