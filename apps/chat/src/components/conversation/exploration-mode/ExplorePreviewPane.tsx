@@ -13,7 +13,7 @@ interface ExplorePreviewPaneProps {
 }
 
 /** 参考产品图绘制的双栏收起图标；路径使用 currentColor 以复用按钮交互色。 */
-const CollapseIcon: React.FC = () => (
+export const CollapseIcon: React.FC = () => (
   <svg viewBox="0 0 20 20" width={20} height={20} fill="none" aria-hidden="true" focusable="false">
     <path d="M11.5 3.5v5h5M8.5 16.5v-5h-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>

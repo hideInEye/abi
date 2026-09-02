@@ -399,36 +399,6 @@
   gap: 10px;
 }
 
-.processCode {
-  overflow: auto;
-  border: 1px solid rgba(91, 124, 247, 0.12);
-  border-radius: 10px;
-  background:
-    linear-gradient(135deg, rgba(26, 39, 68, 0.06) 0%, rgba(91, 124, 247, 0.03) 100%);
-  color: var(--ink-2, #333c4f);
-  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
-  font-size: 12px;
-  line-height: 1.7;
-  margin: 0;
-  padding: 10px 12px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  position: relative;
-}
-
-/* 代码块左上角小标记 */
-.processCode::before {
-  content: '';
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(91, 124, 247, 0.35);
-  box-shadow: 0 0 6px rgba(91, 124, 247, 0.3);
-}
-
 /* 无过程文本/入参时的回退展示：当前动作 + 执行原因 */
 .processMeta {
   display: flex;
@@ -1323,4 +1293,92 @@
   .dataTable td {
     white-space: normal;
   }
+}
+
+/* ========== 千问风格代码块（ExploreCodeBlock） ========== */
+.codeBlock {
+  overflow: hidden;
+  border: 1px solid rgba(91, 124, 247, 0.12);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.codeBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 10px 5px 12px;
+  border-bottom: 1px solid rgba(91, 124, 247, 0.1);
+  background: linear-gradient(135deg, rgba(26, 39, 68, 0.05) 0%, rgba(91, 124, 247, 0.04) 100%);
+}
+
+.codeBlockLang {
+  color: var(--ink-2, #4f5c76);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.codeBlockActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.codeBlockAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--ink-2, #4f5c76);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 3px 6px;
+  transition: all 0.2s ease;
+}
+
+.codeBlockAction:hover {
+  background: rgba(91, 124, 247, 0.08);
+  color: var(--accent, #5b7cf7);
+}
+
+.codeBlockBody {
+  max-height: 360px;
+  overflow: auto;
+}
+
+/* ========== 代码编辑右侧面板（ExploreCodeEditorPane） ========== */
+.codeEditorLang {
+  flex: 0 0 auto;
+  border-radius: 6px;
+  background: rgba(91, 124, 247, 0.1);
+  color: var(--accent, #5b7cf7);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  padding: 1px 8px;
+}
+
+.codeEditorBody {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px 16px 16px;
+}
+
+.codeEditorBody :global(.cm-editor) {
+  height: 100%;
+  border: 1px solid rgba(91, 124, 247, 0.12);
+  border-radius: 10px;
+  outline: none;
+}
+
+.codeEditorBody :global(.cm-scroller) {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 12px;
+  line-height: 1.7;
 }

@@ -15,6 +15,8 @@ import { useConversationController, type ConversationProps } from './hooks/useCo
 import { useExploreConversation } from './exploration-mode/useExploreConversation'
 import type { ExploreSendOptions } from './exploration-mode/types'
 import ExplorePreviewPane from './exploration-mode/ExplorePreviewPane'
+import ExploreCodeEditorPane from './exploration-mode/ExploreCodeEditorPane'
+import type { ExploreCodeEditPayload } from './exploration-mode/ExploreCodeBlock'
 import { useExplorePreviewPresence } from './exploration-mode/useExplorePreviewPresence'
 import ReportPreviewPane from './report-mode/ReportPreviewPane'
 import { useReportConversation } from './report-mode/useReportConversation'
@@ -137,14 +139,36 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     [exploreItemsAll, activeExploreId],
   )
   const explorePreview = useExplorePreviewPresence(activeExplore)
+  // 代码编辑右侧面板：与工作室 / 报告侧栏互斥，共用同一套分屏动画壳
+  const [codeEditor, setCodeEditor] = useState<ExploreCodeEditPayload>()
   const exploreStatusRef = React.useRef<Map<string, string>>(new Map())
   const openExplore = React.useCallback((exploreId: string) => {
     reportController.closeReport()
+    setCodeEditor(undefined)
     setActiveExploreId(exploreId)
   }, [reportController])
   const closeExplore = React.useCallback(() => setActiveExploreId(undefined), [])
+  const openCodeEditor = React.useCallback((payload: ExploreCodeEditPayload) => {
+    reportController.closeReport()
+    setActiveExploreId(undefined)
+    setCodeEditor(payload)
+  }, [reportController])
+  const closeCodeEditor = React.useCallback(() => setCodeEditor(undefined), [])
+  // 编辑面板挂载后延迟一帧加 open 类，复用工作室同一套宽度过渡动画
+  const [codeEditorVisible, setCodeEditorVisible] = useState(false)
+  useEffect(() => {
+    if (!codeEditor) {
+      setCodeEditorVisible(false)
+      return
+    }
+    const raf = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => setCodeEditorVisible(true))
+    })
+    return () => window.cancelAnimationFrame(raf)
+  }, [codeEditor])
   const openReport = React.useCallback((reportId: string) => {
     setActiveExploreId(undefined)
+    setCodeEditor(undefined)
     reportController.openReport(reportId)
   }, [reportController])
 
@@ -231,9 +255,9 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   }, [props.onReportPreviewChange, reportPreview.mounted])
 
   useEffect(() => {
-    // 探索右侧工作室打开时，父级输入框需要收进左侧对话区域，而不是继续横跨全宽。
-    props.onExplorePreviewChange?.(explorePreview.mounted)
-  }, [props.onExplorePreviewChange, explorePreview.mounted])
+    // 探索右侧工作室或代码编辑面板打开时，父级输入框需要收进左侧对话区域，而不是继续横跨全宽。
+    props.onExplorePreviewChange?.(explorePreview.mounted || Boolean(codeEditor))
+  }, [props.onExplorePreviewChange, explorePreview.mounted, codeEditor])
 
   // 同步父级传入的 currentModel
   useEffect(() => {
@@ -301,7 +325,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         </div>
       )}
 
-      <div className={`${reportStyles.body} ${reportPreview.visible || explorePreview.visible ? reportStyles.bodySplit : ''}`}>
+      <div className={`${reportStyles.body} ${reportPreview.visible || explorePreview.visible || Boolean(codeEditor) ? reportStyles.bodySplit : ''}`}>
         <div className={`${reportStyles.conversationPane} ${reportPreview.mounted && reportController.mobileView === 'report' ? reportStyles.mobileHidden : ''}`}>
           <MessageList
             conv={conv}
@@ -339,6 +363,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             onOpenReport={openReport}
             onOpenExplore={openExplore}
             onCloseExplore={closeExplore}
+            onEditExploreCode={openCodeEditor}
             activeExploreId={activeExploreId}
             hideMessageNavRail={reportPreview.mounted || explorePreview.mounted}
             emptyContent={props.emptyContent}
@@ -354,12 +379,23 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
           </div>
         )}
 
-        {explorePreview.renderedItem && !reportPreview.mounted && (
+        {explorePreview.renderedItem && !reportPreview.mounted && !codeEditor && (
           <div
             className={`${reportStyles.reportPaneWrap} ${explorePreview.visible ? reportStyles.reportPaneWrapOpen : ''}`}
             data-transition-phase={explorePreview.phase}
           >
             <ExplorePreviewPane item={explorePreview.renderedItem} onClose={closeExplore} />
+          </div>
+        )}
+
+        {codeEditor && !reportPreview.mounted && (
+          <div className={`${reportStyles.reportPaneWrap} ${codeEditorVisible ? reportStyles.reportPaneWrapOpen : ''}`}>
+            <ExploreCodeEditorPane
+              code={codeEditor.code}
+              language={codeEditor.language}
+              title={codeEditor.title}
+              onClose={closeCodeEditor}
+            />
           </div>
         )}
       </div>
