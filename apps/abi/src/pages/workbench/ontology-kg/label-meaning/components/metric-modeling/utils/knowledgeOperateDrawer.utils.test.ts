@@ -48,7 +48,7 @@ describe('metric create/edit display names', () => {
     expect(
       formatMappedDimensionOptionTitle({
         bizName: '交易明细表_ # _收货城市',
-        techName: 'receive_city',
+        techName: 'trade_detail.receive_city',
       })
     ).toBe('收货城市（receive_city）')
   })

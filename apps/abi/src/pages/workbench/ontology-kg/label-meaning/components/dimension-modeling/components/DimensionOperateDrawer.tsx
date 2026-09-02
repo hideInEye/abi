@@ -130,7 +130,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     if (error) {
       return Promise.reject(new Error(error))
     }
-    const nextName = restoreMappedBizName(value, form.getFieldValue('mappedBizNameFieldName'))
+    const nextName = restoreMappedBizName(value, form.getFieldValue('mappedBizNameTableName'))
     const currentName = editingItem?.rawZhName || editingItem?.zhName || ''
     if (!groupId || nextName === currentName) {
       return Promise.resolve()
@@ -310,7 +310,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     const values = {
       ...formValues,
       dimCategoryName: form.getFieldValue('dimCategoryName'),
-      mappedBizNameFieldName: form.getFieldValue('mappedBizNameFieldName'),
+      mappedBizNameTableName: form.getFieldValue('mappedBizNameTableName'),
       mappedTechNameTableName: form.getFieldValue('mappedTechNameTableName'),
     }
     if (!groupId) {

@@ -8,6 +8,8 @@ import type { KnowledgeFormValues } from '../types/metricModeling.types'
 import { getMappedMetricFieldDisplayName } from '../utils/knowledgeOperateDrawer.utils'
 
 import styles from './knowledgeOperateDrawer.DimensionStep.module.scss'
+import { getDimensionTreeSelectionChange } from './knowledgeOperateDrawer.DimensionStep.utils'
+import type { DimensionSelectionTreeNode } from './knowledgeOperateDrawer.DimensionStep.utils'
 
 interface SelectedDimensionSnapshot {
   groupId?: string
@@ -134,7 +136,6 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
     () =>
       treeData.map(group => ({
         ...group,
-        checkable: false,
         children: group.children.map(item => ({
           ...item,
           disabled: targetKeys.includes(item.value),
@@ -146,7 +147,6 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
             </span>
           )
         })),
-        disableCheckbox: true,
         key: group.value,
         title: (
           <span className={styles.treeNodeTitle}>
@@ -202,11 +202,11 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
           dataSource={dataSource}
           listStyle={{ height: 420, width: '46%' }}
           render={item => item.title}
-          showSelectAll={false}
+          showSelectAll
           targetKeys={targetKeys}
           onChange={handleChange}
         >
-          {({ direction, filteredItems, onItemSelect, selectedKeys }) =>
+          {({ direction, filteredItems, onItemSelect, onItemSelectAll, selectedKeys }) =>
             direction === 'left' ? (
               <Tree
                 blockNode
@@ -215,8 +215,8 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
                 className={styles.dimensionTree}
                 treeData={transferTree}
                 onCheck={(_, info) => {
-                  const key = String(info.node.key)
-                  if (!key.startsWith('group-')) onItemSelect(key, !selectedKeys.includes(key))
+                  const selection = getDimensionTreeSelectionChange(info.node as unknown as DimensionSelectionTreeNode, info.checked)
+                  if (selection.keys.length > 0) onItemSelectAll(selection.keys, selection.checked)
                 }}
               />
             ) : (

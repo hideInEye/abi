@@ -153,7 +153,7 @@ export interface DimensionFormValues {
   englishName: string
   groupId?: number | string
   id?: number
-  mappedBizNameFieldName?: string
+  mappedBizNameTableName?: string
   mappedTechNameTableName?: string
   owner: string
   ownerEmail?: string

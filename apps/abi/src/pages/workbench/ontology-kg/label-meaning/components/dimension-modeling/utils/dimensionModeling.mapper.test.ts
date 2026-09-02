@@ -64,11 +64,11 @@ describe('dimensionModeling mapper', () => {
     })
     const values = buildFormValues(item)
 
-    expect(item.zhName).toBe('交易明细表')
+    expect(item.zhName).toBe('收货城市')
     expect(item.englishName).toBe('receive_city')
-    expect(values.zhName).toBe('交易明细表')
+    expect(values.zhName).toBe('收货城市')
     expect(values.englishName).toBe('receive_city')
-    expect(values.mappedBizNameFieldName).toBe('收货城市')
+    expect(values.mappedBizNameTableName).toBe('交易明细表')
     expect(values.mappedTechNameTableName).toBe('trade_detail')
   })
 
@@ -80,9 +80,9 @@ describe('dimensionModeling mapper', () => {
     })
     const values = buildFormValues(item)
 
-    expect(values.zhName).toBe('交易明细表')
+    expect(values.zhName).toBe('收货城市')
     expect(values.englishName).toBe('receive_city')
-    expect(values.mappedBizNameFieldName).toBe('收货城市')
+    expect(values.mappedBizNameTableName).toBe('交易明细表')
     expect(values.mappedTechNameTableName).toBe('trade_detail')
   })
 
@@ -442,20 +442,20 @@ describe('dimensionModeling mapper', () => {
         dimType: 'std',
         drillDirection: 'down',
         englishName: 'receive_city_new',
-        mappedBizNameFieldName: '收货城市',
+        mappedBizNameTableName: '交易明细表',
         mappedTechNameTableName: 'trade_detail',
         owner: '',
         relatedFieldKeys: [],
         status: 1,
         timeGranularity: [],
-        zhName: '交易明细表新'
+        zhName: '收货城市新'
       },
       id: 10,
       relatedFields: [],
       selectedGroupId: 9
     })
 
-    expect(payload.bizName).toBe('交易明细表新_#_收货城市')
+    expect(payload.bizName).toBe('交易明细表_#_收货城市新')
     expect(payload.techName).toBe('trade_detail.receive_city_new')
   })
 
