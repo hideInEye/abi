@@ -65,6 +65,8 @@ interface Props {
   chartType?: string
   currentTableData?: any[] // 当前表格数据，用于提取筛选选项
   showTitle?: boolean
+  /** 窄屏（分享面板）：隐藏配置/调试/大屏/导出/筛选等工具按钮，仅保留图/表/SQL 视图切换 */
+  hideTools?: boolean
 }
 
 const ChartHeader: React.FC<Props> = ({
@@ -89,6 +91,7 @@ const ChartHeader: React.FC<Props> = ({
   chartType,
   currentTableData = [],
   showTitle = true,
+  hideTools = false,
 }) => {
   const [filterValues, setFilterValues] = useState<Record<string, any>>({})
   const [allFilters, setAllFilters] = useState<FilterData[]>([]) // 二次引导筛选项
@@ -537,49 +540,57 @@ const ChartHeader: React.FC<Props> = ({
             <SvgIcon className="text-[1rem]" localIcon="share" />
           </span>
           */}
-          {showChartIcon && (
+          {showChartIcon && !hideTools && (
             <Tooltip title="图表配置">
               <span className="chart-header-icon" onClick={onConfigClick}>
                 <SettingOutlined />
               </span>
             </Tooltip>
           )}
-          <Tooltip title="模型调试">
-            <span className="chart-header-icon" onClick={onDebugClick}>
-              <BugOutlined />
-            </span>
-          </Tooltip>
-          <Tooltip title="大屏展示">
-            <span className="chart-header-icon" onClick={onFullscreenClick}>
-              <FullscreenOutlined />
-            </span>
-          </Tooltip>
-          <Tooltip title="数据导出">
-            <span className="chart-header-icon text-[#666] flex hover:text-[#3470f6]">
-              <Dropdown menu={{ items: exportMenuItems, onClick: handleDownloadClick }} placement="bottom" trigger={['click']}>
-                <Space>
-                  <DownloadOutlined />
-                </Space>
-              </Dropdown>
-            </span>
-          </Tooltip>
-          {/* 筛选条件Popover */}
-          <Tooltip title="数据筛选" open={open ? false : undefined}>
-            <Popover
-              content={popoverContent}
-              title={null} // 取消默认标题
-              trigger="click"
-              placement="bottomRight"
-              arrow={{ pointAtCenter: true }}
-              open={open}
-              onOpenChange={setOpen} // 监听popover打开/关闭状态
-            >
-              <span onClick={handleGetFileter} className="chart-header-icon text-[#666] hover:text-[#3470f6]">
-                <FilterOutlined />
-                {filterValuesLen > 0 && <span style={{ fontSize: '0.625rem' }}>{`(${filterValuesLen})`}</span>}
+          {!hideTools && (
+            <Tooltip title="模型调试">
+              <span className="chart-header-icon" onClick={onDebugClick}>
+                <BugOutlined />
               </span>
-            </Popover>
-          </Tooltip>
+            </Tooltip>
+          )}
+          {!hideTools && (
+            <Tooltip title="大屏展示">
+              <span className="chart-header-icon" onClick={onFullscreenClick}>
+                <FullscreenOutlined />
+              </span>
+            </Tooltip>
+          )}
+          {!hideTools && (
+            <Tooltip title="数据导出">
+              <span className="chart-header-icon text-[#666] flex hover:text-[#3470f6]">
+                <Dropdown menu={{ items: exportMenuItems, onClick: handleDownloadClick }} placement="bottom" trigger={['click']}>
+                  <Space>
+                    <DownloadOutlined />
+                  </Space>
+                </Dropdown>
+              </span>
+            </Tooltip>
+          )}
+          {/* 筛选条件Popover */}
+          {!hideTools && (
+            <Tooltip title="数据筛选" open={open ? false : undefined}>
+              <Popover
+                content={popoverContent}
+                title={null} // 取消默认标题
+                trigger="click"
+                placement="bottomRight"
+                arrow={{ pointAtCenter: true }}
+                open={open}
+                onOpenChange={setOpen} // 监听popover打开/关闭状态
+              >
+                <span onClick={handleGetFileter} className="chart-header-icon text-[#666] hover:text-[#3470f6]">
+                  <FilterOutlined />
+                  {filterValuesLen > 0 && <span style={{ fontSize: '0.625rem' }}>{`(${filterValuesLen})`}</span>}
+                </span>
+              </Popover>
+            </Tooltip>
+          )}
         </div>
       </header>
     </div>

@@ -14,9 +14,9 @@ interface ExploreCodeEditorPaneProps {
   language: ExploreCodeLanguage
   /** 代码所属步骤标题，展示在面板标题处。 */
   title?: string
-  onClose: () => void
+  onClose: () => void 
 }
-
+  
 /** 代码编辑右侧面板：与工作室共用同一套分屏壳，CodeMirror 支持就地编辑与复制。 */
 const ExploreCodeEditorPane: React.FC<ExploreCodeEditorPaneProps> = ({ code, language, title, onClose }) => {
   const [value, setValue] = useState(code)

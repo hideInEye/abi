@@ -139,6 +139,25 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     [exploreItemsAll, activeExploreId],
   )
   const explorePreview = useExplorePreviewPresence(activeExplore)
+    // 分屏 width 动画期间把工作室内宽冻结为终值：壳宽 0→48% 逐帧变化时，
+    // 面板内 markdown/表格不再逐帧重排（报告侧是 iframe 天然无此问题），外壳只做裁切揭示；动画结束恢复自适应
+    const [exploreFrozenWidth, setExploreFrozenWidth] = useState<number | undefined>(undefined)
+    const bodyRef = React.useRef<HTMLDivElement>(null)
+    useEffect(() => {
+      const phase = explorePreview.phase
+      if (phase === 'opening' || phase === 'closing') {
+        if (window.matchMedia?.('(max-width: 900px)').matches) return
+        const bodyWidth = bodyRef.current?.clientWidth
+        if (bodyWidth) setExploreFrozenWidth(Math.round(bodyWidth * 0.48))
+        return
+      }
+      if (phase === 'open') {
+        // 宽度过渡 0.3s，结束后解除冻结让面板重新跟随容器
+        const timer = window.setTimeout(() => setExploreFrozenWidth(undefined), 400)
+        return () => window.clearTimeout(timer)
+      }
+      setExploreFrozenWidth(undefined)
+    }, [explorePreview.phase])
   // 代码编辑右侧面板：与工作室 / 报告侧栏互斥，共用同一套分屏动画壳
   const [codeEditor, setCodeEditor] = useState<ExploreCodeEditPayload>()
   const exploreStatusRef = React.useRef<Map<string, string>>(new Map())
@@ -325,7 +344,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         </div>
       )}
 
-      <div className={`${reportStyles.body} ${reportPreview.visible || explorePreview.visible || Boolean(codeEditor) ? reportStyles.bodySplit : ''}`}>
+      <div ref={bodyRef} className={`${reportStyles.body} ${reportPreview.visible || explorePreview.visible || Boolean(codeEditor) ? reportStyles.bodySplit : ''}`}>
         <div className={`${reportStyles.conversationPane} ${reportPreview.mounted && reportController.mobileView === 'report' ? reportStyles.mobileHidden : ''}`}>
           <MessageList
             conv={conv}
@@ -384,7 +403,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             className={`${reportStyles.reportPaneWrap} ${explorePreview.visible ? reportStyles.reportPaneWrapOpen : ''}`}
             data-transition-phase={explorePreview.phase}
           >
-            <ExplorePreviewPane item={explorePreview.renderedItem} onClose={closeExplore} />
+            <ExplorePreviewPane item={explorePreview.renderedItem} onClose={closeExplore} frozenWidth={exploreFrozenWidth} />
           </div>
         )}
 

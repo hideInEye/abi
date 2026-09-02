@@ -62,6 +62,8 @@ interface PropsType {
   thinkTime?: number
   isDone?: boolean;
   useSimpleStyle?: boolean
+  /** 窄屏紧凑态（分享面板）：思考文字缩小、限高由 --think-max-h 控制 */
+  compact?: boolean
   getAnswer?: (props: any) => void;
   onMessageUpdate?: (props: any) => void;
 }
@@ -79,6 +81,7 @@ const AiEle: React.FC<PropsType> = ({
   thinkTime,
   useSimpleStyle = false,
   isDone,
+  compact = false,
   getAnswer,
   onMessageUpdate,
 }) => {
@@ -381,7 +384,7 @@ const AiEle: React.FC<PropsType> = ({
                   historySteps.map((step: any, index: number) => (
                     <div key={step.id || index} className={styles.thinkingStepItem}>
                       <div className={styles.thinkingStepBody}>
-                        <div className={styles.thinkingStepContent}>
+                        <div className={`${styles.thinkingStepContent} ${compact ? styles.thinkingStepContentCompact : ''}`}>
                           <ReactMarkdown>{toThinkingMarkdown(step.content)}</ReactMarkdown>
                         </div>
                       </div>
@@ -390,7 +393,7 @@ const AiEle: React.FC<PropsType> = ({
                 ) : fallbackThinkingContent ? (
                   <div className={styles.thinkingStepItem}>
                     <div className={styles.thinkingStepBody}>
-                      <div className={styles.thinkingStepContent}>
+                      <div className={`${styles.thinkingStepContent} ${compact ? styles.thinkingStepContentCompact : ''}`}>
                         <ReactMarkdown>{fallbackThinkingContent}</ReactMarkdown>
                       </div>
                     </div>
@@ -406,7 +409,7 @@ const AiEle: React.FC<PropsType> = ({
             <div
               ref={thinkingContentRef}
               onScroll={handleThinkingScroll}
-              className={styles.thinkingContent}
+              className={`${styles.thinkingContent} ${compact ? styles.thinkingContentCompact : ''}`}
               style={{
                 paddingTop: '1.25rem'
               }}

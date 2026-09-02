@@ -183,4 +183,10 @@ const ExploreRichText: React.FC<ExploreRichTextProps> = ({ text, tablesOnly = fa
   )
 }
 
-export default ExploreRichText
+// 仅当文本 / 过滤开关变化时才重渲染：MessageList 因打开工作室整棵重渲染时，
+// memo 后已渲染的富文本跳过 ReactMarkdown 重新解析（与表格重建），降低左栏重渲染开销。
+export default React.memo(
+  ExploreRichText,
+  (prev, next) =>
+    prev.text === next.text && Boolean(prev.tablesOnly) === Boolean(next.tablesOnly) && Boolean(prev.hideTables) === Boolean(next.hideTables),
+)

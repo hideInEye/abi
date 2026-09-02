@@ -41,12 +41,13 @@
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
+  /* 不用 backdrop-filter：毛玻璃会让卡内任何重绘都触发整块区域重新采样模糊（绘制耗时大头），
+     浅色底上提高不透明度视觉几乎等价 */
+  background: rgba(255, 255, 255, 0.9);
   box-shadow:
     0 0 0 1px rgba(91, 124, 247, 0.06),
     0 8px 32px rgba(15, 23, 42, 0.06),
     0 2px 8px rgba(91, 124, 247, 0.04);
-  backdrop-filter: blur(18px) saturate(1.25);
   overflow: hidden;
   position: relative;
 }
@@ -184,7 +185,7 @@
   letter-spacing: 0.5px;
 }
 
-/* 运行状态指示灯：小圆点 + 呼吸光晕 */
+/* 运行状态指示灯：小圆点 + 静态光晕（不做呼吸动画：infinite filter 动画会每帧重绘） */
 .statusDot {
   display: inline-block;
   width: 7px;
@@ -192,7 +193,6 @@
   border-radius: 50%;
   background: var(--accent, #5b7cf7);
   box-shadow: 0 0 8px rgba(91, 124, 247, 0.5);
-  animation: exploreGlowPulse 1.5s infinite;
   flex-shrink: 0;
 }
 
@@ -567,7 +567,11 @@
   border-radius: 50%;
   background: var(--accent, #5b7cf7);
   box-shadow: 0 0 8px rgba(91, 124, 247, 0.5);
-  animation: exploreGlowPulse 2s infinite;
+}
+
+/* 仅运行中点亮光点；不做常驻 filter 动画，避免每帧重绘拖帧 */
+.thinkingBoxRunning::before {
+  opacity: 1;
 }
 
 .thinkingText {
@@ -603,7 +607,6 @@
 
 .thinkingPending .anticon {
   color: var(--accent, #5b7cf7);
-  animation: exploreGlowPulse 1.5s infinite;
 }
 
 /* 待办事项：科技感增强 — 发光状态指示器 + 行高亮；填满待办面板剩余高度，超出内部滚动 */
@@ -667,7 +670,6 @@
   color: var(--accent, #5b5cf6);
   border: 1px solid rgba(91, 124, 247, 0.3);
   box-shadow: 0 0 8px rgba(91, 124, 247, 0.25);
-  animation: explorePulse 1.4s infinite;
 }
 
 .todoStatusDone {
@@ -777,7 +779,6 @@
 
 .skillRowRunning .anticon {
   color: var(--accent, #5b7cf7);
-  animation: exploreGlowPulse 1.5s infinite;
 }
 
 /* 历史探索：选中待办对应的技能高亮 */
@@ -850,7 +851,7 @@
   font-weight: 600;
 }
 
-/* 运行中提示左侧动态扫描线 */
+/* 运行中提示左侧装饰线（静态：扫描线动画会每帧重绘） */
 .runningHint::before {
   content: '';
   position: absolute;
@@ -863,7 +864,6 @@
     rgba(91, 124, 247, 0.3) 50%,
     transparent 100%
   );
-  animation: exploreScanLine 3s linear infinite;
 }
 
 /* ── 右侧全高工作室侧栏（科技感增强） ── */
@@ -875,8 +875,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.74);
-  backdrop-filter: blur(18px);
+  /* 同 .card：去毛玻璃，避免面板内重绘触发整块重新采样模糊 */
+  background: rgba(255, 255, 255, 0.92);
   position: relative;
 }
 
@@ -1125,6 +1125,9 @@
   margin: 8px 0;
   padding: 10px 12px;
   font-family: var(--mono, ui-monospace, monospace);
+  /* 与代码块同理：固有宽度使布局不随分屏列宽变化，动画期间不逐帧重排 */
+  width: max-content;
+  min-width: 100%;
 }
 
 .tableWrap {
@@ -1136,7 +1139,10 @@
 }
 
 .dataTable {
-  width: 100%;
+  /* 固有宽度：单元格本就 nowrap，取 max-content 后表格布局不随分屏列宽变化，动画期间不逐帧重排；
+     min-width 保证窄表仍撑满容器，视觉等价 */
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 12.5px;
 }
@@ -1293,6 +1299,12 @@
   .dataTable td {
     white-space: normal;
   }
+
+  /* 窄屏靠单元格换行适配，收回固有宽度 */
+  .dataTable {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 /* ========== 千问风格代码块（ExploreCodeBlock） ========== */
@@ -1350,6 +1362,13 @@
   overflow: auto;
 }
 
+/* 代码体宽度取固有宽度：其布局不再随列宽变化，分屏 width 动画期间 Prism 大量 token span 不逐帧重排；
+   min-width 保证短代码仍撑满容器、长代码横向滚动照旧，视觉等价 */
+.codeBlockBody pre {
+  width: max-content;
+  min-width: 100%;
+}
+
 /* ========== 代码编辑右侧面板（ExploreCodeEditorPane） ========== */
 .codeEditorLang {
   flex: 0 0 auto;
@@ -1368,6 +1387,12 @@
   min-height: 0;
   overflow: hidden;
   padding: 12px 16px 16px;
+}
+
+/* CodeMirror 外层包裹 div（.cm-theme-light）默认高度 auto，
+   会使 .cm-editor 的 100% 失效、编辑器被内容撑高后裁切且无滚动条，故先给包裹层确定高度。 */
+.codeEditorBody > :global(.cm-theme-light) {
+  height: 100%;
 }
 
 .codeEditorBody :global(.cm-editor) {

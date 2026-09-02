@@ -59,6 +59,51 @@ describe('parseAiRaw', () => {
     expect(text).toBe(raw)
     expect(json).toBeNull()
   })
+
+  it('内联思考段（## 1. 🧠 思考过程 … ## 3. 🔧 查询模式）：包装为思考、正文只保留结束标记后内容', () => {
+    const raw = '## 1. 🧠 思考过程\n分析用户意图\n## 3. 🔧 查询模式\n描述分析内容'
+    const { thinking, text } = parseAiRaw(raw)
+    expect(thinking).toBe('分析用户意图')
+    expect(text).toBe('\n描述分析内容')
+  })
+
+  it('内联思考段未闭合（流式进行中）：归入思考、正文不闪现', () => {
+    const raw = '## 1. 🧠 思考过程\n正在分析'
+    const { thinking, text } = parseAiRaw(raw)
+    expect(thinking).toBe('正在分析')
+    expect(text).toBe('')
+  })
+
+  it('```json 围栏 thoughts JSON（知识模式）：thoughts 归入思考、desc 作为正文', () => {
+    const raw = '```json\n{"thoughts": "检索数据知识", "desc": "知识正文"}\n```'
+    const { thinking, text, json } = parseAiRaw(raw)
+    expect(thinking).toBe('检索数据知识')
+    expect(text).toBe('知识正文')
+    expect(json?.desc).toBe('知识正文')
+  })
+
+  it('正文含 { 代码片段：尾部合法 JSON 仍提取且不吞正文', () => {
+    const raw = '示例 {"code": 1} 结论 {"sql": "select 3", "type": "response_bar_chart"}'
+    const { text, json } = parseAiRaw(raw)
+    expect(json?.sql).toBe('select 3')
+    expect(text).toBe('示例 {"code": 1} 结论 ')
+  })
+
+  it('分享流变体内联标记（## 1. 💡 分析思路 … ## 2. 🔧 查询模式）：标记前未闭合 JSON 头丢弃', () => {
+    const raw =
+      '{\n  "thought\n\n用户问题为X。\\## 1. 💡 分析思路\n\n分析内容\n\n---\n\n## 2. 🔧 查询模式\n\nchat_with_db_execute 查询模式'
+    const { thinking, text } = parseAiRaw(raw)
+    expect(thinking).toBe('分析内容\n\n---')
+    expect(text).toBe('\n\nchat_with_db_execute 查询模式')
+  })
+
+  it('整段以 { 开头但提取不到字段（退化流）：保留原文不清空正文', () => {
+    const raw = '{\n  "thought\n\n普通正文'
+    const { thinking, text, json } = parseAiRaw(raw)
+    expect(thinking).toBe('')
+    expect(text).toBe(raw)
+    expect(json).toBeNull()
+  })
 })
 
 describe('mapProjectSemantics', () => {
