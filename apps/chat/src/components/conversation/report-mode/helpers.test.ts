@@ -52,9 +52,9 @@ describe('report-mode UI helpers', () => {
   it('只用当前执行任务的公开步骤生成折叠摘要', () => {
     const currentStep: ReportPublicStep = {
       id: 'step-2',
-      title: 'execute_skill_script_file',
+      title: 'load_skill',
       action: 'execute_skill_script_file',
-      actionIntention: '生成订单查询 SQL',
+      actionIntention: '加载 sql-generator 技能',
       status: 'in_progress',
       chunks: [{ entryId: '3-0', outputType: 'text', content: 'Skill: sql-generator' }],
       firstEntryId: '2-0',
@@ -71,12 +71,12 @@ describe('report-mode UI helpers', () => {
       stepOrder: ['step-2'],
     }
 
-    expect(getCollapsedTodoExecutionSummary(report)).toBe('当前正在执行 生成订单查询 SQL 步骤，调用 sql-generator 技能')
-    expect(getCollapsedTodoExecutionSummary({ ...report, stepsById: { 'step-2': { ...currentStep, chunks: [] } } })).toBe('当前正在执行 生成订单查询 SQL 步骤')
+    expect(getCollapsedTodoExecutionSummary(report)).toBe('当前正在执行 生成订单查询 SQL 步骤，调用 load_skill')
+    expect(getCollapsedTodoExecutionSummary({ ...report, stepsById: { 'step-2': { ...currentStep, actionIntention: undefined, title: undefined, action: undefined } } })).toBe('当前正在执行 生成订单查询 SQL 步骤')
     expect(getCollapsedTodoExecutionSummary({ ...report, tasks: [{ content: '生成订单查询 SQL', status: 'pending' }] })).toBeUndefined()
   })
 
-  it('重规划后仍按相同任务内容读取旧计划中的公开 Skill', () => {
+  it('子步骤已完成但 Todo 状态尚未更新时保留最近标题', () => {
     const step: ReportPublicStep = {
       id: 'step-old-plan',
       title: 'load_skill',
@@ -96,7 +96,7 @@ describe('report-mode UI helpers', () => {
       executionGroups: [{ key: 'old-plan:0', planEntryId: 'old-plan', taskIndex: 0, taskContent: '生成订单查询 SQL', stepIds: ['step-old-plan'] }],
       stepsById: { 'step-old-plan': step },
       stepOrder: ['step-old-plan'],
-    })).toBe('当前正在执行 加载 sql-generator 技能 步骤，调用 sql-generator 技能')
+    })).toBe('当前正在执行 生成订单查询 SQL 步骤，调用 load_skill')
   })
 
   it('同时存在已完成与执行中步骤时优先展示执行中步骤', () => {
@@ -113,7 +113,8 @@ describe('report-mode UI helpers', () => {
     }
     const runningStep: ReportPublicStep = {
       id: 'step-running',
-      actionIntention: '生成趋势预测',
+      title: 'load_skill',
+      actionIntention: '加载时间序列预测技能 time-series-predictor',
       status: 'in_progress',
       chunks: [{ entryId: '3-0', outputType: 'text', content: 'Skill: time-series-predictor' }],
       firstEntryId: '3-0',
@@ -124,13 +125,13 @@ describe('report-mode UI helpers', () => {
     }
 
     expect(getCollapsedTodoExecutionSummary({
-      tasks: [{ content: '预测未来趋势', status: 'in_progress' }],
-      currentPlan: { entryId: 'plan-1', tasks: [{ content: '预测未来趋势', status: 'in_progress' }] },
-      executionGroups: [{ key: 'plan-1:0', planEntryId: 'plan-1', taskIndex: 0, taskContent: '预测未来趋势', stepIds: ['step-running', 'step-done'] }],
+      tasks: [{ content: '核实预测流程并基于全年数据预测2026年1-3月', status: 'in_progress' }],
+      currentPlan: { entryId: 'plan-1', tasks: [{ content: '核实预测流程并基于全年数据预测2026年1-3月', status: 'in_progress' }] },
+      executionGroups: [{ key: 'plan-1:0', planEntryId: 'plan-1', taskIndex: 0, taskContent: '核实预测流程并基于全年数据预测2026年1-3月', stepIds: ['step-running', 'step-done'] }],
       stepsById: { 'step-running': runningStep, 'step-done': doneStep },
       // 已完成步骤在 Redis 顺序中更新得更晚，也应优先展示真实的 in_progress 步骤。
       stepOrder: ['step-running', 'step-done'],
-    })).toBe('当前正在执行 生成趋势预测 步骤，调用 time-series-predictor 技能')
+    })).toBe('当前正在执行 核实预测流程并基于全年数据预测2026年1-3月 步骤，调用 load_skill')
   })
 
   it('只把明确的中英文报告任务识别为报告产物阶段', () => {
@@ -181,6 +182,7 @@ describe('report-mode UI helpers', () => {
     ])
     expect(options.find((option) => option.format === 'pdf')?.url).toBe('/latest/report.pdf')
     expect(options.find((option) => option.format === 'word')?.fileName).toBe('report.docx')
+    expect(options.find((option) => option.format === 'word')?.label).toBe('WORD')
   })
 
   it('将 done 秒数转换为完成耗时，缺失或非法值不展示', () => {

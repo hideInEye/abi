@@ -28,6 +28,7 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
   const [passwordLoading, setPasswordLoading] = useState(false)
   const [verifiedAppId, setVerifiedAppId] = useState('')
   const [verifiedType, setVerifiedType] = useState<ProjectType>('react')
+  const [verifiedToken, setVerifiedToken] = useState('')
 
   const apiBase = window.APP_CONFIG?.VITE_BASE_API || ''
 
@@ -44,6 +45,8 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
           setLoading(false)
           return
         }
+        // 校验通过后后端下发临时 token，后续接口随 Authorization 携带
+        if (d.token) setVerifiedToken(String(d.token))
         if (d.passwordFlag) {
           setPasswordModalVisible(true)
           setVerifiedType(normalizeType(d.type))
@@ -70,6 +73,7 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
       if (d.result && appId) {
         setPasswordModalVisible(false)
         setVerifiedType(normalizeType(d.type))
+        if (d.token) setVerifiedToken(String(d.token))
         setVerifiedAppId(appId)
       }
     } finally {
@@ -124,7 +128,7 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
       </Modal>
 
       {verifiedAppId && (
-        <ChatWidget shareCode={shareCode} apiBase={apiBase} mode="page" verifiedAppId={verifiedAppId} verifiedType={verifiedType} />
+        <ChatWidget shareCode={shareCode} apiBase={apiBase} mode="page" verifiedAppId={verifiedAppId} verifiedType={verifiedType} verifiedToken={verifiedToken} />
       )}
     </>
   )

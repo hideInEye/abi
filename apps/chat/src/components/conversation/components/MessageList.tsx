@@ -19,6 +19,7 @@ import ReportMessageRow from '../report-mode/ReportMessageRow'
 import { mergeConversationAndReportGroups } from '../report-mode/reportTimeline'
 import type { ReportItem } from '../report-mode/types'
 import ExploreMessageRow from '../exploration-mode/ExploreMessageRow'
+import type { ExploreCodeEditPayload } from '../exploration-mode/ExploreCodeBlock'
 import type { ExploreItem } from '../exploration-mode/types'
 
 // 从消息内容（view 的 chart-view 或内嵌 JSON）中解析数据分组/语义元信息，
@@ -97,6 +98,8 @@ type MessageListProps = {
   onOpenExplore?: (exploreId: string) => void
   /** 关闭探索结果工作室侧栏。 */
   onCloseExplore?: () => void
+  /** 探索代码块点击编辑时打开右侧代码编辑面板。 */
+  onEditExploreCode?: (payload: ExploreCodeEditPayload) => void
   /** 当前在右侧工作室打开的探索项 id。 */
   activeExploreId?: string
   /** 报告预览占用右侧空间时隐藏问题导航，避免导航面板覆盖双栏内容。 */
@@ -146,6 +149,7 @@ const MessageList = ({
   onOpenReport,
   onOpenExplore,
   onCloseExplore,
+  onEditExploreCode,
   activeExploreId,
   hideMessageNavRail = false,
   emptyContent,
@@ -359,6 +363,7 @@ const MessageList = ({
           active={activeExploreId === exploration.id}
           onOpen={() => onOpenExplore?.(exploration.id)}
           onClose={onCloseExplore}
+          onEditCode={onEditExploreCode}
         />
       )
     }

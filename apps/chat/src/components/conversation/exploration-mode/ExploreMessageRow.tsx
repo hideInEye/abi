@@ -2,6 +2,7 @@ import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, Dis
 import { Alert, message, Tooltip } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 
+import ExploreCodeBlock, { detectCodeLanguage, type ExploreCodeEditPayload, type ExploreCodeLanguage } from './ExploreCodeBlock'
 import ExploreRichText, { containsText } from './ExploreRichText'
 import type { ExploreItem, ExploreStep, ExploreStepOutput } from './types'
 import styles from './styles.module.css'
@@ -14,6 +15,8 @@ interface ExploreMessageRowProps {
   onOpen?: () => void
   /** 关闭右侧工作室。 */
   onClose?: () => void
+  /** 代码块点击编辑时，由上层在右侧面板打开代码编辑器。 */
+  onEditCode?: (payload: ExploreCodeEditPayload) => void
 }
 
 function getTodoStatusMeta(status: string) {
@@ -93,7 +96,28 @@ function isProcessOutput(output: ExploreStepOutput): boolean {
   return typeof content === 'string' && containsText(content)
 }
 
-const SQL_LIKE = /^\s*(select|with|insert|update|delete|create|drop|alter|show|describe)\b/i
+function renderProcessOutput(output: ExploreStepOutput, index: number, onEditCode?: (code: string, language: ExploreCodeLanguage) => void) {
+  const content = output.content
+  if (output.outputType === 'image' && typeof content === 'string') {
+    return <img key={index} src={content} alt="当前步骤输出" className={styles.mediaImage} />
+  }
+  if ((output.outputType === 'pdf' || output.outputType === 'word') && typeof content === 'string') {
+    return (
+      <a key={index} href={content} target="_blank" rel="noreferrer" className={styles.fileLink}>
+        打开{output.outputType === 'pdf' ? ' PDF' : ' Word'} 文件
+      </a>
+    )
+  }
+  if (typeof content === 'string') {
+    // 识别 sql / python / shell / json 代码，按千问风格代码块渲染；后端标记 code 但未识别语言时兜底纯文本代码块
+    const language = detectCodeLanguage(content)
+    if (language || output.outputType === 'code') {
+      return <ExploreCodeBlock key={index} code={content} language={language ?? 'text'} onEdit={onEditCode} />
+    }
+    return <ExploreRichText key={index} text={content} hideTables />
+  }
+  return null
+}
 
 /** 调用入参可能是 "{}" 空占位，空对象不展示；非空格式化为可读 JSON。 */
 function normalizeActionInput(input?: string | null): string {
@@ -108,27 +132,7 @@ function normalizeActionInput(input?: string | null): string {
   }
 }
 
-function renderProcessOutput(output: ExploreStepOutput, index: number) {
-  const content = output.content
-  if (output.outputType === 'image' && typeof content === 'string') {
-    return <img key={index} src={content} alt="当前步骤输出" className={styles.mediaImage} />
-  }
-  if ((output.outputType === 'pdf' || output.outputType === 'word') && typeof content === 'string') {
-    return (
-      <a key={index} href={content} target="_blank" rel="noreferrer" className={styles.fileLink}>
-        打开{output.outputType === 'pdf' ? ' PDF' : ' Word'} 文件
-      </a>
-    )
-  }
-  if (typeof content === 'string') {
-    // SQL 语句用代码块展示，避免 markdown 把换行压成空格
-    if (SQL_LIKE.test(content)) return <pre key={index} className={styles.processCode}>{content}</pre>
-    return <ExploreRichText key={index} text={content} hideTables />
-  }
-  return null
-}
-
-const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = false, onOpen, onClose }) => {
+const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = false, onOpen, onClose, onEditCode }) => {
   const completedCount = item.tasks.filter((task) => task.status === 'completed' || task.status === 'done').length
   const statusTag = getCardStatusTag(item.status)
   const running = item.status === 'running'
@@ -191,6 +195,10 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
   }, [thinking.thought, running])
   const focusedStep = selectionActive ? getStepsFocused(selectedSteps) : getFocusedStep(item)
   const focusedStepTitle = focusedStep?.title || focusedStep?.action || (focusedStep?.step != null ? `步骤 ${focusedStep.step}` : '当前步骤')
+  // 过程代码与调用入参共用同一编辑入口；上层未传回调（如调试抽屉）时编辑按钮自动隐藏
+  const handleEditCode = onEditCode
+    ? (code: string, language: ExploreCodeLanguage) => onEditCode({ code, language, title: focusedStepTitle })
+    : undefined
   const focusedOutputs = focusedStep?.outputs || []
   const focusedProcessOutputs = focusedOutputs.filter(isProcessOutput)
   const focusedActionInput = normalizeActionInput(focusedStep?.actionInput)
@@ -341,8 +349,9 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
                         {focusedStep?.actionReason && <div><b>执行原因：</b>{focusedStep.actionReason}</div>}
                       </div>
                     )}
-                    {focusedProcessOutputs.map((output, index) => renderProcessOutput(output, index))}
-                    {focusedActionInput && <pre className={styles.processCode}>{focusedActionInput}</pre>}
+                    {focusedProcessOutputs.map((output, index) => renderProcessOutput(output, index, handleEditCode))}
+                    {/* 调用入参为 JSON，按 json 代码块规范渲染（高亮 + 复制/编辑） */}
+                    {focusedActionInput && <ExploreCodeBlock code={focusedActionInput} language="json" onEdit={handleEditCode} />}
                   </div>
                 ) : (
                   <div className={styles.currentResultEmpty}>
