@@ -439,7 +439,7 @@ export function buildFormValues(item: DimensionModelItem): DimensionFormValues {
     englishName: item.englishName || '',
     groupId: item.groupId,
     id: item.id,
-    mappedBizNameFieldName: mappedBizNameParts.isMapped ? mappedBizNameParts.fieldName : undefined,
+    mappedBizNameTableName: mappedBizNameParts.isMapped ? mappedBizNameParts.tableName : undefined,
     mappedTechNameTableName: mappedTechNameParts.isMapped ? mappedTechNameParts.tableName : undefined,
     owner: item.owner || '',
     ownerEmail: item.ownerEmail || '',
@@ -478,7 +478,7 @@ export function buildSubmitPayload(params: {
     .map(item => item.trim())
     .filter(Boolean)
   const semanticType = formValues.dimType === 'time' ? 'datetime' : 'categorical'
-  const bizName = restoreMappedBizName(formValues.zhName, formValues.mappedBizNameFieldName)
+  const bizName = restoreMappedBizName(formValues.zhName, formValues.mappedBizNameTableName)
   const techName = restoreMappedTechName(formValues.englishName, formValues.mappedTechNameTableName)
   const typeParams =
     formValues.dimType === 'time'

@@ -29,7 +29,7 @@ describe('knowledgeIndicator mapper', () => {
       techName: 'trade_detail.pay_amount'
     })
 
-    expect(item.bizName).toBe('交易明细表')
+    expect(item.bizName).toBe('支付金额')
     expect(item.indicatorCode).toBe('pay_amount')
     expect(item.techName).toBe('trade_detail.pay_amount')
     expect(item.rawBizName).toBe('交易明细表_#_支付金额')

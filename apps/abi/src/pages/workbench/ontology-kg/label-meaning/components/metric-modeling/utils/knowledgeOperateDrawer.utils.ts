@@ -1,5 +1,5 @@
 import type { KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
-import { getMappedBizNameParts } from '../../../utils/ontologyName'
+import { getMappedBizNameParts, getMappedTechNameDisplay } from '../../../utils/ontologyName'
 
 export interface TransferItem {
   key: string
@@ -68,7 +68,7 @@ export function formatMappedDimensionOptionTitle(params: {
   techName?: unknown
 }) {
   const displayName = getMappedMetricFieldDisplayName(params.bizName)
-  const techName = trimText(params.techName)
+  const techName = getMappedTechNameDisplay(params.techName)
   const fallback = trimText(params.fallback)
   const name = displayName || techName || fallback
 

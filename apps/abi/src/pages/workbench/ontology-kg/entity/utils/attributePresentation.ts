@@ -43,10 +43,20 @@ export function getMappedAttributeDisplayName(value: unknown): string {
   return fieldName || sourceName || text
 }
 
+export function getMappedAttributeCodeDisplay(value: unknown): string {
+  const text = String(value ?? '').trim()
+  const separatorIndex = text.lastIndexOf('.')
+  if (separatorIndex < 0) return text
+
+  const tableName = text.slice(0, separatorIndex).trim()
+  const fieldName = text.slice(separatorIndex + 1).trim()
+  return fieldName || tableName || text
+}
+
 export function buildAttributeAssetOptions(assets: AttributeAsset[]): AttributeAssetOption[] {
   return [
     { disabled: assets.length === 0, label: `绑定当前分组（${assets.length} 个资产）`, value: '__group__' },
-    ...assets.map((asset) => ({ label: `${getMappedAttributeDisplayName(asset.attributeName)}（${asset.attributeCode}）`, value: String(asset.id) })),
+    ...assets.map((asset) => ({ label: `${getMappedAttributeDisplayName(asset.attributeName)}（${getMappedAttributeCodeDisplay(asset.attributeCode)}）`, value: String(asset.id) })),
   ]
 }
 

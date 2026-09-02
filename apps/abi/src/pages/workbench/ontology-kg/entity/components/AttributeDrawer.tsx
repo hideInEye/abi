@@ -15,7 +15,7 @@ import { useAttributeAssets } from '../hooks/useAttributeAssets'
 import { useAttributeGroups } from '../hooks/useAttributeGroups'
 import { useEntityAttributeManagement } from '../hooks/useEntityAttributeManagement'
 import type { AttributeBindingValues } from '../types'
-import { ATTRIBUTE_TYPE_PRESENTATION, SUPPORTED_ATTRIBUTE_TYPES, buildAttributeAssetOptions, buildAttributeFilterItems, getMappedAttributeDisplayName } from '../utils/attributePresentation'
+import { ATTRIBUTE_TYPE_PRESENTATION, SUPPORTED_ATTRIBUTE_TYPES, buildAttributeAssetOptions, buildAttributeFilterItems, getMappedAttributeCodeDisplay, getMappedAttributeDisplayName } from '../utils/attributePresentation'
 import type { AttributeFilterKey, SupportedAttributeType } from '../utils/attributePresentation'
 import { getEntityAttributeIdentity, makeAttributes } from '../utils/entity'
 
@@ -199,7 +199,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
         },
       },
       { align: 'center', dataIndex: 'attributeName', ellipsis: true, key: 'attributeName', render: (value) => formatDisplayValue(getMappedAttributeDisplayName(value)), title: '属性名称' },
-      { align: 'center', dataIndex: 'attributeCode', ellipsis: true, key: 'attributeCode', render: formatDisplayValue, title: '属性编码' },
+      { align: 'center', dataIndex: 'attributeCode', ellipsis: true, key: 'attributeCode', render: (value) => formatDisplayValue(getMappedAttributeCodeDisplay(value)), title: '属性编码' },
       { align: 'center', key: 'source', title: '来源模块', width: 120, render: (_, attribute) => ATTRIBUTE_TYPE_PRESENTATION[attribute.attributeType].label },
       {
         align: 'center',

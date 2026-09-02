@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { OntologyEntityAttribute } from '@/pages/workbench/ontology-kg/shared-network-types'
 import { formatDisplayValue } from '../../utils/table-display'
 
-import { ATTRIBUTE_TYPE_PRESENTATION, buildAttributeAssetOptions, buildAttributeFilterItems, getMappedAttributeDisplayName } from '../utils/attributePresentation'
+import { ATTRIBUTE_TYPE_PRESENTATION, buildAttributeAssetOptions, buildAttributeFilterItems, getMappedAttributeCodeDisplay, getMappedAttributeDisplayName } from '../utils/attributePresentation'
 
 function createAttribute(attributeType: OntologyEntityAttribute['attributeType'], attributeCode: string): OntologyEntityAttribute {
   return {
@@ -19,7 +19,7 @@ describe('AttributeDrawer presentation', () => {
   it('shows mapped names in binding asset options without changing asset codes or values', () => {
     expect(
       buildAttributeAssetOptions([
-        { attributeCode: 'atomic_issued_count', attributeName: '优惠券表_#_已发放数', id: '9007199254740993' },
+        { attributeCode: 'coupon.atomic_issued_count', attributeName: '优惠券表_#_已发放数', id: '9007199254740993' },
         { attributeCode: 'deal_amount', attributeName: '成交金额', id: 2 },
       ]),
     ).toEqual([
@@ -37,6 +37,9 @@ describe('AttributeDrawer presentation', () => {
     expect(getMappedAttributeDisplayName('交易明细表_ # _支付金额')).toBe('支付金额')
     expect(getMappedAttributeDisplayName('成交金额')).toBe('成交金额')
     expect(formatDisplayValue(getMappedAttributeDisplayName(null))).toBe('-')
+    expect(getMappedAttributeCodeDisplay('trade_detail.pay_amount')).toBe('pay_amount')
+    expect(getMappedAttributeCodeDisplay('deal_amount')).toBe('deal_amount')
+    expect(formatDisplayValue(getMappedAttributeCodeDisplay(null))).toBe('-')
   })
 
   it('keeps the table background override local to the drawer and covers header and body cells', () => {

@@ -428,7 +428,7 @@ function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormV
     dimensionFieldIds: item.dimensionFieldIds ?? item.relateDims,
     indAlias: splitAliasTags(item.indAlias),
     indicatorCode: mappedTechNameParts.displayName,
-    mappedBizNameFieldName: mappedBizNameParts.isMapped ? mappedBizNameParts.fieldName : undefined,
+    mappedBizNameTableName: mappedBizNameParts.isMapped ? mappedBizNameParts.tableName : undefined,
     mappedTechNameTableName: mappedTechNameParts.isMapped ? mappedTechNameParts.tableName : undefined,
     precomputeConfig,
     projectionFunc: item.projectionFunc || calcLogicValues.projectionFunc || 'sum',
@@ -951,7 +951,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       ...form.getFieldsValue(true)
     } as KnowledgeFormValues
     const nextIndicatorClass = normalizeIndicatorClass(values.indicatorClass)
-    const submitBizName = restoreMappedBizName(values.bizName, values.mappedBizNameFieldName)
+    const submitBizName = restoreMappedBizName(values.bizName, values.mappedBizNameTableName)
     const submitTechName = restoreMappedTechName(
       nextIndicatorClass === 'derived' ? values.indicatorCode : values.techName,
       values.mappedTechNameTableName

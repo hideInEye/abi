@@ -5,6 +5,7 @@ import React, { useMemo } from 'react'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 import type { OntologyEntityAttribute, OntologyGraphEdge, OntologyGraphNode } from '@/pages/workbench/ontology-kg/shared-network-types'
 
+import { getGraphAttributeDisplayName } from './GraphDetailPanel.utils'
 import styles from './detail.module.css'
 
 interface GraphDetailPanelProps {
@@ -87,7 +88,7 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({ edge, entity
                       <div className="flex flex-wrap gap-2">
                         {attributes.map((attribute) => (
                           <Tag key={`${attribute.attributeType}-${attribute.attributeCode}`} className={styles.attrTag}>
-                            {attribute.attributeName}
+                            {getGraphAttributeDisplayName(attribute)}
                           </Tag>
                         ))}
                       </div>

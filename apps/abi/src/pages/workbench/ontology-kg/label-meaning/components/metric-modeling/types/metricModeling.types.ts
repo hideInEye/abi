@@ -330,7 +330,7 @@ export interface KnowledgeFormValues {
   indAlias?: string[] | string
   isPublic?: boolean | string
   measurementUnit?: string
-  mappedBizNameFieldName?: string
+  mappedBizNameTableName?: string
   mappedTechNameTableName?: string
   nullStrategy?: string
   ownerEmail?: string
