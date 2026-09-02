@@ -1,7 +1,7 @@
 export const MAPPED_BIZ_NAME_SEPARATOR = '_#_'
-const LEGACY_MAPPED_BIZ_NAME_SEPARATOR = '_#'
-const MAPPED_BIZ_NAME_SEPARATORS = [MAPPED_BIZ_NAME_SEPARATOR, LEGACY_MAPPED_BIZ_NAME_SEPARATOR]
 export const MAPPED_TECH_NAME_SEPARATOR = '.'
+
+const MAPPED_BIZ_NAME_SEPARATOR_PATTERN = /_\s*#\s*_?/
 
 function trim(value: unknown) {
   return String(value ?? '').trim()
@@ -12,13 +12,8 @@ function getResponseData(res: any) {
 }
 
 function findMappedBizNameSeparator(text: string) {
-  return MAPPED_BIZ_NAME_SEPARATORS
-    .map(separator => ({
-      index: text.indexOf(separator),
-      separator
-    }))
-    .filter(item => item.index >= 0)
-    .sort((a, b) => a.index - b.index || b.separator.length - a.separator.length)[0]
+  const match = MAPPED_BIZ_NAME_SEPARATOR_PATTERN.exec(text)
+  return match?.index === undefined ? undefined : { index: match.index, separator: match[0] }
 }
 
 export function getMappedBizNameParts(value: unknown) {
@@ -29,15 +24,20 @@ export function getMappedBizNameParts(value: unknown) {
       displayName: text,
       fieldName: '',
       isMapped: false,
-      rawName: text
+      rawName: text,
+      tableName: ''
     }
   }
 
+  const tableName = text.slice(0, match.index).trim()
+  const fieldName = text.slice(match.index + match.separator.length).trim()
+
   return {
-    displayName: text.slice(0, match.index).trim(),
-    fieldName: text.slice(match.index + match.separator.length).trim(),
+    displayName: fieldName || tableName || text,
+    fieldName,
     isMapped: true,
-    rawName: text
+    rawName: text,
+    tableName
   }
 }
 
@@ -81,9 +81,9 @@ export function buildMappedTechName(tableTechName: unknown, fieldOriginName: unk
   return tableName && fieldName ? `${tableName}${MAPPED_TECH_NAME_SEPARATOR}${fieldName}` : tableName || fieldName
 }
 
-export function restoreMappedBizName(displayName: unknown, mappedFieldName?: unknown) {
-  const fieldName = trim(mappedFieldName)
-  return fieldName ? buildMappedBizName(displayName, fieldName) : trim(displayName)
+export function restoreMappedBizName(displayName: unknown, mappedTableName?: unknown) {
+  const tableName = trim(mappedTableName)
+  return tableName ? buildMappedBizName(tableName, displayName) : trim(displayName)
 }
 
 export function restoreMappedTechName(displayName: unknown, mappedTableName?: unknown) {
@@ -96,7 +96,7 @@ export function validateCustomBizNameText(value: unknown, label = '中文名称'
   if (!text) {
     return `请输入${label}`
   }
-  if (MAPPED_BIZ_NAME_SEPARATORS.some(separator => text.includes(separator))) {
+  if (findMappedBizNameSeparator(text)) {
     return `${label}不能包含${MAPPED_BIZ_NAME_SEPARATOR}`
   }
   return ''

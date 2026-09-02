@@ -57,7 +57,7 @@ export function createKnowledgeOperateValidators({ form, groupId, initialBizName
     if (!/^[\u4E00-\u9FA5A-Za-z0-9_]+$/.test(text)) {
       return Promise.reject(new Error('指标名称仅支持中文、英文、数字、下划线'))
     }
-    const nextName = restoreMappedBizName(text, form.getFieldValue('mappedBizNameFieldName'))
+    const nextName = restoreMappedBizName(text, form.getFieldValue('mappedBizNameTableName'))
     try {
       await checkRemoteName({
         groupId,
@@ -92,8 +92,8 @@ export function createKnowledgeOperateValidators({ form, groupId, initialBizName
     if (list.length > 10) {
       return Promise.reject(new Error('别名需唯一且不超过10个'))
     }
-    if (list.some((item) => item.length > 20)) {
-      return Promise.reject(new Error('单个别名长度不能超过20个字符'))
+    if (list.some((item) => item.length > 10)) {
+      return Promise.reject(new Error('单个别名长度不能超过10个字符'))
     }
     const lowerSet = new Set(list.map((item) => item.toLowerCase()))
     if (lowerSet.size !== list.length) {

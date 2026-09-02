@@ -105,7 +105,7 @@ export function getAtomicSemanticSchemaName(item?: KnowledgeIndicatorItem): stri
   if (sourceFieldSchemaName) return sourceFieldSchemaName
 
   const mappedBizName = getMappedBizNameParts(source.rawBizName || source.bizName)
-  return mappedBizName.isMapped ? mappedBizName.displayName || '-' : '-'
+  return mappedBizName.isMapped ? mappedBizName.tableName || '-' : '-'
 }
 
 export function parseSemanticModelFields(detailValue: unknown): KnowledgeTechField[] {
