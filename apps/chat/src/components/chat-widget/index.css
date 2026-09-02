@@ -7,6 +7,8 @@
   color: #333;
   line-height: 1.6;
   box-sizing: border-box;
+  /* 思考打字机限高（约 5 行；em 相对思考区紧凑字号 12px/1.7，供 AiEle compact 态消费） */
+  --think-max-h: 8.5em;
 }
 
 .abi-cw-root *,
@@ -26,9 +28,9 @@
   position: fixed;
   top: 48px;
   right: 24px;
-  width: 420px;
+  width: 520px;
   max-width: calc(100vw - 32px);
-  height: 640px;
+  height: 780px;
   max-height: calc(100vh - 72px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
@@ -39,7 +41,7 @@
   top: 72px;
   right: 24px;
   bottom: 24px;
-  width: 396px;
+  width: 480px;
   max-width: calc(100vw - 32px);
   z-index: 2147483000;
 }
@@ -245,6 +247,87 @@
 .abi-cw-msg-human {
   align-self: flex-end;
   align-items: flex-end;
+  /* 明确宽度：避免收缩ToFit 与内层 max-w 百分比循环把气泡压窄导致短文本换行 */
+  width: 100%;
+}
+
+/* 复用主对话 HumanEle：其根节点 my-4 外边距、以及隐藏态 hover 操作条（编辑/复制/删除，分享场景无回调）在窄面板里造成多余留白，归零/隐藏以收紧用户与 AI 间距 */
+.abi-cw-msg-human > div {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.abi-cw-msg-human > div > div > div:last-child {
+  display: none;
+}
+
+/* 描述分析正文（窄面板）：主对话 markdown-content 的标题/代码字号偏大，此处统一下调；正文 p/li 继承容器内联 13px */
+.abi-cw-desc h1,
+.abi-cw-desc h2,
+.abi-cw-desc h3,
+.abi-cw-desc h4,
+.abi-cw-desc h5,
+.abi-cw-desc h6 {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  margin: 0.4em 0 !important;
+}
+
+.abi-cw-desc code,
+.abi-cw-desc pre {
+  font-size: 12px !important;
+}
+
+/* 信息条：分组 + 数据语义（复刻主对话 MessageList 信息条内联样式；窄面板字号略收） */
+.abi-cw-infobar {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  border: 1px solid rgba(130, 140, 200, 0.12);
+  font-size: 12px;
+  color: #546074;
+  flex-wrap: wrap;
+}
+
+.abi-cw-infobar-label {
+  color: #1a2744;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.abi-cw-infobar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.abi-cw-infobar-chip-group {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(91, 124, 247, 0.06));
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  box-shadow: 0 1px 4px rgba(139, 92, 246, 0.08);
+}
+
+.abi-cw-infobar-chip-sem {
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.12), rgba(16, 185, 129, 0.04));
+  color: #5b7cf7;
+  border: 1px solid rgba(91, 124, 247, 0.18);
+  box-shadow: 0 1px 4px rgba(91, 124, 247, 0.08);
+}
+
+.abi-cw-infobar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .abi-cw-msg-ai {

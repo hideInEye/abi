@@ -22,7 +22,7 @@ import { getChartOption, parseISO8601Duration, parseISODate } from '../conversat
 import { handleImageExport } from '../conversation/helpers/download'
 import PieLegend from '../PieLegend'
 import { EChart } from '../react-echarts'
-import type { WidgetChart, WidgetMessage } from './history'
+import { parseViewChart, type WidgetChart, WidgetMessage } from './history'
 import {
   checkSharePassword,
   ensureSession,
@@ -30,12 +30,12 @@ import {
   fetchChartDataBySql,
   fetchHistory,
   fetchMaxRound,
+  fetchViewContextByRound,
   parseAiRaw,
   sendChatStream,
   submitFeedback,
   type ProjectType,
   type WidgetAssistantInfo,
-  type WidgetConfig,
   type WidgetSemanticNode,
   type WidgetSemanticSelection,
   type WidgetSession,
@@ -87,6 +87,12 @@ const WIDGET_CHART_TYPES: Array<{ value: string; label: string }> = [
 
 const isValidChartType = (t: unknown): boolean =>
   typeof t === 'string' && WIDGET_CHART_TYPES.some((i) => i.value === t)
+
+/** 流内/查数 JSON 的语义元信息 → 消息信息条字段（同主对话 extractSemanticMeta 口径） */
+const semanticMetaOf = (json: any): Pick<WidgetMessage, 'semanticGroup' | 'semanticName'> => ({
+  semanticGroup: typeof json?.semantic_group_name === 'string' && json.semantic_group_name.trim() ? json.semantic_group_name : undefined,
+  semanticName: typeof json?.semantic_name === 'string' && json.semantic_name.trim() ? json.semantic_name : undefined,
+})
 
 /** marked 同步解析；解析异常时降级为转义后的原文 */
 const renderMarkdown = (content: string): string => {
@@ -156,7 +162,8 @@ const CHART_CONFIG = {
 }
 
 const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: (type: string) => void }) => {
-  const [activeType, setActiveType] = useState<'chart' | 'table' | 'sql'>('chart')
+  // 后端 response_table 默认落表格视图（同主对话 ViewEle：response_table → setActiveType('table')）
+  const [activeType, setActiveType] = useState<'chart' | 'table' | 'sql'>(chart.tableView ? 'table' : 'chart')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [isChartHovered, setIsChartHovered] = useState(false)
@@ -242,7 +249,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
             }}
           />
         )}
-        <EChart ref={echartRef} option={option} style={{ height: '25rem', width: '100%' }} autoResize handleClick={() => {}} />
+        <EChart ref={echartRef} option={option} style={{ height: '16rem', width: '100%' }} autoResize handleClick={() => {}} />
       </div>
     )
   }
@@ -383,6 +390,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
           activeType={activeType}
           currentTableData={chart.data || []}
           showTitle={false}
+          hideTools
         />
         <div className="mt-3" style={activeType === 'chart' || !hasData ? { background: '#F2F3F5', borderRadius: '8px', padding: '12px' } : undefined}>
           {renderContent()}
@@ -437,18 +445,23 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       sessionRef.current = session
       if (session) {
         const history = await fetchHistory(effectiveCfg, session.convUid)
-        // 历史 AI 消息同实时一样结构化解析（剥离思考段/尾部 JSON），再按索引补图表数据与轮次无关字段
+        // 历史 AI 消息同实时一样结构化解析（剥离思考段/尾部 JSON）；view 消息挂来的图表按白名单校正类型
+        // 图表数据仅取 view 消息自带结果行（同主对话历史链路不重查 sql）
         const enriched = history.map((m) => {
           if (m.role !== 'ai') return m
           const { thinking, text } = parseAiRaw(m.content)
-          return { ...m, thinking: thinking || undefined, content: text }
+          const chart = m.chart && !isValidChartType(m.chart.type) ? { ...m.chart, type: 'response_bar_chart' } : m.chart
+          // ai 内容无正文字段时回退 view 消息 desc（同主对话 ViewEle 正文口径）；信息条取 view 的 semantic_*
+          return {
+            ...m,
+            thinking: thinking || undefined,
+            content: text || chart?.desc || '',
+            chart,
+            semanticGroup: chart?.semanticGroup,
+            semanticName: chart?.semanticName,
+          }
         })
         setMessages(enriched)
-        history.forEach((m, i) => {
-          if (m.role !== 'ai') return
-          const { json } = parseAiRaw(m.content)
-          void loadChartForMessage(i, json, session.dbName, effectiveCfg)
-        })
       }
       setPhase('ready')
     },
@@ -536,12 +549,12 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   }
 
   // 按尾部 JSON 组装图表：优先直连 json.data（后端直接下发结果行时无需 sql/dbName），否则同主对话 fetchDataBySql 查数；两者皆无静默降级不展示图表
-  const loadChartForMessage = async (index: number | undefined, json: any, dbName?: string, cfgOverride?: WidgetConfig) => {
+  const loadChartForMessage = async (json: any, dbName?: string) => {
     const directRows = Array.isArray(json?.data) && json.data.length > 0 ? (json.data as any[]) : null
     const hasSql = dbName && typeof json?.sql === 'string' && json.sql.trim()
     if (!directRows && !hasSql) return
-    patchMsg({ chartLoading: true }, index)
-    const rows = directRows ?? (await fetchChartDataBySql(cfgOverride ?? cfg, dbName as string, json.sql))
+    patchMsg({ chartLoading: true })
+    const rows = directRows ?? (await fetchChartDataBySql(cfg, dbName as string, json.sql))
     patchMsg(
       rows
         ? {
@@ -550,12 +563,38 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               data: rows,
               title: json.title ? String(json.title) : undefined,
               sql: json.sql,
+              tableView: json.type === 'response_table' ? true : undefined,
             },
             chartLoading: false,
+            ...semanticMetaOf(json),
           }
-        : { chartLoading: false },
-      index,
+        : { chartLoading: false, ...semanticMetaOf(json) },
     )
+  }
+
+  // 流结束无 sql/数据（同主对话 describe 场景）：按本轮 round 搜 view 回补正文/图表。
+  // 同主对话 ViewEle fetchData 口径；round 缺失（流内未提取且 max 未落库）直接不搜。
+  // 返回是否回补到正文 desc：未回补时调用方回退流内解析正文
+  const backfillFromView = async (session: WidgetSession, round: number | null): Promise<boolean> => {
+    if (round == null) return false
+    // 后端 view 消息异步落库常晚于 [DONE]：单次 search 易取空而回退退化流文本，故有限重试（最多 3 次、间隔 700ms）
+    let view: ReturnType<typeof parseViewChart> = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+      view = parseViewChart(await fetchViewContextByRound(cfg, session.convUid, round))
+      if (view) break
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 700))
+    }
+    if (!view) return false
+    const type = isValidChartType(view.type) ? view.type : 'response_bar_chart'
+    const patch: Partial<WidgetMessage> = {}
+    if (view.desc) patch.content = view.desc
+    if (view.data.length > 0 || view.sql) patch.chart = { ...view, type }
+    if (view.semanticGroup) patch.semanticGroup = view.semanticGroup
+    if (view.semanticName) patch.semanticName = view.semanticName
+    if (Object.keys(patch).length === 0) return false
+    patchMsg(patch)
+    // 仅当回补到正文 desc 才算 filled：只回补图表时调用方仍需回退流内正文，避免“描述分析”小节缺失
+    return !!view.desc
   }
 
   // 切换图表类型（同主对话：仅切换本地类型，用已有数据重新构建 option）
@@ -602,11 +641,23 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     setMessages((prev) => [
       ...prev,
       { role: 'human', content: text, time: getNow() },
-      { role: 'ai', content: '', time: getNow(), streaming: true },
+      {
+        role: 'ai',
+        content: '',
+        time: getNow(),
+        streaming: true,
+        // 信息条随发送即展示（取当前选中语义），历史/回补场景由 view 的 semantic_* 覆盖
+        semanticGroup: selectedSemantic?.groupName,
+        semanticName: selectedSemantic?.name,
+      },
     ])
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
+    // 同主对话：round_index 随流内 content 占位串下发，优先流内提取，免流结束再查 max
+    let streamRound: number | null = null
+    // 同主对话 thinkTime 口径：发送到 [DONE] 的耗时秒
+    const startTime = performance.now()
     sendChatStream(
       cfg,
       session,
@@ -614,20 +665,50 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       appId,
       controller.signal,
       {
-        // 流中：实时结构化解析（思考段 + 展示文本）增量回写
+        // 流中：仅思考卡流式展示（同主对话流中只挂 ai 思考消息，正文 [DONE] 后由 view 挂载）
         onDelta: (raw) => {
-          const { thinking, text } = parseAiRaw(raw)
-          patchMsg({ thinking: thinking || undefined, content: text, streaming: true })
+          if (streamRound == null) {
+            const roundMatch = raw.match(/round_index:(\d+)/)
+            if (roundMatch) {
+              streamRound = Number(roundMatch[1])
+              patchMsg({ roundIndex: streamRound })
+            }
+          }
+          const { thinking, text: deltaText } = parseAiRaw(raw)
+          patchMsg({ thinking: thinking || undefined, content: deltaText, streaming: true })
         },
-        // 流结束（同主对话管线）：收尾文本 → 尾部 JSON 带 sql 则查数组图表 → 取本轮 roundIndex
+        // 流结束（同主对话 [DONE] 管线）：思考卡收尾 → 轮次定位 → sql 主动查数 / describe 单次回补
         onDone: (raw) => {
-          const { thinking, text, json } = parseAiRaw(raw)
-          patchMsg({ thinking: thinking || undefined, content: text || '无数据返回', streaming: false })
-          setSending(false)
-          void loadChartForMessage(undefined, json, session.dbName)
-          void fetchMaxRound(cfg, session.convUid).then((round) => {
-            if (round != null) patchMsg({ roundIndex: round })
+          const { thinking, text: finalText, json } = parseAiRaw(raw)
+          // 思考卡不随 [DONE] 立即收起：保持 streaming 直到正文/图表落定，与主对话「数据到位后思考收起与正文同帧展示」一致
+          patchMsg({
+            thinking: thinking || undefined,
+            content: '',
+            thinkTime: Math.round((performance.now() - startTime) / 1000),
           })
+          setSending(false)
+          // 落定收口：streaming 置 false 与正文/图表同一次 patch 生效，避免思考先收起、数据后到的空窗
+          const settle = (patch: Partial<WidgetMessage>) => patchMsg({ ...patch, streaming: false })
+          // 轮次：流内提取优先，缺失补查一次 max（同主对话 [DONE] 的 fetchConvMaxRound）
+          const resolveRound = async (): Promise<number | null> => {
+            if (streamRound != null) return streamRound
+            const round = await fetchMaxRound(cfg, session.convUid)
+            if (round != null) patchMsg({ roundIndex: round })
+            return round
+          }
+          const hasSql = !!session.dbName && typeof json?.sql === 'string' && !!json.sql.trim()
+          const hasRows = Array.isArray(json?.data) && json.data.length > 0
+          if (hasSql || hasRows) {
+            // sql 已主动查数（同主对话 arrowStatus=true），不再搜 view；图表落定后正文同帧落定
+            void resolveRound()
+            void loadChartForMessage(json, session.dbName).then(() => settle({ content: finalText || '无数据返回' }))
+          } else {
+            void resolveRound().then(async (round) => {
+              const filled = await backfillFromView(session, round)
+              // view 未回补到任何内容时才回退流内解析正文（避免退化流文本覆盖 view desc）
+              settle(filled ? {} : { content: finalText || '无数据返回' })
+            })
+          }
         },
         onError: () => {
           // 主动停止（AbortError）保留已生成内容，其余异常提示重试
@@ -642,6 +723,9 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
 
   const handleStop = () => {
     abortRef.current?.abort()
+    // service 对 AbortError 静默（不回调 onError），这里主动收尾：重置发送态让 icon 变回发送，并落定流式标记保留已生成内容
+    setSending(false)
+    patchMsg({ streaming: false })
   }
 
   // 展开/收起语义分组节点（数据已全量返回，无需懒加载）
@@ -806,12 +890,27 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                   </div>
                 )
               }
-              // 流中隐藏尚未闭合的尾部 JSON 片段（[DONE] 后由 parseAiRaw 完整剥离）
-              const displayText = stripHtmlTags(m.streaming ? (m.content || '').replace(/\{[^{}]*$/, '') : m.content || '')
+              // 流中仅思考卡（同主对话），正文不闪现未闭合 JSON；[DONE] 后正文同主对话 ViewEle desc 口径
+              const displayText = m.streaming ? '' : stripHtmlTags(m.content || '')
               return (
                 <div key={`ai-${i}`} className="abi-cw-msg abi-cw-msg-ai">
                   {/* 白卡容器类与主对话 MessageList bodyCard 保持一致 */}
                   <div className="w-full rounded-[1.25rem] border border-[#e9edf4] bg-white px-[0.875rem] pt-[0.75rem] shadow-[0_0.125rem_0.5rem_rgba(15,23,42,0.04)]">
+                    {/* 信息条：分组 + 数据语义（同主对话 MessageList 信息条样式，分享场景不可点 schema） */}
+                    {(m.semanticGroup || m.semanticName) && (
+                      <div className="abi-cw-infobar">
+                        <span className="abi-cw-infobar-label">分组：</span>
+                        <span className="abi-cw-infobar-chip abi-cw-infobar-chip-group">
+                          <i className="abi-cw-infobar-dot" style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.5)' }} />
+                          {m.semanticGroup || '无'}
+                        </span>
+                        <span className="abi-cw-infobar-label" style={{ marginLeft: '2em' }}>数据语义：</span>
+                        <span className="abi-cw-infobar-chip abi-cw-infobar-chip-sem">
+                          <i className="abi-cw-infobar-dot" style={{ background: '#5b7cf7', boxShadow: '0 0 6px rgba(91,124,247,0.5)' }} />
+                          {m.semanticName || '无'}
+                        </span>
+                      </div>
+                    )}
                     {(m.thinking || m.streaming) && (
                       <AiEle
                         data={{
@@ -821,14 +920,22 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                         }}
                         loading={m.streaming}
                         isDone={!m.streaming}
+                        thinkTime={m.thinkTime}
+                        compact
                       />
                     )}
                     {displayText && (
-                      <div
-                        className={`${convStyles['markdown-content']} text-left`}
-                        style={{ width: '100%' }}
-                        dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }}
-                      />
+                      <>
+                        {/* 描述分析小节头（同主对话 ViewEle：蓝色左条标题），与思考卡拉开间距 */}
+                        <div className="section-header mt-2 pt-3 pb-3">
+                          <span className="chart-header-title font-semibold text-[#2d2d2d]">描述分析</span>
+                        </div>
+                        <div
+                          className={`${convStyles['markdown-content']} abi-cw-desc text-left`}
+                          style={{ width: '100%', fontSize: '13px', lineHeight: 1.75 }}
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }}
+                        />
+                      </>
                     )}
                     {m.chartLoading && (
                       <div className="flex items-center justify-center gap-2 py-4 text-xs text-[#8494ad]">
@@ -836,7 +943,10 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                         <span>图表数据加载中...</span>
                       </div>
                     )}
-                    {m.chart && <ChartCard chart={m.chart} onTypeChange={(t) => handleChartTypeChange(i, t)} />}
+                    {/* 仅 desc 的 view（无结果行无 sql）不渲染图表卡，避免空图表占位；streaming 期间隐藏，与思考收起同帧展示 */}
+                    {!m.streaming && m.chart && (m.chart.data.length > 0 || !!m.chart.sql) && (
+                      <ChartCard chart={m.chart} onTypeChange={(t) => handleChartTypeChange(i, t)} />
+                    )}
                     {!m.streaming && (
                       <StatisticsAnalysis
                         chatMode="chat_with_analysis"

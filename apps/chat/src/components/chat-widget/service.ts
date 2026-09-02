@@ -83,6 +83,8 @@ const API = {
   // 以下三个与主对话同接口（网关路径一致），供图表数据/轮次/点赞点踩使用
   dbQuery: '/chat-proxy/api/v1/chat/db/query',
   maxRound: '/chat-proxy/api/v1/chat/conv/messages/round_index/max',
+  // 搜本轮 view 消息（同主对话 ViewEle fetchData）：query 固定 key=view/page=1/page_size=1/message_role=view，round 随 body
+  viewSearch: '/chat-proxy/api/v1/chat/conv/messages/search?key=view&page=1&page_size=1&message_role=view',
   feedback: '/abi-chat/v1/app/message/feedback/add',
 }
 
@@ -106,8 +108,9 @@ async function postJson(cfg: WidgetConfig, path: string, body: Record<string, un
   return res.json()
 }
 
+// 兼容两种响应信封（同主对话 ViewEle / useConversationController 口径）：chat-proxy 系（max/db/query/search）返回 { success, err_code, err_msg, data }（无 code），其余返回 { code: 200, ... }
 function isOk(json: any): boolean {
-  return Number(json?.code) === 200
+  return json?.success === true || Number(json?.code) === 200
 }
 
 /** 校验分享密码 / 获取分享信息（与大屏同接口、同字段名；密码传空串即探测是否需要密码） */
@@ -307,8 +310,21 @@ export function sendChatStream(
   const base = String(cfg.apiBase || '').replace(/\/+$/, '')
   const spaceIdNum = Number(spaceId)
   let buf = ''
+  // 同主对话流式管线：reasoning_content 单独到达时需包装 <think>；[DONE]/提前断流时闭合
+  let isReasoning = false
+  // 收尾重入守卫（[DONE] 与 onclose 二选一生效）
+  let done = false
+  // 后端可能重发全量前缀：记录上一次 content，仅追加新增部分（同主对话）
+  let lastContent = ''
 
   const finalize = () => {
+    // [DONE] 后服务端关流还会触发 onclose：收尾仅一次，避免 onDone 双发（重复查轮次/回补）
+    if (done) return
+    done = true
+    if (isReasoning) {
+      buf += '</think>'
+      isReasoning = false
+    }
     onDone(buf)
   }
 
@@ -344,7 +360,8 @@ export function sendChatStream(
                 semantic_name: semantic.name || '',
               }
             : {}),
-          extra_body: { enable_thinking: false },
+          // 与主对话深度思考开启态一致：分享页思考卡常显，后端据此下发思考内容
+          extra_body: { enable_thinking: true },
           share_code: cfg.shareCode,
         },
       },
@@ -374,10 +391,34 @@ export function sendChatStream(
         if (parsed && typeof parsed === 'object' && Number(parsed.code) >= 400) {
           throw new Error(parsed.msg || '请求失败')
         }
-        const content = parsed?.choices?.[0]?.delta?.content
-        if (typeof content === 'string' && content) {
-          buf += content
+        const delta = parsed?.choices?.[0]?.delta
+        const reasoning = delta?.reasoning_content
+        if (typeof reasoning === 'string' && reasoning.length > 0) {
+          // 思考内容单独放在 reasoning_content 逐字输出：包装 <think> 复用思考卡链路（同主对话）
+          if (!isReasoning) {
+            buf += '<think>'
+            isReasoning = true
+          }
+          buf += reasoning
+          // 记录占位串，避免 reasoning 结束后占位串被当作新正文重复处理
+          if (typeof delta?.content === 'string') lastContent = delta.content
           onDelta(buf)
+          return
+        }
+        if (reasoning === null && isReasoning) {
+          // reasoning 切换为 null 代表思考结束：闭合 <think>（同主对话）
+          buf += '</think>'
+          isReasoning = false
+          lastContent = ''
+        }
+        const content = delta?.content
+        if (typeof content === 'string' && content) {
+          const append = lastContent && content.startsWith(lastContent) ? content.slice(lastContent.length) : content
+          lastContent = content
+          if (append) {
+            buf += append
+            onDelta(buf)
+          }
         }
       } catch (err) {
         // JSON.parse 失败的普通增量忽略；Error（业务错误）向上抛终止
@@ -403,7 +444,8 @@ export function sendChatStream(
  * 模型可能在字符串值内直接输出字面换行（非法 JSON，JSON.parse 必失败），字符类正则可容纳值内换行，仅反转义常见转义符。
  */
 const extractJsonStringField = (src: string, field: string): string | null => {
-  const re = new RegExp('"' + field + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')
+  // 不要求闭合引号：流式中值未到达完整时可增量提取已到达部分（同主对话思考逐字展示效果）
+  const re = new RegExp('"' + field + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)')
   const m = src.match(re)
   if (!m) return null
   return m[1]
@@ -418,11 +460,11 @@ const extractJsonStringField = (src: string, field: string): string | null => {
 const lenientParseTail = (src: string): any | null => {
   if (!/^\s*\{/.test(src)) return null
   const out: any = {}
-  for (const field of ['thought', 'task_type', 'sql', 'type', 'title']) {
+  for (const field of ['thought', 'thoughts', 'task_type', 'sql', 'type', 'title']) {
     const v = extractJsonStringField(src, field)
     if (v != null) out[field] = v
   }
-  for (const field of ['answer', 'response', 'result', 'text', 'content']) {
+  for (const field of ['answer', 'response', 'result', 'text', 'content', 'desc', 'data_knowledge']) {
     const v = extractJsonStringField(src, field)
     if (v != null) {
       out[field] = v
@@ -445,52 +487,135 @@ const isStructuredPayload = (parsed: any): boolean =>
   !!parsed &&
   (parsed.task_type != null ||
     typeof parsed.thought === 'string' ||
+    typeof parsed.thoughts === 'string' ||
     typeof parsed.sql === 'string' ||
+    typeof parsed.desc === 'string' ||
     typeof parsed.answer === 'string' ||
     typeof parsed.response === 'string' ||
     typeof parsed.result === 'string')
 
+/** 深度思考内联边界（同主对话）：开始“## 1. 🧠 思考过程”、结束“## 3. 🔧 查询模式”；分享流模型变体“## 1. 💡 分析思路”/“## 2. 🔧 查询模式”一并识别 */
+const THINK_START_REGEX = /##\s*1\.\s*(?:🧠\s*思考过程|💡\s*分析思路)/
+const THINK_END_REGEX = /##\s*[23]\.\s*🔧\s*查询模式/
+
+/**
+ * 把全文中的内联思考段包装为 <think>…</think>（同主对话深度思考开启态）。
+ * 流式增量与历史全文共用：未闭合段（流式进行中）整体包装，下次到达结束标记后自动收口。
+ */
+function wrapInlineThinking(src: string): string {
+  let out = ''
+  let rest = src
+  for (;;) {
+    const startM = rest.match(THINK_START_REGEX)
+    if (!startM) break
+    const before = rest.slice(0, startM.index!)
+    const after = rest.slice(startM.index! + startM[0].length)
+    const endM = after.match(THINK_END_REGEX)
+    // 模型可能在思考标记前泄漏未闭合 JSON 头（如 `{\n  "thought`）：括号不平衡即整段丢弃，避免污染正文
+    const head = /^\s*\{/.test(before) && before.split('{').length !== before.split('}').length ? '' : before
+    if (endM) {
+      out += head + '<think>' + after.slice(0, endM.index!) + '</think>'
+      rest = after.slice(endM.index! + endM[0].length)
+    } else {
+      out += head + '<think>' + after
+      rest = ''
+      break
+    }
+  }
+  return out + rest
+}
+
+/**
+ * 从后往前找尾部平衡的顶层 JSON 块并严格解析验证（同主对话 extractTrailingJson 策略）：
+ * 正文可能含 {（如 markdown 代码块），贪婪正则会连正文一起吞掉，此处只认 JSON.parse 通过的块。
+ */
+function findTrailingJsonBlock(src: string): { parsed: any; block: string; index: number } | null {
+  const trimmed = src.trimEnd()
+  if (!trimmed.endsWith('}')) return null
+  let depth = 0
+  for (let i = trimmed.length - 1; i >= 0; i--) {
+    const ch = trimmed[i]
+    if (ch === '}') depth++
+    else if (ch === '{') {
+      depth--
+      if (depth === 0) {
+        // 确保前面不是 JSON 的一部分（前一个非空字符不能是 , : { [ 等）；位于文首的块交由 ^{ 整段分支处理
+        const before = trimmed.slice(0, i).trimEnd()
+        const lastChar = before[before.length - 1]
+        if (lastChar && lastChar !== ',' && lastChar !== ':' && lastChar !== '{' && lastChar !== '[') {
+          const block = trimmed.slice(i)
+          try {
+            const p = JSON.parse(block)
+            if (p && typeof p === 'object') return { parsed: p, block, index: i }
+          } catch {
+            // 非法 JSON 交由贪婪匹配 + 宽容提取回退
+          }
+        }
+        return null
+      }
+    }
+  }
+  return null
+}
+
+/** 流内占位标记（同主对话 displayMessage/normalizeStepContent）：round_index 由调用方提前提取，展示层统一剥离避免泄漏进思考卡/正文 */
+const stripStreamMarkers = (s: string): string =>
+  s.replace(/round_index:\d+,?\s*/g, '').replace(/sub_chat_mode:\w+,?\s*/g, '')
+
 /**
  * 结构化解析 AI 原始回复（与主对话管线对齐）：
- * - thinking：全部 <think>…</think> 段拼接（深度思考展示）
- * - text：剥离思考段后的展示文本；尾部结构化 JSON（task_type / thought / sql 等）提取其中回复文本替换，裸 JSON 不进入正文
+ * - thinking：<think>…</think> 段（含内联 “## 1. 🧠 思考过程” 标记与未闭合流式段）+ 结构化 thought/thoughts 字段拼接
+ * - text：剥离思考段后的展示文本；尾部结构化 JSON（task_type / thought / sql / desc 等）提取其中回复文本替换，裸 JSON 不进入正文
  * - json：尾部结构化 JSON 对象（含 sql/data/type 等，用于图表渲染）；无则 null
  */
 export function parseAiRaw(raw: string): { thinking: string; text: string; json: any | null } {
   const thinks: string[] = []
-  const withoutThink = raw.replace(/<think>([\s\S]*?)<\/think>/g, (_m, inner: string) => {
+  const closed = wrapInlineThinking(raw).replace(/<think>([\s\S]*?)<\/think>/g, (_m, inner: string) => {
     const t = String(inner).trim()
     if (t) thinks.push(t)
     return ''
   })
-  let text = withoutThink
+  // 流式进行中未闭合的 <think> 段：归入思考内容，正文不闪现（同主对话流式思考展示）
+  let withoutThink = closed
+  const openIdx = closed.lastIndexOf('<think>')
+  if (openIdx >= 0) {
+    const t = closed.slice(openIdx + 7).trim()
+    if (t) thinks.push(t)
+    withoutThink = closed.slice(0, openIdx)
+  }
+  // chat_with_knowledge：content 为 ```json 围栏包裹、以 thoughts 为首字段的 JSON，剥离围栏后走统一 JSON 解析（同主对话）
+  let text = withoutThink.replace(/^\s*```(?:json)?\s*(?=\{)/i, '').replace(/```\s*$/, '')
   let json: any | null = null
-  // 尾部完整 JSON 块；流式未闭合时整段以 { 开头的文本也按未完成块处理（避免裸 JSON 闪现在正文）
-  const tail = text.match(/\{[\s\S]*\}\s*$/)
-  const block = tail ? tail[0] : /^\s*\{/.test(text) ? text : null
-  const blockIndex = tail ? (tail.index ?? 0) : 0
+  // 优先尾部平衡且可严格解析的 JSON 块；非法 JSON（字符串值内字面换行等）回退贪婪匹配；流式未闭合整段以 { 开头时按未完成块处理
+  const balanced = findTrailingJsonBlock(text)
+  const greedy = balanced ? null : text.match(/\{[\s\S]*\}\s*$/)
+  const block = balanced ? balanced.block : greedy ? greedy[0] : /^\s*\{/.test(text) ? text : null
+  const blockIndex = balanced ? balanced.index : greedy ? (greedy.index ?? 0) : 0
   if (block) {
-    let parsed: any = null
-    if (tail) {
-      try {
-        const p = JSON.parse(block)
-        if (p && typeof p === 'object') parsed = p
-      } catch {
+    let parsed: any = balanced ? balanced.parsed : null
+    if (!parsed) {
+      if (greedy) {
+        try {
+          const p = JSON.parse(block)
+          if (p && typeof p === 'object') parsed = p
+        } catch {
+          parsed = lenientParseTail(block)
+        }
+      } else {
         parsed = lenientParseTail(block)
       }
-    } else {
-      parsed = lenientParseTail(block)
     }
     if (parsed && isStructuredPayload(parsed)) {
       json = parsed
-      if (typeof parsed.thought === 'string' && parsed.thought.trim()) thinks.push(parsed.thought.trim())
+      const thoughtStr = typeof parsed.thought === 'string' ? parsed.thought : typeof parsed.thoughts === 'string' ? parsed.thoughts : ''
+      if (thoughtStr.trim()) thinks.push(thoughtStr.trim())
       text = text.slice(0, blockIndex).concat(answerFromParsed(parsed))
-    } else if (!parsed) {
-      // 流式未闭合/无法识别的 JSON 块：正文不展示裸 JSON 片段
+    } else if (!parsed && blockIndex > 0) {
+      // 尾部块无法识别仅截断尾部；整段以 { 开头且提取不到字段时保留原文（避免正文被清空降级）
       text = text.slice(0, blockIndex)
     }
   }
-  return { thinking: thinks.join('\n\n'), text, json }
+  return { thinking: stripStreamMarkers(thinks.join('\n\n')), text: stripStreamMarkers(text), json }
 }
 
 /** 通过深度思考产出的 SQL 查询图表数据（同主对话 fetchDataBySql），shareCode 随 body 下发；失败返回 null */
@@ -512,6 +637,18 @@ export async function fetchMaxRound(cfg: WidgetConfig, convUid: string): Promise
     if (!isOk(json)) return null
     const n = Number(json?.data?.data ?? json?.data)
     return Number.isFinite(n) ? n : null
+  } catch {
+    return null
+  }
+}
+
+/** 按轮次搜本轮 view 消息（同主对话 ViewEle fetchData 的 messages/search）；返回其 context（desc/data/sql 等 view 原文），未落库或失败返回 null */
+export async function fetchViewContextByRound(cfg: WidgetConfig, convUid: string, roundIndex: number): Promise<unknown> {
+  try {
+    const json = await postJson(cfg, API.viewSearch, { conv_uid: convUid, round_index: roundIndex })
+    if (!isOk(json)) return null
+    const items = json?.data?.items
+    return Array.isArray(items) && items.length > 0 ? (items[0]?.context ?? null) : null
   } catch {
     return null
   }
@@ -548,5 +685,9 @@ function answerFromParsed(parsed: any): string {
   if (!parsed || typeof parsed !== 'object') return ''
   const taskType = parsed.task_type ?? 'development'
   const seg = parsed[taskType] && typeof parsed[taskType] === 'object' ? parsed[taskType] : {}
-  return seg.text || seg.content || parsed.text || parsed.content || parsed.answer || parsed.response || parsed.result || ''
+  return (
+    seg.text || seg.content || parsed.text || parsed.content || parsed.answer || parsed.response || parsed.result ||
+    // ViewEle 正文取 desc（非知识场景）/ data_knowledge（知识场景），同主对话口径
+    parsed.desc || parsed.data_knowledge || ''
+  )
 }

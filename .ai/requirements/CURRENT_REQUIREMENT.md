@@ -1262,3 +1262,68 @@ dashboard 微应用「我的大屏 → 分享记录」卡片仍为旧版行式�
 - bearer 默认凭证可手动修改且不被自动填充覆盖；新增方案/切换到 bearer 时仍自动填充。
 - 后端补齐 extensions 字段支持后，重新编辑能正确回显下行/上行选择及透明认证/凭证覆盖（前端提交/回显逻辑已就绪）。
 - tsc 不新增报错。
+
+## 2026-09-02 追加：探索模式代码编辑面板滚动条修复
+
+### 需求类型
+
+前端缺陷修复（纯 CSS 高度链，不改接口与交互）。
+
+### 背景
+
+探索模式右侧「代码编辑」面板（ExploreCodeEditorPane）中 CodeMirror 编辑器在内容超出面板高度时没有纵向滚动条，超出内容被裁切看不全。原因是 `@uiw/react-codemirror` 外层包裹 div（`.cm-theme-light`）默认高度 auto，使 `.cm-editor` 的 `height: 100%` 失效、编辑器被内容撑高后被 `.codeEditorBody` 的 `overflow: hidden` 裁切。
+
+### 目标
+
+- 给 `.codeEditorBody` 内 CodeMirror 包裹层确定高度（100%），使 `.cm-editor` / `.cm-scroller` 的 100% 高度链生效，内容超出时编辑器内部出现纵向滚动条，可滚动看全内容。
+- 不改编辑器边框、圆角、字体与头部布局；复制 / 收起交互不变。
+
+### 非目标
+
+- 不引入 python / bash 语法高亮扩展；不回写编辑结果到后端。
+- 不改工作室（ExplorePreviewPane）、报告侧栏样式。
+
+### 影响范围预期
+
+- `apps/chat/src/components/conversation/exploration-mode/styles.module.css`
+- 新增 run log：`.ai/runs/2026-09-02-explore-code-editor-scrollbar/`
+
+### 验收标准
+
+- 代码编辑面板打开长代码时编辑器内出现纵向滚动条，滚动可看全内容；面板外框不被撑高或裁切。
+- 代码不足一屏时不出现滚动条，编辑器外框（边框/行号槽）撑满面板内容区，与长代码状态外框一致；头部、复制 / 收起交互不变。
+- chat 应用构建与类型检查不新增错误。
+
+## 2026-09-02 追加二：分享复制按钮对齐大屏分享弹窗口径（密码有无决定文案与复制内容）
+
+### 需求类型
+
+前端缺陷修复 + 文案一致性（纯前端，不改接口协议）。
+
+### 背景
+
+用户反馈：「已发布助手 → 分享记录」中对有密码的分享点「复制链接和密码」，剪贴板内容只有分享链接没有密码；截图标注「复制信息，没有密码」。参照物为大屏分享弹窗按钮（密码有无决定按钮文案与复制内容，行为正确）。用户要求大屏分享记录按钮、助手分享按钮、助手分享记录按钮三处对齐该口径。分享记录列表接口（`/project/share/list`）返回字段无文档，密码字段名后端未统一，前端此前仅读 `sharePassword`。
+
+### 目标
+
+- 两端分享记录（abi `my-assistant/ShareRecordList.tsx`、dashboard `my-screen/ShareRecordList.tsx`）密码映射兼容 `sharePassword || password || sharePwd`（同名称字段兼容映射口径）；分享弹窗（`AssistantShareModal.tsx`）创建响应密码读取同口径兼容。
+- 两端分享记录按钮文案随密码有无切换：有密码「复制链接和密码」、无密码「复制链接」（同大屏分享弹窗口径，覆盖 2026-08-31 追加四的固定文案）；复制内容与提示文案沿用既有条件逻辑。
+- 复制内容格式不变：有密码 `分享链接：{url}\n访问密码：{pwd}`，无密码仅链接；大屏链接格式转换（`/#/`→`/`、`/dr/`→`/dashboard-share-page/`）仅大屏端沿用，助手端保持后端哈希路径原样（chat 应用 `dashboard_share_page/{code}` 哈希路由直接渲染后端路径）。
+
+### 非目标
+
+- 不修改分享记录查询接口、分页、空态、切空间重拉与状态标签逻辑。
+- 不修改大屏分享弹窗（参照物）与 chat 端分享页。
+- 不新增接口调用。
+
+### 影响范围预期
+
+- 修改：`apps/abi/src/pages/workbench/app-workshop/my-assistant/ShareRecordList.tsx`、`AssistantShareModal.tsx`
+- 修改：`apps/dashboard/src/pages/my-screen/ShareRecordList.tsx`
+- 新增 run log：`.ai/runs/2026-09-02-share-copy-password-align/`
+
+### 验收标准
+
+- 列表/创建响应任一兼容字段带密码时，复制内容含「访问密码」行、按钮文案「复制链接和密码」；无密码时按钮文案「复制链接」、复制仅链接。
+- 后端列表不返回任何密码字段时按钮不再承诺复制密码（文案「复制链接」），行为与大屏分享弹窗一致。
+- abi、dashboard 类型检查不新增错误。

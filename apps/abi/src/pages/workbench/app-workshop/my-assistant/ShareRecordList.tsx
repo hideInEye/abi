@@ -44,7 +44,8 @@ function mapShareRecord(item: any): ShareRecordItem {
     id: String(item.id ?? item.shareCode ?? item.projectId ?? ''),
     name: item.projectName || item.appName || item.name || '-',
     shareUrl: item.shareUrl || '',
-    sharePassword: item.sharePassword ?? '',
+    // 后端列表密码字段未统一口径，兼容 sharePassword/password/sharePwd（同名称字段兼容映射）
+    sharePassword: item.sharePassword || item.password || item.sharePwd || '',
     shareTime: fmtTime(item.createTime || item.shareTime),
     expiration: item.expirationDate ? fmtTime(item.expirationDate) : '永久',
     statusLabel: status.label,
@@ -193,7 +194,8 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
               <div className="ac-footer">
                 <span className={`ac-tag${r.statusOff ? ' off' : ''}`}>{r.statusLabel}</span>
                 <div className="ac-actions">
-                  <button className="ac-btn" onClick={() => handleCopy(r)}>复制链接和密码</button>
+                  {/* 文案随密码有无切换（同分享弹窗口径），避免无密码记录承诺复制密码 */}
+                  <button className="ac-btn" onClick={() => handleCopy(r)}>{r.sharePassword ? '复制链接和密码' : '复制链接'}</button>
                 </div>
               </div>
             </div>
