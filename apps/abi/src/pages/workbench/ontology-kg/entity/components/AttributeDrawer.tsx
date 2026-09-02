@@ -1,5 +1,5 @@
 import { ApartmentOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Empty, Form, Input, Select, Space, Table, Tabs, TreeSelect, message } from 'antd'
+import { Button, Empty, Form, Input, Select, Space, Table, Tag, TreeSelect, message } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import type { ColumnsType } from 'antd/es/table'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -15,10 +15,11 @@ import { useAttributeAssets } from '../hooks/useAttributeAssets'
 import { useAttributeGroups } from '../hooks/useAttributeGroups'
 import { useEntityAttributeManagement } from '../hooks/useEntityAttributeManagement'
 import type { AttributeBindingValues } from '../types'
+import { ATTRIBUTE_TYPE_PRESENTATION, SUPPORTED_ATTRIBUTE_TYPES, buildAttributeAssetOptions, buildAttributeFilterItems, getMappedAttributeDisplayName } from '../utils/attributePresentation'
+import type { AttributeFilterKey, SupportedAttributeType } from '../utils/attributePresentation'
 import { getEntityAttributeIdentity, makeAttributes } from '../utils/entity'
 
-type SupportedAttributeType = Exclude<OntologyEntityAttribute['attributeType'], 'field'>
-type AttributeTab = 'all' | SupportedAttributeType
+import styles from './AttributeDrawer.module.scss'
 
 interface AttributeDrawerProps {
   readonly entity?: OntologyEntity
@@ -26,19 +27,6 @@ interface AttributeDrawerProps {
   readonly onClose: () => void
   readonly onSaved: () => Promise<void>
   readonly open: boolean
-}
-
-const TYPE_LABELS: Record<SupportedAttributeType, string> = {
-  dimension: '维度属性',
-  indicator: '指标属性',
-  label: '标签属性',
-}
-
-const ATTRIBUTE_TYPE_LABELS: Record<OntologyEntityAttribute['attributeType'], string> = {
-  dimension: '维度属性',
-  field: '字段属性',
-  indicator: '指标属性',
-  label: '标签属性',
 }
 
 const DRAWER_STYLES: Record<string, React.CSSProperties> = {
@@ -80,18 +68,12 @@ const DRAWER_STYLES: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     lineHeight: '26px',
   },
-  listSection: {
-    background: '#fff',
-    border: '1px solid #edf1f7',
-    borderRadius: 8,
-    padding: 16,
-  },
 }
 
 export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels, onClose, onSaved, open }) => {
   const spaceId = useAppSelector(getSpaceId)
   const [form] = Form.useForm<AttributeBindingValues>()
-  const [activeTab, setActiveTab] = useState<AttributeTab>('all')
+  const [activeTab, setActiveTab] = useState<AttributeFilterKey>('all')
   const [selectedType, setSelectedType] = useState<SupportedAttributeType | undefined>()
   const [selectedGroupId, setSelectedGroupId] = useState<string>()
   const [adding, setAdding] = useState(false)
@@ -197,29 +179,28 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
   }, [onClose, saving])
 
   const visibleAttributes = useMemo(() => (activeTab === 'all' ? attributes : attributes.filter((attribute) => attribute.attributeType === activeTab)), [activeTab, attributes])
-  const assetOptions = useMemo(
-    () => [
-      { disabled: assets.length === 0, label: `绑定当前分组（${assets.length} 个资产）`, value: '__group__' },
-      ...assets.map((asset) => ({ label: `${asset.attributeName}（${asset.attributeCode}）`, value: String(asset.id) })),
-    ],
-    [assets],
-  )
-  const tabItems = useMemo(
-    () => [
-      { key: 'all', label: `全部（${attributes.length}）` },
-      ...(['dimension', 'indicator', 'label'] as SupportedAttributeType[]).map((type) => ({
-        key: type,
-        label: `${TYPE_LABELS[type]}（${attributes.filter((attribute) => attribute.attributeType === type).length}）`,
-      })),
-    ],
-    [attributes],
-  )
+  const assetOptions = useMemo(() => buildAttributeAssetOptions(assets), [assets])
+  const filterItems = useMemo(() => buildAttributeFilterItems(attributes), [attributes])
   const columns = useMemo<ColumnsType<OntologyEntityAttribute>>(
     () => [
-      { align: 'center', dataIndex: 'attributeType', key: 'attributeType', title: '属性类型', width: 110, render: (type: OntologyEntityAttribute['attributeType']) => ATTRIBUTE_TYPE_LABELS[type] },
-      { align: 'center', dataIndex: 'attributeName', ellipsis: true, key: 'attributeName', render: formatDisplayValue, title: '属性名称' },
+      {
+        align: 'center',
+        dataIndex: 'attributeType',
+        key: 'attributeType',
+        title: '属性类型',
+        width: 110,
+        render: (type: OntologyEntityAttribute['attributeType']) => {
+          const presentation = ATTRIBUTE_TYPE_PRESENTATION[type]
+          return (
+            <Tag bordered={false} className={styles.attributeTypeTag} data-tone={presentation.tone}>
+              {presentation.label}
+            </Tag>
+          )
+        },
+      },
+      { align: 'center', dataIndex: 'attributeName', ellipsis: true, key: 'attributeName', render: (value) => formatDisplayValue(getMappedAttributeDisplayName(value)), title: '属性名称' },
       { align: 'center', dataIndex: 'attributeCode', ellipsis: true, key: 'attributeCode', render: formatDisplayValue, title: '属性编码' },
-      { align: 'center', key: 'source', title: '来源模块', width: 120, render: (_, attribute) => ATTRIBUTE_TYPE_LABELS[attribute.attributeType] },
+      { align: 'center', key: 'source', title: '来源模块', width: 120, render: (_, attribute) => ATTRIBUTE_TYPE_PRESENTATION[attribute.attributeType].label },
       {
         align: 'center',
         key: 'action',
@@ -271,11 +252,27 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
           ))}
         </section>
 
-        <Tabs activeKey={activeTab} items={tabItems} onChange={(key) => setActiveTab(key as AttributeTab)} />
+        <div aria-label="属性分类筛选" className={styles.filterBar}>
+          {filterItems.map((item) => {
+            const active = item.key === activeTab
+            return (
+              <Button
+                aria-pressed={active}
+                className={`${styles.filterButton} ${active ? styles.filterButtonActive : ''}`}
+                data-tone={item.tone}
+                key={item.key}
+                onClick={() => setActiveTab(item.key)}
+              >
+                <span>{item.label}</span>
+                <span className={styles.filterCount}>{item.count}</span>
+              </Button>
+            )
+          })}
+        </div>
 
-        <section style={DRAWER_STYLES.listSection}>
+        <section className={styles.tableSection}>
           <Table<OntologyEntityAttribute>
-            className="abi-std-table"
+            className={`${styles.attributeTable} abi-std-table`}
             columns={columns}
             dataSource={visibleAttributes}
             loading={loadingDetail}
@@ -292,7 +289,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
             <div style={DRAWER_STYLES.bindingFormRow}>
               <Form.Item label="属性类型" name="attributeType" rules={[{ message: '请选择属性类型', required: true }]} style={{ flex: '0 0 180px', marginBottom: 0 }}>
                 <Select<SupportedAttributeType>
-                  options={(Object.keys(TYPE_LABELS) as SupportedAttributeType[]).map((type) => ({ label: TYPE_LABELS[type], value: type }))}
+                  options={SUPPORTED_ATTRIBUTE_TYPES.map((type) => ({ label: ATTRIBUTE_TYPE_PRESENTATION[type].label, value: type }))}
                   placeholder="请选择属性类型"
                   onChange={handleTypeChange}
                 />
