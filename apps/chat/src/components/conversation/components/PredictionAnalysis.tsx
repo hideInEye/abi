@@ -27,6 +27,8 @@ interface PropsType {
   data: any;  // 组件数据对象
   /** 点击模型调试图标的回调 */
   onDebugClick?: () => void;
+  /** 窄面板模式（分享页等）：预留 y 轴标签宽度使折线用满宽度；主对话不传，保持默认边距 */
+  compact?: boolean;
 }
 
 /**
@@ -34,7 +36,7 @@ interface PropsType {
  * @param {PropsType} props - 组件属性
  * @returns {JSX.Element} 预测分析图表组件
  */
-const PredictionAnalysis: React.FC<PropsType> = ({ data, onDebugClick }) => {
+const PredictionAnalysis: React.FC<PropsType> = ({ data, onDebugClick, compact }) => {
   // 使用 useState 管理图表数据状态
   const [chartData, setChartData] = useState<ChartDataItem[]>([]);
   // 图表实例引用，用于导出图片（保持原 echarts saveAsImage 的下载行为）
@@ -280,6 +282,8 @@ const PredictionAnalysis: React.FC<PropsType> = ({ data, onDebugClick }) => {
         return index < actualDataLen - 1 ? null : item.value;
     });
     return {
+      // 窄面板模式：预留 y 轴标签宽度并贴近两侧，标签不裁切、折线用满宽度；未传（主对话）保持默认边距
+      grid: compact ? { left: 8, right: 8, containLabel: true } : undefined,
       tooltip: {
         trigger: 'axis',
         axisPointer: {
@@ -364,7 +368,7 @@ const PredictionAnalysis: React.FC<PropsType> = ({ data, onDebugClick }) => {
         }
       ]
     };
-  }, [chartData]);
+  }, [chartData, compact]);
 
   /**
    * 获取 AQI 等级颜色

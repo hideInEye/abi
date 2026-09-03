@@ -2,6 +2,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 
 import { mapShareHistory, type WidgetMessage } from './history'
+import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
 
 /** Widget 配置：shareCode 为免登录凭证，apiBase 为网关前缀（空串表示同源） */
 export interface WidgetConfig {
@@ -45,6 +46,10 @@ export interface WidgetAssistantInfo {
   recQuestions: string[]
   /** 助手绑定的数据语义（随助手详情一并下发，扁平叶子列表） */
   semantics: WidgetSemanticNode[]
+  /** 助手绑定的技能（工具菜单候选，选中后随发送透传） */
+  skills: AssistantBoundSkill[]
+  /** 助手绑定的 MCP 服务（工具菜单候选，选中后随发送透传） */
+  mcps: AssistantBoundMcp[]
   /** 助手所属空间（建会话时随 spaceId 下发，同主对话） */
   spaceId?: number | string
 }
@@ -86,6 +91,8 @@ const API = {
   // 搜本轮 view 消息（同主对话 ViewEle fetchData）：query 固定 key=view/page=1/page_size=1/message_role=view，round 随 body
   viewSearch: '/chat-proxy/api/v1/chat/conv/messages/search?key=view&page=1&page_size=1&message_role=view',
   feedback: '/abi-chat/v1/app/message/feedback/add',
+  // 数据语义详情（同主对话 GET /api/copilot/v1/schema/{id}；/api 前缀由 apiBase 提供，避免双重拼接）
+  semanticDetail: '/copilot/v1/schema',
 }
 
 /** 请求头：分享校验通过后的临时 token 以 Authorization: Bearer 携带（与主应用鉴权头同格式） */
@@ -96,13 +103,13 @@ function buildHeaders(cfg: WidgetConfig, contentType?: string): Record<string, s
   return headers
 }
 
-/** 裸 fetch + 附 shareCode；不读 localStorage，供分享/嵌入免登录场景 */
+/** 裸 fetch；不读 localStorage，供分享/嵌入免登录场景（shareCode 仅校验接口需要，其余接口靠 token） */
 async function postJson(cfg: WidgetConfig, path: string, body: Record<string, unknown> = {}) {
   const base = String(cfg.apiBase || '').replace(/\/+$/, '')
   const res = await fetch(`${base}${path}`, {
     method: 'POST',
     headers: buildHeaders(cfg, 'application/json;charset=utf-8'),
-    body: JSON.stringify({ ...body, shareCode: cfg.shareCode }),
+    body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
@@ -115,7 +122,7 @@ function isOk(json: any): boolean {
 
 /** 校验分享密码 / 获取分享信息（与大屏同接口、同字段名；密码传空串即探测是否需要密码） */
 export async function checkSharePassword(cfg: WidgetConfig, password: string): Promise<ShareCheckResult | null> {
-  const json = await postJson(cfg, API.checkShare, { sharePassword: password })
+  const json = await postJson(cfg, API.checkShare, { sharePassword: password, shareCode: cfg.shareCode })
   if (!isOk(json)) return null
   const d = json?.data ?? {}
   return {
@@ -128,14 +135,22 @@ export async function checkSharePassword(cfg: WidgetConfig, password: string): P
   }
 }
 
-/** 裸 fetch GET + shareCode 随 query 下发（免登录），供分享/嵌入场景 */
+/** 裸 fetch GET（免登录）；shareCode 仅 getProjectInfo 需要，由调用方随 params 显式传入 */
 async function getJson(cfg: WidgetConfig, path: string, params: Record<string, string | number> = {}) {
   const base = String(cfg.apiBase || '').replace(/\/+$/, '')
-  const query = new URLSearchParams({ shareCode: cfg.shareCode })
+  const query = new URLSearchParams()
   Object.entries(params).forEach(([k, v]) => query.set(k, String(v)))
-  const res = await fetch(`${base}${path}?${query.toString()}`, { headers: buildHeaders(cfg) })
+  const qs = query.toString()
+  const res = await fetch(`${base}${path}${qs ? `?${qs}` : ''}`, { headers: buildHeaders(cfg) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
+}
+
+/** 查询数据语义详情（含 modelDetail 字段列表）；网关路径 = apiBase + /copilot/v1/schema/{schemaId} */
+export async function fetchSemanticDetail(cfg: WidgetConfig, schemaId: number | string): Promise<any> {
+  const json = await getJson(cfg, `${API.semanticDetail}/${schemaId}`)
+  if (!isOk(json)) throw new Error(json?.msg || json?.err_msg || '语义详情查询失败')
+  return json
 }
 
 /**
@@ -146,7 +161,7 @@ async function getJson(cfg: WidgetConfig, path: string, params: Record<string, s
  */
 export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string, type: ProjectType = 'react'): Promise<WidgetAssistantInfo | null> {
   try {
-    const json = await getJson(cfg, `${API.getProjectInfo}/${type}/${appId}`)
+    const json = await getJson(cfg, `${API.getProjectInfo}/${type}/${appId}`, { shareCode: cfg.shareCode })
     if (!isOk(json)) return null
     const d = json?.data?.data ?? json?.data ?? {}
     return {
@@ -156,6 +171,7 @@ export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string, type:
       prologue: d.prologue || '',
       recQuestions: parseRecQuery(d.recQuery),
       semantics: mapProjectSemantics(d),
+      ...mapAssistantBoundToolResources(d),
       spaceId: d.spaceId ?? d.space_id,
     }
   } catch {
@@ -193,6 +209,42 @@ export function mapProjectSemantics(detail: any): WidgetSemanticNode[] {
     })
   })
   return nodes
+}
+
+/**
+ * 从助手详情提取绑定技能/MCP（工具菜单候选，不新增接口调用）。
+ * 规则同主对话 mapAssistantBoundResources；分享查询的 config 可能为 JSON 字符串，复用 toSchemaConfigList 兼容。
+ */
+export function mapAssistantBoundToolResources(detail: any): { skills: AssistantBoundSkill[]; mcps: AssistantBoundMcp[] } {
+  const safe: any = detail && typeof detail === 'object' ? detail : {}
+  const versions: any[] = Array.isArray(safe.versions) ? safe.versions : []
+  const version: any =
+    versions.find((v: any) => v?.versionId != null && String(v.versionId) === String(safe.latestVersionId)) ||
+    versions[0] ||
+    safe
+
+  const skills: AssistantBoundSkill[] = []
+  const skillGroups: any[] = Array.isArray(version?.skills) ? version.skills : []
+  skillGroups.forEach((s: any) => {
+    toSchemaConfigList(s?.skillConfig).forEach((c: any) => {
+      if (c?.id == null) return
+      skills.push({ id: String(c.id), bizName: c.name || '', latestVersionId: String(c.id), skillType: '1' })
+    })
+  })
+
+  const mcps: AssistantBoundMcp[] = []
+  const tools: any[] = Array.isArray(version?.tools) ? version.tools : []
+  tools.forEach((t: any) => {
+    // toolType：'1' 内置工具 / '2' MCP，仅 MCP 进入工具候选
+    if (String(t?.toolType) !== '2') return
+    toSchemaConfigList(t?.toolConfig).forEach((c: any) => {
+      if (c?.id == null) return
+      const sse: any[] = Array.isArray(c.mcp_sse) ? c.mcp_sse : []
+      mcps.push({ id: String(c.id), name: c.name || '', protocol: sse.length > 0 ? 'sse' : 'streamable' })
+    })
+  })
+
+  return { skills, mcps }
 }
 
 /** schemaConfig 两种形态：数组或 JSON 字符串（分享查询实际下发字符串）；解析失败返回空数组 */
@@ -291,10 +343,27 @@ function getChatModel(): string {
   }
 }
 
+/** 发送透传项（输入工具栏）：思考开关与选中技能/MCP 源版本 id；字段名同主对话探索模式协议 */
+export interface WidgetSendExtras {
+  /** 深度思考开关（缺省 true，与现状一致） */
+  enableThinking?: boolean
+  /** 选中技能源版本 id */
+  skillSourceVersionIds?: Array<string | number>
+  /** 选中 MCP 源版本 id（sse 协议） */
+  sseMcpSourceVersionIds?: Array<string | number>
+  /** 选中 MCP 源版本 id（streamable 协议） */
+  streamableMcpSourceVersionIds?: Array<string | number>
+}
+
+/** 去重 + 过滤空值（同主对话 normalizeIdList） */
+function normalizeIdList(ids?: Array<string | number>): Array<string | number> {
+  return Array.from(new Set((ids || []).filter((id) => id !== '' && id !== null && id !== undefined)))
+}
+
 /**
  * 发送对话（SSE 流式，与助手对话链路一致）：
  * 同 useConversationController 走 /chat-proxy/api/v2/workflow/chat/completions，
- * stream/incremental 参数对齐，context 绑定会话与助手 app_id；shareCode 随 body 下发供后端免登录鉴权。
+ * stream/incremental 参数对齐，context 绑定会话与助手 app_id；鉴权靠 Authorization token，不再随 body 附 shareCode。
  * chat_mode 初版假设 'chat_with_assistant_share'，后端联调时按实际约定调整（集中此处）。
  */
 export function sendChatStream(
@@ -306,9 +375,15 @@ export function sendChatStream(
   { onDelta, onDone, onError }: StreamChatCallbacks,
   semantic?: WidgetSemanticSelection | null,
   spaceId?: number | string,
+  extras?: WidgetSendExtras,
 ): void {
   const base = String(cfg.apiBase || '').replace(/\/+$/, '')
   const spaceIdNum = Number(spaceId)
+  const skillIds = normalizeIdList(extras?.skillSourceVersionIds)
+  const sseMcpIds = normalizeIdList(extras?.sseMcpSourceVersionIds)
+  const streamableMcpIds = normalizeIdList(extras?.streamableMcpSourceVersionIds)
+  // 未选中任何技能/MCP 时不下发字段，避免污染后端默认行为（同语义字段口径）
+  const hasToolSelection = skillIds.length > 0 || sseMcpIds.length > 0 || streamableMcpIds.length > 0
   let buf = ''
   // 同主对话流式管线：reasoning_content 单独到达时需包装 <think>；[DONE]/提前断流时闭合
   let isReasoning = false
@@ -339,7 +414,6 @@ export function sendChatStream(
       max_new_tokens: 4096,
       incremental: true,
       enable_vis: false,
-      shareCode: cfg.shareCode,
       context: {
         session_id: session.sessionId,
         conv_uid: session.convUid,
@@ -350,6 +424,14 @@ export function sendChatStream(
         app_id: appId,
         user_id: 0,
         chat_mode: 'chat_with_assistant_share',
+        // 选中技能/MCP 时随 context 顶层下发（字段名同主对话探索模式协议）
+        ...(hasToolSelection
+          ? {
+              skills_source_version_ids: skillIds,
+              sse_mcp_source_version_ids: sseMcpIds,
+              mcp_streamable_source_version_ids: streamableMcpIds,
+            }
+          : {}),
         extra: {
           if_debug: false,
           // 数据语义（与大屏/对话一致）：未选中时不下发语义字段，避免污染后端默认行为。
@@ -360,9 +442,8 @@ export function sendChatStream(
                 semantic_name: semantic.name || '',
               }
             : {}),
-          // 与主对话深度思考开启态一致：分享页思考卡常显，后端据此下发思考内容
-          extra_body: { enable_thinking: true },
-          share_code: cfg.shareCode,
+          // 与主对话深度思考开启态一致：缺省开启（保持现状），工具栏关闭后下发 false
+          extra_body: { enable_thinking: extras?.enableThinking !== false },
         },
       },
     }),

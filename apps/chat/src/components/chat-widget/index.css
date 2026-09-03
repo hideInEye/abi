@@ -28,9 +28,10 @@
   position: fixed;
   top: 48px;
   right: 24px;
-  width: 520px;
+  /* 默认尺寸按视口等比（1920×1080 下约 653×907，给归因/预测看板更多展示空间），max() 兜底小屏最小可用尺寸 */
+  width: max(500px, 34vw);
   max-width: calc(100vw - 32px);
-  height: 780px;
+  height: max(660px, 84vh);
   max-height: calc(100vh - 72px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
@@ -38,15 +39,18 @@
 /* 形态 B：第三方嵌入（右侧悬浮面板） */
 .abi-cw-float {
   position: fixed;
-  top: 72px;
+  top: 64px;
   right: 24px;
-  bottom: 24px;
-  width: 480px;
+  bottom: 20px;
+  /* 同 page 形态按视口等比放大（1920 下约 614） */
+  width: max(480px, 32vw);
   max-width: calc(100vw - 32px);
   z-index: 2147483000;
 }
 
 .abi-cw-float .abi-cw-panel {
+  /* Popover/Drawer getPopupContainer 挂面板内，需定位父级（page 形态已是 fixed） */
+  position: relative;
   height: 100%;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
@@ -59,6 +63,58 @@
   overflow: hidden;
   border: 1px solid #e9edf4;
   box-shadow: 0 8px 32px rgba(26, 39, 68, 0.08);
+}
+
+/* ── 四边拖拽改大小把手（page 形态；透明热区骑跨边框，不影响圆角与内容） ── */
+.abi-cw-page .abi-cw-panel {
+  overflow: visible;
+}
+
+/* 面板不再裁剪子元素：首尾子元素自带圆角，避免背景溢出面板 16px 圆角 */
+.abi-cw-page .abi-cw-header {
+  border-radius: 16px 16px 0 0;
+}
+
+.abi-cw-page .abi-cw-footer {
+  border-radius: 0 0 16px 16px;
+}
+
+.abi-cw-resize {
+  position: absolute;
+  z-index: 30;
+  touch-action: none;
+}
+
+.abi-cw-resize-n {
+  top: -4px;
+  left: 12px;
+  right: 12px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.abi-cw-resize-s {
+  bottom: -4px;
+  left: 12px;
+  right: 12px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.abi-cw-resize-e {
+  top: 12px;
+  bottom: 12px;
+  right: -4px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.abi-cw-resize-w {
+  top: 12px;
+  bottom: 12px;
+  left: -4px;
+  width: 8px;
+  cursor: ew-resize;
 }
 
 /* ── 头部（拖拽把手，对齐大屏 ai-chat-header） ── */
@@ -128,13 +184,13 @@
   height: 16px;
 }
 
-/* ── 消息区（浅薰衣草画布，同主对话背景，白色内容卡浮于其上） ── */
+/* ── 消息区（浅灰白画布：纯白太刺眼，原薰衣草渐变太彩，取中间值） ── */
 .abi-cw-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding: 16px 12px;
-  background: linear-gradient(180deg, #e4e9f9 0%, #eaeefb 100%);
+  background: #f7f8fa;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -323,6 +379,18 @@
   box-shadow: 0 1px 4px rgba(91, 124, 247, 0.08);
 }
 
+/* 带 schemaId 的语义 chip 可点：窗体放大 + Schema 抽屉窗内展示 */
+.abi-cw-infobar-chip-sem.clickable {
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.abi-cw-infobar-chip-sem.clickable:hover {
+  border-color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.18);
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.2);
+}
+
 .abi-cw-infobar-dot {
   width: 6px;
   height: 6px;
@@ -377,10 +445,10 @@
   color: #8c8c8c;
 }
 
+/* 语义选择器与模式/思考/工具贴左排布，发送/停止靠右（margin-left:auto） */
 .abi-cw-input-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 4px 10px 8px;
   gap: 8px;
 }
@@ -388,7 +456,8 @@
 /* ── 数据语义 selector（对齐大屏 sem-selector） ── */
 .abi-cw-sem-selector {
   position: relative;
-  flex: 1;
+  /* 不撑满剩余宽度，否则模式/思考/工具会被顶到右侧 */
+  flex-shrink: 0;
   min-width: 0;
 }
 
@@ -622,6 +691,7 @@
 
 /* ── 发送 / 停止按钮（对齐大屏 send-btn / stop-btn） ── */
 .abi-cw-send {
+  margin-left: auto;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -654,6 +724,7 @@
 }
 
 .abi-cw-stop {
+  margin-left: auto;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -684,4 +755,161 @@
   font-size: 11px;
   color: #8c8c8c;
   margin-top: 6px;
+}
+
+/* ── 输入工具栏：模式 / 思考 / 工具（更多）── */
+.abi-cw-tb-item {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.abi-cw-tb-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #8494ad;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.abi-cw-tb-btn:hover {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.08);
+}
+
+.abi-cw-tb-btn.active {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.1);
+  border-color: rgba(91, 124, 247, 0.3);
+}
+
+/* 思考开启态高亮（缺省开，与现状一致） */
+.abi-cw-tb-btn.on {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.1);
+}
+
+.abi-cw-tb-btn-icon {
+  display: inline-flex;
+}
+
+.abi-cw-tb-btn-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.abi-cw-tb-btn-arrow {
+  display: inline-flex;
+}
+
+.abi-cw-tb-btn-arrow svg {
+  width: 10px;
+  height: 10px;
+}
+
+.abi-cw-tb-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #5b7cf7;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* 工具栏浮层（同语义 popover：非 portal，向上展开） */
+.abi-cw-tb-popover {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  min-width: 190px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+}
+
+/* 模式项：图标 + 名称/描述 + 选中勾（同主对话 mode-menu-item） */
+.abi-cw-tb-mode-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.abi-cw-tb-mode-item:hover {
+  background: rgba(130, 140, 200, 0.08);
+}
+
+.abi-cw-tb-mode-item.selected {
+  background: rgba(91, 124, 247, 0.1);
+}
+
+.abi-cw-tb-mode-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: #5b7cf7;
+}
+
+.abi-cw-tb-mode-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.abi-cw-tb-mode-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.abi-cw-tb-mode-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3a4d65;
+  line-height: 1.4;
+}
+
+.abi-cw-tb-mode-item.selected .abi-cw-tb-mode-name {
+  color: #5b7cf7;
+}
+
+.abi-cw-tb-mode-desc {
+  font-size: 11px;
+  color: #8494ad;
+  line-height: 1.4;
+}
+
+.abi-cw-tb-mode-check {
+  flex-shrink: 0;
+  color: #5b7cf7;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* 面板内抽屉（SchemaFieldsModal getContainer 指向面板）：绝对定位铺满面板，不随面板圆角溢出 */
+.abi-cw-panel > .ant-drawer {
+  border-radius: 16px;
+  overflow: hidden;
 }

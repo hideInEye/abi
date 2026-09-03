@@ -13,6 +13,12 @@ export interface WidgetChart {
   semanticGroup?: string
   /** 数据语义（semantic_name） */
   semanticName?: string
+  /** 数据语义 schemaId（view/流内 JSON 的 semantic_id，信息条 chip 点击查看 Schema 抽屉依赖） */
+  semanticSchemaId?: number | string
+  /** 主场景标识（chat_with_analysis 归因 / chat_with_predict 预测），用于渲染专属看板而非通用图表卡 */
+  chatMode?: string
+  /** 归因/预测看板的完整原始 JSON（view 尾部结构化数据），直接透传 AttributionDashboard / PredictionAnalysis */
+  raw?: any
 }
 
 /** Widget 消息模型（与后端原始字段解耦） */
@@ -39,6 +45,8 @@ export interface WidgetMessage {
   semanticGroup?: string
   /** 仅 AI：数据语义（semantic_name） */
   semanticName?: string
+  /** 仅 AI：数据语义 schemaId（信息条 chip 可点查看 Schema 抽屉的依据） */
+  semanticSchemaId?: number | string
 }
 
 /** createTime → HH:mm；非法时间返回空字符串 */
@@ -111,7 +119,10 @@ export function parseViewChart(content: unknown): WidgetChart | null {
       : typeof json.desc === 'string' && json.desc.trim()
         ? json.desc
         : undefined)
-  if (!rows.length && !sql && !desc) return null
+  // 归因（chat_with_analysis）/ 预测（chat_with_predict）走专属看板：无结果行/sql/desc 也需保留原始 JSON 供渲染（同主对话 ViewEle）
+  const chatMode = typeof json.chat_mode === 'string' && json.chat_mode ? json.chat_mode : undefined
+  const isDashboard = chatMode === 'chat_with_analysis' || chatMode === 'chat_with_predict'
+  if (!rows.length && !sql && !desc && !isDashboard) return null
   return {
     // 类型合法性由调用方按图表白名单校正，此处仅做非空兜底
     type: typeof json.type === 'string' && json.type ? json.type : 'response_bar_chart',
@@ -120,7 +131,10 @@ export function parseViewChart(content: unknown): WidgetChart | null {
     sql,
     desc,
     tableView: json.type === 'response_table' ? true : undefined,
+    chatMode,
+    raw: isDashboard ? json : undefined,
     semanticGroup: typeof json.semantic_group_name === 'string' && json.semantic_group_name.trim() ? json.semantic_group_name : undefined,
     semanticName: typeof json.semantic_name === 'string' && json.semantic_name.trim() ? json.semantic_name : undefined,
+    semanticSchemaId: json.semantic_id != null && json.semantic_id !== '' ? json.semantic_id : undefined,
   }
 }

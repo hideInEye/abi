@@ -121,6 +121,8 @@ interface AttributionDashboardProps {
   data: AttributionAnalysisData;
   /** 点击模型调试图标的回调 */
   onDebugClick?: () => void;
+  /** 窄面板模式（分享页等）：指标数值单行省略、窄屏改 2 列；主对话不传，行为不变 */
+  compact?: boolean;
 }
 
 /** 维度配色板（与参考报告一致） */
@@ -145,7 +147,7 @@ const fmtPct = (n: number | null | undefined): string => (n == null ? '—' : `$
 /** 截断长文本 */
 const truncate = (s: string, max: number): string => (s.length > max ? `${s.slice(0, max - 1)}…` : s);
 
-const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDebugClick }) => {
+const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDebugClick, compact }) => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [dimSubTab, setDimSubTab] = useState<'single' | 'cross'>('single');
   const [factorTab, setFactorTab] = useState<string>(data?.factor_table?.[0]?.dimension || '');
@@ -656,7 +658,7 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
   );
 
   const dashboard = (
-    <div className={styles.root}>
+    <div className={`${styles.root}${compact ? ` ${styles.rootCompact}` : ''}`}>
       {/* 顶部导航 */}
       <header className={styles.header}>
         <div className={styles.headerBrand}>

@@ -287,6 +287,17 @@
   z-index: 1;
 }
 
+/* 分享页窄面板（compact）适配：主对话不传 compact，不受影响 */
+/* 数值/副标题单行省略，避免窄面板下逐字竖排换行 */
+.rootCompact .metricNum,
+.rootCompact .metricSub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 窄面板（.main 容器）下指标卡改 2 列，单卡更宽、数值更完整 */
+@container (max-width: 760px) { .rootCompact .metricStrip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 .metricAccentLine {
   display: block;
   height: 2px;
