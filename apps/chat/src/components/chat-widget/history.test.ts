@@ -65,6 +65,19 @@ describe('parseViewChart', () => {
     expect(chart?.tableView).toBeUndefined()
   })
 
+  it('归因/预测（chat_with_analysis/chat_with_predict）无结果行也保留 chatMode 与原始 JSON 供专属看板渲染', () => {
+    const analysis = parseViewChart(
+      '{"chat_mode":"chat_with_analysis","metric_overview":{"current_value":1},"dimension_table":[],"factor_table":[]}',
+    )
+    expect(analysis?.chatMode).toBe('chat_with_analysis')
+    expect(analysis?.raw?.metric_overview).toEqual({ current_value: 1 })
+    expect(analysis?.data).toEqual([])
+
+    const predict = parseViewChart('{"chat_mode":"chat_with_predict","result_df":"ds,value"}')
+    expect(predict?.chatMode).toBe('chat_with_predict')
+    expect(predict?.raw?.result_df).toBe('ds,value')
+  })
+
   it('describe 占位与空内容返回 null', () => {
     expect(parseViewChart('describe')).toBeNull()
     expect(parseViewChart('  ')).toBeNull()

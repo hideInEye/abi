@@ -326,6 +326,16 @@ const AiEle: React.FC<PropsType> = ({
     setStepsExpanded((prev) => !prev)
   }
 
+  // 头部点击与展开/收起按钮共用同一开关：流式结束后历史步骤区是思考内容唯一查看入口，
+  // 避免头部再单独切换思考主体造成两块同内容区域同时出现；流式/澄清场景历史区不渲染，头部仍控制实时思考主体
+  const handleToggleHeader = () => {
+    if (canOpenHistorySteps) {
+      setStepsExpanded((prev) => !prev)
+      return
+    }
+    setIsCollapsed((prev) => !prev)
+  }
+
   return (
     <div className="my-2 w-full flex justify-start">
       {/* <SvgIcon
@@ -336,7 +346,7 @@ const AiEle: React.FC<PropsType> = ({
         <div className={styles.thinkingCard}>
           <div 
             className={styles.thinkingCardHeader}
-            onClick={() => setIsCollapsed((prev) => !prev)}
+            onClick={handleToggleHeader}
             style={{ cursor: 'pointer' }}
           >
             <div className={styles.thinkingStatusWrap}>
@@ -360,7 +370,11 @@ const AiEle: React.FC<PropsType> = ({
                 <button
                   type="button"
                   className={`${styles.thinkingHistoryTrigger} ${!canOpenHistorySteps ? styles.thinkingHistoryTriggerDisabled : ''}`}
-                  onClick={handleToggleHistorySteps}
+                  onClick={(e) => {
+                    // 按钮在头部内，阻止冒泡避免一次点击同时切换步骤区与思考主体两个状态
+                    e.stopPropagation()
+                    handleToggleHistorySteps()
+                  }}
                   disabled={!canOpenHistorySteps}
                 >
                   <span>{stepsExpanded ? '收起' : '展开'}</span>
@@ -405,7 +419,8 @@ const AiEle: React.FC<PropsType> = ({
             </div>
           )}
 
-          {isCollapsed ? null : <div className={styles.thinkingCardBody}>
+          {/* 流式结束后思考内容只经历史步骤区查看，主体不再渲染，杜绝与步骤区同内容双层 */}
+          {isCollapsed || canOpenHistorySteps ? null : <div className={styles.thinkingCardBody}>
             <div
               ref={thinkingContentRef}
               onScroll={handleThinkingScroll}
