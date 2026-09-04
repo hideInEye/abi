@@ -243,6 +243,35 @@
   overflow: auto;
 }
 
+/* 窄屏（分享面板）紧凑态：思考文字缩小、行高收紧；限高由使用方通过 --think-max-h 覆盖 */
+.thinkingContentCompact {
+  font-size: 12px;
+  line-height: 1.7;
+  max-height: var(--think-max-h, 300px);
+}
+
+.thinkingStepContentCompact {
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* 紧凑态下内层 markdown 容器自带字号会覆盖父级继承，需同步下调（打字机/折叠步骤正文） */
+.thinkingContentCompact .markdown-content,
+.thinkingContentCompact .markdown-content p,
+.thinkingContentCompact .markdown-content li,
+.thinkingContentCompact .markdown-content h1,
+.thinkingContentCompact .markdown-content h2,
+.thinkingContentCompact .markdown-content h3,
+.thinkingContentCompact .markdown-content h4,
+.thinkingContentCompact .markdown-content h5,
+.thinkingContentCompact .markdown-content h6,
+.thinkingStepContentCompact .markdown-content,
+.thinkingStepContentCompact .markdown-content p,
+.thinkingStepContentCompact .markdown-content li {
+  font-size: 12px;
+  line-height: 1.7;
+}
+
 /* 实时思考内容复用了 .markdown-content，需在思考区强制浅灰，避免继承描述分析的深色 */
 .thinkingContent .markdown-content,
 .thinkingContent .markdown-content p,

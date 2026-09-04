@@ -38,73 +38,6 @@
 
 ---
 
-<<<<<<< Updated upstream
-# 本体网络接口异步交互一致性审计需求
-
-## 文档状态
-
-- 状态：已完成。
-- 日期：2026-09-01。
-- 需求来源：用户提出的 `.ai` 长期规则补充、`ontology-kg` 全量接口交互审计，以及“每一个调用接口的地方都要有对应单测文件”的补充要求。
-- 影响范围：`.ai/context/AI_DEVELOPMENT_RULES.md`、`.ai/requirements/CURRENT_REQUIREMENT.md`、`apps/abi/src/pages/workbench/ontology-kg/**` 中经审计确认违反规则的实现及其测试、被本体网络直接复用的 `apps/abi/src/components/tableSemantics.tsx` 与 `apps/abi/src/components/stateful/group/{Group.tsx,useGroupManagement.ts}`、为本体网络保留 flat request 成败信息的 `apps/abi/src/service/api/{assistant-manage.ts,data-preparation.ts}`、用于统一判定现有 flat request 结果的 `apps/abi/src/service/request/flat-result.ts` 及测试、本轮 `.ai/runs` 记录。
-
-## 需求类型
-
-ABI 本体网络模块 Bug 修复、异步交互一致性审计和长期开发规则补充。
-
-## 目标
-
-1. 在 `.ai` 中固化接口成功时序规则：所有接口请求必须等待响应并判定真实成败，只有成功才能执行 callback、进入下一步、关闭弹层、展示成功提示、刷新数据、提交成功态或跳转；失败时进入失败分支并保留可重试状态，不得继续成功链路。该规则适用于读写接口和所有交互形态，不局限于弹层。
-2. 在 `.ai` 中固化需求边界规则：严禁修改当前需求范围之外的代码，发现无关问题只记录，不顺手修改。
-3. 盘点 `apps/abi/src/pages/workbench/ontology-kg/**` 下全部接口调用点及其 callback、下一步操作、状态更新、提示、刷新、关闭和跳转链路，并覆盖 Drawer、Modal、Popconfirm 与命令式确认框。
-4. 修复所有违反上述成功时序规则的实现，并为可测试的异步边界补充回归测试。
-5. 按实体、关系、图谱、推荐问题、行业术语、标签语义、维度建模、指标建模和共享调用等小模块建立接口单测，允许一个测试文件覆盖模块内多个调用源文件，但必须逐一覆盖每个实际接口调用的成功继续与失败阻断；本体网络响应适配器执行同一标准。
-
-## 非目标
-
-- 除本体网络直接复用的分组/数据语义组件、仅由本体网络使用的响应适配函数和 flat request 成败判定工具外，不修改 `ontology-kg` 之外的业务代码。
-- 不改变后端接口路径、请求参数、返回协议或统一 request 成功判定。
-- 不重构与异步关闭、成功提示或 callback 时序无关的组件、样式和业务逻辑。
-- 不新增运行时依赖，不进行全局格式化；仅在现有 Vitest/React 服务端渲染能力无法执行 hook/component 异步交互时，允许增加最小化的开发测试依赖。
-- 不重构纯读取接口的 loading/缓存策略，但必须保证读取失败不会被当作成功数据继续驱动 callback、状态更新或下一步操作。
-
-## 审计规则
-
-1. `await` 到请求 Promise 返回且显式判定成功后，才允许执行 callback、下一步操作、关闭弹层、成功提示、数据刷新、成功态提交或跳转；仅 Promise resolve 不等于接口成功。
-2. 不得使用 `void request()` 后立即执行依赖请求成功的逻辑，不得在未等待并确认成功的情况下调用 callback 或进入下一步。
-3. 不得用 `try/finally` 的 `finally` 关闭弹层或触发完成型 callback；`finally` 只允许恢复 loading 等无论成败都应恢复的瞬时状态。
-4. 失败结果和 `catch` 分支不得显示成功提示、执行 callback 或继续成功链路；错误提示优先沿用 ABI 统一 request 错误处理，避免重复提示。
-5. 防止重复提交：已有 loading 状态的弹层在请求期间保持确认按钮 loading/disabled；本轮不为与缺陷无关的所有弹层统一重构状态方案。
-6. 读取、删除、批量操作等没有持续弹层的交互，也必须先判定响应成功，再消费响应数据、更新状态、刷新列表、执行 callback 或显示成功提示。
-
-## 验收标准
-
-1. `ontology-kg` 下全部接口调用点均有可追溯的响应判定与后续流程审计结果。
-2. 任一读写请求失败时，不消费失败响应数据，不执行 callback 或下一步，不关闭当前弹层、不刷新为成功态、不显示成功提示。
-3. 相同请求成功时，原有关闭、callback、刷新和成功提示行为保持不变。
-4. 修复仅落在本需求列明的影响范围内，不包含无关重构或格式化。
-5. 针对新增异步控制逻辑补充 Vitest 回归测试；无法组件化自动测试的交互在 run log 中记录静态/手工回归方法。
-6. 每个实际接口调用源文件必须归属一个模块单测；测试名称或用例矩阵能追溯到该文件内的具体接口函数，不要求一个调用文件对应一个单测文件。
-7. 每个接口调用至少覆盖一次明确成功响应和一次业务/网络失败响应，并断言 callback、下一步、关闭、刷新、成功提示或状态消费只发生在成功分支。
-
-## 测试要求
-
-- 运行受影响的 `ontology-kg` Vitest 测试。
-- 生成并校验“接口调用源文件 -> 所属模块测试 -> 接口函数 -> 成功/失败用例”覆盖矩阵，不允许遗漏实际调用文件或接口函数。
-- 运行 `pnpm test`。
-- 运行 `pnpm --filter chatbi typecheck`。
-- 运行 `pnpm --filter chatbi build`。
-- 运行 `git diff --check`，并静态复查全部命中链路。
-- 生成 `.ai/runs/2026-09-01-ontology-kg-request-success-flow/RUN_LOG.md`。
-
-## 回滚策略
-
-- 各修复保持在原组件或 domain hook 内，可按文件独立回滚，不修改统一 request 层和接口协议。
-
----
-
-# 历史需求：标签语义表达式与指标建模改造（已完成，仅供上下文）
-=======
 # 本体网络属性配置与指标维度选择修复
 
 ## 文档状态
@@ -179,7 +112,6 @@ ABI 本体网络局部交互与视觉修复。
 ---
 
 # 历史需求：标签语义表达式与指标建模改造需求（含派生指标预览）
->>>>>>> Stashed changes
 
 ## 文档状态
 
@@ -1380,39 +1312,110 @@ dashboard 微应用「我的大屏 → 分享记录」卡片仍为旧版行式�
 - 后端补齐 extensions 字段支持后，重新编辑能正确回显下行/上行选择及透明认证/凭证覆盖（前端提交/回显逻辑已就绪）。
 - tsc 不新增报错。
 
-## 2026-09-04 追加：报告 Todo 异常顺序静默防御
+## 2026-09-02 追加：探索模式代码编辑面板滚动条修复
 
 ### 需求类型
 
-报告模式前端缺陷修复（仅调整 Redis 事件聚合，不改接口协议和页面样式）。
+前端缺陷修复（纯 CSS 高度链，不改接口与交互）。
 
 ### 背景
 
-后端偶发返回顺序异常的 `plan.update.tasks`：已经完成的任务出现在执行中、等待中或已取消任务之后。该快照若直接渲染，会使后执行的任务显示在未执行任务后面，并造成执行步骤归属错乱。
+探索模式右侧「代码编辑」面板（ExploreCodeEditorPane）中 CodeMirror 编辑器在内容超出面板高度时没有纵向滚动条，超出内容被裁切看不全。原因是 `@uiw/react-codemirror` 外层包裹 div（`.cm-theme-light`）默认高度 auto，使 `.cm-editor` 的 `height: 100%` 失效、编辑器被内容撑高后被 `.codeEditorBody` 的 `overflow: hidden` 裁切。
 
 ### 目标
 
-- `completed` 任务必须构成 Todo 列表的连续前缀；出现首个非 `completed` 状态后，不允许再出现 `completed`。
-- 收到上述顺序异常的 `plan.update` 时，静默忽略整份任务快照，保留上一份有效计划和 Todo 状态；没有上一份有效计划时继续保持空 Todo。
-- 异常 Stream entry 仍记为已处理并推进 `lastEntryId`，避免断线续读或历史回放时重复处理。
-- 后续收到顺序正常的 `plan.update` 时恢复正常更新。
-- 不展示警告、Toast、错误卡片或其他用户提示，不在前端重新排序后端任务。
+- 给 `.codeEditorBody` 内 CodeMirror 包裹层确定高度（100%），使 `.cm-editor` / `.cm-scroller` 的 100% 高度链生效，内容超出时编辑器内部出现纵向滚动条，可滚动看全内容。
+- 不改编辑器边框、圆角、字体与头部布局；复制 / 收起交互不变。
 
 ### 非目标
 
-- 不调整普通对话、报告样式、步骤展示、步骤归属、报告文件识别和下载逻辑。
-- 不改变 Todo 状态枚举或 Redis Stream 接口协议。
-- 不修改已完成报告的 query 历史适配协议。
+- 不引入 python / bash 语法高亮扩展；不回写编辑结果到后端。
+- 不改工作室（ExplorePreviewPane）、报告侧栏样式。
 
 ### 影响范围预期
 
-- `apps/chat/src/components/conversation/report-mode/reportStreamReducer.ts`
-- `apps/chat/src/components/conversation/report-mode/reportStreamReducer.test.ts`
-- `.ai/runs/2026-09-04-report-todo-order-guard/`
+- `apps/chat/src/components/conversation/exploration-mode/styles.module.css`
+- 新增 run log：`.ai/runs/2026-09-02-explore-code-editor-scrollbar/`
 
 ### 验收标准
 
-- 顺序正常的计划（如 `completed → in_progress → pending`）照常渲染。
-- 顺序异常的计划（如 `completed → in_progress → pending → completed`）不覆盖上一份有效计划，也不新增 warning。
-- 被忽略的 entry 仍更新 `lastEntryId` 和去重记录，下一份有效计划可以继续更新。
-- 报告 Stream reducer 定向测试、类型检查、构建和 `git diff --check` 通过，或明确记录环境原因。
+- 代码编辑面板打开长代码时编辑器内出现纵向滚动条，滚动可看全内容；面板外框不被撑高或裁切。
+- 代码不足一屏时不出现滚动条，编辑器外框（边框/行号槽）撑满面板内容区，与长代码状态外框一致；头部、复制 / 收起交互不变。
+- chat 应用构建与类型检查不新增错误。
+
+## 2026-09-02 追加二：分享复制按钮对齐大屏分享弹窗口径（密码有无决定文案与复制内容）
+
+### 需求类型
+
+前端缺陷修复 + 文案一致性（纯前端，不改接口协议）。
+
+### 背景
+
+用户反馈：「已发布助手 → 分享记录」中对有密码的分享点「复制链接和密码」，剪贴板内容只有分享链接没有密码；截图标注「复制信息，没有密码」。参照物为大屏分享弹窗按钮（密码有无决定按钮文案与复制内容，行为正确）。用户要求大屏分享记录按钮、助手分享按钮、助手分享记录按钮三处对齐该口径。分享记录列表接口（`/project/share/list`）返回字段无文档，密码字段名后端未统一，前端此前仅读 `sharePassword`。
+
+### 目标
+
+- 两端分享记录（abi `my-assistant/ShareRecordList.tsx`、dashboard `my-screen/ShareRecordList.tsx`）密码映射兼容 `sharePassword || password || sharePwd`（同名称字段兼容映射口径）；分享弹窗（`AssistantShareModal.tsx`）创建响应密码读取同口径兼容。
+- 两端分享记录按钮文案随密码有无切换：有密码「复制链接和密码」、无密码「复制链接」（同大屏分享弹窗口径，覆盖 2026-08-31 追加四的固定文案）；复制内容与提示文案沿用既有条件逻辑。
+- 复制内容格式不变：有密码 `分享链接：{url}\n访问密码：{pwd}`，无密码仅链接；大屏链接格式转换（`/#/`→`/`、`/dr/`→`/dashboard-share-page/`）仅大屏端沿用，助手端保持后端哈希路径原样（chat 应用 `dashboard_share_page/{code}` 哈希路由直接渲染后端路径）。
+
+### 非目标
+
+- 不修改分享记录查询接口、分页、空态、切空间重拉与状态标签逻辑。
+- 不修改大屏分享弹窗（参照物）与 chat 端分享页。
+- 不新增接口调用。
+
+### 影响范围预期
+
+- 修改：`apps/abi/src/pages/workbench/app-workshop/my-assistant/ShareRecordList.tsx`、`AssistantShareModal.tsx`
+- 修改：`apps/dashboard/src/pages/my-screen/ShareRecordList.tsx`
+- 新增 run log：`.ai/runs/2026-09-02-share-copy-password-align/`
+
+### 验收标准
+
+- 列表/创建响应任一兼容字段带密码时，复制内容含「访问密码」行、按钮文案「复制链接和密码」；无密码时按钮文案「复制链接」、复制仅链接。
+- 后端列表不返回任何密码字段时按钮不再承诺复制密码（文案「复制链接」），行为与大屏分享弹窗一致。
+- abi、dashboard 类型检查不新增错误。
+
+## 2026-09-03 追加：分享悬浮窗四块交互增强（放大缩小/四边拖拽/语义抽屉/输入工具栏）
+
+### 需求类型
+
+前端交互增强（分享悬浮窗 ChatWidget 纯前端；不新增后端接口）。
+
+### 背景
+
+产品截图四处标注，对象为助手分享对话悬浮窗（apps/chat chat-widget，分享页与第三方嵌入共用）：头部缺放大/缩小按钮（归因分析看板已有全屏按钮可参照）；信息条「数据语义」chip 分享场景不可点、看不了语义详情；窗体仅头部整体拖拽、边框不能改大小；输入工具栏缺主对话的模式/思考/工具三个入口。
+
+### 目标
+
+1. 头部关闭按钮左侧加放大/缩小切换按钮，图标与交互同归因分析看板全屏按钮（AttributionDashboard fsBtn）一致；放大后窗体铺满视口，缩小恢复放大前尺寸（含拖拽自定义尺寸）。
+2. 信息条「数据语义」chip 改为可点（仅该消息携带 schemaId 时）：点击后窗体默认进入放大态，语义 Schema 详情以窗内抽屉展示（复用 SchemaFieldsModal）。
+3. 窗体上/下/左/右四边加拖拽把手，支持拖拽实时改宽高（最小尺寸与视口边界约束）；放大态禁用把手。
+4. 输入工具栏对齐主对话补三个入口：模式（交互/报告/探索三选下拉，报告/探索先不对接发送协议与专属渲染）、思考开关（透传 extra_body.enable_thinking，默认开启保持现状）、工具（「更多」菜单：查看语义/技能/MCP；技能/MCP 列表从助手详情 getProjectInfo 同响应提取，选中后随发送透传 skills/mcp source version ids，字段名同主对话）。
+
+### 非目标
+
+- 不对接报告/探索模式的发送协议（chat_mode 映射）与消息渲染管线。
+- 不新增后端接口调用；技能/MCP 列表从 getProjectInfo 同响应提取。
+- 不改主对话与大屏 AiChatPanel 的信息条、输入工具栏；不改归因分析看板。
+- 不改分享窗思考卡/图表/点赞点踩等既有渲染链路。
+
+### 影响范围预期
+
+- 修改：`apps/chat/src/components/chat-widget/{ChatWidget.tsx,index.css,service.ts}`
+- 新增 run log：`.ai/runs/2026-09-03-chat-widget-window-enhancements/`
+
+### 验收标准
+
+1. 头部放大/缩小按钮位于关闭按钮左侧，图标随状态切换；放大铺满视口、缩小恢复此前尺寸，可反复切换。
+2. 点击带 schemaId 的语义 chip：窗体自动放大、Schema 抽屉窗内右侧滑出，字段分组/搜索/筛选可用；无 schemaId 的 chip 保持不可点。
+3. 四边拖拽实时改窗体尺寸，不小于最小尺寸、不越出视口；放大态无把手。
+4. 模式下拉交互/报告/探索三态可切换；思考开关控制 enable_thinking（默认开）；「更多」菜单查看语义同目标 2 抽屉，技能/MCP 可多选并随发送透传。
+5. chat-widget 单测与 `tsc --noEmit` 不新增错误；分享对话既有发送/渲染无回归。
+
+### 测试要求
+
+- `pnpm test`（chat-widget 相关：service/history/shareUrl）。
+- apps/chat 目录 `tsc --noEmit`。
+- 手工：分享页拖拽/放大/四边 resize/语义抽屉/工具栏交互。

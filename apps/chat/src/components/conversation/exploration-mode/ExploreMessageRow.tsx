@@ -187,11 +187,22 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
   useEffect(() => {
     const el = thinkingScrollRef.current
     if (!el) return
-    const check = () => setThinkingOverflow(el.scrollHeight > el.clientHeight + 1)
+    // 分屏 width 动画期间 RO 每帧触发；用 rAF 把一帧内多次回调合并、推迟到帧边界读布局，避免逐帧强制同步重排
+    let raf = 0
+    const check = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        setThinkingOverflow(el.scrollHeight > el.clientHeight + 1)
+      })
+    }
     check()
     const observer = new ResizeObserver(check)
     observer.observe(el)
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      if (raf) cancelAnimationFrame(raf)
+    }
   }, [thinking.thought, running])
   const focusedStep = selectionActive ? getStepsFocused(selectedSteps) : getFocusedStep(item)
   const focusedStepTitle = focusedStep?.title || focusedStep?.action || (focusedStep?.step != null ? `步骤 ${focusedStep.step}` : '当前步骤')
@@ -270,7 +281,7 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
                   }}
                 >
                   {thinking.thought ? (
-                    <div className={styles.thinkingBox}>
+                    <div className={`${styles.thinkingBox} ${running ? styles.thinkingBoxRunning : ''}`}>
                       <div className={styles.thinkingText}>{thinking.thought}</div>
                       {thinking.intention && (
                         <div className={styles.thinkingSub}>

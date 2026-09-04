@@ -10,6 +10,8 @@ import styles from './styles.module.css'
 interface ExplorePreviewPaneProps {
   item: ExploreItem
   onClose: () => void
+  /** 分屏动画期间冻结的面板宽度（px）：使内部布局不随壳宽逐帧变化，动画结束后为 undefined 恢复自适应。 */
+  frozenWidth?: number
 }
 
 /** 参考产品图绘制的双栏收起图标；路径使用 currentColor 以复用按钮交互色。 */
@@ -74,14 +76,14 @@ const StepResult: React.FC<{ step: ExploreStep }> = ({ step }) => {
 }
 
 /** 探索结果全高工作室：展示分步骤执行数据、最终结论与执行摘要。 */
-const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose }) => {
+const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose, frozenWidth }) => {
   const statusTag = getStatusTag(item.status)
   const resultSteps = item.steps.filter((step) => step.outputs.some(isStructuredOutput))
   const hasResult = Boolean(item.finalContent) || resultSteps.length > 0 || Boolean(item.summary)
   const running = item.status === 'running'
 
   return (
-    <aside className={styles.pane}>
+    <aside className={styles.pane} style={frozenWidth ? { width: frozenWidth } : undefined}>
       <div className={styles.paneHeader}>
         <div style={{ minWidth: 0 }}>
           <div className={styles.paneTitle}>

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { marked } from 'marked'
-import { ConfigProvider, Table, Typography, message as antdMessage } from 'antd'
+import { ConfigProvider, Popover, Table, Typography, message as antdMessage } from 'antd'
+import { ApiOutlined, CheckOutlined, EyeOutlined, RightOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons'
 import zhCN from 'antd/es/locale/zh_CN'
 import { format as formatSql } from 'sql-formatter'
 // @ts-ignore - react-syntax-highlighter 类型定义问题
@@ -15,6 +16,9 @@ import AiEle from '../conversation/AiEle'
 import OpeningsEle from '../conversation/OpeningsEle'
 import ChartHeader from '../conversation/components/ChartHeader'
 import StatisticsAnalysis from '../conversation/components/StatisticsAnalysis'
+import AttributionDashboard from '../conversation/components/AttributionDashboard'
+import PredictionAnalysis from '../conversation/components/PredictionAnalysis'
+import CausalAnalysis from '../conversation/components/CausalAnalysis'
 import { SUPPORTED_RENDER_TYPES, getChartTypeItem } from '../conversation/components/chartTypeCatalog'
 import convStyles from '../conversation/index.module.css'
 import viewStyles from '../conversation/styles.module.css'
@@ -22,7 +26,9 @@ import { getChartOption, parseISO8601Duration, parseISODate } from '../conversat
 import { handleImageExport } from '../conversation/helpers/download'
 import PieLegend from '../PieLegend'
 import { EChart } from '../react-echarts'
-import type { WidgetChart, WidgetMessage } from './history'
+import SchemaFieldsModal, { parseSchemaFieldsFromModelDetail } from '../conversation-analysis/SchemaFieldsModal'
+import type { SchemaTable } from '../conversation-analysis/SchemaFieldsModal'
+import { parseViewChart, type WidgetChart, WidgetMessage } from './history'
 import {
   checkSharePassword,
   ensureSession,
@@ -30,16 +36,18 @@ import {
   fetchChartDataBySql,
   fetchHistory,
   fetchMaxRound,
+  fetchSemanticDetail,
+  fetchViewContextByRound,
   parseAiRaw,
   sendChatStream,
   submitFeedback,
   type ProjectType,
   type WidgetAssistantInfo,
-  type WidgetConfig,
   type WidgetSemanticNode,
   type WidgetSemanticSelection,
   type WidgetSession,
 } from './service'
+import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
 import './index.css'
 
 export interface ChatWidgetProps {
@@ -60,6 +68,15 @@ export interface ChatWidgetProps {
 }
 
 type Phase = 'checking' | 'password' | 'loading' | 'ready' | 'error'
+
+/** 输入工具栏对话模式（标签同主对话；报告/探索暂不对接发送协议与专属渲染，仅切换展示） */
+type WidgetChatMode = 'interact' | 'report' | 'explore'
+
+const WIDGET_MODES: Array<{ key: WidgetChatMode; label: string; desc: string }> = [
+  { key: 'interact', label: '交互', desc: '敏捷问数，基础分析' },
+  { key: 'report', label: '报告', desc: '深度挖掘，智能洞察' },
+  { key: 'explore', label: '探索', desc: '自主规划，复杂分析' },
+]
 
 function getNow(): string {
   const d = new Date()
@@ -87,6 +104,13 @@ const WIDGET_CHART_TYPES: Array<{ value: string; label: string }> = [
 
 const isValidChartType = (t: unknown): boolean =>
   typeof t === 'string' && WIDGET_CHART_TYPES.some((i) => i.value === t)
+
+/** 流内/查数 JSON 的语义元信息 → 消息信息条字段（同主对话 extractSemanticMeta 口径）；schemaId 供 chip 点击开 Schema 抽屉 */
+const semanticMetaOf = (json: any): Pick<WidgetMessage, 'semanticGroup' | 'semanticName' | 'semanticSchemaId'> => ({
+  semanticGroup: typeof json?.semantic_group_name === 'string' && json.semantic_group_name.trim() ? json.semantic_group_name : undefined,
+  semanticName: typeof json?.semantic_name === 'string' && json.semantic_name.trim() ? json.semantic_name : undefined,
+  semanticSchemaId: json?.semantic_id != null && json.semantic_id !== '' ? json.semantic_id : undefined,
+})
 
 /** marked 同步解析；解析异常时降级为转义后的原文 */
 const renderMarkdown = (content: string): string => {
@@ -145,6 +169,56 @@ const IconArrowDown = (
   </svg>
 )
 
+/* 头部放大/缩小（SVG 路径同归因分析 AttributionDashboard 全屏按钮） */
+const IconExpand = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+  </svg>
+)
+
+const IconCompress = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+  </svg>
+)
+
+/* 输入工具栏图标（feather 线稿：对话/文档/指南针=三模式，灯泡=思考，眼睛=查看语义，闪电=技能，服务器=MCP） */
+const IconMessage = (
+  <svg viewBox="0 0 24 24" {...iconProps}>
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+)
+
+const IconFileText = (
+  <svg viewBox="0 0 24 24" {...iconProps}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+  </svg>
+)
+
+const IconCompass = (
+  <svg viewBox="0 0 24 24" {...iconProps}>
+    <circle cx="12" cy="12" r="10" />
+    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+  </svg>
+)
+
+const IconBulb = (
+  <svg viewBox="0 0 24 24" {...iconProps}>
+    <path d="M9 18h6" />
+    <path d="M10 22h4" />
+    <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+  </svg>
+)
+
+const WIDGET_MODE_ICONS: Record<WidgetChatMode, React.ReactNode> = {
+  interact: IconMessage,
+  report: IconFileText,
+  explore: IconCompass,
+}
+
 const { Text } = Typography
 
 /* ── 图表区（同主对话 ViewEle 图表分支：小节头 + ChartHeader 工具栏 + 图/表/SQL 三视图） ── */
@@ -156,12 +230,23 @@ const CHART_CONFIG = {
 }
 
 const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: (type: string) => void }) => {
-  const [activeType, setActiveType] = useState<'chart' | 'table' | 'sql'>('chart')
+  // 后端 response_table 默认落表格视图（同主对话 ViewEle：response_table → setActiveType('table')）
+  const [activeType, setActiveType] = useState<'chart' | 'table' | 'sql'>(chart.tableView ? 'table' : 'chart')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [isChartHovered, setIsChartHovered] = useState(false)
   const echartRef = useRef<any>(null)
   const tableRef = useRef<HTMLDivElement>(null)
+  const chartWrapRef = useRef<HTMLDivElement>(null)
+
+  // 面板拖拽改宽不触发 window resize（EChart autoResize 仅监听 window）：观察图表容器宽度同步 echarts 尺寸
+  useEffect(() => {
+    const el = chartWrapRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => echartRef.current?.resize())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const hasData = Array.isArray(chart.data) && chart.data.length > 0
   const option = useMemo(
@@ -227,6 +312,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
     }))
     return (
       <div
+        ref={chartWrapRef}
         className={`${viewStyles.chartContainer} ${isChartHovered ? viewStyles.chartContainerHovered : ''}`}
         onMouseEnter={() => setIsChartHovered(true)}
         onMouseLeave={() => setIsChartHovered(false)}
@@ -242,7 +328,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
             }}
           />
         )}
-        <EChart ref={echartRef} option={option} style={{ height: '25rem', width: '100%' }} autoResize handleClick={() => {}} />
+        <EChart ref={echartRef} option={option} style={{ height: '16rem', width: '100%' }} autoResize handleClick={() => {}} />
       </div>
     )
   }
@@ -383,6 +469,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
           activeType={activeType}
           currentTableData={chart.data || []}
           showTitle={false}
+          hideTools
         />
         <div className="mt-3" style={activeType === 'chart' || !hasData ? { background: '#F2F3F5', borderRadius: '8px', padding: '12px' } : undefined}>
           {renderContent()}
@@ -414,12 +501,29 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const [selectedSemantic, setSelectedSemantic] = useState<WidgetSemanticSelection | null>(null)
   const [expandedSemGroups, setExpandedSemGroups] = useState<Set<string>>(new Set())
   const [semDropdownOpen, setSemDropdownOpen] = useState(false)
+  // 窗体放大态（头部按钮切换；点击信息条语义 chip 时自动进入）
+  const [maximized, setMaximized] = useState(false)
+  // 输入工具栏：模式（仅切换展示）/ 思考开关（缺省开，同现状）/ 更多浮层与工具子视图
+  const [chatMode, setChatMode] = useState<WidgetChatMode>('interact')
+  const [enableThinking, setEnableThinking] = useState(true)
+  const [tbPopover, setTbPopover] = useState<'mode' | 'tools' | null>(null)
+  // 技能/MCP 飞层搜索词（同主对话飞层顶部搜索）
+  const [skillSearch, setSkillSearch] = useState('')
+  const [mcpSearch, setMcpSearch] = useState('')
+  const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set())
+  const [selectedMcps, setSelectedMcps] = useState<Set<string>>(new Set())
+  // 数据语义 Schema 抽屉（窗内右侧滑出，复用主对话 SchemaFieldsModal）
+  const [schemaDrawerOpen, setSchemaDrawerOpen] = useState(false)
+  const [schemaTables, setSchemaTables] = useState<SchemaTable[]>([])
 
   const sessionRef = useRef<WidgetSession | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const semSelectorRef = useRef<HTMLDivElement>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  // 放大前的 inline 样式快照（还原时恢复拖拽/resize 自定义的位置尺寸）
+  const panelCssTextRef = useRef('')
   const didInit = useRef(false)
 
   // 加载助手信息 + 会话 + 历史（type 为统一接口 getProjectInfo/{type}/{id} 的类型段）
@@ -433,22 +537,39 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       setInfo(assistantInfo)
       // 数据语义随助手详情（getProjectInfo）一并下发；后端未加字段时为空列表，下拉显示“暂无数据语义”
       setSemanticTree(assistantInfo?.semantics ?? [])
+      // 默认选中第一个数据语义（同主对话 findFirstSchemaLeaf：深度优先首个叶子）；已选中不覆盖
+      const findFirstSchemaLeaf = (nodes: WidgetSemanticNode[]): WidgetSemanticNode | undefined => {
+        for (const n of nodes) {
+          if (n.type === 'schema') return n
+          const hit = findFirstSchemaLeaf(Array.isArray(n.children) ? n.children : [])
+          if (hit) return hit
+        }
+        return undefined
+      }
+      const firstLeaf = findFirstSchemaLeaf(assistantInfo?.semantics ?? [])
+      if (firstLeaf) setSelectedSemantic((prev) => prev ?? { name: firstLeaf.name, schemaId: firstLeaf.schemaId, groupName: firstLeaf.groupName })
       const session = await ensureSession(effectiveCfg, id, assistantInfo?.spaceId)
       sessionRef.current = session
       if (session) {
         const history = await fetchHistory(effectiveCfg, session.convUid)
-        // 历史 AI 消息同实时一样结构化解析（剥离思考段/尾部 JSON），再按索引补图表数据与轮次无关字段
+        // 历史 AI 消息同实时一样结构化解析（剥离思考段/尾部 JSON）；view 消息挂来的图表按白名单校正类型
+        // 图表数据仅取 view 消息自带结果行（同主对话历史链路不重查 sql）
         const enriched = history.map((m) => {
           if (m.role !== 'ai') return m
           const { thinking, text } = parseAiRaw(m.content)
-          return { ...m, thinking: thinking || undefined, content: text }
+          const chart = m.chart && !isValidChartType(m.chart.type) ? { ...m.chart, type: 'response_bar_chart' } : m.chart
+          // ai 内容无正文字段时回退 view 消息 desc（同主对话 ViewEle 正文口径）；信息条取 view 的 semantic_*
+          return {
+            ...m,
+            thinking: thinking || undefined,
+            content: text || chart?.desc || '',
+            chart,
+            semanticGroup: chart?.semanticGroup,
+            semanticName: chart?.semanticName,
+            semanticSchemaId: chart?.semanticSchemaId,
+          }
         })
         setMessages(enriched)
-        history.forEach((m, i) => {
-          if (m.role !== 'ai') return
-          const { json } = parseAiRaw(m.content)
-          void loadChartForMessage(i, json, session.dbName, effectiveCfg)
-        })
       }
       setPhase('ready')
     },
@@ -501,6 +622,18 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     return () => document.removeEventListener('pointerdown', onDown)
   }, [semDropdownOpen])
 
+  // 模式下拉打开时：点击工具栏外部收起（工具用 antd Popover，外部收起由其自管）
+  useEffect(() => {
+    if (tbPopover !== 'mode') return
+    const onDown = (e: PointerEvent) => {
+      if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
+        setTbPopover(null)
+      }
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [tbPopover])
+
   const handlePasswordSubmit = async () => {
     if (!password) {
       setPasswordError('请输入密码')
@@ -536,12 +669,12 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   }
 
   // 按尾部 JSON 组装图表：优先直连 json.data（后端直接下发结果行时无需 sql/dbName），否则同主对话 fetchDataBySql 查数；两者皆无静默降级不展示图表
-  const loadChartForMessage = async (index: number | undefined, json: any, dbName?: string, cfgOverride?: WidgetConfig) => {
+  const loadChartForMessage = async (json: any, dbName?: string) => {
     const directRows = Array.isArray(json?.data) && json.data.length > 0 ? (json.data as any[]) : null
     const hasSql = dbName && typeof json?.sql === 'string' && json.sql.trim()
     if (!directRows && !hasSql) return
-    patchMsg({ chartLoading: true }, index)
-    const rows = directRows ?? (await fetchChartDataBySql(cfgOverride ?? cfg, dbName as string, json.sql))
+    patchMsg({ chartLoading: true })
+    const rows = directRows ?? (await fetchChartDataBySql(cfg, dbName as string, json.sql))
     patchMsg(
       rows
         ? {
@@ -550,12 +683,41 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               data: rows,
               title: json.title ? String(json.title) : undefined,
               sql: json.sql,
+              tableView: json.type === 'response_table' ? true : undefined,
             },
             chartLoading: false,
+            ...semanticMetaOf(json),
           }
-        : { chartLoading: false },
-      index,
+        : { chartLoading: false, ...semanticMetaOf(json) },
     )
+  }
+
+  // 流结束无 sql/数据（同主对话 describe 场景）：按本轮 round 搜 view 回补正文/图表。
+  // 同主对话 ViewEle fetchData 口径；round 缺失（流内未提取且 max 未落库）直接不搜。
+  // 返回是否回补到正文 desc：未回补时调用方回退流内解析正文
+  const backfillFromView = async (session: WidgetSession, round: number | null): Promise<boolean> => {
+    if (round == null) return false
+    // 后端 view 消息异步落库常晚于 [DONE]：单次 search 易取空而回退退化流文本，故有限重试（最多 3 次、间隔 700ms）
+    let view: ReturnType<typeof parseViewChart> = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+      view = parseViewChart(await fetchViewContextByRound(cfg, session.convUid, round))
+      if (view) break
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 700))
+    }
+    if (!view) return false
+    const type = isValidChartType(view.type) ? view.type : 'response_bar_chart'
+    // 归因/预测无结果行/sql，但需保留 chatMode+raw 以渲染专属看板（同主对话 ViewEle）
+    const isDashboard = view.chatMode === 'chat_with_analysis' || view.chatMode === 'chat_with_predict'
+    const patch: Partial<WidgetMessage> = {}
+    if (view.desc) patch.content = view.desc
+    if (view.data.length > 0 || view.sql || isDashboard) patch.chart = { ...view, type }
+    if (view.semanticGroup) patch.semanticGroup = view.semanticGroup
+    if (view.semanticName) patch.semanticName = view.semanticName
+    if (view.semanticSchemaId != null) patch.semanticSchemaId = view.semanticSchemaId
+    if (Object.keys(patch).length === 0) return false
+    patchMsg(patch)
+    // 仅当回补到正文 desc 才算 filled：只回补图表时调用方仍需回退流内正文，避免“描述分析”小节缺失
+    return !!view.desc
   }
 
   // 切换图表类型（同主对话：仅切换本地类型，用已有数据重新构建 option）
@@ -602,11 +764,24 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     setMessages((prev) => [
       ...prev,
       { role: 'human', content: text, time: getNow() },
-      { role: 'ai', content: '', time: getNow(), streaming: true },
+      {
+        role: 'ai',
+        content: '',
+        time: getNow(),
+        streaming: true,
+        // 信息条随发送即展示（取当前选中语义），历史/回补场景由 view 的 semantic_* 覆盖
+        semanticGroup: selectedSemantic?.groupName,
+        semanticName: selectedSemantic?.name,
+        semanticSchemaId: selectedSemantic?.schemaId,
+      },
     ])
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
+    // 同主对话：round_index 随流内 content 占位串下发，优先流内提取，免流结束再查 max
+    let streamRound: number | null = null
+    // 同主对话 thinkTime 口径：发送到 [DONE] 的耗时秒
+    const startTime = performance.now()
     sendChatStream(
       cfg,
       session,
@@ -614,20 +789,50 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       appId,
       controller.signal,
       {
-        // 流中：实时结构化解析（思考段 + 展示文本）增量回写
+        // 流中：仅思考卡流式展示（同主对话流中只挂 ai 思考消息，正文 [DONE] 后由 view 挂载）
         onDelta: (raw) => {
-          const { thinking, text } = parseAiRaw(raw)
-          patchMsg({ thinking: thinking || undefined, content: text, streaming: true })
+          if (streamRound == null) {
+            const roundMatch = raw.match(/round_index:(\d+)/)
+            if (roundMatch) {
+              streamRound = Number(roundMatch[1])
+              patchMsg({ roundIndex: streamRound })
+            }
+          }
+          const { thinking, text: deltaText } = parseAiRaw(raw)
+          patchMsg({ thinking: thinking || undefined, content: deltaText, streaming: true })
         },
-        // 流结束（同主对话管线）：收尾文本 → 尾部 JSON 带 sql 则查数组图表 → 取本轮 roundIndex
+        // 流结束（同主对话 [DONE] 管线）：思考卡收尾 → 轮次定位 → sql 主动查数 / describe 单次回补
         onDone: (raw) => {
-          const { thinking, text, json } = parseAiRaw(raw)
-          patchMsg({ thinking: thinking || undefined, content: text || '无数据返回', streaming: false })
-          setSending(false)
-          void loadChartForMessage(undefined, json, session.dbName)
-          void fetchMaxRound(cfg, session.convUid).then((round) => {
-            if (round != null) patchMsg({ roundIndex: round })
+          const { thinking, text: finalText, json } = parseAiRaw(raw)
+          // 思考卡不随 [DONE] 立即收起：保持 streaming 直到正文/图表落定，与主对话「数据到位后思考收起与正文同帧展示」一致
+          patchMsg({
+            thinking: thinking || undefined,
+            content: '',
+            thinkTime: Math.round((performance.now() - startTime) / 1000),
           })
+          setSending(false)
+          // 落定收口：streaming 置 false 与正文/图表同一次 patch 生效，避免思考先收起、数据后到的空窗
+          const settle = (patch: Partial<WidgetMessage>) => patchMsg({ ...patch, streaming: false })
+          // 轮次：流内提取优先，缺失补查一次 max（同主对话 [DONE] 的 fetchConvMaxRound）
+          const resolveRound = async (): Promise<number | null> => {
+            if (streamRound != null) return streamRound
+            const round = await fetchMaxRound(cfg, session.convUid)
+            if (round != null) patchMsg({ roundIndex: round })
+            return round
+          }
+          const hasSql = !!session.dbName && typeof json?.sql === 'string' && !!json.sql.trim()
+          const hasRows = Array.isArray(json?.data) && json.data.length > 0
+          if (hasSql || hasRows) {
+            // sql 已主动查数（同主对话 arrowStatus=true），不再搜 view；图表落定后正文同帧落定
+            void resolveRound()
+            void loadChartForMessage(json, session.dbName).then(() => settle({ content: finalText || '无数据返回' }))
+          } else {
+            void resolveRound().then(async (round) => {
+              const filled = await backfillFromView(session, round)
+              // view 未回补到任何内容时才回退流内解析正文（避免退化流文本覆盖 view desc）
+              settle(filled ? {} : { content: finalText || '无数据返回' })
+            })
+          }
         },
         onError: () => {
           // 主动停止（AbortError）保留已生成内容，其余异常提示重试
@@ -637,11 +842,21 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       },
       selectedSemantic,
       info?.spaceId,
+      {
+        enableThinking,
+        // 工具菜单选中的技能/MCP 源版本 id（MCP 按协议归入 sse/streamable 字段，同主对话）
+        skillSourceVersionIds: Array.from(selectedSkills),
+        sseMcpSourceVersionIds: (info?.mcps ?? []).filter((m: AssistantBoundMcp) => selectedMcps.has(m.id) && m.protocol === 'sse').map((m: AssistantBoundMcp) => m.id),
+        streamableMcpSourceVersionIds: (info?.mcps ?? []).filter((m: AssistantBoundMcp) => selectedMcps.has(m.id) && m.protocol === 'streamable').map((m: AssistantBoundMcp) => m.id),
+      },
     )
   }
 
   const handleStop = () => {
     abortRef.current?.abort()
+    // service 对 AbortError 静默（不回调 onError），这里主动收尾：重置发送态让 icon 变回发送，并落定流式标记保留已生成内容
+    setSending(false)
+    patchMsg({ streaming: false })
   }
 
   // 展开/收起语义分组节点（数据已全量返回，无需懒加载）
@@ -654,8 +869,9 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     })
   }
 
-  // 按住头部拖拽面板：首次拖拽时把 CSS 定位切换为显式 left/top，之后跟随指针
+  // 按住头部拖拽面板：首次拖拽时把 CSS 定位切换为显式 left/top，之后跟随指针；放大态禁用
   const handleDragStart = (e: React.PointerEvent) => {
+    if (maximized) return
     if ((e.target as HTMLElement).closest('button')) return
     const panel = panelRef.current
     if (!panel) return
@@ -678,6 +894,99 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
+  }
+
+  // 面板最小尺寸与视口安全边距（resize 约束，口径同头部拖拽）
+  const RESIZE_MIN_W = 380
+  const RESIZE_MIN_H = 420
+  const VIEWPORT_MARGIN = 16
+
+  // 四边拖拽改大小：按下时把 CSS 定位固化为显式 left/top/width/height，之后按方向跟随指针（视口内约束 + 最小尺寸）
+  const handleResizeStart = (dir: 'n' | 's' | 'e' | 'w', e: React.PointerEvent) => {
+    if (maximized) return
+    e.preventDefault()
+    e.stopPropagation()
+    const panel = panelRef.current
+    if (!panel) return
+    const rect = panel.getBoundingClientRect()
+    const startX = e.clientX
+    const startY = e.clientY
+    panel.style.position = 'fixed'
+    panel.style.transform = 'none'
+    panel.style.right = 'auto'
+    panel.style.bottom = 'auto'
+    panel.style.left = `${rect.left}px`
+    panel.style.top = `${rect.top}px`
+    panel.style.width = `${rect.width}px`
+    panel.style.height = `${rect.height}px`
+    panel.style.maxWidth = 'none'
+    panel.style.maxHeight = 'none'
+    const clampW = (w: number) => Math.min(Math.max(w, RESIZE_MIN_W), window.innerWidth - VIEWPORT_MARGIN)
+    const clampH = (h: number) => Math.min(Math.max(h, RESIZE_MIN_H), window.innerHeight - VIEWPORT_MARGIN)
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX
+      const dy = ev.clientY - startY
+      if (dir === 'e') {
+        panel.style.width = `${clampW(rect.width + dx)}px`
+      } else if (dir === 's') {
+        panel.style.height = `${clampH(rect.height + dy)}px`
+      } else if (dir === 'w') {
+        // 左边拖过最小宽度后固定左缘，避免面板抖动
+        const w = clampW(rect.width - dx)
+        panel.style.left = `${Math.max(VIEWPORT_MARGIN, rect.right - w)}px`
+        panel.style.width = `${w}px`
+      } else {
+        const h = clampH(rect.height - dy)
+        panel.style.top = `${Math.max(0, rect.bottom - h)}px`
+        panel.style.height = `${h}px`
+      }
+    }
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
+  // 放大：快照当前 inline 样式后按视口百分比留边铺展（不占满全屏，保留圆角）；还原：恢复快照（保留拖拽/resize 自定义的位置尺寸）
+  const handleToggleMaximize = () => {
+    const panel = panelRef.current
+    if (!panel) return
+    if (maximized) {
+      panel.setAttribute('style', panelCssTextRef.current)
+      setMaximized(false)
+      return
+    }
+    panelCssTextRef.current = panel.getAttribute('style') || ''
+    panel.style.position = 'fixed'
+    // 百分比布局随屏幕等比缩放（产品标注留边：左右约 6%、上约 7%、高约 85%）
+    panel.style.left = '6%'
+    panel.style.top = '7%'
+    panel.style.right = 'auto'
+    panel.style.bottom = 'auto'
+    panel.style.width = '88%'
+    panel.style.height = '85%'
+    panel.style.maxWidth = 'none'
+    panel.style.maxHeight = 'none'
+    panel.style.transform = 'none'
+    setMaximized(true)
+  }
+
+  // 点击信息条语义 chip：窗体自动放大，Schema 详情抽屉在面板内右侧滑出（同主对话 openSchemaModal 链路）
+  const openSchemaDrawer = (schemaId: number | string, bizName: string) => {
+    if (!maximized) handleToggleMaximize()
+    const table: SchemaTable = { schemaId, bizName, fields: [], loading: true }
+    setSchemaTables([table])
+    setSchemaDrawerOpen(true)
+    fetchSemanticDetail(cfg, schemaId)
+      .then((res: any) => {
+        const detail = res?.data?.data || res?.data || res
+        const modelDetail = detail?.modelDetail
+        const fields = modelDetail ? parseSchemaFieldsFromModelDetail(modelDetail) : []
+        setSchemaTables([{ ...table, fields, loading: false, description: detail?.description || detail?.remark || '' }])
+      })
+      .catch(() => setSchemaTables([{ ...table, loading: false }]))
   }
 
   /** 递归渲染语义节点（与大屏同款：分组仅展开/收起，叶子可选中） */
@@ -726,17 +1035,178 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     )
   }
 
+  // 技能/MCP 飞层候选（顶部搜索过滤，同主对话 uni-popup 飞层）
+  const filteredSkills = useMemo(() => {
+    const kw = skillSearch.trim().toLowerCase()
+    const list = (info?.skills ?? []) as AssistantBoundSkill[]
+    return kw ? list.filter((sk) => (sk.bizName || sk.id).toLowerCase().includes(kw)) : list
+  }, [info?.skills, skillSearch])
+
+  const filteredMcps = useMemo(() => {
+    const kw = mcpSearch.trim().toLowerCase()
+    const list = (info?.mcps ?? []) as AssistantBoundMcp[]
+    return kw ? list.filter((mc) => (mc.name || mc.id).toLowerCase().includes(kw)) : list
+  }, [info?.mcps, mcpSearch])
+
+  const skillFlyoutContent = (
+    <div className="uni-popup uni-popup--flyout">
+      <div className="uni-popup-search">
+        <SearchOutlined />
+        <input
+          placeholder="搜索技能"
+          value={skillSearch}
+          onChange={(e) => setSkillSearch(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+      <div className="uni-popup-list">
+        {filteredSkills.length === 0 ? (
+          <div className="uni-popup-empty">
+            {skillSearch.trim() ? '无匹配结果' : '该助手未绑定技能'}
+          </div>
+        ) : (
+          filteredSkills.map((sk: AssistantBoundSkill) => (
+            <div
+              key={sk.id}
+              className={`uni-popup-item${selectedSkills.has(sk.id) ? ' selected' : ''}`}
+              title={sk.bizName}
+              onClick={() =>
+                setSelectedSkills((prev) => {
+                  const next = new Set(prev)
+                  if (next.has(sk.id)) next.delete(sk.id)
+                  else next.add(sk.id)
+                  return next
+                })
+              }
+            >
+              <ToolOutlined className="uni-icon" />
+              <span className="uni-name">{sk.bizName || sk.id}</span>
+              {selectedSkills.has(sk.id) && <CheckOutlined className="uni-check" />}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+
+  const mcpFlyoutContent = (
+    <div className="uni-popup uni-popup--flyout">
+      <div className="uni-popup-search">
+        <SearchOutlined />
+        <input
+          placeholder="搜索 MCP"
+          value={mcpSearch}
+          onChange={(e) => setMcpSearch(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+      <div className="uni-popup-list">
+        {filteredMcps.length === 0 ? (
+          <div className="uni-popup-empty">
+            {mcpSearch.trim() ? '无匹配结果' : '该助手未绑定 MCP'}
+          </div>
+        ) : (
+          filteredMcps.map((mc: AssistantBoundMcp) => (
+            <div
+              key={mc.id}
+              className={`uni-popup-item${selectedMcps.has(mc.id) ? ' selected' : ''}`}
+              title={mc.name}
+              onClick={() =>
+                setSelectedMcps((prev) => {
+                  const next = new Set(prev)
+                  if (next.has(mc.id)) next.delete(mc.id)
+                  else next.add(mc.id)
+                  return next
+                })
+              }
+            >
+              <ApiOutlined className="uni-icon" />
+              <span className="uni-name">{mc.name || mc.id}</span>
+              {selectedMcps.has(mc.id) && <CheckOutlined className="uni-check" />}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+
+  // 工具弹窗内容（同主对话「更多」菜单：查看语义 + 技能/MCP hover 右飞层）
+  const toolsPopoverContent = (
+    <div className="uni-popup uni-popup--menu">
+      <div
+        className="uni-popup-item"
+        onClick={() => {
+          setTbPopover(null)
+          const schemaId = selectedSemantic?.schemaId
+          if (schemaId != null) openSchemaDrawer(schemaId, selectedSemantic?.name || '')
+          else antdMessage.info('请先在左侧选择数据语义')
+        }}
+      >
+        <EyeOutlined className="uni-icon" />
+        <span className="uni-name">查看语义</span>
+      </div>
+      <Popover
+        content={skillFlyoutContent}
+        trigger="hover"
+        placement="rightTop"
+        arrow={false}
+        overlayClassName="uni-popover"
+        getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+      >
+        <div className="uni-popup-item">
+          <ToolOutlined className="uni-icon" />
+          <span className="uni-name">技能</span>
+          {(info?.skills?.length ?? 0) > 0 && <span className="uni-count">{info!.skills.length}</span>}
+          <RightOutlined className="uni-arrow" />
+        </div>
+      </Popover>
+      <Popover
+        content={mcpFlyoutContent}
+        trigger="hover"
+        placement="rightTop"
+        arrow={false}
+        overlayClassName="uni-popover"
+        getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+      >
+        <div className="uni-popup-item">
+          <ApiOutlined className="uni-icon" />
+          <span className="uni-name">MCP</span>
+          {(info?.mcps?.length ?? 0) > 0 && <span className="uni-count">{info!.mcps.length}</span>}
+          <RightOutlined className="uni-arrow" />
+        </div>
+      </Popover>
+    </div>
+  )
+
   const welcomeDesc = info?.prologue || info?.description || '请输入问题，开始对话'
   const recList = info?.recQuestions ?? []
 
   return (
     <div className={`abi-cw-root ${mode === 'float' ? 'abi-cw-float' : 'abi-cw-page'}`}>
       <div className="abi-cw-panel" ref={panelRef}>
+        {/* 四边拖拽改大小把手（放大态隐藏） */}
+        {!maximized && (
+          <>
+            <div className="abi-cw-resize abi-cw-resize-n" onPointerDown={(e) => handleResizeStart('n', e)} />
+            <div className="abi-cw-resize abi-cw-resize-s" onPointerDown={(e) => handleResizeStart('s', e)} />
+            <div className="abi-cw-resize abi-cw-resize-e" onPointerDown={(e) => handleResizeStart('e', e)} />
+            <div className="abi-cw-resize abi-cw-resize-w" onPointerDown={(e) => handleResizeStart('w', e)} />
+          </>
+        )}
         <div className="abi-cw-header" onPointerDown={handleDragStart}>
           <div className="abi-cw-header-logo">A</div>
           <span className="abi-cw-header-name" title={info?.name || '助手'}>
             AI {info?.name ? `· ${info.name}` : '智能问答'}
           </span>
+          <button
+            type="button"
+            className="abi-cw-action-btn"
+            onClick={handleToggleMaximize}
+            aria-label={maximized ? '还原' : '放大'}
+            title={maximized ? '还原' : '放大'}
+          >
+            {maximized ? IconCompress : IconExpand}
+          </button>
           {mode === 'float' && onClose && (
             <button type="button" className="abi-cw-action-btn" onClick={onClose} aria-label="关闭">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -806,12 +1276,31 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                   </div>
                 )
               }
-              // 流中隐藏尚未闭合的尾部 JSON 片段（[DONE] 后由 parseAiRaw 完整剥离）
-              const displayText = stripHtmlTags(m.streaming ? (m.content || '').replace(/\{[^{}]*$/, '') : m.content || '')
+              // 流中仅思考卡（同主对话），正文不闪现未闭合 JSON；[DONE] 后正文同主对话 ViewEle desc 口径
+              const displayText = m.streaming ? '' : stripHtmlTags(m.content || '')
               return (
                 <div key={`ai-${i}`} className="abi-cw-msg abi-cw-msg-ai">
                   {/* 白卡容器类与主对话 MessageList bodyCard 保持一致 */}
                   <div className="w-full rounded-[1.25rem] border border-[#e9edf4] bg-white px-[0.875rem] pt-[0.75rem] shadow-[0_0.125rem_0.5rem_rgba(15,23,42,0.04)]">
+                    {/* 信息条：分组 + 数据语义（同主对话 MessageList 信息条样式，分享场景不可点 schema） */}
+                    {(m.semanticGroup || m.semanticName) && (
+                      <div className="abi-cw-infobar">
+                        <span className="abi-cw-infobar-label">分组：</span>
+                        <span className="abi-cw-infobar-chip abi-cw-infobar-chip-group">
+                          <i className="abi-cw-infobar-dot" style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.5)' }} />
+                          {m.semanticGroup || '无'}
+                        </span>
+                        <span className="abi-cw-infobar-label" style={{ marginLeft: '2em' }}>数据语义：</span>
+                        {/* 带 schemaId 时可点：窗体自动放大，Schema 抽屉窗内右侧滑出 */}
+                        <span
+                          className={`abi-cw-infobar-chip abi-cw-infobar-chip-sem${m.semanticSchemaId != null ? ' clickable' : ''}`}
+                          onClick={m.semanticSchemaId != null ? () => openSchemaDrawer(m.semanticSchemaId as number | string, m.semanticName || '') : undefined}
+                        >
+                          <i className="abi-cw-infobar-dot" style={{ background: '#5b7cf7', boxShadow: '0 0 6px rgba(91,124,247,0.5)' }} />
+                          {m.semanticName || '无'}
+                        </span>
+                      </div>
+                    )}
                     {(m.thinking || m.streaming) && (
                       <AiEle
                         data={{
@@ -821,14 +1310,22 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                         }}
                         loading={m.streaming}
                         isDone={!m.streaming}
+                        thinkTime={m.thinkTime}
+                        compact
                       />
                     )}
                     {displayText && (
-                      <div
-                        className={`${convStyles['markdown-content']} text-left`}
-                        style={{ width: '100%' }}
-                        dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }}
-                      />
+                      <>
+                        {/* 描述分析小节头（同主对话 ViewEle：蓝色左条标题），与思考卡拉开间距；px-2.5 与主对话卡片内边距对齐，避免贴左 */}
+                        <div className="section-header mt-2 pt-3 pb-3 px-2.5">
+                          <span className="chart-header-title font-semibold text-[#2d2d2d]">描述分析</span>
+                        </div>
+                        <div
+                          className={`${convStyles['markdown-content']} abi-cw-desc text-left px-2.5`}
+                          style={{ width: '100%', fontSize: '13px', lineHeight: 1.75 }}
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }}
+                        />
+                      </>
                     )}
                     {m.chartLoading && (
                       <div className="flex items-center justify-center gap-2 py-4 text-xs text-[#8494ad]">
@@ -836,7 +1333,29 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                         <span>图表数据加载中...</span>
                       </div>
                     )}
-                    {m.chart && <ChartCard chart={m.chart} onTypeChange={(t) => handleChartTypeChange(i, t)} />}
+                    {/* 归因分析（chat_with_analysis）：与主对话 ViewEle 一致，新版看板优先，旧格式沿用因果组件 */}
+                    {!m.streaming && m.chart?.chatMode === 'chat_with_analysis' && m.chart?.raw && (() => {
+                      const d = m.chart!.raw
+                      const hasAnalysis = Array.isArray(d.dimension_table) && Array.isArray(d.factor_table) && d.metric_overview
+                      // 看板自身为圆角灰底面板（width:100%），直接嵌入白卡与其他块等宽，无需额外负边距
+                      if (hasAnalysis) return <AttributionDashboard data={d} compact />
+                      if (d.total_df || d.analysis_response) return <CausalAnalysis data={d} />
+                      return null
+                    })()}
+                    {/* 预测分析（chat_with_predict）：与主对话 ViewEle 一致，渲染预测图表 */}
+                    {!m.streaming && m.chart?.chatMode === 'chat_with_predict' && m.chart?.raw && (
+                      <div className="flex" style={{ width: '100%' }}>
+                        <div className="rounded bg-white px-2.5" style={{ width: '100%' }}>
+                          <PredictionAnalysis data={m.chart.raw} compact />
+                        </div>
+                      </div>
+                    )}
+                    {/* 仅 desc 的 view（无结果行无 sql）不渲染图表卡，避免空图表占位；归因/预测走专属看板不走通用图表卡；streaming 期间隐藏，与思考收起同帧展示 */}
+                    {!m.streaming && m.chart && m.chart.chatMode !== 'chat_with_analysis' && m.chart.chatMode !== 'chat_with_predict' && (m.chart.data.length > 0 || !!m.chart.sql) && (
+                      <div className="px-2.5">
+                        <ChartCard chart={m.chart} onTypeChange={(t) => handleChartTypeChange(i, t)} />
+                      </div>
+                    )}
                     {!m.streaming && (
                       <StatisticsAnalysis
                         chatMode="chat_with_analysis"
@@ -869,14 +1388,17 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                 }
               }}
             />
-            <div className="abi-cw-input-toolbar">
+            <div className="abi-cw-input-toolbar" ref={toolbarRef}>
               {/* 数据语义选择（与大屏同款：分组树，仅叶子可选） */}
               <div className="abi-cw-sem-selector" ref={semSelectorRef}>
                 <button
                   type="button"
                   className={`abi-cw-sem-trigger${semDropdownOpen ? ' active' : ''}`}
                   title="选择数据语义"
-                  onClick={() => setSemDropdownOpen((v) => !v)}
+                  onClick={() => {
+                    setTbPopover(null)
+                    setSemDropdownOpen((v) => !v)
+                  }}
                 >
                   <span className="abi-cw-sem-trigger-icon">{IconDatabase}</span>
                   <span className="abi-cw-sem-trigger-name">{selectedSemantic?.name || '数据语义'}</span>
@@ -894,6 +1416,86 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                   </div>
                 )}
               </div>
+              {/* 模式（交互/报告/探索，同主对话标签；报告/探索发送协议暂不对接） */}
+              <div className="abi-cw-tb-item">
+                <button
+                  type="button"
+                  className={`abi-cw-tb-btn${tbPopover === 'mode' ? ' active' : ''}`}
+                  title="切换模式"
+                  onClick={() => {
+                    setSemDropdownOpen(false)
+                    setTbPopover((v) => (v === 'mode' ? null : 'mode'))
+                  }}
+                >
+                  <span className="abi-cw-tb-btn-icon">{WIDGET_MODE_ICONS[chatMode]}</span>
+                  <span>{WIDGET_MODES.find((mo) => mo.key === chatMode)?.label}</span>
+                  <span className="abi-cw-tb-btn-arrow">{IconArrowDown}</span>
+                </button>
+                {tbPopover === 'mode' && (
+                  <div className="abi-cw-tb-popover">
+                    {WIDGET_MODES.map((mo) => (
+                      <div
+                        key={mo.key}
+                        className={`abi-cw-tb-mode-item${chatMode === mo.key ? ' selected' : ''}`}
+                        onClick={() => {
+                          setChatMode(mo.key)
+                          setTbPopover(null)
+                          antdMessage.info(`已切换到${mo.label}模式`)
+                        }}
+                      >
+                        <span className="abi-cw-tb-mode-icon">{WIDGET_MODE_ICONS[mo.key]}</span>
+                        <span className="abi-cw-tb-mode-main">
+                          <span className="abi-cw-tb-mode-name">{mo.label}</span>
+                          <span className="abi-cw-tb-mode-desc">{mo.desc}</span>
+                        </span>
+                        {chatMode === mo.key && <span className="abi-cw-tb-mode-check">✓</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* 深度思考开关（缺省开，关闭后随发送下发 enable_thinking:false） */}
+              <button
+                type="button"
+                className={`abi-cw-tb-btn${enableThinking ? ' on' : ''}`}
+                title={enableThinking ? '关闭深度思考' : '开启深度思考'}
+                onClick={() => setEnableThinking((v) => !v)}
+              >
+                <span className="abi-cw-tb-btn-icon">{IconBulb}</span>
+                <span>思考</span>
+              </button>
+              {/* 工具（更多）：查看语义 / 技能 / MCP，打开方式同主对话（antd Popover + uni-popup 弹窗） */}
+              <Popover
+                content={toolsPopoverContent}
+                trigger="click"
+                placement="topRight"
+                arrow={false}
+                open={tbPopover === 'tools'}
+                onOpenChange={(open) => {
+                  if (open) {
+                    setSemDropdownOpen(false)
+                    setTbPopover('tools')
+                  } else {
+                    setTbPopover(null)
+                    setSkillSearch('')
+                    setMcpSearch('')
+                  }
+                }}
+                destroyTooltipOnHide
+                overlayClassName="uni-popover"
+                getPopupContainer={() => panelRef.current as HTMLElement}
+              >
+                <button
+                  type="button"
+                  className={`abi-cw-tb-btn${tbPopover === 'tools' ? ' active' : ''}`}
+                  title="更多工具"
+                >
+                  工具
+                  {(selectedSkills.size > 0 || selectedMcps.size > 0) && (
+                    <span className="abi-cw-tb-badge">{selectedSkills.size + selectedMcps.size}</span>
+                  )}
+                </button>
+              </Popover>
               {sending ? (
                 <button type="button" className="abi-cw-stop" onClick={handleStop} aria-label="停止生成">
                   <svg viewBox="0 0 24 24" fill="currentColor">
@@ -918,6 +1520,14 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           </div>
           <div className="abi-cw-disclaimer">AI 生成的内容仅供参考，请注意甄别信息准确性</div>
         </div>
+
+        {/* 数据语义 Schema 抽屉：挂载到面板内（窗内右侧滑出，不溢出悬浮窗） */}
+        <SchemaFieldsModal
+          open={schemaDrawerOpen}
+          tables={schemaTables}
+          onClose={() => setSchemaDrawerOpen(false)}
+          getContainer={() => panelRef.current as HTMLElement}
+        />
       </div>
     </div>
   )

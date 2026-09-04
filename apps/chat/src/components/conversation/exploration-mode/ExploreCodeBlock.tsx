@@ -90,6 +90,11 @@ const ExploreCodeBlock: React.FC<ExploreCodeBlockProps> = ({ code, language, onE
   const [copied, setCopied] = useState(false)
   const copyTimerRef = useRef<number>()
   useEffect(() => () => window.clearTimeout(copyTimerRef.current), [])
+  // 用 ref 持有最新 onEdit，使组件可仅按 code/language memo；onEdit 每次父渲染都是新闭包，不能进比较器
+  const onEditRef = useRef(onEdit)
+  useEffect(() => {
+    onEditRef.current = onEdit
+  })
 
   const handleCopy = async () => {
     try {
@@ -108,7 +113,7 @@ const ExploreCodeBlock: React.FC<ExploreCodeBlockProps> = ({ code, language, onE
         <span className={styles.codeBlockLang}>{language}</span>
         <div className={styles.codeBlockActions}>
           {onEdit && (
-            <button type="button" className={styles.codeBlockAction} onClick={() => onEdit(code, language)}>
+            <button type="button" className={styles.codeBlockAction} onClick={() => onEditRef.current?.(code, language)}>
               <FormOutlined /> 编辑
             </button>
           )}
@@ -144,4 +149,9 @@ const ExploreCodeBlock: React.FC<ExploreCodeBlockProps> = ({ code, language, onE
   )
 }
 
-export default ExploreCodeBlock
+// 仅当代码或语言变化时才重渲染：打开工作室 / 切换激活项会让 MessageList 整棵重渲染，
+// memo 后已渲染的代码块跳过 Prism 重新高亮，消除动画开头的一次性长任务。
+export default React.memo(
+  ExploreCodeBlock,
+  (prev, next) => prev.code === next.code && prev.language === next.language && Boolean(prev.onEdit) === Boolean(next.onEdit),
+)

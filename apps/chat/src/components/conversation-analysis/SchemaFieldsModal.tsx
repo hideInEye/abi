@@ -27,6 +27,37 @@ interface Props {
   open: boolean
   tables: SchemaTable[]
   onClose: () => void
+  /** 抽屉挂载容器（分享悬浮窗内需限定在面板内展示时传入） */
+  getContainer?: () => HTMLElement
+}
+
+/** 解析接口 modelDetail（JSON 字符串）为扁平字段列表：主键/日期/维度/指标 */
+export function parseSchemaFieldsFromModelDetail(modelDetailStr: string): SchemaField[] {
+  try {
+    const detail = typeof modelDetailStr === 'string' ? JSON.parse(modelDetailStr) : modelDetailStr
+    const fields: SchemaField[] = []
+    const addFields = (items: any[], semantic: SchemaField['semantic'], semLabel: string) => {
+      (items || []).forEach(item => {
+        fields.push({
+          name: item.originName || item.fieldName || item.techName || '',
+          type: item.fieldType || '',
+          semantic,
+          semLabel,
+          description: item.fieldDesc || '',
+          tableName: item.tableName || '',
+          tableDesc: item.tdesc || item.rtableName || '',
+          bizName: item.bizName || '',
+          alias: item.alias || '',
+        })
+      })
+    }
+    addFields(detail.identifiers, 'pk', '主键')
+    const dimensions = detail.dimensions || []
+    addFields(dimensions.filter((d: any) => d.type === 'datetime'), 'date', '日期')
+    addFields(dimensions.filter((d: any) => d.type !== 'datetime'), 'dim', '维度')
+    addFields(detail.measures, 'metric', '指标')
+    return fields
+  } catch { return [] }
 }
 
 const SEM_TAG_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -49,7 +80,7 @@ function groupFieldsByTable(fields: SchemaField[]): { tableName: string; tableDe
   return Array.from(map.entries()).map(([tableName, v]) => ({ tableName, tableDesc: v.tableDesc, fields: v.fields }))
 }
 
-export default function SchemaFieldsModal({ open, tables, onClose }: Props) {
+export default function SchemaFieldsModal({ open, tables, onClose, getContainer }: Props) {
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<string>('')
 
@@ -98,6 +129,7 @@ export default function SchemaFieldsModal({ open, tables, onClose }: Props) {
       closable={false}
       styles={{ body: { padding: 0, overflowY: 'auto' } }}
       rootStyle={{ position: 'absolute' }}
+      getContainer={getContainer}
     >
       {/* Header */}
       <div style={{

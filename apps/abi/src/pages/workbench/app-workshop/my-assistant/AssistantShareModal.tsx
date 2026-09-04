@@ -65,7 +65,8 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
       }
       // 直接展示后端返回的分享链接（host 由使用方自行替换）
       setShareLink(shareUrl)
-      setSharePassword((data as any)?.sharePassword ?? null)
+      // 密码字段兼容映射同分享记录列表口径（后端字段未统一时仍能带出密码）
+      setSharePassword((data as any)?.sharePassword ?? (data as any)?.password ?? (data as any)?.sharePwd ?? null)
       // 新增分享记录后通知外部刷新（分享记录 tab 保持挂载，不会自动重拉）
       onShared?.()
     } finally {

@@ -11,8 +11,8 @@ import MessageNavRail from './MessageNavRail'
 import type { NavItem } from './MessageNavRail'
 import OpeningsEle from '../OpeningsEle'
 import ViewEle from '../ViewEle'
-import SchemaFieldsModal from '../../conversation-analysis/SchemaFieldsModal'
-import type { SchemaTable, SchemaField } from '../../conversation-analysis/SchemaFieldsModal'
+import SchemaFieldsModal, { parseSchemaFieldsFromModelDetail } from '../../conversation-analysis/SchemaFieldsModal'
+import type { SchemaTable } from '../../conversation-analysis/SchemaFieldsModal'
 import { fetchSemanticDetail } from '../../../service/api/semantic'
 import { parseMessageContent } from '../../../utils'
 import ReportMessageRow from '../report-mode/ReportMessageRow'
@@ -167,34 +167,8 @@ const MessageList = ({
   const [versionSel, setVersionSel] = useState<Record<string, number>>({})
   const prevVersionCountRef = useRef<Record<string, number>>({})
 
-  // 解析 modelDetail 提取字段
-  function parseFieldsFromModelDetail(modelDetailStr: string): SchemaField[] {
-    try {
-      const detail = typeof modelDetailStr === 'string' ? JSON.parse(modelDetailStr) : modelDetailStr
-      const fields: SchemaField[] = []
-      const addFields = (items: any[], semantic: SchemaField['semantic'], semLabel: string) => {
-        (items || []).forEach(item => {
-          fields.push({
-            name: item.originName || item.fieldName || item.techName || '',
-            type: item.fieldType || '',
-            semantic,
-            semLabel,
-            description: item.fieldDesc || '',
-            tableName: item.tableName || '',
-            tableDesc: item.tdesc || item.rtableName || '',
-            bizName: item.bizName || '',
-            alias: item.alias || '',
-          })
-        })
-      }
-      addFields(detail.identifiers, 'pk', '主键')
-      const dimensions = detail.dimensions || []
-      addFields(dimensions.filter((d: any) => d.type === 'datetime'), 'date', '日期')
-      addFields(dimensions.filter((d: any) => d.type !== 'datetime'), 'dim', '维度')
-      addFields(detail.measures, 'metric', '指标')
-      return fields
-    } catch { return [] }
-  }
+  // 解析 modelDetail 提取字段（与分享悬浮窗共用 SchemaFieldsModal 导出的解析函数）
+  const parseFieldsFromModelDetail = parseSchemaFieldsFromModelDetail
 
   const openSchemaModal = (schemaId: number | string, bizName: string) => {
     const table: SchemaTable = {

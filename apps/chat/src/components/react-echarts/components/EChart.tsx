@@ -75,9 +75,20 @@ const EChartComponent = forwardRef<EChartHandle, EChartProps & { handleClick: (p
             chart.resize();
           }, 100);
 
-          window.addEventListener('resize', resizeHandler);
+          // 容器尺寸变化即重绘：面板拖拽改宽 / 放大态切换只改容器尺寸、不触发 window.resize，
+          // 用 ResizeObserver 观察图表容器（窗口缩放时容器随之变化也会被捕获），实现实时自适应；
+          // 无 ResizeObserver 的环境（旧浏览器 / jsdom）回退 window.resize 监听
+          const el = chartRef.current;
+          let observer: ResizeObserver | undefined;
+          if (typeof ResizeObserver !== 'undefined' && el) {
+            observer = new ResizeObserver(resizeHandler);
+            observer.observe(el);
+          } else {
+            window.addEventListener('resize', resizeHandler);
+          }
 
           return () => {
+            observer?.disconnect();
             window.removeEventListener('resize', resizeHandler);
             resizeHandler.cancel();
           };

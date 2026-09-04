@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatTime, mapShareHistory } from './history'
+import { formatTime, mapShareHistory, parseViewChart } from './history'
 
 describe('mapShareHistory', () => {
   const human = {
@@ -42,5 +42,44 @@ describe('formatTime', () => {
   it('非法时间返回空串', () => {
     expect(formatTime('')).toBe('')
     expect(formatTime('not-a-date')).toBe('')
+  })
+})
+
+describe('parseViewChart', () => {
+  it('chart-view 标签前前缀文本即 desc（同主对话 parseContext），response_table 标记表格视图', () => {
+    const content =
+      '用户意图为查询订单状态。最终采用表格形式兜底展示查询结果。\n' +
+      '<chart-view content="{"type": "response_table", "sql": "SELECT 1;", "data": [{"订单状态": "已付款"}]}" />'
+    const chart = parseViewChart(content)
+    expect(chart?.desc).toBe('用户意图为查询订单状态。最终采用表格形式兜底展示查询结果。')
+    expect(chart?.data).toEqual([{ 订单状态: '已付款' }])
+    expect(chart?.sql).toBe('SELECT 1;')
+    expect(chart?.type).toBe('response_table')
+    expect(chart?.tableView).toBe(true)
+  })
+
+  it('无 chart-view 标签时兜底 JSON desc 字段', () => {
+    const chart = parseViewChart('{"desc":"纯描述无图表","data":[]}')
+    expect(chart?.desc).toBe('纯描述无图表')
+    expect(chart?.data).toEqual([])
+    expect(chart?.tableView).toBeUndefined()
+  })
+
+  it('归因/预测（chat_with_analysis/chat_with_predict）无结果行也保留 chatMode 与原始 JSON 供专属看板渲染', () => {
+    const analysis = parseViewChart(
+      '{"chat_mode":"chat_with_analysis","metric_overview":{"current_value":1},"dimension_table":[],"factor_table":[]}',
+    )
+    expect(analysis?.chatMode).toBe('chat_with_analysis')
+    expect(analysis?.raw?.metric_overview).toEqual({ current_value: 1 })
+    expect(analysis?.data).toEqual([])
+
+    const predict = parseViewChart('{"chat_mode":"chat_with_predict","result_df":"ds,value"}')
+    expect(predict?.chatMode).toBe('chat_with_predict')
+    expect(predict?.raw?.result_df).toBe('ds,value')
+  })
+
+  it('describe 占位与空内容返回 null', () => {
+    expect(parseViewChart('describe')).toBeNull()
+    expect(parseViewChart('  ')).toBeNull()
   })
 })
