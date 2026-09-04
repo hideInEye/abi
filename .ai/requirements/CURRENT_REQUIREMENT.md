@@ -1379,3 +1379,40 @@ dashboard 微应用「我的大屏 → 分享记录」卡片仍为旧版行式�
 - bearer 默认凭证可手动修改且不被自动填充覆盖；新增方案/切换到 bearer 时仍自动填充。
 - 后端补齐 extensions 字段支持后，重新编辑能正确回显下行/上行选择及透明认证/凭证覆盖（前端提交/回显逻辑已就绪）。
 - tsc 不新增报错。
+
+## 2026-09-04 追加：报告 Todo 异常顺序静默防御
+
+### 需求类型
+
+报告模式前端缺陷修复（仅调整 Redis 事件聚合，不改接口协议和页面样式）。
+
+### 背景
+
+后端偶发返回顺序异常的 `plan.update.tasks`：已经完成的任务出现在执行中、等待中或已取消任务之后。该快照若直接渲染，会使后执行的任务显示在未执行任务后面，并造成执行步骤归属错乱。
+
+### 目标
+
+- `completed` 任务必须构成 Todo 列表的连续前缀；出现首个非 `completed` 状态后，不允许再出现 `completed`。
+- 收到上述顺序异常的 `plan.update` 时，静默忽略整份任务快照，保留上一份有效计划和 Todo 状态；没有上一份有效计划时继续保持空 Todo。
+- 异常 Stream entry 仍记为已处理并推进 `lastEntryId`，避免断线续读或历史回放时重复处理。
+- 后续收到顺序正常的 `plan.update` 时恢复正常更新。
+- 不展示警告、Toast、错误卡片或其他用户提示，不在前端重新排序后端任务。
+
+### 非目标
+
+- 不调整普通对话、报告样式、步骤展示、步骤归属、报告文件识别和下载逻辑。
+- 不改变 Todo 状态枚举或 Redis Stream 接口协议。
+- 不修改已完成报告的 query 历史适配协议。
+
+### 影响范围预期
+
+- `apps/chat/src/components/conversation/report-mode/reportStreamReducer.ts`
+- `apps/chat/src/components/conversation/report-mode/reportStreamReducer.test.ts`
+- `.ai/runs/2026-09-04-report-todo-order-guard/`
+
+### 验收标准
+
+- 顺序正常的计划（如 `completed → in_progress → pending`）照常渲染。
+- 顺序异常的计划（如 `completed → in_progress → pending → completed`）不覆盖上一份有效计划，也不新增 warning。
+- 被忽略的 entry 仍更新 `lastEntryId` 和去重记录，下一份有效计划可以继续更新。
+- 报告 Stream reducer 定向测试、类型检查、构建和 `git diff --check` 通过，或明确记录环境原因。
