@@ -17,6 +17,8 @@ interface ExploreMessageRowProps {
   onClose?: () => void
   /** 代码块点击编辑时，由上层在右侧面板打开代码编辑器。 */
   onEditCode?: (payload: ExploreCodeEditPayload) => void
+  /** 窄容器（分享悬浮窗等）单栏紧凑布局；主对话宽屏不传，保持双栏。 */
+  compact?: boolean
 }
 
 function getTodoStatusMeta(status: string) {
@@ -132,7 +134,7 @@ function normalizeActionInput(input?: string | null): string {
   }
 }
 
-const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = false, onOpen, onClose, onEditCode }) => {
+const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = false, onOpen, onClose, onEditCode, compact = false }) => {
   const completedCount = item.tasks.filter((task) => task.status === 'completed' || task.status === 'done').length
   const statusTag = getCardStatusTag(item.status)
   const running = item.status === 'running'
@@ -218,7 +220,7 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
   const activeTodoId = focusedStep?.todoId
   
   return (
-    <article className={styles.messageRow}>
+    <article className={`${styles.messageRow} ${compact ? styles.compact : ''}`}>
       <div className={styles.questionWrap}>
         <div className={styles.questionBubble}>{item.question}</div>
       </div>

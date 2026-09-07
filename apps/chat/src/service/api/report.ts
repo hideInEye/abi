@@ -97,6 +97,8 @@ export interface RawReportStreamEntry {
 interface ConnectReportEventsOptions {
   query: ReportStreamQuery
   signal: AbortSignal
+  /** 免登录分享场景注入的 Authorization 头（Bearer <shareToken>）；缺省时读取登录态。 */
+  authorization?: string | null
   onEntry: (entry: RawReportStreamEntry, raw: EventSourceMessage) => void
   onError?: (error: Error) => void
   onClose?: () => void
@@ -125,9 +127,9 @@ function getReportSubmitApi() {
   return `${baseApi}${REPORT_SUBMIT_PATH}`
 }
 
-function getAuthorizationHeaders(): Record<string, string> {
-  const authorization = getAuthorization()
-  return authorization ? { Authorization: authorization } : {}
+function getAuthorizationHeaders(authorization?: string | null): Record<string, string> {
+  const authHeader = authorization ?? getAuthorization()
+  return authHeader ? { Authorization: authHeader } : {}
 }
 
 function getBusinessApi(path: string) {
@@ -160,12 +162,12 @@ function getResponseError(body: SubmitReportResponse | undefined, fallback: stri
  * 提交异步报告任务并返回 Redis Stream 定位信息。
  * HTTP 202 只代表任务已入队，真正的执行状态由后续 Redis 原始事件决定。
  */
-export async function submitReportTask(data: SubmitReportRequest, signal?: AbortSignal): Promise<SubmittedReportTask> {
+export async function submitReportTask(data: SubmitReportRequest, signal?: AbortSignal, authorization?: string | null): Promise<SubmittedReportTask> {
   const response = await fetch(getReportSubmitApi(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...getAuthorizationHeaders(),
+      ...getAuthorizationHeaders(authorization),
     },
     body: JSON.stringify(data),
     signal,
@@ -202,14 +204,14 @@ export async function submitReportTask(data: SubmitReportRequest, signal?: Abort
  * 查询已持久化 taskId 的真实状态。
  * 成功状态由 query 历史恢复；未完成状态才继续建立 Java Redis Stream SSE。
  */
-export async function fetchReportTaskStatus(taskId: string, signal?: AbortSignal): Promise<ReportTaskStatus> {
+export async function fetchReportTaskStatus(taskId: string, signal?: AbortSignal, authorization?: string | null): Promise<ReportTaskStatus> {
   const normalizedTaskId = taskId.trim()
   if (!normalizedTaskId) throw new Error('报告 task_id 不能为空')
 
   const searchParams = new URLSearchParams({ task_id: normalizedTaskId })
   const response = await fetch(`${getBusinessApi(REPORT_TASK_PATH)}?${searchParams.toString()}`, {
     method: 'GET',
-    headers: getAuthorizationHeaders(),
+    headers: getAuthorizationHeaders(authorization),
     signal,
   })
 
@@ -252,7 +254,7 @@ export async function fetchReportTaskStatus(taskId: string, signal?: AbortSignal
 export function connectReportEvents(options: ConnectReportEventsOptions) {
   return fetchEventSource(buildReportEventsUrl(options.query), {
     method: 'GET',
-    headers: getAuthorizationHeaders(),
+    headers: getAuthorizationHeaders(options.authorization),
     signal: options.signal,
     openWhenHidden: true,
     async onopen(response) {

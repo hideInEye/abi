@@ -200,6 +200,18 @@
   width: 4px;
 }
 
+/* ── 探索工作室 / 报告预览覆盖层：铺满面板（预览打开时窗体已自动放大），内部直接嵌入主对话预览面板（width:100%/flex:1） ── */
+.abi-cw-preview-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
 .abi-cw-body::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -298,6 +310,13 @@
   display: flex;
   flex-direction: column;
   max-width: 88%;
+}
+
+/* 探索/报告卡片是整行块级内容（非气泡），不受 88% 气泡限宽，占满 body 宽，避免相对交互白卡偏左 */
+.abi-cw-msg-full {
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
 }
 
 .abi-cw-msg-human {

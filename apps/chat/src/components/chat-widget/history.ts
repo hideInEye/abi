@@ -47,6 +47,8 @@ export interface WidgetMessage {
   semanticName?: string
   /** 仅 AI：数据语义 schemaId（信息条 chip 可点查看 Schema 抽屉的依据） */
   semanticSchemaId?: number | string
+  /** 创建时间戳（ms）：与探索/报告项在同一时间线按创建时间排序；历史消息无此值，按索引兜底排最前 */
+  createdAt?: number
 }
 
 /** createTime → HH:mm；非法时间返回空字符串 */
