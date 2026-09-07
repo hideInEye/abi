@@ -33,6 +33,8 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   designer: () => import("@/pages/designer/index.tsx"),
   guide: () => import("@/pages/guide/index.tsx"),
   home: () => import("@/pages/home/index.tsx"),
+  log_access: () => import("@/pages/log/access/index.tsx"),
+  log_action: () => import("@/pages/log/action/index.tsx"),
   login: () => import("@/pages/login/index.tsx"),
   "manage_component_icon-selector": () => import("@/pages/manage/component/icon-selector/index.tsx"),
   manage_dept: () => import("@/pages/manage/dept/index.tsx"),

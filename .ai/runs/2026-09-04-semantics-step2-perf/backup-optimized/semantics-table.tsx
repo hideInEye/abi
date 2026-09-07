@@ -1,0 +1,468 @@
+import { CloseOutlined, TableOutlined } from '@ant-design/icons'
+import { message } from 'antd'
+import CommonDrawer from '@/components/stateless/common/CommonDrawer'
+
+import { useDatasource } from '@/hooks/data-preparation/useDataSource'
+import { addTableSemantics, editTableSemantics } from '@/service/api/data-table-meaning'
+import { formattedDate } from '@/utils/date'
+
+import DataTableMeaningBaseInfoFields from '../components/semantics-base-info-fields'
+import DataTableMeaningTable from '../components/semantics-table-config'
+import DataTableMeaning from '../components/semantics-steps'
+import { useTableStore } from '../store/useTableStore'
+import type { InputField, OutputData, TableSemanticParams } from '../types'
+import { getDefaultSemanticType, withDateDefaultDesc } from '../utils/getDefaultField'
+
+export function streamlinedData(data: any[]): InputField[] {
+  return data.map((item) => ({
+    ...item,
+    agg: item.agg || '',
+    alias: item.alias || item.tfieldAlias,
+    bizName: item.bizName || item.tfieldAlias,
+    dataType: item.fieldType,
+    expand: item.expand || {},
+    expr: item.expr || '',
+    fieldDesc: item.fieldDesc || '',
+    fieldName: item.originName,
+    fieldType: item.fieldType,
+    isCreateDimension: 1,
+    isCreateMetric: 1,
+    originName: item.originName,
+    primaryKey: item.primaryKey || '',
+    rtableId: item.rtableId,
+    rtableName: item.tableRemarks,
+    semanticType: item.semanticType || '',
+    sourceId: item.sourceId,
+    tableName: item.tableName,
+    tableRemarks: item.tableRemarks || '',
+    // 表别名 无
+    tdesc: item.tableRemarks,
+    techId: item.techId || item.tfieldId,
+    techName: item.originName,
+    tfieldId: item.tfieldId,
+    tfieldName: item.tfieldName,
+    type: item.fieldType,
+  }))
+}
+
+function createDimensionObject(field: InputField) {
+  return {
+    alias: field.alias,
+    bizName: field.bizName,
+    expand: field.expand,
+    fieldDesc: field.fieldDesc,
+    fieldName: field.fieldName,
+    fieldType: field.fieldType,
+    originName: field.originName,
+    primaryKey: field.primaryKey,
+    rtableName: field.tableRemarks,
+    sourceId: field.sourceId,
+    tableName: field.tableName,
+    tdesc: field.tableRemarks,
+    techId: field.tfieldId,
+    techName: field.techName,
+    tfieldName: field.tfieldName,
+    type: field.semanticType || '',
+  }
+}
+
+export function assembleData(input: InputField[]): OutputData {
+  const result: OutputData = {
+    // 维度
+    dimensions: [],
+    // 字段
+    fields: [],
+    // 主键
+    identifiers: [],
+    // 度量
+    measures: [],
+    // 表名称
+    tableNames: [],
+  }
+
+  const semanticTypeHandlers = {
+    // 维度
+    categorical: (field: InputField) => {
+      result.dimensions.push({
+        ...createDimensionObject(field),
+        isCreateDimension: field.isCreateDimension,
+        techId: field.tfieldId,
+        type: 'categorical',
+      })
+    },
+    // 日期
+    datetime: (field: InputField) => {
+      result.dimensions.push({
+        ...createDimensionObject(field),
+        dateFormat: formattedDate(),
+        techId: field.tfieldId,
+        type: 'datetime',
+      })
+    },
+
+    // 度量
+    measure: (field: InputField) => {
+      result.measures.push({
+        agg: field.agg || 'sum',
+        alias: field.alias,
+        bizName: field.bizName,
+        expand: field.expand,
+        expr: field.expr || field.fieldName,
+        fieldDesc: field.fieldDesc,
+        fieldName: field.fieldName,
+        fieldType: field.fieldType,
+        isCreateMetric: field.isCreateMetric,
+        originName: field.originName,
+        primaryKey: field.primaryKey || '*',
+        rtableName: field.tableRemarks || '*',
+        sourceId: field.sourceId || '*',
+        tableName: field.tableName,
+        tdesc: field.tableRemarks,
+        techId: field.tfieldId,
+        techName: field.techName,
+        tfieldName: field.tfieldName,
+        type: 'measure',
+      })
+    },
+    // 主键
+    primary_key: (field: InputField) => {
+      result.identifiers.push({
+        ...createDimensionObject(field),
+        techId: field.tfieldId,
+        type: 'primary_key',
+      })
+    },
+  }
+
+  type SemanticType = keyof typeof semanticTypeHandlers
+  // 储存表名称的数组
+  const tableNames = new Map<string, string>()
+
+  input.forEach((field) => {
+    // 如果没有设置 semanticType，先使用默认值
+    let semanticType = field.semanticType
+    if (!semanticType) {
+      // 简单的字段类型推断
+      const lowerFieldType = (field.fieldType || '').toLowerCase()
+      const upperFieldType = (field.fieldType || '').toUpperCase()
+
+      if (upperFieldType === 'DATETIME' || upperFieldType === 'DATETIME64' || upperFieldType === 'DATE' || upperFieldType === 'TIME' || upperFieldType.includes('TIMESTAMP')) {
+        semanticType = 'datetime'
+      } else if (
+        lowerFieldType.includes('int') ||
+        lowerFieldType.includes('float') ||
+        lowerFieldType.includes('decimal') ||
+        lowerFieldType.includes('integer') ||
+        lowerFieldType.includes('double') ||
+        upperFieldType.includes('NUMBER') ||
+        upperFieldType.includes('NUMERIC') ||
+        upperFieldType.includes('LONG')
+      ) {
+        semanticType = 'measure'
+      } else {
+        semanticType = 'categorical'
+      }
+    }
+
+    const handler = semanticTypeHandlers[semanticType as SemanticType]
+    if (handler) {
+      handler(field)
+    }
+    result.fields.push({
+      dataType: field.dataType,
+      fieldName: field.fieldName,
+    })
+
+    if (field.rtableId && !tableNames.has(field.rtableId)) {
+      result.tableNames.push({
+        tableName: field.tableRemarks || '',
+        rtableId: field.rtableId,
+      })
+      tableNames.set(field.rtableId, field.tableRemarks || '')
+    }
+  })
+  return result
+}
+
+function setTableName(fields: any[], union: any[], tablePrikey: any[] = []) {
+  if (!fields?.length) {
+    return
+  }
+
+  // 一次性构建映射表，避免重复递归
+  // 优先从 currentDsFields 里取真实 tableName（SQL 视图场景 currentDs.tableName 为"自定义sql"）
+  const rtableIdMap = new Map<string, string>()
+  // 表中文名映射：union.currentDs.rtableName 是表中文名来源，与配置页展示(tableChineseName)一致
+  const rtableRemarksMap = new Map<string, string>()
+  const traverse = (items: any[]) => {
+    items?.forEach((item) => {
+      if (item.currentDs?.rtableId) {
+        // 先尝试从 currentDsFields 取第一个字段的 tableName（SQL视图时有真实表名）
+        const fieldsTableName = item.currentDsFields?.[0]?.tableName
+        const tableName = fieldsTableName || item.currentDs.tableName
+        rtableIdMap.set(item.currentDs.rtableId, tableName)
+        rtableRemarksMap.set(item.currentDs.rtableId, item.currentDs.rtableName || '')
+      }
+      traverse(item.childrenDs)
+    })
+  }
+  traverse(union)
+
+  const primaryKeyMap = new Map<string, string>()
+  tablePrikey.forEach((item) => {
+    if (item.originName) {
+      primaryKeyMap.set(item.originName, item.originName)
+      primaryKeyMap.set(item.tableName, item.originName)
+    }
+  })
+
+  fields.forEach((field) => {
+    // 直接从映射表查找
+    const tableName = rtableIdMap.get(field.rtableId)
+
+    if (tableName) {
+      field.tableName = tableName
+    }
+
+    // 表中文名兜底：用户未手动编辑「表中文名」时 tableRemarks 为空，
+    // 从 union 的 rtableName 兜底，避免保存报文里 rtableName/tdesc 传空
+    if (!field.tableRemarks) {
+      field.tableRemarks = rtableRemarksMap.get(field.rtableId) || ''
+    }
+
+    const primaryKey = tableName && primaryKeyMap.has(tableName) && primaryKeyMap.has(field.originName) ? primaryKeyMap.get(field.originName) : undefined
+    field.primaryKey = primaryKey || '*'
+  })
+}
+
+export function SemanticsTable({ updateTableList }: { readonly updateTableList: () => void }) {
+  const {
+    chineseName,
+    dbName,
+    dbType,
+    desc,
+    downSelectVal,
+    drawerTitle,
+    editObj,
+    englishName,
+    fields,
+    groupId,
+    resetStore,
+    setDataSourceInfo,
+    setFields,
+    setStepIndex,
+    setTableModalOpen,
+    sourceId,
+    stepIndex,
+    tableModalOpen,
+    tablePrikey,
+    union,
+  } = useTableStore()
+
+  const { formBaseInfo, formFieldsConfig, tableConfigValidator, nextStep, prevStep } = useTableStore()
+  const [nextLoading, setNextLoading] = useState(false)
+  const { dataSourceList, getDatasourceList } = useDatasource()
+
+  useEffect(() => {
+    getDatasourceList({ spaceId: Number(localStorage.getItem('spaceId')) })
+  }, [])
+
+  useEffect(() => {
+    if (!sourceId || !dataSourceList.length) return
+    const ds = dataSourceList.find((item: any) => String(item.sourceId) === String(sourceId))
+    if (!ds) return
+    let dbName = ''
+    try {
+      const configuration = typeof ds.configuration === 'string' ? JSON.parse(ds.configuration) : ds.configuration
+      dbName = configuration?.dbName || ''
+    } catch {
+      dbName = ''
+    }
+    setDataSourceInfo({
+      dbName,
+      dbType: ds.sourceType || '',
+    })
+  }, [sourceId, dataSourceList])
+
+  const handleClose = () => {
+    setTableModalOpen(false)
+    resetStore()
+    setStepIndex(0)
+  }
+
+  // setTableName 会就地修改 fields；用 useMemo 仅在依赖变化时执行，
+  // 避免每次渲染都递归遍历 union + 全量改字段（第二步多轮重渲染下成本被放大）
+  useMemo(() => setTableName(fields, union, tablePrikey), [fields, union, tablePrikey])
+
+  const buildTableSemanticParams = (): TableSemanticParams => ({
+    bizName: chineseName,
+    dbName,
+    dbType,
+    drillDim: null,
+    filters: null,
+    groupId,
+    modelDetail: JSON.stringify(assembleData(streamlinedData(fields))),
+    relViewId: downSelectVal?.toString() || '',
+    remark: desc,
+    schemaId: drawerTitle === '新增数据语义' ? '' : editObj.schemaId,
+    sourceId: fields[0]?.sourceId || '',
+    spaceId: localStorage.getItem('spaceId'),
+    status: '1',
+    techName: englishName,
+  })
+  // 滚动定位到表单字段
+  const scrollToErrorField = (fieldName: string) => {
+    let selector = ''
+    if (fieldName.includes('tableHeader')) {
+      selector = '[data-field-type="table-chinese-name"]'
+    } else if (fieldName.includes('tableConfig')) {
+      // 提取字段索引，如 tableConfig[5].semanticType -> 5
+      const indexMatch = fieldName.match(/tableConfig\[(\d+)\]/)
+      const fieldIndex = indexMatch ? indexMatch[1] : null
+
+      const fieldType = fieldName.includes('semanticType') ? 'semantic-type' : fieldName.includes('bizName') ? 'bizName' : fieldName.includes('alias') ? 'alias' : 'fieldDesc'
+
+      // 如果是语义类型且有索引，精确定位到特定字段
+      if (fieldType === 'semantic-type' && fieldIndex) {
+        selector = `[data-field-type="semantic-type"][data-field-index="${fieldIndex}"]`
+      } else {
+        selector = `[data-field-type="${fieldType}"]`
+      }
+    }
+
+    if (selector) {
+      document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }
+
+  const handleTableSemantics = async () => {
+    const params = buildTableSemanticParams()
+    if (params.groupId === '' || !params.groupId) {
+      message.error('请选择分组')
+      return
+    }
+    const api = drawerTitle === '新增数据语义' ? addTableSemantics : editTableSemantics
+    const { response } = await api(params)
+
+    if (Number(response.data.code) === 200) {
+      message.success(`${drawerTitle === '新增数据语义' ? '新增' : '编辑'}成功`)
+      handleClose()
+      updateTableList()
+    }
+  }
+
+  function onPrevStep() {
+    prevStep()
+  }
+
+  async function onNextStep() {
+    if (nextLoading) return
+    setNextLoading(true)
+    try {
+      if (stepIndex === 0) {
+        await formBaseInfo.validateFields()
+        await formFieldsConfig.validateFields()
+        // 进入第二步前一次性写入默认语义类型、日期默认描述与中文名称/别名兜底，
+        // 避免第二步挂载后再批量写 store 触发全表重渲染（大数据量卡顿的主要来源之一）
+        const prepared = fields.map((field: any) => {
+          let next = field
+          if (!next.semanticType) {
+            const defaultType = getDefaultSemanticType(next, drawerTitle, tablePrikey)
+            if (defaultType) next = { ...next, semanticType: defaultType }
+          }
+          next = withDateDefaultDesc(next, next.semanticType)
+          if (!(next.alias && String(next.alias).trim()) && next.alias !== next.tfieldAlias) next = { ...next, alias: next.tfieldAlias }
+          if (!(next.bizName && String(next.bizName).trim()) && next.bizName !== next.tfieldAlias) next = { ...next, bizName: next.tfieldAlias }
+          return next
+        })
+        if (prepared.some((item, index) => item !== fields[index])) setFields(prepared)
+        nextStep()
+      } else if (stepIndex === 1) {
+        const firstErrorKey = tableConfigValidator ? await tableConfigValidator() : null
+        if (firstErrorKey) {
+          scrollToErrorField(firstErrorKey)
+          return
+        }
+
+        // 检查每个表都有主键
+        const tableNames = [...new Set(fields.map((f) => f.tableName))]
+        for (const tableName of tableNames) {
+          const hasKey = fields.some((f) => f.tableName === tableName && f.semanticType === 'primary_key')
+          if (!hasKey) {
+            const firstIndex = fields.findIndex((f) => f.tableName === tableName)
+            scrollToErrorField(`tableConfig[${firstIndex}].semanticType`)
+            message.error(`表"${tableName}"缺少主键，每个表都必须设置一个主键字段`)
+            return
+          }
+        }
+        await handleTableSemantics()
+      }
+    } finally {
+      setNextLoading(false)
+    }
+  }
+
+  return (
+    <CommonDrawer
+      className="ds-operate-drawer"
+      destroyOnClose
+      open={tableModalOpen}
+      icon={<TableOutlined />}
+      title={drawerTitle}
+      width={1200}
+      footer={
+        <div className="ds-operate-footer">
+          <div className="ds-operate-footer-left" />
+          <div className="ds-operate-footer-right">
+            {stepIndex >= 1 && (
+              <AButton
+                className="btn-accent-gradient"
+                onClick={() => {
+                  window.open('/ai-assistant/conversational-analysis', '_blank')
+                  setTableModalOpen(false)
+                  resetStore()
+                  handleClose()
+                }}
+              >
+                开始对话
+              </AButton>
+            )}
+            {stepIndex >= 1 && (
+              <AButton
+                className="btn-ghost-v5"
+                disabled={nextLoading}
+                onClick={() => {
+                  onPrevStep()
+                }}
+              >
+                上一步
+              </AButton>
+            )}
+            <AButton
+              className="btn-accent-gradient"
+              loading={nextLoading}
+              disabled={nextLoading}
+              onClick={() => {
+                onNextStep()
+              }}
+            >
+              {stepIndex === 0 && '下一步'}
+              {stepIndex === 1 && '保存'}
+            </AButton>
+          </div>
+        </div>
+      }
+      onClose={() => {
+        setTableModalOpen(false)
+        resetStore()
+        handleClose()
+      }}
+    >
+      <ASpin spinning={nextLoading} tip="正在处理，请稍候">
+        <DataTableMeaning data={stepIndex} />
+        {stepIndex === 0 && <DataTableMeaningBaseInfoFields />}
+        {stepIndex === 1 && <DataTableMeaningTable />}
+      </ASpin>
+    </CommonDrawer>
+  )
+}

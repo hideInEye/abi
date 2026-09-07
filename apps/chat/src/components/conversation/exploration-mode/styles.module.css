@@ -1407,3 +1407,52 @@
   font-size: 12px;
   line-height: 1.7;
 }
+
+/* ── 窄容器紧凑布局（compact：分享悬浮窗等窄面板由上层显式开启）──
+   主对话为宽屏双栏工作区（grid minmax 最小总宽 540px），窄面板下横向溢出被裁切；
+   compact 折叠为单栏纵向堆叠并收紧限高。主对话不传 compact，以下规则不生效。 */
+.compact .cardWorkspace {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+  height: auto;
+}
+
+/* 单栏后左栏无右侧邻居：去掉右描边与分隔光线 */
+.compact .todoColumn {
+  border-right: none;
+}
+
+.compact .todoColumn::after {
+  display: none;
+}
+
+/* 单栏下容器高为 auto，思考/待办不再按容器高 50% 等分，改为内容自适应 */
+.compact .todoColumn .panel:first-child,
+.compact .todoColumn .panel:last-child,
+.compact .todoColumn .panel:first-child:last-child {
+  flex: 0 0 auto;
+}
+
+/* 窄面板收紧内边距与纵向限高，避免单栏过长、两侧留白过大 */
+.compact .panel {
+  padding: 14px 14px 16px;
+}
+
+.compact .panel::before {
+  left: 14px;
+  right: 14px;
+}
+
+/* 单栏下思考区默认仅露约 3 行（13px × 1.8 × 3 ≈ 70px），超出内部滚动，保证下方待办/步骤结果可见 */
+.compact .thinkingCollapsibleInner {
+  max-height: 72px;
+}
+
+.compact .currentResultBody {
+  max-height: 300px;
+  padding: 12px;
+}
+
+.compact .currentResultEmpty {
+  min-height: 120px;
+}

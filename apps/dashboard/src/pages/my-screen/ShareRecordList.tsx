@@ -9,9 +9,9 @@ import '../home/project-list/ProjectList.less';
 /** 分享记录行数据（字段做兼容映射，后端字段缺失时兜底展示） */
 interface ShareRecordItem {
     id: string;
+    shareCode: string;
     name: string;
     shareUrl: string;
-    sharePassword: string;
     shareTime: string;
     expiration: string;
     statusLabel: string;
@@ -40,10 +40,10 @@ function mapShareRecord(item: any): ShareRecordItem {
     const status = getShareStatus(item);
     return {
         id: String(item.id ?? item.shareCode ?? item.projectId ?? ''),
+        // 列表接口不含密码，shareCode 用于复制时单查详情；列表缺 shareCode 时从分享链接尾段兜底
+        shareCode: item.shareCode || String(item.shareUrl || '').split('/').pop() || '',
         name: item.projectName || item.appName || item.name || '-',
         shareUrl: item.shareUrl || '',
-        // 后端列表密码字段未统一口径，兼容 sharePassword/password/sharePwd（同名称字段兼容映射）
-        sharePassword: item.sharePassword || item.password || item.sharePwd || '',
         shareTime: fmtTime(item.createTime || item.shareTime),
         expiration: item.expirationDate ? fmtTime(item.expirationDate) : '永久',
         statusLabel: status.label,
@@ -136,16 +136,27 @@ const ShareRecordList = memo(() => {
         });
     };
 
-    /** 复制链接（含密码时一并复制；链接格式对齐大屏分享弹窗的转换规则） */
-    const handleCopy = (r: ShareRecordItem) => {
+    /** 复制链接和密码（列表接口无密码字段，点击时按 shareCode 单查分享详情取密码；链接格式对齐大屏分享弹窗的转换规则） */
+    const handleCopy = async (r: ShareRecordItem) => {
         if (!r.shareUrl) {
             globalMessage.messageApi?.error('该记录暂无分享链接');
             return;
         }
         const shareUrl = r.shareUrl.replace('/#/', '/').replace('/dr/', '/dashboard-share-page/');
-        const text = r.sharePassword ? `分享链接：${shareUrl}\n访问密码：${r.sharePassword}` : shareUrl;
+        let password = '';
+        if (r.shareCode) {
+            const pwd = await baseApi.getSharePassword(r.shareCode);
+            if (pwd === null) {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    globalMessage.messageApi?.warning('获取分享密码失败，已仅复制分享链接');
+                });
+                return;
+            }
+            password = pwd;
+        }
+        const text = password ? `分享链接：${shareUrl}\n访问密码：${password}` : shareUrl;
         navigator.clipboard.writeText(text).then(() => {
-            globalMessage.messageApi?.success(r.sharePassword ? '分享链接和密码已复制到剪贴板' : '分享链接已复制到剪贴板');
+            globalMessage.messageApi?.success(password ? '分享链接和密码已复制到剪贴板' : '分享链接已复制到剪贴板');
         });
     };
 
@@ -183,8 +194,8 @@ const ShareRecordList = memo(() => {
                                     <div className="ac-footer">
                                         <span className={`ac-tag${r.statusOff ? ' off' : ''}`}>{r.statusLabel}</span>
                                         <div className="ac-actions">
-                                            {/* 文案随密码有无切换（同分享弹窗口径），避免无密码记录承诺复制密码 */}
-                                            <button className="ac-btn" onClick={() => handleCopy(r)}>{r.sharePassword ? '复制链接和密码' : '复制链接'}</button>
+                                            {/* 密码在点击时单查详情获取，列表行无法预判有无密码，文案固定（复制内容与提示随实际密码切换） */}
+                                            <button className="ac-btn" onClick={() => handleCopy(r)}>复制链接和密码</button>
                                         </div>
                                     </div>
                                 </div>

@@ -54,3 +54,14 @@ export function fetchProjectShareListApi(data: {
     data
   });
 }
+
+/**
+ * 分享详情单查（助手与大屏共用）。列表接口不含密码字段，密码在复制时按 shareCode 单独查询。
+ * 网关路径与分享接口一致：/api + /dashboard/api/v1/project/share/{shareCode}。
+ */
+export function fetchProjectShareDetailApi(shareCode: string) {
+  return apiRequest({
+    method: 'get',
+    url: `/api/dashboard/api/v1/project/share/${shareCode}`
+  });
+}

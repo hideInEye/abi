@@ -14,6 +14,20 @@ import { formatField } from '../utils/helper.ts';
 
 import { TableTooltip } from './table-tooltip.tsx';
 
+// 日期语义类型字段的默认字段描述：用户问题未涉及时间范围场景时填充
+const DATE_SEMANTIC_DEFAULT_DESC = '用户问题未涉及时间范围场景，默认最近3个月';
+
+/**
+ * 语义类型为日期且字段描述为空时自动填充默认描述；描述已有值（已保存或用户手填）则不覆盖。
+ * 仅用于事件/副作用触发的一次性赋值场景；render 期的默认值赋值需就地修改以保持单次渲染收敛
+ */
+function withDateDefaultDesc(field: any, semanticType: string) {
+  if (semanticType === 'datetime' && !String(field.fieldDesc || '').trim()) {
+    return { ...field, fieldDesc: DATE_SEMANTIC_DEFAULT_DESC };
+  }
+  return field;
+}
+
 export default function DataTableMeaningTable() {
   const [form] = Form.useForm();
   const { drawerTitle, editObj } = useTableStore();
@@ -54,13 +68,16 @@ export default function DataTableMeaningTable() {
     const newFields = fields.map((field: any) => {
       try {
         const { alias, bizName, fieldDesc, semanticType } = semanticTypeMap.get(field.tfieldId);
-        return {
-          ...field,
-          alias,
-          bizName,
-          fieldDesc,
+        return withDateDefaultDesc(
+          {
+            ...field,
+            alias,
+            bizName,
+            fieldDesc,
+            semanticType
+          },
           semanticType
-        };
+        );
       } catch (error) {
         console.error(error);
         return {
@@ -319,6 +336,12 @@ export default function DataTableMeaningTable() {
             const newFields = [...fields];
             if (globalIndex !== undefined && !newFields[globalIndex].semanticType) {
               newFields[globalIndex].semanticType = initSemanticType;
+              // 日期类型且描述为空时就地填充默认描述（保持就地修改，避免额外的渲染 pass）
+              if (initSemanticType === 'datetime' && !String(record.fieldDesc || '').trim()) {
+                record.fieldDesc = DATE_SEMANTIC_DEFAULT_DESC;
+                newFields[globalIndex].fieldDesc = DATE_SEMANTIC_DEFAULT_DESC;
+                form.setFieldValue(`tableConfig[${globalIndex}].fieldDesc`, DATE_SEMANTIC_DEFAULT_DESC);
+              }
               setFields(newFields);
             }
             // 同步更新表单值
@@ -356,21 +379,33 @@ export default function DataTableMeaningTable() {
                       if (field.tableName === currentTableName && idx !== globalIndex && field.semanticType === "primary_key") {
                         // 根据字段类型自动改成其他类型（不考虑 tablePrikey 映射）
                         const defaultType = getSemanticTypeByFieldType(field.fieldType);
-                        newFields[idx] = {
-                          ...newFields[idx],
-                          semanticType: defaultType
-                        };
+                        newFields[idx] = withDateDefaultDesc(
+                          {
+                            ...newFields[idx],
+                            semanticType: defaultType
+                          },
+                          defaultType
+                        );
                         form.setFieldValue(`tableConfig[${idx}].semanticType`, defaultType);
+                        form.setFieldValue(`tableConfig[${idx}].fieldDesc`, newFields[idx].fieldDesc);
                       }
                     });
                   }
 
-                  newFields[globalIndex] = {
-                    ...newFields[globalIndex],
-                    semanticType: value
-                  };
+                  // 切换语义类型时若为日期类型且描述为空，自动填充默认描述；已有描述不覆盖
+                  const prevDesc = newFields[globalIndex].fieldDesc;
+                  newFields[globalIndex] = withDateDefaultDesc(
+                    {
+                      ...newFields[globalIndex],
+                      semanticType: value
+                    },
+                    value
+                  );
                   setFields(newFields);
                   form.setFieldValue(fieldName, value);
+                  if (newFields[globalIndex].fieldDesc !== prevDesc) {
+                    form.setFieldValue(`tableConfig[${globalIndex}].fieldDesc`, newFields[globalIndex].fieldDesc);
+                  }
                   form.setFields([{ name: fieldName, errors: [] }]);
                 }}
               />
@@ -548,13 +583,18 @@ export default function DataTableMeaningTable() {
               const newFields = fieldsRef.current.map((field: any) => {
                 const matched = techIdMap.get(String(field.tfieldId));
                 if (!matched) return field;
-                return {
-                  ...field,
-                  bizName: (matched.bizName && String(matched.bizName).trim()) ? matched.bizName : field.bizName,
-                  alias: (matched.alias && String(matched.alias).trim()) ? matched.alias : field.alias,
-                  fieldDesc: (matched.fieldDesc && String(matched.fieldDesc).trim()) ? matched.fieldDesc : field.fieldDesc,
-                  semanticType: (matched.type && String(matched.type).trim()) ? matched.type : field.semanticType
-                };
+                // 语义类型有变化时联动日期默认描述（已有描述不覆盖）
+                const nextSemanticType = (matched.type && String(matched.type).trim()) ? matched.type : field.semanticType;
+                return withDateDefaultDesc(
+                  {
+                    ...field,
+                    bizName: (matched.bizName && String(matched.bizName).trim()) ? matched.bizName : field.bizName,
+                    alias: (matched.alias && String(matched.alias).trim()) ? matched.alias : field.alias,
+                    fieldDesc: (matched.fieldDesc && String(matched.fieldDesc).trim()) ? matched.fieldDesc : field.fieldDesc,
+                    semanticType: nextSemanticType
+                  },
+                  nextSemanticType
+                );
               });
 
               // 填充完成后，检查仍然缺少必填项的字段并提示（不阻止填充）
