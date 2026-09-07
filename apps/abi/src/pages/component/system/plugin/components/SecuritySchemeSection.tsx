@@ -1,5 +1,7 @@
-import { getToken } from '@/store/slice/auth/shared';
 import type { McpSecurityExtensions, McpSecurityScheme } from '@/types/plug';
+import { Button, Flex, Input, Select, Typography } from 'antd';
+
+const { Text } = Typography;
 
 interface SecuritySchemeSectionProps {
   readonly schemes: McpSecurityScheme[];
@@ -7,6 +9,22 @@ interface SecuritySchemeSectionProps {
   readonly onSchemesChange: (next: McpSecurityScheme[]) => void;
   readonly onExtensionsChange: (next: McpSecurityExtensions) => void;
 }
+
+const AUTH_TYPE_OPTIONS = [
+  { label: 'API Key', value: 'apiKey' },
+  { label: 'HTTP (Basic/Bearer)', value: 'http' }
+];
+
+const KEY_LOCATION_OPTIONS = [
+  { label: 'Header', value: 'header' },
+  { label: 'Query', value: 'query' },
+  { label: 'Cookie', value: 'cookie' }
+];
+
+const HTTP_SCHEME_OPTIONS = [
+  { label: 'Bearer', value: 'bearer' },
+  { label: 'Basic', value: 'basic' }
+];
 
 export const SecuritySchemeSection = ({
   schemes,
@@ -27,12 +45,12 @@ export const SecuritySchemeSection = ({
   };
 
   const addScheme = () => {
-    const token = getToken();
     const next: McpSecurityScheme = {
       id: `securityScheme_${schemes.length + 1}`,
-      type: 'http',
-      scheme: 'bearer',
-      defaultCredential: token ? `Bearer ${token}` : ''
+      type: 'apiKey',
+      name: 'X-API-Key',
+      in: 'header',
+      defaultCredential: ''
     };
     onSchemesChange([...schemes, next]);
   };
@@ -43,13 +61,6 @@ export const SecuritySchemeSection = ({
 
   const updateScheme = (idx: number, patch: Partial<McpSecurityScheme>) => {
     const merged = { ...schemes[idx], ...patch };
-    // 仅在切换到 bearer 时自动填充凭证；用户手动编辑凭证/ID 时不覆盖，保证可编辑
-    const isSchemeSwitch =
-      ('type' in patch || 'scheme' in patch) && !('defaultCredential' in patch);
-    if (isSchemeSwitch && merged.type === 'http' && merged.scheme === 'bearer') {
-      const token = getToken();
-      merged.defaultCredential = token ? `Bearer ${token}` : '';
-    }
     onSchemesChange(schemes.map((s, i) => (i === idx ? merged : s)));
   };
 
@@ -62,151 +73,181 @@ export const SecuritySchemeSection = ({
     minWidth: 0
   };
 
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    color: '#666',
+    fontSize: 12,
+    marginBottom: 4
+  };
+
   return (
-    <AFlex vertical gap={16}>
-      {/* 默认下行 / 默认上行 双卡片 */}
-      <AFlex gap={16} wrap="wrap">
-        <div style={cardStyle}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>默认下行认证</div>
-          <div style={{ color: '#888', fontSize: 12, marginBottom: 12 }}>
-            作用于客户端到网关的请求（如 tools/list）以及未显式配置 security 的工具。
-          </div>
-          <AFlex gap={12} align="flex-end">
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>选择认证方案</div>
-              <ASelect
-                allowClear
-                style={{ width: '100%' }}
-                placeholder="请选择默认下行认证方案"
-                value={extensions['server.defaultDownstreamSecurity']?.id}
-                options={idOptions}
-                onChange={v => updateExt('server.defaultDownstreamSecurity', { id: v })}
-              />
-            </div>
-            <div>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>启用透明认证</div>
-              <AFlex gap={6} align="center" style={{ height: 32 }}>
-                <ASwitch
-                  disabled={!extensions['server.defaultDownstreamSecurity']?.id}
-                  checked={extensions['server.defaultDownstreamSecurity']?.passthrough || false}
-                  onChange={v => updateExt('server.defaultDownstreamSecurity', { passthrough: v })}
-                />
-                <span style={{ color: '#888', fontSize: 12 }}>
-                  {extensions['server.defaultDownstreamSecurity']?.passthrough ? '启用' : '禁用'}
-                </span>
-              </AFlex>
-            </div>
-          </AFlex>
+    <Flex vertical gap={16}>
+      {/* 默认上行认证 */}
+      <div style={cardStyle}>
+        <Text strong style={{ fontSize: 14 }}>默认上行认证</Text>
+        <div style={{ color: '#888', fontSize: 12, margin: '4px 0 12px' }}>
+          作用于网关到上游服务的请求。
         </div>
-
-        <div style={cardStyle}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>默认上行认证</div>
-          <div style={{ color: '#888', fontSize: 12, marginBottom: 12 }}>
-            作用于网关访问后端（如 requestTemplate.security）时的默认配置。
+        <Flex gap={12} align="flex-end">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={labelStyle}>选择认证方案</span>
+            <Select
+              allowClear
+              style={{ width: '100%' }}
+              placeholder="请选择默认上行认证方案"
+              value={extensions['server.defaultUpstreamSecurity']?.id}
+              options={idOptions}
+              onChange={v => updateExt('server.defaultUpstreamSecurity', { id: v })}
+            />
           </div>
-          <AFlex gap={12} align="flex-end">
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>选择认证方案</div>
-              <ASelect
-                allowClear
-                style={{ width: '100%' }}
-                placeholder="请选择默认上行认证方案"
-                value={extensions['server.defaultUpstreamSecurity']?.id}
-                options={idOptions}
-                onChange={v => updateExt('server.defaultUpstreamSecurity', { id: v })}
-              />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>凭证覆盖</div>
-              <AInput
-                placeholder="调用后端时可选的凭证覆盖"
-                disabled={!extensions['server.defaultUpstreamSecurity']?.id}
-                value={extensions['server.defaultUpstreamSecurity']?.credential}
-                onChange={e =>
-                  updateExt('server.defaultUpstreamSecurity', { credential: e.target.value })
-                }
-              />
-            </div>
-          </AFlex>
-        </div>
-      </AFlex>
-
-      {/* 添加认证方案按钮 */}
-      <div>
-        <AButton type="primary" onClick={addScheme}>
-          添加认证方案
-        </AButton>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={labelStyle}>上行凭证</span>
+            <Input
+              placeholder="如未填写，将使用选中方案的默认凭证"
+              value={extensions['server.defaultUpstreamSecurity']?.credential || ''}
+              onChange={e => updateExt('server.defaultUpstreamSecurity', { credential: e.target.value })}
+            />
+          </div>
+        </Flex>
       </div>
 
-      {/* 已添加的认证方案条目 */}
+      {/* 添加认证方案 */}
+      <Button type="dashed" onClick={addScheme} block>
+        + 添加认证方案
+      </Button>
+
+      {/* 认证方案列表 */}
       {schemes.map((scheme, idx) => (
-        <div
-          key={idx}
-          style={{
-            border: '1px solid #e6ebf2',
-            borderRadius: 8,
-            padding: 16,
-            background: '#fff'
-          }}
-        >
-          <AFlex gap={12} align="flex-end" wrap="wrap">
-            <div style={{ flex: 1, minWidth: 180 }}>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>
+        <div key={idx} style={cardStyle}>
+          <Flex gap={16} wrap="wrap" style={{ marginBottom: 12 }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <span style={labelStyle}>
                 <span style={{ color: '#ff4d4f', marginRight: 4 }}>*</span>ID
-              </div>
-              <AInput
+              </span>
+              <Input
+                placeholder="认证方案唯一标识"
                 value={scheme.id}
                 onChange={e => updateScheme(idx, { id: e.target.value })}
               />
-            </div>
-            <div style={{ flex: 1, minWidth: 180 }}>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>
-                <span style={{ color: '#ff4d4f', marginRight: 4 }}>*</span>认证类型
+              <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
+                该认证方案的唯一标识，用于在 OpenAPI 规范中引用此配置。
               </div>
-              <ASelect
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <span style={labelStyle}>
+                <span style={{ color: '#ff4d4f', marginRight: 4 }}>*</span>认证类型
+              </span>
+              <Select
                 style={{ width: '100%' }}
                 value={scheme.type}
-                onChange={v =>
-                  updateScheme(idx, {
-                    type: v,
-                    scheme: v === 'http' ? scheme.scheme || 'bearer' : undefined
-                  })
-                }
-                options={[
-                  { label: 'HTTP (Basic/Bearer)', value: 'http' },
-                  { label: 'API Key', value: 'apiKey' }
-                ]}
+                options={AUTH_TYPE_OPTIONS}
+                onChange={v => {
+                  if (v === 'apiKey') {
+                    updateScheme(idx, {
+                      type: 'apiKey',
+                      scheme: undefined,
+                      name: scheme.name || 'X-API-Key',
+                      in: scheme.in || 'header'
+                    });
+                  } else {
+                    updateScheme(idx, {
+                      type: 'http',
+                      scheme: 'bearer',
+                      name: undefined,
+                      in: undefined
+                    });
+                  }
+                }}
               />
+              <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
+                {scheme.type === 'apiKey'
+                  ? '通过固定的密钥字符串进行身份验证。'
+                  : '使用 HTTP 协议原生支持的认证方式（Basic/Bearer）。'}
+              </div>
             </div>
-            <div style={{ flex: 1, minWidth: 180 }}>
-              <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Scheme</div>
-              <ASelect
-                allowClear
-                disabled={scheme.type !== 'http'}
-                style={{ width: '100%' }}
-                placeholder="选择认证方案"
-                value={scheme.scheme}
-                options={[
-                  { label: 'bearer', value: 'bearer' },
-                  { label: 'basic', value: 'basic' }
-                ]}
-                onChange={v => updateScheme(idx, { scheme: v })}
-              />
-            </div>
-            <AButton danger onClick={() => removeScheme(idx)}>
+          </Flex>
+
+          {/* API Key specific fields */}
+          {scheme.type === 'apiKey' && (
+            <>
+              <Flex gap={16} wrap="wrap" style={{ marginBottom: 12 }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <span style={labelStyle}>密钥位置</span>
+                  <Select
+                    style={{ width: '100%' }}
+                    placeholder="选择位置"
+                    value={scheme.in}
+                    options={KEY_LOCATION_OPTIONS}
+                    onChange={v => updateScheme(idx, { in: v })}
+                  />
+                  <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
+                    指定 API Key 在请求中的传递位置（Header 最常见）。
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <span style={labelStyle}>密钥名称</span>
+                  <Input
+                    placeholder="X-API-Key"
+                    value={scheme.name}
+                    onChange={e => updateScheme(idx, { name: e.target.value })}
+                  />
+                  <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
+                    自定义请求头或参数的名称（如 Authorization、AppKey）。
+                  </div>
+                </div>
+              </Flex>
+              <div style={{ marginBottom: 12 }}>
+                <span style={labelStyle}>默认凭证</span>
+                <Input
+                  placeholder="默认凭证值"
+                  value={scheme.defaultCredential}
+                  onChange={e => updateScheme(idx, { defaultCredential: e.target.value })}
+                />
+                <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
+                  选填，用于预先填入默认的密钥值，方便调试。
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* HTTP (Basic/Bearer) specific fields */}
+          {scheme.type === 'http' && (
+            <>
+              <Flex gap={16} wrap="wrap" style={{ marginBottom: 12 }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <span style={labelStyle}>Scheme</span>
+                  <Select
+                    style={{ width: '100%' }}
+                    value={scheme.scheme}
+                    options={HTTP_SCHEME_OPTIONS}
+                    onChange={v => updateScheme(idx, { scheme: v })}
+                  />
+                  <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
+                    {scheme.scheme === 'bearer'
+                      ? 'Bearer Token 认证，常用于 OAuth2 / JWT。'
+                      : 'Basic 认证：用户名:密码 经 Base64 编码后放入 Authorization 头。'}
+                  </div>
+                </div>
+              </Flex>
+              <div style={{ marginBottom: 12 }}>
+                <span style={labelStyle}>默认凭证</span>
+                <Input
+                  placeholder="默认凭证值"
+                  value={scheme.defaultCredential}
+                  onChange={e => updateScheme(idx, { defaultCredential: e.target.value })}
+                />
+              </div>
+            </>
+          )}
+
+          {/* 删除按钮 */}
+          <div style={{ textAlign: 'right' }}>
+            <Button danger onClick={() => removeScheme(idx)}>
               删除
-            </AButton>
-          </AFlex>
-          <div style={{ marginTop: 12 }}>
-            <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>默认凭证</div>
-            <AInput
-              placeholder={scheme.scheme === 'bearer' ? '已自动填充平台当前登录凭证，可手动修改' : '默认凭证值'}
-              value={scheme.defaultCredential}
-              onChange={e => updateScheme(idx, { defaultCredential: e.target.value })}
-            />
+            </Button>
           </div>
         </div>
       ))}
-    </AFlex>
+    </Flex>
   );
 };

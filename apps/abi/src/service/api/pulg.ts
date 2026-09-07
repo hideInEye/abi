@@ -37,7 +37,7 @@ export function queryMcpList(data: { pageNo: number; pageSize: number; mcpName?:
   return apiRequest({
     data,
     method: 'post',
-    url: `/api/abi-mcp/v1/register/list`
+    url: `/api/abi-mcp/v1/mcp/register/list`
   });
 }
 
@@ -51,7 +51,7 @@ export function registerMcp(data: {
   return apiRequest({
     data,
     method: 'post',
-    url: `/api/abi-mcp/v1/register`
+    url: `/api/abi-mcp/v1/mcp/register`
   });
 }
 
@@ -65,7 +65,7 @@ export function updateMcp(data: {
   return apiRequest({
     data,
     method: 'put',
-    url: `/api/abi-mcp/v1/register`
+    url: `/api/abi-mcp/v1/mcp/register`
   });
 }
 
@@ -79,7 +79,7 @@ export function deleteMcp(params: {
   return apiRequest({
     params,
     method: 'delete',
-    url: `/api/abi-mcp/v1/register`
+    url: `/api/abi-mcp/v1/mcp/register`
   });
 }
 
@@ -93,6 +93,21 @@ export function getMcpDetail(params: {
   return apiRequest({
     params,
     method: 'get',
-    url: `/api/abi-mcp/v1/register/detail`
+    url: `/api/abi-mcp/v1/mcp/register/detail`
+  });
+}
+
+// 从 MCP 服务自动导入工具列表
+export function importMcpTools(params: {
+  transportType: 'mcp-sse' | 'mcp-streamable';
+  baseUrl: string;
+  endpoint: string;
+  authToken?: string;
+  namespaceId?: string;
+}) {
+  return apiRequest({
+    params,
+    method: 'get',
+    url: `/api/abi-mcp/v1/mcp/register/importToolsFromMcp`
   });
 }

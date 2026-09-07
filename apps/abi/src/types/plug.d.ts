@@ -98,6 +98,10 @@ export interface McpSecurityScheme {
   id: string;
   type: 'http' | 'apiKey';
   scheme?: string;
+  /** API Key: key name (e.g. X-API-Key) */
+  name?: string;
+  /** API Key: key location (header/query/cookie) */
+  in?: 'header' | 'query' | 'cookie';
   defaultCredential?: string;
 }
 
