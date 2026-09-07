@@ -10,6 +10,8 @@ interface UseExploreConversationOptions {
   spaceId?: number
   currentModelId?: string | number
   embedModelId?: string | number
+  /** 免登录分享场景注入的 Authorization 头；缺省时 streamExplorePlan 读取登录态，主对话行为不变。 */
+  authorization?: string | null
 }
 
 function getCurrentUserId(): number {
@@ -25,7 +27,7 @@ function normalizeIdList(ids?: Array<string | number>): Array<string | number> {
   return Array.from(new Set((ids || []).filter((id) => id !== '' && id !== null && id !== undefined)))
 }
 
-export function useExploreConversation({ conv, spaceId, currentModelId, embedModelId }: UseExploreConversationOptions) {
+export function useExploreConversation({ conv, spaceId, currentModelId, embedModelId, authorization }: UseExploreConversationOptions) {
   const [items, setItems] = useState<ExploreItem[]>([])
   const [loading, setLoading] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
@@ -96,6 +98,7 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
       await streamExplorePlan({
         data: payload,
         signal: abortRef.current.signal,
+        authorization,
         async onopen(response) {
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: 探索接口请求失败`)
@@ -139,7 +142,7 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
         error: current.error || { message: err?.message || '探索任务执行失败' },
       }))
     }
-  }, [conv, currentModelId, embedModelId, loading, spaceId, updateItem])
+  }, [conv, currentModelId, embedModelId, loading, spaceId, updateItem, authorization])
 
   return {
     items,

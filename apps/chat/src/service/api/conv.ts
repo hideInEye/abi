@@ -82,20 +82,22 @@ export function streamConvAnswer({ data, signal, onopen, onmessage, onclose, one
 type StreamExplorePlanOptions = {
   data: any
   signal: AbortSignal
+  /** 免登录分享场景注入的 Authorization 头（Bearer <shareToken>）；缺省时读取登录态 getAuthorization()，主对话行为不变。 */
+  authorization?: string | null
   onopen?: (response: Response) => Promise<void>
   onmessage?: (event: EventSourceMessage) => void | Promise<void>
   onclose?: () => void
   onerror?: (err: any) => number | null | undefined | void
 }
 
-export function streamExplorePlan({ data, signal, onopen, onmessage, onclose, onerror }: StreamExplorePlanOptions) {
-  const authorization = getAuthorization()
+export function streamExplorePlan({ data, signal, authorization, onopen, onmessage, onclose, onerror }: StreamExplorePlanOptions) {
+  const authHeader = authorization ?? getAuthorization()
 
   return fetchEventSource(`${window.APP_CONFIG.VITE_BASE_API}/chat-proxy/api/v2/chat/plan`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(authorization ? { Authorization: authorization } : {})
+      ...(authHeader ? { Authorization: authHeader } : {})
     },
     body: JSON.stringify(data),
     signal,

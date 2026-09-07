@@ -28,6 +28,16 @@ import PieLegend from '../PieLegend'
 import { EChart } from '../react-echarts'
 import SchemaFieldsModal, { parseSchemaFieldsFromModelDetail } from '../conversation-analysis/SchemaFieldsModal'
 import type { SchemaTable } from '../conversation-analysis/SchemaFieldsModal'
+/* 探索/报告：直接复用主对话 hook 与渲染组件，仅通过 authorization 注入分享 token（依赖注入，不影响主对话） */
+import { useExploreConversation } from '../conversation/exploration-mode/useExploreConversation'
+import ExploreMessageRow from '../conversation/exploration-mode/ExploreMessageRow'
+import ExplorePreviewPane from '../conversation/exploration-mode/ExplorePreviewPane'
+import type { ExploreItem } from '../conversation/exploration-mode/types'
+import { useReportConversation } from '../conversation/report-mode/useReportConversation'
+import ReportMessageRow from '../conversation/report-mode/ReportMessageRow'
+import ReportPreviewPane from '../conversation/report-mode/ReportPreviewPane'
+import type { ReportHistoryRoundGroup, ReportItem } from '../conversation/report-mode/types'
+import type { ReportSourceVersionFields } from '../../service/api/report'
 import { parseViewChart, type WidgetChart, WidgetMessage } from './history'
 import {
   checkSharePassword,
@@ -218,6 +228,20 @@ const WIDGET_MODE_ICONS: Record<WidgetChatMode, React.ReactNode> = {
   report: IconFileText,
   explore: IconCompass,
 }
+
+/* 探索/报告复用交互链路的默认模型 id（同 service.sendChatStream：大模型 12 / 嵌入模型 6） */
+const WIDGET_CHAT_MODEL_ID = 12
+const WIDGET_EMBED_MODEL_ID = 6
+
+/* 分享场景不做历史恢复：模块级空数组保持引用稳定；内联 [] 每次渲染都是新引用，
+   会触发报告 hook 的初始化 effect（依赖 historyRounds）重跑并清空实时报告项 */
+const WIDGET_EMPTY_HISTORY_ROUNDS: ReportHistoryRoundGroup[] = []
+
+/** 统一时间线条目：交互消息 / 探索项 / 报告项按 sortKey（创建时间）合并排序 */
+type WidgetTimelineEntry =
+  | { key: string; sortKey: number; kind: 'interact'; index: number; message: WidgetMessage }
+  | { key: string; sortKey: number; kind: 'explore'; item: ExploreItem }
+  | { key: string; sortKey: number; kind: 'report'; report: ReportItem }
 
 const { Text } = Typography
 
@@ -515,6 +539,10 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 数据语义 Schema 抽屉（窗内右侧滑出，复用主对话 SchemaFieldsModal）
   const [schemaDrawerOpen, setSchemaDrawerOpen] = useState(false)
   const [schemaTables, setSchemaTables] = useState<SchemaTable[]>([])
+  // sessionRef 的 state 镜像：探索/报告 hook 需在渲染期读取 conv（ref 变更不触发重渲染）
+  const [convSession, setConvSession] = useState<WidgetSession | null>(null)
+  // 探索右侧工作室当前打开项 id
+  const [activeExploreId, setActiveExploreId] = useState<string | undefined>(undefined)
 
   const sessionRef = useRef<WidgetSession | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -525,6 +553,40 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 放大前的 inline 样式快照（还原时恢复拖拽/resize 自定义的位置尺寸）
   const panelCssTextRef = useRef('')
   const didInit = useRef(false)
+
+  // 分享 token 以 Bearer 头注入探索/报告 service（依赖注入，不写 localStorage、不影响主对话登录态）
+  const shareAuth = shareToken ? `Bearer ${shareToken}` : null
+  // 探索/报告 hook 在渲染期读取的 conv：由 convSession 构造（字段名对齐主对话 conv）
+  const hookConv = useMemo(() => {
+    if (!convSession) return undefined
+    return {
+      conv_uid: convSession.convUid,
+      chat_id: convSession.sessionId,
+      appId: Number(appId) || 0,
+      space_id: Number(info?.spaceId) || 0,
+      chat_model_id: WIDGET_CHAT_MODEL_ID,
+    }
+  }, [convSession, appId, info?.spaceId])
+
+  const exploreController = useExploreConversation({
+    conv: hookConv,
+    spaceId: Number(info?.spaceId) || 0,
+    currentModelId: WIDGET_CHAT_MODEL_ID,
+    embedModelId: WIDGET_EMBED_MODEL_ID,
+    authorization: shareAuth,
+  })
+
+  // 分享场景不做历史恢复：historyLoaded=true + 空历史，报告项只来自本次实时提交
+  const reportController = useReportConversation({
+    conv: hookConv,
+    spaceId: Number(info?.spaceId) || 0,
+    schemaId: selectedSemantic?.schemaId,
+    currentModelId: WIDGET_CHAT_MODEL_ID,
+    embedModelId: WIDGET_EMBED_MODEL_ID,
+    historyLoaded: true,
+    historyRounds: WIDGET_EMPTY_HISTORY_ROUNDS,
+    authorization: shareAuth,
+  })
 
   // 加载助手信息 + 会话 + 历史（type 为统一接口 getProjectInfo/{type}/{id} 的类型段）
   const load = useCallback(
@@ -550,6 +612,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       if (firstLeaf) setSelectedSemantic((prev) => prev ?? { name: firstLeaf.name, schemaId: firstLeaf.schemaId, groupName: firstLeaf.groupName })
       const session = await ensureSession(effectiveCfg, id, assistantInfo?.spaceId)
       sessionRef.current = session
+      // 镜像到 state：探索/报告 hook 在渲染期读取 conv（sessionRef 不触发重渲染）
+      setConvSession(session)
       if (session) {
         const history = await fetchHistory(effectiveCfg, session.convUid)
         // 历史 AI 消息同实时一样结构化解析（剥离思考段/尾部 JSON）；view 消息挂来的图表按白名单校正类型
@@ -604,11 +668,11 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 卸载时中断进行中的流式请求，避免向已卸载组件写状态
   useEffect(() => () => abortRef.current?.abort(), [])
 
-  // 新消息自动滚动到底部
+  // 新消息/探索/报告流式更新自动滚动到底部（三模式统一追踪时间线数据源；交互仅 messages 变化，行为不变）
   useEffect(() => {
     const el = bodyRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages, phase])
+  }, [messages, exploreController.items, reportController.reports, phase])
 
   // 语义下拉打开时：点击面板外部收起
   useEffect(() => {
@@ -758,17 +822,21 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
         return
       }
       sessionRef.current = session
+      setConvSession(session)
     }
     setInput('')
     setSending(true)
+    // 交互消息记录创建时间，与探索/报告项在同一时间线按 createdAt 排序
+    const nowTs = Date.now()
     setMessages((prev) => [
       ...prev,
-      { role: 'human', content: text, time: getNow() },
+      { role: 'human', content: text, time: getNow(), createdAt: nowTs },
       {
         role: 'ai',
         content: '',
         time: getNow(),
         streaming: true,
+        createdAt: nowTs,
         // 信息条随发送即展示（取当前选中语义），历史/回补场景由 view 的 semantic_* 覆盖
         semanticGroup: selectedSemantic?.groupName,
         semanticName: selectedSemantic?.name,
@@ -858,6 +926,112 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     setSending(false)
     patchMsg({ streaming: false })
   }
+
+  // 报告能力源：技能 + MCP（按协议拆 sse/streamable），与交互发送同口径；无选择时四字段为空数组
+  const buildReportSources = (): ReportSourceVersionFields => {
+    const mcps = (info?.mcps ?? []) as AssistantBoundMcp[]
+    return {
+      sse_mcp_source_version_ids: mcps.filter((m) => selectedMcps.has(m.id) && m.protocol === 'sse').map((m) => m.id),
+      mcp_streamable_source_version_ids: mcps.filter((m) => selectedMcps.has(m.id) && m.protocol === 'streamable').map((m) => m.id),
+      skills_source_version_ids: Array.from(selectedSkills),
+      builtin_tools_source_version_ids: [],
+    }
+  }
+
+  // 三模式统一发送入口：按当前模式分流到交互 / 探索 / 报告，交互沿用既有 handleSend
+  const dispatchSend = async (explicitText?: string) => {
+    const text = (explicitText ?? input).trim()
+    if (!text || phase !== 'ready') return
+    if (chatMode === 'explore') {
+      if (exploreController.loading) return
+      const schemaId = selectedSemantic?.schemaId
+      if (schemaId == null || schemaId === '') {
+        antdMessage.warning('请先选择数据语义')
+        return
+      }
+      if (!convSession) {
+        antdMessage.error('会话未就绪，请稍后重试')
+        return
+      }
+      setInput('')
+      exploreController.handleSend(text, schemaId, {
+        skillSourceVersionIds: Array.from(selectedSkills),
+        mcpSourceVersionIds: Array.from(selectedMcps),
+      })
+      return
+    }
+    if (chatMode === 'report') {
+      if (reportController.loading) return
+      if (!convSession) {
+        antdMessage.error('会话未就绪，请稍后重试')
+        return
+      }
+      setInput('')
+      reportController.handleSend(text, buildReportSources())
+      return
+    }
+    void handleSend(explicitText)
+  }
+
+  // 停止按钮：按当前正在生成的模式停止（探索/报告各自的流，交互沿用 handleStop）
+  const handleStopClick = () => {
+    if (exploreController.loading) {
+      exploreController.stopGenerating()
+      return
+    }
+    if (reportController.loading) {
+      reportController.stopGenerating()
+      return
+    }
+    handleStop()
+  }
+
+  // 三模式发送中态：任一模式在生成即视为 busy（驱动发送/停止按钮切换）
+  const busy = sending || exploreController.loading || reportController.loading
+
+  // 探索/报告预览互斥：打开探索工作室时收起报告侧栏，反之亦然
+  const openExplore = (exploreId: string) => {
+    reportController.closeReport()
+    setActiveExploreId(exploreId)
+  }
+  const openReportPane = (reportId: string) => {
+    setActiveExploreId(undefined)
+    reportController.openReport(reportId)
+  }
+  const activeExplore = useMemo(
+    () => exploreController.items.find((item) => item.id === activeExploreId),
+    [exploreController.items, activeExploreId],
+  )
+  const previewOpen = Boolean(activeExplore) || Boolean(reportController.activeReport)
+
+  // 探索从 running 结束为 completed 且有结果时自动打开工作室（同主对话）
+  const exploreStatusRef = useRef<Map<string, string>>(new Map())
+  useEffect(() => {
+    const next = new Map<string, string>()
+    exploreController.items.forEach((item) => {
+      const prev = exploreStatusRef.current.get(item.id)
+      const hasResult = Boolean(item.finalContent) || Boolean(item.summary) || item.steps.some((s) => s.outputs.length > 0)
+      if (prev === 'running' && item.status === 'completed' && hasResult) openExplore(item.id)
+      next.set(item.id, item.status)
+    })
+    exploreStatusRef.current = next
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exploreController.items])
+
+  // 预览打开时若窗体未放大则自动放大（窄面板放不下工作室/报告侧栏）
+  useEffect(() => {
+    if (previewOpen && !maximized) handleToggleMaximize()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewOpen])
+
+  // 统一时间线：交互消息 + 探索项 + 报告项按创建时间排序（历史交互消息无 createdAt，用索引兜底排最前）
+  const timeline = useMemo<WidgetTimelineEntry[]>(() => {
+    const entries: WidgetTimelineEntry[] = []
+    messages.forEach((m, i) => entries.push({ key: `im-${i}`, sortKey: m.createdAt ?? i, kind: 'interact', index: i, message: m }))
+    exploreController.items.forEach((item) => entries.push({ key: `ex-${item.id}`, sortKey: item.createdAt, kind: 'explore', item }))
+    reportController.reports.forEach((r) => entries.push({ key: `rp-${r.id}`, sortKey: r.createdAt, kind: 'report', report: r }))
+    return entries.sort((a, b) => a.sortKey - b.sortKey)
+  }, [messages, exploreController.items, reportController.reports])
 
   // 展开/收起语义分组节点（数据已全量返回，无需懒加载）
   const toggleSemGroup = (nodeId: string) => {
@@ -1249,7 +1423,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                 </button>
               </div>
             </div>
-          ) : messages.length === 0 ? (
+          ) : timeline.length === 0 ? (
             /* 开场白直接复用主对话 OpeningsEle（含 3 个一批 + 换一批） */
             <OpeningsEle
               data={
@@ -1264,10 +1438,42 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                   },
                 } as any
               }
-              getAnswer={({ question }: any) => void handleSend(question)}
+              getAnswer={({ question }: any) => void dispatchSend(question)}
             />
           ) : (
-            messages.map((m, i) => {
+            timeline.map((entry) => {
+              /* 探索项：复用主对话 ExploreMessageRow（运行中卡片内展示当前步骤，完成后自动开工作室） */
+              if (entry.kind === 'explore') {
+                return (
+                  <div key={entry.key} className="abi-cw-msg abi-cw-msg-full">
+                    <ExploreMessageRow
+                      item={entry.item}
+                      active={activeExploreId === entry.item.id}
+                      compact
+                      onOpen={() => openExplore(entry.item.id)}
+                      onClose={() => setActiveExploreId(undefined)}
+                    />
+                  </div>
+                )
+              }
+              /* 报告项：复用主对话 ReportMessageRow（思考/Todo/文件卡），点文件卡在覆盖层打开报告预览 */
+              if (entry.kind === 'report') {
+                const r = entry.report
+                return (
+                  <div key={entry.key} className="abi-cw-msg abi-cw-msg-full">
+                    <ReportMessageRow
+                      report={r}
+                      onToggleThinking={() => reportController.toggleThinking(r.id)}
+                      onToggleTodo={() => reportController.toggleTodo(r.id)}
+                      onToggleTask={(taskKey) => reportController.toggleTaskExecution(r.id, taskKey)}
+                      onOpenReport={() => openReportPane(r.id)}
+                      onThinkingTypewriterComplete={() => reportController.completeThinkingTypewriter(r.id)}
+                    />
+                  </div>
+                )
+              }
+              const m = entry.message
+              const i = entry.index
               if (m.role === 'human') {
                 return (
                   <div key={`human-${i}`} className="abi-cw-msg abi-cw-msg-human">
@@ -1384,7 +1590,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  void handleSend()
+                  void dispatchSend()
                 }
               }}
             />
@@ -1496,8 +1702,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                   )}
                 </button>
               </Popover>
-              {sending ? (
-                <button type="button" className="abi-cw-stop" onClick={handleStop} aria-label="停止生成">
+              {busy ? (
+                <button type="button" className="abi-cw-stop" onClick={handleStopClick} aria-label="停止生成">
                   <svg viewBox="0 0 24 24" fill="currentColor">
                     <rect x="6" y="6" width="12" height="12" rx="2" />
                   </svg>
@@ -1507,7 +1713,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                   type="button"
                   className="abi-cw-send"
                   disabled={!input.trim()}
-                  onClick={() => void handleSend()}
+                  onClick={() => void dispatchSend()}
                   aria-label="发送"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1520,6 +1726,21 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           </div>
           <div className="abi-cw-disclaimer">AI 生成的内容仅供参考，请注意甄别信息准确性</div>
         </div>
+
+        {/* 探索工作室 / 报告预览：覆盖层铺满面板（预览打开时窗体已自动放大），复用主对话预览面板 */}
+        {previewOpen && (
+          <div className="abi-cw-preview-overlay">
+            {reportController.activeReport ? (
+              <ReportPreviewPane
+                report={reportController.activeReport}
+                animate={reportController.animateReportPreview}
+                onClose={reportController.closeReport}
+              />
+            ) : activeExplore ? (
+              <ExplorePreviewPane item={activeExplore} onClose={() => setActiveExploreId(undefined)} />
+            ) : null}
+          </div>
+        )}
 
         {/* 数据语义 Schema 抽屉：挂载到面板内（窗内右侧滑出，不溢出悬浮窗） */}
         <SchemaFieldsModal
