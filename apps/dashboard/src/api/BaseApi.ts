@@ -73,17 +73,12 @@ class BaseApi extends AbstractApi {
     }
 
     /**
-     * 清空会话消息（chat-proxy）
+     * 清空会话消息（abi-chat）
+     * 调用 /abi-chat/v1/app/message/delete（与 chat 对话删除消息同源），按 convUid 删除该会话全部消息。
      * @param convUid 会话uid
-     * @param chartId 当前图表id
-     * @param chatMode 聊天模式，默认 chat_with_dashboard
      */
-    async clearChatConv(convUid: string, chartId = '', chatMode = 'chat_with_dashboard'): Promise<boolean> {
-        const res = await FetchUtil.post('/chat-proxy/api/v1/chat/conv/clear', {
-            conv_uid: convUid,
-            chart_id: chartId,
-            chat_mode: chatMode,
-        });
+    async clearChatConv(convUid: string): Promise<boolean> {
+        const res = await FetchUtil.post('/abi-chat/v1/app/message/delete', {convUid});
         return res.code === 200;
     }
 
@@ -238,6 +233,18 @@ class BaseApi extends AbstractApi {
         }
         globalMessage.messageApi?.error(res.msg);
         return {records: [], total: 0};
+    }
+
+    /**
+     * 分享详情单查（列表接口不含密码字段，密码在复制时按 shareCode 单独查询，助手与大屏统一）
+     * @param shareCode 分享码
+     * @returns 密码字符串（无密码返回空串）；null 表示查询失败
+     */
+    public async getSharePassword(shareCode: string): Promise<string | null> {
+        const res = await FetchUtil.get(`/dashboard/api/v1/project/share/${shareCode}`);
+        if (res.code !== 200) return null;
+        const detail = res.data ?? {};
+        return detail.sharePassword || '';
     }
 
     /**

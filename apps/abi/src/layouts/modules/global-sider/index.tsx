@@ -3,7 +3,7 @@ import userIcon from '@/assets/imgs/home/用户.svg'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
-import { UserOutlined, SettingOutlined, TeamOutlined, LogoutOutlined } from '@ant-design/icons'
+import { UserOutlined, SettingOutlined, TeamOutlined, LogoutOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import * as antdIcons from '@ant-design/icons'
 import SvgIcon from '@/components/stateless/custom/SvgIcon'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
@@ -27,6 +27,7 @@ const GlobalSider: FC = memo(() => {
   const dispatch = useAppDispatch()
   const routes = useAppSelector(getAllRoutes)
   const showManage = routes.find((r) => r.name === 'manage')
+  const showLog = routes.find((r) => r.name === 'log')
   const isMicroApp = qiankunWindow.__POWERED_BY_QIANKUN__
   const redirectHome = () => {
     router.push('/home')
@@ -119,6 +120,19 @@ const GlobalSider: FC = memo(() => {
       })
     }
     
+    if (showLog) {
+      items.push({
+        key: 'log',
+        label: (
+          <div className="abi-user-dropdown-item-new">
+            <ClockCircleOutlined className="abi-user-dropdown-icon-new" />
+            <span className="abi-user-dropdown-label-new">日志管理</span>
+          </div>
+        ),
+        className: 'abi-user-dropdown-menu-item',
+      })
+    }
+
     items.push({ type: 'divider', className: 'abi-user-dropdown-divider-new' })
     items.push({
       key: 'logout',
@@ -132,10 +146,11 @@ const GlobalSider: FC = memo(() => {
     })
     
     return items
-  }, [showManage, routes])
+  }, [showManage, showLog, routes])
 
   const handleMenuClick = (e: any) => {
-    if (itemMap.get(e.key)) {
+    // 目标路由未注册时（如目录子菜单尚未配置）不跳转，避免回退到通配路由
+    if (itemMap.get(e.key) && router.getRouteByName(e.key)) {
       router.push({ name: e.key })
       selectedMenuKey && dispatch(setSelectedMenuKey(''))
     }

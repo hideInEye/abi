@@ -45,6 +45,9 @@ declare module "@elegant-router/types" {
     "guide": "/guide";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
+    "log": "/log";
+    "log_access": "access";
+    "log_action": "action";
     "login": "/login";
     "manage": "/manage";
     "manage_component": "component";
@@ -146,6 +149,7 @@ declare module "@elegant-router/types" {
     | "guide"
     | "home"
     | "iframe-page"
+    | "log"
     | "login"
     | "manage"
     | "space"
@@ -186,6 +190,8 @@ declare module "@elegant-router/types" {
     | "designer"
     | "guide"
     | "home"
+    | "log_access"
+    | "log_action"
     | "login"
     | "manage_component_icon-selector"
     | "manage_dept"

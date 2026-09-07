@@ -1419,3 +1419,79 @@ dashboard 微应用「我的大屏 → 分享记录」卡片仍为旧版行式�
 - `pnpm test`（chat-widget 相关：service/history/shareUrl）。
 - apps/chat 目录 `tsc --noEmit`。
 - 手工：分享页拖拽/放大/四边 resize/语义抽屉/工具栏交互。
+
+## 2026-09-03 追加二：分享记录密码改走详情单查接口（GET /project/share/{shareCode}，助手与大屏统一）
+
+### 需求类型
+
+Bug 修复延续（分享记录复制缺密码）+ 接口对接调整。
+
+### 背景
+
+用户确认：分享记录列表接口（`POST /project/share/list`）不返回密码字段，后端已改为单独查询 `GET /api/v1/project/share/{shareCode}`，助手分享与大屏分享统一。因此「2026-09-02 追加二」中基于列表行密码字段的兼容映射与按钮文案切换方案作废：行数据永远无密码，文案会永远退化为「复制链接」。
+
+### 目标
+
+- 两端分享记录（abi `my-assistant/ShareRecordList.tsx`、dashboard `my-screen/ShareRecordList.tsx`）行数据改存 `shareCode`（列表缺字段时从分享链接尾段兜底），删除行级密码映射。
+- 点击「复制链接和密码」时按 shareCode 单查详情（abi `fetchProjectShareDetailApi`，网关路径 `/api/dashboard/api/v1/project/share/{shareCode}`；dashboard `baseApi.getSharePassword`，路径 `/dashboard/api/v1/project/share/{shareCode}`）取密码，密码字段读 `sharePassword` 单字段（后端字段已明确，不保留兼容链）。
+- 有密码复制 `分享链接：{url}\n访问密码：{pwd}`，无密码仅链接；详情查询失败时降级仅复制链接并 warning 提示，不阻断复制。
+- 按钮文案恢复固定「复制链接和密码」（密码在点击时才可知，列表行无法预判；复制内容与 toast 随实际密码切换），即恢复 2026-08-31 追加四口径、覆盖 2026-09-02 追加二的文案切换。
+- 助手分享弹窗（`AssistantShareModal.tsx`）创建响应密码读取收敛回 `sharePassword` 单字段（创建响应字段明确，删除兼容链）；弹窗自身不查详情。
+- 大屏端链接格式转换（`/#/`→`/`、`/dr/`→`/dashboard-share-page/`）不变；助手端保持后端哈希路径原样。
+
+### 非目标
+
+- 不改分享创建、列表分页、状态标签、空态与切空间重拉逻辑。
+- 不改大屏/助手分享弹窗的复制按钮（创建响应已含密码，行为正确）。
+- 不在列表加载时批量预查详情（避免 N 次请求，仅点击时单查）。
+
+### 影响范围预期
+
+- 修改：`apps/abi/src/service/api/share.ts`、`apps/abi/src/pages/workbench/app-workshop/my-assistant/ShareRecordList.tsx`、`AssistantShareModal.tsx`
+- 修改：`apps/dashboard/src/api/BaseApi.ts`、`apps/dashboard/src/pages/my-screen/ShareRecordList.tsx`
+- 新增 run log：`.ai/runs/2026-09-03-share-detail-password/`
+
+### 验收标准
+
+- 有密码的分享记录点「复制链接和密码」，剪贴板含「访问密码」行；无密码记录仅复制链接，toast 区分两种结果。
+- 详情接口失败时仅复制链接并 warning 提示，无未捕获异常。
+- 两端按钮文案固定「复制链接和密码」。
+- abi、dashboard 类型检查不新增错误。
+
+## 2026-09-03 追加三：日志管理（log）一级路由骨架与用户下拉入口
+
+### 需求类型
+
+新功能（路由骨架；子菜单待平台配置后追加）
+
+### 背景
+
+平台菜单管理已新增「日志管理」目录菜单（路由地址 `log`，图标 ClockCircle，排序 5），与「系统管理」（`manage`）同级；其两个子菜单「访问记录」「操作记录」尚未在平台配置，待用户配置完成后再补充本地子路由与页面。
+
+### 目标
+
+- 参照 `manage` 的本地接线方式补 `log` 一级路由骨架：elegant 静态路由（children 暂空）、transform routeMap、`@elegant-router/types`（RouteMap/FirstLevelRouteKey）、zh-cn/en-us route 文案。
+- 用户下拉菜单（global-sider）在「空间管理」与「退出登录」之间加「日志管理」项，图标 ClockCircleOutlined，后端路由含 `log` 时显示；点击经 itemMap `log` 跳转，目标路由未注册时不跳转，避免回退通配路由。
+- VerticalMenu 登记 log 导航标签与 manage-menu-wrapper 样式分组。
+
+### 非目标
+
+- 不开发「访问记录」「操作记录」两个子菜单及其页面组件（待平台配置完成后追加）。
+- 不改平台菜单配置；不改 global-header UserAvatar 旧下拉。
+
+### 影响范围预期
+
+- 修改：`apps/abi/src/router/elegant/{routes,transform}.ts`、`apps/abi/src/types/elegant-router.d.ts`、`apps/abi/src/locales/langs/{zh-cn,en-us}/route.ts`、`apps/abi/src/constants/layout/global_side.ts`、`apps/abi/src/layouts/modules/global-sider/index.tsx`、`apps/abi/src/layouts/modules/global-menu/components/VerticalMenu.tsx`
+- 新增 run log：`.ai/runs/2026-09-03-log-management-route/`
+
+### 验收标准
+
+1. 后端菜单含 `log` 目录时，用户下拉在「空间管理」与「退出登录」之间显示「日志管理」。
+2. 子菜单配置并补页面后，点击「日志管理」进入 `/log` 首个子菜单；配置前点击不跳转、不回退通配路由。
+3. `pnpm typecheck`（apps/abi）不新增错误。
+
+### 测试要求
+
+- `pnpm typecheck`（apps/abi）对比基线无新增错误。
+- 手工：下拉入口显示；子菜单配置后导航与 VerticalMenu 标签。
+

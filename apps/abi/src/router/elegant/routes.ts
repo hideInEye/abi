@@ -234,6 +234,37 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'log',
+    path: '/log',
+    component: 'layout.base',
+    meta: {
+      hideInMenu: false,
+      i18nKey: 'route.log',
+      order: 5,
+      title: 'log'
+    },
+    children: [
+      {
+        name: 'log_access',
+        path: 'access',
+        component: 'view.log_access',
+        meta: {
+          i18nKey: 'route.log_access',
+          title: 'log_access'
+        }
+      },
+      {
+        name: 'log_action',
+        path: 'action',
+        component: 'view.log_action',
+        meta: {
+          i18nKey: 'route.log_action',
+          title: 'log_action'
+        }
+      }
+    ]
+  },
+  {
     name: 'login',
     path: '/login',
     component: 'layout.blank$view.login',
