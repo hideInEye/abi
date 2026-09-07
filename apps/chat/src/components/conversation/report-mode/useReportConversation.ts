@@ -22,6 +22,8 @@ interface UseReportConversationOptions {
   historyLoaded?: boolean
   onRefreshHistory?: () => Promise<void>
   onReportCompleted?: (report: ReportItem) => void
+  /** 免登录分享场景注入的 Authorization 头；缺省时各接口读取登录态，主对话行为不变。 */
+  authorization?: string | null
 }
 
 const MAX_STREAM_RETRY_COUNT = 3
@@ -108,7 +110,7 @@ function wait(ms: number) {
  * - Java 只透传 Redis entry id/data。
  * - 本 Hook 负责 query 历史、IndexedDB、task 状态、连接生命周期和 UI 聚合。
  */
-export function useReportConversation({ conv, spaceId, schemaId, currentModelId, embedModelId, historyRounds = [], historyLoaded = false, onRefreshHistory, onReportCompleted , groupId}: UseReportConversationOptions) {
+export function useReportConversation({ conv, spaceId, schemaId, currentModelId, embedModelId, historyRounds = [], historyLoaded = false, onRefreshHistory, onReportCompleted , groupId, authorization}: UseReportConversationOptions) {
   const [reports, setReports] = useState<ReportItem[]>([])
   const [activeReportId, setActiveReportId] = useState<string>()
   const [animateReportPreview, setAnimateReportPreview] = useState(false)
@@ -251,6 +253,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
               last_id: reportsRef.current.find((report) => report.id === reportId)?.lastEntryId,
             },
             signal: controller.signal,
+            authorization,
             onEntry(entry) {
               applyRawEntry(reportId, entry)
             },
@@ -294,7 +297,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
         }
       }
     },
-    [applyRawEntry, updateReport],
+    [applyRawEntry, updateReport, authorization],
   )
 
   const handleSend = useCallback(
@@ -354,7 +357,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
         ...(appType !== undefined && appType !== null && appType !== '' ? { app_type: String(appType) } : {}),
       }
 
-      void submitReportTask(requestData, controller.signal)
+      void submitReportTask(requestData, controller.signal, authorization)
         .then(async (submitted) => {
           const record: ReportTaskRecord = {
             conversationId: submitted.conversationId,
@@ -403,7 +406,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
           submitControllersRef.current.delete(pendingReport.id)
         })
     },
-    [commitReports, conv, conversationId, currentModelId, embedModelId, schemaId, groupId, sessionId, spaceId, updateReport, connectStream],
+    [commitReports, conv, conversationId, currentModelId, embedModelId, schemaId, groupId, sessionId, spaceId, updateReport, connectStream, authorization],
   )
 
   const stopReport = useCallback(
@@ -532,7 +535,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
         if (!historyLoaded) return
 
         unresolvedRecords.forEach((record) => {
-          void fetchReportTaskStatus(record.taskId, recoveryController.signal)
+          void fetchReportTaskStatus(record.taskId, recoveryController.signal, authorization)
             .then((taskStatus) => {
               if (loadGenerationRef.current !== generation || recoveryController.signal.aborted) return
 
@@ -594,7 +597,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
       recoveryController.abort()
       abortAllConnections()
     }
-  }, [abortAllConnections, connectStream, conversationId, deleteStoredTask, historyLoaded, historyRounds, sessionId, updateReport])
+  }, [abortAllConnections, connectStream, conversationId, deleteStoredTask, historyLoaded, historyRounds, sessionId, updateReport, authorization])
 
   useEffect(() => () => reportTaskStorage.close(), [])
 
