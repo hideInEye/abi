@@ -114,6 +114,22 @@ function getUniqueRunningTask(tasks: ReportPlanTask[]): { index: number; task: R
   return running.length === 1 ? running[0] : undefined
 }
 
+/** 已完成任务只能是连续前缀，避免异常快照把后执行结果插到未执行任务之后。 */
+function hasValidPlanTaskOrder(tasks: ReportPlanTask[]): boolean {
+  let reachedUnfinishedTask = false
+
+  for (const task of tasks) {
+    if (task.status === 'completed') {
+      if (reachedUnfinishedTask) return false
+      continue
+    }
+
+    reachedUnfinishedTask = true
+  }
+
+  return true
+}
+
 /**
  * plan.update 已经把下一个 Todo 标为执行中，因此后续 step.plan 只能总结前一个已完成项。
  * done 使用完成数量，转换为 0-based 下标后是 done - 1；done=0 没有前置任务，不能归到当前项。
@@ -589,6 +605,12 @@ export function reduceReportStreamEvent(state: ReportStreamRuntimeState, event: 
       // plan.update 是完整快照：只覆盖当前任务，不删除此前时间片已经产生的 executionGroups。
       // ToDo 是否展开是页面 UI 状态，仅在初次创建/恢复时默认为 false；接口更新不得覆盖用户选择。
       const tasks = event.tasks.map((task) => ({ ...task }))
+      if (!hasValidPlanTaskOrder(tasks)) {
+        // 异常 entry 仍由统一出口标记为已处理；保留上一份有效计划且不向用户暴露后端抖动。
+        nextState = state
+        break
+      }
+
       const reconciledAssignment = reconcileUnassignedStepsForNextPlan(state, entryId, tasks)
       const runningTaskIndex = tasks.findIndex((task) => task.status === 'in_progress')
       nextState = {

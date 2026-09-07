@@ -229,6 +229,73 @@ describe('report stream reducer', () => {
     expect(secondPlan.expandedTaskKeys).toEqual(['20-0:1'])
   })
 
+  it('静默忽略已完成任务落在未完成任务之后的异常计划，并继续接收后续有效计划', () => {
+    const validPlan = reduceReportStreamEntry(
+      createInitialReportStreamState(),
+      entry('10-0', {
+        type: 'plan.update',
+        tasks: [
+          { content: '读取交易数据', status: 'completed' },
+          { content: '分析交易趋势', status: 'in_progress' },
+          { content: '生成报告', status: 'pending' },
+        ],
+        version: 1,
+      }),
+    )
+    const malformedPlan = reduceReportStreamEntry(
+      validPlan,
+      entry('20-0', {
+        type: 'plan.update',
+        tasks: [
+          { content: '读取交易数据', status: 'completed' },
+          { content: '分析交易趋势', status: 'in_progress' },
+          { content: '生成报告', status: 'pending' },
+          { content: '加载补充数据', status: 'completed' },
+        ],
+        version: 2,
+      }),
+    )
+    const recoveredPlan = reduceReportStreamEntry(
+      malformedPlan,
+      entry('30-0', {
+        type: 'plan.update',
+        tasks: [
+          { content: '读取交易数据', status: 'completed' },
+          { content: '分析交易趋势', status: 'completed' },
+          { content: '生成报告', status: 'in_progress' },
+        ],
+        version: 3,
+      }),
+    )
+
+    expect(malformedPlan.tasks).toEqual(validPlan.tasks)
+    expect(malformedPlan.currentPlan).toEqual(validPlan.currentPlan)
+    expect(malformedPlan.warnings).toEqual(validPlan.warnings)
+    expect(malformedPlan.lastEntryId).toBe('20-0')
+    expect(malformedPlan.processedEntryIds['20-0']).toBe(true)
+    expect(recoveredPlan.currentPlan?.version).toBe(3)
+    expect(recoveredPlan.tasks.map((task) => task.status)).toEqual(['completed', 'completed', 'in_progress'])
+  })
+
+  it('首份计划顺序异常时保持空 Todo，且不产生提示', () => {
+    const state = reduceReportStreamEntry(
+      createInitialReportStreamState(),
+      entry('10-0', {
+        type: 'plan.update',
+        tasks: [
+          { content: '等待数据', status: 'pending' },
+          { content: '已提前完成的异常任务', status: 'completed' },
+        ],
+      }),
+    )
+
+    expect(state.tasks).toEqual([])
+    expect(state.currentPlan).toBeUndefined()
+    expect(state.warnings).toEqual([])
+    expect(state.lastEntryId).toBe('10-0')
+    expect(state.processedEntryIds['10-0']).toBe(true)
+  })
+
   it('按 plan 时间片把步骤归入唯一 in_progress 项，并保留旧执行记录', () => {
     const state = reduceReportStreamEntries([
       entry('10-0', {
