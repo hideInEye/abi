@@ -1,12 +1,35 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildDimensionFieldPayload, buildFormValues, buildSchemaFieldOptions, buildSubmitPayload, getDimensionFieldLookupKeys, isApiSuccess, mapDimensionFromApi, normalizeDimensionFieldSelectionKeys, normalizeDimensionSelectedFieldsToOptionKeys } from './dimensionModeling.mapper'
+import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildDimensionFieldPayload, buildFormValues, buildSchemaFieldOptions, buildSubmitPayload, findSubmittedDimensionId, getDimensionFieldLookupKeys, getSubmittedDimensionId, isApiSuccess, mapDimensionFromApi, normalizeDimensionFieldSelectionKeys, normalizeDimensionSelectedFieldsToOptionKeys } from './dimensionModeling.mapper'
 
 describe('dimensionModeling mapper', () => {
   it('treats only an explicit flat-request success as API success', () => {
     expect(isApiSuccess({ data: true, error: null, response: { data: { code: 200 } } })).toBe(true)
     expect(isApiSuccess({ error: new Error('failed'), response: { data: { code: 100 } } })).toBe(false)
     expect(isApiSuccess({ response: { data: { code: 200 } } })).toBe(false)
+  })
+
+  it('extracts the saved dimension id before opening hierarchy configuration', () => {
+    expect(getSubmittedDimensionId({ data: { dimId: '12258336449129' } })).toBe(12258336449129)
+    expect(getSubmittedDimensionId({ data: { id: 57 } })).toBe(57)
+    expect(getSubmittedDimensionId({ data: { dimensionId: 58 } })).toBe(58)
+    expect(getSubmittedDimensionId({ data: '59' })).toBe(59)
+    expect(getSubmittedDimensionId({ response: { data: { data: { dimId: 60 } } } })).toBe(60)
+    expect(getSubmittedDimensionId({ data: true }, 61)).toBe(61)
+    expect(getSubmittedDimensionId({ data: true })).toBeUndefined()
+  })
+
+  it('finds a newly created dimension by its submitted names when create only returns true', () => {
+    expect(
+      findSubmittedDimensionId(
+        [
+          { bizName: '其他维度', dimId: 56, techName: 'other_dimension' },
+          { bizName: '店铺', dimId: '12258336449120', techName: 'shop' },
+        ],
+        { bizName: '店铺', techName: 'shop' },
+      ),
+    ).toBe(12258336449120)
+    expect(findSubmittedDimensionId([{ bizName: '其他维度', dimId: 56, techName: 'other_dimension' }], { bizName: '店铺', techName: 'shop' })).toBeUndefined()
   })
 
   it('keeps all time granularities from typeParams when editing time dimensions', () => {

@@ -1,7 +1,7 @@
 import { describeStrictApiCallContract } from '../../../../../../service/request/strict-api-call-contract.test-helper'
 
 describeStrictApiCallContract(import.meta.url, './hooks/useDimensionModeling.ts', [
-  { guard: /assertFlatRequestSuccess\(res\)/, name: 'queryDimensionList' },
+  { guard: /assertFlatRequestSuccess\(res\)|isApiSuccess\(lookupRes\)/, name: 'queryDimensionList', occurrences: 2 },
   { guard: /isApiSuccess\(res\)/, name: 'queryDimensionDetail' },
   { guard: /isApiSuccess\(res\)/, name: 'deleteDimensionModel' },
   { guard: /isApiSuccess\(res\)/, name: 'deleteDimensionModelBatch' },

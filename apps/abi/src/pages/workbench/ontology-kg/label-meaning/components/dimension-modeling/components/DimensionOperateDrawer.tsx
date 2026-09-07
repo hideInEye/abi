@@ -3,7 +3,7 @@ import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import React from 'react'
 
 import { DEFAULT_DIMENSION_TIME_FORMAT, DEFAULT_FORM_VALUES } from '../constants/dimensionModeling.constants'
-import type { DimensionFieldOption, DimensionFormValues, DimensionModelItem, DimensionSchemaInfo } from '../types/dimensionModeling.types'
+import type { DimensionFieldOption, DimensionFormValues, DimensionModelItem, DimensionSchemaInfo, DimensionSubmitResult } from '../types/dimensionModeling.types'
 import { buildFormValues, buildSchemaFieldOptions, filterSelectableFields, getDimensionFieldLookupKeys, normalizeDetail, normalizeDimensionSelectedFieldsToOptionKeys } from '../utils/dimensionModeling.mapper'
 import { checkOntologyName } from '@/service/api/ontology-name'
 import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
@@ -23,7 +23,7 @@ interface Props {
   readonly onClose: (refresh?: boolean) => void
   readonly onGoMetricModeling?: () => void
   readonly onOpenHierarchy: (record: DimensionModelItem) => void
-  readonly onSubmit: (params: { formValues: DimensionFormValues; id?: number; relatedFields: DimensionFieldOption[]; selectedSchema?: DimensionSchemaInfo }) => Promise<boolean>
+  readonly onSubmit: (params: { configureHierarchy?: boolean; formValues: DimensionFormValues; id?: number; relatedFields: DimensionFieldOption[]; selectedSchema?: DimensionSchemaInfo }) => Promise<DimensionSubmitResult | null>
   readonly open: boolean
 }
 
@@ -319,9 +319,10 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
     }
     submitLockRef.current = true
     setSubmitting(true)
-    let success = false
+    let submitResult: DimensionSubmitResult | null = null
     try {
-      success = await onSubmit({
+      submitResult = await onSubmit({
+        configureHierarchy: openHierarchyAfterSave,
         formValues: values,
         id: editingItem?.id,
         relatedFields: selectedFields,
@@ -331,14 +332,15 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
       submitLockRef.current = false
       setSubmitting(false)
     }
-    if (!success) return
+    if (!submitResult) return
+    const dimensionId = submitResult.dimensionId || editingItem?.id
     const nextRecord: DimensionModelItem = {
       ...(editingItem || {}),
       dimType: values.dimType,
       englishName: values.englishName,
       groupId,
       groupName,
-      id: editingItem?.id || 0,
+      id: dimensionId || 0,
       owner: values.owner,
       path: editingItem?.path || groupName || '-',
       relatedFields: selectedFields,
@@ -351,6 +353,10 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
 
     if (openHierarchyAfterSave) {
       handleDrawerClose()
+      if (!dimensionId) {
+        message.warning('维度已保存，但未获取到维度ID，请从列表进入层级配置')
+        return
+      }
       onOpenHierarchy(nextRecord)
       return
     }

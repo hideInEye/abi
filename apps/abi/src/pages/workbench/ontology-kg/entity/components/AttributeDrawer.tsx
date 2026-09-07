@@ -15,7 +15,14 @@ import { useAttributeAssets } from '../hooks/useAttributeAssets'
 import { useAttributeGroups } from '../hooks/useAttributeGroups'
 import { useEntityAttributeManagement } from '../hooks/useEntityAttributeManagement'
 import type { AttributeBindingValues } from '../types'
-import { ATTRIBUTE_TYPE_PRESENTATION, SUPPORTED_ATTRIBUTE_TYPES, buildAttributeAssetOptions, buildAttributeFilterItems, getMappedAttributeCodeDisplay, getMappedAttributeDisplayName } from '../utils/attributePresentation'
+import {
+  ATTRIBUTE_TYPE_PRESENTATION,
+  SUPPORTED_ATTRIBUTE_TYPES,
+  buildAttributeAssetOptions,
+  buildAttributeFilterItems,
+  getMappedAttributeCodeDisplay,
+  getMappedAttributeDisplayName,
+} from '../utils/attributePresentation'
 import type { AttributeFilterKey, SupportedAttributeType } from '../utils/attributePresentation'
 import { getEntityAttributeIdentity, makeAttributes } from '../utils/entity'
 
@@ -33,7 +40,7 @@ const DRAWER_STYLES: Record<string, React.CSSProperties> = {
   bindingFormRow: {
     alignItems: 'flex-start',
     display: 'flex',
-    gap: 16,
+    gap: 8,
     width: '100%',
   },
   bindingSection: {
@@ -42,6 +49,7 @@ const DRAWER_STYLES: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     marginTop: 16,
     padding: 16,
+    overflow: 'scroll',
   },
   entityInfoGrid: {
     display: 'grid',
@@ -231,7 +239,9 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
     <CommonDrawer
       footer={
         <Space className="flex justify-end">
-          <Button disabled={saving} onClick={handleClose}>取消</Button>
+          <Button disabled={saving} onClick={handleClose}>
+            取消
+          </Button>
           <Button disabled={!loadedDetail || loadingDetail || saving} loading={saving} type="primary" onClick={handleSave}>
             保存
           </Button>
@@ -239,7 +249,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
       }
       open={open}
       title="属性配置"
-      width={1120}
+      width="60%"
       onClose={handleClose}
     >
       <div className="ontology-attribute-drawer-content">
@@ -256,13 +266,7 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
           {filterItems.map((item) => {
             const active = item.key === activeTab
             return (
-              <Button
-                aria-pressed={active}
-                className={`${styles.filterButton} ${active ? styles.filterButtonActive : ''}`}
-                data-tone={item.tone}
-                key={item.key}
-                onClick={() => setActiveTab(item.key)}
-              >
+              <Button aria-pressed={active} className={`${styles.filterButton} ${active ? styles.filterButtonActive : ''}`} data-tone={item.tone} key={item.key} onClick={() => setActiveTab(item.key)}>
                 <span>{item.label}</span>
                 <span className={styles.filterCount}>{item.count}</span>
               </Button>
@@ -279,22 +283,29 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
             locale={{ emptyText: <Empty description="暂无已绑定属性" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
             pagination={false}
             rowKey={getEntityAttributeIdentity}
-            title={() => <OntologyFormSectionTitle className="ontology-attribute-section-title" icon={<ApartmentOutlined />}>已绑定属性列表</OntologyFormSectionTitle>}
+            title={() => (
+              <OntologyFormSectionTitle className="ontology-attribute-section-title" icon={<ApartmentOutlined />}>
+                已绑定属性列表
+              </OntologyFormSectionTitle>
+            )}
           />
         </section>
 
         <section style={DRAWER_STYLES.bindingSection}>
-          <OntologyFormSectionTitle className="ontology-attribute-section-title ontology-attribute-section-title--binding" icon={<PlusOutlined />}>新增属性绑定</OntologyFormSectionTitle>
+          <OntologyFormSectionTitle className="ontology-attribute-section-title ontology-attribute-section-title--binding" icon={<PlusOutlined />}>
+            新增属性绑定
+          </OntologyFormSectionTitle>
           <Form<AttributeBindingValues> className="ds-form-section" form={form} layout="vertical">
             <div style={DRAWER_STYLES.bindingFormRow}>
-              <Form.Item label="属性类型" name="attributeType" rules={[{ message: '请选择属性类型', required: true }]} style={{ flex: '0 0 180px', marginBottom: 0 }}>
+              <Form.Item label="属性类型" name="attributeType" rules={[{ message: '请选择属性类型', required: true }]} style={{ marginBottom: 0 }}>
                 <Select<SupportedAttributeType>
                   options={SUPPORTED_ATTRIBUTE_TYPES.map((type) => ({ label: ATTRIBUTE_TYPE_PRESENTATION[type].label, value: type }))}
                   placeholder="请选择属性类型"
                   onChange={handleTypeChange}
+                  style={{ width: 135 }}
                 />
               </Form.Item>
-              <Form.Item label="绑定分组" name="groupId" rules={[{ message: '请选择绑定分组', required: true }]} style={{ flex: '0 0 240px', marginBottom: 0 }}>
+              <Form.Item label="绑定分组" name="groupId" rules={[{ message: '请选择绑定分组', required: true }]} style={{ marginBottom: 0 }}>
                 <TreeSelect
                   allowClear
                   disabled={!selectedType || loadingGroups || !hasGroups}
@@ -304,16 +315,25 @@ export const AttributeDrawer: React.FC<AttributeDrawerProps> = ({ entity, labels
                   showSearch
                   treeData={groupTreeOptions}
                   treeDefaultExpandAll
+                  style={{ width: 180 }}
                   treeNodeFilterProp="label"
                   treeNodeLabelProp="label"
                   onChange={handleGroupChange}
                 />
               </Form.Item>
-              <Form.Item label="绑定资产" name="assetCode" rules={[{ message: '请选择绑定资产', required: true }]} style={{ flex: '1 1 260px', marginBottom: 0, minWidth: 220 }}>
-                <Select disabled={!selectedGroupId} loading={loadingAssets} optionFilterProp="label" options={assetOptions} placeholder="请选择绑定当前分组或具体资产" showSearch />
+              <Form.Item label="绑定资产" name="assetCode" rules={[{ message: '请选择绑定资产', required: true }]} style={{ marginBottom: 0 }}>
+                <Select
+                  disabled={!selectedGroupId}
+                  style={{ width: 180 }}
+                  loading={loadingAssets}
+                  optionFilterProp="label"
+                  options={assetOptions}
+                  placeholder="请选择绑定当前分组或具体资产"
+                  showSearch
+                />
               </Form.Item>
-              <Form.Item label="备注" name="remark" rules={[{ max: 500, message: '备注最多500个字符' }]} style={{ flex: '0 0 220px', marginBottom: 0 }}>
-                <Input maxLength={500} placeholder="请输入备注" />
+              <Form.Item label="备注" name="remark" rules={[{ max: 500, message: '备注最多500个字符' }]} style={{ marginBottom: 0 }}>
+                <Input maxLength={500} style={{ width: 150 }} placeholder="请输入备注" />
               </Form.Item>
               <div style={{ flex: '0 0 96px', paddingTop: 30 }}>
                 <Button block disabled={!selectedGroupId || adding} icon={<PlusOutlined />} loading={adding} type="primary" onClick={handleAdd}>

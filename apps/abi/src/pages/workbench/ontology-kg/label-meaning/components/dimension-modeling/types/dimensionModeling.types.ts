@@ -136,6 +136,10 @@ export interface DimensionModelItem {
   zhName: string
 }
 
+export interface DimensionSubmitResult {
+  dimensionId?: number
+}
+
 export interface DimensionSearchParams {
   /** 中文名搜索（主搜索框） */
   bizName: string

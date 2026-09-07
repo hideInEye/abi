@@ -6,6 +6,7 @@ import {
   getMappedMetricFieldDisplayName,
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
+  shouldShowMetricPrecomputeConfig,
 } from './knowledgeOperateDrawer.utils'
 
 describe('extractUniqueIds', () => {
@@ -51,5 +52,18 @@ describe('metric create/edit display names', () => {
         techName: 'trade_detail.receive_city',
       })
     ).toBe('收货城市（receive_city）')
+  })
+})
+
+describe('metric precompute config visibility', () => {
+  it('hides precompute config for atomic metrics', () => {
+    expect(shouldShowMetricPrecomputeConfig('atomic')).toBe(false)
+  })
+
+  it('shows precompute config only for derived and derivative metrics', () => {
+    expect(shouldShowMetricPrecomputeConfig('derived')).toBe(true)
+    expect(shouldShowMetricPrecomputeConfig('derivative')).toBe(true)
+    expect(shouldShowMetricPrecomputeConfig('custom')).toBe(false)
+    expect(shouldShowMetricPrecomputeConfig(undefined)).toBe(false)
   })
 })

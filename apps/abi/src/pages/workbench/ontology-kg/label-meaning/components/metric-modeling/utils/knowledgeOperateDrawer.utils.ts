@@ -89,6 +89,10 @@ export function getStepItems(showDimensionStep = true, businessOnly = false): St
   return [...baseItems, { key: 'dimension', title: '维度配置' }]
 }
 
+export function shouldShowMetricPrecomputeConfig(indicatorClass?: unknown) {
+  return indicatorClass === 'derived' || indicatorClass === 'derivative'
+}
+
 export function parseAliasTags(alias?: string) {
   if (!alias) {
     return []

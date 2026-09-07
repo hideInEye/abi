@@ -24,12 +24,15 @@ import type {
   DimensionModelItem,
   DimensionPagination,
   DimensionSchemaInfo,
-  DimensionSearchParams
+  DimensionSearchParams,
+  DimensionSubmitResult
 } from '../types/dimensionModeling.types'
 import {
   buildSubmitPayload,
   buildDimensionBatchCreatePayload,
+  findSubmittedDimensionId,
   getApiErrorMessage,
+  getSubmittedDimensionId,
   isApiSuccess,
   mapDimensionFromApi,
   normalizeDetail,
@@ -292,12 +295,13 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
   }
 
   const handleSubmit = async (params: {
+    configureHierarchy?: boolean
     formValues: DimensionFormValues
     id?: number
     relatedFields: DimensionFieldOption[]
     selectedSchema?: DimensionSchemaInfo
   }) => {
-    const { formValues, id, relatedFields, selectedSchema } = params
+    const { configureHierarchy, formValues, id, relatedFields, selectedSchema } = params
     const payload = buildSubmitPayload({
       formValues,
       id,
@@ -309,11 +313,33 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
     const res = isEdit ? await editDimensionModel(payload) : await addDimensionModel(payload)
     if (!isApiSuccess(res)) {
       message.error(getApiErrorMessage(res, isEdit ? '编辑失败' : '新增失败'))
-      return false
+      return null
+    }
+    let dimensionId = getSubmittedDimensionId(res, id)
+    if (!dimensionId && configureHierarchy && !isEdit) {
+      const lookupRes = await queryDimensionList({
+        bizName: payload.bizName,
+        groupId: selectedGroup?.groupId,
+        pageNum: 1,
+        pageSize: 10,
+        spaceId: payload.spaceId,
+        techName: payload.techName,
+      })
+      if (isApiSuccess(lookupRes)) {
+        dimensionId = findSubmittedDimensionId(normalizeRows(lookupRes), payload)
+      }
+    }
+    if (configureHierarchy && !dimensionId) {
+      await fetchTableData()
+      return {
+        dimensionId
+      } satisfies DimensionSubmitResult
     }
     message.success(isEdit ? '编辑成功' : '新增成功')
     await fetchTableData()
-    return true
+    return {
+      dimensionId
+    } satisfies DimensionSubmitResult
   }
 
   const handleBatchMappingSubmit = async (rows: DimensionBatchMappingRow[], semanticsGroupId?: number | string) => {
