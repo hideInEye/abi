@@ -79,13 +79,14 @@ export interface ChatWidgetProps {
 
 type Phase = 'checking' | 'password' | 'loading' | 'ready' | 'error'
 
-/** 输入工具栏对话模式（标签同主对话；报告/探索暂不对接发送协议与专属渲染，仅切换展示） */
+/** 输入工具栏对话模式（标签同主对话，三模式各自对接发送协议与渲染） */
 type WidgetChatMode = 'interact' | 'report' | 'explore'
 
+/* 模式展示顺序对齐主对话 chat-input modeMenuItems：交互 / 探索 / 报告 */
 const WIDGET_MODES: Array<{ key: WidgetChatMode; label: string; desc: string }> = [
   { key: 'interact', label: '交互', desc: '敏捷问数，基础分析' },
-  { key: 'report', label: '报告', desc: '深度挖掘，智能洞察' },
   { key: 'explore', label: '探索', desc: '自主规划，复杂分析' },
+  { key: 'report', label: '报告', desc: '深度挖掘，智能洞察' },
 ]
 
 function getNow(): string {
@@ -1622,7 +1623,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                   </div>
                 )}
               </div>
-              {/* 模式（交互/报告/探索，同主对话标签；报告/探索发送协议暂不对接） */}
+              {/* 模式（交互/探索/报告，顺序与标签同主对话） */}
               <div className="abi-cw-tb-item">
                 <button
                   type="button"
