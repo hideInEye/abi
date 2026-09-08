@@ -18,8 +18,6 @@ import {ISelectOption} from "../../../../json-schema/ui/select/Select.tsx";
 import ObjectUtil from "../../../../utils/ObjectUtil.ts";
 import {IDatabase} from "../../../../designer/DesignerType.ts";
 import FetchUtil from "../../../../utils/FetchUtil.ts";
-import {IDataSource} from "../../../../pages/home/datasource/DataSourceStore.ts";
-import Base64Util from "../../../../utils/Base64Util.ts";
 import baseApi from "../../../../api/BaseApi.ts";
 import {doSave} from "../../../../designer/operate-provider/hot-key/HotKeyImpl.ts";
 
@@ -76,7 +74,7 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
             globalMessage.messageApi?.error('请输入SQL语句');
             return false;
         }
-        if (!sql.trim().startsWith('select')) {
+        if (!sql.trim().toLowerCase().startsWith('select')) {
             globalMessage.messageApi?.error('SQL语句必须以select开头');
             return false;
         }

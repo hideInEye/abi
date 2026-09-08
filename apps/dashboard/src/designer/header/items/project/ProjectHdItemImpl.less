@@ -14,6 +14,57 @@
   form {
     padding: 5px 10px;
 
+    // 暗色 Dialog 内的 antd 控件默认亮色，覆盖为暗色
+    .lc-input.ant-input {
+      background-color: #26292e;
+      border-color: rgba(255, 255, 255, 0.18);
+      color: #d0d3d8;
+
+      &::placeholder {
+        color: #6b7280;
+      }
+
+      &:hover,
+      &:focus {
+        border-color: #5b7cf7;
+      }
+    }
+
+    .lc-select {
+      .ant-select-selector {
+        background-color: #26292e !important;
+        border-color: rgba(255, 255, 255, 0.18) !important;
+      }
+
+      .ant-select-selection-item {
+        color: #d0d3d8;
+      }
+
+      .ant-select-arrow {
+        color: #a3a3a3;
+      }
+
+      &:hover .ant-select-selector {
+        border-color: #5b7cf7 !important;
+      }
+    }
+
+    .lc-radio {
+      .ant-radio-inner {
+        background-color: transparent;
+        border-color: rgba(255, 255, 255, 0.35);
+      }
+
+      .ant-radio-checked .ant-radio-inner {
+        background-color: #1677ff;
+        border-color: #1677ff;
+      }
+
+      .ant-radio + * {
+        color: #a3a3a3;
+      }
+    }
+
     .lc-header-project-footer {
       margin-top: 3px;
       border-top: 2px solid #272b34;
@@ -26,6 +77,18 @@
         width: 85px;
         height: 30px;
         margin: 6px 5px 10px 0;
+      }
+
+      // 取消为次要按钮（暗底亮字），保存保持 primary
+      .ant-btn-default.lc-button {
+        background-color: transparent;
+        border-color: rgba(255, 255, 255, 0.25);
+        color: #a3a3a3;
+
+        &:hover {
+          border-color: #5b7cf7;
+          color: #5b7cf7;
+        }
       }
     }
   }

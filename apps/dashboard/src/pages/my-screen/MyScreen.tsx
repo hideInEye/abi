@@ -129,6 +129,8 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
         const id = unpublishIdRef.current;
         await baseApi.updateProject({id, status: '2'} as IProjectInfo);
         globalMessage.messageApi?.success('已取消发布');
+        // 取消发布=历史版本(2)：同步分享记录应用状态（大屏 status '2'→appStatus 2）
+        baseApi.syncShareAppStatus(id, 2);
         setUnpublishDialog(false);
         fetchList(currentPage, pageSize, searchKeyword);
     };

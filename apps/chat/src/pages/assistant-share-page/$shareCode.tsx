@@ -1,6 +1,6 @@
 import { LockOutlined } from '@ant-design/icons'
 import { createFileRoute } from '@tanstack/react-router'
-import { Button, Input, Modal, Spin } from 'antd'
+import { Button, Input, Modal, Spin, message } from 'antd'
 import { useEffect, useState } from 'react'
 
 import ChatWidget from '@/components/chat-widget/ChatWidget'
@@ -65,16 +65,24 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
 
   // 用户输入密码后校验
   const handlePasswordSubmit = async () => {
-    if (!password) return
+    if (!password) {
+      message.warning('请输入密码')
+      return
+    }
     setPasswordLoading(true)
     try {
       const d = unwrap(await checkAssistantShare({ shareCode, sharePassword: password }))
       const appId = String(d.appId ?? d.projectId ?? '')
-      if (d.result && appId) {
+      // 与 widget checkSharePassword 同口径：后端校验通过时 result 可能缺省，仅显式 false 判为失败
+      if (d.result !== false && appId) {
         setPasswordModalVisible(false)
-        setVerifiedType(normalizeType(d.type))
+        // type 缺失时复用探测阶段已归一化的 verifiedType，避免抛错中断跳转
+        if (d.type) setVerifiedType(normalizeType(d.type))
         if (d.token) setVerifiedToken(String(d.token))
         setVerifiedAppId(appId)
+        message.success('验证成功')
+      } else {
+        message.error('密码错误')
       }
     } finally {
       setPasswordLoading(false)

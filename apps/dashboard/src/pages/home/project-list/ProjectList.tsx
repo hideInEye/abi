@@ -204,6 +204,8 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 setDelDialog(false);
                 getProjectPageList(pageData.current, pageData.size);
                 globalMessage.messageApi?.success('删除成功');
+                // 删除=已删除(0)：同步分享记录应用状态
+                baseApi.syncShareAppStatus(id, 0);
             } else {
                 globalMessage.messageApi?.error('删除失败');
             }
@@ -220,6 +222,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
             // Delete each selected project
             for (const id of selectedRowKeys) {
                 await baseApi.deleteProject(String(id));
+                baseApi.syncShareAppStatus(id as number | string, 0);
             }
             globalMessage.messageApi?.success(`成功删除 ${selectedRowKeys.length} 个项目`);
             setSelectedRowKeys([]);

@@ -21,6 +21,7 @@ import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { addAppApi, updateAppApi, fetchAppDetailApi, publishVersionApi } from '@/service/api/abi-chat-app'
+import { syncShareAppStatus } from '@/service/api/share'
 import { fetchModelList } from '@/service/api'
 import { getSpaceId } from '@/store/slice/app'
 import { useAppSelector } from '@/hooks/business/useStore'
@@ -449,20 +450,23 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     return true
   }
 
-  /** 保存：状态设为草稿 */
-  const handleSave = async () => {
+  /** 保存/创建复用同一提交：nextStatus 决定落库状态（保存='0'草稿、创建='2'历史版本），仅成功文案不同 */
+  const handleSave = async (successText = '已保存', nextStatus: '0' | '1' | '2' = '0') => {
     if (saving) return
     if (!validateRequired()) return
     setSaving('draft')
     try {
-      const payload = buildPayload('0')
+      const payload = buildPayload(nextStatus)
       // apiRequest 为扁平请求，失败时不会抛错而是返回 { error }，需显式判断
       const { error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
       // 失败时全局错误处理已提示后端具体信息（如“应用名称不能为空”），保留抽屉不关闭
       if (error) return
-      setStatus('0')
+      setStatus(nextStatus)
       setDraftSaved(true)
-      message.success('已保存')
+      if (isEdit && agent?.id != null) {
+        syncShareAppStatus({ projectId: agent.id, type: 'workflow', spaceId: spaceId || undefined, appStatus: nextStatus === '2' ? 2 : 3 });
+      }
+      message.success(successText)
       onClose(true)
     } finally {
       setSaving(null)
@@ -485,6 +489,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
         if (publishError) return
       }
       setStatus('1')
+      if (isEdit && agent?.id != null) syncShareAppStatus({ projectId: agent.id, type: 'workflow', spaceId: spaceId || undefined, appStatus: 1 });
       message.success('已发布')
       onClose(true)
     } finally {
@@ -613,7 +618,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
             <Button
               disabled={saving === 'publish'}
               loading={saving === 'draft'}
-              onClick={handleSave}
+              onClick={() => handleSave()}
               style={{
                 borderRadius: 8,
                 border: '1px solid rgba(130, 140, 200, 0.2)',
@@ -622,6 +627,19 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               }}
             >
               保存
+            </Button>
+            <Button
+              disabled={saving === 'publish'}
+              loading={saving === 'draft'}
+              onClick={() => handleSave('已创建', '2')}
+              style={{
+                borderRadius: 8,
+                border: '1px solid rgba(130, 140, 200, 0.2)',
+                fontWeight: 500,
+                transition: 'all 0.3s ease',
+              }}
+            >
+              创建
             </Button>
             <Button
               disabled={saving === 'draft'}

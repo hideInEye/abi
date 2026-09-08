@@ -1495,3 +1495,81 @@ Bug 修复延续（分享记录复制缺密码）+ 接口对接调整。
 - `pnpm typecheck`（apps/abi）对比基线无新增错误。
 - 手工：下拉入口显示；子菜单配置后导航与 VerticalMenu 标签。
 
+## 2026-09-07 追加：大屏数据库 SQL 的 select 前缀校验大小写修复
+
+### 需求类型
+
+前端缺陷修复（校验逻辑），无 UI 变化。
+
+### 背景
+
+大屏设计器组件「数据」面板（数据库数据源）点击「测试SQL并保存」时报「SQL语句必须以select开头」，但实际输入的 SQL 以大写 `SELECT` 开头。排查确认是前端自有校验：`apps/dashboard/src/comps/common-component/data-config/database/DatabaseConfig.tsx` 的 `validate()` 使用 `sql.trim().startsWith('select')`，大小写敏感导致大写 SELECT 被误判；与 code-editor 组件和后端无关。
+
+### 目标
+
+- select 前缀校验改为大小写不敏感：`sql.trim().toLowerCase().startsWith('select')`，`SELECT`/`Select` 等开头均通过。
+- 顺带删除同文件两个未使用导入（`IDataSource`、`Base64Util`），消除既有 tsc TS6133 报错。
+
+### 非目标
+
+- 不改校验文案、其余校验项（选择数据库、SQL 非空）与测试保存请求逻辑。
+- 不放宽注释、WITH 子句等其他前缀。
+
+### 影响范围预期
+
+- 修改：`apps/dashboard/src/comps/common-component/data-config/database/DatabaseConfig.tsx`
+- 新增 run log：`.ai/runs/2026-09-07-dashboard-sql-select-case/`
+
+### 验收标准
+
+1. 大写 `SELECT` 开头的 SQL 点击「测试SQL并保存」不再误报，正常进入测试请求。
+2. 非 select 开头（不分大小写）的 SQL 仍按原文案拦截。
+3. 该文件 tsc 不新增报错，既有 TS6133 清零。
+
+### 测试要求
+
+- `npx tsc --noEmit`（apps/dashboard）对比基线无新增错误。
+- 手工：大写 SELECT 通过校验；非 select 前缀仍拦截。
+
+## 2026-09-07 追加：分享记录应用状态（appStatus）四态展示与助手创建按钮
+
+### 需求类型
+
+前端接口对接 + UI 补齐（分享记录状态展示、助手编辑页创建按钮；同步写入待后端接口参数确认后接线）。
+
+### 背景
+
+- 后端分享记录表（助手与大屏混存）新增应用状态 `app_status: char(1)`：0-已删除 1-启用中 2-已离线 3-编辑中。其中 2-已离线对应产品口径「历史版本」（版本下线状态）；枚举无「离线版本」档（该色档为技能版本词汇，助手/大屏不使用）。
+- 产品统一按钮链：保存→创建→发布→取消发布，对应 编辑中(橙)→离线版本(蓝)→当前启用(绿)→历史版本(灰)。助手编辑页在历史版本态缺「创建」入口（截图红框标注）。
+- 同步写入确认走方案A：现有 `PUT /project/share/status` 改为一次传多个 shareCode；前端经分享列表收集该应用名下 shareCode 后一次调用（每次点击 1 列表 + 1 更新）。接口传参格式与列表行字段名待后端确认，本轮不接同步调用。
+
+### 目标
+
+1. 两端分享记录卡片（abi `my-assistant/ShareRecordList.tsx`、dashboard `my-screen/ShareRecordList.tsx`）状态标签优先读 `appStatus`（兼容 `app_status`）：3-编辑中(橙 draft) / 1-当前启用(绿) / 2-历史版本(灰 off) / 0-已删除(灰 off)；过期时间优先逻辑不变；字段缺失时回落既有 status 猜测逻辑，行为与改前一致。
+2. 助手编辑抽屉头部新增「创建」按钮：仅 `status==='2'`（历史版本）且非只读时显示；点击复用保存提交（`updateAppApi` 全量 payload、status='0'，从历史版本重新起草稿），成功文案「已创建」并刷新列表。
+3. 颜色复用既有 `ac-tag` 修饰类（abi table.scss 已有 draft/off；dashboard ProjectList.less 补 `draft` 橙），不新增全局样式。
+
+### 非目标
+
+- 不接 `PUT /project/share/status` 同步调用（待后端给：多 shareCode 传参格式、列表行应用 id 字段名、列表行 appStatus 字段名、删除后 0 由谁写入）。
+- 不改大屏设计器头部按钮、技能管理、chat 分享页与分享创建/列表/详情接口协议。
+- 不处理需求文件中已有的冲突标记与历史需求内容。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/app-workshop/my-assistant/ShareRecordList.tsx`
+- `apps/dashboard/src/pages/my-screen/ShareRecordList.tsx`、`apps/dashboard/src/pages/home/project-list/ProjectList.less`
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- run log：`.ai/runs/2026-09-07-share-appstatus-create-button/`
+
+### 验收标准
+
+1. 列表行带 appStatus 时卡片按四态表显示标签与颜色；缺失时展示行为与改前完全一致。
+2. 历史版本态编辑页显示「创建」，点击成功后助手状态变编辑中、列表刷新；其他状态与只读模式不显示。
+3. abi、dashboard 类型检查对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck`、dashboard `tsc --noEmit --skipLibCheck` 对比基线。
+- 手工：分享记录四态展示（待后端返回 appStatus）、历史版本态创建按钮、只读模式不显示。
+

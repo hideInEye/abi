@@ -10,7 +10,7 @@
  */
 
 import designerManager from "../manager/DesignerManager.ts";
-import {DesignerMode, ProjectDataType, ProjectState, SaveType} from "../DesignerType";
+import {DesignerMode, ProjectDataType, SaveType} from "../DesignerType";
 import {DesignerLoader} from "./DesignerLoader.ts";
 import layerManager from "../manager/LayerManager.ts";
 import BPExecutor from "../blueprint/core/BPExecutor.ts";
@@ -28,7 +28,6 @@ class EditorDesignerLoader extends DesignerLoader {
             id,
             name: projectInfo.name,
             des: projectInfo.des,
-            state: projectInfo.state as ProjectState | undefined,
             status: projectInfo.status,
             dataJson: projectInfo.dataJson,
         });

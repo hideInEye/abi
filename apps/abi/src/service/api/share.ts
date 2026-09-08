@@ -65,3 +65,51 @@ export function fetchProjectShareDetailApi(shareCode: string) {
     url: `/api/dashboard/api/v1/project/share/${shareCode}`
   });
 }
+
+/**
+ * 更新分享记录的应用状态（shareCodes 以重复 query key 传多个：?shareCodes=a&shareCodes=b）。
+ * appStatus: 0-已删除 1-启用中 2-已离线(历史版本) 3-编辑中。
+ * 手动拼 query 而非 axios 数组序列化，避免默认带 [] 后缀与后端 repeat 形式不符。
+ */
+export function updateShareStatusApi(shareCodes: string[], appStatus: number | string) {
+  const qs = [
+    ...shareCodes.map(c => `shareCodes=${encodeURIComponent(c)}`),
+    `appStatus=${encodeURIComponent(String(appStatus))}`,
+  ].join('&');
+  return apiRequest({
+    method: 'put',
+    url: `/api/dashboard/api/v1/project/share/status?${qs}`
+  });
+}
+
+/**
+ * 应用状态变更后同步其名下的分享记录：列表接口无“按应用筛”参数，故拉全量后前端挑出
+ * projectId 命中的行、收集 shareCode 逗号拼接一次 PUT；无分享记录则不发请求。
+ * 内部吞错（仅 console），同步失败不阻塞应用侧主流程。
+ */
+export async function syncShareAppStatus(o: {
+  projectId: number | string;
+  type: 'react' | 'workflow' | 'dashboard';
+  spaceId?: number | string;
+  appStatus: number | string;
+}) {
+  try {
+    const { data, error } = await fetchProjectShareListApi({
+      type: o.type,
+      spaceId: o.spaceId || undefined,
+      current: 1,
+      size: 999,
+    });
+    if (error) return;
+    const page = data ?? {};
+    const list = Array.isArray(page) ? page : (page.records ?? page.rows ?? page.list ?? []);
+    const codes = (Array.isArray(list) ? list : [])
+      .filter((r: any) => String(r?.projectId) === String(o.projectId))
+      .map((r: any) => r?.shareCode)
+      .filter(Boolean);
+    if (!codes.length) return;
+    await updateShareStatusApi(codes, o.appStatus);
+  } catch (e) {
+    console.error('同步分享记录应用状态失败', e);
+  }
+}
