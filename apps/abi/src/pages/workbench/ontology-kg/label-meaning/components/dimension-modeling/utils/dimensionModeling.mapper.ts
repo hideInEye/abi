@@ -72,6 +72,54 @@ function toNumber(value: any) {
   return Number.isNaN(num) ? undefined : num
 }
 
+function toPositiveNumber(value: unknown) {
+  if (typeof value !== 'number' && typeof value !== 'string') {
+    return undefined
+  }
+  const text = String(value).trim()
+  if (!text) {
+    return undefined
+  }
+  const number = Number(text)
+  return Number.isFinite(number) && number > 0 ? number : undefined
+}
+
+export function getSubmittedDimensionId(res: any, existingId?: number) {
+  const data = res?.data
+  const responseData = res?.response?.data
+  const candidates = [
+    existingId,
+    data?.dimId,
+    data?.id,
+    data?.dimensionId,
+    data?.data?.dimId,
+    data?.data?.id,
+    data?.data?.dimensionId,
+    data?.data,
+    data,
+    responseData?.data?.dimId,
+    responseData?.data?.id,
+    responseData?.data?.dimensionId,
+    responseData?.data,
+    responseData?.dimId,
+    responseData?.id,
+    responseData?.dimensionId,
+  ]
+
+  return candidates.map(toPositiveNumber).find(id => id !== undefined)
+}
+
+export function findSubmittedDimensionId(rows: any[], submitted: { bizName?: unknown; techName?: unknown }) {
+  const bizName = String(submitted.bizName ?? '').trim()
+  const techName = String(submitted.techName ?? '').trim()
+  const matched = rows.find((row) => {
+    const item = mapDimensionFromApi(row)
+    return (!bizName || item.rawZhName === bizName) && (!techName || item.rawEnglishName === techName)
+  })
+
+  return matched ? getSubmittedDimensionId({ data: matched }) : undefined
+}
+
 function normalizeType(value: any): DimensionType {
   const text = String(value || '')
     .trim()

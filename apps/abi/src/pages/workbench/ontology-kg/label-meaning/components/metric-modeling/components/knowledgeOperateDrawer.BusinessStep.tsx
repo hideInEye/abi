@@ -11,6 +11,7 @@ import {
   STATUS_OPTIONS
 } from '../constants/metricModeling.constants'
 import type { KnowledgeFormValues } from '../types/metricModeling.types'
+import { shouldShowMetricPrecomputeConfig } from '../utils/knowledgeOperateDrawer.utils'
 
 import { KnowledgePrecomputeConfig } from './knowledgeOperateDrawer.PrecomputeConfig'
 
@@ -158,7 +159,14 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
         </div>
       </div>
 
-      <KnowledgePrecomputeConfig form={form} />
+      <AForm.Item
+        noStyle
+        shouldUpdate={(prevValues, nextValues) => prevValues.indicatorClass !== nextValues.indicatorClass}
+      >
+        {({ getFieldValue }) =>
+          shouldShowMetricPrecomputeConfig(getFieldValue('indicatorClass')) ? <KnowledgePrecomputeConfig form={form} /> : null
+        }
+      </AForm.Item>
 
       <div className="mb-4 border border-gray-200 rounded bg-white p-4">
         <OntologyFormSectionTitle icon={<TagsOutlined />}>语义信息</OntologyFormSectionTitle>

@@ -1,5 +1,6 @@
+import React, { useState, useMemo, useEffect } from 'react';
 import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, MoreOutlined, RightOutlined } from '@ant-design/icons';
-import { Dropdown, Empty, Typography, message } from 'antd';
+import { Button, Dropdown, Empty, Popconfirm, Space, Switch, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
@@ -9,6 +10,16 @@ import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
+
+// Ant Design 组件别名
+const AButton = Button;
+const AInput = (props: any) => <input {...props} />;
+const ASelect = (props: any) => <select {...props} />;
+const ASpace = Space;
+const ASwitch = Switch;
+const ATable = Table;
+const ATag = Tag;
+const APopconfirm = Popconfirm;
 
 const ALL_COLUMNS: ColumnOption[] = [
   { key: 'pluginName', label: 'MCP名称', visible: true },
