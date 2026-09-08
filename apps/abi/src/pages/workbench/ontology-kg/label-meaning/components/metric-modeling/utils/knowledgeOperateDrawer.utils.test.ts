@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  buildMetricIndicatorSearchQuery,
   extractUniqueIds,
   formatMappedDimensionOptionTitle,
   getMappedMetricFieldDisplayName,
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
+  mergeMetricIndicatorSearchResults,
   shouldShowMetricPrecomputeConfig,
 } from './knowledgeOperateDrawer.utils'
 
@@ -65,5 +67,50 @@ describe('metric precompute config visibility', () => {
     expect(shouldShowMetricPrecomputeConfig('derivative')).toBe(true)
     expect(shouldShowMetricPrecomputeConfig('custom')).toBe(false)
     expect(shouldShowMetricPrecomputeConfig(undefined)).toBe(false)
+  })
+})
+
+describe('metric indicator fuzzy search', () => {
+  it('builds the existing list query with a trimmed bizName', () => {
+    expect(buildMetricIndicatorSearchQuery('  支付金额  ', 82)).toEqual({
+      bizName: '支付金额',
+      pageNum: 1,
+      pageSize: 1000,
+      spaceId: 82,
+    })
+    expect(buildMetricIndicatorSearchQuery('   ', 82).bizName).toBeUndefined()
+  })
+
+  it('keeps selected indicators while replacing stale unselected results', () => {
+    const result = mergeMetricIndicatorSearchResults(
+      [
+        { bizName: '旧支付金额', indId: 1, indicatorClass: 'atomic', semanticSchemaName: '交易语义' },
+        { bizName: '旧订单数量', indId: 2, indicatorClass: 'atomic' },
+      ],
+      [
+        { bizName: '支付金额', indId: 1, indicatorClass: 'atomic' },
+        { bizName: '支付笔数', indId: 3, indicatorClass: 'atomic' },
+      ],
+      [1],
+    )
+
+    expect(result).toEqual([
+      { bizName: '支付金额', indId: 1, indicatorClass: 'atomic', semanticSchemaName: '交易语义' },
+      { bizName: '支付笔数', indId: 3, indicatorClass: 'atomic' },
+    ])
+  })
+
+  it('appends a selected indicator when the fuzzy response does not contain it', () => {
+    const selected = { bizName: '成交金额', indId: 1, indicatorClass: 'atomic' }
+    const result = mergeMetricIndicatorSearchResults(
+      [selected],
+      [{ bizName: '订单数量', indId: 2, indicatorClass: 'atomic' }],
+      ['1'],
+    )
+
+    expect(result).toEqual([
+      { bizName: '订单数量', indId: 2, indicatorClass: 'atomic' },
+      selected,
+    ])
   })
 })

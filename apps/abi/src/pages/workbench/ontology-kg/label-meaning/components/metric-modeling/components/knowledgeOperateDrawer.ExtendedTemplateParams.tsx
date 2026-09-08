@@ -17,6 +17,7 @@ import {
 import type { KnowledgeFormValues, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
 
 import { KnowledgeOperateExpressionEditor } from './knowledgeOperateDrawer.ExpressionEditor'
+import { KnowledgeIndicatorSearchSelect } from './knowledgeOperateDrawer.IndicatorSearchSelect'
 
 interface AtomicMetricOption {
   item?: KnowledgeIndicatorItem
@@ -28,6 +29,8 @@ interface Props {
   readonly allFields: KnowledgeTechField[]
   readonly atomicMetricOptions: AtomicMetricOption[]
   readonly form: FormInstance<KnowledgeFormValues>
+  readonly indicatorOptionsLoading?: boolean
+  readonly onIndicatorSearch: (searchText: string) => void
   readonly referenceMetricOptions: AtomicMetricOption[]
   readonly templateTypeVal: string
   readonly validateAccumulationDate: (_: unknown, value?: string) => Promise<void>
@@ -109,6 +112,8 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   allFields,
   atomicMetricOptions,
   form,
+  indicatorOptionsLoading,
+  onIndicatorSearch,
   referenceMetricOptions,
   templateTypeVal,
   validateAccumulationDate,
@@ -200,9 +205,11 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               name="ratioNumeratorId"
               rules={[{ message: '请选择分子指标', required: true }]}
             >
-              <ASelect
+              <KnowledgeIndicatorSearchSelect
+                loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择分子指标"
+                onSearch={onIndicatorSearch}
               />
             </AForm.Item>
             <AForm.Item
@@ -210,9 +217,11 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               name="ratioDenominatorId"
               rules={[{ message: '请选择分母指标', required: true }]}
             >
-              <ASelect
+              <KnowledgeIndicatorSearchSelect
+                loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择分母指标"
+                onSearch={onIndicatorSearch}
               />
             </AForm.Item>
             <AForm.Item
@@ -253,9 +262,11 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               name="cumulativeMetricId"
               rules={[{ message: '请选择原子指标', required: true }]}
             >
-              <ASelect
+              <KnowledgeIndicatorSearchSelect
+                loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择原子指标"
+                onSearch={onIndicatorSearch}
               />
             </AForm.Item>
             <AForm.Item
@@ -295,9 +306,11 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               name="compareMetricId"
               rules={[{ message: '请选择基准指标', required: true }]}
             >
-              <ASelect
+              <KnowledgeIndicatorSearchSelect
+                loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择基准指标"
+                onSearch={onIndicatorSearch}
               />
             </AForm.Item>
             <AForm.Item
@@ -337,9 +350,11 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               name="volatilityMetricId"
               rules={[{ message: '请选择原始指标', required: true }]}
             >
-              <ASelect
+              <KnowledgeIndicatorSearchSelect
+                loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择原始指标"
+                onSearch={onIndicatorSearch}
               />
             </AForm.Item>
             <AForm.Item
