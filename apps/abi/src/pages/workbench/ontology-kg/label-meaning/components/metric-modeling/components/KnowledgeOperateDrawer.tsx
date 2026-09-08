@@ -42,7 +42,8 @@ import {
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
   getStepItems,
-  parseTemplateParams
+  parseTemplateParams,
+  shouldShowMetricPrecomputeConfig
 } from '../utils/knowledgeOperateDrawer.utils'
 import { createKnowledgeOperateValidators } from '../utils/knowledgeOperateDrawer.validators'
 import { parseKnowledgeCalcLogicFormValues } from '../utils/knowledgeSubmitPayload'
@@ -888,14 +889,17 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   }
 
   const getBusinessRequiredFields = () => {
-    const precomputeConfig = normalizePrecomputeConfig(form.getFieldValue('precomputeConfig'))
-    const precomputeFields: ValidationField[] = [['precomputeConfig', 'frequency']]
-    if (precomputeConfig.frequency === 'hourly') precomputeFields.push(['precomputeConfig', 'minute'])
-    if (precomputeConfig.frequency === 'daily') precomputeFields.push(['precomputeConfig', 'time'])
-    if (precomputeConfig.frequency === 'weekly')
-      precomputeFields.push(['precomputeConfig', 'weekday'], ['precomputeConfig', 'time'])
-    if (precomputeConfig.frequency === 'monthly')
-      precomputeFields.push(['precomputeConfig', 'monthDay'], ['precomputeConfig', 'time'])
+    const precomputeFields: ValidationField[] = []
+    if (shouldShowMetricPrecomputeConfig(indicatorClass)) {
+      const precomputeConfig = normalizePrecomputeConfig(form.getFieldValue('precomputeConfig'))
+      precomputeFields.push(['precomputeConfig', 'frequency'])
+      if (precomputeConfig.frequency === 'hourly') precomputeFields.push(['precomputeConfig', 'minute'])
+      if (precomputeConfig.frequency === 'daily') precomputeFields.push(['precomputeConfig', 'time'])
+      if (precomputeConfig.frequency === 'weekly')
+        precomputeFields.push(['precomputeConfig', 'weekday'], ['precomputeConfig', 'time'])
+      if (precomputeConfig.frequency === 'monthly')
+        precomputeFields.push(['precomputeConfig', 'monthDay'], ['precomputeConfig', 'time'])
+    }
     const baseFields: ValidationField[] = [
       'bizName',
       'indicatorClass',
