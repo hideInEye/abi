@@ -73,6 +73,22 @@ describe('precompute config', () => {
     expect(isValidStatisticalDateRangeValue(1.5)).toBe(false)
   })
 
+  it('normalizes multiple subject dimensions and the cross-dimension flag', () => {
+    expect(
+      normalizeStatisticalCaliber({
+        isCrossDim: '是',
+        subjectDimensionIds: ['dim-1', 'dim-1', 'dim-2'],
+        subjectDimensionNameMap: { 'dim-1': '产品维度', 'dim-2': '区域维度' }
+      })
+    ).toMatchObject({
+      isCrossDim: true,
+      subjectDimensionId: 'dim-1',
+      subjectDimensionIds: ['dim-1', 'dim-2'],
+      subjectDimensionName: '产品维度',
+      subjectDimensionNameMap: { 'dim-1': '产品维度', 'dim-2': '区域维度' }
+    })
+  })
+
   it.each([
     {
       hint: '每次预计算时，动态统计最近 7 日的数据。',

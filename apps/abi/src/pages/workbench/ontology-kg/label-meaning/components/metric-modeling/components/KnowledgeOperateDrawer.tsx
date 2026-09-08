@@ -816,7 +816,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         'projectionFunc',
         ['statisticalCaliber', 'dateRangeMode'],
         ['statisticalCaliber', 'timeRangeType'],
-        ['statisticalCaliber', 'subjectDimensionId'],
+        ['statisticalCaliber', 'subjectDimensionIds'],
         'derivedExpressions'
       ]
       if (isDynamicStatisticalDateRangeMode(statisticalCaliber.dateRangeMode)) {

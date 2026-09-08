@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildApiCalcPeriod,
-  buildApiSubjectDimension,
+  buildApiCrossDimension,
+  buildApiSubjectDimensions,
   buildApiUpdateFrequency,
   parseApiCalcPeriod,
-  parseApiSubjectDimension,
+  parseApiCrossDimension,
+  parseApiSubjectDimensions,
   parseApiUpdateFrequency
 } from './indicatorApiAdapter'
 
@@ -72,24 +74,47 @@ describe('indicator api adapter', () => {
     expect(parseApiCalcPeriod(result).dateRangeMode).toBe(formMode)
   })
 
-  it('maps a custom time range and subject dimension in both directions', () => {
+  it('maps a custom time range, cross flag and multiple subject dimensions in both directions', () => {
     const caliber = {
       dateRangeMode: 'previous_full',
       dateRangeUnit: 'month',
       dateRangeValue: 3,
       endTime: '06:59',
+      isCrossDim: true,
       startTime: '00:00',
-      subjectDimensionId: 'dim-1',
-      subjectDimensionName: '产品维度',
+      subjectDimensionIds: ['dim-1', 'dim-2'],
+      subjectDimensionNameMap: { 'dim-1': '产品维度', 'dim-2': '区域维度' },
       timeRangeType: 'specified'
     }
     expect(buildApiCalcPeriod(caliber)).toMatchObject({
       time_range: { end_time: '06:59', start_time: '00:00', type: 'custom' }
     })
-    expect(buildApiSubjectDimension(caliber)).toEqual({ dim_id: 'dim-1', dim_name: '产品维度' })
-    expect(parseApiSubjectDimension({ dim_id: 'dim-1', dim_name: '产品维度' })).toEqual({
+    expect(buildApiCrossDimension(caliber)).toBe('是')
+    expect(buildApiSubjectDimensions(caliber)).toEqual([
+      { dim_id: 'dim-1', dim_name: '产品维度' },
+      { dim_id: 'dim-2', dim_name: '区域维度' }
+    ])
+    expect(
+      parseApiSubjectDimensions([
+        { dim_id: 'dim-1', dim_name: '产品维度' },
+        { dim_id: 'dim-2', dim_name: '区域维度' }
+      ])
+    ).toMatchObject({
       subjectDimensionId: 'dim-1',
-      subjectDimensionName: '产品维度'
+      subjectDimensionIds: ['dim-1', 'dim-2'],
+      subjectDimensionName: '产品维度',
+      subjectDimensionNameMap: { 'dim-1': '产品维度', 'dim-2': '区域维度' }
+    })
+    expect(parseApiCrossDimension('是')).toBe(true)
+    expect(parseApiCrossDimension('否')).toBe(false)
+  })
+
+  it('rehydrates the existing single subject dimension as a one-item selection', () => {
+    expect(parseApiSubjectDimensions({ dim_id: 'dim-1', dim_name: '产品维度' })).toMatchObject({
+      subjectDimensionId: 'dim-1',
+      subjectDimensionIds: ['dim-1'],
+      subjectDimensionName: '产品维度',
+      subjectDimensionNameMap: { 'dim-1': '产品维度' }
     })
   })
 })

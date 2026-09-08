@@ -1630,3 +1630,43 @@ Bug 修复延续（分享记录复制缺密码）+ 接口对接调整。
 
 - 任意合法状态组合的 `plan.update.tasks` 均能进入现有聚合流程。
 - 报告模式现有测试和 TypeScript 检查通过。
+
+## 2026-09-08 追加二：派生指标主体维度多选与维度交叉
+
+### 需求类型
+
+指标建模前端功能增强（表单交互、提交协议与编辑回显）。
+
+### 目标
+
+- 派生指标第二步“统计口径”的主体维度由单选改为多选，仍复用现有维度树数据源且至少选择一个维度。
+- 主体维度右侧新增“是否维度交叉”复选框，默认不勾选。
+- 派生指标提交时，`calcLogic` 新增/调整以下字段：
+  - `indicator_templates`：指标模板集合对象。
+  - `calcPeriod`：时间周期对象。
+  - `isCrossDim`：字符串，勾选传 `是`，未勾选传 `否`。
+  - `subjectDimension`：数组，每项为 `{ dim_id: string, dim_name: string }`。
+- 编辑回显支持新的 `subjectDimension` 数组和 `isCrossDim` 字符串；现有单对象主体维度数据继续可回显，后续提交统一输出数组。
+- 指标预览同时展示全部主体维度，并将其全部纳入 SQL Preview 的 `GROUP BY` 去重结果。
+
+### 非目标
+
+- 不修改原子指标、衍生指标和第三步统计维度的交互与协议。
+- 不修改维度接口、维度树数据源和其他指标字段。
+- 不重构指标建模抽屉及规则表达式模块。
+
+### 影响范围预期
+
+- `apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/metric-modeling/components/knowledgeOperateDrawer.DerivedLogicBuilder.tsx`
+- `apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/metric-modeling/types/metricModeling.types.ts`
+- `apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/metric-modeling/utils/{precomputeConfig,indicatorApiAdapter,knowledgeSubmitPayload,derivedMetricPreview}.ts`
+- 上述适配层与预览对应测试。
+- `.ai/runs/2026-09-08-derived-metric-multi-subject-dimensions/`
+
+### 验收标准
+
+- 主体维度下拉可以选择、删除多个叶子维度，分组节点仍不可选；未选择时无法进入下一步。
+- 勾选交叉维度后提交 `isCrossDim: "是"`，取消勾选后提交 `isCrossDim: "否"`。
+- 两个主体维度提交为 `subjectDimension: [{ dim_id, dim_name }, { dim_id, dim_name }]`，名称来自维度选项而非展示标签猜测。
+- 编辑新协议数据时多选与复选框正确回显；编辑现有单对象数据时仍能回显并在保存后转为数组。
+- 派生指标相关定向测试、apps/abi 类型检查、构建和 `git diff --check` 通过，或记录既有环境问题。

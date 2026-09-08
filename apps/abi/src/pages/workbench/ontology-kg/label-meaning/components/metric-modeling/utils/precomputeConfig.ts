@@ -16,6 +16,7 @@ export const DEFAULT_STATISTICAL_CALIBER: StatisticalCaliber = {
   dateRangeMode: 'recent',
   dateRangeUnit: 'day',
   dateRangeValue: 7,
+  isCrossDim: false,
   timeRangeType: 'allDay'
 }
 
@@ -50,6 +51,11 @@ const STATISTICAL_DATE_RANGE_HINTS: Record<Exclude<StatisticalDateRangeMode, 'pr
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
   return value as Record<string, unknown>
+}
+
+function normalizeStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return Array.from(new Set(value.map(item => String(item ?? '').trim()).filter(Boolean)))
 }
 
 function normalizeFrequency(value: unknown): PrecomputeFrequency {
@@ -177,23 +183,37 @@ export function normalizeStatisticalCaliber(value: unknown): StatisticalCaliber 
   const dateRangeValue = Number(source.dateRangeValue ?? 7)
   const dateRangeUnit = normalizeStatisticalDateRangeUnit(dateRangeMode, source.dateRangeUnit)
   const timeRangeType = source.timeRangeType === 'specified' ? 'specified' : 'allDay'
+  const legacySubjectDimensionId = String(source.subjectDimensionId ?? '').trim()
+  const subjectDimensionIds = normalizeStringList(source.subjectDimensionIds)
+  if (!subjectDimensionIds.length && legacySubjectDimensionId) subjectDimensionIds.push(legacySubjectDimensionId)
+
+  const sourceNameMap = asRecord(source.subjectDimensionNameMap)
+  const legacySubjectDimensionName = String(source.subjectDimensionName ?? '').trim()
+  const subjectDimensionNameMap = subjectDimensionIds.reduce<Record<string, string>>((result, dimensionId) => {
+    const name = String(
+      sourceNameMap[dimensionId] ??
+        (dimensionId === legacySubjectDimensionId ? legacySubjectDimensionName : '')
+    ).trim()
+    if (name) result[dimensionId] = name
+    return result
+  }, {})
+  const firstSubjectDimensionId = subjectDimensionIds[0]
+  const firstSubjectDimensionName = firstSubjectDimensionId
+    ? subjectDimensionNameMap[firstSubjectDimensionId]
+    : undefined
+
   return {
     dateRangeMode,
     dateRangeUnit,
     dateRangeValue: isValidStatisticalDateRangeValue(dateRangeValue) ? dateRangeValue : 7,
+    ...(source.isCrossDim !== undefined ? { isCrossDim: source.isCrossDim === true || source.isCrossDim === '是' } : {}),
     ...(timeRangeType === 'specified'
       ? { endTime: String(source.endTime || '23:59'), startTime: String(source.startTime || '00:00') }
       : {}),
-    ...(source.subjectDimensionId !== undefined &&
-    source.subjectDimensionId !== null &&
-    source.subjectDimensionId !== ''
-      ? { subjectDimensionId: String(source.subjectDimensionId) }
-      : {}),
-    ...(source.subjectDimensionName !== undefined &&
-    source.subjectDimensionName !== null &&
-    source.subjectDimensionName !== ''
-      ? { subjectDimensionName: String(source.subjectDimensionName) }
-      : {}),
+    ...(subjectDimensionIds.length ? { subjectDimensionIds } : {}),
+    ...(Object.keys(subjectDimensionNameMap).length ? { subjectDimensionNameMap } : {}),
+    ...(firstSubjectDimensionId ? { subjectDimensionId: firstSubjectDimensionId } : {}),
+    ...(firstSubjectDimensionName ? { subjectDimensionName: firstSubjectDimensionName } : {}),
     timeRangeType
   }
 }
