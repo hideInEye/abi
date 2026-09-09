@@ -15,6 +15,7 @@ import { AssistantIconBlock } from '@/components/AssistantIcon';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { fetchAppListApi, deleteAppApi, updateAppApi } from '@/service/api/abi-chat-app';
+import { syncShareAppStatus } from '@/service/api/share';
 import { filterByCreateTime } from '@/utils/date';
 
 import AssistantEditDrawer, { type AgentMock } from './modules/assistant-edit-drawer';
@@ -285,6 +286,7 @@ export function Component() {
     try {
       await updateAppApi({ appId: id, appName, status: nextStatus });
       message.success(checked ? '已发布' : '已取消发布');
+      syncShareAppStatus({ projectId: id, type: 'workflow', spaceId: spaceId || undefined, appStatus: checked ? 1 : 2 });
     } catch {
       // 回滚
       setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: checked ? '2' : '1' } : it)));
@@ -297,6 +299,7 @@ export function Component() {
       await deleteAppApi({ appId: id });
       setAgents(prev => prev.filter(it => it.id !== id));
       message.success('已删除');
+      syncShareAppStatus({ projectId: id, type: 'workflow', spaceId: spaceId || undefined, appStatus: 0 });
     } catch {
       message.error('删除失败');
     }
@@ -314,6 +317,7 @@ export function Component() {
       setCheckedRowKeys([]);
       setSelectedRows([]);
       message.success(`成功删除 ${checkedRowKeys.length} 个助手`);
+      checkedRowKeys.forEach(id => syncShareAppStatus({ projectId: id as number | string, type: 'workflow', spaceId: spaceId || undefined, appStatus: 0 }));
     } catch {
       message.error('批量删除失败');
       fetchList();

@@ -153,6 +153,8 @@ export const doSave = throttle(async () => {
     }
     await baseApi.updateProject(projectInfo);
     projectHdStore.updateProjectConfig({status: '1'});
+    // 保存=编辑中(3)：同步分享记录应用状态（大屏 status '1'→appStatus 3）
+    if (id != null) baseApi.syncShareAppStatus(id, 3);
     NProgress.done()
 }, 5000, {trailing: false});
 

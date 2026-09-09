@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, MoreOutlined, RightOutlined } from '@ant-design/icons';
-import { Button, Dropdown, Empty, Popconfirm, Space, Switch, Table, Tag, Typography, message } from 'antd';
+import { Button, Dropdown, Empty, Input, Popconfirm, Select, Space, Switch, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
@@ -13,8 +13,8 @@ import type { ColumnOption } from '@/components/ViewControls';
 
 // Ant Design 组件别名
 const AButton = Button;
-const AInput = (props: any) => <input {...props} />;
-const ASelect = (props: any) => <select {...props} />;
+const AInput = Input;
+const ASelect = Select;
 const ASpace = Space;
 const ASwitch = Switch;
 const ATable = Table;

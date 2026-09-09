@@ -1616,3 +1616,231 @@ Bug 修复延续（分享记录复制缺密码）+ 接口对接调整。
 
 - `pnpm typecheck`（apps/abi）对比基线无新增错误。
 - 手工：下拉入口显示；子菜单配置后导航与 VerticalMenu 标签。
+
+## 2026-09-07 追加：大屏数据库 SQL 的 select 前缀校验大小写修复
+
+### 需求类型
+
+前端缺陷修复（校验逻辑），无 UI 变化。
+
+### 背景
+
+大屏设计器组件「数据」面板（数据库数据源）点击「测试SQL并保存」时报「SQL语句必须以select开头」，但实际输入的 SQL 以大写 `SELECT` 开头。排查确认是前端自有校验：`apps/dashboard/src/comps/common-component/data-config/database/DatabaseConfig.tsx` 的 `validate()` 使用 `sql.trim().startsWith('select')`，大小写敏感导致大写 SELECT 被误判；与 code-editor 组件和后端无关。
+
+### 目标
+
+- select 前缀校验改为大小写不敏感：`sql.trim().toLowerCase().startsWith('select')`，`SELECT`/`Select` 等开头均通过。
+- 顺带删除同文件两个未使用导入（`IDataSource`、`Base64Util`），消除既有 tsc TS6133 报错。
+
+### 非目标
+
+- 不改校验文案、其余校验项（选择数据库、SQL 非空）与测试保存请求逻辑。
+- 不放宽注释、WITH 子句等其他前缀。
+
+### 影响范围预期
+
+- 修改：`apps/dashboard/src/comps/common-component/data-config/database/DatabaseConfig.tsx`
+- 新增 run log：`.ai/runs/2026-09-07-dashboard-sql-select-case/`
+
+### 验收标准
+
+1. 大写 `SELECT` 开头的 SQL 点击「测试SQL并保存」不再误报，正常进入测试请求。
+2. 非 select 开头（不分大小写）的 SQL 仍按原文案拦截。
+3. 该文件 tsc 不新增报错，既有 TS6133 清零。
+
+### 测试要求
+
+- `npx tsc --noEmit`（apps/dashboard）对比基线无新增错误。
+- 手工：大写 SELECT 通过校验；非 select 前缀仍拦截。
+
+## 2026-09-07 追加：分享记录应用状态（appStatus）四态展示与助手创建按钮
+
+### 需求类型
+
+前端接口对接 + UI 补齐（分享记录状态展示、助手编辑页创建按钮；同步写入待后端接口参数确认后接线）。
+
+### 背景
+
+- 后端分享记录表（助手与大屏混存）新增应用状态 `app_status: char(1)`：0-已删除 1-启用中 2-已离线 3-编辑中。其中 2-已离线对应产品口径「历史版本」（版本下线状态）；枚举无「离线版本」档（该色档为技能版本词汇，助手/大屏不使用）。
+- 产品统一按钮链：保存→创建→发布→取消发布，对应 编辑中(橙)→离线版本(蓝)→当前启用(绿)→历史版本(灰)。助手编辑页在历史版本态缺「创建」入口（截图红框标注）。
+- 同步写入确认走方案A：现有 `PUT /project/share/status` 改为一次传多个 shareCode；前端经分享列表收集该应用名下 shareCode 后一次调用（每次点击 1 列表 + 1 更新）。接口传参格式与列表行字段名待后端确认，本轮不接同步调用。
+
+### 目标
+
+1. 两端分享记录卡片（abi `my-assistant/ShareRecordList.tsx`、dashboard `my-screen/ShareRecordList.tsx`）状态标签优先读 `appStatus`（兼容 `app_status`）：3-编辑中(橙 draft) / 1-当前启用(绿) / 2-历史版本(灰 off) / 0-已删除(灰 off)；过期时间优先逻辑不变；字段缺失时回落既有 status 猜测逻辑，行为与改前一致。
+2. 助手编辑抽屉头部新增「创建」按钮：仅 `status==='2'`（历史版本）且非只读时显示；点击复用保存提交（`updateAppApi` 全量 payload、status='0'，从历史版本重新起草稿），成功文案「已创建」并刷新列表。
+3. 颜色复用既有 `ac-tag` 修饰类（abi table.scss 已有 draft/off；dashboard ProjectList.less 补 `draft` 橙），不新增全局样式。
+
+### 非目标
+
+- 不接 `PUT /project/share/status` 同步调用（待后端给：多 shareCode 传参格式、列表行应用 id 字段名、列表行 appStatus 字段名、删除后 0 由谁写入）。
+- 不改大屏设计器头部按钮、技能管理、chat 分享页与分享创建/列表/详情接口协议。
+- 不处理需求文件中已有的冲突标记与历史需求内容。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/app-workshop/my-assistant/ShareRecordList.tsx`
+- `apps/dashboard/src/pages/my-screen/ShareRecordList.tsx`、`apps/dashboard/src/pages/home/project-list/ProjectList.less`
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- run log：`.ai/runs/2026-09-07-share-appstatus-create-button/`
+
+### 验收标准
+
+1. 列表行带 appStatus 时卡片按四态表显示标签与颜色；缺失时展示行为与改前完全一致。
+2. 历史版本态编辑页显示「创建」，点击成功后助手状态变编辑中、列表刷新；其他状态与只读模式不显示。
+3. abi、dashboard 类型检查对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck`、dashboard `tsc --noEmit --skipLibCheck` 对比基线。
+- 手工：分享记录四态展示（待后端返回 appStatus）、历史版本态创建按钮、只读模式不显示。
+
+## 2026-09-09 追加：HTTP 转 MCP 协议转化五类模板对齐 nacos 控制台
+
+### 需求类型
+
+前端缺陷修复（预设模板内容对齐），无接口协议变化。
+
+### 背景
+
+- 创建工具弹窗「协议转化配置」模板生成器的五类模板（原 `CreateToolModal.tsx` 的 `TEMPLATE_PRESETS`）与 nacos 控制台源码 `console-ui/src/pages/AI/McpDetail/CreateTools/AdvancedConfig.js` 的 `generateTemplateByType` 不一致：旧模板手写 `body`/url 拼参、`headers` 为对象形式、`argsPosition` 嵌套在 `requestTemplate` 内部，均不符合网关规范（body/argsToJsonBody/argsToUrlParam/argsToFormBody 四选一互斥、headers 为 `{key,value}` 数组、argsPosition 位于模板顶层）。
+
+### 目标
+
+1. 五类模板（JSON请求体/URL参数/表单数据/自定义请求体/参数位置-Path）逐一改为 nacos 控制台源码值。
+2. 「参数位置-Path」与 nacos 一致改为动态生成：按当前工具参数名（第一个 path、其余 query），无参数时回退 `id/name`，`argsPosition` 置于顶层。
+3. 改动限定 `CreateToolModal.tsx` 单文件内原地修改，不新增模块或测试文件（应用户范围要求收敛）。
+
+### 非目标
+
+- 不改提交字段 `protocolTemplate`、提交校验逻辑、编辑器交互与按钮样式。
+- 不改弹窗打开时的模板初始值（保持现状空值），不引入 nacos 默认模板自动填充。
+- 不触碰无关模块与用户既有未提交改动。
+
+### 影响范围
+
+- 修改：`apps/abi/src/pages/component/system/plugin/components/CreateToolModal.tsx`
+- run log：`.ai/runs/2026-09-09-mcp-protocol-template-align/`
+
+### 验收标准
+
+1. 点击五类模板按钮生成的内容与 nacos 控制台 `generateTemplateByType` 一致（headers 数组、互斥请求体字段、顶层 argsPosition）。
+2. 参数表有参数时「参数位置-Path」按参数名生成 argsPosition；参数表为空回退 `id/name`。
+3. `pnpm --filter chatbi typecheck` 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck` 对比基线（改动文件无新增报错）。
+- 手工：创建工具弹窗点击五类按钮核对编辑器内容；填参数后点「参数位置-Path」核对动态 argsPosition。
+- 应用户要求改动范围收敛为单文件配置值修正，未新增独立模块与测试文件。
+
+## 2026-09-09 追加：HTTP 转 MCP 协议转化配置增/改/明细三态对齐 nacos
+
+### 需求类型
+
+功能补充（UI 一致性对齐）+ 缺陷修复
+
+### 背景
+
+协议转化配置仅创建工具弹窗的模板值已对齐；明细抽屉不展示协议转化配置，编辑态无已发布版本限制逻辑，与 nacos 控制台不一致；且编辑回填读取的 templates key 与写入侧（json-go-template）不一致，导致再次编辑时编辑器内容被套层。
+
+### 目标
+
+1. 明细（PluginDetail）：HTTP 转 MCP 服务按工具展示「协议转化配置」只读块，结构与配色对齐 nacos ShowTools：请求模板配置（HTTP 方法徽章、请求路径 chip、后端认证方式、headers 逐行、body 绿框）、响应模板配置（body/prependBody/appendBody、其他配置、空提示）；数据源 `toolsMeta[toolName].templates['json-go-template']`。
+2. 编辑（PlugUpdate + CreateToolModal）：编辑已发布版本（当前版本号 ∈ allVersions/versionDetail）时版本字段下展示 nacos 同款两行红字提示；服务端禁用描述/协议类型/连接方式开关/端点相关字段，版本号保持可改作为逃生口；工具弹窗新增 `onlyEditRuntimeInfo`：工具名称、参数名/类型/必填/默认值、协议转化编辑器只读（编辑器替换为只读格式化 JSON 盒），仅工具描述、参数描述、启用开关可改。
+3. 修复 PlugUpdate 编辑回填：优先读 `templates['json-go-template']`（与写入侧及 nacos 一致），保留旧 `streamableHttp/sse.protocolTemplate` 回退。
+
+### 非目标
+
+- 不改提交参数结构（toolSpecification/toolsMeta 写入路径不变）。
+- 不新增接口、依赖或路由。
+
+### 影响范围
+
+- 修改：`apps/abi/src/pages/component/system/plugin/components/` 下 `PluginDetail.tsx`、`PlugUpdate.tsx`、`CreateToolModal.tsx`
+- run log：`.ai/runs/2026-09-09-mcp-protocol-template-align/`
+
+### 验收标准
+
+1. 明细抽屉中 HTTP 转 MCP 服务的工具展示协议转化配置块，字段与配色对齐 nacos（method 徽章色值、url chip、headers 蓝框、body 绿框、响应灰框）。
+2. 编辑已发布版本：两行红字提示出现；描述/协议类型/连接开关/地址/端口/传输协议不可改；工具弹窗内仅描述与启用开关可改，协议转化区为只读格式化 JSON。
+3. 版本号改为未发布的新版本后限制解除。
+4. 再编辑存量服务时编辑器展示未套层的协议转化 JSON。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck` 对比基线（改动文件无新增报错）。
+- 手工：新增、编辑已发布版本、改新版本号编辑、明细四路径走查。
+
+## 2026-09-09 追加：助手绑定 MCP 协议分组保存值改为 namespaceId（s_ 前缀）
+
+### 需求类型
+
+前端缺陷修复（保存参数口径），无 UI 变化。
+
+### 背景
+
+- 助手扩展能力 MCP 工具保存时 toolConfig 的 `mcp_sse/mcp_streamable` 原先直接取分组列表的原始 groupId（无前缀），与 `/api/abi-mcp/v1/mcp/register/list` 查询入参 `namespaceId`（`s_${groupId}`）口径不一致；MCP 管理模块的 namespaceId 统一带 `s_` 前缀。
+
+### 目标
+
+1. `mergeOptionNames` 按协议归类时写入 `mcp_sse/mcp_streamable` 的值改为 `s_${groupId}`，与 register/list 的 namespaceId 入参同口径。
+2. 回显链路（详情读回 → 再保存）原样透传不变；存量无前缀数据不做迁移。
+
+### 非目标
+
+- 不改 chat 端读 mcp_sse 判协议的非空逻辑。
+- 不改分组列表查询、工具列表查询入参与其他保存字段。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/tool-picker-drawer.tsx`（仅注释）
+- run log：`.ai/runs/2026-09-09-assistant-mcp-namespace-prefix/`
+
+### 验收标准
+
+1. 新勾选 MCP 工具保存后 toolConfig 的 `mcp_sse`/`mcp_streamable` 数组值为带 `s_` 前缀的 groupId。
+2. 存量助手回显与再保存行为一致（原样透传）。
+3. `pnpm --filter chatbi typecheck` 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck` 对比基线。
+- 手工：助手编辑页勾选 MCP 工具保存，网络面板核对 mcp_sse/mcp_streamable 值带 s_ 前缀。
+
+## 2026-09-09 追加：助手编辑页保存/创建按钮 loading 互串修复
+
+### 需求类型
+
+前端缺陷修复（按钮交互态），无接口变化。
+
+### 背景
+
+- 保存与创建两按钮共用 `loading={saving === 'draft'}`，而 `handleSave` 不区分触发按钮统一 `setSaving('draft')`，导致点任一按钮两个同时转圈。
+
+### 目标
+
+1. saving 态新增 `'create'` 档：`handleSave` 增加 `savingKey` 参数（保存='draft'、创建='create'），创建按钮 `loading={saving === 'create'}`。
+2. 互斥禁用：任一提交进行中其余按钮 disabled（保存↔创建↔发布三态互斥）。
+
+### 非目标
+
+- 不改提交逻辑、payload、成功文案与发布流程（handlePublish 仍用 'publish'）。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- run log：`.ai/runs/2026-09-09-assistant-save-create-loading/`
+
+### 验收标准
+
+1. 点保存仅保存转圈、点创建仅创建转圈；进行中另一按钮置灰。
+2. 发布按钮行为与改前一致。
+3. `pnpm --filter chatbi typecheck` 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck` 对比基线。
+- 手工：保存/创建/发布三按钮互斥 loading 与禁用走查。
+

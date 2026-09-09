@@ -10,6 +10,8 @@ interface CreateToolModalProps {
   readonly initial?: McpToolItem | null;
   readonly schemes?: McpSecurityScheme[];
   readonly restToMcpSwitch?: boolean;
+  /** 编辑已发布版本：仅 Tool/参数描述与启用开关可改，对齐 nacos onlyEditRuntimeInfo */
+  readonly onlyEditRuntimeInfo?: boolean;
   readonly onClose: () => void;
   readonly onOk: (tool: McpToolItem) => void;
 }
@@ -36,14 +38,43 @@ const PARAM_TYPE_OPTIONS: Array<{ label: string; value: ParamType }> = [
   { label: '数组类型 (array)', value: 'array' }
 ];
 
-const TEMPLATE_PRESETS: Array<{ key: string; label: string; color: string; tpl: string }> = [
+/** 参数位置模板在参数表为空时的回退参数名，与 nacos 控制台一致 */
+const FALLBACK_PARAM_NAMES = ['id', 'name'];
+
+/** args-path 模板：argsPosition 在顶层，第一个参数进 path，其余进 query（对齐 nacos 控制台 generateTemplateByType） */
+const buildArgsPositionTpl = (paramNames: string[]): string => {
+  const names = paramNames.length > 0 ? paramNames : FALLBACK_PARAM_NAMES;
+  const argsPosition: Record<string, string> = {};
+  names.forEach((name, index) => {
+    argsPosition[name] = index === 0 ? 'path' : 'query';
+  });
+  return JSON.stringify(
+    {
+      requestTemplate: { method: 'GET', url: 'https://api.example.com/endpoint', headers: [{ key: 'Authorization', value: 'Bearer your key' }] },
+      responseTemplate: { body: '{{.}}' },
+      argsPosition
+    },
+    null,
+    2
+  );
+};
+
+const TEMPLATE_PRESETS: Array<{ key: string; label: string; color: string; tpl: string | ((paramNames: string[]) => string) }> = [
   {
     key: 'json',
     label: 'JSON请求体',
     color: 'blue',
     tpl: JSON.stringify(
       {
-        requestTemplate: { method: 'POST', url: '/api/example', body: '{"foo":"{{.foo}}"}' },
+        requestTemplate: {
+          method: 'POST',
+          url: 'https://api.example.com/endpoint',
+          headers: [
+            { key: 'Content-Type', value: 'application/json' },
+            { key: 'Authorization', value: 'Bearer your key' }
+          ],
+          argsToJsonBody: true
+        },
         responseTemplate: { body: '{{.}}' }
       },
       null,
@@ -56,7 +87,12 @@ const TEMPLATE_PRESETS: Array<{ key: string; label: string; color: string; tpl: 
     color: 'purple',
     tpl: JSON.stringify(
       {
-        requestTemplate: { method: 'GET', url: '/api/example?foo={{.foo}}' },
+        requestTemplate: {
+          method: 'GET',
+          url: 'https://api.example.com/endpoint',
+          headers: [{ key: 'Authorization', value: 'Bearer your key' }],
+          argsToUrlParam: true
+        },
         responseTemplate: { body: '{{.}}' }
       },
       null,
@@ -71,9 +107,12 @@ const TEMPLATE_PRESETS: Array<{ key: string; label: string; color: string; tpl: 
       {
         requestTemplate: {
           method: 'POST',
-          url: '/api/example',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: 'foo={{.foo}}'
+          url: 'https://api.example.com/endpoint',
+          headers: [
+            { key: 'Content-Type', value: 'application/x-www-form-urlencoded' },
+            { key: 'Authorization', value: 'Bearer your key' }
+          ],
+          argsToFormBody: true
         },
         responseTemplate: { body: '{{.}}' }
       },
@@ -87,7 +126,15 @@ const TEMPLATE_PRESETS: Array<{ key: string; label: string; color: string; tpl: 
     color: 'orange',
     tpl: JSON.stringify(
       {
-        requestTemplate: { method: 'POST', url: '/api/example', body: '{{.body}}' },
+        requestTemplate: {
+          method: 'POST',
+          url: 'https://api.example.com/endpoint',
+          headers: [
+            { key: 'Content-Type', value: 'application/json' },
+            { key: 'Authorization', value: 'Bearer your key' }
+          ],
+          body: '{\n  "query": "{{.args.query}}",\n  "limit": {{.args.limit}}\n}'
+        },
         responseTemplate: { body: '{{.}}' }
       },
       null,
@@ -98,14 +145,7 @@ const TEMPLATE_PRESETS: Array<{ key: string; label: string; color: string; tpl: 
     key: 'argsPosition',
     label: '参数位置-Path',
     color: 'red',
-    tpl: JSON.stringify(
-      {
-        requestTemplate: { method: 'GET', url: '/api/example/{{.id}}', argsPosition: { id: 'path' } },
-        responseTemplate: { body: '{{.}}' }
-      },
-      null,
-      2
-    )
+    tpl: buildArgsPositionTpl
   }
 ];
 
@@ -309,6 +349,7 @@ const TreeNode = ({
   onAddChild,
   expandedPaths,
   onToggleExpand,
+  readOnly,
 }: {
   param: ParamRow;
   path: string;
@@ -319,6 +360,7 @@ const TreeNode = ({
   onAddChild: (path: string) => void;
   expandedPaths: Set<string>;
   onToggleExpand: (path: string) => void;
+  readOnly?: boolean;
 }) => {
   const isSelected = path === selectedPath;
   const hasChildren = (param.type === 'object' || param.type === 'array') && param.children && param.children.length > 0;
@@ -398,7 +440,7 @@ const TreeNode = ({
 
         {/* 操作按钮 */}
         <Flex gap={2} style={{ flexShrink: 0, marginLeft: 4 }}>
-          {canHaveChildren && (
+          {canHaveChildren && !readOnly && (
             <span
               onClick={(e) => { e.stopPropagation(); onAddChild(path); }}
               style={{
@@ -412,7 +454,7 @@ const TreeNode = ({
               <PlusOutlined />
             </span>
           )}
-          {isSelected && (
+          {isSelected && !readOnly && (
             <span
               onClick={e => { e.stopPropagation(); onRemove(path); }}
               style={{
@@ -443,6 +485,7 @@ const TreeNode = ({
               onAddChild={onAddChild}
               expandedPaths={expandedPaths}
               onToggleExpand={onToggleExpand}
+              readOnly={readOnly}
             />
           ))}
         </div>
@@ -451,7 +494,7 @@ const TreeNode = ({
   );
 };
 
-export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onClose, onOk }: CreateToolModalProps) => {
+export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onlyEditRuntimeInfo = false, onClose, onOk }: CreateToolModalProps) => {
   const [form] = Form.useForm();
   const [params, setParams] = useState<ParamRow[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -474,7 +517,8 @@ export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onClos
     });
     const initParams = parseSchemaProperties(initial?.inputSchema);
     setParams(initParams);
-    setSelectedPath(initParams.length > 0 ? '0' : null);
+    // 参数详情默认关闭，由用户点击参数行打开
+    setSelectedPath(null);
     setRootExpanded(true);
     setProtocolTpl(initial?.protocolTemplate || '');
     // 默认展开第一层有子节点的参数
@@ -490,7 +534,6 @@ export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onClos
   const addParam = () => {
     setParams(prev => {
       const next = [...prev, { name: `NewArg${prev.length + 1}`, type: 'string' as ParamType, description: '', required: false, defaultValue: '' }];
-      setSelectedPath(String(next.length - 1));
       return next;
     });
     setRootExpanded(true);
@@ -631,7 +674,8 @@ export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onClos
             <div>
               <label style={labelStyle}><span style={{ color: C.danger, marginRight: 4 }}>*</span>Tool 名称</label>
               <Form.Item name="name" noStyle rules={[{ message: '请输入 Tool 名称', required: true }]}>
-                <Input placeholder="请输入工具名称" />
+                {/* 编辑模式锁定名称，对齐 nacos BasicInfo 名称 isPreview */}
+                <Input placeholder="请输入工具名称" disabled={!!initial} />
               </Form.Item>
             </div>
             <div>
@@ -658,15 +702,21 @@ export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onClos
             borderRadius: 8,
             padding: 16,
           }}>
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={addParam}
-              block
-              style={{ marginBottom: 16, borderColor: C.primaryBorder, color: C.primary }}
-            >
-              添加参数
-            </Button>
+            {onlyEditRuntimeInfo ? (
+              <div style={{ background: '#fff7e6', border: '1px solid #ffd591', color: '#fa8c16', fontSize: 12, padding: '6px 12px', borderRadius: 6, marginBottom: 16 }}>
+                当前正在修改已发布的版本，只能修改Tool以及参数的描述信息以及开关
+              </div>
+            ) : (
+              <Button
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={addParam}
+                block
+                style={{ marginBottom: 16, borderColor: C.primaryBorder, color: C.primary }}
+              >
+                添加参数
+              </Button>
+            )}
 
             {/* 列头 */}
             <div style={{
@@ -715,11 +765,13 @@ export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onClos
                     path={String(idx)}
                     depth={0}
                     selectedPath={selectedPath}
-                    onSelect={setSelectedPath}
+                    // 点击已选中参数时取消选中，关闭参数详情
+                    onSelect={p => setSelectedPath(prev => (prev === p ? null : p))}
                     onRemove={handleRemoveParam}
                     onAddChild={handleAddChild}
                     expandedPaths={expandedPaths}
                     onToggleExpand={handleToggleExpand}
+                    readOnly={onlyEditRuntimeInfo}
                   />
                 ))}
               </div>
@@ -737,6 +789,7 @@ export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onClos
                 <Input
                   value={selected.name}
                   placeholder="请输入参数名"
+                  disabled={onlyEditRuntimeInfo}
                   onChange={e => updateParam(selectedPath, { name: e.target.value })}
                 />
               </div>
@@ -746,6 +799,7 @@ export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onClos
                   value={selected.type}
                   style={{ width: '100%' }}
                   options={PARAM_TYPE_OPTIONS}
+                  disabled={onlyEditRuntimeInfo}
                   onChange={v => {
                     const patch: Partial<ParamRow> = { type: v };
                     // 切换到 object/array 时初始化 children
@@ -774,6 +828,7 @@ export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onClos
                     checked={!!selected.required}
                     checkedChildren="必填"
                     unCheckedChildren="可选"
+                    disabled={onlyEditRuntimeInfo}
                     onChange={v => updateParam(selectedPath, { required: v })}
                   />
                   <span style={{ color: C.textSecondary, fontSize: 12 }}>{selected.required ? '必填' : '可选'}</span>
@@ -803,39 +858,70 @@ export const CreateToolModal = ({ open, initial, restToMcpSwitch = false, onClos
               borderRadius: 8,
               padding: 16,
             }}>
-              <div style={{ color: C.textSecondary, fontSize: 12, marginBottom: 10 }}>
-                配置模板生成器 — 点击快速生成对应类型的配置模板
-              </div>
-              <Flex gap={8} wrap="wrap" style={{ marginBottom: 12 }}>
-                {TEMPLATE_PRESETS.map(preset => (
-                  <Tag.CheckableTag
-                    key={preset.key}
-                    checked={false}
-                    onChange={() => setProtocolTpl(preset.tpl)}
-                    style={{
-                      padding: '3px 12px',
-                      border: `1px solid ${C.primaryBorder}`,
-                      borderRadius: 6,
-                      background: 'transparent',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <span style={{ color: C.primary, fontSize: 12, fontWeight: 500 }}>{preset.label}</span>
-                  </Tag.CheckableTag>
-                ))}
-              </Flex>
-              <div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>
-                💡 包含完整的请求和响应配置；参数位置模式通过 argsPosition 指定每个参数在请求中的位置
-              </div>
-              <div style={{ border: `1px solid ${C.border}`, borderRadius: 6, overflow: 'hidden', marginTop: 8 }}>
-                <Editor
-                  height="200px"
-                  defaultLanguage="json"
-                  value={protocolTpl}
-                  onChange={v => setProtocolTpl(v || '')}
-                  options={{ minimap: { enabled: false }, fontSize: 13, lineNumbers: 'on', scrollBeyondLastLine: false }}
-                />
-              </div>
+              {!onlyEditRuntimeInfo && (
+                <>
+                  <div style={{ color: C.textSecondary, fontSize: 12, marginBottom: 10 }}>
+                    配置模板生成器 — 点击快速生成对应类型的配置模板
+                  </div>
+                  <Flex gap={8} wrap="wrap" style={{ marginBottom: 12 }}>
+                    {TEMPLATE_PRESETS.map(preset => (
+                      <Tag.CheckableTag
+                        key={preset.key}
+                        checked={false}
+                        onChange={() => setProtocolTpl(typeof preset.tpl === 'function' ? preset.tpl(params.map(p => p.name)) : preset.tpl)}
+                        style={{
+                          padding: '3px 12px',
+                          border: `1px solid ${C.primaryBorder}`,
+                          borderRadius: 6,
+                          background: 'transparent',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <span style={{ color: C.primary, fontSize: 12, fontWeight: 500 }}>{preset.label}</span>
+                      </Tag.CheckableTag>
+                    ))}
+                  </Flex>
+                  <div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>
+                    💡 包含完整的请求和响应配置；参数位置模式通过 argsPosition 指定每个参数在请求中的位置
+                  </div>
+                </>
+              )}
+              {onlyEditRuntimeInfo ? (
+                <div
+                  style={{
+                    background: '#f6f7f9',
+                    border: '1px solid #dcdee3',
+                    borderRadius: 8,
+                    padding: 16,
+                    fontSize: 13,
+                    fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    maxHeight: 400,
+                    overflow: 'auto',
+                    marginTop: 8,
+                  }}
+                >
+                  {(() => {
+                    try {
+                      return JSON.stringify(JSON.parse(protocolTpl), null, 2);
+                    } catch {
+                      return protocolTpl;
+                    }
+                  })()}
+                </div>
+              ) : (
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 6, overflow: 'hidden', marginTop: 8 }}>
+                  <Editor
+                    height="200px"
+                    defaultLanguage="json"
+                    value={protocolTpl}
+                    onChange={v => setProtocolTpl(v || '')}
+                    options={{ minimap: { enabled: false }, fontSize: 13, lineNumbers: 'on', scrollBeyondLastLine: false }}
+                  />
+                </div>
+              )}
               <div style={{ color: C.textMuted, fontSize: 11, marginTop: 8 }}>
                 通过网关提供的协议转换模版进行协议转化，详见{' '}
                 <a href="https://nacos.io/docs/v3.0/manual/user/mcp-template" target="_blank" rel="noreferrer" style={{ color: C.primary }}>

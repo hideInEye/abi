@@ -1,4 +1,4 @@
-import { ApiOutlined, CloudServerOutlined, SafetyCertificateOutlined, ToolOutlined, CloseOutlined, EditOutlined, DeleteOutlined, ImportOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons'
+import { CloseOutlined, ImportOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons'
 import { Form, Tabs, Button, Input, Select, Space, Typography, message, Switch } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { useEffect, useState } from 'react'
@@ -9,6 +9,7 @@ import { importMcpTools } from '@/service/api/pulg'
 import { CreateToolModal } from './CreateToolModal'
 import { ImportOpenApiModal } from './ImportOpenApiModal'
 import { SecuritySchemeSection } from './SecuritySchemeSection'
+import { ToolsPanel } from './ToolsPanel'
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -40,6 +41,14 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
   const [autoImporting, setAutoImporting] = useState(false)
   const [activeTab, setActiveTab] = useState('general')
   const [selectedProtocol, setSelectedProtocol] = useState<string>('sse')
+
+  const versionValue = Form.useWatch('version', form)
+  // 编辑已发布版本（当前版本号已在版本历史中）：对齐 nacos，仅 Tool/参数描述/开关可改
+  const publishedEdit =
+    !!currentEdit &&
+    [...(currentEdit.allVersions ?? []).map(v => v.version), currentEdit.versionDetail?.version ?? '']
+      .filter(Boolean)
+      .includes(versionValue || '')
 
   const openImportOpenApi = () => setImportModalOpen(true)
   const handleImportOpenApi = (data: { tools: McpToolItem[]; schemes: McpSecurityScheme[] }) => {
@@ -183,13 +192,20 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
         setSecurityExtensions(toolSpec.extensions ?? {})
         const toolList = (toolSpec.tools ?? []).map(tool => {
           const meta = toolSpec.toolsMeta?.[tool.name]
-          const tpl = meta?.templates?.[proto === 'streamablehttp' ? 'streamableHttp' : 'sse']?.protocolTemplate
+          // 优先读 json-go-template（与写入侧及 nacos 一致），回退旧 streamableHttp/sse.protocolTemplate
+          const tplObj = meta?.templates?.['json-go-template']
+          const tpl =
+            typeof tplObj === 'string'
+              ? tplObj
+              : tplObj && typeof tplObj === 'object'
+                ? JSON.stringify(tplObj, null, 2)
+                : meta?.templates?.[proto === 'streamablehttp' ? 'streamableHttp' : 'sse']?.protocolTemplate
           return {
             name: tool.name,
             description: tool.description || '',
             enabled: meta?.enabled ?? true,
             inputSchema: tool.inputSchema,
-            protocolTemplate: tpl || JSON.stringify(meta?.templates || {}, null, 2),
+            protocolTemplate: tpl || '',
             passthroughAuth: !!meta?.invokeContext?.passthroughAuth,
             backendSecuritySchemeId: meta?.invokeContext?.backendSecuritySchemeId,
             clientSecuritySchemeId: meta?.invokeContext?.clientSecuritySchemeId
@@ -251,8 +267,9 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
                 <span style={{ color: '#ff4d4f' }}>*</span> MCP服务名称
               </Text>
             </div>
+            {/* 编辑已有服务时锁定名称，对齐 nacos BasicInfo name isPreview */}
             <Form.Item name="mcp_name" noStyle rules={[{ required: true, message: '请输入MCP服务名称' }]}>
-              <Input placeholder="请输入MCP服务名称" />
+              <Input placeholder="请输入MCP服务名称" disabled={!!currentEdit} />
             </Form.Item>
           </div>
           <div>
@@ -267,6 +284,7 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
                 placeholder="请选择协议类型"
                 onChange={(value) => setSelectedProtocol(value)}
                 style={{ width: '160px' }}
+                disabled={!!currentEdit}
               />
             </Form.Item>
             {selectedProtocol && (
@@ -284,6 +302,12 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
             <Form.Item name="version" noStyle rules={[{ required: true, message: '请输入服务版本' }]}>
               <Input placeholder="如 1.0.0" />
             </Form.Item>
+            {publishedEdit && (
+              <div style={{ marginTop: 4, color: '#ff4d4f', fontSize: 12, lineHeight: 1.7 }}>
+                <div>当前正在修改已发布的版本，只能修改Tool以及参数的描述信息以及开关</div>
+                <div>修改其他信息请使用新的版本号</div>
+              </div>
+            )}
           </div>
         </div>
         <div style={{ marginTop: 16 }}>
@@ -291,7 +315,7 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
             <Text type="secondary" style={{ fontSize: 12 }}>描述信息</Text>
           </div>
           <Form.Item name="description" noStyle>
-            <TextArea rows={3} placeholder="请输入描述信息" />
+            <TextArea rows={3} placeholder="请输入描述信息" disabled={publishedEdit} />
           </Form.Item>
         </div>
       </div>
@@ -309,6 +333,7 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
             <ASwitch
               type="switch"
               checked={restToMcpSwitch}
+              disabled={!!currentEdit}
               onChange={(v: boolean) => {
                 setRestToMcpSwitch(v)
                 form.setFieldValue('restToMcpSwitch', v)
@@ -328,7 +353,7 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
               </Text>
             </div>
             <AForm.Item name="mcpEndpointUrl" noStyle rules={[{ required: true, message: '请输入 MCP 服务端点 URL' }]}>
-              <AInput placeholder="请输入完整的 MCP 服务端点 URL，如 https://example.com/mcp" />
+              <AInput placeholder="请输入完整的 MCP 服务端点 URL，如 https://example.com/mcp" disabled={publishedEdit} />
             </AForm.Item>
           </div>
         ) : (
@@ -340,7 +365,7 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
                 </Text>
               </div>
               <AForm.Item name="address" noStyle rules={[{ required: true, message: '请输入服务地址' }]}>
-                <AInput placeholder="如 ip地址 或 服务域名" />
+                <AInput placeholder="如 ip地址 或 服务域名" disabled={publishedEdit} />
               </AForm.Item>
             </div>
             <div style={{ flex: 2 }}>
@@ -350,7 +375,7 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
                 </Text>
               </div>
               <AForm.Item name="port" noStyle rules={[{ required: true, message: '请输入端口' }]}>
-                <AInput placeholder="如 8080" />
+                <AInput placeholder="如 8080" disabled={publishedEdit} />
               </AForm.Item>
             </div>
             <div style={{ flex: 2 }}>
@@ -362,6 +387,7 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
               <AForm.Item name="transport" noStyle rules={[{ required: true, message: '请选择传输协议' }]}>
                 <ASelect
                   placeholder="选择协议"
+                  disabled={publishedEdit}
                   options={[
                     { label: 'HTTP', value: 'HTTP' },
                     { label: 'HTTPS', value: 'HTTPS' }
@@ -389,223 +415,98 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
   // Tools Tab Content
   const toolsTabContent = (
     <>
-      {/* 工具操作按钮 */}
-      <div style={{ 
-        marginBottom: 20, 
-        display: 'flex', 
-        gap: 12,
-        padding: '16px 20px',
-        background: 'linear-gradient(135deg, rgba(91, 124, 247, 0.04) 0%, rgba(0, 212, 255, 0.02) 100%)',
-        borderRadius: 10,
-        border: '1px solid rgba(91, 124, 247, 0.12)',
-      }}>
-        {restToMcpSwitch ? (
-          <>
+      {/* 工具操作按钮（编辑已发布版本时整行隐藏：无新增/导入入口、不展示工具计数） */}
+      {!publishedEdit && (
+        <div style={{ 
+          marginBottom: 20, 
+          display: 'flex', 
+          gap: 12,
+          padding: '16px 20px',
+          background: 'linear-gradient(135deg, rgba(91, 124, 247, 0.04) 0%, rgba(0, 212, 255, 0.02) 100%)',
+          borderRadius: 10,
+          border: '1px solid rgba(91, 124, 247, 0.12)',
+        }}>
+          {restToMcpSwitch ? (
+            <>
+              <Button 
+                className="btn-accent-gradient" 
+                icon={<PlusOutlined />} 
+                onClick={openCreateTool}
+                style={{ fontWeight: 600 }}
+              >
+                添加工具
+              </Button>
+              <Button 
+                icon={<ImportOutlined />} 
+                onClick={openImportOpenApi}
+                style={{ borderColor: 'rgba(91, 124, 247, 0.3)', color: '#5b7cf7' }}
+              >
+                从 OpenAPI 导入
+              </Button>
+            </>
+          ) : (
             <Button 
-              className="btn-accent-gradient" 
-              icon={<PlusOutlined />} 
-              onClick={openCreateTool}
+              className="btn-accent-gradient"
+              icon={<DownloadOutlined />} 
+              onClick={handleAutoImport}
+              loading={autoImporting}
               style={{ fontWeight: 600 }}
             >
-              添加工具
+              从 MCP 服务自动导入
             </Button>
-            <Button 
-              icon={<ImportOutlined />} 
-              onClick={openImportOpenApi}
-              style={{ borderColor: 'rgba(91, 124, 247, 0.3)', color: '#5b7cf7' }}
-            >
-              从 OpenAPI 导入
-            </Button>
-          </>
-        ) : (
-          <Button 
-            className="btn-accent-gradient"
-            icon={<DownloadOutlined />} 
-            onClick={handleAutoImport}
-            loading={autoImporting}
-            style={{ fontWeight: 600 }}
-          >
-            从 MCP 服务自动导入
-          </Button>
-        )}
-        {tools.length > 0 && (
-          <div style={{ 
-            marginLeft: 'auto', 
-            display: 'flex', 
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 13,
-            color: '#6b7280'
-          }}>
-            <span style={{
-              display: 'inline-flex',
+          )}
+          {tools.length > 0 && (
+            <div style={{ 
+              marginLeft: 'auto', 
+              display: 'flex', 
               alignItems: 'center',
-              justifyContent: 'center',
-              width: 24,
-              height: 24,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
-              color: '#fff',
-              fontSize: 12,
-              fontWeight: 700,
+              gap: 8,
+              fontSize: 13,
+              color: '#6b7280'
             }}>
-              {tools.length}
-            </span>
-            <span>个工具</span>
-          </div>
-        )}
-      </div>
-
-      {tools.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {tools.map((tool, idx) => (
-            <div
-              key={idx}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #eef0f5',
-                borderRadius: 10,
-                padding: '18px 20px',
-                marginBottom: 0,
-                transition: 'all 0.2s ease',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(91, 124, 247, 0.12)';
-                e.currentTarget.style.borderColor = 'rgba(91, 124, 247, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.04)';
-                e.currentTarget.style.borderColor = '#eef0f5';
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: tool.description ? 12 : 0 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    background: 'linear-gradient(135deg, rgba(91, 124, 247, 0.1) 0%, rgba(0, 212, 255, 0.08) 100%)',
-                    color: '#5b7cf7',
-                    fontSize: 16,
-                    flexShrink: 0,
-                  }}>
-                    <ToolOutlined />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: tool.description ? 6 : 0 }}>
-                      <strong style={{ fontSize: 14, color: '#1a2340', fontWeight: 600 }}>{tool.name}</strong>
-                      {tool.enabled === false ? (
-                        <span style={{ 
-                          fontSize: 11, 
-                          color: '#9ca3af', 
-                          background: '#f3f4f6', 
-                          padding: '2px 8px', 
-                          borderRadius: 4,
-                          fontWeight: 500,
-                        }}>
-                          已禁用
-                        </span>
-                      ) : (
-                        <span style={{ 
-                          fontSize: 11, 
-                          color: '#10b981', 
-                          background: 'rgba(16, 185, 129, 0.08)', 
-                          padding: '2px 8px', 
-                          borderRadius: 4,
-                          fontWeight: 500,
-                        }}>
-                          已启用
-                        </span>
-                      )}
-                    </div>
-                    {tool.description && (
-                      <div style={{ 
-                        color: '#6b7280', 
-                        fontSize: 13, 
-                        lineHeight: 1.6,
-                        marginTop: 0,
-                      }}>
-                        {tool.description}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 12 }}>
-                  <Button 
-                    type="text" 
-                    size="small" 
-                    icon={<EditOutlined />} 
-                    onClick={() => openEditTool(idx)}
-                    style={{ 
-                      color: '#5b7cf7',
-                      fontSize: 12,
-                      padding: '4px 8px',
-                    }}
-                  >
-                    编辑
-                  </Button>
-                  <Button 
-                    type="text" 
-                    size="small" 
-                    icon={<DeleteOutlined />} 
-                    onClick={() => removeTool(idx)}
-                    style={{ 
-                      color: '#ef4444',
-                      fontSize: 12,
-                      padding: '4px 8px',
-                    }}
-                  >
-                    删除
-                  </Button>
-                </div>
-              </div>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%)',
+                color: '#fff',
+                fontSize: 12,
+                fontWeight: 700,
+              }}>
+                {tools.length}
+              </span>
+              <span>个工具</span>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '60px 40px',
-          background: '#fafbfc',
-          borderRadius: 10,
-          border: '2px dashed #e5e7eb',
-        }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 64,
-            height: 64,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, rgba(91, 124, 247, 0.08) 0%, rgba(0, 212, 255, 0.06) 100%)',
-            marginBottom: 16,
-          }}>
-            <ToolOutlined style={{ fontSize: 28, color: '#5b7cf7' }} />
-          </div>
-          <div style={{ 
-            fontSize: 15, 
-            fontWeight: 600,
-            color: '#374151',
-            marginBottom: 8 
-          }}>
-            暂无工具配置
-          </div>
-          <div style={{ 
-            fontSize: 13, 
-            color: '#9ca3af',
-            lineHeight: 1.6,
-          }}>
-            {restToMcpSwitch 
-              ? '点击"添加工具"手动创建，或"从 OpenAPI 导入"批量导入' 
-              : '点击"从 MCP 服务自动导入"获取工具列表'}
-          </div>
+          )}
         </div>
       )}
+
+      <ToolsPanel
+        tools={tools}
+        restToMcp={restToMcpSwitch}
+        templateOf={t => {
+          // 优先读本地未保存的编辑值，新增/修改工具后无需保存即可展示
+          const local = (t as McpToolItem & { protocolTemplate?: string }).protocolTemplate
+          if (local) {
+            try {
+              return JSON.parse(local)
+            } catch {
+              return null
+            }
+          }
+          const d = currentEdit?.toolSpec?.toolsMeta?.[t.name]?.templates?.['json-go-template']
+          return d && typeof d === 'object' ? d : null
+        }}
+        onEdit={openEditTool}
+        // 编辑已发布版本不可删工具，对齐 nacos（卡片仅保留编辑链接）
+        onDelete={publishedEdit ? undefined : removeTool}
+        emptyTip={restToMcpSwitch
+          ? '点击"添加工具"手动创建，或"从 OpenAPI 导入"批量导入'
+          : '点击"从 MCP 服务自动导入"获取工具列表'}
+      />
     </>
   )
 
@@ -627,7 +528,7 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
       open={open}
       title={currentEdit ? '编辑 MCP 服务' : '新增 MCP 服务'}
       onClose={onClose}
-      width={720}
+      width={960}
       footer={<DrawerFooter onClose={onClose} onSubmit={() => form.submit()} />}
       extra={
         <Button
@@ -647,6 +548,7 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
         initial={editingToolIdx !== null ? tools[editingToolIdx] : null}
         schemes={securitySchemes}
         restToMcpSwitch={restToMcpSwitch}
+        onlyEditRuntimeInfo={publishedEdit}
         onClose={() => setToolModalOpen(false)}
         onOk={handleToolModalOk}
       />

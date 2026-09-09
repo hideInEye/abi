@@ -106,6 +106,14 @@ export default class FetchUtil {
     }
 
     /**
+     * PUT请求（query 传参，无 body）
+     */
+    static async put(url: string, options: RequestInit = {}): Promise<HttpResponse> {
+        options.method = 'PUT';
+        return FetchUtil.request(url, options);
+    }
+
+    /**
      * 请求的标准返回结果必须包含code、msg字段，data字段可选，且code为200时，data为有效数据
      * @param url
      * @param options

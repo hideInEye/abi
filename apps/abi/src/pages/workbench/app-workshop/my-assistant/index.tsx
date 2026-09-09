@@ -6,6 +6,7 @@ import { AssistantIconBlock } from '@/components/AssistantIcon';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { fetchAppListApi, updateAppApi } from '@/service/api/abi-chat-app';
+import { syncShareAppStatus } from '@/service/api/share';
 import { tableSemanticsGroupList } from '@/service/api/table-semantics';
 import { filterByCreateTime } from '@/utils/date';
 
@@ -154,7 +155,9 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
         try {
           await updateAppApi({ appId: agent.id, appName: agent.name, status: '2' });
           message.success('已取消发布');
+          await syncShareAppStatus({ projectId: agent.id, type: 'workflow', spaceId: spaceId || undefined, appStatus: 2 });
           fetchList();
+          setShareRefreshToken(t => t + 1);
         } catch {
           message.error('取消发布失败');
         }
