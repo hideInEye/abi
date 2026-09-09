@@ -5,6 +5,7 @@ import type { AxiosInstance, AxiosResponse } from 'axios';
 
 import { handleLoginExpired } from '@/utils/auth';
 
+import { shouldHandleLoginExpiredForRequest } from './auth-policy';
 import { showErrorMsg } from './shared';
 import type { RequestInstanceState } from './type';
 
@@ -23,7 +24,8 @@ export async function backEndFail(
   // if (isTestConnect) {
   //   return null;
   // }
-  if (isUnauthorizedResponse(response)) {
+  // Explicit logout must keep the local session intact when the server rejects it.
+  if (isUnauthorizedResponse(response) && shouldHandleLoginExpiredForRequest(response.config?.url)) {
     await handleLoginExpired();
 
     throw new AxiosError<App.Service.Response<unknown>>(
@@ -74,7 +76,7 @@ export function handleError(
     backendErrorCode = String(error.response?.data?.code || '');
   }
 
-  if (error.response?.status === 401 || backendErrorCode === '401') {
+  if ((error.response?.status === 401 || backendErrorCode === '401') && shouldHandleLoginExpiredForRequest(error.config?.url)) {
     handleLoginExpired();
     return;
   }

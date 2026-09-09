@@ -1,3 +1,53 @@
+# 鉴权接口路由迁移与退出登录成功门禁
+
+## 文档状态
+
+- 状态：已实现并完成代码级回归检查；按用户要求未执行测试或构建，待接口联调验证。
+- 日期：2026-09-09。
+- 需求来源：用户要求将系统中 `/api/auth/xxx` 鉴权接口迁移为 `/api/xxx`，并要求退出登录只有在 `/api/logout` 成功后才能继续清理登录态和跳转。
+- 需求类型：前端接口协议迁移与鉴权流程缺陷修复。
+
+## 目标
+
+1. 将 ABI 中所有 `/api/auth/xxx` 接口路径去除 `/auth` 层级，分别迁移到对应的 `/api/xxx` 路径。
+2. ABI 和 Chat 的显式退出入口统一先调用 `POST /api/logout`。
+3. 只有退出接口明确成功后，才允许清理 token、用户信息、路由/页签状态并跳转登录页。
+4. 退出接口业务失败、网络失败或返回 401 时，保留当前登录态和页面，不执行任何成功链路，并允许用户重试。
+
+## 非目标
+
+- 不修改登录、验证码和用户信息接口的请求方法、参数、响应结构或成功码约定。
+- 不修改普通请求 401 时既有的登录过期处理、并发去重和跳转延迟。
+- 不修改后端实现、动态业务路由、登录页面或退出确认弹窗视觉。
+- 不将业务接口地址写入 `packages/auth`，不重构与当前鉴权流程无关的模块。
+
+## 影响范围
+
+- `apps/abi/src/service/api/auth.ts`、`apps/abi/src/service/api/platform.ts`。
+- `apps/abi/src/service/logout.ts`、`apps/abi/src/utils/auth.ts`、显式退出入口与内置 `/logout` action。
+- `apps/abi/src/service/request/error.ts` 中退出接口 401 的失败保留逻辑。
+- `apps/chat/src/service/api/auth.ts`、`apps/chat/src/service/logout.ts`、用户退出入口和请求层退出 401 的失败保留逻辑。
+- 上述小模块对应 Vitest 与本轮 run log。
+
+## 验收标准
+
+1. 验证码、登录、自定义认证错误接口分别请求 `/api/captchaImage`、`/api/login`、`/api/error`，仓库业务源码中不再存在 `/api/auth/xxx` 请求路径。
+2. ABI 与 Chat 点击确认退出后先发起 `POST /api/logout`，请求携带现有 Authorization。
+3. `/api/logout` 成功时才执行本地鉴权清理和登录页跳转；内置 `/logout` action 同样先等待接口成功。
+4. `/api/logout` 业务失败、网络失败或 401 时，不清 token、不重置 store、不跳转登录页，确认操作保持失败状态并可重试。
+5. 普通接口返回 401 时仍沿用既有登录过期处理，不受退出接口特例影响。
+
+## 测试要求
+
+- 用户于 2026-09-09 追加要求：本轮不执行测试或构建，仅完成代码修改和变更记录；下列命令保留为后续验证清单。
+- 补充 ABI 鉴权 API 路径测试，覆盖全部迁移路径与 `POST /api/logout`。
+- 补充 ABI 退出编排测试，覆盖等待接口、成功后继续、失败时阻断；补充请求层普通 401 与退出 401 的分流测试。
+- 补充 Chat 退出编排和退出响应成功判定测试，覆盖成功、业务失败和请求异常；验证确认回调返回退出 Promise。
+- 执行相关定向 Vitest、`pnpm test`、`pnpm --filter chatbi typecheck`、`pnpm --filter ai-bot exec tsc --noEmit`、相关应用构建与 `git diff --check`。
+- 创建 `.ai/runs/2026-09-09-auth-route-and-logout-gate/RUN_LOG.md`。
+
+---
+
 # 自定义指标预计算配置显示条件修复
 
 ## 文档状态
@@ -1566,4 +1616,3 @@ Bug 修复延续（分享记录复制缺密码）+ 接口对接调整。
 
 - `pnpm typecheck`（apps/abi）对比基线无新增错误。
 - 手工：下拉入口显示；子菜单配置后导航与 VerticalMenu 标签。
-
