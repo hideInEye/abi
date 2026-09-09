@@ -4,7 +4,7 @@ import { apiRequest, request } from '../request';
 export function fetchCaptchaImage() {
   return apiRequest<Api.Auth.CaptchaImage>({
     method: 'get',
-    url: '/api/auth/captchaImage'
+    url: '/api/captchaImage'
   });
 }
 
@@ -21,7 +21,14 @@ export function fetchLogin(userName: string, password: string) {
       username: userName
     },
     method: 'post',
-    url: '/api/auth/login'
+    url: '/api/login'
+  });
+}
+
+export function fetchLogout() {
+  return apiRequest({
+    method: 'post',
+    url: '/api/logout'
   });
 }
 
@@ -37,7 +44,7 @@ export function fetchGetUserInfo() {
  * @param msg error message
  */
 export function fetchCustomBackendError(code: string, msg: string) {
-  return request({ params: { code, msg }, url: '/api/auth/error' });
+  return request({ params: { code, msg }, url: '/api/error' });
 }
 
 /** 嵌入onenet时获取登录token接口 */
