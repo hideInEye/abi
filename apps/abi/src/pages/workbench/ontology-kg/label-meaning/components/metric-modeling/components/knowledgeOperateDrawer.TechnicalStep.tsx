@@ -26,6 +26,7 @@ interface Props {
   readonly form: FormInstance<KnowledgeFormValues>
   readonly indicatorClass: string
   readonly indicatorOptionsLoading?: boolean
+  readonly onIndicatorLoadMore: () => void
   readonly onIndicatorSearch: (searchText: string) => void
   readonly onRetryFields?: () => void
   readonly referenceMetricOptions: AtomicMetricOption[]
@@ -49,6 +50,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
   form,
   indicatorClass,
   indicatorOptionsLoading,
+  onIndicatorLoadMore,
   onIndicatorSearch,
   onRetryFields,
   referenceMetricOptions,
@@ -95,6 +97,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择原子指标"
+                onLoadMore={onIndicatorLoadMore}
                 onSearch={onIndicatorSearch}
               />
             </AForm.Item>
@@ -166,6 +169,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
             validateRollingWindow={validateRollingWindow}
             validateThresholdMax={validateThresholdMax}
             validateThresholdValue={validateThresholdValue}
+            onIndicatorLoadMore={onIndicatorLoadMore}
             onIndicatorSearch={onIndicatorSearch}
           />
         </>

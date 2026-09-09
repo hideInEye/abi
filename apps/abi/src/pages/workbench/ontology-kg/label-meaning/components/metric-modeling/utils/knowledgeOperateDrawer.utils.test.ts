@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  appendMetricIndicatorSearchResults,
   buildMetricIndicatorSearchQuery,
   extractUniqueIds,
   formatMappedDimensionOptionTitle,
   getMappedMetricFieldDisplayName,
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
+  hasMoreMetricIndicatorSearchResults,
   mergeMetricIndicatorSearchResults,
   shouldShowMetricPrecomputeConfig,
 } from './knowledgeOperateDrawer.utils'
@@ -75,10 +77,16 @@ describe('metric indicator fuzzy search', () => {
     expect(buildMetricIndicatorSearchQuery('  支付金额  ', 82)).toEqual({
       bizName: '支付金额',
       pageNum: 1,
-      pageSize: 1000,
+      pageSize: 10,
       spaceId: 82,
     })
     expect(buildMetricIndicatorSearchQuery('   ', 82).bizName).toBeUndefined()
+    expect(buildMetricIndicatorSearchQuery('支付金额', 82, 2)).toEqual({
+      bizName: '支付金额',
+      pageNum: 2,
+      pageSize: 10,
+      spaceId: 82,
+    })
   })
 
   it('keeps selected indicators while replacing stale unselected results', () => {
@@ -112,5 +120,31 @@ describe('metric indicator fuzzy search', () => {
       { bizName: '订单数量', indId: 2, indicatorClass: 'atomic' },
       selected,
     ])
+  })
+
+  it('appends the next page in order and deduplicates repeated indicators', () => {
+    const result = appendMetricIndicatorSearchResults(
+      [
+        { bizName: '支付金额', indId: 1, indicatorClass: 'atomic', semanticSchemaName: '交易语义' },
+        { bizName: '订单数量', indId: 2, indicatorClass: 'atomic' },
+      ],
+      [
+        { bizName: '订单笔数', indId: 2, indicatorClass: 'atomic' },
+        { bizName: '客单价', indId: 3, indicatorClass: 'derived' },
+      ],
+    )
+
+    expect(result).toEqual([
+      { bizName: '支付金额', indId: 1, indicatorClass: 'atomic', semanticSchemaName: '交易语义' },
+      { bizName: '订单笔数', indId: 2, indicatorClass: 'atomic' },
+      { bizName: '客单价', indId: 3, indicatorClass: 'derived' },
+    ])
+  })
+
+  it('uses total when available and falls back to the current page size', () => {
+    expect(hasMoreMetricIndicatorSearchResults(21, 10, 2)).toBe(true)
+    expect(hasMoreMetricIndicatorSearchResults('20', 10, 2)).toBe(false)
+    expect(hasMoreMetricIndicatorSearchResults(undefined, 10, 2)).toBe(true)
+    expect(hasMoreMetricIndicatorSearchResults(undefined, 9, 2)).toBe(false)
   })
 })

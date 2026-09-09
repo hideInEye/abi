@@ -59,4 +59,37 @@ describe('KnowledgeIndicatorSearchSelect', () => {
     element.props.onDropdownVisibleChange(true)
     expect(onSearch).toHaveBeenCalledWith('')
   })
+
+  it('loads the next page only when the dropdown reaches the bottom threshold', () => {
+    const onLoadMore = vi.fn()
+    const element = KnowledgeIndicatorSearchSelect({
+      onLoadMore,
+      onSearch: vi.fn(),
+      options: [],
+    }) as React.ReactElement
+
+    element.props.onPopupScroll({
+      currentTarget: { clientHeight: 100, scrollHeight: 300, scrollTop: 150 },
+    })
+    expect(onLoadMore).not.toHaveBeenCalled()
+
+    element.props.onPopupScroll({
+      currentTarget: { clientHeight: 100, scrollHeight: 300, scrollTop: 190 },
+    })
+    expect(onLoadMore).toHaveBeenCalledTimes(1)
+  })
+
+  it('passes load-more handling to every indicator-backed selector', () => {
+    const technicalStepSource = readFileSync(
+      new URL('./knowledgeOperateDrawer.TechnicalStep.tsx', import.meta.url),
+      'utf8'
+    )
+    const templateSource = readFileSync(
+      new URL('./knowledgeOperateDrawer.ExtendedTemplateParams.tsx', import.meta.url),
+      'utf8'
+    )
+
+    expect(technicalStepSource).toMatch(/name="techId"[\s\S]*?onLoadMore=\{onIndicatorLoadMore\}/)
+    expect(templateSource.match(/onLoadMore=\{onIndicatorLoadMore\}/g)).toHaveLength(5)
+  })
 })

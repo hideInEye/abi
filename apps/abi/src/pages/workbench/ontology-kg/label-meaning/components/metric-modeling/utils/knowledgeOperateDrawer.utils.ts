@@ -13,6 +13,8 @@ export interface StepItem {
 
 type UnknownRecord = Record<string, unknown>
 
+export const METRIC_INDICATOR_SEARCH_PAGE_SIZE = 10
+
 function trimText(value: unknown) {
   return String(value ?? '').trim()
 }
@@ -59,15 +61,44 @@ export function getMetricIndicatorOptionValue(item: Partial<KnowledgeIndicatorIt
   return String(item.termId || item.indId || item.indicatorCode || item.techName || item.bizName || '').trim()
 }
 
-export function buildMetricIndicatorSearchQuery(searchText: unknown, spaceId: number) {
+export function buildMetricIndicatorSearchQuery(searchText: unknown, spaceId: number, pageNum = 1) {
   const bizName = trimText(searchText)
 
   return {
     bizName: bizName || undefined,
-    pageNum: 1,
-    pageSize: 1000,
+    pageNum,
+    pageSize: METRIC_INDICATOR_SEARCH_PAGE_SIZE,
     spaceId
   }
+}
+
+export function appendMetricIndicatorSearchResults(
+  currentItems: KnowledgeIndicatorItem[],
+  nextItems: KnowledgeIndicatorItem[]
+) {
+  const mergedItemMap = new Map<string, KnowledgeIndicatorItem>()
+
+  currentItems.forEach(item => {
+    const value = getMetricIndicatorOptionValue(item)
+    if (value) mergedItemMap.set(value, item)
+  })
+  nextItems.forEach(item => {
+    const value = getMetricIndicatorOptionValue(item)
+    if (!value) return
+    const currentItem = mergedItemMap.get(value)
+    mergedItemMap.set(value, currentItem ? { ...currentItem, ...item } : item)
+  })
+
+  return Array.from(mergedItemMap.values())
+}
+
+export function hasMoreMetricIndicatorSearchResults(total: unknown, pageItemCount: number, pageNum: number) {
+  const totalText = String(total ?? '').trim()
+  const totalNumber = totalText ? Number(totalText) : Number.NaN
+  if (Number.isFinite(totalNumber) && totalNumber >= 0) {
+    return pageNum * METRIC_INDICATOR_SEARCH_PAGE_SIZE < totalNumber
+  }
+  return pageItemCount >= METRIC_INDICATOR_SEARCH_PAGE_SIZE
 }
 
 export function mergeMetricIndicatorSearchResults(

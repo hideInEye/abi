@@ -40,12 +40,14 @@ import {
 import { parseApiUpdateFrequency } from '../utils/indicatorApiAdapter'
 import { normalizeKnowledgeIndicatorListItem } from '../utils/knowledgeIndicator.mapper'
 import {
+  appendMetricIndicatorSearchResults,
   buildMetricIndicatorSearchQuery,
   extractUniqueIds,
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
   getMetricIndicatorOptionValue,
   getStepItems,
+  hasMoreMetricIndicatorSearchResults,
   mergeMetricIndicatorSearchResults,
   parseTemplateParams,
   shouldShowMetricPrecomputeConfig
@@ -473,7 +475,11 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   const editMatchedRef = useRef(false)
   const formValuesRef = useRef<Partial<KnowledgeFormValues>>({})
   const lastAtomicOptionRef = useRef<AtomicIndicatorOption>()
+  const indicatorOptionsLoadingRef = useRef(false)
+  const indicatorSearchHasMoreRef = useRef(true)
+  const indicatorSearchPageRef = useRef(0)
   const indicatorSearchRequestRef = useRef(0)
+  const indicatorSearchTextRef = useRef('')
   const semanticRequestRef = useRef(0)
   const submitLockRef = useRef(false)
   const templateTypeVal = AForm.useWatch('templateType', form)!
@@ -541,10 +547,13 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   )
 
   const queryIndicatorOptions = useCallback(
-    async (searchText: string, requestId: number) => {
+    async (searchText: string, pageNum: number, requestId: number) => {
+      indicatorOptionsLoadingRef.current = true
       setIndicatorOptionsLoading(true)
       try {
-        const res = await queryKnowledgeIndicators(buildMetricIndicatorSearchQuery(searchText, getKnowledgeSpaceId()))
+        const res = await queryKnowledgeIndicators(
+          buildMetricIndicatorSearchQuery(searchText, getKnowledgeSpaceId(), pageNum)
+        )
         assertFlatRequestSuccess(res)
         if (requestId !== indicatorSearchRequestRef.current) return
         const responseData = getApiResponseData(res)
@@ -554,18 +563,25 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         const selectedValues = INDICATOR_OPTION_FORM_FIELDS.map(field => form.getFieldValue(field)).filter(
           value => typeof value === 'string' || typeof value === 'number'
         )
-        setIndicatorOptionSource(currentItems =>
-          mergeMetricIndicatorSearchResults(currentItems, nextItems, selectedValues)
-        )
+        const mergeItems = (currentItems: KnowledgeIndicatorItem[]) =>
+          pageNum === 1
+            ? mergeMetricIndicatorSearchResults(currentItems, nextItems, selectedValues)
+            : appendMetricIndicatorSearchResults(currentItems, nextItems)
+        setIndicatorOptionSource(mergeItems)
         if (!searchText.trim()) {
-          setReferenceIndicatorOptionSource(currentItems =>
-            mergeMetricIndicatorSearchResults(currentItems, nextItems, selectedValues)
-          )
+          setReferenceIndicatorOptionSource(mergeItems)
         }
+        indicatorSearchPageRef.current = pageNum
+        indicatorSearchHasMoreRef.current = hasMoreMetricIndicatorSearchResults(
+          responseData.total,
+          nextItems.length,
+          pageNum
+        )
       } catch {
         // The shared request layer reports the error; keep the last successful options.
       } finally {
         if (requestId === indicatorSearchRequestRef.current) {
+          indicatorOptionsLoadingRef.current = false
           setIndicatorOptionsLoading(false)
         }
       }
@@ -574,20 +590,36 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   )
 
   const { cancel: cancelIndicatorSearch, run: runIndicatorSearch } = useDebounceFn(
-    (searchText: string, requestId: number) => {
-      queryIndicatorOptions(searchText, requestId)
+    (searchText: string, pageNum: number, requestId: number) => {
+      queryIndicatorOptions(searchText, pageNum, requestId)
     },
     { wait: 300 }
   )
 
   const handleIndicatorSearch = useCallback(
     (searchText: string) => {
+      indicatorSearchTextRef.current = searchText
+      indicatorSearchPageRef.current = 0
+      indicatorSearchHasMoreRef.current = true
       const requestId = indicatorSearchRequestRef.current + 1
       indicatorSearchRequestRef.current = requestId
-      runIndicatorSearch(searchText, requestId)
+      runIndicatorSearch(searchText, 1, requestId)
     },
     [runIndicatorSearch]
   )
+
+  const handleIndicatorLoadMore = useCallback(() => {
+    if (
+      indicatorOptionsLoadingRef.current ||
+      !indicatorSearchHasMoreRef.current ||
+      indicatorSearchPageRef.current < 1
+    ) {
+      return
+    }
+    const requestId = indicatorSearchRequestRef.current + 1
+    indicatorSearchRequestRef.current = requestId
+    queryIndicatorOptions(indicatorSearchTextRef.current, indicatorSearchPageRef.current + 1, requestId)
+  }, [queryIndicatorOptions])
 
   const updateIndicatorOptionItem = useCallback((optionValue: string, values: KnowledgeIndicatorItem) => {
     const updateItems = (items: KnowledgeIndicatorItem[]) =>
@@ -714,12 +746,19 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     if (!open) {
       cancelIndicatorSearch()
       indicatorSearchRequestRef.current += 1
+      indicatorOptionsLoadingRef.current = false
+      indicatorSearchHasMoreRef.current = true
+      indicatorSearchPageRef.current = 0
+      indicatorSearchTextRef.current = ''
       setIndicatorOptionsLoading(false)
       return
     }
+    indicatorSearchTextRef.current = ''
+    indicatorSearchPageRef.current = 0
+    indicatorSearchHasMoreRef.current = true
     const requestId = indicatorSearchRequestRef.current + 1
     indicatorSearchRequestRef.current = requestId
-    queryIndicatorOptions('', requestId)
+    queryIndicatorOptions('', 1, requestId)
   }, [cancelIndicatorSearch, open, queryIndicatorOptions])
 
   useEffect(() => {
@@ -1145,6 +1184,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
             validateTechnicalRemark={validateTechnicalRemark}
             validateThresholdMax={validateThresholdMax}
             validateThresholdValue={validateThresholdValue}
+            onIndicatorLoadMore={handleIndicatorLoadMore}
             onIndicatorSearch={handleIndicatorSearch}
             onRetryFields={retryAtomicSemanticFields}
           />

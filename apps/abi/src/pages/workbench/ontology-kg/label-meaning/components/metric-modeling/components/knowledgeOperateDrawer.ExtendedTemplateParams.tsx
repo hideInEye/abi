@@ -30,6 +30,7 @@ interface Props {
   readonly atomicMetricOptions: AtomicMetricOption[]
   readonly form: FormInstance<KnowledgeFormValues>
   readonly indicatorOptionsLoading?: boolean
+  readonly onIndicatorLoadMore: () => void
   readonly onIndicatorSearch: (searchText: string) => void
   readonly referenceMetricOptions: AtomicMetricOption[]
   readonly templateTypeVal: string
@@ -113,6 +114,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   atomicMetricOptions,
   form,
   indicatorOptionsLoading,
+  onIndicatorLoadMore,
   onIndicatorSearch,
   referenceMetricOptions,
   templateTypeVal,
@@ -209,6 +211,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择分子指标"
+                onLoadMore={onIndicatorLoadMore}
                 onSearch={onIndicatorSearch}
               />
             </AForm.Item>
@@ -221,6 +224,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择分母指标"
+                onLoadMore={onIndicatorLoadMore}
                 onSearch={onIndicatorSearch}
               />
             </AForm.Item>
@@ -266,6 +270,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择原子指标"
+                onLoadMore={onIndicatorLoadMore}
                 onSearch={onIndicatorSearch}
               />
             </AForm.Item>
@@ -310,6 +315,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择基准指标"
+                onLoadMore={onIndicatorLoadMore}
                 onSearch={onIndicatorSearch}
               />
             </AForm.Item>
@@ -354,6 +360,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择原始指标"
+                onLoadMore={onIndicatorLoadMore}
                 onSearch={onIndicatorSearch}
               />
             </AForm.Item>
