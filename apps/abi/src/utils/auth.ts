@@ -120,7 +120,7 @@ export function resetLoginExpiredState() {
   authManager.resetUnauthorizedState();
 }
 
-export async function logoutNow(redirectPath?: string) {
+export async function completeLocalLogout(redirectPath?: string) {
   await resetAuthState();
 
   return authManager.logout({

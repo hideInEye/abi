@@ -1,7 +1,8 @@
 import { LogoutOutlined } from '@ant-design/icons'
 import { Popover, Modal } from 'antd'
 import { useState } from 'react'
-import { authManager } from '../../utils/auth'
+
+import { logoutNow } from '@/service/logout'
 
 type UserProfileCardProps = {
   collapsed: boolean
@@ -23,9 +24,7 @@ export function UserProfileCard({ collapsed, userName }: UserProfileCardProps) {
       content: '确定要退出登录吗？',
       okText: '确定',
       cancelText: '取消',
-      onOk: async () => {
-        await authManager.logout({ preserveRedirect: false })
-      },
+      onOk: () => logoutNow(),
     })
   }
 

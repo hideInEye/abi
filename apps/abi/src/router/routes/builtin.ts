@@ -3,6 +3,7 @@ import type { ElegantConstRoute } from '@ohh-889/react-auto-route';
 import type { ActionFunctionArgs } from 'react-router-dom';
 import { redirect } from 'react-router-dom';
 
+import { requestLogout } from '@/service/logout';
 import { store } from '@/store';
 import { resetStore } from '@/store/slice/auth';
 
@@ -34,10 +35,9 @@ const LOG_OUT_ROUTE: CustomRoute = {
   action: async ({ request }: ActionFunctionArgs) => {
     const formData = await request.formData();
 
-    store.dispatch(resetStore());
+    await requestLogout();
+    await store.dispatch(resetStore());
 
-    // 如果需要还需要调用登出接口  也是在这里 去做相关的操作
-    // If needed, you can also call the logout API and perform related operations here
     const needRedirect = formData.get('needRedirect');
 
     if (needRedirect) {

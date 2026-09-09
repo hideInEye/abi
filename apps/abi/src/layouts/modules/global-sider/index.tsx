@@ -9,7 +9,7 @@ import SvgIcon from '@/components/stateless/custom/SvgIcon'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
 import { getAllRoutes } from '@/store/slice/route'
-import { logoutNow } from '@/utils/auth'
+import { logoutNow } from '@/service/logout'
 import { openChatConversationWindow } from '@/utils/chatWindow'
 import { readPersistedSpaceId } from '@/utils/spaceStorage'
 import { Dropdown, Layout } from 'antd'
@@ -160,12 +160,7 @@ const GlobalSider: FC = memo(() => {
           cancelText: t('common.cancel'),
           content: t('common.logoutConfirm'),
           okText: t('common.confirm'),
-          onOk: () => {
-            // let needRedirect = false;
-            // if (!route.meta?.constant) needRedirect = true;
-            // submit({ needRedirect, redirectFullPath: route.fullPath }, { action: '/logout', method: 'post' });
-            logoutNow()
-          },
+          onOk: () => logoutNow(),
           title: t('common.tip'),
         })
       }
