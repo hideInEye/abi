@@ -80,7 +80,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   const [publicAccess, setPublicAccess] = useState<'0' | '1'>('1')
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
-  const [saving, setSaving] = useState<'draft' | 'publish' | null>(null)
+  const [saving, setSaving] = useState<'draft' | 'create' | 'publish' | null>(null)
   // 是否已保存草稿：新建助手在首次保存草稿前锁定右侧测试输入框，编辑已有助手默认解锁
   const [draftSaved, setDraftSaved] = useState(false)
   // 当前助手最新版本 ID：编辑态由 loadDetail 回填，上线时用于调用 version/publish
@@ -188,7 +188,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   const [optionNameMap, setOptionNameMap] = useState<Record<string, string>>({})
   // id -> 分组层级路径（形如「父组 / 子组」），用于已选项行标注所属分组并展示层级
   const [optionGroupMap, setOptionGroupMap] = useState<Record<string, string>>({})
-  // MCP 工具协议分组元数据：id -> { mcpSse, mcpStreamable }，值为真实 groupId 列表
+  // MCP 工具协议分组元数据：id -> { mcpSse, mcpStreamable }，值为 namespaceId（s_ + groupId，与 register/list 查询入参同口径）
   // sse 入 mcpSse，streamableHttp 入 mcpStreamable；保存时写入 toolConfig 的 mcp_sse/mcp_streamable
   const [toolMcpMetaMap, setToolMcpMetaMap] = useState<Record<string, { mcpSse: string[]; mcpStreamable: string[] }>>({})
   const mergeOptionNames = (options: { id: string; name: string; groupPath?: string; groupId?: string; frontProtocol?: string }[]) => {
@@ -206,13 +206,14 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       })
       return next
     })
-    // MCP 工具：按协议把真实 groupId 归入 sse / streamable（选择器加载时已带出 groupId 与 frontProtocol）
+    // MCP 工具：按协议把 namespaceId（s_ + groupId，与列表查询入参同口径）归入 sse / streamable
     setToolMcpMetaMap((prev) => {
       const next = { ...prev }
       options.forEach((o) => {
         if (o.id.startsWith('mcp_') && o.groupId) {
           const isSse = String(o.frontProtocol || '').toLowerCase() === 'sse'
-          next[o.id] = isSse ? { mcpSse: [o.groupId], mcpStreamable: [] } : { mcpSse: [], mcpStreamable: [o.groupId] }
+          const namespaceId = `s_${o.groupId}`
+          next[o.id] = isSse ? { mcpSse: [namespaceId], mcpStreamable: [] } : { mcpSse: [], mcpStreamable: [namespaceId] }
         }
       })
       return next
@@ -450,11 +451,11 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     return true
   }
 
-  /** 保存/创建复用同一提交：nextStatus 决定落库状态（保存='0'草稿、创建='2'历史版本），仅成功文案不同 */
-  const handleSave = async (successText = '已保存', nextStatus: '0' | '1' | '2' = '0') => {
+  /** 保存/创建复用同一提交：nextStatus 决定落库状态（保存='0'草稿、创建='2'历史版本），仅成功文案不同；savingKey 区分触发按钮，避免两按钮同时 loading */
+  const handleSave = async (successText = '已保存', nextStatus: '0' | '1' | '2' = '0', savingKey: 'draft' | 'create' = 'draft') => {
     if (saving) return
     if (!validateRequired()) return
-    setSaving('draft')
+    setSaving(savingKey)
     try {
       const payload = buildPayload(nextStatus)
       // apiRequest 为扁平请求，失败时不会抛错而是返回 { error }，需显式判断
@@ -616,7 +617,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
           <div style={{ alignItems: 'center', display: 'flex', gap: 12, marginLeft: 'auto' }}>
             {!readOnly && (<>
             <Button
-              disabled={saving === 'publish'}
+              disabled={saving === 'create' || saving === 'publish'}
               loading={saving === 'draft'}
               onClick={() => handleSave()}
               style={{
@@ -629,9 +630,9 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               保存
             </Button>
             <Button
-              disabled={saving === 'publish'}
-              loading={saving === 'draft'}
-              onClick={() => handleSave('已创建', '2')}
+              disabled={saving === 'draft' || saving === 'publish'}
+              loading={saving === 'create'}
+              onClick={() => handleSave('已创建', '2', 'create')}
               style={{
                 borderRadius: 8,
                 border: '1px solid rgba(130, 140, 200, 0.2)',
@@ -642,7 +643,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               创建
             </Button>
             <Button
-              disabled={saving === 'draft'}
+              disabled={saving === 'draft' || saving === 'create'}
               loading={saving === 'publish'}
               type="primary"
               onClick={handlePublish}

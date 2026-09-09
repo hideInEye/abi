@@ -62,13 +62,23 @@
 - 取消发布漏接补上：初版误判「大屏无取消发布入口」（只搜了 ProjectList），实际在 MyScreen.tsx confirmUnpublish（updateProject status'2'），已接 syncShareAppStatus(id, 2)。
 - 验证：apps/dashboard npx tsc --noEmit MyScreen/BaseApi 无新增报错（dayjs 为既有基线）。
 
-## 2026-09-08 项目设置弹窗暗色样式适配
+## 2026-09-08 项目设置弹窗淡色样式适配（用户纠正方向）
 
-- 弹窗用暗色 Dialog（header #26292e / content #1b1e23），但内部 Input/Radio/Select 是纯 antd 组件（无 less，默认亮色白底），暗弹窗里白控件突兀（用户截图反馈）。
-- ProjectHdItemImpl.less 覆盖暗色：.lc-input（暗底亮字暗边框 hover 蓝）、.lc-select（selector 暗底、selection-item/arrow 亮色）、.lc-radio（inner 透明暗边框、选中蓝、label 亮灰）、取消按钮 .ant-btn-default 次要（暗底亮字边框）。
-- tsx 修两处：Select options value '1'→SaveType.LOCAL（'0'，原 value 与 SaveType.LOCAL 不符导致显示 raw '0'）；取消 Button type='default'（次要，原默认 primary 与保存同亮蓝）。
-- Select 展开 dropdown 为 antd portal 到 body，未做暗色（全局改会影响亮色弹窗如画布/主题设置），仅适配弹窗内收起态。
-- 验证：tsc ProjectHdItemImpl 无报错。
+- 弹窗入口：编辑器内按 Ctrl+1（HotKeyConfig 'control+1'→toggleProjectConfig）。
+- **用户明确要淡色**（对齐画布设置/主题设置那种白底弹窗）；初版误按 Dialog 暗色硬编码做了暗色适配，方向反了，已重写。
+- Dialog 默认 header #26292e / content #1b1e23 暗色，用 `.lc-dialog.lc-header-project-set`（双类提特异性压过 Dialog.less）覆盖为 `.dialog-header` #f2f3f5 + `.dialog-content` #fff 转白底。
+- **关键**：antd Input/Radio/Select 默认即亮色白底，容器转白后无需逐个覆盖控件（删掉初版全部暗色控件覆盖，做减法）；UIContainer label 本就 color:#555 暗字，白底可见。footer 白底 + 浅分隔线 #f0f0f0。
+- tsx 两处（与配色无关的功能修复，保留）：①存储类型 Select options value '1'→SaveType.LOCAL（'0'），修复收起态显示 raw '0'；②取消 Button type='default'（白底暗字边次要样式，与 primary 保存区分）。
+- 教训：弹窗配色先确认项目主色调（画布/主题设置是白底亮色），别看到 Dialog 组件暗色就往暗色做。
+- 验证：tsc 无新增报错（10 个均为 dashboard 既有遗留：dayjs/unused/MenuClickEventHandler）。
+
+## 2026-09-09 项目设置弹窗淡色细节优化
+
+- 用户反馈「白色了但丑」。根因：Dialog.less 的 `.dialog-body` 无宽度，弹窗宽被内容固有宽撑开（shrink-to-fit），输入框/Select 填不满格子显得宽窄不一、整体 830px 过宽松散；header #f2f3f5 灰条与白内容割裂；无圆角阴影；行高字号不统一。
+- less 优化：body 固定 560px（antd Modal 常规宽）+ border-radius 8px + overflow hidden + 阴影；header 改白底 + 1px #f0f0f0 下分隔、标题 15px/600、关闭 #999 hover #333；content padding 20px 24px 0；表单行高统一 32px、字号 13px、label #666；footer 1px 上分隔拉通内容边（margin 20px -24px 0）、按钮 32px 高 4px 圆角。
+- tsx：按钮顺序换惯例「取消左、保存右」（原保存左取消右）。
+- 追修（用户截图右侧露灰块）：Dialog.tsx 的 `.dialog-content` 带内联 `style={{width}}`（prop 默认 400），less 强设 body 宽 560 比 content 400 宽，透明差值露出 mask 灰。改传 Dialog 组件自带 `width={560}` prop（控制 content 内联宽），删 less 强设 body 宽，body auto 跟随 content，灰块消失。
+- 验证：tsc 无新增报错（dashboard 既有 10 个遗留不变）。
 
 ## 待办与风险（同步接线轮）
 

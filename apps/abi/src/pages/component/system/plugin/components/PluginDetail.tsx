@@ -69,6 +69,170 @@ const InfoCell = ({ label, value }: { label: React.ReactNode; value: React.React
   </div>
 )
 
+/* ── 协议转化配置只读展示（对齐 nacos 控制台 ShowTools 结构与配色） ── */
+const MONO_FONT = 'Monaco, Consolas, "Courier New", monospace'
+const METHOD_BADGE_COLOR: Record<string, string> = { get: '#52c41a', post: '#1890ff', put: '#fa8c16', delete: '#f5222d' }
+
+const KvRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+    <span style={{ fontWeight: 700, color: '#000', flexShrink: 0 }}>{label}</span>
+    {children}
+  </div>
+)
+
+const SubTitle = ({ color, children }: { color: string; children: React.ReactNode }) => (
+  <div style={{ borderLeft: `3px solid ${color}`, paddingLeft: 8, fontSize: 14, fontWeight: 700, color: '#000', marginBottom: 8 }}>{children}</div>
+)
+
+const ProtocolTemplateView = ({ data }: { data: Record<string, any> }) => {
+  const req = data.requestTemplate
+  const resp = data.responseTemplate
+  const method = req?.method ? String(req.method) : ''
+  const headers = req?.headers
+  const headerRows: Array<[string, unknown]> = headers && typeof headers === 'object' ? Object.entries(headers) : []
+  const knownRespFields = ['body', 'prependBody', 'appendBody']
+  const otherRespFields = resp ? Object.keys(resp).filter(key => !knownRespFields.includes(key)) : []
+
+  return (
+    <div style={{ marginTop: 12, border: `1px solid ${BORDER}`, borderRadius: 8, padding: 16, background: 'rgba(255,255,255,0.9)' }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_DEFAULT, marginBottom: 12 }}>协议转化配置</div>
+
+      {/* 透明认证信息 */}
+      {data.security && (
+        <div style={{ marginBottom: 16 }}>
+          <SubTitle color="#52c41a">透明认证信息</SubTitle>
+          <div style={{ background: '#f9f9f9', padding: 12, borderRadius: 4, fontFamily: MONO_FONT, fontSize: 12 }}>
+            <KvRow label="启用状态: ">
+              <span style={{ color: data.security.passthrough ? '#52c41a' : '#666' }}>{data.security.passthrough ? '已启用' : '未启用'}</span>
+            </KvRow>
+            {data.security.id && (
+              <KvRow label="客户端认证方式: ">
+                <span style={{ color: '#1890ff' }}>{data.security.id}</span>
+              </KvRow>
+            )}
+            {data.security.type && <KvRow label="认证类型: ">{data.security.type}</KvRow>}
+          </div>
+        </div>
+      )}
+
+      {/* 请求模板配置 */}
+      {req && (
+        <div style={{ marginBottom: 16 }}>
+          <SubTitle color="#1890ff">请求模板配置</SubTitle>
+          <div style={{ background: '#f5f8ff', padding: 12, borderRadius: 4, fontFamily: MONO_FONT, fontSize: 12 }}>
+            {method && (
+              <KvRow label="HTTP 方法: ">
+                <span
+                  style={{
+                    color: '#fff',
+                    background: METHOD_BADGE_COLOR[method.toLowerCase()] || '#999',
+                    padding: '2px 6px',
+                    borderRadius: 3,
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
+                  {method}
+                </span>
+              </KvRow>
+            )}
+            {req.url && (
+              <KvRow label="请求路径: ">
+                <span style={{ color: '#1890ff', background: '#e6f7ff', padding: '2px 6px', borderRadius: 3, wordBreak: 'break-all' }}>{req.url}</span>
+              </KvRow>
+            )}
+            {req.security?.id && (
+              <KvRow label="后端认证方式: ">
+                <span style={{ color: '#fa8c16' }}>{req.security.id}</span>
+              </KvRow>
+            )}
+            {headerRows.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, color: '#000', marginBottom: 6 }}>headers:</div>
+                <div style={{ background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 3, padding: 8, maxHeight: 120, overflowY: 'auto' }}>
+                  {headerRows.map(([key, value]) => (
+                    <div key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontWeight: 700, color: '#000', flexShrink: 0 }}>{key}:</span>
+                      <span style={{ color: '#1890ff', wordBreak: 'break-all' }}>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {req.body && (
+              <div>
+                <div style={{ fontWeight: 700, color: '#000', marginBottom: 6 }}>body:</div>
+                <div
+                  style={{
+                    background: '#f6ffed',
+                    border: '1px solid #b7eb8f',
+                    borderRadius: 3,
+                    padding: 8,
+                    maxHeight: 100,
+                    overflowY: 'auto',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    color: '#52c41a',
+                  }}
+                >
+                  {typeof req.body === 'object' ? JSON.stringify(req.body, null, 2) : req.body}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 响应模板配置 */}
+      {resp && (
+        <div>
+          <SubTitle color="#fa8c16">响应模板配置</SubTitle>
+          <div style={{ background: '#fffbe6', padding: 12, borderRadius: 4, fontFamily: MONO_FONT, fontSize: 12 }}>
+            {resp.body && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, color: '#000', marginBottom: 6 }}>body:</div>
+                <div style={{ background: '#f6f8fa', border: '1px solid #e1e4e8', borderRadius: 3, padding: 8, maxHeight: 100, overflowY: 'auto', color: '#8c8c8c', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                  {resp.body}
+                </div>
+              </div>
+            )}
+            {resp.prependBody && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, color: '#000', marginBottom: 6 }}>prependBody:</div>
+                <div style={{ background: '#f6f8fa', border: '1px solid #e1e4e8', borderRadius: 3, padding: 8, maxHeight: 100, overflowY: 'auto', color: '#8c8c8c', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                  {resp.prependBody}
+                </div>
+              </div>
+            )}
+            {resp.appendBody && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, color: '#000', marginBottom: 6 }}>appendBody:</div>
+                <div style={{ background: '#f6f8fa', border: '1px solid #e1e4e8', borderRadius: 3, padding: 8, maxHeight: 100, overflowY: 'auto', color: '#8c8c8c', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                  {resp.appendBody}
+                </div>
+              </div>
+            )}
+            {otherRespFields.length > 0 && (
+              <div>
+                <div style={{ fontWeight: 700, color: '#000', marginBottom: 6 }}>其他配置:</div>
+                {otherRespFields.map(field => (
+                  <div key={field} style={{ marginBottom: 6 }}>
+                    <span style={{ fontWeight: 700, color: '#000' }}>{field}: </span>
+                    <span style={{ color: '#666' }}>{typeof resp[field] === 'object' ? JSON.stringify(resp[field], null, 2) : String(resp[field])}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!resp.body && !resp.prependBody && !resp.appendBody && Object.keys(resp).length === 0 && (
+              <div style={{ color: '#bfbfbf' }}>暂无响应模板配置</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export const PluginDetail: React.FC<PluginDetailProps> = ({ open, record, groupName, onClose }) => {
   if (!record) {
     return <CommonDrawer open={open} title="MCP 服务详情" width={800} onClose={onClose} />
@@ -276,6 +440,12 @@ export const PluginDetail: React.FC<PluginDetailProps> = ({ open, record, groupN
                   </ATag>
                 </AFlex>
                 {tool.description && <div style={{ color: TEXT_MUTED, fontSize: 12, marginLeft: 24, lineHeight: 1.6 }}>{tool.description}</div>}
+                {/* HTTP 转 MCP 服务展示协议转化配置，对齐 nacos 明细页 */}
+                {isLegacy &&
+                  (() => {
+                    const templateData = record.toolSpec?.toolsMeta?.[tool.name]?.templates?.['json-go-template']
+                    return templateData && typeof templateData === 'object' ? <ProtocolTemplateView data={templateData} /> : null
+                  })()}
               </div>
             ))}
           </AFlex>

@@ -47,7 +47,7 @@ const ProjectHdItemImpl = () => {
     }
 
     return (
-        <Dialog title={'项目设置'} className={'lc-header-project-set'} visible={projectVisible}
+        <Dialog title={'项目设置'} className={'lc-header-project-set'} width={560} visible={projectVisible}
                 onClose={onClose}>
             <form onSubmit={doSave}>
                 <div style={{display: 'flex', flexWrap: 'wrap'}}>
@@ -70,8 +70,8 @@ const ProjectHdItemImpl = () => {
 
                 </div>
                 <div className={'lc-header-project-footer'}>
-                    <Button onClick={doSave}>保存</Button>
                     <Button onClick={onClose} type={'default'}>取消</Button>
+                    <Button onClick={doSave}>保存</Button>
                 </div>
             </form>
         </Dialog>
