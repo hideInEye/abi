@@ -18,32 +18,57 @@ import { getRouteHome, initAuthRoute, initConstantRoute } from '@/store/slice/ro
 import { localStg } from '@/utils/storage';
 import { checkAuthStatus } from './authGuard';
 
+/**
+ * 检查 JWT token 是否已过期。
+ * 仅对标准三段 JWT 有效（含 exp claim）；非 JWT 或无法解码时返回 false（保守放行）。
+ */
+function isTokenExpired(): boolean {
+  try {
+    const token = localStg.get('token');
+    if (!token || typeof token !== 'string') return true;
+
+    const parts = token.split('.');
+    if (parts.length !== 3) return false; // 非 JWT，保守放行
+
+    const payload = JSON.parse(atob(parts[1]));
+    if (typeof payload.exp !== 'number') return false; // 无 exp，保守放行
+
+    // exp 是秒级时间戳，留 30 秒缓冲避免边界竞态
+    return payload.exp * 1000 < Date.now() + 30_000;
+  } catch {
+    return false; // 解码失败，保守放行让后端判定
+  }
+}
+
 export const init: Init = async currentFullPath => {
   await store.dispatch(initConstantRoute());
 
   // 分享页（大屏/助手分享）支持匿名访问，不跳登录
   const isSharePage = currentFullPath.includes('/dashboard_share_page/') || currentFullPath.includes('/dashboard-share-page/');
 
+  const isOnLoginPage = currentFullPath.includes('login');
   const isLogin = checkAuthStatus();
 
-  if (!isLogin && !currentFullPath.includes('login') && !isSharePage) {
+  // login 页无条件不调菜单接口，避免过期 token 触发 401 弹出"登录已过期"
+  // 登录成功后的路由初始化由 useLogin hook 中的 dispatch(initAuthRoute()) 负责
+  if (isOnLoginPage) {
+    return null;
+  }
+
+  // token 不存在或 JWT 已过期 → 不调菜单接口，重定向到 login
+  // 避免过期 token 发起菜单请求后触发 401 弹出"未授权访问"
+  if (!isLogin || isTokenExpired()) {
+    if (isSharePage) {
+      return null; // 分享页允许匿名访问
+    }
     const loginRoute: RouteKey = 'login';
     const routeHome = getRouteHome(store.getState());
     const query = getRouteQueryOfLoginRoute(currentFullPath, routeHome as RouteKey);
-
-    return {
-      name: loginRoute,
-      query
-    };
+    return { name: loginRoute, query };
   }
 
-  if (!isLogin) return null;
-
+  // 非 login 页且 token 有效 → 初始化动态路由（调菜单接口）
   await store.dispatch(initAuthRoute());
-
-  if (currentFullPath.includes('login')) {
-    return { name: 'root' as RouteKey, replace: true };
-  }
 
   return null;
 };

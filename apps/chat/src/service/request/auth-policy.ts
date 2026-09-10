@@ -1,4 +1,4 @@
-export const LOGOUT_API_PATH = '/api/logout'
+export const LOGOUT_API_PATH = '/api/auth/logout'
 
 export function shouldHandleLoginExpiredForRequest(url?: string): boolean {
   if (!url) return true

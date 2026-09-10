@@ -17,7 +17,7 @@ export function fetchLogin(userName: string, password: string, code?: string, uu
       uuid
     },
     method: 'post',
-    url: '/api/login'
+    url: '/api/auth/login'
   });
 }
 

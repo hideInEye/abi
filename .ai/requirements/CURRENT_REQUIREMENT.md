@@ -1844,3 +1844,98 @@ Bug 修复延续（分享记录复制缺密码）+ 接口对接调整。
 - `pnpm --filter chatbi typecheck` 对比基线。
 - 手工：保存/创建/发布三按钮互斥 loading 与禁用走查。
 
+## 2026-09-10 追加：登录页访问时不预调菜单接口
+
+### 需求类型
+
+前端鉴权/路由缺陷修复（纯前端，不改接口协议）。
+
+### 背景
+
+访问 `https://<host>/login` 时，若 localStorage 中存在过期或失效 token，应用在展示登录页之前会先调用以下两个菜单接口：
+
+1. `GET /api/system/menu/getRouters`（`getUserSystemMenuApi`）
+2. `GET /api/system/v1/space/menu/getAllRouters`（`getAllSpaceMenuApi`）
+
+这两个接口由 `store/slice/route/index.ts` 的 `initDynamicAuthRoute()` 触发。根因在 `router/guard/index.ts` 的 `init()` 函数：先执行 `initAuthRoute()`（含菜单接口），后才判断当前路径是否在 login 页。当 `checkAuthStatus()` 检测到 localStorage 中仍有 token（即使已过期）时，`isLogin` 为 true，函数不会在 `if (!isLogin) return null` 处提前返回，于是继续执行 `initAuthRoute()` 并触发菜单接口；接口返回 401 后触发 `handleLoginExpired()`，弹"登录已过期"提示并跳转登录页，导致用户在登录页看到无意义的过期提示。
+
+### 目标
+
+1. 访问 `/login` 时（无论 localStorage 中是否存在 token），不调用 `getUserSystemMenuApi` 和 `getAllSpaceMenuApi`，直接展示登录页。
+2. 已登录用户（有效 token）访问 `/login` 时，先调菜单接口初始化路由后重定向到首页（保持原有行为）。
+3. 点击登录按钮、获取 token 后，仍正常调用菜单接口初始化动态路由（`useLogin` hook 中 `dispatch(initAuthRoute())` 链路不变）。
+4. 非 login 页的鉴权和路由初始化流程不受影响（`/home`、`/workbench` 等页面仍按原逻辑先检查 token 再初始化路由）。
+
+### 非目标
+
+- 不修改 `createRouteGuard`（每次导航执行的 beforeEach 守卫）和 `afterEach` 钩子。
+- 不修改 `useLogin` hook（`apps/abi/src/hooks/common/login.ts`）中登录成功后的 `initAuthRoute()` 调用。
+- 不修改登录接口、验证码接口、用户信息接口的请求参数或响应处理。
+- 不修改 chat、dashboard 子应用的鉴权流程。
+- 不修改 `store/slice/route/index.ts` 中 `initDynamicAuthRoute()` 的实现。
+
+### 影响范围
+
+- `apps/abi/src/router/guard/index.ts`：`init` 函数内判断顺序调整，将 login 页判断提前到 `initAuthRoute()` 之前。
+
+### 修复方案
+
+将 `init()` 函数中的 login 页判断提前：
+
+```typescript
+export const init: Init = async currentFullPath => {
+  await store.dispatch(initConstantRoute());
+
+  const isSharePage = currentFullPath.includes('/dashboard_share_page/')
+    || currentFullPath.includes('/dashboard-share-page/');
+
+  const isOnLoginPage = currentFullPath.includes('login');
+  const isLogin = checkAuthStatus();
+
+  // 修复：login 页优先判断，不调菜单接口
+  if (isOnLoginPage) {
+    if (isLogin) {
+      // 有有效 token 访问 login 页 → 初始化路由后重定向首页
+      await store.dispatch(initAuthRoute());
+      return { name: 'root' as RouteKey, replace: true };
+    }
+    // 无 token 或 token 过期 → 展示登录页，不调菜单接口
+    return null;
+  }
+
+  // 非 login 页且未登录 → 重定向到 login
+  if (!isLogin && !isSharePage) {
+    const loginRoute: RouteKey = 'login';
+    const routeHome = getRouteHome(store.getState());
+    const query = getRouteQueryOfLoginRoute(currentFullPath, routeHome as RouteKey);
+    return { name: loginRoute, query };
+  }
+
+  if (!isLogin) return null;
+
+  await store.dispatch(initAuthRoute());
+  return null;
+};
+```
+
+### 验收标准
+
+1. 浏览器无痕模式（无 localStorage token）访问 `/login`，Network 面板不出现 `/api/system/menu/getRouters` 和 `/api/system/v1/space/menu/getAllRouters` 请求。
+2. 手动在 localStorage 写入过期 token 后访问 `/login`，不弹出"登录已过期"提示，Network 面板不出现上述两个菜单接口请求。
+3. 有效 token 状态下访问 `/login`，调用菜单接口后重定向到首页（保持原有行为）。
+4. 点击登录按钮后，正常调用 login 接口 → 菜单接口 → 跳转首页，流程与修改前一致。
+5. 访问 `/home`、`/workbench` 等非 login 页面，token 有效时正常调用菜单接口；token 无效时正常重定向到 login。
+6. 分享页（`/dashboard-share-page/`）匿名访问行为不变。
+7. `pnpm --filter chatbi typecheck` 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck` 对比基线。
+- 手工走查：
+  - 无痕模式访问 `/login`，确认无菜单接口调用。
+  - 写入过期 token 后访问 `/login`，确认无菜单接口调用、无过期提示。
+  - 有效 token 访问 `/login`，确认正常重定向首页。
+  - 点击登录按钮，确认 login → 菜单 → 首页的完整流程。
+  - 访问其他页面（有/无 token），确认鉴权和重定向正常。
+- run log：`.ai/runs/2026-09-10-login-page-menu-api-guard/`
+

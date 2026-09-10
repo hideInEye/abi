@@ -4,7 +4,7 @@ import { apiRequest, request } from '../request';
 export function fetchCaptchaImage() {
   return apiRequest<Api.Auth.CaptchaImage>({
     method: 'get',
-    url: '/api/captchaImage'
+    url: '/api/auth/captchaImage'
   });
 }
 
@@ -21,14 +21,14 @@ export function fetchLogin(userName: string, password: string) {
       username: userName
     },
     method: 'post',
-    url: '/api/login'
+    url: '/api/auth/login'
   });
 }
 
 export function fetchLogout() {
   return apiRequest({
     method: 'post',
-    url: '/api/logout'
+    url: '/api/auth/logout'
   });
 }
 
