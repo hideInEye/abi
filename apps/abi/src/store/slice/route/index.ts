@@ -11,6 +11,7 @@ import { ROOT_ROUTE } from '@/router/routes/builtin';
 import { getAllSpaceMenuApi, getUserSystemMenuApi } from '@/service/api';
 import { isStaticSuper, selectUserInfo } from '@/store/slice/auth';
 import { initHomeTab } from '@/store/slice/tab';
+import { handleLoginExpired } from '@/utils/auth';
 import { convertRuoYiToSoybean } from '@/utils/router';
 
 import type { AppThunk } from '../..';
@@ -480,8 +481,9 @@ const initDynamicAuthRoute = (): AppThunk => async dispatch => {
 
     dispatch(setIsInitAuthRoute(true));
   } else {
-    // if fetch user routes failed, reset store
-    dispatch(resetRouteStore());
+    // 菜单接口失败（通常是 token 失效/401）：重置路由并跳转登录页
+    await dispatch(resetRouteStore());
+    await handleLoginExpired();
   }
 };
 
