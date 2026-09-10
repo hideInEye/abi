@@ -50,6 +50,9 @@ export function handleError(
   // ai对话，通过sql查询图表数据接口，不提示报错
   if (['/api/v1/chat/db/query', '/api/v1/chat/db/add'].includes(error.config?.url || '')) return;
 
+  // 路由初始化菜单接口失败时不弹错误提示，由 initDynamicAuthRoute 统一处理跳转
+  if (!shouldHandleLoginExpiredForRequest(error.config?.url)) return;
+
   // 测试连接接口不跳转登录页
   // const isTestConnect = error.config?.url?.includes('model/test/connect');
   // if (isTestConnect) {
