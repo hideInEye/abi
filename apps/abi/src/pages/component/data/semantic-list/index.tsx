@@ -6,32 +6,37 @@ import {
   PlusOutlined,
   StopOutlined
 } from '@ant-design/icons'
-import { Button, Grid, Modal, Pagination, Switch, Table, message } from 'antd'
+import { Button, Grid, Modal, Pagination, Spin, Switch, Table, Tooltip, message } from 'antd'
 import type { TableColumnsType } from 'antd'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
+import { useAppSelector } from '@/hooks/business/useStore'
+import { getSpaceId } from '@/store/slice/app'
 
 import { SemanticListFilters } from './components/SemanticListFilters'
 import { SemanticRuleCardList } from './components/SemanticRuleCardList'
 import { SemanticRuleDetailDrawer } from './components/SemanticRuleDetailDrawer'
 import { SemanticRuleDrawer } from './components/SemanticRuleDrawer'
-import { EMPTY_FILTERS, LIST_TYPE_LABELS, MATCH_TARGET_LABELS, PAGE_SIZE } from './constants'
-import { clampSemanticListPage, filterSemanticRules } from './semantic-list-model'
+import { EMPTY_FILTERS, LIST_TYPE_LABELS, PAGE_SIZE } from './constants'
+import { useSemanticListManagement } from './hooks/useSemanticListManagement'
+import { TABLE_SELECTION_COLUMN_WIDTH, getResponsiveOverlayWidths, getTableScrollWidth } from './semantic-list-layout'
 import styles from './semantic-list.module.scss'
-import type { SemanticRule, SemanticRuleDraft, SemanticRuleFilters } from './types'
-import { useSemanticListDemo } from './useSemanticListDemo'
+import type { SemanticRule, SemanticRuleDraft, SemanticRuleFilters, SemanticRuleId } from './types'
 
-type RulePanelState = { mode: 'create' } | { mode: 'detail' | 'edit'; ruleId: number } | null
+type ExistingPanelMode = 'detail' | 'edit'
+type RulePanelState = { mode: 'create' } | { mode: ExistingPanelMode; rule: SemanticRule } | null
 
-interface DeleteConfirmation {
-  batch: boolean
-  content: string
-  ids: number[]
+interface PanelLoadingState {
+  mode: ExistingPanelMode
+  ruleId: SemanticRuleId
 }
 
-const TABLE_SELECTION_COLUMN_WIDTH = 48
+interface DeleteConfirmation {
+  content: string
+  rule: SemanticRule
+}
 
 const DEFAULT_COLUMN_OPTIONS: ColumnOption[] = [
   { key: 'name', label: '规则名称', visible: true },
@@ -43,26 +48,11 @@ const DEFAULT_COLUMN_OPTIONS: ColumnOption[] = [
   { key: 'updatedAt', label: '更新时间', visible: true }
 ]
 
-function getTableScrollWidth(columns: TableColumnsType<SemanticRule>): number {
-  return columns.reduce(
-    (total, column) => total + (typeof column.width === 'number' ? column.width : 0),
-    TABLE_SELECTION_COLUMN_WIDTH
-  )
-}
-
-function getResponsiveOverlayWidths(isDesktop: boolean | undefined): {
-  confirmWidth: string
-  drawerWidth: string
-} {
-  if (isDesktop) return { confirmWidth: '50%', drawerWidth: '50%' }
-  return { confirmWidth: '90%', drawerWidth: '96%' }
-}
-
 export const Component = () => {
   const screens = Grid.useBreakpoint()
   const { confirmWidth, drawerWidth } = getResponsiveOverlayWidths(screens.lg)
   const [messageApi, messageContext] = message.useMessage()
-  const { createRule, deleteRules, setRuleStatus, state, updateRule } = useSemanticListDemo()
+  const spaceId = useAppSelector(getSpaceId) || 0
   const [viewMode, setViewMode] = useState<'card' | 'list'>('list')
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(() =>
     DEFAULT_COLUMN_OPTIONS.map(column => ({ ...column }))
@@ -73,33 +63,61 @@ export const Component = () => {
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [panelState, setPanelState] = useState<RulePanelState>(null)
-  const [statusPendingIds, setStatusPendingIds] = useState<Set<number>>(new Set())
-  const [batchAction, setBatchAction] = useState<'enable' | 'disable' | null>(null)
+  const [panelLoading, setPanelLoading] = useState<PanelLoadingState | null>(null)
+  const panelRequestSequence = useRef(0)
+  const [statusPendingIds, setStatusPendingIds] = useState<Set<SemanticRuleId>>(new Set())
   const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmation | null>(null)
   const [deletePending, setDeletePending] = useState(false)
 
-  const filteredRules = useMemo(() => filterSemanticRules(state.rules, appliedFilters), [appliedFilters, state.rules])
-  const pagedRules = useMemo(
-    () => filteredRules.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [currentPage, filteredRules, pageSize]
-  )
-  const activeRule =
-    panelState && panelState.mode !== 'create'
-      ? (state.rules.find(rule => rule.id === panelState.ruleId) ?? null)
-      : null
+  const {
+    businessCategoryOptions,
+    createRule,
+    deleteRule,
+    dictionaryLoading,
+    fetchRuleDetail,
+    loading,
+    matchTargetOptions,
+    refresh,
+    rules,
+    total,
+    updateRule,
+    updateRuleStatus
+  } = useSemanticListManagement({
+    filters: appliedFilters,
+    pageNum: currentPage,
+    pageSize,
+    spaceId
+  })
+
   const visibleColumnKeys = useMemo(
     () => new Set(columnOptions.filter(column => column.visible).map(column => column.key)),
     [columnOptions]
   )
+  const targetLabelMap = useMemo(
+    () => new Map(matchTargetOptions.map(option => [option.value, option.label])),
+    [matchTargetOptions]
+  )
+  const getTargetLabel = useCallback(
+    (target: string): string => (targetLabelMap.get(target) ?? target) || '-',
+    [targetLabelMap]
+  )
+  const categoryLabelMap = useMemo(
+    () => new Map(businessCategoryOptions.map(option => [option.value, option.label])),
+    [businessCategoryOptions]
+  )
+  const getCategoryLabel = useCallback(
+    (category: string): string => (categoryLabelMap.get(category) ?? category) || '-',
+    [categoryLabelMap]
+  )
 
   useEffect(() => {
-    setCurrentPage(page => clampSemanticListPage(page, filteredRules.length, pageSize))
-  }, [filteredRules.length, pageSize])
-
-  useEffect(() => {
-    const existingIds = new Set(state.rules.map(rule => rule.id))
-    setSelectedRowKeys(keys => keys.filter(key => existingIds.has(Number(key))))
-  }, [state.rules])
+    panelRequestSequence.current += 1
+    setCurrentPage(1)
+    setSelectedRowKeys([])
+    setPanelState(null)
+    setPanelLoading(null)
+    setDeleteConfirmation(null)
+  }, [spaceId])
 
   function applyFilters() {
     setAppliedFilters({ ...draftFilters })
@@ -114,11 +132,33 @@ export const Component = () => {
     setSelectedRowKeys([])
   }
 
-  async function handleStatusChange(rule: SemanticRule, enabled: boolean) {
+  async function openExistingPanel(rule: SemanticRule, mode: ExistingPanelMode): Promise<void> {
+    panelRequestSequence.current += 1
+    const requestId = panelRequestSequence.current
+    setPanelLoading({ mode, ruleId: rule.id })
+    try {
+      const detail = await fetchRuleDetail(rule.id)
+      if (requestId !== panelRequestSequence.current) return
+      setPanelState({ mode, rule: detail })
+    } catch {
+      if (requestId === panelRequestSequence.current) messageApi.error('规则详情加载失败，请重试')
+    } finally {
+      if (requestId === panelRequestSequence.current) setPanelLoading(null)
+    }
+  }
+
+  function closePanel() {
+    panelRequestSequence.current += 1
+    setPanelLoading(null)
+    setPanelState(null)
+  }
+
+  async function handleStatusChange(rule: SemanticRule, enabled: boolean): Promise<void> {
     setStatusPendingIds(ids => new Set(ids).add(rule.id))
     try {
-      await setRuleStatus([rule.id], enabled)
+      await updateRuleStatus(rule, enabled)
       messageApi.success(enabled ? '已启用' : '已禁用')
+      await refresh()
     } catch {
       messageApi.error('状态更新失败，请重试')
     } finally {
@@ -130,39 +170,23 @@ export const Component = () => {
     }
   }
 
-  async function handleBatchStatus(enabled: boolean) {
-    const ids = selectedRowKeys.map(Number)
-    if (!ids.length) return
-
-    setBatchAction(enabled ? 'enable' : 'disable')
-    try {
-      await setRuleStatus(ids, enabled)
-      setSelectedRowKeys([])
-      messageApi.success(`已${enabled ? '启用' : '禁用'} ${ids.length} 条规则`)
-    } catch {
-      messageApi.error('批量状态更新失败，请重试')
-    } finally {
-      setBatchAction(null)
-    }
-  }
-
   function requestSingleDelete(rule: SemanticRule) {
-    setDeleteConfirmation({ batch: false, content: `确认删除规则“${rule.name}”？删除后不可恢复。`, ids: [rule.id] })
+    setDeleteConfirmation({ content: `确认删除规则“${rule.name}”？删除后不可恢复。`, rule })
   }
 
-  function requestBatchDelete() {
-    const ids = selectedRowKeys.map(Number)
-    if (!ids.length) return
-    setDeleteConfirmation({ batch: true, content: `确认删除已选择的 ${ids.length} 条规则？删除后不可恢复。`, ids })
-  }
-
-  async function confirmDelete() {
+  async function confirmDelete(): Promise<void> {
     if (!deleteConfirmation) return
+    const { rule } = deleteConfirmation
     setDeletePending(true)
     try {
-      await deleteRules(deleteConfirmation.ids)
-      setSelectedRowKeys(keys => keys.filter(key => !deleteConfirmation.ids.includes(Number(key))))
-      messageApi.success(deleteConfirmation.batch ? '批量删除成功' : '删除成功')
+      await deleteRule(rule.id)
+      setSelectedRowKeys(keys => keys.filter(key => key !== rule.id))
+      if (rules.length === 1 && currentPage > 1) {
+        setCurrentPage(page => page - 1)
+      } else {
+        await refresh()
+      }
+      messageApi.success('删除成功')
       setDeleteConfirmation(null)
     } catch {
       messageApi.error('删除失败，请重试')
@@ -171,16 +195,22 @@ export const Component = () => {
     }
   }
 
-  async function handleRuleSubmit(draft: SemanticRuleDraft) {
+  async function handleRuleSubmit(draft: SemanticRuleDraft): Promise<void> {
     try {
       if (panelState?.mode === 'edit') {
-        await updateRule(panelState.ruleId, draft)
+        await updateRule(panelState.rule, draft)
+        await refresh()
         messageApi.success('保存成功')
-      } else {
-        await createRule(draft)
-        setCurrentPage(1)
-        messageApi.success('创建成功')
+        return
       }
+
+      await createRule(draft)
+      if (currentPage === 1) {
+        await refresh()
+      } else {
+        setCurrentPage(1)
+      }
+      messageApi.success('创建成功')
     } catch (error) {
       messageApi.error('保存失败，请重试')
       throw error
@@ -213,13 +243,15 @@ export const Component = () => {
           className={styles.ruleName}
           title={name}
           type="button"
-          onClick={() => setPanelState({ mode: 'detail', ruleId: rule.id })}
+          onClick={() => {
+            openExistingPanel(rule, 'detail').catch(() => undefined)
+          }}
         >
           {name}
         </button>
       ),
       title: '规则名称',
-      width: 160
+      width: 190
     },
     {
       dataIndex: 'code',
@@ -228,13 +260,13 @@ export const Component = () => {
       render: (code: string) => (
         <code
           className={styles.ruleCode}
-          title={code}
+          title={code || '-'}
         >
-          {code}
+          {code || '-'}
         </code>
       ),
       title: '规则编码',
-      width: 150
+      width: 180
     },
     {
       className: styles.nowrapCell,
@@ -247,18 +279,26 @@ export const Component = () => {
         </span>
       ),
       title: '名单类型',
-      width: 120
+      width: 140
     },
-    { align: 'center', dataIndex: 'category', ellipsis: true, key: 'category', title: '业务类别', width: 125 },
+    {
+      align: 'center',
+      dataIndex: 'category',
+      ellipsis: true,
+      key: 'category',
+      render: (category: string) => getCategoryLabel(category),
+      title: '业务类别',
+      width: 160
+    },
     {
       align: 'center',
       className: styles.nowrapCell,
       dataIndex: 'target',
       key: 'target',
       onHeaderCell: () => ({ className: styles.nowrapCell }),
-      render: (target: SemanticRule['target']) => MATCH_TARGET_LABELS[target],
+      render: (target: string) => getTargetLabel(target),
       title: '匹配目标',
-      width: 120
+      width: 150
     },
     {
       align: 'center',
@@ -277,7 +317,7 @@ export const Component = () => {
         />
       ),
       title: '状态',
-      width: 70
+      width: 90
     },
     {
       align: 'center',
@@ -285,8 +325,9 @@ export const Component = () => {
       dataIndex: 'updatedAt',
       ellipsis: true,
       key: 'updatedAt',
+      render: (updatedAt: string) => updatedAt || '-',
       title: '更新时间',
-      width: 120
+      width: 180
     },
     {
       align: 'center',
@@ -299,18 +340,24 @@ export const Component = () => {
           <Button
             className="abi-action-link"
             icon={<EyeOutlined />}
+            loading={panelLoading?.mode === 'detail' && panelLoading.ruleId === rule.id}
             size="small"
             type="link"
-            onClick={() => setPanelState({ mode: 'detail', ruleId: rule.id })}
+            onClick={() => {
+              openExistingPanel(rule, 'detail').catch(() => undefined)
+            }}
           >
             详情
           </Button>
           <Button
             className="abi-action-link"
             icon={<EditOutlined />}
+            loading={panelLoading?.mode === 'edit' && panelLoading.ruleId === rule.id}
             size="small"
             type="link"
-            onClick={() => setPanelState({ mode: 'edit', ruleId: rule.id })}
+            onClick={() => {
+              openExistingPanel(rule, 'edit').catch(() => undefined)
+            }}
           >
             编辑
           </Button>
@@ -326,7 +373,7 @@ export const Component = () => {
         </div>
       ),
       title: '操作',
-      width: 260
+      width: 280
     }
   ]
 
@@ -334,16 +381,17 @@ export const Component = () => {
   const visibleColumns = columns.filter(
     column => column.key === 'operation' || visibleColumnKeys.has(String(column.key))
   )
-  const tableColumns = pagedRules.length
-    ? visibleColumns
-    : visibleColumns.map(column => ({ ...column, fixed: undefined, width: undefined }))
   const tableScrollWidth = getTableScrollWidth(visibleColumns)
+  const batchTooltip = '待批量接口接入'
 
   return (
     <>
       {messageContext}
       <div className={`${styles.pageRoot} h-full min-h-0 flex flex-col overflow-hidden`}>
         <SemanticListFilters
+          businessCategoryOptions={businessCategoryOptions}
+          dictionaryLoading={dictionaryLoading}
+          matchTargetOptions={matchTargetOptions}
           value={draftFilters}
           onChange={setDraftFilters}
           onQuery={applyFilters}
@@ -357,40 +405,44 @@ export const Component = () => {
             <div className={`abi-toolbar-left ${styles.toolbarActions}`}>
               <Button
                 className="btn-accent-gradient"
+                disabled={spaceId <= 0}
                 icon={<PlusOutlined />}
                 type="primary"
                 onClick={() => setPanelState({ mode: 'create' })}
               >
                 新增规则
               </Button>
-              <Button
-                disabled={!hasSelection}
-                icon={<CheckCircleOutlined />}
-                loading={batchAction === 'enable'}
-                onClick={() => {
-                  handleBatchStatus(true).catch(() => undefined)
-                }}
-              >
-                批量启用{hasSelection ? `(${selectedRowKeys.length})` : ''}
-              </Button>
-              <Button
-                disabled={!hasSelection}
-                icon={<StopOutlined />}
-                loading={batchAction === 'disable'}
-                onClick={() => {
-                  handleBatchStatus(false).catch(() => undefined)
-                }}
-              >
-                批量禁用{hasSelection ? `(${selectedRowKeys.length})` : ''}
-              </Button>
-              <Button
-                danger
-                disabled={!hasSelection}
-                icon={<DeleteOutlined />}
-                onClick={requestBatchDelete}
-              >
-                批量删除{hasSelection ? `(${selectedRowKeys.length})` : ''}
-              </Button>
+              <Tooltip title={batchTooltip}>
+                <span className="inline-flex">
+                  <Button
+                    disabled
+                    icon={<CheckCircleOutlined />}
+                  >
+                    批量启用{hasSelection ? `(${selectedRowKeys.length})` : ''}
+                  </Button>
+                </span>
+              </Tooltip>
+              <Tooltip title={batchTooltip}>
+                <span className="inline-flex">
+                  <Button
+                    disabled
+                    icon={<StopOutlined />}
+                  >
+                    批量禁用{hasSelection ? `(${selectedRowKeys.length})` : ''}
+                  </Button>
+                </span>
+              </Tooltip>
+              <Tooltip title={batchTooltip}>
+                <span className="inline-flex">
+                  <Button
+                    danger
+                    disabled
+                    icon={<DeleteOutlined />}
+                  >
+                    批量删除{hasSelection ? `(${selectedRowKeys.length})` : ''}
+                  </Button>
+                </span>
+              </Tooltip>
             </div>
             <ViewControls
               columns={columnOptions}
@@ -406,12 +458,13 @@ export const Component = () => {
                 <div className="assistant-table-scroll max-h-full overflow-auto">
                   <Table<SemanticRule>
                     className={`${styles.ruleTable} abi-std-table`}
-                    columns={tableColumns}
-                    dataSource={pagedRules}
+                    columns={visibleColumns}
+                    dataSource={rules}
+                    loading={loading}
                     locale={{ emptyText: <TableEmpty description="暂无符合条件的规则" /> }}
                     pagination={false}
                     rowKey="id"
-                    scroll={pagedRules.length ? { x: tableScrollWidth } : undefined}
+                    scroll={{ x: tableScrollWidth }}
                     size="middle"
                     tableLayout="fixed"
                     rowSelection={{
@@ -425,17 +478,28 @@ export const Component = () => {
                 </div>
               </div>
             ) : (
-              <SemanticRuleCardList
-                dataSource={pagedRules}
-                statusPendingIds={statusPendingIds}
-                visibleColumnKeys={visibleColumnKeys}
-                onDelete={requestSingleDelete}
-                onDetail={rule => setPanelState({ mode: 'detail', ruleId: rule.id })}
-                onEdit={rule => setPanelState({ mode: 'edit', ruleId: rule.id })}
-                onStatusChange={(rule, enabled) => {
-                  handleStatusChange(rule, enabled).catch(() => undefined)
-                }}
-              />
+              <Spin
+                spinning={loading}
+                wrapperClassName="abi-data-spin"
+              >
+                <SemanticRuleCardList
+                  dataSource={rules}
+                  getCategoryLabel={getCategoryLabel}
+                  getTargetLabel={getTargetLabel}
+                  statusPendingIds={statusPendingIds}
+                  visibleColumnKeys={visibleColumnKeys}
+                  onDelete={requestSingleDelete}
+                  onDetail={rule => {
+                    openExistingPanel(rule, 'detail').catch(() => undefined)
+                  }}
+                  onEdit={rule => {
+                    openExistingPanel(rule, 'edit').catch(() => undefined)
+                  }}
+                  onStatusChange={(rule, enabled) => {
+                    handleStatusChange(rule, enabled).catch(() => undefined)
+                  }}
+                />
+              </Spin>
             )}
             <div className={styles.paginationRoot}>
               <Pagination
@@ -444,10 +508,11 @@ export const Component = () => {
                 align="end"
                 className={styles.systemPagination}
                 current={currentPage}
+                disabled={loading}
                 pageSize={pageSize}
                 pageSizeOptions={[10, 20, 30, 40, 50]}
-                showTotal={total => `共 ${total} 条`}
-                total={filteredRules.length}
+                showTotal={count => `共 ${count} 条`}
+                total={total}
                 onChange={handlePaginationChange}
               />
             </div>
@@ -456,22 +521,28 @@ export const Component = () => {
       </div>
 
       <SemanticRuleDrawer
+        businessCategoryOptions={businessCategoryOptions}
+        dictionaryLoading={dictionaryLoading}
+        matchTargetOptions={matchTargetOptions}
         open={panelState?.mode === 'create' || panelState?.mode === 'edit'}
-        rule={panelState?.mode === 'edit' ? activeRule : null}
+        rule={panelState?.mode === 'edit' ? panelState.rule : null}
         width={drawerWidth}
-        onClose={() => setPanelState(null)}
+        onClose={closePanel}
         onSubmit={handleRuleSubmit}
       />
       <SemanticRuleDetailDrawer
+        getCategoryLabel={getCategoryLabel}
+        getTargetLabel={getTargetLabel}
         open={panelState?.mode === 'detail'}
-        rule={panelState?.mode === 'detail' ? activeRule : null}
+        rule={panelState?.mode === 'detail' ? panelState.rule : null}
         width={drawerWidth}
-        onClose={() => setPanelState(null)}
-        onEdit={rule => setPanelState({ mode: 'edit', ruleId: rule.id })}
+        onClose={closePanel}
+        onEdit={rule => setPanelState({ mode: 'edit', rule })}
       />
 
       <Modal
         centered
+        cancelButtonProps={{ disabled: deletePending }}
         cancelText="取消"
         closable={!deletePending}
         confirmLoading={deletePending}

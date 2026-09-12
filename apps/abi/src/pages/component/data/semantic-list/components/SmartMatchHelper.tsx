@@ -1,4 +1,4 @@
-import { MATCH_METHOD_LABELS, MATCH_TARGET_LABELS, SMART_HELPERS } from '../constants'
+import { MATCH_METHOD_LABELS, SMART_HELPERS } from '../constants'
 import styles from '../semantic-list.module.scss'
 import type { SemanticMatchMethod, SemanticMatchTarget } from '../types'
 
@@ -6,10 +6,14 @@ interface SmartMatchHelperProps {
   readonly method: SemanticMatchMethod
   readonly onApply: (value: string) => void
   readonly target: SemanticMatchTarget
+  readonly targetLabel: string
 }
 
-export function SmartMatchHelper({ method, onApply, target }: SmartMatchHelperProps) {
-  const helper = SMART_HELPERS[target][method]
+export function SmartMatchHelper({ method, onApply, target, targetLabel }: SmartMatchHelperProps) {
+  const helper = SMART_HELPERS[target]?.[method] ?? {
+    description: method === 'AST' ? 'AST 表达式由服务端解析和执行' : '请根据当前业务目标填写匹配内容',
+    examples: []
+  }
 
   return (
     <section
@@ -22,7 +26,7 @@ export function SmartMatchHelper({ method, onApply, target }: SmartMatchHelperPr
           className={styles.smartHelperDot}
         />
         <span className={styles.smartHelperTitle}>
-          智能提示 · {MATCH_TARGET_LABELS[target]} + {MATCH_METHOD_LABELS[method]}
+          智能提示 · {targetLabel || '未选择匹配目标'} + {MATCH_METHOD_LABELS[method]}
         </span>
         <span className={styles.smartHelperDescription}>
           {helper.description}

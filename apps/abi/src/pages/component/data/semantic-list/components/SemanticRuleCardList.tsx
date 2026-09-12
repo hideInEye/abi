@@ -1,22 +1,26 @@
 import { DeleteOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons'
 import { Button, Empty, Switch } from 'antd'
 
-import { LIST_TYPE_LABELS, MATCH_METHOD_LABELS, MATCH_TARGET_LABELS } from '../constants'
+import { LIST_TYPE_LABELS, MATCH_METHOD_LABELS } from '../constants'
 import styles from '../semantic-list.module.scss'
-import type { SemanticRule } from '../types'
+import type { SemanticRule, SemanticRuleId } from '../types'
 
 interface SemanticRuleCardListProps {
   readonly dataSource: readonly SemanticRule[]
+  readonly getCategoryLabel: (category: string) => string
+  readonly getTargetLabel: (target: string) => string
   readonly onDelete: (rule: SemanticRule) => void
   readonly onDetail: (rule: SemanticRule) => void
   readonly onEdit: (rule: SemanticRule) => void
   readonly onStatusChange: (rule: SemanticRule, enabled: boolean) => void
-  readonly statusPendingIds: ReadonlySet<number>
+  readonly statusPendingIds: ReadonlySet<SemanticRuleId>
   readonly visibleColumnKeys: ReadonlySet<string>
 }
 
 export function SemanticRuleCardList({
   dataSource,
+  getCategoryLabel,
+  getTargetLabel,
   onDelete,
   onDetail,
   onEdit,
@@ -68,9 +72,9 @@ export function SemanticRuleCardList({
                   <span className="lbl">规则编码</span>
                   <code
                     className={`val ${styles.cardCode}`}
-                    title={rule.code}
+                    title={rule.code || '-'}
                   >
-                    {rule.code}
+                    {rule.code || '-'}
                   </code>
                 </div>
               )}
@@ -79,9 +83,9 @@ export function SemanticRuleCardList({
                   <span className="lbl">业务类别</span>
                   <span
                     className="val"
-                    title={rule.category}
+                    title={getCategoryLabel(rule.category)}
                   >
-                    {rule.category}
+                    {getCategoryLabel(rule.category)}
                   </span>
                 </div>
               )}
@@ -90,16 +94,16 @@ export function SemanticRuleCardList({
                   <span className="lbl">匹配规则</span>
                   <span
                     className="val"
-                    title={`${MATCH_TARGET_LABELS[rule.target]} · ${MATCH_METHOD_LABELS[rule.method]}`}
+                    title={`${getTargetLabel(rule.target)} · ${MATCH_METHOD_LABELS[rule.method]}`}
                   >
-                    {MATCH_TARGET_LABELS[rule.target]} · {MATCH_METHOD_LABELS[rule.method]}
+                    {getTargetLabel(rule.target)} · {MATCH_METHOD_LABELS[rule.method]}
                   </span>
                 </div>
               )}
               {visibleColumnKeys.has('updatedAt') && (
                 <div className="row">
                   <span className="lbl">更新时间</span>
-                  <span className="val">{rule.updatedAt}</span>
+                  <span className="val">{rule.updatedAt || '-'}</span>
                 </div>
               )}
               {visibleColumnKeys.has('enabled') && (

@@ -1,21 +1,24 @@
 import { describe, expect, it } from 'vitest'
 
 import { EMPTY_FILTERS } from './constants'
+import { getResponsiveOverlayWidths, getTableScrollWidth } from './semantic-list-layout'
 import {
-  clampSemanticListPage,
+  buildSemanticRuleCreateParams,
+  buildSemanticRuleListParams,
+  buildSemanticRuleStatusUpdateParams,
+  buildSemanticRuleUpdateParams,
   convertLikePatternToRegex,
-  createInitialSemanticListState,
-  filterSemanticRules,
-  formatSemanticRuleTime,
-  semanticListReducer,
+  normalizeSemanticRuleDraft,
+  semanticRuleToDraft,
+  serializeAdvancedSettings,
   testSemanticRule,
   validateSemanticRuleDraft
 } from './semantic-list-model'
-import type { SemanticRuleDraft } from './types'
+import type { SemanticRule, SemanticRuleDraft } from './types'
 
 const validDraft: SemanticRuleDraft = {
   advancedSettings: [],
-  category: '时间范围与边界',
+  category: '元数据查询',
   method: 'EXACT',
   name: '测试规则',
   pattern: 'dim_customer',
@@ -26,44 +29,23 @@ const validDraft: SemanticRuleDraft = {
   visibility: 'PUBLIC'
 }
 
-describe('semantic list filtering and pagination', () => {
-  it('fuzzy searches the trimmed keyword against name and code', () => {
-    const { rules } = createInitialSemanticListState()
-
-    expect(filterSemanticRules(rules, { ...EMPTY_FILTERS, keyword: '  meta_explore  ' }).map(rule => rule.id)).toEqual([
-      2
-    ])
-    expect(filterSemanticRules(rules, { ...EMPTY_FILTERS, keyword: '高危ddl' }).map(rule => rule.id)).toEqual([6])
-  })
-
-  it('combines type, category, status, target and method filters', () => {
-    const initial = createInitialSemanticListState()
-    const state = semanticListReducer(initial, {
-      enabled: false,
-      ids: [6],
-      now: '2026-09-10 10:00',
-      type: 'set-status'
-    })
-    const result = filterSemanticRules(state.rules, {
-      category: '高危操作',
-      keyword: '',
-      method: 'REGEX',
-      status: 'DISABLED',
-      target: 'SQL_TEXT',
-      type: 'BLACKLIST'
-    })
-
-    expect(result.map(rule => rule.code)).toEqual(['BL_HIGH_RISK_001'])
-    expect(filterSemanticRules(state.rules, EMPTY_FILTERS)).toHaveLength(7)
-    expect(filterSemanticRules(state.rules, { ...EMPTY_FILTERS, keyword: '不存在' })).toEqual([])
-  })
-
-  it('clamps invalid and out-of-range pages', () => {
-    expect(clampSemanticListPage(3, 21, 20)).toBe(2)
-    expect(clampSemanticListPage(0, 21, 20)).toBe(1)
-    expect(clampSemanticListPage(5, 0, 20)).toBe(1)
-  })
-})
+const existingRule: SemanticRule = {
+  advancedSettings: [{ key: 'tenant', value: 'retail' }],
+  category: '元数据查询',
+  code: 'RULE_000001',
+  enabled: false,
+  hitExamples: [],
+  id: '9007199254740993',
+  method: 'LIKE',
+  name: '存量规则',
+  pattern: 'dim_%',
+  priority: 90,
+  remark: '存量说明',
+  target: 'TABLE_NAME',
+  type: 'WHITELIST',
+  updatedAt: '2026-09-12 10:00:00',
+  visibility: 'PRIVATE'
+}
 
 describe('semantic rule matcher', () => {
   it('uses complete case-sensitive equality for exact matching', () => {
@@ -76,6 +58,7 @@ describe('semantic rule matcher', () => {
     expect(testSemanticRule('LIKE', 'select%from%', 'SELECT count(*) FROM orders').matched).toBe(true)
     expect(testSemanticRule('LIKE', 'ab_d', 'abXd').matched).toBe(true)
     expect(testSemanticRule('LIKE', 'ab_d', 'abXXd').matched).toBe(false)
+    expect(testSemanticRule('LIKE', 'select%from%', 'SELECT *\nFROM orders').matched).toBe(true)
     expect(convertLikePatternToRegex('dim_%.v1').test('DIM_customer.v1')).toBe(true)
     expect(convertLikePatternToRegex('dim_%.v1').test('dim_customer-v1')).toBe(false)
   })
@@ -87,123 +70,192 @@ describe('semantic rule matcher', () => {
     expect(testSemanticRule('REGEX', '^dim_', 'fact_order').status).toBe('miss')
   })
 
-  it('reports an empty test text before attempting a match', () => {
+  it('does not pretend to execute AST matching in the browser', () => {
+    expect(testSemanticRule('AST', 'FULL_TABLE_SCAN', 'select * from orders')).toMatchObject({
+      matched: false,
+      status: 'unsupported'
+    })
+  })
+
+  it('reports an empty test text before attempting a regex match', () => {
     expect(testSemanticRule('REGEX', '[invalid', '')).toMatchObject({ message: '请输入测试文本', status: 'empty' })
   })
 })
 
-describe('semantic list state transitions', () => {
-  it('creates an enabled rule with a unique demo code and normalized values', () => {
-    const initial = createInitialSemanticListState()
-    const state = semanticListReducer(initial, {
-      draft: {
+describe('semantic rule request mapping', () => {
+  it('normalizes business fields without altering non-empty advanced values', () => {
+    expect(
+      normalizeSemanticRuleDraft({
         ...validDraft,
         advancedSettings: [
           { key: ' space ', value: ' retail ' },
           { key: ' ', value: '  ' },
           { key: 'tenant', value: '' }
         ],
+        category: '  自定义类别  ',
         name: '  新规则  ',
         pattern: '  dim_order  ',
         priority: null
-      },
-      now: '2026-09-10 10:10',
-      type: 'create'
-    })
-
-    expect(state).not.toBe(initial)
-    expect(initial.rules).toHaveLength(7)
-    expect(state.rules[0]).toMatchObject({
-      code: 'RULE_000008',
-      enabled: true,
-      id: 8,
+      })
+    ).toMatchObject({
+      advancedSettings: [
+        { key: ' space ', value: ' retail ' },
+        { key: 'tenant', value: '' }
+      ],
+      category: '自定义类别',
       name: '新规则',
       pattern: 'dim_order',
-      priority: 100,
-      updatedAt: '2026-09-10 10:10'
+      priority: 100
     })
-    expect(state.rules[0].advancedSettings).toEqual([
-      { key: ' space ', value: ' retail ' },
-      { key: 'tenant', value: '' }
-    ])
-    expect(state.nextSequence).toBe(9)
   })
 
-  it('edits mutable fields while preserving identity, code, status and examples', () => {
-    const initial = createInitialSemanticListState()
-    const disabled = semanticListReducer(initial, {
-      enabled: false,
-      ids: [1],
-      now: '2026-09-10 10:00',
-      type: 'set-status'
-    })
-    const state = semanticListReducer(disabled, {
-      draft: { ...validDraft, name: '修改后' },
-      id: 1,
-      now: '2026-09-10 10:11',
-      type: 'update'
-    })
-    const updated = state.rules.find(rule => rule.id === 1)
-
-    expect(updated).toMatchObject({
-      code: 'WL_TIME_BOUNDARY_001',
-      enabled: false,
-      id: 1,
-      name: '修改后',
-      updatedAt: '2026-09-10 10:11'
-    })
-    expect(updated?.hitExamples).toEqual(['2026-01-01 00:00:00'])
+  it('serializes advanced settings as an object, ignores empty rows and lets the last duplicate win', () => {
+    expect(
+      serializeAdvancedSettings([
+        { key: '', value: '' },
+        { key: 'tenant', value: 'first' },
+        { key: 'onlyKey', value: '' },
+        { key: '', value: 'onlyValue' },
+        { key: '__proto__', value: 'literal-key' },
+        { key: 'tenant', value: 'last' }
+      ])
+    ).toBe('{"tenant":"last","onlyKey":"","":"onlyValue","__proto__":"literal-key"}')
+    expect(serializeAdvancedSettings([])).toBe('{}')
   })
 
-  it('updates statuses in a batch without mutating unaffected records', () => {
-    const initial = createInitialSemanticListState()
-    const unaffected = initial.rules[2]
-    const state = semanticListReducer(initial, {
-      enabled: false,
-      ids: [1, 2],
-      now: '2026-09-10 10:12',
-      type: 'set-status'
+  it('maps only confirmed list filters and keeps pagination on the server', () => {
+    const params = buildSemanticRuleListParams({
+      filters: {
+        ...EMPTY_FILTERS,
+        category: '  元数据查询 ',
+        method: 'AST',
+        ruleName: '  禁止扫描 ',
+        status: '1',
+        target: ' AST_FEATURE ',
+        type: 'BLACKLIST',
+        visibility: 'PRIVATE'
+      },
+      pageNum: 3,
+      pageSize: 50,
+      spaceId: 1001
     })
 
-    expect(state.rules.slice(0, 2).every(rule => !rule.enabled && rule.updatedAt === '2026-09-10 10:12')).toBe(true)
-    expect(state.rules[2]).toBe(unaffected)
-    expect(initial.rules[0].enabled).toBe(true)
+    expect(params).toEqual({
+      bizType: '元数据查询',
+      listType: 'BLACKLIST',
+      matchMethod: 'AST',
+      matchTarget: 'AST_FEATURE',
+      pageNum: 3,
+      pageSize: 50,
+      ruleName: '禁止扫描',
+      spaceId: 1001,
+      status: '1',
+      visibility: 'PRIVATE'
+    })
+    expect(params).not.toHaveProperty('ruleCode')
   })
 
-  it('deletes single and multiple rules without reusing the sequence', () => {
-    const initial = createInitialSemanticListState()
-    const single = semanticListReducer(initial, { ids: [1], type: 'delete' })
-    const batch = semanticListReducer(single, { ids: [2, 3], type: 'delete' })
+  it('builds create and update payloads with explicit status and preserves Long IDs', () => {
+    expect(buildSemanticRuleCreateParams(1001, validDraft)).toMatchObject({
+      bizType: '元数据查询',
+      extConditions: '{}',
+      matchMethod: 'EXACT',
+      spaceId: 1001,
+      status: '1'
+    })
 
-    expect(batch.rules.map(rule => rule.id)).toEqual([4, 5, 6, 7])
-    expect(batch.nextSequence).toBe(8)
-    expect(initial.rules).toHaveLength(7)
+    expect(
+      buildSemanticRuleUpdateParams({
+        draft: { ...validDraft, method: 'AST', pattern: 'FULL_TABLE_SCAN' },
+        rule: existingRule,
+        spaceId: 1001
+      })
+    ).toMatchObject({ ruleId: '9007199254740993', status: '0' })
+    expect(
+      buildSemanticRuleUpdateParams({
+        draft: validDraft,
+        enabled: true,
+        rule: existingRule,
+        spaceId: 1001
+      })
+    ).toMatchObject({ ruleId: '9007199254740993', status: '1' })
+
+    expect(buildSemanticRuleStatusUpdateParams(1001, existingRule, true)).toEqual({
+      bizType: '元数据查询',
+      listType: 'WHITELIST',
+      matchTarget: 'TABLE_NAME',
+      ruleId: '9007199254740993',
+      spaceId: 1001,
+      status: '1'
+    })
+  })
+
+  it('creates an editable draft without mutating nested settings', () => {
+    const draft = semanticRuleToDraft(existingRule)
+    if (draft.advancedSettings?.[0]) draft.advancedSettings[0].value = 'changed'
+
+    expect(existingRule.advancedSettings[0].value).toBe('retail')
+    expect(draft).toMatchObject({ method: 'LIKE', name: '存量规则', visibility: 'PRIVATE' })
   })
 })
 
 describe('semantic rule validation', () => {
-  it('accepts the valid draft without inventing length limits', () => {
-    expect(validateSemanticRuleDraft({ ...validDraft, name: 'a'.repeat(500), remark: 'b'.repeat(2000) })).toEqual({})
+  it('accepts dictionary-driven and custom categories, dynamic targets and AST', () => {
+    expect(
+      validateSemanticRuleDraft({
+        ...validDraft,
+        category: '后端新增类别',
+        method: 'AST',
+        name: 'a'.repeat(500),
+        pattern: '[由服务端解释',
+        target: 'BACKEND_NEW_TARGET'
+      })
+    ).toEqual({})
   })
 
   it('rejects whitespace required values, negative priority and invalid regex', () => {
-    expect(validateSemanticRuleDraft({ ...validDraft, name: '  ', pattern: '  ', priority: -1 })).toMatchObject({
+    expect(
+      validateSemanticRuleDraft({
+        ...validDraft,
+        category: ' ',
+        name: '  ',
+        pattern: '  ',
+        priority: -1,
+        target: ' '
+      })
+    ).toMatchObject({
+      category: '请选择或填写业务类别',
       name: '请填写规则名称',
       pattern: '请填写匹配内容',
-      priority: '请输入有效的优先级'
+      priority: '请输入有效的优先级',
+      target: '请选择匹配目标'
     })
     expect(validateSemanticRuleDraft({ ...validDraft, method: 'REGEX', pattern: '[invalid' })).toMatchObject({
       pattern: '正则表达式格式错误'
     })
+    expect(
+      validateSemanticRuleDraft({
+        ...validDraft,
+        category: undefined as unknown as string,
+        target: undefined as unknown as string
+      })
+    ).toMatchObject({ category: '请选择或填写业务类别', target: '请选择匹配目标' })
+  })
+})
+
+describe('semantic list layout contracts', () => {
+  it('sums every visible column width plus the selection column', () => {
+    expect(
+      getTableScrollWidth([
+        { key: 'name', width: 190 },
+        { key: 'type', width: 140 },
+        { key: 'operation', width: 280 }
+      ])
+    ).toBe(658)
   })
 
-  it('rejects a category that does not belong to the selected list type', () => {
-    expect(validateSemanticRuleDraft({ ...validDraft, type: 'BLACKLIST' })).toMatchObject({
-      category: '请选择业务类别'
-    })
-  })
-
-  it('formats the injected clock deterministically', () => {
-    expect(formatSemanticRuleTime(new Date(2026, 8, 10, 9, 7))).toBe('2026-09-10 09:07')
+  it('uses half-screen desktop overlays and narrow-screen fallbacks', () => {
+    expect(getResponsiveOverlayWidths(true)).toEqual({ confirmWidth: '50%', drawerWidth: '50%' })
+    expect(getResponsiveOverlayWidths(false)).toEqual({ confirmWidth: '90%', drawerWidth: '96%' })
   })
 })

@@ -1,11 +1,11 @@
-import { AimOutlined, AppstoreOutlined, ExperimentOutlined, ProfileOutlined, SettingOutlined } from '@ant-design/icons'
-import { Button, Empty, Tag } from 'antd'
+import { AimOutlined, AppstoreOutlined, ExperimentOutlined, ProfileOutlined } from '@ant-design/icons'
+import { Button, Tag } from 'antd'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
-import { LIST_TYPE_LABELS, MATCH_METHOD_LABELS, MATCH_TARGET_LABELS, VISIBILITY_LABELS } from '../constants'
+import { LIST_TYPE_LABELS, MATCH_METHOD_LABELS, VISIBILITY_LABELS } from '../constants'
 import { testSemanticRule } from '../semantic-list-model'
 import styles from '../semantic-list.module.scss'
 import type { SemanticMatchResult, SemanticRule } from '../types'
@@ -13,6 +13,8 @@ import type { SemanticMatchResult, SemanticRule } from '../types'
 import { MatchTester } from './MatchTester'
 
 interface SemanticRuleDetailDrawerProps {
+  readonly getCategoryLabel: (category: string) => string
+  readonly getTargetLabel: (target: string) => string
   readonly onClose: () => void
   readonly onEdit: (rule: SemanticRule) => void
   readonly open: boolean
@@ -39,7 +41,15 @@ function DetailItem({
   )
 }
 
-export function SemanticRuleDetailDrawer({ onClose, onEdit, open, rule, width }: SemanticRuleDetailDrawerProps) {
+export function SemanticRuleDetailDrawer({
+  getCategoryLabel,
+  getTargetLabel,
+  onClose,
+  onEdit,
+  open,
+  rule,
+  width
+}: SemanticRuleDetailDrawerProps) {
   const [testText, setTestText] = useState('')
   const [testResult, setTestResult] = useState<SemanticMatchResult | null>(null)
 
@@ -54,7 +64,7 @@ export function SemanticRuleDetailDrawer({ onClose, onEdit, open, rule, width }:
   return (
     <CommonDrawer
       destroyOnClose
-      description={rule.code}
+      description={rule.code || '未返回规则编码'}
       icon={<AppstoreOutlined />}
       open={open}
       rootClassName={styles.semanticOverlayRoot}
@@ -88,7 +98,7 @@ export function SemanticRuleDetailDrawer({ onClose, onEdit, open, rule, width }:
             <DetailItem
               monospace
               label="规则编码"
-              value={rule.code}
+              value={rule.code || '-'}
             />
             <DetailItem
               label="名单类型"
@@ -103,7 +113,7 @@ export function SemanticRuleDetailDrawer({ onClose, onEdit, open, rule, width }:
             />
             <DetailItem
               label="业务类别"
-              value={rule.category}
+              value={getCategoryLabel(rule.category)}
             />
             <DetailItem
               label="优先级"
@@ -133,35 +143,39 @@ export function SemanticRuleDetailDrawer({ onClose, onEdit, open, rule, width }:
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <DetailItem
               label="匹配目标"
-              value={MATCH_TARGET_LABELS[rule.target]}
+              value={getTargetLabel(rule.target)}
             />
             <DetailItem
               label="匹配方式"
               value={MATCH_METHOD_LABELS[rule.method]}
             />
             <div className="md:col-span-2">
-              <div className={styles.detailLabel}>{rule.method === 'REGEX' ? '匹配表达式' : '匹配内容'}</div>
+              <div className={styles.detailLabel}>
+                {rule.method === 'REGEX' || rule.method === 'AST' ? '匹配表达式' : '匹配内容'}
+              </div>
               <div className={styles.codeBox}>{rule.pattern}</div>
-              <MatchTester
-                note="仅验证，不修改规则"
-                result={testResult}
-                text={testText}
-                onTest={() => setTestResult(testSemanticRule(rule.method, rule.pattern, testText))}
-                onChange={value => {
-                  setTestText(value)
-                  setTestResult(null)
-                }}
-              />
+              {rule.method !== 'AST' ? (
+                <MatchTester
+                  note="仅验证，不修改规则"
+                  result={testResult}
+                  text={testText}
+                  onTest={() => setTestResult(testSemanticRule(rule.method, rule.pattern, testText))}
+                  onChange={value => {
+                    setTestText(value)
+                    setTestResult(null)
+                  }}
+                />
+              ) : null}
             </div>
           </div>
         </section>
 
-        <section className="ds-form-section">
-          <div className="ds-form-section-title">
-            <ExperimentOutlined />
-            命中示例
-          </div>
-          {rule.hitExamples.length ? (
+        {rule.hitExamples.length ? (
+          <section className="ds-form-section">
+            <div className="ds-form-section-title">
+              <ExperimentOutlined />
+              命中示例
+            </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {rule.hitExamples.map((example, index) => (
                 <div
@@ -173,38 +187,8 @@ export function SemanticRuleDetailDrawer({ onClose, onEdit, open, rule, width }:
                 </div>
               ))}
             </div>
-          ) : (
-            <Empty
-              description="暂无命中示例"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          )}
-        </section>
-
-        <section className="ds-form-section">
-          <div className="ds-form-section-title">
-            <SettingOutlined />
-            高级设置
-          </div>
-          {rule.advancedSettings.length ? (
-            <div className="flex flex-col gap-2">
-              {rule.advancedSettings.map((setting, index) => (
-                <div
-                  className={styles.advancedDetailRow}
-                  key={`${setting.key}-${setting.value}-${index}`}
-                >
-                  <code>{setting.key || '-'}</code>
-                  <span>{setting.value || '-'}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Empty
-              description="未配置高级设置"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          )}
-        </section>
+          </section>
+        ) : null}
       </div>
     </CommonDrawer>
   )

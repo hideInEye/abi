@@ -6,24 +6,22 @@ import {
   SafetyCertificateOutlined,
   SettingOutlined
 } from '@ant-design/icons'
-import { Button, Form, Input, InputNumber, Radio, Select } from 'antd'
+import { AutoComplete, Button, Form, Input, InputNumber, Radio, Select } from 'antd'
 import { useEffect, useState } from 'react'
 
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
 import {
-  BUSINESS_CATEGORIES,
   DEFAULT_RULE_DRAFT,
   LIST_TYPE_OPTIONS,
   MATCH_METHOD_HINTS,
   MATCH_METHOD_OPTIONS,
-  MATCH_TARGET_OPTIONS,
   VISIBILITY_OPTIONS
 } from '../constants'
-import { testSemanticRule, validateSemanticRuleDraft } from '../semantic-list-model'
+import { semanticRuleToDraft, testSemanticRule, validateSemanticRuleDraft } from '../semantic-list-model'
 import styles from '../semantic-list.module.scss'
 import type {
-  SemanticListType,
+  SemanticDictionaryOption,
   SemanticMatchMethod,
   SemanticMatchResult,
   SemanticMatchTarget,
@@ -38,6 +36,9 @@ import { SmartMatchHelper } from './SmartMatchHelper'
 const { TextArea } = Input
 
 interface SemanticRuleDrawerProps {
+  readonly businessCategoryOptions: readonly SemanticDictionaryOption[]
+  readonly dictionaryLoading: boolean
+  readonly matchTargetOptions: readonly SemanticDictionaryOption[]
   readonly onClose: () => void
   readonly onSubmit: (draft: SemanticRuleDraft) => Promise<void>
   readonly open: boolean
@@ -57,33 +58,34 @@ const FORM_FIELDS: SemanticRuleField[] = [
 ]
 
 function getRuleDraft(rule: SemanticRule | null): SemanticRuleDraft {
-  if (!rule) {
-    return { ...DEFAULT_RULE_DRAFT, advancedSettings: [] }
-  }
-
-  return {
-    advancedSettings: rule.advancedSettings.map(item => ({ ...item })),
-    category: rule.category,
-    method: rule.method,
-    name: rule.name,
-    pattern: rule.pattern,
-    priority: rule.priority,
-    remark: rule.remark,
-    target: rule.target,
-    type: rule.type,
-    visibility: rule.visibility
-  }
+  return rule ? semanticRuleToDraft(rule) : { ...DEFAULT_RULE_DRAFT, advancedSettings: [] }
 }
 
-export function SemanticRuleDrawer({ onClose, onSubmit, open, rule, width }: SemanticRuleDrawerProps) {
+export function SemanticRuleDrawer({
+  businessCategoryOptions,
+  dictionaryLoading,
+  matchTargetOptions,
+  onClose,
+  onSubmit,
+  open,
+  rule,
+  width
+}: SemanticRuleDrawerProps) {
   const [form] = Form.useForm<SemanticRuleDraft>()
   const [submitting, setSubmitting] = useState(false)
   const [testText, setTestText] = useState('')
   const [testResult, setTestResult] = useState<SemanticMatchResult | null>(null)
-  const selectedType = Form.useWatch('type', form) ?? 'WHITELIST'
-  const selectedTarget = Form.useWatch('target', form) ?? 'TABLE_NAME'
+  const selectedTarget = Form.useWatch('target', form) ?? ''
   const selectedMethod = Form.useWatch('method', form) ?? 'EXACT'
   const selectedPattern = Form.useWatch('pattern', form) ?? ''
+  const targetOptions =
+    rule?.target && !matchTargetOptions.some(option => option.value === rule.target)
+      ? [...matchTargetOptions, { label: rule.target, value: rule.target }]
+      : [...matchTargetOptions]
+  const selectedTargetLabel = targetOptions.find(option => option.value === selectedTarget)?.label ?? selectedTarget
+  let patternPlaceholder = '请输入匹配内容'
+  if (selectedMethod === 'REGEX') patternPlaceholder = '请输入正则表达式'
+  if (selectedMethod === 'AST') patternPlaceholder = '请输入 AST 匹配表达式'
 
   useEffect(() => {
     if (!open) return
@@ -94,26 +96,31 @@ export function SemanticRuleDrawer({ onClose, onSubmit, open, rule, width }: Sem
     setTestResult(null)
   }, [form, open, rule])
 
+  useEffect(() => {
+    if (!open || rule) return
+    if (!form.getFieldValue('category') && businessCategoryOptions[0]) {
+      form.setFieldValue('category', businessCategoryOptions[0].value)
+    }
+    if (!form.getFieldValue('target') && matchTargetOptions[0]) {
+      form.setFieldValue('target', matchTargetOptions[0].value)
+    }
+  }, [businessCategoryOptions, form, matchTargetOptions, open, rule])
+
   function handleValuesChange(changedValues: Partial<SemanticRuleDraft>) {
     const changedField = Object.keys(changedValues)[0] as SemanticRuleField | undefined
     if (changedField && FORM_FIELDS.includes(changedField)) form.setFields([{ errors: [], name: changedField }])
-
-    if (changedValues.type) {
-      form.setFieldValue('category', BUSINESS_CATEGORIES[changedValues.type][0])
-      form.setFields([{ errors: [], name: 'category' }])
-    }
 
     if (changedValues.method || changedValues.pattern !== undefined) setTestResult(null)
   }
 
   function runRegexTest(pattern = selectedPattern) {
-    setTestResult(testSemanticRule('REGEX', pattern, testText))
+    setTestResult(testSemanticRule('REGEX', pattern.trim(), testText))
   }
 
   function applySmartExample(value: string) {
     form.setFieldValue('pattern', value)
     form.setFields([{ errors: [], name: 'pattern' }])
-    if (selectedMethod === 'REGEX' && testText) setTestResult(testSemanticRule('REGEX', value, testText))
+    if (selectedMethod === 'REGEX' && testText) runRegexTest(value)
   }
 
   async function handleSubmit() {
@@ -140,8 +147,10 @@ export function SemanticRuleDrawer({ onClose, onSubmit, open, rule, width }: Sem
   return (
     <CommonDrawer
       destroyOnClose
-      description={rule ? rule.code : '填写基础信息并配置匹配规则'}
+      closable={!submitting}
+      description={rule ? rule.code || '未返回规则编码' : '填写基础信息并配置匹配规则'}
       icon={<SafetyCertificateOutlined />}
+      keyboard={!submitting}
       maskClosable={!submitting}
       open={open}
       rootClassName={styles.semanticOverlayRoot}
@@ -149,7 +158,12 @@ export function SemanticRuleDrawer({ onClose, onSubmit, open, rule, width }: Sem
       width={width}
       footer={
         <div className="flex justify-end gap-2">
-          <Button onClick={onClose}>取消</Button>
+          <Button
+            disabled={submitting}
+            onClick={onClose}
+          >
+            取消
+          </Button>
           <Button
             className="btn-accent-gradient"
             loading={submitting}
@@ -208,11 +222,15 @@ export function SemanticRuleDrawer({ onClose, onSubmit, open, rule, width }: Sem
               label="业务类别"
               name="category"
             >
-              <Select
-                options={BUSINESS_CATEGORIES[selectedType as SemanticListType].map(category => ({
-                  label: category,
-                  value: category
-                }))}
+              <AutoComplete
+                allowClear
+                options={[...businessCategoryOptions]}
+                placeholder="请选择或输入业务类别"
+                filterOption={(inputValue, option) =>
+                  String(option?.label ?? option?.value ?? '')
+                    .toLocaleLowerCase()
+                    .includes(inputValue.toLocaleLowerCase())
+                }
               />
             </Form.Item>
             <Form.Item
@@ -257,7 +275,14 @@ export function SemanticRuleDrawer({ onClose, onSubmit, open, rule, width }: Sem
               label="匹配目标"
               name="target"
             >
-              <Select options={MATCH_TARGET_OPTIONS} />
+              <Select
+                showSearch
+                loading={dictionaryLoading}
+                notFoundContent={dictionaryLoading ? '加载中...' : '暂无可用匹配目标'}
+                optionFilterProp="label"
+                options={targetOptions}
+                placeholder="请选择匹配目标"
+              />
             </Form.Item>
             <Form.Item
               required
@@ -270,12 +295,12 @@ export function SemanticRuleDrawer({ onClose, onSubmit, open, rule, width }: Sem
               required
               className="md:col-span-2"
               extra={MATCH_METHOD_HINTS[selectedMethod as SemanticMatchMethod]}
-              label={selectedMethod === 'REGEX' ? '匹配表达式' : '匹配内容'}
+              label={selectedMethod === 'REGEX' || selectedMethod === 'AST' ? '匹配表达式' : '匹配内容'}
               name="pattern"
             >
               <TextArea
                 className={styles.monospaceInput}
-                placeholder={selectedMethod === 'REGEX' ? '请输入正则表达式' : '请输入匹配内容'}
+                placeholder={patternPlaceholder}
                 rows={3}
               />
             </Form.Item>
@@ -283,6 +308,7 @@ export function SemanticRuleDrawer({ onClose, onSubmit, open, rule, width }: Sem
               <SmartMatchHelper
                 method={selectedMethod as SemanticMatchMethod}
                 target={selectedTarget as SemanticMatchTarget}
+                targetLabel={selectedTargetLabel}
                 onApply={applySmartExample}
               />
               {selectedMethod === 'REGEX' ? (

@@ -1,3 +1,71 @@
+# 语义名单管理接口联调
+
+## 文档状态
+
+- 状态：已完成代码接入、接口契约测试、全量变更审查和生产构建；因未提供可访问的接口主机/鉴权环境，且当前会话未启用 `playwright-interactive` 所需的 `js_repl`，真实后端端到端请求与本轮浏览器回归待部署环境继续确认。
+- 日期：2026-09-12。
+- 需求来源：用户补充的语义名单增、改、删、详情、分页列表及字典接口协议，并确认开始联调。
+- 需求类型：ABI 数据资产管理页面接口接入。
+- 继承关系：继承下方“语义名单前端原型实现（无接口阶段）”已经完成的系统化布局、列表/卡片切换、列管理、响应式弹层和匹配测试；本节覆盖其中“无接口、会话内存数据、批量模拟操作”的阶段性约束。
+
+## 目标
+
+1. 将 `/component/data/semantic-list` 从会话内存演示数据切换到真实语义名单接口，接入分页列表、新增、编辑、删除和详情。
+2. 列表查询使用当前空间 `spaceId` 与后端分页参数 `pageNum/pageSize`；名称输入框仅映射 `ruleName` 模糊查询，不再按编码查询。
+3. 通过字典接口分别加载业务类别 `semantic_biz_type` 与匹配目标 `semantic_match_target`：业务类别允许选择或自定义输入，匹配目标只能选择字典已有项。
+4. 匹配方式补充 `AST`，新增/编辑/筛选均可使用；AST 由后端解释，前端不提供规则测试。
+5. 高级设置在新增/编辑时保留 Key/Value 编辑，并序列化为 `extConditions` JSON 对象字符串；详情不展示高级设置。
+6. 所有读写请求必须经过 ABI 既有 `apiRequest`，等待接口结果并通过 flat request 成功门禁后，才允许关闭弹层、刷新列表、展示成功提示或进入后续流程。
+7. 保留服务端 Long ID 原值，不将 `ruleId` 或选择项强制转换为 number；空间切换时立即清理旧空间列表、选择态和已打开详情/编辑面板。
+
+## 非目标
+
+- 不写死接口 ip/port，不绕过现有请求鉴权、代理和统一错误处理。
+- 不猜测或模拟尚未提供的批量启用、批量停用、批量删除接口；对应按钮保留但禁用，并提示“待批量接口接入”。
+- 不修改后端动态菜单、全局主题、公共表格/分页样式或语义名单现有页面布局。
+- 不为本次联调引入 React Query、MSW 或其他新依赖，不扩大范围修复仓库既有测试、类型或构建基线问题。
+- 不支持需求外的正则 `/pattern/flags` 格式，不在 AST 模式下实现前端匹配解释器。
+
+## 接口与数据约束
+
+- 新增：`POST /api/copilot/v1/semanticRules`。
+- 编辑：`PUT /api/copilot/v1/semanticRules`。
+- 删除：`DELETE /api/copilot/v1/semanticRules/{ruleId}`。
+- 详情：`GET /api/copilot/v1/semanticRules/{ruleId}`。
+- 列表：`GET /api/copilot/v1/semanticRules/list`，参数包含 `spaceId/pageNum/pageSize` 和已生效筛选项。
+- 字典：`GET /api/system/dict/data/type/{dictType}`。
+- 名单类型使用 `WHITELIST/BLACKLIST`，匹配方式使用 `EXACT/LIKE/REGEX/AST`，可见性使用 `PUBLIC/PRIVATE`，状态使用字符串 `0/1`。
+- 接口尚未给出统一响应示例；适配层兼容 ABI flat request 的 `data` 以及常见 `records/rows/list` 分页容器，但业务字段只按已确认协议映射，不制造演示数据回退。
+- `extConditions` 空值提交 `"{}"`；全空 Key/Value 行忽略，单边填写原样保留，重复 Key 后一项覆盖前一项。
+
+## 影响范围
+
+- `apps/abi/src/service/api/semantic-rules.ts` 与字典查询服务。
+- `apps/abi/src/pages/component/data/semantic-list` 下的类型、响应适配、领域纯函数、数据 hook、筛选、列表/卡片和三个抽屉。
+- 上述接口服务、响应适配与接口调用成功门禁的同域 Vitest。
+- 本需求文件和 `.ai/runs/2026-09-12-semantic-list-api-integration/RUN_LOG.md`。
+
+## 验收标准
+
+1. 进入页面后按当前 `spaceId` 请求第一页，每次查询、重置、翻页、切换页大小均使用服务端分页并正确显示后端总数；删除最后一页最后一条后页码自动收敛。
+2. 名称、名单类型、业务类别、匹配目标、匹配方式、可见性和状态筛选只在点击查询后生效；名称停止输入的既有自动查询能力仍只提交 `ruleName`。
+3. 新增、编辑、状态切换和删除仅在接口明确成功后更新界面、关闭弹层、提示成功并刷新；失败时保留当前数据与可重试交互。
+4. 查看详情和进入编辑均先请求真实详情；详情失败不打开空抽屉，编辑回显能够解析 `extConditions`，详情不展示高级设置。
+5. 业务类别字典支持选择和自定义文本，匹配目标仅能选择字典值；字典失败时不使用硬编码业务枚举伪装后端数据。
+6. AST 可用于筛选和保存，但新增/编辑及详情均不显示前端规则测试；精确、LIKE、正则原有测试语义保持不变。
+7. 单条状态开关保留当前值直到更新成功；请求失败后回到原状态。批量三个按钮不可执行并展示待接口提示。
+8. 列表/卡片切换、列管理、表格横向滚动宽度求和、50% 桌面弹层、窄屏回退和分页样式无回归。
+
+## 测试要求
+
+- 领域单测覆盖精确/LIKE/正则、AST 不支持前端测试、动态字典值校验、`extConditions` 解析与序列化边界。
+- 响应适配单测覆盖数组及 `records/rows/list` 容器、分页总数、空响应、状态/时间回退、异常 JSON 和 string/number Long ID 保真。
+- API 服务契约测试覆盖 6 类接口的 URL、method、params/data 放置和路径参数编码。
+- 页面接口调用契约测试逐项确认 list/detail/create/update/delete/status-update 均被 `await` 且成功链路位于 `assertFlatRequestSuccess` 之后，失败不会关闭、刷新或提示成功。
+- 执行语义名单定向 Vitest、相关 ESLint、`pnpm test`、`pnpm --filter chatbi typecheck`、`pnpm --filter chatbi build` 和 `git diff --check`；基线失败必须对比并在 run log 如实记录。
+
+---
+
 # 语义名单前端原型实现（无接口阶段）
 
 ## 文档状态
