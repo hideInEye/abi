@@ -28,7 +28,7 @@ import { ApiKeyDrawer } from './components/ApiKeyDrawer'
 import { ApiKeyTable } from './components/ApiKeyTable'
 import type { ApiKeyFormValues, ApiKeyItem, ApiKeyQueryValues, DrawerMode } from './types'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 12
 const DEFAULT_ACTIVE_TIMEOUT = 1800
 
 function extractSecretKey(resp: any): string {

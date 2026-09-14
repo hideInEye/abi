@@ -3,7 +3,7 @@ import { message } from 'antd'
 
 import { streamExplorePlan } from '../../../service/api/conv'
 import { reduceExploreEvent, parseExploreStreamEvent } from './exploreStreamReducer'
-import type { ExploreItem, ExploreSendOptions } from './types'
+import type { ExploreItem, ExploreMcpSource, ExploreSendOptions } from './types'
 
 interface UseExploreConversationOptions {
   conv: any
@@ -25,6 +25,33 @@ function getCurrentUserId(): number {
 
 function normalizeIdList(ids?: Array<string | number>): Array<string | number> {
   return Array.from(new Set((ids || []).filter((id) => id !== '' && id !== null && id !== undefined)))
+}
+
+function toProtocolKey(value: unknown) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, '')
+}
+
+/**
+ * MCP 选中项按协议分流为两类源版本字段，元素形态 {源版本id: 分组namespaceId(s_<groupId>)}；
+ * 未知协议归入 sse（与未分流前行为一致）。
+ */
+export function buildMcpSourceVersionFields(sources?: ExploreMcpSource[]) {
+  const sse: Array<Record<string, string>> = []
+  const streamable: Array<Record<string, string>> = []
+  const seen = new Set<string>()
+  ;(sources || []).forEach((source) => {
+    const id = String(source?.id ?? '')
+    if (!id || seen.has(id)) return
+    seen.add(id)
+    const entry = { [id]: source.namespaceId ?? '' }
+    const protocol = toProtocolKey(source.protocol)
+    if (protocol === 'streamable' || protocol === 'streamablehttp') streamable.push(entry)
+    else sse.push(entry)
+  })
+  return { sse, streamable }
 }
 
 export function useExploreConversation({ conv, spaceId, currentModelId, embedModelId, authorization }: UseExploreConversationOptions) {
@@ -76,6 +103,7 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
     setLoading(true)
     abortRef.current = new AbortController()
 
+    const mcpFields = buildMcpSourceVersionFields(options?.mcpSourceVersionIds)
     const payload = {
       messages: question,
       app_id: conv.appId ?? conv.app_id ?? 0,
@@ -89,8 +117,8 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
       user_id: getCurrentUserId(),
       embed_model_id: embedModelId || 0,
       chat_model_id: currentModelId || 0,
-      sse_mcp_source_version_ids: normalizeIdList(options?.mcpSourceVersionIds),
-      mcp_streamable_source_version_ids: [],
+      sse_mcp_source_version_ids: mcpFields.sse,
+      mcp_streamable_source_version_ids: mcpFields.streamable,
       skills_source_version_ids: normalizeIdList(options?.skillSourceVersionIds),
     }
 

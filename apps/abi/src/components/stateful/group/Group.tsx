@@ -176,6 +176,8 @@ export const Group = forwardRef<GroupHandle, GroupProps>(({ config, onGroupId, o
       return false;
     }
     await handleGroupDelete(groupId);
+    // handleGroupDelete 内部 assertFlatRequestSuccess，失败会抛错，走到这里即删除成功
+    message.success('删除成功');
     return true;
   };
 

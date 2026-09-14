@@ -75,8 +75,15 @@ export type ExploreStreamEvent =
   | { type: 'done'; finish_reason?: string }
   | { type: 'failed'; code?: string; message?: string; finish_reason?: string }
 
+/** MCP 源选中项：id 为源版本 id；protocol 决定 sse/streamable 归属；namespaceId 为所属分组 namespaceId（s_<groupId>） */
+export interface ExploreMcpSource {
+  id: string | number
+  protocol?: string
+  namespaceId?: string
+}
+
 export interface ExploreSendOptions {
   groupId?: string | number
   skillSourceVersionIds?: Array<string | number>
-  mcpSourceVersionIds?: Array<string | number>
+  mcpSourceVersionIds?: ExploreMcpSource[]
 }

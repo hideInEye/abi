@@ -1,4 +1,4 @@
-import { DeleteOutlined, MoreOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, LeftOutlined, MoreOutlined, ReloadOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dropdown, message, Modal, Splitter } from 'antd';
 
@@ -79,7 +79,8 @@ export const Component: React.FC = () => {
   };
 
   // 前端按创建时间过滤 + 前端分页（hook 已全量加载）
-  const PAGE_SIZE = 10;
+  const [pageSize, setPageSize] = useState(12);
+  const [jumpValue, setJumpValue] = useState('');
   const filteredRows = useMemo(
     () => filterByCreateTime((dictionaryDataSource.rows as any[]) || [], dateRange, 'createTime'),
     [dictionaryDataSource.rows, dateRange],
@@ -87,14 +88,55 @@ export const Component: React.FC = () => {
   const pagedDataSource = useMemo(
     () => ({
       ...dictionaryDataSource,
-      rows: filteredRows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE),
+      rows: filteredRows.slice((current - 1) * pageSize, current * pageSize),
       total: filteredRows.length,
     }),
-    [dictionaryDataSource, filteredRows, current],
+    [dictionaryDataSource, filteredRows, current, pageSize],
   );
   useEffect(() => {
     setCurrent(1);
   }, [dateRange]);
+
+  const totalCount = filteredRows.length;
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) setCurrent(page);
+  };
+  const handlePrev = () => { if (current > 1) handlePageChange(current - 1); };
+  const handleNext = () => { if (current < totalPages) handlePageChange(current + 1); };
+  const handleJump = () => {
+    const page = parseInt(jumpValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      handlePageChange(page);
+      setJumpValue('');
+    }
+  };
+  const renderPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else if (current <= 3) {
+      for (let i = 1; i <= 4; i++) pages.push(i);
+      pages.push('...', totalPages);
+    } else if (current >= totalPages - 2) {
+      pages.push(1, '...');
+      for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1, '...');
+      pages.push(current - 1, current, current + 1);
+      pages.push('...', totalPages);
+    }
+    return pages.map((page, idx) => {
+      if (page === '...') return <span key={`ellipsis-${idx}`} className="page-item page-ellipsis">...</span>;
+      const isActive = page === current;
+      return (
+        <span key={page} className={`page-item ${isActive ? 'page-active' : ''}`} onClick={() => handlePageChange(page as number)}>
+          {page}
+        </span>
+      );
+    });
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
@@ -162,12 +204,10 @@ export const Component: React.FC = () => {
               </div>
               {viewMode === 'list' ? (
                 <TableDictionary
-                  current={current}
                   dataSource={pagedDataSource}
                   onDelete={handleDelete}
                   onDiff={openEnumDrawer}
                   onEdit={handleEdit}
-                  onPageChange={setCurrent}
                   onStatusChange={handleUpdateStatus}
                   selectedRowKeys={selectedRowKeys}
                   onSelectedRowKeysChange={setSelectedRowKeys}
@@ -179,7 +219,7 @@ export const Component: React.FC = () => {
                   ) : (
                     <div className="abi-card-grid">
                       <div className="abi-card-grid-inner">
-                        {filteredRows.map((record: any) => (
+                        {pagedDataSource.rows.map((record: any) => (
                           <div key={record.dictId} className="abi-data-card" style={{ position: 'relative' }}>
                             <div className="abi-data-card-head">
                               <div className="abi-data-card-title">
@@ -223,6 +263,41 @@ export const Component: React.FC = () => {
                   )}
                 </div>
               )}
+
+              <div className="data-source-pagination">
+                <span className="total-text">共 {totalCount} 条</span>
+                <div className="pagination-controls">
+                  <ASelect
+                    value={pageSize}
+                    onChange={(val: any) => { setPageSize(val); setCurrent(1); }}
+                    options={[
+                      { label: '12条/页', value: 12 },
+                      { label: '18条/页', value: 18 },
+                      { label: '24条/页', value: 24 },
+                      { label: '30条/页', value: 30 },
+                    ]}
+                    className="page-size-select"
+                  />
+                  <button className="page-btn" disabled={current === 1} onClick={handlePrev}>
+                    <LeftOutlined />
+                  </button>
+                  {renderPageNumbers()}
+                  <button className="page-btn" disabled={current === totalPages} onClick={handleNext}>
+                    <RightOutlined />
+                  </button>
+                  <span className="quick-jumper">
+                    前往
+                    <AInput
+                      className="jump-input"
+                      style={{ width: 48, textAlign: 'center' }}
+                      value={jumpValue}
+                      onChange={(e: any) => setJumpValue(e.target.value)}
+                      onPressEnter={handleJump}
+                    />
+                    页
+                  </span>
+                </div>
+              </div>
             </section>
           </div>
           </GroupContentGate>

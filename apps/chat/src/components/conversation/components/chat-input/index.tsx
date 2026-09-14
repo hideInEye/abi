@@ -16,6 +16,7 @@ import type { ModelOption } from '../chat-header';
 import { buildReportSourceVersionFields } from './reportSourceSelection';
 import { hasSelectedConversationData } from './sendValidation';
 import { filterSemanticTree, matchKeyword } from './popupFilter';
+import type { ExploreMcpSource } from '../../exploration-mode/types';
 
 export interface SemanticSelectedData {
   name: string
@@ -32,9 +33,9 @@ export interface ChatInputSendOptions {
   mode: ChatInputModeKey
   /** 仅报告模式提交使用；普通交互请求不得透传这些字段。 */
   reportSources?: ReportSourceVersionFields
-  /** 仅探索模式提交使用，透传所选技能/MCP 版本 id。 */
+  /** 仅探索模式提交使用，透传所选技能/MCP 版本 id（MCP 带协议与分组 namespaceId，发送侧按协议分流）。 */
   skillSourceVersionIds?: string[]
-  mcpSourceVersionIds?: string[]
+  mcpSourceVersionIds?: ExploreMcpSource[]
 }
 
 type ChatInputMode = {
@@ -76,7 +77,7 @@ interface ChatInputProps {
   /** 技能候选仅用绑定列表；非 null 时跳过全局收藏技能请求 */
   assistantSkills?: ReadonlyArray<{ id: string; bizName: string; latestVersionId: string; skillType: string }> | null;
   /** MCP 候选仅用绑定列表（扁平，无分组）；非 null 时跳过全局 MCP 分组请求 */
-  assistantMcps?: ReadonlyArray<{ id: string; name: string; protocol: 'sse' | 'streamable' }> | null;
+  assistantMcps?: ReadonlyArray<{ id: string; name: string; protocol: 'sse' | 'streamable'; namespaceId?: string }> | null;
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
@@ -251,6 +252,20 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       } catch { return []; }
     }
 
+    // 探索发送的 MCP 选中项：带出协议与所属分组 namespaceId（s_<groupId>），发送侧按协议分流 sse/streamable 字段。
+    // 助手会话取绑定候选；普通会话从已加载的分组服务反查（分组 key 即 register/list 查询用的 groupId）。
+    const buildExploreMcpSources = useCallback((): ExploreMcpSource[] => {
+      const metaById = new Map<string, { protocol?: string; namespaceId?: string }>();
+      if (assistantMcps) {
+        assistantMcps.forEach((m) => metaById.set(String(m.id), { protocol: m.protocol, namespaceId: m.namespaceId }));
+      } else {
+        mcpGroupItems.forEach((items, gid) => {
+          items.forEach((m: any) => metaById.set(String(m.id), { protocol: m.protocol ?? m.frontProtocol, namespaceId: `s_${gid}` }));
+        });
+      }
+      return Array.from(selectedMCPs).map((id) => ({ id, ...metaById.get(id) }));
+    }, [assistantMcps, mcpGroupItems, selectedMCPs]);
+
     const handleSend = useCallback(() => {
       if (!value.trim() || loading) return;
 
@@ -280,13 +295,13 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           ? {
               mode: selectedMode.key,
               skillSourceVersionIds: Array.from(selectedSkills),
-              mcpSourceVersionIds: Array.from(selectedMCPs),
+              mcpSourceVersionIds: buildExploreMcpSources(),
             }
           : { mode: selectedMode.key };
 
       onSend(value, options);
       setValue('');
-    }, [assistantMcps, assistantSkills, loading, mcpGroupItems, onSend, selectedData, selectedExcel, selectedMCPs, selectedMode.key, selectedSkills, skillList, value]);
+    }, [assistantMcps, assistantSkills, buildExploreMcpSources, loading, mcpGroupItems, onSend, selectedData, selectedExcel, selectedMCPs, selectedMode.key, selectedSkills, skillList, value]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

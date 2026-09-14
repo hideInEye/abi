@@ -34,7 +34,7 @@ export const Component: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [dateRange, setDateRange] = useState<any>(null)
   const [fePage, setFePage] = useState(1)
-  const [fePageSize, setFePageSize] = useState(10)
+  const [fePageSize, setFePageSize] = useState(12)
   const { columnOptions, handleColumnToggle, setViewMode, viewMode, visibleColumnKeys } = useOntologyViewControls(RELATION_COLUMN_OPTIONS)
 
   const filteredRelations = useMemo(() => filterByCreateTime(relations as any[], dateRange, 'createTime') as OntologyRelation[], [relations, dateRange])

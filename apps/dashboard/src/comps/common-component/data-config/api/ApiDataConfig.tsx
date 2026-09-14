@@ -175,6 +175,15 @@ export function ApiDataConfig(props: ApiDataConfigProps) {
     }
 
 
+    // 不能用ObjectUtil.stringToJsObj：它会先删除所有空白字符，破坏字符串值内的空格（如SQL语句、Bearer令牌）
+    const parseJsonText = (text: string) => {
+        try {
+            return JSON.parse(text);
+        } catch {
+            return null;
+        }
+    }
+
     const validate = () => {
         if (!dataRef.current?.url) {
             globalMessage.messageApi?.error('接口地址不能为空');
@@ -185,7 +194,7 @@ export function ApiDataConfig(props: ApiDataConfigProps) {
             return false;
         }
         if (typeof dataRef.current.header === 'string') {
-            const header = ObjectUtil.stringToJsObj(dataRef.current.header)
+            const header = parseJsonText(dataRef.current.header)
             if (!header) {
                 globalMessage.messageApi?.error('请求头不符合json格式');
                 return false;
@@ -193,7 +202,7 @@ export function ApiDataConfig(props: ApiDataConfigProps) {
                 dataRef.current.header = header;
         }
         if (typeof dataRef.current.params === 'string') {
-            const param = ObjectUtil.stringToJsObj(dataRef.current.params)
+            const param = parseJsonText(dataRef.current.params)
             if (!param) {
                 globalMessage.messageApi?.error('请求参数不符合json格式');
                 return false;

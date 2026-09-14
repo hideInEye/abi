@@ -46,7 +46,7 @@ const initialSearchParams: DimensionSearchParams = {
 
 const initialPagination: DimensionPagination = {
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 12,
   total: 0
 }
 
@@ -321,7 +321,7 @@ export function useDimensionModeling(selectedGroup: DimensionGroup | null) {
         bizName: payload.bizName,
         groupId: selectedGroup?.groupId,
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 12,
         spaceId: payload.spaceId,
         techName: payload.techName,
       })
