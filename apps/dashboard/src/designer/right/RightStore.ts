@@ -70,10 +70,15 @@ class RightStore {
                 this.visible = false;
             return;
         }
+        //配置面板已可见时重复激活同一组件：保留当前面板与页签，避免无意义重挂载
+        if (this.visible && this.activeElem.id === id && this.activeElem.type === type)
+            return;
         this.activeElem = {id, type};
         //更新菜单列表
         this.menus = DesignerLoader?.definitionMap[type]?.getMenuList() || [];
         if (this.menus.length > 0) {
+            const hasAiMenu = this.menus.some((menu) => menu.key === 'ai');
+            const hasStyleMenu = this.menus.some((menu) => menu.key === 'style');
             let setNewActiveMenu = true;
             for (let i = 0; i < this.menus.length; i++) {
                 if (this.menus[i].key === this.activeMenu) {
@@ -81,12 +86,11 @@ class RightStore {
                     break;
                 }
             }
-            if (setNewActiveMenu && this.visible)
-                this.activeMenu = this.menus[0].key;
-            if (type === 'group' || !this.menus.some((menu) => menu.key === 'style'))
+            if (setNewActiveMenu)
+                //点击组件打开配置面板时默认进入AI页签；无AI菜单时回退首菜单或样式页签
+                this.activeMenu = hasAiMenu ? 'ai' : (this.visible ? this.menus[0].key : 'style');
+            if (type === 'group' || !hasStyleMenu)
                 this.activeMenu = 'base';
-            else if (this.activeMenu === '')
-                this.activeMenu = 'style';
         }
         //重新挂载配置面板
         if (this.visible) {

@@ -386,4 +386,9 @@ N/A
 **修订记录**：
 - 2026-09-10 初版修复有缺陷：`if (isLogin)` 分支仍会在过期 token 场景下调用菜单接口
 - 2026-09-10 二次修复：login 页无条件返回 `null`，不调用任何菜单接口
-- 2026-09-10 三次修复（最终版）：新增 `isTokenExpired()` JWT 过期检查，`init()` 在调菜单接口前先验证 token 有效性；token 过期或非 JWT 时直接重定向 login，不发起菜单请求
+- 2026-09-10 三次修复：新增 `isTokenExpired()` JWT 过期检查，`init()` 在调菜单接口前先验证 token 有效性
+- 2026-09-10 最终修复（四层防御）：
+  1. `guard/index.ts`：login 页无条件跳过 + JWT exp 预检
+  2. `auth-policy.ts`：菜单 API 401 时请求层不弹 toast、不触发 handleLoginExpired
+  3. `error.ts`：菜单 API 失败时 handleError 不弹错误提示
+  4. `route/index.ts`：`initDynamicAuthRoute` 失败时显式调 `handleLoginExpired()` 跳转登录页
