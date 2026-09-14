@@ -19,11 +19,12 @@ export interface AssistantBoundSkill {
   skillType: string
 }
 
-/** 助手绑定的 MCP 服务；id 即源版本 id，protocol 决定 sse/streamable 归属 */
+/** 助手绑定的 MCP 服务；id 即源版本 id，protocol 决定 sse/streamable 归属，namespaceId 为所属分组（s_<groupId>） */
 export interface AssistantBoundMcp {
   id: string
   name: string
   protocol: 'sse' | 'streamable'
+  namespaceId: string
 }
 
 /** 助手绑定资源全集：数据语义 / 技能 / MCP */
@@ -37,6 +38,13 @@ export interface AssistantBoundResources {
   semantics: AssistantBoundSemantic[]
   skills: AssistantBoundSkill[]
   mcps: AssistantBoundMcp[]
+}
+
+/** namespaceId 统一形态为 s_<groupId>；兼容详情历史数据存裸 groupId 的情况 */
+function toNamespaceId(value: unknown): string {
+  const raw = String(value ?? '').trim()
+  if (!raw) return ''
+  return raw.startsWith('s_') ? raw : `s_${raw}`
 }
 
 /**
@@ -89,12 +97,14 @@ export function mapAssistantBoundResources(detail: any, fallbackAppId?: number |
     const cfg: any[] = Array.isArray(t?.toolConfig) ? t.toolConfig : []
     cfg.forEach((c: any) => {
       if (c?.id == null) return
-      // 详情接口原样返回 mcp_sse/mcp_streamable（真实 groupId 列表），非空即对应协议
+      // 详情接口原样返回 mcp_sse/mcp_streamable（namespaceId 列表），非空即对应协议
       const sse: any[] = Array.isArray(c.mcp_sse) ? c.mcp_sse : []
+      const streamable: any[] = Array.isArray(c.mcp_streamable) ? c.mcp_streamable : []
       mcps.push({
         id: String(c.id),
         name: c.name || '',
         protocol: sse.length > 0 ? 'sse' : 'streamable',
+        namespaceId: toNamespaceId(sse[0] ?? streamable[0]),
       })
     })
   })

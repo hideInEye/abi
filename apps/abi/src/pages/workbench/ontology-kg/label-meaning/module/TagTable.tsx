@@ -111,7 +111,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
     return visibleColumns.reduce((total: number, column: any) => total + (column.minWidth || column.width || 100), 0);
   }, [visibleColumns]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
 
   const pagedDataSource = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;

@@ -169,7 +169,7 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
   }, [columns]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
   const [jumpValue, setJumpValue] = useState('');
   const pagedTableSchemaList = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
@@ -349,10 +349,9 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
             value={pageSize}
             onChange={(val: any) => { setPageSize(val); setCurrentPage(1); }}
             options={[
-              { label: '10条/页', value: 10 },
-              { label: '15条/页', value: 15 },
-              { label: '20条/页', value: 20 },
-              { label: '25条/页', value: 25 },
+              { label: '12条/页', value: 12 },
+              { label: '18条/页', value: 18 },
+              { label: '24条/页', value: 24 },
               { label: '30条/页', value: 30 },
             ]}
             className="page-size-select"

@@ -10,7 +10,7 @@ interface OntologyTablePaginationProps {
   readonly total: number
 }
 
-const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50]
+const PAGE_SIZE_OPTIONS = [12, 18, 24, 30]
 
 export const OntologyTablePagination: React.FC<OntologyTablePaginationProps> = ({ onChange, pageNum = 1, pageSize, total }) => {
   const handlePageChange = (nextPageNum: number, nextPageSize: number) => {

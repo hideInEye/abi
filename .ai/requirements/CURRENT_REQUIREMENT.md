@@ -1986,3 +1986,81 @@ export const init: Init = async currentFullPath => {
   - 访问其他页面（有/无 token），确认鉴权和重定向正常。
 - run log：`.ai/runs/2026-09-10-login-page-menu-api-guard/`
 
+
+## 2026-09-11 ׷�ӣ�API Key ��Ƭ��ͼ�����Ż�
+
+### ��������
+
+ǰ�� UI �Ż�����ǰ�ˣ����Ľӿ�Э�飩��
+
+### Ŀ��
+
+1. API Key ��Ƭ��ͼ��Ƭȥ��������ʱ�䡹��ʾ�
+2. ��Ƭ��Ϊ������ģ�飨����Դ�����ߡ�MCP �ȣ�һ�µ� bi-data-card-head / bi-data-card-body / bi-data-card-footer ��׼���νṹ���߶�������ģ�鿨Ƭ����һ�¡�
+3. ���鿴����ͣ��/���á��� hover�����ࡹ�������Ƴ�����Ϊ��Ƭ�ײ� footer ���Ե� bi-card-act ��ť��������SK����ɾ���������� footer �Ҳ� bi-card-more �����У�trigger ��Ϊ click��������ģ��һ�£���
+
+### ��Ŀ��
+
+- ���޸��б���ͼ���ֶ��������
+- ���޸Ĳ鿴/ͣ��/����SK/ɾ���Ľӿڵ����߼���
+
+### Ӱ�췶Χ
+
+- pps/abi/src/pages/component/applications/api-key/components/ApiKeyTable.tsx������Ƭ��ͼ��֧��
+
+### ���ձ�׼
+
+1. ��Ƭ������ʾ������ʱ�䡹�С�
+2. ���鿴����ͣ��/���á���ť�ڿ�Ƭ�ײ����ԣ������Ϊ��ԭ�˵���һ�¡�
+3. �����ࡹ��������������SK����ɾ���������������
+4. ��Ƭ�ṹ/�߶�������ģ�鿨Ƭһ�¡�
+
+### ����Ҫ��
+
+- pps/abi �� 
+px tsc --noEmit --skipLibCheck �ԱȻ�������������
+- �ֹ��߲飺API Key ҳ��Ƭ��ͼ�Ĳ鿴/ͣ��/����SK/ɾ��������
+- run log��.ai/runs/2026-09-11-api-key-card-layout/
+
+## 2026-09-11 追加：探索模式执行步骤内嵌待办折叠 + 文案改名
+
+### 需求类型
+
+前端 UI 样式优化与文案调整，无接口变化。
+
+### 背景
+
+- 助手调试预览侧（管理端 assistant-edit-drawer）探索模式卡片右栏集中展示“当前步骤结果 / 当前步骤详情”，与左侧待办对照不便。
+- chat 对话探索模式卡片结果区标题文案不直观。
+
+### 目标
+
+1. 助手侧（apps/abi 探索模式卡片）：移除右栏，执行步骤内嵌在待办事项列表中对应待办的下方；点击待办行展开/收起其下步骤（行右侧不展示优先级标签），步骤执行信息默认展开、手动可折叠；未关联待办的孤儿步骤兜底展示在待办列表末尾。
+2. 折叠行为：运行中的待办自动展开，待办执行完（in_progress 转终态）自动收起（此时清除手动覆盖态）；步骤执行信息默认展开、仅手动切换；历史探索点击待办联动选中态与思考区，手动展开不受自动收起影响。
+3. chat 侧（apps/chat 探索模式卡片）：布局不变，仅右栏标题由“当前步骤结果 / 当前步骤详情”改为“运行结果”。
+
+### 非目标
+
+- 不改工作室（ExplorePreviewPane）抽屉的数据展示。
+- 不改探索流式协议、reducer 与接口调用。
+- 不同步调整 chat 应用应用工坊助手详情抽屉的卡片布局（共用 chat 卡片组件，仅文案同步生效）。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/exploration-mode/ExploreMessageRow.tsx`、`styles.module.css`
+- `apps/chat/src/components/conversation/exploration-mode/ExploreMessageRow.tsx`、`styles.module.css`
+- `apps/chat/src/components/conversation/index.tsx`（注释文案）
+- run log：`.ai/runs/2026-09-11-explore-step-result-inline/`
+
+### 验收标准
+
+1. 助手调试卡片单列：思考、待办事项纵向堆叠；每条待办行可点击展开/收起其下执行步骤，步骤行可再展开/折叠执行信息。
+2. 运行中当前待办自动展开并滚动到可视区，该待办执行完自动收起；步骤执行信息默认展开、手动可切换；待办行不展示优先级标签。
+3. chat 对话探索卡片右栏标题显示“运行结果”，布局不变。
+4. `pnpm --filter chatbi typecheck` 与 eslint 对比基线无新增错误；探索模式单测通过。
+
+### 测试要求
+
+- `pnpm exec vitest run exploreStreamReducer historyAdapter`
+- `pnpm --filter chatbi typecheck`、改动文件 eslint 对比基线。
+- 手工：助手调试运行探索问题，观察步骤自动展开/折叠与手动切换；chat 对话查看探索卡片文案。

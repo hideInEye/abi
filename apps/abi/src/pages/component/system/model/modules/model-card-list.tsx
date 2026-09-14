@@ -479,9 +479,9 @@ const ModelCardList: FC<Props> = ({
                 onChange={(val: number) => { setPageSize(val); setCurrentPage(1) }}
                 options={[
                   { label: '12条/页', value: 12 },
-                  { label: '20条/页', value: 20 },
+                  { label: '18条/页', value: 18 },
+                  { label: '24条/页', value: 24 },
                   { label: '30条/页', value: 30 },
-                  { label: '50条/页', value: 50 },
                 ]}
                 className="page-size-select"
               />
