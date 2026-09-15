@@ -18,6 +18,7 @@ import {ClazzTemplate} from "../common-component/CommonTypes.ts";
 import {MenuInfo} from "../../designer/right/MenuType.ts";
 import React from "react";
 import AbstractDesignerDefinition from "../../framework/core/AbstractDesignerDefinition.ts";
+import {DEFAULT_MAP_RENDERER} from "../../security/renderer-registry.ts";
 
 const BaseInfo = React.lazy(() => import("../common-component/base-info/BaseInfo"));
 const ThemeConfig = React.lazy(() => import("../common-component/theme-config/ThemeConfig.tsx"));
@@ -52,18 +53,7 @@ export default class AMapDefinition extends AbstractDesignerDefinition<AMapContr
             style: {
                 key: "",
                 securityJsCode: "",
-                customCode: "function(container, AMap, bpTriggers) {\n" +
-                    "    let map = new AMap.Map(container, {\n" +
-                    "        zoom: 11.43,\n" +
-                    "        center: [120.2446746826172, 30.199146446037616],\n" +
-                    "        pitch: 55,\n" +
-                    "        rotation: 20,\n" +
-                    "        showLabel: true,\n" +
-                    "        viewMode: '3D',\n" +
-                    "        mapStyle: 'amap://styles/dark',\n" +
-                    "    });\n" +
-                    "    return map;\n" +
-                    "}"
+                renderer: DEFAULT_MAP_RENDERER,
             },
             filter: {
                 enable: false,

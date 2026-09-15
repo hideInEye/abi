@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { marked } from 'marked'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { ConfigProvider, Popover, Table, Typography, message as antdMessage } from 'antd'
 import { ApiOutlined, CheckOutlined, EyeOutlined, RightOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons'
 import zhCN from 'antd/es/locale/zh_CN'
@@ -97,9 +98,6 @@ function getNow(): string {
 }
 
 /* ── AI 消息 Markdown 渲染（对齐主对话 ViewEle 管线）── */
-// 窄屏分享面板：开启硬换行，问数/归因/预测等回复中的单换行保持原样换行
-marked.use({ breaks: true, gfm: true })
-
 /** 剥离 AI 回复中的残留 HTML 标签（think 段与尾部结构化 JSON 已由 parseAiRaw 剥离） */
 const stripHtmlTags = (s: string): string => s.replace(/<[^>]*>/g, '')
 
@@ -123,15 +121,6 @@ const semanticMetaOf = (json: any): Pick<WidgetMessage, 'semanticGroup' | 'seman
   semanticName: typeof json?.semantic_name === 'string' && json.semantic_name.trim() ? json.semantic_name : undefined,
   semanticSchemaId: json?.semantic_id != null && json.semantic_id !== '' ? json.semantic_id : undefined,
 })
-
-/** marked 同步解析；解析异常时降级为转义后的原文 */
-const renderMarkdown = (content: string): string => {
-  try {
-    return marked.parse(content) as string
-  } catch {
-    return content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')
-  }
-}
 
 /* ── 内联图标（不依赖 antd，与大屏 AiChatPanel 同款 feather 线稿） ── */
 const iconProps = {
@@ -1531,11 +1520,9 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                         <div className="section-header mt-2 pt-3 pb-3 px-2.5">
                           <span className="chart-header-title font-semibold text-[#2d2d2d]">描述分析</span>
                         </div>
-                        <div
-                          className={`${convStyles['markdown-content']} abi-cw-desc text-left px-2.5`}
-                          style={{ width: '100%', fontSize: '13px', lineHeight: 1.75 }}
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }}
-                        />
+                        <div className={`${convStyles['markdown-content']} abi-cw-desc text-left px-2.5`} style={{ width: '100%', fontSize: '13px', lineHeight: 1.75 }}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayText}</ReactMarkdown>
+                        </div>
                       </>
                     )}
                     {m.chartLoading && (

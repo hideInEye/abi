@@ -10,21 +10,20 @@
  */
 
 import {AbstractBPNodeController, AnchorPointType, ExecuteInfoType, NodeInfoType} from "../../AbstractBPNodeController";
-import {UpdateOptions} from "../../../../../../framework/core/AbstractController";
 import ComponentUtil from "../../../../../../utils/ComponentUtil";
 import BPNode, {NodeProps} from "../../../BPNode";
 import React from "react";
 import ObjectUtil from "../../../../../../utils/ObjectUtil";
 import {LogicalProcessNodeConfig} from "./LogicalProcessNodeConfig";
 import BPExecutor from "../../../../core/BPExecutor";
+import {applyDataTransform, DataTransformConfig, RuntimeConfigError} from "../../../../../../security/runtime-config.ts";
+import {globalMessage} from "../../../../../../framework/message/GlobalMessage.tsx";
 
 export interface LogicalProcessNodeConfigType extends NodeProps {
-    handler?: string;
+    handler?: DataTransformConfig | string;
 }
 
 export default class BPLogicalProcessNodeController extends AbstractBPNodeController<LogicalProcessNodeConfigType> {
-
-    private handler: Function | null = null;
 
     async create(container: HTMLElement, config: LogicalProcessNodeConfigType): Promise<void> {
         this.config = config;
@@ -34,25 +33,13 @@ export default class BPLogicalProcessNodeController extends AbstractBPNodeContro
 
     execute(executeInfo: ExecuteInfoType, executor: BPExecutor, params: any): void {
         const {nodeId} = executeInfo;
-        if (!this.handler) {
-            if (!this.config?.handler)
-                return;
-            try {
-                // eslint-disable-next-line
-                this.handler = eval(`(${this.config.handler})`);
-            } catch (e) {
-                console.error('解析条件函数错误，请检查你写条件判断函数');
-                return;
-            }
-        }
+        if (!this.config?.handler) return;
         const apId = nodeId + ':afterExecute:' + AnchorPointType.OUTPUT;
-        const newParams = this.handler!(params) || params;
-        if (newParams instanceof Promise) {
-            newParams.then(params => {
-                executor.execute(apId, executor, params);
-            })
-        } else {
+        try {
+            const newParams = applyDataTransform(params, this.config.handler) ?? params;
             executor.execute(apId, executor, newParams);
+        } catch (error) {
+            globalMessage.messageApi?.error(error instanceof RuntimeConfigError ? error.message : '数据处理配置解析失败');
         }
     }
 
@@ -60,7 +47,7 @@ export default class BPLogicalProcessNodeController extends AbstractBPNodeContro
         return this.config;
     }
 
-    update(config: LogicalProcessNodeConfigType, upOp: UpdateOptions | undefined): void {
+    update(config: LogicalProcessNodeConfigType): void {
         this.config = ObjectUtil.merge(this.config, config);
     }
 

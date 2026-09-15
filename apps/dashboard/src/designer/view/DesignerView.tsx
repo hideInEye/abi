@@ -21,6 +21,7 @@ import canvasManager from "../header/items/canvas/CanvasManager.ts";
 import '../../designer/resource/font/FontGlobal.css';
 import ScaleAction from "../../framework/core/ScaleAction.ts";
 import {DesignerLoader} from "../loader/DesignerLoader.ts";
+import {destroyDesignerRuntime} from "../runtime/destroyDesignerRuntime.ts";
 
 const ScreenFit = lazy(() => import('../../framework/screen-fit/ScreenFit.tsx'));
 
@@ -37,6 +38,10 @@ const DesignerView = observer((props: DesignerViewProps) => {
 
     useEffect(() => {
         loaderRef.current?.load(id, type);
+        return () => {
+            loaderRef.current?.cancelLoad();
+            destroyDesignerRuntime();
+        };
     }, []);
 
     const {layerConfigs} = layerManager!;

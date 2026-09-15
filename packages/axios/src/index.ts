@@ -14,13 +14,26 @@ function createCommonRequest<ResponseData = any>(axiosConfig?: CreateAxiosDefaul
   const instance = axios.create(axiosConf)
 
   const abortControllerMap = new Map<string, AbortController>()
+  const managedControllerMap = new WeakMap<NonNullable<InternalAxiosRequestConfig['signal']>, AbortController>()
+
+  function getRequestId(config?: InternalAxiosRequestConfig) {
+    return config?.headers?.get(REQUEST_ID_KEY)?.toString()
+  }
+
+  function cleanupRequest(config?: InternalAxiosRequestConfig) {
+    const requestId = getRequestId(config)
+    if (requestId) abortControllerMap.delete(requestId)
+  }
 
   // config axios retry
   const retryOptions = createRetryOptions(axiosConf)
   axiosRetry(instance, retryOptions)
 
-  instance.interceptors.request.use((conf) => {
+  instance.interceptors.request.use(async (conf) => {
     const config: InternalAxiosRequestConfig = { ...conf }
+
+    // axios-retry reuses the config; remove the completed attempt before assigning the next id.
+    cleanupRequest(config)
 
     // set request id
     const requestId = nanoid()
@@ -30,17 +43,33 @@ function createCommonRequest<ResponseData = any>(axiosConfig?: CreateAxiosDefaul
     if (!config.signal) {
       const abortController = new AbortController()
       config.signal = abortController.signal
-      abortControllerMap.set(requestId, abortController)
+      managedControllerMap.set(abortController.signal, abortController)
+    }
+    const signal = config.signal
+    const managedController = signal ? managedControllerMap.get(signal) : undefined
+    if (managedController) abortControllerMap.set(requestId, managedController)
+
+    const adapter = axios.getAdapter(config.adapter)
+    config.adapter = async adapterConfig => {
+      try {
+        return await adapter(adapterConfig)
+      } finally {
+        cleanupRequest(adapterConfig as InternalAxiosRequestConfig)
+      }
     }
 
     // handle config by hook
-    const handledConfig = opts.onRequest?.(config) || config
-
-    return handledConfig
+    try {
+      return (await opts.onRequest?.(config)) || config
+    } catch (error) {
+      cleanupRequest(config)
+      throw error
+    }
   })
 
   instance.interceptors.response.use(
     async (response) => {
+      cleanupRequest(response.config)
       const responseType: ResponseType = (response.config?.responseType as ResponseType) || 'json'
 
       if (responseType === 'blob') return response
@@ -61,6 +90,7 @@ function createCommonRequest<ResponseData = any>(axiosConfig?: CreateAxiosDefaul
       return Promise.reject(backendError)
     },
     async (error: AxiosError<ResponseData>) => {
+      cleanupRequest(error.config)
       await opts.onError(error)
 
       return Promise.reject(error)

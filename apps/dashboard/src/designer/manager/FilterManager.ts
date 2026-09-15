@@ -30,6 +30,8 @@ class FilterManager extends AbstractManager<FilterManagerDataType> {
             delFilter: action,
             updateFilter: action,
             setVisibility: action,
+            destroy: action,
+            init: action,
         })
 
     }
@@ -67,7 +69,9 @@ class FilterManager extends AbstractManager<FilterManagerDataType> {
     }
 
     public destroy(): void {
-        this.filters = {}
+        this.filters = {};
+        this.editFilter = {id: '', name: '', func: ''};
+        this.visible = false;
     }
 }
 

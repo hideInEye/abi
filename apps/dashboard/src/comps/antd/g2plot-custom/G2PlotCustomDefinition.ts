@@ -17,6 +17,7 @@ import pieImg from './g2-plot-custom.png';
 import G2PlotCustomController, {G2PlotCustomProps} from "./G2PlotCustomController.ts";
 import {AntdCommonDefinition} from "../../antd-common/AntdCommonDefinition";
 import {Data, Optimize, SettingOne} from "@icon-park/react";
+import {DEFAULT_PLOT_RENDERER} from "../../../security/renderer-registry.ts";
 
 const G2PlotCustomConfig = React.lazy(() => import("./G2PlotCustomConfig.tsx"));
 const BaseInfo = React.lazy(() => import("../../common-component/base-info/BaseInfo"));
@@ -77,66 +78,7 @@ class G2PlotCustomDefinition extends AntdCommonDefinition<G2PlotCustomController
                 type: 'G2PlotCustom',
             },
             style: {
-                customCode: "function renderG2Plot(container, G2Plot, data) {\n" +
-                    "    const g2plot = new G2Plot.BidirectionalBar(container, {\n" +
-                    "        data: data,\n" +
-                    "        layout: 'vertical',\n" +
-                    "        xField: 'country',\n" +
-                    "        yField: ['2016年耕地总面积', '2016年转基因种植面积'],\n" +
-                    "        legend: false,\n" +
-                    "        appendPadding: [20, 0],\n" +
-                    "        barStyle: {\n" +
-                    "            lineWidth: 4\n" +
-                    "        },\n" +
-                    "        yAxis: {\n" +
-                    "            '2016年耕地总面积': {\n" +
-                    "                grid: null,\n" +
-                    "                label: {\n" +
-                    "                    style: {\n" +
-                    "                        fill: \"#555\",\n" +
-                    "                        fontSize: 10,\n" +
-                    "                    },\n" +
-                    "                },\n" +
-                    "\n" +
-                    "            },\n" +
-                    "            '2016年转基因种植面积': {\n" +
-                    "                grid: null,\n" +
-                    "                label: {\n" +
-                    "                    style: {\n" +
-                    "                        fill: \"#555\",\n" +
-                    "                        fontSize: 10,\n" +
-                    "                    },\n" +
-                    "                },\n" +
-                    "            },\n" +
-                    "        },\n" +
-                    "        xAxis: {\n" +
-                    "            grid: null,\n" +
-                    "            label: {\n" +
-                    "                style: {\n" +
-                    "                    fill: \"#555\",\n" +
-                    "                    fontSize: 10,\n" +
-                    "                },\n" +
-                    "            },\n" +
-                    "            line: {\n" +
-                    "                style: {\n" +
-                    "                    stroke: \"#6f6f6f91\",\n" +
-                    "                    lineWidth: 1,\n" +
-                    "                },\n" +
-                    "            },\n" +
-                    "            tickLine: null,\n" +
-                    "            subTickLine: null,\n" +
-                    "            title: null,\n" +
-                    "        },\n" +
-                    "        label: {\n" +
-                    "            position: 'top',\n" +
-                    "            style: {\n" +
-                    "                fill: '#555'\n" +
-                    "            }\n" +
-                    "        },\n" +
-                    "    });\n" +
-                    "    g2plot.render();\n" +
-                    "    return g2plot;\n" +
-                    "}",
+                renderer: DEFAULT_PLOT_RENDERER,
             },
             data: {
                 sourceType: 'static',

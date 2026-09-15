@@ -1,20 +1,23 @@
+import { message } from 'antd'
 import { useEffect, useState } from 'react'
+
 import { deleteSpace, spaceList } from '@/service/api/data-space'
 import { fetchHomeData } from '@/service/api/home'
+import { changeSpaceId, getSpaceId } from '@/store/slice/app'
+import { clearTabs } from '@/store/slice/tab'
+import { clearPersistedSpace, persistSpaceName } from '@/utils/spaceStorage'
 import { useRouter } from '~/packages/simple-router/src'
 
 import { SpaceEdit } from '../space-list/components/SpaceEdit'
 import { SpaceItem } from '../space-list/components/SpaceItem'
 import type { ISpaceItem } from '../space-list/types'
 
+import { mergeHomeSpaceData, readRequiredFlatData, readSpaceRows } from './homeRequests'
+import s from './index.module.scss'
 import { DataAssets } from './modules/DataAssets'
 import { FastCreate } from './modules/FastCreate'
-import { clearTabs } from '@/store/slice/tab'
-import s from './index.module.scss'
-import { HomeTitle } from './modules/home_title'
 import { ApprovSpace } from './modules/approv_space'
-import { changeSpaceId, getSpaceId } from '@/store/slice/app'
-import { clearPersistedSpace, persistSpaceName } from '@/utils/spaceStorage'
+import { HomeTitle } from './modules/home_title'
 
 export function Component() {
   const [homeData, setHomeData] = useState<any>(null)
@@ -26,7 +29,7 @@ export function Component() {
 
   async function getHomeData() {
     try {
-      const { data: homeData } = await fetchHomeData()
+      const homePayload = readRequiredFlatData<Record<string, any>>(await fetchHomeData(), '获取首页数据失败')
 
       const spaceRes = await spaceList({
         isAsc: 'desc',
@@ -35,18 +38,8 @@ export function Component() {
         pageSize: 8,
       })
 
-      let spaceData = (spaceRes as any).response?.data?.rows || []
-
-      if (spaceData && spaceData.length > 0) {
-        spaceData = spaceData.map((item: any) => ({
-          ...item,
-          type: 'space',
-        }))
-      }
-      const mergedData = {
-        ...homeData,
-        spaceList: spaceData.length > 0 ? spaceData : homeData.spaceList || [],
-      }
+      const spaceData = readSpaceRows(spaceRes as any)
+      const mergedData = mergeHomeSpaceData(homePayload, spaceData)
       const lgSpaceId = localStorage.getItem('spaceId')
       if (lgSpaceId && !spaceId) {
         dispatch(changeSpaceId(Number(lgSpaceId)))
@@ -57,8 +50,7 @@ export function Component() {
       setHomeData(mergedData)
     } catch (error) {
       console.error('获取首页数据失败:', error)
-      const { data } = await fetchHomeData()
-      setHomeData(data)
+      message.error('获取首页数据失败，请稍后重试')
     }
   }
 
@@ -67,11 +59,14 @@ export function Component() {
   }, [])
 
   async function deleteSpaceHandler(space: ISpaceItem) {
-    const { data } = await deleteSpace([space.spaceId])
-    console.log('deleteSpaceHandler', data)
+    const result = await deleteSpace([space.spaceId])
+    if (result.error) {
+      message.error('删除空间失败，请重试')
+      return
+    }
     clearPersistedSpace()
     dispatch(clearTabs())
-    getHomeData()
+    await getHomeData()
   }
 
   function editSpaceHandler(space: ISpaceItem) {
@@ -84,8 +79,8 @@ export function Component() {
     setDrawerOpen(true)
   }
 
-  function updateSpace() {
-    getHomeData()
+  async function updateSpace() {
+    await getHomeData()
   }
 
   return (

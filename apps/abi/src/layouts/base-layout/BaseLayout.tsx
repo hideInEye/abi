@@ -2,21 +2,15 @@ import { AdminLayout, LAYOUT_SCROLL_EL_ID } from '@sa/materials'
 import type { LayoutMode } from '@sa/materials'
 import { configResponsive } from 'ahooks'
 import './index.scss'
-import { Suspense } from 'react'
 
 import { hideMenuRoute } from '@/constants/app'
-import { getContentXScrollable, getFullContent, getMixSiderFixed, getSiderCollapse, getSpaceHidden, setIsMobile, setSiderCollapse } from '@/store/slice/app'
+import { getContentXScrollable, getFullContent, getMixSiderFixed, getSiderCollapse, setIsMobile, setSiderCollapse } from '@/store/slice/app'
 import { getThemeSettings, setLayoutMode } from '@/store/slice/theme'
 import { useRoute } from '~/packages/simple-router/src'
 
 import GlobalContent from '../modules/global-content'
-import GlobalFooter from '../modules/global-footer'
-import GlobalHeader from '../modules/global-header'
 import GlobalMenu from '../modules/global-menu'
 import GlobalSider from '../modules/global-sider'
-import GlobalTab from '../modules/global-tab'
-
-const ThemeDrawer = lazy(() => import('../modules/theme-drawer'))
 
 const LAYOUT_MODE_VERTICAL: LayoutMode = 'vertical'
 const LAYOUT_MODE_HORIZONTAL: LayoutMode = 'horizontal'
@@ -27,7 +21,6 @@ configResponsive({ sm: 640 })
 
 const BaseLayout = () => {
   const siderCollapse = useAppSelector(getSiderCollapse)
-  const spaceHidden = useAppSelector(getSpaceHidden)
   const themeSettings = useAppSelector(getThemeSettings)
   const fullContent = useAppSelector(getFullContent)
   const dispatch = useAppDispatch()
@@ -98,7 +91,6 @@ const BaseLayout = () => {
       contentClass={`${contentXScrollable ? 'overflow-x-hidden' : ''}`}
       fixedFooter={themeSettings.footer.fixed}
       fixedTop={themeSettings.fixedHeaderAndTab}
-      // Footer={<GlobalFooter />}
       footerHeight={themeSettings.footer.height}
       footerVisible={themeSettings.footer.visible}
       fullContent={fullContent}
@@ -113,25 +105,13 @@ const BaseLayout = () => {
       siderCollapsedWidth={siderCollapsedWidth}
       siderVisible={siderVisible}
       siderWidth={siderWidth}
-      // Tab={<GlobalTab />}
       tabHeight={themeSettings.tab.height}
       tabVisible={themeSettings.tab.visible}
       updateSiderCollapse={() => dispatch(setSiderCollapse(true))}
-      // Header={
-      //   <GlobalHeader
-      //     isMobile={isMobile}
-      //     mode={themeSettings.layout.mode}
-      //     reverse={themeSettings.layout.reverseHorizontalMix}
-      //     siderWidth={themeSettings.sider.width}
-      //   />
-      // }
       Sider={<GlobalSider />}
     >
       <GlobalContent />
       <GlobalMenu mode={themeSettings.layout.mode} reverse={themeSettings.layout.reverseHorizontalMix} />
-      {/* <Suspense fallback={null}>
-        <ThemeDrawer />
-      </Suspense> */}
     </AdminLayout>
   )
 }

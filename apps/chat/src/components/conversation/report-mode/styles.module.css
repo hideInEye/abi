@@ -934,6 +934,27 @@
   background: #fff;
 }
 
+.htmlFrameEnter {
+  animation: report-frame-enter 320ms ease-out both;
+}
+
+@keyframes report-frame-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .htmlFrameEnter {
+    animation: none;
+  }
+}
+
 .previewEmpty {
   display: flex;
   min-height: 320px;

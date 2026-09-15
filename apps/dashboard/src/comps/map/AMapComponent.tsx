@@ -17,11 +17,13 @@ import AMapScaleObserver from "./AMapScaleObserver.ts";
 import {globalMessage} from "../../framework/message/GlobalMessage.tsx";
 import mapLoader from "./MapLoader.ts";
 import {IFilterConfigType} from "../../designer/DesignerType.ts";
+import {DEFAULT_MAP_RENDERER, MapRendererConfig, parseMapRendererConfig} from "../../security/renderer-registry.ts";
 
 export interface AMapComponentStyle {
     key?: string;
     securityJsCode?: string;
     customCode?: string;
+    renderer?: MapRendererConfig | string;
 }
 
 export interface AMapComponentProps {
@@ -30,16 +32,18 @@ export interface AMapComponentProps {
     filter?: IFilterConfigType;
 }
 
+type MapEventHandler = (event: unknown) => void;
+
 export interface AMapComponentRef {
     updateConfig: (newConfig: AMapComponentProps) => void;
-    setEventHandler: (eventMap: Record<string, Function>) => void;
+    setEventHandler: (eventMap: Record<string, MapEventHandler>) => void;
 }
 
 const AMapComponent = React.forwardRef((props: AMapComponentProps, ref: ForwardedRef<AMapComponentRef>) => {
     const [config, setConfig] = useState<AMapComponentProps>({...props});
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<AMap.Map>();
-    const eventHandlerMap = useRef<Record<string, Function>>({});
+    const eventHandlerMap = useRef<Record<string, MapEventHandler>>({});
 
     useImperativeHandle(ref, () => ({
         updateConfig: (newConfig) => setConfig({...newConfig}),
@@ -48,21 +52,33 @@ const AMapComponent = React.forwardRef((props: AMapComponentProps, ref: Forwarde
     }));
 
     useEffect(() => {
-        new AMapScaleObserver(mapContainerRef.current!)
+        const observer = new AMapScaleObserver(mapContainerRef.current!);
+        return () => observer.destroy();
     }, []);
 
     useEffect(() => {
+        let active = true;
         const {key, securityJsCode} = config.style!;
         mapLoader.load(key!, securityJsCode!).then((AMap) => {
-            if (!AMap) return;
-            const code = config.style?.customCode;
-            const fun = eval(`(${code})`);
-            if (typeof fun === 'function') {
-                mapRef.current = fun(mapContainerRef.current!, AMap, eventHandlerMap);
-            } else {
-                globalMessage.messageApi?.error('自定义代码错误,请检查');
+            if (!active || !AMap) return;
+            if (config.style?.customCode && !config.style.renderer) {
+                globalMessage.messageApi?.error('旧版地图脚本已停用，请手动迁移为 JSON 渲染配置');
+                return;
+            }
+            try {
+                const renderer = parseMapRendererConfig(config.style?.renderer || DEFAULT_MAP_RENDERER);
+                mapRef.current?.destroy();
+                mapRef.current = new AMap.Map(mapContainerRef.current!, renderer.options);
+                mapRef.current.on('click', event => eventHandlerMap.current.click?.(event));
+            } catch (error) {
+                globalMessage.messageApi?.error(error instanceof Error ? error.message : '地图渲染配置无效');
             }
         })
+        return () => {
+            active = false;
+            mapRef.current?.destroy();
+            mapRef.current = undefined;
+        };
     }, [config]);
 
     return (

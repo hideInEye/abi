@@ -34,6 +34,7 @@ import NProgress from "nprogress";
 import ProjectUtil from "../../../utils/ProjectUtil.ts";
 import baseApi from "../../../api/BaseApi.ts";
 import FetchUtil from "../../../utils/FetchUtil.ts";
+import {runProjectSaveFlow} from "./projectSaveFlow.ts";
 
 export const selectAll = () => {
     const {layerConfigs} = layerManager;
@@ -129,34 +130,44 @@ export const doDelete = () => {
     historyRecordOperateProxy.doDelete();
 }
 
-//保存函数节流5s, 5s内不可重复保存
-export const doSave = throttle(async () => {
+export const saveProjectNow = async (): Promise<boolean> => {
     NProgress.configure({minimum: 0.5});
     NProgress.start();
-    const {id} = URLUtil.parseUrlParams();
-    const proData = designerManager.getData();
-    // 保留 dataJson 中已有的会话标识（chatId / convUid），防止保存时覆盖丢失
-    const sessionPatch: {chatId?: string; convUid?: string} = {};
     try {
-        const existing = projectHdStore.projectConfig.dataJson;
-        if (existing) {
-            const parsed = JSON.parse(existing);
-            if (parsed?.chatId) sessionPatch.chatId = parsed.chatId;
-            if (parsed?.convUid) sessionPatch.convUid = parsed.convUid;
-        }
-    } catch { /* ignore */ }
-    //转换为最终保存的数据格式
-    const projectInfo: IProjectInfo = {
-        id,
-        dataJson: JSON.stringify({...proData, ...sessionPatch}),
-        status: '1',
+        const {id} = URLUtil.parseUrlParams();
+        const proData = designerManager.getData();
+        // 保留 dataJson 中已有的会话标识（chatId / convUid），防止保存时覆盖丢失
+        const sessionPatch: {chatId?: string; convUid?: string} = {};
+        try {
+            const existing = projectHdStore.projectConfig.dataJson;
+            if (existing) {
+                const parsed = JSON.parse(existing);
+                if (parsed?.chatId) sessionPatch.chatId = parsed.chatId;
+                if (parsed?.convUid) sessionPatch.convUid = parsed.convUid;
+            }
+        } catch { /* ignore */ }
+        const projectInfo: IProjectInfo = {
+            id,
+            dataJson: JSON.stringify({...proData, ...sessionPatch}),
+            status: '1',
+        };
+        return await runProjectSaveFlow({
+            save: () => baseApi.updateProject(projectInfo),
+            onSaved: () => {
+                projectHdStore.updateProjectConfig({status: '1'});
+            },
+            syncStatus: id == null ? undefined : () => baseApi.syncShareAppStatus(id, 3),
+        });
+    } catch (error) {
+        globalMessage.messageApi?.error(error instanceof Error ? error.message : '项目保存失败');
+        return false;
+    } finally {
+        NProgress.done();
     }
-    await baseApi.updateProject(projectInfo);
-    projectHdStore.updateProjectConfig({status: '1'});
-    // 保存=编辑中(3)：同步分享记录应用状态（大屏 status '1'→appStatus 3）
-    if (id != null) baseApi.syncShareAppStatus(id, 3);
-    NProgress.done()
-}, 5000, {trailing: false});
+};
+
+//保存函数节流5s, 5s内不可重复保存
+export const doSave = throttle(saveProjectNow, 5000, {trailing: false});
 
 export const doHide = () => {
     const {targetIds, setTargetIds} = eventOperateStore;

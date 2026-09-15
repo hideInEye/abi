@@ -101,6 +101,7 @@ class DesignerMovable extends React.Component<DesignerMovableProps, DesignerMova
             const {updateBaseConfig} = baseInfoStore;
             updateBaseConfig(data[0]);
         }
+        if (eventOperateStore.backoff) setBackoff(false);
         const {throttleDragRotate} = this.state;
         if (throttleDragRotate !== 0)
             this.setState({throttleDragRotate: 0});
@@ -128,7 +129,10 @@ class DesignerMovable extends React.Component<DesignerMovableProps, DesignerMova
         //通过第一个元素来判断。 框选的所有组件是否处于锁定状态，处于锁定状态，则不允许拖拽和缩放。
         const {updateLayer, layerConfigs} = layerManager;
         const firstLock = layerConfigs[targets[0].id].lock;
-        if (firstLock) return false;
+        if (firstLock) {
+            if (eventOperateStore.backoff) eventOperateStore.setBackoff(false);
+            return false;
+        }
 
         const {backoff, setBackoff, setGroupCoordinate, groupCoordinate, targetIds} = eventOperateStore;
         const data: ILayerItem[] = [];
@@ -159,6 +163,7 @@ class DesignerMovable extends React.Component<DesignerMovableProps, DesignerMova
             } else
                 historyRecordOperateProxy.doDrag(data)
         }
+        if (eventOperateStore.backoff) setBackoff(false);
         const {throttleDragRotate} = this.state;
         if (throttleDragRotate !== 0)
             this.setState({throttleDragRotate: 0});
@@ -216,6 +221,7 @@ class DesignerMovable extends React.Component<DesignerMovableProps, DesignerMova
             const {updateBaseConfig} = baseInfoStore;
             updateBaseConfig(data[0]);
         }
+        if (eventOperateStore.backoff) setBackoff(false);
         const {keepRatio} = this.state;
         if (keepRatio)
             this.setState({keepRatio: false});
@@ -225,7 +231,10 @@ class DesignerMovable extends React.Component<DesignerMovableProps, DesignerMova
         const {targets, inputEvent} = e;
         const {layerConfigs} = layerManager;
         const firstLock = layerConfigs[targets[0].id].lock;
-        if (firstLock) return false;
+        if (firstLock) {
+            if (eventOperateStore.backoff) eventOperateStore.setBackoff(false);
+            return false;
+        }
         if (inputEvent && inputEvent.ctrlKey)
             this.setState({keepRatio: true});
     }
@@ -256,7 +265,10 @@ class DesignerMovable extends React.Component<DesignerMovableProps, DesignerMova
                 })
             }
         })
-        if (!e.lastEvent) return;
+        if (!e.lastEvent) {
+            if (eventOperateStore.backoff) setBackoff(false);
+            return;
+        }
         const {dist, direction} = e.lastEvent;
         //更新组件尺寸和坐标信息
         if (data.length > 0) {
@@ -295,6 +307,7 @@ class DesignerMovable extends React.Component<DesignerMovableProps, DesignerMova
                 });
             }
         }
+        if (eventOperateStore.backoff) setBackoff(false);
         const {keepRatio} = this.state;
         if (keepRatio)
             this.setState({keepRatio: false});
