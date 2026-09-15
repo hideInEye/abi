@@ -5,9 +5,12 @@ import { getAuthorization, handleLoginExpired } from '../../utils/auth'
 
 export type SourceVersionId = string | number
 
+/** SSE MCP 按当前资源 ID 映射到选中的分组 ID；每项只包含一个映射。 */
+export type SseMcpSourceVersionBinding = Record<string, SourceVersionId>
+
 /** 报告任务可选的技能/MCP 源版本；无选择时接口约定发送空数组。 */
 export interface ReportSourceVersionFields {
-  sse_mcp_source_version_ids: SourceVersionId[]
+  sse_mcp_source_version_ids: SseMcpSourceVersionBinding[]
   mcp_streamable_source_version_ids: SourceVersionId[]
   skills_source_version_ids: SourceVersionId[]
   builtin_tools_source_version_ids: SourceVersionId[]

@@ -87,3 +87,10 @@ export function deleteDictionaryEnum(dictIds: number) {
     url: `/api/system/v1/dictionarydata/${dictIds}`
   });
 }
+
+export function queryDictionaryDataByType(dictType: string) {
+  return apiRequest<unknown>({
+    method: 'get',
+    url: `/api/system/dict/data/type/${encodeURIComponent(dictType)}`
+  });
+}

@@ -15,6 +15,7 @@ import {DesignerMode, ProjectDataType, SaveType} from "../DesignerType";
 import layerManager from "../manager/LayerManager.ts";
 import BPExecutor from "../blueprint/core/BPExecutor.ts";
 import baseApi from "../../api/BaseApi.ts";
+import {parseViewProjectData} from './viewProjectData.ts';
 
 
 /**
@@ -24,9 +25,10 @@ class ViewDesignerLoader extends DesignerLoader {
 
     protected async getProjectData(id: string): Promise<ProjectDataType | null> {
         const projectInfo = await baseApi.getProjectInfo(id);
-        const {name, dataJson} = projectInfo!
+        if (!projectInfo) return null;
+        const {name, dataJson} = projectInfo;
         name && (document.title = name);
-        return JSON.parse(dataJson!);
+        return parseViewProjectData({dataJson});
     }
 
     protected getProjectDataAfter(id: string, type: SaveType, data: ProjectDataType): void {

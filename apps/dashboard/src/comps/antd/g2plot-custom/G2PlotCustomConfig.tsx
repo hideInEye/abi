@@ -13,23 +13,32 @@ import {useRef} from 'react';
 import {FieldChangeData, LCGUI} from "../../../json-schema/LCGUI";
 import {Control} from "../../../json-schema/SchemaTypes";
 import {ConfigType} from "../../../designer/right/ConfigContent";
-import {AMapController} from "../../map/AMapController.ts";
+import G2PlotCustomController from "./G2PlotCustomController.ts";
+import {DEFAULT_PLOT_RENDERER, parsePlotRendererConfig} from "../../../security/renderer-registry.ts";
+import {globalMessage} from "../../../framework/message/GlobalMessage.tsx";
 
 
-export default function G2PlotCustomConfig(props: ConfigType<AMapController>) {
+export default function G2PlotCustomConfig(props: ConfigType<G2PlotCustomController>) {
     const {controller} = props;
     const config = controller.getConfig()?.style;
 
-    const codeRef = useRef<string>(config?.customCode || '');
+    const rendererRef = useRef<string>(typeof config?.renderer === 'string'
+        ? config.renderer
+        : JSON.stringify(config?.renderer || DEFAULT_PLOT_RENDERER, null, 2));
 
     const onFieldChange = (fieldChangeData: FieldChangeData) => {
         const {id, data, dataFragment} = fieldChangeData;
-        if (id === 'customCode') {
-            codeRef.current = data as string;
+        if (id === 'renderer') {
+            rendererRef.current = data as string;
             return;
         }
-        if (id === 'refreshChart')
-            controller.update({style: {customCode: codeRef.current}});
+        if (id === 'refreshChart') {
+            try {
+                controller.update({style: {renderer: parsePlotRendererConfig(rendererRef.current)}});
+            } catch (error) {
+                globalMessage.messageApi?.error(error instanceof Error ? error.message : '图表渲染配置无效');
+            }
+        }
         else
             controller.update(dataFragment);
     }
@@ -40,8 +49,8 @@ export default function G2PlotCustomConfig(props: ConfigType<AMapController>) {
         children: [
             {
                 type: 'card-panel',
-                label: 'G2Plot代码',
-                tip: '请参考G2Plot官方文档复制粘贴并调试代码',
+                label: 'G2Plot渲染配置',
+                tip: '仅支持已注册图表类型和 JSON 参数，不执行 JavaScript',
                 config: {
                     contentStyle: {
                         padding: 0
@@ -49,11 +58,11 @@ export default function G2PlotCustomConfig(props: ConfigType<AMapController>) {
                 },
                 children: [
                     {
-                        id: 'customCode',
+                        id: 'renderer',
                         type: 'code-editor',
-                        value: codeRef.current,
+                        value: rendererRef.current,
                         config: {
-                            language: 'javascript',
+                            language: 'json',
                             height: 600
                         }
                     }

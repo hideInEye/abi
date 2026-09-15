@@ -13,6 +13,15 @@ import {action, makeObservable, observable, runInAction, toJS} from "mobx";
 import AbstractManager from "../../../manager/core/AbstractManager.ts";
 import {CanvasConfig} from "../../../DesignerType.ts";
 
+const DEFAULT_CANVAS_CONFIG: CanvasConfig = {
+    rasterize: false,
+    dragStep: 1,
+    resizeStep: 1,
+    width: 1920,
+    height: 1080,
+    adaptationType: 'scale'
+};
+
 class CanvasManager extends AbstractManager<CanvasConfig> {
 
     constructor() {
@@ -29,14 +38,7 @@ class CanvasManager extends AbstractManager<CanvasConfig> {
 
     setCanvasVisible = (visible: boolean) => this.canvasVisible = visible;
 
-    canvasConfig: CanvasConfig = {
-        rasterize: false, //是否栅格化
-        dragStep: 1, //栅格化拖拽步长
-        resizeStep: 1, //栅格化缩放步长
-        width: 1920, //画布宽
-        height: 1080, //画布高
-        adaptationType: 'scale' //屏幕适配
-    };
+    canvasConfig: CanvasConfig = {...DEFAULT_CANVAS_CONFIG};
 
     updateCanvasConfig = (data: CanvasConfig) => this.canvasConfig = {...this.canvasConfig, ...data};
 
@@ -52,7 +54,8 @@ class CanvasManager extends AbstractManager<CanvasConfig> {
 
     public destroy = () => {
         runInAction(() => {
-            this.canvasConfig = {}
+            this.canvasConfig = {...DEFAULT_CANVAS_CONFIG};
+            this.canvasVisible = false;
         });
     }
 

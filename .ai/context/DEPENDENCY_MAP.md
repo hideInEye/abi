@@ -47,13 +47,13 @@ apps/dashboard
 - MobX：`apps/dashboard`。
 - React Router：`apps/abi` 通过 `@sa/simple-router`，`apps/dashboard` 直接使用。
 - TanStack Router：`apps/chat`。
-- qiankun：`apps/abi`、`apps/chat`、`apps/dashboard` 均存在依赖或 runtime 代码。
+- qiankun：`apps/abi` 作为宿主加载 `apps/dashboard`；`apps/chat` 虽保留依赖/兼容入口，但当前作为 `/chat-ui/` 独立 SPA 运行。
 - ECharts/G2/G6/X6/Monaco/CodeMirror：数据可视化、图谱、编辑器相关。
 
 ## 构建依赖
 
 - 根 `turbo.json` pipeline：`build` 依赖 `^build` 并输出 `dist/**`。
-- `packages/charts`、`packages/config` 使用 `father build`。
+- `packages/charts` 使用 `father build`；原未使用的 `packages/config` 已删除。
 - `apps/abi` 使用 Vite 5，`apps/chat` 使用 Vite 6，`apps/dashboard` 使用 Vite 5。
 
 ## 依赖更新规则

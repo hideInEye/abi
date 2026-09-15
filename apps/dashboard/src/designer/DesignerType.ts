@@ -11,6 +11,7 @@
 
 import {BPNodeLayoutType, IBPLine} from "./blueprint/manager/BluePrintManager.ts";
 import {IFilter} from "./manager/FilterManager.ts";
+import type {DataTransformConfig} from "../security/runtime-config.ts";
 
 /**
  * 主题
@@ -50,7 +51,7 @@ export interface APIConfig {
     //刷新频率
     frequency?: number;
     //过滤器
-    filter?: string;
+    filter?: DataTransformConfig | string;
 }
 
 export interface IDatabase {
@@ -63,7 +64,7 @@ export interface IDatabase {
     //刷新频率
     frequency?: number;
     //过滤器
-    filter?: string;
+    filter?: DataTransformConfig | string;
 }
 
 /**

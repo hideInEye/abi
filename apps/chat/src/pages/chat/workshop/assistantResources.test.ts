@@ -10,7 +10,15 @@ vi.mock('../../../service/api/assistant', () => ({
 describe('mapAssistantBoundResources', () => {
   it('空 versions 时回退详情自身且各资源为空数组', () => {
     const result = mapAssistantBoundResources({ appId: 9, appName: '测试助手' }, 9)
-    expect(result).toEqual({ appId: '9', appName: '测试助手', semantics: [], skills: [], mcps: [] })
+    expect(result).toEqual({
+      appId: '9',
+      appName: '测试助手',
+      prologue: '',
+      description: '',
+      semantics: [],
+      skills: [],
+      mcps: [],
+    })
   })
 
   it('detail 为 null 时使用 fallbackAppId 且不抛错', () => {
@@ -80,9 +88,9 @@ describe('mapAssistantBoundResources', () => {
     }
     const result = mapAssistantBoundResources(detail)
     expect(result.mcps).toEqual([
-      { id: '41', name: 'sse 服务', protocol: 'sse' },
-      { id: '42', name: 'streamable 服务', protocol: 'streamable' },
-      { id: '43', name: '无协议信息', protocol: 'streamable' },
+      { id: '41', name: 'sse 服务', protocol: 'sse', sseGroupIds: ['1001'] },
+      { id: '42', name: 'streamable 服务', protocol: 'streamable', sseGroupIds: [] },
+      { id: '43', name: '无协议信息', protocol: 'streamable', sseGroupIds: [] },
     ])
   })
 })

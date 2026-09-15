@@ -90,12 +90,13 @@ Vitest。证据：根 `package.json` 和测试文件中的 `import { describe, e
 
 ## 开发完成后验证
 
-优先顺序：
+默认只验证当前修改内容，不主动扩大到未修改模块或全仓测试。优先顺序：
 
-1. `pnpm test`
-2. `pnpm type-check` 或 app-specific `typecheck/check`
-3. `pnpm lint` 或 app-specific `lint`
-4. `pnpm build` 或 `pnpm --filter <app> build`
+1. 直接覆盖本次修改文件或小模块的定向 Vitest。
+2. 仅针对修改范围可执行的 typecheck、lint 或静态检查。
+3. `git diff --check`。
+
+只有用户明确要求时才运行 `pnpm test` 等全仓测试；修改共享基础设施且无法通过定向测试界定影响时，应先向用户说明再扩大验证范围。
 
 如果命令失败，run log 必须记录失败原因、是否由当前改动导致、后续处理建议。
 

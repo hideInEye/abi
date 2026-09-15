@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { finalizeStreamText, mapProjectSemantics, parseAiRaw } from './service'
+import { finalizeStreamText, mapAssistantBoundToolResources, mapProjectSemantics, parseAiRaw } from './service'
 
 describe('finalizeStreamText', () => {
   it('剥离 think 思考段保留正文', () => {
@@ -145,6 +145,27 @@ describe('mapProjectSemantics', () => {
     }
     expect(mapProjectSemantics(detail)).toEqual([
       { id: 'schema_396', type: 'schema', schemaId: 396, name: 'test_bank_db', groupName: '动账交易测试' },
+    ])
+  })
+})
+
+describe('mapAssistantBoundToolResources', () => {
+  it('保留 SSE MCP 配置的真实分组 ID', () => {
+    const detail = {
+      versions: [{
+        tools: [{
+          toolType: '2',
+          toolConfig: JSON.stringify([
+            { id: 41, name: 'sse 服务', mcp_sse: [1001, '1002', 1001] },
+            { id: 42, name: 'streamable 服务', mcp_streamable: [2001] },
+          ]),
+        }],
+      }],
+    }
+
+    expect(mapAssistantBoundToolResources(detail).mcps).toEqual([
+      { id: '41', name: 'sse 服务', protocol: 'sse', sseGroupIds: [1001, '1002'] },
+      { id: '42', name: 'streamable 服务', protocol: 'streamable', sseGroupIds: [] },
     ])
   })
 })

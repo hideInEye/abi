@@ -20,10 +20,12 @@ export function notifyTokenExpired() {
     void handleLoginExpired();
 }
 
-let _authExpiredAt = 0;
-// 登录过期提醒触发后的短时间窗口：请求层已统一提醒并跳转，供全局消息出口抑制组件层重复弹错
-export function isAuthExpiredNotifying(windowMs = 5000): boolean {
-    return Date.now() - _authExpiredAt < windowMs;
+export function isSuccessfulNativeResult(value: unknown): boolean {
+    if (typeof value !== 'object' || value === null) return true;
+    const result = value as Record<string, unknown>;
+    if ('code' in result) return Number(result.code) === 200;
+    if ('success' in result) return result.success === true;
+    return true;
 }
 
 let _apiTarget = '';
@@ -196,7 +198,7 @@ export default class FetchUtil {
                     if (typeof res === 'object' && res !== null && 'code' in res) {
                         FetchUtil.handleUnauthorized((res as HttpResponse).code);
                     }
-                    return res;
+                    return isSuccessfulNativeResult(res) ? res : null;
                 } else if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain'))) {
                     return await response.text()
                 } else {
@@ -271,7 +273,7 @@ export default class FetchUtil {
      * @param headers
      * @param params
      */
-    static async doRequestNativeResult(url: string, method: string, headers: Record<string, string>, params: FormData | Record<string, any>): Promise<object> {
+    static async doRequestNativeResult(url: string, method: string, headers: Record<string, string>, params: FormData | Record<string, any>): Promise<object | null> {
         const reqInfo = FetchUtil.doRequestBefore(url, method, headers, params);
         return FetchUtil.requestNativeResult(reqInfo.url, reqInfo.options);
     }

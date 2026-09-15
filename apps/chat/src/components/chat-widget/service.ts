@@ -241,13 +241,26 @@ export function mapAssistantBoundToolResources(detail: any): { skills: Assistant
       if (c?.id == null) return
       const sse: any[] = Array.isArray(c.mcp_sse) ? c.mcp_sse : []
       const streamable: any[] = Array.isArray(c.mcp_streamable) ? c.mcp_streamable : []
-      mcps.push({ id: String(c.id), name: c.name || '', protocol: sse.length > 0 ? 'sse' : 'streamable', namespaceId: toNamespaceId(sse[0] ?? streamable[0]) })
+      mcps.push({
+        id: String(c.id),
+        name: c.name || '',
+        protocol: sse.length > 0 ? 'sse' : 'streamable',
+        sseGroupIds: normalizeBoundMcpGroupIds(sse),
+        namespaceId: toNamespaceId(sse[0] ?? streamable[0])
+      })
     })
   })
 
   return { skills, mcps }
 }
 
+function normalizeBoundMcpGroupIds(raw: unknown): Array<string | number> {
+  if (!Array.isArray(raw)) return []
+  return [...new Map(raw
+    .filter((id): id is string | number =>
+      (typeof id === 'string' && id.trim() !== '') || (typeof id === 'number' && Number.isFinite(id)))
+    .map((id) => [String(id), id])).values()]
+}
 /** namespaceId 统一形态为 s_<groupId>；兼容详情历史数据存裸 groupId 的情况 */
 function toNamespaceId(value: unknown): string {
   const raw = String(value ?? '').trim()

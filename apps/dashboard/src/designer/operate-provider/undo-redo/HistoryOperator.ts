@@ -26,6 +26,10 @@ class HistoryOperator {
     public forward(): IHistoryRecords | null {
         return this.queue.forward();
     }
+
+    public reset(): void {
+        this.queue.clear();
+    }
 }
 
 const historyOperator = new HistoryOperator();

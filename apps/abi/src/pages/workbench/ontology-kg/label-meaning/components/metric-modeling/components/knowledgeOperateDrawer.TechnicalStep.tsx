@@ -10,6 +10,7 @@ import { getAtomicProjection, getAtomicSemanticSchemaName, getAtomicTechnicalSou
 
 import { KnowledgeOperateDerivedLogicBuilder } from './knowledgeOperateDrawer.DerivedLogicBuilder'
 import { KnowledgeOperateExtendedTemplateParams } from './knowledgeOperateDrawer.ExtendedTemplateParams'
+import { KnowledgeIndicatorSearchSelect } from './knowledgeOperateDrawer.IndicatorSearchSelect'
 
 interface AtomicMetricOption {
   item?: KnowledgeIndicatorItem
@@ -24,6 +25,9 @@ interface Props {
   readonly fieldLoading?: boolean
   readonly form: FormInstance<KnowledgeFormValues>
   readonly indicatorClass: string
+  readonly indicatorOptionsLoading?: boolean
+  readonly onIndicatorLoadMore: () => void
+  readonly onIndicatorSearch: (searchText: string) => void
   readonly onRetryFields?: () => void
   readonly referenceMetricOptions: AtomicMetricOption[]
   readonly templateTypeVal: string
@@ -45,6 +49,9 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
   fieldLoading,
   form,
   indicatorClass,
+  indicatorOptionsLoading,
+  onIndicatorLoadMore,
+  onIndicatorSearch,
   onRetryFields,
   referenceMetricOptions,
   templateTypeVal,
@@ -86,9 +93,12 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
               name="techId"
               rules={[{ message: '请选择原子指标', required: true }]}
             >
-              <ASelect
+              <KnowledgeIndicatorSearchSelect
+                loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择原子指标"
+                onLoadMore={onIndicatorLoadMore}
+                onSearch={onIndicatorSearch}
               />
             </AForm.Item>
             <AForm.Item
@@ -149,6 +159,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
             allFields={allFields}
             atomicMetricOptions={atomicMetricOptions}
             form={form}
+            indicatorOptionsLoading={indicatorOptionsLoading}
             referenceMetricOptions={referenceMetricOptions}
             templateTypeVal={templateTypeVal}
             validateAccumulationDate={validateAccumulationDate}
@@ -158,6 +169,8 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
             validateRollingWindow={validateRollingWindow}
             validateThresholdMax={validateThresholdMax}
             validateThresholdValue={validateThresholdValue}
+            onIndicatorLoadMore={onIndicatorLoadMore}
+            onIndicatorSearch={onIndicatorSearch}
           />
         </>
       ) : (
