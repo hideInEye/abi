@@ -240,11 +240,24 @@ export function mapAssistantBoundToolResources(detail: any): { skills: Assistant
     toSchemaConfigList(t?.toolConfig).forEach((c: any) => {
       if (c?.id == null) return
       const sse: any[] = Array.isArray(c.mcp_sse) ? c.mcp_sse : []
-      mcps.push({ id: String(c.id), name: c.name || '', protocol: sse.length > 0 ? 'sse' : 'streamable' })
+      mcps.push({
+        id: String(c.id),
+        name: c.name || '',
+        protocol: sse.length > 0 ? 'sse' : 'streamable',
+        sseGroupIds: normalizeBoundMcpGroupIds(sse),
+      })
     })
   })
 
   return { skills, mcps }
+}
+
+function normalizeBoundMcpGroupIds(raw: unknown): Array<string | number> {
+  if (!Array.isArray(raw)) return []
+  return [...new Map(raw
+    .filter((id): id is string | number =>
+      (typeof id === 'string' && id.trim() !== '') || (typeof id === 'number' && Number.isFinite(id)))
+    .map((id) => [String(id), id])).values()]
 }
 
 /** schemaConfig 两种形态：数组或 JSON 字符串（分享查询实际下发字符串）；解析失败返回空数组 */

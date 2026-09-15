@@ -16,6 +16,7 @@ import type { ModelOption } from '../chat-header';
 import { buildReportSourceVersionFields } from './reportSourceSelection';
 import { hasSelectedConversationData } from './sendValidation';
 import { filterSemanticTree, matchKeyword } from './popupFilter';
+import { buildMcpGroupQuery, isSuccessfulMcpResponse, loadCurrentMcpItems, shouldReloadMcpOnSpaceChange } from './mcpSpaceLoad';
 
 export interface SemanticSelectedData {
   name: string
@@ -76,7 +77,7 @@ interface ChatInputProps {
   /** 技能候选仅用绑定列表；非 null 时跳过全局收藏技能请求 */
   assistantSkills?: ReadonlyArray<{ id: string; bizName: string; latestVersionId: string; skillType: string }> | null;
   /** MCP 候选仅用绑定列表（扁平，无分组）；非 null 时跳过全局 MCP 分组请求 */
-  assistantMcps?: ReadonlyArray<{ id: string; name: string; protocol: 'sse' | 'streamable' }> | null;
+  assistantMcps?: ReadonlyArray<{ id: string; name: string; protocol: 'sse' | 'streamable'; sseGroupIds?: ReadonlyArray<string | number> }> | null;
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
@@ -173,31 +174,72 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
 
     // 懒加载 MCP 分组（首次 hover 进入 MCP 面板时触发一次）；助手会话直接用绑定候选，不请求全局分组。
     const mcpLoadStartedRef = useRef(false);
+    const mcpLoadGenerationRef = useRef(0);
+    const previousMcpSpaceIdRef = useRef(spaceId);
     const startMcpLoad = useCallback(() => {
       if (assistantMcps || mcpLoadStartedRef.current) return;
       mcpLoadStartedRef.current = true;
       setMcpLoading(true);
-      fetchSemanticGroups({ groupType: 'mcp', pageNum: 1, pageSize: 100, spaceId: spaceId || getSpaceId() })
-        .then((res: any) => {
-          const list = res?.data?.data?.pageItems || res?.data || res?.rows || [];
-          setMcpGroups(Array.isArray(list) ? list : []);
+      const generation = mcpLoadGenerationRef.current;
+      loadCurrentMcpItems<any, any>({
+        request: () => fetchSemanticGroups(buildMcpGroupQuery(spaceId, getSpaceId())),
+        isCurrent: () => generation === mcpLoadGenerationRef.current,
+        isSuccess: isSuccessfulMcpResponse,
+        selectItems: (res: any) => res?.data?.data?.pageItems || res?.data || res?.rows || [],
+      })
+        .then((list) => {
+          if (list) {
+            setMcpGroups(list);
+          } else if (generation === mcpLoadGenerationRef.current) {
+            mcpLoadStartedRef.current = false;
+          }
         })
-        .catch(() => {})
-        .finally(() => setMcpLoading(false));
+        .finally(() => {
+          if (generation === mcpLoadGenerationRef.current) setMcpLoading(false);
+        });
     }, [spaceId, assistantMcps]);
 
     // hover MCP 分组时懒加载服务列表（防重入）
     const mcpLoadingGroupsRef = useRef<Set<number>>(new Set());
+
+    useEffect(() => {
+      const previousSpaceId = previousMcpSpaceIdRef.current;
+      if (String(previousSpaceId ?? '') === String(spaceId ?? '')) return;
+
+      const shouldReload = shouldReloadMcpOnSpaceChange(
+        previousSpaceId,
+        spaceId,
+        mcpLoadStartedRef.current,
+        Boolean(assistantMcps),
+      );
+      previousMcpSpaceIdRef.current = spaceId;
+      mcpLoadGenerationRef.current += 1;
+      mcpLoadStartedRef.current = false;
+      mcpLoadingGroupsRef.current.clear();
+      setMcpGroups([]);
+      setMcpGroupItems(new Map());
+      setSelectedMCPs(new Set());
+      setMcpLoading(false);
+
+      if (shouldReload) startMcpLoad();
+    }, [assistantMcps, spaceId, startMcpLoad]);
+
     const loadMcpGroup = useCallback((groupId: number) => {
       if (mcpGroupItems.has(groupId) || mcpLoadingGroupsRef.current.has(groupId)) return;
       mcpLoadingGroupsRef.current.add(groupId);
-      queryMcpList({ pageNo: 1, pageSize: 100, namespaceId: `s_${groupId}` })
-        .then((res: any) => {
-          const list = res?.data?.data?.pageItems || res?.data?.records || res?.data?.list || (Array.isArray(res?.data) ? res.data : []);
-          setMcpGroupItems(prev => new Map(prev).set(groupId, Array.isArray(list) ? list : []));
+      const generation = mcpLoadGenerationRef.current;
+      loadCurrentMcpItems<any, any>({
+        request: () => queryMcpList({ pageNo: 1, pageSize: 100, namespaceId: `s_${groupId}` }),
+        isCurrent: () => generation === mcpLoadGenerationRef.current,
+        isSuccess: isSuccessfulMcpResponse,
+        selectItems: (res: any) => res?.data?.data?.pageItems || res?.data?.records || res?.data?.list || (Array.isArray(res?.data) ? res.data : []),
+      })
+        .then((list) => {
+          if (list) setMcpGroupItems(prev => new Map(prev).set(groupId, list));
         })
-        .catch(() => {})
-        .finally(() => mcpLoadingGroupsRef.current.delete(groupId));
+        .finally(() => {
+          if (generation === mcpLoadGenerationRef.current) mcpLoadingGroupsRef.current.delete(groupId);
+        });
     }, [mcpGroupItems]);
 
     // 查看语义
@@ -269,10 +311,11 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         ? {
             mode: selectedMode.key,
             reportSources: buildReportSourceVersionFields({
-              // 助手会话：候选即绑定列表（id 即源版本 id），报告源字段映射规则不变。
+              // 助手会话直接使用绑定候选，SSE MCP 的 id 与详情分组由统一 mapper 组装。
               skills: (assistantSkills ?? skillList) as any[],
               selectedSkillIds: selectedSkills,
-              mcps: (assistantMcps ?? Array.from(mcpGroupItems.values()).flat()) as any[],
+              mcps: (assistantMcps ?? Array.from(mcpGroupItems.entries()).flatMap(([groupId, items]) =>
+                items.map((mcp) => ({ ...mcp, groupId })))) as any[],
               selectedMcpIds: selectedMCPs,
             }),
           }
