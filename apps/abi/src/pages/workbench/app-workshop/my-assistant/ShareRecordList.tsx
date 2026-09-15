@@ -86,7 +86,7 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
   const [jumpValue, setJumpValue] = useState('');
 
   /** 拉取分享记录（服务端分页） */
@@ -242,10 +242,9 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
               value={pageSize}
               onChange={(val: number) => { setPageSize(val); setCurrentPage(1); fetchList(1, val); }}
               options={[
-                { label: '10条/页', value: 10 },
-                { label: '15条/页', value: 15 },
-                { label: '20条/页', value: 20 },
-                { label: '25条/页', value: 25 },
+                { label: '12条/页', value: 12 },
+                { label: '18条/页', value: 18 },
+                { label: '24条/页', value: 24 },
                 { label: '30条/页', value: 30 },
               ]}
               className="page-size-select"

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Splitter } from 'antd';
 
 import { deleteMcp, getMcpDetail, queryMcpList, registerMcp, updateMcp } from '@/service/api/pulg';
+import { isFlatRequestSuccess } from '@/service/request/flat-result';
 import type { PluginAddParams, PluginItem, PluginList, McpForm } from '@/types/plug';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
@@ -70,11 +71,14 @@ export const Component: React.FC = () => {
 
   const toDeletePlugin = async (data: PluginList) => {
     if (!groupIdRef.current) return;
-    await deleteMcp({
+    const res = await deleteMcp({
       mcpId: data.pluginId.toString(),
       mcpName: data.pluginName,
       namespaceId: `s_${groupIdRef.current}`
     });
+    // 接口明确成功才提示并刷新，失败走全局错误处理
+    if (!isFlatRequestSuccess(res)) return;
+    message.success('删除成功');
     getPluginList();
   };
 

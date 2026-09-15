@@ -58,7 +58,7 @@ const MetricModeling: React.FC = () => {
 
   const [dateRange, setDateRange] = useState<any>(null)
   const [fePage, setFePage] = useState(1)
-  const [fePageSize, setFePageSize] = useState(10)
+  const [fePageSize, setFePageSize] = useState(12)
   const filteredData = useMemo(() => filterByCreateTime(tableData as any[], dateRange, 'createTime'), [tableData, dateRange])
   const pagedData = useMemo(() => {
     const start = (fePage - 1) * fePageSize

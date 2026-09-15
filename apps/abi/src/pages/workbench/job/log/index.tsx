@@ -48,7 +48,7 @@ export function Component() {
     apiFn: fetchJobLogList as any,
     apiParams: {
       pageNum: 1,
-      pageSize: 10,
+      pageSize: 12,
       spaceId, // 空间id
     },
     columns: () =>
@@ -372,7 +372,7 @@ export function Component() {
             {(() => {
               const pag = tableProps.pagination as any;
               const current = pag?.current || 1;
-              const pageSizeVal = pag?.pageSize || 10;
+              const pageSizeVal = pag?.pageSize || 12;
               const totalVal = pag?.total || 0;
               const totalPages = Math.max(1, Math.ceil(totalVal / pageSizeVal));
               const onChange = pag?.onChange;
@@ -391,7 +391,7 @@ export function Component() {
                 <>
                   <span className="total-text">共 {totalVal} 条</span>
                   <div className="pagination-controls">
-                    <ASelect value={pageSizeVal} onChange={(v: number) => onChange?.(1, v)} options={[{label:'10条/页',value:10},{label:'15条/页',value:15},{label:'20条/页',value:20}]} className="page-size-select" />
+                    <ASelect value={pageSizeVal} onChange={(v: number) => onChange?.(1, v)} options={[{label:'12条/页',value:12},{label:'18条/页',value:18},{label:'24条/页',value:24},{label:'30条/页',value:30}]} className="page-size-select" />
                     <button className="page-btn" disabled={current === 1} onClick={() => onChange?.(current - 1, pageSizeVal)}><LeftOutlined /></button>
                     {pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === current ? ' page-active' : ''}`} onClick={() => onChange?.(p, pageSizeVal)}>{p}</span>)}
                     <button className="page-btn" disabled={current >= totalPages} onClick={() => onChange?.(current + 1, pageSizeVal)}><RightOutlined /></button>

@@ -90,10 +90,9 @@ function filterByTimeRange(rows: WorkshopRecord[], range: any): WorkshopRecord[]
 }
 
 const PAGE_SIZE_OPTIONS = [
-  { label: '10条/页', value: 10 },
-  { label: '15条/页', value: 15 },
-  { label: '20条/页', value: 20 },
-  { label: '25条/页', value: 25 },
+  { label: '12条/页', value: 12 },
+  { label: '18条/页', value: 18 },
+  { label: '24条/页', value: 24 },
   { label: '30条/页', value: 30 },
 ]
 
@@ -116,7 +115,7 @@ function WorkshopView() {
   const [dateRange, setDateRange] = useState<any>(null)
   // 前端分页（对齐 abi：接口返回全量数据）
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(12)
   const [jumpValue, setJumpValue] = useState('')
 
   // 按当前 tab 拉取列表：最近使用/我的分享走操作记录接口，我的收藏走收藏接口

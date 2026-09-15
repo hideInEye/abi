@@ -82,12 +82,22 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
   const normalizedLayers = useMemo(() => normalizeRuleLayers(derivedExpressions), [derivedExpressions])
 
   useEffect(() => {
-    const subjectDimensionId = statisticalCaliber.subjectDimensionId
-    if (!subjectDimensionId) return
-    const option = dimensionOptions.find(item => String(item.key) === String(subjectDimensionId))
-    if (!option || option.name === statisticalCaliber.subjectDimensionName) return
-    form.setFieldValue(['statisticalCaliber', 'subjectDimensionName'], option.name)
-  }, [dimensionOptions, form, statisticalCaliber.subjectDimensionId, statisticalCaliber.subjectDimensionName])
+    const subjectDimensionIds = statisticalCaliber.subjectDimensionIds || []
+    if (!subjectDimensionIds.length) return
+
+    const currentNameMap = statisticalCaliber.subjectDimensionNameMap || {}
+    const nextNameMap = subjectDimensionIds.reduce<Record<string, string>>((result, dimensionId) => {
+      const option = dimensionOptions.find(item => String(item.key) === dimensionId)
+      result[dimensionId] = option?.name || currentNameMap[dimensionId] || dimensionId
+      return result
+    }, {})
+    const nameMapChanged = subjectDimensionIds.some(
+      dimensionId => nextNameMap[dimensionId] !== currentNameMap[dimensionId]
+    )
+    if (!nameMapChanged || !dimensionOptions.length) return
+
+    form.setFieldValue(['statisticalCaliber', 'subjectDimensionNameMap'], nextNameMap)
+  }, [dimensionOptions, form, statisticalCaliber.subjectDimensionIds, statisticalCaliber.subjectDimensionNameMap])
 
   useEffect(() => {
     const current = form.getFieldValue('derivedExpressions')
@@ -222,28 +232,55 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
             </div>
           </div>
         </div>
-        <div className="mt-6 max-w-[50%] pr-4">
-          <AForm.Item
-            extra="单选主体维度，选项与第三步维度设置使用同一数据源。"
-            label="主体维度"
-            name={['statisticalCaliber', 'subjectDimensionId']}
-            rules={[{ message: '请选择主体维度', required: true }]}
-          >
-            <ATreeSelect
-              showSearch
-              treeDefaultExpandAll
-              loading={dimensionLoading}
-              placeholder="请选择主体维度"
-              treeData={dimensionTree}
-              treeNodeFilterProp="title"
-              onChange={value => {
-                const option = dimensionOptions.find(item => String(item.key) === String(value || ''))
-                form.setFieldValue(['statisticalCaliber', 'subjectDimensionName'], option?.name || '')
-              }}
-            />
-          </AForm.Item>
+        <div className="mt-6 max-w-[70%] pr-4">
+          <div className="flex items-start gap-6">
+            <AForm.Item
+              className="mb-0! min-w-0 flex-1"
+              extra="可选择多个主体维度，选项与第三步维度设置使用同一数据源。"
+              label="主体维度"
+              name={['statisticalCaliber', 'subjectDimensionIds']}
+              rules={[{ message: '请选择主体维度', min: 1, required: true, type: 'array' }]}
+            >
+              <ATreeSelect
+                showSearch
+                treeDefaultExpandAll
+                loading={dimensionLoading}
+                maxTagCount="responsive"
+                multiple
+                placeholder="请选择主体维度"
+                treeData={dimensionTree}
+                treeNodeFilterProp="title"
+                onChange={value => {
+                  const dimensionIds = Array.isArray(value)
+                    ? value.map(item => String(item ?? '').trim()).filter(Boolean)
+                    : []
+                  const currentNameMap = form.getFieldValue([
+                    'statisticalCaliber',
+                    'subjectDimensionNameMap'
+                  ]) as Record<string, string> | undefined
+                  const subjectDimensionNameMap = dimensionIds.reduce<Record<string, string>>(
+                    (result, dimensionId) => {
+                      const option = dimensionOptions.find(item => String(item.key) === dimensionId)
+                      result[dimensionId] = option?.name || currentNameMap?.[dimensionId] || dimensionId
+                      return result
+                    },
+                    {}
+                  )
+                  form.setFieldValue(['statisticalCaliber', 'subjectDimensionNameMap'], subjectDimensionNameMap)
+                }}
+              />
+            </AForm.Item>
+            <AForm.Item
+              className="mb-0! pt-8"
+              name={['statisticalCaliber', 'isCrossDim']}
+              valuePropName="checked"
+            >
+              <ACheckbox>是否维度交叉</ACheckbox>
+            </AForm.Item>
+          </div>
           {dimensionError ? (
             <Alert
+              className="mt-2"
               message="主体维度加载失败"
               type="error"
               action={

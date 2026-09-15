@@ -226,10 +226,10 @@ const ShareRecordList = memo(() => {
                         value={pageSize}
                         onChange={(val: number) => pageChange(1, val)}
                         options={[
-                            {label: '12条/页', value: 12},
-                            {label: '20条/页', value: 20},
-                            {label: '30条/页', value: 30},
-                            {label: '50条/页', value: 50},
+                            { label: '12条/页', value: 12 },
+                            { label: '18条/页', value: 18 },
+                            { label: '24条/页', value: 24 },
+                            { label: '30条/页', value: 30 },
                         ]}
                         className="page-size-select"
                     />

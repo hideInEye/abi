@@ -39,6 +39,7 @@ import ReportMessageRow from '../conversation/report-mode/ReportMessageRow'
 import ReportPreviewPane from '../conversation/report-mode/ReportPreviewPane'
 import type { ReportHistoryRoundGroup, ReportItem } from '../conversation/report-mode/types'
 import type { ReportSourceVersionFields } from '../../service/api/report'
+import { buildReportSourceVersionFields } from '../conversation/components/chat-input/reportSourceSelection'
 import { parseViewChart, type WidgetChart, WidgetMessage } from './history'
 import {
   checkSharePassword,
@@ -920,12 +921,12 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 报告能力源：技能 + MCP（按协议拆 sse/streamable），与交互发送同口径；无选择时四字段为空数组
   const buildReportSources = (): ReportSourceVersionFields => {
     const mcps = (info?.mcps ?? []) as AssistantBoundMcp[]
-    return {
-      sse_mcp_source_version_ids: mcps.filter((m) => selectedMcps.has(m.id) && m.protocol === 'sse').map((m) => m.id),
-      mcp_streamable_source_version_ids: mcps.filter((m) => selectedMcps.has(m.id) && m.protocol === 'streamable').map((m) => m.id),
-      skills_source_version_ids: Array.from(selectedSkills),
-      builtin_tools_source_version_ids: [],
-    }
+    return buildReportSourceVersionFields({
+      skills: info?.skills ?? [],
+      selectedSkillIds: selectedSkills,
+      mcps,
+      selectedMcpIds: selectedMcps,
+    })
   }
 
   // 三模式统一发送入口：按当前模式分流到交互 / 探索 / 报告，交互沿用既有 handleSend
@@ -946,7 +947,10 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       setInput('')
       exploreController.handleSend(text, schemaId, {
         skillSourceVersionIds: Array.from(selectedSkills),
-        mcpSourceVersionIds: Array.from(selectedMcps),
+        // 探索接口按 {源版本id: 分组namespaceId} 提交，hook 内再按 protocol 分流 sse/streamable
+        mcpSourceVersionIds: ((info?.mcps ?? []) as AssistantBoundMcp[])
+          .filter((m) => selectedMcps.has(m.id))
+          .map((m) => ({ id: m.id, protocol: m.protocol, namespaceId: m.namespaceId })),
       })
       return
     }

@@ -9,7 +9,7 @@ import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 import type { EntityFormValues, EntityPagination, EntitySearchValues } from '../types'
 
 const INITIAL_SEARCH: EntitySearchValues = { entityCode: '', entityName: '' }
-const INITIAL_PAGINATION: EntityPagination = { pageNum: 1, pageSize: 10, total: 0 }
+const INITIAL_PAGINATION: EntityPagination = { pageNum: 1, pageSize: 12, total: 0 }
 
 interface UseEntityManagementResult {
   batchDeleteEntities: () => Promise<boolean>

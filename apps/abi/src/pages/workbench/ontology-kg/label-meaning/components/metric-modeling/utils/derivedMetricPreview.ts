@@ -213,8 +213,14 @@ export function buildDerivedMetricPreview(params: DerivedMetricPreviewParams): D
   const displayPredicate = validateRuleLayers(params.ruleLayers, params.ruleFields).valid ? predicate : ''
   const conditionText = buildDerivedConditionDescription(params.ruleLayers, params.ruleFields)
   const dimensionMap = new Map(params.dimensionOptions.map(option => [String(option.key), option]))
-  const subjectDimensionId = text(caliber.subjectDimensionId)
-  const subjectDimension = subjectDimensionId ? dimensionMap.get(subjectDimensionId) : undefined
+  const subjectDimensions = (caliber.subjectDimensionIds || []).map(dimensionId => {
+    const option = dimensionMap.get(dimensionId)
+    return {
+      displayName:
+        option?.title || caliber.subjectDimensionNameMap?.[dimensionId] || `待加载维度（${dimensionId}）`,
+      techName: option?.techName || dimensionId
+    }
+  })
   const dimensionSelections = parseDimensionSelections(params.dimensionFieldIds)
   const statisticDimensions = dimensionSelections.map(selection => {
     const option = dimensionMap.get(selection.key)
@@ -225,7 +231,7 @@ export function buildDerivedMetricPreview(params: DerivedMetricPreviewParams): D
   })
   const statisticDimensionLabels = unique(statisticDimensions.map(item => item.displayName))
   const groupByFields = unique(
-    [subjectDimension?.techName || subjectDimensionId, ...statisticDimensions.map(item => item.techName)].map(text)
+    [...subjectDimensions.map(item => item.techName), ...statisticDimensions.map(item => item.techName)].map(text)
   )
   const source = resolveAtomicSource(params.atomicMetric, params.allFields)
   const sourceField = source.fieldName || 'source_field /* 来源字段待接口返回 */'
@@ -243,7 +249,7 @@ export function buildDerivedMetricPreview(params: DerivedMetricPreviewParams): D
       `指标：${text(params.bizName) || '未命名指标'}`,
       `计算基础：${atomicLabel}`,
       `统计范围：${dateRangeSummary}，${timeRangeSummary}`,
-      `主体维度：${subjectDimension?.title || (subjectDimensionId ? `待加载维度（${subjectDimensionId}）` : '请选择主体维度')}`,
+      `主体维度：${unique(subjectDimensions.map(item => item.displayName)).join('、') || '请选择主体维度'}`,
       `统计维度：${statisticDimensionLabels.join('、') || '未设置'}`,
       `配置表达式：\n${conditionText}`
     ].join('\n\n'),

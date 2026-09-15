@@ -67,7 +67,7 @@ function getCurrentThinking(item: ExploreItem): { thought?: string; intention?: 
   return { thought: item.planThought?.thought, intention: item.planThought?.actionIntention }
 }
 
-/** 左侧工作区右栏只展示当前步骤结果：运行中跟随 running，结束后停在最后一个有输出的步骤。 */
+/** 左侧工作区右栏只展示运行结果：运行中跟随 running，结束后停在最后一个有输出的步骤。 */
 function getFocusedStep(item: ExploreItem): ExploreStep | undefined {
   const running = [...item.steps].reverse().find((step) => step.status === 'running')
   if (running) return running
@@ -347,7 +347,7 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
           <section className={styles.currentColumn}>
             <div className={styles.currentResultHeader}>
               <div className={styles.currentResultTitle}>
-                <ToolOutlined /> {running ? '当前步骤结果' : '当前步骤详情'}
+                <ToolOutlined /> 运行结果
               </div>
               {focusedStep && <span className={styles.currentResultMeta}>{focusedStepTitle}</span>}
             </div>

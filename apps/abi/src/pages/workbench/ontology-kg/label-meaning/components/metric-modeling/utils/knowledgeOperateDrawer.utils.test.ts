@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  appendMetricIndicatorSearchResults,
+  buildMetricIndicatorSearchQuery,
   extractUniqueIds,
   formatMappedDimensionOptionTitle,
   getMappedMetricFieldDisplayName,
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
+  hasMoreMetricIndicatorSearchResults,
+  mergeMetricIndicatorSearchResults,
   shouldShowMetricPrecomputeConfig,
 } from './knowledgeOperateDrawer.utils'
 
@@ -65,5 +69,82 @@ describe('metric precompute config visibility', () => {
     expect(shouldShowMetricPrecomputeConfig('derivative')).toBe(true)
     expect(shouldShowMetricPrecomputeConfig('custom')).toBe(false)
     expect(shouldShowMetricPrecomputeConfig(undefined)).toBe(false)
+  })
+})
+
+describe('metric indicator fuzzy search', () => {
+  it('builds the existing list query with a trimmed bizName', () => {
+    expect(buildMetricIndicatorSearchQuery('  支付金额  ', 82)).toEqual({
+      bizName: '支付金额',
+      pageNum: 1,
+      pageSize: 10,
+      spaceId: 82,
+    })
+    expect(buildMetricIndicatorSearchQuery('   ', 82).bizName).toBeUndefined()
+    expect(buildMetricIndicatorSearchQuery('支付金额', 82, 2)).toEqual({
+      bizName: '支付金额',
+      pageNum: 2,
+      pageSize: 10,
+      spaceId: 82,
+    })
+  })
+
+  it('keeps selected indicators while replacing stale unselected results', () => {
+    const result = mergeMetricIndicatorSearchResults(
+      [
+        { bizName: '旧支付金额', indId: 1, indicatorClass: 'atomic', semanticSchemaName: '交易语义' },
+        { bizName: '旧订单数量', indId: 2, indicatorClass: 'atomic' },
+      ],
+      [
+        { bizName: '支付金额', indId: 1, indicatorClass: 'atomic' },
+        { bizName: '支付笔数', indId: 3, indicatorClass: 'atomic' },
+      ],
+      [1],
+    )
+
+    expect(result).toEqual([
+      { bizName: '支付金额', indId: 1, indicatorClass: 'atomic', semanticSchemaName: '交易语义' },
+      { bizName: '支付笔数', indId: 3, indicatorClass: 'atomic' },
+    ])
+  })
+
+  it('appends a selected indicator when the fuzzy response does not contain it', () => {
+    const selected = { bizName: '成交金额', indId: 1, indicatorClass: 'atomic' }
+    const result = mergeMetricIndicatorSearchResults(
+      [selected],
+      [{ bizName: '订单数量', indId: 2, indicatorClass: 'atomic' }],
+      ['1'],
+    )
+
+    expect(result).toEqual([
+      { bizName: '订单数量', indId: 2, indicatorClass: 'atomic' },
+      selected,
+    ])
+  })
+
+  it('appends the next page in order and deduplicates repeated indicators', () => {
+    const result = appendMetricIndicatorSearchResults(
+      [
+        { bizName: '支付金额', indId: 1, indicatorClass: 'atomic', semanticSchemaName: '交易语义' },
+        { bizName: '订单数量', indId: 2, indicatorClass: 'atomic' },
+      ],
+      [
+        { bizName: '订单笔数', indId: 2, indicatorClass: 'atomic' },
+        { bizName: '客单价', indId: 3, indicatorClass: 'derived' },
+      ],
+    )
+
+    expect(result).toEqual([
+      { bizName: '支付金额', indId: 1, indicatorClass: 'atomic', semanticSchemaName: '交易语义' },
+      { bizName: '订单笔数', indId: 2, indicatorClass: 'atomic' },
+      { bizName: '客单价', indId: 3, indicatorClass: 'derived' },
+    ])
+  })
+
+  it('uses total when available and falls back to the current page size', () => {
+    expect(hasMoreMetricIndicatorSearchResults(21, 10, 2)).toBe(true)
+    expect(hasMoreMetricIndicatorSearchResults('20', 10, 2)).toBe(false)
+    expect(hasMoreMetricIndicatorSearchResults(undefined, 10, 2)).toBe(true)
+    expect(hasMoreMetricIndicatorSearchResults(undefined, 9, 2)).toBe(false)
   })
 })

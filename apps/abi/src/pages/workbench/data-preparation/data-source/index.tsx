@@ -136,7 +136,7 @@ export function Component() {
       apiFn: fetchDataSourceList as any,
       apiParams: useMemo(() => ({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 12,
         spaceId,
       }), [spaceId]),
       columns: () =>
@@ -386,7 +386,7 @@ export function Component() {
 
   const pagination = tableProps.pagination as any;
   const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1;
-  const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10;
+  const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 12;
   // 前端按创建时间过滤 + 前端分页（useTable 返回全量数据）
   const filteredData = useMemo(() => filterByCreateTime((data as any[]) || [], dateRange), [data, dateRange]);
   const totalCount = filteredData.length;
@@ -646,10 +646,9 @@ export function Component() {
                 value={pageSizeVal}
                 onChange={handlePageSizeChange}
                 options={[
-                  { label: '10条/页', value: 10 },
-                  { label: '15条/页', value: 15 },
-                  { label: '20条/页', value: 20 },
-                  { label: '25条/页', value: 25 },
+                  { label: '12条/页', value: 12 },
+                  { label: '18条/页', value: 18 },
+                  { label: '24条/页', value: 24 },
                   { label: '30条/页', value: 30 },
                 ]}
                 className="page-size-select"

@@ -138,7 +138,7 @@ export function Component() {
     apiFn: fetchEffectReviewList as any,
     apiParams: {
       page: 1,
-      page_size: 10,
+      page_size: 12,
       space_id: spaceId,
     } as any,
     columns: () =>
@@ -440,7 +440,7 @@ export function Component() {
 
   const pagination = tableProps.pagination as any
   const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1
-  const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10
+  const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 12
   // 前端按提交时间（create_time）过滤 + 前端分页（useTable 返回全量数据）
   const filteredData = useMemo(
     () => filterByCreateTime((data as any[]) || [], dateRange, 'create_time'),
@@ -686,10 +686,9 @@ export function Component() {
                 value={pageSizeVal}
                 onChange={handlePageSizeChange}
                 options={[
-                  { label: '10条/页', value: 10 },
-                  { label: '15条/页', value: 15 },
-                  { label: '20条/页', value: 20 },
-                  { label: '25条/页', value: 25 },
+                  { label: '12条/页', value: 12 },
+                  { label: '18条/页', value: 18 },
+                  { label: '24条/页', value: 24 },
                   { label: '30条/页', value: 30 },
                 ]}
                 className="page-size-select"
