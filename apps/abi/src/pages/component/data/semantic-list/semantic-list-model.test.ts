@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { EMPTY_FILTERS } from './constants'
+import { DEFAULT_RULE_DRAFT, DETAIL_HIT_EXAMPLES, EMPTY_FILTERS, MATCH_METHOD_OPTIONS } from './constants'
 import { getResponsiveOverlayWidths, getTableScrollWidth } from './semantic-list-layout'
 import {
   buildSemanticRuleCreateParams,
@@ -34,7 +34,6 @@ const existingRule: SemanticRule = {
   category: '元数据查询',
   code: 'RULE_000001',
   enabled: false,
-  hitExamples: [],
   id: '9007199254740993',
   method: 'LIKE',
   name: '存量规则',
@@ -70,13 +69,6 @@ describe('semantic rule matcher', () => {
     expect(testSemanticRule('REGEX', '^dim_', 'fact_order').status).toBe('miss')
   })
 
-  it('does not pretend to execute AST matching in the browser', () => {
-    expect(testSemanticRule('AST', 'FULL_TABLE_SCAN', 'select * from orders')).toMatchObject({
-      matched: false,
-      status: 'unsupported'
-    })
-  })
-
   it('reports an empty test text before attempting a regex match', () => {
     expect(testSemanticRule('REGEX', '[invalid', '')).toMatchObject({ message: '请输入测试文本', status: 'empty' })
   })
@@ -105,7 +97,7 @@ describe('semantic rule request mapping', () => {
       category: '自定义类别',
       name: '新规则',
       pattern: 'dim_order',
-      priority: 100
+      priority: undefined
     })
   })
 
@@ -128,10 +120,10 @@ describe('semantic rule request mapping', () => {
       filters: {
         ...EMPTY_FILTERS,
         category: '  元数据查询 ',
-        method: 'AST',
-        ruleName: '  禁止扫描 ',
+        method: 'REGEX',
+        ruleCodeOrName: '  禁止扫描 ',
         status: '1',
-        target: ' AST_FEATURE ',
+        target: ' SQL_TEXT ',
         type: 'BLACKLIST',
         visibility: 'PRIVATE'
       },
@@ -143,15 +135,16 @@ describe('semantic rule request mapping', () => {
     expect(params).toEqual({
       bizType: '元数据查询',
       listType: 'BLACKLIST',
-      matchMethod: 'AST',
-      matchTarget: 'AST_FEATURE',
+      matchMethod: 'REGEX',
+      matchTarget: 'SQL_TEXT',
       pageNum: 3,
       pageSize: 50,
-      ruleName: '禁止扫描',
+      ruleCodeOrName: '禁止扫描',
       spaceId: 1001,
       status: '1',
       visibility: 'PRIVATE'
     })
+    expect(params).not.toHaveProperty('ruleName')
     expect(params).not.toHaveProperty('ruleCode')
   })
 
@@ -166,7 +159,7 @@ describe('semantic rule request mapping', () => {
 
     expect(
       buildSemanticRuleUpdateParams({
-        draft: { ...validDraft, method: 'AST', pattern: 'FULL_TABLE_SCAN' },
+        draft: { ...validDraft, method: 'REGEX', pattern: '(?i)select\\s+\\*' },
         rule: existingRule,
         spaceId: 1001
       })
@@ -180,14 +173,19 @@ describe('semantic rule request mapping', () => {
       })
     ).toMatchObject({ ruleId: '9007199254740993', status: '1' })
 
-    expect(buildSemanticRuleStatusUpdateParams(1001, existingRule, true)).toEqual({
-      bizType: '元数据查询',
-      listType: 'WHITELIST',
-      matchTarget: 'TABLE_NAME',
-      ruleId: '9007199254740993',
-      spaceId: 1001,
+    const selectedRuleIds = [existingRule.id, 2]
+    const enabledPayload = buildSemanticRuleStatusUpdateParams(selectedRuleIds, true)
+    selectedRuleIds.push(3)
+    expect(enabledPayload).toEqual({
+      ruleIds: ['9007199254740993', 2],
       status: '1'
     })
+    expect(buildSemanticRuleStatusUpdateParams([existingRule.id], false)).toEqual({
+      ruleIds: ['9007199254740993'],
+      status: '0'
+    })
+
+    expect(buildSemanticRuleCreateParams(1001, { ...validDraft, priority: null })).not.toHaveProperty('priority')
   })
 
   it('creates an editable draft without mutating nested settings', () => {
@@ -200,17 +198,19 @@ describe('semantic rule request mapping', () => {
 })
 
 describe('semantic rule validation', () => {
-  it('accepts dictionary-driven and custom categories, dynamic targets and AST', () => {
+  it('accepts dictionary-driven categories and targets but rejects AST as a match method', () => {
     expect(
       validateSemanticRuleDraft({
         ...validDraft,
         category: '后端新增类别',
-        method: 'AST',
         name: 'a'.repeat(500),
-        pattern: '[由服务端解释',
+        pattern: '后端新增匹配内容',
         target: 'BACKEND_NEW_TARGET'
       })
     ).toEqual({})
+    expect(
+      validateSemanticRuleDraft({ ...validDraft, method: 'AST' as unknown as SemanticRuleDraft['method'] })
+    ).toMatchObject({ method: '请选择匹配方式' })
   })
 
   it('rejects whitespace required values, negative priority and invalid regex', () => {
@@ -240,6 +240,23 @@ describe('semantic rule validation', () => {
         target: undefined as unknown as string
       })
     ).toMatchObject({ category: '请选择或填写业务类别', target: '请选择匹配目标' })
+  })
+})
+
+describe('semantic rule design defaults and examples', () => {
+  it('defaults new rules to exact matching and exposes only the three confirmed methods', () => {
+    expect(DEFAULT_RULE_DRAFT.method).toBe('EXACT')
+    expect(MATCH_METHOD_OPTIONS.map(option => option.value)).toEqual(['EXACT', 'LIKE', 'REGEX'])
+  })
+
+  it('uses the five design-specified static hit examples', () => {
+    expect(DETAIL_HIT_EXAMPLES).toEqual({
+      DATE_TIME: ['2026-01-01 00:00:00'],
+      DB_NAME: ['prod_finance'],
+      SQL_TEXT: ['select count(*) from trade_detail'],
+      TABLE_NAME: ['dim_customer'],
+      TEXT_CONTENT: ['查询账户A1024的交易流水']
+    })
   })
 })
 

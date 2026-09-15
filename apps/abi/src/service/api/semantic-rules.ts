@@ -26,7 +26,7 @@ export function createSemanticRule(data: SemanticRuleCreateParams) {
   })
 }
 
-export function updateSemanticRule(data: SemanticRuleStatusUpdateParams | SemanticRuleUpdateParams) {
+export function updateSemanticRule(data: SemanticRuleUpdateParams) {
   return apiRequest<unknown>({
     data,
     method: 'put',
@@ -34,10 +34,26 @@ export function updateSemanticRule(data: SemanticRuleStatusUpdateParams | Semant
   })
 }
 
+export function updateSemanticRuleStatus(data: SemanticRuleStatusUpdateParams) {
+  return apiRequest<unknown>({
+    data,
+    method: 'put',
+    url: `${SEMANTIC_RULE_API_PREFIX}/status`
+  })
+}
+
 export function deleteSemanticRule(ruleId: SemanticRuleId) {
   return apiRequest<unknown>({
     method: 'delete',
     url: `${SEMANTIC_RULE_API_PREFIX}/${encodeURIComponent(String(ruleId))}`
+  })
+}
+
+export function batchDeleteSemanticRules(ruleIds: SemanticRuleId[]) {
+  return apiRequest<unknown>({
+    data: ruleIds,
+    method: 'delete',
+    url: `${SEMANTIC_RULE_API_PREFIX}/batch`
   })
 }
 

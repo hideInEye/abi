@@ -6,6 +6,7 @@ import type {
   SemanticRuleCreateParams,
   SemanticRuleDraft,
   SemanticRuleFieldErrors,
+  SemanticRuleId,
   SemanticRuleListParams,
   SemanticRuleStatusUpdateParams,
   SemanticRuleUpdateParams
@@ -13,7 +14,7 @@ import type {
 
 export type NormalizedSemanticRuleDraft = Omit<SemanticRuleDraft, 'advancedSettings' | 'priority' | 'remark'> & {
   advancedSettings: SemanticAdvancedSetting[]
-  priority: number
+  priority?: number
   remark: string
 }
 
@@ -30,7 +31,7 @@ export function normalizeSemanticRuleDraft(draft: SemanticRuleDraft): Normalized
     category: normalizeText(draft.category).trim(),
     name: normalizeText(draft.name).trim(),
     pattern: normalizeText(draft.pattern).trim(),
-    priority: typeof draft.priority === 'number' && Number.isFinite(draft.priority) ? draft.priority : 100,
+    priority: typeof draft.priority === 'number' && Number.isFinite(draft.priority) ? draft.priority : undefined,
     remark: normalizeText(draft.remark).trim(),
     target: normalizeText(draft.target).trim()
   }
@@ -50,7 +51,7 @@ interface SemanticRuleListQueryInput {
   filters: {
     category: string
     method: SemanticMatchMethod | ''
-    ruleName: string
+    ruleCodeOrName: string
     status: '' | '0' | '1'
     target: string
     type: '' | 'BLACKLIST' | 'WHITELIST'
@@ -74,7 +75,7 @@ export function buildSemanticRuleListParams({
     matchTarget: filters.target.trim() || undefined,
     pageNum,
     pageSize,
-    ruleName: filters.ruleName.trim() || undefined,
+    ruleCodeOrName: filters.ruleCodeOrName.trim() || undefined,
     spaceId,
     status: filters.status || undefined,
     visibility: filters.visibility || undefined
@@ -83,20 +84,21 @@ export function buildSemanticRuleListParams({
 
 export function buildSemanticRuleCreateParams(spaceId: number, draft: SemanticRuleDraft): SemanticRuleCreateParams {
   const normalized = normalizeSemanticRuleDraft(draft)
-  return {
+  const params: SemanticRuleCreateParams = {
     bizType: normalized.category,
     extConditions: serializeAdvancedSettings(normalized.advancedSettings),
     listType: normalized.type,
     matchMethod: normalized.method,
     matchPattern: normalized.pattern,
     matchTarget: normalized.target,
-    priority: normalized.priority,
     remark: normalized.remark,
     ruleName: normalized.name,
     spaceId,
     status: '1',
     visibility: normalized.visibility
   }
+  if (normalized.priority !== undefined) params.priority = normalized.priority
+  return params
 }
 
 interface SemanticRuleUpdateInput {
@@ -135,16 +137,11 @@ export function semanticRuleToDraft(rule: SemanticRule): SemanticRuleDraft {
 }
 
 export function buildSemanticRuleStatusUpdateParams(
-  spaceId: number,
-  rule: SemanticRule,
+  ruleIds: readonly SemanticRuleId[],
   enabled: boolean
 ): SemanticRuleStatusUpdateParams {
   return {
-    bizType: rule.category,
-    listType: rule.type,
-    matchTarget: rule.target,
-    ruleId: rule.id,
-    spaceId,
+    ruleIds: [...ruleIds],
     status: enabled ? '1' : '0'
   }
 }
@@ -164,15 +161,6 @@ export function convertLikePatternToRegex(pattern: string): RegExp {
 }
 
 export function testSemanticRule(method: SemanticMatchMethod, pattern: string, text: string): SemanticMatchResult {
-  if (method === 'AST') {
-    return {
-      hit: '',
-      matched: false,
-      message: 'AST 匹配由服务端执行，暂不支持前端测试',
-      status: 'unsupported'
-    }
-  }
-
   if (!text) {
     return { hit: '', matched: false, message: '请输入测试文本', status: 'empty' }
   }
@@ -211,7 +199,7 @@ export function validateSemanticRuleDraft(draft: SemanticRuleDraft): SemanticRul
     errors.priority = '请输入有效的优先级'
   if (!['PUBLIC', 'PRIVATE'].includes(draft.visibility)) errors.visibility = '请选择有效的可见性'
   if (!normalizeText(draft.target).trim()) errors.target = '请选择匹配目标'
-  if (!['AST', 'EXACT', 'LIKE', 'REGEX'].includes(draft.method)) errors.method = '请选择匹配方式'
+  if (!['EXACT', 'LIKE', 'REGEX'].includes(draft.method)) errors.method = '请选择匹配方式'
   if (!normalizeText(draft.pattern).trim()) errors.pattern = '请填写匹配内容'
 
   if (draft.method === 'REGEX' && normalizeText(draft.pattern).trim()) {

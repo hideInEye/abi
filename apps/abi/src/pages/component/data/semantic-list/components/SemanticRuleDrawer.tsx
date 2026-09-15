@@ -85,7 +85,6 @@ export function SemanticRuleDrawer({
   const selectedTargetLabel = targetOptions.find(option => option.value === selectedTarget)?.label ?? selectedTarget
   let patternPlaceholder = '请输入匹配内容'
   if (selectedMethod === 'REGEX') patternPlaceholder = '请输入正则表达式'
-  if (selectedMethod === 'AST') patternPlaceholder = '请输入 AST 匹配表达式'
 
   useEffect(() => {
     if (!open) return
@@ -295,7 +294,7 @@ export function SemanticRuleDrawer({
               required
               className="md:col-span-2"
               extra={MATCH_METHOD_HINTS[selectedMethod as SemanticMatchMethod]}
-              label={selectedMethod === 'REGEX' || selectedMethod === 'AST' ? '匹配表达式' : '匹配内容'}
+              label={selectedMethod === 'REGEX' ? '匹配表达式' : '匹配内容'}
               name="pattern"
             >
               <TextArea

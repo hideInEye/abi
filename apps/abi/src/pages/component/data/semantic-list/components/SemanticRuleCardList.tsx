@@ -13,6 +13,7 @@ interface SemanticRuleCardListProps {
   readonly onDetail: (rule: SemanticRule) => void
   readonly onEdit: (rule: SemanticRule) => void
   readonly onStatusChange: (rule: SemanticRule, enabled: boolean) => void
+  readonly statusDisabled?: boolean
   readonly statusPendingIds: ReadonlySet<SemanticRuleId>
   readonly visibleColumnKeys: ReadonlySet<string>
 }
@@ -25,6 +26,7 @@ export function SemanticRuleCardList({
   onDetail,
   onEdit,
   onStatusChange,
+  statusDisabled = false,
   statusPendingIds,
   visibleColumnKeys
 }: SemanticRuleCardListProps) {
@@ -113,6 +115,7 @@ export function SemanticRuleCardList({
                     <Switch
                       aria-label={`${rule.name}${rule.enabled ? '已启用' : '已禁用'}`}
                       checked={rule.enabled}
+                      disabled={statusDisabled}
                       loading={statusPendingIds.has(rule.id)}
                       size="small"
                       onChange={enabled => onStatusChange(rule, enabled)}

@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
-import { LIST_TYPE_LABELS, MATCH_METHOD_LABELS, VISIBILITY_LABELS } from '../constants'
+import { DETAIL_HIT_EXAMPLES, LIST_TYPE_LABELS, MATCH_METHOD_LABELS, VISIBILITY_LABELS } from '../constants'
 import { testSemanticRule } from '../semantic-list-model'
 import styles from '../semantic-list.module.scss'
 import type { SemanticMatchResult, SemanticRule } from '../types'
@@ -60,6 +60,7 @@ export function SemanticRuleDetailDrawer({
   }, [open, rule?.id])
 
   if (!rule) return null
+  const hitExamples = DETAIL_HIT_EXAMPLES[rule.target] ?? []
 
   return (
     <CommonDrawer
@@ -150,34 +151,30 @@ export function SemanticRuleDetailDrawer({
               value={MATCH_METHOD_LABELS[rule.method]}
             />
             <div className="md:col-span-2">
-              <div className={styles.detailLabel}>
-                {rule.method === 'REGEX' || rule.method === 'AST' ? '匹配表达式' : '匹配内容'}
-              </div>
+              <div className={styles.detailLabel}>{rule.method === 'REGEX' ? '匹配表达式' : '匹配内容'}</div>
               <div className={styles.codeBox}>{rule.pattern}</div>
-              {rule.method !== 'AST' ? (
-                <MatchTester
-                  note="仅验证，不修改规则"
-                  result={testResult}
-                  text={testText}
-                  onTest={() => setTestResult(testSemanticRule(rule.method, rule.pattern, testText))}
-                  onChange={value => {
-                    setTestText(value)
-                    setTestResult(null)
-                  }}
-                />
-              ) : null}
+              <MatchTester
+                note="仅验证，不修改规则"
+                result={testResult}
+                text={testText}
+                onTest={() => setTestResult(testSemanticRule(rule.method, rule.pattern, testText))}
+                onChange={value => {
+                  setTestText(value)
+                  setTestResult(null)
+                }}
+              />
             </div>
           </div>
         </section>
 
-        {rule.hitExamples.length ? (
+        {hitExamples.length ? (
           <section className="ds-form-section">
             <div className="ds-form-section-title">
               <ExperimentOutlined />
               命中示例
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {rule.hitExamples.map((example, index) => (
+              {hitExamples.map((example, index) => (
                 <div
                   className={styles.hitExample}
                   key={`${example}-${index}`}

@@ -6,7 +6,7 @@ export type SemanticBusinessCategory = string
 
 export type SemanticMatchTarget = string
 
-export type SemanticMatchMethod = 'AST' | 'EXACT' | 'LIKE' | 'REGEX'
+export type SemanticMatchMethod = 'EXACT' | 'LIKE' | 'REGEX'
 
 export type SemanticVisibility = 'PRIVATE' | 'PUBLIC'
 
@@ -27,7 +27,6 @@ export interface SemanticRule {
   category: SemanticBusinessCategory
   code: string
   enabled: boolean
-  hitExamples: string[]
   id: SemanticRuleId
   method: SemanticMatchMethod
   name: string
@@ -68,14 +67,14 @@ export type SemanticRuleFieldErrors = Partial<Record<SemanticRuleField, string>>
 export interface SemanticRuleFilters {
   category: string
   method: SemanticMatchMethod | ''
-  ruleName: string
+  ruleCodeOrName: string
   status: SemanticRuleStatus | ''
   target: string
   type: SemanticListType | ''
   visibility: SemanticVisibility | ''
 }
 
-export type SemanticMatchResultStatus = 'empty' | 'invalid' | 'miss' | 'success' | 'unsupported'
+export type SemanticMatchResultStatus = 'empty' | 'invalid' | 'miss' | 'success'
 
 export interface SemanticMatchResult {
   hit: string
@@ -88,7 +87,6 @@ export interface SemanticRuleApiRecord {
   bizType?: unknown
   createTime?: unknown
   extConditions?: unknown
-  hitExamples?: unknown
   listType?: unknown
   matchMethod?: unknown
   matchPattern?: unknown
@@ -111,7 +109,7 @@ export interface SemanticRuleListParams {
   matchTarget?: string
   pageNum: number
   pageSize: number
-  ruleName?: string
+  ruleCodeOrName?: string
   spaceId: number
   status?: SemanticRuleStatus
   visibility?: SemanticVisibility
@@ -124,7 +122,7 @@ export interface SemanticRuleCreateParams {
   matchMethod: SemanticMatchMethod
   matchPattern: string
   matchTarget: string
-  priority: number
+  priority?: number
   remark: string
   ruleName: string
   spaceId: number
@@ -137,11 +135,7 @@ export interface SemanticRuleUpdateParams extends SemanticRuleCreateParams {
 }
 
 export interface SemanticRuleStatusUpdateParams {
-  bizType: string
-  listType: SemanticListType
-  matchTarget: string
-  ruleId: SemanticRuleId
-  spaceId: number
+  ruleIds: SemanticRuleId[]
   status: SemanticRuleStatus
 }
 

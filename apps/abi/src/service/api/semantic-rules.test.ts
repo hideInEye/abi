@@ -3,16 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   SemanticRuleCreateParams,
   SemanticRuleListParams,
+  SemanticRuleStatusUpdateParams,
   SemanticRuleUpdateParams
 } from '../../pages/component/data/semantic-list/types'
 
 import { queryDictionaryDataByType } from './dictionary'
 import {
+  batchDeleteSemanticRules,
   createSemanticRule,
   deleteSemanticRule,
   getSemanticRuleDetail,
   querySemanticRuleList,
-  updateSemanticRule
+  updateSemanticRule,
+  updateSemanticRuleStatus
 } from './semantic-rules'
 
 const { apiRequest } = vi.hoisted(() => ({ apiRequest: vi.fn() }))
@@ -22,7 +25,7 @@ vi.mock('../request', () => ({ apiRequest }))
 const listParams: SemanticRuleListParams = {
   pageNum: 2,
   pageSize: 20,
-  ruleName: '扫描',
+  ruleCodeOrName: '扫描',
   spaceId: 1001,
   status: '1'
 }
@@ -31,9 +34,9 @@ const createParams: SemanticRuleCreateParams = {
   bizType: '高危操作',
   extConditions: '{}',
   listType: 'BLACKLIST',
-  matchMethod: 'AST',
-  matchPattern: 'FULL_TABLE_SCAN',
-  matchTarget: 'AST_FEATURE',
+  matchMethod: 'REGEX',
+  matchPattern: '(?i)select\\s+\\*',
+  matchTarget: 'SQL_TEXT',
   priority: 100,
   remark: '',
   ruleName: '禁止全表扫描',
@@ -76,20 +79,19 @@ describe('semantic rule API routes', () => {
       method: 'put',
       url: '/api/copilot/v1/semanticRules'
     })
+  })
 
-    const statusParams = {
-      bizType: '高危操作',
-      listType: 'BLACKLIST' as const,
-      matchTarget: 'SQL_TEXT',
-      ruleId: '9007199254740993',
-      spaceId: 1001,
-      status: '1' as const
+  it('uses the shared status endpoint for one or many Long IDs', () => {
+    const statusParams: SemanticRuleStatusUpdateParams = {
+      ruleIds: ['9007199254740993', 2],
+      status: '1'
     }
-    updateSemanticRule(statusParams)
-    expect(apiRequest).toHaveBeenNthCalledWith(2, {
+    updateSemanticRuleStatus(statusParams)
+
+    expect(apiRequest).toHaveBeenCalledWith({
       data: statusParams,
       method: 'put',
-      url: '/api/copilot/v1/semanticRules'
+      url: '/api/copilot/v1/semanticRules/status'
     })
   })
 
@@ -104,6 +106,17 @@ describe('semantic rule API routes', () => {
     expect(apiRequest).toHaveBeenNthCalledWith(2, {
       method: 'delete',
       url: '/api/copilot/v1/semanticRules/rule%2F9007199254740993'
+    })
+  })
+
+  it('sends the Long ID array as the DELETE batch request body', () => {
+    const ruleIds = ['9007199254740993', 2]
+    batchDeleteSemanticRules(ruleIds)
+
+    expect(apiRequest).toHaveBeenCalledWith({
+      data: ruleIds,
+      method: 'delete',
+      url: '/api/copilot/v1/semanticRules/batch'
     })
   })
 

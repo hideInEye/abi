@@ -11,7 +11,7 @@ interface SmartMatchHelperProps {
 
 export function SmartMatchHelper({ method, onApply, target, targetLabel }: SmartMatchHelperProps) {
   const helper = SMART_HELPERS[target]?.[method] ?? {
-    description: method === 'AST' ? 'AST 表达式由服务端解析和执行' : '请根据当前业务目标填写匹配内容',
+    description: '请根据当前业务目标填写匹配内容',
     examples: []
   }
 

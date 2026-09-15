@@ -38,8 +38,8 @@ export function SemanticListFilters({
         filterGridClassName="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2"
         filterLabel="更多"
         filterPanelClassName={styles.semanticFilterPanel}
-        searchPlaceholder="请输入规则名称"
-        searchValue={value.ruleName}
+        searchPlaceholder="请输入规则名称或编码"
+        searchValue={value.ruleCodeOrName}
         filters={
           <>
             <SearchFilterField label="名单类型">
@@ -130,7 +130,7 @@ export function SemanticListFilters({
         }
         onQuery={onQuery}
         onReset={onReset}
-        onSearchChange={ruleName => updateFilter('ruleName', ruleName)}
+        onSearchChange={ruleCodeOrName => updateFilter('ruleCodeOrName', ruleCodeOrName)}
       />
     </section>
   )

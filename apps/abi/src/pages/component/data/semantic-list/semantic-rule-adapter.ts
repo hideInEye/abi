@@ -45,7 +45,7 @@ function normalizeListType(value: unknown): SemanticListType {
 }
 
 function normalizeMatchMethod(value: unknown): SemanticMatchMethod {
-  return value === 'AST' || value === 'EXACT' || value === 'LIKE' || value === 'REGEX' ? value : 'REGEX'
+  return value === 'EXACT' || value === 'LIKE' || value === 'REGEX' ? value : 'REGEX'
 }
 
 function normalizeVisibility(value: unknown): SemanticVisibility {
@@ -125,11 +125,6 @@ export function parseAdvancedSettings(value: unknown): SemanticAdvancedSetting[]
   return Object.entries(parsed).map(([key, itemValue]) => ({ key, value: stringifySettingValue(itemValue) }))
 }
 
-function normalizeHitExamples(value: unknown): string[] {
-  if (!Array.isArray(value)) return []
-  return value.map(item => toText(item)).filter(Boolean)
-}
-
 export function mapSemanticRuleRecord(record: SemanticRuleApiRecord): SemanticRule | null {
   const id = normalizeRuleId(record.ruleId)
   if (id === null) return null
@@ -139,7 +134,6 @@ export function mapSemanticRuleRecord(record: SemanticRuleApiRecord): SemanticRu
     category: toText(record.bizType),
     code: toText(record.ruleCode),
     enabled: toText(record.status, '1') === '1',
-    hitExamples: normalizeHitExamples(record.hitExamples),
     id,
     method: normalizeMatchMethod(record.matchMethod),
     name: toText(record.ruleName),

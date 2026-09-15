@@ -33,9 +33,15 @@ interface PanelLoadingState {
   ruleId: SemanticRuleId
 }
 
-interface DeleteConfirmation {
-  content: string
-  rule: SemanticRule
+type DeleteConfirmation = { kind: 'batch'; ruleIds: SemanticRuleId[] } | { kind: 'single'; rule: SemanticRule }
+
+type BatchStatusAction = 'disable' | 'enable'
+
+interface BatchActionState {
+  deletePending: boolean
+  hasSelection: boolean
+  loading: boolean
+  statusPending: boolean
 }
 
 const DEFAULT_COLUMN_OPTIONS: ColumnOption[] = [
@@ -48,11 +54,30 @@ const DEFAULT_COLUMN_OPTIONS: ColumnOption[] = [
   { key: 'updatedAt', label: '更新时间', visible: true }
 ]
 
+function shouldDisableBatchActions({ deletePending, hasSelection, loading, statusPending }: BatchActionState) {
+  return !hasSelection || loading || deletePending || statusPending
+}
+
+function getBatchTooltip(hasSelection: boolean, disabled: boolean): string | undefined {
+  if (!hasSelection) return '请先选择规则'
+  return disabled ? '操作处理中，请稍候' : undefined
+}
+
+function getDeleteConfirmationContent(confirmation: DeleteConfirmation | null): string {
+  if (!confirmation) return ''
+  if (confirmation.kind === 'batch') {
+    return `确认删除已选择的 ${confirmation.ruleIds.length} 条规则？删除后不可恢复。`
+  }
+  return `确认删除规则“${confirmation.rule.name}”？删除后不可恢复。`
+}
+
 export const Component = () => {
   const screens = Grid.useBreakpoint()
   const { confirmWidth, drawerWidth } = getResponsiveOverlayWidths(screens.lg)
   const [messageApi, messageContext] = message.useMessage()
   const spaceId = useAppSelector(getSpaceId) || 0
+  const activeSpaceIdRef = useRef(spaceId)
+  activeSpaceIdRef.current = spaceId
   const [viewMode, setViewMode] = useState<'card' | 'list'>('list')
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(() =>
     DEFAULT_COLUMN_OPTIONS.map(column => ({ ...column }))
@@ -66,6 +91,7 @@ export const Component = () => {
   const [panelLoading, setPanelLoading] = useState<PanelLoadingState | null>(null)
   const panelRequestSequence = useRef(0)
   const [statusPendingIds, setStatusPendingIds] = useState<Set<SemanticRuleId>>(new Set())
+  const [batchStatusAction, setBatchStatusAction] = useState<BatchStatusAction | null>(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmation | null>(null)
   const [deletePending, setDeletePending] = useState(false)
 
@@ -73,6 +99,7 @@ export const Component = () => {
     businessCategoryOptions,
     createRule,
     deleteRule,
+    deleteRules,
     dictionaryLoading,
     fetchRuleDetail,
     loading,
@@ -81,6 +108,7 @@ export const Component = () => {
     rules,
     total,
     updateRule,
+    updateRulesStatus,
     updateRuleStatus
   } = useSemanticListManagement({
     filters: appliedFilters,
@@ -114,9 +142,12 @@ export const Component = () => {
     panelRequestSequence.current += 1
     setCurrentPage(1)
     setSelectedRowKeys([])
+    setStatusPendingIds(new Set())
+    setBatchStatusAction(null)
     setPanelState(null)
     setPanelLoading(null)
     setDeleteConfirmation(null)
+    setDeletePending(false)
   }, [spaceId])
 
   function applyFilters() {
@@ -154,57 +185,111 @@ export const Component = () => {
   }
 
   async function handleStatusChange(rule: SemanticRule, enabled: boolean): Promise<void> {
+    const requestSpaceId = spaceId
     setStatusPendingIds(ids => new Set(ids).add(rule.id))
     try {
       await updateRuleStatus(rule, enabled)
+      if (activeSpaceIdRef.current !== requestSpaceId) return
       messageApi.success(enabled ? '已启用' : '已禁用')
       await refresh()
     } catch {
-      messageApi.error('状态更新失败，请重试')
+      if (activeSpaceIdRef.current === requestSpaceId) messageApi.error('状态更新失败，请重试')
     } finally {
-      setStatusPendingIds(ids => {
-        const next = new Set(ids)
-        next.delete(rule.id)
-        return next
-      })
+      if (activeSpaceIdRef.current === requestSpaceId) {
+        setStatusPendingIds(ids => {
+          const next = new Set(ids)
+          next.delete(rule.id)
+          return next
+        })
+      }
+    }
+  }
+
+  async function handleBatchStatusChange(enabled: boolean): Promise<void> {
+    const ruleIds = selectedRowKeys.map(key => key as SemanticRuleId)
+    if (!ruleIds.length) return
+    const requestSpaceId = spaceId
+
+    setBatchStatusAction(enabled ? 'enable' : 'disable')
+    setStatusPendingIds(ids => new Set([...ids, ...ruleIds]))
+    try {
+      await updateRulesStatus(ruleIds, enabled)
+      if (activeSpaceIdRef.current !== requestSpaceId) return
+      setSelectedRowKeys([])
+      messageApi.success(enabled ? '批量启用成功' : '批量禁用成功')
+      await refresh()
+    } catch {
+      if (activeSpaceIdRef.current === requestSpaceId) {
+        messageApi.error(enabled ? '批量启用失败，请重试' : '批量禁用失败，请重试')
+      }
+    } finally {
+      if (activeSpaceIdRef.current === requestSpaceId) {
+        setBatchStatusAction(null)
+        setStatusPendingIds(ids => {
+          const next = new Set(ids)
+          ruleIds.forEach(ruleId => next.delete(ruleId))
+          return next
+        })
+      }
     }
   }
 
   function requestSingleDelete(rule: SemanticRule) {
-    setDeleteConfirmation({ content: `确认删除规则“${rule.name}”？删除后不可恢复。`, rule })
+    setDeleteConfirmation({ kind: 'single', rule })
+  }
+
+  function requestBatchDelete() {
+    const ruleIds = selectedRowKeys.map(key => key as SemanticRuleId)
+    if (!ruleIds.length) return
+    setDeleteConfirmation({ kind: 'batch', ruleIds })
   }
 
   async function confirmDelete(): Promise<void> {
     if (!deleteConfirmation) return
-    const { rule } = deleteConfirmation
+    const requestSpaceId = spaceId
+    const isBatch = deleteConfirmation.kind === 'batch'
+    const ruleIds = isBatch ? deleteConfirmation.ruleIds : [deleteConfirmation.rule.id]
     setDeletePending(true)
     try {
-      await deleteRule(rule.id)
-      setSelectedRowKeys(keys => keys.filter(key => key !== rule.id))
-      if (rules.length === 1 && currentPage > 1) {
-        setCurrentPage(page => page - 1)
+      if (isBatch) {
+        await deleteRules(ruleIds)
+      } else {
+        await deleteRule(ruleIds[0]!)
+      }
+      if (activeSpaceIdRef.current !== requestSpaceId) return
+
+      setSelectedRowKeys(keys => (isBatch ? [] : keys.filter(key => key !== ruleIds[0])))
+      const remainingTotal = Math.max(0, total - ruleIds.length)
+      const lastPage = Math.max(1, Math.ceil(remainingTotal / pageSize))
+      if (currentPage > lastPage) {
+        setCurrentPage(lastPage)
       } else {
         await refresh()
       }
-      messageApi.success('删除成功')
+      messageApi.success(isBatch ? '批量删除成功' : '删除成功')
       setDeleteConfirmation(null)
     } catch {
-      messageApi.error('删除失败，请重试')
+      if (activeSpaceIdRef.current === requestSpaceId) {
+        messageApi.error(deleteConfirmation.kind === 'batch' ? '批量删除失败，请重试' : '删除失败，请重试')
+      }
     } finally {
-      setDeletePending(false)
+      if (activeSpaceIdRef.current === requestSpaceId) setDeletePending(false)
     }
   }
 
   async function handleRuleSubmit(draft: SemanticRuleDraft): Promise<void> {
+    const requestSpaceId = spaceId
     try {
       if (panelState?.mode === 'edit') {
         await updateRule(panelState.rule, draft)
+        if (activeSpaceIdRef.current !== requestSpaceId) return
         await refresh()
         messageApi.success('保存成功')
         return
       }
 
       await createRule(draft)
+      if (activeSpaceIdRef.current !== requestSpaceId) return
       if (currentPage === 1) {
         await refresh()
       } else {
@@ -212,7 +297,7 @@ export const Component = () => {
       }
       messageApi.success('创建成功')
     } catch (error) {
-      messageApi.error('保存失败，请重试')
+      if (activeSpaceIdRef.current === requestSpaceId) messageApi.error('保存失败，请重试')
       throw error
     }
   }
@@ -308,6 +393,7 @@ export const Component = () => {
         <Switch
           aria-label={`${rule.name}${enabled ? '已启用' : '已禁用'}`}
           checked={enabled}
+          disabled={batchStatusAction !== null}
           loading={statusPendingIds.has(rule.id)}
           size="small"
           title={enabled ? '启用' : '禁用'}
@@ -378,11 +464,18 @@ export const Component = () => {
   ]
 
   const hasSelection = selectedRowKeys.length > 0
+  const batchActionsDisabled = shouldDisableBatchActions({
+    deletePending,
+    hasSelection,
+    loading,
+    statusPending: statusPendingIds.size > 0
+  })
   const visibleColumns = columns.filter(
     column => column.key === 'operation' || visibleColumnKeys.has(String(column.key))
   )
   const tableScrollWidth = getTableScrollWidth(visibleColumns)
-  const batchTooltip = '待批量接口接入'
+  const batchTooltip = getBatchTooltip(hasSelection, batchActionsDisabled)
+  const deleteConfirmationContent = getDeleteConfirmationContent(deleteConfirmation)
 
   return (
     <>
@@ -415,8 +508,12 @@ export const Component = () => {
               <Tooltip title={batchTooltip}>
                 <span className="inline-flex">
                   <Button
-                    disabled
+                    disabled={batchActionsDisabled}
                     icon={<CheckCircleOutlined />}
+                    loading={batchStatusAction === 'enable'}
+                    onClick={() => {
+                      handleBatchStatusChange(true).catch(() => undefined)
+                    }}
                   >
                     批量启用{hasSelection ? `(${selectedRowKeys.length})` : ''}
                   </Button>
@@ -425,8 +522,12 @@ export const Component = () => {
               <Tooltip title={batchTooltip}>
                 <span className="inline-flex">
                   <Button
-                    disabled
+                    disabled={batchActionsDisabled}
                     icon={<StopOutlined />}
+                    loading={batchStatusAction === 'disable'}
+                    onClick={() => {
+                      handleBatchStatusChange(false).catch(() => undefined)
+                    }}
                   >
                     批量禁用{hasSelection ? `(${selectedRowKeys.length})` : ''}
                   </Button>
@@ -436,8 +537,9 @@ export const Component = () => {
                 <span className="inline-flex">
                   <Button
                     danger
-                    disabled
+                    disabled={batchActionsDisabled}
                     icon={<DeleteOutlined />}
+                    onClick={requestBatchDelete}
                   >
                     批量删除{hasSelection ? `(${selectedRowKeys.length})` : ''}
                   </Button>
@@ -486,6 +588,7 @@ export const Component = () => {
                   dataSource={rules}
                   getCategoryLabel={getCategoryLabel}
                   getTargetLabel={getTargetLabel}
+                  statusDisabled={batchStatusAction !== null}
                   statusPendingIds={statusPendingIds}
                   visibleColumnKeys={visibleColumnKeys}
                   onDelete={requestSingleDelete}
@@ -552,14 +655,14 @@ export const Component = () => {
         okText="确认删除"
         open={Boolean(deleteConfirmation)}
         rootClassName={styles.semanticOverlayRoot}
-        title="删除确认"
+        title={deleteConfirmation?.kind === 'batch' ? '批量删除确认' : '删除确认'}
         width={confirmWidth}
         onCancel={() => setDeleteConfirmation(null)}
         onOk={() => {
           confirmDelete().catch(() => undefined)
         }}
       >
-        <p>{deleteConfirmation?.content}</p>
+        <p>{deleteConfirmationContent}</p>
       </Modal>
     </>
   )

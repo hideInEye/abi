@@ -3,11 +3,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { queryDictionaryDataByType } from '@/service/api/dictionary'
 import {
+  batchDeleteSemanticRules,
   createSemanticRule,
   deleteSemanticRule,
   getSemanticRuleDetail,
   querySemanticRuleList,
-  updateSemanticRule
+  updateSemanticRule,
+  updateSemanticRuleStatus
 } from '@/service/api/semantic-rules'
 import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
@@ -44,6 +46,7 @@ interface UseSemanticListManagementResult {
   businessCategoryOptions: SemanticDictionaryOption[]
   createRule: (draft: SemanticRuleDraft) => Promise<void>
   deleteRule: (ruleId: SemanticRuleId) => Promise<void>
+  deleteRules: (ruleIds: SemanticRuleId[]) => Promise<void>
   dictionaryLoading: boolean
   fetchRuleDetail: (ruleId: SemanticRuleId) => Promise<SemanticRule>
   loading: boolean
@@ -52,6 +55,7 @@ interface UseSemanticListManagementResult {
   rules: SemanticRule[]
   total: number
   updateRule: (rule: SemanticRule, draft: SemanticRuleDraft) => Promise<void>
+  updateRulesStatus: (ruleIds: SemanticRuleId[], enabled: boolean) => Promise<void>
   updateRuleStatus: (rule: SemanticRule, enabled: boolean) => Promise<void>
 }
 
@@ -181,16 +185,24 @@ export function useSemanticListManagement({
     [spaceId]
   )
 
-  const updateRuleStatus = useCallback(
-    async (rule: SemanticRule, enabled: boolean): Promise<void> => {
-      const result = await updateSemanticRule(buildSemanticRuleStatusUpdateParams(spaceId, rule, enabled))
+  const updateRulesStatus = useCallback(
+    async (ruleIds: SemanticRuleId[], enabled: boolean): Promise<void> => {
+      const result = await updateSemanticRuleStatus(buildSemanticRuleStatusUpdateParams(ruleIds, enabled))
       assertFlatRequestSuccess(result)
       if (activeSpaceId.current !== spaceId) return
+      const ruleIdSet = new Set(ruleIds)
       setRules(currentRules =>
-        currentRules.map(currentRule => (currentRule.id === rule.id ? { ...currentRule, enabled } : currentRule))
+        currentRules.map(currentRule => (ruleIdSet.has(currentRule.id) ? { ...currentRule, enabled } : currentRule))
       )
     },
     [spaceId]
+  )
+
+  const updateRuleStatus = useCallback(
+    async (rule: SemanticRule, enabled: boolean): Promise<void> => {
+      await updateRulesStatus([rule.id], enabled)
+    },
+    [updateRulesStatus]
   )
 
   const deleteRule = useCallback(
@@ -204,10 +216,23 @@ export function useSemanticListManagement({
     [spaceId]
   )
 
+  const deleteRules = useCallback(
+    async (ruleIds: SemanticRuleId[]): Promise<void> => {
+      const result = await batchDeleteSemanticRules(ruleIds)
+      assertFlatRequestSuccess(result)
+      if (activeSpaceId.current !== spaceId) return
+      const ruleIdSet = new Set(ruleIds)
+      setRules(currentRules => currentRules.filter(rule => !ruleIdSet.has(rule.id)))
+      setTotal(currentTotal => Math.max(0, currentTotal - ruleIds.length))
+    },
+    [spaceId]
+  )
+
   return {
     businessCategoryOptions,
     createRule,
     deleteRule,
+    deleteRules,
     dictionaryLoading,
     fetchRuleDetail,
     loading,
@@ -216,6 +241,7 @@ export function useSemanticListManagement({
     rules,
     total,
     updateRule,
+    updateRulesStatus,
     updateRuleStatus
   }
 }
