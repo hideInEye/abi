@@ -41,6 +41,7 @@ import type { ReportHistoryRoundGroup, ReportItem } from '../conversation/report
 import type { ReportSourceVersionFields } from '../../service/api/report'
 import { buildReportSourceVersionFields } from '../conversation/components/chat-input/reportSourceSelection'
 import { parseViewChart, type WidgetChart, WidgetMessage } from './history'
+import { nextUserScrolled } from './scrollFollow'
 import {
   checkSharePassword,
   ensureSession,
@@ -538,6 +539,9 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const sessionRef = useRef<WidgetSession | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
+  // 自动跟随底部守卫：用户手动上滑后流式更新不再强制滚底（避免执行过程滚动条锁定底部滑不上去）
+  const userScrolledRef = useRef(false)
+  const lastBodyScrollTopRef = useRef(0)
   const panelRef = useRef<HTMLDivElement>(null)
   const semSelectorRef = useRef<HTMLDivElement>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
@@ -659,10 +663,20 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 卸载时中断进行中的流式请求，避免向已卸载组件写状态
   useEffect(() => () => abortRef.current?.abort(), [])
 
+  // 记录用户是否手动上滑：上滑超过阈值暂停自动滚底，回到底部附近恢复（阈值同主对话）
+  const handleBodyScroll = () => {
+    const el = bodyRef.current
+    if (!el) return
+    const { scrollTop, scrollHeight, clientHeight } = el
+    userScrolledRef.current = nextUserScrolled(userScrolledRef.current, lastBodyScrollTopRef.current, scrollTop, scrollHeight, clientHeight)
+    lastBodyScrollTopRef.current = scrollTop
+  }
+
   // 新消息/探索/报告流式更新自动滚动到底部（三模式统一追踪时间线数据源；交互仅 messages 变化，行为不变）
+  // 用户手动上滑阅读时跳过，避免滚动条被反复拽回底部
   useEffect(() => {
     const el = bodyRef.current
-    if (el) el.scrollTop = el.scrollHeight
+    if (el && !userScrolledRef.current) el.scrollTop = el.scrollHeight
   }, [messages, exploreController.items, reportController.reports, phase])
 
   // 语义下拉打开时：点击面板外部收起
@@ -933,6 +947,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const dispatchSend = async (explicitText?: string) => {
     const text = (explicitText ?? input).trim()
     if (!text || phase !== 'ready') return
+    // 新提问重置自动跟随：发送后无论此前滚动位置都滚底跟随新回复
+    userScrolledRef.current = false
     if (chatMode === 'explore') {
       if (exploreController.loading) return
       const schemaId = selectedSemantic?.schemaId
@@ -1385,7 +1401,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           )}
         </div>
 
-        <div className="abi-cw-body" ref={bodyRef}>
+        <div className="abi-cw-body" ref={bodyRef} onScroll={handleBodyScroll}>
           {phase === 'checking' || phase === 'loading' ? (
             <div className="abi-cw-status">
               <div className="abi-cw-spinner" />

@@ -134,6 +134,18 @@ function normalizeActionInput(input?: string | null): string {
   }
 }
 
+/**
+ * 步骤在列表容器内对齐到可视区（等价 block:'nearest'），只改容器自身 scrollTop。
+ * 不用 scrollIntoView：它会连带滚动祖先容器，执行中把外层消息区滚动条拽回底部。
+ * 容器 CSS 已设 scroll-behavior: smooth，直接赋值 scrollTop 即为平滑滚动。
+ */
+function scrollStepIntoListView(container: HTMLElement, target: Element) {
+  const cRect = container.getBoundingClientRect()
+  const tRect = target.getBoundingClientRect()
+  if (tRect.bottom > cRect.bottom) container.scrollTop += tRect.bottom - cRect.bottom
+  else if (tRect.top < cRect.top) container.scrollTop -= cRect.top - tRect.top
+}
+
 const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = false, onOpen, onClose, onEditCode, compact = false }) => {
   const completedCount = item.tasks.filter((task) => task.status === 'completed' || task.status === 'done').length
   const statusTag = getCardStatusTag(item.status)
@@ -151,7 +163,7 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
     if (!skillListRef.current || !runningStepId) return
     const runningElement = skillListRef.current.querySelector(`[data-step-id="${runningStepId}"]`)
     if (runningElement) {
-      runningElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      scrollStepIntoListView(skillListRef.current, runningElement)
     }
   }, [runningStepId])
 
@@ -168,7 +180,7 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
   useEffect(() => {
     if (!skillListRef.current || !selectionActive) return
     const firstSelected = skillListRef.current.querySelector(`[data-step-id="${selectedSteps[0].id}"]`)
-    if (firstSelected) firstSelected.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    if (firstSelected) scrollStepIntoListView(skillListRef.current, firstSelected)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTodoId, selectionActive])
   const handleTodoClick = (todoId?: string) => {

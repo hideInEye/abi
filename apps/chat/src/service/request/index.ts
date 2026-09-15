@@ -102,7 +102,10 @@ service.interceptors.response.use(
     return response.data;
   },
   (error) => {
-    if (error?.response?.status === 401 && shouldHandleLoginExpiredForRequest(error.config?.url)) {
+    // 兼容两种鉴权失效返回：HTTP 401，或非 2xx（如 500）+ 响应体业务码 401
+    const isUnauthorized =
+      error?.response?.status === 401 || isBackendCodeIn(error?.response?.data, TOKEN_EXPIRED_CODES);
+    if (isUnauthorized && shouldHandleLoginExpiredForRequest(error.config?.url)) {
       void handleTokenExpired();
     } else if (error.response) {
       // HTTP 非 2xx（含 500 内部服务器错误）：优先展示后端返回的 msg
