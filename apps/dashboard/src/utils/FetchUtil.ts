@@ -20,6 +20,14 @@ export function notifyTokenExpired() {
     void handleLoginExpired();
 }
 
+export function isSuccessfulNativeResult(value: unknown): boolean {
+    if (typeof value !== 'object' || value === null) return true;
+    const result = value as Record<string, unknown>;
+    if ('code' in result) return Number(result.code) === 200;
+    if ('success' in result) return result.success === true;
+    return true;
+}
+
 let _apiTarget = '';
 export function getApiTarget(): string {
     return _apiTarget;
@@ -187,7 +195,7 @@ export default class FetchUtil {
                     if (typeof res === 'object' && res !== null && 'code' in res) {
                         FetchUtil.handleUnauthorized((res as HttpResponse).code);
                     }
-                    return res;
+                    return isSuccessfulNativeResult(res) ? res : null;
                 } else if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain'))) {
                     return await response.text()
                 } else {
@@ -254,7 +262,7 @@ export default class FetchUtil {
      * @param headers
      * @param params
      */
-    static async doRequestNativeResult(url: string, method: string, headers: Record<string, string>, params: FormData | Record<string, any>): Promise<object> {
+    static async doRequestNativeResult(url: string, method: string, headers: Record<string, string>, params: FormData | Record<string, any>): Promise<object | null> {
         const reqInfo = FetchUtil.doRequestBefore(url, method, headers, params);
         return FetchUtil.requestNativeResult(reqInfo.url, reqInfo.options);
     }

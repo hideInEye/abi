@@ -49,6 +49,7 @@ import oracleIcon from '@/assets/imgs/home/deOracle.svg';
 import postgresqlIcon from '@/assets/imgs/home/dePostgreSQL.svg';
 import starrocksIcon from '@/assets/imgs/home/deStarrocks.svg';
 import kingbaseIcon from '@/assets/imgs/home/kingbase.svg';
+import { buildDataSourceEditRecord } from './dataSourceEdit';
 
 const DB_TYPE_ICONS: Record<string, string> = {
   ck: clickhouseIcon,
@@ -116,31 +117,10 @@ export function Component() {
   }, []);
 
   const handleListEdit = (record: any) => {
-    if (record.excelDatasourceFlag) {
-      const config = JSON.parse(record.configuration);
-      if (config?.excelConfig) {
-        let excelConfig = JSON.parse(config?.excelConfig);
-        excelConfig = {
-          ...excelConfig[0],
-          sourceType: "Excel",
-          sourceName: record.sourceName,
-          sourceFile: excelConfig,
-          excelDatasourceFlag: true,
-          sourceId:record.sourceId
-        };
-        edit(excelConfig);
-      }
-      return;
-    } else {
-      const config = JSON.parse(record.configuration);
-      const formatRecord = {
-        ...record,
-        ...config,
-        sheets: config,
-        sourceFile: [{ name: config?.[0]?.fileName }],
-        tableName: config?.[0]?.deTableName,
-      };
-      edit(formatRecord);
+    try {
+      edit(buildDataSourceEditRecord(record));
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '数据源配置格式错误，无法编辑');
     }
   };
 

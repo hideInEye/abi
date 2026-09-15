@@ -1939,3 +1939,97 @@ export const init: Init = async currentFullPath => {
   - 访问其他页面（有/无 token），确认鉴权和重定向正常。
 - run log：`.ai/runs/2026-09-10-login-page-menu-api-guard/`
 
+---
+
+## 2026-09-14 追加：框架级 Bug 复核文档生成
+
+### 需求类型
+
+只读分析结果文档化，不修改业务代码。
+
+### 目标
+
+1. 保留 `.ai/requirements/FRAMEWORK_BUG_FIX.md` 原始分析文档。
+2. 新增 `.ai/requirements/FRAMEWORK_BUG_FIX_REVIEW.md`，对原 28 项逐项给出复核状态、修正后的根因、建议优先级、最小修复边界、验收条件和测试建议。
+3. 增加可勾选的用户确认区和推荐实施批次，供用户选择需要修改的问题后再单独制定实施计划。
+4. 将复核中发现但原文档遗漏的问题单独列出，不在本轮修复。
+
+### 非目标
+
+- 不修改原 `FRAMEWORK_BUG_FIX.md`。
+- 不修改 `apps/*`、`packages/*`、Nginx 或构建配置。
+- 不直接生成业务修复计划或执行任何 Bug 修复。
+- 不运行与纯 Markdown 文档变更无关的业务测试、类型检查或构建。
+
+### 影响范围
+
+- `.ai/requirements/FRAMEWORK_BUG_FIX_REVIEW.md`
+- `.ai/requirements/CURRENT_REQUIREMENT.md`
+- `.ai/runs/2026-09-14-framework-bug-review/RUN_LOG.md`
+
+### 验收标准
+
+1. 原 28 个 Bug 编号均能在复核文档中找到且只出现一个总览结论。
+2. 明确区分确认存在、部分成立、待协议/复现和不按运行时 Bug 排期。
+3. 原文档中不完整或危险的建议得到纠正，包括 `eval → new Function`、WebSocket 长期 token query、HistoryQueue 仅钳制 size 等。
+4. 文档提供未默认勾选的修复项和批次，用户可先选择范围再生成计划。
+5. 本轮不产生业务源码改动。
+
+### 测试要求
+
+- 检查 Markdown 格式和 `git diff --check`。
+- 用文本扫描确认 P0-01～P0-05、P1-01～P1-12、P2-01～P2-11 均完整覆盖。
+- 因未修改业务代码，不运行业务测试、类型检查或构建。
+
+---
+
+## 2026-09-14 追加：框架级 Bug 选定项修复
+
+### 需求类型
+
+安全修复、框架生命周期修复、异步状态修复和明确授权的死代码清理。
+
+### 目标
+
+1. 修复复核文档中未被用户标记为 `[x]` 的问题：P0-02、P0-03、P0-04、P0-05、P1-02、P1-03、P1-05、P1-06、P1-07、P1-10、P2-04、P2-06、P2-07、P2-10、P2-11、NEW-01、NEW-02、NEW-03、NEW-04。
+2. 按用户补充口径处理三个清理项：P1-01 只清理 `BaseLayout` 无关引入及对应死逻辑；P1-08 删除无调用方的 `getOpeningText` 及仅供其使用的配置；P0-05 删除未使用的 `packages/config` 工作区包及其锁文件/文档引用。
+3. P0-02 删除登录页“记住密码”勾选框、密码持久化、旧密码回填和相关样式/逻辑，并清理已有 `loginInfo` 中的密码字段。
+4. P0-03 遵循 `p0-03.text`：先完成仓库扫描和 source→transform→sink 分类，再用受控 DSL、运行时校验、显式注册表或静态 HTML 沙箱替代运行时字符串代码执行；禁止用 `new Function`、动态 script、字符串 timer、Blob/Worker 或用户可控动态 import 绕过；增加 ESLint 禁令、迁移失败路径、安全单测和最终复扫。
+5. 所有修改到的接口链路必须等待响应并判断真实业务成功；只有成功后才能 callback、进入下一步、关闭、刷新、重置或提示成功，失败必须停留在可重试状态。
+6. 为每个修改过接口调用的小模块提供可追溯单测；允许一个小模块的测试覆盖多个相邻调用点。
+
+### 明确不修改
+
+1. 用户标记为 `[x]` 的 P0-01、P1-04、P1-09、P1-11、P1-12、P2-01、P2-02、P2-03、P2-05、P2-08、P2-09。
+2. 不以 P1-01 名义修改 Tab slice 或 simple-router 返回契约；本轮以用户补充的 `BaseLayout` 清理口径为准。
+3. 不把长期访问 token 写入 WebSocket query；未确认后端安全鉴权协议前不得创造不兼容协议。
+4. 不顺带重构无关应用、组件、样式或接口。
+5. 测试只覆盖本轮修改内容及直接受影响范围；仓库既有无关失败不纳入本轮整改。
+
+### 影响范围
+
+- ABI：登录页、JWT 解析、BaseLayout、首页双接口流程、数据源 JSON 配置、鉴权适配、ViewDesignerLoader。
+- Chat：SSE 代次隔离、WebSocket 安全边界、邮件分享、收藏、JSON 解析、Markdown/报表 HTML 渲染、死代码清理、鉴权适配。
+- Dashboard：规则解析、数据转换 DSL、蓝图处理器、G2Plot/AMap 注册表、原生请求业务成功门禁、controller/manager/store/history 生命周期、rollback backoff。
+- Packages：Axios AbortController 生命周期、`packages/config` 删除、共享鉴权适配。
+- 配置/文档：三应用 ESLint 动态执行禁令、微前端拓扑说明、运行记录与安全复扫结果。
+
+### 验收标准
+
+1. 登录 DOM 与状态中没有“记住密码”能力；localStorage 不保存或回填密码，旧密码字段会被移除。
+2. 生产源码不存在 `eval`、`new Function`、字符串 timer、动态脚本注入或等价绕过；历史任意 JS 配置不执行，只有白名单 DSL/注册项运行，未知旧配置显示迁移错误。
+3. Dashboard HTTP 200 + 业务失败不会进入 filter/changeData；所有本轮接口流程只在真实成功后执行成功链路。
+4. Chat 旧 SSE 回调不能污染新会话；邮件分享和收藏失败可被捕获且不误触发成功状态；不再建立无显式安全协议的调试 WebSocket。
+5. Dashboard 卸载后定时器、controller、manager/store/history 和 backoff 状态均被幂等清理；HistoryQueue 保持容量、游标和 undo/redo 不变量。
+6. Axios 请求正常、业务失败、网络失败、取消和重试最终均不在 AbortController Map 留下已结束项。
+7. `packages/config` 及工作区锁文件项被删除，应用无残留引用；`BaseLayout` 和 Chat 开场白死代码被删除。
+8. ViewDesignerLoader 的空项目、reject 和非法数据均不会因非空解构产生未处理异常。
+9. 项目上下文准确描述 Chat 独立 SPA 与 Dashboard qiankun 子应用拓扑。
+
+### 测试要求
+
+- 修改模块的 Vitest/Jest 单测：登录持久化、JWT、动态规则/DSL/注册表、FetchUtil、SSE 代次、分享/收藏、JSON 安全解析、Axios cleanup、HistoryQueue、生命周期 reset、rollback backoff、首页接口四象限和 Loader 异常路径。
+- 运行受影响应用/包的定向 typecheck、lint 和测试；P0-03 额外运行最终动态执行扫描。
+- 能运行时执行受影响构建；若基线或环境阻塞，记录原始命令、错误和与本轮 diff 的关系。
+- 回归检查登录、首页、Chat 会话切换/分享/收藏、Dashboard 编辑/预览/卸载重挂载和数据源配置。
+- 生成 `.ai/runs/2026-09-14-framework-bug-fixes/RUN_LOG.md`。

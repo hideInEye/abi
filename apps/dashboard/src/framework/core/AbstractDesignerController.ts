@@ -13,7 +13,7 @@ import {APIConfig, IDatabase, IFilterConfigType, ThemeItemType, DesignerMode} fr
 import AbstractController from "./AbstractController";
 import {ComponentBaseProps} from "../../comps/common-component/CommonTypes.ts";
 import FetchUtil from "../../utils/FetchUtil.ts";
-import Base64Util from "../../utils/Base64Util.ts";
+import {applyDataTransform, RuntimeConfigError} from "../../security/runtime-config.ts";
 
 /**
  * AbstractDesignerController继承自AbstractController，在泛型的定义和约束上和AbstractController完全保持一致。
@@ -42,30 +42,35 @@ abstract class AbstractDesignerController<I = any, C = any> extends AbstractCont
     }
 
 
+    private setRequestFailed(message = "数据加载失败...") {
+        this.lastReqState = false;
+        if (!this.errMsgDom && this.container) {
+            this.errMsgDom = document.createElement("div");
+            this.errMsgDom.classList.add("view-error-message");
+            this.errMsgDom.innerText = message;
+            this.container.appendChild(this.errMsgDom);
+        }
+    }
+
+    private setRequestSucceeded() {
+        if (!this.lastReqState) {
+            this.lastReqState = true;
+            this.errMsgDom?.remove();
+            this.errMsgDom = null;
+        }
+    }
+
     private doApi = (config: APIConfig) => {
         const {url, method, params, header, frequency = 5, filter, autoFlush} = config;
         const request = () => {
             FetchUtil.doRequestNativeResult(url!, method!, header, params).then((res) => {
-                if (res) {
-                    if (!this.lastReqState) {
-                        this.lastReqState = true;
-                        this.errMsgDom?.remove();
-                        this.errMsgDom = null;
-                    }
-                    if (filter && filter !== '') {
-                        const func = eval(`(${filter})`);
-                        res = typeof func === 'function' ? func(res) : res;
-                    }
-                    this.changeData(res);
-                } else {
-                    this.lastReqState = false;
-                    //请求失败，在原有容器的基础上添加异常提示信息的dom元素（此处直接操作dom元素，不适用react的api进行组件的反复挂载和卸载）
-                    if (!this.errMsgDom) {
-                        this.errMsgDom = document.createElement("div");
-                        this.errMsgDom.classList.add("view-error-message");
-                        this.errMsgDom.innerText = "数据加载失败...";
-                        this.container!.appendChild(this.errMsgDom);
-                    }
+                if (!res) return this.setRequestFailed();
+                try {
+                    const data = filter ? applyDataTransform(res, filter) : res;
+                    this.setRequestSucceeded();
+                    this.changeData(data);
+                } catch (error) {
+                    this.setRequestFailed(error instanceof RuntimeConfigError ? error.message : undefined);
                 }
             });
         }
@@ -89,25 +94,15 @@ abstract class AbstractDesignerController<I = any, C = any> extends AbstractCont
             }).then(res => {
                 let data = res.data?.data ?? res.data;
                 if (res.code === 200) {
-                    if (!this.lastReqState) {
-                        this.lastReqState = true;
-                        this.errMsgDom?.remove();
-                        this.errMsgDom = null;
+                    try {
+                        data = filter ? applyDataTransform(data, filter) : data;
+                        this.setRequestSucceeded();
+                        this.changeData(data);
+                    } catch (error) {
+                        this.setRequestFailed(error instanceof RuntimeConfigError ? error.message : undefined);
                     }
-                    if (filter && filter !== '') {
-                        const func = eval(`(${filter})`);
-                        data = typeof func === 'function' ? func(data) : data;
-                    }
-                    this.changeData(data);
                 } else {
-                    this.lastReqState = false;
-                    //请求失败，在原有容器的基础上添加异常提示信息的dom元素（此处直接操作dom元素，不适用react的api进行组件的反复挂载和卸载）
-                    if (!this.errMsgDom) {
-                        this.errMsgDom = document.createElement("div");
-                        this.errMsgDom.classList.add("view-error-message");
-                        this.errMsgDom.innerText = "数据加载失败...";
-                        this.container!.appendChild(this.errMsgDom);
-                    }
+                    this.setRequestFailed();
                 }
             });
         }
@@ -172,6 +167,27 @@ abstract class AbstractDesignerController<I = any, C = any> extends AbstractCont
                 this.container.style.visibility = "visible";
             else
                 this.container.style.visibility = "hidden";
+        }
+    }
+
+    private clearRuntimeResources(): void {
+        if (this.interval) clearInterval(this.interval);
+        this.interval = null;
+        this.errMsgDom?.remove();
+        this.errMsgDom = null;
+    }
+
+    public destroy(): void {
+        this.clearRuntimeResources();
+        super.destroy();
+    }
+
+    public dispose(): void {
+        try {
+            this.destroy();
+        } finally {
+            this.clearRuntimeResources();
+            super.destroy();
         }
     }
 

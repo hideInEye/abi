@@ -17,6 +17,8 @@ import {Control} from "../../../../json-schema/SchemaTypes.ts";
 import {globalMessage} from "../../../../framework/message/GlobalMessage.tsx";
 import {FieldChangeData, LCGUI} from "../../../../json-schema/LCGUI.tsx";
 import FetchUtil from "../../../../utils/FetchUtil.ts";
+import {applyDataTransform, EMPTY_DATA_TRANSFORM, parseDataTransformConfig, RuntimeConfigError} from "../../../../security/runtime-config.ts";
+import {runDataRequestFlow} from "../requestFlow.ts";
 
 export interface ApiDataConfigProps {
     controller: AbstractDesignerController;
@@ -133,9 +135,11 @@ export function ApiDataConfig(props: ApiDataConfigProps) {
                         type: 'code-editor',
                         config: {
                             height: 200,
-                            language: 'javascript'
+                            language: 'json'
                         },
-                        value: dataRef.current?.filter || "function filter(data){\n\n\n\treturn data\n}",
+                        value: typeof dataRef.current?.filter === 'string'
+                            ? dataRef.current.filter
+                            : JSON.stringify(dataRef.current?.filter || EMPTY_DATA_TRANSFORM, null, 2),
                     }
                 ]
             },
@@ -200,36 +204,38 @@ export function ApiDataConfig(props: ApiDataConfigProps) {
             } else
                 dataRef.current.params = param;
         }
+        try {
+            dataRef.current.filter = parseDataTransformConfig(dataRef.current.filter);
+        } catch (error) {
+            globalMessage.messageApi?.error(error instanceof RuntimeConfigError ? error.message : '过滤器配置无效');
+            return false;
+        }
         return true;
     }
 
-    const testAndSave = () => {
+    const testAndSave = async () => {
         if (!validate())
             return;
         const {params, header, url, method, filter} = dataRef.current!;
-        FetchUtil.doRequestNativeResult(url!, method!, header, params).then(res => {
-            if (res) {
-                if (filter && filter !== '') {
-                    const func = eval(`(${filter})`);
-                    res = typeof func === 'function' ? func(res) : res;
-                }
-                apiTestResRef.current = JSON.stringify(res, null, 2);
-                controller.update({data: {apiData: dataRef.current, staticData: res}}, {reRender: false});
-                controller.changeData(res);
-            } else {
-                apiTestResRef.current = JSON.stringify({msg: '请求错误'}, null, 2);
-                controller.update({data: {apiData: dataRef.current}}, {reRender: false});
-                globalMessage.messageApi?.warning('配置项已保存，但数据未成功刷新');
-            }
-        }).finally(() => {
-            setCount(count + 1);
-        })
+        const result = await runDataRequestFlow({
+            request: () => FetchUtil.doRequestNativeResult(url!, method!, header, params),
+            isSuccess: response => response !== null,
+            selectData: response => response,
+            transform: response => filter ? applyDataTransform(response, filter) : response,
+            onSuccess: transformedResult => {
+                controller.update({data: {apiData: dataRef.current, staticData: transformedResult as any}}, {reRender: false});
+                controller.changeData(transformedResult as object);
+            },
+        });
+        apiTestResRef.current = JSON.stringify(result.success ? result.data : {msg: result.message}, null, 2);
+        if (!result.success) globalMessage.messageApi?.error(result.message);
+        setCount(current => current + 1);
     }
 
     const onFieldChange = (fieldChangeData: FieldChangeData) => {
         const {reRender, id, dataFragment} = fieldChangeData;
         if (id === 'testAndSave')
-            testAndSave();
+            void testAndSave();
         else if (id === 'apiTestRes')
             return
         else {

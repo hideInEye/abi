@@ -26,6 +26,7 @@ import FrameLayout from "../json-schema/ui/frame-layout/FrameLayout";
 import {DesignerMode, SaveType} from "./DesignerType.ts";
 import 'nprogress/nprogress.css';
 import {DesignerLoader} from "./loader/DesignerLoader.ts";
+import {destroyDesignerRuntime} from "./runtime/destroyDesignerRuntime.ts";
 
 /**
  * 绑定事件到dom元素
@@ -102,7 +103,11 @@ const Designer = observer((props: DesignerProps) => {
         loaderRef.current?.load(id, type);
         //绑定事件到dom元素
         bindEventToDom();
-        return () => unbindEventToDom();//卸载dom元素上的事件
+        return () => {
+            loaderRef.current?.cancelLoad();
+            unbindEventToDom();
+            destroyDesignerRuntime();
+        };
     }, []);
 
     if (!loaderRef.current?.loaded)
@@ -119,4 +124,3 @@ const Designer = observer((props: DesignerProps) => {
 })
 
 export default Designer;
-

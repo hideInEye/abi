@@ -15,6 +15,7 @@ import {lazy, Suspense} from "react";
 // import Loading from "./json-schema/ui/loading/Loading.tsx";
 import {loadAppConfig} from "./utils/FetchUtil.ts";
 import {renderWithQiankun, qiankunWindow} from 'vite-plugin-qiankun/dist/helper';
+import {destroyDesignerRuntime} from './designer/runtime/destroyDesignerRuntime.ts';
 
 const MainRouter = lazy(() => import('./router/MainRouter.tsx'))
 
@@ -54,9 +55,10 @@ const initQianKun = () => {
             render(props);
         },
         bootstrap() {},
-        unmount(_props: any) {
+        unmount() {
             root?.unmount();
             root = null;
+            destroyDesignerRuntime();
             delete window.__ABI_DASHBOARD_HOST_BASE_PATH__;
             delete window.__ABI_DASHBOARD_INITIAL_PATH__;
             delete window.__ABI_DASHBOARD_PAGE_TITLE__;

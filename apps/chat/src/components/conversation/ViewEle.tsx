@@ -5,7 +5,7 @@
  * @module ViewEle
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState, } from "react";
+import React, { useCallback, useEffect, useRef, useState, } from "react";
 import { Button, Spin, Table, message, ConfigProvider, Typography } from "antd";
 import zhCN from 'antd/es/locale/zh_CN';
 import { format } from 'sql-formatter';
@@ -33,12 +33,12 @@ import { parseContext, parseJsonContent, isNotEmptyObject, stripHtmlTags } from 
 import { processChartData, getChartOption, parseISO8601Duration, parseISODate } from './helpers/chartOption';
 import { handleDataExport, handleImageExport, handleExcelFileExport } from './helpers/download';
 import FileTag from "@/components/FileTag"; // 引入文件组件
-import { fetchDrillDown, fetchQueryRewrite, setExperteval, searchConv } from '../../service/api/conv';
+import { fetchDrillDown, setExperteval, searchConv } from '../../service/api/conv';
 import { fetchSemanticGroups } from '../../service/api/semantic';
 import { CloseOutlined, RedoOutlined, ArrowRightOutlined } from "@ant-design/icons";
-import { marked } from 'marked';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { CHAT_MODE_MAP } from '../../constant/chat';
-import { useDebugStore } from '../../store';
 
 /**
  * 组件属性接口定义
@@ -184,10 +184,6 @@ const ViewEle: React.FC<PropsType> = ({
   const [configModalVisible, setConfigModalVisible] = React.useState(false);
   const [debugModalVisible, setDebugModalVisible] = React.useState(false);
   const [fullscreenModalVisible, setFullscreenModalVisible] = React.useState(false);
-  // 模型调试数据流 WebSocket 引用
-  const wsRef = useRef<WebSocket | null>(null);
-  const wsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { setDebugInfoMap } = useDebugStore();
   const [activeType, setActiveType] = React.useState('table');
   // 图表配置状态
   const [chartConfig, setChartConfig] = React.useState<ChartConfig>({
@@ -398,130 +394,10 @@ const ViewEle: React.FC<PropsType> = ({
     setConfigModalVisible(true);
   };
 
-  // 建立 WebSocket 连接，拉取模型调试数据流
-  const connectDebugWebSocket = useCallback((cUid: string, rIndex: number) => {
-    // 关闭现有连接
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-    if (!cUid) {
-      console.warn('缺少 conv_uid，无法建立模型调试连接');
-      return;
-    }
-    try {
-      const baseUrl = window.APP_CONFIG?.VITE_WEBSOCKET_API || '';
-      if (!baseUrl) {
-        message.error('未配置 WebSocket 地址，无法获取调试数据');
-        return;
-      }
-      const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-      const url = `${normalizedBaseUrl}/ws-proxy/abi-debug/ws/stream/consume?convUid=${cUid}&roundIndex=${rIndex}`;
-
-      // [临时调试] 打印实际连接的 WS 地址
-      console.log('[模型调试][WS连接]', url);
-
-      wsRef.current = new WebSocket(url);
-
-      // 连接超时定时器
-      if (wsTimeoutRef.current) clearTimeout(wsTimeoutRef.current);
-      wsTimeoutRef.current = setTimeout(() => {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) {
-          console.warn('WebSocket连接超时');
-          wsRef.current.close();
-          message.error('WebSocket连接超时，请重试');
-        }
-        wsTimeoutRef.current = null;
-      }, 10000);
-
-      // 连接打开：写入初始 loading 占位
-      wsRef.current.onopen = () => {
-        console.log('[模型调试][WS onopen] 连接已建立，等待后端推送数据...');
-        if (wsTimeoutRef.current) {
-          clearTimeout(wsTimeoutRef.current);
-          wsTimeoutRef.current = null;
-        }
-        setDebugInfoMap({
-          uid: `${cUid}_${rIndex}`,
-          metrics: { current_stage: 1 },
-          loading: true,
-        });
-      };
-
-      // 接收消息：分段拼接后解析完整 JSON
-      let partialMessage = '';
-      wsRef.current.onmessage = (event: MessageEvent) => {
-        const msg = event.data;
-        // [临时调试] 打印每一帧原始数据，确认后端是否真的推了东西
-        console.log('[模型调试][WS onmessage] 原始帧:', msg);
-        if (!msg) return;
-        partialMessage += msg;
-        while (partialMessage.startsWith('{') && partialMessage.endsWith('}')) {
-          try {
-            const debugInfo = JSON.parse(partialMessage);
-            // [临时调试] 打印后端推送的 metrics，核对 total_tokens/total_time
-            console.log('[模型调试][ViewEle] metrics:', debugInfo?.metrics, 'full:', debugInfo);
-            setDebugInfoMap({ ...debugInfo, name: debugInfo.name || {} });
-            partialMessage = '';
-          } catch {
-            // JSON 尚未完整，等待更多数据
-            break;
-          }
-        }
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        if (wsTimeoutRef.current) {
-          clearTimeout(wsTimeoutRef.current);
-          wsTimeoutRef.current = null;
-        }
-        message.error('WebSocket连接异常，请重试');
-      };
-
-      wsRef.current.onclose = () => {
-        console.log('[模型调试][WS onclose] 连接已关闭');
-        if (wsTimeoutRef.current) {
-          clearTimeout(wsTimeoutRef.current);
-          wsTimeoutRef.current = null;
-        }
-      };
-    } catch (error) {
-      console.error('建立模型调试连接失败:', error);
-      message.error('建立模型调试连接失败');
-    }
-  }, [setDebugInfoMap]);
-
-  // 关闭模型调试连接
-  const closeDebugWebSocket = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-    if (wsTimeoutRef.current) {
-      clearTimeout(wsTimeoutRef.current);
-      wsTimeoutRef.current = null;
-    }
-  }, []);
-
   const handleDebugClick = () => {
-    // [临时调试] 对比"请求的 roundIndex"与"弹窗读取的 key"，定位 暂无调试数据 是否为 key 不一致
-    console.log('[模型调试][打开]', {
-      conv_uid: conv?.conv_uid,
-      'data.roundIndex': data?.roundIndex,
-      '请求roundIndex(?? 0)': data?.roundIndex ?? 0,
-      '弹窗读取key': `${conv?.conv_uid}_${data?.roundIndex}`,
-    });
     setDebugModalVisible(true);
-    connectDebugWebSocket(conv?.conv_uid, data?.roundIndex ?? 0);
+    message.warning('模型调试数据通道尚未配置安全鉴权，已停止建立连接');
   };
-
-  // 组件卸载时清理 WebSocket
-  useEffect(() => {
-    return () => {
-      closeDebugWebSocket();
-    };
-  }, [closeDebugWebSocket]);
 
   const handleFullscreenClick = () => {
     setFullscreenModalVisible(true);
@@ -1156,7 +1032,6 @@ const ViewEle: React.FC<PropsType> = ({
     : (chartData?.desc || '');
   // 先移除HTML标签，再处理markdown；压缩 3 个以上连续换行为段落分隔
   const cleanDesc = stripHtmlTags(desc).replace(/\n{3,}/g, '\n\n').trim();
-  const html: any = marked(cleanDesc)
 
   return (
     <div className={`my-2 w-full flex justify-start items-start`}>
@@ -1196,11 +1071,9 @@ const ViewEle: React.FC<PropsType> = ({
                     检测到非法的场景标识
                   </div>
                 ) : (
-                  <div
-                    className={`${s['markdown-content']} text-left`}
-                    dangerouslySetInnerHTML={{ __html: html }}
-                    style={{ width: '100%'}}
-                  ></div>
+                  <div className={`${s['markdown-content']} text-left`} style={{ width: '100%'}}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanDesc}</ReactMarkdown>
+                  </div>
                 )}
               </div>
             </div> : null}
@@ -1464,7 +1337,6 @@ const ViewEle: React.FC<PropsType> = ({
         open={debugModalVisible}
         onClose={() => {
           setDebugModalVisible(false);
-          closeDebugWebSocket();
         }}
       />
       <FullscreenModal

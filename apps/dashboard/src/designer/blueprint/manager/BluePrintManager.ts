@@ -56,6 +56,7 @@ class BluePrintManager extends AbstractManager<BluePrintManagerDataType> {
             addBPNodeLayout: action,
             updBpNodeLayout: action,
             setCanvasScale: action,
+            destroy: action,
         });
     }
 
@@ -353,12 +354,41 @@ class BluePrintManager extends AbstractManager<BluePrintManagerDataType> {
     }
 
     public destroy(): void {
+        Object.values(this.bpNodeControllerInsMap).forEach(controller => {
+            try {
+                controller.destroy();
+            } catch (error) {
+                console.error('蓝图节点销毁失败', error);
+            }
+        });
+        Object.values(this.lineInstances).forEach(graphic => {
+            try {
+                graphic.destroy();
+            } catch (error) {
+                console.error('蓝图连线销毁失败', error);
+            }
+        });
+        try {
+            this.pixiApp?.destroy(true);
+        } catch (error) {
+            console.error('蓝图画布销毁失败', error);
+        }
         this.bpAPMap = {};
         this.bpLines = {};
         this.bpAPLineMap = {};
         this.bpNodeLayoutMap = {};
         this.bpNodeControllerInsMap = {};
         this.bpNodeConfigMap = {};
+        this.selectedNodes = [];
+        this.selectedLines = [];
+        this.bpMovableRef = null;
+        this.bpSelectRef = null;
+        this.lineInstances = {};
+        this.pixiApp = null;
+        this.nodeContainerRef = null;
+        this.bpDragContentRef = null;
+        this.canvasTranslate = {x: 0, y: 0};
+        this.canvasScale = 1;
     }
 
 }
