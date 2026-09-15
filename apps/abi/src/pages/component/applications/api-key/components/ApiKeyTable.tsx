@@ -255,7 +255,7 @@ export function ApiKeyTable({
             <div className="abi-card-grid">
               <div className="abi-card-grid-inner">
                 {dataSource.map((record) => (
-                  <div key={record.id} className="abi-data-card" style={{ position: 'relative' }}>
+                  <div key={record.id} className="abi-data-card">
                     <div className="abi-data-card-head">
                       <div className="abi-data-card-title">
                         <span className="abi-data-card-name">{record.clientId || '-'}</span>
@@ -267,28 +267,31 @@ export function ApiKeyTable({
                       <div className="row"><span className="lbl">Access Key</span><span className="val" style={{ fontFamily: 'monospace', fontSize: 12 }}>{record.accessKey ? `${record.accessKey.slice(0, 16)}...` : '-'}</span></div>
                       <div className="row"><span className="lbl">IP限制</span><span className="val">{record.ipAccessType === 'unlimited' ? '不限制' : '仅白名单'}</span></div>
                       <div className="row"><span className="lbl">过期时间</span><span className="val">{record.expireTime ? dayjs(record.expireTime).format('YYYY-MM-DD') : '永久有效'}</span></div>
-                      <div className="row"><span className="lbl">创建时间</span><span className="val">{record.createdAt ? dayjs(record.createdAt).format('YYYY-MM-DD') : '-'}</span></div>
                     </div>
-                    <div style={{ position: 'absolute', bottom: 18, right: 20, zIndex: 10 }}>
+                    <div className="abi-data-card-footer">
+                      <button className="abi-card-act" onClick={() => onView(record)}>
+                        <EyeOutlined style={{ marginRight: 3 }} />查看
+                      </button>
+                      <button className="abi-card-act" onClick={() => onToggleStatus(record)}>
+                        <EditOutlined style={{ marginRight: 3 }} />{record.status === 'normal' ? '停用' : '启用'}
+                      </button>
                       <Dropdown
                         menu={{
                           items: [
-                            { key: 'view', label: <span><EyeOutlined style={{ marginRight: 6 }} />查看</span> },
                             { key: 'resetSk', label: <span><SyncOutlined style={{ marginRight: 6 }} />重置SK</span> },
-                            { key: 'toggle', label: <span><EditOutlined style={{ marginRight: 6 }} />{record.status === 'normal' ? '停用' : '启用'}</span> },
-                            { key: 'delete', label: <span style={{ color: '#ff4d4f' }}><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
+                            { type: 'divider' },
+                            { key: 'delete', danger: true, label: <span><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
                           ],
                           onClick: ({ key }) => {
-                            if (key === 'view') onView(record);
-                            else if (key === 'copyAk') copyValue(record.accessKey, 'Access Key');
-                            else if (key === 'resetSk') onResetSk(record);
-                            else if (key === 'toggle') onToggleStatus(record);
-                            else if (key === 'delete') onDelete(record);
+                            if (key === 'resetSk') onResetSk(record)
+                            else if (key === 'delete') onDelete(record)
                           }
                         }}
-                        trigger={['hover']}
+                        trigger={['click']}
                       >
-                        <AButton type="text" size="small" style={{ color: '#8c8c8c' }}><MoreOutlined /></AButton>
+                        <button className="abi-card-more">
+                          <MoreOutlined />
+                        </button>
                       </Dropdown>
                     </div>
                   </div>
@@ -305,9 +308,10 @@ export function ApiKeyTable({
           <ASelect
             value={pageSize}
             options={[
-              { label: '10条/页', value: 10 },
-              { label: '20条/页', value: 20 },
-              { label: '50条/页', value: 50 },
+              { label: '12条/页', value: 12 },
+              { label: '18条/页', value: 18 },
+              { label: '24条/页', value: 24 },
+              { label: '30条/页', value: 30 },
             ]}
             disabled
             className="page-size-select"

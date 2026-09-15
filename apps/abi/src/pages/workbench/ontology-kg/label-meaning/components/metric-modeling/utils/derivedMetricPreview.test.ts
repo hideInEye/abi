@@ -89,7 +89,11 @@ describe('derived metric preview', () => {
         dateRangeValue: 7,
         endTime: '18:00',
         startTime: '09:00',
-        subjectDimensionId: 'product-dim',
+        subjectDimensionIds: ['product-dim', 'region-dim'],
+        subjectDimensionNameMap: {
+          'product-dim': '产品维度（product_id）',
+          'region-dim': '区域维度（region_id）'
+        },
         timeRangeType: 'specified'
       }
     })
@@ -97,7 +101,7 @@ describe('derived metric preview', () => {
     expect(result.businessPreview).toContain('指标：最近支付金额')
     expect(result.businessPreview).toContain('计算基础：实付金额')
     expect(result.businessPreview).toContain('统计范围：最近 7 日，指定时段 09:00～18:00')
-    expect(result.businessPreview).toContain('主体维度：产品维度（product_id）')
+    expect(result.businessPreview).toContain('主体维度：产品维度（product_id）、区域维度（region_id）')
     expect(result.businessPreview).toContain('统计维度：区域维度（region_id）、产品维度（product_id）')
     expect(result.businessPreview).toContain('高价值：')
     expect(result.businessPreview).toContain('且\n有效区域：')

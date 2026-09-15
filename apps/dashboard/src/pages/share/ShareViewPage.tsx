@@ -24,6 +24,7 @@ import layerBuilder from '../../designer/left/layer-list/LayerBuilder';
 import canvasManager from '../../designer/header/items/canvas/CanvasManager.ts';
 import '../../designer/resource/font/FontGlobal.css';
 import ScaleAction from '../../framework/core/ScaleAction.ts';
+import {destroyDesignerRuntime} from '../../designer/runtime/destroyDesignerRuntime.ts';
 
 const ScreenFit = lazy(() => import('../../framework/screen-fit/ScreenFit.tsx'));
 
@@ -69,6 +70,11 @@ const ShareViewPage = observer(() => {
         init();
     }, [shareCode]);
 
+    useEffect(() => () => {
+        loaderRef.current?.cancelLoad();
+        destroyDesignerRuntime();
+    }, []);
+
     // 用户输入密码后校验
     const handlePasswordSubmit = async () => {
         if (!password) {
@@ -94,7 +100,8 @@ const ShareViewPage = observer(() => {
     const loadProjectData = async (projectId: string, pwd?: string) => {
         try {
             loaderRef.current?.setShareInfo(shareCode, pwd);
-            await loaderRef.current?.load(projectId, SaveType.SERVER);
+            const succeeded = await loaderRef.current?.load(projectId, SaveType.SERVER);
+            if (!succeeded) return;
             setLoaded(true);
         } catch {
             globalMessage.messageApi?.error('加载大屏数据失败');

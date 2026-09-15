@@ -27,6 +27,8 @@ class DesignerManager extends AbstractManager<ProjectDataType> {
         makeObservable(this, {
             loaded: observable,
             setLoaded: action,
+            destroy: action,
+            init: action,
         })
     }
 
@@ -35,10 +37,12 @@ class DesignerManager extends AbstractManager<ProjectDataType> {
     setLoaded = (loaded: boolean) => this.loaded = loaded;
 
     destroy(): void {
-        canvasManager.destroy();
         layerManager.destroy();
-        themeManager.destroy();
         bluePrintManager.destroy();
+        canvasManager.destroy();
+        themeManager.destroy();
+        FilterManager.destroy();
+        this.loaded = false;
     }
 
     getData(): ProjectDataType {
@@ -52,6 +56,7 @@ class DesignerManager extends AbstractManager<ProjectDataType> {
     }
 
     init(data: ProjectDataType, mode: DesignerMode): void {
+        this.destroy();
         data.canvasManager && canvasManager.init(data.canvasManager!);
         data.themeManager && themeManager.init(data.themeManager!);
         data.layerManager && layerManager.init(data.layerManager!);

@@ -19,7 +19,9 @@ import ObjectUtil from "../../../../utils/ObjectUtil.ts";
 import {IDatabase} from "../../../../designer/DesignerType.ts";
 import FetchUtil from "../../../../utils/FetchUtil.ts";
 import baseApi from "../../../../api/BaseApi.ts";
-import {doSave} from "../../../../designer/operate-provider/hot-key/HotKeyImpl.ts";
+import {saveProjectNow} from "../../../../designer/operate-provider/hot-key/HotKeyImpl.ts";
+import {applyDataTransform, EMPTY_DATA_TRANSFORM, parseDataTransformConfig, RuntimeConfigError} from "../../../../security/runtime-config.ts";
+import {runDataRequestFlow} from "../requestFlow.ts";
 
 export interface DatabaseDataConfigProps {
     controller: AbstractDesignerController;
@@ -78,50 +80,51 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
             globalMessage.messageApi?.error('SQL语句必须以select开头');
             return false;
         }
+        try {
+            dataRef.current.filter = parseDataTransformConfig(dataRef.current.filter);
+        } catch (error) {
+            globalMessage.messageApi?.error(error instanceof RuntimeConfigError ? error.message : '过滤器配置无效');
+            return false;
+        }
         return true;
     }
 
-    const testAndSave = () => {
+    const testAndSave = async () => {
         if (!validate())
             return;
 
         const {targetDb, sql, filter} = dataRef.current;
         if (!sql || sql === '')
             return;
-        FetchUtil.post(`/dashboard/api/v1/db/executor/execute`, {
-            id: targetDb,
-            sql: sql,
-            projectId: window.LC_ENV?.projectId,
-            spaceId: localStorage.getItem('spaceId'),
-            remark: '',
-            saveFlag: true
-        }).then(res => {
-            let data = res.data.data;
-            const {code, msg} = res;
-            if (code === 200) {
-                if (filter && filter !== '') {
-                    const func = eval(`(${filter})`);
-                    data = typeof func === 'function' ? func(data) : data;
-                }
-                setTestRes(JSON.stringify(data, null, 2));
-                setResCollapsed(false);
-
+        const result = await runDataRequestFlow({
+            request: () => FetchUtil.post(`/dashboard/api/v1/db/executor/execute`, {
+                id: targetDb,
+                sql: sql,
+                projectId: window.LC_ENV?.projectId,
+                spaceId: localStorage.getItem('spaceId'),
+                remark: '',
+                saveFlag: true
+            }),
+            isSuccess: response => response.code === 200,
+            getErrorMessage: response => response.msg,
+            selectData: response => response.data?.data ?? response.data,
+            transform: responseData => filter ? applyDataTransform(responseData, filter) : responseData,
+            onSuccess: async data => {
                 controller.update({data: {database: dataRef.current, staticData: data}})
                 controller.changeData(data);
-                doSave()
-            } else {
-                setTestRes(JSON.stringify({msg}, null, 2));
-                setResCollapsed(false);
-                controller.update({data: {database: dataRef.current}}, {reRender: false})
-                globalMessage.messageApi?.warning('配置项已保存，但数据未成功刷新 ' + msg);
+                const saved = await saveProjectNow();
+                if (!saved) throw new Error('项目保存失败');
             }
-        })
+        });
+        setTestRes(JSON.stringify(result.success ? result.data : {msg: result.message}, null, 2));
+        setResCollapsed(false);
+        if (!result.success) globalMessage.messageApi?.error(result.message);
     }
 
     const onFieldChange = (fieldChangeData: FieldChangeData) => {
         const {reRender, id, dataFragment} = fieldChangeData;
         if (id === 'testAndSave')
-            testAndSave();
+            void testAndSave();
         else
             dataRef.current = ObjectUtil.merge(dataRef.current, dataFragment);
         if (reRender)
@@ -208,9 +211,11 @@ export function DatabaseDataConfig(props: DatabaseDataConfigProps) {
                         type: 'code-editor',
                         config: {
                             height: 200,
-                            language: 'javascript'
+                            language: 'json'
                         },
-                        value: dataRef.current?.filter || "function filter(data){\n\n\n\treturn data\n}",
+                        value: typeof dataRef.current?.filter === 'string'
+                            ? dataRef.current.filter
+                            : JSON.stringify(dataRef.current?.filter || EMPTY_DATA_TRANSFORM, null, 2),
                     }
                 ]
             },

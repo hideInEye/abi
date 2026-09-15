@@ -11,9 +11,11 @@ import {
 } from './derivedIndicatorTemplateAdapter'
 import {
   buildApiCalcPeriod,
-  buildApiSubjectDimension,
+  buildApiCrossDimension,
+  buildApiSubjectDimensions,
   parseApiCalcPeriod,
-  parseApiSubjectDimension
+  parseApiCrossDimension,
+  parseApiSubjectDimensions
 } from './indicatorApiAdapter'
 import {
   DEFAULT_PRECOMPUTE_CONFIG,
@@ -711,7 +713,8 @@ export function buildKnowledgeCalcLogic(values: KnowledgeSubmitPayload): JsonRec
         values.derivedExpressions,
         values.derivedExpressionFieldMetaMap
       ),
-      subjectDimension: buildApiSubjectDimension(values.statisticalCaliber),
+      isCrossDim: buildApiCrossDimension(values.statisticalCaliber),
+      subjectDimension: buildApiSubjectDimensions(values.statisticalCaliber),
       expressions: buildDerivedExpressions(values)
     }) as JsonRecord
   }
@@ -739,7 +742,8 @@ export function parseKnowledgeCalcLogicFormValues(calcLogicValue: unknown): Part
   const legacyStatisticalCaliber = normalizeStatisticalCaliber(calcLogic.statisticalCaliber)
   const statisticalCaliber = normalizeStatisticalCaliber({
     ...parseApiCalcPeriod(calcLogic.calcPeriod, legacyStatisticalCaliber),
-    ...parseApiSubjectDimension(calcLogic.subjectDimension)
+    ...parseApiSubjectDimensions(calcLogic.subjectDimension),
+    isCrossDim: parseApiCrossDimension(calcLogic.isCrossDim, legacyStatisticalCaliber)
   })
 
   const baseValues = compactRecord({

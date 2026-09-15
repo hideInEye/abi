@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { streamExplorePlan } from '@/service/api/conv'
 import { addAppSessionApi } from '@/service/api/abi-chat-app'
 import { reduceExploreEvent, parseExploreStreamEvent } from './exploreStreamReducer'
-import type { ExploreItem, ExploreSendOptions } from './types'
+import type { ExploreItem, ExploreMcpSource } from './types'
 
 interface UseAssistantDebugChatOptions {
   appId?: number | string | null
@@ -15,6 +15,33 @@ interface UseAssistantDebugChatOptions {
 
 function normalizeIdList(ids?: Array<string | number>): Array<string | number> {
   return Array.from(new Set((ids || []).filter((id) => id !== '' && id !== null && id !== undefined)))
+}
+
+function toProtocolKey(value: unknown) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, '')
+}
+
+/**
+ * MCP 选中项按协议分流为两类源版本字段，元素形态 {源版本id: 分组namespaceId(s_<groupId>)}；
+ * 未知协议归入 sse（与未分流前行为一致）。
+ */
+function buildMcpSourceVersionFields(sources?: ExploreMcpSource[]) {
+  const sse: Array<Record<string, string>> = []
+  const streamable: Array<Record<string, string>> = []
+  const seen = new Set<string>()
+  ;(sources || []).forEach((source) => {
+    const id = String(source?.id ?? '')
+    if (!id || seen.has(id)) return
+    seen.add(id)
+    const entry = { [id]: source.namespaceId ?? '' }
+    const protocol = toProtocolKey(source.protocol)
+    if (protocol === 'streamable' || protocol === 'streamablehttp') streamable.push(entry)
+    else sse.push(entry)
+  })
+  return { sse, streamable }
 }
 
 // 与 chat 探索模式一致：从 SOY-REACT_userInfo 读取当前用户ID，缺失时为 0
@@ -75,7 +102,7 @@ export function useAssistantDebugChat({ appId, spaceId, schemaId, chatModelId, e
     setLoading(false)
   }, [])
 
-  const handleSend = useCallback(async (question: string, options?: { skillSourceVersionIds?: string[]; mcpSourceVersionIds?: string[] }) => {
+  const handleSend = useCallback(async (question: string, options?: { skillSourceVersionIds?: string[]; mcpSourceVersionIds?: ExploreMcpSource[] }) => {
     const didCreateSession = await ensureSession()
     if (!didCreateSession) {
       setLoading(false)
@@ -104,6 +131,7 @@ export function useAssistantDebugChat({ appId, spaceId, schemaId, chatModelId, e
     setLoading(true)
     abortRef.current = new AbortController()
 
+    const mcpFields = buildMcpSourceVersionFields(options?.mcpSourceVersionIds)
     const payload = {
       messages: question,  // 和 chat 一样，直接传字符串
       app_id: appId ?? 0,
@@ -119,8 +147,8 @@ export function useAssistantDebugChat({ appId, spaceId, schemaId, chatModelId, e
       chat_model_id: chatModelId || 0,
       is_debug: isDebug,
       chat_mode: 'copilot',
-      sse_mcp_source_version_ids: normalizeIdList(options?.mcpSourceVersionIds),
-      mcp_streamable_source_version_ids: [],
+      sse_mcp_source_version_ids: mcpFields.sse,
+      mcp_streamable_source_version_ids: mcpFields.streamable,
       skills_source_version_ids: normalizeIdList(options?.skillSourceVersionIds),
     }
 

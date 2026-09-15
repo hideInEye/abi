@@ -11,20 +11,19 @@
 
 import {AbstractBPNodeController, AnchorPointType, ExecuteInfoType, NodeInfoType} from "../../AbstractBPNodeController";
 import ComponentUtil from "../../../../../../utils/ComponentUtil";
-import {UpdateOptions} from "../../../../../../framework/core/AbstractController";
 import BPNode from "../../../BPNode";
 import React from "react";
 import {ConditionNodeConfig} from "./ConditionNodeConfig";
 import ObjectUtil from "../../../../../../utils/ObjectUtil";
 import BPExecutor from "../../../../core/BPExecutor";
+import {ConditionConfig, evaluateCondition, RuntimeConfigError} from "../../../../../../security/runtime-config.ts";
+import {globalMessage} from "../../../../../../framework/message/GlobalMessage.tsx";
 
 export interface ConditionConfigType extends NodeInfoType {
-    handler?: string;
+    handler?: ConditionConfig | string;
 }
 
 export default class BPConditionNodeController extends AbstractBPNodeController<ConditionConfigType> {
-
-    private handler: Function | null = null;
 
     async create(container: HTMLElement, config: ConditionConfigType): Promise<void> {
         this.config = config;
@@ -37,18 +36,14 @@ export default class BPConditionNodeController extends AbstractBPNodeController<
         //输出类型节点不执行
         if (anchorType === 1)
             return;
-        if (!this.handler) {
-            if (!this.config?.handler)
-                return;
-            try {
-                // eslint-disable-next-line
-                this.handler = eval(`(${this.config.handler})`);
-            } catch (e) {
-                console.error('解析条件函数错误，请检查你写条件判断函数');
-                return;
-            }
+        if (!this.config?.handler) return;
+        let result = false;
+        try {
+            result = evaluateCondition(params, this.config.handler);
+        } catch (error) {
+            globalMessage.messageApi?.error(error instanceof RuntimeConfigError ? error.message : '条件配置解析失败');
+            return;
         }
-        const result = this.handler!(params);
         if (result) {
             const anchorId = nodeId + ":satisfy:" + AnchorPointType.OUTPUT;
             executor.execute(anchorId, executor, params);
@@ -62,7 +57,7 @@ export default class BPConditionNodeController extends AbstractBPNodeController<
         return this.config;
     }
 
-    update(config: ConditionConfigType, upOp?: UpdateOptions | undefined): void {
+    update(config: ConditionConfigType): void {
         this.config = ObjectUtil.merge(this.config, config);
     }
 

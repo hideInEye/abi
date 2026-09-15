@@ -14,21 +14,30 @@ import {AMapController} from "./AMapController.ts";
 import {FieldChangeData, LCGUI} from "../../json-schema/LCGUI.tsx";
 import {Control} from "../../json-schema/SchemaTypes.ts";
 import {ConfigType} from "../../designer/right/ConfigContent.tsx";
+import {DEFAULT_MAP_RENDERER, parseMapRendererConfig} from "../../security/renderer-registry.ts";
+import {globalMessage} from "../../framework/message/GlobalMessage.tsx";
 
 export const AMapConfig: React.FC<ConfigType<AMapController>> = ({controller}) => {
 
     const config = controller.getConfig()?.style;
 
-    const codeRef = useRef<string>(config?.customCode || 'function(container, AMap) {\n\n\n\n\n\n\n\n}');
+    const rendererRef = useRef<string>(typeof config?.renderer === 'string'
+        ? config.renderer
+        : JSON.stringify(config?.renderer || DEFAULT_MAP_RENDERER, null, 2));
 
     const onFieldChange = (fieldChangeData: FieldChangeData) => {
         const {id, data, dataFragment} = fieldChangeData;
-        if (id === 'customCode') {
-            codeRef.current = data as string;
+        if (id === 'renderer') {
+            rendererRef.current = data as string;
             return;
         }
-        if (id === 'refreshMap')
-            controller.update({style: {customCode: codeRef.current}});
+        if (id === 'refreshMap') {
+            try {
+                controller.update({style: {renderer: parseMapRendererConfig(rendererRef.current)}});
+            } catch (error) {
+                globalMessage.messageApi?.error(error instanceof Error ? error.message : '地图渲染配置无效');
+            }
+        }
         else
             controller.update(dataFragment);
     }
@@ -65,17 +74,17 @@ export const AMapConfig: React.FC<ConfigType<AMapController>> = ({controller}) =
             },
             {
                 type: 'accordion',
-                label: '自定义地图',
+                label: '地图渲染配置',
                 children: [
                     {
                         type: 'grid',
                         children: [
                             {
-                                id: 'customCode',
+                                id: 'renderer',
                                 type: 'code-editor',
-                                value: codeRef.current,
+                                value: rendererRef.current,
                                 config: {
-                                    language: 'javascript',
+                                    language: 'json',
                                     height: 600,
                                     fullScreen: true
                                 }
@@ -100,4 +109,3 @@ export const AMapConfig: React.FC<ConfigType<AMapController>> = ({controller}) =
         <div style={{padding: 10}}><LCGUI schema={schema} onFieldChange={onFieldChange}/></div>
     )
 }
-

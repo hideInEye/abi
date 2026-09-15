@@ -1,26 +1,33 @@
+import { fixupPluginRules } from '@eslint/compat'
 import js from '@eslint/js'
+import importPlugin from 'eslint-plugin-import'
 import globals from 'globals'
+import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import sort from 'eslint-plugin-sort'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
     ignores: ['dist', 'node_modules'],
-    env: {
-      "node": true
-    },
   },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
     },
     plugins: {
+      import: fixupPluginRules(importPlugin),
+      react,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      sort,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -52,6 +59,9 @@ export default tseslint.config(
       ],
 
       'no-underscore-dangle': 'off',
+      'no-eval': 'error',
+      'no-new-func': 'error',
+      'no-implied-eval': 'error',
 
       'react/hook-use-state': [
         'error', // or "warn" to only warn instead of error

@@ -101,7 +101,11 @@ export interface StatisticalCaliber {
   dateRangeUnit: StatisticalDateRangeUnit
   dateRangeValue: number
   endTime?: string
+  isCrossDim?: boolean
   startTime?: string
+  subjectDimensionIds?: string[]
+  subjectDimensionNameMap?: Record<string, string>
+  /** 兼容已保存的单主体维度表单数据，新提交统一使用 subjectDimensionIds。 */
   subjectDimensionId?: string
   subjectDimensionName?: string
   timeRangeType: 'allDay' | 'specified'

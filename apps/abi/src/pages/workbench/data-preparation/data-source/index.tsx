@@ -49,6 +49,7 @@ import oracleIcon from '@/assets/imgs/home/deOracle.svg';
 import postgresqlIcon from '@/assets/imgs/home/dePostgreSQL.svg';
 import starrocksIcon from '@/assets/imgs/home/deStarrocks.svg';
 import kingbaseIcon from '@/assets/imgs/home/kingbase.svg';
+import { buildDataSourceEditRecord } from './dataSourceEdit';
 
 const DB_TYPE_ICONS: Record<string, string> = {
   ck: clickhouseIcon,
@@ -116,31 +117,10 @@ export function Component() {
   }, []);
 
   const handleListEdit = (record: any) => {
-    if (record.excelDatasourceFlag) {
-      const config = JSON.parse(record.configuration);
-      if (config?.excelConfig) {
-        let excelConfig = JSON.parse(config?.excelConfig);
-        excelConfig = {
-          ...excelConfig[0],
-          sourceType: "Excel",
-          sourceName: record.sourceName,
-          sourceFile: excelConfig,
-          excelDatasourceFlag: true,
-          sourceId:record.sourceId
-        };
-        edit(excelConfig);
-      }
-      return;
-    } else {
-      const config = JSON.parse(record.configuration);
-      const formatRecord = {
-        ...record,
-        ...config,
-        sheets: config,
-        sourceFile: [{ name: config?.[0]?.fileName }],
-        tableName: config?.[0]?.deTableName,
-      };
-      edit(formatRecord);
+    try {
+      edit(buildDataSourceEditRecord(record));
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '数据源配置格式错误，无法编辑');
     }
   };
 
@@ -156,7 +136,7 @@ export function Component() {
       apiFn: fetchDataSourceList as any,
       apiParams: useMemo(() => ({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 12,
         spaceId,
       }), [spaceId]),
       columns: () =>
@@ -406,7 +386,7 @@ export function Component() {
 
   const pagination = tableProps.pagination as any;
   const currentPage = searchParams.current?.pageNum || searchParams.current?.page || 1;
-  const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 10;
+  const pageSizeVal = searchParams.current?.pageSize || searchParams.current?.page_size || 12;
   // 前端按创建时间过滤 + 前端分页（useTable 返回全量数据）
   const filteredData = useMemo(() => filterByCreateTime((data as any[]) || [], dateRange), [data, dateRange]);
   const totalCount = filteredData.length;
@@ -666,10 +646,9 @@ export function Component() {
                 value={pageSizeVal}
                 onChange={handlePageSizeChange}
                 options={[
-                  { label: '10条/页', value: 10 },
-                  { label: '15条/页', value: 15 },
-                  { label: '20条/页', value: 20 },
-                  { label: '25条/页', value: 25 },
+                  { label: '12条/页', value: 12 },
+                  { label: '18条/页', value: 18 },
+                  { label: '24条/页', value: 24 },
                   { label: '30条/页', value: 30 },
                 ]}
                 className="page-size-select"

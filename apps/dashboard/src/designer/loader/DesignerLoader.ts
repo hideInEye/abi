@@ -15,6 +15,7 @@ import {componentCategorize} from "../left/compoent-lib/ComponentCategorize";
 import {DesignerMode, ProjectDataType, SaveType} from "../DesignerType.ts";
 import {globalMessage} from "../../framework/message/GlobalMessage.tsx";
 import {action, makeObservable, observable} from "mobx";
+import {runProjectLoadFlow} from './projectLoadFlow.ts';
 
 export class DesignerLoader {
 
@@ -34,8 +35,14 @@ export class DesignerLoader {
     public static definitionMap: Record<string, AbstractDefinition> = {};
     //数据转换器
     public convertMap: { [key: string]: AbstractConvert } = {};
+    private loadGeneration = 0;
 
     public setLoaded = (loaded: boolean) => this.loaded = loaded;
+
+    public cancelLoad = () => {
+        this.loadGeneration += 1;
+        this.setLoaded(false);
+    };
 
     protected getProjectData(id: string, type: SaveType): Promise<ProjectDataType | null> {
         throw new Error(`Method not implemented. ${id} - ${type}`);
@@ -49,19 +56,16 @@ export class DesignerLoader {
     /**
      * 加载设计器
      */
-    public load(id: string, type: SaveType): void {
+    public async load(id: string, type: SaveType): Promise<boolean> {
+        const generation = ++this.loadGeneration;
         //扫描组件
         this.scanComponents();
-        //请求数据
-        this.getProjectData(id, type).then((data) => {
-            if (!data) {
-                globalMessage?.messageApi?.error("无项目数据或项目不存在");
-                return;
-            }
-            //后置处理
-            this.getProjectDataAfter(id, type, data);
-            //数据加载完成
-            this.setLoaded(true);
+        return runProjectLoadFlow({
+            isCurrent: () => generation === this.loadGeneration,
+            load: () => this.getProjectData(id, type),
+            onSuccess: data => this.getProjectDataAfter(id, type, data),
+            onLoaded: this.setLoaded,
+            onError: message => globalMessage?.messageApi?.error(message),
         });
     }
 
