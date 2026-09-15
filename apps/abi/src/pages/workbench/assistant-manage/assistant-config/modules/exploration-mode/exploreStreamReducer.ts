@@ -34,9 +34,11 @@ function mapStepStatus(status?: string): ExploreStep['status'] {
 }
 
 /** plan.update 按 todo_id 做 keyed diff：顺序以首次到达的 plan.update 为准，
- *  已知 id 保持首次出现顺序、仅更新字段，新 id 按到达顺序追加。
+ *  已知 id 保持首次出现顺序、仅更新字段。
  *  注意：todo_id 为随机哈希（如 todo-fec68b39），无数值顺序，不能按 id 值排序，
- *  否则会把后端正确的下发顺序排反；后续乱序到达的更新只改状态、不改顺序。 */
+ *  否则会把后端正确的下发顺序排反；后续乱序到达的更新只改状态、不改顺序。
+ *  新 id 按其在快照中的相邻锚点原位插入（重新规划替换出的新任务会落在被替换任务的位置），
+ *  找不到锚点时追加末尾。 */
 export function mergeExploreTasks(prev: ExploreTask[], incoming: ExploreTask[]): ExploreTask[] {
   const incomingById = new Map<string, ExploreTask>()
   for (const task of incoming) {
@@ -45,14 +47,26 @@ export function mergeExploreTasks(prev: ExploreTask[], incoming: ExploreTask[]):
   // 后端未下发 todo_id 时无法做 keyed diff，退回整组替换，避免丢失任务
   if (incomingById.size === 0) return incoming.map((task) => ({ ...task }))
   const consumed = new Set<string>()
-  const merged: ExploreTask[] = prev.map((task) => {
+  // 1) 以 prev 顺序保留仍存在于最新快照中的待办，丢弃已被替换（新 todo_id）的旧待办，避免残留成幽灵任务
+  const merged: ExploreTask[] = []
+  for (const task of prev) {
     const next = task.todo_id ? incomingById.get(task.todo_id) : undefined
-    if (!next) return task
+    if (!next) continue
     consumed.add(next.todo_id as string)
-    return { ...next }
-  })
+    merged.push({ ...next })
+  }
+  // 2) 新增的 todo_id 依据其在快照中的相邻锚点原位插入，保持后端下发的位置；无锚点则插到队首/末尾
+  let anchorId: string | undefined
   for (const task of incoming) {
-    if (task.todo_id && !consumed.has(task.todo_id)) merged.push({ ...task })
+    if (!task.todo_id) continue
+    if (consumed.has(task.todo_id)) {
+      anchorId = task.todo_id
+      continue
+    }
+    const insertAt = anchorId ? merged.findIndex((item) => item.todo_id === anchorId) + 1 : 0
+    merged.splice(insertAt, 0, { ...task })
+    consumed.add(task.todo_id)
+    anchorId = task.todo_id
   }
   return merged
 }

@@ -1,4 +1,4 @@
-import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DesktopOutlined, DownOutlined, InboxOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, RightOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
+import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DesktopOutlined, DownOutlined, InboxOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, RightOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
 import { Alert, Tag } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 
@@ -28,6 +28,30 @@ function getTodoStatusMeta(status: string) {
     default:
       return { icon: <ClockCircleOutlined />, cls: styles.todoStatusPending }
   }
+}
+
+/** 待办状态中文文案：用于报告式待办详情行的状态标签。 */
+function getTodoStatusText(status: string): string {
+  switch (status) {
+    case 'completed':
+    case 'done':
+      return '已完成'
+    case 'in_progress':
+      return '执行中'
+    case 'failed':
+      return '失败'
+    case 'cancelled':
+      return '已取消'
+    default:
+      return '等待执行'
+  }
+}
+
+/** 待办详情行的执行步骤描述：有步骤展示数量，终态无步骤提示无详情，否则等待。 */
+function getExecutionDetail(status: string, stepCount: number): string {
+  if (stepCount > 0) return `${stepCount} 个执行步骤`
+  if (['completed', 'done', 'cancelled', 'failed'].includes(status)) return '无执行详情'
+  return '等待执行记录'
 }
 
 function getCardStatusTag(status: ExploreItem['status']) {
@@ -144,53 +168,41 @@ function handleToggleKeyDown(event: React.KeyboardEvent, toggle: () => void) {
 }
 
 interface ExploreStepBlockProps {
-  readonly expanded: boolean
   readonly index: number
-  readonly onToggle: (stepId: string, expanded: boolean) => void
   readonly step: ExploreStep
 }
 
-/** 单个步骤行 + 其下折叠的执行信息（过程文本 / 文件 / 调用入参）。 */
-const ExploreStepBlock: React.FC<ExploreStepBlockProps> = ({ step, index, expanded, onToggle }) => {
+/** 单个执行步骤：技能执行信息直接展开展示、不支持折叠（左侧蓝色引导线，对齐报告模式执行步骤）。 */
+const ExploreStepBlock: React.FC<ExploreStepBlockProps> = ({ step, index }) => {
   const stepRunning = step.status === 'running'
   const meta = getStepStatusMeta(step.status)
   const processOutputs = step.outputs.filter(isProcessOutput)
   const actionInput = normalizeActionInput(step.actionInput)
   const hasMeta = Boolean(step.actionIntention) || Boolean(step.actionReason)
   const hasContent = processOutputs.length > 0 || Boolean(actionInput) || hasMeta
-  const toggle = () => onToggle(step.id, expanded)
   return (
     <div data-step-id={step.id} className={styles.stepBlock}>
-      <div
-        className={`${styles.stepRow} ${stepRunning ? styles.stepRowRunning : ''}`}
-        role="button"
-        tabIndex={0}
-        onClick={toggle}
-        onKeyDown={(event) => handleToggleKeyDown(event, toggle)}
-      >
+      <div className={styles.stepHeader}>
         <span className={`${styles.todoStatus} ${meta.cls}`}>{meta.icon}</span>
         <span className={styles.stepName}>{step.title || step.action || `步骤 ${step.step ?? index + 1}`}</span>
-        <span className={styles.stepToggleIcon}>{expanded ? <DownOutlined /> : <RightOutlined />}</span>
       </div>
-      {expanded && (
+      {hasContent ? (
         <div className={styles.stepBody}>
-          {hasContent ? (
-            <div className={styles.processInfo}>
-              {hasMeta && (
-                <div className={styles.processMeta}>
-                  {step.actionIntention && <div><b>当前动作：</b>{step.actionIntention}</div>}
-                  {step.actionReason && <div><b>执行原因：</b>{step.actionReason}</div>}
-                </div>
-              )}
-              {processOutputs.map((output, outputIndex) => renderProcessOutput(output, outputIndex))}
-              {actionInput && <pre className={styles.processCode}>{actionInput}</pre>}
-            </div>
-          ) : (
-            <div className={styles.stepEmpty}>
-              {stepRunning ? <LoadingOutlined /> : <InboxOutlined />}
-              {stepRunning ? '当前步骤正在执行，执行信息会实时出现在这里…' : '当前步骤暂无执行信息'}
-            </div>
-          )}
+          <div className={styles.processInfo}>
+            {hasMeta && (
+              <div className={styles.processMeta}>
+                {step.actionIntention && <div><b>当前动作：</b>{step.actionIntention}</div>}
+                {step.actionReason && <div><b>执行原因：</b>{step.actionReason}</div>}
+              </div>
+            )}
+            {processOutputs.map((output, outputIndex) => renderProcessOutput(output, outputIndex))}
+            {actionInput && <pre className={styles.processCode}>{actionInput}</pre>}
+          </div>
+        </div>
+      ) : (
+        <div className={styles.stepEmpty}>
+          {stepRunning ? <LoadingOutlined /> : <InboxOutlined />}
+          {stepRunning ? '当前步骤正在执行，执行信息会实时出现在这里…' : '当前步骤暂无执行信息'}
         </div>
       )}
     </div>
@@ -232,10 +244,12 @@ function getTodoRowView({ task, steps, activeTodoId, selectedTodoId, selectionAc
   const isSelected = selectionActive && task.todo_id === selectedTodoId
   const expandable = steps.length > 0
   const todoId = task.todo_id || ''
-  // 展开态：手动覆盖 > 历史选中 / 有待办步骤正在执行时自动展开
+  // 展开态：手动覆盖 > 历史选中 / 待办正在执行时自动展开。
+  // 自动开合以“任务级”为粒度：任务 in_progress 期间持续展开（不因步骤间隙无 running 步骤而闪烁/折叠），
+  // 转终态后自动收起；steps.some(running) 作为兼容兵底（步骤先于 plan.update 到达时仍能展开）。
   const expanded = Boolean(todoId) && resolveExpanded(
     todoId ? todoExpandedOverride[todoId] : undefined,
-    isSelected || steps.some((step) => step.status === 'running'),
+    isSelected || task.status === 'in_progress' || steps.some((step) => step.status === 'running'),
   )
   return { isActive, isSelected, expandable, expanded, meta: getTodoStatusMeta(task.status) }
 }
@@ -243,19 +257,17 @@ function getTodoRowView({ task, steps, activeTodoId, selectedTodoId, selectionAc
 interface ExploreTodoBlockProps {
   readonly activeTodoId?: string
   readonly index: number
-  readonly onStepToggle: (stepId: string, expanded: boolean) => void
   readonly onTodoClick: (todoId?: string) => void
   readonly selectedTodoId: string | null
   readonly selectionActive: boolean
-  readonly stepExpandedMap: Record<string, boolean>
   readonly steps: ExploreStep[]
   readonly task: ExploreTask
   readonly todoExpandedOverride: Record<string, boolean>
 }
 
-/** 单条待办行 + 内嵌其下的执行步骤列表；点击待办行展开/收起步骤（运行中的待办自动展开、运行完自动折叠）。 */
+/** 单条待办卡片 + 内嵌其下的执行步骤列表；点击卡片头部展开/收起步骤（运行中的待办自动展开、运行完自动折叠）。 */
 const ExploreTodoBlock: React.FC<ExploreTodoBlockProps> = ({
-  task, index, steps, activeTodoId, selectedTodoId, selectionActive, todoExpandedOverride, stepExpandedMap, onTodoClick, onStepToggle,
+  task, index, steps, activeTodoId, selectedTodoId, selectionActive, todoExpandedOverride, onTodoClick,
 }) => {
   const { meta, isActive, isSelected, expandable, expanded } = getTodoRowView({ task, steps, activeTodoId, selectedTodoId, selectionActive, todoExpandedOverride })
   const toggle = () => onTodoClick(task.todo_id)
@@ -269,19 +281,19 @@ const ExploreTodoBlock: React.FC<ExploreTodoBlockProps> = ({
         onKeyDown={expandable ? (event) => handleToggleKeyDown(event, toggle) : undefined}
       >
         <span className={`${styles.todoStatus} ${meta.cls}`}>{meta.icon}</span>
-        <span className={`${styles.todoText} ${isActive || isSelected ? styles.todoTextActive : ''}`}>{task.content || `任务 ${index + 1}`}</span>
+        <div className={styles.todoContent}>
+          <div className={`${styles.todoText} ${isActive || isSelected ? styles.todoTextActive : ''}`}>{task.content || `任务 ${index + 1}`}</div>
+          <div className={styles.todoDetail}>
+            <span className={`${styles.todoStateTag} ${meta.cls}`}>{getTodoStatusText(task.status)}</span>
+            <span>{getExecutionDetail(task.status, steps.length)}</span>
+          </div>
+        </div>
         {expandable && <span className={styles.todoToggleIcon}>{expanded ? <DownOutlined /> : <RightOutlined />}</span>}
       </div>
       {expanded && (
         <div className={styles.todoSteps}>
           {steps.map((step, stepIndex) => (
-            <ExploreStepBlock
-              key={step.id}
-              step={step}
-              index={stepIndex}
-              expanded={stepExpandedMap[step.id] ?? true}
-              onToggle={onStepToggle}
-            />
+            <ExploreStepBlock key={step.id} step={step} index={stepIndex} />
           ))}
         </div>
       )}
@@ -293,16 +305,14 @@ const ExploreTodoBlock: React.FC<ExploreTodoBlockProps> = ({
 const ORPHAN_STEPS_LABEL = '其他执行步骤'
 
 interface ExploreOrphanStepsProps {
-  readonly expandedMap: Record<string, boolean>
-  readonly onStepToggle: (stepId: string, expanded: boolean) => void
+  readonly expanded: boolean
   readonly onToggleGroup: () => void
   readonly steps: ExploreStep[]
 }
 
 /** 孤儿步骤分组：未关联待办的步骤兜底展示在待办列表末尾，运行中自动展开、运行完自动折叠。 */
-const ExploreOrphanSteps: React.FC<ExploreOrphanStepsProps> = ({ steps, expandedMap, onToggleGroup, onStepToggle }) => {
+const ExploreOrphanSteps: React.FC<ExploreOrphanStepsProps> = ({ steps, expanded, onToggleGroup }) => {
   if (steps.length === 0) return null
-  const expanded = resolveExpanded(expandedMap[ORPHAN_STEPS_LABEL], steps.some((step) => step.status === 'running'))
   const toggle = () => onToggleGroup()
   return (
     <div className={styles.todoBlock}>
@@ -314,19 +324,18 @@ const ExploreOrphanSteps: React.FC<ExploreOrphanStepsProps> = ({ steps, expanded
         onKeyDown={(event) => handleToggleKeyDown(event, toggle)}
       >
         <span className={`${styles.todoStatus} ${styles.todoStatusPending}`}><ToolOutlined /></span>
-        <span className={styles.todoText}>{ORPHAN_STEPS_LABEL}</span>
+        <div className={styles.todoContent}>
+          <div className={styles.todoText}>{ORPHAN_STEPS_LABEL}</div>
+          <div className={styles.todoDetail}>
+            <span>{getExecutionDetail('completed', steps.length)}</span>
+          </div>
+        </div>
         <span className={styles.todoToggleIcon}>{expanded ? <DownOutlined /> : <RightOutlined />}</span>
       </div>
       {expanded && (
         <div className={styles.todoSteps}>
           {steps.map((step, stepIndex) => (
-            <ExploreStepBlock
-              key={step.id}
-              step={step}
-              index={stepIndex}
-              expanded={expandedMap[step.id] ?? true}
-              onToggle={onStepToggle}
-            />
+            <ExploreStepBlock key={step.id} step={step} index={stepIndex} />
           ))}
         </div>
       )}
@@ -336,11 +345,10 @@ const ExploreOrphanSteps: React.FC<ExploreOrphanStepsProps> = ({ steps, expanded
 
 interface ExploreTodoPanelProps {
   readonly activeTodoId?: string
-  readonly onStepToggle: (stepId: string, expanded: boolean) => void
+  readonly onGroupToggle: (key: string, autoExpanded: boolean) => void
   readonly onTodoClick: (todoId?: string) => void
   readonly selectedTodoId: string | null
   readonly selectionActive: boolean
-  readonly stepExpandedMap: Record<string, boolean>
   readonly steps: ExploreStep[]
   readonly tasks: ExploreTask[]
   readonly todoExpandedOverride: Record<string, boolean>
@@ -348,12 +356,13 @@ interface ExploreTodoPanelProps {
 
 /** 待办事项面板：每条待办下内嵌其执行步骤，未关联待办的孤儿步骤兜底展示在列表末尾。 */
 const ExploreTodoPanel: React.FC<ExploreTodoPanelProps> = ({
-  tasks, steps, activeTodoId, selectedTodoId, selectionActive, todoExpandedOverride, stepExpandedMap, onTodoClick, onStepToggle,
+  tasks, steps, activeTodoId, selectedTodoId, selectionActive, todoExpandedOverride, onTodoClick, onGroupToggle,
 }) => {
   const completedCount = tasks.filter((task) => task.status === 'completed' || task.status === 'done').length
   const taskIds = new Set(tasks.map((task) => task.todo_id).filter(Boolean))
   const orphanSteps = steps.filter((step) => !step.todoId || !taskIds.has(step.todoId))
   if (tasks.length === 0 && orphanSteps.length === 0) return null
+  const orphanExpanded = resolveExpanded(todoExpandedOverride[ORPHAN_STEPS_LABEL], orphanSteps.some((step) => step.status === 'running'))
   return (
     <section className={styles.panel}>
       <div className={`${styles.panelTitle} ${styles.panelTitleTodo}`}>
@@ -371,16 +380,13 @@ const ExploreTodoPanel: React.FC<ExploreTodoPanelProps> = ({
             selectedTodoId={selectedTodoId}
             selectionActive={selectionActive}
             todoExpandedOverride={todoExpandedOverride}
-            stepExpandedMap={stepExpandedMap}
             onTodoClick={onTodoClick}
-            onStepToggle={onStepToggle}
           />
         ))}
         <ExploreOrphanSteps
           steps={orphanSteps}
-          expandedMap={stepExpandedMap}
-          onToggleGroup={() => onStepToggle(ORPHAN_STEPS_LABEL, resolveExpanded(stepExpandedMap[ORPHAN_STEPS_LABEL], orphanSteps.some((step) => step.status === 'running')))}
-          onStepToggle={onStepToggle}
+          expanded={orphanExpanded}
+          onToggleGroup={() => onGroupToggle(ORPHAN_STEPS_LABEL, orphanSteps.some((step) => step.status === 'running'))}
         />
       </div>
     </section>
@@ -399,9 +405,7 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
   const thinkingScrollRef = useRef<HTMLDivElement>(null)
   // 待办区引用：运行中或历史探索选中待办后滚动到对应步骤行
   const todoColumnRef = useRef<HTMLDivElement>(null)
-  // 步骤折叠手动覆盖态：步骤执行信息默认展开，仅手动点击切换；自动展开/收起由待办级控制
-  const [stepExpandedOverride, setStepExpandedOverride] = useState<Record<string, boolean>>({})
-  // 待办折叠手动覆盖态：运行中的待办自动展开，执行完自动收起（清除覆盖态），手动点击可临时覆盖
+  // 待办折叠手动覆盖态：运行中的待办自动展开，执行完自动收起（清除覆盖态），手动点击可临时覆盖；孤儿步骤分组也复用此态
   const [todoExpandedOverride, setTodoExpandedOverride] = useState<Record<string, boolean>>({})
   // 待办从 in_progress 变为终态时清除其手动覆盖态，保证“执行完自动收起”（历史模式手动展开不受影响）
   const prevTaskStatusRef = useRef<Record<string, string>>({})
@@ -455,7 +459,8 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
     if (el) el.scrollTop = el.scrollHeight
   }, [thinking.thought, running])
   const activeTodoId = getFocusedStep(item)?.todoId
-  const toggleStepExpanded = (stepId: string, expanded: boolean) => setStepExpandedOverride((prev) => ({ ...prev, [stepId]: !expanded }))
+  // 孤儿步骤分组展开切换：手动覆盖自动态（运行中自动展开）
+  const handleGroupToggle = (key: string, autoExpanded: boolean) => setTodoExpandedOverride((prev) => ({ ...prev, [key]: !resolveExpanded(prev[key], autoExpanded) }))
 
   return (
     <article className={styles.messageRow}>
@@ -477,9 +482,6 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
               onClick={onOpen}
             >
               <DesktopOutlined /> 工作室
-            </button>
-            <button type="button" className={styles.studioIcon} onClick={onOpen} aria-label="打开工作室">
-              <ShrinkOutlined />
             </button>
           </div>
         </div>
@@ -528,9 +530,8 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
               selectedTodoId={selectedTodoId}
               selectionActive={selectionActive}
               todoExpandedOverride={todoExpandedOverride}
-              stepExpandedMap={stepExpandedOverride}
               onTodoClick={handleTodoClick}
-              onStepToggle={toggleStepExpanded}
+              onGroupToggle={handleGroupToggle}
             />
 
             {/* 左栏底部提示语：任务运行中提醒用户留在当前页面 */}

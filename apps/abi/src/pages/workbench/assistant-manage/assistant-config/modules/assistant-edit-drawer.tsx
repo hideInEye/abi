@@ -76,7 +76,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   const [status, setStatus] = useState<'0' | '1' | '2'>(agent?.status || '0')
   // 调试模式 enable_debug: '0'禁用 '1'启用
   const [enableDebug, setEnableDebug] = useState(false)
-  // 公开访问 public_access: '0'关闭(私密) '1'开启(空间可见)
+  // 公开访问 public_access: '0'关闭(私有) '1'开启(空间)
   const [publicAccess, setPublicAccess] = useState<'0' | '1'>('1')
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
@@ -928,7 +928,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 </div>
                 <span style={{ color: '#1a2744', fontSize: 15, fontWeight: 500, letterSpacing: '0.03em' }}>访问权限</span>
               </div>
-              <Switch checked={publicAccess === '1'} onChange={(checked) => setPublicAccess(checked ? '1' : '0')} checkedChildren="空间可见" unCheckedChildren="仅自己可见" disabled={readOnly} />
+              <Switch checked={publicAccess === '1'} onChange={(checked) => setPublicAccess(checked ? '1' : '0')} checkedChildren="空间" unCheckedChildren="私有" disabled={readOnly} />
             </div>
           </div>
 
@@ -1068,6 +1068,9 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
               backdropFilter: 'blur(8px)',
               display: 'flex',
               flexDirection: 'column',
+              // 网格子项默认最小高度为内容高：不置 0 并裁切时内容会把三栏主体撑出页面，内部滚动容器失效
+              minHeight: 0,
+              overflow: 'hidden',
             }}
           >
             <SectionHeader icon={headerIcon} title="调试预览" />

@@ -2064,3 +2064,121 @@ px tsc --noEmit --skipLibCheck �ԱȻ�������������
 - `pnpm exec vitest run exploreStreamReducer historyAdapter`
 - `pnpm --filter chatbi typecheck`、改动文件 eslint 对比基线。
 - 手工：助手调试运行探索问题，观察步骤自动展开/折叠与手动切换；chat 对话查看探索卡片文案。
+
+## 2026-09-15 追加：助手分享悬浮窗探索模式执行过程滚动条锁定底部修复
+
+### 需求类型
+
+前端缺陷修复（纯前端，不改接口协议）。
+
+### 背景
+
+助手分享悬浮窗（ChatWidget）消息区的自动滚底 effect 在探索/报告流式更新时无条件执行 `scrollTop = scrollHeight`；探索模式执行过程 SSE 事件密集触发 items 更新，用户手动上滑查看执行步骤后立即被拽回底部，表现为“滚动条滑不上去、一直锁定在底部”。主对话（useConversationController）已有 userScrolled 守卫，分享悬浮窗缺失。
+
+### 目标
+
+1. 分享悬浮窗消息区：用户手动上滑超过阈值后，流式更新不再强制滚底，可自由回看执行过程。
+2. 用户滚回底部附近（距底 ≤50px）恢复自动跟随；新提问发送后重置为跟随。
+3. 交互/探索/报告三模式统一生效；未上滑时保持既有自动滚底行为。
+
+### 非目标
+
+- 不改主对话（conversation）既有滚动守卫逻辑。
+- 不改探索流式协议、reducer 与接口调用。
+- 不改助手调试预览侧（assistant-edit-drawer / AssistantDetailDrawer）的滚动行为。
+
+### 影响范围
+
+- `apps/chat/src/components/chat-widget/ChatWidget.tsx`（滚动守卫接入、发送重置、body onScroll）
+- `apps/chat/src/components/chat-widget/scrollFollow.ts`（新增纯函数守卫，阈值对齐主对话）
+- `apps/chat/src/components/chat-widget/scrollFollow.test.ts`（新增回归测试）
+- run log：`.ai/runs/2026-09-15-share-widget-scroll-follow/`
+
+### 验收标准
+
+1. 分享页/嵌入悬浮窗运行探索任务时，手动上滑后滚动条保持在用户位置，不再被拽回底部。
+2. 滚回底部附近后恢复自动跟随；发送新提问后无条件滚底跟随。
+3. 未手动上滑时，流式更新仍自动滚底（既有行为不变）。
+4. `pnpm exec vitest run src/components/chat-widget` 通过；apps/chat `tsc --noEmit` 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm exec vitest run src/components/chat-widget`
+- apps/chat 下 `npx tsc --noEmit -p tsconfig.app.json` 对比基线。
+- 手工：分享页运行探索问题，执行过程中上滑查看步骤不再被拽回；滚回底部恢复跟随。
+
+## 2026-09-15 追加二：分享悬浮窗滚动守卫两处调整（首次上滑生效 + 内部跟随滚动 containment）
+
+### 需求类型
+
+前端缺陷修复的后续调整（纯前端，无接口变化），延续同日「滚动条锁定底部」修复。
+
+### 背景
+
+- 初版修复后手工复核发现两个残留问题：① 上滑暂停阈值沿用主对话 100px，滚轮单档约 100px 不超阈值，首次上滑被下一次流式事件拽回，需滑两次才生效；② ExploreMessageRow 步骤跟随用 scrollIntoView，会连带滚动祖先容器，执行中把外层消息区滚动条拽回底部，绕过滚动守卫。
+
+### 目标
+
+1. 上滑暂停阈值降为「离开底部区（距底 >50px）」，单档滚轮上滑立即暂停自动滚底。
+2. 步骤跟随滚动只在步骤列表容器（.skillList，本身独立滚动容器）内生效，不影响外层消息区滚动条；保持 block:'nearest' 等价行为。
+
+### 非目标
+
+- 不改主对话 useConversationController 的守卫阈值与逻辑。
+- 不改探索流式协议、reducer 与接口调用。
+
+### 影响范围
+
+- `apps/chat/src/components/chat-widget/scrollFollow.ts`、`scrollFollow.test.ts`（阈值调整与用例更新）
+- `apps/chat/src/components/conversation/exploration-mode/ExploreMessageRow.tsx`（scrollStepIntoListView 容器内滚动，运行跟随与历史选中两处）
+- run log：`.ai/runs/2026-09-15-share-widget-scroll-follow/`
+
+### 验收标准
+
+1. 分享悬浮窗探索执行中，单档滚轮上滑后滚动条即保持在用户位置。
+2. 步骤切换时仅卡片内步骤列表跟随滚动，外层消息区滚动条不再自行移动。
+3. 滚回距底 ≤50px 恢复跟随；发送新提问重置跟随。
+4. chat-widget 单测通过；tsc 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm exec vitest run src/components/chat-widget`
+- apps/chat 下 `npx tsc --noEmit -p tsconfig.app.json` 对比基线。
+- 手工：分享页运行探索问题，单档滚轮上滑立即生效；步骤切换不拽外层滚动条。
+
+## 2026-09-15 追加三：滚动守卫阈值与恢复方向修正（上滑一点即生效、防内容折叠误恢复）
+
+### 需求类型
+
+前端缺陷修复的后续调整（纯前端，无接口变化），延续同日「滚动条锁定底部」修复。
+
+### 背景
+
+- 复核反馈：暂停阈值 50px 仍偏大，小幅度上滑不生效、需反复滑动；且内容折叠（待办执行完自动收起、思考区自动折叠）使 scrollHeight 缩水时浏览器被动钳制 scrollTop，旧恢复条件（距底 ≤50 不限方向）会误恢复跟随，下一次流式更新又把视图拽回底部。
+
+### 目标
+
+1. 暂停阈值降为贴底区（距底 >16px）：主动上滑即使幅度很小也立即暂停自动滚底。
+2. 恢复仅限「主动下滚进入贴底区（距底 ≤16px）」；内容折叠导致的 scrollTop 被动钳制不恢复跟随。
+
+### 非目标
+
+- 不改主对话 useConversationController 守卫与 ExploreMessageRow 容器内滚动（containment）改动。
+
+### 影响范围
+
+- `apps/chat/src/components/chat-widget/scrollFollow.ts`、`scrollFollow.test.ts`（9 用例）
+- run log：`.ai/runs/2026-09-15-share-widget-scroll-follow/`
+
+### 验收标准
+
+1. 探索执行中轻微上滑立即暂停自动滚底，无需反复滑动。
+2. 待办/思考自动折叠使内容缩水时，已暂停的视图不再被拽回底部。
+3. 主动滚回底部恢复跟随；发送新提问重置跟随。
+4. chat-widget 单测通过；tsc 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm exec vitest run src/components/chat-widget`
+- apps/chat 下 `npx tsc --noEmit -p tsconfig.app.json` 对比基线。
+- 手工：分享页运行探索问题，小幅度上滑立即生效；折叠发生时不回拽。

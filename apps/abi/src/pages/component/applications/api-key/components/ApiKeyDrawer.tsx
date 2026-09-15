@@ -306,7 +306,7 @@ export function ApiKeyDrawer({ defaultSpaceId, mode, onClose, onSubmit, open, op
         description={isView ? '查看 API Key 详细配置信息' : '创建新的客户端访问授权凭证'}
         icon={isView ? <EyeOutlined /> : <KeyOutlined />}
         title={drawerTitleMap[mode]}
-        width={980}
+        width={isView ? 490 : 980}
         footer={
           <div style={{ alignItems: 'center', display: 'flex', gap: 12, justifyContent: 'flex-end', padding: '4px 0' }}>
             {isView ? (

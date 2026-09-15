@@ -75,7 +75,7 @@
   gap: 8px;
 }
 
-/* 工作室入口：卡片顶部蓝色芯片 + 方形图标按钮 */
+/* 工作室入口：卡片顶部蓝色芯片 */
 .studioChip {
   display: inline-flex;
   align-items: center;
@@ -98,25 +98,6 @@
 .studioChipActive {
   border-color: rgba(91, 124, 247, 0.5);
   background: rgba(91, 124, 247, 0.2);
-}
-
-.studioIcon {
-  display: inline-flex;
-  width: 26px;
-  height: 26px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(130, 140, 200, 0.24);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.65);
-  color: var(--ink-2, #333c4f);
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.studioIcon:hover {
-  border-color: rgba(91, 124, 247, 0.4);
-  color: var(--accent, #5b7cf7);
 }
 
 /* ── 卡片内工作区：单列堆叠思考 / 待办事项（内嵌执行步骤） ── */
@@ -230,9 +211,9 @@
   padding-left: 12px;
 }
 
-/* 思考区展开时限高约 4 行（13px × 1.8 行高），内部滚动，避免长思考撑开卡片 */
+/* 思考区展开时固定默认高度约 4 行（13px × 1.8 行高），内部滚动，避免流式输出时高度来回跳动 */
 .thinkingScroll {
-  max-height: 96px;
+  height: 96px;
   overflow-y: auto;
 }
 
@@ -267,40 +248,50 @@
   line-height: 1.7;
 }
 
-/* 待办事项：无边框无背景，宽松行距；每条待办下可内嵌展开执行步骤 */
+/* 待办事项：报告模式同款卡片列表；每条待办下可内嵌展开执行步骤 */
 .todoList {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
 }
 
+/* 待办卡片：描边 + 圆角 + 浅底 + 裁切，对齐报告模式待办卡片 */
 .todoBlock {
   display: flex;
   flex-direction: column;
+  border: 1px solid rgba(130, 140, 200, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.58);
+  overflow: hidden;
 }
 
 /* 待办行尾折叠箭头：仅有关联步骤时展示 */
 .todoToggleIcon {
   flex-shrink: 0;
-  align-self: center;
+  margin-top: 4px;
   color: var(--ink-3, #9aa3b5);
-  font-size: 10px;
+  font-size: 11px;
 }
 
-/* 待办下内嵌的步骤列表：缩进对齐待办文本 */
+/* 待办展开的执行步骤区：顶部分隔线 + 浅蓝底 + 左缩进对齐状态图标（对齐报告模式执行列表）；限高内部滚动 */
 .todoSteps {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 4px 0 8px 28px;
+  gap: 8px;
+  border-top: 1px solid rgba(130, 140, 200, 0.1);
+  background: rgba(245, 247, 255, 0.52);
+  padding: 10px 12px 12px 40px;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
+/* 待办卡片头部：点击展开/收起其执行步骤 */
 .todoRow {
   display: flex;
+  width: 100%;
   align-items: flex-start;
   gap: 10px;
-  padding: 6px 0;
-  border-radius: 6px;
+  padding: 10px 12px;
   transition: background 0.2s ease;
 }
 
@@ -356,88 +347,84 @@
   color: var(--ink-3, #9ca3af);
 }
 
-.todoText {
+.todoContent {
+  min-width: 0;
   flex: 1;
+}
+
+.todoText {
   min-width: 0;
   color: var(--ink-3, #8a97ad);
   font-size: 13px;
-  font-style: italic;
-  /* 防止全局 font-synthesis: none 导致中文不合成斜体，局部放开 */
-  font-synthesis: style;
-  font-weight: 500;
-  line-height: 1.6;
+  font-weight: 650;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
 .todoTextActive {
   color: var(--ink-2, #333c4f);
-  font-weight: 600;
 }
 
-/* 步骤块：待办内嵌的执行步骤，执行信息折叠在步骤行下方 */
-.stepBlock {
-  border: 1px solid rgba(130, 140, 200, 0.14);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.5);
-  overflow: hidden;
-}
-
-/* 步骤行：点击折叠/展开该步执行信息 */
-.stepRow {
+/* 待办详情行：状态标签 + 执行步骤数量，对齐报告模式 */
+.todoDetail {
   display: flex;
-  width: 100%;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-  color: var(--ink-3, #9aa3b5);
-  font-size: 12.5px;
+  gap: 7px;
+  margin-top: 3px;
+  color: var(--ink-3, #8a97ad);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.todoStateTag {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 7px 10px;
-  transition: background 0.2s ease;
+  line-height: 1;
+  padding: 4px 8px;
 }
 
-.stepRow:hover {
-  background: rgba(91, 124, 247, 0.07);
+/* 执行步骤：左侧蓝色引导线，技能执行信息直接展开、不支持折叠（对齐报告模式执行步骤） */
+.stepBlock {
+  min-width: 0;
+  border-left: 2px solid rgba(91, 124, 247, 0.24);
+  padding: 2px 0 2px 10px;
 }
 
-.stepRowRunning {
-  background: rgba(91, 124, 247, 0.08);
-  color: var(--ink, #1f2937);
+.stepHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .stepName {
-  flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--ink-2, #333c4f);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
-.stepToggleIcon {
-  flex-shrink: 0;
-  color: var(--ink-3, #9aa3b5);
-  font-size: 10px;
-}
-
-/* 步骤执行信息：限高内部滚动，避免长输出撑开卡片 */
+/* 步骤执行信息：过程文本 / 文件 / 调用入参，缩进对齐步骤名并限高内部滚动 */
 .stepBody {
-  max-height: 320px;
+  margin: 6px 0 0 26px;
+  max-height: 280px;
   overflow: auto;
-  border-top: 1px dashed rgba(130, 140, 200, 0.18);
-  padding: 10px 12px;
 }
 
 .stepEmpty {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
+  margin: 4px 0 0 26px;
   color: var(--ink-3, #9aa3b5);
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.7;
-  padding: 10px 12px;
-  text-align: center;
 }
 
 .inlineAlert {
@@ -458,6 +445,7 @@
   width: 100%;
   min-width: 420px;
   min-height: 0;
+  height: 100%;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -536,7 +524,6 @@
 
 .paneBody {
   min-height: 0;
-  max-height: calc(100vh - 280px); /* 限制右侧消息区域高度，避免撑破页面 */
   flex: 1;
   overflow: auto;
   padding: 18px;

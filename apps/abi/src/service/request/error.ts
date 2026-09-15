@@ -60,7 +60,6 @@ export function handleError(
   // }
 
   let message = error.message;
-  let backendErrorCode = '';
 
   // Network errors (no response) - backend unreachable, cert error, CORS, etc.
   // In this case, show an error and force logout so user returns to login page
@@ -76,8 +75,10 @@ export function handleError(
   if (error.code === BACKEND_ERROR_CODE) {
     // 部分旧接口（如 chat-proxy 的 llmeval）用 err_msg 字段返回错误信息，作为 msg 的兜底，保证只弹出一条真实报错
     message = error.response?.data?.msg || (error.response?.data as any)?.err_msg || message;
-    backendErrorCode = String(error.response?.data?.code || '');
   }
+
+  // 业务码独立于 error.code 提取：后端可能以非 2xx（如 500）+ 响应体业务码 401 返回鉴权失效
+  const backendErrorCode = String(error.response?.data?.code || '');
 
   if ((error.response?.status === 401 || backendErrorCode === '401') && shouldHandleLoginExpiredForRequest(error.config?.url)) {
     handleLoginExpired();
