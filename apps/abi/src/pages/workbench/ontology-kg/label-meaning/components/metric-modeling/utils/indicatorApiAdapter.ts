@@ -184,24 +184,47 @@ export function parseApiCalcPeriod(value: unknown, legacyValue?: unknown): Stati
   })
 }
 
-export function buildApiSubjectDimension(value: unknown): ApiSubjectDimension | undefined {
-  const caliber = normalizeStatisticalCaliber(value)
-  if (!caliber.subjectDimensionId) return undefined
-
-  return {
-    dim_id: caliber.subjectDimensionId,
-    dim_name: caliber.subjectDimensionName || caliber.subjectDimensionId
-  }
+export function buildApiCrossDimension(value: unknown): '否' | '是' {
+  return normalizeStatisticalCaliber(value).isCrossDim ? '是' : '否'
 }
 
-export function parseApiSubjectDimension(value: unknown): Partial<StatisticalCaliber> {
-  const source = asRecord(value)
-  const subjectDimensionId = String(source.dim_id || '').trim()
-  if (!subjectDimensionId) return {}
+export function parseApiCrossDimension(value: unknown, legacyValue?: unknown): boolean {
+  if (value === '是' || value === true) return true
+  if (value === '否' || value === false) return false
+  return Boolean(normalizeStatisticalCaliber(legacyValue).isCrossDim)
+}
 
-  const subjectDimensionName = String(source.dim_name || '').trim()
+export function buildApiSubjectDimensions(value: unknown): ApiSubjectDimension[] {
+  const caliber = normalizeStatisticalCaliber(value)
+  return (caliber.subjectDimensionIds || []).map(dimensionId => ({
+    dim_id: dimensionId,
+    dim_name: caliber.subjectDimensionNameMap?.[dimensionId] || dimensionId
+  }))
+}
+
+export function parseApiSubjectDimensions(value: unknown): Partial<StatisticalCaliber> {
+  const parsed = parseJson(value)
+  const sources = Array.isArray(parsed) ? parsed : Object.keys(asRecord(parsed)).length ? [parsed] : []
+  const subjectDimensionIds: string[] = []
+  const subjectDimensionNameMap: Record<string, string> = {}
+
+  sources.forEach(item => {
+    const source = asRecord(item)
+    const dimensionId = String(source.dim_id || '').trim()
+    if (!dimensionId || subjectDimensionIds.includes(dimensionId)) return
+    const dimensionName = String(source.dim_name || '').trim()
+    subjectDimensionIds.push(dimensionId)
+    if (dimensionName) subjectDimensionNameMap[dimensionId] = dimensionName
+  })
+
+  const firstSubjectDimensionId = subjectDimensionIds[0]
+  if (!firstSubjectDimensionId) return {}
+  const firstSubjectDimensionName = subjectDimensionNameMap[firstSubjectDimensionId]
+
   return {
-    subjectDimensionId,
-    ...(subjectDimensionName ? { subjectDimensionName } : {})
+    subjectDimensionId: firstSubjectDimensionId,
+    subjectDimensionIds,
+    ...(firstSubjectDimensionName ? { subjectDimensionName: firstSubjectDimensionName } : {}),
+    ...(Object.keys(subjectDimensionNameMap).length ? { subjectDimensionNameMap } : {})
   }
 }

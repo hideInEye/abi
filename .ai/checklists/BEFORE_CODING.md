@@ -9,7 +9,7 @@
 - [ ] Chat 改动已读取 `apps/chat/src/service/request/index.ts`、`apps/chat/src/router/index.tsx`
 - [ ] Dashboard 改动已读取 `apps/dashboard/src/utils/FetchUtil.ts` 或 `apps/dashboard/src/designer`
 - [ ] 涉及 qiankun 微应用新增/接入时，已确认启用样式隔离，且子应用没有用全局 `html` / `body` 写业务背景污染宿主
-- [ ] 已确认测试命令：`pnpm test`
+- [ ] 已确认测试命令：只执行当前修改内容对应的定向测试，不主动运行未修改模块或全仓测试
 - [ ] 已确认根 `pnpm lint` 和 `pnpm type-check` 当前不可作为通过门禁
 - [ ] UI 改动已确认所属 app 样式系统
 

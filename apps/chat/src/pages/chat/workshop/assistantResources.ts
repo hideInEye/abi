@@ -24,7 +24,18 @@ export interface AssistantBoundMcp {
   id: string
   name: string
   protocol: 'sse' | 'streamable'
+  /** 详情 `mcp_sse` 中的真实分组 ID，报告提交时与当前 id 组成映射。 */
+  sseGroupIds: Array<string | number>
   namespaceId: string
+
+}
+
+function normalizeBoundMcpGroupIds(raw: unknown): Array<string | number> {
+  if (!Array.isArray(raw)) return []
+  return [...new Map(raw
+    .filter((id): id is string | number =>
+      (typeof id === 'string' && id.trim() !== '') || (typeof id === 'number' && Number.isFinite(id)))
+    .map((id) => [String(id), id])).values()]
 }
 
 /** 助手绑定资源全集：数据语义 / 技能 / MCP */
@@ -104,6 +115,7 @@ export function mapAssistantBoundResources(detail: any, fallbackAppId?: number |
         id: String(c.id),
         name: c.name || '',
         protocol: sse.length > 0 ? 'sse' : 'streamable',
+        sseGroupIds: normalizeBoundMcpGroupIds(sse),
         namespaceId: toNamespaceId(sse[0] ?? streamable[0]),
       })
     })

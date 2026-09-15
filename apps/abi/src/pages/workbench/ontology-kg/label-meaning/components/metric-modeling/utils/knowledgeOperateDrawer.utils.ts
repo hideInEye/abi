@@ -1,5 +1,5 @@
-import type { KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
 import { getMappedBizNameParts, getMappedTechNameDisplay } from '../../../utils/ontologyName'
+import type { KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
 
 export interface TransferItem {
   key: string
@@ -12,6 +12,8 @@ export interface StepItem {
 }
 
 type UnknownRecord = Record<string, unknown>
+
+export const METRIC_INDICATOR_SEARCH_PAGE_SIZE = 10
 
 function trimText(value: unknown) {
   return String(value ?? '').trim()
@@ -53,6 +55,80 @@ export function getMetricIndicatorOptionLabel(item: Partial<KnowledgeIndicatorIt
   return getMappedMetricFieldDisplayName(
     item.rawBizName || item.bizName || item.techName || item.indicatorCode || '-'
   ) || '-'
+}
+
+export function getMetricIndicatorOptionValue(item: Partial<KnowledgeIndicatorItem>) {
+  return String(item.termId || item.indId || item.indicatorCode || item.techName || item.bizName || '').trim()
+}
+
+export function buildMetricIndicatorSearchQuery(searchText: unknown, spaceId: number, pageNum = 1) {
+  const bizName = trimText(searchText)
+
+  return {
+    bizName: bizName || undefined,
+    pageNum,
+    pageSize: METRIC_INDICATOR_SEARCH_PAGE_SIZE,
+    spaceId
+  }
+}
+
+export function appendMetricIndicatorSearchResults(
+  currentItems: KnowledgeIndicatorItem[],
+  nextItems: KnowledgeIndicatorItem[]
+) {
+  const mergedItemMap = new Map<string, KnowledgeIndicatorItem>()
+
+  currentItems.forEach(item => {
+    const value = getMetricIndicatorOptionValue(item)
+    if (value) mergedItemMap.set(value, item)
+  })
+  nextItems.forEach(item => {
+    const value = getMetricIndicatorOptionValue(item)
+    if (!value) return
+    const currentItem = mergedItemMap.get(value)
+    mergedItemMap.set(value, currentItem ? { ...currentItem, ...item } : item)
+  })
+
+  return Array.from(mergedItemMap.values())
+}
+
+export function hasMoreMetricIndicatorSearchResults(total: unknown, pageItemCount: number, pageNum: number) {
+  const totalText = String(total ?? '').trim()
+  const totalNumber = totalText ? Number(totalText) : Number.NaN
+  if (Number.isFinite(totalNumber) && totalNumber >= 0) {
+    return pageNum * METRIC_INDICATOR_SEARCH_PAGE_SIZE < totalNumber
+  }
+  return pageItemCount >= METRIC_INDICATOR_SEARCH_PAGE_SIZE
+}
+
+export function mergeMetricIndicatorSearchResults(
+  currentItems: KnowledgeIndicatorItem[],
+  nextItems: KnowledgeIndicatorItem[],
+  selectedValues: unknown[]
+) {
+  const selectedValueSet = new Set(selectedValues.map(value => trimText(value)).filter(Boolean))
+  const currentItemMap = new Map(
+    currentItems
+      .map(item => [getMetricIndicatorOptionValue(item), item] as const)
+      .filter(([value]) => Boolean(value))
+  )
+  const mergedItemMap = new Map<string, KnowledgeIndicatorItem>()
+
+  nextItems.forEach(item => {
+    const value = getMetricIndicatorOptionValue(item)
+    if (!value) return
+    const selectedItem = selectedValueSet.has(value) ? currentItemMap.get(value) : undefined
+    mergedItemMap.set(value, selectedItem ? { ...selectedItem, ...item } : item)
+  })
+
+  selectedValueSet.forEach(value => {
+    const selectedItem = currentItemMap.get(value)
+    if (selectedItem && !mergedItemMap.has(value)) {
+      mergedItemMap.set(value, selectedItem)
+    }
+  })
+
+  return Array.from(mergedItemMap.values())
 }
 
 export function getMetricFieldOptionLabel(item: Partial<KnowledgeTechField>) {

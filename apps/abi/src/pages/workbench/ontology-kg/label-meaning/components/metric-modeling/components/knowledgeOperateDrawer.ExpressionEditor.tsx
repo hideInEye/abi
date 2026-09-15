@@ -188,7 +188,7 @@ export const KnowledgeOperateExpressionEditor: React.FC<Props> = ({
     >
       <div className="mb-3 flex gap-2">
         <AButton onClick={() => handleTemplateFill('SUM(##字段ID##)')}>填入原子指标模板</AButton>
-        <AButton onClick={() => handleTemplateFill('(##字段ID## / ##字段ID##) * 100')}>填入派生指标模板</AButton>
+        <AButton onClick={() => handleTemplateFill('(##字段ID## / ##字段ID##) * 100')}>填入衍生指标模板</AButton>
         <AButton onClick={() => handleTemplateFill('(本期值 - 同期值) / 同期值')}>填入同比模板</AButton>
         <AButton
           onClick={() => {

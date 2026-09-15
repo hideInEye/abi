@@ -449,9 +449,13 @@ describe('buildKnowledgeCalcLogic', () => {
         dateRangeUnit: 'day',
         dateRangeValue: 30,
         endTime: '18:00',
+        isCrossDim: true,
         startTime: '09:00',
-        subjectDimensionId: 'shop-dimension',
-        subjectDimensionName: '门店维度',
+        subjectDimensionIds: ['shop-dimension', 'region-dimension'],
+        subjectDimensionNameMap: {
+          'region-dimension': '区域维度',
+          'shop-dimension': '门店维度'
+        },
         timeRangeType: 'specified'
       }
     } as KnowledgeSubmitPayload)
@@ -497,13 +501,19 @@ describe('buildKnowledgeCalcLogic', () => {
           }
         ]
       },
+      isCrossDim: '是',
       precomputeConfig: { frequency: 'weekly', time: '09:00', weekday: 1 },
-      subjectDimension: { dim_id: 'shop-dimension', dim_name: '门店维度' },
+      subjectDimension: [
+        { dim_id: 'shop-dimension', dim_name: '门店维度' },
+        { dim_id: 'region-dimension', dim_name: '区域维度' }
+      ],
       statisticalCaliber: {
         dateRangeMode: 'previous_full',
         dateRangeUnit: 'day',
         dateRangeValue: 30,
+        isCrossDim: true,
         subjectDimensionId: 'shop-dimension',
+        subjectDimensionIds: ['shop-dimension', 'region-dimension'],
         timeRangeType: 'specified'
       }
     })
@@ -528,8 +538,14 @@ describe('buildKnowledgeCalcLogic', () => {
         dateRangeMode: 'previous_full',
         dateRangeUnit: 'day',
         dateRangeValue: 30,
+        isCrossDim: true,
         subjectDimensionId: 'shop-dimension',
-        subjectDimensionName: '门店维度'
+        subjectDimensionIds: ['shop-dimension', 'region-dimension'],
+        subjectDimensionName: '门店维度',
+        subjectDimensionNameMap: {
+          'region-dimension': '区域维度',
+          'shop-dimension': '门店维度'
+        }
       }
     })
   })
@@ -570,7 +586,11 @@ describe('buildKnowledgeCalcLogic', () => {
         subjectDimensionId: 'legacy-dim',
         timeRangeType: 'specified'
       },
-      subjectDimension: { dim_id: 'new-dim', dim_name: '新主体维度' }
+      isCrossDim: '否',
+      subjectDimension: [
+        { dim_id: 'new-dim', dim_name: '新主体维度' },
+        { dim_id: 'second-dim', dim_name: '第二主体维度' }
+      ]
     })
 
     expect(result).toMatchObject({
@@ -587,8 +607,14 @@ describe('buildKnowledgeCalcLogic', () => {
       ],
       statisticalCaliber: {
         dateRangeMode: 'this_month',
+        isCrossDim: false,
         subjectDimensionId: 'new-dim',
+        subjectDimensionIds: ['new-dim', 'second-dim'],
         subjectDimensionName: '新主体维度',
+        subjectDimensionNameMap: {
+          'new-dim': '新主体维度',
+          'second-dim': '第二主体维度'
+        },
         timeRangeType: 'allDay'
       }
     })
