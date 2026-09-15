@@ -126,6 +126,15 @@ export const generatedRoutes: GeneratedRoute[] = [
               i18nKey: 'route.component_data_effect-review',
               title: 'component_data_effect-review'
             }
+          },
+          {
+            name: 'component_data_semantic-list',
+            path: 'semantic-list',
+            component: 'view.component_data_semantic-list',
+            meta: {
+              i18nKey: 'route.component_data_semantic-list',
+              title: 'component_data_semantic-list'
+            }
           }
         ]
       },

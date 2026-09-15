@@ -114,6 +114,12 @@ export const DeferredSelect: React.FC<{ readonly value?: any; readonly onChange?
 interface SearchFilterBarProps {
   /** 搜索框与「高级筛选」按钮之间的额外内容（如数据目录下拉） */
   readonly extra?: React.ReactNode;
+  /** 高级筛选网格类名，默认一行两个筛选项 */
+  readonly filterGridClassName?: string
+  /** 高级筛选按钮文案，默认沿用系统通用文案 */
+  readonly filterLabel?: React.ReactNode
+  /** 高级筛选内容容器类名，用于页面级响应式宽度适配 */
+  readonly filterPanelClassName?: string
   /** 高级筛选面板中的筛选项（一行两个），无筛选项时不渲染高级筛选按钮 */
   readonly filters?: React.ReactNode;
   /** 查询回调（点击面板查询按钮 / 输入框回车） */
@@ -147,6 +153,9 @@ export const getFilterPopupContainer = (trigger: HTMLElement): HTMLElement =>
  */
 export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
   extra,
+  filterGridClassName = 'grid grid-cols-2 gap-x-4 gap-y-3',
+  filterLabel = '高级筛选',
+  filterPanelClassName,
   filters,
   onQuery,
   onReset,
@@ -201,10 +210,10 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
   );
 
   const panelContent = (
-    <div className={styles.filterPanel}>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+    <div className={[styles.filterPanel, filterPanelClassName].filter(Boolean).join(' ')}>
+      <div className={filterGridClassName}>
         {filters}
-        <div className="col-span-2 flex items-end justify-end gap-3">
+        <div className="col-span-full flex items-end justify-end gap-3">
           <AButton className={styles.resetBtn} icon={<ReloadOutlined />} onClick={handleReset}>
             重置
           </AButton>
@@ -234,7 +243,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
         {filters ? (
           <Popover content={panelContent} open={open} placement="bottomRight" trigger="click" onOpenChange={setOpen}>
             <AButton className={styles.filterBtn} icon={<FilterOutlined />}>
-              高级筛选
+              {filterLabel}
               <DownOutlined className={`${styles.filterArrow} ${open ? styles.filterArrowOpen : ''}`} />
             </AButton>
           </Popover>
