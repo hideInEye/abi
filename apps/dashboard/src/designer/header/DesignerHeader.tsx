@@ -24,7 +24,7 @@ import ThemeHdItemImpl from "./items/theme/ThemeHdItemImpl.tsx";
 import BluePrintHdImpl from "./items/blue-print/BluePrintHdImpl.tsx";
 import {AfferentFour, ConnectionPointTwo, EfferentFour, Eyes, HardDiskOne, PageTemplate, Theme, Send} from "@icon-park/react";
 import URLUtil from "../../utils/URLUtil.ts";
-import {DesignerMode, ProjectState} from "../DesignerType.ts";
+import {DesignerMode} from "../DesignerType.ts";
 import baseApi from "../../api/BaseApi.ts";
 import {globalMessage} from "../../framework/message/GlobalMessage.tsx";
 import designerManager from "../manager/DesignerManager.ts";
@@ -118,6 +118,8 @@ const Header: React.FC = observer(() => {
             });
             projectHdStore.updateProjectConfig({status: '0'});
             globalMessage.messageApi?.success('发布成功');
+            // 发布=当前启用(1)：同步分享记录应用状态（大屏 status '0'→appStatus 1）
+            if (id != null) baseApi.syncShareAppStatus(id, 1);
         };
 
         const handleBack = () => {

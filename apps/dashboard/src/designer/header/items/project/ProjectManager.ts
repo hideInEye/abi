@@ -11,7 +11,7 @@
 
 import {action, makeObservable, observable, toJS} from "mobx";
 import AbstractManager from "../../../manager/core/AbstractManager.ts";
-import {IProjectInfo, ProjectState, SaveType} from "../../../DesignerType.ts";
+import {IProjectInfo, SaveType} from "../../../DesignerType.ts";
 
 class ProjectManager extends AbstractManager<IProjectInfo> {
     constructor() {
@@ -34,7 +34,6 @@ class ProjectManager extends AbstractManager<IProjectInfo> {
     projectConfig: IProjectInfo = {
         name: "", //项目名称
         des: "", //项目描述
-        state: ProjectState.DRAFT, //项目状态
         createTime: "", //创建时间
         updateTime: "", //更新时间
         saveType: SaveType.LOCAL, //存储类型

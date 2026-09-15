@@ -1,0 +1,22 @@
+# CodeBuddy runtime state — kept out of git. Authored config stays tracked.
+# Managed by CodeBuddy. The root .gitignore is intentionally left untouched.
+logs/
+telemetry/
+*.db
+*.db-wal
+*.db-shm
+user-memory.json
+memory.json
+.last-session-head
+AGENT_ERROR.txt
+# Scheduler task reports (dated, regenerated) — runtime output, not config.
+standup-*
+code-health-*
+dependency-check-*
+# Policy files: out of git (hooks.json runs shell; access.json is an
+# authoritative security control; security.json holds MACHINE-SPECIFIC absolute
+# allowedPaths) but still agent-readable via the '!' re-includes in
+# codebuddy-ignore.service.ts.
+hooks.json
+access.json
+security.json

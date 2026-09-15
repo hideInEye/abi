@@ -9,26 +9,79 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-.lc-header-project-set {
+// 项目设置弹窗：Dialog 默认暗色，这里覆盖成淡色（对齐画布/主题设置的白底弹窗）；antd 控件默认亮色白底无需逐个覆盖
+// 宽度走 Dialog width prop（content 内联 width），body 跟随 auto，less 强设 body 宽会露出 mask 灰底
+.lc-dialog.lc-header-project-set {
+  .dialog-body {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
 
-  form {
-    padding: 5px 10px;
+    .dialog-header {
+      height: 46px;
+      padding: 0 20px;
+      background: #fff;
+      border-bottom: 1px solid #f0f0f0;
+      color: #1f1f1f;
 
-    .lc-header-project-footer {
-      margin-top: 3px;
-      border-top: 2px solid #272b34;
-      display: flex;
-      flex-direction: row-reverse;
-
-      .lc-button {
-        font-size: 12px;
-        color: #a3a3a3;
-        width: 85px;
-        height: 30px;
-        margin: 6px 5px 10px 0;
+      .dialog-title {
+        font-size: 15px;
+        font-weight: 600;
       }
+
+      .dialog-close {
+        color: #999;
+
+        &:hover {
+          color: #333;
+        }
+      }
+    }
+
+    .dialog-content {
+      background: #fff;
+      padding: 20px 24px 0;
     }
   }
 
+  form {
+    // 统一行高与字号，label 与控件视觉对齐
+    .ui-container {
+      min-height: 32px;
+      font-size: 13px;
+    }
 
+    .ui-container-label {
+      color: #666;
+    }
+
+    .lc-input.ant-input {
+      height: 32px;
+      font-size: 13px;
+    }
+
+    .lc-radio .ant-radio-wrapper {
+      font-size: 13px;
+      color: #333;
+    }
+
+    .lc-header-project-footer {
+      margin: 20px -24px 0;
+      padding: 12px 24px;
+      background: #fff;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+
+      .lc-button {
+        width: auto !important;
+        height: 32px;
+        padding: 0 16px;
+        font-size: 13px;
+        border-radius: 4px;
+      }
+    }
+  }
 }

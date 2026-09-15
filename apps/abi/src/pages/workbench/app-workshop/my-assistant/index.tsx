@@ -6,6 +6,7 @@ import { AssistantIconBlock } from '@/components/AssistantIcon';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { fetchAppListApi, updateAppApi } from '@/service/api/abi-chat-app';
+import { syncShareAppStatus } from '@/service/api/share';
 import { tableSemanticsGroupList } from '@/service/api/table-semantics';
 import { filterByCreateTime } from '@/utils/date';
 
@@ -115,7 +116,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
   const [jumpValue, setJumpValue] = useState('');
 
   // 筛选条件变化时重置到第一页（关键字改为后端查询，随 agents 变化联动）
@@ -154,7 +155,9 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
         try {
           await updateAppApi({ appId: agent.id, appName: agent.name, status: '2' });
           message.success('已取消发布');
+          await syncShareAppStatus({ projectId: agent.id, type: 'workflow', spaceId: spaceId || undefined, appStatus: 2 });
           fetchList();
+          setShareRefreshToken(t => t + 1);
         } catch {
           message.error('取消发布失败');
         }
@@ -309,10 +312,9 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
                 value={pageSize}
                 onChange={(val: number) => { setPageSize(val); setCurrentPage(1); }}
                 options={[
-                  { label: '10条/页', value: 10 },
-                  { label: '15条/页', value: 15 },
-                  { label: '20条/页', value: 20 },
-                  { label: '25条/页', value: 25 },
+                  { label: '12条/页', value: 12 },
+                  { label: '18条/页', value: 18 },
+                  { label: '24条/页', value: 24 },
                   { label: '30条/页', value: 30 },
                 ]}
                 className="page-size-select"

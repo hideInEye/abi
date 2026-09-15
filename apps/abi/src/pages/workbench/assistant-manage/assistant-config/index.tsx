@@ -15,6 +15,7 @@ import { AssistantIconBlock } from '@/components/AssistantIcon';
 import { getSpaceId } from '@/store/slice/app';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { fetchAppListApi, deleteAppApi, updateAppApi } from '@/service/api/abi-chat-app';
+import { syncShareAppStatus } from '@/service/api/share';
 import { filterByCreateTime } from '@/utils/date';
 
 import AssistantEditDrawer, { type AgentMock } from './modules/assistant-edit-drawer';
@@ -137,7 +138,7 @@ export function Component() {
 
   // v5 pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
   const [jumpValue, setJumpValue] = useState('');
 
   // 筛选条件变化时重置到第一页（关键字改为后端查询，随 agents 变化联动）
@@ -282,24 +283,23 @@ export function Component() {
     // 后端 update 接口校验应用名称非空，切换状态时需回传当前助手名称
     const appName = agents.find(it => it.id === id)?.name;
     setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: nextStatus } : it)));
-    try {
-      await updateAppApi({ appId: id, appName, status: nextStatus });
-      message.success(checked ? '已发布' : '已取消发布');
-    } catch {
-      // 回滚
+    // flat request 不会抛异常，失败时需判断 error 并回滚乐观更新（失败原因已由全局错误提示弹出）
+    const { error } = await updateAppApi({ appId: id, appName, status: nextStatus });
+    if (error) {
       setAgents(prev => prev.map(it => (it.id === id ? { ...it, status: checked ? '2' : '1' } : it)));
-      message.error('状态更新失败');
+      return;
     }
+    message.success(checked ? '已发布' : '已取消发布');
+    syncShareAppStatus({ projectId: id, type: 'workflow', spaceId: spaceId || undefined, appStatus: checked ? 1 : 2 });
   };
 
   const handleDelete = async (id: AgentCard['id']) => {
-    try {
-      await deleteAppApi({ appId: id });
-      setAgents(prev => prev.filter(it => it.id !== id));
-      message.success('已删除');
-    } catch {
-      message.error('删除失败');
-    }
+    // flat request 不会抛异常，error 为空才能走成功流程；失败原因已由全局错误提示弹出
+    const { error } = await deleteAppApi({ appId: id });
+    if (error) return;
+    setAgents(prev => prev.filter(it => it.id !== id));
+    message.success('已删除');
+    syncShareAppStatus({ projectId: id, type: 'workflow', spaceId: spaceId || undefined, appStatus: 0 });
   };
 
   // Batch delete
@@ -308,16 +308,18 @@ export function Component() {
       message.warning('请先选择要删除的助手');
       return;
     }
-    try {
-      await Promise.all(checkedRowKeys.map(id => deleteAppApi({ appId: id as number | string })));
-      setAgents(prev => prev.filter(it => !checkedRowKeys.includes(it.id)));
-      setCheckedRowKeys([]);
-      setSelectedRows([]);
-      message.success(`成功删除 ${checkedRowKeys.length} 个助手`);
-    } catch {
-      message.error('批量删除失败');
-      fetchList();
+    const results = await Promise.all(checkedRowKeys.map(id => deleteAppApi({ appId: id as number | string })));
+    const deletedKeys = checkedRowKeys.filter((_, index) => !results[index].error);
+    const failCount = checkedRowKeys.length - deletedKeys.length;
+    if (deletedKeys.length > 0) {
+      setAgents(prev => prev.filter(it => !deletedKeys.includes(it.id)));
+      setCheckedRowKeys(prev => prev.filter(key => !deletedKeys.includes(key)));
+      setSelectedRows(prev => prev.filter(row => !deletedKeys.includes(row.id)));
+      message.success(`成功删除 ${deletedKeys.length} 个助手`);
+      deletedKeys.forEach(id => syncShareAppStatus({ projectId: id as number | string, type: 'workflow', spaceId: spaceId || undefined, appStatus: 0 }));
     }
+    // 存在删除失败时以服务端为准刷新列表，避免本地状态与服务端不一致（失败原因已由全局错误提示弹出）
+    if (failCount > 0) fetchList();
   };
 
   const rowSelection: TableProps<AgentCard>['rowSelection'] = {
@@ -545,10 +547,9 @@ export function Component() {
                 value={pageSize}
                 onChange={(val: number) => { setPageSize(val); setCurrentPage(1); }}
                 options={[
-                  { label: '10条/页', value: 10 },
-                  { label: '15条/页', value: 15 },
-                  { label: '20条/页', value: 20 },
-                  { label: '25条/页', value: 25 },
+                  { label: '12条/页', value: 12 },
+                  { label: '18条/页', value: 18 },
+                  { label: '24条/页', value: 24 },
                   { label: '30条/页', value: 30 },
                 ]}
                 className="page-size-select"

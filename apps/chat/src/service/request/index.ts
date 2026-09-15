@@ -4,6 +4,8 @@ import { isBackendCodeIn } from "@sa/axios";
 
 import { getAuthorization, handleLoginExpired } from "@/utils/auth";
 
+import { shouldHandleLoginExpiredForRequest } from "./auth-policy";
+
 const service = axios.create({
   baseURL: '/',  // 使用相对路径，让请求通过代理转发
   headers: { "Content-Type": "application/json;charset=utf-8" },
@@ -84,8 +86,12 @@ service.interceptors.response.use(
 
     // 业务错误码触发 token 过期处理
     if (isBackendCodeIn(response.data, TOKEN_EXPIRED_CODES)) {
-      void handleTokenExpired();
-      return Promise.reject(new Error('Token expired'));
+      if (shouldHandleLoginExpiredForRequest(response.config.url)) {
+        void handleTokenExpired();
+      } else {
+        showBackendError((response.data as any)?.msg || (response.data as any)?.message);
+      }
+      return Promise.reject(new Error((response.data as any)?.msg || 'Token expired'));
     }
 
     // 后端业务失败（如 {"code":500,"msg":"内部服务器错误"}）：统一弹出提示
@@ -96,7 +102,7 @@ service.interceptors.response.use(
     return response.data;
   },
   (error) => {
-    if (error?.response?.status === 401) {
+    if (error?.response?.status === 401 && shouldHandleLoginExpiredForRequest(error.config?.url)) {
       void handleTokenExpired();
     } else if (error.response) {
       // HTTP 非 2xx（含 500 内部服务器错误）：优先展示后端返回的 msg

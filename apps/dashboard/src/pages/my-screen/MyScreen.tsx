@@ -129,6 +129,8 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
         const id = unpublishIdRef.current;
         await baseApi.updateProject({id, status: '2'} as IProjectInfo);
         globalMessage.messageApi?.success('已取消发布');
+        // 取消发布=历史版本(2)：同步分享记录应用状态（大屏 status '2'→appStatus 2）
+        baseApi.syncShareAppStatus(id, 2);
         setUnpublishDialog(false);
         fetchList(currentPage, pageSize, searchKeyword);
     };
@@ -234,9 +236,9 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
                             onChange={(val: number) => { setPageSize(val); setCurrentPage(1); pageChange(1, val); }}
                             options={[
                                 { label: '12条/页', value: 12 },
-                                { label: '20条/页', value: 20 },
+                                { label: '18条/页', value: 18 },
+                                { label: '24条/页', value: 24 },
                                 { label: '30条/页', value: 30 },
-                                { label: '50条/页', value: 50 },
                             ]}
                             className="page-size-select"
                         />

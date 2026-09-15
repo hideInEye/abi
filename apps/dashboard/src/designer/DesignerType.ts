@@ -109,18 +109,6 @@ export enum DesignerMode {
 }
 
 /**
- * 项目状态
- */
-export enum ProjectState {
-    //编辑中
-    DRAFT = '0',
-    //当前启用
-    PUBLISH = '1',
-    //历史版本
-    SEALED = '2'
-}
-
-/**
  * 项目配置
  */
 export interface IProjectInfo {
@@ -130,8 +118,6 @@ export interface IProjectInfo {
     name?: string;
     //项目描述
     des?: string;
-    //项目状态
-    state?: ProjectState;
     //发布状态（后端字段）
     status?: string;
     //创建时间

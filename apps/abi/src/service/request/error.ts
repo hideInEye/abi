@@ -5,6 +5,7 @@ import type { AxiosInstance, AxiosResponse } from 'axios';
 
 import { handleLoginExpired } from '@/utils/auth';
 
+import { shouldHandleLoginExpiredForRequest } from './auth-policy';
 import { showErrorMsg } from './shared';
 import type { RequestInstanceState } from './type';
 
@@ -23,7 +24,8 @@ export async function backEndFail(
   // if (isTestConnect) {
   //   return null;
   // }
-  if (isUnauthorizedResponse(response)) {
+  // Explicit logout must keep the local session intact when the server rejects it.
+  if (isUnauthorizedResponse(response) && shouldHandleLoginExpiredForRequest(response.config?.url)) {
     await handleLoginExpired();
 
     throw new AxiosError<App.Service.Response<unknown>>(
@@ -47,6 +49,9 @@ export function handleError(
 
   // ai对话，通过sql查询图表数据接口，不提示报错
   if (['/api/v1/chat/db/query', '/api/v1/chat/db/add'].includes(error.config?.url || '')) return;
+
+  // 路由初始化菜单接口失败时不弹错误提示，由 initDynamicAuthRoute 统一处理跳转
+  if (!shouldHandleLoginExpiredForRequest(error.config?.url)) return;
 
   // 测试连接接口不跳转登录页
   // const isTestConnect = error.config?.url?.includes('model/test/connect');
@@ -74,7 +79,7 @@ export function handleError(
     backendErrorCode = String(error.response?.data?.code || '');
   }
 
-  if (error.response?.status === 401 || backendErrorCode === '401') {
+  if ((error.response?.status === 401 || backendErrorCode === '401') && shouldHandleLoginExpiredForRequest(error.config?.url)) {
     handleLoginExpired();
     return;
   }

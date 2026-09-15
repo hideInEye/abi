@@ -1,4 +1,4 @@
-/* 探索模式：时间线卡片内部提供左侧工作区（思考 + todolist / 当前步骤结果），
+/* 探索模式：单列卡片纵向堆叠思考与待办事项，执行步骤内嵌在对应待办下方折叠展示，
    右侧全高工作室侧栏只展示全部执行结果。整体复用系统 CSS 变量对齐报告模式视觉。 */
 .messageRow {
   display: flex;
@@ -119,18 +119,16 @@
   color: var(--accent, #5b7cf7);
 }
 
-/* ── 卡片内工作区：左侧 todolist，右侧当前步骤结果 ── */
+/* ── 卡片内工作区：单列堆叠思考 / 待办事项（内嵌执行步骤） ── */
 .cardWorkspace {
-  display: grid;
-  grid-template-columns: minmax(240px, 0.92fr) minmax(300px, 1.08fr);
-  min-height: 360px;
+  display: flex;
+  flex-direction: column;
 }
 
 .todoColumn {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  border-right: 1px solid rgba(130, 140, 200, 0.12);
   background: rgba(255, 255, 255, 0.34);
 }
 
@@ -138,55 +136,7 @@
   border-bottom: none;
 }
 
-.currentColumn {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  background:
-    radial-gradient(circle at 100% 0%, rgba(91, 124, 247, 0.07), transparent 34%),
-    rgba(255, 255, 255, 0.38);
-}
-
-.currentResultHeader {
-  display: flex;
-  min-height: 48px;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
-  padding: 12px 16px;
-}
-
-.currentResultTitle {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 8px;
-  color: var(--ink, #25304d);
-  font-size: 13px;
-  font-weight: 750;
-}
-
-.currentResultMeta {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--ink-3, #8a97ad);
-  font-size: 12px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.currentResultBody {
-  min-height: 0;
-  max-height: 440px;
-  flex: 1;
-  overflow: auto;
-  padding: 16px;
-}
-
-/* 上块：当前技能执行过程信息（过程文本 + SQL），不展示数据表格 */
+/* 步骤执行信息：过程文本 / 文件 / 调用入参，不展示数据表格 */
 .processInfo {
   display: flex;
   min-width: 0;
@@ -224,22 +174,6 @@
 .processMeta b {
   color: var(--ink-2, #4f5c76);
   font-weight: 700;
-}
-
-.currentResultEmpty {
-  display: flex;
-  min-height: 220px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px dashed rgba(130, 140, 200, 0.26);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.45);
-  color: var(--ink-3, #9aa3b5);
-  font-size: 13px;
-  line-height: 1.7;
-  padding: 18px;
-  text-align: center;
 }
 
 /* ── 面板（思考区 / 待办事项），用分隔线纵向堆叠 ── */
@@ -333,11 +267,32 @@
   line-height: 1.7;
 }
 
-/* 待办事项：无边框无背景，宽松行距 */
+/* 待办事项：无边框无背景，宽松行距；每条待办下可内嵌展开执行步骤 */
 .todoList {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.todoBlock {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 待办行尾折叠箭头：仅有关联步骤时展示 */
+.todoToggleIcon {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--ink-3, #9aa3b5);
+  font-size: 10px;
+}
+
+/* 待办下内嵌的步骤列表：缩进对齐待办文本 */
+.todoSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0 8px 28px;
 }
 
 .todoRow {
@@ -419,73 +374,70 @@
   font-weight: 600;
 }
 
-.todoPriority {
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: rgba(132, 148, 173, 0.1);
-  color: var(--ink-3, #8a97ad);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 18px;
-  padding: 1px 9px;
+/* 步骤块：待办内嵌的执行步骤，执行信息折叠在步骤行下方 */
+.stepBlock {
+  border: 1px solid rgba(130, 140, 200, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
 }
 
-.todoPriorityHigh {
-  background: rgba(235, 87, 87, 0.08);
-  color: #cf5b60;
-}
-
-.todoPriorityMedium {
-  background: rgba(242, 153, 46, 0.1);
-  color: #c78b2e;
-}
-
-.todoPriorityLow {
-  background: rgba(39, 174, 96, 0.08);
-  color: #2f9e63;
-}
-
-/* 当前步骤结果下块：技能名称展示区（完成执行灰色 / 当前执行黑色） */
-.skillList {
+/* 步骤行：点击折叠/展开该步执行信息 */
+.stepRow {
   display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  border-top: 1px solid rgba(130, 140, 200, 0.1);
-  background: rgba(255, 255, 255, 0.3);
-  padding: 12px 16px 14px;
-}
-
-.skillRow {
-  display: inline-flex;
-  max-width: 100%;
+  width: 100%;
   align-items: center;
   gap: 8px;
-  border-radius: 10px;
-  background: rgba(132, 148, 173, 0.1);
+  cursor: pointer;
+  user-select: none;
   color: var(--ink-3, #9aa3b5);
   font-size: 12.5px;
   font-weight: 600;
-  padding: 6px 12px;
+  padding: 7px 10px;
+  transition: background 0.2s ease;
 }
 
-.skillRowRunning {
-  background: rgba(91, 124, 247, 0.1);
+.stepRow:hover {
+  background: rgba(91, 124, 247, 0.07);
+}
+
+.stepRowRunning {
+  background: rgba(91, 124, 247, 0.08);
   color: var(--ink, #1f2937);
 }
 
-/* 历史探索：选中待办对应的技能高亮 */
-.skillRowSelected {
-  background: rgba(91, 124, 247, 0.12);
-  color: var(--ink, #1f2937);
-}
-
-.skillName {
+.stepName {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.stepToggleIcon {
+  flex-shrink: 0;
+  color: var(--ink-3, #9aa3b5);
+  font-size: 10px;
+}
+
+/* 步骤执行信息：限高内部滚动，避免长输出撑开卡片 */
+.stepBody {
+  max-height: 320px;
+  overflow: auto;
+  border-top: 1px dashed rgba(130, 140, 200, 0.18);
+  padding: 10px 12px;
+}
+
+.stepEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ink-3, #9aa3b5);
+  font-size: 12.5px;
+  line-height: 1.7;
+  padding: 10px 12px;
+  text-align: center;
 }
 
 .inlineAlert {
@@ -761,30 +713,6 @@
 }
 
 @media (max-width: 900px) {
-  .cardWorkspace {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-
-  .todoColumn {
-    border-right: none;
-    border-bottom: 1px solid rgba(130, 140, 200, 0.12);
-  }
-
-  .currentResultBody {
-    max-height: 52vh;
-  }
-
-  .currentResultHeader {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .currentResultMeta {
-    max-width: 100%;
-  }
-
   .pane {
     min-width: 0;
     width: 100%;

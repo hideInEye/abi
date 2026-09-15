@@ -240,11 +240,13 @@ export function mapAssistantBoundToolResources(detail: any): { skills: Assistant
     toSchemaConfigList(t?.toolConfig).forEach((c: any) => {
       if (c?.id == null) return
       const sse: any[] = Array.isArray(c.mcp_sse) ? c.mcp_sse : []
+      const streamable: any[] = Array.isArray(c.mcp_streamable) ? c.mcp_streamable : []
       mcps.push({
         id: String(c.id),
         name: c.name || '',
         protocol: sse.length > 0 ? 'sse' : 'streamable',
         sseGroupIds: normalizeBoundMcpGroupIds(sse),
+        namespaceId: toNamespaceId(sse[0] ?? streamable[0])
       })
     })
   })
@@ -258,6 +260,12 @@ function normalizeBoundMcpGroupIds(raw: unknown): Array<string | number> {
     .filter((id): id is string | number =>
       (typeof id === 'string' && id.trim() !== '') || (typeof id === 'number' && Number.isFinite(id)))
     .map((id) => [String(id), id])).values()]
+}
+/** namespaceId 统一形态为 s_<groupId>；兼容详情历史数据存裸 groupId 的情况 */
+function toNamespaceId(value: unknown): string {
+  const raw = String(value ?? '').trim()
+  if (!raw) return ''
+  return raw.startsWith('s_') ? raw : `s_${raw}`
 }
 
 /** schemaConfig 两种形态：数组或 JSON 字符串（分享查询实际下发字符串）；解析失败返回空数组 */

@@ -236,6 +236,36 @@ class BaseApi extends AbstractApi {
     }
 
     /**
+     * 同步分享记录的应用状态（PUT /project/share/status，shareCodes 重复 query key + appStatus）。
+     * appStatus: 0-已删除 1-启用中 2-已离线(历史版本) 3-编辑中
+     */
+    public async updateShareStatus(shareCodes: string[], appStatus: number | string): Promise<void> {
+        const qs = [
+            ...shareCodes.map(c => `shareCodes=${encodeURIComponent(c)}`),
+            `appStatus=${encodeURIComponent(String(appStatus))}`,
+        ].join('&');
+        await FetchUtil.put(`/dashboard/api/v1/project/share/status?${qs}`);
+    }
+
+    /**
+     * 大屏 status 变更后同步到分享记录：查本项目分享记录 → 一次 PUT 同步 appStatus。
+     * fire-and-forget，失败仅 console。大屏 status→appStatus：'0'(当前启用)→1、'1'(编辑中)→3、'2'(历史版本)→2、删除→0。
+     */
+    public async syncShareAppStatus(projectId: number | string, appStatus: number | string): Promise<void> {
+        try {
+            const spaceId = localStorage.getItem('spaceId');
+            const { records } = await this.getShareProjectList({ type: 'dashboard', spaceId: spaceId ? Number(spaceId) : undefined, current: 1, size: 999 });
+            const codes = [...new Set(
+                records.filter((r: any) => String(r?.projectId) === String(projectId)).map((r: any) => r?.shareCode).filter(Boolean),
+            )] as string[];
+            if (!codes.length) return;
+            await this.updateShareStatus(codes, appStatus);
+        } catch (e) {
+            console.error('同步分享记录应用状态失败', e);
+        }
+    }
+
+    /**
      * 分享详情单查（列表接口不含密码字段，密码在复制时按 shareCode 单独查询，助手与大屏统一）
      * @param shareCode 分享码
      * @returns 密码字符串（无密码返回空串）；null 表示查询失败

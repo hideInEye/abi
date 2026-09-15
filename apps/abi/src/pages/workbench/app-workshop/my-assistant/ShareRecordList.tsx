@@ -16,7 +16,8 @@ interface ShareRecordItem {
   shareTime: string;
   expiration: string;
   statusLabel: string;
-  statusOff: boolean;
+  /** 状态标签颜色修饰类：''=绿 当前启用 / draft=橙 编辑中 / off=灰 历史版本·已删除·已过期 */
+  statusCls: string;
   icon?: string;
 }
 
@@ -25,16 +26,25 @@ function fmtTime(t?: string | null): string {
   return t ? String(t).replace('T', ' ') : '-';
 }
 
-/** 分享状态标签：过期时间优先，其次后端 status 字段，兜底「当前启用」（与助手卡片状态口径一致） */
-function getShareStatus(item: any): { label: string; off: boolean } {
+/** 分享状态标签：过期时间优先，其次应用状态 appStatus 四态，兜底后端 status 字段（与助手卡片状态口径一致） */
+function getShareStatus(item: any): { label: string; cls: string } {
   if (item.expirationDate) {
     const t = new Date(String(item.expirationDate).replace('T', ' ')).getTime();
-    if (!Number.isNaN(t) && t < Date.now()) return { label: '已过期', off: true };
+    if (!Number.isNaN(t) && t < Date.now()) return { label: '已过期', cls: 'off' };
   }
-  // 大屏域 status '0'=已发布启用、'2'=取消发布；助手域 '1'=启用。仅显式停用才置灰，'0'/'1' 均视为当前启用
+  // 应用状态（应用侧按钮操作后由后端同步写入）：0-已删除 1-启用中 2-已离线(历史版本) 3-编辑中
+  const app = item.appStatus ?? item.app_status;
+  if (app != null && app !== '') {
+    const s = String(app);
+    if (s === '0') return { label: '已删除', cls: 'off' };
+    if (s === '2') return { label: '历史版本', cls: 'off' };
+    if (s === '3') return { label: '编辑中', cls: 'draft' };
+    return { label: '当前启用', cls: '' };
+  }
+  // appStatus 缺失兜底：大屏域 status '0'=已发布启用、'2'=取消发布；助手域 '1'=启用。仅显式停用才置灰，'0'/'1' 均视为当前启用
   const s = item.status ?? item.shareStatus;
-  if (s === '2' || s === 2 || s === false || s === 'off' || s === 'disabled') return { label: '已停用', off: true };
-  return { label: '当前启用', off: false };
+  if (s === '2' || s === 2 || s === false || s === 'off' || s === 'disabled') return { label: '已停用', cls: 'off' };
+  return { label: '当前启用', cls: '' };
 }
 
 /** 将后端分享记录映射为展示结构 */
@@ -49,7 +59,7 @@ function mapShareRecord(item: any): ShareRecordItem {
     shareTime: fmtTime(item.createTime || item.shareTime),
     expiration: item.expirationDate ? fmtTime(item.expirationDate) : '永久',
     statusLabel: status.label,
-    statusOff: status.off,
+    statusCls: status.cls,
     icon: item.icon,
   };
 }
@@ -76,7 +86,7 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
   const [jumpValue, setJumpValue] = useState('');
 
   /** 拉取分享记录（服务端分页） */
@@ -203,7 +213,7 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
               </div>
               {/* 底部：分享状态标签 + 复制链接和密码 */}
               <div className="ac-footer">
-                <span className={`ac-tag${r.statusOff ? ' off' : ''}`}>{r.statusLabel}</span>
+                <span className={`ac-tag${r.statusCls ? ` ${r.statusCls}` : ''}`}>{r.statusLabel}</span>
                 <div className="ac-actions">
                   {/* 密码在点击时单查详情获取，列表行无法预判有无密码，文案固定（复制内容与提示随实际密码切换） */}
                   <button className="ac-btn" onClick={() => handleCopy(r)}>复制链接和密码</button>
@@ -232,10 +242,9 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
               value={pageSize}
               onChange={(val: number) => { setPageSize(val); setCurrentPage(1); fetchList(1, val); }}
               options={[
-                { label: '10条/页', value: 10 },
-                { label: '15条/页', value: 15 },
-                { label: '20条/页', value: 20 },
-                { label: '25条/页', value: 25 },
+                { label: '12条/页', value: 12 },
+                { label: '18条/页', value: 18 },
+                { label: '24条/页', value: 24 },
                 { label: '30条/页', value: 30 },
               ]}
               className="page-size-select"

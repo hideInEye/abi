@@ -204,6 +204,8 @@ export const ProjectList = memo((props: ProjectListProps) => {
                 setDelDialog(false);
                 getProjectPageList(pageData.current, pageData.size);
                 globalMessage.messageApi?.success('删除成功');
+                // 删除=已删除(0)：同步分享记录应用状态
+                baseApi.syncShareAppStatus(id, 0);
             } else {
                 globalMessage.messageApi?.error('删除失败');
             }
@@ -220,6 +222,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
             // Delete each selected project
             for (const id of selectedRowKeys) {
                 await baseApi.deleteProject(String(id));
+                baseApi.syncShareAppStatus(id as number | string, 0);
             }
             globalMessage.messageApi?.success(`成功删除 ${selectedRowKeys.length} 个项目`);
             setSelectedRowKeys([]);
@@ -695,9 +698,9 @@ export const ProjectList = memo((props: ProjectListProps) => {
                             onChange={(val: number) => { setPageSize(val); setCurrentPage(1); pageChange(1, val); }}
                             options={[
                                 { label: '12条/页', value: 12 },
-                                { label: '20条/页', value: 20 },
+                                { label: '18条/页', value: 18 },
+                                { label: '24条/页', value: 24 },
                                 { label: '30条/页', value: 30 },
-                                { label: '50条/页', value: 50 },
                             ]}
                             className="page-size-select"
                         />

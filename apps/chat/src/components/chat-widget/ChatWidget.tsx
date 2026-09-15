@@ -958,7 +958,10 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       setInput('')
       exploreController.handleSend(text, schemaId, {
         skillSourceVersionIds: Array.from(selectedSkills),
-        mcpSourceVersionIds: Array.from(selectedMcps),
+        // 探索接口按 {源版本id: 分组namespaceId} 提交，hook 内再按 protocol 分流 sse/streamable
+        mcpSourceVersionIds: ((info?.mcps ?? []) as AssistantBoundMcp[])
+          .filter((m) => selectedMcps.has(m.id))
+          .map((m) => ({ id: m.id, protocol: m.protocol, namespaceId: m.namespaceId })),
       })
       return
     }

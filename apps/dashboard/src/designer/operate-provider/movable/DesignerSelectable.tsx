@@ -18,6 +18,7 @@ import LayerUtil from "../../left/layer-list/util/LayerUtil";
 import layerListStore from "../../left/layer-list/LayerListStore";
 import designerLeftStore from "../../left/DesignerLeftStore";
 import layerManager from "../../manager/LayerManager.ts";
+import rightStore from "../../right/RightStore";
 
 /**
  * 设置控制点和边框的颜色
@@ -115,6 +116,21 @@ class DesignerSelectable extends Component<DesignerSelectableProps> {
 
         //更新选中组件的边框颜色（锁定状态组件为红色，非锁定状态组件为蓝色）
         setControlPointLineColor(lockState);
+
+        //点选（非拖拽）：单击单个组件打开右侧配置面板（默认AI页签），单击空白处收回面板
+        if (!e.isDragStart) {
+            const {activeConfig} = rightStore;
+            if (layerIds.length === 0) {
+                activeConfig(null, null);
+            } else {
+                const activeIds = e.inputEvent.shiftKey ? layerIds : LayerUtil.findTopGroupLayer(layerIds, true);
+                if (activeIds.length === 1) {
+                    const layer = layerConfigs[activeIds[0]];
+                    if (layer)
+                        activeConfig(activeIds[0], layer.type!);
+                }
+            }
+        }
     }
 
     onDragStart = (e: OnDragStart) => {

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, MoreOutlined, RightOutlined } from '@ant-design/icons';
-import { Button, Dropdown, Empty, Popconfirm, Space, Switch, Table, Tag, Typography, message } from 'antd';
+import { Button, Dropdown, Empty, Input, Popconfirm, Select, Space, Switch, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 
 import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
@@ -13,8 +13,8 @@ import type { ColumnOption } from '@/components/ViewControls';
 
 // Ant Design 组件别名
 const AButton = Button;
-const AInput = (props: any) => <input {...props} />;
-const ASelect = (props: any) => <select {...props} />;
+const AInput = Input;
+const ASelect = Select;
 const ASpace = Space;
 const ASwitch = Switch;
 const ATable = Table;
@@ -241,7 +241,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
   const [jumpValue, setJumpValue] = useState('');
 
   const pagedList = useMemo(() => {
@@ -448,10 +448,9 @@ export const PluginTable: React.FC<PluginTableProps> = ({
             value={pageSize}
             onChange={(val: any) => { setPageSize(val); setCurrentPage(1); }}
             options={[
-              { label: '10条/页', value: 10 },
-              { label: '15条/页', value: 15 },
-              { label: '20条/页', value: 20 },
-              { label: '25条/页', value: 25 },
+              { label: '12条/页', value: 12 },
+              { label: '18条/页', value: 18 },
+              { label: '24条/页', value: 24 },
               { label: '30条/页', value: 30 },
             ]}
             className="page-size-select"

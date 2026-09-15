@@ -1656,120 +1656,403 @@ Bug 修复延续（分享记录复制缺密码）+ 接口对接调整。
 - `pnpm typecheck`（apps/abi）对比基线无新增错误。
 - 手工：下拉入口显示；子菜单配置后导航与 VerticalMenu 标签。
 
-## 2026-09-08 追加：撤销报告 Todo 顺序过滤兜底
+## 2026-09-07 追加：大屏数据库 SQL 的 select 前缀校验大小写修复
 
 ### 需求类型
 
-报告模式前端逻辑回退。
+前端缺陷修复（校验逻辑），无 UI 变化。
+
+### 背景
+
+大屏设计器组件「数据」面板（数据库数据源）点击「测试SQL并保存」时报「SQL语句必须以select开头」，但实际输入的 SQL 以大写 `SELECT` 开头。排查确认是前端自有校验：`apps/dashboard/src/comps/common-component/data-config/database/DatabaseConfig.tsx` 的 `validate()` 使用 `sql.trim().startsWith('select')`，大小写敏感导致大写 SELECT 被误判；与 code-editor 组件和后端无关。
 
 ### 目标
 
-- 删除报告 Stream reducer 中“`completed` 必须构成连续前缀”的任务顺序校验。
-- `plan.update.tasks` 恢复为按后端返回的完整快照直接更新和渲染，不因任务状态排列而静默丢弃。
-- 删除该兜底对应的专用测试与旧运行记录。
+- select 前缀校验改为大小写不敏感：`sql.trim().toLowerCase().startsWith('select')`，`SELECT`/`Select` 等开头均通过。
+- 顺带删除同文件两个未使用导入（`IDataSource`、`Base64Util`），消除既有 tsc TS6133 报错。
 
 ### 非目标
 
-- 不调整 Todo 排序、状态、样式、步骤归属或报告文件逻辑。
-- 不修改普通对话及其他业务模块。
-
-### 验收标准
-
-- 任意合法状态组合的 `plan.update.tasks` 均能进入现有聚合流程。
-- 报告模式现有测试和 TypeScript 检查通过。
-
-## 2026-09-08 追加二：派生指标主体维度多选与维度交叉
-
-### 需求类型
-
-指标建模前端功能增强（表单交互、提交协议与编辑回显）。
-
-### 目标
-
-- 派生指标第二步“统计口径”的主体维度由单选改为多选，仍复用现有维度树数据源且至少选择一个维度。
-- 主体维度右侧新增“是否维度交叉”复选框，默认不勾选。
-- 派生指标提交时，`calcLogic` 新增/调整以下字段：
-  - `indicator_templates`：指标模板集合对象。
-  - `calcPeriod`：时间周期对象。
-  - `isCrossDim`：字符串，勾选传 `是`，未勾选传 `否`。
-  - `subjectDimension`：数组，每项为 `{ dim_id: string, dim_name: string }`。
-- 编辑回显支持新的 `subjectDimension` 数组和 `isCrossDim` 字符串；现有单对象主体维度数据继续可回显，后续提交统一输出数组。
-- 指标预览同时展示全部主体维度，并将其全部纳入 SQL Preview 的 `GROUP BY` 去重结果。
-
-### 非目标
-
-- 不修改原子指标、衍生指标和第三步统计维度的交互与协议。
-- 不修改维度接口、维度树数据源和其他指标字段。
-- 不重构指标建模抽屉及规则表达式模块。
+- 不改校验文案、其余校验项（选择数据库、SQL 非空）与测试保存请求逻辑。
+- 不放宽注释、WITH 子句等其他前缀。
 
 ### 影响范围预期
 
-- `apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/metric-modeling/components/knowledgeOperateDrawer.DerivedLogicBuilder.tsx`
-- `apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/metric-modeling/types/metricModeling.types.ts`
-- `apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/metric-modeling/utils/{precomputeConfig,indicatorApiAdapter,knowledgeSubmitPayload,derivedMetricPreview}.ts`
-- 上述适配层与预览对应测试。
-- `.ai/runs/2026-09-08-derived-metric-multi-subject-dimensions/`
+- 修改：`apps/dashboard/src/comps/common-component/data-config/database/DatabaseConfig.tsx`
+- 新增 run log：`.ai/runs/2026-09-07-dashboard-sql-select-case/`
 
 ### 验收标准
 
-- 主体维度下拉可以选择、删除多个叶子维度，分组节点仍不可选；未选择时无法进入下一步。
-- 勾选交叉维度后提交 `isCrossDim: "是"`，取消勾选后提交 `isCrossDim: "否"`。
-- 两个主体维度提交为 `subjectDimension: [{ dim_id, dim_name }, { dim_id, dim_name }]`，名称来自维度选项而非展示标签猜测。
-- 编辑新协议数据时多选与复选框正确回显；编辑现有单对象数据时仍能回显并在保存后转为数组。
-- 派生指标相关定向测试、apps/abi 类型检查、构建和 `git diff --check` 通过，或记录既有环境问题。
+1. 大写 `SELECT` 开头的 SQL 点击「测试SQL并保存」不再误报，正常进入测试请求。
+2. 非 select 开头（不分大小写）的 SQL 仍按原文案拦截。
+3. 该文件 tsc 不新增报错，既有 TS6133 清零。
 
-## 2026-09-08 追加三：派生指标第二步指标下拉分页搜索
+### 测试要求
+
+- `npx tsc --noEmit`（apps/dashboard）对比基线无新增错误。
+- 手工：大写 SELECT 通过校验；非 select 前缀仍拦截。
+
+## 2026-09-07 追加：分享记录应用状态（appStatus）四态展示与助手创建按钮
 
 ### 需求类型
 
-指标建模前端交互优化（远程模糊搜索与分页加载）。
+前端接口对接 + UI 补齐（分享记录状态展示、助手编辑页创建按钮；同步写入待后端接口参数确认后接线）。
+
+### 背景
+
+- 后端分享记录表（助手与大屏混存）新增应用状态 `app_status: char(1)`：0-已删除 1-启用中 2-已离线 3-编辑中。其中 2-已离线对应产品口径「历史版本」（版本下线状态）；枚举无「离线版本」档（该色档为技能版本词汇，助手/大屏不使用）。
+- 产品统一按钮链：保存→创建→发布→取消发布，对应 编辑中(橙)→离线版本(蓝)→当前启用(绿)→历史版本(灰)。助手编辑页在历史版本态缺「创建」入口（截图红框标注）。
+- 同步写入确认走方案A：现有 `PUT /project/share/status` 改为一次传多个 shareCode；前端经分享列表收集该应用名下 shareCode 后一次调用（每次点击 1 列表 + 1 更新）。接口传参格式与列表行字段名待后端确认，本轮不接同步调用。
 
 ### 目标
 
-- 派生指标第二步的指标下拉首次打开及每次新搜索默认请求第 1 页，每页 10 条。
-- 输入指标名称时，将去除首尾空格后的名称通过现有 `bizName` 参数传给指标列表接口。
-- 下拉列表滚动到底部时请求下一页，并在保留当前结果与已选项的前提下追加、去重。
-- 加载更多时继续携带当前模糊搜索名称；新搜索重置页码，并拒绝旧关键词或旧页请求的迟到响应。
-- 根据接口总数判断是否还有下一页；接口未返回有效总数时，以当前页返回数量是否达到 10 条作为兜底。
+1. 两端分享记录卡片（abi `my-assistant/ShareRecordList.tsx`、dashboard `my-screen/ShareRecordList.tsx`）状态标签优先读 `appStatus`（兼容 `app_status`）：3-编辑中(橙 draft) / 1-当前启用(绿) / 2-历史版本(灰 off) / 0-已删除(灰 off)；过期时间优先逻辑不变；字段缺失时回落既有 status 猜测逻辑，行为与改前一致。
+2. 助手编辑抽屉头部新增「创建」按钮：仅 `status==='2'`（历史版本）且非只读时显示；点击复用保存提交（`updateAppApi` 全量 payload、status='0'，从历史版本重新起草稿），成功文案「已创建」并刷新列表。
+3. 颜色复用既有 `ac-tag` 修饰类（abi table.scss 已有 draft/off；dashboard ProjectList.less 补 `draft` 橙），不新增全局样式。
 
 ### 非目标
 
-- 不修改指标列表接口的全局默认分页规则。
-- 不修改派生指标提交协议、编辑协议、维度选择和其他业务页面。
-- 不引入新的请求状态库或重构指标建模抽屉。
+- 不接 `PUT /project/share/status` 同步调用（待后端给：多 shareCode 传参格式、列表行应用 id 字段名、列表行 appStatus 字段名、删除后 0 由谁写入）。
+- 不改大屏设计器头部按钮、技能管理、chat 分享页与分享创建/列表/详情接口协议。
+- 不处理需求文件中已有的冲突标记与历史需求内容。
 
-### 影响范围预期
+### 影响范围
 
-- 指标建模抽屉的指标选项查询、分页状态和加载更多处理。
-- 指标远程搜索下拉组件及其在指标选择场景中的参数透传。
-- 指标搜索 query、分页结果合并工具及对应测试。
-- `.ai/runs/2026-09-09-derived-metric-indicator-select-pagination/`
+- `apps/abi/src/pages/workbench/app-workshop/my-assistant/ShareRecordList.tsx`
+- `apps/dashboard/src/pages/my-screen/ShareRecordList.tsx`、`apps/dashboard/src/pages/home/project-list/ProjectList.less`
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- run log：`.ai/runs/2026-09-07-share-appstatus-create-button/`
 
 ### 验收标准
 
-- 默认请求参数为 `pageNum: 1`、`pageSize: 10`。
-- 模糊搜索请求包含 `bizName`，滚动加载第 2 页及后续页时仍携带相同 `bizName`。
-- 滚动到下拉底部可连续加载更多，结果顺序追加且相同指标不重复。
-- 已无更多数据、正在请求或未滚动到底部时不重复加载。
-- 切换搜索词后从第 1 页重新加载，旧请求结果不会覆盖新搜索结果。
-- 已选择指标在搜索和翻页后仍可正常回显。
-- 定向测试、apps/abi 构建和 `git diff --check` 通过，或明确记录既有环境问题。
+1. 列表行带 appStatus 时卡片按四态表显示标签与颜色；缺失时展示行为与改前完全一致。
+2. 历史版本态编辑页显示「创建」，点击成功后助手状态变编辑中、列表刷新；其他状态与只读模式不显示。
+3. abi、dashboard 类型检查对比基线无新增错误。
 
-## 2026-09-09 追加：指标下拉加载更多防重复触发
+### 测试要求
+
+- `pnpm --filter chatbi typecheck`、dashboard `tsc --noEmit --skipLibCheck` 对比基线。
+- 手工：分享记录四态展示（待后端返回 appStatus）、历史版本态创建按钮、只读模式不显示。
+
+## 2026-09-09 追加：HTTP 转 MCP 协议转化五类模板对齐 nacos 控制台
+
+### 需求类型
+
+前端缺陷修复（预设模板内容对齐），无接口协议变化。
+
+### 背景
+
+- 创建工具弹窗「协议转化配置」模板生成器的五类模板（原 `CreateToolModal.tsx` 的 `TEMPLATE_PRESETS`）与 nacos 控制台源码 `console-ui/src/pages/AI/McpDetail/CreateTools/AdvancedConfig.js` 的 `generateTemplateByType` 不一致：旧模板手写 `body`/url 拼参、`headers` 为对象形式、`argsPosition` 嵌套在 `requestTemplate` 内部，均不符合网关规范（body/argsToJsonBody/argsToUrlParam/argsToFormBody 四选一互斥、headers 为 `{key,value}` 数组、argsPosition 位于模板顶层）。
 
 ### 目标
 
-- 指标远程搜索公共下拉的加载更多触发增加 500ms 尾触发防抖。
-- 同一轮连续滚动触底只在最后一次触发停止 500ms 后调用一次 `onLoadMore`。
-- 下拉关闭或组件卸载时取消尚未执行的加载请求触发。
+1. 五类模板（JSON请求体/URL参数/表单数据/自定义请求体/参数位置-Path）逐一改为 nacos 控制台源码值。
+2. 「参数位置-Path」与 nacos 一致改为动态生成：按当前工具参数名（第一个 path、其余 query），无参数时回退 `id/name`，`argsPosition` 置于顶层。
+3. 改动限定 `CreateToolModal.tsx` 单文件内原地修改，不新增模块或测试文件（应用户范围要求收敛）。
 
 ### 非目标
 
-- 不修改搜索、分页、接口参数、结果合并和其他指标建模逻辑。
-- 不调整下拉样式。
+- 不改提交字段 `protocolTemplate`、提交校验逻辑、编辑器交互与按钮样式。
+- 不改弹窗打开时的模板初始值（保持现状空值），不引入 nacos 默认模板自动填充。
+- 不触碰无关模块与用户既有未提交改动。
 
-### 验收与验证
+### 影响范围
 
-- 连续触底不会立即、重复调用加载更多方法。
-- 停止触发 500ms 后只调用一次加载更多方法。
-- 按用户要求，本次不运行测试和构建，仅进行定向差异与格式检查。
+- 修改：`apps/abi/src/pages/component/system/plugin/components/CreateToolModal.tsx`
+- run log：`.ai/runs/2026-09-09-mcp-protocol-template-align/`
+
+### 验收标准
+
+1. 点击五类模板按钮生成的内容与 nacos 控制台 `generateTemplateByType` 一致（headers 数组、互斥请求体字段、顶层 argsPosition）。
+2. 参数表有参数时「参数位置-Path」按参数名生成 argsPosition；参数表为空回退 `id/name`。
+3. `pnpm --filter chatbi typecheck` 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck` 对比基线（改动文件无新增报错）。
+- 手工：创建工具弹窗点击五类按钮核对编辑器内容；填参数后点「参数位置-Path」核对动态 argsPosition。
+- 应用户要求改动范围收敛为单文件配置值修正，未新增独立模块与测试文件。
+
+## 2026-09-09 追加：HTTP 转 MCP 协议转化配置增/改/明细三态对齐 nacos
+
+### 需求类型
+
+功能补充（UI 一致性对齐）+ 缺陷修复
+
+### 背景
+
+协议转化配置仅创建工具弹窗的模板值已对齐；明细抽屉不展示协议转化配置，编辑态无已发布版本限制逻辑，与 nacos 控制台不一致；且编辑回填读取的 templates key 与写入侧（json-go-template）不一致，导致再次编辑时编辑器内容被套层。
+
+### 目标
+
+1. 明细（PluginDetail）：HTTP 转 MCP 服务按工具展示「协议转化配置」只读块，结构与配色对齐 nacos ShowTools：请求模板配置（HTTP 方法徽章、请求路径 chip、后端认证方式、headers 逐行、body 绿框）、响应模板配置（body/prependBody/appendBody、其他配置、空提示）；数据源 `toolsMeta[toolName].templates['json-go-template']`。
+2. 编辑（PlugUpdate + CreateToolModal）：编辑已发布版本（当前版本号 ∈ allVersions/versionDetail）时版本字段下展示 nacos 同款两行红字提示；服务端禁用描述/协议类型/连接方式开关/端点相关字段，版本号保持可改作为逃生口；工具弹窗新增 `onlyEditRuntimeInfo`：工具名称、参数名/类型/必填/默认值、协议转化编辑器只读（编辑器替换为只读格式化 JSON 盒），仅工具描述、参数描述、启用开关可改。
+3. 修复 PlugUpdate 编辑回填：优先读 `templates['json-go-template']`（与写入侧及 nacos 一致），保留旧 `streamableHttp/sse.protocolTemplate` 回退。
+
+### 非目标
+
+- 不改提交参数结构（toolSpecification/toolsMeta 写入路径不变）。
+- 不新增接口、依赖或路由。
+
+### 影响范围
+
+- 修改：`apps/abi/src/pages/component/system/plugin/components/` 下 `PluginDetail.tsx`、`PlugUpdate.tsx`、`CreateToolModal.tsx`
+- run log：`.ai/runs/2026-09-09-mcp-protocol-template-align/`
+
+### 验收标准
+
+1. 明细抽屉中 HTTP 转 MCP 服务的工具展示协议转化配置块，字段与配色对齐 nacos（method 徽章色值、url chip、headers 蓝框、body 绿框、响应灰框）。
+2. 编辑已发布版本：两行红字提示出现；描述/协议类型/连接开关/地址/端口/传输协议不可改；工具弹窗内仅描述与启用开关可改，协议转化区为只读格式化 JSON。
+3. 版本号改为未发布的新版本后限制解除。
+4. 再编辑存量服务时编辑器展示未套层的协议转化 JSON。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck` 对比基线（改动文件无新增报错）。
+- 手工：新增、编辑已发布版本、改新版本号编辑、明细四路径走查。
+
+## 2026-09-09 追加：助手绑定 MCP 协议分组保存值改为 namespaceId（s_ 前缀）
+
+### 需求类型
+
+前端缺陷修复（保存参数口径），无 UI 变化。
+
+### 背景
+
+- 助手扩展能力 MCP 工具保存时 toolConfig 的 `mcp_sse/mcp_streamable` 原先直接取分组列表的原始 groupId（无前缀），与 `/api/abi-mcp/v1/mcp/register/list` 查询入参 `namespaceId`（`s_${groupId}`）口径不一致；MCP 管理模块的 namespaceId 统一带 `s_` 前缀。
+
+### 目标
+
+1. `mergeOptionNames` 按协议归类时写入 `mcp_sse/mcp_streamable` 的值改为 `s_${groupId}`，与 register/list 的 namespaceId 入参同口径。
+2. 回显链路（详情读回 → 再保存）原样透传不变；存量无前缀数据不做迁移。
+
+### 非目标
+
+- 不改 chat 端读 mcp_sse 判协议的非空逻辑。
+- 不改分组列表查询、工具列表查询入参与其他保存字段。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/tool-picker-drawer.tsx`（仅注释）
+- run log：`.ai/runs/2026-09-09-assistant-mcp-namespace-prefix/`
+
+### 验收标准
+
+1. 新勾选 MCP 工具保存后 toolConfig 的 `mcp_sse`/`mcp_streamable` 数组值为带 `s_` 前缀的 groupId。
+2. 存量助手回显与再保存行为一致（原样透传）。
+3. `pnpm --filter chatbi typecheck` 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck` 对比基线。
+- 手工：助手编辑页勾选 MCP 工具保存，网络面板核对 mcp_sse/mcp_streamable 值带 s_ 前缀。
+
+## 2026-09-09 追加：助手编辑页保存/创建按钮 loading 互串修复
+
+### 需求类型
+
+前端缺陷修复（按钮交互态），无接口变化。
+
+### 背景
+
+- 保存与创建两按钮共用 `loading={saving === 'draft'}`，而 `handleSave` 不区分触发按钮统一 `setSaving('draft')`，导致点任一按钮两个同时转圈。
+
+### 目标
+
+1. saving 态新增 `'create'` 档：`handleSave` 增加 `savingKey` 参数（保存='draft'、创建='create'），创建按钮 `loading={saving === 'create'}`。
+2. 互斥禁用：任一提交进行中其余按钮 disabled（保存↔创建↔发布三态互斥）。
+
+### 非目标
+
+- 不改提交逻辑、payload、成功文案与发布流程（handlePublish 仍用 'publish'）。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer.tsx`
+- run log：`.ai/runs/2026-09-09-assistant-save-create-loading/`
+
+### 验收标准
+
+1. 点保存仅保存转圈、点创建仅创建转圈；进行中另一按钮置灰。
+2. 发布按钮行为与改前一致。
+3. `pnpm --filter chatbi typecheck` 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck` 对比基线。
+- 手工：保存/创建/发布三按钮互斥 loading 与禁用走查。
+
+## 2026-09-10 追加：登录页访问时不预调菜单接口
+
+### 需求类型
+
+前端鉴权/路由缺陷修复（纯前端，不改接口协议）。
+
+### 背景
+
+访问 `https://<host>/login` 时，若 localStorage 中存在过期或失效 token，应用在展示登录页之前会先调用以下两个菜单接口：
+
+1. `GET /api/system/menu/getRouters`（`getUserSystemMenuApi`）
+2. `GET /api/system/v1/space/menu/getAllRouters`（`getAllSpaceMenuApi`）
+
+这两个接口由 `store/slice/route/index.ts` 的 `initDynamicAuthRoute()` 触发。根因在 `router/guard/index.ts` 的 `init()` 函数：先执行 `initAuthRoute()`（含菜单接口），后才判断当前路径是否在 login 页。当 `checkAuthStatus()` 检测到 localStorage 中仍有 token（即使已过期）时，`isLogin` 为 true，函数不会在 `if (!isLogin) return null` 处提前返回，于是继续执行 `initAuthRoute()` 并触发菜单接口；接口返回 401 后触发 `handleLoginExpired()`，弹"登录已过期"提示并跳转登录页，导致用户在登录页看到无意义的过期提示。
+
+### 目标
+
+1. 访问 `/login` 时（无论 localStorage 中是否存在 token），不调用 `getUserSystemMenuApi` 和 `getAllSpaceMenuApi`，直接展示登录页。
+2. 已登录用户（有效 token）访问 `/login` 时，先调菜单接口初始化路由后重定向到首页（保持原有行为）。
+3. 点击登录按钮、获取 token 后，仍正常调用菜单接口初始化动态路由（`useLogin` hook 中 `dispatch(initAuthRoute())` 链路不变）。
+4. 非 login 页的鉴权和路由初始化流程不受影响（`/home`、`/workbench` 等页面仍按原逻辑先检查 token 再初始化路由）。
+
+### 非目标
+
+- 不修改 `createRouteGuard`（每次导航执行的 beforeEach 守卫）和 `afterEach` 钩子。
+- 不修改 `useLogin` hook（`apps/abi/src/hooks/common/login.ts`）中登录成功后的 `initAuthRoute()` 调用。
+- 不修改登录接口、验证码接口、用户信息接口的请求参数或响应处理。
+- 不修改 chat、dashboard 子应用的鉴权流程。
+- 不修改 `store/slice/route/index.ts` 中 `initDynamicAuthRoute()` 的实现。
+
+### 影响范围
+
+- `apps/abi/src/router/guard/index.ts`：`init` 函数内判断顺序调整，将 login 页判断提前到 `initAuthRoute()` 之前。
+
+### 修复方案
+
+将 `init()` 函数中的 login 页判断提前：
+
+```typescript
+export const init: Init = async currentFullPath => {
+  await store.dispatch(initConstantRoute());
+
+  const isSharePage = currentFullPath.includes('/dashboard_share_page/')
+    || currentFullPath.includes('/dashboard-share-page/');
+
+  const isOnLoginPage = currentFullPath.includes('login');
+  const isLogin = checkAuthStatus();
+
+  // 修复：login 页优先判断，不调菜单接口
+  if (isOnLoginPage) {
+    if (isLogin) {
+      // 有有效 token 访问 login 页 → 初始化路由后重定向首页
+      await store.dispatch(initAuthRoute());
+      return { name: 'root' as RouteKey, replace: true };
+    }
+    // 无 token 或 token 过期 → 展示登录页，不调菜单接口
+    return null;
+  }
+
+  // 非 login 页且未登录 → 重定向到 login
+  if (!isLogin && !isSharePage) {
+    const loginRoute: RouteKey = 'login';
+    const routeHome = getRouteHome(store.getState());
+    const query = getRouteQueryOfLoginRoute(currentFullPath, routeHome as RouteKey);
+    return { name: loginRoute, query };
+  }
+
+  if (!isLogin) return null;
+
+  await store.dispatch(initAuthRoute());
+  return null;
+};
+```
+
+### 验收标准
+
+1. 浏览器无痕模式（无 localStorage token）访问 `/login`，Network 面板不出现 `/api/system/menu/getRouters` 和 `/api/system/v1/space/menu/getAllRouters` 请求。
+2. 手动在 localStorage 写入过期 token 后访问 `/login`，不弹出"登录已过期"提示，Network 面板不出现上述两个菜单接口请求。
+3. 有效 token 状态下访问 `/login`，调用菜单接口后重定向到首页（保持原有行为）。
+4. 点击登录按钮后，正常调用 login 接口 → 菜单接口 → 跳转首页，流程与修改前一致。
+5. 访问 `/home`、`/workbench` 等非 login 页面，token 有效时正常调用菜单接口；token 无效时正常重定向到 login。
+6. 分享页（`/dashboard-share-page/`）匿名访问行为不变。
+7. `pnpm --filter chatbi typecheck` 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm --filter chatbi typecheck` 对比基线。
+- 手工走查：
+  - 无痕模式访问 `/login`，确认无菜单接口调用。
+  - 写入过期 token 后访问 `/login`，确认无菜单接口调用、无过期提示。
+  - 有效 token 访问 `/login`，确认正常重定向首页。
+  - 点击登录按钮，确认 login → 菜单 → 首页的完整流程。
+  - 访问其他页面（有/无 token），确认鉴权和重定向正常。
+- run log：`.ai/runs/2026-09-10-login-page-menu-api-guard/`
+
+
+## 2026-09-11 ׷�ӣ�API Key ��Ƭ��ͼ�����Ż�
+
+### ��������
+
+ǰ�� UI �Ż�����ǰ�ˣ����Ľӿ�Э�飩��
+
+### Ŀ��
+
+1. API Key ��Ƭ��ͼ��Ƭȥ��������ʱ�䡹��ʾ�
+2. ��Ƭ��Ϊ������ģ�飨����Դ�����ߡ�MCP �ȣ�һ�µ� bi-data-card-head / bi-data-card-body / bi-data-card-footer ��׼���νṹ���߶�������ģ�鿨Ƭ����һ�¡�
+3. ���鿴����ͣ��/���á��� hover�����ࡹ�������Ƴ�����Ϊ��Ƭ�ײ� footer ���Ե� bi-card-act ��ť��������SK����ɾ���������� footer �Ҳ� bi-card-more �����У�trigger ��Ϊ click��������ģ��һ�£���
+
+### ��Ŀ��
+
+- ���޸��б���ͼ���ֶ��������
+- ���޸Ĳ鿴/ͣ��/����SK/ɾ���Ľӿڵ����߼���
+
+### Ӱ�췶Χ
+
+- pps/abi/src/pages/component/applications/api-key/components/ApiKeyTable.tsx������Ƭ��ͼ��֧��
+
+### ���ձ�׼
+
+1. ��Ƭ������ʾ������ʱ�䡹�С�
+2. ���鿴����ͣ��/���á���ť�ڿ�Ƭ�ײ����ԣ������Ϊ��ԭ�˵���һ�¡�
+3. �����ࡹ��������������SK����ɾ���������������
+4. ��Ƭ�ṹ/�߶�������ģ�鿨Ƭһ�¡�
+
+### ����Ҫ��
+
+- pps/abi �� 
+px tsc --noEmit --skipLibCheck �ԱȻ�������������
+- �ֹ��߲飺API Key ҳ��Ƭ��ͼ�Ĳ鿴/ͣ��/����SK/ɾ��������
+- run log��.ai/runs/2026-09-11-api-key-card-layout/
+
+## 2026-09-11 追加：探索模式执行步骤内嵌待办折叠 + 文案改名
+
+### 需求类型
+
+前端 UI 样式优化与文案调整，无接口变化。
+
+### 背景
+
+- 助手调试预览侧（管理端 assistant-edit-drawer）探索模式卡片右栏集中展示“当前步骤结果 / 当前步骤详情”，与左侧待办对照不便。
+- chat 对话探索模式卡片结果区标题文案不直观。
+
+### 目标
+
+1. 助手侧（apps/abi 探索模式卡片）：移除右栏，执行步骤内嵌在待办事项列表中对应待办的下方；点击待办行展开/收起其下步骤（行右侧不展示优先级标签），步骤执行信息默认展开、手动可折叠；未关联待办的孤儿步骤兜底展示在待办列表末尾。
+2. 折叠行为：运行中的待办自动展开，待办执行完（in_progress 转终态）自动收起（此时清除手动覆盖态）；步骤执行信息默认展开、仅手动切换；历史探索点击待办联动选中态与思考区，手动展开不受自动收起影响。
+3. chat 侧（apps/chat 探索模式卡片）：布局不变，仅右栏标题由“当前步骤结果 / 当前步骤详情”改为“运行结果”。
+
+### 非目标
+
+- 不改工作室（ExplorePreviewPane）抽屉的数据展示。
+- 不改探索流式协议、reducer 与接口调用。
+- 不同步调整 chat 应用应用工坊助手详情抽屉的卡片布局（共用 chat 卡片组件，仅文案同步生效）。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/assistant-manage/assistant-config/modules/exploration-mode/ExploreMessageRow.tsx`、`styles.module.css`
+- `apps/chat/src/components/conversation/exploration-mode/ExploreMessageRow.tsx`、`styles.module.css`
+- `apps/chat/src/components/conversation/index.tsx`（注释文案）
+- run log：`.ai/runs/2026-09-11-explore-step-result-inline/`
+
+### 验收标准
+
+1. 助手调试卡片单列：思考、待办事项纵向堆叠；每条待办行可点击展开/收起其下执行步骤，步骤行可再展开/折叠执行信息。
+2. 运行中当前待办自动展开并滚动到可视区，该待办执行完自动收起；步骤执行信息默认展开、手动可切换；待办行不展示优先级标签。
+3. chat 对话探索卡片右栏标题显示“运行结果”，布局不变。
+4. `pnpm --filter chatbi typecheck` 与 eslint 对比基线无新增错误；探索模式单测通过。
+
+### 测试要求
+
+- `pnpm exec vitest run exploreStreamReducer historyAdapter`
+- `pnpm --filter chatbi typecheck`、改动文件 eslint 对比基线。
+- 手工：助手调试运行探索问题，观察步骤自动展开/折叠与手动切换；chat 对话查看探索卡片文案。

@@ -25,6 +25,13 @@ export function fetchLogin(userName: string, password: string) {
   });
 }
 
+export function fetchLogout() {
+  return apiRequest({
+    method: 'post',
+    url: '/api/auth/logout'
+  });
+}
+
 /** Get user info */
 export function fetchGetUserInfo() {
   return request<Api.Auth.UserInfo>({ url: '/api/system/user/getInfo' });
@@ -37,7 +44,7 @@ export function fetchGetUserInfo() {
  * @param msg error message
  */
 export function fetchCustomBackendError(code: string, msg: string) {
-  return request({ params: { code, msg }, url: '/api/auth/error' });
+  return request({ params: { code, msg }, url: '/api/error' });
 }
 
 /** 嵌入onenet时获取登录token接口 */

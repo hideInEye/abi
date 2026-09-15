@@ -6,7 +6,8 @@ import {
   parseExploreStreamEvent,
   reduceExploreEvent,
 } from '@/components/conversation/exploration-mode/exploreStreamReducer'
-import type { ExploreItem } from '@/components/conversation/exploration-mode/types'
+import { buildMcpSourceVersionFields } from '@/components/conversation/exploration-mode/useExploreConversation'
+import type { ExploreItem, ExploreMcpSource } from '@/components/conversation/exploration-mode/types'
 
 interface UseAssistantDebugChatOptions {
   appId?: number | string | null
@@ -89,7 +90,7 @@ export function useAssistantDebugChat({ appId, spaceId, schemaId, chatModelId, e
     setItems((prev) => prev.map((item) => (item.status === 'running' ? { ...item, status: 'cancelled', finishReason: 'user_cancelled' } : item)))
   }, [])
 
-  const handleSend = useCallback(async (question: string, options?: { skillSourceVersionIds?: string[]; mcpSourceVersionIds?: string[] }) => {
+  const handleSend = useCallback(async (question: string, options?: { skillSourceVersionIds?: string[]; mcpSourceVersionIds?: ExploreMcpSource[] }) => {
     if (loading) return
     const didCreateSession = await ensureSession()
     if (!didCreateSession) {
@@ -117,6 +118,7 @@ export function useAssistantDebugChat({ appId, spaceId, schemaId, chatModelId, e
     setLoading(true)
     abortRef.current = new AbortController()
 
+    const mcpFields = buildMcpSourceVersionFields(options?.mcpSourceVersionIds)
     const payload = {
       messages: question,
       app_id: appId ?? 0,
@@ -132,8 +134,8 @@ export function useAssistantDebugChat({ appId, spaceId, schemaId, chatModelId, e
       chat_model_id: chatModelId || 0,
       is_debug: isDebug,
       chat_mode: 'copilot',
-      sse_mcp_source_version_ids: normalizeIdList(options?.mcpSourceVersionIds),
-      mcp_streamable_source_version_ids: [],
+      sse_mcp_source_version_ids: mcpFields.sse,
+      mcp_streamable_source_version_ids: mcpFields.streamable,
       skills_source_version_ids: normalizeIdList(options?.skillSourceVersionIds),
     }
 

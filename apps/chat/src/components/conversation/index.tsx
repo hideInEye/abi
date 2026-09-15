@@ -191,7 +191,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     reportController.openReport(reportId)
   }, [reportController])
 
-  // 探索运行中只在卡片内展示当前步骤结果；从 running 结束为 completed 后再自动打开右侧全部结果。
+  // 探索运行中只在卡片内展示运行结果；从 running 结束为 completed 后再自动打开右侧全部结果。
   useEffect(() => {
     const nextStatuses = new Map<string, string>()
     exploreController.items.forEach((item) => {
