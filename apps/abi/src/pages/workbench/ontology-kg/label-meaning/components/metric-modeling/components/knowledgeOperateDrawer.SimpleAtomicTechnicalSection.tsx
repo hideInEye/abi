@@ -7,7 +7,7 @@ import { TableSemantics } from '@/components/tableSemantics'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
-import { AGG_METHOD_LABEL_MAP, AGG_METHOD_OPTIONS } from '../constants/metricModeling.constants'
+import { AGG_METHOD_OPTIONS } from '../constants/metricModeling.constants'
 import type { AggregationCode, KnowledgeFormValues, KnowledgeTechField } from '../types/metricModeling.types'
 import { toLegacyProjectionFunc } from '../utils/aggregation'
 import { getKnowledgeTechFieldId } from '../utils/atomicMetricSource'
@@ -33,7 +33,6 @@ export const KnowledgeOperateSimpleAtomicTechnicalSection: React.FC<Props> = ({
   onRetryFields,
   onSchemaChange
 }) => {
-  const aggregationMethods = (AForm.useWatch('atomicAggregationMethods', form) || []) as AggregationCode[]
   const sourceFieldId = AForm.useWatch('atomicSourceFieldId', form)
   const selectedField = useMemo(
     () => allFields.find(item => getKnowledgeTechFieldId(item) === String(sourceFieldId || '')),
@@ -47,10 +46,6 @@ export const KnowledgeOperateSimpleAtomicTechnicalSection: React.FC<Props> = ({
       })),
     [allFields]
   )
-  const aggregationSummary = aggregationMethods
-    .map(method => `${AGG_METHOD_LABEL_MAP[method]}（${method}）`)
-    .join('、')
-
   useEffect(() => {
     form.setFieldValue('semanticType', selectedField?.semanticType)
   }, [form, selectedField])
@@ -69,13 +64,11 @@ export const KnowledgeOperateSimpleAtomicTechnicalSection: React.FC<Props> = ({
           groupFieldName="semanticsGroupId"
           type="shema"
         />
-        <div className={styles.semanticHint}>先选择数据语义，再从该数据语义已纳入的字段中选择一个来源字段。</div>
       </div>
 
       <div className="grid grid-cols-2 gap-x-8">
         <AForm.Item
           required
-          extra="一次选择一个语义字段作为原子指标来源。"
           label="来源字段"
           name="atomicSourceFieldId"
           rules={[{ message: '请选择来源字段', required: true }]}
@@ -90,12 +83,6 @@ export const KnowledgeOperateSimpleAtomicTechnicalSection: React.FC<Props> = ({
         </AForm.Item>
         <AForm.Item
           required
-          extra={
-            <div>
-              <div>当前已保存聚合方式：{aggregationSummary || '-'}</div>
-              <div className="mt-1">一键映射生成的原子指标可在此查看并维护已保存的聚合方式。</div>
-            </div>
-          }
           label="聚合方式"
           name="atomicAggregationMethods"
           rules={[{ message: '请至少选择一种聚合方式', min: 1, required: true, type: 'array' }]}

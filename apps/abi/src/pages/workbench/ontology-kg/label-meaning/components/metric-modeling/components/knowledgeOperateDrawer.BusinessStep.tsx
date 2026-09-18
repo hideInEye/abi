@@ -149,6 +149,8 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
         }
       </AForm.Item>
 
+      {atomicTechnicalSection}
+
       <div className="mb-4 border border-gray-200 rounded bg-white p-4">
         <OntologyFormSectionTitle icon={<TagsOutlined />}>语义信息</OntologyFormSectionTitle>
         <AForm.Item
@@ -177,8 +179,6 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
           />
         </AForm.Item>
       </div>
-
-      {atomicTechnicalSection}
     </>
   )
 }
