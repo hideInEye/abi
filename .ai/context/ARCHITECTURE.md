@@ -17,7 +17,7 @@
 
 ## 模块边界
 
-- `apps/abi` 是主壳和主要业务管理端，可以集成 `chat` 和 `dashboard` 子应用，但不应把子应用内部 UI 逻辑复制进主应用。
+- `apps/abi` 是主壳和主要业务管理端，通过 qiankun 集成 `dashboard`；`chat` 当前是 `/chat-ui/` 独立 SPA，不应按 qiankun 卸载语义评估其生命周期。
 - `apps/chat` 负责聊天、会话、图表/问答呈现和相关请求，鉴权通过共享 token 或 host `window.onTokenExpired` 协作。
 - `apps/dashboard` 负责大屏设计器、画布、组件定义、蓝图、热键、Undo/Redo 等复杂交互。
 - `packages/auth` 只处理 token 标准化、Authorization header、登录过期流程，不应包含业务路由或页面。
@@ -26,6 +26,7 @@
 
 ## 微前端集成约束
 
+- 当前拓扑：ABI 是宿主，Dashboard 是 qiankun 子应用；Chat 的 `registerAiBotMicroApp()` 是兼容空函数，实际通过 `/chat-ui/` 独立运行。
 - ABI 使用 qiankun 加载微应用时必须启用样式隔离，优先使用 `sandbox.experimentalStyleIsolation`，避免子应用样式污染宿主。
 - 新增或改造微应用时，子应用不得把业务背景、主题色、页面底色直接写到全局 `html` / `body` 选择器；应写到自身 root 容器或业务作用域 class。必要的 reset 也应尽量收敛到子应用容器。
 - 若确需修改全局 `html` / `body`，必须在需求和 run log 中说明原因、影响范围、样式隔离策略和回归验证方式。
@@ -36,7 +37,7 @@
 
 - `apps/*` -> `packages/*`
 - `apps/abi` -> qiankun host/sub-app 配置
-- `apps/chat`、`apps/dashboard` -> `packages/auth` 或同源 token 约定
+- `apps/chat` 独立 SPA、`apps/dashboard` qiankun 子应用 -> `packages/auth` 或同源 token 约定
 - `packages/axios` -> `packages/auth`、`packages/utils`
 - `packages/materials` -> `packages/color`、`packages/utils`
 

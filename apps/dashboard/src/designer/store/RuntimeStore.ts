@@ -17,6 +17,7 @@ class RuntimeStore {
         makeObservable(this, {
             auxiliaryBorder: observable,
             setAuxiliaryBorder: action,
+            reset: action,
         })
     }
 
@@ -25,6 +26,8 @@ class RuntimeStore {
     setAuxiliaryBorder = (auxiliaryBorder: boolean) => {
         this.auxiliaryBorder = auxiliaryBorder;
     }
+
+    reset = () => this.auxiliaryBorder = false;
 
 }
 

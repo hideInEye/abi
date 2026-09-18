@@ -8,7 +8,7 @@
 
 - 前端 monorepo。
 - 多应用 + 共享包结构。
-- 存在 qiankun 微前端集成线索：`apps/abi/src/main.tsx`、`apps/chat/vite.config.ts`、`apps/dashboard/src/index.tsx`、`vite-plugin-qiankun` 依赖。
+- `apps/abi` 是主应用；`apps/dashboard` 由 ABI 通过 qiankun 动态加载；`apps/chat` 当前通过 `/chat-ui/` 作为独立 SPA 运行，其 qiankun 入口仅保留兼容空实现。
 
 ## 技术栈
 
@@ -57,7 +57,7 @@
 
 - 根配置：`package.json`、`pnpm-workspace.yaml`、`turbo.json`、`Makefile`。
 - 主应用：`apps/abi/src/main.tsx`、`apps/abi/src/App.tsx`、`apps/abi/vite.config.ts`。
-- 聊天子应用：`apps/chat/src/main.tsx`、`apps/chat/src/App.tsx`、`apps/chat/vite.config.ts`。
+- 聊天独立应用：`apps/chat/src/main.tsx`、`apps/chat/src/App.tsx`、`apps/chat/vite.config.ts`。
 - 大屏设计器：`apps/dashboard/src/index.tsx`、`apps/dashboard/src/router/MainRouter.tsx`、`apps/dashboard/vite.config.ts`。
 
 ## 构建和运行方式

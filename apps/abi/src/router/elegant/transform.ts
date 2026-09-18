@@ -216,6 +216,7 @@ const routeMap: RouteMap = {
   "component_data": "data",
   "component_data_data-dictionary": "data-dictionary",
   "component_data_effect-review": "effect-review",
+  "component_data_semantic-list": "semantic-list",
   "component_system": "system",
   "component_system_model": "model",
   "component_system_plugin": "plugin",

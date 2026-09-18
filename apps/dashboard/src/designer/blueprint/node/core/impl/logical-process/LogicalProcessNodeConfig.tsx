@@ -13,24 +13,30 @@ import React, {Suspense, lazy, useState} from "react";
 import {BPRightConfigProps} from "../../../../right/BPRight";
 import debounce from "lodash/debounce";
 import Loading from "../../../../../../json-schema/ui/loading/Loading.tsx";
+import {EMPTY_DATA_TRANSFORM, parseDataTransformConfig, RuntimeConfigError} from "../../../../../../security/runtime-config.ts";
+import {globalMessage} from "../../../../../../framework/message/GlobalMessage.tsx";
 
 const CodeEditor = lazy(() => import("../../../../../../json-schema/ui/code-editor/CodeEditor.tsx"));
 
 export const LogicalProcessNodeConfig: React.FC<BPRightConfigProps> = (props) => {
     const {controller} = props;
     const config = controller?.getConfig();
-    const handleCode = config.handler || "function handle(data) { \n \n }";
+    const handleCode = typeof config.handler === 'string' ? config.handler : JSON.stringify(config.handler || EMPTY_DATA_TRANSFORM, null, 2);
     const [count, setCount] = useState(0);
     const onCodeChange = debounce((value: string | undefined) => {
         if (!value) return;
-        controller?.update({handler: value});
-        setCount(count + 1);
+        try {
+            controller?.update({handler: parseDataTransformConfig(value)});
+            setCount(count + 1);
+        } catch (error) {
+            globalMessage.messageApi?.error(error instanceof RuntimeConfigError ? error.message : '数据处理配置无效');
+        }
     }, 500);
     return (
         <div className={'logical-process-node-config'}>
             <Suspense fallback={<Loading/>}>
                 <CodeEditor value={handleCode} onChange={onCodeChange} height={400} fullScreen={true}
-                            language={'javascript'}/>
+                            language={'json'}/>
             </Suspense>
         </div>
     )

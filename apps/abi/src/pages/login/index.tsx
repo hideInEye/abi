@@ -1,14 +1,16 @@
-import { Button, Checkbox, Form, Input } from 'antd'
-
-import loginHero from '@/assets/imgs/login/loginbot.png'
-import loginLogo from '@/assets/imgs/login/logo.png'
-import loginBg from '@/assets/imgs/login/loginbg.png'
-import Captcha, { CaptchaRef } from '@/components/captcha-code'
-import { useLogin } from '@/hooks/common/login'
 import { EyeInvisibleOutlined, EyeTwoTone, LockOutlined, UserOutlined } from '@ant-design/icons'
+import { Button, Form, Input } from 'antd'
 import { debounce } from 'lodash'
 
+import loginBg from '@/assets/imgs/login/loginbg.png'
+import loginHero from '@/assets/imgs/login/loginbot.png'
+import loginLogo from '@/assets/imgs/login/logo.png'
+import Captcha from '@/components/captcha-code'
+import type { CaptchaRef } from '@/components/captcha-code'
+import { useLogin } from '@/hooks/common/login'
+
 import styles from './index.module.css'
+import { clearLegacyRememberedCredentials } from './loginSecurity'
 
 type AccountKey = 'admin' | 'super' | 'user'
 interface Account {
@@ -16,10 +18,9 @@ interface Account {
   label: string
   password: string
   username: string
-  remember: boolean
 }
 
-interface LoginParams extends Pick<Account, 'password' | 'username' | 'remember'> {
+interface LoginParams extends Pick<Account, 'password' | 'username'> {
   code: string
 }
 
@@ -35,11 +36,6 @@ export function Component() {
 
   const handleSubmit = debounce(async function handleSubmit() {
     const params = await form.validateFields()
-    if (params.remember) {
-      localStorage.setItem('loginInfo', JSON.stringify({ userName: params.username, passWord: params.password }))
-    } else {
-      localStorage.removeItem('loginInfo')
-    }
     toLogin(
       {
         ...params,
@@ -53,15 +49,8 @@ export function Component() {
     handleSubmit()
   })
   useEffect(() => {
-    const loginInfo = localStorage.getItem('loginInfo')
-    if (loginInfo) {
-      const data = JSON.parse(loginInfo)
-      form.setFieldsValue({
-        username: data.userName,
-        password: data.passWord,
-        remember: true,
-      })
-    }
+    // Remove credentials persisted by older versions; passwords must never survive a page reload.
+    clearLegacyRememberedCredentials(localStorage)
   }, [])
 
   return (
@@ -132,15 +121,6 @@ export function Component() {
                   onRefresh={setCaptchaUuid}
                 />
               </Form.Item>
-
-              <div className={styles.helperRow}>
-                <Form.Item name="remember" valuePropName="checked" noStyle>
-                  <Checkbox className={styles.remember}>记住我</Checkbox>
-                </Form.Item>
-                {/* <a className={styles.forgotLink} href="#" onClick={(event) => event.preventDefault()}>
-                  忘记密码?
-                </a> */}
-              </div>
 
               <Button
                 type="primary"

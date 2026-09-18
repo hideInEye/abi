@@ -1,6 +1,6 @@
 import { CheckOutlined, DownOutlined, MessageOutlined, SearchOutlined, TeamOutlined } from '@ant-design/icons'
 import { useNavigate } from '@tanstack/react-router'
-import { Dropdown, Empty, Spin, message } from 'antd'
+import { Dropdown, Empty, Spin } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { fetchSpaceList } from '@/service/api/space'
@@ -116,7 +116,7 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
 
       setSelectedSpaceId(nextSpaceList[0].spaceId)
     } catch {
-      message.error('加载空间列表失败')
+      // 错误提示由请求层统一弹出后端原文，这里只重置空间列表
       setSpaceList([])
     } finally {
       setLoading(false)

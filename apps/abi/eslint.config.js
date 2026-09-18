@@ -38,6 +38,9 @@ export default defineConfig(
       ],
 
       'no-underscore-dangle': 'off',
+      'no-eval': 'error',
+      'no-new-func': 'error',
+      'no-implied-eval': 'error',
 
       'react/hook-use-state': [
         'error', // or "warn" to only warn instead of error

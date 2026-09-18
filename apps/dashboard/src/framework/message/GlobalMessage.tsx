@@ -12,12 +12,27 @@
 import {message} from "antd";
 import {useEffect} from "react";
 import {MessageInstance} from "antd/es/message/interface";
+import {isAuthExpiredNotifying} from "../../utils/FetchUtil";
+
+// 登录过期时请求层已统一提醒并跳转，窗口期内忽略组件层的 error 弹错，避免同一次失败弹两条
+function createAuthAwareMessageApi(api: MessageInstance): MessageInstance {
+    return new Proxy(api, {
+        get(target, prop, receiver) {
+            const value = Reflect.get(target, prop, receiver);
+            if (prop !== 'error' || typeof value !== 'function') return value;
+            return (...args: any[]) => {
+                if (isAuthExpiredNotifying()) return () => {};
+                return value.apply(target, args);
+            };
+        }
+    });
+}
 
 class GMessage {
     public messageApi: MessageInstance | null = null;
 
     public setMessageApi(messageApi: MessageInstance | null) {
-        this.messageApi = messageApi;
+        this.messageApi = messageApi ? createAuthAwareMessageApi(messageApi) : null;
     }
 
 }

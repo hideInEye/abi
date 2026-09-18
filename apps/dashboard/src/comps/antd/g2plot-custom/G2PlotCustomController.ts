@@ -15,9 +15,12 @@ import {Plot} from "@antv/g2plot";
 import {UpdateOptions} from "../../../framework/core/AbstractController";
 import {AntdBaseDesignerController} from "../../antd-common/AntdBaseDesignerController";
 import ObjectUtil from "../../../utils/ObjectUtil.ts";
+import {createRegisteredPlot, PlotRendererConfig} from "../../../security/renderer-registry.ts";
+import {globalMessage} from "../../../framework/message/GlobalMessage.tsx";
 
 export interface G2PlotCustomStyle {
-    customCode: string;
+    renderer?: PlotRendererConfig | string;
+    customCode?: string;
 }
 
 export interface G2PlotCustomProps extends ComponentBaseProps {
@@ -29,19 +32,21 @@ export default class G2PlotCustomController extends AntdBaseDesignerController<P
     async create(container: HTMLElement, config: G2PlotCustomProps): Promise<void> {
         this.container = container;
         this.config = config;
-        const customCode = config.style?.customCode;
-        if (!customCode || customCode === "")
+        if (!config.style?.renderer) {
+            if (config.style?.customCode) globalMessage.messageApi?.error('旧版自定义图表脚本已停用，请手动迁移为 JSON 渲染配置');
             return;
-        const func = eval(`(${customCode})`);
-        if (typeof func !== 'function')
-            return;
-        this.instance = func(container, G2Plot, config.data?.staticData);
+        }
+        try {
+            this.instance = createRegisteredPlot(container, G2Plot, config.data?.staticData, config.style.renderer);
+        } catch (error) {
+            globalMessage.messageApi?.error(error instanceof Error ? error.message : '图表渲染配置无效');
+        }
         //注册蓝图-暂不处理
         // this.registerEvent();
     }
 
     destroy(): void {
-        this.instance!.destroy();
+        this.instance?.destroy();
         this.instance = null;
         this.config = null;
         this.interval && clearInterval(this.interval);
@@ -69,13 +74,13 @@ export default class G2PlotCustomController extends AntdBaseDesignerController<P
                     this.container.removeChild(this.container.firstChild);
                 }
             }
-            const customCode = config.style?.customCode;
-            if (!customCode || customCode === "")
-                return;
-            const func = eval(`(${customCode})`);
-            if (typeof func !== 'function')
-                return;
-            this.instance = func(this.container, G2Plot, this.config?.data?.staticData);
+            const renderer = this.config?.style?.renderer;
+            if (!renderer || !this.container) return;
+            try {
+                this.instance = createRegisteredPlot(this.container, G2Plot, this.config?.data?.staticData, renderer);
+            } catch (error) {
+                globalMessage.messageApi?.error(error instanceof Error ? error.message : '图表渲染配置无效');
+            }
         }
     }
 

@@ -15,6 +15,7 @@ import LCGUIUtil from "./LCGUIUtil";
 import UIMap from "./ui";
 import {ConfigProvider, theme} from "antd";
 import {antdComponentTheme} from "./AntdTheme.ts";
+import {evaluateVisibilityRule} from "../security/runtime-config.ts";
 
 export interface FieldChangeData {
     id?: string;
@@ -59,49 +60,16 @@ export class LCGUI extends React.Component<LCGUIProps> {
      * @param control
      */
     analyzeRules = (rules: string, control: Control): boolean => {
-        const regex = /{([^}]+)}/g;
-        const variable = [];
-        let match;
-        //解析rule中设置的变量
-        while ((match = regex.exec(rules)) !== null) {
-            variable.push(match[1]);
+        const values: Record<string, unknown> = {};
+        let current: Control | undefined = control;
+        while (current) {
+            current.children?.forEach(child => {
+                if (child.key) values[child.key] = child.value;
+            });
+            if (current.key) values[current.key] = current.value;
+            current = current.parent;
         }
-        //从control本层级开始逐级向上匹配，直到所有变量都匹配结束
-        const analyze = (control: Control, variable: string[], rules: string): string => {
-            if (variable.length === 0) {
-                //如果没有按照LCGUI设计的变量格式设置变量，如："{variable}==='true'",则会直接返回rule本身，并使用eval解析执行。这意味着可以直接写js脚本，转换为字符串匹配执行。这无意间提升了rule字段的灵活性
-                return rules;
-            }
-            const {parent} = control;
-            if (parent && "children" in parent) {
-                //解析parent的所有子节点control(与当前control同级)
-                const {children} = parent;
-                for (let i = 0; i < children!.length; i++) {
-                    if (variable.length === 0) break;
-                    const child = children![i];
-                    const matchIndex = variable.indexOf(child.key!);
-                    if (child.key && matchIndex !== -1) {
-                        rules = rules.replaceAll(`{${child!.key}}`, `'${child.value}'`)
-                        variable.splice(matchIndex, 1);
-                    }
-                }
-            }
-            if (variable.length > 0 && parent) {
-                //解析parent层级的key是否匹配
-                const matchIndex = variable.indexOf(parent!.key!);
-                if (parent!.key && parent.value && matchIndex !== -1) {
-                    //parent层级在同时匹配上key，同时value属性有值，同时variable中有匹配项时，才进行替换
-                    rules = rules.replace(`{${parent!.key}}`, `'${parent.value}'`)
-                    variable.splice(matchIndex, 1);
-                }
-                if (variable.length > 0) {
-                    return analyze(parent!, variable, rules);
-                }
-            }
-            return rules;
-        }
-        // eslint-disable-next-line
-        return eval(analyze(control, variable, rules));
+        return evaluateVisibilityRule(rules, values);
     }
 
     buildConfigUI = (control: Control, schemaKeyPath: SchemaPathNode[], dataKeyPath: string[], childIndex: number): ReactNode[] => {
@@ -184,4 +152,3 @@ export class LCGUI extends React.Component<LCGUIProps> {
         );
     }
 }
-

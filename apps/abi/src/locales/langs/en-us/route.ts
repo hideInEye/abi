@@ -20,6 +20,7 @@ const route: App.I18n.Schema['translation']['route'] = {
   component_data: 'Data',
   'component_data_data-dictionary': 'Data Dictionary',
   'component_data_effect-review': 'Effect Review',
+  'component_data_semantic-list': 'Semantic List',
   component_system_skills: 'Skill Manage',
   component_system_tools: 'Tool Develop',
   'data-preparation': 'Data Preparation',

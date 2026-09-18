@@ -13,6 +13,22 @@ import {action, makeObservable, observable} from "mobx";
 import AbstractManager from "../../../manager/core/AbstractManager.ts";
 import {ThemeItemType} from "../../../DesignerType.ts";
 
+const DEFAULT_THEME_CONFIG: Array<ThemeItemType> = [
+    {
+        id: "0",
+        name: "标准风格(默认主题)",
+        colors: {
+            main: "#1677ff",
+            mainText: "#333333",
+            subText: "#555555",
+            background: "rgba(22,119,255,0.08)",
+            supplementFirst: "#13c2c2",
+            supplementSecond: "#52c41a",
+        },
+    },
+];
+const createDefaultThemeConfig = () => DEFAULT_THEME_CONFIG.map(item => ({...item, colors: {...item.colors}}));
+
 class ThemeManager extends AbstractManager<Array<ThemeItemType>> {
     constructor() {
         super();
@@ -21,6 +37,7 @@ class ThemeManager extends AbstractManager<Array<ThemeItemType>> {
             setThemeVisible: action,
             themeConfig: observable,
             updateThemeConfig: action,
+            destroy: action,
         })
     }
 
@@ -31,24 +48,13 @@ class ThemeManager extends AbstractManager<Array<ThemeItemType>> {
     /**
      * 主题
      */
-    themeConfig: Array<ThemeItemType> | null = [
-        {
-            id: "0",
-            name: "标准风格(默认主题)",
-            colors: {
-                main: "#1677ff",
-                mainText: "#333333",
-                subText: "#555555",
-                background: "rgba(22,119,255,0.08)",
-                supplementFirst: "#13c2c2",
-                supplementSecond: "#52c41a",
-            },
-        },
-    ];
+    themeConfig: Array<ThemeItemType> | null = createDefaultThemeConfig();
 
     updateThemeConfig = (data: Array<ThemeItemType>) => this.themeConfig = data;
 
     destroy(): void {
+        this.themeConfig = createDefaultThemeConfig();
+        this.themeVisible = false;
     }
 
     getData(): Array<ThemeItemType> {

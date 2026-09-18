@@ -119,6 +119,28 @@ describe('reduceExploreEvent plan.update', () => {
     expect(item.tasks.map((task) => task.todo_id)).toEqual(['todo-fec68b39', 'todo-8b08d375'])
   })
 
+  it('drops a stale todo replaced by a re-planned todo_id and keeps the new one in place', () => {
+    let item = reduceExploreEvent(baseItem(), {
+      type: 'plan.update',
+      tasks: [
+        { todo_id: 'todo-a', content: '探索数据库结构', status: 'in_progress' },
+        { todo_id: 'todo-b', content: '编写SQL查询', status: 'pending' },
+        { todo_id: 'todo-d', content: '生成报告', status: 'pending' },
+      ],
+    })
+    // 后端重新规划：todo-b 被替换为新 id todo-c（旧 id 不再下发），应原位插入而非追加末尾
+    item = reduceExploreEvent(item, {
+      type: 'plan.update',
+      tasks: [
+        { todo_id: 'todo-a', content: '探索数据库结构', status: 'completed' },
+        { todo_id: 'todo-c', content: '编写SQL查询（细化）', status: 'in_progress' },
+        { todo_id: 'todo-d', content: '生成报告', status: 'pending' },
+      ],
+    })
+    expect(item.tasks.map((task) => task.todo_id)).toEqual(['todo-a', 'todo-c', 'todo-d'])
+    expect(item.tasks.some((task) => task.todo_id === 'todo-b')).toBe(false)
+  })
+
   it('falls back to whole replacement when tasks carry no todo_id', () => {
     const item = reduceExploreEvent(baseItem(), {
       type: 'plan.update',

@@ -4,7 +4,7 @@ import React from 'react'
 import ReactMarkdown from 'react-markdown'
 
 import { canRevealReport, getReportTitle } from './helpers'
-import { createTypewriterHtmlDocument } from './htmlTypewriter'
+import { createSafeHtmlDocument } from './safeHtmlDocument'
 import type { ReportItem } from './types'
 import styles from './styles.module.css'
 
@@ -28,8 +28,8 @@ const ReportPreviewPane: React.FC<ReportPreviewPaneProps> = ({ report, animate =
   const title = getReportTitle(candidate)
   const htmlDocument = React.useMemo(() => {
     if (candidate?.format !== 'html') return undefined
-    return animate ? createTypewriterHtmlDocument(candidate.content) : candidate.content
-  }, [animate, candidate?.content, candidate?.format])
+    return createSafeHtmlDocument(candidate.content)
+  }, [candidate?.content, candidate?.format])
 
   return (
     <aside className={styles.reportPane}>
@@ -58,8 +58,7 @@ const ReportPreviewPane: React.FC<ReportPreviewPaneProps> = ({ report, animate =
         {!candidate ? (
           <Empty className={styles.previewEmpty} image={Empty.PRESENTED_IMAGE_SIMPLE} description="报告内容尚未可用" />
         ) : candidate.format === 'html' ? (
-          // 完整 HTML 只加载一次；打字机在沙箱内部修改可见文本节点，不按动画帧刷新 srcDoc。
-          <iframe key={`${candidate.entryId}:${animate ? 'typing' : 'static'}`} title={title} className={styles.htmlFrame} srcDoc={htmlDocument} sandbox="allow-scripts" />
+          <iframe key={candidate.entryId} title={title} className={`${styles.htmlFrame} ${animate ? styles.htmlFrameEnter : ''}`} srcDoc={htmlDocument} sandbox="" />
         ) : (
           <div className={styles.markdownDoc}>
             <ReactMarkdown

@@ -12,6 +12,7 @@
 import AbstractRollback from "./AbstractRollback";
 import eventOperateStore from "../../EventOperateStore";
 import {IDragOperateData, IHistoryRecord} from "../OperateType";
+import {requestRollback} from "./requestRollback";
 
 export class DragRollbackImpl extends AbstractRollback {
     redo(record: IHistoryRecord): void {
@@ -23,12 +24,10 @@ export class DragRollbackImpl extends AbstractRollback {
         setTargetIds(nextRecordData.ids);
         setBackoff(true);
         //执行反向操作,React18推出了新的批处理和并发执行机制，导致之前17版本中部分逻辑代码的执行顺序发生了变化，因此这里需要将反向执行操作放到下一个事件循环中执行
-        Promise.resolve().then(() => {
-            movableRef?.request("draggable", {
-                x: nextRecordData!.x,
-                y: nextRecordData!.y,
-            }, true);
-        });
+        requestRollback(movableRef, () => eventOperateStore.targets.length > 0, "draggable", {
+            x: nextRecordData!.x,
+            y: nextRecordData!.y,
+        }, () => setBackoff(false));
     }
 
     undo(record: IHistoryRecord): void {
@@ -40,12 +39,10 @@ export class DragRollbackImpl extends AbstractRollback {
         setTargetIds(prevRecordData.ids);
         setBackoff(true);
         //执行反向操作,React18推出了新的批处理和并发执行机制，导致之前17版本中部分逻辑代码的执行顺序发生了变化，因此这里需要将反向执行操作放到下一个事件循环中执行
-        Promise.resolve().then(() => {
-            movableRef?.request("draggable", {
-                x: prevRecordData!.x,
-                y: prevRecordData!.y,
-            }, true);
-        })
+        requestRollback(movableRef, () => eventOperateStore.targets.length > 0, "draggable", {
+            x: prevRecordData!.x,
+            y: prevRecordData!.y,
+        }, () => setBackoff(false));
     }
 
 }

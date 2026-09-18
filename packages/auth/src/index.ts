@@ -36,6 +36,20 @@ export interface AuthManagerOptions {
   stateKey?: string;
 }
 
+export interface BrowserAuthEnvironment {
+  localStorage: Pick<Storage, 'getItem' | 'removeItem'>;
+  location: Pick<Location, 'hash' | 'pathname' | 'search'> & { href: string };
+  onTokenExpired?: () => Promise<void> | void;
+}
+
+export interface BrowserAuthAdapterOptions {
+  authStorageKeys?: readonly string[];
+  getEnvironment: () => BrowserAuthEnvironment;
+  notify?: (context: AuthNoticeContext) => Promise<void> | void;
+  stateKey: string;
+  tokenStorageKeys?: readonly string[];
+}
+
 interface AuthState {
   handling: boolean;
   redirecting: boolean;
@@ -142,6 +156,66 @@ export function createAuthorizationHeader(tokenLike: unknown): string | null {
   const token = normalizeToken(tokenLike);
 
   return token ? `Bearer ${token}` : null;
+}
+
+export function createBrowserAuthAdapter(options: BrowserAuthAdapterOptions) {
+  const tokenStorageKeys = options.tokenStorageKeys || ['SOY-REACT_token', 'token'];
+  const authStorageKeys = options.authStorageKeys || [
+    'SOY-REACT_token', 'token', 'SOY-REACT_refreshToken', 'refreshToken', 'SOY-REACT_userInfo', 'userInfo'
+  ];
+
+  const readAuthToken = () => {
+    for (const key of tokenStorageKeys) {
+      try {
+        const token = normalizeToken(options.getEnvironment().localStorage.getItem(key));
+        if (token) return token;
+      } catch {}
+    }
+    return '';
+  };
+
+  const manager = createAuthManager({
+    clearAuth: () => {
+      for (const key of authStorageKeys) {
+        try {
+          options.getEnvironment().localStorage.removeItem(key);
+        } catch {}
+      }
+    },
+    defaultNoticeMessage: DEFAULT_NOTICE_MESSAGE,
+    defaultNoticeTitle: DEFAULT_NOTICE_TITLE,
+    getCurrentPath: () => {
+      const {location} = options.getEnvironment();
+      return `${location.pathname}${location.search}${location.hash}`;
+    },
+    getToken: readAuthToken,
+    notify: options.notify,
+    redirectToLogin: async ({preserveRedirect, redirectPath}) => {
+      const environment = options.getEnvironment();
+      if (typeof environment.onTokenExpired === 'function') {
+        await environment.onTokenExpired();
+        return;
+      }
+      environment.location.href = preserveRedirect && redirectPath
+        ? `/login?redirect=${encodeURIComponent(redirectPath)}`
+        : '/login';
+    },
+    stateKey: options.stateKey
+  });
+
+  return {
+    authManager: manager,
+    getAuthorization: () => createAuthorizationHeader(readAuthToken()),
+    handleLoginExpired: (noticeMessage = DEFAULT_NOTICE_MESSAGE) => {
+      const hasHostHandler = typeof options.getEnvironment().onTokenExpired === 'function';
+      return manager.handleUnauthorized({
+        message: noticeMessage,
+        redirectDelay: hasHostHandler ? 0 : undefined,
+        showNotice: !hasHostHandler
+      });
+    },
+    readAuthToken
+  };
 }
 
 export function createAuthManager(options: AuthManagerOptions) {

@@ -1,130 +1,3 @@
-## 2026-09-18 追加：原子指标编辑与派生聚合定义按类型分流
-
-### 文档状态
-
-- 状态：已完成。
-- 需求类型：ABI 本体网络指标建模交互与提交协议修复。
-- 影响范围：`apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/metric-modeling` 及其定向测试。
-- 需求依据：用户提供的一键映射原子指标编辑、派生指标引用自定义原子指标两张截图与补充说明。
-- 完成记录：`.ai/runs/2026-09-18-atomic-aggregation-type-flow/RUN_LOG.md`。
-
-### 目标
-
-1. 编辑聚合定义 `type: 'simple'` 的一键映射原子指标时仅展示“业务配置”一步，并在该页增加技术定义区域，展示所属数据语义、来源字段和可维护的多选聚合方式。
-2. 新建或编辑聚合定义 `type: 'complex'` 的自定义原子指标继续使用“业务配置 → 技术属性”两步，不改变自定义聚合表达式编辑能力。
-3. 派生指标选择 `simple` 原子指标时继续展示并选择其已配置的聚合枚举；选择 `complex` 原子指标时，来源摘要和派生聚合方式统一显示“自定义聚合方式表达式”，并提供真实表达式查看入口。
-4. 派生指标引用 `complex` 原子指标时，选择框仅使用固定展示文案，提交给后端的 `calcLogic.aggMethod`、兼容聚合字段及派生表达式仍使用原子指标的真实自定义表达式。
-5. 编辑 `simple` 原子指标时继续提交 `techId: [{ ... }]`，来源字段中的 `agg` 保持 `{ type: 'simple', data: [...] }`，不被改写为 `complex`。
-
-### 非目标
-
-- 不修改一键映射接口、指标新增/编辑接口路径、维度配置、衍生指标模板或本体网络其他模块。
-- 不修改全局 Ant Design 样式，不重构现有业务配置、表达式构建器或数据语义接口。
-- 不覆盖当前指标建模目录及需求文件中已有的未提交改动和冲突标记。
-
-### 验收标准
-
-1. `simple` 原子指标编辑抽屉没有步骤导航和第二步；第一步能看到技术定义，聚合方式至少保留一项并可多选维护。
-2. `complex` 自定义原子指标仍有两步，技术属性字段、函数插入、表达式校验和提交结构保持可用。
-3. 派生指标选中 `simple` 原子指标后，摘要标签和下拉选项来自其 `agg.data`；切换时默认第一项并提交该枚举。
-4. 派生指标选中 `complex` 原子指标后，摘要与下拉只显示“自定义聚合方式表达式”，可以查看真实表达式，提交值不是展示文案而是真实表达式。
-5. `simple` 原子指标编辑提交后 `techId[0].agg.type` 仍为 `simple`；`complex` 派生指标的预览和提交不会将表达式回退为 `SUM`。
-
-### 测试要求
-
-- 补充指标建模小模块 Vitest，覆盖聚合类型识别、simple 编辑步骤、simple 报文保持、complex 展示值/真实提交值和派生预览。
-- 只运行本次修改涉及的定向 Vitest、相关 TypeScript/ESLint 静态检查与 `git diff --check`，不执行全仓测试或全量构建。
-- 完成后创建 `.ai/runs/2026-09-18-atomic-aggregation-type-flow/RUN_LOG.md`。
-
----
-
-## 2026-09-18 追加：指标建模聚合方式与自定义原子指标技术属性
-
-### 文档状态
-
-- 状态：已完成。
-- 需求类型：ABI 本体网络指标建模功能调整与接口协议适配。
-- 影响范围：`apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/metric-modeling` 及其定向测试。
-- 完成记录：`.ai/runs/2026-09-18-metric-aggregation-custom-atomic/RUN_LOG.md`。
-
-### 目标
-
-1. 一键映射原子指标的聚合方式改为多选，支持 `SUM`、`COUNT`、`COUNT DISTINCT`、`AVG`、`MAX`、`MIN`、`STDDEV`、`VARIANCE`、`MEDIAN`；每个 `techId` 字段新增 `agg: { type: 'simple', data: [...] }`，外层数组和既有字段不变。
-2. 派生指标展示所选原子指标的全部聚合能力，并在统计口径中新增单选“派生聚合方式”；选项仅来自当前原子指标，默认第一项，提交为 `calcLogic.aggMethod` 字符串。
-3. 自定义原子指标保持隐藏预计算配置，第一步删除英文名称，新增“技术属性”第二步，配置指标编码、数据、来源字段、聚合逻辑表达式和函数快捷入口。
-4. 自定义原子指标提交 `calcLogic.bizeName = 表中文名_#_字段中文名`、`calcLogic.techName = 表英文名.字段英文名`、`calcLogic.agg = { type: 'complex', data: 表达式 }`，同时提交来源语义及字段信息；顶层 `techId` 即使只有一个来源字段也使用单元素对象数组。
-5. 新旧指标兼容：聚合方式优先读取 `agg.data`，缺失时回退既有 `projectionFunc`；所有接口驱动的关闭、刷新、成功提示和下一步继续遵守成功响应门禁。
-
-### 非目标
-
-- 不修改指标创建、更新和一键映射接口路径，不改变一键映射请求最外层数组结构。
-- 不修改衍生指标模板、维度配置、标签语义、本体网络其他模块或全局 Ant Design 样式。
-- 不删除既有 `projectionFunc` 兼容字段，不修改任务范围外的字段和业务逻辑。
-- 不处理本文件已有的冲突标记和历史需求内容，不覆盖用户已有未提交改动。
-
-### 验收标准
-
-1. 一键映射每行至少选择一种聚合方式，默认 `SUM`，请求中 `techId[].agg.data` 为大写枚举数组；既有名称格式和请求结构保持不变。
-2. 派生指标来源摘要可读地展示多个聚合能力；统计口径只能选择该原子指标支持的一种聚合方式，切换原子指标后默认第一项并正确保存、回显。
-3. 自定义原子指标为“业务配置 → 技术属性”两步，第二步字段、校验、来源字段元信息和聚合函数快捷插入可用，原子指标不展示预计算配置。
-4. 自定义原子指标保存报文中的顶层 `techId` 为单元素来源字段对象数组，`calcLogic` 名称、表达式和 `complex` 聚合结构符合最新协议；指标列表仍展示指标自身顶层名称。
-5. 所有新增样式只作用于指标建模组件，旧指标和其他指标类型能够继续读取、编辑和提交。
-
-### 测试要求
-
-- 只运行指标建模修改内容对应的定向 Vitest、ABI TypeScript 检查和 `git diff --check`，不运行全仓测试或全量构建。
-- 单测覆盖聚合枚举/新旧兼容、一键映射请求、自定义原子指标 `complex` 请求、派生聚合方式默认与回显，以及原子指标预计算隐藏。
-- 完成后创建 `.ai/runs/2026-09-18-metric-aggregation-custom-atomic/RUN_LOG.md`。
-
----
-
-<<<<<<< Updated upstream
-# Chat 报告对话 SSE MCP 版本分组映射
-=======
-# 本体网络列表分页快速跳转
-
-## 文档状态
-
-- 状态：已完成。
-- 日期：2026-09-15。
-- 需求来源：用户要求本体网络模块的列表分页器均支持页码跳转，并明确无需执行测试和构建；后续补充以维度列表当前显示的“跳至 [页码] 页”为准，指标、标签、实体、关系也必须显示。
-- 需求类型：ABI 本体网络分页交互补齐。
-- 完成记录：`.ai/runs/2026-09-15-ontology-pagination-quick-jumper/RUN_LOG.md`。
-
-## 目标
-
-1. 完整检查 `apps/abi/src/pages/workbench/ontology-kg` 下实际展示分页器的列表。
-2. 维度、指标、标签、实体、关系五类主列表均始终显示“跳至 [页码] 页”，包括当前数据只有一页的情况。
-3. 保持现有页码、每页条数、总数、翻页请求和分页样式不变。
-
-## 非目标
-
-- 不给当前明确设置 `pagination={false}` 且没有独立分页器的抽屉内静态表格新增分页。
-- 不修改列表接口、查询参数、数据处理、全局 Ant Design 配置或全局样式。
-- 不重构现有手写分页器，不为五类主列表分别复制跳转逻辑。
-- 按用户要求，不执行测试和构建。
-
-## 影响范围
-
-- `apps/abi/src/pages/workbench/ontology-kg/components/OntologyTablePagination.tsx` 及其局部样式。
-- `apps/abi/src/pages/workbench/ontology-kg/label-meaning/components/dimension-modeling/components/dimensionOperateDrawer/RelatedMetricsTab.tsx`。
-- 本需求文件与 `.ai/runs/2026-09-15-ontology-pagination-quick-jumper/RUN_LOG.md`。
-
-## 验收标准
-
-1. 本体网络维度、指标、标签、实体、关系主列表无论总数是否超过一页，均显示与维度截图一致的“跳至 [页码] 页”控件。
-2. 推荐问法、技术术语的手写分页器继续显示“前往 [页码] 页”跳转控件。
-3. 维度关联指标列表的 Ant Design 分页器显示快速跳转控件，并沿用原翻页回调。
-4. 输入有效页码并按回车后沿用原分页回调跳转；空值、非数字和超出页数的值不触发翻页。
-5. `ontology-kg` 下不存在已启用分页但缺少快速跳转能力的列表。
-
-## 测试要求
-
-- 遵循用户要求，不运行单元测试、类型检查或构建。
-- 仅通过分页入口静态扫描与 `git diff --check` 检查变更完整性和格式问题。
-
----
-
 # 语义名单批量接口与产品口径收敛
 
 ## 文档状态
@@ -317,7 +190,6 @@
 ---
 
 # 鉴权接口路由迁移与退出登录成功门禁
->>>>>>> Stashed changes
 
 ## 文档状态
 
@@ -2297,42 +2169,6 @@ export const init: Init = async currentFullPath => {
   - 访问其他页面（有/无 token），确认鉴权和重定向正常。
 - run log：`.ai/runs/2026-09-10-login-page-menu-api-guard/`
 
-
-## 2026-09-11 ׷�ӣ�API Key ��Ƭ��ͼ�����Ż�
-
-### ��������
-
-ǰ�� UI �Ż�����ǰ�ˣ����Ľӿ�Э�飩��
-
-### Ŀ��
-
-1. API Key ��Ƭ��ͼ��Ƭȥ��������ʱ�䡹��ʾ�
-2. ��Ƭ��Ϊ������ģ�飨����Դ�����ߡ�MCP �ȣ�һ�µ� bi-data-card-head / bi-data-card-body / bi-data-card-footer ��׼���νṹ���߶�������ģ�鿨Ƭ����һ�¡�
-3. ���鿴����ͣ��/���á��� hover�����ࡹ�������Ƴ�����Ϊ��Ƭ�ײ� footer ���Ե� bi-card-act ��ť��������SK����ɾ���������� footer �Ҳ� bi-card-more �����У�trigger ��Ϊ click��������ģ��һ�£���
-
-### ��Ŀ��
-
-- ���޸��б���ͼ���ֶ��������
-- ���޸Ĳ鿴/ͣ��/����SK/ɾ���Ľӿڵ����߼���
-
-### Ӱ�췶Χ
-
-- pps/abi/src/pages/component/applications/api-key/components/ApiKeyTable.tsx������Ƭ��ͼ��֧��
-
-### ���ձ�׼
-
-1. ��Ƭ������ʾ������ʱ�䡹�С�
-2. ���鿴����ͣ��/���á���ť�ڿ�Ƭ�ײ����ԣ������Ϊ��ԭ�˵���һ�¡�
-3. �����ࡹ��������������SK����ɾ���������������
-4. ��Ƭ�ṹ/�߶�������ģ�鿨Ƭһ�¡�
-
-### ����Ҫ��
-
-- pps/abi �� 
-px tsc --noEmit --skipLibCheck �ԱȻ�������������
-- �ֹ��߲飺API Key ҳ��Ƭ��ͼ�Ĳ鿴/ͣ��/����SK/ɾ��������
-- run log��.ai/runs/2026-09-11-api-key-card-layout/
-
 ## 2026-09-11 追加：探索模式执行步骤内嵌待办折叠 + 文案改名
 
 ### 需求类型
@@ -2375,3 +2211,121 @@ px tsc --noEmit --skipLibCheck �ԱȻ�������������
 - `pnpm exec vitest run exploreStreamReducer historyAdapter`
 - `pnpm --filter chatbi typecheck`、改动文件 eslint 对比基线。
 - 手工：助手调试运行探索问题，观察步骤自动展开/折叠与手动切换；chat 对话查看探索卡片文案。
+
+## 2026-09-15 追加：助手分享悬浮窗探索模式执行过程滚动条锁定底部修复
+
+### 需求类型
+
+前端缺陷修复（纯前端，不改接口协议）。
+
+### 背景
+
+助手分享悬浮窗（ChatWidget）消息区的自动滚底 effect 在探索/报告流式更新时无条件执行 `scrollTop = scrollHeight`；探索模式执行过程 SSE 事件密集触发 items 更新，用户手动上滑查看执行步骤后立即被拽回底部，表现为“滚动条滑不上去、一直锁定在底部”。主对话（useConversationController）已有 userScrolled 守卫，分享悬浮窗缺失。
+
+### 目标
+
+1. 分享悬浮窗消息区：用户手动上滑超过阈值后，流式更新不再强制滚底，可自由回看执行过程。
+2. 用户滚回底部附近（距底 ≤50px）恢复自动跟随；新提问发送后重置为跟随。
+3. 交互/探索/报告三模式统一生效；未上滑时保持既有自动滚底行为。
+
+### 非目标
+
+- 不改主对话（conversation）既有滚动守卫逻辑。
+- 不改探索流式协议、reducer 与接口调用。
+- 不改助手调试预览侧（assistant-edit-drawer / AssistantDetailDrawer）的滚动行为。
+
+### 影响范围
+
+- `apps/chat/src/components/chat-widget/ChatWidget.tsx`（滚动守卫接入、发送重置、body onScroll）
+- `apps/chat/src/components/chat-widget/scrollFollow.ts`（新增纯函数守卫，阈值对齐主对话）
+- `apps/chat/src/components/chat-widget/scrollFollow.test.ts`（新增回归测试）
+- run log：`.ai/runs/2026-09-15-share-widget-scroll-follow/`
+
+### 验收标准
+
+1. 分享页/嵌入悬浮窗运行探索任务时，手动上滑后滚动条保持在用户位置，不再被拽回底部。
+2. 滚回底部附近后恢复自动跟随；发送新提问后无条件滚底跟随。
+3. 未手动上滑时，流式更新仍自动滚底（既有行为不变）。
+4. `pnpm exec vitest run src/components/chat-widget` 通过；apps/chat `tsc --noEmit` 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm exec vitest run src/components/chat-widget`
+- apps/chat 下 `npx tsc --noEmit -p tsconfig.app.json` 对比基线。
+- 手工：分享页运行探索问题，执行过程中上滑查看步骤不再被拽回；滚回底部恢复跟随。
+
+## 2026-09-15 追加二：分享悬浮窗滚动守卫两处调整（首次上滑生效 + 内部跟随滚动 containment）
+
+### 需求类型
+
+前端缺陷修复的后续调整（纯前端，无接口变化），延续同日「滚动条锁定底部」修复。
+
+### 背景
+
+- 初版修复后手工复核发现两个残留问题：① 上滑暂停阈值沿用主对话 100px，滚轮单档约 100px 不超阈值，首次上滑被下一次流式事件拽回，需滑两次才生效；② ExploreMessageRow 步骤跟随用 scrollIntoView，会连带滚动祖先容器，执行中把外层消息区滚动条拽回底部，绕过滚动守卫。
+
+### 目标
+
+1. 上滑暂停阈值降为「离开底部区（距底 >50px）」，单档滚轮上滑立即暂停自动滚底。
+2. 步骤跟随滚动只在步骤列表容器（.skillList，本身独立滚动容器）内生效，不影响外层消息区滚动条；保持 block:'nearest' 等价行为。
+
+### 非目标
+
+- 不改主对话 useConversationController 的守卫阈值与逻辑。
+- 不改探索流式协议、reducer 与接口调用。
+
+### 影响范围
+
+- `apps/chat/src/components/chat-widget/scrollFollow.ts`、`scrollFollow.test.ts`（阈值调整与用例更新）
+- `apps/chat/src/components/conversation/exploration-mode/ExploreMessageRow.tsx`（scrollStepIntoListView 容器内滚动，运行跟随与历史选中两处）
+- run log：`.ai/runs/2026-09-15-share-widget-scroll-follow/`
+
+### 验收标准
+
+1. 分享悬浮窗探索执行中，单档滚轮上滑后滚动条即保持在用户位置。
+2. 步骤切换时仅卡片内步骤列表跟随滚动，外层消息区滚动条不再自行移动。
+3. 滚回距底 ≤50px 恢复跟随；发送新提问重置跟随。
+4. chat-widget 单测通过；tsc 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm exec vitest run src/components/chat-widget`
+- apps/chat 下 `npx tsc --noEmit -p tsconfig.app.json` 对比基线。
+- 手工：分享页运行探索问题，单档滚轮上滑立即生效；步骤切换不拽外层滚动条。
+
+## 2026-09-15 追加三：滚动守卫阈值与恢复方向修正（上滑一点即生效、防内容折叠误恢复）
+
+### 需求类型
+
+前端缺陷修复的后续调整（纯前端，无接口变化），延续同日「滚动条锁定底部」修复。
+
+### 背景
+
+- 复核反馈：暂停阈值 50px 仍偏大，小幅度上滑不生效、需反复滑动；且内容折叠（待办执行完自动收起、思考区自动折叠）使 scrollHeight 缩水时浏览器被动钳制 scrollTop，旧恢复条件（距底 ≤50 不限方向）会误恢复跟随，下一次流式更新又把视图拽回底部。
+
+### 目标
+
+1. 暂停阈值降为贴底区（距底 >16px）：主动上滑即使幅度很小也立即暂停自动滚底。
+2. 恢复仅限「主动下滚进入贴底区（距底 ≤16px）」；内容折叠导致的 scrollTop 被动钳制不恢复跟随。
+
+### 非目标
+
+- 不改主对话 useConversationController 守卫与 ExploreMessageRow 容器内滚动（containment）改动。
+
+### 影响范围
+
+- `apps/chat/src/components/chat-widget/scrollFollow.ts`、`scrollFollow.test.ts`（9 用例）
+- run log：`.ai/runs/2026-09-15-share-widget-scroll-follow/`
+
+### 验收标准
+
+1. 探索执行中轻微上滑立即暂停自动滚底，无需反复滑动。
+2. 待办/思考自动折叠使内容缩水时，已暂停的视图不再被拽回底部。
+3. 主动滚回底部恢复跟随；发送新提问重置跟随。
+4. chat-widget 单测通过；tsc 对比基线无新增错误。
+
+### 测试要求
+
+- `pnpm exec vitest run src/components/chat-widget`
+- apps/chat 下 `npx tsc --noEmit -p tsconfig.app.json` 对比基线。
+- 手工：分享页运行探索问题，小幅度上滑立即生效；折叠发生时不回拽。

@@ -93,10 +93,12 @@ class LayerManager extends AbstractManager<LayerManagerDataType> {
     delItem = (ids: string[]) => {
         for (const id of ids) {
             const controller = this.compController[id];
-            if (controller)
-                controller.destroy();
-            delete this.layerConfigs[id];
-            delete this.compController[id];
+            try {
+                controller?.dispose();
+            } finally {
+                delete this.layerConfigs[id];
+                delete this.compController[id];
+            }
         }
     };
 
@@ -156,10 +158,20 @@ class LayerManager extends AbstractManager<LayerManagerDataType> {
     }
 
     public destroy(): void {
+        Object.values(this.compController).forEach(controller => {
+            try {
+                controller.dispose();
+            } catch (error) {
+                console.error('组件销毁失败', error);
+            }
+        });
+        this.compController = {};
         this.elemConfigs = {};
         this.layerConfigs = {};
         this.layerHeader = undefined;
         this.layerTail = undefined;
+        this.enableEvent = false;
+        this.enableAdsorption = true;
     }
 }
 

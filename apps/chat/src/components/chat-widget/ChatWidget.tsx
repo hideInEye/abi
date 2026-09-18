@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { marked } from 'marked'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { ConfigProvider, Popover, Table, Typography, message as antdMessage } from 'antd'
 import { ApiOutlined, CheckOutlined, EyeOutlined, RightOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons'
 import zhCN from 'antd/es/locale/zh_CN'
@@ -40,6 +41,7 @@ import type { ReportHistoryRoundGroup, ReportItem } from '../conversation/report
 import type { ReportSourceVersionFields } from '../../service/api/report'
 import { buildReportSourceVersionFields } from '../conversation/components/chat-input/reportSourceSelection'
 import { parseViewChart, type WidgetChart, WidgetMessage } from './history'
+import { nextUserScrolled } from './scrollFollow'
 import {
   checkSharePassword,
   ensureSession,
@@ -97,9 +99,6 @@ function getNow(): string {
 }
 
 /* ── AI 消息 Markdown 渲染（对齐主对话 ViewEle 管线）── */
-// 窄屏分享面板：开启硬换行，问数/归因/预测等回复中的单换行保持原样换行
-marked.use({ breaks: true, gfm: true })
-
 /** 剥离 AI 回复中的残留 HTML 标签（think 段与尾部结构化 JSON 已由 parseAiRaw 剥离） */
 const stripHtmlTags = (s: string): string => s.replace(/<[^>]*>/g, '')
 
@@ -123,15 +122,6 @@ const semanticMetaOf = (json: any): Pick<WidgetMessage, 'semanticGroup' | 'seman
   semanticName: typeof json?.semantic_name === 'string' && json.semantic_name.trim() ? json.semantic_name : undefined,
   semanticSchemaId: json?.semantic_id != null && json.semantic_id !== '' ? json.semantic_id : undefined,
 })
-
-/** marked 同步解析；解析异常时降级为转义后的原文 */
-const renderMarkdown = (content: string): string => {
-  try {
-    return marked.parse(content) as string
-  } catch {
-    return content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')
-  }
-}
 
 /* ── 内联图标（不依赖 antd，与大屏 AiChatPanel 同款 feather 线稿） ── */
 const iconProps = {
@@ -549,6 +539,9 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const sessionRef = useRef<WidgetSession | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
+  // 自动跟随底部守卫：用户手动上滑后流式更新不再强制滚底（避免执行过程滚动条锁定底部滑不上去）
+  const userScrolledRef = useRef(false)
+  const lastBodyScrollTopRef = useRef(0)
   const panelRef = useRef<HTMLDivElement>(null)
   const semSelectorRef = useRef<HTMLDivElement>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
@@ -670,10 +663,20 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 卸载时中断进行中的流式请求，避免向已卸载组件写状态
   useEffect(() => () => abortRef.current?.abort(), [])
 
+  // 记录用户是否手动上滑：上滑超过阈值暂停自动滚底，回到底部附近恢复（阈值同主对话）
+  const handleBodyScroll = () => {
+    const el = bodyRef.current
+    if (!el) return
+    const { scrollTop, scrollHeight, clientHeight } = el
+    userScrolledRef.current = nextUserScrolled(userScrolledRef.current, lastBodyScrollTopRef.current, scrollTop, scrollHeight, clientHeight)
+    lastBodyScrollTopRef.current = scrollTop
+  }
+
   // 新消息/探索/报告流式更新自动滚动到底部（三模式统一追踪时间线数据源；交互仅 messages 变化，行为不变）
+  // 用户手动上滑阅读时跳过，避免滚动条被反复拽回底部
   useEffect(() => {
     const el = bodyRef.current
-    if (el) el.scrollTop = el.scrollHeight
+    if (el && !userScrolledRef.current) el.scrollTop = el.scrollHeight
   }, [messages, exploreController.items, reportController.reports, phase])
 
   // 语义下拉打开时：点击面板外部收起
@@ -944,6 +947,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const dispatchSend = async (explicitText?: string) => {
     const text = (explicitText ?? input).trim()
     if (!text || phase !== 'ready') return
+    // 新提问重置自动跟随：发送后无论此前滚动位置都滚底跟随新回复
+    userScrolledRef.current = false
     if (chatMode === 'explore') {
       if (exploreController.loading) return
       const schemaId = selectedSemantic?.schemaId
@@ -1396,7 +1401,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           )}
         </div>
 
-        <div className="abi-cw-body" ref={bodyRef}>
+        <div className="abi-cw-body" ref={bodyRef} onScroll={handleBodyScroll}>
           {phase === 'checking' || phase === 'loading' ? (
             <div className="abi-cw-status">
               <div className="abi-cw-spinner" />
@@ -1531,11 +1536,9 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                         <div className="section-header mt-2 pt-3 pb-3 px-2.5">
                           <span className="chart-header-title font-semibold text-[#2d2d2d]">描述分析</span>
                         </div>
-                        <div
-                          className={`${convStyles['markdown-content']} abi-cw-desc text-left px-2.5`}
-                          style={{ width: '100%', fontSize: '13px', lineHeight: 1.75 }}
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }}
-                        />
+                        <div className={`${convStyles['markdown-content']} abi-cw-desc text-left px-2.5`} style={{ width: '100%', fontSize: '13px', lineHeight: 1.75 }}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayText}</ReactMarkdown>
+                        </div>
                       </>
                     )}
                     {m.chartLoading && (

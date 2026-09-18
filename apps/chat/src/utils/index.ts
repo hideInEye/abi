@@ -289,33 +289,6 @@ export const isSingleMetricData = (data: any[]) => {
   return false;
 };
 
-//获取推荐问题开场白
-type OpeningTextConfig = {
-  userGreeting: string;
-  promptMessage: string;
-};
-
-const openingTextConfig: { [key: string]: OpeningTextConfig } = {
-  default: {
-    userGreeting: '嘿~你的数据分析小能手已上线!✨',
-    promptMessage: '随时喊我问数、分析、预测，像聊天一样简单~\n 您最想分析哪个业务指标?直接告诉我吧~',
-  },
-  special: {
-    userGreeting: '嘿~你的数据分析小能手己上线!✨',
-    promptMessage: '随时喊我问数、分析、预测，像聊天一样简单~\n 先送你几个高频问题热热身',
-  },
-  public:{
-    userGreeting:'您好，欢迎使用ChatBI智能数据分析平台。',
-    promptMessage:'我是您的数据决策顾问，将结合行业实践与深度分析技术，为您提供精准、高效的数据洞察建议。请随时提出需求，我们将共同挖掘数据价值。'
-  }
-};
-
-export const getOpeningText = (state: boolean): string => {
-  const selectedConfig = state ? openingTextConfig.public : openingTextConfig.public;
-
-  return `${selectedConfig.userGreeting}\n${selectedConfig.promptMessage}`;
-};
-
 /**
  * 移除HTML标签，只保留纯文本内容
  * @param {string} text - 包含HTML标签的文本

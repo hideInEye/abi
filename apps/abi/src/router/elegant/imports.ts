@@ -25,6 +25,7 @@ export const pages: Record<LastLevelRouteKey, LazyRouteFunction<CustomRouteObjec
   "component_applications_api-key": () => import("@/pages/component/applications/api-key/index.tsx"),
   "component_data_data-dictionary": () => import("@/pages/component/data/data-dictionary/index.tsx"),
   "component_data_effect-review": () => import("@/pages/component/data/effect-review/index.tsx"),
+  "component_data_semantic-list": () => import("@/pages/component/data/semantic-list/index.tsx"),
   component_system_model: () => import("@/pages/component/system/model/index.tsx"),
   component_system_plugin: () => import("@/pages/component/system/plugin/index.tsx"),
   component_system_skills: () => import("@/pages/component/system/skills/index.tsx"),

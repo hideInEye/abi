@@ -10,8 +10,6 @@ import { fetchSessionMessages, deleteMessageByRound } from '../../../service/api
 import {
   fetchConvMaxRound,
   fetchDataBySql,
-  fetchDimension,
-  fetchExceptionGuidance,
   groupMessagesByOrder,
   fetchQueryRewrite,
   fetchRecommendQuestion,
@@ -27,6 +25,8 @@ import { areReportHistoryRoundsEqual, splitConversationHistoryRounds } from '../
 import type { chatHeaderRefMethod } from '../../../types'
 import type { ModelOption } from '../components/chat-header'
 import type { ReportHistoryRoundGroup } from '../report-mode/types'
+import { createGenerationGuard } from './generationGuard'
+import { isApiSuccess, parseStoredUserInfo, runApiSuccessFlow } from './conversationRequests'
 
 export interface ConversationProps {
   conv: any
@@ -407,7 +407,6 @@ export const useConversationController = (
   const [cur, setCur] = useState<any>()
   const [debugModalVisible, setDebugModalVisible] = useState(false)
   const {
-    setDebugInfoMap,
     setUserDebugInfoMap,
     userDebugInfoMap
   } = useDebugStore()
@@ -417,9 +416,9 @@ export const useConversationController = (
   const prevSpaceId = useRef<number | undefined>(undefined)
   const webSocketViewAdded = useRef(false)
   const isAborting = useRef(false)
-  const [exceptionGuidanceLoading, setExceptionGuidanceLoading] = useState(false)
   const [tempUserId, setTempUserId] = useState<string>('')
   const baseId = useId()
+  const generationGuardRef = useRef(createGenerationGuard())
 
   const [minRoundIndex, setMinRoundIndex] = useState<number | undefined>(undefined)
   const [hasMoreHistory, setHasMoreHistory] = useState(true)
@@ -497,9 +496,6 @@ export const useConversationController = (
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const chatHeaderRef = useRef<chatHeaderRefMethod>(null)
   const requestTokenRef = useRef(0)
-  const wsRef = useRef<WebSocket | null>(null)
-  const wsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const [hasError, setHasError] = useState(false)
 
   const { ref: sharingRef, download } = useScreenshot()
 
@@ -637,16 +633,16 @@ export const useConversationController = (
   const isLoadingHistory = useRef(false)
 
   const handleCollect = async () => {
-    const userInfoString = localStorage.getItem('SOY-REACT_userInfo')
-    const userInfo = JSON.parse(userInfoString || '{}')
-    fetchOperate({
-      ...conv,
-      type: 1,
-      name: conv.biz_name || 'AI智能助手',
-      operator: userInfo.userName,
-      update_by: userInfo.userName,
-      create_by: userInfo.userName
-    })
+    const userInfo = parseStoredUserInfo(localStorage.getItem('SOY-REACT_userInfo'))
+    const result = await runApiSuccessFlow(() => fetchOperate({
+        ...conv,
+        type: 1,
+        name: conv.biz_name || 'AI智能助手',
+        operator: userInfo.userName,
+        update_by: userInfo.userName,
+        create_by: userInfo.userName
+      }))
+    return result.success
   }
 
   useEffect(() => {
@@ -700,20 +696,12 @@ export const useConversationController = (
       stopGenerating()
     }
 
-    if (wsRef.current) {
-      wsRef.current.close()
-    }
-    if (wsTimeoutRef.current) {
-      clearTimeout(wsTimeoutRef.current)
-      wsTimeoutRef.current = null
-    }
-
     const currentSpaceId = currentConv.space_id
     if (prevSpaceId.current !== undefined && prevSpaceId.current !== currentSpaceId) {
       // cache cleared
     }
     prevSpaceId.current = currentSpaceId
-    handleCollect()
+    void handleCollect()
     setSelectedExcel({})
     setReferenceDialog({})
 
@@ -888,6 +876,7 @@ export const useConversationController = (
   }
 
   const stopGenerating = () => {
+    generationGuardRef.current.invalidate()
     if (abortController.current) {
       isAborting.current = true
       abortController.current.abort()
@@ -917,151 +906,6 @@ export const useConversationController = (
     }
   }
 
-  const handleExceptionGuidance = async (data: any) => {
-    setExceptionGuidanceLoading(true)
-    const res: any = await fetchExceptionGuidance({
-      ...data,
-      extra: { except_guidance: 'true' }
-    })
-    console.log(res)
-    updateAiMessage({ context: res.content })
-
-    setExceptionGuidanceLoading(false)
-  }
-
-  const connectWebSocket = (convUid: string, roundIndex: number) => {
-    if (wsRef.current) {
-      wsRef.current.close()
-    }
-
-    try {
-      const baseUrl = window.APP_CONFIG.VITE_WEBSOCKET_API
-      const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
-      const url = `${normalizedBaseUrl}/ws-proxy/abi-debug/ws/stream/consume?convUid=${convUid}&roundIndex=${roundIndex}`
-
-      wsRef.current = new WebSocket(url)
-
-      if (wsTimeoutRef.current) {
-        clearTimeout(wsTimeoutRef.current)
-      }
-
-      wsTimeoutRef.current = setTimeout(() => {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) {
-          console.warn('WebSocket连接超时')
-          wsRef.current.close()
-          setLoading(false)
-          setIsGettingData(false)
-          setSmLoading(false)
-          isRequesting.current = false
-          message.error('WebSocket连接超时，请重试')
-        }
-        wsTimeoutRef.current = null
-      }, 10000)
-
-      wsRef.current.onopen = () => {
-        console.log('WebSocket connected')
-        if (wsTimeoutRef.current) {
-          clearTimeout(wsTimeoutRef.current)
-          wsTimeoutRef.current = null
-        }
-
-        setDebugInfoMap({
-          uid: `${convUid}_${roundIndex}`,
-          metrics: {
-            current_stage: 1
-          },
-          loading: true
-        })
-      }
-
-      let partialMessage = ''
-      wsRef.current.onmessage = (event) => {
-        const message = event.data
-
-        try {
-          if (message) {
-            partialMessage += message
-            while (partialMessage.startsWith('{') && partialMessage.endsWith('}')) {
-              try {
-                const debugInfo = JSON.parse(partialMessage)
-
-                // [临时调试] 打印后端推送的 metrics，核对 total_tokens/total_time
-                console.log('[模型调试][useConversationController] metrics:', debugInfo?.metrics, 'full:', debugInfo)
-
-                if (debugInfo.logs?.length > 0 && debugInfo.logs[0] && !exceptionGuidanceLoading) {
-                  handleExceptionGuidance({
-                    conv_uid: convUid,
-                    round_index: roundIndex
-                  })
-                }
-
-                const enhancedDebugInfo = {
-                  ...debugInfo,
-                  name: debugInfo.name || {}
-                }
-
-                setDebugInfoMap(enhancedDebugInfo)
-
-                partialMessage = ''
-                setHasError(false)
-              } catch (error) {
-                setHasError(true)
-                console.error('Error parsing message:', error)
-                break
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error parsing message:', error)
-        }
-      }
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error)
-        if (wsTimeoutRef.current) {
-          clearTimeout(wsTimeoutRef.current)
-          wsTimeoutRef.current = null
-        }
-
-        setLoading(false)
-        setIsGettingData(false)
-        setSmLoading(false)
-        isRequesting.current = false
-        message.error('WebSocket连接异常，请重试')
-      }
-      wsRef.current.onclose = (event) => {
-        console.log('WebSocket disconnected', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean
-        })
-        if (wsTimeoutRef.current) {
-          clearTimeout(wsTimeoutRef.current)
-          wsTimeoutRef.current = null
-        }
-
-        if (!event.wasClean) {
-          console.warn('WebSocket异常关闭，清理loading状态')
-          setLoading(false)
-          setIsGettingData(false)
-          setSmLoading(false)
-          isRequesting.current = false
-        }
-      }
-    } catch (error) {
-      console.error('WebSocket连接创建失败:', error)
-      if (wsTimeoutRef.current) {
-        clearTimeout(wsTimeoutRef.current)
-        wsTimeoutRef.current = null
-      }
-
-      setLoading(false)
-      setIsGettingData(false)
-      setSmLoading(false)
-      isRequesting.current = false
-      message.error('WebSocket连接创建失败，请重试')
-    }
-  }
-
   const syncTempOrderToRoundIndex = (tempOrder: string, roundIndex: number) => {
     setConvContent((prevState: any[]) => {
       return prevState.map((item: any) => {
@@ -1081,13 +925,17 @@ export const useConversationController = (
     if (isRequesting.current) {
       return
     }
+    const generation = generationGuardRef.current.begin()
+    const isCurrentGeneration = () => generationGuardRef.current.isCurrent(generation)
     const tempUserId = `${baseId}-${Date.now()}`
     setTempUserId(tempUserId)
 
     // 在请求开始时固定本次对话的思考开关状态，避免流式过程中用户切换开关导致渲染状态变化
     const currentDeepThinkEnabled = effectiveDeepThinkEnabledRef.current
 
-    setTimeout(scrollToBottom, 300)
+    setTimeout(() => {
+      if (isCurrentGeneration()) scrollToBottom()
+    }, 300)
     abortController.current = new AbortController()
     isAborting.current = false
     const params = cloneDeep(paramsDataRef.current || paramsData)
@@ -1177,6 +1025,7 @@ export const useConversationController = (
         data: params,
         signal: abortController.current.signal,
         async onopen(response) {
+          if (!isCurrentGeneration()) return
           const contentType = response.headers.get('content-type') || ''
           if (response.ok && contentType.includes('text/event-stream')) {
             retryCount = 0
@@ -1192,6 +1041,7 @@ export const useConversationController = (
                 backendMsg = errData.msg || errData.message || ''
               }
             } catch {}
+            if (!isCurrentGeneration()) return
             if (backendMsg) {
               message.error(backendMsg)
               throw new Error(backendMsg)
@@ -1207,6 +1057,7 @@ export const useConversationController = (
           }
         },
         async onmessage(event) {
+          if (!isCurrentGeneration()) return
           if (event.data) {
             // 处理 [DONE] 信号
             if (event.data === '[DONE]') {
@@ -1240,6 +1091,7 @@ export const useConversationController = (
                   const maxRoundRes: any = await fetchConvMaxRound({
                     conv_uid: conv.conv_uid
                   })
+                  if (!isCurrentGeneration()) return
                   roundIndex = Number(maxRoundRes?.data || 0)
                   setLoadingRoundIndex(roundIndex)
                   setUserDebugInfoMap({
@@ -1253,6 +1105,7 @@ export const useConversationController = (
                   syncTempOrderToRoundIndex(tempUserId, roundIndex)
                 } catch {}
               }
+              if (!isCurrentGeneration()) return
               setIsGettingData(false)
 
               setLoading(false)
@@ -1273,6 +1126,7 @@ export const useConversationController = (
                     db_name: convRef.current.dbName,
                     query_sql: responseJson.sql
                   })
+                  if (!isCurrentGeneration()) return
                   const queryData = queryRes?.data?.data ?? queryRes?.data
                   viewContext = JSON.stringify({
                     ...responseJson,
@@ -1283,7 +1137,7 @@ export const useConversationController = (
                 } catch (error) {
                   console.error('根据 SQL 查询数据失败:', error)
                 } finally {
-                  setIsGettingData(false)
+                  if (isCurrentGeneration()) setIsGettingData(false)
                 }
               }
 
@@ -1558,6 +1412,7 @@ export const useConversationController = (
           }
         },
         onclose() {
+          if (!isCurrentGeneration()) return
           setLoading(false)
           setIsGettingData(false)
           setSmLoading(false)
@@ -1601,6 +1456,7 @@ export const useConversationController = (
           })
         },
         onerror(err: any) {
+          if (!isCurrentGeneration()) throw err
           retryCount++
           if (retryCount > maxRetries) {
             setLoading(false)
@@ -1632,6 +1488,7 @@ export const useConversationController = (
         }
       })
     } catch (error: any) {
+      if (!isCurrentGeneration()) return
       if (error?.name !== 'AbortError') {
         setConvContent((prevState: any[]) => {
           return prevState.map((item: any) => {
@@ -1877,7 +1734,7 @@ export const useConversationController = (
 
   const handleSend = (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; semanticGroupId?: number | string; selectedExcel?: any }) => {
     if (!value.trim() || loading) return
-    handleCollect()
+    void handleCollect()
     // 新建会话时，Excel 信息通过 meta 透传（此时组件状态可能已被清空）
     const metaExcel = meta?.selectedExcel?.file_id ? meta.selectedExcel : null
     const messageContent = {
@@ -1968,13 +1825,7 @@ export const useConversationController = (
       if (abortController.current) {
         abortController.current.abort()
       }
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
-      if (wsTimeoutRef.current) {
-        clearTimeout(wsTimeoutRef.current)
-        wsTimeoutRef.current = null
-      }
+      generationGuardRef.current.invalidate()
     }
   }, [])
 
@@ -2038,10 +1889,9 @@ export const useConversationController = (
       message.loading('正在生成快照，请稍候...', 0)
       await new Promise((resolve) => setTimeout(resolve, 100))
 
-      const userInfoString = localStorage.getItem('SOY-REACT_userInfo')
-      const userInfo = JSON.parse(userInfoString || '{}')
+      const userInfo = parseStoredUserInfo(localStorage.getItem('SOY-REACT_userInfo'))
 
-      const [_, res] = await Promise.all([
+      const [, res] = await Promise.all([
         download(),
         fetchOperate({
           ...conv,
@@ -2053,7 +1903,7 @@ export const useConversationController = (
 
       message.destroy()
 
-      if ((res as any).code !== 200) {
+      if (!isApiSuccess(res)) {
         message.error((res as any).msg || '分享失败，请稍后再试')
         return
       }
@@ -2077,62 +1927,54 @@ export const useConversationController = (
     shareEmailForm.resetFields()
   }
 
-  const handleShareEmail = () => {
+  const handleShareEmail = async () => {
     setConfirmShareLoading(true)
     const roundIndexs = sharingList.map((item: any) => item.order).join(',')
-
-    shareEmailForm
-      .validateFields()
-      .then((values) => {
-        let data = {
-          convUid: conv.conv_uid,
-          sessionId: conv.chat_id,
-          spaceId: conv.space_id,
-          extra: {},
-          chatName: conv.biz_name,
-          roundIndexs,
-          ...values,
-          executeTime: values?.sendTime?.time
+    try {
+      const values = await shareEmailForm.validateFields()
+      const data: Record<string, any> = {
+        convUid: conv.conv_uid,
+        sessionId: conv.chat_id,
+        spaceId: conv.space_id,
+        extra: {},
+        chatName: conv.biz_name,
+        roundIndexs,
+        ...values,
+        executeTime: values?.sendTime?.time
+      }
+      if (values.executeFrequency === 2) data.weekendTargetDay = values?.sendTime?.status
+      if (values.executeFrequency === 3) data.monthlyTargetDay = values?.sendTime?.status
+      delete data.sendTime
+      const result = await runApiSuccessFlow(
+        () => fetchShareEmail(data),
+        () => {
+          message.success('分享成功')
+          setIsSharing(false)
+          setConfirmShareVisible(false)
+          shareEmailForm.resetFields()
+          setShareStep(1)
         }
-        if (values.executeFrequency === 2) {
-          data.weekendTargetDay = values?.sendTime?.status
-        }
-        if (values.executeFrequency === 3) {
-          data.monthlyTargetDay = values?.sendTime?.status
-        }
-        delete data.sendTime
-        fetchShareEmail(data).then((res: any) => {
-          setConfirmShareLoading(false)
-          if (res.code === 200) {
-            message.success('分享成功')
-            setIsSharing(false)
-            setConfirmShareVisible(false)
-            shareEmailForm.resetFields()
-            setShareStep(1)
-            setConfirmShareLoading(false)
-          } else {
-            message.error('服务器错误')
-          }
-        })
-      })
-      .catch(() => {
-        setConfirmShareLoading(false)
-      })
+      )
+      if (!result.success) {
+        message.error(result.message || '分享失败，请重试')
+        return
+      }
+    } catch (error: any) {
+      if (error?.errorFields) return
+      message.error(error?.message || '分享失败，请重试')
+    } finally {
+      setConfirmShareLoading(false)
+    }
   }
 
   const openDebugPanel = (item: any) => {
     setCur(item)
     setDebugModalVisible(true)
-    setTimeout(() => {
-      connectWebSocket(conv.conv_uid, userDebugInfoMap.get(item.order)?.roundIndex || 0)
-    }, 0)
+    message.warning('模型调试数据通道尚未配置安全鉴权，已停止建立连接')
   }
 
   const closeDebugPanel = () => {
     setDebugModalVisible(false)
-    if (wsRef.current) {
-      wsRef.current.close()
-    }
   }
 
   return {

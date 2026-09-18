@@ -62,6 +62,7 @@ class EventOperateStore {
             scale: observable,
             setScale: action,
             setTargetIds: action,
+            reset: action,
         })
     }
 
@@ -223,6 +224,21 @@ class EventOperateStore {
         const enforcementCap = document.querySelector('.lc-ruler-content');
         //删除组件后，重新聚焦鼠标指针到容器上，避免鼠标失去焦点导致其他快捷键失效。
         this.setPointerTarget(enforcementCap! as HTMLElement);
+    }
+
+    reset = () => {
+        this.movableRef = null;
+        this.selectorRef = null;
+        this.rulerRef = null;
+        this.dsContentRef = null;
+        this.targets = [];
+        this.targetIds = [];
+        this.pointerTarget = null;
+        this.groupCoordinate = {minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity};
+        this.backoff = false;
+        this.addRecordCompId = null;
+        this.scale = 1;
+        this.ratio = 1;
     }
 
 }

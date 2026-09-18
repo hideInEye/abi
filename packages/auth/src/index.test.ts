@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createAuthManager } from './index';
+import { createAuthManager, createBrowserAuthAdapter } from './index';
 
 let stateKeyIndex = 0;
 
@@ -63,5 +63,25 @@ describe('createAuthManager unauthorized flow', () => {
 
     expect(notify).toHaveBeenCalledTimes(2);
     expect(redirectToLogin).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('createBrowserAuthAdapter', () => {
+  it('shares token lookup and exact auth-key cleanup across browser applications', async () => {
+    const values = new Map([['SOY-REACT_token', 'token-value'], ['unrelated', 'keep']]);
+    const localStorage = {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      removeItem: vi.fn((key: string) => values.delete(key))
+    };
+    const location = {pathname: '/chat', search: '', hash: '', href: ''};
+    const adapter = createBrowserAuthAdapter({
+      getEnvironment: () => ({localStorage, location}),
+      stateKey: '__BROWSER_AUTH_ADAPTER_TEST__'
+    });
+
+    expect(adapter.getAuthorization()).toBe('Bearer token-value');
+    await adapter.authManager.logout();
+    expect(values.get('unrelated')).toBe('keep');
+    expect(location.href).toBe('/login');
   });
 });

@@ -20,6 +20,14 @@ export function notifyTokenExpired() {
     void handleLoginExpired();
 }
 
+export function isSuccessfulNativeResult(value: unknown): boolean {
+    if (typeof value !== 'object' || value === null) return true;
+    const result = value as Record<string, unknown>;
+    if ('code' in result) return Number(result.code) === 200;
+    if ('success' in result) return result.success === true;
+    return true;
+}
+
 let _apiTarget = '';
 export function getApiTarget(): string {
     return _apiTarget;
@@ -48,8 +56,10 @@ export default class FetchUtil {
 
         return nextHeaders;
     }
-    private static handleUnauthorized(code?: number) {
-        if (code === 401) {
+    private static handleUnauthorized(status?: number, bodyCode?: unknown) {
+        // 兼容两种鉴权失效返回：HTTP 401，或响应体业务码 401（后端可能以 500 等非 2xx + code 401 返回）
+        if (status === 401 || Number(bodyCode as any) === 401) {
+            _authExpiredAt = Date.now();
             notifyTokenExpired();
         }
     }
@@ -129,7 +139,6 @@ export default class FetchUtil {
                 headers: FetchUtil.buildHeaders(options.headers),
             });
             if (!response.ok) {
-                FetchUtil.handleUnauthorized(response.status);
                 console.error('请求错误:', response?.status, response?.statusText);
                 // 尝试解析错误响应体，保留后端业务错误信息（如 err_msg / msg），
                 // 避免上层把真实错误（如数据库异常）误判为其他语义（如"名称已存在"）
@@ -142,6 +151,8 @@ export default class FetchUtil {
                         errMsg = errData?.msg || errData?.err_msg || errData?.message || errMsg;
                     }
                 } catch { /* 保底使用 statusText */ }
+                // 鉴权判断放在响应体解析后：兼容 HTTP 401 与非 2xx + 业务码 401
+                FetchUtil.handleUnauthorized(response.status, errData?.code);
                 return {code: response?.status ?? 500, msg: errMsg, data: errData};
             }
             const contentType = response.headers.get('content-type');
@@ -187,15 +198,23 @@ export default class FetchUtil {
                     if (typeof res === 'object' && res !== null && 'code' in res) {
                         FetchUtil.handleUnauthorized((res as HttpResponse).code);
                     }
-                    return res;
+                    return isSuccessfulNativeResult(res) ? res : null;
                 } else if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain'))) {
                     return await response.text()
                 } else {
                     return await response.blob()
                 }
             } else {
-                FetchUtil.handleUnauthorized(response.status);
                 console.error('请求错误:', response?.status, response?.statusText);
+                // 解析错误响应体业务码：兼容非 2xx（如 500）+ code 401 的鉴权失效返回
+                let errCode: unknown;
+                try {
+                    const errCt = response.headers.get('content-type');
+                    if (errCt && errCt.includes('application/json')) {
+                        errCode = (await response.json())?.code;
+                    }
+                } catch { /* 仅需业务码，解析失败忽略 */ }
+                FetchUtil.handleUnauthorized(response.status, errCode);
                 return null;
             }
         } catch (error) {
@@ -254,7 +273,7 @@ export default class FetchUtil {
      * @param headers
      * @param params
      */
-    static async doRequestNativeResult(url: string, method: string, headers: Record<string, string>, params: FormData | Record<string, any>): Promise<object> {
+    static async doRequestNativeResult(url: string, method: string, headers: Record<string, string>, params: FormData | Record<string, any>): Promise<object | null> {
         const reqInfo = FetchUtil.doRequestBefore(url, method, headers, params);
         return FetchUtil.requestNativeResult(reqInfo.url, reqInfo.options);
     }

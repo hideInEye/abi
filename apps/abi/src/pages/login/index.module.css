@@ -281,53 +281,6 @@
   box-shadow: 0 0.375rem 0.875rem rgba(24, 144, 255, 0.16);
 }
 
-.helperRow {
-  margin-top: 0.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #666;
-  font-size: clamp(0.75rem, 0.7rem + 0.2vw, 0.8125rem);
-}
-
-.remember {
-  color: #666;
-  font-size: clamp(0.75rem, 0.7rem + 0.2vw, 0.8125rem);
-}
-
-.remember :global(.ant-checkbox-inner) {
-  border-color: rgba(0, 0, 0, 0.18);
-  border-radius: 0.3125rem;
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.remember:hover :global(.ant-checkbox-inner) {
-  border-color: #1890ff;
-}
-
-.remember :global(.ant-checkbox-checked .ant-checkbox-inner) {
-  border-color: #1890ff;
-  background: #1890ff;
-}
-
-.remember :global(.ant-checkbox-checked::after) {
-  border-color: #1890ff;
-}
-
-.forgotLink {
-  color: #666;
-  font-size: clamp(0.75rem, 0.7rem + 0.2vw, 0.8125rem);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.forgotLink:hover {
-  color: #1890ff;
-}
-
 .submit {
   margin-top: 2.25rem;
   height: 3.25rem;
