@@ -2,7 +2,12 @@ import type { RuleFieldOption, RuleLayer, RuleOperator } from '../../rule-expres
 import { compileRulePredicate, normalizeRuleLayers, validateRuleLayers } from '../../rule-expression'
 import type { KnowledgeIndicatorItem, KnowledgeTechField, StatisticalCaliber } from '../types/metricModeling.types'
 
-import { getAtomicProjection, getAtomicTechnicalSource, parseAtomicSourceFields } from './atomicMetricSource'
+import {
+  getAtomicComplexAggregationExpression,
+  getAtomicProjection,
+  getAtomicTechnicalSource,
+  parseAtomicSourceFields
+} from './atomicMetricSource'
 import { getStatisticalDateRangeSummary, normalizeStatisticalCaliber } from './precomputeConfig'
 
 interface DimensionSelection {
@@ -236,11 +241,18 @@ export function buildDerivedMetricPreview(params: DerivedMetricPreviewParams): D
   const source = resolveAtomicSource(params.atomicMetric, params.allFields)
   const sourceField = source.fieldName || 'source_field /* 来源字段待接口返回 */'
   const sourceTable = source.tableName || 'source_table /* 来源表待接口返回 */'
+  const customAggregationExpression = getAtomicComplexAggregationExpression(params.atomicMetric)
   const displayAggregation = text(params.projectionFunc) || getAtomicProjection(params.atomicMetric)
-  const submissionAggregation = String(params.projectionFunc || 'sum').toUpperCase()
+  const simpleAggregation = String(params.projectionFunc || 'sum').toUpperCase()
+  const selectedAggregationExpression = customAggregationExpression
+    ? displayAggregation || customAggregationExpression
+    : `${displayAggregation.toUpperCase()}(${sourceField})`
+  const submissionAggregationExpression = customAggregationExpression
+    ? displayAggregation || customAggregationExpression
+    : `${simpleAggregation}(${legacyAtomicLabel})`
   const timeRangeSummary = getTimeRangeSummary(caliber)
   const dateRangeSummary = getStatisticalDateRangeSummary(caliber)
-  const sqlLines = [`SELECT ${displayAggregation.toUpperCase()}(${sourceField}) FROM ${sourceTable}`]
+  const sqlLines = [`SELECT ${selectedAggregationExpression} FROM ${sourceTable}`]
   if (displayPredicate) sqlLines.push(`WHERE ${displayPredicate}`)
   if (groupByFields.length) sqlLines.push(`GROUP BY ${groupByFields.join(', ')}`)
 
@@ -255,6 +267,6 @@ export function buildDerivedMetricPreview(params: DerivedMetricPreviewParams): D
     ].join('\n\n'),
     displaySql: sqlLines.join('\n'),
     predicate,
-    submissionExpression: `${submissionAggregation}(${legacyAtomicLabel})${predicate ? `\nWHERE ${predicate}` : ''}`
+    submissionExpression: `${submissionAggregationExpression}${predicate ? `\nWHERE ${predicate}` : ''}`
   }
 }

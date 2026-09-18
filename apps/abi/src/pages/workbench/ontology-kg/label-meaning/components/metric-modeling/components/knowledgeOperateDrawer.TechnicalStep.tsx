@@ -4,13 +4,28 @@ import React from 'react'
 
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
-import { AGG_METHOD_OPTIONS, EXTENDED_TEMPLATE_OPTIONS } from '../constants/metricModeling.constants'
+import {
+  AGG_METHOD_LABEL_MAP,
+  CUSTOM_AGGREGATION_EXPRESSION_LABEL,
+  EXTENDED_TEMPLATE_OPTIONS
+} from '../constants/metricModeling.constants'
 import type { KnowledgeFormValues, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
-import { getAtomicProjection, getAtomicSemanticSchemaName, getAtomicTechnicalSource } from '../utils/atomicMetricSource'
+import {
+  getAtomicAggregationMethods,
+  getAtomicComplexAggregationExpression,
+  getAtomicSemanticSchemaName,
+  getAtomicSourceFieldTechnicalName,
+  getAtomicTechnicalSource
+} from '../utils/atomicMetricSource'
 
+import {
+  type AtomicSemanticSelection,
+  KnowledgeOperateAtomicTechnicalStep
+} from './knowledgeOperateDrawer.AtomicTechnicalStep'
 import { KnowledgeOperateDerivedLogicBuilder } from './knowledgeOperateDrawer.DerivedLogicBuilder'
 import { KnowledgeOperateExtendedTemplateParams } from './knowledgeOperateDrawer.ExtendedTemplateParams'
 import { KnowledgeIndicatorSearchSelect } from './knowledgeOperateDrawer.IndicatorSearchSelect'
+import styles from './knowledgeOperateDrawer.TechnicalStep.module.scss'
 
 interface AtomicMetricOption {
   item?: KnowledgeIndicatorItem
@@ -26,6 +41,7 @@ interface Props {
   readonly form: FormInstance<KnowledgeFormValues>
   readonly indicatorClass: string
   readonly indicatorOptionsLoading?: boolean
+  readonly onAtomicSchemaChange: (selection: AtomicSemanticSelection) => Promise<void>
   readonly onIndicatorLoadMore: () => void
   readonly onIndicatorSearch: (searchText: string) => void
   readonly onRetryFields?: () => void
@@ -36,6 +52,7 @@ interface Props {
   readonly validatePercentile: (_: unknown, value?: number | string) => Promise<void>
   readonly validatePositiveInt: (value: unknown, messageText: string) => Promise<void>
   readonly validateRollingWindow: (_: unknown, value?: number | string) => Promise<void>
+  readonly validateSqlExpression: (_: unknown, value?: string) => Promise<void>
   readonly validateTechName: (_: unknown, value?: string) => Promise<void>
   readonly validateTechnicalRemark: (_: unknown, value?: string) => Promise<void>
   readonly validateThresholdMax: (_: unknown, value?: string) => Promise<void>
@@ -50,6 +67,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
   form,
   indicatorClass,
   indicatorOptionsLoading,
+  onAtomicSchemaChange,
   onIndicatorLoadMore,
   onIndicatorSearch,
   onRetryFields,
@@ -60,6 +78,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
   validatePercentile,
   validatePositiveInt,
   validateRollingWindow,
+  validateSqlExpression,
   validateTechName,
   validateTechnicalRemark,
   validateThresholdMax,
@@ -67,10 +86,24 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
 }) => {
   const selectedAtomicId = AForm.useWatch('techId', form)
   const selectedAtomic = atomicMetricOptions.find(item => String(item.value) === String(selectedAtomicId || ''))?.item
-  const sourceFieldName = getAtomicTechnicalSource(selectedAtomic?.techName || selectedAtomic?.rawTechName).fieldName
-  const projectionFunc = getAtomicProjection(selectedAtomic)
-  const projectionLabel =
-    AGG_METHOD_OPTIONS.find(item => item.value === projectionFunc)?.label || projectionFunc || '合计'
+  const sourceFieldName = getAtomicTechnicalSource(getAtomicSourceFieldTechnicalName(selectedAtomic)).fieldName
+  const aggregationMethods = getAtomicAggregationMethods(selectedAtomic)
+  const customAggregationExpression = getAtomicComplexAggregationExpression(selectedAtomic)
+
+  if (indicatorClass === 'atomic') {
+    return (
+      <KnowledgeOperateAtomicTechnicalStep
+        allFields={allFields}
+        fieldError={fieldError}
+        fieldLoading={fieldLoading}
+        form={form}
+        onRetryFields={onRetryFields}
+        onSchemaChange={onAtomicSchemaChange}
+        validateSqlExpression={validateSqlExpression}
+        validateTechName={validateTechName}
+      />
+    )
+  }
 
   return (
     <>
@@ -101,24 +134,29 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
                 onSearch={onIndicatorSearch}
               />
             </AForm.Item>
-            <AForm.Item
-              hidden
-              name="projectionFunc"
-              rules={[{ message: '未获取到原子指标聚合方式', required: true }]}
-            >
-              <AInput />
-            </AForm.Item>
           </div>
           {selectedAtomic ? (
-            <div className="grid grid-cols-3 mt-4 gap-4 border border-[#e2e8f3] rounded bg-[#fafbfe] px-5 py-4">
+            <div className={styles.sourceSummary}>
               <div>
                 <div className="mb-2 text-sm text-[#7d899d]">来源字段</div>
                 <div className="text-[#26354d] font-semibold">{sourceFieldName || '-'}</div>
               </div>
               <div>
                 <div className="mb-2 text-sm text-[#7d899d]">聚合方式</div>
-                <div className="text-[#26354d] font-semibold">
-                  {projectionLabel}（{String(projectionFunc || 'sum').toUpperCase()}）
+                <div className={styles.aggregationRail}>
+                  {customAggregationExpression ? (
+                    <span className={styles.aggregationChip}>{CUSTOM_AGGREGATION_EXPRESSION_LABEL}</span>
+                  ) : (
+                    aggregationMethods.map(method => (
+                      <span
+                        className={styles.aggregationChip}
+                        key={method}
+                      >
+                        <span>{AGG_METHOD_LABEL_MAP[method]}</span>
+                        <span className={styles.aggregationCode}>{method}</span>
+                      </span>
+                    ))
+                  )}
                 </div>
               </div>
               <div>

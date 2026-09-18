@@ -63,29 +63,6 @@
     order: 4;
   }
 
-  :global(.ant-pagination-options-quick-jumper) {
-    order: 5;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    height: 34px;
-    margin-left: 4px;
-    color: #768a9f;
-    font-size: 13px;
-    line-height: 34px;
-
-    input {
-      width: 48px;
-      height: 34px;
-      margin: 0;
-      border-color: rgba(130, 140, 200, 0.18);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.40);
-      box-shadow: none;
-      text-align: center;
-    }
-  }
-
   :global(.ant-pagination-prev),
   :global(.ant-pagination-next),
   :global(.ant-pagination-item) {
@@ -165,5 +142,29 @@
     margin-inline-end: 0;
     color: #a3b3c8;
     line-height: 34px;
+  }
+}
+
+.quickJumper {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  margin-left: 4px;
+  color: #768a9f;
+  font-size: 13px;
+  line-height: 34px;
+  white-space: nowrap;
+
+  :global(.ant-input) {
+    width: 48px;
+    height: 34px;
+    margin: 0;
+    border-color: rgba(130, 140, 200, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.40);
+    box-shadow: none;
+    text-align: center;
   }
 }

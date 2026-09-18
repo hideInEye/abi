@@ -367,7 +367,7 @@ describe('buildKnowledgeCalcLogic', () => {
           name: '线上渠道过滤'
         }
       ],
-      projectionFunc: 'sum'
+      projectionFunc: 'SUM'
     })
   })
 
@@ -618,5 +618,80 @@ describe('buildKnowledgeCalcLogic', () => {
         timeRangeType: 'allDay'
       }
     })
+  })
+
+  it('submits and restores the selected derived aggregation method', () => {
+    const calcLogic = buildKnowledgeCalcLogic({
+      groupId: 1,
+      indicatorClass: 'derived',
+      projectionFunc: 'COUNT DISTINCT',
+      spaceId: 82
+    } as KnowledgeSubmitPayload)
+
+    expect(calcLogic).toMatchObject({
+      aggMethod: 'COUNT DISTINCT',
+      projectionFunc: 'distinct'
+    })
+    expect(parseKnowledgeCalcLogicFormValues(calcLogic).projectionFunc).toBe('COUNT DISTINCT')
+  })
+
+  it('submits and restores the real custom expression selected by a derived metric', () => {
+    const expression = 'SUM(payment_amount) / COUNT(DISTINCT order_id)'
+    const calcLogic = buildKnowledgeCalcLogic({
+      groupId: 1,
+      indicatorClass: 'derived',
+      projectionFunc: expression,
+      spaceId: 82
+    } as KnowledgeSubmitPayload)
+
+    expect(calcLogic).toMatchObject({
+      aggMethod: expression,
+      projectionFunc: expression
+    })
+    expect(parseKnowledgeCalcLogicFormValues(calcLogic).projectionFunc).toBe(expression)
+  })
+
+  it('keeps an edited one-click atomic metric aggregation type simple', () => {
+    const calcLogic = buildKnowledgeCalcLogic({
+      atomicAggregationMethods: ['SUM', 'AVG'],
+      groupId: 1,
+      indicatorClass: 'atomic',
+      spaceId: 82,
+      techId: [
+        {
+          agg: { data: ['SUM', 'AVG'], type: 'simple' },
+          bizName: '订单明细表_#_支付金额',
+          techId: 'field-1',
+          techName: 'order_detail.payment_amount'
+        }
+      ]
+    } as KnowledgeSubmitPayload)
+
+    expect(calcLogic).toEqual({
+      agg: { data: ['SUM', 'AVG'], type: 'simple' },
+      bizeName: '订单明细表_#_支付金额',
+      techName: 'order_detail.payment_amount'
+    })
+  })
+
+  it('builds and restores the custom atomic complex aggregation payload', () => {
+    const calcLogic = buildKnowledgeCalcLogic({
+      atomicAggregationExpression: 'SUM(payment_amount)',
+      groupId: 1,
+      indicatorClass: 'atomic',
+      spaceId: 82,
+      techId: {
+        bizName: '订单明细表_#_支付金额',
+        techId: 'field-1',
+        techName: 'order_detail.payment_amount'
+      }
+    } as KnowledgeSubmitPayload)
+
+    expect(calcLogic).toEqual({
+      agg: { data: 'SUM(payment_amount)', type: 'complex' },
+      bizeName: '订单明细表_#_支付金额',
+      techName: 'order_detail.payment_amount'
+    })
+    expect(parseKnowledgeCalcLogicFormValues(calcLogic).atomicAggregationExpression).toBe('SUM(payment_amount)')
   })
 })

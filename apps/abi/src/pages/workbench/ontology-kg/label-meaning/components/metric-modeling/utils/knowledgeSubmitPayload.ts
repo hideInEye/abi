@@ -6,6 +6,11 @@ import type {
 } from '../types/metricModeling.types'
 
 import {
+  normalizeAggregationCode,
+  normalizeAggregationCodes,
+  toDerivedAggregationPayloadValue
+} from './aggregation'
+import {
   buildApiDerivedIndicatorTemplates,
   parseApiDerivedIndicatorTemplates
 } from './derivedIndicatorTemplateAdapter'
@@ -183,6 +188,19 @@ function parseJsonRecord(value: unknown): UnknownRecord {
     }
   }
   return typeof value === 'object' && !Array.isArray(value) ? (value as UnknownRecord) : {}
+}
+
+function parseFirstTechField(value: unknown): UnknownRecord {
+  if (!value) return {}
+  if (typeof value === 'string') {
+    try {
+      return parseFirstTechField(JSON.parse(value))
+    } catch {
+      return {}
+    }
+  }
+  if (Array.isArray(value)) return parseJsonRecord(value[0])
+  return parseJsonRecord(value)
 }
 
 function getTemplateParameter(parameters: unknown, key: string): UnknownRecord {
@@ -683,7 +701,7 @@ function buildBaseCalcLogic(values: KnowledgeSubmitPayload) {
     nullStrategy: values.nullStrategy,
     percentileValue: values.percentileValue,
     precomputeConfig: values.precomputeConfig ? normalizePrecomputeConfig(values.precomputeConfig) : undefined,
-    projectionFunc: values.projectionFunc,
+    projectionFunc: toDerivedAggregationPayloadValue(values.projectionFunc),
     ratioDenominatorId: values.ratioDenominatorId,
     ratioNumeratorId: values.ratioNumeratorId,
     ratioPrecision: values.ratioPrecision,
@@ -708,6 +726,7 @@ export function buildKnowledgeCalcLogic(values: KnowledgeSubmitPayload): JsonRec
   if (indicatorClass === 'derived') {
     return compactRecord({
       ...buildBaseCalcLogic(values),
+      aggMethod: normalizeAggregationCode(values.projectionFunc) || normalizeText(values.projectionFunc) || undefined,
       calcPeriod: buildApiCalcPeriod(values.statisticalCaliber),
       indicator_templates: buildApiDerivedIndicatorTemplates(
         values.derivedExpressions,
@@ -727,7 +746,26 @@ export function buildKnowledgeCalcLogic(values: KnowledgeSubmitPayload): JsonRec
     }) as JsonRecord
   }
 
-  return buildBaseCalcLogic(values)
+  const sourceField = parseFirstTechField(values.techId)
+  const sourceAggregation = parseJsonRecord(sourceField.agg)
+  if (sourceAggregation.type === 'simple') {
+    return compactRecord({
+      agg: {
+        data: normalizeAggregationCodes(sourceAggregation.data, ['SUM']),
+        type: 'simple'
+      },
+      bizeName: sourceField.bizName,
+      techName: sourceField.techName
+    }) as JsonRecord
+  }
+  return compactRecord({
+    agg: {
+      data: normalizeText(values.atomicAggregationExpression),
+      type: 'complex'
+    },
+    bizeName: sourceField.bizName,
+    techName: sourceField.techName
+  }) as JsonRecord
 }
 
 export function parseKnowledgeCalcLogicFormValues(calcLogicValue: unknown): Partial<KnowledgeSubmitPayload> {
@@ -746,6 +784,7 @@ export function parseKnowledgeCalcLogicFormValues(calcLogicValue: unknown): Part
     isCrossDim: parseApiCrossDimension(calcLogic.isCrossDim, legacyStatisticalCaliber)
   })
 
+  const aggregationValue = calcLogic.aggMethod ?? calcLogic.projectionFunc
   const baseValues = compactRecord({
     accumulateStartDate: calcLogic.accumulateStartDate,
     calcPeriod: calcLogic.calcPeriod,
@@ -763,7 +802,9 @@ export function parseKnowledgeCalcLogicFormValues(calcLogicValue: unknown): Part
     nullStrategy: calcLogic.nullStrategy,
     percentileValue: calcLogic.percentileValue,
     precomputeConfig: normalizePrecomputeConfig(calcLogic.precomputeConfig, calcLogic.updateFrequency),
-    projectionFunc: calcLogic.projectionFunc,
+    atomicAggregationExpression:
+      parseJsonRecord(calcLogic.agg).type === 'complex' ? parseJsonRecord(calcLogic.agg).data : undefined,
+    projectionFunc: normalizeAggregationCode(aggregationValue) || normalizeText(aggregationValue) || undefined,
     ratioDenominatorId: calcLogic.ratioDenominatorId,
     ratioNumeratorId: calcLogic.ratioNumeratorId,
     ratioPrecision: calcLogic.ratioPrecision,
