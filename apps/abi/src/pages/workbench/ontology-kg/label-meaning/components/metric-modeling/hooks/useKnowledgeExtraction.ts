@@ -12,6 +12,7 @@ import {
 import { assertFlatRequestSuccess, isFlatRequestSuccess } from '@/service/request/flat-result'
 
 import type { AtomicMappingPayload, KnowledgeGroupItem, KnowledgeIndicatorItem, KnowledgePagination, KnowledgeSearchParams, KnowledgeSubmitPayload } from '../types/metricModeling.types'
+import { toDerivedAggregationPayloadValue } from '../utils/aggregation'
 import { buildApiUpdateFrequency } from '../utils/indicatorApiAdapter'
 import { buildKnowledgeIndicatorListQuery, normalizeKnowledgeIndicatorListItem } from '../utils/knowledgeIndicator.mapper'
 import { buildKnowledgeCalcLogic } from '../utils/knowledgeSubmitPayload'
@@ -120,6 +121,16 @@ function toPublicFlag(value: unknown) {
   return value === true || String(value) === '1' ? '1' : '0'
 }
 
+function buildProjectionPayload(payload: KnowledgeSubmitPayload, indicatorClass: string) {
+  if (indicatorClass === 'derived') {
+    return toDerivedAggregationPayloadValue(payload.projectionFunc)
+  }
+  if (indicatorClass === 'atomic' && !payload.atomicAggregationMethods?.length) {
+    return undefined
+  }
+  return trimOrUndefined(payload.projectionFunc)
+}
+
 function compactPayload<T extends Record<string, unknown>>(payload: T): Partial<T> {
   const entries = Object.entries(payload).filter(([, value]) => value !== undefined && value !== null)
   return Object.fromEntries(entries) as Partial<T>
@@ -142,6 +153,7 @@ function normalizeDetail(res: ApiResponseLike): KnowledgeIndicatorItem | null {
 }
 
 function buildSubmitPayload(payload: KnowledgeSubmitPayload, selectedGroup: KnowledgeGroupItem | null) {
+  const indicatorClass = String(payload.indicatorClass || '').trim()
   return compactPayload({
     alertConfig: payload.alertConfig,
     bizName: trimOrUndefined(payload.bizName),
@@ -158,10 +170,14 @@ function buildSubmitPayload(payload: KnowledgeSubmitPayload, selectedGroup: Know
     measurementUnit: trimOrUndefined(payload.measurementUnit),
     ownerEmail: trimOrUndefined(payload.ownerEmail),
     ownerPhone: trimOrUndefined(payload.ownerPhone),
-    projectionFunc: trimOrUndefined(payload.projectionFunc),
+    projectionFunc: buildProjectionPayload(payload, indicatorClass),
     qualityLevel: toApiQualityLevel(payload.qualityLevel),
     relateDims: parseRelateDimsPayload(payload.dimensionFieldIds),
     relItemId: trimOrUndefined(payload.relItemId),
+    relSchemaId: payload.semanticSchemaId ?? payload.relSchemaId,
+    relViewId: payload.relViewId ?? payload.relViewid,
+    semanticsGroupId: payload.semanticsGroupId ?? payload.semanticGroupId,
+    semanticType: trimOrUndefined(payload.semanticType),
     spaceId: getKnowledgeSpaceId(),
     status: trimOrUndefined(payload.status),
     templateParams: payload.templateParams,

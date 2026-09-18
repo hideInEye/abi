@@ -2,10 +2,26 @@
 
 export type JsonRecord = Record<string, unknown>
 
+export type AggregationCode =
+  | 'AVG'
+  | 'COUNT'
+  | 'COUNT DISTINCT'
+  | 'MAX'
+  | 'MEDIAN'
+  | 'MIN'
+  | 'STDDEV'
+  | 'SUM'
+  | 'VARIANCE'
+
+export type KnowledgeAggregation =
+  | { data: AggregationCode[]; type: 'simple' }
+  | { data: string; type: 'complex' }
+
 export interface KnowledgeTechField {
-  agg?: string
+  agg?: KnowledgeAggregation | string
   alias?: string
   bizName?: string
+  dataType?: string
   description?: string
   englishName?: string
   fieldName?: string
@@ -17,6 +33,7 @@ export interface KnowledgeTechField {
   rtableName?: string
   tableBizName?: string
   tableName?: string
+  semanticType?: string
   techId?: string
   techName?: string
   tfieldAlias?: string
@@ -26,6 +43,7 @@ export interface KnowledgeTechField {
 }
 
 export interface KnowledgeAtomicMetricMeta {
+  aggregationMethods?: AggregationCode[]
   field?: string
   fieldName?: string
   id?: number | string
@@ -233,6 +251,7 @@ export interface KnowledgeGroupItem {
 }
 
 export interface KnowledgeIndicatorItem {
+  agg?: KnowledgeAggregation | string
   accumulateStartDate?: string
   alertConfig?: JsonRecord | string
   atomicMetricId?: number | string
@@ -312,6 +331,9 @@ export interface KnowledgeIndicatorItem {
 
 export interface KnowledgeFormValues {
   accumulateStartDate?: string
+  atomicAggregationExpression?: string
+  atomicAggregationMethods?: AggregationCode[]
+  atomicSourceFieldId?: string
   bizName?: string
   calcPeriod?: string
   compareMetricId?: number | string
@@ -347,6 +369,8 @@ export interface KnowledgeFormValues {
   ratioNumeratorId?: number | string
   ratioPrecision?: string
   relItemId?: string
+  relSchemaId?: number | string
+  relViewId?: number | string
   relViewid?: number | string
   businessDefinition?: string
   rollingWindowSize?: number
@@ -355,6 +379,7 @@ export interface KnowledgeFormValues {
   semanticGroupName?: string
   semanticSchemaId?: number | string
   semanticSchemaName?: string
+  semanticType?: string
   status?: number | string
   statisticalCaliber?: StatisticalCaliber
   techName?: string

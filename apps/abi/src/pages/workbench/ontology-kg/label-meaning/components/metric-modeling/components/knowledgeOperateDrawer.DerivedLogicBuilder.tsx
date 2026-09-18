@@ -15,6 +15,7 @@ import {
   validateRuleLogicUniformity
 } from '@/pages/workbench/ontology-kg/label-meaning/components/rule-expression'
 
+import { AGG_METHOD_OPTIONS, CUSTOM_AGGREGATION_EXPRESSION_LABEL } from '../constants/metricModeling.constants'
 import { useKnowledgeDimensions } from '../hooks/useKnowledgeDimensions'
 import type {
   KnowledgeDerivedCondition,
@@ -23,6 +24,7 @@ import type {
   KnowledgeTechField,
   StatisticalCaliber
 } from '../types/metricModeling.types'
+import { getAtomicAggregationMethods, getAtomicComplexAggregationExpression } from '../utils/atomicMetricSource'
 import { buildDerivedMetricPreview } from '../utils/derivedMetricPreview'
 import {
   getStatisticalDateRangeHint,
@@ -113,6 +115,17 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
     () => atomicMetricOptions.find(item => String(item.value) === String(techId || '')),
     [atomicMetricOptions, techId]
   )
+  const customAggregationExpression = useMemo(
+    () => getAtomicComplexAggregationExpression(selectedAtomicOption?.item),
+    [selectedAtomicOption]
+  )
+  const aggregationOptions = useMemo(() => {
+    if (customAggregationExpression) {
+      return [{ label: CUSTOM_AGGREGATION_EXPRESSION_LABEL, value: customAggregationExpression }]
+    }
+    const availableMethods = new Set(getAtomicAggregationMethods(selectedAtomicOption?.item))
+    return AGG_METHOD_OPTIONS.filter(item => availableMethods.has(item.value))
+  }, [customAggregationExpression, selectedAtomicOption])
   const result = useMemo(
     () =>
       buildDerivedMetricPreview({
@@ -179,6 +192,43 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
             </div>
           </div>
           <div>
+            <AForm.Item
+              className="mb-0!"
+              extra={
+                customAggregationExpression
+                  ? '该原子指标使用自定义聚合表达式，派生指标直接继承该表达式。'
+                  : '仅展示当前原子指标已配置的聚合方式，派生指标只能选择其中 1 个。'
+              }
+              label="派生聚合方式"
+              name="projectionFunc"
+              rules={[{ message: '请选择派生聚合方式', required: true }]}
+            >
+              <ASelect
+                options={aggregationOptions}
+                placeholder="请选择派生聚合方式"
+              />
+            </AForm.Item>
+            {customAggregationExpression ? (
+              <div className={styles.customAggregationNotice}>
+                <span>已继承原子指标的自定义聚合方式表达式</span>
+                <APopover
+                  content={<pre className={styles.customAggregationExpression}>{customAggregationExpression}</pre>}
+                  placement="bottomRight"
+                  trigger="click"
+                >
+                  <AButton
+                    className={styles.customAggregationViewButton}
+                    type="link"
+                  >
+                    查看表达式
+                  </AButton>
+                </APopover>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-x-8">
+          <div>
             <div className="mb-2 text-sm text-[#3e5068] font-medium">时段范围</div>
             <div className="flex gap-3">
               <AForm.Item
@@ -231,68 +281,68 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
                 : '默认统计全天数据。'}
             </div>
           </div>
-        </div>
-        <div className="mt-6 max-w-[70%] pr-4">
-          <div className="flex items-start gap-6">
-            <AForm.Item
-              className="mb-0! min-w-0 flex-1"
-              extra="可选择多个主体维度，选项与第三步维度设置使用同一数据源。"
-              label="主体维度"
-              name={['statisticalCaliber', 'subjectDimensionIds']}
-              rules={[{ message: '请选择主体维度', min: 1, required: true, type: 'array' }]}
-            >
-              <ATreeSelect
-                showSearch
-                treeDefaultExpandAll
-                loading={dimensionLoading}
-                maxTagCount="responsive"
-                multiple
-                placeholder="请选择主体维度"
-                treeData={dimensionTree}
-                treeNodeFilterProp="title"
-                onChange={value => {
-                  const dimensionIds = Array.isArray(value)
-                    ? value.map(item => String(item ?? '').trim()).filter(Boolean)
-                    : []
-                  const currentNameMap = form.getFieldValue([
-                    'statisticalCaliber',
-                    'subjectDimensionNameMap'
-                  ]) as Record<string, string> | undefined
-                  const subjectDimensionNameMap = dimensionIds.reduce<Record<string, string>>(
-                    (result, dimensionId) => {
-                      const option = dimensionOptions.find(item => String(item.key) === dimensionId)
-                      result[dimensionId] = option?.name || currentNameMap?.[dimensionId] || dimensionId
-                      return result
-                    },
-                    {}
-                  )
-                  form.setFieldValue(['statisticalCaliber', 'subjectDimensionNameMap'], subjectDimensionNameMap)
-                }}
+          <div>
+            <div className="flex items-start gap-6">
+              <AForm.Item
+                className="mb-0! min-w-0 flex-1"
+                extra="可选择多个主体维度，选项与第三步维度设置使用同一数据源。"
+                label="主体维度"
+                name={['statisticalCaliber', 'subjectDimensionIds']}
+                rules={[{ message: '请选择主体维度', min: 1, required: true, type: 'array' }]}
+              >
+                <ATreeSelect
+                  showSearch
+                  treeDefaultExpandAll
+                  loading={dimensionLoading}
+                  maxTagCount="responsive"
+                  multiple
+                  placeholder="请选择主体维度"
+                  treeData={dimensionTree}
+                  treeNodeFilterProp="title"
+                  onChange={value => {
+                    const dimensionIds = Array.isArray(value)
+                      ? value.map(item => String(item ?? '').trim()).filter(Boolean)
+                      : []
+                    const currentNameMap = form.getFieldValue([
+                      'statisticalCaliber',
+                      'subjectDimensionNameMap'
+                    ]) as Record<string, string> | undefined
+                    const subjectDimensionNameMap = dimensionIds.reduce<Record<string, string>>(
+                      (nameMap, dimensionId) => {
+                        const option = dimensionOptions.find(item => String(item.key) === dimensionId)
+                        nameMap[dimensionId] = option?.name || currentNameMap?.[dimensionId] || dimensionId
+                        return nameMap
+                      },
+                      {}
+                    )
+                    form.setFieldValue(['statisticalCaliber', 'subjectDimensionNameMap'], subjectDimensionNameMap)
+                  }}
+                />
+              </AForm.Item>
+              <AForm.Item
+                className="mb-0! pt-8"
+                name={['statisticalCaliber', 'isCrossDim']}
+                valuePropName="checked"
+              >
+                <ACheckbox>是否维度交叉</ACheckbox>
+              </AForm.Item>
+            </div>
+            {dimensionError ? (
+              <Alert
+                className="mt-2"
+                message="主体维度加载失败"
+                type="error"
+                action={
+                  <AButton
+                    size="small"
+                    onClick={retryDimensions}
+                  >
+                    重试
+                  </AButton>
+                }
               />
-            </AForm.Item>
-            <AForm.Item
-              className="mb-0! pt-8"
-              name={['statisticalCaliber', 'isCrossDim']}
-              valuePropName="checked"
-            >
-              <ACheckbox>是否维度交叉</ACheckbox>
-            </AForm.Item>
+            ) : null}
           </div>
-          {dimensionError ? (
-            <Alert
-              className="mt-2"
-              message="主体维度加载失败"
-              type="error"
-              action={
-                <AButton
-                  size="small"
-                  onClick={retryDimensions}
-                >
-                  重试
-                </AButton>
-              }
-            />
-          ) : null}
         </div>
       </div>
 

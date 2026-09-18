@@ -13,19 +13,25 @@ import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
 import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
-import { buildMappedBizName, buildMappedTechName } from '../../../utils/ontologyName'
 import { AGG_METHOD_OPTIONS } from '../constants/metricModeling.constants'
-import type { AtomicMappingPayload, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
+import type {
+  AggregationCode,
+  AtomicMappingPayload,
+  KnowledgeIndicatorItem,
+  KnowledgeTechField
+} from '../types/metricModeling.types'
+import { normalizeAggregationCodes } from '../utils/aggregation'
+import { type AtomicMappingFieldInput, buildAtomicMappingPayload } from '../utils/atomicMapping'
 import { getKnowledgeSpaceId } from '../utils/space'
 
-interface MeasureFieldItem {
+interface MeasureFieldItem extends AtomicMappingFieldInput {
+  aggregationMethods: AggregationCode[]
   alias: string
   bizName: string
   description: string
   englishName: string
   fieldType: string
   key: string
-  projectionFunc: string
   raw: KnowledgeTechField
   tableBizName: string
   tableTechName: string
@@ -89,7 +95,7 @@ function parseMeasureFields(modelDetail: unknown, schemaDetail?: Record<string, 
           englishName,
           fieldType: String(item?.fieldType || item?.tfieldType || '-').trim() || '-',
           key,
-          projectionFunc: String(item?.projectionFunc || item?.agg || 'sum'),
+          aggregationMethods: normalizeAggregationCodes(item?.agg || item?.projectionFunc, ['SUM']),
           raw: {
             ...item,
             techId: key
@@ -318,32 +324,22 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       message.warning('请选择未映射的度量字段')
       return
     }
+    if (selectedRows.some(item => !item.aggregationMethods.length)) {
+      message.warning('每个度量字段至少选择一种聚合方式')
+      return
+    }
 
     const semanticSchemaId = values.semanticSchemaId
     const semanticsGroupId = values.semanticsGroupId ?? values.semanticGroupId
     if (!hasFieldValue(semanticSchemaId)) {
       return
     }
-    const payload: AtomicMappingPayload[] = selectedRows.map(item => ({
+    const payload = buildAtomicMappingPayload(selectedRows, {
       groupId,
-      projectionFunc: item.projectionFunc || 'sum',
       relSchemaId: semanticSchemaId as number | string,
       semanticsGroupId,
-      spaceId: getKnowledgeSpaceId(),
-      techId: [
-        {
-          ...item.raw,
-          alias: item.alias,
-          bizName: buildMappedBizName(item.tableBizName, item.bizName),
-          description: item.description,
-          englishName: item.englishName,
-          fieldType: item.fieldType,
-          projectionFunc: item.projectionFunc || 'sum',
-          techId: String(item.raw?.techId ?? item.key),
-          techName: buildMappedTechName(item.tableTechName, item.englishName)
-        }
-      ]
-    }))
+      spaceId: getKnowledgeSpaceId()
+    })
 
     setSaving(true)
     try {
@@ -361,12 +357,14 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
     {
       dataIndex: 'englishName',
       key: 'englishName',
-      title: '英文名称'
+      title: '英文名称',
+      width: 120
     },
     {
       dataIndex: 'fieldType',
       key: 'fieldType',
-      title: '字段类型'
+      title: '字段类型',
+      width: 120
     },
     {
       key: 'semanticType',
@@ -377,22 +375,28 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
           value="measure"
         />
       ),
-      title: '语义类型'
+      title: '语义类型',
+      width: 120
     },
     {
-      dataIndex: 'projectionFunc',
-      key: 'projectionFunc',
-      render: (value: string, record: MeasureFieldItem) => (
+      dataIndex: 'aggregationMethods',
+      key: 'aggregationMethods',
+      render: (value: AggregationCode[], record: MeasureFieldItem) => (
         <ASelect
+          maxTagCount="responsive"
+          mode="multiple"
           options={AGG_METHOD_OPTIONS}
           placeholder="请选择聚合方式"
-          value={value || 'sum'}
-          onChange={projectionFunc =>
-            setFieldRows(prev => prev.map(item => (item.key === record.key ? { ...item, projectionFunc } : item)))
+          value={value}
+          popupMatchSelectWidth={230}
+          style={{width:120}}
+          onChange={aggregationMethods =>
+            setFieldRows(prev => prev.map(item => (item.key === record.key ? { ...item, aggregationMethods } : item)))
           }
         />
       ),
-      title: '聚合方式'
+      title: '聚合方式',
+      width: 140
     },
     {
       dataIndex: 'bizName',
@@ -406,7 +410,8 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
           }}
         />
       ),
-      title: '中文名称'
+      title: '中文名称',
+      width: 130
     },
     {
       dataIndex: 'alias',
@@ -420,7 +425,8 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
           }}
         />
       ),
-      title: '别名'
+      title: '别名',
+      width: 120
     },
     {
       dataIndex: 'description',
@@ -436,9 +442,14 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
           }}
         />
       ),
-      title: '字段描述'
+      title: '字段描述',
+      width: 120
     }
   ]
+
+const getColumnWidth = useMemo(() => {
+    return columns.reduce((total, column: any) => total + (column.minWidth || column.width || 100), 55)
+  }, [columns])
 
   return (
     <CommonDrawer
@@ -486,8 +497,9 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
           loading={loadingFields}
           pagination={false}
           rowKey="key"
-          scroll={{ x: 1200, y: 520 }}
+          scroll={{ x: getColumnWidth}}
           rowSelection={{
+            fixed:true,
             getCheckboxProps: record => ({
               disabled: disabledRowKeys.includes(record.key)
             }),
