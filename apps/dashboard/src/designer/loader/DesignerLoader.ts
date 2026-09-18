@@ -73,7 +73,12 @@ export class DesignerLoader {
      * 扫描设计器组件
      */
     protected scanComponents(): void {
-        const glob = import.meta.glob('../../comps/**/*.ts', {eager: true}) as Record<string, any>;
+        // 排除测试文件：eager glob 会同步求值所有匹配模块，若把 *.test.ts（内部 import 'vitest'）扫进来，
+        // 会在浏览器运行时抛错并击穿整个模块图，导致大屏白屏/微应用 bootstrap 超时
+        const glob = import.meta.glob(
+            ['../../comps/**/*.ts', '!../../comps/**/*.test.ts', '!../../comps/**/*.spec.ts'],
+            {eager: true}
+        ) as Record<string, any>;
         for (const key of Object.keys(glob)) {
             const Clazz = glob[key]?.default;
             if (Clazz && Object.prototype.isPrototypeOf.call(AbstractDefinition, Clazz)) {

@@ -1,3 +1,65 @@
+# 定时任务重构接入 XXL-JOB 调度中心接口
+
+## 文档状态
+
+- 状态：进行中（第一版代码完成；后端未部署，调度接口暂走本地 mock，见 `service/api/job-mock.ts` 的 `JOB_MOCK_DEFAULT` 开关，部署后关闭即回真实请求）。
+- 日期：2026-09-17。
+- 需求来源：用户提供 XXL-JOB 任务调度中心功能参考图与 `ABI-LOG.apifox.json` 接口协议，要求重构定时任务模块；明确不做 GLUE IDE，并保持现有页面样式。
+- 需求类型：ABI 定时任务（任务管理/调度日志）模块重构 + 新接口接入。
+- 继承关系：覆盖 `apps/abi/src/pages/workbench/job/time` 与 `job/log` 的旧接口用法（abi-system/shared jobList、/abi-job/job、/job/log/sharedList）；`job/email` 发送记录及其 abi-system/shared 接口本轮不动。
+- 接口协议来源：`ABI-LOG.apifox.json`（abi-job 集合），接口清单 dump 见 `.ai/runs/2026-09-17-job-xxljob-refactor/apifox-dump.txt`。
+
+## 目标
+
+1. 任务管理页改用 `/jobinfo/*` 接口：列表（jobGroup/triggerStatus/name/executorHandler/author 筛选 + offset/pagesize 分页）、明细、创建、更新、删除、启动、停止、手动触发、下次触发时间预览。
+2. 提供参考图工具栏操作：新增、编辑、删除、复制、启动、停止、执行一次、查询日志、注册节点、下次执行时间；不做 GLUE IDE。
+3. 调度日志页改用 `/joblog/*` 接口：列表（jobGroup/jobId/logStatus/filterTime）、明细、日志内容（fromLineNum 滚动加载）、终止运行作业、清理历史。
+4. 执行器下拉数据源为 `/jobgroup/list`；注册节点使用 `/jobgroup/{id}` 的 registryList。
+5. 保持现有页面样式：搜索栏、工具栏、列表/卡片切换、列管理、自定义分页、弹层与抽屉样式均不改动。
+6. 新增纯函数（分页参数转换、filterTime 格式化、日志状态推导、列展示文本、成功门禁、列表信封解析）集中到 `job/utils.ts` 并补 Vitest 与接口契约测试。
+
+## 非目标
+
+- 不实现 GLUE IDE（不接入 GLUE 代码查看/保存接口）。
+- 不新增执行器管理、运行报表、用户管理、使用教程等页面（是否新增待用户确认）。
+- 不修改 `job/email` 发送记录页面及其 abi-system/shared 接口。
+- 不修改全局样式、路由菜单、请求层封装。
+- 旧定时任务编辑弹层（ShareEmailSetting 邮件分享配置）本轮下线，其去留待用户确认。
+
+## 接口与数据约束
+
+- 接口前缀假设 `/api/abi-job`（apifox 路径无网关前缀，按现存 `/api/abi-job/job` 同源推断），待联调确认。
+- 列表分页：`offset` 为 0 基记录起始偏移、`pagesize` 为每页条数；前端 pageNum/pageSize 经 `toOffsetPageParams` 转换。
+- 列表响应信封 `{code,msg,data:{offset,pagesize,data,total},success}`；写接口信封 `{code,msg,data,success}`；成功门禁 `code===200 || success===true`。
+- triggerStatus：1 运行、0 停止，查询 -1 全部；logStatus：-1 全部、1 成功、2 失败、3 运行中（枚举值为假设，待确认）。
+- filterTime 格式 `YYYY-MM-DD HH:mm:ss - YYYY-MM-DD HH:mm:ss`。
+- 新建任务 glueType 固定 BEAN（无 GLUE IDE），executorHandler 必填。
+
+## 影响范围
+
+- `apps/abi/src/service/api/job.ts`、`apps/abi/src/service/api/job.test.ts`（新增）、`apps/abi/src/constants/job.tsx`。
+- `apps/abi/src/pages/workbench/job/utils.ts`（新增）、`utils.test.ts`（新增）。
+- `apps/abi/src/pages/workbench/job/time/index.tsx`、`time/modules/job-form-modal.tsx`（新增）。
+- `apps/abi/src/pages/workbench/job/log/index.tsx`、`log/modules/job-log-detail-drawer.tsx`。
+- 本需求文件与 `.ai/runs/2026-09-17-job-xxljob-refactor/`。
+
+## 验收标准
+
+1. 任务管理页筛选、工具栏操作、表格列与参考图对齐（除 GLUE IDE）；单选/多选操作的禁用态正确。
+2. 新增/编辑弹层按创建/更新接口 body 提交；CRON 类型复用现有表达式生成器。
+3. 启动/停止/删除/复制/执行一次/注册节点/下次执行时间/查询日志均走新接口或既有日志路由。
+4. 调度日志页支持执行器-任务级联、状态与时间筛选、详情抽屉展示触发/处理信息与日志内容、运行中可终止、可按当前筛选清理历史。
+5. 列表/卡片切换、列管理、分页、弹层样式无回归。
+6. 定向 Vitest 通过；job 模块相关文件无新增类型错误。
+
+## 测试要求
+
+- `pnpm exec vitest run apps/abi/src/pages/workbench/job apps/abi/src/service/api/job.test.ts`。
+- `pnpm --filter chatbi typecheck` 后确认 job 模块相关文件无新增错误（对比基线）。
+- 手工：本轮无联调环境，接口字段与枚举待联调环境逐项确认（见 RUN_LOG 不清楚清单）。
+
+---
+
 # 语义名单批量接口与产品口径收敛
 
 ## 文档状态

@@ -84,6 +84,10 @@ function redirectToLogin({
   preserveRedirect: boolean;
   redirectPath?: string;
 }) {
+  if (window.location.pathname.startsWith('/login')) {
+    return;
+  }
+
   const safeRedirectPath = preserveRedirect ? getSafeLoginRedirectPath(redirectPath) : '';
   const loginUrl = safeRedirectPath ? `/login?redirect=${encodeURIComponent(safeRedirectPath)}` : '/login';
 

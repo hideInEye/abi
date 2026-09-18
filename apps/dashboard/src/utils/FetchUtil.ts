@@ -20,6 +20,16 @@ export function notifyTokenExpired() {
     void handleLoginExpired();
 }
 
+// 登录过期提示去重窗口：请求层检测到鉴权失效后统一提示并跳转，此窗口期内组件层的 error 弹窗被屏蔽，
+// 避免同一次失败弹两条（见 GlobalMessage.tsx）。窗口略大于 @sa/auth 默认 redirectDelay(1800ms)。
+const AUTH_EXPIRED_NOTIFY_WINDOW = 2000;
+let _authExpiredAt = 0;
+
+/** 是否处于登录过期统一提示的窗口期内 */
+export function isAuthExpiredNotifying(): boolean {
+    return _authExpiredAt > 0 && Date.now() - _authExpiredAt < AUTH_EXPIRED_NOTIFY_WINDOW;
+}
+
 export function isSuccessfulNativeResult(value: unknown): boolean {
     if (typeof value !== 'object' || value === null) return true;
     const result = value as Record<string, unknown>;
