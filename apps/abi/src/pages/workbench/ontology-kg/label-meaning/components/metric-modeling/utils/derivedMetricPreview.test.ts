@@ -226,4 +226,24 @@ describe('derived metric preview', () => {
 
     expect(result.displaySql).toBe('SELECT SUM(payment_amount) FROM payment_amount')
   })
+
+  it('uses a custom atomic expression directly instead of wrapping it with a fallback aggregation', () => {
+    const expression = 'SUM(payment_amount) / COUNT(DISTINCT order_id)'
+    const result = buildDerivedMetricPreview({
+      allFields: [{ fieldName: 'payment_amount', tableName: 'trade_fact', techId: 'amount-id' }],
+      atomicLabel: '客单价',
+      atomicMetric: {
+        calcLogic: { agg: { data: expression, type: 'complex' } },
+        techId: [{ techId: 'amount-id', techName: 'trade_fact.payment_amount' }]
+      },
+      dimensionOptions: [],
+      projectionFunc: expression,
+      ruleFields: fields,
+      ruleLayers: []
+    })
+
+    expect(result.displaySql).toBe(`SELECT ${expression} FROM trade_fact`)
+    expect(result.submissionExpression).toBe(expression)
+    expect(result.displaySql).not.toContain(`SUM(${expression})`)
+  })
 })

@@ -1,0 +1,49 @@
+.functionRail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.functionButton {
+  border-color: #dbe5ff;
+  background: #f6f8ff;
+  color: #365ecf;
+
+  &:hover,
+  &:focus-visible {
+    border-color: #7898ff !important;
+    background: #edf2ff !important;
+    color: #244fc8 !important;
+  }
+}
+
+.metaStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+  padding: 16px 20px;
+  border: 1px solid #e2e8f3;
+  border-radius: 8px;
+  background: #fafbfe;
+}
+
+.metaLabel {
+  margin-bottom: 6px;
+  color: #8995a8;
+  font-size: 13px;
+}
+
+.metaValue {
+  overflow: hidden;
+  color: #26354d;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .metaStrip {
+    grid-template-columns: 1fr;
+  }
+}

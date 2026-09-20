@@ -1,0 +1,11 @@
+.semanticField {
+  margin-bottom: 22px;
+
+  :global(.ant-form-item) {
+    margin-bottom: 0;
+  }
+
+  :global(.ant-form-item-label) {
+    display: none;
+  }
+}

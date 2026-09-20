@@ -29,13 +29,20 @@ import type {
   KnowledgeTechField,
   KnowledgeTemplateParams
 } from '../types/metricModeling.types'
+import { normalizeAggregationCode } from '../utils/aggregation'
 import {
+  buildCustomAtomicSourceField,
+  buildSimpleAtomicSourceField,
   getApiResponseData,
-  getAtomicProjection,
+  getAtomicAggregationMethods,
+  getAtomicAggregationType,
   getAtomicSemanticSchemaId,
   getAtomicSemanticSchemaName,
+  getKnowledgeTechFieldId,
+  hasAtomicAggregationMetadata,
   parseAtomicSourceFields,
-  parseSemanticModelFields
+  parseSemanticModelFields,
+  resolveDerivedAggregationMethod
 } from '../utils/atomicMetricSource'
 import { parseApiUpdateFrequency } from '../utils/indicatorApiAdapter'
 import { normalizeKnowledgeIndicatorListItem } from '../utils/knowledgeIndicator.mapper'
@@ -65,6 +72,7 @@ import { getKnowledgeSpaceId } from '../utils/space'
 
 import { KnowledgeOperateBusinessStep } from './knowledgeOperateDrawer.BusinessStep'
 import { KnowledgeOperateDimensionStep } from './knowledgeOperateDrawer.DimensionStep'
+import { KnowledgeOperateSimpleAtomicTechnicalSection } from './knowledgeOperateDrawer.SimpleAtomicTechnicalSection'
 import { KnowledgeOperateTechnicalStep } from './knowledgeOperateDrawer.TechnicalStep'
 
 type IndicatorType = 'atomic' | 'derivative' | 'derived'
@@ -117,6 +125,17 @@ const DERIVED_ONLY_FIELDS: Array<keyof KnowledgeFormValues> = [
   'projectionFunc',
   'statisticalCaliber',
   'techId'
+]
+const ATOMIC_ONLY_FIELDS: Array<keyof KnowledgeFormValues> = [
+  'atomicAggregationExpression',
+  'atomicAggregationMethods',
+  'atomicSourceFieldId',
+  'relSchemaId',
+  'relViewId',
+  'semanticGroupId',
+  'semanticSchemaId',
+  'semanticsGroupId',
+  'semanticType'
 ]
 const INDICATOR_OPTION_FORM_FIELDS: Array<keyof KnowledgeFormValues> = [
   'techId',
@@ -258,7 +277,8 @@ function buildAtomicMetricMetaMap(options: AtomicIndicatorOption[]) {
       fieldName: getMetricIndicatorOptionLabel(option.item),
       id: option.item.indId ?? option.item.termId ?? key,
       label: option.label,
-      projectionFunc: getAtomicProjection(option.item),
+      aggregationMethods: getAtomicAggregationMethods(option.item),
+      projectionFunc: getAtomicAggregationMethods(option.item)[0],
       semanticSchemaId: getAtomicSemanticSchemaId(option.item),
       semanticSchemaName: option.item.semanticSchemaName || option.item.relSchemaName,
       value: key
@@ -418,6 +438,16 @@ function buildTemplateParams(
   return compactTemplateParams(common)
 }
 
+function buildRelItemId(values: KnowledgeFormValues, indicatorClass: IndicatorType) {
+  if (indicatorClass === 'derived') {
+    return collectRuleFieldIds(values.derivedExpressions).join(',')
+  }
+  if (indicatorClass === 'derivative') {
+    return extractUniqueIds(values.expr || '').join(',')
+  }
+  return undefined
+}
+
 function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormValues {
   const templateValues = parseTemplateParams(item.templateParams) as Partial<KnowledgeFormValues>
   const calcLogicValues = parseKnowledgeCalcLogicFormValues(item.calcLogic) as Partial<KnowledgeFormValues>
@@ -430,20 +460,33 @@ function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormV
   const mappedBizNameParts = getMappedBizNameParts(rawBizName)
   const mappedTechNameParts = getMappedTechNameParts(rawTechName)
   const rawCalcLogic = parseJsonIfPossible(item.calcLogic) as Record<string, unknown>
+  const atomicSourceField = parseAtomicSourceFields(item.techId)[0]
   const precomputeConfig = parseApiUpdateFrequency(item.updateFrequency, rawCalcLogic?.precomputeConfig)
   const statisticalCaliber = normalizeStatisticalCaliber(calcLogicValues.statisticalCaliber)
   const values: KnowledgeFormValues = {
     ...item,
     ...templateValues,
     ...calcLogicValues,
+    atomicAggregationMethods: getAtomicAggregationMethods(item),
     bizName: mappedBizNameParts.displayName,
+    atomicSourceFieldId: resolveTechFieldIdentity(atomicSourceField),
     dimensionFieldIds: item.dimensionFieldIds ?? item.relateDims,
     indAlias: splitAliasTags(item.indAlias),
     indicatorCode: mappedTechNameParts.displayName,
     mappedBizNameTableName: mappedBizNameParts.isMapped ? mappedBizNameParts.tableName : undefined,
     mappedTechNameTableName: mappedTechNameParts.isMapped ? mappedTechNameParts.tableName : undefined,
     precomputeConfig,
-    projectionFunc: item.projectionFunc || calcLogicValues.projectionFunc || 'sum',
+    projectionFunc:
+      normalizeAggregationCode(calcLogicValues.projectionFunc ?? item.projectionFunc) ||
+      calcLogicValues.projectionFunc ||
+      item.projectionFunc ||
+      'SUM',
+    relSchemaId: item.relSchemaId ?? item.semanticSchemaId,
+    relViewId: item.relViewId ?? item.relViewid,
+    semanticGroupId: item.semanticGroupId ?? item.semanticsGroupId,
+    semanticSchemaId: item.semanticSchemaId ?? item.relSchemaId,
+    semanticsGroupId: item.semanticsGroupId ?? item.semanticGroupId,
+    semanticType: item.semanticType ?? atomicSourceField?.semanticType,
     statisticalCaliber,
     techName: mappedTechNameParts.displayName
   }
@@ -486,11 +529,12 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
 
   const isEditing = Boolean(editingItem)
   const isAtomicEditing = normalizeIndicatorClass(editingItem?.indicatorClass) === 'atomic'
+  const isSimpleAtomicEditing = isAtomicEditing && getAtomicAggregationType(editingItem || undefined) === 'simple'
   const indicatorClass = normalizeIndicatorClass(
     String(form.getFieldValue('indicatorClass') || selectedIndicatorClass || 'derived')
   )
   const isAtomicMode = isAtomicEditing || indicatorClass === 'atomic'
-  const stepItems = useMemo(() => getStepItems(true, isAtomicMode), [isAtomicMode])
+  const stepItems = useMemo(() => getStepItems(!isAtomicMode, isSimpleAtomicEditing), [isAtomicMode, isSimpleAtomicEditing])
   const currentStepKey = stepItems[current]?.key
   const atomicIndicatorOptions = useMemo(() => {
     const allowedClasses = indicatorClass === 'derivative' ? new Set(['atomic', 'derived']) : new Set(['atomic'])
@@ -527,6 +571,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     validatePercentile,
     validatePositiveInt,
     validateRollingWindow,
+    validateSqlExpression,
     validateTechName,
     validateTechnicalRemark,
     validateThresholdMax,
@@ -628,6 +673,12 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     setReferenceIndicatorOptionSource(updateItems)
   }, [])
 
+  const fetchSemanticSchemaDetail = useCallback(async (schemaId: number | string) => {
+    const schemaResult = await queryTableSemanticsDetail(schemaId)
+    assertFlatRequestSuccess(schemaResult)
+    return getApiResponseData(schemaResult)
+  }, [])
+
   const loadAtomicSemanticFields = useCallback(
     async (option?: AtomicIndicatorOption, settings?: { confirmChange?: boolean; previousTechId?: unknown }) => {
       semanticRequestRef.current += 1
@@ -638,7 +689,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         setFieldError(false)
         setFieldLoading(false)
         currentSemanticSchemaRef.current = ''
-        form.setFieldValue('projectionFunc', 'sum')
+        form.setFieldValue('projectionFunc', 'SUM')
         return
       }
 
@@ -648,7 +699,10 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         let resolvedItem = option.item
         let schemaId = getAtomicSemanticSchemaId(resolvedItem)
         const detailId = resolvedItem.indId ?? resolvedItem.termId
-        if (detailId !== undefined && (!schemaId || getAtomicSemanticSchemaName(resolvedItem) === '-')) {
+        if (
+          detailId !== undefined &&
+          (!schemaId || getAtomicSemanticSchemaName(resolvedItem) === '-' || !hasAtomicAggregationMetadata(resolvedItem))
+        ) {
           const detailResult = await queryKnowledgeIndicatorDetail({ id: detailId })
           assertFlatRequestSuccess(detailResult)
           const detail = getApiResponseData(detailResult)
@@ -693,7 +747,11 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         }
         if (schemaChanged) setAllFields([])
 
-        const projectionFunc = getAtomicProjection(resolvedItem)
+        const projectionFunc = resolveDerivedAggregationMethod(
+          resolvedItem,
+          form.getFieldValue('projectionFunc'),
+          settings?.confirmChange === false
+        )
         form.setFieldValue('projectionFunc', projectionFunc)
         formValuesRef.current = { ...formValuesRef.current, projectionFunc, techId: option.value }
         currentSemanticSchemaRef.current = nextSchemaId
@@ -704,9 +762,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
           return
         }
 
-        const schemaResult = await queryTableSemanticsDetail(schemaId)
-        assertFlatRequestSuccess(schemaResult)
-        const schemaDetail = getApiResponseData(schemaResult)
+        const schemaDetail = await fetchSemanticSchemaDetail(schemaId)
         if (requestId !== semanticRequestRef.current) return
         const fields = parseSemanticModelFields(schemaDetail)
         setAllFields(fields)
@@ -732,15 +788,74 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         if (requestId === semanticRequestRef.current) setFieldLoading(false)
       }
     },
-    [form, updateIndicatorOptionItem]
+    [fetchSemanticSchemaDetail, form, updateIndicatorOptionItem]
+  )
+
+  const loadCustomAtomicSemanticFields = useCallback(
+    async (schemaId: number | string) => {
+      semanticRequestRef.current += 1
+      const requestId = semanticRequestRef.current
+      currentSemanticSchemaRef.current = String(schemaId)
+      setFieldLoading(true)
+      setFieldError(false)
+      try {
+        const schemaDetail = await fetchSemanticSchemaDetail(schemaId)
+        if (requestId !== semanticRequestRef.current) return
+        setAllFields(parseSemanticModelFields(schemaDetail))
+      } catch {
+        if (requestId !== semanticRequestRef.current) return
+        setFieldError(true)
+      } finally {
+        if (requestId === semanticRequestRef.current) setFieldLoading(false)
+      }
+    },
+    [fetchSemanticSchemaDetail]
+  )
+
+  const handleAtomicSchemaChange = useCallback(
+    async ({
+      semanticGroupId,
+      semanticSchemaId,
+      semanticsGroupId,
+      viewId
+    }: {
+      semanticGroupId: number | string | null
+      semanticSchemaId: number | string
+      semanticsGroupId: number | string | null
+      viewId: number | string
+    }) => {
+      const nextGroupId = semanticsGroupId ?? semanticGroupId ?? undefined
+      const nextValues: Partial<KnowledgeFormValues> = {
+        atomicAggregationExpression: undefined,
+        atomicSourceFieldId: undefined,
+        relSchemaId: semanticSchemaId,
+        relViewId: viewId,
+        semanticGroupId: nextGroupId,
+        semanticSchemaId,
+        semanticsGroupId: nextGroupId,
+        semanticType: undefined
+      }
+      form.setFieldsValue(nextValues)
+      formValuesRef.current = { ...formValuesRef.current, ...nextValues }
+      setAllFields([])
+      await loadCustomAtomicSemanticFields(semanticSchemaId)
+    },
+    [form, loadCustomAtomicSemanticFields]
   )
 
   const retryAtomicSemanticFields = useCallback(() => {
+    if (normalizeIndicatorClass(form.getFieldValue('indicatorClass')) === 'atomic') {
+      const schemaId = form.getFieldValue('semanticSchemaId') || form.getFieldValue('relSchemaId')
+      if (schemaId !== undefined && schemaId !== null && schemaId !== '') {
+        loadCustomAtomicSemanticFields(schemaId)
+      }
+      return
+    }
     loadAtomicSemanticFields(lastAtomicOptionRef.current, {
       confirmChange: false,
       previousTechId: form.getFieldValue('techId')
     })
-  }, [form, loadAtomicSemanticFields])
+  }, [form, loadAtomicSemanticFields, loadCustomAtomicSemanticFields])
 
   useEffect(() => {
     if (!open) {
@@ -786,12 +901,16 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         editValues.derivedExpressions = resolveDerivedExpressionMetrics(editValues.derivedExpressions, nextAllFields)
         setAllFields(nextAllFields)
       } else {
-        setAllFields([])
+        setAllFields(parseAtomicSourceFields(editingItem.techId))
       }
 
       form.setFieldsValue(editValues)
       formValuesRef.current = editValues
       setSelectedIndicatorClass(indicatorClassValue)
+
+      if (isAtomicEditing && editValues.semanticSchemaId) {
+        loadCustomAtomicSemanticFields(editValues.semanticSchemaId)
+      }
 
       return
     }
@@ -799,7 +918,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       derivedExpressions: createDefaultRuleLayers(),
       indAlias: [],
       precomputeConfig: DEFAULT_PRECOMPUTE_CONFIG,
-      projectionFunc: 'sum',
+      projectionFunc: 'SUM',
       statisticalCaliber: DEFAULT_STATISTICAL_CALIBER,
       variableMappings: []
     }
@@ -807,7 +926,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     formValuesRef.current = nextValues
     setSelectedIndicatorClass('derived')
     setAllFields([])
-  }, [editingItem, form, isAtomicEditing, open])
+  }, [editingItem, form, isAtomicEditing, loadCustomAtomicSemanticFields, open])
 
   useEffect(() => {
     if (!open || !editingItem || isAtomicMode || editMatchedRef.current || !atomicIndicatorOptions.length) {
@@ -847,6 +966,13 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   }, [current, stepItems.length])
 
   const getTechnicalRequiredFields = () => {
+    if (indicatorClass === 'atomic') {
+      if (isSimpleAtomicEditing) {
+        return ['semanticSchemaId', 'atomicSourceFieldId', 'atomicAggregationMethods']
+      }
+      return ['techName', 'semanticSchemaId', 'atomicSourceFieldId', 'atomicAggregationExpression']
+    }
+
     if (indicatorClass === 'derived') {
       const statisticalCaliber = normalizeStatisticalCaliber(form.getFieldValue('statisticalCaliber'))
       const fields: ValidationField[] = [
@@ -919,17 +1045,17 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       const nextClass = normalizeIndicatorClass(String(changeValues.indicatorClass || 'derived'))
       setSelectedIndicatorClass(nextClass)
       if (nextClass === 'derived') {
-        clearFields([...DERIVATIVE_TEMPLATE_FIELDS, 'techName'])
+        clearFields([...ATOMIC_ONLY_FIELDS, ...DERIVATIVE_TEMPLATE_FIELDS, 'techName'])
         const derivedDefaults: Partial<KnowledgeFormValues> = {
           derivedExpressions: createDefaultRuleLayers(),
-          projectionFunc: 'sum',
+          projectionFunc: 'SUM',
           statisticalCaliber: { ...DEFAULT_STATISTICAL_CALIBER }
         }
         form.setFieldsValue(derivedDefaults)
         formValuesRef.current = { ...formValuesRef.current, ...derivedDefaults }
       }
       if (nextClass === 'derivative') {
-        clearFields([...DERIVED_ONLY_FIELDS, 'techName'])
+        clearFields([...ATOMIC_ONLY_FIELDS, ...DERIVED_ONLY_FIELDS, 'techName'])
         setAllFields([])
       }
       if (nextClass === 'atomic') {
@@ -1000,7 +1126,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       'businessDefinition',
       ...precomputeFields
     ]
-    return isAtomicMode ? [...baseFields, 'techName'] : baseFields
+    return baseFields
   }
 
   const next = async () => {
@@ -1034,9 +1160,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     }
 
     const baseFields = getBusinessRequiredFields()
-    const valid = await validateKnowledgeFields(
-      isAtomicMode ? baseFields : [...baseFields, ...getTechnicalRequiredFields()]
-    )
+    const valid = await validateKnowledgeFields([...baseFields, ...getTechnicalRequiredFields()])
     if (!valid) {
       return
     }
@@ -1053,7 +1177,30 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     )
 
     const selectedAtomic = atomicIndicatorOptions.find(item => item.value === String(values.techId || ''))
-    const selectedTechObject = isAtomicMode ? values.techId : (selectedAtomic?.item?.techId ?? values.techId)
+    const selectedAtomicSource = allFields.find(
+      item => getKnowledgeTechFieldId(item) === String(values.atomicSourceFieldId || '')
+    )
+    const originalAtomicSource = parseAtomicSourceFields(editingItem?.techId)[0]
+    const atomicSourceInput =
+      isSimpleAtomicEditing &&
+      selectedAtomicSource &&
+      getKnowledgeTechFieldId(selectedAtomicSource) === getKnowledgeTechFieldId(originalAtomicSource)
+        ? { ...selectedAtomicSource, ...originalAtomicSource }
+        : selectedAtomicSource
+    let atomicSourceField: KnowledgeTechField | null = null
+    if (isAtomicMode) {
+      atomicSourceField = isSimpleAtomicEditing
+        ? buildSimpleAtomicSourceField(atomicSourceInput, values.atomicAggregationMethods)
+        : buildCustomAtomicSourceField(atomicSourceInput)
+    }
+    if (isAtomicMode && !atomicSourceField) {
+      message.error('来源字段信息未加载完成，请重新选择数据后重试')
+      const technicalStepIndex = stepItems.findIndex(item => item.key === 'technical')
+      if (technicalStepIndex >= 0) setCurrent(technicalStepIndex)
+      return
+    }
+    const selectedTechObject =
+      isAtomicMode && atomicSourceField ? [atomicSourceField] : (selectedAtomic?.item?.techId ?? values.techId)
     const aliasText = (Array.isArray(values.indAlias) ? values.indAlias : splitAliasTags(values.indAlias))
       .map(item => String(item || '').trim())
       .filter(Boolean)
@@ -1068,10 +1215,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       dimensionFieldIds: values.dimensionFieldIds ?? editingItem?.dimensionFieldIds ?? '',
       groupId,
       indAlias: aliasText,
-      relItemId:
-        nextIndicatorClass === 'derived'
-          ? collectRuleFieldIds(values.derivedExpressions).join(',')
-          : extractUniqueIds(values.expr || '').join(','),
+      relItemId: buildRelItemId(values, nextIndicatorClass),
       spaceId: getKnowledgeSpaceId(),
       templateParams: buildTemplateParams(values, nextIndicatorClass)
     }
@@ -1082,6 +1226,9 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     } else {
       payload.techName = submitTechName
       delete payload.indicatorCode
+    }
+    if (isSimpleAtomicEditing && atomicSourceField?.projectionFunc) {
+      payload.projectionFunc = atomicSourceField.projectionFunc
     }
     payload.techId = selectedTechObject as KnowledgeSubmitPayload['techId']
 
@@ -1154,13 +1301,24 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       >
         {currentStepKey === 'business' ? (
           <KnowledgeOperateBusinessStep
+            atomicTechnicalSection={
+              isSimpleAtomicEditing ? (
+                <KnowledgeOperateSimpleAtomicTechnicalSection
+                  allFields={allFields}
+                  fieldError={fieldError}
+                  fieldLoading={fieldLoading}
+                  form={form}
+                  onRetryFields={retryAtomicSemanticFields}
+                  onSchemaChange={handleAtomicSchemaChange}
+                />
+              ) : null
+            }
             form={form}
             indicatorNameDisabled={false}
             validateAliasTags={validateAliasTags}
             validateBusinessRemark={validateBusinessRemark}
             validateIndicatorName={validateIndicatorName}
             validateMeasurementUnit={validateMeasurementUnit}
-            validateTechName={validateTechName}
           />
         ) : null}
 
@@ -1173,6 +1331,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
             form={form}
             indicatorClass={indicatorClass}
             indicatorOptionsLoading={indicatorOptionsLoading}
+            onAtomicSchemaChange={handleAtomicSchemaChange}
             referenceMetricOptions={referenceMetricOptions}
             templateTypeVal={templateTypeVal}
             validateAccumulationDate={validateAccumulationDate}
@@ -1180,6 +1339,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
             validatePercentile={validatePercentile}
             validatePositiveInt={validatePositiveInt}
             validateRollingWindow={validateRollingWindow}
+            validateSqlExpression={validateSqlExpression}
             validateTechName={validateTechName}
             validateTechnicalRemark={validateTechnicalRemark}
             validateThresholdMax={validateThresholdMax}

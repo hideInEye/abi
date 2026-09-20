@@ -1,7 +1,53 @@
+.customAggregationNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 1px solid #dce6fb;
+  border-radius: 8px;
+  background: #f7f9fe;
+  color: #66758f;
+  font-size: 13px;
+}
+
+.customAggregationViewButton {
+  flex: 0 0 auto;
+  height: auto !important;
+  padding: 0 !important;
+  font-size: 13px;
+}
+
+.customAggregationExpression {
+  max-width: min(560px, 70vw);
+  max-height: 280px;
+  margin: 0;
+  overflow: auto;
+  color: #26354d;
+  font:
+    13px/1.65 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .previewGrid {
   display: grid;
   min-width: 0;
   gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .customAggregationNotice {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 .previewCard {

@@ -8,6 +8,7 @@ import {
   getMappedMetricFieldDisplayName,
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
+  getStepItems,
   hasMoreMetricIndicatorSearchResults,
   mergeMetricIndicatorSearchResults,
   shouldShowMetricPrecomputeConfig,
@@ -69,6 +70,23 @@ describe('metric precompute config visibility', () => {
     expect(shouldShowMetricPrecomputeConfig('derivative')).toBe(true)
     expect(shouldShowMetricPrecomputeConfig('custom')).toBe(false)
     expect(shouldShowMetricPrecomputeConfig(undefined)).toBe(false)
+  })
+})
+
+describe('metric create steps', () => {
+  it('uses business and technical steps for custom atomic metrics', () => {
+    expect(getStepItems(false)).toEqual([
+      { key: 'business', title: '业务配置' },
+      { key: 'technical', title: '技术属性' }
+    ])
+  })
+
+  it('uses only business configuration when editing a simple atomic metric', () => {
+    expect(getStepItems(false, true)).toEqual([{ key: 'business', title: '业务配置' }])
+  })
+
+  it('keeps the dimension step for derived and derivative metrics', () => {
+    expect(getStepItems(true).map(item => item.key)).toEqual(['business', 'technical', 'dimension'])
   })
 })
 

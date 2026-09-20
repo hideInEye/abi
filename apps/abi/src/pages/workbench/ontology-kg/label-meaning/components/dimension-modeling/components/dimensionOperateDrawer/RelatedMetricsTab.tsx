@@ -148,6 +148,7 @@ export const RelatedMetricsTab: React.FC<Props> = ({ onGoMetricModeling, onTotal
         pagination={{
           current: pagination.current,
           pageSize: pagination.pageSize,
+          showQuickJumper: true,
           showTotal: total => `共 ${total} 条`,
           total: tabCount
         }}
