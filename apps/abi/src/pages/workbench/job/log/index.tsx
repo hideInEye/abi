@@ -1,127 +1,210 @@
-import { DeleteOutlined, DownOutlined, ExceptionOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
-import { useDebounceFn } from 'ahooks';
-import { Dropdown, Empty, Typography, message } from 'antd';
+import { DeleteOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, RightOutlined, StopOutlined } from '@ant-design/icons';
+import { Dropdown, Empty, message } from 'antd';
+import dayjs from 'dayjs';
 
-import { JOB_GROUP_OPTIONS, RUN_STATUS_OPTIONS } from '@/constants/job';
-import { cleanJobLog, deleteJobLog, exportJobLog, fetchJobDetail, fetchJobLogList } from '@/service/api/job';
+import { LOG_CLEAN_TYPE_OPTIONS, LOG_STATUS_OPTIONS } from '@/constants/job';
+import { cleanJobLog, fetchJobDetail, fetchJobGroupList, fetchJobInfoList, fetchJobLogList, killJobLog } from '@/service/api/job';
+import { isJobRequestSuccess, resolveHandleResult, resolveJobPageResult, resolveTriggerResult } from '../utils';
+import type { JobLogStatus } from '../utils';
 import { useRoute } from '~/packages/simple-router/src';
-import { useAppSelector } from '@/hooks/business/useStore';
-import { getSpaceId } from '@/store/slice/app';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 
 import JobLogDetailDrawer from './modules/job-log-detail-drawer';
 
+const RESULT_TAG_MAP: Record<JobLogStatus, { cls: string; text: string }> = {
+  fail: { cls: 'status-error', text: '失败' },
+  running: { cls: 'status-warning', text: '运行中' },
+  success: { cls: 'status-normal', text: '成功' },
+  unknown: { cls: 'status-disabled', text: '-' },
+};
+
+const PRE_STYLE: React.CSSProperties = {
+  background: 'rgba(130,140,200,0.08)',
+  borderRadius: 8,
+  maxHeight: 320,
+  overflow: 'auto',
+  padding: 12,
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-all',
+};
+
 export function Component() {
   const { t } = useTranslation();
   const route = useRoute();
-  const spaceId = useAppSelector(getSpaceId);
   const [viewJobLogId, setViewJobLogId] = useState('');
-  const [jobDetail, setJobDetail] = useState<any>();
+  const [triggerMsgModal, setTriggerMsgModal] = useState<{ open: boolean; text: string }>({ open: false, text: '' });
+  // 日志清理弹层：回显当前筛选的执行器/任务 + 清理方式九选一
+  const [cleanModal, setCleanModal] = useState<{ groupText: string; jobText: string; open: boolean; type: number }>({ groupText: '全部', jobText: '全部', open: false, type: 1 });
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
+  const [jobGroupOptions, setJobGroupOptions] = useState<{ label: string; value: number | string }[]>([]);
+  const [jobOptions, setJobOptions] = useState<{ label: string; value: number | string }[]>([]);
+  const [checkedRowKeys, setCheckedRowKeys] = useState<React.Key[]>([]);
+  // 任务列展示名：日志接口只回 jobId，用当前执行器下的任务列表做映射（ref 保证列渲染闭包读到最新值）
+  const jobNameMapRef = useRef<Record<string, string>>({});
+
+  // 调度时间默认近 7 天，对齐调度中心日志页初始查询范围
+  const defaultFilterTime = useMemo(() => [dayjs().subtract(7, 'day').startOf('day'), dayjs().endOf('day')], []);
 
   // 列选项：用于列选择器
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
-    { key: 'executeTime', label: '任务执行时间', visible: true },
-    { key: 'status', label: '任务状态', visible: true },
-    { key: 'resultDescription', label: '结果描述', visible: true },
-    { key: 'operate', label: '操作', visible: true },
+    { key: 'id', label: '调度日志ID', visible: true },
+    { key: 'job', label: '任务', visible: true },
+    { key: 'triggerTime', label: '调度时间', visible: true },
+    { key: 'triggerResult', label: '调度结果', visible: true },
+    { key: 'triggerMsg', label: '调度备注', visible: true },
+    { key: 'handleTime', label: '执行时间', visible: true },
+    { key: 'handleResult', label: '执行结果', visible: true },
+    { key: 'handleMsg', label: '执行备注', visible: true },
   ]);
 
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
-
-  useEffect(() => {
-    const { query } = route;
-    console.log(query);
-
-    if (query?.jobId) {
-      updateSearchParams({ jobId: query.jobId });
-    }
-  }, [route.query]);
-
-  const { scrollConfig, tableWrapperRef } = useTableScroll();
-
-  const { columnChecks, data, run, searchParams, searchProps, setColumnChecks, tableProps, updateSearchParams } = useTable({
+  const { data, run, searchParams, searchProps, tableProps, updateSearchParams } = useTable({
     apiFn: fetchJobLogList as any,
-    apiParams: {
+    apiParams: useMemo(() => ({
       pageNum: 1,
       pageSize: 12,
-      spaceId, // 空间id
+      logStatus: '-1',
+      filterTime: defaultFilterTime,
+    }), []),
+    transformer: (res: any) => {
+      const { records, total } = resolveJobPageResult(res);
+      const pageNum = searchParams.current.pageNum || 1;
+      const pageSize = searchParams.current.pageSize || 12;
+      return {
+        data: records.map((item: any, index: number) => ({ ...item, index: (pageNum - 1) * pageSize + index + 1 })),
+        pageNum,
+        pageSize,
+        total,
+      };
     },
     columns: () =>
       [
         {
           align: 'center',
-          dataIndex: 'executeTime',
-          key: 'executeTime',
-          title: '任务执行时间',
-          minWidth: 180,
+          dataIndex: 'id',
+          key: 'id',
+          title: '调度日志ID',
+          minWidth: 110,
         },
         {
-          align: 'center',
-          dataIndex: 'status',
-          key: 'status',
-          title: '任务状态',
-          minWidth: 100,
-          render: (val: number) => {
-            const text: Record<number, string> = {
-              0: '正常',
-              1: '错误',
-              2: '执行中',
-            };
-            return <span>{text[val] || '-'}</span>;
+          align: 'left',
+          key: 'job',
+          title: '任务',
+          minWidth: 200,
+          render: (_: unknown, record: any) => {
+            const name = record.jobDesc || record.jobName || jobNameMapRef.current[String(record.jobId)] || '';
+            const text = `【${record.jobId}】${name}`;
+            return (
+              <span style={{ fontWeight: 600 }} title={text}>{text}</span>
+            );
           },
         },
         {
-          align: 'left' as const,
-          className: 'col-job-log-desc',
-          dataIndex: 'resultDescription',
-          key: 'resultDescription',
-          title: '结果描述',
-          minWidth: 200,
-          onHeaderCell: () => ({ className: 'col-job-log-desc' }),
-          onCell: () => ({ style: { whiteSpace: 'normal', wordBreak: 'break-all' as const, maxWidth: 300 } }),
-          render: (text: string) => text
-            ? <Typography.Paragraph ellipsis={{ rows: 2, tooltip: text }} style={{ marginBottom: 0, fontSize: 'inherit', color: 'inherit', maxWidth: 260 }}>{text}</Typography.Paragraph>
-            : <span style={{ color: '#9ca3af' }}>-</span>,
+          align: 'center',
+          dataIndex: 'triggerTime',
+          key: 'triggerTime',
+          title: '调度时间',
+          minWidth: 180,
+          render: (text: string) => text || '-',
         },
         {
           align: 'center',
-          fixed: 'right',
-          key: 'operate',
-          minWidth: 120,
-          render: (_: unknown, record: any) => (
-            <div className="ds-action-group">
-              {record?.status === '0' && (
-                <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleView(record)}>
-                  <FileSearchOutlined style={{ marginRight: 3, fontSize: 12 }} />查看报告
-                </AButton>
-              )}
-              {record?.status === '1' && (
-                <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleViewError(record)}>
-                  <ExceptionOutlined style={{ marginRight: 3, fontSize: 12 }} />查看错误
-                </AButton>
-              )}
-              <APopconfirm title="提示" description="确定要删除吗？" onConfirm={() => handleDelete(record.jobLogId)}>
-                <AButton className="abi-action-link" size="small" variant="link">
-                  <DeleteOutlined style={{ marginRight: 3, fontSize: 12 }} />删除
-                </AButton>
-              </APopconfirm>
-            </div>
-          ),
-          title: t('common.operate'),
+          key: 'triggerResult',
+          title: '调度结果',
+          minWidth: 100,
+          render: (_: unknown, record: any) => {
+            const st = RESULT_TAG_MAP[resolveTriggerResult(record)];
+            return <span className={`abi-status-tag ${st.cls}`}>{st.text}</span>;
+          },
+        },
+        {
+          align: 'center',
+          key: 'triggerMsg',
+          title: '调度备注',
+          minWidth: 100,
+          render: (_: unknown, record: any) =>
+            record.triggerMsg ? (
+              <AButton className="abi-action-link" size="small" variant="link" onClick={() => setTriggerMsgModal({ open: true, text: record.triggerMsg })}>
+                查看
+              </AButton>
+            ) : (
+              '-'
+            ),
+        },
+        {
+          align: 'center',
+          dataIndex: 'handleTime',
+          key: 'handleTime',
+          title: '执行时间',
+          minWidth: 180,
+          render: (text: string) => text || '-',
+        },
+        {
+          align: 'center',
+          key: 'handleResult',
+          title: '执行结果',
+          minWidth: 100,
+          render: (_: unknown, record: any) => {
+            const st = RESULT_TAG_MAP[resolveHandleResult(record)];
+            return <span className={`abi-status-tag ${st.cls}`}>{st.text}</span>;
+          },
+        },
+        {
+          align: 'left',
+          dataIndex: 'handleMsg',
+          key: 'handleMsg',
+          title: '执行备注',
+          minWidth: 160,
+          render: (text: string) => text || '无',
         },
       ] as any,
     immediate: false,
-    rowKey: 'jobLogId',
+    rowKey: 'id',
   } as any);
 
-  const { checkedRowKeys, clearCheckedRowKeys, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, async () => {}, true);
+  const loadJobOptions = async (jobGroup: any) => {
+    if (jobGroup === undefined || jobGroup === null || jobGroup === '') {
+      setJobOptions([]);
+      jobNameMapRef.current = {};
+      return;
+    }
+    const res: any = await fetchJobInfoList({ jobGroup, pageNum: 1, pageSize: 500 });
+    const records = resolveJobPageResult(res).records;
+    jobNameMapRef.current = Object.fromEntries(records.map((job: any) => [String(job.id), job.name]));
+    setJobOptions(records.map((job: any) => ({ label: job.name, value: job.id })));
+  };
+
+  // 执行器-任务级联初始化；从任务管理「查询日志」进入时按 jobId 定位
+  useEffect(() => {
+    const init = async () => {
+      const groupRes: any = await fetchJobGroupList({ pageNum: 1 });
+      const groups = resolveJobPageResult(groupRes).records;
+      setJobGroupOptions(groups.map((group: any) => ({ label: group.name, value: group.id })));
+      const queryJobId = route.query?.jobId as string | undefined;
+      let jobGroup = groups[0]?.id;
+      if (queryJobId) {
+        const jobRes: any = await fetchJobDetail(queryJobId);
+        if (jobRes?.data?.jobGroup) jobGroup = jobRes.data.jobGroup;
+      }
+      await loadJobOptions(jobGroup);
+      (searchProps.form.setFieldsValue as any)({ jobGroup, jobId: queryJobId || undefined, logStatus: '-1', filterTime: defaultFilterTime });
+      updateSearchParams({ jobGroup, jobId: queryJobId || undefined, logStatus: '-1', filterTime: defaultFilterTime, pageNum: 1 } as any);
+    };
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleJobGroupChange = (value: any) => {
+    (searchProps.form.setFieldsValue as any)({ jobId: undefined });
+    loadJobOptions(value);
+    searchProps.search();
+  };
+
   const handleViewModeChange = (mode: 'list' | 'card') => {
-    clearCheckedRowKeys();
     setViewMode(mode);
   };
 
@@ -130,13 +213,54 @@ export function Component() {
     return ((tableProps as any).columns || []).filter((col: any) => visibleKeys.has(col.key || col.dataIndex));
   }, [columnOptions, tableProps]);
 
-  // 卡片视图渲染
-  const statusMap: Record<string, { text: string; cls: string }> = {
-    '0': { text: '正常', cls: 'status-normal' },
-    '1': { text: '错误', cls: 'status-error' },
-    '2': { text: '执行中', cls: 'status-warning' },
+  const selectedRows = useMemo(() => (data as any[]).filter(row => checkedRowKeys.includes(row.id)), [data, checkedRowKeys]);
+  const singleRow = selectedRows.length === 1 ? selectedRows[0] : null;
+
+  const rowSelection = {
+    columnWidth: 48,
+    fixed: true,
+    onChange: (keys: React.Key[]) => setCheckedRowKeys(keys),
+    selectedRowKeys: checkedRowKeys,
+    type: 'checkbox' as const,
   };
 
+  async function handleKillSelected() {
+    const ids = checkedRowKeys as (number | string)[];
+    const results: any[] = await Promise.all(ids.map(id => killJobLog(String(id))));
+    if (!results.every(isJobRequestSuccess)) return;
+    message.success('终止成功');
+    setCheckedRowKeys([]);
+    run(false);
+  }
+
+  async function handleKill(record: any) {
+    const res: any = await killJobLog(String(record.id));
+    if (!isJobRequestSuccess(res)) return;
+    message.success('终止成功');
+    run(false);
+  }
+
+  const openCleanModal = () => {
+    const { jobGroup, jobId } = searchProps.form.getFieldsValue() as any;
+    setCleanModal({
+      groupText: jobGroupOptions.find(item => String(item.value) === String(jobGroup))?.label || '全部',
+      jobText: jobOptions.find(item => String(item.value) === String(jobId))?.label || '全部',
+      open: true,
+      type: 1,
+    });
+  };
+
+  const submitClean = async () => {
+    const { jobGroup, jobId } = searchProps.form.getFieldsValue() as any;
+    const res: any = await cleanJobLog({ jobGroup: jobGroup ?? 0, jobId: jobId ?? 0, type: cleanModal.type });
+    if (!isJobRequestSuccess(res)) return;
+    message.success('清理成功');
+    setCleanModal(modal => ({ ...modal, open: false }));
+    setCheckedRowKeys([]);
+    run(false);
+  };
+
+  // 卡片视图渲染
   const renderCardGrid = () => {
     const dataSource = (tableProps as any).dataSource || [];
     if (dataSource.length === 0) {
@@ -150,39 +274,32 @@ export function Component() {
       <div className="abi-card-grid">
         <div className="abi-card-grid-inner">
           {dataSource.map((record: any) => {
-            const st = statusMap[String(record.status)] || { text: '-', cls: '' };
+            const st = RESULT_TAG_MAP[resolveTriggerResult(record)];
+            const running = resolveHandleResult(record) === 'running';
+            const name = record.jobDesc || record.jobName || jobNameMapRef.current[String(record.jobId)] || '';
             return (
-              <div key={record.jobLogId} className="abi-data-card">
+              <div key={record.id} className="abi-data-card">
                 <div className="abi-data-card-head">
                   <div className="abi-data-card-title">
-                    <span className="abi-data-card-name" title={record.jobName || record.jobLogId}>{record.jobName || record.jobLogId}</span>
+                    <span className="abi-data-card-name" title={`【${record.jobId}】${name}`}>【{record.jobId}】{name}</span>
                   </div>
                   <span className={`abi-status-tag ${st.cls}`}>{st.text}</span>
                 </div>
                 <div className="abi-data-card-body">
-                  <div className="row"><span className="lbl">执行时间</span><span className="val">{record.executeTime || '-'}</span></div>
-                  <div className="row"><span className="lbl">结果描述</span><span className="val">{record.resultDescription || '-'}</span></div>
+                  <div className="row"><span className="lbl">调度时间</span><span className="val">{record.triggerTime || '-'}</span></div>
+                  <div className="row"><span className="lbl">执行时间</span><span className="val">{record.handleTime || '-'}</span></div>
+                  <div className="row"><span className="lbl">执行备注</span><span className="val">{record.handleMsg || '无'}</span></div>
                 </div>
                 <div className="abi-data-card-footer">
-                  {record.status === '0' && (
-                    <button className="abi-card-act" onClick={() => handleView(record)}>
-                      <FileSearchOutlined style={{ marginRight: 3 }} />查看报告
-                    </button>
-                  )}
-                  {record.status === '1' && (
-                    <button className="abi-card-act" onClick={() => handleViewError(record)}>
-                      <ExceptionOutlined style={{ marginRight: 3 }} />查看错误
-                    </button>
-                  )}
+                  <button className="abi-card-act" onClick={() => setViewJobLogId(String(record.id))}>
+                    <FileSearchOutlined style={{ marginRight: 3 }} />执行日志
+                  </button>
                   <Dropdown
                     menu={{
                       items: [
-                        { key: 'delete', danger: true, label: '删除' },
+                        ...(record.triggerMsg ? [{ key: 'triggerMsg', label: '调度备注', onClick: () => setTriggerMsgModal({ open: true, text: record.triggerMsg }) }] : []),
+                        ...(running ? [{ key: 'kill', danger: true, label: '终止', onClick: () => handleKill(record) }] : []),
                       ],
-                      onClick: ({ key, domEvent }) => {
-                        domEvent.stopPropagation();
-                        if (key === 'delete') handleDelete(record.jobLogId);
-                      }
                     }}
                     trigger={['click']}
                   >
@@ -199,104 +316,58 @@ export function Component() {
     );
   };
 
-  async function handleBatchDelete() {
-    const res = await deleteJobLog(checkedRowKeys.join(','));
-    if (res.response.data.code === 200) {
-      onBatchDeleted();
-    }
-  }
-
-  async function handleDelete(jobLogId: string) {
-    const res = await deleteJobLog(jobLogId);
-    if (res.response.data.code === 200) {
-      onDeleted();
-    }
-  }
-
-  async function handleView(record: any) {
-    if (!record.fileUrl) return;
-    window.open(record.fileUrl);
-  }
-
-  const handleViewError = (r:any)=>{
-
-  }
-
-  const handleExport = async () => {
-    const res = await exportJobLog({ ...searchParams.current });
-    const url = URL.createObjectURL(res.data);
-    const a: any = document.createElement('a');
-    a.style.display = 'none';
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleClean = async () => {
-    const res = await cleanJobLog();
-
-    if (res.response.data.code === 200) {
-      message.success('清空成功');
-      run();
-    }
-  };
-
-  // 搜索框停止输入 1s 后自动查询；清空时立即查询
-  const { cancel: cancelDebouncedSearch, run: runDebouncedSearch } = useDebounceFn(() => searchProps.search(), { wait: 1000 });
-  const handleSearchValuesChange = (changed: Record<string, unknown>): void => {
-    if (!Object.prototype.hasOwnProperty.call(changed, 'jobName')) return;
-    const value = changed.jobName;
-    if (value === undefined || value === null || value === '') {
-      cancelDebouncedSearch();
-      searchProps.search();
-    } else {
-      runDebouncedSearch();
-    }
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* v5 Searchbar */}
       <section className="abi-searchbar">
-        <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }} onValuesChange={handleSearchValuesChange}>
+        <AForm form={searchProps.form} layout="inline" style={{ display: 'contents' }}>
           <SearchFilterBar
             searchSlot={
-              <AForm.Item className="m-0 flex-1 min-w-0" name="jobName">
-                <AInput
-                  allowClear
-                  className="abi-field-input w-full"
-                  placeholder="请输入任务名称"
-                  prefix={<SearchOutlined style={{ color: '#a3b3c8' }} />}
-                  onPressEnter={() => { cancelDebouncedSearch(); searchProps.search(); }}
-                />
-              </AForm.Item>
+              <div className="flex flex-1 min-w-0 gap-2">
+                <AForm.Item className="m-0 flex-1 min-w-0" name="jobGroup">
+                  <ASelect
+                    className="abi-field-input w-full"
+                    options={jobGroupOptions}
+                    placeholder="请选择执行器"
+                    onChange={handleJobGroupChange}
+                  />
+                </AForm.Item>
+                <AForm.Item className="m-0 flex-1 min-w-0" name="jobId">
+                  <ASelect
+                    allowClear
+                    showSearch
+                    className="abi-field-input w-full"
+                    optionFilterProp="label"
+                    options={jobOptions}
+                    placeholder="请选择任务"
+                  />
+                </AForm.Item>
+              </div>
             }
             onQuery={() => searchProps.search()}
             onReset={() => searchProps.reset()}
             filters={
               <>
-                <SearchFilterField label="任务执行时间">
-                  <AForm.Item className="m-0" name="lastSendTime">
-                    <ADatePicker.RangePicker
-                      allowClear
-                      className="abi-field-input"
-                      format="YYYY-MM-DD"
-                      getPopupContainer={getFilterPopupContainer}
-                      placeholder={['开始时间', '结束时间']}
-                    />
-                  </AForm.Item>
-                </SearchFilterField>
-                <SearchFilterField label="执行状态">
-                  <AForm.Item className="m-0" name="status">
+                <SearchFilterField label="日志状态">
+                  <AForm.Item className="m-0" name="logStatus">
                     <ASelect
                       allowClear
                       className="abi-field-input w-full"
                       getPopupContainer={getFilterPopupContainer}
-                      options={RUN_STATUS_OPTIONS}
-                      placeholder="请选择执行状态"
+                      options={LOG_STATUS_OPTIONS}
+                      placeholder="请选择日志状态"
+                    />
+                  </AForm.Item>
+                </SearchFilterField>
+                <SearchFilterField label="调度时间">
+                  <AForm.Item className="m-0" initialValue={defaultFilterTime} name="filterTime">
+                    <ADatePicker.RangePicker
+                      allowClear
+                      showTime
+                      className="abi-field-input"
+                      format="YYYY-MM-DD HH:mm:ss"
+                      getPopupContainer={getFilterPopupContainer}
+                      placeholder={['开始时间', '结束时间']}
                     />
                   </AForm.Item>
                 </SearchFilterField>
@@ -310,23 +381,31 @@ export function Component() {
       <section className="abi-data-area">
         <div className="abi-toolbar">
           <div className="abi-toolbar-left">
-            <AButton className="btn-accent-gradient" onClick={handleExport}>
-              导出
-            </AButton>
-            <AButton className="btn-ghost-v5" onClick={handleClean}>
-              清空日志
-            </AButton>
             <APopconfirm
-              title={t('common.confirmDelete')}
-              onConfirm={handleBatchDelete}
+              title="系统提示"
+              description={`确认终止选中的 ${checkedRowKeys.length} 个作业吗？`}
+              onConfirm={handleKillSelected}
             >
-              <AButton danger
-                icon={<DeleteOutlined />}
+              <AButton
+                icon={<StopOutlined />}
                 disabled={checkedRowKeys.length === 0}
               >
-                批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
+                终止任务{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
               </AButton>
             </APopconfirm>
+            <AButton danger
+              icon={<DeleteOutlined />}
+              onClick={openCleanModal}
+            >
+              日志清理
+            </AButton>
+            <AButton
+              icon={<FileSearchOutlined />}
+              disabled={!singleRow}
+              onClick={() => setViewJobLogId(String(singleRow?.id))}
+            >
+              执行日志
+            </AButton>
           </div>
           <ViewControls
             viewMode={viewMode}
@@ -338,7 +417,6 @@ export function Component() {
 
         {/* Content */}
         <div
-          ref={tableWrapperRef}
           style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
         >
           {viewMode === 'list' ? (
@@ -353,7 +431,7 @@ export function Component() {
             >
               <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
                 <ATable
-                  scroll={(tableProps as any).dataSource?.length > 0 ? { x: 'max-content', ...scrollConfig } : undefined}
+                  scroll={(tableProps as any).dataSource?.length > 0 ? { x: 'max-content' } : undefined}
                   size="middle"
                   className="job-log-table abi-std-table"
                   {...(tableProps as any)}
@@ -402,6 +480,51 @@ export function Component() {
           </div>
         </div>
       </section>
+
+      {/* 调度备注查看 */}
+      <AModal
+        open={triggerMsgModal.open}
+        title="调度备注"
+        footer={null}
+        onCancel={() => setTriggerMsgModal({ open: false, text: '' })}
+      >
+        <pre style={PRE_STYLE}>{triggerMsgModal.text}</pre>
+      </AModal>
+
+      {/* 日志清理：执行器/任务只读回显当前筛选，清理方式对齐调度中心九档 */}
+      <AModal
+        open={cleanModal.open}
+        title="日志清理"
+        onCancel={() => setCleanModal(modal => ({ ...modal, open: false }))}
+        footer={
+          <div className="flex justify-end gap-2">
+            <AButton danger type="primary" onClick={submitClean}>
+              清理
+            </AButton>
+            <AButton onClick={() => setCleanModal(modal => ({ ...modal, open: false }))}>取消</AButton>
+          </div>
+        }
+      >
+        <AForm labelCol={{ span: 5 }} wrapperCol={{ span: 18 }}>
+          <AForm.Item label="执行器">
+            <AInput disabled value={cleanModal.groupText} />
+          </AForm.Item>
+          <AForm.Item label="任务">
+            <AInput disabled value={cleanModal.jobText} />
+          </AForm.Item>
+          <AForm.Item label="清理方式">
+            <ASelect options={LOG_CLEAN_TYPE_OPTIONS} value={cleanModal.type} onChange={value => setCleanModal(modal => ({ ...modal, type: value }))} />
+          </AForm.Item>
+        </AForm>
+      </AModal>
+
+      {viewJobLogId && (
+        <JobLogDetailDrawer
+          jobLogId={viewJobLogId}
+          onClose={() => setViewJobLogId('')}
+          onRefresh={() => run(false)}
+        />
+      )}
     </div>
   );
 }

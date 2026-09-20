@@ -1,4 +1,10 @@
 import { apiRequest } from '../request';
+import { formatLogFilterTime, toOffsetPageParams } from '../../pages/workbench/job/utils';
+
+/** 调度中心请求入口（XXL-JOB 协议），经网关 abi-scheduler 服务 */
+function jobRequest(config: any) {
+  return apiRequest<any>(config);
+}
 
 
 /**
@@ -54,122 +60,152 @@ export function updateShareEmail(data: any) {
   });
 }
 
-/** get data-source list */
-export async function fetchJobList(data?: any) {
-  const res = (await apiRequest<any>({
-    method: 'post',
-    data,
-    url: '/api/abi-system/shared/jobList'
-  })) as any;
-  return { data: res };
-}
+// ===== 调度中心（XXL-JOB）接口，协议见 ABI-LOG.apifox.json =====
 
-/** get data-source list */
-export async function fetchJobDetail(jobId: string) {
-  return await apiRequest<any>({
+/** 作业列表：后端以 offset（0 基起始偏移）+ pagesize 分页；name/executorHandler/author/triggerStatus 为后端必填参数，空串/-1 表示不过滤 */
+export function fetchJobInfoList(params?: any) {
+  const { author = '', executorHandler = '', name = '', triggerStatus = '-1', ...rest } = params || {};
+  return jobRequest({
     method: 'get',
-    url: `/api/abi-job/job/${jobId}`
+    params: toOffsetPageParams({ ...rest, author, executorHandler, name, triggerStatus }),
+    url: '/api/abi-scheduler/jobinfo/list',
   });
 }
 
-export async function fetchChangeStatus(data?: any) {
-  return await apiRequest<any>({
-    // data,
-    method: 'put',
-    url: `/api/abi-system/shared/changeStatus?recordId=${data.recordId}`
+/** 作业明细 */
+export function fetchJobDetail(jobId: string) {
+  return jobRequest({
+    method: 'get',
+    url: `/api/abi-scheduler/jobinfo/${jobId}`,
   });
 }
 
-export function updateJob(data?: any) {
-  return apiRequest<any>({
-    data,
-    method: 'put',
-    url: '/api/abi-job/job'
-  });
-}
-
-export function addJob(data?: any) {
-  return apiRequest<any>({
+/** 作业创建 */
+export function addJobInfo(data?: any) {
+  return jobRequest({
     data,
     method: 'post',
-    url: '/api/abi-job/job'
+    url: '/api/abi-scheduler/jobinfo',
   });
 }
 
-// 批量删除定时任务
-export function batchDeleteJob(data: any) {
-  return apiRequest<any>({
+/** 作业更新 */
+export function updateJobInfo(jobId: string, data?: any) {
+  return jobRequest({
+    data,
+    method: 'put',
+    url: `/api/abi-scheduler/jobinfo/${jobId}`,
+  });
+}
+
+/** 作业删除 */
+export function deleteJobInfo(jobId: string) {
+  return jobRequest({
+    method: 'delete',
+    url: `/api/abi-scheduler/jobinfo/${jobId}`,
+  });
+}
+
+/** 作业启动 */
+export function startJob(jobId: string) {
+  return jobRequest({
     method: 'post',
-    url: '/api/abi-system/shared/batchDelete',
-    data
+    url: `/api/abi-scheduler/jobinfo/${jobId}/start`,
   });
 }
 
+/** 作业停止 */
+export function stopJob(jobId: string) {
+  return jobRequest({
+    method: 'post',
+    url: `/api/abi-scheduler/jobinfo/${jobId}/stop`,
+  });
+}
+
+/** 作业手动触发一次 */
+export function triggerJob(jobId: string, data?: any) {
+  return jobRequest({
+    data,
+    method: 'post',
+    url: `/api/abi-scheduler/jobinfo/${jobId}/trigger`,
+  });
+}
+
+/** 作业触发预览：按调度配置返回接下来若干次触发时间 */
+export function fetchNextTriggerTime(data?: any) {
+  return jobRequest({
+    data,
+    method: 'post',
+    url: '/api/abi-scheduler/jobinfo/nextTriggerTime',
+  });
+}
+
+/** 执行器列表：执行器下拉与注册节点数据源 */
+export function fetchJobGroupList(params?: any) {
+  return jobRequest({
+    method: 'get',
+    params: toOffsetPageParams(params, 100),
+    url: '/api/abi-scheduler/jobgroup/list',
+  });
+}
+
+/** 执行器明细：registryList 为注册节点地址 */
+export function fetchJobGroupDetail(jobGroupId: string | number) {
+  return jobRequest({
+    method: 'get',
+    url: `/api/abi-scheduler/jobgroup/${jobGroupId}`,
+  });
+}
+
+/** 调度日志列表：filterTime 格式 'YYYY-MM-DD HH:mm:ss - YYYY-MM-DD HH:mm:ss'；jobId/logStatus/filterTime 为后端必填参数，0/-1/空串表示不过滤 */
+export function fetchJobLogList(params?: any) {
+  const { filterTime, jobId, logStatus = '-1', ...rest } = params || {};
+  const formattedFilterTime = formatLogFilterTime(filterTime);
+  return jobRequest({
+    method: 'get',
+    params: { ...toOffsetPageParams(rest), filterTime: formattedFilterTime || '', jobId: jobId ?? 0, logStatus },
+    url: '/api/abi-scheduler/joblog/list',
+  });
+}
+
+/** 调度日志明细 */
+export function fetchJobLogDetail(jobLogId: string) {
+  return jobRequest({
+    method: 'get',
+    url: `/api/abi-scheduler/joblog/${jobLogId}/detail`,
+  });
+}
+
+/** 调度日志内容：自 fromLineNum 起滚动拉取日志行 */
+export function fetchJobLogContent(jobLogId: string, fromLineNum: number) {
+  return jobRequest({
+    method: 'get',
+    params: { fromLineNum },
+    url: `/api/abi-scheduler/joblog/${jobLogId}/content`,
+  });
+}
+
+/** 日志终止运行作业 */
+export function killJobLog(jobLogId: string) {
+  return jobRequest({
+    method: 'post',
+    url: `/api/abi-scheduler/joblog/${jobLogId}/kill`,
+  });
+}
+
+/** 日志清理历史 */
+export function cleanJobLog(data?: any) {
+  return jobRequest({
+    data,
+    method: 'delete',
+    url: '/api/abi-scheduler/joblog/clean',
+  });
+}
+
+// 邮件记录页仍在使用旧单条删除，保留
 export function deleteJob(id: string) {
   return apiRequest<any>({
     method: 'post',
-    url: `/api/abi-system/shared/delete?recordId=${id}`
-  });
-}
-
-export function runJob(data?: any) {
-  return apiRequest<any>({
-    data,
-    method: 'put',
-    url: '/api/abi-job/job/run'
-  });
-}
-
-export function exportJob(data?: any) {
-  return apiRequest<any>({
-    data,
-    method: 'post',
-    responseType: 'blob' as any,
-    url: '/api/abi-job/job/export'
-  });
-}
-
-export async function fetchJobLogList(params?: any) {
-  const pr = {...params}
-  if(pr.lastSendTime){
-    pr.startDate = pr.lastSendTime[0].format('YYYY-MM-DD HH:mm:ss');
-    pr.endDate = pr.lastSendTime[1].format('YYYY-MM-DD HH:mm:ss');
-    delete pr.lastSendTime;
-  }
-  const res = (await apiRequest<any>({
-    method: 'get',
-    params:pr,
-    url: '/api/abi-job/job/log/sharedList'
-  })) as any;
-  return { data: res };
-}
-
-export function exportJobLog(data?: any) {
-  return apiRequest<any>({
-    data,
-    method: 'post',
-    responseType: 'blob' as any,
-    url: '/api/abi-job/job/log/export'
-  });
-}
-
-export async function fetchJobLogDetail(jobLogId: string) {
-  return await apiRequest<any>({
-    method: 'get',
-    url: `/api/abi-job/job/log/${jobLogId}`
-  });
-}
-
-export function deleteJobLog(jobLogIds: string) {
-  return apiRequest<any>({
-    method: 'delete',
-    url: `/api/abi-job/job/log/${jobLogIds}`
-  });
-}
-
-export function cleanJobLog() {
-  return apiRequest<any>({
-    method: 'delete',
-    url: `/api/abi-job/job/log/clean`
+    url: `/api/abi-system/shared/delete?recordId=${id}`,
   });
 }
