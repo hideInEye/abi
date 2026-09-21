@@ -1,5 +1,5 @@
 import { CloseOutlined, DownOutlined, FieldTimeOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons'
-import { message } from 'antd'
+import { Cascader, Segmented, message } from 'antd'
 import dayjs from 'dayjs'
 
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
@@ -29,26 +29,17 @@ interface Props {
   operateType: JobFormOperateType
 }
 
-// 分组小标题，对齐调度中心新增/编辑弹层的基础/调度/任务/高级配置分区
-const SectionTitle: FC<{ children?: React.ReactNode }> = ({ children }) => <div style={{ color: '#8a94a6', fontSize: 13, margin: '2px 0 12px' }}>{children}</div>
-
-// 调度模式分段卡片：一行等宽圆角卡片，选中浅蓝底蓝字
-const ScheduleModeCards: FC<{ onChange?: (value: string) => void; value?: string }> = ({ onChange, value }) => (
-  <div className="grid grid-cols-4 gap-2">
-    {SCHEDULE_MODE_OPTIONS.map((option) => {
-      const active = option.value === value
-      return (
-        <div
-          key={option.value}
-          className="cursor-pointer rounded-md border border-solid py-2.5 text-center"
-          style={active ? { background: '#eef4ff', borderColor: '#eef4ff', color: '#3b5bfd' } : { background: '#fff', borderColor: '#e5e6eb', color: '#1f2329' }}
-          onClick={() => onChange?.(option.value)}
-        >
-          {option.label}
-        </div>
-      )
-    })}
+// 分区标题：加粗深色标题 + 整行底部分隔线，清晰区分基础/调度/任务配置每一块；extra 可在标题右侧内联分段器，预留 24px 间距不贴死
+const SectionHeader: FC<{ extra?: React.ReactNode; title: string }> = ({ extra, title }) => (
+  <div className="flex items-center" style={{ borderBottom: '1px solid #f0f0f1', margin: '4px 0 20px', paddingBottom: 10 }}>
+    <span style={{ color: '#1f2329', fontSize: 14, fontWeight: 600 }}>{title}</span>
+    {extra ? <div className="ml-6">{extra}</div> : null}
   </div>
+)
+
+// 调度模式分段选择器：antd Segmented 胶囊样式（.abi-seg 统一定制：灰底轨道、选中白块+品牌蓝字）
+const ScheduleModeCards: FC<{ onChange?: (value: string) => void; value?: string }> = ({ onChange, value }) => (
+  <Segmented className="abi-seg" onChange={(next) => onChange?.(String(next))} options={SCHEDULE_MODE_OPTIONS} value={value} />
 )
 
 const WEEK_DAY_SHORT: Record<string, string> = { FRI: '五', MON: '一', SAT: '六', SUN: '日', THU: '四', TUE: '二', WED: '三' }
@@ -82,44 +73,165 @@ const SchedulePointsEditor: FC<{ onChange?: (next: any[]) => void; unit?: string
   const update = (index: number, patch: Record<string, any>) => onChange?.(list.map((item, i) => (i === index ? { ...item, ...patch } : item)))
   const remove = (index: number) => onChange?.(list.filter((_, i) => i !== index))
   const add = () => onChange?.([...list, unit === 'MONTH' ? { day: 1, time: '09:00' } : unit === 'YEAR' ? { date: '1-1', time: '09:00' } : { time: '09:00' }])
+  // 对齐千问：每个执行时刻渲染为紧凑块（无边框选择器 + ✕ 删除），末尾 [+] 方块按钮新增，横向自动换行
   return (
-    <div className="flex flex-col items-start gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {list.map((point, index) => (
-        <div key={index} className="flex w-full items-center gap-2">
-          {unit === 'MONTH' && <ASelect className="w-1/2" options={MONTH_DAY_OPTIONS} value={point.day} onChange={(next) => update(index, { day: next })} />}
-          {unit === 'YEAR' && <ASelect className="w-1/2" options={YEAR_DATE_OPTIONS} value={point.date} onChange={(next) => update(index, { date: next })} />}
+        <div key={index} className="flex items-center rounded-md border border-solid" style={{ background: '#fff', borderColor: '#e5e6eb' }}>
+          {unit === 'MONTH' && <ASelect className="w-24" options={MONTH_DAY_OPTIONS} value={point.day} variant="borderless" onChange={(next) => update(index, { day: next })} />}
+          {unit === 'YEAR' && <ASelect className="w-28" options={YEAR_DATE_OPTIONS} value={point.date} variant="borderless" onChange={(next) => update(index, { date: next })} />}
           <ATimePicker
-            className="flex-1"
             format="HH:mm"
+            popupClassName="abi-time-panel"
+            suffixIcon={null}
             value={point.time ? dayjs(point.time, 'HH:mm') : null}
+            variant="borderless"
             onChange={(next) => update(index, { time: next ? next.format('HH:mm') : point.time })}
           />
-          {list.length > 1 && <CloseOutlined style={{ color: '#8a94a6', fontSize: 12 }} onClick={() => remove(index)} />}
+          <CloseOutlined style={{ color: '#8a94a6', cursor: 'pointer', fontSize: 12, margin: '0 8px' }} onClick={() => remove(index)} />
         </div>
       ))}
-      <AButton icon={<PlusOutlined />} onClick={add}>
-        添加时间
-      </AButton>
+      <AButton icon={<PlusOutlined />} onClick={add} />
     </div>
   )
 }
 
-// 小时模式的第几分条目编辑器
-const ScheduleMinutesEditor: FC<{ onChange?: (next: number[]) => void; value?: number[] }> = ({ onChange, value }) => {
-  const list = Array.isArray(value) && value.length ? value : []
-  const update = (index: number, next: number) => onChange?.(list.map((item, i) => (i === index ? next : item)))
-  const remove = (index: number) => onChange?.(list.filter((_, i) => i !== index))
+// 小时模式执行分钟：单选某一分，存为单元素数组以复用 cron 的 singleValue 转换
+const HOUR_MINUTE_OPTIONS = Array.from({ length: 60 }, (_, index) => ({ label: `${String(index).padStart(2, '0')}分`, value: index }))
+
+const ScheduleMinuteSelect: FC<{ onChange?: (next: number[]) => void; value?: number[] }> = ({ onChange, value }) => (
+  <ASelect
+    className="w-full"
+    onChange={(next) => onChange?.([next])}
+    options={HOUR_MINUTE_OPTIONS}
+    placeholder="请选择执行分钟"
+    value={Array.isArray(value) ? value[0] : undefined}
+  />
+)
+
+// 周模式单一执行时刻：满宽单个时间选择器（无新增/删除），仍存 points=[{time}] 以复用 cron 转换
+const ScheduleSingleTime: FC<{ onChange?: (next: any[]) => void; value?: any[] }> = ({ onChange, value }) => {
+  const time = Array.isArray(value) && value.length ? value[0]?.time : undefined
   return (
-    <div className="flex flex-col items-start gap-2">
-      {list.map((item, index) => (
-        <div key={index} className="flex w-full items-center gap-2">
-          <AInputNumber addonAfter="分" className="flex-1" max={59} min={0} value={item} onChange={(next) => update(index, next ?? 0)} />
-          {list.length > 1 && <CloseOutlined style={{ color: '#8a94a6', fontSize: 12 }} onClick={() => remove(index)} />}
+    <ATimePicker
+      className="w-full"
+      format="HH:mm"
+      popupClassName="abi-time-panel"
+      value={time ? dayjs(time, 'HH:mm') : null}
+      onChange={(next) => onChange?.([{ time: next ? next.format('HH:mm') : '' }])}
+    />
+  )
+}  
+
+// 月模式日期选择：千问式 7 列日历方格弹层（替代默认下拉列表），触发框沿用 select 外观
+const MONTH_DAYS = Array.from({ length: 31 }, (_, index) => index + 1)
+
+const MonthDayGridPicker: FC<{ onChange?: (next: number) => void; value?: number }> = ({ onChange, value }) => {
+  const [open, setOpen] = useState(false)
+  return (
+    <APopover
+      arrow={false}
+      content={
+        <div className="abi-day-grid">
+          {MONTH_DAYS.map((day) => (
+            <div
+              className={day === value ? 'abi-day-cell is-active' : 'abi-day-cell'}
+              key={day}
+              onClick={() => {
+                onChange?.(day)
+                setOpen(false)
+              }}
+            >
+              {day}
+            </div>
+          ))}
         </div>
-      ))}
-      <AButton icon={<PlusOutlined />} onClick={() => onChange?.([...list, 0])}>
-        添加分钟
-      </AButton>
+      }
+      open={open}
+      placement="bottomLeft"
+      trigger="click"
+      onOpenChange={setOpen}
+    >
+      <div className="flex w-full cursor-pointer items-center justify-between rounded-md border border-solid" style={{ height: 32, padding: '0 11px', borderColor: '#d9d9d9', background: '#fff' }}>
+        <span style={{ color: value ? '#1f2329' : '#bfbfbf', fontSize: 14 }}>{value ? `${value}号` : '请选择日期'}</span>
+        <DownOutlined style={{ color: '#bfbfbf', fontSize: 11 }} />
+      </div>
+    </APopover>
+  )
+}
+
+// 月模式单一执行时刻：日期选择 + 时间选择器并排满宽（无新增/删除），存 points=[{day,time}] 以复用 cron 转换
+const ScheduleMonthTime: FC<{ onChange?: (next: any[]) => void; value?: any[] }> = ({ onChange, value }) => {
+  const point = Array.isArray(value) && value.length ? value[0] : {}
+  return (
+    <div className="flex w-full gap-2">
+      <div className="flex-1">
+        <MonthDayGridPicker value={point.day} onChange={(next) => onChange?.([{ ...point, day: next }])} />
+      </div>
+      <ATimePicker
+        className="flex-1"
+        format="HH:mm"
+        popupClassName="abi-time-panel"
+        value={point.time ? dayjs(point.time, 'HH:mm') : null}
+        onChange={(next) => onChange?.([{ ...point, time: next ? next.format('HH:mm') : '' }])}
+      />
+    </div>
+  )
+}
+
+// 年模式日期选择：原生 Cascader 两列（左月右日），选中高亮/字号/圆角走 antd 默认，与输入框风格统一；值存 "M-D" 字符串
+const YEAR_CASCADER_OPTIONS = Array.from({ length: 12 }, (_month, monthIdx) => ({
+  children: Array.from({ length: 31 }, (_day, dayIdx) => ({ label: `${dayIdx + 1}日`, value: dayIdx + 1 })),
+  label: `${monthIdx + 1}月`,
+  value: monthIdx + 1,
+}))
+
+const MonthDayCascader: FC<{ onChange?: (next: string) => void; value?: string }> = ({ onChange, value }) => {
+  const [monthPart, dayPart] = (value || '').split('-')
+  const month = Number(monthPart)
+  const day = Number(dayPart)
+  return (
+    <Cascader
+      className="w-full"
+      displayRender={(labels) => `${labels[0]}${labels[1]}`}
+      expandIcon={<span />}
+      expandTrigger="hover"
+      options={YEAR_CASCADER_OPTIONS}
+      placeholder="请选择日期"
+      popupClassName="abi-md-panel"
+      value={month && day ? [month, day] : undefined}
+      onChange={(next) => onChange?.(next && next.length === 2 ? `${next[0]}-${next[1]}` : '')}
+    />
+  )
+}
+
+// 年模式：顶部单个日期（月日级联）+ 下方多时刻（纯时间 chip），所有时刻共享同一日期，存 points=[{date,time}]
+const ScheduleYearTime: FC<{ onChange?: (next: any[]) => void; value?: any[] }> = ({ onChange, value }) => {
+  const list = Array.isArray(value) && value.length ? value : [{ date: '1-1', time: '09:00' }]
+  const date = list[0]?.date
+  const setDate = (next: string) => onChange?.(list.map(point => ({ ...point, date: next })))
+  const updateTime = (index: number, next: string) => onChange?.(list.map((point, i) => (i === index ? { ...point, time: next } : point)))
+  const removeAt = (index: number) => onChange?.(list.filter((_, i) => i !== index))
+  const addTime = () => onChange?.([...list, { date, time: '09:00' }])
+  return (
+    <div className="flex w-full flex-col gap-2">
+      <MonthDayCascader onChange={setDate} value={date} />
+      <div className="flex flex-wrap items-center gap-2">
+        {list.map((point, index) => (
+          <div className="flex items-center rounded-md border border-solid" key={index} style={{ background: '#fff', borderColor: '#e5e6eb' }}>
+            <ATimePicker
+              format="HH:mm"
+              popupClassName="abi-time-panel"
+              suffixIcon={null}
+              value={point.time ? dayjs(point.time, 'HH:mm') : null}
+              variant="borderless"
+              onChange={(next) => updateTime(index, next ? next.format('HH:mm') : point.time)}
+            />
+            <CloseOutlined style={{ color: '#8a94a6', cursor: 'pointer', fontSize: 12, margin: '0 8px' }} onClick={() => removeAt(index)} />
+          </div>
+        ))}
+        <AButton icon={<PlusOutlined />} onClick={addTime} />
+      </div>
     </div>
   )
 }
@@ -151,8 +263,6 @@ const ADVANCED_SUBMIT_DEFAULTS = {
   glueType: 'BEAN',
   misfireStrategy: 'DO_NOTHING',
 }
-
-const GLUE_MODE_OPTIONS = [{ label: 'BEAN', value: 'BEAN' }]
 
 // 结构化 scheduleConf 拆包进表单字段：日期/时刻串转 dayjs，空条目给默认值避免卡必填
 function unpackStructuredConf(target: Record<string, any>, conf: Record<string, any>) {
@@ -292,7 +402,7 @@ const JobFormModal: FC<Props> = memo(({ initial, jobGroupOptions, onClose, onSuc
       >
         <div ref={bodyScrollRef} className="pb-2">
           <AForm form={form} labelCol={{ span: 8 }} wrapperCol={{ span: 16 }} onValuesChange={handleScheduleValuesChange}>
-            <SectionTitle>基础配置</SectionTitle>
+            <SectionHeader title="基础配置" />
             <div className="grid grid-cols-2 gap-x-4">
               <AForm.Item label="执行器" name="jobGroup" rules={[{ required: true, message: '请选择执行器' }]}>
                 <ASelect options={jobGroupOptions} placeholder="请选择执行器" />
@@ -308,17 +418,21 @@ const JobFormModal: FC<Props> = memo(({ initial, jobGroupOptions, onClose, onSuc
               </AForm.Item>
             </div>
 
-            <SectionTitle>调度配置</SectionTitle>
-            <AForm.Item label="任务类型" labelCol={{ span: 4 }} name="scheduleType" rules={[{ required: true, message: '请选择调度模式' }]} wrapperCol={{ span: 20 }}>
-              <ScheduleModeCards />
-            </AForm.Item>
+            <SectionHeader
+              extra={
+                <AForm.Item className="mb-0" name="scheduleType" rules={[{ required: true, message: '请选择调度模式' }]}>
+                  <ScheduleModeCards />
+                </AForm.Item>
+              }
+              title="调度配置"
+            />
             {scheduleType === 'ONCE' && (
               <>
                 <AForm.Item label="执行日期" labelCol={{ span: 4 }} name="execDate" rules={[{ required: true, message: '请选择执行日期' }]} wrapperCol={{ span: 20 }}>
                   <ADatePicker className="w-full" />
                 </AForm.Item>
                 <AForm.Item label="执行时间" labelCol={{ span: 4 }} name="execTime" rules={[{ required: true, message: '请选择执行时间' }]} wrapperCol={{ span: 20 }}>
-                  <ATimePicker className="w-full" format="HH:mm" />
+                  <ATimePicker className="w-full" format="HH:mm" popupClassName="abi-time-panel" />
                 </AForm.Item>
               </>
             )}
@@ -344,8 +458,20 @@ const JobFormModal: FC<Props> = memo(({ initial, jobGroupOptions, onClose, onSuc
                       </AForm.Item>
                     )}
                     {repeatUnit === 'HOUR' ? (
-                      <AForm.Item className="mb-0" labelCol={{ span: 0 }} name="minutes" rules={[{ required: true, type: 'array', message: '请添加执行分钟' }]} wrapperCol={{ span: 24 }}>
-                        <ScheduleMinutesEditor />
+                      <AForm.Item className="mb-0" labelCol={{ span: 0 }} name="minutes" rules={[{ required: true, type: 'array', message: '请选择执行分钟' }]} wrapperCol={{ span: 24 }}>
+                        <ScheduleMinuteSelect />
+                      </AForm.Item>
+                    ) : repeatUnit === 'WEEK' ? (
+                      <AForm.Item className="mb-0" labelCol={{ span: 0 }} name="points" rules={[{ required: true, type: 'array', message: '请选择执行时间' }]} wrapperCol={{ span: 24 }}>
+                        <ScheduleSingleTime />
+                      </AForm.Item>
+                    ) : repeatUnit === 'MONTH' ? (
+                      <AForm.Item className="mb-0" labelCol={{ span: 0 }} name="points" rules={[{ required: true, type: 'array', message: '请选择执行时间' }]} wrapperCol={{ span: 24 }}>
+                        <ScheduleMonthTime />
+                      </AForm.Item>
+                    ) : repeatUnit === 'YEAR' ? (
+                      <AForm.Item className="mb-0" labelCol={{ span: 0 }} name="points" rules={[{ required: true, type: 'array', message: '请添加执行时间' }]} wrapperCol={{ span: 24 }}>
+                        <ScheduleYearTime />
                       </AForm.Item>
                     ) : (
                       <AForm.Item className="mb-0" labelCol={{ span: 0 }} name="points" rules={[{ required: true, type: 'array', message: '请添加执行时间' }]} wrapperCol={{ span: 24 }}>
@@ -379,11 +505,18 @@ const JobFormModal: FC<Props> = memo(({ initial, jobGroupOptions, onClose, onSuc
               </AForm.Item>
             )}
 
-            <SectionTitle>任务配置</SectionTitle>
+            <SectionHeader
+              extra={
+                <Segmented
+                  className="abi-seg"
+                  onChange={() => message.info('功能开发中...')}
+                  options={[{ label: '对象', value: 'object' }, { label: '脚本', value: 'script' }]}
+                  value="object"
+                />
+              }
+              title="任务配置"
+            />
             <div className="grid grid-cols-2 gap-x-4">
-              <AForm.Item label="运行模式" name="glueType">
-                <ASelect disabled options={GLUE_MODE_OPTIONS} />
-              </AForm.Item>
               <AForm.Item label="作业场景" name="executorHandler" rules={[{ required: true, message: '请选择作业场景' }]}>
                 <ASelect options={JOB_SCENE_OPTIONS} placeholder="请选择作业场景" />
               </AForm.Item>

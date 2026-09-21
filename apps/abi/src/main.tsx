@@ -98,7 +98,8 @@ const initQianKun = () => {
 
 if (shareHashMatch) {
   const iframe = document.createElement('iframe');
-  iframe.src = `${window.location.origin}/chat-ui/#/dashboard_share_page/${decodeURIComponent(shareHashMatch[1])}`;
+  // 原样转发完整 hash（含 ?embed=1 等 query），供第三方 iframe 直嵌时透传 embed 悬浮形态参数
+  iframe.src = `${window.location.origin}/chat-ui/${window.location.hash}`;
   iframe.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;border:0;';
   const rootEl = document.getElementById('root');
   if (rootEl) rootEl.replaceChildren(iframe);

@@ -1,4 +1,4 @@
-import { ClockCircleOutlined, ClusterOutlined, CopyOutlined, DeleteOutlined, EditOutlined, FieldTimeOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, PauseCircleOutlined, PlayCircleOutlined, PlusOutlined, RightOutlined, SearchOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, DeleteOutlined, DownOutlined, EditOutlined, FileSearchOutlined, LeftOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { useDebounceFn } from 'ahooks';
 import { Dropdown, Empty, message } from 'antd';
 
@@ -39,7 +39,7 @@ export function Component() {
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
-  const { data, run, searchParams, searchProps, tableProps, updateSearchParams } = useTable({
+  const { run, searchParams, searchProps, tableProps, updateSearchParams } = useTable({
     apiFn: fetchJobInfoList as any,
     apiParams: useMemo(() => ({
       pageNum: 1,
@@ -115,12 +115,20 @@ export function Component() {
           align: 'center',
           fixed: 'right',
           key: 'operate',
-          minWidth: 80,
+          minWidth: 150,
           render: (_: unknown, record: any) => (
             <div className="ds-action-group">
               <AButton className="abi-action-link" size="small" variant="link" onClick={() => openEdit(record)}>
                 <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
               </AButton>
+              <AButton className="abi-action-link" size="small" variant="link" onClick={() => handleViewLog(record)}>
+                <FileSearchOutlined style={{ marginRight: 3, fontSize: 12 }} />日志
+              </AButton>
+              <Dropdown menu={{ items: moreMenuItems(record) }} trigger={['click']}>
+                <AButton className="abi-action-link" size="small" variant="link">
+                  更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
+                </AButton>
+              </Dropdown>
             </div>
           ),
           title: t('common.operate'),
@@ -145,9 +153,6 @@ export function Component() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const selectedRows = useMemo(() => (data as any[]).filter(row => checkedRowKeys.includes(row.id)), [data, checkedRowKeys]);
-  const singleRow = selectedRows.length === 1 ? selectedRows[0] : null;
-
   const rowSelection = {
     columnWidth: 48,
     fixed: true,
@@ -156,7 +161,7 @@ export function Component() {
     type: 'checkbox' as const,
   };
 
-  const handleViewModeChange = (mode: 'list' | 'card') => {
+  const handleViewModeChange = (mode: 'card' | 'list') => {
     setCheckedRowKeys([]);
     setViewMode(mode);
   };
@@ -166,20 +171,20 @@ export function Component() {
     return ((tableProps as any).columns || []).filter((col: any) => visibleKeys.has(col.key || col.dataIndex));
   }, [columnOptions, tableProps]);
 
-  const openForm = (operateType: JobFormOperateType, initial?: any) => {
+  function openForm(operateType: JobFormOperateType, initial?: any) {
     setFormModal({ initial, open: true, operateType });
-  };
+  }
 
-  const openEdit = async (row: any) => {
+  async function openEdit(row: any) {
     const res: any = await fetchJobDetail(String(row.id));
     openForm('edit', res?.data || row);
-  };
+  }
 
-  const openCopy = async (row: any) => {
+  async function openCopy(row: any) {
     const res: any = await fetchJobDetail(String(row.id));
     const { id, ...rest } = res?.data || row;
     openForm('copy', rest);
-  };
+  }
 
   async function handleDelete(ids: (number | string)[]) {
     const results: any[] = await Promise.all(ids.map(id => deleteJobInfo(String(id))));
@@ -189,23 +194,10 @@ export function Component() {
     run(false);
   }
 
-  const confirmDelete = (ids: (number | string)[]) => {
+  const confirmDelete = (record: any) => {
     AModal.confirm({
-      content: `确认删除选中的 ${ids.length} 个任务吗？`,
-      onOk: () => handleDelete(ids),
-      title: '系统提示',
-    });
-  };
-
-  const handleToggleStatus = (status: 0 | 1) => {
-    AModal.confirm({
-      content: `确认要${status === 1 ? '启动' : '停止'}选中的 ${selectedRows.length} 个任务吗？`,
-      onOk: async () => {
-        const results: any[] = await Promise.all(selectedRows.map(row => (status === 1 ? startJob(String(row.id)) : stopJob(String(row.id)))));
-        if (!results.every(isJobRequestSuccess)) return;
-        message.success('操作成功');
-        run(false);
-      },
+      content: `确认删除任务“${record.name}”吗？`,
+      onOk: () => handleDelete([record.id]),
       title: '系统提示',
     });
   };
@@ -224,9 +216,9 @@ export function Component() {
     run(false);
   };
 
-  const handleViewLog = (row: any) => {
+  function handleViewLog(row: any) {
     router.push({ name: 'job_log', query: { jobId: String(row.id) } });
-  };
+  }
 
   const handleRegistry = async (row: any) => {
     setRegistryModal({ list: [], loading: true, open: true });
@@ -242,17 +234,19 @@ export function Component() {
     setNextTriggerModal({ loading: false, open: true, times: raw.map(formatNextTriggerTime) });
   };
 
-  // 卡片视图更多菜单
-  const cardMoreItems = (record: any) => [
-    { key: 'copy', label: '复制', onClick: () => openCopy(record) },
-    { key: 'start', label: '启动', onClick: () => handleToggleRowsStatus([record], 1) },
-    { key: 'stop', label: '停止', onClick: () => handleToggleRowsStatus([record], 0) },
-    { key: 'trigger', label: '执行一次', onClick: () => setTriggerModal({ job: record, open: true }) },
-    { key: 'registry', label: '注册节点', onClick: () => handleRegistry(record) },
-    { key: 'nextTrigger', label: '下次执行时间', onClick: () => handleNextTrigger(record) },
-    { type: 'divider' as const },
-    { key: 'delete', danger: true, label: '删除', onClick: () => confirmDelete([record.id]) },
-  ];
+  // 行内/卡片更多菜单（列表操作列与卡片视图共用）
+  function moreMenuItems(record: any) {
+    return [
+      { key: 'copy', label: '复制', onClick: () => openCopy(record) },
+      { key: 'start', label: '启动', onClick: () => handleToggleRowsStatus([record], 1) },
+      { key: 'stop', label: '停止', onClick: () => handleToggleRowsStatus([record], 0) },
+      { key: 'trigger', label: '执行一次', onClick: () => setTriggerModal({ job: record, open: true }) },
+      { key: 'registry', label: '注册节点', onClick: () => handleRegistry(record) },
+      { key: 'nextTrigger', label: '下次执行时间', onClick: () => handleNextTrigger(record) },
+      { type: 'divider' as const },
+      { key: 'delete', danger: true, label: '删除', onClick: () => confirmDelete(record) },
+    ];
+  }
 
   function handleToggleRowsStatus(rows: any[], status: 0 | 1) {
     AModal.confirm({
@@ -316,7 +310,7 @@ export function Component() {
                   <button className="abi-card-act" onClick={() => handleViewLog(record)}>
                     <FileSearchOutlined style={{ marginRight: 3 }} />日志
                   </button>
-                  <Dropdown menu={{ items: cardMoreItems(record) }} trigger={['click']}>
+                  <Dropdown menu={{ items: moreMenuItems(record) }} trigger={['click']}>
                     <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
                       <MoreOutlined />
                     </button>
@@ -351,17 +345,6 @@ export function Component() {
             onReset={() => searchProps.reset()}
             filters={
               <>
-                <SearchFilterField label="执行器">
-                  <AForm.Item className="m-0" name="jobGroup">
-                    <ASelect
-                      allowClear
-                      className="abi-field-input w-full"
-                      getPopupContainer={getFilterPopupContainer}
-                      options={jobGroupOptions}
-                      placeholder="请选择执行器"
-                    />
-                  </AForm.Item>
-                </SearchFilterField>
                 <SearchFilterField label="任务状态">
                   <AForm.Item className="m-0" name="triggerStatus">
                     <ASelect
@@ -394,7 +377,7 @@ export function Component() {
         <div className="abi-toolbar">
           <div className="abi-toolbar-left">
             <AButton className="btn-accent-gradient" icon={<PlusOutlined />} onClick={() => openForm('add')}>
-              新增
+              新增任务
             </AButton>
             <APopconfirm
               title={t('common.confirmDelete')}
@@ -404,58 +387,9 @@ export function Component() {
                 icon={<DeleteOutlined />}
                 disabled={checkedRowKeys.length === 0}
               >
-                删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
+                批量删除{checkedRowKeys.length ? `(${checkedRowKeys.length})` : ''}
               </AButton>
             </APopconfirm>
-            <AButton
-              icon={<CopyOutlined />}
-              disabled={!singleRow}
-              onClick={() => openCopy(singleRow)}
-            >
-              复制
-            </AButton>
-            <AButton
-              icon={<PlayCircleOutlined />}
-              disabled={checkedRowKeys.length === 0}
-              onClick={() => handleToggleStatus(1)}
-            >
-              启动
-            </AButton>
-            <AButton
-              icon={<PauseCircleOutlined />}
-              disabled={checkedRowKeys.length === 0}
-              onClick={() => handleToggleStatus(0)}
-            >
-              停止
-            </AButton>
-            <AButton
-              icon={<ThunderboltOutlined />}
-              disabled={!singleRow}
-              onClick={() => setTriggerModal({ job: singleRow, open: true })}
-            >
-              执行一次
-            </AButton>
-            <AButton
-              icon={<FileSearchOutlined />}
-              disabled={!singleRow}
-              onClick={() => handleViewLog(singleRow)}
-            >
-              查询日志
-            </AButton>
-            <AButton
-              icon={<ClusterOutlined />}
-              disabled={!singleRow}
-              onClick={() => handleRegistry(singleRow)}
-            >
-              注册节点
-            </AButton>
-            <AButton
-              icon={<FieldTimeOutlined />}
-              disabled={!singleRow}
-              onClick={() => handleNextTrigger(singleRow)}
-            >
-              下次执行时间
-            </AButton>
           </div>
           <ViewControls
             viewMode={viewMode}

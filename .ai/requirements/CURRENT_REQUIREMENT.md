@@ -2418,3 +2418,82 @@ export const init: Init = async currentFullPath => {
 - `pnpm exec vitest run src/components/chat-widget`
 - apps/chat 下 `npx tsc --noEmit -p tsconfig.app.json` 对比基线。
 - 手工：分享页运行探索问题，小幅度上滑立即生效；折叠发生时不回拽。
+
+## 2026-09-21 追加：调度日志/邮件记录移除卡片视图（仅保留列表 icon）
+
+### 需求类型
+
+前端 UI 调整（纯前端，无接口变化）。
+
+### 背景
+
+- 用户反馈截图：调度日志、邮件记录两个记录类页面不需要卡片视图；工具栏视图切换区移除卡片 icon、仅保留列表 icon；定时任务页保留双视图切换。
+
+### 目标
+
+1. 调度日志页（`job/log`）与邮件记录页（`job/email`）移除卡片视图，固定表格（列表）展示。
+2. 工具栏视图切换区仅保留列表 icon（移除卡片 icon），列设置入口保留。
+3. `ViewControls` 新增 `hideCardToggle` 属性隐藏卡片切换按钮；其他页面的双视图切换与 `hideViewToggle` 用法不受影响。
+
+### 非目标
+
+- 不改定时任务（`job/time`）及其他页面的列表/卡片切换。
+- 不改列表列、筛选、分页与接口逻辑。
+
+### 影响范围
+
+- `apps/abi/src/components/ViewControls.tsx`
+- `apps/abi/src/pages/workbench/job/log/index.tsx`
+- `apps/abi/src/pages/workbench/job/email/index.tsx`
+- run log：`.ai/runs/2026-09-21-job-log-email-list-only/`
+
+### 验收标准
+
+1. 调度日志、邮件记录页工具栏仅显示列表 icon 与列设置，不显示卡片 icon。
+2. 两页内容区固定表格展示，卡片渲染代码与 viewMode 状态已移除。
+3. 其他页面（含定时任务）列表/卡片切换表现不变。
+4. tsc 无新增错误；改动文件 ESLint 无新增错误（既存基线除外）。
+
+### 测试要求
+
+- apps/abi 下 `npx tsc --noEmit -p tsconfig.json` 对比基线。
+- 三个改动文件 `pnpm exec eslint --quiet` 对比基线。
+- 手工：进入调度日志/邮件记录确认仅列表 icon；定时任务页切换正常。
+
+## 2026-09-21 追加二：定时任务工具栏操作下放到列表行内操作列
+
+### 需求类型
+
+前端 UI 调整（纯前端，无接口变化）。
+
+### 背景
+
+- 用户截图标注：红框圈选定时任务页工具栏 8 个操作按钮（删除/复制/启动/停止/执行一次/查询日志/注册节点/下次执行时间），箭头指向列表「操作」列，要求操作下放到行内；工具栏按钮依赖勾选且常置灰，交互路径长。
+
+### 目标
+
+1. 工具栏仅保留「新增」与视图/列设置控件，移除上述 8 个操作按钮。
+2. 列表操作列对齐卡片视图形态：`编辑` + `日志` + `更多`下拉（复制/启动/停止/执行一次/注册节点/下次执行时间/分隔线/删除），下拉菜单与卡片视图共用。
+3. 无批量操作后列表移除勾选列（rowSelection）与批量启停/删除逻辑；删除确认改为单条任务名文案。
+
+### 非目标
+
+- 不改卡片视图布局、筛选、分页与接口逻辑。
+- 不改调度日志/邮件记录页。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/job/time/index.tsx`
+- run log：`.ai/runs/2026-09-21-job-toolbar-to-row-actions/`
+
+### 验收标准
+
+1. 工具栏仅「新增」+ 视图/列设置；列表无勾选列。
+2. 行内操作列 编辑/日志/更多 均可用，更多下拉含原工具栏 8 项操作且行为与原一致。
+3. tsc 无新增错误；改动文件 ESLint 无新增错误（既存基线除外）。
+
+### 测试要求
+
+- apps/abi 下 `npx tsc --noEmit -p tsconfig.json` 对比基线。
+- 改动文件 `node node_modules/eslint/bin/eslint.js` 对比基线。
+- 手工：列表行内各操作、卡片视图更多菜单、删除确认文案。
