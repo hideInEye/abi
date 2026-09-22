@@ -42,11 +42,36 @@
   gap: 16px;
 }
 
+.subjectDimensionRow {
+  display: grid;
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+}
+
+.subjectDimensionField {
+  min-width: 0;
+}
+
+.crossDimensionField {
+  padding-top: 32px;
+  white-space: nowrap;
+}
+
 @media (max-width: 900px) {
   .customAggregationNotice {
     align-items: flex-start;
     flex-direction: column;
     gap: 8px;
+  }
+
+  .subjectDimensionRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .crossDimensionField {
+    padding-top: 0;
   }
 }
 

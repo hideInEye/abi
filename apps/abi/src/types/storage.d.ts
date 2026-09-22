@@ -10,6 +10,8 @@ declare namespace StorageType {
   }
 
   interface Local {
+    /** Marker written after a login flow has persisted the complete session. */
+    authSessionVersion: number;
     /** The backup theme setting before is mobile */
     backupThemeSettingBeforeIsMobile: {
       layout: UnionKey.ThemeLayoutMode;

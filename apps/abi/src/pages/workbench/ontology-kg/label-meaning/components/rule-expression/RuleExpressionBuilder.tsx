@@ -10,6 +10,7 @@ import {
   createDefaultRuleCondition,
   createDefaultRuleLayer,
   createRuleId,
+  hasConfiguredRuleConditions,
   normalizeRuleConnections,
   normalizeRuleLayers,
   validateRuleLayers,
@@ -41,6 +42,7 @@ interface RuleExpressionBuilderProps {
   readonly fieldLoading?: boolean
   readonly fields: RuleFieldOption[]
   readonly onChange?: (value: RuleLayer[]) => void
+  readonly optional?: boolean
   readonly uniformLogic?: boolean
   readonly validationRequested?: boolean
   readonly value?: RuleLayer[]
@@ -69,6 +71,7 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
       fieldLoading = false,
       fields,
       onChange,
+      optional = false,
       uniformLogic = false,
       validationRequested = false,
       value
@@ -78,12 +81,15 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
     const layers = useMemo(() => normalizeRuleLayers(value), [value])
     const fieldTree = useMemo(() => buildRuleFieldTree(fields), [fields])
     const validation = useMemo(() => {
+      if (optional && !hasConfiguredRuleConditions(layers)) {
+        return { issues: [], valid: true }
+      }
       const baseValidation = validateRuleLayers(layers, fields)
       if (!uniformLogic) return baseValidation
       const logicValidation = validateRuleLogicUniformity(layers)
       const issues = [...baseValidation.issues, ...logicValidation.issues]
       return { issues, valid: issues.length === 0 }
-    }, [fields, layers, uniformLogic])
+    }, [fields, layers, optional, uniformLogic])
     const [activeLayerId, setActiveLayerId] = useState(layers[0]?.id)
     const [showErrors, setShowErrors] = useState(validationRequested)
     const rootRef = useRef<HTMLDivElement>(null)

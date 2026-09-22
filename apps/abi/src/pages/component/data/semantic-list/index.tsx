@@ -3,10 +3,12 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
+  LoadingOutlined,
+  MoreOutlined,
   PlusOutlined,
   StopOutlined
 } from '@ant-design/icons'
-import { Button, Grid, Modal, Pagination, Spin, Switch, Table, Tooltip, message } from 'antd'
+import { Button, Dropdown, Grid, Modal, Pagination, Spin, Switch, Table, Tooltip, message } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -19,7 +21,7 @@ import { SemanticListFilters } from './components/SemanticListFilters'
 import { SemanticRuleCardList } from './components/SemanticRuleCardList'
 import { SemanticRuleDetailDrawer } from './components/SemanticRuleDetailDrawer'
 import { SemanticRuleDrawer } from './components/SemanticRuleDrawer'
-import { EMPTY_FILTERS, LIST_TYPE_LABELS, PAGE_SIZE } from './constants'
+import { EMPTY_FILTERS, LIST_TYPE_LABELS, PAGE_SIZE, VISIBILITY_LABELS } from './constants'
 import { useSemanticListManagement } from './hooks/useSemanticListManagement'
 import { TABLE_SELECTION_COLUMN_WIDTH, getResponsiveOverlayWidths, getTableScrollWidth } from './semantic-list-layout'
 import styles from './semantic-list.module.scss'
@@ -47,6 +49,7 @@ interface BatchActionState {
 const DEFAULT_COLUMN_OPTIONS: ColumnOption[] = [
   { key: 'name', label: '规则名称', visible: true },
   { key: 'code', label: '规则编码', visible: true },
+  { key: 'visibility', label: '可见性', visible: true },
   { key: 'type', label: '名单类型', visible: true },
   { key: 'category', label: '业务类别', visible: true },
   { key: 'target', label: '匹配目标', visible: true },
@@ -354,10 +357,17 @@ export const Component = () => {
       width: 180
     },
     {
-      className: styles.nowrapCell,
+      align: 'center',
+      dataIndex: 'visibility',
+      key: 'visibility',
+      render: (visibility: SemanticRule['visibility']) => VISIBILITY_LABELS[visibility],
+      title: '可见性',
+      width: 100
+    },
+    {
       dataIndex: 'type',
       key: 'type',
-      onHeaderCell: () => ({ className: styles.nowrapCell }),
+      align:'center',
       render: (type: SemanticRule['type']) => (
         <span className={`abi-status-tag ${type === 'WHITELIST' ? 'status-normal' : 'status-error'}`}>
           {LIST_TYPE_LABELS[type]}
@@ -507,42 +517,44 @@ export const Component = () => {
               </Button>
               <Tooltip title={batchTooltip}>
                 <span className="inline-flex">
-                  <Button
-                    disabled={batchActionsDisabled}
-                    icon={<CheckCircleOutlined />}
-                    loading={batchStatusAction === 'enable'}
-                    onClick={() => {
-                      handleBatchStatusChange(true).catch(() => undefined)
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          disabled: batchActionsDisabled,
+                          icon: batchStatusAction === 'enable' ? <LoadingOutlined spin /> : <CheckCircleOutlined />,
+                          key: 'enable',
+                          label: `批量启用${hasSelection ? `(${selectedRowKeys.length})` : ''}`
+                        },
+                        {
+                          disabled: batchActionsDisabled,
+                          icon: batchStatusAction === 'disable' ? <LoadingOutlined spin /> : <StopOutlined />,
+                          key: 'disable',
+                          label: `批量禁用${hasSelection ? `(${selectedRowKeys.length})` : ''}`
+                        },
+                        {
+                          danger: true,
+                          disabled: batchActionsDisabled,
+                          icon: deletePending ? <LoadingOutlined spin /> : <DeleteOutlined />,
+                          key: 'delete',
+                          label: `批量删除${hasSelection ? `(${selectedRowKeys.length})` : ''}`
+                        }
+                      ],
+                      onClick: ({ key }) => {
+                        if (key === 'enable') handleBatchStatusChange(true).catch(() => undefined)
+                        if (key === 'disable') handleBatchStatusChange(false).catch(() => undefined)
+                        if (key === 'delete') requestBatchDelete()
+                      }
                     }}
+                    placement="bottomLeft"
+                    trigger={['click']}
                   >
-                    批量启用{hasSelection ? `(${selectedRowKeys.length})` : ''}
-                  </Button>
-                </span>
-              </Tooltip>
-              <Tooltip title={batchTooltip}>
-                <span className="inline-flex">
-                  <Button
-                    disabled={batchActionsDisabled}
-                    icon={<StopOutlined />}
-                    loading={batchStatusAction === 'disable'}
-                    onClick={() => {
-                      handleBatchStatusChange(false).catch(() => undefined)
-                    }}
-                  >
-                    批量禁用{hasSelection ? `(${selectedRowKeys.length})` : ''}
-                  </Button>
-                </span>
-              </Tooltip>
-              <Tooltip title={batchTooltip}>
-                <span className="inline-flex">
-                  <Button
-                    danger
-                    disabled={batchActionsDisabled}
-                    icon={<DeleteOutlined />}
-                    onClick={requestBatchDelete}
-                  >
-                    批量删除{hasSelection ? `(${selectedRowKeys.length})` : ''}
-                  </Button>
+                    <Button
+                      icon={<MoreOutlined />}
+                    >
+                      更多操作
+                    </Button>
+                  </Dropdown>
                 </span>
               </Tooltip>
             </div>

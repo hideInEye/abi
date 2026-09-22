@@ -20,8 +20,8 @@ export const MATCH_METHOD_OPTIONS: Array<{ label: string; value: SemanticMatchMe
 ]
 
 export const VISIBILITY_OPTIONS: Array<{ label: string; value: SemanticVisibility }> = [
-  { label: '公开', value: 'PUBLIC' },
-  { label: '私有', value: 'PRIVATE' }
+  { label: '平台', value: 'PUBLIC' },
+  { label: '空间', value: 'PRIVATE' }
 ]
 
 export const LIST_TYPE_LABELS: Record<SemanticListType, string> = {
@@ -36,8 +36,8 @@ export const MATCH_METHOD_LABELS: Record<SemanticMatchMethod, string> = {
 }
 
 export const VISIBILITY_LABELS: Record<SemanticVisibility, string> = {
-  PRIVATE: '私有',
-  PUBLIC: '公开'
+  PRIVATE: '空间',
+  PUBLIC: '平台'
 }
 
 export interface SmartHelperExample {
@@ -120,14 +120,14 @@ export const EMPTY_FILTERS: SemanticRuleFilters = {
 export const DEFAULT_RULE_DRAFT: SemanticRuleDraft = {
   advancedSettings: [],
   category: '',
-  method: 'EXACT',
+  method: undefined,
   name: '',
   pattern: '',
-  priority: 100,
+  priority: undefined,
   remark: '',
-  target: '',
-  type: 'WHITELIST',
-  visibility: 'PUBLIC'
+  target: undefined,
+  type: undefined,
+  visibility: undefined
 }
 
 export const DETAIL_HIT_EXAMPLES: Readonly<Record<string, readonly string[]>> = {

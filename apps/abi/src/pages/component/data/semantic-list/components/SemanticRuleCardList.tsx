@@ -1,7 +1,7 @@
 import { DeleteOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons'
 import { Button, Empty, Switch } from 'antd'
 
-import { LIST_TYPE_LABELS, MATCH_METHOD_LABELS } from '../constants'
+import { LIST_TYPE_LABELS, MATCH_METHOD_LABELS, VISIBILITY_LABELS } from '../constants'
 import styles from '../semantic-list.module.scss'
 import type { SemanticRule, SemanticRuleId } from '../types'
 
@@ -63,9 +63,16 @@ export function SemanticRuleCardList({
                   {rule.name}
                 </button>
               </div>
-              <span className={`abi-status-tag ${rule.type === 'WHITELIST' ? 'status-normal' : 'status-error'}`}>
-                {LIST_TYPE_LABELS[rule.type]}
-              </span>
+              <div className={styles.cardHeadTags}>
+                {visibleColumnKeys.has('visibility') && (
+                  <span className={`abi-status-tag ${rule.visibility === 'PUBLIC' ? 'status-normal' : 'status-disabled'}`}>
+                    {VISIBILITY_LABELS[rule.visibility]}
+                  </span>
+                )}
+                <span className={`abi-status-tag ${rule.type === 'WHITELIST' ? 'status-normal' : 'status-error'}`}>
+                  {LIST_TYPE_LABELS[rule.type]}
+                </span>
+              </div>
             </div>
 
             <div className="abi-data-card-body">

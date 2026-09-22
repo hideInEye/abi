@@ -1,3 +1,4 @@
+import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSelector } from '@reduxjs/toolkit';
 
 import { fetchGetUserInfo, fetchLogin } from '@/service/api/platform';
@@ -90,6 +91,8 @@ const initialState = {
   userInfo: getUserInfo()
 };
 
+type AuthState = typeof initialState;
+
 export const authSlice = createAppSlice({
   initialState,
   name: 'auth',
@@ -173,6 +176,10 @@ export const authSlice = createAppSlice({
           userName: ''
         }
       };
+    }),
+    setAuthState: create.reducer((state, { payload }: PayloadAction<AuthState>) => {
+      state.token = payload.token;
+      state.userInfo = payload.userInfo;
     })
   }),
   selectors: {
@@ -181,7 +188,17 @@ export const authSlice = createAppSlice({
   }
 });
 export const { selectToken, selectUserInfo } = authSlice.selectors;
+const { setAuthState } = authSlice.actions;
 export const { login, resetAuth } = authSlice.actions;
+
+export const syncAuthFromStorage = (): AppThunk => dispatch => {
+  dispatch(
+    setAuthState({
+      token: getToken(),
+      userInfo: getUserInfo()
+    })
+  );
+};
 // We can also write thunks by hand, which may contain both sync and async logic.
 // Here's an example of conditionally dispatching actions based on current state.
 export const getUerName = (): AppThunk<string> => (_, getState) => {

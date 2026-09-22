@@ -183,13 +183,13 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
 
           <AForm.Item
             required
-            label="衍生模板"
+            label="复合模板"
             name="templateType"
-            rules={[{ message: '请选择衍生模板', required: true }]}
+            rules={[{ message: '请选择复合模板', required: true }]}
           >
             <ASelect
               options={EXTENDED_TEMPLATE_OPTIONS}
-              placeholder="请选择衍生模板"
+              placeholder="请选择复合模板"
             />
           </AForm.Item>
 

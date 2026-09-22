@@ -22,9 +22,7 @@ import { semanticRuleToDraft, testSemanticRule, validateSemanticRuleDraft } from
 import styles from '../semantic-list.module.scss'
 import type {
   SemanticDictionaryOption,
-  SemanticMatchMethod,
   SemanticMatchResult,
-  SemanticMatchTarget,
   SemanticRule,
   SemanticRuleDraft,
   SemanticRuleField
@@ -76,7 +74,7 @@ export function SemanticRuleDrawer({
   const [testText, setTestText] = useState('')
   const [testResult, setTestResult] = useState<SemanticMatchResult | null>(null)
   const selectedTarget = Form.useWatch('target', form) ?? ''
-  const selectedMethod = Form.useWatch('method', form) ?? 'EXACT'
+  const selectedMethod = Form.useWatch('method', form)
   const selectedPattern = Form.useWatch('pattern', form) ?? ''
   const targetOptions =
     rule?.target && !matchTargetOptions.some(option => option.value === rule.target)
@@ -88,22 +86,13 @@ export function SemanticRuleDrawer({
 
   useEffect(() => {
     if (!open) return
+    form.resetFields()
     form.setFieldsValue(getRuleDraft(rule))
     form.setFields(FORM_FIELDS.map(name => ({ errors: [], name })))
     setSubmitting(false)
     setTestText('')
     setTestResult(null)
   }, [form, open, rule])
-
-  useEffect(() => {
-    if (!open || rule) return
-    if (!form.getFieldValue('category') && businessCategoryOptions[0]) {
-      form.setFieldValue('category', businessCategoryOptions[0].value)
-    }
-    if (!form.getFieldValue('target') && matchTargetOptions[0]) {
-      form.setFieldValue('target', matchTargetOptions[0].value)
-    }
-  }, [businessCategoryOptions, form, matchTargetOptions, open, rule])
 
   function handleValuesChange(changedValues: Partial<SemanticRuleDraft>) {
     const changedField = Object.keys(changedValues)[0] as SemanticRuleField | undefined
@@ -248,7 +237,10 @@ export function SemanticRuleDrawer({
               label="可见性"
               name="visibility"
             >
-              <Select options={VISIBILITY_OPTIONS} />
+              <Select
+                options={VISIBILITY_OPTIONS}
+                placeholder="请选择可见性"
+              />
             </Form.Item>
             <Form.Item
               className="md:col-span-2"
@@ -288,12 +280,15 @@ export function SemanticRuleDrawer({
               label="匹配方式"
               name="method"
             >
-              <Select options={MATCH_METHOD_OPTIONS} />
+              <Select
+                options={MATCH_METHOD_OPTIONS}
+                placeholder="请选择匹配方式"
+              />
             </Form.Item>
             <Form.Item
               required
               className="md:col-span-2"
-              extra={MATCH_METHOD_HINTS[selectedMethod as SemanticMatchMethod]}
+              extra={selectedMethod ? MATCH_METHOD_HINTS[selectedMethod] : undefined}
               label={selectedMethod === 'REGEX' ? '匹配表达式' : '匹配内容'}
               name="pattern"
             >
@@ -304,12 +299,14 @@ export function SemanticRuleDrawer({
               />
             </Form.Item>
             <div className="md:col-span-2">
-              <SmartMatchHelper
-                method={selectedMethod as SemanticMatchMethod}
-                target={selectedTarget as SemanticMatchTarget}
-                targetLabel={selectedTargetLabel}
-                onApply={applySmartExample}
-              />
+              {selectedMethod && selectedTarget ? (
+                <SmartMatchHelper
+                  method={selectedMethod}
+                  target={selectedTarget}
+                  targetLabel={selectedTargetLabel}
+                  onApply={applySmartExample}
+                />
+              ) : null}
               {selectedMethod === 'REGEX' ? (
                 <MatchTester
                   note="保存前可验证当前规则"
