@@ -194,10 +194,17 @@ export function buildCronPreview(mode: string, values: Record<string, any>): str
       if (interval !== 1) return '';
       const dates = points.map(point => String(point.date || '').split('-'));
       if (!dates.length || dates.some(([month, day]) => !month || !day)) return '';
+      // 单一日期 + 多时刻：固定月日，时刻按分/时扁平枚举（与 DAY 同款）
+      const distinctDates = [...new Set(points.map(point => String(point.date || '')))];
+      if (distinctDates.length === 1) {
+        const field = timeField(points);
+        const [month, day] = dates[0];
+        return field ? `0 ${field.minuteField} ${field.hourField} ${Number(day)} ${Number(month)} ? *` : '';
+      }
+      // 多日期（同日跨月）+ 共享同一时刻：月份枚举（兼容旧数据）
       const sharedTime = singleTime(points);
       const sameDay = dates.every(([, day]) => day === dates[0][1]);
       if (sharedTime && sameDay) return `0 ${sharedTime[0]} ${sharedTime[1]} ${Number(dates[0][1])} ${dates.map(([month]) => Number(month)).join(',')} ? *`;
-      if (points.length === 1 && sharedTime) return `0 ${sharedTime[0]} ${sharedTime[1]} ${Number(dates[0][1])} ${Number(dates[0][0])} ? *`;
       return '';
     }
     default:

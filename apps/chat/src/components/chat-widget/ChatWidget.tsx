@@ -68,8 +68,8 @@ export interface ChatWidgetProps {
   shareCode: string
   /** 网关前缀，空串表示同源 */
   apiBase: string
-  /** page：分享路由页整页面板；float：第三方嵌入右侧悬浮面板 */
-  mode?: 'page' | 'float'
+  /** page：分享路由页整页面板；float：第三方嵌入右侧悬浮面板；embed：iframe 直嵌（铺满 iframe，宿主自行控制悬浮定位与尺寸，禁拖拽/缩放/放大） */
+  mode?: 'page' | 'float' | 'embed'
   /** 外层（分享页）已完成校验并拿到 appId 时传入，跳过 widget 内部校验/密码表单 */
   verifiedAppId?: string
   /** 外层校验时后端返回的项目类型（自主助手=react / 工作流助手=workflow），随 verifiedAppId 透传 */
@@ -1055,6 +1055,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
 
   // 按住头部拖拽面板：首次拖拽时把 CSS 定位切换为显式 left/top，之后跟随指针；放大态禁用
   const handleDragStart = (e: React.PointerEvent) => {
+    // iframe 直嵌形态由宿主页面控制悬浮定位，面板铺满 iframe，禁用窗内拖拽
+    if (mode === 'embed') return
     if (maximized) return
     if ((e.target as HTMLElement).closest('button')) return
     const panel = panelRef.current
@@ -1366,10 +1368,10 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const recList = info?.recQuestions ?? []
 
   return (
-    <div className={`abi-cw-root ${mode === 'float' ? 'abi-cw-float' : 'abi-cw-page'}`}>
+    <div className={`abi-cw-root ${mode === 'float' ? 'abi-cw-float' : mode === 'embed' ? 'abi-cw-embed' : 'abi-cw-page'}`}>
       <div className="abi-cw-panel" ref={panelRef}>
-        {/* 四边拖拽改大小把手（放大态隐藏） */}
-        {!maximized && (
+        {/* 四边拖拽改大小把手（放大态隐藏；embed 直嵌形态由宿主控制尺寸，隐藏把手） */}
+        {!maximized && mode !== 'embed' && (
           <>
             <div className="abi-cw-resize abi-cw-resize-n" onPointerDown={(e) => handleResizeStart('n', e)} />
             <div className="abi-cw-resize abi-cw-resize-s" onPointerDown={(e) => handleResizeStart('s', e)} />
@@ -1382,15 +1384,17 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           <span className="abi-cw-header-name" title={info?.name || '助手'}>
             AI {info?.name ? `· ${info.name}` : '智能问答'}
           </span>
-          <button
-            type="button"
-            className="abi-cw-action-btn"
-            onClick={handleToggleMaximize}
-            aria-label={maximized ? '还原' : '放大'}
-            title={maximized ? '还原' : '放大'}
-          >
-            {maximized ? IconCompress : IconExpand}
-          </button>
+          {mode !== 'embed' && (
+            <button
+              type="button"
+              className="abi-cw-action-btn"
+              onClick={handleToggleMaximize}
+              aria-label={maximized ? '还原' : '放大'}
+              title={maximized ? '还原' : '放大'}
+            >
+              {maximized ? IconCompress : IconExpand}
+            </button>
+          )}
           {mode === 'float' && onClose && (
             <button type="button" className="abi-cw-action-btn" onClick={onClose} aria-label="关闭">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
