@@ -13,6 +13,8 @@ import {
   normalizePrecomputeConfig
 } from '../utils/precomputeConfig'
 
+import { KnowledgeFormItemLabel } from './knowledgeOperateDrawer.FormItemLabel'
+
 interface TimeStringPickerProps {
   readonly onChange?: (value?: string) => void
   readonly value?: string
@@ -56,8 +58,12 @@ export const KnowledgePrecomputeConfig: React.FC<Props> = ({ form }) => {
           />
         </AForm.Item>
         <div>
-          <div className="mb-2 text-sm text-[#3e5068] font-medium">
-            执行时间 <span className="text-red-500">*</span>
+          <div className="mb-2 flex items-center gap-1 text-sm text-[#3e5068] font-medium">
+            <KnowledgeFormItemLabel
+              helpText="按当前空间时区执行。"
+              title="执行时间"
+            />
+            <span className="text-red-500">*</span>
           </div>
           {config.frequency === 'hourly' ? (
             <div className="flex items-center gap-3">
@@ -128,7 +134,6 @@ export const KnowledgePrecomputeConfig: React.FC<Props> = ({ form }) => {
               </AForm.Item>
             </div>
           ) : null}
-          <div className="mt-2 text-sm text-[#8995a8]">按当前空间时区执行。</div>
         </div>
       </div>
       <div className="mt-5 border border-[#dbe5ff] rounded bg-[#f6f8ff] px-4 py-3 text-[#4568c8]">

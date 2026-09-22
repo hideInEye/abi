@@ -7,10 +7,23 @@ import loginHero from '@/assets/imgs/login/loginbot.png'
 import loginLogo from '@/assets/imgs/login/logo.png'
 import Captcha from '@/components/captcha-code'
 import type { CaptchaRef } from '@/components/captcha-code'
+import { useAppDispatch } from '@/hooks/business/useStore'
 import { useLogin } from '@/hooks/common/login'
+import { useRouterPush } from '@/hooks/common/routerPush'
+import { checkAuthStatus } from '@/router/guard/authGuard'
+import { store } from '@/store'
+import { syncAuthFromStorage } from '@/store/slice/auth'
+import { initAuthRoute } from '@/store/slice/route'
+import { resetLoginExpiredState } from '@/utils/auth'
+import { localStg } from '@/utils/storage'
 
 import styles from './index.module.css'
 import { clearLegacyRememberedCredentials } from './loginSecurity'
+import {
+  createLoginSessionRedirectCheck,
+  hasActiveLoginSession,
+  isLoginSessionReadyStorageKey,
+} from './loginSessionSync'
 
 type AccountKey = 'admin' | 'super' | 'user'
 interface Account {
@@ -26,9 +39,14 @@ interface LoginParams extends Pick<Account, 'password' | 'username'> {
 
 export function Component() {
   const [form] = Form.useForm<LoginParams>()
+  const dispatch = useAppDispatch()
   const { loading, toLogin } = useLogin()
+  const { redirectFromLogin } = useRouterPush()
+  const redirectFromLoginRef = useRef(redirectFromLogin)
   const captchaRef = useRef<CaptchaRef>(null)
   const [captchaUuid, setCaptchaUuid] = useState('')
+
+  redirectFromLoginRef.current = redirectFromLogin
 
   const {
     formRules: { pwd, userName: userNameRules },
@@ -52,6 +70,53 @@ export function Component() {
     // Remove credentials persisted by older versions; passwords must never survive a page reload.
     clearLegacyRememberedCredentials(localStorage)
   }, [])
+
+  useEffect(() => {
+    let lastSessionVersion = localStg.get('authSessionVersion')
+    const checkLoginSession = createLoginSessionRedirectCheck({
+      isSessionActive: () =>
+        hasActiveLoginSession(checkAuthStatus(), localStg.get('token'), localStg.get('userInfo')),
+      restoreSession: async () => {
+        dispatch(syncAuthFromStorage())
+        await dispatch(initAuthRoute())
+
+        if (!store.getState().route.isInitAuthRoute) return false
+
+        resetLoginExpiredState()
+        return Boolean(await redirectFromLoginRef.current())
+      },
+    })
+    const runSessionCheck = () => {
+      checkLoginSession().catch(() => undefined)
+    }
+    const handleStorageChange = (event: StorageEvent) => {
+      if (!isLoginSessionReadyStorageKey(event.key)) return
+
+      lastSessionVersion = localStg.get('authSessionVersion')
+      runSessionCheck()
+    }
+    const handleFocus = () => {
+      const currentSessionVersion = localStg.get('authSessionVersion')
+      if (currentSessionVersion === lastSessionVersion) return
+
+      lastSessionVersion = currentSessionVersion
+      runSessionCheck()
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') handleFocus()
+    }
+
+    runSessionCheck()
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [dispatch])
 
   return (
     <div className={styles.page}>

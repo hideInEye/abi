@@ -5,13 +5,13 @@ export const KNOWLEDGE_GROUP_TYPE = 'ontology'
 export const INDICATOR_TYPE_OPTIONS = [
   { label: '原子指标', value: 'atomic' },
   { label: '派生指标', value: 'derived' },
-  { label: '衍生指标', value: 'derivative' }
+  { label: '复合指标', value: 'derivative' }
 ]
 
 export const INDICATOR_TYPE_FILTER_OPTIONS = [
   { label: '原子指标', value: 'atomic' },
   { label: '派生指标', value: 'derived' },
-  { label: '衍生指标', value: 'derivative' }
+  { label: '复合指标', value: 'derivative' }
 ]
 
 export const STATUS_OPTIONS = [
@@ -110,7 +110,7 @@ export const EXTENDED_TEMPLATE_OPTIONS = [
 export const EXTENDED_TEMPLATE_DESC_MAP: Record<string, string> = {
   comparison: '衡量当前周期与历史周期的变化趋势',
   cumulative: '反映时间维度上的总量变化，如累计销售额',
-  custom: '自定义表达式进行衍生指标计算',
+  custom: '自定义表达式进行复合指标计算',
   percentile: '描述数据分布情况，提供比平均值更全面的统计视角',
   ratio: '衡量部分与整体的关系，如转化率、成功率',
   volatility: '通过数据离散程度评估稳定性'
@@ -200,5 +200,5 @@ export const STATUS_TEXT_MAP: Record<string, string> = {
 export const INDICATOR_TYPE_TEXT_MAP: Record<string, string> = {
   atomic: '原子指标',
   derived: '派生指标',
-  derivative: '衍生指标'
+  derivative: '复合指标'
 }

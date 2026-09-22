@@ -21,6 +21,7 @@ import {
 } from '../utils/customAtomic'
 
 import styles from './knowledgeOperateDrawer.AtomicTechnicalStep.module.scss'
+import { KnowledgeFormItemLabel } from './knowledgeOperateDrawer.FormItemLabel'
 
 export interface AtomicSemanticSelection {
   semanticGroupId: number | string | null
@@ -147,10 +148,14 @@ export const KnowledgeOperateAtomicTechnicalStep: React.FC<Props> = ({
 
       <AForm.Item
         required
-        extra="可直接输入或组合表达式；点击下方函数会在光标位置插入当前来源字段。"
-        label="聚合逻辑表达式"
         name="atomicAggregationExpression"
         rules={[{ validator: validateSqlExpression }]}
+        label={
+          <KnowledgeFormItemLabel
+            helpText="可直接输入或组合表达式；点击下方函数会在光标位置插入当前来源字段。"
+            title="聚合逻辑表达式"
+          />
+        }
       >
         <AInput.TextArea
           ref={textAreaRef}

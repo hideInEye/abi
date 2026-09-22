@@ -10,6 +10,7 @@ import {
   RuleExpressionFormItem,
   collectRuleFieldIds,
   createRuleFieldOptions,
+  hasConfiguredRuleConditions,
   normalizeRuleLayers,
   validateRuleLayers,
   validateRuleLogicUniformity
@@ -34,6 +35,7 @@ import {
 } from '../utils/precomputeConfig'
 
 import styles from './knowledgeOperateDrawer.DerivedLogicBuilder.module.scss'
+import { KnowledgeFormItemLabel } from './knowledgeOperateDrawer.FormItemLabel'
 import { TimeStringPicker } from './knowledgeOperateDrawer.PrecomputeConfig'
 import { StatisticalDateRangeFields } from './knowledgeOperateDrawer.StatisticalDateRangeFields'
 
@@ -167,8 +169,12 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
         <OntologyFormSectionTitle icon={<FieldTimeOutlined />}>统计口径</OntologyFormSectionTitle>
         <div className="grid grid-cols-2 gap-x-8">
           <div>
-            <div className="mb-2 text-sm text-[#3e5068] font-medium">
-              日期范围 <span className="text-red-500">*</span>
+            <div className="mb-2 flex items-center gap-1 text-sm text-[#3e5068] font-medium">
+              <KnowledgeFormItemLabel
+                helpText={getStatisticalDateRangeHint(statisticalCaliberValue || statisticalCaliber)}
+                title="日期范围"
+              />
+              <span className="text-red-500">*</span>
             </div>
             <AForm.Item
               className="mb-0!"
@@ -187,21 +193,22 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
             >
               <StatisticalDateRangeFields mode={statisticalCaliber.dateRangeMode} />
             </AForm.Item>
-            <div className="mt-2 text-sm text-[#8995a8]">
-              {getStatisticalDateRangeHint(statisticalCaliberValue || statisticalCaliber)}
-            </div>
           </div>
           <div>
             <AForm.Item
               className="mb-0!"
-              extra={
-                customAggregationExpression
-                  ? '该原子指标使用自定义聚合表达式，派生指标直接继承该表达式。'
-                  : '仅展示当前原子指标已配置的聚合方式，派生指标只能选择其中 1 个。'
-              }
-              label="派生聚合方式"
               name="projectionFunc"
               rules={[{ message: '请选择派生聚合方式', required: true }]}
+              label={
+                <KnowledgeFormItemLabel
+                  title="派生聚合方式"
+                  helpText={
+                    customAggregationExpression
+                      ? '该原子指标使用自定义聚合表达式，派生指标直接继承该表达式。'
+                      : '仅展示当前原子指标已配置的聚合方式，派生指标只能选择其中 1 个。'
+                  }
+                />
+              }
             >
               <ASelect
                 options={aggregationOptions}
@@ -227,9 +234,89 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
             ) : null}
           </div>
         </div>
-        <div className="mt-6 grid grid-cols-2 gap-x-8">
+        <div className="mt-6">
+          <div className={styles.subjectDimensionRow}>
+            <AForm.Item
+              className={`mb-0! ${styles.subjectDimensionField}`}
+              name={['statisticalCaliber', 'subjectDimensionIds']}
+              rules={[{ message: '请选择主体维度', min: 1, required: true, type: 'array' }]}
+              label={
+                <KnowledgeFormItemLabel
+                  helpText="可选择多个主体维度，选项与第三步维度设置使用同一数据源。"
+                  title="主体维度"
+                />
+              }
+            >
+              <ATreeSelect
+                multiple
+                showSearch
+                treeCheckable
+                treeDefaultExpandAll
+                loading={dimensionLoading}
+                maxTagCount="responsive"
+                placeholder="请选择主体维度"
+                treeData={dimensionTree}
+                treeNodeFilterProp="title"
+                onChange={value => {
+                  const dimensionIds = Array.isArray(value)
+                    ? value.map(item => String(item ?? '').trim()).filter(Boolean)
+                    : []
+                  const currentNameMap = form.getFieldValue(['statisticalCaliber', 'subjectDimensionNameMap']) as
+                    | Record<string, string>
+                    | undefined
+                  const subjectDimensionNameMap = dimensionIds.reduce<Record<string, string>>(
+                    (nameMap, dimensionId) => {
+                      const option = dimensionOptions.find(item => String(item.key) === dimensionId)
+                      nameMap[dimensionId] = option?.name || currentNameMap?.[dimensionId] || dimensionId
+                      return nameMap
+                    },
+                    {}
+                  )
+                  form.setFieldValue(['statisticalCaliber', 'subjectDimensionNameMap'], subjectDimensionNameMap)
+                }}
+              />
+            </AForm.Item>
+            <AForm.Item
+              className={`mb-0! ${styles.crossDimensionField}`}
+              name={['statisticalCaliber', 'isCrossDim']}
+              valuePropName="checked"
+            >
+              <ACheckbox>
+                <KnowledgeFormItemLabel
+                  helpText="如需多个维度组合分析指标，请勾选"
+                  title="是否维度交叉"
+                />
+              </ACheckbox>
+            </AForm.Item>
+          </div>
+          {dimensionError ? (
+            <Alert
+              className="mt-2"
+              message="主体维度加载失败"
+              type="error"
+              action={
+                <AButton
+                  size="small"
+                  onClick={retryDimensions}
+                >
+                  重试
+                </AButton>
+              }
+            />
+          ) : null}
+        </div>
+        <div className="mt-6">
           <div>
-            <div className="mb-2 text-sm text-[#3e5068] font-medium">时段范围</div>
+            <div className="mb-2 text-sm text-[#3e5068] font-medium">
+              <KnowledgeFormItemLabel
+                title="时段范围"
+                helpText={
+                  statisticalCaliber.timeRangeType === 'specified'
+                    ? `仅统计每天 ${statisticalCaliber.startTime || '--:--'}～${statisticalCaliber.endTime || '--:--'} 的数据。`
+                    : '默认统计全天数据。'
+                }
+              />
+            </div>
             <div className="flex gap-3">
               <AForm.Item
                 className="mb-0!"
@@ -275,73 +362,6 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
                 </>
               ) : null}
             </div>
-            <div className="mt-2 text-sm text-[#8995a8]">
-              {statisticalCaliber.timeRangeType === 'specified'
-                ? `仅统计每天 ${statisticalCaliber.startTime || '--:--'}～${statisticalCaliber.endTime || '--:--'} 的数据。`
-                : '默认统计全天数据。'}
-            </div>
-          </div>
-          <div>
-            <div className="flex items-start gap-6">
-              <AForm.Item
-                className="mb-0! min-w-0 flex-1"
-                extra="可选择多个主体维度，选项与第三步维度设置使用同一数据源。"
-                label="主体维度"
-                name={['statisticalCaliber', 'subjectDimensionIds']}
-                rules={[{ message: '请选择主体维度', min: 1, required: true, type: 'array' }]}
-              >
-                <ATreeSelect
-                  showSearch
-                  treeDefaultExpandAll
-                  loading={dimensionLoading}
-                  maxTagCount="responsive"
-                  multiple
-                  placeholder="请选择主体维度"
-                  treeData={dimensionTree}
-                  treeNodeFilterProp="title"
-                  onChange={value => {
-                    const dimensionIds = Array.isArray(value)
-                      ? value.map(item => String(item ?? '').trim()).filter(Boolean)
-                      : []
-                    const currentNameMap = form.getFieldValue([
-                      'statisticalCaliber',
-                      'subjectDimensionNameMap'
-                    ]) as Record<string, string> | undefined
-                    const subjectDimensionNameMap = dimensionIds.reduce<Record<string, string>>(
-                      (nameMap, dimensionId) => {
-                        const option = dimensionOptions.find(item => String(item.key) === dimensionId)
-                        nameMap[dimensionId] = option?.name || currentNameMap?.[dimensionId] || dimensionId
-                        return nameMap
-                      },
-                      {}
-                    )
-                    form.setFieldValue(['statisticalCaliber', 'subjectDimensionNameMap'], subjectDimensionNameMap)
-                  }}
-                />
-              </AForm.Item>
-              <AForm.Item
-                className="mb-0! pt-8"
-                name={['statisticalCaliber', 'isCrossDim']}
-                valuePropName="checked"
-              >
-                <ACheckbox>是否维度交叉</ACheckbox>
-              </AForm.Item>
-            </div>
-            {dimensionError ? (
-              <Alert
-                className="mt-2"
-                message="主体维度加载失败"
-                type="error"
-                action={
-                  <AButton
-                    size="small"
-                    onClick={retryDimensions}
-                  >
-                    重试
-                  </AButton>
-                }
-              />
-            ) : null}
           </div>
         </div>
       </div>
@@ -368,6 +388,10 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
           rules={[
             {
               validator: (_, value) => {
+                if (!hasConfiguredRuleConditions(value)) {
+                  setShowRuleErrors(false)
+                  return Promise.resolve()
+                }
                 const baseValidation = validateRuleLayers(value, ruleFields)
                 const logicValidation = validateRuleLogicUniformity(value)
                 const issues = [...baseValidation.issues, ...logicValidation.issues]
@@ -380,10 +404,11 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
           ]}
         >
           <RuleExpressionBuilder
+            optional
+            uniformLogic
             fieldLoading={fieldLoading}
             fields={ruleFields}
             ref={ruleBuilderRef}
-            uniformLogic
             validationRequested={showRuleErrors}
           />
         </RuleExpressionFormItem>

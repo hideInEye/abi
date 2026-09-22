@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
 import { DEFAULT_RULE_DRAFT, DETAIL_HIT_EXAMPLES, EMPTY_FILTERS, MATCH_METHOD_OPTIONS } from './constants'
@@ -244,8 +246,27 @@ describe('semantic rule validation', () => {
 })
 
 describe('semantic rule design defaults and examples', () => {
-  it('defaults new rules to exact matching and exposes only the three confirmed methods', () => {
-    expect(DEFAULT_RULE_DRAFT.method).toBe('EXACT')
+  it('keeps every configurable field empty for a new rule', () => {
+    expect(DEFAULT_RULE_DRAFT).toEqual({
+      advancedSettings: [],
+      category: '',
+      method: undefined,
+      name: '',
+      pattern: '',
+      priority: undefined,
+      remark: '',
+      target: undefined,
+      type: undefined,
+      visibility: undefined
+    })
+  })
+
+  it('does not auto-select the first dictionary options and exposes only the confirmed match methods', () => {
+    const drawerSource = readFileSync(new URL('./components/SemanticRuleDrawer.tsx', import.meta.url), 'utf8')
+
+    expect(drawerSource).not.toContain('businessCategoryOptions[0]')
+    expect(drawerSource).not.toContain('matchTargetOptions[0]')
+    expect(drawerSource).not.toContain("Form.useWatch('method', form) ?? 'EXACT'")
     expect(MATCH_METHOD_OPTIONS.map(option => option.value)).toEqual(['EXACT', 'LIKE', 'REGEX'])
   })
 

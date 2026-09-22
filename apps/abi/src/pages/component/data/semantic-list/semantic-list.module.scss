@@ -649,3 +649,9 @@
     animation-iteration-count: 1 !important;
   }
 }
+.cardHeadTags {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}

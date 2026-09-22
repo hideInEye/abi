@@ -13,6 +13,7 @@ import {
 import type { KnowledgeFormValues } from '../types/metricModeling.types'
 import { shouldShowMetricPrecomputeConfig } from '../utils/knowledgeOperateDrawer.utils'
 
+import { KnowledgeFormItemLabel } from './knowledgeOperateDrawer.FormItemLabel'
 import { KnowledgePrecomputeConfig } from './knowledgeOperateDrawer.PrecomputeConfig'
 
 interface Props {
@@ -154,10 +155,14 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
       <div className="mb-4 border border-gray-200 rounded bg-white p-4">
         <OntologyFormSectionTitle icon={<TagsOutlined />}>语义信息</OntologyFormSectionTitle>
         <AForm.Item
-          extra="用于 ChatBI 对业务术语的识别与召回"
-          label="指标别名"
           name="indAlias"
           rules={[{ validator: validateAliasTags }]}
+          label={
+            <KnowledgeFormItemLabel
+              helpText="用于 ChatBI 对业务术语的识别与召回"
+              title="指标别名"
+            />
+          }
         >
           <ASelect
             mode="tags"
