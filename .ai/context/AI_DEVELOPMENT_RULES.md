@@ -18,6 +18,7 @@
 7. 新增 app 内逻辑优先放当前 domain，不要过早抽象。
 8. UI 修改按所属 app 样式系统执行。
 9. 新增或接入 qiankun 微应用时必须启用样式隔离；微应用样式不得污染宿主全局 `html` / `body`，业务背景应写到微应用 root 容器或局部作用域。
+10. ABI 页面路由由应用启动时的 Elegant Router 插件根据 `apps/abi/src/pages` 目录与页面 `config.ts` 自动生成；开发时只维护页面目录和配置，不手工执行路由生成命令，也不手工编辑 `src/router/elegant/*` 或 `src/types/elegant-router.d.ts` 生成文件，除非用户明确要求。
 
 ## 测试与验证
 

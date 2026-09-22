@@ -8,6 +8,7 @@ export const primaryMenuData = [
 export const itemMap = new Map([
   ['manage_user', '系统配置'],
   ['space_space-user', '空间管理'],
+  ['systems_data-dictionary', '系统字典'],
   ['log', '日志管理'],
 ])
 
@@ -17,4 +18,3 @@ export const primaryMenuMap = new Map([
   ['assistant-manage_assistant-config', '工作台'],
   ['system_model', '组件'],
 ])
-

@@ -27,7 +27,7 @@
 - 测试环境构建：`pnpm --filter chatbi build:test`
 - 类型检查：`pnpm --filter chatbi typecheck`
 - Lint：`pnpm --filter chatbi lint`
-- 路由生成：`pnpm --filter chatbi gen-route`
+- 路由：启动 ABI 后由 Elegant Router 插件根据 `src/pages` 自动生成；日常开发不手工执行 `gen-route`，也不维护生成文件。
 
 ### apps/chat
 

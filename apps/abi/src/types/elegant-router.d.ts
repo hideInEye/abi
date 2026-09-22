@@ -68,6 +68,8 @@ declare module "@elegant-router/types" {
     "space_space-role": "space-role";
     "space_space-user": "space-user";
     "space-list": "/space-list";
+    "systems": "/systems";
+    "systems_data-dictionary": "data-dictionary";
     "view": "/view";
     "workbench": "/workbench";
     "workbench_app-workshop": "app-workshop";
@@ -155,6 +157,7 @@ declare module "@elegant-router/types" {
     | "manage"
     | "space"
     | "space-list"
+    | "systems"
     | "view"
     | "workbench"
   >;
@@ -209,6 +212,7 @@ declare module "@elegant-router/types" {
     | "space_space-menu"
     | "space_space-role"
     | "space_space-user"
+    | "systems_data-dictionary"
     | "view"
     | "workbench_app-workshop_my-assistant"
     | "workbench_app-workshop_my-chat"

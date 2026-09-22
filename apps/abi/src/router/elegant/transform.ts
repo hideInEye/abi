@@ -249,6 +249,8 @@ const routeMap: RouteMap = {
   "space_space-role": "space-role",
   "space_space-user": "space-user",
   "space-list": "/space-list",
+  "systems": "/systems",
+  "systems_data-dictionary": "data-dictionary",
   "view": "/view",
   "workbench": "/workbench",
   "workbench_app-workshop": "app-workshop",
