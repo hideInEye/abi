@@ -19,8 +19,9 @@ function unwrap(res: any): any {
   return d?.data || d || {}
 }
 
-/** 助手分享页视图：后端传路径前端跳转，交互复刻大屏 ShareViewPage（先校验密码再渲染悬浮面板） */
-export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
+/** 助手分享页视图：后端传路径前端跳转，交互复刻大屏 ShareViewPage（先校验密码再渲染悬浮面板）。
+ * embed=true：第三方系统通过 iframe 直嵌，对话框铺满 iframe（宿主自行控制悬浮定位与尺寸）。 */
+export function AssistantSharePageView({ shareCode, embed = false }: { shareCode: string; embed?: boolean }) {
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [passwordModalVisible, setPasswordModalVisible] = useState(false)
@@ -91,7 +92,7 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
 
   if (loading) {
     return (
-      <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f2f5fa' }}>
+      <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: embed ? '#fff' : '#f2f5fa' }}>
         <Spin size="large" tip="加载中..." />
       </div>
     )
@@ -99,7 +100,7 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
 
   if (failed) {
     return (
-      <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a94a6', background: '#f2f5fa' }}>
+      <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a94a6', background: embed ? '#fff' : '#f2f5fa' }}>
         获取分享信息失败
       </div>
     )
@@ -136,7 +137,13 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
       </Modal>
 
       {verifiedAppId && (
-        <ChatWidget shareCode={shareCode} apiBase={apiBase} mode="page" verifiedAppId={verifiedAppId} verifiedType={verifiedType} verifiedToken={verifiedToken} />
+        embed ? (
+          <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+            <ChatWidget shareCode={shareCode} apiBase={apiBase} mode="embed" verifiedAppId={verifiedAppId} verifiedType={verifiedType} verifiedToken={verifiedToken} />
+          </div>
+        ) : (
+          <ChatWidget shareCode={shareCode} apiBase={apiBase} mode="page" verifiedAppId={verifiedAppId} verifiedType={verifiedType} verifiedToken={verifiedToken} />
+        )
       )}
     </>
   )
@@ -144,9 +151,15 @@ export function AssistantSharePageView({ shareCode }: { shareCode: string }) {
 
 function AssistantSharePage() {
   const { shareCode } = Route.useParams()
-  return <AssistantSharePageView shareCode={shareCode} />
+  const { embed } = Route.useSearch()
+  return <AssistantSharePageView shareCode={shareCode} embed={embed} />
 }
 
 export const Route = createFileRoute('/assistant-share-page/$shareCode')({
   component: AssistantSharePage,
+  // embed=1 时以可嵌入悬浮对话框（铺满 iframe）形态渲染，供第三方系统 iframe 直嵌
+  // TanStack 默认 JSON 解析 search，?embed=1 会解析为数字 1，故数字/字符串/布尔均需兼容
+  validateSearch: (search: Record<string, unknown>): { embed?: boolean } => ({
+    embed: search.embed === 1 || search.embed === '1' || search.embed === 'true' || search.embed === true,
+  }),
 })

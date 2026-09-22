@@ -15,7 +15,7 @@ out/
 
 npm-debug.log*
 .pnpm-debug.log*
-.pnpm.store
+.pnpm-store
 .tanstack
 
 .claude

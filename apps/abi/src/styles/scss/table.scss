@@ -4751,3 +4751,121 @@ div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
   font-size: 13px;
   color: #768a9f;
 }
+
+// ============================================================
+// 定时任务时间选择弹层 — 保持 antd 原生外观（含底部「此刻/确定」按钮），仅去滚动条与底部占位空白
+// 仅作用于挂了 popupClassName="abi-time-panel" 的 TimePicker 下拉
+// ============================================================
+.abi-time-panel {
+  .ant-picker-time-panel-column {
+    // 与年日期级联列同宽（~96px），避免原生默认列过窄；列为 flex 子项需同时锁 flex-basis
+    flex: 0 0 96px;
+    width: 96px;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+
+    // antd 给末项预留的占位块（calc(100% - timeCellHeight)）会在底部留一大截空白，去掉
+    &::after {
+      content: none;
+    }
+
+    // 加宽列后让选中背景/文字铺满整列（antd 按原生列宽写死了 inner 宽度）
+    .ant-picker-time-panel-cell-inner {
+      width: 100% !important;
+    }
+  }
+}
+
+// ============================================================
+// 定时任务分段选择器（调度配置/任务配置标题行的胶囊切换）— 统一胶囊风格
+// 灰底轨道、选中白块+品牌蓝字+浅阴影，加大内边距与圆角，避免 antd 默认过于紧凑小气
+// ============================================================
+.abi-seg.ant-segmented {
+  padding: 3px;
+  background: #f2f3f5;
+  border-radius: 8px;
+
+  .ant-segmented-item {
+    border-radius: 6px;
+    color: #4e5969;
+    transition: color 0.2s, background-color 0.2s, box-shadow 0.2s;
+
+    &:hover:not(.ant-segmented-item-selected) {
+      color: #1f2329;
+      background: transparent;
+    }
+  }
+
+  .ant-segmented-item-label {
+    min-height: 30px;
+    padding: 0 18px;
+    font-size: 14px;
+    line-height: 30px;
+  }
+
+  // 选中项：白底圆角块 + 品牌蓝字 + 浅阴影（覆盖 antd 默认的黑字无彩）
+  .ant-segmented-item-selected {
+    color: #3b5bfd;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgb(31 35 41 / 10%);
+  }
+}
+
+// ============================================================
+// 定时任务年模式日期级联（原生 Cascader）— 保持 antd 默认外观，仅去掉滚动条
+// 箭头用 expandIcon={<span />} 在组件层关掉，不在这里用 CSS
+// ============================================================
+.abi-md-panel {
+  .ant-cascader-menu {
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+  }
+}
+
+// ============================================================
+// 定时任务月模式日期选择弹层 — 千问式 7 列日历方格（选中主色蓝底白字圆角块）
+// ============================================================
+.abi-day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  width: 266px;
+}
+
+.abi-day-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  border-radius: 6px;
+  color: #1f2329;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #f2f3f5;
+  }
+
+  &.is-active {
+    background-color: #5b7cf7;
+    color: #fff;
+    font-weight: 600;
+
+    &:hover {
+      background-color: #5b7cf7;
+    }
+  }
+}
+
+

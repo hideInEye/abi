@@ -1,4 +1,4 @@
-import { DeleteOutlined, FileMarkdownOutlined, LeftOutlined, MoreOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, FileMarkdownOutlined, LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { useDebounceFn } from 'ahooks';
 // import PageTitle from '@/components/stateless/common/PageTitle';
 
@@ -8,7 +8,7 @@ import { DeferredRangePicker, DeferredSelect, SearchFilterBar, SearchFilterField
 import { filterByCreateTime } from '@/utils/date';
 import { useRoute, useRouter } from '~/packages/simple-router/src';
 import { shareMailColor, shareMailDisplayGroups, shareMailStatus, statusType, displayGroupColor, resolveDisplayGroup } from '@/types/job';
-import { Dropdown, Empty, message } from 'antd';
+import { message } from 'antd';
 import { getSpaceId } from '@/store/slice/app';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
@@ -19,7 +19,6 @@ export function Component() {
   const spaceId = useAppSelector(getSpaceId);
   const [dateRange, setDateRange] = useState<any>(null);
   const [displayGroupFilter, setDisplayGroupFilter] = useState<string | undefined>(undefined);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   // 列选项：用于列选择器
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'jobName', label: '任务名称', visible: true },
@@ -187,11 +186,7 @@ export function Component() {
     rowKey: 'logId',
   } as any);
 
-  const { checkedRowKeys, clearCheckedRowKeys, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, () => {}, true);
-  const handleViewModeChange = (mode: 'list' | 'card') => {
-    clearCheckedRowKeys?.();
-    setViewMode(mode);
-  };
+  const { checkedRowKeys, onBatchDeleted, onDeleted, rowSelection } = useTableOperate(data as any, run, () => {}, true);
   useEffect(() => {
     const { query } = route;
     if (query?.jobName) {
@@ -273,66 +268,6 @@ export function Component() {
     return ((tableProps as any).columns || []).filter((col: any) => visibleKeys.has(col.key || col.dataIndex));
   }, [columnOptions, tableProps]);
 
-  // 卡片视图渲染
-  const renderCardGrid = () => {
-    if (!pagedData || pagedData.length === 0) {
-      return (
-        <div className="abi-card-empty">
-          <Empty description="暂无邮件记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-        </div>
-      );
-    }
-    return (
-      <div className="abi-card-grid">
-        <div className="abi-card-grid-inner">
-          {pagedData.map((record: any) => (
-            <div key={record.logId} className="abi-data-card">
-              <div className="abi-data-card-head">
-                <div className="abi-data-card-title">
-                  <span className="abi-data-card-name" title={record.jobName}>{record.jobName || '-'}</span>
-                </div>
-                <span
-                  className="abi-status-tag"
-                  style={{ color: (() => {
-                    const group = resolveDisplayGroup(record);
-                    return group ? displayGroupColor[group] : shareMailColor[record.status as statusType];
-                  })() }}
-                >
-                  {resolveDisplayGroup(record) || shareMailStatus[record.status as statusType] || '-'}
-                </span>
-              </div>
-              <div className="abi-data-card-body">
-                <div className="row"><span className="lbl">任务id</span><span className="val">{record.jobId || '-'}</span></div>
-                <div className="row"><span className="lbl">收件人</span><span className="val">{record.recipients || '-'}</span></div>
-                <div className="row"><span className="lbl">发送类型</span><span className="val">{record.type || '-'}</span></div>
-                <div className="row"><span className="lbl">发送时间</span><span className="val">{record.sendTime || '-'}</span></div>
-              </div>
-              <div className="abi-data-card-footer">
-                <button className="abi-card-act" onClick={() => handleExport(record)}>
-                  <FileMarkdownOutlined style={{ marginRight: 3 }} />下载
-                </button>
-                <Dropdown
-                  menu={{
-                    items: [{ key: 'delete', danger: true, label: '删除' }],
-                    onClick: ({ key, domEvent }) => {
-                      domEvent.stopPropagation();
-                      if (key === 'delete') handleDelete(record.logId);
-                    }
-                  }}
-                  trigger={['click']}
-                >
-                  <button className="abi-card-more" onClick={(e) => e.stopPropagation()}>
-                    <MoreOutlined />
-                  </button>
-                </Dropdown>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       {/* v5 Searchbar */}
@@ -399,8 +334,7 @@ export function Component() {
             </APopconfirm>
           </div>
           <ViewControls
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
+            hideCardToggle
             columns={columnOptions}
             onColumnToggle={handleColumnToggle}
           />
@@ -409,7 +343,6 @@ export function Component() {
         <div
           style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
         >
-        {viewMode === 'list' ? (
         <div
           style={{
             border: '1px solid rgba(130,140,200,0.18)',
@@ -436,9 +369,6 @@ export function Component() {
             />
           </div>
         </div>
-        ) : (
-          renderCardGrid()
-        )}
         <div className="data-source-pagination">
           {(() => {
             const current = currentPage;

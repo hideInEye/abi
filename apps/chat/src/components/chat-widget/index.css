@@ -55,6 +55,27 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
+/* 形态 C：第三方 iframe 直嵌（铺满 iframe 视口，宿主页面自行控制悬浮定位与尺寸） */
+.abi-cw-embed {
+  width: 100%;
+  height: 100%;
+}
+
+.abi-cw-embed .abi-cw-panel {
+  /* Popover/Drawer getPopupContainer 挂面板内，需定位父级 */
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.abi-cw-embed .abi-cw-header {
+  /* 直嵌禁用拖拽，头部不显示可拖动光标 */
+  cursor: default;
+}
+
 .abi-cw-panel {
   display: flex;
   flex-direction: column;

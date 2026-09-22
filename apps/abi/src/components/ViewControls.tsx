@@ -21,6 +21,8 @@ interface ViewControlsProps {
   onColumnToggle: (key: string, visible: boolean) => void;
   /** Hide view mode toggle (list/card) buttons */
   hideViewToggle?: boolean;
+  /** Hide card view button, keep only the list icon */
+  hideCardToggle?: boolean;
 }
 
 /**
@@ -29,6 +31,7 @@ interface ViewControlsProps {
  */
 export function ViewControls({
   columns,
+  hideCardToggle = false,
   hideViewToggle = false,
   onColumnToggle,
   onViewModeChange,
@@ -62,13 +65,15 @@ export function ViewControls({
           >
             <UnorderedListOutlined />
           </button>
-          <button
-            className={`abi-vt-btn ${viewMode === 'card' ? 'active' : ''}`}
-            onClick={() => onViewModeChange?.('card')}
-            title="卡片视图"
-          >
-            <AppstoreOutlined />
-          </button>
+          {!hideCardToggle && (
+            <button
+              className={`abi-vt-btn ${viewMode === 'card' ? 'active' : ''}`}
+              onClick={() => onViewModeChange?.('card')}
+              title="卡片视图"
+            >
+              <AppstoreOutlined />
+            </button>
+          )}
         </div>
       )}
 
