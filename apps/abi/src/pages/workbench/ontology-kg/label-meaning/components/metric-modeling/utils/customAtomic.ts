@@ -2,43 +2,6 @@ import type { KnowledgeTechField } from '../types/metricModeling.types'
 
 import { getKnowledgeTechFieldId } from './atomicMetricSource'
 
-export type CustomAtomicFunctionKey =
-  | 'abs'
-  | 'avg'
-  | 'ceil'
-  | 'count'
-  | 'countDistinct'
-  | 'distinct'
-  | 'floor'
-  | 'max'
-  | 'median'
-  | 'min'
-  | 'round'
-  | 'roundPrecision'
-  | 'stddev'
-  | 'substring'
-  | 'sum'
-  | 'variance'
-
-export const CUSTOM_ATOMIC_FUNCTION_OPTIONS: Array<{ label: string; value: CustomAtomicFunctionKey }> = [
-  { label: '求和', value: 'sum' },
-  { label: '计数', value: 'count' },
-  { label: '去重计数', value: 'countDistinct' },
-  { label: '平均值', value: 'avg' },
-  { label: '最大值', value: 'max' },
-  { label: '最小值', value: 'min' },
-  { label: '标准差', value: 'stddev' },
-  { label: '方差', value: 'variance' },
-  { label: '中位数', value: 'median' },
-  { label: '去重', value: 'distinct' },
-  { label: '绝对值', value: 'abs' },
-  { label: '向上取整', value: 'ceil' },
-  { label: '向下取整', value: 'floor' },
-  { label: '四舍五入', value: 'round' },
-  { label: '保留小数', value: 'roundPrecision' },
-  { label: '字符串截取', value: 'substring' }
-]
-
 const SEMANTIC_TYPE_LABELS: Record<string, string> = {
   categorical: '维度',
   datetime: '日期',
@@ -62,26 +25,21 @@ export function getCustomAtomicFieldOptionLabel(field: KnowledgeTechField): stri
   return `${bizName} · ${techName} · ${fieldType} · ${getCustomAtomicSemanticTypeLabel(field.semanticType)}`
 }
 
-export function buildCustomAtomicFunctionSnippet(key: CustomAtomicFunctionKey, fieldName: string): string {
-  const templates: Record<CustomAtomicFunctionKey, string> = {
-    abs: `ABS(${fieldName})`,
-    avg: `AVG(${fieldName})`,
-    ceil: `CEIL(${fieldName})`,
-    count: `COUNT(${fieldName})`,
-    countDistinct: `COUNT(DISTINCT ${fieldName})`,
-    distinct: `DISTINCT ${fieldName}`,
-    floor: `FLOOR(${fieldName})`,
-    max: `MAX(${fieldName})`,
-    median: `MEDIAN(${fieldName})`,
-    min: `MIN(${fieldName})`,
-    round: `ROUND(${fieldName})`,
-    roundPrecision: `ROUND(${fieldName}, 2)`,
-    stddev: `STDDEV(${fieldName})`,
-    substring: `SUBSTRING(${fieldName}, 1, 1)`,
-    sum: `SUM(${fieldName})`,
-    variance: `VARIANCE(${fieldName})`
-  }
-  return templates[key]
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+export function getCustomExpressionSourceFields(
+  expression: unknown,
+  fields: readonly KnowledgeTechField[]
+): KnowledgeTechField[] {
+  const text = String(expression || '')
+  if (!text) return []
+  return fields.filter(field => {
+    const fieldName = getCustomAtomicFieldTechnicalName(field)
+    if (!fieldName) return false
+    return new RegExp(`(^|[^A-Za-z0-9_])${escapeRegExp(fieldName)}(?=$|[^A-Za-z0-9_])`).test(text)
+  })
 }
 
 export function insertCustomAtomicFunction(

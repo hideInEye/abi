@@ -1,4 +1,4 @@
-import { CheckCircleOutlined, CodeOutlined } from '@ant-design/icons'
+import { ApiOutlined, CheckCircleOutlined, CodeOutlined } from '@ant-design/icons'
 import type { FormInstance } from 'antd'
 import React from 'react'
 
@@ -16,7 +16,8 @@ import {
 } from '../constants/metricModeling.constants'
 import type { KnowledgeFormValues, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
 
-import { KnowledgeOperateExpressionEditor } from './knowledgeOperateDrawer.ExpressionEditor'
+import type { AtomicSemanticSelection } from './knowledgeOperateDrawer.AtomicTechnicalStep'
+import { KnowledgeOperateDerivativeCustomTechnicalSection } from './knowledgeOperateDrawer.DerivativeCustomTechnicalSection'
 import { KnowledgeFormItemLabel } from './knowledgeOperateDrawer.FormItemLabel'
 import { KnowledgeIndicatorSearchSelect } from './knowledgeOperateDrawer.IndicatorSearchSelect'
 
@@ -29,17 +30,21 @@ interface AtomicMetricOption {
 interface Props {
   readonly allFields: KnowledgeTechField[]
   readonly atomicMetricOptions: AtomicMetricOption[]
+  readonly fieldError?: boolean
+  readonly fieldLoading?: boolean
   readonly form: FormInstance<KnowledgeFormValues>
   readonly indicatorOptionsLoading?: boolean
   readonly onIndicatorLoadMore: () => void
   readonly onIndicatorSearch: (searchText: string) => void
+  readonly onRetryFields?: () => void
+  readonly onSchemaChange: (selection: AtomicSemanticSelection) => Promise<void>
   readonly referenceMetricOptions: AtomicMetricOption[]
   readonly templateTypeVal: string
   readonly validateAccumulationDate: (_: unknown, value?: string) => Promise<void>
-  readonly validateCustomExpression: (_: unknown, value?: string) => Promise<void>
   readonly validatePercentile: (_: unknown, value?: number | string) => Promise<void>
   readonly validatePositiveInt: (value: unknown, messageText: string) => Promise<void>
   readonly validateRollingWindow: (_: unknown, value?: number | string) => Promise<void>
+  readonly validateSqlExpression: (_: unknown, value?: string) => Promise<void>
   readonly validateThresholdMax: (_: unknown, value?: string) => Promise<void>
   readonly validateThresholdValue: (_: unknown, value?: string) => Promise<void>
 }
@@ -59,9 +64,9 @@ function formatCustomExpressionPreview(expression: unknown, options: AtomicMetri
 function buildExtendedExpressionPreview(
   templateType: string,
   values: Partial<KnowledgeFormValues>,
-  options: AtomicMetricOption[],
-  referenceOptions: AtomicMetricOption[] = options
+  optionGroups: { metrics: AtomicMetricOption[]; references: AtomicMetricOption[] }
 ) {
+  const { metrics: options, references: referenceOptions } = optionGroups
   if (templateType === 'ratio') {
     const numerator = getLabel(options, values.ratioNumeratorId)
     const denominator = getLabel(options, values.ratioDenominatorId)
@@ -113,17 +118,21 @@ function buildExtendedExpressionPreview(
 export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   allFields,
   atomicMetricOptions,
+  fieldError,
+  fieldLoading,
   form,
   indicatorOptionsLoading,
   onIndicatorLoadMore,
   onIndicatorSearch,
+  onRetryFields,
+  onSchemaChange,
   referenceMetricOptions,
   templateTypeVal,
   validateAccumulationDate,
-  validateCustomExpression,
   validatePercentile,
   validatePositiveInt,
   validateRollingWindow,
+  validateSqlExpression,
   validateThresholdMax,
   validateThresholdValue
 }) => {
@@ -164,8 +173,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
           volatilityMethod,
           volatilityMetricId
         },
-        atomicMetricOptions,
-        referenceMetricOptions
+        { metrics: atomicMetricOptions, references: referenceMetricOptions }
       ),
     [
       atomicMetricOptions,
@@ -198,11 +206,15 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   return (
     <>
       <div className="mb-4 border border-gray-200 rounded p-4">
-        <OntologyFormSectionTitle icon={<CodeOutlined />}>
-          <KnowledgeFormItemLabel
-            helpText={EXTENDED_TEMPLATE_DESC_MAP[templateTypeVal] || '请选择复合模板'}
-            title="复合逻辑配置"
-          />
+        <OntologyFormSectionTitle icon={templateTypeVal === 'custom' ? <ApiOutlined /> : <CodeOutlined />}>
+          {templateTypeVal === 'custom' ? (
+            '技术定义'
+          ) : (
+            <KnowledgeFormItemLabel
+              helpText={EXTENDED_TEMPLATE_DESC_MAP[templateTypeVal] || '请选择复合模板'}
+              title="复合逻辑配置"
+            />
+          )}
         </OntologyFormSectionTitle>
 
         {templateTypeVal === 'ratio' ? (
@@ -412,13 +424,14 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
         ) : null}
 
         {templateTypeVal === 'custom' ? (
-          <KnowledgeOperateExpressionEditor
-            strictCustom
+          <KnowledgeOperateDerivativeCustomTechnicalSection
             allFields={allFields}
+            fieldError={fieldError}
+            fieldLoading={fieldLoading}
             form={form}
-            referenceMetricOptions={referenceMetricOptions}
-            validateCustomExpression={validateCustomExpression}
-            validateSqlExpression={validateCustomExpression}
+            validateSqlExpression={validateSqlExpression}
+            onRetryFields={onRetryFields}
+            onSchemaChange={onSchemaChange}
           />
         ) : null}
       </div>

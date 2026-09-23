@@ -2,16 +2,7 @@
 
 export type JsonRecord = Record<string, unknown>
 
-export type AggregationCode =
-  | 'AVG'
-  | 'COUNT'
-  | 'COUNT DISTINCT'
-  | 'MAX'
-  | 'MEDIAN'
-  | 'MIN'
-  | 'STDDEV'
-  | 'SUM'
-  | 'VARIANCE'
+export type AggregationCode = string
 
 export type KnowledgeAggregation =
   | { data: AggregationCode[]; type: 'simple' }

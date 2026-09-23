@@ -8,21 +8,21 @@ import {
 } from './aggregation'
 
 describe('aggregation adapter', () => {
-  it('normalizes supported aggregation enums and legacy aliases', () => {
+  it('normalizes dynamic aggregation codes without a local enum allowlist', () => {
     expect(normalizeAggregationCode(' count   distinct ')).toBe('COUNT DISTINCT')
-    expect(normalizeAggregationCode('distinct')).toBe('COUNT DISTINCT')
+    expect(normalizeAggregationCode('distinct')).toBe('DISTINCT')
     expect(normalizeAggregationCode('avg')).toBe('AVG')
-    expect(normalizeAggregationCode('unknown')).toBeUndefined()
+    expect(normalizeAggregationCode('custom_method')).toBe('CUSTOM_METHOD')
+    expect(normalizeAggregationCode('SUM(amount)')).toBeUndefined()
   })
 
-  it('prefers new agg data while deduplicating values', () => {
+  it('preserves exact dictionary values while deduplicating selections', () => {
     expect(
       normalizeAggregationCodes({
-        data: ['sum', 'AVG', 'SUM', 'COUNT DISTINCT'],
+        data: ['SUM(X)', 'AVG(X)', 'SUM(X)', 'DISTINCT (X)'],
         type: 'simple'
       })
-    ).toEqual(['SUM', 'AVG', 'COUNT DISTINCT'])
-    expect(normalizeAggregationCodes(undefined, ['SUM'])).toEqual(['SUM'])
+    ).toEqual(['SUM(X)', 'AVG(X)', 'DISTINCT (X)'])
   })
 
   it('writes the first selection to the legacy projection value', () => {

@@ -29,7 +29,6 @@ import type {
   KnowledgeTechField,
   KnowledgeTemplateParams
 } from '../types/metricModeling.types'
-import { normalizeAggregationCode } from '../utils/aggregation'
 import {
   buildCustomAtomicSourceField,
   buildSimpleAtomicSourceField,
@@ -44,6 +43,7 @@ import {
   parseSemanticModelFields,
   resolveDerivedAggregationMethod
 } from '../utils/atomicMetricSource'
+import { getCustomExpressionSourceFields } from '../utils/customAtomic'
 import { parseApiUpdateFrequency } from '../utils/indicatorApiAdapter'
 import { normalizeKnowledgeIndicatorListItem } from '../utils/knowledgeIndicator.mapper'
 import {
@@ -109,7 +109,13 @@ const DERIVATIVE_TEMPLATE_FIELDS: Array<keyof KnowledgeFormValues> = [
   'ratioNumeratorId',
   'ratioPrecision',
   'relItemId',
+  'relSchemaId',
+  'relViewId',
   'rollingWindowSize',
+  'semanticGroupId',
+  'semanticSchemaId',
+  'semanticsGroupId',
+  'semanticType',
   'templateType',
   'thresholdMax',
   'thresholdMin',
@@ -375,7 +381,8 @@ function compactTemplateParams(params: KnowledgeTemplateParams): KnowledgeTempla
 
 function buildTemplateParams(
   values: KnowledgeFormValues,
-  indicatorClass: IndicatorType
+  indicatorClass: IndicatorType,
+  allFields: KnowledgeTechField[]
 ): KnowledgeTemplateParams | undefined {
   if (indicatorClass !== 'derivative') {
     return undefined
@@ -432,17 +439,30 @@ function buildTemplateParams(
     })
   }
   if (templateType === 'custom') {
-    return compactTemplateParams(common)
+    return compactTemplateParams({
+      ...common,
+      relItemId: buildRelItemId(values, indicatorClass, allFields)
+    })
   }
 
   return compactTemplateParams(common)
 }
 
-function buildRelItemId(values: KnowledgeFormValues, indicatorClass: IndicatorType) {
+function buildRelItemId(
+  values: KnowledgeFormValues,
+  indicatorClass: IndicatorType,
+  allFields: KnowledgeTechField[]
+) {
   if (indicatorClass === 'derived') {
     return collectRuleFieldIds(values.derivedExpressions).join(',')
   }
   if (indicatorClass === 'derivative') {
+    if (values.templateType === 'custom') {
+      return getCustomExpressionSourceFields(values.expr, allFields)
+        .map(getKnowledgeTechFieldId)
+        .filter(Boolean)
+        .join(',')
+    }
     return extractUniqueIds(values.expr || '').join(',')
   }
   return undefined
@@ -476,11 +496,7 @@ function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormV
     mappedBizNameTableName: mappedBizNameParts.isMapped ? mappedBizNameParts.tableName : undefined,
     mappedTechNameTableName: mappedTechNameParts.isMapped ? mappedTechNameParts.tableName : undefined,
     precomputeConfig,
-    projectionFunc:
-      normalizeAggregationCode(calcLogicValues.projectionFunc ?? item.projectionFunc) ||
-      calcLogicValues.projectionFunc ||
-      item.projectionFunc ||
-      'SUM',
+    projectionFunc: calcLogicValues.projectionFunc || item.projectionFunc,
     relSchemaId: item.relSchemaId ?? item.semanticSchemaId,
     relViewId: item.relViewId ?? item.relViewid,
     semanticGroupId: item.semanticGroupId ?? item.semanticsGroupId,
@@ -565,7 +581,6 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     validateAccumulationDate,
     validateAliasTags,
     validateBusinessRemark,
-    validateCustomExpression,
     validateIndicatorName,
     validateMeasurementUnit,
     validatePercentile,
@@ -689,7 +704,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         setFieldError(false)
         setFieldLoading(false)
         currentSemanticSchemaRef.current = ''
-        form.setFieldValue('projectionFunc', 'SUM')
+        form.setFieldValue('projectionFunc', undefined)
         return
       }
 
@@ -825,8 +840,10 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       viewId: number | string
     }) => {
       const nextGroupId = semanticsGroupId ?? semanticGroupId ?? undefined
+      const isDerivativeCustom =
+        normalizeIndicatorClass(form.getFieldValue('indicatorClass')) === 'derivative' &&
+        form.getFieldValue('templateType') === 'custom'
       const nextValues: Partial<KnowledgeFormValues> = {
-        atomicAggregationExpression: undefined,
         atomicSourceFieldId: undefined,
         relSchemaId: semanticSchemaId,
         relViewId: viewId,
@@ -834,6 +851,11 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         semanticSchemaId,
         semanticsGroupId: nextGroupId,
         semanticType: undefined
+      }
+      if (isDerivativeCustom) {
+        nextValues.expr = undefined
+      } else {
+        nextValues.atomicAggregationExpression = undefined
       }
       form.setFieldsValue(nextValues)
       formValuesRef.current = { ...formValuesRef.current, ...nextValues }
@@ -844,7 +866,11 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   )
 
   const retryAtomicSemanticFields = useCallback(() => {
-    if (normalizeIndicatorClass(form.getFieldValue('indicatorClass')) === 'atomic') {
+    const indicatorClassValue = normalizeIndicatorClass(form.getFieldValue('indicatorClass'))
+    if (
+      indicatorClassValue === 'atomic' ||
+      (indicatorClassValue === 'derivative' && form.getFieldValue('templateType') === 'custom')
+    ) {
       const schemaId = form.getFieldValue('semanticSchemaId') || form.getFieldValue('relSchemaId')
       if (schemaId !== undefined && schemaId !== null && schemaId !== '') {
         loadCustomAtomicSemanticFields(schemaId)
@@ -908,7 +934,10 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       formValuesRef.current = editValues
       setSelectedIndicatorClass(indicatorClassValue)
 
-      if (isAtomicEditing && editValues.semanticSchemaId) {
+      if (
+        editValues.semanticSchemaId &&
+        (isAtomicEditing || (indicatorClassValue === 'derivative' && editValues.templateType === 'custom'))
+      ) {
         loadCustomAtomicSemanticFields(editValues.semanticSchemaId)
       }
 
@@ -918,7 +947,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       derivedExpressions: createDefaultRuleLayers(),
       indAlias: [],
       precomputeConfig: DEFAULT_PRECOMPUTE_CONFIG,
-      projectionFunc: 'SUM',
+      projectionFunc: undefined,
       statisticalCaliber: DEFAULT_STATISTICAL_CALIBER,
       variableMappings: []
     }
@@ -929,7 +958,17 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   }, [editingItem, form, isAtomicEditing, loadCustomAtomicSemanticFields, open])
 
   useEffect(() => {
-    if (!open || !editingItem || isAtomicMode || editMatchedRef.current || !atomicIndicatorOptions.length) {
+    const isDerivativeCustomEditing =
+      normalizeIndicatorClass(editingItem?.indicatorClass) === 'derivative' &&
+      form.getFieldValue('templateType') === 'custom'
+    if (
+      !open ||
+      !editingItem ||
+      isAtomicMode ||
+      isDerivativeCustomEditing ||
+      editMatchedRef.current ||
+      !atomicIndicatorOptions.length
+    ) {
       return
     }
 
@@ -1011,7 +1050,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       templateFields.push('percentileValue')
     }
     if (templateType === 'custom') {
-      templateFields.push('expr')
+      templateFields.push('semanticSchemaId', 'expr')
     }
     return templateFields
   }
@@ -1025,7 +1064,12 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     }
 
     if (Object.hasOwn(changeValues, 'expr')) {
-      const relItemId = extractUniqueIds(changeValues.expr || '').join(',')
+      const isDerivativeCustom =
+        normalizeIndicatorClass(form.getFieldValue('indicatorClass')) === 'derivative' &&
+        form.getFieldValue('templateType') === 'custom'
+      const relItemId = isDerivativeCustom
+        ? buildRelItemId(allValues, 'derivative', allFields)
+        : extractUniqueIds(changeValues.expr || '').join(',')
       form.setFieldValue('relItemId', relItemId)
     }
 
@@ -1048,7 +1092,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         clearFields([...ATOMIC_ONLY_FIELDS, ...DERIVATIVE_TEMPLATE_FIELDS, 'techName'])
         const derivedDefaults: Partial<KnowledgeFormValues> = {
           derivedExpressions: createDefaultRuleLayers(),
-          projectionFunc: 'SUM',
+          projectionFunc: undefined,
           statisticalCaliber: { ...DEFAULT_STATISTICAL_CALIBER }
         }
         form.setFieldsValue(derivedDefaults)
@@ -1067,6 +1111,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
 
     if (Object.hasOwn(changeValues, 'templateType')) {
       clearFields(DERIVATIVE_TEMPLATE_FIELDS.filter(field => field !== 'templateType'))
+      currentSemanticSchemaRef.current = ''
+      setAllFields([])
     }
 
     if (Object.hasOwn(changeValues, 'techId') && !isAtomicMode) {
@@ -1180,6 +1226,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     const selectedAtomicSource = allFields.find(
       item => getKnowledgeTechFieldId(item) === String(values.atomicSourceFieldId || '')
     )
+    const isDerivativeCustom = nextIndicatorClass === 'derivative' && values.templateType === 'custom'
     const originalAtomicSource = parseAtomicSourceFields(editingItem?.techId)[0]
     const atomicSourceInput =
       isSimpleAtomicEditing &&
@@ -1199,8 +1246,23 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       if (technicalStepIndex >= 0) setCurrent(technicalStepIndex)
       return
     }
-    const selectedTechObject =
-      isAtomicMode && atomicSourceField ? [atomicSourceField] : (selectedAtomic?.item?.techId ?? values.techId)
+    const derivativeCustomSourceFields = isDerivativeCustom
+      ? getCustomExpressionSourceFields(values.expr, allFields)
+          .map(buildCustomAtomicSourceField)
+          .filter((item): item is KnowledgeTechField => Boolean(item))
+      : []
+    if (isDerivativeCustom && !derivativeCustomSourceFields.length) {
+      message.error('请在聚合逻辑表达式中插入至少一个来源字段')
+      const technicalStepIndex = stepItems.findIndex(item => item.key === 'technical')
+      if (technicalStepIndex >= 0) setCurrent(technicalStepIndex)
+      return
+    }
+    let selectedTechObject = selectedAtomic?.item?.techId ?? values.techId
+    if (isAtomicMode && atomicSourceField) {
+      selectedTechObject = [atomicSourceField]
+    } else if (isDerivativeCustom) {
+      selectedTechObject = derivativeCustomSourceFields
+    }
     const aliasText = (Array.isArray(values.indAlias) ? values.indAlias : splitAliasTags(values.indAlias))
       .map(item => String(item || '').trim())
       .filter(Boolean)
@@ -1215,9 +1277,9 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       dimensionFieldIds: values.dimensionFieldIds ?? editingItem?.dimensionFieldIds ?? '',
       groupId,
       indAlias: aliasText,
-      relItemId: buildRelItemId(values, nextIndicatorClass),
+      relItemId: buildRelItemId(values, nextIndicatorClass, allFields),
       spaceId: getKnowledgeSpaceId(),
-      templateParams: buildTemplateParams(values, nextIndicatorClass)
+      templateParams: buildTemplateParams(values, nextIndicatorClass, allFields)
     }
 
     if (nextIndicatorClass === 'derived') {
@@ -1335,7 +1397,6 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
             referenceMetricOptions={referenceMetricOptions}
             templateTypeVal={templateTypeVal}
             validateAccumulationDate={validateAccumulationDate}
-            validateCustomExpression={validateCustomExpression}
             validatePercentile={validatePercentile}
             validatePositiveInt={validatePositiveInt}
             validateRollingWindow={validateRollingWindow}

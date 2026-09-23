@@ -13,7 +13,7 @@ import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
 import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
-import { AGG_METHOD_OPTIONS } from '../constants/metricModeling.constants'
+import { useOntologyAtomicAggregationDictionary } from '../hooks/useOntologyFunctionDictionary'
 import type {
   AggregationCode,
   AtomicMappingPayload,
@@ -95,7 +95,7 @@ function parseMeasureFields(modelDetail: unknown, schemaDetail?: Record<string, 
           englishName,
           fieldType: String(item?.fieldType || item?.tfieldType || '-').trim() || '-',
           key,
-          aggregationMethods: normalizeAggregationCodes(item?.agg || item?.projectionFunc, ['SUM']),
+          aggregationMethods: normalizeAggregationCodes(item?.agg || item?.projectionFunc),
           raw: {
             ...item,
             techId: key
@@ -183,6 +183,18 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
   const [loadingFields, setLoadingFields] = useState(false)
   const [saving, setSaving] = useState(false)
   const [semanticLocked, setSemanticLocked] = useState(false)
+  const { loading: aggregationOptionsLoading, options: aggregationOptions } =
+    useOntologyAtomicAggregationDictionary()
+
+  useEffect(() => {
+    const defaultMethod = aggregationOptions[0]?.value
+    if (!defaultMethod) return
+    setFieldRows(rows =>
+      rows.map(row =>
+        row.aggregationMethods.length ? row : { ...row, aggregationMethods: [defaultMethod] }
+      )
+    )
+  }, [aggregationOptions])
 
   const queryCurrentGroupAtomicIndicators = useCallback(async () => {
     if (!groupId) {
@@ -383,9 +395,10 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       key: 'aggregationMethods',
       render: (value: AggregationCode[], record: MeasureFieldItem) => (
         <ASelect
+          loading={aggregationOptionsLoading}
           maxTagCount="responsive"
           mode="multiple"
-          options={AGG_METHOD_OPTIONS}
+          options={aggregationOptions}
           placeholder="请选择聚合方式"
           value={value}
           popupMatchSelectWidth={230}

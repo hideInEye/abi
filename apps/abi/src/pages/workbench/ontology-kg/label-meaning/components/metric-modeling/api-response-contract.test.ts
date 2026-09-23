@@ -26,4 +26,8 @@ describeStrictApiCallContract(import.meta.url, './components/KnowledgeOperateDra
   { guard: /assertFlatRequestSuccess\(schemaResult\)/, name: 'queryTableSemanticsDetail' },
 ])
 
+describeStrictApiCallContract(import.meta.url, './utils/ontologyFunctionDictionary.ts', [
+  { guard: /assertFlatRequestSuccess\(result\)/, name: 'queryDictDataList' },
+])
+
 describeStrictApiCallContract(import.meta.url, './utils/knowledgeOperateDrawer.validators.ts', [{ guard: /assertFlatRequestSuccess\(res/, name: 'checkOntologyName' }])
