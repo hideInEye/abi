@@ -48,6 +48,7 @@ const MENU_LABELS: Record<string, string> = {
   component: '组件导航',
   manage: '系统管理导航',
   space: '空间管理导航',
+  systems: '系统字典导航',
   log: '日志管理导航',
 };
 
@@ -148,7 +149,7 @@ const VerticalMenu = memo(() => {
   const menuLabel = MENU_LABELS[menuKey];
 
   return (
-    <div className={['manage', 'space', 'log'].includes(menuKey) ? 'manage-menu-wrapper' : ''} style={{ position: 'relative', height: '100%' }}>
+    <div className={['manage', 'space', 'systems', 'log'].includes(menuKey) ? 'manage-menu-wrapper' : ''} style={{ position: 'relative', height: '100%' }}>
       <div className={`abi-menu-panel ${collapsed ? 'abi-menu-panel--collapsed' : ''}`}>
         {/* Section label — fades out when collapsed */}
         {menuLabel && (

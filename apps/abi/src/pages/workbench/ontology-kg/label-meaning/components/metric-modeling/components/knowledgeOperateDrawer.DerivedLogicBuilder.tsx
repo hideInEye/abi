@@ -16,7 +16,7 @@ import {
   validateRuleLogicUniformity
 } from '@/pages/workbench/ontology-kg/label-meaning/components/rule-expression'
 
-import { AGG_METHOD_OPTIONS, CUSTOM_AGGREGATION_EXPRESSION_LABEL } from '../constants/metricModeling.constants'
+import { CUSTOM_AGGREGATION_EXPRESSION_LABEL } from '../constants/metricModeling.constants'
 import { useKnowledgeDimensions } from '../hooks/useKnowledgeDimensions'
 import type {
   KnowledgeDerivedCondition,
@@ -27,6 +27,7 @@ import type {
 } from '../types/metricModeling.types'
 import { getAtomicAggregationMethods, getAtomicComplexAggregationExpression } from '../utils/atomicMetricSource'
 import { buildDerivedMetricPreview } from '../utils/derivedMetricPreview'
+import type { OntologyAggregationMethodOption } from '../utils/ontologyFunctionDictionary'
 import {
   getStatisticalDateRangeHint,
   isDynamicStatisticalDateRangeMode,
@@ -46,6 +47,8 @@ interface AtomicMetricOption {
 }
 
 interface Props {
+  readonly aggregationOptions: OntologyAggregationMethodOption[]
+  readonly aggregationOptionsLoading?: boolean
   readonly allFields: KnowledgeTechField[]
   readonly atomicMetricOptions: AtomicMetricOption[]
   readonly fieldError?: boolean
@@ -55,6 +58,8 @@ interface Props {
 }
 
 export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
+  aggregationOptions: dictionaryAggregationOptions,
+  aggregationOptionsLoading,
   allFields,
   atomicMetricOptions,
   fieldError = false,
@@ -126,8 +131,8 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
       return [{ label: CUSTOM_AGGREGATION_EXPRESSION_LABEL, value: customAggregationExpression }]
     }
     const availableMethods = new Set(getAtomicAggregationMethods(selectedAtomicOption?.item))
-    return AGG_METHOD_OPTIONS.filter(item => availableMethods.has(item.value))
-  }, [customAggregationExpression, selectedAtomicOption])
+    return dictionaryAggregationOptions.filter(item => availableMethods.has(item.value))
+  }, [customAggregationExpression, dictionaryAggregationOptions, selectedAtomicOption])
   const result = useMemo(
     () =>
       buildDerivedMetricPreview({
@@ -211,6 +216,7 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
               }
             >
               <ASelect
+                loading={aggregationOptionsLoading}
                 options={aggregationOptions}
                 placeholder="请选择派生聚合方式"
               />

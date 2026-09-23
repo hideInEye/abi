@@ -1,35 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  CUSTOM_ATOMIC_FUNCTION_OPTIONS,
-  buildCustomAtomicFunctionSnippet,
   getCustomAtomicFieldOptionLabel,
+  getCustomExpressionSourceFields,
   insertCustomAtomicFunction
 } from './customAtomic'
 
 describe('custom atomic metric technical configuration', () => {
-  it('exposes all required quick aggregation functions', () => {
-    expect(CUSTOM_ATOMIC_FUNCTION_OPTIONS.map(item => item.label)).toEqual([
-      '求和',
-      '计数',
-      '去重计数',
-      '平均值',
-      '最大值',
-      '最小值',
-      '标准差',
-      '方差',
-      '中位数',
-      '去重',
-      '绝对值',
-      '向上取整',
-      '向下取整',
-      '四舍五入',
-      '保留小数',
-      '字符串截取'
-    ])
-    expect(buildCustomAtomicFunctionSnippet('countDistinct', 'customer_id')).toBe('COUNT(DISTINCT customer_id)')
-  })
-
   it('shows field name, data type and semantic type in source field options', () => {
     expect(
       getCustomAtomicFieldOptionLabel({
@@ -47,5 +24,24 @@ describe('custom atomic metric technical configuration', () => {
       cursor: 23,
       expression: '1 + SUM(payment_amount)'
     })
+  })
+
+  it('derives compound source fields from technical names inserted into the expression', () => {
+    const fields = [
+      { fieldName: 'amount', techId: 'field-1' },
+      { originName: 'order_id', techId: 'field-2' },
+      { fieldName: 'unused', techId: 'field-3' }
+    ]
+
+    expect(getCustomExpressionSourceFields('SUM(amount) / COUNT(DISTINCT order_id)', fields)).toEqual(fields.slice(0, 2))
+  })
+
+  it('does not confuse a technical name with a longer identifier', () => {
+    const fields = [
+      { fieldName: 'amount', techId: 'field-1' },
+      { fieldName: 'total_amount', techId: 'field-2' }
+    ]
+
+    expect(getCustomExpressionSourceFields('SUM(total_amount)', fields)).toEqual([fields[1]])
   })
 })

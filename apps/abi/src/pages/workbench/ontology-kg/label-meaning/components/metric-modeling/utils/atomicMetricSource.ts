@@ -11,7 +11,7 @@ import type {
   KnowledgeTechField
 } from '../types/metricModeling.types'
 
-import { normalizeAggregationCode, normalizeAggregationCodes, toLegacyProjectionFunc } from './aggregation'
+import { normalizeAggregationCodes, toLegacyProjectionFunc } from './aggregation'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -62,7 +62,7 @@ export function buildSimpleAtomicSourceField(
 ): KnowledgeTechField | null {
   const sourceField = buildCustomAtomicSourceField(value)
   if (!sourceField) return null
-  const methods = normalizeAggregationCodes(aggregationMethods, ['SUM'])
+  const methods = normalizeAggregationCodes(aggregationMethods)
   return {
     ...sourceField,
     agg: {
@@ -127,7 +127,7 @@ function parseAtomicAggregation(value: unknown): KnowledgeAggregation | undefine
     return expression ? { data: expression, type: 'complex' } : undefined
   }
   if (source.type === 'simple') {
-    return { data: normalizeAggregationCodes(source.data, ['SUM']), type: 'simple' }
+    return { data: normalizeAggregationCodes(source.data), type: 'simple' }
   }
   return undefined
 }
@@ -157,15 +157,14 @@ export function getAtomicProjection(item?: KnowledgeIndicatorItem): string {
 }
 
 export function getAtomicAggregationMethods(item?: KnowledgeIndicatorItem): AggregationCode[] {
-  if (!item) return ['SUM']
+  if (!item) return []
   const definition = getAtomicAggregationDefinition(item)
   if (definition?.type === 'complex') return []
   if (definition?.type === 'simple') return definition.data
   const calcLogic = parseCalcLogic(item.calcLogic)
   const firstField = parseAtomicSourceFields(item.techId)[0]
   return normalizeAggregationCodes(
-    item.projectionFunc || calcLogic.aggMethod || calcLogic.projectionFunc || firstField?.projectionFunc,
-    ['SUM']
+    item.projectionFunc || calcLogic.aggMethod || calcLogic.projectionFunc || firstField?.projectionFunc
   )
 }
 
@@ -200,7 +199,7 @@ export function resolveDerivedAggregationMethod(
     return preserveCurrent && currentExpression === complexExpression ? currentExpression : complexExpression
   }
   const aggregationMethods = getAtomicAggregationMethods(item)
-  const currentMethod = normalizeAggregationCode(currentValue)
+  const currentMethod = String(currentValue ?? '').trim()
   if (preserveCurrent && currentMethod && aggregationMethods.includes(currentMethod)) {
     return currentMethod
   }

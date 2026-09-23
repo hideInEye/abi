@@ -7,7 +7,7 @@ import { TableSemantics } from '@/components/tableSemantics'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
-import { AGG_METHOD_OPTIONS } from '../constants/metricModeling.constants'
+import { useOntologyAtomicAggregationDictionary } from '../hooks/useOntologyFunctionDictionary'
 import type { AggregationCode, KnowledgeFormValues, KnowledgeTechField } from '../types/metricModeling.types'
 import { toLegacyProjectionFunc } from '../utils/aggregation'
 import { getKnowledgeTechFieldId } from '../utils/atomicMetricSource'
@@ -34,6 +34,9 @@ export const KnowledgeOperateSimpleAtomicTechnicalSection: React.FC<Props> = ({
   onSchemaChange
 }) => {
   const sourceFieldId = AForm.useWatch('atomicSourceFieldId', form)
+  const aggregationMethods = AForm.useWatch('atomicAggregationMethods', form)
+  const { loading: aggregationOptionsLoading, options: aggregationOptions } =
+    useOntologyAtomicAggregationDictionary()
   const selectedField = useMemo(
     () => allFields.find(item => getKnowledgeTechFieldId(item) === String(sourceFieldId || '')),
     [allFields, sourceFieldId]
@@ -49,6 +52,13 @@ export const KnowledgeOperateSimpleAtomicTechnicalSection: React.FC<Props> = ({
   useEffect(() => {
     form.setFieldValue('semanticType', selectedField?.semanticType)
   }, [form, selectedField])
+  useEffect(() => {
+    const defaultMethod = aggregationOptions[0]?.value
+    if (defaultMethod && aggregationMethods === undefined) {
+      form.setFieldValue('atomicAggregationMethods', [defaultMethod])
+      form.setFieldValue('projectionFunc', toLegacyProjectionFunc(defaultMethod))
+    }
+  }, [aggregationMethods, aggregationOptions, form])
 
   return (
     <div className="mb-4 border border-gray-200 rounded bg-white p-4">
@@ -88,9 +98,10 @@ export const KnowledgeOperateSimpleAtomicTechnicalSection: React.FC<Props> = ({
           rules={[{ message: '请至少选择一种聚合方式', min: 1, required: true, type: 'array' }]}
         >
           <ASelect
+            loading={aggregationOptionsLoading}
             maxTagCount="responsive"
             mode="multiple"
-            options={AGG_METHOD_OPTIONS}
+            options={aggregationOptions}
             placeholder="请选择聚合方式"
             popupMatchSelectWidth={260}
             onChange={(methods: AggregationCode[]) => {

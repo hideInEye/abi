@@ -367,7 +367,7 @@ describe('buildKnowledgeCalcLogic', () => {
           name: '线上渠道过滤'
         }
       ],
-      projectionFunc: 'SUM'
+      projectionFunc: 'sum'
     })
   })
 

@@ -1,0 +1,604 @@
+.filterPanel {
+  width: 34vw !important;
+  max-width: 92vw;
+}
+
+.modeHeader {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  border: 1px solid rgba(130, 140, 200, 0.16);
+  border-radius: 12px;
+  margin: 0 28px 12px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 8px 24px rgba(45, 64, 116, 0.04);
+  gap: 24px;
+}
+
+.modeHeaderCopy {
+  min-width: 220px;
+}
+
+.modeEyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: #5b7cf7;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+}
+
+.modeTitleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+
+  h1 {
+    margin: 0;
+    color: #1a2744;
+    font-size: 20px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  span {
+    color: #768a9f;
+    font-size: 12px;
+  }
+}
+
+.modeSteps,
+.modeStepGroup {
+  display: flex;
+  align-items: center;
+}
+
+.modeSteps {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modeStepGroup {
+  gap: 8px;
+}
+
+.modeStepArrow {
+  color: #a7b3c4;
+  font-size: 12px;
+}
+
+.modeStep {
+  display: grid;
+  min-width: 172px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #6f8097;
+  cursor: pointer;
+  gap: 9px;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: rgba(91, 124, 247, 0.2);
+    background: rgba(91, 124, 247, 0.05);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(91, 124, 247, 0.3);
+    outline-offset: 2px;
+  }
+}
+
+.modeStepActive {
+  border-color: rgba(91, 124, 247, 0.22);
+  background: rgba(91, 124, 247, 0.09);
+  color: #405fc9;
+}
+
+.modeStepIndex {
+  color: #a2afc0;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.modeStepIcon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(91, 124, 247, 0.1);
+  color: #5b7cf7;
+  font-size: 15px;
+}
+
+.modeStepText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+
+  strong {
+    color: inherit;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  small {
+    overflow: hidden;
+    color: #8a9aaf;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.pageRoot,
+.toolbar {
+  min-width: 0;
+}
+
+.managementPane {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.optionErrorBanner {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid rgba(217, 119, 6, 0.2);
+  border-radius: 10px;
+  margin: 0 28px 10px;
+  background: rgba(255, 247, 237, 0.82);
+  color: #9a5b0b;
+  font-size: 12px;
+  gap: 12px;
+}
+
+.visibleFilterBar:global(.abi-search-row) {
+  align-items: flex-end;
+}
+
+.visibleFilterFields {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+}
+
+.visibleFilterActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+
+  :global(.ant-btn) {
+    height: 35px !important;
+  }
+}
+
+.toolbarActions {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.tableRegion {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tableFrame {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.dictionaryTable {
+  width: 100%;
+}
+
+.tableErrorBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid rgba(220, 38, 38, 0.16);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: rgba(254, 242, 242, 0.78);
+  color: #9f2633;
+  font-size: 13px;
+}
+
+.typeCode,
+.subtleCode,
+.monospaceInput,
+.detailCode,
+.valuePill,
+.mappingHeroValue,
+.relatedItem code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+
+.typeCode,
+.subtleCode {
+  display: block;
+  overflow: hidden;
+  color: #536780;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.typeNameButton {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  padding: 3px 5px 3px 3px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #1a2744;
+  cursor: pointer;
+  font-weight: 650;
+  gap: 9px;
+  text-align: left;
+
+  > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(91, 124, 247, 0.07);
+    color: #405fc9;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(91, 124, 247, 0.3);
+    outline-offset: 2px;
+  }
+}
+
+.typeNameMark {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(91, 124, 247, 0.13);
+  border-radius: 8px;
+  background: rgba(91, 124, 247, 0.09);
+  color: #506fe0;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.dataLabel {
+  display: block;
+  overflow: hidden;
+  color: #1a2744;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mappingArrow {
+  color: #8fa0b5;
+}
+
+.valuePill {
+  display: inline-block;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px 8px;
+  overflow: hidden;
+  border: 1px solid rgba(91, 124, 247, 0.16);
+  border-radius: 7px;
+  background: rgba(91, 124, 247, 0.08);
+  color: #405fc9;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.defaultBadge {
+  display: inline-flex;
+  min-width: 42px;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #f2f5fc;
+  color: #768a9f;
+  font-size: 12px;
+}
+
+.defaultBadgeActive {
+  background: rgba(91, 124, 247, 0.12);
+  color: #405fc9;
+  font-weight: 600;
+}
+
+.paginationRoot {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 14px 0;
+  margin-top: auto;
+}
+
+.systemPagination {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0;
+  gap: 4px;
+
+  :global(.ant-pagination-total-text) {
+    order: 0;
+    height: 34px;
+    margin-right: 16px;
+    color: #768a9f;
+    font-size: 13px;
+    line-height: 34px;
+  }
+
+  :global(.ant-pagination-options) {
+    display: contents;
+    margin-inline-start: 0;
+  }
+
+  :global(.ant-pagination-options-size-changer) {
+    order: 1;
+    min-width: 100px;
+  }
+
+  :global(.ant-pagination-prev) {
+    order: 2;
+  }
+  :global(.ant-pagination-item) {
+    order: 3;
+  }
+  :global(.ant-pagination-next) {
+    order: 4;
+  }
+  :global(.ant-pagination-options-quick-jumper) {
+    order: 5;
+  }
+}
+
+.drawerForm {
+  min-height: 100%;
+  padding: 24px 32px;
+  background: #f8faff;
+}
+
+.cascadeAlert {
+  margin-top: 4px;
+}
+
+.mappingHero {
+  display: grid;
+  align-items: center;
+  padding: 18px 20px;
+  border: 1px solid rgba(91, 124, 247, 0.16);
+  border-radius: 12px;
+  background: linear-gradient(120deg, rgba(91, 124, 247, 0.09), rgba(255, 255, 255, 0.74));
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.mappingHeroLabel {
+  color: #1a2744;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.mappingHeroValue {
+  overflow: hidden;
+  color: #405fc9;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailItem {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(130, 140, 200, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.detailLabel {
+  margin-bottom: 6px;
+  color: #768a9f;
+  font-size: 12px;
+}
+
+.detailValue,
+.detailCode {
+  overflow-wrap: anywhere;
+  color: #1a2744;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.detailCode {
+  color: #405fc9;
+}
+
+.relatedList {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid rgba(130, 140, 200, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.relatedItem {
+  display: grid;
+  align-items: center;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  code {
+    overflow: hidden;
+    color: #405fc9;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.relatedNormal,
+.relatedDisabled {
+  font-size: 12px;
+}
+
+.relatedNormal {
+  color: #059669;
+}
+.relatedDisabled {
+  color: #768a9f;
+}
+
+.relatedState {
+  display: flex;
+  min-height: 88px;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border: 1px dashed rgba(130, 140, 200, 0.28);
+  border-radius: 10px;
+  color: #768a9f;
+  gap: 12px;
+}
+
+.dictionaryOverlayRoot {
+  :global(.ant-drawer-body) {
+    padding: 0;
+    background: #f8faff;
+  }
+}
+
+@media (max-width: 767px) {
+  .filterPanel {
+    width: 88vw !important;
+  }
+
+  .drawerForm {
+    padding: 18px 16px;
+  }
+
+  .modeHeader {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .modeTitleRow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .modeSteps {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .modeStepGroup {
+    display: block;
+  }
+
+  .modeStepArrow {
+    display: none;
+  }
+
+  .modeStep {
+    width: 100%;
+  }
+
+  .optionErrorBanner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .visibleFilterBar:global(.abi-search-row) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .visibleFilterFields {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .visibleFilterActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .mappingHero {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .mappingArrow {
+    transform: rotate(90deg);
+  }
+
+  .tableErrorBanner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .paginationRoot {
+    overflow-x: auto;
+  }
+
+  .systemPagination {
+    width: max-content;
+    min-width: 100%;
+  }
+}

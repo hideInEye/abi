@@ -480,6 +480,32 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'systems',
+    path: '/systems',
+    component: 'layout.base',
+    meta: {
+      hideInMenu: false,
+      i18nKey: 'route.systems',
+      icon: 'material-symbols:dictionary-outline',
+      order: 6,
+      title: 'systems'
+    },
+    children: [
+      {
+        name: 'systems_data-dictionary',
+        path: 'data-dictionary',
+        component: 'view.systems_data-dictionary',
+        meta: {
+          hideInMenu: false,
+          i18nKey: 'route.systems_data-dictionary',
+          icon: 'material-symbols:book-2-outline',
+          order: 1,
+          title: 'systems_data-dictionary'
+        }
+      }
+    ]
+  },
+  {
     name: 'view',
     path: '/view',
     component: 'layout.blank$view.view',

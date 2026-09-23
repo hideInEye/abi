@@ -5,10 +5,10 @@ import React from 'react'
 import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
 import {
-  AGG_METHOD_LABEL_MAP,
   CUSTOM_AGGREGATION_EXPRESSION_LABEL,
   EXTENDED_TEMPLATE_OPTIONS
 } from '../constants/metricModeling.constants'
+import { useOntologyAtomicAggregationDictionary } from '../hooks/useOntologyFunctionDictionary'
 import type { KnowledgeFormValues, KnowledgeIndicatorItem, KnowledgeTechField } from '../types/metricModeling.types'
 import {
   getAtomicAggregationMethods,
@@ -48,7 +48,6 @@ interface Props {
   readonly referenceMetricOptions: AtomicMetricOption[]
   readonly templateTypeVal: string
   readonly validateAccumulationDate: (_: unknown, value?: string) => Promise<void>
-  readonly validateCustomExpression: (_: unknown, value?: string) => Promise<void>
   readonly validatePercentile: (_: unknown, value?: number | string) => Promise<void>
   readonly validatePositiveInt: (value: unknown, messageText: string) => Promise<void>
   readonly validateRollingWindow: (_: unknown, value?: number | string) => Promise<void>
@@ -74,7 +73,6 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
   referenceMetricOptions,
   templateTypeVal,
   validateAccumulationDate,
-  validateCustomExpression,
   validatePercentile,
   validatePositiveInt,
   validateRollingWindow,
@@ -89,6 +87,12 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
   const sourceFieldName = getAtomicTechnicalSource(getAtomicSourceFieldTechnicalName(selectedAtomic)).fieldName
   const aggregationMethods = getAtomicAggregationMethods(selectedAtomic)
   const customAggregationExpression = getAtomicComplexAggregationExpression(selectedAtomic)
+  const { loading: aggregationOptionsLoading, options: aggregationOptions } =
+    useOntologyAtomicAggregationDictionary()
+  const aggregationLabelMap = useMemo(
+    () => Object.fromEntries(aggregationOptions.map(item => [item.value, item.shortLabel])),
+    [aggregationOptions]
+  )
 
   if (indicatorClass === 'atomic') {
     return (
@@ -97,10 +101,10 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
         fieldError={fieldError}
         fieldLoading={fieldLoading}
         form={form}
-        onRetryFields={onRetryFields}
-        onSchemaChange={onAtomicSchemaChange}
         validateSqlExpression={validateSqlExpression}
         validateTechName={validateTechName}
+        onRetryFields={onRetryFields}
+        onSchemaChange={onAtomicSchemaChange}
       />
     )
   }
@@ -152,7 +156,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
                         className={styles.aggregationChip}
                         key={method}
                       >
-                        <span>{AGG_METHOD_LABEL_MAP[method]}</span>
+                        <span>{aggregationLabelMap[method] || method}</span>
                         <span className={styles.aggregationCode}>{method}</span>
                       </span>
                     ))
@@ -196,23 +200,29 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
           <KnowledgeOperateExtendedTemplateParams
             allFields={allFields}
             atomicMetricOptions={atomicMetricOptions}
+            fieldError={fieldError}
+            fieldLoading={fieldLoading}
             form={form}
             indicatorOptionsLoading={indicatorOptionsLoading}
             referenceMetricOptions={referenceMetricOptions}
             templateTypeVal={templateTypeVal}
             validateAccumulationDate={validateAccumulationDate}
-            validateCustomExpression={validateCustomExpression}
             validatePercentile={validatePercentile}
             validatePositiveInt={validatePositiveInt}
             validateRollingWindow={validateRollingWindow}
+            validateSqlExpression={validateSqlExpression}
             validateThresholdMax={validateThresholdMax}
             validateThresholdValue={validateThresholdValue}
             onIndicatorLoadMore={onIndicatorLoadMore}
             onIndicatorSearch={onIndicatorSearch}
+            onRetryFields={onRetryFields}
+            onSchemaChange={onAtomicSchemaChange}
           />
         </>
       ) : (
         <KnowledgeOperateDerivedLogicBuilder
+          aggregationOptions={aggregationOptions}
+          aggregationOptionsLoading={aggregationOptionsLoading}
           allFields={allFields}
           atomicMetricOptions={atomicMetricOptions}
           fieldError={fieldError}

@@ -18,6 +18,7 @@ import type { AppThunk } from '../..';
 import { createAppSlice } from '../../createAppSlice';
 
 import { filterAuthRoutesByRoles, getCacheRouteNames, sortRoutesByOrder } from './shared';
+import { appendSystemsDictionaryRoute } from './systems-dictionary-route';
 
 /** 移除 workbench/component 的 index route（自动生成的重定向） */
 const NO_REDIRECT_ROUTE_NAMES = ['workbench', 'component'];
@@ -467,6 +468,7 @@ const initDynamicAuthRoute = (): AppThunk => async dispatch => {
 
     soybeanRoutes = filterBuiltinDashboardRoutes(soybeanRoutes);
     soybeanRoutes = appendSubAppWhiteRoutes(soybeanRoutes);
+    soybeanRoutes = appendSystemsDictionaryRoute(soybeanRoutes, createStaticRoutes().authRoutes);
     soybeanRoutes = mergeHiddenChildRoutes(soybeanRoutes);
 
     dispatch(setAuthRoutes(soybeanRoutes));

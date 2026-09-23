@@ -1,5 +1,3 @@
-import type { AggregationCode } from '../types/metricModeling.types'
-
 export const KNOWLEDGE_GROUP_TYPE = 'ontology'
 
 export const INDICATOR_TYPE_OPTIONS = [
@@ -79,22 +77,6 @@ export const QUALITY_LEVEL_DISPLAY_TEXT_MAP: Record<string, string> = {
   p1: '重要',
   p2: '一般'
 }
-
-export const AGG_METHOD_OPTIONS: Array<{ label: string; shortLabel: string; value: AggregationCode }> = [
-  { label: '求和（SUM）', shortLabel: '求和', value: 'SUM' },
-  { label: '计数（COUNT）', shortLabel: '计数', value: 'COUNT' },
-  { label: '去重计数（COUNT DISTINCT）', shortLabel: '去重计数', value: 'COUNT DISTINCT' },
-  { label: '平均值（AVG）', shortLabel: '平均值', value: 'AVG' },
-  { label: '最大值（MAX）', shortLabel: '最大值', value: 'MAX' },
-  { label: '最小值（MIN）', shortLabel: '最小值', value: 'MIN' },
-  { label: '标准差（STDDEV）', shortLabel: '标准差', value: 'STDDEV' },
-  { label: '方差（VARIANCE）', shortLabel: '方差', value: 'VARIANCE' },
-  { label: '中位数（MEDIAN）', shortLabel: '中位数', value: 'MEDIAN' }
-]
-
-export const AGG_METHOD_LABEL_MAP = Object.fromEntries(
-  AGG_METHOD_OPTIONS.map(item => [item.value, item.shortLabel])
-) as Record<AggregationCode, string>
 
 export const CUSTOM_AGGREGATION_EXPRESSION_LABEL = '自定义聚合方式表达式'
 
