@@ -6,7 +6,8 @@ import type {
   SemanticVisibility
 } from './types'
 
-export const PAGE_SIZE = 20
+export const PAGE_SIZE_OPTIONS = [12, 18, 24, 30]
+export const PAGE_SIZE = PAGE_SIZE_OPTIONS[0]
 
 export const LIST_TYPE_OPTIONS: Array<{ label: string; value: SemanticListType }> = [
   { label: '白名单', value: 'WHITELIST' },

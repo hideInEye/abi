@@ -1377,6 +1377,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
             }
             form={form}
             indicatorNameDisabled={false}
+            indicatorTypeDisabled={isEditing}
             validateAliasTags={validateAliasTags}
             validateBusinessRemark={validateBusinessRemark}
             validateIndicatorName={validateIndicatorName}
@@ -1388,6 +1389,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
           <KnowledgeOperateTechnicalStep
             allFields={allFields}
             atomicMetricOptions={atomicIndicatorOptions}
+            editing={isEditing}
             fieldError={fieldError}
             fieldLoading={fieldLoading}
             form={form}

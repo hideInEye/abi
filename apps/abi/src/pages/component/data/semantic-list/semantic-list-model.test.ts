@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, it } from 'vitest'
 
-import { DEFAULT_RULE_DRAFT, DETAIL_HIT_EXAMPLES, EMPTY_FILTERS, MATCH_METHOD_OPTIONS } from './constants'
+import {
+  DEFAULT_RULE_DRAFT,
+  DETAIL_HIT_EXAMPLES,
+  EMPTY_FILTERS,
+  MATCH_METHOD_OPTIONS,
+  PAGE_SIZE,
+  PAGE_SIZE_OPTIONS
+} from './constants'
 import { getResponsiveOverlayWidths, getTableScrollWidth } from './semantic-list-layout'
 import {
   buildSemanticRuleCreateParams,
@@ -282,6 +289,11 @@ describe('semantic rule design defaults and examples', () => {
 })
 
 describe('semantic list layout contracts', () => {
+  it('uses the same default and page-size options as the ontology network', () => {
+    expect(PAGE_SIZE).toBe(12)
+    expect(PAGE_SIZE_OPTIONS).toEqual([12, 18, 24, 30])
+  })
+
   it('sums every visible column width plus the selection column', () => {
     expect(
       getTableScrollWidth([
