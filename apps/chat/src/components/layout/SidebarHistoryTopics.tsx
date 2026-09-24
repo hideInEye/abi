@@ -4,18 +4,18 @@ import { Button, Checkbox, ConfigProvider, Drawer, Dropdown, Input, message, Mod
 import type { MenuProps } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import CreateModal from '@/components/conversation-analysis/CreateModal'
-import EditSessionModal from '@/components/conversation-analysis/EditSessionModal'
+import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { useConversationGroups } from '@/hooks/layout/useConversationGroups'
 import { useHistoryTopics } from '@/hooks/layout/useHistoryTopics'
 import { deleteBatchSession, deleteSession, moveSessionToGroup, updateApp } from '@/service/api/app'
 import { fetchIsFavorite, fetchOperateNew } from '@/service/api/abi-system'
-import { getSpaceId } from '@/utils'
+
+const loadCreateModal = () => import('@/components/conversation-analysis/CreateModal')
+const loadEditSessionModal = () => import('@/components/conversation-analysis/EditSessionModal')
 
 type SidebarHistoryTopicsProps = {
   collapsed: boolean
-  refreshKey: number
   /** 当应用工坊/技能商店视图激活时，抑制会话列表的选中高亮 */
   suppressActive?: boolean
 }
@@ -25,7 +25,7 @@ function getActiveTaskId(pathname: string) {
   return match?.[1] ?? ''
 }
 
-export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = false }: SidebarHistoryTopicsProps) {
+export function SidebarHistoryTopics({ collapsed, suppressActive = false }: SidebarHistoryTopicsProps) {
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const activeTaskId = useMemo(
@@ -54,14 +54,13 @@ export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = f
 
   useEffect(() => {
     if (!collapsed) {
-      // 首次加载显示 loading，后续 refreshKey 触发的刷新静默加载
       const silent = initialLoadDone.current
       loadHistoryTopics({ silent })
       initialLoadDone.current = true
       // 同时加载分组列表（用于移动到分组子菜单）
       loadGroups()
     }
-  }, [collapsed, loadHistoryTopics, loadGroups, refreshKey])
+  }, [collapsed, loadHistoryTopics, loadGroups])
 
   // 过滤掉已归属分组的会话，避免与分组内重复高亮
   // 判断标准：groupId 存在且不为无效值才算有分组
@@ -205,7 +204,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = f
       try {
         if (isEdit) {
           await updateApp(formValue)
-          await loadHistoryTopics()
+          await loadHistoryTopics({ force: true })
         }
 
         setCreateModalVisible(false)
@@ -237,7 +236,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = f
     async (values: { sessionId: string | number; title: string }) => {
       await updateApp(values)
       message.success('更新成功')
-      await loadHistoryTopics()
+      await loadHistoryTopics({ force: true })
     },
     [loadHistoryTopics],
   )
@@ -285,9 +284,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = f
       try {
         await moveSessionToGroup({ sessionId: app.chat_id, groupId, title: app.title || app.biz_name || '' })
         message.success('已移动到分组')
-        await Promise.all([loadGroups(), loadHistoryTopics({ silent: true })])
-        // 通知父组件刷新 refreshKey，让 ConversationGroups 也同步更新
-        window.dispatchEvent(new Event('conversation-created'))
+        await Promise.all([loadGroups(), loadHistoryTopics({ force: true, silent: true })])
       } catch {
         message.error('移动失败')
       }
@@ -302,14 +299,10 @@ export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = f
       return
     }
     try {
-      await addGroup({ groupName: newGroupName.trim() })
+      const updatedGroups = await addGroup({ groupName: newGroupName.trim() })
       // 如果有待移动的会话，获取最新的分组列表后移动
       if (pendingMoveChatId) {
-        const spaceId = getSpaceId()
-        const { fetchSessionGroupList } = await import('@/service/api/app')
-        const res: any = await fetchSessionGroupList({ spaceId: spaceId || undefined })
-        const list = Array.isArray(res?.data) ? res.data : []
-        const newGroup = list.find((g: any) => g.groupName === newGroupName.trim())
+        const newGroup = updatedGroups.find((group) => group.groupName === newGroupName.trim())
         if (newGroup) {
           await handleMoveToGroup(pendingMoveChatId, newGroup.groupId)
         }
@@ -391,7 +384,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = f
           sortOrder: currentlyTop ? 0 : maxSortOrder + 1,
         })
         message.success(currentlyTop ? '已取消置顶' : '已置顶')
-        await loadHistoryTopics({ silent: true })
+        await loadHistoryTopics({ force: true, silent: true })
       } catch {
         message.error('操作失败')
       }
@@ -665,18 +658,25 @@ export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = f
         </Drawer>
       </ConfigProvider>
 
-      <EditSessionModal
-        visible={editVisible}
-        initialValues={editItem}
-        onClose={() => setEditVisible(false)}
-        onOk={handleEditOk}
-      />
-      <CreateModal
-        visible={createModalVisible}
-        onClose={handleCreateModalClose}
-        isEdit={createModalIsEdit}
-        initialValues={createModalInitialValues}
-      />
+      {editVisible && (
+        <RetryableLazy
+          loader={loadEditSessionModal}
+          componentProps={{ visible: true, initialValues: editItem, onClose: () => setEditVisible(false), onOk: handleEditOk }}
+          fallback={<LazyFeatureFallback label="正在加载会话编辑…" />}
+        />
+      )}
+      {createModalVisible && (
+        <RetryableLazy
+          loader={loadCreateModal}
+          componentProps={{
+            visible: true,
+            onClose: handleCreateModalClose,
+            isEdit: createModalIsEdit,
+            initialValues: createModalInitialValues,
+          }}
+          fallback={<LazyFeatureFallback label="正在加载会话配置…" />}
+        />
+      )}
 
       {/* 新建分组弹窗（从移动菜单触发） */}
       <Modal

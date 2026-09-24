@@ -21,12 +21,8 @@ function clearAuthStorageOnly() {
 
 async function resetAuthState() {
   try {
-    const [{ store }, { resetStore }] = await Promise.all([
-      import('@/store'),
-      import('@/store/slice/auth')
-    ]);
-
-    await store.dispatch(resetStore());
+    const { resetAbiAuthState } = await import('@/bootstrap/resetAuthState');
+    await resetAbiAuthState();
   } catch {
     // 如果 store 还没有初始化，至少清掉本地登录态。
     clearAuthStorageOnly();

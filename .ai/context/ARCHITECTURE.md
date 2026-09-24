@@ -6,7 +6,7 @@
 
 1. 应用层：`apps/abi`、`apps/chat`、`apps/dashboard`。
 2. 共享包层：`packages/auth`、`packages/axios`、`packages/simple-router`、`packages/hooks`、`packages/materials`、`packages/color`、`packages/utils` 等。
-3. 构建/部署层：根 `package.json`、`turbo.json`、`dockerfile`、`nginx/*`、`apps/dashboard/Dockerfile`。
+3. 构建/部署层：根 `package.json`、`turbo.json`、`dockerfile`、`apps/dashboard/Dockerfile`。仓库虽存在 `nginx/*` 历史文件，但当前项目不使用该链路，需求、优化和验收均不得依赖 Nginx。
 
 ## 分层方式
 
@@ -81,3 +81,26 @@
 3. 路由新增需遵循当前应用路由生成/声明方式。
 4. UI 修改必须按所属 app 的样式系统执行，不跨 app 强行统一。
 5. 新增可复用逻辑优先写 characterization/unit test。
+
+## 首屏性能边界与持续门禁
+
+### 加载边界
+
+- HTML 启动壳只负责稳定占位、失败提示与重试；完整应用、路由和可选业务能力必须从启动分类结果后再加载。
+- 路由页面、关闭状态的 Drawer/Modal、编辑器、图表、报告、Explore、导出和 Dashboard Designer 保持动态 `import()` 边界。Chat 分享页的交互消息渲染器、Explore/Report 控制器也只能在输入意图、历史消息或模式切换后加载。不得同时保留同一模块的首屏静态 import。
+- 服务器数据复用留在各应用 domain 内，通过稳定 key、进行中 Promise 复用、成功缓存、精确失效、取消和旧响应保护实现；不得新增跨应用业务缓存层。
+- 图片、图标、字体和媒体保持当前目录与引用位置，物理文件迁移、云路径配置和实际替换由用户手工处理。前端不得预先移动仍在使用的资源或建立云路径切换层；只允许在引用扫描、构建和页面回归均证明未使用后删除图标。用户完成迁移并给出明确新路径后，再按独立需求调整引用和验证 Content-Type、CORS、Canvas 与缓存。
+
+### Vendor Chunk 原则
+
+- ABI、Chat、Dashboard 使用各自独立的 `manualChunks` 分类器，不共享一份无差别规则表。
+- 只允许稳定且被多个关键入口真实复用的运行时进入手工 Vendor；当前分组为 ABI `react/router/state/platform/ui-foundation`、Chat `react/router/state/platform/ui-foundation`、Dashboard `react/router/state`。
+- Chat `vendor-state` 本身体积很小，但移除后 Rollup 会把共享状态图并入更大的自然块，使助手分享同步闭包从 79.0 KiB 反弹到 271.3 KiB；该组是有对照构建证据的隔离例外，不能按单文件体积直接删除。
+- 禁止全量第三方 `vendor` 大桶，也禁止把 Monaco、图表、报告、Explore、录音、截图、导出或 Designer 等可选能力提升到公共首屏 Vendor。
+- 修改分类器、升级核心依赖或新增重型依赖后，必须同时检查路由同步闭包、重复模块、循环 Chunk、React 多实例、可选模块误请求和 Vendor 热缓存。
+
+### 验证原则
+
+- 修改加载边界、Chunk 分类器或核心依赖后，至少运行三个应用的生产构建及相关定向测试，并检查构建输出中是否出现循环 Chunk、React 多实例或重型能力回流首屏。
+- 浏览器指标、真实请求、跨路由缓存、qiankun 生命周期和云资源链路属于独立验收层；构建成功不能替代这些验证。
+- 本项目首屏专项不依赖 Nginx；本地静态服务只用于前端产物验证，不代表正式压缩、缓存头或云对象链路。

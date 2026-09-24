@@ -1,6 +1,6 @@
-import { Suspense, lazy } from 'react'
+import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 
-const ModelDebugModal = lazy(() => import('../ModelDebugModal'))
+const loadModelDebugModal = () => import('../ModelDebugModal')
 
 type DebugPanelProps = {
   open: boolean
@@ -14,15 +14,11 @@ const DebugPanel = ({ open, convUid, roundIndex, thinkTime, onClose }: DebugPane
   if (!open) return null
 
   return (
-    <Suspense fallback={null}>
-      <ModelDebugModal
-        thinkTime={thinkTime}
-        convUid={convUid!}
-        roundIndex={roundIndex!}
-        open={open}
-        onClose={onClose}
-      />
-    </Suspense>
+    <RetryableLazy
+      loader={loadModelDebugModal}
+      componentProps={{ thinkTime, convUid: convUid!, roundIndex: roundIndex!, open, onClose }}
+      fallback={<LazyFeatureFallback label="正在加载调试详情…" style={{ position: 'fixed', inset: 0, zIndex: 1000, minHeight: '100vh' }} />}
+    />
   )
 }
 

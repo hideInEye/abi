@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import request from '../request/index'
-import { fetchSessionMessages } from './app'
+import { fetchSessionDetail, fetchSessionMessages } from './app'
 
 vi.mock('../request/index', () => ({
   default: vi.fn(),
@@ -44,6 +44,46 @@ describe('fetchSessionMessages', () => {
     const refreshedResponse = { code: 200, data: { data: [{ roundIndex: 1, messages: [] }] } }
     requestMock.mockResolvedValueOnce(refreshedResponse)
     await expect(fetchSessionMessages(params)).resolves.toEqual(refreshedResponse)
+    expect(requestMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('fetchSessionDetail', () => {
+  const requestMock = vi.mocked(request)
+
+  beforeEach(() => {
+    vi.stubGlobal('window', {
+      APP_CONFIG: {
+        VITE_BASE_API: '/api',
+      },
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.clearAllMocks()
+  })
+
+  it('复用同一会话的并发详情请求，请求结束后允许重新加载', async () => {
+    let resolveFirstRequest: (value: unknown) => void = () => undefined
+    const firstResponse = { code: 200, data: { sessionId: 'conversation-1' } }
+    const pendingRequest = new Promise(resolve => {
+      resolveFirstRequest = resolve
+    })
+    requestMock.mockReturnValueOnce(pendingRequest as ReturnType<typeof request>)
+
+    const first = fetchSessionDetail({ sessionId: 'conversation-1' })
+    const duplicate = fetchSessionDetail({ sessionId: 'conversation-1' })
+
+    expect(duplicate).toBe(first)
+    expect(requestMock).toHaveBeenCalledOnce()
+
+    resolveFirstRequest(firstResponse)
+    await expect(first).resolves.toEqual(firstResponse)
+
+    const refreshedResponse = { code: 200, data: { sessionId: 'conversation-1', title: 'refreshed' } }
+    requestMock.mockResolvedValueOnce(refreshedResponse)
+    await expect(fetchSessionDetail({ sessionId: 'conversation-1' })).resolves.toEqual(refreshedResponse)
     expect(requestMock).toHaveBeenCalledTimes(2)
   })
 })

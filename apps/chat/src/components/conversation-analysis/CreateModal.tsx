@@ -4,7 +4,7 @@ import { CHECKED_MAP } from "../../constant";
 import AgentList, { AgentListHandle } from "./AgentList";
 import { CloseOutlined } from "@ant-design/icons";
 import RecommendQuestions, { RecommendQuestionsHandle } from "./RecommendQuestions";
-import { getSpaceId } from "../../utils";
+import { getSpaceId } from "../../utils/runtime";
 import { checkAppNameExists, createApp } from "../../service/api/app";
 const userInfoString = localStorage.getItem('SOY-REACT_userInfo');
 const initState = {

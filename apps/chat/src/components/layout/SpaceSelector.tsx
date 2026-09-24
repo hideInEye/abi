@@ -1,13 +1,16 @@
 import { CheckOutlined, DownOutlined, MessageOutlined, SearchOutlined, TeamOutlined } from '@ant-design/icons'
 import { useNavigate } from '@tanstack/react-router'
-import { Dropdown, Empty, Spin } from 'antd'
+import { Button, Dropdown, Empty, Spin } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { fetchSpaceList } from '@/service/api/space'
-import { getSpaceId } from '@/utils'
+import {
+  abortChatSpacePage,
+  loadChatSpacePage,
+  mergeChatSpacePages,
+} from '@/resources/spaceListResource'
+import { getSpaceId } from '@/utils/runtime'
 import type { SpaceInfo } from '@/types/layout'
 
-const ALL_SPACE_PAGE_SIZE = 100000
 const SPACE_ID_STORAGE_KEY = 'spaceId'
 const SPACE_NAME_STORAGE_KEY = 'spaceName'
 
@@ -36,49 +39,18 @@ type SpaceSelectorProps = {
   onSpaceChanged?: (space: SpaceInfo) => void
 }
 
-type SpaceListResponse = {
-  rows?: unknown
-  data?: unknown
-  response?: {
-    data?: {
-      rows?: unknown
-    }
-  }
-}
-
-function normalizeSpaceList(response: SpaceListResponse): SpaceInfo[] {
-  const rawList = [
-    response?.rows,
-    (response?.data as any)?.rows,
-    response?.response?.data?.rows,
-    response?.data,
-  ].find((item) => Array.isArray(item))
-
-  if (!Array.isArray(rawList)) return []
-
-  return rawList
-    .map((item: any): SpaceInfo | null => {
-      const spaceId = Number(item?.spaceId)
-      const spaceName = String(item?.spaceName ?? '').trim()
-      if (!Number.isFinite(spaceId) || spaceId <= 0 || !spaceName) return null
-      return {
-        spaceId,
-        spaceName,
-        remark: typeof item?.remark === 'string' ? item.remark.trim() : '',
-        userCount: Number(item?.userCount) || 0,
-        chatCount: Number(item?.chatCount) || 0,
-      }
-    })
-    .filter((item): item is SpaceInfo => Boolean(item))
-}
-
 export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps) {
   const navigate = useNavigate()
-  const loadedRef = useRef(false)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [spaceList, setSpaceList] = useState<SpaceInfo[]>([])
   const [selectedSpaceId, setSelectedSpaceId] = useState<number>(() => getSpaceId())
+  const [selectedSpaceName, setSelectedSpaceName] = useState(() => localStorage.getItem(SPACE_NAME_STORAGE_KEY) || '')
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const requestRef = useRef<{ page: number; run: number; search: string } | null>(null)
+  const requestRunRef = useRef(0)
 
   const currentSpace = useMemo(
     () => spaceList.find((space) => space.spaceId === selectedSpaceId),
@@ -86,48 +58,52 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
   )
 
   const [searchValue, setSearchValue] = useState('')
-  const filteredSpaceList = useMemo(() => {
-    const keyword = searchValue.trim().toLowerCase()
-    if (!keyword) return spaceList
-    return spaceList.filter((space) => space.spaceName.toLowerCase().includes(keyword))
-  }, [searchValue, spaceList])
 
-  const loadAllSpaces = useCallback(async () => {
+  const loadSpaces = useCallback(async (nextPage: number, search: string, replace: boolean) => {
+    const run = ++requestRunRef.current
+    const previous = requestRef.current
+    if (previous && (previous.page !== nextPage || previous.search !== search)) {
+      abortChatSpacePage(previous.page, previous.search)
+    }
+    requestRef.current = { page: nextPage, run, search }
     setLoading(true)
+    setLoadError('')
     try {
-      const response = (await fetchSpaceList({
-        isAsc: 'desc',
-        orderByColumn: 'spaceId',
-        pageNum: 1,
-        pageSize: ALL_SPACE_PAGE_SIZE,
-      })) as SpaceListResponse
+      const result = await loadChatSpacePage(nextPage, search)
+      if (requestRunRef.current !== run) return
+      setSpaceList(current => mergeChatSpacePages(current, result.rows, replace))
+      setPage(result.pageNum)
+      setHasMore(result.hasMore)
 
-      const nextSpaceList = normalizeSpaceList(response)
-      setSpaceList(nextSpaceList)
-
-      if (!nextSpaceList.length) return
+      if (!result.rows.length) return
 
       const currentSpaceId = getSpaceId()
-      const hasCurrent = nextSpaceList.some((space) => space.spaceId === currentSpaceId)
+      const hasCurrent = result.rows.some((space) => space.spaceId === currentSpaceId)
       if (hasCurrent) {
         setSelectedSpaceId(currentSpaceId)
         return
       }
-
-      setSelectedSpaceId(nextSpaceList[0].spaceId)
-    } catch {
-      // 错误提示由请求层统一弹出后端原文，这里只重置空间列表
-      setSpaceList([])
+    } catch (error: any) {
+      if (error?.name !== 'AbortError' && requestRunRef.current === run) {
+        setLoadError('空间列表加载失败，请重试')
+      }
     } finally {
-      setLoading(false)
+      if (requestRunRef.current === run) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    if (loadedRef.current) return
-    loadedRef.current = true
-    void loadAllSpaces()
-  }, [loadAllSpaces])
+    if (!open) return
+    const timer = window.setTimeout(() => {
+      void loadSpaces(1, searchValue.trim(), true)
+    }, 350)
+    return () => window.clearTimeout(timer)
+  }, [loadSpaces, open, searchValue])
+
+  useEffect(() => () => {
+    const active = requestRef.current
+    if (active) abortChatSpacePage(active.page, active.search)
+  }, [])
 
   const handleSelectSpace = useCallback(
     async (space: SpaceInfo) => {
@@ -138,6 +114,7 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
       localStorage.removeItem('chatId')
 
       setSelectedSpaceId(space.spaceId)
+      setSelectedSpaceName(space.spaceName)
       setOpen(false)
 
       window.dispatchEvent(
@@ -163,12 +140,12 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
         className="space-picker-avatar space-picker-avatar--sm"
         style={{ background: currentColor.bg }}
       >
-        {collapsed ? getSpaceInitial(currentSpace?.spaceName || '') : getSpaceInitial(currentSpace?.spaceName || '')}
+        {getSpaceInitial(currentSpace?.spaceName || selectedSpaceName)}
       </span>
       {!collapsed && (
         <>
           <span className="flex-1 truncate" style={{ fontSize: 12.5, fontWeight: 700 }}>
-            {currentSpace?.spaceName || '选择空间'}
+            {currentSpace?.spaceName || selectedSpaceName || '选择空间'}
           </span>
           <DownOutlined
             className={`text-xs transition-transform ${open ? 'rotate-180' : ''}`}
@@ -184,7 +161,10 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
       <Dropdown
         trigger={['click']}
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen)
+          if (!nextOpen) setSearchValue('')
+        }}
         placement="bottomRight"
         dropdownRender={() => (
           <div className="space-picker-panel">
@@ -205,8 +185,8 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
             </div>
             <Spin spinning={loading}>
               <div className="space-picker-list">
-                {filteredSpaceList.length ? (
-                  filteredSpaceList.map((space) => {
+                {spaceList.length ? (
+                  spaceList.map((space) => {
                     const isActive = space.spaceId === selectedSpaceId
                     const realIndex = spaceList.findIndex((s) => s.spaceId === space.spaceId)
                     const color = getSpaceColorByIndex(realIndex >= 0 ? realIndex : 0)
@@ -244,8 +224,13 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
                     )
                   })
                 ) : (
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无空间" className="!my-2" />
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={loadError || '暂无空间'} className="!my-2" />
                 )}
+                {loadError ? (
+                  <Button block size="small" onClick={() => void loadSpaces(1, searchValue.trim(), true)}>重新加载</Button>
+                ) : hasMore ? (
+                  <Button block loading={loading} size="small" onClick={() => void loadSpaces(page + 1, searchValue.trim(), false)}>加载更多</Button>
+                ) : null}
               </div>
             </Spin>
           </div>

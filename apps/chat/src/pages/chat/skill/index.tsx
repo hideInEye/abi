@@ -1,16 +1,19 @@
 import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { createFileRoute } from '@tanstack/react-router'
-import { Button, DatePicker, Empty, Input, message, Popover, Select, Spin, Tabs } from 'antd'
+import { Button, Empty, Input, message, Popover, Select, Spin, Tabs } from 'antd'
 import dayjs from 'dayjs'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SkillCard } from '@/constant/layout'
 import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { AssistantIconBlock } from '@/components/AssistantIcon'
+import { RetryableLazy } from '@/components/performance/RetryableLazy'
 import { fetchFavoriteList, fetchOperateNew } from '@/service/api/abi-system'
 import { querySkillList, updateSkillStatus } from '@/service/api/skill'
-import { getSpaceId } from '@/utils'
-import SkillDetailDrawer from './SkillDetailDrawer'
+import { getSpaceId } from '@/utils/runtime'
+import SkillDetailDrawer from './-SkillDetailDrawer'
+
+const loadDateRangePicker = () => import('@/components/performance/DeferredDateRangePicker')
 
 /** 后端技能列表项 */
 type SkillItem = {
@@ -316,16 +319,13 @@ function SkillStoreView() {
       <div className="ws-filter-grid">
         <label className="ws-filter-field">
           <span>时间范围</span>
-          <DatePicker.RangePicker
-            allowClear
-            format="YYYY-MM-DD"
-            placeholder={['开始时间', '结束时间']}
-            value={pendingRange}
-            getPopupContainer={(trigger) =>
-              (trigger.closest('.ant-popover-inner') as HTMLElement) || (trigger.parentElement as HTMLElement)
-            }
-            onChange={(dates) => setPendingRange(dates)}
-          />
+          {filterOpen ? (
+            <RetryableLazy
+              loader={loadDateRangePicker}
+              componentProps={{ value: pendingRange, onChange: setPendingRange }}
+              fallback={<div aria-busy="true" className="h-8 w-[260px] animate-pulse rounded-md bg-slate-100" />}
+            />
+          ) : null}
         </label>
         <div className="ws-filter-actions">
           <Button className="ws-reset-btn" icon={<ReloadOutlined />} onClick={handleResetFilter}>

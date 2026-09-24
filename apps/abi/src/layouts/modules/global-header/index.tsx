@@ -1,4 +1,3 @@
-import { useRequest } from '@sa/hooks';
 import { useSelector } from 'react-redux';
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
 
@@ -7,8 +6,14 @@ import DarkModeContainer from '@/components/stateless/common/DarkModeContainer';
 import { hideMenuRoute } from '@/constants/app';
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
 import { useAppDispatch, useAppSelector } from '@/hooks/business/useStore';
-import { spaceList } from '@/service/api/data-space'; // 添加空间列表接口
+import {
+  abortSpaceListPage,
+  loadSpaceListPage,
+  mergeSpacePages,
+  type SpaceListItem,
+} from '@/resources/spaceListResource';
 import { changeSpaceId, getSpaceId } from '@/store/slice/app';
+import { persistSpaceName } from '@/utils/spaceStorage';
 // import LangSwitch from '@/components/stateful/LangSwitch';
 // import ThemeSchemaSwitch from '@/components/stateful/ThemeSchemaSwitch';
 // import FullScreen from '@/components/stateless/common/FullScreen';
@@ -63,29 +68,65 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
 
   // const [isFullscreen, { toggleFullscreen }] = useFullscreen(document.body);
 
-  // 添加空间列表请求
-  const { data: curspaceList, run: getSpaceList } = useRequest(spaceList, {
-    manual: true
-  });
-
   // 添加当前空间状态
-  const [currentSpace, setCurrentSpace] = useState<number | null>(null);
+  const [currentSpace, setCurrentSpace] = useState<number | null>(_curspaceId || null);
+  const [spaceRows, setSpaceRows] = useState<SpaceListItem[]>([]);
+  const [spaceSearch, setSpaceSearch] = useState('');
+  const [spaceDropdownOpen, setSpaceDropdownOpen] = useState(false);
+  const [spacePage, setSpacePage] = useState(1);
+  const [spaceHasMore, setSpaceHasMore] = useState(false);
+  const [spaceLoading, setSpaceLoading] = useState(false);
+  const [spaceError, setSpaceError] = useState('');
+  const spaceRequestRef = useRef<{ page: number; run: number; search: string } | null>(null);
+  const spaceRequestRunRef = useRef(0);
+
+  const loadHeaderSpaces = useCallback(async (page: number, search: string, replace: boolean) => {
+    const run = ++spaceRequestRunRef.current;
+    const previous = spaceRequestRef.current;
+    if (previous && (previous.page !== page || previous.search !== search)) {
+      abortSpaceListPage(previous.page, previous.search);
+    }
+    spaceRequestRef.current = { page, run, search };
+    setSpaceLoading(true);
+    setSpaceError('');
+    try {
+      const result = await loadSpaceListPage(page, search);
+      if (spaceRequestRunRef.current !== run) return;
+      setSpaceRows(current => mergeSpacePages(current, result.rows, replace));
+      setSpacePage(result.pageNum);
+      setSpaceHasMore(result.hasMore);
+    } catch (error: any) {
+      if (error?.name !== 'AbortError' && spaceRequestRunRef.current === run) {
+        setSpaceError('空间列表加载失败，请重试');
+      }
+    } finally {
+      if (spaceRequestRunRef.current === run) setSpaceLoading(false);
+    }
+  }, []);
 
   // 添加空间切换处理函数
-  const handleSpaceChange = (value: number) => {
+  const handleSpaceChange = async (value: number) => {
+    const switched = await switchToSpace(value);
+    if (!switched) return;
+    const selected = spaceRows.find(space => space.spaceId === value);
+    if (selected) persistSpaceName(selected.spaceName);
     setCurrentSpace(value);
-    switchToSpace(value);
   };
 
   useEffect(() => {
-    // 初始化时获取空间列表
-    getSpaceList({
-      isAsc: 'desc',
-      orderByColumn: 'spaceId',
-      pageNum: 1,
-      pageSize: 100000
-    });
+    if (!spaceDropdownOpen) return;
+    const timer = window.setTimeout(() => {
+      void loadHeaderSpaces(1, spaceSearch.trim(), true);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [loadHeaderSpaces, spaceDropdownOpen, spaceSearch]);
 
+  useEffect(() => () => {
+    const active = spaceRequestRef.current;
+    if (active) abortSpaceListPage(active.page, active.search);
+  }, []);
+
+  useEffect(() => {
     // 从localStorage获取当前空间
     // 仅在处于“空间”相关页面时，从 localStorage 恢复上次选择的 spaceId
     const savedSpace = localStorage.getItem('spaceId');
@@ -101,6 +142,7 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
     const handleGlobalSpaceChange = (event: CustomEvent) => {
       const { spaceId } = event.detail;
       dispatch(changeSpaceId(spaceId));
+      setCurrentSpace(spaceId);
     };
 
     window.addEventListener('space-change', handleGlobalSpaceChange as EventListener);
@@ -108,7 +150,7 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
     return () => {
       window.removeEventListener('space-change', handleGlobalSpaceChange as EventListener);
     };
-  }, [dispatch, getSpaceList]);
+  }, [dispatch]);
 
   // 每次路由变化时，尝试从 localStorage 同步当前空间到 header 的选中值
   useEffect(() => {
@@ -183,10 +225,10 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
 
   // 格式化空间选项
   const spaceOptions =
-    curspaceList?.map((space: any) => ({
+    spaceRows.map(space => ({
       label: space.spaceName,
       value: space.spaceId
-    })) || [];
+    }));
 
   return (
     <DarkModeContainer className="h-full flex flex-y-center justify-between p-6 px-12px text-16px shadow-header">
@@ -213,12 +255,34 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
         <div className="flex items-center">
           {showSpaceSelector && (
             <ASelect
+              filterOption={false}
+              loading={spaceLoading}
+              notFoundContent={
+                spaceLoading ? <ASpin size="small" /> : spaceError ? (
+                  <AButton size="small" onClick={() => void loadHeaderSpaces(1, spaceSearch.trim(), true)}>
+                    {spaceError}
+                  </AButton>
+                ) : null
+              }
               options={spaceOptions}
               placeholder="空间切换"
+              searchValue={spaceSearch}
+              showSearch
               style={{ width: '286px' }}
               value={currentSpace}
               variant="borderless"
               onChange={handleSpaceChange}
+              onDropdownVisibleChange={open => {
+                setSpaceDropdownOpen(open);
+                if (!open) setSpaceSearch('');
+              }}
+              onPopupScroll={event => {
+                const target = event.currentTarget;
+                if (spaceHasMore && !spaceLoading && target.scrollTop + target.clientHeight >= target.scrollHeight - 24) {
+                  void loadHeaderSpaces(spacePage + 1, spaceSearch.trim(), false);
+                }
+              }}
+              onSearch={setSpaceSearch}
             />
           )}
           {/* <span className="cursor-pointer">用户权限管理</span> */}
@@ -239,12 +303,34 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
           <div className="h-full flex-y-center justify-end">
             {showSpaceSelector && (
               <ASelect
+                filterOption={false}
+                loading={spaceLoading}
+                notFoundContent={
+                  spaceLoading ? <ASpin size="small" /> : spaceError ? (
+                    <AButton size="small" onClick={() => void loadHeaderSpaces(1, spaceSearch.trim(), true)}>
+                      {spaceError}
+                    </AButton>
+                  ) : null
+                }
                 options={spaceOptions}
                 placeholder="空间切换"
+                searchValue={spaceSearch}
+                showSearch
                 style={{ width: '286px' }}
                 value={currentSpace}
                 variant="borderless"
                 onChange={handleSpaceChange}
+                onDropdownVisibleChange={open => {
+                  setSpaceDropdownOpen(open);
+                  if (!open) setSpaceSearch('');
+                }}
+                onPopupScroll={event => {
+                  const target = event.currentTarget;
+                  if (spaceHasMore && !spaceLoading && target.scrollTop + target.clientHeight >= target.scrollHeight - 24) {
+                    void loadHeaderSpaces(spacePage + 1, spaceSearch.trim(), false);
+                  }
+                }}
+                onSearch={setSpaceSearch}
               />
             )}
             {/* <GlobalSearch /> */}

@@ -9,48 +9,73 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import designerManager from "../manager/DesignerManager.ts";
-import {DesignerMode, ProjectDataType, SaveType} from "../DesignerType";
-import {DesignerLoader} from "./DesignerLoader.ts";
-import layerManager from "../manager/LayerManager.ts";
-import BPExecutor from "../blueprint/core/BPExecutor.ts";
-import baseApi from "../../api/BaseApi.ts";
-import projectHdStore from "../header/items/project/ProjectManager.ts";
+import designerManager from '../manager/DesignerManager.ts'
+import { DesignerMode, ProjectDataType, SaveType } from '../DesignerType'
+import { DesignerLoader } from './DesignerLoader.ts'
+import layerManager from '../manager/LayerManager.ts'
+import BPExecutor from '../blueprint/core/BPExecutor.ts'
+import baseApi from '../../api/BaseApi.ts'
+import projectHdStore from '../header/items/project/ProjectManager.ts'
+import type { AbstractDefinition } from '../../framework/core/AbstractDefinition.ts'
+import { componentCategorize } from '../left/compoent-lib/ComponentCategorize.ts'
+import { editorComponentModules } from './editorComponentModules.ts'
 
 class EditorDesignerLoader extends DesignerLoader {
+  protected async scanComponents(): Promise<void> {
+    this.registerComponentModules(Object.values(editorComponentModules))
+  }
 
-    protected async getProjectData(id: string): Promise<ProjectDataType | null> {
-        const projectInfo = await baseApi.getProjectInfo(id);
-        if (!projectInfo)
-            return null;
-
-        projectHdStore.updateProjectConfig({
-            id,
-            name: projectInfo.name,
-            des: projectInfo.des,
-            status: projectInfo.status,
-            dataJson: projectInfo.dataJson,
-        });
-        const {name, dataJson} = projectInfo!
-        name && (document.title = name);
-        return JSON.parse(dataJson!);
+  protected registerDefinitionCategories(definition: AbstractDefinition): void {
+    const categorize = definition.getCategorize?.()
+    if (categorize) {
+      if (!categorize.icon) {
+        console.error('自定义组件的分类必须指定icon')
+      } else {
+        componentCategorize.push(categorize)
+      }
     }
 
-    protected getProjectDataAfter(id: string, type: SaveType, data: ProjectDataType): void {
-        designerManager.init(data, DesignerMode.EDIT);
-        window.LC_ENV = {
-            projectId: id,
-            saveType: type,
-            mode: DesignerMode.EDIT,
-            createdController: 0,
-            totalController: Object.keys(data.layerManager?.layerConfigs ?? []).length,
-            controllers: layerManager.compController,
-            definitions: DesignerLoader.definitionMap,
-            bpExecutor: BPExecutor,
-            layerManager: layerManager,
-            ...window.LC_ENV
-        }
+    const subCategorize = definition.getSubCategorize?.()
+    if (subCategorize) {
+      if (!subCategorize.parentKey) {
+        console.error('自定义组件的子分类必须指定parentKey')
+      } else {
+        componentCategorize.push(subCategorize)
+      }
     }
+  }
+
+  protected async getProjectData(id: string): Promise<ProjectDataType | null> {
+    const projectInfo = await baseApi.getProjectInfo(id)
+    if (!projectInfo) return null
+
+    projectHdStore.updateProjectConfig({
+      id,
+      name: projectInfo.name,
+      des: projectInfo.des,
+      status: projectInfo.status,
+      dataJson: projectInfo.dataJson,
+    })
+    const { name, dataJson } = projectInfo!
+    name && (document.title = name)
+    return JSON.parse(dataJson!)
+  }
+
+  protected getProjectDataAfter(id: string, type: SaveType, data: ProjectDataType): void {
+    designerManager.init(data, DesignerMode.EDIT)
+    window.LC_ENV = {
+      projectId: id,
+      saveType: type,
+      mode: DesignerMode.EDIT,
+      createdController: 0,
+      totalController: Object.keys(data.layerManager?.layerConfigs ?? []).length,
+      controllers: layerManager.compController,
+      definitions: DesignerLoader.definitionMap,
+      bpExecutor: BPExecutor,
+      layerManager: layerManager,
+      ...window.LC_ENV,
+    }
+  }
 }
 
-export {EditorDesignerLoader}
+export { EditorDesignerLoader }

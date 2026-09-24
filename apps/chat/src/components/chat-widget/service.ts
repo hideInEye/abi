@@ -2,7 +2,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 
 import { mapShareHistory, type WidgetMessage } from './history'
-import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
+import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/-assistantResources'
 
 /** Widget 配置：shareCode 为免登录凭证，apiBase 为网关前缀（空串表示同源） */
 export interface WidgetConfig {

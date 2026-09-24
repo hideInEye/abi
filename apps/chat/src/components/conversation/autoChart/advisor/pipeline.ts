@@ -1,6 +1,6 @@
 import type { Advice, AdviseParams, AdvisorConfig, ChartKnowledgeBase, Datum, FieldInfo } from '@antv/ava';
 import { Advisor, CkbConfig, DataFrame } from '@antv/ava';
-import { size } from 'lodash';
+import size from 'lodash/size';
 import type { CustomAdvisorConfig, RuleConfig, Specification } from '../types';
 
 export type CustomRecommendConfig = {

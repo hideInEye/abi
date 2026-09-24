@@ -1,6 +1,6 @@
 import request from "../request/index";
 // 获取基础API地址
-import { getChatbiBaseApi } from "../../utils/index";
+import { getChatbiBaseApi } from "../../utils/runtime";
 
 function getCurrentUserId(): number | undefined {
   try {
@@ -139,22 +139,15 @@ export function checkAppNameExists(data:{ biz_name: string,space_id: number}) {
   });
 }
 
-// 请求去重：同一时刻同一 appId 只允许一个 fetchAppList 在飞行中，后续调用复用同一 promise
-const _appListInflightByAppId = new Map<number, Promise<any>>()
-
 // 获取app列表
-export function fetchAppList(params: any) {
-  const appId = Number(params?.appId ?? 0) || 0
-  const inflight = _appListInflightByAppId.get(appId)
-  if (inflight) return inflight
-  const promise = request({
+export function fetchAppList(params: any, signal?: AbortSignal) {
+  return request({
     url: "/abi-chat/v1/app/session/list",
     method: "post",
     data: mapAppListParams(params),
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
-  }).then(mapAppListResponse).finally(() => { _appListInflightByAppId.delete(appId) })
-  _appListInflightByAppId.set(appId, promise)
-  return promise
+    signal,
+  }).then(mapAppListResponse)
 }
 
 // 应用工坊-我的助手：查询当前空间下的助手列表（默认仅查已上线 status='1'）
@@ -240,6 +233,7 @@ export interface FetchSessionMessagesParams {
 
 // React StrictMode 会在开发环境重挂载组件；相同会话的并发历史请求复用同一个 Promise，避免重复访问 query。
 const sessionMessagesInflight = new Map<string, Promise<any>>()
+const sessionDetailInflight = new Map<string, Promise<any>>()
 
 function getSessionMessagesRequestKey(params: FetchSessionMessagesParams) {
   return JSON.stringify([
@@ -273,12 +267,23 @@ export function fetchSessionMessages(params: FetchSessionMessagesParams) {
 
 // 获取会话详情
 export function fetchSessionDetail(params: { sessionId: string | number }) {
-  return request({
+  const requestKey = String(params.sessionId)
+  const inflightRequest = sessionDetailInflight.get(requestKey)
+  if (inflightRequest) return inflightRequest
+
+  const requestPromise = request({
     url: "/abi-chat/v1/app/session/get",
     method: "post",
     data: params,
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
+  }).finally(() => {
+    if (sessionDetailInflight.get(requestKey) === requestPromise) {
+      sessionDetailInflight.delete(requestKey)
+    }
   })
+
+  sessionDetailInflight.set(requestKey, requestPromise)
+  return requestPromise
 }
 
 // 更新会话（支持 title / sortOrder 置顶排序等字段）
@@ -377,19 +382,15 @@ export function updateSessionGroup(data: UpdateGroupParams) {
   })
 }
 
-// 请求去重：同一时刻只允许一个 fetchSessionGroupList 在飞行中
-let _groupListInflight: Promise<any> | null = null
-
 // 查询分组列表
-export function fetchSessionGroupList(data: ListGroupParams) {
-  if (_groupListInflight) return _groupListInflight
-  _groupListInflight = request({
+export function fetchSessionGroupList(data: ListGroupParams, signal?: AbortSignal) {
+  return request({
     url: "/abi-chat/v1/app/session/group/list",
     method: "post",
     data: { ...data, createBy: data.createBy ?? getCurrentUserName() },
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
-  }).finally(() => { _groupListInflight = null })
-  return _groupListInflight
+    signal,
+  })
 }
 
 // 删除分组

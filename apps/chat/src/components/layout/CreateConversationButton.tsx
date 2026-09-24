@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons'
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback } from 'react'
 
@@ -30,7 +29,9 @@ export function CreateConversationButton({ collapsed, onCreated }: CreateConvers
         onClick={handleCreateNewChat}
         style={{ padding: collapsed ? '10px 0' : '10px 18px' }}
       >
-        <PlusOutlined style={{ fontSize: 14, fontWeight: 600 }} />
+        <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 14 14" width="14">
+          <path d="M7 2v10M2 7h10" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+        </svg>
         {!collapsed && '新建对话'}
       </button>
     </div>

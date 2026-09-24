@@ -9,10 +9,11 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
+import type {ComponentType} from 'react';
+
 import Accordion from './accordion/Accordion';
 import SubAccordion from './accordion/SubAccordion';
 import Button from './button/Button';
-import CodeEditor from './code-editor/CodeEditor';
 import ColorPicker from './color-picker/ColorPicker';
 import ColorsPicker from './colors-picker/ColorsPicker';
 import {Grid} from './grid/Grid';
@@ -31,7 +32,18 @@ import NumberInput from './input/NumberInput';
 import ControlGroup from './control-group/ControlGroup';
 import CheckBox from './checkbox/CheckBox';
 
-const UIMap = new Map();
+export interface AsyncUIRegistryEntry {
+    kind: 'async';
+    loader: () => Promise<{default: ComponentType<any>}>;
+}
+
+export type UIRegistryEntry = ComponentType<any> | AsyncUIRegistryEntry;
+
+export function isAsyncUIRegistryEntry(entry: UIRegistryEntry): entry is AsyncUIRegistryEntry {
+    return typeof entry === 'object' && entry !== null && 'kind' in entry && entry.kind === 'async';
+}
+
+const UIMap = new Map<string, UIRegistryEntry>();
 
 UIMap.set('accordion', Accordion);
 UIMap.set('sub-accordion', SubAccordion);
@@ -41,7 +53,7 @@ UIMap.set('input', Input);
 UIMap.set('radio', Radio);
 UIMap.set('select', Select);
 UIMap.set('switch', Switch);
-UIMap.set('code-editor', CodeEditor);
+UIMap.set('code-editor', {kind: 'async', loader: () => import('./code-editor/CodeEditor')});
 UIMap.set('color-picker', ColorPicker);
 UIMap.set('colors-picker', ColorsPicker);
 UIMap.set('color-mode', ColorMode);

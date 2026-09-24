@@ -1,5 +1,6 @@
 import type { Datum, FieldInfo } from '@antv/ava';
-import { cloneDeep, uniq } from 'lodash';
+import cloneDeep from 'lodash/cloneDeep';
+import uniq from 'lodash/uniq';
 import { hasSubset, intersects } from '../advisor/utils';
 
 /**

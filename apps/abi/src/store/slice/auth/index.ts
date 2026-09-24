@@ -2,8 +2,7 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSelector } from '@reduxjs/toolkit';
 
 import { fetchGetUserInfo, fetchLogin } from '@/service/api/platform';
-import { encrypt } from '@/utils/jsencrypt';
-import { localStg, localforage } from '@/utils/storage';
+import { localStg, loadLocalforage } from '@/utils/storage';
 
 import type { AppThunk } from '../..';
 import { createAppSlice } from '../../createAppSlice';
@@ -72,6 +71,7 @@ async function cleanupWebStorage(prefix: string, debugRemoved: string[]) {
 
 async function cleanupLocalforageKeys(prefix: string, debugRemoved: string[]) {
   try {
+    const localforage = await loadLocalforage();
     const keys = await localforage.keys();
     await Promise.all(
       keys.map(k => {
@@ -100,6 +100,7 @@ export const authSlice = createAppSlice({
     login: create.asyncThunk(
       async ({ password, username, code, uuid }: { password: string; username: string; code?: string; uuid?: string }) => {
         try {
+          const { encrypt } = await import('@/utils/jsencrypt');
           const psd = encrypt(password) as string;
           const { data, error } = await fetchLogin(username, psd, code, uuid);
 

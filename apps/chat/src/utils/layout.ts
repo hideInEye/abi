@@ -1,19 +1,11 @@
 import dayjs from 'dayjs'
 
-import type { TopicItem, UserInfo } from '@/types/layout'
+import type { TopicItem } from '@/types/layout'
 
-const USER_INFO_STORAGE_KEY = 'SOY-REACT_userInfo'
+export { getCurrentUser, getCurrentUserName } from './identity'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
-}
-
-function safeParseJson(value: string): unknown {
-  try {
-    return JSON.parse(value)
-  } catch {
-    return null
-  }
 }
 
 function normalizeText(value: unknown): string {
@@ -43,26 +35,6 @@ function normalizeTopic(item: unknown): TopicItem | null {
     updateTime,
     sortOrder: normalizeSortOrder(item),
   }
-}
-
-// 读取本地用户信息，解析失败时返回空对象，避免阻断页面渲染。
-export function getCurrentUser(): UserInfo {
-  const raw = localStorage.getItem(USER_INFO_STORAGE_KEY)
-  if (!raw) return {}
-
-  const parsed = safeParseJson(raw)
-  if (!isRecord(parsed)) return {}
-
-  return {
-    userName: normalizeText(parsed.userName) || undefined,
-    nickName: normalizeText(parsed.nickName) || undefined,
-  }
-}
-
-// 统一用户名称回退顺序，保证 UI 永远有可展示值。
-export function getCurrentUserName(): string {
-  const user = getCurrentUser()
-  return user.nickName || user.userName || '当前用户'
 }
 
 // 服务端历史话题可能为空或格式异常，统一在此做标准化。

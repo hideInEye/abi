@@ -139,8 +139,7 @@
     "unplugin-icons": "0.20.0",
     "vite": "5.4.10",
     "vite-plugin-inspect": "0.8.7",
-    "vite-plugin-remove-console": "2.2.0",
-    "vite-plugin-svg-icons": "2.0.1"
+    "vite-plugin-remove-console": "2.2.0"
   },
   "website": "https://react-soybean.ohh-889.com/"
 }

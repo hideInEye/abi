@@ -1,6 +1,8 @@
 # Decision Log
 
-当前暂无正式 ADR。
+## 已接受决策
+
+- 2026-09-23：[三个应用采用独立加载边界与 Vendor 策略](./2026-09-23-first-screen-boundaries-and-budgets.md)。
 
 后续满足以下条件时新增 ADR：
 
