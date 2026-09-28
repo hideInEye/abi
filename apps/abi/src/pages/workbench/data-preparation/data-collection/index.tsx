@@ -13,14 +13,14 @@ import { useRouter } from '~/packages/simple-router/src';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { getSpaceId } from '@/store/slice/app';
 import clickhouseIcon from '@/assets/imgs/home/deClickHouse.svg';
-import dmIcon from '@/assets/imgs/home/deDm.svg';
-import dorisIcon from '@/assets/imgs/home/deDoris.svg';
-import excelIcon from '@/assets/imgs/home/Excel.svg';
+import dmIcon from '@/assets/imgs/home/dedm.svg';
+import dorisIcon from '@/assets/imgs/home/dedoris.svg';
+import excelIcon from '@/assets/imgs/home/excel.svg';
 import hiveIcon from '@/assets/imgs/home/deHive.svg';
 import mysqlIcon from '@/assets/imgs/home/deMysql.svg';
-import oracleIcon from '@/assets/imgs/home/deOracle.svg';
+import oracleIcon from '@/assets/imgs/home/deoracle.svg';
 import postgresqlIcon from '@/assets/imgs/home/dePostgreSQL.svg';
-import starrocksIcon from '@/assets/imgs/home/deStarrocks.svg';
+import starrocksIcon from '@/assets/imgs/home/destarrocks.svg';
 import kingbaseIcon from '@/assets/imgs/home/kingbase.svg';
 
 const DB_TYPE_ICONS: Record<string, string> = {

@@ -87,6 +87,8 @@ const route: App.I18n.Schema['translation']['route'] = {
   // 'multi-menu_second_child_home': 'Menu Two Child Home',
   'space-list': 'Space List',
   'system_space-user': 'Space User',
+  systems: 'System Dictionary',
+  'systems_data-dictionary': 'Dictionary Management',
   'workbench_app-workshop_my-collect': 'My Collect',
   'workbench_app-workshop_my-assistant': 'My Assistant',
   'workbench_app-workshop_my-chat': 'My Chat',

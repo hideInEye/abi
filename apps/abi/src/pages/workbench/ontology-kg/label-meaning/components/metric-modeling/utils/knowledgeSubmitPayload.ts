@@ -5,11 +5,7 @@ import type {
   KnowledgeSubmitPayload
 } from '../types/metricModeling.types'
 
-import {
-  normalizeAggregationCode,
-  normalizeAggregationCodes,
-  toDerivedAggregationPayloadValue
-} from './aggregation'
+import { normalizeAggregationCodes, toDerivedAggregationPayloadValue } from './aggregation'
 import {
   buildApiDerivedIndicatorTemplates,
   parseApiDerivedIndicatorTemplates
@@ -726,7 +722,7 @@ export function buildKnowledgeCalcLogic(values: KnowledgeSubmitPayload): JsonRec
   if (indicatorClass === 'derived') {
     return compactRecord({
       ...buildBaseCalcLogic(values),
-      aggMethod: normalizeAggregationCode(values.projectionFunc) || normalizeText(values.projectionFunc) || undefined,
+      aggMethod: normalizeText(values.projectionFunc) || undefined,
       calcPeriod: buildApiCalcPeriod(values.statisticalCaliber),
       indicator_templates: buildApiDerivedIndicatorTemplates(
         values.derivedExpressions,
@@ -751,7 +747,7 @@ export function buildKnowledgeCalcLogic(values: KnowledgeSubmitPayload): JsonRec
   if (sourceAggregation.type === 'simple') {
     return compactRecord({
       agg: {
-        data: normalizeAggregationCodes(sourceAggregation.data, ['SUM']),
+        data: normalizeAggregationCodes(sourceAggregation.data),
         type: 'simple'
       },
       bizeName: sourceField.bizName,
@@ -804,7 +800,7 @@ export function parseKnowledgeCalcLogicFormValues(calcLogicValue: unknown): Part
     precomputeConfig: normalizePrecomputeConfig(calcLogic.precomputeConfig, calcLogic.updateFrequency),
     atomicAggregationExpression:
       parseJsonRecord(calcLogic.agg).type === 'complex' ? parseJsonRecord(calcLogic.agg).data : undefined,
-    projectionFunc: normalizeAggregationCode(aggregationValue) || normalizeText(aggregationValue) || undefined,
+    projectionFunc: normalizeText(aggregationValue) || undefined,
     ratioDenominatorId: calcLogic.ratioDenominatorId,
     ratioNumeratorId: calcLogic.ratioNumeratorId,
     ratioPrecision: calcLogic.ratioPrecision,

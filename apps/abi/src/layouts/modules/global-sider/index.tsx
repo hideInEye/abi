@@ -3,7 +3,7 @@ import userIcon from '@/assets/imgs/home/用户.svg'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
-import { UserOutlined, SettingOutlined, TeamOutlined, LogoutOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { UserOutlined, SettingOutlined, TeamOutlined, LogoutOutlined, ClockCircleOutlined, BookOutlined } from '@ant-design/icons'
 import * as antdIcons from '@ant-design/icons'
 import SvgIcon from '@/components/stateless/custom/SvgIcon'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
@@ -114,6 +114,16 @@ const GlobalSider: FC = memo(() => {
           <div className="abi-user-dropdown-item-new">
             {renderSpaceIcon()}
             <span className="abi-user-dropdown-label-new">空间管理</span>
+          </div>
+        ),
+        className: 'abi-user-dropdown-menu-item',
+      })
+      items.push({
+        key: 'systems_data-dictionary',
+        label: (
+          <div className="abi-user-dropdown-item-new">
+            <BookOutlined className="abi-user-dropdown-icon-new" />
+            <span className="abi-user-dropdown-label-new">系统字典</span>
           </div>
         ),
         className: 'abi-user-dropdown-menu-item',

@@ -99,7 +99,7 @@ const MetricModeling: React.FC = () => {
         label: (
           <div className="py-1">
             <div className="text-sm font-semibold">指标自定义</div>
-            <div className="mt-1 text-xs text-gray-400">创建派生指标或衍生指标</div>
+            <div className="mt-1 text-xs text-gray-400">创建派生指标或复合指标</div>
           </div>
         ),
       },

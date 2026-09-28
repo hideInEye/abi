@@ -1,17 +1,15 @@
-import type { AggregationCode } from '../types/metricModeling.types'
-
 export const KNOWLEDGE_GROUP_TYPE = 'ontology'
 
 export const INDICATOR_TYPE_OPTIONS = [
   { label: '原子指标', value: 'atomic' },
   { label: '派生指标', value: 'derived' },
-  { label: '衍生指标', value: 'derivative' }
+  { label: '复合指标', value: 'derivative' }
 ]
 
 export const INDICATOR_TYPE_FILTER_OPTIONS = [
   { label: '原子指标', value: 'atomic' },
   { label: '派生指标', value: 'derived' },
-  { label: '衍生指标', value: 'derivative' }
+  { label: '复合指标', value: 'derivative' }
 ]
 
 export const STATUS_OPTIONS = [
@@ -80,22 +78,6 @@ export const QUALITY_LEVEL_DISPLAY_TEXT_MAP: Record<string, string> = {
   p2: '一般'
 }
 
-export const AGG_METHOD_OPTIONS: Array<{ label: string; shortLabel: string; value: AggregationCode }> = [
-  { label: '求和（SUM）', shortLabel: '求和', value: 'SUM' },
-  { label: '计数（COUNT）', shortLabel: '计数', value: 'COUNT' },
-  { label: '去重计数（COUNT DISTINCT）', shortLabel: '去重计数', value: 'COUNT DISTINCT' },
-  { label: '平均值（AVG）', shortLabel: '平均值', value: 'AVG' },
-  { label: '最大值（MAX）', shortLabel: '最大值', value: 'MAX' },
-  { label: '最小值（MIN）', shortLabel: '最小值', value: 'MIN' },
-  { label: '标准差（STDDEV）', shortLabel: '标准差', value: 'STDDEV' },
-  { label: '方差（VARIANCE）', shortLabel: '方差', value: 'VARIANCE' },
-  { label: '中位数（MEDIAN）', shortLabel: '中位数', value: 'MEDIAN' }
-]
-
-export const AGG_METHOD_LABEL_MAP = Object.fromEntries(
-  AGG_METHOD_OPTIONS.map(item => [item.value, item.shortLabel])
-) as Record<AggregationCode, string>
-
 export const CUSTOM_AGGREGATION_EXPRESSION_LABEL = '自定义聚合方式表达式'
 
 export const EXTENDED_TEMPLATE_OPTIONS = [
@@ -110,7 +92,7 @@ export const EXTENDED_TEMPLATE_OPTIONS = [
 export const EXTENDED_TEMPLATE_DESC_MAP: Record<string, string> = {
   comparison: '衡量当前周期与历史周期的变化趋势',
   cumulative: '反映时间维度上的总量变化，如累计销售额',
-  custom: '自定义表达式进行衍生指标计算',
+  custom: '自定义表达式进行复合指标计算',
   percentile: '描述数据分布情况，提供比平均值更全面的统计视角',
   ratio: '衡量部分与整体的关系，如转化率、成功率',
   volatility: '通过数据离散程度评估稳定性'
@@ -200,5 +182,5 @@ export const STATUS_TEXT_MAP: Record<string, string> = {
 export const INDICATOR_TYPE_TEXT_MAP: Record<string, string> = {
   atomic: '原子指标',
   derived: '派生指标',
-  derivative: '衍生指标'
+  derivative: '复合指标'
 }

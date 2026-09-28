@@ -42,14 +42,14 @@ export interface SemanticRule {
 export interface SemanticRuleDraft {
   advancedSettings?: SemanticAdvancedSetting[]
   category: SemanticBusinessCategory
-  method: SemanticMatchMethod
+  method?: SemanticMatchMethod
   name: string
   pattern: string
   priority?: number | null
   remark?: string
-  target: SemanticMatchTarget
-  type: SemanticListType
-  visibility: SemanticVisibility
+  target?: SemanticMatchTarget
+  type?: SemanticListType
+  visibility?: SemanticVisibility
 }
 
 export type SemanticRuleField =

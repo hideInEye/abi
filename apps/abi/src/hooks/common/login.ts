@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { getUerName, login } from '@/store/slice/auth';
 import { initAuthRoute, resetRouteStore } from '@/store/slice/route';
 import { resetLoginExpiredState } from '@/utils/auth';
+import { localStg } from '@/utils/storage';
 
 import { useAppDispatch } from '../business/useStore';
 
@@ -32,6 +33,7 @@ export function useLogin() {
       const userName = dispatch(getUerName());
 
       if (userName) {
+        localStg.set('authSessionVersion', Date.now());
         resetLoginExpiredState();
         await dispatch(initAuthRoute());
 

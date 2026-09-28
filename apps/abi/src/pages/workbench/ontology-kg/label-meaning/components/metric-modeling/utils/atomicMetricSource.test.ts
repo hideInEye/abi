@@ -28,7 +28,7 @@ describe('atomic metric source adapter', () => {
     expect(getAtomicSemanticSchemaId(item)).toBe('schema-1')
     expect(getAtomicProjection(item)).toBe('avg')
     expect(parseAtomicSourceFields(item.techId)).toMatchObject([{ fieldName: 'payment_amount', techId: 'field-1' }])
-    expect(getAtomicProjection({ techId: [] })).toBe('sum')
+    expect(getAtomicProjection({ techId: [] })).toBe('')
   })
 
   it('prefers the new aggregation array and resets derived selection when the atomic metric changes', () => {
@@ -40,8 +40,8 @@ describe('atomic metric source adapter', () => {
     expect(resolveDerivedAggregationMethod(item, 'MAX', true)).toBe('MAX')
     expect(resolveDerivedAggregationMethod(item, 'SUM', true)).toBe('AVG')
     expect(resolveDerivedAggregationMethod(item, 'MAX')).toBe('AVG')
-    expect(getAtomicAggregationMethods({ projectionFunc: 'distinct' })).toEqual(['COUNT DISTINCT'])
-    expect(getAtomicAggregationMethods({ agg: { data: [], type: 'simple' } })).toEqual(['SUM'])
+    expect(getAtomicAggregationMethods({ projectionFunc: 'distinct' })).toEqual(['distinct'])
+    expect(getAtomicAggregationMethods({ agg: { data: [], type: 'simple' } })).toEqual([])
     expect(hasAtomicAggregationMetadata(item)).toBe(true)
     expect(hasAtomicAggregationMetadata({ relSchemaId: 'schema-1' })).toBe(false)
     expect(hasAtomicAggregationMetadata({ agg: { data: 'SUM(amount)', type: 'complex' } })).toBe(true)

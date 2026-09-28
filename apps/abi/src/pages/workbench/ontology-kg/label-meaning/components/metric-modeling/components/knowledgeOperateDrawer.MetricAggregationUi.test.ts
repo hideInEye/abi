@@ -13,9 +13,24 @@ describe('metric aggregation UI contract', () => {
     expect(source).toMatch(/selectedRows\.some\(item => !item\.aggregationMethods\.length\)/)
   })
 
+  it('loads every aggregation option from the atomic system dictionary', () => {
+    const constantsSource = readSource('../constants/metricModeling.constants.ts')
+    const mappingSource = readSource('./KnowledgeAtomicMappingDrawer.tsx')
+    const simpleAtomicSource = readSource('./knowledgeOperateDrawer.SimpleAtomicTechnicalSection.tsx')
+    const technicalSource = readSource('./knowledgeOperateDrawer.TechnicalStep.tsx')
+    const sources = [mappingSource, simpleAtomicSource, technicalSource]
+
+    expect(constantsSource).not.toContain('AGG_METHOD_OPTIONS')
+    expect(constantsSource).not.toContain('AGG_METHOD_LABEL_MAP')
+    expect(sources.every(source => source.includes('useOntologyAtomicAggregationDictionary()'))).toBe(true)
+    expect(mappingSource).toContain('options={aggregationOptions}')
+    expect(simpleAtomicSource).toContain('options={aggregationOptions}')
+    expect(technicalSource).toContain('aggregationOptions={aggregationOptions}')
+  })
+
   it('uses one derived aggregation selector backed by the selected atomic methods', () => {
     const source = readSource('./knowledgeOperateDrawer.DerivedLogicBuilder.tsx')
-    const aggregationField = source.match(/<AForm\.Item[\s\S]*?label="派生聚合方式"[\s\S]*?<\/AForm\.Item>/)?.[0]
+    const aggregationField = source.match(/<AForm\.Item[\s\S]*?title="派生聚合方式"[\s\S]*?<\/AForm\.Item>/)?.[0]
     expect(aggregationField).toContain('name="projectionFunc"')
     expect(aggregationField).toContain('options={aggregationOptions}')
     expect(aggregationField).not.toContain('mode="multiple"')
@@ -24,12 +39,14 @@ describe('metric aggregation UI contract', () => {
   it('keeps the atomic metric code out of business configuration and validates technical fields', () => {
     const businessSource = readSource('./knowledgeOperateDrawer.BusinessStep.tsx')
     const atomicTechnicalSource = readSource('./knowledgeOperateDrawer.AtomicTechnicalStep.tsx')
+    const functionExpressionSource = readSource('./knowledgeOperateDrawer.FunctionExpressionField.tsx')
     const drawerSource = readSource('./KnowledgeOperateDrawer.tsx')
 
     expect(businessSource).not.toContain('name="techName"')
     expect(atomicTechnicalSource).toContain('name="techName"')
     expect(atomicTechnicalSource).toContain('name="atomicSourceFieldId"')
-    expect(atomicTechnicalSource).toContain('name="atomicAggregationExpression"')
+    expect(atomicTechnicalSource).toContain('fieldName="atomicAggregationExpression"')
+    expect(functionExpressionSource).toContain('name={fieldName}')
     expect(drawerSource).toContain("return ['techName', 'semanticSchemaId', 'atomicSourceFieldId', 'atomicAggregationExpression']")
   })
 
@@ -51,5 +68,93 @@ describe('metric aggregation UI contract', () => {
     expect(source).toContain('label: CUSTOM_AGGREGATION_EXPRESSION_LABEL, value: customAggregationExpression')
     expect(source).toContain('查看表达式')
     expect(source).toContain('{customAggregationExpression}</pre>')
+  })
+
+  it('shows checkbox dimension options in a dedicated statistical-caliber row', () => {
+    const source = readSource('./knowledgeOperateDrawer.DerivedLogicBuilder.tsx')
+
+    expect(source).toMatch(
+      /name=\{\['statisticalCaliber', 'subjectDimensionIds'\]\}[\s\S]*?<ATreeSelect[\s\S]*?treeCheckable/
+    )
+    expect(source).toContain('className={styles.subjectDimensionRow}')
+    expect(source).toMatch(/className=\{`mb-0! \$\{styles\.crossDimensionField\}`\}/)
+    expect(source.indexOf('className={styles.subjectDimensionRow}')).toBeLessThan(source.indexOf('title="时段范围"'))
+  })
+
+  it('moves metric form help text into title tooltips', () => {
+    const atomicSource = readSource('./knowledgeOperateDrawer.AtomicTechnicalStep.tsx')
+    const businessSource = readSource('./knowledgeOperateDrawer.BusinessStep.tsx')
+    const derivedSource = readSource('./knowledgeOperateDrawer.DerivedLogicBuilder.tsx')
+    const extendedSource = readSource('./knowledgeOperateDrawer.ExtendedTemplateParams.tsx')
+    const functionExpressionSource = readSource('./knowledgeOperateDrawer.FunctionExpressionField.tsx')
+    const labelSource = readSource('./knowledgeOperateDrawer.FormItemLabel.tsx')
+    const precomputeSource = readSource('./knowledgeOperateDrawer.PrecomputeConfig.tsx')
+
+    expect(labelSource).toContain('<Tooltip title={helpText}>')
+    expect(labelSource).toContain('aria-label="查看字段说明"')
+    expect(functionExpressionSource).toContain('可直接输入或组合表达式；点击下方函数会在光标位置插入当前来源字段。')
+    expect(functionExpressionSource).toContain('点击来源字段会插入到当前光标位置')
+    expect(businessSource).toContain('helpText="用于 ChatBI 对业务术语的识别与召回"')
+    expect(derivedSource).toContain('helpText={getStatisticalDateRangeHint')
+    expect(derivedSource).toContain('title="派生聚合方式"')
+    expect(derivedSource).toContain('title="主体维度"')
+    expect(derivedSource).toContain('title="时段范围"')
+    expect(derivedSource).toContain('helpText="如需多个维度组合分析指标，请勾选"')
+    expect(extendedSource).toContain("helpText={EXTENDED_TEMPLATE_DESC_MAP[templateTypeVal] || '请选择复合模板'}")
+    expect(precomputeSource).toContain('helpText="按当前空间时区执行。"')
+    expect(
+      [atomicSource, businessSource, derivedSource, extendedSource, precomputeSource].every(
+        source => !source.includes('extra=')
+      )
+    ).toBe(true)
+  })
+
+  it('uses system dictionaries and semantic field groups for custom metric expressions', () => {
+    const atomicSource = readSource('./knowledgeOperateDrawer.AtomicTechnicalStep.tsx')
+    const customDerivativeSource = readSource('./knowledgeOperateDrawer.DerivativeCustomTechnicalSection.tsx')
+    const drawerSource = readSource('./KnowledgeOperateDrawer.tsx')
+    const extendedSource = readSource('./knowledgeOperateDrawer.ExtendedTemplateParams.tsx')
+    const functionSource = readSource('./knowledgeOperateDrawer.FunctionExpressionField.tsx')
+
+    expect(atomicSource).toContain('dictionaryKind="atomic"')
+    expect(extendedSource).toContain('<KnowledgeOperateDerivativeCustomTechnicalSection')
+    expect(customDerivativeSource).toContain('createRuleFieldOptions(allFields)')
+    expect(customDerivativeSource).toContain('buildRuleFieldTree(')
+    expect(customDerivativeSource).toContain('value={undefined}')
+    expect(customDerivativeSource).toContain('onSelect={insertSourceField}')
+    expect(customDerivativeSource).toContain('expressionRef.current?.insertText(fieldName)')
+    expect(customDerivativeSource).toContain('placeholder="点击字段插入到下方表达式"')
+    expect(customDerivativeSource).toContain('fieldName="expr"')
+    expect(customDerivativeSource).toContain('dictionaryKind="derivative"')
+    expect(functionSource).toContain('useOntologyFunctionDictionary(dictionaryKind)')
+    expect(drawerSource).toContain("templateFields.push('semanticSchemaId', 'expr')")
+    expect(drawerSource).toContain('getCustomExpressionSourceFields(values.expr, allFields)')
+    expect(drawerSource).toContain('selectedTechObject = derivativeCustomSourceFields')
+  })
+
+  it('keeps derived business constraints optional while validating configured conditions', () => {
+    const builderSource = readSource('../../rule-expression/RuleExpressionBuilder.tsx')
+    const derivedSource = readSource('./knowledgeOperateDrawer.DerivedLogicBuilder.tsx')
+
+    expect(builderSource).toContain('optional && !hasConfiguredRuleConditions(layers)')
+    expect(derivedSource).toContain('if (!hasConfiguredRuleConditions(value))')
+    expect(derivedSource).toMatch(/<RuleExpressionBuilder[\s\S]*?optional[\s\S]*?validationRequested=/)
+    expect(derivedSource).toContain('const baseValidation = validateRuleLayers(value, ruleFields)')
+    expect(derivedSource).toContain('const logicValidation = validateRuleLogicUniformity(value)')
+  })
+
+  it('uses compound wording for every derivative metric label', () => {
+    const constantsSource = readSource('../constants/metricModeling.constants.ts')
+    const runtimeSources = [
+      constantsSource,
+      readSource('../MetricModeling.tsx'),
+      readSource('./knowledgeOperateDrawer.ExpressionEditor.tsx'),
+      readSource('./knowledgeOperateDrawer.ExtendedTemplateParams.tsx'),
+      readSource('./knowledgeOperateDrawer.TechnicalStep.tsx'),
+    ]
+
+    expect(runtimeSources.join('\n')).not.toContain('衍生')
+    expect(constantsSource).toContain("{ label: '复合指标', value: 'derivative' }")
+    expect(constantsSource).toContain("derivative: '复合指标'")
   })
 })

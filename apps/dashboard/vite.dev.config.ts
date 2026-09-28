@@ -14,6 +14,8 @@ import {defineConfig} from 'vite'
 export default defineConfig({
     server: {
         port:5174,
+        strictPort: true,
+        cors: true,
         proxy: {
             '^/(api|static)/.*': {
                 target: 'http://127.0.0.1:8080',

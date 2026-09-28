@@ -12,10 +12,14 @@ import type {
   SemanticRuleUpdateParams
 } from './types'
 
-export type NormalizedSemanticRuleDraft = Omit<SemanticRuleDraft, 'advancedSettings' | 'priority' | 'remark'> & {
+export type NormalizedSemanticRuleDraft = Omit<
+  SemanticRuleDraft,
+  'advancedSettings' | 'priority' | 'remark' | 'target'
+> & {
   advancedSettings: SemanticAdvancedSetting[]
   priority?: number
   remark: string
+  target: string
 }
 
 function normalizeText(value: unknown): string {
@@ -87,15 +91,15 @@ export function buildSemanticRuleCreateParams(spaceId: number, draft: SemanticRu
   const params: SemanticRuleCreateParams = {
     bizType: normalized.category,
     extConditions: serializeAdvancedSettings(normalized.advancedSettings),
-    listType: normalized.type,
-    matchMethod: normalized.method,
+    listType: normalized.type!,
+    matchMethod: normalized.method!,
     matchPattern: normalized.pattern,
     matchTarget: normalized.target,
     remark: normalized.remark,
     ruleName: normalized.name,
     spaceId,
     status: '1',
-    visibility: normalized.visibility
+    visibility: normalized.visibility!
   }
   if (normalized.priority !== undefined) params.priority = normalized.priority
   return params
@@ -189,7 +193,7 @@ export function validateSemanticRuleDraft(draft: SemanticRuleDraft): SemanticRul
   const errors: SemanticRuleFieldErrors = {}
 
   if (!normalizeText(draft.name).trim()) errors.name = '请填写规则名称'
-  if (!['WHITELIST', 'BLACKLIST'].includes(draft.type)) errors.type = '请选择名单类型'
+  if (draft.type !== 'WHITELIST' && draft.type !== 'BLACKLIST') errors.type = '请选择名单类型'
   if (!normalizeText(draft.category).trim()) errors.category = '请选择或填写业务类别'
   if (
     draft.priority !== undefined &&
@@ -197,9 +201,9 @@ export function validateSemanticRuleDraft(draft: SemanticRuleDraft): SemanticRul
     (!Number.isFinite(draft.priority) || draft.priority < 0)
   )
     errors.priority = '请输入有效的优先级'
-  if (!['PUBLIC', 'PRIVATE'].includes(draft.visibility)) errors.visibility = '请选择有效的可见性'
+  if (draft.visibility !== 'PUBLIC' && draft.visibility !== 'PRIVATE') errors.visibility = '请选择有效的可见性'
   if (!normalizeText(draft.target).trim()) errors.target = '请选择匹配目标'
-  if (!['EXACT', 'LIKE', 'REGEX'].includes(draft.method)) errors.method = '请选择匹配方式'
+  if (draft.method !== 'EXACT' && draft.method !== 'LIKE' && draft.method !== 'REGEX') errors.method = '请选择匹配方式'
   if (!normalizeText(draft.pattern).trim()) errors.pattern = '请填写匹配内容'
 
   if (draft.method === 'REGEX' && normalizeText(draft.pattern).trim()) {

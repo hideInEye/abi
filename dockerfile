@@ -8,6 +8,7 @@ RUN rm -rf ./*
 
 COPY ./apps/abi/dist ./abi
 COPY ./apps/chat/dist ./chat
+COPY ./apps/dashboard/dist ./dashboard-ui
 
 # 拷贝 Nginx 配置
 COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
