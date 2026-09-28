@@ -486,6 +486,34 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
     setMobileView('conversation')
   }, [])
 
+  const removeReportsByRounds = useCallback(
+    (rounds: number[]) => {
+      const roundSet = new Set(rounds)
+      const removedReports = reportsRef.current.filter((report) => roundSet.has(report.sortOrder))
+      const removedReportIds = new Set(removedReports.map((report) => report.id))
+      removedReportIds.forEach((reportId) => {
+        submitControllersRef.current.get(reportId)?.abort()
+        streamControllersRef.current.get(reportId)?.abort()
+        submitControllersRef.current.delete(reportId)
+        streamControllersRef.current.delete(reportId)
+      })
+      commitReports((currentReports) => currentReports.filter((report) => !removedReportIds.has(report.id)))
+
+      if (activeReportId && removedReportIds.has(activeReportId)) {
+        setAnimateReportPreview(false)
+        setActiveReportId(undefined)
+        setMobileView('conversation')
+      }
+
+      removedReports.forEach((report) => {
+        if (report.taskId && report.conversationId) {
+          void reportTaskStorage.delete(report.conversationId, report.taskId).catch(() => undefined)
+        }
+      })
+    },
+    [activeReportId, commitReports],
+  )
+
   // query 与 IndexedDB 并行启动：缓存问题可以先占位；task 状态判断仍等 query 完成，避免与权威历史竞态。
   useEffect(() => {
     const generation = loadGenerationRef.current + 1
@@ -620,6 +648,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
     toggleTaskExecution,
     openReport,
     closeReport,
+    removeReportsByRounds,
     setMobileView,
   }
 }

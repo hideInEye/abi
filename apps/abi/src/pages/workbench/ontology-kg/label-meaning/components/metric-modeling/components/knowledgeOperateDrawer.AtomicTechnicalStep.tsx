@@ -23,6 +23,7 @@ export interface AtomicSemanticSelection {
 
 interface Props {
   readonly allFields: KnowledgeTechField[]
+  readonly editing?: boolean
   readonly fieldError?: boolean
   readonly fieldLoading?: boolean
   readonly form: FormInstance<KnowledgeFormValues>
@@ -34,6 +35,7 @@ interface Props {
 
 export const KnowledgeOperateAtomicTechnicalStep: React.FC<Props> = ({
   allFields,
+  editing,
   fieldError,
   fieldLoading,
   form,
@@ -62,7 +64,7 @@ export const KnowledgeOperateAtomicTechnicalStep: React.FC<Props> = ({
 
   return (
     <div className="mb-4 border border-gray-200 rounded bg-white p-4">
-      <OntologyFormSectionTitle icon={<ApiOutlined />}>技术定义</OntologyFormSectionTitle>
+      {!editing ? <OntologyFormSectionTitle icon={<ApiOutlined />}>技术定义</OntologyFormSectionTitle> : null}
       <AForm.Item
         required
         label="指标编码"
@@ -71,7 +73,10 @@ export const KnowledgeOperateAtomicTechnicalStep: React.FC<Props> = ({
         validateDebounce={600}
         validateTrigger="onChange"
       >
-        <AInput placeholder="请输入指标编码" />
+        <AInput
+          disabled={editing}
+          placeholder="请输入指标编码"
+        />
       </AForm.Item>
 
       <div className="grid grid-cols-2 gap-x-8">
@@ -80,6 +85,8 @@ export const KnowledgeOperateAtomicTechnicalStep: React.FC<Props> = ({
           getSchemaId={onSchemaChange}
           getSchemaOptions={(_: TableSemanticParams[]) => {}}
           groupFieldName="semanticsGroupId"
+          isEdit={editing}
+          label="数据语义"
           type="shema"
         />
         <AForm.Item
@@ -90,6 +97,7 @@ export const KnowledgeOperateAtomicTechnicalStep: React.FC<Props> = ({
         >
           <ASelect
             showSearch
+            disabled={editing}
             loading={fieldLoading}
             optionFilterProp="label"
             options={sourceOptions}

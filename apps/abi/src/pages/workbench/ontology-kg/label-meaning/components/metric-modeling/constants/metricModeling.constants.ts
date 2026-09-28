@@ -3,13 +3,13 @@ export const KNOWLEDGE_GROUP_TYPE = 'ontology'
 export const INDICATOR_TYPE_OPTIONS = [
   { label: '原子指标', value: 'atomic' },
   { label: '派生指标', value: 'derived' },
-  { label: '复合指标', value: 'derivative' }
+  { label: '复合指标', value: 'composite' }
 ]
 
 export const INDICATOR_TYPE_FILTER_OPTIONS = [
   { label: '原子指标', value: 'atomic' },
   { label: '派生指标', value: 'derived' },
-  { label: '复合指标', value: 'derivative' }
+  { label: '复合指标', value: 'composite' }
 ]
 
 export const STATUS_OPTIONS = [
@@ -181,6 +181,6 @@ export const STATUS_TEXT_MAP: Record<string, string> = {
 
 export const INDICATOR_TYPE_TEXT_MAP: Record<string, string> = {
   atomic: '原子指标',
-  derived: '派生指标',
-  derivative: '复合指标'
+  composite: '复合指标',
+  derived: '派生指标'
 }

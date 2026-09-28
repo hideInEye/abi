@@ -65,9 +65,10 @@ describe('metric precompute config visibility', () => {
     expect(shouldShowMetricPrecomputeConfig('atomic')).toBe(false)
   })
 
-  it('shows precompute config only for derived and derivative metrics', () => {
+  it('shows precompute config only for derived and composite metrics', () => {
     expect(shouldShowMetricPrecomputeConfig('derived')).toBe(true)
-    expect(shouldShowMetricPrecomputeConfig('derivative')).toBe(true)
+    expect(shouldShowMetricPrecomputeConfig('composite')).toBe(true)
+    expect(shouldShowMetricPrecomputeConfig('derivative')).toBe(false)
     expect(shouldShowMetricPrecomputeConfig('custom')).toBe(false)
     expect(shouldShowMetricPrecomputeConfig(undefined)).toBe(false)
   })
@@ -85,7 +86,7 @@ describe('metric create steps', () => {
     expect(getStepItems(false, true)).toEqual([{ key: 'business', title: '业务配置' }])
   })
 
-  it('keeps the dimension step for derived and derivative metrics', () => {
+  it('keeps the dimension step for derived and composite metrics', () => {
     expect(getStepItems(true).map(item => item.key)).toEqual(['business', 'technical', 'dimension'])
   })
 })

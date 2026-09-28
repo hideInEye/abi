@@ -98,6 +98,8 @@ export function extractExploreHistoryItems(roundGroups: any[]): ExploreItem[] {
     return [{
       id: `history-explore-${roundIndex}-${index}`,
       question: getQuestion(messages),
+      historySequence: Number.isSafeInteger(group?.historySequence) ? Number(group.historySequence) : index,
+      roundIndex: Number.isFinite(roundIndex) ? roundIndex : undefined,
       sortOrder: Number.isFinite(roundIndex) ? roundIndex : Date.now() + index,
       status: success ? 'completed' : 'failed',
       tasks: orderTasksByStepAppearance(Array.isArray(payload?.task_plan) ? payload.task_plan : [], steps),

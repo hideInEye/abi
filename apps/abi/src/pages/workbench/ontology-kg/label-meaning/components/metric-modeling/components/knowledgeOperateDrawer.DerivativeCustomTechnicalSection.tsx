@@ -19,6 +19,7 @@ import type { KnowledgeOperateFunctionExpressionFieldHandle } from './knowledgeO
 
 interface Props {
   readonly allFields: KnowledgeTechField[]
+  readonly editing?: boolean
   readonly fieldError?: boolean
   readonly fieldLoading?: boolean
   readonly form: FormInstance<KnowledgeFormValues>
@@ -29,6 +30,7 @@ interface Props {
 
 export const KnowledgeOperateDerivativeCustomTechnicalSection: React.FC<Props> = ({
   allFields,
+  editing,
   fieldError,
   fieldLoading,
   form,
@@ -53,11 +55,14 @@ export const KnowledgeOperateDerivativeCustomTechnicalSection: React.FC<Props> =
           getSchemaId={onSchemaChange}
           getSchemaOptions={(_: TableSemanticParams[]) => {}}
           groupFieldName="semanticsGroupId"
+          isEdit={editing}
+          label="数据语义"
           type="shema"
         />
         <AForm.Item label="来源字段">
           <ATreeSelect
             showSearch
+            disabled={editing}
             treeDefaultExpandAll
             fieldNames={{ label: 'title', value: 'value' }}
             loading={fieldLoading}
@@ -98,7 +103,7 @@ export const KnowledgeOperateDerivativeCustomTechnicalSection: React.FC<Props> =
 
       <KnowledgeOperateFunctionExpressionField
         ref={expressionRef}
-        dictionaryKind="derivative"
+        dictionaryKind="composite"
         fieldName="expr"
         form={form}
         validateExpression={validateSqlExpression}
