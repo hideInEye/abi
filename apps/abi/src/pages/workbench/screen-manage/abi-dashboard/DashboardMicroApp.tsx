@@ -1,13 +1,18 @@
-import { loadMicroApp } from 'qiankun'
-import type { MicroApp } from 'qiankun'
-import type { CSSProperties } from 'react'
-import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 import { useRoute } from '@sa/simple-router'
-import { handleLoginExpired } from '@/utils/auth'
+import { Alert, Button } from 'antd'
+import { loadMicroApp } from 'qiankun'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
+
 import { useAppSelector } from '@/hooks/business/useStore'
 import { getSpaceId } from '@/store/slice/app'
+import { handleLoginExpired } from '@/utils/auth'
+
+import { startDashboardSession } from './dashboardSession'
 
 const { VITE_BASE_URL } = import.meta.env
+const IDLE_RELEASE_DELAY = 5 * 60 * 1000
 
 interface DashboardMicroAppProps {
   readonly className?: string
@@ -16,97 +21,126 @@ interface DashboardMicroAppProps {
   readonly style?: CSSProperties
 }
 
-function getDashboardHostBasePath() {
-  return qiankunWindow.__POWERED_BY_QIANKUN__ ? '/studio/chatbi' : VITE_BASE_URL
+type DashboardPage = DashboardMicroAppProps & { pageTitle?: string }
+const DashboardHostContext = createContext<((page: DashboardPage) => () => void) | null>(null)
+
+export function DashboardMicroAppHost({ children }: { readonly children: ReactNode }) {
+  const [page, setPage] = useState<DashboardPage>()
+  const [active, setActive] = useState(false)
+  const activate = useCallback((nextPage: DashboardPage) => {
+    setPage(nextPage)
+    setActive(true)
+    return () => setActive(false)
+  }, [])
+
+  useEffect(() => {
+    if (active || !page) return undefined
+    const timer = window.setTimeout(() => setPage(undefined), IDLE_RELEASE_DELAY)
+    return () => window.clearTimeout(timer)
+  }, [active, page])
+
+  return (
+    <DashboardHostContext.Provider value={activate}>
+      {children}
+      {page && (
+        <DashboardInstance
+          active={active}
+          page={page}
+        />
+      )}
+    </DashboardHostContext.Provider>
+  )
 }
 
-export default function DashboardMicroApp(props: DashboardMicroAppProps) {
-  const { className, containerId, initialPath, style } = props
-  const route = useRoute()
-  const routeTitle = typeof route.meta?.title === 'string' ? route.meta.title.trim() : ''
+function DashboardInstance({ active, page }: { readonly active: boolean; readonly page: DashboardPage }) {
   const spaceId = useAppSelector(getSpaceId)
-  const microAppRef = useRef<MicroApp | null>(null)
+  const slotRef = useRef<HTMLDivElement>(null)
+  const sessionRef = useRef<ReturnType<typeof startDashboardSession>>()
+  const [attempt, setAttempt] = useState(0)
+  const [failed, setFailed] = useState(false)
+  const latestProps = useRef({})
+  latestProps.current = {
+    hostBasePath: qiankunWindow.__POWERED_BY_QIANKUN__ ? '/studio/chatbi' : VITE_BASE_URL,
+    initialPath: page.initialPath,
+    onTokenExpired: () => handleLoginExpired(),
+    pageTitle: page.pageTitle,
+    spaceId
+  }
 
-  // 初次挂载微应用
-  useEffect(() => {
-    const container = document.getElementById(containerId)
-    if (!container) {
-      return undefined
-    }
-
-    const microApp = loadMicroApp(
-      {
-        container: `#${containerId}`,
-        entry: import.meta.env.VITE_MICRO_ABI_DASHBOARD_ENTRY,
-        name: 'abi-dashboard',
-        props: {
-          hostBasePath: getDashboardHostBasePath(),
-          initialPath,
-          pageTitle: routeTitle || undefined,
-          spaceId,
-          onTokenExpired: () => {
-            handleLoginExpired()
-          }
-        }
-      },
-      {
-        sandbox: {
-          experimentalStyleIsolation: true
-        }
+  useLayoutEffect(() => {
+    const slot = slotRef.current
+    if (!slot) return undefined
+    const container = document.createElement('div')
+    container.className = 'h-full'
+    slot.appendChild(container)
+    let cancelled = false
+    setFailed(false)
+    const session = startDashboardSession(
+      container,
+      () =>
+        loadMicroApp(
+          {
+            container,
+            entry: import.meta.env.VITE_MICRO_ABI_DASHBOARD_ENTRY,
+            name: 'abi-dashboard',
+            props: latestProps.current
+          },
+          { sandbox: { experimentalStyleIsolation: true } }
+        ),
+      error => {
+        console.error('[abi-dashboard] 微应用生命周期失败:', error)
+        if (!cancelled) setFailed(true)
       }
     )
-    microAppRef.current = microApp
-
-    // 路由快速切换时容器会先于微应用加载完成被移除，qiankun 各生命周期 promise 会同时 reject，
-    // 统一兜底避免 Uncaught (in promise)；仅在组件仍存活时输出真实加载错误
-    let cancelled = false
-    const handleLifecycleError = (error: unknown) => {
-      if (!cancelled) {
-        console.error('[abi-dashboard] 微应用加载失败:', error)
-      }
-    }
-    microApp.loadPromise.catch(handleLifecycleError)
-    microApp.bootstrapPromise.catch(handleLifecycleError)
-    microApp.mountPromise.catch(handleLifecycleError)
+    sessionRef.current = session
 
     return () => {
       cancelled = true
-      microAppRef.current = null
-      microApp.mountPromise
-        .then(() => microApp.unmount())
-        .catch(() => {
-          // 加载被路由切换打断（容器已移除），无需卸载
-        })
+      sessionRef.current = undefined
+      session.dispose()
     }
-  }, [containerId, initialPath])
+  }, [attempt])
 
-  // routeTitle 变化时更新微应用 props
   useEffect(() => {
-    const microApp = microAppRef.current
-    if (microApp && microApp.getStatus() === 'MOUNTED') {
-      microApp.update?.({
-        pageTitle: routeTitle || undefined
-      })
-    }
-  }, [routeTitle])
-
-  // spaceId 变化时通知微应用刷新
-  useEffect(() => {
-    const microApp = microAppRef.current
-    if (microApp && microApp.getStatus() === 'MOUNTED') {
-      microApp.update?.({
-        spaceId
-      })
-    }
-  }, [spaceId])
+    sessionRef.current?.update(latestProps.current)
+  }, [attempt, page.initialPath, page.pageTitle, spaceId])
 
   return (
     <div
-      className={className}
-      id={containerId}
-      style={style}
+      className={page.className}
+      hidden={!active}
+      id={page.containerId}
+      style={page.style}
     >
-      数据大屏
+      {failed && (
+        <Alert
+          action={<Button onClick={() => setAttempt(value => value + 1)}>重试</Button>}
+          message="数据大屏加载失败"
+          type="error"
+        />
+      )}
+      <div
+        className="h-full"
+        ref={slotRef}
+      />
     </div>
+  )
+}
+
+export default function DashboardMicroApp({ className, containerId, initialPath, style }: DashboardMicroAppProps) {
+  const activate = useContext(DashboardHostContext)
+  const route = useRoute()
+  const pageTitle = typeof route.meta?.title === 'string' ? route.meta.title.trim() || undefined : undefined
+
+  useLayoutEffect(
+    () => activate?.({ className, containerId, initialPath, pageTitle, style }),
+    [activate, className, containerId, initialPath, pageTitle, style]
+  )
+
+  return activate ? null : (
+    <DashboardInstance
+      active
+      page={{ className, containerId, initialPath, pageTitle, style }}
+    />
   )
 }
