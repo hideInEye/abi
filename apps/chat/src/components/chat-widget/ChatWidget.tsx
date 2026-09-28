@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -238,10 +238,10 @@ type WidgetTimelineEntry =
 const { Text } = Typography
 
 /* ── 图表区（同主对话 ViewEle 图表分支：小节头 + ChartHeader 工具栏 + 图/表/SQL 三视图） ── */
-// 图表配置常量与主对话 ViewEle 默认值保持一致
+// 配色沿用主对话 ViewEle 默认值；字号收小以贴合悬浮窗窄面板
 const CHART_CONFIG = {
   font: 'Arial',
-  fontSize: 12,
+  fontSize: 10,
   chartStyle: { color: '#2FA4FF,#7ACBFF,#A67AFF,#F7A45C,#6E6E6E,#50C878', textColor: '#333333' },
 }
 
@@ -254,17 +254,25 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
   const echartRef = useRef<any>(null)
   const tableRef = useRef<HTMLDivElement>(null)
   const chartWrapRef = useRef<HTMLDivElement>(null)
+  // 图表容器实际宽度：用于按宽度自适应同屏可视条数（窄面板少显示可滚动，宽面板多显示）
+  const [chartWidth, setChartWidth] = useState(0)
 
   // 面板拖拽改宽不触发 window resize（EChart autoResize 仅监听 window）：观察图表容器宽度同步 echarts 尺寸
   useEffect(() => {
     const el = chartWrapRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(() => echartRef.current?.resize())
+    const ro = new ResizeObserver(() => {
+      echartRef.current?.resize()
+      setChartWidth(el.clientWidth)
+    })
     ro.observe(el)
+    setChartWidth(el.clientWidth)
     return () => ro.disconnect()
   }, [])
 
   const hasData = Array.isArray(chart.data) && chart.data.length > 0
+  // 每个类目约需 56px 才不拥挤（字号已收小）：据此估算同屏可视条数，兜底 7
+  const visibleCount = chartWidth > 0 ? Math.max(5, Math.min(12, Math.floor(chartWidth / 56))) : 7
   const option = useMemo(
     () =>
       getChartOption(chart.type, chart.data, {
@@ -272,8 +280,9 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
         fontSize: CHART_CONFIG.fontSize,
         color: CHART_CONFIG.chartStyle.color,
         textColor: CHART_CONFIG.chartStyle.textColor,
+        visibleCount,
       }),
-    [chart.type, chart.data],
+    [chart.type, chart.data, visibleCount],
   )
 
   // 导出：PNG 走客户端截图；csv/excel 在分享免登录场景无后端导出接口，用已有数据本地生成
@@ -344,7 +353,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
             }}
           />
         )}
-        <EChart ref={echartRef} option={option} style={{ height: '16rem', width: '100%' }} autoResize handleClick={() => {}} />
+        <EChart ref={echartRef} option={option} style={{ height: '12rem', width: '100%' }} autoResize handleClick={() => {}} />
       </div>
     )
   }
@@ -548,6 +557,39 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 放大前的 inline 样式快照（还原时恢复拖拽/resize 自定义的位置尺寸）
   const panelCssTextRef = useRef('')
   const didInit = useRef(false)
+  // 用户手动拖拽改大小后交还控制权：不再自动抬高 min-width，允许拖回默认，信息条切省略号
+  const manualResizeRef = useRef(false)
+
+  // 信息条内容超宽时抬高面板 min-width：默认宽度为下限，面板随信息条内容自适应变宽，正文仍正常换行
+  const fitInfobarWidth = useCallback(() => {
+    const panel = panelRef.current
+    const body = bodyRef.current
+    if (!panel || !body || maximized || mode === 'embed' || manualResizeRef.current) return
+    const bars = body.querySelectorAll<HTMLElement>('.abi-cw-infobar')
+    let maxBar = 0
+    bars.forEach((b) => {
+      if (b.offsetWidth > maxBar) maxBar = b.offsetWidth
+    })
+    // 无信息条时清空下限，回落默认宽度
+    if (maxBar === 0) {
+      panel.style.minWidth = ''
+      return
+    }
+    // 54 = body 左右内边距(24) + 白卡左右内边距(28) + 面板边框(2)
+    const needed = maxBar + 54
+    const cap = window.innerWidth - 32
+    panel.style.minWidth = `${Math.min(needed, cap)}px`
+  }, [maximized, mode])
+
+  useLayoutEffect(() => {
+    fitInfobarWidth()
+  }, [fitInfobarWidth, messages])
+
+  useEffect(() => {
+    const onResize = () => fitInfobarWidth()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [fitInfobarWidth])
 
   // 分享 token 以 Bearer 头注入探索/报告 service（依赖注入，不写 localStorage、不影响主对话登录态）
   const shareAuth = shareToken ? `Bearer ${shareToken}` : null
@@ -912,6 +954,12 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           patchMsg({ content: (controller.signal.aborted && '已停止生成') || '请求异常，请稍后重试', streaming: false })
           setSending(false)
         },
+        // 闲聊/超范围屏蔽（illegal_query）：直接以提示语作为正文收尾，不走轮次定位/回补（同主对话）
+        // 单换行在 markdown 为软换行会并到一行，转两空格硬换行以还原后端原文分行
+        onIllegalQuery: (tip) => {
+          patchMsg({ content: tip.replace(/\n/g, '  \n'), thinking: undefined, streaming: false })
+          setSending(false)
+        },
       },
       selectedSemantic,
       info?.spaceId,
@@ -1095,6 +1143,11 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     const panel = panelRef.current
     if (!panel) return
     const rect = panel.getBoundingClientRect()
+    // 手动接管：先按当前（撑宽后）宽度量取 rect，再清除自动撑宽的 min-width 下限并把 width 钉在当前值，避免塌陷跳变；信息条切「超出省略号」模式
+    manualResizeRef.current = true
+    panel.style.width = `${rect.width}px`
+    panel.style.minWidth = ''
+    panel.classList.add('abi-cw-infobar-ellipsis')
     const startX = e.clientX
     const startY = e.clientY
     panel.style.position = 'fixed'
@@ -1331,36 +1384,41 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
         <EyeOutlined className="uni-icon" />
         <span className="uni-name">查看语义</span>
       </div>
-      <Popover
-        content={skillFlyoutContent}
-        trigger="hover"
-        placement="rightTop"
-        arrow={false}
-        overlayClassName="uni-popover"
-        getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
-      >
-        <div className="uni-popup-item">
-          <ToolOutlined className="uni-icon" />
-          <span className="uni-name">技能</span>
-          {(info?.skills?.length ?? 0) > 0 && <span className="uni-count">{info!.skills.length}</span>}
-          <RightOutlined className="uni-arrow" />
-        </div>
-      </Popover>
-      <Popover
-        content={mcpFlyoutContent}
-        trigger="hover"
-        placement="rightTop"
-        arrow={false}
-        overlayClassName="uni-popover"
-        getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
-      >
-        <div className="uni-popup-item">
-          <ApiOutlined className="uni-icon" />
-          <span className="uni-name">MCP</span>
-          {(info?.mcps?.length ?? 0) > 0 && <span className="uni-count">{info!.mcps.length}</span>}
-          <RightOutlined className="uni-arrow" />
-        </div>
-      </Popover>
+      {/* 交互模式下隐藏 技能 / MCP 入口（对齐主对话 chat-input） */}
+      {chatMode !== 'interact' && (
+        <>
+          <Popover
+            content={skillFlyoutContent}
+            trigger="hover"
+            placement="rightTop"
+            arrow={false}
+            overlayClassName="uni-popover"
+            getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+          >
+            <div className="uni-popup-item">
+              <ToolOutlined className="uni-icon" />
+              <span className="uni-name">技能</span>
+              {(info?.skills?.length ?? 0) > 0 && <span className="uni-count">{info!.skills.length}</span>}
+              <RightOutlined className="uni-arrow" />
+            </div>
+          </Popover>
+          <Popover
+            content={mcpFlyoutContent}
+            trigger="hover"
+            placement="rightTop"
+            arrow={false}
+            overlayClassName="uni-popover"
+            getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+          >
+            <div className="uni-popup-item">
+              <ApiOutlined className="uni-icon" />
+              <span className="uni-name">MCP</span>
+              {(info?.mcps?.length ?? 0) > 0 && <span className="uni-count">{info!.mcps.length}</span>}
+              <RightOutlined className="uni-arrow" />
+            </div>
+          </Popover>
+        </>
+      )}
     </div>
   )
 
@@ -1508,7 +1566,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                         <span className="abi-cw-infobar-label">分组：</span>
                         <span className="abi-cw-infobar-chip abi-cw-infobar-chip-group">
                           <i className="abi-cw-infobar-dot" style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.5)' }} />
-                          {m.semanticGroup || '无'}
+                          <span className="abi-cw-infobar-chip-text">{m.semanticGroup || '无'}</span>
                         </span>
                         <span className="abi-cw-infobar-label" style={{ marginLeft: '2em' }}>数据语义：</span>
                         {/* 带 schemaId 时可点：窗体自动放大，Schema 抽屉窗内右侧滑出 */}
@@ -1517,7 +1575,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                           onClick={m.semanticSchemaId != null ? () => openSchemaDrawer(m.semanticSchemaId as number | string, m.semanticName || '') : undefined}
                         >
                           <i className="abi-cw-infobar-dot" style={{ background: '#5b7cf7', boxShadow: '0 0 6px rgba(91,124,247,0.5)' }} />
-                          {m.semanticName || '无'}
+                          <span className="abi-cw-infobar-chip-text">{m.semanticName || '无'}</span>
                         </span>
                       </div>
                     )}

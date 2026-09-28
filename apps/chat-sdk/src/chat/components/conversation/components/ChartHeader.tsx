@@ -1,0 +1,600 @@
+import { useState, useEffect } from 'react'
+import { Button, Dropdown, Space, Popover, Skeleton, Divider, Tooltip } from 'antd'
+import SvgIcon from '../../../components/SvgIcon'
+import {
+  FilterOutlined,
+  DownloadOutlined,
+  CloseOutlined,
+  BarChartOutlined,
+  TableOutlined,
+  CodeOutlined,
+  SettingOutlined,
+  FullscreenOutlined,
+  BugOutlined,
+  DownOutlined,
+} from '@ant-design/icons'
+import { fetchConvGuide, fetchAssembleSql, fetchSelectDataBySql } from '../../../service/api/conv'
+import FilterItem, { FilterType, FilterOption } from './FilterItem'
+import ChartTypeModal from './ChartTypeModal'
+import { getChartTypeItem } from './chartTypeCatalog'
+import { filterParams, countActiveFilters } from '@/utils'
+import { exportMenuItems } from '@/constant/chat'
+import type { MenuProps } from 'antd'
+import './styles.css'
+
+interface FilterData {
+  dateFormat: string | null
+  fieldType: string
+  filteredData: any
+  filtrateDataList: string[]
+  greaterThan: any
+  minorThan: any
+  showType: string
+  tfieldName: string
+  tfieldShowName: string
+  tfieldType: string | null
+}
+
+interface FilterConfig {
+  type: FilterType
+  field: string
+  placeholder?: string | [string, string]
+  options?: FilterOption[]
+  extra: any
+}
+
+interface Props {
+  onTypeChange: (type: string) => void
+  onShareClick: () => void
+  onConfigClick: () => void
+  onDebugClick: () => void
+  onFullscreenClick: () => void
+  onDataFetched: (data: any) => void
+  onExportClick?: (key: string) => void
+  onhandleGetChartType?: (type: string) => void
+  showChartIcon?: boolean
+  activeType?: string
+  convUid?: string
+  chatId?: string
+  spaceId?: number
+  agentId?: string
+  sessionId?: string
+  schemaId?: number | string
+  chatMode?: string
+  ansiSql?: string
+  chartType?: string
+  currentTableData?: any[] // 当前表格数据，用于提取筛选选项
+  showTitle?: boolean
+  /** 窄屏（分享面板）：隐藏配置/调试/大屏/导出/筛选等工具按钮，仅保留图/表/SQL 视图切换 */
+  hideTools?: boolean
+}
+
+const ChartHeader: React.FC<Props> = ({
+  onTypeChange,
+  onShareClick,
+  onConfigClick,
+  onDebugClick,
+  onFullscreenClick,
+  onDataFetched,
+  onExportClick,
+  onhandleGetChartType,
+  showChartIcon = false,
+  activeType = 'table',
+  convUid,
+  chatId,
+  spaceId,
+  agentId,
+  sessionId,
+  schemaId,
+  chatMode,
+  ansiSql,
+  chartType,
+  currentTableData = [],
+  showTitle = true,
+  hideTools = false,
+}) => {
+  const [filterValues, setFilterValues] = useState<Record<string, any>>({})
+  const [allFilters, setAllFilters] = useState<FilterData[]>([]) // 二次引导筛选项
+  const [open, setOpen] = useState(false) // 控制Popover显示状态
+  const [filterValuesLen, setFilterValuesLen] = useState(0)
+  const [loading, setLoading] = useState(false) // 加载状态
+  const [filtersFetched, setFiltersFetched] = useState(false) // 记录是否已获取过筛选数据
+  const [chartModalOpen, setChartModalOpen] = useState(false) // 图表类型选择弹窗
+
+  const handleGetFileter = async () => {
+    setOpen(true)
+    // 如果已经获取过筛选数据且当前有筛选条件，则不再重复请求
+    if (filtersFetched && allFilters.length > 0) {
+      return
+    }
+
+    if (convUid && sessionId && spaceId && schemaId && chatMode) {
+      try {
+        setLoading(true)
+        const res = await fetchConvGuide({
+          convUid,
+          sessionId,
+          spaceId,
+          schemaId,
+          chatMode,
+          unionSql: ansiSql,
+        })
+
+        if (res.data) {
+          setAllFilters(res.data || [])
+          setFiltersFetched(true) // 标记为已获取数据
+
+          const initialValues = res.data.reduce(
+            (acc, filter) => {
+              acc[filter.tfieldName] = undefined
+              return acc
+            },
+            {} as Record<string, any>,
+          )
+          setFilterValues(initialValues)
+        }
+      } catch (error) {
+        console.error('获取过滤器配置失败:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
+
+  // 重置筛选条件
+  const resetFilters = () => {
+    const initialValues = allFilters.reduce(
+      (acc, filter) => {
+        const { showType } = filter
+        let initialValue
+
+        // 根据筛选类型设置初始值
+        switch (showType) {
+          case 'select': // 下拉选择框：空数组
+            initialValue = []
+            break
+          case 'date': // 日期范围：空值
+            initialValue = null
+            break
+          case 'range': // 数值范围：固定对象形态，避免 value.min/value.max 访问异常
+            initialValue = { min: '', max: '' }
+            break
+          default: // 输入框等其他类型：设为 undefined 或空字符串
+            initialValue = undefined
+            break
+        }
+
+        acc[filter.tfieldName] = initialValue
+        return acc
+      },
+      {} as Record<string, any>,
+    )
+
+    setFilterValues(initialValues)
+    setFilterValuesLen(countActiveFilters(initialValues))
+  }
+
+  const handleFilterChange = (field: string, value: any) => {
+    setFilterValues((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
+  // 查询,根据筛选和上一次的sql条件转sql，再查数据
+  const handleSearch = async (isRefresh: boolean = false) => {
+    setFilterValuesLen(isRefresh ? 0 : countActiveFilters(filterValues))
+    try {
+      const res = await fetchAssembleSql({
+        convUid,
+        sessionId,
+        spaceId,
+        schemaId,
+        chatMode,
+        unionSql: ansiSql,
+        filteredFields: isRefresh ? [] : generateFilteredFields(allFilters, filterParams(filterValues)),
+      })
+      if (res.data) {
+        const newSql = res.data.unionSql
+        handleSelectDataBySql(newSql)
+      }
+      setOpen(false)
+    } catch (error) {
+      console.error('组装SQL失败:', error)
+    }
+  }
+
+  // 根据sql 查数据
+  const handleSelectDataBySql = async (sql: string) => {
+    try {
+      const res = await fetchSelectDataBySql({
+        convUid,
+        sessionId,
+        spaceId,
+        schemaId,
+        chatMode,
+        unionSql: sql,
+      })
+      if (res.data) {
+        // 将查询到的数据传递给父组件
+        onDataFetched?.({
+          data: res.data.data.data,
+          sql,
+        })
+      }
+    } catch (error) {
+      console.error('执行SQL查询失败:', error)
+      onDataFetched?.({ sql })
+    }
+  }
+
+  const generateFilteredFields = (originalFields, formData) => {
+    return originalFields
+      .filter((field) => formData[field.tfieldName] !== undefined)
+      .map((field) => {
+        const { tfieldShowName, tfieldName, fieldType, dateFormat, showType } = field
+        const value = formData[tfieldName]
+        let filteredData = ''
+
+        // 处理不同 showType 的筛选逻辑
+        switch (showType) {
+          case 'range': {
+            // 处理范围类型：对象格式 { min: ..., max: ... }
+            if (value && value.min !== undefined && value.max !== undefined) {
+              const min = fieldType === 'VARCHAR' ? `'${value.min}'` : value.min
+              const max = fieldType === 'VARCHAR' ? `'${value.max}'` : value.max
+              filteredData = `${tfieldName} >= ${min} and ${tfieldName} <= ${max}`
+            } else if (value && value.min !== undefined) {
+              const min = fieldType === 'VARCHAR' ? `'${value.min}'` : value.min
+              filteredData = `${tfieldName} >= ${min}`
+            } else if (value && value.max !== undefined) {
+              const max = fieldType === 'VARCHAR' ? `'${value.max}'` : value.max
+              filteredData = `${tfieldName} <= ${max}`
+            }
+            break
+          }
+
+          case 'date': {
+            // 处理日期类型：数组格式 [val1, val2]
+            if (Array.isArray(value) && value.length === 2) {
+              const [startDate, endDate] = value
+              if (startDate && endDate) {
+                const formattedStart = (fieldType === 'VARCHAR' || showType === 'date') ? `'${startDate}'` : startDate
+                const formattedEnd = (fieldType === 'VARCHAR' || showType === 'date') ? `'${endDate}'` : endDate
+                filteredData = `${tfieldName} >= ${formattedStart} and ${tfieldName} <= ${formattedEnd}`
+              } else if (startDate) {
+                const formattedStart = (fieldType === 'VARCHAR' || showType === 'date') ? `'${startDate}'` : startDate
+                filteredData = `${tfieldName} >= ${formattedStart}`
+              } else if (endDate) {
+                const formattedEnd = (fieldType === 'VARCHAR' || showType === 'date') ? `'${endDate}'` : endDate
+                filteredData = `${tfieldName} <= ${formattedEnd}`
+              }
+            }
+            break
+          }
+
+          case 'select': {
+            // 处理下拉选择：生成 IN 条件
+            if (value && (Array.isArray(value) ? value.length > 0 : value !== null)) {
+              const values = Array.isArray(value) ? value : [value]
+              const formattedValues = values
+                .filter((v) => v !== null && v !== undefined)
+                .map((v) => {
+                  // 将时间格式中的T替换为空格
+                  const cleanValue = String(v).replace(/T/g, ' ');
+                  // 对于字符串类型的值（包括时间），都需要加引号
+                  const needQuotes = fieldType === 'VARCHAR' || 
+                                    fieldType?.includes('TIMESTAMP') || 
+                                    fieldType?.includes('DATE') ||
+                                    typeof v === 'string';
+                  return needQuotes ? `'${cleanValue}'` : cleanValue;
+                })
+                .join(',')
+              filteredData = `${tfieldName} in (${formattedValues})`
+            }
+            break
+          }
+
+          case 'input': {
+            // 处理输入框：生成等于条件
+            if (value !== null && value !== undefined && value !== '') {
+              const formattedValue = fieldType === 'VARCHAR' ? `'${value}'` : value
+              filteredData = `${tfieldName} = ${formattedValue}`
+            }
+            break
+          }
+
+          default: {
+            filteredData = ''
+          }
+        }
+
+        return {
+          tfieldShowName,
+          tfieldName,
+          fieldType,
+          dateFormat,
+          filteredData,
+        }
+      })
+  }
+
+  // 文件下载
+  const handleDownloadClick: MenuProps['onClick'] = async ({ key }) => {
+    onExportClick && onExportClick(key)
+  }
+
+  const renderFilterItem = (filter: FilterData) => {
+    if (currentTableData && currentTableData.length > 0) {
+      const tableFields = Object.keys(currentTableData[0] || {})
+      const matchedField = tableFields.find(
+        (field) => field.includes(filter.tfieldName) || filter.tfieldName.includes(field) || field.includes(filter.tfieldShowName) || filter.tfieldShowName.includes(field),
+      )
+
+      if (!matchedField) {
+        return null
+      }
+    }
+
+    let config: FilterConfig = {
+      type: 'input',
+      field: filter.tfieldName,
+      placeholder: filter.tfieldShowName,
+      extra: {
+        convUid,
+        chatId,
+        spaceId,
+        agentId,
+        chatMode,
+      },
+    }
+
+    switch (filter.showType) {
+      case 'select':
+        // 如果有当前表格数据，从表格数据中提取唯一值作为选项，否则使用API提供的选项
+        let options = filter.filtrateDataList.map((item) => ({
+          label: item,
+          value: item,
+        }))
+
+        if (currentTableData && currentTableData.length > 0) {
+          try {
+            // 直接使用模糊匹配查找对应字段
+            const tableFields = Object.keys(currentTableData[0])
+            const matchedField = tableFields.find(
+              (field) => field.includes(filter.tfieldName) || filter.tfieldName.includes(field) || field.includes(filter.tfieldShowName) || filter.tfieldShowName.includes(field),
+            )
+
+            if (matchedField) {
+              const fieldValues = currentTableData.map((row) => row[matchedField])
+              const uniqueValues = [...new Set(fieldValues.filter((val) => val !== null && val !== undefined))]
+
+              if (uniqueValues.length > 0) {
+                options = uniqueValues.map((item) => {
+                // 格式化时间字符串，将T替换为空格
+                const label = String(item).replace(/T/g, ' ');
+                return {
+                  label,
+                  value: item,
+                }})
+              }
+            }
+          } catch (error) {
+            console.warn('Error extracting filter options from table data:', error)
+            // 如果提取失败，继续使用原来的选项
+          }
+        }
+
+        config = {
+          type: 'select',
+          field: filter.tfieldName,
+          placeholder: filter.tfieldShowName,
+          options,
+          extra: {
+            convUid,
+            chatId,
+            spaceId,
+            agentId,
+            chatMode,
+          },
+        }
+        break
+      case 'range':
+        config = {
+          type: 'range',
+          field: filter.tfieldName,
+          placeholder: [filter.tfieldShowName, filter.tfieldShowName],
+          extra: {
+            convUid,
+            chatId,
+            spaceId,
+            agentId,
+            chatMode,
+          },
+        }
+        break
+      case 'date':
+        config = {
+          type: 'date',
+          field: filter.tfieldName,
+          placeholder: [filter.tfieldShowName, filter.tfieldShowName],
+          extra: {
+            convUid,
+            chatId,
+            spaceId,
+            agentId,
+            chatMode,
+          },
+        }
+        break
+      case 'input':
+        config = {
+          type: 'input',
+          field: filter.tfieldName,
+          placeholder: filter.tfieldShowName,
+          extra: {
+            convUid,
+            chatId,
+            spaceId,
+            agentId,
+            chatMode,
+          },
+        }
+        break
+    }
+
+    return (
+      <div className="mb-3" key={filter.tfieldName}>
+        <FilterItem
+          {...config}
+          value={filterValues[filter.tfieldName]}
+          onChange={(value) => handleFilterChange(filter.tfieldName, value)}
+          style={config.type === 'input' ? { width: 260 } : config.type === 'date' ? { width: 300 } : config.type === 'select' ? { width: 300 } : config.type === 'range' ? { width: 300 } : undefined}
+        />
+      </div>
+    )
+  }
+
+  const popoverContent = (
+    <div className="p-3 w-[26.25rem] max-h-[25rem] overflow-y-auto">
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="font-medium">筛选条件</h3>
+        <CloseOutlined className="cursor-pointer hover:text-gray-600" onClick={() => setOpen(false)} />
+      </div>
+      {/* 加载状态 */}
+      {loading && <Skeleton active paragraph={{ rows: 5 }} />}
+
+      {/* 筛选内容 */}
+      {!loading && <div className="mb-3">{allFilters?.length > 0 ? <>{allFilters.map(renderFilterItem)}</> : <div className="text-gray-500 text-center py-4">没有可用的筛选条件</div>}</div>}
+      <div className="flex justify-end pt-2 border-t">
+        <Button onClick={() => setOpen(false)} className="mr-2">
+          取消
+        </Button>
+        {/* <Button 
+          className="mr-2"
+          onClick={resetFilters}
+        >
+          重置筛选条件
+        </Button> */}
+        <Button type="primary" onClick={() => handleSearch(false)}>
+          查询
+        </Button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div>
+      <header className="chart-header-bar flex items-center justify-between py-3 bg-white">
+        
+        <div className="flex items-center">
+          {showTitle ? <span className="chart-header-title font-semibold text-[#2d2d2d] mr-[0.36rem]">图表信息</span> : null}
+          {/* 左侧原本的筛选区域已移除 */}
+          {showChartIcon && activeType === 'chart' && (
+            <ChartTypeModal
+              open={chartModalOpen}
+              value={chartType}
+              onOpenChange={setChartModalOpen}
+              onSelect={(v) => onhandleGetChartType?.(v)}
+            >
+              <button
+                type="button"
+                className="flex items-center gap-1 h-6 px-2 rounded-md border border-[#d9d9d9] bg-white text-[#333] text-xs hover:text-[#3470f6] hover:border-[#3470f6] transition-colors"
+              >
+                <BarChartOutlined />
+                <span>{getChartTypeItem(chartType)?.label || '选择图表'}</span>
+                <DownOutlined className="text-[0.625rem] text-[#999]" />
+              </button>
+            </ChartTypeModal>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {showChartIcon && (
+            <Tooltip title="智能图表">
+              <span
+                className={`chart-header-icon ${activeType === 'chart' ? 'active' : ''}`}
+                onClick={() => onTypeChange('chart')}
+              >
+                <BarChartOutlined />
+              </span>
+            </Tooltip>
+          )}
+          <Tooltip title="数据表格">
+            <span
+              className={`chart-header-icon ${activeType === 'table' ? 'active' : ''}`}
+              onClick={() => onTypeChange('table')}
+            >
+              <TableOutlined />
+            </span>
+          </Tooltip>
+          <Tooltip title={chatMode === 'chat_excel' ? 'Python代码' : 'SQL语句'}>
+            <span
+              className={`chart-header-icon ${activeType === 'sql' ? 'active' : ''}`}
+              onClick={() => onTypeChange('sql')}
+            >
+              <CodeOutlined />
+            </span>
+          </Tooltip>
+          {/* 暂时隐藏分享按钮
+          <span className="cursor-pointer hover:opacity-70 select-none" onClick={onShareClick}>
+            <SvgIcon className="text-[1rem]" localIcon="share" />
+          </span>
+          */}
+          {showChartIcon && !hideTools && (
+            <Tooltip title="图表配置">
+              <span className="chart-header-icon" onClick={onConfigClick}>
+                <SettingOutlined />
+              </span>
+            </Tooltip>
+          )}
+          {!hideTools && (
+            <Tooltip title="模型调试">
+              <span className="chart-header-icon" onClick={onDebugClick}>
+                <BugOutlined />
+              </span>
+            </Tooltip>
+          )}
+          {!hideTools && (
+            <Tooltip title="大屏展示">
+              <span className="chart-header-icon" onClick={onFullscreenClick}>
+                <FullscreenOutlined />
+              </span>
+            </Tooltip>
+          )}
+          {!hideTools && (
+            <Tooltip title="数据导出">
+              <span className="chart-header-icon text-[#666] flex hover:text-[#3470f6]">
+                <Dropdown menu={{ items: exportMenuItems, onClick: handleDownloadClick }} placement="bottom" trigger={['click']}>
+                  <Space>
+                    <DownloadOutlined />
+                  </Space>
+                </Dropdown>
+              </span>
+            </Tooltip>
+          )}
+          {/* 筛选条件Popover */}
+          {!hideTools && (
+            <Tooltip title="数据筛选" open={open ? false : undefined}>
+              <Popover
+                content={popoverContent}
+                title={null} // 取消默认标题
+                trigger="click"
+                placement="bottomRight"
+                arrow={{ pointAtCenter: true }}
+                open={open}
+                onOpenChange={setOpen} // 监听popover打开/关闭状态
+              >
+                <span onClick={handleGetFileter} className="chart-header-icon text-[#666] hover:text-[#3470f6]">
+                  <FilterOutlined />
+                  {filterValuesLen > 0 && <span style={{ fontSize: '0.625rem' }}>{`(${filterValuesLen})`}</span>}
+                </span>
+              </Popover>
+            </Tooltip>
+          )}
+        </div>
+      </header>
+    </div>
+  )
+}
+
+export default ChartHeader

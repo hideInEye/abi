@@ -21,6 +21,7 @@ import historyRecordOperateProxy from "../../../operate-provider/undo-redo/Histo
 import {Input} from "antd";
 import {DesignerLoader} from "../../../loader/DesignerLoader.ts";
 import layerManager from "../../../manager/LayerManager.ts";
+import URLUtil from "../../../../utils/URLUtil.ts";
 
 class CompList extends Component {
 
@@ -136,7 +137,7 @@ class CompList extends Component {
             const compInfo: BaseInfoType = compInfoArr[i];
             const {compName, compKey} = compInfo;
             const definition: AbstractDefinition = DesignerLoader.definitionMap[compKey];
-            const chartImg = definition.getChartImg();
+            const chartImg = URLUtil.resolveAssetUrl(definition.getChartImg());
             chartDom.push(
                 <div
                     key={i + ''}

@@ -14,7 +14,7 @@ export const fetchEmailList = (data?: any) => {
   return apiRequest<any>({
     method: 'post',
     data,
-    url: '/api/abi-system/shared/list'
+    url: '/api/abi-executor/shared/list'
   })
 }
 
@@ -22,7 +22,7 @@ export const fetchEmailList = (data?: any) => {
 // 邮件分享
 export function fetchShareEmail(data: any) {
   return apiRequest({
-    url: "/api/abi-system/shared/add",
+    url: "/api/abi-executor/shared/add",
     method: "post",
     data,
   });
@@ -30,14 +30,14 @@ export function fetchShareEmail(data: any) {
 // 邮件列表删除
 export function deleteShareEmail(id: string) {
   return apiRequest({
-    url: `/api/abi-system/shared/deleteLog?logId=${id}`,
+    url: `/api/abi-executor/shared/deleteLog?logId=${id}`,
     method: "post",
   });
 }
 // 邮件列表批量删除
 export function deleteShareEmailBatch(data: any) {
   return apiRequest({
-    url: `/api/abi-system/shared/batchDeleteLog`,
+    url: `/api/abi-executor/shared/batchDeleteLog`,
     method: "post",
     data
   });
@@ -46,7 +46,7 @@ export function deleteShareEmailBatch(data: any) {
 // 查询邮件详情
 export function fetchShareEmailDetail(id: string) {
   return apiRequest({
-    url: `/api/abi-system/shared/detail?recordId=${id}`,
+    url: `/api/abi-executor/shared/detail?recordId=${id}`,
     method: "get",
   });
 }
@@ -54,7 +54,7 @@ export function fetchShareEmailDetail(id: string) {
 // 邮件更新
 export function updateShareEmail(data: any) {
   return apiRequest({
-    url: "/api/abi-system/shared/update",
+    url: "/api/abi-executor/shared/update",
     method: "post",
     data,
   });
@@ -168,14 +168,6 @@ export function fetchJobLogList(params?: any) {
   });
 }
 
-/** 调度日志明细 */
-export function fetchJobLogDetail(jobLogId: string) {
-  return jobRequest({
-    method: 'get',
-    url: `/api/abi-scheduler/joblog/${jobLogId}/detail`,
-  });
-}
-
 /** 调度日志内容：自 fromLineNum 起滚动拉取日志行 */
 export function fetchJobLogContent(jobLogId: string, fromLineNum: number) {
   return jobRequest({
@@ -206,6 +198,6 @@ export function cleanJobLog(data?: any) {
 export function deleteJob(id: string) {
   return apiRequest<any>({
     method: 'post',
-    url: `/api/abi-system/shared/delete?recordId=${id}`,
+    url: `/api/abi-executor/shared/delete?recordId=${id}`,
   });
 }

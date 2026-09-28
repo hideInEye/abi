@@ -545,7 +545,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
           </div>
         }
       >
-        <Form form={shareEmailForm} layout="vertical" wrapperCol={{ span: 20 }} initialValues={{ emailTitle: `${conv.biz_name}报告-${dayjs().format('YYYY.MM.DD')}` }}>
+        <Form form={shareEmailForm} layout="vertical" wrapperCol={{ span: 20 }} initialValues={{ emailTitle: `${conv.biz_name}报告-${dayjs().format('YYYY.MM.DD')}`, interval: 1, points: [{ time: '08:00' }], scheduleMode: 'CONTINUOUS', unit: 'DAY' }}>
           {confirmShareType === 'email' && shareStep === 2 && <ShareEmailSetting form={shareEmailForm} />}
         </Form>
         {(confirmShareType === 'snapshot' || (confirmShareType === 'email' && shareStep === 1)) && (

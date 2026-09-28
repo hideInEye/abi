@@ -25,8 +25,18 @@
 - 依赖：TanStack Router、Zustand、Ant Design、Tailwind、axios、`@sa/auth`、`@sa/axios`。
 - 输入：`public/config.json`、URL boot params、localStorage token、后端聊天/分析接口。
 - 输出：会话消息、图表、下载/截图、调试状态。
-- 注意事项：`src/main.tsx` 会 fetch config 后挂载；`src/service/request/index.ts` 在开发环境会把绝对 baseURL 降为同源路径以走 Vite proxy。`src/components/chat-widget/` 为无 store 依赖的纯组件对话悬浮框，服务两种形态：分享路由页 `/assistant-share-page/:shareCode` 与第三方嵌入；`vite.config.widget.ts`（`build:widget` 脚本）独立构建 iife 单文件 `dist/widget/abi-chat-widget.js/css`（Web Component `<abi-chat-widget>`）；widget 不引入 Tailwind/antd，样式全量 `abi-cw-` 前缀，请求走 shareCode 免登录封装（`chat-widget/service.ts`，接口路径假设集中该文件）。
+- 注意事项：`src/main.tsx` 会 fetch config 后挂载；`src/service/request/index.ts` 在开发环境会把绝对 baseURL 降为同源路径以走 Vite proxy。`src/components/chat-widget/` 为对话悬浮框，服务分享路由页 `/assistant-share-page/:shareCode` 与第三方嵌入；`public/abi-assistant-widget.js` 由 `apps/chat-widget` 构建产出并自动复制而来，正常 Chat 构建时原样复制到 `dist` 对外提供。
 - 测试建议：优先覆盖 `syncBootParams`、conversation helpers、图表数据转换和 token 过期处理。
+
+## apps/chat-widget
+
+- 路径：`apps/chat-widget`（目录仍为 `apps/chat-sdk`，包名 `@abi/chat-widget`）
+- 职责：把「浮窗助手」做成可构建 SDK；自定义元素负责跨框架接入，内部直接复用 React ChatWidget 弹窗。
+- 依赖：构建期 Vite + TypeScript；产物内置 React、ReactDOM 和 ChatWidget 运行依赖。
+- 输入：`share-code`/`base`/`open` 属性或 `AbiAssistant.init({ shareCode, base, target })`。
+- 输出：单文件 `dist/abi-assistant-widget.js`（IIFE，内嵌 ChatWidget CSS，约 5MB）、`dist/index.es.js`（ESM）、`dist/index.d.ts`。
+- 注意事项：`src/widget.tsx` 使用 ReactDOM 直接渲染 `apps/chat/src/components/chat-widget/ChatWidget.tsx` 的 `float` 弹窗，不使用 iframe；`base` 映射为 `apiBase`。构建后经 Vite `closeBundle` 将 CSS 注入 IIFE，并自动复制到 `apps/chat/public/abi-assistant-widget.js`。对外同时暴露标签 `<abi-assistant>` 与 `window.AbiAssistant.init`。
+- 测试建议：`pnpm --filter @abi/chat-widget type-check` + `build`，并 `node --check dist/abi-assistant-widget.js` 校验产物；真实接口调用需要目标服务允许宿主页面跨域访问。
 
 ## apps/dashboard
 

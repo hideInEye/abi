@@ -12,6 +12,8 @@ export interface ChartOptionStyle {
   /** 逗号分隔的系列配色 */
   color: string
   textColor: string
+  /** 横向滚动时同屏可视的类目数；缺省 10（主对话）。窄面板（悬浮窗）可调小以降低标签拥挤 */
+  visibleCount?: number
 }
 
 /** 与 ViewEle chartConfig 初始状态一致的默认样式 */
@@ -174,11 +176,11 @@ export const getChartOption = (type: string, data: any[], style: ChartOptionStyl
   // 计算x轴标签的旋转角度
   const rotation = isDateAxis ? 30 : calculateRotation(finalXData)
 
-  // 仅当数据超过可视数量时才需要横向滚动条，避免未溢出也显示
-  const visibleCount = 10
-  const needZoom = finalXData.length > visibleCount
-
   const { font, fontSize, color, textColor } = style
+
+  // 仅当数据超过可视数量时才需要横向滚动条，避免未溢出也显示
+  const visibleCount = style.visibleCount ?? 10
+  const needZoom = finalXData.length > visibleCount
 
   // 根据图表类型计算Y轴最大值
   const calculateYAxisMax = (chartType: string) => {
