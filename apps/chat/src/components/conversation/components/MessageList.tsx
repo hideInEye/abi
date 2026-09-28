@@ -16,6 +16,7 @@ import type { SchemaTable } from '../../conversation-analysis/SchemaFieldsModal'
 import { fetchSemanticDetail } from '../../../service/api/semantic'
 import { parseMessageContent } from '../../../utils'
 import ReportMessageRow from '../report-mode/ReportMessageRow'
+import { getReportDeleteRoundIndex } from '../report-mode/reportMessageActions'
 import { mergeConversationAndReportGroups } from '../report-mode/reportTimeline'
 import type { ReportItem } from '../report-mode/types'
 import ExploreMessageRow from '../exploration-mode/ExploreMessageRow'
@@ -167,6 +168,17 @@ const MessageList = ({
   const [versionSel, setVersionSel] = useState<Record<string, number>>({})
   const prevVersionCountRef = useRef<Record<string, number>>({})
 
+  const getDeleteRoundIndex = (item: any): number | undefined => {
+    if (item?.role === 'report') return getReportDeleteRoundIndex(item.report as ReportItem)
+    if (item?.role === 'exploration') {
+      const roundIndex = item.exploration?.roundIndex
+      return Number.isSafeInteger(roundIndex) && roundIndex >= 0 ? roundIndex : undefined
+    }
+
+    const roundIndex = item?.roundIndex ?? item?.order
+    return Number.isSafeInteger(roundIndex) && roundIndex >= 0 ? roundIndex : undefined
+  }
+
   // 解析 modelDetail 提取字段（与分享悬浮窗共用 SchemaFieldsModal 导出的解析函数）
   const parseFieldsFromModelDetail = parseSchemaFieldsFromModelDetail
 
@@ -211,6 +223,7 @@ const MessageList = ({
       exploration: item,
       order: item.sortOrder,
       roundIndex: item.sortOrder,
+      historySequence: item.historySequence,
     }]])
     return mergeConversationAndReportGroups([...baseGroups3d, ...explorationGroups], reportItems)
   }, [mode, convContent, convContent2d, convContent3d, reportItems, explorationItems, sharingList])
@@ -315,6 +328,7 @@ const MessageList = ({
   ) => {
     if (item.role === 'report') {
       const report = item.report as ReportItem
+      const deleteRoundIndex = getDeleteRoundIndex(item)
       return (
         <ReportMessageRow
           key={key}
@@ -324,12 +338,16 @@ const MessageList = ({
           onToggleTodo={() => onToggleReportTodo?.(report.id)}
           onToggleTask={(taskKey) => onToggleReportTask?.(report.id, taskKey)}
           onOpenReport={() => onOpenReport?.(report.id)}
+          onDelete={deleteRoundIndex !== undefined && onEnterDeleteMode
+            ? () => onEnterDeleteMode({ deleteRoundIndex })
+            : undefined}
         />
       )
     }
 
     if (item.role === 'exploration') {
       const exploration = item.exploration as ExploreItem
+      const deleteRoundIndex = getDeleteRoundIndex(item)
       return (
         <ExploreMessageRow
           key={key}
@@ -338,6 +356,9 @@ const MessageList = ({
           onOpen={() => onOpenExplore?.(exploration.id)}
           onClose={onCloseExplore}
           onEditCode={onEditExploreCode}
+          onDelete={deleteRoundIndex !== undefined && onEnterDeleteMode
+            ? () => onEnterDeleteMode({ deleteRoundIndex })
+            : undefined}
         />
       )
     }
@@ -463,8 +484,8 @@ const MessageList = ({
     let groupRound: number | undefined = undefined
     for (const it of flatGroup) {
       if (it?.role === 'first') continue
-      const r = it?.roundIndex ?? it?.order
-      if (typeof r === 'number') { groupRound = r; break }
+      const roundIndex = getDeleteRoundIndex(it)
+      if (roundIndex !== undefined) { groupRound = roundIndex; break }
     }
     // 合并多版本块的删除以整块（含全部版本轮次）为单位
     const deleteRounds = (opts?.groupRounds && opts.groupRounds.length)
@@ -484,7 +505,12 @@ const MessageList = ({
 
     if (flatGroup.length === 1 && flatGroup[0]?.role === 'report') {
       return (
-        <div key={`group-${groupKey}-${index}`} id={`human-msg-${groupKey}`} className="mb-5">
+        <div key={`group-${groupKey}-${index}`} id={`human-msg-${groupKey}`} className="relative mb-5">
+          {showCheckbox && (
+            <div className="absolute -left-9 top-2 z-10">
+              {renderRoundCheckbox()}
+            </div>
+          )}
           {renderItem(flatGroup[0], `report-${groupKey}`)}
         </div>
       )
@@ -492,7 +518,12 @@ const MessageList = ({
 
     if (flatGroup.length === 1 && flatGroup[0]?.role === 'exploration') {
       return (
-        <div key={`group-${groupKey}-${index}`} id={`human-msg-${groupKey}`} className="mb-5">
+        <div key={`group-${groupKey}-${index}`} id={`human-msg-${groupKey}`} className="relative mb-5">
+          {showCheckbox && (
+            <div className="absolute -left-9 top-2 z-10">
+              {renderRoundCheckbox()}
+            </div>
+          )}
           {renderItem(flatGroup[0], `exploration-${groupKey}`)}
         </div>
       )
@@ -658,8 +689,8 @@ const MessageList = ({
     const groupRounds: number[] = []
     entry.versions.forEach((g) => g.flat().forEach((it: any) => {
       if (it?.role === 'first') return
-      const r = it?.roundIndex ?? it?.order
-      if (typeof r === 'number' && !groupRounds.includes(r)) groupRounds.push(r)
+      const roundIndex = getDeleteRoundIndex(it)
+      if (roundIndex !== undefined && !groupRounds.includes(roundIndex)) groupRounds.push(roundIndex)
     }))
     if (entry.versions.length <= 1) {
       return renderGroup(entry.versions[0], index, { isLast, groupRounds })

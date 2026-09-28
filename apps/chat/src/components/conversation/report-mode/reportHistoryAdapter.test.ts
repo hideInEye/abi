@@ -113,9 +113,12 @@ describe('report history adapter', () => {
   })
 
   it('从 react-agent payload 恢复任务、步骤和最后一个 HTML，且丢弃内部字段', () => {
-    const item = createReportItemFromHistory(reportRound(), 'conv-1', 'session-1')
+    const round = reportRound()
+    round.historySequence = 4
+    const item = createReportItemFromHistory(round, 'conv-1', 'session-1')
 
     expect(item.question).toBe('生成销售报告')
+    expect(item.historySequence).toBe(4)
     expect(item.sortOrder).toBe(2)
     expect(item.status).toBe('completed')
     expect(item.thinkingCompleted).toBe(true)

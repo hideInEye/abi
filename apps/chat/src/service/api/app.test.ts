@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import request from '../request/index'
-import { fetchSessionMessages } from './app'
+import request from '../request'
 
-vi.mock('../request/index', () => ({
+import { deleteMessageByRound, fetchSessionMessages } from './app'
+
+vi.mock('../request', () => ({
   default: vi.fn(),
 }))
 
@@ -45,5 +46,29 @@ describe('fetchSessionMessages', () => {
     requestMock.mockResolvedValueOnce(refreshedResponse)
     await expect(fetchSessionMessages(params)).resolves.toEqual(refreshedResponse)
     expect(requestMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('按轮次删除时使用单请求 items 透传两类来源', async () => {
+    requestMock.mockResolvedValue({ code: 200 })
+
+    await deleteMessageByRound({
+      convUid: 'conversation-1',
+      items: [
+        { roundIndex: [1, 3], source: 'message' },
+        { roundIndex: [7], source: 'report' },
+      ],
+    })
+
+    expect(requestMock).toHaveBeenCalledOnce()
+    expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
+      data: {
+        convUid: 'conversation-1',
+        items: [
+          { roundIndex: [1, 3], source: 'message' },
+          { roundIndex: [7], source: 'report' },
+        ],
+      },
+      url: '/abi-chat/v1/app/message/deleteByRound',
+    }))
   })
 })

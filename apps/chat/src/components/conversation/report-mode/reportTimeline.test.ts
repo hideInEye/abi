@@ -4,11 +4,12 @@ import { createInitialReportStreamState } from './reportStreamReducer'
 import { mergeConversationAndReportGroups } from './reportTimeline'
 import type { ReportItem } from './types'
 
-function report(sortOrder: number): ReportItem {
+function report(sortOrder: number, historySequence?: number): ReportItem {
   return {
     ...createInitialReportStreamState(),
     id: `report-${sortOrder}`,
     question: `报告问题 ${sortOrder}`,
+    historySequence,
     sortOrder,
     createdAt: sortOrder,
     source: 'task',
@@ -25,5 +26,27 @@ describe('unified conversation timeline', () => {
 
     expect(result.map((group) => group.flat()[0]?.role)).toEqual(['first', 'human', 'report', 'human'])
     expect(result[2].flat()[0].report.id).toBe('report-2')
+  })
+
+  it('历史 roundIndex 乱序时仍按接口数组顺序合并三种模式', () => {
+    const opening = [[{ role: 'first' }]]
+    const interaction = [[{ role: 'human', roundIndex: 30, historySequence: 0 }]]
+    const exploration = [[{ role: 'exploration', roundIndex: 20, historySequence: 2 }]]
+
+    const result = mergeConversationAndReportGroups(
+      [opening, exploration, interaction],
+      [{ ...report(10, 1), source: 'history' }],
+    )
+
+    expect(result.map((group) => group.flat()[0]?.role)).toEqual(['first', 'human', 'report', 'exploration'])
+    expect(result.slice(1).map((group) => group.flat()[0]?.historySequence)).toEqual([0, 1, 2])
+  })
+
+  it('实时新增项显示在接口历史之后', () => {
+    const history = [[{ role: 'human', roundIndex: 100, historySequence: 0 }]]
+
+    const result = mergeConversationAndReportGroups([history], [report(1)])
+
+    expect(result.map((group) => group.flat()[0]?.role)).toEqual(['human', 'report'])
   })
 })
