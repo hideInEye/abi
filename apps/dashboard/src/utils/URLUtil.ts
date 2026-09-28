@@ -9,6 +9,8 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
+import {qiankunWindow} from 'vite-plugin-qiankun/dist/helper';
+
 export interface UrlParams {
     [key: string]: string;
 }
@@ -38,6 +40,25 @@ export default class URLUtil {
         const qiankunPublicPath = (window as any).__INJECTED_PUBLIC_PATH_BY_QIANKUN__;
         const publicPath = qiankunPublicPath || import.meta.env.BASE_URL || '/';
         return new URL(publicPath, window.location.origin).toString();
+    }
+
+    /**
+     * 修正 dev 下 qiankun 嵌入时的静态资源 URL：import 进来的图片是 /src/xx.png 绝对路径，
+     * 会被浏览器按宿主 origin 解析导致 404，需拼接大屏自身注入的 public path。仅 dev 生效，线上原样返回。
+     */
+    public static resolveAssetUrl(url: string | null): string | null {
+        // 仅 dev 需要修正：大屏(5174)与宿主跨源；线上 base=/dashboard-ui/ 且同源，资源路径已正确，勿动
+        if (!import.meta.env.DEV || !url || /^(https?:|data:|blob:)/i.test(url)) {
+            return url;
+        }
+        // ESM 子应用下 public path 注入在 qiankun 的 window.proxy 上，而非真实 window
+        const publicPath = (qiankunWindow as any).__INJECTED_PUBLIC_PATH_BY_QIANKUN__;
+        if (!publicPath) {
+            return url;
+        }
+        const normalized = url.startsWith('/') ? url.slice(1) : url;
+        const base = publicPath.endsWith('/') ? publicPath : `${publicPath}/`;
+        return `${base}${normalized}`;
     }
 
     public static buildAppUrl(path: string, params?: BuildUrlParams): string {

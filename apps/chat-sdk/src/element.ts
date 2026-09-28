@@ -8,11 +8,12 @@ export const TAG_NAME = 'abi-assistant'
 
 /**
  * <abi-assistant> 标签与 React 之间的桥：浏览器要求自定义元素必须是 HTMLElement 子类，
- * 这里只负责把标签属性透传给 React 组件，所有交互状态都在 AbiAssistant 组件内。
+ * 这里只负责把标签属性透传给 React 组件（纯弹窗，不自带悬浮球）。
+ * 面板关闭按钮会向外派发 close 事件，宿主系统自行决定如何隐藏。
  */
 export class AbiAssistantElement extends HTMLElement {
   static get observedAttributes() {
-    return ['share-code', 'base', 'open', 'theme']
+    return ['share-code', 'base', 'theme', 'theme-switch']
   }
 
   private root: Root | null = null
@@ -47,9 +48,12 @@ export class AbiAssistantElement extends HTMLElement {
       createElement(AbiAssistant, {
         shareCode,
         apiBase,
-        defaultOpen: this.hasAttribute('open'),
         // 预设主题风格；非法/缺省值在 normalizeThemeId 内回退蓝色系
         theme: normalizeThemeId(this.getAttribute('theme')),
+        // 带 theme-switch 属性时在悬浮窗头部显示主题切换按钮
+        themeSwitch: this.hasAttribute('theme-switch'),
+        // 关闭按钮向外派发 close 事件，由宿主系统决定隐藏/移除
+        onClose: () => this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true })),
       }),
     )
   }

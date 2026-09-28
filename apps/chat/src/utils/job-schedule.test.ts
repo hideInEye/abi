@@ -117,26 +117,26 @@ describe('摘要与列表文本', () => {
 describe('toShareEmailScheduleParams', () => {
   it('单次：定时 + 每天占位 + 日期扩展字段', () => {
     const params = toShareEmailScheduleParams({ execDate: dayjs('2026-09-30'), execTime: dayjs(new Date(2000, 0, 1, 10, 0)), scheduleMode: 'ONCE' })
-    expect(params).toEqual({ executeDate: '2026-09-30', executeFrequency: 1, executeTime: '10:00', type: 2 })
+    expect(params).toEqual({ executeDate: '2026-09-30', executeFrequency: 1, executeTime: '10:00:00', type: 2 })
   })
 
   it('每周：weekendTargetDay 周一=1', () => {
     const params = toShareEmailScheduleParams({ points: [{ time: '09:00' }], scheduleMode: 'CONTINUOUS', unit: 'WEEK', weekDay: 'MON' })
-    expect(params).toEqual({ executeFrequency: 2, executeTime: '09:00', type: 2, weekendTargetDay: 1 })
+    expect(params).toEqual({ executeFrequency: 2, executeTime: '09:00:00', type: 2, weekendTargetDay: 1 })
   })
 
   it('每月：monthlyTargetDay 取首日号', () => {
     const params = toShareEmailScheduleParams({ points: [{ day: 15, time: '18:30' }], scheduleMode: 'PERIODIC', unit: 'MONTH' })
-    expect(params).toEqual({ executeFrequency: 3, executeTime: '18:30', monthlyTargetDay: 15, type: 2 })
+    expect(params).toEqual({ executeFrequency: 3, executeTime: '18:30:00', monthlyTargetDay: 15, type: 2 })
   })
 
   it('小时级降为每天该分钟', () => {
     const params = toShareEmailScheduleParams({ minutes: [5], scheduleMode: 'CONTINUOUS', unit: 'HOUR' })
-    expect(params).toEqual({ executeFrequency: 1, executeTime: '00:05', type: 2 })
+    expect(params).toEqual({ executeFrequency: 1, executeTime: '00:05:00', type: 2 })
   })
 
   it('年级降为每月该日', () => {
     const params = toShareEmailScheduleParams({ points: [{ date: '6-18', time: '08:00' }], scheduleMode: 'CONTINUOUS', unit: 'YEAR' })
-    expect(params).toEqual({ executeFrequency: 3, executeTime: '08:00', monthlyTargetDay: 18, type: 2 })
+    expect(params).toEqual({ executeFrequency: 3, executeTime: '08:00:00', monthlyTargetDay: 18, type: 2 })
   })
 })

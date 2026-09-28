@@ -255,6 +255,15 @@ export function formatJobScheduleText(record?: any): string {
 
 const pad2 = (value: number | string) => String(value).padStart(2, '0')
 const toTime = (hour: string, minute: string) => `${pad2(hour)}:${pad2(minute)}`
+
+/** 执行时间补秒：HH:mm → HH:mm:ss（后端要求 HH:mm:ss，如 08:01:15）；已含秒或空值原样返回 */
+const toHms = (time?: string): string => {
+  if (!time) return ''
+  const parts = time.split(':')
+  if (parts.length >= 3) return time
+  if (parts.length === 2) return `${time}:00`
+  return time
+}
 const isNum = (value: string) => /^\d+$/.test(value)
 const isNumList = (value: string) => /^\d+(,\d+)*$/.test(value)
 
@@ -343,7 +352,7 @@ export function toShareEmailScheduleParams(values: Record<string, any>): Record<
   const params: Record<string, any> = { type: 2 }
   if (mode === 'ONCE') {
     params.executeFrequency = 1
-    params.executeTime = toText(values.execTime, 'HH:mm')
+    params.executeTime = toHms(toText(values.execTime, 'HH:mm'))
     params.executeDate = toText(values.execDate)
     return params
   }
@@ -351,29 +360,29 @@ export function toShareEmailScheduleParams(values: Record<string, any>): Record<
     case 'HOUR': {
       const minute = Array.isArray(values.minutes) ? values.minutes[0] : undefined
       params.executeFrequency = 1
-      params.executeTime = minute === undefined || minute === null || minute === '' ? '' : `00:${pad2(minute)}`
+      params.executeTime = minute === undefined || minute === null || minute === '' ? '' : toHms(`00:${pad2(minute)}`)
       return params
     }
     case 'WEEK':
       params.executeFrequency = 2
       params.weekendTargetDay = WEEK_DAY_TO_NUM[values.weekDay]
-      params.executeTime = firstPoint?.time || ''
+      params.executeTime = toHms(firstPoint?.time)
       return params
     case 'MONTH':
       params.executeFrequency = 3
       params.monthlyTargetDay = firstPoint?.day ? Number(firstPoint.day) : undefined
-      params.executeTime = firstPoint?.time || ''
+      params.executeTime = toHms(firstPoint?.time)
       return params
     case 'YEAR': {
       const dayPart = String(firstPoint?.date || '').split('-')[1]
       params.executeFrequency = 3
       params.monthlyTargetDay = dayPart ? Number(dayPart) : undefined
-      params.executeTime = firstPoint?.time || ''
+      params.executeTime = toHms(firstPoint?.time)
       return params
     }
     default:
       params.executeFrequency = 1
-      params.executeTime = firstPoint?.time || ''
+      params.executeTime = toHms(firstPoint?.time)
       return params
   }
 }

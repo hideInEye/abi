@@ -3,54 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ABI 助手悬浮窗 · 样式调试</title>
+    <title>ABI 助手悬浮窗 SDK · 接入调试</title>
     <style>
       body {
         margin: 0;
         min-height: 100vh;
         background: #f5f7fa;
+        font: 14px/1.5 sans-serif;
       }
-      .theme-switch {
+      /* 打开按钮由宿主系统自己加（SDK 不再自带悬浮球） */
+      .host-open-btn {
         position: fixed;
-        top: 16px;
-        left: 16px;
+        right: 24px;
+        bottom: 24px;
         z-index: 2147483647;
-        display: flex;
-        gap: 8px;
-        font: 13px/1 sans-serif;
-      }
-      .theme-switch button {
-        padding: 6px 12px;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        background: #fff;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 24px;
         cursor: pointer;
-      }
-      .theme-switch button.active {
-        border-color: #5b7cf7;
-        color: #5b7cf7;
+        background: linear-gradient(135deg, #5b7cf7, #8b5cf6);
+        color: #fff;
+        box-shadow: 0 6px 20px rgba(91, 124, 247, 0.4);
       }
     </style>
   </head>
   <body>
     <!-- 仅 pnpm dev 使用：源码直接以 module 加载，样式随 Vite HMR 热更新；base 走 vite /api 代理 -->
-    <div class="theme-switch">
-      <button data-theme="blue" class="active">蓝色系</button>
-      <button data-theme="light">白色系</button>
-      <button data-theme="dark">黑色系</button>
-    </div>
     <script type="module" src="/src/index.ts"></script>
-    <abi-assistant share-code="rkh7lyn8" base="/api" theme="blue" open></abi-assistant>
+
+    <!-- SDK 是纯弹窗：标签一放即渲染面板，不含悬浮球；theme-switch 让面板头部出现蓝/黑切换按钮 -->
+    <abi-assistant share-code="rkh7lyn8" base="/api" theme-switch></abi-assistant>
+
+    <!-- 宿主系统自己的打开按钮 -->
+    <button class="host-open-btn" id="hostOpenBtn" style="display: none">打开 AI 助手</button>
+
     <script>
-      // 仅调试：点按钮切换 <abi-assistant> 的 theme 属性，验证三套预设风格
+      // 宿主控制显隐：面板 close 事件 -> 隐藏面板、露出自己的打开按钮；点按钮 -> 重新显示面板
       const widget = document.querySelector('abi-assistant')
-      document.querySelectorAll('.theme-switch button').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.theme-switch button').forEach((b) => b.classList.remove('active'))
-          btn.classList.add('active')
-          widget.setAttribute('theme', btn.dataset.theme)
-          widget.setAttribute('open', '')
-        })
+      const hostOpenBtn = document.getElementById('hostOpenBtn')
+      widget.addEventListener('close', () => {
+        widget.style.display = 'none'
+        hostOpenBtn.style.display = ''
+      })
+      hostOpenBtn.addEventListener('click', () => {
+        widget.style.display = 'contents'
+        hostOpenBtn.style.display = 'none'
       })
     </script>
   </body>

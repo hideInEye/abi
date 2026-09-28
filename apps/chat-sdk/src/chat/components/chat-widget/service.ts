@@ -3,6 +3,7 @@ import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 
 import { mapShareHistory, type WidgetMessage } from './history'
 import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
+import { normalizeThemeId, type ThemeId } from '../../../theme'
 
 /** Widget 配置：shareCode 为免登录凭证，apiBase 为网关前缀（空串表示同源） */
 export interface WidgetConfig {
@@ -20,6 +21,8 @@ export interface ShareCheckResult {
   type: ProjectType
   /** 校验通过后后端下发的临时 token（无密码分享探测通过时同样返回） */
   token?: string
+  /** 分享记录存储的主题风格；后端未下发时为 undefined，消费方回退接入属性/默认值 */
+  theme?: ThemeId
 }
 
 /** 统一 project 接口的类型段：大屏=dashboard，自主助手=react，工作流助手=workflow */
@@ -132,6 +135,8 @@ export async function checkSharePassword(cfg: WidgetConfig, password: string): P
     appId: String(d.appId ?? d.projectId ?? ''),
     type: normalizeProjectType(d.type),
     token: typeof d.token === 'string' && d.token ? d.token : undefined,
+    // 后端存了 theme 才生效；非法/缺省不下发，避免未就绪环境被回退值强制刷成 blue
+    theme: typeof d.theme === 'string' && d.theme ? normalizeThemeId(d.theme) : undefined,
   }
 }
 

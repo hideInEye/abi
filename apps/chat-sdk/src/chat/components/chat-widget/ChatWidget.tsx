@@ -81,6 +81,8 @@ export interface ChatWidgetProps {
   onClose?: () => void
   /** 预设主题风格：blue（默认现状）/ light（白色系）/ dark（黑色系），由分享配置下发 */
   theme?: ThemeId
+  /** 头部显示主题切换按钮（蓝色系 <-> 黑色系），点击即时切换并记忆到 localStorage */
+  showThemeSwitch?: boolean
 }
 
 type Phase = 'checking' | 'password' | 'loading' | 'ready' | 'error'
@@ -184,6 +186,27 @@ const IconExpand = (
 const IconCompress = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+  </svg>
+)
+
+/* 头部主题切换图标（月亮=切到黑色系 / 太阳=切到蓝色系） */
+const IconMoon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+  </svg>
+)
+
+const IconSun = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="5" />
+    <line x1="12" y1="1" x2="12" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="23" />
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+    <line x1="1" y1="12" x2="3" y2="12" />
+    <line x1="21" y1="12" x2="23" y2="12" />
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
   </svg>
 )
 
@@ -498,10 +521,25 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
   )
 }
 
+/** 头部主题切换按钮的记忆键（仅蓝色系/黑色系两档，跨刷新保留访客选择） */
+const THEME_STORAGE_KEY = 'abi-assistant-theme'
+
 /** 助手分享对话悬浮框：无 store 依赖的纯组件，分享页与第三方嵌入共用；渲染层复用主对话组件 */
-const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verifiedType, verifiedToken, onClose, theme = DEFAULT_THEME }: ChatWidgetProps) => {
+const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verifiedType, verifiedToken, onClose, theme = DEFAULT_THEME, showThemeSwitch = false }: ChatWidgetProps) => {
   // 分享校验通过后的临时 token（外层传入或 widget 内部密码校验后写入），后续接口随 Authorization 携带
   const [shareToken, setShareToken] = useState(verifiedToken || '')
+  // 分享记录存储的主题：接口下发后覆盖接入标签属性（后端未下发时保持属性/默认值）
+  const [apiTheme, setApiTheme] = useState<ThemeId | null>(null)
+  // 访客在头部手动切换的主题：优先级最高，初始从 localStorage 恢复
+  const [userTheme, setUserTheme] = useState<ThemeId | null>(() => {
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY)
+      return saved === 'dark' || saved === 'blue' ? saved : null
+    } catch {
+      return null
+    }
+  })
+  const effectiveTheme = userTheme ?? apiTheme ?? theme
   const cfg = useMemo(() => ({ shareCode, apiBase, token: shareToken || undefined }), [shareCode, apiBase, shareToken])
 
   const [phase, setPhase] = useState<Phase>(verifiedAppId ? 'loading' : 'checking')
@@ -652,6 +690,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       return
     }
     if (res.token) setShareToken(res.token)
+    if (res.theme) setApiTheme(res.theme)
     await load(res.appId, res.type, res.token)
   }, [cfg, load])
 
@@ -715,6 +754,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     if (res?.result && res.appId) {
       setPasswordError('')
       if (res.token) setShareToken(res.token)
+      if (res.theme) setApiTheme(res.theme)
       await load(res.appId, res.type, res.token)
     } else {
       setPasswordError('密码错误')
@@ -1138,6 +1178,17 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     window.addEventListener('pointerup', onUp)
   }
 
+  // 头部主题切换：蓝色系 <-> 黑色系，记忆到 localStorage（跨刷新保留访客选择）
+  const handleToggleTheme = () => {
+    const next: ThemeId = effectiveTheme === 'dark' ? 'blue' : 'dark'
+    setUserTheme(next)
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, next)
+    } catch {
+      // localStorage 不可用时仅本次会话生效
+    }
+  }
+
   // 放大：快照当前 inline 样式后按视口百分比留边铺展（不占满全屏，保留圆角）；还原：恢复快照（保留拖拽/resize 自定义的位置尺寸）
   const handleToggleMaximize = () => {
     const panel = panelRef.current
@@ -1371,7 +1422,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const recList = info?.recQuestions ?? []
 
   return (
-    <div className={`abi-cw-root ${mode === 'float' ? 'abi-cw-float' : mode === 'embed' ? 'abi-cw-embed' : 'abi-cw-page'}`} data-cw-theme={theme} style={resolveThemeStyle(theme)}>
+    <div className={`abi-cw-root ${mode === 'float' ? 'abi-cw-float' : mode === 'embed' ? 'abi-cw-embed' : 'abi-cw-page'}`} data-cw-theme={effectiveTheme} style={resolveThemeStyle(effectiveTheme)}>
       <div className="abi-cw-panel" ref={panelRef}>
         {/* 四边拖拽改大小把手（放大态隐藏；embed 直嵌形态由宿主控制尺寸，隐藏把手） */}
         {!maximized && mode !== 'embed' && (
@@ -1387,6 +1438,17 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           <span className="abi-cw-header-name" title={info?.name || '助手'}>
             AI {info?.name ? `· ${info.name}` : '智能问答'}
           </span>
+          {showThemeSwitch && (
+            <button
+              type="button"
+              className="abi-cw-action-btn"
+              onClick={handleToggleTheme}
+              aria-label="切换主题"
+              title={effectiveTheme === 'dark' ? '切换为蓝色系' : '切换为黑色系'}
+            >
+              {effectiveTheme === 'dark' ? IconSun : IconMoon}
+            </button>
+          )}
           {mode !== 'embed' && (
             <button
               type="button"

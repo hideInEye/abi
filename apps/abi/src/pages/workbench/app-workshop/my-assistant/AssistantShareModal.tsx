@@ -17,6 +17,15 @@ interface Props {
   onShared?: () => void
 }
 
+/** 悬浮窗预设主题，取值与 chat-sdk theme.ts ThemeId 一致 */
+type ShareTheme = 'blue' | 'light' | 'dark'
+
+const THEME_OPTIONS: { value: ShareTheme; label: string; bg: string; bar: string; ink: string }[] = [
+  { value: 'blue', label: '蓝色系', bg: '#d5daf5', bar: '#5b7cf7', ink: '#262626' },
+  { value: 'light', label: '白色系', bg: '#ffffff', bar: '#5b7cf7', ink: '#1f2733' },
+  { value: 'dark', label: '黑色系', bg: '#1a1d29', bar: '#282c3a', ink: '#e8ecf5' },
+]
+
 /**
  * 助手分享弹窗
  * UI 参考「我的大屏」分享弹窗（访问密码保护 / 链接有效期 / 生成链接 / 复制链接）。
@@ -30,6 +39,7 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
   const [shareLoading, setShareLoading] = useState(false)
   const [expirationMode, setExpirationMode] = useState<string>('forever')
   const [expirationDate, setExpirationDate] = useState<Dayjs | null>(null)
+  const [theme, setTheme] = useState<ShareTheme>('blue')
 
   // 关闭后重置弹窗内所有状态，避免下次打开残留
   useEffect(() => {
@@ -40,6 +50,7 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
       setShareLoading(false)
       setExpirationMode('forever')
       setExpirationDate(null)
+      setTheme('blue')
     }
   }, [open])
 
@@ -55,6 +66,7 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
         spaceId: spaceId || 0,
         type: 'workflow',
         sharePasswordFlag,
+        theme,
         ...(expirationDays !== undefined ? { expirationDays } : {}),
         ...(expirationDateStr ? { expirationDate: expirationDateStr } : {}),
       })
@@ -139,6 +151,49 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
               </ConfigProvider>
             </div>
           )}
+        </div>
+
+        {/* 悬浮窗主题风格：预设三选一，随分享记录存储，SDK 校验分享时拉取套用 */}
+        <div
+          style={{
+            padding: '14px 16px',
+            background: '#f7f8fa',
+            borderRadius: '10px',
+            marginBottom: '20px',
+          }}
+        >
+          <div style={{ fontWeight: 500, color: '#262626', marginBottom: '10px' }}>悬浮窗主题风格</div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {THEME_OPTIONS.map((opt) => {
+              const active = theme === opt.value
+              return (
+                <div
+                  key={opt.value}
+                  onClick={() => !shareLink && setTheme(opt.value)}
+                  style={{
+                    flex: 1,
+                    cursor: shareLink ? 'not-allowed' : 'pointer',
+                    opacity: shareLink && !active ? 0.5 : 1,
+                    border: `2px solid ${active ? '#5b7cf7' : 'transparent'}`,
+                    borderRadius: '10px',
+                    background: '#fff',
+                    padding: '6px',
+                    transition: 'border-color 0.2s',
+                  }}
+                >
+                  {/* 缩略预览：标题栏 + 正文 + 一行文字示意 */}
+                  <div style={{ background: opt.bg, borderRadius: '6px', overflow: 'hidden', height: '44px', border: '1px solid #eceef2' }}>
+                    <div style={{ background: opt.bar, height: '14px' }} />
+                    <div style={{ margin: '8px 8px 0', height: '6px', borderRadius: '3px', background: opt.ink, opacity: 0.45 }} />
+                    <div style={{ margin: '6px 8px 0', width: '60%', height: '6px', borderRadius: '3px', background: opt.ink, opacity: 0.25 }} />
+                  </div>
+                  <div style={{ textAlign: 'center', fontSize: '12px', marginTop: '6px', color: active ? '#5b7cf7' : '#595959', fontWeight: active ? 600 : 400 }}>
+                    {opt.label}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* 生成按钮 / 结果区 */}

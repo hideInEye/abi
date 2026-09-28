@@ -28,7 +28,8 @@
   position: fixed;
   top: 48px;
   right: 24px;
-  /* 默认尺寸按视口等比（1920×1080 下约 653×907，给归因/预测看板更多展示空间），max() 兜底小屏最小可用尺寸 */
+  /* 默认尺寸按视口等比（1920×1080 下约 653×907，给归因/预测看板更多展示空间），max() 兜底小屏最小可用尺寸；
+     信息条内容超宽时由 JS 动态抬高 min-width（见 ChatWidget fitInfobarWidth），面板随内容自适应变宽 */
   width: max(500px, 34vw);
   max-width: calc(100vw - 32px);
   height: max(660px, 84vh);
@@ -52,7 +53,7 @@
   position: fixed;
   top: 64px;
   right: 24px;
-  /* 同 page 形态按视口等比放大（1920 下约 614） */
+  /* 同 page 形态按视口等比放大（1920 下约 614）；信息条超宽时由 JS 抬高 min-width */
   width: max(480px, 32vw);
   max-width: calc(100vw - 32px);
   height: calc(100vh - 84px);
@@ -391,13 +392,17 @@
   border: 1px solid var(--cw-border, rgba(130, 140, 200, 0.12));
   font-size: 12px;
   color: var(--cw-text-2, #546074);
-  flex-wrap: wrap;
+  /* 按内容撑开：不换行、不裁切、不省略，宽度驱动面板自适应变宽 */
+  flex-wrap: nowrap;
+  width: max-content;
 }
 
 .abi-cw-infobar-label {
   color: var(--cw-text, #1a2744);
   font-weight: 500;
   font-size: 13px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .abi-cw-infobar-chip {
@@ -408,6 +413,29 @@
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* chip 文本：完整显示，不截断 */
+.abi-cw-infobar-chip-text {
+  white-space: nowrap;
+}
+
+/* 手动接管后（拖回默认/更窄）：信息条改为占满宽度、超长名称省略号截断，不再硬裁切 */
+.abi-cw-panel.abi-cw-infobar-ellipsis .abi-cw-infobar {
+  width: 100%;
+  overflow: hidden;
+}
+
+.abi-cw-panel.abi-cw-infobar-ellipsis .abi-cw-infobar-chip {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.abi-cw-panel.abi-cw-infobar-ellipsis .abi-cw-infobar-chip-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .abi-cw-infobar-chip-group {

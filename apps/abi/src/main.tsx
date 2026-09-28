@@ -97,13 +97,30 @@ const initQianKun = () => {
 };
 
 if (shareHashMatch) {
-  const iframe = document.createElement('iframe');
-  // 原样转发完整 hash（含 ?embed=1 等 query），供第三方 iframe 直嵌时透传 embed 悬浮形态参数
-  iframe.src = `${window.location.origin}/chat-ui/${window.location.hash}`;
-  iframe.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;border:0;';
+  // 分享页改用新 SDK：引入 abi-assistant-widget 的 css + js 两个标签，加载完成后加 <abi-assistant> 悬浮窗标签。
+  // base="/api" 与 chat 应用 config.json 的 VITE_BASE_API 一致，保证网关路径拼接正确；
+  // theme-switch 开启悬浮窗头部的主题切换按钮（蓝色系 / 黑色系）。
+  const shareCode = shareHashMatch[1];
   const rootEl = document.getElementById('root');
-  if (rootEl) rootEl.replaceChildren(iframe);
-  else document.body.appendChild(iframe);
+  if (rootEl) rootEl.replaceChildren();
+
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = '/chat-ui/abi-assistant-widget.css';
+  document.head.appendChild(link);
+
+  const script = document.createElement('script');
+  script.src = '/chat-ui/abi-assistant-widget.js';
+  script.onload = () => {
+    const assistant = document.createElement('abi-assistant');
+    assistant.setAttribute('share-code', shareCode);
+    assistant.setAttribute('base', '/api');
+    assistant.setAttribute('theme-switch', '');
+    // SDK 为纯弹窗，关闭按钮派发 close 事件；分享页为独立页面，关闭即移除弹窗
+    assistant.addEventListener('close', () => assistant.remove());
+    document.body.appendChild(assistant);
+  };
+  document.head.appendChild(script);
 } else if (qiankunWindow.__POWERED_BY_QIANKUN__) {
   initQianKun();
 } else {
