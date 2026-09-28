@@ -354,6 +354,7 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
       arrow={false}
       content={panel}
       overlayInnerStyle={{ padding: 0, borderRadius: 12, overflow: 'hidden' }}
+      getPopupContainer={(node) => (node.closest('.abi-cw-panel') as HTMLElement) || document.body}
       destroyTooltipOnHide
     >
       {children}

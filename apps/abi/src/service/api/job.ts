@@ -168,14 +168,6 @@ export function fetchJobLogList(params?: any) {
   });
 }
 
-/** 调度日志明细 */
-export function fetchJobLogDetail(jobLogId: string) {
-  return jobRequest({
-    method: 'get',
-    url: `/api/abi-scheduler/joblog/${jobLogId}/detail`,
-  });
-}
-
 /** 调度日志内容：自 fromLineNum 起滚动拉取日志行 */
 export function fetchJobLogContent(jobLogId: string, fromLineNum: number) {
   return jobRequest({

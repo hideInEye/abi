@@ -10,6 +10,7 @@ import {
   formatNextTriggerTime,
   formatScheduleConf,
   isJobRequestSuccess,
+  parseTriggerMsg,
   resolveJobLogStatus,
   resolveJobPageResult,
   resolveHandleResult,
@@ -151,5 +152,29 @@ describe('response helpers', () => {
     expect(resolveJobPageResult({ data: { data: records, offset: 0, pagesize: 12, total: 5 } })).toEqual({ records, total: 5 })
     expect(resolveJobPageResult({ data: null })).toEqual({ records: [], total: 0 })
     expect(resolveJobPageResult(undefined)).toEqual({ records: [], total: 0 })
+  })
+})
+
+describe('parseTriggerMsg', () => {
+  it('strips html tags and splits into label/value lines', () => {
+    const raw = '任务触发类型： 手动触发<br>调度机器： 172.18.0.5<br><br><span style="color:#00c0ef;" > >>>>>>>>>>触发调度<<<<<<<<<< </span><br>JobHandler： aiAnalysis<br>任务参数： <br>msg： job handler [aiAnalysis] not found.'
+    expect(parseTriggerMsg(raw)).toEqual([
+      { label: '任务触发类型：', value: '手动触发' },
+      { label: '调度机器：', value: '172.18.0.5' },
+      { label: '', value: '>>>>>>>>>>触发调度<<<<<<<<<<' },
+      { label: 'JobHandler：', value: 'aiAnalysis' },
+      { label: '任务参数：', value: '' },
+      { label: 'msg：', value: 'job handler [aiAnalysis] not found.' },
+    ])
+  })
+
+  it('decodes entities and keeps colon inside value', () => {
+    expect(parseTriggerMsg('address： http://a/b?c=1&amp;d=2')).toEqual([{ label: 'address：', value: 'http://a/b?c=1&d=2' }])
+    expect(parseTriggerMsg('执行器-地址列表： [http://172.18.0.19:9999/]')).toEqual([{ label: '执行器-地址列表：', value: '[http://172.18.0.19:9999/]' }])
+  })
+
+  it('returns empty list for blank input', () => {
+    expect(parseTriggerMsg(undefined)).toEqual([])
+    expect(parseTriggerMsg('  ')).toEqual([])
   })
 })

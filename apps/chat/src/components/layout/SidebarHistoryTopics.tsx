@@ -63,15 +63,15 @@ export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = f
     }
   }, [collapsed, loadHistoryTopics, loadGroups, refreshKey])
 
-  // 过滤掉已归属分组的会话，避免与分组内重复高亮
-  // 判断标准：groupId 存在且不为无效值才算有分组
+  // 过滤掉已归属分组的会话；分组已被删除的会话仍在最近对话中显示
   const ungroupedTopics = useMemo(() => {
     const invalidGroupIds = new Set([null, undefined, '', '0', 0, 'null'])
+    const validGroupIds = new Set(groups.map((g) => String(g.groupId)))
     const groupedChatIds = new Set(
       historyApps
         .filter((app) => {
           const gid = app.groupId ?? app.group_id
-          return !invalidGroupIds.has(gid)
+          return !invalidGroupIds.has(gid) && validGroupIds.has(String(gid))
         })
         .map((app) => String(app.chat_id)),
     )
@@ -86,7 +86,7 @@ export function SidebarHistoryTopics({ collapsed, refreshKey, suppressActive = f
       if (ta === 1) return sb - sa
       return 0
     })
-  }, [historyTopics, historyApps])
+  }, [historyTopics, historyApps, groups])
 
   // 当前处于置顶状态（sortOrder>0）的会话集合，用于菜单文案与列表图钉标记
   const toppedChatIds = useMemo(

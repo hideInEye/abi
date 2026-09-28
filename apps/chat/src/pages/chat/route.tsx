@@ -170,13 +170,13 @@ function ChatWorkbenchLayout() {
               定时任务
             </button>
             <SpaceSelector collapsed={false} onSpaceChanged={handleSpaceChanged} />
-            <ScheduleTaskDrawer open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
           </div>
           <SidebarCollapseProvider value={sidebarCollapseContext}>
             <Fragment key={newChatNonce}>
               <Outlet />
             </Fragment>
           </SidebarCollapseProvider>
+          <ScheduleTaskDrawer open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
         </Content>
       </Layout>
     </Layout>

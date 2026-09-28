@@ -274,3 +274,22 @@ export function resolveJobPageResult(res: any): { records: any[]; total: number 
     total: Number(pageData.total) || 0,
   };
 }
+
+const HTML_ENTITY_MAP: Record<string, string> = { '&#39;': '\'', '&amp;': '&', '&gt;': '>', '&lt;': '<', '&nbsp;': ' ', '&quot;': '"' };
+
+/** 调度备注（triggerMsg）为 HTML 片段：<br> 换行、<span> 着色；去标签解实体后拆成「标签: 值」行，无冒号的行（分隔标题）label 为空 */
+export function parseTriggerMsg(raw?: string): { label: string; value: string }[] {
+  const text = String(raw ?? '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    // 标签名须以字母开头：避免值里的连续 < 被误判为标签起点（如 <<<<<<<<<< </span>）
+    .replace(/<\/?[a-zA-Z][^>]*>/g, '')
+    .replace(/&(?:amp|lt|gt|quot|nbsp|#39);/gi, match => HTML_ENTITY_MAP[match.toLowerCase()] ?? match);
+  return text
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const matched = line.match(/^([^：:]+：)\s*(.*)$/);
+      return matched ? { label: matched[1], value: matched[2] } : { label: '', value: line };
+    });
+}

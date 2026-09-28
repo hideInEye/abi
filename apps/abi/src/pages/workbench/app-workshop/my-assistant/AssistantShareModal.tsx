@@ -80,21 +80,6 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
     })
   }
 
-  // iframe 直嵌链接：在分享页 URL 上追加 embed=1，分享页会以铺满 iframe 的悬浮对话框形态渲染（复用同一 shareCode 与匿名 token 鉴权）
-  const embedUrl = shareLink
-    ? `${shareLink}${shareLink.includes('embed=') ? '' : `${shareLink.includes('?') ? '&' : '?'}embed=1`}`
-    : ''
-  // 第三方系统（如 IPA 案件研判）粘贴此代码即可在页面右下角嵌入悬浮对话框；位置/尺寸由宿主页面自行调整
-  const embedSnippet = embedUrl
-    ? `<iframe src="${embedUrl}" title="AI 助手" style="position:fixed;right:24px;bottom:24px;width:420px;height:680px;border:none;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.12);z-index:2147483000;" allow="clipboard-write"></iframe>`
-    : ''
-
-  const handleCopyEmbed = () => {
-    navigator.clipboard.writeText(embedSnippet).then(() => {
-      message.success('嵌入代码已复制到剪贴板')
-    })
-  }
-
   return (
     <Modal title="分享助手" open={open} onCancel={onClose} footer={null} width={520} centered destroyOnClose>
       <div style={{ padding: '8px 0 4px' }}>
@@ -188,23 +173,6 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
             )}
             <Button type="primary" block size="large" onClick={handleCopyLink} style={{ borderRadius: '8px', height: '44px' }}>
               {sharePassword ? '复制链接和密码' : '复制链接'}
-            </Button>
- 
-            {/* iframe 嵌入代码：供第三方系统直接嵌入悬浮对话框 */}
-            <div style={{ background: '#f7f8fa', borderRadius: '10px', padding: '14px 16px' }}>
-              <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: '8px' }}>嵌入代码（iframe）</div>
-              <Input.TextArea
-                value={embedSnippet}
-                readOnly
-                rows={3}
-                style={{ background: 'transparent', border: 'none', padding: 0, resize: 'none', boxShadow: 'none', fontFamily: 'monospace', fontSize: '12px' }}
-              />
-              <div style={{ fontSize: '12px', color: '#bfbfbf', marginTop: '6px' }}>
-                第三方系统（如案件研判）粘贴到页面即可在右下角嵌入悬浮对话框，位置与尺寸可自行调整。
-              </div>
-            </div>
-            <Button block size="large" onClick={handleCopyEmbed} style={{ borderRadius: '8px', height: '44px' }}>
-              复制嵌入代码
             </Button>
           </div>
         )}

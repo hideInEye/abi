@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ABI 助手悬浮窗 · 样式调试</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #f5f7fa;
+      }
+      .theme-switch {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 2147483647;
+        display: flex;
+        gap: 8px;
+        font: 13px/1 sans-serif;
+      }
+      .theme-switch button {
+        padding: 6px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+      }
+      .theme-switch button.active {
+        border-color: #5b7cf7;
+        color: #5b7cf7;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 仅 pnpm dev 使用：源码直接以 module 加载，样式随 Vite HMR 热更新；base 走 vite /api 代理 -->
+    <div class="theme-switch">
+      <button data-theme="blue" class="active">蓝色系</button>
+      <button data-theme="light">白色系</button>
+      <button data-theme="dark">黑色系</button>
+    </div>
+    <script type="module" src="/src/index.ts"></script>
+    <abi-assistant share-code="rkh7lyn8" base="/api" theme="blue" open></abi-assistant>
+    <script>
+      // 仅调试：点按钮切换 <abi-assistant> 的 theme 属性，验证三套预设风格
+      const widget = document.querySelector('abi-assistant')
+      document.querySelectorAll('.theme-switch button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.theme-switch button').forEach((b) => b.classList.remove('active'))
+          btn.classList.add('active')
+          widget.setAttribute('theme', btn.dataset.theme)
+          widget.setAttribute('open', '')
+        })
+      })
+    </script>
+  </body>
+</html>
