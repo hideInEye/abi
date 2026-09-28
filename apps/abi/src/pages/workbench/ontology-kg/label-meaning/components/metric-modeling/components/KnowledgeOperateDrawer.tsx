@@ -75,7 +75,7 @@ import { KnowledgeOperateDimensionStep } from './knowledgeOperateDrawer.Dimensio
 import { KnowledgeOperateSimpleAtomicTechnicalSection } from './knowledgeOperateDrawer.SimpleAtomicTechnicalSection'
 import { KnowledgeOperateTechnicalStep } from './knowledgeOperateDrawer.TechnicalStep'
 
-type IndicatorType = 'atomic' | 'derivative' | 'derived'
+type IndicatorType = 'atomic' | 'composite' | 'derived'
 type ValidationField = (number | string)[] | string
 
 interface AtomicIndicatorOption {
@@ -172,8 +172,8 @@ function normalizeIndicatorClass(value?: string): IndicatorType {
   if (text === 'atomic') {
     return 'atomic'
   }
-  if (text === 'derivative') {
-    return 'derivative'
+  if (text === 'composite') {
+    return 'composite'
   }
   return 'derived'
 }
@@ -384,7 +384,7 @@ function buildTemplateParams(
   indicatorClass: IndicatorType,
   allFields: KnowledgeTechField[]
 ): KnowledgeTemplateParams | undefined {
-  if (indicatorClass !== 'derivative') {
+  if (indicatorClass !== 'composite') {
     return undefined
   }
 
@@ -456,7 +456,7 @@ function buildRelItemId(
   if (indicatorClass === 'derived') {
     return collectRuleFieldIds(values.derivedExpressions).join(',')
   }
-  if (indicatorClass === 'derivative') {
+  if (indicatorClass === 'composite') {
     if (values.templateType === 'custom') {
       return getCustomExpressionSourceFields(values.expr, allFields)
         .map(getKnowledgeTechFieldId)
@@ -553,7 +553,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   const stepItems = useMemo(() => getStepItems(!isAtomicMode, isSimpleAtomicEditing), [isAtomicMode, isSimpleAtomicEditing])
   const currentStepKey = stepItems[current]?.key
   const atomicIndicatorOptions = useMemo(() => {
-    const allowedClasses = indicatorClass === 'derivative' ? new Set(['atomic', 'derived']) : new Set(['atomic'])
+    const allowedClasses = indicatorClass === 'composite' ? new Set(['atomic', 'derived']) : new Set(['atomic'])
 
     return indicatorOptionSource
       .filter(item => allowedClasses.has(normalizeIndicatorClass(item.indicatorClass)))
@@ -841,7 +841,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     }) => {
       const nextGroupId = semanticsGroupId ?? semanticGroupId ?? undefined
       const isDerivativeCustom =
-        normalizeIndicatorClass(form.getFieldValue('indicatorClass')) === 'derivative' &&
+        normalizeIndicatorClass(form.getFieldValue('indicatorClass')) === 'composite' &&
         form.getFieldValue('templateType') === 'custom'
       const nextValues: Partial<KnowledgeFormValues> = {
         atomicSourceFieldId: undefined,
@@ -869,7 +869,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     const indicatorClassValue = normalizeIndicatorClass(form.getFieldValue('indicatorClass'))
     if (
       indicatorClassValue === 'atomic' ||
-      (indicatorClassValue === 'derivative' && form.getFieldValue('templateType') === 'custom')
+      (indicatorClassValue === 'composite' && form.getFieldValue('templateType') === 'custom')
     ) {
       const schemaId = form.getFieldValue('semanticSchemaId') || form.getFieldValue('relSchemaId')
       if (schemaId !== undefined && schemaId !== null && schemaId !== '') {
@@ -936,7 +936,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
 
       if (
         editValues.semanticSchemaId &&
-        (isAtomicEditing || (indicatorClassValue === 'derivative' && editValues.templateType === 'custom'))
+        (isAtomicEditing || (indicatorClassValue === 'composite' && editValues.templateType === 'custom'))
       ) {
         loadCustomAtomicSemanticFields(editValues.semanticSchemaId)
       }
@@ -959,7 +959,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
 
   useEffect(() => {
     const isDerivativeCustomEditing =
-      normalizeIndicatorClass(editingItem?.indicatorClass) === 'derivative' &&
+      normalizeIndicatorClass(editingItem?.indicatorClass) === 'composite' &&
       form.getFieldValue('templateType') === 'custom'
     if (
       !open ||
@@ -1065,10 +1065,10 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
 
     if (Object.hasOwn(changeValues, 'expr')) {
       const isDerivativeCustom =
-        normalizeIndicatorClass(form.getFieldValue('indicatorClass')) === 'derivative' &&
+        normalizeIndicatorClass(form.getFieldValue('indicatorClass')) === 'composite' &&
         form.getFieldValue('templateType') === 'custom'
       const relItemId = isDerivativeCustom
-        ? buildRelItemId(allValues, 'derivative', allFields)
+        ? buildRelItemId(allValues, 'composite', allFields)
         : extractUniqueIds(changeValues.expr || '').join(',')
       form.setFieldValue('relItemId', relItemId)
     }
@@ -1098,7 +1098,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         form.setFieldsValue(derivedDefaults)
         formValuesRef.current = { ...formValuesRef.current, ...derivedDefaults }
       }
-      if (nextClass === 'derivative') {
+      if (nextClass === 'composite') {
         clearFields([...ATOMIC_ONLY_FIELDS, ...DERIVED_ONLY_FIELDS, 'techName'])
         setAllFields([])
       }
@@ -1226,7 +1226,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     const selectedAtomicSource = allFields.find(
       item => getKnowledgeTechFieldId(item) === String(values.atomicSourceFieldId || '')
     )
-    const isDerivativeCustom = nextIndicatorClass === 'derivative' && values.templateType === 'custom'
+    const isDerivativeCustom = nextIndicatorClass === 'composite' && values.templateType === 'custom'
     const originalAtomicSource = parseAtomicSourceFields(editingItem?.techId)[0]
     const atomicSourceInput =
       isSimpleAtomicEditing &&

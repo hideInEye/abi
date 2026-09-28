@@ -121,6 +121,11 @@ describe('ontology function dictionaries', () => {
       .mockResolvedValueOnce({ data: { rows: [] }, error: null })
       .mockResolvedValueOnce({ data: null, error: failure })
 
-    await expect(loadOntologyFunctionOptions(ONTOLOGY_FUNCTION_DICTIONARY_TYPES.derivative)).rejects.toBe(failure)
+    await expect(loadOntologyFunctionOptions(ONTOLOGY_FUNCTION_DICTIONARY_TYPES.composite)).rejects.toBe(failure)
+    expect(queryDictDataListMock).toHaveBeenNthCalledWith(2, {
+      dictType: 'ontology_derivative',
+      pageNum: 1,
+      pageSize: 1000
+    })
   })
 })

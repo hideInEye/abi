@@ -103,7 +103,7 @@ export const KnowledgeOperateDerivativeCustomTechnicalSection: React.FC<Props> =
 
       <KnowledgeOperateFunctionExpressionField
         ref={expressionRef}
-        dictionaryKind="derivative"
+        dictionaryKind="composite"
         fieldName="expr"
         form={form}
         validateExpression={validateSqlExpression}

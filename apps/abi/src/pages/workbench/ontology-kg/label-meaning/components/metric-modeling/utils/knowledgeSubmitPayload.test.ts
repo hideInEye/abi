@@ -122,11 +122,11 @@ describe('buildKnowledgeCalcLogic', () => {
     ])
   })
 
-  it('builds api indicator_templates for derivative template params', () => {
+  it('builds api indicator_templates for composite template params', () => {
     const result = buildKnowledgeCalcLogic({
       atomicMetricMetaMap,
       groupId: 1,
-      indicatorClass: 'derivative',
+      indicatorClass: 'composite',
       ratioDenominatorId: 'visit_count',
       ratioNumeratorId: 'order_count',
       ratioPrecision: '2',
@@ -175,7 +175,7 @@ describe('buildKnowledgeCalcLogic', () => {
     })
   })
 
-  it('builds derivative cumulative indicator template according to api contract', () => {
+  it('builds composite cumulative indicator template according to api contract', () => {
     const result = buildKnowledgeCalcLogic({
       accumulateStartDate: '2024-01-12',
       atomicMetricMetaMap,
@@ -183,7 +183,7 @@ describe('buildKnowledgeCalcLogic', () => {
       cumulativeMode: 'DOWN',
       cumulativeTimeRange: 'QUARTER',
       groupId: 1,
-      indicatorClass: 'derivative',
+      indicatorClass: 'composite',
       spaceId: 82,
       templateType: 'cumulative'
     } as KnowledgeSubmitPayload)
@@ -226,7 +226,7 @@ describe('buildKnowledgeCalcLogic', () => {
     })
   })
 
-  it('builds derivative comparison, volatility and quantile template params', () => {
+  it('builds composite comparison, volatility and quantile template params', () => {
     const comparison = buildKnowledgeCalcLogic({
       atomicMetricMetaMap,
       compareMetricId: 'pay_amount',
@@ -234,14 +234,14 @@ describe('buildKnowledgeCalcLogic', () => {
       compareType: 'MOM',
       comparisonOutputType: 'VALUE',
       groupId: 1,
-      indicatorClass: 'derivative',
+      indicatorClass: 'composite',
       spaceId: 82,
       templateType: 'comparison'
     } as KnowledgeSubmitPayload)
     const volatility = buildKnowledgeCalcLogic({
       atomicMetricMetaMap,
       groupId: 1,
-      indicatorClass: 'derivative',
+      indicatorClass: 'composite',
       rollingWindowSize: 7,
       spaceId: 82,
       templateType: 'volatility',
@@ -251,7 +251,7 @@ describe('buildKnowledgeCalcLogic', () => {
     const quantile = buildKnowledgeCalcLogic({
       atomicMetricMetaMap,
       groupId: 1,
-      indicatorClass: 'derivative',
+      indicatorClass: 'composite',
       percentileValue: '0.9',
       spaceId: 82,
       techId: 'pay_amount',
@@ -288,12 +288,12 @@ describe('buildKnowledgeCalcLogic', () => {
     expect(quantile).not.toHaveProperty('techId')
   })
 
-  it('builds derivative custom template maps from variable mappings', () => {
+  it('builds composite custom template maps from variable mappings', () => {
     const result = buildKnowledgeCalcLogic({
       atomicMetricMetaMap,
       expr: '(A+B)/C',
       groupId: 1,
-      indicatorClass: 'derivative',
+      indicatorClass: 'composite',
       spaceId: 82,
       templateType: 'custom',
       variableMappings: [
@@ -371,7 +371,7 @@ describe('buildKnowledgeCalcLogic', () => {
     })
   })
 
-  it('parses api indicator_templates back to derivative ratio form fields', () => {
+  it('parses api indicator_templates back to composite ratio form fields', () => {
     const result = parseKnowledgeCalcLogicFormValues({
       indicator_templates: {
         proportion_indicator: {

@@ -179,7 +179,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
         </div>
       )}
 
-      {indicatorClass === 'derivative' ? (
+      {indicatorClass === 'composite' ? (
         <>
           <AForm.Item
             required

@@ -135,7 +135,7 @@ describe('metric aggregation UI contract', () => {
     expect(customDerivativeSource).toContain('expressionRef.current?.insertText(fieldName)')
     expect(customDerivativeSource).toContain('placeholder="点击字段插入到下方表达式"')
     expect(customDerivativeSource).toContain('fieldName="expr"')
-    expect(customDerivativeSource).toContain('dictionaryKind="derivative"')
+    expect(customDerivativeSource).toContain('dictionaryKind="composite"')
     expect(functionSource).toContain('useOntologyFunctionDictionary(dictionaryKind)')
     expect(drawerSource).toContain("templateFields.push('semanticSchemaId', 'expr')")
     expect(drawerSource).toContain('getCustomExpressionSourceFields(values.expr, allFields)')
@@ -153,19 +153,26 @@ describe('metric aggregation UI contract', () => {
     expect(derivedSource).toContain('const logicValidation = validateRuleLogicUniformity(value)')
   })
 
-  it('uses compound wording for every derivative metric label', () => {
+  it('uses compound wording and the composite enum for every composite metric label', () => {
     const constantsSource = readSource('../constants/metricModeling.constants.ts')
+    const drawerSource = readSource('./KnowledgeOperateDrawer.tsx')
+    const payloadSource = readSource('../utils/knowledgeSubmitPayload.ts')
+    const technicalSource = readSource('./knowledgeOperateDrawer.TechnicalStep.tsx')
     const runtimeSources = [
       constantsSource,
       readSource('../MetricModeling.tsx'),
       readSource('./knowledgeOperateDrawer.ExpressionEditor.tsx'),
       readSource('./knowledgeOperateDrawer.ExtendedTemplateParams.tsx'),
-      readSource('./knowledgeOperateDrawer.TechnicalStep.tsx'),
+      technicalSource
     ]
 
     expect(runtimeSources.join('\n')).not.toContain('衍生')
-    expect(constantsSource).toContain("{ label: '复合指标', value: 'derivative' }")
-    expect(constantsSource).toContain("derivative: '复合指标'")
+    expect(constantsSource).toContain("{ label: '复合指标', value: 'composite' }")
+    expect(constantsSource).toContain("composite: '复合指标'")
+    expect(constantsSource).not.toContain("value: 'derivative'")
+    expect(drawerSource).toContain("type IndicatorType = 'atomic' | 'composite' | 'derived'")
+    expect(technicalSource).toContain("indicatorClass === 'composite'")
+    expect(payloadSource).toContain("indicatorClass === 'composite'")
   })
 
   it('locks immutable metric fields only while editing', () => {
