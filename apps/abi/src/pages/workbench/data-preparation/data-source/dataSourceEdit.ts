@@ -24,7 +24,6 @@ export function buildDataSourceEditRecord(record: any): any {
       sourceId: record.sourceId,
     }
   }
-  if (!Array.isArray(config)) throw new Error('数据源配置格式错误，无法编辑该数据源')
   return {
     ...record,
     ...config,

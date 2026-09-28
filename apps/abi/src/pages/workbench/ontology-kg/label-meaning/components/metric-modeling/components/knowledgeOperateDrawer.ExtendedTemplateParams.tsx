@@ -30,6 +30,7 @@ interface AtomicMetricOption {
 interface Props {
   readonly allFields: KnowledgeTechField[]
   readonly atomicMetricOptions: AtomicMetricOption[]
+  readonly editing?: boolean
   readonly fieldError?: boolean
   readonly fieldLoading?: boolean
   readonly form: FormInstance<KnowledgeFormValues>
@@ -118,6 +119,7 @@ function buildExtendedExpressionPreview(
 export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   allFields,
   atomicMetricOptions,
+  editing,
   fieldError,
   fieldLoading,
   form,
@@ -211,7 +213,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
             '技术定义'
           ) : (
             <KnowledgeFormItemLabel
-              helpText={EXTENDED_TEMPLATE_DESC_MAP[templateTypeVal] || '请选择复合模板'}
+              helpText={EXTENDED_TEMPLATE_DESC_MAP[templateTypeVal] || '请选择指标模版'}
               title="复合逻辑配置"
             />
           )}
@@ -225,6 +227,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               rules={[{ message: '请选择分子指标', required: true }]}
             >
               <KnowledgeIndicatorSearchSelect
+                disabled={editing}
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择分子指标"
@@ -238,6 +241,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               rules={[{ message: '请选择分母指标', required: true }]}
             >
               <KnowledgeIndicatorSearchSelect
+                disabled={editing}
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择分母指标"
@@ -284,6 +288,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               rules={[{ message: '请选择原子指标', required: true }]}
             >
               <KnowledgeIndicatorSearchSelect
+                disabled={editing}
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择原子指标"
@@ -329,6 +334,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               rules={[{ message: '请选择基准指标', required: true }]}
             >
               <KnowledgeIndicatorSearchSelect
+                disabled={editing}
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择基准指标"
@@ -342,6 +348,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               rules={[{ message: '请选择对比类型', required: true }]}
             >
               <ASelect
+                disabled={editing}
                 options={COMPARISON_TYPE_OPTIONS}
                 placeholder="请选择对比类型"
               />
@@ -359,6 +366,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               rules={[{ message: '请选择产出格式', required: true }]}
             >
               <ASelect
+                disabled={editing}
                 options={COMPARISON_OUTPUT_OPTIONS}
                 placeholder="请选择产出格式"
               />
@@ -374,6 +382,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               rules={[{ message: '请选择原始指标', required: true }]}
             >
               <KnowledgeIndicatorSearchSelect
+                disabled={editing}
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择原始指标"
@@ -387,6 +396,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               rules={[{ message: '请选择计算方法', required: true }]}
             >
               <ASelect
+                disabled={editing}
                 options={VOLATILITY_METHOD_OPTIONS}
                 placeholder="请选择计算方法"
               />
@@ -404,6 +414,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               rules={[{ message: '请选择数据范围', required: true }]}
             >
               <ASelect
+                disabled={editing}
                 options={VOLATILITY_DATA_RANGE_OPTIONS}
                 placeholder="请选择数据范围"
               />
@@ -426,6 +437,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
         {templateTypeVal === 'custom' ? (
           <KnowledgeOperateDerivativeCustomTechnicalSection
             allFields={allFields}
+            editing={editing}
             fieldError={fieldError}
             fieldLoading={fieldLoading}
             form={form}

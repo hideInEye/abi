@@ -1,11 +1,9 @@
-import { ApiOutlined } from '@ant-design/icons'
 import { Alert } from 'antd'
 import type { FormInstance } from 'antd'
 import React, { useEffect, useMemo } from 'react'
 
 import { TableSemantics } from '@/components/tableSemantics'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
-import { OntologyFormSectionTitle } from '@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle'
 
 import { useOntologyAtomicAggregationDictionary } from '../hooks/useOntologyFunctionDictionary'
 import type { AggregationCode, KnowledgeFormValues, KnowledgeTechField } from '../types/metricModeling.types'
@@ -14,7 +12,6 @@ import { getKnowledgeTechFieldId } from '../utils/atomicMetricSource'
 import { getCustomAtomicFieldOptionLabel } from '../utils/customAtomic'
 
 import type { AtomicSemanticSelection } from './knowledgeOperateDrawer.AtomicTechnicalStep'
-import styles from './knowledgeOperateDrawer.SimpleAtomicTechnicalSection.module.scss'
 
 interface Props {
   readonly allFields: KnowledgeTechField[]
@@ -62,16 +59,14 @@ export const KnowledgeOperateSimpleAtomicTechnicalSection: React.FC<Props> = ({
 
   return (
     <div className="mb-4 border border-gray-200 rounded bg-white p-4">
-      <OntologyFormSectionTitle icon={<ApiOutlined />}>技术定义</OntologyFormSectionTitle>
-      <div className={styles.semanticField}>
-        <div className="mb-2 text-sm text-[#3e5068] font-medium">
-          <span className="mr-1 text-red-500">*</span>所属数据语义
-        </div>
+      <div className="mb-4">
         <TableSemantics
           form={form}
           getSchemaId={onSchemaChange}
           getSchemaOptions={(_: TableSemanticParams[]) => {}}
           groupFieldName="semanticsGroupId"
+          isEdit
+          label="数据语义"
           type="shema"
         />
       </div>
@@ -85,6 +80,7 @@ export const KnowledgeOperateSimpleAtomicTechnicalSection: React.FC<Props> = ({
         >
           <ASelect
             showSearch
+            disabled
             loading={fieldLoading}
             optionFilterProp="label"
             options={sourceOptions}

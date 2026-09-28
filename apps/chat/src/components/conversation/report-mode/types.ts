@@ -247,6 +247,8 @@ export interface ReportStreamRuntimeState {
 export interface ReportItem extends ReportStreamRuntimeState {
   id: string
   question: string
+  /** 历史接口顶层数组位置；只用于跨模式时间线展示，不替代后端轮次号。 */
+  historySequence?: number
   taskId?: string
   conversationId?: string
   sessionId?: string
@@ -278,6 +280,7 @@ export interface ReportHistoryMessage {
 
 export interface ReportHistoryRoundGroup {
   roundIndex?: number
+  historySequence?: number
   messages?: ReportHistoryMessage[]
 }
 

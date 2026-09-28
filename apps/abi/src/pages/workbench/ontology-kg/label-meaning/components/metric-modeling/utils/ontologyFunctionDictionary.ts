@@ -3,7 +3,7 @@ import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
 type UnknownRecord = Record<string, unknown>
 
-export type OntologyFunctionDictionaryKind = 'atomic' | 'derivative'
+export type OntologyFunctionDictionaryKind = 'atomic' | 'composite'
 
 export interface OntologyFunctionOption {
   dictType: string
@@ -20,7 +20,7 @@ export interface OntologyAggregationMethodOption {
 
 export const ONTOLOGY_FUNCTION_DICTIONARY_TYPES: Record<OntologyFunctionDictionaryKind, readonly string[]> = {
   atomic: ['ontology_fun', 'ontology_atomic'],
-  derivative: ['ontology_fun', 'ontology_derivative']
+  composite: ['ontology_fun', 'ontology_derivative']
 }
 
 export const ONTOLOGY_ATOMIC_AGGREGATION_DICTIONARY_TYPES = ['ontology_atomic'] as const

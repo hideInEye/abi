@@ -166,7 +166,7 @@ export function getStepItems(showDimensionStep = true, businessOnly = false): St
 }
 
 export function shouldShowMetricPrecomputeConfig(indicatorClass?: unknown) {
-  return indicatorClass === 'derived' || indicatorClass === 'derivative'
+  return indicatorClass === 'derived' || indicatorClass === 'composite'
 }
 
 export function parseAliasTags(alias?: string) {

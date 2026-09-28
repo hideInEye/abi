@@ -21,7 +21,7 @@ import { SemanticListFilters } from './components/SemanticListFilters'
 import { SemanticRuleCardList } from './components/SemanticRuleCardList'
 import { SemanticRuleDetailDrawer } from './components/SemanticRuleDetailDrawer'
 import { SemanticRuleDrawer } from './components/SemanticRuleDrawer'
-import { EMPTY_FILTERS, LIST_TYPE_LABELS, PAGE_SIZE, VISIBILITY_LABELS } from './constants'
+import { EMPTY_FILTERS, LIST_TYPE_LABELS, PAGE_SIZE, PAGE_SIZE_OPTIONS, VISIBILITY_LABELS } from './constants'
 import { useSemanticListManagement } from './hooks/useSemanticListManagement'
 import { TABLE_SELECTION_COLUMN_WIDTH, getResponsiveOverlayWidths, getTableScrollWidth } from './semantic-list-layout'
 import styles from './semantic-list.module.scss'
@@ -625,7 +625,7 @@ export const Component = () => {
                 current={currentPage}
                 disabled={loading}
                 pageSize={pageSize}
-                pageSizeOptions={[10, 20, 30, 40, 50]}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
                 showTotal={count => `共 ${count} 条`}
                 total={total}
                 onChange={handlePaginationChange}

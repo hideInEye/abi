@@ -6,6 +6,14 @@ function readSource(relativePath: string) {
   return readFileSync(new URL(relativePath, import.meta.url), 'utf8')
 }
 
+function getFormItemSource(source: string, fieldName: string) {
+  const fieldIndex = source.indexOf(`name="${fieldName}"`)
+  const startIndex = source.lastIndexOf('<AForm.Item', fieldIndex)
+  const endIndex = source.indexOf('</AForm.Item>', fieldIndex)
+
+  return source.slice(startIndex, endIndex)
+}
+
 describe('metric aggregation UI contract', () => {
   it('uses a multi-select for one-click atomic mapping aggregations', () => {
     const source = readSource('./KnowledgeAtomicMappingDrawer.tsx')
@@ -57,7 +65,9 @@ describe('metric aggregation UI contract', () => {
     expect(drawerSource).toContain("getAtomicAggregationType(editingItem || undefined) === 'simple'")
     expect(drawerSource).toContain('getStepItems(!isAtomicMode, isSimpleAtomicEditing)')
     expect(drawerSource).toContain('atomicTechnicalSection=')
-    expect(simpleTechnicalSource).toContain('>技术定义</OntologyFormSectionTitle>')
+    expect(simpleTechnicalSource).not.toContain('技术定义')
+    expect(simpleTechnicalSource).toContain('label="数据语义"')
+    expect(simpleTechnicalSource).toContain('isEdit')
     expect(simpleTechnicalSource).toContain('name="atomicAggregationMethods"')
     expect(simpleTechnicalSource).toContain('mode="multiple"')
   })
@@ -100,7 +110,7 @@ describe('metric aggregation UI contract', () => {
     expect(derivedSource).toContain('title="主体维度"')
     expect(derivedSource).toContain('title="时段范围"')
     expect(derivedSource).toContain('helpText="如需多个维度组合分析指标，请勾选"')
-    expect(extendedSource).toContain("helpText={EXTENDED_TEMPLATE_DESC_MAP[templateTypeVal] || '请选择复合模板'}")
+    expect(extendedSource).toContain("helpText={EXTENDED_TEMPLATE_DESC_MAP[templateTypeVal] || '请选择指标模版'}")
     expect(precomputeSource).toContain('helpText="按当前空间时区执行。"')
     expect(
       [atomicSource, businessSource, derivedSource, extendedSource, precomputeSource].every(
@@ -125,7 +135,7 @@ describe('metric aggregation UI contract', () => {
     expect(customDerivativeSource).toContain('expressionRef.current?.insertText(fieldName)')
     expect(customDerivativeSource).toContain('placeholder="点击字段插入到下方表达式"')
     expect(customDerivativeSource).toContain('fieldName="expr"')
-    expect(customDerivativeSource).toContain('dictionaryKind="derivative"')
+    expect(customDerivativeSource).toContain('dictionaryKind="composite"')
     expect(functionSource).toContain('useOntologyFunctionDictionary(dictionaryKind)')
     expect(drawerSource).toContain("templateFields.push('semanticSchemaId', 'expr')")
     expect(drawerSource).toContain('getCustomExpressionSourceFields(values.expr, allFields)')
@@ -143,18 +153,69 @@ describe('metric aggregation UI contract', () => {
     expect(derivedSource).toContain('const logicValidation = validateRuleLogicUniformity(value)')
   })
 
-  it('uses compound wording for every derivative metric label', () => {
+  it('uses compound wording and the composite enum for every composite metric label', () => {
     const constantsSource = readSource('../constants/metricModeling.constants.ts')
+    const drawerSource = readSource('./KnowledgeOperateDrawer.tsx')
+    const payloadSource = readSource('../utils/knowledgeSubmitPayload.ts')
+    const technicalSource = readSource('./knowledgeOperateDrawer.TechnicalStep.tsx')
     const runtimeSources = [
       constantsSource,
       readSource('../MetricModeling.tsx'),
       readSource('./knowledgeOperateDrawer.ExpressionEditor.tsx'),
       readSource('./knowledgeOperateDrawer.ExtendedTemplateParams.tsx'),
-      readSource('./knowledgeOperateDrawer.TechnicalStep.tsx'),
+      technicalSource
     ]
 
     expect(runtimeSources.join('\n')).not.toContain('衍生')
-    expect(constantsSource).toContain("{ label: '复合指标', value: 'derivative' }")
-    expect(constantsSource).toContain("derivative: '复合指标'")
+    expect(constantsSource).toContain("{ label: '复合指标', value: 'composite' }")
+    expect(constantsSource).toContain("composite: '复合指标'")
+    expect(constantsSource).not.toContain("value: 'derivative'")
+    expect(drawerSource).toContain("type IndicatorType = 'atomic' | 'composite' | 'derived'")
+    expect(technicalSource).toContain("indicatorClass === 'composite'")
+    expect(payloadSource).toContain("indicatorClass === 'composite'")
+  })
+
+  it('locks immutable metric fields only while editing', () => {
+    const atomicSource = readSource('./knowledgeOperateDrawer.AtomicTechnicalStep.tsx')
+    const businessSource = readSource('./knowledgeOperateDrawer.BusinessStep.tsx')
+    const customSource = readSource('./knowledgeOperateDrawer.DerivativeCustomTechnicalSection.tsx')
+    const drawerSource = readSource('./KnowledgeOperateDrawer.tsx')
+    const extendedSource = readSource('./knowledgeOperateDrawer.ExtendedTemplateParams.tsx')
+    const technicalSource = readSource('./knowledgeOperateDrawer.TechnicalStep.tsx')
+
+    expect(drawerSource).toContain('indicatorTypeDisabled={isEditing}')
+    expect(drawerSource).toContain('editing={isEditing}')
+    expect(getFormItemSource(businessSource, 'indicatorClass')).toContain('disabled={indicatorTypeDisabled}')
+
+    expect(atomicSource).toContain('!editing ? <OntologyFormSectionTitle')
+    expect(getFormItemSource(atomicSource, 'techName')).toContain('disabled={editing}')
+    expect(atomicSource).toMatch(/<TableSemantics[\s\S]*?isEdit=\{editing\}[\s\S]*?label="数据语义"/)
+    expect(getFormItemSource(atomicSource, 'atomicSourceFieldId')).toContain('disabled={editing}')
+
+    expect(getFormItemSource(technicalSource, 'indicatorCode')).toContain('disabled={editing}')
+    expect(getFormItemSource(technicalSource, 'techId')).toContain('disabled={editing}')
+    expect(getFormItemSource(technicalSource, 'techName')).toContain('disabled={editing}')
+    expect(getFormItemSource(technicalSource, 'templateType')).toContain('label="指标模版"')
+    expect(getFormItemSource(technicalSource, 'templateType')).toContain('disabled={editing}')
+
+    for (const field of [
+      'ratioNumeratorId',
+      'ratioDenominatorId',
+      'cumulativeMetricId',
+      'compareMetricId',
+      'compareType',
+      'comparisonOutputType',
+      'volatilityMetricId',
+      'volatilityMethod',
+      'volatilityDataRange'
+    ]) {
+      expect(getFormItemSource(extendedSource, field)).toContain('disabled={editing}')
+    }
+    for (const field of ['ratioPrecision', 'cumulativeTimeRange', 'comparePeriod', 'rollingWindowSize']) {
+      expect(getFormItemSource(extendedSource, field)).not.toContain('disabled={editing}')
+    }
+    expect(extendedSource).toContain('editing={editing}')
+    expect(customSource).toMatch(/<TableSemantics[\s\S]*?isEdit=\{editing\}[\s\S]*?label="数据语义"/)
+    expect(customSource).toMatch(/<ATreeSelect[\s\S]*?disabled=\{editing\}/)
   })
 })

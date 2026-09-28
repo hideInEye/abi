@@ -27,6 +27,8 @@
 ## 微前端集成约束
 
 - 当前拓扑：ABI 是宿主，Dashboard 是 qiankun 子应用；Chat 的 `registerAiBotMicroApp()` 是兼容空函数，实际通过 `/chat-ui/` 独立运行。
+- ABI 内容布局内由 `DashboardMicroAppHost` 保留一个 Dashboard 实例，叶子页面只登记路径与标题；离开后隐藏，空闲 5 分钟释放。宿主通过子应用 `update` 同步内部路由、标题与空间，不重建 React root。
+- Dashboard 真正退出时由 `dashboardSession` 等待在途挂载/更新和卸载，期间保留隐藏的 DOM 容器；新的实例必须等待旧实例释放后加载。不要恢复叶子路由直接销毁容器或菜单显隐时重建整层布局的做法。
 - ABI 使用 qiankun 加载微应用时必须启用样式隔离，优先使用 `sandbox.experimentalStyleIsolation`，避免子应用样式污染宿主。
 - 新增或改造微应用时，子应用不得把业务背景、主题色、页面底色直接写到全局 `html` / `body` 选择器；应写到自身 root 容器或业务作用域 class。必要的 reset 也应尽量收敛到子应用容器。
 - 若确需修改全局 `html` / `body`，必须在需求和 run log 中说明原因、影响范围、样式隔离策略和回归验证方式。

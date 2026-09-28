@@ -9,10 +9,11 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import {lazy, memo, useMemo} from 'react';
+import {lazy, memo, useEffect, useMemo, useSyncExternalStore} from 'react';
 import {createBrowserRouter, createMemoryRouter, Navigate, RouterProvider} from "react-router-dom";
 import {ConfigProvider, theme} from "antd";
 import {qiankunWindow} from 'vite-plugin-qiankun/dist/helper';
+import {getDashboardHostRoute, subscribeDashboardHostRoute} from './dashboardHostRoute.ts';
 
 const DesignerViewPage = lazy(() => import('../pages/view/DesignerViewPage.tsx'));
 const DesignerPage = lazy(() => import('../pages/designer/DesignerPage.tsx'));
@@ -423,8 +424,9 @@ const ShareViewPage = lazy(() => import('../pages/share/ShareViewPage.tsx'));
 // };
 
 /** 动态读取主应用传入的页面标题 */
-const DynamicServerProjectList = () => <ServerProjectList title={window.__ABI_DASHBOARD_PAGE_TITLE__}/>
-const DynamicMyScreen = () => <MyScreen title={window.__ABI_DASHBOARD_PAGE_TITLE__}/>
+const useDashboardHostRoute = () => useSyncExternalStore(subscribeDashboardHostRoute, getDashboardHostRoute);
+const DynamicServerProjectList = () => <ServerProjectList title={useDashboardHostRoute().pageTitle}/>
+const DynamicMyScreen = () => <MyScreen title={useDashboardHostRoute().pageTitle}/>
 
 const routes = [
     {
@@ -503,12 +505,25 @@ const routes = [
 const isPoweredByQiankun = (qiankunWindow as any).__POWERED_BY_QIANKUN__
 
 const MainRouter = memo(() => {
+    const {initialPath} = useDashboardHostRoute();
     const router = useMemo(() => {
         if (isPoweredByQiankun) {
-            return createMemoryRouter(routes, {initialEntries: [window.__ABI_DASHBOARD_INITIAL_PATH__ || '/projects']});
+            return createMemoryRouter(routes, {initialEntries: [getDashboardHostRoute().initialPath || '/projects']});
         }
         return createBrowserRouter(routes);
     }, []);
+
+    useEffect(() => {
+        if (!isPoweredByQiankun || !initialPath) return;
+        const {pathname, search, hash} = router.state.location;
+        if (`${pathname}${search}${hash}` !== initialPath) {
+            void router.navigate(initialPath, {replace: true}).catch(error => {
+                console.error('[abi-dashboard] 路由切换失败:', error);
+            });
+        }
+    }, [initialPath, router]);
+
+    useEffect(() => () => router.dispose(), [router]);
 
     return (
         <ConfigProvider theme={{

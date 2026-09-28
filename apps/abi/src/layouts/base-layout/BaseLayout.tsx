@@ -3,10 +3,8 @@ import type { LayoutMode } from '@sa/materials'
 import { configResponsive } from 'ahooks'
 import './index.scss'
 
-import { hideMenuRoute } from '@/constants/app'
 import { getContentXScrollable, getFullContent, getMixSiderFixed, getSiderCollapse, setIsMobile, setSiderCollapse } from '@/store/slice/app'
 import { getThemeSettings, setLayoutMode } from '@/store/slice/theme'
-import { useRoute } from '~/packages/simple-router/src'
 
 import GlobalContent from '../modules/global-content'
 import GlobalMenu from '../modules/global-menu'
@@ -26,8 +24,6 @@ const BaseLayout = () => {
   const dispatch = useAppDispatch()
   const responsive = useResponsive()
   const { childLevelMenus, isActiveFirstLevelMenuHasChildren } = useMixMenuContext()
-  const route = useRoute()
-  const isHideMenuRoute = hideMenuRoute.includes(route.name!)
 
   const contentXScrollable = useAppSelector(getContentXScrollable)
   const mixSiderFixed = useAppSelector(getMixSiderFixed)
@@ -96,7 +92,6 @@ const BaseLayout = () => {
       fullContent={fullContent}
       headerHeight={themeSettings.header.height}
       isMobile={isMobile}
-      key={isHideMenuRoute ? 0 : 1}
       mode={layoutMode}
       rightFooter={themeSettings.footer.right}
       scrollElId={LAYOUT_SCROLL_EL_ID}

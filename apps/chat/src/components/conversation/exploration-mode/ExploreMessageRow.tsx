@@ -1,4 +1,4 @@
-import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DislikeOutlined, DownOutlined, ExpandOutlined, InboxOutlined, LikeOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
+import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DeleteOutlined, DislikeOutlined, DownOutlined, ExpandOutlined, InboxOutlined, LikeOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
 import { Alert, message, Tooltip } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 
@@ -17,6 +17,8 @@ interface ExploreMessageRowProps {
   onClose?: () => void
   /** 代码块点击编辑时，由上层在右侧面板打开代码编辑器。 */
   onEditCode?: (payload: ExploreCodeEditPayload) => void
+  /** 删除当前探索轮次（进入统一选择删除模式）。 */
+  onDelete?: (item: ExploreItem) => void
   /** 窄容器（分享悬浮窗等）单栏紧凑布局；主对话宽屏不传，保持双栏。 */
   compact?: boolean
 }
@@ -146,7 +148,7 @@ function scrollStepIntoListView(container: HTMLElement, target: Element) {
   else if (tRect.top < cRect.top) container.scrollTop -= cRect.top - tRect.top
 }
 
-const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = false, onOpen, onClose, onEditCode, compact = false }) => {
+const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = false, onOpen, onClose, onEditCode, onDelete, compact = false }) => {
   const completedCount = item.tasks.filter((task) => task.status === 'completed' || task.status === 'done').length
   const statusTag = getCardStatusTag(item.status)
   const running = item.status === 'running'
@@ -234,7 +236,18 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
   return (
     <article className={`${styles.messageRow} ${compact ? styles.compact : ''}`}>
       <div className={styles.questionWrap}>
-        <div className={styles.questionBubble}>{item.question}</div>
+        <div className={styles.questionColumn}>
+          <div className={styles.questionBubble}>{item.question}</div>
+          {onDelete && (
+            <div className={styles.questionActions}>
+              <Tooltip title="删除">
+                <button type="button" className={styles.questionActionButton} aria-label="删除" onClick={() => onDelete(item)}>
+                  <DeleteOutlined />
+                </button>
+              </Tooltip>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className={styles.card}>

@@ -212,12 +212,19 @@ export function deleteMessage(params: { convUid: string }) {
   })
 }
 
+export type DeleteMessageSource = 'message' | 'report'
+
+export interface DeleteMessageRoundItem {
+  source: DeleteMessageSource
+  roundIndex: number[]
+}
+
 // 按轮次批量删除对话消息
-export function deleteMessageByRound(params: { convUid: string; roundIndex: number[] }) {
+export function deleteMessageByRound(params: { convUid: string; items: DeleteMessageRoundItem[] }) {
   return request({
     url: "/abi-chat/v1/app/message/deleteByRound",
     method: "post",
-    data: { convUid: params.convUid, roundIndex: params.roundIndex },
+    data: { convUid: params.convUid, items: params.items },
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
   })
 }
