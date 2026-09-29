@@ -1,0 +1,428 @@
+.container {
+  width: 100%;
+}
+
+.containerWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.fullscreenButtonWrapper {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+}
+
+.fullscreenButton {
+  color: #6b7280 !important;
+  transition: all 0.2s ease !important;
+}
+
+.fullscreenButton:hover {
+  color: #5b7cf7 !important;
+  background: rgba(91, 124, 247, 0.06) !important;
+}
+
+/* ── Block Section ── */
+.block {
+  margin-bottom: 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+/* ── Block Title (same as chart-header-title style) ── */
+.blockTitle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 10px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #2d2d2d;
+  letter-spacing: 0.02em;
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.8), rgba(255, 255, 255, 0));
+  border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+  border-radius: 8px 8px 0 0;
+}
+
+/* Left blue gradient bar indicator */
+.blockTitle::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #5b7cf7, #7c9cff);
+}
+
+.blockTitleIcon {
+  font-size: 14px;
+  color: #5b7cf7;
+}
+
+.blockContent {
+  padding: 14px 16px 16px;
+  text-align: left;
+}
+
+/* ── Description Text (描述分析) ── */
+.descText {
+  color: #4a5060;
+  font-size: 13.5px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  text-align: left;
+}
+
+/* ── Summary Row (指标概览) ── */
+.summaryRow {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.metricCard {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(130, 140, 200, 0.1);
+  background: linear-gradient(135deg, rgba(248, 250, 255, 0.8), rgba(255, 255, 255, 0.9));
+  backdrop-filter: blur(6px);
+  box-shadow: 0 1px 4px rgba(26, 39, 68, 0.04);
+  transition: box-shadow 0.2s ease;
+}
+
+.metricCard:hover {
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.08);
+}
+
+.metricLabel {
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.metricValue {
+  color: #313a4a;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.metricHighlight {
+  color: #5b7cf7;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* ── Table (影响因素) - aligned with ViewEle viewTable style ── */
+.tableWrap {
+  padding: 14px 16px 16px;
+}
+
+.factorTable :global(.ant-table-body) {
+  overflow-x: auto !important;
+}
+
+.factorTable :global(.ant-table) {
+  border: 1px solid rgba(130, 140, 200, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 6px rgba(26, 39, 68, 0.05);
+}
+
+.factorTable :global(.ant-table-container) {
+  border-inline-start: none !important;
+}
+
+.factorTable :global(.ant-table-content table) {
+  border-collapse: collapse;
+}
+
+.factorTable :global(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+  background: linear-gradient(180deg, rgba(245, 248, 252, 0.95), rgba(240, 244, 250, 0.9)) !important;
+  color: #3a3f50 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  border-bottom: 1.5px solid rgba(91, 124, 247, 0.12) !important;
+  padding: 10px 14px !important;
+  letter-spacing: 0.02em;
+  text-align: left !important;
+}
+
+.factorTable :global(.ant-table-tbody > tr > td) {
+  white-space: nowrap;
+  color: #4a5060 !important;
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.06) !important;
+  padding: 9px 14px !important;
+  background: transparent;
+  transition: background 0.15s ease;
+  text-align: left !important;
+}
+
+.factorTable :global(.ant-table-tbody > tr:hover > td) {
+  background: rgba(91, 124, 247, 0.03) !important;
+}
+
+.factorTable :global(.ant-table-tbody > tr:last-child > td) {
+  border-bottom: none !important;
+}
+
+.factorTable :global(.ant-table-thead > tr:first-child > th:first-child) {
+  border-top-left-radius: 10px !important;
+}
+
+.factorTable :global(.ant-table-thead > tr:first-child > th:last-child) {
+  border-top-right-radius: 10px !important;
+}
+
+/* Zebra striping */
+.factorTable :global(.ant-table-tbody > tr:nth-child(even) > td) {
+  background: rgba(248, 250, 255, 0.5);
+}
+.factorTable :global(.ant-table-tbody > tr:nth-child(even):hover > td) {
+  background: rgba(91, 124, 247, 0.04) !important;
+}
+
+/* ── Pagination (aligned with ViewEle viewTable style) ── */
+.factorTable :global(.ant-table-pagination.ant-pagination) {
+  margin: 14px 16px 12px !important;
+  padding: 10px 0;
+  border-top: 1px solid rgba(130, 140, 200, 0.06);
+}
+
+.factorTable :global(.ant-pagination-item) {
+  border-radius: 6px !important;
+  border: 1px solid rgba(130, 140, 200, 0.15) !important;
+  transition: all 0.2s ease !important;
+}
+
+.factorTable :global(.ant-pagination-item a) {
+  font-size: 13px !important;
+  color: #5a6070 !important;
+}
+
+.factorTable :global(.ant-pagination-item:hover) {
+  border-color: #5b7cf7 !important;
+  background: rgba(91, 124, 247, 0.04) !important;
+}
+
+.factorTable :global(.ant-pagination-item:hover a) {
+  color: #5b7cf7 !important;
+}
+
+.factorTable :global(.ant-pagination-item-active) {
+  background: linear-gradient(135deg, #5b7cf7, #7c9cff) !important;
+  border-color: transparent !important;
+  box-shadow: 0 2px 6px rgba(91, 124, 247, 0.25) !important;
+}
+
+.factorTable :global(.ant-pagination-item-active a) {
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+.factorTable :global(.ant-pagination-prev .ant-pagination-item-link),
+.factorTable :global(.ant-pagination-next .ant-pagination-item-link) {
+  border-radius: 6px !important;
+  border: 1px solid rgba(130, 140, 200, 0.15) !important;
+  color: #6b7280 !important;
+  transition: all 0.2s ease !important;
+}
+
+.factorTable :global(.ant-pagination-prev:hover .ant-pagination-item-link),
+.factorTable :global(.ant-pagination-next:hover .ant-pagination-item-link) {
+  border-color: #5b7cf7 !important;
+  color: #5b7cf7 !important;
+  background: rgba(91, 124, 247, 0.04) !important;
+}
+
+.factorTable :global(.ant-pagination-disabled .ant-pagination-item-link) {
+  color: #c0c4cc !important;
+  border-color: rgba(130, 140, 200, 0.1) !important;
+}
+
+.factorTable :global(.ant-pagination-total-text) {
+  font-size: 13px !important;
+  color: #6b7280 !important;
+  margin-right: 8px !important;
+}
+
+.factorTable :global(.ant-pagination-options) {
+  margin-left: 8px !important;
+}
+
+.factorTable :global(.ant-select-selector) {
+  border-radius: 6px !important;
+  border-color: rgba(130, 140, 200, 0.2) !important;
+  font-size: 13px !important;
+  min-height: 30px !important;
+}
+
+.factorTable :global(.ant-select-selector:hover) {
+  border-color: #5b7cf7 !important;
+}
+
+.factorTable :global(.ant-pagination-options-quick-jumper) {
+  font-size: 13px !important;
+  color: #6b7280 !important;
+}
+
+.factorTable :global(.ant-pagination-options-quick-jumper input) {
+  border-radius: 6px !important;
+  border-color: rgba(130, 140, 200, 0.2) !important;
+  font-size: 13px !important;
+  height: 30px !important;
+}
+
+.factorTable :global(.ant-pagination-options-quick-jumper input:focus) {
+  border-color: #5b7cf7 !important;
+  box-shadow: 0 0 0 2px rgba(91, 124, 247, 0.1) !important;
+}
+
+.deltaValue {
+  color: #5b7cf7;
+  font-weight: 600;
+}
+
+/* ── Markdown Content (归因建议) - left aligned ── */
+.markdownContent {
+  color: #4a5060;
+  font-size: 13.5px;
+  line-height: 1.8;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(130, 140, 200, 0.08);
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.5), rgba(255, 255, 255, 0.8));
+  text-align: left;
+}
+
+.markdownContent :global(p) {
+  margin: 0 0 0.5rem 0;
+  color: #4a5060;
+  text-align: left;
+}
+
+.markdownContent :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdownContent :global(h1),
+.markdownContent :global(h2),
+.markdownContent :global(h3),
+.markdownContent :global(h4),
+.markdownContent :global(h5),
+.markdownContent :global(h6) {
+  margin: 0.75rem 0 0.5rem 0;
+  color: #2d2d2d;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.markdownContent :global(h1) { font-size: 16px; }
+.markdownContent :global(h2) { font-size: 15px; }
+.markdownContent :global(h3) { font-size: 14px; }
+.markdownContent :global(h4),
+.markdownContent :global(h5),
+.markdownContent :global(h6) { font-size: 13.5px; }
+
+.markdownContent :global(ul),
+.markdownContent :global(ol) {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+  text-align: left;
+}
+
+.markdownContent :global(li) {
+  margin-bottom: 0.25rem;
+  line-height: 1.7;
+  text-align: left;
+}
+
+.markdownContent :global(strong) {
+  color: #2d2d2d;
+  font-weight: 600;
+}
+
+.markdownContent :global(code) {
+  background: rgba(91, 124, 247, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #5b7cf7;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+}
+
+.markdownContent :global(pre) {
+  background: rgba(245, 248, 252, 0.8);
+  border: 1px solid rgba(130, 140, 200, 0.1);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+  text-align: left;
+}
+
+.markdownContent :global(pre code) {
+  background: transparent;
+  padding: 0;
+  color: #4a5060;
+}
+
+.markdownContent :global(blockquote) {
+  border-left: 3px solid #5b7cf7;
+  padding-left: 12px;
+  margin: 0.5rem 0;
+  color: #6b7280;
+  font-style: italic;
+  text-align: left;
+}
+
+.markdownContent :global(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 12.5px;
+  border: 1px solid rgba(130, 140, 200, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.markdownContent :global(th) {
+  background: linear-gradient(180deg, rgba(245, 248, 252, 0.95), rgba(240, 244, 250, 0.9));
+  font-weight: 600;
+  padding: 10px 14px;
+  text-align: left;
+  color: #3a3f50;
+  border-bottom: 1.5px solid rgba(91, 124, 247, 0.12);
+}
+
+.markdownContent :global(td) {
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.06);
+  text-align: left;
+  color: #4a5060;
+}
+
+.markdownContent :global(tr:hover) {
+  background: rgba(91, 124, 247, 0.03);
+}

@@ -1,13 +1,14 @@
-import { FileSearchOutlined } from '@ant-design/icons'
-import { Alert } from 'antd'
+import { CopyOutlined, DeleteOutlined, FileSearchOutlined } from '@ant-design/icons'
+import { Alert, Tooltip, message } from 'antd'
 import React from 'react'
 
 import ReportFileCard from './ReportFileCard'
 import ReportThinkingPanel from './ReportThinkingPanel'
 import ReportTodoList from './ReportTodoList'
 import { formatReportDuration, getReportPresentationStage, shouldShowReportEstimate } from './helpers'
-import type { ReportItem } from './types'
+import { getReportQuestionCopyText } from './reportMessageActions'
 import styles from './styles.module.css'
+import type { ReportItem } from './types'
 
 interface ReportMessageRowProps {
   report: ReportItem
@@ -15,6 +16,7 @@ interface ReportMessageRowProps {
   onToggleTodo: () => void
   onToggleTask: (taskKey: string) => void
   onOpenReport: () => void
+  onDelete?: (report: ReportItem) => void
   onThinkingTypewriterComplete?: () => void
 }
 
@@ -48,7 +50,7 @@ const STATUS_TONE_CLASS_NAMES: Record<ReportStatusTone, string> = {
   neutral: styles.reportStatusNeutral,
 }
 
-const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThinking, onToggleTodo, onToggleTask, onOpenReport, onThinkingTypewriterComplete }) => {
+const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThinking, onToggleTodo, onToggleTask, onOpenReport, onDelete, onThinkingTypewriterComplete }) => {
   const statusMeta = getStatusMeta(report.status)
   const latestWarning = report.warnings[report.warnings.length - 1]
   const presentationStage = getReportPresentationStage(report)
@@ -57,10 +59,35 @@ const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThi
   const showFinalSummary = Boolean(report.final) && (presentationStage === 'report' || report.status === 'failed')
   const warningDescription = report.status === 'syncing_history' ? '报告已经生成，正在整理到当前会话中。' : report.status === 'completed' ? undefined : '生成过程出现短暂波动，系统正在自动恢复。'
 
+  const copyQuestion = async () => {
+    try {
+      await navigator.clipboard.writeText(getReportQuestionCopyText(report))
+      message.success('已复制')
+    } catch {
+      message.error('复制失败')
+    }
+  }
+
   return (
     <article className={styles.messageRow}>
       <div className={styles.questionWrap}>
-        <div className={styles.questionBubble}>{report.question}</div>
+        <div className={styles.questionColumn}>
+          <div className={styles.questionBubble}>{report.question}</div>
+          <div className={styles.questionActions}>
+            <Tooltip title="复制">
+              <button type="button" className={styles.questionActionButton} aria-label="复制" onClick={copyQuestion}>
+                <CopyOutlined />
+              </button>
+            </Tooltip>
+            {onDelete && (
+              <Tooltip title="删除">
+                <button type="button" className={styles.questionActionButton} aria-label="删除" onClick={() => onDelete(report)}>
+                  <DeleteOutlined />
+                </button>
+              </Tooltip>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className={styles.answerWrap}>

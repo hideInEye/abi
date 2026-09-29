@@ -17,6 +17,15 @@ interface Props {
   onShared?: () => void
 }
 
+/** 悬浮窗预设主题，取值与 chat-sdk theme.ts ThemeId 一致 */
+type ShareTheme = 'blue' | 'light' | 'dark'
+
+const THEME_OPTIONS: { value: ShareTheme; label: string; bg: string; bar: string; ink: string }[] = [
+  { value: 'blue', label: '蓝色系', bg: '#d5daf5', bar: '#5b7cf7', ink: '#262626' },
+  { value: 'light', label: '白色系', bg: '#ffffff', bar: '#5b7cf7', ink: '#1f2733' },
+  { value: 'dark', label: '黑色系', bg: '#1a1d29', bar: '#282c3a', ink: '#e8ecf5' },
+]
+
 /**
  * 助手分享弹窗
  * UI 参考「我的大屏」分享弹窗（访问密码保护 / 链接有效期 / 生成链接 / 复制链接）。
@@ -30,6 +39,7 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
   const [shareLoading, setShareLoading] = useState(false)
   const [expirationMode, setExpirationMode] = useState<string>('forever')
   const [expirationDate, setExpirationDate] = useState<Dayjs | null>(null)
+  const [theme, setTheme] = useState<ShareTheme>('blue')
 
   // 关闭后重置弹窗内所有状态，避免下次打开残留
   useEffect(() => {
@@ -40,6 +50,7 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
       setShareLoading(false)
       setExpirationMode('forever')
       setExpirationDate(null)
+      setTheme('blue')
     }
   }, [open])
 
@@ -55,6 +66,7 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
         spaceId: spaceId || 0,
         type: 'workflow',
         sharePasswordFlag,
+        theme,
         ...(expirationDays !== undefined ? { expirationDays } : {}),
         ...(expirationDateStr ? { expirationDate: expirationDateStr } : {}),
       })
@@ -77,21 +89,6 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
     const text = sharePassword ? `分享链接：${shareLink}\n访问密码：${sharePassword}` : shareLink
     navigator.clipboard.writeText(text).then(() => {
       message.success(sharePassword ? '分享链接和密码已复制到剪贴板' : '分享链接已复制到剪贴板')
-    })
-  }
-
-  // iframe 直嵌链接：在分享页 URL 上追加 embed=1，分享页会以铺满 iframe 的悬浮对话框形态渲染（复用同一 shareCode 与匿名 token 鉴权）
-  const embedUrl = shareLink
-    ? `${shareLink}${shareLink.includes('embed=') ? '' : `${shareLink.includes('?') ? '&' : '?'}embed=1`}`
-    : ''
-  // 第三方系统（如 IPA 案件研判）粘贴此代码即可在页面右下角嵌入悬浮对话框；位置/尺寸由宿主页面自行调整
-  const embedSnippet = embedUrl
-    ? `<iframe src="${embedUrl}" title="AI 助手" style="position:fixed;right:24px;bottom:24px;width:420px;height:680px;border:none;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.12);z-index:2147483000;" allow="clipboard-write"></iframe>`
-    : ''
-
-  const handleCopyEmbed = () => {
-    navigator.clipboard.writeText(embedSnippet).then(() => {
-      message.success('嵌入代码已复制到剪贴板')
     })
   }
 
@@ -156,6 +153,49 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
           )}
         </div>
 
+        {/* 悬浮窗主题风格：预设三选一，随分享记录存储，SDK 校验分享时拉取套用 */}
+        <div
+          style={{
+            padding: '14px 16px',
+            background: '#f7f8fa',
+            borderRadius: '10px',
+            marginBottom: '20px',
+          }}
+        >
+          <div style={{ fontWeight: 500, color: '#262626', marginBottom: '10px' }}>悬浮窗主题风格</div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {THEME_OPTIONS.map((opt) => {
+              const active = theme === opt.value
+              return (
+                <div
+                  key={opt.value}
+                  onClick={() => !shareLink && setTheme(opt.value)}
+                  style={{
+                    flex: 1,
+                    cursor: shareLink ? 'not-allowed' : 'pointer',
+                    opacity: shareLink && !active ? 0.5 : 1,
+                    border: `2px solid ${active ? '#5b7cf7' : 'transparent'}`,
+                    borderRadius: '10px',
+                    background: '#fff',
+                    padding: '6px',
+                    transition: 'border-color 0.2s',
+                  }}
+                >
+                  {/* 缩略预览：标题栏 + 正文 + 一行文字示意 */}
+                  <div style={{ background: opt.bg, borderRadius: '6px', overflow: 'hidden', height: '44px', border: '1px solid #eceef2' }}>
+                    <div style={{ background: opt.bar, height: '14px' }} />
+                    <div style={{ margin: '8px 8px 0', height: '6px', borderRadius: '3px', background: opt.ink, opacity: 0.45 }} />
+                    <div style={{ margin: '6px 8px 0', width: '60%', height: '6px', borderRadius: '3px', background: opt.ink, opacity: 0.25 }} />
+                  </div>
+                  <div style={{ textAlign: 'center', fontSize: '12px', marginTop: '6px', color: active ? '#5b7cf7' : '#595959', fontWeight: active ? 600 : 400 }}>
+                    {opt.label}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
         {/* 生成按钮 / 结果区 */}
         {!shareLink ? (
           <Button
@@ -188,23 +228,6 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
             )}
             <Button type="primary" block size="large" onClick={handleCopyLink} style={{ borderRadius: '8px', height: '44px' }}>
               {sharePassword ? '复制链接和密码' : '复制链接'}
-            </Button>
- 
-            {/* iframe 嵌入代码：供第三方系统直接嵌入悬浮对话框 */}
-            <div style={{ background: '#f7f8fa', borderRadius: '10px', padding: '14px 16px' }}>
-              <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: '8px' }}>嵌入代码（iframe）</div>
-              <Input.TextArea
-                value={embedSnippet}
-                readOnly
-                rows={3}
-                style={{ background: 'transparent', border: 'none', padding: 0, resize: 'none', boxShadow: 'none', fontFamily: 'monospace', fontSize: '12px' }}
-              />
-              <div style={{ fontSize: '12px', color: '#bfbfbf', marginTop: '6px' }}>
-                第三方系统（如案件研判）粘贴到页面即可在右下角嵌入悬浮对话框，位置与尺寸可自行调整。
-              </div>
-            </div>
-            <Button block size="large" onClick={handleCopyEmbed} style={{ borderRadius: '8px', height: '44px' }}>
-              复制嵌入代码
             </Button>
           </div>
         )}

@@ -87,12 +87,13 @@ interface IProps {
   readonly getSchemaOptions?: (schemaOptions: TableSemanticParams[]) => void;
   readonly groupFieldName?: 'semanticGroupId' | 'semanticsGroupId';
   readonly isEdit?: boolean;
+  readonly label?: string;
   readonly selectedGroupId?: SelectId | null;
   readonly type: TableSemanticsGroupType;
   readonly valueAsString?: boolean;
 }
 
-export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = false, selectedGroupId, type, groupFieldName = 'semanticGroupId', valueAsString = false }: IProps) => {
+export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = false, label = '数据', selectedGroupId, type, groupFieldName = 'semanticGroupId', valueAsString = false }: IProps) => {
   const spaceId = useAppSelector(getSpaceId);
   const [groupOptions, setGroupOptions] = useState<SemanticGroupOption[]>([]);
   const [groupId, setGroupId] = useState<SelectId | null>(null);
@@ -282,15 +283,15 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
         <AInput />
       </AForm.Item>
       <AForm.Item
-        label="数据"
+        label={label}
         name="semanticSchemaId"
-        rules={[{ message: '请选择数据', required: true }]}
+        rules={[{ message: `请选择${label}`, required: true }]}
       >
         <ATreeSelect
           disabled={isEdit}
           allowClear
           loadData={handleLoadTreeData}
-          placeholder="请选择数据"
+          placeholder={`请选择${label}`}
           showSearch
           treeData={treeData}
           treeDefaultExpandAll={false}

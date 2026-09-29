@@ -29,8 +29,12 @@ async function startCurrentBranch(poweredByQiankun: boolean) {
     return
   }
 
-  const { mountShareBridge } = await import('./bootstrap/shareBridge')
-  mountShareBridge(branch.targetUrl)
+  const { mountAssistantShare, mountShareBridge } = await import('./bootstrap/shareBridge')
+  if (branch.kind === 'chat-share') {
+    await mountAssistantShare(branch.shareCode)
+  } else {
+    mountShareBridge(branch.targetUrl)
+  }
 }
 
 document.getElementById('abi-startup-retry')?.addEventListener('click', () => window.location.reload())

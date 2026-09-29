@@ -22,6 +22,7 @@ import WorkbenchEmpty from '@/components/stateless/common/WorkbenchEmpty'
 import { $t } from '@/locales';
 import { useMixMenuContext } from '@/hooks/common/menu'
 import { useRouterPush } from '@/hooks/common/routerPush'
+import { DashboardMicroAppHost } from '@/pages/workbench/screen-manage/abi-dashboard/DashboardMicroApp'
 
 const SPACE_AVATAR_COLORS = [
   { bg: 'linear-gradient(135deg, #6366f1, #5b7cf7)', shadow: 'rgba(91,124,247,0.35)' },
@@ -349,7 +350,8 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
 
   return (
     <div className="flex min-w-0" style={{ background: 'var(--abi-card-bg)' }}>
-      {!hideMenuRoute.includes(route.name!) && <div className={'shrink-0 dark:bg-[#1a1a1a] dark:border-[#333] h-[100vh] transition-all duration-300'} id={GLOBAL_SIDER_MENU_ID} style={{ background: 'var(--abi-card-bg)' }} />}
+      {/* 菜单通过 portal 持有这个节点，切换显隐时不能销毁它。 */}
+      <div className={'shrink-0 dark:bg-[#1a1a1a] dark:border-[#333] h-[100vh] transition-all duration-300'} hidden={hideMenuRoute.includes(route.name!)} id={GLOBAL_SIDER_MENU_ID} style={{ background: 'var(--abi-card-bg)' }} />
       <div className={ClassNames('flex-1 min-w-0 h-screen relative flex flex-col')}>
         {!hideMenuRoute.includes(route.name!) && (
           <div className="px-6 pt-4 pb-3 page-header-container">
@@ -448,7 +450,9 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
         )}
         <div className="flex-1 min-h-0 overflow-auto page-content-area">
           {/* <KeepAlive activeCacheKey={cacheKey} aliveRef={aliveRef} cacheNodeClassName={reload ? transitionName : ''} include={cacheKeys}> */}
-            {(route.name === 'workbench' || route.name === 'component') ? <WorkbenchEmpty /> : currentOutlet}
+            <DashboardMicroAppHost>
+              {(route.name === 'workbench' || route.name === 'component') ? <WorkbenchEmpty /> : currentOutlet}
+            </DashboardMicroAppHost>
           {/* </KeepAlive> */}
         </div>
       </div>

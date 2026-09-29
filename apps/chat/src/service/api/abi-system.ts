@@ -182,10 +182,10 @@ export function fetchModelList(params?: { pageNum?: number; pageSize?: number; m
   });
 }
 
-// 邮件分享
+// 邮件分享（shared 接口已迁至 abi-executor 服务）
 export function fetchShareEmail(data: any) {
   return request({
-    url: "/api/abi-system/shared/add",
+    url: "/api/abi-executor/shared/add",
     method: "post",
     data,
   });

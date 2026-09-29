@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -27,6 +27,7 @@ interface WidgetInteractionMessageProps {
   onChartTypeChange: (index: number, type: string) => void
   onFeedback: (index: number, current: number, status: 1 | -1) => void
   onOpenSchema: (schemaId: string | number, name: string) => void
+  onLayout?: () => void
 }
 
 const stripHtmlTags = (value: string): string => value.replace(/<[^>]*>/g, '')
@@ -83,7 +84,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
         <RetryableLazy
           loader={loadWidgetChartVisualization}
           componentProps={{ chart, chartRef: echartRef }}
-          fallback={<LazyFeatureFallback label="正在加载图表…" style={{ height: 280 }} />}
+          fallback={<LazyFeatureFallback label="正在加载图表…" style={{ height: '12rem' }} />}
         />
       )
     }
@@ -205,7 +206,12 @@ export default function WidgetInteractionMessage({
   onChartTypeChange,
   onFeedback,
   onOpenSchema,
+  onLayout,
 }: WidgetInteractionMessageProps) {
+  useLayoutEffect(() => {
+    onLayout?.()
+  }, [onLayout, message.semanticGroup, message.semanticName])
+
   if (message.role === 'human') {
     return (
       <div className="abi-cw-msg abi-cw-msg-human">
@@ -223,7 +229,7 @@ export default function WidgetInteractionMessage({
             <span className="abi-cw-infobar-label">分组：</span>
             <span className="abi-cw-infobar-chip abi-cw-infobar-chip-group">
               <i className="abi-cw-infobar-dot" style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.5)' }} />
-              {message.semanticGroup || '无'}
+              <span className="abi-cw-infobar-chip-text">{message.semanticGroup || '无'}</span>
             </span>
             <span className="abi-cw-infobar-label" style={{ marginLeft: '2em' }}>数据语义：</span>
             <span
@@ -231,7 +237,7 @@ export default function WidgetInteractionMessage({
               onClick={message.semanticSchemaId != null ? () => onOpenSchema(message.semanticSchemaId as number | string, message.semanticName || '') : undefined}
             >
               <i className="abi-cw-infobar-dot" style={{ background: '#5b7cf7', boxShadow: '0 0 6px rgba(91,124,247,0.5)' }} />
-              {message.semanticName || '无'}
+              <span className="abi-cw-infobar-chip-text">{message.semanticName || '无'}</span>
             </span>
           </div>
         )}

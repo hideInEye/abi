@@ -46,6 +46,12 @@ function getRoundIndex(round: ReportHistoryRoundGroup): number {
   return Number.isSafeInteger(candidate) && Number(candidate) >= 0 ? Number(candidate) : 0
 }
 
+function getHistorySequence(round: ReportHistoryRoundGroup): number | undefined {
+  return Number.isSafeInteger(round.historySequence) && Number(round.historySequence) >= 0
+    ? Number(round.historySequence)
+    : undefined
+}
+
 /** 相同 query 结果保持 state 引用稳定，避免报告恢复 effect 重查全部 task。 */
 export function areReportHistoryRoundsEqual(left: ReportHistoryRoundGroup[], right: ReportHistoryRoundGroup[]) {
   if (left === right) return true
@@ -53,7 +59,11 @@ export function areReportHistoryRoundsEqual(left: ReportHistoryRoundGroup[], rig
 
   return left.every((leftRound, roundIndex) => {
     const rightRound = right[roundIndex]
-    if (!rightRound || getRoundIndex(leftRound) !== getRoundIndex(rightRound)) return false
+    if (
+      !rightRound
+      || getRoundIndex(leftRound) !== getRoundIndex(rightRound)
+      || getHistorySequence(leftRound) !== getHistorySequence(rightRound)
+    ) return false
 
     const leftMessages = leftRound.messages || []
     const rightMessages = rightRound.messages || []
@@ -239,6 +249,7 @@ export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conv
       conversationId,
       sessionId,
       question,
+      historySequence: getHistorySequence(round),
       sortOrder,
       createdAt,
       source: 'history',
@@ -374,6 +385,7 @@ export function createReportItemFromHistory(round: ReportHistoryRoundGroup, conv
     conversationId,
     sessionId,
     question,
+    historySequence: getHistorySequence(round),
     sortOrder,
     createdAt,
     source: 'history',
@@ -440,9 +452,18 @@ export function mergeReportTimelineItems(historyItems: ReportItem[], taskItems: 
   })
   const pendingTasks = taskItems.filter((item) => !historyOrders.has(item.sortOrder))
 
-  return [...mergedHistory, ...pendingTasks].sort((left, right) => (
-    left.sortOrder - right.sortOrder
-    || left.createdAt - right.createdAt
-    || left.id.localeCompare(right.id)
-  ))
+  return [...mergedHistory, ...pendingTasks].sort((left, right) => {
+    const leftSequence = left.historySequence
+    const rightSequence = right.historySequence
+
+    if (leftSequence !== undefined && rightSequence !== undefined) {
+      return leftSequence - rightSequence
+    }
+    if (leftSequence !== undefined) return -1
+    if (rightSequence !== undefined) return 1
+
+    return left.sortOrder - right.sortOrder
+      || left.createdAt - right.createdAt
+      || left.id.localeCompare(right.id)
+  })
 }

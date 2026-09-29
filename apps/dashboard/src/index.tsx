@@ -1,3 +1,14 @@
+/*
+ * Copyright © 2023-2025 puyinzhen
+ * All rights reserved.
+ *
+ * The copyright of this work (or idea/project/document) is owned by puyinzhen. Without explicit written permission, no part of this work may be reproduced, distributed, or modified in any form for commercial purposes.
+ *
+ * This copyright statement applies to, but is not limited to: concept descriptions, design documents, source code, images, presentation files, and any related content.
+ *
+ * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
+ */
+
 import {qiankunWindow, renderWithQiankun} from 'vite-plugin-qiankun/dist/helper';
 
 import {
@@ -7,8 +18,10 @@ import {
 import {createDashboardStartupController} from './bootstrap/startup.ts';
 import {preloadInitialDashboardRoute} from './bootstrap/routePreload.ts';
 import {runRegisteredAppCleanup} from './runtime/appCleanup.ts';
+import {resetDashboardHostRoute, updateDashboardHostRoute} from './router/dashboardHostRoute.ts';
 
 let activeContainer: HTMLElement | null = null;
+let currentSpaceId: string | undefined;
 
 function startupMarkup(message = '正在准备大屏应用...'): string {
     return `
@@ -70,15 +83,19 @@ const startup = createDashboardStartupController({
 });
 
 function applyHostProps(props: Record<string, any>): void {
-    const {hostBasePath, initialPath, onTokenExpired, pageTitle} = props;
-    window.__ABI_DASHBOARD_HOST_BASE_PATH__ = hostBasePath;
-    window.__ABI_DASHBOARD_INITIAL_PATH__ = initialPath;
-    window.__ABI_DASHBOARD_PAGE_TITLE__ = pageTitle;
-    window.onTokenExpired = onTokenExpired;
+    if ('hostBasePath' in props) window.__ABI_DASHBOARD_HOST_BASE_PATH__ = props.hostBasePath;
+    if ('initialPath' in props) window.__ABI_DASHBOARD_INITIAL_PATH__ = props.initialPath;
+    if ('pageTitle' in props) window.__ABI_DASHBOARD_PAGE_TITLE__ = props.pageTitle;
+    if ('onTokenExpired' in props) window.onTokenExpired = props.onTokenExpired;
+    updateDashboardHostRoute({
+        initialPath: window.__ABI_DASHBOARD_INITIAL_PATH__,
+        pageTitle: window.__ABI_DASHBOARD_PAGE_TITLE__,
+    });
 }
 
 async function render(props: Record<string, any> = {}): Promise<void> {
     applyHostProps(props);
+    currentSpaceId = props.spaceId == null ? undefined : String(props.spaceId);
     const container = props.container?.querySelector?.('#root')
         ?? activeContainer
         ?? document.getElementById('root');
@@ -89,6 +106,8 @@ async function render(props: Record<string, any> = {}): Promise<void> {
 }
 
 function clearHostState(): void {
+    resetDashboardHostRoute();
+    currentSpaceId = undefined;
     delete window.__ABI_DASHBOARD_HOST_BASE_PATH__;
     delete window.__ABI_DASHBOARD_INITIAL_PATH__;
     delete window.__ABI_DASHBOARD_PAGE_TITLE__;
@@ -102,6 +121,8 @@ function clearHostState(): void {
 function syncSpace(spaceId: unknown): void {
     if (spaceId === undefined || spaceId === null || Number(spaceId) <= 0) return;
     const nextSpaceId = String(spaceId);
+    if (nextSpaceId === currentSpaceId) return;
+    currentSpaceId = nextSpaceId;
     try {
         if (localStorage.getItem('spaceId') !== nextSpaceId) {
             localStorage.setItem('spaceId', nextSpaceId);
@@ -126,11 +147,10 @@ if ((qiankunWindow as any).__POWERED_BY_QIANKUN__) {
         },
         update(props: Record<string, any>) {
             const nextProps = props ?? {};
+            applyHostProps(nextProps);
             if ('spaceId' in nextProps) {
                 syncSpace(nextProps.spaceId);
-                return;
             }
-            return render(nextProps);
         },
     } as any);
 } else {

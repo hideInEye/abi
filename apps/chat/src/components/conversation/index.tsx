@@ -17,6 +17,7 @@ import type { ExploreSendOptions } from './exploration-mode/types'
 import type { ExploreCodeEditPayload } from './exploration-mode/ExploreCodeBlock'
 import { useExplorePreviewPresence } from './exploration-mode/useExplorePreviewPresence'
 import { useReportConversation } from './report-mode/useReportConversation'
+import { getReportDeleteRoundIndex } from './report-mode/reportMessageActions'
 import { useReportPreviewPresence } from './report-mode/useReportPreviewPresence'
 import reportStyles from './report-mode/styles.module.css'
 
@@ -120,8 +121,8 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     onUpdateList,
     // 批量删除
     isDeleting,
+    deletableRounds,
     deleteSelectedRounds,
-    deleteCheckAll,
     deleteLoading,
     enterDeleteMode,
     exitDeleteMode,
@@ -134,6 +135,32 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   const exploreItemsAll = React.useMemo(
     () => [...exploreHistoryItems, ...exploreController.items],
     [exploreHistoryItems, exploreController.items],
+  )
+  const reportDeleteRounds = React.useMemo(
+    () => reportController.reports.flatMap((report) => {
+      const roundIndex = getReportDeleteRoundIndex(report)
+      return roundIndex === undefined ? [] : [roundIndex]
+    }),
+    [reportController.reports],
+  )
+  const allDeletableRounds = React.useMemo(() => Array.from(new Set([
+    ...deletableRounds,
+    ...exploreItemsAll.flatMap((item) => (item.roundIndex === undefined ? [] : [item.roundIndex])),
+    ...reportDeleteRounds,
+  ])), [deletableRounds, exploreItemsAll, reportDeleteRounds])
+  const deleteCheckAll = allDeletableRounds.length > 0
+    && allDeletableRounds.every((round) => deleteSelectedRounds.includes(round))
+  const handleToggleDeleteAll = React.useCallback(
+    (checked: boolean) => toggleDeleteAll(checked, allDeletableRounds),
+    [allDeletableRounds, toggleDeleteAll],
+  )
+  const handleConfirmDelete = React.useCallback(
+    () => confirmDelete({
+      onMessageRoundsDeleted: exploreController.removeItemsByRounds,
+      reportRounds: reportDeleteRounds,
+      onReportRoundsDeleted: reportController.removeReportsByRounds,
+    }),
+    [confirmDelete, exploreController.removeItemsByRounds, reportController.removeReportsByRounds, reportDeleteRounds],
   )
   const [activeExploreId, setActiveExploreId] = useState<string>()
   const activeExplore = React.useMemo(
@@ -440,12 +467,12 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
       {isDeleting && (
         <div style={{ paddingRight: 'var(--scrollbar-width, 17px)' }}>
           <div className="max-w-[53.75rem] w-full m-auto flex items-center justify-between px-4 py-3 border-t border-[#e9edf4] bg-white">
-            <Checkbox checked={deleteCheckAll} onChange={(e) => toggleDeleteAll(e.target.checked)}>
+            <Checkbox checked={deleteCheckAll} onChange={(e) => handleToggleDeleteAll(e.target.checked)}>
               全选
             </Checkbox>
             <div className="flex items-center gap-2">
               <Button onClick={exitDeleteMode}>取消</Button>
-              <Button type="primary" danger loading={deleteLoading} disabled={deleteSelectedRounds.length === 0} onClick={confirmDelete}>
+              <Button type="primary" danger loading={deleteLoading} disabled={deleteSelectedRounds.length === 0} onClick={handleConfirmDelete}>
                 删除{deleteSelectedRounds.length > 0 ? `（${deleteSelectedRounds.length}）` : ''}
               </Button>
             </div>
@@ -535,7 +562,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
           </div>
         }
       >
-        <Form form={shareEmailForm} layout="vertical" wrapperCol={{ span: 20 }} initialValues={{ emailTitle: `${conv.biz_name}报告-${dayjs().format('YYYY.MM.DD')}` }}>
+        <Form form={shareEmailForm} layout="vertical" wrapperCol={{ span: 20 }} initialValues={{ emailTitle: `${conv.biz_name}报告-${dayjs().format('YYYY.MM.DD')}`, interval: 1, points: [{ time: '08:00' }], scheduleMode: 'CONTINUOUS', unit: 'DAY' }}>
           {confirmShareType === 'email' && shareStep === 2 && (
             <RetryableLazy
               loader={loadShareEmailSetting}

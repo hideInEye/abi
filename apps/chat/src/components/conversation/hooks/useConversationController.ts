@@ -17,9 +17,12 @@ import {
 } from '../../../service/api/conv'
 import { useDebugStore } from '../../../store'
 import { getHumanInHistoryByOrderIndex, parseMessageContent } from '../../../utils'
+import { buildScheduleConf, toShareEmailScheduleParams } from '../../../utils/job-schedule'
 import { useScreenshot } from '../useScreenShot'
 import { extractExploreHistoryItems, isExploreHistoryRound } from '../exploration-mode/historyAdapter'
 import type { ExploreItem } from '../exploration-mode/types'
+import { buildDeleteRoundItems, normalizeDeleteRounds } from '../helpers/deleteRoundSelection'
+import { markHistoryResponseOrder } from '../helpers/historyResponseOrder'
 import { areReportHistoryRoundsEqual, splitConversationHistoryRounds } from '../report-mode/reportHistoryAdapter'
 
 import type { chatHeaderRefMethod } from '../../../types'
@@ -55,6 +58,12 @@ export interface ConversationProps {
   onHistorySemanticLoaded?: (data: { name: string; schemaId?: number | string; groupId?: number | string; groupName?: string } | null) => void
   /** 消息列表为空时展示的占位内容（如助手会话开场引导欢迎页） */
   emptyContent?: ReactNode
+}
+
+interface ConfirmDeleteOptions {
+  onMessageRoundsDeleted?: (rounds: number[]) => void
+  reportRounds?: number[]
+  onReportRoundsDeleted?: (rounds: number[]) => void
 }
 
 /**
@@ -438,11 +447,9 @@ export const useConversationController = (
     })
     return Array.from(rounds)
   }, [convContent])
-  const deleteCheckAll = deletableRounds.length > 0 && deleteSelectedRounds.length === deletableRounds.length
-
   // 进入删除模式；若来源消息可删除则默认勾选该轮次
   const enterDeleteMode = (item?: any) => {
-    const round = item?.roundIndex ?? item?.order
+    const round = item?.deleteRoundIndex ?? item?.roundIndex ?? item?.order
     setIsDeleting(true)
     setDeleteSelectedRounds(typeof round === 'number' ? [round] : [])
   }
@@ -460,30 +467,43 @@ export const useConversationController = (
     })
   }
 
-  const toggleDeleteAll = (checked: boolean) => {
-    setDeleteSelectedRounds(checked ? [...deletableRounds] : [])
+  const toggleDeleteAll = (checked: boolean, rounds: number[] = deletableRounds) => {
+    setDeleteSelectedRounds(checked ? normalizeDeleteRounds(rounds) : [])
   }
 
-  const confirmDelete = async () => {
-    const rounds = deleteSelectedRounds.filter((r) => typeof r === 'number')
+  const confirmDelete = async (options: ConfirmDeleteOptions = {}) => {
+    const rounds = normalizeDeleteRounds(deleteSelectedRounds)
     if (!rounds.length) {
       message.warning('请选择要删除的对话')
       return
     }
+
+    const items = buildDeleteRoundItems(rounds, options.reportRounds || [])
+
     setDeleteLoading(true)
     try {
-      const res: any = await deleteMessageByRound({ convUid: conv.conv_uid, roundIndex: rounds })
-      // 后端业务错误码不会抛异常（拦截器直接返回 body），需显式校验成功状态，
-      // 否则删除失败时仍会误提“删除成功”且本地误删
-      const isSuccess = res?.success === true || Number(res?.code) === 200
-      if (!isSuccess) {
-        message.error(res?.msg || res?.err_msg || '删除失败，请重试')
+      const response = await deleteMessageByRound({ convUid: conv.conv_uid, items })
+      if (!isApiSuccess(response)) {
+        const result = response as { err_msg?: string; msg?: string } | undefined
+        message.error(result?.msg || result?.err_msg || '删除失败，请重试')
         return
       }
-      setConvContent((prev) => prev.filter((item: any) => {
-        const round = item?.roundIndex ?? item?.order
-        return !(typeof round === 'number' && rounds.includes(round))
-      }))
+
+      const messageRounds = items.find((item) => item.source === 'message')?.roundIndex || []
+      if (messageRounds.length > 0) {
+        setConvContent((prev) => prev.filter((item: any) => {
+          const round = item?.roundIndex ?? item?.order
+          return !(typeof round === 'number' && messageRounds.includes(round))
+        }))
+        setExploreHistoryItems((prev) => prev.filter((item) => !messageRounds.includes(item.roundIndex ?? -1)))
+        options.onMessageRoundsDeleted?.(messageRounds)
+      }
+
+      const reportRounds = items.find((item) => item.source === 'report')?.roundIndex || []
+      if (reportRounds.length > 0) {
+        options.onReportRoundsDeleted?.(reportRounds)
+      }
+
       message.success('删除成功')
       exitDeleteMode()
     } catch {
@@ -796,7 +816,8 @@ export const useConversationController = (
         if (!isRequestTokenActive(requestToken)) return
 
         // query 只请求一次；报告 round 交给报告历史适配器，避免进入普通 ViewEle。
-        const roundGroups: ReportHistoryRoundGroup[] = Array.isArray(result?.data?.data) ? result.data.data : []
+        const rawRoundGroups: ReportHistoryRoundGroup[] = Array.isArray(result?.data?.data) ? result.data.data : []
+        const roundGroups = markHistoryResponseOrder(rawRoundGroups)
         setExploreHistoryItems(extractExploreHistoryItems(roundGroups))
         const { interactionRounds, reportRounds } = splitConversationHistoryRounds(roundGroups)
         // 同内容刷新保持原数组引用，避免报告恢复 Hook 重查全部 IndexedDB task。
@@ -806,7 +827,9 @@ export const useConversationController = (
         // 探索轮次整轮交给探索卡片渲染，从普通历史中整轮剔除，避免 human 问题被重复渲染成气泡。
         const flatHistory: any[] = interactionRounds
           .filter((group) => !isExploreHistoryRound(group))
-          .flatMap((group) => (Array.isArray(group?.messages) ? group.messages : []))
+          .flatMap((group) => (Array.isArray(group?.messages)
+            ? group.messages.map((item) => ({ ...item, historySequence: group.historySequence }))
+            : []))
 
         if (flatHistory.length > 0) {
           const orders = flatHistory.map((item: any) => item.roundIndex ?? item.index ?? 0)
@@ -1932,6 +1955,10 @@ export const useConversationController = (
     const roundIndexs = sharingList.map((item: any) => item.order).join(',')
     try {
       const values = await shareEmailForm.validateFields()
+      // 三 tab 调度值→旧分享邮件接口参数（type/executeFrequency/executeTime/weekendTargetDay/monthlyTargetDay），
+      // 另附 scheduleMode + 结构化 scheduleConf 供后端后续升级完整调度语义
+      const { deadline, execDate, execTime, interval, minutes, points, scheduleMode, unit, weekDay, ...restValues } = values
+      const scheduleValues = { deadline, execDate, execTime, interval, minutes, points, scheduleMode, unit, weekDay }
       const data: Record<string, any> = {
         convUid: conv.conv_uid,
         sessionId: conv.chat_id,
@@ -1939,12 +1966,11 @@ export const useConversationController = (
         extra: {},
         chatName: conv.biz_name,
         roundIndexs,
-        ...values,
-        executeTime: values?.sendTime?.time
+        ...restValues,
+        ...toShareEmailScheduleParams(scheduleValues),
+        scheduleMode,
+        scheduleConf: buildScheduleConf(scheduleMode, scheduleValues),
       }
-      if (values.executeFrequency === 2) data.weekendTargetDay = values?.sendTime?.status
-      if (values.executeFrequency === 3) data.monthlyTargetDay = values?.sendTime?.status
-      delete data.sendTime
       const result = await runApiSuccessFlow(
         () => fetchShareEmail(data),
         () => {
@@ -2041,8 +2067,8 @@ export const useConversationController = (
     onUpdateList,
     // 批量删除
     isDeleting,
+    deletableRounds,
     deleteSelectedRounds,
-    deleteCheckAll,
     deleteLoading,
     enterDeleteMode,
     exitDeleteMode,

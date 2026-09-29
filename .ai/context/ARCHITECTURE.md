@@ -4,7 +4,7 @@
 
 本仓库是 pnpm workspace + Turbo 管理的前端 monorepo。架构可分为：
 
-1. 应用层：`apps/abi`、`apps/chat`、`apps/dashboard`。
+1. 应用层：`apps/abi`、`apps/chat`、`apps/dashboard`；独立分享 SDK 位于 `apps/chat-sdk`。
 2. 共享包层：`packages/auth`、`packages/axios`、`packages/simple-router`、`packages/hooks`、`packages/materials`、`packages/color`、`packages/utils` 等。
 3. 构建/部署层：根 `package.json`、`turbo.json`、`dockerfile`、`apps/dashboard/Dockerfile`。仓库虽存在 `nginx/*` 历史文件，但当前项目不使用该链路，需求、优化和验收均不得依赖 Nginx。
 
@@ -27,6 +27,9 @@
 ## 微前端集成约束
 
 - 当前拓扑：ABI 是宿主，Dashboard 是 qiankun 子应用；Chat 的 `registerAiBotMicroApp()` 是兼容空函数，实际通过 `/chat-ui/` 独立运行。
+- ABI 内容布局内由 `DashboardMicroAppHost` 保留一个 Dashboard 实例，叶子页面只登记路径与标题；离开后隐藏，空闲 5 分钟释放。宿主通过子应用 `update` 同步内部路由、标题与空间，不重建 React root。
+- Dashboard 真正退出时由 `dashboardSession` 等待在途挂载/更新和卸载，期间保留隐藏的 DOM 容器；新的实例必须等待旧实例释放后加载。不要恢复叶子路由直接销毁容器或菜单显隐时重建整层布局的做法。
+- qiankun 运行时保持动态加载，放弃挂载时取消后续实例创建；启动占位与失败重试由宿主管理。子应用 `update` 只同步路由、标题和空间，不重新执行启动配置加载。
 - ABI 使用 qiankun 加载微应用时必须启用样式隔离，优先使用 `sandbox.experimentalStyleIsolation`，避免子应用样式污染宿主。
 - 新增或改造微应用时，子应用不得把业务背景、主题色、页面底色直接写到全局 `html` / `body` 选择器；应写到自身 root 容器或业务作用域 class。必要的 reset 也应尽量收敛到子应用容器。
 - 若确需修改全局 `html` / `body`，必须在需求和 run log 中说明原因、影响范围、样式隔离策略和回归验证方式。
@@ -87,6 +90,7 @@
 ### 加载边界
 
 - HTML 启动壳只负责稳定占位、失败提示与重试；完整应用、路由和可选业务能力必须从启动分类结果后再加载。
+- ABI 的助手分享哈希入口只加载 `chat-sdk` 的 JS/CSS，不启动 ABI 主应用；大屏分享路径继续走 Dashboard iframe。SDK 保留单 IIFE 接入约定，不参与三个 SPA 的公共 Vendor，不能在普通 Chat 欢迎页注入 SDK。
 - 路由页面、关闭状态的 Drawer/Modal、编辑器、图表、报告、Explore、导出和 Dashboard Designer 保持动态 `import()` 边界。Chat 分享页的交互消息渲染器、Explore/Report 控制器也只能在输入意图、历史消息或模式切换后加载。不得同时保留同一模块的首屏静态 import。
 - 服务器数据复用留在各应用 domain 内，通过稳定 key、进行中 Promise 复用、成功缓存、精确失效、取消和旧响应保护实现；不得新增跨应用业务缓存层。
 - 图片、图标、字体和媒体保持当前目录与引用位置，物理文件迁移、云路径配置和实际替换由用户手工处理。前端不得预先移动仍在使用的资源或建立云路径切换层；只允许在引用扫描、构建和页面回归均证明未使用后删除图标。用户完成迁移并给出明确新路径后，再按独立需求调整引用和验证 Content-Type、CORS、Canvas 与缓存。

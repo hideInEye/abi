@@ -20,6 +20,7 @@ interface Props {
   readonly atomicTechnicalSection?: React.ReactNode
   readonly form: FormInstance<KnowledgeFormValues>
   readonly indicatorNameDisabled?: boolean
+  readonly indicatorTypeDisabled?: boolean
   readonly validateAliasTags: (_: unknown, value?: string[]) => Promise<void>
   readonly validateBusinessRemark: (_: unknown, value?: string) => Promise<void>
   readonly validateIndicatorName: (_: unknown, value?: string) => Promise<void>
@@ -30,6 +31,7 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
   atomicTechnicalSection,
   form,
   indicatorNameDisabled,
+  indicatorTypeDisabled,
   validateAliasTags,
   validateBusinessRemark,
   validateIndicatorName,
@@ -61,6 +63,7 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
             rules={[{ message: '请选择指标类型', required: true }]}
           >
             <ASelect
+              disabled={indicatorTypeDisabled}
               options={INDICATOR_TYPE_OPTIONS}
               placeholder="请选择指标类型"
             />

@@ -36,6 +36,7 @@ interface AtomicMetricOption {
 interface Props {
   readonly allFields: KnowledgeTechField[]
   readonly atomicMetricOptions: AtomicMetricOption[]
+  readonly editing?: boolean
   readonly fieldError?: boolean
   readonly fieldLoading?: boolean
   readonly form: FormInstance<KnowledgeFormValues>
@@ -61,6 +62,7 @@ interface Props {
 export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
   allFields,
   atomicMetricOptions,
+  editing,
   fieldError,
   fieldLoading,
   form,
@@ -98,6 +100,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
     return (
       <KnowledgeOperateAtomicTechnicalStep
         allFields={allFields}
+        editing={editing}
         fieldError={fieldError}
         fieldLoading={fieldLoading}
         form={form}
@@ -123,7 +126,10 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
               validateDebounce={600}
               validateTrigger="onChange"
             >
-              <AInput placeholder="请输入指标编码" />
+              <AInput
+                disabled={editing}
+                placeholder="请输入指标编码"
+              />
             </AForm.Item>
             <AForm.Item
               label="原子指标"
@@ -131,6 +137,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
               rules={[{ message: '请选择原子指标', required: true }]}
             >
               <KnowledgeIndicatorSearchSelect
+                disabled={editing}
                 loading={indicatorOptionsLoading}
                 options={atomicMetricOptions}
                 placeholder="请选择原子指标"
@@ -172,7 +179,7 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
         </div>
       )}
 
-      {indicatorClass === 'derivative' ? (
+      {indicatorClass === 'composite' ? (
         <>
           <AForm.Item
             required
@@ -182,24 +189,29 @@ export const KnowledgeOperateTechnicalStep: React.FC<Props> = ({
             validateDebounce={600}
             validateTrigger="onChange"
           >
-            <AInput placeholder="请输入指标编码" />
+            <AInput
+              disabled={editing}
+              placeholder="请输入指标编码"
+            />
           </AForm.Item>
 
           <AForm.Item
             required
-            label="复合模板"
+            label="指标模版"
             name="templateType"
-            rules={[{ message: '请选择复合模板', required: true }]}
+            rules={[{ message: '请选择指标模版', required: true }]}
           >
             <ASelect
+              disabled={editing}
               options={EXTENDED_TEMPLATE_OPTIONS}
-              placeholder="请选择复合模板"
+              placeholder="请选择指标模版"
             />
           </AForm.Item>
 
           <KnowledgeOperateExtendedTemplateParams
             allFields={allFields}
             atomicMetricOptions={atomicMetricOptions}
+            editing={editing}
             fieldError={fieldError}
             fieldLoading={fieldLoading}
             form={form}

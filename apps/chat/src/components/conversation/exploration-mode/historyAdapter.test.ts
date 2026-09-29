@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { markHistoryResponseOrder } from '../helpers/historyResponseOrder'
+
 import { extractExploreHistoryItems } from './historyAdapter'
 
 /** 构造探索历史轮次：human 问题 + view 结果（react-agent payload）。 */
@@ -33,6 +35,7 @@ describe('extractExploreHistoryItems', () => {
         ],
       }),
     )
+    expect(item?.roundIndex).toBe(1)
     expect(item?.tasks.map((task) => task.todo_id)).toEqual(['todo-2f02b558', 'todo-51896150'])
   })
 
@@ -49,5 +52,17 @@ describe('extractExploreHistoryItems', () => {
       }),
     )
     expect(item?.tasks.map((task) => task.todo_id)).toEqual(['todo-a', 'todo-b'])
+  })
+
+  it('keeps the source array position for cross-mode timeline rendering', () => {
+    const rounds = markHistoryResponseOrder([
+      { roundIndex: 30, messages: [] },
+      ...exploreRound({ type: 'react-agent', final_content: 'done', task_plan: [], steps: [] }),
+    ])
+
+    const [item] = extractExploreHistoryItems(rounds)
+
+    expect(item?.roundIndex).toBe(1)
+    expect(item?.historySequence).toBe(1)
   })
 })

@@ -1,5 +1,33 @@
-<<<<<<< Updated upstream
-=======
+# 2026-09-29 主分支合并与首屏优化兼容
+
+## 文档状态
+
+- 状态：代码合并与静态验证完成；浏览器回归按用户要求暂停，待确认后继续。
+- 完成记录：`.ai/runs/2026-09-29-merge-first-screen-compatibility/RUN_LOG.md`。
+- 需求来源：用户要求合并工作区中主分支的功能变动，并继续满足已完成的首屏优化方案。
+- 影响范围：现有合并冲突、ABI 分享启动与 Dashboard 宿主、Chat 会话/分享/定时任务及 Dashboard 子应用生命周期、锁文件。
+
+## 目标与验收标准
+
+1. 合并双方功能，清除工作区与 Git 索引中的未解决冲突。
+2. 保留 Dashboard 单实例、空闲释放、有序卸载、内部路由和空间同步，同时保留 qiankun 动态加载、启动占位和失败重试。
+3. 保留 Chat 三模式删除的单请求 items 协议、历史接口顺序、定时任务默认值、分享 SDK 和图表交互，并继续按需加载消息渲染器、编辑器、抽屉和重型模块。
+4. 保留三个应用既有 Vendor Chunk、请求复用和启动分类；静态资源位置保持原样。
+5. 完成受影响模块定向测试、应用构建、冲突标记及差异检查，并记录尚未验证的真实后端场景。
+
+## 非目标
+
+- 不扩展无关业务、不批量重构或迁移静态资源，不重新加入专项测试脚本、截图目录或应用内 `.ai`。
+- 不删除主分支新合入的 SDK、业务修复或历史记录；不创建合并提交或推送远端。
+
+## 测试要求
+
+- 验证 Dashboard 挂载/更新/卸载竞态、首屏启动边界及相关路由。
+- 验证 Chat 消息删除、历史排序、分享消息渲染、请求复用和定时任务的相关测试。
+- 构建受影响应用，校验锁文件及 Git 合并状态。
+
+---
+
 # 2026-09-24 首屏优化交付范围收口
 
 ## 文档状态
@@ -41,6 +69,69 @@
 
 ---
 
+# 2026-09-28 Dashboard 宿主单例与有序卸载
+
+## 文档状态
+
+- 状态：代码、定向测试与本机 Chrome（localhost:9527）验证已完成；服务器环境待验收。运行记录：`.ai/runs/2026-09-28-dashboard-host-singleton/RUN_LOG.md`。
+- 需求来源：用户确认原方案第 2、3 条：Dashboard 宿主单例复用，真正卸载时先完成微应用卸载再移除容器。
+- 影响范围：ABI 内容宿主、布局稳定性、Dashboard 容器生命周期，以及 Dashboard 的 props 更新和内部路由同步。
+
+## 目标与验收标准
+
+1. “我的大屏”和“大屏管理”共用宿主内一个实例，分别显示 `/my-screen`、`/projects`；首次进入才加载。
+2. 普通主应用菜单切换只隐藏 Dashboard；隐藏 5 分钟后释放，返回时取消待释放计时。
+3. 去掉基础布局随菜单显隐变化的动态 key，保持宿主稳定；侧栏 portal 容器保持挂载，仅切换显隐。
+4. 真实退出布局或空闲释放时，将微应用容器保留在文档内直到挂载及卸载结束；后继实例必须等待旧实例卸载完成。
+5. 加载、更新、卸载异常均被处理；空间和标题更新保留其他宿主参数；独立设计、预览与分享入口仍可使用。
+
+## 非目标
+
+- 不调整全局路由 Loading、菜单缓存策略、鉴权、Nginx 或业务接口。
+- 不修改 Dashboard 的全局样式、设计器业务和 React Router 路由表。
+- 不恢复此前撤回的导航守卫及多入口销毁协调方案。
+
+## 测试要求
+
+- 定向测试覆盖加载中离开、连续切换、异步更新与卸载顺序、失败清理、单例复用和子应用参数同步。
+- 执行改动范围的静态检查与定向 Vitest，不执行全量构建。
+- 若无法连接部署环境，明确记录浏览器联调未验证。
+
+---
+
+# 2026-09-28 复合指标枚举值调整
+
+## 文档状态
+
+- 状态：已完成。运行记录：`.ai/runs/2026-09-28-composite-indicator-enum/RUN_LOG.md`。
+- 需求类型：ABI 本体网络指标建模枚举修复。
+- 影响范围：复合指标类型选项、筛选、创建/编辑判断、提交计算逻辑、函数字典选择及对应小模块测试。
+
+## 目标
+
+1. 原“衍生指标”改名为“复合指标”后，对应 `indicatorClass` 枚举由 `derivative` 统一调整为 `composite`。
+2. 新建、编辑、筛选和提交复合指标时均使用 `composite`。
+3. 复合指标自定义表达式仍读取既有 `ontology_fun` 与 `ontology_derivative` 系统字典。
+
+## 非目标
+
+- 不修改派生指标 `derived`、原子指标 `atomic` 及其业务逻辑。
+- 不修改系统字典 `dictType`、复合指标模板协议、接口字段或用户可见文案。
+- 不重命名既有组件、文件及不影响运行时协议的内部变量。
+
+## 验收标准
+
+1. 指标类型选项和筛选项中“复合指标”的值为 `composite`。
+2. 复合指标表单分支、预计算配置、模板报文和列表类型映射均识别 `composite`。
+3. 创建或编辑复合指标提交的 `indicatorClass` 为 `composite`。
+4. 复合自定义表达式仍请求 `ontology_fun`、`ontology_derivative` 两类字典。
+
+## 测试要求
+
+- 更新指标枚举、表单契约、计算逻辑和函数字典对应的小模块测试。
+- 只运行本次修改相关 Vitest 与 `git diff --check`，不执行全量构建。
+
+---
 
 # 2026-09-23 语义名单分页条数对齐本体网络
 
@@ -77,7 +168,6 @@
 
 ---
 
->>>>>>> Stashed changes
 # 2026-09-22 系统字典展示修正
 
 ## 文档状态
@@ -3009,3 +3099,419 @@ export const init: Init = async currentFullPath => {
 - 更新函数字典适配单元测试，覆盖聚合选项转换、`DISTINCT (X)` 括号保留、标签不覆盖模板及既有通用占位符。
 - 更新指标聚合 UI 契约测试，确认所有聚合选项使用点不再依赖静态枚举。
 - 只运行聚合字典与指标聚合 UI 对应的定向 Vitest、对应 ESLint 和 `git diff --check`。
+
+---
+
+## 2026-09-21 追加二：定时任务工具栏操作下放到列表行内操作列
+
+### 需求类型
+
+前端 UI 调整（纯前端，无接口变化）。
+
+### 背景
+
+- 用户截图标注：红框圈选定时任务页工具栏 8 个操作按钮（删除/复制/启动/停止/执行一次/查询日志/注册节点/下次执行时间），箭头指向列表「操作」列，要求操作下放到行内；工具栏按钮依赖勾选且常置灰，交互路径长。
+
+### 目标
+
+1. 工具栏仅保留「新增」与视图/列设置控件，移除上述 8 个操作按钮。
+2. 列表操作列对齐卡片视图形态：`编辑` + `日志` + `更多`下拉（复制/启动/停止/执行一次/注册节点/下次执行时间/分隔线/删除），下拉菜单与卡片视图共用。
+3. 无批量操作后列表移除勾选列（rowSelection）与批量启停/删除逻辑；删除确认改为单条任务名文案。
+
+### 非目标
+
+- 不改卡片视图布局、筛选、分页与接口逻辑。
+- 不改调度日志/邮件记录页。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/job/time/index.tsx`
+- run log：`.ai/runs/2026-09-21-job-toolbar-to-row-actions/`
+
+### 验收标准
+
+1. 工具栏仅「新增」+ 视图/列设置；列表无勾选列。
+2. 行内操作列 编辑/日志/更多 均可用，更多下拉含原工具栏 8 项操作且行为与原一致。
+3. tsc 无新增错误；改动文件 ESLint 无新增错误（既存基线除外）。
+
+### 测试要求
+
+- apps/abi 下 `npx tsc --noEmit -p tsconfig.json` 对比基线。
+- 改动文件 `node node_modules/eslint/bin/eslint.js` 对比基线。
+- 手工：列表行内各操作、卡片视图更多菜单、删除确认文案。
+
+## 2026-09-22 追加三：对话端定时任务搬管理端编辑表单 + 邮件弹窗调度改三 tab
+
+### 需求类型
+
+前端功能（chat 子应用 UI + 接口对齐，无后端改动）。
+
+### 背景
+
+- 用户截图三张：图一为对话端定时任务抽屉现状（统计 + 搜索 + 卡片列表 + 简易内联表单）；图二为管理端定时任务编辑表单标注稿，标明对话端保留/隐藏字段；图三为对话端「邮件发送」弹窗标注稿，红框要求发送方式/执行频率/执行时间区域改为 单次/连续/定期 tab。
+- 管理端已于 2026-09-17 完成 XXL-JOB 调度中心重构（job-form-modal 三分区表单），对话端仍用 mock 时代简易表单与旧接口（abi-system/shared/jobList、abi-job/job），列表与表单均对不上真实调度中心数据。
+
+### 目标
+
+1. 对话端定时任务抽屉新增/编辑表单搬管理端结构：基础配置（任务名称*、报警邮件）/ 调度配置（任务类型 Segmented 仅 单次/连续/定期 三 tab + 各模式周期字段 + 任务内容摘要）/ 任务配置（作业场景*、渠道推送时推送渠道）；分区标题 SectionHeader 与标签右对齐对齐管理端规范。
+2. 隐藏字段默认传参不展示：执行器（默认通用执行器，取执行器列表首个/名称含「通用」者）、负责人（当前用户）、运行模式（BEAN）、任务参数（沿用原值/空串，与 chat 具体任务绑定）、高级配置全组（提交用管理端同款默认值兜底）。
+3. 提交与管理端一致：结构化调度转 cron，`scheduleType='CRON'` + `scheduleConf=cron` 落库；编辑回显优先结构化 conf，CRON 记录用 cron 反解析回三 tab 结构化字段，解析失败回落连续任务每天。
+4. 抽屉接口对齐管理端调度中心：jobinfo/list、jobinfo 增改、jobinfo/{id} 删除、start/stop、trigger、jobgroup/list；列表卡片调度类型/作业场景/状态按真实字段展示；工具栏补「新增任务」按钮。
+5. 邮件发送弹窗红框区改为 单次/连续/定期 tab + 管理端同款调度字段（与抽屉共用调度字段组件）；提交仍走旧分享邮件接口，新调度值最佳努力映射旧参数（type=2、executeFrequency、executeTime、weekendTargetDay、monthlyTargetDay），并附加 scheduleMode + 结构化 scheduleConf 供后端后续升级；立即发送选项下线。
+
+### 非目标
+
+- 不改管理端 job 模块任何代码。
+- 不改抽屉统计卡/搜索/高级筛选的视觉结构（仅数据源换真实字段）。
+- 不做自定义 Cron tab 与 Cron 生成器。
+- 不改快照分享流程。
+
+### 影响范围
+
+- `apps/chat/src/utils/job-schedule.ts`（新）、`job-schedule.test.ts`（新）
+- `apps/chat/src/components/schedule/schedule-fields.tsx`（新）
+- `apps/chat/src/components/layout/ScheduleTaskForm.tsx`（新）
+- `apps/chat/src/components/layout/ScheduleTaskDrawer.tsx`
+- `apps/chat/src/service/api/job.ts`
+- `apps/chat/src/components/conversation/components/share-email-setting/index.tsx`（daily-time/week-select/month-select 下线）
+- `apps/chat/src/components/conversation/hooks/useConversationController.ts`、`conversation/index.tsx`、`conversation/refectorview.tsx`（表单初值）
+- `apps/chat/src/index.css`
+- run log：`.ai/runs/2026-09-22-chat-schedule-admin-form/`
+
+### 验收标准
+
+1. 抽屉新增/编辑表单三分区结构与管理端一致；隐藏字段不出现在 UI 且提交携带默认值。
+2. 三 tab 切换后周期字段联动正确；任务内容摘要实时刷新；保存后列表回显调度摘要与作业场景。
+3. 邮件弹窗发送方式为三 tab；提交 payload 含旧接口参数与 scheduleMode/scheduleConf。
+4. 根 vitest 新增单测通过（cron 构建/反解析往返、邮件参数映射）；chat `tsc --noEmit` 与改动文件 ESLint 无新增错误。
+
+### 测试要求
+
+- 根目录 `pnpm exec vitest run apps/chat/src/utils/job-schedule.test.ts`。
+- apps/chat 下 `npx tsc --noEmit -p tsconfig.json` 对比基线。
+- 改动文件 `pnpm exec eslint` 对比基线。
+- 手工：抽屉新增/编辑/启停/执行/删除；邮件弹窗三 tab 提交。
+
+## 2026-09-22 追加四：独立 React Chat SDK npm 包
+
+### 需求类型
+
+前端工程化（新增独立 SDK 项目与 npm 包构建，无后端改动）。
+
+### 目标
+
+1. 新建与 `apps/chat`、`apps/dashboard` 同级的 `apps/chat-sdk` 独立项目。
+2. 保留 `apps/chat` 现有实现，将助手分享对话组件及其依赖源码复制到 `apps/chat-sdk`，两边暂时并存以便测试。
+3. SDK 以 npm 包形态输出 ESM、CommonJS、类型声明和独立 CSS，React/ReactDOM 由宿主项目提供。
+4. 支持 React 组件 `AbiAssistant` 与命令式 `mount` 两种引入方式，并允许传入 `shareCode`、`apiBase`、`embed`。
+
+### 非目标
+
+- 本轮不删除或迁移 `apps/chat` 原有组件与 SDK 构建代码。
+- 本轮不实现 Vue2 Web Component 包装层。
+- 本轮不发布到真实 npm registry，不改后端 CORS 配置。
+
+### 影响范围
+
+- `apps/chat-sdk/**`（新增独立项目）。
+- `pnpm-lock.yaml`（新增 workspace importer）。
+- `.ai/runs/2026-09-22-chat-sdk-package/`（运行记录）。
+
+### 验收标准
+
+1. `apps/chat-sdk` 可单独执行 build，并输出可发布的 npm 包目录。
+2. package exports 可分别加载 JS、类型声明和 CSS。
+3. `pnpm pack` 成功，压缩包仅包含发布所需文件。
+4. 原 `apps/chat` 代码保持不删除，其他未提交改动不被覆盖。
+
+### 测试要求
+
+- `pnpm --filter @abi/chat-sdk build`。
+- `pnpm --filter @abi/chat-sdk pack`。
+- 检查打包产物导出、CSS、类型声明及 npm tarball 内容。
+
+## 2026-09-22 追加五：单 JS Web Component iframe 交付
+
+### 需求类型
+
+前端工程化（Chat 静态资源与第三方嵌入入口，无后端改动）。
+
+### 目标
+
+1. 在 `apps/chat/public` 重新生成单文件 `abi-assistant-widget.js`，注册 `<abi-assistant>` 自定义元素。
+2. 组件通过 iframe 加载 Chat 分享路由 `#/dashboard_share_page/{shareCode}?embed=1`，并默认根据脚本自身线上地址推导 Chat base。
+3. 支持 `share-code`、`base`、`mode`、`open`、`primary-color`、`width`、`height`、`z-index` 属性；floating 模式支持打开、关闭、拖拽、最大化和还原，inline 模式铺满宿主容器。
+4. 第三方只需引入一个 JS 并声明自定义元素，无 React、npm 包或宿主接口代理依赖。
+
+### 非目标
+
+- 不复制 Chat 业务源码到单 JS，不把 React/antd 等依赖打入 Web Component。
+- 不修改分享接口、鉴权协议或实际线上 Nginx 配置。
+- 不删除独立 `apps/chat-sdk` npm 包方案。
+
+### 影响范围
+
+- `apps/chat/public/abi-assistant-widget.js`（新增）。
+- `.ai/runs/2026-09-22-chat-widget-single-js/`（运行记录）。
+
+### 验收标准
+
+1. JS 可直接通过 `<script src=".../abi-assistant-widget.js"></script>` 加载并注册 `<abi-assistant>`。
+2. 未传 `base` 时根据脚本 URL 推导部署地址，传入 `base` 时使用显式地址。
+3. iframe URL 正确携带 URL 编码后的 shareCode 和 `embed=1`。
+4. `apps/chat` 正常构建后，JS 原样出现在 `apps/chat/dist/abi-assistant-widget.js`。
+
+### 测试要求
+
+- `node --check apps/chat/public/abi-assistant-widget.js`。
+- `pnpm --filter ai-bot build`。
+- 比对 public 与 dist 中的 JS 文件哈希，并做浏览器注册与 iframe URL smoke 验证。
+
+## 2026-09-23 追加：浮窗 SDK 外壳样式对齐原 ChatWidget
+
+### 目标
+
+- 仅调整 `apps/chat-sdk` 的浮窗外壳，使面板、标题栏、Logo、操作按钮、尺寸、圆角、边框与阴影对齐 `apps/chat/src/components/chat-widget` 的现有视觉。
+- 保持 `<script>` + `<abi-assistant>` 的 Vue 2 接入方式、属性协议、iframe 地址、拖拽和最大化行为不变。
+
+### 非目标
+
+- 不复制 React ChatWidget 业务代码，不改变 iframe 内聊天界面和接口。
+- 不修改第三方测试项目或执行浏览器联调。
+
+### 验收与测试
+
+- 外壳不再自绘第二条标题栏：透明控制条叠在 iframe 自带标题栏（渐变 Logo + 助手名）上，仅补最大化/关闭按钮与拖拽热区；面板 16px 圆角、浅边框与柔和阴影对齐原 ChatWidget。
+- `pnpm --filter @abi/chat-widget type-check`、`build` 与 `node --check apps/chat-sdk/dist/abi-assistant-widget.js` 通过。
+
+## 2026-09-23 追加：原 React ChatWidget 弹窗打包交付
+
+### 目标
+
+- 废弃 SDK 的 iframe 和手写浮窗外壳；`<abi-assistant>` 在 Vue 2 等宿主中直接由 ReactDOM 渲染 `apps/chat/src/components/chat-widget/ChatWidget.tsx` 的 `float` 弹窗。
+- 将 React、ReactDOM、ChatWidget 及其运行依赖、样式打入单个 IIFE JS；Vue 2 只通过 script 标签与 `share-code`、`base` 属性接入。
+- `base` 作为 ChatWidget 的 `apiBase` 传入，关闭、拖拽、缩放和最大化均使用原组件逻辑。
+
+### 非目标
+
+- 不再使用 iframe 分享路由，也不再保留 SDK 仿制的标题栏、启动按钮、拖拽和最大化逻辑。
+- 不修改 ChatWidget 原业务源码、分享接口或第三方 Vue 2 项目。
+
+### 验收与测试
+
+- 构建产物包含 React 自定义元素注册、ChatWidget 的 `abi-cw-panel` 样式和运行代码，不包含 iframe 分享路由。
+- `pnpm --filter @abi/chat-widget type-check`、`build`、`node --check` 均通过；`dist` 与 `apps/chat/public` 的 JS 哈希一致。
+# 2026-09-23 指标编辑页关键字段锁定
+
+## 文档状态
+
+- 状态：已完成。运行记录：`.ai/runs/2026-09-23-metric-edit-immutable-fields/RUN_LOG.md`。
+- 需求类型：ABI 本体网络指标编辑表单防误改与字段文案调整。
+- 影响范围：指标建模编辑抽屉的业务配置、技术属性、复合指标模板参数及对应小模块测试。
+
+## 目标
+
+1. 原子、派生、复合指标编辑时均锁定指标类型，新建流程保持可选。
+2. 原子指标编辑时去掉“技术定义”区块标题，将“数据”改为“数据语义”，并锁定指标编码、数据语义和来源字段。
+3. 派生指标编辑时锁定指标编码和原子指标选择。
+4. 复合指标将“复合模板”改为“指标模版”；编辑时锁定指标编码、指标模版及各模板指定的关键来源参数。
+5. 复合自定义模板将“数据”改为“数据语义”，编辑时锁定数据语义和来源字段入口。
+
+## 非目标
+
+- 不改变新增指标时各字段的可编辑状态、提交结构、校验规则或接口调用。
+- 不锁定需求未点名的模板参数，不修改预览、表达式、维度及无关指标逻辑。
+- 不修改全局样式或其他模块的表语义默认文案。
+
+## 验收标准
+
+1. 三类指标编辑页的指标类型均不可切换；新增页仍可选择。
+2. 原子指标编辑页不显示“技术定义”，指标编码、数据语义、来源字段不可修改，其他允许维护的字段保持原逻辑。
+3. 派生指标编辑页的指标编码和原子指标不可修改。
+4. 复合指标编辑页的指标编码、指标模版不可修改；占比、累积、同环比、波动模板仅锁定需求指定字段。
+5. 复合自定义模板的数据语义和来源字段不可修改，表达式等未点名字段仍可编辑。
+
+## 测试要求
+
+- 更新指标建模 UI 契约小模块测试，覆盖编辑态传递、字段锁定和文案。
+- 运行对应定向 Vitest、修改文件 ESLint 与 `git diff --check`，不执行全量构建。
+
+---
+
+# 2026-09-28 报告模式问答复制与删除
+
+## 文档状态
+
+- 状态：已完成。运行记录：`.ai/runs/2026-09-28-report-message-actions/RUN_LOG.md`。
+- 需求类型：Chat 报告模式会话操作补齐。
+- 影响范围：报告模式问题操作区、按轮次删除调用、报告本地状态清理及对应小模块测试。
+
+## 目标
+
+1. 报告模式已发送的问题提供“复制”和“删除”操作，交互样式与交互模式的问题操作保持一致。
+2. 复制时只复制当前问题文本，不包含报告回复内容。
+3. 删除时复用交互模式的 `/abi-chat/v1/app/message/deleteByRound` 接口，一次删除当前轮次的问题和回复。
+4. 只有接口明确返回成功后，才从报告时间线移除整轮记录并关闭对应的报告预览；失败时保留原记录并提示错误。
+
+## 非目标
+
+- 不为报告问题增加编辑、重新生成或批量删除能力。
+- 不修改交互模式现有复制、编辑、批量删除逻辑。
+- 不修改报告发送、流式生成、历史解析、回复内容或删除接口协议。
+- 不修改全局样式或报告模式之外的页面。
+
+## 验收标准
+
+1. 鼠标移入报告问题区域后可见“复制”和“删除”操作，不显示“编辑”。
+2. 点击复制后剪贴板内容等于当前 `report.question`，报告回复不会被复制。
+3. 删除确认后使用当前会话 `convUid` 和报告轮次组成 `roundIndex` 数组调用既有删除接口。
+4. 删除接口业务失败或请求异常时，报告问题与回复均保留；成功时二者作为同一条报告记录一起消失。
+5. 被删除报告正在右侧预览或仍有本地恢复任务时，同步关闭预览并清理对应本地任务状态。
+
+## 测试要求
+
+- 更新报告消息行定向 Vitest，覆盖复制/删除入口及不出现编辑入口。
+- 补充报告删除响应与轮次校验小模块测试。
+- 运行上述定向 Vitest、修改文件 ESLint 和 `git diff --check`，不执行全量构建。
+
+---
+
+# 2026-09-28 三种对话模式统一按轮次选择删除
+
+## 文档状态
+
+- 状态：已完成。运行记录：`.ai/runs/2026-09-28-unified-conversation-delete/RUN_LOG.md`。
+- 需求类型：Chat 会话删除交互统一与接口参数升级。
+- 影响范围：交互、探索、报告三种消息时间线的删除入口、轮次选择、删除请求分流及本地状态清理。
+
+## 目标
+
+1. 报告模式不再使用单条确认弹窗，统一采用交互模式现有的“点击删除进入选择模式、勾选轮次、底部确认删除”流程。
+2. 探索模式和报告模式的已持久化轮次均能渲染删除选择框，并能通过各自问题区域的删除入口进入选择模式。
+3. `deleteMessageByRound` 请求新增 `source`：报告轮次传 `report`，交互和探索轮次传 `message`。
+4. 同时选中不同来源的轮次时按来源拆分请求；每组请求明确成功后才清理该组对应的本地消息。
+
+## 非目标
+
+- 不修改三种模式的发送、生成、历史解析或回复渲染逻辑。
+- 不允许使用实时临时排序号作为后端删除轮次。
+- 不修改删除接口 URL、其他接口协议或全局样式。
+- 不修改分享 ChatWidget 中既有的只读删除权限。
+
+## 验收标准
+
+1. 交互、探索、报告的持久化问答均可进入同一个选择删除状态并显示轮次复选框。
+2. 全选范围包含当前时间线内三种模式的全部可删除轮次。
+3. 只选交互/探索时请求包含 `source: 'message'`；只选报告时包含 `source: 'report'`。
+4. 混合选择时分别发送 `message`、`report` 两次请求，且各自仅携带对应轮次。
+5. 任一请求失败时不清理该来源轮次；其他已成功来源可正常从页面移除，失败轮次继续保持选中以便重试。
+6. 删除报告时同步关闭对应预览并清理恢复任务；删除探索历史时同步移除探索卡片。
+
+## 测试要求
+
+- 补充删除轮次按来源分组、成功门禁和 API `source` 请求结构测试。
+- 更新报告/探索消息操作入口与时间线选择框的小模块测试。
+- 运行相关定向 Vitest、新增文件 ESLint 和 `git diff --check`，不执行全量构建。
+
+---
+
+# 2026-09-28 会话删除改为单请求 items 报文
+
+## 文档状态
+
+- 状态：已完成。运行记录：`.ai/runs/2026-09-28-delete-items-payload/RUN_LOG.md`。
+- 需求类型：Chat 按轮次删除接口报文调整。
+- 影响范围：删除接口 DTO、统一删除控制器与 API 契约测试。
+
+## 目标
+
+1. `deleteMessageByRound` 改为一次请求提交 `convUid` 与 `items`。
+2. `items` 中交互和探索合并为 `{ source: 'message', roundIndex: [...] }`，报告使用 `{ source: 'report', roundIndex: [...] }`。
+3. 没有轮次的来源不出现在 `items` 中。
+4. 接口整体明确成功后再统一清理所选交互、探索和报告记录；失败时全部保留。
+
+## 非目标
+
+- 不修改统一选择删除的界面和交互。
+- 不修改轮次识别、探索轮次同步、报告复制或其他会话接口。
+- 不修改删除接口 URL。
+
+## 验收标准
+
+1. 混合选择时只发送一次删除请求，报文结构为 `{ convUid, items: [{ source, roundIndex }] }`。
+2. 只选择一种来源时 `items` 只包含对应的一项。
+3. 接口请求异常或业务失败时不清理任何已选记录，也不退出选择状态。
+4. 接口成功时一次清理两种来源对应的本地记录并退出选择状态。
+
+## 测试要求
+
+- 更新 API 契约测试，覆盖混合来源 `items` 报文。
+- 更新来源分组测试并运行相关定向 Vitest、ESLint 与 `git diff --check`；不执行全量构建。
+
+---
+
+# 2026-09-28 会话历史按接口顺序展示
+
+## 文档状态
+
+- 状态：已完成。运行记录：`.ai/runs/2026-09-28-chat-history-response-order/RUN_LOG.md`。
+- 需求类型：Chat 历史时间线顺序修复。
+- 影响范围：交互、探索、报告历史轮次适配与统一时间线合并。
+
+## 目标
+
+1. `/abi-chat/v1/app/message/query` 返回的顶层轮次数组按接口原始顺序展示。
+2. 普通、探索、报告历史在分流和重新合并后仍保持同一接口顺序。
+3. 实时新增的交互、探索和报告内容继续显示在已有历史之后。
+
+## 非目标
+
+- 不修改历史查询接口、请求参数、响应结构及轮次内既有问答布局。
+- 不修改三种模式的发送、删除、报告恢复和探索执行逻辑。
+- 不修改全局样式或无关模块。
+
+## 验收标准
+
+1. 即使接口数组中的 `roundIndex` 不是升序，页面仍严格按数组顺序展示各轮。
+2. 历史轮次跨普通、探索、报告类型时不因类型分流或 `sortOrder` 再次重排。
+3. 接口顺序标记仅用于历史展示，不替代后端轮次号，也不影响删除与反馈参数。
+
+## 测试要求
+
+- 补充历史顺序与统一时间线小模块测试，覆盖乱序 `roundIndex` 和跨模式合并。
+- 运行相关定向 Vitest、修改文件 ESLint 与 `git diff --check`，不执行全量构建。
+
+---
+
+# 2026-09-28 数据源编辑配置结构回归修复
+
+## 文档状态
+
+- 状态：已完成。运行记录：`.ai/runs/2026-09-28-data-source-edit-structure-regression/RUN_LOG.md`。
+- 需求来源：复核提交 `758f596a1e6910f09f2831ba09b95208989e000c` 对既有数据结构的改动。
+- 影响范围：ABI 数据准备的数据源编辑配置适配及该提交的数据结构审计。
+
+## 目标
+
+1. 非 Excel 数据源继续接受既有的对象型 `configuration`，不得强制要求数组。
+2. 编辑记录的对象展开、表单字段和值结构保持提交前行为。
+3. 保留损坏 JSON 的可见错误处理，以及 Excel `excelConfig` 的既有数组契约校验。
+4. 复核目标提交中新增的对象/数组结构判断，确认是否存在其他同类误改。
+
+## 非目标
+
+- 不回退目标提交中的接口成功门禁、安全解析、鉴权或生命周期修复。
+- 不调整 Excel 数据源结构、数据源接口或编辑表单字段。
+- 不修改审计后没有证据表明错误的数据结构判断。
+
+## 验收标准
+
+1. 对象型数据库配置能够进入编辑流程，并原样展开到编辑记录和 `sheets`。
+2. 合法数组配置继续兼容，损坏 JSON 继续阻断编辑并提示错误。
+3. Excel 配置仍要求 `excelConfig` 为包含对象的数组。
+4. 审计结果明确列出目标提交中其他数据结构判断及是否需要处理。
+
+## 测试要求
+
+- 更新 `dataSourceEdit.test.ts`，覆盖对象配置、兼容数组、损坏 JSON 和非法 Excel 配置。
+- 运行该小模块定向 Vitest、相关 ESLint 与 `git diff --check`，不执行无关测试或全量构建。

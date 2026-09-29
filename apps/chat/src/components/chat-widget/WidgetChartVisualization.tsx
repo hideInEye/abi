@@ -17,30 +17,37 @@ interface WidgetChartVisualizationProps {
 
 const CHART_CONFIG = {
   font: 'Arial',
-  fontSize: 12,
+  fontSize: 10,
   chartStyle: { color: '#2FA4FF,#7ACBFF,#A67AFF,#F7A45C,#6E6E6E,#50C878', textColor: '#333333' },
 }
 
 export default function WidgetChartVisualization({ chart, chartRef }: WidgetChartVisualizationProps) {
   const [isChartHovered, setIsChartHovered] = useState(false)
   const chartWrapRef = useRef<HTMLDivElement>(null)
+  const [chartWidth, setChartWidth] = useState(0)
+  const visibleCount = chartWidth > 0 ? Math.max(5, Math.min(12, Math.floor(chartWidth / 56))) : 7
   const option = useMemo(
     () => getChartOption(chart.type, chart.data, {
       font: CHART_CONFIG.font,
       fontSize: CHART_CONFIG.fontSize,
       color: CHART_CONFIG.chartStyle.color,
       textColor: CHART_CONFIG.chartStyle.textColor,
+      visibleCount,
     }),
-    [chart.data, chart.type],
+    [chart.data, chart.type, visibleCount],
   )
 
   useEffect(() => {
     const element = chartWrapRef.current
     if (!element || typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(() => chartRef.current?.resize())
+    const observer = new ResizeObserver(() => {
+      chartRef.current?.resize()
+      setChartWidth(element.clientWidth)
+    })
     observer.observe(element)
+    setChartWidth(element.clientWidth)
     return () => observer.disconnect()
-  }, [chartRef])
+  }, [chartRef, chart.type])
 
   if (!SUPPORTED_RENDER_TYPES.has(chart.type)) {
     const item = getChartTypeItem(chart.type)
@@ -80,7 +87,7 @@ export default function WidgetChartVisualization({ chart, chartRef }: WidgetChar
           }}
         />
       )}
-      <EChart ref={chartRef} option={option} style={{ height: '16rem', width: '100%' }} autoResize handleClick={() => {}} />
+      <EChart ref={chartRef} option={option} style={{ height: '12rem', width: '100%' }} autoResize handleClick={() => {}} />
     </div>
   )
 }

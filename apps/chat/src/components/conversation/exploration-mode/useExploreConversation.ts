@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
 import { message } from 'antd'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { streamExplorePlan } from '../../../service/api/conv'
-import { reduceExploreEvent, parseExploreStreamEvent } from './exploreStreamReducer'
+import { fetchConvMaxRound, streamExplorePlan } from '../../../service/api/conv'
+import { isApiSuccess } from '../hooks/conversationRequests'
+
+import { parseExploreStreamEvent, reduceExploreEvent } from './exploreStreamReducer'
 import type { ExploreItem, ExploreMcpSource, ExploreSendOptions } from './types'
 
 interface UseExploreConversationOptions {
@@ -73,6 +75,24 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
     setItems((prev) => prev.map((item) => (item.id === id ? updater(item) : item)))
   }, [])
 
+  const syncPersistedRoundIndex = useCallback(async (id: string) => {
+    if (!convUid || authorization) return
+    try {
+      const response: unknown = await fetchConvMaxRound({ conv_uid: convUid })
+      if (!isApiSuccess(response)) return
+      const roundIndex = Number((response as Record<string, unknown>).data)
+      if (!Number.isSafeInteger(roundIndex) || roundIndex <= 0) return
+      updateItem(id, (item) => ({ ...item, roundIndex }))
+    } catch {
+      // 本次只影响实时卡片的删除资格；重新进入会话后历史 roundIndex 会正常恢复。
+    }
+  }, [authorization, convUid, updateItem])
+
+  const removeItemsByRounds = useCallback((rounds: number[]) => {
+    const roundSet = new Set(rounds)
+    setItems((prev) => prev.filter((item) => item.roundIndex === undefined || !roundSet.has(item.roundIndex)))
+  }, [])
+
   const stopGenerating = useCallback(() => {
     abortRef.current?.abort()
     abortRef.current = null
@@ -140,6 +160,7 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
           if (parsed.type === 'done' || parsed.type === 'failed') {
             setLoading(false)
             abortRef.current = null
+            void syncPersistedRoundIndex(id)
           }
         },
         onclose() {
@@ -170,12 +191,13 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
         error: current.error || { message: err?.message || '探索任务执行失败' },
       }))
     }
-  }, [conv, currentModelId, embedModelId, loading, spaceId, updateItem, authorization])
+  }, [conv, currentModelId, embedModelId, loading, spaceId, syncPersistedRoundIndex, updateItem, authorization])
 
   return {
     items,
     loading,
     handleSend,
+    removeItemsByRounds,
     stopGenerating,
   }
 }

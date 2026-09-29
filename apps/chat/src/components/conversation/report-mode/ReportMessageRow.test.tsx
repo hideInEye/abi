@@ -76,4 +76,22 @@ describe('ReportMessageRow', () => {
     expect(markup).not.toContain('查看报告')
     expect(markup).not.toContain('下载报告')
   })
+
+  it('问题操作只提供复制和删除，不提供编辑', () => {
+    const markup = renderToStaticMarkup(
+      <ReportMessageRow
+        report={createReport({ question: '只复制这个问题' })}
+        onToggleThinking={() => undefined}
+        onToggleTodo={() => undefined}
+        onToggleTask={() => undefined}
+        onOpenReport={() => undefined}
+        onDelete={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('只复制这个问题')
+    expect(markup).toContain('aria-label="复制"')
+    expect(markup).toContain('aria-label="删除"')
+    expect(markup).not.toContain('aria-label="编辑"')
+  })
 })

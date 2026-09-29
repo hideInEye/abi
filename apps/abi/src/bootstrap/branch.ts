@@ -1,19 +1,20 @@
 export type AbiBootstrapBranch =
   | { kind: 'app' }
-  | { kind: 'chat-share'; targetUrl: string }
+  | { kind: 'chat-share'; shareCode: string }
   | { kind: 'dashboard-share'; targetUrl: string }
 
-const CHAT_SHARE_HASH = /^#\/?dashboard_share_page\/[^/?#]+/i
+const CHAT_SHARE_HASH = /^#\/?dashboard_share_page\/([^/?#]+)/i
 const DASHBOARD_SHARE_PATH = /\/(dashboard-share-page|dashboard_share_page)\/[^/?#]+/i
 
 export function resolveAbiBootstrapBranch(href: string, poweredByQiankun: boolean): AbiBootstrapBranch {
   if (poweredByQiankun) return { kind: 'app' }
 
   const url = new URL(href)
-  if (CHAT_SHARE_HASH.test(url.hash)) {
+  const chatShare = url.hash.match(CHAT_SHARE_HASH)
+  if (chatShare) {
     return {
       kind: 'chat-share',
-      targetUrl: `${url.origin}/chat-ui/${url.hash}`,
+      shareCode: chatShare[1],
     }
   }
 

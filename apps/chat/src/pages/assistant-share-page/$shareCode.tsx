@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import React from 'react'
 
-import { AssistantSharePageView } from './-AssistantSharePageView'
+import { AssistantSharePageView } from '@/components/chat-widget/AssistantSharePanel'
 
 export const Route = createFileRoute('/assistant-share-page/$shareCode')({
   component: AssistantSharePage,

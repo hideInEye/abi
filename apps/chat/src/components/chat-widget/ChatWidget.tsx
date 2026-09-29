@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { Popover, message as antdMessage } from 'antd'
 import { ApiOutlined, CheckOutlined, EyeOutlined, RightOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons'
@@ -271,6 +271,39 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 放大前的 inline 样式快照（还原时恢复拖拽/resize 自定义的位置尺寸）
   const panelCssTextRef = useRef('')
   const didInit = useRef(false)
+  // 用户手动拖拽改大小后交还控制权：不再自动抬高 min-width，允许拖回默认，信息条切省略号
+  const manualResizeRef = useRef(false)
+
+  // 信息条内容超宽时抬高面板 min-width：默认宽度为下限，面板随信息条内容自适应变宽，正文仍正常换行
+  const fitInfobarWidth = useCallback(() => {
+    const panel = panelRef.current
+    const body = bodyRef.current
+    if (!panel || !body || maximized || mode === 'embed' || manualResizeRef.current) return
+    const bars = body.querySelectorAll<HTMLElement>('.abi-cw-infobar')
+    let maxBar = 0
+    bars.forEach((b) => {
+      if (b.offsetWidth > maxBar) maxBar = b.offsetWidth
+    })
+    // 无信息条时清空下限，回落默认宽度
+    if (maxBar === 0) {
+      panel.style.minWidth = ''
+      return
+    }
+    // 54 = body 左右内边距(24) + 白卡左右内边距(28) + 面板边框(2)
+    const needed = maxBar + 54
+    const cap = window.innerWidth - 32
+    panel.style.minWidth = `${Math.min(needed, cap)}px`
+  }, [maximized, mode])
+
+  useLayoutEffect(() => {
+    fitInfobarWidth()
+  }, [fitInfobarWidth, messages])
+
+  useEffect(() => {
+    const onResize = () => fitInfobarWidth()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [fitInfobarWidth])
 
   // 分享 token 以 Bearer 头注入探索/报告 service（依赖注入，不写 localStorage、不影响主对话登录态）
   const shareAuth = shareToken ? `Bearer ${shareToken}` : null
@@ -618,6 +651,12 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           patchMsg({ content: (controller.signal.aborted && '已停止生成') || '请求异常，请稍后重试', streaming: false })
           setSending(false)
         },
+        // 闲聊/超范围屏蔽（illegal_query）：直接以提示语作为正文收尾，不走轮次定位/回补（同主对话）
+        // 单换行在 markdown 为软换行会并到一行，转两空格硬换行以还原后端原文分行
+        onIllegalQuery: (tip) => {
+          patchMsg({ content: tip.replace(/\n/g, '  \n'), thinking: undefined, streaming: false })
+          setSending(false)
+        },
       },
       selectedSemantic,
       info?.spaceId,
@@ -811,6 +850,11 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     const panel = panelRef.current
     if (!panel) return
     const rect = panel.getBoundingClientRect()
+    // 手动接管：先按当前（撑宽后）宽度量取 rect，再清除自动撑宽的 min-width 下限并把 width 钉在当前值，避免塌陷跳变；信息条切「超出省略号」模式
+    manualResizeRef.current = true
+    panel.style.width = `${rect.width}px`
+    panel.style.minWidth = ''
+    panel.classList.add('abi-cw-infobar-ellipsis')
     const startX = e.clientX
     const startY = e.clientY
     panel.style.position = 'fixed'
@@ -1047,36 +1091,41 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
         <EyeOutlined className="uni-icon" />
         <span className="uni-name">查看语义</span>
       </div>
-      <Popover
-        content={skillFlyoutContent}
-        trigger="hover"
-        placement="rightTop"
-        arrow={false}
-        overlayClassName="uni-popover"
-        getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
-      >
-        <div className="uni-popup-item">
-          <ToolOutlined className="uni-icon" />
-          <span className="uni-name">技能</span>
-          {(info?.skills?.length ?? 0) > 0 && <span className="uni-count">{info!.skills.length}</span>}
-          <RightOutlined className="uni-arrow" />
-        </div>
-      </Popover>
-      <Popover
-        content={mcpFlyoutContent}
-        trigger="hover"
-        placement="rightTop"
-        arrow={false}
-        overlayClassName="uni-popover"
-        getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
-      >
-        <div className="uni-popup-item">
-          <ApiOutlined className="uni-icon" />
-          <span className="uni-name">MCP</span>
-          {(info?.mcps?.length ?? 0) > 0 && <span className="uni-count">{info!.mcps.length}</span>}
-          <RightOutlined className="uni-arrow" />
-        </div>
-      </Popover>
+      {/* 交互模式下隐藏 技能 / MCP 入口（对齐主对话 chat-input） */}
+      {chatMode !== 'interact' && (
+        <>
+          <Popover
+            content={skillFlyoutContent}
+            trigger="hover"
+            placement="rightTop"
+            arrow={false}
+            overlayClassName="uni-popover"
+            getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+          >
+            <div className="uni-popup-item">
+              <ToolOutlined className="uni-icon" />
+              <span className="uni-name">技能</span>
+              {(info?.skills?.length ?? 0) > 0 && <span className="uni-count">{info!.skills.length}</span>}
+              <RightOutlined className="uni-arrow" />
+            </div>
+          </Popover>
+          <Popover
+            content={mcpFlyoutContent}
+            trigger="hover"
+            placement="rightTop"
+            arrow={false}
+            overlayClassName="uni-popover"
+            getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+          >
+            <div className="uni-popup-item">
+              <ApiOutlined className="uni-icon" />
+              <span className="uni-name">MCP</span>
+              {(info?.mcps?.length ?? 0) > 0 && <span className="uni-count">{info!.mcps.length}</span>}
+              <RightOutlined className="uni-arrow" />
+            </div>
+          </Popover>
+        </>
+      )}
     </div>
   )
 
@@ -1220,6 +1269,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                     onChartTypeChange: handleChartTypeChange,
                     onFeedback: (index: number, current: number, status: 1 | -1) => void handleFeedback(index, current, status),
                     onOpenSchema: openSchemaDrawer,
+                    onLayout: fitInfobarWidth,
                   }}
                   fallback={<LazyFeatureFallback label="正在加载消息…" style={{ minHeight: 80 }} />}
                 />

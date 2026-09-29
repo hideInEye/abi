@@ -7,10 +7,10 @@ describe('resolveAbiBootstrapBranch', () => {
     expect(resolveAbiBootstrapBranch('https://example.com/dashboard_share_page/code', true)).toEqual({ kind: 'app' })
   })
 
-  it('preserves the existing hash bridge for assistant shares', () => {
+  it('selects the assistant SDK branch before loading the full application', () => {
     expect(resolveAbiBootstrapBranch('https://example.com/#/dashboard_share_page/code?embed=1', false)).toEqual({
       kind: 'chat-share',
-      targetUrl: 'https://example.com/chat-ui/#/dashboard_share_page/code?embed=1',
+      shareCode: 'code',
     })
   })
 

@@ -194,7 +194,7 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
           </div>
         }
       >
-        <Form form={shareEmailForm} layout="vertical" wrapperCol={{ span: 20 }} initialValues={{ emailTitle: `${conv.biz_name}报告-${dayjs().format('YYYY.MM.DD')}` }}>
+        <Form form={shareEmailForm} layout="vertical" wrapperCol={{ span: 20 }} initialValues={{ emailTitle: `${conv.biz_name}报告-${dayjs().format('YYYY.MM.DD')}`, interval: 1, points: [{ time: '08:00' }], scheduleMode: 'CONTINUOUS', unit: 'DAY' }}>
           {confirmShareType === 'email' && shareStep === 2 && (
             <RetryableLazy
               loader={loadShareEmailSetting}

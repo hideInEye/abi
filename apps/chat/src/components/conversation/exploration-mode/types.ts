@@ -34,6 +34,10 @@ export interface ExploreStep {
 export interface ExploreItem {
   id: string
   question: string
+  /** 历史接口顶层数组位置；只用于跨模式时间线展示，不替代后端轮次号。 */
+  historySequence?: number
+  /** 后端已持久化轮次；实时临时项在历史同步前不具备删除资格。 */
+  roundIndex?: number
   sortOrder: number
   status: ExploreStatus
   planThought?: {
