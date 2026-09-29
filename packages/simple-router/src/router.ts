@@ -89,11 +89,12 @@ export function createRouter({ getReactRoutes, init, initRoutes, mode, opt }: Ro
     reactRouter.patchRoutes(parent, reactRoutes as RouteObject[])
   }
 
-  function onBeforeRouteChange({ nextLocation }: Parameters<BlockerFunction>[0]) {
+  function onBeforeRouteChange({ nextLocation, historyAction }: Parameters<BlockerFunction>[0]) {
     const to = resolve(nextLocation)
 
     if (to.fullPath === currentRoute.fullPath) {
-      return true
+      // Blocking single-spa's supplemental POP would revert by zero and reload the document.
+      return historyAction !== 'POP'
     }
 
     if (to.redirect) {
