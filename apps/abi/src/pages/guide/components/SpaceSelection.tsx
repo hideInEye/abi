@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 
 import { deleteSpace, spaceList } from '@/service/api/data-space'
 import type { ISpaceItem } from '@/pages/space-list/types'
-import { SpaceEdit } from '@/pages/space-list/components/SpaceEdit'
+import { LazyFeatureFallback, RetryableLazy } from '@/components/common/RetryableLazy'
 import { SpaceItemCard } from './SpaceItemCard'
+
+const loadSpaceEdit = () => import('@/pages/space-list/components/SpaceEdit').then(module => ({ default: module.SpaceEdit }))
 
 interface SpaceSelectionProps {
   onSelectSpace?: (space: ISpaceItem) => void
@@ -58,11 +60,13 @@ export const SpaceSelection = ({ onSelectSpace, selectedSpaceId }: SpaceSelectio
   }
 
   const editSpaceHandler = (space: ISpaceItem) => {
+    void loadSpaceEdit()
     setDrawerOpen(true)
     setEditSpace(space)
   }
 
   const handleCreateSpace = () => {
+    void loadSpaceEdit()
     setDrawerOpen(true)
     setEditSpace(null)
   }
@@ -126,7 +130,13 @@ export const SpaceSelection = ({ onSelectSpace, selectedSpaceId }: SpaceSelectio
         </div>
       )}
     </div>
-      {drawerOpen && <SpaceEdit drawerOpen={drawerOpen} editSpace={editSpace} setDrawerOpen={setDrawerOpen} updateSpace={updateSpace} />}
+      {drawerOpen && (
+        <RetryableLazy
+          loader={loadSpaceEdit}
+          componentProps={{ drawerOpen, editSpace, setDrawerOpen, updateSpace }}
+          fallback={<LazyFeatureFallback label="正在加载空间编辑器…" style={{ position: 'fixed', inset: 0, zIndex: 1000, minHeight: '100vh' }} />}
+        />
+      )}
   </div>
   )
 }

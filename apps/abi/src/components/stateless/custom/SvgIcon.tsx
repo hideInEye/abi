@@ -1,5 +1,13 @@
-import { Icon } from '@iconify/react';
-import type { CSSProperties } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
+
+import type { SvgIconAsset } from './SvgIconAssets'
+
+const IconifyIcon = lazy(async () => {
+  const { Icon } = await import('@iconify/react')
+  return { default: Icon }
+})
+
 /**
  * Props
  *
@@ -7,44 +15,67 @@ import type { CSSProperties } from 'react';
  * - If icon and localIcon are passed at the same time, localIcon will be rendered first
  */
 interface Props {
-  readonly className?: string;
+  readonly className?: string
   /** Iconify icon name */
-  readonly icon?: string;
+  readonly icon?: string
   /** Local svg icon name */
-  readonly localIcon?: string;
-  readonly style?: CSSProperties;
+  readonly localIcon?: string
+  readonly style?: CSSProperties
 }
 
-const defaultLocalIcon = 'no-icon';
-const { VITE_ICON_LOCAL_PREFIX: prefix } = import.meta.env;
-const symbolId = (localIcon: string = defaultLocalIcon) => {
-  const iconName = localIcon || defaultLocalIcon;
+const defaultLocalIcon = 'no-icon'
+const SvgIcon = ({ className, icon, localIcon, style }: Props) => {
+  const iconName = localIcon || defaultLocalIcon
+  const shouldRenderLocalIcon = Boolean(localIcon || !icon)
+  const [localAsset, setLocalAsset] = useState<SvgIconAsset | null>(null)
 
-  return `#${prefix}-${iconName}`;
-};
-const SvgIcon = ({ icon, localIcon, ...props }: Props) => {
+  useEffect(() => {
+    if (!shouldRenderLocalIcon) return undefined
+    let active = true
+    setLocalAsset(null)
+    import('./SvgIconAssets')
+      .then(module => module.loadSvgIconAsset(iconName))
+      .then(asset => {
+        if (active) setLocalAsset(asset)
+      })
+    return () => {
+      active = false
+    }
+  }, [iconName, shouldRenderLocalIcon])
+
   /** If localIcon is passed, render localIcon first */
   return localIcon || !icon ? (
-    <svg
-      height="1em"
-      width="1em"
-      {...props}
+    <span
       aria-hidden="true"
-    >
-      <use
-        fill="currentColor"
-        href={symbolId(localIcon)}
-        onError={e => {
-          console.error('SVG icon not found:', e, symbolId(localIcon));
-        }}
-      />
-    </svg>
-  ) : (
-    <Icon
-      icon={icon}
-      {...props}
+      className={className}
+      dangerouslySetInnerHTML={localAsset?.kind === 'markup' ? { __html: localAsset.markup } : undefined}
+      style={{
+        display: 'inline-flex',
+        flexShrink: 0,
+        height: '1em',
+        lineHeight: 1,
+        overflow: 'hidden',
+        width: '1em',
+        ...style
+      }}
     />
-  );
-};
+  ) : (
+    <Suspense
+      fallback={
+        <span
+          aria-hidden="true"
+          className={className}
+          style={{ display: 'inline-block', height: '1em', width: '1em', ...style }}
+        />
+      }
+    >
+      <IconifyIcon
+        className={className}
+        icon={icon}
+        style={style}
+      />
+    </Suspense>
+  )
+}
 
-export default SvgIcon;
+export default SvgIcon

@@ -1,5 +1,5 @@
 import { createFileRoute, useParams, useRouterState } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import React from 'react'
 import ConversationAnalysis from '@/components/conversation-analysis'
 import type { ChatRouterContext } from '@/router/context'
 
@@ -24,16 +24,6 @@ function TaskPage() {
     select: (state) => getSafeRouteContext(state.context),
   })
   const chatId = taskId || conversationId
-
-  // 悬浮窗 SDK 样式调试：仅欢迎页挂载；base 用 /api 走 vite 代理保持同源
-  useEffect(() => {
-    if (chatId !== 'new') return
-    const el = document.createElement('abi-assistant')
-    el.setAttribute('share-code', 'rkh7lyn8')
-    el.setAttribute('base', '/api')
-    document.body.appendChild(el)
-    return () => el.remove()
-  }, [chatId])
 
   return <ConversationAnalysis spaceId={spaceId} chatId={chatId} hideSidebar pendingAssistantId={appId} />
 }

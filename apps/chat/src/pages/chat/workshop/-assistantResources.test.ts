@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { fetchAssistantBoundResources, mapAssistantBoundResources } from './assistantResources'
-import { buildBoundSemanticTree } from './assistantResources'
+import { fetchAssistantBoundResources, mapAssistantBoundResources } from './-assistantResources'
+import { buildBoundSemanticTree } from './-assistantResources'
 
 vi.mock('../../../service/api/assistant', () => ({
   fetchAssistantDetail: vi.fn(),

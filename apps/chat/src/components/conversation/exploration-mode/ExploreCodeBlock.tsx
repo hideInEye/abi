@@ -1,8 +1,7 @@
 import { CheckOutlined, CopyOutlined, FormOutlined } from '@ant-design/icons'
 import { message, Tooltip } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
-// @ts-ignore - react-syntax-highlighter 类型定义问题
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import SyntaxHighlighter from '@/components/performance/PrismSyntaxHighlighter'
 // @ts-ignore
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 

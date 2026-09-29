@@ -10,10 +10,9 @@ import type { SessionGroup } from '@/service/api/app'
 
 type ConversationGroupsProps = {
   collapsed: boolean
-  refreshKey?: number
 }
 
-export function ConversationGroups({ collapsed, refreshKey }: ConversationGroupsProps) {
+export function ConversationGroups({ collapsed }: ConversationGroupsProps) {
   const navigate = useNavigate()
 
   const { loading, groups, loadGroups, addGroup, editGroup, removeGroup } = useConversationGroups()
@@ -30,7 +29,7 @@ export function ConversationGroups({ collapsed, refreshKey }: ConversationGroups
       loadGroups()
       loadHistoryTopics({ silent: true })
     }
-  }, [collapsed, loadGroups, loadHistoryTopics, refreshKey])
+  }, [collapsed, loadGroups, loadHistoryTopics])
 
   // 分组内会话数量
   const sessionsByGroupId = useMemo(() => {

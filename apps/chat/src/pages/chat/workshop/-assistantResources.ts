@@ -1,5 +1,3 @@
-import { fetchAssistantDetail } from '../../../service/api/assistant'
-
 /** 助手绑定的数据语义叶子，用于限制输入框数据语义弹窗候选 */
 export interface AssistantBoundSemantic {
   /** 与详情抽屉一致的前缀 id（schema_<真实id>） */
@@ -150,6 +148,7 @@ export function buildBoundSemanticTree(semantics: AssistantBoundSemantic[]): any
 /** 拉取助手详情并映射为绑定资源；失败返回 null 由调用方降级为不限制。 */
 export async function fetchAssistantBoundResources(appId: number | string): Promise<AssistantBoundResources | null> {
   try {
+    const { fetchAssistantDetail } = await import('../../../service/api/assistant')
     const res: any = await fetchAssistantDetail({ appId })
     const d = res?.data
     const detail = d?.data || d || {}

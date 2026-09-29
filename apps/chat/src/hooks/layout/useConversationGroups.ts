@@ -1,63 +1,34 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback } from 'react'
 
+import { useChatBootstrap } from '@/resources/chatBootstrap'
 import {
   addSessionGroup,
   deleteSessionGroup,
-  fetchSessionGroupList,
   updateSessionGroup,
 } from '@/service/api/app'
-import type { AddGroupParams, SessionGroup, UpdateGroupParams } from '@/service/api/app'
-import { getSpaceId } from '@/utils'
+import type { AddGroupParams, UpdateGroupParams } from '@/service/api/app'
+import { getSpaceId } from '@/utils/runtime'
 
 export function useConversationGroups() {
-  const mountedRef = useRef(true)
-  const loadingRef = useRef(false)
-  const [loading, setLoading] = useState(false)
-  const [groups, setGroups] = useState<SessionGroup[]>([])
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
+  const bootstrap = useChatBootstrap()
+  const groups = bootstrap.groups.data ?? []
+  const loading = bootstrap.groups.status === 'loading'
 
   /** 加载分组列表 */
-  const loadGroups = useCallback(async () => {
-    if (!mountedRef.current) return
-    // 防止并发重复调用
-    if (loadingRef.current) return
-    loadingRef.current = true
-    setLoading(true)
-
-    try {
-      const spaceId = getSpaceId()
-      const res: any = await fetchSessionGroupList({ spaceId: spaceId || undefined })
-      const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
-      if (mountedRef.current) {
-        setGroups(list)
-      }
-    } catch (err) {
-      console.error('加载分组列表失败:', err)
-      if (mountedRef.current) {
-        setGroups([])
-      }
-    } finally {
-      loadingRef.current = false
-      if (mountedRef.current) {
-        setLoading(false)
-      }
-    }
-  }, [])
+  const loadGroups = useCallback(
+    (options?: { force?: boolean }) => bootstrap.loadGroups(options),
+    [bootstrap.loadGroups],
+  )
 
   /** 新增分组 */
   const addGroup = useCallback(
     async (params: Omit<AddGroupParams, 'spaceId'> & { spaceId?: number }) => {
       const spaceId = params.spaceId ?? getSpaceId()
       await addSessionGroup({ ...params, spaceId })
-      await loadGroups()
+      bootstrap.invalidateGroups()
+      return loadGroups({ force: true })
     },
-    [loadGroups],
+    [bootstrap.invalidateGroups, loadGroups],
   )
 
   /** 更新分组 */
@@ -65,18 +36,20 @@ export function useConversationGroups() {
     async (params: UpdateGroupParams) => {
       const spaceId = params.spaceId ?? getSpaceId()
       await updateSessionGroup({ ...params, spaceId })
-      await loadGroups()
+      bootstrap.invalidateGroups()
+      return loadGroups({ force: true })
     },
-    [loadGroups],
+    [bootstrap.invalidateGroups, loadGroups],
   )
 
   /** 删除分组 */
   const removeGroup = useCallback(
     async (groupId: string) => {
       await deleteSessionGroup({ groupId })
-      await loadGroups()
+      bootstrap.invalidateGroups()
+      return loadGroups({ force: true })
     },
-    [loadGroups],
+    [bootstrap.invalidateGroups, loadGroups],
   )
 
   return {

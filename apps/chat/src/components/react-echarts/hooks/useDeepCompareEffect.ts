@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { isEqual } from 'lodash';
+import isEqual from 'lodash/isEqual';
 
 export type UseDeepCompareEffect = (
   callback: () => void | (() => void),
@@ -15,4 +15,4 @@ export const useDeepCompareEffect: UseDeepCompareEffect = (callback, dependencie
       return callback();
     }
   }, dependencies);
-}; 
+};

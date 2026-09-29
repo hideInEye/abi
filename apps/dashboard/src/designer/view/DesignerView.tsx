@@ -15,13 +15,13 @@ import './DesignerView.less';
 import layerManager from "../manager/LayerManager.ts";
 import {observer} from "mobx-react";
 import Loading from "../../json-schema/ui/loading/Loading";
-import layerBuilder from "../left/layer-list/LayerBuilder";
+import {buildRuntimeCanvasComponents} from "../runtime/RuntimeLayerBuilder";
 import {DesignerMode, SaveType} from "../DesignerType.ts";
 import canvasManager from "../header/items/canvas/CanvasManager.ts";
-import '../../designer/resource/font/FontGlobal.css';
 import ScaleAction from "../../framework/core/ScaleAction.ts";
 import {DesignerLoader} from "../loader/DesignerLoader.ts";
-import {destroyDesignerRuntime} from "../runtime/destroyDesignerRuntime.ts";
+import {destroyViewRuntime} from "../runtime/viewRuntime.ts";
+import {registerAppCleanup} from "../../runtime/appCleanup.ts";
 
 const ScreenFit = lazy(() => import('../../framework/screen-fit/ScreenFit.tsx'));
 
@@ -37,10 +37,11 @@ const DesignerView = observer((props: DesignerViewProps) => {
     const loaderRef = useRef<DesignerLoader | null>(new ViewDesignerLoader(DesignerMode.VIEW));
 
     useEffect(() => {
+        const cleanupRuntime = registerAppCleanup(destroyViewRuntime);
         loaderRef.current?.load(id, type);
         return () => {
             loaderRef.current?.cancelLoad();
-            destroyDesignerRuntime();
+            cleanupRuntime();
         };
     }, []);
 
@@ -50,7 +51,7 @@ const DesignerView = observer((props: DesignerViewProps) => {
         return <Loading/>;
 
     const canvasDom = <div style={{width, height, background: '#f2f3f5', overflow: 'hidden', position: "relative"}}>
-        {layerBuilder.buildCanvasComponents(layerConfigs)}
+        {buildRuntimeCanvasComponents(layerConfigs)}
     </div>
 
     return (

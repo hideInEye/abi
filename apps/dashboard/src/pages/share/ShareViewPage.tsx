@@ -20,11 +20,11 @@ import {DesignerMode, SaveType} from '../../designer/DesignerType.ts';
 import layerManager from '../../designer/manager/LayerManager.ts';
 import {observer} from 'mobx-react';
 import Loading from '../../json-schema/ui/loading/Loading';
-import layerBuilder from '../../designer/left/layer-list/LayerBuilder';
+import {buildRuntimeCanvasComponents} from '../../designer/runtime/RuntimeLayerBuilder';
 import canvasManager from '../../designer/header/items/canvas/CanvasManager.ts';
-import '../../designer/resource/font/FontGlobal.css';
 import ScaleAction from '../../framework/core/ScaleAction.ts';
-import {destroyDesignerRuntime} from '../../designer/runtime/destroyDesignerRuntime.ts';
+import {destroyViewRuntime} from '../../designer/runtime/viewRuntime.ts';
+import {registerAppCleanup} from '../../runtime/appCleanup.ts';
 
 const ScreenFit = lazy(() => import('../../framework/screen-fit/ScreenFit.tsx'));
 
@@ -70,9 +70,12 @@ const ShareViewPage = observer(() => {
         init();
     }, [shareCode]);
 
-    useEffect(() => () => {
-        loaderRef.current?.cancelLoad();
-        destroyDesignerRuntime();
+    useEffect(() => {
+        const cleanupRuntime = registerAppCleanup(destroyViewRuntime);
+        return () => {
+            loaderRef.current?.cancelLoad();
+            cleanupRuntime();
+        };
     }, []);
 
     // 用户输入密码后校验
@@ -179,7 +182,7 @@ const CanvasRenderer = observer(() => {
 
     const canvasDom = (
         <div style={{width, height, background: '#f2f3f5', overflow: 'hidden', position: "relative"}}>
-            {layerBuilder.buildCanvasComponents(layerConfigs)}
+            {buildRuntimeCanvasComponents(layerConfigs)}
         </div>
     );
 

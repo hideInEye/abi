@@ -1,5 +1,5 @@
 import type { Advice } from '@antv/ava';
-import { isNull } from 'lodash';
+import isNull from 'lodash/isNull';
 
 export function defaultAdvicesFilter(props: { advices: Advice[] }) {
   const { advices } = props;

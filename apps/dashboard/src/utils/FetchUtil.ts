@@ -10,6 +10,9 @@
  */
 
 import {getAuthorization, handleLoginExpired} from "./auth.ts";
+import {getApiTarget} from "../bootstrap/runtimeConfig.ts";
+
+export {getApiTarget} from "../bootstrap/runtimeConfig.ts";
 
 export interface HttpResponse {
     code: number;
@@ -36,23 +39,6 @@ export function isSuccessfulNativeResult(value: unknown): boolean {
     if ('code' in result) return Number(result.code) === 200;
     if ('success' in result) return result.success === true;
     return true;
-}
-
-let _apiTarget = '';
-export function getApiTarget(): string {
-    return _apiTarget;
-}
-export async function loadAppConfig(): Promise<void> {
-    try {
-        const configPath = import.meta.env.MODE === 'development' ? 'http://localhost:5174/config.json': '/dashboard-ui/config.json'
-        const res = await fetch(configPath);
-        const cfg = await res.json();
-        if (cfg.VITE_API_TARGET) {
-            _apiTarget = cfg.VITE_API_TARGET.replace(/\/$/, '');
-        }
-    } catch {
-        // config.json 不存在时静默降级，使用相对路径
-    }
 }
 
 export default class FetchUtil {
@@ -140,8 +126,8 @@ export default class FetchUtil {
      * @private
      */
     private static async request(url: string, options: RequestInit = {}): Promise<HttpResponse> {
-        // /chat-proxy/ 开头的路径直接走代理，不拼接 _apiTarget
-        const fullUrl = (url.startsWith('http') || url.startsWith('/chat-proxy/')) ? url : `${_apiTarget}${url}`;
+        // /chat-proxy/ 开头的路径直接走代理，不拼接 API target
+        const fullUrl = (url.startsWith('http') || url.startsWith('/chat-proxy/')) ? url : `${getApiTarget()}${url}`;
         let response: Response | null = null;
         try {
             response = await fetch(fullUrl, {
@@ -183,6 +169,7 @@ export default class FetchUtil {
                 return {code: 200, msg: '操作成功', data: blob}
             }
         } catch (error: any) {
+            if (options.signal?.aborted || error?.name === 'AbortError') throw error;
             return {code: response?.status ?? 500, msg: response?.statusText ?? '', data: null};
         }
     }
@@ -194,7 +181,7 @@ export default class FetchUtil {
      * @private
      */
     private static async requestNativeResult(url: string, options: RequestInit = {}): Promise<any> {
-        const fullUrl = (url.startsWith('http') || url.startsWith('/chat-proxy/')) ? url : `${_apiTarget}${url}`;
+        const fullUrl = (url.startsWith('http') || url.startsWith('/chat-proxy/')) ? url : `${getApiTarget()}${url}`;
         let response: Response | null = null;
         try {
             response = await fetch(fullUrl, {

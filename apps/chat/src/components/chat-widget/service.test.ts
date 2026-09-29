@@ -164,8 +164,8 @@ describe('mapAssistantBoundToolResources', () => {
     }
 
     expect(mapAssistantBoundToolResources(detail).mcps).toEqual([
-      { id: '41', name: 'sse 服务', protocol: 'sse', sseGroupIds: [1001, '1002'] },
-      { id: '42', name: 'streamable 服务', protocol: 'streamable', sseGroupIds: [] },
+      { id: '41', name: 'sse 服务', namespaceId: 's_1001', protocol: 'sse', sseGroupIds: [1001, '1002'] },
+      { id: '42', name: 'streamable 服务', namespaceId: 's_2001', protocol: 'streamable', sseGroupIds: [] },
     ])
   })
 })

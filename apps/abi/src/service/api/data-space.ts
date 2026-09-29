@@ -11,12 +11,13 @@ export function spaceList(params: {
   pageNum: number;
   pageSize: number;
   spaceName?: string;
-}) {
+}, signal?: AbortSignal) {
   return apiRequest({
     method: 'get',
     params: {
       ...params
     },
+    signal,
     url: '/api/system/v1/sinfo/list'
   });
 }

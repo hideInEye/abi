@@ -19,6 +19,69 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+.dashboard-route-skeleton {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  width: 100%;
+  min-height: 100%;
+  background: #f4f6fb;
+}
+
+.dashboard-route-skeleton__sidebar {
+  min-height: 100vh;
+  background: #202a44;
+}
+
+.dashboard-route-skeleton__content {
+  padding: 24px;
+}
+
+.dashboard-route-skeleton__header,
+.dashboard-route-skeleton__cards {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #eef1f6 25%, #f8f9fc 37%, #eef1f6 63%);
+  background-size: 400% 100%;
+  animation: dashboard-skeleton-pulse 1.4s ease infinite;
+}
+
+.dashboard-route-skeleton__header {
+  height: 56px;
+  margin-bottom: 24px;
+}
+
+.dashboard-route-skeleton__cards {
+  height: 280px;
+}
+
+.dashboard-route-error {
+  display: grid;
+  place-content: center;
+  min-height: 100%;
+  padding: 32px;
+  color: #26324b;
+  text-align: center;
+  background: #f4f6fb;
+}
+
+.dashboard-route-error button {
+  height: 38px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  background: #4f7cff;
+  cursor: pointer;
+}
+
+.dashboard-global-infrastructure-loading {
+  display: none;
+}
+
+@keyframes dashboard-skeleton-pulse {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
   monospace;

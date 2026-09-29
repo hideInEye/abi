@@ -8,36 +8,27 @@ import {
   addSessionGroup,
   deleteSession,
   deleteSessionGroup,
-  fetchAppList,
-  fetchSessionGroupList,
   moveSessionToGroup,
   updateApp,
   updateSessionGroup,
 } from '@/service/api/app'
 import type { SessionGroup } from '@/service/api/app'
 import { fetchIsFavorite, fetchOperateNew } from '@/service/api/abi-system'
-import { CHAT_MODE } from '@/constant'
-import { getCurrentUser } from '@/utils/layout'
-import { getSpaceId } from '@/utils'
+import { useChatBootstrap } from '@/resources/chatBootstrap'
+import { getSpaceId } from '@/utils/runtime'
 
 interface GroupSessionListViewProps {
   groupId: string
   onOpenSession: (chatId: string) => void
   onGroupDeleted: () => void
-  refreshKey?: number
 }
 
 const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
   groupId,
   onOpenSession,
   onGroupDeleted,
-  refreshKey = 0,
 }) => {
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState(false)
-  const [group, setGroup] = useState<SessionGroup | null>(null)
-  const [groups, setGroups] = useState<SessionGroup[]>([])
-  const [sessions, setSessions] = useState<any[]>([])
+  const bootstrap = useChatBootstrap()
   const [keyword, setKeyword] = useState('')
 
   const [editVisible, setEditVisible] = useState(false)
@@ -52,42 +43,35 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
   // 收藏状态：记录已收藏的对话 chatId，用于菜单文案「收藏对话/取消收藏」
   const [favoriteChatIds, setFavoriteChatIds] = useState<Set<string>>(new Set())
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setLoadError(false)
-    try {
-      const spaceId = getSpaceId()
-      const [groupRes, sessionRes] = await Promise.all([
-        fetchSessionGroupList({ spaceId: spaceId || undefined }),
-        fetchAppList({
-          chat_mode: CHAT_MODE,
-          space_id: spaceId,
-          create_by: getCurrentUser().userName,
-        }),
-      ])
-      const groupList = Array.isArray(groupRes?.data) ? groupRes.data : []
-      setGroups(groupList)
-      const currentGroup = groupList.find(
-        (g: SessionGroup) => String(g.groupId) === String(groupId),
-      )
-      setGroup(currentGroup || null)
+  const groups = bootstrap.groups.data ?? []
+  const allSessions = bootstrap.conversations.data ?? []
+  const group = groups.find(
+    (item: SessionGroup) => String(item.groupId) === String(groupId),
+  ) ?? null
+  const sessions = allSessions.filter(
+    (app: any) => String(app.groupId ?? app.group_id) === String(groupId),
+  )
+  const loading = (
+    (bootstrap.groups.status === 'idle' || bootstrap.groups.status === 'loading') && !bootstrap.groups.data
+  ) || (
+    (bootstrap.conversations.status === 'idle' || bootstrap.conversations.status === 'loading') && !bootstrap.conversations.data
+  )
+  const loadError = bootstrap.groups.status === 'error' || bootstrap.conversations.status === 'error'
 
-      const allSessions = Array.isArray(sessionRes?.data) ? sessionRes.data : []
-      const groupSessions = allSessions.filter(
-        (app: any) => String(app.groupId ?? app.group_id) === String(groupId),
-      )
-      setSessions(groupSessions)
+  const loadData = useCallback(async (force = false) => {
+    try {
+      await Promise.all([
+        bootstrap.loadGroups({ force }),
+        bootstrap.loadConversations({ force }),
+      ])
     } catch {
-      setLoadError(true)
       message.error('加载分组数据失败')
-    } finally {
-      setLoading(false)
     }
-  }, [groupId])
+  }, [bootstrap.loadConversations, bootstrap.loadGroups])
 
   useEffect(() => {
-    loadData()
-  }, [loadData, refreshKey])
+    void loadData()
+  }, [loadData])
 
   // 按 title / biz_name 过滤；排序由后端返回顺序（最新优先），保持与侧边栏一致
   const filteredSessions = useMemo(() => {
@@ -110,6 +94,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
       onOk: async () => {
         try {
           await deleteSessionGroup({ groupId: group.groupId })
+          bootstrap.updateGroups(current => current.filter(item => String(item.groupId) !== String(group.groupId)))
           message.success('删除分组成功')
           onGroupDeleted()
         } catch {
@@ -117,25 +102,23 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
         }
       },
     })
-  }, [group, onGroupDeleted])
+  }, [bootstrap.updateGroups, group, onGroupDeleted])
 
   const handleEditGroup = useCallback(async () => {
     if (!group || !editName.trim()) return
     const newName = editName.trim()
     try {
       await updateSessionGroup({ groupId: group.groupId, groupName: newName, spaceId: getSpaceId() })
-      // 乐观更新：避免后端列表查询延迟/缓存导致页面仍显示旧名称
-      setGroup((prev) => (prev ? { ...prev, groupName: newName } : prev))
+      bootstrap.updateGroups(current => current.map(item => (
+        String(item.groupId) === String(group.groupId) ? { ...item, groupName: newName } : item
+      )))
       message.success('更新分组成功')
       setEditVisible(false)
       setEditName('')
-      await loadData()
-      // 同步刷新侧边栏分组列表
-      window.dispatchEvent(new Event('conversation-created'))
     } catch {
       message.error('更新分组失败')
     }
-  }, [group, editName, loadData])
+  }, [bootstrap.updateGroups, group, editName])
 
   const handleRenameSession = useCallback(async () => {
     if (!renamingSession || !renameValue.trim()) return
@@ -146,8 +129,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
         sessionId,
         title: newTitle,
       })
-      // 乐观更新：避免后端列表查询延迟/缓存导致卡片仍显示旧名称
-      setSessions((prev) =>
+      bootstrap.updateConversations((prev) =>
         prev.map((s) =>
           String(s.chat_id) === sessionId ? { ...s, title: newTitle, biz_name: newTitle } : s,
         ),
@@ -156,13 +138,10 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
       setRenameVisible(false)
       setRenameValue('')
       setRenamingSession(null)
-      await loadData()
-      // 同步刷新侧边栏会话列表
-      window.dispatchEvent(new Event('conversation-created'))
     } catch {
       message.error('重命名失败')
     }
-  }, [renamingSession, renameValue, loadData])
+  }, [bootstrap.updateConversations, renamingSession, renameValue])
 
   const handleMoveSession = useCallback(
     async (session: any, targetGroupId: string) => {
@@ -172,14 +151,17 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
           groupId: targetGroupId,
           title: session.title || session.biz_name || '',
         })
+        bootstrap.updateConversations(current => current.map(item => (
+          String(item.chat_id) === String(session.chat_id)
+            ? { ...item, groupId: targetGroupId, group_id: targetGroupId }
+            : item
+        )))
         message.success(targetGroupId === '0' ? '已移出本组' : '移动成功')
-        await loadData()
-        window.dispatchEvent(new Event('conversation-created'))
       } catch {
         message.error('移动失败')
       }
     },
-    [loadData],
+    [bootstrap.updateConversations],
   )
 
   const handleDeleteSession = useCallback(
@@ -192,16 +174,15 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
         onOk: async () => {
           try {
             await deleteSession({ sessionId: String(session.chat_id), convUid: session.conv_uid })
+            bootstrap.updateConversations(current => current.filter(item => String(item.chat_id) !== String(session.chat_id)))
             message.success('删除成功')
-            window.dispatchEvent(new Event('conversation-created'))
-            loadData()
           } catch {
             message.error('删除失败')
           }
         },
       })
     },
-    [loadData],
+    [bootstrap.updateConversations],
   )
 
   const handleAddGroupAndMove = useCallback(async () => {
@@ -219,17 +200,28 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
           groupId: String(newGroupId),
           title: pendingMoveSession.title || pendingMoveSession.biz_name || '',
         })
+        bootstrap.updateConversations(current => current.map(item => (
+          String(item.chat_id) === String(pendingMoveSession.chat_id)
+            ? { ...item, groupId: String(newGroupId), group_id: String(newGroupId) }
+            : item
+        )))
         message.success('已新增分组并移动')
       }
+      bootstrap.invalidateGroups()
+      await bootstrap.loadGroups({ force: true })
       setAddGroupVisible(false)
       setAddGroupValue('')
       setPendingMoveSession(null)
-      window.dispatchEvent(new Event('conversation-created'))
-      loadData()
     } catch {
       message.error('新增分组失败')
     }
-  }, [addGroupValue, pendingMoveSession, loadData])
+  }, [
+    addGroupValue,
+    bootstrap.invalidateGroups,
+    bootstrap.loadGroups,
+    bootstrap.updateConversations,
+    pendingMoveSession,
+  ])
 
   // 收藏对话：切换收藏状态（addOrRemove 由后端切换）
   const handleFavoriteSession = useCallback(async (session: any) => {
@@ -341,7 +333,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
         <span
           className="cursor-pointer"
           style={{ color: 'var(--accent)' }}
-          onClick={() => loadData()}
+          onClick={() => void loadData(true)}
         >
           点击重试
         </span>

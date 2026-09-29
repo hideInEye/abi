@@ -100,6 +100,78 @@
         line-height: 1.2;
       }
 
+      .chat-startup-error__message {
+        max-width: 480px;
+        margin: 16px 24px 20px;
+        color: #6b7280;
+        font-size: 14px;
+        text-align: center;
+      }
+
+      .chat-startup-error__retry {
+        min-width: 112px;
+        height: 38px;
+        padding: 0 20px;
+        border: 0;
+        border-radius: 6px;
+        color: #fff;
+        background: var(--primary-color);
+        cursor: pointer;
+      }
+
+      .chat-startup-route-shell {
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+        background:
+          radial-gradient(circle at 50% 42%, rgba(91, 124, 247, 0.08), transparent 34%),
+          #fff;
+      }
+
+      .chat-startup-route-shell__content {
+        width: min(640px, 100%);
+        padding-bottom: 6vh;
+        text-align: center;
+      }
+
+      .chat-startup-route-shell__title {
+        margin: 0 0 12px;
+        color: #202124;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .chat-startup-route-shell__subtitle {
+        max-width: 640px;
+        margin: 0 auto 24px;
+        color: #5f6572;
+        font-size: 14px;
+        line-height: 1.85;
+      }
+
+      .chat-startup-route-shell__status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #8a909c;
+        font-size: 12px;
+      }
+
+      .chat-startup-route-shell__status::before {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #5b7cf7;
+        content: "";
+        animation: chat-startup-pulse 1.6s ease-in-out infinite;
+      }
+
       @keyframes chat-startup-spin {
         to {
           transform: rotate(360deg);
@@ -121,7 +193,7 @@
     </style>
   </head>
   <body>
-    <div id="root">
+    <div id="root" aria-busy="true" aria-live="polite">
       <div class="chat-startup-loading" aria-label="加载中">
         <div class="chat-startup-loading__content">
           <!-- <img class="chat-startup-loading__logo" src="home_logo.png" alt="ABI" /> -->
@@ -133,10 +205,29 @@
               <div class="chat-startup-loading__dot"></div>
             </div>
           </div>
-          <h2 class="chat-startup-loading__title">正在准备对话环境...</h2>
+          <h2 class="chat-startup-loading__title" data-chat-startup-status>正在准备对话环境...</h2>
         </div>
       </div>
     </div>
+    <script>
+      (() => {
+        const route = window.location.hash.replace(/^#/, "").split("?", 1)[0].replace(/\/+$/, "");
+        if (route !== "/chat/task/new") return;
+
+        const root = document.getElementById("root");
+        if (!root) return;
+        root.dataset.chatStartupRoute = "task-new";
+        root.innerHTML = `
+          <main class="chat-startup-route-shell" aria-label="新建对话正在加载">
+            <div class="chat-startup-route-shell__content">
+              <h1 class="chat-startup-route-shell__title">TrustABI · 芯智</h1>
+              <p class="chat-startup-route-shell__subtitle">您的全能数据智能专家。从智能问数到归因预测，再到一键生成报告，芯智助您高效挖掘数据价值，精准获取商业洞察。</p>
+              <span class="chat-startup-route-shell__status">正在加载对话能力</span>
+            </div>
+          </main>
+        `;
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

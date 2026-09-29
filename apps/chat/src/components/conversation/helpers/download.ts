@@ -1,4 +1,3 @@
-import html2canvas from 'html2canvas';
 import { downloadExtMap} from '@/constant/chat';
 import { generateFilename, downloadFileByBlob, prepareTableForExport, createTempContainer, downloadImage } from '@/utils';
 import { dataExport, excelFileExport } from '@/service/api/conv';
@@ -49,6 +48,7 @@ export const handleImageExport = async (type: 'table' | 'chart', ref: React.RefO
       let imageUrl: string;
 
       if (type === 'table') {
+        const { default: html2canvas } = await import('html2canvas');
         const preparedTable = prepareTableForExport(ref.current);
         const tempContainer = createTempContainer(preparedTable);
         

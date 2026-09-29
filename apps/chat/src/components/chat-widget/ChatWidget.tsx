@@ -1,47 +1,19 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { ConfigProvider, Popover, Table, Typography, message as antdMessage } from 'antd'
+import { Popover, message as antdMessage } from 'antd'
 import { ApiOutlined, CheckOutlined, EyeOutlined, RightOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons'
-import zhCN from 'antd/es/locale/zh_CN'
-import { format as formatSql } from 'sql-formatter'
-// @ts-ignore - react-syntax-highlighter 类型定义问题
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-// @ts-ignore
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
-/* 渲染层直接复用主对话组件（开场白/用户气泡/思考卡/图表工具栏/反馈行），仅数据层走分享 token 链路 */
-import HumanEle from '../conversation/HumanEle'
-import AiEle from '../conversation/AiEle'
+/* 开场白复用主对话组件；普通消息的重型渲染依赖在有消息后按需加载。 */
 import OpeningsEle from '../conversation/OpeningsEle'
-import ChartHeader from '../conversation/components/ChartHeader'
-import StatisticsAnalysis from '../conversation/components/StatisticsAnalysis'
-import AttributionDashboard from '../conversation/components/AttributionDashboard'
-import PredictionAnalysis from '../conversation/components/PredictionAnalysis'
-import CausalAnalysis from '../conversation/components/CausalAnalysis'
-import { SUPPORTED_RENDER_TYPES, getChartTypeItem } from '../conversation/components/chartTypeCatalog'
-import convStyles from '../conversation/index.module.css'
-import viewStyles from '../conversation/styles.module.css'
-import { getChartOption, parseISO8601Duration, parseISODate } from '../conversation/helpers/chartOption'
-import { handleImageExport } from '../conversation/helpers/download'
-import PieLegend from '../PieLegend'
-import { EChart } from '../react-echarts'
-import SchemaFieldsModal, { parseSchemaFieldsFromModelDetail } from '../conversation-analysis/SchemaFieldsModal'
-import type { SchemaTable } from '../conversation-analysis/SchemaFieldsModal'
-/* 探索/报告：直接复用主对话 hook 与渲染组件，仅通过 authorization 注入分享 token（依赖注入，不影响主对话） */
-import { useExploreConversation } from '../conversation/exploration-mode/useExploreConversation'
-import ExploreMessageRow from '../conversation/exploration-mode/ExploreMessageRow'
-import ExplorePreviewPane from '../conversation/exploration-mode/ExplorePreviewPane'
+import { parseSchemaFieldsFromModelDetail } from '../conversation-analysis/schemaFields'
+import type { SchemaTable } from '../conversation-analysis/schemaFields'
 import type { ExploreItem } from '../conversation/exploration-mode/types'
-import { useReportConversation } from '../conversation/report-mode/useReportConversation'
-import ReportMessageRow from '../conversation/report-mode/ReportMessageRow'
-import ReportPreviewPane from '../conversation/report-mode/ReportPreviewPane'
-import type { ReportHistoryRoundGroup, ReportItem } from '../conversation/report-mode/types'
-import type { ReportSourceVersionFields } from '../../service/api/report'
-import { buildReportSourceVersionFields } from '../conversation/components/chat-input/reportSourceSelection'
-import { parseViewChart, type WidgetChart, WidgetMessage } from './history'
+import type { ReportItem } from '../conversation/report-mode/types'
+import { LazyFeatureFallback, RetryableLazy } from '../performance/RetryableLazy'
+import { parseViewChart, type WidgetMessage } from './history'
 import { nextUserScrolled } from './scrollFollow'
+import type { ExploreControllerHandle, ExploreControllerSnapshot } from './ExploreControllerBridge'
+import type { ReportControllerHandle, ReportControllerSnapshot } from './ReportControllerBridge'
 import {
   checkSharePassword,
   ensureSession,
@@ -60,8 +32,17 @@ import {
   type WidgetSemanticSelection,
   type WidgetSession,
 } from './service'
-import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
+import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/-assistantResources'
 import './index.css'
+
+const loadExplorePreviewPane = () => import('../conversation/exploration-mode/ExplorePreviewPane')
+const loadReportPreviewPane = () => import('../conversation/report-mode/ReportPreviewPane')
+const loadExploreMessageRow = () => import('../conversation/exploration-mode/ExploreMessageRow')
+const loadReportMessageRow = () => import('../conversation/report-mode/ReportMessageRow')
+const loadSchemaFieldsModal = () => import('../conversation-analysis/SchemaFieldsModal')
+const loadExploreControllerBridge = () => import('./ExploreControllerBridge')
+const loadReportControllerBridge = () => import('./ReportControllerBridge')
+const loadWidgetInteractionMessage = () => import('./WidgetInteractionMessage')
 
 export interface ChatWidgetProps {
   /** 分享码（免登录凭证） */
@@ -97,10 +78,6 @@ function getNow(): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
-
-/* ── AI 消息 Markdown 渲染（对齐主对话 ViewEle 管线）── */
-/** 剥离 AI 回复中的残留 HTML 标签（think 段与尾部结构化 JSON 已由 parseAiRaw 剥离） */
-const stripHtmlTags = (s: string): string => s.replace(/<[^>]*>/g, '')
 
 /** 图表类型白名单（与主对话 ViewEle 一致）：仅白名单内类型参与渲染与切换 */
 const WIDGET_CHART_TYPES: Array<{ value: string; label: string }> = [
@@ -225,284 +202,11 @@ const WIDGET_MODE_ICONS: Record<WidgetChatMode, React.ReactNode> = {
 const WIDGET_CHAT_MODEL_ID = 12
 const WIDGET_EMBED_MODEL_ID = 6
 
-/* 分享场景不做历史恢复：模块级空数组保持引用稳定；内联 [] 每次渲染都是新引用，
-   会触发报告 hook 的初始化 effect（依赖 historyRounds）重跑并清空实时报告项 */
-const WIDGET_EMPTY_HISTORY_ROUNDS: ReportHistoryRoundGroup[] = []
-
 /** 统一时间线条目：交互消息 / 探索项 / 报告项按 sortKey（创建时间）合并排序 */
 type WidgetTimelineEntry =
   | { key: string; sortKey: number; kind: 'interact'; index: number; message: WidgetMessage }
   | { key: string; sortKey: number; kind: 'explore'; item: ExploreItem }
   | { key: string; sortKey: number; kind: 'report'; report: ReportItem }
-
-const { Text } = Typography
-
-/* ── 图表区（同主对话 ViewEle 图表分支：小节头 + ChartHeader 工具栏 + 图/表/SQL 三视图） ── */
-// 配色沿用主对话 ViewEle 默认值；字号收小以贴合悬浮窗窄面板
-const CHART_CONFIG = {
-  font: 'Arial',
-  fontSize: 10,
-  chartStyle: { color: '#2FA4FF,#7ACBFF,#A67AFF,#F7A45C,#6E6E6E,#50C878', textColor: '#333333' },
-}
-
-const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: (type: string) => void }) => {
-  // 后端 response_table 默认落表格视图（同主对话 ViewEle：response_table → setActiveType('table')）
-  const [activeType, setActiveType] = useState<'chart' | 'table' | 'sql'>(chart.tableView ? 'table' : 'chart')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [isChartHovered, setIsChartHovered] = useState(false)
-  const echartRef = useRef<any>(null)
-  const tableRef = useRef<HTMLDivElement>(null)
-  const chartWrapRef = useRef<HTMLDivElement>(null)
-  // 图表容器实际宽度：用于按宽度自适应同屏可视条数（窄面板少显示可滚动，宽面板多显示）
-  const [chartWidth, setChartWidth] = useState(0)
-
-  // 面板拖拽改宽不触发 window resize（EChart autoResize 仅监听 window）：观察图表容器宽度同步 echarts 尺寸
-  useEffect(() => {
-    const el = chartWrapRef.current
-    if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(() => {
-      echartRef.current?.resize()
-      setChartWidth(el.clientWidth)
-    })
-    ro.observe(el)
-    setChartWidth(el.clientWidth)
-    return () => ro.disconnect()
-  }, [])
-
-  const hasData = Array.isArray(chart.data) && chart.data.length > 0
-  // 每个类目约需 56px 才不拥挤（字号已收小）：据此估算同屏可视条数，兜底 7
-  const visibleCount = chartWidth > 0 ? Math.max(5, Math.min(12, Math.floor(chartWidth / 56))) : 7
-  const option = useMemo(
-    () =>
-      getChartOption(chart.type, chart.data, {
-        font: CHART_CONFIG.font,
-        fontSize: CHART_CONFIG.fontSize,
-        color: CHART_CONFIG.chartStyle.color,
-        textColor: CHART_CONFIG.chartStyle.textColor,
-        visibleCount,
-      }),
-    [chart.type, chart.data, visibleCount],
-  )
-
-  // 导出：PNG 走客户端截图；csv/excel 在分享免登录场景无后端导出接口，用已有数据本地生成
-  const handleExport = async (key: string) => {
-    if (!hasData) {
-      antdMessage.warning('暂无数据可导出')
-      return
-    }
-    try {
-      if (key === 'csv' || key === 'excel') {
-        const rows = chart.data || []
-        const keys = Object.keys(rows[0] || {})
-        const csv = [keys.join(','), ...rows.map((r: any) => keys.map((k) => `"${String(r[k] ?? '').replace(/"/g, '""')}"`).join(','))].join('\n')
-        const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${chart.title || '数据'}.csv`
-        a.click()
-        URL.revokeObjectURL(url)
-        return
-      }
-      if (!['table', 'chart'].includes(activeType)) {
-        antdMessage.warning('请切换到表格或图表再点击进行下载图片')
-        return
-      }
-      await handleImageExport(activeType as 'table' | 'chart', activeType === 'table' ? tableRef : echartRef, chart.title || '数据')
-    } catch (error: any) {
-      antdMessage.error(error?.message || '文件导出失败，请重试')
-    }
-  }
-
-  const renderVisualization = () => {
-    // 未接入真实渲染的图表类型展示占位提示（同主对话）
-    if (!SUPPORTED_RENDER_TYPES.has(chart.type)) {
-      const item = getChartTypeItem(chart.type)
-      return (
-        <div className="flex flex-col items-center justify-center py-14 text-center">
-          {item?.thumbnail && <img src={item.thumbnail} alt={item.label} className="w-40 opacity-60 mb-3" />}
-          <div className="text-sm text-[#666]">「{item?.label || '该图表'}」即将支持</div>
-          <div className="text-xs text-[#999] mt-1">当前版本暂未接入该图表渲染，可切换其他图表类型或查看数据表格</div>
-        </div>
-      )
-    }
-    const isPieOrDonut = chart.type === 'response_pie_chart' || chart.type === 'response_donut_chart'
-    const pieSeriesData: any[] = isPieOrDonut ? ((option as any).series?.[0]?.data || []) : []
-    const colors = CHART_CONFIG.chartStyle.color.split(',')
-    const legendData = pieSeriesData.map((item: any, i: number) => ({
-      name: String(item.name),
-      value: item.value,
-      color: colors[i % colors.length],
-    }))
-    return (
-      <div
-        ref={chartWrapRef}
-        className={`${viewStyles.chartContainer} ${isChartHovered ? viewStyles.chartContainerHovered : ''}`}
-        onMouseEnter={() => setIsChartHovered(true)}
-        onMouseLeave={() => setIsChartHovered(false)}
-      >
-        {isPieOrDonut && legendData.length > 0 && (
-          <PieLegend
-            data={legendData}
-            maxRows={3}
-            fontSize={CHART_CONFIG.fontSize}
-            resetKey={chart.type + (chart.data?.length ?? 0)}
-            onItemClick={(name: string) => {
-              echartRef.current?.getInstance()?.dispatchAction({ type: 'legendToggleSelect', name })
-            }}
-          />
-        )}
-        <EChart ref={echartRef} option={option} style={{ height: '12rem', width: '100%' }} autoResize handleClick={() => {}} />
-      </div>
-    )
-  }
-
-  const renderContent = () => {
-    if (activeType !== 'sql' && !hasData) {
-      return (
-        <div className="flex items-center justify-center py-8">
-          <span style={{ fontSize: '12px', color: '#999' }}>暂无数据</span>
-        </div>
-      )
-    }
-    const paginationConfig = {
-      current: currentPage,
-      pageSize,
-      total: (chart.data || []).length,
-      showSizeChanger: true,
-      pageSizeOptions: ['10', '20', '50', '100'],
-      onChange: (page: number, newPageSize: number) => {
-        setCurrentPage(page)
-        if (newPageSize !== pageSize) {
-          setPageSize(newPageSize)
-          setCurrentPage(1)
-        }
-      },
-      showTotal: (total: number) => `共 ${total} 条`,
-    }
-    if (activeType === 'chart') return renderVisualization()
-    if (activeType === 'table') {
-      const tableRows = chart.data || []
-      const tableKeys = Object.keys(tableRows[0] || {})
-      const isFewCols = tableKeys.length > 0 && tableKeys.length <= 4
-      const isNumericColumn = (key: string) =>
-        tableRows.slice(0, 20).every((row: Record<string, any>) => {
-          const v = row?.[key]
-          if (v === null || v === undefined || v === '') return true
-          return typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v)))
-        })
-      const measureTextWidth = (s: string) => {
-        let w = 0
-        for (const ch of String(s)) {
-          w += ch.charCodeAt(0) > 255 ? 14 : 8
-        }
-        return w
-      }
-      const estimateColWidth = (key: string) => {
-        let maxWidth = measureTextWidth(key) + 16
-        tableRows.slice(0, 30).forEach((row: Record<string, any>) => {
-          const w = measureTextWidth(String(row?.[key] ?? ''))
-          if (w > maxWidth) maxWidth = w
-        })
-        return Math.min(320, Math.max(96, maxWidth + 28))
-      }
-      const tableColumns = tableKeys.map((key, columnIndex) => {
-        const isDeltaColumn = /变化量|变化率/.test(key)
-        const numeric = isNumericColumn(key)
-        return {
-          title: key,
-          dataIndex: key,
-          key,
-          ellipsis: true,
-          align: isFewCols ? (numeric ? 'right' : 'left') : columnIndex <= 1 ? 'left' : 'center',
-          width: isFewCols ? estimateColWidth(key) : columnIndex === 0 ? 90 : undefined,
-          render: (text: any) => {
-            let displayText = text
-            if (typeof displayText === 'string') {
-              if (/^P(?:\d+D)?T(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?$/.test(displayText)) displayText = parseISO8601Duration(displayText)
-              if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(displayText)) displayText = parseISODate(displayText)
-            }
-            return <span className={isDeltaColumn ? viewStyles.deltaValue : viewStyles.tableCellValue}>{displayText}</span>
-          },
-        }
-      })
-      if (isFewCols) {
-        tableColumns.push({ title: '', dataIndex: '__filler__', key: '__filler__', ellipsis: true, align: 'left', width: undefined, render: () => null } as any)
-      }
-      return (
-        <div ref={tableRef} className="px-1 pb-2">
-          <ConfigProvider locale={zhCN}>
-            <Table
-              dataSource={tableRows.map((item: Record<string, any>, index: number) => ({ ...item, key: index }))}
-              columns={tableColumns as any}
-              pagination={paginationConfig}
-              scroll={isFewCols ? undefined : { x: 'max-content' }}
-              className={viewStyles.viewTable}
-            />
-          </ConfigProvider>
-        </div>
-      )
-    }
-    // activeType === 'sql'
-    const sqlText = chart.sql
-    let displayText = sqlText || ''
-    if (sqlText) {
-      try {
-        displayText = formatSql(sqlText, { language: 'sql', tabWidth: 2, keywordCase: 'upper', linesBetweenQueries: 2 })
-      } catch {
-        displayText = sqlText
-      }
-    }
-    return (
-      <div className={viewStyles.sqlCodeBlock}>
-        <div className={viewStyles.sqlCodeBlockHeader}>
-          <span>SQL</span>
-          <Text copyable={{ text: displayText, tooltips: ['复制', '已复制'] }} />
-        </div>
-        {/* @ts-ignore */}
-        <SyntaxHighlighter
-          language="sql"
-          style={oneLight}
-          showLineNumbers
-          customStyle={{ margin: 0, borderRadius: '0 0 10px 10px', fontSize: '0.8125rem', backgroundColor: 'transparent', padding: '12px 14px' }}
-          codeTagProps={{ style: { fontFamily: 'Consolas, Monaco, "Courier New", monospace' } }}
-        >
-          {displayText || '暂无 SQL 语句'}
-        </SyntaxHighlighter>
-      </div>
-    )
-  }
-
-  return (
-    <div className="w-full text-left">
-      <div className="section-header pt-3 pb-3">
-        <span className="chart-header-title font-semibold text-[#2d2d2d]">图表信息</span>
-      </div>
-      <div className="pt-3">
-        <ChartHeader
-          onTypeChange={(t) => setActiveType(t as 'chart' | 'table' | 'sql')}
-          onShareClick={() => {}}
-          onConfigClick={() => {}}
-          onDebugClick={() => {}}
-          onFullscreenClick={() => {}}
-          onDataFetched={() => {}}
-          onExportClick={(key) => void handleExport(key)}
-          onhandleGetChartType={onTypeChange}
-          showChartIcon
-          chartType={chart.type}
-          activeType={activeType}
-          currentTableData={chart.data || []}
-          showTitle={false}
-          hideTools
-        />
-        <div className="mt-3" style={activeType === 'chart' || !hasData ? { background: '#F2F3F5', borderRadius: '8px', padding: '12px' } : undefined}>
-          {renderContent()}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 /** 助手分享对话悬浮框：无 store 依赖的纯组件，分享页与第三方嵌入共用；渲染层复用主对话组件 */
 const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verifiedType, verifiedToken, onClose }: ChatWidgetProps) => {
@@ -530,6 +234,14 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const [maximized, setMaximized] = useState(false)
   // 输入工具栏：模式（仅切换展示）/ 思考开关（缺省开，同现状）/ 更多浮层与工具子视图
   const [chatMode, setChatMode] = useState<WidgetChatMode>('interact')
+  const [exploreEnabled, setExploreEnabled] = useState(false)
+  const [reportEnabled, setReportEnabled] = useState(false)
+  const [exploreSnapshot, setExploreSnapshot] = useState<ExploreControllerSnapshot>({ items: [], loading: false })
+  const [reportSnapshot, setReportSnapshot] = useState<ReportControllerSnapshot>({
+    reports: [],
+    animateReportPreview: false,
+    loading: false,
+  })
   const [enableThinking, setEnableThinking] = useState(true)
   const [tbPopover, setTbPopover] = useState<'mode' | 'tools' | null>(null)
   // 技能/MCP 飞层搜索词（同主对话飞层顶部搜索）
@@ -554,6 +266,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const panelRef = useRef<HTMLDivElement>(null)
   const semSelectorRef = useRef<HTMLDivElement>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
+  const exploreControllerRef = useRef<ExploreControllerHandle | null>(null)
+  const reportControllerRef = useRef<ReportControllerHandle | null>(null)
   // 放大前的 inline 样式快照（还原时恢复拖拽/resize 自定义的位置尺寸）
   const panelCssTextRef = useRef('')
   const didInit = useRef(false)
@@ -605,25 +319,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     }
   }, [convSession, appId, info?.spaceId])
 
-  const exploreController = useExploreConversation({
-    conv: hookConv,
-    spaceId: Number(info?.spaceId) || 0,
-    currentModelId: WIDGET_CHAT_MODEL_ID,
-    embedModelId: WIDGET_EMBED_MODEL_ID,
-    authorization: shareAuth,
-  })
-
-  // 分享场景不做历史恢复：historyLoaded=true + 空历史，报告项只来自本次实时提交
-  const reportController = useReportConversation({
-    conv: hookConv,
-    spaceId: Number(info?.spaceId) || 0,
-    schemaId: selectedSemantic?.schemaId,
-    currentModelId: WIDGET_CHAT_MODEL_ID,
-    embedModelId: WIDGET_EMBED_MODEL_ID,
-    historyLoaded: true,
-    historyRounds: WIDGET_EMPTY_HISTORY_ROUNDS,
-    authorization: shareAuth,
-  })
+  const handleExploreSnapshot = useCallback((snapshot: ExploreControllerSnapshot) => setExploreSnapshot(snapshot), [])
+  const handleReportSnapshot = useCallback((snapshot: ReportControllerSnapshot) => setReportSnapshot(snapshot), [])
 
   // 加载助手信息 + 会话 + 历史（type 为统一接口 getProjectInfo/{type}/{id} 的类型段）
   const load = useCallback(
@@ -719,7 +416,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   useEffect(() => {
     const el = bodyRef.current
     if (el && !userScrolledRef.current) el.scrollTop = el.scrollHeight
-  }, [messages, exploreController.items, reportController.reports, phase])
+  }, [messages, exploreSnapshot.items, reportSnapshot.reports, phase])
 
   // 语义下拉打开时：点击面板外部收起
   useEffect(() => {
@@ -980,17 +677,6 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     patchMsg({ streaming: false })
   }
 
-  // 报告能力源：技能 + MCP（按协议拆 sse/streamable），与交互发送同口径；无选择时四字段为空数组
-  const buildReportSources = (): ReportSourceVersionFields => {
-    const mcps = (info?.mcps ?? []) as AssistantBoundMcp[]
-    return buildReportSourceVersionFields({
-      skills: info?.skills ?? [],
-      selectedSkillIds: selectedSkills,
-      mcps,
-      selectedMcpIds: selectedMcps,
-    })
-  }
-
   // 三模式统一发送入口：按当前模式分流到交互 / 探索 / 报告，交互沿用既有 handleSend
   const dispatchSend = async (explicitText?: string) => {
     const text = (explicitText ?? input).trim()
@@ -998,7 +684,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     // 新提问重置自动跟随：发送后无论此前滚动位置都滚底跟随新回复
     userScrolledRef.current = false
     if (chatMode === 'explore') {
-      if (exploreController.loading) return
+      if (exploreSnapshot.loading) return
       const schemaId = selectedSemantic?.schemaId
       if (schemaId == null || schemaId === '') {
         antdMessage.warning('请先选择数据语义')
@@ -1008,8 +694,14 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
         antdMessage.error('会话未就绪，请稍后重试')
         return
       }
+      const controller = exploreControllerRef.current
+      if (!controller) {
+        void loadExploreControllerBridge()
+        antdMessage.info('探索模式正在加载，请稍后重试')
+        return
+      }
       setInput('')
-      exploreController.handleSend(text, schemaId, {
+      controller.handleSend(text, schemaId, {
         skillSourceVersionIds: Array.from(selectedSkills),
         // 探索接口按 {源版本id: 分组namespaceId} 提交，hook 内再按 protocol 分流 sse/streamable
         mcpSourceVersionIds: ((info?.mcps ?? []) as AssistantBoundMcp[])
@@ -1019,54 +711,69 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       return
     }
     if (chatMode === 'report') {
-      if (reportController.loading) return
+      if (reportSnapshot.loading) return
       if (!convSession) {
         antdMessage.error('会话未就绪，请稍后重试')
         return
       }
+      const controller = reportControllerRef.current
+      if (!controller) {
+        void loadReportControllerBridge()
+        antdMessage.info('报告模式正在加载，请稍后重试')
+        return
+      }
       setInput('')
-      reportController.handleSend(text, buildReportSources())
+      controller.handleSend(
+        text,
+        info?.skills ?? [],
+        selectedSkills,
+        (info?.mcps ?? []) as AssistantBoundMcp[],
+        selectedMcps,
+      )
       return
     }
+    void loadWidgetInteractionMessage()
     void handleSend(explicitText)
   }
 
   // 停止按钮：按当前正在生成的模式停止（探索/报告各自的流，交互沿用 handleStop）
   const handleStopClick = () => {
-    if (exploreController.loading) {
-      exploreController.stopGenerating()
+    if (exploreSnapshot.loading) {
+      exploreControllerRef.current?.stopGenerating()
       return
     }
-    if (reportController.loading) {
-      reportController.stopGenerating()
+    if (reportSnapshot.loading) {
+      reportControllerRef.current?.stopGenerating()
       return
     }
     handleStop()
   }
 
   // 三模式发送中态：任一模式在生成即视为 busy（驱动发送/停止按钮切换）
-  const busy = sending || exploreController.loading || reportController.loading
+  const busy = sending || exploreSnapshot.loading || reportSnapshot.loading
 
   // 探索/报告预览互斥：打开探索工作室时收起报告侧栏，反之亦然
   const openExplore = (exploreId: string) => {
-    reportController.closeReport()
+    void loadExplorePreviewPane()
+    reportControllerRef.current?.closeReport()
     setActiveExploreId(exploreId)
   }
   const openReportPane = (reportId: string) => {
+    void loadReportPreviewPane()
     setActiveExploreId(undefined)
-    reportController.openReport(reportId)
+    reportControllerRef.current?.openReport(reportId)
   }
   const activeExplore = useMemo(
-    () => exploreController.items.find((item) => item.id === activeExploreId),
-    [exploreController.items, activeExploreId],
+    () => exploreSnapshot.items.find((item) => item.id === activeExploreId),
+    [exploreSnapshot.items, activeExploreId],
   )
-  const previewOpen = Boolean(activeExplore) || Boolean(reportController.activeReport)
+  const previewOpen = Boolean(activeExplore) || Boolean(reportSnapshot.activeReport)
 
   // 探索从 running 结束为 completed 且有结果时自动打开工作室（同主对话）
   const exploreStatusRef = useRef<Map<string, string>>(new Map())
   useEffect(() => {
     const next = new Map<string, string>()
-    exploreController.items.forEach((item) => {
+    exploreSnapshot.items.forEach((item) => {
       const prev = exploreStatusRef.current.get(item.id)
       const hasResult = Boolean(item.finalContent) || Boolean(item.summary) || item.steps.some((s) => s.outputs.length > 0)
       if (prev === 'running' && item.status === 'completed' && hasResult) openExplore(item.id)
@@ -1074,7 +781,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     })
     exploreStatusRef.current = next
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exploreController.items])
+  }, [exploreSnapshot.items])
 
   // 预览打开时若窗体未放大则自动放大（窄面板放不下工作室/报告侧栏）
   useEffect(() => {
@@ -1086,10 +793,10 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const timeline = useMemo<WidgetTimelineEntry[]>(() => {
     const entries: WidgetTimelineEntry[] = []
     messages.forEach((m, i) => entries.push({ key: `im-${i}`, sortKey: m.createdAt ?? i, kind: 'interact', index: i, message: m }))
-    exploreController.items.forEach((item) => entries.push({ key: `ex-${item.id}`, sortKey: item.createdAt, kind: 'explore', item }))
-    reportController.reports.forEach((r) => entries.push({ key: `rp-${r.id}`, sortKey: r.createdAt, kind: 'report', report: r }))
+    exploreSnapshot.items.forEach((item) => entries.push({ key: `ex-${item.id}`, sortKey: item.createdAt, kind: 'explore', item }))
+    reportSnapshot.reports.forEach((r) => entries.push({ key: `rp-${r.id}`, sortKey: r.createdAt, kind: 'report', report: r }))
     return entries.sort((a, b) => a.sortKey - b.sortKey)
-  }, [messages, exploreController.items, reportController.reports])
+  }, [messages, exploreSnapshot.items, reportSnapshot.reports])
 
   // 展开/收起语义分组节点（数据已全量返回，无需懒加载）
   const toggleSemGroup = (nodeId: string) => {
@@ -1518,12 +1225,16 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               if (entry.kind === 'explore') {
                 return (
                   <div key={entry.key} className="abi-cw-msg abi-cw-msg-full">
-                    <ExploreMessageRow
-                      item={entry.item}
-                      active={activeExploreId === entry.item.id}
-                      compact
-                      onOpen={() => openExplore(entry.item.id)}
-                      onClose={() => setActiveExploreId(undefined)}
+                    <RetryableLazy
+                      loader={loadExploreMessageRow}
+                      componentProps={{
+                        item: entry.item,
+                        active: activeExploreId === entry.item.id,
+                        compact: true,
+                        onOpen: () => openExplore(entry.item.id),
+                        onClose: () => setActiveExploreId(undefined),
+                      }}
+                      fallback={<LazyFeatureFallback label="正在加载探索消息…" />}
                     />
                   </div>
                 )
@@ -1533,117 +1244,35 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                 const r = entry.report
                 return (
                   <div key={entry.key} className="abi-cw-msg abi-cw-msg-full">
-                    <ReportMessageRow
-                      report={r}
-                      onToggleThinking={() => reportController.toggleThinking(r.id)}
-                      onToggleTodo={() => reportController.toggleTodo(r.id)}
-                      onToggleTask={(taskKey) => reportController.toggleTaskExecution(r.id, taskKey)}
-                      onOpenReport={() => openReportPane(r.id)}
-                      onThinkingTypewriterComplete={() => reportController.completeThinkingTypewriter(r.id)}
+                    <RetryableLazy
+                      loader={loadReportMessageRow}
+                      componentProps={{
+                        report: r,
+                        onToggleThinking: () => reportControllerRef.current?.toggleThinking(r.id),
+                        onToggleTodo: () => reportControllerRef.current?.toggleTodo(r.id),
+                        onToggleTask: (taskKey: string) => reportControllerRef.current?.toggleTaskExecution(r.id, taskKey),
+                        onOpenReport: () => openReportPane(r.id),
+                        onThinkingTypewriterComplete: () => reportControllerRef.current?.completeThinkingTypewriter(r.id),
+                      }}
+                      fallback={<LazyFeatureFallback label="正在加载报告消息…" />}
                     />
                   </div>
                 )
               }
-              const m = entry.message
-              const i = entry.index
-              if (m.role === 'human') {
-                return (
-                  <div key={`human-${i}`} className="abi-cw-msg abi-cw-msg-human">
-                    {/* 用户气泡复用主对话 HumanEle（分享场景不传编辑/删除回调） */}
-                    <HumanEle data={{ context: m.content }} />
-                  </div>
-                )
-              }
-              // 流中仅思考卡（同主对话），正文不闪现未闭合 JSON；[DONE] 后正文同主对话 ViewEle desc 口径
-              const displayText = m.streaming ? '' : stripHtmlTags(m.content || '')
               return (
-                <div key={`ai-${i}`} className="abi-cw-msg abi-cw-msg-ai">
-                  {/* 白卡容器类与主对话 MessageList bodyCard 保持一致 */}
-                  <div className="w-full rounded-[1.25rem] border border-[#e9edf4] bg-white px-[0.875rem] pt-[0.75rem] shadow-[0_0.125rem_0.5rem_rgba(15,23,42,0.04)]">
-                    {/* 信息条：分组 + 数据语义（同主对话 MessageList 信息条样式，分享场景不可点 schema） */}
-                    {(m.semanticGroup || m.semanticName) && (
-                      <div className="abi-cw-infobar">
-                        <span className="abi-cw-infobar-label">分组：</span>
-                        <span className="abi-cw-infobar-chip abi-cw-infobar-chip-group">
-                          <i className="abi-cw-infobar-dot" style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.5)' }} />
-                          <span className="abi-cw-infobar-chip-text">{m.semanticGroup || '无'}</span>
-                        </span>
-                        <span className="abi-cw-infobar-label" style={{ marginLeft: '2em' }}>数据语义：</span>
-                        {/* 带 schemaId 时可点：窗体自动放大，Schema 抽屉窗内右侧滑出 */}
-                        <span
-                          className={`abi-cw-infobar-chip abi-cw-infobar-chip-sem${m.semanticSchemaId != null ? ' clickable' : ''}`}
-                          onClick={m.semanticSchemaId != null ? () => openSchemaDrawer(m.semanticSchemaId as number | string, m.semanticName || '') : undefined}
-                        >
-                          <i className="abi-cw-infobar-dot" style={{ background: '#5b7cf7', boxShadow: '0 0 6px rgba(91,124,247,0.5)' }} />
-                          <span className="abi-cw-infobar-chip-text">{m.semanticName || '无'}</span>
-                        </span>
-                      </div>
-                    )}
-                    {(m.thinking || m.streaming) && (
-                      <AiEle
-                        data={{
-                          context: m.thinking ? `<think>${m.thinking}</think>` : '',
-                          smLoading: m.streaming,
-                          order: i,
-                        }}
-                        loading={m.streaming}
-                        isDone={!m.streaming}
-                        thinkTime={m.thinkTime}
-                        compact
-                      />
-                    )}
-                    {displayText && (
-                      <>
-                        {/* 描述分析小节头（同主对话 ViewEle：蓝色左条标题），与思考卡拉开间距；px-2.5 与主对话卡片内边距对齐，避免贴左 */}
-                        <div className="section-header mt-2 pt-3 pb-3 px-2.5">
-                          <span className="chart-header-title font-semibold text-[#2d2d2d]">描述分析</span>
-                        </div>
-                        <div className={`${convStyles['markdown-content']} abi-cw-desc text-left px-2.5`} style={{ width: '100%', fontSize: '13px', lineHeight: 1.75 }}>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayText}</ReactMarkdown>
-                        </div>
-                      </>
-                    )}
-                    {m.chartLoading && (
-                      <div className="flex items-center justify-center gap-2 py-4 text-xs text-[#8494ad]">
-                        <div className="abi-cw-spinner" />
-                        <span>图表数据加载中...</span>
-                      </div>
-                    )}
-                    {/* 归因分析（chat_with_analysis）：与主对话 ViewEle 一致，新版看板优先，旧格式沿用因果组件 */}
-                    {!m.streaming && m.chart?.chatMode === 'chat_with_analysis' && m.chart?.raw && (() => {
-                      const d = m.chart!.raw
-                      const hasAnalysis = Array.isArray(d.dimension_table) && Array.isArray(d.factor_table) && d.metric_overview
-                      // 看板自身为圆角灰底面板（width:100%），直接嵌入白卡与其他块等宽，无需额外负边距
-                      if (hasAnalysis) return <AttributionDashboard data={d} compact />
-                      if (d.total_df || d.analysis_response) return <CausalAnalysis data={d} />
-                      return null
-                    })()}
-                    {/* 预测分析（chat_with_predict）：与主对话 ViewEle 一致，渲染预测图表 */}
-                    {!m.streaming && m.chart?.chatMode === 'chat_with_predict' && m.chart?.raw && (
-                      <div className="flex" style={{ width: '100%' }}>
-                        <div className="rounded bg-white px-2.5" style={{ width: '100%' }}>
-                          <PredictionAnalysis data={m.chart.raw} compact />
-                        </div>
-                      </div>
-                    )}
-                    {/* 仅 desc 的 view（无结果行无 sql）不渲染图表卡，避免空图表占位；归因/预测走专属看板不走通用图表卡；streaming 期间隐藏，与思考收起同帧展示 */}
-                    {!m.streaming && m.chart && m.chart.chatMode !== 'chat_with_analysis' && m.chart.chatMode !== 'chat_with_predict' && (m.chart.data.length > 0 || !!m.chart.sql) && (
-                      <div className="px-2.5">
-                        <ChartCard chart={m.chart} onTypeChange={(t) => handleChartTypeChange(i, t)} />
-                      </div>
-                    )}
-                    {!m.streaming && (
-                      <StatisticsAnalysis
-                        chatMode="chat_with_analysis"
-                        feedback={m.feedback ?? 0}
-                        content={m.content}
-                        onVoteChange={(p: any) => void handleFeedback(i, m.feedback || 0, (p?.status === -1 ? -1 : 1) as 1 | -1)}
-                        onAttributionClick={() => {}}
-                        onPredictClick={() => {}}
-                      />
-                    )}
-                  </div>
-                </div>
+                <RetryableLazy
+                  key={entry.key}
+                  loader={loadWidgetInteractionMessage}
+                  componentProps={{
+                    index: entry.index,
+                    message: entry.message,
+                    onChartTypeChange: handleChartTypeChange,
+                    onFeedback: (index: number, current: number, status: 1 | -1) => void handleFeedback(index, current, status),
+                    onOpenSchema: openSchemaDrawer,
+                    onLayout: fitInfobarWidth,
+                  }}
+                  fallback={<LazyFeatureFallback label="正在加载消息…" style={{ minHeight: 80 }} />}
+                />
               )
             })
           )}
@@ -1656,6 +1285,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               rows={2}
               placeholder="请输入问题，获取结果"
               value={input}
+              onFocus={() => void loadWidgetInteractionMessage()}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -1714,6 +1344,14 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                         key={mo.key}
                         className={`abi-cw-tb-mode-item${chatMode === mo.key ? ' selected' : ''}`}
                         onClick={() => {
+                          if (mo.key === 'explore') {
+                            setExploreEnabled(true)
+                            void loadExploreControllerBridge()
+                          }
+                          if (mo.key === 'report') {
+                            setReportEnabled(true)
+                            void loadReportControllerBridge()
+                          }
                           setChatMode(mo.key)
                           setTbPopover(null)
                           antdMessage.info(`已切换到${mo.label}模式`)
@@ -1800,25 +1438,71 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
         {/* 探索工作室 / 报告预览：覆盖层铺满面板（预览打开时窗体已自动放大），复用主对话预览面板 */}
         {previewOpen && (
           <div className="abi-cw-preview-overlay">
-            {reportController.activeReport ? (
-              <ReportPreviewPane
-                report={reportController.activeReport}
-                animate={reportController.animateReportPreview}
-                onClose={reportController.closeReport}
+            {reportSnapshot.activeReport ? (
+              <RetryableLazy
+                loader={loadReportPreviewPane}
+                componentProps={{
+                  report: reportSnapshot.activeReport,
+                  animate: reportSnapshot.animateReportPreview,
+                  onClose: () => reportControllerRef.current?.closeReport(),
+                }}
+                fallback={<LazyFeatureFallback label="正在加载报告预览…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
               />
             ) : activeExplore ? (
-              <ExplorePreviewPane item={activeExplore} onClose={() => setActiveExploreId(undefined)} />
+              <RetryableLazy
+                loader={loadExplorePreviewPane}
+                componentProps={{ item: activeExplore, onClose: () => setActiveExploreId(undefined) }}
+                fallback={<LazyFeatureFallback label="正在加载探索结果…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
+              />
             ) : null}
           </div>
         )}
 
         {/* 数据语义 Schema 抽屉：挂载到面板内（窗内右侧滑出，不溢出悬浮窗） */}
-        <SchemaFieldsModal
-          open={schemaDrawerOpen}
-          tables={schemaTables}
-          onClose={() => setSchemaDrawerOpen(false)}
-          getContainer={() => panelRef.current as HTMLElement}
-        />
+        {schemaDrawerOpen && (
+          <RetryableLazy
+            loader={loadSchemaFieldsModal}
+            componentProps={{
+              open: true,
+              tables: schemaTables,
+              onClose: () => setSchemaDrawerOpen(false),
+              getContainer: () => panelRef.current as HTMLElement,
+            }}
+            fallback={<LazyFeatureFallback label="正在加载数据语义…" />}
+          />
+        )}
+
+        {exploreEnabled && (
+          <RetryableLazy
+            loader={loadExploreControllerBridge}
+            componentProps={{
+              conv: hookConv,
+              spaceId: Number(info?.spaceId) || 0,
+              currentModelId: WIDGET_CHAT_MODEL_ID,
+              embedModelId: WIDGET_EMBED_MODEL_ID,
+              authorization: shareAuth,
+              controllerRef: exploreControllerRef,
+              onSnapshot: handleExploreSnapshot,
+            }}
+            fallback={null}
+          />
+        )}
+        {reportEnabled && (
+          <RetryableLazy
+            loader={loadReportControllerBridge}
+            componentProps={{
+              conv: hookConv,
+              spaceId: Number(info?.spaceId) || 0,
+              schemaId: selectedSemantic?.schemaId,
+              currentModelId: WIDGET_CHAT_MODEL_ID,
+              embedModelId: WIDGET_EMBED_MODEL_ID,
+              authorization: shareAuth,
+              controllerRef: reportControllerRef,
+              onSnapshot: handleReportSnapshot,
+            }}
+            fallback={null}
+          />
+        )}
       </div>
     </div>
   )

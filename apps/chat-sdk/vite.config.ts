@@ -73,6 +73,7 @@ export default defineConfig({
       '@': chatRoot,
       '@sa/axios': fileURLToPath(new URL('../../packages/axios/src/index.ts', import.meta.url)),
       '@sa/auth': fileURLToPath(new URL('../../packages/auth/src/index.ts', import.meta.url)),
+      '@sa/utils/nanoid': fileURLToPath(new URL('../../packages/utils/src/nanoid.ts', import.meta.url)),
       '@sa/utils': fileURLToPath(new URL('../../packages/utils/src/index.ts', import.meta.url)),
     },
     dedupe: ['react', 'react-dom'],

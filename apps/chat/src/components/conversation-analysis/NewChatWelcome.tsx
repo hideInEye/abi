@@ -1,31 +1,78 @@
 import React from 'react'
-import { BarChartOutlined, FileSearchOutlined, FundOutlined, LineChartOutlined } from '@ant-design/icons'
+
+type WelcomeIconKind = 'bar' | 'document' | 'fund' | 'line'
+
+function WelcomeIcon({ kind }: { kind: WelcomeIconKind }) {
+  const commonProps = {
+    'aria-hidden': true,
+    fill: 'none',
+    height: 18,
+    stroke: 'currentColor',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    strokeWidth: 1.8,
+    viewBox: '0 0 24 24',
+    width: 18,
+  }
+
+  if (kind === 'document') {
+    return (
+      <svg {...commonProps}>
+        <path d="M6 3h8l4 4v14H6z" />
+        <path d="M14 3v5h5M9 12h6M9 16h4" />
+      </svg>
+    )
+  }
+
+  if (kind === 'fund') {
+    return (
+      <svg {...commonProps}>
+        <path d="M4 19h16M6 16V9M11 16V5M16 16v-4M20 16V7" />
+      </svg>
+    )
+  }
+
+  if (kind === 'line') {
+    return (
+      <svg {...commonProps}>
+        <path d="M4 18 9 12l4 3 7-9" />
+        <path d="M16 6h4v4" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg {...commonProps}>
+      <path d="M5 19V9h3v10M11 19V5h3v14M17 19v-7h3v7M3 19h19" />
+    </svg>
+  )
+}
 
 const examples = [
   {
     key: 'sales',
-    icon: <BarChartOutlined />,
+    icon: 'bar' as const,
     title: '沃尔玛销售数据分析',
     desc: '分析沃尔玛近一年的销售数据，识别趋势、异常和增长机会',
     color: 'blue',
   },
   {
     key: 'profile',
-    icon: <FileSearchOutlined />,
+    icon: 'document' as const,
     title: '数据库画像与分析报告',
     desc: '基于用户行为数据，生成用户画像与分析报告',
     color: 'green',
   },
   {
     key: 'finance',
-    icon: <FundOutlined />,
+    icon: 'fund' as const,
     title: '金融财报深度分析',
     desc: '解读上市公司年度财报，进行深度财务分析',
     color: 'purple',
   },
   {
     key: 'predict',
-    icon: <LineChartOutlined />,
+    icon: 'line' as const,
     title: '电商销售预测分析',
     desc: '基于历史数据预测未来三个月的销售趋势与走向',
     color: 'orange',
@@ -63,7 +110,7 @@ const NewChatWelcome: React.FC<NewChatWelcomeProps> = ({ onExampleClick, title, 
                   style={{ cursor: 'pointer' }}
                   onClick={() => onExampleClick?.(item.title)}
                 >
-                  <div className="case-icon">{item.icon}</div>
+                  <div className="case-icon"><WelcomeIcon kind={item.icon} /></div>
                   <div className="case-content">
                     <div className="case-title">{item.title}</div>
                     <div className="case-desc">{item.desc}</div>

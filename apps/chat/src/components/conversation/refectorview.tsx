@@ -8,8 +8,10 @@ import type { ModelOption } from './components/chat-header'
 import Composer from './components/Composer'
 import DebugPanel from './components/DebugPanel'
 import MessageList from './components/MessageList'
-import ShareEmailSetting from './components/share-email-setting'
+import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 import { useConversationController, type ConversationProps } from './hooks/useConversationController'
+
+const loadShareEmailSetting = () => import('./components/share-email-setting')
 
 const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void }, ConversationProps>((props, ref) => {
   const { conv, fold } = props
@@ -193,7 +195,13 @@ const Conversation = React.forwardRef<{ setConvContent: (content: any[]) => void
         }
       >
         <Form form={shareEmailForm} layout="vertical" wrapperCol={{ span: 20 }} initialValues={{ emailTitle: `${conv.biz_name}报告-${dayjs().format('YYYY.MM.DD')}`, interval: 1, points: [{ time: '08:00' }], scheduleMode: 'CONTINUOUS', unit: 'DAY' }}>
-          {confirmShareType === 'email' && shareStep === 2 && <ShareEmailSetting form={shareEmailForm} />}
+          {confirmShareType === 'email' && shareStep === 2 && (
+            <RetryableLazy
+              loader={loadShareEmailSetting}
+              componentProps={{ form: shareEmailForm }}
+              fallback={<LazyFeatureFallback label="正在加载邮件编辑器…" />}
+            />
+          )}
         </Form>
         {(confirmShareType === 'snapshot' || (confirmShareType === 'email' && shareStep === 1)) && (
           <div className="h-[60vh] overflow-y-scroll">

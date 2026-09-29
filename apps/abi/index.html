@@ -8,9 +8,246 @@
       content="width=device-width, initial-scale=1.0"
     />
     <title>%VITE_APP_TITLE%</title>
+    <style>
+      html,
+      body,
+      #root {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+      }
+
+      .abi-startup-shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        background: #f4f6fb;
+        color: #1f2937;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+
+      .abi-startup-shell__sidebar {
+        padding: 24px 20px;
+        background: #fff;
+        border-right: 1px solid #e8ecf5;
+      }
+
+      .abi-startup-shell__brand,
+      .abi-startup-shell__line,
+      .abi-startup-shell__card {
+        position: relative;
+        overflow: hidden;
+        background: #e9edf6;
+      }
+
+      .abi-startup-shell__brand {
+        width: 104px;
+        height: 32px;
+        margin-bottom: 40px;
+        border-radius: 10px;
+      }
+
+      .abi-startup-shell__line {
+        height: 14px;
+        margin: 18px 0;
+        border-radius: 7px;
+      }
+
+      .abi-startup-shell__main {
+        padding: 28px;
+      }
+
+      .abi-startup-shell__header {
+        height: 64px;
+        margin-bottom: 24px;
+        border-radius: 14px;
+        background: #fff;
+      }
+
+      .abi-startup-shell__grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .abi-startup-shell__card {
+        height: 150px;
+        border-radius: 14px;
+      }
+
+      .abi-startup-shell__status {
+        position: fixed;
+        left: 50%;
+        bottom: 32px;
+        transform: translateX(-50%);
+        min-width: 280px;
+        padding: 14px 20px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 10px 30px rgba(31, 41, 55, 0.12);
+        text-align: center;
+      }
+
+      .abi-startup-shell__status p {
+        margin: 6px 0 0;
+        color: #7b8497;
+        font-size: 13px;
+      }
+
+      .abi-startup-shell__route-copy {
+        box-sizing: border-box;
+        width: min(720px, 100%);
+        margin: 0 auto 28px;
+        padding: 28px 32px;
+        border: 1px solid rgba(218, 226, 244, 0.82);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: 0 18px 46px rgba(45, 75, 132, 0.09);
+        text-align: center;
+      }
+
+      .abi-startup-shell__route-copy h1 {
+        margin: 0 0 14px;
+        color: #243047;
+        font-size: clamp(30px, 3vw, 42px);
+        line-height: 1.25;
+      }
+
+      .abi-startup-shell__route-copy p {
+        max-width: 640px;
+        margin: 0 auto;
+        color: #59667f;
+        font-size: 18px;
+        line-height: 1.8;
+      }
+
+      .abi-startup-shell[data-route="login"] {
+        display: block;
+        background:
+          radial-gradient(circle at 34% 42%, rgba(68, 121, 246, 0.16), transparent 35%),
+          linear-gradient(135deg, #edf4ff, #f8fbff 56%, #eef3ff);
+      }
+
+      .abi-startup-shell[data-route="login"] .abi-startup-shell__sidebar,
+      .abi-startup-shell[data-route="login"] .abi-startup-shell__header,
+      .abi-startup-shell[data-route="login"] .abi-startup-shell__grid {
+        display: none;
+      }
+
+      .abi-startup-shell[data-route="login"] .abi-startup-shell__main {
+        box-sizing: border-box;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .abi-startup-shell[data-route="login"] .abi-startup-shell__route-copy {
+        margin: 0;
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .abi-startup-shell__retry {
+        margin-top: 12px;
+        border: 0;
+        border-radius: 8px;
+        padding: 9px 18px;
+        background: #3366ff;
+        color: #fff;
+        cursor: pointer;
+      }
+
+      .abi-startup-shell [hidden] {
+        display: none;
+      }
+
+      /* BaseLayout renders before its split stylesheet finishes on a cold load. */
+      .abi-menu-panel {
+        box-sizing: border-box;
+        width: 240px;
+      }
+
+      .abi-menu-panel.abi-menu-panel--collapsed {
+        width: 64px;
+      }
+
+      .abi-startup-shell__brand::after,
+      .abi-startup-shell__line::after,
+      .abi-startup-shell__card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+        animation: abi-startup-shimmer 1.4s infinite;
+      }
+
+      @keyframes abi-startup-shimmer {
+        to { transform: translateX(100%); }
+      }
+
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="abi-startup-shell" id="abi-startup-shell" aria-live="polite">
+        <aside class="abi-startup-shell__sidebar" aria-hidden="true">
+          <div class="abi-startup-shell__brand"></div>
+          <div class="abi-startup-shell__line"></div>
+          <div class="abi-startup-shell__line"></div>
+          <div class="abi-startup-shell__line"></div>
+        </aside>
+        <main class="abi-startup-shell__main">
+          <div class="abi-startup-shell__header"></div>
+          <div class="abi-startup-shell__grid" aria-hidden="true">
+            <div class="abi-startup-shell__card"></div>
+            <div class="abi-startup-shell__card"></div>
+            <div class="abi-startup-shell__card"></div>
+          </div>
+        </main>
+        <div class="abi-startup-shell__status">
+          <strong id="abi-startup-title">正在准备应用...</strong>
+          <p id="abi-startup-detail">正在加载当前页面所需资源</p>
+          <button class="abi-startup-shell__retry" id="abi-startup-retry" type="button" hidden>重新加载</button>
+        </div>
+      </div>
+    </div>
+    <script>
+      (() => {
+        const path = window.location.pathname.replace(/\/+$/, "") || "/";
+        const shell = document.getElementById("abi-startup-shell");
+        const main = shell?.querySelector(".abi-startup-shell__main");
+        const title = document.getElementById("abi-startup-title");
+        const detail = document.getElementById("abi-startup-detail");
+        if (!shell || !main) return;
+
+        let route = "";
+        let heading = "";
+        let description = "";
+        if (path.endsWith("/workbench/screen-manage/abi-dashboard")) {
+          route = "embedded-dashboard";
+          heading = "数据大屏";
+          description = "正在加载数据大屏，应用资源与运行环境正在准备。";
+        } else if (path === "/home" || path.endsWith("/home")) {
+          route = "home";
+          heading = "智能对话";
+          description = "支持交互分析、自主智能洞察、报告生成";
+        } else if (path === "/login" || path.endsWith("/login")) {
+          route = "login";
+          heading = "欢迎体验「芯智ABI」";
+          description = "企业级数智化决策开放平台，为您提供自然语言交互、智能数据分析与可信决策支持。";
+        }
+
+        if (!route) return;
+        shell.dataset.route = route;
+        main.insertAdjacentHTML(
+          "afterbegin",
+          `<section class="abi-startup-shell__route-copy" role="status"><h1>${heading}</h1><p>${description}</p></section>`,
+        );
+        if (title) title.textContent = route === "embedded-dashboard" ? "正在准备大屏应用..." : "正在准备当前页面...";
+        if (detail) detail.textContent = "核心资源加载完成后将自动进入";
+      })();
+    </script>
     <script
       type="module"
       src="/src/main.tsx"

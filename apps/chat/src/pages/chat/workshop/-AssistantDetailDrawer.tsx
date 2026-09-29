@@ -19,11 +19,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 import { AssistantIconBlock } from '@/components/AssistantIcon'
 import ExploreMessageRow from '@/components/conversation/exploration-mode/ExploreMessageRow'
-import ExplorePreviewPane from '@/components/conversation/exploration-mode/ExplorePreviewPane'
+import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 import { fetchModelList } from '@/service/api/abi-system'
 import { fetchAssistantDetail } from '@/service/api/assistant'
-import { getSpaceId } from '@/utils/index'
-import { useAssistantDebugChat } from './useAssistantDebugChat'
+import { getSpaceId } from '@/utils/runtime'
+import { useAssistantDebugChat } from './-useAssistantDebugChat'
+
+const loadExplorePreviewPane = () => import('@/components/conversation/exploration-mode/ExplorePreviewPane')
 
 /** 助手卡片兜底数据：抽屉打开瞬间先展示，详情接口返回后覆盖 */
 export type AssistantDetailFallback = {
@@ -615,7 +617,10 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
                       key={it.id}
                       item={it}
                       active={previewId === it.id}
-                      onOpen={() => setPreviewId(it.id)}
+                      onOpen={() => {
+                        void loadExplorePreviewPane()
+                        setPreviewId(it.id)
+                      }}
                     />
                   ))}
                 </div>
@@ -691,7 +696,13 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
         bodyStyle={{ padding: 0, height: '100%' }}
         onClose={() => setPreviewId(null)}
       >
-        {previewItem && <ExplorePreviewPane item={previewItem} onClose={() => setPreviewId(null)} />}
+        {previewItem && (
+          <RetryableLazy
+            loader={loadExplorePreviewPane}
+            componentProps={{ item: previewItem, onClose: () => setPreviewId(null) }}
+            fallback={<LazyFeatureFallback label="正在加载探索结果…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
+          />
+        )}
       </Drawer>
     </Drawer>
   )

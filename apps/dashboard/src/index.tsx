@@ -9,104 +9,154 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import {createRoot} from "react-dom/client";
-import './index.less';
-import {lazy, Suspense} from "react";
-// import Loading from "./json-schema/ui/loading/Loading.tsx";
-import {loadAppConfig} from "./utils/FetchUtil.ts";
-import {renderWithQiankun, qiankunWindow} from 'vite-plugin-qiankun/dist/helper';
-import {destroyDesignerRuntime} from './designer/runtime/destroyDesignerRuntime.ts';
+import {qiankunWindow, renderWithQiankun} from 'vite-plugin-qiankun/dist/helper';
+
+import {
+    applyDashboardRuntimeConfig,
+    loadDashboardRuntimeConfig,
+} from './bootstrap/runtimeConfig.ts';
+import {createDashboardStartupController} from './bootstrap/startup.ts';
+import {preloadInitialDashboardRoute} from './bootstrap/routePreload.ts';
+import {runRegisteredAppCleanup} from './runtime/appCleanup.ts';
 import {resetDashboardHostRoute, updateDashboardHostRoute} from './router/dashboardHostRoute.ts';
 
-const MainRouter = lazy(() => import('./router/MainRouter.tsx'))
-
-let root: ReturnType<typeof createRoot> | null = null;
+let activeContainer: HTMLElement | null = null;
 let currentSpaceId: string | undefined;
 
-async function render(props: any) {
-    await loadAppConfig();
-    const {container, hostBasePath, initialPath, onTokenExpired, pageTitle} = props ?? {};
-    window.__ABI_DASHBOARD_HOST_BASE_PATH__ = hostBasePath;
-    window.__ABI_DASHBOARD_INITIAL_PATH__ = initialPath;
-    window.__ABI_DASHBOARD_PAGE_TITLE__ = pageTitle;
-    window.onTokenExpired = onTokenExpired;
-    currentSpaceId = props?.spaceId == null ? undefined : String(props.spaceId);
-    updateDashboardHostRoute({initialPath, pageTitle});
-    const containerEl = container
-        ? container.querySelector('#root')
-        : document.getElementById('root');
-    if (!containerEl) return;
-
-    // 背景样式挂在子应用自身根节点上（见 index.less .abi-dashboard-root），不污染主应用 html/body
-    containerEl.classList.add('abi-dashboard-root');
-
-    if (!root) {
-        root = createRoot(containerEl);
-    }
-
-    root.render(
-        <div className="abi-dashboard-root">
-            <Suspense fallback={null}>
-                <MainRouter/>
-            </Suspense>
+function startupMarkup(message = '正在准备大屏应用...'): string {
+    return `
+        <div class="dashboard-startup-shell" role="status">
+            <div class="dashboard-startup-shell__spinner" aria-hidden="true"></div>
+            <p class="dashboard-startup-shell__title">${message}</p>
         </div>
-    );
+    `;
 }
 
-const initQianKun = () => {
+function renderLoading(hasMounted: boolean): void {
+    if (!activeContainer || hasMounted) return;
+    activeContainer.setAttribute('aria-busy', 'true');
+    activeContainer.innerHTML = startupMarkup();
+}
+
+function renderFallbackStatus(hasMounted: boolean): void {
+    if (!activeContainer || hasMounted) return;
+    activeContainer.innerHTML = startupMarkup('未找到运行配置，正在使用同源接口启动...');
+}
+
+function renderError(error: Error, retry: () => void, hasMounted: boolean): void {
+    if (hasMounted) {
+        console.error('Dashboard 更新失败:', error);
+        return;
+    }
+    if (!activeContainer) return;
+
+    activeContainer.setAttribute('aria-busy', 'false');
+    activeContainer.innerHTML = `
+        <div class="dashboard-startup-shell dashboard-startup-shell--error" role="alert">
+            <h2 class="dashboard-startup-shell__title">大屏应用加载失败</h2>
+            <p class="dashboard-startup-shell__message"></p>
+            <button class="dashboard-startup-shell__retry" type="button">重新加载</button>
+        </div>
+    `;
+    const message = activeContainer.querySelector<HTMLElement>('.dashboard-startup-shell__message');
+    if (message) message.textContent = error.message;
+    activeContainer.querySelector<HTMLButtonElement>('.dashboard-startup-shell__retry')
+        ?.addEventListener('click', retry, {once: true});
+}
+
+const startup = createDashboardStartupController({
+    applyConfig(result) {
+        applyDashboardRuntimeConfig(result.config);
+    },
+    loadApp: () => {
+        const appModulePromise = import('./bootstrap/app.tsx');
+        preloadInitialDashboardRoute();
+        return appModulePromise;
+    },
+    loadConfig: signal => loadDashboardRuntimeConfig({signal}),
+    onError: renderError,
+    onFallback: renderFallbackStatus,
+    onLoading: renderLoading,
+    onReady() {
+        activeContainer?.setAttribute('aria-busy', 'false');
+    },
+});
+
+function applyHostProps(props: Record<string, any>): void {
+    if ('hostBasePath' in props) window.__ABI_DASHBOARD_HOST_BASE_PATH__ = props.hostBasePath;
+    if ('initialPath' in props) window.__ABI_DASHBOARD_INITIAL_PATH__ = props.initialPath;
+    if ('pageTitle' in props) window.__ABI_DASHBOARD_PAGE_TITLE__ = props.pageTitle;
+    if ('onTokenExpired' in props) window.onTokenExpired = props.onTokenExpired;
+    updateDashboardHostRoute({
+        initialPath: window.__ABI_DASHBOARD_INITIAL_PATH__,
+        pageTitle: window.__ABI_DASHBOARD_PAGE_TITLE__,
+    });
+}
+
+async function render(props: Record<string, any> = {}): Promise<void> {
+    applyHostProps(props);
+    currentSpaceId = props.spaceId == null ? undefined : String(props.spaceId);
+    const container = props.container?.querySelector?.('#root')
+        ?? activeContainer
+        ?? document.getElementById('root');
+    if (!container) throw new Error('未找到 Dashboard 根节点 #root');
+
+    activeContainer = container as HTMLElement;
+    await startup.start({container: activeContainer, props});
+}
+
+function clearHostState(): void {
+    resetDashboardHostRoute();
+    currentSpaceId = undefined;
+    delete window.__ABI_DASHBOARD_HOST_BASE_PATH__;
+    delete window.__ABI_DASHBOARD_INITIAL_PATH__;
+    delete window.__ABI_DASHBOARD_PAGE_TITLE__;
+    try {
+        delete window.onTokenExpired;
+    } catch {
+        window.onTokenExpired = undefined;
+    }
+}
+
+function syncSpace(spaceId: unknown): void {
+    if (spaceId === undefined || spaceId === null || Number(spaceId) <= 0) return;
+    const nextSpaceId = String(spaceId);
+    if (nextSpaceId === currentSpaceId) return;
+    currentSpaceId = nextSpaceId;
+    try {
+        if (localStorage.getItem('spaceId') !== nextSpaceId) {
+            localStorage.setItem('spaceId', nextSpaceId);
+        }
+    } catch {
+        // 存储不可写时仍通过事件刷新当前页面。
+    }
+    window.dispatchEvent(new CustomEvent('abi-dashboard:space-change', {
+        detail: {spaceId: Number(spaceId)},
+    }));
+}
+
+if ((qiankunWindow as any).__POWERED_BY_QIANKUN__) {
     renderWithQiankun({
-        mount(props: any) {
-            return render(props);
-        },
         bootstrap() {},
+        mount: (props: Record<string, any>) => render(props),
         unmount() {
-            root?.unmount();
-            root = null;
-            destroyDesignerRuntime();
-            resetDashboardHostRoute();
-            currentSpaceId = undefined;
-            delete window.__ABI_DASHBOARD_HOST_BASE_PATH__;
-            delete window.__ABI_DASHBOARD_INITIAL_PATH__;
-            delete window.__ABI_DASHBOARD_PAGE_TITLE__;
-            try {
-                delete window.onTokenExpired;
-            } catch {
-                window.onTokenExpired = undefined;
-            }
+            startup.unmount();
+            runRegisteredAppCleanup();
+            activeContainer = null;
+            clearHostState();
         },
-        update(props: any) {
+        update(props: Record<string, any>) {
             const nextProps = props ?? {};
-            if ('hostBasePath' in nextProps) window.__ABI_DASHBOARD_HOST_BASE_PATH__ = nextProps.hostBasePath;
-            if ('onTokenExpired' in nextProps) window.onTokenExpired = nextProps.onTokenExpired;
-            if ('initialPath' in nextProps) window.__ABI_DASHBOARD_INITIAL_PATH__ = nextProps.initialPath;
-            if ('pageTitle' in nextProps) window.__ABI_DASHBOARD_PAGE_TITLE__ = nextProps.pageTitle;
-            updateDashboardHostRoute({
-                initialPath: window.__ABI_DASHBOARD_INITIAL_PATH__,
-                pageTitle: window.__ABI_DASHBOARD_PAGE_TITLE__,
-            });
+            applyHostProps(nextProps);
             if ('spaceId' in nextProps) {
-                const {spaceId} = nextProps;
-                if (spaceId !== undefined && spaceId !== null && Number(spaceId) > 0 && String(spaceId) !== currentSpaceId) {
-                    const nextSpaceId = String(spaceId);
-                    currentSpaceId = nextSpaceId;
-                    try {
-                        if (localStorage.getItem('spaceId') !== nextSpaceId) {
-                            localStorage.setItem('spaceId', nextSpaceId);
-                        }
-                    } catch {
-                        // localStorage 不可写时忽略，列表仍会按事件刷新
-                    }
-                    window.dispatchEvent(new CustomEvent('abi-dashboard:space-change', {
-                        detail: {spaceId: Number(spaceId)}
-                    }));
-                }
+                syncSpace(nextProps.spaceId);
             }
         },
     } as any);
-};
-
-if ((qiankunWindow as any).__POWERED_BY_QIANKUN__) {
-    initQianKun();
 } else {
-    render({});
+    void render();
+    window.addEventListener('beforeunload', () => {
+        startup.dispose();
+        runRegisteredAppCleanup();
+    }, {once: true});
 }

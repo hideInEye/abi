@@ -49,6 +49,15 @@ const App = () => {
   const locale = useAppSelector(getLocale);
 
   const { antdTheme, themeSettings } = useTheme();
+  const appContent = (
+    <>
+      <GlobalLoading />
+      <RouterProvider
+        fallback={<GlobalLoadingContainer />}
+        router={router}
+      />
+    </>
+  );
 
   return (
     <AConfigProvider
@@ -59,17 +68,17 @@ const App = () => {
       theme={antdTheme}
     >
       <AppProvider>
-        <AWatermark
-          className="h-full"
-          content={themeSettings.watermark.visible ? themeSettings.watermark?.text || 'Soybean' : ''}
-          {...watermarkProps}
-        >
-          <GlobalLoading />
-          <RouterProvider
-            fallback={<GlobalLoadingContainer />}
-            router={router}
-          />
-        </AWatermark>
+        {themeSettings.watermark.visible ? (
+          <AWatermark
+            className="h-full"
+            content={themeSettings.watermark.text || 'Soybean'}
+            {...watermarkProps}
+          >
+            {appContent}
+          </AWatermark>
+        ) : (
+          <div className="h-full">{appContent}</div>
+        )}
       </AppProvider>
     </AConfigProvider>
   );

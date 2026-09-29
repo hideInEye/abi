@@ -5,9 +5,9 @@ import SvgIcon from '../../components/SvgIcon'
 import left_online from '@/assets/svg-icon/left_online.svg'
 import right_online from '@/assets/svg-icon/right_online.svg'
 import { MenuProps } from 'antd'
-import { formatTimeDiff } from '../../utils'
+import { formatTimeDiff } from '../../utils/date'
 
-interface converListProps {
+export interface ConverListProps {
   appList: any[]
   handleSetCurApp: (item: any) => void
   handleDeleteApp: (item: any) => void
@@ -16,7 +16,7 @@ interface converListProps {
   fold: boolean
 }
 
-const ConverList = React.forwardRef((props: converListProps, ref) => {
+const ConverList = React.forwardRef((props: ConverListProps, ref) => {
   const { appList, handleSetCurApp, handleDeleteApp, handleEdit, setFold, fold } = props
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string>('analysis')

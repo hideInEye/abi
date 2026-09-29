@@ -1,14 +1,19 @@
 import { createBrowserAuthAdapter } from '@sa/auth';
-import { message } from 'antd';
 
-const adapter = createBrowserAuthAdapter({
-  getEnvironment: () => window,
-  notify: ({ message: content, redirectDelay }) => {
+function notifyLoginExpired(content: string, redirectDelay: number) {
+  void import('antd/es/message').then(({ default: message }) => {
     message.warning({
       content,
       duration: Math.max(redirectDelay / 1000, 1.5),
       key: 'chat-login-expired'
     });
+  });
+}
+
+const adapter = createBrowserAuthAdapter({
+  getEnvironment: () => window,
+  notify: ({ message: content, redirectDelay }) => {
+    notifyLoginExpired(content, redirectDelay);
   },
   stateKey: '__CHAT_AUTH_UNAUTHORIZED_STATE__'
 });
