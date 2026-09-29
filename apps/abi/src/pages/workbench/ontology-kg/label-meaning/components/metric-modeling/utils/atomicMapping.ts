@@ -19,6 +19,21 @@ export interface AtomicMappingFieldInput {
   tableTechName: string
 }
 
+export interface AtomicMappingMetricInput extends AtomicMappingFieldInput {
+  dataType: string
+  indicatorName: string
+}
+
+export function getDuplicateAtomicMappingName(fields: Pick<AtomicMappingMetricInput, 'indicatorName'>[]) {
+  const names = new Set<string>()
+  for (const field of fields) {
+    const name = field.indicatorName.trim()
+    if (names.has(name)) return name
+    names.add(name)
+  }
+  return undefined
+}
+
 interface AtomicMappingContext {
   groupId?: string
   relSchemaId: number | string
@@ -27,13 +42,15 @@ interface AtomicMappingContext {
 }
 
 export function buildAtomicMappingPayload(
-  fields: AtomicMappingFieldInput[],
+  fields: AtomicMappingMetricInput[],
   context: AtomicMappingContext
 ): AtomicMappingPayload[] {
   return fields.map(item => {
     const projectionFunc = toLegacyProjectionFunc(item.aggregationMethods[0])
     return {
       ...context,
+      bizName: item.indicatorName.trim(),
+      dataType: item.dataType,
       projectionFunc,
       techId: [
         {

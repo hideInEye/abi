@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildAtomicMappingPayload } from './atomicMapping'
+import { buildAtomicMappingPayload, getDuplicateAtomicMappingName } from './atomicMapping'
 
 describe('atomic metric one-click mapping payload', () => {
+  it('rejects duplicate names within the selected batch after trimming', () => {
+    expect(getDuplicateAtomicMappingName([{ indicatorName: '实付金额' }, { indicatorName: ' 实付金额 ' }])).toBe('实付金额')
+    expect(getDuplicateAtomicMappingName([{ indicatorName: '实付金额' }, { indicatorName: '退款金额' }])).toBeUndefined()
+  })
   it('keeps the existing object-array request and submits every selected aggregation method', () => {
     const payload = buildAtomicMappingPayload(
       [
@@ -13,6 +17,8 @@ describe('atomic metric one-click mapping payload', () => {
           description: '订单支付金额',
           englishName: 'payment_amount',
           fieldType: 'decimal',
+          indicatorName: ' 实付金额指标 ',
+          dataType: 'amount',
           raw: { techId: 'field-1' },
           tableBizName: '订单明细表',
           tableTechName: 'order_detail'
@@ -28,6 +34,8 @@ describe('atomic metric one-click mapping payload', () => {
 
     expect(payload).toHaveLength(1)
     expect(payload[0]).toMatchObject({
+      bizName: '实付金额指标',
+      dataType: 'amount',
       groupId: 'group-1',
       projectionFunc: 'sum',
       relSchemaId: 'schema-1',
@@ -37,6 +45,7 @@ describe('atomic metric one-click mapping payload', () => {
         {
           agg: { data: ['SUM', 'AVG'], type: 'simple' },
           bizName: '订单明细表_#_支付金额',
+          fieldType: 'decimal',
           projectionFunc: 'sum',
           techId: 'field-1',
           techName: 'order_detail.payment_amount'
@@ -55,6 +64,8 @@ describe('atomic metric one-click mapping payload', () => {
           description: '',
           englishName: 'customer_id',
           fieldType: 'string',
+          indicatorName: '客户去重数',
+          dataType: 'num',
           raw: { techId: 'field-2' },
           tableBizName: '订单明细表',
           tableTechName: 'order_detail'

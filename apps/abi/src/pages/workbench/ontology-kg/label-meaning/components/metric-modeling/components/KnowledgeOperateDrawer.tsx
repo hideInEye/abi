@@ -594,6 +594,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   } = useMemo(
     () =>
       createKnowledgeOperateValidators({
+        businessDefinitionRequired: !isAtomicEditing,
         form,
         groupId,
         initialBizName: editingItem?.rawBizName || editingItem?.bizName,
@@ -603,7 +604,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
           editingItem?.indicatorCode ||
           editingItem?.techName
       }),
-    [editingItem, form, groupId]
+    [editingItem, form, groupId, isAtomicEditing]
   )
 
   const queryIndicatorOptions = useCallback(
@@ -1363,6 +1364,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       >
         {currentStepKey === 'business' ? (
           <KnowledgeOperateBusinessStep
+            businessDefinitionRequired={!isAtomicEditing}
             atomicTechnicalSection={
               isSimpleAtomicEditing ? (
                 <KnowledgeOperateSimpleAtomicTechnicalSection
