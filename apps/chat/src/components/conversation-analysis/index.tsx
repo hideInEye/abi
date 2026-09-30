@@ -1,32 +1,79 @@
-import { Modal } from 'antd'
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { newConv } from '../../service/api/conv'
-import CreateModal from './CreateModal'
-import EditSessionModal from './EditSessionModal'
-import { createApp, deleteSession, fetchAppList, fetchSessionDetail, updateApp } from '../../service/api/app'
-import { fetchSemanticTree } from '../../service/api/semantic'
-import { fetchModelList } from '../../service/api/abi-system'
-import { CHAT_MODE } from '../../constant'
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
-import Conversation from '../conversation'
 import type { ConversationHandle } from '../conversation'
-import ChatHeader from '../conversation/components/chat-header'
-import type { ModelOption } from '../conversation/components/chat-header'
+import type { ConversationProps } from '../conversation/hooks/useConversationController'
+import type { ChatHeaderProps, ModelOption } from '../conversation/components/chat-header'
 import NewChatWelcome from './NewChatWelcome'
-import ChatInput from '../conversation/components/chat-input'
-import type { ChatInputModeKey, ChatInputSendOptions, SemanticSelectedData } from '../conversation/components/chat-input'
-import { message } from 'antd'
-import { getSpaceId } from '../../utils'
-import ConverList from './conver_list'
+import type { ChatInputModeKey, ChatInputProps, ChatInputSendOptions, SemanticSelectedData } from '../conversation/components/chat-input'
+import { getSpaceId } from '../../utils/runtime'
+import type { ConverListProps } from './conver_list'
 import { hasSelectedConversationData } from '../conversation/components/chat-input/sendValidation'
 import { useSidebarCollapse } from '../layout/SidebarCollapseContext'
+import { useChatBootstrap } from '@/resources/chatBootstrap'
+import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
+import { useAfterFirstPaint } from '@/components/performance/useAfterFirstPaint'
 // 助手会话（appId≠0）：输入框的数据语义/技能/MCP 只能从助手绑定资源里拿。
 import {
   buildBoundSemanticTree,
   fetchAssistantBoundResources,
   type AssistantBoundResources,
-} from '../../pages/chat/workshop/assistantResources'
+} from '../../pages/chat/workshop/-assistantResources'
+
+const loadCreateModal = () => import('./CreateModal')
+const loadEditSessionModal = () => import('./EditSessionModal')
+const loadChatInput = () => import('../conversation/components/chat-input')
+const loadAppApi = () => import('../../service/api/app')
+const loadConversationApi = () => import('../../service/api/conv')
+interface DeferredChatHeaderProps extends ChatHeaderProps {
+  headerRef: React.Ref<any>
+}
+const loadChatHeader = () => import('../conversation/components/chat-header').then(({ default: ChatHeader }) => ({
+  default: ({ headerRef, ...props }: DeferredChatHeaderProps) => (
+    <ChatHeader ref={headerRef} {...props} />
+  ),
+}))
+interface DeferredConverListProps extends ConverListProps {
+  listRef: React.Ref<any>
+}
+const loadConverList = () => import('./conver_list').then(({ default: ConverList }) => ({
+  default: ({ listRef, ...props }: DeferredConverListProps) => (
+    <ConverList ref={listRef} {...props} />
+  ),
+}))
+interface DeferredConversationProps extends ConversationProps {
+  conversationRef: React.Ref<ConversationHandle>
+}
+const loadConversation = () => import('../conversation').then(({ default: Conversation }) => ({
+  default: ({ conversationRef, ...props }: DeferredConversationProps) => (
+    <Conversation ref={conversationRef} {...props} />
+  ),
+}))
+const EMPTY_APP_LIST: any[] = []
+const pendingSessionDetailRequests = new Map<string, Promise<any>>()
+
+function fetchSessionDetailOnce(sessionId: string): Promise<any> {
+  const pending = pendingSessionDetailRequests.get(sessionId)
+  if (pending) return pending
+
+  const request = loadAppApi().then(({ fetchSessionDetail }) => fetchSessionDetail({ sessionId }))
+  pendingSessionDetailRequests.set(sessionId, request)
+  const clearRequest = () => {
+    window.setTimeout(() => {
+      if (pendingSessionDetailRequests.get(sessionId) === request) {
+        pendingSessionDetailRequests.delete(sessionId)
+      }
+    }, 2000)
+  }
+  void request.then(clearRequest, clearRequest)
+  return request
+}
+
+function showMessage(type: 'error' | 'success' | 'warning', content: string): void {
+  void import('antd/es/message').then(({ default: message }) => {
+    message[type](content)
+  })
+}
 
 /** 深度优先取第一个数据语义叶子（type=schema），用于“默认选中第一个” */
 const findFirstSchemaLeaf = (nodes: any[]): any | null => {
@@ -39,41 +86,6 @@ const findFirstSchemaLeaf = (nodes: any[]): any | null => {
   return null
 }
 
-// ── 模块级工作台缓存（跨组件卸载/重挂载保留，按 spaceId 区分）──
-// 技能商店 / 应用工坊为独立路由，进入后 ConversationAnalysis 会被卸载；
-// 切回对话时组件冷挂载，若无缓存会重新拉取 appList/模型/语义，产生 1-2s 加载遮罩。
-// 用模块级缓存保存这些数据，冷挂载时直接命中缓存即时渲染、仅静默刷新，体验与对话↔对话一致。
-interface WorkbenchCache {
-  appList: any[]
-  modelOptions: ModelOption[]
-  currentModel: ModelOption | null
-  embedModelId: string | number
-  modelLoaded: boolean
-  semanticTree: any[]
-  semanticLoaded: boolean
-}
-
-const workbenchCacheBySpace = new Map<number, WorkbenchCache>()
-
-function getWorkbenchCache(spaceId: number): WorkbenchCache | undefined {
-  if (Number.isNaN(spaceId)) return undefined
-  return workbenchCacheBySpace.get(spaceId)
-}
-
-function patchWorkbenchCache(spaceId: number, patch: Partial<WorkbenchCache>) {
-  if (Number.isNaN(spaceId)) return
-  const prev = workbenchCacheBySpace.get(spaceId) || {
-    appList: [],
-    modelOptions: [],
-    currentModel: null,
-    embedModelId: '',
-    modelLoaded: false,
-    semanticTree: [],
-    semanticLoaded: false,
-  }
-  workbenchCacheBySpace.set(spaceId, { ...prev, ...patch })
-}
-
 interface ConversationAnalysisProps {
   spaceId?: number
   chatId?: string
@@ -83,24 +95,24 @@ interface ConversationAnalysisProps {
 }
 
 const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false, pendingAssistantId }) => {
-  // 冷挂载时优先用模块级缓存预解析初始值，避免重新拉取导致的加载闪烁
-  const initialSpaceId = propSpaceId !== undefined ? Number(propSpaceId) : getSpaceId()
-  const initialCache = getWorkbenchCache(initialSpaceId)
+  const bootstrap = useChatBootstrap()
+  const interactiveReady = useAfterFirstPaint()
+  const initialSpaceId = propSpaceId !== undefined ? Number(propSpaceId) : bootstrap.identity.spaceId || getSpaceId()
+  const initialAppList = bootstrap.conversations.data ?? EMPTY_APP_LIST
   const initialApp = (() => {
     if (routeChatId === 'new') return undefined
-    if (!initialCache?.appList?.length) return undefined
+    if (!initialAppList.length) return undefined
     if (routeChatId) {
-      // 指定了会话：仅在缓存命中时预设，未命中不预设（避免闪现错误会话），等静默刷新后由切换 effect 归位
-      return initialCache.appList.find((item: any) => String(item.chat_id) === String(routeChatId))
+      return initialAppList.find((item: any) => String(item.chat_id) === String(routeChatId))
     }
     const cachedChatId = localStorage.getItem('chatId') || ''
-    return (cachedChatId && initialCache.appList.find((item: any) => String(item.chat_id) === String(cachedChatId))) || initialCache.appList[0]
+    return (cachedChatId && initialAppList.find((item: any) => String(item.chat_id) === String(cachedChatId))) || initialAppList[0]
   })()
 
   const { collapseSidebar } = useSidebarCollapse()
   const [visible, setVisible] = useState(false)
   const [curApp, setCurApp] = useState<any>(initialApp ? { ...initialApp } : {})
-  const [appList, setAppList] = useState<any[]>(initialCache?.appList || [])
+  const appList = bootstrap.conversations.data ?? EMPTY_APP_LIST
   const [curConv, setCurConv] = useState<any>(initialApp?.conv_uid ? { ...initialApp } : undefined)
   const [, setLoading] = useState(false)
   const lastSpaceIdRef = useRef<number | null>(null)
@@ -113,7 +125,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const converListRef = useRef<any>(null)
   const [fold, setFold] = useState(false)
   const justCreatedRef = useRef(false)
-  const [currentSpaceId, setCurrentSpaceId] = useState<number>(() => initialSpaceId)
+  const currentSpaceId = Number(propSpaceId ?? bootstrap.identity.spaceId ?? initialSpaceId)
 
   // ── 统一输入框状态 ──
   const [convLoading, setConvLoading] = useState(false)
@@ -140,67 +152,27 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     if (open) collapseSidebar()
   }, [collapseSidebar])
 
-  // ── 模型列表状态（全局加载一次）──
-  const [modelOptions, setModelOptions] = useState<ModelOption[]>(initialCache?.modelOptions || [])
-  const [currentModel, setCurrentModel] = useState<ModelOption | null>(initialCache?.currentModel || null)
-  const [embedModelId, setEmbedModelId] = useState<string | number>(initialCache?.embedModelId ?? '')
-  const modelLoadedRef = useRef(initialCache?.modelLoaded ?? false)
+  const modelOptions = (bootstrap.models.data?.options ?? []) as ModelOption[]
+  const [currentModel, setCurrentModel] = useState<ModelOption | null>(
+    () => (bootstrap.models.data?.currentModel as ModelOption | null | undefined) ?? null,
+  )
+  const [embedModelOverride, setEmbedModelOverride] = useState<string | number>('')
+  const embedModelId = embedModelOverride || bootstrap.models.data?.embedModelId || ''
 
-  // ── 数据语义状态（统一节点树，一次性拉取）──
-  const [semanticTree, setSemanticTree] = useState<any[]>(initialCache?.semanticTree || [])
+  const semanticTree = bootstrap.semantic.data ?? []
   const [selectedData, setSelectedData] = useState<SemanticSelectedData | null>(null)
   const [selectedExcel, setSelectedExcel] = useState<any>(null)
-  const [semLoading, setSemLoading] = useState(false)
-  const semGroupsLoadedRef = useRef(initialCache?.semanticLoaded ?? false)
+  const semLoading = bootstrap.semantic.status === 'loading'
 
   // ── 助手会话绑定资源（按 curConv.appId）：非空时输入框候选仅从其中取 ──
   const [boundResources, setBoundResources] = useState<AssistantBoundResources | null>(null)
   const [boundResourcesLoading, setBoundResourcesLoading] = useState(false)
 
-  // ── 模型列表加载（只调一次）──
   useEffect(() => {
-    if (modelLoadedRef.current) return
-    modelLoadedRef.current = true
-    fetchModelList({ spaceId: currentSpaceId })
-      .then((res: any) => {
-        const list = res?.data?.data || res?.data || []
-        if (Array.isArray(list) && list.length > 0) {
-          // 找到嵌入模型（从完整列表中查找）
-          let resolvedEmbedId: string | number = ''
-          const embedModel = list.find((item: any) => item.modelKey === 'bge-large')
-          if (embedModel) {
-            resolvedEmbedId = embedModel.modelId ?? embedModel.id ?? embedModel.llmId
-            setEmbedModelId(resolvedEmbedId)
-          }
-          // 只筛选 status 为 1 的大模型（modelType='1' 为语言模型，排除 modelType='2' 向量/嵌入模型）
-          const filteredList = list.filter(
-            (item: any) => String(item.status) === '1' && String(item.modelType) === '1',
-          )
-          const options: ModelOption[] = filteredList.map((item: any) => ({
-            id: item.modelId ?? item.id ?? item.llmId ?? '',
-            key: item.modelKey || item.model_name || item.key || '',
-            label: item.modelName || item.model_name || item.llmModel || item.label || '',
-            desc: item.remark || item.description || item.desc || '',
-            isDefault: item.isDefault,
-            isSupportThinking: item.isSupportThinking,
-          }))
-          setModelOptions(options)
-          // 进入对话页面默认展示默认模型（isDefault === 1），无默认模型时回退列表首个
-          const initialModel = options.find((option) => option.isDefault === 1) || options[0] || null
-          if (initialModel) {
-            setCurrentModel(initialModel)
-          }
-          // 写入模块级缓存，供切回对话时冷挂载直接命中
-          patchWorkbenchCache(currentSpaceId, {
-            modelOptions: options,
-            currentModel: initialModel,
-            embedModelId: resolvedEmbedId,
-            modelLoaded: true,
-          })
-        }
-      })
-      .catch(() => {})
-  }, [currentSpaceId])
+    const initialModel = bootstrap.models.data?.currentModel as ModelOption | null | undefined
+    setCurrentModel(initialModel ?? null)
+    setEmbedModelOverride('')
+  }, [bootstrap.models.data, currentSpaceId])
 
   // 模型是否支持关闭思考（1 为支持，0 或其他为不支持）
   const isSupportCloseThinking = useCallback((model: ModelOption | null | undefined) => {
@@ -221,22 +193,6 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       setDeepThinkEnabled(true)
     }
   }, [currentModel, isSupportCloseThinking])
-
-  // ── 数据语义加载（分组树一次性返回，含各级子分组与数据语义叶子）──
-  useEffect(() => {
-    if (semGroupsLoadedRef.current) return
-    semGroupsLoadedRef.current = true
-    setSemLoading(true)
-    fetchSemanticTree({ spaceId: currentSpaceId })
-      .then((res: any) => {
-        const list = res?.data || res?.rows || []
-        const tree = Array.isArray(list) ? list : []
-        setSemanticTree(tree)
-        patchWorkbenchCache(currentSpaceId, { semanticTree: tree, semanticLoaded: true })
-      })
-      .catch(() => {})
-      .finally(() => setSemLoading(false))
-  }, [currentSpaceId])
 
   // ── 助手会话绑定资源加载（普通会话 appId=0 不请求、不限制；待命助手按路由 appId）──
   const assistantId = curConv ? String(curConv.appId ?? 0) : (pendingAssistantId ? String(pendingAssistantId) : '0')
@@ -309,57 +265,23 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     return { appId: assistantId, title: boundResources?.appName || undefined }
   }, [curConv, assistantId, boundResources])
 
-  // ── SpaceId 同步 ──
   useEffect(() => {
-    if (propSpaceId === undefined) return
-    const next = Number(propSpaceId)
-    if (!Number.isNaN(next) && next !== currentSpaceId) {
-      setCurrentSpaceId(next)
+    if (lastSpaceIdRef.current === null) {
+      lastSpaceIdRef.current = currentSpaceId
+      return
     }
-  }, [propSpaceId, currentSpaceId])
+    if (lastSpaceIdRef.current === currentSpaceId) return
+    lastSpaceIdRef.current = currentSpaceId
+    setCurApp({})
+    setCurConv(null)
+    converListRef.current?.setSelectedChatId(null)
+    setSelectedData(null)
+  }, [currentSpaceId])
 
-  useEffect(() => {
-    const handleSpaceChange = (event: Event) => {
-      const detail = (event as CustomEvent)?.detail
-      const next = Number(detail?.spaceId)
-      if (!Number.isNaN(next)) {
-        setCurrentSpaceId(next)
-        setCurApp({})
-        setCurConv(null)
-        converListRef.current?.setSelectedChatId(null)
-        // 切换空间时重置已选数据语义与候选树，避免残留旧空间的语义名称；
-        // 候选树一并清空，防止默认选中 effect 在新树返回前用旧树重新选中。
-        setSelectedData(null)
-        setSemanticTree([])
-        // 重新加载语义
-        semGroupsLoadedRef.current = false
-      }
-    }
-    window.addEventListener('space-change', handleSpaceChange)
-    return () => { window.removeEventListener('space-change', handleSpaceChange) }
-  }, [])
-
-  // ── App 列表 ──
-  const sortAppList = (list: any[]) => {
-    return list.sort((a, b) => new Date(b.create_time).getTime() - new Date(a.create_time).getTime())
-  }
-
-  const getAppList = useCallback(async (options?: { silent?: boolean }) => {
-    const userInfoString = JSON.parse(localStorage.getItem('SOY-REACT_userInfo') || '{}')
+  const getAppList = useCallback(async (options?: { force?: boolean; silent?: boolean }) => {
     try {
       if (!options?.silent) setLoading(true)
-      const res = await fetchAppList({
-        chat_mode: CHAT_MODE,
-        space_id: currentSpaceId,
-        create_by: userInfoString?.userName,
-      })
-      const normalList = Array.isArray(res.data) ? res.data : []
-      // 助手会话（appId≠0）不在 appId=0 查询里，也不进该列表：
-      // 列表 UI（ConverList）当前唯一使用方恒 hideSidebar 不渲染，路由恢复由 session/get 兑底，
-      // 故不再逐助手合并查询（原 fetchAssistantSessionList 死代码已删）。
-      const data = sortAppList(normalList)
-      setAppList(data)
-      patchWorkbenchCache(currentSpaceId, { appList: data })
+      const data = await bootstrap.loadConversations({ force: options?.force })
       if (options?.silent) return data
       const chatId = localStorage.getItem('chatId') || ''
       const targetApp = (chatId && data.find((item: any) => String(item.chat_id) === String(chatId))) || data[0]
@@ -368,7 +290,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         setCurConv(targetApp.conv_uid ? { ...targetApp } : undefined)
         localStorage.setItem('chatId', String(targetApp.chat_id))
       } else {
-        setCurApp(undefined)
+        setCurApp({})
         setCurConv(undefined)
         localStorage.removeItem('chatId')
       }
@@ -376,16 +298,12 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     } finally {
       if (!options?.silent) setLoading(false)
     }
-  }, [currentSpaceId])
+  }, [bootstrap.loadConversations])
 
   useEffect(() => {
     if (currentSpaceId === null || Number.isNaN(currentSpaceId)) return
-    if (lastSpaceIdRef.current === currentSpaceId) return
-    lastSpaceIdRef.current = currentSpaceId
-    // 命中缓存（冷挂载但曾进入过工作台）时静默刷新，避免加载遮罩；新对话也静默
-    const cached = getWorkbenchCache(currentSpaceId)
-    getAppList(routeChatId === 'new' || cached ? { silent: true } : undefined)
-  }, [currentSpaceId, getAppList, routeChatId])
+    void getAppList({ silent: routeChatId === 'new' || Boolean(appList.length) })
+  }, [appList.length, currentSpaceId, getAppList, routeChatId])
 
   useEffect(() => {
     if (!routeChatId || routeChatId === 'new' || !appList.length) return
@@ -409,7 +327,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     if (curConv && String(curConv.chat_id) === String(routeChatId)) return
     if (appList.some((item) => String(item.chat_id) === String(routeChatId))) return
     let cancelled = false
-    fetchSessionDetail({ sessionId: routeChatId })
+    fetchSessionDetailOnce(String(routeChatId))
       .then((res: any) => {
         const convData = res?.data?.data || res?.data
         if (cancelled || !convData || typeof convData !== 'object') return
@@ -441,6 +359,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   // 创建新会话（仅创建，不发送消息），返回创建后的会话对象；
   // options 用于待命助手延后创建：绑定助手 appId + 助手名标题。
   const createNewConv = useCallback(async (options?: { appId?: string | number; title?: string }): Promise<any> => {
+    const { createApp } = await loadAppApi()
     const appRes: any = await createApp({
       space_id: currentSpaceId,
       appId: options?.appId,
@@ -456,7 +375,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       conv_uid: rawApp?.conv_uid ?? rawApp?.convUid,
     }
     if (!app.chat_id) {
-      message.error('创建会话失败')
+      showMessage('error', '创建会话失败')
       return null
     }
     justCreatedRef.current = true
@@ -470,14 +389,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     setCurApp(newApp)
     setCurConv(newApp)
     localStorage.setItem('chatId', String(app.chat_id))
-    setAppList((prev) => [newApp, ...prev])
+    bootstrap.updateConversations(prev => [newApp, ...prev])
     navigate({
       to: TASK_DETAIL_ROUTE,
       params: { taskId: String(app.chat_id) },
     })
-    window.dispatchEvent(new CustomEvent('conversation-created'))
     return newApp
-  }, [currentSpaceId, navigate])
+  }, [bootstrap.updateConversations, currentSpaceId, navigate])
 
   // 确保存在可用会话：已有则直接返回，没有则先创建（用于上传文件等需要 conv_uid 的场景）
   const ensureConv = useCallback(async (): Promise<any> => {
@@ -488,7 +406,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       return await createNewConv(pendingAssistantCreate)
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
-        message.error(err?.message || '创建会话失败')
+        showMessage('error', err?.message || '创建会话失败')
       }
       return null
     } finally {
@@ -502,7 +420,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
     // 所有对话模式共享同一数据前置条件，报告模式不得绕过交互模式的校验。
     if (!hasSelectedConversationData(selectedData, selectedExcel)) {
-      message.warning('选择已有数据或上传excel，即可开始对话')
+      showMessage('warning', '选择已有数据或上传excel，即可开始对话')
       return
     }
 
@@ -529,7 +447,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
       if (sendMode === 'explore') {
         if (!selectedData?.schemaId) {
-          message.warning('探索模式请选择具体数据语义')
+          showMessage('warning', '探索模式请选择具体数据语义')
           return true
         }
         if (!conversationRef.current?.handleExploreSend) return false
@@ -586,7 +504,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       waitAndSend(0, () => setCreating(false))
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
-        message.error(err?.message || '创建会话失败')
+        showMessage('error', err?.message || '创建会话失败')
       }
       setCreating(false)
     }
@@ -603,8 +521,9 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const onClose = async (val?: any) => {
     if (val) {
       try {
+        const appApi = await loadAppApi()
         if (isEdit) {
-          const res = await updateApp(val)
+          const res = await appApi.updateApp(val)
           if (res?.success) {
             setIsEdit(false)
             setVisible(false)
@@ -613,18 +532,19 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
           }
           return Promise.resolve()
         }
-        const res = await createApp(val)
+        const res = await appApi.createApp(val)
         setIsEdit(false)
-        await getAppList()
+        await getAppList({ force: true })
         const currentApp = { ...res.data }
         setCurApp(currentApp)
         localStorage.setItem('chatId', String(currentApp.chat_id))
+        const { newConv } = await loadConversationApi()
         const newConvRes = await newConv(currentApp)
         setCurConv({ ...newConvRes.data, ...currentApp })
         setVisible(false)
         return Promise.resolve()
       } catch (e) {
-        message.error('创建失败')
+        showMessage('error', '创建失败')
         return Promise.reject()
       }
     } else {
@@ -635,35 +555,38 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     }
   }
 
-  const handleDeleteApp = useCallback(async (item: any) => {
-    Modal.confirm({
-      title: '确认删除对话',
-      content: '是否确认删除当前对话？删除后无法恢复。',
-      okText: '确认',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          setLoading(true)
-          await deleteSession({ sessionId: item.chat_id, convUid: item.conv_uid })
-          message.success('对话已删除')
-          if (curApp.chat_id === item.chat_id) {
-            setCurConv(undefined)
+  const handleDeleteApp = useCallback((item: any) => {
+    void import('antd/es/modal').then(({ default: Modal }) => {
+      Modal.confirm({
+        title: '确认删除对话',
+        content: '是否确认删除当前对话？删除后无法恢复。',
+        okText: '确认',
+        cancelText: '取消',
+        onOk: async () => {
+          try {
+            setLoading(true)
+            const { deleteSession } = await loadAppApi()
+            await deleteSession({ sessionId: item.chat_id, convUid: item.conv_uid })
+            showMessage('success', '对话已删除')
+            if (curApp.chat_id === item.chat_id) {
+              setCurConv(undefined)
+            }
+            void getAppList({ force: true })
+          } catch (error) {
+            showMessage('error', '删除对话失败')
+          } finally {
+            setLoading(false)
           }
-          getAppList()
-        } catch (error) {
-          message.error('删除对话失败')
-        } finally {
-          setLoading(false)
-        }
-      },
+        },
+      })
     })
-  }, [])
+  }, [curApp.chat_id, getAppList])
 
   const handleUpdateList = useCallback((data: any) => {
     const newApp = data?.newApp
     const newConv = data?.newConv
     if (newApp) {
-      setAppList((prev) => [newApp, ...prev.filter((a) => a.chat_id !== newApp.chat_id)])
+      bootstrap.updateConversations(prev => [newApp, ...prev.filter(a => a.chat_id !== newApp.chat_id)])
       setCurApp(newApp)
       setCurConv(newApp.conv_uid ? { ...newApp } : undefined)
       localStorage.setItem('chatId', String(newApp.chat_id))
@@ -677,13 +600,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
         setCurConv((prev: any) => ({ ...prev, ...data }))
       }
       if (data.chat_id) {
-        setAppList((prev) => prev.map((app) => (app.chat_id === data.chat_id ? { ...app, ...data } : app)))
+        bootstrap.updateConversations(prev => prev.map(app => (app.chat_id === data.chat_id ? { ...app, ...data } : app)))
         if (curApp.chat_id === data.chat_id) {
           setCurApp((prev: any) => ({ ...prev, ...data }))
         }
       }
     }
-  }, [])
+  }, [bootstrap.updateConversations, curApp.chat_id])
 
   const handleEdit = useCallback((key?: string, item?: any) => {
     if (key === 'edit' && item) {
@@ -700,12 +623,13 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
   const handleEditOk = useCallback(
     async (values: { sessionId: string | number; title: string }) => {
+      const { updateApp } = await loadAppApi()
       await updateApp(values)
-      message.success('更新成功')
+      showMessage('success', '更新成功')
       setEditVisible(false)
-      await getAppList()
+      await getAppList({ force: true })
     },
-    [],
+    [getAppList],
   )
 
   // 推荐示例点击 → 填入输入框
@@ -722,57 +646,71 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     <div className="h-full w-full" style={{ background: 'transparent' }}>
       <div className="h-full w-full flex">
         {!hideSidebar && (
-          <ConverList
-            ref={converListRef}
-            handleEdit={handleEdit}
-            appList={appList}
-            handleSetCurApp={handleSetCurApp}
-            handleDeleteApp={handleDeleteApp}
-            setFold={setFold}
-            fold={fold}
+          <RetryableLazy
+            loader={loadConverList}
+            componentProps={{
+              listRef: converListRef,
+              handleEdit,
+              appList,
+              handleSetCurApp,
+              handleDeleteApp,
+              setFold,
+              fold,
+            }}
+            fallback={<div aria-busy="true" className="h-full w-[12.5rem] shrink-0 animate-pulse border-r border-slate-200 bg-white/20" />}
           />
         )}
         <div className="flex-1 min-w-0 flex flex-col">
           {/* 顶部 header（永驻） */}
-          {!curConv && (
-            <ChatHeader
-              conv={curApp || {}}
-              ref={chatHeaderRef}
-              setConvContent={() => {}}
-              onUpdateList={handleUpdateList}
-              setIsSharing={() => {}}
-              onClose={() => {}}
-              modelOptions={modelOptions}
-              currentModel={currentModel}
-              onModelChange={handleModelChange}
-              onEmbedModelFound={(id) => setEmbedModelId(id)}
+          {!curConv && (interactiveReady ? (
+            <RetryableLazy
+              loader={loadChatHeader}
+              componentProps={{
+                headerRef: chatHeaderRef,
+                conv: curApp || {},
+                setConvContent: () => {},
+                onUpdateList: handleUpdateList,
+                setIsSharing: () => {},
+                onClose: () => {},
+                modelOptions,
+                currentModel,
+                onModelChange: handleModelChange,
+                onEmbedModelFound: setEmbedModelOverride,
+              }}
+              fallback={<header aria-busy="true" className="chat-header" style={{ boxSizing: 'border-box', height: 70 }} />}
             />
-          )}
+          ) : (
+            <header aria-busy="true" className="chat-header" style={{ boxSizing: 'border-box', height: 70 }} />
+          ))}
           {/* 内容区域 */}
           <div className="flex-1 min-h-0">
             {curConv ? (
-              <Conversation
-                fold={hideSidebar ? false : fold}
-                conv={curConv}
-                ref={conversationRef}
-                onClose={() => setCurConv(undefined)}
-                onUpdateList={handleUpdateList}
-                onLoadingChange={setConvLoading}
-                onReportLoadingChange={setReportLoading}
-                onExploreLoadingChange={setExploreLoading}
-                onReportPreviewChange={handleReportPreviewChange}
-                onExplorePreviewChange={handleExplorePreviewChange}
-                semanticId={selectedData?.schemaId}
-                semanticGroupId={selectedData?.groupId}
-                selectedExcel={selectedExcel}
-                modelOptions={modelOptions}
-                currentModel={currentModel}
-                onModelChange={handleModelChange}
-                embedModelId={embedModelId}
-                deepThinkEnabled={deepThinkEnabled}
-                spaceId={currentSpaceId}
-                onHistorySemanticLoaded={(data) => setSelectedData(data)}
-                emptyContent={assistantWelcome}
+              <RetryableLazy
+                loader={loadConversation}
+                componentProps={{
+                  conversationRef,
+                  fold: hideSidebar ? false : fold,
+                  conv: curConv,
+                  onClose: () => setCurConv(undefined),
+                  onUpdateList: handleUpdateList,
+                  onLoadingChange: setConvLoading,
+                  onReportLoadingChange: setReportLoading,
+                  onExploreLoadingChange: setExploreLoading,
+                  onReportPreviewChange: handleReportPreviewChange,
+                  onExplorePreviewChange: handleExplorePreviewChange,
+                  semanticId: selectedData?.schemaId,
+                  semanticGroupId: selectedData?.groupId,
+                  selectedExcel,
+                  modelOptions,
+                  currentModel,
+                  onModelChange: handleModelChange,
+                  embedModelId,
+                  deepThinkEnabled,
+                  spaceId: currentSpaceId,
+                  onHistorySemanticLoaded: setSelectedData,
+                  emptyContent: assistantWelcome,
+                }}
+                fallback={<LazyFeatureFallback label="正在加载会话内容…" style={{ height: '100%' }} />}
               />
             ) : (!routeChatId || routeChatId === 'new') ? (
               // 待命助手：展示类欢迎页（开场引导、无推荐示例）；绑定资源加载中空置，避免默认欢迎页闪烁。
@@ -785,45 +723,52 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
             <div className="report-composer-presence-inner">
               <div className="composer-wrap">
                 <div className="max-w-[53.75rem] w-full m-auto">
-                  <ChatInput
-                    conv={curConv}
-                    ensureConv={ensureConv}
-                    loading={(selectedMode === 'report' ? reportLoading : selectedMode === 'explore' ? exploreLoading : convLoading) || creating}
-                    onSend={handleUnifiedSend}
-                    onStop={() => {
-                      if (selectedMode === 'report') {
-                        conversationRef.current?.stopReportGenerating()
-                        return
-                      }
+                  {interactiveReady ? (
+                    <RetryableLazy<ChatInputProps>
+                    loader={loadChatInput}
+                    componentProps={{
+                      conv: curConv,
+                      ensureConv,
+                      loading: (selectedMode === 'report' ? reportLoading : selectedMode === 'explore' ? exploreLoading : convLoading) || creating,
+                      onSend: handleUnifiedSend,
+                      onStop: () => {
+                        if (selectedMode === 'report') {
+                          conversationRef.current?.stopReportGenerating()
+                          return
+                        }
 
-                      if (selectedMode === 'explore') {
-                        conversationRef.current?.stopExploreGenerating()
-                        return
-                      }
+                        if (selectedMode === 'explore') {
+                          conversationRef.current?.stopExploreGenerating()
+                          return
+                        }
 
-                      conversationRef.current?.stopGenerating()
+                        conversationRef.current?.stopGenerating()
+                      },
+                      deepThinkEnabled,
+                      uploadFileEnabled,
+                      currentModel,
+                      onToggleDeepThink: () => setDeepThinkEnabled(!deepThinkEnabled),
+                      onToggleUploadFile: () => setUploadFileEnabled(!uploadFileEnabled),
+                      spaceId: currentSpaceId,
+                      semanticTree,
+                      assistantSemanticTree: boundSemanticTree,
+                      assistantSkills,
+                      assistantMcps,
+                      selectedData,
+                      onSelectData: setSelectedData,
+                      selectedExcel,
+                      setSelectedExcel,
+                      semLoading: semLoading || (assistantId !== '0' && boundResourcesLoading),
+                      externalValue: externalInputValue,
+                      onExternalValueConsumed: () => setExternalInputValue(''),
+                      selectedModeKey: selectedMode,
+                      onModeChange: setSelectedMode,
                     }}
-                    deepThinkEnabled={deepThinkEnabled}
-                    uploadFileEnabled={uploadFileEnabled}
-                    currentModel={currentModel}
-                    onToggleDeepThink={() => setDeepThinkEnabled(!deepThinkEnabled)}
-                    onToggleUploadFile={() => setUploadFileEnabled(!uploadFileEnabled)}
-                    spaceId={currentSpaceId}
-                    semanticTree={semanticTree}
-                    // 助手会话：数据语义/技能/MCP 弹窗仅展示绑定候选，并跳过全局候选请求。
-                    assistantSemanticTree={boundSemanticTree}
-                    assistantSkills={assistantSkills}
-                    assistantMcps={assistantMcps}
-                    selectedData={selectedData}
-                    onSelectData={setSelectedData}
-                    selectedExcel={selectedExcel}
-                    setSelectedExcel={setSelectedExcel}
-                    semLoading={semLoading || (assistantId !== '0' && boundResourcesLoading)}
-                    externalValue={externalInputValue}
-                    onExternalValueConsumed={() => setExternalInputValue('')}
-                    selectedModeKey={selectedMode}
-                    onModeChange={setSelectedMode}
-                  />
+                      fallback={<div aria-busy="true" className="mx-auto h-[108px] w-full max-w-[53.75rem] animate-pulse rounded-2xl bg-slate-100/80" />}
+                    />
+                  ) : (
+                    <div aria-busy="true" className="mx-auto h-[108px] w-full max-w-[53.75rem] animate-pulse rounded-2xl bg-slate-100/80" />
+                  )}
                 </div>
                 <div className="chat-footer">内容由 AI 生成，请注意甄别</div>
               </div>
@@ -831,22 +776,29 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
           </div>
         </div>
       </div>
-      <CreateModal
-        onClose={onClose}
-        initialValues={{
-          ...EditData,
-          title: EditData.title || 'AI智能助手',
-          biz_name: EditData.biz_name || 'AI智能助手',
-        }}
-        isEdit={isEdit}
-        visible={visible}
-      />
-      <EditSessionModal
-        visible={editVisible}
-        initialValues={editItem}
-        onClose={() => setEditVisible(false)}
-        onOk={handleEditOk}
-      />
+      {visible && (
+        <RetryableLazy
+          loader={loadCreateModal}
+          componentProps={{
+            onClose,
+            initialValues: {
+              ...EditData,
+              title: EditData.title || 'AI智能助手',
+              biz_name: EditData.biz_name || 'AI智能助手',
+            },
+            isEdit,
+            visible: true,
+          }}
+          fallback={<LazyFeatureFallback label="正在加载会话配置…" />}
+        />
+      )}
+      {editVisible && (
+        <RetryableLazy
+          loader={loadEditSessionModal}
+          componentProps={{ visible: true, initialValues: editItem, onClose: () => setEditVisible(false), onOk: handleEditOk }}
+          fallback={<LazyFeatureFallback label="正在加载会话编辑…" />}
+        />
+      )}
     </div>
   )
 }

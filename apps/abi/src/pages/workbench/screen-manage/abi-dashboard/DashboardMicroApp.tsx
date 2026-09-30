@@ -1,6 +1,4 @@
 import { useRoute } from '@sa/simple-router'
-import { Alert, Button } from 'antd'
-import { loadMicroApp } from 'qiankun'
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
@@ -57,7 +55,7 @@ function DashboardInstance({ active, page }: { readonly active: boolean; readonl
   const slotRef = useRef<HTMLDivElement>(null)
   const sessionRef = useRef<ReturnType<typeof startDashboardSession>>()
   const [attempt, setAttempt] = useState(0)
-  const [failed, setFailed] = useState(false)
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const latestProps = useRef({})
   latestProps.current = {
     hostBasePath: qiankunWindow.__POWERED_BY_QIANKUN__ ? '/studio/chatbi' : VITE_BASE_URL,
@@ -74,11 +72,15 @@ function DashboardInstance({ active, page }: { readonly active: boolean; readonl
     container.className = 'h-full'
     slot.appendChild(container)
     let cancelled = false
-    setFailed(false)
+    setLoadState('loading')
     const session = startDashboardSession(
       container,
-      () =>
-        loadMicroApp(
+      async signal => {
+        const { loadMicroApp } = await import('qiankun')
+        // Give the browser a paint between evaluating qiankun and mounting the child app.
+        await new Promise<void>(resolve => window.setTimeout(resolve, 0))
+        if (signal.aborted) return undefined
+        return loadMicroApp(
           {
             container,
             entry: import.meta.env.VITE_MICRO_ABI_DASHBOARD_ENTRY,
@@ -86,10 +88,14 @@ function DashboardInstance({ active, page }: { readonly active: boolean; readonl
             props: latestProps.current
           },
           { sandbox: { experimentalStyleIsolation: true } }
-        ),
+        )
+      },
       error => {
         console.error('[abi-dashboard] 微应用生命周期失败:', error)
-        if (!cancelled) setFailed(true)
+        if (!cancelled) setLoadState('error')
+      },
+      () => {
+        if (!cancelled) setLoadState('ready')
       }
     )
     sessionRef.current = session
@@ -112,17 +118,26 @@ function DashboardInstance({ active, page }: { readonly active: boolean; readonl
       id={page.containerId}
       style={page.style}
     >
-      {failed && (
-        <Alert
-          action={<Button onClick={() => setAttempt(value => value + 1)}>重试</Button>}
-          message="数据大屏加载失败"
-          type="error"
-        />
-      )}
-      <div
-        className="h-full"
-        ref={slotRef}
-      />
+      <div className="relative h-full min-h-320px overflow-hidden">
+        <div className="h-full" ref={slotRef} />
+        {loadState !== 'ready' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-16px bg-#f4f6fb" role={loadState === 'error' ? 'alert' : 'status'}>
+            {loadState === 'loading' ? (
+              <>
+                <div className="h-48px w-48px animate-spin rounded-full border-4 border-#dce4f5 border-t-primary" />
+                <strong className="text-16px text-#4b5563">正在加载数据大屏...</strong>
+              </>
+            ) : (
+              <>
+                <strong className="text-18px text-#374151">数据大屏加载失败</strong>
+                <button className="rounded-8px border-0 bg-primary px-18px py-10px text-white" type="button" onClick={() => setAttempt(value => value + 1)}>
+                  重新加载
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

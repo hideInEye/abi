@@ -2,7 +2,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 import { isBackendCodeIn } from "@sa/axios";
 import request from "../request/index";
-import { getChatbiBaseApi } from "../../utils/index";
+import { getChatbiBaseApi } from "../../utils/runtime";
 import { getAuthorization, handleLoginExpired } from "../../utils/auth";
 
 // 与 axios 响应拦截器保持一致：后端可能以 HTTP 401，或 200 + { code: 401 } 业务码返回鉴权失效

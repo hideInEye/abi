@@ -32,6 +32,71 @@ function createApp(mountPromise = Promise.resolve()) {
 }
 
 describe('Dashboard session lifecycle', () => {
+  it('waits for the lazy runtime and child mount before reporting ready', async () => {
+    const runtime = deferred()
+    const mount = deferred()
+    const app = createApp(mount.promise)
+    const onReady = vi.fn()
+    const session = createDashboardSessionManager()(
+      createContainer(),
+      async () => { await runtime.promise; return app },
+      vi.fn(),
+      onReady
+    )
+    const updated = session.update({ initialPath: '/projects' })
+    expect(onReady).not.toHaveBeenCalled()
+    runtime.resolve()
+    await Promise.resolve()
+    expect(onReady).not.toHaveBeenCalled()
+    mount.resolve()
+    await updated
+    expect(onReady).toHaveBeenCalledOnce()
+    expect(app.update).toHaveBeenCalledWith({ initialPath: '/projects' })
+    await session.dispose()
+  })
+
+  it('cancels an abandoned lazy load before creating the micro app', async () => {
+    const runtime = deferred()
+    const loadMicroApp = vi.fn(() => createApp())
+    const onReady = vi.fn()
+    const container = createContainer()
+    let signal: AbortSignal | undefined
+    const session = createDashboardSessionManager()(
+      container,
+      async nextSignal => {
+        signal = nextSignal
+        await runtime.promise
+        return nextSignal.aborted ? undefined : loadMicroApp()
+      },
+      vi.fn(),
+      onReady
+    )
+    await vi.waitFor(() => expect(signal).toBeDefined())
+    const disposal = session.dispose()
+    expect(signal?.aborted).toBe(true)
+    runtime.resolve()
+    await disposal
+    expect(loadMicroApp).not.toHaveBeenCalled()
+    expect(onReady).not.toHaveBeenCalled()
+    expect(container.remove).toHaveBeenCalledOnce()
+  })
+
+  it('reports a lazy runtime failure and allows the next session to load', async () => {
+    const start = createDashboardSessionManager()
+    const error = new Error('chunk unavailable')
+    const onError = vi.fn()
+    const container = createContainer()
+    const first = start(container, async () => { throw error }, onError)
+    await first.update({})
+    expect(onError).toHaveBeenCalledWith(error)
+    const onReady = vi.fn()
+    const second = start(createContainer(), () => createApp(), vi.fn(), onReady)
+    await second.update({})
+    expect(container.remove).toHaveBeenCalledOnce()
+    expect(onReady).toHaveBeenCalledOnce()
+    await second.dispose()
+  })
+
   it('waits for mounting and applies only the latest pending host props', async () => {
     const start = createDashboardSessionManager()
     const mount = deferred()

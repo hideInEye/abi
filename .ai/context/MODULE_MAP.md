@@ -25,18 +25,18 @@
 - 依赖：TanStack Router、Zustand、Ant Design、Tailwind、axios、`@sa/auth`、`@sa/axios`。
 - 输入：`public/config.json`、URL boot params、localStorage token、后端聊天/分析接口。
 - 输出：会话消息、图表、下载/截图、调试状态。
-- 注意事项：`src/main.tsx` 会 fetch config 后挂载；`src/service/request/index.ts` 在开发环境会把绝对 baseURL 降为同源路径以走 Vite proxy。`src/components/chat-widget/` 为对话悬浮框，服务分享路由页 `/assistant-share-page/:shareCode` 与第三方嵌入；`public/abi-assistant-widget.js` 由 `apps/chat-widget` 构建产出并自动复制而来，正常 Chat 构建时原样复制到 `dist` 对外提供。
+- 注意事项：`src/main.tsx` 会 fetch config 后挂载；`src/service/request/index.ts` 在开发环境会把绝对 baseURL 降为同源路径以走 Vite proxy。`src/components/chat-widget/` 为 Chat 内的分享悬浮框；`public/abi-assistant-widget.js` 与同名 CSS 由 `apps/chat-sdk` 构建并复制而来，Chat 构建时原样复制到 `dist` 对外提供。
 - 测试建议：优先覆盖 `syncBootParams`、conversation helpers、图表数据转换和 token 过期处理。
 
-## apps/chat-widget
+## apps/chat-sdk
 
-- 路径：`apps/chat-widget`（目录仍为 `apps/chat-sdk`，包名 `@abi/chat-widget`）
-- 职责：把「浮窗助手」做成可构建 SDK；自定义元素负责跨框架接入，内部直接复用 React ChatWidget 弹窗。
+- 路径：`apps/chat-sdk`，包名 `@abi/chat-widget`。
+- 职责：独立构建助手浮窗 SDK；`src/element.ts` 把自定义元素属性传入 `AbiAssistant`，使用 SDK 内 `src/chat/` 下的组件与服务。
 - 依赖：构建期 Vite + TypeScript；产物内置 React、ReactDOM 和 ChatWidget 运行依赖。
-- 输入：`share-code`/`base`/`open` 属性或 `AbiAssistant.init({ shareCode, base, target })`。
-- 输出：单文件 `dist/abi-assistant-widget.js`（IIFE，内嵌 ChatWidget CSS，约 5MB）、`dist/index.es.js`（ESM）、`dist/index.d.ts`。
-- 注意事项：`src/widget.tsx` 使用 ReactDOM 直接渲染 `apps/chat/src/components/chat-widget/ChatWidget.tsx` 的 `float` 弹窗，不使用 iframe；`base` 映射为 `apiBase`。构建后经 Vite `closeBundle` 将 CSS 注入 IIFE，并自动复制到 `apps/chat/public/abi-assistant-widget.js`。对外同时暴露标签 `<abi-assistant>` 与 `window.AbiAssistant.init`。
-- 测试建议：`pnpm --filter @abi/chat-widget type-check` + `build`，并 `node --check dist/abi-assistant-widget.js` 校验产物；真实接口调用需要目标服务允许宿主页面跨域访问。
+- 输入：`<abi-assistant>` 的 `share-code`、`base`、`theme`、`theme-switch` 属性；关闭面板派发 `close` 事件，由宿主移除或隐藏。
+- 输出：`dist/abi-assistant-widget.js`（单 IIFE）和 `dist/abi-assistant-widget.css`，不输出 ESM 或类型声明。
+- 注意事项：修改 SDK 后先构建 SDK、再构建 Chat；SDK 构建会同步两个产物到 `apps/chat/public/`。脚本自动补载同目录 CSS，宿主手动加载时使用 `abi-assistant-widget-styles` 标识避免重复。SDK 源码与 Chat 分享组件目前为两套文件，修改时应区分调用入口，不能假设自动同步。
+- 测试建议：`pnpm --filter @abi/chat-widget build` 和 `node --check dist/abi-assistant-widget.js`；现有 `type-check` 含 `--noCheck`，不代表类型验证通过。真实接口调用还需验证分享校验、鉴权及跨域限制。
 
 ## apps/dashboard
 

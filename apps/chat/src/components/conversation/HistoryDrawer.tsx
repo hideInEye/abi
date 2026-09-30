@@ -3,7 +3,7 @@ import { Drawer, Table, Input, Pagination, message, Collapse } from 'antd';
 import type { AlignType } from 'rc-table/lib/interface';
 import { CloseOutlined, SearchOutlined } from '@ant-design/icons';
 import { searchConv, historyConv, historyConvPages } from '../../service/api/conv';
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 
 interface Props {
   open: boolean;

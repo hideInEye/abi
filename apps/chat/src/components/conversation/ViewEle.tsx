@@ -10,8 +10,7 @@ import { Button, Spin, Table, message, ConfigProvider, Typography } from "antd";
 import zhCN from 'antd/es/locale/zh_CN';
 import { format } from 'sql-formatter';
 import SvgIcon from "../../components/SvgIcon";
-// @ts-ignore - react-syntax-highlighter 类型定义问题
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import SyntaxHighlighter from '@/components/performance/PrismSyntaxHighlighter';
 // @ts-ignore
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { EChart } from "../../components/react-echarts";
@@ -19,9 +18,9 @@ import PieLegend from "../../components/PieLegend";
 const { Text } = Typography;
 import ShareModal from "./ShareModal";
 import ChartConfigModal from "./ChartConfigModal";
-import ModelDebugModal from "./ModelDebugModal";
 import FullscreenModal from "./FullscreenModal";
 import ChartHeader from "./components/ChartHeader";
+import DebugPanel from './components/DebugPanel';
 import { SUPPORTED_RENDER_TYPES, getChartTypeItem } from './components/chartTypeCatalog';
 import StatisticsAnalysis from './components/StatisticsAnalysis';
 import PredictionAnalysis from './components/PredictionAnalysis';
@@ -1331,7 +1330,7 @@ const ViewEle: React.FC<PropsType> = ({
         onConfirm={handleConfigConfirm}
         defaultConfig={chartConfig}
       />
-      <ModelDebugModal
+      <DebugPanel
         convUid={conv.conv_uid}
         roundIndex={data.roundIndex}
         open={debugModalVisible}

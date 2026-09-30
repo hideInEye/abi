@@ -1,5 +1,4 @@
 import axios from "axios";
-import { message } from "antd";
 import { isBackendCodeIn } from "@sa/axios";
 
 import { getAuthorization, handleLoginExpired } from "@/utils/auth";
@@ -28,7 +27,9 @@ function showBackendError(msg?: string) {
   if (text === lastErrorMsg && now - lastErrorTime < 2000) return;
   lastErrorMsg = text;
   lastErrorTime = now;
-  message.error(text);
+  void import('antd/es/message').then(({ default: message }) => {
+    message.error(text);
+  });
 }
 
 // 判断是否为后端业务错误码（成功码约定为 200；401 由 token 过期逻辑单独处理）

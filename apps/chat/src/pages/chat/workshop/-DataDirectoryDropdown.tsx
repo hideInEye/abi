@@ -12,6 +12,8 @@ interface DataDirectoryDropdownProps {
   value: string
   /** 选择分组回调（'' 表示全部） */
   onChange: (groupId: string) => void
+  /** 由轻量触发器首次激活时直接展开面板 */
+  initialOpen?: boolean
 }
 
 /** 将平铺分组按 parentId 递归构建成多级树（parentId==='0' 为根；脏数据提升到根级） */
@@ -37,8 +39,8 @@ function buildTree(list: any[], parentId = '0'): any[] {
  * 默认选中「全部」（展示全部助手）；每个分组显示其下助手数量（仅自身，不含子分组）
  * 面板样式对齐 ABI Group 组件（玻璃态 + 搜索 + 文件夹展开/折叠 + 选中高亮）
  */
-export default function DataDirectoryDropdown({ groups, assistants, value, onChange }: DataDirectoryDropdownProps) {
-  const [open, setOpen] = useState(false)
+export default function DataDirectoryDropdown({ groups, assistants, value, onChange, initialOpen = false }: DataDirectoryDropdownProps) {
+  const [open, setOpen] = useState(initialOpen)
   const [searchText, setSearchText] = useState('')
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([])
 

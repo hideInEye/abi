@@ -106,6 +106,99 @@
         box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.10) !important;
       }
     }
+
+    .my-screen-search-control {
+      flex: 1;
+      min-width: 0;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border: 1px solid rgba(130, 140, 200, 0.18);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.55);
+      color: #a3b3c8;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:focus-within {
+        border-color: #5b7cf7;
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.10);
+      }
+
+      input {
+        min-width: 0;
+        flex: 1;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: #333;
+        font: inherit;
+      }
+    }
+
+    .my-screen-filter-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .my-screen-filter-button {
+      height: 34px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(91, 124, 247, 0.15);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 4px 16px rgba(91, 124, 247, 0.1);
+      color: #64748b;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .my-screen-filter-arrow {
+      transition: transform 0.2s ease;
+
+      &.open { transform: rotate(180deg); }
+    }
+
+    .my-screen-filter-panel {
+      position: absolute;
+      z-index: 100;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 360px;
+      padding: 16px;
+      border: 1px solid rgba(130, 140, 200, 0.18);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 12px 32px rgba(26, 39, 68, 0.14);
+    }
+
+    .my-screen-filter-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
+
+      button {
+        height: 32px;
+        padding: 0 16px;
+        border: 1px solid rgba(91, 124, 247, 0.2);
+        border-radius: 8px;
+        background: #fff;
+        color: #64748b;
+        cursor: pointer;
+
+        &.primary {
+          border-color: #5b7cf7;
+          background: #5b7cf7;
+          color: #fff;
+        }
+      }
+    }
   }
 
   // ── v5 Data Area (matching data-source global style) ──
@@ -518,6 +611,52 @@
     }
   }
 
+  .project-list-alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 9px 12px;
+    border: 1px solid rgba(255, 77, 79, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 77, 79, 0.06);
+    color: #cf3f43;
+    font-size: 13px;
+
+    button {
+      flex-shrink: 0;
+      padding: 4px 10px;
+      border: 1px solid rgba(255, 77, 79, 0.24);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.72);
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+    }
+  }
+
+  .project-card-loading-wrap {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .project-card-loading-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    padding: 5px 10px;
+    border: 1px solid rgba(91, 124, 247, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 14px rgba(26, 39, 68, 0.08);
+    color: #5b7cf7;
+    font-size: 12px;
+  }
+
   // ── v5 Card Grid ──
   .abi-card-grid {
     flex: 1;
@@ -546,6 +685,21 @@
     align-items: center;
     justify-content: center;
     min-height: 200px;
+  }
+
+  .my-screen-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #768a9f;
+    font-size: 13px;
+  }
+
+  .my-screen-empty-icon {
+    color: #b8c3d3;
+    font-size: 44px;
+    line-height: 1;
   }
 
   .abi-data-card {
@@ -672,11 +826,55 @@
         cursor: pointer;
         transition: background 0.15s, color 0.15s;
         padding: 0;
-        margin-left: auto;
 
         &:hover {
           background: rgba(91, 124, 247, 0.08);
           color: #5b7cf7;
+        }
+      }
+
+      .abi-card-menu-wrap {
+        position: relative;
+        margin-left: auto;
+      }
+
+      .abi-card-menu {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% + 6px);
+        z-index: 10;
+        min-width: 112px;
+        padding: 5px;
+        border: 1px solid rgba(130, 140, 200, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 10px 28px rgba(26, 39, 68, 0.16);
+
+        button {
+          display: block;
+          width: 100%;
+          padding: 7px 10px;
+          border: 0;
+          border-radius: 5px;
+          background: transparent;
+          color: #3e5068;
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          text-align: left;
+
+          &:hover {
+            background: rgba(91, 124, 247, 0.1);
+            color: #5b7cf7;
+          }
+
+          &.danger {
+            color: #cf3f43;
+
+            &:hover {
+              background: rgba(255, 77, 79, 0.08);
+            }
+          }
         }
       }
     }
@@ -817,10 +1015,12 @@
 
       .page-size-select {
         min-width: 100px;
-        .ant-select-selector {
-          border-radius: 8px !important;
-          border-color: rgba(130, 140, 200, 0.18) !important;
-        }
+        height: 34px;
+        padding: 0 28px 0 10px;
+        border: 1px solid rgba(130, 140, 200, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.72);
+        color: #3e5068;
       }
 
       .page-btn {
@@ -900,8 +1100,12 @@
         margin-left: 4px;
 
         .jump-input {
+          height: 34px;
+          padding: 0 4px;
+          border: 1px solid rgba(130, 140, 200, 0.18);
           border-radius: 8px;
-          border-color: rgba(130, 140, 200, 0.18);
+          background: rgba(255, 255, 255, 0.72);
+          color: #3e5068;
         }
       }
     }

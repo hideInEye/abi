@@ -4,8 +4,8 @@ import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/glo
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
 import { localStg } from '@/utils/storage'
 import { UserOutlined, SettingOutlined, TeamOutlined, LogoutOutlined, ClockCircleOutlined, BookOutlined } from '@ant-design/icons'
-import * as antdIcons from '@ant-design/icons'
 import SvgIcon from '@/components/stateless/custom/SvgIcon'
+import { getOutlinedIcon } from '@/utils/antdIconRegistry'
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 
 import { getAllRoutes } from '@/store/slice/route'
@@ -72,7 +72,7 @@ const GlobalSider: FC = memo(() => {
         return <SvgIcon localIcon={spaceLocalIcon} className="abi-user-dropdown-icon-new" style={{ fontSize: 18 }} />
       }
       if (spaceIconName) {
-        const AntdIcon = (antdIcons as any)[spaceIconName]
+        const AntdIcon = getOutlinedIcon(spaceIconName)
         if (AntdIcon) {
           return <AntdIcon className="abi-user-dropdown-icon-new" />
         }

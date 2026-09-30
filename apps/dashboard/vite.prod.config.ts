@@ -10,7 +10,16 @@
  */
 
 import {defineConfig} from 'vite'
+import {dashboardCandidateManualChunks} from './build/manualChunks'
 
 export default defineConfig({
     base: '/dashboard-ui/',
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: dashboardCandidateManualChunks,
+                onlyExplicitManualChunks: true,
+            },
+        },
+    },
 })

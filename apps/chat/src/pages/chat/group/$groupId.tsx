@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useState } from 'react'
+import React, { useCallback } from 'react'
 
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 
@@ -12,7 +12,6 @@ export const Route = createFileRoute('/chat/group/$groupId')({
 function ConversationGroupPage() {
   const { groupId } = Route.useParams()
   const navigate = useNavigate()
-  const [refreshKey, setRefreshKey] = useState(0)
 
   const handleOpenSession = useCallback(
     (chatId: string) => {
@@ -25,18 +24,11 @@ function ConversationGroupPage() {
     navigate({ to: TASK_DETAIL_ROUTE, params: { taskId: 'new' } })
   }, [navigate])
 
-  useEffect(() => {
-    const handleConversationChanged = () => setRefreshKey((key) => key + 1)
-    window.addEventListener('conversation-created', handleConversationChanged)
-    return () => window.removeEventListener('conversation-created', handleConversationChanged)
-  }, [])
-
   return (
     <GroupSessionListView
       groupId={groupId}
       onOpenSession={handleOpenSession}
       onGroupDeleted={handleGroupDeleted}
-      refreshKey={refreshKey}
     />
   )
 }

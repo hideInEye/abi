@@ -1,4 +1,4 @@
-import { nanoid } from '@sa/utils'
+import { nanoid } from '@sa/utils/nanoid'
 import axios, { AxiosError } from 'axios'
 import type { AxiosResponse, CreateAxiosDefaults, InternalAxiosRequestConfig } from 'axios'
 import axiosRetry from 'axios-retry'

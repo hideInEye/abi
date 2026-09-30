@@ -5,7 +5,7 @@ export function useGetElementById(id: string) {
 
   const isMobile = useAppSelector(getIsMobile);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = document.getElementById(id);
 
     setContainers(element);

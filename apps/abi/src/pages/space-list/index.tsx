@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
+import { LazyFeatureFallback, RetryableLazy } from '@/components/common/RetryableLazy';
 import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
@@ -23,8 +24,9 @@ import { spaceRoleList } from '@/service/api/role';
 import { setSelectedMenuKey } from '@/store/slice/layout';
 import { useRouter } from '~/packages/simple-router/src';
 
-import { SpaceEdit } from './components/SpaceEdit';
 import type { ISpaceItem } from './types';
+
+const loadSpaceEdit = () => import('./components/SpaceEdit').then(module => ({ default: module.SpaceEdit }));
 
 // Column definitions for picker
 const ALL_COLUMNS: ColumnOption[] = [
@@ -151,6 +153,7 @@ export function Component() {
       if (Array.isArray(data)) {
         const haiRole = data.some((i: any) => i.roleKey === 'creator');
         if (haiRole) {
+          void loadSpaceEdit();
           setDrawerOpen(true);
           setEditSpace(null);
         } else {
@@ -161,6 +164,7 @@ export function Component() {
   }
 
   function editSpaceHandler(space: ISpaceItem) {
+    void loadSpaceEdit();
     setDrawerOpen(true);
     setEditSpace(space);
   }
@@ -471,7 +475,12 @@ export function Component() {
         {/* Toolbar */}
         <div className="abi-toolbar">
           <div className="abi-toolbar-left">
-            <AButton className="btn-accent-gradient" onClick={addNewSpaceHandler}>
+            <AButton
+              className="btn-accent-gradient"
+              onClick={addNewSpaceHandler}
+              onFocus={() => void loadSpaceEdit()}
+              onMouseEnter={() => void loadSpaceEdit()}
+            >
               <PlusOutlined />{$t('page.mySpace.addNewSpace')}
             </AButton>
             <AButton danger
@@ -560,11 +569,10 @@ export function Component() {
       </section>
 
       {drawerOpen && (
-        <SpaceEdit
-          drawerOpen={drawerOpen}
-          editSpace={editSpace}
-          setDrawerOpen={setDrawerOpen}
-          updateSpace={updateSpace}
+        <RetryableLazy
+          loader={loadSpaceEdit}
+          componentProps={{ drawerOpen, editSpace, setDrawerOpen, updateSpace }}
+          fallback={<LazyFeatureFallback label="正在加载空间编辑器…" style={{ position: 'fixed', inset: 0, zIndex: 1000, minHeight: '100vh' }} />}
         />
       )}
     </div>

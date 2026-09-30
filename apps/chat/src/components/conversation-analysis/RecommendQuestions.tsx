@@ -2,7 +2,7 @@ import React, { forwardRef, useImperativeHandle, useState, useEffect, useRef, us
 import { Form, message, Spin, Tabs, Checkbox, Switch } from 'antd';
 import PromptEditor from '../../components/PromptEditor';
 import { fetchRecommendQuestions,fetchChatPromptsConfig } from '../../service/api/conv';
-import { cloneDeep } from 'lodash';
+import cloneDeep from 'lodash/cloneDeep';
 
 interface PromptItem {
   prompt_id: number;

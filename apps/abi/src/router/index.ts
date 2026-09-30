@@ -33,3 +33,20 @@ export async function setupRouter() {
   router.afterEach(afterEach);
   await router.initReady();
 }
+
+export function preloadInitialRoute(pathname: string) {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  const loaders: Array<() => Promise<unknown>> = [];
+
+  if (path.endsWith('/workbench/screen-manage/abi-dashboard')) {
+    loaders.push(layouts.base, pages['workbench_screen-manage_abi-dashboard']);
+  } else if (path === '/home' || path.endsWith('/home')) {
+    loaders.push(layouts.base, pages.home);
+  } else if (path === '/login' || path.endsWith('/login')) {
+    loaders.push(layouts.blank, pages.login);
+  }
+
+  if (loaders.length > 0) {
+    void Promise.all(loaders.map(loader => loader())).catch(() => {});
+  }
+}

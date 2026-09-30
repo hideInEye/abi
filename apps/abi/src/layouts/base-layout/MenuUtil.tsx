@@ -1,7 +1,9 @@
-import * as antdIcons from '@ant-design/icons';
 import type { ElegantConstRoute } from '@elegant-router/types';
 
+import SvgIcon from '@/components/stateless/custom/SvgIcon';
 import { $t } from '@/locales';
+import { getOutlinedIcon } from '@/utils/antdIconRegistry';
+import { isDashboardMicroAppRouteKey, prefetchDashboardMicroApp } from '@/utils/dashboardPrefetch';
 import { getLocalIcons } from '@/utils/icon';
 
 // 预加载本地 SVG 图标名称列表
@@ -42,7 +44,7 @@ const renderIcon = (iconName: string, localIcon: any, depth: number) => {
   }
   // antd 图标
   else {
-    const IconComponent = (antdIcons as any)[iconName];
+    const IconComponent = getOutlinedIcon(iconName);
     if (IconComponent) {
       iconEl = <IconComponent style={{ fontSize: 16 }} />;
     } else {
@@ -96,11 +98,19 @@ export function getGlobalMenuByBaseRoute(route: ElegantConstRoute, depth = 0): A
   const { i18nKey, icon = import.meta.env.VITE_MENU_ICON, localIcon, title } = route.meta ?? {};
 
   const label = i18nKey ? $t(i18nKey) : title;
+  const labelNode = <BeyondHiding title={label} />;
+  const menuLabel = isDashboardMicroAppRouteKey(name)
+    ? (
+      <span onFocus={prefetchDashboardMicroApp} onMouseEnter={prefetchDashboardMicroApp}>
+        {labelNode}
+      </span>
+    )
+    : labelNode;
 
   const menu: App.Global.Menu = {
     icon: renderIcon(icon, localIcon, depth),
     key: name,
-    label: <BeyondHiding title={label} />,
+    label: menuLabel,
     title: label
   };
 

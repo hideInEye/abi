@@ -1,18 +1,21 @@
 import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Button, DatePicker, Empty, Input, Popover, Select, Spin } from 'antd'
+import { Button, Empty, Input, Popover, Spin } from 'antd'
 import dayjs from 'dayjs'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
 import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
 import { AssistantIconBlock } from '@/components/AssistantIcon'
+import { RetryableLazy } from '@/components/performance/RetryableLazy'
 import { fetchFavoriteList, fetchOperateRecordList } from '@/service/api/abi-system'
 import { fetchAssistantList } from '@/service/api/app'
 import { fetchSemanticGroups } from '@/service/api/semantic'
-import { getSpaceId } from '@/utils/index'
-import AssistantDetailDrawer from './AssistantDetailDrawer'
-import DataDirectoryDropdown from './DataDirectoryDropdown'
+import { getSpaceId } from '@/utils/runtime'
+
+const loadDateRangePicker = () => import('@/components/performance/DeferredDateRangePicker')
+const loadAssistantDetailDrawer = () => import('./-AssistantDetailDrawer')
+const loadDataDirectoryDropdown = () => import('./-DataDirectoryDropdown')
 
 /** 应用工坊 tab 顺序：我的助手、我的分析、我的报告、最近使用、我的收藏、我的分享 */
 const WORKSHOP_TABS = [
@@ -109,6 +112,7 @@ function WorkshopView() {
   // 我的助手：只读详情抽屉
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailAgent, setDetailAgent] = useState<AssistantCard | null>(null)
+  const [directoryActivated, setDirectoryActivated] = useState(false)
   // 高级筛选：面板草稿值 / 已生效值（点「查询」才生效，对齐 abi DeferredRangePicker）
   const [filterOpen, setFilterOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<any>(null)
@@ -324,16 +328,13 @@ function WorkshopView() {
       <div className="ws-filter-grid">
         <label className="ws-filter-field">
           <span>时间范围</span>
-          <DatePicker.RangePicker
-            allowClear
-            format="YYYY-MM-DD"
-            placeholder={['开始时间', '结束时间']}
-            value={pendingRange}
-            getPopupContainer={(trigger) =>
-              (trigger.closest('.ant-popover-inner') as HTMLElement) || (trigger.parentElement as HTMLElement)
-            }
-            onChange={(dates) => setPendingRange(dates)}
-          />
+          {filterOpen ? (
+            <RetryableLazy
+              loader={loadDateRangePicker}
+              componentProps={{ value: pendingRange, onChange: setPendingRange }}
+              fallback={<div aria-busy="true" className="h-8 w-[260px] animate-pulse rounded-md bg-slate-100" />}
+            />
+          ) : null}
         </label>
         <div className="ws-filter-actions">
           <Button className="ws-reset-btn" icon={<ReloadOutlined />} onClick={handleReset}>
@@ -382,15 +383,34 @@ function WorkshopView() {
           }}
         />
         {isAssistantTab && (
-          <DataDirectoryDropdown
-            groups={groups}
-            assistants={assistants}
-            value={groupId}
-            onChange={(id) => {
-              setGroupId(id)
-              setCurrentPage(1)
-            }}
-          />
+          directoryActivated ? (
+            <RetryableLazy
+              loader={loadDataDirectoryDropdown}
+              componentProps={{
+                assistants,
+                groups,
+                initialOpen: true,
+                onChange: (id: string) => {
+                  setGroupId(id)
+                  setCurrentPage(1)
+                },
+                value: groupId,
+              }}
+              fallback={<div aria-busy="true" className="ws-filter-btn ws-filter-btn--loading">正在加载目录…</div>}
+            />
+          ) : (
+            <button
+              type="button"
+              className="ws-filter-btn"
+              onClick={() => setDirectoryActivated(true)}
+              onFocus={() => void loadDataDirectoryDropdown()}
+              onMouseEnter={() => void loadDataDirectoryDropdown()}
+            >
+              <span aria-hidden="true">▣</span>
+              数据目录
+              <span className="ws-filter-arrow" aria-hidden="true">⌄</span>
+            </button>
+          )
         )}
         <Popover
           content={filterPanel}
@@ -504,12 +524,16 @@ function WorkshopView() {
       <div className="ws-pagination">
         <span className="ws-total-text">共 {totalCount} 条</span>
         <div className="ws-pagination-controls">
-          <Select
+          <select
+            aria-label="每页条数"
             className="ws-page-size-select"
             value={pageSize}
-            options={PAGE_SIZE_OPTIONS}
-            onChange={handlePageSizeChange}
-          />
+            onChange={(event) => handlePageSizeChange(Number(event.target.value))}
+          >
+            {PAGE_SIZE_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
           <button
             type="button"
             className="ws-page-btn"
@@ -529,22 +553,34 @@ function WorkshopView() {
           </button>
           <span className="ws-quick-jumper">
             前往
-            <Input
+            <input
+              aria-label="跳转页码"
+              type="number"
+              min={1}
+              max={totalPages}
               className="ws-jump-input"
               value={jumpValue}
               onChange={(e) => setJumpValue(e.target.value)}
-              onPressEnter={handleJump}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') handleJump()
+              }}
             />
             页
           </span>
         </div>
       </div>
-      <AssistantDetailDrawer
-        open={detailOpen}
-        appId={detailAgent?.id}
-        fallback={detailAgent}
-        onClose={() => setDetailOpen(false)}
-      />
+      {detailOpen ? (
+        <RetryableLazy
+          loader={loadAssistantDetailDrawer}
+          componentProps={{
+            appId: detailAgent?.id,
+            fallback: detailAgent,
+            onClose: () => setDetailOpen(false),
+            open: detailOpen,
+          }}
+          fallback={<div aria-busy="true" className="fixed inset-0 z-[1000] flex items-center justify-center bg-white/90">正在加载助手详情…</div>}
+        />
+      ) : null}
     </div>
   )
 }

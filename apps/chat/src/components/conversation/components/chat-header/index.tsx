@@ -4,8 +4,10 @@ import type { MenuProps } from 'antd'
 import React, { useState } from 'react'
 
 import { SidebarCollapseButton } from '@/components/layout/SidebarCollapseButton'
+import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 import { updateApp } from '../../../../service/api/app'
-import CreateModal from '../../../conversation-analysis/CreateModal'
+
+const loadCreateModal = () => import('../../../conversation-analysis/CreateModal')
 
 export interface ModelOption {
   id: string | number
@@ -18,7 +20,7 @@ export interface ModelOption {
   isSupportThinking?: number | string
 }
 
-interface ChatHeaderProps {
+export interface ChatHeaderProps {
   conv: any
   setConvContent: (data: any) => void
   onUpdateList: (data: any) => void
@@ -94,22 +96,28 @@ const ChatHeader = React.forwardRef<any, ChatHeaderProps>((props, ref) => {
         </div>
       </header>
 
-      <CreateModal
-        visible={createModalVisible}
-        onClose={async (val: any) => {
-          if (val) {
-            await handleUpdateConv(val)
-          } else {
-            setCreateModalVisible(false)
-          }
-        }}
-        isEdit={true}
-        initialValues={{
-          ...conv,
-          title: conv?.title || 'AI智能助手',
-          biz_name: conv?.biz_name || 'AI智能助手',
-        }}
-      />
+      {createModalVisible && (
+        <RetryableLazy
+          loader={loadCreateModal}
+          componentProps={{
+            visible: true,
+            onClose: async (val: any) => {
+              if (val) {
+                await handleUpdateConv(val)
+              } else {
+                setCreateModalVisible(false)
+              }
+            },
+            isEdit: true,
+            initialValues: {
+              ...conv,
+              title: conv?.title || 'AI智能助手',
+              biz_name: conv?.biz_name || 'AI智能助手',
+            },
+          }}
+          fallback={<LazyFeatureFallback label="正在加载会话配置…" />}
+        />
+      )}
     </>
   )
 })

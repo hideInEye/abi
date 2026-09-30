@@ -12,10 +12,32 @@
 import {Control, ControlValueType} from "./SchemaTypes";
 import React, {ReactNode} from "react";
 import LCGUIUtil from "./LCGUIUtil";
-import UIMap from "./ui";
+import UIMap, {isAsyncUIRegistryEntry, type UIRegistryEntry} from "./ui";
 import {ConfigProvider, theme} from "antd";
 import {antdComponentTheme} from "./AntdTheme.ts";
 import {evaluateVisibilityRule} from "../security/runtime-config.ts";
+import {LazyFeatureFallback, RetryableLazy} from "../runtime/RetryableLazy.tsx";
+
+interface RegisteredControlProps {
+    children?: ReactNode;
+    controlProps: Record<string, any>;
+    entry: UIRegistryEntry;
+}
+
+function RegisteredControl({children, controlProps, entry}: RegisteredControlProps) {
+    if (isAsyncUIRegistryEntry(entry)) {
+        return (
+            <RetryableLazy
+                loader={entry.loader}
+                componentProps={{...controlProps, children}}
+                fallback={<LazyFeatureFallback label="正在加载代码编辑器…" style={{height: 180}}/>}
+            />
+        );
+    }
+
+    const Component = entry;
+    return <Component {...controlProps}>{children}</Component>;
+}
 
 export interface FieldChangeData {
     id?: string;
@@ -97,8 +119,9 @@ export class LCGUI extends React.Component<LCGUIProps> {
                 //本层没有控件，直接返回子节点
                 nodes.push([...tempNodes]);
             } else {
-                const {type, config, value, id, reRender, label, tip} = control;
-                const Component = UIMap.get(type);
+                const {config, value, id, reRender, label, tip} = control;
+                const componentEntry = UIMap.get(type);
+                if (!componentEntry) return nodes;
                 schemaKeyPath.pop();
                 schemaKeyPath.push({key: "value"});
                 //非叶子节点不解析label
@@ -107,7 +130,7 @@ export class LCGUI extends React.Component<LCGUIProps> {
                     ...config, ...controlVal, label, tip,
                     onChange: (data: any) => this.onControlChange(data, schemaKeyPath, dataKeyPath, reRender, id)
                 };
-                nodes.push(<Component key={childIndex} {..._props}>{tempNodes}</Component>);
+                nodes.push(<RegisteredControl key={childIndex} entry={componentEntry} controlProps={_props}>{tempNodes}</RegisteredControl>);
             }
         } else {
             //解析叶子节点
@@ -124,9 +147,9 @@ export class LCGUI extends React.Component<LCGUIProps> {
                 ...config, ...controlVal, label, tip,
                 onChange: (data: any) => this.onControlChange(data, schemaKeyPath, dataKeyPath, reRender, id)
             };
-            const Component = UIMap.get(type);
-            if (!Component) return [];
-            nodes.push(<Component key={childIndex} {..._props} />);
+            const componentEntry = UIMap.get(type);
+            if (!componentEntry) return [];
+            nodes.push(<RegisteredControl key={childIndex} entry={componentEntry} controlProps={_props}/>);
         }
         return nodes;
     }

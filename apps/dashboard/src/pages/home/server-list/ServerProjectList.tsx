@@ -10,8 +10,12 @@
  */
 
 import {memo} from "react";
-import ProjectList from "../project-list/ProjectList";
-import {SaveType} from "../../../designer/DesignerType";
+import type {SaveType} from "../../../designer/DesignerType";
+import type {ProjectListProps} from "../project-list/ProjectList";
+import {LazyFeatureFallback, RetryableLazy} from "../../../runtime/RetryableLazy.tsx";
+
+const loadProjectList = () => import('../project-list/ProjectList.tsx');
+const SERVER_SAVE_TYPE = '1' as SaveType;
 
 interface ServerProjectListProps {
     statusFilter?: string;
@@ -20,7 +24,16 @@ interface ServerProjectListProps {
 
 const ServerProjectList = memo((props: ServerProjectListProps) => {
     return (
-        <ProjectList saveType={SaveType.SERVER} statusFilter={props.statusFilter} title={props.title}/>
+        <RetryableLazy<ProjectListProps>
+            loader={loadProjectList}
+            componentProps={{saveType: SERVER_SAVE_TYPE, statusFilter: props.statusFilter, title: props.title}}
+            fallback={
+                <LazyFeatureFallback
+                    label="正在准备项目列表…"
+                    style={{height: '100%', minHeight: 320, width: '100%'}}
+                />
+            }
+        />
     )
 })
 

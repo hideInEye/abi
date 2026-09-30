@@ -1,27 +1,9 @@
 import React, { useMemo, useState } from 'react'
 import { Drawer, Input, Spin, Empty, Tag, Select } from 'antd'
 import { SearchOutlined, DatabaseOutlined, CloseOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons'
+import type { SchemaField, SchemaTable } from './schemaFields'
 
-export interface SchemaField {
-  name: string           // originName/fieldName - 字段名
-  type: string           // fieldType - 原始类型
-  semantic: 'pk' | 'date' | 'dim' | 'metric'
-  semLabel: string
-  description?: string   // fieldDesc - 描述
-  tableName?: string     // 所属表名
-  tableDesc?: string     // 表描述/中文名
-  bizName?: string       // 中文名称
-  alias?: string         // 别名
-}
-
-export interface SchemaTable {
-  schemaId: number | string
-  bizName: string
-  techName?: string
-  description?: string
-  fields: SchemaField[]
-  loading?: boolean
-}
+export type { SchemaField, SchemaTable } from './schemaFields'
 
 interface Props {
   open: boolean
@@ -29,35 +11,6 @@ interface Props {
   onClose: () => void
   /** 抽屉挂载容器（分享悬浮窗内需限定在面板内展示时传入） */
   getContainer?: () => HTMLElement
-}
-
-/** 解析接口 modelDetail（JSON 字符串）为扁平字段列表：主键/日期/维度/指标 */
-export function parseSchemaFieldsFromModelDetail(modelDetailStr: string): SchemaField[] {
-  try {
-    const detail = typeof modelDetailStr === 'string' ? JSON.parse(modelDetailStr) : modelDetailStr
-    const fields: SchemaField[] = []
-    const addFields = (items: any[], semantic: SchemaField['semantic'], semLabel: string) => {
-      (items || []).forEach(item => {
-        fields.push({
-          name: item.originName || item.fieldName || item.techName || '',
-          type: item.fieldType || '',
-          semantic,
-          semLabel,
-          description: item.fieldDesc || '',
-          tableName: item.tableName || '',
-          tableDesc: item.tdesc || item.rtableName || '',
-          bizName: item.bizName || '',
-          alias: item.alias || '',
-        })
-      })
-    }
-    addFields(detail.identifiers, 'pk', '主键')
-    const dimensions = detail.dimensions || []
-    addFields(dimensions.filter((d: any) => d.type === 'datetime'), 'date', '日期')
-    addFields(dimensions.filter((d: any) => d.type !== 'datetime'), 'dim', '维度')
-    addFields(detail.measures, 'metric', '指标')
-    return fields
-  } catch { return [] }
 }
 
 const SEM_TAG_CONFIG: Record<string, { color: string; bg: string }> = {

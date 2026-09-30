@@ -12,6 +12,7 @@ import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
 import { $t } from '@/locales';
 import { getRouteName, getRoutePath } from '@/router/elegant/transform';
 import { store } from '@/store';
+import { hidePageLoading, showPageLoading } from '@/store/slice/app/loadingSlice';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { isStaticSuper, selectUserInfo } from '@/store/slice/auth';
 import { getRouteHome, initAuthRoute, initConstantRoute } from '@/store/slice/route';
@@ -76,11 +77,7 @@ export const createRouteGuard: BeforeEach = (to, _, blockerOrJump) => {
 
   // 第三步
   window.NProgress?.start?.();
-  import('@/store').then(({ store }) => {
-    import('@/store/slice/app/loadingSlice').then(({ showPageLoading }) => {
-      store.dispatch(showPageLoading());
-    });
-  });
+  store.dispatch(showPageLoading());
 
   const notFoundRoute: RouteKey = 'not-found';
 
@@ -167,11 +164,7 @@ export const afterEach: AfterEach = to => {
   const documentTitle = i18nKey ? $t(i18nKey) : title;
   document.title = documentTitle ?? 'React-Soybean';
   window.NProgress?.done?.();
-  import('@/store').then(({ store }) => {
-    import('@/store/slice/app/loadingSlice').then(({ hidePageLoading }) => {
-      store.dispatch(hidePageLoading());
-    });
-  });
+  store.dispatch(hidePageLoading());
 };
 
 function getRouteQueryOfLoginRoute(fullPath: string, routeHome: RouteKey) {

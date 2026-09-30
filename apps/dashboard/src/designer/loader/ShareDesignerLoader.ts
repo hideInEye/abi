@@ -9,12 +9,12 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import designerManager from "../manager/DesignerManager.ts";
 import {DesignerLoader} from "./DesignerLoader.ts";
 import {DesignerMode, ProjectDataType, SaveType} from "../DesignerType";
 import layerManager from "../manager/LayerManager.ts";
 import BPExecutor from "../blueprint/core/BPExecutor.ts";
 import baseApi from "../../api/BaseApi.ts";
+import {initializeViewRuntime} from '../runtime/viewRuntime.ts';
 
 
 /**
@@ -41,7 +41,7 @@ class ShareDesignerLoader extends DesignerLoader {
     }
 
     protected getProjectDataAfter(id: string, type: SaveType, data: ProjectDataType): void {
-        designerManager.init(data, DesignerMode.VIEW);
+        initializeViewRuntime(data);
         window.LC_ENV = {
             projectId: id,
             saveType: type,

@@ -12,7 +12,6 @@
 import {EditorDesignerLoader} from "./loader/EditorDesignerLoader.ts";
 import {useEffect, useRef} from 'react';
 import './style/DesignerGlobalStyle.less';
-import '../designer/resource/font/FontGlobal.css';
 import DesignerLeft from "./left/DesignerLeft";
 import DesignerRight from "./right/DesignerRight";
 import DesignerFooter from "./footer/DesignerFooter";
@@ -27,6 +26,7 @@ import {DesignerMode, SaveType} from "./DesignerType.ts";
 import 'nprogress/nprogress.css';
 import {DesignerLoader} from "./loader/DesignerLoader.ts";
 import {destroyDesignerRuntime} from "./runtime/destroyDesignerRuntime.ts";
+import {registerAppCleanup} from "../runtime/appCleanup.ts";
 
 /**
  * 绑定事件到dom元素
@@ -99,6 +99,7 @@ const Designer = observer((props: DesignerProps) => {
     const {id, type} = props;
     const loaderRef = useRef<DesignerLoader>(new EditorDesignerLoader(DesignerMode.EDIT));
     useEffect(() => {
+        const cleanupRuntime = registerAppCleanup(destroyDesignerRuntime);
         //加载设计器
         loaderRef.current?.load(id, type);
         //绑定事件到dom元素
@@ -106,7 +107,7 @@ const Designer = observer((props: DesignerProps) => {
         return () => {
             loaderRef.current?.cancelLoad();
             unbindEventToDom();
-            destroyDesignerRuntime();
+            cleanupRuntime();
         };
     }, []);
 

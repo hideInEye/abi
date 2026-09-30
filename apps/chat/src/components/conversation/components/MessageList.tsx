@@ -10,18 +10,22 @@ import HumanEle from '../HumanEle'
 import MessageNavRail from './MessageNavRail'
 import type { NavItem } from './MessageNavRail'
 import OpeningsEle from '../OpeningsEle'
-import ViewEle from '../ViewEle'
-import SchemaFieldsModal, { parseSchemaFieldsFromModelDetail } from '../../conversation-analysis/SchemaFieldsModal'
-import type { SchemaTable } from '../../conversation-analysis/SchemaFieldsModal'
+import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
+import { parseSchemaFieldsFromModelDetail } from '../../conversation-analysis/schemaFields'
+import type { SchemaTable } from '../../conversation-analysis/schemaFields'
 import { fetchSemanticDetail } from '../../../service/api/semantic'
 import { parseMessageContent } from '../../../utils'
-import ReportMessageRow from '../report-mode/ReportMessageRow'
 import { getReportDeleteRoundIndex } from '../report-mode/reportMessageActions'
 import { mergeConversationAndReportGroups } from '../report-mode/reportTimeline'
 import type { ReportItem } from '../report-mode/types'
-import ExploreMessageRow from '../exploration-mode/ExploreMessageRow'
 import type { ExploreCodeEditPayload } from '../exploration-mode/ExploreCodeBlock'
 import type { ExploreItem } from '../exploration-mode/types'
+import { calculateVirtualMessageWindow, getDeferredMessageStyle } from './messageRendering'
+
+const loadViewMessage = () => import('../ViewEle')
+const loadReportMessageRow = () => import('../report-mode/ReportMessageRow')
+const loadExploreMessageRow = () => import('../exploration-mode/ExploreMessageRow')
+const loadSchemaFieldsModal = () => import('../../conversation-analysis/SchemaFieldsModal')
 
 // 从消息内容（view 的 chart-view 或内嵌 JSON）中解析数据分组/语义元信息，
 // 用于历史会话回填信息条（历史 human 消息不携带 _groupName/_semanticName）
@@ -330,17 +334,21 @@ const MessageList = ({
       const report = item.report as ReportItem
       const deleteRoundIndex = getDeleteRoundIndex(item)
       return (
-        <ReportMessageRow
+        <RetryableLazy
           key={key}
-          report={report}
-          onToggleThinking={() => onToggleReportThinking?.(report.id)}
-          onThinkingTypewriterComplete={() => onCompleteReportThinkingTypewriter?.(report.id)}
-          onToggleTodo={() => onToggleReportTodo?.(report.id)}
-          onToggleTask={(taskKey) => onToggleReportTask?.(report.id, taskKey)}
-          onOpenReport={() => onOpenReport?.(report.id)}
-          onDelete={deleteRoundIndex !== undefined && onEnterDeleteMode
-            ? () => onEnterDeleteMode({ deleteRoundIndex })
-            : undefined}
+          loader={loadReportMessageRow}
+          componentProps={{
+            report,
+            onToggleThinking: () => onToggleReportThinking?.(report.id),
+            onThinkingTypewriterComplete: () => onCompleteReportThinkingTypewriter?.(report.id),
+            onToggleTodo: () => onToggleReportTodo?.(report.id),
+            onToggleTask: (taskKey: string) => onToggleReportTask?.(report.id, taskKey),
+            onOpenReport: () => onOpenReport?.(report.id),
+            onDelete: deleteRoundIndex !== undefined && onEnterDeleteMode
+              ? () => onEnterDeleteMode({ deleteRoundIndex })
+              : undefined,
+          }}
+          fallback={<LazyFeatureFallback label="正在加载报告消息…" />}
         />
       )
     }
@@ -349,16 +357,20 @@ const MessageList = ({
       const exploration = item.exploration as ExploreItem
       const deleteRoundIndex = getDeleteRoundIndex(item)
       return (
-        <ExploreMessageRow
+        <RetryableLazy
           key={key}
-          item={exploration}
-          active={activeExploreId === exploration.id}
-          onOpen={() => onOpenExplore?.(exploration.id)}
-          onClose={onCloseExplore}
-          onEditCode={onEditExploreCode}
-          onDelete={deleteRoundIndex !== undefined && onEnterDeleteMode
-            ? () => onEnterDeleteMode({ deleteRoundIndex })
-            : undefined}
+          loader={loadExploreMessageRow}
+          componentProps={{
+            item: exploration,
+            active: activeExploreId === exploration.id,
+            onOpen: () => onOpenExplore?.(exploration.id),
+            onClose: onCloseExplore,
+            onEditCode: onEditExploreCode,
+            onDelete: deleteRoundIndex !== undefined && onEnterDeleteMode
+              ? () => onEnterDeleteMode({ deleteRoundIndex })
+              : undefined,
+          }}
+          fallback={<LazyFeatureFallback label="正在加载探索消息…" />}
         />
       )
     }
@@ -410,29 +422,33 @@ const MessageList = ({
 
     if (item.role === 'view') {
       return (
-        <ViewEle
-          isReadyShare={mode === 'share' ? false : undefined}
-          isSharing={isSharing}
+        <RetryableLazy
           key={key}
-          data={item}
-          getAnswer={getAnswer}
-          getRecommend={getRecommend}
-          getQueryRewrite={getQueryRewrite}
-          convUid={conv.conv_uid}
-          chatId={conv.chat_id}
-          spaceId={conv.space_id}
-          agentId={conv.agent_id}
-          onReferenceClick={onReferenceClick}
-          conv={conv}
-          isDone={isDone}
-          isGettingData={isGettingData}
-          setConvContent={setConvContent!}
-          onDelete={onEnterDeleteMode}
-          onRegenerate={onRegenerate}
-          isLast={isLast}
-          versionInfo={versionInfo}
-          shareOrder={shareOrder}
-          onMessageUpdate={() => {}}
+          loader={loadViewMessage}
+          componentProps={{
+            isReadyShare: mode === 'share' ? false : undefined,
+            isSharing,
+            data: item,
+            getAnswer,
+            getRecommend,
+            getQueryRewrite,
+            convUid: conv.conv_uid,
+            chatId: conv.chat_id,
+            spaceId: conv.space_id,
+            agentId: conv.agent_id,
+            onReferenceClick,
+            conv,
+            isDone,
+            isGettingData,
+            setConvContent: setConvContent!,
+            onDelete: onEnterDeleteMode,
+            onRegenerate,
+            isLast,
+            versionInfo,
+            shareOrder,
+            onMessageUpdate: () => {},
+          }}
+          fallback={<LazyFeatureFallback label="正在加载可视化结果…" style={{ height: 320 }} />}
         />
       )
     }
@@ -732,20 +748,33 @@ const MessageList = ({
         >
           <div className={`max-w-[53.75rem] w-full m-auto ${mergedGroups.length === 0 && emptyContent ? 'h-full' : ''}`}>
             {mergedGroups.length === 0 && emptyContent}
-            {mergedGroups.map(renderMergedEntry)}
+            {mergedGroups.map((entry, index) => (
+              <div key={entry.key} style={getDeferredMessageStyle(index, mergedGroups.length, loading)}>
+                {renderMergedEntry(entry, index)}
+              </div>
+            ))}
             {reportLoadError && <Alert className="mb-4" type="error" showIcon message={reportLoadError} />}
           </div>
-          <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
+          {semModalOpen && (
+            <RetryableLazy
+              loader={loadSchemaFieldsModal}
+              componentProps={{ open: true, tables: semModalTables, onClose: () => setSemModalOpen(false) }}
+              fallback={<LazyFeatureFallback label="正在加载数据语义…" />}
+            />
+          )}
         </div>
         {!hideMessageNavRail && <MessageNavRail items={navItems} containerRef={containerRef} />}
       </div>
     )
   }
 
-  const totalHeight = flatData.length * estimatedItemHeight
-  const startIndex = Math.max(0, Math.floor(scrollTop / estimatedItemHeight) - overscan)
-  const endIndex = Math.min(flatData.length, Math.ceil((scrollTop + containerHeight) / estimatedItemHeight) + overscan)
-  const offsetTop = startIndex * estimatedItemHeight
+  const { endIndex, offsetTop, startIndex, totalHeight } = calculateVirtualMessageWindow({
+    containerHeight,
+    estimatedItemHeight,
+    itemCount: flatData.length,
+    overscan,
+    scrollTop,
+  })
   const visibleItems = flatData.slice(startIndex, endIndex)
 
   return (
@@ -760,7 +789,13 @@ const MessageList = ({
         <div style={{ transform: `translateY(${offsetTop / 16}rem)` }}>{visibleItems.map((item, index) => renderItem(item, startIndex + index))}</div>
       </div>
       </div>
-      <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
+      {semModalOpen && (
+        <RetryableLazy
+          loader={loadSchemaFieldsModal}
+          componentProps={{ open: true, tables: semModalTables, onClose: () => setSemModalOpen(false) }}
+          fallback={<LazyFeatureFallback label="正在加载数据语义…" />}
+        />
+      )}
     </div>
   )
 }
