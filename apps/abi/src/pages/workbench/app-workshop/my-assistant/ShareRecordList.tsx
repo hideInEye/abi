@@ -1,11 +1,12 @@
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
-import { Empty, Select, Spin, message } from 'antd';
+import { Empty, Modal, Select, Spin, message } from 'antd';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { AssistantIconBlock } from '@/components/AssistantIcon';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { fetchProjectShareDetailApi, fetchProjectShareListApi } from '@/service/api/share';
 import { getSpaceId } from '@/store/slice/app';
+import { normalizeShareUrl } from '@/utils/shareUrl';
 
 /** 分享记录行数据（字段做兼容映射，后端字段缺失时兜底展示） */
 interface ShareRecordItem {
@@ -19,6 +20,14 @@ interface ShareRecordItem {
   /** 状态标签颜色修饰类：''=绿 当前启用 / draft=橙 编辑中 / off=灰 历史版本·已删除·已过期 */
   statusCls: string;
   icon?: string;
+  apiKeys?: string[];
+}
+
+/** apiKeys 字段兼容：数组或逗号分隔串 */
+function parseApiKeys(value: any): string[] {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  if (typeof value === 'string' && value.trim()) return value.split(',').map(s => s.trim()).filter(Boolean);
+  return [];
 }
 
 /** 时间格式化：去掉 T 分隔符 */
@@ -55,12 +64,14 @@ function mapShareRecord(item: any): ShareRecordItem {
     // 列表接口不含密码，shareCode 用于复制时单查详情；列表缺 shareCode 时从分享链接尾段兜底
     shareCode: item.shareCode || String(item.shareUrl || '').split('/').pop() || '',
     name: item.projectName || item.appName || item.name || '-',
-    shareUrl: item.shareUrl || '',
+    // 后端旧路径 dashboard_share_page 过渡期直接替换为新路径 share_url
+    shareUrl: normalizeShareUrl(item.shareUrl),
     shareTime: fmtTime(item.createTime || item.shareTime),
     expiration: item.expirationDate ? fmtTime(item.expirationDate) : '永久',
     statusLabel: status.label,
     statusCls: status.cls,
     icon: item.icon,
+    apiKeys: parseApiKeys(item.apiKeys ?? item.accessKeys),
   };
 }
 
@@ -88,6 +99,9 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [jumpValue, setJumpValue] = useState('');
+  const [akRecord, setAkRecord] = useState<ShareRecordItem | null>(null);
+  const [akList, setAkList] = useState<string[]>([]);
+  const [akLoading, setAkLoading] = useState(false);
 
   /** 拉取分享记录（服务端分页） */
   const fetchList = useCallback(async (page: number, size: number) => {
@@ -166,27 +180,34 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
     });
   };
 
-  /** 复制链接和密码（列表接口无密码字段，点击时按 shareCode 单查分享详情取密码，助手与大屏统一） */
-  const handleCopy = async (r: ShareRecordItem) => {
+  /** 复制分享链接 */
+  const handleCopy = (r: ShareRecordItem) => {
     if (!r.shareUrl) {
       message.error('该记录暂无分享链接');
       return;
     }
-    let password = '';
-    if (r.shareCode) {
-      const { data, error } = await fetchProjectShareDetailApi(r.shareCode);
-      if (error || !data) {
-        navigator.clipboard.writeText(r.shareUrl).then(() => {
-          message.warning('获取分享密码失败，已仅复制分享链接');
-        });
-        return;
-      }
-      password = (data as any).sharePassword || '';
-    }
-    const text = password ? `分享链接：${r.shareUrl}\n访问密码：${password}` : r.shareUrl;
-    navigator.clipboard.writeText(text).then(() => {
-      message.success(password ? '分享链接和密码已复制到剪贴板' : '分享链接已复制到剪贴板');
+    navigator.clipboard.writeText(r.shareUrl).then(() => {
+      message.success('分享链接已复制到剪贴板');
     });
+  };
+
+  /** API Key 查看：优先读列表行字段，缺失时按 shareCode 单查详情 */
+  const openAkModal = async (r: ShareRecordItem) => {
+    setAkRecord(r);
+    if (r.apiKeys?.length) {
+      setAkList(r.apiKeys);
+      return;
+    }
+    setAkList([]);
+    setAkLoading(true);
+    try {
+      const { data, error } = await fetchProjectShareDetailApi(r.shareCode);
+      setAkList(!error && data ? parseApiKeys((data as any).apiKeys ?? (data as any).accessKeys) : []);
+    } catch {
+      setAkList([]);
+    } finally {
+      setAkLoading(false);
+    }
   };
 
   const renderCardGrid = () => {
@@ -215,8 +236,8 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
               <div className="ac-footer">
                 <span className={`ac-tag${r.statusCls ? ` ${r.statusCls}` : ''}`}>{r.statusLabel}</span>
                 <div className="ac-actions">
-                  {/* 密码在点击时单查详情获取，列表行无法预判有无密码，文案固定（复制内容与提示随实际密码切换） */}
-                  <button className="ac-btn" onClick={() => handleCopy(r)}>复制链接和密码</button>
+                  <button className="ac-btn" onClick={() => openAkModal(r)}>API Key查看</button>
+                  <button className="ac-btn" onClick={() => handleCopy(r)}>复制链接</button>
                 </div>
               </div>
             </div>
@@ -270,6 +291,20 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
           </div>
         </div>
       </section>
+
+      <Modal title="API Key列表" open={!!akRecord} onCancel={() => setAkRecord(null)} footer={null} width={420} centered>
+        <Spin spinning={akLoading}>
+          {akList.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflow: 'auto' }}>
+              {akList.map(key => (
+                <div key={key} style={{ padding: '8px 12px', background: '#f7f8fa', borderRadius: 8, color: '#262626' }}>{key}</div>
+              ))}
+            </div>
+          ) : (
+            !akLoading && <Empty description="暂无 API Key" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          )}
+        </Spin>
+      </Modal>
     </div>
   );
 };

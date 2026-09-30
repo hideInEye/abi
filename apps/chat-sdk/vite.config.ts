@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 
@@ -61,6 +61,73 @@ function copyArtifacts(): Plugin {
   }
 }
 
+// lib 模式不打包 index.html，产物目录缺入口文件时 nginx 直接 403；这里补一个生产调试页支持整目录独立部署。
+// 只写 dist 不同步 chat/public，避免覆盖 Chat 自身的 index.html。
+const STANDALONE_PAGE = `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ABI 助手悬浮窗 SDK · 接入调试</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #f5f7fa;
+        font: 14px/1.5 sans-serif;
+      }
+      /* 打开按钮由宿主系统自己加（SDK 不再自带悬浮球） */
+      .host-open-btn {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 2147483647;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 24px;
+        cursor: pointer;
+        background: linear-gradient(135deg, #5b7cf7, #8b5cf6);
+        color: #fff;
+        box-shadow: 0 6px 20px rgba(91, 124, 247, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <button class="host-open-btn" id="hostOpenBtn" style="display: none">打开 AI 助手</button>
+    <script src="./abi-assistant-widget.js"></script>
+    <script>
+      // 独立部署调试页：shareCode/base 可用 URL 参数覆盖（?shareCode=xxx&base=/api），默认值与 dev 调试页一致
+      var params = new URLSearchParams(location.search)
+      var assistant = document.createElement('abi-assistant')
+      assistant.setAttribute('share-code', params.get('shareCode') || 'rkh7lyn8')
+      assistant.setAttribute('base', params.get('base') || '/api')
+      assistant.setAttribute('theme-switch', '')
+      var hostOpenBtn = document.getElementById('hostOpenBtn')
+      assistant.addEventListener('close', function () {
+        assistant.style.display = 'none'
+        hostOpenBtn.style.display = ''
+      })
+      hostOpenBtn.addEventListener('click', function () {
+        assistant.style.display = 'contents'
+        hostOpenBtn.style.display = 'none'
+      })
+      document.body.appendChild(assistant)
+    </script>
+  </body>
+</html>
+`
+
+function emitStandalonePage(): Plugin {
+  return {
+    name: 'abi-widget-emit-standalone-page',
+    apply: 'build',
+    closeBundle() {
+      const distDir = path.join(fileURLToPath(new URL('.', import.meta.url)), 'dist')
+      writeFileSync(path.join(distDir, 'index.html'), STANDALONE_PAGE)
+    },
+  }
+}
+
 const chatRoot = fileURLToPath(new URL('./src/chat', import.meta.url))
 
 export default defineConfig({
@@ -86,7 +153,7 @@ export default defineConfig({
       plugins: [tailwindcss, scopeGlobalCss()],
     },
   },
-  plugins: [copyArtifacts()],
+  plugins: [copyArtifacts(), emitStandalonePage()],
   // 仅 dev：调试页 base="/api" 时转发到网关，保持同源免 CORS
   server: {
     port: 5199,

@@ -1,12 +1,13 @@
 /** 助手分享前端路由前缀（连字符约定，对齐大屏 dashboard-share-page） */
 export const ASSISTANT_SHARE_ROUTE = '/assistant-share-page'
 
-/** 后端分享路径标识（助手/大屏 × 下划线/连字符 均兼容，后端统一返回 share_page 标识） */
-const BACKEND_PATH_MARKER = '(?:assistant|dashboard)[_-]share[_-]page'
+/** 后端分享路径标识（新格式 share_url 助手与大屏共用；旧 assistant/dashboard share_page 过渡期兼容，后端切换后可收窄） */
+const BACKEND_PATH_MARKER = 'share[_-]url|(?:assistant|dashboard)[_-]share[_-]page'
 
 /** 从后端分享链接中提取 shareCode（兼容完整 URL / 纯路径） */
 export function parseShareCode(shareUrl: string): string {
-  const m = String(shareUrl || '').match(new RegExp(`${BACKEND_PATH_MARKER}\\/([^/?#]+)`))
+  // marker 含 | 分支，必须整体括起再拼后缀，否则只有最后一个分支带捕获组
+  const m = String(shareUrl || '').match(new RegExp(`(?:${BACKEND_PATH_MARKER})\\/([^/?#]+)`))
   return m ? decodeURIComponent(m[1]) : ''
 }
 

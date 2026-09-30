@@ -6,6 +6,7 @@ import {PreviewOpen, Share, Undo} from '@icon-park/react';
 import {IProjectInfo, SaveType} from '../../designer/DesignerType.ts';
 import baseApi from '../../api/BaseApi.ts';
 import URLUtil from '../../utils/URLUtil.ts';
+import {normalizeShareUrl} from '../../utils/ShareViewUtil.ts';
 import defaultSnapshot from '../home/image/default-snapshot.jpg';
 import '../home/project-list/ProjectItem.less';
 
@@ -38,8 +39,8 @@ export default function MyScreenItem({item, onUnpublish}: MyScreenItemProps) {
                 : undefined;
             const res = await baseApi.shareProject(Number(id), Number(currentSpaceId), sharePasswordFlag, expirationDays, expirationDateStr);
             if (res?.shareUrl) {
-                // 将 /#/dr/xxx 格式转为 /dashboard-share-page/xxx，兼容 history 路由并对齐新路由路径
-                const shareUrl = res.shareUrl.replace('/#/', '/').replace('/dr/', '/dashboard-share-page/');
+                // 将 /#/dr/xxx 格式转为 /share_url/xxx（助手与大屏共用新路径），兼容 history 路由；旧 dashboard_share_page 路径过渡期直接替换
+                const shareUrl = normalizeShareUrl(res.shareUrl.replace('/#/', '/').replace('/dr/', '/share_url/'));
                 setShareLink(shareUrl);
                 setSharePassword(res.sharePassword ?? null);
             }

@@ -2,9 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { AssistantSharePageView } from '@/components/chat-widget/AssistantSharePanel'
 
-// 兼容既有引用：dashboard_share_page 从本模块导入 AssistantSharePageView
-export { AssistantSharePageView }
-
 function AssistantSharePage() {
   const { shareCode } = Route.useParams()
   const { embed } = Route.useSearch()

@@ -26,12 +26,17 @@ import { resetLoginExpiredState } from './utils/auth.ts';
 //   models,
 // })
 
-// 兼容后端助手分享返回的哈希路径（#/dashboard_share_page/{code}）：
+// 兼容后端助手分享返回的哈希路径（#/share_url/{code}，助手与大屏共用）：
 // 本应用为 history 路由无法消费哈希路径，独立运行时以全屏 iframe 内嵌 chat 分享页，
 // 地址栏保持后端原路径不变，也不经过本应用路由（避免 404 / 登录跳转闪烁）
+// TODO: 过渡兼容旧路径 #/dashboard_share_page/{code}，检测到后直接替换成 share_url，后端切换完成后删除旧路径分支
 const shareHashMatch = !qiankunWindow.__POWERED_BY_QIANKUN__
-  ? window.location.hash.match(/^#\/?dashboard_share_page\/([^/?#]+)/)
+  ? window.location.hash.match(/^#\/?(share_url|dashboard_share_page)\/([^/?#]+)/)
   : null;
+if (shareHashMatch && shareHashMatch[1] === 'dashboard_share_page') {
+  const newHash = window.location.hash.replace('dashboard_share_page', 'share_url');
+  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${newHash}`);
+}
 let root: any;
 
 async function setupApp(props: any) {
@@ -99,18 +104,23 @@ const initQianKun = () => {
 if (shareHashMatch) {
   // 分享页改用新 SDK：引入 abi-assistant-widget 的 css + js 两个标签，加载完成后加 <abi-assistant> 悬浮窗标签。
   // base="/api" 与 chat 应用 config.json 的 VITE_BASE_API 一致，保证网关路径拼接正确；
-  // theme-switch 开启悬浮窗头部的主题切换按钮（蓝色系 / 黑色系）。
-  const shareCode = shareHashMatch[1];
+  // theme-switch 开启悬浮窗头部的“外观自定义”入口按钮（打开定制抽屉，支持背景/标题栏/字体/图表自定义）。
+  const shareCode = shareHashMatch[2];
   const rootEl = document.getElementById('root');
   if (rootEl) rootEl.replaceChildren();
 
+  // bundle 文件名无内容 hash，浏览器会强缓存旧版：dev 带时间戳永远拉新，生产带版本号（发新产物后 bump）
+  const widgetVer = import.meta.env.DEV ? String(Date.now()) : '20260929-1813';
+
   const link = document.createElement('link');
+  // id 与 SDK 内置去重一致，防止 loadStyles 再插一条不带 ?v 的旧缓存 CSS
+  link.id = 'abi-assistant-widget-styles';
   link.rel = 'stylesheet';
-  link.href = '/chat-ui/abi-assistant-widget.css';
+  link.href = `/chat-ui/abi-assistant-widget.css?v=${widgetVer}`;
   document.head.appendChild(link);
 
   const script = document.createElement('script');
-  script.src = '/chat-ui/abi-assistant-widget.js';
+  script.src = `/chat-ui/abi-assistant-widget.js?v=${widgetVer}`;
   script.onload = () => {
     const assistant = document.createElement('abi-assistant');
     assistant.setAttribute('share-code', shareCode);

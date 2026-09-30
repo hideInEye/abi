@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 
 import AbiAssistant from './AbiAssistant'
-import { normalizeThemeId } from './theme'
+import { normalizeThemeConfig, normalizeThemeId, type DeepPartial, type ThemeConfig } from './theme'
 
 export const TAG_NAME = 'abi-assistant'
 
@@ -13,7 +13,7 @@ export const TAG_NAME = 'abi-assistant'
  */
 export class AbiAssistantElement extends HTMLElement {
   static get observedAttributes() {
-    return ['share-code', 'base', 'theme', 'theme-switch']
+    return ['share-code', 'base', 'theme', 'theme-switch', 'theme-config']
   }
 
   private root: Root | null = null
@@ -43,15 +43,28 @@ export class AbiAssistantElement extends HTMLElement {
     const apiBase = (this.getAttribute('base') || window.location.origin).replace(/\/$/, '')
     window.APP_CONFIG = { ...(window.APP_CONFIG || {}), VITE_BASE_API: apiBase }
 
+    // 宿主可选直接传入初始自定义配置（JSON 串）；解析失败/非法字段经 normalizeThemeConfig 兜底为 undefined
+    const themeConfigAttr = this.getAttribute('theme-config')
+    let initialThemeConfig: DeepPartial<ThemeConfig> | undefined
+    if (themeConfigAttr) {
+      try {
+        initialThemeConfig = normalizeThemeConfig(JSON.parse(themeConfigAttr))
+      } catch {
+        console.warn('[abi-assistant] theme-config 属性不是合法 JSON，已忽略')
+      }
+    }
+
     this.root ??= createRoot(this)
     this.root.render(
       createElement(AbiAssistant, {
         shareCode,
         apiBase,
-        // 预设主题风格；非法/缺省值在 normalizeThemeId 内回退蓝色系
+        // 预设主题风格（背景/标题栏/字体/图表的基准）；非法/缺省值在 normalizeThemeId 内回退蓝色系
         theme: normalizeThemeId(this.getAttribute('theme')),
-        // 带 theme-switch 属性时在悬浮窗头部显示主题切换按钮
+        // 带 theme-switch 属性时在悬浮窗头部显示“外观自定义”入口按钮（打开定制抽屉）
         themeSwitch: this.hasAttribute('theme-switch'),
+        // 宿主注入的初始自定义配置（优先级低于接口下发与访客本地自定义）
+        initialThemeConfig,
         // 关闭按钮向外派发 close 事件，由宿主系统决定隐藏/移除
         onClose: () => this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true })),
       }),

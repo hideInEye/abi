@@ -75,10 +75,16 @@ interface ScheduleTaskDrawerProps {
   onClose: () => void
 }
 
+// 每页加载条数：滚动到底点「更多任务」按页追加
+const PAGE_SIZE = 10
+
 export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
   const [rawList, setRawList] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [filters, setFilters] = useState({ name: '', status: '', time: '' })
+  const [pageNum, setPageNum] = useState(1)
+  const [listTotal, setListTotal] = useState(0)
+  const [stats, setStats] = useState({ total: 0, running: 0, paused: 0, stopped: 0 })
   // 高级筛选：草稿值在点击“查询”前不会生效
   const [advOpen, setAdvOpen] = useState(false)
   const [advDraft, setAdvDraft] = useState({ status: '', time: '' })
@@ -91,19 +97,47 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
 
   const hasAdvFilter = filters.status !== '' || filters.time !== ''
 
-  const loadTasks = async () => {
+  // 状态走服务端 triggerStatus 过滤；「已暂停」调度中心无对应状态，直接展示空列表
+  const loadTasks = async (page = 1) => {
     if (jobGroup === undefined) return
+    if (filters.status === 'paused') {
+      setRawList([])
+      setListTotal(0)
+      setPageNum(1)
+      return
+    }
     setLoading(true)
     try {
-      const res: any = await fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 9999 })
+      const triggerStatus = filters.status === 'running' ? '1' : filters.status === 'stopped' ? '0' : '-1'
+      const res: any = await fetchJobInfoList({ jobGroup, name: filters.name, pageNum: page, pageSize: PAGE_SIZE, triggerStatus })
       const rows = Array.isArray(res?.data?.data) ? res.data.data : []
-      setRawList(rows)
+      setRawList((prev) => (page === 1 ? rows : [...prev, ...rows]))
+      setListTotal(Number(res?.data?.total) || 0)
+      setPageNum(page)
     } catch {
       message.error('任务列表加载失败')
     } finally {
       setLoading(false)
     }
   }
+
+  // 统计卡片与列表分页相互独立：调度中心只能按 triggerStatus 单条件计数，用 pageSize=1 的轻量请求取 total
+  const loadStats = async () => {
+    if (jobGroup === undefined) return
+    try {
+      const [allRes, runningRes, stoppedRes] = await Promise.all([
+        fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, triggerStatus: '-1' }),
+        fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, triggerStatus: '1' }),
+        fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, triggerStatus: '0' }),
+      ])
+      const totalOf = (res: any) => Number(res?.data?.total) || 0
+      setStats({ total: totalOf(allRes), running: totalOf(runningRes), paused: 0, stopped: totalOf(stoppedRes) })
+    } catch {
+      // 统计失败不阻塞列表
+    }
+  }
+
+  const refresh = () => Promise.all([loadTasks(1), loadStats()])
 
   // 打开抽屉时先解析默认执行器，拿到 jobGroup 后再查列表（列表接口缺 jobGroup 会被后端拒绝）
   useEffect(() => {
@@ -117,41 +151,36 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
       .catch(() => message.error('执行器列表加载失败'))
   }, [open, jobGroup])
 
-  useEffect(() => {
-    if (open && jobGroup !== undefined) {
-      loadTasks()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, jobGroup])
-
-  // 名称走服务端过滤，防抖请求；状态/时间在前端过滤
+  // 打开抽屉/执行器就绪/名称搜索（防抖）统一回第一页，重刷列表与统计
   useEffect(() => {
     if (!open || jobGroup === undefined) return
     const timer = setTimeout(() => {
-      loadTasks()
+      refresh()
     }, 300)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.name, jobGroup])
+  }, [open, jobGroup, filters.name])
 
+  // 状态筛选变化回第一页；统计与状态无关，无需重刷
+  useEffect(() => {
+    if (open && jobGroup !== undefined) loadTasks(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.status])
+
+  // 创建时间后端不支持过滤，仍按已加载数据前端过滤
   const tasks = useMemo(() => {
-    const list = rawList.map(toUiTask)
-    return list.filter((task) => {
-      if (filters.status && task.status !== filters.status) return false
+    return rawList.map(toUiTask).filter((task) => {
       if (filters.time && !task.created.startsWith(filters.time)) return false
       return true
     })
-  }, [rawList, filters.status, filters.time])
+  }, [rawList, filters.time])
 
-  const stats = useMemo(() => {
-    const all = rawList.map(toUiTask)
-    return {
-      total: all.length,
-      running: all.filter((t) => t.status === 'running').length,
-      paused: all.filter((t) => t.status === 'paused').length,
-      stopped: all.filter((t) => t.status === 'stopped').length,
-    }
-  }, [rawList])
+  const hasMore = rawList.length < listTotal
+
+  const loadMore = () => {
+    if (loading) return
+    loadTasks(pageNum + 1)
+  }
 
   // 高级筛选面板外部点击关闭
   useEffect(() => {
@@ -192,7 +221,7 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
     }
     message.success('删除成功')
     setDeleteId(null)
-    await loadTasks()
+    await refresh()
   }
 
   const handleRun = async (task: ScheduleTask) => {
@@ -202,7 +231,7 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
       return
     }
     message.success('已触发执行')
-    await loadTasks()
+    await refresh()
   }
 
   const handleToggleStatus = async (task: ScheduleTask) => {
@@ -212,7 +241,7 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
       return
     }
     message.success(task.status === 'running' ? '已停止' : '已启动')
-    await loadTasks()
+    await refresh()
   }
 
   return (
@@ -326,75 +355,84 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
               defaultJobGroup={jobGroup}
               initial={formState.raw}
               onClose={() => setFormState(null)}
-              onSuccess={loadTasks}
+              onSuccess={refresh}
             />
           )}
 
           {/* 任务列表 */}
           <div className="schedule-task-list">
-            {loading ? (
-              <div className="schedule-empty">加载中…</div>
-            ) : tasks.length === 0 ? (
-              <div className="schedule-empty">
-                <ClockCircleOutlined />
-                <span>暂无匹配的定时任务</span>
-              </div>
-            ) : (
-              tasks.map((task) => (
-                <div key={task.id} className="schedule-task-card">
-                  <div className="schedule-task-head">
-                    <div className="schedule-task-name">{task.name}</div>
-                    <button
-                      type="button"
-                      className={`schedule-status ${task.status}`}
-                      onClick={() => handleToggleStatus(task)}
-                      title={task.status === 'running' ? '点击停止' : '点击启动'}
-                    >
-                      {statusLabel[task.status]}
-                    </button>
-                  </div>
-                  <div className="schedule-task-meta">
-                    <div className="schedule-meta-item">
-                      <ClockCircleOutlined />
-                      {task.freq}
-                    </div>
-                    <div className="schedule-meta-item">
-                      <FolderOutlined />
-                      {task.type}
-                    </div>
-                    <div className="schedule-meta-item">
-                      <UserOutlined />
-                      {task.creator}
-                    </div>
-                    <div className="schedule-meta-item">
-                      <ReloadOutlined />
-                      {task.lastRun}
-                    </div>
-                  </div>
-                  <div className="schedule-task-footer">
-                    <button
-                      type="button"
-                      className="schedule-task-action"
-                      onClick={() => setFormState({ raw: rawList.find((item) => String(item.id) === task.id) })}
-                    >
-                      <EditOutlined />
-                      编辑
-                    </button>
-                    <button type="button" className="schedule-task-action" onClick={() => handleToggleStatus(task)}>
-                      {task.status === 'running' ? <PauseOutlined /> : <PlayCircleOutlined />}
-                      {task.status === 'running' ? '停止' : '启动'}
-                    </button>
-                    <button type="button" className="schedule-task-action run" onClick={() => handleRun(task)}>
-                      <ReloadOutlined />
-                      执行
-                    </button>
-                    <button type="button" className="schedule-task-action danger" onClick={() => setDeleteId(task.id)}>
-                      <DeleteOutlined />
-                      删除
-                    </button>
-                  </div>
+            {tasks.length === 0 ? (
+              loading ? (
+                <div className="schedule-empty">加载中…</div>
+              ) : (
+                <div className="schedule-empty">
+                  <ClockCircleOutlined />
+                  <span>暂无匹配的定时任务</span>
                 </div>
-              ))
+              )
+            ) : (
+              <>
+                {tasks.map((task) => (
+                  <div key={task.id} className="schedule-task-card">
+                    <div className="schedule-task-head">
+                      <div className="schedule-task-name">{task.name}</div>
+                      <button
+                        type="button"
+                        className={`schedule-status ${task.status}`}
+                        onClick={() => handleToggleStatus(task)}
+                        title={task.status === 'running' ? '点击停止' : '点击启动'}
+                      >
+                        {statusLabel[task.status]}
+                      </button>
+                    </div>
+                    <div className="schedule-task-meta">
+                      <div className="schedule-meta-item">
+                        <ClockCircleOutlined />
+                        {task.freq}
+                      </div>
+                      <div className="schedule-meta-item">
+                        <FolderOutlined />
+                        {task.type}
+                      </div>
+                      <div className="schedule-meta-item">
+                        <UserOutlined />
+                        {task.creator}
+                      </div>
+                      <div className="schedule-meta-item">
+                        <ReloadOutlined />
+                        {task.lastRun}
+                      </div>
+                    </div>
+                    <div className="schedule-task-footer">
+                      <button
+                        type="button"
+                        className="schedule-task-action"
+                        onClick={() => setFormState({ raw: rawList.find((item) => String(item.id) === task.id) })}
+                      >
+                        <EditOutlined />
+                        编辑
+                      </button>
+                      <button type="button" className="schedule-task-action" onClick={() => handleToggleStatus(task)}>
+                        {task.status === 'running' ? <PauseOutlined /> : <PlayCircleOutlined />}
+                        {task.status === 'running' ? '停止' : '启动'}
+                      </button>
+                      <button type="button" className="schedule-task-action run" onClick={() => handleRun(task)}>
+                        <ReloadOutlined />
+                        执行
+                      </button>
+                      <button type="button" className="schedule-task-action danger" onClick={() => setDeleteId(task.id)}>
+                        <DeleteOutlined />
+                        删除
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {hasMore && (
+                  <button type="button" className="schedule-load-more" disabled={loading} onClick={loadMore}>
+                    {loading ? '加载中…' : '更多任务'}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

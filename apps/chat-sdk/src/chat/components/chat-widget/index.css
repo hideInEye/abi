@@ -2,9 +2,11 @@
    视觉对齐主对话（glassmorphism 主题：#5b7cf7 蓝 / #8b5cf6 紫 / 浅薰衣草画布 + 白色内容卡）。 */
 
 .abi-cw-root {
-  font-family: 'Helvetica Neue', Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px;
-  color: #333;
+  /* 字体三维（字族/字号缩放/字重）与正文色随自定义主题联动；未自定义时 --cw-font-scale 缺省 1，观感不变 */
+  font-family: var(--cw-font-family, 'Helvetica Neue', Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: calc(14px * var(--cw-font-scale, 1));
+  font-weight: var(--cw-font-weight, 400);
+  color: var(--cw-text, #333);
   line-height: 1.6;
   box-sizing: border-box;
   /* 思考打字机限高（约 5 行；em 相对思考区紧凑字号 12px/1.7，供 AiEle compact 态消费） */
@@ -176,8 +178,9 @@
 .abi-cw-header-name {
   flex: 1;
   min-width: 0;
-  color: var(--cw-text, #333);
-  font-size: 15px;
+  /* 标题栏文字色优先取 --cw-header-text（自定义），回退正文色 */
+  color: var(--cw-header-text, var(--cw-text, #333));
+  font-size: calc(15px * var(--cw-font-scale, 1));
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -193,7 +196,8 @@
   justify-content: center;
   border-radius: 6px;
   cursor: pointer;
-  color: var(--cw-text-muted, #8c8c8c);
+  /* 图标色跟随标题栏：品牌蓝底等深色标题栏下由 --cw-header-icon 提亮 */
+  color: var(--cw-header-icon, var(--cw-text-muted, #8c8c8c));
   transition: all 0.2s;
   background: transparent;
   border: none;
@@ -201,8 +205,8 @@
 }
 
 .abi-cw-action-btn:hover {
-  background: rgba(91, 124, 247, 0.1);
-  color: #5b7cf7;
+  background: var(--cw-header-icon-hover-bg, rgba(91, 124, 247, 0.1));
+  color: var(--cw-header-icon, #5b7cf7);
 }
 
 .abi-cw-action-btn svg {
@@ -216,7 +220,9 @@
   min-height: 0;
   overflow-y: auto;
   padding: 16px 12px;
-  background: var(--cw-body-bg, #f7f8fa);
+  /* 背景色 + 可选渐变图（自定义渐变时 --cw-body-bg-image 产出 linear-gradient，纯色时为 none） */
+  background-color: var(--cw-body-bg, #f7f8fa);
+  background-image: var(--cw-body-bg-image, none);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -369,14 +375,14 @@
 .abi-cw-desc h4,
 .abi-cw-desc h5,
 .abi-cw-desc h6 {
-  font-size: 14px !important;
+  font-size: calc(14px * var(--cw-font-scale, 1)) !important;
   line-height: 1.6 !important;
   margin: 0.4em 0 !important;
 }
 
 .abi-cw-desc code,
 .abi-cw-desc pre {
-  font-size: 12px !important;
+  font-size: calc(12px * var(--cw-font-scale, 1)) !important;
 }
 
 /* 信息条：分组 + 数据语义（复刻主对话 MessageList 信息条内联样式；窄面板字号略收） */
@@ -389,7 +395,7 @@
   backdrop-filter: blur(8px);
   border-radius: 12px;
   border: 1px solid var(--cw-border, rgba(130, 140, 200, 0.12));
-  font-size: 12px;
+  font-size: calc(12px * var(--cw-font-scale, 1));
   color: var(--cw-text-2, #546074);
   flex-wrap: wrap;
 }
@@ -397,7 +403,7 @@
 .abi-cw-infobar-label {
   color: var(--cw-text, #1a2744);
   font-weight: 500;
-  font-size: 13px;
+  font-size: calc(13px * var(--cw-font-scale, 1));
 }
 
 .abi-cw-infobar-chip {
@@ -406,7 +412,7 @@
   gap: 6px;
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: calc(12px * var(--cw-font-scale, 1));
   font-weight: 600;
 }
 
@@ -479,7 +485,7 @@
   outline: none;
   padding: 10px 12px 4px;
   color: var(--cw-text, #333);
-  font-size: 13px;
+  font-size: calc(13px * var(--cw-font-scale, 1));
   line-height: 1.6;
   font-family: inherit;
   min-height: 52px;
@@ -490,12 +496,15 @@
   color: var(--cw-text-muted, #8c8c8c);
 }
 
-/* 语义选择器与模式/思考/工具贴左排布，发送/停止靠右（margin-left:auto） */
+/* 语义选择器与模式/思考/工具贴左排布，发送/停止靠右（margin-left:auto）；
+   窄面板允许换行，避免超出按钮被面板圆角硬裁切 */
 .abi-cw-input-toolbar {
   display: flex;
   align-items: center;
   padding: 4px 10px 8px;
   gap: 8px;
+  row-gap: 4px;
+  flex-wrap: wrap;
 }
 
 /* ── 数据语义 selector（对齐大屏 sem-selector） ── */
@@ -951,6 +960,32 @@
   color: #5b7cf7;
   font-size: 12px;
   font-weight: 700;
+}
+
+/* ── 窄面板自适应（JS 按宽度阈值加 abi-cw-narrow / abi-cw-narrow-xs）── 收敛选项列表宽度，保证窄悬浮窗内完整可见 */
+.abi-cw-narrow .abi-cw-sem-tree {
+  width: 200px;
+  max-height: 220px;
+}
+
+.abi-cw-narrow-xs .abi-cw-sem-tree {
+  width: 160px;
+  max-height: 200px;
+}
+
+/* 二级飞层挂到 body，保留原右侧级联格式，并用透明左内边距连接 hover 触发区 */
+.abi-cw-tool-flyout {
+  z-index: 2147483002 !important;
+  padding-left: 8px;
+}
+
+/* body 飞层不再受面板 overflow 裁切；按尺寸类限高以适应矮悬浮窗 */
+.abi-cw-tool-flyout .uni-popup-list {
+  max-height: 180px;
+}
+
+.abi-cw-tool-flyout-xs .uni-popup-list {
+  max-height: 140px;
 }
 
 /* 面板内抽屉（SchemaFieldsModal getContainer 指向面板）：绝对定位铺满面板，不随面板圆角溢出 */
