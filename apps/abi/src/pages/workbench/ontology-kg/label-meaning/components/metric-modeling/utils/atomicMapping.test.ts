@@ -13,6 +13,7 @@ describe('atomic metric one-click mapping payload', () => {
           description: '订单支付金额',
           englishName: 'payment_amount',
           fieldType: 'decimal',
+          dataType: 'amount',
           raw: { techId: 'field-1' },
           tableBizName: '订单明细表',
           tableTechName: 'order_detail'
@@ -37,12 +38,16 @@ describe('atomic metric one-click mapping payload', () => {
         {
           agg: { data: ['SUM', 'AVG'], type: 'simple' },
           bizName: '订单明细表_#_支付金额',
+          dataType: 'amount',
+          fieldType: 'decimal',
           projectionFunc: 'sum',
           techId: 'field-1',
           techName: 'order_detail.payment_amount'
         }
       ]
     })
+    expect(payload[0]).not.toHaveProperty('bizName')
+    expect(payload[0]).not.toHaveProperty('dataType')
   })
 
   it('uses the first aggregation method for the legacy compatibility field', () => {
@@ -55,6 +60,7 @@ describe('atomic metric one-click mapping payload', () => {
           description: '',
           englishName: 'customer_id',
           fieldType: 'string',
+          dataType: 'num',
           raw: { techId: 'field-2' },
           tableBizName: '订单明细表',
           tableTechName: 'order_detail'
@@ -65,5 +71,6 @@ describe('atomic metric one-click mapping payload', () => {
 
     expect(payload.projectionFunc).toBe('distinct')
     expect(payload.techId[0].projectionFunc).toBe('distinct')
+    expect(payload.techId[0].dataType).toBe('num')
   })
 })

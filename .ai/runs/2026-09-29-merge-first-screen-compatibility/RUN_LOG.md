@@ -32,3 +32,14 @@
 
 - 已更新 `.ai/requirements/`、`.ai/context/ARCHITECTURE.md`、`.ai/context/MODULE_MAP.md`，说明 SDK 真实目录与输出、独立加载边界及 Dashboard 生命周期契约。
 - 无需更新 `.ai/prompts/`、`.ai/agents/`、`.ai/skills/`、`.ai/mcp/`、`.ai/checklists/`、`.ai/decisions/`；沿用已有开发规范和首屏分包决策。
+
+## 追加：ABI 菜单图标缺失修复
+
+- 范围：仅修改 `src/utils/antdIconRegistry.ts`，增加相邻回归测试并更新需求和本记录；未移动或删除静态资源，未修改菜单配置、业务接口、Chat、Dashboard、Vendor Chunk 规则或依赖，复用用户现有开发服务。
+- 原因：此前本地 SVG 修复未覆盖 Ant Design 动态菜单图标。常用图标白名单缺少后端实际配置的 `CodeSandboxOutlined`、`ProfileOutlined`、`AppstoreAddOutlined`、`InboxOutlined`，菜单把未命中项交给 Iconify 后呈现空白。
+- 最终行为：保留常用图标的同步解析，其余合法 Outlined 图标由构建期可分析的懒加载映射按实际渲染加载；缓存组件身份，透传样式/className/ref，单个图标内设置 Suspense，不阻塞整个菜单。Iconify、本地 SVG 和未知名称不被误识别为 Ant Design 图标。
+- 回归测试先复现四个缺失图标及其他选择器图标解析失败；修复后执行 `pnpm exec vitest run apps/abi/src/utils/antdIconRegistry.test.ts apps/abi/src/components/stateless/custom/SvgIconAssets.test.ts`，2 个文件、14 条用例通过，覆盖真实 SVG 输出、属性透传、组件身份与图标类型边界。
+- ABI 目录执行定向 ESLint，以及 `pnpm exec tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution bundler --jsx react-jsx --types vite/client src/utils/antdIconRegistry.ts src/utils/antdIconRegistry.test.ts` 均通过；这是修改范围的类型检查，不代表全仓类型检查。
+- `pnpm --filter chatbi build` 通过；输出含图标选择器 CSS 类名识别警告与大 Chunk 提示。生产产物中的四个图标为独立模块，解析产物静态导入图确认它们不在图标解析工具的同步依赖闭包中；未恢复首屏全量图标库。
+- 本机 Chrome 使用真实已登录页面验证：组件页刷新后三个分组分别显示 code-sandbox/profile/appstore-add SVG，用户下拉“空间管理”显示 inbox；点击后正常进入 `/space/space-user`，空间用户/角色/菜单图标分别显示 dropbox/gold/schedule。原主页、对话、工作台、组件本地 SVG 仍有实际路径图形，无页面加载失败。未提交业务写操作，截图仅存临时目录，不加入仓库。
+- 复盘：此前检查只覆盖本地 SVG，遗漏后端动态 Ant Design 名称；本次补上真实菜单配置对应的渲染回归。更新当前需求和本记录即可，无需更新 `.ai/prompts/`、`.ai/agents/`、`.ai/skills/`、`.ai/mcp/`、`.ai/context/`、`.ai/checklists/` 或 `.ai/decisions/`。

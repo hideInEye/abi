@@ -15,6 +15,19 @@ function getFormItemSource(source: string, fieldName: string) {
 }
 
 describe('metric aggregation UI contract', () => {
+  it('only makes the business definition optional when editing an atomic indicator', () => {
+    const businessSource = readSource('./knowledgeOperateDrawer.BusinessStep.tsx')
+    const drawerSource = readSource('./KnowledgeOperateDrawer.tsx')
+    expect(drawerSource).toContain('businessDefinitionRequired: !isAtomicEditing')
+    expect(drawerSource).toContain('businessDefinitionRequired={!isAtomicEditing}')
+    expect(getFormItemSource(businessSource, 'businessDefinition')).toContain('required={businessDefinitionRequired}')
+    expect(businessSource).toContain('businessDefinitionRequired = true')
+  })
+
+  it('labels only the tag semantics data selector as data semantics', () => {
+    const source = readSource('../../../module/TagModal.tsx')
+    expect(source).toMatch(/<TableSemantics[\s\S]*?label="数据语义"/)
+  })
   it('uses a multi-select for one-click atomic mapping aggregations', () => {
     const source = readSource('./KnowledgeAtomicMappingDrawer.tsx')
     expect(source).toMatch(/dataIndex: 'aggregationMethods'[\s\S]*?mode="multiple"/)

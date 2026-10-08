@@ -13,6 +13,7 @@ import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
 import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
+import { KNOWLEDGE_DATA_TYPE_OPTIONS } from '../constants/metricModeling.constants'
 import { useOntologyAtomicAggregationDictionary } from '../hooks/useOntologyFunctionDictionary'
 import type {
   AggregationCode,
@@ -22,6 +23,7 @@ import type {
 } from '../types/metricModeling.types'
 import { normalizeAggregationCodes } from '../utils/aggregation'
 import { type AtomicMappingFieldInput, buildAtomicMappingPayload } from '../utils/atomicMapping'
+import { validateKnowledgeIndicatorName } from '../utils/knowledgeOperateDrawer.validators'
 import { getKnowledgeSpaceId } from '../utils/space'
 
 interface MeasureFieldItem extends AtomicMappingFieldInput {
@@ -38,6 +40,7 @@ interface MeasureFieldItem extends AtomicMappingFieldInput {
 }
 
 interface MappingFormValues {
+  metricFields?: Record<string, { bizName?: string; dataType?: string }>
   semanticGroupId?: number | string
   semanticSchemaId?: number | string
   semanticsGroupId?: number | string
@@ -216,6 +219,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       semanticSchemaId: number | string,
       options?: { existingAtomicItems?: KnowledgeIndicatorItem[]; keepExistingSelection?: boolean }
     ) => {
+      form.setFieldValue('metricFields', {})
       setLoadingFields(true)
       try {
         const res = await queryTableSemanticsDetail(semanticSchemaId)
@@ -227,6 +231,10 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
           existingKeys = getExistingAtomicKeys(await queryCurrentGroupAtomicIndicators())
         }
         const disabledKeys = nextRows.filter(item => existingKeys.has(item.key)).map(item => item.key)
+        form.setFieldValue(
+          'metricFields',
+          Object.fromEntries(nextRows.map(item => [item.key, { bizName: item.bizName, dataType: 'num' }]))
+        )
         setFieldRows(nextRows)
         setDisabledRowKeys(disabledKeys)
         setSelectedRowKeys(options?.keepExistingSelection ? disabledKeys : [])
@@ -242,7 +250,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
         setLoadingFields(false)
       }
     },
-    [queryCurrentGroupAtomicIndicators]
+    [form, queryCurrentGroupAtomicIndicators]
   )
 
   const handleSchemaChange = async ({
@@ -322,15 +330,18 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
   }, [form, groupId, loadSchemaFields, open, queryCurrentGroupAtomicIndicators])
 
   const handleSave = async () => {
-    const values = await validateFieldsAndScroll<MappingFormValues>(form)
-    if (!values) {
-      return
-    }
-    if (!values.semanticSchemaId) {
-      return
-    }
     const disabledKeySet = new Set(disabledRowKeys.map(item => String(item)))
     const selectedRows = fieldRows.filter(item => selectedRowKeys.includes(item.key) && !disabledKeySet.has(item.key))
+    const values = await validateFieldsAndScroll<MappingFormValues>(form, [
+      'semanticSchemaId',
+      'semanticsGroupId',
+      'semanticGroupId',
+      ...selectedRows.flatMap(item => [
+        ['metricFields', item.key, 'bizName'],
+        ['metricFields', item.key, 'dataType']
+      ])
+    ])
+    if (!values?.semanticSchemaId) return
 
     if (!selectedRows.length) {
       message.warning('请选择未映射的度量字段')
@@ -346,7 +357,12 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
     if (!hasFieldValue(semanticSchemaId)) {
       return
     }
-    const payload = buildAtomicMappingPayload(selectedRows, {
+    const mappedRows = selectedRows.map(item => ({
+      ...item,
+      bizName: values.metricFields?.[item.key]?.bizName || '',
+      dataType: values.metricFields?.[item.key]?.dataType || ''
+    }))
+    const payload = buildAtomicMappingPayload(mappedRows, {
       groupId,
       relSchemaId: semanticSchemaId as number | string,
       semanticsGroupId,
@@ -414,14 +430,23 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
     {
       dataIndex: 'bizName',
       key: 'bizName',
-      render: (value: string, record: MeasureFieldItem) => (
-        <AInput
-          value={value}
-          onChange={e => {
-            const nextValue = e.target.value
-            setFieldRows(prev => prev.map(item => (item.key === record.key ? { ...item, bizName: nextValue } : item)))
-          }}
-        />
+      render: (_: unknown, record: MeasureFieldItem) => (
+        <AForm.Item
+          className="mb-0"
+          name={['metricFields', record.key, 'bizName']}
+          rules={disabledRowKeys.includes(record.key) ? [] : [
+            {
+              validator: (_rule, value) => validateKnowledgeIndicatorName(value, {
+                groupId,
+                mappedTableName: record.tableBizName
+              })
+            }
+          ]}
+          validateDebounce={600}
+          validateTrigger="onChange"
+        >
+          <AInput aria-label="中文名称" />
+        </AForm.Item>
       ),
       title: '中文名称',
       width: 130
@@ -457,6 +482,28 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       ),
       title: '字段描述',
       width: 120
+    },
+    {
+      key: 'dataType',
+      render: (_: unknown, record: MeasureFieldItem) =>
+        disabledRowKeys.includes(record.key) ? (
+          '-'
+        ) : (
+          <AForm.Item
+            className="mb-0"
+            name={['metricFields', record.key, 'dataType']}
+            rules={[{ message: '请选择数据类型', required: true }]}
+          >
+            <ASelect
+              aria-label="数据类型"
+              options={KNOWLEDGE_DATA_TYPE_OPTIONS}
+              placeholder="请选择数据类型"
+              style={{ width: '100%' }}
+            />
+          </AForm.Item>
+        ),
+      title: '数据类型',
+      width: 140
     }
   ]
 
@@ -487,40 +534,41 @@ const getColumnWidth = useMemo(() => {
     >
       <div className="mb-4 rounded bg-gray-50 px-3 py-2 text-sm">当前分组：{groupName || '-'}</div>
       <AForm<MappingFormValues>
-        className="ds-form-section"
         form={form}
         layout="vertical"
       >
-        <OntologyFormSectionTitle icon={<LinkOutlined />}>语义来源</OntologyFormSectionTitle>
-        <TableSemantics
-          form={form}
-          getSchemaId={handleSchemaChange}
-          getSchemaOptions={(_: TableSemanticParams[]) => {}}
-          groupFieldName="semanticsGroupId"
-          isEdit={semanticLocked}
-          type="shema"
-        />
-      </AForm>
+        <div className="ds-form-section">
+          <OntologyFormSectionTitle icon={<LinkOutlined />}>语义来源</OntologyFormSectionTitle>
+          <TableSemantics
+            form={form}
+            getSchemaId={handleSchemaChange}
+            getSchemaOptions={(_: TableSemanticParams[]) => {}}
+            groupFieldName="semanticsGroupId"
+            isEdit={semanticLocked}
+            type="shema"
+          />
+        </div>
 
-      <div className="ds-form-section mt-4">
-        <OntologyFormSectionTitle icon={<TableOutlined />}>字段映射原子指标</OntologyFormSectionTitle>
-        <ATable
-          columns={columns}
-          dataSource={fieldRows}
-          loading={loadingFields}
-          pagination={false}
-          rowKey="key"
-          scroll={{ x: getColumnWidth}}
-          rowSelection={{
-            fixed:true,
-            getCheckboxProps: record => ({
-              disabled: disabledRowKeys.includes(record.key)
-            }),
-            onChange: keys => setSelectedRowKeys(keys),
-            selectedRowKeys
-          }}
-        />
-      </div>
+        <div className="ds-form-section mt-4">
+          <OntologyFormSectionTitle icon={<TableOutlined />}>字段映射原子指标</OntologyFormSectionTitle>
+          <ATable
+            columns={columns}
+            dataSource={fieldRows}
+            loading={loadingFields}
+            pagination={false}
+            rowKey="key"
+            scroll={{ x: getColumnWidth}}
+            rowSelection={{
+              fixed:true,
+              getCheckboxProps: record => ({
+                disabled: disabledRowKeys.includes(record.key)
+              }),
+              onChange: keys => setSelectedRowKeys(keys),
+              selectedRowKeys
+            }}
+          />
+        </div>
+      </AForm>
     </CommonDrawer>
   )
 }

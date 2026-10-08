@@ -19,6 +19,10 @@ export interface AtomicMappingFieldInput {
   tableTechName: string
 }
 
+export interface AtomicMappingMetricInput extends AtomicMappingFieldInput {
+  dataType: string
+}
+
 interface AtomicMappingContext {
   groupId?: string
   relSchemaId: number | string
@@ -27,7 +31,7 @@ interface AtomicMappingContext {
 }
 
 export function buildAtomicMappingPayload(
-  fields: AtomicMappingFieldInput[],
+  fields: AtomicMappingMetricInput[],
   context: AtomicMappingContext
 ): AtomicMappingPayload[] {
   return fields.map(item => {
@@ -44,6 +48,7 @@ export function buildAtomicMappingPayload(
           },
           alias: item.alias,
           bizName: buildMappedBizName(item.tableBizName, item.bizName),
+          dataType: item.dataType,
           description: item.description,
           englishName: item.englishName,
           fieldType: item.fieldType,
