@@ -1,74 +1,28 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 
-import { CHAT_MODE } from '@/constant'
 import { fallbackTopics } from '@/constant/layout'
-import { fetchAppList } from '@/service/api/app'
+import { useChatBootstrap } from '@/resources/chatBootstrap'
 import type { TopicItem } from '@/types/layout'
-import { getCurrentUser, normalizeTopicsFromApi } from '@/utils/layout'
-import { getSpaceId } from '@/utils'
-
-type FetchAppListResponse = {
-  data?: unknown
-}
+import { normalizeTopicsFromApi } from '@/utils/layout'
 
 export function useHistoryTopics() {
-  const mountedRef = useRef(true)
-  const loadingRef = useRef(false)
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyTopics, setHistoryTopics] = useState<TopicItem[]>(fallbackTopics)
-  const [historyApps, setHistoryApps] = useState<any[]>([])
+  const bootstrap = useChatBootstrap()
+  const historyApps = bootstrap.conversations.data ?? []
+  const historyLoading = bootstrap.conversations.status === 'loading'
+  const historyTopics = useMemo<TopicItem[]>(() => {
+    const normalized = normalizeTopicsFromApi(historyApps)
+    return normalized.length ? normalized : fallbackTopics
+  }, [historyApps])
 
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
-
-  const loadHistoryTopics = useCallback(async (options?: { silent?: boolean }) => {
-    if (!mountedRef.current) return
-    // 防止并发重复调用
-    if (loadingRef.current) return
-    loadingRef.current = true
-    if (!options?.silent) setHistoryLoading(true)
-
-    try {
-      const user = getCurrentUser()
-      const response = (await fetchAppList({
-        chat_mode: CHAT_MODE,
-        space_id: getSpaceId(),
-        create_by: user.userName,
-        _t: Date.now(),
-      })) as FetchAppListResponse
-      const rawApps = Array.isArray(response?.data) ? response.data : []
-      const normalizedTopics = normalizeTopicsFromApi(rawApps)
-      const nextTopics = normalizedTopics.length ? normalizedTopics : fallbackTopics
-
-      if (mountedRef.current) {
-        setHistoryApps(rawApps)
-        setHistoryTopics(nextTopics)
-      }
-    } catch {
-      if (mountedRef.current) {
-        setHistoryApps([])
-        setHistoryTopics(fallbackTopics)
-      }
-    } finally {
-      loadingRef.current = false
-      if (mountedRef.current) {
-        setHistoryLoading(false)
-      }
-    }
-  }, [])
+  const loadHistoryTopics = useCallback(
+    (options?: { force?: boolean; silent?: boolean }) => bootstrap.loadConversations({ force: options?.force }),
+    [bootstrap.loadConversations],
+  )
 
   // 乐观删除：立即从本地列表中移除，不等待服务端响应
   const removeTopicById = useCallback((chatId: string) => {
-    setHistoryApps((prev) => prev.filter((app) => String(app.chat_id) !== String(chatId)))
-    setHistoryTopics((prev) => {
-      const next = prev.filter((t) => String(t.chatId) !== String(chatId))
-      return next.length ? next : fallbackTopics
-    })
-  }, [])
+    bootstrap.updateConversations(previous => previous.filter(app => String(app.chat_id) !== String(chatId)))
+  }, [bootstrap.updateConversations])
 
   return {
     historyLoading,

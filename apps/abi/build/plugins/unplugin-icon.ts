@@ -4,7 +4,6 @@ import process from 'node:process';
 import { FileSystemIconLoader } from 'unplugin-icons/loaders';
 import Icons from 'unplugin-icons/vite';
 import type { PluginOption } from 'vite';
-import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
 export function setupUnPluginIcon(viteEnv: Env.ImportMeta) {
   const { VITE_ICON_LOCAL_PREFIX, VITE_ICON_PREFIX } = viteEnv;
@@ -15,12 +14,6 @@ export function setupUnPluginIcon(viteEnv: Env.ImportMeta) {
   const collectionName = VITE_ICON_LOCAL_PREFIX.replace(`${VITE_ICON_PREFIX}-`, '');
   
   const plugins: PluginOption[] = [
-    createSvgIconsPlugin({
-      // customDomId: '__SVG_ICON_LOCAL__',
-      iconDirs: [localIconPath],
-      inject: 'body-last',
-      symbolId: `${VITE_ICON_LOCAL_PREFIX}-[dir]-[name]`
-    }),
     Icons({
       compiler: 'jsx',
       customCollections: {

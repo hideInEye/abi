@@ -1123,6 +1123,112 @@ button {
   box-shadow: 0 4px 14px rgba(91, 124, 247, 0.35);
 }
 
+/* ============================================================
+   管理端同款调度表单样式（移植自 apps/abi table.scss 的 .abi-seg/.abi-day-grid/.abi-time-panel/.abi-md-panel）
+   ============================================================ */
+
+/* 分区标题：加粗深色标题 + 整行底部分隔线，extra 在标题右侧内联分段器 */
+.schedule-form-section {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f1;
+  margin: 4px 0 20px;
+  padding-bottom: 10px;
+}
+.schedule-form-section > span {
+  color: #1f2329;
+  font-size: 14px;
+  font-weight: 600;
+}
+.schedule-form-section-extra {
+  margin-left: 24px;
+}
+
+/* 调度模式分段选择器：灰底轨道、选中白块+品牌蓝字+浅阴影胶囊 */
+.schedule-seg.ant-segmented {
+  padding: 3px;
+  background: #f2f3f5;
+  border-radius: 8px;
+}
+.schedule-seg.ant-segmented .ant-segmented-item {
+  border-radius: 6px;
+  color: #4e5969;
+  transition: color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+.schedule-seg.ant-segmented .ant-segmented-item:hover:not(.ant-segmented-item-selected) {
+  color: #1f2329;
+  background: transparent;
+}
+.schedule-seg.ant-segmented .ant-segmented-item-label {
+  min-height: 30px;
+  padding: 0 18px;
+  font-size: 14px;
+  line-height: 30px;
+}
+.schedule-seg.ant-segmented .ant-segmented-item-selected {
+  color: #3b5bfd;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgb(31 35 41 / 10%);
+}
+
+/* 月模式日期选择弹层：7 列日历方格（选中主色蓝底白字圆角块） */
+.schedule-day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  width: 266px;
+}
+.schedule-day-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  border-radius: 6px;
+  color: #1f2329;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.schedule-day-cell:hover {
+  background-color: #f2f3f5;
+}
+.schedule-day-cell.is-active {
+  background-color: #5b7cf7;
+  color: #fff;
+  font-weight: 600;
+}
+.schedule-day-cell.is-active:hover {
+  background-color: #5b7cf7;
+}
+
+/* TimePicker 下拉：加宽列并隐藏滚动条，去掉 antd 末项占位空白 */
+.schedule-time-panel .ant-picker-time-panel-column {
+  flex: 0 0 96px;
+  width: 96px;
+  scrollbar-width: none;
+}
+.schedule-time-panel .ant-picker-time-panel-column::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.schedule-time-panel .ant-picker-time-panel-column::after {
+  content: none;
+}
+.schedule-time-panel .ant-picker-time-panel-column .ant-picker-time-panel-cell-inner {
+  width: 100% !important;
+}
+
+/* 年模式日期级联弹层：保持 antd 默认外观，仅去掉滚动条 */
+.schedule-md-panel .ant-cascader-menu {
+  scrollbar-width: none;
+}
+.schedule-md-panel .ant-cascader-menu::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* Task list */
 .schedule-task-list {
   display: flex;
@@ -2798,10 +2904,13 @@ code, pre {
 }
 .ws-page-size-select {
   min-width: 100px;
-}
-.ws-page-size-select .ant-select-selector {
-  border-radius: 8px !important;
-  border-color: rgba(130, 140, 200, 0.18) !important;
+  height: 34px;
+  padding: 0 28px 0 10px;
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #3e5068;
+  font: inherit;
 }
 .ws-page-btn {
   min-width: 34px;
@@ -2875,9 +2984,17 @@ code, pre {
 .ws-jump-input {
   width: 48px !important;
   height: 34px;
+  padding: 0 4px;
   text-align: center;
-  border-radius: 8px !important;
-  border-color: rgba(130, 140, 200, 0.18) !important;
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #3e5068;
+  font: inherit;
+}
+
+.ws-filter-btn--loading {
+  cursor: wait;
 }
 
 /* ════════════════════════════════════════════════════════════════

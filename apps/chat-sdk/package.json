@@ -1,0 +1,44 @@
+{
+  "name": "@abi/chat-widget",
+  "version": "0.2.0",
+  "description": "ABI 助手分享页悬浮窗 SDK：构建输出 abi-assistant-widget.js + abi-assistant-widget.css，第三方通过 <abi-assistant> 标签接入",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "type-check": "tsc --noEmit --noCheck"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.6.0",
+    "@microsoft/fetch-event-source": "^2.0.1",
+    "antd": "^5.23.0",
+    "axios": "^1.7.9",
+    "dayjs": "^1.11.13",
+    "echarts": "^5.6.0",
+    "html2canvas": "^1.4.1",
+    "lodash": "^4.17.21",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.0",
+    "remark-gfm": "^4.0.1",
+    "sql-formatter": "^15.6.10"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.6.2",
+    "vite": "^6.3.2"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}

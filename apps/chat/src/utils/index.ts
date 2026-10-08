@@ -1,6 +1,10 @@
 import dayjs from 'dayjs';
-import { isEmpty, isObject } from 'lodash';
+import isEmpty from 'lodash/isEmpty';
+import isObject from 'lodash/isObject';
 import { chatModeWithModels } from '@/constant/chat';
+
+export { formatTimeDiff } from './date';
+export { getBaseApi, getChatbiBaseApi, getSpaceId } from './runtime';
 /**
  * 通过 Blob 下载文件
  * @param res 文件内容，通常为 ArrayBuffer 或其他二进制数据
@@ -273,9 +277,6 @@ export function parseRecommendText(inputText: string) {
   return { thinkContent, recommendData };
 }
   
-export const getSpaceId = () => Number(localStorage.getItem('spaceId'));
-
-
 // 判断数据格式是单指标还是多指标
 export const isSingleMetricData = (data: any[]) => {
   if (data && data.length > 0) {
@@ -301,37 +302,6 @@ export const stripHtmlTags = (text: string | undefined | null): string => {
   // 移除所有HTML标签
   return text.replace(/<[^>]*>/g, '');
 };
-// 获取基础API地址
-export function getBaseApi() {
-  // 尝试从多个来源获取配置
-  const config = window.APP_CONFIG || {}
-  let baseApi = config.VITE_BASE_API
-  // 如果没有找到，尝试从环境变量获取
-  if (!baseApi && typeof import.meta !== 'undefined' && import.meta.env) {
-    baseApi = import.meta.env.VITE_BASE_API || ''
-  }
-  
-  // 如果还是没有，使用默认值或抛出错误
-  if (!baseApi) {
-    console.warn('VITE_BASE_API 未配置，使用默认值')
-    baseApi = ''
-  }
-  
-  return baseApi
-}
-
-// 获取处理后的 chatbi_base_api
-export function getChatbiBaseApi() {
-  let chatbi_base_api = getBaseApi()
-  if (chatbi_base_api) {
-    chatbi_base_api = chatbi_base_api.replace(/\/$/, '')
-    if (!chatbi_base_api.includes('/api')) {
-      chatbi_base_api = `${chatbi_base_api}/api`
-    }
-  }
-  return chatbi_base_api
-}
-
 // 一个相对宽松但够用的邮箱正则
 const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -360,45 +330,4 @@ export function validateMultiEmails(value: string) {
     valid: invalid.length === 0,
     invalidEmails: invalid
   };
-}
-
-export 
- const formatTimeDiff = (
-  inputTime: string,
-  options?: {
-    formatWhenOver24h?: string; // 超过24小时的显示格式
-  }
-) => {
-  const now = dayjs();
-  if(!inputTime)return now.format(options?.formatWhenOver24h ?? 'YYYY-MM-DD HH:mm:ss')
-
-  const target = dayjs(inputTime);
-
-  if (!target.isValid()) return '';
-
-  const diffSeconds = now.diff(target, 'second');
-
-  // 未来时间，按业务可自行处理
-  if (diffSeconds < 0) {
-    return '0s';
-  }
-
-  // 超过 24 小时
-  if (diffSeconds >= 24 * 60 * 60) {
-    return target.format(options?.formatWhenOver24h ?? 'YYYY-MM-DD HH:mm:ss');
-  }
-
-  const hours = Math.floor(diffSeconds / 3600);
-  const minutes = Math.floor((diffSeconds % 3600) / 60);
-  const seconds = diffSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}小时${minutes}分钟前`;
-  }
-
-  if (minutes > 0) {
-    return `${minutes}分钟${seconds}秒前`;
-  }
-
-  return `${seconds}秒前`;
 }

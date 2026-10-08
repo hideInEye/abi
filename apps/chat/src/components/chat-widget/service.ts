@@ -2,7 +2,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 
 import { mapShareHistory, type WidgetMessage } from './history'
-import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
+import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/-assistantResources'
 
 /** Widget 配置：shareCode 为免登录凭证，apiBase 为网关前缀（空串表示同源） */
 export interface WidgetConfig {
@@ -353,7 +353,14 @@ export interface StreamChatCallbacks {
   onDone: (raw: string) => void
   /** 异常（含业务错误体/网络异常），不会自动重试 */
   onError: (err: unknown) => void
+  /** 闲聊/超范围屏蔽（illegal_query）：后端把提示语放在 <think>"illegal_query": "..."</think>，
+   *  且含真实换行会被 SSE 截断，这里解析前拦截并直接以完整提示语收尾（同主对话），参数为最终展示文案 */
+  onIllegalQuery?: (text: string) => void
 }
+
+/** illegal_query 兜底提示语：闭合标签随换行被 SSE 丢弃、尾部不可恢复时用此文案补全（同主对话） */
+const ILLEGAL_QUERY_FALLBACK_TIP =
+  '温馨提示：您的问题有点超出我当前的理解范围了。\n～可能是我掌握的“词汇量”还不够，暂时无法与我数据库语义信息匹配😊'
 
 /** 对话模型：跟随宿主 APP_CONFIG（分享页同源），第三方嵌入无 APP_CONFIG 时用默认值 */
 function getChatModel(): string {
@@ -393,7 +400,7 @@ export function sendChatStream(
   question: string,
   appId: string,
   signal: AbortSignal,
-  { onDelta, onDone, onError }: StreamChatCallbacks,
+  { onDelta, onDone, onError, onIllegalQuery }: StreamChatCallbacks,
   semantic?: WidgetSemanticSelection | null,
   spaceId?: number | string,
   extras?: WidgetSendExtras,
@@ -482,9 +489,23 @@ export function sendChatStream(
       throw new Error(backendMsg || `HTTP ${response.status}`)
     },
     onmessage(event: EventSourceMessage) {
-      if (!event.data) return
+      if (!event.data || done) return
       if (event.data === '[DONE]') {
         finalize()
+        return
+      }
+      // illegal_query（闲聊/超范围屏蔽）：必须在 JSON.parse 之前拦截。
+      // 提示语含真实换行 → 该 chunk 为非法 JSON（字符串内裸换行），parse 会抛错；
+      // 且闭合
+      // 标签随换行被 SSE 丢弃、尾部不可恢复，故解析前直接以完整提示语收尾（同主对话）。
+      if (event.data.includes('illegal_query') || buf.includes('illegal_query')) {
+        const combined = buf + event.data
+        const closed = combined.match(/"illegal_query":\s*"([\s\S]*?)"\s*<\/think>/)
+        const tip = closed ? (closed[1] || '').replace(/\\n/g, '\n') : ILLEGAL_QUERY_FALLBACK_TIP
+        done = true
+        isReasoning = false
+        if (onIllegalQuery) onIllegalQuery(tip)
+        else onDone(tip)
         return
       }
       try {
@@ -523,8 +544,8 @@ export function sendChatStream(
           }
         }
       } catch (err) {
-        // JSON.parse 失败的普通增量忽略；Error（业务错误）向上抛终止
-        if (err instanceof Error) throw err
+        // JSON.parse 失败的普通增量忽略（SyntaxError）；仅业务错误体（手动 throw 的 Error）向上抛终止
+        if (err instanceof Error && err.name !== 'SyntaxError') throw err
       }
     },
     onclose() {

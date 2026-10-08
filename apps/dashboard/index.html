@@ -15,10 +15,71 @@
         * {
             user-select: none;
         }
+
+        html,
+        body,
+        #root {
+            width: 100%;
+            height: 100%;
+            min-height: 100%;
+        }
+
+        .dashboard-startup-shell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 100vh;
+            color: #59657a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f4f6fb;
+        }
+
+        .dashboard-startup-shell__spinner {
+            width: 38px;
+            height: 38px;
+            border: 4px solid #dfe5f1;
+            border-top-color: #4f7cff;
+            border-radius: 50%;
+            animation: dashboard-startup-spin 0.9s linear infinite;
+        }
+
+        .dashboard-startup-shell__title {
+            margin: 18px 0 0;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .dashboard-startup-shell__message {
+            max-width: 480px;
+            margin: 12px 24px 20px;
+            text-align: center;
+        }
+
+        .dashboard-startup-shell__retry {
+            min-width: 112px;
+            height: 38px;
+            padding: 0 20px;
+            border: 0;
+            border-radius: 6px;
+            color: #fff;
+            background: #4f7cff;
+            cursor: pointer;
+        }
+
+        @keyframes dashboard-startup-spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body style="padding: 0;margin: 0">
-<div id="root" style="height: 100%"></div>
+<div id="root" aria-busy="true" aria-live="polite">
+    <div class="dashboard-startup-shell" role="status">
+        <div class="dashboard-startup-shell__spinner" aria-hidden="true"></div>
+        <p class="dashboard-startup-shell__title">正在准备大屏应用...</p>
+    </div>
+</div>
 <script type="module" src="/src/index.tsx"></script>
 </body>
 </html>

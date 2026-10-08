@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react'
-import RecordRTC from 'recordrtc'
 import { message } from 'antd'
 import { AudioOutlined, LoadingOutlined } from '@ant-design/icons'
 import { getAuthorization, handleLoginExpired } from '@/utils/auth'
@@ -9,11 +8,18 @@ interface AudioRecorderProps {
   disabled?: boolean
 }
 
+interface RecorderInstance {
+  getBlob: () => Blob
+  getInternalRecorder: () => { stream?: MediaStream } | undefined
+  startRecording: () => void
+  stopRecording: (callback: () => void) => void
+}
+
 const AudioRecorder: React.FC<AudioRecorderProps> = ({ onTranscribed, disabled = false }) => {
   const [recording, setRecording] = useState(false)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [isTranscribing, setIsTranscribing] = useState(false)
-  const recorderRef = useRef<RecordRTC | null>(null)
+  const recorderRef = useRef<RecorderInstance | null>(null)
 
   const startRecording = async () => {
     try {
@@ -44,6 +50,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onTranscribed, disabled =
         },
       })
 
+      const { default: RecordRTC } = await import('recordrtc')
       const recorder = new RecordRTC(stream, {
         type: 'audio',
         // 使用浏览器支持的格式
@@ -55,7 +62,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onTranscribed, disabled =
       })
 
       recorder.startRecording()
-      recorderRef.current = recorder
+      recorderRef.current = recorder as RecorderInstance
       setRecording(true)
       console.log('开始录音，配置:', recorder.getInternalRecorder())
     } catch (error: any) {

@@ -9,16 +9,14 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import {lazy, memo, useEffect, useMemo, useSyncExternalStore} from 'react';
-import {createBrowserRouter, createMemoryRouter, Navigate, RouterProvider} from "react-router-dom";
-import {ConfigProvider, theme} from "antd";
+import {lazy, memo, Suspense, useEffect, useMemo, useSyncExternalStore} from 'react';
+import {createBrowserRouter, createMemoryRouter, Navigate, RouterProvider, useRouteError} from "react-router-dom";
+import type {RouteObject} from "react-router-dom";
 import {qiankunWindow} from 'vite-plugin-qiankun/dist/helper';
 import {getDashboardHostRoute, subscribeDashboardHostRoute} from './dashboardHostRoute.ts';
 
 const DesignerViewPage = lazy(() => import('../pages/view/DesignerViewPage.tsx'));
 const DesignerPage = lazy(() => import('../pages/designer/DesignerPage.tsx'));
-const GlobalMessage = lazy(() => import('../framework/message/GlobalMessage.tsx'));
-const GlobalModal = lazy(() => import('../framework/message/GlobalModal.tsx'));
 const Home = lazy(() => import('../pages/home/Home'));
 const ServerProjectList = lazy(() => import('../pages/home/server-list/ServerProjectList.tsx'));
 const MyScreen = lazy(() => import('../pages/my-screen/MyScreen.tsx'));
@@ -428,7 +426,40 @@ const useDashboardHostRoute = () => useSyncExternalStore(subscribeDashboardHostR
 const DynamicServerProjectList = () => <ServerProjectList title={useDashboardHostRoute().pageTitle}/>
 const DynamicMyScreen = () => <MyScreen title={useDashboardHostRoute().pageTitle}/>
 
-const routes = [
+function startProjectListPreload() {
+    void import('../pages/home/project-list/projectListResource.ts')
+        .then(module => module.preloadDefaultProjectList())
+        .catch(() => {
+            // ProjectList owns the visible error and retry state after its chunk mounts.
+        });
+    return null;
+}
+
+function DashboardRouteSkeleton() {
+    return (
+        <div className="dashboard-route-skeleton" role="status" aria-label="页面加载中">
+            <div className="dashboard-route-skeleton__sidebar"/>
+            <div className="dashboard-route-skeleton__content">
+                <div className="dashboard-route-skeleton__header"/>
+                <div className="dashboard-route-skeleton__cards"/>
+            </div>
+        </div>
+    );
+}
+
+function DashboardRouteError() {
+    const routeError = useRouteError();
+    const message = routeError instanceof globalThis.Error ? routeError.message : '页面模块加载失败';
+    return (
+        <div className="dashboard-route-error" role="alert">
+            <h2>页面加载失败</h2>
+            <p>{message}</p>
+            <button type="button" onClick={() => window.location.reload()}>重新加载</button>
+        </div>
+    );
+}
+
+const routeDefinitions: RouteObject[] = [
     {
         path: '/view',
         element: <DesignerViewPage/>
@@ -453,6 +484,7 @@ const routes = [
     {
         path: '/projects',
         element: <DynamicServerProjectList/>,
+        loader: startProjectListPreload,
     },
     {
         path: '/published-projects',
@@ -502,6 +534,11 @@ const routes = [
     }
 ]
 
+const routes: RouteObject[] = routeDefinitions.map(route => ({
+    ...route,
+    errorElement: <DashboardRouteError/>,
+}));
+
 const isPoweredByQiankun = (qiankunWindow as any).__POWERED_BY_QIANKUN__
 
 const MainRouter = memo(() => {
@@ -526,13 +563,9 @@ const MainRouter = memo(() => {
     useEffect(() => () => router.dispose(), [router]);
 
     return (
-        <ConfigProvider theme={{
-            algorithm: theme.defaultAlgorithm,
-        }}>
+        <Suspense fallback={<DashboardRouteSkeleton/>}>
             <RouterProvider router={router}/>
-            <GlobalMessage/>
-            <GlobalModal/>
-        </ConfigProvider>
+        </Suspense>
     );
 })
 

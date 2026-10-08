@@ -3114,6 +3114,205 @@ export const init: Init = async currentFullPath => {
 
 ---
 
+## 2026-09-21 追加二：定时任务工具栏操作下放到列表行内操作列
+
+### 需求类型
+
+前端 UI 调整（纯前端，无接口变化）。
+
+### 背景
+
+- 用户截图标注：红框圈选定时任务页工具栏 8 个操作按钮（删除/复制/启动/停止/执行一次/查询日志/注册节点/下次执行时间），箭头指向列表「操作」列，要求操作下放到行内；工具栏按钮依赖勾选且常置灰，交互路径长。
+
+### 目标
+
+1. 工具栏仅保留「新增」与视图/列设置控件，移除上述 8 个操作按钮。
+2. 列表操作列对齐卡片视图形态：`编辑` + `日志` + `更多`下拉（复制/启动/停止/执行一次/注册节点/下次执行时间/分隔线/删除），下拉菜单与卡片视图共用。
+3. 无批量操作后列表移除勾选列（rowSelection）与批量启停/删除逻辑；删除确认改为单条任务名文案。
+
+### 非目标
+
+- 不改卡片视图布局、筛选、分页与接口逻辑。
+- 不改调度日志/邮件记录页。
+
+### 影响范围
+
+- `apps/abi/src/pages/workbench/job/time/index.tsx`
+- run log：`.ai/runs/2026-09-21-job-toolbar-to-row-actions/`
+
+### 验收标准
+
+1. 工具栏仅「新增」+ 视图/列设置；列表无勾选列。
+2. 行内操作列 编辑/日志/更多 均可用，更多下拉含原工具栏 8 项操作且行为与原一致。
+3. tsc 无新增错误；改动文件 ESLint 无新增错误（既存基线除外）。
+
+### 测试要求
+
+- apps/abi 下 `npx tsc --noEmit -p tsconfig.json` 对比基线。
+- 改动文件 `node node_modules/eslint/bin/eslint.js` 对比基线。
+- 手工：列表行内各操作、卡片视图更多菜单、删除确认文案。
+
+## 2026-09-22 追加三：对话端定时任务搬管理端编辑表单 + 邮件弹窗调度改三 tab
+
+### 需求类型
+
+前端功能（chat 子应用 UI + 接口对齐，无后端改动）。
+
+### 背景
+
+- 用户截图三张：图一为对话端定时任务抽屉现状（统计 + 搜索 + 卡片列表 + 简易内联表单）；图二为管理端定时任务编辑表单标注稿，标明对话端保留/隐藏字段；图三为对话端「邮件发送」弹窗标注稿，红框要求发送方式/执行频率/执行时间区域改为 单次/连续/定期 tab。
+- 管理端已于 2026-09-17 完成 XXL-JOB 调度中心重构（job-form-modal 三分区表单），对话端仍用 mock 时代简易表单与旧接口（abi-system/shared/jobList、abi-job/job），列表与表单均对不上真实调度中心数据。
+
+### 目标
+
+1. 对话端定时任务抽屉新增/编辑表单搬管理端结构：基础配置（任务名称*、报警邮件）/ 调度配置（任务类型 Segmented 仅 单次/连续/定期 三 tab + 各模式周期字段 + 任务内容摘要）/ 任务配置（作业场景*、渠道推送时推送渠道）；分区标题 SectionHeader 与标签右对齐对齐管理端规范。
+2. 隐藏字段默认传参不展示：执行器（默认通用执行器，取执行器列表首个/名称含「通用」者）、负责人（当前用户）、运行模式（BEAN）、任务参数（沿用原值/空串，与 chat 具体任务绑定）、高级配置全组（提交用管理端同款默认值兜底）。
+3. 提交与管理端一致：结构化调度转 cron，`scheduleType='CRON'` + `scheduleConf=cron` 落库；编辑回显优先结构化 conf，CRON 记录用 cron 反解析回三 tab 结构化字段，解析失败回落连续任务每天。
+4. 抽屉接口对齐管理端调度中心：jobinfo/list、jobinfo 增改、jobinfo/{id} 删除、start/stop、trigger、jobgroup/list；列表卡片调度类型/作业场景/状态按真实字段展示；工具栏补「新增任务」按钮。
+5. 邮件发送弹窗红框区改为 单次/连续/定期 tab + 管理端同款调度字段（与抽屉共用调度字段组件）；提交仍走旧分享邮件接口，新调度值最佳努力映射旧参数（type=2、executeFrequency、executeTime、weekendTargetDay、monthlyTargetDay），并附加 scheduleMode + 结构化 scheduleConf 供后端后续升级；立即发送选项下线。
+
+### 非目标
+
+- 不改管理端 job 模块任何代码。
+- 不改抽屉统计卡/搜索/高级筛选的视觉结构（仅数据源换真实字段）。
+- 不做自定义 Cron tab 与 Cron 生成器。
+- 不改快照分享流程。
+
+### 影响范围
+
+- `apps/chat/src/utils/job-schedule.ts`（新）、`job-schedule.test.ts`（新）
+- `apps/chat/src/components/schedule/schedule-fields.tsx`（新）
+- `apps/chat/src/components/layout/ScheduleTaskForm.tsx`（新）
+- `apps/chat/src/components/layout/ScheduleTaskDrawer.tsx`
+- `apps/chat/src/service/api/job.ts`
+- `apps/chat/src/components/conversation/components/share-email-setting/index.tsx`（daily-time/week-select/month-select 下线）
+- `apps/chat/src/components/conversation/hooks/useConversationController.ts`、`conversation/index.tsx`、`conversation/refectorview.tsx`（表单初值）
+- `apps/chat/src/index.css`
+- run log：`.ai/runs/2026-09-22-chat-schedule-admin-form/`
+
+### 验收标准
+
+1. 抽屉新增/编辑表单三分区结构与管理端一致；隐藏字段不出现在 UI 且提交携带默认值。
+2. 三 tab 切换后周期字段联动正确；任务内容摘要实时刷新；保存后列表回显调度摘要与作业场景。
+3. 邮件弹窗发送方式为三 tab；提交 payload 含旧接口参数与 scheduleMode/scheduleConf。
+4. 根 vitest 新增单测通过（cron 构建/反解析往返、邮件参数映射）；chat `tsc --noEmit` 与改动文件 ESLint 无新增错误。
+
+### 测试要求
+
+- 根目录 `pnpm exec vitest run apps/chat/src/utils/job-schedule.test.ts`。
+- apps/chat 下 `npx tsc --noEmit -p tsconfig.json` 对比基线。
+- 改动文件 `pnpm exec eslint` 对比基线。
+- 手工：抽屉新增/编辑/启停/执行/删除；邮件弹窗三 tab 提交。
+
+## 2026-09-22 追加四：独立 React Chat SDK npm 包
+
+### 需求类型
+
+前端工程化（新增独立 SDK 项目与 npm 包构建，无后端改动）。
+
+### 目标
+
+1. 新建与 `apps/chat`、`apps/dashboard` 同级的 `apps/chat-sdk` 独立项目。
+2. 保留 `apps/chat` 现有实现，将助手分享对话组件及其依赖源码复制到 `apps/chat-sdk`，两边暂时并存以便测试。
+3. SDK 以 npm 包形态输出 ESM、CommonJS、类型声明和独立 CSS，React/ReactDOM 由宿主项目提供。
+4. 支持 React 组件 `AbiAssistant` 与命令式 `mount` 两种引入方式，并允许传入 `shareCode`、`apiBase`、`embed`。
+
+### 非目标
+
+- 本轮不删除或迁移 `apps/chat` 原有组件与 SDK 构建代码。
+- 本轮不实现 Vue2 Web Component 包装层。
+- 本轮不发布到真实 npm registry，不改后端 CORS 配置。
+
+### 影响范围
+
+- `apps/chat-sdk/**`（新增独立项目）。
+- `pnpm-lock.yaml`（新增 workspace importer）。
+- `.ai/runs/2026-09-22-chat-sdk-package/`（运行记录）。
+
+### 验收标准
+
+1. `apps/chat-sdk` 可单独执行 build，并输出可发布的 npm 包目录。
+2. package exports 可分别加载 JS、类型声明和 CSS。
+3. `pnpm pack` 成功，压缩包仅包含发布所需文件。
+4. 原 `apps/chat` 代码保持不删除，其他未提交改动不被覆盖。
+
+### 测试要求
+
+- `pnpm --filter @abi/chat-sdk build`。
+- `pnpm --filter @abi/chat-sdk pack`。
+- 检查打包产物导出、CSS、类型声明及 npm tarball 内容。
+
+## 2026-09-22 追加五：单 JS Web Component iframe 交付
+
+### 需求类型
+
+前端工程化（Chat 静态资源与第三方嵌入入口，无后端改动）。
+
+### 目标
+
+1. 在 `apps/chat/public` 重新生成单文件 `abi-assistant-widget.js`，注册 `<abi-assistant>` 自定义元素。
+2. 组件通过 iframe 加载 Chat 分享路由 `#/dashboard_share_page/{shareCode}?embed=1`，并默认根据脚本自身线上地址推导 Chat base。
+3. 支持 `share-code`、`base`、`mode`、`open`、`primary-color`、`width`、`height`、`z-index` 属性；floating 模式支持打开、关闭、拖拽、最大化和还原，inline 模式铺满宿主容器。
+4. 第三方只需引入一个 JS 并声明自定义元素，无 React、npm 包或宿主接口代理依赖。
+
+### 非目标
+
+- 不复制 Chat 业务源码到单 JS，不把 React/antd 等依赖打入 Web Component。
+- 不修改分享接口、鉴权协议或实际线上 Nginx 配置。
+- 不删除独立 `apps/chat-sdk` npm 包方案。
+
+### 影响范围
+
+- `apps/chat/public/abi-assistant-widget.js`（新增）。
+- `.ai/runs/2026-09-22-chat-widget-single-js/`（运行记录）。
+
+### 验收标准
+
+1. JS 可直接通过 `<script src=".../abi-assistant-widget.js"></script>` 加载并注册 `<abi-assistant>`。
+2. 未传 `base` 时根据脚本 URL 推导部署地址，传入 `base` 时使用显式地址。
+3. iframe URL 正确携带 URL 编码后的 shareCode 和 `embed=1`。
+4. `apps/chat` 正常构建后，JS 原样出现在 `apps/chat/dist/abi-assistant-widget.js`。
+
+### 测试要求
+
+- `node --check apps/chat/public/abi-assistant-widget.js`。
+- `pnpm --filter ai-bot build`。
+- 比对 public 与 dist 中的 JS 文件哈希，并做浏览器注册与 iframe URL smoke 验证。
+
+## 2026-09-23 追加：浮窗 SDK 外壳样式对齐原 ChatWidget
+
+### 目标
+
+- 仅调整 `apps/chat-sdk` 的浮窗外壳，使面板、标题栏、Logo、操作按钮、尺寸、圆角、边框与阴影对齐 `apps/chat/src/components/chat-widget` 的现有视觉。
+- 保持 `<script>` + `<abi-assistant>` 的 Vue 2 接入方式、属性协议、iframe 地址、拖拽和最大化行为不变。
+
+### 非目标
+
+- 不复制 React ChatWidget 业务代码，不改变 iframe 内聊天界面和接口。
+- 不修改第三方测试项目或执行浏览器联调。
+
+### 验收与测试
+
+- 外壳不再自绘第二条标题栏：透明控制条叠在 iframe 自带标题栏（渐变 Logo + 助手名）上，仅补最大化/关闭按钮与拖拽热区；面板 16px 圆角、浅边框与柔和阴影对齐原 ChatWidget。
+- `pnpm --filter @abi/chat-widget type-check`、`build` 与 `node --check apps/chat-sdk/dist/abi-assistant-widget.js` 通过。
+
+## 2026-09-23 追加：原 React ChatWidget 弹窗打包交付
+
+### 目标
+
+- 废弃 SDK 的 iframe 和手写浮窗外壳；`<abi-assistant>` 在 Vue 2 等宿主中直接由 ReactDOM 渲染 `apps/chat/src/components/chat-widget/ChatWidget.tsx` 的 `float` 弹窗。
+- 将 React、ReactDOM、ChatWidget 及其运行依赖、样式打入单个 IIFE JS；Vue 2 只通过 script 标签与 `share-code`、`base` 属性接入。
+- `base` 作为 ChatWidget 的 `apiBase` 传入，关闭、拖拽、缩放和最大化均使用原组件逻辑。
+
+### 非目标
+
+- 不再使用 iframe 分享路由，也不再保留 SDK 仿制的标题栏、启动按钮、拖拽和最大化逻辑。
+- 不修改 ChatWidget 原业务源码、分享接口或第三方 Vue 2 项目。
+
+### 验收与测试
+
+- 构建产物包含 React 自定义元素注册、ChatWidget 的 `abi-cw-panel` 样式和运行代码，不包含 iframe 分享路由。
+- `pnpm --filter @abi/chat-widget type-check`、`build`、`node --check` 均通过；`dist` 与 `apps/chat/public` 的 JS 哈希一致。
 # 2026-09-23 指标编辑页关键字段锁定
 
 ## 文档状态

@@ -1,28 +1,13 @@
-import { Form, Input, Radio, Select } from 'antd';
+import { Form, Input } from 'antd';
 import { FormInstance } from 'antd/lib';
 import EditorQuill from '../editor-quill';
-import WeekSelect from './week-select';
-import MonthSelect from './month-select';
-import { useEffect } from 'react';
 import EmailTitle from './email-title';
 import { validateMultiEmails } from '../../../../utils';
-import DailyTime from './daily-time';
+import { ScheduleFormItems, ScheduleModeSegmented } from '../../../schedule/schedule-fields';
 import styles from './index.module.css';
 
 const ShareEmailSetting = ({ form }: { form: FormInstance }) => {
-  const separator = Form.useWatch('type', form);
-  const frequency = Form.useWatch('executeFrequency', form);
-  useEffect(() => {
-    form.setFieldsValue({
-      sendTime: null,
-    });
-  }, [frequency]);
-  useEffect(() => {
-    form.setFieldsValue({
-      executeFrequency: null,
-      sendTime: null,
-    });
-  }, [separator]);
+  const scheduleMode = Form.useWatch('scheduleMode', form);
   return (
     <>
       <Form.Item
@@ -53,47 +38,11 @@ const ShareEmailSetting = ({ form }: { form: FormInstance }) => {
       >
         <EmailTitle />
       </Form.Item>
-      <Form.Item label="发送方式" name="type" rules={[{ required: true, message: '请选择发送方式' }]}>
-        <Select placeholder="请选择发送方式">
-          <Select.Option value={1}>立即发送</Select.Option>
-          <Select.Option value={2}>定时发送</Select.Option>
-        </Select>
+      {/* 发送方式：管理端同款三 tab 调度（单次/连续/定期），提交时在 controller 映射回旧接口参数 */}
+      <Form.Item label="发送方式" name="scheduleMode" rules={[{ required: true, message: '请选择发送方式' }]}>
+        <ScheduleModeSegmented />
       </Form.Item>
-      {separator === 2 && (
-        <>
-          {/* 执行频率 */}
-          <Form.Item label="执行频率" name="executeFrequency" rules={[{ required: true, message: '请选择执行频率' }]}>
-            <Radio.Group
-              options={[
-                { label: '每天', value: 1 },
-                { label: '每周', value: 2 },
-                { label: '每月', value: 3 },
-              ]}
-            />
-          </Form.Item>
-          {/* 执行时间 */}
-          <Form.Item
-            label="执行时间"
-            name="sendTime"
-            rules={[
-              {
-                validator: (rule, value) => {
-                  if (frequency !== 1 && (!value?.time || !value?.status)) {
-                    return Promise.reject(new Error('请选择执行时间'));
-                  } else if (frequency === 1 && !value?.time) {
-                    return Promise.reject(new Error('请选择执行时间'));
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
-          >
-            {frequency === 1 && <DailyTime />}
-            {frequency === 2 && <WeekSelect />}
-            {frequency === 3 && <MonthSelect />}
-          </Form.Item>
-        </>
-      )}
+      <ScheduleFormItems mode={scheduleMode} />
       <Form.Item label="邮件正文" name="emailContent">
         <EmailContent />
       </Form.Item>

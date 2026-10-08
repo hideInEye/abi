@@ -1,4 +1,5 @@
 import { createFileRoute, useParams, useRouterState } from '@tanstack/react-router'
+import React from 'react'
 import ConversationAnalysis from '@/components/conversation-analysis'
 import type { ChatRouterContext } from '@/router/context'
 

@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import request from "../request/index";
-import { getChatbiBaseApi } from '../../utils/index'
+import { getChatbiBaseApi } from '../../utils/runtime'
 
 // 获取部门列表
 export function fetchDeptList(params: any) {
@@ -172,19 +172,20 @@ export function queryUserList(
 
 
 // 获取大模型列表
-export function fetchModelList(params?: { pageNum?: number; pageSize?: number; modelName?: string; spaceId?: number }) {
+export function fetchModelList(params?: { pageNum?: number; pageSize?: number; modelName?: string; spaceId?: number }, signal?: AbortSignal) {
   return request({
     url: "/abi-copilot/v1/model/list",
     method: "get",
     params: { pageNum: 1, pageSize: 999, modelName: '', ...params },
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
+    signal,
   });
 }
 
-// 邮件分享
+// 邮件分享（shared 接口已迁至 abi-executor 服务）
 export function fetchShareEmail(data: any) {
   return request({
-    url: "/api/abi-system/shared/add",
+    url: "/api/abi-executor/shared/add",
     method: "post",
     data,
   });

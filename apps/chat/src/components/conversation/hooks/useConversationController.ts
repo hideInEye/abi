@@ -17,6 +17,7 @@ import {
 } from '../../../service/api/conv'
 import { useDebugStore } from '../../../store'
 import { getHumanInHistoryByOrderIndex, parseMessageContent } from '../../../utils'
+import { buildScheduleConf, toShareEmailScheduleParams } from '../../../utils/job-schedule'
 import { useScreenshot } from '../useScreenShot'
 import { extractExploreHistoryItems, isExploreHistoryRound } from '../exploration-mode/historyAdapter'
 import type { ExploreItem } from '../exploration-mode/types'
@@ -1954,6 +1955,10 @@ export const useConversationController = (
     const roundIndexs = sharingList.map((item: any) => item.order).join(',')
     try {
       const values = await shareEmailForm.validateFields()
+      // 三 tab 调度值→旧分享邮件接口参数（type/executeFrequency/executeTime/weekendTargetDay/monthlyTargetDay），
+      // 另附 scheduleMode + 结构化 scheduleConf 供后端后续升级完整调度语义
+      const { deadline, execDate, execTime, interval, minutes, points, scheduleMode, unit, weekDay, ...restValues } = values
+      const scheduleValues = { deadline, execDate, execTime, interval, minutes, points, scheduleMode, unit, weekDay }
       const data: Record<string, any> = {
         convUid: conv.conv_uid,
         sessionId: conv.chat_id,
@@ -1961,12 +1966,11 @@ export const useConversationController = (
         extra: {},
         chatName: conv.biz_name,
         roundIndexs,
-        ...values,
-        executeTime: values?.sendTime?.time
+        ...restValues,
+        ...toShareEmailScheduleParams(scheduleValues),
+        scheduleMode,
+        scheduleConf: buildScheduleConf(scheduleMode, scheduleValues),
       }
-      if (values.executeFrequency === 2) data.weekendTargetDay = values?.sendTime?.status
-      if (values.executeFrequency === 3) data.monthlyTargetDay = values?.sendTime?.status
-      delete data.sendTime
       const result = await runApiSuccessFlow(
         () => fetchShareEmail(data),
         () => {

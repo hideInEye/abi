@@ -30,6 +30,8 @@ export function shareProjectApi(data: {
   expirationDays?: number;
   /** 自定义过期时间，格式 "YYYY-MM-DD HH:mm:ss" */
   expirationDate?: string;
+  /** 悬浮窗预设主题：blue-蓝(默认) light-白 dark-黑；与 chat-sdk theme.ts ThemeId 对齐，后端存储后随分享校验下发 */
+  theme?: 'blue' | 'light' | 'dark';
 }) {
   return apiRequest({
     method: 'post',

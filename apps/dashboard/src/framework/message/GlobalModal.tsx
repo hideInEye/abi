@@ -9,36 +9,32 @@
  * For permission to use this work or any part of it, please contact 1182810784@qq.com to obtain written authorization.
  */
 
-import {Modal} from "antd";
-import {useEffect} from "react";
-import {HookAPI} from "antd/es/modal/useModal";
+import type {HookAPI} from "antd/es/modal/useModal";
+
+let modalModulePromise: Promise<typeof import('antd/es/modal')> | null = null;
+
+function loadModalApi() {
+    modalModulePromise ??= import('antd/es/modal');
+    return modalModulePromise.then(module => module.default);
+}
+
+const lazyModalApi = new Proxy({} as HookAPI, {
+    get(_target, prop) {
+        if (prop === 'then') return undefined;
+        return (...args: any[]) => loadModalApi().then(api => {
+            const method = Reflect.get(api, prop);
+            return typeof method === 'function' ? method.apply(api, args) : method;
+        });
+    }
+});
 
 class GModal {
-    public modalApi: HookAPI | null = null;
-
-    public setModalApi(modalApi: HookAPI | null) {
-        this.modalApi = modalApi;
-    }
-
+    public modalApi: HookAPI = lazyModalApi;
 }
 
 const globalModal = new GModal();
 export {globalModal};
 
-
 export default function GlobalModal() {
-    const [modalApi, contextHolder] = Modal.useModal();
-
-    useEffect(() => {
-        globalModal.setModalApi(modalApi);
-        return () => {
-            globalModal.setModalApi(null);
-        }
-    }, []);
-
-    return (
-        <>
-            {contextHolder}
-        </>
-    )
+    return null;
 }

@@ -1,32 +1,20 @@
-import ClassNames from 'classnames';
-
-import SystemLogo from './SystemLogo';
-
-const loadingClasses = [
-  'left-0 top-0',
-  'left-0 bottom-0 animate-delay-500',
-  'right-0 top-0 animate-delay-1000',
-  'right-0 bottom-0 animate-delay-1500'
-];
-
 const GlobalLoadings = memo(() => {
-  const { t } = useTranslation();
-
   return (
-    <div className="fixed-center flex-col">
-      <div className="my-36px h-56px w-56px">
-        <div className="relative h-full animate-spin">
-          {loadingClasses.map(item => {
-            return (
-              <div
-                className={ClassNames('absolute w-16px h-16px bg-primary rounded-8px animate-pulse ', item)}
-                key={item}
-              />
-            );
-          })}
+    <div className="abi-startup-shell" role="status" aria-label="正在整理工作台环境">
+      <aside className="abi-startup-shell__sidebar" aria-hidden="true">
+        <div className="abi-startup-shell__brand" />
+        <div className="abi-startup-shell__line" />
+        <div className="abi-startup-shell__line" />
+        <div className="abi-startup-shell__line" />
+      </aside>
+      <main className="abi-startup-shell__main" aria-hidden="true">
+        <div className="abi-startup-shell__header" />
+        <div className="abi-startup-shell__grid">
+          <div className="abi-startup-shell__card" />
+          <div className="abi-startup-shell__card" />
+          <div className="abi-startup-shell__card" />
         </div>
-      </div>
-      <h2 className="text-28px text-#646464 font-500">{t('system.loading')}</h2>
+      </main>
     </div>
   );
 });

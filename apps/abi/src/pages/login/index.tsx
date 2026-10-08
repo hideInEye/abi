@@ -1,6 +1,5 @@
 import { EyeInvisibleOutlined, EyeTwoTone, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Form, Input } from 'antd'
-import { debounce } from 'lodash'
 
 import loginBg from '@/assets/imgs/login/loginbg.png'
 import loginHero from '@/assets/imgs/login/loginbot.png'
@@ -44,6 +43,7 @@ export function Component() {
   const { redirectFromLogin } = useRouterPush()
   const redirectFromLoginRef = useRef(redirectFromLogin)
   const captchaRef = useRef<CaptchaRef>(null)
+  const submitTimerRef = useRef<number | null>(null)
   const [captchaUuid, setCaptchaUuid] = useState('')
 
   redirectFromLoginRef.current = redirectFromLogin
@@ -52,16 +52,21 @@ export function Component() {
     formRules: { pwd, userName: userNameRules },
   } = useFormRules()
 
-  const handleSubmit = debounce(async function handleSubmit() {
-    const params = await form.validateFields()
-    toLogin(
-      {
-        ...params,
-        uuid: captchaUuid,
-      },
-      captchaRef,
-    )
-  }, 300)
+  const handleSubmit = useCallback(() => {
+    if (submitTimerRef.current !== null) window.clearTimeout(submitTimerRef.current)
+    submitTimerRef.current = window.setTimeout(() => {
+      submitTimerRef.current = null
+      form.validateFields().then(params => {
+        toLogin(
+          {
+            ...params,
+            uuid: captchaUuid,
+          },
+          captchaRef,
+        )
+      }).catch(() => undefined)
+    }, 300)
+  }, [captchaUuid, form, toLogin])
 
   useKeyPress('enter', () => {
     handleSubmit()
@@ -69,6 +74,9 @@ export function Component() {
   useEffect(() => {
     // Remove credentials persisted by older versions; passwords must never survive a page reload.
     clearLegacyRememberedCredentials(localStorage)
+    return () => {
+      if (submitTimerRef.current !== null) window.clearTimeout(submitTimerRef.current)
+    }
   }, [])
 
   useEffect(() => {
@@ -120,7 +128,15 @@ export function Component() {
 
   return (
     <div className={styles.page}>
-      <img src={loginBg} alt="" className={styles.background} />
+      <img
+        src={loginBg}
+        alt=""
+        className={styles.background}
+        width={1920}
+        height={960}
+        fetchPriority="high"
+        decoding="async"
+      />
       <img src={loginLogo} alt="ABI" className={styles.logo} />
 
       <div className={styles.layout}>
@@ -134,7 +150,14 @@ export function Component() {
             <p className={styles.heroDesc}>自然语言交互 · 智能数据分析 · 可视化洞察 · 可信决策支持</p>
           </div>
 
-          <img src={loginHero} alt="" className={styles.heroImage} />
+          <img
+            src={loginHero}
+            alt=""
+            className={styles.heroImage}
+            width={637}
+            height={520}
+            decoding="async"
+          />
 
           <p className={styles.sloganText}>
             智领数据，赋能行业。全链路智能分析与可信决策平台，以本体语义导航洞察先机，驱动业务确定性增长。

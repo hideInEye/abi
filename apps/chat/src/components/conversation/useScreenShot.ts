@@ -1,5 +1,4 @@
 import { useRef } from 'react';
-import html2canvas from 'html2canvas';
 /**
  * 将 SVG <use> 元素转换为内联 SVG
  * html2canvas 不支持 SVG <use> 元素引用 sprite，需要将其转换为内联 SVG
@@ -111,6 +110,7 @@ export const useScreenshot = () => {
     };
 
     try {
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(ref.current, {
         ...defaultOptions,
         onclone: (clonedDoc, element) => {

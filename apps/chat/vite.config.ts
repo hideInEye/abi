@@ -3,9 +3,7 @@ import { URL, fileURLToPath } from 'node:url'
 import reactRefresh from '@vitejs/plugin-react-refresh'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import tailwindcss from 'tailwindcss'
-import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
-import path from 'path'
-const localIconPath = path.join(process.cwd(), 'src/assets/svg-icon')
+import { chatCandidateManualChunks } from './build/manualChunks'
 
 const useDevMode = process.env.NODE_ENV === 'development'
 const baseUrl = '/chat-ui/'
@@ -18,15 +16,18 @@ export default defineConfig({
       routesDirectory: './src/pages',
       generatedRouteTree: './src/routeTree.gen.ts',
       quoteStyle: 'single',
+      autoCodeSplitting: true,
     }),
     ...(useDevMode ? [] : [reactRefresh()]),
-    createSvgIconsPlugin({
-      customDomId: '__SVG_ICON_LOCAL__',
-      iconDirs: [localIconPath],
-      inject: 'body-last',
-      symbolId: `icon-[dir]-[name]`,
-    }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: chatCandidateManualChunks,
+        onlyExplicitManualChunks: true,
+      },
+    },
+  },
   // base: '/micro-app-react',
   resolve: {
     alias: {
@@ -34,6 +35,7 @@ export default defineConfig({
       '@sa/axios': fileURLToPath(new URL('../../packages/axios/src/index.ts', import.meta.url)),
       '@sa/auth': fileURLToPath(new URL('../../packages/auth/src/index.ts', import.meta.url)),
       // @sa/axios 源码内会继续引用 @sa/utils；显式别名能避免生产构建时 Rollup 无法解析 workspace 包。
+      '@sa/utils/nanoid': fileURLToPath(new URL('../../packages/utils/src/nanoid.ts', import.meta.url)),
       '@sa/utils': fileURLToPath(new URL('../../packages/utils/src/index.ts', import.meta.url)),
     },
   },

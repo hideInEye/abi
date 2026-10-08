@@ -3,21 +3,23 @@ import { Dropdown, Input, message, Popover } from 'antd';
 import type { MenuProps } from 'antd';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AudioRecorder from '../../../../components/AudioRecorder';
-import UploadDrawer from '../../UploadDrawer';
+import { LazyFeatureFallback, RetryableLazy } from '../../../../components/performance/RetryableLazy';
 import FileTag from '../../../../components/FileTag';
 import { fetchFavoriteList } from '../../../../service/api/abi-system';
 import { queryMcpList } from '../../../../service/api/mcp';
 import type { ReportSourceVersionFields } from '../../../../service/api/report';
 import { fetchSemanticGroups, fetchSemanticDetail } from '../../../../service/api/semantic';
-import SchemaFieldsModal from '../../../conversation-analysis/SchemaFieldsModal';
-import type { SchemaTable, SchemaField } from '../../../conversation-analysis/SchemaFieldsModal';
-import { getSpaceId } from '../../../../utils';
+import type { SchemaTable, SchemaField } from '../../../conversation-analysis/schemaFields';
+import { getSpaceId } from '../../../../utils/runtime';
 import type { ModelOption } from '../chat-header';
 import { buildReportSourceVersionFields } from './reportSourceSelection';
 import { hasSelectedConversationData } from './sendValidation';
 import { filterSemanticTree, matchKeyword } from './popupFilter';
 import { buildMcpGroupQuery, isSuccessfulMcpResponse, loadCurrentMcpItems, shouldReloadMcpOnSpaceChange } from './mcpSpaceLoad';
 import type { ExploreMcpSource } from '../../exploration-mode/types';
+
+const loadUploadDrawer = () => import('../../UploadDrawer');
+const loadSchemaFieldsModal = () => import('../../../conversation-analysis/SchemaFieldsModal');
 
 export interface SemanticSelectedData {
   name: string
@@ -46,7 +48,7 @@ type ChatInputMode = {
   icon: React.ReactNode
 }
 
-interface ChatInputProps {
+export interface ChatInputProps {
   conv?: any;
   /** 确保存在可用会话（无会话时先创建），返回会话对象 */
   ensureConv?: () => Promise<any>;
@@ -725,7 +727,13 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
         <div style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 10px', gap: 6 }}>
           {/* + (upload dropdown) */}
           <Dropdown menu={{ items: plusMenuItems }} trigger={['click']} placement="topLeft">
-            <button type="button" className="input-label-btn" title="更多操作">
+            <button
+              type="button"
+              className="input-label-btn"
+              title="更多操作"
+              onFocus={() => void loadUploadDrawer()}
+              onMouseEnter={() => void loadUploadDrawer()}
+            >
               <PlusOutlined style={{ fontSize: 14 }} />
             </button>
           </Dropdown>
@@ -795,10 +803,22 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           </button>
         </div>
 
-        <UploadDrawer open={uploadFileVisible} conv={conv} onOk={handleUploadOk} onClose={handleUploadClose} />
+        {uploadFileVisible && (
+          <RetryableLazy
+            loader={loadUploadDrawer}
+            componentProps={{ open: uploadFileVisible, conv, onOk: handleUploadOk, onClose: handleUploadClose }}
+            fallback={<LazyFeatureFallback label="正在加载文件上传…" style={{ position: 'fixed', inset: '0 0 0 auto', zIndex: 1000, width: 520, minHeight: '100vh' }} />}
+          />
+        )}
 
         {/* 查看语义 Modal */}
-        <SchemaFieldsModal open={semModalOpen} tables={semModalTables} onClose={() => setSemModalOpen(false)} />
+        {semModalOpen && (
+          <RetryableLazy
+            loader={loadSchemaFieldsModal}
+            componentProps={{ open: true, tables: semModalTables, onClose: () => setSemModalOpen(false) }}
+            fallback={<LazyFeatureFallback label="正在加载数据语义…" />}
+          />
+        )}
       </div>
     );
   }

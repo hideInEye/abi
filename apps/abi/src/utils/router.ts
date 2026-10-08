@@ -1,23 +1,14 @@
-// src/utils/icon-converter.ts
-import * as antdIcons from '@ant-design/icons'
 import React from 'react'
 
+import SvgIcon from '@/components/stateless/custom/SvgIcon'
+import { defaultOutlinedIcon, getOutlinedIcon } from '@/utils/antdIconRegistry'
 import { getLocalIcons } from '@/utils/icon'
 
-// 创建安全的图标映射
-const safeIcons = new Map<string, any>()
-
-// 将 Ant Design 图标添加到安全映射
-Object.entries(antdIcons).forEach(([name, iconComponent]) => {
-  if (typeof iconComponent === 'function' && name.endsWith('Outlined')) {
-    safeIcons.set(name, iconComponent)
-  }
-})
 // 预加载本地 SVG 图标名称列表
 const localIconNames = getLocalIcons()
 
 // 添加默认图标
-const DefaultIcon = antdIcons.QuestionCircleOutlined
+const DefaultIcon = defaultOutlinedIcon
 
 /**
  * 图标转换器：支持 antd 图标和本地 SVG 图标
@@ -30,7 +21,7 @@ export const safeConvertToIcon = (iconName?: string, props?: React.ComponentProp
     return React.createElement(SvgIcon, { localIcon: iconName, style: { fontSize: '20px' } })
   }
 
-  const IconComponent = safeIcons.get(iconName)
+  const IconComponent = getOutlinedIcon(iconName)
   if (IconComponent) {
     return React.createElement(IconComponent, props)
   }

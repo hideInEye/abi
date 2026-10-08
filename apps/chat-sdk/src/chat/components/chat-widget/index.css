@@ -1,0 +1,1005 @@
+/* 助手分享对话悬浮框样式：全量 abi-cw- 前缀，避免污染宿主页面；不依赖 Tailwind。
+   视觉对齐主对话（glassmorphism 主题：#5b7cf7 蓝 / #8b5cf6 紫 / 浅薰衣草画布 + 白色内容卡）。 */
+
+.abi-cw-root {
+  font-family: 'Helvetica Neue', Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.6;
+  box-sizing: border-box;
+  /* 思考打字机限高（约 5 行；em 相对思考区紧凑字号 12px/1.7，供 AiEle compact 态消费） */
+  --think-max-h: 8.5em;
+}
+
+.abi-cw-root *,
+.abi-cw-root *::before,
+.abi-cw-root *::after {
+  box-sizing: border-box;
+}
+
+/* 形态 A：分享路由页（悬浮可拖拽小面板） */
+.abi-cw-page {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(160deg, #d5daf5 0%, #dfe6f8 60%, #e2d9f3 100%);
+}
+
+.abi-cw-page .abi-cw-panel {
+  position: fixed;
+  top: 48px;
+  right: 24px;
+  /* 默认尺寸按视口等比（1920×1080 下约 653×907，给归因/预测看板更多展示空间），max() 兜底小屏最小可用尺寸 */
+  width: max(500px, 34vw);
+  max-width: calc(100vw - 32px);
+  height: max(660px, 84vh);
+  max-height: calc(100vh - 72px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* 形态 B：第三方嵌入（右侧悬浮面板） */
+.abi-cw-float {
+  /* 仅作弹层挂载锚点与层叠上下文；尺寸/定位由面板自身承担（同 page 形态），
+     否则拖拽把面板切成 fixed 时会脱离外层尺寸约束导致宽高塌陷 */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 2147483000;
+}
+
+.abi-cw-float .abi-cw-panel {
+  position: fixed;
+  top: 64px;
+  right: 24px;
+  /* 同 page 形态按视口等比放大（1920 下约 614） */
+  width: max(480px, 32vw);
+  max-width: calc(100vw - 32px);
+  height: calc(100vh - 84px);
+  max-height: calc(100vh - 84px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* 形态 C：第三方 iframe 直嵌（铺满 iframe 视口，宿主页面自行控制悬浮定位与尺寸） */
+.abi-cw-embed {
+  width: 100%;
+  height: 100%;
+}
+
+.abi-cw-embed .abi-cw-panel {
+  /* Popover/Drawer getPopupContainer 挂面板内，需定位父级 */
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.abi-cw-embed .abi-cw-header {
+  /* 直嵌禁用拖拽，头部不显示可拖动光标 */
+  cursor: default;
+}
+
+.abi-cw-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--cw-surface, #fff);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--cw-border, #e9edf4);
+  box-shadow: 0 8px 32px rgba(26, 39, 68, 0.08);
+}
+
+/* ── 四边拖拽改大小把手（page 形态；透明热区骑跨边框，不影响圆角与内容） ── */
+.abi-cw-page .abi-cw-panel {
+  overflow: visible;
+}
+
+/* 面板不再裁剪子元素：首尾子元素自带圆角，避免背景溢出面板 16px 圆角 */
+.abi-cw-page .abi-cw-header {
+  border-radius: 16px 16px 0 0;
+}
+
+.abi-cw-page .abi-cw-footer {
+  border-radius: 0 0 16px 16px;
+}
+
+.abi-cw-resize {
+  position: absolute;
+  z-index: 30;
+  touch-action: none;
+}
+
+.abi-cw-resize-n {
+  top: -4px;
+  left: 12px;
+  right: 12px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.abi-cw-resize-s {
+  bottom: -4px;
+  left: 12px;
+  right: 12px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.abi-cw-resize-e {
+  top: 12px;
+  bottom: 12px;
+  right: -4px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.abi-cw-resize-w {
+  top: 12px;
+  bottom: 12px;
+  left: -4px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+/* ── 头部（拖拽把手，对齐大屏 ai-chat-header） ── */
+.abi-cw-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 16px;
+  height: 52px;
+  background: var(--cw-header-bg, rgba(255, 255, 255, 0.7));
+  border-bottom: 1px solid var(--cw-header-border, rgba(130, 140, 200, 0.16));
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+
+.abi-cw-header-logo {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #5b7cf7 0%, #8b5cf6 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #fff;
+  font-weight: bold;
+}
+
+.abi-cw-header-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--cw-text, #333);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.abi-cw-action-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--cw-text-muted, #8c8c8c);
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.abi-cw-action-btn:hover {
+  background: rgba(91, 124, 247, 0.1);
+  color: #5b7cf7;
+}
+
+.abi-cw-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── 消息区（浅灰白画布：纯白太刺眼，原薰衣草渐变太彩，取中间值） ── */
+.abi-cw-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 12px;
+  background: var(--cw-body-bg, #f7f8fa);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.abi-cw-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+/* ── 探索工作室 / 报告预览覆盖层：铺满面板（预览打开时窗体已自动放大），内部直接嵌入主对话预览面板（width:100%/flex:1） ── */
+.abi-cw-preview-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: var(--cw-surface, #fff);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.abi-cw-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.abi-cw-body::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 2px;
+}
+
+.abi-cw-body::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+.abi-cw-status {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--cw-text-muted, #8c8c8c);
+  text-align: center;
+  padding: 0 24px;
+}
+
+.abi-cw-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e8e8e8;
+  border-top-color: #5b7cf7;
+  border-radius: 50%;
+  animation: abi-cw-spin 0.8s linear infinite;
+}
+
+@keyframes abi-cw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 密码表单（嵌入形态下的分享密码校验） */
+.abi-cw-password {
+  width: 100%;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.abi-cw-password-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cw-text, #333);
+}
+
+.abi-cw-password input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.abi-cw-password input:focus {
+  border-color: #5b7cf7;
+}
+
+.abi-cw-password-error {
+  color: #ff4d4f;
+  font-size: 12px;
+  min-height: 18px;
+}
+
+.abi-cw-btn-primary {
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%);
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.abi-cw-btn-primary:hover {
+  opacity: 0.85;
+}
+
+.abi-cw-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 消息流（对齐大屏 ai-message：时间置于气泡下方） */
+.abi-cw-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 88%;
+}
+
+/* 探索/报告卡片是整行块级内容（非气泡），不受 88% 气泡限宽，占满 body 宽，避免相对交互白卡偏左 */
+.abi-cw-msg-full {
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
+}
+
+.abi-cw-msg-human {
+  align-self: flex-end;
+  align-items: flex-end;
+  /* 明确宽度：避免收缩ToFit 与内层 max-w 百分比循环把气泡压窄导致短文本换行 */
+  width: 100%;
+}
+
+/* 复用主对话 HumanEle：其根节点 my-4 外边距、以及隐藏态 hover 操作条（编辑/复制/删除，分享场景无回调）在窄面板里造成多余留白，归零/隐藏以收紧用户与 AI 间距 */
+.abi-cw-msg-human > div {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.abi-cw-msg-human > div > div > div:last-child {
+  display: none;
+}
+
+/* 描述分析正文（窄面板）：主对话 markdown-content 的标题/代码字号偏大，此处统一下调；正文 p/li 继承容器内联 13px */
+.abi-cw-desc h1,
+.abi-cw-desc h2,
+.abi-cw-desc h3,
+.abi-cw-desc h4,
+.abi-cw-desc h5,
+.abi-cw-desc h6 {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  margin: 0.4em 0 !important;
+}
+
+.abi-cw-desc code,
+.abi-cw-desc pre {
+  font-size: 12px !important;
+}
+
+/* 信息条：分组 + 数据语义（复刻主对话 MessageList 信息条内联样式；窄面板字号略收） */
+.abi-cw-infobar {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  background: var(--cw-infobar-bg, rgba(255, 255, 255, 0.55));
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  border: 1px solid var(--cw-border, rgba(130, 140, 200, 0.12));
+  font-size: 12px;
+  color: var(--cw-text-2, #546074);
+  flex-wrap: wrap;
+}
+
+.abi-cw-infobar-label {
+  color: var(--cw-text, #1a2744);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.abi-cw-infobar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.abi-cw-infobar-chip-group {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(91, 124, 247, 0.06));
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  box-shadow: 0 1px 4px rgba(139, 92, 246, 0.08);
+}
+
+.abi-cw-infobar-chip-sem {
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.12), rgba(16, 185, 129, 0.04));
+  color: #5b7cf7;
+  border: 1px solid rgba(91, 124, 247, 0.18);
+  box-shadow: 0 1px 4px rgba(91, 124, 247, 0.08);
+}
+
+/* 带 schemaId 的语义 chip 可点：窗体放大 + Schema 抽屉窗内展示 */
+.abi-cw-infobar-chip-sem.clickable {
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.abi-cw-infobar-chip-sem.clickable:hover {
+  border-color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.18);
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.2);
+}
+
+.abi-cw-infobar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.abi-cw-msg-ai {
+  align-self: stretch;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ── 输入区（对齐大屏 ai-chat-input-area） ── */
+.abi-cw-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--cw-border-2, #e8e8e8);
+  background: var(--cw-surface, #fff);
+  padding: 12px;
+}
+
+.abi-cw-input-box {
+  background: var(--cw-input-bg, #f5f7fa);
+  border-radius: 10px;
+  border: 1px solid var(--cw-border-2, #d9d9d9);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.abi-cw-input-box:focus-within {
+  border-color: #5b7cf7;
+  box-shadow: 0 0 0 2px rgba(91, 124, 247, 0.1);
+}
+
+.abi-cw-input {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  padding: 10px 12px 4px;
+  color: var(--cw-text, #333);
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: inherit;
+  min-height: 52px;
+  max-height: 120px;
+}
+
+.abi-cw-input::placeholder {
+  color: var(--cw-text-muted, #8c8c8c);
+}
+
+/* 语义选择器与模式/思考/工具贴左排布，发送/停止靠右（margin-left:auto） */
+.abi-cw-input-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px 8px;
+  gap: 8px;
+}
+
+/* ── 数据语义 selector（对齐大屏 sem-selector） ── */
+.abi-cw-sem-selector {
+  position: relative;
+  /* 不撑满剩余宽度，否则模式/思考/工具会被顶到右侧 */
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.abi-cw-sem-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  max-width: 160px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--cw-header-border, rgba(130, 140, 200, 0.16));
+  background: var(--cw-input-bg, rgba(255, 255, 255, 0.5));
+  color: var(--cw-text-2, #8494ad);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.abi-cw-sem-trigger-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+.abi-cw-sem-trigger-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.abi-cw-sem-trigger-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.abi-cw-sem-trigger-arrow {
+  flex-shrink: 0;
+  display: inline-flex;
+  transition: transform 0.2s;
+}
+
+.abi-cw-sem-trigger-arrow svg {
+  width: 10px;
+  height: 10px;
+}
+
+.abi-cw-sem-trigger-arrow.open {
+  transform: rotate(180deg);
+}
+
+.abi-cw-sem-trigger:hover {
+  border-color: #5b7cf7;
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.1);
+}
+
+.abi-cw-sem-trigger.active {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.1);
+  border-color: rgba(91, 124, 247, 0.3);
+}
+
+/* 语义下拉面板（组件内绝对定位浮层，非 portal；向上展开） */
+.abi-cw-sem-popover {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  background: var(--cw-surface, #fff);
+  border: 1px solid var(--cw-border-2, #e8e8e8);
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  padding: 6px 8px;
+}
+
+.abi-cw-sem-tree {
+  width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.abi-cw-sem-tree::-webkit-scrollbar {
+  width: 4px;
+}
+
+.abi-cw-sem-tree::-webkit-scrollbar-thumb {
+  background: rgba(130, 140, 200, 0.3);
+  border-radius: 2px;
+}
+
+.abi-cw-sem-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--cw-text-2, #8494ad);
+  font-size: 12px;
+}
+
+/* 分组节点 */
+.abi-cw-sem-group-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cw-text, #3a4d65);
+  user-select: none;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.abi-cw-sem-group-node:hover {
+  background: rgba(130, 140, 200, 0.08);
+}
+
+.abi-cw-sem-group-node.is-empty {
+  cursor: default;
+}
+
+.abi-cw-sem-group-node.is-empty:hover {
+  background: transparent;
+}
+
+.abi-cw-sem-group-node.is-empty .abi-cw-sem-group-name {
+  color: #8a97ad;
+  font-weight: 500;
+}
+
+.abi-cw-sem-group-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: #358cf3;
+}
+
+.abi-cw-sem-group-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.abi-cw-sem-group-icon.is-empty {
+  color: #b7c0d0;
+}
+
+.abi-cw-sem-group-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.abi-cw-sem-group-count {
+  font-size: 11px;
+  color: var(--cw-text-2, #8494ad);
+  font-weight: 400;
+}
+
+.abi-cw-sem-chevron {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.35;
+  transition: transform 0.25s ease;
+}
+
+.abi-cw-sem-chevron svg {
+  width: 10px;
+  height: 10px;
+}
+
+.abi-cw-sem-chevron.open {
+  transform: rotate(90deg);
+  opacity: 0.6;
+}
+
+/* 叶子（数据语义文件）—— 缩进由递归层级内联 paddingLeft 控制 */
+.abi-cw-sem-leaf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--cw-text-2, #5f7490);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.abi-cw-sem-leaf:hover {
+  background: rgba(130, 140, 200, 0.08);
+}
+
+.abi-cw-sem-leaf.selected {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.1);
+  font-weight: 600;
+}
+
+.abi-cw-sem-leaf.selected .abi-cw-sem-leaf-icon {
+  color: #5b7cf7;
+}
+
+.abi-cw-sem-leaf-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: rgb(175, 209, 250);
+}
+
+.abi-cw-sem-leaf-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.abi-cw-sem-leaf-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 发送 / 停止按钮（对齐大屏 send-btn / stop-btn） ── */
+.abi-cw-send {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #fff;
+  padding: 0;
+}
+
+.abi-cw-send:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: scale(1.05);
+}
+
+.abi-cw-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.abi-cw-send svg {
+  width: 16px;
+  height: 16px;
+}
+
+.abi-cw-stop {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #fff1f0;
+  border: 1px solid #ffa39e;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #ff4d4f;
+  padding: 0;
+}
+
+.abi-cw-stop:hover {
+  background: #ffccc7;
+}
+
+.abi-cw-stop svg {
+  width: 14px;
+  height: 14px;
+}
+
+.abi-cw-disclaimer {
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--cw-text-muted, #8c8c8c);
+  margin-top: 6px;
+}
+
+/* ── 输入工具栏：模式 / 思考 / 工具（更多）── */
+.abi-cw-tb-item {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.abi-cw-tb-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--cw-text-2, #8494ad);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.abi-cw-tb-btn:hover {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.08);
+}
+
+.abi-cw-tb-btn.active {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.1);
+  border-color: rgba(91, 124, 247, 0.3);
+}
+
+/* 思考开启态高亮（缺省开，与现状一致） */
+.abi-cw-tb-btn.on {
+  color: #5b7cf7;
+  background: rgba(91, 124, 247, 0.1);
+}
+
+.abi-cw-tb-btn-icon {
+  display: inline-flex;
+}
+
+.abi-cw-tb-btn-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.abi-cw-tb-btn-arrow {
+  display: inline-flex;
+}
+
+.abi-cw-tb-btn-arrow svg {
+  width: 10px;
+  height: 10px;
+}
+
+.abi-cw-tb-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #5b7cf7;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* 工具栏浮层（同语义 popover：非 portal，向上展开） */
+.abi-cw-tb-popover {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  min-width: 190px;
+  background: var(--cw-surface, #fff);
+  border: 1px solid var(--cw-border-2, #e8e8e8);
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+}
+
+/* 模式项：图标 + 名称/描述 + 选中勾（同主对话 mode-menu-item） */
+.abi-cw-tb-mode-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.abi-cw-tb-mode-item:hover {
+  background: rgba(130, 140, 200, 0.08);
+}
+
+.abi-cw-tb-mode-item.selected {
+  background: rgba(91, 124, 247, 0.1);
+}
+
+.abi-cw-tb-mode-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: #5b7cf7;
+}
+
+.abi-cw-tb-mode-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.abi-cw-tb-mode-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.abi-cw-tb-mode-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cw-text, #3a4d65);
+  line-height: 1.4;
+}
+
+.abi-cw-tb-mode-item.selected .abi-cw-tb-mode-name {
+  color: #5b7cf7;
+}
+
+.abi-cw-tb-mode-desc {
+  font-size: 11px;
+  color: var(--cw-text-2, #8494ad);
+  line-height: 1.4;
+}
+
+.abi-cw-tb-mode-check {
+  flex-shrink: 0;
+  color: #5b7cf7;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* 面板内抽屉（SchemaFieldsModal getContainer 指向面板）：绝对定位铺满面板，不随面板圆角溢出 */
+.abi-cw-panel > .ant-drawer {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* ── 黑色系覆盖层 ── 复用的大屏对话/图表组件用 Tailwind 写死浅色（bg-white / border-[#...] / text-[#...]），
+   CSS 变量覆盖不到，此处按 data-cw-theme='dark' 作用域把这些原子类收敛到 --cw-* 变量。
+   仅 SDK 传入 dark 时根节点才带该属性，蓝/白系与大屏 page 形态均不带 → 零影响。 */
+.abi-cw-root[data-cw-theme='dark'] .bg-white,
+.abi-cw-root[data-cw-theme='dark'] .bg-\[\#ffffff\],
+.abi-cw-root[data-cw-theme='dark'] .bg-\[\#fbfcfe\] {
+  background-color: var(--cw-surface) !important;
+}
+
+.abi-cw-root[data-cw-theme='dark'] .bg-\[\#eef3ff\],
+.abi-cw-root[data-cw-theme='dark'] .bg-\[\#f7f9fc\],
+.abi-cw-root[data-cw-theme='dark'] .bg-\[\#f5f5f5\] {
+  background-color: var(--cw-input-bg) !important;
+}
+
+.abi-cw-root[data-cw-theme='dark'] .bg-\[\#e8eefb\] {
+  background-color: var(--accent-soft) !important;
+}
+
+.abi-cw-root[data-cw-theme='dark'] .border-\[\#e9edf4\],
+.abi-cw-root[data-cw-theme='dark'] .border-\[\#f0f0f0\],
+.abi-cw-root[data-cw-theme='dark'] .border-\[\#f2f3f5\],
+.abi-cw-root[data-cw-theme='dark'] .border-\[\#eef0f4\],
+.abi-cw-root[data-cw-theme='dark'] .border-\[\#eee\] {
+  border-color: var(--cw-border) !important;
+}
+
+.abi-cw-root[data-cw-theme='dark'] .text-\[\#2d2d2d\],
+.abi-cw-root[data-cw-theme='dark'] .text-\[\#1f2733\],
+.abi-cw-root[data-cw-theme='dark'] .text-\[\#1f2329\],
+.abi-cw-root[data-cw-theme='dark'] .text-\[\#333\] {
+  color: var(--cw-text) !important;
+}
+
+.abi-cw-root[data-cw-theme='dark'] .text-gray-700,
+.abi-cw-root[data-cw-theme='dark'] .text-gray-500,
+.abi-cw-root[data-cw-theme='dark'] .text-\[\#666\] {
+  color: var(--cw-text-2) !important;
+}
+
+.abi-cw-root[data-cw-theme='dark'] .text-gray-400,
+.abi-cw-root[data-cw-theme='dark'] .text-\[\#999\] {
+  color: var(--cw-text-muted) !important;
+}

@@ -8,11 +8,10 @@ import { Table } from "antd";
 import React, { memo, useEffect, useMemo, useState } from "react";
 import { format } from 'sql-formatter';
 import SvgIcon from "../../components/SvgIcon";
-// @ts-ignore - react-syntax-highlighter 类型定义问题
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import SyntaxHighlighter from '@/components/performance/PrismSyntaxHighlighter';
 // @ts-ignore
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import AutoChart from "./autoChart";
+import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 import { getChartType } from "./autoChart/helpers";
 import ReactMarkdown from 'react-markdown'
 import { Spin } from 'antd'
@@ -21,6 +20,8 @@ interface PropsType {
   dataInfo: any;
   loading?: boolean;
 }
+
+const loadAutoChart = () => import('./autoChart')
 
 const formatStrToObj = (str: string) => {
   // 使用正则表达式提取 content 属性的值
@@ -110,9 +111,10 @@ const Answer: React.FC<PropsType> = memo(({ dataInfo, loading }) => {
     // };
     return {
       chart: (
-        <AutoChart
-          chartType={getChartType(data?.type)}
-          data={data?.data}
+        <RetryableLazy
+          loader={loadAutoChart}
+          componentProps={{ chartType: getChartType(data?.type), data: data?.data }}
+          fallback={<LazyFeatureFallback label="正在加载图表…" style={{ height: 400 }} />}
         />
       ),
       sql: (

@@ -8,8 +8,14 @@ type DashboardApp = Pick<
 export function createDashboardSessionManager() {
   let releasePrevious = () => Promise.resolve()
 
-  return (container: HTMLElement, load: () => DashboardApp, onError: (error: unknown) => void) => {
+  return (
+    container: HTMLElement,
+    load: (signal: AbortSignal) => DashboardApp | Promise<DashboardApp | undefined>,
+    onError: (error: unknown) => void,
+    onReady?: () => void
+  ) => {
     let disposed = false
+    const controller = new AbortController()
     let disposal: Promise<void> | undefined
     let app: DashboardApp | undefined
     let updateVersion = 0
@@ -17,16 +23,19 @@ export function createDashboardSessionManager() {
     let pending = releasePrevious()
       .then(async () => {
         if (disposed) return
-        app = load()
+        app = await load(controller.signal)
+        if (!app) return
         app.loadPromise.catch(report)
         app.bootstrapPromise.catch(report)
         await app.mountPromise
+        if (!disposed) onReady?.()
       })
       .catch(report)
 
     const dispose = () => {
       if (disposal) return disposal
       disposed = true
+      controller.abort()
       // React 不会等待异步 cleanup；把自行创建的容器暂存到文档中，直到 qiankun 完成卸载。
       container.hidden = true
       container.ownerDocument.body.appendChild(container)

@@ -9,20 +9,22 @@ import ChatHeader from './components/chat-header'
 import type { ModelOption } from './components/chat-header'
 import DebugPanel from './components/DebugPanel'
 import MessageList from './components/MessageList'
-import ShareEmailSetting from './components/share-email-setting'
 import SharingModal from './SharingModal'
+import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 import { useConversationController, type ConversationProps } from './hooks/useConversationController'
 import { useExploreConversation } from './exploration-mode/useExploreConversation'
 import type { ExploreSendOptions } from './exploration-mode/types'
-import ExplorePreviewPane from './exploration-mode/ExplorePreviewPane'
-import ExploreCodeEditorPane from './exploration-mode/ExploreCodeEditorPane'
 import type { ExploreCodeEditPayload } from './exploration-mode/ExploreCodeBlock'
 import { useExplorePreviewPresence } from './exploration-mode/useExplorePreviewPresence'
-import ReportPreviewPane from './report-mode/ReportPreviewPane'
-import { getReportDeleteRoundIndex } from './report-mode/reportMessageActions'
 import { useReportConversation } from './report-mode/useReportConversation'
+import { getReportDeleteRoundIndex } from './report-mode/reportMessageActions'
 import { useReportPreviewPresence } from './report-mode/useReportPreviewPresence'
 import reportStyles from './report-mode/styles.module.css'
+
+const loadExplorePreviewPane = () => import('./exploration-mode/ExplorePreviewPane')
+const loadExploreCodeEditorPane = () => import('./exploration-mode/ExploreCodeEditorPane')
+const loadReportPreviewPane = () => import('./report-mode/ReportPreviewPane')
+const loadShareEmailSetting = () => import('./components/share-email-setting')
 
 export interface ConversationHandle {
   setConvContent: (content: any[]) => void
@@ -189,12 +191,14 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   const [codeEditor, setCodeEditor] = useState<ExploreCodeEditPayload>()
   const exploreStatusRef = React.useRef<Map<string, string>>(new Map())
   const openExplore = React.useCallback((exploreId: string) => {
+    void loadExplorePreviewPane()
     reportController.closeReport()
     setCodeEditor(undefined)
     setActiveExploreId(exploreId)
   }, [reportController])
   const closeExplore = React.useCallback(() => setActiveExploreId(undefined), [])
   const openCodeEditor = React.useCallback((payload: ExploreCodeEditPayload) => {
+    void loadExploreCodeEditorPane()
     reportController.closeReport()
     setActiveExploreId(undefined)
     setCodeEditor(payload)
@@ -213,6 +217,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     return () => window.cancelAnimationFrame(raf)
   }, [codeEditor])
   const openReport = React.useCallback((reportId: string) => {
+    void loadReportPreviewPane()
     setActiveExploreId(undefined)
     setCodeEditor(undefined)
     reportController.openReport(reportId)
@@ -421,7 +426,11 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             className={`${reportStyles.reportPaneWrap} ${reportPreview.visible ? reportStyles.reportPaneWrapOpen : ''} ${reportController.mobileView === 'conversation' ? reportStyles.mobileHidden : ''}`}
             data-transition-phase={reportPreview.phase}
           >
-            <ReportPreviewPane report={reportPreview.renderedReport} animate={reportController.animateReportPreview} onClose={reportController.closeReport} />
+            <RetryableLazy
+              loader={loadReportPreviewPane}
+              componentProps={{ report: reportPreview.renderedReport, animate: reportController.animateReportPreview, onClose: reportController.closeReport }}
+              fallback={<LazyFeatureFallback label="正在加载报告预览…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
+            />
           </div>
         )}
 
@@ -430,17 +439,25 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             className={`${reportStyles.reportPaneWrap} ${explorePreview.visible ? reportStyles.reportPaneWrapOpen : ''}`}
             data-transition-phase={explorePreview.phase}
           >
-            <ExplorePreviewPane item={explorePreview.renderedItem} onClose={closeExplore} frozenWidth={exploreFrozenWidth} />
+            <RetryableLazy
+              loader={loadExplorePreviewPane}
+              componentProps={{ item: explorePreview.renderedItem, onClose: closeExplore, frozenWidth: exploreFrozenWidth }}
+              fallback={<LazyFeatureFallback label="正在加载探索结果…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
+            />
           </div>
         )}
 
         {codeEditor && !reportPreview.mounted && (
           <div className={`${reportStyles.reportPaneWrap} ${codeEditorVisible ? reportStyles.reportPaneWrapOpen : ''}`}>
-            <ExploreCodeEditorPane
-              code={codeEditor.code}
-              language={codeEditor.language}
-              title={codeEditor.title}
-              onClose={closeCodeEditor}
+            <RetryableLazy
+              loader={loadExploreCodeEditorPane}
+              componentProps={{
+                code: codeEditor.code,
+                language: codeEditor.language,
+                title: codeEditor.title,
+                onClose: closeCodeEditor,
+              }}
+              fallback={<LazyFeatureFallback label="正在加载代码编辑器…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
             />
           </div>
         )}
@@ -545,8 +562,14 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
           </div>
         }
       >
-        <Form form={shareEmailForm} layout="vertical" wrapperCol={{ span: 20 }} initialValues={{ emailTitle: `${conv.biz_name}报告-${dayjs().format('YYYY.MM.DD')}` }}>
-          {confirmShareType === 'email' && shareStep === 2 && <ShareEmailSetting form={shareEmailForm} />}
+        <Form form={shareEmailForm} layout="vertical" wrapperCol={{ span: 20 }} initialValues={{ emailTitle: `${conv.biz_name}报告-${dayjs().format('YYYY.MM.DD')}`, interval: 1, points: [{ time: '08:00' }], scheduleMode: 'CONTINUOUS', unit: 'DAY' }}>
+          {confirmShareType === 'email' && shareStep === 2 && (
+            <RetryableLazy
+              loader={loadShareEmailSetting}
+              componentProps={{ form: shareEmailForm }}
+              fallback={<LazyFeatureFallback label="正在加载邮件编辑器…" />}
+            />
+          )}
         </Form>
         {(confirmShareType === 'snapshot' || (confirmShareType === 'email' && shareStep === 1)) && (
           <div className="h-[60vh] overflow-y-scroll">

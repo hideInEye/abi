@@ -19,6 +19,7 @@ import { createAppSlice } from '../../createAppSlice';
 
 import { filterAuthRoutesByRoles, getCacheRouteNames, sortRoutesByOrder } from './shared';
 import { appendSystemsDictionaryRoute } from './systems-dictionary-route';
+import { loadMenuSources } from './menuSources';
 
 /** 移除 workbench/component 的 index route（自动生成的重定向） */
 const NO_REDIRECT_ROUTE_NAMES = ['workbench', 'component'];
@@ -452,18 +453,18 @@ export const resetRouteStore = (): AppThunk => async dispatch => {
 
 /** Init dynamic auth route */
 const initDynamicAuthRoute = (): AppThunk => async dispatch => {
-  // const { data, error } = await fetchGetUserRoutes();
-  // 1：获取当前用户下的菜单列表：
-  const { data, error } = await getUserSystemMenuApi();
-  // 2：获取当前用户下所有的空间列表：
-  const { data: spaceData, error: spaceError } = await getAllSpaceMenuApi();
+  const { systemMenu, spaceMenu } = await loadMenuSources(getUserSystemMenuApi, getAllSpaceMenuApi);
+  const { data, error } = systemMenu;
+  const { data: spaceData, error: spaceError } = spaceMenu;
   if (!error) {
+    const systemMenuRows = Array.isArray(data) ? data : [];
+    const spaceMenuRows = Array.isArray(spaceData) ? spaceData : [];
     // 路由处理格式修改：若依=>Elegant Router
     let soybeanRoutes = [];
     if (!spaceError) {
-      soybeanRoutes = convertRuoYiToSoybean([...data, ...spaceData]);
+      soybeanRoutes = convertRuoYiToSoybean([...systemMenuRows, ...spaceMenuRows]);
     } else {
-      soybeanRoutes = convertRuoYiToSoybean(data);
+      soybeanRoutes = convertRuoYiToSoybean(systemMenuRows);
     }
 
     soybeanRoutes = filterBuiltinDashboardRoutes(soybeanRoutes);
@@ -476,7 +477,7 @@ const initDynamicAuthRoute = (): AppThunk => async dispatch => {
     dispatch(handleConstantOrAuthRoutes('auth'));
 
     // eslint-disable-next-line
-    const home = (Array.isArray(soybeanRoutes[0].children) && soybeanRoutes[0].children[0]) ? soybeanRoutes[0].children[0].name : soybeanRoutes[0].name;
+    const home = ((Array.isArray(soybeanRoutes[0].children) && soybeanRoutes[0].children[0]) ? soybeanRoutes[0].children[0].name : soybeanRoutes[0].name) as LastLevelRouteKey;
     dispatch(setRouteHome(home));
 
     handleUpdateRootRouteRedirect(home);

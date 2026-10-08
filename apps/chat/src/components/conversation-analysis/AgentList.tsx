@@ -3,7 +3,7 @@ import { Empty, Table, TableProps } from "antd";
 import React, { useEffect, useReducer, useState, forwardRef, useImperativeHandle } from "react"
 import { fetchAgentList } from "../../service/api/app";
 import AgentInfoModal from "./AgentInfoModal";
-import { getSpaceId } from "../../utils";
+import { getSpaceId } from "../../utils/runtime";
 
 interface PropsType {
   setAgentId: (id: number) => void

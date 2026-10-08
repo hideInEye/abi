@@ -1,11 +1,11 @@
-import { DeleteOutlined, DownOutlined, FileSearchOutlined, FormOutlined, LeftOutlined, RightOutlined, SearchOutlined, StopOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DownOutlined, FileSearchOutlined, LeftOutlined, RightOutlined, SearchOutlined, StopOutlined } from '@ant-design/icons';
 import { useDebounceFn } from 'ahooks';
 import { Dropdown, message } from 'antd';
 import dayjs from 'dayjs';
 
 import { LOG_CLEAN_TYPE_OPTIONS, LOG_STATUS_OPTIONS } from '@/constants/job';
 import { cleanJobLog, fetchJobDetail, fetchJobGroupList, fetchJobInfoList, fetchJobLogList, killJobLog } from '@/service/api/job';
-import { isJobRequestSuccess, resolveHandleResult, resolveJobPageResult, resolveTriggerResult } from '../utils';
+import { isJobRequestSuccess, parseTriggerMsg, resolveHandleResult, resolveJobPageResult, resolveTriggerResult } from '../utils';
 import type { JobLogStatus } from '../utils';
 import { useRoute } from '~/packages/simple-router/src';
 import { ViewControls } from '@/components/ViewControls';
@@ -171,7 +171,6 @@ export function Component() {
             // 行内最多展示 3 个（含「更多」按钮）：有溢出操作时行内 2 个 + 更多，其余收进更多菜单
             const actions: { icon?: React.ReactNode; key: string; label: string; onClick: () => void }[] = [
               { icon: <FileSearchOutlined style={{ fontSize: 12, marginRight: 3 }} />, key: 'view', label: '执行日志', onClick: () => setViewJobLogId(String(record.id)) },
-              ...(record.triggerMsg ? [{ icon: <FormOutlined style={{ fontSize: 12, marginRight: 3 }} />, key: 'triggerMsg', label: '调度备注', onClick: () => setTriggerMsgModal({ open: true, text: record.triggerMsg }) }] : []),
               { icon: <StopOutlined style={{ fontSize: 12, marginRight: 3 }} />, key: 'kill', label: '终止任务', onClick: () => handleKill(record) },
               { key: 'clean', label: '日志清理', onClick: () => openCleanModal(record) },
             ];
@@ -263,6 +262,8 @@ export function Component() {
 
   const selectedRows = useMemo(() => (data as any[]).filter(row => checkedRowKeys.includes(row.id)), [data, checkedRowKeys]);
   const singleRow = selectedRows.length === 1 ? selectedRows[0] : null;
+  // 执行日志抽屉的运行中状态来源：随列表刷新保持最新，抽屉内终止后按钮自动隐藏
+  const viewJobLogRecord = useMemo(() => (data as any[]).find(row => String(row.id) === viewJobLogId), [data, viewJobLogId]);
 
   const rowSelection = {
     columnWidth: 48,
@@ -488,14 +489,25 @@ export function Component() {
         </div>
       </section>
 
-      {/* 调度备注查看 */}
+      {/* 调度备注查看：triggerMsg 为 HTML 片段，拆行后标签/值分色展示 */}
       <AModal
         open={triggerMsgModal.open}
         title="调度备注"
         footer={null}
         onCancel={() => setTriggerMsgModal({ open: false, text: '' })}
       >
-        <pre style={PRE_STYLE}>{triggerMsgModal.text}</pre>
+        <div style={PRE_STYLE}>
+          {parseTriggerMsg(triggerMsgModal.text).map((line, index) =>
+            line.label ? (
+              <div key={index}>
+                <span style={{ color: '#8a94a6' }}>{line.label}</span>
+                <span>{line.value}</span>
+              </div>
+            ) : (
+              <div key={index} style={{ fontWeight: 600, margin: '6px 0 2px' }}>{line.value}</div>
+            ),
+          )}
+        </div>
       </AModal>
 
       {/* 日志清理：执行器/任务只读回显当前筛选，清理方式对齐调度中心九档 */}
@@ -528,6 +540,7 @@ export function Component() {
       {viewJobLogId && (
         <JobLogDetailDrawer
           jobLogId={viewJobLogId}
+          record={viewJobLogRecord}
           onClose={() => setViewJobLogId('')}
           onRefresh={() => run(false)}
         />

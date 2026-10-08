@@ -4,7 +4,7 @@ import zhCN from 'antd/locale/zh_CN';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 import { fetchSelectFilterValue } from '../../../service/api/conv';
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 const { RangePicker } = DatePicker;
 export type FilterType = 'input' | 'select' | 'range' | 'date';
 dayjs.locale('zh-cn');

@@ -1,11 +1,16 @@
 import './style.css'
 import ClassNames from 'classnames'
 import KeepAlive, { useKeepAliveRef } from 'keepalive-for-react'
-import { Breadcrumb, Dropdown, Spin, Empty } from 'antd';
+import { Breadcrumb, Button, Dropdown, Empty, Spin, message } from 'antd';
 import { CheckOutlined, DownOutlined, MessageOutlined, SearchOutlined, TeamOutlined } from '@ant-design/icons';
-import { useRequest } from '@sa/hooks';
-import { spaceList } from '@/service/api/data-space';
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
+import {
+  abortSpaceListPage,
+  loadSpaceListPage,
+  mergeSpacePages,
+  type SpaceListItem,
+} from '@/resources/spaceListResource';
+import { persistSpaceName, readPersistedSpaceName } from '@/utils/spaceStorage';
 
 import { changeSpaceId, getReloadFlag, getSpaceId } from '@/store/slice/app'
 import { getRemoveCacheKey, selectCacheRoutes } from '@/store/slice/route'
@@ -90,50 +95,73 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
 
   const currentSpaceId = useAppSelector(getSpaceId);
   const { switchToSpace } = useSpaceSwitch();
-  const [currentSpaceName, setCurrentSpaceName] = useState('');
+  const [currentSpaceName, setCurrentSpaceName] = useState(() => readPersistedSpaceName());
   const [currentSpace, setCurrentSpace] = useState<number | null>(currentSpaceId);
   const [spaceDropdownOpen, setSpaceDropdownOpen] = useState(false);
   const [spaceSearch, setSpaceSearch] = useState('');
-
-  const { data: curspaceList, run: getSpaceList } = useRequest(spaceList, {
-    manual: true
-  });
+  const [spaceRows, setSpaceRows] = useState<SpaceListItem[]>([]);
+  const [spacePage, setSpacePage] = useState(1);
+  const [spaceHasMore, setSpaceHasMore] = useState(false);
+  const [spaceLoading, setSpaceLoading] = useState(false);
+  const [spaceError, setSpaceError] = useState('');
+  const spaceRequestRef = useRef<{ page: number; run: number; search: string } | null>(null);
+  const spaceRequestRunRef = useRef(0);
 
   const spaceOptions =
-    curspaceList?.map((space: any) => ({
+    spaceRows.map((space: SpaceListItem) => ({
       label: space.spaceName,
       value: space.spaceId,
       key: space.spaceId,
       remark: space.remark,
       userCount: space.userCount,
       chatCount: space.chatCount,
-    })) || [];
+    }));
 
-  const filteredSpaceOptions = (() => {
-    const keyword = spaceSearch.trim().toLowerCase();
-    if (!keyword) return spaceOptions;
-    return spaceOptions.filter((space: any) =>
-      String(space.label || '').toLowerCase().includes(keyword),
-    );
-  })();
-
-  useEffect(() => {
-    getSpaceList({
-      isAsc: 'desc',
-      orderByColumn: 'spaceId',
-      pageNum: 1,
-      pageSize: 100000
-    });
+  const loadSpaces = useCallback(async (page: number, search: string, replace: boolean) => {
+    const run = ++spaceRequestRunRef.current;
+    const previous = spaceRequestRef.current;
+    if (previous && (previous.page !== page || previous.search !== search)) {
+      abortSpaceListPage(previous.page, previous.search);
+    }
+    spaceRequestRef.current = { page, run, search };
+    setSpaceLoading(true);
+    setSpaceError('');
+    try {
+      const result = await loadSpaceListPage(page, search);
+      if (spaceRequestRunRef.current !== run) return;
+      setSpaceRows(current => mergeSpacePages(current, result.rows, replace));
+      setSpacePage(result.pageNum);
+      setSpaceHasMore(result.hasMore);
+    } catch (error: any) {
+      if (error?.name !== 'AbortError' && spaceRequestRunRef.current === run) {
+        setSpaceError('空间列表加载失败，请重试');
+      }
+    } finally {
+      if (spaceRequestRunRef.current === run) setSpaceLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (Array.isArray(curspaceList) && currentSpace) {
-      const space = curspaceList.find((s: any) => s.spaceId === currentSpace);
+    if (!spaceDropdownOpen) return;
+    const timer = window.setTimeout(() => {
+      void loadSpaces(1, spaceSearch.trim(), true);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [loadSpaces, spaceDropdownOpen, spaceSearch]);
+
+  useEffect(() => () => {
+    const activeRequest = spaceRequestRef.current;
+    if (activeRequest) abortSpaceListPage(activeRequest.page, activeRequest.search);
+  }, []);
+
+  useEffect(() => {
+    if (currentSpace) {
+      const space = spaceRows.find((item) => item.spaceId === currentSpace);
       if (space) {
         setCurrentSpaceName(space.spaceName);
       }
     }
-  }, [curspaceList, currentSpace]);
+  }, [spaceRows, currentSpace]);
 
   // 同步 Redux store 中的 spaceId 到本地状态
   useEffect(() => {
@@ -183,10 +211,15 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
       setSpaceDropdownOpen(false);
       return;
     }
+    const switched = await switchToSpace(spaceId);
+    if (!switched) {
+      message.error('空间切换失败，已保留当前空间');
+      return;
+    }
     setCurrentSpaceName(spaceName);
     setCurrentSpace(spaceId);
+    persistSpaceName(spaceName);
     setSpaceDropdownOpen(false);
-    await switchToSpace(spaceId);
   };
 
   const themeSetting = useAppSelector(getThemeSettings)
@@ -326,7 +359,10 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
               <Breadcrumb items={breadcrumbItems} separator="/" className="abi-breadcrumb" />
               <Dropdown
                 open={spaceDropdownOpen}
-                onOpenChange={setSpaceDropdownOpen}
+                onOpenChange={open => {
+                  setSpaceDropdownOpen(open);
+                  if (!open) setSpaceSearch('');
+                }}
                 trigger={['click']}
                 dropdownRender={() => (
                   <div className="space-picker-panel">
@@ -345,10 +381,10 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
                         />
                       </div>
                     </div>
-                    <Spin spinning={!curspaceList}>
+                    <Spin spinning={spaceLoading}>
                       <div className="space-picker-list">
-                        {filteredSpaceOptions.length ? (
-                          filteredSpaceOptions.map((space: any) => {
+                        {spaceOptions.length ? (
+                          spaceOptions.map((space: any) => {
                             const isActive = space.value === currentSpace;
                             const realIndex = spaceOptions.findIndex((s: any) => s.value === space.value);
                             const color = getSpaceColorByIndex(realIndex >= 0 ? realIndex : 0);
@@ -386,8 +422,13 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
                             );
                           })
                         ) : (
-                          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无空间" className="!my-2" />
+                          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={spaceError || '暂无空间'} className="!my-2" />
                         )}
+                        {spaceError ? (
+                          <Button block size="small" onClick={() => void loadSpaces(1, spaceSearch.trim(), true)}>重新加载</Button>
+                        ) : spaceHasMore ? (
+                          <Button block loading={spaceLoading} size="small" onClick={() => void loadSpaces(spacePage + 1, spaceSearch.trim(), false)}>加载更多</Button>
+                        ) : null}
                       </div>
                     </Spin>
                   </div>

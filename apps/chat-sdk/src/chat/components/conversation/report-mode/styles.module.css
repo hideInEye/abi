@@ -1,0 +1,1044 @@
+.body {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.conversationPane {
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  flex: 0 0 100%;
+  flex-direction: column;
+  overflow: hidden;
+  transition:
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    flex-basis 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s ease;
+}
+
+.bodySplit .conversationPane {
+  width: 52%;
+  flex: 0 0 52%;
+  border-right: 1px solid rgba(130, 140, 200, 0.16);
+}
+
+.messageRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.messageRow + .messageRow {
+  margin-top: 28px;
+}
+
+.questionWrap {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  margin: 16px 0;
+}
+
+.questionBubble {
+  max-width: 80%;
+  margin-right: 8px;
+  overflow-wrap: break-word;
+  border: 1px solid rgba(91, 124, 247, 0.18);
+  border-radius: 16px 16px 4px 16px;
+  background: linear-gradient(135deg, rgba(91, 124, 247, 0.06), rgba(112, 145, 250, 0.08));
+  box-shadow: 0 2px 8px rgba(91, 124, 247, 0.08);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px 16px;
+  white-space: pre-wrap;
+}
+
+.answerWrap {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.answerCard {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-m);
+  overflow: hidden;
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.answerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+  padding: 13px 16px;
+}
+
+.answerTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.reportStatusBadge {
+  display: inline-flex;
+  min-height: 22px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  padding: 4px 9px 4px 8px;
+}
+
+.reportStatusDot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.reportStatusActive {
+  background: rgba(91, 111, 239, 0.1);
+  color: #5064d8;
+}
+
+.reportStatusActive .reportStatusDot {
+  box-shadow: 0 0 0 3px rgba(91, 111, 239, 0.12);
+  animation: report-status-pulse 1.8s ease-in-out infinite;
+}
+
+.reportStatusSuccess {
+  background: rgba(47, 158, 107, 0.11);
+  color: #277f59;
+}
+
+.reportStatusDanger {
+  background: rgba(216, 76, 91, 0.1);
+  color: #b63f4d;
+}
+
+.reportStatusNeutral {
+  background: rgba(123, 132, 153, 0.1);
+  color: #687185;
+}
+
+@keyframes report-status-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(91, 111, 239, 0.1);
+    opacity: 0.72;
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(91, 111, 239, 0.04);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reportStatusActive .reportStatusDot {
+    animation: none;
+  }
+}
+
+.answerMeta {
+  flex-shrink: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.estimateNotice {
+  margin: 16px 16px;
+  border: 1px solid rgba(91, 124, 247, 0.14);
+  border-radius: 12px;
+  background: rgba(91, 124, 247, 0.055);
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.75;
+  padding: 10px 12px;
+}
+
+.estimateNotice strong {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+
+.panel {
+  border-bottom: 1px solid rgba(130, 140, 200, 0.1);
+}
+
+.panel:last-child {
+  border-bottom: none;
+}
+
+.panelHeader {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.panelHeader:hover {
+  background: rgba(91, 124, 247, 0.06);
+}
+
+.panelTitle {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.panelSummary {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panelBody {
+  padding: 0 16px 14px;
+}
+
+.thinkingPanelBody {
+  padding-top: 1px;
+}
+
+.thinkingContentViewport {
+  position: relative;
+  font-size: 13px;
+}
+
+.thinkingContentCollapsed {
+  height: 3.6em;
+  overflow: hidden;
+}
+
+.thinkingContentFade {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2em;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(250, 251, 255, 0.96));
+  pointer-events: none;
+}
+
+.thinkingPlanContent {
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.thinkingTypewriterCursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  border-radius: 999px;
+  margin-left: 2px;
+  animation: thinkingCursorBlink 0.8s steps(1, end) infinite;
+  background: var(--accent);
+  vertical-align: -0.12em;
+}
+
+@keyframes thinkingCursorBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.thinkingPlaceholder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.todoHeaderStats {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.todoCollapsedActivity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 16px 12px 40px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.todoCollapsedActivityDot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(91, 124, 247, 0.1);
+  animation: pulse 1.4s infinite;
+}
+
+.todoList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.todoRow {
+  border: 1px solid rgba(130, 140, 200, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.58);
+  overflow: hidden;
+}
+
+.todoMain {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.todoMainClickable {
+  cursor: pointer;
+}
+
+.todoMainClickable:hover {
+  background: rgba(91, 124, 247, 0.06);
+}
+
+.todoMainDisabled {
+  cursor: not-allowed;
+}
+
+.todoStatus {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  margin-top: 1px;
+  font-size: 11px;
+}
+
+.todoStatusPending {
+  background: rgba(132, 148, 173, 0.16);
+  color: #8c98aa;
+}
+
+.todoStatusRunning {
+  background: rgba(91, 124, 247, 0.14);
+  color: var(--accent);
+}
+
+.todoStatus.todoStatusRunning {
+  animation: pulse 1.4s infinite;
+}
+
+.todoStatusDone {
+  background: rgba(16, 185, 129, 0.14);
+  color: var(--success);
+}
+
+.todoStatusFailed {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+.todoStatusSkipped {
+  background: rgba(132, 148, 173, 0.14);
+  color: var(--ink-3);
+}
+
+.todoContent {
+  min-width: 0;
+  flex: 1;
+}
+
+.todoTitle {
+  color: var(--ink-3);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.todoTitleRunning {
+  color: var(--ink);
+}
+
+.todoDetail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 3px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.todoStateTag {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  border: 0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 4px 8px;
+}
+
+.taskExpandIcon {
+  flex-shrink: 0;
+  margin-top: 4px;
+  color: var(--ink-3);
+  font-size: 11px;
+  transition: transform 0.18s;
+}
+
+.executionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid rgba(130, 140, 200, 0.1);
+  background: rgba(245, 247, 255, 0.52);
+  padding: 10px 12px 12px 40px;
+}
+
+.executionStep {
+  min-width: 0;
+  border-left: 2px solid rgba(91, 124, 247, 0.24);
+  padding: 2px 0 2px 10px;
+}
+
+.executionStepHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.executionStepTitle {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.executionStepSummary {
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.todoPlanSummary {
+  margin-top: 2px;
+  border-radius: 10px;
+  background: rgba(91, 124, 247, 0.06);
+  padding: 10px 12px;
+}
+
+.todoPlanSummaryLabel {
+  margin-bottom: 5px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.todoPlanSummaryContent {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.todoPlanSummaryContent > :first-child {
+  margin-top: 0;
+}
+
+.todoPlanSummaryContent > :last-child {
+  margin-bottom: 0;
+}
+
+.stepChunks {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.chunkHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.stepMarkdown {
+  overflow-wrap: anywhere;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.stepMarkdown {
+  max-height: 280px;
+  overflow: auto;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.64);
+  padding: 9px 10px;
+}
+
+.stepMarkdown > :last-child {
+  margin-bottom: 0;
+}
+
+.stepMarkdown p,
+.stepMarkdown li {
+  white-space: pre-wrap;
+}
+
+.stepMarkdown table {
+  width: max-content;
+  min-width: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(123, 139, 171, 0.22);
+  border-radius: 8px;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--ink-2);
+}
+
+.stepMarkdown th,
+.stepMarkdown td {
+  border-right: 1px solid rgba(123, 139, 171, 0.18);
+  border-bottom: 1px solid rgba(123, 139, 171, 0.18);
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+}
+
+.stepMarkdown th {
+  background: rgba(91, 111, 232, 0.07);
+  color: var(--ink-1);
+  font-weight: 600;
+}
+
+.stepMarkdown tr > :last-child {
+  border-right: 0;
+}
+
+.stepMarkdown tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.stepMarkdown pre {
+  max-height: 260px;
+  overflow: auto;
+  border-radius: 10px;
+  background: rgba(26, 39, 68, 0.07);
+  margin: 0;
+  padding: 10px;
+}
+
+.stepMarkdown pre code {
+  white-space: pre;
+}
+
+.stepImageWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.stepImage {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 10px;
+  object-fit: contain;
+}
+
+.executionEmpty {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.finalSummary {
+  margin: 16px 16px;
+  border-radius: 12px;
+  background: rgba(91, 124, 247, 0.06);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.75;
+  padding: 11px 12px;
+  white-space: pre-wrap;
+}
+
+.inlineAlert {
+  margin: 0 16px 16px;
+}
+
+.fileCard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 16px 16px;
+  overflow: hidden;
+  border: 1px solid rgba(91, 124, 247, 0.2);
+  border-radius: 16px;
+  background:
+    linear-gradient(90deg, rgba(91, 124, 247, 0.08), rgba(255, 255, 255, 0.74) 42%),
+    rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 24px rgba(54, 73, 135, 0.07);
+  padding: 14px 14px 14px 16px;
+}
+
+.fileCard::before {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, #5b7cf7, #8ba5ff);
+  content: '';
+}
+
+.fileCardContent {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 13px;
+}
+
+.fileAssetIcon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(91, 124, 247, 0.16);
+  border-radius: 12px;
+  background: rgba(91, 124, 247, 0.09);
+  color: var(--accent);
+}
+
+.fileAssetIcon svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.fileInfo {
+  min-width: 0;
+}
+
+.fileTitle {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.fileDesc {
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fileFormatList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.fileTypeTag {
+  display: inline-flex;
+  height: 18px;
+  align-items: center;
+  border: 1px solid rgba(91, 124, 247, 0.2);
+  border-radius: 5px;
+  background: rgba(91, 124, 247, 0.07);
+  color: #5270d9;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 0 6px;
+}
+
+.fileActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.fileActionButton {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(130, 140, 200, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 2px 7px rgba(54, 73, 135, 0.06);
+  color: var(--ink-2);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.fileActionButton svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.fileActionButton:hover {
+  border-color: rgba(91, 124, 247, 0.36);
+  background: rgba(91, 124, 247, 0.08);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.fileActionButton:focus-visible {
+  outline: 2px solid rgba(91, 124, 247, 0.42);
+  outline-offset: 2px;
+}
+
+.fileActionPrimary {
+  border-color: transparent;
+  background: var(--accent);
+  box-shadow: 0 5px 12px rgba(91, 124, 247, 0.22);
+  color: #fff;
+}
+
+.fileActionPrimary:hover {
+  border-color: transparent;
+  background: #4e70ed;
+  color: #fff;
+}
+
+.reportPane {
+  width: 100%;
+  min-width: 420px;
+  min-height: 0;
+  flex: 1;
+  background: rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(18px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.reportPaneWrap {
+  display: flex;
+  width: 0;
+  min-width: 0;
+  min-height: 0;
+  flex: 0 0 0;
+  /* clip 保留宽度动画所需的裁切，但不会像 hidden 一样创建额外滚动容器。 */
+  overflow: hidden;
+  overflow: clip;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(18px);
+  transition:
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    flex-basis 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width, flex-basis, opacity, transform;
+}
+
+.reportPaneWrapOpen {
+  width: 48%;
+  flex-basis: 48%;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.previewHeader {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.14);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 12px 16px;
+}
+
+.previewTitle {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.previewMeta {
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.previewCloseButton {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border: none;
+  border-radius: 8px;
+  box-shadow: none;
+  color: var(--ink-2);
+  padding: 0;
+}
+
+.previewCloseIcon {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.previewCloseButton:hover {
+  background: rgba(91, 124, 247, 0.08) !important;
+  color: var(--ink) !important;
+}
+
+.previewCloseButton:focus-visible {
+  outline: 2px solid rgba(91, 124, 247, 0.45);
+  outline-offset: 2px;
+}
+
+.previewBody {
+  min-height: 0;
+  flex: 1;
+}
+
+.previewBodyScrollable {
+  overflow: auto;
+  padding: 18px;
+}
+
+.previewBodyHtml {
+  display: flex;
+  overflow: hidden;
+  padding: 18px;
+}
+
+.markdownDoc {
+  max-width: 780px;
+  margin: 0 auto;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.85;
+}
+
+.markdownDoc h1,
+.markdownDoc h2,
+.markdownDoc h3 {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.markdownDoc pre {
+  overflow: auto;
+  border-radius: 12px;
+  background: rgba(26, 39, 68, 0.06);
+  padding: 12px;
+}
+
+.htmlFrame {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  border: none;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.htmlFrameEnter {
+  animation: report-frame-enter 320ms ease-out both;
+}
+
+@keyframes report-frame-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .htmlFrameEnter {
+    animation: none;
+  }
+}
+
+.previewEmpty {
+  display: flex;
+  min-height: 320px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.mobileSwitch {
+  display: none;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.12);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(91, 124, 247, 0.28);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(91, 124, 247, 0);
+  }
+}
+
+@media (max-width: 900px) {
+  .bodySplit .conversationPane,
+  .conversationPane {
+    flex: 1 1 auto;
+    width: 100%;
+    border-right: none;
+  }
+
+  .reportPane {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .reportPaneWrap,
+  .reportPaneWrapOpen {
+    width: 100%;
+    flex: 1 1 auto;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .mobileSwitch {
+    display: block;
+  }
+
+  .mobileHidden {
+    display: none;
+  }
+
+  .answerCard {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .fileCard {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .fileAssetIcon {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conversationPane,
+  .reportPaneWrap {
+    transition: none;
+  }
+
+  .todoStatusRunning,
+  .todoCollapsedActivityDot,
+  .thinkingTypewriterCursor {
+    animation: none;
+  }
+}

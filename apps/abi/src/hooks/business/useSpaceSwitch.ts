@@ -32,17 +32,15 @@ export function useSpaceSwitch() {
 
       // 必须在同步点击上下文中尽早触发打开新窗口，避免 await 后被浏览器拦截为弹窗
 
-      // 清除对话相关的缓存，避免显示上个空间的对话列表
-      clearConversationCache();
-
       // 如果空间内没有菜单权限隐藏左边菜单
       const { data, error } = await getSpaceMenuBySpaceIdApi(Number(spaceId));
-      if(!error) {
-        const isHidden = data && data.length > 0
-        dispatch(setSpaceHidden(!isHidden))
-      }else {
-        dispatch(setSpaceHidden(false))
-      }
+      if (error) return false
+
+      const isHidden = data && data.length > 0
+      dispatch(setSpaceHidden(!isHidden))
+
+      // 只有空间权限请求明确成功后才清理旧空间状态并提交新空间。
+      clearConversationCache();
       // 先同步并等待清除标签页（关闭前一个空间打开的 tab）
       // try {
       //   await dispatch(clearTabs());
@@ -65,9 +63,10 @@ export function useSpaceSwitch() {
       // 触发全局事件（供其它页面监听并刷新数据）
       const event = new CustomEvent('space-change', { detail: { spaceId } });
       window.dispatchEvent(event);
-      if (options?.redirect || !url) return;
+      if (options?.redirect || !url) return true;
 
       window.open(url, '_blank', 'noopener,noreferrer');
+      return true;
 
     },
     [dispatch]

@@ -1,14 +1,30 @@
 // @unocss-include
-import { getRgb } from '@sa/color';
-
 import systemLogo from '@/assets/svg-icon/logo.svg?raw';
 import { $t } from '@/locales';
 import { localStg } from '@/utils/storage';
 
+function getLoadingRgb(color: string) {
+  const shortHex = /^#([\da-f])([\da-f])([\da-f])$/i.exec(color);
+  if (shortHex) {
+    const [, r, g, b] = shortHex;
+    return { b: Number.parseInt(`${b}${b}`, 16), g: Number.parseInt(`${g}${g}`, 16), r: Number.parseInt(`${r}${r}`, 16) };
+  }
+
+  const hex = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})/i.exec(color);
+  if (hex) {
+    return { b: Number.parseInt(hex[3], 16), g: Number.parseInt(hex[2], 16), r: Number.parseInt(hex[1], 16) };
+  }
+
+  const rgb = /^rgba?\(\s*(\d+)\s*[, ]\s*(\d+)\s*[, ]\s*(\d+)/i.exec(color);
+  if (rgb) return { b: Number(rgb[3]), g: Number(rgb[2]), r: Number(rgb[1]) };
+
+  return { b: 255, g: 108, r: 100 };
+}
+
 export function setupLoading() {
   const themeColor = localStg.get('themeColor') || '#646cff';
 
-  const { b, g, r } = getRgb(themeColor);
+  const { b, g, r } = getLoadingRgb(themeColor);
 
   const primaryColor = `--primary-color: ${r} ${g} ${b}`;
 

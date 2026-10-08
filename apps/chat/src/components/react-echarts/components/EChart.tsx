@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import * as echarts from 'echarts';
-import { debounce } from 'lodash';
+import debounce from 'lodash/debounce';
 import type { EChartsOption, ECharts } from 'echarts';
 export interface EChartProps {
   /** 图表配置项 */

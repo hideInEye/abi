@@ -1,0 +1,82 @@
+import { FileTextOutlined } from '@ant-design/icons'
+import { Button, Empty, Tag } from 'antd'
+import React from 'react'
+import ReactMarkdown from 'react-markdown'
+
+import { canRevealReport, getReportTitle } from './helpers'
+import { createSafeHtmlDocument } from './safeHtmlDocument'
+import type { ReportItem } from './types'
+import styles from './styles.module.css'
+
+interface ReportPreviewPaneProps {
+  report: ReportItem
+  /** 仅实时任务首次自动打开时为 true；手动重开和历史报告直接显示完整正文。 */
+  animate?: boolean
+  onClose: () => void
+}
+
+/** 参考产品图绘制的双栏收起图标；路径使用 currentColor 以复用按钮交互色。 */
+const ReportCollapseIcon: React.FC = () => (
+  <svg className={styles.previewCloseIcon} viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+    <path d="M11.5 3.5v5h5M8.5 16.5v-5h-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const ReportPreviewPane: React.FC<ReportPreviewPaneProps> = ({ report, animate = false, onClose }) => {
+  // 即使调用方状态短暂不同步，也不允许在最终阶段前渲染报告正文。
+  const candidate = canRevealReport(report) ? report.reportCandidate : undefined
+  const title = getReportTitle(candidate)
+  const htmlDocument = React.useMemo(() => {
+    if (candidate?.format !== 'html') return undefined
+    return createSafeHtmlDocument(candidate.content)
+  }, [candidate?.content, candidate?.format])
+
+  return (
+    <aside className={styles.reportPane}>
+      <div className={styles.previewHeader}>
+        <div style={{ minWidth: 0 }}>
+          <div className={styles.previewTitle}>
+            <FileTextOutlined style={{ marginRight: 8 }} />
+            {title}
+          </div>
+          <div className={styles.previewMeta}>
+            {candidate && <Tag color={candidate.format === 'html' ? 'blue' : 'purple'}>{candidate.format.toUpperCase()}</Tag>}
+            {candidate && <Tag color="green">已完成</Tag>}
+          </div>
+        </div>
+        <Button
+          type="text"
+          className={styles.previewCloseButton}
+          icon={<ReportCollapseIcon />}
+          title="收起报告"
+          aria-label="收起报告"
+          onClick={onClose}
+        />
+      </div>
+
+      <div className={`${styles.previewBody} ${candidate?.format === 'html' ? styles.previewBodyHtml : styles.previewBodyScrollable}`}>
+        {!candidate ? (
+          <Empty className={styles.previewEmpty} image={Empty.PRESENTED_IMAGE_SIMPLE} description="报告内容尚未可用" />
+        ) : candidate.format === 'html' ? (
+          <iframe key={candidate.entryId} title={title} className={`${styles.htmlFrame} ${animate ? styles.htmlFrameEnter : ''}`} srcDoc={htmlDocument} sandbox="" />
+        ) : (
+          <div className={styles.markdownDoc}>
+            <ReactMarkdown
+              components={{
+                a: ({ children, ...props }) => (
+                  <a {...props} target="_blank" rel="noopener noreferrer">
+                    {children}
+                  </a>
+                ),
+              }}
+            >
+              {candidate.content}
+            </ReactMarkdown>
+          </div>
+        )}
+      </div>
+    </aside>
+  )
+}
+
+export default ReportPreviewPane
