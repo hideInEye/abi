@@ -33,7 +33,7 @@
 /* ── Thinking Card (glassmorphism) ── */
 .thinkingCard {
   width: 100%;
-  border: 1px solid rgba(139, 92, 246, 0.15);
+  border: 1px solid var(--cw-think-border, rgba(139, 92, 246, 0.15));
   border-radius: var(--r-sm);
   background: var(--cw-think-bg, rgba(255, 255, 255, 0.6));
   backdrop-filter: blur(8px);
@@ -46,13 +46,13 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(91, 124, 247, 0.08) 0%, rgba(139, 92, 246, 0.06) 100%);
+  background: var(--cw-think-head-bg, linear-gradient(135deg, rgba(91, 124, 247, 0.08) 0%, rgba(139, 92, 246, 0.06) 100%));
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .thinkingCardHeader:hover {
-  background: linear-gradient(135deg, rgba(91, 124, 247, 0.12) 0%, rgba(139, 92, 246, 0.1) 100%);
+  background: var(--cw-think-head-bg-hover, linear-gradient(135deg, rgba(91, 124, 247, 0.12) 0%, rgba(139, 92, 246, 0.1) 100%));
 }
 
 .thinkingStatusWrap {
@@ -393,8 +393,9 @@
 
 /* ── Markdown Content (glassmorphism-aware) ── */
 .markdown-content {
-  color: var(--cw-md-text, #262626);
-  font-size: 15px;
+  /* 预设色（--cw-md-text）优先，未给值时跟随自定义字体色（--cw-text） */
+  color: var(--cw-md-text, var(--cw-text, #262626));
+  font-size: calc(15px * var(--cw-font-scale, 1));
   line-height: 1.9;
 
   & > * {
@@ -411,7 +412,7 @@
   & > p,
   & p {
     margin: 0 0 0.85rem 0 !important;
-    color: var(--cw-md-text, #262626);
+    color: var(--cw-md-text, var(--cw-text, #262626));
     line-height: 1.9 !important;
   }
 
@@ -482,11 +483,11 @@
     padding: 0.5em 0.75em !important;
     white-space: pre-wrap !important;
     word-wrap: break-word !important;
-    background: rgba(245, 248, 252, 0.5) !important;
+    background: var(--cw-block-head-bg, rgba(245, 248, 252, 0.5)) !important;
     border: 1px solid var(--border) !important;
     border-radius: var(--r-xs) !important;
     font-family: var(--mono) !important;
-    font-size: 12px !important;
+    font-size: calc(12px * var(--cw-font-scale, 1)) !important;
     margin: 0.35rem 0 !important;
   }
 
@@ -494,7 +495,7 @@
     white-space: pre-wrap !important;
     word-wrap: break-word !important;
     font-family: var(--mono) !important;
-    font-size: 12px !important;
+    font-size: calc(12px * var(--cw-font-scale, 1)) !important;
   }
 
   & p code, & li code {
@@ -509,9 +510,9 @@
   & td, & th {
     padding: 11px 16px !important;
     border: none !important;
-    border-bottom: 1px solid rgba(130, 140, 200, 0.14) !important;
+    border-bottom: 1px solid var(--cw-block-border, rgba(130, 140, 200, 0.14)) !important;
     color: var(--cw-md-td, #333333) !important;
-    font-size: 14px !important;
+    font-size: calc(14px * var(--cw-font-scale, 1)) !important;
     line-height: 1.6 !important;
     text-align: left !important;
   }
@@ -519,11 +520,12 @@
   & table {
     border-collapse: collapse !important;
     width: 100% !important;
-    font-size: 14px !important;
+    font-size: calc(14px * var(--cw-font-scale, 1)) !important;
     margin: 0.8rem 0 !important;
     border-radius: var(--r-sm) !important;
     overflow: hidden !important;
-    border: 1px solid rgba(130, 140, 200, 0.16) !important;
+    border: 1px solid var(--cw-block-border, rgba(130, 140, 200, 0.16)) !important;
+    background: var(--cw-md-table-bg, transparent) !important;
     box-shadow: 0 1px 4px rgba(26, 39, 68, 0.04) !important;
   }
 
@@ -542,7 +544,7 @@
   }
 
   & tbody tr:hover {
-    background: rgba(91, 124, 247, 0.04) !important;
+    background: var(--cw-block-hover, rgba(91, 124, 247, 0.04)) !important;
   }
 
   & strong, & b, & em, & i {

@@ -6,7 +6,6 @@ import AssistantShareModal from '@/pages/workbench/app-workshop/my-assistant/Ass
 import { fetchAppListApi } from '@/service/api/abi-chat-app'
 import { fetchProjectShareListApi } from '@/service/api/share'
 import { getSpaceId } from '@/store/slice/app'
-import { normalizeShareUrl } from '@/utils/shareUrl'
 
 import type { ApiKeyItem } from '../types'
 
@@ -75,7 +74,7 @@ export function ShareAssistantDrawer({ apiKey, open, onClose }: ShareAssistantDr
         rowMap.set(pid, {
           id: pid,
           name: app?.appName || '-',
-          shareUrl: r?.shareUrl ? normalizeShareUrl(r.shareUrl) : '',
+          shareUrl: r?.shareUrl || '',
           createBy: app?.createBy || r?.createBy || '-',
           createTime: app?.createTime
             ? String(app.createTime).replace('T', ' ')

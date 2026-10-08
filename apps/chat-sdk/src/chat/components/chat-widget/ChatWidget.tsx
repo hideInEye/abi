@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ConfigProvider, Popover, Table, Typography, message as antdMessage } from 'antd'
+import { ConfigProvider, Popover, Table, Typography, message as antdMessage, theme as antdTheme } from 'antd'
 import { ApiOutlined, CheckOutlined, EyeOutlined, RightOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons'
 import zhCN from 'antd/es/locale/zh_CN'
 import { format as formatSql } from 'sql-formatter'
 // @ts-ignore - react-syntax-highlighter 类型定义问题
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 // @ts-ignore
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 /* 渲染层直接复用主对话组件（开场白/用户气泡/思考卡/图表工具栏/反馈行），仅数据层走分享 token 链路 */
 import HumanEle from '../conversation/HumanEle'
@@ -64,6 +64,7 @@ import {
 } from './service'
 import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
 import { ChartThemeContext, useChartTheme } from './ChartThemeContext'
+import { useTweenedChartStyle } from './useTweenedChartStyle'
 import ThemeCustomizer from './ThemeCustomizer'
 import {
   chartStyleFromConfig,
@@ -278,6 +279,8 @@ const { Text } = Typography
 const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: (type: string) => void }) => {
   // 图表配色/字体随自定义主题联动：从 ChartThemeContext 读取（替代原写死的模块常量）
   const chartTheme = useChartTheme()
+  // 主图颜色补间：主题换色时逐帧插值驱动 setOption，消除 ECharts 颜色不补间造成的硬切
+  const tweenedChartTheme = useTweenedChartStyle(chartTheme)
   // 后端 response_table 默认落表格视图（同主对话 ViewEle：response_table → setActiveType('table')）
   const [activeType, setActiveType] = useState<'chart' | 'table' | 'sql'>(chart.tableView ? 'table' : 'chart')
   const [currentPage, setCurrentPage] = useState(1)
@@ -300,12 +303,12 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
   const option = useMemo(
     () =>
       getChartOption(chart.type, chart.data, {
-        font: chartTheme.font,
-        fontSize: chartTheme.fontSize,
-        color: chartTheme.color,
-        textColor: chartTheme.textColor,
+        font: tweenedChartTheme.font,
+        fontSize: tweenedChartTheme.fontSize,
+        color: tweenedChartTheme.color,
+        textColor: tweenedChartTheme.textColor,
       }),
-    [chart.type, chart.data, chartTheme],
+    [chart.type, chart.data, tweenedChartTheme],
   )
 
   // 导出：PNG 走客户端截图；csv/excel 在分享免登录场景无后端导出接口，用已有数据本地生成
@@ -392,7 +395,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
     if (activeType !== 'sql' && !hasData) {
       return (
         <div className="flex items-center justify-center py-8">
-          <span style={{ fontSize: '12px', color: '#999' }}>暂无数据</span>
+          <span style={{ fontSize: '12px', color: 'var(--cw-block-muted, #999)' }}>暂无数据</span>
         </div>
       )
     }
@@ -462,7 +465,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
       }
       return (
         <div ref={tableRef} className="px-1 pb-2">
-          <ConfigProvider locale={zhCN}>
+          <ConfigProvider locale={zhCN} theme={chartTheme.dark ? { algorithm: antdTheme.darkAlgorithm } : undefined}>
             <Table
               dataSource={tableRows.map((item: Record<string, any>, index: number) => ({ ...item, key: index }))}
               columns={tableColumns as any}
@@ -493,7 +496,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
         {/* @ts-ignore */}
         <SyntaxHighlighter
           language="sql"
-          style={oneLight}
+          style={chartTheme.dark ? oneDark : oneLight}
           showLineNumbers
           customStyle={{ margin: 0, borderRadius: '0 0 10px 10px', fontSize: '0.8125rem', backgroundColor: 'transparent', padding: '12px 14px' }}
           codeTagProps={{ style: { fontFamily: 'Consolas, Monaco, "Courier New", monospace' } }}
@@ -507,7 +510,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
   return (
     <div className="w-full text-left">
       <div className="section-header pt-3 pb-3">
-        <span className="chart-header-title font-semibold text-[#2d2d2d]">图表信息</span>
+        <span className="chart-header-title font-semibold" style={{ color: 'var(--cw-block-text, #2d2d2d)' }}>图表信息</span>
       </div>
       <div className="pt-3">
         <ChartHeader
@@ -526,7 +529,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
           showTitle={false}
           hideTools
         />
-        <div className="mt-3" style={activeType === 'chart' || !hasData ? { background: '#F2F3F5', borderRadius: '8px', padding: '12px' } : undefined}>
+        <div className="mt-3" style={activeType === 'chart' || !hasData ? { background: 'var(--cw-chart-wrap-bg, #F2F3F5)', borderRadius: '8px', padding: '12px' } : undefined}>
           {renderContent()}
         </div>
       </div>
@@ -575,7 +578,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 生效配置：预设基准 + 宿主注入 + 接口下发 + 访客本地（后者覆盖前者）；CSS 仅叠 override 保 blue 零风险，图表取完整值
   const themeOverride = useMemo(() => mergeThemeOverride(initialThemeConfig, apiThemeConfig, customConfig), [initialThemeConfig, apiThemeConfig, customConfig])
   const fullThemeConfig = useMemo(() => resolveFullConfig(effectiveTheme, themeOverride), [effectiveTheme, themeOverride])
-  const chartTheme = useMemo(() => chartStyleFromConfig(fullThemeConfig), [fullThemeConfig])
+  const chartTheme = useMemo(() => ({ ...chartStyleFromConfig(fullThemeConfig), dark: effectiveTheme === 'dark' }), [fullThemeConfig, effectiveTheme])
   const rootStyle = useMemo(() => ({ ...resolveThemeStyle(effectiveTheme), ...themeConfigToStyle(themeOverride) }), [effectiveTheme, themeOverride])
   const cfg = useMemo(() => ({ shareCode, apiBase, token: shareToken || undefined }), [shareCode, apiBase, shareToken])
 
@@ -1674,8 +1677,15 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               const displayText = m.streaming ? '' : stripHtmlTags(m.content || '')
               return (
                 <div key={`ai-${i}`} className="abi-cw-msg abi-cw-msg-ai">
-                  {/* 白卡容器类与主对话 MessageList bodyCard 保持一致 */}
-                  <div className="w-full rounded-[1.25rem] border border-[#e9edf4] bg-white px-[0.875rem] pt-[0.75rem] shadow-[0_0.125rem_0.5rem_rgba(15,23,42,0.04)]">
+                  {/* 白卡容器类与主对话 MessageList bodyCard 保持一致；底色/边框读主题变量，支持预设与自定义 */}
+                  <div
+                    className="w-full rounded-[1.25rem] px-[0.875rem] pt-[0.75rem]"
+                    style={{
+                      border: '1px solid var(--cw-border, #e9edf4)',
+                      background: 'var(--cw-card-bg, #ffffff)',
+                      boxShadow: '0 0.125rem 0.5rem rgba(15,23,42,0.04)',
+                    }}
+                  >
                     {/* 信息条：分组 + 数据语义（同主对话 MessageList 信息条样式，分享场景不可点 schema） */}
                     {(m.semanticGroup || m.semanticName) && (
                       <div className="abi-cw-infobar">
@@ -1737,7 +1747,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                     {/* 预测分析（chat_with_predict）：与主对话 ViewEle 一致，渲染预测图表 */}
                     {!m.streaming && m.chart?.chatMode === 'chat_with_predict' && m.chart?.raw && (
                       <div className="flex" style={{ width: '100%' }}>
-                        <div className="rounded bg-white px-2.5" style={{ width: '100%' }}>
+                        <div className="rounded px-2.5" style={{ width: '100%', background: 'var(--cw-block-bg, #ffffff)' }}>
                           <PredictionAnalysis data={m.chart.raw} compact />
                         </div>
                       </div>

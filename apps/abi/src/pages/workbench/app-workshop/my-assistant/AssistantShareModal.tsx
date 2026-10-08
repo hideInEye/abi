@@ -8,7 +8,6 @@ import type { AgentMock } from '@/pages/workbench/assistant-manage/assistant-con
 import { queryAbiClientList } from '@/service/api/abi-client'
 import { shareProjectApi } from '@/service/api/share'
 import { getSpaceId } from '@/store/slice/app'
-import { normalizeShareUrl } from '@/utils/shareUrl'
 
 interface Props {
   /** 当前分享的助手（为空时不渲染内容） */
@@ -88,8 +87,7 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared, 
         message.error('获取分享链接失败')  
         return
       }
-      // 展示分享链接（后端旧路径 dashboard_share_page 过渡期直接替换为新路径 share_url）
-      setShareLink(normalizeShareUrl(shareUrl))
+      setShareLink(shareUrl)
       // 新增分享记录后通知外部刷新（分享记录 tab 保持挂载，不会自动重拉）
       onShared?.()
     } finally {

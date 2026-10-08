@@ -107,28 +107,32 @@ const OverlayScroll: React.FC<OverlayScrollProps> = ({ className = '', contentCl
   const draggingRef = useRef(false)
   const [thumb, setThumb] = useState({ top: 0, height: 0, visible: false })
   const [active, setActive] = useState(false)
+  // 最近一次落地的 thumb 值：容差 1px 内视为已收敛，直接跳过 setState
+  const appliedRef = useRef({ top: 0, height: 0, visible: false })
 
   const updateThumb = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
     const { scrollHeight, clientHeight, scrollTop } = el
     if (scrollHeight <= clientHeight + 1) {
+      appliedRef.current = { top: 0, height: 0, visible: false }
       setThumb((t) => (t.visible ? { ...t, visible: false } : t))
       return
     }
-    const height = Math.max((clientHeight / scrollHeight) * clientHeight, 24)
+    // 取整 + 1px 容差：容器度量亚像素抖动（缩放/小数宽高）时守卫仍能收敛，不会来回 setState
+    const height = Math.round(Math.max((clientHeight / scrollHeight) * clientHeight, 24))
     const maxTop = clientHeight - height
-    const top = maxTop <= 0 ? 0 : (scrollTop / (scrollHeight - clientHeight)) * maxTop
-    // 仅在数值确实变化时更新，避免 useLayoutEffect 每次渲染都 setState 造成无限更新
-    setThumb((t) =>
-      t.visible && Math.abs(t.top - top) < 0.5 && Math.abs(t.height - height) < 0.5
-        ? t
-        : { top, height, visible: true },
-    )
+    const top = Math.round(maxTop <= 0 ? 0 : (scrollTop / (scrollHeight - clientHeight)) * maxTop)
+    const last = appliedRef.current
+    if (last.visible && Math.abs(last.top - top) <= 1 && Math.abs(last.height - height) <= 1) return
+    appliedRef.current = { top, height, visible: true }
+    setThumb((t) => (t.visible && t.top === top && t.height === height ? t : { top, height, visible: true }))
   }, [])
 
   useLayoutEffect(() => {
-    updateThumb()
+    // 微任务延迟打断「layout effect → setState → 重渲染」同步嵌套链，度量持续抖动时也不会触发 React #185
+    if (typeof queueMicrotask === 'function') queueMicrotask(updateThumb)
+    else updateThumb()
   })
 
   useEffect(() => {

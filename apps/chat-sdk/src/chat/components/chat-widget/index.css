@@ -23,7 +23,7 @@
 .abi-cw-page {
   width: 100%;
   min-height: 100vh;
-  background: linear-gradient(160deg, #d5daf5 0%, #dfe6f8 60%, #e2d9f3 100%);
+  background: var(--cw-page-bg, linear-gradient(160deg, #d5daf5 0%, #dfe6f8 60%, #e2d9f3 100%));
 }
 
 .abi-cw-page .abi-cw-panel {
@@ -785,17 +785,17 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: #fff1f0;
-  border: 1px solid #ffa39e;
+  background: var(--cw-stop-bg, #fff1f0);
+  border: 1px solid var(--cw-stop-border, #ffa39e);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  color: #ff4d4f;
+  color: var(--cw-stop-color, #ff4d4f);
   padding: 0;
 }
 
 .abi-cw-stop:hover {
-  background: #ffccc7;
+  background: var(--cw-stop-bg-hover, #ffccc7);
 }
 
 .abi-cw-stop svg {

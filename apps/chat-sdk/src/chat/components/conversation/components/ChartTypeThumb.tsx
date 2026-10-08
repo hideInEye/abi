@@ -1,61 +1,316 @@
+import { useLayoutEffect, useMemo } from 'react'
+import * as echarts from 'echarts'
+import type { EChartsOption } from 'echarts'
+
 import { useChartTheme } from '../../chat-widget/ChartThemeContext'
 
 /**
- * 图表类型缩略图：按类型实时绘制 SVG 迷你图，配色/文字色取自图表主题 Context。
- * 替代原静态白底图片：透明背景 + 主题取色，深色/自定义背景下不再出现白块。
+ * 图表类型缩略图：用 ECharts SSR 按类型实时渲染迷你真图表 SVG 字符串（轴/数据点/数值均真实渲染，观感对齐大屏缩略图）。
+ * 配色/文字色取自图表主题 Context，透明底、背景由外层容器加，深浅主题自适应。
+ * 词云无 ECharts 核心实现，降级为 SVG 文字造型。
  */
 
-const W = 120
-const H = 64
-const X0 = 8
-const X1 = 112
-const Y0 = 8
-const Y1 = 56
+const W = 220
+const H = 110
+
+// SVG 为矢量可无损缩放：固定绘制尺寸，显示宽度交给容器
+const STYLE_ID = 'chart-type-thumb-svg-style'
+const STYLE_CSS = `.chart-type-thumb-svg > svg { display: block; width: 100%; height: auto; }`
+
+function useInjectThumbStyle() {
+  useLayoutEffect(() => {
+    if (typeof document === 'undefined') return
+    if (document.getElementById(STYLE_ID)) return
+    const el = document.createElement('style')
+    el.id = STYLE_ID
+    el.textContent = STYLE_CSS
+    document.head.appendChild(el)
+  }, [])
+}
 
 /** 示例序列（仅用于缩略图造型，非真实数据） */
-const S1 = [20, 45, 30, 60, 42, 70, 52]
-const S2 = [12, 28, 20, 38, 26, 44, 34]
-const BARS = [40, 65, 30, 75, 50]
-const PIE = [40, 30, 20, 10]
+const CATS = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q8']
+const CATS6 = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6']
+const S1 = [20, 45, 30, 60, 42, 70, 52, 64]
+const S2 = [12, 28, 20, 38, 26, 44, 34, 40]
+const BARS = [40, 65, 30, 75, 50, 60]
+const BARS2 = [25, 40, 22, 55, 35, 42]
+const PIE = [
+  { name: 'A', value: 40 },
+  { name: 'B', value: 30 },
+  { name: 'C', value: 20 },
+  { name: 'D', value: 10 },
+]
 
-const px = (i: number, n: number) => X0 + (i * (X1 - X0)) / (n - 1)
-const py = (v: number, max: number) => Y1 - (v / max) * (Y1 - Y0)
-
-function linePoints(series: number[], max: number): string {
-  return series.map((v, i) => `${px(i, series.length)},${py(v, max)}`).join(' ')
+interface ThumbCtx {
+  palette: string[]
+  text: string
 }
 
-function areaPath(series: number[], max: number, base?: number[]): string {
-  const top = series.map((v, i) => `${px(i, series.length)},${py(base ? base[i] + v : v, max)}`)
-  const bottom = series
-    .map((_, i) => `${px(i, series.length)},${py(base ? base[i] : 0, max)}`)
-    .reverse()
-  return `M${top.join(' L')} L${bottom.join(' L')} Z`
+/** hex 色 → rgba，用于轴/刻度文字等低透明度元素 */
+function rgba(hex: string, alpha: number): string {
+  const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex.trim())
+  if (!m) return hex
+  return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})`
 }
 
-/** 环形/扇形路径：a0→a1 弧度，r0=0 时为饼图扇区 */
-function sectorPath(cx: number, cy: number, r0: number, r1: number, a0: number, a1: number): string {
-  const pt = (r: number, a: number) => `${cx + r * Math.cos(a)} ${cy + r * Math.sin(a)}`
-  const large = a1 - a0 > Math.PI ? 1 : 0
-  if (r0 <= 0) return `M${cx} ${cy} L${pt(r1, a0)} A${r1} ${r1} 0 ${large} 1 ${pt(r1, a1)} Z`
-  return `M${pt(r1, a0)} A${r1} ${r1} 0 ${large} 1 ${pt(r1, a1)} L${pt(r0, a1)} A${r0} ${r0} 0 ${large} 0 ${pt(r0, a0)} Z`
+/** 按列百分比归一化（百分比堆叠面积/柱状） */
+function toPercents(a: number[], b: number[]): [number[], number[]] {
+  const totals = a.map((v, i) => v + b[i])
+  return [a.map((v, i) => Math.round((v / totals[i]) * 100)), b.map((v, i) => Math.round((v / totals[i]) * 100))]
 }
 
-/** 圆弧描边路径（仪表/玉珏） */
-function arcStroke(cx: number, cy: number, r: number, a0: number, a1: number): string {
-  const pt = (a: number) => `${cx + r * Math.cos(a)} ${cy + r * Math.sin(a)}`
-  const large = a1 - a0 > Math.PI ? 1 : 0
-  return `M${pt(a0)} A${r} ${r} 0 ${large} 1 ${pt(a1)}`
+type XAxisOpt = NonNullable<EChartsOption['xAxis']>
+type YAxisOpt = NonNullable<EChartsOption['yAxis']>
+
+const axisSkin = (ctx: ThumbCtx) => ({
+  axisLabel: { fontSize: 8, color: rgba(ctx.text, 0.5) },
+  axisLine: { lineStyle: { color: rgba(ctx.text, 0.25) } },
+  axisTick: { show: false },
+})
+
+const hiddenAxis = () => ({
+  axisLabel: { show: false },
+  axisLine: { show: false },
+  axisTick: { show: false },
+  splitLine: { show: false },
+})
+
+function categoryAxisX(ctx: ThumbCtx, data: string[], boundaryGap: boolean): XAxisOpt {
+  return { type: 'category', data, boundaryGap, ...axisSkin(ctx) }
 }
 
-function polygonPoints(values: number[], cx: number, cy: number, r: number): string {
-  const n = values.length
-  return values
-    .map((v, i) => {
-      const a = -Math.PI / 2 + (i * 2 * Math.PI) / n
-      return `${cx + r * v * Math.cos(a)},${cy + r * v * Math.sin(a)}`
-    })
-    .join(' ')
+function categoryAxisY(ctx: ThumbCtx, data: string[]): YAxisOpt {
+  return { type: 'category', data, ...axisSkin(ctx) }
+}
+
+function valueAxisX(): XAxisOpt {
+  return { type: 'value', ...hiddenAxis() }
+}
+
+function valueAxisY(max?: number): YAxisOpt {
+  return { type: 'value', max, ...hiddenAxis() }
+}
+
+const GRID = { left: 4, right: 8, top: 12, bottom: 2, containLabel: true }
+
+const pointLabel = (ctx: ThumbCtx) => ({ show: true, position: 'top' as const, fontSize: 8, color: rgba(ctx.text, 0.55) })
+
+function buildOption(value: string, ctx: ThumbCtx): EChartsOption {
+  const base: EChartsOption = { animation: false, color: ctx.palette }
+  switch (value) {
+    case 'response_area_chart':
+      return {
+        ...base,
+        grid: GRID,
+        xAxis: categoryAxisX(ctx, CATS, false),
+        yAxis: valueAxisY(),
+        series: [
+          {
+            type: 'line',
+            data: S1,
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 4,
+            lineStyle: { width: 1.5 },
+            areaStyle: { opacity: 0.35 },
+            label: pointLabel(ctx),
+          },
+        ],
+      }
+    case 'response_stacked_area_chart':
+      return {
+        ...base,
+        grid: GRID,
+        xAxis: categoryAxisX(ctx, CATS, false),
+        yAxis: valueAxisY(),
+        series: [
+          { type: 'line', data: S1, stack: 'total', smooth: true, symbol: 'circle', symbolSize: 3, areaStyle: { opacity: 0.55 } },
+          { type: 'line', data: S2, stack: 'total', smooth: true, symbol: 'circle', symbolSize: 3, areaStyle: { opacity: 0.55 } },
+        ],
+      }
+    case 'response_percent_area_chart': {
+      const [p1, p2] = toPercents(S1, S2)
+      return {
+        ...base,
+        grid: GRID,
+        xAxis: categoryAxisX(ctx, CATS, false),
+        yAxis: valueAxisY(100),
+        series: [
+          { type: 'line', data: p1, stack: 'total', smooth: true, symbol: 'circle', symbolSize: 3, areaStyle: { opacity: 0.55 } },
+          { type: 'line', data: p2, stack: 'total', smooth: true, symbol: 'circle', symbolSize: 3, areaStyle: { opacity: 0.55 } },
+        ],
+      }
+    }
+    case 'response_pie_chart':
+      return {
+        ...base,
+        series: [{ type: 'pie', radius: '72%', center: ['50%', '50%'], data: PIE, label: { show: false }, labelLine: { show: false } }],
+      }
+    case 'response_donut_chart':
+      return {
+        ...base,
+        series: [{ type: 'pie', radius: ['42%', '72%'], center: ['50%', '50%'], data: PIE, label: { show: false }, labelLine: { show: false } }],
+      }
+    case 'response_rose_chart':
+      return {
+        ...base,
+        series: [
+          { type: 'pie', roseType: 'radius', radius: ['12%', '72%'], center: ['50%', '50%'], data: PIE, label: { show: false }, labelLine: { show: false } },
+        ],
+      }
+    case 'response_bar_chart':
+      return {
+        ...base,
+        grid: GRID,
+        xAxis: categoryAxisX(ctx, CATS6, true),
+        yAxis: valueAxisY(),
+        series: [{ type: 'bar', data: BARS, barWidth: '55%', itemStyle: { borderRadius: [2, 2, 0, 0] }, label: pointLabel(ctx) }],
+      }
+    case 'response_many_bar_chart':
+      return {
+        ...base,
+        grid: GRID,
+        xAxis: categoryAxisX(ctx, CATS6, true),
+        yAxis: valueAxisY(),
+        series: [
+          { type: 'bar', data: BARS, barWidth: '30%', itemStyle: { borderRadius: [2, 2, 0, 0] } },
+          { type: 'bar', data: BARS2, barWidth: '30%', itemStyle: { borderRadius: [2, 2, 0, 0] } },
+        ],
+      }
+    case 'response_percent_bar_chart': {
+      const [p1, p2] = toPercents(BARS, BARS2)
+      return {
+        ...base,
+        grid: GRID,
+        xAxis: categoryAxisX(ctx, CATS6, true),
+        yAxis: valueAxisY(100),
+        series: [
+          { type: 'bar', data: p1, stack: 'total', barWidth: '55%' },
+          { type: 'bar', data: p2, stack: 'total', barWidth: '55%' },
+        ],
+      }
+    }
+    case 'response_horizontal_bar_chart':
+      return {
+        ...base,
+        grid: GRID,
+        xAxis: valueAxisX(),
+        yAxis: categoryAxisY(ctx, ['A', 'B', 'C', 'D', 'E']),
+        series: [{ type: 'bar', data: [40, 65, 30, 75, 50], barWidth: 7, colorBy: 'data', itemStyle: { borderRadius: [0, 3, 3, 0] } }],
+      }
+    case 'response_radar_chart':
+      return {
+        ...base,
+        radar: {
+          indicator: [{ name: '', max: 100 }, { name: '', max: 100 }, { name: '', max: 100 }, { name: '', max: 100 }, { name: '', max: 100 }],
+          radius: '68%',
+          center: ['50%', '52%'],
+          axisName: { show: false },
+          splitLine: { lineStyle: { color: rgba(ctx.text, 0.2) } },
+          axisLine: { lineStyle: { color: rgba(ctx.text, 0.2) } },
+          splitArea: { show: false },
+        },
+        series: [
+          {
+            type: 'radar',
+            data: [{ value: [90, 60, 80, 50, 75], areaStyle: { opacity: 0.4 }, lineStyle: { width: 1.5 }, symbol: 'circle', symbolSize: 3 }],
+          },
+        ],
+      }
+    case 'response_funnel_chart':
+      return {
+        ...base,
+        series: [
+          {
+            type: 'funnel',
+            width: '76%',
+            top: 8,
+            bottom: 8,
+            gap: 3,
+            label: { show: false },
+            labelLine: { show: false },
+            data: [{ value: 100 }, { value: 62 }, { value: 34 }],
+          },
+        ],
+      }
+    case 'response_gauge_chart':
+      return {
+        ...base,
+        series: [
+          {
+            type: 'gauge',
+            startAngle: 180,
+            endAngle: 0,
+            center: ['50%', '80%'],
+            radius: '92%',
+            progress: { show: true, width: 7 },
+            axisLine: { lineStyle: { width: 7, color: [[1, rgba(ctx.text, 0.18)]] } },
+            pointer: { show: false },
+            anchor: { show: false },
+            axisLabel: { show: false },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            detail: { show: false },
+            title: { show: false },
+            data: [{ value: 66 }],
+          },
+        ],
+      }
+    case 'response_radial_bar_chart':
+      return {
+        ...base,
+        angleAxis: { max: 100, show: false },
+        radiusAxis: { type: 'category', data: ['A', 'B', 'C'], show: false },
+        polar: { radius: ['24%', '92%'], center: ['50%', '54%'] },
+        series: [{ type: 'bar', coordinateSystem: 'polar', data: [80, 60, 40], barWidth: '55%', roundCap: true, colorBy: 'data' }],
+      }
+    case 'response_scatter_chart':
+      return {
+        ...base,
+        grid: GRID,
+        xAxis: categoryAxisX(ctx, CATS, true),
+        yAxis: valueAxisY(),
+        series: [
+          { type: 'scatter', data: S1, symbolSize: 5 },
+          { type: 'scatter', data: S2, symbolSize: 5 },
+        ],
+      }
+    case 'response_line_chart':
+    default:
+      return {
+        ...base,
+        grid: GRID,
+        xAxis: categoryAxisX(ctx, CATS, false),
+        yAxis: valueAxisY(),
+        series: [
+          { type: 'line', data: S1, symbol: 'circle', symbolSize: 4, lineStyle: { width: 2 } },
+          { type: 'line', data: S2, symbol: 'circle', symbolSize: 4, lineStyle: { width: 2, type: 'dashed' } },
+        ],
+      }
+  }
+}
+
+/** 词云降级造型：ECharts 核心无词云图 */
+function wordcloudSvg(palette: string[]): string {
+  const c = (i: number) => palette[i % palette.length]
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+<text x="36" y="56" font-size="30" font-weight="700" fill="${c(0)}">数据</text>
+<text x="110" y="44" font-size="20" fill="${c(1)}">趋势</text>
+<text x="160" y="62" font-size="24" font-weight="600" fill="${c(2)}">占比</text>
+<text x="56" y="88" font-size="18" fill="${c(3)}">增长</text>
+<text x="122" y="92" font-size="21" fill="${c(4)}">分析</text>
+</svg>`
+}
+
+function renderThumbSvg(value: string, ctx: ThumbCtx): string {
+  if (value === 'response_wordcloud_chart') return wordcloudSvg(ctx.palette)
+  // SSR 模式无需 DOM：同步出 SVG 字符串后立即销毁，避免缩略图持有真实实例
+  const chart = echarts.init(null, undefined, { renderer: 'svg', ssr: true, width: W, height: H })
+  chart.setOption(buildOption(value, ctx))
+  const svg = chart.renderToSVGString()
+  chart.dispose()
+  return svg
 }
 
 export interface ChartTypeThumbProps {
@@ -65,199 +320,16 @@ export interface ChartTypeThumbProps {
 }
 
 export default function ChartTypeThumb({ value, className }: ChartTypeThumbProps) {
+  useInjectThumbStyle()
   const theme = useChartTheme()
-  const palette = theme.color.split(',').map((c) => c.trim()).filter(Boolean)
-  const c = (i: number) => palette[i % palette.length]
-  const axis = theme.textColor
-
-  const body = (() => {
-    switch (value) {
-      case 'response_line_chart':
-        return (
-          <>
-            <polyline points={linePoints(S1, 80)} fill="none" stroke={c(0)} strokeWidth={2} strokeLinejoin="round" />
-            <polyline points={linePoints(S2, 80)} fill="none" stroke={c(1)} strokeWidth={2} strokeLinejoin="round" strokeDasharray="4 3" />
-          </>
-        )
-      case 'response_area_chart':
-        return (
-          <>
-            <path d={areaPath(S1, 90)} fill={c(0)} fillOpacity={0.35} stroke={c(0)} strokeWidth={1.5} />
-            <path d={areaPath(S2, 90)} fill={c(1)} fillOpacity={0.35} stroke={c(1)} strokeWidth={1.5} />
-          </>
-        )
-      case 'response_stacked_area_chart':
-        return (
-          <>
-            <path d={areaPath(S1, 120)} fill={c(0)} fillOpacity={0.55} />
-            <path d={areaPath(S2, 120, S1)} fill={c(1)} fillOpacity={0.55} />
-          </>
-        )
-      case 'response_percent_area_chart': {
-        const total = S1.map((v, i) => v + S2[i])
-        const a = S1.map((v, i) => (v / total[i]) * 80)
-        const b = S2.map((v, i) => (v / total[i]) * 80)
-        return (
-          <>
-            <path d={areaPath(a, 80)} fill={c(0)} fillOpacity={0.55} />
-            <path d={areaPath(b, 80, a)} fill={c(1)} fillOpacity={0.55} />
-          </>
-        )
-      }
-      case 'response_pie_chart':
-      case 'response_donut_chart': {
-        const r0 = value === 'response_donut_chart' ? 12 : 0
-        const total = PIE.reduce((s, v) => s + v, 0)
-        let a = -Math.PI / 2
-        return (
-          <>
-            {PIE.map((v, i) => {
-              const a1 = a + (v / total) * Math.PI * 2
-              const d = sectorPath(60, 32, r0, 24, a, a1)
-              a = a1
-              return <path key={i} d={d} fill={c(i)} fillOpacity={0.85} stroke="none" />
-            })}
-          </>
-        )
-      }
-      case 'response_bar_chart':
-        return (
-          <>
-            {BARS.map((v, i) => {
-              const bw = (X1 - X0) / BARS.length
-              return <rect key={i} x={X0 + i * bw + bw * 0.2} y={py(v, 80)} width={bw * 0.6} height={Y1 - py(v, 80)} rx={2} fill={c(i % 2)} fillOpacity={0.85} />
-            })}
-          </>
-        )
-      case 'response_many_bar_chart':
-        return (
-          <>
-            {BARS.map((v, i) => {
-              const bw = (X1 - X0) / BARS.length
-              const v2 = S2[i % S2.length]
-              return (
-                <g key={i}>
-                  <rect x={X0 + i * bw + bw * 0.15} y={py(v, 80)} width={bw * 0.3} height={Y1 - py(v, 80)} rx={1.5} fill={c(0)} fillOpacity={0.85} />
-                  <rect x={X0 + i * bw + bw * 0.5} y={py(v2, 80)} width={bw * 0.3} height={Y1 - py(v2, 80)} rx={1.5} fill={c(1)} fillOpacity={0.85} />
-                </g>
-              )
-            })}
-          </>
-        )
-      case 'response_percent_bar_chart':
-        return (
-          <>
-            {BARS.map((_, i) => {
-              const bw = (X1 - X0) / BARS.length
-              const a = 0.35 + (i % 3) * 0.15
-              const h = Y1 - Y0
-              return (
-                <g key={i}>
-                  <rect x={X0 + i * bw + bw * 0.2} y={Y0} width={bw * 0.6} height={h * a} rx={1.5} fill={c(0)} fillOpacity={0.85} />
-                  <rect x={X0 + i * bw + bw * 0.2} y={Y0 + h * a} width={bw * 0.6} height={h * (1 - a)} rx={1.5} fill={c(1)} fillOpacity={0.85} />
-                </g>
-              )
-            })}
-          </>
-        )
-      case 'response_horizontal_bar_chart':
-        return (
-          <>
-            {BARS.map((v, i) => (
-              <rect key={i} x={X0} y={Y0 + i * 10 + 2} width={(v / 80) * (X1 - X0)} height={7} rx={2} fill={c(i % 3)} fillOpacity={0.85} />
-            ))}
-          </>
-        )
-      case 'response_radar_chart':
-        return (
-          <>
-            <polygon points={polygonPoints([1, 1, 1, 1, 1], 60, 32, 24)} fill="none" stroke={axis} strokeOpacity={0.25} />
-            <polygon points={polygonPoints([0.55, 0.55, 0.55, 0.55, 0.55], 60, 32, 24)} fill="none" stroke={axis} strokeOpacity={0.2} />
-            <polygon points={polygonPoints([0.9, 0.6, 0.8, 0.5, 0.75], 60, 32, 24)} fill={c(0)} fillOpacity={0.4} stroke={c(0)} strokeWidth={1.5} />
-          </>
-        )
-      case 'response_funnel_chart':
-        return (
-          <>
-            {[0, 1, 2].map((i) => {
-              const w = 88 - i * 26
-              const w2 = 88 - (i + 1) * 26
-              const y = Y0 + i * 16
-              return <path key={i} d={`M${60 - w / 2} ${y} L${60 + w / 2} ${y} L${60 + w2 / 2} ${y + 14} L${60 - w2 / 2} ${y + 14} Z`} fill={c(i)} fillOpacity={0.85} />
-            })}
-          </>
-        )
-      case 'response_gauge_chart':
-        return (
-          <>
-            <path d={arcStroke(60, 40, 22, Math.PI, Math.PI * 2)} fill="none" stroke={axis} strokeOpacity={0.18} strokeWidth={7} strokeLinecap="round" />
-            <path d={arcStroke(60, 40, 22, Math.PI, Math.PI * 1.65)} fill="none" stroke={c(0)} strokeWidth={7} strokeLinecap="round" />
-          </>
-        )
-      case 'response_rose_chart': {
-        const total = PIE.length
-        return (
-          <>
-            {PIE.map((v, i) => {
-              const a0 = -Math.PI / 2 + (i * 2 * Math.PI) / total
-              const a1 = a0 + (2 * Math.PI) / total - 0.06
-              return <path key={i} d={sectorPath(60, 32, 4, 8 + (v / 40) * 18, a0, a1)} fill={c(i)} fillOpacity={0.85} />
-            })}
-          </>
-        )
-      }
-      case 'response_radial_bar_chart':
-        return (
-          <>
-            {[0, 1, 2].map((i) => (
-              <g key={i}>
-                <path d={arcStroke(60, 36, 10 + i * 7, Math.PI, Math.PI * 2)} fill="none" stroke={axis} strokeOpacity={0.15} strokeWidth={5} strokeLinecap="round" />
-                <path d={arcStroke(60, 36, 10 + i * 7, Math.PI, Math.PI * (1.4 + i * 0.25))} fill="none" stroke={c(i)} strokeWidth={5} strokeLinecap="round" />
-              </g>
-            ))}
-          </>
-        )
-      case 'response_scatter_chart':
-        return (
-          <>
-            {S1.map((v, i) => (
-              <circle key={`a${i}`} cx={px(i, S1.length)} cy={py(v, 80)} r={3} fill={c(0)} fillOpacity={0.8} />
-            ))}
-            {S2.map((v, i) => (
-              <circle key={`b${i}`} cx={px(i, S2.length) + 5} cy={py(v + 8, 80)} r={3} fill={c(1)} fillOpacity={0.8} />
-            ))}
-          </>
-        )
-      case 'response_wordcloud_chart':
-        return (
-          <>
-            <text x={20} y={30} fontSize={16} fontWeight={700} fill={c(0)}>
-              数据
-            </text>
-            <text x={58} y={24} fontSize={11} fill={c(1)}>
-              趋势
-            </text>
-            <text x={86} y={34} fontSize={13} fontWeight={600} fill={c(2)}>
-              占比
-            </text>
-            <text x={30} y={48} fontSize={10} fill={c(3)}>
-              增长
-            </text>
-            <text x={66} y={50} fontSize={12} fill={c(4)}>
-              分析
-            </text>
-          </>
-        )
-      default:
-        return <polyline points={linePoints(S1, 80)} fill="none" stroke={c(0)} strokeWidth={2} />
-    }
-  })()
-
+  const palette = useMemo(() => theme.color.split(',').map((s) => s.trim()).filter(Boolean), [theme.color])
+  const svg = useMemo(() => renderThumbSvg(value, { palette, text: theme.textColor }), [value, palette, theme.textColor])
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className={className} role="img" aria-label={value} style={{ display: 'block', width: '100%', height: 'auto' }}>
-      {/* 基线：跟随图表文字色低透明度，深浅背景都可见 */}
-      <line x1={X0} y1={Y1} x2={X1} y2={Y1} stroke={axis} strokeOpacity={0.25} strokeWidth={1} />
-      {body}
-    </svg>
+    <div
+      className={`chart-type-thumb-svg${className ? ` ${className}` : ''}`}
+      role="img"
+      aria-label={value}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
   )
 }

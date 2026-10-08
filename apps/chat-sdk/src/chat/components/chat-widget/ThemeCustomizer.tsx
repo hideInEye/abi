@@ -98,6 +98,7 @@ export default function ThemeCustomizer({ open, value, preset, saving, getContai
   const patchHeader = (p: Partial<ThemeConfig['titleBar']>) => onChange({ ...value, titleBar: { ...value.titleBar, ...p } })
   const patchFont = (p: Partial<ThemeConfig['font']>) => onChange({ ...value, font: { ...value.font, ...p } })
   const patchChart = (p: Partial<ThemeConfig['chart']>) => onChange({ ...value, chart: { ...value.chart, ...p } })
+  const patchMessage = (p: Partial<ThemeConfig['message']>) => onChange({ ...value, message: { ...value.message, ...p } })
 
   const bgSection = (
     <div className={styles.section}>
@@ -140,6 +141,14 @@ export default function ThemeCustomizer({ open, value, preset, saving, getContai
       <Row label="字重">
         <Segmented size="small" block value={value.font.weight} options={FONT_WEIGHTS} onChange={(v) => patchFont({ weight: v as number })} />
       </Row>
+    </div>
+  )
+
+  const messageSection = (
+    <div className={styles.section}>
+      <ColorRow label="AI 卡片底色" value={value.message.cardBg} getPopupContainer={popupContainer} onChange={(css) => patchMessage({ cardBg: css })} />
+      <ColorRow label="AI 文字颜色" value={value.message.textColor} getPopupContainer={popupContainer} onChange={(css) => patchMessage({ textColor: css })} />
+      <ColorRow label="用户气泡色" value={value.message.bubbleColor} getPopupContainer={popupContainer} onChange={(css) => patchMessage({ bubbleColor: css })} />
     </div>
   )
 
@@ -234,6 +243,7 @@ export default function ThemeCustomizer({ open, value, preset, saving, getContai
             items={[
               { key: 'bg', label: '页面背景', children: bgSection },
               { key: 'header', label: '标题栏', children: headerSection },
+              { key: 'message', label: '对话消息', children: messageSection },
               { key: 'font', label: '字体', children: fontSection },
               { key: 'chart', label: '图表样式', children: chartSection },
             ]}

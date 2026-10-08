@@ -1,12 +1,11 @@
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
-import { Empty, Modal, Select, Spin, message } from 'antd';
+import { Empty, Popover, Select, Spin, message } from 'antd';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { AssistantIconBlock } from '@/components/AssistantIcon';
 import { useAppSelector } from '@/hooks/business/useStore';
 import { fetchProjectShareDetailApi, fetchProjectShareListApi } from '@/service/api/share';
 import { getSpaceId } from '@/store/slice/app';
-import { normalizeShareUrl } from '@/utils/shareUrl';
 
 /** 分享记录行数据（字段做兼容映射，后端字段缺失时兜底展示） */
 interface ShareRecordItem {
@@ -64,8 +63,7 @@ function mapShareRecord(item: any): ShareRecordItem {
     // 列表接口不含密码，shareCode 用于复制时单查详情；列表缺 shareCode 时从分享链接尾段兜底
     shareCode: item.shareCode || String(item.shareUrl || '').split('/').pop() || '',
     name: item.projectName || item.appName || item.name || '-',
-    // 后端旧路径 dashboard_share_page 过渡期直接替换为新路径 share_url
-    shareUrl: normalizeShareUrl(item.shareUrl),
+    shareUrl: item.shareUrl || '',
     shareTime: fmtTime(item.createTime || item.shareTime),
     expiration: item.expirationDate ? fmtTime(item.expirationDate) : '永久',
     statusLabel: status.label,
@@ -192,7 +190,7 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
   };
 
   /** API Key 查看：优先读列表行字段，缺失时按 shareCode 单查详情 */
-  const openAkModal = async (r: ShareRecordItem) => {
+  const openAkList = async (r: ShareRecordItem) => {
     setAkRecord(r);
     if (r.apiKeys?.length) {
       setAkList(r.apiKeys);
@@ -236,7 +234,29 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
               <div className="ac-footer">
                 <span className={`ac-tag${r.statusCls ? ` ${r.statusCls}` : ''}`}>{r.statusLabel}</span>
                 <div className="ac-actions">
-                  <button className="ac-btn" onClick={() => openAkModal(r)}>API Key查看</button>
+                  {/* API Key 列表浮层：锚定按钮在卡片右侧展开，无遮罩，点击外部自动关闭 */}
+                  <Popover
+                    title="API Key列表"
+                    trigger="click"
+                    placement="right"
+                    open={akRecord?.id === r.id}
+                    onOpenChange={(visible) => { if (visible) openAkList(r); else setAkRecord(null); }}
+                    content={
+                      <Spin spinning={akLoading}>
+                        {akList.length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflow: 'auto', width: 300 }}>
+                            {akList.map(key => (
+                              <div key={key} style={{ padding: '8px 12px', background: '#f7f8fa', borderRadius: 8, color: '#262626' }}>{key}</div>
+                            ))}
+                          </div>
+                        ) : (
+                          !akLoading && <Empty description="暂无 API Key" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ width: 300, margin: '4px 0' }} />
+                        )}
+                      </Spin>
+                    }
+                  >
+                    <button className="ac-btn">API Key查看</button>
+                  </Popover>
                   <button className="ac-btn" onClick={() => handleCopy(r)}>复制链接</button>
                 </div>
               </div>
@@ -291,20 +311,6 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
           </div>
         </div>
       </section>
-
-      <Modal title="API Key列表" open={!!akRecord} onCancel={() => setAkRecord(null)} footer={null} width={420} centered>
-        <Spin spinning={akLoading}>
-          {akList.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflow: 'auto' }}>
-              {akList.map(key => (
-                <div key={key} style={{ padding: '8px 12px', background: '#f7f8fa', borderRadius: 8, color: '#262626' }}>{key}</div>
-              ))}
-            </div>
-          ) : (
-            !akLoading && <Empty description="暂无 API Key" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-          )}
-        </Spin>
-      </Modal>
     </div>
   );
 };
