@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { checkOntologyName } from '@/service/api/ontology-name'
+
 import { KNOWLEDGE_DATA_TYPE_OPTIONS } from '../constants/metricModeling.constants'
 
 import { KnowledgeAtomicMappingDrawer } from './KnowledgeAtomicMappingDrawer'
@@ -38,7 +40,7 @@ vi.mock('../hooks/useOntologyFunctionDictionary', () => ({
 interface ItemProps {
   children: ReactNode
   name: string[]
-  rules: unknown[]
+  rules: Array<{ message?: string; required?: boolean; validator?: (rule: unknown, value?: string) => Promise<void> }>
 }
 
 const fieldRows = ['field-1', 'field-2', 'field-3'].map(key => ({
@@ -56,9 +58,9 @@ const fieldRows = ['field-1', 'field-2', 'field-3'].map(key => ({
 
 const values = {
   metricFields: {
-    'field-1': { dataType: 'amount', indicatorName: '订单实付金额' },
-    'field-2': { dataType: undefined, indicatorName: '' },
-    'field-3': { dataType: undefined, indicatorName: '' }
+    'field-1': { bizName: '实付金额', dataType: 'amount' },
+    'field-2': { bizName: '', dataType: undefined },
+    'field-3': { bizName: '', dataType: undefined }
   },
   semanticSchemaId: 'schema-1',
   semanticsGroupId: 'semantic-group-1'
@@ -129,23 +131,52 @@ function renderDrawer(selectedKeys = ['field-1', 'field-3'], submitSuccess = tru
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(checkOntologyName).mockReset()
+  vi.mocked(checkOntologyName).mockResolvedValue({ data: false, error: null } as never)
   form.validateFields.mockResolvedValue(values)
 })
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('atomic mapping form', () => {
-  it('renders metric name validation and the same required data type options as the edit form', () => {
+  it('validates Chinese names and data types without restoring a separate indicator name field', () => {
     const { fields, selectOptions } = renderDrawer()
     expect(fields.map(field => field.name)).toEqual([
-      ['metricFields', 'field-1', 'indicatorName'],
+      ['metricFields', 'field-1', 'bizName'],
       ['metricFields', 'field-1', 'dataType'],
-      ['metricFields', 'field-2', 'indicatorName'],
-      ['metricFields', 'field-2', 'dataType']
+      ['metricFields', 'field-2', 'bizName'],
+      ['metricFields', 'field-2', 'dataType'],
+      ['metricFields', 'field-3', 'bizName']
     ])
     expect(fields[0].rules).toEqual([{ validator: expect.any(Function) }])
     expect(fields[1].rules).toEqual([{ message: '请选择数据类型', required: true }])
+    expect(fields[4].rules).toEqual([])
     expect(selectOptions).toContain(KNOWLEDGE_DATA_TYPE_OPTIONS)
+  })
+
+  it.each(['', '12345', '指标-金额', 'a'.repeat(51), '订单_#_金额'])(
+    'applies indicator creation validation to Chinese name %s',
+    async value => {
+      const { fields } = renderDrawer()
+      await expect(fields[0].rules[0].validator!(undefined, value)).rejects.toThrow()
+      expect(checkOntologyName).not.toHaveBeenCalled()
+    }
+  )
+
+  it('checks uniqueness using the same mapped Chinese name as the payload', async () => {
+    const { fields } = renderDrawer()
+    await expect(fields[0].rules[0].validator!(undefined, '实付金额')).resolves.toBeUndefined()
+    expect(checkOntologyName).toHaveBeenCalledWith({
+      groupId: 'group-1',
+      name: '订单表_#_实付金额',
+      nameType: 'bizName',
+      objectType: 'indicator',
+      spaceId: 82
+    })
+    vi.mocked(checkOntologyName).mockResolvedValueOnce({ data: true, error: null } as never)
+    await expect(fields[0].rules[0].validator!(undefined, '实付金额')).rejects.toThrow('指标名称已存在')
+    vi.mocked(checkOntologyName).mockResolvedValueOnce({ data: false, error: new Error('校验失败') } as never)
+    await expect(fields[0].rules[0].validator!(undefined, '实付金额')).rejects.toThrow('校验失败')
   })
 
   it.each([true, false])('only validates/submits selected unmapped fields and closes on success=%s', async success => {
@@ -155,10 +186,12 @@ describe('atomic mapping form', () => {
       'semanticSchemaId',
       'semanticsGroupId',
       'semanticGroupId',
-      ['metricFields', 'field-1', 'indicatorName'],
+      ['metricFields', 'field-1', 'bizName'],
       ['metricFields', 'field-1', 'dataType']
     ])
-    expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ bizName: '订单实付金额', dataType: 'amount' })])
+    expect(onSubmit).toHaveBeenCalledWith([
+      expect.objectContaining({ techId: [expect.objectContaining({ bizName: '订单表_#_实付金额', dataType: 'amount' })] })
+    ])
     expect(onClose).toHaveBeenCalledTimes(success ? 1 : 0)
   })
 
@@ -178,14 +211,15 @@ describe('atomic mapping form', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
-  it('rejects duplicate names within the batch before submitting', async () => {
+  it('submits fields with identical source names without checking a separate indicator name', async () => {
     form.validateFields.mockResolvedValueOnce({
       ...values,
       metricFields: { 'field-1': values.metricFields['field-1'], 'field-2': values.metricFields['field-1'] }
     })
     const { onSubmit, save } = renderDrawer(['field-1', 'field-2'])
     await save()
-    expect(onSubmit).not.toHaveBeenCalled()
-    expect(messages.warning).toHaveBeenCalledWith('指标名称“订单实付金额”重复，请修改后再提交')
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+    expect(onSubmit.mock.calls[0][0]).toHaveLength(2)
+    expect(messages.warning).not.toHaveBeenCalled()
   })
 })

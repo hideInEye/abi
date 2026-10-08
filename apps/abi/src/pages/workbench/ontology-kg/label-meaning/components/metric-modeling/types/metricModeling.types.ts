@@ -222,8 +222,6 @@ export interface KnowledgeSubmitPayload extends KnowledgeFormValues {
 }
 
 export interface AtomicMappingPayload {
-  bizName: string
-  dataType: string
   groupId?: string
   relSchemaId: number | string
   semanticsGroupId?: number | string

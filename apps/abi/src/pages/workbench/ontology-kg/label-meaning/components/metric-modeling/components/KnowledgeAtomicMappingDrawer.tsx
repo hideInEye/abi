@@ -13,7 +13,6 @@ import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
 import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
 import { assertFlatRequestSuccess } from '@/service/request/flat-result'
 
-import { getMappedBizNameDisplay } from '../../../utils/ontologyName'
 import { KNOWLEDGE_DATA_TYPE_OPTIONS } from '../constants/metricModeling.constants'
 import { useOntologyAtomicAggregationDictionary } from '../hooks/useOntologyFunctionDictionary'
 import type {
@@ -23,11 +22,7 @@ import type {
   KnowledgeTechField
 } from '../types/metricModeling.types'
 import { normalizeAggregationCodes } from '../utils/aggregation'
-import {
-  type AtomicMappingFieldInput,
-  buildAtomicMappingPayload,
-  getDuplicateAtomicMappingName
-} from '../utils/atomicMapping'
+import { type AtomicMappingFieldInput, buildAtomicMappingPayload } from '../utils/atomicMapping'
 import { validateKnowledgeIndicatorName } from '../utils/knowledgeOperateDrawer.validators'
 import { getKnowledgeSpaceId } from '../utils/space'
 
@@ -45,7 +40,7 @@ interface MeasureFieldItem extends AtomicMappingFieldInput {
 }
 
 interface MappingFormValues {
-  metricFields?: Record<string, { dataType?: string; indicatorName?: string }>
+  metricFields?: Record<string, { bizName?: string; dataType?: string }>
   semanticGroupId?: number | string
   semanticSchemaId?: number | string
   semanticsGroupId?: number | string
@@ -238,7 +233,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
         const disabledKeys = nextRows.filter(item => existingKeys.has(item.key)).map(item => item.key)
         form.setFieldValue(
           'metricFields',
-          Object.fromEntries(nextRows.map(item => [item.key, { indicatorName: getMappedBizNameDisplay(item.bizName) }]))
+          Object.fromEntries(nextRows.map(item => [item.key, { bizName: item.bizName, dataType: 'num' }]))
         )
         setFieldRows(nextRows)
         setDisabledRowKeys(disabledKeys)
@@ -342,7 +337,7 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       'semanticsGroupId',
       'semanticGroupId',
       ...selectedRows.flatMap(item => [
-        ['metricFields', item.key, 'indicatorName'],
+        ['metricFields', item.key, 'bizName'],
         ['metricFields', item.key, 'dataType']
       ])
     ])
@@ -364,14 +359,9 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
     }
     const mappedRows = selectedRows.map(item => ({
       ...item,
-      dataType: values.metricFields?.[item.key]?.dataType || '',
-      indicatorName: values.metricFields?.[item.key]?.indicatorName || ''
+      bizName: values.metricFields?.[item.key]?.bizName || '',
+      dataType: values.metricFields?.[item.key]?.dataType || ''
     }))
-    const duplicateName = getDuplicateAtomicMappingName(mappedRows)
-    if (duplicateName) {
-      message.warning(`指标名称“${duplicateName}”重复，请修改后再提交`)
-      return
-    }
     const payload = buildAtomicMappingPayload(mappedRows, {
       groupId,
       relSchemaId: semanticSchemaId as number | string,
@@ -440,14 +430,23 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
     {
       dataIndex: 'bizName',
       key: 'bizName',
-      render: (value: string, record: MeasureFieldItem) => (
-        <AInput
-          value={value}
-          onChange={e => {
-            const nextValue = e.target.value
-            setFieldRows(prev => prev.map(item => (item.key === record.key ? { ...item, bizName: nextValue } : item)))
-          }}
-        />
+      render: (_: unknown, record: MeasureFieldItem) => (
+        <AForm.Item
+          className="mb-0"
+          name={['metricFields', record.key, 'bizName']}
+          rules={disabledRowKeys.includes(record.key) ? [] : [
+            {
+              validator: (_rule, value) => validateKnowledgeIndicatorName(value, {
+                groupId,
+                mappedTableName: record.tableBizName
+              })
+            }
+          ]}
+          validateDebounce={600}
+          validateTrigger="onChange"
+        >
+          <AInput aria-label="中文名称" />
+        </AForm.Item>
       ),
       title: '中文名称',
       width: 130
@@ -483,28 +482,6 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       ),
       title: '字段描述',
       width: 120
-    },
-    {
-      key: 'indicatorName',
-      render: (_: unknown, record: MeasureFieldItem) =>
-        disabledRowKeys.includes(record.key) ? (
-          '-'
-        ) : (
-          <AForm.Item
-            className="mb-0"
-            name={['metricFields', record.key, 'indicatorName']}
-            rules={[{ validator: (_rule, value) => validateKnowledgeIndicatorName(value, { groupId }) }]}
-            validateDebounce={600}
-            validateTrigger="onChange"
-          >
-            <AInput
-              aria-label="指标名称"
-              placeholder="请输入指标名称"
-            />
-          </AForm.Item>
-        ),
-      title: '指标名称',
-      width: 180
     },
     {
       key: 'dataType',
