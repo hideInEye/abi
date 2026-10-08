@@ -1,4 +1,4 @@
-import { CopyOutlined, DeleteOutlined, EditOutlined, EyeOutlined, LeftOutlined, MoreOutlined, RightOutlined, SyncOutlined } from '@ant-design/icons'
+import { CopyOutlined, DeleteOutlined, EditOutlined, EyeOutlined, LeftOutlined, MoreOutlined, RightOutlined, ShareAltOutlined, SyncOutlined } from '@ant-design/icons'
 import { Dropdown, Empty, message } from 'antd'
 import { DownOutlined } from '@ant-design/icons'
 import copy from 'copy-to-clipboard'
@@ -16,6 +16,7 @@ interface ApiKeyTableProps {
   readonly onPageChange: (page: number) => void
   readonly onResetSk: (record: ApiKeyItem) => void
   readonly onSelectedRowKeysChange: (keys: React.Key[]) => void
+  readonly onShareAssistant: (record: ApiKeyItem) => void
   readonly onToggleStatus: (record: ApiKeyItem) => void
   readonly onView: (record: ApiKeyItem) => void
   readonly pageSize: number
@@ -33,6 +34,7 @@ export function ApiKeyTable({
   onPageChange,
   onResetSk,
   onSelectedRowKeysChange,
+  onShareAssistant,
   onToggleStatus,
   onView,
   pageSize,
@@ -189,6 +191,10 @@ export function ApiKeyTable({
                     </APopconfirm>
                   ),
                 },
+                {
+                  key: 'shareAssistant',
+                  label: <span>分享助手</span>,
+                },
                 { type: 'divider' },
                 {
                   key: 'delete',
@@ -204,6 +210,9 @@ export function ApiKeyTable({
                   ),
                 },
               ],
+              onClick: ({ key }) => {
+                if (key === 'shareAssistant') onShareAssistant(record)
+              },
             }}
           >
             <AButton className="abi-action-link" size="small" variant="link">
@@ -279,12 +288,14 @@ export function ApiKeyTable({
                         menu={{
                           items: [
                             { key: 'resetSk', label: <span><SyncOutlined style={{ marginRight: 6 }} />重置SK</span> },
+                            { key: 'shareAssistant', label: <span><ShareAltOutlined style={{ marginRight: 6 }} />分享助手</span> },
                             { type: 'divider' },
                             { key: 'delete', danger: true, label: <span><DeleteOutlined style={{ marginRight: 6 }} />删除</span> },
                           ],
                           onClick: ({ key }) => {
                             if (key === 'resetSk') onResetSk(record)
                             else if (key === 'delete') onDelete(record)
+                            else if (key === 'shareAssistant') onShareAssistant(record)
                           }
                         }}
                         trigger={['click']}

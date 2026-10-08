@@ -442,6 +442,22 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     return () => document.removeEventListener('pointerdown', onDown)
   }, [tbPopover])
 
+  // 窄宽自适应：一级菜单在面板内收敛；二级飞层挂到 body 后通过独立尺寸类同步收敛
+  const [toolFlyoutSize, setToolFlyoutSize] = useState<'normal' | 'narrow' | 'xs'>('normal')
+  useEffect(() => {
+    const panel = panelRef.current
+    if (!panel) return
+    const ro = new ResizeObserver(() => {
+      const w = panel.getBoundingClientRect().width
+      const size = w < 460 ? 'xs' : w < 580 ? 'narrow' : 'normal'
+      panel.classList.toggle('abi-cw-narrow', size !== 'normal')
+      panel.classList.toggle('abi-cw-narrow-xs', size === 'xs')
+      setToolFlyoutSize((prev) => (prev === size ? prev : size))
+    })
+    ro.observe(panel)
+    return () => ro.disconnect()
+  }, [])
+
   const handlePasswordSubmit = async () => {
     if (!password) {
       setPasswordError('请输入密码')
@@ -1076,7 +1092,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     </div>
   )
 
-  // 工具弹窗内容（同主对话「更多」菜单：查看语义 + 技能/MCP hover 右飞层）
+  // 工具弹窗内容：保留原右侧 hover 飞层格式；二级飞层挂到 body，脱离悬浮窗 overflow 裁切
   const toolsPopoverContent = (
     <div className="uni-popup uni-popup--menu">
       <div
@@ -1099,8 +1115,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
             trigger="hover"
             placement="rightTop"
             arrow={false}
-            overlayClassName="uni-popover"
-            getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+            overlayClassName={`uni-popover abi-cw-tool-flyout abi-cw-tool-flyout-${toolFlyoutSize}`}
+            getPopupContainer={() => panelRef.current?.parentElement ?? document.body}
           >
             <div className="uni-popup-item">
               <ToolOutlined className="uni-icon" />
@@ -1114,8 +1130,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
             trigger="hover"
             placement="rightTop"
             arrow={false}
-            overlayClassName="uni-popover"
-            getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+            overlayClassName={`uni-popover abi-cw-tool-flyout abi-cw-tool-flyout-${toolFlyoutSize}`}
+            getPopupContainer={() => panelRef.current?.parentElement ?? document.body}
           >
             <div className="uni-popup-item">
               <ApiOutlined className="uni-icon" />

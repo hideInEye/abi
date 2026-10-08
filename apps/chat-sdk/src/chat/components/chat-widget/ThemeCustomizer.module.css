@@ -1,0 +1,311 @@
+/* 外观自定义抽屉：只消费本类定义的 --tk-* 局部变量（浅色值固定，.drawerDark 切深色值），
+   不读任何 --cw-*：访客自定义的颜色/字体无论如何都不会染到弹窗 */
+
+.drawer {
+  --tk-surface: #ffffff;
+  --tk-text: #1f2733;
+  --tk-text-2: #6b7688;
+  --tk-muted: #9aa4b2;
+  --tk-border: #e5e7eb;
+  --tk-chip-bg: #f2f4f8;
+  /* 宿主（abi 分享页）对 drawer/下拉/输入框有全局 !important 规则，但取色都是 var(--abi-*)：
+     在抽屉子树遮蔽这两个变量，使那些规则整体退化为抽屉自身 surface，宿主不劫持弹窗配色 */
+  --abi-card-box-draw-pop-bg: var(--tk-surface);
+  --abi-input-bg: var(--tk-surface);
+  /* 弹窗是控件面板不是预览内容：字体锁默认，不随自定义字族/字号/字重变化 */
+  font-family: 'Helvetica Neue', Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.drawerDark {
+  --tk-surface: #1f2230;
+  --tk-text: #e8ecf5;
+  --tk-text-2: #a6b2c8;
+  --tk-muted: #8494ad;
+  --tk-border: rgba(255, 255, 255, 0.12);
+  --tk-chip-bg: #262a3a;
+  --abi-card-box-draw-pop-bg: var(--tk-surface);
+  --abi-input-bg: var(--tk-surface);
+}
+
+/* 抽屉四段背景/分隔线统一走局部 surface；!important 压过宿主全局 !important 规则 */
+.drawer :global(.ant-drawer-content),
+.drawer :global(.ant-drawer-header),
+.drawer :global(.ant-drawer-body),
+.drawer :global(.ant-drawer-footer) {
+  background: var(--tk-surface) !important;
+}
+
+.drawer :global(.ant-drawer-header) {
+  border-bottom: 1px solid var(--tk-border) !important;
+}
+
+.drawer :global(.ant-drawer-footer) {
+  border-top: 1px solid var(--tk-border) !important;
+}
+
+.drawer :global(.ant-drawer-title) {
+  color: var(--tk-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.drawer :global(.ant-drawer-close) {
+  color: var(--tk-text-2);
+}
+
+.drawer :global(.ant-collapse-header) {
+  color: var(--tk-text) !important;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 10px 0 !important;
+}
+
+.drawer :global(.ant-collapse-content-box) {
+  padding: 2px 0 8px !important;
+}
+
+/* 细滚动条：默认灰轨在窄抽屉里太抢眼 */
+.drawer :global(.ant-drawer-body)::-webkit-scrollbar {
+  width: 6px;
+}
+
+.drawer :global(.ant-drawer-body)::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: var(--tk-border);
+}
+
+.drawer :global(.ant-drawer-body)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 预设：三等分 chip，选中态用主色描边 */
+.presetRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.presetChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 4px;
+  border: 1px solid var(--tk-border);
+  border-radius: 8px;
+  background: var(--tk-chip-bg);
+  color: var(--tk-text);
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.presetChip:hover {
+  border-color: var(--accent, #5b7cf7);
+}
+
+.presetChipActive {
+  border-color: var(--accent, #5b7cf7);
+  box-shadow: 0 0 0 2px var(--accent-soft, rgba(91, 124, 247, 0.16));
+}
+
+.presetDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  flex: none;
+}
+
+.hint {
+  margin: -4px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--tk-muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 行：标签定宽成列，控件右区对齐，避免长短不一的散乱感 */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+}
+
+.label {
+  flex: none;
+  width: 64px;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--tk-text-2);
+}
+
+.control {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.colorControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hex {
+  max-width: 168px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--tk-text);
+}
+
+.sliderControl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.slider {
+  flex: 1;
+  margin: 0;
+}
+
+.metric {
+  flex: none;
+  width: 42px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--tk-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.select {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 配色板：六列网格色块，删除角标悬停才出现，保持版面干净 */
+.paletteLabel {
+  font-size: 12px;
+  color: var(--tk-text-2);
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.paletteCell {
+  position: relative;
+}
+
+.paletteSwatch {
+  display: block;
+  width: 100%;
+  height: 26px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+}
+
+.paletteDel {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(17, 24, 39, 0.55);
+  color: #fff;
+  font-size: 11px;
+  line-height: 15px;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.paletteCell:hover .paletteDel {
+  opacity: 1;
+}
+
+.paletteAdd {
+  height: 26px;
+  border: 1px dashed var(--tk-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tk-text-2);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.paletteAdd:hover {
+  border-color: var(--accent, #5b7cf7);
+  color: var(--accent, #5b7cf7);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.resetBtn {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--tk-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tk-text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.resetBtn:hover {
+  border-color: var(--accent, #5b7cf7);
+  color: var(--accent, #5b7cf7);
+}
+
+.saveBtn {
+  height: 30px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #5b7cf7, #8b5cf6);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

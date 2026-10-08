@@ -1,20 +1,20 @@
-import { createFileRoute } from '@tanstack/react-router'
-import React from 'react'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { AssistantSharePageView } from '@/components/chat-widget/AssistantSharePanel'
-
-/** 后端分享链接统一为哈希路径 dashboard_share_page/{code}，直接在后端路径上渲染（不重定向，URL 保持不变） */
+/**
+ * 过渡兼容：后端分享链接历史路径 dashboard_share_page/{code}，检测到后直接替换为新路径 share_url/{code}。
+ * TODO: 后端切换为 share_url 返回后删除本文件（routeTree 中对应条目由插件自动重新生成）
+ */
 export const Route = createFileRoute('/dashboard_share_page/$shareCode')({
-  component: AssistantSharePage,
-  // embed=1 时以可嵌入悬浮对话框（铺满 iframe）形态渲染，供第三方系统 iframe 直嵌
-  // TanStack 默认 JSON 解析 search，?embed=1 会解析为数字 1，故数字/字符串/布尔均需兼容
+  // 与 share_url 路由一致的 search 解析，保证 embed 参数在重定向中正确透传
   validateSearch: (search: Record<string, unknown>): { embed?: boolean } => ({
     embed: search.embed === 1 || search.embed === '1' || search.embed === 'true' || search.embed === true,
   }),
+  beforeLoad: ({ params, location }) => {
+    throw redirect({
+      to: '/share_url/$shareCode',
+      params: { shareCode: params.shareCode },
+      search: location.search,
+      replace: true,
+    })
+  },
 })
-
-function AssistantSharePage() {
-  const { shareCode } = Route.useParams()
-  const { embed } = Route.useSearch()
-  return <AssistantSharePageView shareCode={shareCode} embed={embed} />
-}

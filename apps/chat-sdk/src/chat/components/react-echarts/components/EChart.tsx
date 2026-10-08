@@ -104,8 +104,8 @@ const EChartComponent = forwardRef<EChartHandle, EChartProps & { handleClick: (p
           chartInstance.current = undefined;
         }
       };
-    }, [theme, autoResize, JSON.stringify(option)]);
-    // }, [theme, autoResize, JSON.stringify(option), handleClick]);
+    }, [theme, autoResize]);
+    // option 不进 init 依赖：配置变化走下方更新 effect 的合并 setOption，保留系列实例以播放过渡动画，避免整图重 init 硬切
 
 
     // 更新图表配置
@@ -118,7 +118,12 @@ const EChartComponent = forwardRef<EChartHandle, EChartProps & { handleClick: (p
         chartInstance.current.hideLoading();
       }
 
-      chartInstance.current.setOption(option, true);
+      // 默认合并更新：主题换色/数据增长走 animationDurationUpdate 平滑过渡；
+      // 仅当系列数量减少（同实例换图表类型）时 notMerge 清残留，仍带入场动画
+      const prev = chartInstance.current.getOption() as { series?: unknown } | undefined;
+      const prevLen = Array.isArray(prev?.series) ? prev.series.length : 0;
+      const nextLen = Array.isArray((option as { series?: unknown }).series) ? (option as { series: unknown[] }).series.length : 0;
+      chartInstance.current.setOption(option, { notMerge: nextLen < prevLen });
     }, [option, loading]);
 
     return (

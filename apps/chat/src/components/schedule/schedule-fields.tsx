@@ -244,10 +244,10 @@ export const ScheduleFormItems = ({ mode }: { mode?: string }) => {
     return (
       <>
         <Form.Item label="执行日期" name="execDate" rules={[{ required: true, message: '请选择执行日期' }]}>
-          <DatePicker className="w-full" />
+          <DatePicker className="w-full" placeholder="请选择日期" />
         </Form.Item>
         <Form.Item label="执行时间" name="execTime" rules={[{ required: true, message: '请选择执行时间' }]}>
-          <TimePicker className="w-full" format="HH:mm" popupClassName="schedule-time-panel" />
+          <TimePicker className="w-full" format="HH:mm" placeholder="请选择时间" popupClassName="schedule-time-panel" />
         </Form.Item>
       </>
     )
@@ -301,7 +301,7 @@ export const ScheduleFormItems = ({ mode }: { mode?: string }) => {
       </Form.Item>
       {mode === 'PERIODIC' && (
         <Form.Item label="截止日期" name="deadline" rules={[{ required: true, message: '请选择截止日期' }]}>
-          <DatePicker className="w-full" />
+          <DatePicker className="w-full" placeholder="请选择截止日期" />
         </Form.Item>
       )}
     </>

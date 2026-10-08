@@ -4,10 +4,10 @@
   }
 
   :global(.ant-table) {
-    border: 1px solid rgba(130, 140, 200, 0.1);
+    border: 1px solid var(--cw-block-border, rgba(130, 140, 200, 0.1));
     border-radius: 10px;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--cw-block-bg, rgba(255, 255, 255, 0.85));
     backdrop-filter: blur(8px);
     box-shadow: 0 1px 6px rgba(26, 39, 68, 0.05);
   }
@@ -23,8 +23,8 @@
   :global(.ant-table-thead > tr > th) {
     white-space: normal;
     word-break: break-word;
-    background: linear-gradient(180deg, rgba(245, 248, 252, 0.95), rgba(240, 244, 250, 0.9)) !important;
-    color: #3a3f50 !important;
+    background: var(--cw-block-head-bg, linear-gradient(180deg, rgba(245, 248, 252, 0.95), rgba(240, 244, 250, 0.9))) !important;
+    color: var(--cw-block-text, #3a3f50) !important;
     font-weight: 600 !important;
     font-size: 12px !important;
     line-height: 1.4 !important;
@@ -44,17 +44,17 @@
 
   :global(.ant-table-tbody > tr > td) {
     white-space: nowrap;
-    color: #4a5060 !important;
+    color: var(--cw-block-text, #4a5060) !important;
     font-size: 12.5px !important;
     line-height: 1.5 !important;
-    border-bottom: 1px solid rgba(130, 140, 200, 0.06) !important;
+    border-bottom: 1px solid var(--cw-block-border, rgba(130, 140, 200, 0.06)) !important;
     padding: 9px 14px !important;
     background: transparent;
     transition: background 0.15s ease;
   }
 
   :global(.ant-table-tbody > tr:hover > td) {
-    background: rgba(91, 124, 247, 0.03) !important;
+    background: var(--cw-block-hover, rgba(91, 124, 247, 0.03)) !important;
   }
 
   :global(.ant-table-tbody > tr:last-child > td) {
@@ -84,7 +84,7 @@
 
   :global(.ant-pagination-item a) {
     font-size: 13px !important;
-    color: #5a6070 !important;
+    color: var(--cw-block-muted, #5a6070) !important;
   }
 
   :global(.ant-pagination-item:hover) {
@@ -110,8 +110,8 @@
   :global(.ant-pagination-prev .ant-pagination-item-link),
   :global(.ant-pagination-next .ant-pagination-item-link) {
     border-radius: 6px !important;
-    border: 1px solid rgba(130, 140, 200, 0.15) !important;
-    color: #6b7280 !important;
+    border: 1px solid var(--cw-block-border, rgba(130, 140, 200, 0.15)) !important;
+    color: var(--cw-block-muted, #6b7280) !important;
     transition: all 0.2s ease !important;
   }
 
@@ -124,12 +124,12 @@
 
   :global(.ant-pagination-disabled .ant-pagination-item-link) {
     color: #c0c4cc !important;
-    border-color: rgba(130, 140, 200, 0.1) !important;
+    border-color: var(--cw-block-border, rgba(130, 140, 200, 0.1)) !important;
   }
 
   :global(.ant-pagination-total-text) {
     font-size: 13px !important;
-    color: #6b7280 !important;
+    color: var(--cw-block-muted, #6b7280) !important;
     margin-right: 8px !important;
   }
 
@@ -150,7 +150,7 @@
 
   :global(.ant-pagination-options-quick-jumper) {
     font-size: 13px !important;
-    color: #6b7280 !important;
+    color: var(--cw-block-muted, #6b7280) !important;
   }
 
   :global(.ant-pagination-options-quick-jumper input) {
@@ -167,19 +167,19 @@
 
   /* Zebra striping for better readability */
   :global(.ant-table-tbody > tr:nth-child(even) > td) {
-    background: rgba(248, 250, 255, 0.5);
+    background: var(--cw-block-zebra, rgba(248, 250, 255, 0.5));
   }
   :global(.ant-table-tbody > tr:nth-child(even):hover > td) {
-    background: rgba(91, 124, 247, 0.04) !important;
+    background: var(--cw-block-hover, rgba(91, 124, 247, 0.04)) !important;
   }
 }
 
 .tableCellValue {
-  color: #4a5060;
+  color: var(--cw-block-text, #4a5060);
 }
 
 .deltaValue {
-  color: #5b7cf7;
+  color: var(--accent, #5b7cf7);
   font-weight: 600;
 }
 
@@ -188,8 +188,8 @@
   position: relative;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(130, 140, 200, 0.1);
-  background: linear-gradient(180deg, #fafbfd, #f5f7fb);
+  border: 1px solid var(--cw-block-border, rgba(130, 140, 200, 0.1));
+  background: var(--cw-block-bg, linear-gradient(180deg, #fafbfd, #f5f7fb));
   box-shadow: 0 1px 4px rgba(26, 39, 68, 0.04);
 }
 
@@ -198,10 +198,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px;
-  background: rgba(245, 248, 252, 0.8);
-  border-bottom: 1px solid rgba(130, 140, 200, 0.08);
+  background: var(--cw-block-head-bg, rgba(245, 248, 252, 0.8));
+  border-bottom: 1px solid var(--cw-block-border, rgba(130, 140, 200, 0.08));
   font-size: 12px;
-  color: #6b7280;
+  color: var(--cw-block-muted, #6b7280);
 }
 
 /* ── Chart Container ── */

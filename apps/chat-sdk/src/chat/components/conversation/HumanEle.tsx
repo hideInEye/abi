@@ -136,13 +136,13 @@ const HumanEle: React.FC<HumanEleProps> = ({ data, id, onEditSubmit, onDelete })
           id={id}
           className="msg-bubble-human"
           style={{
-            background: 'linear-gradient(135deg, rgba(91,124,247,0.06), rgba(112,145,250,0.08))',
-            border: '1px solid rgba(91,124,247,0.18)',
-            color: 'var(--ink)',
+            background: 'var(--cw-bubble-bg, linear-gradient(135deg, rgba(91,124,247,0.06), rgba(112,145,250,0.08)))',
+            border: '1px solid var(--cw-bubble-border, rgba(91,124,247,0.18))',
+            color: 'var(--cw-bubble-text, var(--cw-text, var(--ink)))',
             padding: '12px 16px',
             borderRadius: '16px 16px 4px 16px',
             boxShadow: '0 2px 8px rgba(91,124,247,0.08)',
-            fontSize: 13,
+            fontSize: 'calc(13px * var(--cw-font-scale, 1))',
             lineHeight: 1.6,
           }}
         >

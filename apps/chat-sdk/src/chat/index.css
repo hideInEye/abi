@@ -1901,6 +1901,11 @@ button {
 /* 级联卡片宽度保持一致：一级菜单 / 二级面板（数据语义、技能、MCP）/ 三级飞层统一 260px */
 .uni-popup { display: flex; flex-direction: column; width: 260px; }
 .uni-popup--flyout, .uni-popup--menu { width: 260px; }
+/* 悬浮窗一级菜单按面板宽度收敛；挂到 body 的二级飞层通过独立尺寸类同步收敛 */
+.abi-cw-narrow .uni-popup--menu { width: 200px; }
+.abi-cw-narrow-xs .uni-popup--menu { width: 160px; }
+.abi-cw-tool-flyout-narrow .uni-popup--flyout { width: 200px; }
+.abi-cw-tool-flyout-xs .uni-popup--flyout { width: 160px; }
 .uni-popup-search {
   display: flex; align-items: center; gap: 8px; padding: 9px 12px; flex-shrink: 0;
   border-bottom: 1px solid var(--border-2); color: var(--ink-3); font-size: 13px;

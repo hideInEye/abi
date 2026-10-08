@@ -28,8 +28,12 @@ import { isJwtExpired } from './jwt';
 export const init: Init = async currentFullPath => {
   await store.dispatch(initConstantRoute());
 
-  // 分享页（大屏/助手分享）支持匿名访问，不跳登录
-  const isSharePage = currentFullPath.includes('/dashboard_share_page/') || currentFullPath.includes('/dashboard-share-page/');
+  // 分享页（大屏/助手分享，新路径 share_url 共用）支持匿名访问，不跳登录
+  // TODO: dashboard_share_page / dashboard-share-page 为旧路径过渡兼容，后端切换完成后删除
+  const isSharePage =
+    currentFullPath.includes('/share_url/') ||
+    currentFullPath.includes('/dashboard_share_page/') ||
+    currentFullPath.includes('/dashboard-share-page/');
 
   const isOnLoginPage = currentFullPath.includes('login');
   const isLogin = checkAuthStatus();

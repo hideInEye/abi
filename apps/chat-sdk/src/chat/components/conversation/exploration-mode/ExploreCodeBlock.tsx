@@ -4,8 +4,9 @@ import React, { useEffect, useRef, useState } from 'react'
 // @ts-ignore - react-syntax-highlighter 类型定义问题
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 // @ts-ignore
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
+import { useChartTheme } from '../../chat-widget/ChartThemeContext'
 import styles from './styles.module.css'
 
 export type ExploreCodeLanguage = 'sql' | 'python' | 'bash' | 'json' | 'text'
@@ -88,6 +89,8 @@ interface ExploreCodeBlockProps {
 /** 千问风格代码块：顶栏左侧语言标识，右侧编辑 / 复制，主体行号 + 语法高亮。 */
 const ExploreCodeBlock: React.FC<ExploreCodeBlockProps> = ({ code, language, onEdit }) => {
   const [copied, setCopied] = useState(false)
+  // 黑色系预设下语法高亮切暗色主题，避免深色卡片里嵌一块浅色代码区
+  const { dark } = useChartTheme()
   const copyTimerRef = useRef<number>()
   useEffect(() => () => window.clearTimeout(copyTimerRef.current), [])
   // 用 ref 持有最新 onEdit，使组件可仅按 code/language memo；onEdit 每次父渲染都是新闭包，不能进比较器
@@ -127,7 +130,7 @@ const ExploreCodeBlock: React.FC<ExploreCodeBlockProps> = ({ code, language, onE
       <div className={styles.codeBlockBody}>
         <SyntaxHighlighter
           language={language === 'text' ? undefined : language}
-          style={oneLight}
+          style={dark ? oneDark : oneLight}
           showLineNumbers
           customStyle={{
             margin: 0,

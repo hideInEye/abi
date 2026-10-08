@@ -17,6 +17,7 @@ import layerManager from "../../designer/manager/LayerManager.ts";
 import URLUtil from "../../utils/URLUtil.ts";
 import BPExecutor from "../../designer/blueprint/core/BPExecutor.ts";
 import {DesignerLoader} from "../../designer/loader/DesignerLoader.ts";
+import {isShareViewPath} from "../../utils/ShareViewUtil.ts";
 
 export interface GroupLayerStyleProps {
     children?: React.ReactNode;
@@ -39,7 +40,7 @@ export default class GroupLayer extends React.PureComponent<GroupLayerStyleProps
         const {elemConfigs, compController} = layerManager;
         const groupDefinition: AbstractDefinition = DesignerLoader.definitionMap['group'];
         const {mode: urlMode} = URLUtil.parseUrlParams();
-        const isSharePage = window.location.pathname.includes('/dashboard-share-page/') || window.location.hash.includes('/dashboard-share-page/') || window.location.pathname.includes('/dashboard_share_page/') || window.location.hash.includes('/dashboard_share_page/');
+        const isSharePage = isShareViewPath();
         const mode = isSharePage ? DesignerMode.VIEW : (urlMode as DesignerMode || DesignerMode.EDIT);
         let config;
         if (layer.id! in compController!) {

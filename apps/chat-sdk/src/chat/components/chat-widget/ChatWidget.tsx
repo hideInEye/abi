@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ConfigProvider, Popover, Table, Typography, message as antdMessage } from 'antd'
+import { ConfigProvider, Popover, Table, Typography, message as antdMessage, theme as antdTheme } from 'antd'
 import { ApiOutlined, CheckOutlined, EyeOutlined, RightOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons'
 import zhCN from 'antd/es/locale/zh_CN'
 import { format as formatSql } from 'sql-formatter'
 // @ts-ignore - react-syntax-highlighter 类型定义问题
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 // @ts-ignore
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 /* 渲染层直接复用主对话组件（开场白/用户气泡/思考卡/图表工具栏/反馈行），仅数据层走分享 token 链路 */
 import HumanEle from '../conversation/HumanEle'
@@ -21,6 +21,7 @@ import AttributionDashboard from '../conversation/components/AttributionDashboar
 import PredictionAnalysis from '../conversation/components/PredictionAnalysis'
 import CausalAnalysis from '../conversation/components/CausalAnalysis'
 import { SUPPORTED_RENDER_TYPES, getChartTypeItem } from '../conversation/components/chartTypeCatalog'
+import ChartTypeThumb from '../conversation/components/ChartTypeThumb'
 import convStyles from '../conversation/index.module.css'
 import viewStyles from '../conversation/styles.module.css'
 import { getChartOption, parseISO8601Duration, parseISODate } from '../conversation/helpers/chartOption'
@@ -52,6 +53,7 @@ import {
   fetchSemanticDetail,
   fetchViewContextByRound,
   parseAiRaw,
+  saveShareTheme,
   sendChatStream,
   submitFeedback,
   type ProjectType,
@@ -61,7 +63,21 @@ import {
   type WidgetSession,
 } from './service'
 import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
-import { DEFAULT_THEME, resolveThemeStyle, type ThemeId } from '../../../theme'
+import { ChartThemeContext, useChartTheme } from './ChartThemeContext'
+import { useTweenedChartStyle } from './useTweenedChartStyle'
+import ThemeCustomizer from './ThemeCustomizer'
+import {
+  chartStyleFromConfig,
+  DEFAULT_THEME,
+  mergeThemeOverride,
+  normalizeThemeConfig,
+  resolveFullConfig,
+  resolveThemeStyle,
+  themeConfigToStyle,
+  type DeepPartial,
+  type ThemeConfig,
+  type ThemeId,
+} from '../../../theme'
 import './index.css'
 
 export interface ChatWidgetProps {
@@ -81,8 +97,10 @@ export interface ChatWidgetProps {
   onClose?: () => void
   /** 预设主题风格：blue（默认现状）/ light（白色系）/ dark（黑色系），由分享配置下发 */
   theme?: ThemeId
-  /** 头部显示主题切换按钮（蓝色系 <-> 黑色系），点击即时切换并记忆到 localStorage */
+  /** 头部显示“外观自定义”入口按钮（打开定制抽屉，支持背景/标题栏/字体/图表自定义） */
   showThemeSwitch?: boolean
+  /** 宿主注入的初始自定义配置（优先级最低：预设基准 < 宿主注入 < 接口下发 < 访客本地） */
+  initialThemeConfig?: DeepPartial<ThemeConfig>
 }
 
 type Phase = 'checking' | 'password' | 'loading' | 'ready' | 'error'
@@ -189,24 +207,18 @@ const IconCompress = (
   </svg>
 )
 
-/* 头部主题切换图标（月亮=切到黑色系 / 太阳=切到蓝色系） */
-const IconMoon = (
+/* 头部“外观自定义”入口图标（sliders 调节滑块） */
+const IconCustomize = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-  </svg>
-)
-
-const IconSun = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="5" />
-    <line x1="12" y1="1" x2="12" y2="3" />
-    <line x1="12" y1="21" x2="12" y2="23" />
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-    <line x1="1" y1="12" x2="3" y2="12" />
-    <line x1="21" y1="12" x2="23" y2="12" />
-    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    <line x1="4" y1="21" x2="4" y2="14" />
+    <line x1="4" y1="10" x2="4" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12" y2="3" />
+    <line x1="20" y1="21" x2="20" y2="16" />
+    <line x1="20" y1="12" x2="20" y2="3" />
+    <line x1="1" y1="14" x2="7" y2="14" />
+    <line x1="9" y1="8" x2="15" y2="8" />
+    <line x1="17" y1="16" x2="23" y2="16" />
   </svg>
 )
 
@@ -264,14 +276,11 @@ type WidgetTimelineEntry =
 const { Text } = Typography
 
 /* ── 图表区（同主对话 ViewEle 图表分支：小节头 + ChartHeader 工具栏 + 图/表/SQL 三视图） ── */
-// 图表配置常量与主对话 ViewEle 默认值保持一致
-const CHART_CONFIG = {
-  font: 'Arial',
-  fontSize: 12,
-  chartStyle: { color: '#2FA4FF,#7ACBFF,#A67AFF,#F7A45C,#6E6E6E,#50C878', textColor: '#333333' },
-}
-
 const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: (type: string) => void }) => {
+  // 图表配色/字体随自定义主题联动：从 ChartThemeContext 读取（替代原写死的模块常量）
+  const chartTheme = useChartTheme()
+  // 主图颜色补间：主题换色时逐帧插值驱动 setOption，消除 ECharts 颜色不补间造成的硬切
+  const tweenedChartTheme = useTweenedChartStyle(chartTheme)
   // 后端 response_table 默认落表格视图（同主对话 ViewEle：response_table → setActiveType('table')）
   const [activeType, setActiveType] = useState<'chart' | 'table' | 'sql'>(chart.tableView ? 'table' : 'chart')
   const [currentPage, setCurrentPage] = useState(1)
@@ -294,12 +303,12 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
   const option = useMemo(
     () =>
       getChartOption(chart.type, chart.data, {
-        font: CHART_CONFIG.font,
-        fontSize: CHART_CONFIG.fontSize,
-        color: CHART_CONFIG.chartStyle.color,
-        textColor: CHART_CONFIG.chartStyle.textColor,
+        font: tweenedChartTheme.font,
+        fontSize: tweenedChartTheme.fontSize,
+        color: tweenedChartTheme.color,
+        textColor: tweenedChartTheme.textColor,
       }),
-    [chart.type, chart.data],
+    [chart.type, chart.data, tweenedChartTheme],
   )
 
   // 导出：PNG 走客户端截图；csv/excel 在分享免登录场景无后端导出接口，用已有数据本地生成
@@ -338,15 +347,22 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
       const item = getChartTypeItem(chart.type)
       return (
         <div className="flex flex-col items-center justify-center py-14 text-center">
-          {item?.thumbnail && <img src={item.thumbnail} alt={item.label} className="w-40 opacity-60 mb-3" />}
-          <div className="text-sm text-[#666]">「{item?.label || '该图表'}」即将支持</div>
-          <div className="text-xs text-[#999] mt-1">当前版本暂未接入该图表渲染，可切换其他图表类型或查看数据表格</div>
+          {/* 占位预览同缩略图实时渲染，深色/自定义背景下不再残留白底图片 */}
+          <div className="w-44 opacity-80 mb-3">
+            <ChartTypeThumb value={chart.type} />
+          </div>
+          <div className="text-sm" style={{ color: 'var(--cw-text-2, #666)' }}>
+            「{item?.label || '该图表'}」即将支持
+          </div>
+          <div className="text-xs mt-1" style={{ color: 'var(--cw-text-muted, #999)' }}>
+            当前版本暂未接入该图表渲染，可切换其他图表类型或查看数据表格
+          </div>
         </div>
       )
     }
     const isPieOrDonut = chart.type === 'response_pie_chart' || chart.type === 'response_donut_chart'
     const pieSeriesData: any[] = isPieOrDonut ? ((option as any).series?.[0]?.data || []) : []
-    const colors = CHART_CONFIG.chartStyle.color.split(',')
+    const colors = chartTheme.color.split(',')
     const legendData = pieSeriesData.map((item: any, i: number) => ({
       name: String(item.name),
       value: item.value,
@@ -363,7 +379,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
           <PieLegend
             data={legendData}
             maxRows={3}
-            fontSize={CHART_CONFIG.fontSize}
+            fontSize={chartTheme.fontSize}
             resetKey={chart.type + (chart.data?.length ?? 0)}
             onItemClick={(name: string) => {
               echartRef.current?.getInstance()?.dispatchAction({ type: 'legendToggleSelect', name })
@@ -379,7 +395,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
     if (activeType !== 'sql' && !hasData) {
       return (
         <div className="flex items-center justify-center py-8">
-          <span style={{ fontSize: '12px', color: '#999' }}>暂无数据</span>
+          <span style={{ fontSize: '12px', color: 'var(--cw-block-muted, #999)' }}>暂无数据</span>
         </div>
       )
     }
@@ -449,7 +465,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
       }
       return (
         <div ref={tableRef} className="px-1 pb-2">
-          <ConfigProvider locale={zhCN}>
+          <ConfigProvider locale={zhCN} theme={chartTheme.dark ? { algorithm: antdTheme.darkAlgorithm } : undefined}>
             <Table
               dataSource={tableRows.map((item: Record<string, any>, index: number) => ({ ...item, key: index }))}
               columns={tableColumns as any}
@@ -480,7 +496,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
         {/* @ts-ignore */}
         <SyntaxHighlighter
           language="sql"
-          style={oneLight}
+          style={chartTheme.dark ? oneDark : oneLight}
           showLineNumbers
           customStyle={{ margin: 0, borderRadius: '0 0 10px 10px', fontSize: '0.8125rem', backgroundColor: 'transparent', padding: '12px 14px' }}
           codeTagProps={{ style: { fontFamily: 'Consolas, Monaco, "Courier New", monospace' } }}
@@ -494,7 +510,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
   return (
     <div className="w-full text-left">
       <div className="section-header pt-3 pb-3">
-        <span className="chart-header-title font-semibold text-[#2d2d2d]">图表信息</span>
+        <span className="chart-header-title font-semibold" style={{ color: 'var(--cw-block-text, #2d2d2d)' }}>图表信息</span>
       </div>
       <div className="pt-3">
         <ChartHeader
@@ -513,7 +529,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
           showTitle={false}
           hideTools
         />
-        <div className="mt-3" style={activeType === 'chart' || !hasData ? { background: '#F2F3F5', borderRadius: '8px', padding: '12px' } : undefined}>
+        <div className="mt-3" style={activeType === 'chart' || !hasData ? { background: 'var(--cw-chart-wrap-bg, #F2F3F5)', borderRadius: '8px', padding: '12px' } : undefined}>
           {renderContent()}
         </div>
       </div>
@@ -521,25 +537,49 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
   )
 }
 
-/** 头部主题切换按钮的记忆键（仅蓝色系/黑色系两档，跨刷新保留访客选择） */
+/** 头部预设主题的记忆键（蓝/白/黑，跨刷新保留访客选择） */
 const THEME_STORAGE_KEY = 'abi-assistant-theme'
+/** 访客自定义主题配置的记忆键（背景/标题栏/字体/图表四维 JSON） */
+const THEME_CONFIG_STORAGE_KEY = 'abi-assistant-theme-config'
+
+/** 从 localStorage 读回自定义配置并校验（脏数据/异常一律 null） */
+function loadStoredThemeConfig(): DeepPartial<ThemeConfig> | null {
+  try {
+    const raw = localStorage.getItem(THEME_CONFIG_STORAGE_KEY)
+    return raw ? normalizeThemeConfig(JSON.parse(raw)) ?? null : null
+  } catch {
+    return null
+  }
+}
 
 /** 助手分享对话悬浮框：无 store 依赖的纯组件，分享页与第三方嵌入共用；渲染层复用主对话组件 */
-const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verifiedType, verifiedToken, onClose, theme = DEFAULT_THEME, showThemeSwitch = false }: ChatWidgetProps) => {
+const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verifiedType, verifiedToken, onClose, theme = DEFAULT_THEME, showThemeSwitch = false, initialThemeConfig }: ChatWidgetProps) => {
   // 分享校验通过后的临时 token（外层传入或 widget 内部密码校验后写入），后续接口随 Authorization 携带
   const [shareToken, setShareToken] = useState(verifiedToken || '')
-  // 分享记录存储的主题：接口下发后覆盖接入标签属性（后端未下发时保持属性/默认值）
+  // 分享记录存储的预设主题：接口下发后覆盖接入标签属性（后端未下发时保持属性/默认值）
   const [apiTheme, setApiTheme] = useState<ThemeId | null>(null)
-  // 访客在头部手动切换的主题：优先级最高，初始从 localStorage 恢复
+  // 分享记录存储的自定义主题配置（后端下发，与 Token 映射）；未下发为 null
+  const [apiThemeConfig, setApiThemeConfig] = useState<DeepPartial<ThemeConfig> | null>(null)
+  // 访客在浮窗自定义的配置：优先级最高，初始从 localStorage 恢复
+  const [customConfig, setCustomConfig] = useState<DeepPartial<ThemeConfig> | null>(loadStoredThemeConfig)
+  // 访客手动选择的预设：优先级最高，初始从 localStorage 恢复
   const [userTheme, setUserTheme] = useState<ThemeId | null>(() => {
     try {
       const saved = localStorage.getItem(THEME_STORAGE_KEY)
-      return saved === 'dark' || saved === 'blue' ? saved : null
+      return saved === 'dark' || saved === 'blue' || saved === 'light' ? saved : null
     } catch {
       return null
     }
   })
   const effectiveTheme = userTheme ?? apiTheme ?? theme
+  // 外观自定义抽屉开合与保存中态
+  const [customizerOpen, setCustomizerOpen] = useState(false)
+  const [savingTheme, setSavingTheme] = useState(false)
+  // 生效配置：预设基准 + 宿主注入 + 接口下发 + 访客本地（后者覆盖前者）；CSS 仅叠 override 保 blue 零风险，图表取完整值
+  const themeOverride = useMemo(() => mergeThemeOverride(initialThemeConfig, apiThemeConfig, customConfig), [initialThemeConfig, apiThemeConfig, customConfig])
+  const fullThemeConfig = useMemo(() => resolveFullConfig(effectiveTheme, themeOverride), [effectiveTheme, themeOverride])
+  const chartTheme = useMemo(() => ({ ...chartStyleFromConfig(fullThemeConfig), dark: effectiveTheme === 'dark' }), [fullThemeConfig, effectiveTheme])
+  const rootStyle = useMemo(() => ({ ...resolveThemeStyle(effectiveTheme), ...themeConfigToStyle(themeOverride) }), [effectiveTheme, themeOverride])
   const cfg = useMemo(() => ({ shareCode, apiBase, token: shareToken || undefined }), [shareCode, apiBase, shareToken])
 
   const [phase, setPhase] = useState<Phase>(verifiedAppId ? 'loading' : 'checking')
@@ -691,6 +731,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     }
     if (res.token) setShareToken(res.token)
     if (res.theme) setApiTheme(res.theme)
+    if (res.themeConfig) setApiThemeConfig(res.themeConfig)
     await load(res.appId, res.type, res.token)
   }, [cfg, load])
 
@@ -745,6 +786,22 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     return () => document.removeEventListener('pointerdown', onDown)
   }, [tbPopover])
 
+  // 窄宽自适应：一级菜单在面板内收敛；二级飞层挂到 body 后通过独立尺寸类同步收敛
+  const [toolFlyoutSize, setToolFlyoutSize] = useState<'normal' | 'narrow' | 'xs'>('normal')
+  useEffect(() => {
+    const panel = panelRef.current
+    if (!panel) return
+    const ro = new ResizeObserver(() => {
+      const w = panel.getBoundingClientRect().width
+      const size = w < 460 ? 'xs' : w < 580 ? 'narrow' : 'normal'
+      panel.classList.toggle('abi-cw-narrow', size !== 'normal')
+      panel.classList.toggle('abi-cw-narrow-xs', size === 'xs')
+      setToolFlyoutSize((prev) => (prev === size ? prev : size))
+    })
+    ro.observe(panel)
+    return () => ro.disconnect()
+  }, [])
+
   const handlePasswordSubmit = async () => {
     if (!password) {
       setPasswordError('请输入密码')
@@ -755,6 +812,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       setPasswordError('')
       if (res.token) setShareToken(res.token)
       if (res.theme) setApiTheme(res.theme)
+      if (res.themeConfig) setApiThemeConfig(res.themeConfig)
       await load(res.appId, res.type, res.token)
     } else {
       setPasswordError('密码错误')
@@ -955,6 +1013,12 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           patchMsg({ content: (controller.signal.aborted && '已停止生成') || '请求异常，请稍后重试', streaming: false })
           setSending(false)
         },
+        // 闲聊/超范围屏蔽（illegal_query）：直接以提示语作为正文收尾，不走轮次定位/回补（同主对话）
+        // 单换行在 markdown 为软换行会并到一行，转两空格硬换行以还原后端原文分行
+        onIllegalQuery: (tip) => {
+          patchMsg({ content: tip.replace(/\n/g, '  \n'), thinking: undefined, streaming: false })
+          setSending(false)
+        },
       },
       selectedSemantic,
       info?.spaceId,
@@ -1082,7 +1146,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     const entries: WidgetTimelineEntry[] = []
     messages.forEach((m, i) => entries.push({ key: `im-${i}`, sortKey: m.createdAt ?? i, kind: 'interact', index: i, message: m }))
     exploreController.items.forEach((item) => entries.push({ key: `ex-${item.id}`, sortKey: item.createdAt, kind: 'explore', item }))
-    reportController.reports.forEach((r) => entries.push({ key: `rp-${r.id}`, sortKey: r.createdAt, kind: 'report', report: r }))
+     reportController.reports.forEach((r) => entries.push({ key: `rp-${r.id}`, sortKey: r.createdAt, kind: 'report', report: r }))
     return entries.sort((a, b) => a.sortKey - b.sortKey)
   }, [messages, exploreController.items, reportController.reports])
 
@@ -1126,8 +1190,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   }
 
   // 面板最小尺寸与视口安全边距（resize 约束，口径同头部拖拽）
-  const RESIZE_MIN_W = 380
-  const RESIZE_MIN_H = 420
+  const RESIZE_MIN_W = 460
+  const RESIZE_MIN_H = 600
   const VIEWPORT_MARGIN = 16
 
   // 四边拖拽改大小：按下时把 CSS 定位固化为显式 left/top/width/height，之后按方向跟随指针（视口内约束 + 最小尺寸）
@@ -1178,15 +1242,62 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     window.addEventListener('pointerup', onUp)
   }
 
-  // 头部主题切换：蓝色系 <-> 黑色系，记忆到 localStorage（跨刷新保留访客选择）
-  const handleToggleTheme = () => {
-    const next: ThemeId = effectiveTheme === 'dark' ? 'blue' : 'dark'
-    setUserTheme(next)
+  // 自定义抽屉打开时临时加宽面板：抽屉占位 340px，给左侧留出预览区，避免取色时看不到实时效果
+  useEffect(() => {
+    const el = panelRef.current
+    if (!el) return
+    const shouldWiden = customizerOpen && mode !== 'embed' && !maximized
+    if (shouldWiden) {
+      if (el.getBoundingClientRect().width < 760) {
+        el.dataset.cwPrevWidth = el.style.width
+        el.style.width = '760px'
+      }
+    } else if (el.dataset.cwPrevWidth !== undefined) {
+      el.style.width = el.dataset.cwPrevWidth
+      delete el.dataset.cwPrevWidth
+    }
+  }, [customizerOpen, mode, maximized])
+
+  // 预设切换：记忆到 localStorage 并清空本地自定义（回到该预设的干净基准）
+  const handlePresetChange = (id: ThemeId) => {
+    setUserTheme(id)
+    setCustomConfig(null)
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, next)
+      localStorage.setItem(THEME_STORAGE_KEY, id)
+      localStorage.removeItem(THEME_CONFIG_STORAGE_KEY)
     } catch {
       // localStorage 不可用时仅本次会话生效
     }
+  }
+
+  // 自定义面板实时改动：更新本地配置并记忆（即时预览，跨刷新保留）
+  const handleThemeConfigChange = (next: ThemeConfig) => {
+    setCustomConfig(next)
+    try {
+      localStorage.setItem(THEME_CONFIG_STORAGE_KEY, JSON.stringify(next))
+    } catch {
+      // localStorage 不可用时仅本次会话生效
+    }
+  }
+
+  // 保存到后端（与分享 Token 映射）：仅接口明确成功才提示成功；失败保留可重试，本地配置已在改动时落地
+  const handleSaveTheme = async () => {
+    setSavingTheme(true)
+    const ok = await saveShareTheme(cfg, fullThemeConfig)
+    setSavingTheme(false)
+    if (ok) antdMessage.success('主题已保存')
+    else antdMessage.error('云端保存失败，已保留在本地，可重试')
+  }
+
+  // 恢复默认：清空本地自定义，回到预设 + 接口下发基准
+  const handleResetTheme = () => {
+    setCustomConfig(null)
+    try {
+      localStorage.removeItem(THEME_CONFIG_STORAGE_KEY)
+    } catch {
+      // localStorage 不可用时忽略
+    }
+    antdMessage.success('已恢复默认外观')
   }
 
   // 放大：快照当前 inline 样式后按视口百分比留边铺展（不占满全屏，保留圆角）；还原：恢复快照（保留拖拽/resize 自定义的位置尺寸）
@@ -1370,7 +1481,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     </div>
   )
 
-  // 工具弹窗内容（同主对话「更多」菜单：查看语义 + 技能/MCP hover 右飞层）
+  // 工具弹窗内容：保留原右侧 hover 飞层格式；二级飞层挂到 body，脱离悬浮窗 overflow 裁切
   const toolsPopoverContent = (
     <div className="uni-popup uni-popup--menu">
       <div
@@ -1390,8 +1501,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
         trigger="hover"
         placement="rightTop"
         arrow={false}
-        overlayClassName="uni-popover"
-        getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+        overlayClassName={`uni-popover abi-cw-tool-flyout abi-cw-tool-flyout-${toolFlyoutSize}`}
+        getPopupContainer={() => panelRef.current?.parentElement ?? document.body}
       >
         <div className="uni-popup-item">
           <ToolOutlined className="uni-icon" />
@@ -1405,8 +1516,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
         trigger="hover"
         placement="rightTop"
         arrow={false}
-        overlayClassName="uni-popover"
-        getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
+        overlayClassName={`uni-popover abi-cw-tool-flyout abi-cw-tool-flyout-${toolFlyoutSize}`}
+        getPopupContainer={() => panelRef.current?.parentElement ?? document.body}
       >
         <div className="uni-popup-item">
           <ApiOutlined className="uni-icon" />
@@ -1422,7 +1533,8 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const recList = info?.recQuestions ?? []
 
   return (
-    <div className={`abi-cw-root ${mode === 'float' ? 'abi-cw-float' : mode === 'embed' ? 'abi-cw-embed' : 'abi-cw-page'}`} data-cw-theme={effectiveTheme} style={resolveThemeStyle(effectiveTheme)}>
+    <ChartThemeContext.Provider value={chartTheme}>
+    <div className={`abi-cw-root ${mode === 'float' ? 'abi-cw-float' : mode === 'embed' ? 'abi-cw-embed' : 'abi-cw-page'}`} data-cw-theme={effectiveTheme} style={rootStyle}>
       <div className="abi-cw-panel" ref={panelRef}>
         {/* 四边拖拽改大小把手（放大态隐藏；embed 直嵌形态由宿主控制尺寸，隐藏把手） */}
         {!maximized && mode !== 'embed' && (
@@ -1442,11 +1554,11 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
             <button
               type="button"
               className="abi-cw-action-btn"
-              onClick={handleToggleTheme}
-              aria-label="切换主题"
-              title={effectiveTheme === 'dark' ? '切换为蓝色系' : '切换为黑色系'}
+              onClick={() => setCustomizerOpen(true)}
+              aria-label="外观自定义"
+              title="外观自定义"
             >
-              {effectiveTheme === 'dark' ? IconSun : IconMoon}
+              {IconCustomize}
             </button>
           )}
           {mode !== 'embed' && (
@@ -1565,8 +1677,15 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               const displayText = m.streaming ? '' : stripHtmlTags(m.content || '')
               return (
                 <div key={`ai-${i}`} className="abi-cw-msg abi-cw-msg-ai">
-                  {/* 白卡容器类与主对话 MessageList bodyCard 保持一致 */}
-                  <div className="w-full rounded-[1.25rem] border border-[#e9edf4] bg-white px-[0.875rem] pt-[0.75rem] shadow-[0_0.125rem_0.5rem_rgba(15,23,42,0.04)]">
+                  {/* 白卡容器类与主对话 MessageList bodyCard 保持一致；底色/边框读主题变量，支持预设与自定义 */}
+                  <div
+                    className="w-full rounded-[1.25rem] px-[0.875rem] pt-[0.75rem]"
+                    style={{
+                      border: '1px solid var(--cw-border, #e9edf4)',
+                      background: 'var(--cw-card-bg, #ffffff)',
+                      boxShadow: '0 0.125rem 0.5rem rgba(15,23,42,0.04)',
+                    }}
+                  >
                     {/* 信息条：分组 + 数据语义（同主对话 MessageList 信息条样式，分享场景不可点 schema） */}
                     {(m.semanticGroup || m.semanticName) && (
                       <div className="abi-cw-infobar">
@@ -1605,7 +1724,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                         <div className="section-header mt-2 pt-3 pb-3 px-2.5">
                           <span className="chart-header-title font-semibold text-[#2d2d2d]">描述分析</span>
                         </div>
-                        <div className={`${convStyles['markdown-content']} abi-cw-desc text-left px-2.5`} style={{ width: '100%', fontSize: '13px', lineHeight: 1.75 }}>
+                        <div className={`${convStyles['markdown-content']} abi-cw-desc text-left px-2.5`} style={{ width: '100%', fontSize: 'calc(13px * var(--cw-font-scale, 1))', lineHeight: 1.75 }}>
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayText}</ReactMarkdown>
                         </div>
                       </>
@@ -1628,7 +1747,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                     {/* 预测分析（chat_with_predict）：与主对话 ViewEle 一致，渲染预测图表 */}
                     {!m.streaming && m.chart?.chatMode === 'chat_with_predict' && m.chart?.raw && (
                       <div className="flex" style={{ width: '100%' }}>
-                        <div className="rounded bg-white px-2.5" style={{ width: '100%' }}>
+                        <div className="rounded px-2.5" style={{ width: '100%', background: 'var(--cw-block-bg, #ffffff)' }}>
                           <PredictionAnalysis data={m.chart.raw} compact />
                         </div>
                       </div>
@@ -1826,8 +1945,23 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           onClose={() => setSchemaDrawerOpen(false)}
           getContainer={() => panelRef.current as HTMLElement}
         />
+
+        {/* 外观自定义抽屉：挂载到面板内，实时预览背景/标题栏/字体/图表 */}
+        <ThemeCustomizer
+          open={customizerOpen}
+          value={fullThemeConfig}
+          preset={effectiveTheme}
+          saving={savingTheme}
+          getContainer={() => panelRef.current as HTMLElement}
+          onChange={handleThemeConfigChange}
+          onPresetChange={handlePresetChange}
+          onSave={handleSaveTheme}
+          onReset={handleResetTheme}
+          onClose={() => setCustomizerOpen(false)}
+        />
       </div>
     </div>
+    </ChartThemeContext.Provider>
   )
 }
 

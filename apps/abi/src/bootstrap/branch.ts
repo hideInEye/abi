@@ -3,8 +3,9 @@ export type AbiBootstrapBranch =
   | { kind: 'chat-share'; shareCode: string }
   | { kind: 'dashboard-share'; targetUrl: string }
 
-const CHAT_SHARE_HASH = /^#\/?dashboard_share_page\/([^/?#]+)/i
-const DASHBOARD_SHARE_PATH = /\/(dashboard-share-page|dashboard_share_page)\/[^/?#]+/i
+const CHAT_SHARE_HASH = /^#\/?((?:share_url)|(?:dashboard_share_page))\/([^/?#]+)/i
+// 新路径 share_url（助手与大屏共用）；旧 dashboard-share-page / dashboard_share_page 过渡兼容，后端切换完成后收窄
+const DASHBOARD_SHARE_PATH = /\/(?:share_url|dashboard-share-page|dashboard_share_page)\/[^/?#]+/i
 
 export function resolveAbiBootstrapBranch(href: string, poweredByQiankun: boolean): AbiBootstrapBranch {
   if (poweredByQiankun) return { kind: 'app' }
@@ -14,7 +15,7 @@ export function resolveAbiBootstrapBranch(href: string, poweredByQiankun: boolea
   if (chatShare) {
     return {
       kind: 'chat-share',
-      shareCode: chatShare[1],
+      shareCode: chatShare[2],
     }
   }
 

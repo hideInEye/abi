@@ -1,32 +1,14 @@
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
-import { ViewControls } from '@/components/ViewControls';
-import type { ColumnOption } from '@/components/ViewControls';
 import { getLoginInforListApi } from '@/service/api/log';
-
-// Column definitions for picker
-const ALL_COLUMNS: ColumnOption[] = [
-  { key: 'userName', label: '用户名称', visible: true },
-  { key: 'ipaddr', label: '登录地址', visible: true },
-  { key: 'status', label: '登录状态', visible: true },
-  { key: 'msg', label: '消息', visible: true },
-  { key: 'accessTime', label: '访问时间', visible: true },
-];
 
 export function Component() {
   // Inline search state
   const [searchUserName, setSearchUserName] = useState('');
   const [searchStatus, setSearchStatus] = useState<string | undefined>(undefined);
   const [dateRange, setDateRange] = useState<any>(null);
-  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
   const [jumpValue, setJumpValue] = useState('');
-
-  const handleColumnToggle = (key: string, visible: boolean) => {
-    setColumnOptions(prev => prev.map(c => (c.key === key ? { ...c, visible } : c)));
-  };
-
-  const visibleKeys = useMemo(() => new Set(columnOptions.filter(c => c.visible).map(c => c.key)), [columnOptions]);
 
   const statusOptions = [
     { label: '成功', value: '0' },
@@ -96,13 +78,6 @@ export function Component() {
       ] as any,
     rowKey: 'infoId'
   } as any);
-
-  // Filter columns by visibility
-  const filteredColumns = useMemo(() => {
-    const cols = tableProps.columns as any[];
-    if (!cols) return cols;
-    return cols.filter((col: any) => visibleKeys.has(col.key));
-  }, [tableProps.columns, visibleKeys]);
 
   const handleSearch = () => {
     updateSearchParams({
@@ -225,15 +200,6 @@ export function Component() {
 
       {/* Data Area */}
       <section className="abi-data-area">
-        {/* Toolbar */}
-        <div className="abi-toolbar">
-          <ViewControls
-            hideViewToggle
-            columns={columnOptions}
-            onColumnToggle={handleColumnToggle}
-          />
-        </div>
-
         {/* Table + Pagination */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <div
@@ -247,7 +213,7 @@ export function Component() {
           >
             <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
               <ATable
-                columns={filteredColumns as any}
+                columns={tableProps.columns as any}
                 dataSource={(data as any[]) || []}
                 loading={tableProps.loading}
                 pagination={false}
