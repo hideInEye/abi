@@ -264,6 +264,7 @@ export const TagModal: React.FC<TagModalProps> = ({ editingGroup, isModalOpen, o
           getSchemaOptions={setSchemaOptions}
           groupFieldName="semanticsGroupId"
           isEdit={Boolean(editingGroup)}
+          label="数据语义"
           type="shema"
         />
         <TagInput />

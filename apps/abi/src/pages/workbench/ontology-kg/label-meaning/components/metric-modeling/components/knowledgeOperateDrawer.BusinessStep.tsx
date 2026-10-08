@@ -18,6 +18,7 @@ import { KnowledgePrecomputeConfig } from './knowledgeOperateDrawer.PrecomputeCo
 
 interface Props {
   readonly atomicTechnicalSection?: React.ReactNode
+  readonly businessDefinitionRequired?: boolean
   readonly form: FormInstance<KnowledgeFormValues>
   readonly indicatorNameDisabled?: boolean
   readonly indicatorTypeDisabled?: boolean
@@ -29,6 +30,7 @@ interface Props {
 
 export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
   atomicTechnicalSection,
+  businessDefinitionRequired = true,
   form,
   indicatorNameDisabled,
   indicatorTypeDisabled,
@@ -176,9 +178,9 @@ export const KnowledgeOperateBusinessStep: React.FC<Props> = ({
         </AForm.Item>
 
         <AForm.Item
-          required
           label="业务口径"
           name="businessDefinition"
+          required={businessDefinitionRequired}
           rules={[{ validator: validateBusinessRemark }]}
         >
           <AInput.TextArea
