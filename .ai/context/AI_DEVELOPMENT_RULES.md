@@ -30,7 +30,7 @@
 
 ## 完成后
 
-1. 生成 run log。
+1. 在 `.ai/runs/<date>-<task-name>/` 生成本地 run log。整个目录已加入 `.gitignore`，运行记录只在本机查看，不提交或通过 `git add -f` 强制加入版本控制。
 2. 汇总修改文件、测试结果、风险、未解决事项。
 3. 判断是否更新 `.ai/context`、`.ai/prompts`、`.ai/agents`、`.ai/skills`、`.ai/mcp`、`.ai/checklists`、`.ai/decisions`。
 4. 不要声称未验证内容已经通过。

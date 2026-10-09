@@ -69,17 +69,17 @@ const GlobalSider: FC = memo(() => {
     const spaceLocalIcon = spaceRoute?.meta?.localIcon as string | undefined
     const renderSpaceIcon = () => {
       if (spaceLocalIcon) {
-        return <SvgIcon localIcon={spaceLocalIcon} className="abi-user-dropdown-icon-new" style={{ fontSize: 18 }} />
+        return <SvgIcon localIcon={spaceLocalIcon}  style={{ fontSize: 18 }} />
       }
       if (spaceIconName) {
         const AntdIcon = getOutlinedIcon(spaceIconName)
         if (AntdIcon) {
-          return <AntdIcon className="abi-user-dropdown-icon-new" />
+          return <AntdIcon  />
         }
         // 兼容 iconify 图标名（如 mdi:inbox-outline）
-        return <SvgIcon icon={spaceIconName} className="abi-user-dropdown-icon-new" style={{ fontSize: 18 }} />
+        return <SvgIcon icon={spaceIconName}  style={{ fontSize: 18 }} />
       }
-      return <TeamOutlined className="abi-user-dropdown-icon-new" />
+      return <TeamOutlined  />
     }
     
     const items: any[] = [
@@ -87,7 +87,7 @@ const GlobalSider: FC = memo(() => {
         key: 'user-header',
         label: (
           <div className="abi-user-dropdown-header-new">
-            <UserOutlined className="abi-user-dropdown-icon-new" />
+            <UserOutlined  />
             <span className="abi-user-dropdown-label-new">{userName || '用户'}</span>
           </div>
         ),
@@ -102,8 +102,8 @@ const GlobalSider: FC = memo(() => {
         key: 'manage_user',
         label: (
           <div className="abi-user-dropdown-item-new">
-            <SettingOutlined className="abi-user-dropdown-icon-new" />
-            <span className="abi-user-dropdown-label-new">系统管理</span>
+            <SettingOutlined  />
+            <span>系统管理</span>
           </div>
         ),
         className: 'abi-user-dropdown-menu-item',
@@ -113,7 +113,7 @@ const GlobalSider: FC = memo(() => {
         label: (
           <div className="abi-user-dropdown-item-new">
             {renderSpaceIcon()}
-            <span className="abi-user-dropdown-label-new">空间管理</span>
+            <span>空间管理</span>
           </div>
         ),
         className: 'abi-user-dropdown-menu-item',
@@ -122,8 +122,8 @@ const GlobalSider: FC = memo(() => {
         key: 'systems_data-dictionary',
         label: (
           <div className="abi-user-dropdown-item-new">
-            <BookOutlined className="abi-user-dropdown-icon-new" />
-            <span className="abi-user-dropdown-label-new">系统字典</span>
+            <BookOutlined  />
+            <span>系统字典</span>
           </div>
         ),
         className: 'abi-user-dropdown-menu-item',
@@ -135,8 +135,8 @@ const GlobalSider: FC = memo(() => {
         key: 'log',
         label: (
           <div className="abi-user-dropdown-item-new">
-            <ClockCircleOutlined className="abi-user-dropdown-icon-new" />
-            <span className="abi-user-dropdown-label-new">日志管理</span>
+            <ClockCircleOutlined  />
+            <span>日志管理</span>
           </div>
         ),
         className: 'abi-user-dropdown-menu-item',
@@ -147,9 +147,9 @@ const GlobalSider: FC = memo(() => {
     items.push({
       key: 'logout',
       label: (
-        <div className="abi-user-dropdown-item-new abi-user-dropdown-danger-new">
-          <LogoutOutlined className="abi-user-dropdown-icon-new" />
-          <span className="abi-user-dropdown-label-new">退出登录</span>
+        <div className="abi-user-dropdown-item-new">
+          <LogoutOutlined  />
+          <span>退出登录</span>
         </div>
       ),
       className: 'abi-user-dropdown-menu-item',
