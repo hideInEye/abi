@@ -180,8 +180,6 @@
     align-items: center;
     gap: 12px;
     padding: 16px 18px;
-    background: rgba(91, 124, 247, 0.04);
-    border-bottom: 1px solid rgba(130, 140, 200, 0.12);
   }
   
   .abi-user-dropdown-icon-new {
@@ -216,7 +214,28 @@
 .abi-user-dropdown-menu-item {
   padding: 0 !important;
   margin: 0 !important;
+  color: #3e5068 !important;
   
+  &:hover {
+      background: rgba(91, 124, 247, 0.08) !important;
+      color: #1a2744 !important;
+  }
+
+  .abi-user-dropdown-danger-new {
+    // color: red !important;
+    // &:hover {
+    //   color: #1a2744 !important;
+    // }
+  // .abi-user-dropdown-icon-new {
+  //   color: #1a2744 !important;
+  // }
+  // .abi-user-dropdown-label-new {
+  //   color: #3e5068;
+  //   &:hover {
+  //     color: #1a2744 !important;
+  //   }
+  // }
+}
   .abi-user-dropdown-item-new {
     display: flex;
     align-items: center;
@@ -225,14 +244,8 @@
     cursor: pointer;
     transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 14px;
-    color: #3e5068;
     font-weight: 500;
     letter-spacing: 0;
-    
-    &:hover {
-      background: rgba(91, 124, 247, 0.08);
-      color: #1a2744;
-    }
   }
   
   .abi-user-dropdown-icon-new {
@@ -258,22 +271,7 @@
 }
 
 /* Danger item (logout) — color unified to black */
-.abi-user-dropdown-danger-new {
-  color: #1a2744 !important;
-  
-  .abi-user-dropdown-icon-new {
-    color: #1a2744 !important;
-  }
-  
-  &:hover {
-    background: rgba(91, 124, 247, 0.08) !important;
-    color: #1a2744 !important;
-    
-    .abi-user-dropdown-icon-new {
-      color: #1a2744 !important;
-    }
-  }
-}
+
 
 /* ── Legacy User Dropdown Styles (kept for backward compatibility) ── */
 .abi-user-dropdown-item {
