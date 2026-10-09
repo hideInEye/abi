@@ -438,11 +438,11 @@ function startProjectListPreload() {
 function DashboardRouteSkeleton() {
     return (
         <div className="dashboard-route-skeleton" role="status" aria-label="页面加载中">
-            <div className="dashboard-route-skeleton__sidebar"/>
+            {/* <div className="dashboard-route-skeleton__sidebar"/>
             <div className="dashboard-route-skeleton__content">
                 <div className="dashboard-route-skeleton__header"/>
                 <div className="dashboard-route-skeleton__cards"/>
-            </div>
+            </div> */}
         </div>
     );
 }

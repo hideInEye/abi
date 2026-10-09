@@ -212,42 +212,6 @@
         </div>
       </div>
     </div>
-    <script>
-      (() => {
-        const path = window.location.pathname.replace(/\/+$/, "") || "/";
-        const shell = document.getElementById("abi-startup-shell");
-        const main = shell?.querySelector(".abi-startup-shell__main");
-        const title = document.getElementById("abi-startup-title");
-        const detail = document.getElementById("abi-startup-detail");
-        if (!shell || !main) return;
-
-        let route = "";
-        let heading = "";
-        let description = "";
-        if (path.endsWith("/workbench/screen-manage/abi-dashboard")) {
-          route = "embedded-dashboard";
-          heading = "数据大屏";
-          description = "正在加载数据大屏，应用资源与运行环境正在准备。";
-        } else if (path === "/home" || path.endsWith("/home")) {
-          route = "home";
-          heading = "智能对话";
-          description = "支持交互分析、自主智能洞察、报告生成";
-        } else if (path === "/login" || path.endsWith("/login")) {
-          route = "login";
-          heading = "欢迎体验「芯智ABI」";
-          description = "企业级数智化决策开放平台，为您提供自然语言交互、智能数据分析与可信决策支持。";
-        }
-
-        if (!route) return;
-        shell.dataset.route = route;
-        main.insertAdjacentHTML(
-          "afterbegin",
-          `<section class="abi-startup-shell__route-copy" role="status"><h1>${heading}</h1><p>${description}</p></section>`,
-        );
-        if (title) title.textContent = route === "embedded-dashboard" ? "正在准备大屏应用..." : "正在准备当前页面...";
-        if (detail) detail.textContent = "核心资源加载完成后将自动进入";
-      })();
-    </script>
     <script
       type="module"
       src="/src/main.tsx"
