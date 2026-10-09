@@ -10,7 +10,7 @@
 - `skills/`：可执行 SOP，覆盖启动项目、补测试、调试、回归、更新 AI 系统等常见动作。
 - `mcp/`：按当前项目技术栈推荐的 MCP 能力和使用规则。
 - `requirements/`：需求入口和规格模板。开发前必须先填写 `CURRENT_REQUIREMENT.md`。
-- `runs/`：每轮开发记录模板和后续实际 run log。
+- `runs/`：每轮开发记录模板和实际 run log，仅在本机生成、查看；整个目录由 Git 忽略，不加入版本控制。
 - `decisions/`：架构决策记录。
 - `checklists/`：编码前、提交前、完成前、测试和知识更新检查清单。
 
