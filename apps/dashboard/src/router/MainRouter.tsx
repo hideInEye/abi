@@ -465,11 +465,16 @@ const routeDefinitions: RouteObject[] = [
         element: <DesignerViewPage/>
     },
     {
+        // 后端分享接口统一返回 share_url/{code}（助手与大屏共用）
+        path: '/share_url/:shareCode',
+        element: <ShareViewPage/>
+    },
+    {
+        // TODO: 以下为旧分享路径过渡兼容，后端切换为 share_url 后删除
         path: '/dashboard-share-page/:shareCode',
         element: <ShareViewPage/>
     },
     {
-        // 后端分享接口统一返回下划线路径，别名路由兼容
         path: '/dashboard_share_page/:shareCode',
         element: <ShareViewPage/>
     },

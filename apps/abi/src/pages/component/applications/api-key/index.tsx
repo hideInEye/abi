@@ -26,6 +26,7 @@ import { useAppSelector } from '@/hooks/business/useStore'
 
 import { ApiKeyDrawer } from './components/ApiKeyDrawer'
 import { ApiKeyTable } from './components/ApiKeyTable'
+import { ShareAssistantDrawer } from './components/ShareAssistantDrawer'
 import type { ApiKeyFormValues, ApiKeyItem, ApiKeyQueryValues, DrawerMode } from './types'
 
 const PAGE_SIZE = 12
@@ -173,6 +174,8 @@ export function Component() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('create')
   const [currentRecord, setCurrentRecord] = useState<ApiKeyItem | null>(null)
+  // 分享助手抽屉：当前触发入口的 API Key（为空时关闭）
+  const [shareAssistantRecord, setShareAssistantRecord] = useState<ApiKeyItem | null>(null)
   const [submitLoading, setSubmitLoading] = useState(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [spaceOptions, setSpaceOptions] = useState<Array<{ label: string; value: number }>>([])
@@ -245,7 +248,7 @@ export function Component() {
   useEffect(() => {
     let cancelled = false
     spaceList({ isAsc: 'asc', orderByColumn: 'createTime', pageNum: 1, pageSize: 200 })
-      .then((res) => {
+      .then((res: any) => {
         if (cancelled) return
         const payload = (res as any).response?.data || {}
         const rows = (payload.rows || []) as Array<{ spaceId: number; spaceName?: string }>
@@ -532,6 +535,7 @@ export function Component() {
           onPageChange={setCurrent}
           onResetSk={handleResetSk}
           onSelectedRowKeysChange={setSelectedRowKeys}
+          onShareAssistant={setShareAssistantRecord}
           onToggleStatus={handleToggleStatus}
           onView={openView}
         />
@@ -546,6 +550,12 @@ export function Component() {
         submitLoading={submitLoading}
         onClose={closeDrawer}
         onSubmit={handleSubmit}
+      />
+
+      <ShareAssistantDrawer
+        apiKey={shareAssistantRecord}
+        open={Boolean(shareAssistantRecord)}
+        onClose={() => setShareAssistantRecord(null)}
       />
     </div>
   )

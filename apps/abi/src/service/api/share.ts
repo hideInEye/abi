@@ -26,6 +26,8 @@ export function shareProjectApi(data: {
   spaceId: number | string;
   type: 'react' | 'workflow' | 'dashboard';
   sharePasswordFlag?: boolean;
+  /** 绑定的 API Key（accessKey 数组），分享链接访问凭证 */
+  apiKeys?: string[];
   /** 过期天数（1/7/30） */
   expirationDays?: number;
   /** 自定义过期时间，格式 "YYYY-MM-DD HH:mm:ss" */

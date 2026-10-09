@@ -518,12 +518,15 @@
   color: var(--cw-text-muted, #8c8c8c);
 }
 
-/* 语义选择器与模式/思考/工具贴左排布，发送/停止靠右（margin-left:auto） */
+/* 语义选择器与模式/思考/工具贴左排布，发送/停止靠右（margin-left:auto）；
+   窄面板允许换行，避免超出按钮被面板圆角硬裁切 */
 .abi-cw-input-toolbar {
   display: flex;
   align-items: center;
   padding: 4px 10px 8px;
   gap: 8px;
+  row-gap: 4px;
+  flex-wrap: wrap;
 }
 
 /* ── 数据语义 selector（对齐大屏 sem-selector） ── */
@@ -979,6 +982,32 @@
   color: #5b7cf7;
   font-size: 12px;
   font-weight: 700;
+}
+
+/* ── 窄面板自适应（JS 按宽度阈值加 abi-cw-narrow / abi-cw-narrow-xs）── 收敛选项列表宽度，保证窄悬浮窗内完整可见 */
+.abi-cw-narrow .abi-cw-sem-tree {
+  width: 200px;
+  max-height: 220px;
+}
+
+.abi-cw-narrow-xs .abi-cw-sem-tree {
+  width: 160px;
+  max-height: 200px;
+}
+
+/* 二级飞层挂到 body，保留原右侧级联格式，并用透明左内边距连接 hover 触发区 */
+.abi-cw-tool-flyout {
+  z-index: 2147483002 !important;
+  padding-left: 8px;
+}
+
+/* body 飞层不再受面板 overflow 裁切；按尺寸类限高以适应矮悬浮窗 */
+.abi-cw-tool-flyout .uni-popup-list {
+  max-height: 180px;
+}
+
+.abi-cw-tool-flyout-xs .uni-popup-list {
+  max-height: 140px;
 }
 
 /* 面板内抽屉（SchemaFieldsModal getContainer 指向面板）：绝对定位铺满面板，不随面板圆角溢出 */

@@ -22,14 +22,14 @@
   max-width: 80%;
   margin-right: 8px;
   overflow-wrap: break-word;
-  border: 1px solid rgba(91, 124, 247, 0.22);
+  border: 1px solid var(--cw-bubble-border, rgba(91, 124, 247, 0.22));
   border-radius: 16px 16px 4px 16px;
-  background: linear-gradient(135deg, rgba(91, 124, 247, 0.08), rgba(139, 92, 246, 0.06));
+  background: var(--cw-bubble-bg, linear-gradient(135deg, rgba(91, 124, 247, 0.08), rgba(139, 92, 246, 0.06)));
   box-shadow:
     0 2px 12px rgba(91, 124, 247, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  color: var(--ink, #25304d);
-  font-size: 13px;
+  color: var(--cw-bubble-text, var(--cw-text, var(--ink, #25304d)));
+  font-size: calc(13px * var(--cw-font-scale, 1));
   line-height: 1.6;
   padding: 12px 16px;
   white-space: pre-wrap;
@@ -39,11 +39,11 @@
 /* ── 单列卡片（科技感增强） ── */
 .card {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.7));
   border-radius: 18px;
   /* 不用 backdrop-filter：毛玻璃会让卡内任何重绘都触发整块区域重新采样模糊（绘制耗时大头），
      浅色底上提高不透明度视觉几乎等价 */
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--glass-strong, rgba(255, 255, 255, 0.9));
   box-shadow:
     0 0 0 1px rgba(91, 124, 247, 0.06),
     0 8px 32px rgba(15, 23, 42, 0.06),
@@ -156,13 +156,13 @@
 .statusTagCompleted {
   background: rgba(16, 185, 129, 0.08);
   border-color: rgba(16, 185, 129, 0.25);
-  color: #0d9468;
+  color: var(--cw-tag-green, #0d9468);
 }
 
 .statusTagFailed {
   background: rgba(239, 68, 68, 0.08);
   border-color: rgba(239, 68, 68, 0.25);
-  color: #dc2626;
+  color: var(--cw-tag-red, #dc2626);
 }
 
 .statusTagCancelled {
@@ -174,7 +174,7 @@
 .statusTagSuccess {
   background: rgba(16, 185, 129, 0.08);
   border-color: rgba(16, 185, 129, 0.25);
-  color: #0d9468;
+  color: var(--cw-tag-green, #0d9468);
 }
 
 .cardMeta {
@@ -272,7 +272,7 @@
   border-right: 1px solid rgba(91, 124, 247, 0.08);
   background:
     linear-gradient(180deg, rgba(91, 124, 247, 0.02) 0%, transparent 30%),
-    rgba(255, 255, 255, 0.34);
+    var(--cw-block-zebra, rgba(255, 255, 255, 0.34));
   position: relative;
 }
 
@@ -326,7 +326,7 @@
   background:
     radial-gradient(circle at 100% 0%, rgba(91, 124, 247, 0.06), transparent 40%),
     radial-gradient(circle at 0% 100%, rgba(139, 92, 246, 0.04), transparent 40%),
-    rgba(255, 255, 255, 0.38);
+    var(--cw-block-zebra, rgba(255, 255, 255, 0.38));
   position: relative;
 }
 
@@ -427,7 +427,7 @@
   border-radius: 14px;
   background:
     radial-gradient(circle at center, rgba(91, 124, 247, 0.03) 0%, transparent 70%),
-    rgba(255, 255, 255, 0.45);
+    var(--cw-empty-bg, rgba(255, 255, 255, 0.45));
   color: var(--ink-3, #9aa3b5);
   font-size: 13px;
   line-height: 1.7;
@@ -544,7 +544,7 @@
   left: 0;
   right: 0;
   height: 2.5em;
-  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.88));
+  background: linear-gradient(to bottom, transparent, var(--cw-think-fade, rgba(255, 255, 255, 0.88)));
   pointer-events: none;
 }
 
@@ -720,7 +720,7 @@
   border-top: 1px solid rgba(91, 124, 247, 0.08);
   background:
     linear-gradient(0deg, rgba(91, 124, 247, 0.02) 0%, transparent 100%),
-    rgba(255, 255, 255, 0.3);
+    var(--cw-skill-band-bg, rgba(255, 255, 255, 0.3));
   padding: 12px 16px 14px;
   position: relative;
   /* 仅展示2条技能行高度，超出隐藏滚动条 */
@@ -876,7 +876,7 @@
   flex-direction: column;
   overflow: hidden;
   /* 同 .card：去毛玻璃，避免面板内重绘触发整块重新采样模糊 */
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--glass-strong, rgba(255, 255, 255, 0.92));
   position: relative;
 }
 
@@ -907,7 +907,7 @@
   border-bottom: 1px solid rgba(91, 124, 247, 0.1);
   background:
     linear-gradient(180deg, rgba(91, 124, 247, 0.03) 0%, transparent 100%),
-    rgba(255, 255, 255, 0.9);
+    var(--glass, rgba(255, 255, 255, 0.9));
   padding: 12px 16px;
 }
 
@@ -1026,8 +1026,8 @@
 .stepResult {
   border: 1px solid rgba(91, 124, 247, 0.12);
   border-radius: 12px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(91, 124, 247, 0.02) 100%);
+  background: var(--cw-step-bg,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(91, 124, 247, 0.02) 100%));
   overflow: hidden;
   transition: border-color 0.2s ease;
 }
@@ -1072,8 +1072,8 @@
 
 .summaryBlock {
   border-radius: 12px;
-  background:
-    linear-gradient(135deg, rgba(245, 247, 255, 0.7) 0%, rgba(91, 124, 247, 0.03) 100%);
+  background: var(--cw-step-bg,
+    linear-gradient(135deg, rgba(245, 247, 255, 0.7) 0%, rgba(91, 124, 247, 0.03) 100%));
   color: var(--ink-2, #4a5468);
   font-size: 13px;
   line-height: 1.75;
@@ -1135,7 +1135,7 @@
   border: 1px solid rgba(91, 124, 247, 0.14);
   border-radius: 10px;
   margin: 8px 0;
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--cw-md-table-bg, rgba(255, 255, 255, 0.4));
 }
 
 .dataTable {
@@ -1310,9 +1310,9 @@
 /* ========== 千问风格代码块（ExploreCodeBlock） ========== */
 .codeBlock {
   overflow: hidden;
-  border: 1px solid rgba(91, 124, 247, 0.12);
+  border: 1px solid var(--cw-block-border, rgba(91, 124, 247, 0.12));
   border-radius: 10px;
-  background: #fff;
+  background: var(--cw-block-bg, #fff);
 }
 
 .codeBlockHeader {
@@ -1321,12 +1321,12 @@
   justify-content: space-between;
   gap: 8px;
   padding: 5px 10px 5px 12px;
-  border-bottom: 1px solid rgba(91, 124, 247, 0.1);
-  background: linear-gradient(135deg, rgba(26, 39, 68, 0.05) 0%, rgba(91, 124, 247, 0.04) 100%);
+  border-bottom: 1px solid var(--cw-block-border, rgba(91, 124, 247, 0.1));
+  background: var(--cw-block-head-bg, linear-gradient(135deg, rgba(26, 39, 68, 0.05) 0%, rgba(91, 124, 247, 0.04) 100%));
 }
 
 .codeBlockLang {
-  color: var(--ink-2, #4f5c76);
+  color: var(--cw-block-muted, var(--ink-2, #4f5c76));
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 12px;
   line-height: 20px;

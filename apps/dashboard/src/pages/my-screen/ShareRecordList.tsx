@@ -4,6 +4,7 @@ import {LeftOutlined, RightOutlined} from '@ant-design/icons';
 import {Monitor} from '@icon-park/react';
 import baseApi from '../../api/BaseApi.ts';
 import {globalMessage} from '../../framework/message/GlobalMessage.tsx';
+import {normalizeShareUrl} from '../../utils/ShareViewUtil.ts';
 import '../home/project-list/ProjectList.less';
 
 /** 分享记录行数据（字段做兼容映射，后端字段缺失时兜底展示） */
@@ -53,7 +54,8 @@ function mapShareRecord(item: any): ShareRecordItem {
         // 列表接口不含密码，shareCode 用于复制时单查详情；列表缺 shareCode 时从分享链接尾段兜底
         shareCode: item.shareCode || String(item.shareUrl || '').split('/').pop() || '',
         name: item.projectName || item.appName || item.name || '-',
-        shareUrl: item.shareUrl || '',
+        // 后端旧路径 dashboard_share_page 过渡期直接替换为新路径 share_url
+        shareUrl: normalizeShareUrl(item.shareUrl),
         shareTime: fmtTime(item.createTime || item.shareTime),
         expiration: item.expirationDate ? fmtTime(item.expirationDate) : '永久',
         statusLabel: status.label,
@@ -152,7 +154,7 @@ const ShareRecordList = memo(() => {
             globalMessage.messageApi?.error('该记录暂无分享链接');
             return;
         }
-        const shareUrl = r.shareUrl.replace('/#/', '/').replace('/dr/', '/dashboard-share-page/');
+        const shareUrl = normalizeShareUrl(r.shareUrl.replace('/#/', '/').replace('/dr/', '/share_url/'));
         let password = '';
         if (r.shareCode) {
             const pwd = await baseApi.getSharePassword(r.shareCode);

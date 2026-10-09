@@ -4,6 +4,7 @@ import type {Dayjs} from 'dayjs';
 import {useState} from 'react';
 
 import baseApi from '../../api/BaseApi.ts';
+import {normalizeShareUrl} from '../../utils/ShareViewUtil.ts';
 
 interface MyScreenShareDialogProps {
     onClose: () => void;
@@ -35,7 +36,8 @@ export default function MyScreenShareDialog({onClose, open, projectId}: MyScreen
                 expirationDateStr,
             );
             if (response?.shareUrl) {
-                setShareLink(response.shareUrl.replace('/#/', '/').replace('/dr/', '/dashboard-share-page/'));
+                // 将 /#/dr/xxx 格式转为 /share_url/xxx（助手与大屏共用新路径），兼容 history 路由；旧 dashboard_share_page 路径过渡期直接替换
+                setShareLink(normalizeShareUrl(response.shareUrl.replace('/#/', '/').replace('/dr/', '/share_url/')));
                 setSharePassword(response.sharePassword ?? null);
             }
         } finally {

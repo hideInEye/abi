@@ -65,7 +65,10 @@ type SectionKey = 'model' | 'opening' | 'questions' | 'semantic' | 'mcp' | 'skil
 
 const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId: propsGroupId, readOnly = false, onClose }) => {
   const spaceId = useAppSelector(getSpaceId)
-  const isEdit = !!agent?.id
+  // 新建保存成功后记录后端返回的 appId：抽屉就地转为编辑态，后续保存走更新、右侧调试对话可用
+  const [savedAppId, setSavedAppId] = useState<string | number | undefined>(undefined)
+  const currentAppId = savedAppId ?? agent?.id
+  const isEdit = !!currentAppId
   const [name, setName] = useState<string>('')
   const [editingName, setEditingName] = useState(false)
   // 助手图标 key（持久化到 app.icon），标题处图标选择器读写
@@ -81,8 +84,12 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [saving, setSaving] = useState<'draft' | 'create' | 'publish' | null>(null)
-  // 是否已保存草稿：新建助手在首次保存草稿前锁定右侧测试输入框，编辑已有助手默认解锁
-  const [draftSaved, setDraftSaved] = useState(false)
+  // 是否已保存过一次：新建首次保存前为 false（锁定右侧测试），编辑态详情加载完成或保存成功后为 true
+  const [hasSavedOnce, setHasSavedOnce] = useState(false)
+  // 已保存配置的指纹基线：与实时 formFingerprint 比对得出是否存在未保存修改
+  const [savedFingerprint, setSavedFingerprint] = useState('')
+  // 本次打开是否发生过保存：保存后就地停留不关闭，关闭时据此通知父组件刷新列表
+  const savedRef = useRef(false)
   // 当前助手最新版本 ID：编辑态由 loadDetail 回填，上线时用于调用 version/publish
   const [versionId, setVersionId] = useState<number | string | undefined>(undefined)
   // rec_query 推荐问题列表
@@ -152,13 +159,40 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     [selectedSkillIds],
   )
 
+  // 配置指纹：覆盖左侧助手画像与中栏全部可编辑项，任一改动都会改变指纹（Set 排序后序列化，与选择顺序无关）
+  const formFingerprint = useMemo(
+    () =>
+      JSON.stringify({
+        name,
+        prompt,
+        description,
+        iconKey: iconKey ?? '',
+        prologue,
+        recQuestions,
+        model: Array.from(selectedModelIds).sort(),
+        semantic: Array.from(selectedSemanticIds).sort(),
+        skill: Array.from(selectedSkillIds).sort(),
+        tool: Array.from(selectedToolIds).sort(),
+        enableDebug,
+        publicAccess,
+      }),
+    [name, prompt, description, iconKey, prologue, recQuestions, selectedModelIds, selectedSemanticIds, selectedSkillIds, selectedToolIds, enableDebug, publicAccess],
+  )
+  // 是否存在未保存修改：当前配置与已保存基线不一致
+  const isDirty = formFingerprint !== savedFingerprint
+  // 右侧调试对话是否可用：已保存过、当前无未保存修改、且已有 appId（对话接口依赖）
+  const canChat = hasSavedOnce && !isDirty && currentAppId != null
+
   const { items: debugItems, loading: debugLoading, handleSend, stopGenerating, resetSession } = useAssistantDebugChat({
-    appId: agent?.id,
+    appId: currentAppId,
     spaceId,
     schemaId: firstSchemaId,
     chatModelId: debugChatModelId,
     isDebug: enableDebug,
   })
+
+  // 生成中即使存在未保存修改也不禁用输入框，避免「停止生成」按钮失效；仅空闲态按 canChat 锁定
+  const chatLocked = !canChat && !debugLoading
 
   // 右侧展开的探索项：从实时列表按 id 取，保证流式更新时预览同步刷新
   const previewItem = useMemo(() => debugItems.find((it) => it.id === previewId) || null, [debugItems, previewId])
@@ -332,16 +366,22 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
 
   useEffect(() => {
     if (visible && agent?.id) {
-      // 编辑已有助手：视为已保存，右侧测试输入框默认解锁
-      setDraftSaved(true)
+      // 编辑已有助手：加载期间先锁定右侧测试，待详情加载完成后再解锁（见下方 loadingDetail effect）
+      setSavedAppId(undefined)
+      setHasSavedOnce(false)
+      setSavedFingerprint('')
+      savedRef.current = false
       // 切换/打开助手时清空上一助手遗留的调试对话与会话标识
       resetSession()
       setChatInput('')
       setPreviewId(null)
       loadDetail()
     } else if (visible && !agent?.id) {
-      // 新增模式：重置表单，未保存草稿前锁定右侧测试输入框
-      setDraftSaved(false)
+      // 新增模式：重置表单，未保存前锁定右侧测试输入框
+      setSavedAppId(undefined)
+      setHasSavedOnce(false)
+      setSavedFingerprint('')
+      savedRef.current = false
       resetSession()
       setChatInput('')
       setPreviewId(null)
@@ -362,6 +402,17 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       setVersionId(undefined)
     }
   }, [visible, agent])
+
+  // 编辑态详情加载完成（loadingDetail 由 true 归位）后，把当前配置记为已保存基线并解锁右侧测试
+  const prevLoadingRef = useRef(false)
+  useEffect(() => {
+    const wasLoading = prevLoadingRef.current
+    prevLoadingRef.current = loadingDetail
+    if (wasLoading && !loadingDetail && visible && isEdit) {
+      setSavedFingerprint(formFingerprint)
+      setHasSavedOnce(true)
+    }
+  }, [loadingDetail, visible, isEdit, formFingerprint])
 
   /** 构建提交数据 */
   function buildPayload(overrideStatus?: string) {
@@ -409,7 +460,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       // 名称必填：保存/上线前已通过 validateRequired 校验非空
       appName: name.trim(),
       spaceId,
-      groupId: String(isEdit ? (agent?.groupId ?? '0') : (propsGroupId ?? '0')),
+      groupId: String(agent?.groupId ?? propsGroupId ?? '0'),
       description,
       icon: iconKey,
       appPrompt: prompt,
@@ -425,8 +476,8 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       chatModelId,
       embedModelId: 6,
     }
-    if (isEdit && agent?.id) {
-      payload.appId = agent.id
+    if (currentAppId != null) {
+      payload.appId = currentAppId
     }
     return payload
   }
@@ -459,16 +510,23 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     try {
       const payload = buildPayload(nextStatus)
       // apiRequest 为扁平请求，失败时不会抛错而是返回 { error }，需显式判断
-      const { error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
+      const { data, error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
       // 失败时全局错误处理已提示后端具体信息（如“应用名称不能为空”），保留抽屉不关闭
       if (error) return
+      // 新建保存成功：记录后端返回的 appId，就地转为编辑态（后续保存走更新、右侧调试对话可用）
+      if (!isEdit) {
+        const newAppId = (data as any)?.appId ?? (data as any)?.app_id ?? (data as any)?.id ?? (typeof data === 'number' || typeof data === 'string' ? data : undefined)
+        if (newAppId != null && newAppId !== '') setSavedAppId(newAppId)
+      }
       setStatus(nextStatus)
-      setDraftSaved(true)
-      if (isEdit && agent?.id != null) {
-        syncShareAppStatus({ projectId: agent.id, type: 'workflow', spaceId: spaceId || undefined, appStatus: nextStatus === '2' ? 2 : 3 });
+      // 保存后就地停留在当前界面：刷新已保存基线、解锁右侧测试，并标记本次已保存（关闭时据此刷新列表）
+      setSavedFingerprint(formFingerprint)
+      setHasSavedOnce(true)
+      savedRef.current = true
+      if (currentAppId != null) {
+        syncShareAppStatus({ projectId: currentAppId, type: 'workflow', spaceId: spaceId || undefined, appStatus: nextStatus === '2' ? 2 : 3 });
       }
       message.success(successText)
-      onClose(true)
     } finally {
       setSaving(null)
     }
@@ -482,16 +540,22 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     try {
       const payload = buildPayload('1')
       // apiRequest 为扁平请求，失败时返回 { error } 而不抛错，需显式判断
-      const { error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
+      const { data, error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
       if (error) return
+      // 新建直接发布：记录后端返回的 appId，保证 syncShareAppStatus 与后续操作拿到正确 id
+      if (!isEdit) {
+        const newAppId = (data as any)?.appId ?? (data as any)?.app_id ?? (data as any)?.id ?? (typeof data === 'number' || typeof data === 'string' ? data : undefined)
+        if (newAppId != null && newAppId !== '') setSavedAppId(newAppId)
+      }
       // 保存成功后，对已加载的最新版本调用 version/publish 上线（versionId 由 loadDetail 回填）
       if (versionId != null && String(versionId) !== '') {
         const { error: publishError } = await publishVersionApi({ versionId })
         if (publishError) return
       }
       setStatus('1')
-      if (isEdit && agent?.id != null) syncShareAppStatus({ projectId: agent.id, type: 'workflow', spaceId: spaceId || undefined, appStatus: 1 });
+      if (currentAppId != null) syncShareAppStatus({ projectId: currentAppId, type: 'workflow', spaceId: spaceId || undefined, appStatus: 1 });
       message.success('已发布')
+      savedRef.current = true
       onClose(true)
     } finally {
       setSaving(null)
@@ -562,7 +626,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
         padding: 0,
       }}
       headerStyle={{ display: 'none' }}
-      onClose={() => onClose(false)}
+      onClose={() => onClose(savedRef.current)}
     >
       <Spin spinning={loadingDetail}>
         {/* 顶部栏 */}
@@ -581,7 +645,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
           <Button
             icon={<ArrowLeftOutlined />}
             type="text"
-            onClick={() => onClose(false)}
+            onClick={() => onClose(savedRef.current)}
             style={{
               borderRadius: 8,
               transition: 'all 0.3s ease',
@@ -1120,6 +1184,28 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
 
             {/* 推荐问题 + 输入栏 */}
             <div style={{ padding: '10px 24px 18px' }}>
+              {/* 未保存提醒：新建未保存 / 左侧配置已改未保存时，锁定测试并提示先保存 */}
+              {!canChat && (
+                <div
+                  style={{
+                    alignItems: 'center',
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    border: '1px solid rgba(245, 158, 11, 0.28)',
+                    borderRadius: 8,
+                    color: '#b45309',
+                    display: 'flex',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    gap: 8,
+                    lineHeight: 1.5,
+                    marginBottom: 12,
+                    padding: '8px 12px',
+                  }}
+                >
+                  <LockOutlined style={{ flexShrink: 0 }} />
+                  <span>{hasSavedOnce ? '左侧配置已修改，请先点击「保存」再进行对话测试' : '请先点击「保存」后再进行对话测试'}</span>
+                </div>
+              )}
               <div style={{ color: '#5f7490', fontSize: 12, marginBottom: 10, fontWeight: 500 }}>推荐问题</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
                 {recQuestions.length > 0 ? (
@@ -1128,7 +1214,11 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                       key={q}
                       color="processing"
                       onClick={() => {
-                        if (!draftSaved || debugLoading) return
+                        if (debugLoading) return
+                        if (!canChat) {
+                          message.warning(hasSavedOnce ? '配置已修改，请先保存后再测试' : '请先保存后再测试')
+                          return
+                        }
                         handleSend(q, { skillSourceVersionIds })
                       }}
                       style={{
@@ -1153,27 +1243,27 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
                 )}
               </div>
               <Input
-                disabled={!draftSaved}
+                disabled={chatLocked}
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onPressEnter={submitDebug}
-                placeholder={draftSaved ? (debugLoading ? 'AI 正在思考，可点击右侧停止…' : '请输入问题') : '保存后即可开始测试'}
-                prefix={draftSaved ? undefined : <LockOutlined style={{ color: '#b6c0d4' }} />}
+                placeholder={debugLoading ? 'AI 正在思考，可点击右侧停止…' : canChat ? '请输入问题' : hasSavedOnce ? '配置已修改，保存后可继续测试' : '保存后即可开始测试'}
+                prefix={chatLocked ? <LockOutlined style={{ color: '#b6c0d4' }} /> : undefined}
                 size="large"
                 suffix={
                   debugLoading ? (
                     <LoadingOutlined style={{ color: '#5b7cf7', cursor: 'pointer' }} title="停止生成" onClick={stopGenerating} />
                   ) : (
                     <SendOutlined
-                      style={{ color: draftSaved ? '#5b7cf7' : '#c2ccdd', cursor: draftSaved ? 'pointer' : 'default' }}
-                      onClick={draftSaved ? submitDebug : undefined}
+                      style={{ color: canChat ? '#5b7cf7' : '#c2ccdd', cursor: canChat ? 'pointer' : 'default' }}
+                      onClick={canChat ? submitDebug : undefined}
                     />
                   )
                 }
                 style={{
                   borderRadius: 10,
                   border: '1px solid rgba(130, 140, 200, 0.2)',
-                  background: draftSaved ? 'rgba(255, 255, 255, 0.6)' : 'rgba(240, 242, 248, 0.6)',
+                  background: chatLocked ? 'rgba(240, 242, 248, 0.6)' : 'rgba(255, 255, 255, 0.6)',
                 }}
               />
             </div>

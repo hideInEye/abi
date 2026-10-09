@@ -1,19 +1,9 @@
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
-import { ViewControls } from '@/components/ViewControls';
-import type { ColumnOption } from '@/components/ViewControls';
 import { getOperLogListApi } from '@/service/api/log';
 
-// Column definitions for picker
-const ALL_COLUMNS: ColumnOption[] = [
-  { key: 'title', label: '系统模块', visible: true },
-  { key: 'businessType', label: '操作类型', visible: true },
-  { key: 'operName', label: '操作人员', visible: true },
-  { key: 'operIp', label: '主机地址', visible: true },
-  { key: 'status', label: '操作状态', visible: true },
-  { key: 'operTime', label: '操作时间', visible: true },
-];
+import { EMPTY_OPER_LOG_SEARCH_PARAMS, buildOperLogSearchParams } from './search-params';
 
 // 若依业务类型字典
 const BUSINESS_TYPE_MAP: Record<string, string> = {
@@ -31,20 +21,13 @@ const BUSINESS_TYPE_MAP: Record<string, string> = {
 
 export function Component() {
   // Inline search state
-  const [searchOperName, setSearchOperName] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [searchStatus, setSearchStatus] = useState<string | undefined>(undefined);
   const [searchTitle, setSearchTitle] = useState('');
   const [searchBusinessType, setSearchBusinessType] = useState<string | undefined>(undefined);
   const [searchOperIp, setSearchOperIp] = useState('');
   const [dateRange, setDateRange] = useState<any>(null);
-  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
   const [jumpValue, setJumpValue] = useState('');
-
-  const handleColumnToggle = (key: string, visible: boolean) => {
-    setColumnOptions(prev => prev.map(c => (c.key === key ? { ...c, visible } : c)));
-  };
-
-  const visibleKeys = useMemo(() => new Set(columnOptions.filter(c => c.visible).map(c => c.key)), [columnOptions]);
 
   const statusOptions = [
     { label: '正常', value: '0' },
@@ -52,12 +35,6 @@ export function Component() {
   ];
 
   const businessTypeOptions = Object.entries(BUSINESS_TYPE_MAP).map(([value, label]) => ({ label, value }));
-
-  // 若依时间范围查询走 params[beginTime]/params[endTime]
-  const timeParams = (range: any) => ({
-    'params[beginTime]': range?.[0] ? `${range[0].format('YYYY-MM-DD')} 00:00:00` : '',
-    'params[endTime]': range?.[1] ? `${range[1].format('YYYY-MM-DD')} 23:59:59` : ''
-  });
 
   const { data, searchParams, tableProps, updateSearchParams } = useTable({
     apiFn: getOperLogListApi as any,
@@ -143,42 +120,27 @@ export function Component() {
     rowKey: 'operId'
   } as any);
 
-  // Filter columns by visibility
-  const filteredColumns = useMemo(() => {
-    const cols = tableProps.columns as any[];
-    if (!cols) return cols;
-    return cols.filter((col: any) => visibleKeys.has(col.key));
-  }, [tableProps.columns, visibleKeys]);
-
   const handleSearch = () => {
-    updateSearchParams({
-      pageNum: 1,
-      operName: searchOperName.trim() || '',
-      title: searchTitle.trim() || '',
-      businessType: searchBusinessType ?? '',
-      operIp: searchOperIp.trim() || '',
-      status: searchStatus ?? '',
-      ...timeParams(dateRange)
-    } as any);
+    updateSearchParams(
+      buildOperLogSearchParams({
+        keyword: searchKeyword,
+        title: searchTitle,
+        businessType: searchBusinessType,
+        operIp: searchOperIp,
+        status: searchStatus,
+        dateRange
+      }) as any
+    );
   };
 
   const handleReset = () => {
-    setSearchOperName('');
+    setSearchKeyword('');
     setSearchStatus(undefined);
     setSearchTitle('');
     setSearchBusinessType(undefined);
     setSearchOperIp('');
     setDateRange(null);
-    updateSearchParams({
-      pageNum: 1,
-      operName: '',
-      title: '',
-      businessType: '',
-      operIp: '',
-      status: '',
-      'params[beginTime]': '',
-      'params[endTime]': ''
-    } as any);
+    updateSearchParams(EMPTY_OPER_LOG_SEARCH_PARAMS as any);
   };
 
   // Pagination logic（服务端分页，total 取自接口返回）
@@ -245,11 +207,11 @@ export function Component() {
       {/* Searchbar */}
       <section className="abi-searchbar">
         <SearchFilterBar
-          searchPlaceholder="操作人员"
-          searchValue={searchOperName}
+          searchPlaceholder="系统模块 / 操作类型"
+          searchValue={searchKeyword}
           onQuery={handleSearch}
           onReset={handleReset}
-          onSearchChange={setSearchOperName}
+          onSearchChange={setSearchKeyword}
           filters={
             <>
               <SearchFilterField label="操作时间">
@@ -308,15 +270,6 @@ export function Component() {
 
       {/* Data Area */}
       <section className="abi-data-area">
-        {/* Toolbar */}
-        <div className="abi-toolbar">
-          <ViewControls
-            hideViewToggle
-            columns={columnOptions}
-            onColumnToggle={handleColumnToggle}
-          />
-        </div>
-
         {/* Table + Pagination */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <div
@@ -330,7 +283,7 @@ export function Component() {
           >
             <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
               <ATable
-                columns={filteredColumns as any}
+                columns={tableProps.columns as any}
                 dataSource={(data as any[]) || []}
                 loading={tableProps.loading}
                 pagination={false}

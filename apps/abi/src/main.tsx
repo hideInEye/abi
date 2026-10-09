@@ -23,6 +23,11 @@ function renderBootstrapError(error: unknown) {
 async function startCurrentBranch(poweredByQiankun: boolean) {
   const branch = resolveAbiBootstrapBranch(window.location.href, poweredByQiankun)
 
+  // 过渡兼容：旧哈希路径 dashboard_share_page 直接替换成 share_url（地址栏保持新路径，后端切换完成后删除）
+  if (branch.kind === 'chat-share' && window.location.hash.includes('dashboard_share_page')) {
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${window.location.hash.replace('dashboard_share_page', 'share_url')}`)
+  }
+
   if (branch.kind === 'app') {
     const { mountFullAbiApp } = await loadFullApp()
     await mountFullAbiApp({}, false)

@@ -15,11 +15,16 @@ describe('parseShareCode', () => {
     expect(parseShareCode('https://demo.com/#/assistant-share-page/xyz9')).toBe('xyz9')
   })
 
-  it('兼容大屏 dashboard_share_page 标识（后端统一返回格式）', () => {
+  it('兼容大屏 dashboard_share_page 标识（后端旧格式，过渡期保留）', () => {
     expect(parseShareCode('https://192.168.1.195/#/dashboard_share_page/qpulk6sb')).toBe('qpulk6sb')
     expect(convertShareUrl('https://demo.com/#/dashboard_share_page/vi1i3pe2')).toBe(
       `${ASSISTANT_SHARE_ROUTE}/vi1i3pe2`,
     )
+  })
+
+  it('支持新 share_url 标识（助手与大屏共用）', () => {
+    expect(parseShareCode('https://192.168.1.195/#/share_url/atqgzvsq')).toBe('atqgzvsq')
+    expect(convertShareUrl('https://demo.com/#/share_url/abc123')).toBe(`${ASSISTANT_SHARE_ROUTE}/abc123`)
   })
 
   it('非法输入返回空串', () => {

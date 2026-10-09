@@ -18,6 +18,7 @@ import {
   type ChartTypeItem,
   type ChartFamily,
 } from './chartTypeCatalog'
+import ChartTypeThumb from './ChartTypeThumb'
 
 interface Props {
   open: boolean
@@ -50,7 +51,7 @@ const SCROLL_STYLE_CSS = `
 .chart-type-modal-search.ant-input-affix-wrapper {
   border-radius: 8px;
   background-color: transparent;
-  border: 1px solid #e6e8ee;
+  border: 1px solid var(--cw-border, #e6e8ee);
   box-shadow: none;
   transition: border-color .2s, box-shadow .2s;
 }
@@ -67,14 +68,19 @@ const SCROLL_STYLE_CSS = `
 .chart-type-modal-search .ant-input {
   background: transparent;
   font-size: 12.5px;
-  color: #1f2733;
+  color: var(--cw-text, #1f2733);
 }
 .chart-type-modal-search .ant-input::placeholder {
-  color: #a4abb8;
+  color: var(--cw-text-muted, #a4abb8);
 }
 .chart-type-modal-search .ant-input-prefix { margin-inline-end: 6px; }
-.chart-type-modal-search .ant-input-clear-icon { color: #b0b6c1; }
-.chart-type-modal-search .ant-input-clear-icon:hover { color: #6b7280; }
+.chart-type-modal-search .ant-input-clear-icon { color: var(--cw-text-muted, #b0b6c1); }
+.chart-type-modal-search .ant-input-clear-icon:hover { color: var(--cw-text-2, #6b7280); }
+
+/* 分类/大类导航项：颜色吃主题变量，深色背景下不残留浅底浅字 */
+.chart-type-modal-rail-item { color: var(--cw-text-2, #666); }
+.chart-type-modal-rail-item:hover { color: #3470f6; background: var(--cw-body-bg, #f7f9fc); }
+.chart-type-modal-rail-item.is-active { color: #3470f6; background: var(--accent-soft, rgba(52, 112, 246, 0.12)); }
 `
 function useInjectScrollStyle() {
   useLayoutEffect(() => {
@@ -101,28 +107,32 @@ const OverlayScroll: React.FC<OverlayScrollProps> = ({ className = '', contentCl
   const draggingRef = useRef(false)
   const [thumb, setThumb] = useState({ top: 0, height: 0, visible: false })
   const [active, setActive] = useState(false)
+  // 最近一次落地的 thumb 值：容差 1px 内视为已收敛，直接跳过 setState
+  const appliedRef = useRef({ top: 0, height: 0, visible: false })
 
   const updateThumb = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
     const { scrollHeight, clientHeight, scrollTop } = el
     if (scrollHeight <= clientHeight + 1) {
+      appliedRef.current = { top: 0, height: 0, visible: false }
       setThumb((t) => (t.visible ? { ...t, visible: false } : t))
       return
     }
-    const height = Math.max((clientHeight / scrollHeight) * clientHeight, 24)
+    // 取整 + 1px 容差：容器度量亚像素抖动（缩放/小数宽高）时守卫仍能收敛，不会来回 setState
+    const height = Math.round(Math.max((clientHeight / scrollHeight) * clientHeight, 24))
     const maxTop = clientHeight - height
-    const top = maxTop <= 0 ? 0 : (scrollTop / (scrollHeight - clientHeight)) * maxTop
-    // 仅在数值确实变化时更新，避免 useLayoutEffect 每次渲染都 setState 造成无限更新
-    setThumb((t) =>
-      t.visible && Math.abs(t.top - top) < 0.5 && Math.abs(t.height - height) < 0.5
-        ? t
-        : { top, height, visible: true },
-    )
+    const top = Math.round(maxTop <= 0 ? 0 : (scrollTop / (scrollHeight - clientHeight)) * maxTop)
+    const last = appliedRef.current
+    if (last.visible && Math.abs(last.top - top) <= 1 && Math.abs(last.height - height) <= 1) return
+    appliedRef.current = { top, height, visible: true }
+    setThumb((t) => (t.visible && t.top === top && t.height === height ? t : { top, height, visible: true }))
   }, [])
 
   useLayoutEffect(() => {
-    updateThumb()
+    // 微任务延迟打断「layout effect → setState → 重渲染」同步嵌套链，度量持续抖动时也不会触发 React #185
+    if (typeof queueMicrotask === 'function') queueMicrotask(updateThumb)
+    else updateThumb()
   })
 
   useEffect(() => {
@@ -182,7 +192,7 @@ const OverlayScroll: React.FC<OverlayScrollProps> = ({ className = '', contentCl
           style={{
             top: thumb.top,
             height: thumb.height,
-            backgroundColor: active ? '#a8a8a8' : '#c1c1c1',
+            backgroundColor: active ? 'var(--cw-text-2, #a8a8a8)' : 'var(--cw-text-muted, #c1c1c1)',
             opacity: active ? 1 : 0,
             pointerEvents: active ? 'auto' : 'none',
             cursor: 'default',
@@ -239,9 +249,12 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
   const categoryRail = [{ key: 'all', label: '全部' }, ...CHART_CATEGORIES.map((c) => ({ key: c.key, label: c.label }))]
 
   const panel = (
-    <div className="flex overflow-hidden rounded-xl" style={{ width: '25rem', height: '28rem' }}>
+    <div
+      className="flex overflow-hidden rounded-xl"
+      style={{ width: '25rem', height: '28rem', background: 'var(--cw-surface, #fff)', color: 'var(--cw-text, #1f2733)' }}
+    >
       {/* 一级：语义分类（图标栏） */}
-      <OverlayScroll className="shrink-0 border-r border-[#f0f0f0]" style={{ width: '4.5rem' }} contentClassName="py-2">
+      <OverlayScroll className="shrink-0 border-r" style={{ width: '4.5rem', borderColor: 'var(--cw-border, #f0f0f0)' }} contentClassName="py-2">
         {categoryRail.map((cat) => {
           const active = !keyword && activeCategory === cat.key
           return (
@@ -252,8 +265,8 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
                 setActiveCategory(cat.key)
                 setActiveFamily('all')
               }}
-              className={`flex flex-col items-center gap-0.5 py-2 cursor-pointer text-[0.625rem] leading-tight transition-colors ${
-                active ? 'text-[#3470f6] bg-[#eef3ff]' : 'text-[#666] hover:text-[#3470f6] hover:bg-[#f7f9fc]'
+              className={`chart-type-modal-rail-item flex flex-col items-center gap-0.5 py-2 cursor-pointer text-[0.625rem] leading-tight transition-colors ${
+                active ? 'is-active' : ''
               }`}
             >
               <span className="text-[0.9375rem]">{CATEGORY_ICONS[cat.key]}</span>
@@ -264,7 +277,7 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
       </OverlayScroll>
 
       {/* 二级：图表大类（文字导航） */}
-      <OverlayScroll className="shrink-0 border-r border-[#f0f0f0]" style={{ width: '6.25rem' }} contentClassName="py-2">
+      <OverlayScroll className="shrink-0 border-r" style={{ width: '6.25rem', borderColor: 'var(--cw-border, #f0f0f0)' }} contentClassName="py-2">
         {familyRail.map((f) => {
           const active = !keyword && activeFamily === f.key
           return (
@@ -274,10 +287,8 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
                 setKeyword('')
                 setActiveFamily(f.key)
               }}
-              className={`px-1 py-2 text-[13px] text-center cursor-pointer transition-colors ${
-                active
-                  ? 'text-[#3470f6] bg-[#eef3ff] font-medium'
-                  : 'text-[#666] hover:text-[#3470f6] hover:bg-[#f7f9fc]'
+              className={`chart-type-modal-rail-item px-1 py-2 text-[13px] text-center cursor-pointer transition-colors ${
+                active ? 'is-active font-medium' : ''
               }`}
             >
               {f.label}
@@ -287,13 +298,13 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
       </OverlayScroll>
 
       {/* 三级：搜索 + 变体卡片（单列窄卡，可上下滚动） */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#fbfcfe]">
+      <div className="flex-1 flex flex-col min-w-0" style={{ background: 'var(--cw-body-bg, #fbfcfe)' }}>
         <div className="px-2 pt-2 pb-1.5">
           <Input
             allowClear
             size="small"
             className="chart-type-modal-search"
-            prefix={<SearchOutlined style={{ color: '#9aa2b1', fontSize: 13 }} />}
+            prefix={<SearchOutlined style={{ color: 'var(--cw-text-muted, #9aa2b1)', fontSize: 13 }} />}
             placeholder="搜索图表"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
@@ -311,29 +322,33 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
                     key={item.value}
                     onClick={() => handleSelect(item)}
                     className={`rounded-lg border overflow-hidden cursor-pointer transition-all ${
-                      current
-                        ? 'border-[#3470f6] shadow-[0_2px_8px_rgba(52,112,246,0.15)]'
-                        : 'border-[#eef0f4] hover:border-[#c3d4fb] hover:shadow-[0_2px_10px_rgba(52,112,246,0.08)]'
+                      current ? 'border-[#3470f6] shadow-[0_2px_8px_rgba(52,112,246,0.15)]' : 'hover:shadow-[0_2px_10px_rgba(52,112,246,0.08)]'
                     }`}
+                    style={current ? undefined : { borderColor: 'var(--cw-border, #eef0f4)' }}
                   >
-                    <div className="flex items-center justify-between px-2.5 py-1.5 bg-white border-b border-[#f2f3f5]">
-                      <span className="text-[13px] font-medium text-[#1f2733] truncate">{item.label}</span>
+                    <div
+                      className="flex items-center justify-between px-2.5 py-1.5 border-b"
+                      style={{ background: 'var(--cw-surface, #fff)', borderColor: 'var(--cw-border, #f2f3f5)' }}
+                    >
+                      <span className="text-[13px] font-medium truncate" style={{ color: 'var(--cw-text, #1f2733)' }}>
+                        {item.label}
+                      </span>
                       {current ? (
                         <Tag color="blue" className="!m-0 !mr-0 !px-1 !leading-4 !text-[11px]">当前</Tag>
                       ) : item.supported ? (
                         <Tag color="green" className="!m-0 !mr-0 !px-1 !leading-4 !text-[11px]">可用</Tag>
                       ) : (
-                        <Tag className="!m-0 !mr-0 !px-1 !leading-4 !text-[11px] !text-[#999] !bg-[#f5f5f5] !border-[#eee]">
+                        <Tag
+                          className="!m-0 !mr-0 !px-1 !leading-4 !text-[11px]"
+                          style={{ color: 'var(--cw-text-muted, #999)', background: 'var(--cw-body-bg, #f5f5f5)', borderColor: 'var(--cw-border, #eee)' }}
+                        >
                           即将
                         </Tag>
                       )}
                     </div>
-                    <div className="bg-white px-4 py-2">
-                      <img
-                        src={item.thumbnail}
-                        alt={item.label}
-                        className="block w-full h-auto object-contain rounded"
-                      />
+                    {/* 缩略图实时渲染：透明底 + 主题配色，适应任意背景 */}
+                    <div className="px-4 py-2" style={{ background: 'var(--cw-surface, #fff)' }}>
+                      <ChartTypeThumb value={item.value} />
                     </div>
                   </div>
                 )

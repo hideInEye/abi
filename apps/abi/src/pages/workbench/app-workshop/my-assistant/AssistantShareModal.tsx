@@ -1,10 +1,11 @@
-import { Button, ConfigProvider, DatePicker, Input, Modal, Segmented, Switch, message } from 'antd'
+import { Button, ConfigProvider, DatePicker, Input, Modal, Segmented, Select, message } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import type { Dayjs } from 'dayjs'
 import { useEffect, useState } from 'react'
 
 import { useAppSelector } from '@/hooks/business/useStore'
 import type { AgentMock } from '@/pages/workbench/assistant-manage/assistant-config/modules/assistant-edit-drawer'
+import { queryAbiClientList } from '@/service/api/abi-client'
 import { shareProjectApi } from '@/service/api/share'
 import { getSpaceId } from '@/store/slice/app'
 
@@ -15,6 +16,8 @@ interface Props {
   onClose: () => void
   /** 分享成功（拿到分享链接）后回调，用于刷新分享记录 */
   onShared?: () => void
+  /** 打开时预选的 API Key（API Key 页反向入口带入） */
+  defaultApiKeys?: string[]
 }
 
 /** 悬浮窗预设主题，取值与 chat-sdk theme.ts ThemeId 一致 */
@@ -31,28 +34,37 @@ const THEME_OPTIONS: { value: ShareTheme; label: string; bg: string; bar: string
  * UI 参考「我的大屏」分享弹窗（访问密码保护 / 链接有效期 / 生成链接 / 复制链接）。
  * 对接统一分享接口 /api/dashboard/api/v1/project/share（abi 助手 type=workflow）。
  */
-const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }) => {
+const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared, defaultApiKeys }) => {
   const spaceId = useAppSelector(getSpaceId)
-  const [sharePasswordFlag, setSharePasswordFlag] = useState(false)
+  const [apiKeys, setApiKeys] = useState<string[]>([])
+  const [apiKeyOptions, setApiKeyOptions] = useState<string[]>([])
   const [shareLink, setShareLink] = useState('')
-  const [sharePassword, setSharePassword] = useState<string | null>(null)
   const [shareLoading, setShareLoading] = useState(false)
   const [expirationMode, setExpirationMode] = useState<string>('forever')
   const [expirationDate, setExpirationDate] = useState<Dayjs | null>(null)
   const [theme, setTheme] = useState<ShareTheme>('blue')
 
-  // 关闭后重置弹窗内所有状态，避免下次打开残留
+  // 关闭后重置弹窗内所有状态，避免下次打开残留；打开时预选外部带入的 API Key
   useEffect(() => {
     if (!open) {
-      setSharePasswordFlag(false)
+      setApiKeys([])
       setShareLink('')
-      setSharePassword(null)
       setShareLoading(false)
       setExpirationMode('forever')
       setExpirationDate(null)
       setTheme('blue')
+      return
     }
-  }, [open])
+    setApiKeys(defaultApiKeys?.length ? [...defaultApiKeys] : [])
+    // API Key 选项与 API Key 管理页同源（/abi-system/client/list）
+    queryAbiClientList({ pageNum: 1, pageSize: 100, spaceId: spaceId || 0 })
+      .then((res: any) => {
+        const payload = res?.response?.data ?? res?.data ?? {}
+        const rows = Array.isArray(payload.rows) ? payload.rows : Array.isArray(payload.records) ? payload.records : []
+        setApiKeyOptions(rows.map((row: any) => row.accessKey).filter(Boolean))
+      })
+      .catch(() => undefined)
+  }, [open, spaceId, defaultApiKeys])
 
   const handleShare = async () => {
     if (!agent?.id) return
@@ -65,8 +77,8 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
         projectId: agent.id,
         spaceId: spaceId || 0,
         type: 'workflow',
-        sharePasswordFlag,
         theme,
+        ...(apiKeys.length ? { apiKeys } : {}),
         ...(expirationDays !== undefined ? { expirationDays } : {}),
         ...(expirationDateStr ? { expirationDate: expirationDateStr } : {}),
       })
@@ -75,9 +87,7 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
         message.error('获取分享链接失败')  
         return
       }
-      // 直接展示后端返回的分享链接
       setShareLink(shareUrl)
-      setSharePassword((data as any)?.sharePassword ?? null)
       // 新增分享记录后通知外部刷新（分享记录 tab 保持挂载，不会自动重拉）
       onShared?.()
     } finally {
@@ -86,32 +96,36 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
   }
 
   const handleCopyLink = () => {
-    const text = sharePassword ? `分享链接：${shareLink}\n访问密码：${sharePassword}` : shareLink
-    navigator.clipboard.writeText(text).then(() => {
-      message.success(sharePassword ? '分享链接和密码已复制到剪贴板' : '分享链接已复制到剪贴板')
+    navigator.clipboard.writeText(shareLink).then(() => {
+      message.success('分享链接已复制到剪贴板')
     })
   }
 
   return (
     <Modal title="分享助手" open={open} onCancel={onClose} footer={null} width={520} centered destroyOnClose>
       <div style={{ padding: '8px 0 4px' }}>
-        {/* 访问密码 */}
+        {/* API Key：绑定分享链接的访问凭证，支持搜索与多选 */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
             padding: '14px 16px',
             background: '#f7f8fa',
             borderRadius: '10px',
             marginBottom: '12px',
           }}
         >
-          <div>
-            <div style={{ fontWeight: 500, color: '#262626', marginBottom: '2px' }}>访问密码保护</div>
-            <div style={{ fontSize: '12px', color: '#8c8c8c' }}>开启后将生成随机访问密码</div>
-          </div>
-          <Switch checked={sharePasswordFlag} onChange={setSharePasswordFlag} disabled={!!shareLink} />
+          <div style={{ fontWeight: 500, color: '#262626', marginBottom: '10px' }}>API Key</div>
+          <Select
+            mode="multiple"
+            allowClear
+            disabled={!!shareLink}
+            optionFilterProp="label"
+            options={apiKeyOptions.map((key) => ({ label: key, value: key }))}
+            placeholder="请选择 API Key（可搜索、多选）"
+            showSearch
+            style={{ width: '100%' }}
+            value={apiKeys}
+            onChange={setApiKeys}
+          />
         </div>
 
         {/* 链接有效期 */}
@@ -220,14 +234,8 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared }
                 style={{ background: 'transparent', border: 'none', padding: 0, resize: 'none', boxShadow: 'none' }}
               />
             </div>
-            {sharePassword && (
-              <div style={{ background: '#F7F8FA', borderRadius: '10px', padding: '14px 16px' }}>
-                <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: '6px' }}>访问密码</div>
-                <div style={{ fontWeight: 700, fontSize: '22px', letterSpacing: '6px', color: '#666' }}>{sharePassword}</div>
-              </div>
-            )}
             <Button type="primary" block size="large" onClick={handleCopyLink} style={{ borderRadius: '8px', height: '44px' }}>
-              {sharePassword ? '复制链接和密码' : '复制链接'}
+              复制链接
             </Button>
           </div>
         )}
