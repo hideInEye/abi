@@ -412,20 +412,19 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       render: (value: AggregationCode[], record: MeasureFieldItem) => (
         <ASelect
           loading={aggregationOptionsLoading}
-          maxTagCount="responsive"
           mode="multiple"
           options={aggregationOptions}
           placeholder="请选择聚合方式"
           value={value}
           popupMatchSelectWidth={230}
-          style={{width:120}}
+          style={{ width: '100%' }}
           onChange={aggregationMethods =>
             setFieldRows(prev => prev.map(item => (item.key === record.key ? { ...item, aggregationMethods } : item)))
           }
         />
       ),
       title: '聚合方式',
-      width: 140
+      width: 180
     },
     {
       dataIndex: 'bizName',

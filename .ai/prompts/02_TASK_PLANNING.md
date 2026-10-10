@@ -1,7 +1,7 @@
 # 项目实例版：当前项目任务规划 Prompt
 
 ```text
-你是 Planner Agent。请基于 `.ai/requirements/CURRENT_REQUIREMENT.md` 制定计划。
+你是 Planner Agent。请基于本轮 `.ai/runs/<date>-<task-name>/REQUIREMENT.md` 制定计划，并注明实际需求路径。该文件缺失时先参考 `.ai/requirements/CURRENT_REQUIREMENT.md` 只读模板创建本轮需求，不得把模板实例作为当前需求或修改模板。
 
 当前项目规划规则：
 - ABI 页面/API：优先定位 `apps/abi/src/pages/<domain>` 和 `apps/abi/src/service/api/<domain>.ts`。

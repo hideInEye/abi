@@ -2,7 +2,8 @@
 
 - [ ] 已读取 `AGENTS.md`
 - [ ] 已读取 `.ai/README.md`
-- [ ] 已读取 `.ai/requirements/CURRENT_REQUIREMENT.md`
+- [ ] 已参考 `.ai/requirements/CURRENT_REQUIREMENT.md` 只读模板，并创建、读取本轮 `.ai/runs/<date>-<task-name>/REQUIREMENT.md`
+- [ ] 本轮需求目录独立，不覆盖历史轮次；没有将实际需求写回模板
 - [ ] 已检查 `git status`，确认不恢复 README/ref-request 既有删除
 - [ ] 已判断需求属于 `apps/abi`、`apps/chat`、`apps/dashboard` 或 `packages/*`
 - [ ] ABI 改动已读取 `apps/abi/src/service/request/index.ts`、`apps/abi/src/router/guard/index.ts` 或相关 domain

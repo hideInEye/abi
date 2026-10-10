@@ -2,11 +2,11 @@
 
 ## 当前项目执行示例
 
-示例：根据 `CURRENT_REQUIREMENT.md` 为 ABI ontology entity 增加颜色预设。
+示例：根据本轮 `.ai/runs/<date>-<task-name>/REQUIREMENT.md` 为 ABI ontology entity 增加颜色预设。
 
 步骤：
 
-1. 读取 `.ai/requirements/CURRENT_REQUIREMENT.md`。
+1. 参考 `.ai/requirements/CURRENT_REQUIREMENT.md` 只读模板，在本轮 `.ai/runs/<date>-<task-name>/REQUIREMENT.md` 保存并读取实际需求；不得修改模板或覆盖其他轮次需求。
 2. 定位 `apps/abi/src/pages/workbench/ontology-kg/entity`。
 3. API 若需要，查 `apps/abi/src/service/api/ontology-network.ts`。
 4. UI 使用 Ant Design + UnoCSS，不使用 Chat 的 Tailwind。
